@@ -670,7 +670,9 @@
     "changeDates": "Termine ändern",
     "unchecked": "Überschneidungen konnten nicht geprüft werden.",
     "saveAnyway": "Trotzdem speichern",
-    "retry": "Erneut prüfen"
+    "retry": "Erneut prüfen",
+    "incomplete": "Nicht alle Aufenthalte in diesem Zeitraum konnten verglichen werden – prüfe die Termine selbst.",
+    "incompleteMore": "Die Liste ist möglicherweise nicht vollständig."
   },
   "restay": {
     "action": "Wieder hier übernachten",

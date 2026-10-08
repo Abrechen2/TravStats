@@ -376,4 +376,57 @@ describe("StayEditor - the overlap notice", () => {
     await userEvent.click(screen.getByTestId("stay-conflict-proceed"));
     await waitFor(() => expect(createStay).toHaveBeenCalledTimes(1));
   });
+
+  // forgejo#229 review: the lookup used to read the first 100 and ignore `total`,
+  // so a stay beyond them was never compared.
+  describe("a crowded window", () => {
+    const filler = (n: number, offset: number): LodgingStayListItem[] =>
+      Array.from({ length: n }, (_, i) =>
+        storedStay({
+          id: `far-${offset + i}`,
+          checkIn: "2020-01-01T00:00:00.000Z",
+          checkOut: "2020-01-02T00:00:00.000Z",
+        })
+      );
+
+    it("walks every page, so a collision past the first page is found", async () => {
+      vi.mocked(listStayPage)
+        .mockResolvedValueOnce({ rows: filler(500, 0), total: 600 })
+        .mockResolvedValueOnce({
+          rows: [
+            ...filler(99, 500),
+            storedStay({
+              id: "late",
+              checkIn: "2026-07-12T00:00:00.000Z",
+              checkOut: "2026-07-16T00:00:00.000Z",
+            }),
+          ],
+          total: 600,
+        });
+      await renderEditor();
+      typeDates("2026-07-10", "2026-07-14");
+      await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+      await screen.findByTestId("stay-conflict-late");
+      expect(listStayPage).toHaveBeenCalledTimes(2);
+      expect(vi.mocked(listStayPage).mock.calls.map(([q]) => q?.offset)).toEqual([0, 500]);
+      expect(createStay).not.toHaveBeenCalled();
+    });
+
+    it("says 'not fully checked' when it could not compare everything, never a silent clear", async () => {
+      vi.mocked(listStayPage)
+        .mockResolvedValueOnce({ rows: filler(2, 0), total: 10 })
+        .mockResolvedValueOnce({ rows: [], total: 10 });
+      await renderEditor();
+      typeDates("2026-07-10", "2026-07-14");
+      await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+      const box = await screen.findByTestId("stay-conflict-notice");
+      expect(box).toHaveTextContent("lodging:conflict.incomplete");
+      expect(createStay).not.toHaveBeenCalled();
+
+      await userEvent.click(screen.getByTestId("stay-conflict-proceed"));
+      await waitFor(() => expect(createStay).toHaveBeenCalledTimes(1));
+    });
+  });
 });

@@ -4,18 +4,32 @@ import { listStayPage } from "../lib/api/lodging";
 import { findStayConflicts, type StayConflict } from "../lib/lodgingConflicts";
 import { exactDays, type StaySpan } from "../shared/lodgingOverlap";
 import { logger } from "../lib/logger";
+import type { LodgingStayListItem } from "../types/lodging";
 
 /** What the lookup found for one set of dates; `conflicts: null` = the lookup failed. */
 interface ConflictVerdict {
   key: string;
   conflicts: StayConflict[] | null;
+  /** The window held more stays than could be fetched: what was compared is not everything. */
+  incomplete?: boolean;
 }
+
+/** The server's page maximum - fewest round trips for a crowded window. */
+const LOOKUP_PAGE_SIZE = 500;
+/** 5000 stays in ONE window is not a real account; past it the notice says "not fully checked". */
+const MAX_LOOKUP_PAGES = 10;
 
 /** The notice to show, or null. */
 export interface StayConflictNotice {
   conflicts: readonly StayConflict[];
   /** The lookup itself failed: nothing is known, and the notice says so. */
   unchecked: boolean;
+  /**
+   * The lookup ran but could not compare every stay in the window (more than
+   * the pages we are willing to walk, or a page that came back short). Said
+   * as such - a partial comparison must not pass for a complete one.
+   */
+  incomplete: boolean;
 }
 
 /**
@@ -66,7 +80,7 @@ export function useStayConflicts({
       // Cancelled, undated or month/year: it names no days, so it can collide with nothing.
       if (days === null) return "clear";
       if (verdict?.key === dateKey && verdict.conflicts !== null) {
-        return verdict.conflicts.length > 0 ? "ask" : "clear";
+        return verdict.conflicts.length > 0 || verdict.incomplete ? "ask" : "clear";
       }
       // Two presses of Save in one breath share one lookup: the second must
       // wait for the first's answer, not start another.
@@ -74,10 +88,27 @@ export function useStayConflicts({
       const lookup = (async (): Promise<"clear" | "ask"> => {
         setChecking(true);
         try {
-          const page = await listStayPage({ from: days.from, to: days.to, limit: 100 });
-          const conflicts = findStayConflicts(span, page.rows, { stayId, lodgingId });
-          setVerdict({ key: dateKey, conflicts });
-          return conflicts.length > 0 ? "ask" : "clear";
+          // Every page of the window, not just the first: a stay beyond the
+          // first hundred would otherwise never be compared (forgejo#229).
+          const rows: LodgingStayListItem[] = [];
+          let total = 0;
+          for (let page = 0; page < MAX_LOOKUP_PAGES; page += 1) {
+            const answer = await listStayPage({
+              from: days.from,
+              to: days.to,
+              limit: LOOKUP_PAGE_SIZE,
+              offset: rows.length,
+            });
+            total = answer.total;
+            rows.push(...answer.rows);
+            // An empty page ends the walk even if `total` says more: a stale
+            // total must not spin this loop.
+            if (answer.rows.length === 0 || rows.length >= total) break;
+          }
+          const incomplete = rows.length < total;
+          const conflicts = findStayConflicts(span, rows, { stayId, lodgingId });
+          setVerdict({ key: dateKey, conflicts, incomplete });
+          return conflicts.length > 0 || incomplete ? "ask" : "clear";
         } catch (err: unknown) {
           logger.error("useStayConflicts: could not look up overlapping stays", err);
           setVerdict({ key: dateKey, conflicts: null });
@@ -101,9 +132,14 @@ export function useStayConflicts({
   const shown =
     verdict !== null && verdict.key === dateKey && acknowledgedKey !== dateKey ? verdict : null;
   const notice: StayConflictNotice | null =
-    shown === null || (shown.conflicts !== null && shown.conflicts.length === 0)
+    shown === null ||
+    (shown.conflicts !== null && shown.conflicts.length === 0 && !shown.incomplete)
       ? null
-      : { conflicts: shown.conflicts ?? [], unchecked: shown.conflicts === null };
+      : {
+          conflicts: shown.conflicts ?? [],
+          unchecked: shown.conflicts === null,
+          incomplete: shown.incomplete === true,
+        };
 
   return { notice, checking, check, acknowledge };
 }

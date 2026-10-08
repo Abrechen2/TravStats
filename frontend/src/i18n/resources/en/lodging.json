@@ -670,7 +670,9 @@
     "changeDates": "Change the dates",
     "unchecked": "Overlaps could not be checked.",
     "saveAnyway": "Save anyway",
-    "retry": "Check again"
+    "retry": "Check again",
+    "incomplete": "Not every stay in this period could be compared – check the dates yourself.",
+    "incompleteMore": "This list may not be complete."
   },
   "restay": {
     "action": "Stay here again",

@@ -45,9 +45,11 @@ export function StayConflictNotice({
   const duplicate = notice.conflicts.some((c) => c.sameHouse);
   const title = notice.unchecked
     ? t("lodging:conflict.unchecked")
-    : duplicate
-      ? t("lodging:conflict.titleDuplicate")
-      : t("lodging:conflict.title");
+    : notice.conflicts.length === 0
+      ? t("lodging:conflict.incomplete")
+      : duplicate
+        ? t("lodging:conflict.titleDuplicate")
+        : t("lodging:conflict.title");
 
   return (
     <div
@@ -61,7 +63,7 @@ export function StayConflictNotice({
       <p id="stay-conflict-title" className="font-medium">
         {title}
       </p>
-      {!notice.unchecked && (
+      {!notice.unchecked && notice.conflicts.length > 0 && (
         <>
           <ul className="mt-2 list-disc pl-5">
             {notice.conflicts.map(({ stay, sameHouse }) => (
@@ -83,6 +85,11 @@ export function StayConflictNotice({
           <p className="mt-2 text-xs text-[var(--text-muted)]">{t("lodging:conflict.rule")}</p>
         </>
       )}
+      {notice.incomplete && notice.conflicts.length > 0 && (
+        <p className="mt-2 text-xs text-[var(--text-muted)]">
+          {t("lodging:conflict.incompleteMore")}
+        </p>
+      )}
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
@@ -90,7 +97,9 @@ export function StayConflictNotice({
           onClick={onProceed}
           className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-(--ts-accent-text) hover:bg-[var(--accent-dim)] pointer-coarse:min-h-(--ts-size-touch-min)"
         >
-          {notice.unchecked ? t("lodging:conflict.saveAnyway") : t("lodging:conflict.proceed")}
+          {notice.unchecked || notice.conflicts.length === 0
+            ? t("lodging:conflict.saveAnyway")
+            : t("lodging:conflict.proceed")}
         </button>
         {notice.unchecked ? (
           <button
