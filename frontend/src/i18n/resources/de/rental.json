@@ -152,7 +152,9 @@
       "roadtripNotFound": "Dieser Roadtrip wurde nicht gefunden.",
       "invalid": "Eine Angabe wurde nicht angenommen. Bitte prüfe das Formular.",
       "nonexistentTime": "Diese Uhrzeit gibt es an der Station nicht (Zeitumstellung).",
-      "unknownBooking": "Zu dieser Buchungsnummer gibt es keine Miete."
+      "unknownBooking": "Zu dieser Buchungsnummer gibt es keine Miete.",
+      "timeShape": "Bitte ein vollständiges Datum mit Uhrzeit angeben – oder „nur Datum“ wählen.",
+      "actualReturnBeforePickup": "Die tatsächliche Rückgabe liegt vor der tatsächlichen Abholung."
     }
   },
   "detail": {

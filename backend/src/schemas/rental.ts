@@ -137,8 +137,18 @@ export const rentalStationSchema = z
 
 const foldField = z.enum(["earlier", "later"]).nullable().optional();
 
-/** The fold keys a rental write understands — see `strayFoldKey`. */
-export const RENTAL_FOLD_KEYS = ["pickupFold", "returnFold"] as const;
+/**
+ * The fold keys a rental write understands — see `strayFoldKey`. One per
+ * wall clock: the booked ends AND the actual hand-overs, because an actual
+ * return at 02:30 on the autumn night is two instants an hour apart just like
+ * a booked one. Each is read only beside its own clock; absent = the earlier.
+ */
+export const RENTAL_FOLD_KEYS = [
+  "pickupFold",
+  "returnFold",
+  "actualPickupFold",
+  "actualReturnFold",
+] as const;
 
 /**
  * A `…Fold` key the schema does not know. zod strips unknown keys, so a
@@ -171,9 +181,14 @@ const baseRentalSchema = z.object({
   returnLocal: wallClock,
   pickupFold: foldField,
   returnFold: foldField,
-  /** What happened at the counter, when recorded; null clears it. */
+  /**
+   * What happened at the counter, when recorded; null clears it. A wall clock
+   * or a bare day (precision `day`), each on its own station's clock.
+   */
   actualPickupLocal: wallClock.nullable().optional(),
   actualReturnLocal: wallClock.nullable().optional(),
+  actualPickupFold: foldField,
+  actualReturnFold: foldField,
   vehicleClass: optionalText(80),
   acrissCode: z
     .string()

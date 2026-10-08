@@ -20,6 +20,8 @@ export interface RentalTimeColumns {
   returnTimezone: string;
   pickupPrecision: string;
   returnPrecision: string;
+  actualPickupPrecision: string | null;
+  actualReturnPrecision: string | null;
 }
 
 const precisionOf = (value: string): TimePrecision =>
@@ -32,7 +34,16 @@ export function rentalTimes(r: RentalTimeColumns): RentalTimes {
   return {
     pickup: at(r.pickupTime, r.pickupTimezone, precisionOf(r.pickupPrecision)),
     return: at(r.returnTime, r.returnTimezone, precisionOf(r.returnPrecision)),
-    actualPickup: at(r.actualPickupTime, r.pickupTimezone, "minute"),
-    actualReturn: at(r.actualReturnTime, r.returnTimezone, "minute"),
+    // A row written before the precision columns has none: it was read to the minute.
+    actualPickup: at(
+      r.actualPickupTime,
+      r.pickupTimezone,
+      precisionOf(r.actualPickupPrecision ?? "minute")
+    ),
+    actualReturn: at(
+      r.actualReturnTime,
+      r.returnTimezone,
+      precisionOf(r.actualReturnPrecision ?? "minute")
+    ),
   };
 }

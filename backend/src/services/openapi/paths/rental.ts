@@ -307,7 +307,11 @@ registry.registerPath({
     "sent → the address geocoded) and reads the clock in its zone. A station nothing places " +
     "is refused — never stored at a guessed position. Without `returnStation` the car is " +
     "returned where it was picked up. `distanceKm` and `finalAmount` here are labelled " +
-    "corrections (`user`); the invoice is their real source.",
+    "corrections (`user`); the invoice is their real source. Each of the four wall clocks " +
+    "(`pickupLocal`, `returnLocal`, `actualPickupLocal`, `actualReturnLocal`) has its own fold " +
+    "key (`pickupFold`, `returnFold`, `actualPickupFold`, `actualReturnFold`): `later` picks the " +
+    "second occurrence of a repeated autumn hour, absent or null the earlier. Any other " +
+    "`…Fold` key is refused (`RENTAL_INVALID_INPUT`, `field` names it).",
   tags: ["Rentals"],
   request: {
     body: {
@@ -328,6 +332,8 @@ registry.registerPath({
     400: {
       description:
         "Validation failed (`RENTAL_INVALID_INPUT`, `RENTAL_RETURN_BEFORE_PICKUP`, " +
+        "`RENTAL_ACTUAL_RETURN_BEFORE_PICKUP` — the actual return before the actual pickup, " +
+        "compared as instants, a day-only end standing for its whole day; " +
         "`RENTAL_ODOMETER_REVERSED` — the return odometer below the pick-up one)",
       content: errorContent,
     },
@@ -343,7 +349,8 @@ registry.registerPath({
   description:
     "Partial update. A station is replaced whole; `returnStation: null` ties the return to the " +
     "pickup station again. A wall clock not sent keeps the booking's reading, re-read in the " +
-    "(possibly new) station's zone. Every field sent is recorded as edited by hand.",
+    "(possibly new) station's zone. Every field sent is recorded as edited by hand. A key " +
+    "not sent is unchanged — never cleared; a fold is read only beside its own wall clock.",
   tags: ["Rentals"],
   request: {
     params: z.object({ id: z.string().uuid() }),
@@ -361,7 +368,8 @@ registry.registerPath({
     400: {
       description:
         "Validation failed; `RENTAL_ODOMETER_REVERSED` when the merged row's return odometer " +
-        "is below the pick-up one",
+        "is below the pick-up one; `RENTAL_ACTUAL_RETURN_BEFORE_PICKUP` when the merged row's " +
+        "actual return precedes its actual pickup (`field`: the actual end this write sent)",
       content: errorContent,
     },
     404: { description: "Not found", content: errorContent },

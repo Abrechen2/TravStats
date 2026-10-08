@@ -53,6 +53,8 @@ function plainColumns(input: UpdateRentalInput) {
     returnFold: _rf,
     actualPickupLocal: _ap,
     actualReturnLocal: _ar,
+    actualPickupFold: _apf,
+    actualReturnFold: _arf,
     distanceKm: _d,
     status: _s,
     companions: _c,

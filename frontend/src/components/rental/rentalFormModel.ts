@@ -9,6 +9,19 @@ import type {
   RentalStationHit,
   RentalStationInput,
 } from "../../types/rental";
+import {
+  NO_DAY_ONLY,
+  NO_FOLDS,
+  REQUIRED_TIME_ENDS,
+  RENTAL_TIME_ENDS,
+  foldOf,
+  timeShapeOk,
+  wallOf,
+  wireFold,
+  type RentalFold,
+  type RentalTimeEnd,
+  type RentalTimeFlags,
+} from "./rentalFormTimes";
 
 /**
  * The rental form's state and its two translations — from a stored rental,
@@ -28,6 +41,12 @@ export interface RentalStationDraft {
   lat: number | null;
   lon: number | null;
   country: string | null;
+  /**
+   * The station's zone when the pick brought one (an airport, an earlier
+   * station, a stored rental) — read only to say beside a time that it meets
+   * a clock change; never sent: the server derives the zone itself.
+   */
+  timezone?: string | null;
 }
 
 export const EMPTY_RENTAL_STATION: RentalStationDraft = {
@@ -38,6 +57,7 @@ export const EMPTY_RENTAL_STATION: RentalStationDraft = {
   lat: null,
   lon: null,
   country: null,
+  timezone: null,
 };
 
 export interface RentalDraft {
@@ -48,9 +68,18 @@ export interface RentalDraft {
   /** "Returned at the same station" — ticked by default (§6). */
   sameStation: boolean;
   ret: RentalStationDraft;
-  /** `YYYY-MM-DDTHH:mm` on the station's clock — what a datetime-local input holds. */
+  /**
+   * `YYYY-MM-DDTHH:mm` on the station's clock — what a datetime-local input
+   * holds — or `YYYY-MM-DD` for an end known only by its day (`dayOnly`).
+   * The actual hand-overs are optional; empty = nobody recorded them.
+   */
   pickupLocal: string;
   returnLocal: string;
+  actualPickupLocal: string;
+  actualReturnLocal: string;
+  dayOnly: RentalTimeFlags<boolean>;
+  /** Which occurrence of a repeated autumn hour each clock names; null = the earlier. */
+  folds: RentalTimeFlags<RentalFold | null>;
   vehicleClass: string;
   acrissCode: string;
   vehicleExample: string;
@@ -87,6 +116,10 @@ export const EMPTY_RENTAL_DRAFT: RentalDraft = {
   ret: EMPTY_RENTAL_STATION,
   pickupLocal: "",
   returnLocal: "",
+  actualPickupLocal: "",
+  actualReturnLocal: "",
+  dayOnly: NO_DAY_ONLY,
+  folds: NO_FOLDS,
   vehicleClass: "",
   acrissCode: "",
   vehicleExample: "",
@@ -116,6 +149,7 @@ export function stationFromHit(hit: RentalStationHit): RentalStationDraft {
     lat: hit.lat,
     lon: hit.lon,
     country: hit.country,
+    timezone: hit.timezone,
   };
 }
 
@@ -137,6 +171,7 @@ function stationOf(r: RentalBooking, end: "pickup" | "return"): RentalStationDra
         lat: r.pickupLat,
         lon: r.pickupLon,
         country: r.pickupCountry,
+        timezone: r.pickupTimezone,
       }
     : {
         name: r.returnStationName,
@@ -146,11 +181,9 @@ function stationOf(r: RentalBooking, end: "pickup" | "return"): RentalStationDra
         lat: r.returnLat,
         lon: r.returnLon,
         country: r.returnCountry,
+        timezone: r.returnTimezone,
       };
 }
-
-const wall = (value: { local: string } | null, precision: string): string =>
-  value ? (precision === "day" ? value.local.slice(0, 10) : value.local.slice(0, 16)) : "";
 
 /** The form, filled from a stored rental — times on each station's clock, from `times`. */
 export function draftFromRental(r: RentalBooking): RentalDraft {
@@ -161,8 +194,25 @@ export function draftFromRental(r: RentalBooking): RentalDraft {
     pickup: stationOf(r, "pickup"),
     sameStation: !r.oneWay && r.pickupStationName === r.returnStationName,
     ret: stationOf(r, "return"),
-    pickupLocal: wall(r.times.pickup, r.pickupPrecision),
-    returnLocal: wall(r.times.return, r.returnPrecision),
+    // Each end opens with its own precision and occurrence: a day shown as
+    // 00:00 would be saved back as a midnight nobody stated, and 02:30 on the
+    // autumn night re-sent without its fold would move by an hour.
+    pickupLocal: wallOf(r.times.pickup),
+    returnLocal: wallOf(r.times.return),
+    actualPickupLocal: wallOf(r.times.actualPickup),
+    actualReturnLocal: wallOf(r.times.actualReturn),
+    dayOnly: {
+      pickup: r.times.pickup?.precision === "day",
+      return: r.times.return?.precision === "day",
+      actualPickup: r.times.actualPickup?.precision === "day",
+      actualReturn: r.times.actualReturn?.precision === "day",
+    },
+    folds: {
+      pickup: foldOf(r.times.pickup),
+      return: foldOf(r.times.return),
+      actualPickup: foldOf(r.times.actualPickup),
+      actualReturn: foldOf(r.times.actualReturn),
+    },
     vehicleClass: r.vehicleClass ?? "",
     acrissCode: r.acrissCode ?? "",
     vehicleExample: r.vehicleExample ?? "",
@@ -189,6 +239,8 @@ export type RentalFormField =
   | "returnStation"
   | "pickupLocal"
   | "returnLocal"
+  | "actualPickupLocal"
+  | "actualReturnLocal"
   | "price"
   | "distanceKm"
   | "odometerOutKm"
@@ -211,7 +263,8 @@ export function parseKmReading(raw: string): number | null {
   if (value === "") return null;
   return KM_READING.test(value) ? Number(value.replace(/[.,\s\u202f]/g, "")) : Number.NaN;
 }
-const LOCAL = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/;
+/** The draft's wall clock of one end. */
+export const localOf = (d: RentalDraft, end: RentalTimeEnd): string => d[`${end}Local`];
 
 /** Translation keys of what keeps the draft from being saved; empty when it can be. */
 export function validateRentalDraft(d: RentalDraft): RentalDraftErrors {
@@ -220,8 +273,13 @@ export function validateRentalDraft(d: RentalDraft): RentalDraftErrors {
   if (!isPlaced(d.pickup)) errors.pickupStation = "rental:form.errors.stationUnplaced";
   if (!d.sameStation && !isPlaced(d.ret))
     errors.returnStation = "rental:form.errors.stationUnplaced";
-  if (!LOCAL.test(d.pickupLocal)) errors.pickupLocal = "rental:form.errors.timeRequired";
-  if (!LOCAL.test(d.returnLocal)) errors.returnLocal = "rental:form.errors.timeRequired";
+  for (const end of RENTAL_TIME_ENDS) {
+    const required = REQUIRED_TIME_ENDS.includes(end);
+    if (!timeShapeOk(localOf(d, end), d.dayOnly[end], required)) {
+      errors[`${end}Local`] =
+        localOf(d, end) === "" ? "rental:form.errors.timeRequired" : "rental:form.errors.timeShape";
+    }
+  }
   // Both read through `parseDecimalInput`, so "150,00" is a price (forgejo#163).
   const price = parseDecimalInput(d.price);
   if (price !== null && !(price >= 0)) errors.price = "rental:form.errors.number";
@@ -302,6 +360,13 @@ export function rentalInputFromDraft(d: RentalDraft): RentalInput {
     returnStation: d.sameStation ? null : stationInput(d.ret),
     pickupLocal: d.pickupLocal,
     returnLocal: d.returnLocal,
+    pickupFold: wireFold(d.pickupLocal, d.dayOnly.pickup, d.folds.pickup),
+    returnFold: wireFold(d.returnLocal, d.dayOnly.return, d.folds.return),
+    // Empty = not recorded: sent as null, so emptying the field clears it.
+    actualPickupLocal: d.actualPickupLocal === "" ? null : d.actualPickupLocal,
+    actualReturnLocal: d.actualReturnLocal === "" ? null : d.actualReturnLocal,
+    actualPickupFold: wireFold(d.actualPickupLocal, d.dayOnly.actualPickup, d.folds.actualPickup),
+    actualReturnFold: wireFold(d.actualReturnLocal, d.dayOnly.actualReturn, d.folds.actualReturn),
     vehicleClass: text(d.vehicleClass),
     acrissCode: text(d.acrissCode)?.toUpperCase() ?? null,
     vehicleExample: text(d.vehicleExample),
@@ -325,6 +390,7 @@ const RENTAL_CODE_KEYS: Readonly<Record<string, string>> = {
   RENTAL_STATION_UNRESOLVED: "rental:form.errors.stationUnresolved",
   RENTAL_GEOCODER_UNAVAILABLE: "rental:form.errors.geocoderUnavailable",
   RENTAL_RETURN_BEFORE_PICKUP: "rental:form.errors.returnBeforePickup",
+  RENTAL_ACTUAL_RETURN_BEFORE_PICKUP: "rental:form.errors.actualReturnBeforePickup",
   RENTAL_ODOMETER_REVERSED: "rental:form.errors.odometerReversed",
   RENTAL_ROADTRIP_NOT_FOUND: "rental:form.errors.roadtripNotFound",
   RENTAL_UNKNOWN_BOOKING: "rental:form.errors.unknownBooking",
@@ -338,6 +404,8 @@ const FIELDS: readonly RentalFormField[] = [
   "returnStation",
   "pickupLocal",
   "returnLocal",
+  "actualPickupLocal",
+  "actualReturnLocal",
   "price",
   "distanceKm",
   "odometerOutKm",

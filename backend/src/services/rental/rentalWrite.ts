@@ -2,7 +2,8 @@ import { AppError } from "../../middleware/errorHandler";
 import type { UpdateRentalInput } from "../../schemas/rental";
 import { deriveRentalStatus } from "../../shared/statusDerivation";
 import { LocalTimeNonexistentError } from "../../shared/time/errors";
-import { toInstant, toLocal, type Fold } from "../../shared/time/instant";
+import { localDay, toInstant, toLocal, type Fold } from "../../shared/time/instant";
+import { fromDbDate, toDbDate } from "../../shared/time/localDate";
 import { now as clockNow } from "../../shared/time/clock";
 import type { TimePrecision } from "../../shared/time/wire";
 import {
@@ -41,6 +42,9 @@ export interface RentalState {
   returnPrecision: string;
   actualPickupTime: Date | null;
   actualReturnTime: Date | null;
+  /** minute | day; null without an actual time (a legacy row reads as minute). */
+  actualPickupPrecision: string | null;
+  actualReturnPrecision: string | null;
   status: string;
 }
 
@@ -114,17 +118,24 @@ export function mergeRental(
     );
   }
 
-  const actualPickupTime = actualOf(
-    existing?.actualPickupTime ?? null,
+  const actualPickup = actualOf(
+    existing && { utc: existing.actualPickupTime, precision: existing.actualPickupPrecision },
     input.actualPickupLocal,
+    input.actualPickupFold,
     pickup,
     "actualPickupLocal"
   );
-  const actualReturnTime = actualOf(
-    existing?.actualReturnTime ?? null,
+  const actualReturn = actualOf(
+    existing && { utc: existing.actualReturnTime, precision: existing.actualReturnPrecision },
     input.actualReturnLocal,
+    input.actualReturnFold,
     ret,
     "actualReturnLocal"
+  );
+  assertActualOrder(
+    actualPickup && { ...actualPickup, zone: pickup.timezone },
+    actualReturn && { ...actualReturn, zone: ret.timezone },
+    input
   );
 
   const requested = input.status ?? existing?.status ?? "scheduled";
@@ -142,8 +153,10 @@ export function mergeRental(
     returnTime: returnAt.utc,
     pickupPrecision: pickupAt.precision,
     returnPrecision: returnAt.precision,
-    actualPickupTime,
-    actualReturnTime,
+    actualPickupTime: actualPickup?.utc ?? null,
+    actualReturnTime: actualReturn?.utc ?? null,
+    actualPickupPrecision: actualPickup ? actualPickup.precision : null,
+    actualReturnPrecision: actualReturn ? actualReturn.precision : null,
     status,
   };
 }
@@ -179,15 +192,67 @@ function timeOf(
   };
 }
 
+interface ActualEnd {
+  utc: Date;
+  precision: string;
+}
+
+/**
+ * An actual hand-over after the write: absent keeps what is stored (with its
+ * precision — a legacy row without one reads as minute), null clears it, a
+ * wall clock is read on the station's clock with ITS fold — the same rule as
+ * the booked ends, so 02:30 on the autumn night is the occurrence the user
+ * chose and not silently the earlier one.
+ */
 function actualOf(
-  stored: Date | null,
+  stored: { utc: Date | null; precision: string | null } | null,
   sent: string | null | undefined,
+  fold: Fold | null | undefined,
   station: ResolvedStation,
   field: TimeField
-): Date | null {
-  if (sent === undefined) return stored;
+): ActualEnd | null {
+  if (sent === undefined) {
+    return stored?.utc ? { utc: stored.utc, precision: stored.precision ?? "minute" } : null;
+  }
   if (sent === null) return null;
-  return sentWallClock(sent, station.timezone, field, null).utc;
+  return sentWallClock(sent, station.timezone, field, fold);
+}
+
+/** The first instant a recorded end can mean: the instant, or its day's start at the station. */
+const earliestOf = (end: ActualEnd): number => end.utc.getTime();
+
+/** The last instant a recorded end can mean: the instant, or the start of the next day there. */
+function latestOf(end: ActualEnd & { zone: string }): number {
+  if (end.precision !== "day") return end.utc.getTime();
+  const next = fromDbDate(new Date(toDbDate(localDay(end.utc, end.zone)).getTime() + 86_400_000));
+  return toInstant(`${next}T00:00`, end.zone, { origin: "machine" }).utc.getTime();
+}
+
+/**
+ * Refuse an actual return before the actual pickup — compared as INSTANTS,
+ * since a one-way rental's two stations may keep different clocks. A day-only
+ * end stands for its whole day at its station, so a return recorded only as
+ * the pickup's own day is never refused. 400
+ * `RENTAL_ACTUAL_RETURN_BEFORE_PICKUP`, `field` = the end this write moved
+ * (the return when both or neither moved — the end a reader fixes first).
+ */
+function assertActualOrder(
+  pickup: (ActualEnd & { zone: string }) | null,
+  ret: (ActualEnd & { zone: string }) | null,
+  input: UpdateRentalInput
+): void {
+  if (!pickup || !ret) return;
+  if (latestOf(ret) >= earliestOf(pickup)) return;
+  const field =
+    input.actualPickupLocal !== undefined && input.actualReturnLocal === undefined
+      ? "actualPickupLocal"
+      : "actualReturnLocal";
+  throw new AppError(
+    "the actual return must not precede the actual pickup",
+    400,
+    "RENTAL_ACTUAL_RETURN_BEFORE_PICKUP",
+    field
+  );
 }
 
 /** One-way: the stations differ — by airport when both are airports, else by more than 1 km (§3.1). */

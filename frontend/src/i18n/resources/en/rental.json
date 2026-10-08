@@ -152,7 +152,9 @@
       "roadtripNotFound": "This roadtrip was not found.",
       "invalid": "A value was not accepted. Please check the form.",
       "nonexistentTime": "This time does not exist at the station (clock change).",
-      "unknownBooking": "There is no rental with this booking number."
+      "unknownBooking": "There is no rental with this booking number.",
+      "timeShape": "Please enter a full date and time – or choose \"date only\".",
+      "actualReturnBeforePickup": "The actual return is before the actual pickup."
     }
   },
   "detail": {

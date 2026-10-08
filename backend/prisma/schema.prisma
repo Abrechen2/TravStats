@@ -3743,8 +3743,12 @@ model RentalBooking {
   returnPrecision String   @default("minute") @map("return_precision")
 
   /// What happened at the counter, from an agreement/invoice or typed; null = nobody recorded it.
-  actualPickupTime DateTime? @map("actual_pickup_time")
-  actualReturnTime DateTime? @map("actual_return_time")
+  actualPickupTime      DateTime? @map("actual_pickup_time")
+  actualReturnTime      DateTime? @map("actual_return_time")
+  /// minute | day — how much of the actual hand-over is known; null with no
+  /// actual time. A row written before this column existed reads as minute.
+  actualPickupPrecision String?   @map("actual_pickup_precision")
+  actualReturnPrecision String?   @map("actual_return_precision")
 
   /// The class as printed ("Compact", "Gruppe C").
   vehicleClass   String? @map("vehicle_class")

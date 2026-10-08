@@ -92,6 +92,8 @@ export function RentalStationPicker({
         lat: selection.lat,
         lon: selection.lon,
         country: selection.countryCode ? selection.countryCode.toUpperCase() : null,
+        // A geocoder hit carries no zone; the server derives it on save.
+        timezone: null,
       });
     },
     [onChange, value.name]

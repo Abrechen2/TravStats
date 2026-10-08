@@ -8,7 +8,11 @@ import { createRentalSchema } from "./rental";
  * server decides create vs update by the booking number, never the client.
  */
 
-const LOCAL = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+/**
+ * A wall clock, or only its day: an invoice that prints the return date
+ * without an hour is precision `day`, not a midnight nobody stated.
+ */
+const LOCAL = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/;
 const km = z.number().int().min(0).max(1_000_000).nullable();
 const number = z.string().trim().min(1).max(60);
 

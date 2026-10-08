@@ -168,6 +168,16 @@ describe("POST /api/v1/rentals/import", () => {
     expect(res.body.data.times.actualReturn.local).toBe("2026-07-08T18:10:00");
   });
 
+  it("keeps an invoice's return printed without an hour a day, not a midnight", async () => {
+    await post(confirmation());
+    const res = await post(invoice({ actualPickupLocal: null, actualReturnLocal: "2026-07-08" }));
+    expect(res.status).toBe(200);
+    expect(res.body.data.times.actualReturn).toMatchObject({
+      local: "2026-07-08T00:00:00",
+      precision: "day",
+    });
+  });
+
   it("matches a later invoice by the agreement number the first one stored", async () => {
     await post(confirmation());
     await post(invoice());

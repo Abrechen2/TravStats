@@ -134,6 +134,11 @@ export interface RentalInput {
   returnLocal: string;
   pickupFold?: "earlier" | "later" | null;
   returnFold?: "earlier" | "later" | null;
+  /** The actual hand-overs, a wall clock or a day on each station's clock; null clears one. */
+  actualPickupLocal?: string | null;
+  actualReturnLocal?: string | null;
+  actualPickupFold?: "earlier" | "later" | null;
+  actualReturnFold?: "earlier" | "later" | null;
   vehicleClass?: string | null;
   acrissCode?: string | null;
   vehicleExample?: string | null;
