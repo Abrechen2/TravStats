@@ -277,4 +277,21 @@ describe("LodgingStaysView", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: "common:buttons.delete" }));
     await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(2));
   });
+
+  it("says when the trip list could not load, and loads it again on request", async () => {
+    getTripsMock.mockRejectedValueOnce(new Error("503"));
+    renderView();
+    expect(await screen.findByText("lodging:stayView.filter.tripsFailed")).toBeInTheDocument();
+    // The list itself is unaffected.
+    expect(await screen.findByTestId("stay-view-row-s-june")).toBeInTheDocument();
+
+    const alert = screen
+      .getByText("lodging:stayView.filter.tripsFailed")
+      .closest("p") as HTMLElement;
+    await userEvent.click(within(alert).getByRole("button", { name: "common:buttons.retry" }));
+    await waitFor(() =>
+      expect(screen.queryByText("lodging:stayView.filter.tripsFailed")).toBeNull()
+    );
+    expect(getTripsMock).toHaveBeenCalledTimes(2);
+  });
 });

@@ -1,3 +1,4 @@
+import { useId } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { lodgingIssue, LODGING_ISSUE_ICON } from "./lodgingCompleteness";
@@ -28,8 +29,13 @@ export function LodgingStatusTag({
   onRepair?: () => void;
 }): JSX.Element | null {
   const { t } = useTranslation(["lodging"]);
+  const hintId = useId();
   const issue = lodgingIssue(lodging);
   if (!issue) return null;
+  // The explanation was a hover-only `title` (forgejo#249). It is now text a
+  // screen reader gets with the tag (`aria-describedby` / inline), and `title`
+  // stays only as the mouse's extra.
+  const hint = t(`lodging:list.status.${issue}Hint`);
 
   const className =
     "inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-(--bg-elevated) px-2 py-0.5 text-xs text-(--text-muted)";
@@ -47,19 +53,26 @@ export function LodgingStatusTag({
           onRepair();
         }}
         aria-label={t("lodging:repair.openFor", { issue: label })}
-        title={t("lodging:repair.openFor", { issue: label })}
+        aria-describedby={hintId}
+        title={hint}
         className={`${className} underline decoration-dotted underline-offset-2 hover:text-(--text-primary) pointer-coarse:min-h-(--ts-size-touch-min)`}
       >
         <span aria-hidden>{LODGING_ISSUE_ICON[issue]}</span>
         {label}
+        <span id={hintId} className="sr-only">
+          {hint}
+        </span>
       </button>
     );
   }
 
   return (
-    <span className={className} title={t(`lodging:list.status.${issue}Hint`)}>
+    <span className={className} title={hint}>
       <span aria-hidden>{LODGING_ISSUE_ICON[issue]}</span>
       {label}
+      <span id={hintId} className="sr-only">
+        {hint}
+      </span>
     </span>
   );
 }

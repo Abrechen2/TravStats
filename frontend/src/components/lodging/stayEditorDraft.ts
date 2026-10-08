@@ -1,5 +1,6 @@
 import type { BoardType, LodgingCurrency, LodgingStay } from "../../types/lodging";
 import type { LodgingDatePrecision } from "../../shared/lodgingTiming";
+import { stayCheckIn, stayCheckOut } from "../../lib/entityTimes";
 
 /**
  * The stay editor's draft as plain data - what the dirty guard compares and
@@ -54,8 +55,10 @@ export function stayDraftFields(
   defaultCurrency: LodgingCurrency
 ): StayDraftFields {
   return {
-    checkIn: toDateInput(stay?.checkIn),
-    checkOut: toDateInput(stay?.checkOut),
+    // The hotel's own days (`times`, ADR 0002) - the same ones the overlap rule
+    // and the lists read - and the legacy anchor only where `times` is absent.
+    checkIn: (stay && stayCheckIn(stay)?.date) || toDateInput(stay?.checkIn),
+    checkOut: (stay && stayCheckOut(stay)?.date) || toDateInput(stay?.checkOut),
     checkInTime: stay?.checkInTime ?? "",
     checkOutTime: stay?.checkOutTime ?? "",
     datePrecision: stay?.datePrecision ?? "DAY",

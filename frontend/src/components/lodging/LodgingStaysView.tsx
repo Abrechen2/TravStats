@@ -74,6 +74,10 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
   const [to, setTo] = useState<string>("");
   const [tripId, setTripId] = useState<string>("");
   const [trips, setTrips] = useState<Trip[]>([]);
+  // The trip filter has nothing to offer when its list did not load - and
+  // saying nothing would read as "no trips" (forgejo#247).
+  const [tripsFailed, setTripsFailed] = useState<boolean>(false);
+  const [tripsToken, setTripsToken] = useState<number>(0);
   const [editing, setEditing] = useState<LodgingStayListItem | null>(null);
   const [toDelete, setToDelete] = useState<LodgingStayListItem | null>(null);
   const [deleting, setDeleting] = useState<boolean>(false);
@@ -94,16 +98,20 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
     void (async () => {
       try {
         const all = await tripsApi.getAll();
-        if (!cancelled) setTrips(all);
+        if (!cancelled) {
+          setTrips(all);
+          setTripsFailed(false);
+        }
       } catch (err: unknown) {
-        // The trip filter goes quiet; the list itself still works.
+        // The list itself still works; the filter says why it is empty.
         logger.error("LodgingStaysView: failed to load trips", err);
+        if (!cancelled) setTripsFailed(true);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [tripsToken]);
 
   useEffect(() => {
     if (windowInvalid) return;
@@ -263,20 +271,37 @@ export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProp
             error={windowInvalid ? t("lodging:stayView.filter.invalidWindow") : null}
           />
         </div>
-        <FilterField label={t("lodging:stayView.filter.trip")}>
-          <select
-            value={tripId}
-            onChange={(e) => setTripId(e.target.value)}
-            className={INPUT_CLASS}
-          >
-            <option value="">{t("lodging:stayView.filter.allTrips")}</option>
-            {trips.map((trip) => (
-              <option key={trip.id} value={trip.id}>
-                {trip.name}
-              </option>
-            ))}
-          </select>
-        </FilterField>
+        <div>
+          <FilterField label={t("lodging:stayView.filter.trip")}>
+            <select
+              value={tripId}
+              onChange={(e) => setTripId(e.target.value)}
+              className={INPUT_CLASS}
+            >
+              <option value="">{t("lodging:stayView.filter.allTrips")}</option>
+              {trips.map((trip) => (
+                <option key={trip.id} value={trip.id}>
+                  {trip.name}
+                </option>
+              ))}
+            </select>
+          </FilterField>
+          {tripsFailed && (
+            <p
+              role="alert"
+              className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--danger)]"
+            >
+              {t("lodging:stayView.filter.tripsFailed")}
+              <button
+                type="button"
+                onClick={() => setTripsToken((n) => n + 1)}
+                className="rounded-md border border-[var(--danger)]/50 px-2 py-1 pointer-coarse:min-h-(--ts-size-touch-min)"
+              >
+                {t("common:buttons.retry")}
+              </button>
+            </p>
+          )}
+        </div>
         {hasActiveFilter && (
           <div className="flex items-end">
             <button

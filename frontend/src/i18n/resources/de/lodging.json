@@ -651,7 +651,8 @@
       "to": "Bis",
       "trip": "Reise",
       "allTrips": "Alle Reisen",
-      "invalidWindow": "Der Zeitraum endet vor seinem Beginn."
+      "invalidWindow": "Der Zeitraum endet vor seinem Beginn.",
+      "tripsFailed": "Die Reisen konnten nicht geladen werden – der Reisefilter ist deshalb leer."
     },
     "room": "Zimmer {{room}}",
     "reference": "Buchung {{reference}}",

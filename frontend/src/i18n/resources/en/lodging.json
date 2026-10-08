@@ -651,7 +651,8 @@
       "to": "To",
       "trip": "Trip",
       "allTrips": "All trips",
-      "invalidWindow": "The period ends before it begins."
+      "invalidWindow": "The period ends before it begins.",
+      "tripsFailed": "The trips could not be loaded – the trip filter is empty because of that."
     },
     "room": "Room {{room}}",
     "reference": "Booking {{reference}}",
