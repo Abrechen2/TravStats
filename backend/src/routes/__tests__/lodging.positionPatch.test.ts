@@ -158,6 +158,51 @@ describe("PATCH /api/v1/lodging/:id - position only", () => {
       });
     });
 
+    // The first clause of the repair dialog's copy: EMPTY street and city are
+    // filled from the new position.
+    it("fills an empty street and an empty city from the new position", async () => {
+      const bareId = (
+        await prisma.lodging.create({
+          data: {
+            userId,
+            name: "Pension ohne Adresse",
+            type: "guesthouse",
+            country: "Deutschland",
+            notes: "Bei Anna",
+          },
+        })
+      ).id;
+      jest
+        .spyOn(geo, "resolveCoordinates")
+        .mockImplementation(async (input) =>
+          input.lat != null && input.lon != null ? { lat: input.lat, lon: input.lon } : null
+        );
+      const complete = jest
+        .spyOn(geo, "completeAddressFromCoordinates")
+        .mockResolvedValue({ address: "Dorfstrasse 4", city: "Bad Tölz" });
+
+      const res = await request(app)
+        .patch(`/api/v1/lodging/${bareId}`)
+        .set("Cookie", authCookie)
+        .send({ lat: 47.76, lon: 11.56 });
+
+      expect(res.status).toBe(200);
+      // The lookup is handed the EMPTY fields - that is what makes them fillable.
+      expect(complete).toHaveBeenCalledWith(
+        expect.objectContaining({ lat: 47.76, lon: 11.56, address: null, city: null })
+      );
+      expect(res.body.data).toMatchObject({
+        address: "Dorfstrasse 4",
+        city: "Bad Tölz",
+        country: "Deutschland",
+        notes: "Bei Anna",
+        lat: 47.76,
+        lon: 11.56,
+      });
+      const stored = await prisma.lodging.findUniqueOrThrow({ where: { id: bareId } });
+      expect(stored).toMatchObject({ address: "Dorfstrasse 4", city: "Bad Tölz" });
+    });
+
     it("does not touch a country that really is one, even if the pin disagrees", async () => {
       jest
         .spyOn(geo, "resolveCoordinates")
