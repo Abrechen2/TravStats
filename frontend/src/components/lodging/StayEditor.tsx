@@ -53,6 +53,11 @@ interface StayEditorProps {
   /** The house's name - shown under the title so two stays of one house, or the
    *  same editor opened from a list of stays, say which house they belong to. */
   lodgingName?: string;
+  /**
+   * One muted line above the form - used by "stay here again" to say what was
+   * carried over from the house and what is left to the user (forgejo#227).
+   */
+  introText?: string;
   /** The hotel's chain, if any - used to derive the covering loyalty card. */
   lodgingChainId?: number | null;
   /**
@@ -119,6 +124,7 @@ export function StayEditor({
   mode,
   lodgingId,
   lodgingName,
+  introText,
   lodgingChainId = null,
   lodgingCountryCode = null,
   stay,
@@ -522,6 +528,11 @@ export function StayEditor({
       }
     >
       <div ref={failure.rootRef}>
+        {introText && (
+          <p data-testid="stay-editor-intro" className="mb-3 text-sm text-[var(--text-muted)]">
+            {introText}
+          </p>
+        )}
         <StayEditorDatesSection
           fid={fid}
           t={t}

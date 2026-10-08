@@ -671,5 +671,9 @@
     "unchecked": "Überschneidungen konnten nicht geprüft werden.",
     "saveAnyway": "Trotzdem speichern",
     "retry": "Erneut prüfen"
+  },
+  "restay": {
+    "action": "Wieder hier übernachten",
+    "intro": "Ein neuer Aufenthalt in „{{name}}“. Anreise, Abreise, Zimmer, Buchungsnummer und Preis trägst du neu ein; der frühere Aufenthalt bleibt unverändert."
   }
 }

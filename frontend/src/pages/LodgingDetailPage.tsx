@@ -84,6 +84,9 @@ export default function LodgingDetailPage(): JSX.Element {
   const [deleting, setDeleting] = useState<boolean>(false);
   // "new" = create mode, a LodgingStay = edit mode for that stay, null = closed.
   const [editingStay, setEditingStay] = useState<LodgingStay | "new" | null>(null);
+  // The new stay was opened by "Wieder hier übernachten" (forgejo#227): same
+  // empty editor, plus a line saying what was carried over from the house.
+  const [restaying, setRestaying] = useState<boolean>(false);
   // The stay whose deletion has been ASKED about but not yet answered — null
   // while no question is open. Holding the stay itself (not just its id) is
   // what lets the confirmation name the dates it is about.
@@ -388,6 +391,18 @@ export default function LodgingDetailPage(): JSX.Element {
         actions={
           <>
             <LodgingEnrichButton lodgingId={lodging.id} onDone={() => setReloadKey((k) => k + 1)} />
+            {/* The quickest way to the next visit (forgejo#227): a new stay at
+                THIS house, nothing carried over but the house itself - dates,
+                room, booking reference and price are the new visit's own. */}
+            <Button
+              data-testid="lodging-restay-button"
+              onClick={() => {
+                setRestaying(true);
+                setEditingStay("new");
+              }}
+            >
+              {t("lodging:restay.action")}
+            </Button>
             <Button onClick={() => setEditing(true)}>{t("common:buttons.edit")}</Button>
             <Button
               variant="danger"
@@ -574,6 +589,12 @@ export default function LodgingDetailPage(): JSX.Element {
         <StayEditor
           mode={editingStay === "new" ? "create" : "edit"}
           lodgingId={lodging.id}
+          lodgingName={lodging.name}
+          introText={
+            restaying && editingStay === "new"
+              ? t("lodging:restay.intro", { name: lodging.name })
+              : undefined
+          }
           lodgingChainId={lodging.chainId}
           lodgingCountryCode={lodging.isoCountryCode}
           stay={editingStay === "new" ? null : editingStay}
@@ -581,9 +602,13 @@ export default function LodgingDetailPage(): JSX.Element {
           onRequestDelete={
             editingStay === "new" ? undefined : () => setConfirmingStayDelete(editingStay)
           }
-          onClose={() => setEditingStay(null)}
+          onClose={() => {
+            setEditingStay(null);
+            setRestaying(false);
+          }}
           onSaved={async (savedStay) => {
             setEditingStay(null);
+            setRestaying(false);
             // A stay write doesn't return the parent lodging's recomputed
             // aggregates (nights/stayCount/overallRating/totalSpendBase) —
             // those are only ever attached server-side via

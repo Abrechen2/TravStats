@@ -28,6 +28,7 @@ import { lodgingDeleteMessage } from "../lib/lodgingDeleteMessage";
 import { useLodgingDeleteFacts } from "../hooks/useLodgingDeleteFacts";
 import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
+import { StayEditor } from "../components/lodging/StayEditor";
 import { LodgingStaysView } from "../components/lodging/LodgingStaysView";
 import { LodgingViewToggle, type LodgingView } from "../components/lodging/LodgingViewToggle";
 import ConfirmModal from "../components/Training/ConfirmModal";
@@ -132,6 +133,9 @@ export default function LodgingListPage(): JSX.Element {
   const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState<boolean>(false);
   const [editing, setEditing] = useState<Lodging | null>(null);
+  // The house a new stay is being started at, from the row's "Wieder hier
+  // übernachten" (forgejo#227).
+  const [restayAt, setRestayAt] = useState<Lodging | null>(null);
   const [toDelete, setToDelete] = useState<Lodging | null>(null);
   const [deleting, setDeleting] = useState<boolean>(false);
   // The photographs and kept originals that go with the house, and the trips
@@ -623,6 +627,7 @@ export default function LodgingListPage(): JSX.Element {
                           onOpen={() => navigate(`/lodging/${l.id}`)}
                           onEdit={() => setEditing(l)}
                           onDelete={() => setToDelete(l)}
+                          onRestay={() => setRestayAt(l)}
                         />
                       ))}
                     </Table>
@@ -675,6 +680,26 @@ export default function LodgingListPage(): JSX.Element {
             onClose={() => setEditing(null)}
             onSaved={async () => {
               setEditing(null);
+              await reloadAll();
+            }}
+          />
+        )}
+
+        {restayAt && (
+          // Nothing is carried over but the house: dates, room, booking
+          // reference and price are the new visit's own, and the overlap
+          // notice (forgejo#229) catches a booking that is already there.
+          <StayEditor
+            mode="create"
+            lodgingId={restayAt.id}
+            lodgingName={restayAt.name}
+            lodgingChainId={restayAt.chainId}
+            lodgingCountryCode={restayAt.isoCountryCode}
+            introText={t("lodging:restay.intro", { name: restayAt.name })}
+            afterSaveFailedKey="common:form.savedButRefreshFailed"
+            onClose={() => setRestayAt(null)}
+            onSaved={async () => {
+              setRestayAt(null);
               await reloadAll();
             }}
           />

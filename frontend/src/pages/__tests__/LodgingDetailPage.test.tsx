@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { Lodging, LodgingMembership, LodgingStay } from "../../types/lodging";
@@ -9,6 +9,8 @@ const deleteLodgingMock = vi.fn();
 const deleteStayMock = vi.fn();
 const listMembershipsMock = vi.fn();
 const tripsGetAllMock = vi.fn();
+const createStayMock = vi.fn();
+const listStayPageMock = vi.fn();
 
 // The documents section fetches its entry's kept originals on mount. It has
 // its own suite, and `__tests__/documentsMountPoints.test.tsx` checks that
@@ -47,10 +49,10 @@ vi.mock("../../lib/api/lodging", () => ({
   // The stay editor is opened by one test below (the second entry point into
   // the deletion). It imports these three from the same module; a missing
   // export is `undefined is not a function` the moment the FX preview runs.
-  createStay: () => Promise.resolve(null),
+  createStay: (...args: unknown[]) => createStayMock(...args),
   updateStay: () => Promise.resolve(null),
   getFxPreview: () => Promise.resolve(null),
-  listStayPage: () => Promise.resolve({ rows: [], total: 0 }),
+  listStayPage: (...args: unknown[]) => listStayPageMock(...args),
 }));
 
 // Same reason as in StayEditor's own suite: the currency picker asks the server
@@ -181,6 +183,10 @@ describe("LodgingDetailPage", () => {
     tripsGetAllMock.mockReset();
     listForEntryMock.mockReset();
     listForEntryMock.mockResolvedValue([]);
+    createStayMock.mockReset();
+    createStayMock.mockResolvedValue(null);
+    listStayPageMock.mockReset();
+    listStayPageMock.mockResolvedValue({ rows: [], total: 0 });
     listMembershipsMock.mockResolvedValue([]);
     tripsGetAllMock.mockResolvedValue([]);
     useToastStore.setState({ toasts: [] });
@@ -793,6 +799,82 @@ describe("LodgingDetailPage", () => {
     });
     await waitFor(() => {
       expect(screen.queryByTestId("stay-editor-delete")).not.toBeInTheDocument();
+    });
+  });
+
+  // forgejo#227: the next visit to a known house, started where the house is.
+  describe("stay here again", () => {
+    const enterDates = async (from: string, to: string): Promise<void> => {
+      fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
+        target: { value: from },
+      });
+      fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOut\b/), {
+        target: { value: to },
+      });
+    };
+
+    it("opens a NEW stay at this house with nothing carried over but the house", async () => {
+      getLodgingMock.mockResolvedValue(makeLodging({}, [baseStay]));
+      const user = userEvent.setup();
+      renderDetailPage();
+      await screen.findByTestId("stay-card-stay-1");
+
+      await user.click(screen.getByTestId("lodging-restay-button"));
+
+      // The new visit: the house is named, the line says what is left to enter,
+      // and the dates, room, booking reference and price are empty - the earlier
+      // stay's values (12 May, room 21, ENG-55021, 840 CHF) are NOT prefilled.
+      expect(await screen.findByTestId("stay-editor-house")).toHaveTextContent(
+        "Engimatt City & Garden"
+      );
+      expect(screen.getByTestId("stay-editor-intro")).toHaveTextContent("lodging:restay.intro");
+      expect(screen.getByLabelText(/^lodging:field\.checkIn\b/)).toHaveValue("");
+      expect(screen.getByLabelText(/^lodging:field\.checkOut\b/)).toHaveValue("");
+      expect(screen.getByLabelText("lodging:field.room")).toHaveValue("");
+      expect(screen.getByLabelText("lodging:field.bookingReference")).toHaveValue("");
+      expect(screen.getByLabelText("lodging:field.totalPrice")).toHaveValue(null);
+      // A create form has nothing to delete, and the earlier stay is untouched.
+      expect(screen.queryByTestId("stay-editor-delete")).not.toBeInTheDocument();
+      expect(screen.getByTestId("stay-card-stay-1")).toBeInTheDocument();
+    });
+
+    it("warns when the new booking repeats a stay this house already has, and lets the user go on", async () => {
+      getLodgingMock.mockResolvedValue(makeLodging({}, [baseStay]));
+      listStayPageMock.mockResolvedValue({
+        rows: [
+          {
+            ...baseStay,
+            lodging: {
+              id: "lodging-1",
+              name: "Engimatt City & Garden",
+              type: "hotel",
+              city: "Zürich",
+              country: "CH",
+              chainId: null,
+              isoCountryCode: null,
+            },
+            trip: null,
+          },
+        ],
+        total: 1,
+      });
+      createStayMock.mockResolvedValue({ ...baseStay, id: "stay-2" });
+      const user = userEvent.setup();
+      renderDetailPage();
+      await screen.findByTestId("stay-card-stay-1");
+
+      await user.click(screen.getByTestId("lodging-restay-button"));
+      await screen.findByTestId("stay-editor-save");
+      await enterDates("2024-05-12", "2024-05-14");
+      await user.click(screen.getByTestId("stay-editor-save"));
+
+      const notice = await screen.findByTestId("stay-conflict-notice");
+      expect(notice).toHaveTextContent("lodging:conflict.titleDuplicate");
+      expect(createStayMock).not.toHaveBeenCalled();
+
+      await user.click(screen.getByTestId("stay-conflict-proceed"));
+      await waitFor(() => expect(createStayMock).toHaveBeenCalledTimes(1));
+      expect(createStayMock.mock.calls[0][0]).toBe("lodging-1");
     });
   });
 

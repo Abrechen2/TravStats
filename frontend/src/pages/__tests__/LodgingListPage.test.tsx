@@ -87,6 +87,15 @@ vi.mock("../../components/lodging/LodgingFormModal", () => ({
   LodgingFormModal: () => null,
 }));
 
+// The stay editor has its own suites; here it only has to arrive for the right house.
+vi.mock("../../components/lodging/StayEditor", () => ({
+  StayEditor: (props: { mode: string; lodgingId: string; lodgingName?: string }) => (
+    <div data-testid="stay-editor-stub">
+      {props.mode}|{props.lodgingId}|{props.lodgingName}
+    </div>
+  ),
+}));
+
 // The import log used to render (and fetch) on this page; it now lives in
 // the central import hub. The stub stays so this file never hits the real
 // (unmocked) network through any remaining lodging-import client. The log's
@@ -917,6 +926,21 @@ describe("LodgingListPage", () => {
       expect(dialog).toHaveTextContent("lodging:detail.deleteConfirmMessage");
       expect(dialog).not.toHaveTextContent("documents:deleteCascadeNote");
       expect(dialog).not.toHaveTextContent("lodging:detail.deletePhotosNote");
+    });
+
+    // forgejo#227: "Wieder hier übernachten" from the row - a new stay at that
+    // house, without opening the house and without walking to its page first.
+    it("starts a new stay at the row's house, without opening the house", async () => {
+      mockRows([makeLodging({ id: "l1", name: "Hotel Adlon" })]);
+      renderListPage();
+
+      await screen.findByText("Hotel Adlon");
+      await userEvent.click(screen.getByTestId("lodging-restay-l1"));
+
+      expect(await screen.findByTestId("stay-editor-stub")).toHaveTextContent(
+        "create|l1|Hotel Adlon"
+      );
+      expect(navigateMock).not.toHaveBeenCalled();
     });
 
     it("does not open the lodging when an action is clicked", async () => {

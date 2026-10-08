@@ -671,5 +671,9 @@
     "unchecked": "Overlaps could not be checked.",
     "saveAnyway": "Save anyway",
     "retry": "Check again"
+  },
+  "restay": {
+    "action": "Stay here again",
+    "intro": "A new stay at “{{name}}”. Enter check-in, check-out, room, booking reference and price afresh; the earlier stay stays as it is."
   }
 }
