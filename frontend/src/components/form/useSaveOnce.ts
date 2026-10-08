@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { logger } from "../../lib/logger";
 
 /**
@@ -69,6 +69,13 @@ export function useSaveOnce<T>(
   const [afterSaveFailed, setAfterSaveFailed] = useState(false);
   const inFlight = useRef(false);
   const done = useRef(false);
+  /**
+   * Which opening a save belongs to. A reset starts a new generation; a save
+   * that settles in a LATER generation still finishes (its record is stored,
+   * its `onSaved` still runs) but no longer marks anything as saved — the
+   * dialog it was for has been closed and opened afresh since.
+   */
+  const generation = useRef(0);
 
   const save = useCallback(
     async (
@@ -77,6 +84,8 @@ export function useSaveOnce<T>(
     ): Promise<SaveOutcome<T>> => {
       if (inFlight.current || done.current) return { status: "skipped" };
       inFlight.current = true;
+      const ownGeneration = generation.current;
+      const current = (): boolean => generation.current === ownGeneration;
       setSaving(true);
       let value: T;
       try {
@@ -86,15 +95,17 @@ export function useSaveOnce<T>(
         setSaving(false);
         return { status: "failed", error };
       }
-      done.current = true;
-      setSaved(value);
+      if (current()) {
+        done.current = true;
+        setSaved(value);
+      }
       try {
         await onSaved?.(value);
         return { status: "saved", value };
       } catch (error: unknown) {
         // Stored, so not a refusal — but never silent either.
         logger.error("useSaveOnce: saved, but the follow-up failed", error);
-        setAfterSaveFailed(true);
+        if (current()) setAfterSaveFailed(true);
         return { status: "savedButAfterFailed", value, error };
       } finally {
         inFlight.current = false;
@@ -104,24 +115,35 @@ export function useSaveOnce<T>(
     []
   );
 
+  /**
+   * Forget the earlier success. A save still RUNNING is not forgotten: its
+   * in-flight flag (and `saving`) stay until it settles, so a click meanwhile
+   * is skipped with the button visibly busy rather than sending a second
+   * request beside the first.
+   */
   const reset = useCallback((): void => {
-    inFlight.current = false;
+    generation.current += 1;
     done.current = false;
-    setSaving(false);
     setSaved(null);
     setAfterSaveFailed(false);
   }, []);
 
-  // A dialog that stays mounted while closed starts over when it re-opens.
-  // Without this the "saved once" memory outlived the dialog: the SECOND
-  // "Neue Tour" of a session was skipped without a word (review, fix round 1).
-  // A save still running when the dialog closes is not interrupted.
+  // A dialog that stays mounted while closed starts over when it re-opens —
+  // in the render that opens it (React's "adjust state when a prop changes"),
+  // so its first paint is already clean. Without this the "saved once"
+  // memory outlived the dialog: the SECOND "Neue Tour" of a session was
+  // skipped without a word (review, fix rounds 1 and 2).
   const open = options.open ?? true;
-  const wasOpen = useRef(open);
-  useEffect(() => {
-    if (open && !wasOpen.current && !inFlight.current) reset();
-    wasOpen.current = open;
-  }, [open, reset]);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      generation.current += 1;
+      done.current = false;
+      setSaved(null);
+      setAfterSaveFailed(false);
+    }
+  }
 
   const afterSaveFailedKey = options.afterSaveFailedKey ?? "common:form.savedButRefreshFailed";
 

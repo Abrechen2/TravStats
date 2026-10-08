@@ -232,6 +232,22 @@ describe("useDirtyGuard", () => {
     expect(result.current.dirty).toBe(true);
   });
 
+  // Fix round 2: every non-plain object normalised to `{}`, so two different
+  // dates compared equal and a changed date picker never counted.
+  it("compares dates by their instant, and keeps arrays as arrays", () => {
+    const { result, rerender } = renderHook(
+      ({ draft }) => useDirtyGuard({ day: new Date("2026-10-08T00:00:00Z"), legs: [1, 2] }, draft),
+      {
+        initialProps: { draft: { day: new Date("2026-10-08T00:00:00Z"), legs: [1, 2] } },
+      }
+    );
+    expect(result.current.dirty).toBe(false);
+    rerender({ draft: { day: new Date("2026-10-09T00:00:00Z"), legs: [1, 2] } });
+    expect(result.current.dirty).toBe(true);
+    rerender({ draft: { day: new Date("2026-10-08T00:00:00Z"), legs: [2, 1] } });
+    expect(result.current.dirty).toBe(true);
+  });
+
   it("still sees a real change inside an array or a nested object", () => {
     const { result } = renderHook(() =>
       useDirtyGuard({ tags: ["a"], meta: { n: 1 } }, { tags: ["a", "b"], meta: { n: 1 } })

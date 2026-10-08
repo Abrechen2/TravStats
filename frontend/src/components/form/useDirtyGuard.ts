@@ -70,7 +70,8 @@ export function useDirtyGuard(
  * So: object keys are sorted, and `undefined`, `null` and `""` are one EMPTY,
  * which also equals an absent key (empty members are dropped). For a form the
  * three are the same answer — "nothing entered" — and the save paths already
- * send them alike. `0` and `false` are values, not empty.
+ * send them alike. `0` and `false` are values, not empty. A `Date` compares as
+ * its ISO instant, and arrays keep their order.
  */
 export function stableSnapshot(value: unknown): string {
   return JSON.stringify(normalise(value)) ?? "";
@@ -82,6 +83,12 @@ function isEmpty(value: unknown): boolean {
 
 function normalise(value: unknown): unknown {
   if (isEmpty(value)) return null;
+  // A Date has no own enumerable keys: as a plain object every date became
+  // `{}` and two different days compared equal (fix round 2). Its instant is
+  // its value; an invalid date is its own value too.
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? "Invalid Date" : value.toISOString();
+  }
   if (Array.isArray(value)) return value.map(normalise);
   if (typeof value === "object") {
     const entries = Object.entries(value as Record<string, unknown>)
