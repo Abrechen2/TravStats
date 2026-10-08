@@ -101,16 +101,19 @@ export function StayConflictNotice({
             ? t("lodging:conflict.saveAnyway")
             : t("lodging:conflict.proceed")}
         </button>
-        {notice.unchecked ? (
+        {/* "Erneut prüfen" for a lookup that failed OR could not compare everything. */}
+        {(notice.unchecked || notice.incomplete) && (
           <button
             type="button"
+            data-testid="stay-conflict-retry"
             onClick={onRetry}
             disabled={checking}
             className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-sm disabled:opacity-50 pointer-coarse:min-h-(--ts-size-touch-min)"
           >
             {t("lodging:conflict.retry")}
           </button>
-        ) : (
+        )}
+        {!notice.unchecked && (
           <button
             type="button"
             onClick={onChangeDates}

@@ -79,8 +79,10 @@ export function useStayConflicts({
       const days = exactDays(span);
       // Cancelled, undated or month/year: it names no days, so it can collide with nothing.
       if (days === null) return "clear";
-      if (verdict?.key === dateKey && verdict.conflicts !== null) {
-        return verdict.conflicts.length > 0 || verdict.incomplete ? "ask" : "clear";
+      // A complete verdict for these dates is reused. A failed or INCOMPLETE one
+      // is not: pressing "Erneut prüfen" must look again.
+      if (verdict?.key === dateKey && verdict.conflicts !== null && !verdict.incomplete) {
+        return verdict.conflicts.length > 0 ? "ask" : "clear";
       }
       // Two presses of Save in one breath share one lookup: the second must
       // wait for the first's answer, not start another.

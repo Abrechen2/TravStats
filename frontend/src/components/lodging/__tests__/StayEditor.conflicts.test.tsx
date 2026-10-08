@@ -428,5 +428,45 @@ describe("StayEditor - the overlap notice", () => {
       await userEvent.click(screen.getByTestId("stay-conflict-proceed"));
       await waitFor(() => expect(createStay).toHaveBeenCalledTimes(1));
     });
+
+    it("offers 'Erneut prüfen' on the not-fully-checked notice, and a complete second look clears it", async () => {
+      vi.mocked(listStayPage)
+        .mockResolvedValueOnce({ rows: filler(2, 0), total: 10 })
+        .mockResolvedValueOnce({ rows: [], total: 10 })
+        // The retry: everything is there this time.
+        .mockResolvedValueOnce({ rows: filler(2, 0), total: 2 });
+      await renderEditor();
+      typeDates("2026-07-10", "2026-07-14");
+      await userEvent.click(screen.getByTestId("stay-editor-save"));
+      await screen.findByTestId("stay-conflict-notice");
+
+      await userEvent.click(screen.getByTestId("stay-conflict-retry"));
+      await waitFor(() => expect(createStay).toHaveBeenCalledTimes(1));
+      expect(listStayPage).toHaveBeenCalledTimes(3);
+    });
+
+    it("a notice that lists collisions AND is incomplete keeps both the retry and 'Termine ändern'", async () => {
+      vi.mocked(listStayPage)
+        .mockResolvedValueOnce({
+          rows: [
+            storedStay({
+              id: "hit",
+              checkIn: "2026-07-12T00:00:00.000Z",
+              checkOut: "2026-07-16T00:00:00.000Z",
+            }),
+          ],
+          total: 10,
+        })
+        .mockResolvedValueOnce({ rows: [], total: 10 });
+      await renderEditor();
+      typeDates("2026-07-10", "2026-07-14");
+      await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+      await screen.findByTestId("stay-conflict-hit");
+      expect(screen.getByTestId("stay-conflict-retry")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "lodging:conflict.changeDates" })
+      ).toBeInTheDocument();
+    });
   });
 });
