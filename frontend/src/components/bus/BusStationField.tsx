@@ -50,15 +50,20 @@ export function BusStationField({
 
   const handlePick = useCallback(
     (selection: LocationSelection): void => {
+      const moved = selection.lat !== value.lat || selection.lon !== value.lon;
+      const pickedCountry = selection.countryCode ? selection.countryCode.toUpperCase() : null;
       onChange({
+        // A name is the user's, a country is a fact about the point: when the
+        // point moves and the pick brings no country, the old terminal's
+        // country is not this one's (null, never guessed — spec §3.1).
         name: selection.name ?? value.name,
         address: value.address,
         lat: selection.lat,
         lon: selection.lon,
-        country: selection.countryCode ? selection.countryCode.toUpperCase() : value.country,
+        country: moved ? pickedCountry : (pickedCountry ?? value.country),
       });
     },
-    [onChange, value.name, value.address, value.country]
+    [onChange, value.name, value.address, value.lat, value.lon, value.country]
   );
 
   const position =

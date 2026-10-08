@@ -24,23 +24,33 @@ vi.mock("../../location/LocationInput", () => ({
     label: string;
     onChange: (s: { lat: number; lon: number; name?: string; countryCode?: string }) => void;
   }) => (
-    <button
-      type="button"
-      onClick={() =>
-        onChange(
-          label === "bus:form.departureStation"
-            ? { lat: 37.5048, lon: 127.0046, name: "Seoul Express Bus Terminal", countryCode: "kr" }
-            : {
-                lat: 38.1911,
-                lon: 128.5918,
-                name: "Sokcho Express Bus Terminal",
-                countryCode: "kr",
-              }
-        )
-      }
-    >
-      pick {label}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() =>
+          onChange(
+            label === "bus:form.departureStation"
+              ? {
+                  lat: 37.5048,
+                  lon: 127.0046,
+                  name: "Seoul Express Bus Terminal",
+                  countryCode: "kr",
+                }
+              : {
+                  lat: 38.1911,
+                  lon: 128.5918,
+                  name: "Sokcho Express Bus Terminal",
+                  countryCode: "kr",
+                }
+          )
+        }
+      >
+        pick {label}
+      </button>
+      <button type="button" onClick={() => onChange({ lat: 35.1, lon: 129.0 })}>
+        pick bare {label}
+      </button>
+    </>
   ),
 }));
 
@@ -176,6 +186,29 @@ describe("BusFormModal", () => {
         operator: "Kobus",
         departureLocal: "2026-09-20T09:00",
         arrivalLocal: "2026-09-20T11:20",
+      })
+    );
+  });
+
+  it("re-placing a terminal on a point with no country sends country null, not the old terminal's", async () => {
+    create.mockResolvedValue({ id: "new" });
+    await renderModal(null);
+    pickBothTerminals();
+    fireEvent.click(screen.getByText("pick bare bus:form.departureStation"));
+    typeDeparture("2026-09-20T09:00");
+    fireEvent.click(saveButton());
+
+    await waitFor(() => expect(create).toHaveBeenCalled());
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        departureStation: {
+          name: "Seoul Express Bus Terminal",
+          address: null,
+          lat: 35.1,
+          lon: 129.0,
+          country: null,
+        },
+        arrivalStation: expect.objectContaining({ country: "KR" }),
       })
     );
   });
