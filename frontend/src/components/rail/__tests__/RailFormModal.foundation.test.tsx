@@ -15,26 +15,39 @@ vi.mock("../../../lib/logger", () => ({
 }));
 vi.mock("../../../hooks/useRecentCurrencies", () => ({ useRecentCurrencies: () => [] }));
 vi.mock("../../CompanionPicker", () => ({ default: () => null }));
+// The geocoder field stands in as a pick button, a "refused longitude"
+// button, and the two coordinate inputs a hint item can focus.
 vi.mock("../../location/LocationInput", () => ({
   LocationInput: ({
     label,
+    idPrefix,
     onChange,
+    onValidityChange,
   }: {
     label: string;
+    idPrefix: string;
     onChange: (s: { lat: number; lon: number; name?: string; countryCode?: string }) => void;
+    onValidityChange?: (valid: boolean, field?: "lat" | "lon") => void;
   }) => (
-    <button
-      type="button"
-      onClick={() =>
-        onChange(
-          label === "rail:form.departureStation"
-            ? { lat: 50.1071, lon: 8.6632, name: "Frankfurt (Main) Hbf", countryCode: "de" }
-            : { lat: 48.8768, lon: 2.3591, name: "Paris Est", countryCode: "fr" }
-        )
-      }
-    >
-      pick {label}
-    </button>
+    <div>
+      <button
+        type="button"
+        onClick={() =>
+          onChange(
+            label === "rail:form.departureStation"
+              ? { lat: 50.1071, lon: 8.6632, name: "Frankfurt (Main) Hbf", countryCode: "de" }
+              : { lat: 48.8768, lon: 2.3591, name: "Paris Est", countryCode: "fr" }
+          )
+        }
+      >
+        pick {label}
+      </button>
+      <button type="button" onClick={() => onValidityChange?.(false, "lon")}>
+        bad lon {label}
+      </button>
+      <input id={`${idPrefix}-lat`} aria-label={`lat ${label}`} />
+      <input id={`${idPrefix}-lon`} aria-label={`lon ${label}`} />
+    </div>
   ),
 }));
 
@@ -261,5 +274,78 @@ describe("RailFormModal — shared form blocks", () => {
       expect(field).not.toHaveAttribute("aria-label");
       expect(field.closest("label")).not.toBeNull();
     }
+  });
+
+  // Review minor 5: a refusal naming a plain field is said AT that field.
+  it("shows a refused coach at the coach field and takes the user there", async () => {
+    create.mockRejectedValue({
+      response: { status: 400, data: { code: "RAIL_INVALID_INPUT", field: "coach" } },
+    });
+    await readyForm();
+    fireEvent.click(saveButton());
+    const coach = screen.getByLabelText("rail:form.coach");
+    await waitFor(() => expect(coach).toHaveFocus());
+    expect(coach).toHaveAttribute("aria-invalid", "true");
+    expect(coach).toHaveAccessibleDescription("rail:form.errors.invalidField");
+    expect(document.querySelector("[data-form-error-banner]")).toBeNull();
+  });
+
+  // Review minor 6: a map pick can leave the station's name empty; the hint
+  // then names the name and takes the user to that field, not to the search.
+  it("names a missing station name and takes the user to the name field", async () => {
+    await readyForm();
+    const name = document.getElementById("rail-dep-name") as HTMLInputElement;
+    fireEvent.change(name, { target: { value: "" } });
+    const item = screen.getByRole("button", { name: "rail:form.missing.depName" });
+    fireEvent.click(item);
+    expect(name).toHaveFocus();
+    expect(screen.getByTestId("save-blocked-hint")).not.toHaveTextContent(
+      "rail:form.departureStation"
+    );
+  });
+
+  it("takes the user to the coordinate that was refused", async () => {
+    await readyForm();
+    fireEvent.click(screen.getByText("bad lon rail:form.departureStation"));
+    fireEvent.click(screen.getByRole("button", { name: "rail:form.missing.depCoordinates" }));
+    expect(document.getElementById("rail-dep-lon")).toHaveFocus();
+  });
+
+  // Review minor 7: "save and add a connection" whose list reload fails
+  // still opens the next leg, and says the list is stale.
+  it("moves on to the next leg when the list behind it did not reload, and says so", async () => {
+    create.mockResolvedValue({ journey: makeRailJourney({ id: "leg1" }), geometry: null });
+    const onProgress = vi.fn().mockRejectedValue(new Error("list down"));
+    render(
+      <RailFormModal journey={null} onClose={vi.fn()} onSaved={vi.fn()} onProgress={onProgress} />
+    );
+    await waitFor(() => expect(getAllTrips).toHaveBeenCalled());
+    pickBothViaGeocoder();
+    fireEvent.change(screen.getByLabelText(DEPARTURE_TIME), {
+      target: { value: "2026-07-01T08:15" },
+    });
+    fireEvent.click(screen.getByTestId("rail-save-and-connect"));
+    expect(await screen.findByTestId("rail-connection-banner")).toBeInTheDocument();
+    expect(screen.getByText("common:form.savedButRefreshFailed")).toBeInTheDocument();
+    expect(onProgress).toHaveBeenCalledTimes(1);
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
+  it("repeats 'save and add a connection' when its retry is pressed", async () => {
+    create.mockRejectedValueOnce(NETWORK);
+    create.mockResolvedValueOnce({ journey: makeRailJourney({ id: "leg1" }), geometry: null });
+    const onSaved = vi.fn();
+    render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={onSaved} />);
+    await waitFor(() => expect(getAllTrips).toHaveBeenCalled());
+    pickBothViaGeocoder();
+    fireEvent.change(screen.getByLabelText(DEPARTURE_TIME), {
+      target: { value: "2026-07-01T08:15" },
+    });
+    fireEvent.click(screen.getByTestId("rail-save-and-connect"));
+    const banner = await screen.findByRole("alert");
+    fireEvent.click(within(banner).getByRole("button", { name: "common:buttons.retry" }));
+    expect(await screen.findByTestId("rail-connection-banner")).toBeInTheDocument();
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(create).toHaveBeenCalledTimes(2);
   });
 });

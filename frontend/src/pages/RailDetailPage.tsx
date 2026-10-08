@@ -65,6 +65,19 @@ export default function RailDetailPage(): JSX.Element {
   const [failure, setFailure] = useState<LoadFailure | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [editing, setEditing] = useState<Editing>(null);
+  /**
+   * "Save and add a connection" stored a leg while the dialog stayed open.
+   * The page reads its booking again when the dialog closes — not before:
+   * reloading underneath would unmount the dialog with the next leg in it.
+   */
+  const [legAdded, setLegAdded] = useState(false);
+  const closeEditor = (): void => {
+    setEditing(null);
+    if (legAdded) {
+      setLegAdded(false);
+      setReloadKey((k) => k + 1);
+    }
+  };
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const documentCount = useDocumentCount(
@@ -112,6 +125,7 @@ export default function RailDetailPage(): JSX.Element {
 
   const handleSaved = async (saved: RailJourney): Promise<void> => {
     setEditing(null);
+    setLegAdded(false);
     addToast("success", t("rail:saved"));
     // A new connection is its own page; an edit reloads this one, so the
     // booking's leg list is read again rather than patched by hand. The move
@@ -368,8 +382,9 @@ export default function RailDetailPage(): JSX.Element {
           journey={editing.mode === "edit" ? journey : null}
           initialDraft={editing.mode === "connection" ? connectionDraftFrom(journey) : undefined}
           connectsFrom={editing.mode === "connection" ? journey.id : undefined}
-          onClose={() => setEditing(null)}
+          onClose={closeEditor}
           onSaved={handleSaved}
+          onProgress={() => setLegAdded(true)}
           afterSaveFailedKey="common:form.savedButViewRefreshFailed"
         />
       )}

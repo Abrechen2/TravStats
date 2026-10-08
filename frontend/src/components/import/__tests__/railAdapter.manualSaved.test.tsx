@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import DomainImportPanel from "../DomainImportPanel";
 import { useRailImportAdapter } from "../adapters/railAdapter";
+import { makeRailJourney } from "../../rail/__tests__/railJourneyFixture";
 
 const create = vi.fn();
 vi.mock("../../../lib/api/rail", () => ({
@@ -84,5 +85,28 @@ describe("rail add flow — a failed reload after the create", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "rail:form.save" })).toBeNull()
     );
+  });
+
+  // Review minor 9: a leg stored by "save and add a connection" reloads the
+  // list at once, so cancelling the next leg leaves nothing missing.
+  it("reloads the list after a leg stored by 'save and add a connection', and stays open", async () => {
+    create.mockResolvedValue({ journey: makeRailJourney({ id: "leg1" }), geometry: null });
+    const reload = vi.fn().mockResolvedValue(undefined);
+    render(<Host reload={reload} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "import:route.manual" }));
+    for (const b of await screen.findAllByRole("button", { name: "rail:station.useGeocoder" })) {
+      fireEvent.click(b);
+    }
+    fireEvent.click(screen.getByText("pick rail:form.departureStation"));
+    fireEvent.click(screen.getByText("pick rail:form.arrivalStation"));
+    fireEvent.change(screen.getByLabelText(/^rail:form\.departureTime\s*\*?$/), {
+      target: { value: "2026-07-01T08:15" },
+    });
+    fireEvent.click(screen.getByTestId("rail-save-and-connect"));
+
+    expect(await screen.findByTestId("rail-connection-banner")).toBeInTheDocument();
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(create).toHaveBeenCalledTimes(1);
   });
 });

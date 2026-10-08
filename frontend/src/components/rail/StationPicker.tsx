@@ -15,7 +15,8 @@ interface Props {
   idPrefix: string;
   value: RailStationDraft;
   onChange: (next: RailStationDraft) => void;
-  onValidityChange?: (valid: boolean) => void;
+  /** As `LocationInput` reports it: `field` names the coordinate at fault. */
+  onValidityChange?: (valid: boolean, field?: "lat" | "lon") => void;
   inputClassName: string;
   /**
    * The name a ticket printed, when the picker opens on it (the import
@@ -28,6 +29,8 @@ interface Props {
 }
 
 const MIN_QUERY = 2;
+/** A text-link button a finger can hit on a coarse pointer (forgejo#249). */
+const TOUCH_TEXT_BUTTON = "pointer-coarse:min-h-(--ts-size-touch-min)";
 const DEBOUNCE_MS = 250;
 
 type SearchState =
@@ -137,7 +140,7 @@ export function StationPicker({
         />
         <button
           type="button"
-          className="text-xs text-(--accent) underline"
+          className={`text-xs text-(--accent) underline ${TOUCH_TEXT_BUTTON}`}
           onClick={(): void => switchMode("catalogue")}
         >
           {t("rail:station.backToCatalogue")}
@@ -228,7 +231,7 @@ export function StationPicker({
       ) : null}
       <button
         type="button"
-        className="text-xs text-(--accent) underline"
+        className={`text-xs text-(--accent) underline ${TOUCH_TEXT_BUTTON}`}
         onClick={(): void => switchMode("geocoder")}
       >
         {t("rail:station.useGeocoder")}

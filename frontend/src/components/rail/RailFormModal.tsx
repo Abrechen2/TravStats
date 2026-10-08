@@ -40,10 +40,12 @@ import {
   isStationComplete,
   knownStationZone,
   onwardDraftFrom,
+  railFieldId,
   saveErrorFrom,
   toRailInput,
   withClock,
   type RailFormDraft,
+  type RailFormErrorField,
   type RailSaveError,
 } from "./railFormModel";
 
@@ -69,7 +71,10 @@ interface Props {
 
 const HINT_ID = "rail-form-save-blocked";
 /** The time inputs' ids — `saveErrorFrom` names a refused time by these fields. */
-const TIME_ID = { departureLocal: "rail-departureLocal", arrivalLocal: "rail-arrivalLocal" };
+const TIME_ID = {
+  departureLocal: railFieldId("departureLocal"),
+  arrivalLocal: railFieldId("arrivalLocal"),
+};
 /** A checkbox row a finger can hit on a coarse pointer. */
 const CHECK_ROW = "flex items-center gap-2 text-sm pointer-coarse:min-h-(--ts-size-touch-min)";
 
@@ -121,8 +126,11 @@ export function RailFormModal({
     () => initialDraft ?? draftFrom(initialJourney)
   );
   const [trips, setTrips] = useState<Trip[]>([]);
-  const [depValid, setDepValid] = useState(true);
-  const [arrValid, setArrValid] = useState(true);
+  /** Which typed coordinate of each station `LocationInput` refused, if any. */
+  const [depBad, setDepBad] = useState<"lat" | "lon" | null>(null);
+  const [arrBad, setArrBad] = useState<"lat" | "lon" | null>(null);
+  const depValid = depBad === null;
+  const arrValid = arrBad === null;
   /** The last refusal; shown only while `failure` still holds it (until the next edit). */
   const [refusal, setRefusal] = useState<RailSaveError | null>(null);
   /** Which button the refused save came from, so "Erneut versuchen" repeats it. */
@@ -246,14 +254,24 @@ export function RailFormModal({
   // What keeps both save buttons greyed out, said beside them (forgejo#245);
   // the same conditions as `ready`, one item per gap, each focusing its field.
   const missing: MissingStep[] = [
-    ...(isStationComplete(draft.departure)
+    ...stationGap(
+      draft.departure,
+      "rail-dep",
+      t("rail:form.departureStation"),
+      t("rail:form.missing.depName")
+    ),
+    ...(depBad === null
       ? []
-      : [{ field: "rail-dep-search", label: t("rail:form.departureStation") }]),
-    ...(depValid ? [] : [{ field: "rail-dep-lat", label: t("rail:form.missing.depCoordinates") }]),
-    ...(isStationComplete(draft.arrival)
+      : [{ field: `rail-dep-${depBad}`, label: t("rail:form.missing.depCoordinates") }]),
+    ...stationGap(
+      draft.arrival,
+      "rail-arr",
+      t("rail:form.arrivalStation"),
+      t("rail:form.missing.arrName")
+    ),
+    ...(arrBad === null
       ? []
-      : [{ field: "rail-arr-search", label: t("rail:form.arrivalStation") }]),
-    ...(arrValid ? [] : [{ field: "rail-arr-lat", label: t("rail:form.missing.arrCoordinates") }]),
+      : [{ field: `rail-arr-${arrBad}`, label: t("rail:form.missing.arrCoordinates") }]),
     ...(draft.departureLocal === ""
       ? [{ field: TIME_ID.departureLocal, label: t("rail:form.missing.departureTime") }]
       : []),
@@ -263,11 +281,11 @@ export function RailFormModal({
     shown === null
       ? null
       : t(shown.key, shown.fieldLabelKey ? { field: t(shown.fieldLabelKey) } : undefined);
-  /** A refused time, at its field (forgejo#246). */
-  const timeError = (field: "departureLocal" | "arrivalLocal"): string | null =>
+  /** A refusal naming a plain field, at that field (forgejo#246). */
+  const fieldError = (field: RailFormErrorField): string | null =>
     shown?.field === field ? errorText : null;
-  const depError = timeError("departureLocal");
-  const arrError = timeError("arrivalLocal");
+  const depError = fieldError("departureLocal");
+  const arrError = fieldError("arrivalLocal");
   const bannerText = shown !== null && shown.field === null ? errorText : null;
 
   const previousId = typeof connectsFrom === "string" ? connectsFrom : connectsFrom?.id;
@@ -418,6 +436,8 @@ export function RailFormModal({
             <div>
               <LabelledInput
                 label={t("rail:form.operator")}
+                field="operator"
+                error={fieldError("operator")}
                 placeholder={t("rail:form.operatorPlaceholder")}
                 value={draft.operator}
                 onChange={(e): void => set("operator", e.target.value)}
@@ -431,12 +451,16 @@ export function RailFormModal({
             </div>
             <LabelledInput
               label={t("rail:form.category")}
+              field="trainCategory"
+              error={fieldError("trainCategory")}
               placeholder={t("rail:form.categoryPlaceholder")}
               value={draft.trainCategory}
               onChange={(e): void => set("trainCategory", e.target.value)}
             />
             <LabelledInput
               label={t("rail:form.number")}
+              field="trainNumber"
+              error={fieldError("trainNumber")}
               placeholder={t("rail:form.numberPlaceholder")}
               value={draft.trainNumber}
               onChange={(e): void => set("trainNumber", e.target.value)}
@@ -474,7 +498,7 @@ export function RailFormModal({
             <div className="mt-2 flex gap-2">
               <button
                 type="button"
-                className="rounded-md bg-(--accent) px-3 py-1.5 text-sm font-medium text-(--bg-base) disabled:opacity-50"
+                className="rounded-md bg-(--accent) px-3 py-1.5 text-sm font-medium text-(--bg-base) disabled:opacity-50 pointer-coarse:min-h-(--ts-size-touch-min)"
                 disabled={blocked}
                 aria-describedby={HINT_ID}
                 onClick={(): void => void submit(true)}
@@ -483,7 +507,7 @@ export function RailFormModal({
               </button>
               <button
                 type="button"
-                className="rounded-md border border-border px-3 py-1.5 text-sm"
+                className="rounded-md border border-border px-3 py-1.5 text-sm pointer-coarse:min-h-(--ts-size-touch-min)"
                 onClick={(): void => setOnward(null)}
               >
                 {t("rail:connection.dismissOnward")}
@@ -500,7 +524,7 @@ export function RailFormModal({
               required
               value={draft.departure}
               onChange={(next): void => setStation("departure", next)}
-              onValidityChange={setDepValid}
+              onValidityChange={(valid, field): void => setDepBad(valid ? null : (field ?? "lat"))}
               inputClassName={INPUT_CLASS}
             />
             <StationPicker
@@ -509,7 +533,7 @@ export function RailFormModal({
               required
               value={draft.arrival}
               onChange={(next): void => setStation("arrival", next)}
-              onValidityChange={setArrValid}
+              onValidityChange={(valid, field): void => setArrBad(valid ? null : (field ?? "lat"))}
               inputClassName={INPUT_CLASS}
             />
           </div>
@@ -583,15 +607,21 @@ export function RailFormModal({
               <label className="mt-3 block text-sm">
                 {t("rail:form.delay")}
                 <input
+                  id={railFieldId("delayMinutes")}
                   type="number"
                   className={`mt-1 ${INPUT_CLASS}`}
                   aria-label={t("rail:form.delay")}
                   value={draft.delayMinutes}
                   disabled={anyDayOnly}
-                  aria-describedby={anyDayOnly ? "rail-delay-hint" : undefined}
+                  {...fieldErrorProps(
+                    railFieldId("delayMinutes"),
+                    fieldError("delayMinutes"),
+                    anyDayOnly ? "rail-delay-hint" : undefined
+                  )}
                   onChange={(e): void => set("delayMinutes", e.target.value)}
                 />
               </label>
+              <FieldError id={railFieldId("delayMinutes")} error={fieldError("delayMinutes")} />
               {anyDayOnly && (
                 <p id="rail-delay-hint" className="mt-1 text-xs text-(--text-muted)">
                   {t("rail:form.delayNeedsClock")}
@@ -600,17 +630,18 @@ export function RailFormModal({
             </div>
           </div>
           <p className="mt-2 text-xs text-(--text-muted)">{t("rail:form.timeHint")}</p>
-          <label className="mt-3 block text-sm">
-            {t("rail:form.distance")}
-            <input
+          <div className="mt-3">
+            <LabelledInput
+              label={t("rail:form.distance")}
+              field="distanceKm"
+              error={fieldError("distanceKm")}
               type="number"
               min={0}
               step="0.1"
-              className={`mt-1 ${INPUT_CLASS}`}
               value={draft.distanceKm}
               onChange={(e): void => set("distanceKm", e.target.value)}
             />
-          </label>
+          </div>
           <p className="mt-1 text-xs text-(--text-muted)">{t("rail:form.distanceHint")}</p>
           <label className={`mt-3 ${CHECK_ROW}`}>
             <input
@@ -628,6 +659,7 @@ export function RailFormModal({
           suggestions={suggestions}
           trips={trips}
           pickTrip={pickTrip}
+          errorFor={fieldError}
         />
 
         {!(isStationComplete(draft.departure) && isStationComplete(draft.arrival)) && (
@@ -646,4 +678,22 @@ export function RailFormModal({
       </div>
     </Modal>
   );
+}
+
+/**
+ * What a station still lacks, as a "still missing" item: the whole station
+ * (no position yet — the search), or only its name (a map click or a pasted
+ * coordinate leaves it empty — the name field of the geocoder mode).
+ */
+function stationGap(
+  station: RailStationDraft,
+  idPrefix: string,
+  stationLabel: string,
+  nameLabel: string
+): MissingStep[] {
+  if (isStationComplete(station)) return [];
+  if (station.lat !== null && station.lon !== null && station.name.trim() === "") {
+    return [{ field: `${idPrefix}-name`, label: nameLabel }];
+  }
+  return [{ field: `${idPrefix}-search`, label: stationLabel }];
 }

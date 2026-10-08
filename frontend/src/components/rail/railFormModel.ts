@@ -435,8 +435,32 @@ export function geometryNotice(
   return null;
 }
 
-/** The form fields a refusal can be shown beside. */
-export type RailFormErrorField = "departureLocal" | "arrivalLocal";
+/**
+ * The form fields a refusal can be shown beside — every plain input the
+ * server names (forgejo#246). The stations, the currency, tags and companions
+ * are composite controls; a refusal naming one of them stays in the banner,
+ * which names the field.
+ */
+export const RAIL_FIELD_ERROR_FIELDS = [
+  "departureLocal",
+  "arrivalLocal",
+  "operator",
+  "trainCategory",
+  "trainNumber",
+  "distanceKm",
+  "delayMinutes",
+  "travelClass",
+  "coach",
+  "seat",
+  "bookingReference",
+  "price",
+  "tripId",
+  "notes",
+] as const;
+export type RailFormErrorField = (typeof RAIL_FIELD_ERROR_FIELDS)[number];
+
+/** The DOM id of the input a refusal names. */
+export const railFieldId = (field: RailFormErrorField): string => `rail-${field}`;
 
 /** A refused save as the form shows it: a message key, maybe beside one field. */
 export interface RailSaveError {
@@ -482,6 +506,10 @@ export function saveErrorFrom(err: unknown): RailSaveError {
   const code = typeof data?.code === "string" ? data.code : null;
   const field = typeof data?.field === "string" ? data.field : null;
   const timeField = field && TIME_FIELDS.includes(field) ? (field as RailFormErrorField) : null;
+  const inputField =
+    field && (RAIL_FIELD_ERROR_FIELDS as readonly string[]).includes(field)
+      ? (field as RailFormErrorField)
+      : null;
   switch (code) {
     case "RAIL_ARRIVAL_BEFORE_DEPARTURE":
       return { key: "rail:form.errors.arrivalBeforeDeparture", field: "arrivalLocal" };
@@ -492,7 +520,7 @@ export function saveErrorFrom(err: unknown): RailSaveError {
     case "RAIL_INVALID_INPUT": {
       const fieldLabelKey = field ? FIELD_LABEL_KEYS[field] : undefined;
       return fieldLabelKey
-        ? { key: "rail:form.errors.invalidField", field: timeField, fieldLabelKey }
+        ? { key: "rail:form.errors.invalidField", field: inputField, fieldLabelKey }
         : { key: "rail:form.errors.invalid", field: null };
     }
     default:

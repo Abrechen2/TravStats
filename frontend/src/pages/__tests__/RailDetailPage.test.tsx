@@ -31,10 +31,37 @@ vi.mock("../../components/documents/DocumentsSection", () => ({
 vi.mock("../../components/rail/RailRouteMap", () => ({
   RailRouteMap: () => <div data-testid="map-stub" />,
 }));
+// The editor stands in as buttons for what it reports back to the page.
 vi.mock("../../components/rail/RailFormModal", () => ({
-  RailFormModal: ({ journey }: { journey: { id: string } | null }) => (
-    <div data-testid="rail-editor">{journey?.id ?? "new"}</div>
+  RailFormModal: ({
+    journey,
+    onClose,
+    onSaved,
+    onProgress,
+  }: {
+    journey: { id: string } | null;
+    onClose: () => void;
+    onSaved: (saved: { id: string }) => void;
+    onProgress?: (saved: { id: string }) => void;
+  }) => (
+    <div data-testid="rail-editor">
+      {journey?.id ?? "new"}
+      <button type="button" onClick={() => onProgress?.({ id: "leg-2" })}>
+        editor-progress
+      </button>
+      <button type="button" onClick={onClose}>
+        editor-close
+      </button>
+      <button type="button" onClick={() => onSaved({ id: "leg-new" })}>
+        editor-save-new
+      </button>
+    </div>
   ),
+}));
+const navigateAfterSave = vi.fn();
+vi.mock("../../components/form", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../components/form")>()),
+  navigateAfterSave: (...a: unknown[]) => navigateAfterSave(...a),
 }));
 vi.mock("../../components/common/TripPhotoWindowStrip", () => ({
   default: ({ entry, id }: { entry: string; id: string }) => (
@@ -82,6 +109,7 @@ describe("RailDetailPage", () => {
     getMock.mockReset();
     getConnectionMock.mockReset().mockRejectedValue(new Error("not asked in this test"));
     listForEntry.mockReset().mockResolvedValue([]);
+    navigateAfterSave.mockReset();
   });
 
   it("shows each time on its station's clock, with the zone it was read in", async () => {
@@ -281,6 +309,36 @@ describe("RailDetailPage", () => {
     expect(dialog.textContent).toContain('rail:deleteConfirmNamed {"route":"Frankfurt → Fulda"}');
     expect(dialog.textContent).toContain('rail:deleteSurvivors.trip {\\"name\\":\\"Rhön\\"}');
     expect(dialog.textContent).toContain('rail:deleteSurvivors.otherLegs {\\"count\\":1}');
+  });
+
+  // Review minor 9: a leg stored by "save and add a connection" shows once
+  // the dialog closes, even when the user cancels the next leg.
+  it("reads the booking again when the dialog closes after a leg was added", async () => {
+    await renderPage(detail());
+    fireEvent.click(screen.getByRole("button", { name: "rail:connection.add" }));
+    fireEvent.click(screen.getByText("editor-progress"));
+    expect(getMock).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByText("editor-close"));
+    await waitFor(() => expect(getMock).toHaveBeenCalledTimes(2));
+  });
+
+  it("closes without a reload when nothing was added", async () => {
+    await renderPage(detail());
+    fireEvent.click(screen.getByRole("button", { name: "rail:connection.add" }));
+    fireEvent.click(screen.getByText("editor-close"));
+    expect(screen.queryByTestId("rail-editor")).toBeNull();
+    expect(getMock).toHaveBeenCalledTimes(1);
+  });
+
+  // Review minor 7: the move to a newly saved connection goes through the
+  // Back guard's own navigation, never a plain navigate.
+  it("moves to a newly saved connection through navigateAfterSave", async () => {
+    await renderPage(detail());
+    fireEvent.click(screen.getByRole("button", { name: "rail:connection.add" }));
+    fireEvent.click(screen.getByText("editor-save-new"));
+    await waitFor(() =>
+      expect(navigateAfterSave).toHaveBeenCalledWith(expect.any(Function), "/rail/leg-new")
+    );
   });
 
   it("files documents with the journey", async () => {

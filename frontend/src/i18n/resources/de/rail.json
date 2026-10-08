@@ -107,7 +107,9 @@
     "missing": {
       "depCoordinates": "gültige Koordinaten des Abfahrtsbahnhofs",
       "arrCoordinates": "gültige Koordinaten des Ankunftsbahnhofs",
-      "departureTime": "Abfahrtszeit"
+      "departureTime": "Abfahrtszeit",
+      "depName": "Name des Abfahrtsbahnhofs",
+      "arrName": "Name des Ankunftsbahnhofs"
     }
   },
   "tracedLine": "entlang der Strecke, Transitous",

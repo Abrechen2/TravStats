@@ -13,7 +13,9 @@ import {
   type RailTravelClass,
 } from "../../types/rail";
 import type { RailFormDraft } from "./railFormModel";
-import { INPUT_CLASS, LabelledInput, Section } from "./railFormFields";
+import { FieldError, fieldErrorProps } from "../form";
+import { railFieldId } from "./railFormModel";
+import { INPUT_CLASS, LabelledInput, Section, type RailFieldErrorFor } from "./railFormFields";
 
 interface Props {
   draft: RailFormDraft;
@@ -21,6 +23,8 @@ interface Props {
   suggestions: Pick<RailEntrySuggestions, "travelClass" | "coaches" | "seats">;
   trips: Trip[];
   pickTrip: (tripId: string) => void;
+  /** A refusal naming one of these fields, shown at it (forgejo#246). */
+  errorFor: RailFieldErrorFor;
 }
 
 /**
@@ -29,7 +33,14 @@ interface Props {
  * label that stays visible once typed into (forgejo#249): a placeholder
  * alone vanishes the moment it is needed.
  */
-export function RailFormDetails({ draft, set, suggestions, trips, pickTrip }: Props): JSX.Element {
+export function RailFormDetails({
+  draft,
+  set,
+  suggestions,
+  trips,
+  pickTrip,
+  errorFor,
+}: Props): JSX.Element {
   const { t } = useTranslation(["rail", "common"]);
   const recentCurrencies = useRecentCurrencies();
   return (
@@ -37,11 +48,12 @@ export function RailFormDetails({ draft, set, suggestions, trips, pickTrip }: Pr
       <Section title={t("rail:form.seat")}>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div>
-            <label className="block text-sm" htmlFor="rail-form-class">
+            <label className="block text-sm" htmlFor={railFieldId("travelClass")}>
               {t("rail:form.class")}
             </label>
             <select
-              id="rail-form-class"
+              id={railFieldId("travelClass")}
+              {...fieldErrorProps(railFieldId("travelClass"), errorFor("travelClass"))}
               className={`mt-1 ${INPUT_CLASS}`}
               value={draft.travelClass}
               onChange={(e): void => set("travelClass", e.target.value as RailTravelClass | "")}
@@ -53,6 +65,7 @@ export function RailFormDetails({ draft, set, suggestions, trips, pickTrip }: Pr
                 </option>
               ))}
             </select>
+            <FieldError id={railFieldId("travelClass")} error={errorFor("travelClass")} />
             {/* Offered only while no class is chosen — a chip never
               overrides a value the user set. */}
             {draft.travelClass === "" && suggestions.travelClass !== null && (
@@ -67,6 +80,8 @@ export function RailFormDetails({ draft, set, suggestions, trips, pickTrip }: Pr
           <div>
             <LabelledInput
               label={t("rail:form.coach")}
+              field="coach"
+              error={errorFor("coach")}
               value={draft.coach}
               onChange={(e): void => set("coach", e.target.value)}
             />
@@ -80,6 +95,8 @@ export function RailFormDetails({ draft, set, suggestions, trips, pickTrip }: Pr
           <div>
             <LabelledInput
               label={t("rail:form.seatNumber")}
+              field="seat"
+              error={errorFor("seat")}
               value={draft.seat}
               onChange={(e): void => set("seat", e.target.value)}
             />
@@ -97,11 +114,15 @@ export function RailFormDetails({ draft, set, suggestions, trips, pickTrip }: Pr
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <LabelledInput
             label={t("rail:form.bookingReference")}
+            field="bookingReference"
+            error={errorFor("bookingReference")}
             value={draft.bookingReference}
             onChange={(e): void => set("bookingReference", e.target.value)}
           />
           <LabelledInput
             label={t("rail:form.price")}
+            field="price"
+            error={errorFor("price")}
             type="number"
             min={0}
             step={10 ** -minorUnits(draft.currency)}
@@ -147,6 +168,8 @@ export function RailFormDetails({ draft, set, suggestions, trips, pickTrip }: Pr
         <label className="mt-3 block text-sm">
           {t("rail:form.trip")}
           <select
+            id={railFieldId("tripId")}
+            {...fieldErrorProps(railFieldId("tripId"), errorFor("tripId"))}
             className={`mt-1 ${INPUT_CLASS}`}
             value={draft.tripId}
             onChange={(e): void => pickTrip(e.target.value)}
@@ -159,15 +182,19 @@ export function RailFormDetails({ draft, set, suggestions, trips, pickTrip }: Pr
             ))}
           </select>
         </label>
+        <FieldError id={railFieldId("tripId")} error={errorFor("tripId")} />
         <label className="mt-3 block text-sm">
           {t("rail:form.notes")}
           <textarea
+            id={railFieldId("notes")}
+            {...fieldErrorProps(railFieldId("notes"), errorFor("notes"))}
             rows={3}
             className={`mt-1 ${INPUT_CLASS}`}
             value={draft.notes}
             onChange={(e): void => set("notes", e.target.value)}
           />
         </label>
+        <FieldError id={railFieldId("notes")} error={errorFor("notes")} />
       </Section>
     </>
   );

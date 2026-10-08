@@ -107,7 +107,9 @@
     "missing": {
       "depCoordinates": "valid coordinates of the departure station",
       "arrCoordinates": "valid coordinates of the arrival station",
-      "departureTime": "departure time"
+      "departureTime": "departure time",
+      "depName": "name of the departure station",
+      "arrName": "name of the arrival station"
     }
   },
   "tracedLine": "along the line, Transitous",

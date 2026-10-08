@@ -253,6 +253,12 @@ describe("saveErrorFrom", () => {
       field: null,
       fieldLabelKey: "rail:form.departureStation",
     });
+    // Review minor 5: a plain input the server names is the field to show it at.
+    expect(saveErrorFrom(refusal({ code: "RAIL_INVALID_INPUT", field: "coach" }))).toEqual({
+      key: "rail:form.errors.invalidField",
+      field: "coach",
+      fieldLabelKey: "rail:form.coach",
+    });
   });
 
   it("falls back to the generic sentence, never to the server's prose", () => {

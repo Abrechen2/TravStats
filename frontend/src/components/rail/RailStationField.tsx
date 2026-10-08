@@ -29,7 +29,7 @@ interface Props {
   idPrefix: string;
   value: RailStationDraft;
   onChange: (next: RailStationDraft) => void;
-  onValidityChange?: (valid: boolean) => void;
+  onValidityChange?: (valid: boolean, field?: "lat" | "lon") => void;
   inputClassName: string;
   /** Passed to the search field: the shared asterisk and `aria-required`. */
   required?: boolean;
@@ -91,13 +91,20 @@ export function RailStationField({
         compact
         required={required}
       />
-      <input
-        className={inputClassName}
-        aria-label={`${label}: ${t("rail:form.stationName")}`}
-        placeholder={t("rail:form.stationName")}
-        value={value.name}
-        onChange={(e): void => onChange({ ...value, name: e.target.value })}
-      />
+      {/* A visible label, and an id the form's "still missing" line can
+          take the user to: a map click or a coordinate paste leaves the name
+          empty, and this field is then the gap (forgejo#245, #249). */}
+      <label className="block text-sm">
+        {t("rail:form.stationName")}
+        <input
+          id={`${idPrefix}-name`}
+          className={`mt-1 ${inputClassName}`}
+          aria-label={`${label}: ${t("rail:form.stationName")}`}
+          aria-required={required || undefined}
+          value={value.name}
+          onChange={(e): void => onChange({ ...value, name: e.target.value })}
+        />
+      </label>
     </div>
   );
 }
