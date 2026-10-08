@@ -219,6 +219,13 @@ describe("useDirtyGuard", () => {
     expect(result.current.dirty).toBe(true);
   });
 
+  it("reset(next) makes `next` the baseline", () => {
+    const { result } = renderHook(() => useDirtyGuard({ name: "" }, { name: "Neu" }));
+    expect(result.current.dirty).toBe(true);
+    act(() => result.current.reset({ name: "Neu" }));
+    expect(result.current.dirty).toBe(false);
+  });
+
   it("markSaved ends the protection for what was saved", () => {
     const { result, rerender } = renderHook(({ draft }) => useDirtyGuard({ name: "" }, draft), {
       initialProps: { draft: { name: "Hotel" } },

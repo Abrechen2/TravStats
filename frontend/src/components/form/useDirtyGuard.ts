@@ -11,7 +11,7 @@ import { useCallback, useState } from "react";
  * people to click through it. It also cannot be forgotten by the next field
  * someone adds — it is in the draft or it is not saved at all.
  *
- * `initial` is read ONCE, on the first render: an edit form's starting values
+ * `initial` is read ONCE per opening (see `open` below), on the first render: an edit form's starting values
  * are the record as it was opened, and a parent re-rendering with a fresh
  * object must not move that baseline. `markSaved` moves it to whatever the
  * draft was when the save started — a successful save ends the protection, as the issue asks,
@@ -22,10 +22,25 @@ import { useCallback, useState } from "react";
  */
 export function useDirtyGuard(
   initial: unknown,
-  current: unknown
-): { dirty: boolean; markSaved: () => void } {
-  const [baseline, setBaseline] = useState<string>(() => stableSnapshot(initial));
+  current: unknown,
+  options: { open?: boolean } = {}
+): { dirty: boolean; markSaved: () => void; reset: (nextInitial?: unknown) => void } {
+  const initialSnapshot = stableSnapshot(initial);
+  const [baseline, setBaseline] = useState<string>(initialSnapshot);
   const currentSnapshot = stableSnapshot(current);
+
+  // A dialog that stays MOUNTED while closed (`NewRoadtripDialog` renders
+  // with `open=false`) starts over each time it opens: the baseline becomes
+  // that opening's initial values. Without `open` this never fires, and the
+  // first render's `initial` stays the baseline, as described above.
+  // Adjusted during render (React's documented pattern for "reset state when
+  // a prop changes"), so the reopened form is clean in its FIRST paint.
+  const open = options.open ?? true;
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setBaseline(initialSnapshot);
+  }
 
   // Closes over the draft of the render that created it — so a `markSaved`
   // called after `await save(...)` records what was SENT, not whatever the
@@ -33,7 +48,14 @@ export function useDirtyGuard(
   // change, and still guarded.
   const markSaved = useCallback((): void => setBaseline(currentSnapshot), [currentSnapshot]);
 
-  return { dirty: currentSnapshot !== baseline, markSaved };
+  /** Start over from `nextInitial`, or from this render's `initial`. */
+  const reset = useCallback(
+    (nextInitial?: unknown): void =>
+      setBaseline(nextInitial === undefined ? initialSnapshot : stableSnapshot(nextInitial)),
+    [initialSnapshot]
+  );
+
+  return { dirty: currentSnapshot !== baseline, markSaved, reset };
 }
 
 /**

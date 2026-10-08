@@ -70,4 +70,18 @@ describe("useSaveOnce", () => {
     expect(outcome).toEqual({ status: "skipped" });
     expect(api).toHaveBeenCalledTimes(1);
   });
+
+  it("reset() forgets the earlier success, so the next save sends again", async () => {
+    const { result } = renderHook(() => useSaveOnce<{ id: string }>());
+    const api = vi.fn().mockResolvedValue({ id: "1" });
+    await act(async () => {
+      await result.current.save(api);
+    });
+    act(() => result.current.reset());
+    expect(result.current.saved).toBeNull();
+    await act(async () => {
+      await result.current.save(api);
+    });
+    expect(api).toHaveBeenCalledTimes(2);
+  });
 });

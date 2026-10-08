@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { logger } from "../../lib/logger";
 
 /**
@@ -41,7 +41,7 @@ export type SaveOutcome<T> =
  * The in-flight flag is a ref as well as state: two clicks inside one frame
  * both read the state from before either re-rendered, and both would send.
  */
-export function useSaveOnce<T>(): {
+export function useSaveOnce<T>(options: { open?: boolean } = {}): {
   save: (
     apiCall: () => Promise<T>,
     onSaved?: (value: T) => void | Promise<void>
@@ -49,6 +49,8 @@ export function useSaveOnce<T>(): {
   saving: boolean;
   saved: T | null;
   afterSaveFailed: boolean;
+  /** Forget the earlier success, so the next `save` sends again. */
+  reset: () => void;
 } {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<T | null>(null);
@@ -90,5 +92,24 @@ export function useSaveOnce<T>(): {
     []
   );
 
-  return { save, saving, saved, afterSaveFailed };
+  const reset = useCallback((): void => {
+    inFlight.current = false;
+    done.current = false;
+    setSaving(false);
+    setSaved(null);
+    setAfterSaveFailed(false);
+  }, []);
+
+  // A dialog that stays mounted while closed starts over when it re-opens.
+  // Without this the "saved once" memory outlived the dialog: the SECOND
+  // "Neue Tour" of a session was skipped without a word (review, fix round 1).
+  // A save still running when the dialog closes is not interrupted.
+  const open = options.open ?? true;
+  const wasOpen = useRef(open);
+  useEffect(() => {
+    if (open && !wasOpen.current && !inFlight.current) reset();
+    wasOpen.current = open;
+  }, [open, reset]);
+
+  return { save, saving, saved, afterSaveFailed, reset };
 }
