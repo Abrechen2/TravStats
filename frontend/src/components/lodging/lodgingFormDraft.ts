@@ -19,6 +19,11 @@ export interface LodgingFormFields {
   amenities: string[];
   notes: string;
   website: string;
+  /**
+   * A typed coordinate LocationInput refused. Never saved — but it is input
+   * the user would lose, so the dirty guard must see it. Absent when valid.
+   */
+  badCoordinate?: "lat" | "lon" | null;
 }
 
 /** What the form starts with: the stored lodging, or an empty hotel. */

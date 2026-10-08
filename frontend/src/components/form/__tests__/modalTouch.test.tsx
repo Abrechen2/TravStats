@@ -46,7 +46,9 @@ describe("Modal touch targets", () => {
     expect(close.style.minHeight).toBe("var(--ts-size-touch-min)");
     const footer = screen.getByRole("button", { name: "OK" }).parentElement;
     expect(footer).toHaveAttribute("data-touch", "coarse");
-    expect(footer?.className).toContain("[&_button]:min-h-(--ts-size-touch-min)");
+    expect(footer?.className).toContain(
+      "[&_button:not([data-inline-action])]:min-h-(--ts-size-touch-min)"
+    );
   });
 
   it("keeps the compact sizes for a mouse", () => {
@@ -56,5 +58,13 @@ describe("Modal touch targets", () => {
     expect(screen.getByRole("button", { name: "OK" }).parentElement).not.toHaveAttribute(
       "data-touch"
     );
+  });
+});
+
+describe("inline actions inside a dialog footer", () => {
+  it("SaveBlockedHint's items are marked inline, so the touch sizing leaves them in the sentence", async () => {
+    const { default: SaveBlockedHint } = await import("../SaveBlockedHint");
+    render(<SaveBlockedHint id="hint" missing={[{ field: "name", label: "Name" }]} />);
+    expect(screen.getByRole("button", { name: "Name" })).toHaveAttribute("data-inline-action");
   });
 });

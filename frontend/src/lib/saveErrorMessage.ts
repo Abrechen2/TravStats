@@ -68,3 +68,21 @@ export function saveErrorKey(
   }
   return fallbackKey;
 }
+
+/**
+ * The failures where pressing the same button again is the likely cure — a
+ * dropped connection, a database that is restarting, a rate limit. A form
+ * offers "Erneut versuchen" for these and NOT for a refusal of the input
+ * itself, where a retry would only be refused again. One home, so the eight
+ * forms that offer a retry cannot disagree about when.
+ */
+const TRANSIENT_KEYS: ReadonlySet<string> = new Set([
+  "common:saveErrors.network",
+  "common:saveErrors.dbUnavailable",
+  "common:saveErrors.rateLimited",
+]);
+
+/** Takes the key `saveErrorKey` returned. */
+export function isTransientSaveError(key: string): boolean {
+  return TRANSIENT_KEYS.has(key);
+}

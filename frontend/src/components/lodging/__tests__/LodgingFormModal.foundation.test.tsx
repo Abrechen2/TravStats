@@ -37,12 +37,15 @@ vi.mock("../../location/LocationInput", () => ({
     onValidityChange,
     idPrefix,
   }: {
-    onValidityChange?: (valid: boolean) => void;
+    onValidityChange?: (valid: boolean, field?: "lat" | "lon") => void;
     idPrefix: string;
   }) => (
     <div>
       <button type="button" onClick={() => onValidityChange?.(false)}>
         mock-type-bad-coordinates
+      </button>
+      <button type="button" onClick={() => onValidityChange?.(false, "lon")}>
+        mock-type-bad-longitude
       </button>
       <button type="button" onClick={() => onValidityChange?.(true)}>
         mock-fix-coordinates
@@ -51,6 +54,8 @@ vi.mock("../../location/LocationInput", () => ({
         <summary>location:advanced</summary>
         <label htmlFor={`${idPrefix}-lat`}>location:field.lat</label>
         <input id={`${idPrefix}-lat`} />
+        <label htmlFor={`${idPrefix}-lon`}>location:field.lon</label>
+        <input id={`${idPrefix}-lon`} />
       </details>
     </div>
   ),
@@ -110,7 +115,7 @@ describe("LodgingFormModal — the shared form blocks", () => {
     // folded section it is reported in.
     await userEvent.click(screen.getByText("mock-type-bad-coordinates"));
     expect(hint()).toHaveTextContent(
-      "common:form.saveBlocked lodging:field.name, lodging:form.missing.coordinates"
+      "common:form.saveBlocked lodging:field.name and lodging:form.missing.coordinates"
     );
 
     await userEvent.type(nameField(), "Hotel Adlon");
@@ -208,5 +213,38 @@ describe("LodgingFormModal — the shared form blocks", () => {
     expect(screen.queryByRole("button", { name: "common:buttons.save" })).not.toBeInTheDocument();
     expect(screen.queryByText("lodging:form.saveError")).not.toBeInTheDocument();
     expect(createLodging).toHaveBeenCalledTimes(1);
+  });
+
+  // Review fix round 1: the hint jumps to the value that is actually wrong.
+  it("takes the user to the longitude when the longitude is the wrong one", async () => {
+    render(<LodgingFormModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+    await userEvent.click(screen.getByText("mock-type-bad-longitude"));
+    await userEvent.click(screen.getByRole("button", { name: "lodging:form.missing.coordinates" }));
+    expect(document.activeElement).toBe(screen.getByLabelText("location:field.lon"));
+  });
+
+  // An out-of-range number the user typed is input too — Escape must not drop it.
+  it("counts a rejected coordinate as a change worth asking about", async () => {
+    const onClose = vi.fn();
+    render(<LodgingFormModal mode="create" onClose={onClose} onSaved={vi.fn()} />);
+    await userEvent.click(screen.getByText("mock-type-bad-coordinates"));
+    await userEvent.keyboard("{Escape}");
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByText("common:discard.title")).toBeInTheDocument();
+  });
+
+  it("names the view, not the list, when the caller says so", async () => {
+    vi.mocked(createLodging).mockResolvedValue(stored);
+    render(
+      <LodgingFormModal
+        mode="create"
+        onClose={vi.fn()}
+        onSaved={vi.fn().mockRejectedValue(new Error("reload failed"))}
+        afterSaveFailedKey="common:form.savedButViewRefreshFailed"
+      />
+    );
+    await userEvent.type(nameField(), "Hotel Adlon");
+    await userEvent.click(saveButton());
+    expect(await screen.findByText("common:form.savedButViewRefreshFailed")).toBeInTheDocument();
   });
 });

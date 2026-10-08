@@ -85,3 +85,14 @@ describe("useSaveOnce", () => {
     expect(api).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("useSaveOnce — the after-save notice", () => {
+  it("speaks of the list by default, and of whatever the caller names otherwise", () => {
+    const list = renderHook(() => useSaveOnce<string>());
+    expect(list.result.current.afterSaveFailedKey).toBe("common:form.savedButRefreshFailed");
+    const detail = renderHook(() =>
+      useSaveOnce<string>({ afterSaveFailedKey: "common:form.savedButViewRefreshFailed" })
+    );
+    expect(detail.result.current.afterSaveFailedKey).toBe("common:form.savedButViewRefreshFailed");
+  });
+});

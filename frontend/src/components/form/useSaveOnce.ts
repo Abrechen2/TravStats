@@ -41,7 +41,17 @@ export type SaveOutcome<T> =
  * The in-flight flag is a ref as well as state: two clicks inside one frame
  * both read the state from before either re-rendered, and both would send.
  */
-export function useSaveOnce<T>(options: { open?: boolean } = {}): {
+export function useSaveOnce<T>(
+  options: {
+    open?: boolean;
+    /**
+     * The notice for "stored, but the follow-up failed". It names what failed
+     * to refresh, which depends on where the form was opened: the list by
+     * default; a detail page passes `common:form.savedButViewRefreshFailed`.
+     */
+    afterSaveFailedKey?: string;
+  } = {}
+): {
   save: (
     apiCall: () => Promise<T>,
     onSaved?: (value: T) => void | Promise<void>
@@ -49,6 +59,8 @@ export function useSaveOnce<T>(options: { open?: boolean } = {}): {
   saving: boolean;
   saved: T | null;
   afterSaveFailed: boolean;
+  /** The translation key for the `afterSaveFailed` notice. */
+  afterSaveFailedKey: string;
   /** Forget the earlier success, so the next `save` sends again. */
   reset: () => void;
 } {
@@ -111,5 +123,7 @@ export function useSaveOnce<T>(options: { open?: boolean } = {}): {
     wasOpen.current = open;
   }, [open, reset]);
 
-  return { save, saving, saved, afterSaveFailed, reset };
+  const afterSaveFailedKey = options.afterSaveFailedKey ?? "common:form.savedButRefreshFailed";
+
+  return { save, saving, saved, afterSaveFailed, afterSaveFailedKey, reset };
 }

@@ -7,15 +7,23 @@
  * the control announces itself as invalid and reads the message as its
  * description. The id convention is `${id}-error`, which `FieldError` renders.
  *
- * Returns an empty object for a valid field, so it can be spread
+ * Returns no `aria-invalid` for a valid field, so it can be spread
  * unconditionally: `<input id={id} {...fieldErrorProps(id, error)} />`.
+ * A control that already has a description (a hint line) passes it as
+ * `existingDescribedBy`: the error is ADDED to it, never put in its place —
+ * spreading after a plain `aria-describedby` would silently drop the hint.
  */
 export function fieldErrorProps(
   id: string,
-  error: string | null | undefined
-): { "aria-invalid": true; "aria-describedby": string } | Record<string, never> {
-  if (!error) return {};
-  return { "aria-invalid": true, "aria-describedby": fieldErrorId(id) };
+  error: string | null | undefined,
+  existingDescribedBy?: string
+): { "aria-invalid"?: true; "aria-describedby"?: string } {
+  if (!error) return existingDescribedBy ? { "aria-describedby": existingDescribedBy } : {};
+  const errorId = fieldErrorId(id);
+  return {
+    "aria-invalid": true,
+    "aria-describedby": existingDescribedBy ? `${existingDescribedBy} ${errorId}` : errorId,
+  };
 }
 
 /** The id `FieldError` renders and `fieldErrorProps` points at. */

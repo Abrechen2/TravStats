@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
 import { leaveThroughHistory, registerDirtyDialog } from "./unsavedChanges";
 
 /**
@@ -42,9 +43,14 @@ interface Options {
   dirty: boolean;
   busy: boolean;
   onClose: () => void;
+  /**
+   * The dialog's panel. With it, "Weiter bearbeiten" hands focus back to the
+   * field the user was in — see `keepEditing`.
+   */
+  panelRef?: RefObject<HTMLElement | null>;
 }
 
-export function useDiscardGuard({ open, dirty, busy, onClose }: Options): DiscardGuard {
+export function useDiscardGuard({ open, dirty, busy, onClose, panelRef }: Options): DiscardGuard {
   const [asking, setAsking] = useState(false);
   const stateRef = useRef({ dirty, busy, onClose });
   useEffect(() => {
@@ -54,16 +60,53 @@ export function useDiscardGuard({ open, dirty, busy, onClose }: Options): Discar
   /** The open question came from the browser's Back, not from a close. */
   const fromHistory = useRef(false);
 
+  // Where focus goes back to after "Weiter bearbeiten". Without this it went
+  // to <body> after a click beside the form: the press on the scrim blurs the
+  // field BEFORE the question opens, so the question's own focus return had
+  // nothing better to return to, and the next keystroke went nowhere. So the
+  // last element focused inside the panel is remembered as it happens.
+  const lastFocused = useRef<HTMLElement | null>(null);
+  const returnTo = useRef<HTMLElement | null>(null);
+  const restorePending = useRef(false);
+  useEffect(() => {
+    const panel = panelRef?.current;
+    if (!open || !panel) return;
+    const onFocusIn = (event: FocusEvent): void => {
+      if (event.target instanceof HTMLElement) lastFocused.current = event.target;
+    };
+    panel.addEventListener("focusin", onFocusIn);
+    return () => panel.removeEventListener("focusin", onFocusIn);
+  }, [open, panelRef]);
+
+  const rememberFocus = useCallback((): void => {
+    const panel = panelRef?.current ?? null;
+    const active = document.activeElement;
+    returnTo.current =
+      panel && active instanceof HTMLElement && active !== panel && panel.contains(active)
+        ? active
+        : lastFocused.current;
+  }, [panelRef]);
+
+  // Runs after the question's own focus return (an unmounting child's effects
+  // are cleaned up before a parent's effects run), so this one has the last word.
+  useEffect(() => {
+    if (asking || !restorePending.current) return;
+    restorePending.current = false;
+    const target = returnTo.current;
+    if (target?.isConnected) target.focus();
+  }, [asking]);
+
   const guarding = open && dirty;
   useEffect(() => {
     if (!guarding) return;
     return registerDirtyDialog({
       askFromHistory: () => {
         fromHistory.current = true;
+        rememberFocus();
         setAsking(true);
       },
     });
-  }, [guarding]);
+  }, [guarding, rememberFocus]);
 
   // A dialog that closed (or saved, which also ends "dirty") must not come
   // back still asking.
@@ -73,11 +116,12 @@ export function useDiscardGuard({ open, dirty, busy, onClose }: Options): Discar
     const current = stateRef.current;
     if (current.busy) return;
     if (current.dirty) {
+      rememberFocus();
       setAsking(true);
       return;
     }
     current.onClose();
-  }, []);
+  }, [rememberFocus]);
 
   const discard = useCallback((): void => {
     setAsking(false);
@@ -90,6 +134,7 @@ export function useDiscardGuard({ open, dirty, busy, onClose }: Options): Discar
 
   const keepEditing = useCallback((): void => {
     fromHistory.current = false;
+    restorePending.current = true;
     setAsking(false);
   }, []);
 

@@ -4,6 +4,7 @@
  */
 export { useDirtyGuard } from "./useDirtyGuard";
 export { useDiscardGuard } from "./useDiscardGuard";
+export { openDirtyDialogCount } from "./unsavedChanges";
 export { RequiredMark, focusFirstMissingRequired, unfoldAncestors } from "./requiredFields";
 export { default as RequiredLegend } from "./RequiredLegend";
 export { default as SaveBlockedHint } from "./SaveBlockedHint";
@@ -13,6 +14,9 @@ export { default as FieldError } from "./FieldError";
 export { default as FormErrorBanner } from "./FormErrorBanner";
 export { focusFirstError } from "./focusFirstError";
 export { useSaveOnce } from "./useSaveOnce";
+export { useFormFailure } from "./useFormFailure";
+/** The "Änderungen verwerfen?" dialog, for a form that asks outside Modal/Dialog. */
+export { DiscardQuestion } from "../Modal";
 export type { SaveOutcome } from "./useSaveOnce";
 /**
  * The help affordance for a field (forgejo#249): a real button, so it opens on

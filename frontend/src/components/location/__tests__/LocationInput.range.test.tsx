@@ -52,7 +52,8 @@ describe("LocationInput — coordinates out of range", () => {
     fireEvent.change(screen.getByLabelText("location:field.lat"), { target: { value: "10" } });
     fireEvent.change(screen.getByLabelText("location:field.lon"), { target: { value: "999" } });
 
-    expect(onValidityChange).toHaveBeenLastCalledWith(false);
+    // …and names WHICH value, so the form can take the user to it.
+    expect(onValidityChange).toHaveBeenLastCalledWith(false, "lon");
   });
 
   it("names the offending field, not just 'invalid'", () => {
@@ -115,7 +116,7 @@ describe("LocationInput — coordinates out of range", () => {
       fireEvent.change(screen.getByLabelText("location:field.lat"), { target: { value: "999" } });
       fireEvent.change(screen.getByLabelText("location:field.lon"), { target: { value: "8" } });
       expect(screen.getByTestId("location-range-error")).toBeInTheDocument();
-      expect(utils.onValidityChange).toHaveBeenLastCalledWith(false);
+      expect(utils.onValidityChange).toHaveBeenLastCalledWith(false, "lat");
       return utils;
     }
 

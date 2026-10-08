@@ -29,6 +29,16 @@ describe("fieldErrorProps + FieldError", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("1 bis 5");
   });
 
+  it("keeps a description the control already had, and adds the error to it", () => {
+    expect(fieldErrorProps("stars", "1 bis 5", "stars-hint")).toEqual({
+      "aria-invalid": true,
+      "aria-describedby": "stars-hint stars-error",
+    });
+    expect(fieldErrorProps("stars", null, "stars-hint")).toEqual({
+      "aria-describedby": "stars-hint",
+    });
+  });
+
   it("adds nothing for a valid field", () => {
     expect(fieldErrorProps("stars", null)).toEqual({});
     render(<FieldError id="stars" error={null} />);

@@ -1,4 +1,4 @@
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { unfoldAncestors } from "./requiredFields";
 
@@ -36,7 +36,7 @@ export default function SaveBlockedHint({
   id: string;
   missing: readonly MissingStep[];
 }): JSX.Element {
-  const { t } = useTranslation(["common"]);
+  const { t, i18n } = useTranslation(["common"]);
 
   const focusField = (field: string): void => {
     const control = document.getElementById(field);
@@ -45,25 +45,61 @@ export default function SaveBlockedHint({
     control.focus();
   };
 
+  const items = missing.map((step) => (
+    <button
+      key={`${step.field}|${step.label}`}
+      type="button"
+      data-inline-action=""
+      onClick={() => focusField(step.field)}
+      className="underline underline-offset-2 hover:text-[var(--text-primary)]"
+    >
+      {step.label}
+    </button>
+  ));
+
   return (
     <div id={id} aria-live="polite" className="text-xs text-[var(--text-muted)]">
       {missing.length > 0 && (
         <p data-testid="save-blocked-hint">
-          {t("common:form.saveBlocked")}{" "}
-          {missing.map((step, index) => (
-            <span key={step.field}>
-              {index > 0 && ", "}
-              <button
-                type="button"
-                onClick={() => focusField(step.field)}
-                className="underline underline-offset-2 hover:text-[var(--text-primary)]"
-              >
-                {step.label}
-              </button>
-            </span>
-          ))}
+          {t("common:form.saveBlocked")} {joinAsList(items, i18n.language)}
         </p>
       )}
     </div>
   );
+}
+
+interface ListFormatPart {
+  type: "element" | "literal";
+  value: string;
+}
+type ListFormatConstructor = new (
+  locale: string | undefined,
+  options: { style: "long"; type: "conjunction" }
+) => { formatToParts: (list: string[]) => ListFormatPart[] };
+
+/**
+ * "Name und Position" in German, "Name and position" in English — joined the
+ * way the UI language joins a list, not with a comma that reads as English
+ * punctuation everywhere. `Intl.ListFormat` gives the separators; the items
+ * stay BUTTONS, which is why its parts are interleaved rather than its string
+ * used. A browser without it (or a locale it rejects) gets ", ".
+ */
+function joinAsList(items: ReactNode[], language: string | undefined): ReactNode[] {
+  const ListFormat = (Intl as unknown as { ListFormat?: ListFormatConstructor }).ListFormat;
+  let parts: ListFormatPart[] | null = null;
+  if (ListFormat) {
+    try {
+      const placeholders = items.map((_, index) => String(index));
+      parts = new ListFormat(language, { style: "long", type: "conjunction" }).formatToParts(
+        placeholders
+      );
+    } catch {
+      parts = null;
+    }
+  }
+  if (!parts) {
+    return items.flatMap((item, index) => (index === 0 ? [item] : [", ", item]));
+  }
+  let next = 0;
+  return parts.map((part) => (part.type === "element" ? items[next++] : part.value));
 }

@@ -77,7 +77,12 @@ export interface LocationInputProps {
    * form can refuse to save. Optional: a caller that does not pass it keeps
    * today's behaviour and still gets the inline message.
    */
-  onValidityChange?: (valid: boolean) => void;
+  /**
+   * Whether the typed coordinates are acceptable. On a refusal `field` names
+   * the value at fault ("lat" when both are), so a form can take the user to
+   * it instead of to the first of the two.
+   */
+  onValidityChange?: (valid: boolean, field?: "lat" | "lon") => void;
 }
 
 function isValidLat(n: number): boolean {
@@ -226,7 +231,7 @@ export function LocationInput({
               ? "location:latOutOfRange"
               : "location:lonOutOfRange"
         );
-        onValidityChange?.(false);
+        onValidityChange?.(false, latOk ? "lon" : "lat");
         return;
       }
       applySelection({ lat, lon });

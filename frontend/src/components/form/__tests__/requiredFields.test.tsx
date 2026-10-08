@@ -55,9 +55,10 @@ describe("SaveBlockedHint", () => {
     render(<Form />);
     const save = screen.getByRole("button", { name: "Speichern" });
     expect(save).toBeDisabled();
+    // Joined the way the UI language joins a list (the suite runs in "en").
     // The accessible-name algorithm pads each item button with a space, so
-    // the comma reads "Name , Breitengrad" — matched loosely on purpose.
-    expect(save).toHaveAccessibleDescription(/^common:form\.saveBlocked Name\s*, Breitengrad$/);
+    // the spacing is matched loosely on purpose.
+    expect(save).toHaveAccessibleDescription(/^common:form\.saveBlocked Name\s+and\s+Breitengrad$/);
     expect(document.getElementById("f-hint")).toHaveAttribute("aria-live", "polite");
   });
 

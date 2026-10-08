@@ -364,7 +364,8 @@
   "form": {
     "requiredLegend": "Mit * markierte Felder sind Pflicht.",
     "saveBlocked": "Zum Speichern fehlt noch:",
-    "savedButRefreshFailed": "Gespeichert. Die Liste konnte nicht aktualisiert werden."
+    "savedButRefreshFailed": "Gespeichert. Die Liste konnte nicht aktualisiert werden.",
+    "savedButViewRefreshFailed": "Gespeichert. Die Ansicht konnte nicht aktualisiert werden."
   },
   "delete": {
     "survivors": "Erhalten bleiben: {{names}}"

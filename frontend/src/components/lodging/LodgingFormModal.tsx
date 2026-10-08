@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import Modal from "../Modal";
@@ -13,7 +13,7 @@ import { LodgingOsmNearby } from "./LodgingOsmNearby";
 import { lodgingTypeForKind, osmFillFor } from "./lodgingFromOsm";
 import TagInput from "../TagInput";
 import { useLodgingEntrySuggestions } from "../../hooks/useLodgingEntrySuggestions";
-import { saveErrorKey } from "../../lib/saveErrorMessage";
+import { isTransientSaveError, saveErrorKey } from "../../lib/saveErrorMessage";
 import {
   FieldError,
   FormErrorBanner,
@@ -21,8 +21,8 @@ import {
   RequiredMark,
   SaveBlockedHint,
   fieldErrorProps,
-  focusFirstError,
   useDirtyGuard,
+  useFormFailure,
   useSaveOnce,
 } from "../form";
 import type { MissingStep } from "../form";
@@ -37,22 +37,16 @@ const WEBSITE_ID = "lodging-form-website";
 const LOCATION_PREFIX = "lodging-form-location";
 const HINT_ID = "lodging-form-save-blocked";
 
-/**
- * Failures where pressing the same button again is the likely cure — the
- * banner offers "Erneut versuchen" for these and not for a refusal of the
- * input itself, where retrying would only be refused again.
- */
-const TRANSIENT_KEYS: ReadonlySet<string> = new Set([
-  "common:saveErrors.network",
-  "common:saveErrors.dbUnavailable",
-  "common:saveErrors.rateLimited",
-]);
-
 interface LodgingFormModalProps {
   mode: "create" | "edit";
   lodging?: Lodging | null;
   onClose: () => void;
   onSaved: (saved: Lodging) => void | Promise<void>;
+  /**
+   * What the "stored, but the follow-up failed" notice names. The list's
+   * wording by default; the detail page passes the view's.
+   */
+  afterSaveFailedKey?: string;
 }
 
 /**
@@ -66,6 +60,7 @@ export function LodgingFormModal({
   lodging,
   onClose,
   onSaved,
+  afterSaveFailedKey,
 }: LodgingFormModalProps): JSX.Element {
   const { t } = useTranslation(["lodging", "common", "location", "openData"]);
   // ONE source for the starting values, read by the state below AND by the
@@ -98,7 +93,9 @@ export function LodgingFormModal({
   // Forgejo #9: out-of-range coordinates used to vanish silently and the
   // record saved without them. LocationInput now says so; this stops the
   // form writing while the user is looking at that message.
-  const [coordsValid, setCoordsValid] = useState(true);
+  // Which typed coordinate LocationInput refused, if any — so the hint can
+  // take the user to the value that is actually wrong.
+  const [badCoordinate, setBadCoordinate] = useState<"lat" | "lon" | null>(null);
 
   const position: LocationCoordinates | null = lat !== null && lon !== null ? { lat, lon } : null;
 
@@ -116,23 +113,25 @@ export function LodgingFormModal({
     amenities,
     notes,
     website,
+    // A refused coordinate is the user's input too: Escape must not drop it
+    // silently just because it never became a position. Empty (null) while
+    // everything is valid, so it adds nothing to a clean form.
+    badCoordinate,
   });
   const { dirty, markSaved } = useDirtyGuard(lodgingFormSnapshot(initial), snapshot);
-  const { save, saving, saved, afterSaveFailed } = useSaveOnce<Lodging>();
+  const saving = useSaveOnce<Lodging>({ afterSaveFailedKey });
   const snapshotKey = JSON.stringify(snapshot);
 
-  // A refused save, remembered together with the draft it was refused for.
-  // It shows until the draft changes — "until the next edit" — without an
-  // effect that would have to remember to clear it from every setter.
-  const [failure, setFailure] = useState<{ key: string; draft: string } | null>(null);
-  const failureKey = failure !== null && failure.draft === snapshotKey ? failure.key : null;
+  // A refusal stays until the next edit; focus goes to the first problem.
+  const failure = useFormFailure(snapshotKey);
 
   // Field rules the server enforces too (`backend/src/schemas/lodging.ts`).
   // Checked here so the complaint lands AT the field: before, "7 Sterne" came
   // back as the form's one generic sentence, naming nothing. Shown only after
   // the first save attempt, then live, so nobody is scolded mid-keystroke.
-  const [attempted, setAttempted] = useState(false);
-  const fieldErrors: LodgingFieldErrors = attempted ? lodgingFieldErrors({ stars, website }) : {};
+  const fieldErrors: LodgingFieldErrors = failure.attempted
+    ? lodgingFieldErrors({ stars, website })
+    : {};
   const starsError = fieldErrors.stars ? t(fieldErrors.stars) : null;
   const websiteError = fieldErrors.website ? t(fieldErrors.website) : null;
 
@@ -141,17 +140,15 @@ export function LodgingFormModal({
   // here is the only way a user learns of it without opening that section.
   const missing: MissingStep[] = [
     ...(name.trim().length === 0 ? [{ field: NAME_ID, label: t("lodging:field.name") }] : []),
-    ...(!coordsValid
-      ? [{ field: `${LOCATION_PREFIX}-lat`, label: t("lodging:form.missing.coordinates") }]
+    ...(badCoordinate !== null
+      ? [
+          {
+            field: `${LOCATION_PREFIX}-${badCoordinate}`,
+            label: t("lodging:form.missing.coordinates"),
+          },
+        ]
       : []),
   ];
-
-  // Focus moves to the first problem after the render that shows it.
-  const bodyRef = useRef<HTMLDivElement>(null);
-  const [focusRequest, setFocusRequest] = useState(0);
-  useEffect(() => {
-    if (focusRequest > 0) focusFirstError(bodyRef.current);
-  }, [focusRequest]);
 
   // A selection always reports the picked position; the text fields it
   // ALSO carries (search hit) only overwrite what the user already typed
@@ -219,14 +216,14 @@ export function LodgingFormModal({
   };
 
   const handleSave = async (): Promise<void> => {
-    setAttempted(true);
+    failure.markAttempted();
     if (Object.keys(lodgingFieldErrors({ stars, website })).length > 0) {
-      setFocusRequest((n) => n + 1);
+      failure.focusFirstProblem();
       return;
     }
     if (mode === "edit" && !lodging) {
       // Defensive only — callers always pass `lodging` in edit mode.
-      setFailure({ key: "lodging:form.saveError", draft: snapshotKey });
+      failure.fail("lodging:form.saveError");
       return;
     }
     const input: LodgingInput = {
@@ -251,11 +248,11 @@ export function LodgingFormModal({
       website: website.trim() || null,
       ...(osmRef !== null && { osmRef }),
     };
-    setFailure(null);
+    failure.clear();
     // The request and what follows it are two steps (forgejo#247): a list
     // that fails to reload must not turn a stored lodging into "konnte nicht
     // gespeichert werden" — the next click would have created it twice.
-    const outcome = await save(
+    const outcome = await saving.save(
       () =>
         mode === "create" || !lodging ? createLodging(input) : updateLodging(lodging.id, input),
       async (stored) => {
@@ -265,11 +262,7 @@ export function LodgingFormModal({
     );
     if (outcome.status === "failed") {
       logger.error("LodgingFormModal: save failed", outcome.error);
-      setFailure({
-        key: saveErrorKey(outcome.error, "lodging:form.saveError"),
-        draft: snapshotKey,
-      });
-      setFocusRequest((n) => n + 1);
+      failure.fail(saveErrorKey(outcome.error, "lodging:form.saveError"));
     }
   };
 
@@ -283,7 +276,7 @@ export function LodgingFormModal({
     <Modal
       open
       onClose={onClose}
-      busy={saving}
+      busy={saving.saving}
       dirty={dirty}
       closeLabel={t("common:buttons.close")}
       title={title}
@@ -291,10 +284,10 @@ export function LodgingFormModal({
         // Stored, but the follow-up failed: the only honest action left is to
         // close. Another "Speichern" would send nothing (`useSaveOnce`), and
         // a button that does nothing is worse than no button.
-        afterSaveFailed ? (
+        saving.afterSaveFailed ? (
           <>
             <p role="status" className="mr-auto self-center text-sm text-[var(--text-muted)]">
-              {t("common:form.savedButRefreshFailed")}
+              {t(saving.afterSaveFailedKey)}
             </p>
             <button
               type="button"
@@ -312,7 +305,7 @@ export function LodgingFormModal({
             <button
               type="button"
               onClick={requestClose}
-              disabled={saving}
+              disabled={saving.saving}
               className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)] disabled:opacity-50"
             >
               {t("common:buttons.cancel")}
@@ -320,17 +313,17 @@ export function LodgingFormModal({
             <button
               type="button"
               onClick={() => void handleSave()}
-              disabled={saving || saved !== null || missing.length > 0}
+              disabled={saving.saving || saving.saved !== null || missing.length > 0}
               aria-describedby={HINT_ID}
               className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)] disabled:opacity-50"
             >
-              {saving ? t("common:buttons.saving") : t("common:buttons.save")}
+              {saving.saving ? t("common:buttons.saving") : t("common:buttons.save")}
             </button>
           </>
         )
       }
     >
-      <div ref={bodyRef}>
+      <div ref={failure.rootRef}>
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {/* FIRST field, and named "Unterkunft suchen" (Alex, Discord
               2026-07-12). It sat below the name field, but a search hit fills
@@ -341,7 +334,7 @@ export function LodgingFormModal({
             <LocationInput
               value={position}
               onChange={handleLocationChange}
-              onValidityChange={setCoordsValid}
+              onValidityChange={(valid, field) => setBadCoordinate(valid ? null : (field ?? "lat"))}
               label={t("lodging:form.searchLabel")}
               idPrefix={LOCATION_PREFIX}
             />
@@ -487,13 +480,13 @@ export function LodgingFormModal({
         </div>
 
         <FormErrorBanner
-          message={failureKey !== null ? t(failureKey) : null}
+          message={failure.failureKey !== null ? t(failure.failureKey) : null}
           onRetry={
-            failureKey !== null && TRANSIENT_KEYS.has(failureKey)
+            failure.failureKey !== null && isTransientSaveError(failure.failureKey)
               ? () => void handleSave()
               : undefined
           }
-          retryDisabled={saving}
+          retryDisabled={saving.saving}
         />
         <RequiredLegend className="mt-3" />
       </div>

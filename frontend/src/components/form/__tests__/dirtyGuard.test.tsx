@@ -93,6 +93,30 @@ describe.each<Frame>(["Modal", "Dialog"])("%s with unsaved input", (frame) => {
     expect(screen.getByText("Inhalt")).toBeInTheDocument();
   });
 
+  // Review fix round 1: "Weiter bearbeiten" put focus on <body> after a
+  // click beside the form — the press on the scrim had already blurred the
+  // field — so the next keystroke went nowhere.
+  it("gives focus back to the field the user was in, even after a click beside it", async () => {
+    const onClose = vi.fn();
+    if (frame === "Modal") {
+      render(
+        <Modal open onClose={onClose} title="Formular" dirty>
+          <input aria-label="Name" />
+        </Modal>
+      );
+    } else {
+      render(
+        <Dialog open onClose={onClose} title="Formular" dirty>
+          <input aria-label="Name" />
+        </Dialog>
+      );
+    }
+    await userEvent.click(screen.getByLabelText("Name"));
+    await userEvent.click(scrimOf(frame));
+    await userEvent.click(screen.getByRole("button", { name: "common:discard.keepEditing" }));
+    expect(document.activeElement).toBe(screen.getByLabelText("Name"));
+  });
+
   it("an Escape on the question answers the question, not the form", async () => {
     const { onClose } = renderFrame(frame, { dirty: true });
     await userEvent.keyboard("{Escape}");

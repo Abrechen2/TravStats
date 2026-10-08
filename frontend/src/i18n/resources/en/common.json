@@ -364,7 +364,8 @@
   "form": {
     "requiredLegend": "Fields marked * are required.",
     "saveBlocked": "Still needed to save:",
-    "savedButRefreshFailed": "Saved. The list could not be refreshed."
+    "savedButRefreshFailed": "Saved. The list could not be refreshed.",
+    "savedButViewRefreshFailed": "Saved. This view could not be refreshed."
   },
   "delete": {
     "survivors": "Kept: {{names}}"

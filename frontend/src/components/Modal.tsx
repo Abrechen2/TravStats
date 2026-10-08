@@ -117,12 +117,15 @@ export default function Modal({
     titleIdRef.current = `modal-title-${idCounter}`;
   }
 
-  const guard = useDiscardGuard({ open, dirty, busy, onClose });
+  const guard = useDiscardGuard({ open, dirty, busy, onClose, panelRef });
   const { requestClose } = guard;
   // Touch sizing follows the POINTER, not the width (CLAUDE.md, forgejo#249):
   // an iPad is wide and finger-operated, and measured the × at ~28 px and the
   // footer buttons at ~36 px — under the 44 px the design's own sheet uses.
   // The layout stays width-based; only the target sizes grow.
+  // Inline actions INSIDE a sentence (SaveBlockedHint's "Name") carry
+  // `data-inline-action` and keep their text size: a 44 px link in the middle
+  // of a line breaks the line, and WCAG exempts inline targets for that reason.
   const coarse = useCoarsePointer();
   useDialogChrome({ open, onClose: requestClose, panelRef, busy });
   const scrim = useScrimDismiss(panelRef, requestClose);
@@ -193,7 +196,7 @@ export default function Modal({
           <div
             data-touch={coarse ? "coarse" : undefined}
             className={`flex shrink-0 flex-wrap justify-end gap-2 px-5 py-3 ${
-              coarse ? "[&_button]:min-h-(--ts-size-touch-min)" : ""
+              coarse ? "[&_button:not([data-inline-action])]:min-h-(--ts-size-touch-min)" : ""
             }`}
             style={{ background: "var(--ts-surface)", borderTop: "1px solid var(--ts-border)" }}
           >

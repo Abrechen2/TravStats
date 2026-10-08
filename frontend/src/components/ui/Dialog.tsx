@@ -66,7 +66,7 @@ export default function Dialog({
   discardLabel,
 }: DialogProps): JSX.Element | null {
   const panelRef = useRef<HTMLDivElement>(null);
-  const guard = useDiscardGuard({ open, dirty, busy, onClose });
+  const guard = useDiscardGuard({ open, dirty, busy, onClose, panelRef });
   const { requestClose } = guard;
   useDialogChrome({ open, onClose: requestClose, panelRef, busy });
   const scrim = useScrimDismiss(panelRef, requestClose);
