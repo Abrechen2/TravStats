@@ -631,5 +631,34 @@
   },
   "photos": {
     "title": "Fotos"
+  },
+  "stayView": {
+    "toggle": {
+      "label": "Ansicht",
+      "houses": "Unterkünfte",
+      "stays": "Aufenthalte"
+    },
+    "title": "Aufenthalte",
+    "columns": {
+      "period": "Zeitraum",
+      "house": "Unterkunft",
+      "trip": "Reise",
+      "status": "Status",
+      "actions": "Aktionen"
+    },
+    "filter": {
+      "from": "Von",
+      "to": "Bis",
+      "trip": "Reise",
+      "allTrips": "Alle Reisen",
+      "invalidWindow": "Der Zeitraum endet vor seinem Beginn."
+    },
+    "room": "Zimmer {{room}}",
+    "reference": "Buchung {{reference}}",
+    "openHouse": "Zur Unterkunft {{name}}",
+    "loadError": "Aufenthalte konnten nicht geladen werden",
+    "empty": "Noch keine Aufenthalte erfasst",
+    "emptyHint": "Ein Aufenthalt gehört zu einer Unterkunft: lege zuerst eine Unterkunft an oder lies eine Buchung ein.",
+    "footer": "Neueste Anreise zuerst; Aufenthalte ohne Datum stehen am Ende."
   }
 }

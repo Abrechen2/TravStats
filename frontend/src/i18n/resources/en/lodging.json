@@ -631,5 +631,34 @@
   },
   "photos": {
     "title": "Photos"
+  },
+  "stayView": {
+    "toggle": {
+      "label": "View",
+      "houses": "Lodgings",
+      "stays": "Stays"
+    },
+    "title": "Stays",
+    "columns": {
+      "period": "Period",
+      "house": "Lodging",
+      "trip": "Trip",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "filter": {
+      "from": "From",
+      "to": "To",
+      "trip": "Trip",
+      "allTrips": "All trips",
+      "invalidWindow": "The period ends before it begins."
+    },
+    "room": "Room {{room}}",
+    "reference": "Booking {{reference}}",
+    "openHouse": "Open the lodging {{name}}",
+    "loadError": "Stays could not be loaded",
+    "empty": "No stays recorded yet",
+    "emptyHint": "A stay belongs to a lodging: add a lodging first or read in a booking.",
+    "footer": "Latest check-in first; stays without a date come last."
   }
 }

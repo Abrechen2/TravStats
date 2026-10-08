@@ -29,6 +29,7 @@ import { photoFileQuerySchema } from "../../../schemas/photoVariant";
 import {
   createLodgingSchema,
   lodgingQuerySchema,
+  stayListQuerySchema,
   proposeLodgingSchema,
   updateLodgingSchema,
   createStaySchema,
@@ -171,6 +172,58 @@ registry.registerPath({
             data: z.array(lodging),
             meta: z.object({
               total: z.number().int().describe("Rows matching the filters, before the page slice"),
+              limit: z.number().int(),
+              offset: z.number().int(),
+            }),
+          }),
+        },
+      },
+    },
+    400: { description: "Invalid query", content: errorContent },
+  },
+});
+
+const stayListItem = registry.register(
+  "StayListItem",
+  stay
+    .extend({
+      lodging: z.object({
+        id: z.string().uuid(),
+        name: z.string(),
+        type: z.enum(LODGING_TYPES),
+        city: z.string().nullable(),
+        country: z.string().nullable(),
+        chainId: z.number().int().nullable(),
+        isoCountryCode: z.string().nullable(),
+      }),
+      trip: z.object({ id: z.string().uuid(), name: z.string() }).nullable(),
+    })
+    .describe("A stay together with the house it belongs to and the trip it is linked to.")
+    .openapi("StayListItem")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/lodging/stays",
+  summary: "List stays across all lodgings, in check-in order",
+  description:
+    "The chronological view: every stay of the account, newest check-in first (`order=asc` " +
+    "reverses it), undated stays last. `from` / `to` (calendar days) narrow it to the stays " +
+    "whose span touches that window - a coarse superset, so an adjacent check-out/check-in " +
+    "day is included; the exact overlap rule is the client's. `meta.total` is the size of " +
+    "the filtered set before the page slice.",
+  tags: ["Lodging"],
+  request: { query: stayListQuerySchema },
+  responses: {
+    200: {
+      description: "One page of stays, each with its house and trip",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.array(stayListItem),
+            meta: z.object({
+              total: z.number().int().describe("Stays matching the filters, before the page slice"),
               limit: z.number().int(),
               offset: z.number().int(),
             }),

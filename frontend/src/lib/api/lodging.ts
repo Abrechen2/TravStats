@@ -12,6 +12,8 @@ import type {
   MembershipInput,
   LodgingListQuery,
   LodgingPage,
+  StayListQuery,
+  StayPage,
   LodgingFacets,
   LodgingStats,
   FxPreview,
@@ -124,6 +126,18 @@ export const updateLodging = async (id: string, input: LodgingInput): Promise<Lo
 
 export const deleteLodging = async (id: string): Promise<void> => {
   await api.delete(`/lodging/${id}`);
+};
+
+/**
+ * ONE page of the account's stays across all its houses, in check-in order
+ * (forgejo#226), optionally narrowed to a window of calendar days or a trip.
+ * The same call answers "which stays touch these days?" for the overlap notice
+ * (forgejo#229) - the server's window is a coarse superset, the exact rule is
+ * `shared/lodgingOverlap.ts`.
+ */
+export const listStayPage = async (params: StayListQuery = {}): Promise<StayPage> => {
+  const { data } = await api.get<Envelope<StayPage["rows"]>>("/lodging/stays", { params });
+  return { rows: data.data, total: data.meta?.total ?? data.data.length };
 };
 
 // ---- Stay CRUD (nested under a lodging) ----

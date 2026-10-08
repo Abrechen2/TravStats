@@ -341,6 +341,34 @@ export const lodgingQuerySchema = z.object({
   order: z.enum(["asc", "desc"]).optional(),
 });
 
+/**
+ * `GET /lodging/stays` - the chronological view across houses (forgejo#226),
+ * and the candidate lookup behind the overlap notice (forgejo#229).
+ *
+ * `from` / `to` are calendar days (`YYYY-MM-DD`) and select the stays whose
+ * span TOUCHES that window - a coarse superset on purpose, the exact overlap
+ * rule lives in `shared/lodgingOverlap.ts` and runs on the rows this returns.
+ * An undated stay touches no window, so it appears only when neither bound is
+ * given.
+ */
+const stayListDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "must be YYYY-MM-DD");
+
+export const stayListQuerySchema = z
+  .object({
+    from: stayListDay.optional(),
+    to: stayListDay.optional(),
+    tripId: z.string().uuid().optional(),
+    limit: z.coerce.number().int().min(1).max(500).optional(),
+    offset: z.coerce.number().int().min(0).optional(),
+    /** Newest first unless asked otherwise - what a logbook reads first. */
+    order: z.enum(["asc", "desc"]).optional(),
+  })
+  .refine((q) => q.from === undefined || q.to === undefined || q.from <= q.to, {
+    message: "from must not be after to",
+    path: ["to"],
+  });
+export type StayListQuery = z.infer<typeof stayListQuerySchema>;
+
 // A membership is still PROGRAM-shaped — one card, one programme name, several
 // chains (Sheraton/Westin/Ritz-Carlton -> Marriott Bonvoy). What changed is how
 // the chains are attached: `chainIds` is an explicit list of ids, never a single

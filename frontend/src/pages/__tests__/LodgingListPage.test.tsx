@@ -14,6 +14,7 @@ const getLodgingFacetsMock = vi.fn();
 const getLodgingStatsMock = vi.fn();
 const deleteLodgingMock = vi.fn();
 const listLodgingPhotosMock = vi.fn();
+const listStayPageMock = vi.fn();
 const listForEntryMock = vi.fn();
 const getTripsMock = vi.fn();
 const navigateMock = vi.fn();
@@ -60,6 +61,8 @@ vi.mock("../../lib/api/lodging", () => ({
   deleteLodging: (...args: unknown[]) => deleteLodgingMock(...args),
   // The delete question counts what goes with the house (forgejo#250).
   listLodgingPhotos: (...args: unknown[]) => listLodgingPhotosMock(...args),
+  // The chronological stay view (forgejo#226).
+  listStayPage: (...args: unknown[]) => listStayPageMock(...args),
 }));
 
 vi.mock("../../lib/api/documents", () => ({
@@ -254,6 +257,8 @@ describe("LodgingListPage", () => {
     getLodgingStatsMock.mockResolvedValue(defaultStats);
     listLodgingPhotosMock.mockReset();
     listLodgingPhotosMock.mockResolvedValue([]);
+    listStayPageMock.mockReset();
+    listStayPageMock.mockResolvedValue({ rows: [], total: 0 });
     listForEntryMock.mockReset();
     listForEntryMock.mockResolvedValue([]);
     getTripsMock.mockReset();
@@ -924,6 +929,41 @@ describe("LodgingListPage", () => {
       // The row navigates; without stopPropagation the delete click would
       // also open the very lodging it is about to remove.
       expect(navigateMock).not.toHaveBeenCalled();
+    });
+  });
+
+  // forgejo#226: the same logbook read as houses or as a chronological stay list.
+  describe("houses or stays", () => {
+    it("switches to the stay list and back, keeping the choice in the URL", async () => {
+      mockRows([makeLodging({ id: "l1", name: "Hotel Adlon" })]);
+      render(
+        <MemoryRouter initialEntries={["/lodging"]}>
+          <LodgingListPage />
+        </MemoryRouter>
+      );
+      await screen.findByText("Hotel Adlon");
+      expect(screen.getByTestId("lodging-view-houses")).toHaveAttribute("aria-pressed", "true");
+      expect(listStayPageMock).not.toHaveBeenCalled();
+
+      await userEvent.click(screen.getByTestId("lodging-view-stays"));
+      await waitFor(() => expect(listStayPageMock).toHaveBeenCalled());
+      expect(screen.getByTestId("lodging-view-stays")).toHaveAttribute("aria-pressed", "true");
+      // The house table and its filter bar give way to the stay list.
+      expect(screen.queryByText("Hotel Adlon")).toBeNull();
+      expect(await screen.findByText("lodging:stayView.empty")).toBeInTheDocument();
+
+      await userEvent.click(screen.getByTestId("lodging-view-houses"));
+      expect(await screen.findByText("Hotel Adlon")).toBeInTheDocument();
+    });
+
+    it("opens on the stay list when the link says so", async () => {
+      render(
+        <MemoryRouter initialEntries={["/lodging?view=stays"]}>
+          <LodgingListPage />
+        </MemoryRouter>
+      );
+      expect(await screen.findByText("lodging:stayView.empty")).toBeInTheDocument();
+      expect(screen.getByTestId("lodging-view-stays")).toHaveAttribute("aria-pressed", "true");
     });
   });
 

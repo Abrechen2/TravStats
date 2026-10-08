@@ -56,7 +56,7 @@ export function RowActionButton({ icon, label, onClick, testId }: Props): JSX.El
         e.stopPropagation();
         onClick();
       }}
-      className={`inline-flex h-7 w-7 items-center justify-center rounded-sm ${HOVER_CLASS[icon]}`}
+      className={`inline-flex h-7 w-7 items-center justify-center rounded-sm pointer-coarse:h-(--ts-size-touch-min) pointer-coarse:w-(--ts-size-touch-min) ${HOVER_CLASS[icon]}`}
       style={{ color: "var(--text-muted)" }}
       aria-label={label}
       title={label}

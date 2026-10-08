@@ -10,6 +10,7 @@ import * as fx from "../services/fx/resolver";
 import { resolveLocation } from "./lodgingGeocode";
 import proposeRouter from "./lodging/propose";
 import entrySuggestionsRouter from "./lodging/entrySuggestions";
+import stayListRouter from "./lodging/stayList";
 import { computeAggregates, type LodgingListItem } from "../services/lodging/listView";
 import {
   queryLodgingPage,
@@ -220,6 +221,8 @@ router.get(
 router.use(proposeRouter);
 // Same reason: "entry-suggestions" is a literal path, not a lodging id.
 router.use(entrySuggestionsRouter);
+// And "stays": the chronological view across houses.
+router.use(stayListRouter);
 
 router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
