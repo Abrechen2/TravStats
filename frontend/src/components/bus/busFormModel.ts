@@ -179,9 +179,14 @@ export const dayPart = (local: string): string => local.slice(0, 10);
 export const withClock = (local: string): string =>
   local.length === 10 ? `${local}T00:00` : local;
 
-/** True when the ride, as drafted, has an end without a clock — a delay is then meaningless. */
+/**
+ * True when the ride, as drafted, has an end without a clock — a delay is then
+ * meaningless. An arrival that is not there at all constrains nothing (the
+ * server reads an absent arrival as no clock to compare), so a ticked box
+ * beside an empty arrival does not count.
+ */
 export const hasClocklessEnd = (draft: BusFormDraft): boolean =>
-  draft.departureDayOnly || draft.arrivalDayOnly;
+  draft.departureDayOnly || (draft.arrivalDayOnly && draft.arrivalLocal !== "");
 
 /** The write body. Every optional field is SENT, null when empty — omitting it would keep the old value. */
 export function toBusInput(draft: BusFormDraft): BusJourneyInput {

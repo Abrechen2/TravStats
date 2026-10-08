@@ -55,6 +55,8 @@ export function BusFormModal({ journey, onClose, onSaved }: Props): JSX.Element 
   const { t } = useTranslation(["bus", "common"]);
   const recentCurrencies = useRecentCurrencies();
   const [draft, setDraft] = useState<BusFormDraft>(() => draftFrom(journey));
+  /** The draft as the ride opened, to tell a time changed away and back from one really changed. */
+  const [opened] = useState<BusFormDraft>(() => draftFrom(journey));
   const [trips, setTrips] = useState<Trip[]>([]);
   const [depValid, setDepValid] = useState(true);
   const [arrValid, setArrValid] = useState(true);
@@ -111,10 +113,19 @@ export function BusFormModal({ journey, onClose, onSaved }: Props): JSX.Element 
     });
   };
 
-  /** A typed time ends the stored occurrence of a repeated hour: it was the old clock's. */
+  /**
+   * A typed time ends the stored occurrence of a repeated hour: it was the old
+   * clock's. Typing the clock the ride OPENED with, on the terminal it opened
+   * with, gives it back — a change away and back must not move the ride.
+   */
   const setTime = (end: "departure" | "arrival", value: string): void => {
     setError(null);
-    setDraft((prev) => ({ ...prev, [`${end}Local`]: value, [`${end}Fold`]: null }));
+    setDraft((prev) => {
+      const sameClock = value === opened[`${end}Local`] && !opened[`${end}DayOnly`];
+      const sameTerminal = prev[end].lat === opened[end].lat && prev[end].lon === opened[end].lon;
+      const fold = sameClock && sameTerminal ? opened[`${end}Fold`] : null;
+      return { ...prev, [`${end}Local`]: value, [`${end}Fold`]: fold };
+    });
   };
 
   const toggleDayOnly = (end: "departure" | "arrival", dayOnly: boolean): void => {

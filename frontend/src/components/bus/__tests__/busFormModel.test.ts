@@ -214,6 +214,17 @@ describe("busFormModel", () => {
       expect(input.arrivalLocal).toBe("2026-09-20T11:20");
     });
 
+    it("a day-only box beside an absent arrival does not block the delay", () => {
+      const draft = {
+        ...draftFrom(rideFixture()),
+        arrivalLocal: "",
+        arrivalDayOnly: true,
+        delayMinutes: "12",
+      };
+      expect(toBusInput(draft).delayMinutes).toBe(12);
+      expect(toBusInput({ ...draft, arrivalLocal: "2026-09-20" }).delayMinutes).toBeNull();
+    });
+
     it("does not send a delay while either end is a day, but keeps it in the draft", () => {
       const draft = { ...draftFrom(rideFixture()), delayMinutes: "12" };
       expect(toBusInput(draft).delayMinutes).toBe(12);
