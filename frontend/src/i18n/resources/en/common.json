@@ -354,5 +354,11 @@
   },
   "list": {
     "loadFailedHint": "Your data is not affected — it is still there. Try again in a moment."
+  },
+  "discard": {
+    "title": "Discard changes?",
+    "message": "What you entered in this form will be lost.",
+    "confirm": "Discard",
+    "keepEditing": "Keep editing"
   }
 }
