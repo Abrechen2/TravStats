@@ -15,18 +15,26 @@ import {
   type AllianceId,
 } from "../data/airlineAlliances";
 
-/** IATA codes of airports on ocean-island territories (not exhaustive). */
+/**
+ * IATA codes of airports that lie ON an island (not exhaustive).
+ *
+ * Audited against the airport catalogue's coordinates and country on
+ * 2026-10-08 (forgejo#253). Six entries sat on a continent and were removed:
+ * MAD and AGP (Iberian mainland), SKG (Greek mainland), DAD and SGN (Vietnamese
+ * mainland) and AKU (Aksu, inland Xinjiang — most likely a mistaken Akureyri,
+ * which is AEY). What stays is an airport on an island of any size: the large
+ * ones are deliberate (Honshu: NRT/HND/KIX, Hokkaido: CTS, Taiwan: TPE/TSA,
+ * Java: CGK/SUB, Sri Lanka: CMB). The set does not try to list every island
+ * airport, so a missing entry is a gap, never a claim.
+ */
 export const ISLAND_AIRPORTS: ReadonlySet<string> = new Set([
   // Atlantic
   "KEF",
   "RKV",
-  "AKU",
   "FAE",
-  "AGP",
   "TFN",
   "TFS",
   "GCM",
-  "MAD",
   // Balearic / Mediterranean
   "PMI",
   "IBZ",
@@ -35,7 +43,6 @@ export const ISLAND_AIRPORTS: ReadonlySet<string> = new Set([
   "HER",
   "RHO",
   "CFU",
-  "SKG",
   "PFO",
   "LCA",
   // Canary
@@ -86,8 +93,6 @@ export const ISLAND_AIRPORTS: ReadonlySet<string> = new Set([
   "DPS",
   "CGK",
   "SUB",
-  "DAD",
-  "SGN",
 ]);
 
 /**
