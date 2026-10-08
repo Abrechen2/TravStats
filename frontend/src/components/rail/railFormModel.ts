@@ -186,6 +186,8 @@ export function connectionDraftFrom(previous: RailJourney): RailFormDraft {
     // a day has no clock to start from, and inventing a 00:00 for it would
     // repeat forgejo#212 one leg later.
     departureDayOnly: before.arrivalLocal ? before.arrivalDayOnly : before.departureDayOnly,
+    // The copied clock means the same occurrence it did on the leg before.
+    departureFold: before.arrivalLocal ? before.arrivalFold : before.departureFold,
     travelClass: before.travelClass,
     bookingReference: before.bookingReference,
     currency: before.currency,

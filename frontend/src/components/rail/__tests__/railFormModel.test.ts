@@ -533,7 +533,48 @@ describe("a ride in a repeated hour", () => {
     expect(draftFrom(dayEnd).departureFold).toBeNull();
   });
 
-  it("starts the next leg without a fold: its clock is a new ticket's", () => {
-    expect(connectionDraftFrom(later)).toMatchObject({ departureFold: null, arrivalFold: null });
+  it("starts the next leg on the occurrence of the end whose clock it copies", () => {
+    // No arrival stored: the leg before ended where its departure clock says.
+    expect(connectionDraftFrom(later)).toMatchObject({ departureFold: "later", arrivalFold: null });
+    expect(connectionDraftFrom(earlier).departureFold).toBe("earlier");
+    expect(connectionDraftFrom(journey).departureFold).toBeNull();
+
+    const arrivesLater: RailJourney = {
+      ...journey,
+      arrivalTime: "2026-10-25T01:30:00.000Z",
+      times: {
+        departure: {
+          utc: "2026-10-24T20:00:00.000Z",
+          zone: "Europe/Berlin",
+          offset: "+02:00",
+          local: "2026-10-24T22:00:00",
+          precision: "minute",
+        },
+        arrival: {
+          utc: "2026-10-25T01:30:00.000Z",
+          zone: "Europe/Berlin",
+          offset: "+01:00",
+          local: "2026-10-25T02:30:00",
+          precision: "minute",
+        },
+        actualDeparture: null,
+        actualArrival: null,
+      },
+    };
+    const next = connectionDraftFrom(arrivesLater);
+    expect(next).toMatchObject({
+      departureLocal: "2026-10-25T02:30",
+      departureFold: "later",
+      arrivalFold: null,
+    });
+    expect(toRailInput({ ...next, ...completeStations(next) })).toMatchObject({
+      departureLocal: "2026-10-25T02:30",
+      departureFold: "later",
+    });
   });
 });
+
+/** A connection draft has no arrival station yet; give it one so it can be sent. */
+function completeStations(draft: ReturnType<typeof draftFrom>): Partial<typeof draft> {
+  return { arrival: { ...draft.departure, name: "Hamburg Hbf", lat: 53.55, lon: 10.0 } };
+}
