@@ -182,6 +182,34 @@ describe("useDirtyGuard", () => {
     expect(result.current.dirty).toBe(false);
   });
 
+  // Fix round 1: a plain JSON.stringify called a form "changed" when only the
+  // key order or the spelling of "empty" differed — an edit form built from a
+  // record with `null` and a draft holding "" opened already dirty.
+  it("ignores key order", () => {
+    const { result } = renderHook(() => useDirtyGuard({ a: 1, b: "x" }, { b: "x", a: 1 }));
+    expect(result.current.dirty).toBe(false);
+  });
+
+  it("treats undefined, null, an empty string and an absent key as the same empty", () => {
+    const { result, rerender } = renderHook(
+      ({ draft }: { draft: Record<string, unknown> }) =>
+        useDirtyGuard({ a: undefined, b: null, nested: { c: "" } }, draft),
+      { initialProps: { draft: { a: "", b: "", nested: {} } as Record<string, unknown> } }
+    );
+    expect(result.current.dirty).toBe(false);
+    rerender({ draft: { nested: { c: null } } });
+    expect(result.current.dirty).toBe(false);
+    rerender({ draft: { a: "x", nested: {} } });
+    expect(result.current.dirty).toBe(true);
+  });
+
+  it("still sees a real change inside an array or a nested object", () => {
+    const { result } = renderHook(() =>
+      useDirtyGuard({ tags: ["a"], meta: { n: 1 } }, { tags: ["a", "b"], meta: { n: 1 } })
+    );
+    expect(result.current.dirty).toBe(true);
+  });
+
   it("reads the initial values once — a parent's fresh object does not move the baseline", () => {
     const { result, rerender } = renderHook(({ initial, draft }) => useDirtyGuard(initial, draft), {
       initialProps: { initial: { name: "Alt" }, draft: { name: "Neu" } },

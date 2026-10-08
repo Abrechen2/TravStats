@@ -24,8 +24,8 @@ export function useDirtyGuard(
   initial: unknown,
   current: unknown
 ): { dirty: boolean; markSaved: () => void } {
-  const [baseline, setBaseline] = useState<string>(() => snapshot(initial));
-  const currentSnapshot = snapshot(current);
+  const [baseline, setBaseline] = useState<string>(() => stableSnapshot(initial));
+  const currentSnapshot = stableSnapshot(current);
 
   // Closes over the draft of the render that created it — so a `markSaved`
   // called after `await save(...)` records what was SENT, not whatever the
@@ -36,7 +36,37 @@ export function useDirtyGuard(
   return { dirty: currentSnapshot !== baseline, markSaved };
 }
 
-/** JSON is enough: a draft is plain data, and `undefined` vs absent is no change. */
-function snapshot(value: unknown): string {
-  return JSON.stringify(value) ?? "";
+/**
+ * A stable, comparable form of a draft.
+ *
+ * Plain `JSON.stringify` was not enough (review, fix round 1): it depends on
+ * key ORDER, so a draft assembled in a different order than the record it was
+ * built from compared unequal; and it tells `undefined`, `null` and `""` apart,
+ * so an edit form whose record says `notes: null` and whose input holds `""`
+ * opened already "changed" — and asked "discard changes?" about nothing.
+ *
+ * So: object keys are sorted, and `undefined`, `null` and `""` are one EMPTY,
+ * which also equals an absent key (empty members are dropped). For a form the
+ * three are the same answer — "nothing entered" — and the save paths already
+ * send them alike. `0` and `false` are values, not empty.
+ */
+export function stableSnapshot(value: unknown): string {
+  return JSON.stringify(normalise(value)) ?? "";
+}
+
+function isEmpty(value: unknown): boolean {
+  return value === undefined || value === null || value === "";
+}
+
+function normalise(value: unknown): unknown {
+  if (isEmpty(value)) return null;
+  if (Array.isArray(value)) return value.map(normalise);
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, member]) => !isEmpty(member))
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([key, member]) => [key, normalise(member)] as const);
+    return Object.fromEntries(entries);
+  }
+  return value;
 }
