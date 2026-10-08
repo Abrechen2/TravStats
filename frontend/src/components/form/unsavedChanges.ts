@@ -33,9 +33,30 @@ export interface DirtyRegistration {
 const registered: DirtyRegistration[] = [];
 /** We believe the current history entry is our sentinel. */
 let sentinelOnTop = false;
-/** `popstate` events we caused ourselves and must not answer. */
-let ownPops = 0;
 let listeningToPop = false;
+
+/**
+ * "The next `popstate` is one WE caused" — a flag, not a count, and it clears
+ * itself. A count went wrong in exactly the owner's setting (fix round 2): a
+ * `history.go(-2)` with nothing two steps back fires NO popstate, so the count
+ * stayed at 1 forever and swallowed the user's next real Back — the form
+ * behind it was lost. A flag is cleared by the next pop or, if none comes,
+ * by a timer; it can never outlive the navigation that set it by more than
+ * that.
+ */
+let ownNavigation = false;
+let ownNavigationTimer: ReturnType<typeof setTimeout> | null = null;
+const OWN_NAVIGATION_WINDOW_MS = 1000;
+
+function navigateOurselves(step: number): void {
+  ownNavigation = true;
+  if (ownNavigationTimer !== null) clearTimeout(ownNavigationTimer);
+  ownNavigationTimer = setTimeout(() => {
+    ownNavigation = false;
+    ownNavigationTimer = null;
+  }, OWN_NAVIGATION_WINDOW_MS);
+  window.history.go(step);
+}
 
 /** How many open dialogs hold unsaved input. */
 export function openDirtyDialogCount(): number {
@@ -63,8 +84,10 @@ function pushSentinel(): void {
 }
 
 function onPopState(): void {
-  if (ownPops > 0) {
-    ownPops -= 1;
+  if (ownNavigation) {
+    ownNavigation = false;
+    if (ownNavigationTimer !== null) clearTimeout(ownNavigationTimer);
+    ownNavigationTimer = null;
     return;
   }
   if (!sentinelOnTop || currentStateIsSentinel()) return;
@@ -99,10 +122,7 @@ export function registerDirtyDialog(entry: DirtyRegistration): () => void {
     window.removeEventListener("beforeunload", onBeforeUnload);
     // Clean again (saved, or discarded through a close): take the sentinel
     // away without navigating anywhere — and without asking about it.
-    if (sentinelOnTop && currentStateIsSentinel()) {
-      ownPops += 1;
-      window.history.back();
-    }
+    if (sentinelOnTop && currentStateIsSentinel()) navigateOurselves(-1);
     sentinelOnTop = false;
   };
 }
@@ -110,9 +130,17 @@ export function registerDirtyDialog(entry: DirtyRegistration): () => void {
 /**
  * "Verwerfen" on a question that a Back raised: go where the user was going —
  * past the sentinel we re-armed AND the entry their Back had landed on.
+ *
+ * How far that is comes from the history itself, never from an assumption:
+ * the sentinel was just re-pushed, so nothing lies ahead of it and the current
+ * index is `length - 1`. Two steps back exist only from a length of 3. With 2,
+ * the page itself is the oldest entry (a fresh tab, a home-screen app): one
+ * step lands on it and the dialog closes — there is nowhere further to go.
+ * With 1 there is no step at all, and the sentinel is simply forgotten.
  */
 export function leaveThroughHistory(): void {
   sentinelOnTop = false;
-  ownPops += 1;
-  window.history.go(-2);
+  const length = window.history.length;
+  const step = length >= 3 ? -2 : length >= 2 ? -1 : 0;
+  if (step !== 0) navigateOurselves(step);
 }
