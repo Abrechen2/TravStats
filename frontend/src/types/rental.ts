@@ -151,6 +151,11 @@ export interface RentalInput {
   paymentTiming?: RentalPaymentTiming | null;
   price?: number | null;
   currency?: string | null;
+  /** A labelled correction of the invoice's amount; absent leaves the stored one. */
+  finalAmount?: number | null;
+  finalCurrency?: string | null;
+  invoiceNumber?: string | null;
+  fuelPolicy?: RentalFuelPolicy | null;
   inclusions?: RentalInclusion[];
   arrivalFlightNumber?: string | null;
   status?: "scheduled" | "cancelled";

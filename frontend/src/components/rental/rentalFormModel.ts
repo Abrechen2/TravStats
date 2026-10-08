@@ -3,6 +3,7 @@ import { parseDecimalInput } from "../../lib/decimalInput";
 import { rentalDrivenKm, type RentalDrivenKm } from "../../shared/rentalCounting";
 import type {
   RentalBooking,
+  RentalFuelPolicy,
   RentalInclusion,
   RentalInput,
   RentalPaymentTiming,
@@ -90,6 +91,17 @@ export interface RentalDraft {
   price: string;
   currency: string;
   inclusions: RentalInclusion[];
+  fuelPolicy: RentalFuelPolicy | "";
+  /**
+   * The invoice's charged total as the form shows it — whatever wrote it.
+   * Sent only when it differs from the stored value (`finalAmountChanged`):
+   * re-sending an invoice's figure would relabel it a correction by hand.
+   */
+  finalAmount: string;
+  finalCurrency: string;
+  storedFinalAmount: number | null;
+  storedFinalCurrency: string | null;
+  invoiceNumber: string;
   /**
    * A typed km figure is a labelled correction; empty = leave it to the
    * invoice or the odometer. Filled from a stored figure only when that figure
@@ -129,6 +141,12 @@ export const EMPTY_RENTAL_DRAFT: RentalDraft = {
   price: "",
   currency: "EUR",
   inclusions: [],
+  fuelPolicy: "",
+  finalAmount: "",
+  finalCurrency: "EUR",
+  storedFinalAmount: null,
+  storedFinalCurrency: null,
+  invoiceNumber: "",
   distanceKm: "",
   odometerOutKm: "",
   odometerInKm: "",
@@ -222,6 +240,12 @@ export function draftFromRental(r: RentalBooking): RentalDraft {
     price: r.price === null ? "" : String(r.price),
     currency: r.currency ?? "EUR",
     inclusions: r.inclusions,
+    fuelPolicy: r.fuelPolicy ?? "",
+    finalAmount: r.finalAmount === null ? "" : String(r.finalAmount),
+    finalCurrency: r.finalCurrency ?? r.currency ?? "EUR",
+    storedFinalAmount: r.finalAmount,
+    storedFinalCurrency: r.finalCurrency,
+    invoiceNumber: r.invoiceNumber ?? "",
     distanceKm: r.distanceKm !== null && r.distanceSource === "user" ? String(r.distanceKm) : "",
     odometerOutKm: r.odometerOutKm === null ? "" : String(r.odometerOutKm),
     odometerInKm: r.odometerInKm === null ? "" : String(r.odometerInKm),
@@ -242,6 +266,7 @@ export type RentalFormField =
   | "actualPickupLocal"
   | "actualReturnLocal"
   | "price"
+  | "finalAmount"
   | "distanceKm"
   | "odometerOutKm"
   | "odometerInKm"
@@ -283,6 +308,8 @@ export function validateRentalDraft(d: RentalDraft): RentalDraftErrors {
   // Both read through `parseDecimalInput`, so "150,00" is a price (forgejo#163).
   const price = parseDecimalInput(d.price);
   if (price !== null && !(price >= 0)) errors.price = "rental:form.errors.number";
+  const final = parseDecimalInput(d.finalAmount);
+  if (final !== null && !(final >= 0)) errors.finalAmount = "rental:form.errors.number";
   const km = parseDecimalInput(d.distanceKm);
   if (km !== null && !Number.isInteger(km)) errors.distanceKm = "rental:form.errors.number";
   const out = parseKmReading(d.odometerOutKm);
@@ -346,6 +373,19 @@ function correctionInput(d: RentalDraft): Pick<RentalInput, "distanceKm"> {
 }
 
 /**
+ * The invoice amount as the write body carries it: ABSENT while it is what
+ * was stored (an invoice's figure stays the invoice's), the typed figure — or
+ * null, emptied — once the user changed it; that is a labelled correction.
+ */
+function finalAmountInput(d: RentalDraft): Pick<RentalInput, "finalAmount" | "finalCurrency"> {
+  const typed = parseDecimalInput(d.finalAmount);
+  const currency = typed === null ? null : d.finalCurrency;
+  const unchanged =
+    typed === d.storedFinalAmount && (typed === null || currency === d.storedFinalCurrency);
+  return unchanged ? {} : { finalAmount: typed, finalCurrency: currency };
+}
+
+/**
  * The write body. An empty price is null — unknown, never 0 (§2). A typed km
  * figure goes out as the labelled correction it is; the two odometer readings
  * as whole km, an empty one as null.
@@ -376,6 +416,9 @@ export function rentalInputFromDraft(d: RentalDraft): RentalInput {
     price,
     currency: price === null ? null : d.currency,
     inclusions: d.inclusions,
+    fuelPolicy: d.fuelPolicy === "" ? null : d.fuelPolicy,
+    invoiceNumber: text(d.invoiceNumber),
+    ...finalAmountInput(d),
     ...correctionInput(d),
     odometerOutKm: parseKmReading(d.odometerOutKm),
     odometerInKm: parseKmReading(d.odometerInKm),
@@ -407,6 +450,7 @@ const FIELDS: readonly RentalFormField[] = [
   "actualPickupLocal",
   "actualReturnLocal",
   "price",
+  "finalAmount",
   "distanceKm",
   "odometerOutKm",
   "odometerInKm",

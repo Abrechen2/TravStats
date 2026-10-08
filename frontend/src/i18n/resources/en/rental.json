@@ -9,7 +9,6 @@
   "saved": "Rental saved.",
   "deleted": "Rental deleted.",
   "deleteError": "The rental could not be deleted.",
-  "deleteConfirm": "Delete this rental for good?",
   "edit": "Edit",
   "delete": "Delete",
   "status": {
@@ -84,7 +83,8 @@
     "allStatuses": "All statuses",
     "allYears": "All years",
     "allProviders": "All providers",
-    "emptyHint": "Add your first rental or read in a booking mail."
+    "emptyHint": "Add your first rental or read in a booking mail.",
+    "emptyAction": "Add a rental"
   },
   "summary": {
     "rentals_one": "Rental",
@@ -117,8 +117,8 @@
     "returnStation": "Return",
     "sameStation": "Returned at the same station",
     "stationName": "Station name",
-    "pickupLocal": "Pickup (station local time)",
-    "returnLocal": "Return (station local time)",
+    "pickupLocal": "Booked pickup (station local time)",
+    "returnLocal": "Booked return (station local time)",
     "stationClockHint": "Times are in each station's local time, as the booking prints them.",
     "vehicleClass": "Car group",
     "acrissCode": "ACRISS code",
@@ -155,6 +155,27 @@
       "unknownBooking": "There is no rental with this booking number.",
       "timeShape": "Please enter a full date and time – or choose \"date only\".",
       "actualReturnBeforePickup": "The actual return is before the actual pickup."
+    },
+    "dayOnly": "date only",
+    "actualPickupLocal": "Actual pickup (station local time)",
+    "actualReturnLocal": "Actual return (station local time)",
+    "arrivalFlightNumber": "Arriving flight",
+    "fuelPolicy": "Fuel policy",
+    "notesHint": "Your own notes – they also appear on the return card.",
+    "invoice": "Invoice",
+    "finalAmount": "Final amount on the invoice",
+    "finalCurrency": "Currency of the final amount",
+    "invoiceNumber": "Invoice number",
+    "invoiceHint": "A final amount you change here is saved as a correction by hand; an amount from an imported invoice otherwise stays as it is.",
+    "steps": {
+      "label": "Rental steps",
+      "booking": "Booking",
+      "pickup": "Pickup",
+      "return": "Return",
+      "gaps_one": "{{count}} open entry",
+      "gaps_other": "{{count}} open entries",
+      "next": "Next: {{step}}",
+      "pickupIntro": "What happened at the counter – all optional. The booked times are under \"Booking\"."
     }
   },
   "detail": {
@@ -279,5 +300,12 @@
     "span_one": "{{count}} rental day to the return",
     "span_other": "{{count}} rental days to the return"
   },
-  "invoiceMissing": "The invoice is still missing: it supplies the kilometres driven. Read it in once you have it."
+  "invoiceMissing": "The invoice is still missing: it supplies the kilometres driven. Read it in once you have it.",
+  "deleteConfirmNamed": "Really delete the rental {{provider}} · {{where}}?",
+  "deleteSurvivors": {
+    "trip": "the trip \"{{name}}\"",
+    "roadtrip": "the roadtrip \"{{name}}\"",
+    "companions_one": "{{count}} companion",
+    "companions_other": "{{count}} companions"
+  }
 }

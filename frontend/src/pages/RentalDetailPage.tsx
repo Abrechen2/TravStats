@@ -18,7 +18,8 @@ import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
 import { rentalApi } from "../lib/api/rental";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
-import { DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { rentalDeleteMessage } from "../lib/rental/rentalDeleteMessage";
 import { formatAmount } from "../lib/units";
 import { formatStationMoment } from "../lib/rentalTime";
 import type { TimeValue } from "../shared/time";
@@ -372,6 +373,7 @@ export default function RentalDetailPage(): JSX.Element {
       {editing && (
         <RentalFormModal
           rental={rental}
+          afterSaveFailedKey="common:form.savedButViewRefreshFailed"
           onClose={() => setEditing(false)}
           onSaved={() => {
             setEditing(false);
@@ -387,7 +389,7 @@ export default function RentalDetailPage(): JSX.Element {
         onConfirm={() => void handleDelete()}
         isLoading={deleting}
         title={t("rental:delete")}
-        message={withDocumentNote(t("rental:deleteConfirm"), t, documentCount)}
+        message={rentalDeleteMessage(t, rental, documentCount)}
         confirmText={t("common:buttons.delete")}
         confirmButtonClass={DELETE_BUTTON_CLASS}
       />

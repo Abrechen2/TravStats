@@ -9,7 +9,6 @@
   "saved": "Miete gespeichert.",
   "deleted": "Miete gelöscht.",
   "deleteError": "Die Miete konnte nicht gelöscht werden.",
-  "deleteConfirm": "Diese Miete endgültig löschen?",
   "edit": "Bearbeiten",
   "delete": "Löschen",
   "status": {
@@ -84,7 +83,8 @@
     "allStatuses": "Alle Status",
     "allYears": "Alle Jahre",
     "allProviders": "Alle Anbieter",
-    "emptyHint": "Trage deine erste Miete ein oder lies eine Buchungsmail ein."
+    "emptyHint": "Trage deine erste Miete ein oder lies eine Buchungsmail ein.",
+    "emptyAction": "Miete hinzufügen"
   },
   "summary": {
     "rentals_one": "Miete",
@@ -117,8 +117,8 @@
     "returnStation": "Rückgabe",
     "sameStation": "Rückgabe an derselben Station",
     "stationName": "Name der Station",
-    "pickupLocal": "Abholung (Ortszeit der Station)",
-    "returnLocal": "Rückgabe (Ortszeit der Station)",
+    "pickupLocal": "Gebuchte Abholung (Ortszeit der Station)",
+    "returnLocal": "Gebuchte Rückgabe (Ortszeit der Station)",
     "stationClockHint": "Zeiten gelten in der Ortszeit der jeweiligen Station, wie in der Buchung gedruckt.",
     "vehicleClass": "Fahrzeuggruppe",
     "acrissCode": "ACRISS-Code",
@@ -155,6 +155,27 @@
       "unknownBooking": "Zu dieser Buchungsnummer gibt es keine Miete.",
       "timeShape": "Bitte ein vollständiges Datum mit Uhrzeit angeben – oder „nur Datum“ wählen.",
       "actualReturnBeforePickup": "Die tatsächliche Rückgabe liegt vor der tatsächlichen Abholung."
+    },
+    "dayOnly": "nur Datum",
+    "actualPickupLocal": "Tatsächliche Abholung (Ortszeit der Station)",
+    "actualReturnLocal": "Tatsächliche Rückgabe (Ortszeit der Station)",
+    "arrivalFlightNumber": "Ankunftsflug",
+    "fuelPolicy": "Tankregel",
+    "notesHint": "Eigene Hinweise – sie erscheinen auch auf der Rückgabekarte.",
+    "invoice": "Rechnung",
+    "finalAmount": "Endbetrag laut Rechnung",
+    "finalCurrency": "Währung des Endbetrags",
+    "invoiceNumber": "Rechnungsnummer",
+    "invoiceHint": "Ein Endbetrag, den du hier änderst, wird als Korrektur von Hand gespeichert; ein Betrag aus einer eingelesenen Rechnung bleibt sonst unverändert.",
+    "steps": {
+      "label": "Schritte der Miete",
+      "booking": "Buchung",
+      "pickup": "Abholung",
+      "return": "Rückgabe",
+      "gaps_one": "{{count}} offene Angabe",
+      "gaps_other": "{{count}} offene Angaben",
+      "next": "Weiter: {{step}}",
+      "pickupIntro": "Was am Schalter geschah – alles optional. Die gebuchten Zeiten stehen unter „Buchung“."
     }
   },
   "detail": {
@@ -279,5 +300,12 @@
     "span_one": "{{count}} Miettag bis zur Rückgabe",
     "span_other": "{{count}} Miettage bis zur Rückgabe"
   },
-  "invoiceMissing": "Die Rechnung fehlt noch – erst mit ihr kennt TravStats die gefahrenen Kilometer. Lies sie ein, sobald du sie hast."
+  "invoiceMissing": "Die Rechnung fehlt noch – erst mit ihr kennt TravStats die gefahrenen Kilometer. Lies sie ein, sobald du sie hast.",
+  "deleteConfirmNamed": "Die Miete {{provider}} · {{where}} wirklich löschen?",
+  "deleteSurvivors": {
+    "trip": "die Reise „{{name}}“",
+    "roadtrip": "der Roadtrip „{{name}}“",
+    "companions_one": "{{count}} Mitreisende Person",
+    "companions_other": "{{count}} Mitreisende"
+  }
 }
