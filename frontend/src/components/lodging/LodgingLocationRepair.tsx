@@ -154,7 +154,7 @@ export function LodgingLocationRepair({
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-neutral-900"
+                className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-(--ts-accent-text)"
               >
                 {t("common:buttons.close")}
               </button>
@@ -178,7 +178,7 @@ export function LodgingLocationRepair({
                 aria-describedby={hintId}
                 disabled={candidate === null || saving.saving || saving.saved !== null}
                 onClick={() => void handleSave()}
-                className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)] disabled:opacity-50"
+                className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-(--ts-accent-text) hover:bg-[var(--accent-dim)] disabled:opacity-50"
               >
                 {saving.saving ? t("common:buttons.saving") : t("lodging:repair.take")}
               </button>

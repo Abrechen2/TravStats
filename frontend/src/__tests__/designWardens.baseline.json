@@ -130,7 +130,6 @@
     "components/Trips/TripModal.tsx",
     "components/import/ColumnMappingWizard.tsx",
     "components/import/PreviewModal.tsx",
-    "components/lodging/StayEditor.tsx",
     "components/places/PlaceImportPreviewModal.tsx",
     "pages/LoginPage.tsx",
     "pages/PendingUpdatesPage.tsx"

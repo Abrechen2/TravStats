@@ -88,7 +88,7 @@ export function StayConflictNotice({
           type="button"
           data-testid="stay-conflict-proceed"
           onClick={onProceed}
-          className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)] pointer-coarse:min-h-(--ts-size-touch-min)"
+          className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-(--ts-accent-text) hover:bg-[var(--accent-dim)] pointer-coarse:min-h-(--ts-size-touch-min)"
         >
           {notice.unchecked ? t("lodging:conflict.saveAnyway") : t("lodging:conflict.proceed")}
         </button>
