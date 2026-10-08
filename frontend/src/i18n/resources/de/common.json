@@ -363,6 +363,7 @@
   },
   "form": {
     "requiredLegend": "Mit * markierte Felder sind Pflicht.",
-    "saveBlocked": "Zum Speichern fehlt noch:"
+    "saveBlocked": "Zum Speichern fehlt noch:",
+    "savedButRefreshFailed": "Gespeichert. Die Liste konnte nicht aktualisiert werden."
   }
 }

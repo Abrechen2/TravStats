@@ -363,6 +363,7 @@
   },
   "form": {
     "requiredLegend": "Fields marked * are required.",
-    "saveBlocked": "Still needed to save:"
+    "saveBlocked": "Still needed to save:",
+    "savedButRefreshFailed": "Saved. The list could not be refreshed."
   }
 }
