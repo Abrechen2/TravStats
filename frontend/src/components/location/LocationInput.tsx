@@ -26,6 +26,7 @@ import type { PlaceSearchResult } from "../../lib/api/geo";
 import { useLocationSearch } from "./useLocationSearch";
 import { LocationSuggestions } from "./LocationSuggestions";
 import { LocationMapModal } from "./LocationMapModal";
+import { RequiredMark } from "../form/requiredFields";
 
 export interface LocationCoordinates {
   lat: number;
@@ -83,6 +84,11 @@ export interface LocationInputProps {
    * it instead of to the first of the two.
    */
   onValidityChange?: (valid: boolean, field?: "lat" | "lon") => void;
+  /**
+   * Marks the search as a required field (forgejo#245): the shared asterisk
+   * beside the label and `aria-required` on the input. Off by default.
+   */
+  required?: boolean;
 }
 
 function isValidLat(n: number): boolean {
@@ -122,6 +128,7 @@ export function LocationInput({
   label,
   idPrefix = "location-input",
   onValidityChange,
+  required = false,
 }: LocationInputProps): JSX.Element {
   const { t, i18n } = useTranslation(["location"]);
 
@@ -298,9 +305,16 @@ export function LocationInput({
       <div className="relative">
         <label className="label" htmlFor={`${idPrefix}-search`}>
           {label ?? t("location:searchLabel")}
+          {required && (
+            <>
+              {" "}
+              <RequiredMark />
+            </>
+          )}
         </label>
         <input
           id={`${idPrefix}-search`}
+          aria-required={required || undefined}
           role="combobox"
           aria-expanded={isDropdownOpen}
           aria-autocomplete="list"

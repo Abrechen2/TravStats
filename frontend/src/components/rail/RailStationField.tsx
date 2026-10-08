@@ -31,6 +31,8 @@ interface Props {
   onChange: (next: RailStationDraft) => void;
   onValidityChange?: (valid: boolean) => void;
   inputClassName: string;
+  /** Passed to the search field: the shared asterisk and `aria-required`. */
+  required?: boolean;
 }
 
 /**
@@ -52,6 +54,7 @@ export function RailStationField({
   onChange,
   onValidityChange,
   inputClassName,
+  required = false,
 }: Props): JSX.Element {
   const { t } = useTranslation(["rail"]);
 
@@ -86,6 +89,7 @@ export function RailStationField({
         onChange={handlePick}
         onValidityChange={onValidityChange}
         compact
+        required={required}
       />
       <input
         className={inputClassName}

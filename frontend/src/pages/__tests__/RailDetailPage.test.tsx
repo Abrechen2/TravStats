@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import {
   makeRailBookingLeg,
@@ -246,6 +246,29 @@ describe("RailDetailPage", () => {
     await renderPage(detail({ booking: { id: "b1", pnr: null, railJourneys: legs } }));
     await waitFor(() => expect(getConnectionMock).toHaveBeenCalled());
     expect(screen.queryByTestId("rail-connection-link")).toBeNull();
+  });
+
+  // forgejo#250: what goes (the ride, its originals) and what stays (the
+  // trip, the booking's other trains), on the detail page too.
+  it("names the ride, its originals and what stays in the delete question", async () => {
+    listForEntry.mockResolvedValue([{ id: "d1" }]);
+    const legs = [
+      makeRailBookingLeg({ id: "j1" }),
+      makeRailBookingLeg({ id: "j2", depStationName: "Fulda", arrStationName: "Berlin" }),
+    ];
+    await renderPage(
+      detail({
+        bookingId: "b1",
+        trip: { id: "t1", name: "Rhön", color: "#fff" },
+        booking: { id: "b1", pnr: null, railJourneys: legs },
+      })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "rail:delete" }));
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => expect(dialog.textContent).toContain("documents:deleteCascadeNote"));
+    expect(dialog.textContent).toContain('rail:deleteConfirmNamed {"route":"Frankfurt → Fulda"}');
+    expect(dialog.textContent).toContain('rail:deleteSurvivors.trip {\\"name\\":\\"Rhön\\"}');
+    expect(dialog.textContent).toContain('rail:deleteSurvivors.otherLegs {\\"count\\":1}');
   });
 
   it("files documents with the journey", async () => {

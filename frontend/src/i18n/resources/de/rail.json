@@ -33,7 +33,13 @@
   "onTime": "pünktlich",
   "edit": "Bearbeiten",
   "delete": "Löschen",
-  "deleteConfirm": "Diese Fahrt wirklich löschen?",
+  "deleteConfirmNamed": "Die Fahrt {{route}} wirklich löschen?",
+  "deleteSurvivors": {
+    "trip": "Reise „{{name}}“",
+    "otherLegs_one": "{{count}} weitere Fahrt derselben Buchung",
+    "otherLegs_other": "{{count}} weitere Fahrten derselben Buchung",
+    "bookingLegs": "andere Fahrten derselben Buchung"
+  },
   "deleted": "Fahrt gelöscht",
   "deleteError": "Die Fahrt konnte nicht gelöscht werden.",
   "saved": "Fahrt gespeichert",
@@ -97,7 +103,12 @@
       "invalidField": "Die Angabe „{{field}}“ wurde nicht angenommen. Bitte prüf sie.",
       "invalid": "Eine Angabe wurde nicht angenommen. Bitte prüf die Felder."
     },
-    "suggestionsFailed": "Vorschläge aus deinen bisherigen Fahrten konnten nicht geladen werden — das Formular funktioniert trotzdem."
+    "suggestionsFailed": "Vorschläge aus deinen bisherigen Fahrten konnten nicht geladen werden — das Formular funktioniert trotzdem.",
+    "missing": {
+      "depCoordinates": "gültige Koordinaten des Abfahrtsbahnhofs",
+      "arrCoordinates": "gültige Koordinaten des Ankunftsbahnhofs",
+      "departureTime": "Abfahrtszeit"
+    }
   },
   "tracedLine": "entlang der Strecke, Transitous",
   "roadtripLine": "entlang der Roadtrip-Route",

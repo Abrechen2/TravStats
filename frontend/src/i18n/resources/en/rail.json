@@ -33,7 +33,13 @@
   "onTime": "on time",
   "edit": "Edit",
   "delete": "Delete",
-  "deleteConfirm": "Really delete this journey?",
+  "deleteConfirmNamed": "Really delete the journey {{route}}?",
+  "deleteSurvivors": {
+    "trip": "trip “{{name}}”",
+    "otherLegs_one": "{{count}} other journey of the same booking",
+    "otherLegs_other": "{{count}} other journeys of the same booking",
+    "bookingLegs": "other journeys of the same booking"
+  },
   "deleted": "Journey deleted",
   "deleteError": "The journey could not be deleted.",
   "saved": "Journey saved",
@@ -97,7 +103,12 @@
       "invalidField": "“{{field}}” was not accepted. Please check it.",
       "invalid": "An entry was not accepted. Please check the fields."
     },
-    "suggestionsFailed": "Suggestions from your earlier rides could not be loaded — the form works all the same."
+    "suggestionsFailed": "Suggestions from your earlier rides could not be loaded — the form works all the same.",
+    "missing": {
+      "depCoordinates": "valid coordinates of the departure station",
+      "arrCoordinates": "valid coordinates of the arrival station",
+      "departureTime": "departure time"
+    }
   },
   "tracedLine": "along the line, Transitous",
   "roadtripLine": "along the roadtrip route",

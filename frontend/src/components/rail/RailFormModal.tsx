@@ -1,24 +1,34 @@
 import { useEffect, useState } from "react";
-import type { JSX, ReactNode } from "react";
+import type { JSX } from "react";
 import Modal from "../Modal";
-import CurrencySelect from "../common/CurrencySelect";
-import TagInput from "../TagInput";
 import { useTripPreselection } from "../../hooks/useTripPreselection";
-import CompanionPicker from "../CompanionPicker";
-import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useTranslation } from "../../hooks/useTranslation";
-import { minorUnits } from "../../shared/currencies";
 import { railApi } from "../../lib/api/rail";
 import { tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
+import { isTransientSaveError } from "../../lib/saveErrorMessage";
+import {
+  FieldError,
+  FormErrorBanner,
+  RequiredLegend,
+  RequiredMark,
+  SaveBlockedHint,
+  fieldErrorProps,
+  useDirtyGuard,
+  useFormFailure,
+  useSaveOnce,
+} from "../form";
+import type { MissingStep } from "../form";
 import type { Trip } from "../../types";
-import { RAIL_TRAVEL_CLASSES, type RailJourney, type RailTravelClass } from "../../types/rail";
+import type { RailJourney } from "../../types/rail";
 import SuggestionChips from "../common/SuggestionChips";
 import { ClockChangeNotice } from "../common/ClockChangeNotice";
 import { trainLabel, useRailEntrySuggestions } from "../../hooks/useRailEntrySuggestions";
 import { StationPicker } from "./StationPicker";
 import { RailLookupPanel } from "./RailLookupPanel";
+import { RailFormDetails } from "./RailFormDetails";
+import { INPUT_CLASS, LabelledInput, Section } from "./railFormFields";
 import type { RailStationDraft } from "./RailStationField";
 import {
   canSubmit,
@@ -50,10 +60,18 @@ interface Props {
    * open for the next one — the caller refreshes, but does not close.
    */
   onProgress?: (saved: RailJourney) => void | Promise<void>;
+  /**
+   * What the "stored, but the follow-up failed" notice names: the list by
+   * default; the detail page passes the view's wording.
+   */
+  afterSaveFailedKey?: string;
 }
 
-const INPUT_CLASS =
-  "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden";
+const HINT_ID = "rail-form-save-blocked";
+/** The time inputs' ids — `saveErrorFrom` names a refused time by these fields. */
+const TIME_ID = { departureLocal: "rail-departureLocal", arrivalLocal: "rail-arrivalLocal" };
+/** A checkbox row a finger can hit on a coarse pointer. */
+const CHECK_ROW = "flex items-center gap-2 text-sm pointer-coarse:min-h-(--ts-size-touch-min)";
 
 /** A notice about the line is read, not glanced at — longer than a "saved". */
 const NOTICE_MS = 12_000;
@@ -69,6 +87,13 @@ const DARK_PICKER_STYLE = { colorScheme: "dark" } as const;
  * the server finds the zone from the station and stores the instant. The
  * status is not a field: it follows from the times, and only a cancellation
  * is the user's to state — the same rule the cruise form follows.
+ *
+ * Shared form blocks (forgejo#245–#249), pattern "disabled save +
+ * `SaveBlockedHint`": both save buttons stay greyed out until the stations
+ * and the departure are there, and the line beside them says which is
+ * missing. A refusal by the server is shown at its time field or in the
+ * banner, until the next edit; a save is sent once (`useSaveOnce`), and a
+ * changed form asks before it is discarded.
  */
 export function RailFormModal({
   journey: initialJourney,
@@ -77,9 +102,9 @@ export function RailFormModal({
   onClose,
   onSaved,
   onProgress,
+  afterSaveFailedKey,
 }: Props): JSX.Element {
   const { t } = useTranslation(["rail", "common"]);
-  const recentCurrencies = useRecentCurrencies();
   const addToast = useToastStore((s) => s.addToast);
   // The dialog can move on to the next leg without closing, so what it edits
   // and what it continues are state, seeded from the props.
@@ -98,8 +123,27 @@ export function RailFormModal({
   const [trips, setTrips] = useState<Trip[]>([]);
   const [depValid, setDepValid] = useState(true);
   const [arrValid, setArrValid] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<RailSaveError | null>(null);
+  /** The last refusal; shown only while `failure` still holds it (until the next edit). */
+  const [refusal, setRefusal] = useState<RailSaveError | null>(null);
+  /** Which button the refused save came from, so "Erneut versuchen" repeats it. */
+  const [retryConnect, setRetryConnect] = useState(false);
+  /** "Save and add a connection" stored the leg, but the list did not reload. */
+  const [progressRefreshFailed, setProgressRefreshFailed] = useState(false);
+  /** The trip the form itself suggested for a new ride — not the user's change. */
+  const [autoTripId, setAutoTripId] = useState<string | null>(null);
+  // The baseline is the ride as the dialog OPENED it (or the next leg it
+  // moved on to), the same draft the form starts from. A trip the form
+  // preselected on its own is no reason to ask "discard changes?".
+  const {
+    dirty,
+    markSaved,
+    reset: resetDirty,
+  } = useDirtyGuard(
+    opened,
+    autoTripId !== null && draft.tripId === autoTripId ? { ...draft, tripId: opened.tripId } : draft
+  );
+  const saving = useSaveOnce<RailJourney>({ afterSaveFailedKey });
+  const failure = useFormFailure(JSON.stringify(draft));
   /** Where the ride continues after a change the lookup revealed. */
   const [onward, setOnward] = useState<RailStationDraft | null>(null);
 
@@ -123,13 +167,20 @@ export function RailFormModal({
 
   // A NEW ride is filed under the one trip whose dates contain its departure
   // day, as flights, cruises and stays are; a pick by hand ends it.
-  const pickTrip = useTripPreselection({
+  const preselectTrip = useTripPreselection({
     enabled: journey === null,
     trips,
     date: draft.departureLocal,
     value: draft.tripId,
-    onChange: (tripId) => set("tripId", tripId),
+    onChange: (tripId) => {
+      set("tripId", tripId);
+      setAutoTripId(tripId);
+    },
   });
+  const pickTrip = (tripId: string): void => {
+    preselectTrip(tripId);
+    setAutoTripId(null);
+  };
 
   const { suggestions, failed: suggestionsFailed } = useRailEntrySuggestions({
     departure: draft.departure,
@@ -181,7 +232,6 @@ export function RailFormModal({
   };
 
   const toggleDayOnly = (end: "departure" | "arrival", dayOnly: boolean): void => {
-    setError(null);
     setDraft((prev) => {
       const local = end === "departure" ? prev.departureLocal : prev.arrivalLocal;
       const next = dayOnly ? dayPart(local) : withClock(local);
@@ -193,106 +243,168 @@ export function RailFormModal({
   };
 
   const ready = canSubmit(draft) && depValid && arrValid;
+  // What keeps both save buttons greyed out, said beside them (forgejo#245);
+  // the same conditions as `ready`, one item per gap, each focusing its field.
+  const missing: MissingStep[] = [
+    ...(isStationComplete(draft.departure)
+      ? []
+      : [{ field: "rail-dep-search", label: t("rail:form.departureStation") }]),
+    ...(depValid ? [] : [{ field: "rail-dep-lat", label: t("rail:form.missing.depCoordinates") }]),
+    ...(isStationComplete(draft.arrival)
+      ? []
+      : [{ field: "rail-arr-search", label: t("rail:form.arrivalStation") }]),
+    ...(arrValid ? [] : [{ field: "rail-arr-lat", label: t("rail:form.missing.arrCoordinates") }]),
+    ...(draft.departureLocal === ""
+      ? [{ field: TIME_ID.departureLocal, label: t("rail:form.missing.departureTime") }]
+      : []),
+  ];
+  const shown = failure.failureKey !== null ? refusal : null;
   const errorText =
-    error === null
+    shown === null
       ? null
-      : t(error.key, error.fieldLabelKey ? { field: t(error.fieldLabelKey) } : undefined);
-  /** The refusal shown under a time field, with the input marked invalid. */
-  const fieldError = (field: "departureLocal" | "arrivalLocal") =>
-    error?.field === field
-      ? {
-          input: { "aria-invalid": true, "aria-describedby": `rail-${field}-error` } as const,
-          message: (
-            <p id={`rail-${field}-error`} role="alert" className="mt-1 text-sm text-(--danger)">
-              {errorText}
-            </p>
-          ),
-        }
-      : { input: {}, message: null };
-  const depError = fieldError("departureLocal");
-  const arrError = fieldError("arrivalLocal");
+      : t(shown.key, shown.fieldLabelKey ? { field: t(shown.fieldLabelKey) } : undefined);
+  /** A refused time, at its field (forgejo#246). */
+  const timeError = (field: "departureLocal" | "arrivalLocal"): string | null =>
+    shown?.field === field ? errorText : null;
+  const depError = timeError("departureLocal");
+  const arrError = timeError("arrivalLocal");
+  const bannerText = shown !== null && shown.field === null ? errorText : null;
 
   const previousId = typeof connectsFrom === "string" ? connectsFrom : connectsFrom?.id;
   const previousStation =
     typeof connectsFrom === "object" ? connectsFrom.arrStationName : draft.departure.name;
 
-  const submit = async (thenConnect = false): Promise<void> => {
-    if (!ready) return;
-    setSaving(true);
-    setError(null);
-    try {
-      const input = toRailInput(draft);
-      const result = journey
-        ? await railApi.update(journey.id, input)
-        : await railApi.create(previousId ? { ...input, connectsFrom: previousId } : input);
-      const saved = result.journey;
-      const notice = geometryNotice(result.geometry);
-      if (notice) {
-        addToast(notice.level, t(notice.key, { reason: t(notice.reasonKey) }), NOTICE_MS);
-      }
-      if (!thenConnect) {
-        await onSaved(saved);
-        return;
-      }
-      // The next leg: from where this one arrives, after it arrives, in the
-      // same trip and booking. The pickers remount so they show the new pick.
-      await onProgress?.(saved);
-      setJourney(null);
-      setConnectsFrom(saved);
-      const nextLeg = onward ? onwardDraftFrom(saved, onward) : connectionDraftFrom(saved);
-      setDraft(nextLeg);
-      setOpened(nextLeg);
-      setOnward(null);
-      setFormKey((k) => k + 1);
-    } catch (err: unknown) {
-      logger.error("RailFormModal: save failed", err);
-      setError(saveErrorFrom(err));
-    } finally {
-      setSaving(false);
-    }
+  /** The leg after `saved`, opened in place — the dialog moves on rather than closing. */
+  const continueAfter = (saved: RailJourney): void => {
+    setJourney(null);
+    setConnectsFrom(saved);
+    const nextLeg = onward ? onwardDraftFrom(saved, onward) : connectionDraftFrom(saved);
+    setDraft(nextLeg);
+    setOpened(nextLeg);
+    resetDirty(nextLeg);
+    setAutoTripId(null);
+    saving.reset();
+    setOnward(null);
+    // The pickers remount so they show the new leg's stations.
+    setFormKey((k) => k + 1);
   };
 
+  const submit = async (thenConnect = false): Promise<void> => {
+    if (!ready) return;
+    failure.clear();
+    setRetryConnect(thenConnect);
+    setProgressRefreshFailed(false);
+    const input = toRailInput(draft);
+    // The request and what follows are two steps (forgejo#247): a list that
+    // fails to reload must not turn a stored ride into "nicht gespeichert" —
+    // the next click would have created it twice.
+    const outcome = await saving.save(
+      async () => {
+        const result = journey
+          ? await railApi.update(journey.id, input)
+          : await railApi.create(previousId ? { ...input, connectsFrom: previousId } : input);
+        const notice = geometryNotice(result.geometry);
+        if (notice) {
+          addToast(notice.level, t(notice.key, { reason: t(notice.reasonKey) }), NOTICE_MS);
+        }
+        return result.journey;
+      },
+      async (saved) => {
+        markSaved();
+        if (!thenConnect) {
+          await onSaved(saved);
+          return;
+        }
+        // The next leg opens either way: the ride IS stored, only the list
+        // behind the dialog is stale — said, not treated as a refusal.
+        try {
+          await onProgress?.(saved);
+        } catch (err: unknown) {
+          logger.error("RailFormModal: list not refreshed after a leg", err);
+          setProgressRefreshFailed(true);
+        }
+      }
+    );
+    if (outcome.status === "failed") {
+      logger.error("RailFormModal: save failed", outcome.error);
+      const refused = saveErrorFrom(outcome.error);
+      setRefusal(refused);
+      failure.fail(refused.key);
+      return;
+    }
+    if (thenConnect && outcome.status === "saved") continueAfter(outcome.value);
+  };
+
+  const blocked = saving.saving || saving.saved !== null || !ready;
   const anyDayOnly = hasDayOnlyEnd(draft);
 
   return (
     <Modal
       open
       onClose={onClose}
-      busy={saving}
+      busy={saving.saving}
+      dirty={dirty}
       closeLabel={t("common:buttons.close")}
       title={journey ? t("rail:form.editTitle") : t("rail:form.createTitle")}
       maxWidth={672}
-      footer={
-        <>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            className="rounded-md border border-border px-4 py-2 text-sm text-(--text-muted) hover:bg-(--bg-surface) disabled:opacity-50"
-          >
-            {t("rail:form.cancel")}
-          </button>
-          <button
-            type="button"
-            onClick={(): void => void submit(true)}
-            disabled={saving || !ready}
-            data-testid="rail-save-and-connect"
-            className="rounded-md border border-border px-4 py-2 text-sm hover:bg-(--bg-surface) disabled:opacity-50"
-          >
-            {t("rail:connection.saveAndAdd")}
-          </button>
-          <button
-            type="button"
-            onClick={(): void => void submit()}
-            disabled={saving || !ready}
-            className="rounded-md bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base) hover:bg-(--accent-dim) disabled:opacity-50"
-          >
-            {saving ? t("rail:form.saving") : t("rail:form.save")}
-          </button>
-        </>
+      footer={(requestClose) =>
+        // Stored, but the follow-up failed: closing is the only honest action
+        // left — another "Speichern" would send nothing (`useSaveOnce`).
+        saving.afterSaveFailed ? (
+          <>
+            <p role="status" className="mr-auto self-center text-sm text-(--text-muted)">
+              {t(saving.afterSaveFailedKey)}
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base) hover:bg-(--accent-dim)"
+            >
+              {t("common:buttons.close")}
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="mr-auto self-center">
+              <SaveBlockedHint id={HINT_ID} missing={missing} />
+            </div>
+            <button
+              type="button"
+              onClick={requestClose}
+              disabled={saving.saving}
+              className="rounded-md border border-border px-4 py-2 text-sm text-(--text-muted) hover:bg-(--bg-surface) disabled:opacity-50"
+            >
+              {t("rail:form.cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={(): void => void submit(true)}
+              disabled={blocked}
+              aria-describedby={HINT_ID}
+              data-testid="rail-save-and-connect"
+              className="rounded-md border border-border px-4 py-2 text-sm hover:bg-(--bg-surface) disabled:opacity-50"
+            >
+              {t("rail:connection.saveAndAdd")}
+            </button>
+            <button
+              type="button"
+              onClick={(): void => void submit()}
+              disabled={blocked}
+              aria-describedby={HINT_ID}
+              className="rounded-md bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base) hover:bg-(--accent-dim) disabled:opacity-50"
+            >
+              {saving.saving ? t("rail:form.saving") : t("rail:form.save")}
+            </button>
+          </>
+        )
       }
     >
-      <div key={formKey}>
+      <div key={formKey} ref={failure.rootRef}>
+        {progressRefreshFailed && (
+          <p role="status" className="mb-3 text-sm text-(--text-muted)">
+            {t("common:form.savedButRefreshFailed")}
+          </p>
+        )}
         {previousId && (
           <p
             className="mb-3 rounded-md border border-border px-3 py-2 text-sm"
@@ -304,9 +416,8 @@ export function RailFormModal({
         <Section title={t("rail:form.train")}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <div>
-              <input
-                className={INPUT_CLASS}
-                aria-label={t("rail:form.operator")}
+              <LabelledInput
+                label={t("rail:form.operator")}
                 placeholder={t("rail:form.operatorPlaceholder")}
                 value={draft.operator}
                 onChange={(e): void => set("operator", e.target.value)}
@@ -318,16 +429,14 @@ export function RailFormModal({
                 fieldLabel={t("rail:form.operator")}
               />
             </div>
-            <input
-              className={INPUT_CLASS}
-              aria-label={t("rail:form.category")}
+            <LabelledInput
+              label={t("rail:form.category")}
               placeholder={t("rail:form.categoryPlaceholder")}
               value={draft.trainCategory}
               onChange={(e): void => set("trainCategory", e.target.value)}
             />
-            <input
-              className={INPUT_CLASS}
-              aria-label={t("rail:form.number")}
+            <LabelledInput
+              label={t("rail:form.number")}
               placeholder={t("rail:form.numberPlaceholder")}
               value={draft.trainNumber}
               onChange={(e): void => set("trainNumber", e.target.value)}
@@ -366,7 +475,8 @@ export function RailFormModal({
               <button
                 type="button"
                 className="rounded-md bg-(--accent) px-3 py-1.5 text-sm font-medium text-(--bg-base) disabled:opacity-50"
-                disabled={saving || !ready}
+                disabled={blocked}
+                aria-describedby={HINT_ID}
                 onClick={(): void => void submit(true)}
               >
                 {t("rail:connection.saveAndContinue", { station: onward.name })}
@@ -387,6 +497,7 @@ export function RailFormModal({
             <StationPicker
               label={t("rail:form.departureStation")}
               idPrefix="rail-dep"
+              required
               value={draft.departure}
               onChange={(next): void => setStation("departure", next)}
               onValidityChange={setDepValid}
@@ -395,6 +506,7 @@ export function RailFormModal({
             <StationPicker
               label={t("rail:form.arrivalStation")}
               idPrefix="rail-arr"
+              required
               value={draft.arrival}
               onChange={(next): void => setStation("arrival", next)}
               onValidityChange={setArrValid}
@@ -403,18 +515,22 @@ export function RailFormModal({
           </div>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
+              {/* The error sits OUTSIDE the label, or it would become part of
+                  the field's name. */}
               <label className="block text-sm">
-                {t("rail:form.departureTime")}
+                {t("rail:form.departureTime")} <RequiredMark />
                 <input
+                  id={TIME_ID.departureLocal}
                   type={draft.departureDayOnly ? "date" : "datetime-local"}
                   className={`mt-1 ${INPUT_CLASS}`}
                   style={DARK_PICKER_STYLE}
+                  aria-required="true"
                   value={draft.departureLocal}
                   onChange={(e): void => setTime("departure", e.target.value)}
-                  {...depError.input}
+                  {...fieldErrorProps(TIME_ID.departureLocal, depError)}
                 />
               </label>
-              {depError.message}
+              <FieldError id={TIME_ID.departureLocal} error={depError} />
               {/* A day has no clock to be repeated. */}
               <ClockChangeNotice
                 local={draft.departureDayOnly ? "" : draft.departureLocal}
@@ -422,7 +538,7 @@ export function RailFormModal({
                 onFoldChange={(fold): void => set("departureFold", fold ?? "earlier")}
                 zone={knownStationZone(journey, "dep", draft.departure)}
               />
-              <label className="mt-2 flex items-center gap-2 text-sm">
+              <label className={`mt-2 ${CHECK_ROW}`}>
                 <input
                   type="checkbox"
                   checked={draft.departureDayOnly}
@@ -436,22 +552,23 @@ export function RailFormModal({
               <label className="block text-sm">
                 {t("rail:form.arrivalTime")}
                 <input
+                  id={TIME_ID.arrivalLocal}
                   type={draft.arrivalDayOnly ? "date" : "datetime-local"}
                   className={`mt-1 ${INPUT_CLASS}`}
                   style={DARK_PICKER_STYLE}
                   value={draft.arrivalLocal}
                   onChange={(e): void => setTime("arrival", e.target.value)}
-                  {...arrError.input}
+                  {...fieldErrorProps(TIME_ID.arrivalLocal, arrError)}
                 />
               </label>
-              {arrError.message}
+              <FieldError id={TIME_ID.arrivalLocal} error={arrError} />
               <ClockChangeNotice
                 local={draft.arrivalDayOnly ? "" : draft.arrivalLocal}
                 fold={draft.arrivalFold ?? undefined}
                 onFoldChange={(fold): void => set("arrivalFold", fold ?? "earlier")}
                 zone={knownStationZone(journey, "arr", draft.arrival)}
               />
-              <label className="mt-2 flex items-center gap-2 text-sm">
+              <label className={`mt-2 ${CHECK_ROW}`}>
                 <input
                   type="checkbox"
                   checked={draft.arrivalDayOnly}
@@ -495,7 +612,7 @@ export function RailFormModal({
             />
           </label>
           <p className="mt-1 text-xs text-(--text-muted)">{t("rail:form.distanceHint")}</p>
-          <label className="mt-3 flex items-center gap-2 text-sm">
+          <label className={`mt-3 ${CHECK_ROW}`}>
             <input
               type="checkbox"
               checked={draft.cancelled}
@@ -505,157 +622,28 @@ export function RailFormModal({
           </label>
         </Section>
 
-        <Section title={t("rail:form.seat")}>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div>
-              <select
-                aria-label={t("rail:form.class")}
-                className={INPUT_CLASS}
-                value={draft.travelClass}
-                onChange={(e): void => set("travelClass", e.target.value as RailTravelClass | "")}
-              >
-                <option value="">{t("rail:form.class")}</option>
-                {RAIL_TRAVEL_CLASSES.map((c) => (
-                  <option key={c} value={c}>
-                    {t(`rail:class.${c}`)}
-                  </option>
-                ))}
-              </select>
-              {/* Offered only while no class is chosen — a chip never
-                  overrides a value the user set. */}
-              {draft.travelClass === "" && suggestions.travelClass !== null && (
-                <SuggestionChips
-                  value=""
-                  suggestions={[t(`rail:class.${suggestions.travelClass}`)]}
-                  onPick={(): void => set("travelClass", suggestions.travelClass ?? "")}
-                  fieldLabel={t("rail:form.class")}
-                />
-              )}
-            </div>
-            <div>
-              <input
-                className={INPUT_CLASS}
-                aria-label={t("rail:form.coach")}
-                placeholder={t("rail:form.coach")}
-                value={draft.coach}
-                onChange={(e): void => set("coach", e.target.value)}
-              />
-              <SuggestionChips
-                value={draft.coach}
-                suggestions={suggestions.coaches}
-                onPick={(value): void => set("coach", value)}
-                fieldLabel={t("rail:form.coach")}
-              />
-            </div>
-            <div>
-              <input
-                className={INPUT_CLASS}
-                aria-label={t("rail:form.seatNumber")}
-                placeholder={t("rail:form.seatNumber")}
-                value={draft.seat}
-                onChange={(e): void => set("seat", e.target.value)}
-              />
-              <SuggestionChips
-                value={draft.seat}
-                suggestions={suggestions.seats}
-                onPick={(value): void => set("seat", value)}
-                fieldLabel={t("rail:form.seatNumber")}
-              />
-            </div>
-          </div>
-        </Section>
-
-        <Section title={t("rail:form.costs")}>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <input
-              className={INPUT_CLASS}
-              aria-label={t("rail:form.bookingReference")}
-              placeholder={t("rail:form.bookingReference")}
-              value={draft.bookingReference}
-              onChange={(e): void => set("bookingReference", e.target.value)}
-            />
-            <input
-              type="number"
-              min={0}
-              step={10 ** -minorUnits(draft.currency)}
-              className={INPUT_CLASS}
-              aria-label={t("rail:form.price")}
-              placeholder={t("rail:form.price")}
-              value={draft.price}
-              onChange={(e): void => set("price", e.target.value)}
-            />
-            <CurrencySelect
-              aria-label={t("rail:form.currency")}
-              value={draft.currency}
-              recent={recentCurrencies}
-              onChange={(code): void => set("currency", code)}
-            />
-          </div>
-        </Section>
-
-        <Section title={t("rail:form.meta")}>
-          <TagInput
-            ariaLabel={t("rail:form.tags")}
-            className={INPUT_CLASS}
-            placeholder={t("rail:form.tags")}
-            value={draft.tags}
-            onChange={(next): void => set("tags", next)}
-          />
-          <div className="mt-3">
-            <span className="label">{t("rail:form.companions")}</span>
-            <CompanionPicker
-              value={draft.companions}
-              onChange={(next): void => set("companions", next)}
-            />
-          </div>
-          <label className="mt-3 block text-sm">
-            {t("rail:form.trip")}
-            <select
-              className={`mt-1 ${INPUT_CLASS}`}
-              value={draft.tripId}
-              onChange={(e): void => pickTrip(e.target.value)}
-            >
-              <option value="">{t("rail:form.noTrip")}</option>
-              {trips.map((trip) => (
-                <option key={trip.id} value={trip.id}>
-                  {trip.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <textarea
-            aria-label={t("rail:form.notes")}
-            rows={3}
-            className={`mt-3 ${INPUT_CLASS}`}
-            placeholder={t("rail:form.notes")}
-            value={draft.notes}
-            onChange={(e): void => set("notes", e.target.value)}
-          />
-        </Section>
+        <RailFormDetails
+          draft={draft}
+          set={set}
+          suggestions={suggestions}
+          trips={trips}
+          pickTrip={pickTrip}
+        />
 
         {!(isStationComplete(draft.departure) && isStationComplete(draft.arrival)) && (
           <p className="mb-3 text-sm text-(--text-muted)">{t("rail:form.stationMissing")}</p>
         )}
-        {error !== null && error.field === null && (
-          <div
-            role="alert"
-            className="mb-3 rounded-md border border-(--danger)/50 bg-(--danger)/10 px-3 py-2 text-sm text-(--danger)"
-          >
-            {errorText}
-          </div>
-        )}
+        <FormErrorBanner
+          message={bannerText}
+          onRetry={
+            failure.failureKey !== null && isTransientSaveError(failure.failureKey)
+              ? (): void => void submit(retryConnect)
+              : undefined
+          }
+          retryDisabled={saving.saving}
+        />
+        <RequiredLegend className="mt-3" />
       </div>
     </Modal>
-  );
-}
-
-function Section({ title, children }: { title: string; children: ReactNode }): JSX.Element {
-  return (
-    <details open className="mb-4 rounded-md border border-border bg-(--bg-surface)/50 p-3">
-      <summary className="cursor-pointer text-sm font-medium text-(--text-primary)">
-        {title}
-      </summary>
-      <div className="mt-3">{children}</div>
-    </details>
   );
 }
