@@ -23,6 +23,7 @@ import type { RailStationDraft } from "./RailStationField";
 import {
   canSubmit,
   connectionDraftFrom,
+  dayOf,
   draftFrom,
   geometryNotice,
   isStationComplete,
@@ -30,6 +31,7 @@ import {
   onwardDraftFrom,
   saveErrorFrom,
   toRailInput,
+  withClock,
   type RailFormDraft,
   type RailSaveError,
 } from "./railFormModel";
@@ -144,6 +146,16 @@ export function RailFormModal({
     }));
   };
 
+  const toggleDayOnly = (dayOnly: boolean): void => {
+    setError(null);
+    setDraft((prev) => ({
+      ...prev,
+      dayOnly,
+      departureLocal: dayOnly ? dayOf(prev.departureLocal) : withClock(prev.departureLocal),
+      arrivalLocal: dayOnly ? dayOf(prev.arrivalLocal) : withClock(prev.arrivalLocal),
+    }));
+  };
+
   const ready = canSubmit(draft) && depValid && arrValid;
   const errorText =
     error === null
@@ -201,6 +213,8 @@ export function RailFormModal({
       setSaving(false);
     }
   };
+
+  const timeInputType = draft.dayOnly ? "date" : "datetime-local";
 
   return (
     <Modal
@@ -354,7 +368,7 @@ export function RailFormModal({
               <label className="block text-sm">
                 {t("rail:form.departureTime")}
                 <input
-                  type="datetime-local"
+                  type={timeInputType}
                   className={`mt-1 ${INPUT_CLASS}`}
                   style={DARK_PICKER_STYLE}
                   value={draft.departureLocal}
@@ -366,7 +380,7 @@ export function RailFormModal({
               {/* Notice only: the rail write path cannot take `fold` yet, so no
                   "later" choice is offered that the save would drop. */}
               <ClockChangeNotice
-                local={draft.departureLocal}
+                local={draft.dayOnly ? "" : draft.departureLocal}
                 zone={knownStationZone(journey, "dep", draft.departure)}
               />
             </div>
@@ -374,7 +388,7 @@ export function RailFormModal({
               <label className="block text-sm">
                 {t("rail:form.arrivalTime")}
                 <input
-                  type="datetime-local"
+                  type={timeInputType}
                   className={`mt-1 ${INPUT_CLASS}`}
                   style={DARK_PICKER_STYLE}
                   value={draft.arrivalLocal}
@@ -384,7 +398,7 @@ export function RailFormModal({
               </label>
               {arrError.message}
               <ClockChangeNotice
-                local={draft.arrivalLocal}
+                local={draft.dayOnly ? "" : draft.arrivalLocal}
                 zone={knownStationZone(journey, "arr", draft.arrival)}
               />
               {/* Beside the arrival it qualifies, with a label that stays
@@ -397,11 +411,20 @@ export function RailFormModal({
                   className={`mt-1 ${INPUT_CLASS}`}
                   aria-label={t("rail:form.delay")}
                   value={draft.delayMinutes}
+                  disabled={draft.dayOnly}
                   onChange={(e): void => set("delayMinutes", e.target.value)}
                 />
               </label>
             </div>
           </div>
+          <label className="mt-3 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={draft.dayOnly}
+              onChange={(e): void => toggleDayOnly(e.target.checked)}
+            />
+            {t("rail:form.dayOnly")}
+          </label>
           <p className="mt-2 text-xs text-(--text-muted)">{t("rail:form.timeHint")}</p>
           <label className="mt-3 block text-sm">
             {t("rail:form.distance")}

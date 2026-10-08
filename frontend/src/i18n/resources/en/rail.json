@@ -68,6 +68,7 @@
     "departureTime": "Departure (local time at the station)",
     "arrivalTime": "Arrival (local time at the station)",
     "timeHint": "The time printed on the ticket. The time zone follows from the station.",
+    "dayOnly": "Only the date is known",
     "distance": "Distance in km",
     "distanceHint": "Leave empty: TravStats measures along the line taken from Transitous, otherwise the straight line. Fill it in when the ticket names the distance.",
     "seat": "Seat",

@@ -7,6 +7,7 @@ import type {
   RailLookupStop,
   RailTravelClass,
 } from "../../types/rail";
+import type { TimeValue } from "../../shared/time";
 import { toStationWallClock } from "../../lib/railTime";
 import { railArrival, railDeparture } from "../../lib/entityTimes";
 import { EMPTY_STATION, type RailStationDraft } from "./RailStationField";
@@ -22,8 +23,11 @@ export interface RailFormDraft {
   trainNumber: string;
   departure: RailStationDraft;
   arrival: RailStationDraft;
+  /** `YYYY-MM-DDTHH:mm` on the station's own clock, or `YYYY-MM-DD` while `dayOnly`. */
   departureLocal: string;
   arrivalLocal: string;
+  /** "Only the date is known": both times are sent as a day, not a wall clock. */
+  dayOnly: boolean;
   /** Only what the user typed. A measured distance is not shown here. */
   distanceKm: string;
   travelClass: RailTravelClass | "";
@@ -42,6 +46,18 @@ export interface RailFormDraft {
   lookup: RailJourneyInput["lookup"];
 }
 
+/** `YYYY-MM-DD` of a typed time, the part a "date only" ride keeps. */
+export const dayOf = (local: string): string => local.slice(0, 10);
+
+/** A day given a clock, so a `datetime-local` input can show it; a clock stays as it is. */
+export const withClock = (local: string): string =>
+  local.length === 10 ? `${local}T00:00` : local;
+
+/** The station's own wall clock, or only its day for a ride stored without a time. */
+function wallClockFor(value: TimeValue | null, dayOnly: boolean): string {
+  return dayOnly ? dayOf(toStationWallClock(value)) : toStationWallClock(value);
+}
+
 export function draftFrom(journey: RailJourney | null): RailFormDraft {
   if (!journey) {
     return {
@@ -52,6 +68,7 @@ export function draftFrom(journey: RailJourney | null): RailFormDraft {
       arrival: EMPTY_STATION,
       departureLocal: "",
       arrivalLocal: "",
+      dayOnly: false,
       distanceKm: "",
       travelClass: "",
       coach: "",
@@ -68,6 +85,7 @@ export function draftFrom(journey: RailJourney | null): RailFormDraft {
       lookup: null,
     };
   }
+  const dayOnly = railDeparture(journey)?.precision === "day";
   return {
     operator: journey.operator ?? "",
     trainCategory: journey.trainCategory ?? "",
@@ -88,9 +106,12 @@ export function draftFrom(journey: RailJourney | null): RailFormDraft {
       code: journey.arrStationCode,
       stationId: journey.arrStationId,
     },
-    // Read back on each station's own clock — the time the ticket printed.
-    departureLocal: toStationWallClock(railDeparture(journey)),
-    arrivalLocal: toStationWallClock(railArrival(journey)),
+    // Read back on each station's own clock — the time the ticket printed. A
+    // ride stored by its day alone is edited as one: shown as 00:00 it would
+    // be saved back as a midnight departure nobody stated (forgejo#212).
+    departureLocal: wallClockFor(railDeparture(journey), dayOnly),
+    arrivalLocal: wallClockFor(railArrival(journey), dayOnly),
+    dayOnly,
     distanceKm:
       journey.distanceSource === "user" && journey.distanceKm !== null
         ? String(journey.distanceKm)
@@ -127,6 +148,9 @@ export function connectionDraftFrom(previous: RailJourney): RailFormDraft {
     ...draftFrom(null),
     departure: before.arrival,
     departureLocal: before.arrivalLocal || before.departureLocal,
+    // A leg after a day-only ride has no clock to start from; inventing a
+    // 00:00 for it would repeat forgejo#212 one leg later.
+    dayOnly: before.dayOnly,
     travelClass: before.travelClass,
     bookingReference: before.bookingReference,
     currency: before.currency,
@@ -155,6 +179,11 @@ const numberOrNull = (value: string): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
+const roundedOrNull = (value: string): number | null => {
+  const n = numberOrNull(value);
+  return n === null ? null : Math.round(n);
+};
+
 function stationInput(station: RailStationDraft): RailJourneyInput["departureStation"] {
   if (station.lat === null || station.lon === null) {
     throw new Error("station without a position");
@@ -175,22 +204,22 @@ function stationInput(station: RailStationDraft): RailJourneyInput["departureSta
  * edit form would silently do nothing (the defect the cruise form had).
  */
 export function toRailInput(draft: RailFormDraft): RailJourneyInput {
+  const time = (local: string): string => (draft.dayOnly ? dayOf(local) : local);
   return {
     operator: orNull(draft.operator),
     trainCategory: orNull(draft.trainCategory),
     trainNumber: orNull(draft.trainNumber),
     departureStation: stationInput(draft.departure),
     arrivalStation: stationInput(draft.arrival),
-    departureLocal: draft.departureLocal,
-    arrivalLocal: draft.arrivalLocal === "" ? null : draft.arrivalLocal,
+    departureLocal: time(draft.departureLocal),
+    arrivalLocal: draft.arrivalLocal === "" ? null : time(draft.arrivalLocal),
     distanceKm: numberOrNull(draft.distanceKm),
     travelClass: draft.travelClass === "" ? null : draft.travelClass,
     coach: orNull(draft.coach),
     seat: orNull(draft.seat),
-    delayMinutes: (() => {
-      const n = numberOrNull(draft.delayMinutes);
-      return n === null ? null : Math.round(n);
-    })(),
+    // A ride without a clock has no arrival to be late for; the server
+    // refuses a delay on it (RAIL_INVALID_INPUT).
+    delayMinutes: draft.dayOnly ? null : roundedOrNull(draft.delayMinutes),
     bookingReference: orNull(draft.bookingReference),
     price: numberOrNull(draft.price),
     currency: draft.currency || "EUR",
@@ -277,9 +306,31 @@ export function applyLookup(
     trainNumber: match.trainNumber ?? draft.trainNumber,
     departure: stationFromStop(from),
     arrival: stationFromStop(to),
-    departureLocal: from.departureLocal ?? draft.departureLocal,
-    arrivalLocal: to.arrivalLocal ?? draft.arrivalLocal,
+    ...lookupTimes(draft, from.departureLocal, to.arrivalLocal),
     lookup: { provider: match.provider, ref: match.ref },
+  };
+}
+
+/**
+ * The times after a lookup. A planned time is a clock, so it ends "date
+ * only"; with none given the user's own entry stands, day or clock alike.
+ */
+function lookupTimes(
+  draft: RailFormDraft,
+  departureLocal: string | null,
+  arrivalLocal: string | null
+): Pick<RailFormDraft, "departureLocal" | "arrivalLocal" | "dayOnly"> {
+  if (departureLocal === null && arrivalLocal === null) {
+    return {
+      departureLocal: draft.departureLocal,
+      arrivalLocal: draft.arrivalLocal,
+      dayOnly: draft.dayOnly,
+    };
+  }
+  return {
+    departureLocal: departureLocal ?? withClock(draft.departureLocal),
+    arrivalLocal: arrivalLocal ?? withClock(draft.arrivalLocal),
+    dayOnly: false,
   };
 }
 

@@ -500,4 +500,65 @@ describe("RailFormModal", () => {
     const arrival = screen.getByLabelText("rail:form.arrivalTime");
     expect(arrival.closest("label")?.parentElement).toBe(label?.parentElement);
   });
+
+  // forgejo#212: a day-only ride opened as 00:00 and a seat change saved it
+  // back as a midnight departure.
+  describe("a day-only ride", () => {
+    const dayRide = makeRailJourney({
+      departureTime: "2026-09-20T22:00:00.000Z",
+      arrivalTime: null,
+      times: {
+        departure: {
+          utc: "2026-09-20T22:00:00.000Z",
+          zone: "Europe/Berlin",
+          offset: "+02:00",
+          local: "2026-09-21T00:00:00",
+          precision: "day",
+        },
+        arrival: null,
+        actualDeparture: null,
+        actualArrival: null,
+      },
+    });
+
+    it("opens on a date input and saves a seat change without inventing a clock", async () => {
+      update.mockResolvedValue({ journey: dayRide, geometry: null });
+      render(<RailFormModal journey={dayRide} onClose={vi.fn()} onSaved={vi.fn()} />);
+      await waitFor(() => expect(getAllTrips).toHaveBeenCalled());
+
+      const departure = screen.getByLabelText("rail:form.departureTime");
+      expect(departure).toHaveAttribute("type", "date");
+      expect(departure).toHaveValue("2026-09-21");
+      expect(screen.getByLabelText("rail:form.dayOnly")).toBeChecked();
+
+      fireEvent.change(screen.getByLabelText("rail:form.seatNumber"), { target: { value: "42" } });
+      fireEvent.click(saveButton());
+
+      await waitFor(() => expect(update).toHaveBeenCalled());
+      expect(update).toHaveBeenCalledWith(
+        "j1",
+        expect.objectContaining({
+          departureLocal: "2026-09-21",
+          arrivalLocal: null,
+          delayMinutes: null,
+          seat: "42",
+        })
+      );
+    });
+
+    it("gives the day a clock when the user says the time is known, and back", async () => {
+      render(<RailFormModal journey={dayRide} onClose={vi.fn()} onSaved={vi.fn()} />);
+      await waitFor(() => expect(getAllTrips).toHaveBeenCalled());
+      const toggle = screen.getByLabelText("rail:form.dayOnly");
+
+      fireEvent.click(toggle);
+      const departure = screen.getByLabelText("rail:form.departureTime");
+      expect(departure).toHaveAttribute("type", "datetime-local");
+      expect(departure).toHaveValue("2026-09-21T00:00");
+
+      fireEvent.change(departure, { target: { value: "2026-09-21T08:15" } });
+      fireEvent.click(toggle);
+      expect(screen.getByLabelText("rail:form.departureTime")).toHaveValue("2026-09-21");
+    });
+  });
 });

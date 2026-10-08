@@ -273,3 +273,101 @@ describe("saveErrorFrom", () => {
     expect(saveErrorFrom({ isAxiosError: true }).key).toBe("common:saveErrors.network");
   });
 });
+
+// forgejo#212: a ride stored by its day alone opened as a midnight clock and
+// any save wrote that 00:00 back as a time nobody typed.
+describe("a day-only ride", () => {
+  const dayRide: RailJourney = {
+    ...journey,
+    departureTime: "2026-09-20T22:00:00.000Z",
+    arrivalTime: null,
+    delayMinutes: 5,
+    times: {
+      departure: {
+        utc: "2026-09-20T22:00:00.000Z",
+        zone: "Europe/Berlin",
+        offset: "+02:00",
+        local: "2026-09-21T00:00:00",
+        precision: "day",
+      },
+      arrival: null,
+      actualDeparture: null,
+      actualArrival: null,
+    },
+  };
+
+  it("opens on its day, read from the station's clock rather than the UTC instant", () => {
+    const draft = draftFrom(dayRide);
+    expect(draft.dayOnly).toBe(true);
+    expect(draft.departureLocal).toBe("2026-09-21");
+    expect(draft.arrivalLocal).toBe("");
+  });
+
+  it("is saved back as a day, with no arrival and no delay", () => {
+    const input = toRailInput(draftFrom(dayRide));
+    expect(input.departureLocal).toBe("2026-09-21");
+    expect(input.arrivalLocal).toBeNull();
+    expect(input.delayMinutes).toBeNull();
+  });
+
+  it("sends a typed arrival as its day too", () => {
+    const input = toRailInput({ ...draftFrom(dayRide), arrivalLocal: "2026-09-22T07:30" });
+    expect(input.arrivalLocal).toBe("2026-09-22");
+  });
+
+  it("leaves a minute-precision ride on its clock", () => {
+    const draft = draftFrom(journey);
+    expect(draft.dayOnly).toBe(false);
+    expect(toRailInput(draft).departureLocal).toBe("2026-07-01T08:15");
+  });
+
+  it("starts a new ride on a clock", () => {
+    expect(draftFrom(null).dayOnly).toBe(false);
+  });
+
+  // The leg after a day-only ride has no clock to start from either; a
+  // 00:00 invented for it would be the same defect one leg later.
+  it("hands its day, not a midnight, to the connection after it", () => {
+    const next = connectionDraftFrom(dayRide);
+    expect(next.dayOnly).toBe(true);
+    expect(next.departureLocal).toBe("2026-09-21");
+    expect(connectionDraftFrom(journey).dayOnly).toBe(false);
+  });
+
+  it("leaves day-only when a lookup gives the leg its clocks", () => {
+    const match: NonNullable<RailLookupAnswer["match"]> = {
+      provider: "transitous",
+      ref: "trip",
+      operator: null,
+      trainCategory: "ICE",
+      trainNumber: "9557",
+      boardingIndex: 0,
+      stops: [
+        {
+          name: "A",
+          lat: 50,
+          lon: 8,
+          country: "DE",
+          code: null,
+          stationId: null,
+          arrivalLocal: null,
+          departureLocal: "2026-09-21T08:15",
+        },
+        {
+          name: "B",
+          lat: 51,
+          lon: 9,
+          country: "DE",
+          code: null,
+          stationId: null,
+          arrivalLocal: "2026-09-21T10:00",
+          departureLocal: null,
+        },
+      ],
+    } as unknown as NonNullable<RailLookupAnswer["match"]>;
+    const next = applyLookup(draftFrom(dayRide), match, 1);
+    expect(next.dayOnly).toBe(false);
+    expect(next.departureLocal).toBe("2026-09-21T08:15");
+    expect(next.arrivalLocal).toBe("2026-09-21T10:00");
+  });
+});
