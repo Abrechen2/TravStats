@@ -360,5 +360,9 @@
     "message": "What you entered in this form will be lost.",
     "confirm": "Discard",
     "keepEditing": "Keep editing"
+  },
+  "form": {
+    "requiredLegend": "Fields marked * are required.",
+    "saveBlocked": "Still needed to save:"
   }
 }

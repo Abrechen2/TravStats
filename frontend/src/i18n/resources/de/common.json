@@ -360,5 +360,9 @@
     "message": "Deine Eingaben in diesem Formular gehen verloren.",
     "confirm": "Verwerfen",
     "keepEditing": "Weiter bearbeiten"
+  },
+  "form": {
+    "requiredLegend": "Mit * markierte Felder sind Pflicht.",
+    "saveBlocked": "Zum Speichern fehlt noch:"
   }
 }
