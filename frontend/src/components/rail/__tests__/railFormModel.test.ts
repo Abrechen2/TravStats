@@ -578,3 +578,83 @@ describe("a ride in a repeated hour", () => {
 function completeStations(draft: ReturnType<typeof draftFrom>): Partial<typeof draft> {
   return { arrival: { ...draft.departure, name: "Hamburg Hbf", lat: 53.55, lon: 10.0 } };
 }
+
+describe("applyLookup and the occurrence of a repeated hour", () => {
+  const stop = (
+    lat: number,
+    lon: number,
+    departureLocal: string | null,
+    arrivalLocal: string | null
+  ) => ({
+    name: "X",
+    lat,
+    lon,
+    country: "DE",
+    code: null,
+    stationId: null,
+    arrivalLocal,
+    departureLocal,
+  });
+  const matchOf = (...stops: ReturnType<typeof stop>[]) =>
+    ({
+      provider: "transitous",
+      ref: "trip",
+      operator: null,
+      trainCategory: "ICE",
+      trainNumber: "9557",
+      boardingIndex: 0,
+      stops,
+    }) as unknown as NonNullable<RailLookupAnswer["match"]>;
+  const base = draftFrom({
+    ...journey,
+    departureTime: "2026-10-25T01:30:00.000Z",
+    arrivalTime: "2026-10-25T01:40:00.000Z",
+    times: {
+      departure: {
+        utc: "2026-10-25T01:30:00.000Z",
+        zone: "Europe/Berlin",
+        offset: "+01:00",
+        local: "2026-10-25T02:30:00",
+        precision: "minute",
+      },
+      arrival: {
+        utc: "2026-10-25T01:40:00.000Z",
+        zone: "Europe/Berlin",
+        offset: "+01:00",
+        local: "2026-10-25T02:40:00",
+        precision: "minute",
+      },
+      actualDeparture: null,
+      actualArrival: null,
+    },
+  });
+  const dep = [journey.depLat, journey.depLon] as const;
+  const arr = [journey.arrLat, journey.arrLon] as const;
+
+  it("starts from two later occurrences", () => {
+    expect(base).toMatchObject({ departureFold: "later", arrivalFold: "later" });
+  });
+
+  it("keeps an end's fold while the lookup neither gives it a time nor moves its station", () => {
+    const next = applyLookup(base, matchOf(stop(...dep, null, null), stop(...arr, null, null)), 1);
+    expect(next).toMatchObject({ departureFold: "later", arrivalFold: "later" });
+  });
+
+  it("drops the fold of the end the lookup gives a time for", () => {
+    const next = applyLookup(
+      base,
+      matchOf(stop(...dep, "2026-10-25T08:00", null), stop(...arr, null, null)),
+      1
+    );
+    expect(next).toMatchObject({ departureFold: null, arrivalFold: "later" });
+  });
+
+  it("drops the fold of an end whose station the lookup moves, even without a time", () => {
+    const next = applyLookup(
+      base,
+      matchOf(stop(...dep, null, null), stop(52.5, 13.4, null, null)),
+      1
+    );
+    expect(next).toMatchObject({ departureFold: "later", arrivalFold: null });
+  });
+});

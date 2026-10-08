@@ -316,6 +316,21 @@ export function lookupKeptFields(
 }
 
 /**
+ * An end's fold after a lookup: it belongs to a clock at a place, so it goes
+ * when the timetable gives the end a new time or puts the end at another
+ * station — the same rule as moving the station by hand.
+ */
+function keptFold(
+  fold: RailFold | null,
+  plannedLocal: string | null,
+  before: RailStationDraft,
+  after: RailLookupStop
+): RailFold | null {
+  const moved = before.lat !== after.lat || before.lon !== after.lon;
+  return plannedLocal === null && !moved ? fold : null;
+}
+
+/**
  * Take a lookup's answer over into the form: the train, the boarding stop
  * and the chosen alighting stop with their planned times, and the match
  * itself so the server can fetch the traced line when the journey is saved.
@@ -352,10 +367,10 @@ export function applyLookup(
     // the timetable gives nothing for keeps the user's entry, day or clock.
     departureLocal: from.departureLocal ?? draft.departureLocal,
     departureDayOnly: from.departureLocal === null ? draft.departureDayOnly : false,
-    departureFold: from.departureLocal === null ? draft.departureFold : null,
+    departureFold: keptFold(draft.departureFold, from.departureLocal, draft.departure, from),
     arrivalLocal: to.arrivalLocal ?? draft.arrivalLocal,
     arrivalDayOnly: to.arrivalLocal === null ? draft.arrivalDayOnly : false,
-    arrivalFold: to.arrivalLocal === null ? draft.arrivalFold : null,
+    arrivalFold: keptFold(draft.arrivalFold, to.arrivalLocal, draft.arrival, to),
     lookup: { provider: match.provider, ref: match.ref },
   };
 }

@@ -697,6 +697,74 @@ describe("RailFormModal", () => {
       );
     });
 
+    it("gives the stored occurrence back when the time is typed back to the one the ride opened with", async () => {
+      update.mockResolvedValue({ journey: laterRide, geometry: null });
+      render(<RailFormModal journey={laterRide} onClose={vi.fn()} onSaved={vi.fn()} />);
+      await waitFor(() => expect(getAllTrips).toHaveBeenCalled());
+      const input = screen.getByLabelText("rail:form.departureTime");
+
+      fireEvent.change(input, { target: { value: "2026-10-25T02:35" } });
+      expect(laterBox()).not.toBeChecked();
+      fireEvent.change(input, { target: { value: "2026-10-25T02:30" } });
+      expect(laterBox()).toBeChecked();
+
+      fireEvent.click(saveButton());
+      await waitFor(() => expect(update).toHaveBeenCalled());
+      expect(update.mock.calls[0][1]).toMatchObject({
+        departureLocal: "2026-10-25T02:30",
+        departureFold: "later",
+      });
+    });
+
+    it("does not give it back once the station has moved: the occurrence was read at the old place", async () => {
+      update.mockResolvedValue({ journey: laterRide, geometry: null });
+      render(<RailFormModal journey={laterRide} onClose={vi.fn()} onSaved={vi.fn()} />);
+      await waitFor(() => expect(getAllTrips).toHaveBeenCalled());
+      fireEvent.click(screen.getByText("pick rail:form.departureStation"));
+      const input = screen.getByLabelText("rail:form.departureTime");
+
+      fireEvent.change(input, { target: { value: "2026-10-25T02:35" } });
+      fireEvent.change(input, { target: { value: "2026-10-25T02:30" } });
+      fireEvent.click(saveButton());
+
+      await waitFor(() => expect(update).toHaveBeenCalled());
+      expect(update.mock.calls[0][1]).toMatchObject({
+        departureLocal: "2026-10-25T02:30",
+        departureFold: null,
+      });
+    });
+
+    it("drops the occurrence when the station is moved", async () => {
+      update.mockResolvedValue({ journey: laterRide, geometry: null });
+      render(<RailFormModal journey={laterRide} onClose={vi.fn()} onSaved={vi.fn()} />);
+      await waitFor(() => expect(getAllTrips).toHaveBeenCalled());
+      fireEvent.click(screen.getByText("pick rail:form.departureStation"));
+      fireEvent.click(saveButton());
+
+      await waitFor(() => expect(update).toHaveBeenCalled());
+      expect(update.mock.calls[0][1]).toMatchObject({
+        departureLocal: "2026-10-25T02:30",
+        departureFold: null,
+      });
+    });
+
+    it("drops the occurrence when the day box is ticked on and off", async () => {
+      update.mockResolvedValue({ journey: laterRide, geometry: null });
+      render(<RailFormModal journey={laterRide} onClose={vi.fn()} onSaved={vi.fn()} />);
+      await waitFor(() => expect(getAllTrips).toHaveBeenCalled());
+      const box = screen.getByRole("checkbox", {
+        name: "rail:form.departureTime: rail:form.dayOnly",
+      });
+      fireEvent.click(box);
+      fireEvent.click(box);
+      // The clock comes back as midnight, which is not the repeated hour.
+      expect(screen.getByLabelText("rail:form.departureTime")).toHaveValue("2026-10-25T00:00");
+      fireEvent.click(saveButton());
+
+      await waitFor(() => expect(update).toHaveBeenCalled());
+      expect(update.mock.calls[0][1]).toMatchObject({ departureFold: null });
+    });
+
     it("drops the stored occurrence when the time is typed anew, and offers the choice again", async () => {
       update.mockResolvedValue({ journey: laterRide, geometry: null });
       render(<RailFormModal journey={laterRide} onClose={vi.fn()} onSaved={vi.fn()} />);

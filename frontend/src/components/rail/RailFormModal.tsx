@@ -90,6 +90,10 @@ export function RailFormModal({
   const [draft, setDraft] = useState<RailFormDraft>(
     () => initialDraft ?? draftFrom(initialJourney)
   );
+  /** The draft as the ride opened, to tell a time changed away and back from one really changed. */
+  const [opened, setOpened] = useState<RailFormDraft>(
+    () => initialDraft ?? draftFrom(initialJourney)
+  );
   const [trips, setTrips] = useState<Trip[]>([]);
   const [depValid, setDepValid] = useState(true);
   const [arrValid, setArrValid] = useState(true);
@@ -158,6 +162,23 @@ export function RailFormModal({
       };
     });
 
+  /**
+   * A typed time ends the stored occurrence of a repeated hour: it was the old
+   * clock's. Typing the clock the ride OPENED with, at the station it opened
+   * with, gives it back — a change away and back must not move the ride.
+   */
+  const setTime = (end: "departure" | "arrival", value: string): void => {
+    setDraft((prev) => {
+      const sameClock = value === opened[`${end}Local`] && !opened[`${end}DayOnly`];
+      const sameStation = prev[end].lat === opened[end].lat && prev[end].lon === opened[end].lon;
+      return {
+        ...prev,
+        [`${end}Local`]: value,
+        [`${end}Fold`]: sameClock && sameStation ? opened[`${end}Fold`] : null,
+      };
+    });
+  };
+
   const toggleDayOnly = (end: "departure" | "arrival", dayOnly: boolean): void => {
     setError(null);
     setDraft((prev) => {
@@ -217,7 +238,9 @@ export function RailFormModal({
       await onProgress?.(saved);
       setJourney(null);
       setConnectsFrom(saved);
-      setDraft(onward ? onwardDraftFrom(saved, onward) : connectionDraftFrom(saved));
+      const nextLeg = onward ? onwardDraftFrom(saved, onward) : connectionDraftFrom(saved);
+      setDraft(nextLeg);
+      setOpened(nextLeg);
       setOnward(null);
       setFormKey((k) => k + 1);
     } catch (err: unknown) {
@@ -386,13 +409,7 @@ export function RailFormModal({
                   className={`mt-1 ${INPUT_CLASS}`}
                   style={DARK_PICKER_STYLE}
                   value={draft.departureLocal}
-                  onChange={(e): void =>
-                    setDraft((prev) => ({
-                      ...prev,
-                      departureLocal: e.target.value,
-                      departureFold: null,
-                    }))
-                  }
+                  onChange={(e): void => setTime("departure", e.target.value)}
                   {...depError.input}
                 />
               </label>
@@ -422,13 +439,7 @@ export function RailFormModal({
                   className={`mt-1 ${INPUT_CLASS}`}
                   style={DARK_PICKER_STYLE}
                   value={draft.arrivalLocal}
-                  onChange={(e): void =>
-                    setDraft((prev) => ({
-                      ...prev,
-                      arrivalLocal: e.target.value,
-                      arrivalFold: null,
-                    }))
-                  }
+                  onChange={(e): void => setTime("arrival", e.target.value)}
                   {...arrError.input}
                 />
               </label>
