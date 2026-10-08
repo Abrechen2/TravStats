@@ -7,8 +7,8 @@ import { canonicalRoutePair, routePairKey } from "../routePair";
  * OGG-HNL are one connection. `/stats/routes`, the Route Master fun fact, the
  * Wrapped top route and the "same route" badge all key on this one function.
  *
- * MIRRORED in `frontend/src/shar../routePair.ts`, whose test asserts the same
- * truth table.
+ * Frontend MIRROR of `backend/src/shared/__tests__/routePair.test.ts` (which
+ * tests `backend/src/shared/routePair.ts`) - the same truth table.
  */
 describe("routePair", () => {
   it("sorts the two codes so both directions share one pair", () => {

@@ -102,6 +102,29 @@ describe("busiest day — the departure airport's local day (forgejo#255)", () =
     expect(rec?.date).toBe("2026-09-02");
   });
 
+  it.each([
+    ["Auckland (UTC+12)", "AKL", "Pacific/Auckland"],
+    ["Suva (UTC+12)", "SUV", "Pacific/Fiji"],
+    ["Kiritimati (UTC+14)", "CXI", "Pacific/Kiritimati"],
+  ])("keeps a date-only flight from %s on its stored date", (_name, iata, zone) => {
+    // A date-only row is stored as 12:00Z of the recorded day. Read through a
+    // zone east of UTC+12 that instant is already the NEXT local day.
+    const dateOnly = (id: string, day: string) =>
+      flight({
+        id,
+        depIata: iata,
+        depTimezone: zone,
+        depTimeSemantics: "DATE_ONLY",
+        departureTime: new Date(`${day}T12:00:00Z`),
+      });
+    const rec = record(
+      [dateOnly("a", "2026-09-02"), dateOnly("b", "2026-09-02"), dateOnly("c", "2026-09-04")],
+      "busiest-day"
+    );
+    expect(rec?.value).toBe(2);
+    expect(rec?.date).toBe("2026-09-02");
+  });
+
   it("falls back to the stored (UTC) date when no zone is on file — as every other stat does", () => {
     const rec = record(
       [

@@ -477,7 +477,7 @@
     },
     "GROUNDHOG_DAY": {
       "name": "Murmeltier-Tag",
-      "description": "Derselbe Flug in derselben Richtung an drei aufeinanderfolgenden Tagen"
+      "description": "Dieselbe Route in derselben Richtung an drei aufeinanderfolgenden Tagen"
     },
     "SCHEDULE_KEEPER": {
       "name": "Plan-Bewahrer",

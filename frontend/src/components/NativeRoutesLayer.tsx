@@ -10,6 +10,7 @@ import { useMemo } from "react";
 import { Source, Layer } from "react-map-gl/maplibre";
 import type { LineLayerSpecification, CircleLayerSpecification } from "maplibre-gl";
 import type { GeoJSONFeature } from "../types";
+import { canonicalRoutePair } from "../shared/routePair";
 
 /** Layer IDs exported so DeckGLMap can register them as interactive */
 export const NATIVE_ROUTE_LINE_ID = "native-routes-line";
@@ -52,7 +53,7 @@ interface AirportFeature {
 }
 
 function routeKey(a: string, b: string): string {
-  return [a, b].sort().join("-");
+  return canonicalRoutePair(a, b).join("-");
 }
 
 /** Generate great circle intermediate points for smoother curves. */

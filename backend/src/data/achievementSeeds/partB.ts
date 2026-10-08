@@ -451,7 +451,7 @@ export const seedsPartB: AchievementDefinition[] = [
   {
     code: "GROUNDHOG_DAY",
     name: "Groundhog Day",
-    description: "The same flight, in the same direction, on three consecutive days",
+    description: "The same route, in the same direction, on three consecutive days",
     category: "planner",
     domain: "flight",
     icon: "🔁",

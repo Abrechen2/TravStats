@@ -94,6 +94,32 @@ describe("Hat-Trick — flights on one LOCAL day", () => {
     expect(stats.maxFlightsOneDay).toBe(2);
   });
 
+  it.each([
+    ["Auckland (UTC+12)", "Pacific/Auckland"],
+    ["Kiritimati (UTC+14)", "Pacific/Kiritimati"],
+  ])("keeps a date-only flight from %s on its stored date", (_name, zone) => {
+    // Stored as 12:00Z of the recorded day; through a zone east of UTC+12 that
+    // instant is already the next local day. The recorded day wins.
+    const stats = computeFlightSequenceStats([
+      nrtKix("2026-09-02T12:00:00Z", {
+        depTimezone: zone,
+        depTimeSemantics: "DATE_ONLY",
+        status: "historical",
+      }),
+      nrtKix("2026-09-02T00:30:00Z", { depTimezone: zone }),
+    ]);
+    // The second flight leaves at 12:30 (Auckland) / 14:30 (Kiritimati) on 2 Sep.
+    expect(stats.maxFlightsOneDay).toBe(2);
+  });
+
+  it("falls back to the stored (UTC) day for a zone name the runtime does not know", () => {
+    const stats = computeFlightSequenceStats([
+      nrtKix("2026-09-01T23:30:00Z", { depTimezone: "Mars/Olympus" }),
+      nrtKix("2026-09-02T01:30:00Z", { depTimezone: "Mars/Olympus" }),
+    ]);
+    expect(stats.maxFlightsOneDay).toBe(1);
+  });
+
   it("falls back to the stored (UTC) day with no zone on file, as every other stat does", () => {
     const stats = computeFlightSequenceStats([
       nrtKix("2026-09-01T23:30:00Z", { depTimezone: null }),

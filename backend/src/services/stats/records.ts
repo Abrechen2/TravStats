@@ -1,5 +1,5 @@
 import { haversineKm } from "../../shared/geo/haversine";
-import { departureClockOf } from "../../utils/stats/departureClock";
+import { departureDayOf } from "../../utils/stats/departureClock";
 import type { FlightTimeSemantics } from "../../utils/timezone";
 
 /**
@@ -87,22 +87,20 @@ function distanceKm(flight: RecordFlightInput): number | null {
 
 /**
  * The calendar day a flight left on, on the DEPARTURE AIRPORT'S clock
- * (forgejo#255) — the clock contract every "which day was that" figure on this
- * server reads (`departureClockOf`). It used to cut the stored instant at UTC
+ * (forgejo#255) - `departureDayOf`, the clock contract every "which day was
+ * that" figure on this server reads. It used to cut the stored instant at UTC
  * midnight, so two Tokyo departures on 2 September, at 23:30Z on the 1st and
  * 01:30Z on the 2nd, were two days of one flight each.
  *
- * A DATE_ONLY row keeps its recorded date; a row with no usable zone is read on
- * its stored components, which is what the rest of the statistics do as well.
+ * A DATE_ONLY row keeps its recorded date (its 12:00Z placeholder is not read
+ * through the zone); a row with no usable zone is read on its stored components.
  */
 function dayOf(flight: RecordFlightInput): string | null {
-  return (
-    departureClockOf({
-      departureTime: flight.departureTime,
-      depTimezone: flight.depTimezone,
-      depTimeSemantics: flight.depTimeSemantics as FlightTimeSemantics | undefined,
-    })?.date ?? null
-  );
+  return departureDayOf({
+    departureTime: flight.departureTime,
+    depTimezone: flight.depTimezone,
+    depTimeSemantics: flight.depTimeSemantics as FlightTimeSemantics | undefined,
+  });
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;

@@ -14,26 +14,27 @@
 // placeholder. That distinction is easy to lose inside a 350-line loop.
 
 import type { FlightData } from "./achievementStats";
-import { departureClockOf } from "./stats/departureClock";
+import { departureDayOf } from "./stats/departureClock";
 import type { FlightTimeSemantics } from "./timezone";
 
 /** The catalogue zone per airport code - all this module needs of an airport. */
 export type AirportZones = ReadonlyMap<string, { timezone: string | null }>;
 
 /**
- * The calendar day a flight left on, on the DEPARTURE AIRPORT'S clock (forgejo#255):
- * the zone the flight was stored with, else the catalogue's, else the stored
- * components - the contract every other "which day was that" figure reads. It
- * used to cut the instant at UTC midnight, which splits one Tokyo day in two.
+ * The calendar day a flight left on, on the DEPARTURE AIRPORT'S clock
+ * (forgejo#255): the zone the flight was stored with, else the catalogue's, else
+ * the stored components - the contract every other "which day was that" figure
+ * reads. A DATE_ONLY row keeps its recorded date (`departureDayOf`). It used to
+ * cut the instant at UTC midnight, which splits one Tokyo day in two.
  */
 function localDayOf(flight: FlightData, airports: AirportZones): string {
   const code = flight.depIata || flight.depIcao || "";
-  const clock = departureClockOf({
+  const day = departureDayOf({
     departureTime: flight.departureTime,
     depTimezone: flight.depTimezone || airports.get(code)?.timezone || null,
     depTimeSemantics: (flight.depTimeSemantics as FlightTimeSemantics | null) || "UNKNOWN",
   });
-  return (clock as NonNullable<typeof clock>).date;
+  return day as string;
 }
 
 export interface FlightSequenceStats {
