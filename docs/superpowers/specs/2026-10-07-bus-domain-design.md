@@ -145,10 +145,10 @@ connection with a change of coach is two rows bound by the existing `Booking`
 | `depLat/depLon`, `arrLat/arrLon` | float | **Required**, as on `RailJourney`: a terminal without a position has no zone, no country and no map point. |
 | `depCountry`, `arrCountry` | text? | ISO 3166-1 alpha-2 from the geocoder; null when unknown, never guessed. |
 | `depTimezone`, `arrTimezone` | text? | IANA zone, derived on the server from the coordinates (`zoneOf`, coordinates only — there is no catalogue zone). Never user input. |
-| `departureTime` | timestamptz | A real UTC instant. The client sends the terminal's wall clock (`departureLocal`, `YYYY-MM-DDTHH:mm` or a day) and the server converts it in the terminal's zone — rail's rule, rail's code. |
-| `arrivalTime` | timestamptz? | May be unknown. Must not precede the departure, checked on the INSTANTS after both zones are known. |
+| `departureTime` | timestamp (UTC instant) | A real UTC instant. The client sends the terminal's wall clock (`departureLocal`, `YYYY-MM-DDTHH:mm` or a day) and the server converts it in the terminal's zone — rail's rule, rail's code. |
+| `arrivalTime` | timestamp (UTC instant)? | May be unknown. Must not precede the departure, checked on the INSTANTS after both zones are known. |
 | `depPrecision`, `arrPrecision` | text | `minute` \| `day` \| `unknown` (ADR 0002). A day-only ride is stored at the start of its day with precision `day`, and every clock reader abstains on it (`shared/railClock.ts`). |
-| `actualDepartureTime`, `actualArrivalTime` | timestamptz? | What happened, when known. Null for a past ride nobody recorded. |
+| `actualDepartureTime`, `actualArrivalTime` | timestamp (UTC instant)? | What happened, when known. Null for a past ride nobody recorded. |
 | `delayMinutes` | int? | Arrival delay as experienced. Null = not recorded, 0 = on time. Never collapsed. |
 | `distanceKm` | float? | See §5. |
 | `distanceSource` | text? | `great_circle` \| `user` \| `route` (along the routed road line) \| null. |
@@ -283,9 +283,9 @@ the templates, minus train categories and plus ride kinds.
 - **Trip status** lands in **B1** already (the write path calls
   `recomputeTripStatus`; `tripStatusService.ts` gets `busJourneys` in its select
   and spreads `rideStatusSpan` over them — the rail line, one more array). A ride
-  re-derives its trip's status; it fills the trip's dates only when the trip has
-  none, as rail does (`fillTripDatesFromSegments`) — it does not widen dates
-  that are already set.
+  re-derives its trip's status; it never writes the trip's dates — rail does not
+  either (`fillTripDatesFromSegments` is called only by trip detection), so a ride
+  saved into an undated trip leaves it undated.
 - **Timeline and logistics tab:** `lib/timelineRail.ts` → a bus twin; trip
   detail select (`TRIP_BUS_SELECT`), `TripCard` counts, attachable entries,
   trip suggestions' `loadTransport`, trip photo windows, the trip delete
@@ -445,7 +445,7 @@ answered for buses by D5 — a ride has two ends and a road between them.
 
 | # | Package | Measured by |
 |---|---|---|
-| **B1** | Model + migration (`BusJourney`, companion join, `Document.busJourneyId` + CHECK), Zod, CRUD router with list paging, OpenAPI with response schemas, ratchet family, registries (both mirrors), beta key, colour token, status derivation alias + sweep, counting rule (both mirrors), FX snapshot, companions, trip link **and trip status** (the write path already re-derives the trip, one more array in `tripStatusService`; a ride fills the trip's dates only when it has none, as rail does), entry suggestions (own operators and terminals, as chips), list page in the shared logbook layout + create/edit/delete form + simple detail page with documents, DE/EN — **manual entry only**, straight line only, every other shared surface wired to an explicit empty answer | route tests incl. a time-model suite (DST gap refused, far-off zones, arrival before departure refused, day-only ride stored at precision `day`), ownership tests (another user's trip/booking refused), counting truth table on both mirrors, OpenAPI coverage + response-schema + time-shape guards, response-shape ratchet, locale parity, `check:drift`, odd-zone CI runs, the colour test, the beta-registry test, a browser look at the form on an iPad viewport |
+| **B1** | Model + migration (`BusJourney`, companion join, `Document.busJourneyId` + CHECK), Zod, CRUD router with list paging, OpenAPI with response schemas, ratchet family, registries (both mirrors), beta key, colour token, status derivation alias + sweep, counting rule (both mirrors), FX snapshot, companions, trip link **and trip status** (the write path already re-derives the trip, one more array in `tripStatusService`; a ride never writes the trip's dates — rail does not either; `fillTripDatesFromSegments` is called only by trip detection), entry suggestions (own operators and terminals, as chips), list page in the shared logbook layout + create/edit/delete form + simple detail page with documents, DE/EN — **manual entry only**, straight line only, every other shared surface wired to an explicit empty answer | route tests incl. a time-model suite (DST gap refused, far-off zones, arrival before departure refused, day-only ride stored at precision `day`), ownership tests (another user's trip/booking refused), counting truth table on both mirrors, OpenAPI coverage + response-schema + time-shape guards, response-shape ratchet, locale parity, `check:drift`, odd-zone CI runs, the colour test, the beta-registry test, a browser look at the form on an iPad viewport |
 | **B2** | Trip timeline/logistics/card/attachable/suggestions/photo windows; dashboard tab + map layer + "Alle" chip + filter row; `/bus/stats` + stats tab + cross-domain + evidence + passport provenance; upcoming; sync entity; Excel sheet + importer spec + JSON export + diagnostic export; demo seed | trip-status tests (a ride re-derives its trip's status), timeline tests, stats tests with the sample-size rule, cross-domain population test, sync feed test (visible/omit), export round trip, a production-build browser look at both maps with the colour store changed |
 | **B3** | Transitous `COACH` lookup + traced line (measured, §1) through rail's client with a mode parameter; road line via the routing provider as the fallback, frozen, labelled, with reasons; connecting-coach UI through `Booking` as ONE list entry (Alex, forgejo#187); e-mail reminders; optional airport picker source | lookup tests against recorded Transitous answers (a `COACH` match, a `BUS`-only stop answering "no coach here", a past day), geometry tests per fallback reason (each named, none silent), edit-keeps-line test, reminder tests |
 | **B4** | Parser (template + LLM fallback + review modal) **once `test-samples/Bus/` exists**; achievements and Wrapped (2.8, as rail) | the corpus harness with `expectations.json`; 0 candidates from non-bus mails |
@@ -479,9 +479,10 @@ B2), D6 (no loyalty), D7 (colour) and D9 (sync in B2) stand as recommended.
 
 - **Trip dates.** §8 and §12 said a ride widens its trip's dates. It does not, and
   rail never did: the write path re-derives the trip's **status**
-  (`tripStatusService` spreads `rideStatusSpan` over `busJourneys`) and fills the
-  trip's dates **only when the trip has none** (`fillTripDatesFromSegments`). The
-  affected sentences in §8 and §12 are corrected.
+  (`tripStatusService` spreads `rideStatusSpan` over `busJourneys`) and
+  **never writes the trip's dates** (`fillTripDatesFromSegments` is called only by
+  trip detection, for rail as for bus; a ride saved into an undated trip leaves it
+  undated). The affected sentences in §8 and §12 are corrected.
 - **`rideKind` has no `charter`.** The column carries `intercity | shuttle |
   other`; the guided coach tour went to the tour domain (D10, branch
   `feat/tour-activity-excursion`, built first, not merged). The brief expected an
@@ -621,8 +622,6 @@ an iPad portrait sees in every logbook.
   second assertion.
 - EN `settings.modules.sub.bus` lacks the article ("a logbook …").
 - A hook comment names `/api/v1/bus` before the route existed.
-- The migration test's title promises a refusal it does not exercise (rename it or add
-  a 23514 insert test).
 - `assertEntryOwned`'s final `else` has no exhaustiveness check (pre-existing style).
 - The companions usage count was untested until the route test.
 - Uneven wrap of the clockless doc comment in `statusSweep.ts`, and a missing blank
