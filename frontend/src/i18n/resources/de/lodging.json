@@ -234,7 +234,6 @@
     "createTitle": "Neuer Aufenthalt",
     "editTitle": "Aufenthalt bearbeiten",
     "datesSection": "Termine",
-    "datesRequired": "Bitte An- und Abreisedatum angeben",
     "ratingsSection": "Bewertungen",
     "priceSection": "Preis",
     "amenitiesSection": "Ausstattung & Notizen",
@@ -250,6 +249,11 @@
       "both": "Reisezeitraum übernehmen: {{from}} – {{to}}",
       "checkIn": "Reisebeginn als Check-in: {{date}}",
       "checkOut": "Reiseende als Check-out: {{date}}"
+    },
+    "errors": {
+      "checkIn": "Bitte die Anreise angeben.",
+      "checkOut": "Bitte die Abreise angeben.",
+      "checkOutBeforeCheckIn": "Die Abreise liegt vor der Anreise."
     }
   },
   "membership": {

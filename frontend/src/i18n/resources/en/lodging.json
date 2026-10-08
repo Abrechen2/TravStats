@@ -234,7 +234,6 @@
     "createTitle": "New stay",
     "editTitle": "Edit stay",
     "datesSection": "Dates",
-    "datesRequired": "Please provide check-in and check-out dates",
     "ratingsSection": "Ratings",
     "priceSection": "Price",
     "amenitiesSection": "Amenities & notes",
@@ -250,6 +249,11 @@
       "both": "Use the trip's dates: {{from}} – {{to}}",
       "checkIn": "Trip start as check-in: {{date}}",
       "checkOut": "Trip end as check-out: {{date}}"
+    },
+    "errors": {
+      "checkIn": "Please enter the check-in date.",
+      "checkOut": "Please enter the check-out date.",
+      "checkOutBeforeCheckIn": "The check-out is before the check-in."
     }
   },
   "membership": {

@@ -63,10 +63,10 @@ describe("StayEditor — time model", () => {
       response: { status: 422, data: { error: "English prose for a log", code } },
     });
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2027-03-28" },
     });
-    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOut\b/), {
       target: { value: "2027-03-29" },
     });
     await userEvent.click(screen.getByTestId("stay-editor-save"));

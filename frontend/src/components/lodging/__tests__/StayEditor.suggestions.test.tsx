@@ -49,10 +49,10 @@ async function renderCreate(): Promise<void> {
 }
 
 async function fillDates(): Promise<void> {
-  fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+  fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
     target: { value: "2026-05-01" },
   });
-  fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+  fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOut\b/), {
     target: { value: "2026-05-03" },
   });
 }
