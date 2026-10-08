@@ -98,7 +98,10 @@
     "backToLogbook": "Logbook · Stays",
     "location": "Location",
     "nights": "Nights",
-    "stayNotFound": "This stay no longer exists at this lodging."
+    "stayNotFound": "This stay no longer exists at this lodging.",
+    "survivorChain": "chain “{{name}}”",
+    "deletePhotosNote_one": "Plus 1 photo of the house, deleted with it.",
+    "deletePhotosNote_other": "Plus {{count}} photos of the house, deleted with it."
   },
   "field": {
     "name": "Name",

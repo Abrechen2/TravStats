@@ -237,6 +237,22 @@ describe("LodgingDetailPage", () => {
     expect(screen.queryByTestId("stay-fx-readout-stay-2")).not.toBeInTheDocument();
   });
 
+  // forgejo#250: the house delete on the detail page says what the list says -
+  // the kept originals of its stays go with it.
+  it("names the kept originals of the stays in the house delete confirmation", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging({}, [baseStay]));
+    listForEntryMock.mockResolvedValue([{ id: "d1" }, { id: "d2" }]);
+    const user = userEvent.setup();
+    renderDetailPage();
+    await screen.findByText("Engimatt City & Garden");
+
+    await user.click(screen.getByTestId("lodging-delete-button"));
+    const dialog = await screen.findByRole("dialog");
+
+    await waitFor(() => expect(dialog).toHaveTextContent("documents:deleteCascadeNote"));
+    expect(listForEntryMock).toHaveBeenCalledWith({ type: "lodgingStay", id: baseStay.id });
+  });
+
   it("shows a delete confirmation naming the stay count and does NOT call deleteLodging until confirmed", async () => {
     const secondStay: LodgingStay = { ...baseStay, id: "stay-2" };
     getLodgingMock.mockResolvedValue(makeLodging({}, [baseStay, secondStay]));

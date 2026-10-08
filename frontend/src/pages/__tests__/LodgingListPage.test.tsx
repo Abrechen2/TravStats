@@ -13,6 +13,9 @@ const listLodgingPageMock = vi.fn();
 const getLodgingFacetsMock = vi.fn();
 const getLodgingStatsMock = vi.fn();
 const deleteLodgingMock = vi.fn();
+const listLodgingPhotosMock = vi.fn();
+const listForEntryMock = vi.fn();
+const getTripsMock = vi.fn();
 const navigateMock = vi.fn();
 
 // The row navigates, so proving that a row action does NOT navigate needs a
@@ -55,6 +58,17 @@ vi.mock("../../lib/api/lodging", () => ({
   getLodgingFacets: (...args: unknown[]) => getLodgingFacetsMock(...args),
   getLodgingStats: () => getLodgingStatsMock(),
   deleteLodging: (...args: unknown[]) => deleteLodgingMock(...args),
+  // The delete question counts what goes with the house (forgejo#250).
+  listLodgingPhotos: (...args: unknown[]) => listLodgingPhotosMock(...args),
+}));
+
+vi.mock("../../lib/api/documents", () => ({
+  documentsApi: { listForEntry: (...args: unknown[]) => listForEntryMock(...args) },
+}));
+
+vi.mock("../../lib/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/api")>()),
+  tripsApi: { getAll: (...args: unknown[]) => getTripsMock(...args) },
 }));
 
 const getLoyaltyMembershipMock = vi.fn();
@@ -238,6 +252,12 @@ describe("LodgingListPage", () => {
     mockFacets();
     getLodgingStatsMock.mockReset();
     getLodgingStatsMock.mockResolvedValue(defaultStats);
+    listLodgingPhotosMock.mockReset();
+    listLodgingPhotosMock.mockResolvedValue([]);
+    listForEntryMock.mockReset();
+    listForEntryMock.mockResolvedValue([]);
+    getTripsMock.mockReset();
+    getTripsMock.mockResolvedValue([]);
     useSettingsStore.setState({
       baseCurrency: "EUR",
       units: { distanceUnit: "kilometers" },
@@ -835,6 +855,63 @@ describe("LodgingListPage", () => {
       // Scoped to the dialog: the row's own delete icon carries the same name.
       await userEvent.click(within(dialog).getByRole("button", { name: /common:buttons\.delete/ }));
       await waitFor(() => expect(deleteLodgingMock).toHaveBeenCalledWith("l1"));
+    });
+
+    // forgejo#250: the list-page delete named only the stays. It now also names
+    // the house's photographs and its stays' kept originals (both cascade) and
+    // what stays - the linked trips and the chain.
+    it("names the photographs and originals that go, and the trips and chain that stay", async () => {
+      const lodging = makeLodging({
+        id: "l1",
+        name: "Hotel Adlon",
+        stayCount: 2,
+        chain: { id: 7, name: "Kempinski" } as Lodging["chain"],
+        stays: [
+          makeStay({ id: "s1", lodgingId: "l1", tripId: "t1" }),
+          makeStay({ id: "s2", lodgingId: "l1", tripId: null }),
+        ],
+      });
+      mockRows([lodging]);
+      listLodgingPhotosMock.mockResolvedValue([{ id: "p1" }, { id: "p2" }, { id: "p3" }]);
+      listForEntryMock.mockImplementation(async (entry: { id: string }) =>
+        entry.id === "s1" ? [{ id: "d1" }, { id: "d2" }] : [{ id: "d3" }]
+      );
+      getTripsMock.mockResolvedValue([
+        { id: "t1", name: "Berlin 2024" },
+        { id: "t2", name: "Unrelated" },
+      ]);
+      renderListPage();
+
+      await screen.findByText("Hotel Adlon");
+      await userEvent.click(screen.getByTestId("lodging-delete-l1"));
+      const dialog = await screen.findByRole("dialog");
+
+      await waitFor(() => {
+        expect(dialog).toHaveTextContent("lodging:detail.deletePhotosNote");
+        expect(dialog).toHaveTextContent("documents:deleteCascadeNote");
+        expect(dialog).toHaveTextContent("common:delete.survivors");
+      });
+      expect(listForEntryMock).toHaveBeenCalledWith({ type: "lodgingStay", id: "s1" });
+      expect(listForEntryMock).toHaveBeenCalledWith({ type: "lodgingStay", id: "s2" });
+      expect(listLodgingPhotosMock).toHaveBeenCalledWith("l1");
+    });
+
+    // Nothing counted yet, or the count failed: the question must still open and
+    // must not claim "no documents".
+    it("opens with its base sentence when the counts cannot be read", async () => {
+      mockRows([makeLodging({ id: "l1", name: "Hotel Adlon", stayCount: 1 })]);
+      listLodgingPhotosMock.mockRejectedValue(new Error("down"));
+      listForEntryMock.mockRejectedValue(new Error("down"));
+      renderListPage();
+
+      await screen.findByText("Hotel Adlon");
+      await userEvent.click(screen.getByTestId("lodging-delete-l1"));
+      const dialog = await screen.findByRole("dialog");
+
+      await waitFor(() => expect(listLodgingPhotosMock).toHaveBeenCalled());
+      expect(dialog).toHaveTextContent("lodging:detail.deleteConfirmMessage");
+      expect(dialog).not.toHaveTextContent("documents:deleteCascadeNote");
+      expect(dialog).not.toHaveTextContent("lodging:detail.deletePhotosNote");
     });
 
     it("does not open the lodging when an action is clicked", async () => {

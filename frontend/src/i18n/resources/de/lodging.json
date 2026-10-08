@@ -98,7 +98,10 @@
     "backToLogbook": "Logbuch · Unterkünfte",
     "location": "Standort",
     "nights": "Nächte",
-    "stayNotFound": "Diesen Aufenthalt gibt es in dieser Unterkunft nicht mehr."
+    "stayNotFound": "Diesen Aufenthalt gibt es in dieser Unterkunft nicht mehr.",
+    "survivorChain": "Kette „{{name}}“",
+    "deletePhotosNote_one": "Dazu 1 Foto der Unterkunft, das mit gelöscht wird.",
+    "deletePhotosNote_other": "Dazu {{count}} Fotos der Unterkunft, die mit gelöscht werden."
   },
   "field": {
     "name": "Name",

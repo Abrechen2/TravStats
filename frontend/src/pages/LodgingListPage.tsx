@@ -23,7 +23,9 @@ import { SortableHeader } from "../components/table/SortableHeader";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
 import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
-import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { lodgingDeleteMessage } from "../lib/lodgingDeleteMessage";
+import { useLodgingDeleteFacts } from "../hooks/useLodgingDeleteFacts";
 import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import ConfirmModal from "../components/Training/ConfirmModal";
@@ -115,6 +117,9 @@ export default function LodgingListPage(): JSX.Element {
   const [editing, setEditing] = useState<Lodging | null>(null);
   const [toDelete, setToDelete] = useState<Lodging | null>(null);
   const [deleting, setDeleting] = useState<boolean>(false);
+  // The photographs and kept originals that go with the house, and the trips
+  // that stay - read while its confirmation is open (forgejo#250).
+  const deleteFacts = useLodgingDeleteFacts(toDelete);
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebouncedValue(search);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
@@ -654,19 +659,7 @@ export default function LodgingListPage(): JSX.Element {
           // was left behind when the six sentences were unified, so the list
           // rendered a literal "{{name}}" and said "mit 0 Aufenthalten" for a
           // house that has none. Exactly the drift the helper exists to stop.
-          message={
-            toDelete
-              ? countedDeleteMessage(
-                  t,
-                  {
-                    counted: "lodging:detail.deleteConfirmMessage",
-                    empty: "lodging:detail.deleteConfirmMessageNoStays",
-                  },
-                  toDelete.name,
-                  toDelete.stayCount
-                )
-              : ""
-          }
+          message={toDelete ? lodgingDeleteMessage(t, toDelete, deleteFacts) : ""}
           confirmText={t("common:buttons.delete")}
           confirmButtonClass={DELETE_BUTTON_CLASS}
         />
