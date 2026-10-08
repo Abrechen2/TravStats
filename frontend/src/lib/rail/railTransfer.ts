@@ -1,5 +1,5 @@
 import { railArrival, railDeparture, type RailLike } from "../entityTimes";
-import type { TimeValue } from "../../shared/time";
+import { localDay, type TimeValue } from "../../shared/time";
 import type { RailJourney } from "../../types/rail";
 
 /**
@@ -216,27 +216,70 @@ export function railTransfer(previous: RailTransferLeg, next: RailTransferLeg): 
   };
 }
 
-const departsToTheMinute = (leg: RailTransferLeg): boolean =>
-  railDeparture(leg)?.precision === "minute";
+const HOUR_MS = 3_600_000;
+/** A zone is at most UTC+14 / UTC−12: the widest a day of unknown zone can lie. */
+const UNKNOWN_ZONE_MARGIN_MS = 14 * HOUR_MS;
 
 /**
- * Is the order of `legs[i]` and `legs[i + 1]` known? Both departures to the
- * minute, or on different days — and no leg whose departure is NOT to the
- * minute falls on a day the gap spans, because that leg could have run in
- * between: its stored midnight says nothing about when in the day it left.
+ * When a leg left, as an interval of instants `[start, end)`: one instant for
+ * a departure known to the minute; the whole local day, in the station's own
+ * zone, for one known only by its day — its stored midnight says nothing
+ * about when in that day it left. Null when not even the day is known.
+ *
+ * Comparing intervals of INSTANTS, not day labels, is what makes a Berlin day
+ * and a Tokyo clock comparable (re-review N2): 00:30 on 10 October in Tokyo
+ * is still 9 October in Berlin.
+ */
+function departureWindow(leg: RailTransferLeg): { start: number; end: number } | null {
+  const departure = railDeparture(leg);
+  if (!departure) return null;
+  const start = Date.parse(departure.utc);
+  if (!Number.isFinite(start)) return null;
+  if (departure.precision === "minute") return { start, end: start };
+  if (departure.precision !== "day") return null;
+  if (departure.zone === null) {
+    return {
+      start: start - UNKNOWN_ZONE_MARGIN_MS,
+      end: start + 24 * HOUR_MS + UNKNOWN_ZONE_MARGIN_MS,
+    };
+  }
+  // The day is 23, 24 or 25 hours long; it ends where the zone's calendar
+  // turns to the next day.
+  const day = localDay(departure.utc, departure.zone);
+  const hours = [23, 24, 25].find(
+    (h) => localDay(new Date(start + h * HOUR_MS).toISOString(), departure.zone ?? "UTC") !== day
+  );
+  return { start, end: start + (hours ?? 25) * HOUR_MS };
+}
+
+/**
+ * Did `a` certainly leave no later than `b`? Two clocks compare as instants
+ * (equal ones in the server's order); a day only compares once it lies
+ * wholly before or after the other — never by its label.
+ */
+function leftBefore(a: { start: number; end: number }, b: { start: number; end: number }): boolean {
+  const aPoint = a.start === a.end;
+  const bPoint = b.start === b.end;
+  if (aPoint && bPoint) return a.start <= b.start;
+  if (aPoint) return a.start < b.start;
+  return a.end <= b.start;
+}
+
+/**
+ * Is the order of `legs[i]` and `legs[i + 1]` known? Only when the first
+ * certainly left before the second, and every OTHER leg certainly left
+ * before the first or after the second — a leg known only by its day could
+ * have run in between, and a timed leg on the day of a day-only neighbour
+ * could have run before it (re-review N1).
  */
 function gapOrderKnown(legs: readonly RailTransferLeg[], i: number): boolean {
-  const previous = legs[i];
-  const next = legs[i + 1];
-  const from = dayOf(railDeparture(previous));
-  const to = dayOf(railDeparture(next));
-  if (from === null || to === null) return false;
-  const pairKnown = (departsToTheMinute(previous) && departsToTheMinute(next)) || from !== to;
-  if (!pairKnown) return false;
-  return legs.every((leg, j) => {
-    if (j === i || j === i + 1 || departsToTheMinute(leg)) return true;
-    const day = dayOf(railDeparture(leg));
-    return day !== null && (day < from || day > to);
+  const windows = legs.map(departureWindow);
+  const previous = windows[i];
+  const next = windows[i + 1];
+  if (previous === null || next === null || !leftBefore(previous, next)) return false;
+  return windows.every((window, j) => {
+    if (j === i || j === i + 1) return true;
+    return window !== null && (leftBefore(window, previous) || leftBefore(next, window));
   });
 }
 

@@ -371,3 +371,114 @@ describe("railTransfers — legs whose order is not known", () => {
     expect(railTransfers([frankfurtFulda, nextDay])[0]).toMatchObject({ kind: "unknown" });
   });
 });
+
+// Re-review 1: the order is known only where the INSTANTS say so.
+describe("railTransfers — order known only by instants (re-review N1, N2)", () => {
+  const TOKYO = "Asia/Tokyo";
+  it("N1: a day-only next leg with a timed leg of its own day after it claims nothing", () => {
+    const bc = leg(
+      "B",
+      "C",
+      at("2026-10-08T06:00:00Z", "2026-10-08T08:00:00", BERLIN),
+      at("2026-10-08T07:00:00Z", "2026-10-08T09:00:00", BERLIN)
+    );
+    const deDayOnly = leg(
+      "D",
+      "E",
+      at("2026-10-08T22:00:00Z", "2026-10-09T00:00:00", BERLIN, "day"),
+      null
+    );
+    const cf = leg("C", "F", at("2026-10-09T08:00:00Z", "2026-10-09T10:00:00", BERLIN), null);
+    // The server's order: the day-only leg's midnight before the 10:00 train.
+    expect(railTransfers([bc, deDayOnly, cf])).toEqual([
+      { kind: "unknown", reason: "order" },
+      { kind: "unknown", reason: "order" },
+    ]);
+  });
+
+  it("N1, the mirror: a day-only previous leg with a timed leg of its own day after it", () => {
+    const abDayOnly = leg(
+      "A",
+      "B",
+      at("2026-10-08T22:00:00Z", "2026-10-09T00:00:00", BERLIN, "day"),
+      null
+    );
+    const cd = leg(
+      "C",
+      "D",
+      at("2026-10-09T08:00:00Z", "2026-10-09T10:00:00", BERLIN),
+      at("2026-10-09T09:00:00Z", "2026-10-09T11:00:00", BERLIN)
+    );
+    const be = leg("B", "E", at("2026-10-10T06:00:00Z", "2026-10-10T08:00:00", BERLIN), null);
+    expect(railTransfers([abDayOnly, cd, be])).toEqual([
+      { kind: "unknown", reason: "order" },
+      { kind: "unknown", reason: "order" },
+    ]);
+  });
+
+  it("a day-only leg alone on its day keeps both neighbours' order known", () => {
+    const abDayOnly = leg(
+      "A",
+      "B",
+      at("2026-10-08T22:00:00Z", "2026-10-09T00:00:00", BERLIN, "day"),
+      null
+    );
+    const be = leg("B", "E", at("2026-10-10T06:00:00Z", "2026-10-10T08:00:00", BERLIN), null);
+    expect(railTransfers([abDayOnly, be])).toEqual([
+      { kind: "unknown", reason: "time", station: { kind: "same" } },
+    ]);
+  });
+
+  it("N2: a Berlin day and a Tokyo clock inside that day are not ordered", () => {
+    // 9 Oct in Berlin is 8 Oct 22:00Z – 9 Oct 22:00Z; 10 Oct 00:30 in Tokyo is 9 Oct 15:30Z.
+    const berlinDay = leg(
+      "A",
+      "B",
+      at("2026-10-08T22:00:00Z", "2026-10-09T00:00:00", BERLIN, "day"),
+      null
+    );
+    const tokyo = leg("B", "C", at("2026-10-09T15:30:00Z", "2026-10-10T00:30:00", TOKYO), null);
+    expect(railTransfers([berlinDay, tokyo])).toEqual([{ kind: "unknown", reason: "order" }]);
+  });
+
+  it("N2, the mirror: a Tokyo day and a Berlin clock inside it are not ordered", () => {
+    // 10 Oct in Tokyo is 9 Oct 15:00Z – 10 Oct 15:00Z; 9 Oct 20:00 in Berlin is 9 Oct 18:00Z.
+    const tokyoDay = leg(
+      "A",
+      "B",
+      at("2026-10-09T15:00:00Z", "2026-10-10T00:00:00", TOKYO, "day"),
+      null
+    );
+    const berlin = leg("B", "C", at("2026-10-09T18:00:00Z", "2026-10-09T20:00:00", BERLIN), null);
+    expect(railTransfers([tokyoDay, berlin])).toEqual([{ kind: "unknown", reason: "order" }]);
+  });
+
+  it("N2: a clock after the whole Berlin day is ordered, whatever its own label", () => {
+    const berlinDay = leg(
+      "A",
+      "B",
+      at("2026-10-08T22:00:00Z", "2026-10-09T00:00:00", BERLIN, "day"),
+      null
+    );
+    // 10 Oct 08:00 in Tokyo is 9 Oct 23:00Z, after Berlin's 9 Oct ended at 22:00Z.
+    const tokyo = leg("B", "C", at("2026-10-09T23:00:00Z", "2026-10-10T08:00:00", TOKYO), null);
+    expect(railTransfers([berlinDay, tokyo])[0]).toMatchObject({ kind: "unknown", reason: "time" });
+  });
+
+  it("a day-only leg on an autumn clock-change day spans its 25 hours", () => {
+    // 25 Oct 2026 in Berlin runs from 24 Oct 22:00Z to 25 Oct 23:00Z.
+    const longDay = leg(
+      "A",
+      "B",
+      at("2026-10-24T22:00:00Z", "2026-10-25T00:00:00", BERLIN, "day"),
+      null
+    );
+    const lateSameDay = leg(
+      "B",
+      "C",
+      at("2026-10-25T22:30:00Z", "2026-10-25T23:30:00", BERLIN),
+      null
+    );
+    expect(railTransfers([longDay, lateSameDay])).toEqual([{ kind: "unknown", reason: "order" }]);
+  });
+});
