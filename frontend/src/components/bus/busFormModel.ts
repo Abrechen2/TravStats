@@ -1,7 +1,9 @@
 import { saveErrorKey } from "../../lib/saveErrorMessage";
+import type { Fold } from "../../lib/api/timeInput";
 import type { BusJourney, BusJourneyInput, BusRideKind } from "../../types/bus";
 import { toStationWallClock } from "../../lib/railTime";
 import { railArrival, railDeparture } from "../../lib/entityTimes";
+import { classifyWallClock, storedFold, type TimeValue } from "../../shared/time";
 import { EMPTY_TERMINAL, type BusStationDraft } from "./BusStationField";
 
 /**
@@ -20,6 +22,14 @@ export interface BusFormDraft {
   arrivalLocal: string;
   /** "Only the date is known": both times are sent as a day, not a wall clock. */
   dayOnly: boolean;
+  /**
+   * Which occurrence of a repeated autumn hour the end's wall clock means, kept
+   * from the stored ride so a save that does not touch the time resends the
+   * instant it opened with. Null when the clock is not repeated or the user has
+   * since typed a different one (the server then reads the earlier, as ever).
+   */
+  departureFold: Fold | null;
+  arrivalFold: Fold | null;
   /** Only what the user typed. A measured distance is not shown here. */
   distanceKm: string;
   fareClass: string;
@@ -35,6 +45,20 @@ export interface BusFormDraft {
   notes: string;
 }
 
+/**
+ * The occurrence of a repeated hour a stored end is: the wall clock exists
+ * twice, so the instant alone says which. "earlier" is named too (not folded
+ * into null) so a test can tell the two stored states apart; the server reads
+ * both the same as an absent fold.
+ */
+function storedEndFold(value: TimeValue | null): Fold | null {
+  // A value with no zone reads as UTC, which has no repeated hour.
+  if (!value || value.precision === "day" || !value.zone) return null;
+  const local = value.local.slice(0, 16);
+  if (classifyWallClock(local, value.zone) !== "repeated") return null;
+  return storedFold(local, value.zone, value.utc) === "later" ? "later" : "earlier";
+}
+
 export function draftFrom(ride: BusJourney | null): BusFormDraft {
   if (!ride) {
     return {
@@ -46,6 +70,8 @@ export function draftFrom(ride: BusJourney | null): BusFormDraft {
       departureLocal: "",
       arrivalLocal: "",
       dayOnly: false,
+      departureFold: null,
+      arrivalFold: null,
       distanceKm: "",
       fareClass: "",
       seat: "",
@@ -60,6 +86,8 @@ export function draftFrom(ride: BusJourney | null): BusFormDraft {
       notes: "",
     };
   }
+  const departureValue = railDeparture(ride);
+  const arrivalValue = railArrival(ride);
   return {
     operator: ride.operator ?? "",
     lineName: ride.lineName ?? "",
@@ -80,11 +108,13 @@ export function draftFrom(ride: BusJourney | null): BusFormDraft {
     },
     // Read back on each terminal's own clock — the time the ticket printed. A
     // bus row has rail's columns, so rail's readers accept it.
-    departureLocal: toStationWallClock(railDeparture(ride)),
-    arrivalLocal: toStationWallClock(railArrival(ride)),
+    departureLocal: toStationWallClock(departureValue),
+    arrivalLocal: toStationWallClock(arrivalValue),
     // A ride stored by its day alone must be edited as one: shown as 00:00 it
     // would be saved back as a midnight departure nobody stated.
     dayOnly: railDeparture(ride)?.precision === "day",
+    departureFold: storedEndFold(departureValue),
+    arrivalFold: storedEndFold(arrivalValue),
     distanceKm:
       ride.distanceSource === "user" && ride.distanceKm !== null ? String(ride.distanceKm) : "",
     fareClass: ride.fareClass ?? "",
@@ -146,6 +176,10 @@ export function toBusInput(draft: BusFormDraft): BusJourneyInput {
     arrivalStation: terminalInput(draft.arrival),
     departureLocal: time(draft.departureLocal),
     arrivalLocal: draft.arrivalLocal === "" ? null : time(draft.arrivalLocal),
+    // Always sent, null when none: omitting a fold would let the server fall
+    // back to the earlier occurrence of a repeated hour (forgejo#214).
+    departureFold: draft.dayOnly ? null : draft.departureFold,
+    arrivalFold: draft.dayOnly || draft.arrivalLocal === "" ? null : draft.arrivalFold,
     distanceKm: numberOrNull(draft.distanceKm),
     fareClass: orNull(draft.fareClass),
     seat: orNull(draft.seat),

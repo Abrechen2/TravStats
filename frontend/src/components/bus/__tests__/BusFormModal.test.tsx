@@ -423,4 +423,60 @@ describe("BusFormModal", () => {
       expect(screen.getByLabelText("bus:form.departureTime")).toHaveValue("2026-09-20");
     });
   });
+
+  describe("the repeated autumn hour (forgejo#214)", () => {
+    const repeatedRide = (): BusJourney => {
+      const base = rideFixture();
+      return {
+        ...base,
+        depLat: 52.5069,
+        depLon: 13.2778,
+        depTimezone: "Europe/Berlin",
+        departureTime: "2026-10-25T01:30:00.000Z",
+        times: {
+          ...base.times!,
+          departure: {
+            utc: "2026-10-25T01:30:00.000Z",
+            zone: "Europe/Berlin",
+            offset: "+01:00",
+            local: "2026-10-25T02:30:00",
+            precision: "minute",
+          },
+        },
+      };
+    };
+
+    it("a save that touches only the notes resends the later occurrence", async () => {
+      update.mockResolvedValue({ id: "r1" });
+      await renderModal(repeatedRide());
+      fireEvent.change(screen.getByLabelText("bus:form.notes"), { target: { value: "n" } });
+      fireEvent.click(saveButton());
+      await waitFor(() => expect(update).toHaveBeenCalled());
+      expect(update).toHaveBeenCalledWith(
+        "r1",
+        expect.objectContaining({ departureLocal: "2026-10-25T02:30", departureFold: "later" })
+      );
+    });
+
+    it("typing another time drops the fold, and the later hour can be chosen again", async () => {
+      update.mockResolvedValue({ id: "r1" });
+      await renderModal(repeatedRide());
+      const later = screen.getByLabelText("common:clockChange.later");
+      expect(later).toBeChecked();
+
+      fireEvent.change(screen.getByLabelText("bus:form.departureTime"), {
+        target: { value: "2026-10-25T02:45" },
+      });
+      expect(screen.getByLabelText("common:clockChange.later")).not.toBeChecked();
+      fireEvent.click(screen.getByLabelText("common:clockChange.later"));
+      expect(screen.getByLabelText("common:clockChange.later")).toBeChecked();
+
+      fireEvent.click(saveButton());
+      await waitFor(() => expect(update).toHaveBeenCalled());
+      expect(update).toHaveBeenCalledWith(
+        "r1",
+        expect.objectContaining({ departureLocal: "2026-10-25T02:45", departureFold: "later" })
+      );
+    });
+  });
 });

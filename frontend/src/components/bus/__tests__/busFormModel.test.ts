@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { canSubmit, draftFrom, saveErrorFrom, toBusInput } from "../busFormModel";
+import type { BusJourney } from "../../../types/bus";
+import type { TimeValue } from "../../../shared/time";
 import { EMPTY_TERMINAL } from "../BusStationField";
 import { SEOUL, rideFixture } from "./busFixture";
 
@@ -55,6 +57,8 @@ describe("busFormModel", () => {
     expect(draft.arrivalLocal).toBe("2026-09-20T11:20");
     expect(draft.cancelled).toBe(false);
     expect(draft.dayOnly).toBe(false);
+    expect(draft.departureFold).toBeNull();
+    expect(draft.arrivalFold).toBeNull();
   });
 
   it("a ride logged by its day alone is edited by its day and sent as a day", () => {
@@ -123,6 +127,53 @@ describe("busFormModel", () => {
     expect(saveErrorFrom(refused("BUS_INVALID_INPUT"))).toEqual({
       key: "bus:form.errors.invalid",
       field: null,
+    });
+  });
+
+  describe("the repeated autumn hour (forgejo#214)", () => {
+    // 2026-10-25: Europe/Berlin goes back at 03:00 CEST, so 02:30 happens twice.
+    const berlinRide = (utc: string, offset: string): BusJourney => {
+      const base = rideFixture();
+      const departure: TimeValue = {
+        utc,
+        zone: "Europe/Berlin",
+        offset,
+        local: "2026-10-25T02:30:00",
+        precision: "minute",
+      };
+      return {
+        ...base,
+        departureTime: utc,
+        depTimezone: "Europe/Berlin",
+        times: { ...base.times!, departure },
+      };
+    };
+
+    it("reads the later occurrence back and sends it", () => {
+      const draft = draftFrom(berlinRide("2026-10-25T01:30:00.000Z", "+01:00"));
+      expect(draft.departureLocal).toBe("2026-10-25T02:30");
+      expect(draft.departureFold).toBe("later");
+      expect(toBusInput(draft).departureFold).toBe("later");
+    });
+
+    it("reads the earlier occurrence as earlier", () => {
+      const draft = draftFrom(berlinRide("2026-10-25T00:30:00.000Z", "+02:00"));
+      expect(draft.departureFold).toBe("earlier");
+      expect(toBusInput(draft).departureFold).toBe("earlier");
+    });
+
+    it("has no fold for a clock that exists once, and sends none", () => {
+      const draft = draftFrom(rideFixture());
+      expect(draft.departureFold).toBeNull();
+      expect(draft.arrivalFold).toBeNull();
+      const input = toBusInput(draft);
+      expect(input.departureFold).toBeNull();
+      expect(input.arrivalFold).toBeNull();
+    });
+
+    it("sends no fold for an end that is only a day", () => {
+      const draft = draftFrom(berlinRide("2026-10-25T01:30:00.000Z", "+01:00"));
+      expect(toBusInput({ ...draft, dayOnly: true }).departureFold).toBeNull();
     });
   });
 });

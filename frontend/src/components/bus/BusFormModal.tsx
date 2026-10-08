@@ -107,7 +107,21 @@ export function BusFormModal({ journey, onClose, onSaved }: Props): JSX.Element 
     operator: draft.operator,
   });
 
-  const setTerminal = (end: "departure" | "arrival", next: BusStationDraft): void => set(end, next);
+  // A moved terminal may sit in another zone, where the stored occurrence of a
+  // repeated hour means nothing: the fold is dropped with the place it was read at.
+  const setTerminal = (end: "departure" | "arrival", next: BusStationDraft): void => {
+    setError(null);
+    setDraft((prev) => {
+      const moved = prev[end].lat !== next.lat || prev[end].lon !== next.lon;
+      return { ...prev, [end]: next, ...(moved ? { [`${end}Fold`]: null } : {}) };
+    });
+  };
+
+  /** A typed time ends the stored occurrence of a repeated hour: it was the old clock's. */
+  const setTime = (end: "departure" | "arrival", value: string): void => {
+    setError(null);
+    setDraft((prev) => ({ ...prev, [`${end}Local`]: value, [`${end}Fold`]: null }));
+  };
 
   const toggleDayOnly = (dayOnly: boolean): void => {
     setError(null);
@@ -116,6 +130,8 @@ export function BusFormModal({ journey, onClose, onSaved }: Props): JSX.Element 
       dayOnly,
       departureLocal: dayOnly ? dayOf(prev.departureLocal) : withClock(prev.departureLocal),
       arrivalLocal: dayOnly ? dayOf(prev.arrivalLocal) : withClock(prev.arrivalLocal),
+      departureFold: null,
+      arrivalFold: null,
     }));
   };
 
@@ -294,16 +310,17 @@ export function BusFormModal({ journey, onClose, onSaved }: Props): JSX.Element 
                   className={`mt-1 ${INPUT_CLASS}`}
                   style={DARK_PICKER_STYLE}
                   value={shownTime(draft.departureLocal)}
-                  onChange={(e): void => set("departureLocal", e.target.value)}
+                  onChange={(e): void => setTime("departure", e.target.value)}
                   {...depError.input}
                 />
               </label>
               {depError.message}
-              {/* Notice only: no "later" choice is offered that the form
-                  would not send. A day has no clock to be repeated. */}
+              {/* A day has no clock to be repeated. */}
               <ClockChangeNotice
                 local={draft.dayOnly ? "" : draft.departureLocal}
                 zone={knownTerminalZone(journey, "dep", draft.departure)}
+                fold={draft.departureFold ?? undefined}
+                onFoldChange={(fold): void => set("departureFold", fold ?? null)}
               />
             </div>
             <div>
@@ -314,7 +331,7 @@ export function BusFormModal({ journey, onClose, onSaved }: Props): JSX.Element 
                   className={`mt-1 ${INPUT_CLASS}`}
                   style={DARK_PICKER_STYLE}
                   value={shownTime(draft.arrivalLocal)}
-                  onChange={(e): void => set("arrivalLocal", e.target.value)}
+                  onChange={(e): void => setTime("arrival", e.target.value)}
                   {...arrError.input}
                 />
               </label>
@@ -322,6 +339,8 @@ export function BusFormModal({ journey, onClose, onSaved }: Props): JSX.Element 
               <ClockChangeNotice
                 local={draft.dayOnly ? "" : draft.arrivalLocal}
                 zone={knownTerminalZone(journey, "arr", draft.arrival)}
+                fold={draft.arrivalFold ?? undefined}
+                onFoldChange={(fold): void => set("arrivalFold", fold ?? null)}
               />
             </div>
           </div>
