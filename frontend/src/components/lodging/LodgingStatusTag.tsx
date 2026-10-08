@@ -1,6 +1,7 @@
 import { useId } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { HelpIcon } from "../form";
 import { lodgingIssue, LODGING_ISSUE_ICON } from "./lodgingCompleteness";
 import type { Lodging } from "../../types/lodging";
 
@@ -67,14 +68,21 @@ export function LodgingStatusTag({
   }
 
   return (
-    <span className={className} title={hint}>
-      <span aria-hidden>{LODGING_ISSUE_ICON[issue]}</span>
-      {label}
-      <span id={hintId} className="sr-only">
-        {hint}
+    <span className="inline-flex items-center gap-1">
+      <span className={className} title={hint}>
+        <span aria-hidden>{LODGING_ISSUE_ICON[issue]}</span>
+        {label}
+        <span id={hintId} className="sr-only">
+          {hint}
+        </span>
+      </span>
+      {/* The same explanation for a finger (forgejo#249): the `title` needs a
+          mouse and the sr-only text a screen reader, so a tap-reachable help
+          button carries it for everyone else. It sits in a table row that
+          opens the house on click and on Enter, so neither may bubble from it. */}
+      <span onKeyDown={(event) => event.stopPropagation()}>
+        <HelpIcon content={hint} position="bottom" />
       </span>
     </span>
   );
 }
-
-export default LodgingStatusTag;

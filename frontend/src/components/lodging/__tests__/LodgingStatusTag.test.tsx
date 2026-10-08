@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { LodgingStatusTag } from "../LodgingStatusTag";
 import type { Lodging } from "../../../types/lodging";
 
@@ -25,5 +26,33 @@ describe("LodgingStatusTag", () => {
     expect(screen.getByRole("button")).toHaveAccessibleDescription(
       "lodging:list.status.unlocatedHint"
     );
+  });
+
+  // forgejo#249: the sr-only text is for screen readers; a sighted finger needs
+  // something it can tap.
+  it("offers the explanation to a tap: a help button opens it, and the row does not", async () => {
+    const onRow = vi.fn();
+    const onRowKey = vi.fn();
+    render(
+      <div onClick={onRow} onKeyDown={onRowKey}>
+        <LodgingStatusTag lodging={{ ...unlocated, lat: 1, lon: 2, address: null }} />
+      </div>
+    );
+    const help = screen.getByRole("button", { name: "accessibility.showHelp" });
+    await userEvent.click(help);
+
+    // Visible now: a second copy of the hint, in the opened help (the first is sr-only).
+    const copies = await screen.findAllByText("lodging:list.status.noAddressHint");
+    expect(copies.some((el) => !el.classList.contains("sr-only"))).toBe(true);
+    expect(onRow).not.toHaveBeenCalled();
+
+    help.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(onRowKey).not.toHaveBeenCalled();
+  });
+
+  it("the repair button needs no extra help button - its description is the hint", () => {
+    render(<LodgingStatusTag lodging={unlocated} onRepair={vi.fn()} />);
+    expect(screen.queryByRole("button", { name: "accessibility.showHelp" })).toBeNull();
   });
 });
