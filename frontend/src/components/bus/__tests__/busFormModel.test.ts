@@ -56,7 +56,8 @@ describe("busFormModel", () => {
     expect(draft.departureLocal).toBe("2026-09-20T09:00");
     expect(draft.arrivalLocal).toBe("2026-09-20T11:20");
     expect(draft.cancelled).toBe(false);
-    expect(draft.dayOnly).toBe(false);
+    expect(draft.departureDayOnly).toBe(false);
+    expect(draft.arrivalDayOnly).toBe(false);
     expect(draft.departureFold).toBeNull();
     expect(draft.arrivalFold).toBeNull();
   });
@@ -77,16 +78,18 @@ describe("busFormModel", () => {
       },
     };
     const draft = draftFrom(dayOnly);
-    expect(draft.dayOnly).toBe(true);
+    expect(draft.departureDayOnly).toBe(true);
+    expect(draft.arrivalDayOnly).toBe(false);
     const input = toBusInput(draft);
     expect(input.departureLocal).toBe("2026-09-20");
     expect(input.arrivalLocal).toBeNull();
   });
 
-  it("day-only drops the clock part of both times", () => {
+  it("day-only drops the clock part of each end that is day-only", () => {
     const input = toBusInput({
       ...placed,
-      dayOnly: true,
+      departureDayOnly: true,
+      arrivalDayOnly: true,
       departureLocal: "2026-09-20T09:00",
       arrivalLocal: "2026-09-21T11:20",
     });
@@ -129,7 +132,6 @@ describe("busFormModel", () => {
       field: null,
     });
   });
-
   describe("the repeated autumn hour (forgejo#214)", () => {
     // 2026-10-25: Europe/Berlin goes back at 03:00 CEST, so 02:30 happens twice.
     const berlinRide = (utc: string, offset: string): BusJourney => {
@@ -173,7 +175,53 @@ describe("busFormModel", () => {
 
     it("sends no fold for an end that is only a day", () => {
       const draft = draftFrom(berlinRide("2026-10-25T01:30:00.000Z", "+01:00"));
-      expect(toBusInput({ ...draft, dayOnly: true }).departureFold).toBeNull();
+      expect(toBusInput({ ...draft, departureDayOnly: true }).departureFold).toBeNull();
+    });
+  });
+
+  describe("precision per end (forgejo#215)", () => {
+    const withArrival = (arrival: Partial<TimeValue> | null, departure?: Partial<TimeValue>) => {
+      const base = rideFixture();
+      return {
+        ...base,
+        times: {
+          ...base.times!,
+          departure: { ...base.times!.departure!, ...departure },
+          arrival: arrival ? { ...base.times!.arrival!, ...arrival } : null,
+        },
+      };
+    };
+
+    it("a timed departure with a day-only arrival keeps the arrival as a day", () => {
+      const ride = withArrival({ local: "2026-09-20T00:00:00", precision: "day" });
+      const draft = draftFrom(ride);
+      expect(draft.departureDayOnly).toBe(false);
+      expect(draft.arrivalDayOnly).toBe(true);
+      const input = toBusInput(draft);
+      expect(input.departureLocal).toBe("2026-09-20T09:00");
+      expect(input.arrivalLocal).toBe("2026-09-20");
+      expect(input.delayMinutes).toBeNull();
+    });
+
+    it("a day-only departure with a timed arrival keeps the arrival clock", () => {
+      const ride = withArrival(null, { local: "2026-09-20T00:00:00", precision: "day" });
+      const withClockedArrival = {
+        ...ride,
+        times: { ...ride.times, arrival: rideFixture().times!.arrival },
+      };
+      const input = toBusInput(draftFrom(withClockedArrival));
+      expect(input.departureLocal).toBe("2026-09-20");
+      expect(input.arrivalLocal).toBe("2026-09-20T11:20");
+    });
+
+    it("does not send a delay while either end is a day, but keeps it in the draft", () => {
+      const draft = { ...draftFrom(rideFixture()), delayMinutes: "12" };
+      expect(toBusInput(draft).delayMinutes).toBe(12);
+      for (const flags of [{ departureDayOnly: true }, { arrivalDayOnly: true }]) {
+        const blocked = { ...draft, ...flags };
+        expect(toBusInput(blocked).delayMinutes).toBeNull();
+        expect(blocked.delayMinutes).toBe("12");
+      }
     });
   });
 });

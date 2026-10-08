@@ -382,7 +382,10 @@ describe("BusFormModal", () => {
   });
 
   describe("only the date is known", () => {
-    it("switches both inputs to dates and sends days", async () => {
+    const DEP_BOX = "bus:form.departureTime: bus:form.dayOnly";
+    const ARR_BOX = "bus:form.arrivalTime: bus:form.dayOnly";
+
+    it("switches each input to a date on its own box and sends days", async () => {
       create.mockResolvedValue({ id: "new" });
       await renderModal(null);
       pickBothTerminals();
@@ -391,15 +394,43 @@ describe("BusFormModal", () => {
         target: { value: "2026-09-20T11:20" },
       });
 
-      fireEvent.click(screen.getByLabelText("bus:form.dayOnly"));
+      fireEvent.click(screen.getByLabelText(DEP_BOX));
       expect(screen.getByLabelText("bus:form.departureTime")).toHaveAttribute("type", "date");
       expect(screen.getByLabelText("bus:form.departureTime")).toHaveValue("2026-09-20");
+      // The other end is untouched.
+      expect(screen.getByLabelText("bus:form.arrivalTime")).toHaveAttribute(
+        "type",
+        "datetime-local"
+      );
+      fireEvent.click(screen.getByLabelText(ARR_BOX));
       expect(screen.getByLabelText("bus:form.arrivalTime")).toHaveAttribute("type", "date");
 
       fireEvent.click(saveButton());
       await waitFor(() => expect(create).toHaveBeenCalled());
       expect(create).toHaveBeenCalledWith(
         expect.objectContaining({ departureLocal: "2026-09-20", arrivalLocal: "2026-09-20" })
+      );
+    });
+
+    it("a day-only arrival on a timed departure is sent as a day, the departure as a clock", async () => {
+      create.mockResolvedValue({ id: "new" });
+      await renderModal(null);
+      pickBothTerminals();
+      typeDeparture("2026-09-20T09:00");
+      fireEvent.change(screen.getByLabelText("bus:form.arrivalTime"), {
+        target: { value: "2026-09-21T11:20" },
+      });
+      fireEvent.click(screen.getByLabelText(ARR_BOX));
+      expect(screen.getByLabelText(ARR_BOX)).toBeChecked();
+      expect(screen.getByLabelText(DEP_BOX)).not.toBeChecked();
+
+      fireEvent.click(saveButton());
+      await waitFor(() => expect(create).toHaveBeenCalled());
+      expect(create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          departureLocal: "2026-09-20T09:00",
+          arrivalLocal: "2026-09-21",
+        })
       );
     });
 
@@ -419,8 +450,61 @@ describe("BusFormModal", () => {
         },
       };
       await renderModal(ride);
-      expect(screen.getByLabelText("bus:form.dayOnly")).toBeChecked();
+      expect(screen.getByLabelText(DEP_BOX)).toBeChecked();
+      expect(screen.getByLabelText(ARR_BOX)).not.toBeChecked();
       expect(screen.getByLabelText("bus:form.departureTime")).toHaveValue("2026-09-20");
+    });
+
+    it("opens a mixed ride with only the arrival box ticked and saves one day and one clock", async () => {
+      update.mockResolvedValue({ id: "r1" });
+      const stored = rideFixture();
+      const ride = {
+        ...stored,
+        times: {
+          ...stored.times!,
+          arrival: {
+            ...stored.times!.arrival!,
+            local: "2026-09-20T00:00:00",
+            precision: "day" as const,
+          },
+        },
+      };
+      await renderModal(ride);
+      expect(screen.getByLabelText(DEP_BOX)).not.toBeChecked();
+      expect(screen.getByLabelText(ARR_BOX)).toBeChecked();
+      expect(screen.getByLabelText("bus:form.arrivalTime")).toHaveAttribute("type", "date");
+
+      fireEvent.click(saveButton());
+      await waitFor(() => expect(update).toHaveBeenCalled());
+      expect(update).toHaveBeenCalledWith(
+        "r1",
+        expect.objectContaining({
+          departureLocal: "2026-09-20T09:00",
+          arrivalLocal: "2026-09-20",
+          delayMinutes: null,
+        })
+      );
+    });
+
+    it("ticking a day-only box on a delayed ride disables the delay and sends none", async () => {
+      update.mockResolvedValue({ id: "r1" });
+      await renderModal({ ...rideFixture(), delayMinutes: 12 });
+      const delay = screen.getByLabelText("bus:form.delay");
+      expect(delay).toBeEnabled();
+      expect(delay).toHaveValue(12);
+
+      fireEvent.click(screen.getByLabelText(ARR_BOX));
+      expect(delay).toBeDisabled();
+      expect(delay).toHaveAccessibleDescription("bus:form.delayNeedsClock");
+
+      fireEvent.click(saveButton());
+      await waitFor(() => expect(update).toHaveBeenCalled());
+      expect(update).toHaveBeenCalledWith("r1", expect.objectContaining({ delayMinutes: null }));
+
+      // Unticking brings back what was typed.
+      fireEvent.click(screen.getByLabelText(ARR_BOX));
+      expect(delay).toBeEnabled();
+      expect(delay).toHaveValue(12);
     });
   });
 

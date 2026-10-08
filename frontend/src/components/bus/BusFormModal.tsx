@@ -3,7 +3,6 @@ import type { JSX } from "react";
 import Modal from "../Modal";
 import CurrencySelect from "../common/CurrencySelect";
 import SuggestionChips from "../common/SuggestionChips";
-import { ClockChangeNotice } from "../common/ClockChangeNotice";
 import TagInput from "../TagInput";
 import CompanionPicker from "../CompanionPicker";
 import { useTripPreselection } from "../../hooks/useTripPreselection";
@@ -18,13 +17,17 @@ import type { Trip } from "../../types";
 import { BUS_RIDE_KINDS, type BusJourney, type BusRideKind } from "../../types/bus";
 import { BusStationField, type BusStationDraft } from "./BusStationField";
 import { BusTerminalChips } from "./BusTerminalChips";
+import { BusTimeField } from "./BusTimeField";
 import {
   canSubmit,
+  dayPart,
   draftFrom,
+  hasClocklessEnd,
   isTerminalComplete,
   knownTerminalZone,
   saveErrorFrom,
   toBusInput,
+  withClock,
   type BusFormDraft,
   type BusSaveError,
 } from "./busFormModel";
@@ -38,15 +41,6 @@ interface Props {
 
 const INPUT_CLASS =
   "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden";
-
-// Native date/time pickers render their mask unreadably dark on our surface
-// without it — the same note the rail and cruise forms carry.
-const DARK_PICKER_STYLE = { colorScheme: "dark" } as const;
-
-/** `YYYY-MM-DD` — what a `date` input takes and what a day-only ride keeps. */
-const dayOf = (local: string): string => local.slice(0, 10);
-/** A day carries no clock; a `datetime-local` input needs one, so it gets midnight to show. */
-const withClock = (local: string): string => (local.length === 10 ? `${local}T00:00` : local);
 
 /**
  * Create or edit one coach ride (spec 2026-10-07-bus-domain-design).
@@ -123,18 +117,20 @@ export function BusFormModal({ journey, onClose, onSaved }: Props): JSX.Element 
     setDraft((prev) => ({ ...prev, [`${end}Local`]: value, [`${end}Fold`]: null }));
   };
 
-  const toggleDayOnly = (dayOnly: boolean): void => {
+  const toggleDayOnly = (end: "departure" | "arrival", dayOnly: boolean): void => {
     setError(null);
-    setDraft((prev) => ({
-      ...prev,
-      dayOnly,
-      departureLocal: dayOnly ? dayOf(prev.departureLocal) : withClock(prev.departureLocal),
-      arrivalLocal: dayOnly ? dayOf(prev.arrivalLocal) : withClock(prev.arrivalLocal),
-      departureFold: null,
-      arrivalFold: null,
-    }));
+    setDraft((prev) => {
+      const local = prev[`${end}Local`];
+      return {
+        ...prev,
+        [`${end}DayOnly`]: dayOnly,
+        [`${end}Local`]: dayOnly ? dayPart(local) : withClock(local),
+        [`${end}Fold`]: null,
+      };
+    });
   };
 
+  const delayBlocked = hasClocklessEnd(draft);
   const ready = canSubmit(draft) && depValid && arrValid && saved === null;
   const errorText =
     error === null
@@ -181,9 +177,6 @@ export function BusFormModal({ journey, onClose, onSaved }: Props): JSX.Element 
       setSaving(false);
     }
   };
-
-  const timeInputType = draft.dayOnly ? "date" : "datetime-local";
-  const shownTime = (local: string): string => (draft.dayOnly ? dayOf(local) : local);
 
   return (
     <Modal
@@ -302,66 +295,53 @@ export function BusFormModal({ journey, onClose, onSaved }: Props): JSX.Element 
 
         <div className="mb-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div>
-              <label className="block text-sm">
-                {t("bus:form.departureTime")}
-                <input
-                  type={timeInputType}
-                  className={`mt-1 ${INPUT_CLASS}`}
-                  style={DARK_PICKER_STYLE}
-                  value={shownTime(draft.departureLocal)}
-                  onChange={(e): void => setTime("departure", e.target.value)}
-                  {...depError.input}
-                />
-              </label>
-              {depError.message}
-              {/* A day has no clock to be repeated. */}
-              <ClockChangeNotice
-                local={draft.dayOnly ? "" : draft.departureLocal}
-                zone={knownTerminalZone(journey, "dep", draft.departure)}
-                fold={draft.departureFold ?? undefined}
-                onFoldChange={(fold): void => set("departureFold", fold ?? null)}
-              />
-            </div>
-            <div>
-              <label className="block text-sm">
-                {t("bus:form.arrivalTime")}
-                <input
-                  type={timeInputType}
-                  className={`mt-1 ${INPUT_CLASS}`}
-                  style={DARK_PICKER_STYLE}
-                  value={shownTime(draft.arrivalLocal)}
-                  onChange={(e): void => setTime("arrival", e.target.value)}
-                  {...arrError.input}
-                />
-              </label>
-              {arrError.message}
-              <ClockChangeNotice
-                local={draft.dayOnly ? "" : draft.arrivalLocal}
-                zone={knownTerminalZone(journey, "arr", draft.arrival)}
-                fold={draft.arrivalFold ?? undefined}
-                onFoldChange={(fold): void => set("arrivalFold", fold ?? null)}
-              />
-            </div>
-          </div>
-          <label className="mt-3 flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={draft.dayOnly}
-              onChange={(e): void => toggleDayOnly(e.target.checked)}
+            <BusTimeField
+              label={t("bus:form.departureTime")}
+              testId="bus-time-dep"
+              inputClassName={INPUT_CLASS}
+              value={draft.departureLocal}
+              dayOnly={draft.departureDayOnly}
+              zone={knownTerminalZone(journey, "dep", draft.departure)}
+              fold={draft.departureFold}
+              invalid={depError.input}
+              errorMessage={depError.message}
+              onChange={(value): void => setTime("departure", value)}
+              onDayOnlyChange={(dayOnly): void => toggleDayOnly("departure", dayOnly)}
+              onFoldChange={(fold): void => set("departureFold", fold)}
             />
-            {t("bus:form.dayOnly")}
-          </label>
+            <BusTimeField
+              label={t("bus:form.arrivalTime")}
+              testId="bus-time-arr"
+              inputClassName={INPUT_CLASS}
+              value={draft.arrivalLocal}
+              dayOnly={draft.arrivalDayOnly}
+              zone={knownTerminalZone(journey, "arr", draft.arrival)}
+              fold={draft.arrivalFold}
+              invalid={arrError.input}
+              errorMessage={arrError.message}
+              onChange={(value): void => setTime("arrival", value)}
+              onDayOnlyChange={(dayOnly): void => toggleDayOnly("arrival", dayOnly)}
+              onFoldChange={(fold): void => set("arrivalFold", fold)}
+            />
+          </div>
           <label className="mt-3 block text-sm">
             {t("bus:form.delay")}
             <input
               type="number"
               className={`mt-1 ${INPUT_CLASS}`}
-              value={draft.delayMinutes}
+              // The draft keeps what was typed, so unticking a box brings it back.
+              value={delayBlocked ? "" : draft.delayMinutes}
+              disabled={delayBlocked}
+              aria-describedby={delayBlocked ? "bus-delay-needs-clock" : undefined}
               onChange={(e): void => set("delayMinutes", e.target.value)}
             />
           </label>
           <p className="mt-1 text-xs text-(--text-muted)">{t("bus:form.delayHint")}</p>
+          {delayBlocked && (
+            <p id="bus-delay-needs-clock" className="mt-1 text-xs text-(--text-muted)">
+              {t("bus:form.delayNeedsClock")}
+            </p>
+          )}
           <label className="mt-3 block text-sm">
             {t("bus:form.distance")}
             <input

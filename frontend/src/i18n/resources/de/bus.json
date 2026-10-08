@@ -84,6 +84,7 @@
     "seatNumber": "Sitzplatz",
     "delay": "Verspätung (min)",
     "delayHint": "Leer = nicht erfasst, 0 = pünktlich.",
+    "delayNeedsClock": "Eine Verspätung braucht die Uhrzeiten der Fahrt.",
     "bookingReference": "Buchungsnummer",
     "price": "Preis",
     "currency": "Währung",

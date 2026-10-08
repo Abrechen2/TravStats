@@ -17,11 +17,16 @@ export interface BusFormDraft {
   rideKind: BusRideKind | "";
   departure: BusStationDraft;
   arrival: BusStationDraft;
-  /** `YYYY-MM-DDTHH:mm` on the terminal's own clock; the clock part is ignored while `dayOnly`. */
+  /** `YYYY-MM-DDTHH:mm` on the terminal's own clock; the clock part is ignored while that end is day-only. */
   departureLocal: string;
   arrivalLocal: string;
-  /** "Only the date is known": both times are sent as a day, not a wall clock. */
-  dayOnly: boolean;
+  /**
+   * "Only the date is known", per end: a ride can state its departure clock and
+   * only the arrival's day (or the reverse), and each end is sent as it was
+   * stored — one flag for both would turn a day into an asserted midnight.
+   */
+  departureDayOnly: boolean;
+  arrivalDayOnly: boolean;
   /**
    * Which occurrence of a repeated autumn hour the end's wall clock means, kept
    * from the stored ride so a save that does not touch the time resends the
@@ -69,7 +74,8 @@ export function draftFrom(ride: BusJourney | null): BusFormDraft {
       arrival: EMPTY_TERMINAL,
       departureLocal: "",
       arrivalLocal: "",
-      dayOnly: false,
+      departureDayOnly: false,
+      arrivalDayOnly: false,
       departureFold: null,
       arrivalFold: null,
       distanceKm: "",
@@ -110,9 +116,11 @@ export function draftFrom(ride: BusJourney | null): BusFormDraft {
     // bus row has rail's columns, so rail's readers accept it.
     departureLocal: toStationWallClock(departureValue),
     arrivalLocal: toStationWallClock(arrivalValue),
-    // A ride stored by its day alone must be edited as one: shown as 00:00 it
-    // would be saved back as a midnight departure nobody stated.
-    dayOnly: railDeparture(ride)?.precision === "day",
+    // An end stored by its day alone must be edited as one: shown as 00:00 it
+    // would be saved back as a midnight nobody stated. Read per end — the
+    // arrival's precision is not the departure's.
+    departureDayOnly: departureValue?.precision === "day",
+    arrivalDayOnly: arrivalValue?.precision === "day",
     departureFold: storedEndFold(departureValue),
     arrivalFold: storedEndFold(arrivalValue),
     distanceKm:
@@ -161,25 +169,43 @@ function terminalInput(station: BusStationDraft): BusJourneyInput["departureStat
   };
 }
 
-/** `YYYY-MM-DD` of a typed time, the part a "date only" ride keeps. */
-const dayOf = (local: string): string => local.slice(0, 10);
+/**
+ * `YYYY-MM-DD` of a typed time, the part a "date only" end keeps. Named
+ * `dayPart` because `lib/tripForDate.ts` already has a `dayOf` that means
+ * something else.
+ */
+export const dayPart = (local: string): string => local.slice(0, 10);
+/** A day carries no clock; a `datetime-local` input needs one, so it gets midnight to show. */
+export const withClock = (local: string): string =>
+  local.length === 10 ? `${local}T00:00` : local;
+
+/** True when the ride, as drafted, has an end without a clock — a delay is then meaningless. */
+export const hasClocklessEnd = (draft: BusFormDraft): boolean =>
+  draft.departureDayOnly || draft.arrivalDayOnly;
 
 /** The write body. Every optional field is SENT, null when empty — omitting it would keep the old value. */
 export function toBusInput(draft: BusFormDraft): BusJourneyInput {
-  const delay = numberOrNull(draft.delayMinutes);
-  const time = (local: string): string => (draft.dayOnly ? dayOf(local) : local);
+  // A delay is a difference between clocks; the server refuses one on a ride
+  // with a clockless end, so it is not sent (the draft keeps it, in case the
+  // box is unticked again).
+  const delay = hasClocklessEnd(draft) ? null : numberOrNull(draft.delayMinutes);
   return {
     operator: orNull(draft.operator),
     lineName: orNull(draft.lineName),
     rideKind: draft.rideKind === "" ? null : draft.rideKind,
     departureStation: terminalInput(draft.departure),
     arrivalStation: terminalInput(draft.arrival),
-    departureLocal: time(draft.departureLocal),
-    arrivalLocal: draft.arrivalLocal === "" ? null : time(draft.arrivalLocal),
+    departureLocal: draft.departureDayOnly ? dayPart(draft.departureLocal) : draft.departureLocal,
+    arrivalLocal:
+      draft.arrivalLocal === ""
+        ? null
+        : draft.arrivalDayOnly
+          ? dayPart(draft.arrivalLocal)
+          : draft.arrivalLocal,
     // Always sent, null when none: omitting a fold would let the server fall
     // back to the earlier occurrence of a repeated hour (forgejo#214).
-    departureFold: draft.dayOnly ? null : draft.departureFold,
-    arrivalFold: draft.dayOnly || draft.arrivalLocal === "" ? null : draft.arrivalFold,
+    departureFold: draft.departureDayOnly ? null : draft.departureFold,
+    arrivalFold: draft.arrivalDayOnly || draft.arrivalLocal === "" ? null : draft.arrivalFold,
     distanceKm: numberOrNull(draft.distanceKm),
     fareClass: orNull(draft.fareClass),
     seat: orNull(draft.seat),

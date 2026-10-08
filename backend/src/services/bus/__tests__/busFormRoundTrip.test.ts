@@ -138,4 +138,28 @@ describe("bus form round trip", () => {
     const merged = mergeBusJourney(existing, patchAfterNotesEdit(ride));
     expect(merged.departureTime.toISOString()).toBe("2026-10-25T00:30:00.000Z");
   });
+
+  it("a minute departure with a day-only arrival keeps its precisions (forgejo#215)", () => {
+    const existing = storedState({
+      departureTime: new Date("2026-10-24T08:00:00.000Z"),
+      arrivalTime: new Date("2026-10-24T22:00:00.000Z"),
+      arrPrecision: "day",
+    });
+    const base = wireRide(existing);
+    const ride = wireRide(existing, {
+      times: {
+        ...base.times!,
+        departure: {
+          ...base.times!.departure!,
+          local: "2026-10-24T10:00:00",
+          utc: "2026-10-24T08:00:00.000Z",
+          offset: "+02:00",
+        },
+        arrival: { ...base.times!.arrival!, local: "2026-10-25T00:00:00", precision: "day" },
+      },
+    });
+    const merged = mergeBusJourney(existing, patchAfterNotesEdit(ride));
+    expect(merged.depPrecision).toBe("minute");
+    expect(merged.arrPrecision).toBe("day");
+  });
 });

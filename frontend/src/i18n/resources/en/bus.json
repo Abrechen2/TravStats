@@ -84,6 +84,7 @@
     "seatNumber": "Seat",
     "delay": "Delay (min)",
     "delayHint": "Empty = not recorded, 0 = on time.",
+    "delayNeedsClock": "A delay needs the ride's times.",
     "bookingReference": "Booking reference",
     "price": "Price",
     "currency": "Currency",
