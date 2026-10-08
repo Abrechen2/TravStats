@@ -10,17 +10,21 @@ import type { Cruise } from "../../../types";
  * already in it are filled only where empty, and never over something typed.
  */
 
-vi.mock("../../../lib/api", () => ({
-  cruiseApi: { create: vi.fn(), update: vi.fn() },
-  portsApi: { search: vi.fn().mockResolvedValue([]), create: vi.fn() },
-  shipsApi: {
-    search: vi.fn().mockResolvedValue([]),
-    create: vi.fn(),
-    cruiseLines: vi.fn().mockResolvedValue([]),
-  },
-  companionsApi: { list: vi.fn() },
-  tripsApi: { getAll: vi.fn() },
-}));
+vi.mock("../../../lib/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/api")>();
+  return {
+    ...actual,
+    cruiseApi: { create: vi.fn(), update: vi.fn() },
+    portsApi: { search: vi.fn().mockResolvedValue([]), create: vi.fn() },
+    shipsApi: {
+      search: vi.fn().mockResolvedValue([]),
+      create: vi.fn(),
+      cruiseLines: vi.fn().mockResolvedValue([]),
+    },
+    companionsApi: { list: vi.fn() },
+    tripsApi: { getAll: vi.fn() },
+  };
+});
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({

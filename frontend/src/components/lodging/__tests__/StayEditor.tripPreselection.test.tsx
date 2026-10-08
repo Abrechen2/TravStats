@@ -24,9 +24,10 @@ vi.mock("../../../lib/api/lodging", () => ({
   listMemberships: vi.fn(),
   getFxPreview: vi.fn(),
 }));
-vi.mock("../../../lib/api", () => ({
-  tripsApi: { getAll: vi.fn() },
-}));
+vi.mock("../../../lib/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/api")>();
+  return { ...actual, tripsApi: { getAll: vi.fn() } };
+});
 vi.mock("@/hooks/useRecentCurrencies", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/hooks/useRecentCurrencies")>();
   return { ...actual, useRecentCurrencies: () => [] };
