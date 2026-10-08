@@ -134,6 +134,7 @@
     "lodging/entrySuggestions.ts",
     "lodging/photos.ts",
     "lodging/propose.ts",
+    "lodging/stayList.ts",
     "lodging/stays.ts",
     "lodgingChains.ts",
     "lodgingImport.ts",
