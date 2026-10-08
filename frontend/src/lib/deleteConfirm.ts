@@ -70,10 +70,13 @@ export function withDocumentNote(
  * go with it; most people then do not delete at all, or delete and are
  * surprised.
  *
- * Names, not counts: "Bleibt erhalten: Reise Japan 2025, 3 Fotos" is a
+ * Names, not counts: "Erhalten bleiben: Reise Japan 2025, 3 Fotos" is a
  * sentence the caller assembles from things the user recognises. An empty
- * list says nothing — "Bleibt erhalten:" followed by nothing would be noise.
+ * list says nothing — "Erhalten bleiben:" followed by nothing would be noise.
  * Append it like `withDocumentNote`, as a line of its own.
+ *
+ * The English is "Kept: …", not "Stays: …" — in this app a "stay" is a lodging
+ * record, so "Stays: Hotel Adlon" read as a list of hotel visits.
  */
 export function survivorsNote(t: Translate, names: readonly string[]): string | null {
   const named = names.map((name) => name.trim()).filter((name) => name.length > 0);

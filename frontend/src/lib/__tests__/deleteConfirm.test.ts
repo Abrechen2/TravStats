@@ -90,17 +90,17 @@ describe("survivorsNote", () => {
   it("names what stays", () => {
     const t = vi.fn(
       (_key: string, options?: Record<string, unknown>) =>
-        `Bleibt erhalten: ${String(options?.names)}`
+        `Erhalten bleiben: ${String(options?.names)}`
     );
     expect(survivorsNote(t, ["Reise Japan 2025", "3 Fotos"])).toBe(
-      "Bleibt erhalten: Reise Japan 2025, 3 Fotos"
+      "Erhalten bleiben: Reise Japan 2025, 3 Fotos"
     );
     expect(t).toHaveBeenCalledWith("common:delete.survivors", {
       names: "Reise Japan 2025, 3 Fotos",
     });
   });
 
-  it("says nothing when nothing stays — a bare 'Bleibt erhalten:' is noise", () => {
+  it("says nothing when nothing stays — a bare 'Erhalten bleiben:' is noise", () => {
     const t = vi.fn(() => "…");
     expect(survivorsNote(t, [])).toBeNull();
     expect(survivorsNote(t, ["  "])).toBeNull();

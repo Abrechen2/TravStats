@@ -367,6 +367,6 @@
     "savedButRefreshFailed": "Saved. The list could not be refreshed."
   },
   "delete": {
-    "survivors": "Stays: {{names}}"
+    "survivors": "Kept: {{names}}"
   }
 }
