@@ -38,6 +38,16 @@ const HOVER_CLASS: Record<RowActionIcon, string> = {
   delete: "hover:bg-(--bg-muted) hover:text-(--danger)",
 };
 
+/**
+ * Touch target without a layout change (forgejo#249). On a coarse pointer the
+ * button keeps its 28 px box - the action columns are fixed-width, and growing
+ * the button itself overflowed them - and an `::after` extends the HIT area by
+ * 8 px on every side to 44 px (`--ts-size-touch-min`). The 8 px is exactly the
+ * `gap-2` between neighbours, so the extension fills the gap and reaches no
+ * other button's drawn box.
+ */
+export const TOUCH_HIT_AREA = "pointer-coarse:after:absolute pointer-coarse:after:-inset-2";
+
 interface Props {
   icon: RowActionIcon;
   /** Used for both the accessible name and the tooltip — an icon with neither
@@ -56,7 +66,7 @@ export function RowActionButton({ icon, label, onClick, testId }: Props): JSX.El
         e.stopPropagation();
         onClick();
       }}
-      className={`inline-flex h-7 w-7 items-center justify-center rounded-sm pointer-coarse:h-(--ts-size-touch-min) pointer-coarse:w-(--ts-size-touch-min) ${HOVER_CLASS[icon]}`}
+      className={`relative inline-flex h-7 w-7 items-center justify-center rounded-sm ${TOUCH_HIT_AREA} ${HOVER_CLASS[icon]}`}
       style={{ color: "var(--text-muted)" }}
       aria-label={label}
       title={label}
