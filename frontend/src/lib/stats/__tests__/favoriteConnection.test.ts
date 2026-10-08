@@ -42,4 +42,8 @@ describe("favoriteConnection", () => {
   it("returns null for no flights", () => {
     expect(favoriteConnection([])).toBeNull();
   });
+
+  it("takes the separator of a surface whose font has no arrow", () => {
+    expect(favoriteConnection([leg("OGG", "HNL")], " - ")).toBe("HNL - OGG");
+  });
 });

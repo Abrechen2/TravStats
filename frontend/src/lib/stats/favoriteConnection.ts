@@ -16,9 +16,13 @@ interface ConnectionEnds {
  * certificate and the year-report PDF used to key the DIRECTED "DEP \u2192 ARR",
  * so an out-and-back traveller's favourite route was whichever way they happened
  * to leave more often. A flight with an unknown end is on no connection. A tie
- * goes to the pair seen first.
+ * goes to the pair seen first. `separator` is for surfaces whose font has no
+ * arrow (the PDF).
  */
-export function favoriteConnection(flights: readonly ConnectionEnds[]): string | null {
+export function favoriteConnection(
+  flights: readonly ConnectionEnds[],
+  separator = " \u2194 "
+): string | null {
   const counts = new Map<string, number>();
   for (const f of flights) {
     const key = routePairKey(f.depIata || f.depIcao, f.arrIata || f.arrIcao);
@@ -35,5 +39,5 @@ export function favoriteConnection(flights: readonly ConnectionEnds[]): string |
   if (best === null) return null;
   const [from, to] = best.split("-");
   const [lo, hi] = canonicalRoutePair(from, to);
-  return `${lo} \u2194 ${hi}`;
+  return `${lo}${separator}${hi}`;
 }

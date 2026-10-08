@@ -109,7 +109,7 @@ describe("generateYearReportPdf", () => {
       ];
       await generateYearReportPdf({ year: 2026, flights, userName: "Dennis", units: "km" });
       const drawn = mockText.mock.calls.map((call) => call[0]);
-      expect(drawn).toContain("HNL \u2194 OGG");
+      expect(drawn).toContain("HNL - OGG");
       expect(drawn).not.toContain("FRA \u2192 JFK");
     });
 
@@ -122,7 +122,35 @@ describe("generateYearReportPdf", () => {
       });
       const drawn = mockText.mock.calls.map((call) => call[0]);
       expect(drawn).not.toContain("? \u2192 JFK");
-      expect(drawn.filter((d) => d === "\u2014").length).toBeGreaterThan(0);
+      expect(drawn.filter((d) => d === "-").length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("characters the PDF font has", () => {
+    // jsPDF's built-in Helvetica is WinAnsi: an arrow, a subscript two, a
+    // dingbat or a narrow no-break space is drawn as garbage in the real file.
+    const strings = (value: unknown): string[] =>
+      Array.isArray(value) ? value.flatMap(strings) : typeof value === "string" ? [value] : [];
+
+    it.each(["km", "mi"] as const)("draws only Latin-1 characters (%s)", async (units) => {
+      mockText.mockClear();
+      mockAutoTable.mockClear();
+      const flights: Flight[] = [
+        mockFlight,
+        { ...mockFlight, id: "2", depIata: undefined, co2Kg: undefined, departureTime: undefined },
+      ] as Flight[];
+      await generateYearReportPdf({ year: 2026, flights, userName: "Dennis", units });
+
+      const drawn = [
+        ...mockText.mock.calls.flatMap((call) => strings(call[0])),
+        ...mockAutoTable.mock.calls.flatMap((call) => [
+          ...strings(call[1].head),
+          ...strings(call[1].body),
+        ]),
+      ];
+      expect(drawn.length).toBeGreaterThan(10);
+      const offenders = drawn.filter((text) => [...text].some((c) => c.charCodeAt(0) > 0xff));
+      expect(offenders).toEqual([]);
     });
   });
 });
