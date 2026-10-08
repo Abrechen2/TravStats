@@ -558,6 +558,22 @@ describe("RailFormModal", () => {
       );
     });
 
+    it("leaves the delay editable and sent while only an absent arrival is marked date-only", async () => {
+      const clocked = makeRailJourney({ arrivalTime: null });
+      update.mockResolvedValue({ journey: clocked, geometry: null });
+      render(<RailFormModal journey={clocked} onClose={vi.fn()} onSaved={vi.fn()} />);
+      await waitFor(() => expect(getAllTrips).toHaveBeenCalled());
+
+      fireEvent.click(dayOnlyBoxes()[1]);
+      const delay = screen.getByLabelText("rail:form.delay");
+      expect(delay).toBeEnabled();
+      fireEvent.change(delay, { target: { value: "12" } });
+      fireEvent.click(saveButton());
+
+      await waitFor(() => expect(update).toHaveBeenCalled());
+      expect(update.mock.calls[0][1]).toMatchObject({ arrivalLocal: null, delayMinutes: 12 });
+    });
+
     it("names each checkbox after its own time field", async () => {
       render(<RailFormModal journey={dayRide} onClose={vi.fn()} onSaved={vi.fn()} />);
       await waitFor(() => expect(getAllTrips).toHaveBeenCalled());

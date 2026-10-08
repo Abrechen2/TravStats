@@ -26,6 +26,7 @@ import {
   dayPart,
   draftFrom,
   geometryNotice,
+  hasDayOnlyEnd,
   isStationComplete,
   knownStationZone,
   onwardDraftFrom,
@@ -251,7 +252,7 @@ export function RailFormModal({
     }
   };
 
-  const anyDayOnly = draft.departureDayOnly || draft.arrivalDayOnly;
+  const anyDayOnly = hasDayOnlyEnd(draft);
 
   return (
     <Modal

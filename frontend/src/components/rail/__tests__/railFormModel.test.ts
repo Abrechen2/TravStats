@@ -311,6 +311,20 @@ describe("a day-only ride", () => {
     expect(input.delayMinutes).toBeNull();
   });
 
+  // The server treats an absent arrival as no clock constraint, so a day-only
+  // box beside one must not take the delay away.
+  it("a day-only box beside an absent arrival does not block the delay", () => {
+    const draft = {
+      ...draftFrom(journey),
+      arrivalLocal: "",
+      arrivalDayOnly: true,
+      delayMinutes: "12",
+    };
+    expect(toRailInput(draft).delayMinutes).toBe(12);
+    expect(toRailInput({ ...draft, arrivalLocal: "2026-09-20" }).delayMinutes).toBeNull();
+    expect(toRailInput({ ...draft, departureDayOnly: true }).delayMinutes).toBeNull();
+  });
+
   it("sends a typed arrival clock as a clock: the day-only flag is per end", () => {
     const input = toRailInput({ ...draftFrom(dayRide), arrivalLocal: "2026-09-22T07:30" });
     expect(input.arrivalLocal).toBe("2026-09-22T07:30");

@@ -201,6 +201,13 @@ export function isStationComplete(station: RailStationDraft): boolean {
   return station.name.trim() !== "" && station.lat !== null && station.lon !== null;
 }
 
+/**
+ * Does a day-only end rule out a delay? An absent arrival constrains nothing
+ * on the server, so a day-only box beside one counts for nothing.
+ */
+export const hasDayOnlyEnd = (draft: RailFormDraft): boolean =>
+  draft.departureDayOnly || (draft.arrivalDayOnly && draft.arrivalLocal !== "");
+
 export function canSubmit(draft: RailFormDraft): boolean {
   return (
     isStationComplete(draft.departure) &&
@@ -260,8 +267,7 @@ export function toRailInput(draft: RailFormDraft): RailJourneyInput {
     seat: orNull(draft.seat),
     // A delay is measured between clocks; the server refuses one on a ride
     // with a day-only end (RAIL_INVALID_INPUT).
-    delayMinutes:
-      draft.departureDayOnly || draft.arrivalDayOnly ? null : roundedOrNull(draft.delayMinutes),
+    delayMinutes: hasDayOnlyEnd(draft) ? null : roundedOrNull(draft.delayMinutes),
     bookingReference: orNull(draft.bookingReference),
     price: numberOrNull(draft.price),
     currency: draft.currency || "EUR",
