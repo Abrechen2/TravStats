@@ -675,5 +675,23 @@
   "restay": {
     "action": "Wieder hier übernachten",
     "intro": "Ein neuer Aufenthalt in „{{name}}“. Anreise, Abreise, Zimmer, Buchungsnummer und Preis trägst du neu ein; der frühere Aufenthalt bleibt unverändert."
+  },
+  "repair": {
+    "title": "Standort ergänzen",
+    "intro": "Zu „{{name}}“ fehlt der Punkt auf der Karte. Such die Adresse erneut oder setz den Punkt selbst – du siehst das Ergebnis, bevor du es übernimmst. Alle anderen Angaben bleiben unverändert.",
+    "queryLabel": "Suchtext",
+    "search": "Adresse erneut suchen",
+    "searching": "Suche läuft …",
+    "searchFailed": "Die Ortssuche ist gerade nicht erreichbar.",
+    "noResults": "Dazu wurde nichts gefunden. Passe den Suchtext an oder setze den Punkt auf der Karte.",
+    "resultsLabel": "Gefundene Orte – wähle den richtigen",
+    "setOnMap": "Punkt auf der Karte setzen",
+    "pointOnMap": "Punkt auf der Karte",
+    "previewTitle": "Vorschau des neuen Standorts",
+    "missing": "einen gefundenen Ort wählen oder einen Punkt setzen",
+    "take": "Standort übernehmen",
+    "saveError": "Der Standort konnte nicht gespeichert werden.",
+    "saved": "Standort gespeichert",
+    "openFor": "Standort ergänzen: {{issue}}"
   }
 }

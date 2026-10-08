@@ -65,6 +65,8 @@ interface Props {
   onOpen: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  /** Opens the in-place location repair for a house without a pin (forgejo#228). */
+  onRepair?: () => void;
   /** "Wieder hier übernachten" - a new stay at this house (forgejo#227). */
   onRestay?: () => void;
   /** The visible columns, in order — the row renders exactly one cell each. */
@@ -78,6 +80,7 @@ export function LodgingRow({
   onEdit,
   onDelete,
   onRestay,
+  onRepair,
   columns,
 }: Props): JSX.Element {
   const { t } = useTranslation(["lodging", "common"]);
@@ -133,7 +136,7 @@ export function LodgingRow({
         {lifecycle ? (
           <StayStatusPill status={lifecycle} testId={`lodging-lifecycle-${l.id}`} />
         ) : null}
-        <LodgingStatusTag lodging={l} />
+        <LodgingStatusTag lodging={l} onRepair={onRepair} />
       </span>
     ),
     lastStay: day ? display.date(day, { timeZone: "UTC" }) : "—",

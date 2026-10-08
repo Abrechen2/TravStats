@@ -675,5 +675,23 @@
   "restay": {
     "action": "Stay here again",
     "intro": "A new stay at “{{name}}”. Enter check-in, check-out, room, booking reference and price afresh; the earlier stay stays as it is."
+  },
+  "repair": {
+    "title": "Add the location",
+    "intro": "“{{name}}” has no point on the map. Search the address again or set the point yourself – you see the result before you take it. Everything else stays as it is.",
+    "queryLabel": "Search text",
+    "search": "Search the address again",
+    "searching": "Searching …",
+    "searchFailed": "The place search is not reachable right now.",
+    "noResults": "Nothing was found. Adjust the search text or set the point on the map.",
+    "resultsLabel": "Places found – pick the right one",
+    "setOnMap": "Set the point on the map",
+    "pointOnMap": "Point on the map",
+    "previewTitle": "Preview of the new location",
+    "missing": "pick a place found or set a point",
+    "take": "Take this location",
+    "saveError": "The location could not be saved.",
+    "saved": "Location saved",
+    "openFor": "Add the location: {{issue}}"
   }
 }

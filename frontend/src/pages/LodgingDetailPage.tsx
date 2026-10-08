@@ -17,6 +17,7 @@ import { StarRating } from "../components/lodging/StarRating";
 import { LodgingPhotoSection } from "../components/lodging/LodgingPhotoSection";
 import { StayEditor } from "../components/lodging/StayEditor";
 import { StayDeleteConfirm } from "../components/lodging/StayDeleteConfirm";
+import { LodgingLocationRepair } from "../components/lodging/LodgingLocationRepair";
 import { ChainNameLink } from "../components/lodging/ChainNameLink";
 import { useLodgingDeleteFacts } from "../hooks/useLodgingDeleteFacts";
 import { useTranslation } from "../hooks/useTranslation";
@@ -80,6 +81,8 @@ export default function LodgingDetailPage(): JSX.Element {
   /** Bumped by the retry button; the fetch effect watches it. */
   const [reloadKey, setReloadKey] = useState<number>(0);
   const [editing, setEditing] = useState<boolean>(false);
+  // The small dialog for a missing pin (forgejo#228) - not the whole house form.
+  const [repairingLocation, setRepairingLocation] = useState<boolean>(false);
   const [confirmingDelete, setConfirmingDelete] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
   // "new" = create mode, a LodgingStay = edit mode for that stay, null = closed.
@@ -519,7 +522,7 @@ export default function LodgingDetailPage(): JSX.Element {
 
         <aside className="flex flex-col gap-6 md:col-span-2">
           <DetailSection title={t("lodging:detail.location")}>
-            <LodgingMiniMap lodging={lodging} onSetLocation={() => setEditing(true)} />
+            <LodgingMiniMap lodging={lodging} onSetLocation={() => setRepairingLocation(true)} />
           </DetailSection>
 
           <DetailSection title={t("lodging:detail.avgRating")}>
@@ -581,6 +584,19 @@ export default function LodgingDetailPage(): JSX.Element {
           onSaved={(updated) => {
             setLodging(updated);
             setEditing(false);
+          }}
+        />
+      )}
+
+      {repairingLocation && (
+        <LodgingLocationRepair
+          lodging={lodging}
+          afterSaveFailedKey="common:form.savedButViewRefreshFailed"
+          onClose={() => setRepairingLocation(false)}
+          onSaved={(updated) => {
+            setLodging(updated);
+            setRepairingLocation(false);
+            addToast("success", t("lodging:repair.saved"));
           }}
         />
       )}

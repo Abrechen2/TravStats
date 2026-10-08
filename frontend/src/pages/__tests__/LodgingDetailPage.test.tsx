@@ -75,7 +75,37 @@ vi.mock("../../components/NavigationBar", () => ({
 }));
 
 vi.mock("../../components/lodging/LodgingMiniMap", () => ({
-  LodgingMiniMap: () => <div data-testid="map-stub" />,
+  LodgingMiniMap: ({
+    lodging,
+    onSetLocation,
+  }: {
+    lodging: { lat: number | null };
+    onSetLocation?: () => void;
+  }) => (
+    <div data-testid="map-stub">
+      pin:{String(lodging.lat)}
+      {onSetLocation && (
+        <button type="button" onClick={onSetLocation}>
+          stub-set-location
+        </button>
+      )}
+    </div>
+  ),
+}));
+
+// The repair dialog has its own suite (it needs MapLibre for its preview).
+vi.mock("../../components/lodging/LodgingLocationRepair", () => ({
+  LodgingLocationRepair: ({
+    lodging,
+    onSaved,
+  }: {
+    lodging: Record<string, unknown>;
+    onSaved: (l: Record<string, unknown>) => void;
+  }) => (
+    <button type="button" onClick={() => onSaved({ ...lodging, lat: 52.5, lon: 13.4 })}>
+      stub-repair-save
+    </button>
+  ),
 }));
 
 // Use the real settingsStore for the baseCurrency-labeling test below, so we
@@ -876,6 +906,23 @@ describe("LodgingDetailPage", () => {
       await waitFor(() => expect(createStayMock).toHaveBeenCalledTimes(1));
       expect(createStayMock.mock.calls[0][0]).toBe("lodging-1");
     });
+  });
+
+  // forgejo#228: "no location" opens the small repair, not the whole house form,
+  // and the page shows the pin the repair wrote.
+  it("repairs a missing location in place, without opening the house form", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging({ lat: null, lon: null }));
+    const user = userEvent.setup();
+    renderDetailPage();
+    await screen.findByTestId("map-stub");
+    expect(screen.getByTestId("map-stub")).toHaveTextContent("pin:null");
+
+    await user.click(screen.getByRole("button", { name: "stub-set-location" }));
+    expect(screen.queryByText("lodging:form.editTitle")).not.toBeInTheDocument();
+
+    await user.click(await screen.findByRole("button", { name: "stub-repair-save" }));
+    await waitFor(() => expect(screen.getByTestId("map-stub")).toHaveTextContent("pin:52.5"));
+    expect(screen.queryByRole("button", { name: "stub-repair-save" })).not.toBeInTheDocument();
   });
 
   it("offers no delete in the editor while a stay is being created", async () => {

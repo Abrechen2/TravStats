@@ -87,6 +87,13 @@ vi.mock("../../components/lodging/LodgingFormModal", () => ({
   LodgingFormModal: () => null,
 }));
 
+// The location repair has its own suite (needs MapLibre for its preview).
+vi.mock("../../components/lodging/LodgingLocationRepair", () => ({
+  LodgingLocationRepair: (props: { lodging: { id: string } }) => (
+    <div data-testid="repair-stub">{props.lodging.id}</div>
+  ),
+}));
+
 // The stay editor has its own suites; here it only has to arrive for the right house.
 vi.mock("../../components/lodging/StayEditor", () => ({
   StayEditor: (props: { mode: string; lodgingId: string; lodgingName?: string }) => (
@@ -941,6 +948,38 @@ describe("LodgingListPage", () => {
         "create|l1|Hotel Adlon"
       );
       expect(navigateMock).not.toHaveBeenCalled();
+    });
+
+    // forgejo#228: the "not found" tag on a house without a pin is the way in to
+    // the small repair dialog - not a label that sends the user to find the form.
+    it("a house without a pin offers the repair from its tag, without opening the house", async () => {
+      mockRows([
+        makeLodging({
+          id: "l1",
+          name: "Hotel Adlon",
+          address: "Unter den Linden 77",
+          lat: null,
+          lon: null,
+        }),
+      ]);
+      renderListPage();
+
+      await screen.findByText("Hotel Adlon");
+      await userEvent.click(screen.getByTestId("lodging-repair-l1"));
+
+      expect(await screen.findByTestId("repair-stub")).toHaveTextContent("l1");
+      expect(navigateMock).not.toHaveBeenCalled();
+    });
+
+    it("a house that has its pin keeps the plain tag", async () => {
+      mockRows([
+        makeLodging({ id: "l2", name: "Hotel Bristol", address: null, lat: 48.2, lon: 16.4 }),
+      ]);
+      renderListPage();
+
+      await screen.findByText("Hotel Bristol");
+      // "noAddress" is data entry, not a missing point: no button.
+      expect(screen.queryByTestId("lodging-repair-l2")).toBeNull();
     });
 
     it("does not open the lodging when an action is clicked", async () => {

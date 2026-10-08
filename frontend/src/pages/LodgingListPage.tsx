@@ -29,6 +29,7 @@ import { useLodgingDeleteFacts } from "../hooks/useLodgingDeleteFacts";
 import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
 import { StayEditor } from "../components/lodging/StayEditor";
+import { LodgingLocationRepair } from "../components/lodging/LodgingLocationRepair";
 import { LodgingStaysView } from "../components/lodging/LodgingStaysView";
 import { LodgingViewToggle, type LodgingView } from "../components/lodging/LodgingViewToggle";
 import ConfirmModal from "../components/Training/ConfirmModal";
@@ -136,6 +137,8 @@ export default function LodgingListPage(): JSX.Element {
   // The house a new stay is being started at, from the row's "Wieder hier
   // übernachten" (forgejo#227).
   const [restayAt, setRestayAt] = useState<Lodging | null>(null);
+  // The house whose missing pin is being put right, in place (forgejo#228).
+  const [repairing, setRepairing] = useState<Lodging | null>(null);
   const [toDelete, setToDelete] = useState<Lodging | null>(null);
   const [deleting, setDeleting] = useState<boolean>(false);
   // The photographs and kept originals that go with the house, and the trips
@@ -628,6 +631,7 @@ export default function LodgingListPage(): JSX.Element {
                           onEdit={() => setEditing(l)}
                           onDelete={() => setToDelete(l)}
                           onRestay={() => setRestayAt(l)}
+                          onRepair={() => setRepairing(l)}
                         />
                       ))}
                     </Table>
@@ -680,6 +684,19 @@ export default function LodgingListPage(): JSX.Element {
             onClose={() => setEditing(null)}
             onSaved={async () => {
               setEditing(null);
+              await reloadAll();
+            }}
+          />
+        )}
+
+        {repairing && (
+          <LodgingLocationRepair
+            lodging={repairing}
+            afterSaveFailedKey="common:form.savedButRefreshFailed"
+            onClose={() => setRepairing(null)}
+            onSaved={async () => {
+              setRepairing(null);
+              addToast("success", t("lodging:repair.saved"));
               await reloadAll();
             }}
           />
