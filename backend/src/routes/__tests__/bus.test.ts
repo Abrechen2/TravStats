@@ -51,6 +51,7 @@ describe("Bus rides API", () => {
   });
 
   afterAll(async () => {
+    await prisma.booking.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await prisma.trip.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await prisma.companion.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await prisma.user.deleteMany({ where: { id: { in: [userId, otherUserId] } } });
@@ -216,14 +217,40 @@ describe("Bus rides API", () => {
     ).toBe(1);
   });
 
-  it("snapshots the price in the base currency, dated by the departure", async () => {
+  it("leaves the FX snapshot null, never 0, when no rate is available", async () => {
     const res = await create(base);
     expect(res.body.data.currency).toBe("KRW");
-    // fxColumnsFor fills the five columns when a rate exists; without network it leaves them null, never 0.
-    expect(res.body.data.priceBase === null || typeof res.body.data.priceBase === "number").toBe(
-      true
-    );
+    // Without a reachable rate the five columns stay null together; with one they are all filled.
+    // What must never happen is a zero standing in for "unknown".
     expect(res.body.data.priceBase).not.toBe(0);
+    expect(res.body.data.fxRate).not.toBe(0);
+    expect(res.body.data.priceBase === null).toBe(res.body.data.fxRate === null);
+  });
+
+  it("answers 404 to another user's PATCH and DELETE and changes nothing", async () => {
+    const mine = await create(base);
+    const id = mine.body.data.id;
+    const patched = await request(app)
+      .patch(`/api/v1/bus/${id}`)
+      .set("Cookie", otherCookie)
+      .send({ seat: "99Z" });
+    expect(patched.status).toBe(404);
+    const deleted = await request(app).delete(`/api/v1/bus/${id}`).set("Cookie", otherCookie);
+    expect(deleted.status).toBe(404);
+    const row = await prisma.busJourney.findUniqueOrThrow({ where: { id } });
+    expect(row.seat).toBeNull();
+    expect(row.userId).toBe(userId);
+  });
+
+  it("answers 404 to a create that names another user's booking", async () => {
+    const booking = await prisma.booking.create({ data: { userId: otherUserId } });
+    try {
+      const res = await create({ ...base, bookingId: booking.id });
+      expect(res.status).toBe(404);
+      expect(await prisma.busJourney.count({ where: { userId } })).toBe(0);
+    } finally {
+      await prisma.booking.delete({ where: { id: booking.id } });
+    }
   });
 
   it("deletes, then 404s", async () => {

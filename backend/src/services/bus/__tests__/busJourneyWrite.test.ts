@@ -105,6 +105,24 @@ describe("mergeBusJourney", () => {
     );
   });
 
+  it("passes the departure fold through to the stored instant", () => {
+    const merged = (departureFold?: "earlier" | "later"): string =>
+      mergeBusJourney(
+        null,
+        {
+          departureStation: BERLIN_ZOB,
+          arrivalStation: BERLIN_ZOB,
+          departureLocal: "2026-10-25T02:30",
+          ...(departureFold && { departureFold }),
+          status: "scheduled",
+        },
+        now
+      ).departureTime.toISOString();
+    expect(merged("later")).toBe("2026-10-25T01:30:00.000Z");
+    expect(merged("earlier")).toBe("2026-10-25T00:30:00.000Z");
+    expect(merged()).toBe("2026-10-25T00:30:00.000Z");
+  });
+
   it("refuses a wall clock in a spring-forward gap", () => {
     expect(() =>
       mergeBusJourney(

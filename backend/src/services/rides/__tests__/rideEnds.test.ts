@@ -16,6 +16,21 @@ describe("resolveEnd", () => {
     expect(end).toEqual({ time: new Date("2026-09-20T00:00:00Z"), precision: "minute" });
   });
 
+  it("reads the repeated autumn hour as the later pass only when asked", () => {
+    // Berlin falls back on 2026-10-25: 02:30 happens twice, 00:30Z (CEST) then 01:30Z (CET).
+    const at = (fold: "earlier" | "later" | undefined): Date =>
+      resolveEnd({
+        ...none,
+        fold,
+        sent: "2026-10-25T02:30",
+        zone: BERLIN,
+        field: "departureLocal",
+      }).time;
+    expect(at("later").toISOString()).toBe("2026-10-25T01:30:00.000Z");
+    expect(at("earlier").toISOString()).toBe("2026-10-25T00:30:00.000Z");
+    expect(at(undefined).toISOString()).toBe("2026-10-25T00:30:00.000Z");
+  });
+
   it("refuses a sent clock in a skipped hour", () => {
     expect(() =>
       resolveEnd({ ...none, sent: "2027-03-28T02:30", zone: BERLIN, field: "departureLocal" })

@@ -58,6 +58,17 @@ describe("bus schemas", () => {
     ).toBe(false);
   });
 
+  it("refuses a ride kind outside the vocabulary (D10: no charter)", () => {
+    const r = createBusJourneySchema.safeParse({
+      departureStation: SEOUL,
+      arrivalStation: SOKCHO,
+      departureLocal: "2026-09-20T09:00",
+      rideKind: "charter",
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error.issues[0].path[0]).toBe("rideKind");
+  });
+
   it("an update needs at least one field and a misspelt fold is named", () => {
     expect(updateBusJourneySchema.safeParse({}).success).toBe(false);
     expect(strayBusFoldKey({ arrivalFolds: "later" })).toBe("arrivalFolds");
