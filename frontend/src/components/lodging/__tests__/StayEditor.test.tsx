@@ -31,6 +31,8 @@ vi.mock("../../../lib/api/lodging", () => ({
   updateStay: vi.fn(),
   listMemberships: vi.fn(),
   getFxPreview: vi.fn(),
+  // The overlap notice asks which stays touch the saved dates (forgejo#229).
+  listStayPage: vi.fn(async () => ({ rows: [], total: 0 })),
 }));
 
 vi.mock("../../../lib/api", () => ({

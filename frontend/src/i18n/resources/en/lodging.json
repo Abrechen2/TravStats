@@ -660,5 +660,16 @@
     "empty": "No stays recorded yet",
     "emptyHint": "A stay belongs to a lodging: add a lodging first or read in a booking.",
     "footer": "Latest check-in first; stays without a date come last."
+  },
+  "conflict": {
+    "title": "These days overlap other stays",
+    "titleDuplicate": "This lodging already has a stay for these days – this may be a duplicate.",
+    "sameHouse": "this lodging",
+    "rule": "A check-out and a check-in on the same day do not count as an overlap. Two rooms or two lodgings on the same night are allowed – you only confirm it.",
+    "proceed": "Save as it is, on purpose",
+    "changeDates": "Change the dates",
+    "unchecked": "Overlaps could not be checked.",
+    "saveAnyway": "Save anyway",
+    "retry": "Check again"
   }
 }

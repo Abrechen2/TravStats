@@ -28,6 +28,8 @@ vi.mock("../../../lib/api/lodging", () => ({
   updateStay: vi.fn(),
   listMemberships: vi.fn(),
   getFxPreview: vi.fn(),
+  // The overlap notice asks which stays touch the saved dates (forgejo#229).
+  listStayPage: vi.fn(async () => ({ rows: [], total: 0 })),
 }));
 vi.mock("../../../lib/api", () => ({ tripsApi: { getAll: vi.fn() } }));
 vi.mock("../../../lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn() } }));
@@ -208,6 +210,9 @@ describe("StayEditor - the shared form blocks", () => {
     const save = screen.getByTestId("stay-editor-save");
     fireEvent.click(save);
     fireEvent.click(save);
+    await waitFor(() => expect(createStay).toHaveBeenCalledTimes(1));
+    // Both presses were answered by one request, not two.
+    await new Promise((resolve) => setTimeout(resolve, 20));
     expect(createStay).toHaveBeenCalledTimes(1);
     await act(async () => resolve(stored));
   });

@@ -50,6 +50,7 @@ vi.mock("../../lib/api/lodging", () => ({
   createStay: () => Promise.resolve(null),
   updateStay: () => Promise.resolve(null),
   getFxPreview: () => Promise.resolve(null),
+  listStayPage: () => Promise.resolve({ rows: [], total: 0 }),
 }));
 
 // Same reason as in StayEditor's own suite: the currency picker asks the server

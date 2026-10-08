@@ -19,6 +19,8 @@ import {
 } from "../form";
 import { useLodgingEntrySuggestions } from "../../hooks/useLodgingEntrySuggestions";
 import { useStayDatesFromTrip } from "../../hooks/useStayDatesFromTrip";
+import { useStayConflicts } from "../../hooks/useStayConflicts";
+import { StayConflictNotice } from "./StayConflictNotice";
 import { Field } from "../ui/Field";
 import { StayEditorAttachmentsSection } from "./StayEditorAttachmentsSection";
 import { StayEditorTripSection } from "./StayEditorTripSection";
@@ -238,6 +240,18 @@ export function StayEditor({
   // A refusal stays until the next edit; focus goes to the first problem.
   const failure = useFormFailure(JSON.stringify(draft));
 
+  // The overlap notice (forgejo#229, forgejo#227): asked on Save, and only for
+  // dates the user brought - a new stay, or an edit that moved them. Opening a
+  // stay that already overlaps another and fixing its notes must not nag.
+  const dateKey = JSON.stringify([datePrecision, checkIn, checkOut, isCancelled]);
+  const initialDateKey = JSON.stringify([
+    initial.datePrecision,
+    initial.checkIn,
+    initial.checkOut,
+    initial.isCancelled,
+  ]);
+  const conflicts = useStayConflicts({ lodgingId, stayId: stay?.id ?? null, dateKey });
+
   // Date rules show from the first save attempt on, then live: nobody is
   // scolded mid-keystroke, and a fixed field stops complaining as soon as it
   // is right. The messages sit BESIDE their fields (forgejo#246).
@@ -343,6 +357,16 @@ export function StayEditor({
       // as a clean error instead of a runtime throw on the cast below.
       failure.fail("lodging:stayEditor.saveError");
       return;
+    }
+    if (mode === "create" || dateKey !== initialDateKey) {
+      const verdict = await conflicts.check({
+        checkIn: checkIn || null,
+        checkOut: checkOut || null,
+        datePrecision,
+        cancelled: isCancelled,
+      });
+      // The notice is up and has focus; nothing was sent.
+      if (verdict === "ask") return;
     }
     const input: StayInput = {
       // At NONE precision both dates are cleared outright rather than left
@@ -488,7 +512,7 @@ export function StayEditor({
               onClick={(): void => {
                 void submit();
               }}
-              disabled={saving.saving || saving.saved !== null}
+              disabled={saving.saving || saving.saved !== null || conflicts.checking}
               className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)] disabled:opacity-50"
             >
               {saving.saving ? t("common:buttons.saving") : t("common:buttons.save")}
@@ -686,6 +710,18 @@ export function StayEditor({
           inputClassName={INPUT_CLASS}
         />
 
+        {conflicts.notice !== null && (
+          <StayConflictNotice
+            notice={conflicts.notice}
+            checking={conflicts.checking}
+            onProceed={() => {
+              conflicts.acknowledge();
+              void submit();
+            }}
+            onChangeDates={() => document.getElementById(`${fid}-checkIn`)?.focus()}
+            onRetry={() => void submit()}
+          />
+        )}
         <FormErrorBanner
           message={failure.failureKey !== null ? t(failure.failureKey) : null}
           onRetry={

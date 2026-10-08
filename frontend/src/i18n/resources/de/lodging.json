@@ -660,5 +660,16 @@
     "empty": "Noch keine Aufenthalte erfasst",
     "emptyHint": "Ein Aufenthalt gehört zu einer Unterkunft: lege zuerst eine Unterkunft an oder lies eine Buchung ein.",
     "footer": "Neueste Anreise zuerst; Aufenthalte ohne Datum stehen am Ende."
+  },
+  "conflict": {
+    "title": "Diese Tage überschneiden sich mit anderen Aufenthalten",
+    "titleDuplicate": "In diesem Haus gibt es für diese Tage schon einen Aufenthalt – vielleicht ist das ein Duplikat.",
+    "sameHouse": "dieses Haus",
+    "rule": "Abreise und Anreise am selben Tag zählen nicht als Überschneidung. Zwei Zimmer oder zwei Häuser in derselben Nacht sind erlaubt – du bestätigst es nur.",
+    "proceed": "Absichtlich so speichern",
+    "changeDates": "Termine ändern",
+    "unchecked": "Überschneidungen konnten nicht geprüft werden.",
+    "saveAnyway": "Trotzdem speichern",
+    "retry": "Erneut prüfen"
   }
 }
