@@ -19,7 +19,7 @@ vi.mock("../../../lib/api/documents", () => ({
 }));
 
 import { RailConnectionView } from "../RailConnectionView";
-import { makeRailBookingLeg } from "./railJourneyFixture";
+import { FULDA_TO_BERLIN, makeRailBookingLeg } from "./railJourneyFixture";
 
 /**
  * forgejo#235 — a whole connection readable on the platform: per train the
@@ -38,6 +38,7 @@ const second = makeRailBookingLeg({
   id: "j2",
   depStationName: "Fulda",
   arrStationName: "Berlin",
+  ...FULDA_TO_BERLIN,
   departureTime: "2026-09-26T05:25:00.000Z",
   bookingReference: "ZZ99",
 });
@@ -134,6 +135,18 @@ describe("RailConnectionView", () => {
       "href",
       "/rail/j1"
     );
-    await waitFor(() => expect(listForEntry).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(listForEntry).toHaveBeenCalledTimes(1));
+  });
+
+  // Review minor 2: the page's own Documents section lists (and changes) the
+  // train on screen; a second list here went stale after an upload there.
+  it("points the train on screen to the page's Documents section instead of a second list", async () => {
+    renderView("j1");
+    expect(screen.getByTestId("rail-connection-leg-j1-documents")).toHaveTextContent(
+      "rail:connectionView.documentsBelow"
+    );
+    await waitFor(() => expect(listForEntry).toHaveBeenCalledTimes(1));
+    expect(listForEntry).toHaveBeenCalledWith({ type: "railJourney", id: "j2" });
+    expect(listForEntry).not.toHaveBeenCalledWith({ type: "railJourney", id: "j1" });
   });
 });

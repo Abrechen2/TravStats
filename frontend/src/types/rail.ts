@@ -125,6 +125,11 @@ export interface RailBookingLeg {
   /** Catalogue rows — how a change of stations is told (forgejo#234). */
   depStationId: number | null;
   arrStationId: number | null;
+  /** Positions, for the server's "within 1 km is the same station". */
+  depLat: number;
+  depLon: number;
+  arrLat: number;
+  arrLon: number;
   departureTime: string;
   arrivalTime: string | null;
   depTimezone: string | null;

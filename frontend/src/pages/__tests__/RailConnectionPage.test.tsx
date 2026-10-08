@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { makeRailJourney } from "../../components/rail/__tests__/railJourneyFixture";
+import {
+  FULDA_TO_BERLIN,
+  makeRailJourney,
+} from "../../components/rail/__tests__/railJourneyFixture";
 import type { RailConnectionDetail } from "../../types/rail";
 
 /**
@@ -41,6 +44,7 @@ const second = makeRailJourney({
   id: "j2",
   depStationName: "Fulda",
   arrStationName: "Berlin Hbf",
+  ...FULDA_TO_BERLIN,
   departureTime: "2026-09-26T05:25:00.000Z",
   arrivalTime: "2026-09-26T08:05:00.000Z",
   trainNumber: "1090",

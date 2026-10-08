@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import {
   makeRailBookingLeg,
+  FULDA_TO_BERLIN,
   makeRailJourney,
 } from "../../components/rail/__tests__/railJourneyFixture";
 import type { RailJourneyDetail } from "../../types/rail";
@@ -139,7 +140,7 @@ describe("RailDetailPage", () => {
   it("lists the booking's legs, linking the others", async () => {
     const legs = [
       { id: "j1", depStationName: "Frankfurt", arrStationName: "Fulda" },
-      { id: "j2", depStationName: "Fulda", arrStationName: "Berlin" },
+      { id: "j2", depStationName: "Fulda", arrStationName: "Berlin", ...FULDA_TO_BERLIN },
     ].map((l) => makeRailBookingLeg(l));
     await renderPage(detail({ booking: { id: "b1", pnr: "AB12CD", railJourneys: legs } }));
     expect(screen.getByRole("link", { name: "2. Fulda → Berlin" })).toHaveAttribute(
@@ -195,6 +196,7 @@ describe("RailDetailPage", () => {
         id: "j2",
         depStationName: "Fulda",
         arrStationName: "Berlin",
+        ...FULDA_TO_BERLIN,
         coach: "12",
         seat: "61",
       }),
@@ -214,14 +216,19 @@ describe("RailDetailPage", () => {
   it("links up to the whole ride when the server says this train has a change", async () => {
     const legs = [
       { id: "j1", depStationName: "Frankfurt", arrStationName: "Fulda" },
-      { id: "j2", depStationName: "Fulda", arrStationName: "Berlin" },
+      { id: "j2", depStationName: "Fulda", arrStationName: "Berlin", ...FULDA_TO_BERLIN },
     ].map((l) => makeRailBookingLeg(l));
     getConnectionMock.mockResolvedValue({
       id: "j1",
       booking: { id: "b1", pnr: "AB12CD" },
       legs: [
         makeRailJourney(),
-        makeRailJourney({ id: "j2", depStationName: "Fulda", arrStationName: "Berlin" }),
+        makeRailJourney({
+          id: "j2",
+          depStationName: "Fulda",
+          arrStationName: "Berlin",
+          ...FULDA_TO_BERLIN,
+        }),
       ],
     });
     await renderPage(detail({ booking: { id: "b1", pnr: "AB12CD", railJourneys: legs } }));
@@ -254,7 +261,12 @@ describe("RailDetailPage", () => {
     listForEntry.mockResolvedValue([{ id: "d1" }]);
     const legs = [
       makeRailBookingLeg({ id: "j1" }),
-      makeRailBookingLeg({ id: "j2", depStationName: "Fulda", arrStationName: "Berlin" }),
+      makeRailBookingLeg({
+        id: "j2",
+        depStationName: "Fulda",
+        arrStationName: "Berlin",
+        ...FULDA_TO_BERLIN,
+      }),
     ];
     await renderPage(
       detail({

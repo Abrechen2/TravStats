@@ -38,7 +38,7 @@
     "trip": "Reise „{{name}}“",
     "otherLegs_one": "{{count}} weitere Fahrt derselben Buchung",
     "otherLegs_other": "{{count}} weitere Fahrten derselben Buchung",
-    "bookingLegs": "andere Fahrten derselben Buchung"
+    "bookingLegs": "ggf. andere Fahrten derselben Buchung"
   },
   "deleted": "Fahrt gelöscht",
   "deleteError": "Die Fahrt konnte nicht gelöscht werden.",
@@ -381,10 +381,11 @@
     "unknownWhy": "Eine der beiden Zeiten fehlt oder ist nur als Datum bekannt.",
     "conflict": "Zeitkonflikt: Der nächste Zug fährt {{wait}} vor der Ankunft dieses Zugs ab.",
     "stationChange": "Bahnhofswechsel: {{from}} → {{to}}",
-    "shortHint": "Hinweis: weniger als 10 Min. zum Umsteigen. Ob der Anschluss klappt, kann TravStats nicht wissen.",
+    "shortHint": "Hinweis: weniger als {{minutes}} Min. zum Umsteigen. Ob der Anschluss klappt, kann TravStats nicht wissen.",
     "separate": "Eigene Fahrt – kein Umstieg",
     "markTight": "Als knapp markiert",
-    "markFailed": "Die Markierung konnte nicht gespeichert werden. Bitte versuch es erneut."
+    "markFailed": "Die Markierung konnte nicht gespeichert werden. Bitte versuch es erneut.",
+    "orderUnknown": "Umstieg unbekannt: Eine Fahrt dieses Tages ist nur mit Datum erfasst, daher ist die Reihenfolge der Züge nicht bekannt."
   },
   "connectionView": {
     "coach": "Wagen {{coach}}",
@@ -394,6 +395,7 @@
     "documents": "Dokumente:",
     "noDocuments": "Keine Dokumente abgelegt",
     "documentsLoading": "Dokumente werden geladen …",
-    "documentsFailed": "Die Dokumente dieser Fahrt konnten nicht geladen werden."
+    "documentsFailed": "Die Dokumente dieser Fahrt konnten nicht geladen werden.",
+    "documentsBelow": "Dokumente dieser Fahrt: im Abschnitt „Dokumente“ weiter unten."
   }
 }

@@ -4,7 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { railApi } from "../../lib/api/rail";
 import { logger } from "../../lib/logger";
 import { formatRailDuration } from "../../lib/rail/railDuration";
-import type { RailTransfer } from "../../lib/rail/railTransfer";
+import { SHORT_TRANSFER_HINT_MINUTES, type RailTransfer } from "../../lib/rail/railTransfer";
 
 interface Props {
   transfer: RailTransfer;
@@ -22,15 +22,35 @@ interface Props {
  * another station — or that the wait cannot be told. It claims no change will
  * WORK: the automatic "under ten minutes" is worded as a hint, and "knapp" is
  * the user's own mark, saved on the arriving leg.
+ *
+ * A `<div>`, drawn inside the next train's list item: a change is not an item
+ * of the numbered train list, and a screen reader should not count it as one.
  */
 export function RailTransferNote({ transfer, arriving, departing, index }: Props): JSX.Element {
   const { t } = useTranslation(["rail"]);
 
   if (transfer.kind === "separate") {
     return (
-      <li className="t-caption border-t border-border pt-2" data-testid={`rail-transfer-${index}`}>
+      <div
+        className="t-caption mb-1 border-t border-border pt-2"
+        data-testid={`rail-transfer-${index}`}
+      >
         {t("rail:transfer.separate")}
-      </li>
+      </div>
+    );
+  }
+
+  // Which train ran first that day is not known: nothing about this gap —
+  // not even a change of station — can be said, and there is no change to mark.
+  if (transfer.kind === "unknown" && transfer.reason === "order") {
+    return (
+      <div
+        className="t-caption mb-1 rounded-md border border-border px-3 py-2"
+        data-testid={`rail-transfer-${index}`}
+        data-kind="unknown-order"
+      >
+        {t("rail:transfer.orderUnknown")}
+      </div>
     );
   }
 
@@ -43,8 +63,8 @@ export function RailTransferNote({ transfer, arriving, departing, index }: Props
         : t("rail:transfer.unknown", { station });
 
   return (
-    <li
-      className="rounded-md border border-border px-3 py-2 text-sm"
+    <div
+      className="mb-1 rounded-md border border-border px-3 py-2 text-sm"
       data-testid={`rail-transfer-${index}`}
       data-kind={transfer.kind}
     >
@@ -59,11 +79,11 @@ export function RailTransferNote({ transfer, arriving, departing, index }: Props
       {transfer.kind === "unknown" && <p className="t-caption">{t("rail:transfer.unknownWhy")}</p>}
       {transfer.kind === "transfer" && transfer.shortHint && (
         <p className="t-caption" data-testid={`rail-transfer-${index}-hint`}>
-          {t("rail:transfer.shortHint")}
+          {t("rail:transfer.shortHint", { minutes: SHORT_TRANSFER_HINT_MINUTES })}
         </p>
       )}
       <TightMark legId={arriving.id} stored={arriving.tightConnection} />
-    </li>
+    </div>
   );
 }
 
@@ -76,6 +96,13 @@ function TightMark({ legId, stored }: { legId: string; stored: boolean }): JSX.E
   const { t } = useTranslation(["rail"]);
   const id = useId();
   const [marked, setMarked] = useState(stored);
+  // A fresh read of the leg (the page loaded again) wins over what this box
+  // last saw — adjusted during render, React's pattern for a changed prop.
+  const [seen, setSeen] = useState(stored);
+  if (stored !== seen) {
+    setSeen(stored);
+    setMarked(stored);
+  }
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
 

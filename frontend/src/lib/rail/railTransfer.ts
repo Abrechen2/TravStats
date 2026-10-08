@@ -1,4 +1,5 @@
 import { railArrival, railDeparture, type RailLike } from "../entityTimes";
+import type { TimeValue } from "../../shared/time";
 import type { RailJourney } from "../../types/rail";
 
 /**
@@ -7,21 +8,42 @@ import type { RailJourney } from "../../types/rail";
  * or nothing that can be said. ONE home for that verdict; the connection
  * view, the detail page and the whole-ride page all read it from here.
  *
- * Abstention is a result. A wait is measured only between two instants known
- * to the minute (`TimeValue.utc`, so a change across zones or inside the
- * repeated autumn hour measures what really passes); a day-only or missing end
- * makes it `unknown` — never 0, and never "reachable". Nothing here claims a
- * change WORKS: `shortHint` is a hint that the gap is under ten minutes, worded
- * as one, and the user's own "tight" mark lives on the arriving leg
- * (`tightConnection`), not here.
+ * Abstention is a result, twice over:
+ * - A wait is measured only between two instants known to the minute
+ *   (`TimeValue.utc`, so a change across zones or inside the repeated autumn
+ *   hour measures what really passes); a day-only or missing end makes it
+ *   `unknown` — never 0, and never "reachable".
+ * - The legs arrive in departure order, and a day-only departure is stored at
+ *   local midnight, so it sorts before every timed leg of its day whether or
+ *   not it ran first. Where that order is not KNOWN — a day-only leg shares a
+ *   day with a gap — every claim that rests on it (the wait, a change of
+ *   station, "another ride") is withheld: `unknown`, reason `order`
+ *   (review 2026-10-08, important 1).
+ *
+ * Nothing here claims a change WORKS: `shortHint` is a hint that the gap is
+ * under ten minutes, worded as one, and the user's own "tight" mark lives on
+ * the arriving leg (`tightConnection`), not here.
  */
 
 export type RailTransferLeg = RailLike &
-  Pick<RailJourney, "depStationName" | "arrStationName" | "depStationId" | "arrStationId">;
+  Pick<
+    RailJourney,
+    | "depStationName"
+    | "arrStationName"
+    | "depStationId"
+    | "arrStationId"
+    | "depLat"
+    | "depLon"
+    | "arrLat"
+    | "arrLon"
+  >;
 
 export type RailTransfer =
-  /** Either end is not known to the minute, or missing. */
-  | { kind: "unknown"; stationChange: boolean }
+  /**
+   * `time`: either end is not known to the minute, or missing. `order`: the
+   * two legs' order itself is not known, so no station is claimed either.
+   */
+  | { kind: "unknown"; stationChange: boolean; reason: "time" | "order" }
   /** The next train leaves before the previous one arrives; `minutes` is negative. */
   | { kind: "conflict"; minutes: number; stationChange: boolean }
   | { kind: "transfer"; minutes: number; stationChange: boolean; shortHint: boolean }
@@ -36,47 +58,73 @@ export type RailTransfer =
 export const SHORT_TRANSFER_HINT_MINUTES = 10;
 
 /**
- * The longest wait still read as a change — the same four hours the server
- * groups a ride by (`MAX_TRANSFER_MINUTES` in the backend's
- * `shared/railJourneyGrouping.ts`; change both together). Past it, a booking's
- * next leg is another ride, not a 3-day "transfer".
+ * The longest wait still read as a change — the server's
+ * `MAX_TRANSFER_MINUTES` (backend `shared/railJourneyGrouping.ts`). Both
+ * suites run `shared/rail/transferVectors.json`, which pins 240 and 241.
  */
 export const SEPARATE_RIDE_AFTER_MINUTES = 240;
+
+/** Two station records closer than this are one place to change at — the server's `SAME_STATION_KM`. */
+export const SAME_STATION_KM = 1;
 
 interface StationRef {
   id: number | null;
   name: string;
+  lat: number;
+  lon: number;
 }
 
-/** Lower case, accents folded, punctuation to single spaces — "Köln Hbf." = "koln hbf". */
-export function normalizeStationName(name: string): string {
-  return name
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLocaleLowerCase("en")
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim();
+const EARTH_RADIUS_KM = 6371.0088;
+const RAD = Math.PI / 180;
+
+/** Great-circle distance, the backend's `haversineKm`. */
+function distanceKm(a: StationRef, b: StationRef): number {
+  const dLat = (b.lat - a.lat) * RAD;
+  const dLon = (b.lon - a.lon) * RAD;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(a.lat * RAD) * Math.cos(b.lat * RAD) * Math.sin(dLon / 2) ** 2;
+  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(h)));
 }
+
+const foldName = (name: string): string => name.trim().toLocaleLowerCase();
 
 /**
- * The same station: by catalogue id when both ends have one, else by name.
- * Two catalogue rows are two stations even when their names look alike, and a
- * geocoder pick has no id to compare.
+ * The server's `sameStation`, mirrored exactly: the same catalogue row, the
+ * same recorded name, or within `SAME_STATION_KM`. Narrower than that, the
+ * page the server grouped as ONE ride would announce a change of station
+ * between a catalogue row and the geocoder pick 300 m away (review
+ * 2026-10-08, important 2). Pinned by `shared/rail/transferVectors.json`.
  */
 export function sameStation(a: StationRef, b: StationRef): boolean {
-  if (a.id !== null && b.id !== null) return a.id === b.id;
-  const left = normalizeStationName(a.name);
-  return left !== "" && left === normalizeStationName(b.name);
+  if (a.id !== null && b.id !== null && a.id === b.id) return true;
+  if (foldName(a.name) !== "" && foldName(a.name) === foldName(b.name)) return true;
+  return distanceKm(a, b) <= SAME_STATION_KM;
 }
 
 const arrivalStation = (leg: RailTransferLeg): StationRef => ({
   id: leg.arrStationId,
   name: leg.arrStationName,
+  lat: leg.arrLat,
+  lon: leg.arrLon,
 });
 const departureStation = (leg: RailTransferLeg): StationRef => ({
   id: leg.depStationId,
   name: leg.depStationName,
+  lat: leg.depLat,
+  lon: leg.depLon,
 });
+
+/** The local calendar day of a time known at least to the day, else null. */
+function dayOf(value: TimeValue | null): string | null {
+  if (!value || (value.precision !== "minute" && value.precision !== "day")) return null;
+  return value.local.slice(0, 10);
+}
+
+/** Whole calendar days from `a` to `b` (`YYYY-MM-DD`), read as dates — no zone involved. */
+function daysBetween(a: string, b: string): number {
+  return Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
+}
 
 /** Minutes from the previous arrival to the next departure, signed; null when not both known to the minute. */
 export function signedTransferMinutes(
@@ -91,11 +139,20 @@ export function signedTransferMinutes(
   return Number.isFinite(minutes) ? minutes : null;
 }
 
-/** The verdict for one pair of consecutive legs, read alone. */
+/**
+ * The verdict for one pair of consecutive legs whose ORDER is known. A wait
+ * that cannot be measured is still "another ride" when the two days are known
+ * and lie more than a day apart — no change of trains waits that long.
+ */
 export function railTransfer(previous: RailTransferLeg, next: RailTransferLeg): RailTransfer {
   const stationChange = !sameStation(arrivalStation(previous), departureStation(next));
   const minutes = signedTransferMinutes(previous, next);
-  if (minutes === null) return { kind: "unknown", stationChange };
+  if (minutes === null) {
+    const from = dayOf(railArrival(previous)) ?? dayOf(railDeparture(previous));
+    const to = dayOf(railDeparture(next));
+    if (from !== null && to !== null && daysBetween(from, to) > 1) return { kind: "separate" };
+    return { kind: "unknown", stationChange, reason: "time" };
+  }
   if (minutes < 0) return { kind: "conflict", minutes, stationChange };
   if (minutes > SEPARATE_RIDE_AFTER_MINUTES) return { kind: "separate" };
   return {
@@ -106,11 +163,37 @@ export function railTransfer(previous: RailTransferLeg, next: RailTransferLeg): 
   };
 }
 
+const departsToTheMinute = (leg: RailTransferLeg): boolean =>
+  railDeparture(leg)?.precision === "minute";
+
+/**
+ * Is the order of `legs[i]` and `legs[i + 1]` known? Both departures to the
+ * minute, or on different days — and no leg whose departure is NOT to the
+ * minute falls on a day the gap spans, because that leg could have run in
+ * between: its stored midnight says nothing about when in the day it left.
+ */
+function gapOrderKnown(legs: readonly RailTransferLeg[], i: number): boolean {
+  const previous = legs[i];
+  const next = legs[i + 1];
+  const from = dayOf(railDeparture(previous));
+  const to = dayOf(railDeparture(next));
+  if (from === null || to === null) return false;
+  const pairKnown = (departsToTheMinute(previous) && departsToTheMinute(next)) || from !== to;
+  if (!pairKnown) return false;
+  return legs.every((leg, j) => {
+    if (j === i || j === i + 1 || departsToTheMinute(leg)) return true;
+    const day = dayOf(railDeparture(leg));
+    return day !== null && (day < from || day > to);
+  });
+}
+
 /**
  * The verdict between every two consecutive legs, in the order given (the
  * legs' departure order): entry `i` is the gap after `legs[i]`. A leg that
  * returns to a station this ride already passed starts another ride — the way
- * back is not a change of trains, however soon it leaves.
+ * back is not a change of trains, however soon it leaves. A gap whose order
+ * is not known ends the ride as well: nothing before it is "visited" for what
+ * comes after.
  */
 export function railTransfers(legs: readonly RailTransferLeg[]): RailTransfer[] {
   const verdicts: RailTransfer[] = [];
@@ -118,6 +201,11 @@ export function railTransfers(legs: readonly RailTransferLeg[]): RailTransfer[] 
   for (let i = 0; i + 1 < legs.length; i += 1) {
     const previous = legs[i];
     const next = legs[i + 1];
+    if (!gapOrderKnown(legs, i)) {
+      verdicts.push({ kind: "unknown", stationChange: false, reason: "order" });
+      visited = [departureStation(next)];
+      continue;
+    }
     visited = [...visited, arrivalStation(previous)];
     const verdict = railTransfer(previous, next);
     const wayBack = visited.some((station) => sameStation(station, arrivalStation(next)));

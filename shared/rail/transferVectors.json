@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "note": "The server's grouping rule (backend/src/shared/railJourneyGrouping.ts) and the web's transfer verdicts (frontend/src/lib/rail/railTransfer.ts) must agree on these cases. Both suites read this file; change the rule and the file together.",
+  "sameStationKm": 1,
+  "maxTransferMinutes": 240,
+  "sameStation": [
+    {
+      "id": "same-catalogue-row",
+      "a": { "id": 7604, "name": "Frankfurt (Main) Hbf", "lat": 50.1071, "lon": 8.6632 },
+      "b": { "id": 7604, "name": "Frankfurt Hauptbahnhof", "lat": 50.1071, "lon": 8.6632 },
+      "same": true
+    },
+    {
+      "id": "same-name-different-ids-far-apart",
+      "note": "the folded name alone is enough, even across catalogue rows",
+      "a": { "id": 1, "name": "Fulda", "lat": 50.5545, "lon": 9.6839 },
+      "b": { "id": 2, "name": "  fulda ", "lat": 51.0, "lon": 10.0 },
+      "same": true
+    },
+    {
+      "id": "geocoder-pick-beside-catalogue-row",
+      "note": "300 m apart, different names, one without an id: the same place to change at",
+      "a": { "id": 7604, "name": "Frankfurt(Main)Hbf", "lat": 50.1071, "lon": 8.6632 },
+      "b": { "id": null, "name": "Frankfurt Hauptbahnhof", "lat": 50.1098, "lon": 8.6632 },
+      "same": true
+    },
+    {
+      "id": "two-catalogue-rows-one-station",
+      "note": "Hbf and Hbf (tief), 200 m apart: different ids do not decide alone",
+      "a": { "id": 10, "name": "Frankfurt (Main) Hbf", "lat": 50.1071, "lon": 8.6632 },
+      "b": { "id": 11, "name": "Frankfurt (Main) Hbf (tief)", "lat": 50.1068, "lon": 8.6658 },
+      "same": true
+    },
+    {
+      "id": "paris-est-and-nord",
+      "note": "about 500 m apart: inside the radius, so the server reads them as one place",
+      "a": { "id": 20, "name": "Paris Est", "lat": 48.8768, "lon": 2.3591 },
+      "b": { "id": 21, "name": "Paris Nord", "lat": 48.8809, "lon": 2.3553 },
+      "same": true
+    },
+    {
+      "id": "paris-est-and-gare-de-lyon",
+      "note": "about 2.6 km apart, different names and ids: a change of station",
+      "a": { "id": 20, "name": "Paris Est", "lat": 48.8768, "lon": 2.3591 },
+      "b": { "id": 22, "name": "Paris Gare de Lyon", "lat": 48.8443, "lon": 2.3743 },
+      "same": false
+    },
+    {
+      "id": "just-outside-the-radius",
+      "a": { "id": null, "name": "A", "lat": 50.0, "lon": 8.0 },
+      "b": { "id": null, "name": "B", "lat": 50.0099, "lon": 8.0 },
+      "same": false
+    },
+    {
+      "id": "just-inside-the-radius",
+      "a": { "id": null, "name": "A", "lat": 50.0, "lon": 8.0 },
+      "b": { "id": null, "name": "B", "lat": 50.0089, "lon": 8.0 },
+      "same": true
+    }
+  ],
+  "transferLimit": [
+    {
+      "id": "four-hours-is-still-a-change",
+      "waitMinutes": 240,
+      "change": true
+    },
+    {
+      "id": "a-minute-more-is-another-ride",
+      "waitMinutes": 241,
+      "change": false
+    }
+  ]
+}

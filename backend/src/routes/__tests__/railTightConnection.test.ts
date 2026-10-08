@@ -93,6 +93,28 @@ describe("rail tight connection mark", () => {
     expect(cleared.body.data.tightConnection).toBe(false);
   });
 
+  // Review minor 8: the mark's PATCH sends no time, so a day-only arrival
+  // stays a day and nothing is re-read as midnight.
+  it("keeps each end's precision through the one-field PATCH", async () => {
+    const created = await post({
+      departureStation: FRANKFURT,
+      arrivalStation: MANNHEIM,
+      departureLocal: "2025-03-01T08:00",
+      arrivalLocal: "2025-03-01",
+    });
+    const before = await prisma.railJourney.findUniqueOrThrow({
+      where: { id: created.body.data.id },
+    });
+    expect(before.arrPrecision).toBe("day");
+    await patch(created.body.data.id, { tightConnection: true });
+    const after = await prisma.railJourney.findUniqueOrThrow({
+      where: { id: created.body.data.id },
+    });
+    expect(after.depPrecision).toBe(before.depPrecision);
+    expect(after.arrPrecision).toBe("day");
+    expect(after.arrivalTime?.toISOString()).toBe(before.arrivalTime?.toISOString());
+  });
+
   it("keeps the mark through an edit that does not send it", async () => {
     const { first } = await connection();
     await patch(first, { tightConnection: true });
@@ -134,5 +156,12 @@ describe("rail tight connection mark", () => {
       arrStationId: null,
     });
     expect(legs[1]).toMatchObject({ tightConnection: false, coach: null, seat: null });
+    // The positions the web's mirror of the server's `sameStation` reads.
+    expect(legs[0]).toMatchObject({
+      depLat: FRANKFURT.lat,
+      depLon: FRANKFURT.lon,
+      arrLat: MANNHEIM.lat,
+      arrLon: MANNHEIM.lon,
+    });
   });
 });

@@ -22,17 +22,19 @@ import type { RailTransfer } from "../../../lib/rail/railTransfer";
 const arriving = { id: "j1", arrStationName: "Paris Est", tightConnection: false };
 const departing = { depStationName: "Paris Gare de Lyon" };
 
-function renderNote(transfer: RailTransfer, stored = false): void {
-  render(
-    <ul>
-      <RailTransferNote
-        transfer={transfer}
-        arriving={{ ...arriving, tightConnection: stored }}
-        departing={departing}
-        index={1}
-      />
-    </ul>
+function note(transfer: RailTransfer, stored: boolean): React.JSX.Element {
+  return (
+    <RailTransferNote
+      transfer={transfer}
+      arriving={{ ...arriving, tightConnection: stored }}
+      departing={departing}
+      index={1}
+    />
   );
+}
+
+function renderNote(transfer: RailTransfer, stored = false): ReturnType<typeof render> {
+  return render(note(transfer, stored));
 }
 
 describe("RailTransferNote", () => {
@@ -49,7 +51,9 @@ describe("RailTransferNote", () => {
 
   it("says a short wait as a hint, never as a promise", () => {
     renderNote({ kind: "transfer", minutes: 6, stationChange: false, shortHint: true });
-    expect(screen.getByTestId("rail-transfer-1-hint")).toHaveTextContent("rail:transfer.shortHint");
+    expect(screen.getByTestId("rail-transfer-1-hint")).toHaveTextContent(
+      'rail:transfer.shortHint {"minutes":10}'
+    );
   });
 
   it("says a change of stations by both names", () => {
@@ -68,7 +72,7 @@ describe("RailTransferNote", () => {
   });
 
   it("says an unknown wait as unknown, and still names a change of stations", () => {
-    renderNote({ kind: "unknown", stationChange: true });
+    renderNote({ kind: "unknown", stationChange: true, reason: "time" });
     const note = screen.getByTestId("rail-transfer-1");
     expect(note).toHaveTextContent("rail:transfer.unknown");
     expect(note).toHaveTextContent("rail:transfer.unknownWhy");
@@ -101,5 +105,29 @@ describe("RailTransferNote", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("rail:transfer.markFailed");
     expect(box).toBeChecked();
     expect(box).toHaveAccessibleDescription("rail:transfer.markFailed");
+  });
+
+  // Review 2026-10-08, important 1: an unknown order claims nothing at all.
+  it("says only that the order is unknown, with no station claim and no mark", () => {
+    renderNote({ kind: "unknown", stationChange: false, reason: "order" });
+    const shown = screen.getByTestId("rail-transfer-1");
+    expect(shown).toHaveTextContent("rail:transfer.orderUnknown");
+    expect(shown).not.toHaveTextContent("rail:transfer.unknown ");
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByTestId("rail-transfer-1-station-change")).toBeNull();
+  });
+
+  // Review minor 8: a fresh read of the leg wins over what the box last saw.
+  it("follows a newly read mark", () => {
+    const transfer: RailTransfer = {
+      kind: "transfer",
+      minutes: 25,
+      stationChange: false,
+      shortHint: false,
+    };
+    const { rerender } = renderNote(transfer, false);
+    expect(screen.getByRole("checkbox")).not.toBeChecked();
+    rerender(note(transfer, true));
+    expect(screen.getByRole("checkbox")).toBeChecked();
   });
 });

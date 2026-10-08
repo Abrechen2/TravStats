@@ -54,7 +54,12 @@ export function RailConnectionView({ legs, currentId, pnr, showPnr = true }: Pro
   const { t, i18n } = useTranslation(["rail", "documents", "common"]);
   const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
   const transfers = railTransfers(legs);
-  const { byLeg, retry } = useRailLegDocuments(legs.map((leg) => leg.id));
+  // The train on screen lists its originals in the page's own Documents
+  // section, which can upload and delete; a second list here would go stale
+  // the moment the user uploads there (review 2026-10-08, minor 2).
+  const { byLeg, retry } = useRailLegDocuments(
+    legs.filter((leg) => leg.id !== currentId).map((leg) => leg.id)
+  );
 
   return (
     <div className="flex flex-col gap-2">
@@ -69,7 +74,7 @@ export function RailConnectionView({ legs, currentId, pnr, showPnr = true }: Pro
           });
           const when = formatRailSpan(leg, locale);
           return (
-            <Fragment key={leg.id}>
+            <li key={leg.id} className="text-sm" data-testid={`rail-connection-leg-${leg.id}`}>
               {index > 0 && (
                 <RailTransferNote
                   transfer={transfers[index - 1]}
@@ -78,27 +83,31 @@ export function RailConnectionView({ legs, currentId, pnr, showPnr = true }: Pro
                   index={index}
                 />
               )}
-              <li className="text-sm" data-testid={`rail-connection-leg-${leg.id}`}>
-                {leg.id === currentId ? (
-                  <strong aria-current="page">{label}</strong>
-                ) : (
-                  <Link to={`/rail/${leg.id}`} className={`font-semibold underline ${TOUCH_LINK}`}>
-                    {label}
-                  </Link>
-                )}
-                <p className="t-caption">
-                  {[when, train, t(`rail:status.${leg.status}`)].filter(Boolean).join(" · ")}
+              {leg.id === currentId ? (
+                <strong aria-current="page">{label}</strong>
+              ) : (
+                <Link to={`/rail/${leg.id}`} className={`font-semibold underline ${TOUCH_LINK}`}>
+                  {label}
+                </Link>
+              )}
+              <p className="t-caption">
+                {[when, train, t(`rail:status.${leg.status}`)].filter(Boolean).join(" · ")}
+              </p>
+              <p data-testid={`rail-connection-leg-${leg.id}-seat`}>
+                {seatLine(leg, pnr, t).join(" · ")}
+              </p>
+              {leg.id === currentId ? (
+                <p className="t-caption" data-testid={`rail-connection-leg-${leg.id}-documents`}>
+                  {t("rail:connectionView.documentsBelow")}
                 </p>
-                <p data-testid={`rail-connection-leg-${leg.id}-seat`}>
-                  {seatLine(leg, pnr, t).join(" · ")}
-                </p>
+              ) : (
                 <LegDocumentsLine
                   legId={leg.id}
                   documents={byLeg.get(leg.id) ?? { state: "loading" }}
                   onRetry={(): void => retry(leg.id)}
                 />
-              </li>
-            </Fragment>
+              )}
+            </li>
           );
         })}
       </ol>
