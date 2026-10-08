@@ -14,6 +14,27 @@
 // placeholder. That distinction is easy to lose inside a 350-line loop.
 
 import type { FlightData } from "./achievementStats";
+import { departureClockOf } from "./stats/departureClock";
+import type { FlightTimeSemantics } from "./timezone";
+
+/** The catalogue zone per airport code - all this module needs of an airport. */
+export type AirportZones = ReadonlyMap<string, { timezone: string | null }>;
+
+/**
+ * The calendar day a flight left on, on the DEPARTURE AIRPORT'S clock (forgejo#255):
+ * the zone the flight was stored with, else the catalogue's, else the stored
+ * components - the contract every other "which day was that" figure reads. It
+ * used to cut the instant at UTC midnight, which splits one Tokyo day in two.
+ */
+function localDayOf(flight: FlightData, airports: AirportZones): string {
+  const code = flight.depIata || flight.depIcao || "";
+  const clock = departureClockOf({
+    departureTime: flight.departureTime,
+    depTimezone: flight.depTimezone || airports.get(code)?.timezone || null,
+    depTimeSemantics: (flight.depTimeSemantics as FlightTimeSemantics | null) || "UNKNOWN",
+  });
+  return (clock as NonNullable<typeof clock>).date;
+}
 
 export interface FlightSequenceStats {
   windowStreak: number;
@@ -27,7 +48,10 @@ export interface FlightSequenceStats {
   tightConnection: number;
 }
 
-export function computeFlightSequenceStats(flights: FlightData[]): FlightSequenceStats {
+export function computeFlightSequenceStats(
+  flights: FlightData[],
+  airports: AirportZones = new Map()
+): FlightSequenceStats {
   const sorted = [...flights]
     .filter((f) => f.status === "flown" && f.departureTime)
     .sort((a, b) => a.departureTime!.getTime() - b.departureTime!.getTime());
@@ -77,7 +101,7 @@ export function computeFlightSequenceStats(flights: FlightData[]): FlightSequenc
   const flightsPerDay = new Map<string, number>();
   for (const f of flights) {
     if (!f.departureTime) continue;
-    const dayKey = f.departureTime.toISOString().slice(0, 10);
+    const dayKey = localDayOf(f, airports);
     flightsPerDay.set(dayKey, (flightsPerDay.get(dayKey) ?? 0) + 1);
   }
   const maxFlightsOneDay = Math.max(0, ...flightsPerDay.values());
@@ -85,7 +109,7 @@ export function computeFlightSequenceStats(flights: FlightData[]): FlightSequenc
   // Groundhog Day — same route on three consecutive calendar days
   const routesByDay = new Map<string, Set<string>>();
   for (const f of sorted) {
-    const key = f.departureTime!.toISOString().slice(0, 10);
+    const key = localDayOf(f, airports);
     const route = `${f.depIata || f.depIcao}-${f.arrIata || f.arrIcao}`;
     if (!routesByDay.has(key)) routesByDay.set(key, new Set());
     routesByDay.get(key)!.add(route);

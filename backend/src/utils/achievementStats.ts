@@ -752,7 +752,7 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
 
   // Cross-flight computations — everything that needs the flights in relation
   // to each other rather than one at a time. See `./flightSequenceStats`.
-  const sequence = computeFlightSequenceStats(flights);
+  const sequence = computeFlightSequenceStats(flights, airportMap);
   stats.windowStreak = sequence.windowStreak;
   stats.middleStreak = sequence.middleStreak;
   stats.aisleStreak = sequence.aisleStreak;
