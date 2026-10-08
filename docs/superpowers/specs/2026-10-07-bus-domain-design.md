@@ -1,6 +1,6 @@
 # Bus — an eighth domain for long-distance coach rides
 
-Date: 2026-10-07 · Branch: `docs/bus-domain-spec` · Status: **draft — design only, no code; awaiting the owner's review of §13**
+Date: 2026-10-07 · Branch: `docs/bus-domain-spec` · Status: **B1 built on `dev/bus-domain` (2026-10-07/08); B2 next**
 
 ## Why
 
@@ -280,9 +280,12 @@ the templates, minus train categories and plus ride kinds.
 
 ## 8. Trip, timeline, Companion, export (B2)
 
-- **Trip bounds and status** land in **B1** already (the write path calls
+- **Trip status** lands in **B1** already (the write path calls
   `recomputeTripStatus`; `tripStatusService.ts` gets `busJourneys` in its select
-  and spreads `rideStatusSpan` over them — the rail line, one more array).
+  and spreads `rideStatusSpan` over them — the rail line, one more array). A ride
+  re-derives its trip's status; it fills the trip's dates only when the trip has
+  none, as rail does (`fillTripDatesFromSegments`) — it does not widen dates
+  that are already set.
 - **Timeline and logistics tab:** `lib/timelineRail.ts` → a bus twin; trip
   detail select (`TRIP_BUS_SELECT`), `TripCard` counts, attachable entries,
   trip suggestions' `loadTransport`, trip photo windows, the trip delete
@@ -442,8 +445,8 @@ answered for buses by D5 — a ride has two ends and a road between them.
 
 | # | Package | Measured by |
 |---|---|---|
-| **B1** | Model + migration (`BusJourney`, companion join, `Document.busJourneyId` + CHECK), Zod, CRUD router with list paging, OpenAPI with response schemas, ratchet family, registries (both mirrors), beta key, colour token, status derivation alias + sweep, counting rule (both mirrors), FX snapshot, companions, trip link **and trip bounds** (the write path already re-derives the trip; one more array in `tripStatusService`), entry suggestions (own operators and terminals, as chips), list page in the shared logbook layout + create/edit/delete form + simple detail page with documents, DE/EN — **manual entry only**, straight line only, every other shared surface wired to an explicit empty answer | route tests incl. a time-model suite (DST gap refused, far-off zones, arrival before departure refused, day-only ride stored at precision `day`), ownership tests (another user's trip/booking refused), counting truth table on both mirrors, OpenAPI coverage + response-schema + time-shape guards, response-shape ratchet, locale parity, `check:drift`, odd-zone CI runs, the colour test, the beta-registry test, a browser look at the form on an iPad viewport |
-| **B2** | Trip timeline/logistics/card/attachable/suggestions/photo windows; dashboard tab + map layer + "Alle" chip + filter row; `/bus/stats` + stats tab + cross-domain + evidence + passport provenance; upcoming; sync entity; Excel sheet + importer spec + JSON export + diagnostic export; demo seed | trip-status tests (a ride extends a trip), timeline tests, stats tests with the sample-size rule, cross-domain population test, sync feed test (visible/omit), export round trip, a production-build browser look at both maps with the colour store changed |
+| **B1** | Model + migration (`BusJourney`, companion join, `Document.busJourneyId` + CHECK), Zod, CRUD router with list paging, OpenAPI with response schemas, ratchet family, registries (both mirrors), beta key, colour token, status derivation alias + sweep, counting rule (both mirrors), FX snapshot, companions, trip link **and trip status** (the write path already re-derives the trip, one more array in `tripStatusService`; a ride fills the trip's dates only when it has none, as rail does), entry suggestions (own operators and terminals, as chips), list page in the shared logbook layout + create/edit/delete form + simple detail page with documents, DE/EN — **manual entry only**, straight line only, every other shared surface wired to an explicit empty answer | route tests incl. a time-model suite (DST gap refused, far-off zones, arrival before departure refused, day-only ride stored at precision `day`), ownership tests (another user's trip/booking refused), counting truth table on both mirrors, OpenAPI coverage + response-schema + time-shape guards, response-shape ratchet, locale parity, `check:drift`, odd-zone CI runs, the colour test, the beta-registry test, a browser look at the form on an iPad viewport |
+| **B2** | Trip timeline/logistics/card/attachable/suggestions/photo windows; dashboard tab + map layer + "Alle" chip + filter row; `/bus/stats` + stats tab + cross-domain + evidence + passport provenance; upcoming; sync entity; Excel sheet + importer spec + JSON export + diagnostic export; demo seed | trip-status tests (a ride re-derives its trip's status), timeline tests, stats tests with the sample-size rule, cross-domain population test, sync feed test (visible/omit), export round trip, a production-build browser look at both maps with the colour store changed |
 | **B3** | Transitous `COACH` lookup + traced line (measured, §1) through rail's client with a mode parameter; road line via the routing provider as the fallback, frozen, labelled, with reasons; connecting-coach UI through `Booking` as ONE list entry (Alex, forgejo#187); e-mail reminders; optional airport picker source | lookup tests against recorded Transitous answers (a `COACH` match, a `BUS`-only stop answering "no coach here", a past day), geometry tests per fallback reason (each named, none silent), edit-keeps-line test, reminder tests |
 | **B4** | Parser (template + LLM fallback + review modal) **once `test-samples/Bus/` exists**; achievements and Wrapped (2.8, as rail) | the corpus harness with `expectations.json`; 0 candidates from non-bus mails |
 
@@ -464,3 +467,112 @@ B2 the next. Each package's plan is written when the one before it has landed.
 | D8 | Routing profile for the road line (B3) | (a) the car profile; (b) the heavy-vehicle profile where a provider has one (ORS `driving-hgv`, GraphHopper `truck`) | **(a)** — a coach is not a lorry on most roads a provider restricts for HGVs, and (b) would route around low bridges the coach took; the label `road` says it is a routed line either way |
 | D9 | Shall B1 already carry the sync entity so the Companion can read rides early? | (a) B2, with the rest of the shared surfaces; (b) B1 | **(a)** — the Companion has no bus screen; an entity nobody reads is a contract to keep for nothing |
 | D10 | Where does a guided coach tour (DMZ day, GetYourGuide) live? (§11b) | (a) a day tour with a new activity `excursion`; (b) a bus ride with a `charter` kind; (c) a trip-level excursion entity like `CruiseExcursion` | **(a)** — one activity value and an icon; the bus logbook stays tickets between terminals. If (a), it is a small tour-domain change outside the bus packages, done before B1 so the two forms' copy can point at each other |
+
+## B1 — as built (2026-10-08)
+
+B1 landed on `dev/bus-domain` as written in §12, with the deviations below. Each
+was a ruling made while building, with the reason; none reopens a §13 decision.
+D1 (`rideKind`), D2 (day-only), D5 (the chord, stored in B1 and drawn in B2),
+D6 (no loyalty), D7 (colour) and D9 (sync in B2) stand as recommended.
+
+**Deviations and rulings**
+
+- **Trip dates.** §8 and §12 said a ride widens its trip's dates. It does not,
+  and rail never did: the write path re-derives the trip's **status**
+  (`tripStatusService` spreads `rideStatusSpan` over `busJourneys`) and fills the
+  trip's dates **only when the trip has none** (`fillTripDatesFromSegments`).
+  The two sentences above are corrected.
+- **`rideKind` has no `charter`.** The column carries `intercity | shuttle |
+  other`; the guided coach tour went to the tour domain (D10, branch
+  `feat/tour-activity-excursion`, built first and not merged).
+- **One home for the ride-generic end rules.** `services/rides/rideEnds.ts` now
+  holds "resolve the end", "the arrival is not before the departure" and "typed
+  distance or the measured line", parameterised by the refusal code; rail and bus
+  both import it, while `pickStation` / `pickTerminal` stay per domain. The first
+  bus draft had copied rail's three private functions. The move changed two things
+  in rail, both accepted: a moved end whose zone cannot be resolved is refused
+  (`TZ_UNRESOLVED`) instead of falling back to UTC, and a typed distance of 0 km is
+  kept rather than replaced by the measured one.
+- **`TZ_UNRESOLVED` guards the write path, not a reachable input.** `geo-tz`
+  answers every point on the globe, so the test fixture is latitude 91, which the
+  coordinate schema refuses first; the guard exists so a wall clock can never be
+  stored as UTC if the lookup is ever replaced.
+- **`rateLimit.ts` split.** The bus creation limiter pushed the file over the size
+  ratchet; the skip predicate moved, unchanged and re-exported, to
+  `middleware/globalRateLimitSkip.ts`.
+- **Entry suggestions** search **both** station columns (a typed name offers the
+  outbound arrival when entering the ride home), and the `LIKE` wildcards in the
+  typed text are escaped — the first escape in the codebase. `places/suggestions`
+  still passes raw `contains` (follow-up outside this work). The form shows one
+  mixed chip row per terminal field (`BusTerminalChips.tsx`, with its own
+  narrowing); the limiter's comment promises a debounce the form must deliver.
+- **The day-only toggle** is built from the server contract. Rail's form has none
+  and opens a stored day-precision ride as a midnight clock, saving it back as a
+  clock (`railFormModel.ts`) — a follow-up for rail, not part of this work. In the
+  bus form the toggle applies to both ends, and un-ticking it yields `T00:00`
+  rather than the earlier clock.
+- **Year options** come from one bounded list request (`limit: 500`); a years
+  endpoint belongs to B2 with the statistics. The pages read
+  `rail:detail.durationHm` through `formatRailDuration` (moving that string to
+  `common` is a follow-up).
+- **Documents:** `/bus/:id/documents` is served by the documents router, and
+  `Document.busJourneyId` is in the `OWNER_COLUMN` map, the CHECK and the
+  `lib/api/documents.ts` entry list.
+- **The all-data export carries the rides** (`busJourneys` with companion links);
+  the schema-coverage test caught the omission in the full run. This is the JSON
+  export from §8; the Excel sheet and importer stay B2.
+- **`times.*.local` carries seconds** (`2026-09-20T09:00:00`), as the shared clock
+  emits and rail asserts; the web fixtures use that form.
+- **The What's New 2.7.0 line** ("Fernbusfahrten als eigener Bereich" / "coach
+  rides as a domain of their own") was forced by the beta-key test, on the rental
+  precedent. The wording is the implementer's; the owner may reword it. The admin
+  copy for `busDomain` and the `"#c49a6c bus"` exclusion in `listColor._excluded`
+  went in with the final task.
+
+**Gates (measured 2026-10-08, HEAD after the baseline commit)**
+
+- Backend Jest: 952 of 955 suites passed (3 skipped), 8472 of 8494 tests (22
+  skipped), run under coverage. Frontend Vitest: 899 files, 6997 tests; under
+  coverage one timing-sensitive test (a Cruise suggestions case, a Settings case
+  in another run) times out on the loaded host and passes alone — not bus code.
+- `tsc` and lint clean in both trees; `prettier --check .`, `check:size` (13
+  baselined files, none grown) and `check:drift` green.
+- Coverage, against the baseline of 2026-09-16 (forgejo#62): frontend lines 56.21
+  to 74.05 %, statements 55.66 to 73.00 %, functions 52.19 to 70.07 %, branches
+  51.19 to 68.95 %; backend lines 76.35 to 87.90 %, statements 75.14 to 86.34 %,
+  functions 76.63 to 89.50 %, branches 61.82 to 72.93 %. The baseline was
+  tightened to these figures. Most of the rise is three weeks of other work on the
+  branch's base, not bus alone.
+- Odd zones: the bus and shared-ride suites (backend: route, entry suggestions,
+  trip status, write service, `rideEnds`, counting — 6 suites, 56 tests; frontend:
+  counting, form model and modal, both pages — 5 files, 53 tests) give the same
+  verdict under `Pacific/Kiritimati` and `America/St_Johns` as in the default
+  zone; so do all 45 rail suites (357 tests), which share `rideEnds`.
+
+**Browser look (iPad portrait 1024 × 1366, production build, headless Chromium,
+admin account with the beta switch on and `bus` enabled).** Settings stayed German.
+The form (typed coordinates `37.5048, 127.0046` and `38.1911, 128.5918` into the
+terminal searches, names typed as on the ticket, 2026-09-20 09:00 to 11:20, 23000
+KRW) saved with the toast "Busfahrt gespeichert". The list row showed "Kobus",
+"Seoul Express Bus Terminal → Sokcho Express Bus Terminal", "20.09.2026, 09:00 –
+11:20" and the pill "Gefahren". **At 1024 px the shared table steps three columns
+aside (duration, distance, trip) and says so under the table**; the duration
+"2 h 20 min" and "159 km" with "Luftlinie" read in the row at 1366 px, and both
+are always in the detail. Opening the row led to `/bus/:id` with the KPIs
+"Abfahrt · Asia/Seoul 09:00", "Ankunft · Asia/Seoul 11:20", "2 h 20 min", "159 km
+Luftlinie", "23.000 ₩", the status pill and the empty documents section. With the
+beta switch off, `/bus` redirected to `/dashboard` and the Bus tab left the
+logbook strip. The only 5xx seen were airline-logo requests on the flights page
+(no network in the sandbox), unrelated. Not looked at: a phone width (not a
+target), the map (B2), and a real geocoder search (offline; coordinates typed).
+
+**Deferred minors (from the task reviews, none blocking):** a migration test title
+promises a refusal it does not exercise, and `rideKind: "charter"` is not pinned
+as rejected; `isLocalDayInput` is still duplicated in `rail.ts`; the FX test
+cannot fail on "dated by departure" or "PATCH keeps the snapshot", and PATCH has
+no cross-user or invalid-body test; `listAll` multi-page is untested; after a save
+whose parent refetch fails the dialog shows no notice; the year scan is capped at
+500 rides and refetched after each save; the gating tests cover three of seven
+surfaces; `tripEntryCount` answers 0 for bus until B2; the OpenAPI query block
+repeats `busQuerySchema` (the status array is undocumented, as in rail); a few
+cosmetic comment and blank-line items.
