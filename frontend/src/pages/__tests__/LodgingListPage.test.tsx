@@ -746,10 +746,37 @@ describe("LodgingListPage", () => {
     renderListPage();
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toBe("lodging:list.loadError");
+    expect(alert.textContent).toContain("lodging:list.loadError");
     // The failure must not silently render as if there were zero lodgings —
     // the error alert state supersedes the empty state.
     expect(screen.queryByText("lodging:list.empty")).not.toBeInTheDocument();
+  });
+
+  // forgejo#247: the failed read was a red sentence with nothing to press.
+  it("offers a retry on a failed read, and the retry reads again", async () => {
+    listLodgingPageMock.mockRejectedValueOnce(new Error("network failure"));
+    mockRows([makeLodging({ id: "l1", name: "Hotel Adlon" })]);
+
+    renderListPage();
+
+    const retry = await screen.findByRole("button", { name: "common:buttons.retry" });
+    const callsBefore = listLodgingPageMock.mock.calls.length;
+    await userEvent.click(retry);
+
+    await waitFor(() => expect(listLodgingPageMock.mock.calls.length).toBeGreaterThan(callsBefore));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "common:buttons.retry" })).not.toBeInTheDocument()
+    );
+    expect(screen.queryByText("lodging:list.loadError")).not.toBeInTheDocument();
+  });
+
+  // forgejo#250: "add your first lodging" with the button to do it.
+  it("offers to add the first lodging when the library is empty", async () => {
+    mockRows([]);
+    renderListPage();
+
+    await userEvent.click(await screen.findByRole("button", { name: "lodging:add.title" }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
   });
 
   // Bulk import is central (Settings → Import); this page only links there.

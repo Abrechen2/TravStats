@@ -14,6 +14,7 @@ import { SortableHeader } from "../components/table/SortableHeader";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
+import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
 import ListFilterBar, {
   FilterField,
   PANEL_SELECT_CLASS,
@@ -99,6 +100,7 @@ export default function CruisesPage(): JSX.Element {
   const [facets, setFacets] = useState<CruiseFacets | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<boolean>(false);
+  const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState<boolean>(false);
   const importAdapter = useCruiseImportAdapter();
   const [editingCruise, setEditingCruise] = useState<Cruise | null>(null);
@@ -229,6 +231,7 @@ export default function CruisesPage(): JSX.Element {
         // indistinguishable from an account that has no cruises yet.
         logger.error("CruisesPage: failed to load cruises", err);
         setLoadError(true);
+        setLoadFailure(loadFailureLog(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -444,12 +447,12 @@ export default function CruisesPage(): JSX.Element {
         />
 
         {loadError ? (
-          <div
-            role="alert"
-            className="rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-4 py-4 text-sm text-[var(--danger)]"
-          >
-            {t("list.loadError")}
-          </div>
+          // A failed read with a way forward (forgejo#247), not a dead end.
+          <ListLoadFailed
+            title={t("list.loadError")}
+            onRetry={(): void => void reload()}
+            log={loadFailure}
+          />
         ) : loading ? (
           <SkeletonTable rows={10} />
         ) : cruises.length === 0 ? (
@@ -462,6 +465,7 @@ export default function CruisesPage(): JSX.Element {
               emptyTitle={t("list.empty")}
               emptyHint={t("list.emptyHint")}
               onReset={resetFilters}
+              action={{ label: t("add.title"), onClick: () => setShowAdd(true) }}
             />
           </div>
         ) : (

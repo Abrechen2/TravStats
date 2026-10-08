@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import Modal from "../Modal";
@@ -13,8 +13,40 @@ import { LodgingOsmNearby } from "./LodgingOsmNearby";
 import { lodgingTypeForKind, osmFillFor } from "./lodgingFromOsm";
 import TagInput from "../TagInput";
 import { useLodgingEntrySuggestions } from "../../hooks/useLodgingEntrySuggestions";
+import { saveErrorKey } from "../../lib/saveErrorMessage";
+import {
+  FieldError,
+  FormErrorBanner,
+  RequiredLegend,
+  RequiredMark,
+  SaveBlockedHint,
+  fieldErrorProps,
+  focusFirstError,
+  useDirtyGuard,
+  useSaveOnce,
+} from "../form";
+import type { MissingStep } from "../form";
+import { lodgingFieldErrors, lodgingFormFields, lodgingFormSnapshot } from "./lodgingFormDraft";
+import type { LodgingFieldErrors } from "./lodgingFormDraft";
 
 const LODGING_TYPES: LodgingType[] = ["hotel", "campsite", "guesthouse", "apartment", "hostel"];
+
+const NAME_ID = "lodging-form-name";
+const STARS_ID = "lodging-form-stars";
+const WEBSITE_ID = "lodging-form-website";
+const LOCATION_PREFIX = "lodging-form-location";
+const HINT_ID = "lodging-form-save-blocked";
+
+/**
+ * Failures where pressing the same button again is the likely cure — the
+ * banner offers "Erneut versuchen" for these and not for a refusal of the
+ * input itself, where retrying would only be refused again.
+ */
+const TRANSIENT_KEYS: ReadonlySet<string> = new Set([
+  "common:saveErrors.network",
+  "common:saveErrors.dbUnavailable",
+  "common:saveErrors.rateLimited",
+]);
 
 interface LodgingFormModalProps {
   mode: "create" | "edit";
@@ -36,37 +68,90 @@ export function LodgingFormModal({
   onSaved,
 }: LodgingFormModalProps): JSX.Element {
   const { t } = useTranslation(["lodging", "common", "location", "openData"]);
-  const [type, setType] = useState<LodgingType>(lodging?.type ?? "hotel");
+  // ONE source for the starting values, read by the state below AND by the
+  // dirty guard: if the two drifted (say `stars` as "" here and as null
+  // there), every edit form would open already "changed" and ask about it.
+  const initial = lodgingFormFields(lodging);
+  const [type, setType] = useState<LodgingType>(initial.type);
   // "hotel" is only the select's starting point, so an OSM pick may replace it
   // on a new lodging — until the user chooses a type themselves.
   const [typeChosen, setTypeChosen] = useState<boolean>(mode === "edit");
   const [osmFilled, setOsmFilled] = useState<string | null>(null);
-  const [chain, setChain] = useState<LodgingChain | null>(lodging?.chain ?? null);
-  const [name, setName] = useState<string>(lodging?.name ?? "");
-  const [address, setAddress] = useState<string>(lodging?.address ?? "");
-  const [city, setCity] = useState<string>(lodging?.city ?? "");
-  const [country, setCountry] = useState<string>(lodging?.country ?? "");
-  const [lat, setLat] = useState<number | null>(lodging?.lat ?? null);
-  const [lon, setLon] = useState<number | null>(lodging?.lon ?? null);
+  const [chain, setChain] = useState<LodgingChain | null>(initial.chain);
+  const [name, setName] = useState<string>(initial.name);
+  const [address, setAddress] = useState<string>(initial.address);
+  const [city, setCity] = useState<string>(initial.city);
+  const [country, setCountry] = useState<string>(initial.country);
+  const [lat, setLat] = useState<number | null>(initial.lat);
+  const [lon, setLon] = useState<number | null>(initial.lon);
   /** The OSM house the user picked from "nearby" — sent so the server can
    *  remember WHICH house this is (stored only while the row has none). */
   const [osmRef, setOsmRef] = useState<string | null>(null);
   /** Where the pin stood before a nearby pick moved it onto the house, so
    *  the move can be taken back. */
   const [pinBeforePick, setPinBeforePick] = useState<LocationCoordinates | null>(null);
-  const [stars, setStars] = useState<string>(lodging?.stars?.toString() ?? "");
-  const [amenities, setAmenities] = useState<string[]>(lodging?.amenities ?? []);
+  const [stars, setStars] = useState<string>(initial.stars);
+  const [amenities, setAmenities] = useState<string[]>(initial.amenities);
   const entrySuggestions = useLodgingEntrySuggestions();
-  const [notes, setNotes] = useState<string>(lodging?.notes ?? "");
-  const [website, setWebsite] = useState<string>(lodging?.website ?? "");
-  const [saving, setSaving] = useState(false);
+  const [notes, setNotes] = useState<string>(initial.notes);
+  const [website, setWebsite] = useState<string>(initial.website);
   // Forgejo #9: out-of-range coordinates used to vanish silently and the
   // record saved without them. LocationInput now says so; this stops the
   // form writing while the user is looking at that message.
   const [coordsValid, setCoordsValid] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const position: LocationCoordinates | null = lat !== null && lon !== null ? { lat, lon } : null;
+
+  const snapshot = lodgingFormSnapshot({
+    type,
+    chain,
+    name,
+    address,
+    city,
+    country,
+    lat,
+    lon,
+    osmRef,
+    stars,
+    amenities,
+    notes,
+    website,
+  });
+  const { dirty, markSaved } = useDirtyGuard(lodgingFormSnapshot(initial), snapshot);
+  const { save, saving, saved, afterSaveFailed } = useSaveOnce<Lodging>();
+  const snapshotKey = JSON.stringify(snapshot);
+
+  // A refused save, remembered together with the draft it was refused for.
+  // It shows until the draft changes — "until the next edit" — without an
+  // effect that would have to remember to clear it from every setter.
+  const [failure, setFailure] = useState<{ key: string; draft: string } | null>(null);
+  const failureKey = failure !== null && failure.draft === snapshotKey ? failure.key : null;
+
+  // Field rules the server enforces too (`backend/src/schemas/lodging.ts`).
+  // Checked here so the complaint lands AT the field: before, "7 Sterne" came
+  // back as the form's one generic sentence, naming nothing. Shown only after
+  // the first save attempt, then live, so nobody is scolded mid-keystroke.
+  const [attempted, setAttempted] = useState(false);
+  const fieldErrors: LodgingFieldErrors = attempted ? lodgingFieldErrors({ stars, website }) : {};
+  const starsError = fieldErrors.stars ? t(fieldErrors.stars) : null;
+  const websiteError = fieldErrors.website ? t(fieldErrors.website) : null;
+
+  // What keeps "Speichern" greyed out, said beside it (forgejo#245). The
+  // coordinate check lives in a FOLDED section of `LocationInput`; naming it
+  // here is the only way a user learns of it without opening that section.
+  const missing: MissingStep[] = [
+    ...(name.trim().length === 0 ? [{ field: NAME_ID, label: t("lodging:field.name") }] : []),
+    ...(!coordsValid
+      ? [{ field: `${LOCATION_PREFIX}-lat`, label: t("lodging:form.missing.coordinates") }]
+      : []),
+  ];
+
+  // Focus moves to the first problem after the render that shows it.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [focusRequest, setFocusRequest] = useState(0);
+  useEffect(() => {
+    if (focusRequest > 0) focusFirstError(bodyRef.current);
+  }, [focusRequest]);
 
   // A selection always reports the picked position; the text fields it
   // ALSO carries (search hit) only overwrite what the user already typed
@@ -134,52 +219,57 @@ export function LodgingFormModal({
   };
 
   const handleSave = async (): Promise<void> => {
-    if (mode === "edit" && !lodging) {
-      // Defensive only — callers always pass `lodging` in edit mode.
-      setError(t("lodging:form.saveError"));
+    setAttempted(true);
+    if (Object.keys(lodgingFieldErrors({ stars, website })).length > 0) {
+      setFocusRequest((n) => n + 1);
       return;
     }
-    setSaving(true);
-    setError(null);
-    try {
-      const input: LodgingInput = {
-        type,
-        name: name.trim(),
-        chainId: chain?.id ?? null,
-        // `null` (not `undefined`) so an emptied field actually clears the
-        // stored value instead of being dropped by JSON.stringify and read
-        // back as "unchanged" (finding 4).
-        address: address.trim() || null,
-        city: city.trim() || null,
-        country: country.trim() || null,
-        // Explicit `null` (not `undefined`) for the same reason as
-        // address/city/country above — clearing the pin must actually
-        // clear the stored coords, not be dropped as "unchanged".
-        lat,
-        lon,
-        stars: stars.trim() ? Number.parseInt(stars, 10) : null,
-        amenities,
-        notes: notes.trim() || null,
-        // Empty clears it — same explicit `null` rule as the fields above.
-        website: website.trim() || null,
-        ...(osmRef !== null && { osmRef }),
-      };
-      let saved: Lodging;
-      if (mode === "create") {
-        saved = await createLodging(input);
-      } else if (lodging) {
-        saved = await updateLodging(lodging.id, input);
-      } else {
-        // Unreachable — the guard above already returned for this case —
-        // but this keeps `lodging.id` above type-checked without an assertion.
-        return;
+    if (mode === "edit" && !lodging) {
+      // Defensive only — callers always pass `lodging` in edit mode.
+      setFailure({ key: "lodging:form.saveError", draft: snapshotKey });
+      return;
+    }
+    const input: LodgingInput = {
+      type,
+      name: name.trim(),
+      chainId: chain?.id ?? null,
+      // `null` (not `undefined`) so an emptied field actually clears the
+      // stored value instead of being dropped by JSON.stringify and read
+      // back as "unchanged" (finding 4).
+      address: address.trim() || null,
+      city: city.trim() || null,
+      country: country.trim() || null,
+      // Explicit `null` (not `undefined`) for the same reason as
+      // address/city/country above — clearing the pin must actually
+      // clear the stored coords, not be dropped as "unchanged".
+      lat,
+      lon,
+      stars: stars.trim() ? Number.parseInt(stars, 10) : null,
+      amenities,
+      notes: notes.trim() || null,
+      // Empty clears it — same explicit `null` rule as the fields above.
+      website: website.trim() || null,
+      ...(osmRef !== null && { osmRef }),
+    };
+    setFailure(null);
+    // The request and what follows it are two steps (forgejo#247): a list
+    // that fails to reload must not turn a stored lodging into "konnte nicht
+    // gespeichert werden" — the next click would have created it twice.
+    const outcome = await save(
+      () =>
+        mode === "create" || !lodging ? createLodging(input) : updateLodging(lodging.id, input),
+      async (stored) => {
+        markSaved();
+        await onSaved(stored);
       }
-      await onSaved(saved);
-    } catch (err: unknown) {
-      logger.error("LodgingFormModal: save failed", err);
-      setError(t("lodging:form.saveError"));
-    } finally {
-      setSaving(false);
+    );
+    if (outcome.status === "failed") {
+      logger.error("LodgingFormModal: save failed", outcome.error);
+      setFailure({
+        key: saveErrorKey(outcome.error, "lodging:form.saveError"),
+        draft: snapshotKey,
+      });
+      setFocusRequest((n) => n + 1);
     }
   };
 
@@ -194,30 +284,53 @@ export function LodgingFormModal({
       open
       onClose={onClose}
       busy={saving}
+      dirty={dirty}
       closeLabel={t("common:buttons.close")}
       title={title}
-      footer={
-        <>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)] disabled:opacity-50"
-          >
-            {t("common:buttons.cancel")}
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleSave()}
-            disabled={saving || name.trim().length === 0 || !coordsValid}
-            className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)] disabled:opacity-50"
-          >
-            {saving ? t("common:buttons.saving") : t("common:buttons.save")}
-          </button>
-        </>
+      footer={(requestClose) =>
+        // Stored, but the follow-up failed: the only honest action left is to
+        // close. Another "Speichern" would send nothing (`useSaveOnce`), and
+        // a button that does nothing is worse than no button.
+        afterSaveFailed ? (
+          <>
+            <p role="status" className="mr-auto self-center text-sm text-[var(--text-muted)]">
+              {t("common:form.savedButRefreshFailed")}
+            </p>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)]"
+            >
+              {t("common:buttons.close")}
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="mr-auto self-center">
+              <SaveBlockedHint id={HINT_ID} missing={missing} />
+            </div>
+            <button
+              type="button"
+              onClick={requestClose}
+              disabled={saving}
+              className="rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)] disabled:opacity-50"
+            >
+              {t("common:buttons.cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={saving || saved !== null || missing.length > 0}
+              aria-describedby={HINT_ID}
+              className="rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-[var(--accent-dim)] disabled:opacity-50"
+            >
+              {saving ? t("common:buttons.saving") : t("common:buttons.save")}
+            </button>
+          </>
+        )
       }
     >
-      <>
+      <div ref={bodyRef}>
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {/* FIRST field, and named "Unterkunft suchen" (Alex, Discord
               2026-07-12). It sat below the name field, but a search hit fills
@@ -230,7 +343,7 @@ export function LodgingFormModal({
               onChange={handleLocationChange}
               onValidityChange={setCoordsValid}
               label={t("lodging:form.searchLabel")}
-              idPrefix="lodging-form-location"
+              idPrefix={LOCATION_PREFIX}
             />
             {position !== null && (
               <button
@@ -260,8 +373,12 @@ export function LodgingFormModal({
             )}
           </div>
           <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)] sm:col-span-2">
-            {t("lodging:field.name")}
+            <span>
+              {t("lodging:field.name")} <RequiredMark />
+            </span>
             <input
+              id={NAME_ID}
+              aria-required="true"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
@@ -288,17 +405,24 @@ export function LodgingFormModal({
             {t("lodging:field.chain")}
             <ChainPicker value={chain} onChange={setChain} />
           </label>
-          <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)]">
-            {t("lodging:field.stars")}
-            <input
-              type="number"
-              min={1}
-              max={5}
-              value={stars}
-              onChange={(e) => setStars(e.target.value)}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
-            />
-          </label>
+          {/* The error sits OUTSIDE the label: inside it, its text would
+              become part of the field's name ("Sterne 1 bis 5 …"). */}
+          <div className="flex flex-col gap-1">
+            <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)]">
+              {t("lodging:field.stars")}
+              <input
+                id={STARS_ID}
+                type="number"
+                min={1}
+                max={5}
+                value={stars}
+                onChange={(e) => setStars(e.target.value)}
+                {...fieldErrorProps(STARS_ID, starsError)}
+                className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              />
+            </label>
+            <FieldError id={STARS_ID} error={starsError} />
+          </div>
           <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)] sm:col-span-2">
             {t("lodging:field.address")}
             <input
@@ -323,16 +447,21 @@ export function LodgingFormModal({
               className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)] sm:col-span-2">
-            {t("lodging:field.website")}
-            <input
-              type="url"
-              value={website}
-              onChange={(e) => setWebsite(e.target.value)}
-              placeholder="https://"
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
-            />
-          </label>
+          <div className="flex flex-col gap-1 sm:col-span-2">
+            <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)]">
+              {t("lodging:field.website")}
+              <input
+                id={WEBSITE_ID}
+                type="url"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+                placeholder="https://"
+                {...fieldErrorProps(WEBSITE_ID, websiteError)}
+                className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              />
+            </label>
+            <FieldError id={WEBSITE_ID} error={websiteError} />
+          </div>
           <div className="flex flex-col gap-1 text-xs text-[var(--text-muted)] sm:col-span-2">
             <label htmlFor="lodging-form-amenities">{t("lodging:field.amenities")}</label>
             <TagInput
@@ -357,8 +486,17 @@ export function LodgingFormModal({
           </label>
         </div>
 
-        {error && <p className="mt-3 text-sm text-[var(--danger)]">{error}</p>}
-      </>
+        <FormErrorBanner
+          message={failureKey !== null ? t(failureKey) : null}
+          onRetry={
+            failureKey !== null && TRANSIENT_KEYS.has(failureKey)
+              ? () => void handleSave()
+              : undefined
+          }
+          retryDisabled={saving}
+        />
+        <RequiredLegend className="mt-3" />
+      </div>
     </Modal>
   );
 }
