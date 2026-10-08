@@ -15,7 +15,7 @@ import userEvent from "@testing-library/user-event";
 import Modal from "../../Modal";
 import Dialog from "../../ui/Dialog";
 import { useDirtyGuard } from "../useDirtyGuard";
-import { openDirtyDialogCount } from "../useDiscardGuard";
+import { openDirtyDialogCount } from "../unsavedChanges";
 
 afterEach(cleanup);
 

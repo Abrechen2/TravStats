@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { leaveThroughHistory, registerDirtyDialog } from "./unsavedChanges";
 
 /**
  * The close path of a dialog that holds unsaved input (forgejo#248).
@@ -16,13 +17,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
  *   flight leaves the user not knowing whether it happened.
  * - **Changed asks**; the caller renders the question from `question`.
  *
- * In-app navigation is NOT guarded here, and cannot be cheaply: the app mounts
- * `<BrowserRouter>`, not a data router, so react-router's `useBlocker` is not
- * available, and migrating the router for this would touch every route. It
- * matters less than it sounds — the dialog covers the page, so reaching a link
- * means a click on the scrim first, and that click is guarded. A full page
- * unload (reload, closing the tab, typing a URL) is guarded through
- * `beforeunload` below.
+ * Leaving the PAGE is guarded too, through `unsavedChanges`: `beforeunload`
+ * for a reload or closing the tab, and a history sentinel for the browser's
+ * Back (button, Alt+←, the iPad's swipe), which asks this same question.
+ * In-app links need no guard of their own: the dialog covers the page, so
+ * reaching one means a click on the scrim first, and that click is guarded.
+ * Not covered: a reload or tab close on iOS Safari (it ignores
+ * `beforeunload`), and a jump several entries back through the long-press
+ * history menu.
  */
 export interface DiscardGuard {
   /** Close now, ask first, or ignore — see above. */
@@ -42,26 +44,6 @@ interface Options {
   onClose: () => void;
 }
 
-/**
- * How many open dialogs hold unsaved input. One listener for all of them,
- * counted like the scroll lock in `useDialogChrome`: with one listener per
- * dialog a nested picker that closed would remove a listener the form under
- * it still needed.
- */
-let dirtyCount = 0;
-
-function onBeforeUnload(event: BeforeUnloadEvent): void {
-  // Both, because browsers disagree on which one they read; neither shows our
-  // text — every browser substitutes its own fixed sentence.
-  event.preventDefault();
-  event.returnValue = "";
-}
-
-/** Exposed for the test that checks the listener is only there while dirty. */
-export function openDirtyDialogCount(): number {
-  return dirtyCount;
-}
-
 export function useDiscardGuard({ open, dirty, busy, onClose }: Options): DiscardGuard {
   const [asking, setAsking] = useState(false);
   const stateRef = useRef({ dirty, busy, onClose });
@@ -69,15 +51,18 @@ export function useDiscardGuard({ open, dirty, busy, onClose }: Options): Discar
     stateRef.current = { dirty, busy, onClose };
   });
 
+  /** The open question came from the browser's Back, not from a close. */
+  const fromHistory = useRef(false);
+
   const guarding = open && dirty;
   useEffect(() => {
     if (!guarding) return;
-    dirtyCount += 1;
-    if (dirtyCount === 1) window.addEventListener("beforeunload", onBeforeUnload);
-    return () => {
-      dirtyCount -= 1;
-      if (dirtyCount === 0) window.removeEventListener("beforeunload", onBeforeUnload);
-    };
+    return registerDirtyDialog({
+      askFromHistory: () => {
+        fromHistory.current = true;
+        setAsking(true);
+      },
+    });
   }, [guarding]);
 
   // A dialog that closed (or saved, which also ends "dirty") must not come
@@ -96,10 +81,17 @@ export function useDiscardGuard({ open, dirty, busy, onClose }: Options): Discar
 
   const discard = useCallback((): void => {
     setAsking(false);
+    if (fromHistory.current) {
+      fromHistory.current = false;
+      leaveThroughHistory();
+    }
     stateRef.current.onClose();
   }, []);
 
-  const keepEditing = useCallback((): void => setAsking(false), []);
+  const keepEditing = useCallback((): void => {
+    fromHistory.current = false;
+    setAsking(false);
+  }, []);
 
   return { requestClose, asking, discard, keepEditing };
 }
