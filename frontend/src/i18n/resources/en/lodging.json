@@ -680,7 +680,7 @@
   },
   "repair": {
     "title": "Add the location",
-    "intro": "“{{name}}” has no point on the map. Search the address again or set the point yourself – you see the result before you take it. Everything else stays as it is.",
+    "intro": "“{{name}}” has no point on the map. Search the address again or set the point yourself – you see the result before you take it. Taking it fills empty address fields from the new position, and a country field that names no country is replaced by the position's country. The name and everything else stay.",
     "queryLabel": "Search text",
     "search": "Search the address again",
     "searching": "Searching …",

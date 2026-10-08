@@ -680,7 +680,7 @@
   },
   "repair": {
     "title": "Standort ergänzen",
-    "intro": "Zu „{{name}}“ fehlt der Punkt auf der Karte. Such die Adresse erneut oder setz den Punkt selbst – du siehst das Ergebnis, bevor du es übernimmst. Alle anderen Angaben bleiben unverändert.",
+    "intro": "Zu „{{name}}“ fehlt der Punkt auf der Karte. Such die Adresse erneut oder setz den Punkt selbst – du siehst das Ergebnis, bevor du es übernimmst. Beim Übernehmen werden leere Adressfelder aus der neuen Position ergänzt, und ein Länderfeld, das gar kein Land nennt, wird durch das Land der Position ersetzt. Name und alle übrigen Angaben bleiben.",
     "queryLabel": "Suchtext",
     "search": "Adresse erneut suchen",
     "searching": "Suche läuft …",

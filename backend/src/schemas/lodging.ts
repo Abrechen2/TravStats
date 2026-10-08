@@ -97,12 +97,17 @@ const baseLodgingSchema = z.object({
 });
 
 export const createLodgingSchema = baseLodgingSchema;
-export const updateLodgingSchema = partialForUpdate(baseLodgingSchema).refine(
-  (d) => Object.keys(d).length > 0,
-  {
+export const updateLodgingSchema = partialForUpdate(baseLodgingSchema)
+  .refine((d) => Object.keys(d).length > 0, {
     message: "At least one field must be provided for update",
-  }
-);
+  })
+  // A position is a pair. One coordinate on its own would store half a pin (the
+  // in-place location repair writes exactly `{ lat, lon }`), and an explicit
+  // null for the pair is how the pin is removed.
+  .refine((d) => (d.lat === undefined) === (d.lon === undefined), {
+    message: "lat and lon must be sent together",
+    path: ["lon"],
+  });
 
 // "HH:mm", 24h. Deliberately NOT a datetime: the day lives in
 // checkIn/checkOut, and re-encoding it here would create two sources of
