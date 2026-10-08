@@ -140,9 +140,16 @@ export default function DomainImportPanel({
     setParseState(null);
   }, []);
 
+  // The manual form stays MOUNTED until `onItemsCreated` has settled
+  // (forgejo#247). It used to be unmounted first, so a reload that failed after
+  // the record was stored had no form left to say "saved, the list could not be
+  // refreshed" - the user saw a dialog vanish and a list without their entry.
+  // The adapters hand this promise to the form's `onSaved`, so a rejection
+  // reaches `useSaveOnce`, which keeps the form open with that notice (and no
+  // second create); on success the panel closes as before.
   const handleManualSaved = useCallback(async (): Promise<void> => {
-    setShowManual(false);
     await onItemsCreated();
+    setShowManual(false);
     onClose();
   }, [onItemsCreated, onClose]);
 
