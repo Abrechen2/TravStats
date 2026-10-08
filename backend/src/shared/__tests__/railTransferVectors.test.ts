@@ -23,11 +23,25 @@ interface StationVector {
   lat: number;
   lon: number;
 }
+/** The transfer view's cases may lack a position — that is one of the cases. */
+interface DisplayStationVector {
+  id: number | null;
+  name: string;
+  lat: number | null;
+  lon: number | null;
+}
 interface VectorFile {
   sameStationKm: number;
   maxTransferMinutes: number;
   sameStation: Array<{ id: string; a: StationVector; b: StationVector; same: boolean }>;
   transferLimit: Array<{ id: string; waitMinutes: number; change: boolean }>;
+  displaySameStationMeters: number;
+  transferStation: Array<{
+    id: string;
+    a: DisplayStationVector;
+    b: DisplayStationVector;
+    expect: { kind: "same" | "change" | "unconfirmed"; meters?: number };
+  }>;
 }
 
 const VECTORS_PATH = path.resolve(__dirname, "../../../../shared/rail/transferVectors.json");
@@ -81,5 +95,19 @@ describe("shared/rail/transferVectors.json — the server", () => {
       leg("l2", STATION_B, STATION_C, departure, new Date(departure.getTime() + 3_600_000)),
     ]);
     expect(groups.length === 1).toBe(c.change);
+  });
+
+  // The transfer line's own rule (150 m) lives in the web; what the server
+  // owes it is the invariant the file's note states: the display threshold
+  // sits inside the grouping one, and every pair the transfer line calls the
+  // same station is one the server groups as the same station.
+  it("keeps the transfer line's threshold inside the grouping's", () => {
+    expect(vectors.displaySameStationMeters).toBeLessThan(SAME_STATION_KM * 1000);
+  });
+
+  it.each(
+    vectors.transferStation.filter((c) => c.expect.kind === "same").map((c) => [c.id, c] as const)
+  )("a display 'same station' also groups: %s", (_id, c) => {
+    expect(sameStation(c.a as StationVector, c.b as StationVector)).toBe(true);
   });
 });

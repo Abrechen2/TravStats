@@ -190,6 +190,11 @@ describe("RailDetailPage", () => {
         depStationName: "Fulda Süd",
         arrStationName: "Berlin",
         departureTime: "2026-09-26T05:00:00.000Z",
+        // 600 m north of the first leg's arrival (50.55, 9.68).
+        depLat: 50.5554,
+        depLon: 9.68,
+        arrLat: 52.525,
+        arrLon: 13.3694,
       }),
     ];
     await renderPage(detail({ booking: { id: "b1", pnr: "AB12CD", railJourneys: legs } }));
@@ -197,7 +202,7 @@ describe("RailDetailPage", () => {
     expect(note).toHaveAttribute("data-kind", "conflict");
     expect(note.textContent).toContain('rail:detail.durationM {\\"m\\":10}');
     expect(screen.getByTestId("rail-transfer-1-station-change")).toHaveTextContent(
-      'rail:transfer.stationChange {"from":"Fulda","to":"Fulda Süd"}'
+      'rail:transfer.stationChange {"from":"Fulda","to":"Fulda Süd","distance":"rail:transfer.distanceM {\\"value\\":600}"}'
     );
   });
 

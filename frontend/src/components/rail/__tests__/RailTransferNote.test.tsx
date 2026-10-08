@@ -41,7 +41,7 @@ describe("RailTransferNote", () => {
   beforeEach(() => update.mockReset());
 
   it("names the wait at the station", () => {
-    renderNote({ kind: "transfer", minutes: 25, stationChange: false, shortHint: false });
+    renderNote({ kind: "transfer", minutes: 25, station: { kind: "same" }, shortHint: false });
     const note = screen.getByTestId("rail-transfer-1");
     expect(note).toHaveTextContent('rail:transfer.wait {"station":"Paris Est"');
     expect(note).toHaveTextContent('rail:detail.durationM {\\"m\\":25}');
@@ -50,34 +50,65 @@ describe("RailTransferNote", () => {
   });
 
   it("says a short wait as a hint, never as a promise", () => {
-    renderNote({ kind: "transfer", minutes: 6, stationChange: false, shortHint: true });
+    renderNote({ kind: "transfer", minutes: 6, station: { kind: "same" }, shortHint: true });
     expect(screen.getByTestId("rail-transfer-1-hint")).toHaveTextContent(
       'rail:transfer.shortHint {"minutes":10}'
     );
   });
 
-  it("says a change of stations by both names", () => {
-    renderNote({ kind: "transfer", minutes: 70, stationChange: true, shortHint: false });
+  it("says a change of stations by both names and the straight-line distance", () => {
+    renderNote({
+      kind: "transfer",
+      minutes: 70,
+      station: { kind: "change", meters: 2630 },
+      shortHint: false,
+    });
     expect(screen.getByTestId("rail-transfer-1-station-change")).toHaveTextContent(
-      'rail:transfer.stationChange {"from":"Paris Est","to":"Paris Gare de Lyon"}'
+      'rail:transfer.stationChange {"from":"Paris Est","to":"Paris Gare de Lyon","distance":"rail:transfer.distanceKm {\\"value\\":\\"2,6\\"}"}'
     );
   });
 
+  // Ruling 2026-10-08: Paris Est → Paris Nord is a change, with its distance.
+  it("rounds a short walk to 50 m steps, as an estimate", () => {
+    renderNote({
+      kind: "transfer",
+      minutes: 30,
+      station: { kind: "change", meters: 534 },
+      shortHint: false,
+    });
+    expect(screen.getByTestId("rail-transfer-1-station-change")).toHaveTextContent(
+      'rail:transfer.distanceM {\\"value\\":550}'
+    );
+  });
+
+  it("says another name without a position as unconfirmed, never as a change", () => {
+    renderNote({
+      kind: "transfer",
+      minutes: 30,
+      station: { kind: "unconfirmed" },
+      shortHint: false,
+    });
+    expect(screen.getByTestId("rail-transfer-1-station-unconfirmed")).toHaveTextContent(
+      "rail:transfer.stationUnconfirmed"
+    );
+    expect(screen.queryByTestId("rail-transfer-1-station-change")).toBeNull();
+  });
+
   it("shows a departure before the arrival as a conflict with the overlap, not as 0", () => {
-    renderNote({ kind: "conflict", minutes: -12, stationChange: false });
+    renderNote({ kind: "conflict", minutes: -12, station: { kind: "same" } });
     const note = screen.getByTestId("rail-transfer-1");
     expect(note).toHaveAttribute("data-kind", "conflict");
     expect(note).toHaveTextContent("rail:transfer.conflict");
     expect(note).toHaveTextContent('rail:detail.durationM {\\"m\\":12}');
   });
 
-  it("says an unknown wait as unknown, and still names a change of stations", () => {
-    renderNote({ kind: "unknown", stationChange: true, reason: "time" });
+  it("says an unknown wait as unknown, and still says what is known of the station", () => {
+    renderNote({ kind: "unknown", reason: "time", station: { kind: "unconfirmed" } });
     const note = screen.getByTestId("rail-transfer-1");
     expect(note).toHaveTextContent("rail:transfer.unknown");
     expect(note).toHaveTextContent("rail:transfer.unknownWhy");
     expect(note).not.toHaveTextContent("durationM");
-    expect(screen.getByTestId("rail-transfer-1-station-change")).toBeInTheDocument();
+    expect(screen.getByTestId("rail-transfer-1-station-unconfirmed")).toBeInTheDocument();
   });
 
   it("draws another ride as a divider without a mark to set", () => {
@@ -88,7 +119,7 @@ describe("RailTransferNote", () => {
 
   it("saves the mark on the arriving leg and shows the stored value", async () => {
     update.mockResolvedValue({ journey: { id: "j1", tightConnection: true }, geometry: null });
-    renderNote({ kind: "transfer", minutes: 25, stationChange: false, shortHint: false });
+    renderNote({ kind: "transfer", minutes: 25, station: { kind: "same" }, shortHint: false });
     const box = screen.getByRole("checkbox", { name: "rail:transfer.markTight" });
     fireEvent.click(box);
     expect(box).toBeDisabled();
@@ -98,7 +129,10 @@ describe("RailTransferNote", () => {
 
   it("keeps the stored mark and says so when saving it fails", async () => {
     update.mockRejectedValueOnce({ isAxiosError: true, message: "Network Error" });
-    renderNote({ kind: "transfer", minutes: 25, stationChange: false, shortHint: false }, true);
+    renderNote(
+      { kind: "transfer", minutes: 25, station: { kind: "same" }, shortHint: false },
+      true
+    );
     const box = screen.getByRole("checkbox", { name: "rail:transfer.markTight" });
     expect(box).toBeChecked();
     fireEvent.click(box);
@@ -109,7 +143,7 @@ describe("RailTransferNote", () => {
 
   // Review 2026-10-08, important 1: an unknown order claims nothing at all.
   it("says only that the order is unknown, with no station claim and no mark", () => {
-    renderNote({ kind: "unknown", stationChange: false, reason: "order" });
+    renderNote({ kind: "unknown", reason: "order" });
     const shown = screen.getByTestId("rail-transfer-1");
     expect(shown).toHaveTextContent("rail:transfer.orderUnknown");
     expect(shown).not.toHaveTextContent("rail:transfer.unknown ");
@@ -122,7 +156,7 @@ describe("RailTransferNote", () => {
     const transfer: RailTransfer = {
       kind: "transfer",
       minutes: 25,
-      stationChange: false,
+      station: { kind: "same" },
       shortHint: false,
     };
     const { rerender } = renderNote(transfer, false);

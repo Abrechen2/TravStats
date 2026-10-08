@@ -38,15 +38,26 @@ export type RailTransferLeg = RailLike &
     | "arrLon"
   >;
 
+/**
+ * "Must I go to another station?" — the TRANSFER view's question, which is
+ * not the grouping's (see `transferStation`).
+ * - `same`: the same station, or two names for it a few steps apart;
+ * - `change`: another station, `meters` away in a straight line — never a
+ *   walking time, which nothing here knows;
+ * - `unconfirmed`: another name, and a position is missing, so whether it is
+ *   another place cannot be told either way.
+ */
+export type StationVerdict =
+  { kind: "same" } | { kind: "change"; meters: number } | { kind: "unconfirmed" };
+
 export type RailTransfer =
-  /**
-   * `time`: either end is not known to the minute, or missing. `order`: the
-   * two legs' order itself is not known, so no station is claimed either.
-   */
-  | { kind: "unknown"; stationChange: boolean; reason: "time" | "order" }
+  /** Either end is not known to the minute, or missing. */
+  | { kind: "unknown"; reason: "time"; station: StationVerdict }
+  /** The two legs' order itself is not known, so no station is claimed either. */
+  | { kind: "unknown"; reason: "order" }
   /** The next train leaves before the previous one arrives; `minutes` is negative. */
-  | { kind: "conflict"; minutes: number; stationChange: boolean }
-  | { kind: "transfer"; minutes: number; stationChange: boolean; shortHint: boolean }
+  | { kind: "conflict"; minutes: number; station: StationVerdict }
+  | { kind: "transfer"; minutes: number; station: StationVerdict; shortHint: boolean }
   /**
    * Not a change of trains: the next leg leaves later than a change is read
    * as, or goes back to a station the ride already passed (the way home on
@@ -70,15 +81,31 @@ export const SAME_STATION_KM = 1;
 interface StationRef {
   id: number | null;
   name: string;
-  lat: number;
-  lon: number;
+  /** Null where no position is known — only the transfer view reads that case. */
+  lat: number | null;
+  lon: number | null;
 }
+
+/**
+ * Closer than this, two station records with different names are read as two
+ * names for ONE station in the transfer view (a geocoder pick beside its
+ * catalogue row, "Hbf" beside "Hauptbahnhof").
+ *
+ * Why not the grouping's 1 km: the two rules answer different questions.
+ * Grouping asks "do these trains form one ride?", where Paris Est and Paris
+ * Nord, 500 m apart, rightly belong together. The transfer line asks "must I
+ * go to another station?", where the same pair is a walk across the street —
+ * and "kein Bahnhofswechsel" would be a false statement a traveller acts on
+ * (ruling 2026-10-08). 150 m covers a station's own records, not its
+ * neighbours. Pinned with the grouping rule in `shared/rail/transferVectors.json`.
+ */
+export const SAME_STATION_DISPLAY_METERS = 150;
 
 const EARTH_RADIUS_KM = 6371.0088;
 const RAD = Math.PI / 180;
 
 /** Great-circle distance, the backend's `haversineKm`. */
-function distanceKm(a: StationRef, b: StationRef): number {
+function distanceKm(a: { lat: number; lon: number }, b: { lat: number; lon: number }): number {
   const dLat = (b.lat - a.lat) * RAD;
   const dLon = (b.lon - a.lon) * RAD;
   const h =
@@ -91,15 +118,41 @@ const foldName = (name: string): string => name.trim().toLocaleLowerCase();
 
 /**
  * The server's `sameStation`, mirrored exactly: the same catalogue row, the
- * same recorded name, or within `SAME_STATION_KM`. Narrower than that, the
- * page the server grouped as ONE ride would announce a change of station
- * between a catalogue row and the geocoder pick 300 m away (review
- * 2026-10-08, important 2). Pinned by `shared/rail/transferVectors.json`.
+ * same recorded name, or within `SAME_STATION_KM`. It answers the GROUPING
+ * question — here, whether the next leg goes back to a station the ride
+ * already passed (another ride, not a change). Whether the user must walk to
+ * another station is `transferStation`'s question. Pinned by
+ * `shared/rail/transferVectors.json`.
  */
 export function sameStation(a: StationRef, b: StationRef): boolean {
   if (a.id !== null && b.id !== null && a.id === b.id) return true;
   if (foldName(a.name) !== "" && foldName(a.name) === foldName(b.name)) return true;
-  return distanceKm(a, b) <= SAME_STATION_KM;
+  const pa = positionOf(a);
+  const pb = positionOf(b);
+  return pa !== null && pb !== null && distanceKm(pa, pb) <= SAME_STATION_KM;
+}
+
+const positionOf = (s: StationRef): { lat: number; lon: number } | null =>
+  s.lat === null || s.lon === null ? null : { lat: s.lat, lon: s.lon };
+
+/**
+ * The transfer view's answer to "must I go to another station?" — narrower
+ * than `sameStation`, on purpose (see `SAME_STATION_DISPLAY_METERS`). The
+ * same catalogue row or the same name is the same station; otherwise the
+ * straight-line distance decides, and without a position nothing is claimed.
+ */
+export function transferStation(arrival: StationRef, departure: StationRef): StationVerdict {
+  if (arrival.id !== null && departure.id !== null && arrival.id === departure.id) {
+    return { kind: "same" };
+  }
+  if (foldName(arrival.name) !== "" && foldName(arrival.name) === foldName(departure.name)) {
+    return { kind: "same" };
+  }
+  const from = positionOf(arrival);
+  const to = positionOf(departure);
+  if (from === null || to === null) return { kind: "unconfirmed" };
+  const meters = Math.round(distanceKm(from, to) * 1000);
+  return meters < SAME_STATION_DISPLAY_METERS ? { kind: "same" } : { kind: "change", meters };
 }
 
 const arrivalStation = (leg: RailTransferLeg): StationRef => ({
@@ -145,20 +198,20 @@ export function signedTransferMinutes(
  * and lie more than a day apart — no change of trains waits that long.
  */
 export function railTransfer(previous: RailTransferLeg, next: RailTransferLeg): RailTransfer {
-  const stationChange = !sameStation(arrivalStation(previous), departureStation(next));
+  const station = transferStation(arrivalStation(previous), departureStation(next));
   const minutes = signedTransferMinutes(previous, next);
   if (minutes === null) {
     const from = dayOf(railArrival(previous)) ?? dayOf(railDeparture(previous));
     const to = dayOf(railDeparture(next));
     if (from !== null && to !== null && daysBetween(from, to) > 1) return { kind: "separate" };
-    return { kind: "unknown", stationChange, reason: "time" };
+    return { kind: "unknown", reason: "time", station };
   }
-  if (minutes < 0) return { kind: "conflict", minutes, stationChange };
+  if (minutes < 0) return { kind: "conflict", minutes, station };
   if (minutes > SEPARATE_RIDE_AFTER_MINUTES) return { kind: "separate" };
   return {
     kind: "transfer",
     minutes,
-    stationChange,
+    station,
     shortHint: minutes < SHORT_TRANSFER_HINT_MINUTES,
   };
 }
@@ -202,7 +255,7 @@ export function railTransfers(legs: readonly RailTransferLeg[]): RailTransfer[] 
     const previous = legs[i];
     const next = legs[i + 1];
     if (!gapOrderKnown(legs, i)) {
-      verdicts.push({ kind: "unknown", stationChange: false, reason: "order" });
+      verdicts.push({ kind: "unknown", reason: "order" });
       visited = [departureStation(next)];
       continue;
     }

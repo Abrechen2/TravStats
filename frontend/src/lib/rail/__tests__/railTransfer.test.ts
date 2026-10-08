@@ -85,7 +85,7 @@ describe("railTransfer — the truth table", () => {
   it("normal: a 25-minute change at the same station, no hint", () => {
     expect(
       railTransfer(frankfurtFulda, fuldaBerlin("2026-09-26T05:35:00Z", "2026-09-26T07:35:00"))
-    ).toEqual({ kind: "transfer", minutes: 25, stationChange: false, shortHint: false });
+    ).toEqual({ kind: "transfer", minutes: 25, station: { kind: "same" }, shortHint: false });
   });
 
   it("short: under ten minutes carries the hint; ten minutes does not", () => {
@@ -93,7 +93,12 @@ describe("railTransfer — the truth table", () => {
       frankfurtFulda,
       fuldaBerlin("2026-09-26T05:19:00Z", "2026-09-26T07:19:00")
     );
-    expect(nine).toEqual({ kind: "transfer", minutes: 9, stationChange: false, shortHint: true });
+    expect(nine).toEqual({
+      kind: "transfer",
+      minutes: 9,
+      station: { kind: "same" },
+      shortHint: true,
+    });
     const ten = railTransfer(
       frankfurtFulda,
       fuldaBerlin("2026-09-26T05:20:00Z", "2026-09-26T07:20:00")
@@ -109,7 +114,7 @@ describe("railTransfer — the truth table", () => {
   it("negative: the next train leaves before the previous one arrives — a conflict, not 0", () => {
     expect(
       railTransfer(frankfurtFulda, fuldaBerlin("2026-09-26T05:00:00Z", "2026-09-26T07:00:00"))
-    ).toEqual({ kind: "conflict", minutes: -10, stationChange: false });
+    ).toEqual({ kind: "conflict", minutes: -10, station: { kind: "same" } });
   });
 
   it("day-only: an arrival known only by its day is unknown, never 0", () => {
@@ -121,7 +126,7 @@ describe("railTransfer — the truth table", () => {
     );
     expect(
       railTransfer(dayOnly, fuldaBerlin("2026-09-26T05:35:00Z", "2026-09-26T07:35:00"))
-    ).toEqual({ kind: "unknown", stationChange: false, reason: "time" });
+    ).toEqual({ kind: "unknown", reason: "time", station: { kind: "same" } });
   });
 
   it("day-only: a departure known only by its day is unknown too", () => {
@@ -133,8 +138,8 @@ describe("railTransfer — the truth table", () => {
     );
     expect(railTransfer(frankfurtFulda, next)).toEqual({
       kind: "unknown",
-      stationChange: false,
       reason: "time",
+      station: { kind: "same" },
     });
   });
 
@@ -147,8 +152,8 @@ describe("railTransfer — the truth table", () => {
     );
     expect(railTransfer(open, fuldaBerlin("2026-09-26T05:35:00Z", "2026-09-26T07:35:00"))).toEqual({
       kind: "unknown",
-      stationChange: false,
       reason: "time",
+      station: { kind: "same" },
     });
   });
 
@@ -168,18 +173,17 @@ describe("railTransfer — the truth table", () => {
     expect(railTransfer(toParisEst, fromParisLyon)).toEqual({
       kind: "transfer",
       minutes: 70,
-      stationChange: true,
+      station: { kind: "change", meters: 3781 },
       shortHint: false,
     });
   });
 
-  it("same station by the server's rule: one catalogue row, one name, or within 1 km", () => {
+  it("same station: one catalogue row or one name, whatever the other says", () => {
     const toKoeln = leg("A", "Köln Hbf", null, at("2026-09-26T05:00:00Z", "", BERLIN), { arr: 1 });
     const fromOtherRow = leg("Köln Hbf", "B", at("2026-09-26T05:20:00Z", "", BERLIN), null, {
       dep: 2,
     });
-    // Two catalogue rows, one name: the server groups them, so no change of station.
-    expect(railTransfer(toKoeln, fromOtherRow)).toMatchObject({ stationChange: false });
+    expect(railTransfer(toKoeln, fromOtherRow)).toMatchObject({ station: { kind: "same" } });
     const fromSameRow = leg(
       "Koeln Hauptbahnhof",
       "B",
@@ -189,17 +193,29 @@ describe("railTransfer — the truth table", () => {
         dep: 1,
       }
     );
-    expect(railTransfer(toKoeln, fromSameRow)).toMatchObject({ stationChange: false });
-    // Paris Est and Paris Nord lie about 500 m apart: the same place to change at.
+    expect(railTransfer(toKoeln, fromSameRow)).toMatchObject({ station: { kind: "same" } });
+  });
+
+  // Ruling 2026-10-08: the server groups Paris Est and Paris Nord into one
+  // ride (within 1 km), but the traveller must walk ~530 m to another
+  // station — the transfer line says so, with the straight-line distance.
+  it("Paris Est → Paris Nord is a change of station, with its distance", () => {
     const toEst = leg("A", "Paris Est", null, at("2026-09-26T05:00:00Z", "", "Europe/Paris"));
     const fromNord = leg("Paris Nord", "B", at("2026-09-26T05:30:00Z", "", "Europe/Paris"), null);
-    expect(railTransfer(toEst, fromNord)).toMatchObject({ stationChange: false });
+    expect(railTransfer(toEst, fromNord)).toMatchObject({
+      kind: "transfer",
+      station: { kind: "change", meters: 534 },
+    });
   });
 
   it("station change is still said when the wait is unknown", () => {
     const a = leg("A", "Paris Est", null, null);
     const b = leg("Paris Gare de Lyon", "B", at("2026-09-26T05:20:00Z", "", "Europe/Paris"), null);
-    expect(railTransfer(a, b)).toEqual({ kind: "unknown", stationChange: true, reason: "time" });
+    expect(railTransfer(a, b)).toEqual({
+      kind: "unknown",
+      reason: "time",
+      station: { kind: "change", meters: 3781 },
+    });
   });
 
   it("cross-zone: measured between instants, not wall clocks (Paris 10:00 → London 09:30 is +30)", () => {
@@ -219,7 +235,7 @@ describe("railTransfer — the truth table", () => {
     expect(railTransfer(toLondon, onward)).toEqual({
       kind: "transfer",
       minutes: 30,
-      stationChange: false,
+      station: { kind: "same" },
       shortHint: false,
     });
   });
@@ -241,7 +257,7 @@ describe("railTransfer — the truth table", () => {
     expect(railTransfer(night, next)).toEqual({
       kind: "transfer",
       minutes: 30,
-      stationChange: false,
+      station: { kind: "same" },
       shortHint: false,
     });
   });
@@ -315,8 +331,8 @@ describe("railTransfers — legs whose order is not known", () => {
   it("claims no wait, no change of station and no other ride around a day-only leg of the same day", () => {
     // The server's order: the day-only leg's midnight first.
     expect(railTransfers([bcDayOnly, ab, cd])).toEqual([
-      { kind: "unknown", stationChange: false, reason: "order" },
-      { kind: "unknown", stationChange: false, reason: "order" },
+      { kind: "unknown", reason: "order" },
+      { kind: "unknown", reason: "order" },
     ]);
   });
 
@@ -329,8 +345,12 @@ describe("railTransfers — legs whose order is not known", () => {
     );
     const verdicts = railTransfers([xaDayBefore, ab, cd]);
     // A day apart: the order is known, the wait is not (no arrival, a day).
-    expect(verdicts[0]).toEqual({ kind: "unknown", stationChange: false, reason: "time" });
-    expect(verdicts[1]).toMatchObject({ kind: "transfer", minutes: 110, stationChange: true });
+    expect(verdicts[0]).toEqual({ kind: "unknown", reason: "time", station: { kind: "same" } });
+    expect(verdicts[1]).toMatchObject({
+      kind: "transfer",
+      minutes: 110,
+      station: { kind: "change" },
+    });
   });
 
   it("reads legs days apart as another ride even when a time is only a day", () => {

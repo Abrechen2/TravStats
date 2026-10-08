@@ -382,12 +382,15 @@
     "unknown": "Umstieg in {{station}} · Umstiegszeit unbekannt",
     "unknownWhy": "Eine der beiden Zeiten fehlt oder ist nur als Datum bekannt.",
     "conflict": "Zeitkonflikt: Der nächste Zug fährt {{wait}} vor der Ankunft dieses Zugs ab.",
-    "stationChange": "Bahnhofswechsel: {{from}} → {{to}}",
+    "stationChange": "Bahnhofswechsel: {{from}} → {{to}} · ca. {{distance}} Luftlinie",
     "shortHint": "Hinweis: weniger als {{minutes}} Min. zum Umsteigen. Ob der Anschluss klappt, kann TravStats nicht wissen.",
     "separate": "Eigene Fahrt – kein Umstieg",
     "markTight": "Als knapp markiert",
     "markFailed": "Die Markierung konnte nicht gespeichert werden. Bitte versuch es erneut.",
-    "orderUnknown": "Umstieg unbekannt: Eine Fahrt dieses Tages ist nur mit Datum erfasst, daher ist die Reihenfolge der Züge nicht bekannt."
+    "orderUnknown": "Umstieg unbekannt: Eine Fahrt dieses Tages ist nur mit Datum erfasst, daher ist die Reihenfolge der Züge nicht bekannt.",
+    "stationUnconfirmed": "Bahnhofswechsel? {{from}} → {{to}}: anderer Bahnhofsname – Lage unbekannt",
+    "distanceM": "{{value}} m",
+    "distanceKm": "{{value}} km"
   },
   "connectionView": {
     "coach": "Wagen {{coach}}",

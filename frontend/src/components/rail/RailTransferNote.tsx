@@ -27,7 +27,8 @@ interface Props {
  * of the numbered train list, and a screen reader should not count it as one.
  */
 export function RailTransferNote({ transfer, arriving, departing, index }: Props): JSX.Element {
-  const { t } = useTranslation(["rail"]);
+  const { t, i18n } = useTranslation(["rail"]);
+  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
 
   if (transfer.kind === "separate") {
     return (
@@ -71,9 +72,18 @@ export function RailTransferNote({ transfer, arriving, departing, index }: Props
       <p className={transfer.kind === "conflict" ? "font-medium text-(--danger)" : undefined}>
         {headline}
       </p>
-      {transfer.stationChange && (
+      {transfer.station.kind === "change" && (
         <p className="t-caption" data-testid={`rail-transfer-${index}-station-change`}>
-          {t("rail:transfer.stationChange", { from: station, to: departing.depStationName })}
+          {t("rail:transfer.stationChange", {
+            from: station,
+            to: departing.depStationName,
+            distance: straightLine(transfer.station.meters, locale, t),
+          })}
+        </p>
+      )}
+      {transfer.station.kind === "unconfirmed" && (
+        <p className="t-caption" data-testid={`rail-transfer-${index}-station-unconfirmed`}>
+          {t("rail:transfer.stationUnconfirmed", { from: station, to: departing.depStationName })}
         </p>
       )}
       {transfer.kind === "unknown" && <p className="t-caption">{t("rail:transfer.unknownWhy")}</p>}
@@ -143,4 +153,21 @@ function TightMark({ legId, stored }: { legId: string; stored: boolean }): JSX.E
       )}
     </div>
   );
+}
+
+/**
+ * "500 m", "2,6 km" — the straight line, rounded so it reads as the estimate
+ * it is (50 m steps, then tenths of a kilometre). The copy around it says
+ * "Luftlinie": nothing here knows a walking route or time.
+ */
+function straightLine(
+  meters: number,
+  locale: string,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string {
+  if (meters < 1000) {
+    return t("rail:transfer.distanceM", { value: Math.max(50, Math.round(meters / 50) * 50) });
+  }
+  const km = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(meters / 1000);
+  return t("rail:transfer.distanceKm", { value: km });
 }

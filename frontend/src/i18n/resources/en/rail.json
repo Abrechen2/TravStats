@@ -382,12 +382,15 @@
     "unknown": "Change at {{station}} · transfer time unknown",
     "unknownWhy": "One of the two times is missing or known only by its date.",
     "conflict": "Time conflict: the next train leaves {{wait}} before this one arrives.",
-    "stationChange": "Change of station: {{from}} → {{to}}",
+    "stationChange": "Change of station: {{from}} → {{to}} · approx. {{distance}} as the crow flies",
     "shortHint": "Hint: less than {{minutes}} min to change. Whether the connection works out, TravStats cannot know.",
     "separate": "A separate ride – not a change",
     "markTight": "Marked as tight",
     "markFailed": "The mark could not be saved. Please try again.",
-    "orderUnknown": "Change unknown: a ride on this day is recorded by its date only, so the order of the trains is not known."
+    "orderUnknown": "Change unknown: a ride on this day is recorded by its date only, so the order of the trains is not known.",
+    "stationUnconfirmed": "Change of station? {{from}} → {{to}}: different station name – location unknown",
+    "distanceM": "{{value}} m",
+    "distanceKm": "{{value}} km"
   },
   "connectionView": {
     "coach": "Coach {{coach}}",
