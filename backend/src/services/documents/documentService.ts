@@ -224,7 +224,7 @@ export async function assertEntryOwned(userId: string, entry: EntryRef): Promise
               : entry.type === "railJourney"
                 ? await prisma.railJourney.findFirst({ where, select })
                 : await prisma.rentalBooking.findFirst({ where, select });
-  if (!found) throw new AppError("Entry not found", 404);
+  if (!found) throw new AppError("Entry not found", 404, "DOCUMENT_ENTRY_NOT_FOUND");
 }
 
 export interface CreateDocumentInput {

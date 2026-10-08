@@ -153,6 +153,13 @@ export type ApiErrorCode =
    *  flight is gone — stop retrying" from "this server has no route yet"
    *  (forgejo#201). */
   | "FLIGHT_NOT_FOUND"
+  /** Kept originals (forgejo#272): the entry a document is filed under or
+   *  listed for does not exist for this user. Distinct from a code-less 404,
+   *  which an older server — or one without the documents routes at all —
+   *  also answers; the Companion deletes a queued original only on this code,
+   *  so "the entry is gone" is never confused with "this server has no route"
+   *  (the prose "Entry not found" stays for clients that matched on it). */
+  | "DOCUMENT_ENTRY_NOT_FOUND"
   /** Flight recording (forgejo#193): the flight already has a recording under
    *  another upload id; resend with `replace: true` to swap it. */
   | "TRACK_ALREADY_RECORDED"
