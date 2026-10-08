@@ -365,5 +365,8 @@
     "requiredLegend": "Fields marked * are required.",
     "saveBlocked": "Still needed to save:",
     "savedButRefreshFailed": "Saved. The list could not be refreshed."
+  },
+  "delete": {
+    "survivors": "Stays: {{names}}"
   }
 }

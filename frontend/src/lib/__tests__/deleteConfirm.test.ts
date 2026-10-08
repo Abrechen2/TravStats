@@ -5,7 +5,7 @@
  * permanent at all.
  */
 import { describe, it, expect, vi } from "vitest";
-import { countedDeleteMessage, withDocumentNote } from "../deleteConfirm";
+import { countedDeleteMessage, survivorsNote, withDocumentNote } from "../deleteConfirm";
 
 const KEYS = {
   counted: "cruise:detail.deleteConfirmMessage",
@@ -82,5 +82,28 @@ describe("withDocumentNote", () => {
     expect(withDocumentNote("Base.\nReceipt note.", t, 1)).toBe(
       "Base.\nReceipt note.\nDazu 1 Dokument, das mit gelöscht wird."
     );
+  });
+});
+
+// forgejo#250: what the delete leaves standing, named.
+describe("survivorsNote", () => {
+  it("names what stays", () => {
+    const t = vi.fn(
+      (_key: string, options?: Record<string, unknown>) =>
+        `Bleibt erhalten: ${String(options?.names)}`
+    );
+    expect(survivorsNote(t, ["Reise Japan 2025", "3 Fotos"])).toBe(
+      "Bleibt erhalten: Reise Japan 2025, 3 Fotos"
+    );
+    expect(t).toHaveBeenCalledWith("common:delete.survivors", {
+      names: "Reise Japan 2025, 3 Fotos",
+    });
+  });
+
+  it("says nothing when nothing stays — a bare 'Bleibt erhalten:' is noise", () => {
+    const t = vi.fn(() => "…");
+    expect(survivorsNote(t, [])).toBeNull();
+    expect(survivorsNote(t, ["  "])).toBeNull();
+    expect(t).not.toHaveBeenCalled();
   });
 });

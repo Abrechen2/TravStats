@@ -14,6 +14,12 @@ import { useTranslation } from "../../hooks/useTranslation";
  * With a filter active the empty state also has to offer the way out, because
  * the filter that caused it may be one the user forgot they set — that is
  * exactly what a "Filter" button with a badge makes easy to do.
+ *
+ * And the genuinely-empty case has a next step too (forgejo#250): a hint that
+ * says "add your first cruise" beside no button to do it sent the user back to
+ * the page header to find one. `action` puts it here. It is NOT shown while
+ * filtered — there the next step is the reset, and a second button would
+ * suggest the entries are missing rather than hidden.
  */
 
 interface Props {
@@ -24,6 +30,8 @@ interface Props {
   /** How to get a first entry in. Shown only in the genuinely-empty case. */
   emptyHint: string;
   onReset: () => void;
+  /** The way to a first entry — "Flug hinzufügen" — opening the page's own create/import dialog. */
+  action?: { label: string; onClick: () => void };
 }
 
 export default function ListEmptyState({
@@ -31,6 +39,7 @@ export default function ListEmptyState({
   emptyTitle,
   emptyHint,
   onReset,
+  action,
 }: Props): JSX.Element {
   const { t } = useTranslation(["common"]);
 
@@ -51,7 +60,14 @@ export default function ListEmptyState({
           {t("common:filters.reset")}
         </button>
       ) : (
-        <p className="text-sm">{emptyHint}</p>
+        <>
+          <p className="text-sm">{emptyHint}</p>
+          {action && (
+            <button type="button" onClick={action.onClick} className="btn-primary mt-4">
+              {action.label}
+            </button>
+          )}
+        </>
       )}
     </div>
   );
