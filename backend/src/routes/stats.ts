@@ -62,6 +62,7 @@ import { computeSeatStats } from "../services/stats/seatStats";
 import { computeCountryStats } from "../services/stats/countryStats";
 import { computeAirlineRanking } from "../services/stats/airlineRanking";
 import { loadHomePeriods } from "../services/home/homeStore";
+import { routePairKey } from "../shared/routePair";
 
 const router = Router();
 
@@ -309,12 +310,11 @@ router.get(
        * sorted: FRA-WAW and WAW-FRA both become "FRA-WAW".
        *
        * This CHANGES the top-routes list for existing accounts — two entries of
-       * one collapse into one of two, which reorders the ranking. That is a
-       * visible change and belongs in the changelog, not a silent fix.
+       * one collapse into one of two, which reorders the ranking: a changelog
+       * item, not a silent fix.
        *
-       * `departure`/`arrival` name the first flight of the pair that was seen.
-       * With direction no longer meaningful they are simply the two ends; the
-       * distance is the same either way.
+       * `departure`/`arrival` name the first flight of the pair seen: with
+       * direction no longer meaningful they are simply the two ends.
        */
       const routeMap = new Map<
         string,
@@ -327,11 +327,11 @@ router.get(
       >();
 
       flights.forEach((flight) => {
+        // Unordered pair (`shared/routePair`, forgejo#254); no airport, no route.
         const depCode = flight.depIata || flight.depIcao;
         const arrCode = flight.arrIata || flight.arrIcao;
-        // Sorted, so both directions land on one key. `String()` guards the
-        // null-code case, which would otherwise sort inconsistently.
-        const routeKey = [String(depCode), String(arrCode)].sort().join("-");
+        const routeKey = routePairKey(depCode, arrCode);
+        if (routeKey === null) return;
 
         if (routeMap.has(routeKey)) {
           routeMap.get(routeKey)!.count++;

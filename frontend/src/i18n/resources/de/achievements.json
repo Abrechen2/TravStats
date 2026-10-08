@@ -325,15 +325,15 @@
     },
     "FAVORITE_ROUTE": {
       "name": "Lieblingsroute",
-      "description": "Fliege dieselbe Route 5 Mal"
+      "description": "Fliege dieselbe Verbindung 5 Mal (in beliebiger Richtung)"
     },
     "ROUTE_MASTER": {
       "name": "Routen-Meister",
-      "description": "Fliege dieselbe Route 10 Mal"
+      "description": "Fliege dieselbe Verbindung 10 Mal (in beliebiger Richtung)"
     },
     "COMMUTER": {
       "name": "Pendler",
-      "description": "Fliege dieselbe Route 25 Mal"
+      "description": "Fliege dieselbe Verbindung 25 Mal (in beliebiger Richtung)"
     },
     "BUSY_MONTH": {
       "name": "Stressiger Monat",
@@ -477,7 +477,7 @@
     },
     "GROUNDHOG_DAY": {
       "name": "Murmeltier-Tag",
-      "description": "Gleiche Route an drei aufeinanderfolgenden Tagen"
+      "description": "Derselbe Flug in derselben Richtung an drei aufeinanderfolgenden Tagen"
     },
     "SCHEDULE_KEEPER": {
       "name": "Plan-Bewahrer",

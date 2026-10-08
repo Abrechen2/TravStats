@@ -6,6 +6,8 @@
 // MapLibre globe projection + deck.gl PathLayer combination — see the
 // long-form rationale on each declaration.
 
+import { canonicalRoutePair } from "../../shared/routePair";
+
 export const EARTH_RADIUS_M = 6_371_000;
 
 // Peak altitude (meters above ellipsoid) for a flight arc with the
@@ -164,7 +166,12 @@ export const greatCircleWaypoints = (
   return out;
 };
 
-export const createRouteKey = (a: string, b: string): string => (a < b ? `${a}-${b}` : `${b}-${a}`);
+/**
+ * The Globe keys an arc by its endpoint identities, which may be coordinate
+ * sentinels rather than codes — hence `canonicalRoutePair` (pure ordering), not
+ * `routePairKey` (which normalises codes and abstains on a missing one).
+ */
+export const createRouteKey = (a: string, b: string): string => canonicalRoutePair(a, b).join("-");
 
 /**
  * Build a stable per-endpoint identity string. Prefers IATA, falls back

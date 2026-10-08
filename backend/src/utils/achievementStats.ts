@@ -12,6 +12,7 @@ import { normalizeAircraft } from "./aircraftNormalize";
 import { localWallClockOf, type FlightTimeSemantics } from "./timezone";
 import { isCountableFlight } from "../shared/flightCounting";
 import { flightDurationOf } from "../shared/flightDuration";
+import { routePairKey } from "../shared/routePair";
 import {
   B777_SUBSTRINGS,
   HIGH_ALTITUDE_AIRPORTS,
@@ -598,10 +599,10 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
       stats.flightsByYear.set(yearKey, yearCount + 1);
     }
 
-    // Route counts
-    const routeKey = `${depCode}-${arrCode}`;
-    const routeCount = stats.routeCounts.get(routeKey) || 0;
-    stats.routeCounts.set(routeKey, routeCount + 1);
+    // Route counts — per CONNECTION, the unordered airport pair (forgejo#254).
+    const routeKey = routePairKey(depCode, arrCode);
+    if (routeKey !== null)
+      stats.routeCounts.set(routeKey, (stats.routeCounts.get(routeKey) || 0) + 1);
 
     // ── v1.1 expansion ──────────────────────────────────────────────
 

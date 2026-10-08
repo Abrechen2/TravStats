@@ -445,7 +445,7 @@
     "milestoneYear": "Milestone Year",
     "milestoneYearDesc": "{{year}} with {{count}} flights",
     "routeMaster": "Route Master",
-    "routeMasterDesc": "{{route}} (flown {{count}}×)"
+    "routeMasterDesc": "{{route}} (flown {{count}}×, both directions)"
   },
   "business": {
     "title": "💼 Business Statistics",

@@ -106,6 +106,7 @@ export interface WrappedCountry {
 // `schemas/statsWrapped.ts` and read here (forgejo#52).
 export type { WrappedRank, Wrapped } from "../../schemas/statsWrapped";
 import type { Wrapped } from "../../schemas/statsWrapped";
+import { routePairKey } from "../../shared/routePair";
 
 /** Cruises are stored as a calendar start date, so UTC IS their local day. */
 const cruiseYearOf = (at: Date | null): number | null => (at ? at.getUTCFullYear() : null);
@@ -186,10 +187,12 @@ export function buildWrapped(
   const byRoute = new Map<string, { from: string; to: string; flights: number }>();
   for (const flight of inYear) {
     if (!flight.depIata || !flight.arrIata) continue;
-    // Sorted, so both directions land on one entry — the rule /stats/routes
-    // follows since Forgejo #42.
-    const [from, to] = [flight.depIata.toUpperCase(), flight.arrIata.toUpperCase()].sort();
-    const key = `${from}-${to}`;
+    // Both directions land on one entry — the connection rule of
+    // `shared/routePair` that /stats/routes, Route Master and the route badges
+    // follow too (Forgejo #42, #254).
+    const key = routePairKey(flight.depIata, flight.arrIata);
+    if (key === null) continue;
+    const [from, to] = key.split("-");
     const acc = byRoute.get(key) ?? { from, to, flights: 0 };
     acc.flights += 1;
     byRoute.set(key, acc);
