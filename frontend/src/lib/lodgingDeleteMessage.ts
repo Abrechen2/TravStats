@@ -20,7 +20,7 @@ export interface LodgingDeleteFacts {
  *
  * The shape is the one `deleteConfirm.ts` describes: what goes (the house, its
  * stays, its photographs, their kept originals) and what stays (the trips, the
- * chain). Lines for facts that are not known yet are simply absent.
+ * chain). Counts that are not known yet are simply absent; what stays is always said.
  */
 export function lodgingDeleteMessage(
   t: Translate,
@@ -41,8 +41,18 @@ export function lodgingDeleteMessage(
       ? `${base}\n${t("lodging:detail.deletePhotosNote", { count: facts.photoCount })}`
       : base;
   const withDocuments = withDocumentNote(withPhotos, t, facts.documentCount);
+  // What stays is said even when the trips cannot be NAMED (the lookup failed or
+  // is still running, or no stay links one): a house delete never deletes a
+  // trip, and the question must not go quiet about that just because a call
+  // failed. Unnamed, the line says so in general terms - never a guess at names.
+  const trips =
+    facts.tripNames.length > 0
+      ? [...facts.tripNames]
+      : lodging.stayCount > 0
+        ? [t("lodging:detail.survivorTripsUnnamed")]
+        : [];
   const survivors = survivorsNote(t, [
-    ...facts.tripNames,
+    ...trips,
     ...(lodging.chain ? [t("lodging:detail.survivorChain", { name: lodging.chain.name })] : []),
   ]);
   return survivors === null ? withDocuments : `${withDocuments}\n${survivors}`;

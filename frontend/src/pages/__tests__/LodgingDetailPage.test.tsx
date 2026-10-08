@@ -314,7 +314,7 @@ describe("LodgingDetailPage", () => {
     // assertion is WHICH key was chosen: `deleteConfirmMessage` is the
     // count-carrying form, `…NoStays` the one for a house with no stays. The
     // choice itself is unit-tested in lib/__tests__/deleteConfirm.test.ts.
-    const message = within(dialog).getByText("lodging:detail.deleteConfirmMessage");
+    const message = within(dialog).getByText(/lodging:detail\.deleteConfirmMessage/);
     expect(message).toBeInTheDocument();
     expect(deleteLodgingMock).not.toHaveBeenCalled();
 

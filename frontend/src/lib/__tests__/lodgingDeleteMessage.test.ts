@@ -10,10 +10,18 @@ const t = (key: string, options?: Record<string, unknown>): string =>
 const house = { name: "Hotel Adlon", stayCount: 3, chain: null };
 
 describe("lodgingDeleteMessage", () => {
-  it("is the counted sentence alone while nothing else is known", () => {
+  it("starts with the counted sentence while no count is known", () => {
+    const message = lodgingDeleteMessage(t, house, {
+      documentCount: null,
+      photoCount: null,
+      tripNames: [],
+    });
     expect(
-      lodgingDeleteMessage(t, house, { documentCount: null, photoCount: null, tripNames: [] })
-    ).toBe('lodging:detail.deleteConfirmMessage{"name":"Hotel Adlon","count":3}');
+      message.startsWith('lodging:detail.deleteConfirmMessage{"name":"Hotel Adlon","count":3}')
+    ).toBe(true);
+    // No count line - an unknown count is absent, never "none".
+    expect(message).not.toContain("deletePhotosNote");
+    expect(message).not.toContain("deleteCascadeNote");
   });
 
   it("uses the no-stays sentence for a house without stays", () => {
@@ -52,9 +60,39 @@ describe("lodgingDeleteMessage", () => {
     expect(message).toContain("Kempinski");
   });
 
-  it("says nothing about survivors when there are none", () => {
+  // forgejo#250 review: a failed trips call (or a house whose stays link none)
+  // used to make the question go quiet about what stays.
+  it("still says what stays when the trips cannot be named", () => {
+    const message = lodgingDeleteMessage(t, house, {
+      documentCount: null,
+      photoCount: null,
+      tripNames: [],
+    });
+    expect(message).toContain("common:delete.survivors");
+    expect(message).toContain("lodging:detail.survivorTripsUnnamed");
+  });
+
+  it("names the chain beside the unnamed trips", () => {
+    const message = lodgingDeleteMessage(
+      t,
+      { ...house, chain: { id: 1, name: "Kempinski" } as never },
+      { documentCount: null, photoCount: null, tripNames: [] }
+    );
+    expect(message).toContain("lodging:detail.survivorTripsUnnamed");
+    expect(message).toContain("Kempinski");
+  });
+
+  it("says nothing about survivors for a house with no stays and no chain", () => {
     expect(
-      lodgingDeleteMessage(t, house, { documentCount: null, photoCount: null, tripNames: [] })
+      lodgingDeleteMessage(
+        t,
+        { ...house, stayCount: 0 },
+        {
+          documentCount: null,
+          photoCount: null,
+          tripNames: [],
+        }
+      )
     ).not.toContain("survivors");
   });
 

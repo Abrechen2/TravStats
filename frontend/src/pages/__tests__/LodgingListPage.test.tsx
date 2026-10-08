@@ -925,6 +925,30 @@ describe("LodgingListPage", () => {
 
     // Nothing counted yet, or the count failed: the question must still open and
     // must not claim "no documents".
+    // forgejo#250 review: a failed trips call must not make the question go
+    // quiet about what stays.
+    it("still says what stays when the trips cannot be named", async () => {
+      mockRows([
+        makeLodging({
+          id: "l1",
+          name: "Hotel Adlon",
+          stayCount: 1,
+          stays: [makeStay({ id: "s1", lodgingId: "l1", tripId: "t1" })],
+        }),
+      ]);
+      getTripsMock.mockRejectedValue(new Error("down"));
+      renderListPage();
+
+      await screen.findByText("Hotel Adlon");
+      await userEvent.click(screen.getByTestId("lodging-delete-l1"));
+      const dialog = await screen.findByRole("dialog");
+
+      await waitFor(() => expect(getTripsMock).toHaveBeenCalled());
+      // (The names go in through the key's interpolation, which this stub does
+      // not render; the unit test pins the unnamed wording.)
+      expect(dialog).toHaveTextContent("common:delete.survivors");
+    });
+
     it("opens with its base sentence when the counts cannot be read", async () => {
       mockRows([makeLodging({ id: "l1", name: "Hotel Adlon", stayCount: 1 })]);
       deleteFactsMock.mockRejectedValue(new Error("down"));
