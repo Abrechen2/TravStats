@@ -15,7 +15,7 @@ import { flightDurationOf } from "../shared/flightDuration";
 import {
   B777_SUBSTRINGS,
   HIGH_ALTITUDE_AIRPORTS,
-  ISLAND_AIRPORTS,
+  touchesIslandAirport,
   JUMBO_SUBSTRINGS,
   LONG_HAUL_MIN_KM,
   MICRO_STATES,
@@ -605,10 +605,12 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
 
     // ── v1.1 expansion ──────────────────────────────────────────────
 
-    // Airport-based: islands, high altitude, pilgrim routes, alphabet
+    // Island Hopper counts FLIGHTS: one per flight, however many ends are islands (forgejo#252).
+    if (touchesIslandAirport(depCode, arrCode)) stats.islandFlights++;
+
+    // Airport-based: high altitude, pilgrim routes, alphabet
     for (const code of [depCode, arrCode]) {
       if (!code) continue;
-      if (ISLAND_AIRPORTS.has(code)) stats.islandFlights++;
       if (HIGH_ALTITUDE_AIRPORTS.has(code)) stats.highAltitudeFlights++;
       if (PILGRIM_AIRPORTS.has(code)) stats.pilgrimFlights++;
       if (SCANDINAVIA_AIRPORTS.has(code)) stats.scandinaviaSet.add(code);

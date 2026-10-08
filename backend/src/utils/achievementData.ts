@@ -90,6 +90,21 @@ export const ISLAND_AIRPORTS: ReadonlySet<string> = new Set([
   "SGN",
 ]);
 
+/**
+ * Whether a flight touches an island airport at either end. A boolean per
+ * FLIGHT on purpose: Island Hopper counts flights, so HNL -> OGG is one, not two
+ * (forgejo#252).
+ */
+export function touchesIslandAirport(
+  depCode: string | null | undefined,
+  arrCode: string | null | undefined
+): boolean {
+  return (
+    (depCode ? ISLAND_AIRPORTS.has(depCode) : false) ||
+    (arrCode ? ISLAND_AIRPORTS.has(arrCode) : false)
+  );
+}
+
 /** Airports at ≥2500 m elevation. */
 export const HIGH_ALTITUDE_AIRPORTS: ReadonlySet<string> = new Set([
   "LPB", // La Paz / El Alto, 4061 m — highest commercial
