@@ -641,7 +641,7 @@
     "onTimeRate": "On time (< 15 min)",
     "bestAirline": "Most punctual airline",
     "worstAirline": "Least punctual airline",
-    "worstRoute": "Least punctual route"
+    "worstRoute": "Least punctual route (per direction)"
   },
   "travelAccount": {
     "title": "Where you slept",
