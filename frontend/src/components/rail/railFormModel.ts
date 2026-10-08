@@ -7,7 +7,7 @@ import type {
   RailLookupStop,
   RailTravelClass,
 } from "../../types/rail";
-import type { TimeValue } from "../../shared/time";
+import { classifyWallClock, storedFold, type TimeValue } from "../../shared/time";
 import { toStationWallClock } from "../../lib/railTime";
 import { railArrival, railDeparture } from "../../lib/entityTimes";
 import { EMPTY_STATION, type RailStationDraft } from "./RailStationField";
@@ -17,6 +17,8 @@ import { EMPTY_STATION, type RailStationDraft } from "./RailStationField";
  * rules (what clears a field, when a distance counts as typed) are testable
  * without rendering a modal.
  */
+export type RailFold = "earlier" | "later";
+
 export interface RailFormDraft {
   operator: string;
   trainCategory: string;
@@ -33,6 +35,14 @@ export interface RailFormDraft {
    */
   departureDayOnly: boolean;
   arrivalDayOnly: boolean;
+  /**
+   * Which of two occurrences of a repeated autumn hour each time is; null
+   * where the time is not repeated. Read back from the stored instant so an
+   * edit that does not touch a time resends it (forgejo#251), and reset when
+   * the user types that time anew.
+   */
+  departureFold: RailFold | null;
+  arrivalFold: RailFold | null;
   /** Only what the user typed. A measured distance is not shown here. */
   distanceKm: string;
   travelClass: RailTravelClass | "";
@@ -63,6 +73,18 @@ function wallClockFor(value: TimeValue | null, dayOnly: boolean): string {
   return dayOnly ? dayPart(toStationWallClock(value)) : toStationWallClock(value);
 }
 
+/**
+ * Which occurrence of a repeated hour a stored end is. The wall clock alone
+ * cannot say: 02:30 on a clock-change night is two instants an hour apart, and
+ * the server reads an unqualified one as the earlier.
+ */
+function foldOf(value: TimeValue | null, dayOnly: boolean): RailFold | null {
+  if (!value?.zone || dayOnly) return null;
+  const local = value.local.slice(0, 16);
+  if (classifyWallClock(local, value.zone) !== "repeated") return null;
+  return storedFold(local, value.zone, value.utc) === "later" ? "later" : "earlier";
+}
+
 export function draftFrom(journey: RailJourney | null): RailFormDraft {
   if (!journey) {
     return {
@@ -75,6 +97,8 @@ export function draftFrom(journey: RailJourney | null): RailFormDraft {
       arrivalLocal: "",
       departureDayOnly: false,
       arrivalDayOnly: false,
+      departureFold: null,
+      arrivalFold: null,
       distanceKm: "",
       travelClass: "",
       coach: "",
@@ -120,6 +144,8 @@ export function draftFrom(journey: RailJourney | null): RailFormDraft {
     arrivalLocal: wallClockFor(railArrival(journey), arrivalDayOnly),
     departureDayOnly,
     arrivalDayOnly,
+    departureFold: foldOf(railDeparture(journey), departureDayOnly),
+    arrivalFold: foldOf(railArrival(journey), arrivalDayOnly),
     distanceKm:
       journey.distanceSource === "user" && journey.distanceKm !== null
         ? String(journey.distanceKm)
@@ -224,6 +250,8 @@ export function toRailInput(draft: RailFormDraft): RailJourneyInput {
     departureLocal: timeOf(draft.departureLocal, draft.departureDayOnly),
     arrivalLocal:
       draft.arrivalLocal === "" ? null : timeOf(draft.arrivalLocal, draft.arrivalDayOnly),
+    departureFold: draft.departureFold,
+    arrivalFold: draft.arrivalFold,
     distanceKm: numberOrNull(draft.distanceKm),
     travelClass: draft.travelClass === "" ? null : draft.travelClass,
     coach: orNull(draft.coach),
@@ -322,8 +350,10 @@ export function applyLookup(
     // the timetable gives nothing for keeps the user's entry, day or clock.
     departureLocal: from.departureLocal ?? draft.departureLocal,
     departureDayOnly: from.departureLocal === null ? draft.departureDayOnly : false,
+    departureFold: from.departureLocal === null ? draft.departureFold : null,
     arrivalLocal: to.arrivalLocal ?? draft.arrivalLocal,
     arrivalDayOnly: to.arrivalLocal === null ? draft.arrivalDayOnly : false,
+    arrivalFold: to.arrivalLocal === null ? draft.arrivalFold : null,
     lookup: { provider: match.provider, ref: match.ref },
   };
 }

@@ -482,3 +482,58 @@ describe("a day-only ride", () => {
     });
   });
 });
+
+// forgejo#251: the form kept the station wall clock but not WHICH 02:30 of a
+// repeated autumn hour the stored instant was, so any edit moved a "later"
+// ride back an hour (the server takes the earlier occurrence by default).
+describe("a ride in a repeated hour", () => {
+  const repeatedRide = (
+    utc: string,
+    offset: string,
+    local = "2026-10-25T02:30:00"
+  ): RailJourney => ({
+    ...journey,
+    departureTime: utc,
+    arrivalTime: null,
+    times: {
+      departure: { utc, zone: "Europe/Berlin", offset, local, precision: "minute" },
+      arrival: null,
+      actualDeparture: null,
+      actualArrival: null,
+    },
+  });
+  const later = repeatedRide("2026-10-25T01:30:00.000Z", "+01:00");
+  const earlier = repeatedRide("2026-10-25T00:30:00.000Z", "+02:00");
+
+  it("remembers the later occurrence and sends it back", () => {
+    const draft = draftFrom(later);
+    expect(draft.departureLocal).toBe("2026-10-25T02:30");
+    expect(draft.departureFold).toBe("later");
+    expect(toRailInput(draft)).toMatchObject({
+      departureLocal: "2026-10-25T02:30",
+      departureFold: "later",
+      arrivalFold: null,
+    });
+  });
+
+  it("remembers the earlier occurrence as such", () => {
+    expect(draftFrom(earlier).departureFold).toBe("earlier");
+  });
+
+  it("has no fold for a time that is not repeated", () => {
+    const draft = draftFrom(journey);
+    expect(draft.departureFold).toBeNull();
+    expect(draft.arrivalFold).toBeNull();
+    expect(toRailInput(draft)).toMatchObject({ departureFold: null, arrivalFold: null });
+    expect(draftFrom(null)).toMatchObject({ departureFold: null, arrivalFold: null });
+  });
+
+  it("has no fold for an end stored by its day", () => {
+    const dayEnd = repeatedRide("2026-10-24T22:00:00.000Z", "+02:00", "2026-10-25T00:00:00");
+    expect(draftFrom(dayEnd).departureFold).toBeNull();
+  });
+
+  it("starts the next leg without a fold: its clock is a new ticket's", () => {
+    expect(connectionDraftFrom(later)).toMatchObject({ departureFold: null, arrivalFold: null });
+  });
+});

@@ -146,14 +146,27 @@ export function RailFormModal({
     }));
   };
 
+  // Another station is another zone, where the old choice of occurrence means
+  // nothing; a rename of the same station keeps it.
+  const setStation = (end: "departure" | "arrival", next: RailStationDraft): void =>
+    setDraft((prev) => {
+      const moved = next.lat !== prev[end].lat || next.lon !== prev[end].lon;
+      return {
+        ...prev,
+        [end]: next,
+        ...(moved ? { [`${end}Fold`]: null } : {}),
+      };
+    });
+
   const toggleDayOnly = (end: "departure" | "arrival", dayOnly: boolean): void => {
     setError(null);
     setDraft((prev) => {
       const local = end === "departure" ? prev.departureLocal : prev.arrivalLocal;
       const next = dayOnly ? dayPart(local) : withClock(local);
+      // The time is no longer the stored one, so neither is its occurrence.
       return end === "departure"
-        ? { ...prev, departureDayOnly: dayOnly, departureLocal: next }
-        : { ...prev, arrivalDayOnly: dayOnly, arrivalLocal: next };
+        ? { ...prev, departureDayOnly: dayOnly, departureLocal: next, departureFold: null }
+        : { ...prev, arrivalDayOnly: dayOnly, arrivalLocal: next, arrivalFold: null };
     });
   };
 
@@ -351,7 +364,7 @@ export function RailFormModal({
               label={t("rail:form.departureStation")}
               idPrefix="rail-dep"
               value={draft.departure}
-              onChange={(next): void => set("departure", next)}
+              onChange={(next): void => setStation("departure", next)}
               onValidityChange={setDepValid}
               inputClassName={INPUT_CLASS}
             />
@@ -359,7 +372,7 @@ export function RailFormModal({
               label={t("rail:form.arrivalStation")}
               idPrefix="rail-arr"
               value={draft.arrival}
-              onChange={(next): void => set("arrival", next)}
+              onChange={(next): void => setStation("arrival", next)}
               onValidityChange={setArrValid}
               inputClassName={INPUT_CLASS}
             />
@@ -373,21 +386,29 @@ export function RailFormModal({
                   className={`mt-1 ${INPUT_CLASS}`}
                   style={DARK_PICKER_STYLE}
                   value={draft.departureLocal}
-                  onChange={(e): void => set("departureLocal", e.target.value)}
+                  onChange={(e): void =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      departureLocal: e.target.value,
+                      departureFold: null,
+                    }))
+                  }
                   {...depError.input}
                 />
               </label>
               {depError.message}
-              {/* Notice only: the rail write path cannot take `fold` yet, so no
-                  "later" choice is offered that the save would drop. */}
+              {/* A day has no clock to be repeated. */}
               <ClockChangeNotice
                 local={draft.departureDayOnly ? "" : draft.departureLocal}
+                fold={draft.departureFold ?? undefined}
+                onFoldChange={(fold): void => set("departureFold", fold ?? "earlier")}
                 zone={knownStationZone(journey, "dep", draft.departure)}
               />
               <label className="mt-2 flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   checked={draft.departureDayOnly}
+                  aria-label={`${t("rail:form.departureTime")}: ${t("rail:form.dayOnly")}`}
                   onChange={(e): void => toggleDayOnly("departure", e.target.checked)}
                 />
                 {t("rail:form.dayOnly")}
@@ -401,19 +422,28 @@ export function RailFormModal({
                   className={`mt-1 ${INPUT_CLASS}`}
                   style={DARK_PICKER_STYLE}
                   value={draft.arrivalLocal}
-                  onChange={(e): void => set("arrivalLocal", e.target.value)}
+                  onChange={(e): void =>
+                    setDraft((prev) => ({
+                      ...prev,
+                      arrivalLocal: e.target.value,
+                      arrivalFold: null,
+                    }))
+                  }
                   {...arrError.input}
                 />
               </label>
               {arrError.message}
               <ClockChangeNotice
                 local={draft.arrivalDayOnly ? "" : draft.arrivalLocal}
+                fold={draft.arrivalFold ?? undefined}
+                onFoldChange={(fold): void => set("arrivalFold", fold ?? "earlier")}
                 zone={knownStationZone(journey, "arr", draft.arrival)}
               />
               <label className="mt-2 flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
                   checked={draft.arrivalDayOnly}
+                  aria-label={`${t("rail:form.arrivalTime")}: ${t("rail:form.dayOnly")}`}
                   onChange={(e): void => toggleDayOnly("arrival", e.target.checked)}
                 />
                 {t("rail:form.dayOnly")}
