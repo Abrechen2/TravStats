@@ -470,109 +470,194 @@ B2 the next. Each package's plan is written when the one before it has landed.
 
 ## B1 — as built (2026-10-08)
 
-B1 landed on `dev/bus-domain` as written in §12, with the deviations below. Each
-was a ruling made while building, with the reason; none reopens a §13 decision.
-D1 (`rideKind`), D2 (day-only), D5 (the chord, stored in B1 and drawn in B2),
-D6 (no loyalty), D7 (colour) and D9 (sync in B2) stand as recommended.
+B1 landed on `dev/bus-domain` as written in §12, with the rulings and deviations
+below. Each was decided while building, with the reason; none reopens a §13
+decision. D1 (`rideKind`), D2 (day-only), D5 (the chord, stored in B1 and drawn in
+B2), D6 (no loyalty), D7 (colour) and D9 (sync in B2) stand as recommended.
 
-**Deviations and rulings**
+**Rulings and deviations**
 
-- **Trip dates.** §8 and §12 said a ride widens its trip's dates. It does not,
-  and rail never did: the write path re-derives the trip's **status**
+- **Trip dates.** §8 and §12 said a ride widens its trip's dates. It does not, and
+  rail never did: the write path re-derives the trip's **status**
   (`tripStatusService` spreads `rideStatusSpan` over `busJourneys`) and fills the
-  trip's dates **only when the trip has none** (`fillTripDatesFromSegments`).
-  The two sentences above are corrected.
+  trip's dates **only when the trip has none** (`fillTripDatesFromSegments`). The
+  affected sentences in §8 and §12 are corrected.
 - **`rideKind` has no `charter`.** The column carries `intercity | shuttle |
   other`; the guided coach tour went to the tour domain (D10, branch
-  `feat/tour-activity-excursion`, built first and not merged).
-- **One home for the ride-generic end rules.** `services/rides/rideEnds.ts` now
-  holds "resolve the end", "the arrival is not before the departure" and "typed
-  distance or the measured line", parameterised by the refusal code; rail and bus
-  both import it, while `pickStation` / `pickTerminal` stay per domain. The first
-  bus draft had copied rail's three private functions. The move changed two things
-  in rail, both accepted: a moved end whose zone cannot be resolved is refused
-  (`TZ_UNRESOLVED`) instead of falling back to UTC, and a typed distance of 0 km is
-  kept rather than replaced by the measured one.
-- **`TZ_UNRESOLVED` guards the write path, not a reachable input.** `geo-tz`
-  answers every point on the globe, so the test fixture is latitude 91, which the
-  coordinate schema refuses first; the guard exists so a wall clock can never be
-  stored as UTC if the lookup is ever replaced.
+  `feat/tour-activity-excursion`, built first, not merged). The brief expected an
+  activity block in `trips.json`; there is none — the labels live in
+  `roadtrips.json`, and the implementer's placement stands.
+- **Bus counting is its own module, not an alias of rail's.** `shared/busCounting.ts`
+  (and its frontend mirror) duplicates rail's rule on purpose — the plan mandated it
+  and §4 says "own small module" — so that the two domains can rule independently.
+  It is deliberate, not accidental duplication; the status derivation, by contrast,
+  is a one-line alias of rail's.
+- **One home for the ride-generic end rules.** `services/rides/rideEnds.ts` holds
+  "resolve the end", "the arrival is not before the departure" and "typed distance
+  or the measured line", parameterised by the refusal code; rail and bus both import
+  it, while `pickStation` / `pickTerminal` stay per domain (§2 principle 1). The
+  first bus draft had copied rail's three private functions. The move changed two
+  things in rail, both reviewed and accepted: a moved end whose zone cannot be
+  resolved is refused (`TZ_UNRESOLVED`) instead of falling back to UTC, and a typed
+  distance of 0 km is kept rather than replaced by the measured one. The `stop`
+  wording in the `TzUnresolved` message is the same in both.
+- **Two small edits to shared code,** allowed under the same principle:
+  `sentWallClockToInstant` is exported from `services/rail/railJourneyWrite.ts` (it
+  was module-private), and the `ApiErrorCode` union in `middleware/errorHandler.ts`
+  gained the bus codes (`BUS_INVALID_INPUT`, `BUS_ARRIVAL_BEFORE_DEPARTURE`).
+- **`TZ_UNRESOLVED` guards the write path, not a reachable input.** `geo-tz` answers
+  every point on the globe, so the test fixture is latitude 91 (refused first by the
+  coordinate schema); the guard exists so a wall clock can never be stored as UTC if
+  the lookup is ever replaced.
 - **`rateLimit.ts` split.** The bus creation limiter pushed the file over the size
   ratchet; the skip predicate moved, unchanged and re-exported, to
   `middleware/globalRateLimitSkip.ts`.
+- **Registry edits the compiler forced.** `ENTRY_LIST_PATHS` (the route and the
+  OpenAPI one) gained `busJourney` because their `Record` demanded it;
+  `openapi/paths/misc.ts` was deliberately left alone — its enum is the `/upcoming`
+  domain list, which gains `bus` in B2 with the upcoming entry. `tokenName` was added
+  to backend `domains.test.ts` (the test's own `Record`). Task 1 left `tsc` red in
+  both trees by design until the sites were wired in Task 7.
 - **Entry suggestions** search **both** station columns (a typed name offers the
   outbound arrival when entering the ride home), and the `LIKE` wildcards in the
-  typed text are escaped — the first escape in the codebase. `places/suggestions`
-  still passes raw `contains` (follow-up outside this work). The form shows one
-  mixed chip row per terminal field (`BusTerminalChips.tsx`, with its own
-  narrowing); the limiter's comment promises a debounce the form must deliver.
-- **The day-only toggle** is built from the server contract. Rail's form has none
-  and opens a stored day-precision ride as a midnight clock, saving it back as a
-  clock (`railFormModel.ts`) — a follow-up for rail, not part of this work. In the
-  bus form the toggle applies to both ends, and un-ticking it yields `T00:00`
-  rather than the earlier clock.
-- **Year options** come from one bounded list request (`limit: 500`); a years
-  endpoint belongs to B2 with the statistics. The pages read
-  `rail:detail.durationHm` through `formatRailDuration` (moving that string to
-  `common` is a follow-up).
-- **Documents:** `/bus/:id/documents` is served by the documents router, and
+  typed text are escaped — the first escape in the codebase; `places/suggestions`
+  still passes raw `contains` (follow-up outside this work). The form shows one mixed
+  chip row per terminal field (`BusTerminalChips.tsx`, with its own narrowing — beyond
+  the brief, stands); the limiter's comment promises a debounce the form must deliver.
+- **PATCH and FX.** The PATCH handler mirrors `routes/rail.ts` for the FX snapshot
+  rather than a sketch in the plan.
+- **Attachable entries.** `ATTACHABLE_DOMAINS` excluded bus (a stub loader that throws
+  loudly) until the frontend API existed; the loader was filled in with it.
+- **Locale details.** The DE quotes in the beta note are closed with “ (the brief's
+  ASCII quote was invalid JSON); the EN kind list has three labels (the brief listed
+  a stale "Charter"); `bus.json` carries extra keys beyond the brief (114 of 114,
+  DE and EN in parity); `filters.domainBus` had been added twice in the achievements
+  files and was de-duplicated.
+- **The day-only toggle** is built from the server contract. Rail's form has none and
+  opens a stored day-precision ride as a midnight clock, saving it back as a clock
+  (`railFormModel.ts`) — a follow-up for rail (a Forgejo issue to open after B1). In
+  the bus form the toggle applies to both ends, and un-ticking it yields `T00:00`
+  rather than the earlier clock. `depValid` starts true, as in rail; a reviewer's
+  suggestion to start it false was judged wrong.
+- **Form save.** `onSaved` runs outside the `try` with a `saved` flag, so a parent
+  refetch that fails is not read as "save failed" (a retry would duplicate the ride);
+  a refusal stays on screen until the next edit.
+- **Year options** come from one bounded list request (`limit: 500`); a years endpoint
+  belongs to B2 with the statistics. The pages load the `rail` namespace for
+  `formatRailDuration` (`rail:detail.durationHm`) — accepted; moving the string to
+  `common` is a follow-up.
+- **Documents.** `/bus/:id/documents` is served by the documents router;
   `Document.busJourneyId` is in the `OWNER_COLUMN` map, the CHECK and the
-  `lib/api/documents.ts` entry list.
-- **The all-data export carries the rides** (`busJourneys` with companion links);
-  the schema-coverage test caught the omission in the full run. This is the JSON
-  export from §8; the Excel sheet and importer stay B2.
+  `lib/api/documents.ts` entry list (necessary there, so it stands).
+- **The all-data export carries the rides** (`busJourneys` with companion links); the
+  schema-coverage test caught the omission in the full run (its test sits below the
+  new "carries the bus rides" test, as the comment says). The Excel sheet and importer
+  stay B2.
 - **`times.*.local` carries seconds** (`2026-09-20T09:00:00`), as the shared clock
-  emits and rail asserts; the web fixtures use that form.
-- **The What's New 2.7.0 line** ("Fernbusfahrten als eigener Bereich" / "coach
-  rides as a domain of their own") was forced by the beta-key test, on the rental
-  precedent. The wording is the implementer's; the owner may reword it. The admin
-  copy for `busDomain` and the `"#c49a6c bus"` exclusion in `listColor._excluded`
-  went in with the final task.
+  emits and rail asserts; the web fixtures use that form and the real `TimeValue`
+  member names.
+- **The What's New 2.7.0 line** ("Fernbusfahrten als eigener Bereich" / "coach rides as
+  a domain of their own") was forced by the beta-key test, on the rental precedent;
+  the wording is the implementer's and the owner may reword it. The admin copy for
+  `busDomain` and the `"#c49a6c bus"` exclusion in `listColor._excluded` went in with
+  the final task.
 
-**Gates (measured 2026-10-08, HEAD after the baseline commit)**
+**Gates (measured 2026-10-08 on the branch; tsc and lint re-run on the final HEAD)**
 
-- Backend Jest: 952 of 955 suites passed (3 skipped), 8472 of 8494 tests (22
-  skipped), run under coverage. Frontend Vitest: 899 files, 6997 tests; under
-  coverage one timing-sensitive test (a Cruise suggestions case, a Settings case
-  in another run) times out on the loaded host and passes alone — not bus code.
-- `tsc` and lint clean in both trees; `prettier --check .`, `check:size` (13
-  baselined files, none grown) and `check:drift` green.
-- Coverage, against the baseline of 2026-09-16 (forgejo#62): frontend lines 56.21
-  to 74.05 %, statements 55.66 to 73.00 %, functions 52.19 to 70.07 %, branches
-  51.19 to 68.95 %; backend lines 76.35 to 87.90 %, statements 75.14 to 86.34 %,
-  functions 76.63 to 89.50 %, branches 61.82 to 72.93 %. The baseline was
-  tightened to these figures. Most of the rise is three weeks of other work on the
-  branch's base, not bus alone.
-- Odd zones: the bus and shared-ride suites (backend: route, entry suggestions,
-  trip status, write service, `rideEnds`, counting — 6 suites, 56 tests; frontend:
-  counting, form model and modal, both pages — 5 files, 53 tests) give the same
-  verdict under `Pacific/Kiritimati` and `America/St_Johns` as in the default
-  zone; so do all 45 rail suites (357 tests), which share `rideEnds`.
+- Backend Jest, under coverage: 952 of 955 suites passed (3 skipped), 8472 of 8494
+  tests (22 skipped), no failure, no deadlock. Frontend Vitest: 899 files, 6997 tests;
+  a plain run and a `--testTimeout=30000` run each had one or two timing failures that
+  pass alone (`CruiseEditModal.suggestions`, `StayEditor.tripPreselection`,
+  `SettingsPage.adminScope`) — not bus code.
+- `npx tsc --noEmit` and `npm run lint` exit 0 in `backend` and in `frontend`
+  (`eslint src`; `eslint . --max-warnings 0`). `prettier --check .`, `check:size` (13
+  baselined files, none grown) and `check:drift` were green in the controller's run
+  before the two documentation and baseline commits.
+- Coverage, against the baseline of 2026-09-16 (forgejo#62): frontend lines 56.21 to
+  74.05 %, statements 55.66 to 73.00 %, functions 52.19 to 70.07 %, branches 51.19
+  to 68.95 %; backend lines 76.35 to 87.90 %, statements 75.14 to 86.34 %, functions
+  76.63 to 89.50 %, branches 61.82 to 72.93 %. The baseline was tightened to these
+  figures (commit `3f06e766c`, whose body says the rise is mostly not bus). **Provenance:**
+  the frontend figure was measured with `--coverage.reportOnFailure=true
+  --testTimeout=30000`, because vitest writes no summary when any test fails; that
+  run had one flaky failure (`CruiseEditModal.suggestions`, passes alone), which can
+  only lower the figure. **The size of the rise is an inference:** the baseline dates
+  from 2026-09-16 and `main` has since gained rail, rental, parser and time-model
+  tests; bus alone cannot plausibly add 11 to 18 points. CI confirms the figure on this
+  branch's first run; if CI's merged backend figure is lower, the baseline is set to
+  CI's figure before merge.
+- Odd zones: the bus and shared-ride suites (backend: route, entry suggestions, trip
+  status, write service, `rideEnds`, counting — 6 suites, 56 tests; frontend: counting,
+  form model and modal, both pages — 5 files, 53 tests) give the same verdict under
+  `Pacific/Kiritimati` and `America/St_Johns` as in the default zone; so do the rail
+  suites that share `rideEnds` (44 passed, 1 skipped; 357 tests).
 
-**Browser look (iPad portrait 1024 × 1366, production build, headless Chromium,
-admin account with the beta switch on and `bus` enabled).** Settings stayed German.
-The form (typed coordinates `37.5048, 127.0046` and `38.1911, 128.5918` into the
-terminal searches, names typed as on the ticket, 2026-09-20 09:00 to 11:20, 23000
-KRW) saved with the toast "Busfahrt gespeichert". The list row showed "Kobus",
-"Seoul Express Bus Terminal → Sokcho Express Bus Terminal", "20.09.2026, 09:00 –
-11:20" and the pill "Gefahren". **At 1024 px the shared table steps three columns
-aside (duration, distance, trip) and says so under the table**; the duration
-"2 h 20 min" and "159 km" with "Luftlinie" read in the row at 1366 px, and both
-are always in the detail. Opening the row led to `/bus/:id` with the KPIs
-"Abfahrt · Asia/Seoul 09:00", "Ankunft · Asia/Seoul 11:20", "2 h 20 min", "159 km
-Luftlinie", "23.000 ₩", the status pill and the empty documents section. With the
-beta switch off, `/bus` redirected to `/dashboard` and the Bus tab left the
-logbook strip. The only 5xx seen were airline-logo requests on the flights page
-(no network in the sandbox), unrelated. Not looked at: a phone width (not a
-target), the map (B2), and a real geocoder search (offline; coordinates typed).
+**Browser look (headless Chromium, production build, admin account with the beta
+switch on and `bus` enabled, German UI).** The form, the list at 1024 × 1366 portrait,
+the detail page and the gate were taken at the specified iPad portrait viewport; the
+duration and distance cells of the list row were read at **1366 × 1024 landscape**,
+because at 1024 px the shared Table hides them. The form (typed coordinates
+`37.5048, 127.0046` and `38.1911, 128.5918` into the terminal searches, names typed
+as on the ticket, 2026-09-20 09:00 to 11:20, 23000 KRW) saved with the toast
+"Busfahrt gespeichert". The list row shows the operator's monogram tile "KO" (the name
+"Kobus" is the tile's title text; the detail page shows "Kobus" as text), "Seoul
+Express Bus Terminal → Sokcho Express Bus Terminal", "20.09.2026, 09:00 – 11:20" and
+the pill "Gefahren". At 1366 px the row also reads "2 h 20 min" and "159 km
+Luftlinie". The detail page (`/bus/:id`) shows "Abfahrt · Asia/Seoul 09:00", "Ankunft
+· Asia/Seoul 11:20", "2 h 20 min", "159 km Luftlinie", "23.000 ₩", the status pill
+and the empty documents section. With the beta switch off, `/bus` redirected to
+`/dashboard` and the Bus tab left the logbook strip. The only 5xx seen were
+airline-logo requests on the flights page (no network in the sandbox), unrelated. Not
+looked at: a phone width (not a target), the map (B2), and a real geocoder search
+(offline; coordinates typed). **For the owner:** at 1024 px the shared Table hides
+duration, distance and trip ("3 columns hidden", with a note under the table). That is
+not bus code, but it touches the "web build is drawn for iPads" rule and decides what
+an iPad portrait sees in every logbook.
 
-**Deferred minors (from the task reviews, none blocking):** a migration test title
-promises a refusal it does not exercise, and `rideKind: "charter"` is not pinned
-as rejected; `isLocalDayInput` is still duplicated in `rail.ts`; the FX test
-cannot fail on "dated by departure" or "PATCH keeps the snapshot", and PATCH has
-no cross-user or invalid-body test; `listAll` multi-page is untested; after a save
-whose parent refetch fails the dialog shows no notice; the year scan is capped at
-500 rides and refetched after each save; the gating tests cover three of seven
-surfaces; `tripEntryCount` answers 0 for bus until B2; the OpenAPI query block
-repeats `busQuerySchema` (the status array is undocumented, as in rail); a few
-cosmetic comment and blank-line items.
+**Deferred minors (from the task reviews, none blocking):**
+
+- Task 0: the backend mirror test's regex is anchored on `as const` (fragile if the
+  frontend array gains quoted comments); the frontend label test has a redundant
+  second assertion.
+- EN `settings.modules.sub.bus` lacks the article ("a logbook …").
+- A hook comment names `/api/v1/bus` before the route existed.
+- The migration test's title promises a refusal it does not exercise (rename it or add
+  a 23514 insert test).
+- `assertEntryOwned`'s final `else` has no exhaustiveness check (pre-existing style).
+- The companions usage count was untested until the route test.
+- Uneven wrap of the clockless doc comment in `statusSweep.ts`, and a missing blank
+  line before `describe("bus rides")` in its test.
+- The clockless sweep test covers the no-arrival branch only; rail has no clockless
+  sweep test of its own (follow-up outside this work).
+- `wallClockInput.ts`'s doc comment points at `shared/railClock.ts` (say "the domain's
+  clock readers"); `foldField` lacks a doc comment.
+- `isLocalDayInput` is still duplicated in `rail.ts`.
+- `rideKind: "charter"` is not pinned as rejected by a test.
+- The FX test cannot fail on "dated by departure" or "PATCH keeps the snapshot" (stub
+  fetch); no PATCH/DELETE cross-user or PATCH invalid-body tests.
+- The OpenAPI query block duplicates `busQuerySchema` (the status array is
+  undocumented, as in rail).
+- `railListSummary` is the name used for bus list rows.
+- The comment in `index.ts` still names `rateLimit.ts` (true through the re-export).
+- The escape test lacks a positive control ("100% Bus"); "position from the newest" is
+  unpinned (identical coordinates in the fixture).
+- The collation comment overstates; the `terminalRows` mapping uses a cast; a stray
+  comment follows an assertion.
+- `tripEntryCount` answers 0 for bus (pointed at B2): trip-card chips hide bus rides
+  until then.
+- The emoji tile in `MapNextUpCard` / `NextUpEntry` (consistent with its neighbours);
+  the lucide `bus` entry is not strictly alphabetical.
+- `listAll` multi-page and a mid-loop rejection are untested; `BusListQuery.status` is
+  a `string`; the placeholder "Udeung, Lounge …" may want another example.
+- Mixed precision (day departure, minute arrival) loses the arrival clock on save —
+  documented, because the toggle applies to both ends.
+- The generic-sentence test asserts only an alert; the form hook has no test of its
+  own.
+- After a save whose parent `onSaved` rejects, the dialog shows no notice (a "saved,
+  but the list could not be refreshed" line would be better).
+- The year scan is capped at 500 rides and refetched after each save.
+- The gating tests cover three of seven surfaces.
+- A detail reload remounts `DocumentsSection`.
+- `addPerTab.bus` copy is absent (unreachable until B2's tab).
+- Follow-ups outside this plan: `places/suggestions` escaping, `durationHm` into
+  `common`, rail's day-precision form (Forgejo issue after B1).
