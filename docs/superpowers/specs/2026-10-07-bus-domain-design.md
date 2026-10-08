@@ -631,7 +631,6 @@ an iPad portrait sees in every logbook.
 - `wallClockInput.ts`'s doc comment points at `shared/railClock.ts` (say "the domain's
   clock readers"); `foldField` lacks a doc comment.
 - `isLocalDayInput` is still duplicated in `rail.ts`.
-- `rideKind: "charter"` is not pinned as rejected by a test.
 - The FX test cannot fail on "dated by departure" or "PATCH keeps the snapshot" (stub
   fetch); no PATCH/DELETE cross-user or PATCH invalid-body tests.
 - The OpenAPI query block duplicates `busQuerySchema` (the status array is
