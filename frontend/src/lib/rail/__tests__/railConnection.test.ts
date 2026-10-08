@@ -6,7 +6,6 @@ import {
   connectionStations,
   connectionStatus,
   connectionTrains,
-  transferMinutes,
 } from "../railConnection";
 
 /** forgejo#187 — what a grouped logbook entry reads off its legs. */
@@ -45,11 +44,6 @@ describe("railConnection", () => {
 
   it("measures nothing when the last arrival is unknown", () => {
     expect(connectionDurationMinutes([first, { ...second, arrivalTime: null }])).toBeNull();
-  });
-
-  it("measures the wait between two legs, or abstains", () => {
-    expect(transferMinutes(first, second)).toBe(15);
-    expect(transferMinutes({ ...first, arrivalTime: null }, second)).toBeNull();
   });
 
   it("states a status only when every leg agrees", () => {

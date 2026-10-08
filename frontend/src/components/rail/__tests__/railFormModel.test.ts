@@ -11,6 +11,7 @@ import { makeRailJourney } from "./railJourneyFixture";
 import type { RailJourney, RailLookupAnswer } from "../../../types/rail";
 
 const journey: RailJourney = {
+  tightConnection: false,
   id: "j1",
   userId: "u1",
   operator: "DB Fernverkehr",

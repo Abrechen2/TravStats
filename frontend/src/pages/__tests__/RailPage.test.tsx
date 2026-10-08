@@ -101,6 +101,7 @@ const page = (
 
 function journey(over: Partial<RailJourney> = {}): RailJourney {
   return {
+    tightConnection: false,
     id: "j1",
     userId: "u1",
     operator: "DB Fernverkehr",

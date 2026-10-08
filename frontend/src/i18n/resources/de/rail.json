@@ -196,8 +196,6 @@
     "trainsLabel_other": "Züge",
     "totalDuration": "Gesamtdauer",
     "legs": "Züge dieser Verbindung",
-    "transfer": "Umstieg in {{station}} · {{wait}} Aufenthalt",
-    "transferUnknown": "Umstieg in {{station}}",
     "whole": "Ganze Verbindung ansehen: {{route}}",
     "loadError": "Die Verbindung konnte nicht geladen werden.",
     "notFound": "Diese Verbindung gibt es nicht (mehr)."
@@ -365,5 +363,16 @@
     "stations_other": "Bahnhöfe",
     "withoutOperator_one": "{{count}} ohne Betreiber",
     "withoutOperator_other": "{{count}} ohne Betreiber"
+  },
+  "transfer": {
+    "wait": "Umstieg in {{station}} · {{wait}} Umstiegszeit",
+    "unknown": "Umstieg in {{station}} · Umstiegszeit unbekannt",
+    "unknownWhy": "Eine der beiden Zeiten fehlt oder ist nur als Datum bekannt.",
+    "conflict": "Zeitkonflikt: Der nächste Zug fährt {{wait}} vor der Ankunft dieses Zugs ab.",
+    "stationChange": "Bahnhofswechsel: {{from}} → {{to}}",
+    "shortHint": "Hinweis: weniger als 10 Min. zum Umsteigen. Ob der Anschluss klappt, kann TravStats nicht wissen.",
+    "separate": "Eigene Fahrt – kein Umstieg",
+    "markTight": "Als knapp markiert",
+    "markFailed": "Die Markierung konnte nicht gespeichert werden. Bitte versuch es erneut."
   }
 }

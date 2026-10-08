@@ -122,6 +122,12 @@ const railJourney = registry.register(
         .int()
         .nullable()
         .describe("Arrival delay; null = not recorded, 0 = on time"),
+      tightConnection: z
+        .boolean()
+        .describe(
+          "The user's own mark that the change AFTER this train is tight; set on the " +
+            "leg that arrives at the change. Never derived"
+        ),
       trip: includedRow("trip (id, name, color)").nullable().optional(),
       times: railTimesSchema,
       source: railSource,
@@ -145,6 +151,13 @@ const railBookingLeg = z.object({
   trainCategory: z.string().nullable(),
   trainNumber: z.string().nullable(),
   status: z.enum(RAIL_STATUSES),
+  depStationId: z.number().int().nullable(),
+  arrStationId: z.number().int().nullable(),
+  travelClass: z.enum(RAIL_TRAVEL_CLASSES).nullable(),
+  coach: z.string().nullable(),
+  seat: z.string().nullable(),
+  bookingReference: z.string().nullable(),
+  tightConnection: z.boolean().describe("The user's mark that the change after this leg is tight"),
   times: railTimesSchema,
 });
 

@@ -196,8 +196,6 @@
     "trainsLabel_other": "Trains",
     "totalDuration": "Total time",
     "legs": "Trains of this journey",
-    "transfer": "Change at {{station}} · {{wait}} wait",
-    "transferUnknown": "Change at {{station}}",
     "whole": "View the whole journey: {{route}}",
     "loadError": "The journey could not be loaded.",
     "notFound": "This journey does not exist (any more)."
@@ -365,5 +363,16 @@
     "stations_other": "Stations",
     "withoutOperator_one": "{{count}} without an operator",
     "withoutOperator_other": "{{count}} without an operator"
+  },
+  "transfer": {
+    "wait": "Change at {{station}} · {{wait}} to change",
+    "unknown": "Change at {{station}} · transfer time unknown",
+    "unknownWhy": "One of the two times is missing or known only by its date.",
+    "conflict": "Time conflict: the next train leaves {{wait}} before this one arrives.",
+    "stationChange": "Change of station: {{from}} → {{to}}",
+    "shortHint": "Hint: less than 10 min to change. Whether the connection works out, TravStats cannot know.",
+    "separate": "A separate ride – not a change",
+    "markTight": "Marked as tight",
+    "markFailed": "The mark could not be saved. Please try again."
   }
 }

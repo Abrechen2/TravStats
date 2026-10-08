@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { makeRailJourney } from "../../components/rail/__tests__/railJourneyFixture";
+import {
+  makeRailBookingLeg,
+  makeRailJourney,
+} from "../../components/rail/__tests__/railJourneyFixture";
 import type { RailJourneyDetail } from "../../types/rail";
 
 /**
@@ -130,16 +133,7 @@ describe("RailDetailPage", () => {
     const legs = [
       { id: "j1", depStationName: "Frankfurt", arrStationName: "Fulda" },
       { id: "j2", depStationName: "Fulda", arrStationName: "Berlin" },
-    ].map((l) => ({
-      ...l,
-      departureTime: "2026-09-26T04:15:00.000Z",
-      arrivalTime: null,
-      depTimezone: "Europe/Berlin",
-      arrTimezone: "Europe/Berlin",
-      trainCategory: "ICE",
-      trainNumber: "1",
-      status: "completed" as const,
-    }));
+    ].map((l) => makeRailBookingLeg(l));
     await renderPage(detail({ booking: { id: "b1", pnr: "AB12CD", railJourneys: legs } }));
     expect(screen.getByRole("link", { name: "2. Fulda → Berlin" })).toHaveAttribute(
       "href",
@@ -150,20 +144,32 @@ describe("RailDetailPage", () => {
     expect(screen.queryByTestId("rail-connection-link")).toBeNull();
   });
 
+  // forgejo#234: the booking's legs show what lies between them — here a next
+  // train that leaves before this one arrives, at another station.
+  it("shows a conflict and a change of stations between the booking's legs", async () => {
+    const legs = [
+      makeRailBookingLeg({ id: "j1", arrivalTime: "2026-09-26T05:10:00.000Z" }),
+      makeRailBookingLeg({
+        id: "j2",
+        depStationName: "Fulda Süd",
+        arrStationName: "Berlin",
+        departureTime: "2026-09-26T05:00:00.000Z",
+      }),
+    ];
+    await renderPage(detail({ booking: { id: "b1", pnr: "AB12CD", railJourneys: legs } }));
+    const note = screen.getByTestId("rail-transfer-1");
+    expect(note).toHaveAttribute("data-kind", "conflict");
+    expect(note.textContent).toContain('rail:detail.durationM {\\"m\\":10}');
+    expect(screen.getByTestId("rail-transfer-1-station-change")).toHaveTextContent(
+      'rail:transfer.stationChange {"from":"Fulda","to":"Fulda Süd"}'
+    );
+  });
+
   it("links up to the whole ride when the server says this train has a change", async () => {
     const legs = [
       { id: "j1", depStationName: "Frankfurt", arrStationName: "Fulda" },
       { id: "j2", depStationName: "Fulda", arrStationName: "Berlin" },
-    ].map((l) => ({
-      ...l,
-      departureTime: "2026-09-26T04:15:00.000Z",
-      arrivalTime: null,
-      depTimezone: "Europe/Berlin",
-      arrTimezone: "Europe/Berlin",
-      trainCategory: "ICE",
-      trainNumber: "1",
-      status: "completed" as const,
-    }));
+    ].map((l) => makeRailBookingLeg(l));
     getConnectionMock.mockResolvedValue({
       id: "j1",
       booking: { id: "b1", pnr: "AB12CD" },
@@ -182,30 +188,14 @@ describe("RailDetailPage", () => {
   it("draws no link up for a train that is a ride of its own", async () => {
     getConnectionMock.mockResolvedValue({ id: "j1", booking: null, legs: [makeRailJourney()] });
     const legs = [
-      {
-        id: "j1",
-        depStationName: "Frankfurt",
-        arrStationName: "Fulda",
-        departureTime: "2026-09-26T04:15:00.000Z",
-        arrivalTime: null,
-        depTimezone: "Europe/Berlin",
-        arrTimezone: "Europe/Berlin",
-        trainCategory: "ICE",
-        trainNumber: "1",
-        status: "completed" as const,
-      },
-      {
+      makeRailBookingLeg({ id: "j1" }),
+      makeRailBookingLeg({
         id: "j9",
         depStationName: "Fulda",
         arrStationName: "Frankfurt",
         departureTime: "2026-09-28T04:15:00.000Z",
-        arrivalTime: null,
-        depTimezone: "Europe/Berlin",
-        arrTimezone: "Europe/Berlin",
-        trainCategory: "ICE",
         trainNumber: "2",
-        status: "completed" as const,
-      },
+      }),
     ];
     await renderPage(detail({ booking: { id: "b1", pnr: null, railJourneys: legs } }));
     await waitFor(() => expect(getConnectionMock).toHaveBeenCalled());

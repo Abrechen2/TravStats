@@ -17,8 +17,9 @@ import {
   connectionSpan,
   connectionStations,
   connectionStatus,
-  transferMinutes,
 } from "../lib/rail/railConnection";
+import { railTransfers } from "../lib/rail/railTransfer";
+import { RailTransferNote } from "../components/rail/RailTransferNote";
 import { formatRailDuration } from "../lib/rail/railDuration";
 import { formatRailSpan } from "../lib/railTime";
 import type { RailConnectionDetail } from "../types/rail";
@@ -98,6 +99,7 @@ export default function RailConnectionPage(): JSX.Element {
   const duration = connectionDurationMinutes(legs);
   const status = connectionStatus(legs);
   const changes = legs.length - 1;
+  const transfers = railTransfers(legs);
 
   const kpis: DetailKpi[] = [
     ...(duration !== null
@@ -150,19 +152,16 @@ export default function RailConnectionPage(): JSX.Element {
       <DetailSection title={t("rail:connection.legs")}>
         <ol className="flex flex-col gap-3" data-testid="rail-connection-page-legs">
           {legs.map((leg, index) => {
-            const wait = index > 0 ? transferMinutes(legs[index - 1], leg) : null;
             const when = formatRailSpan(leg, locale);
             return (
               <Fragment key={leg.id}>
                 {index > 0 && (
-                  <li className="t-caption" data-testid={`rail-connection-transfer-${index}`}>
-                    {wait !== null
-                      ? t("rail:connection.transfer", {
-                          station: leg.depStationName,
-                          wait: formatRailDuration(wait, t),
-                        })
-                      : t("rail:connection.transferUnknown", { station: leg.depStationName })}
-                  </li>
+                  <RailTransferNote
+                    transfer={transfers[index - 1]}
+                    arriving={legs[index - 1]}
+                    departing={leg}
+                    index={index}
+                  />
                 )}
                 <li data-testid={`rail-connection-leg-${leg.id}`} className="text-sm">
                   <Link to={`/rail/${leg.id}`} className="font-semibold underline">

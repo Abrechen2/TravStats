@@ -71,6 +71,11 @@ export interface RailJourney {
   currency: string | null;
   status: RailStatus;
   delayMinutes: number | null;
+  /**
+   * The user's own mark that the change AFTER this train is tight
+   * (forgejo#234); set on the leg arriving at the change, never derived.
+   */
+  tightConnection: boolean;
   notes: string | null;
   tags: string[];
   companions: string[];
@@ -117,6 +122,9 @@ export interface RailBookingLeg {
   id: string;
   depStationName: string;
   arrStationName: string;
+  /** Catalogue rows — how a change of stations is told (forgejo#234). */
+  depStationId: number | null;
+  arrStationId: number | null;
   departureTime: string;
   arrivalTime: string | null;
   depTimezone: string | null;
@@ -124,6 +132,11 @@ export interface RailBookingLeg {
   trainCategory: string | null;
   trainNumber: string | null;
   status: RailStatus;
+  travelClass: RailTravelClass | null;
+  coach: string | null;
+  seat: string | null;
+  bookingReference: string | null;
+  tightConnection: boolean;
   times?: RailTimes;
 }
 
@@ -183,6 +196,8 @@ export interface RailJourneyInput {
   currency?: string;
   status?: "scheduled" | "cancelled";
   delayMinutes?: number | null;
+  /** The "tight change" mark; the form never sends it, a PATCH of its own does. */
+  tightConnection?: boolean;
   notes?: string | null;
   tags?: string[];
   companions?: string[];
