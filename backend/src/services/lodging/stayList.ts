@@ -17,13 +17,31 @@ const dayAnchor = (day: string): Date => new Date(`${day}T00:00:00.000Z`);
  * lies inside. This is a deliberately COARSE superset - an adjacent
  * check-out/check-in day is returned too - because the exact overlap rule is
  * `shared/lodgingOverlap.ts`, applied to these rows by whoever asked.
+ *
+ * The days are read from the calendar-day columns (`check_in_date`,
+ * `check_out_date`, ADR 0002 - what `times` serves), and from the legacy UTC
+ * anchors only where a row has not been backfilled yet: the two are the same
+ * day by construction, but the day columns are the ones that stay true.
  */
 export function stayListWhere(userId: string, query: StayListQuery): Prisma.LodgingStayWhereInput {
   const and: Prisma.LodgingStayWhereInput[] = [];
-  if (query.to !== undefined) and.push({ checkIn: { lte: dayAnchor(query.to) } });
+  if (query.to !== undefined) {
+    const to = dayAnchor(query.to);
+    and.push({
+      OR: [{ checkInDate: { lte: to } }, { checkInDate: null, checkIn: { lte: to } }],
+    });
+  }
   if (query.from !== undefined) {
     const from = dayAnchor(query.from);
-    and.push({ OR: [{ checkOut: { gte: from } }, { checkOut: null, checkIn: { gte: from } }] });
+    and.push({
+      OR: [
+        { checkOutDate: { gte: from } },
+        { checkOutDate: null, checkOut: { gte: from } },
+        // No check-out at all: the check-in day itself has to lie in the window.
+        { checkOutDate: null, checkOut: null, checkInDate: { gte: from } },
+        { checkOutDate: null, checkOut: null, checkInDate: null, checkIn: { gte: from } },
+      ],
+    });
   }
   return {
     userId,

@@ -68,6 +68,15 @@ describe("GET /api/v1/lodging/stays", () => {
         stay(ibis.id, "I-june", "2025-06-15", "2025-06-18"),
         stay(ibis.id, "I-late", "2025-09-01", "2025-09-02"),
         stay(ibis.id, "I-undated", null, null),
+        // Filed by the days columns (ADR 0002): the legacy anchor is an hour
+        // off the calendar day, the day columns say 20 July.
+        {
+          ...stay(ibis.id, "I-dayCols", "2025-07-19", "2025-07-19"),
+          checkIn: new Date("2025-07-19T22:00:00.000Z"),
+          checkOut: new Date("2025-07-19T22:00:00.000Z"),
+          checkInDate: day("2025-07-20"),
+          checkOutDate: day("2025-07-20"),
+        },
         { ...stay(foreign.id, "SECRET", "2025-06-12", "2025-06-13"), userId: other.id },
       ],
     });
@@ -85,8 +94,8 @@ describe("GET /api/v1/lodging/stays", () => {
     const res = await list();
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    expect(ids(res)).toEqual(["I-late", "I-june", "A-june", "A-early", "I-undated"]);
-    expect(res.body.meta).toEqual({ total: 5, limit: 25, offset: 0 });
+    expect(ids(res)).toEqual(["I-late", "I-dayCols", "I-june", "A-june", "A-early", "I-undated"]);
+    expect(res.body.meta).toEqual({ total: 6, limit: 25, offset: 0 });
     const june = res.body.data.find(
       (s: { bookingReference: string }) => s.bookingReference === "A-june"
     );
@@ -99,7 +108,7 @@ describe("GET /api/v1/lodging/stays", () => {
 
   it("reverses with order=asc, undated still last", async () => {
     const res = await list({ order: "asc" });
-    expect(ids(res)).toEqual(["A-early", "A-june", "I-june", "I-late", "I-undated"]);
+    expect(ids(res)).toEqual(["A-early", "A-june", "I-june", "I-dayCols", "I-late", "I-undated"]);
   });
 
   it("pages on a total order and reports the size of the whole set", async () => {
@@ -108,12 +117,13 @@ describe("GET /api/v1/lodging/stays", () => {
     const third = await list({ limit: "2", offset: "4" });
     expect([...ids(first), ...ids(second), ...ids(third)]).toEqual([
       "I-late",
+      "I-dayCols",
       "I-june",
       "A-june",
       "A-early",
       "I-undated",
     ]);
-    expect(first.body.meta).toEqual({ total: 5, limit: 2, offset: 0 });
+    expect(first.body.meta).toEqual({ total: 6, limit: 2, offset: 0 });
   });
 
   it("a window returns the stays that touch it - adjacent days included, others not", async () => {
@@ -124,7 +134,15 @@ describe("GET /api/v1/lodging/stays", () => {
     // Undated stays touch no window.
     const wide = await list({ from: "2025-01-01", to: "2025-12-31" });
     expect(ids(wide)).not.toContain("I-undated");
-    expect(wide.body.meta.total).toBe(4);
+    expect(wide.body.meta.total).toBe(5);
+  });
+
+  it("reads a window by the calendar-day columns, and by the legacy anchor where those are empty", async () => {
+    // I-dayCols is on 20 July by its day columns (its legacy anchor says 19 July, 22:00).
+    expect(ids(await list({ from: "2025-07-20", to: "2025-07-20" }))).toEqual(["I-dayCols"]);
+    expect(ids(await list({ from: "2025-07-19", to: "2025-07-19" }))).toEqual([]);
+    // The stays that only have the legacy columns are still found.
+    expect(ids(await list({ from: "2025-09-01", to: "2025-09-01" }))).toEqual(["I-late"]);
   });
 
   it("filters by trip", async () => {
