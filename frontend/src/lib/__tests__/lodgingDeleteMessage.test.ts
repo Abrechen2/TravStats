@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { lodgingDeleteMessage } from "../lodgingDeleteMessage";
+import de from "../../i18n/resources/de/lodging.json";
+import en from "../../i18n/resources/en/lodging.json";
 
 /** Echoes the key with its variables, so the assertions read as sentences. */
 const t = (key: string, options?: Record<string, unknown>): string =>
@@ -54,5 +56,24 @@ describe("lodgingDeleteMessage", () => {
     expect(
       lodgingDeleteMessage(t, house, { documentCount: null, photoCount: null, tripNames: [] })
     ).not.toContain("survivors");
+  });
+
+  // The trips are named ONCE, in the "stays" line. The counted sentence used to
+  // say "Zugehörige Reisen bleiben erhalten" as well, so a house with trips said
+  // it twice.
+  it("keeps the trips out of the counted sentence, which would repeat the survivors line", () => {
+    for (const [pattern, resource] of [
+      [/Reisen/, de],
+      [/[Tt]rips/, en],
+    ] as const) {
+      for (const key of [
+        "deleteConfirmMessage",
+        "deleteConfirmMessage_one",
+        "deleteConfirmMessage_other",
+        "deleteConfirmMessageNoStays",
+      ] as const) {
+        expect(resource.detail[key]).not.toMatch(pattern);
+      }
+    }
   });
 });

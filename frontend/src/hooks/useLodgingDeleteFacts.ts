@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { documentsApi } from "../lib/api/documents";
-import { listLodgingPhotos } from "../lib/api/lodging";
+import { getLodgingDeleteFacts } from "../lib/api/lodging";
 import { tripsApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import type { LodgingDeleteFacts } from "../lib/lodgingDeleteMessage";
@@ -13,11 +12,10 @@ const UNKNOWN: LodgingDeleteFacts = { documentCount: null, photoCount: null, tri
  * What deleting a house takes with it besides its stays, asked only while the
  * confirmation is open (forgejo#250).
  *
- * The delete cascades through three things the dialog's one sentence did not
- * name: every stay's kept originals (`Document` cascades from `lodgingStay`,
- * `integrity/cascades.integrity.test.ts`), the house's own photographs
- * (`LodgingPhoto` cascades from `lodging`, and the files are removed from
- * disk), and - by omission - what stays: the trips the stays were linked to.
+ * The delete cascades through two things the dialog's one sentence did not
+ * name: the house's photographs and every stay's kept originals - counted by
+ * ONE request (`GET /lodging/:id/delete-facts`; it used to be one per stay) -
+ * and, by omission, what stays: the trips the stays were linked to.
  *
  * Each answer is independent and `null` / empty means "not known", never
  * "none": a count that could not be read must not read as "no documents".
@@ -30,41 +28,31 @@ export function useLodgingDeleteFacts(
 ): LodgingDeleteFacts {
   const [facts, setFacts] = useState<LodgingDeleteFacts>(UNKNOWN);
   const id = lodging?.id ?? null;
-  // The stays by value, so a parent re-rendering with a fresh array does not
-  // refetch; what matters is WHICH stays and trips there are.
-  const stayKey =
-    lodging === null ? "" : lodging.stays.map((s) => `${s.id}:${s.tripId ?? ""}`).join(",");
+  // The trips by value, so a parent re-rendering with a fresh array does not refetch.
+  const tripKey =
+    lodging === null
+      ? ""
+      : [...new Set(lodging.stays.flatMap((s) => (s.tripId ? [s.tripId] : [])))].sort().join(",");
 
   useEffect(() => {
-    if (id === null || lodging === null) {
+    if (id === null) {
       setFacts(UNKNOWN);
       return;
     }
     let cancelled = false;
     // One house's answer must not leak into the next one's dialog.
     setFacts(UNKNOWN);
-    const stayIds = lodging.stays.map((s) => s.id);
-    const tripIds = new Set(lodging.stays.flatMap((s) => (s.tripId ? [s.tripId] : [])));
+    const tripIds = new Set(tripKey === "" ? [] : tripKey.split(","));
     const patch = (part: Partial<LodgingDeleteFacts>): void => {
       if (!cancelled) setFacts((prev) => ({ ...prev, ...part }));
     };
 
     void (async () => {
       try {
-        const perStay = await Promise.all(
-          stayIds.map((stayId) => documentsApi.listForEntry({ type: "lodgingStay", id: stayId }))
-        );
-        patch({ documentCount: perStay.reduce((sum, docs) => sum + docs.length, 0) });
+        const counts = await getLodgingDeleteFacts(id);
+        patch({ documentCount: counts.documentCount, photoCount: counts.photoCount });
       } catch (err: unknown) {
-        logger.error("useLodgingDeleteFacts: could not count documents", err);
-      }
-    })();
-    void (async () => {
-      try {
-        const photos = await listLodgingPhotos(id);
-        patch({ photoCount: photos.length });
-      } catch (err: unknown) {
-        logger.error("useLodgingDeleteFacts: could not count photos", err);
+        logger.error("useLodgingDeleteFacts: could not count what goes with the house", err);
       }
     })();
     if (tripIds.size > 0) {
@@ -82,9 +70,7 @@ export function useLodgingDeleteFacts(
     return () => {
       cancelled = true;
     };
-    // `stayKey` stands for the stays and trips; the lodging object itself is
-    // rebuilt by its parent on every render.
-  }, [id, stayKey]);
+  }, [id, tripKey]);
 
   return facts;
 }

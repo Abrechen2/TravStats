@@ -13,7 +13,7 @@ const listLodgingPageMock = vi.fn();
 const getLodgingFacetsMock = vi.fn();
 const getLodgingStatsMock = vi.fn();
 const deleteLodgingMock = vi.fn();
-const listLodgingPhotosMock = vi.fn();
+const deleteFactsMock = vi.fn();
 const listStayPageMock = vi.fn();
 const listForEntryMock = vi.fn();
 const getTripsMock = vi.fn();
@@ -60,7 +60,7 @@ vi.mock("../../lib/api/lodging", () => ({
   getLodgingStats: () => getLodgingStatsMock(),
   deleteLodging: (...args: unknown[]) => deleteLodgingMock(...args),
   // The delete question counts what goes with the house (forgejo#250).
-  listLodgingPhotos: (...args: unknown[]) => listLodgingPhotosMock(...args),
+  getLodgingDeleteFacts: (...args: unknown[]) => deleteFactsMock(...args),
   // The chronological stay view (forgejo#226).
   listStayPage: (...args: unknown[]) => listStayPageMock(...args),
 }));
@@ -279,8 +279,8 @@ describe("LodgingListPage", () => {
     mockFacets();
     getLodgingStatsMock.mockReset();
     getLodgingStatsMock.mockResolvedValue(defaultStats);
-    listLodgingPhotosMock.mockReset();
-    listLodgingPhotosMock.mockResolvedValue([]);
+    deleteFactsMock.mockReset();
+    deleteFactsMock.mockResolvedValue({ photoCount: 0, documentCount: 0 });
     listStayPageMock.mockReset();
     listStayPageMock.mockResolvedValue({ rows: [], total: 0 });
     listForEntryMock.mockReset();
@@ -901,10 +901,7 @@ describe("LodgingListPage", () => {
         ],
       });
       mockRows([lodging]);
-      listLodgingPhotosMock.mockResolvedValue([{ id: "p1" }, { id: "p2" }, { id: "p3" }]);
-      listForEntryMock.mockImplementation(async (entry: { id: string }) =>
-        entry.id === "s1" ? [{ id: "d1" }, { id: "d2" }] : [{ id: "d3" }]
-      );
+      deleteFactsMock.mockResolvedValue({ photoCount: 3, documentCount: 3 });
       getTripsMock.mockResolvedValue([
         { id: "t1", name: "Berlin 2024" },
         { id: "t2", name: "Unrelated" },
@@ -920,24 +917,24 @@ describe("LodgingListPage", () => {
         expect(dialog).toHaveTextContent("documents:deleteCascadeNote");
         expect(dialog).toHaveTextContent("common:delete.survivors");
       });
-      expect(listForEntryMock).toHaveBeenCalledWith({ type: "lodgingStay", id: "s1" });
-      expect(listForEntryMock).toHaveBeenCalledWith({ type: "lodgingStay", id: "s2" });
-      expect(listLodgingPhotosMock).toHaveBeenCalledWith("l1");
+      // ONE request for both counts - not one per stay.
+      expect(deleteFactsMock).toHaveBeenCalledTimes(1);
+      expect(deleteFactsMock).toHaveBeenCalledWith("l1");
+      expect(listForEntryMock).not.toHaveBeenCalled();
     });
 
     // Nothing counted yet, or the count failed: the question must still open and
     // must not claim "no documents".
     it("opens with its base sentence when the counts cannot be read", async () => {
       mockRows([makeLodging({ id: "l1", name: "Hotel Adlon", stayCount: 1 })]);
-      listLodgingPhotosMock.mockRejectedValue(new Error("down"));
-      listForEntryMock.mockRejectedValue(new Error("down"));
+      deleteFactsMock.mockRejectedValue(new Error("down"));
       renderListPage();
 
       await screen.findByText("Hotel Adlon");
       await userEvent.click(screen.getByTestId("lodging-delete-l1"));
       const dialog = await screen.findByRole("dialog");
 
-      await waitFor(() => expect(listLodgingPhotosMock).toHaveBeenCalled());
+      await waitFor(() => expect(deleteFactsMock).toHaveBeenCalled());
       expect(dialog).toHaveTextContent("lodging:detail.deleteConfirmMessage");
       expect(dialog).not.toHaveTextContent("documents:deleteCascadeNote");
       expect(dialog).not.toHaveTextContent("lodging:detail.deletePhotosNote");

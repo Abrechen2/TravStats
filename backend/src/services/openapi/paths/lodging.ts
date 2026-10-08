@@ -235,6 +235,35 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/lodging/{id}/delete-facts",
+  summary: "What deleting a lodging takes with it besides its stays",
+  description:
+    "Counts, in one request, the photographs of the lodging and the kept originals " +
+    "(documents) of all of its stays - both are deleted with it. 404 for a lodging " +
+    "that is not the caller's.",
+  tags: ["Lodging"],
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: "Counts of what is deleted with the lodging",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({
+              photoCount: z.number().int(),
+              documentCount: z.number().int(),
+            }),
+          }),
+        },
+      },
+    },
+    404: { description: "Lodging not found", content: errorContent },
+  },
+});
+
 const lodgingFacets = registry.register(
   "LodgingFacets",
   z

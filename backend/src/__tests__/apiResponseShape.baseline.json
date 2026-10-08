@@ -131,6 +131,7 @@
     "importBatches.ts",
     "jobs.ts",
     "lodging.ts",
+    "lodging/deleteFacts.ts",
     "lodging/entrySuggestions.ts",
     "lodging/photos.ts",
     "lodging/propose.ts",

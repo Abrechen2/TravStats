@@ -10,6 +10,7 @@ const deleteStayMock = vi.fn();
 const listMembershipsMock = vi.fn();
 const tripsGetAllMock = vi.fn();
 const createStayMock = vi.fn();
+const deleteFactsMock = vi.fn();
 const listStayPageMock = vi.fn();
 
 // The documents section fetches its entry's kept originals on mount. It has
@@ -46,6 +47,7 @@ vi.mock("../../lib/api/lodging", () => ({
   // this the mock module has no such export, vitest prints an error per
   // render and the section is never exercised (forgejo#110).
   listLodgingPhotos: () => Promise.resolve([]),
+  getLodgingDeleteFacts: (...args: unknown[]) => deleteFactsMock(...args),
   // The stay editor is opened by one test below (the second entry point into
   // the deletion). It imports these three from the same module; a missing
   // export is `undefined is not a function` the moment the FX preview runs.
@@ -213,6 +215,8 @@ describe("LodgingDetailPage", () => {
     tripsGetAllMock.mockReset();
     listForEntryMock.mockReset();
     listForEntryMock.mockResolvedValue([]);
+    deleteFactsMock.mockReset();
+    deleteFactsMock.mockResolvedValue({ photoCount: 0, documentCount: 0 });
     createStayMock.mockReset();
     createStayMock.mockResolvedValue(null);
     listStayPageMock.mockReset();
@@ -278,7 +282,7 @@ describe("LodgingDetailPage", () => {
   // the kept originals of its stays go with it.
   it("names the kept originals of the stays in the house delete confirmation", async () => {
     getLodgingMock.mockResolvedValue(makeLodging({}, [baseStay]));
-    listForEntryMock.mockResolvedValue([{ id: "d1" }, { id: "d2" }]);
+    deleteFactsMock.mockResolvedValue({ photoCount: 0, documentCount: 2 });
     const user = userEvent.setup();
     renderDetailPage();
     await screen.findByText("Engimatt City & Garden");
@@ -287,7 +291,7 @@ describe("LodgingDetailPage", () => {
     const dialog = await screen.findByRole("dialog");
 
     await waitFor(() => expect(dialog).toHaveTextContent("documents:deleteCascadeNote"));
-    expect(listForEntryMock).toHaveBeenCalledWith({ type: "lodgingStay", id: baseStay.id });
+    expect(deleteFactsMock).toHaveBeenCalledWith("lodging-1");
   });
 
   it("shows a delete confirmation naming the stay count and does NOT call deleteLodging until confirmed", async () => {

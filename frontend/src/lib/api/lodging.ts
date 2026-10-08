@@ -124,6 +124,21 @@ export const updateLodging = async (id: string, input: LodgingInput): Promise<Lo
   return data.data;
 };
 
+/**
+ * What deleting a house takes with it besides its stays - its photographs and
+ * the kept originals of ALL its stays - in one request (forgejo#250). The
+ * confirmation used to ask the documents API once per stay.
+ */
+export interface LodgingDeleteFactsCounts {
+  photoCount: number;
+  documentCount: number;
+}
+
+export const getLodgingDeleteFacts = async (id: string): Promise<LodgingDeleteFactsCounts> => {
+  const { data } = await api.get<Envelope<LodgingDeleteFactsCounts>>(`/lodging/${id}/delete-facts`);
+  return data.data;
+};
+
 export const deleteLodging = async (id: string): Promise<void> => {
   await api.delete(`/lodging/${id}`);
 };
