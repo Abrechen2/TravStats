@@ -23,13 +23,16 @@ import type { RailStationDraft } from "./RailStationField";
 import {
   canSubmit,
   connectionDraftFrom,
+  dayPart,
   draftFrom,
   geometryNotice,
+  hasDayOnlyEnd,
   isStationComplete,
   knownStationZone,
   onwardDraftFrom,
   saveErrorFrom,
   toRailInput,
+  withClock,
   type RailFormDraft,
   type RailSaveError,
 } from "./railFormModel";
@@ -88,6 +91,10 @@ export function RailFormModal({
   const [draft, setDraft] = useState<RailFormDraft>(
     () => initialDraft ?? draftFrom(initialJourney)
   );
+  /** The draft as the ride opened, to tell a time changed away and back from one really changed. */
+  const [opened, setOpened] = useState<RailFormDraft>(
+    () => initialDraft ?? draftFrom(initialJourney)
+  );
   const [trips, setTrips] = useState<Trip[]>([]);
   const [depValid, setDepValid] = useState(true);
   const [arrValid, setArrValid] = useState(true);
@@ -144,6 +151,47 @@ export function RailFormModal({
     }));
   };
 
+  // Another station is another zone, where the old choice of occurrence means
+  // nothing; a rename of the same station keeps it.
+  const setStation = (end: "departure" | "arrival", next: RailStationDraft): void =>
+    setDraft((prev) => {
+      const moved = next.lat !== prev[end].lat || next.lon !== prev[end].lon;
+      return {
+        ...prev,
+        [end]: next,
+        ...(moved ? { [`${end}Fold`]: null } : {}),
+      };
+    });
+
+  /**
+   * A typed time ends the stored occurrence of a repeated hour: it was the old
+   * clock's. Typing the clock the ride OPENED with, at the station it opened
+   * with, gives it back — a change away and back must not move the ride.
+   */
+  const setTime = (end: "departure" | "arrival", value: string): void => {
+    setDraft((prev) => {
+      const sameClock = value === opened[`${end}Local`] && !opened[`${end}DayOnly`];
+      const sameStation = prev[end].lat === opened[end].lat && prev[end].lon === opened[end].lon;
+      return {
+        ...prev,
+        [`${end}Local`]: value,
+        [`${end}Fold`]: sameClock && sameStation ? opened[`${end}Fold`] : null,
+      };
+    });
+  };
+
+  const toggleDayOnly = (end: "departure" | "arrival", dayOnly: boolean): void => {
+    setError(null);
+    setDraft((prev) => {
+      const local = end === "departure" ? prev.departureLocal : prev.arrivalLocal;
+      const next = dayOnly ? dayPart(local) : withClock(local);
+      // The time is no longer the stored one, so neither is its occurrence.
+      return end === "departure"
+        ? { ...prev, departureDayOnly: dayOnly, departureLocal: next, departureFold: null }
+        : { ...prev, arrivalDayOnly: dayOnly, arrivalLocal: next, arrivalFold: null };
+    });
+  };
+
   const ready = canSubmit(draft) && depValid && arrValid;
   const errorText =
     error === null
@@ -191,7 +239,9 @@ export function RailFormModal({
       await onProgress?.(saved);
       setJourney(null);
       setConnectsFrom(saved);
-      setDraft(onward ? onwardDraftFrom(saved, onward) : connectionDraftFrom(saved));
+      const nextLeg = onward ? onwardDraftFrom(saved, onward) : connectionDraftFrom(saved);
+      setDraft(nextLeg);
+      setOpened(nextLeg);
       setOnward(null);
       setFormKey((k) => k + 1);
     } catch (err: unknown) {
@@ -201,6 +251,8 @@ export function RailFormModal({
       setSaving(false);
     }
   };
+
+  const anyDayOnly = hasDayOnlyEnd(draft);
 
   return (
     <Modal
@@ -336,7 +388,7 @@ export function RailFormModal({
               label={t("rail:form.departureStation")}
               idPrefix="rail-dep"
               value={draft.departure}
-              onChange={(next): void => set("departure", next)}
+              onChange={(next): void => setStation("departure", next)}
               onValidityChange={setDepValid}
               inputClassName={INPUT_CLASS}
             />
@@ -344,7 +396,7 @@ export function RailFormModal({
               label={t("rail:form.arrivalStation")}
               idPrefix="rail-arr"
               value={draft.arrival}
-              onChange={(next): void => set("arrival", next)}
+              onChange={(next): void => setStation("arrival", next)}
               onValidityChange={setArrValid}
               inputClassName={INPUT_CLASS}
             />
@@ -354,39 +406,60 @@ export function RailFormModal({
               <label className="block text-sm">
                 {t("rail:form.departureTime")}
                 <input
-                  type="datetime-local"
+                  type={draft.departureDayOnly ? "date" : "datetime-local"}
                   className={`mt-1 ${INPUT_CLASS}`}
                   style={DARK_PICKER_STYLE}
                   value={draft.departureLocal}
-                  onChange={(e): void => set("departureLocal", e.target.value)}
+                  onChange={(e): void => setTime("departure", e.target.value)}
                   {...depError.input}
                 />
               </label>
               {depError.message}
-              {/* Notice only: the rail write path cannot take `fold` yet, so no
-                  "later" choice is offered that the save would drop. */}
+              {/* A day has no clock to be repeated. */}
               <ClockChangeNotice
-                local={draft.departureLocal}
+                local={draft.departureDayOnly ? "" : draft.departureLocal}
+                fold={draft.departureFold ?? undefined}
+                onFoldChange={(fold): void => set("departureFold", fold ?? "earlier")}
                 zone={knownStationZone(journey, "dep", draft.departure)}
               />
+              <label className="mt-2 flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={draft.departureDayOnly}
+                  aria-label={`${t("rail:form.departureTime")}: ${t("rail:form.dayOnly")}`}
+                  onChange={(e): void => toggleDayOnly("departure", e.target.checked)}
+                />
+                {t("rail:form.dayOnly")}
+              </label>
             </div>
             <div>
               <label className="block text-sm">
                 {t("rail:form.arrivalTime")}
                 <input
-                  type="datetime-local"
+                  type={draft.arrivalDayOnly ? "date" : "datetime-local"}
                   className={`mt-1 ${INPUT_CLASS}`}
                   style={DARK_PICKER_STYLE}
                   value={draft.arrivalLocal}
-                  onChange={(e): void => set("arrivalLocal", e.target.value)}
+                  onChange={(e): void => setTime("arrival", e.target.value)}
                   {...arrError.input}
                 />
               </label>
               {arrError.message}
               <ClockChangeNotice
-                local={draft.arrivalLocal}
+                local={draft.arrivalDayOnly ? "" : draft.arrivalLocal}
+                fold={draft.arrivalFold ?? undefined}
+                onFoldChange={(fold): void => set("arrivalFold", fold ?? "earlier")}
                 zone={knownStationZone(journey, "arr", draft.arrival)}
               />
+              <label className="mt-2 flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={draft.arrivalDayOnly}
+                  aria-label={`${t("rail:form.arrivalTime")}: ${t("rail:form.dayOnly")}`}
+                  onChange={(e): void => toggleDayOnly("arrival", e.target.checked)}
+                />
+                {t("rail:form.dayOnly")}
+              </label>
               {/* Beside the arrival it qualifies, with a label that stays
                   visible once typed into (forgejo#202) — it used to sit in
                   the seat section with only a placeholder. */}
@@ -397,9 +470,16 @@ export function RailFormModal({
                   className={`mt-1 ${INPUT_CLASS}`}
                   aria-label={t("rail:form.delay")}
                   value={draft.delayMinutes}
+                  disabled={anyDayOnly}
+                  aria-describedby={anyDayOnly ? "rail-delay-hint" : undefined}
                   onChange={(e): void => set("delayMinutes", e.target.value)}
                 />
               </label>
+              {anyDayOnly && (
+                <p id="rail-delay-hint" className="mt-1 text-xs text-(--text-muted)">
+                  {t("rail:form.delayNeedsClock")}
+                </p>
+              )}
             </div>
           </div>
           <p className="mt-2 text-xs text-(--text-muted)">{t("rail:form.timeHint")}</p>

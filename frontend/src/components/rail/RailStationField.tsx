@@ -57,16 +57,21 @@ export function RailStationField({
 
   const handlePick = useCallback(
     (selection: LocationSelection): void => {
+      const moved = selection.lat !== value.lat || selection.lon !== value.lon;
+      const pickedCountry = selection.countryCode ? selection.countryCode.toUpperCase() : null;
       onChange({
         name: selection.name ?? value.name,
         lat: selection.lat,
         lon: selection.lon,
-        country: selection.countryCode ? selection.countryCode.toUpperCase() : value.country,
+        // A country is a fact about the point: when the point moves and the
+        // pick brings none, the old station's country is not this one's —
+        // null, never guessed (forgejo#213).
+        country: moved ? pickedCountry : (pickedCountry ?? value.country),
         code: null,
         stationId: null,
       });
     },
-    [onChange, value.name, value.country]
+    [onChange, value.name, value.lat, value.lon, value.country]
   );
 
   const position =

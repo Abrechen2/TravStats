@@ -167,6 +167,12 @@ export interface RailJourneyInput {
   arrivalStation: RailStationInput;
   departureLocal: string;
   arrivalLocal?: string | null;
+  /**
+   * Which occurrence of a repeated autumn hour the wall clock means; null or
+   * absent is the earlier one, the server's default (ADR 0002, D3 / Q5).
+   */
+  departureFold?: "earlier" | "later" | null;
+  arrivalFold?: "earlier" | "later" | null;
   /** Only a distance typed from the ticket; null = measure it. */
   distanceKm?: number | null;
   travelClass?: RailTravelClass | null;

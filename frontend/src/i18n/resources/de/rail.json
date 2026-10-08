@@ -68,6 +68,8 @@
     "departureTime": "Abfahrt (Ortszeit am Bahnhof)",
     "arrivalTime": "Ankunft (Ortszeit am Bahnhof)",
     "timeHint": "Die Uhrzeit, die auf dem Ticket steht. Die Zeitzone ergibt sich aus dem Bahnhof.",
+    "dayOnly": "Nur das Datum ist bekannt",
+    "delayNeedsClock": "Eine Verspätung braucht die Uhrzeiten der Fahrt.",
     "distance": "Entfernung in km",
     "distanceHint": "Leer lassen: TravStats misst entlang der von Transitous übernommenen Strecke, sonst die Luftlinie. Eintragen, wenn das Ticket die Strecke nennt.",
     "seat": "Platz",
