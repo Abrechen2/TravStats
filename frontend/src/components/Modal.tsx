@@ -49,6 +49,12 @@ import { useCoarsePointer } from "../hooks/useCoarsePointer";
 
 interface ModalProps {
   open: boolean;
+  /**
+   * Close the dialog — and nothing else. It must not navigate: with `dirty`,
+   * a "Verwerfen" after the browser's Back has already gone back
+   * (`form/unsavedChanges`), and a navigating `onClose` would move the user
+   * twice. A save that moves on uses `navigateAfterSave`.
+   */
   onClose: () => void;
   /** Rendered as the dialog's accessible name. */
   title: ReactNode;

@@ -168,7 +168,7 @@ describe("beforeunload", () => {
     );
   }
 
-  it("is registered only while a dialog holds unsaved input", () => {
+  it("is registered only while a dialog holds unsaved input", async () => {
     const add = vi.spyOn(window, "addEventListener");
     const remove = vi.spyOn(window, "removeEventListener");
     render(<Harness />);
@@ -186,6 +186,11 @@ describe("beforeunload", () => {
     expect(event.defaultPrevented).toBe(true);
 
     act(() => screen.getByText("unmount-dialog").click());
+    // The guard is let go one microtask later, so that a dialog re-registering
+    // in the same commit (StrictMode) keeps it — see `unsavedChanges`.
+    await act(async () => {
+      await Promise.resolve();
+    });
     expect(registered()).toBe(0);
     expect(openDirtyDialogCount()).toBe(0);
     add.mockRestore();

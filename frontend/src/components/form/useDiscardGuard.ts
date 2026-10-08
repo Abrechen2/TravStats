@@ -105,8 +105,10 @@ export function useDiscardGuard({ open, dirty, busy, onClose, panelRef }: Option
         rememberFocus();
         setAsking(true);
       },
+      isBusy: () => stateRef.current.busy,
+      panel: () => panelRef?.current ?? null,
     });
-  }, [guarding, rememberFocus]);
+  }, [guarding, rememberFocus, panelRef]);
 
   // A dialog that closed (or saved, which also ends "dirty") must not come
   // back still asking.
@@ -123,6 +125,9 @@ export function useDiscardGuard({ open, dirty, busy, onClose, panelRef }: Option
     current.onClose();
   }, [rememberFocus]);
 
+  // `onClose` must not navigate (rollout rule): after a Back, the discard
+  // below has already gone back, and a navigating `onClose` would move the
+  // user a second time.
   const discard = useCallback((): void => {
     setAsking(false);
     if (fromHistory.current) {

@@ -5,13 +5,14 @@
  * a dialog holds unsaved input, one extra history entry (a "sentinel") now
  * catches that Back and turns it into the same discard question.
  */
-import { useState } from "react";
+import { StrictMode, useState } from "react";
 import type { JSX } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { BrowserRouter, Route, Routes, useNavigate } from "react-router-dom";
 import Modal from "../../Modal";
-import { HISTORY_SENTINEL_KEY, openDirtyDialogCount } from "../unsavedChanges";
+import { HISTORY_SENTINEL_KEY, navigateAfterSave, openDirtyDialogCount } from "../unsavedChanges";
 
 const onSentinel = (): boolean =>
   Boolean((window.history.state as Record<string, unknown> | null)?.[HISTORY_SENTINEL_KEY]);
@@ -118,5 +119,114 @@ describe("the history sentinel", () => {
     expect(openDirtyDialogCount()).toBe(0);
     await waitFor(() => expect(onSentinel()).toBe(false));
     add.mockRestore();
+  });
+});
+
+describe("the history sentinel — fix round 2", () => {
+  // Dev renders in StrictMode, which mounts, unmounts and re-mounts every
+  // effect: the sentinel's removal raced its own re-push.
+  it("survives StrictMode's double effect: one entry, and the first Back asks", async () => {
+    const before = window.history.length;
+    render(
+      <StrictMode>
+        <DirtyModal dirty onClose={vi.fn()} />
+      </StrictMode>
+    );
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(window.history.length).toBe(before + 1);
+    expect(onSentinel()).toBe(true);
+
+    act(() => window.history.back());
+    expect(await screen.findByText("common:discard.title")).toBeInTheDocument();
+  });
+
+  it("does not ask while a save is running, but stays armed", async () => {
+    const onClose = vi.fn();
+    render(
+      <Modal open onClose={onClose} title="Formular" dirty busy>
+        <p>Inhalt</p>
+      </Modal>
+    );
+    act(() => window.history.back());
+    await waitFor(() => expect(onSentinel()).toBe(true));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(screen.queryByText("common:discard.title")).not.toBeInTheDocument();
+    expect(window.location.pathname).toBe("/page");
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("asks the dialog on top, not the one that became dirty last", async () => {
+    const lowerClose = vi.fn();
+    const upperClose = vi.fn();
+    function Stack({ lowerDirty }: { lowerDirty: boolean }): JSX.Element {
+      return (
+        <>
+          <Modal open onClose={lowerClose} title="Unten" dirty={lowerDirty}>
+            <p>unten</p>
+          </Modal>
+          <Modal open onClose={upperClose} title="Oben" dirty>
+            <p>oben</p>
+          </Modal>
+        </>
+      );
+    }
+    const { rerender } = render(<Stack lowerDirty={false} />);
+    // The LOWER dialog becomes dirty after the upper one.
+    rerender(<Stack lowerDirty />);
+
+    act(() => window.history.back());
+    await userEvent.click(await screen.findByRole("button", { name: "common:discard.confirm" }));
+    expect(upperClose).toHaveBeenCalledTimes(1);
+    expect(lowerClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("navigateAfterSave — a save that moves on to another page", () => {
+  function SaveForm(): JSX.Element {
+    const navigate = useNavigate();
+    const [dirty, setDirty] = useState(true);
+    return (
+      <Modal open onClose={vi.fn()} title="Formular" dirty={dirty}>
+        <button
+          type="button"
+          onClick={() => {
+            setDirty(false);
+            void navigateAfterSave(navigate, "/done");
+          }}
+        >
+          save
+        </button>
+      </Modal>
+    );
+  }
+
+  it("lands on the new page and stays there; one Back leaves it normally", async () => {
+    render(
+      <BrowserRouter>
+        <Routes>
+          <Route path="/page" element={<SaveForm />} />
+          <Route path="/done" element={<p>Fertig</p>} />
+          <Route path="/start" element={<p>Start</p>} />
+        </Routes>
+      </BrowserRouter>
+    );
+    expect(onSentinel()).toBe(true);
+
+    await userEvent.click(screen.getByRole("button", { name: "save" }));
+    expect(await screen.findByText("Fertig")).toBeInTheDocument();
+    // No late removal of the sentinel yanks the user back to the form.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    expect(window.location.pathname).toBe("/done");
+    expect(onSentinel()).toBe(false);
+
+    act(() => window.history.back());
+    await waitFor(() => expect(window.location.pathname).toBe("/page"));
+    expect(screen.queryByText("common:discard.title")).not.toBeInTheDocument();
   });
 });

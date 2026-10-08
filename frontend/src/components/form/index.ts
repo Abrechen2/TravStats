@@ -4,7 +4,7 @@
  */
 export { useDirtyGuard } from "./useDirtyGuard";
 export { useDiscardGuard } from "./useDiscardGuard";
-export { openDirtyDialogCount } from "./unsavedChanges";
+export { navigateAfterSave, openDirtyDialogCount } from "./unsavedChanges";
 export { RequiredMark, focusFirstMissingRequired, unfoldAncestors } from "./requiredFields";
 export { default as RequiredLegend } from "./RequiredLegend";
 export { default as SaveBlockedHint } from "./SaveBlockedHint";
