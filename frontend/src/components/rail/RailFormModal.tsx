@@ -23,7 +23,7 @@ import type { RailStationDraft } from "./RailStationField";
 import {
   canSubmit,
   connectionDraftFrom,
-  dayOf,
+  dayPart,
   draftFrom,
   geometryNotice,
   isStationComplete,
@@ -146,14 +146,15 @@ export function RailFormModal({
     }));
   };
 
-  const toggleDayOnly = (dayOnly: boolean): void => {
+  const toggleDayOnly = (end: "departure" | "arrival", dayOnly: boolean): void => {
     setError(null);
-    setDraft((prev) => ({
-      ...prev,
-      dayOnly,
-      departureLocal: dayOnly ? dayOf(prev.departureLocal) : withClock(prev.departureLocal),
-      arrivalLocal: dayOnly ? dayOf(prev.arrivalLocal) : withClock(prev.arrivalLocal),
-    }));
+    setDraft((prev) => {
+      const local = end === "departure" ? prev.departureLocal : prev.arrivalLocal;
+      const next = dayOnly ? dayPart(local) : withClock(local);
+      return end === "departure"
+        ? { ...prev, departureDayOnly: dayOnly, departureLocal: next }
+        : { ...prev, arrivalDayOnly: dayOnly, arrivalLocal: next };
+    });
   };
 
   const ready = canSubmit(draft) && depValid && arrValid;
@@ -214,7 +215,7 @@ export function RailFormModal({
     }
   };
 
-  const timeInputType = draft.dayOnly ? "date" : "datetime-local";
+  const anyDayOnly = draft.departureDayOnly || draft.arrivalDayOnly;
 
   return (
     <Modal
@@ -368,7 +369,7 @@ export function RailFormModal({
               <label className="block text-sm">
                 {t("rail:form.departureTime")}
                 <input
-                  type={timeInputType}
+                  type={draft.departureDayOnly ? "date" : "datetime-local"}
                   className={`mt-1 ${INPUT_CLASS}`}
                   style={DARK_PICKER_STYLE}
                   value={draft.departureLocal}
@@ -380,15 +381,23 @@ export function RailFormModal({
               {/* Notice only: the rail write path cannot take `fold` yet, so no
                   "later" choice is offered that the save would drop. */}
               <ClockChangeNotice
-                local={draft.dayOnly ? "" : draft.departureLocal}
+                local={draft.departureDayOnly ? "" : draft.departureLocal}
                 zone={knownStationZone(journey, "dep", draft.departure)}
               />
+              <label className="mt-2 flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={draft.departureDayOnly}
+                  onChange={(e): void => toggleDayOnly("departure", e.target.checked)}
+                />
+                {t("rail:form.dayOnly")}
+              </label>
             </div>
             <div>
               <label className="block text-sm">
                 {t("rail:form.arrivalTime")}
                 <input
-                  type={timeInputType}
+                  type={draft.arrivalDayOnly ? "date" : "datetime-local"}
                   className={`mt-1 ${INPUT_CLASS}`}
                   style={DARK_PICKER_STYLE}
                   value={draft.arrivalLocal}
@@ -398,9 +407,17 @@ export function RailFormModal({
               </label>
               {arrError.message}
               <ClockChangeNotice
-                local={draft.dayOnly ? "" : draft.arrivalLocal}
+                local={draft.arrivalDayOnly ? "" : draft.arrivalLocal}
                 zone={knownStationZone(journey, "arr", draft.arrival)}
               />
+              <label className="mt-2 flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={draft.arrivalDayOnly}
+                  onChange={(e): void => toggleDayOnly("arrival", e.target.checked)}
+                />
+                {t("rail:form.dayOnly")}
+              </label>
               {/* Beside the arrival it qualifies, with a label that stays
                   visible once typed into (forgejo#202) — it used to sit in
                   the seat section with only a placeholder. */}
@@ -411,20 +428,18 @@ export function RailFormModal({
                   className={`mt-1 ${INPUT_CLASS}`}
                   aria-label={t("rail:form.delay")}
                   value={draft.delayMinutes}
-                  disabled={draft.dayOnly}
+                  disabled={anyDayOnly}
+                  aria-describedby={anyDayOnly ? "rail-delay-hint" : undefined}
                   onChange={(e): void => set("delayMinutes", e.target.value)}
                 />
               </label>
+              {anyDayOnly && (
+                <p id="rail-delay-hint" className="mt-1 text-xs text-(--text-muted)">
+                  {t("rail:form.delayNeedsClock")}
+                </p>
+              )}
             </div>
           </div>
-          <label className="mt-3 flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={draft.dayOnly}
-              onChange={(e): void => toggleDayOnly(e.target.checked)}
-            />
-            {t("rail:form.dayOnly")}
-          </label>
           <p className="mt-2 text-xs text-(--text-muted)">{t("rail:form.timeHint")}</p>
           <label className="mt-3 block text-sm">
             {t("rail:form.distance")}

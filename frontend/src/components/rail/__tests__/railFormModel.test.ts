@@ -298,7 +298,8 @@ describe("a day-only ride", () => {
 
   it("opens on its day, read from the station's clock rather than the UTC instant", () => {
     const draft = draftFrom(dayRide);
-    expect(draft.dayOnly).toBe(true);
+    expect(draft.departureDayOnly).toBe(true);
+    expect(draft.arrivalDayOnly).toBe(false);
     expect(draft.departureLocal).toBe("2026-09-21");
     expect(draft.arrivalLocal).toBe("");
   });
@@ -310,28 +311,107 @@ describe("a day-only ride", () => {
     expect(input.delayMinutes).toBeNull();
   });
 
-  it("sends a typed arrival as its day too", () => {
+  it("sends a typed arrival clock as a clock: the day-only flag is per end", () => {
     const input = toRailInput({ ...draftFrom(dayRide), arrivalLocal: "2026-09-22T07:30" });
-    expect(input.arrivalLocal).toBe("2026-09-22");
+    expect(input.arrivalLocal).toBe("2026-09-22T07:30");
+    expect(input.delayMinutes).toBeNull();
+  });
+
+  // The server takes a day or a clock for each end on its own.
+  describe("mixed precision", () => {
+    const zoned = (local: string, utc: string, precision: "day" | "minute") => ({
+      utc,
+      zone: "Europe/Berlin",
+      offset: "+02:00",
+      local,
+      precision,
+    });
+    const dayThenClock: RailJourney = {
+      ...dayRide,
+      arrivalTime: "2026-09-21T09:20:00.000Z",
+      times: {
+        departure: zoned("2026-09-21T00:00:00", "2026-09-20T22:00:00.000Z", "day"),
+        arrival: zoned("2026-09-21T11:20:00", "2026-09-21T09:20:00.000Z", "minute"),
+        actualDeparture: null,
+        actualArrival: null,
+      },
+    };
+    const clockThenDay: RailJourney = {
+      ...dayRide,
+      arrivalTime: "2026-09-21T22:00:00.000Z",
+      times: {
+        departure: zoned("2026-09-21T08:15:00", "2026-09-21T06:15:00.000Z", "minute"),
+        arrival: zoned("2026-09-22T00:00:00", "2026-09-21T22:00:00.000Z", "day"),
+        actualDeparture: null,
+        actualArrival: null,
+      },
+    };
+
+    it("keeps the arrival clock of a ride whose departure is a day", () => {
+      const draft = draftFrom(dayThenClock);
+      expect(draft).toMatchObject({
+        departureDayOnly: true,
+        arrivalDayOnly: false,
+        departureLocal: "2026-09-21",
+        arrivalLocal: "2026-09-21T11:20",
+      });
+      expect(toRailInput(draft)).toMatchObject({
+        departureLocal: "2026-09-21",
+        arrivalLocal: "2026-09-21T11:20",
+        delayMinutes: null,
+      });
+    });
+
+    it("sends the arrival of a ride whose departure is a clock as the day it is", () => {
+      const draft = draftFrom({ ...clockThenDay, delayMinutes: 5 });
+      expect(draft).toMatchObject({
+        departureDayOnly: false,
+        arrivalDayOnly: true,
+        departureLocal: "2026-09-21T08:15",
+        arrivalLocal: "2026-09-22",
+      });
+      expect(toRailInput(draft)).toMatchObject({
+        departureLocal: "2026-09-21T08:15",
+        arrivalLocal: "2026-09-22",
+        delayMinutes: null,
+      });
+    });
+
+    it("starts the next leg with the precision of the arrival it follows", () => {
+      const next = connectionDraftFrom(clockThenDay);
+      expect(next).toMatchObject({
+        departureLocal: "2026-09-22",
+        departureDayOnly: true,
+        arrivalDayOnly: false,
+      });
+      expect(connectionDraftFrom(dayThenClock)).toMatchObject({
+        departureLocal: "2026-09-21T11:20",
+        departureDayOnly: false,
+      });
+      // No arrival stored: the departure's precision is all there is.
+      expect(connectionDraftFrom(dayRide).departureDayOnly).toBe(true);
+    });
   });
 
   it("leaves a minute-precision ride on its clock", () => {
     const draft = draftFrom(journey);
-    expect(draft.dayOnly).toBe(false);
+    expect(draft.departureDayOnly).toBe(false);
+    expect(draft.arrivalDayOnly).toBe(false);
     expect(toRailInput(draft).departureLocal).toBe("2026-07-01T08:15");
   });
 
   it("starts a new ride on a clock", () => {
-    expect(draftFrom(null).dayOnly).toBe(false);
+    expect(draftFrom(null)).toMatchObject({ departureDayOnly: false, arrivalDayOnly: false });
   });
 
   // The leg after a day-only ride has no clock to start from either; a
   // 00:00 invented for it would be the same defect one leg later.
   it("hands its day, not a midnight, to the connection after it", () => {
     const next = connectionDraftFrom(dayRide);
-    expect(next.dayOnly).toBe(true);
+    expect(next.departureDayOnly).toBe(true);
+    expect(next.arrivalDayOnly).toBe(false);
     expect(next.departureLocal).toBe("2026-09-21");
-    expect(connectionDraftFrom(journey).dayOnly).toBe(false);
+    expect(connectionDraftFrom(journey).departureDayOnly).toBe(false);
   });
 
   it("leaves day-only when a lookup gives the leg its clocks", () => {
@@ -366,8 +446,39 @@ describe("a day-only ride", () => {
       ],
     } as unknown as NonNullable<RailLookupAnswer["match"]>;
     const next = applyLookup(draftFrom(dayRide), match, 1);
-    expect(next.dayOnly).toBe(false);
+    expect(next.departureDayOnly).toBe(false);
+    expect(next.arrivalDayOnly).toBe(false);
     expect(next.departureLocal).toBe("2026-09-21T08:15");
     expect(next.arrivalLocal).toBe("2026-09-21T10:00");
+  });
+
+  it("clears the flag only for the end the lookup gives a time for", () => {
+    const stop = (departureLocal: string | null, arrivalLocal: string | null) => ({
+      name: "X",
+      lat: 50,
+      lon: 8,
+      country: "DE",
+      code: null,
+      stationId: null,
+      arrivalLocal,
+      departureLocal,
+    });
+    const match = {
+      provider: "transitous",
+      ref: "trip",
+      operator: null,
+      trainCategory: "ICE",
+      trainNumber: "9557",
+      boardingIndex: 0,
+      stops: [stop("2026-09-21T08:15", null), stop(null, null)],
+    } as unknown as NonNullable<RailLookupAnswer["match"]>;
+    const both = { ...draftFrom(dayRide), arrivalLocal: "2026-09-22", arrivalDayOnly: true };
+    const next = applyLookup(both, match, 1);
+    expect(next).toMatchObject({
+      departureLocal: "2026-09-21T08:15",
+      departureDayOnly: false,
+      arrivalLocal: "2026-09-22",
+      arrivalDayOnly: true,
+    });
   });
 });

@@ -74,6 +74,11 @@ function pickBothViaGeocoder(): void {
   fireEvent.click(screen.getByText("pick rail:form.arrivalStation"));
 }
 
+/** The two "only the date is known" checkboxes: departure first, arrival second. */
+function dayOnlyBoxes(): HTMLElement[] {
+  return screen.getAllByRole("checkbox", { name: "rail:form.dayOnly" });
+}
+
 describe("RailFormModal", () => {
   beforeEach(() => {
     create.mockReset();
@@ -529,7 +534,14 @@ describe("RailFormModal", () => {
       const departure = screen.getByLabelText("rail:form.departureTime");
       expect(departure).toHaveAttribute("type", "date");
       expect(departure).toHaveValue("2026-09-21");
-      expect(screen.getByLabelText("rail:form.dayOnly")).toBeChecked();
+      const [depDayOnly, arrDayOnly] = dayOnlyBoxes();
+      expect(depDayOnly).toBeChecked();
+      expect(arrDayOnly).not.toBeChecked();
+      // A delay needs both clocks; the field says why it is off.
+      expect(screen.getByLabelText("rail:form.delay")).toBeDisabled();
+      expect(screen.getByLabelText("rail:form.delay")).toHaveAccessibleDescription(
+        "rail:form.delayNeedsClock"
+      );
 
       fireEvent.change(screen.getByLabelText("rail:form.seatNumber"), { target: { value: "42" } });
       fireEvent.click(saveButton());
@@ -549,7 +561,7 @@ describe("RailFormModal", () => {
     it("gives the day a clock when the user says the time is known, and back", async () => {
       render(<RailFormModal journey={dayRide} onClose={vi.fn()} onSaved={vi.fn()} />);
       await waitFor(() => expect(getAllTrips).toHaveBeenCalled());
-      const toggle = screen.getByLabelText("rail:form.dayOnly");
+      const toggle = dayOnlyBoxes()[0];
 
       fireEvent.click(toggle);
       const departure = screen.getByLabelText("rail:form.departureTime");
@@ -560,5 +572,55 @@ describe("RailFormModal", () => {
       fireEvent.click(toggle);
       expect(screen.getByLabelText("rail:form.departureTime")).toHaveValue("2026-09-21");
     });
+  });
+
+  // The server takes a day or a clock per end; one flag for the ride lost the
+  // arrival's clock here (or turned its day into a midnight).
+  it("keeps a mixed-precision ride's day and clock apart, each end with its own checkbox", async () => {
+    const mixed = makeRailJourney({
+      departureTime: "2026-09-20T22:00:00.000Z",
+      arrivalTime: "2026-09-21T09:20:00.000Z",
+      delayMinutes: 3,
+      times: {
+        departure: {
+          utc: "2026-09-20T22:00:00.000Z",
+          zone: "Europe/Berlin",
+          offset: "+02:00",
+          local: "2026-09-21T00:00:00",
+          precision: "day",
+        },
+        arrival: {
+          utc: "2026-09-21T09:20:00.000Z",
+          zone: "Europe/Berlin",
+          offset: "+02:00",
+          local: "2026-09-21T11:20:00",
+          precision: "minute",
+        },
+        actualDeparture: null,
+        actualArrival: null,
+      },
+    });
+    update.mockResolvedValue({ journey: mixed, geometry: null });
+    render(<RailFormModal journey={mixed} onClose={vi.fn()} onSaved={vi.fn()} />);
+    await waitFor(() => expect(getAllTrips).toHaveBeenCalled());
+
+    const [depDayOnly, arrDayOnly] = dayOnlyBoxes();
+    expect(depDayOnly).toBeChecked();
+    expect(arrDayOnly).not.toBeChecked();
+    expect(screen.getByLabelText("rail:form.departureTime")).toHaveAttribute("type", "date");
+    const arrival = screen.getByLabelText("rail:form.arrivalTime");
+    expect(arrival).toHaveAttribute("type", "datetime-local");
+    expect(arrival).toHaveValue("2026-09-21T11:20");
+
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(update).toHaveBeenCalled());
+    expect(update).toHaveBeenCalledWith(
+      "j1",
+      expect.objectContaining({
+        departureLocal: "2026-09-21",
+        arrivalLocal: "2026-09-21T11:20",
+        delayMinutes: null,
+      })
+    );
   });
 });
