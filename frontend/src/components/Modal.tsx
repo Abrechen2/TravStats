@@ -6,6 +6,7 @@ import { useScrimDismiss } from "./ui/useScrimDismiss";
 import { useDiscardGuard } from "./form/useDiscardGuard";
 import { useTranslation } from "../hooks/useTranslation";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { useCoarsePointer } from "../hooks/useCoarsePointer";
 
 /**
  * The frame every blocking dialog sits in.
@@ -118,6 +119,11 @@ export default function Modal({
 
   const guard = useDiscardGuard({ open, dirty, busy, onClose });
   const { requestClose } = guard;
+  // Touch sizing follows the POINTER, not the width (CLAUDE.md, forgejo#249):
+  // an iPad is wide and finger-operated, and measured the × at ~28 px and the
+  // footer buttons at ~36 px — under the 44 px the design's own sheet uses.
+  // The layout stays width-based; only the target sizes grow.
+  const coarse = useCoarsePointer();
   useDialogChrome({ open, onClose: requestClose, panelRef, busy });
   const scrim = useScrimDismiss(panelRef, requestClose);
 
@@ -160,8 +166,14 @@ export default function Modal({
               onClick={requestClose}
               disabled={busy}
               aria-label={closeLabel}
-              className="-mr-1 shrink-0 rounded-sm p-1 disabled:opacity-50"
-              style={{ color: "var(--text-muted)" }}
+              className="-mr-1 inline-flex shrink-0 items-center justify-center rounded-sm p-1 disabled:opacity-50"
+              style={{
+                color: "var(--text-muted)",
+                ...(coarse && {
+                  minWidth: "var(--ts-size-touch-min)",
+                  minHeight: "var(--ts-size-touch-min)",
+                }),
+              }}
             >
               <svg
                 className="h-5 w-5"
@@ -179,7 +191,10 @@ export default function Modal({
         <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3 pb-4">{children}</div>
         {footerContent && (
           <div
-            className="flex shrink-0 flex-wrap justify-end gap-2 px-5 py-3"
+            data-touch={coarse ? "coarse" : undefined}
+            className={`flex shrink-0 flex-wrap justify-end gap-2 px-5 py-3 ${
+              coarse ? "[&_button]:min-h-(--ts-size-touch-min)" : ""
+            }`}
             style={{ background: "var(--ts-surface)", borderTop: "1px solid var(--ts-border)" }}
           >
             {footerContent}
