@@ -124,6 +124,11 @@ function pickBothAirports(): void {
 
 const form = (): HTMLFormElement => screen.getByRole("dialog").querySelector("form")!;
 const networkError = Object.assign(new Error("Network Error"), { isAxiosError: true });
+// A refusal the server answered (nothing stored), so a create may retry.
+const dbDown = Object.assign(new Error("503"), {
+  isAxiosError: true,
+  response: { status: 503, data: { code: "DB_UNAVAILABLE" } },
+});
 
 /** forgejo#245–#249 on the flight CREATE form — the reference the others copied. */
 describe("SimplifiedFlightFormV2 — the shared form blocks", () => {
@@ -147,13 +152,13 @@ describe("SimplifiedFlightFormV2 — the shared form blocks", () => {
     expect(mockOnCancel).not.toHaveBeenCalled();
   });
 
-  it("keeps the draft after a dropped connection, says so, and the retry saves", async () => {
-    const onSubmit = vi.fn().mockRejectedValueOnce(networkError).mockResolvedValueOnce(undefined);
+  it("keeps the draft after a database restart, says so, and the retry saves", async () => {
+    const onSubmit = vi.fn().mockRejectedValueOnce(dbDown).mockResolvedValueOnce(undefined);
     await openManual(onSubmit);
     pickBothAirports();
     fireEvent.submit(form());
 
-    const banner = await screen.findByText("common:saveErrors.network");
+    const banner = await screen.findByText("common:saveErrors.dbUnavailable");
     const alert = banner.closest("[data-form-error-banner]") as HTMLElement;
     expect(alert).toHaveAttribute("role", "alert");
     await waitFor(() => expect(document.activeElement).toBe(alert));
@@ -163,6 +168,29 @@ describe("SimplifiedFlightFormV2 — the shared form blocks", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(2));
+  });
+
+  // Bus review, Minor 2 (integration wiring): the flight may be stored.
+  it("offers no retry after a create whose answer was lost, and offers a reload instead", async () => {
+    const onSubmit = vi.fn().mockRejectedValueOnce(networkError);
+    const onReload = vi.fn();
+    render(
+      <SimplifiedFlightFormV2
+        onSubmit={onSubmit as never}
+        onCancel={mockOnCancel}
+        onReload={onReload}
+      />
+    );
+    fireEvent.click(screen.getByText(/flights:form\.manualEntryAction/i));
+    await screen.findByRole("button", { name: /flights:form\.submit$/i });
+    pickBothAirports();
+    fireEvent.submit(form());
+
+    expect(await screen.findByText("common:saveErrors.outcomeUnknown")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "common:buttons.retry" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.reloadList" }));
+    expect(onReload).toHaveBeenCalledTimes(1);
+    expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
   it("sends one create for a double submit", async () => {

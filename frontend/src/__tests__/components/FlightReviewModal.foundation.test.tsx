@@ -67,6 +67,11 @@ const confirm = (): HTMLButtonElement =>
   document.querySelector('button[type="submit"]') as HTMLButtonElement;
 const airportsResolved = () => waitFor(() => expect(confirm()).not.toBeDisabled());
 const networkError = Object.assign(new Error("Network Error"), { isAxiosError: true });
+// A refusal the server answered (nothing stored), so a create may retry.
+const dbDown = Object.assign(new Error("503"), {
+  isAxiosError: true,
+  response: { status: 503, data: { code: "DB_UNAVAILABLE" } },
+});
 
 /** forgejo#245–#249 on the parser review (part of creating a flight from a document). */
 describe("FlightReviewModal — the shared form blocks", () => {
@@ -106,19 +111,30 @@ describe("FlightReviewModal — the shared form blocks", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("keeps the corrections after a dropped connection; the retry confirms", async () => {
-    const onConfirm = vi.fn().mockRejectedValueOnce(networkError).mockResolvedValueOnce(undefined);
+  it("keeps the corrections after a database restart; the retry confirms", async () => {
+    const onConfirm = vi.fn().mockRejectedValueOnce(dbDown).mockResolvedValueOnce(undefined);
     renderReview(onConfirm);
     await airportsResolved();
     fireEvent.change(screen.getByLabelText(/flights:form\.seat$/), { target: { value: "12A" } });
     fireEvent.click(confirm());
-    const banner = (await screen.findByText("common:saveErrors.network")).closest(
+    const banner = (await screen.findByText("common:saveErrors.dbUnavailable")).closest(
       "[data-form-error-banner]"
     ) as HTMLElement;
     expect(banner).toHaveAttribute("role", "alert");
     expect((screen.getByLabelText(/flights:form\.seat$/) as HTMLInputElement).value).toBe("12A");
     fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
     await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(2));
+  });
+
+  // Bus review, Minor 2 (integration wiring): confirming creates the flight.
+  it("offers no retry when the confirmation's answer was lost", async () => {
+    const onConfirm = vi.fn().mockRejectedValueOnce(networkError);
+    renderReview(onConfirm);
+    await airportsResolved();
+    fireEvent.click(confirm());
+    expect(await screen.findByText("common:saveErrors.outcomeUnknown")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "common:buttons.retry" })).toBeNull();
+    expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
   it("confirms once for a double click", async () => {
