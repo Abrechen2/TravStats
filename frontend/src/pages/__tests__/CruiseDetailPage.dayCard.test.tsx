@@ -128,4 +128,29 @@ describe("CruiseDetailPage — day card", () => {
     expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest" });
     expect(document.activeElement).toBe(heading);
   });
+
+  // Re-review: the open card was kept by day number alone, so with two calls
+  // on one day, tapping the second opened the first.
+  it("opens the second of two calls on one day, not the first", async () => {
+    setClockForTests("2026-12-01T10:00:00Z");
+    getMock.mockResolvedValue({
+      ...cruise,
+      stops: [
+        stop("s3a", 3, "2026-10-07", port(2, "Oslo"), { excursionNote: "Holmenkollen" }),
+        stop("s3b", 3, "2026-10-07", port(9, "Drøbak"), { excursionNote: "Festung" }),
+      ],
+    });
+    listForEntry.mockResolvedValue([]);
+    renderPage();
+
+    await screen.findByText("dayCard.pickHint");
+    const rows = screen.getAllByRole("button", { pressed: false });
+    const drobak = rows.find((r) => r.textContent?.includes("Drøbak"));
+    await userEvent.click(drobak!);
+
+    const card = await screen.findByRole("region", { name: /detail\.day 3/ });
+    expect(card.textContent).toContain("Festung");
+    expect(card.textContent).not.toContain("Holmenkollen");
+    expect(drobak).toHaveAttribute("aria-pressed", "true");
+  });
 });

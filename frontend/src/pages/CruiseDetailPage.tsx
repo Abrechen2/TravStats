@@ -12,7 +12,8 @@ import {
 import { cruiseStatusPillStyle } from "../components/Cruise/cruiseStatusStyle";
 import CruiseItinerary from "../components/Cruise/CruiseItinerary";
 import { CruiseDayCard } from "../components/Cruise/CruiseDayCard";
-import { todayEntryKey } from "../components/Cruise/cruiseDayCardModel";
+import { entryAtSlot, slotOfEntry, todayEntryKey } from "../components/Cruise/cruiseDayCardModel";
+import type { DaySlot } from "../components/Cruise/cruiseDayCardModel";
 import { useCruiseDocuments } from "../components/Cruise/useCruiseDocuments";
 import { useTodayZone } from "../hooks/useTodayZone";
 import { CruiseUnresolvedPorts } from "../components/Cruise/CruiseUnresolvedPorts";
@@ -72,25 +73,25 @@ export default function CruiseDetailPage(): JSX.Element {
   const { isFeatureVisible } = useBetaFeatures();
   const todayZone = useTodayZone();
   /**
-   * The day of the cruise whose card the reader opened; undefined = today's,
-   * if any (forgejo#223). Kept as the DAY, not the stop id: every save
-   * recreates the stops with new ids, and the open card closed after
-   * resolving a port (review M3).
+   * The day whose card the reader opened; undefined = today's, if any
+   * (forgejo#223). Kept as a SLOT — the day of the cruise and the stop's
+   * place among that day's stops — not the stop id: every save recreates the
+   * stops with new ids, and the open card closed after resolving a port
+   * (review M3). The place among the day's stops keeps two calls on one day
+   * apart (re-review: tapping the second opened the first).
    */
-  const [pickedDay, setPickedDay] = useState<number | null | undefined>(undefined);
+  const [pickedSlot, setPickedSlot] = useState<DaySlot | null | undefined>(undefined);
   const [cardFocus, setCardFocus] = useState(0);
   const timeline = useMemo(() => (cruise ? buildEffectiveTimeline(cruise) : []), [cruise]);
   const todayKey = useMemo(() => todayEntryKey(timeline, todayZone), [timeline, todayZone]);
-  const todayDay = timeline.find((e) => e.key === todayKey)?.stop?.dayNumber ?? null;
-  const dayNumber = pickedDay === undefined ? todayDay : pickedDay;
-  const dayEntry = timeline.find((e) => e.stop !== null && e.stop.dayNumber === dayNumber) ?? null;
+  const slot = pickedSlot === undefined ? slotOfEntry(timeline, todayKey) : pickedSlot;
+  const dayEntry = entryAtSlot(timeline, slot);
   const pickDay = (key: string): void => {
-    const day = timeline.find((e) => e.key === key)?.stop?.dayNumber ?? null;
-    if (day === null || day === dayNumber) {
-      setPickedDay(null);
+    if (dayEntry?.key === key) {
+      setPickedSlot(null);
       return;
     }
-    setPickedDay(day);
+    setPickedSlot(slotOfEntry(timeline, key));
     setCardFocus((n) => n + 1);
   };
   const dayDocuments = useCruiseDocuments(dayEntry && cruise ? cruise.id : null);

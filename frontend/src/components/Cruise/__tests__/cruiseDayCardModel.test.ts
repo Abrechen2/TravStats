@@ -1,6 +1,12 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { setClockForTests } from "../../../shared/time";
-import { documentsOfDay, portStay, todayEntryKey } from "../cruiseDayCardModel";
+import {
+  documentsOfDay,
+  entryAtSlot,
+  portStay,
+  slotOfEntry,
+  todayEntryKey,
+} from "../cruiseDayCardModel";
 import type { EffectiveTimelineEntry } from "../cruisePorts";
 import type { CruiseStop, Port } from "../../../types";
 import type { TravelDocument } from "../../../lib/api/documents";
@@ -99,5 +105,22 @@ describe("documentsOfDay", () => {
     ] as TravelDocument[];
     expect(documentsOfDay(docs, "2026-10-07").map((d) => d.id)).toEqual(["a"]);
     expect(documentsOfDay(docs, null)).toEqual([]);
+  });
+});
+
+describe("day slots", () => {
+  it("tells two calls on one day apart, and finds them again under new ids", () => {
+    const before = [
+      entry("a", "2026-10-07", stop({ id: "a", dayNumber: 3 })),
+      entry("b", "2026-10-07", stop({ id: "b", dayNumber: 3 })),
+    ];
+    const slot = slotOfEntry(before, "b");
+    expect(slot).toEqual({ day: 3, nth: 1 });
+    const afterSave = [
+      entry("a2", "2026-10-07", stop({ id: "a2", dayNumber: 3 })),
+      entry("b2", "2026-10-07", stop({ id: "b2", dayNumber: 3 })),
+    ];
+    expect(entryAtSlot(afterSave, slot)?.key).toBe("b2");
+    expect(slotOfEntry(before, "nope")).toBeNull();
   });
 });

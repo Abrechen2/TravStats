@@ -73,3 +73,34 @@ export function documentsOfDay(
   if (!day) return [];
   return documents.filter((d) => d.issuedOn?.slice(0, 10) === day);
 }
+
+/** A day of the cruise and a stop's place among that day's stops. */
+export interface DaySlot {
+  day: number;
+  nth: number;
+}
+
+/**
+ * Where an itinerary entry stands, in terms that survive a save: the stops
+ * get new ids each time, but a day and the order of its stops stay. Null for
+ * an entry without a stop row (the departure/arrival borrowed from the cruise).
+ */
+export function slotOfEntry(
+  entries: readonly EffectiveTimelineEntry[],
+  key: string | null
+): DaySlot | null {
+  const entry = key ? entries.find((e) => e.key === key) : undefined;
+  if (!entry?.stop) return null;
+  const day = entry.stop.dayNumber;
+  const nth = entries.filter((e) => e.stop?.dayNumber === day).indexOf(entry);
+  return { day, nth };
+}
+
+/** The entry standing at a slot now, or null. */
+export function entryAtSlot(
+  entries: readonly EffectiveTimelineEntry[],
+  slot: DaySlot | null
+): EffectiveTimelineEntry | null {
+  if (!slot) return null;
+  return entries.filter((e) => e.stop?.dayNumber === slot.day)[slot.nth] ?? null;
+}
