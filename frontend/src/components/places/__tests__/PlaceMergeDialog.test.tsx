@@ -17,6 +17,12 @@ vi.mock("../../../lib/api/places", () => ({
   mergePlace: (...a: unknown[]) => mergePlace(...a),
   getPlaceRelations: (...a: unknown[]) => getPlaceRelations(...a),
 }));
+vi.mock("../../../lib/api/placeLists", () => ({
+  listCuratedChecklists: vi.fn(async () => [
+    { key: "world-heritage", name: "UNESCO-Welterbe", nameEn: "UNESCO World Heritage" },
+    { key: "world-wonders-new7", name: "Neue 7 Weltwunder", nameEn: "New 7 Wonders" },
+  ]),
+}));
 vi.mock("../../../lib/logger", () => ({ logger: { error: vi.fn() } }));
 vi.mock("../../../hooks/useTranslation", async () => {
   const { germanUseTranslationNs } = await import("../../../__tests__/helpers/germanT");
@@ -286,9 +292,31 @@ describe("PlaceMergeDialog", () => {
     await pickColosseum();
     await chooseAll();
     fireEvent.click(confirmButton());
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "verschiedene Einträge einer Checkliste"
-    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("Einträge von Checklisten");
+  });
+
+  // Review I4: said when the duplicate is picked, before any choice is made.
+  it("explains at pick time why two checklist entries stay apart, naming both lists", async () => {
+    const petra = { ...KOLOSSEUM, name: "Petra", curatedItemId: "world-heritage:326" } as Place;
+    const petra7 = {
+      ...COLOSSEUM,
+      name: "Petra (Neue 7)",
+      curatedItemId: "world-wonders-new7:petra",
+    } as Place;
+    listPlaces.mockResolvedValue([petra7]);
+    render(<PlaceMergeDialog place={petra} onClose={vi.fn()} onMerged={vi.fn()} />);
+    await act(async () => {});
+    fireEvent.click(screen.getByRole("button", { name: /Petra \(Neue 7\)/ }));
+    await act(async () => {});
+
+    const notice = screen.getByRole("alert");
+    expect(notice).toHaveTextContent("Einträge zweier Checklisten");
+    expect(notice).toHaveTextContent("UNESCO-Welterbe, Neue 7 Weltwunder");
+    expect(screen.queryByRole("group", { name: "Name" })).not.toBeInTheDocument();
+    expect(confirmButton()).toBeDisabled();
+    fireEvent.click(within(notice).getByRole("button", { name: "Anderen Ort wählen" }));
+    expect(screen.getByLabelText("Doppelten Ort wählen")).toBeInTheDocument();
+    expect(mergePlace).not.toHaveBeenCalled();
   });
 
   it("asks before a started merge is dropped; an untouched one closes at once", async () => {

@@ -471,7 +471,7 @@
     "failed": "The places could not be merged. Nothing was changed.",
     "merged": "“{{name}}” is merged.",
     "errors": {
-      "bothCurated": "Both places stand for different entries of a checklist — merged, one tick would be lost. Nothing was changed.",
+      "bothCurated": "Both places are checklist entries — merged, one tick would be lost. Nothing was changed.",
       "same": "A place cannot be merged with itself."
     },
     "impact": {
@@ -492,6 +492,10 @@
       "visited": "The place counts as visited, because one of the two was.",
       "wishlist": "The place stays on the wishlist.",
       "refKept": "Its source reference is kept as a second reference — a later import still finds it."
+    },
+    "curated": {
+      "twoLists": "“{{kept}}” and “{{other}}” are entries of two checklists ({{lists}}). Merged, one tick would be lost — so both stay.",
+      "sameList": "“{{kept}}” and “{{other}}” are two different entries of the checklist {{list}}. Merged, one tick would be lost — so both stay."
     }
   },
   "nearby": {

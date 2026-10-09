@@ -471,7 +471,7 @@
     "failed": "Die Orte konnten nicht zusammengeführt werden. Es wurde nichts verändert.",
     "merged": "„{{name}}“ ist zusammengeführt.",
     "errors": {
-      "bothCurated": "Beide Orte stehen für verschiedene Einträge einer Checkliste – zusammengeführt ginge ein Haken verloren. Es wurde nichts verändert.",
+      "bothCurated": "Beide Orte sind Einträge von Checklisten – zusammengeführt ginge ein Haken verloren. Es wurde nichts verändert.",
       "same": "Ein Ort kann nicht mit sich selbst zusammengeführt werden."
     },
     "impact": {
@@ -492,6 +492,10 @@
       "visited": "Der Ort zählt als besucht, weil einer der beiden besucht war.",
       "wishlist": "Der Ort bleibt auf der Merkliste.",
       "refKept": "Seine Kennung aus der Quelle bleibt als Zweitverweis erhalten – ein späterer Import findet ihn wieder."
+    },
+    "curated": {
+      "twoLists": "„{{kept}}“ und „{{other}}“ sind Einträge zweier Checklisten ({{lists}}). Zusammengeführt ginge ein Haken verloren – deshalb bleiben beide bestehen.",
+      "sameList": "„{{kept}}“ und „{{other}}“ sind zwei verschiedene Einträge der Checkliste {{list}}. Zusammengeführt ginge ein Haken verloren – deshalb bleiben beide bestehen."
     }
   },
   "nearby": {

@@ -21,10 +21,12 @@ import type { MissingStep } from "../form";
 import { PlaceMergeCompare, mergeGroupId } from "./PlaceMergeCompare";
 import { mergeFields, openGroups, type MergeChoices } from "./placeMergeModel";
 import { PlaceMergeImpact } from "./PlaceMergeImpact";
+import { PlaceMergeCuratedNotice, curatedPair } from "./PlaceMergeCuratedNotice";
 
 const COARSE = "pointer-coarse:min-h-(--ts-size-touch-min)";
 const PICK_ID = "place-merge-pick";
 const HINT_ID = "place-merge-blocked";
+const PICK_OTHER_ID = "place-merge-pick-other";
 
 /** The server's two refusals, said in the reader's language. */
 const MERGE_ERROR_KEYS = {
@@ -108,12 +110,18 @@ export function PlaceMergeDialog({ place, onClose, onMerged }: Props): JSX.Eleme
   }, [others, query, place]);
 
   const open = source ? openGroups(place, source, choices) : [];
-  const missing: MissingStep[] = source
-    ? open.map((g) => ({ field: mergeGroupId(g), label: t(`places:merge.group.${g}`) }))
-    : [{ field: PICK_ID, label: t("places:merge.pickStep") }];
+  // Two different checklist items cannot become one place (review I4): said at
+  // pick time, and the only way on is another pick.
+  const curatedClash = source !== null && curatedPair(place, source);
+  const missing: MissingStep[] =
+    source === null
+      ? [{ field: PICK_ID, label: t("places:merge.pickStep") }]
+      : curatedClash
+        ? [{ field: PICK_OTHER_ID, label: t("places:merge.pickStep") }]
+        : open.map((g) => ({ field: mergeGroupId(g), label: t(`places:merge.group.${g}`) }));
 
   const handleMerge = async (): Promise<void> => {
-    if (!source) return;
+    if (!source || curatedClash) return;
     const fields = mergeFields(place, source, choices);
     if (fields === null) return;
     failure.clear();
@@ -246,19 +254,35 @@ export function PlaceMergeDialog({ place, onClose, onMerged }: Props): JSX.Eleme
                 {t("places:merge.pickOther")}
               </button>
             </div>
-            <PlaceMergeCompare
-              target={place}
-              source={source}
-              choices={choices}
-              onChoose={(group, choice) => setChoices((prev) => ({ ...prev, [group]: choice }))}
-            />
-            <PlaceMergeImpact
-              keptName={place.name}
-              source={source}
-              relations={impact.relations}
-              countsFailed={impact.failed}
-              visitedEither={place.visited || source.visited}
-            />
+            {curatedClash && place.curatedItemId && source.curatedItemId ? (
+              <PlaceMergeCuratedNotice
+                keptName={place.name}
+                otherName={source.name}
+                keptItem={place.curatedItemId}
+                otherItem={source.curatedItemId}
+                pickAnotherId={PICK_OTHER_ID}
+                onPickAnother={() => {
+                  setSource(null);
+                  setChoices({});
+                }}
+              />
+            ) : (
+              <>
+                <PlaceMergeCompare
+                  target={place}
+                  source={source}
+                  choices={choices}
+                  onChoose={(group, choice) => setChoices((prev) => ({ ...prev, [group]: choice }))}
+                />
+                <PlaceMergeImpact
+                  keptName={place.name}
+                  source={source}
+                  relations={impact.relations}
+                  countsFailed={impact.failed}
+                  visitedEither={place.visited || source.visited}
+                />
+              </>
+            )}
           </>
         )}
 
