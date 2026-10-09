@@ -562,5 +562,39 @@
     "undoNote": "Danach lässt sich das einige Sekunden lang rückgängig machen – gespeichert wird erst, wenn diese Frist vorbei ist.",
     "confirm": "Verschieben",
     "confirmLoss": "Verschieben und Linie verwerfen"
+  },
+  "shift": {
+    "open": "Ab hier verschieben …",
+    "openHint": "Diese und alle folgenden Stationen um Tage verschieben – mit Vorschau.",
+    "title": "Ab „{{name}}“ verschieben",
+    "intro": "Diese Station und alle danach rücken um dieselbe Zahl von Tagen. Verknüpfte Unterkünfte behalten ihre Buchungsdaten – sie stehen unten zum Prüfen.",
+    "days": "Um wie viele Tage?",
+    "daysHint": "Eine positive Zahl verschiebt nach hinten (später), eine negative nach vorne (früher).",
+    "daysInvalid": "Bitte eine ganze Zahl eingeben, z. B. 2 oder -1.",
+    "earlier": "Einen Tag früher",
+    "later": "Einen Tag später",
+    "missingDays": "eine Zahl von Tagen ungleich 0",
+    "missingDated": "eine Station mit Datum ab hier",
+    "colStation": "Station",
+    "colBefore": "Bisher",
+    "colAfter": "Neu",
+    "noticesTitle": "Bitte prüfen",
+    "notice": {
+      "beforePrevious": "„{{name}}“ beginnt dann, bevor „{{previous}}“ endet.",
+      "gap_one": "Zwischen „{{previous}}“ und „{{name}}“ liegt dann {{count}} Tag ohne Station.",
+      "gap_other": "Zwischen „{{previous}}“ und „{{name}}“ liegen dann {{count}} Tage ohne Station.",
+      "linkedStay": "Die Unterkunft „{{name}}“ ({{dates}}) behält ihre Buchungsdaten.",
+      "otherStay": "„{{name}}“ fällt dann in den Aufenthalt „{{stay}}“ ({{dates}}).",
+      "outsideTrip": "Der Roadtrip liegt dann teilweise außerhalb seiner Reise „{{trip}}“ ({{dates}}).",
+      "overlapsTrip": "Der Roadtrip überschneidet sich dann mit der Reise „{{trip}}“ ({{dates}}).",
+      "overlapsRoadtrip": "Der Roadtrip überschneidet sich dann mit dem Roadtrip „{{roadtrip}}“ ({{dates}})."
+    },
+    "check": "prüfen",
+    "contextFailed": "Deine Reisen und anderen Roadtrips konnten nicht geladen werden – Überschneidungen damit sind nicht geprüft.",
+    "apply": "Verschieben",
+    "done_one": "{{count}} Station verschoben ({{days}} Tage)",
+    "done_other": "{{count}} Stationen verschoben ({{days}} Tage)",
+    "undoRestores_one": "Rückgängig stellt das bisherige Datum dieser Station wieder her ({{from}} – {{to}}).",
+    "undoRestores_other": "Rückgängig stellt die bisherigen Daten dieser {{count}} Stationen wieder her ({{from}} – {{to}})."
   }
 }

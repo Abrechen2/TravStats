@@ -56,6 +56,7 @@ export default function StationEditCard({
   lodgings,
   onChange,
   onClose,
+  onShift,
 }: {
   station: EditorStation;
   position: number;
@@ -64,6 +65,8 @@ export default function StationEditCard({
   lodgings: Lodging[] | null;
   onChange: (patch: Partial<EditorStation>) => void;
   onClose: () => void;
+  /** "Ab hier verschieben" — this station and every one after it (forgejo#241). */
+  onShift?: () => void;
 }): JSX.Element {
   const { t } = useTranslation(["roadtrips"]);
   const display = useDisplayFormat();
@@ -273,6 +276,14 @@ export default function StationEditCard({
               />
             </Field>
           )}
+        </div>
+      )}
+      {onShift && kind !== "via" && (
+        <div className="flex flex-wrap items-center" style={{ gap: 10 }}>
+          <Button variant="secondary" onClick={onShift}>
+            {t("roadtrips:shift.open")}
+          </Button>
+          <span className="t-caption">{t("roadtrips:shift.openHint")}</span>
         </div>
       )}
       {kind !== "pass" && kind !== "via" && arrival !== "" && departure === "" && (

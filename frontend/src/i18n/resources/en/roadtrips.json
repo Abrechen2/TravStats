@@ -562,5 +562,39 @@
     "undoNote": "You can undo this for a few seconds afterwards — nothing is saved until that time is up.",
     "confirm": "Move",
     "confirmLoss": "Move and drop the line"
+  },
+  "shift": {
+    "open": "Shift from here …",
+    "openHint": "Move this and every following station by days — with a preview.",
+    "title": "Shift from “{{name}}”",
+    "intro": "This station and every one after it move by the same number of days. Linked stays keep their booking dates — they are listed below to check.",
+    "days": "By how many days?",
+    "daysHint": "A positive number moves later, a negative one earlier.",
+    "daysInvalid": "Please enter a whole number, e.g. 2 or -1.",
+    "earlier": "One day earlier",
+    "later": "One day later",
+    "missingDays": "a number of days other than 0",
+    "missingDated": "a dated station from here on",
+    "colStation": "Station",
+    "colBefore": "Before",
+    "colAfter": "New",
+    "noticesTitle": "Please check",
+    "notice": {
+      "beforePrevious": "“{{name}}” then begins before “{{previous}}” ends.",
+      "gap_one": "There is then {{count}} day without a station between “{{previous}}” and “{{name}}”.",
+      "gap_other": "There are then {{count}} days without a station between “{{previous}}” and “{{name}}”.",
+      "linkedStay": "The stay “{{name}}” ({{dates}}) keeps its booking dates.",
+      "otherStay": "“{{name}}” then falls into the stay “{{stay}}” ({{dates}}).",
+      "outsideTrip": "The roadtrip then runs partly outside its trip “{{trip}}” ({{dates}}).",
+      "overlapsTrip": "The roadtrip then overlaps the trip “{{trip}}” ({{dates}}).",
+      "overlapsRoadtrip": "The roadtrip then overlaps the roadtrip “{{roadtrip}}” ({{dates}})."
+    },
+    "check": "check",
+    "contextFailed": "Your trips and other roadtrips could not be loaded — overlaps with them are not checked.",
+    "apply": "Shift",
+    "done_one": "{{count}} station shifted ({{days}} days)",
+    "done_other": "{{count}} stations shifted ({{days}} days)",
+    "undoRestores_one": "Undo restores this station's previous dates ({{from}} – {{to}}).",
+    "undoRestores_other": "Undo restores the previous dates of these {{count}} stations ({{from}} – {{to}})."
   }
 }

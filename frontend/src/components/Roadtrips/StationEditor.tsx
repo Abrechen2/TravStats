@@ -22,7 +22,9 @@ import {
   reorderImpact,
   type ReorderImpact,
 } from "../../lib/roadtrip/reorderImpact";
+import type { ShiftRow } from "../../lib/roadtrip/shiftDays";
 import ReorderPreviewDialog from "./ReorderPreviewDialog";
+import ShiftDaysDialog from "./ShiftDaysDialog";
 import StationConflictDialog from "./StationConflictDialog";
 import UndoBar from "./UndoBar";
 import StationEditCard from "./StationEditCard";
@@ -166,6 +168,7 @@ export default function StationEditor({
     to: number;
     impact: ReorderImpact;
   } | null>(null);
+  const [shiftFrom, setShiftFrom] = useState<number | null>(null);
   const lodgings = useLodgingLibrary(true);
   const started = useRef(false);
 
@@ -273,6 +276,51 @@ export default function StationEditor({
     });
   };
 
+  /**
+   * forgejo#241: the dates of every station from `fromIndex` on, moved after
+   * the preview. The undo takes back exactly those dates — not the whole list,
+   * so an edit made since stays — and says which ones it restores.
+   */
+  const applyShift = (
+    fromIndex: number,
+    shifted: EditorStation[],
+    rows: ShiftRow[],
+    days: number
+  ): void => {
+    const previous = new Map(
+      drafts.slice(fromIndex).map((s) => [s.key, { startDate: s.startDate, endDate: s.endDate }])
+    );
+    const moved = new Set(rows.map((r) => r.station.key));
+    const byKey = new Map(shifted.map((s) => [s.key, s]));
+    setShiftFrom(null);
+    change((prev) =>
+      prev.map((s) => {
+        const next = moved.has(s.key) ? byKey.get(s.key) : undefined;
+        return next ? { ...s, startDate: next.startDate, endDate: next.endDate } : s;
+      })
+    );
+    const first = rows[0];
+    const last = rows[rows.length - 1];
+    setUndoable({
+      label: t("roadtrips:shift.done", {
+        count: rows.length,
+        days: days > 0 ? `+${days}` : String(days),
+      }),
+      restores: t("roadtrips:shift.undoRestores", {
+        count: rows.length,
+        from: dayLabel(first?.before.start ?? null),
+        to: dayLabel(last?.before.end ?? last?.before.start ?? null),
+      }),
+      restore: () =>
+        change((prev) =>
+          prev.map((s) => {
+            const old = moved.has(s.key) ? previous.get(s.key) : undefined;
+            return old ? { ...s, ...old } : s;
+          })
+        ),
+    });
+  };
+
   const undo = (): void => {
     if (!undoable) return;
     undoable.restore();
@@ -283,6 +331,8 @@ export default function StationEditor({
   const legBetween = (a: EditorStation, b: EditorStation): TourLeg | undefined =>
     a.id && b.id ? legs.find((l) => l.fromStopId === a.id && l.toStopId === b.id) : undefined;
 
+  const dayLabel = (day: string | null): string =>
+    day ? display.date(`${day}T00:00:00Z`, { timeZone: "UTC", omitYear: true }) : "—";
   const name = (s: EditorStation): string =>
     s.title.trim() ||
     (s.night.kind === "via" ? t("roadtrips:night.via") : t("roadtrips:editor.unnamed"));
@@ -315,6 +365,7 @@ export default function StationEditor({
                 lodgings={lodgings}
                 onChange={(patch) => update(s.key, patch)}
                 onClose={() => setOpenKey(null)}
+                onShift={() => setShiftFrom(index)}
               />
             ) : (
               <div
@@ -479,6 +530,18 @@ export default function StationEditor({
           impact={reorder.impact}
           onConfirm={confirmMove}
           onClose={() => setReorder(null)}
+        />
+      )}
+
+      {shiftFrom !== null && drafts[shiftFrom] && (
+        <ShiftDaysDialog
+          routeId={routeId}
+          tripId={tripId}
+          drafts={drafts}
+          fromIndex={shiftFrom}
+          lodgings={lodgings}
+          onClose={() => setShiftFrom(null)}
+          onApply={(shifted, rows, days) => applyShift(shiftFrom, shifted, rows, days)}
         />
       )}
 
