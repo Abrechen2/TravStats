@@ -87,6 +87,10 @@ export const RAIL_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "kpis", label: t("rail:stats.sections.kpis") },
   { key: "rankings", label: t("rail:stats.sections.rankings") },
   { key: "delays", label: t("rail:stats.sections.delays") },
+  // forgejo#261 — journeys and changes, connections, punctuality per operator.
+  { key: "journeys", label: t("rail:stats.sections.journeys") },
+  { key: "connections", label: t("rail:stats.sections.connections") },
+  { key: "punctuality", label: t("rail:stats.sections.punctuality") },
   { key: "records", label: t("rail:stats.sections.records") },
   { key: "years", label: t("rail:stats.sections.years") },
 ];

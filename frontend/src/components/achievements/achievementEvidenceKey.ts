@@ -90,6 +90,10 @@ export const ACHIEVEMENT_EVIDENCE_KEY: Record<string, string> = {
   rail_night_trains: "railNightTrainCount",
   rail_high_speed: "railHighSpeedRideCount",
   rail_cross_border: "railCrossBorderRideCount",
+  // forgejo#261: the journeys behind "Gut umgestiegen", counted by the same
+  // fold. The station return and the year with the most new connections are
+  // extrema — release 1 serves neither, so their dialogs say so.
+  rail_documented_transfer_journeys: "railDocumentedTransferJourneyCount",
 };
 
 /** The served measure behind this rule, or null when nobody can list it yet. */

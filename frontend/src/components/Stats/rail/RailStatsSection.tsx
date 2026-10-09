@@ -14,6 +14,7 @@ import PeriodComparisonStrip from "../PeriodComparisonStrip";
 import { comparisonWindow, sameSpanUntil } from "../../../lib/stats/comparisonWindow";
 import type { PeriodScope } from "../useStatsPeriod";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
+import RailJourneySections from "./RailJourneySections";
 
 /**
  * The rail numbers on the statistics page (spec 2026-09-25-rail-domain, 2b).
@@ -298,6 +299,16 @@ export default function RailStatsSection({
             emptyLabel={t("rail:stats.noDelays")}
           />
         </div>
+      )}
+      {stats.connected && (
+        <RailJourneySections
+          figures={stats.connected}
+          rides={stats.journeys}
+          delaysRecorded={delays.recordedJourneys}
+          year={year}
+          accent={accent}
+          visibility={visibility}
+        />
       )}
       {show("records") && longest && (
         <div className="mt-8">

@@ -757,5 +757,8 @@
   },
   "period": {
     "emptyYear": "Für {{year}} ist hier nichts erfasst."
+  },
+  "metricHelp": {
+    "summary": "So wird gezählt"
   }
 }

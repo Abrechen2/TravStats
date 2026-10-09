@@ -23,6 +23,16 @@ describe("rail badges in the achievement dialog", () => {
     expect(evidenceKeyForRule("rail_longest_km")).toBeNull();
   });
 
+  // forgejo#261
+  it("lists the journeys behind 'Gut umgestiegen' and says the two extrema have no list", () => {
+    expect(evidenceKeyForRule("rail_documented_transfer_journeys")).toBe(
+      "railDocumentedTransferJourneyCount"
+    );
+    expect(evidenceKeyForRule("rail_station_return_years")).toBeNull();
+    expect(evidenceKeyForRule("rail_new_connections_year")).toBeNull();
+    expect(progressUnitForRule("rail_station_return_years")).toBe("years");
+  });
+
   it("names the unit of the distance rules, roadtrip ones included", () => {
     expect(progressUnitForRule("rail_km")).toBe("km");
     expect(progressUnitForRule("rail_longest_km")).toBe("km");

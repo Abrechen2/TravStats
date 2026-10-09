@@ -106,6 +106,11 @@ describe("rail achievements", () => {
       railLongestKm: 1200,
       railHighSpeedRides: 2,
       railCrossBorderRides: 2,
+      // forgejo#261: no station seen twice, no booking linking two rides,
+      // and three of the four counted rides open a connection in one year.
+      railStationReturnYears: 0,
+      railDocumentedTransferJourneys: 0,
+      railNewConnectionsYearMax: 3,
     });
   });
 

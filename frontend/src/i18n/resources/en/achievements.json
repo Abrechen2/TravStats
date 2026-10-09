@@ -61,7 +61,8 @@
       "km": "km",
       "hours": "h",
       "days": "days",
-      "nights": "nights"
+      "nights": "nights",
+      "years": "years"
     },
     "evidence": {
       "trigger": "The entries behind it",
@@ -1291,6 +1292,18 @@
     "RAIL_OPERATORS_5": {
       "name": "Operator collector",
       "description": "Travelled with five different rail operators"
+    },
+    "RAIL_STATION_REUNION": {
+      "name": "Station reunion",
+      "description": "Returned to a station after at least five years"
+    },
+    "RAIL_TRANSFERS_5": {
+      "name": "Smooth connections",
+      "description": "Five fully documented rail journeys with a linked change of trains"
+    },
+    "RAIL_NEW_CONNECTIONS_10": {
+      "name": "New rails",
+      "description": "Ten connections ridden for the first time in one year"
     }
   },
   "header": {

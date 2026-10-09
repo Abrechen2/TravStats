@@ -61,7 +61,8 @@
       "km": "km",
       "hours": "Std.",
       "days": "Tage",
-      "nights": "Nächte"
+      "nights": "Nächte",
+      "years": "Jahre"
     },
     "evidence": {
       "trigger": "Die Einträge dahinter",
@@ -1291,6 +1292,18 @@
     "RAIL_OPERATORS_5": {
       "name": "Bahngesellschaften-Sammler",
       "description": "Mit fünf verschiedenen Bahngesellschaften gefahren"
+    },
+    "RAIL_STATION_REUNION": {
+      "name": "Bahnhofs-Wiedersehen",
+      "description": "Nach mindestens fünf Jahren an einen Bahnhof zurückgekehrt"
+    },
+    "RAIL_TRANSFERS_5": {
+      "name": "Gut umgestiegen",
+      "description": "Fünf vollständig dokumentierte Bahnreisen mit verknüpftem Umstieg"
+    },
+    "RAIL_NEW_CONNECTIONS_10": {
+      "name": "Neue Schienen",
+      "description": "Zehn erstmals gefahrene Verbindungen in einem Jahr"
     }
   },
   "header": {

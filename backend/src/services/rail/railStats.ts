@@ -8,6 +8,8 @@ import {
 } from "../../shared/railCounting";
 import { railRideFacts } from "../../utils/railAchievements";
 import { rideHasClocks } from "../../shared/railClock";
+import { railStationKey } from "../../shared/railConnections";
+import { computeRailJourneyFigures, type RailJourneyFigures } from "./railJourneyStats";
 
 /**
  * The rail statistics (spec 2026-09-25-rail-domain, phase 2b), computed from
@@ -52,6 +54,14 @@ export interface RailStatsRow extends DatedRail {
    */
   depPrecision?: string | null;
   arrPrecision?: string | null;
+  /** The grouping's inputs (forgejo#261); optional for hand-built test rows. */
+  bookingId?: string | null;
+  depStationId?: number | null;
+  arrStationId?: number | null;
+  depLat?: number;
+  depLon?: number;
+  arrLat?: number;
+  arrLon?: number;
 }
 
 export interface Ranked {
@@ -107,6 +117,8 @@ export interface RailStats {
    * disagree about how many night trains there were.
    */
   rideKinds: { nightTrains: number; highSpeed: number; crossBorder: number; operators: number };
+  /** Journeys, changes, connections, punctuality, nights on board (forgejo#261). */
+  connected: RailJourneyFigures;
 }
 
 function rank(values: Array<string | null>): Ranked[] {
@@ -129,7 +141,8 @@ function stationVisits(rows: readonly RailStatsRow[]): Ranked[] {
       [r.depStationCode, r.depStationName],
       [r.arrStationCode, r.arrStationName],
     ] as const) {
-      const key = code ? `code:${code}` : `name:${name.trim().toLowerCase()}`;
+      // One station identity for the ranking and the connections (forgejo#261).
+      const key = railStationKey({ code, name }) ?? `name:${name}`;
       const entry = byKey.get(key) ?? { label: name, count: 0 };
       byKey.set(key, { ...entry, count: entry.count + 1 });
     }
@@ -179,7 +192,14 @@ function rideKinds(rows: readonly RailStatsRow[]): RailStats["rideKinds"] {
   };
 }
 
-export function computeRailStats(rows: readonly RailStatsRow[]): RailStats {
+/**
+ * @param all every counted ride, for the one figure a period cut cannot answer
+ *            alone: whether a connection was NEW in that period.
+ */
+export function computeRailStats(
+  rows: readonly RailStatsRow[],
+  all: readonly RailStatsRow[] = rows
+): RailStats {
   const sumKm = (source: string): number =>
     rows
       .filter((r) => r.distanceSource === source && r.distanceKm !== null)
@@ -237,8 +257,17 @@ export function computeRailStats(rows: readonly RailStatsRow[]): RailStats {
       .map(([year, v]) => ({ year, ...v }))
       .sort((a, b) => a.year - b.year),
     rideKinds: rideKinds(rows),
+    connected: computeRailJourneyFigures(rows.map(withDefaults), all.map(withDefaults)),
   };
 }
+
+/** The night rule reads class and precision; a hand-built row may leave them out. */
+const withDefaults = (r: RailStatsRow) => ({
+  ...r,
+  travelClass: r.travelClass ?? null,
+  depPrecision: r.depPrecision ?? null,
+  arrPrecision: r.arrPrecision ?? null,
+});
 
 const STATS_SELECT = {
   id: true,
@@ -261,6 +290,13 @@ const STATS_SELECT = {
   travelClass: true,
   depPrecision: true,
   arrPrecision: true,
+  bookingId: true,
+  depStationId: true,
+  arrStationId: true,
+  depLat: true,
+  depLon: true,
+  arrLat: true,
+  arrLon: true,
 } as const;
 
 /**
@@ -287,6 +323,7 @@ export async function loadRailStats(
       (r) =>
         railYear(r) === year &&
         (lastDay === null || stationDayKey(r.departureTime, r.depTimezone) <= lastDay)
-    )
+    ),
+    rows
   );
 }

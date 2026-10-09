@@ -8,6 +8,8 @@ import {
   operatorKey,
   rideKm,
 } from "../shared/railRideKinds";
+import { longestStationReturnYears, newConnectionsByYear } from "../shared/railConnections";
+import { isDocumentedTransferJourney, railJourneysOf } from "../services/rail/railJourneyStats";
 
 /**
  * The rail badges (2.7, owner 2026-09-26: "rail achievements go into 2.7 now")
@@ -34,6 +36,12 @@ export interface RailAchievementStats {
   railLongestKm: number;
   railHighSpeedRides: number;
   railCrossBorderRides: number;
+  /** Most whole years between two visits of one station (forgejo#261, "Bahnhofs-Wiedersehen"). */
+  railStationReturnYears: number;
+  /** Journeys with a change whose every train carries both clocks ("Gut umgestiegen"). */
+  railDocumentedTransferJourneys: number;
+  /** The most connections first recorded in any one year ("Neue Schienen"). */
+  railNewConnectionsYearMax: number;
 }
 
 export const EMPTY_RAIL_STATS: RailAchievementStats = {
@@ -45,6 +53,9 @@ export const EMPTY_RAIL_STATS: RailAchievementStats = {
   railLongestKm: 0,
   railHighSpeedRides: 0,
   railCrossBorderRides: 0,
+  railStationReturnYears: 0,
+  railDocumentedTransferJourneys: 0,
+  railNewConnectionsYearMax: 0,
 };
 
 /** The columns a ride's facts need — the frozen line stays out of the query. */
@@ -56,6 +67,16 @@ export const RAIL_BADGE_SELECT = {
   travelClass: true,
   depStationName: true,
   arrStationName: true,
+  // Station identity, connections and the change between two trains (forgejo#261).
+  depStationCode: true,
+  arrStationCode: true,
+  depStationId: true,
+  arrStationId: true,
+  depLat: true,
+  depLon: true,
+  arrLat: true,
+  arrLon: true,
+  bookingId: true,
   depCountry: true,
   arrCountry: true,
   depTimezone: true,
@@ -75,6 +96,15 @@ export interface RailBadgeRow {
   travelClass: string | null;
   depStationName: string;
   arrStationName: string;
+  depStationCode: string | null;
+  arrStationCode: string | null;
+  depStationId: number | null;
+  arrStationId: number | null;
+  depLat: number;
+  depLon: number;
+  arrLat: number;
+  arrLon: number;
+  bookingId: string | null;
   depCountry: string | null;
   arrCountry: string | null;
   depTimezone: string | null;
@@ -152,7 +182,14 @@ export function foldRailAchievementStats(rows: readonly RailBadgeRow[]): RailAch
     if (facts.isHighSpeed) stats.railHighSpeedRides += 1;
     if (facts.isCrossBorder) stats.railCrossBorderRides += 1;
   }
-  return { ...stats, railCountries: countries.size, railOperators: operators.size };
+  return {
+    ...stats,
+    railCountries: countries.size,
+    railOperators: operators.size,
+    railStationReturnYears: longestStationReturnYears(rows),
+    railDocumentedTransferJourneys: railJourneysOf(rows).filter(isDocumentedTransferJourney).length,
+    railNewConnectionsYearMax: Math.max(0, ...newConnectionsByYear(rows).values()),
+  };
 }
 
 export async function calculateRailAchievementStats(userId: string): Promise<RailAchievementStats> {
@@ -168,6 +205,9 @@ const MEASURE: Record<string, keyof RailAchievementStats> = {
   rail_longest_km: "railLongestKm",
   rail_high_speed: "railHighSpeedRides",
   rail_cross_border: "railCrossBorderRides",
+  rail_station_return_years: "railStationReturnYears",
+  rail_documented_transfer_journeys: "railDocumentedTransferJourneys",
+  rail_new_connections_year: "railNewConnectionsYearMax",
 };
 
 /** The requirement types this module answers — the seeds are checked against it. */
