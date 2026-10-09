@@ -50,6 +50,7 @@ import { isLlmEnabledByAdmin } from "../llm/llmGate";
 import { describeLlmTarget, type LlmProviderInfo } from "../llm/llmProvider";
 import { resolveReachableLlmTarget } from "../llm/reachableTarget";
 import { templateRegistry } from "../parsers/templates/registry";
+import { withParseBudget } from "../parsers/templates/v2/budget";
 import { prisma } from "../../db";
 import {
   parsePackageText,
@@ -336,7 +337,16 @@ async function mismatchBody(
   return { domain: "lodging", candidates: [], ...common };
 }
 
-export async function parseDocument(input: ParseDocumentInput): Promise<ParseDocumentOutcome> {
+/**
+ * Every template tried on this document shares one time budget
+ * (`withParseBudget`), held in the request's async context so a crafted
+ * document can only spend its own.
+ */
+export function parseDocument(input: ParseDocumentInput): Promise<ParseDocumentOutcome> {
+  return withParseBudget(() => parseDocumentUnbudgeted(input));
+}
+
+async function parseDocumentUnbudgeted(input: ParseDocumentInput): Promise<ParseDocumentOutcome> {
   const combined = combineSubjectAndText(input.subject, input.text);
   const attachmentTexts = attachmentTextsOnce(input);
   const { domain, detection } = await resolveDomain(input.domain, combined, attachmentTexts);

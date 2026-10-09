@@ -22,7 +22,8 @@ import type {
   TemplateTestInput,
 } from "./envelope";
 import { TEMPLATE_DOMAINS } from "./envelope";
-import { boundedRun, extract, MAX_INPUT_CHARS } from "./extract";
+import { boundedRun, extract, EXTRACT_TIMEOUT_MS, MAX_INPUT_CHARS } from "./extract";
+import { remainingBudgetMs } from "./budget";
 import logger from "../../../../utils/logger";
 import { compileSpec, specPart, type MailPart, type MatchRegex } from "./regexSpec";
 
@@ -70,30 +71,18 @@ function regexHits(spec: MatchRegex, input: TemplateTestInput, haystack: string)
   return compileSpec(spec, "im").test(cap(part ? mailParts(input)[part] : haystack));
 }
 
-/**
- * Templates that hit the time bound while reading a real document. Each run
- * is bounded, but a template that is slow once is slow on every document, so
- * it is set aside until its next version arrives (a new object, so the
- * WeakSet lets it go). Without this the bound would cap one call, not the
- * cost: N slow templates x every parse.
- */
-const quarantined = new WeakSet<TemplateEnvelope>();
-
-function quarantine(template: TemplateEnvelope, where: string): void {
-  quarantined.add(template);
-  logger.warn(
-    {
-      operation: "template_quarantined",
-      templateId: template.id,
-      version: template.version,
-      where,
-    },
-    "v2 template hit the regex time bound and is set aside until its next version"
-  );
+/** This run's bound: the per-run cap, or less when the document's budget is nearly spent. */
+function runTimeout(): number {
+  const left = remainingBudgetMs();
+  return left === null ? EXTRACT_TIMEOUT_MS : Math.min(EXTRACT_TIMEOUT_MS, left);
 }
 
-export function isQuarantined(template: TemplateEnvelope): boolean {
-  return quarantined.has(template);
+function budgetSpent(template: TemplateEnvelope): TemplateApplication {
+  logger.warn(
+    { operation: "template_budget_spent", templateId: template.id },
+    "document's template time budget is spent; remaining templates are skipped for it"
+  );
+  return { matched: false, values: {}, missing: [], budgetExhausted: true };
 }
 
 /**
@@ -102,7 +91,6 @@ export function isQuarantined(template: TemplateEnvelope): boolean {
  * lodging engine's rule; the regexes carry their own flags (default `im`).
  */
 export function envelopeMatches(template: TemplateEnvelope, input: TemplateTestInput): boolean {
-  if (quarantined.has(template)) return false;
   const haystack = testInputHaystack(input);
   const text = haystack.toLowerCase();
   const has = (needle: string): boolean => text.includes(needle.toLowerCase());
@@ -112,14 +100,17 @@ export function envelopeMatches(template: TemplateEnvelope, input: TemplateTestI
   if (allOf.length === 0 && noneOf.length === 0 && (anchored || anyOf.length === 0)) {
     return anchored;
   }
-  // Template regexes are remote input: all of them run in ONE bounded run.
+  // Template regexes are remote input: all of them run in ONE bounded run,
+  // within what is left of the document's budget. A run that times out
+  // decides nothing for this document only.
+  const timeout = runTimeout();
+  if (timeout <= 0) return false;
   const hits = (spec: MatchRegex): boolean => regexHits(spec, input, haystack);
-  const run = boundedRun(
+  return boundedRun(
     () => allOf.every(hits) && (anchored || anyOf.some(hits)) && !noneOf.some(hits),
-    false
-  );
-  if (run.timedOut) quarantine(template, "match");
-  return run.result;
+    false,
+    timeout
+  ).result;
 }
 
 export interface TemplateApplication {
@@ -128,16 +119,21 @@ export interface TemplateApplication {
   missing: string[];
   /** The matcher recognised the issuer AND a `notBookingIf` pattern: a cancellation or the like. */
   nonBooking?: boolean;
+  /** The document's time budget ran out before this template could run. */
+  budgetExhausted?: boolean;
 }
 
 /** Whether a document the matcher accepted is one of the issuer's non-bookings. */
-export function isNonBooking(template: TemplateEnvelope, input: TemplateTestInput): boolean {
+export function isNonBooking(
+  template: TemplateEnvelope,
+  input: TemplateTestInput,
+  timeoutMs = EXTRACT_TIMEOUT_MS
+): boolean {
   const patterns = template.match.notBookingIf ?? [];
   if (patterns.length === 0) return false;
   const haystack = testInputHaystack(input);
-  const run = boundedRun(() => patterns.some((p) => regexHits(p, input, haystack)), false);
-  if (run.timedOut) quarantine(template, "notBookingIf");
-  return run.result;
+  return boundedRun(() => patterns.some((p) => regexHits(p, input, haystack)), false, timeoutMs)
+    .result;
 }
 
 /**
@@ -152,15 +148,15 @@ export function applyTemplate(
   template: TemplateEnvelope,
   text: TemplateTestInput
 ): TemplateApplication {
-  if (quarantined.has(template)) return { matched: false, values: {}, missing: [] };
   const haystack = testInputHaystack(text);
+  if (runTimeout() <= 0) return budgetSpent(template);
   if (!envelopeMatches(template, text)) return { matched: false, values: {}, missing: [] };
-  if (isNonBooking(template, text)) {
+  if (runTimeout() <= 0) return budgetSpent(template);
+  if (isNonBooking(template, text, runTimeout())) {
     return { matched: false, values: {}, missing: [], nonBooking: true };
   }
-  if (quarantined.has(template)) return { matched: false, values: {}, missing: [] };
-  const { values, missing, timedOut } = extract(template.extraction, haystack, mailParts(text));
-  if (timedOut) quarantine(template, "extraction");
+  if (runTimeout() <= 0) return budgetSpent(template);
+  const { values, missing } = extract(template.extraction, haystack, mailParts(text), runTimeout());
   return { matched: missing.length === 0, values, missing };
 }
 

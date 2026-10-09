@@ -1,7 +1,7 @@
 import { describe, it, expect } from "@jest/globals";
 import { applyTransforms } from "../transforms";
 import { validateEnvelope } from "../envelope";
-import { applyTemplate, envelopeMatches, isQuarantined } from "../runners";
+import { applyTemplate, envelopeMatches } from "../runners";
 import { EXTRACT_TIMEOUT_MS } from "../extract";
 import { validTemplate } from "./fixtures";
 
@@ -124,7 +124,7 @@ describe("v2 matcher conditions added in P4b", () => {
     expect(applyTemplate(t, `${text}\nSTORNO`).nonBooking).toBe(true);
   });
 
-  it("runs the matcher's regexes under the extraction's bound and sets a slow template aside", () => {
+  it("runs the matcher's regexes under the extraction's bound, for this document only", () => {
     const slow = {
       ...base,
       match: { markers: [], anchors: [], anyOf: ["^(a+)+$"] },
@@ -132,7 +132,7 @@ describe("v2 matcher conditions added in P4b", () => {
     const started = Date.now();
     expect(envelopeMatches(slow, `${"a".repeat(40)}!`)).toBe(false);
     expect(Date.now() - started).toBeLessThan(EXTRACT_TIMEOUT_MS + 1500);
-    expect(isQuarantined(slow)).toBe(true);
-    expect(envelopeMatches(slow, "aaa")).toBe(false);
+    // Nothing is remembered across documents: the same template reads the next one.
+    expect(envelopeMatches(slow, "aaa")).toBe(true);
   });
 });

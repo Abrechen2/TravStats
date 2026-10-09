@@ -94,14 +94,15 @@ export function extract(
   extraction: Extraction,
   text: string,
   /** The mail's parts, for fields confined to one (`in`). */
-  parts?: Partial<Record<MailPart, string>>
+  parts?: Partial<Record<MailPart, string>>,
+  timeoutMs = EXTRACT_TIMEOUT_MS
 ): ExtractionResult {
   try {
     return vm.runInNewContext(
       "run()",
       { run: () => extractUnbounded(extraction, text, parts) },
       {
-        timeout: EXTRACT_TIMEOUT_MS,
+        timeout: Math.max(1, timeoutMs),
       }
     ) as ExtractionResult;
   } catch (err) {
@@ -116,9 +117,17 @@ export function extract(
  * says so — used for the matcher's regex conditions, which are remote input
  * like every extraction rule.
  */
-export function boundedRun<T>(work: () => T, fallback: T): { result: T; timedOut: boolean } {
+export function boundedRun<T>(
+  work: () => T,
+  fallback: T,
+  timeoutMs = EXTRACT_TIMEOUT_MS
+): { result: T; timedOut: boolean } {
   try {
-    const result = vm.runInNewContext("run()", { run: work }, { timeout: EXTRACT_TIMEOUT_MS }) as T;
+    const result = vm.runInNewContext(
+      "run()",
+      { run: work },
+      { timeout: Math.max(1, timeoutMs) }
+    ) as T;
     return { result, timedOut: false };
   } catch (err) {
     if ((err as { code?: string }).code !== "ERR_SCRIPT_EXECUTION_TIMEOUT") throw err;
@@ -136,7 +145,8 @@ export function boundedRun<T>(work: () => T, fallback: T): { result: T; timedOut
 export function boundedAny(
   sources: readonly string[],
   flags: string,
-  text: string
+  text: string,
+  timeoutMs = EXTRACT_TIMEOUT_MS
 ): { matched: boolean; timedOut: boolean } {
   if (sources.length === 0) return { matched: false, timedOut: false };
   const input = text.length > MAX_INPUT_CHARS ? text.slice(0, MAX_INPUT_CHARS) : text;
@@ -144,7 +154,7 @@ export function boundedAny(
     const matched = vm.runInNewContext(
       "run()",
       { run: () => sources.some((source) => new RegExp(source, flags).test(input)) },
-      { timeout: EXTRACT_TIMEOUT_MS }
+      { timeout: Math.max(1, timeoutMs) }
     ) as boolean;
     return { matched, timedOut: false };
   } catch (err) {
