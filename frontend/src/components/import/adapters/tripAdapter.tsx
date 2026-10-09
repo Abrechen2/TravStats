@@ -1,5 +1,4 @@
 import { useCallback, useState } from "react";
-import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
@@ -8,14 +7,15 @@ import type { ProposedTrip } from "../../../lib/api/trips";
 import DetectReviewModal from "../../Trips/DetectReviewModal";
 import TripModal from "../../Trips/TripModal";
 import type { DomainImportAdapter } from "../types";
+import { usePackageReviewRenderer } from "./packageAdapter";
 
 /**
- * Reading a tour operator's travel documents is not built yet — the mails are
- * cover letters and the itinerary sits in the PDF attachment, which needs its
- * own parser. The route exists in the design and in this file; this flag is
- * what turns it on, so switching it over is one line rather than a rebuild.
+ * Reading a tour operator's travel documents: the drop zone parses as
+ * `package` (plan 2026-10-09 P3) with the operator templates from the
+ * template repository, and the review is the package proposal. Upload the
+ * PDF itself — a mail's PDF attachment is not routed to the reader yet.
  */
-export const TRIP_DOCUMENT_IMPORT_READY = false;
+export const TRIP_DOCUMENT_IMPORT_READY = true;
 
 /**
  * Plugs Trips into `<DomainImportPanel>`.
@@ -31,6 +31,7 @@ export function useTripImportAdapter(onTripsChanged: () => void): DomainImportAd
   const addToast = useToastStore((s) => s.addToast);
   const [proposals, setProposals] = useState<ProposedTrip[] | null>(null);
   const [detecting, setDetecting] = useState(false);
+  const renderPackageReview = usePackageReviewRenderer();
 
   const handleDetect = useCallback((): void => {
     setDetecting(true);
@@ -57,6 +58,7 @@ export function useTripImportAdapter(onTripsChanged: () => void): DomainImportAd
     panelHint: t("import:trip.panelHint"),
     acceptedEmailExtensions: [".eml", ".msg", ".txt"],
     supportsDocumentImport: TRIP_DOCUMENT_IMPORT_READY,
+    parseAs: "package",
     documentRoute: {
       title: t("import:trip.document.title"),
       description: t("import:trip.document.description"),
@@ -87,7 +89,6 @@ export function useTripImportAdapter(onTripsChanged: () => void): DomainImportAd
     renderManual: ({ onClose, onSaved }) => (
       <TripModal trip={null} onClose={onClose} onSaved={onSaved} />
     ),
-    // No parser yet, so nothing can arrive here — see TRIP_DOCUMENT_IMPORT_READY.
-    renderReviewModal: (): JSX.Element | null => null,
+    renderReviewModal: renderPackageReview,
   };
 }

@@ -6,7 +6,12 @@ import type { RENTAL_INCLUSIONS, RENTAL_PAYMENT_TIMINGS } from "../../../schemas
  * document PRINTS; a value it does not print is null, never a guess.
  */
 
-export type RentalParseSource = "sixt-confirmation" | "sixt-invoice";
+/**
+ * Which reader produced a document: the template's short name
+ * (`sixt-confirmation`, `sixt-invoice` — plan 2026-10-09 P4b moved the
+ * provider readers into the template repository, so the set is open).
+ */
+export type RentalParseSource = string;
 
 /** One end as printed: the station's name and its wall clock. */
 export interface ParsedRentalEnd {

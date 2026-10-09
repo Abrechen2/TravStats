@@ -1,0 +1,166 @@
+{
+  "id": "flight:4U",
+  "domain": "flight",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Germanwings",
+    "kind": "airline",
+    "keys": {
+      "iata": "4U",
+      "senderDomains": ["germanwings.com"]
+    }
+  },
+  "markets": ["DE"],
+  "match": {
+    "markers": ["germanwings"],
+    "anchors": ["flugnummer", "buchungscode", "storniert", "stornierung", "flugplanänderung"],
+    "notBookingIf": [
+      "Ihre Buchung wurde storniert",
+      "Stornierungsbestätigung",
+      "Ihre Stornierung",
+      "Flugplanänderung"
+    ]
+  },
+  "extraction": {
+    "repeats": {
+      "legs": {
+        "mode": "split",
+        "splitPattern": "^Flug:\\s*\\d{2}\\.\\d{2}\\.\\d{4}\\s*\\|\\s*Flugnummer",
+        "prependHeader": true,
+        "wholeTextUnlessSplit": true,
+        "required": ["flightNumber"],
+        "fields": {
+          "flightNumber": {
+            "patterns": [
+              "^Flug:\\s*\\d{2}\\.\\d{2}\\.\\d{4}\\s*\\|\\s*Flugnummer\\s*:?\\s*(4U\\s?\\d{1,4})\\b"
+            ],
+            "flags": "im",
+            "transform": ["trim", "removeSpaces"]
+          },
+          "pnr": {
+            "patterns": [
+              "Individueller Buchungscode \\(beim Check-In angeben\\)\\s*\\n\\s*([A-Z0-9]{6})\\b"
+            ],
+            "flags": "im",
+            "transform": ["trim", "upper"]
+          },
+          "departureTime": {
+            "patterns": [
+              "^Flug:\\s*(\\d{2}\\.\\d{2}\\.\\d{4})\\s*\\|[\\s\\S]*?^(\\d{1,2}:\\d{2}) [A-ZÄÖÜ]"
+            ],
+            "flags": "im",
+            "format": "{1}T{2}",
+            "transform": "dateTime"
+          },
+          "arrivalTime": {
+            "patterns": [
+              "^Flug:\\s*(\\d{2}\\.\\d{2}\\.\\d{4})\\s*\\|[\\s\\S]*?^\\d{1,2}:\\d{2} [A-ZÄÖÜ][\\s\\S]*?(?:^| )(\\d{1,2}:\\d{2}) [A-ZÄÖÜ]"
+            ],
+            "flags": "im",
+            "format": "{1}T{2}",
+            "transform": "dateTime"
+          },
+          "departureCode": {
+            "patterns": [
+              "^Flug:\\s*\\d{2}\\.\\d{2}\\.\\d{4}\\s*\\|[\\s\\S]*?^\\d{1,2}:\\d{2} ([A-ZÄÖÜ][^\\n]*?)(?= \\d{1,2}:\\d{2}| Landung|\\s*$)"
+            ],
+            "flags": "im",
+            "transform": ["trim", "airportName"]
+          },
+          "arrivalCode": {
+            "patterns": [
+              "^Flug:\\s*\\d{2}\\.\\d{2}\\.\\d{4}\\s*\\|[\\s\\S]*?^\\d{1,2}:\\d{2} [A-ZÄÖÜ][\\s\\S]*?(?:^| )\\d{1,2}:\\d{2} ([A-ZÄÖÜ][^\\n]*?)(?= \\d{1,2}:\\d{2}| Landung|\\s*$)"
+            ],
+            "flags": "im",
+            "transform": ["trim", "airportName"]
+          }
+        }
+      }
+    },
+    "required": ["legs"]
+  },
+  "testCases": [
+    {
+      "name": "the 2007–2009 layout",
+      "input": {
+        "subject": "Germanwings Buchungsbestätigung und Rechnung QX7TST",
+        "text": "Buchungsbestätigung und Rechnung\nvielen Dank, dass Sie sich für Germanwings entschieden haben.\nIhre Flugbuchung\nIndividueller Buchungscode (beim Check-In angeben)\nQX7TST Tag der Buchung: 02.01.2009 10:15\nPassagiere\n1. MR ERIKA MUSTERMANN\nFlugdaten (Zeiten sind Ortszeiten)\nFlug: 20.02.2009 | Flugnummer 4U 1234:\nStart Landung\n07:10 Dortmund 08:20 München\nFlug: 23.02.2009 | Flugnummer 4U 1235:\nStart Landung\n18:40 München 19:50 Dortmund\nIhre Rechnungsdaten\nReisepreis 99.00 €\nWenn diese Buchung mit einer AirPlus-Karte bezahlt wurde, berechtigt diese Rechnung nicht zum Vorsteuerabzug. Die Rechnung von Lufthansa AirPlus erfüllt diesen Zweck.\nUST-ID: DE 999 000 111"
+      },
+      "expect": "match",
+      "expected": {
+        "legs": [
+          {
+            "flightNumber": "4U1234",
+            "departureCode": "DTM",
+            "arrivalCode": "MUC",
+            "departureTime": "2009-02-20T07:10"
+          },
+          {
+            "flightNumber": "4U1235",
+            "departureCode": "MUC",
+            "arrivalCode": "DTM",
+            "departureTime": "2009-02-23T18:40"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the 2012–2015 layout",
+      "input": {
+        "subject": "Germanwings Buchungsbestätigung und Rechnung QX7TSU",
+        "text": "Individueller Buchungscode (beim Check-In angeben)\nQX7TSU Tag der Buchung: 05.01.2015 09:00\nFlug: 14.03.2015 | Flugnummer : 4U 5678 (SMART \\ N)\nSitz(e): 12C (1)\nStart\n09:05 Berlin-Tegel Landung\n10:10 Köln-Bonn\nFlug: 14.03.2015 | Flugnummer : 4U 0987 (BASIC \\ N)\nStart\n13:30 Köln-Bonn\nLandung\n14:50 Mailand Malpensa\nPassagiere\nGermanwings GmbH\nWenn diese Buchung mit einer AirPlus-Karte bezahlt wurde, berechtigt diese Rechnung nicht zum Vorsteuerabzug. Die Rechnung von Lufthansa AirPlus erfüllt diesen Zweck.\nUST-ID: DE 999 000 111"
+      },
+      "expect": "match",
+      "expected": {
+        "legs": [
+          {
+            "flightNumber": "4U5678",
+            "departureCode": "TXL",
+            "arrivalCode": "CGN",
+            "departureTime": "2015-03-14T09:05"
+          },
+          {
+            "flightNumber": "4U0987",
+            "departureCode": "CGN",
+            "arrivalCode": "MXP",
+            "departureTime": "2015-03-14T13:30"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a single leg",
+      "input": {
+        "subject": "Germanwings Buchungsbestätigung",
+        "text": "Individueller Buchungscode (beim Check-In angeben)\nQX7TST Tag der Buchung: 02.01.2009 10:15\nFlug: 20.02.2009 | Flugnummer 4U 1234:\nStart Landung\n07:10 Dortmund 08:20 München"
+      },
+      "expect": "match",
+      "expected": {
+        "legs": [
+          {
+            "flightNumber": "4U1234",
+            "departureCode": "DTM",
+            "arrivalCode": "MUC",
+            "departureTime": "2009-02-20T07:10"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a newsletter",
+      "input": {
+        "subject": "Germanwings Newsletter",
+        "text": "Germanwings Angebote im Februar\nJetzt buchen: Flüge ab 29 € nach Mailand, Wien und Köln-Bonn.\nIhr Germanwings Team"
+      },
+      "expect": "decline"
+    },
+    {
+      "name": "a cancellation",
+      "input": {
+        "subject": "Germanwings Stornierung QX7TST",
+        "text": "Ihre Buchung wurde storniert\nIndividueller Buchungscode (beim Check-In angeben)\nQX7TST\nFlug: 20.02.2009 | Flugnummer 4U 1234:\nStart Landung\n07:10 Dortmund 08:20 München\nGermanwings GmbH"
+      },
+      "expect": "decline"
+    }
+  ]
+}

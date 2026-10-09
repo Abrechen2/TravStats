@@ -1,0 +1,204 @@
+{
+  "id": "flight:AB",
+  "domain": "flight",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Air Berlin (PDF invoice)",
+    "kind": "airline",
+    "keys": {
+      "iata": "AB",
+      "senderDomains": ["airberlin.com", "invoices.airberlin.com"]
+    }
+  },
+  "markets": ["DE"],
+  "match": {
+    "markers": ["berlin"],
+    "anchors": ["air berlin", "airberlin"]
+  },
+  "extraction": {
+    "repeats": {
+      "legs": {
+        "mode": "split",
+        "splitPattern": "^(?:[A-Z]{3} - [A-Z]{3} \\d{2}\\.\\d{2}\\.? \\d{1,2}:\\d{2}|(?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) - (?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) ?(?:\\t|\\n(?:Operated by[^\\n]*\\n)?[^\\t\\n]*\\t)\\d{2}\\.\\d{2}\\.\\d{4})",
+        "prependHeader": true,
+        "wholeTextUnlessSplit": true,
+        "required": ["flightNumber"],
+        "fields": {
+          "flightNumber": {
+            "patterns": [
+              "^(?:[A-Z]{3} - [A-Z]{3} \\d{2}\\.\\d{2}\\.? \\d{1,2}:\\d{2}|(?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) - (?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) ?(?:\\t|\\n(?:Operated by[^\\n]*\\n)?[^\\t\\n]*\\t)\\d{2}\\.\\d{2}\\.\\d{4})[^\\n]*?\\b(AB[ \\t]*\\d{2,4})\\b"
+            ],
+            "flags": "im",
+            "transform": ["trim", "removeSpaces"]
+          },
+          "pnr": {
+            "patterns": ["^Buchungs(?:code|nummer)[ \\t]+([A-Z0-9]{6})[ \\t]*$"],
+            "flags": "im",
+            "transform": ["trim", "upper"]
+          },
+          "departureCode": {
+            "patterns": [
+              "^([A-Z]{3}) - [A-Z]{3} \\d{2}\\.\\d{2}\\.? \\d{1,2}:\\d{2}",
+              "^((?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?)) - (?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) ?(?:\\t|\\n(?:Operated by[^\\n]*\\n)?[^\\t\\n]*\\t)\\d{2}\\.\\d{2}\\.\\d{4}"
+            ],
+            "flags": "im",
+            "transform": ["trim", "airportName"]
+          },
+          "arrivalCode": {
+            "patterns": [
+              "^[A-Z]{3} - ([A-Z]{3}) \\d{2}\\.\\d{2}\\.? \\d{1,2}:\\d{2}",
+              "^(?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) - ((?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?)) ?(?:\\t|\\n(?:Operated by[^\\n]*\\n)?[^\\t\\n]*\\t)\\d{2}\\.\\d{2}\\.\\d{4}"
+            ],
+            "flags": "im",
+            "transform": ["trim", "airportName"]
+          },
+          "departureTime": {
+            "patterns": [
+              "^[A-Z]{3} - [A-Z]{3} (?<day>\\d{2})\\.(?<month>\\d{2})\\.? (?<time>\\d{1,2}:\\d{2})(?<=(?:Hinflug|R(?:ü|ue)ckflug)[ :]+\\k<day>\\.\\k<month>\\.(?<year>\\d{4})[\\s\\S]*)",
+              "^(?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) - (?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) ?(?:\\t|\\n(?:Operated by[^\\n]*\\n)?[^\\t\\n]*\\t)(?<day>\\d{2})\\.(?<month>\\d{2})\\.(?<year>\\d{4})[ \\t]+(?<time>\\d{1,2}:\\d{2})"
+            ],
+            "flags": "im",
+            "format": "{day}.{month}.{year}T{time}",
+            "transform": "dateTime"
+          },
+          "arrivalTime": {
+            "patterns": [
+              "^[A-Z]{3} - [A-Z]{3} (?<day>\\d{2})\\.(?<month>\\d{2})\\.? \\d{1,2}:\\d{2} - (?<time>\\d{1,2}:\\d{2})(?<=(?:Hinflug|R(?:ü|ue)ckflug)[ :]+\\k<day>\\.\\k<month>\\.(?<year>\\d{4})[\\s\\S]*)",
+              "^(?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) - (?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) ?(?:\\t|\\n(?:Operated by[^\\n]*\\n)?[^\\t\\n]*\\t)(?<day>\\d{2})\\.(?<month>\\d{2})\\.(?<year>\\d{4})[ \\t]+\\d{1,2}:\\d{2} - (?<time>\\d{1,2}:\\d{2})"
+            ],
+            "flags": "im",
+            "format": "{day}.{month}.{year}T{time}",
+            "transform": "dateTime"
+          }
+        }
+      }
+    },
+    "required": ["legs"]
+  },
+  "testCases": [
+    {
+      "name": "the 2010 layout, year from the header",
+      "input": {
+        "subject": "Ihre Buchungsbestätigung",
+        "text": "Air Berlin PLC & Co. Luftverkehrs KG\nRechnung und Reisebestätigung\nBuchungsdetails\nBuchungs/Rechnungsnummer 01234567 / 2\nBuchungsdatum 02.01.2010\nHinflug 08.02.2010 Hinflug : MUENCHEN - HAMBURG\nRückflug 11.02.2010 Rückflug : HAMBURG - MUENCHEN\nFluginformationen\nStrecke Datum Flugzeiten Flugnr Buchungsklasse Gepäck\nMUC - HAM 08.02 07:15 - 08:30 AB1111 M 20KG\nHAM - MUC 11.02. 19:05 - 20:20 AB1112, M 20KG\nPreisdetails"
+      },
+      "expect": "match",
+      "expected": {
+        "legs": [
+          {
+            "flightNumber": "AB1111",
+            "departureCode": "MUC",
+            "arrivalCode": "HAM",
+            "departureTime": "2010-02-08T07:15"
+          },
+          {
+            "flightNumber": "AB1112",
+            "departureCode": "HAM",
+            "arrivalCode": "MUC",
+            "departureTime": "2010-02-11T19:05"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the 2012 layout, Berlin - Tegel",
+      "input": {
+        "subject": "Ihre Buchungsbestätigung",
+        "text": "Rechnung und Reisebestätigung\nBuchungsdetails\nBuchungscode \tQX7TST\nFluginformationen\nSTRECKE \tDATUM \tFLUGZEITEN \tFLUG \tTERMINAL\nMunich - Berlin - Tegel \t14.03.2012 09:10 - 10:15 \tAB2221,P \t1,1\nBerlin - Tegel - Munich \t16.03.2012 \t17:20 - 18:30 \tAB \t2222,O\nOperated by Air Berlin\nPreisdetails\nAir Berlin PLC & Co. Luftverkehrs KG"
+      },
+      "expect": "match",
+      "expected": {
+        "legs": [
+          {
+            "flightNumber": "AB2221",
+            "departureCode": "MUC",
+            "arrivalCode": "TXL",
+            "departureTime": "2012-03-14T09:10"
+          },
+          {
+            "flightNumber": "AB2222",
+            "departureCode": "TXL",
+            "arrivalCode": "MUC",
+            "departureTime": "2012-03-16T17:20"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the 2015 layout",
+      "input": {
+        "subject": "Ihre Buchungsbestätigung",
+        "text": "Rechnung und Reisebestätigung\nBuchungsnummer \tQX7TSU\nFluginformationen\nSTRECKE \tTARIF \tDATUM \tFLUGZEITEN \tFLUG\nMunich - Dusseldorf\nOperated by Air Berlin\nFlyDeal - Economy \t17.06.2015 \t06:50 - 08:05 \tAB 3331\nDusseldorf - Munich\nOperated by Air Berlin\nFlyDeal - Economy \t19.06.2015 \t18:10 - 19:20 \tAB 3332\nBitte beachten Sie, dass alle Flugzeiten in dieser Bestätigung in der jeweiligen Ortszeit angegeben sind\nPreisdetails\nairberlin group"
+      },
+      "expect": "match",
+      "expected": {
+        "legs": [
+          {
+            "flightNumber": "AB3331",
+            "departureCode": "MUC",
+            "arrivalCode": "DUS",
+            "departureTime": "2015-06-17T06:50"
+          },
+          {
+            "flightNumber": "AB3332",
+            "departureCode": "DUS",
+            "arrivalCode": "MUC",
+            "departureTime": "2015-06-19T18:10"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a single leg",
+      "input": {
+        "subject": "Ihre Buchungsbestätigung",
+        "text": "Air Berlin PLC & Co. Luftverkehrs KG\nFluginformationen\nBuchungscode \tQX7TST\nSTRECKE \tDATUM \tFLUGZEITEN \tFLUG\nMunich - Dusseldorf \t09.09.2013 \t15:05 - 16:20 \tAB 4441,X"
+      },
+      "expect": "match",
+      "expected": {
+        "legs": [
+          {
+            "flightNumber": "AB4441",
+            "departureCode": "MUC",
+            "arrivalCode": "DUS",
+            "departureTime": "2013-09-09T15:05"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a 2015 invoice without the Fluginformationen heading",
+      "input": {
+        "subject": "Ihre Buchungsbestätigung QX7TST",
+        "text": "Air Berlin PLC & Co. Luftverkehrs KG\nRechnung und Reisebestätigung\nBuchungsnummer \tQX7TST\nSTRECKE \tDATUM \tFLUGZEITEN \tFLUG\nMunich - Hamburg \t21.04.2015 \t13:35 - 14:55 \tAB 5551"
+      },
+      "expect": "match",
+      "expected": {
+        "legs": [
+          {
+            "flightNumber": "AB5551",
+            "departureCode": "MUC",
+            "arrivalCode": "HAM",
+            "departureTime": "2015-04-21T13:35"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a travel voucher",
+      "input": {
+        "subject": "Ihre Buchungsbestätigung",
+        "text": "Ihr persönlicher 50€ Reisegutschein für Ihre nächste Flug & Hotel Buchung bei airberlin holidays\nIhr persönlicher Gutschein Code\nWie löse ich meinen Gutschein ein?"
+      },
+      "expect": "decline"
+    },
+    {
+      "name": "an invoice without flight lines",
+      "input": {
+        "subject": "Ihre Rechnung",
+        "text": "Air Berlin PLC & Co. Luftverkehrs KG\nRechnung\nFluginformationen\nPreisdetails"
+      },
+      "expect": "decline"
+    }
+  ]
+}

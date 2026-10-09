@@ -86,6 +86,24 @@ export interface RetainInput {
   forceFormat?: DetectedFormat;
 }
 
+/**
+ * What `retain` keeps for a parse: the mail attachment the reading came from
+ * when there is one (`ParseDocumentOutcome.sourceAttachment`), else the input
+ * itself. A tour operator's mail is a cover note; the document worth filing
+ * with the trip is the invoice attached to it.
+ */
+export function retainedInputFor(
+  input: RetainInput,
+  sourceAttachment?: { filename?: string; mediaType: string; content: Buffer }
+): RetainInput {
+  if (!sourceAttachment) return input;
+  return {
+    buffer: sourceAttachment.content,
+    ...(sourceAttachment.filename ? { originalName: sourceAttachment.filename } : {}),
+    declaredMime: sourceAttachment.mediaType,
+  };
+}
+
 /** Refuses, before any parsing, an input that `retain` could not keep. */
 export function assertRetainable(input: RetainInput): void {
   checkDocumentFormat(input);

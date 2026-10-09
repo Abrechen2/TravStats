@@ -142,6 +142,15 @@ export const TOUR_COLOR = "#a9c46a";
 export const AVAILABLE_DOMAINS: DomainKey[] = DOMAIN_KEYS.filter((k) => DOMAINS[k].available);
 
 /**
+ * A package tour (plan 2026-10-09 P3) is a parser target WITHOUT being a
+ * domain: it has no page, colour or enable switch of its own, because what it
+ * yields is a trip holding flights, stays and a cruise — each of which IS a
+ * domain. It is read only by `package` templates from the template
+ * repository; no issuer reader is compiled in for it.
+ */
+export const PACKAGE_PARSE_TARGET = "package";
+
+/**
  * Subset of domains that have a working parser (email + PDF + boarding
  * pass extraction). Strictly narrower than `AVAILABLE_DOMAINS` because
  * a domain can be live in the UI before a parser exists for it. Used
@@ -154,7 +163,8 @@ export const PARSER_SUPPORTED_DOMAINS = [
   "lodging",
   "rail",
   "rental",
-] as const satisfies readonly DomainKey[];
+  "package",
+] as const satisfies readonly (DomainKey | typeof PACKAGE_PARSE_TARGET)[];
 export type ParserSupportedDomain = (typeof PARSER_SUPPORTED_DOMAINS)[number];
 
 export function isValidDomain(value: string): value is DomainKey {

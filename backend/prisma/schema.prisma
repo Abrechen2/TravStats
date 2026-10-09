@@ -799,6 +799,11 @@ model UserSettings {
   /// the headline counts.
   countryThreshold String? @map("country_threshold")
 
+  /// The user's home country, ISO 3166-1 alpha-2 upper-case, or null when not
+  /// chosen. It ORDERS booking templates (home market first) and never filters
+  /// them — template engine v2, plan 2026-10-09 P5. Zod holds the shape.
+  homeCountry String? @map("home_country")
+
   updatedAt DateTime @updatedAt @map("updated_at")
   createdAt DateTime @default(now()) @map("created_at")
 

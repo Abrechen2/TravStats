@@ -1,0 +1,164 @@
+{
+  "id": "rental:sixt-invoice",
+  "domain": "rental",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Sixt",
+    "kind": "other",
+    "keys": {
+      "senderDomains": ["sixt.com"]
+    }
+  },
+  "markets": ["DE", "FR", "NL", "BE"],
+  "match": {
+    "markers": [],
+    "anchors": ["rental_inv"],
+    "allOf": [
+      {
+        "pattern": "\\bRENTAL_INV\\b",
+        "flags": ""
+      },
+      {
+        "pattern": "\\bRes\\.\\s*(?:no|nr)\\.?\\s*:\\s*(\\d{8,12})\\b",
+        "flags": "i"
+      }
+    ]
+  },
+  "extraction": {
+    "preprocess": [
+      "stripZeroWidth",
+      "stripCarriageReturns",
+      "stripLinks",
+      "collapseSpaces",
+      "stripLeadingPipe",
+      "trimLines",
+      "dropBlankLines"
+    ],
+    "fields": {
+      "kind": {
+        "value": "invoice"
+      },
+      "provider": {
+        "value": "Sixt"
+      },
+      "confirmationNumber": {
+        "patterns": ["\\bRes\\.\\s*(?:no|nr)\\.?\\s*:\\s*(\\d{8,12})\\b"],
+        "flags": "i"
+      },
+      "agreementNumber": {
+        "patterns": ["\\b(?:CL No\\.|Contractnr\\.)\\s*:\\s*(\\d{8,12})\\b"],
+        "flags": "i"
+      },
+      "invoiceNumber": {
+        "patterns": ["(?:Rechnung|invoice|Factuur|Facture)\\s+(\\d{12,20})\\b"],
+        "flags": "i",
+        "in": "subject"
+      },
+      "actualPickupLocal": {
+        "patterns": [
+          "^[^\\n]*Station\\s*:[\\s\\S]*?(\\d{2})\\.(\\d{2})\\.(\\d{4})[ \\t]*\\/?[ \\t]*(\\d{2}):(\\d{2})"
+        ],
+        "flags": "m",
+        "format": "{1}.{2}.{3}T{4}:{5}",
+        "transform": "dateTime"
+      },
+      "actualReturnLocal": {
+        "patterns": [
+          "^[^\\n]*Station\\s*:[\\s\\S]*?\\d{2}\\.\\d{2}\\.\\d{4}[ \\t]*\\/?[ \\t]*\\d{2}:\\d{2}[^\\n]*\\n[\\s\\S]*?(\\d{2})\\.(\\d{2})\\.(\\d{4})[ \\t]*\\/?[ \\t]*(\\d{2}):(\\d{2})"
+        ],
+        "flags": "m",
+        "format": "{1}.{2}.{3}T{4}:{5}",
+        "transform": "dateTime"
+      },
+      "finalAmount": {
+        "patterns": [
+          "(?:Montant total brut|Totaal brutobedrag|Gesamtbetrag brutto|Bruttobetrag gesamt|Total gross amount)\\s+([\\d.]+,\\d{2})\\s*€"
+        ],
+        "flags": "i",
+        "transform": "amount"
+      },
+      "finalCurrency": {
+        "value": "EUR"
+      }
+    },
+    "repeats": {
+      "vehicles": {
+        "mode": "matchAll",
+        "pattern": "^[^\\n]*?\\d{2}\\.\\d{2}\\.\\d{4}[ \\t]+(?<out>\\d+)[ \\t]+(?<kmIn>\\d+)[ \\t]+(?<driven>\\d+)[ \\t]+(?<rest>[^\\n]+?)[ \\t]+\\d+[ \\t]+[\\d.]+,\\d{2}[ \\t]*€",
+        "flags": "gm",
+        "fields": {
+          "odometerOut": {
+            "group": "out",
+            "transform": "integer"
+          },
+          "odometerIn": {
+            "group": "kmIn",
+            "transform": "integer"
+          },
+          "driven": {
+            "group": "driven",
+            "transform": "integer"
+          },
+          "model": {
+            "group": "rest",
+            "find": {
+              "pattern": "(?:^|\\s)(?<v>(?:Alfa Romeo|Audi|BMW|BYD|Citroen|Citroën|Cupra|Dacia|DS|Fiat|Ford|Hyundai|Jaguar|Jeep|Kia|Land Rover|Lynk|Mazda|Mercedes|Mercedes\\-Benz|MG|MINI|Mitsubishi|Nissan|Opel|Peugeot|Polestar|Porsche|Range Rover|Renault|Seat|Skoda|Škoda|Smart|Suzuki|Tesla|Toyota|Volkswagen|Volvo|VW)(?=\\s|$)[\\s\\S]*)",
+              "flags": "i"
+            },
+            "transform": "trim"
+          }
+        },
+        "minimum": 0
+      }
+    },
+    "required": ["confirmationNumber"]
+  },
+  "testCases": [
+    {
+      "name": "one car, French labels",
+      "input": {
+        "subject": "Ihre Rechnung 9988776655443322 für die Miete 1122334455",
+        "text": "RENTAL_INV\nFacture\nRes. no. : 5566778899\nCL No. : 1122334455\nRetrait\nStation : Exempleville Aéroport\nRestitution\nStation : Exempleville Aéroport\n10.10.2026 11:05\n12.10.2026 09:50\nMontant total brut 266,30 €\nAeroport 12.10.2026 20000 20350 350 AB-CD 77 Renault Clio 0 21.000,00 €\t09:50"
+      },
+      "expect": "match",
+      "expected": {
+        "confirmationNumber": "5566778899",
+        "agreementNumber": "1122334455",
+        "invoiceNumber": "9988776655443322",
+        "actualPickupLocal": "2026-10-10T11:05",
+        "actualReturnLocal": "2026-10-12T09:50",
+        "finalAmount": 266.3,
+        "vehicles": [
+          {
+            "odometerOut": 20000,
+            "odometerIn": 20350,
+            "driven": 350,
+            "model": "Renault Clio"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a car swap, Dutch labels",
+      "input": "RENTAL_INV\nFactuur\nRes. nr.: 6677889900\nContractnr.: 2233445566\nStation: Musterstad\nStation: Proefdorp\n01.11.2026 08:00\n04.11.2026 17:30\nTotaal brutobedrag 512,00 €\nMusterstad 01.11.2026 100 100 0 ZZ-99-Y Kia Ceed 0 25.000,00 €\t08:10\nProefdorp 04.11.2026 5000 5420 420 YY-88-X Skoda Octavia 0 30.000,00 €\t17:30",
+      "expect": "match",
+      "expected": {
+        "vehicles": [
+          {
+            "driven": 0,
+            "model": "Kia Ceed"
+          },
+          {
+            "driven": 420,
+            "model": "Skoda Octavia"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a Sixt mail without the invoice PDF is no invoice",
+      "input": "Ihre Rechnung von SIXT\nRes. no. : 5566778899\nIm Anhang finden Sie Ihre Rechnung.",
+      "expect": "decline"
+    }
+  ]
+}

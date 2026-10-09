@@ -280,8 +280,9 @@ registry.registerPath({
     "Insert up to 20 flights in a single transaction. Shared booking " +
     "references are auto-grouped into a Trip + Booking row, so a forwarded " +
     "round-trip confirmation lands as one trip with two flights. Each entry " +
-    "uses the same shape as `POST /flights`. Errors abort the whole batch — " +
-    "no partial inserts.",
+    "uses the same shape as `POST /flights`, including `tripId`; a row that " +
+    "names a trip is filed there and left out of the booking-reference " +
+    "grouping. Errors abort the whole batch — no partial inserts.",
   tags: ["Flights"],
   request: {
     body: {
@@ -305,6 +306,10 @@ registry.registerPath({
       },
     },
     400: { description: "Batch too large or any entry invalid", content: errorContent },
+    404: {
+      description: "A row names a trip that is not the caller's (`TRIP_NOT_FOUND`, `row`)",
+      content: errorContent,
+    },
     429: { description: "Rate-limited (batch is heavy)", content: errorContent },
   },
 });

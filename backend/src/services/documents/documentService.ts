@@ -2,7 +2,7 @@ import path from "path";
 
 import type { Document, Prisma } from "../../prisma";
 
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
 import { documentIdsBodySchema } from "../../schemas/document";
@@ -460,6 +460,29 @@ export async function linkDocuments(
     where: { id: { in: unique }, userId },
     orderBy: { createdAt: "asc" },
   });
+}
+
+/**
+ * `linkDocuments` for a caller that writes the entry inside its own
+ * transaction (the package-tour commit files the document on a trip created
+ * a moment earlier in the same transaction). The caller has already run
+ * `assertLinkable` for these ids; the `NO_OWNER` guard still keeps a
+ * document filed elsewhere in the meantime where it is, and the count tells
+ * the caller whether that happened.
+ */
+export async function linkDocumentsInTx(
+  tx: Pick<DbTransaction, "document">,
+  userId: string,
+  ids: readonly string[],
+  entry: EntryRef
+): Promise<number> {
+  const unique = [...new Set(ids)];
+  if (unique.length === 0) return 0;
+  const { count } = await tx.document.updateMany({
+    where: { id: { in: unique }, userId, ...NO_OWNER },
+    data: ownerData(entry),
+  });
+  return count;
 }
 
 /** Takes a document off its entry; it becomes unfiled and expires unless filed again. */

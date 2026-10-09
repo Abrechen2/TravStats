@@ -41,6 +41,7 @@
     "flights.ts",
     "flights/booking.ts",
     "flights/bulkEdit.ts",
+    "flights/createLinks.ts",
     "flights/departureLocalDay.ts",
     "flights/entrySuggestions.ts",
     "flights/facets.ts",
@@ -114,6 +115,7 @@
     "trips/tourRouting.ts",
     "trips/tourTrackArchive.ts",
     "trips/tourTracks.ts",
+    "trips/tripBookings.ts",
     "trips/tripCountries.ts",
     "trips/tripExpenses.ts",
     "trips/tripPhotos.ts",
@@ -180,6 +182,7 @@
     "sync.ts",
     "tripPhotoWindows.ts",
     "tripSuggestions.ts",
+    "trips/tripPackage.ts",
     "upcoming.ts",
     "uploads.ts",
     "xlsxImport.ts"

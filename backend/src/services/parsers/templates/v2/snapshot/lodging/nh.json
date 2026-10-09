@@ -1,0 +1,117 @@
+{
+  "id": "lodging:nh",
+  "domain": "lodging",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "NH Hotels",
+    "kind": "hotel-chain"
+  },
+  "markets": ["DE"],
+  "match": {
+    "markers": ["nh-hotels", "check-in:", "check-out:"],
+    "anchors": ["reservierungsnummer"]
+  },
+  "extraction": {
+    "fields": {
+      "hotelName": {
+        "patterns": [
+          "^(?:(?:WG|FW|Fwd)[ \\t]*:[ \\t]*)*Ihre Reservierung für (NH [^,\\n]+),",
+          "^(?![ \\t]*(?:re|aw)[ \\t]*:)[\\s\\S]*?Hotelinformationen[\\s\\S]{0,600}?\\n[ \\t]*(?=NH )(NH [^\\n]+?)[ \\t\\r]*\\n"
+        ],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "confirmationNumber": {
+        "patterns": ["Reservierungsnummer:?[ \\t]*([A-Z]{4}\\d{6,})"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "checkIn": {
+        "patterns": ["Check-in:[ \\t]*(\\d{1,2}/\\d{1,2}/\\d{4})"],
+        "flags": "i",
+        "transform": "slashDayFirstDate"
+      },
+      "checkOut": {
+        "patterns": ["Check-out:[ \\t]*(\\d{1,2}/\\d{1,2}/\\d{4})"],
+        "flags": "i",
+        "transform": "slashDayFirstDate"
+      },
+      "address": {
+        "patterns": [
+          "Hotelinformationen[\\s\\S]{0,600}?\\n[ \\t]*(?=NH )NH [^\\n]*\\n[ \\t]*([^\\n]+?)\\.[ \\t]+(?:[A-Z]{1,2}-)?\\d{4,5}[ \\t]"
+        ],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "postcode": {
+        "patterns": [
+          "Hotelinformationen[\\s\\S]{0,600}?\\n[ \\t]*(?=NH )NH [^\\n]*\\n[ \\t]*[^\\n]+?\\.[ \\t]+(?:[A-Z]{1,2}-)?(\\d{4,5})[ \\t]"
+        ],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "city": {
+        "patterns": [
+          "Hotelinformationen[\\s\\S]{0,600}?\\n[ \\t]*(?=NH )NH [^\\n]*\\n[ \\t]*[^\\n]+?\\.[ \\t]+(?:[A-Z]{1,2}-)?\\d{4,5}[ \\t]+([^.(\\n]+?)[ \\t]*[.(]"
+        ],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "country": {
+        "patterns": [
+          "Hotelinformationen[\\s\\S]{0,600}?\\n[ \\t]*(?=NH )NH [^\\n]*\\n[ \\t]*[^\\n]*\\(([^)\\n]+)\\)"
+        ],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "totalPrice": {
+        "patterns": ["Gesamtpreis Ihres Aufenthaltes[\\s\\S]{0,160}?=\\s*([\\d.,]+)\\s*[A-Z]{3}"],
+        "flags": "i",
+        "transform": "money"
+      },
+      "currency": {
+        "patterns": ["Gesamtpreis Ihres Aufenthaltes[\\s\\S]{0,160}?=\\s*[\\d.,]+\\s*([A-Z]{3})"],
+        "flags": "i",
+        "transform": "currency"
+      },
+      "type": {
+        "value": "hotel"
+      }
+    },
+    "required": ["hotelName", "checkIn", "checkOut"]
+  },
+  "testCases": [
+    {
+      "name": "an NH confirmation",
+      "input": "Ihre Reservierung für NH Musterstadt City, 14. Februar 2017, QXAB123456789\nIhre Reservierung für NH Musterstadt City, 14. Februar 2017, QXAB123456789\r\n\t\tReservierungsbestätigung\t \r\nVielen Dank, dass Sie sich für NH Hoteles entschieden haben. Hiermit bestätigen wir Ihnen Ihre Reservierung:\t \r\nReservierungsnummer QXAB123456789 \r\nErstellt am 3. Januar 2017\t \r\nHotelinformationen\t \r\n\t\r\n <http://www.nh-hotels.com/nhobe/img/sep01.gif> \t\r\n\t\r\n\t NH Musterstadt City \r\nBeispielweg 7. D-12345 Musterstadt (Deutschland)\r\nTelefon. +49 1 234567 - Fax. +49 1 234568\r\nE-Mail. musterstadt@nh-hotels.com <mailto:musterstadt@nh-hotels.com> \r\nInformationen zur Reservierung\t \r\nCheck-in: 14/02/2017 - Check-out: 16/02/2017 - Übernachtung(en): 2\t \r\nGesamtpreis Ihres Aufenthaltes\r\n\t180.00 EUR + 12.60 MwSt. =\r\n192.60 EUR ",
+      "expect": "match",
+      "expected": {
+        "hotelName": "NH Musterstadt City",
+        "checkIn": "2017-02-14",
+        "checkOut": "2017-02-16",
+        "confirmationNumber": "QXAB123456789"
+      }
+    },
+    {
+      "name": "a subject naming no hotel",
+      "input": "Ihre Reservierung bei NH Hoteles\nIhre Reservierung bei NH Hoteles\r\n\t\tReservierungsbestätigung\t \r\nVielen Dank, dass Sie sich für NH Hoteles entschieden haben. Hiermit bestätigen wir Ihnen Ihre Reservierung:\t \r\nReservierungsnummer QXAB123456789 \r\nErstellt am 3. Januar 2017\t \r\nHotelinformationen\t \r\n\t\r\n <http://www.nh-hotels.com/nhobe/img/sep01.gif> \t\r\n\t\r\n\t NH Musterstadt City \r\nBeispielweg 7. D-12345 Musterstadt (Deutschland)\r\nTelefon. +49 1 234567 - Fax. +49 1 234568\r\nE-Mail. musterstadt@nh-hotels.com <mailto:musterstadt@nh-hotels.com> \r\nInformationen zur Reservierung\t \r\nCheck-in: 14/02/2017 - Check-out: 16/02/2017 - Übernachtung(en): 2\t \r\nGesamtpreis Ihres Aufenthaltes\r\n\t180.00 EUR + 12.60 MwSt. =\r\n192.60 EUR ",
+      "expect": "match",
+      "expected": {
+        "hotelName": "NH Musterstadt City",
+        "checkIn": "2017-02-14",
+        "checkOut": "2017-02-16",
+        "confirmationNumber": "QXAB123456789"
+      }
+    },
+    {
+      "name": "a reply quoting the confirmation",
+      "input": "Re: AW: Ihre Reservierung für NH Musterstadt City, 14. Februar 2017, QXAB123456789\nRe: AW: Ihre Reservierung für NH Musterstadt City, 14. Februar 2017, QXAB123456789\r\nich bitte um kostenfreie Stornierung meiner Reservierung.\r\n\r\n\t\tReservierungsbestätigung\t \r\nVielen Dank, dass Sie sich für NH Hoteles entschieden haben. Hiermit bestätigen wir Ihnen Ihre Reservierung:\t \r\nReservierungsnummer QXAB123456789 \r\nErstellt am 3. Januar 2017\t \r\nHotelinformationen\t \r\n\t\r\n <http://www.nh-hotels.com/nhobe/img/sep01.gif> \t\r\n\t\r\n\t NH Musterstadt City \r\nBeispielweg 7. D-12345 Musterstadt (Deutschland)\r\nTelefon. +49 1 234567 - Fax. +49 1 234568\r\nE-Mail. musterstadt@nh-hotels.com <mailto:musterstadt@nh-hotels.com> \r\nInformationen zur Reservierung\t \r\nCheck-in: 14/02/2017 - Check-out: 16/02/2017 - Übernachtung(en): 2\t \r\nGesamtpreis Ihres Aufenthaltes\r\n\t180.00 EUR + 12.60 MwSt. =\r\n192.60 EUR ",
+      "expect": "decline"
+    },
+    {
+      "name": "an NH newsletter",
+      "input": "Ihre nächste Reise mit NH\nIhre nächste Reise mit NH\r\nEntdecken Sie unsere Hotels\r\nCheck-in ab 14 Uhr — NH Hotel Group\r\nnh-hotels.com",
+      "expect": "decline"
+    }
+  ]
+}

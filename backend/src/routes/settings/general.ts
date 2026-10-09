@@ -39,6 +39,9 @@ export const baseCurrencyField = z.enum(
   ECB_CURRENCIES as unknown as [EcbCurrency, ...EcbCurrency[]]
 );
 
+/** ISO 3166-1 alpha-2, upper-case — the same shape a v2 template's `markets` uses. */
+export const homeCountryField = z.string().regex(/^[A-Z]{2}$/, "must be ISO 3166-1 alpha-2");
+
 const settingsSchema = z
   .object({
     profile: z
@@ -201,6 +204,12 @@ const settingsSchema = z
      * hours-based option, which §2 refuses on principle.
      */
     countryThreshold: z.enum(COUNTRY_TIERS).nullable().optional(),
+    /**
+     * Home country, ISO 3166-1 alpha-2 upper-case. It orders booking templates
+     * (home market first) and never filters them — plan 2026-10-09 P5.
+     * `null` clears it; omitting the key leaves it alone.
+     */
+    homeCountry: homeCountryField.nullable().optional(),
   })
   .partial();
 
@@ -252,6 +261,7 @@ function buildSettingsResponse(
     baseCurrency: string;
     autoCreateTrips: boolean;
     countryThreshold: string | null;
+    homeCountry: string | null;
   }
 ): SettingsResponse {
   const baseData = (
@@ -290,6 +300,7 @@ function buildSettingsResponse(
     // value reads as "no override" and the account follows the instance —
     // which is the same thing it was doing before anybody typed the bad value.
     countryThreshold: parseCountryTier(record.countryThreshold),
+    homeCountry: record.homeCountry ?? null,
     // Listed after the `...baseData` spread so a stale key that somehow made
     // it into the settings JSON can never shadow the authoritative value.
     betaFeaturesEnabled: extra.betaFeaturesEnabled,
@@ -441,7 +452,14 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       return;
     }
 
-    const { enabledDomains, baseCurrency, autoCreateTrips, countryThreshold, ...rest } = payload;
+    const {
+      enabledDomains,
+      baseCurrency,
+      autoCreateTrips,
+      countryThreshold,
+      homeCountry,
+      ...rest
+    } = payload;
     const {
       betaFeaturesEnabled,
       openDataEnabled,
@@ -581,6 +599,11 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       updateData.countryThreshold = countryThreshold;
     }
 
+    // Home country: `undefined` leaves it alone, `null` clears it.
+    if (homeCountry !== undefined) {
+      updateData.homeCountry = homeCountry;
+    }
+
     const saved = await prisma.userSettings.upsert({
       where: { userId },
       update: updateData,
@@ -604,6 +627,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         // null on a fresh row means "follow the instance", which is what an
         // account that has never opened the setting should do.
         countryThreshold: countryThreshold ?? null,
+        homeCountry: homeCountry ?? null,
       },
     });
 

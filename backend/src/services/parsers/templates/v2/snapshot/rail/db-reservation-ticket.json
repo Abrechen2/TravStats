@@ -1,0 +1,355 @@
+{
+  "id": "rail:db-reservation-ticket",
+  "domain": "rail",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Deutsche Bahn",
+    "kind": "rail",
+    "keys": {
+      "senderDomains": ["bahn.de"]
+    }
+  },
+  "markets": ["DE"],
+  "match": {
+    "markers": [],
+    "anchors": [],
+    "allOf": [
+      {
+        "pattern": "Deutsche(n)? Bahn|bahn\\.de|DB Fernverkehr|DB Vertrieb|DB Regio|DEUTSCHE BAHN",
+        "flags": "i"
+      },
+      {
+        "pattern": "Ihre Reiseverbindung und Reservierung[^\\S\\n]+(?:-[^\\S\\n]+)?(?<kind>Hinfahrt|R(?:ü|ue)ckfahrt|Einfache Fahrt)[^\\S\\n]+am[^\\S\\n]+(?<date>\\d{1,2}\\.\\d{1,2}\\.\\d{4})",
+        "flags": "i"
+      },
+      {
+        "pattern": "Halt\\s+Datum\\s+Zeit",
+        "flags": ""
+      }
+    ],
+    "anyOf": [
+      {
+        "pattern": "^(?:Online-)?(?:Sitzplatz)?[Rr]eservierung\\s*$",
+        "flags": "m"
+      },
+      {
+        "pattern": "^Sitzplatzreservierung\\b",
+        "flags": "m"
+      },
+      {
+        "pattern": "(?:gilt|g(?:ü|ue)ltig)\\s+nur\\s+(?:in\\s+Verbindung\\s+)?mit\\s+(?:einer|einem)\\s+g(?:ü|ue)ltigen\\s+Fahr(?:karte|schein|ausweis)",
+        "flags": "i"
+      }
+    ],
+    "noneOf": [
+      {
+        "pattern": "^(?:[A-Z]{1,5}(?:\\/[A-Z]{1,5})?\\s+)?Fahrkarte\\s*$",
+        "flags": "m"
+      },
+      {
+        "pattern": "^Online-Ticket\\s*$",
+        "flags": "m"
+      },
+      {
+        "pattern": "\\((?:Einfache Fahrt|Hin- und R(?:ü|ue)ckfahrt)\\)",
+        "flags": ""
+      },
+      {
+        "pattern": "^(?:Flexpreis|(?:Super )?Sparpreis|Normalpreis|Einzelfahrkarte|Deutschland-Ticket)\\b",
+        "flags": "m"
+      }
+    ]
+  },
+  "extraction": {
+    "preprocess": ["stripCarriageReturns"],
+    "fields": {
+      "documentKind": {
+        "value": "reservation"
+      },
+      "source": {
+        "value": "db-reservation"
+      },
+      "operator": {
+        "value": "Deutsche Bahn"
+      },
+      "bookingReference": {
+        "patterns": [
+          "Auftragsnummer:?\\s+([A-Z0-9]{6,14})\\b",
+          "Auftrag(?:sbestätigung zum Auftrag)?\\s+([A-Z0-9]{6,14})\\b"
+        ],
+        "flags": ""
+      },
+      "travelClass": {
+        "patterns": ["^(?:Klasse\\b.*|Sitzplatzreservierung.*)$"],
+        "flags": "m",
+        "transform": "travelClass"
+      }
+    },
+    "repeats": {
+      "legs": {
+        "mode": "split",
+        "splitPattern": "^[^\\n]*Ihre Reiseverbindung und Reservierung[^\\S\\n]+(?:-[^\\S\\n]+)?(?<kind>Hinfahrt|R(?:ü|ue)ckfahrt|Einfache Fahrt)[^\\S\\n]+am[^\\S\\n]+(?<date>\\d{1,2}\\.\\d{1,2}\\.\\d{4})",
+        "flags": "gim",
+        "skipPreamble": true,
+        "fields": {
+          "date": {
+            "patterns": [
+              "Ihre Reiseverbindung und Reservierung[^\\S\\n]+(?:-[^\\S\\n]+)?(?<kind>Hinfahrt|R(?:ü|ue)ckfahrt|Einfache Fahrt)[^\\S\\n]+am[^\\S\\n]+(?<date>\\d{1,2}\\.\\d{1,2}\\.\\d{4})"
+            ],
+            "format": "{date}",
+            "transform": "numericDate"
+          },
+          "direction": {
+            "patterns": [
+              "Ihre Reiseverbindung und Reservierung[^\\S\\n]+(?:-[^\\S\\n]+)?(?<kind>Hinfahrt|R(?:ü|ue)ckfahrt|Einfache Fahrt)[^\\S\\n]+am[^\\S\\n]+(?<date>\\d{1,2}\\.\\d{1,2}\\.\\d{4})"
+            ],
+            "format": "{kind}",
+            "map": [
+              ["^r", "return"],
+              [".", "outbound"]
+            ]
+          }
+        },
+        "repeats": {
+          "rowLegs": {
+            "mode": "matchAll",
+            "within": {
+              "endBefore": "^[ \\t]*(?:Hinweise|Wichtige Nutzungshinweise|Bitte informieren Sie sich)"
+            },
+            "pattern": "^[ \\t]*(?<dep>[^\\n]+?)[^\\S\\n]+(?<depDm>\\d{1,2}\\.\\d{1,2}\\.)[^\\S\\n]+ab[^\\S\\n]+(?<depTime>\\d{1,2}:\\d{2})(?:[^\\S\\n]+[^\\n]*)?[ \\t]*$(?:\\n(?![ \\t]*[^\\n]+?[^\\S\\n]+\\d{1,2}\\.\\d{1,2}\\.[^\\S\\n]+(?:ab|an)[^\\S\\n]+\\d{1,2}:\\d{2}(?:[^\\S\\n]+[^\\n]*)?[ \\t]*$)[^\\n]*)*?\\n[ \\t]*(?<arr>[^\\n]+?)[^\\S\\n]+(?<arrDm>\\d{1,2}\\.\\d{1,2}\\.)[^\\S\\n]+an[^\\S\\n]+(?<arrTime>\\d{1,2}:\\d{2})(?:[^\\S\\n]+[^\\n]*)?[ \\t]*$(?:(?:\\n(?![ \\t]*[^\\n]+?[^\\S\\n]+\\d{1,2}\\.\\d{1,2}\\.[^\\S\\n]+(?:ab|an)[^\\S\\n]+\\d{1,2}:\\d{2}(?:[^\\S\\n]+[^\\n]*)?[ \\t]*$)[^\\n]*)*?\\n[ \\t]*(?<cat>[A-Za-z]{1,5})[^\\S\\n]?(?<num>\\d{1,6})\\b(?<prest>[^\\n]*))?",
+            "flags": "gm",
+            "fields": {
+              "depStationName": {
+                "group": "dep",
+                "replace": [
+                  ["\\s+Gl\\.\\s*[\\d-]+$", "", "i"],
+                  ["\\s{2,}", " "]
+                ],
+                "transform": "trim"
+              },
+              "arrStationName": {
+                "group": "arr",
+                "replace": [
+                  ["\\s+Gl\\.\\s*[\\d-]+$", "", "i"],
+                  ["\\s{2,}", " "]
+                ],
+                "transform": "trim"
+              },
+              "depDm": {
+                "group": "depDm"
+              },
+              "arrDm": {
+                "group": "arrDm"
+              },
+              "depTime": {
+                "group": "depTime",
+                "transform": "time"
+              },
+              "arrTime": {
+                "group": "arrTime",
+                "transform": "time"
+              },
+              "trainCategory": {
+                "group": "cat"
+              },
+              "trainNumber": {
+                "group": "num"
+              },
+              "coach": {
+                "group": "prest",
+                "find": {
+                  "pattern": "Wg\\.\\s*(?<v>[\\w-]+),\\s*Pl\\.\\s*[\\d\\s]+?(?:,|$)",
+                  "flags": ""
+                }
+              },
+              "seat": {
+                "group": "prest",
+                "find": {
+                  "pattern": "Wg\\.\\s*[\\w-]+,\\s*Pl\\.\\s*(?<v>[\\d\\s]+?)(?:,|$)",
+                  "flags": ""
+                },
+                "replace": [["\\s+", " "]],
+                "transform": "trim"
+              }
+            },
+            "compute": {
+              "depDay": {
+                "format": "{depDm} {parent.date}",
+                "transform": "dayMonthNear"
+              },
+              "arrDay": {
+                "format": "{arrDm} {parent.date}",
+                "transform": "dayMonthNear"
+              },
+              "departureLocal": {
+                "format": "{depDay}T{depTime}"
+              },
+              "arrivalLocal": {
+                "format": "{arrDay}T{arrTime}"
+              },
+              "direction": {
+                "format": "{parent.direction}"
+              }
+            },
+            "skipItemsWithout": ["departureLocal", "arrivalLocal"],
+            "minimum": 0
+          },
+          "stops": {
+            "mode": "columns",
+            "within": {
+              "startAfter": "^[ \\t]*Halt[^\\S\\n]+Datum[^\\S\\n]+Zeit[^\\n]*$",
+              "endBefore": "^[ \\t]*(?:Hinweise|Wichtige Nutzungshinweise|Bitte informieren Sie sich)",
+              "lenient": true
+            },
+            "flags": "gm",
+            "columns": {
+              "station": {
+                "pattern": "^[ \\t]*(?!\\d{1,2}\\.\\d{1,2}\\.[ \\t]*$)(?!(?:ab|an)[^\\S\\n]+\\d{1,2}:\\d{2}[ \\t]*$)(?!\\d{1,3}(?:[^\\S\\n]+[A-Z](?:-[A-Z])?)?[ \\t]*$)(?![A-Za-z]{1,5}[^\\S\\n]?\\d{1,6}\\b)(?![^\\n]*(?:,|Res\\.?\\s?-?Nr))(\\S[^\\n]*?)[ \\t]*$(?=(?:\\n[^\\n]*)*?\\n[ \\t]*\\d{1,2}\\.\\d{1,2}\\.[ \\t]*$)",
+                "replace": [
+                  ["\\s+Gl\\.\\s*[\\d-]+$", "", "i"],
+                  ["\\s{2,}", " "]
+                ],
+                "transform": "trim"
+              },
+              "dm": {
+                "pattern": "^[ \\t]*(\\d{1,2}\\.\\d{1,2}\\.)[ \\t]*$"
+              },
+              "kind": {
+                "pattern": "^[ \\t]*(ab|an)[^\\S\\n]+\\d{1,2}:\\d{2}[ \\t]*$"
+              },
+              "time": {
+                "pattern": "^[ \\t]*(?:ab|an)[^\\S\\n]+(\\d{1,2}:\\d{2})[ \\t]*$",
+                "transform": "time"
+              }
+            },
+            "minimum": 0
+          },
+          "products": {
+            "mode": "matchAll",
+            "within": {
+              "startAfter": "^[ \\t]*Halt[^\\S\\n]+Datum[^\\S\\n]+Zeit[^\\n]*$",
+              "endBefore": "^[ \\t]*(?:Hinweise|Wichtige Nutzungshinweise|Bitte informieren Sie sich)",
+              "lenient": true
+            },
+            "pattern": "^[ \\t]*(?!(?:ab|an)[^\\S\\n]+\\d{1,2}:\\d{2}[ \\t]*$)(?<cat>[A-Za-z]{1,5})[^\\S\\n]?(?<num>\\d{1,6})\\b(?<prest>[^\\n]*)",
+            "flags": "gm",
+            "fields": {
+              "trainCategory": {
+                "group": "cat"
+              },
+              "trainNumber": {
+                "group": "num"
+              },
+              "coach": {
+                "group": "prest",
+                "find": {
+                  "pattern": "Wg\\.\\s*(?<v>[\\w-]+),\\s*Pl\\.\\s*[\\d\\s]+?(?:,|$)",
+                  "flags": ""
+                }
+              },
+              "seat": {
+                "group": "prest",
+                "find": {
+                  "pattern": "Wg\\.\\s*[\\w-]+,\\s*Pl\\.\\s*(?<v>[\\d\\s]+?)(?:,|$)",
+                  "flags": ""
+                },
+                "replace": [["\\s+", " "]],
+                "transform": "trim"
+              }
+            },
+            "minimum": 0
+          },
+          "columnLegs": {
+            "mode": "pairs",
+            "of": "stops",
+            "open": {
+              "field": "kind",
+              "pattern": "^ab$"
+            },
+            "close": {
+              "field": "kind",
+              "pattern": "^an$"
+            },
+            "fields": {
+              "depStationName": {
+                "from": "open",
+                "field": "station"
+              },
+              "depDm": {
+                "from": "open",
+                "field": "dm"
+              },
+              "depTime": {
+                "from": "open",
+                "field": "time"
+              },
+              "arrStationName": {
+                "from": "close",
+                "field": "station"
+              },
+              "arrDm": {
+                "from": "close",
+                "field": "dm"
+              },
+              "arrTime": {
+                "from": "close",
+                "field": "time"
+              }
+            },
+            "zip": {
+              "with": "products",
+              "strict": true
+            },
+            "compute": {
+              "depDay": {
+                "format": "{depDm} {parent.date}",
+                "transform": "dayMonthNear"
+              },
+              "arrDay": {
+                "format": "{arrDm} {parent.date}",
+                "transform": "dayMonthNear"
+              },
+              "departureLocal": {
+                "format": "{depDay}T{depTime}"
+              },
+              "arrivalLocal": {
+                "format": "{arrDay}T{arrTime}"
+              },
+              "direction": {
+                "format": "{parent.direction}"
+              }
+            },
+            "skipItemsWithout": ["departureLocal", "arrivalLocal"],
+            "minimum": 0
+          }
+        },
+        "emit": ["rowLegs", "columnLegs"]
+      }
+    },
+    "required": ["legs"]
+  },
+  "testCases": [
+    {
+      "name": "a seat reservation printed as the 2024 table",
+      "input": "Klasse 1. Klasse\nSitzplatzreservierung\nDie Reservierung gilt nur in Verbindung mit einer gültigen Fahrkarte.\nAuftragsnummer: 665544332211\nIhre Reiseverbindung und Reservierung - Einfache Fahrt am 02.02.2027\nHalt Datum Zeit Gleis Produkte Reservierung / Hinweise\nProbestadt Hbf\nZielstadt Hbf\n02.02.\n02.02.\nab 09:05\nan 11:50\n8\n3\nICE 1234 1 Sitzplatz, Wg. 3, Pl. 17, 1 Fenster,\nWichtige Nutzungshinweise:\nDB Fernverkehr AG",
+      "expect": "match",
+      "expected": {
+        "bookingReference": "665544332211",
+        "travelClass": "first",
+        "legs": [
+          {
+            "trainNumber": "1234",
+            "coach": "3",
+            "seat": "17",
+            "departureLocal": "2027-02-02T09:05"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a ticket that also reserves a seat is a ticket",
+      "input": "Online-Ticket\nSitzplatzreservierung\nFlexpreis (Einfache Fahrt)\nIhre Reiseverbindung und Reservierung - Einfache Fahrt am 02.02.2027\nHalt Datum Zeit Gleis Produkte Reservierung / Hinweise\nProbestadt Hbf\nZielstadt Hbf\n02.02.\n02.02.\nab 09:05\nan 11:50\nDB Fernverkehr AG",
+      "expect": "decline"
+    }
+  ]
+}

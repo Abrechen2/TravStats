@@ -1,4 +1,5 @@
 import { parseAmount } from "../../lodging/documentTotal";
+import { travelClass } from "../../parsers/templates/v2/vocabularyTransforms";
 import type { RailTravelClassValue } from "./types";
 
 /**
@@ -65,17 +66,13 @@ export function currencyOf(text: string): string | null {
   return null;
 }
 
-/** "2. Klasse", "Klasse: 1", "1. Kl.", "2nd class", "1re classe" → the class. */
+/**
+ * "2. Klasse", "Klasse: 1", "1. Kl.", "2nd class", "1re classe" → the class;
+ * the BahnCard's class is not the ticket's. One home: the template engine's
+ * `travelClass` transform, which the rail templates name too.
+ */
 export function travelClassOf(raw: string): RailTravelClassValue | null {
-  // "BahnCard 50 (1. Klasse)" is the discount card's class, not the ticket's.
-  const text = raw.replace(/BahnCard[^,\n()]{0,20}\([12]\.\s*Klasse\)/gi, "");
-  const match =
-    /\b([12])\.\s*(?:Klasse|Kl\.)/i.exec(text) ??
-    /\bKlasse:?\s*([12])\b/i.exec(text) ??
-    /\b([12])(?:st|nd)\s+class\b/i.exec(text) ??
-    /\b([12])(?:re|e|nde)\s+classe\b/i.exec(text);
-  if (!match) return null;
-  return match[1] === "1" ? "first" : "second";
+  return travelClass(raw);
 }
 
 /**

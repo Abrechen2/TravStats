@@ -295,4 +295,4 @@ Each has a recommendation; nothing in packages 1–2 waits on them.
 - Cruise itineraries in the workshop's first round.
 - Templates that become active without passing tests.
 - Coverage at any price: declining stays a valid outcome.
-- A tour/roadtrip parser domain: round trips map to flights + stays + a trip.
+- ~~A tour/roadtrip parser domain: round trips map to flights + stays + a trip.~~ **Reversed by the owner on 2026-10-09:** package tours become a template domain that yields a trip proposal (flights + stays + cruise + booking). See `docs/superpowers/plans/2026-10-09-template-engine-v2-packages.md`.

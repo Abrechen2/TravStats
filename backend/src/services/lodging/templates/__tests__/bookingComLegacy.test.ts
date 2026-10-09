@@ -1,7 +1,5 @@
-import { LODGING_TEMPLATES } from "../builtins";
-import { applyLodgingTemplate } from "../engine";
+import { READERS } from "./readers";
 import { parseLodgingBookingText } from "../../lodgingBookingParser";
-import type { LodgingTemplate } from "../types";
 
 jest.mock("../../../parsers/llmAvailability", () => ({
   isLlmAvailable: jest.fn(async () => false),
@@ -13,12 +11,6 @@ jest.mock("../../../llm/llmGate", () => ({
 jest.mock("../../../parserSettings", () => ({
   getParserOrder: jest.fn(async () => "template_first"),
 }));
-
-const legacy = (): LodgingTemplate => {
-  const found = LODGING_TEMPLATES.find((t) => t.id === "lodging:bookingcom-legacy");
-  if (!found) throw new Error("No template lodging:bookingcom-legacy");
-  return found;
-};
 
 /**
  * Booking.com confirmations from 2008 to 2018 in the one-line layout —
@@ -55,10 +47,10 @@ const LAYOUT_2016 = [
   "Buchung stornieren <https://secure.booking.com/myreservations.de.html?bn=987654321&pincode=1234>",
 ].join("\n");
 
-const read = (subject: string, body: string) =>
-  applyLodgingTemplate(legacy(), subject, `${subject}\n${body}`);
+describe.each(READERS)("the Booking.com one-line-layout reader — %s", (_reader, apply) => {
+  const read = (subject: string, body: string) =>
+    apply("lodging:bookingcom-legacy", subject, `${subject}\n${body}`);
 
-describe("the Booking.com one-line-layout reader", () => {
   it("reads the 2008–2014 layout: name from the subject, both dates, the total, the city", () => {
     const [subject, ...rest] = LAYOUT_2012.split("\n");
     const r = read(subject, rest.join("\n"));

@@ -19,6 +19,7 @@ import {
   multipartRetain,
   readDocumentForParse,
   recordParse,
+  retainedInputFor,
   sendAppError,
   type RetainInput,
 } from "../services/documents/parseRetention";
@@ -321,7 +322,8 @@ router.post(
       const documentId = await recordParse({
         userId,
         retain: retainParse.data,
-        input: retainInput,
+        // The attachment a package was read from, when it was (P3 follow-up).
+        input: retainedInputFor(retainInput, outcome.sourceAttachment),
         parsedDomain: outcome.domain,
         parsedPayload: body,
       });

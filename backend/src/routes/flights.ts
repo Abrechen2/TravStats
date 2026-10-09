@@ -55,6 +55,8 @@ import { normalizeAircraft } from "../utils/aircraftNormalize";
 import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
 import { resolveDuplicateFlight } from "../services/flights/duplicateResolution";
 import batchRouter from "./flightsBatch";
+import { ownedImportBatchId, ownedTripId } from "./flights/createLinks";
+import { recomputeTripStatus } from "../services/tripStatusService";
 import { flightExternalRef, isDocumentImport } from "../services/importProvenance";
 import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from "../shared/statusDerivation";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
@@ -161,14 +163,8 @@ router.post(
       // A mail carrying ONE flight comes through here rather than the batch
       // route, so provenance has to live in both places or half of every
       // mail-imported logbook stays unrecorded.
-      let importBatchId: string | null = null;
-      if (data.importBatchId) {
-        const batch = await prisma.importBatch.findFirst({
-          where: { id: data.importBatchId, userId, domain: "flight" },
-          select: { id: true },
-        });
-        importBatchId = batch?.id ?? null;
-      }
+      const importBatchId = await ownedImportBatchId(userId, data.importBatchId);
+      const tripId = await ownedTripId(userId, data.tripId); // #355: was dropped
       const externalRef = isDocumentImport(data.dataSource)
         ? flightExternalRef({
             flightNumber: data.flightNumber,
@@ -303,6 +299,7 @@ router.post(
             externalRef,
             ...zoneColumns,
             importBatchId,
+            tripId,
             airline: data.airline,
             airlineIata,
             airlineIcao,
@@ -410,6 +407,7 @@ router.post(
         return created;
       });
       await linkDocuments(userId, documentIds, { type: "flight", id: flight.id });
+      if (tripId) await recomputeTripStatus(tripId);
 
       // Check achievements after creating a flight and return newly unlocked ones
       let newAchievements: Awaited<ReturnType<typeof checkAndUpdateAchievements>> = [];
