@@ -23,6 +23,7 @@ import {
 import type { SheetSpec } from "./sheetSpec";
 import { roadtripSheet, roadtripStationSheet, tourPointSheet, tourSheet } from "./roadtripSheets";
 import { railSheet } from "./railSheet";
+import { rentalSheet } from "./rentalSheet";
 import { roadtripExpenseSheet } from "./roadtripExpenseSheet";
 
 type T = (key: string) => string;
@@ -82,7 +83,10 @@ export interface ImportOutcome {
  * `railDomain` beta switch AND the user's domain) — the owner rule that keeps
  * rail behind its gate. Last, where the export writes it.
  */
-export function importableSpecs(t: T, options: { rail?: boolean } = {}): SheetSpec<never>[] {
+export function importableSpecs(
+  t: T,
+  options: { rail?: boolean; rental?: boolean } = {}
+): SheetSpec<never>[] {
   return [
     flightSheet(t),
     cruiseSheet(t),
@@ -99,6 +103,8 @@ export function importableSpecs(t: T, options: { rail?: boolean } = {}): SheetSp
     tourSheet(t),
     tourPointSheet(t),
     ...(options.rail ? [railSheet(t)] : []),
+    // Rentals the same way, behind `rentalDomain` + the user's domain (forgejo#267).
+    ...(options.rental ? [rentalSheet(t)] : []),
   ] as unknown as SheetSpec<never>[];
 }
 
@@ -114,7 +120,7 @@ export function importableSpecs(t: T, options: { rail?: boolean } = {}): SheetSp
 export async function readWorkbookForImport(
   t: T,
   file: File,
-  options: { rail?: boolean } = {},
+  options: { rail?: boolean; rental?: boolean } = {},
   otherLanguages: readonly T[] = []
 ): Promise<ParsedSheet[]> {
   const buffer = await file.arrayBuffer();

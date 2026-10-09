@@ -5,7 +5,7 @@
     "running": "Building the file …",
     "failed": "The export failed.",
     "empty": "There is nothing to export.",
-    "description": "Everything as one Excel file — a sheet per domain, with an ID column so the file can be read back in later."
+    "description": "The editable spreadsheet: every entry as an Excel file – a sheet per area, with an id column so you can change it and read it back in. It is not a backup: photos, documents and settings are not in it – that is what the backup is for."
   },
   "sheets": {
     "flights": "Flights",
@@ -21,7 +21,8 @@
     "tours": "Tours",
     "tourPoints": "Tour points",
     "rail": "Train rides",
-    "roadtripExpenses": "Roadtrip costs"
+    "roadtripExpenses": "Roadtrip costs",
+    "rental": "Rental cars"
   },
   "hints": {
     "cruises": "One row per cruise. Do not change the ID in column A — it is what matches the row back to its record on import. A row without an ID is created as a new cruise.",
@@ -36,7 +37,8 @@
     "tours": "One tour per row. A row with the ID of one of your tours changes it; without an ID — or with an ID from another account — a new standalone tour is created, unless one with the same name and start is already here. Activity: hike, walk, run, bike, mtb, ski, paddle, climb or other. Travel mode: foot, bike, road, rail or ferry — left empty, a new ride (bike, mtb) gets bike and any other tour foot. Start station points to a roadtrip station by the ID in square brackets; without an ID, the name counts when only one station has it. Columns in grey are derived and not imported.",
     "tourPoints": "One point per row. The Tour column points to the Tours sheet by the ID in square brackets – without an ID, the name before it counts. The Order column sets the sequence — 2.5 inserts a point between 2 and 3. A point missing here is kept — except when replacing. When a tour belongs to a trip, its points are the trip's stops: they are listed here for reading and are edited at the trip, not through this sheet.",
     "rail": "One row per train ride. A row with the ID of one of your rides changes it; without an ID — or with an ID from another account — a new one is created, unless one with the same train number, stations and departure day is already here. Times are on each station's local clock. A station is found by its UIC code, else by latitude and longitude, else by its name in the station catalogue. Class: first, second, sleeper or couchette; status: only cancelled is set, the rest follows from the times. The distance is measured again — unless \"Source\" says user, the figure from the ticket.",
-    "roadtripExpenses": "One cost per row. The Roadtrip column points to the Roadtrips sheet by the ID in square brackets — without an ID, the name before it counts. Kind: ferry, toll, pitch, fuel, parking or other. Amount and currency (an ISO code such as EUR, NOK) are required; amounts in different currencies are never added together. Station OR leg from/to — never both; a station that cannot be found is left out, the cost stays. An empty cell keeps the stored value."
+    "roadtripExpenses": "One cost per row. The Roadtrip column points to the Roadtrips sheet by the ID in square brackets — without an ID, the name before it counts. Kind: ferry, toll, pitch, fuel, parking or other. Amount and currency (an ISO code such as EUR, NOK) are required; amounts in different currencies are never added together. Station OR leg from/to — never both; a station that cannot be found is left out, the cost stays. An empty cell keeps the stored value.",
+    "rental": "One row per rental. Do not change the id in column A – it ties the row back to its rental on import; without an id a rental is recognised by provider and booking number (else pickup station and day) instead of duplicated. Times in the station's local time; precision \"day\" means only the day is known. Empty cells stay unknown, never 0. The deposit never counts as a cost."
   },
   "columns": {
     "id": "ID",
@@ -139,7 +141,66 @@
     "paidOn": "Paid on",
     "station": "Station",
     "legFrom": "Leg from",
-    "legTo": "Leg to"
+    "legTo": "Leg to",
+    "rental": {
+      "provider": "Provider",
+      "operatedBy": "Operated by",
+      "broker": "Broker",
+      "confirmationNumber": "Booking number",
+      "brokerReference": "Broker reference",
+      "agreementNumber": "Agreement number",
+      "invoiceNumber": "Invoice number",
+      "pickupStationName": "Pickup station",
+      "pickupIata": "Pickup IATA",
+      "pickupAddress": "Pickup address",
+      "pickupLat": "Pickup latitude",
+      "pickupLon": "Pickup longitude",
+      "pickupCountry": "Pickup country",
+      "returnStationName": "Return station",
+      "returnIata": "Return IATA",
+      "returnAddress": "Return address",
+      "returnLat": "Return latitude",
+      "returnLon": "Return longitude",
+      "returnCountry": "Return country",
+      "pickupLocal": "Pickup (local time)",
+      "pickupPrecision": "Pickup precision",
+      "pickupFold": "Pickup clock change",
+      "returnLocal": "Return (local time)",
+      "returnPrecision": "Return precision",
+      "returnFold": "Return clock change",
+      "actualPickupLocal": "Actual pickup (local time)",
+      "actualPickupPrecision": "Actual pickup precision",
+      "actualPickupFold": "Actual pickup clock change",
+      "actualReturnLocal": "Actual return (local time)",
+      "actualReturnPrecision": "Actual return precision",
+      "actualReturnFold": "Actual return clock change",
+      "status": "Status",
+      "vehicleClass": "Car group",
+      "acrissCode": "ACRISS",
+      "vehicleExample": "Example car",
+      "vehicleDriven": "Car driven",
+      "licensePlate": "Licence plate",
+      "odometerOutKm": "Odometer at pickup",
+      "odometerInKm": "Odometer at return",
+      "distanceKm": "Km driven",
+      "distanceSource": "Km source",
+      "mileagePolicy": "Mileage policy",
+      "mileageCapKm": "Mileage cap",
+      "fuelPolicy": "Fuel policy",
+      "paymentTiming": "Payment",
+      "price": "Booked price",
+      "currency": "Currency",
+      "finalAmount": "Final amount",
+      "finalCurrency": "Final amount currency",
+      "finalAmountSource": "Final amount source",
+      "depositAmount": "Deposit",
+      "depositCurrency": "Deposit currency",
+      "depositPaidOn": "Deposit held on",
+      "depositReturnedOn": "Deposit back on",
+      "depositReturnedAmount": "Deposit back (amount)",
+      "inclusions": "Protection and extras",
+      "arrivalFlightNumber": "Arriving flight"
+    }
   },
   "import": {
     "title": "Excel import",
@@ -195,7 +256,8 @@
       "expense_needs_amount": "A cost needs an amount of 0 or more.",
       "invalid_currency": "The currency is not an ISO code such as EUR or NOK.",
       "expense_needs_roadtrip": "The cost names no roadtrip.",
-      "expense_station_or_leg": "A cost belongs to a station OR to a leg — not both."
+      "expense_station_or_leg": "A cost belongs to a station OR to a leg — not both.",
+      "rental_needs_booking": "A new rental needs a provider, a pickup station and the booked pickup and return."
     },
     "modeLabel": "What should happen to entries that already exist?",
     "modes": {
@@ -239,7 +301,8 @@
     "notes": {
       "trip_not_linked": "trip not found in this account — imported without a trip",
       "port_not_found": "port not in the catalogue — left empty",
-      "chain_not_found": "chain not in the catalogue — imported without a chain"
+      "chain_not_found": "chain not in the catalogue — imported without a chain",
+      "roadtrip_not_linked": "Roadtrip not found in the account – applied without a roadtrip"
     },
     "outcomeUnknown": "The server no longer reports how the import ended. Check your entries before importing the file again."
   }

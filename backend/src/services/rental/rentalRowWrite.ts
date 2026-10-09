@@ -115,7 +115,7 @@ export async function restatusTrips(...tripIds: Array<string | null | undefined>
 export async function createRentalRow(
   userId: string,
   input: CreateRentalInput,
-  options: WriteOptions
+  options: WriteOptions & { extra?: Partial<Prisma.RentalBookingUncheckedCreateInput> }
 ): Promise<RentalRow> {
   const state = mergeRental(null, input, await resolveStations(input));
   assertOdometerOrder(null, input);
@@ -157,6 +157,9 @@ export async function createRentalRow(
         lastMailSentAt: options.mailSentAt ?? null,
         companions: companions.map((c) => c.displayName),
         userEditedFields: options.manual ? editedFields(input) : [],
+        // Columns only a document path writes (an invoice's km source), kept
+        // when a spreadsheet moves the rental (forgejo#267).
+        ...options.extra,
       },
     });
     if (companions.length > 0) {

@@ -5,7 +5,7 @@
     "running": "Datei wird erstellt …",
     "failed": "Der Export ist fehlgeschlagen.",
     "empty": "Es gibt nichts zu exportieren.",
-    "description": "Alle Daten als Excel-Datei – ein Blatt je Bereich, mit ID-Spalte, damit die Datei später wieder eingelesen werden kann."
+    "description": "Die bearbeitbare Tabelle: alle Einträge als Excel-Datei – ein Blatt je Bereich, mit ID-Spalte, damit du sie ändern und wieder einlesen kannst. Eine Sicherung ist das nicht: Fotos, Dokumente und Einstellungen fehlen darin – dafür ist das Backup da."
   },
   "sheets": {
     "flights": "Flüge",
@@ -21,7 +21,8 @@
     "tours": "Touren",
     "tourPoints": "Tourpunkte",
     "rail": "Bahnfahrten",
-    "roadtripExpenses": "Roadtrip-Kosten"
+    "roadtripExpenses": "Roadtrip-Kosten",
+    "rental": "Mietwagen"
   },
   "hints": {
     "cruises": "Eine Zeile je Kreuzfahrt. Die ID in Spalte A nicht ändern – sie ordnet die Zeile beim Import wieder ihrem Eintrag zu. Zeilen ohne ID werden als neue Kreuzfahrt angelegt.",
@@ -36,7 +37,8 @@
     "tours": "Eine Tour pro Zeile. Eine Zeile mit der ID einer deiner Touren ändert sie; ohne ID — oder mit einer ID aus einem anderen Konto — wird eine neue, eigenständige Tour angelegt, außer es gibt schon eine mit gleichem Namen und Beginn. Aktivität: hike, walk, run, bike, mtb, ski, paddle, climb oder other. Fortbewegung: foot, bike, road, rail oder ferry — leer lässt eine neue Rad-Tour (bike, mtb) mit bike, jede andere zu Fuß (foot) anlegen. Startstation verweist über die ID in eckigen Klammern auf eine Roadtrip-Station; fehlt die ID, zählt der Name, wenn nur eine Station so heißt. Grau geschriebene Spalten sind abgeleitet und werden nicht übernommen.",
     "tourPoints": "Ein Punkt pro Zeile. Die Spalte „Tour“ verweist über die ID in eckigen Klammern auf das Blatt „Touren“ – fehlt die ID, zählt der Name davor. Die Spalte Reihenfolge bestimmt die Abfolge — 2,5 fügt einen Punkt zwischen 2 und 3 ein. Ein Punkt, der hier fehlt, bleibt erhalten — außer beim Ersetzen. Gehört eine Tour zu einer Reise, sind ihre Punkte die Stopps der Reise — hier nur zum Lesen, bearbeitet werden sie bei der Reise.",
     "rail": "Eine Zeile je Zugfahrt. Eine Zeile mit der ID einer deiner Fahrten ändert sie; ohne ID — oder mit einer ID aus einem anderen Konto — wird eine neue angelegt, außer es gibt schon eine mit gleicher Zugnummer, gleichen Bahnhöfen und gleichem Abfahrtstag. Zeiten stehen in Ortszeit des jeweiligen Bahnhofs. Ein Bahnhof wird über seinen UIC-Code gefunden, sonst über Breite und Länge, sonst über seinen Namen im Bahnhofskatalog. Klasse: first, second, sleeper oder couchette; Status: nur cancelled wird gesetzt, der Rest ergibt sich aus den Zeiten. Die Entfernung wird neu gemessen — außer in „Quelle“ steht user, die Angabe vom Ticket.",
-    "roadtripExpenses": "Eine Ausgabe pro Zeile. Die Spalte „Roadtrip“ verweist über die ID in eckigen Klammern auf das Blatt „Roadtrips“ – fehlt die ID, zählt der Name davor. Art: ferry (Fähre), toll (Maut), pitch (Stellplatz), fuel (Tanken), parking (Parken) oder other (Sonstiges). Betrag und Währung (ISO-Code wie EUR, NOK) sind Pflicht; Beträge in verschiedenen Währungen werden nie zusammengerechnet. Station ODER Strecke von/bis – nie beides; eine Station, die nicht gefunden wird, entfällt, die Ausgabe bleibt. Eine leere Zelle lässt den gespeicherten Wert stehen."
+    "roadtripExpenses": "Eine Ausgabe pro Zeile. Die Spalte „Roadtrip“ verweist über die ID in eckigen Klammern auf das Blatt „Roadtrips“ – fehlt die ID, zählt der Name davor. Art: ferry (Fähre), toll (Maut), pitch (Stellplatz), fuel (Tanken), parking (Parken) oder other (Sonstiges). Betrag und Währung (ISO-Code wie EUR, NOK) sind Pflicht; Beträge in verschiedenen Währungen werden nie zusammengerechnet. Station ODER Strecke von/bis – nie beides; eine Station, die nicht gefunden wird, entfällt, die Ausgabe bleibt. Eine leere Zelle lässt den gespeicherten Wert stehen.",
+    "rental": "Eine Zeile je Miete. Die ID in Spalte A nicht ändern – sie ordnet die Zeile beim Import wieder ihrer Miete zu; ohne ID wird über Anbieter und Buchungsnummer (sonst Abholstation und -tag) wiedererkannt statt verdoppelt. Zeiten in der Ortszeit der Station; Genauigkeit „day“ heißt: nur der Tag ist bekannt. Leere Zellen bleiben unbekannt, nie 0. Die Kaution zählt nie als Kosten."
   },
   "columns": {
     "id": "ID",
@@ -139,7 +141,66 @@
     "paidOn": "Bezahlt am",
     "station": "Station",
     "legFrom": "Strecke von",
-    "legTo": "Strecke bis"
+    "legTo": "Strecke bis",
+    "rental": {
+      "provider": "Anbieter",
+      "operatedBy": "Betrieben von",
+      "broker": "Vermittler",
+      "confirmationNumber": "Buchungsnummer",
+      "brokerReference": "Vermittler-Referenz",
+      "agreementNumber": "Mietvertragsnummer",
+      "invoiceNumber": "Rechnungsnummer",
+      "pickupStationName": "Abholstation",
+      "pickupIata": "Abholung IATA",
+      "pickupAddress": "Abholung Adresse",
+      "pickupLat": "Abholung Breite",
+      "pickupLon": "Abholung Länge",
+      "pickupCountry": "Abholung Land",
+      "returnStationName": "Rückgabestation",
+      "returnIata": "Rückgabe IATA",
+      "returnAddress": "Rückgabe Adresse",
+      "returnLat": "Rückgabe Breite",
+      "returnLon": "Rückgabe Länge",
+      "returnCountry": "Rückgabe Land",
+      "pickupLocal": "Abholung (Ortszeit)",
+      "pickupPrecision": "Abholung Genauigkeit",
+      "pickupFold": "Abholung Zeitumstellung",
+      "returnLocal": "Rückgabe (Ortszeit)",
+      "returnPrecision": "Rückgabe Genauigkeit",
+      "returnFold": "Rückgabe Zeitumstellung",
+      "actualPickupLocal": "Tatsächliche Abholung (Ortszeit)",
+      "actualPickupPrecision": "Tats. Abholung Genauigkeit",
+      "actualPickupFold": "Tats. Abholung Zeitumstellung",
+      "actualReturnLocal": "Tatsächliche Rückgabe (Ortszeit)",
+      "actualReturnPrecision": "Tats. Rückgabe Genauigkeit",
+      "actualReturnFold": "Tats. Rückgabe Zeitumstellung",
+      "status": "Status",
+      "vehicleClass": "Fahrzeuggruppe",
+      "acrissCode": "ACRISS",
+      "vehicleExample": "Beispielfahrzeug",
+      "vehicleDriven": "Gefahrenes Fahrzeug",
+      "licensePlate": "Kennzeichen",
+      "odometerOutKm": "Kilometerstand Abholung",
+      "odometerInKm": "Kilometerstand Rückgabe",
+      "distanceKm": "Gefahrene km",
+      "distanceSource": "Herkunft km",
+      "mileagePolicy": "Kilometerregel",
+      "mileageCapKm": "Kilometergrenze",
+      "fuelPolicy": "Tankregel",
+      "paymentTiming": "Bezahlung",
+      "price": "Gebuchter Preis",
+      "currency": "Währung",
+      "finalAmount": "Endbetrag",
+      "finalCurrency": "Währung Endbetrag",
+      "finalAmountSource": "Herkunft Endbetrag",
+      "depositAmount": "Kaution",
+      "depositCurrency": "Währung Kaution",
+      "depositPaidOn": "Kaution hinterlegt am",
+      "depositReturnedOn": "Kaution zurück am",
+      "depositReturnedAmount": "Kaution zurück (Betrag)",
+      "inclusions": "Schutz und Extras",
+      "arrivalFlightNumber": "Ankunftsflug"
+    }
   },
   "import": {
     "title": "Excel-Import",
@@ -195,7 +256,8 @@
       "expense_needs_amount": "Eine Ausgabe braucht einen Betrag von 0 oder mehr.",
       "invalid_currency": "Die Währung ist kein ISO-Code wie EUR oder NOK.",
       "expense_needs_roadtrip": "Die Ausgabe nennt keinen Roadtrip.",
-      "expense_station_or_leg": "Eine Ausgabe gehört zu einer Station ODER zu einer Strecke – nicht zu beidem."
+      "expense_station_or_leg": "Eine Ausgabe gehört zu einer Station ODER zu einer Strecke – nicht zu beidem.",
+      "rental_needs_booking": "Eine neue Miete braucht Anbieter, Abholstation sowie gebuchte Abholung und Rückgabe."
     },
     "modeLabel": "Was soll mit vorhandenen Einträgen passieren?",
     "modes": {
@@ -239,7 +301,8 @@
     "notes": {
       "trip_not_linked": "Reise im Konto nicht gefunden – ohne Reise übernommen",
       "port_not_found": "Hafen nicht im Katalog – bleibt leer",
-      "chain_not_found": "Kette nicht im Katalog – ohne Kette übernommen"
+      "chain_not_found": "Kette nicht im Katalog – ohne Kette übernommen",
+      "roadtrip_not_linked": "Roadtrip im Konto nicht gefunden – ohne Roadtrip übernommen"
     },
     "outcomeUnknown": "Der Server meldet nicht mehr, wie der Import ausgegangen ist. Bitte deine Einträge prüfen, bevor du die Datei erneut importierst."
   }
