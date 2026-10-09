@@ -1,3 +1,4 @@
+import { prisma } from "../../../db";
 /**
  * The `package` parse target (plan 2026-10-09 P3): read by active `package`
  * templates only, and recognised by `auto` through those templates' matchers.
@@ -83,5 +84,17 @@ describe("scoreDocument — package evidence", () => {
     const pkg = withDrafts.candidates.find((c) => c.domain === "package");
     expect(pkg?.score).toBe(PACKAGE_TEMPLATE_WEIGHT);
     expect(withDrafts.domain).toBe("package");
+  });
+
+  it("hands the user's home country to the template order", async () => {
+    const active = jest.spyOn(templateRegistry, "getActiveV2").mockReturnValue(drafts);
+    jest.spyOn(prisma.userSettings, "findUnique").mockResolvedValue({ homeCountry: "AT" } as never);
+    await parseDocument({
+      text: matchInput(invoice),
+      domain: "package",
+      source: "document",
+      userId: "u1",
+    });
+    expect(active).toHaveBeenCalledWith("AT");
   });
 });

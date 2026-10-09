@@ -50,6 +50,7 @@ import { isLlmEnabledByAdmin } from "../llm/llmGate";
 import { describeLlmTarget, type LlmProviderInfo } from "../llm/llmProvider";
 import { resolveReachableLlmTarget } from "../llm/reachableTarget";
 import { templateRegistry } from "../parsers/templates/registry";
+import { prisma } from "../../db";
 import {
   parsePackageText,
   type PackageFallbackCode,
@@ -314,13 +315,27 @@ export async function parseDocument(input: ParseDocumentInput): Promise<ParseDoc
   };
 }
 
+async function homeCountryOf(userId: string | undefined): Promise<string | null> {
+  if (userId === undefined) return null;
+  const settings = await prisma.userSettings.findUnique({
+    where: { userId },
+    select: { homeCountry: true },
+  });
+  return settings?.homeCountry ?? null;
+}
+
 async function parseAs(
   domain: ParserSupportedDomain,
   input: ParseDocumentInput,
   combined: string
 ): Promise<DomainBody> {
   if (domain === "package") {
-    const result = parsePackageText(combined, templateRegistry.getActiveV2());
+    // First matching template wins, so the user's home market goes first
+    // (owner, 2026-10-09: markets order candidates, they never filter them).
+    const result = parsePackageText(
+      combined,
+      templateRegistry.getActiveV2(await homeCountryOf(input.userId))
+    );
     return {
       domain: "package",
       package: result.reading,
