@@ -7,11 +7,11 @@ import { fetchJson as httpsFetchJson } from "./fetchJson";
 import { createFsTemplateCache } from "./v2/cache";
 import { V2TemplateStore, type FetchJson } from "./v2/loader";
 import { resolveTemplateRepoBaseUrl } from "./v2/source";
+import { createDirSnapshot, DEFAULT_SNAPSHOT_DIR } from "./v2/snapshot";
 import type { V2Status } from "./v2/status";
-import type { TemplateEnvelope } from "./v2/envelope";
+import type { TemplateDomain, TemplateEnvelope } from "./v2/envelope";
 import { orderByMarket } from "./v2/markets";
 
-const DEFAULT_BUILTIN_DIR = path.join(__dirname, "airlines");
 const DEFAULT_CACHE_DIR = path.join(process.cwd(), ".template-cache");
 const SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
 
@@ -19,8 +19,9 @@ export interface TemplateRegistryOptions {
   fetchJson?: FetchJson;
   /** Repository raw root; v1 airlines live under `<base>/templates`. */
   baseUrl?: string;
-  builtinDir?: string;
   cacheDir?: string;
+  /** The bundled v2 templates (`v2/snapshot/`); the lowest-priority v2 source. */
+  snapshotDir?: string;
   appVersion?: string;
 }
 
@@ -36,53 +37,44 @@ export interface TemplateStatusEntry {
   source: "builtin" | "cached";
 }
 
+/**
+ * The parser template registry.
+ *
+ * v2 template files (plan 2026-10-09) are the issuer readers: bundled in the
+ * snapshot, cached, and synced from the template repository. Nothing about an
+ * issuer is compiled in any more (P4a): the v1 airline templates that used to
+ * ship in `airlines/` are v2 files now, or — the HTML-selector ones nobody
+ * could prove worked — are read only from the template repository's v1 index
+ * and its disk cache, until they have v2 files of their own.
+ */
 export class TemplateRegistry {
   private templates: Map<string, AirlineTemplate> = new Map();
   private templateSources: Map<string, "builtin" | "cached"> = new Map();
   private readonly fetchJson: FetchJson;
   private readonly v1Base: string;
-  private readonly builtinDir: string;
   private readonly cacheDir: string;
   private readonly v2: V2TemplateStore;
+  private v2LocalLoaded = false;
 
   constructor(options: TemplateRegistryOptions = {}) {
     const baseUrl =
       options.baseUrl ?? resolveTemplateRepoBaseUrl(process.env.TEMPLATE_REPO_BASE_URL);
     this.fetchJson = options.fetchJson ?? httpsFetchJson;
     this.v1Base = `${baseUrl}/templates`;
-    this.builtinDir = options.builtinDir ?? DEFAULT_BUILTIN_DIR;
     this.cacheDir = options.cacheDir ?? DEFAULT_CACHE_DIR;
     this.v2 = new V2TemplateStore({
       fetchJson: this.fetchJson,
       baseUrl,
       appVersion: options.appVersion ?? runningAppVersion,
       cache: createFsTemplateCache(path.join(this.cacheDir, "v2")),
+      snapshot: createDirSnapshot(options.snapshotDir ?? DEFAULT_SNAPSHOT_DIR),
     });
   }
 
   async initialize(): Promise<void> {
-    await this.loadBuiltinTemplates();
     await this.loadCachedTemplates();
-    this.v2.loadFromCache();
+    this.loadLocalV2();
     this.scheduleSync();
-  }
-
-  private async loadBuiltinTemplates(): Promise<void> {
-    if (!fs.existsSync(this.builtinDir)) return;
-    const files = fs.readdirSync(this.builtinDir).filter((f) => f.endsWith(".json"));
-    for (const file of files) {
-      try {
-        const raw = fs.readFileSync(path.join(this.builtinDir, file), "utf-8");
-        const content: unknown = JSON.parse(raw);
-        if (isValidAirlineTemplate(content)) {
-          this.templates.set(content.iata, content);
-          this.templateSources.set(content.iata, "builtin");
-        }
-      } catch (err) {
-        logger.warn({ file, err }, "Failed to load builtin template");
-      }
-    }
-    logger.info({ count: this.templates.size }, "Builtin templates loaded");
   }
 
   private async loadCachedTemplates(): Promise<void> {
@@ -124,11 +116,26 @@ export class TemplateRegistry {
   }
 
   /**
-   * v2 templates that validated and passed their own test cases, home-market
-   * first when a home country is given (`orderByMarket` — order, never filter).
+   * v2 templates that validated and passed their own test cases — optionally of
+   * one domain, home-market first when a home country is given (`orderByMarket`:
+   * markets order candidates, they never filter them).
    */
-  getActiveV2(homeCountry?: string | null): TemplateEnvelope[] {
-    return orderByMarket(this.v2.getActive(), homeCountry);
+  getActiveV2(
+    options: { domain?: TemplateDomain; homeCountry?: string | null } = {}
+  ): TemplateEnvelope[] {
+    // A caller that runs before boot finished (a script, a test) still gets
+    // the bundled templates rather than an empty set.
+    if (!this.v2LocalLoaded) this.loadLocalV2();
+    const all = this.v2.getActive();
+    const ofDomain =
+      options.domain === undefined ? all : all.filter((t) => t.domain === options.domain);
+    return orderByMarket(ofDomain, options.homeCountry);
+  }
+
+  /** Load the bundled snapshot and the disk cache, without scheduling any sync. */
+  loadLocalV2(): void {
+    this.v2LocalLoaded = true;
+    this.v2.loadFromCache();
   }
 
   getV2Status(): V2Status {
@@ -158,6 +165,9 @@ export class TemplateRegistry {
    * of any kind is contained here, so it cannot take the v1 sync down with it.
    */
   private async syncFromGitHub(): Promise<void> {
+    // A sync refines what boot loaded; loading the local sources AFTER it
+    // would throw its result away.
+    if (!this.v2LocalLoaded) this.loadLocalV2();
     try {
       await this.v2.sync();
     } catch (err) {
@@ -188,7 +198,7 @@ export class TemplateRegistry {
       }
       logger.info({ count: index.airlines.length }, "Templates synced from GitHub");
     } catch (err) {
-      logger.warn({ err }, "GitHub template sync failed — using cached/builtin templates");
+      logger.warn({ err }, "GitHub template sync failed — using cached templates");
     }
   }
 }

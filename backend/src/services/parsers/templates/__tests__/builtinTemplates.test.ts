@@ -4,34 +4,21 @@ import { applyTemplate } from "../engine";
 import { isValidAirlineTemplate, type AirlineTemplate, type SelectorKey } from "../types";
 
 /**
- * The built-in airline templates, checked as data and then RUN.
+ * The v1 airline engine, run on the six v1 templates that became v2 files in
+ * plan 2026-10-09 P4a (kept under `fixtures/v1-airlines/` as the parity
+ * oracle). The engine itself still reads the HTML-selector templates the
+ * template repository's v1 index serves, so its behaviour stays pinned here:
+ * every file is valid and uniquely keyed, and every `testCases` entry it
+ * carries actually RUNS.
  *
- * Measured 2026-09-17, and the reason this file exists: the nine templates
- * shipped in `templates/airlines/` had no test of their own at all. Seven of
- * them carry zero `testCases`, and the two that carry one had nobody
- * executing it — so the field looked like coverage and was decoration. The
- * owner's corpus only exercises Lufthansa (measured: `LH-old` 19 mails, `LH`
- * 8, generic regex 4), which means a change to the registry or the engine
- * could break EW, FR, LX, OS, SN, U2 or W6 and every check we have would
- * still pass.
- *
- * Two things are pinned here. The templates are valid and uniquely keyed —
- * cheap, and it catches a hand-edited JSON before a user's import does. And
- * every `testCases` entry actually runs through the engine, so writing one is
- * now worth something.
- *
- * The third thing is a ratchet rather than a rule: the seven without a test
- * case are listed, and the list may only shrink. A template added from today
- * carries its own example.
+ * History: measured 2026-09-17, the nine templates then shipped in
+ * `templates/airlines/` had no test of their own at all; seven carried zero
+ * test cases. Those seven (EW, FR, LX, OS, SN, U2, W6) left the app in P4a —
+ * the image never shipped that directory anyway (no Dockerfile line copied
+ * it) — and are read only from the template repository until they are v2
+ * files with test cases of their own.
  */
-const DIR = path.join(__dirname, "..", "airlines");
-
-/**
- * Frozen 2026-09-17. Each of these predates the rule, and each is a template
- * nobody can currently prove works. Removing a name from this list means
- * adding a `testCases` entry to that file — never the other way round.
- */
-const WITHOUT_TEST_CASES = ["EW", "FR", "LX", "OS", "SN", "U2", "W6"];
+const DIR = path.join(__dirname, "fixtures", "v1-airlines");
 
 function loadAll(): Array<{ file: string; template: AirlineTemplate }> {
   return fs
@@ -47,8 +34,10 @@ function loadAll(): Array<{ file: string; template: AirlineTemplate }> {
 describe("the built-in airline templates", () => {
   const all = loadAll();
 
-  it("ships at least the nine the registry was measured with", () => {
-    expect(all.length).toBeGreaterThanOrEqual(9);
+  it("holds the six templates that became v2 files", () => {
+    expect(all.map((t) => t.template.iata).sort()).toEqual(
+      ["4U", "AB", "EK", "EK-old", "LH", "LH-old"].sort()
+    );
   });
 
   it("is valid JSON in the template shape, every file", () => {
@@ -84,14 +73,10 @@ describe("the built-in airline templates", () => {
     }
   });
 
-  // The ratchet. It fails on a NEW template without an example, and on a
-  // stale entry — a file that has gained one but is still on the list.
-  it("carries at least one test case, except for the seven frozen on 2026-09-17", () => {
-    const without = all
-      .filter(({ template }) => template.testCases.length === 0)
-      .map(({ template }) => template.iata)
-      .sort();
-    expect(without).toEqual([...WITHOUT_TEST_CASES].sort());
+  it("carries at least one test case in every file", () => {
+    for (const { file, template } of all) {
+      expect({ file, cases: template.testCases.length > 0 }).toEqual({ file, cases: true });
+    }
   });
 
   describe("every test case a template carries", () => {

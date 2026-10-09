@@ -1,12 +1,4 @@
-import { LODGING_TEMPLATES } from "../builtins";
-import { applyLodgingTemplate } from "../engine";
-import type { LodgingTemplate } from "../types";
-
-const hrs = (): LodgingTemplate => {
-  const found = LODGING_TEMPLATES.find((t) => t.id === "lodging:hrs");
-  if (!found) throw new Error("No template lodging:hrs");
-  return found;
-};
+import { READERS } from "./readers";
 
 /**
  * HRS, the hotel portal. Its confirmations from 2009 to 2016 share one
@@ -59,9 +51,9 @@ function confirmation(opts: { datesBelowLabel?: boolean; secondRoom?: boolean } 
   ].join("\n");
 }
 
-describe("the HRS reader", () => {
+describe.each(READERS)("the HRS reader — %s", (_reader, apply) => {
   it("reads the hotel, its address, both dates and the booking's process number", () => {
-    const r = applyLodgingTemplate(hrs(), subject, `${subject}\n\n${confirmation()}`);
+    const r = apply("lodging:hrs", subject, `${subject}\n\n${confirmation()}`);
     expect(r).not.toBeNull();
     expect(r?.hotelName).toBe("Landhotel Musterhof");
     expect(r?.address).toBe("Beispielweg 7");
@@ -78,8 +70,8 @@ describe("the HRS reader", () => {
   });
 
   it("reads the dates when HRS puts them on the line below the label", () => {
-    const r = applyLodgingTemplate(
-      hrs(),
+    const r = apply(
+      "lodging:hrs",
       subject,
       `${subject}\n\n${confirmation({ datesBelowLabel: true })}`
     );
@@ -88,11 +80,7 @@ describe("the HRS reader", () => {
   });
 
   it("names no total for a booking of two rooms — the line it would read is one room's", () => {
-    const r = applyLodgingTemplate(
-      hrs(),
-      subject,
-      `${subject}\n\n${confirmation({ secondRoom: true })}`
-    );
+    const r = apply("lodging:hrs", subject, `${subject}\n\n${confirmation({ secondRoom: true })}`);
     expect(r?.checkIn).toBe("2016-03-08");
     expect(r?.totalPrice).toBeNull();
   });
@@ -103,7 +91,7 @@ describe("the HRS reader", () => {
       "Buchen Sie jetzt Ihr Hotel für die Messe — bis zu 30 % günstiger.",
       "Anreise / Abreise frei wählbar. Ihr ausgewähltes Hotel wartet.",
     ].join("\n");
-    expect(applyLodgingTemplate(hrs(), "HRS Newsletter", newsletter)).toBeNull();
+    expect(apply("lodging:hrs", "HRS Newsletter", newsletter)).toBeNull();
   });
 
   it("does not claim another sender's confirmation", () => {
@@ -112,6 +100,6 @@ describe("the HRS reader", () => {
       "Anreise / Abreise: Mo. 08.03.2016 - Do. 10.03.2016",
       "Vielen Dank für Ihre Buchung bei Beispielportal.",
     ].join("\n");
-    expect(applyLodgingTemplate(hrs(), "Ihre Reservierung", other)).toBeNull();
+    expect(apply("lodging:hrs", "Ihre Reservierung", other)).toBeNull();
   });
 });

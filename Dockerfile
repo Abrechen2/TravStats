@@ -125,6 +125,14 @@ COPY --from=backend-builder /app/backend/dist ./dist
 # `csv_missing` on first boot, leaving the cruise/ferry domain unable
 # to resolve port + ship references.
 COPY --from=backend-builder /app/backend/src/seedData ./dist/seedData
+# The bundled v2 parser templates (plan 2026-10-09 P4a): every issuer reader
+# — hotel chains, portals, airlines — is a JSON template now, not code, and
+# this snapshot is what a fresh or offline instance reads with. tsc does not
+# copy JSON, and the loader treats a missing directory as an empty snapshot,
+# so without this line every such confirmation silently reads as nothing
+# until the first successful template sync. Guarded by
+# services/parsers/templates/v2/__tests__/snapshot.dockerfile.test.ts.
+COPY --from=backend-builder /app/backend/src/services/parsers/templates/v2/snapshot ./dist/services/parsers/templates/v2/snapshot
 # schematicRouter resolves the fine land-mask via __dirname relative to
 # its compiled location (dist/services/...), landing at /app/backend/data/.
 # Without this copy, /api/v1/cruises/geometry(/batch) returns 500 with

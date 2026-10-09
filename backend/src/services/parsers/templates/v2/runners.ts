@@ -41,10 +41,16 @@ export type TemplateTestRunner = (
 
 export type RunnerRegistry = ReadonlyMap<TemplateDomain, TemplateTestRunner>;
 
-/** The text a matcher sees: sender, subject and body, as the lodging engine joins them. */
+/**
+ * The text a matcher sees: sender, subject and body, one per line, as the
+ * lodging engine joins them. A part the input does not carry adds no line,
+ * so `{ subject, text }` reads exactly like `"<subject>\n<text>"` — the
+ * subject stays the FIRST line, which a pattern anchored at `^` without the
+ * `m` flag relies on.
+ */
 export function testInputHaystack(input: TemplateTestInput): string {
   if (typeof input === "string") return input;
-  return [input.from ?? "", input.subject ?? "", input.text].join("\n");
+  return [input.from, input.subject, input.text].filter((p) => p !== undefined).join("\n");
 }
 
 /** Every marker AND at least one anchor, case-insensitive — the lodging engine's rule. */
@@ -58,13 +64,22 @@ export interface TemplateApplication {
   matched: boolean;
   values: Record<string, unknown>;
   missing: string[];
+  /** The matcher recognised the issuer AND a `notBookingIf` pattern: a cancellation or the like. */
+  nonBooking?: boolean;
+}
+
+/** Whether a document the matcher accepted is one of the issuer's non-bookings. */
+export function isNonBooking(template: TemplateEnvelope, haystack: string): boolean {
+  return (template.match.notBookingIf ?? []).some((p) => new RegExp(p, "im").test(haystack));
 }
 
 /**
  * Applies a template to a document: the matcher first, then extraction. When
  * the matcher declines, nothing is extracted (`values` and `missing` are
  * empty) — a template that does not recognise the document has nothing to
- * say about it. `matched` is true only when nothing `required` is missing.
+ * say about it. A document the issuer's `notBookingIf` names is declined the
+ * same way, flagged `nonBooking`. `matched` is true only when nothing
+ * `required` is missing.
  */
 export function applyTemplate(
   template: TemplateEnvelope,
@@ -72,6 +87,9 @@ export function applyTemplate(
 ): TemplateApplication {
   const haystack = testInputHaystack(text);
   if (!envelopeMatches(template, haystack)) return { matched: false, values: {}, missing: [] };
+  if (isNonBooking(template, haystack)) {
+    return { matched: false, values: {}, missing: [], nonBooking: true };
+  }
   const { values, missing } = extract(template.extraction, haystack);
   return { matched: missing.length === 0, values, missing };
 }

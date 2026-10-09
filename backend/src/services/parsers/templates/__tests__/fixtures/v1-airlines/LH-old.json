@@ -2,27 +2,16 @@
   "airline": "Lufthansa (Buchungsdetails)",
   "iata": "LH-old",
   "version": "2025-09",
-  "from": [
-    "@lufthansa.com",
-    "@miles-and-more.com",
-    "@lufthansa.de"
-  ],
-  "subject": [
-    "Buchungsdetails",
-    "Booking details"
-  ],
+  "from": ["@lufthansa.com", "@miles-and-more.com", "@lufthansa.de"],
+  "subject": ["Buchungsdetails", "Booking details"],
   "selectors": {},
   "textPatterns": {
     "flightNumber": [
       "^\\s*([A-Z]{2}\\s+\\d{1,4})\\s*$",
       "Flugnr\\.?:\\s*([A-Z]{2}\\s?\\d{1,4})\\b"
     ],
-    "pnr": [
-      "(?:Buchungscode|Buchungsreferenz):\\s*([A-Z0-9]{5,8})\\b"
-    ],
-    "departureCode": [
-      "\\d{1,2}:\\d{2}\\s+Uhr\\s+[^\\n(]+\\(([A-Z]{3})\\)"
-    ],
+    "pnr": ["(?:Buchungscode|Buchungsreferenz):\\s*([A-Z0-9]{5,8})\\b"],
+    "departureCode": ["\\d{1,2}:\\d{2}\\s+Uhr\\s+[^\\n(]+\\(([A-Z]{3})\\)"],
     "arrivalCode": [
       "\\d{1,2}:\\d{2}\\s+Uhr[^\\n]+\\n[\\s\\S]+?\\d{1,2}:\\d{2}\\s+Uhr[^\\n]+\\(([A-Z]{3})\\)"
     ],
@@ -32,17 +21,9 @@
     "arrivalTime": [
       "[A-Za-z]{2,3}\\.\\s+(\\d{1,2}\\.?\\s+[A-Za-zÄÖÜäöü]+\\s+\\d{4})[\\s\\S]+?\\d{1,2}:\\d{2}\\s+Uhr[\\s\\S]+?(\\d{1,2}:\\d{2})\\s+Uhr"
     ],
-    "seat": [
-      "Sitzplätze:\\s*([0-9]{1,3}[A-F])",
-      "Sitzplatz:\\s*([0-9]{1,3}[A-F])"
-    ],
-    "seatClass": [
-      "Klasse:\\s*(Economy[\\w\\s]*|Business[\\w\\s]*|First[\\w\\s]*)"
-    ],
-    "ticketNumber": [
-      "Ticketnummer:\\s*([0-9]{10,14})",
-      "\\b(220[0-9]{10})\\b"
-    ]
+    "seat": ["Sitzplätze:\\s*([0-9]{1,3}[A-F])", "Sitzplatz:\\s*([0-9]{1,3}[A-F])"],
+    "seatClass": ["Klasse:\\s*(Economy[\\w\\s]*|Business[\\w\\s]*|First[\\w\\s]*)"],
+    "ticketNumber": ["Ticketnummer:\\s*([0-9]{10,14})", "\\b(220[0-9]{10})\\b"]
   },
   "segments": {
     "splitPattern": "^[A-Za-zÄÖÜäöü]{2}\\.\\s+\\d{1,2}\\.\\s+[A-Za-zÄÖÜäöü]+\\s+\\d{4}:\\s"

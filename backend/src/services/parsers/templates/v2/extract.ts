@@ -15,14 +15,8 @@ import vm from "vm";
  * {@link MAX_REPEAT_ITEMS} items. A regex can still backtrack badly on the
  * capped input; the cap bounds how bad.
  */
-import {
-  fieldFlags,
-  repeatFlags,
-  WITHIN_FLAGS,
-  type Extraction,
-  type FieldRule,
-  type RepeatRule,
-} from "./extraction";
+import { repeatFlags, WITHIN_FLAGS, type Extraction, type RepeatRule } from "./extraction";
+import { compileFields, makeScope, readFields, type CompiledField } from "./fieldReader";
 import { applyTransforms, type TransformValue } from "./transforms";
 
 export const MAX_INPUT_CHARS = 200_000;
@@ -35,14 +29,10 @@ export interface ExtractionResult {
   timedOut?: boolean;
 }
 
-interface CompiledField {
-  readonly rule: FieldRule;
-  readonly patterns: readonly RegExp[];
-}
-
 interface CompiledWithin {
   readonly startAfter?: RegExp;
   readonly endBefore?: RegExp;
+  readonly lenient: boolean;
 }
 
 type CompiledRepeat =
@@ -63,18 +53,10 @@ type CompiledRepeat =
 interface Compiled {
   readonly fields: ReadonlyMap<string, CompiledField>;
   readonly repeats: ReadonlyMap<string, CompiledRepeat>;
+  readonly labels: readonly string[];
 }
 
 const compiledCache = new WeakMap<Extraction, Compiled>();
-
-function compileField(rule: FieldRule): CompiledField {
-  const flags = fieldFlags(rule.flags);
-  return { rule, patterns: (rule.patterns ?? []).map((p) => new RegExp(p, flags)) };
-}
-
-function compileFields(fields: Record<string, FieldRule> | undefined): Map<string, CompiledField> {
-  return new Map(Object.entries(fields ?? {}).map(([name, rule]) => [name, compileField(rule)]));
-}
 
 function compileRepeat(rule: RepeatRule): CompiledRepeat {
   const within: CompiledWithin = {
@@ -82,6 +64,7 @@ function compileRepeat(rule: RepeatRule): CompiledRepeat {
       ? new RegExp(rule.within.startAfter, WITHIN_FLAGS)
       : undefined,
     endBefore: rule.within?.endBefore ? new RegExp(rule.within.endBefore, WITHIN_FLAGS) : undefined,
+    lenient: rule.within?.lenient ?? false,
   };
   const flags = repeatFlags(rule.flags);
   if (rule.mode === "matchAll") {
@@ -104,55 +87,28 @@ function compile(extraction: Extraction): Compiled {
     repeats: new Map(
       Object.entries(extraction.repeats ?? {}).map(([name, rule]) => [name, compileRepeat(rule)])
     ),
+    labels: extraction.labels ?? [],
   };
   compiledCache.set(extraction, compiled);
   return compiled;
 }
 
-// ------------------------------------------------------------------ fields
-
-/** The value of a match: named group "v" when present, else group 1, else the whole match. */
-function captured(m: RegExpExecArray): string | undefined {
-  if (m.groups && "v" in m.groups) return m.groups.v;
-  return m.length > 1 ? m[1] : m[0];
-}
-
-interface FieldRead {
-  readonly value: TransformValue;
-  /** Whether the text contributed anything — a constant or a defaulted transform does not. */
-  readonly read: boolean;
-}
-
-/** First pattern whose capture survives the transforms wins; otherwise the transforms see null. */
-function readField(field: CompiledField, text: string): FieldRead {
-  const { rule } = field;
-  if (rule.value !== undefined) {
-    return { value: applyTransforms(rule.value, rule.transform), read: false };
-  }
-  for (const re of field.patterns) {
-    const m = re.exec(text);
-    const raw = m ? captured(m) : undefined;
-    if (raw === undefined || raw.trim() === "") continue;
-    const value = applyTransforms(raw, rule.transform);
-    if (value !== null) return { value, read: true };
-  }
-  return { value: applyTransforms(null, rule.transform), read: false };
-}
-
 // ------------------------------------------------------------------ repeats
 
-function slice(text: string, within: CompiledWithin): string {
-  let out = text;
+/** Where in `text` a repeat looks: [start, end), or null when a strict `startAfter` is absent. */
+function region(text: string, within: CompiledWithin): { start: number; end: number } | null {
+  let start = 0;
   if (within.startAfter) {
-    const m = within.startAfter.exec(out);
-    if (!m) return "";
-    out = out.slice(m.index + m[0].length);
+    const m = within.startAfter.exec(text);
+    if (m) start = m.index + m[0].length;
+    else if (!within.lenient) return null;
   }
+  let end = text.length;
   if (within.endBefore) {
-    const m = within.endBefore.exec(out);
-    if (m) out = out.slice(0, m.index);
+    const m = within.endBefore.exec(text.slice(start));
+    if (m) end = start + m.index;
   }
-  return out;
+  return { start, end };
 }
 
 type Item = Record<string, TransformValue>;
@@ -179,39 +135,64 @@ function matchAllItems(repeat: Extract<CompiledRepeat, { mode: "matchAll" }>, te
   return items;
 }
 
+/** Block start offsets (absolute in `text`) of every split match inside the region. */
+function blockStarts(
+  repeat: Extract<CompiledRepeat, { mode: "split" }>,
+  text: string,
+  start: number,
+  end: number
+): number[] {
+  const starts: number[] = [];
+  for (const m of text.slice(start, end).matchAll(repeat.splitPattern)) {
+    const at = start + m.index;
+    if (starts.length === 0 || at > starts[starts.length - 1]) starts.push(at);
+    if (starts.length > MAX_REPEAT_ITEMS) break;
+  }
+  return starts;
+}
+
 /**
  * Split mode: a block starts at each match of `splitPattern` (the match is
  * part of its block, so a header line stays readable) and runs to the next.
- * Text before the first match is a block too — for a separator-style
- * pattern it is the first item; for a header-style one it reads nothing and
- * is dropped.
+ * Text between the region's start and the first match is a block too — for a
+ * separator-style pattern it is the first item; for a header-style one it
+ * reads nothing and is dropped. With `prependHeader` the document text before
+ * the first match is put in front of every block instead and is no item.
  */
-function splitItems(repeat: Extract<CompiledRepeat, { mode: "split" }>, text: string) {
-  const starts = [0];
-  for (const m of text.matchAll(repeat.splitPattern)) {
-    if (m.index > starts[starts.length - 1]) starts.push(m.index);
-    if (starts.length > MAX_REPEAT_ITEMS + 1) break;
-  }
+function splitItems(
+  repeat: Extract<CompiledRepeat, { mode: "split" }>,
+  text: string,
+  labels: readonly string[]
+): Item[] {
+  const { rule } = repeat;
+  const read = (block: string): Item[] => {
+    const { values, readAnything } = readFields(repeat.fields, makeScope(block, labels));
+    return keep(values, readAnything);
+  };
+  const bounds = region(text, repeat.within);
+  const starts = bounds ? blockStarts(repeat, text, bounds.start, bounds.end) : [];
+  if (rule.wholeTextUnlessSplit && starts.length < 2) return read(text);
+  if (!bounds) return [];
+
+  const header = rule.prependHeader && starts.length > 0 ? text.slice(0, starts[0]) : null;
+  const cuts = header === null ? [bounds.start, ...starts] : starts;
   const items: Item[] = [];
-  for (const [i, start] of starts.entries()) {
-    const block = text.slice(start, starts[i + 1] ?? text.length);
-    let readAnything = false;
-    const item: Item = {};
-    for (const [name, field] of repeat.fields) {
-      const read = readField(field, block);
-      readAnything ||= read.read;
-      item[name] = read.value;
-    }
-    items.push(...keep(item, readAnything));
+  for (const [i, at] of cuts.entries()) {
+    const next = cuts[i + 1] ?? bounds.end;
+    if (next <= at && i + 1 < cuts.length) continue;
+    const block = text.slice(at, next);
+    items.push(...read(header === null ? block : `${header}\n${block}`));
     if (items.length >= MAX_REPEAT_ITEMS) break;
   }
   return items;
 }
 
-function readRepeat(repeat: CompiledRepeat, text: string): Item[] {
-  const scope = slice(text, repeat.within);
-  if (scope === "") return [];
-  return repeat.mode === "matchAll" ? matchAllItems(repeat, scope) : splitItems(repeat, scope);
+function readRepeat(repeat: CompiledRepeat, text: string, labels: readonly string[]): Item[] {
+  if (repeat.mode === "split") return splitItems(repeat, text, labels);
+  const bounds = region(text, repeat.within);
+  if (!bounds) return [];
+  const scope = text.slice(bounds.start, bounds.end);
+  return scope === "" ? [] : matchAllItems(repeat, scope);
 }
 
 // ------------------------------------------------------------------ entry
@@ -224,15 +205,20 @@ function isEmpty(value: unknown): boolean {
 function extractUnbounded(extraction: Extraction, text: string): ExtractionResult {
   const compiled = compile(extraction);
   const input = text.length > MAX_INPUT_CHARS ? text.slice(0, MAX_INPUT_CHARS) : text;
-  const values: Record<string, unknown> = {};
-  for (const [name, field] of compiled.fields) values[name] = readField(field, input).value;
-  for (const [name, repeat] of compiled.repeats) values[name] = readRepeat(repeat, input);
+  const values: Record<string, unknown> = {
+    ...readFields(compiled.fields, makeScope(input, compiled.labels)).values,
+  };
+  for (const [name, repeat] of compiled.repeats) {
+    values[name] = readRepeat(repeat, input, compiled.labels);
+  }
 
   const missing = (extraction.required ?? []).filter((name) => {
     const repeat = compiled.repeats.get(name);
     if (!repeat) return isEmpty(values[name]);
-    const items = values[name] as unknown[];
-    return items.length < (repeat.rule.minimum ?? 1);
+    const items = values[name] as Item[];
+    const itemRequired = repeat.rule.required ?? [];
+    const incomplete = items.some((item) => itemRequired.some((field) => isEmpty(item[field])));
+    return incomplete || items.length < (repeat.rule.minimum ?? 1);
   });
   return { values, missing };
 }

@@ -95,6 +95,6 @@ describe("scoreDocument — package evidence", () => {
       source: "document",
       userId: "u1",
     });
-    expect(active).toHaveBeenCalledWith("AT");
+    expect(active).toHaveBeenCalledWith({ homeCountry: "AT" });
   });
 });

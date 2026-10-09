@@ -1,4 +1,4 @@
-import type { LodgingTemplate } from "./types";
+import type { LodgingTemplate } from "../../types";
 
 /** The heading, then image links and blank lines, up to the line with the hotel's NH name. */
 const HOTEL_BLOCK = "Hotelinformationen[\\s\\S]{0,600}?\\n[ \\t]*(?=NH )";

@@ -9,8 +9,9 @@ import {
 import { cleanEmailBody } from "../parsers/shared/utils";
 import { documentSectionFor, parseAmount, reconcileTotalPrice } from "./documentTotal";
 import { getParserOrder } from "../parserSettings";
-import { LODGING_TEMPLATES } from "./templates/builtins";
 import { applyLodgingTemplate } from "./templates/engine";
+import { readWithV2LodgingTemplates } from "./templates/v2Lodging";
+import { templateRegistry } from "../parsers/templates/registry";
 import { loadActiveLodgingTemplates } from "../parsers/userTemplates/lodgingTemplates";
 import type { LodgingTemplate } from "./templates/types";
 import { LODGING_TYPES } from "../../schemas/lodging";
@@ -396,10 +397,16 @@ export async function parseLodgingBookingText(
     // declarative readers take what it declines — six KOA campgrounds, a
     // Hilton and two travelclick properties, which read as NOTHING before
     // 2026-09-17 on an instance without an LLM (forgejo#122).
-    for (const template of LODGING_TEMPLATES) {
-      const hit = applyLodgingTemplate(template, subject ?? "", text);
-      if (hit) return hit;
-    }
+    //
+    // Since P4a (plan 2026-10-09) those readers are v2 template FILES, not
+    // code: the bundled snapshot, the disk cache or the template repository,
+    // whichever is newest, each activated only after its own test cases pass.
+    const issuerHit = readWithV2LodgingTemplates(
+      templateRegistry.getActiveV2({ domain: "lodging" }),
+      subject ?? "",
+      text
+    );
+    if (issuerHit) return issuerHit;
     // Personal templates come LAST, deliberately. The plan's rule is
     // "per-user before community, but only when proven" (§7), and what is
     // proven here is thin: one preview against two of the user's own mails.

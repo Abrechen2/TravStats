@@ -49,7 +49,6 @@ describe("TemplateRegistry — v2 beside the v1 airline path", () => {
 
   beforeEach(() => {
     tmp = fs.mkdtempSync(path.join(os.tmpdir(), "tpl-registry-"));
-    fs.mkdirSync(path.join(tmp, "builtin"));
   });
 
   afterEach(() => {
@@ -60,8 +59,9 @@ describe("TemplateRegistry — v2 beside the v1 airline path", () => {
     return new TemplateRegistry({
       fetchJson,
       baseUrl: BASE,
-      builtinDir: path.join(tmp, "builtin"),
       cacheDir: path.join(tmp, "cache"),
+      // No bundled snapshot: these cases are about the v1/v2 sync alone.
+      snapshotDir: path.join(tmp, "no-snapshot"),
       appVersion: "2.7.0",
     });
   }
@@ -134,10 +134,10 @@ describe("TemplateRegistry — v2 beside the v1 airline path", () => {
 
     const unordered = registry.getActiveV2().map((x) => x.id);
     expect(unordered).toEqual(["lodging:spainchain", "lodging:germanychain"]);
-    expect(registry.getActiveV2("DE").map((x) => x.id)).toEqual([
+    expect(registry.getActiveV2({ homeCountry: "DE" }).map((x) => x.id)).toEqual([
       "lodging:germanychain",
       "lodging:spainchain",
     ]);
-    expect(registry.getActiveV2(null).map((x) => x.id)).toEqual(unordered);
+    expect(registry.getActiveV2({ homeCountry: null }).map((x) => x.id)).toEqual(unordered);
   });
 });

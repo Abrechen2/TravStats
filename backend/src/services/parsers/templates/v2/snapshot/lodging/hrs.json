@@ -1,0 +1,133 @@
+{
+  "id": "lodging:hrs",
+  "domain": "lodging",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "HRS",
+    "kind": "portal"
+  },
+  "markets": ["DE"],
+  "match": {
+    "markers": ["hrs", "ihr ausgewähltes hotel", "anreise / abreise"],
+    "anchors": ["vorgangsnummer"]
+  },
+  "extraction": {
+    "fields": {
+      "hotelName": {
+        "patterns": [
+          "Ihr ausgewähltes Hotel[ \\t\\r]*(?:\\n[ \\t\\r]*)+([^\\s<][^\\n<]*?)[ \\t\\r]*(?:<|\\n)"
+        ],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "confirmationNumber": {
+        "patterns": ["Vorgangsnummer:\\s*(\\d{6,})"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "checkIn": {
+        "patterns": [
+          "Anreise / Abreise:\\s*(?:[A-Za-z]{2}\\.?\\s+)?(\\d{1,2}\\.\\d{1,2}\\.\\d{4})"
+        ],
+        "flags": "i",
+        "transform": "numericDate"
+      },
+      "checkOut": {
+        "patterns": [
+          "Anreise / Abreise:\\s*(?:[A-Za-z]{2}\\.?\\s+)?\\d{1,2}\\.\\d{1,2}\\.\\d{4}\\s*-\\s*(?:[A-Za-z]{2}\\.?\\s+)?(\\d{1,2}\\.\\d{1,2}\\.\\d{4})"
+        ],
+        "flags": "i",
+        "transform": "numericDate"
+      },
+      "address": {
+        "patterns": [
+          "Ihr ausgewähltes Hotel[ \\t\\r]*(?:\\n[ \\t\\r]*)+[^\\n]*\\n[ \\t]*([^|\\n]+?)[ \\t]*\\|[ \\t]*[A-Z]?-?\\d{4,5}[ \\t]"
+        ],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "postcode": {
+        "patterns": [
+          "Ihr ausgewähltes Hotel[ \\t\\r]*(?:\\n[ \\t\\r]*)+[^\\n]*\\n[^|\\n]+\\|[ \\t]*[A-Z]?-?(\\d{4,5})[ \\t]"
+        ],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "city": {
+        "patterns": [
+          "Ihr ausgewähltes Hotel[ \\t\\r]*(?:\\n[ \\t\\r]*)+[^\\n]*\\n[^|\\n]+\\|[ \\t]*[A-Z]?-?\\d{4,5}[ \\t]+([^|\\n]+?)[ \\t]*(?:\\||\\r?\\n)"
+        ],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "country": {
+        "patterns": [
+          "Ihr ausgewähltes Hotel[ \\t\\r]*(?:\\n[ \\t\\r]*)+[^\\n]*\\n[^|\\n]+\\|[^\\n]*\\|[ \\t]*([^|\\n]+?)[ \\t]*\\r?\\n"
+        ],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "totalPrice": {
+        "patterns": [
+          "^(?![\\s\\S]*\\n[ \\t]*2\\.[ \\t]+\\S)[\\s\\S]*?Zimmer-\\u200b?Gesamtpreis[^:\\n]*:\\s*([\\d.,]+)\\s*[A-Z]{3}"
+        ],
+        "flags": "i",
+        "transform": "money"
+      },
+      "currency": {
+        "patterns": ["Zimmer-\\u200b?Gesamtpreis[^:\\n]*:\\s*[\\d.,]+\\s*([A-Z]{3})"],
+        "flags": "i",
+        "transform": "currency"
+      },
+      "type": {
+        "value": "hotel"
+      }
+    },
+    "required": ["hotelName", "checkIn", "checkOut"]
+  },
+  "testCases": [
+    {
+      "name": "an HRS confirmation",
+      "input": "Bestätigung Ihrer Hotel-Buchung - Musterhof (Deutschland), 08.03.16 - 10.03.16 | HRS Vorgangs-Nr.: 11122233\nBestätigung Ihrer Hotel-Buchung - Musterhof (Deutschland), 08.03.16 - 10.03.16 | HRS Vorgangs-Nr.: 11122233\n\nBuchung\t \t\nHallo Erika Mustermann,\nvielen Dank für Ihre Buchung. Das Hotel Musterhof <https://www.hrs.de/web3/showPage.do?hotelnumber=1> freut sich auf Sie.\nIhr HRS Team\t \t\nIhre Buchungsdaten\nHRS Vorgangsnummer: \t\t11122233\t \nHRS Zugriffscode: \t\t01234\t \nBuchungsdatum:\t \tDo. 01.01.2015 | MEZ\t \nIhr ausgewähltes Hotel\n\n\nLandhotel Musterhof <https://www.hrs.de/web3/showPage.do?page=showHotelData&hotelnumber=1>\nBeispielweg 7 | 12345 Musterstadt | Musterkreis | Deutschland\nTelefon | Fax:\t \t0049123456 | 0049123457\t \nFrühester Check-In (Ortszeit): \t\t14:00\t \nIhre Buchungsdaten\t \n\t\t1. Standardzimmer : Flex Tarif (EZ) <https://www.hrs.de/images/flex.png> \nBuchungsnummer: \t\t99988877\t \nAnreisende Gäste: \t\tMUSTERMANN, Erika\t \nAnreise / Abreise: \t\tMo. 08.03.2016 - Do. 10.03.2016\t \nZimmer-​Gesamtpreis (inkl. Steuern): \t\t198,00 EUR\t \nZahlungsart: Sie zahlen direkt im Hotel\t ",
+      "expect": "match",
+      "expected": {
+        "hotelName": "Landhotel Musterhof",
+        "checkIn": "2016-03-08",
+        "checkOut": "2016-03-10",
+        "confirmationNumber": "11122233"
+      }
+    },
+    {
+      "name": "dates on the line below the label",
+      "input": "Bestätigung Ihrer Hotel-Buchung - Musterhof (Deutschland), 08.03.16 - 10.03.16 | HRS Vorgangs-Nr.: 11122233\nBestätigung Ihrer Hotel-Buchung - Musterhof (Deutschland), 08.03.16 - 10.03.16 | HRS Vorgangs-Nr.: 11122233\n\nBuchung\t \t\nHallo Erika Mustermann,\nvielen Dank für Ihre Buchung. Das Hotel Musterhof <https://www.hrs.de/web3/showPage.do?hotelnumber=1> freut sich auf Sie.\nIhr HRS Team\t \t\nIhre Buchungsdaten\nHRS Vorgangsnummer: \t\t11122233\t \nHRS Zugriffscode: \t\t01234\t \nBuchungsdatum:\t \tDo. 01.01.2015 | MEZ\t \nIhr ausgewähltes Hotel\n\n\nLandhotel Musterhof <https://www.hrs.de/web3/showPage.do?page=showHotelData&hotelnumber=1>\nBeispielweg 7 | 12345 Musterstadt | Musterkreis | Deutschland\nTelefon | Fax:\t \t0049123456 | 0049123457\t \nFrühester Check-In (Ortszeit): \t\t14:00\t \nIhre Buchungsdaten\t \n\t\t1. Standardzimmer : Flex Tarif (EZ) <https://www.hrs.de/images/flex.png> \nBuchungsnummer: \t\t99988877\t \nAnreisende Gäste: \t\tMUSTERMANN, Erika\t \nAnreise / Abreise: \n\n\tMo. 08.03.2016 - Do. 10.03.2016\n\nZimmer-​Gesamtpreis (inkl. Steuern): \t\t198,00 EUR\t \nZahlungsart: Sie zahlen direkt im Hotel\t ",
+      "expect": "match",
+      "expected": {
+        "hotelName": "Landhotel Musterhof",
+        "checkIn": "2016-03-08",
+        "checkOut": "2016-03-10",
+        "confirmationNumber": "11122233"
+      }
+    },
+    {
+      "name": "two rooms — no total",
+      "input": "Bestätigung Ihrer Hotel-Buchung - Musterhof (Deutschland), 08.03.16 - 10.03.16 | HRS Vorgangs-Nr.: 11122233\nBestätigung Ihrer Hotel-Buchung - Musterhof (Deutschland), 08.03.16 - 10.03.16 | HRS Vorgangs-Nr.: 11122233\n\nBuchung\t \t\nHallo Erika Mustermann,\nvielen Dank für Ihre Buchung. Das Hotel Musterhof <https://www.hrs.de/web3/showPage.do?hotelnumber=1> freut sich auf Sie.\nIhr HRS Team\t \t\nIhre Buchungsdaten\nHRS Vorgangsnummer: \t\t11122233\t \nHRS Zugriffscode: \t\t01234\t \nBuchungsdatum:\t \tDo. 01.01.2015 | MEZ\t \nIhr ausgewähltes Hotel\n\n\nLandhotel Musterhof <https://www.hrs.de/web3/showPage.do?page=showHotelData&hotelnumber=1>\nBeispielweg 7 | 12345 Musterstadt | Musterkreis | Deutschland\nTelefon | Fax:\t \t0049123456 | 0049123457\t \nFrühester Check-In (Ortszeit): \t\t14:00\t \nIhre Buchungsdaten\t \n\t\t1. Standardzimmer : Flex Tarif (EZ) <https://www.hrs.de/images/flex.png> \nBuchungsnummer: \t\t99988877\t \nAnreisende Gäste: \t\tMUSTERMANN, Erika\t \nAnreise / Abreise: \t\tMo. 08.03.2016 - Do. 10.03.2016\t \nZimmer-​Gesamtpreis (inkl. Steuern): \t\t198,00 EUR\t \nIhre Buchungsdaten\t \n\t\t2. Standardzimmer : Flex Tarif (EZ) <https://www.hrs.de/images/flex.png> \nBuchungsnummer: \t\t99988877\t \nAnreisende Gäste: \t\tMUSTERMANN, Erika\t \nAnreise / Abreise: \t\tMo. 08.03.2016 - Do. 10.03.2016\t \nZimmer-​Gesamtpreis (inkl. Steuern): \t\t99,00 EUR\t \nZahlungsart: Sie zahlen direkt im Hotel\t ",
+      "expect": "match",
+      "expected": {
+        "hotelName": "Landhotel Musterhof",
+        "checkIn": "2016-03-08",
+        "checkOut": "2016-03-10",
+        "confirmationNumber": "11122233"
+      }
+    },
+    {
+      "name": "an HRS newsletter",
+      "input": "HRS Newsletter\nIhre Vorteile als HRS Firmenkunde\nBuchen Sie jetzt Ihr Hotel für die Messe — bis zu 30 % günstiger.\nAnreise / Abreise frei wählbar. Ihr ausgewähltes Hotel wartet.",
+      "expect": "decline"
+    },
+    {
+      "name": "another sender's confirmation",
+      "input": "Ihre Reservierung\nIhre Reservierung im Hotel Beispiel\nAnreise / Abreise: Mo. 08.03.2016 - Do. 10.03.2016\nVielen Dank für Ihre Buchung bei Beispielportal.",
+      "expect": "decline"
+    }
+  ]
+}

@@ -1,0 +1,124 @@
+{
+  "id": "lodging:accor",
+  "domain": "lodging",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "ALL Accor",
+    "kind": "hotel-chain",
+    "keys": {
+      "senderDomains": ["confirmation.all.com"]
+    }
+  },
+  "markets": [],
+  "match": {
+    "markers": ["accor"],
+    "anchors": ["reservierung nr.", "aufenthaltsdatum"]
+  },
+  "extraction": {
+    "fields": {
+      "hotelName": {
+        "patterns": [
+          "Buchungsbestätigung:\\s*(.+?)\\s+Nr\\.\\s*[A-Z0-9]+",
+          "Reservierung im ([^\\n.]+)\\."
+        ],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "confirmationNumber": {
+        "patterns": ["Reservierung Nr\\.\\s*([A-Z0-9]{6,})"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "checkIn": {
+        "patterns": ["Aufenthaltsdatum:\\s*vom\\s*(\\d{1,2}\\.\\d{1,2}\\.\\d{4})"],
+        "flags": "i",
+        "transform": "numericDate"
+      },
+      "checkOut": {
+        "patterns": ["Aufenthaltsdatum:[^\\n]*?bis zum\\s*(\\d{1,2}\\.\\d{1,2}\\.\\d{4})"],
+        "flags": "i",
+        "transform": "numericDate"
+      },
+      "totalPrice": {
+        "patterns": ["\\n[ \\t]*Gesamt[ \\t]+([\\d.,]+)[ \\t]*[A-Z]{3}"],
+        "flags": "i",
+        "transform": "money"
+      },
+      "currency": {
+        "patterns": ["\\n[ \\t]*Gesamt[ \\t]+[\\d.,]+[ \\t]*([A-Z]{3})"],
+        "flags": "i",
+        "transform": "currency"
+      },
+      "guests": {
+        "patterns": ["Ihr Aufenthalt:[^\\n]*?(\\d+)\\s+Erwachsene"],
+        "flags": "i",
+        "transform": "integer"
+      },
+      "roomCategory": {
+        "patterns": ["folgenden Namen\\s*:[ \\t\\r]*\\n[^\\n]*\\n[ \\t\\r]*\\n[ \\t]*([^\\n\\r]+)"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "address": {
+        "patterns": ["\\n[ \\t]*([^\\n<]+?)\\s+-\\s+\\d{4,5}\\s+[^\\n<]+?\\s+-\\s+[^\\n<]+?\\s*<"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "postcode": {
+        "patterns": ["\\s-\\s(\\d{4,5})\\s+[^\\n<]+?\\s+-\\s+[^\\n<]+?\\s*<"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "city": {
+        "patterns": ["\\s-\\s\\d{4,5}\\s+([^\\n<]+?)\\s+-\\s+[^\\n<]+?\\s*<"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator", "capsTitleCase"]
+      },
+      "country": {
+        "patterns": ["\\s-\\s\\d{4,5}\\s+[^\\n<]+?\\s+-\\s+([^\\n<]+?)\\s*<"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "type": {
+        "value": "hotel"
+      },
+      "chainName": {
+        "value": "Accor"
+      }
+    },
+    "required": ["hotelName", "checkIn", "checkOut"]
+  },
+  "testCases": [
+    {
+      "name": "an ALL Accor booking over New Year",
+      "input": "Buchungsbestätigung: Novotel Musterstadt Zentrum Nr. QRTEST42\nBuchungsbestätigung: Novotel Musterstadt Zentrum Nr. QRTEST42\nDiese Bestätigungs-E-Mail wurde automatisch erstellt. Bitte antworten Sie nicht auf diese E-Mail.\t \nReservierung Nr. QRTEST42\t \nIhre Buchung wurde bestätigt \t\nAufenthaltsdatum: vom 28.12.2026 bis zum 02.01.2027 \t\nSehr geehrte/r Erika Muster,\t \ngerne bestätigen wir Ihre Reservierung im Novotel Musterstadt Zentrum.\nNovotel Musterstadt Zentrum\t \nMusterallee 7 - 1234 MUSTERSTADT - Schweiz <https://click.mail.all.com/u/?qs=x> \t \nh0000@accor.com <mailto:h0000@accor.com>  \t\nIhre Buchungsdetails\t \nAufenthaltsdatum: vom 28.12.2026 bis zum 02.01.2027\t \nIhr Aufenthalt: 1 Zimmer, 5 Nächte, 2 Erwachsene \t\nZimmer \t\n\t \n \t\n\t \n\t Die Reservierung läuft auf folgenden Namen : \t\nErika Muster \t\n\t \nSuperior Zimmer mit 1 Doppelbett \t\n\t \n2 Erwachsene \t\n\t \n1 x 612.40 CHF \t\n612.40 CHF \t\nGesamtpreis für Ihren Aufenthalt \t\n Gesamt \t630.90 CHF \t\n (gebühren und Steuern inbegriffen) \t\n Darunter Gebühren und Steuern: \t18.50 CHF \t\nKapital 7.000.000 CHF, Musterallee 7 in 1234 Musterstadt, Schweiz\nWeitere Informationen unter https://all.accor.com/information/legal/",
+      "expect": "match",
+      "expected": {
+        "hotelName": "Novotel Musterstadt Zentrum",
+        "checkIn": "2026-12-28",
+        "confirmationNumber": "QRTEST42"
+      }
+    },
+    {
+      "name": "the same with CRLF line ends",
+      "input": "Buchungsbestätigung: Novotel Musterstadt Zentrum Nr. QRTEST42\nBuchungsbestätigung: Novotel Musterstadt Zentrum Nr. QRTEST42\r\nDiese Bestätigungs-E-Mail wurde automatisch erstellt. Bitte antworten Sie nicht auf diese E-Mail.\t \r\nReservierung Nr. QRTEST42\t \r\nIhre Buchung wurde bestätigt \t\r\nAufenthaltsdatum: vom 28.12.2026 bis zum 02.01.2027 \t\r\nSehr geehrte/r Erika Muster,\t \r\ngerne bestätigen wir Ihre Reservierung im Novotel Musterstadt Zentrum.\r\nNovotel Musterstadt Zentrum\t \r\nMusterallee 7 - 1234 MUSTERSTADT - Schweiz <https://click.mail.all.com/u/?qs=x> \t \r\nh0000@accor.com <mailto:h0000@accor.com>  \t\r\nIhre Buchungsdetails\t \r\nAufenthaltsdatum: vom 28.12.2026 bis zum 02.01.2027\t \r\nIhr Aufenthalt: 1 Zimmer, 5 Nächte, 2 Erwachsene \t\r\nZimmer \t\r\n\t \r\n \t\r\n\t \r\n\t Die Reservierung läuft auf folgenden Namen : \t\r\nErika Muster \t\r\n\t \r\nSuperior Zimmer mit 1 Doppelbett \t\r\n\t \r\n2 Erwachsene \t\r\n\t \r\n1 x 612.40 CHF \t\r\n612.40 CHF \t\r\nGesamtpreis für Ihren Aufenthalt \t\r\n Gesamt \t630.90 CHF \t\r\n (gebühren und Steuern inbegriffen) \t\r\n Darunter Gebühren und Steuern: \t18.50 CHF \t\r\nKapital 7.000.000 CHF, Musterallee 7 in 1234 Musterstadt, Schweiz\r\nWeitere Informationen unter https://all.accor.com/information/legal/",
+      "expect": "match",
+      "expected": {
+        "hotelName": "Novotel Musterstadt Zentrum",
+        "checkIn": "2026-12-28",
+        "checkOut": "2027-01-02",
+        "confirmationNumber": "QRTEST42"
+      }
+    },
+    {
+      "name": "an Accor mail without stay dates",
+      "input": "Ihre Vorteile\nIhre Vorteile bei ALL Accor\nReservierung Nr. QRTEST42\nh0000@accor.com",
+      "expect": "decline"
+    },
+    {
+      "name": "a day the calendar does not have",
+      "input": "Buchungsbestätigung: Novotel Musterstadt Zentrum Nr. QRTEST42\nBuchungsbestätigung: Novotel Musterstadt Zentrum Nr. QRTEST42\nDiese Bestätigungs-E-Mail wurde automatisch erstellt. Bitte antworten Sie nicht auf diese E-Mail.\t \nReservierung Nr. QRTEST42\t \nIhre Buchung wurde bestätigt \t\nAufenthaltsdatum: vom 31.04.2026 bis zum 02.01.2027 \t\nSehr geehrte/r Erika Muster,\t \ngerne bestätigen wir Ihre Reservierung im Novotel Musterstadt Zentrum.\nNovotel Musterstadt Zentrum\t \nMusterallee 7 - 1234 MUSTERSTADT - Schweiz <https://click.mail.all.com/u/?qs=x> \t \nh0000@accor.com <mailto:h0000@accor.com>  \t\nIhre Buchungsdetails\t \nAufenthaltsdatum: vom 31.04.2026 bis zum 02.01.2027\t \nIhr Aufenthalt: 1 Zimmer, 5 Nächte, 2 Erwachsene \t\nZimmer \t\n\t \n \t\n\t \n\t Die Reservierung läuft auf folgenden Namen : \t\nErika Muster \t\n\t \nSuperior Zimmer mit 1 Doppelbett \t\n\t \n2 Erwachsene \t\n\t \n1 x 612.40 CHF \t\n612.40 CHF \t\nGesamtpreis für Ihren Aufenthalt \t\n Gesamt \t630.90 CHF \t\n (gebühren und Steuern inbegriffen) \t\n Darunter Gebühren und Steuern: \t18.50 CHF \t\nKapital 7.000.000 CHF, Musterallee 7 in 1234 Musterstadt, Schweiz\nWeitere Informationen unter https://all.accor.com/information/legal/",
+      "expect": "decline"
+    }
+  ]
+}

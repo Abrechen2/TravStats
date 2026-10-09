@@ -1,0 +1,161 @@
+{
+  "id": "flight:LH-old",
+  "domain": "flight",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Lufthansa (Buchungsdetails layout)",
+    "kind": "airline",
+    "keys": {
+      "iata": "LH",
+      "senderDomains": ["lufthansa.com", "miles-and-more.com", "lufthansa.de"]
+    }
+  },
+  "markets": ["DE"],
+  "match": {
+    "markers": ["buchungsdetails"],
+    "anchors": ["lufthansa", "miles-and-more"]
+  },
+  "extraction": {
+    "repeats": {
+      "legs": {
+        "mode": "split",
+        "splitPattern": "^[A-Za-zÄÖÜäöü]{2}\\.\\s+\\d{1,2}\\.\\s+[A-Za-zÄÖÜäöü]+\\s+\\d{4}:\\s",
+        "prependHeader": true,
+        "wholeTextUnlessSplit": true,
+        "required": ["flightNumber"],
+        "fields": {
+          "flightNumber": {
+            "patterns": [
+              "^\\s*([A-Z]{2}\\s+\\d{1,4})\\s*$",
+              "Flugnr\\.?:\\s*([A-Z]{2}\\s?\\d{1,4})\\b"
+            ],
+            "flags": "im",
+            "transform": ["trim", "removeSpaces"]
+          },
+          "pnr": {
+            "patterns": ["(?:Buchungscode|Buchungsreferenz):\\s*([A-Z0-9]{5,8})\\b"],
+            "flags": "im",
+            "transform": ["trim", "upper"]
+          },
+          "departureCode": {
+            "patterns": ["\\d{1,2}:\\d{2}\\s+Uhr\\s+[^\\n(]+\\(([A-Z]{3})\\)"],
+            "flags": "im",
+            "transform": ["trim", "upper"]
+          },
+          "arrivalCode": {
+            "patterns": [
+              "\\d{1,2}:\\d{2}\\s+Uhr[^\\n]+\\n[\\s\\S]+?\\d{1,2}:\\d{2}\\s+Uhr[^\\n]+\\(([A-Z]{3})\\)"
+            ],
+            "flags": "im",
+            "transform": ["trim", "upper"]
+          },
+          "departureTime": {
+            "patterns": [
+              "[A-Za-z]{2,3}\\.\\s+(\\d{1,2}\\.?\\s+[A-Za-zÄÖÜäöü]+\\s+\\d{4})[\\s\\S]+?(\\d{1,2}:\\d{2})\\s+Uhr"
+            ],
+            "flags": "im",
+            "format": "{1}T{2}",
+            "transform": "dateTime"
+          },
+          "arrivalTime": {
+            "patterns": [
+              "[A-Za-z]{2,3}\\.\\s+(\\d{1,2}\\.?\\s+[A-Za-zÄÖÜäöü]+\\s+\\d{4})[\\s\\S]+?\\d{1,2}:\\d{2}\\s+Uhr[\\s\\S]+?(\\d{1,2}:\\d{2})\\s+Uhr"
+            ],
+            "flags": "im",
+            "format": "{1}T{2}",
+            "transform": "dateTime"
+          },
+          "seat": {
+            "patterns": ["Sitzplätze:\\s*([0-9]{1,3}[A-F])", "Sitzplatz:\\s*([0-9]{1,3}[A-F])"],
+            "flags": "im",
+            "transform": "trim"
+          },
+          "seatClass": {
+            "patterns": ["Klasse:\\s*(Economy[\\w\\s]*|Business[\\w\\s]*|First[\\w\\s]*)"],
+            "flags": "im",
+            "transform": "trim"
+          },
+          "ticketNumber": {
+            "patterns": ["Ticketnummer:\\s*([0-9]{10,14})", "\\b(220[0-9]{10})\\b"],
+            "flags": "im",
+            "transform": "trim"
+          },
+          "arrivalDayOffset": {
+            "patterns": [
+              "[A-Za-z]{2,3}\\.\\s+\\d{1,2}\\.?\\s+[A-Za-zÄÖÜäöü]+\\s+\\d{4}[\\s\\S]+?\\d{1,2}:\\d{2}\\s+Uhr[\\s\\S]+?\\d{1,2}:\\d{2}\\s+Uhr\\s+(\\+\\d)\\b"
+            ],
+            "flags": "im",
+            "transform": "dayOffset"
+          }
+        }
+      }
+    },
+    "required": ["legs"]
+  },
+  "testCases": [
+    {
+      "name": "a one-leg Buchungsdetails mail",
+      "input": {
+        "subject": "Buchungsdetails",
+        "text": "Do. 16. Januar 2025: München – Luxemburg\n07:55 Uhr\tMünchen Munich (MUC)\nTerminal 2\n09:00 Uhr\tLuxemburg Luxembourg (LUX)\nLH 2316\nLufthansa Buchungscode:\nJD4TWQ"
+      },
+      "expect": "match",
+      "expected": {
+        "legs": [
+          {
+            "flightNumber": "LH2316",
+            "departureCode": "MUC",
+            "arrivalCode": "LUX",
+            "departureTime": "2025-01-16T07:55"
+          }
+        ]
+      }
+    },
+    {
+      "name": "three legs, one landing the next day",
+      "input": {
+        "subject": "Buchungsdetails",
+        "text": "Buchungsdetails\nBuchungscode:\nQX7PLM\nPassagierinformationen\nTicketnummer: 2201234567890\nReiseverlauf\nDo. 23. November 2023: München – Frankfurt/Main\n09:00 Uhr \tMünchen Munich (MUC)\nTerminal 2\n10:05 Uhr \tFrankfurt/Main Frankfurt (FRA)\nTerminal 1\n \tLH 99\ndurchgeführt von:\nLufthansa\nStatus: bestätigt\nSitzplätze: 26F*\nKlasse: Economy Class (K)\nDo. 23. November 2023: Frankfurt/Main – Las Vegas\nWichtige Hinweise\n \tAufgrund von verstärkten Sicherheitskontrollen bei Flügen in die USA wird empfohlen, früher da zu sein.\n11:05 Uhr \tFrankfurt/Main Frankfurt (FRA)\nTerminal 1\n13:50 Uhr \tLas Vegas McCarran Intl (LAS)\nTerminal 3\n \tLH 4352\ndurchgeführt von:\nEurowings Discover\nStatus: bestätigt\nKlasse: Premium Economy (N)\nDo. 30. November 2023: Los Angeles – München\n17:30 Uhr \tLos Angeles Los Angeles Intl (LAX)\nTerminal B\n13:40 Uhr +1 \tMünchen Munich (MUC)\nTerminal 2\n \tLH 453\ndurchgeführt von:\nLufthansa\nStatus: bestätigt\nKlasse: Premium Economy (R)\nFlugpreis\nWeitere Angebote ab Berlin (BER) finden Sie auf lufthansa.com"
+      },
+      "expect": "match",
+      "expected": {
+        "legs": [
+          {
+            "flightNumber": "LH99",
+            "departureCode": "MUC",
+            "arrivalCode": "FRA",
+            "departureTime": "2023-11-23T09:00"
+          },
+          {
+            "flightNumber": "LH4352",
+            "departureCode": "FRA",
+            "arrivalCode": "LAS",
+            "departureTime": "2023-11-23T11:05"
+          },
+          {
+            "flightNumber": "LH453",
+            "departureCode": "LAX",
+            "arrivalCode": "MUC",
+            "departureTime": "2023-11-30T17:30"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a leg without its flight number",
+      "input": {
+        "subject": "Buchungsdetails",
+        "text": "Do. 16. Januar 2025: München – Luxemburg\n07:55 Uhr\tMünchen Munich (MUC)\nTerminal 2\n09:00 Uhr\tLuxemburg Luxembourg (LUX)\nLufthansa Buchungscode:\nJD4TWQ"
+      },
+      "expect": "decline"
+    },
+    {
+      "name": "an Air Berlin invoice that also says Buchungsdetails",
+      "input": {
+        "subject": "Ihre Buchungsbestätigung",
+        "text": "Air Berlin PLC & Co. Luftverkehrs KG\nRechnung und Reisebestätigung\nBuchungsdetails\nBuchungs/Rechnungsnummer 01234567 / 2\nBuchungsdatum 02.01.2010\nHinflug 08.02.2010 Hinflug : MUENCHEN - HAMBURG\nRückflug 11.02.2010 Rückflug : HAMBURG - MUENCHEN\nFluginformationen\nStrecke Datum Flugzeiten Flugnr Buchungsklasse Gepäck\nMUC - HAM 08.02 07:15 - 08:30 AB1111 M 20KG\nHAM - MUC 11.02. 19:05 - 20:20 AB1112, M 20KG\nPreisdetails"
+      },
+      "expect": "decline"
+    }
+  ]
+}

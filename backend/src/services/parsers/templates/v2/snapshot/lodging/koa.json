@@ -1,0 +1,93 @@
+{
+  "id": "lodging:koa",
+  "domain": "lodging",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Kampgrounds of America (KOA)",
+    "kind": "hotel-chain"
+  },
+  "markets": ["US", "CA"],
+  "match": {
+    "markers": ["koa"],
+    "anchors": ["reservation confirmation", "kampgrounds of america"]
+  },
+  "extraction": {
+    "fields": {
+      "hotelName": {
+        "patterns": ["^(.+?)\\s+Reservation Confirmation\\s*#"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "confirmationNumber": {
+        "patterns": ["Reservation Confirmation\\s*#\\s*(\\d+)"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "checkIn": {
+        "patterns": ["[A-Za-z]+day,\\s*([A-Za-z]+ \\d{1,2}, \\d{4})\\s*[-–]"],
+        "flags": "i",
+        "transform": "englishDate"
+      },
+      "checkOut": {
+        "patterns": ["[-–]\\s*[A-Za-z]+day,\\s*([A-Za-z]+ \\d{1,2}, \\d{4})"],
+        "flags": "i",
+        "transform": "englishDate"
+      },
+      "totalPrice": {
+        "patterns": ["Estimated Total For Your Stay\\*?\\s*\\t?\\s*[^\\d]*([\\d.,]+)"],
+        "flags": "i",
+        "transform": "money"
+      },
+      "currency": {
+        "patterns": ["Estimated Total For Your Stay\\*?[^(]*\\(([A-Z]{3})\\)"],
+        "flags": "i",
+        "transform": "currency"
+      },
+      "pricePerNight": {
+        "patterns": ["\\$\\s*([\\d.,]+)\\s*/\\s*Night"],
+        "flags": "i",
+        "transform": "money"
+      },
+      "roomCategory": {
+        "patterns": ["Your Campsite:[ \\t]*\\r?\\n[ \\t]*(.+)"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "guests": {
+        "patterns": ["(\\d+)\\s+Adults?"],
+        "flags": "i",
+        "transform": "integer"
+      },
+      "type": {
+        "value": "campsite"
+      },
+      "chainName": {
+        "value": "KOA"
+      }
+    },
+    "required": ["hotelName", "checkIn", "checkOut"]
+  },
+  "testCases": [
+    {
+      "name": "a campground reservation",
+      "input": "Canton KOA Holiday Reservation Confirmation #12874330\nCanton KOA Holiday Reservation Confirmation #12874330\nYour reservation to stay at Canton KOA Holiday has been completed.\nDetails:\n2 Adults, Motorhome25 ft.\nYour Campsite:\nPull Thru, 50/30/20 Amps, Full Hookups\nRESERVED\nFriday, November 25, 2022 - Saturday, November 26, 2022 (1 Night)\nRESERVATION #\n12874330\nDates\t Rates\t Nights\t Price\n11/25/2022 - 11/26/2022\t $47.87 / Night\t 1\t $47.87\nEstimated Total For Your Stay* \t$47.87 (USD)",
+      "expect": "match",
+      "expected": {
+        "hotelName": "Canton KOA Holiday",
+        "checkIn": "2022-11-25",
+        "checkOut": "2022-11-26",
+        "confirmationNumber": "12874330"
+      }
+    },
+    {
+      "name": "a newsletter that mentions KOA",
+      "input": "KOA news\nKOA Reservation Confirmation tips for your next trip\nKampgrounds of America has 500 locations.",
+      "expect": "decline"
+    },
+    {
+      "name": "a name without dates",
+      "input": "Canton KOA Holiday Reservation Confirmation #12874330\nCanton KOA Holiday Reservation Confirmation #12874330\nKampgrounds of America",
+      "expect": "decline"
+    }
+  ]
+}

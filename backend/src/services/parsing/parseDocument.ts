@@ -378,7 +378,9 @@ async function readPackage(
 ): Promise<{ body: PackageBody; sourceAttachment?: MailAttachment }> {
   // First matching template wins, so the user's home market goes first
   // (owner, 2026-10-09: markets order candidates, they never filter them).
-  const templates = templateRegistry.getActiveV2(await homeCountryOf(input.userId));
+  const templates = templateRegistry.getActiveV2({
+    homeCountry: await homeCountryOf(input.userId),
+  });
   const fromBody = parsePackageText(combined, templates);
   // The body read nothing: the operator's invoice may be the attachment. Its
   // reading replaces the empty answer; its `invalidReading` replaces only a

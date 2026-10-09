@@ -61,7 +61,10 @@ const LH_OLD_MAIL = [
 
 function lhOld(): AirlineTemplate {
   const raw = fs.readFileSync(
-    path.join(__dirname, "../../services/parsers/templates/airlines/LH-old.json"),
+    path.join(
+      __dirname,
+      "../../services/parsers/templates/__tests__/fixtures/v1-airlines/LH-old.json"
+    ),
     "utf8"
   );
   return JSON.parse(raw) as AirlineTemplate;
@@ -178,7 +181,7 @@ const LH_NEW_LABELLED = [
 
 function lhNew(): AirlineTemplate {
   const raw = fs.readFileSync(
-    path.join(__dirname, "../../services/parsers/templates/airlines/LH.json"),
+    path.join(__dirname, "../../services/parsers/templates/__tests__/fixtures/v1-airlines/LH.json"),
     "utf8"
   );
   return JSON.parse(raw) as AirlineTemplate;
