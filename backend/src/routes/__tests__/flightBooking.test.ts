@@ -51,6 +51,7 @@ describe("GET /flights/:id/booking", () => {
 
   beforeEach(async () => {
     await prisma.flight.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
+    await prisma.busJourney.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await prisma.booking.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await prisma.trip.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
   });
@@ -204,6 +205,31 @@ describe("GET /flights/:id/booking", () => {
       const res = await put(a.id, { method: "equal" });
       expect(res.status).toBe(409);
       expect(res.body.code).toBe("BOOKING_PRICE_MISSING");
+    });
+
+    it("refuses a booking a bus ride shares — its total is not the flights' alone", async () => {
+      const { booking, a } = await bookedPair(100);
+      await prisma.busJourney.create({
+        data: {
+          userId,
+          bookingId: booking.id,
+          depStationName: "München ZOB",
+          depLat: 48.142,
+          depLon: 11.549,
+          arrStationName: "Flughafen München",
+          arrLat: 48.354,
+          arrLon: 11.786,
+          depTimezone: "Europe/Berlin",
+          arrTimezone: "Europe/Berlin",
+          depPrecision: "minute",
+          arrPrecision: "minute",
+          departureTime: new Date("2026-11-02T03:00:00Z"),
+        },
+      });
+      expect((await get(a.id)).body.booking.otherEntries).toBe(1);
+      const res = await put(a.id, { method: "equal" });
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe("BOOKING_SPLIT_MIXED");
     });
 
     it("refuses a flight without a booking, and an unknown method", async () => {

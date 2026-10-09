@@ -55,7 +55,9 @@ async function bookingRow(userId: string, bookingId: string) {
       tripId: true,
       trip: { select: { name: true } },
       priceSplit: true,
-      _count: { select: { cruises: true, railJourneys: true, lodgingStays: true } },
+      _count: {
+        select: { cruises: true, railJourneys: true, busJourneys: true, lodgingStays: true },
+      },
     },
   });
 }
@@ -65,6 +67,20 @@ async function segmentRows(userId: string, bookingId: string) {
     where: { userId, bookingId },
     orderBy: [{ departureTime: { sort: "asc", nulls: "last" } }, { id: "asc" }],
   });
+}
+
+/**
+ * The entries on the booking that are not flights. A bus ride shares a booking
+ * the same way a train ride does (the bus domain arrived after the split), so
+ * it counts too — or a flights-only split would misstate a mixed booking.
+ */
+function otherEntryCount(count: {
+  cruises: number;
+  railJourneys: number;
+  busJourneys: number;
+  lodgingStays: number;
+}): number {
+  return count.cruises + count.railJourneys + count.busJourneys + count.lodgingStays;
 }
 
 /**
@@ -86,7 +102,7 @@ async function bookingAnswer(userId: string, bookingId: string | null) {
     booking: {
       ...booking,
       tripName: trip?.name ?? null,
-      otherEntries: _count.cruises + _count.railJourneys + _count.lodgingStays,
+      otherEntries: otherEntryCount(_count),
       split: readBookingSplit(
         priceSplit,
         booking,
@@ -130,7 +146,7 @@ router.put("/:id/booking/split", async (req: AuthRequest, res: Response, next: N
       {
         price: row.price,
         currency: row.currency,
-        otherEntries: row._count.cruises + row._count.railJourneys + row._count.lodgingStays,
+        otherEntries: otherEntryCount(row._count),
       },
       payingSegments(segments),
       method
