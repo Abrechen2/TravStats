@@ -104,8 +104,14 @@ async function nearbyStays(
 
 /**
  * Arrivals at an airport near the place, dated in the place's zone. A row that
- * stores a wall clock rather than an instant (`LEGACY_FAKE_UTC`), or only a
- * day (`DATE_ONLY`), already carries the local day and is not shifted again.
+ * stores a wall clock rather than an instant (`LEGACY_FAKE_UTC`) already
+ * carries the local day and is not shifted again.
+ *
+ * A `DATE_ONLY` row does NOT: it is a local wall clock (the form's noon, the
+ * cruise import's midnight) written through the airport's zone, so its UTC
+ * date is the day before east of UTC for a midnight write and at UTC+13/+14
+ * for a noon one (forgejo#273). It is read in the zone it was written with —
+ * the stored arrival zone, else the place's, else UTC as every other row.
  */
 async function nearbyArrivals(
   userId: string,
@@ -120,8 +126,13 @@ async function nearbyArrivals(
   const when = Prisma.sql`coalesce(f.arrival_time, f.departure_time)`;
   return prisma.$queryRaw<ArrivalRow[]>(Prisma.sql`
     SELECT CASE
-             WHEN f.arr_time_semantics IN ('LEGACY_FAKE_UTC', 'DATE_ONLY')
+             WHEN f.arr_time_semantics = 'LEGACY_FAKE_UTC'
                THEN to_char(${when}, 'YYYY-MM-DD')
+             WHEN f.arr_time_semantics = 'DATE_ONLY'
+               THEN to_char(
+                 (${when} AT TIME ZONE 'UTC') AT TIME ZONE coalesce(f.arr_timezone, ${tz}, 'UTC'),
+                 'YYYY-MM-DD'
+               )
              ELSE ${localDay(when, tz)}
            END AS day,
            coalesce(f.arr_iata, f.arr_icao, f.arr_name) AS label
