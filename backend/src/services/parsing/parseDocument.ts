@@ -49,6 +49,13 @@ import { conclusiveOtherDomain, scoreDocument, type DomainDetection } from "./do
 import { isLlmEnabledByAdmin } from "../llm/llmGate";
 import { describeLlmTarget, type LlmProviderInfo } from "../llm/llmProvider";
 import { resolveReachableLlmTarget } from "../llm/reachableTarget";
+import { templateRegistry } from "../parsers/templates/registry";
+import {
+  parsePackageText,
+  type PackageFallbackCode,
+  type PackageTemplateRef,
+} from "../trip/package/parsePackage";
+import type { PackageContract } from "../trip/package/contract";
 
 /** What a caller may ask for. `auto` is the addition — see the header. */
 export const REQUESTABLE_DOMAINS = [...PARSER_SUPPORTED_DOMAINS, "auto"] as const;
@@ -153,7 +160,25 @@ type RentalBody = {
   domainMismatch?: DomainMismatch;
 };
 
-type DomainBody = FlightBody | CruiseBody | LodgingBody | RailBody | RentalBody;
+/**
+ * A package tour (plan 2026-10-09 P3): one reading per document, which the
+ * client turns into a trip proposal through `/trips/package/preview`. Read by
+ * repository templates only — `parserUsed` is "template" or "none".
+ */
+type PackageBody = {
+  domain: "package";
+  package: PackageContract | null;
+  template: PackageTemplateRef | null;
+  parserUsed: "template" | "none";
+  ollamaAvailable: boolean;
+  fallbackCode?: PackageFallbackCode;
+  fallbackReason?: string;
+  /** The contract paths a recognising template failed, for `invalidReading`. */
+  issues?: string[];
+  domainMismatch?: DomainMismatch;
+};
+
+type DomainBody = FlightBody | CruiseBody | LodgingBody | RailBody | RentalBody | PackageBody;
 
 /**
  * The domain-shaped payload, plus one field every domain shares:
@@ -294,6 +319,22 @@ async function parseAs(
   input: ParseDocumentInput,
   combined: string
 ): Promise<DomainBody> {
+  if (domain === "package") {
+    const result = parsePackageText(combined, templateRegistry.getActiveV2());
+    return {
+      domain: "package",
+      package: result.reading,
+      template: result.template,
+      parserUsed: result.reading ? "template" : "none",
+      ollamaAvailable: await isLlmAvailable(
+        input.userId !== undefined ? { userId: input.userId } : {}
+      ),
+      ...(result.fallbackCode !== undefined ? { fallbackCode: result.fallbackCode } : {}),
+      ...(result.fallbackReason !== undefined ? { fallbackReason: result.fallbackReason } : {}),
+      ...(result.issues !== undefined ? { issues: result.issues } : {}),
+    };
+  }
+
   if (domain === "cruise") {
     // The userId is what lets the parser refuse the ADMIN's Ollama to the
     // shared demo account (security audit of 2026-09-19, finding 3). The flight

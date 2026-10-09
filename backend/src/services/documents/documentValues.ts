@@ -179,6 +179,17 @@ export function valuesOf(body: ParsedDocumentBody, input: LegHints): ExtractedVa
       bookingReference: text(cruise.bookingReference),
     };
   }
+  // A package's total pays for the whole trip — offered as the booking's
+  // values, which is what an entry's cost block holds for a booked package.
+  if (body.domain === "package") {
+    if (!body.package) return EMPTY;
+    return {
+      ...EMPTY,
+      price: amount(body.package.totalPrice),
+      currency: currency(body.package.currency),
+      bookingReference: text(body.package.bookingReference),
+    };
+  }
   if (body.candidates.length !== 1) return EMPTY;
   const stay = body.candidates[0].stay;
   if (!stay) return EMPTY;

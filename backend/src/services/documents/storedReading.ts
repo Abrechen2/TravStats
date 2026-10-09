@@ -60,6 +60,19 @@ const storedBodySchema = z.discriminatedUnion("domain", [
       candidates: z.array(z.object({ stay: record.nullish() }).passthrough()),
     })
     .passthrough(),
+  z
+    .object({
+      domain: z.literal("package"),
+      package: z
+        .object({
+          bookingReference: z.string(),
+          totalPrice: z.number().nullish(),
+          currency: maybeText,
+        })
+        .passthrough()
+        .nullable(),
+    })
+    .passthrough(),
 ]);
 
 export type StoredReadingReason = "notParsed" | "unreadable" | "nothingFound";
