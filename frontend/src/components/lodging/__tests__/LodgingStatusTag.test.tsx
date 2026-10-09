@@ -55,4 +55,17 @@ describe("LodgingStatusTag", () => {
     render(<LodgingStatusTag lodging={unlocated} onRepair={vi.fn()} />);
     expect(screen.queryByRole("button", { name: "accessibility.showHelp" })).toBeNull();
   });
+
+  // forgejo#249: the help icon is 16 x 16 px. Its hit area grows to 44 px on a
+  // coarse pointer from the wrapper (HelpIcon is shared); jsdom cannot measure.
+  it("extends the help icon's hit area to 44 px on a coarse pointer", () => {
+    render(<LodgingStatusTag lodging={{ ...unlocated, lat: 1, lon: 2, address: null }} />);
+    const wrapper = screen
+      .getByRole("button", { name: "accessibility.showHelp" })
+      .closest("[class*='after:-inset-3.5']") as HTMLElement;
+    expect(wrapper).not.toBeNull();
+    expect(wrapper.className).toContain("[&_button]:pointer-coarse:after:absolute");
+    // 16 px icon + 2 x 14 px = 44 px.
+    expect(wrapper.className).toContain("[&_button]:pointer-coarse:after:-inset-3.5");
+  });
 });

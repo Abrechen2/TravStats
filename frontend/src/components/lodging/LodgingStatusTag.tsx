@@ -16,6 +16,10 @@ import type { Lodging } from "../../types/lodging";
  * rows in a real list are complete, and a confirmation on every one of them
  * would bury the 24 that need a visit.
  */
+/** `[&_button]` reaches the help button inside `HelpIcon`; its wrapper `div.relative` is the 16 px box the ::after is measured against. */
+export const HELP_HIT_AREA =
+  "[&_button]:pointer-coarse:after:absolute [&_button]:pointer-coarse:after:-inset-3.5";
+
 export function LodgingStatusTag({
   lodging,
   onRepair,
@@ -80,7 +84,14 @@ export function LodgingStatusTag({
           mouse and the sr-only text a screen reader, so a tap-reachable help
           button carries it for everyone else. It sits in a table row that
           opens the house on click and on Enter, so neither may bubble from it. */}
-      <span onKeyDown={(event) => event.stopPropagation()}>
+      <span
+        onKeyDown={(event) => event.stopPropagation()}
+        // The icon is 16 px and `HelpIcon` is shared, so its HIT area is
+        // extended from here on a coarse pointer: an ::after 14 px past the
+        // icon on every side = 44 px, no layout change (same technique as
+        // `RowActionButton`).
+        className={HELP_HIT_AREA}
+      >
         <HelpIcon content={hint} position="bottom" />
       </span>
     </span>

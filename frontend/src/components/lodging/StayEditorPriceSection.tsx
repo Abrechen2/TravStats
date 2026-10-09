@@ -157,9 +157,10 @@ export function StayEditorPriceSection({
         </div>
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
+      <label className="flex items-center gap-2 text-sm text-[var(--text-primary)] pointer-coarse:min-h-(--ts-size-touch-min)">
         <input
           type="checkbox"
+          className="pointer-coarse:h-5 pointer-coarse:w-5"
           data-testid="award-stay-toggle"
           checked={isAwardStay}
           onChange={(e): void => onAwardStayChange(e.target.checked)}

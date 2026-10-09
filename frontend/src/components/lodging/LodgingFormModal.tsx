@@ -29,6 +29,11 @@ import type { MissingStep } from "../form";
 import { lodgingFieldErrors, lodgingFormFields, lodgingFormSnapshot } from "./lodgingFormDraft";
 import type { LodgingFieldErrors } from "./lodgingFormDraft";
 
+// Touch sizing follows the POINTER (forgejo#249): `py-2 text-sm` is ~38 px tall,
+// under the 44 px a finger needs on an iPad.
+const FIELD_CLASS =
+  "rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] pointer-coarse:min-h-(--ts-size-touch-min)";
+
 const LODGING_TYPES: LodgingType[] = ["hotel", "campsite", "guesthouse", "apartment", "hostel"];
 
 const NAME_ID = "lodging-form-name";
@@ -374,7 +379,7 @@ export function LodgingFormModal({
               aria-required="true"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              className={FIELD_CLASS}
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)]">
@@ -385,7 +390,7 @@ export function LodgingFormModal({
                 setTypeChosen(true);
                 setType(e.target.value as LodgingType);
               }}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              className={FIELD_CLASS}
             >
               {LODGING_TYPES.map((lt) => (
                 <option key={lt} value={lt}>
@@ -411,7 +416,7 @@ export function LodgingFormModal({
                 value={stars}
                 onChange={(e) => setStars(e.target.value)}
                 {...fieldErrorProps(STARS_ID, starsError)}
-                className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                className={FIELD_CLASS}
               />
             </label>
             <FieldError id={STARS_ID} error={starsError} />
@@ -421,23 +426,19 @@ export function LodgingFormModal({
             <input
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              className={FIELD_CLASS}
             />
           </label>
           <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)]">
             {t("lodging:field.city")}
-            <input
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
-            />
+            <input value={city} onChange={(e) => setCity(e.target.value)} className={FIELD_CLASS} />
           </label>
           <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)]">
             {t("lodging:field.country")}
             <input
               value={country}
               onChange={(e) => setCountry(e.target.value)}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              className={FIELD_CLASS}
             />
           </label>
           <div className="flex flex-col gap-1 sm:col-span-2">
@@ -450,7 +451,7 @@ export function LodgingFormModal({
                 onChange={(e) => setWebsite(e.target.value)}
                 placeholder="https://"
                 {...fieldErrorProps(WEBSITE_ID, websiteError)}
-                className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                className={FIELD_CLASS}
               />
             </label>
             <FieldError id={WEBSITE_ID} error={websiteError} />
@@ -465,7 +466,7 @@ export function LodgingFormModal({
               listLabel={t("lodging:field.amenitySuggestions")}
               removeLabel={(name) => t("lodging:field.removeAmenity", { name })}
               placeholder={t("lodging:field.amenitiesPlaceholder")}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              className={FIELD_CLASS}
             />
           </div>
           <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)] sm:col-span-2">
@@ -474,7 +475,7 @@ export function LodgingFormModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              className={FIELD_CLASS}
             />
           </label>
         </div>

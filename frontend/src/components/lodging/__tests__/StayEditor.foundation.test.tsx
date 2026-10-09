@@ -251,4 +251,17 @@ describe("StayEditor - the shared form blocks", () => {
     await userEvent.click(help as HTMLElement);
     expect(await screen.findByText("lodging:fx.tooltip")).toBeInTheDocument();
   });
+
+  // forgejo#249: the native "Storniert" box measured 13 x 13 px on an iPad. Its
+  // label is the target (44 px high) and the box itself is drawn larger.
+  it("makes the cancelled and award-stay toggles touch-sized", async () => {
+    await renderEditor();
+    for (const id of ["stay-cancelled-toggle", "award-stay-toggle"]) {
+      const box = screen.getByTestId(id);
+      expect(box.className).toContain("pointer-coarse:h-5");
+      expect(box.closest("label")?.className).toContain(
+        "pointer-coarse:min-h-(--ts-size-touch-min)"
+      );
+    }
+  });
 });

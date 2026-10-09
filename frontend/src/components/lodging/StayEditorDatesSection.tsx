@@ -239,6 +239,9 @@ export function StayEditorDatesSection({
           <input
             type="checkbox"
             data-testid="stay-cancelled-toggle"
+            // The native box is ~13 px; on a coarse pointer it is drawn larger
+            // and the whole label (44 px high) is the target.
+            className="pointer-coarse:h-5 pointer-coarse:w-5"
             checked={isCancelled}
             onChange={(e): void => onCancelledChange(e.target.checked)}
           />
