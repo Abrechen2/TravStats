@@ -88,9 +88,9 @@ describe("v2 extraction — validation", () => {
 
   it("rejects patterns AND value, neither, a bad required name and a name used twice", () => {
     expect(issues({ fields: { a: { patterns: ["(x)"], value: "x" } } })[0]).toMatch(
-      /exactly one of patterns or value/
+      /exactly one of patterns, value or stacked/
     );
-    expect(issues({ fields: { a: {} } })[0]).toMatch(/exactly one of patterns or value/);
+    expect(issues({ fields: { a: {} } })[0]).toMatch(/exactly one of patterns, value or stacked/);
     expect(issues({ fields: { a: { value: "x" } }, required: ["b"] })).toEqual([
       'required.0: "b" names no field or repeat',
     ]);

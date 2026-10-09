@@ -41,10 +41,16 @@ export type TemplateTestRunner = (
 
 export type RunnerRegistry = ReadonlyMap<TemplateDomain, TemplateTestRunner>;
 
-/** The text a matcher sees: sender, subject and body, as the lodging engine joins them. */
+/**
+ * The text a matcher sees: sender, subject and body, one per line, as the
+ * lodging engine joins them. A part the input does not carry adds no line,
+ * so `{ subject, text }` reads exactly like `"<subject>\n<text>"` — the
+ * subject stays the FIRST line, which a pattern anchored at `^` without the
+ * `m` flag relies on.
+ */
 export function testInputHaystack(input: TemplateTestInput): string {
   if (typeof input === "string") return input;
-  return [input.from ?? "", input.subject ?? "", input.text].join("\n");
+  return [input.from, input.subject, input.text].filter((p) => p !== undefined).join("\n");
 }
 
 /** Every marker AND at least one anchor, case-insensitive — the lodging engine's rule. */

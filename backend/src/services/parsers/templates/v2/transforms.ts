@@ -11,8 +11,25 @@
  * host-local `Date` would silently pick one (ADR 0002).
  */
 
-export type TransformValue = string | number | null;
-export type Transform = (input: TransformValue) => TransformValue;
+import {
+  airportName,
+  capsTitleCase,
+  dateTime,
+  dropFirstWord,
+  englishDate,
+  firstDigits,
+  germanDate,
+  numericDate,
+  removeSpaces,
+  slashDayFirstDate,
+  stripTrailingSeparator,
+  type TransformContext,
+  type TransformValue,
+} from "./documentTransforms";
+import { fullYear, isoDate, LETTERS, monthNumber } from "./calendar";
+
+export type { TransformContext, TransformValue };
+export type Transform = (input: TransformValue, ctx?: TransformContext) => TransformValue;
 
 function asText(input: TransformValue): string | null {
   if (input === null) return null;
@@ -83,45 +100,6 @@ function currency(input: TransformValue): string | null {
 
 // ------------------------------------------------------------------ date
 
-const MONTH_NAMES: Readonly<Record<string, number>> = (() => {
-  const table: Array<[number, string[]]> = [
-    [1, ["january", "januar", "jänner", "jan", "jän"]],
-    [2, ["february", "februar", "feb"]],
-    [3, ["march", "märz", "maerz", "mar", "mär", "mrz"]],
-    [4, ["april", "apr"]],
-    [5, ["may", "mai"]],
-    [6, ["june", "juni", "jun"]],
-    [7, ["july", "juli", "jul"]],
-    [8, ["august", "aug"]],
-    [9, ["september", "sep", "sept"]],
-    [10, ["october", "oktober", "oct", "okt"]],
-    [11, ["november", "nov"]],
-    [12, ["december", "dezember", "dec", "dez"]],
-  ];
-  return Object.fromEntries(table.flatMap(([n, names]) => names.map((name) => [name, n])));
-})();
-
-function daysInMonth(year: number, month: number): number {
-  if (month === 2) {
-    const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-    return leap ? 29 : 28;
-  }
-  return [4, 6, 9, 11].includes(month) ? 30 : 31;
-}
-
-function isoDate(year: number, month: number, day: number): string | null {
-  if (month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month)) return null;
-  const pad = (n: number): string => String(n).padStart(2, "0");
-  return `${String(year).padStart(4, "0")}-${pad(month)}-${pad(day)}`;
-}
-
-/** A two-digit year is this century — documents in the corpus are recent. */
-function fullYear(raw: string): number {
-  const n = Number(raw);
-  return raw.length === 2 ? 2000 + n : n;
-}
-
-const LETTERS = "A-Za-zÄÖÜäöüß";
 const DATE_READERS: ReadonlyArray<(text: string) => string | null> = [
   (text) => {
     const m = /\b(\d{4})-(\d{1,2})-(\d{1,2})\b/.exec(text);
@@ -134,13 +112,13 @@ const DATE_READERS: ReadonlyArray<(text: string) => string | null> = [
   (text) => {
     const re = new RegExp(`\\b(\\d{1,2})\\.?\\s*([${LETTERS}]+)\\.?,?\\s+(\\d{4}|\\d{2})(?!\\d)`);
     const m = re.exec(text);
-    const month = m ? MONTH_NAMES[m[2].toLowerCase()] : undefined;
+    const month = m ? monthNumber(m[2]) : undefined;
     return m && month ? isoDate(fullYear(m[3]), month, Number(m[1])) : null;
   },
   (text) => {
     const re = new RegExp(`([${LETTERS}]+)\\.?\\s+(\\d{1,2}),?\\s+(\\d{4})(?!\\d)`);
     const m = re.exec(text);
-    const month = m ? MONTH_NAMES[m[1].toLowerCase()] : undefined;
+    const month = m ? monthNumber(m[1]) : undefined;
     return m && month ? isoDate(Number(m[3]), month, Number(m[2])) : null;
   },
 ];
@@ -221,6 +199,18 @@ export const TRANSFORMS = {
   dayOffset,
   flightNumber,
   iata,
+  // Format-specific readers (documentTransforms.ts, plan P4a).
+  englishDate,
+  germanDate,
+  numericDate,
+  slashDayFirstDate,
+  dateTime,
+  airportName,
+  capsTitleCase,
+  firstDigits,
+  dropFirstWord,
+  stripTrailingSeparator,
+  removeSpaces,
 } satisfies Record<string, Transform>;
 
 export type TransformName = keyof typeof TRANSFORMS;
@@ -229,9 +219,10 @@ export const TRANSFORM_NAMES = Object.keys(TRANSFORMS) as [TransformName, ...Tra
 /** Applies the named transforms in order; a null stays null except where a step reads it (dayOffset). */
 export function applyTransforms(
   value: TransformValue,
-  names: TransformName | readonly TransformName[] | undefined
+  names: TransformName | readonly TransformName[] | undefined,
+  ctx: TransformContext = {}
 ): TransformValue {
   if (names === undefined) return value === "" ? null : value;
   const list: readonly TransformName[] = typeof names === "string" ? [names] : names;
-  return list.reduce<TransformValue>((acc, name) => TRANSFORMS[name](acc), value);
+  return list.reduce<TransformValue>((acc, name) => TRANSFORMS[name](acc, ctx), value);
 }
