@@ -18,6 +18,7 @@ import PeopleList from "../ui/PeopleList";
 import TripSummaryPanel from "./TripSummaryPanel";
 import { useTripRoadtrips } from "../Roadtrips/useTripRoadtrips";
 import DocumentsSection from "../documents/DocumentsSection";
+import TripSharingPanel from "../sharing/TripSharingPanel";
 
 type T = ReturnType<typeof useTranslation>["t"];
 
@@ -423,6 +424,9 @@ export default function TripOverview({
                 <PeopleList names={trip.companions} />
               </DetailSection>
             )}
+            {/* Shared trips (design 2026-10-09). Not for the shared demo
+                account, which is every visitor at once. */}
+            {!isSharedDemo && <TripSharingPanel tripId={trip.id} onChanged={onChanged} />}
             <TripSummaryPanel trip={trip} t={t} language={language} onChanged={onChanged} />
             {trip.tags.length > 0 && (
               <DetailSection title={t("trips:detail.tags")}>

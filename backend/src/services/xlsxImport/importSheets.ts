@@ -25,6 +25,7 @@
  * order and the once-per-run follow-ups.
  */
 
+import { propagateBulk, sharedStateOf } from "../sharing/bulkSync";
 import { recomputeLegsForCruise } from "../cruiseDistance/cruiseLegService";
 import { recheckAchievements } from "../../utils/achievements";
 import { newCtx, errorRow, type Ctx } from "./context";
@@ -96,6 +97,9 @@ export async function importSheets(
 ): Promise<SheetOutcome[]> {
   const ctx = newCtx(opts);
   const results: SheetOutcome[] = [];
+  // Shared trips (design 2026-10-09): what is shared before the run, so the
+  // run's changes reach the other members once it is done.
+  const sharedBefore = opts.dryRun ? null : await sharedStateOf(opts.userId);
 
   for (const key of Object.keys(HANDLERS)) {
     const sheet = sheets.find((s) => s.key === key);
@@ -116,6 +120,8 @@ export async function importSheets(
     // Stops changed under these cruises; the distance and the map read the
     // legs, which only this recompute writes.
     for (const cruiseId of ctx.touchedCruises) await recomputeLegsForCruise(cruiseId);
+    // Every helper's writes at once, after the legs, so a cruise carries them.
+    if (sharedBefore) await propagateBulk(opts.userId, sharedBefore);
     // Once per run, not per row: a hundred stays are one change to the badges.
     if (ctx.wrote) await recheckAchievements(ctx.userId, "xlsx_import");
   }

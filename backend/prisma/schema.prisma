@@ -118,6 +118,14 @@ model User {
   placeLists             PlaceList[]
   importBatches          ImportBatch[]
   companions             Companion[]
+  /// Trip sharing (design 2026-10-09): companions of OTHER users linked to
+  /// this account, consents asked and given, groups started, notices.
+  linkedAsCompanion      Companion[]              @relation("CompanionLinkedUser")
+  shareConsentsAsked     ShareConsent[]           @relation("ShareConsentRequester")
+  shareConsentsGiven     ShareConsent[]           @relation("ShareConsentTarget")
+  shareGroupsCreated     TripShareGroup[]
+  shareNotices           ShareNotice[]            @relation("ShareNoticeRecipient")
+  shareNoticesActed      ShareNotice[]            @relation("ShareNoticeActor")
   photoJourneys          PhotoJourney[]
   tripSuggestionAnswers  TripSuggestionDecision[]
   dataQualityFlags       DataQualityFlag[]
@@ -550,6 +558,8 @@ model Flight {
   /// booking alone would silently refuse the second half of every trip.
   externalRef   String? @map("external_ref")
   importBatchId String? @map("import_batch_id")
+  /// Trip sharing: the same key on every member's copy of this entry. Null = never shared.
+  shareKey      String? @map("share_key")
 
   user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   importBatch    ImportBatch?          @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
@@ -563,6 +573,7 @@ model Flight {
   documents Document[]
 
   @@unique([userId, externalRef])
+  @@unique([userId, shareKey])
   // Composite indexes for the two shapes that actually dominate reads.
   // Everything else below is a single-column index kept for a single,
   // named call site — see the note under each.
@@ -1610,11 +1621,16 @@ model Trip {
   coverImageUrl      String?   @map("cover_image_url")
   icon               String?
   countries          String[]  @default([])
+  /// The share group this trip is one member's copy in (trip sharing, S1).
+  /// Null = not shared. Each member owns a complete copy; the group only
+  /// joins them.
+  shareGroupId       String?   @map("share_group_id")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shareGroup     TripShareGroup?    @relation(fields: [shareGroupId], references: [id], onDelete: SetNull)
   flights        Flight[]
   bookings       Booking[]
   cruises        Cruise[]
@@ -1636,6 +1652,7 @@ model Trip {
 
   @@index([userId])
   @@index([userId, status])
+  @@index([shareGroupId])
   @@map("trips")
 }
 
@@ -1781,6 +1798,10 @@ model TripStop {
   /// place leaves the pass-through standing. Only on a pass-through:
   /// `trip_stops_place_on_pass` holds that in the database.
   placeId       String?   @map("place_id")
+  /// Trip sharing: the same key on every member's copy of this stop. A stop
+  /// has no user column, so the key is unique per TRIP — which is per user,
+  /// since a trip has exactly one owner.
+  shareKey      String?   @map("share_key")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -1815,6 +1836,7 @@ model TripStop {
   expensesLegTo   TripExpense[]  @relation("ExpenseLegTo")
 
   @@unique([routeId, routeOrderIdx])
+  @@unique([tripId, shareKey])
   @@index([tripId])
   @@index([tripId, orderIdx])
   @@index([routeId])
@@ -2218,6 +2240,8 @@ model Cruise {
   /// booking alone would silently refuse the second half of every trip.
   externalRef   String? @map("external_ref")
   importBatchId String? @map("import_batch_id")
+  /// Trip sharing: the same key on every member's copy of this entry. Null = never shared.
+  shareKey      String? @map("share_key")
 
   companionLinks CruiseCompanion[]
   importBatch    ImportBatch?      @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
@@ -2225,6 +2249,7 @@ model Cruise {
   documents Document[]
 
   @@unique([userId, externalRef])
+  @@unique([userId, shareKey])
   @@index([userId])
   @@index([startDate])
   @@index([status])
@@ -2623,6 +2648,8 @@ model LodgingStay {
   dataSource       String?   @map("data_source")
   externalRef      String?   @map("external_ref") // e.g. "booking:5087376273"
   batchId          String?   @map("batch_id")
+  /// Trip sharing: the same key on every member's copy of this entry. Null = never shared.
+  shareKey         String?   @map("share_key")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
 
@@ -2639,6 +2666,7 @@ model LodgingStay {
   documents Document[]
 
   @@unique([userId, externalRef])
+  @@unique([userId, shareKey])
   @@index([lodgingId])
   @@index([userId, checkIn])
   @@index([status])
@@ -3272,19 +3300,28 @@ model Companion {
   canonicalName String   @map("canonical_name")
   displayName   String   @map("display_name")
   searchName    String   @map("search_name")
+  /// The account on this server this companion IS (trip sharing, S1). Set only
+  /// with an accepted `ShareConsent` from that account; SetNull keeps the
+  /// companion as a plain name when the account goes away.
+  linkedUserId  String?  @map("linked_user_id")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  user    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  flights FlightCompanion[]
-  trips   TripCompanion[]
-  cruises CruiseCompanion[]
-  rail    RailJourneyCompanion[]
-  bus     BusJourneyCompanion[]
-  rentals RentalBookingCompanion[]
+  user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedUser User?                    @relation("CompanionLinkedUser", fields: [linkedUserId], references: [id], onDelete: SetNull)
+  flights    FlightCompanion[]
+  trips      TripCompanion[]
+  cruises    CruiseCompanion[]
+  rail       RailJourneyCompanion[]
+  bus        BusJourneyCompanion[]
+  rentals    RentalBookingCompanion[]
 
   @@unique([userId, canonicalName])
+  /// One companion per linked account and owner — two names for the same
+  /// person would each get a share tick.
+  @@unique([userId, linkedUserId])
   @@index([userId, searchName])
+  @@index([linkedUserId])
   @@map("companions")
 }
 
@@ -3675,9 +3712,9 @@ model RailJourney {
 
   /// scheduled | in_progress | completed | cancelled — lodging's vocabulary.
   /// A cache of `deriveRailStatus`; only `cancelled` is set by a client.
-  status       String   @default("scheduled")
+  status       String @default("scheduled")
   /// Arrival delay as experienced. Null = not recorded, 0 = on time.
-  delayMinutes Int?     @map("delay_minutes")
+  delayMinutes Int?   @map("delay_minutes")
 
   /// The user's own "this change is tight" (forgejo#234), stored on the leg
   /// that ARRIVES at the change: the transfer is the gap after this train.
@@ -3685,9 +3722,9 @@ model RailJourney {
   /// computed on read and is not written here.
   tightConnection Boolean @default(false) @map("tight_connection")
 
-  notes        String?
-  tags         String[] @default([])
-  companions   String[] @default([])
+  notes      String?
+  tags       String[] @default([])
+  companions String[] @default([])
 
   tripId    String? @map("trip_id")
   bookingId String? @map("booking_id")
@@ -3695,6 +3732,8 @@ model RailJourney {
   /// Reserved for imports, same contract as `Cruise.externalRef`.
   externalRef   String? @map("external_ref")
   importBatchId String? @map("import_batch_id")
+  /// Trip sharing: the same key on every member's copy of this entry. Null = never shared.
+  shareKey      String? @map("share_key")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -3709,6 +3748,7 @@ model RailJourney {
   documents      Document[]
 
   @@unique([userId, externalRef])
+  @@unique([userId, shareKey])
   @@index([userId, departureTime])
   @@index([status])
   @@index([tripId])
@@ -4025,6 +4065,8 @@ model RentalBooking {
   /// The parser writes `rental:<provider>:<confirmationNumber>`.
   externalRef   String? @map("external_ref")
   importBatchId String? @map("import_batch_id")
+  /// Trip sharing: the same key on every member's copy of this entry. Null = never shared.
+  shareKey      String? @map("share_key")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -4039,6 +4081,7 @@ model RentalBooking {
   documents      Document[]
 
   @@unique([userId, externalRef])
+  @@unique([userId, shareKey])
   @@index([userId, pickupTime])
   @@index([userId, confirmationNumber])
   @@index([status])
@@ -4147,4 +4190,73 @@ model SyncState {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("sync_state")
+}
+
+/// Trip sharing, S1 (design 2026-10-09, decision 4): `targetId` allows
+/// `requesterId` to push trips into the target's account. Asked by the
+/// requester, answered by the target; either side may withdraw. One row per
+/// ordered pair — a new request after a decline or withdrawal reopens it.
+model ShareConsent {
+  id          String    @id @default(uuid())
+  requesterId String    @map("requester_id")
+  targetId    String    @map("target_id")
+  /// pending | accepted | declined | withdrawn
+  status      String    @default("pending")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  decidedAt   DateTime? @map("decided_at")
+
+  requester User @relation("ShareConsentRequester", fields: [requesterId], references: [id], onDelete: Cascade)
+  target    User @relation("ShareConsentTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, targetId])
+  @@index([targetId, status])
+  @@map("share_consents")
+}
+
+/// Joins every member's own copy of one shared trip (decision 1). Holds no
+/// facts itself; the trips and their entries' `shareKey`s do.
+model TripShareGroup {
+  id          String   @id @default(uuid())
+  /// Who started it. SetNull: the creator's account going away must not
+  /// dissolve the other members' group.
+  createdById String?  @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  createdBy User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  trips     Trip[]
+  notices   ShareNotice[]
+
+  @@index([createdById])
+  @@map("trip_share_groups")
+}
+
+/// The fourth inbox source (beside pending updates, data-quality flags and
+/// trip suggestions): what another member did to a shared trip. S1 writes
+/// `shared` and `left`; S2 adds created/updated/deleted with before/after.
+model ShareNotice {
+  id         String    @id @default(uuid())
+  /// The recipient.
+  userId     String    @map("user_id")
+  groupId    String?   @map("group_id")
+  actorId    String?   @map("actor_id")
+  /// shared | created | updated | deleted | left
+  kind       String
+  /// trip | flight | lodgingStay | cruise | rail | rental | stop
+  entityType String?   @map("entity_type")
+  /// The entry's shareKey; for `trip` the RECIPIENT's own trip id.
+  entityKey  String?   @map("entity_key")
+  before     Json?
+  after      Json?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  readAt     DateTime? @map("read_at")
+  undoneAt   DateTime? @map("undone_at")
+
+  user  User            @relation("ShareNoticeRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor User?           @relation("ShareNoticeActor", fields: [actorId], references: [id], onDelete: SetNull)
+  group TripShareGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  @@index([userId, readAt])
+  @@index([groupId])
+  @@index([actorId])
+  @@map("share_notices")
 }

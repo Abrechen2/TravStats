@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from "express";
+import { propagateDeletes, propagateWrites, shareSnapshots } from "../services/sharing/propagate";
 import { resolveCountryCode } from "../shared/geo/countryCode";
 import { Prisma } from "../prisma";
 import { z } from "zod";
@@ -296,6 +297,15 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     // An absent `country` key means "leave it alone" — deriving from the stored
     // value would rewrite a column the request never mentioned.
     const patched = { ...input, ...location };
+    // The house is a fact of every stay in it: its shared stays carry the
+    // change to the other members' copies (design 2026-10-09, decision 2).
+    const stayIds = (
+      await prisma.lodgingStay.findMany({
+        where: { lodgingId: existing.id, userId, shareKey: { not: null } },
+        select: { id: true },
+      })
+    ).map((s) => s.id);
+    const before = await shareSnapshots(prisma, "lodgingStay", stayIds);
     const lodging = await prisma.lodging.update({
       where: { id: existing.id },
       data: {
@@ -307,6 +317,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       },
       include: LODGING_INCLUDE,
     });
+    await propagateWrites(prisma, userId, "lodgingStay", stayIds, before);
     const baseCurrency = await getBaseCurrency(userId);
     res.json({
       success: true,
@@ -328,7 +339,20 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
     // with them the only record of their names, so they are read first and the
     // bytes removed after the row is gone (AUD-042).
     const photoFiles = await collectLodgingPhotoFilenames({ id: existing.id });
-    await prisma.lodging.delete({ where: { id: existing.id } });
+    await prisma.$transaction(async (tx) => {
+      // The cascade deletes the stays: their shared copies' members are told.
+      const stays = await tx.lodgingStay.findMany({
+        where: { lodgingId: existing.id, userId, shareKey: { not: null } },
+        select: { id: true },
+      });
+      const gone = await shareSnapshots(
+        tx,
+        "lodgingStay",
+        stays.map((s) => s.id)
+      );
+      await tx.lodging.delete({ where: { id: existing.id } });
+      await propagateDeletes(tx, userId, [...gone.values()]);
+    });
     removeLodgingPhotoFiles(photoFiles);
     res.status(204).send();
   } catch (err) {

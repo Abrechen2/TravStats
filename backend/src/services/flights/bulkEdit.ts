@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { propagateWrites, shareSnapshots } from "../sharing/propagate";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
 import { canonicalizeCompanionName } from "../../utils/companionName";
@@ -215,6 +216,14 @@ export async function bulkEditFlights(
       ])
     : new Map<string, Person>();
 
+  // A trip change moves a flight into or out of a shared trip, which the other
+  // members' copies must follow; tags and companions are private and propagate
+  // nothing. Snapshotted and propagated ONCE for the whole edit — per flight
+  // it doubled the queries of a 200-flight edit (the scale test's bound).
+  const moving = edit.trip ? rows.map((r) => r.id) : [];
+  const before = await shareSnapshots(prisma, "flight", moving);
+  const moved: string[] = [];
+
   const touchedTrips = new Set<string>();
   const results: BulkEditResult[] = [];
   for (const flightId of edit.flightIds) {
@@ -233,6 +242,7 @@ export async function bulkEditFlights(
       if (plan.data.tripId !== undefined) {
         if (flight.tripId) touchedTrips.add(flight.tripId);
         if (plan.data.tripId) touchedTrips.add(plan.data.tripId);
+        moved.push(flightId);
       }
       results.push({ flightId, status: "updated" });
     } catch (err: unknown) {
@@ -245,6 +255,15 @@ export async function bulkEditFlights(
       results.push({ flightId, status: "failed", code: "UPDATE_FAILED" });
     }
   }
+  // Like the status below, a failed propagation does not undo the member's own
+  // edits; it is logged, and the copies catch up on the flight's next change.
+  await propagateWrites(prisma, userId, "flight", moved, before).catch((err: unknown) =>
+    logger.error({
+      operation: "flight_bulk_edit_share_propagation_failed",
+      userId,
+      error: err instanceof Error ? err.message : "Unknown error",
+    })
+  );
   // A trip's status follows its flights. A failed recompute does not undo the
   // edits that went through; it is logged and corrected on the trip's next change.
   for (const tripId of touchedTrips) {

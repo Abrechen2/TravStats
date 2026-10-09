@@ -63,6 +63,18 @@ vi.mock("@/lib/api/tripSuggestions", () => ({
   tripSuggestionsApi: { count: vi.fn(async () => tripSuggestionCount.value) },
 }));
 
+// Shared trips are the fourth source (2026-10-09). `fail` makes the count
+// request reject, to prove one failing source does not zero the badge.
+const sharingCount = vi.hoisted(() => ({ value: 0, fail: false }));
+vi.mock("@/lib/api/sharing", () => ({
+  sharingApi: {
+    inboxCount: vi.fn(async () => {
+      if (sharingCount.fail) throw new Error("sharing count down");
+      return sharingCount.value;
+    }),
+  },
+}));
+
 // Use the real settingsStore so useEnabledDomains reads actual state.
 vi.unmock("../../store/settingsStore");
 
@@ -82,6 +94,8 @@ describe("NavigationBar — round-4 header", () => {
     authState.isAdmin = false;
     useSettingsStore.setState({ enabledDomains: ["flight", "cruise"] });
     tripSuggestionCount.value = 0;
+    sharingCount.value = 0;
+    sharingCount.fail = false;
   });
 
   function renderNav(path = "/dashboard") {
@@ -133,6 +147,20 @@ describe("NavigationBar — round-4 header", () => {
 
   it("counts open trip suggestions in the Posteingang badge", async () => {
     tripSuggestionCount.value = 3;
+    renderNav();
+    expect(await screen.findByRole("link", { name: "dataQuality:inbox.nav (3)" })).toBeTruthy();
+  });
+
+  it("adds open sharing requests and notices to the Posteingang badge", async () => {
+    tripSuggestionCount.value = 3;
+    sharingCount.value = 2;
+    renderNav();
+    expect(await screen.findByRole("link", { name: "dataQuality:inbox.nav (5)" })).toBeTruthy();
+  });
+
+  it("keeps the other sources in the badge when the sharing count fails", async () => {
+    tripSuggestionCount.value = 3;
+    sharingCount.fail = true;
     renderNav();
     expect(await screen.findByRole("link", { name: "dataQuality:inbox.nav (3)" })).toBeTruthy();
   });

@@ -10,6 +10,7 @@
  * so Express matches in exactly the order it did before.
  */
 
+import { propagateDelete, shareSnapshot } from "../../services/sharing/propagate";
 import { Router, Response, NextFunction } from "express";
 
 import { prisma } from "../../db";
@@ -90,7 +91,11 @@ router.delete("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next
     });
     if (!stay) throw new AppError("Stay not found", 404);
 
-    await prisma.lodgingStay.delete({ where: { id: stay.id } });
+    await prisma.$transaction(async (tx) => {
+      const gone = await shareSnapshot(tx, "lodgingStay", stay.id);
+      await tx.lodgingStay.delete({ where: { id: stay.id } });
+      await propagateDelete(tx, userId, gone);
+    });
     res.status(204).send();
   } catch (err) {
     next(err);

@@ -7,6 +7,8 @@ import { normalizeQueryParams, resolveFlightWhere, splitMultiValue } from "./fli
 import { flightListHandler } from "./flights/list";
 import { flightFacetsHandler } from "./flights/facets";
 import { nextFlightHandler } from "./flights/next";
+import { deleteFlightHandler } from "./flights/remove";
+import { propagateWrite, shareSnapshot } from "../services/sharing/propagate";
 import { createFlightSchema, updateFlightSchema, flightQuerySchema } from "../schemas/flight";
 import logger from "../utils/logger";
 import { AppError } from "../middleware/errorHandler";
@@ -403,7 +405,7 @@ router.post(
             skipDuplicates: true,
           });
         }
-
+        await propagateWrite(tx, userId, "flight", created.id);
         return created;
       });
       await linkDocuments(userId, documentIds, { type: "flight", id: flight.id });
@@ -1119,10 +1121,10 @@ router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
         }
       }
 
-      return tx.flight.update({
-        where: { id, userId },
-        data: updateData,
-      });
+      const before = await shareSnapshot(tx, "flight", id);
+      const updated = await tx.flight.update({ where: { id, userId }, data: updateData });
+      await propagateWrite(tx, userId, "flight", id, before);
+      return updated;
     });
 
     // Check achievements if status changed to flown and return newly unlocked ones.
@@ -1153,30 +1155,7 @@ router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
   }
 });
 
-// Delete flight
-router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.userId!;
-    const { id } = req.params;
-
-    // Check if flight exists and belongs to user
-    const existingFlight = await prisma.flight.findFirst({
-      where: { id, userId },
-    });
-
-    if (!existingFlight) {
-      throw new AppError("Flight not found", 404);
-    }
-
-    await prisma.flight.delete({
-      where: { id, userId },
-    });
-
-    res.status(204).send();
-  } catch (error) {
-    next(error);
-  }
-});
+router.delete("/:id", deleteFlightHandler);
 
 // Enrich a specific flight historically
 router.post(

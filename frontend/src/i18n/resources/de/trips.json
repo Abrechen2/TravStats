@@ -596,5 +596,27 @@
   "photoWindow": {
     "title": "Fotos aus der Reise",
     "alt": "Foto aus der Reise"
+  },
+  "export": {
+    "button": "Reise exportieren",
+    "title": "Reise exportieren",
+    "intro": "Lädt die Reise mit allen Einträgen als .travstats-Datei herunter. Eine andere TravStats-Instanz kann sie unter „Reise hinzufügen“ einlesen.",
+    "leavesServer": "Die Datei verlässt den Server: Wer sie bekommt, kann alles darin lesen. Wähle nur, was mit soll.",
+    "options": {
+      "documents": "Dokumente mitgeben",
+      "documentsHint": "Gespeicherte Belege wie Tickets und Rechnungen.",
+      "photos": "Fotos mitgeben",
+      "photosHint": "Die hochgeladenen Fotos der Reise.",
+      "private": "Persönliche Angaben mitgeben",
+      "privateHint": "Sitzplatz, Kabine, eigener Preis, Bewertungen, Notizen, Tagebuch und die Namen deiner Mitreisenden."
+    },
+    "download": "Herunterladen",
+    "downloading": "Datei wird erstellt …",
+    "done": "Die Datei wurde heruntergeladen.",
+    "errors": {
+      "failed": "Die Datei konnte nicht erstellt werden. Bitte versuche es erneut.",
+      "notFound": "Diese Reise gibt es nicht mehr.",
+      "rateLimited": "Zu viele Exporte in kurzer Zeit. Bitte warte ein paar Minuten."
+    }
   }
 }

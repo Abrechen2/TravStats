@@ -9,7 +9,6 @@
   "src/__tests__/components/FlightReviewModal.finalStep.test.tsx",
   "src/__tests__/components/NavigationBar.test.tsx",
   "src/__tests__/components/Trips/TripsTab.test.tsx",
-  "src/__tests__/pages/SettingsPage.betaGate.test.tsx",
   "src/components/Dashboard/__tests__/DashboardLayout.addButton.test.tsx",
   "src/components/Dashboard/tabs/__tests__/AllTab.tours.test.tsx",
   "src/components/Dashboard/tabs/cruiseColorMode.views.test.tsx",

@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from "express";
+import { propagateDelete, shareSnapshot } from "../services/sharing/propagate";
 import type { z } from "zod";
 
 import { prisma } from "../db";
@@ -246,7 +247,11 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
       select: { id: true, tripId: true },
     });
     if (!existing) throw new AppError("Rental not found", 404, "RENTAL_NOT_FOUND");
-    await prisma.rentalBooking.delete({ where: { id: existing.id } });
+    await prisma.$transaction(async (tx) => {
+      const gone = await shareSnapshot(tx, "rental", existing.id);
+      await tx.rentalBooking.delete({ where: { id: existing.id } });
+      await propagateDelete(tx, userId, gone);
+    });
     await restatusTrips(existing.tripId);
     res.status(204).send();
   } catch (err) {

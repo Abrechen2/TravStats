@@ -4,6 +4,7 @@ import { useAuthStore } from "../store/authStore";
 import { pendingUpdatesApi } from "../lib/api";
 import { dataQualityFlagsApi } from "../lib/api/dataQualityFlags";
 import { tripSuggestionsApi } from "../lib/api/tripSuggestions";
+import { sharingApi } from "../lib/api/sharing";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 import DiagnosticExportModal from "./DiagnosticExportModal";
@@ -58,10 +59,11 @@ export default function NavigationBar(): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation(["dashboard", "common", "dataQuality"]);
-  // Three sources, one badge — the Posteingang is one page (see useNavItems).
+  // Four sources, one badge — the Posteingang is one page (see useNavItems).
   const [pendingUpdatesCount, setPendingUpdatesCount] = useState(0);
   const [openFlagCount, setOpenFlagCount] = useState(0);
   const [tripSuggestionCount, setTripSuggestionCount] = useState(0);
+  const [sharingCount, setSharingCount] = useState(0);
   const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
 
   useEffect(() => {
@@ -86,6 +88,11 @@ export default function NavigationBar(): JSX.Element {
         } catch {
           logger.warn("Failed to load trip suggestion count");
         }
+        try {
+          setSharingCount(await sharingApi.inboxCount());
+        } catch {
+          logger.warn("Failed to load sharing inbox count");
+        }
       };
       loadInboxCounts();
       const interval = setInterval(loadInboxCounts, 30000);
@@ -98,7 +105,7 @@ export default function NavigationBar(): JSX.Element {
     navigate("/login");
   };
 
-  const inboxCount = pendingUpdatesCount + openFlagCount + tripSuggestionCount;
+  const inboxCount = pendingUpdatesCount + openFlagCount + tripSuggestionCount + sharingCount;
   const { primary, more } = useNavItems();
   const inboxActive = isPathActive("/pending-updates", location.pathname);
   const inboxLabel =

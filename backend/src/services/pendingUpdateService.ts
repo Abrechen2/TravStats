@@ -5,6 +5,7 @@
  * Also calculates statistics impact of updates.
  */
 
+import { propagateWrite, shareSnapshot } from "./sharing/propagate";
 import { PrismaClient, PendingFlightUpdate, Flight, Prisma } from "../prisma";
 import { prisma } from "../db";
 import logger from "../utils/logger";
@@ -516,11 +517,14 @@ export async function applyPendingUpdate(id: string, userId: string): Promise<Fl
       throw new Error("Arrival time must not precede departure time");
     }
 
-    // Update flight
+    // Update flight. An accepted suggestion is the member's own change: on a
+    // shared trip it reaches the other copies (design 2026-10-09).
+    const before = await shareSnapshot(prisma, "flight", flight.id);
     const updatedFlight = await prismaClient.flight.update({
       where: { id: flight.id },
       data: updateData,
     });
+    await propagateWrite(prisma, userId, "flight", flight.id, before);
 
     // Mark pending update as applied
     await prismaClient.pendingFlightUpdate.update({

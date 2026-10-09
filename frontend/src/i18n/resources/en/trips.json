@@ -596,5 +596,27 @@
   "photoWindow": {
     "title": "Photos from the trip",
     "alt": "Photo from the trip"
+  },
+  "export": {
+    "button": "Export trip",
+    "title": "Export trip",
+    "intro": "Downloads the trip with all its entries as a .travstats file. Another TravStats instance can read it under “Add trip”.",
+    "leavesServer": "The file leaves the server: whoever gets it can read everything in it. Choose only what should go along.",
+    "options": {
+      "documents": "Include documents",
+      "documentsHint": "Kept originals such as tickets and invoices.",
+      "photos": "Include photos",
+      "photosHint": "The photos uploaded to the trip.",
+      "private": "Include personal details",
+      "privateHint": "Seat, cabin, your own price, ratings, notes, journal and the names of your companions."
+    },
+    "download": "Download",
+    "downloading": "Creating the file …",
+    "done": "The file was downloaded.",
+    "errors": {
+      "failed": "The file could not be created. Please try again.",
+      "notFound": "This trip no longer exists.",
+      "rateLimited": "Too many exports in a short time. Please wait a few minutes."
+    }
   }
 }

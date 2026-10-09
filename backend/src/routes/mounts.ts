@@ -62,6 +62,7 @@ import trainingRoutes from "./training";
 import tripsRoutes from "./trips";
 import tripBookingRoutes from "./trips/tripBookings";
 import tripPackageRoutes from "./trips/tripPackage";
+import tripExchangeRoutes from "./trips/tripExchange";
 import tripEntrySuggestionRoutes from "./trips/entrySuggestions";
 import tripStopRoutes from "./trips/tripStops";
 import tripPhotoRoutes from "./trips/tripPhotos";
@@ -126,6 +127,7 @@ import lodgingImportRoutes from "./lodgingImport";
 import placeImportRoutes from "./placeImport";
 import importBatchRoutes from "./importBatches";
 import companionRoutes from "./companions";
+import sharingRoutes from "./sharing";
 import tagRoutes from "./tags";
 import openapiRoutes from "./openapi";
 import importRoutes from "./import";
@@ -277,6 +279,8 @@ export const apiMounts: ApiMount[] = [
   { id: "trips.bookings", base: "/api/v1", router: tripBookingRoutes },
   // Package tours → trips (plan 2026-10-09 P3), same reason.
   { id: "trips.package", base: "/api/v1", router: tripPackageRoutes },
+  // One trip as a `.travstats` file (spec 2026-10-09 S3), same reason.
+  { id: "trips.exchange", base: "/api/v1", router: tripExchangeRoutes },
   { id: "trips", base: "/api/v1", router: tripsRoutes },
   // Stops + journal, and photos + cover: split out of trips.ts (forgejo#59).
   // Mounted directly after `trips`, before every other satellite, so Express
@@ -434,6 +438,8 @@ export const apiMounts: ApiMount[] = [
   { id: "placeImport", base: "/api/v1/place-import", router: placeImportRoutes },
   { id: "importBatches", base: "/api/v1/import-batches", router: importBatchRoutes },
   { id: "companions", base: "/api/v1/companions", router: companionRoutes },
+  // Shared trips (design 2026-10-09): consent, companion link, share, leave.
+  { id: "sharing", base: "/api/v1/sharing", router: sharingRoutes },
   { id: "tags", base: "/api/v1/tags", router: tagRoutes },
   { id: "import", base: "/api/v1/import", router: importRoutes },
   { id: "pairing", base: "/api/v1/pairing", router: pairingRoutes },

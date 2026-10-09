@@ -21,6 +21,20 @@ import type { LodgingStay } from "../types/lodging";
 const mounted = vi.hoisted(() => [] as { type: string; id: string }[]);
 
 // The form asks for the user's own lodging vocabulary on mount; no network here.
+// Shared trips (2026-10-09): the trip overview, the settings and the inbox
+// read the sharing API on mount; answered empty so no request escapes.
+vi.mock("@/lib/api/sharing", () => ({
+  sharingApi: {
+    tripSharing: vi
+      .fn()
+      .mockResolvedValue({ groupId: null, members: [], candidates: [], bookingTotals: [] }),
+    listConsents: vi.fn().mockResolvedValue({ incoming: [], outgoing: [] }),
+    listCompanions: vi.fn().mockResolvedValue({ companions: [], linkableUsers: [] }),
+    listNotices: vi.fn().mockResolvedValue([]),
+    inboxCount: vi.fn().mockResolvedValue(0),
+  },
+}));
+
 vi.mock("../hooks/useLodgingEntrySuggestions", () => ({
   useLodgingEntrySuggestions: () => ({
     amenities: [],

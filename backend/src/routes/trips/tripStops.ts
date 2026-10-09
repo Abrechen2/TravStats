@@ -30,6 +30,7 @@ import { dbDayOf } from "../../services/timeModel/dayColumns";
 
 import { withJournalEntryTimes, withTripStopTimes } from "../../services/trips/timesDto";
 const router = Router();
+import { propagateDelete, propagateWrite, shareSnapshot } from "../../services/sharing/propagate";
 
 /* ─────────── Stops ─────────── */
 
@@ -70,6 +71,7 @@ router.post(
           orderIdx: body.orderIdx ?? 0,
         },
       });
+      await propagateWrite(prisma, userId, "stop", stop.id);
       res.status(201).json({ stop: withTripStopTimes(stop) });
     } catch (error) {
       next(error);
@@ -118,12 +120,14 @@ router.patch(
         req
       );
       const { startDate: _start, endDate: _end, ...rest } = body;
+      const before = await shareSnapshot(prisma, "stop", existing.id);
       const stop = await updateStopAndLegs(
         prisma,
         req.params.stopId,
         { ...rest, ...times },
         existing
       );
+      await propagateWrite(prisma, userId, "stop", stop.id, before);
       res.json({ stop: withTripStopTimes(stop) });
     } catch (error) {
       next(error);
@@ -157,7 +161,9 @@ router.delete(
       if (!existing) throw new AppError("Stop not found", 404);
 
       const createdLegs = await prisma.$transaction(async (tx) => {
+        const gone = await shareSnapshot(tx, "stop", existing.id);
         await tx.tripStop.delete({ where: { id: req.params.stopId } });
+        await propagateDelete(tx, userId, gone);
 
         if (existing.routeId === null) return [];
 

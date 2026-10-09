@@ -140,6 +140,17 @@ export type ApiErrorCode =
   | "PACKAGE_READING_INVALID"
   /** One leg of the package cannot be written as a flight; `field` names it. */
   | "PACKAGE_FLIGHT_INVALID"
+  /** Single-trip import (spec 2026-10-09 S3): the upload is not a readable
+   *  `.travstats` file — not a ZIP, no manifest/trip.json, or a schema
+   *  failure (`extra.issues` names the paths). */
+  | "TRIP_FILE_INVALID"
+  /** The `.travstats` file names a format version this server cannot read
+   *  (`extra.formatVersion`, `extra.supported`). */
+  | "TRIP_FILE_VERSION_UNSUPPORTED"
+  /** The `.travstats` file (or one entry in it) is past its size or entry cap (413). */
+  | "TRIP_FILE_TOO_LARGE"
+  /** An entry of the `.travstats` file names a path outside the archive. */
+  | "TRIP_FILE_UNSAFE_PATH"
   /** A trip, booking or flight id the request named is not the caller's. */
   | "TRIP_NOT_FOUND"
   | "BOOKING_NOT_FOUND"
@@ -310,6 +321,39 @@ export type ApiErrorCode =
    *  keeps its local value either way. */
   | "WEB_PREFS_INVALID"
   | "WEB_PREFS_TOO_LARGE"
+  /** Trip sharing (`routes/sharing.ts`, design 2026-10-09). No account of
+   *  that name on this server (404) — sharing never leaves the instance. */
+  | "SHARE_USER_NOT_FOUND"
+  /** A consent request addressed to the requester's own account (400). */
+  | "SHARE_SELF"
+  /** A consent between these two is already pending or accepted (409). */
+  | "SHARE_CONSENT_DUPLICATE"
+  /** No consent of this caller under that id (404) — also answered for
+   *  another pair's consent, so a probe learns nothing. */
+  | "SHARE_CONSENT_NOT_FOUND"
+  /** Accept/decline on a consent that is no longer pending (409). */
+  | "SHARE_CONSENT_NOT_PENDING"
+  /** Linking or sharing needs an accepted consent the other account gave to
+   *  the caller (403). */
+  | "SHARE_CONSENT_REQUIRED"
+  /** No companion of this caller under that id (404). */
+  | "COMPANION_NOT_FOUND"
+  /** Another of the caller's companions is already linked to that account (409). */
+  | "SHARE_COMPANION_ALREADY_LINKED"
+  /** Sharing with a companion that is not linked to an account (409). */
+  | "SHARE_COMPANION_NOT_LINKED"
+  /** Leaving a group with a trip that is in none (409). */
+  | "SHARE_TRIP_NOT_SHARED"
+  /** No share notice of this caller under that id (404). */
+  | "SHARE_NOTICE_NOT_FOUND"
+  /** Undo refused: the copy changed since the notice; `extra.fields` names
+   *  the facts that differ (409). */
+  | "SHARE_UNDO_STALE"
+  /** The notice is not one that can be acted on that way (not a change, or
+   *  already undone) (409). */
+  | "SHARE_UNDO_UNAVAILABLE"
+  /** The caller's own copy of the entry is gone (deleted or moved away) (409). */
+  | "SHARE_COPY_NOT_FOUND"
   /** A rental evidence category on a document not filed with a rental (forgejo#239). */
   | "DOCUMENT_CATEGORY_NOT_RENTAL"
   /** Merging two places (forgejo#232, `services/places/placeMerge.ts`): a

@@ -1,5 +1,6 @@
 import type { Flight } from "../../prisma";
 
+import { propagateWrite, shareSnapshot } from "../sharing/propagate";
 import { prisma } from "../../db";
 import type { CreateFlightInput } from "../../schemas/flight";
 import { buildFlightMergePatch, type MergeableField } from "../../utils/flightMerge";
@@ -148,6 +149,7 @@ async function mergeInto(
     mergedFields.length === 0
       ? existingFull
       : await prisma.$transaction(async (tx) => {
+          const before = await shareSnapshot(tx, "flight", existing.id);
           if (resolved !== undefined) {
             await tx.flightCompanion.deleteMany({ where: { flightId: existing.id } });
             if (resolved.length > 0) {
@@ -160,10 +162,12 @@ async function mergeInto(
               });
             }
           }
-          return tx.flight.update({
+          const merged = await tx.flight.update({
             where: { id: existing.id },
             data: { ...patch, lastModifiedBy: "user" },
           });
+          await propagateWrite(tx, userId, "flight", existing.id, before);
+          return merged;
         });
 
   return { kind: "merged", flight, mergedFields };

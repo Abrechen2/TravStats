@@ -25,6 +25,7 @@ import DevicesSection from "../../components/Settings/DevicesSection";
 import AboutSection from "../../components/Settings/AboutSection";
 import ImportSection from "../../components/Settings/ImportSection";
 import TripsSection from "../../components/Settings/TripsSection";
+import SharingSection from "../../components/Settings/SharingSection";
 import FeaturesSection from "../../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../../components/Settings/CruisePreferencesSection";
 import LoyaltySection from "../../components/Settings/LoyaltySection";
@@ -114,7 +115,13 @@ export default function SettingsSectionSwitch({
     case "import":
       return <ImportSection />;
     case "trips":
-      return <TripsSection />;
+      return (
+        <div className="space-y-4">
+          <TripsSection />
+          {/* Shared trips (design 2026-10-09): consent and companion links. */}
+          <SharingSection />
+        </div>
+      );
     case "notifications":
       return <NotificationsSection />;
     case "about":

@@ -29,6 +29,7 @@ import { toUtcDate } from "../services/flights/mergedChronology";
 import { buildFlightCreateData } from "../services/flights/flightCreateData";
 import { enrichFlightsForClients } from "../services/flightAirportFacts";
 import { ownedTripIds } from "./flights/createLinks";
+import { propagateWrites } from "../services/sharing/propagate";
 
 const router = Router();
 
@@ -348,6 +349,14 @@ router.post(
             "[Batch] Auto-created trip from PNR group"
           );
         }
+
+        // Flights filed on a shared trip are copied to its other members.
+        await propagateWrites(
+          tx,
+          userId,
+          "flight",
+          flights.map((f) => f.id)
+        );
 
         // Re-read: the grouping updateMany made the in-memory rows stale
         // (old price, missing tripId/bookingId) — the response must show the

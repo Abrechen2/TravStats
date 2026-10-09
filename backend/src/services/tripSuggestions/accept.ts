@@ -1,4 +1,5 @@
 import { prisma, type DbTransaction } from "../../db";
+import { propagateWrites } from "../sharing/propagate";
 import { AppError } from "../../middleware/errorHandler";
 import { TRIP_COLORS } from "../../schemas/trip";
 import { statusFromOwnDates } from "../trips/ownDatesStatus";
@@ -78,6 +79,11 @@ async function linkMembers(
   ]);
   const linked = counts.reduce((n, c) => n + (c?.count ?? 0), 0);
   if (linked !== members.length) throw staleError();
+  // Linked into a shared trip: copied to its other members.
+  await propagateWrites(tx, userId, "flight", ids("flight"));
+  await propagateWrites(tx, userId, "rail", ids("rail"));
+  await propagateWrites(tx, userId, "cruise", ids("cruise"));
+  await propagateWrites(tx, userId, "lodgingStay", ids("lodging"));
   return linked;
 }
 

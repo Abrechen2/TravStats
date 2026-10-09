@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { propagateDeletes, shareSnapshots } from "../sharing/propagate";
 import logger from "../../utils/logger";
 import { AppError } from "../../middleware/errorHandler";
 import {
@@ -92,7 +93,18 @@ export async function revertLodgingImportBatch(
       });
       if (!batch) throw new AppError("Import batch not found", 404);
 
+      // Stays of a shared trip among them: the other members are told.
+      const keyed = await tx.lodgingStay.findMany({
+        where: { userId, batchId, shareKey: { not: null } },
+        select: { id: true },
+      });
+      const gone = await shareSnapshots(
+        tx,
+        "lodgingStay",
+        keyed.map((s) => s.id)
+      );
       const stays = await tx.lodgingStay.deleteMany({ where: { userId, batchId } });
+      await propagateDeletes(tx, userId, [...gone.values()]);
 
       // A house is "empty" only when NOTHING the user added afterwards hangs
       // from it. Stays were the only thing counted, so a hotel the import

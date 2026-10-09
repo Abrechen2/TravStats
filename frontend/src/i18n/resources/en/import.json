@@ -191,5 +191,55 @@
       "noTemplate": "There is no tour operator template for this document yet. Nothing was read.",
       "invalidReading": "The template for {{issuer}} recognises the document but reads it incompletely. Nothing was read."
     }
+  },
+  "tripFile": {
+    "routeTitle": "Import trip",
+    "routeDescription": "Read a .travstats file that you or someone else exported from TravStats.",
+    "action": "Choose file",
+    "title": "Import trip",
+    "intro": "Exported on {{date}} with TravStats {{version}}. Nothing is saved until you confirm.",
+    "loading": "Comparing with your logbook …",
+    "included": "In the file: {{list}}",
+    "includedNone": "Only the trip's facts — no documents, photos or personal details.",
+    "includes": {
+      "documents": "documents",
+      "photos": "photos",
+      "private": "personal details"
+    },
+    "sections": {
+      "trip": "Trip",
+      "bookings": "Bookings",
+      "entries": "Entries",
+      "files": "Files"
+    },
+    "kind": {
+      "flight": "Flight",
+      "stay": "Stay",
+      "cruise": "Cruise",
+      "rail": "Rail",
+      "rental": "Rental car",
+      "visit": "Place",
+      "stop": "Stop"
+    },
+    "files": {
+      "documents": "Documents: {{create}} new, {{skip}} already there",
+      "photos": "Photos: {{create}} new, {{skip}} already there",
+      "journal": "Journal: {{create}} new, {{skip}} already there"
+    },
+    "nothingNew": "Everything in this file is already there.",
+    "commit": "Import trip",
+    "committing": "Saving …",
+    "saved": "Trip imported: {{created}} new, {{attached}} attached, {{skipped}} skipped.",
+    "documentsRefused_one": "{{count}} document was not imported because its format is not supported.",
+    "documentsRefused_other": "{{count}} documents were not imported because their format is not supported.",
+    "errors": {
+      "invalid": "This is not a valid .travstats file.",
+      "version": "This file comes from a newer TravStats version and cannot be read here yet.",
+      "tooLarge": "The file is too large to import.",
+      "unsafe": "The file contains forbidden paths and was refused.",
+      "rateLimited": "Too many imports in a short time. Please wait a few minutes.",
+      "preview": "The file could not be read. Please try again.",
+      "commit": "The trip could not be saved. Nothing was imported."
+    }
   }
 }

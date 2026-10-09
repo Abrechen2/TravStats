@@ -14,6 +14,7 @@
  * forgetting it is the AUD-038 hole.
  */
 
+import { propagateWrite, shareSnapshot } from "../sharing/propagate";
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { Prisma } from "../../prisma";
@@ -76,7 +77,10 @@ export async function createStayRecord(
     data,
     provenance
   );
-  return prisma.lodgingStay.create({ data: { ...columns, lodgingId, userId } });
+  const created = await prisma.lodgingStay.create({ data: { ...columns, lodgingId, userId } });
+  // On a shared trip: copied to the other members (design 2026-10-09).
+  await propagateWrite(prisma, userId, "lodgingStay", created.id);
+  return created;
 }
 
 /** A new stay's columns, without its lodging and owner. */
@@ -336,7 +340,8 @@ export async function updateStayRecord(
     origin
   );
 
-  return prisma.lodgingStay.update({
+  const before = await shareSnapshot(prisma, "lodgingStay", stay.id);
+  const updated = await prisma.lodgingStay.update({
     where: { id: stay.id },
     data: {
       ...input,
@@ -369,4 +374,6 @@ export async function updateStayRecord(
       }),
     },
   });
+  await propagateWrite(prisma, userId, "lodgingStay", stay.id, before);
+  return updated;
 }

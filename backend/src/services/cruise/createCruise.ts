@@ -30,6 +30,7 @@ import {
 } from "../timeModel/cruiseColumns";
 import { dayAnchorNow } from "../../shared/time/clock";
 import { profileZoneOf } from "../../shared/time/profileZone";
+import { propagateWrite } from "../sharing/propagate";
 
 export type CreateCruiseData = Omit<z.infer<typeof createCruiseSchema>, "importBatchId">;
 
@@ -151,6 +152,7 @@ export async function createCruiseRecord(
     }
 
     await recomputeLegsForCruise(created.id, tx);
+    await propagateWrite(tx, userId, "cruise", created.id);
     return tx.cruise.findUniqueOrThrow({ where: { id: created.id }, include: CRUISE_INCLUDE });
   });
 

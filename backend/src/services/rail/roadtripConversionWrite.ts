@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { propagateWrites } from "../sharing/propagate";
 import { handExpensesToTrips, standaloneExpenseCount } from "../expenses/sectionRemoval";
 import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
@@ -231,13 +232,35 @@ export async function convertRoadtripToRail(
     // `skipDuplicates` on the per-user externalRef: a concurrent second
     // request writes nothing twice rather than failing.
     const { count } = await tx.railJourney.createMany({ data: rows, skipDuplicates: true });
+    // New rides on a shared trip are copied to the other members.
+    const newRides = await tx.railJourney.findMany({
+      where: { userId, externalRef: { in: rows.map((r) => r.externalRef as string) } },
+      select: { id: true },
+    });
+    await propagateWrites(
+      tx,
+      userId,
+      "rail",
+      newRides.map((r) => r.id)
+    );
     if (options.removeSection) {
       // As the tour delete does it: a stop borrowed from a trip's timeline
       // goes back to the trip, the section's own stops go with it.
+      const returned = await tx.tripStop.findMany({
+        where: { routeId: section.id, tripId: { not: null } },
+        select: { id: true },
+      });
       await tx.tripStop.updateMany({
         where: { routeId: section.id, tripId: { not: null } },
         data: { routeId: null, routeOrderIdx: null, lodgingStayId: null, overnight: false },
       });
+      // Back on the timeline of a shared trip, a stop is shared like any other.
+      await propagateWrites(
+        tx,
+        userId,
+        "stop",
+        returned.map((r) => r.id)
+      );
       await handExpensesToTrips(tx, [section.id]);
       await tx.tripRoute.delete({ where: { id: section.id } });
     }
