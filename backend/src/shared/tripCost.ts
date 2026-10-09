@@ -179,8 +179,11 @@ export function tripCostItems(trip: TripCostInput): TripCostItems {
     rows.filter((row) => row.status !== "cancelled");
 
   for (const booking of trip.bookings) {
-    if (booking.segmentCount > 0 || !isAmountRecorded(booking.price)) continue;
-    take("booking", { ...ownPrice(booking), priced: true });
+    if (booking.segmentCount > 0) continue;
+    // A segment-less booking IS the entry: without a price it is an unpriced
+    // one, said as such rather than skipped (review M7).
+    const own = ownPrice(booking);
+    take("booking", { ...own, priced: own.amount !== null });
   }
   for (const flight of live(trip.flights)) {
     const own: CostAmount = {

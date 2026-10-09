@@ -28,6 +28,8 @@ import { freeStationNights, roadtripHasStarted } from "./roadtripEvidence";
 import type { TripAccountInput } from "./tripAccount";
 import type { ExpenseAccountRow } from "./expenseAccount";
 import { TRIP_COST_SELECT, expenseMoney, toTripCostInput } from "../trip/tripCostLoad";
+import { loadVisibleDomainSet, rowsIfVisible, type VisibleDomains } from "../domainVisibility";
+import type { DomainKey } from "../../shared/domains";
 
 /** A stay, plus what an evidence entry needs to name it and to link to it. */
 export interface TravelAccountStayRow extends AccountStay {
@@ -86,7 +88,18 @@ const RAIL_NIGHT_SELECT = {
   arrPrecision: true,
 } as const;
 
-export async function loadTravelAccountData(userId: string): Promise<TravelAccountData> {
+/**
+ * `visible` is the user's domain gate (`domainVisibility.loadVisibleDomainSet`),
+ * the same set the trips page prices with: every row of a domain the user does
+ * not see is dropped here, from the nights, the coverage and the money alike,
+ * so a trip has one total on both surfaces and a beta-gated domain shows on
+ * neither (forgejo#274/#275/#266, controller ruling 2026-10-09).
+ */
+export async function loadTravelAccountData(
+  userId: string,
+  visible: VisibleDomains
+): Promise<TravelAccountData> {
+  const when = <T>(domain: DomainKey, rows: T[]): T[] => rowsIfVisible(visible, domain, rows);
   const now = new Date();
   const [stays, cruises, flights, trips, roadtrips, expenses, rail] = await Promise.all([
     prisma.lodgingStay.findMany({
@@ -201,7 +214,7 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
     }),
     prisma.tripExpense.findMany({
       where: { userId },
-      select: { amount: true, currency: true, date: true },
+      select: { amount: true, currency: true, date: true, routeId: true },
     }),
     prisma.railJourney.findMany({
       where: { userId },
@@ -219,7 +232,7 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
   const tzMap = await buildTzMap(flights);
 
   return {
-    stays: stays.map((s) => ({
+    stays: when("lodging", stays).map((s) => ({
       id: s.id,
       lodgingId: s.lodgingId,
       lodgingName: s.lodging.name,
@@ -229,14 +242,14 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
       datePrecision: s.datePrecision,
       nights: s.nights,
     })),
-    cruises: cruises.map((c) => ({
+    cruises: when("cruise", cruises).map((c) => ({
       id: c.id,
       status: c.status,
       startDate: c.startDate,
       endDate: c.endDate,
       label: c.routeName ?? c.shipNameOverride ?? c.ship?.name ?? "—",
     })),
-    flights: flights.map((f) => {
+    flights: when("flight", flights).map((f) => {
       const depTz =
         (f.depIata ? tzMap.get(f.depIata) : undefined) ??
         (f.depIcao ? tzMap.get(f.depIcao) : undefined) ??
@@ -263,7 +276,7 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
             : null,
       };
     }),
-    freeNights: roadtrips
+    freeNights: when("roadtrip", roadtrips)
       // A planned roadtrip counts nowhere, the cut the Stats overview makes.
       .filter((route) => roadtripHasStarted(route.stops, now))
       .flatMap((route) =>
@@ -282,7 +295,7 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
             : [];
         })
       ),
-    rail: rail.map(({ trainNumber, depStationName, arrStationName, ...ride }) => {
+    rail: when("rail", rail).map(({ trainNumber, depStationName, arrStationName, ...ride }) => {
       const train = [ride.trainCategory, trainNumber].filter(Boolean).join(" ");
       const route = `${depStationName} → ${arrStationName}`;
       return { ...ride, label: train ? `${train} · ${route}` : route };
@@ -297,13 +310,30 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
       tags: t.tags,
       journalEntries: t.journalEntries,
       photoCount: t._count.photos,
-      ...toTripCostInput(t),
-      stays: t.lodgingStays,
-      cruises: t.cruises,
-      flights: t.flights,
-      rail: t.railJourneys,
+      // The money from the gated rows, priced by the rule; the dated rows
+      // below only say which nights the trip covers — through the same gate.
+      cost: toTripCostInput(t, visible),
+      stays: when("lodging", t.lodgingStays),
+      cruises: when("cruise", t.cruises),
+      flights: when("flight", t.flights),
+      rail: when("rail", t.railJourneys),
     })),
-    expenses: expenses.map((e) => ({ ...expenseMoney(e), date: e.date })),
+    // A section's expense lives on its roadtrip page, behind that gate.
+    expenses: [
+      ...expenses.filter((e) => e.routeId === null),
+      ...when(
+        "roadtrip",
+        expenses.filter((e) => e.routeId !== null)
+      ),
+    ].map((e) => ({ ...expenseMoney(e), date: e.date })),
     now,
   };
+}
+
+/**
+ * `loadTravelAccountData` behind the user's OWN gate — what `/stats/travel-account`
+ * and its evidence read, the set the trips page prices with (review I1).
+ */
+export async function loadVisibleTravelAccountData(userId: string): Promise<TravelAccountData> {
+  return loadTravelAccountData(userId, await loadVisibleDomainSet(userId));
 }

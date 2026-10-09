@@ -4,6 +4,10 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { assertSumInvariant } from "../../services/evidence/__tests__/invariants";
+import {
+  getInstanceSettings,
+  updateInstanceSettings,
+} from "../../services/instanceSettingsService";
 
 /**
  * `metric` evidence for the ten served `TravelAccountSection` measures
@@ -44,6 +48,7 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
   let juneStayId: string;
   let cruiseId: string;
   let railId: string;
+  let betaBefore: boolean;
   let coveredTripId: string;
   let gappedTripId: string;
 
@@ -91,6 +96,16 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
     ]);
     userAId = userA.id;
     userBId = userB.id;
+    // The account reads the user's domain gate (forgejo#274 review I1/I2):
+    // user A sees every domain the fixture uses, rail behind the beta switch.
+    betaBefore = (await getInstanceSettings()).betaFeaturesEnabled;
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    await prisma.userSettings.createMany({
+      data: [
+        { userId: userAId, enabledDomains: ["flight", "cruise", "lodging", "rail"], data: {} },
+        { userId: userBId, enabledDomains: ["flight", "lodging"], data: {} },
+      ],
+    });
     userACookie = `auth_token=${generateToken(userA.id)}`;
     userBCookie = `auth_token=${generateToken(userB.id)}`;
 
@@ -234,6 +249,8 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
   });
 
   afterAll(async () => {
+    await updateInstanceSettings({ betaFeaturesEnabled: betaBefore });
+    await prisma.userSettings.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
     await prisma.lodgingStay.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
     await prisma.lodging.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
     await prisma.cruise.deleteMany({ where: { userId: userAId } });

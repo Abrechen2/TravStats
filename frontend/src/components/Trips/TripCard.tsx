@@ -206,6 +206,9 @@ export default function TripCard({ trip, onOpen }: TripCardProps): JSX.Element {
             style={figure}
             title={unpriced > 0 ? t("trips:costUnpriced", { count: unpriced }) : undefined}
           >
+            {/* A visible floor, not only a tooltip: the web is drawn for iPads,
+                and a touch screen never shows a `title` (review M2). */}
+            {costTotals.length > 0 && unpriced > 0 && "≥ "}
             {costTotals.length > 0
               ? costTotals
                   .map((c) =>

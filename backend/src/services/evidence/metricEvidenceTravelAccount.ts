@@ -11,7 +11,9 @@ import {
   stayEvidenceEntry,
   tripEvidenceEntry,
 } from "./entryMappersDomains";
-import { loadTravelAccountData, type TravelAccountData } from "../stats/travelAccountData";
+// The endpoint's own loader behind the endpoint's own gate: evidence names
+// exactly the rows the tile counted, hidden domains out of both (review I1).
+import { loadVisibleTravelAccountData, type TravelAccountData } from "../stats/travelAccountData";
 import {
   attributeTravelNights,
   buildTravelAccount,
@@ -78,7 +80,7 @@ interface AccountIndex {
 }
 
 async function loadAccountIndex(userId: string): Promise<AccountIndex> {
-  const data = await loadTravelAccountData(userId);
+  const data = await loadVisibleTravelAccountData(userId);
   return { data, nights: attributeTravelNights(data).nights };
 }
 
@@ -230,7 +232,7 @@ export async function resolveTravelAccountUnassignedNights(
   page: PagingParams
 ): Promise<EvidenceResponse> {
   requireAllTime(scope, "travelAccountUnassignedNights");
-  const data = await loadTravelAccountData(userId);
+  const data = await loadVisibleTravelAccountData(userId);
   const account = buildTravelAccount(data);
   const unassigned = account.years.reduce((total, year) => total + year.unassignedNights, 0);
   return {
@@ -344,7 +346,7 @@ async function loadTripAccount(userId: string): Promise<{
   rows: ReturnType<typeof buildTripAccount>;
   startDateById: Map<string, Date | null>;
 }> {
-  const data = await loadTravelAccountData(userId);
+  const data = await loadVisibleTravelAccountData(userId);
   return {
     rows: buildTripAccount(data.trips),
     startDateById: new Map(data.trips.map((trip) => [trip.id, trip.startDate])),

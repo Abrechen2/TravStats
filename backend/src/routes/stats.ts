@@ -48,7 +48,7 @@ import {
 } from "../utils/stats/timeseries";
 import { readYearQuery } from "../utils/stats/domainYear";
 import { buildTravelAccount } from "../services/stats/travelAccount";
-import { loadTravelAccountData } from "../services/stats/travelAccountData";
+import { loadVisibleTravelAccountData } from "../services/stats/travelAccountData";
 import { loadCruiseStatsData } from "../services/stats/cruiseStatsData";
 import { buildCruiseTabResponse } from "../services/stats/cruiseTabResponse";
 import { loadLodgingStatsData } from "../services/stats/lodgingStatsData";
@@ -1280,7 +1280,7 @@ router.get(
         return;
       }
 
-      const data = await loadTravelAccountData(userId);
+      const data = await loadVisibleTravelAccountData(userId);
       const account = buildTravelAccount(data);
       const tripAccount = buildTripAccount(data.trips);
       res.json({ account, trips: tripAccount, expenses: buildExpenseAccount(data.expenses) });

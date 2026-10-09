@@ -33,7 +33,13 @@ describe("GET /trips and /trips/:id — the trip's cost", () => {
         arrStationName: "Paris Nord",
         arrLat: 48.88,
         arrLon: 2.35,
-        departureTime: new Date("2025-04-01T08:00:00Z"),
+        // A Nightjet: 22:58 in Köln on 1 April, 08:00 in Paris on the 2nd.
+        trainCategory: "NJ",
+        travelClass: "sleeper",
+        depTimezone: "Europe/Berlin",
+        arrTimezone: "Europe/Paris",
+        departureTime: new Date("2025-04-01T20:58:00Z"),
+        arrivalTime: new Date("2025-04-02T06:00:00Z"),
         status: "completed",
         price,
         currency: "EUR",
@@ -59,6 +65,9 @@ describe("GET /trips and /trips/:id — the trip's cost", () => {
 
   afterEach(async () => {
     await prisma.railJourney.deleteMany({ where: { userId } });
+    await prisma.rentalBooking.deleteMany({ where: { userId } });
+    await prisma.tripExpense.deleteMany({ where: { userId } });
+    await prisma.tripRoute.deleteMany({ where: { userId } });
     await prisma.flight.deleteMany({ where: { userId } });
     await prisma.trip.deleteMany({ where: { userId } });
   });
@@ -149,4 +158,66 @@ describe("GET /trips and /trips/:id — the trip's cost", () => {
     const detail = await request(app).get(`/api/v1/trips/${trip.id}`).set("Cookie", cookie);
     expect(detail.body.trip.cost).toEqual({ spendByCurrency: { EUR: 89 }, unpricedEntries: 0 });
   });
+
+  /**
+   * Review I1/I2 (controller ruling 2026-10-09): the trips page and the
+   * statistics' travel account read ONE source set. With the beta switch off,
+   * the night train, the rental and the roadtrip's fuel are out of BOTH — the
+   * card, the stats row and the night account — and with it on, in both.
+   */
+  it("prices a trip the same on /trips and /stats/travel-account, hidden domains out of both", async () => {
+    const trip = await prisma.trip.create({ data: { userId, name: "Mixed", status: "completed" } });
+    await ride(trip.id, 89);
+    await prisma.rentalBooking.create({
+      data: {
+        userId,
+        tripId: trip.id,
+        provider: "Testcar",
+        pickupStationName: "Paris Nord",
+        pickupLat: 48.88,
+        pickupLon: 2.35,
+        pickupTimezone: "Europe/Paris",
+        returnStationName: "Paris Nord",
+        returnLat: 48.88,
+        returnLon: 2.35,
+        returnTimezone: "Europe/Paris",
+        pickupTime: new Date("2025-04-02T08:00:00Z"),
+        returnTime: new Date("2025-04-04T08:00:00Z"),
+        status: "completed",
+        price: 210,
+        currency: "EUR",
+      },
+    });
+    const roadtrip = await prisma.tripRoute.create({
+      data: { userId, tripId: trip.id, name: "Normandie", mode: "road", kind: "roadtrip" },
+    });
+    await prisma.tripExpense.createMany({
+      data: [
+        { userId, routeId: roadtrip.id, kind: "fuel", amount: 30, currency: "EUR" },
+        // Trip-wide: no domain, always counted.
+        { userId, tripId: trip.id, kind: "parking", amount: 5, currency: "EUR" },
+      ],
+    });
+    await enableDomains(["flight", "rail", "rental", "roadtrip"]);
+
+    const surfaces = async () => {
+      const list = await request(app)
+        .get("/api/v1/trips?includeInsights=true")
+        .set("Cookie", cookie);
+      const stats = await request(app).get("/api/v1/stats/travel-account").set("Cookie", cookie);
+      expect(stats.status).toBe(200);
+      const years = stats.body.account.years as Array<{ railNights: number }>;
+      return {
+        card: list.body.trips.find((t: { id: string }) => t.id === trip.id).cost.spendByCurrency,
+        stats: stats.body.trips.trips.find((t: { id: string }) => t.id === trip.id).spendByCurrency,
+        railNights: years.reduce((sum, y) => sum + y.railNights, 0),
+      };
+    };
+
+    await updateInstanceSettings({ betaFeaturesEnabled: false });
+    expect(await surfaces()).toEqual({ card: { EUR: 5 }, stats: { EUR: 5 }, railNights: 0 });
+
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    expect(await surfaces()).toEqual({ card: { EUR: 334 }, stats: { EUR: 334 }, railNights: 1 });
+  }, 30_000);
 });

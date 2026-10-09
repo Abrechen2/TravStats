@@ -165,6 +165,15 @@ describe("tripCostItems — what an entry on a trip costs", () => {
     expect(spend(input).spendByCurrency).toEqual({ EUR: 400 });
   });
 
+  it("names a segment-less booking without a price as unpriced instead of skipping it", () => {
+    const input = trip({ bookings: [{ ...eur(null), segmentCount: 0 }] });
+    expect(spend(input)).toEqual({
+      spendByCurrency: {},
+      spendBaseByCurrency: {},
+      unpricedEntries: 1,
+    });
+  });
+
   it("adds trip expenses as their own items, with no snapshot", () => {
     const input = trip({
       stays: [stay({ totalPrice: 300, totalPriceBase: 300, fxBaseCurrency: "EUR" })],

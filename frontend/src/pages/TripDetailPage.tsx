@@ -12,8 +12,7 @@ import {
 import { clockOf, type TimeValue } from "../shared/time";
 import { logger } from "../lib/logger";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
-import { sumByCurrency } from "../lib/bookingCost";
-import { formatAmount, formatCurrency } from "../lib/units";
+import { formatAmount } from "../lib/units";
 import { assessStayPlausibility } from "../shared/stayPlausibility";
 import { computeRailStates } from "../lib/timelineRail";
 import { buildTimelineEvents, type TimelineEvent } from "../lib/tripTimelineEvents";
@@ -985,8 +984,6 @@ function LogisticsTab({
   const bookings = trip.bookings ?? [];
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
 
-  const costTotals = sumByCurrency(bookings);
-
   const railJourneys = trip.railJourneys ?? [];
   if (!flights.length && !cruises.length && !bookings.length && !railJourneys.length) {
     return <Placeholder text={t("trips:detail.noLogistics")} />;
@@ -1091,16 +1088,10 @@ function LogisticsTab({
         >
           <PanelHeader>
             {t("trips:detail.logistics.bookings")} ({bookings.length})
-            {costTotals.length > 0 && (
-              <span className="ml-2 text-xs font-normal" style={{ color: "var(--text-muted)" }}>
-                · {t("trips:detail.logistics.totalBooked")}:{" "}
-                <strong style={{ color: "var(--text-primary)" }}>
-                  {costTotals
-                    .map((c) => formatCurrency(c.total, c.currency, { compact: true, language }))
-                    .join(" + ")}
-                </strong>
-              </span>
-            )}
+            {/* No subtotal here: a client sum of the booking list could differ
+                from the trip's cost the overview shows — the server's figure,
+                which counts trains, rentals and expenses and a booking only on
+                the trip its segments are on (forgejo#274 review M8). */}
           </PanelHeader>
           <table className="w-full text-sm">
             <thead>

@@ -3,6 +3,9 @@ import { hashPassword } from "../../../utils/password";
 import { mostExpensiveTrip } from "../tripCostSuperlative";
 import { loadTravelAccountData } from "../../stats/travelAccountData";
 import { buildTripAccount } from "../../stats/tripAccount";
+import { AVAILABLE_DOMAINS } from "../../../shared/domains";
+/** Every domain shown — these cases are about the rule, not the gate (trips.cost.test.ts is). */
+const EVERY_DOMAIN = new Set(AVAILABLE_DOMAINS);
 
 /**
  * forgejo#275: train rides and rentals are cost sources of a trip. The travel
@@ -56,7 +59,7 @@ describe("trip cost — train rides, rentals, roadtrips and expenses", () => {
     prisma.trip.create({ data: { userId, name, status: "completed" } });
 
   const row = async (tripId: string) => {
-    const account = buildTripAccount((await loadTravelAccountData(userId)).trips);
+    const account = buildTripAccount((await loadTravelAccountData(userId, EVERY_DOMAIN)).trips);
     return account.trips.find((r) => r.id === tripId)!;
   };
 
@@ -88,7 +91,10 @@ describe("trip cost — train rides, rentals, roadtrips and expenses", () => {
     await ride({ tripId: trip.id, price: 189 });
 
     expect((await row(trip.id)).spendByCurrency).toEqual({ EUR: 189 });
-    expect(await mostExpensiveTrip(userId)).toMatchObject({ tripId: trip.id, amount: 189 });
+    expect(await mostExpensiveTrip(userId, EVERY_DOMAIN)).toMatchObject({
+      tripId: trip.id,
+      amount: 189,
+    });
   });
 
   it("a connection of three trains on one booking costs the booking once", async () => {
@@ -117,7 +123,10 @@ describe("trip cost — train rides, rentals, roadtrips and expenses", () => {
 
     expect((await row(invoiced.id)).spendByCurrency).toEqual({ EUR: 342.5 });
     expect((await row(booked.id)).spendByCurrency).toEqual({ EUR: 300 });
-    expect(await mostExpensiveTrip(userId)).toMatchObject({ tripId: invoiced.id, amount: 342.5 });
+    expect(await mostExpensiveTrip(userId, EVERY_DOMAIN)).toMatchObject({
+      tripId: invoiced.id,
+      amount: 342.5,
+    });
   });
 
   it("a rental on the trip's roadtrip is billed once, and its fuel and tolls stay their own", async () => {
@@ -164,7 +173,10 @@ describe("trip cost — train rides, rentals, roadtrips and expenses", () => {
     });
 
     expect((await row(trip.id)).spendByCurrency).toEqual({ EUR: 420 });
-    expect(await mostExpensiveTrip(userId)).toMatchObject({ tripId: trip.id, amount: 420 });
+    expect(await mostExpensiveTrip(userId, EVERY_DOMAIN)).toMatchObject({
+      tripId: trip.id,
+      amount: 420,
+    });
     await prisma.flight.deleteMany({ where: { userId } });
   });
 
@@ -203,7 +215,7 @@ describe("trip cost — train rides, rentals, roadtrips and expenses", () => {
       data: { userId, tripId: foreign.id, kind: "toll", amount: 9000, currency: "NOK" },
     });
 
-    expect(await mostExpensiveTrip(userId)).toEqual({
+    expect(await mostExpensiveTrip(userId, EVERY_DOMAIN)).toEqual({
       tripId: withFerry.id,
       name: "With ferry",
       amount: 130,

@@ -6,6 +6,10 @@ import { loadTravelAccountData } from "../travelAccountData";
 import { buildTravelAccount } from "../travelAccount";
 import { resolveTravelAccountHotelNights } from "../../evidence/metricEvidenceTravelAccount";
 import { assertSumInvariant } from "../../evidence/__tests__/invariants";
+import { AVAILABLE_DOMAINS } from "../../../shared/domains";
+import { getInstanceSettings, updateInstanceSettings } from "../../instanceSettingsService";
+/** Every domain shown — these cases are about the rule, not the gate (trips.cost.test.ts is). */
+const EVERY_DOMAIN = new Set(AVAILABLE_DOMAINS);
 
 /**
  * Audit, 2.7: the Stats overview counted a roadtrip's countries, and three
@@ -131,18 +135,25 @@ describe("roadtrips in the passport, the nights account and days away", () => {
   });
 
   it("the nights account bills the free-pitch nights as nights away, and the hotel night once", async () => {
-    const account = buildTravelAccount(await loadTravelAccountData(userId));
+    const account = buildTravelAccount(await loadTravelAccountData(userId, EVERY_DOMAIN));
     const y2024 = account.years.find((y) => y.year === "2024");
     // Two free nights (13th, 14th) plus the one stay night (15th).
     expect(y2024?.hotelNights).toBe(3);
 
     // The panel behind the tile names the free-pitch station, linked to its
     // roadtrip, and its entries still add up to the tile.
+    // The resolver reads the user's own domain gate (forgejo#274 review I1):
+    // lodging and roadtrips shown, roadtrips behind the beta switch.
+    const betaBefore = (await getInstanceSettings()).betaFeaturesEnabled;
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    await prisma.userSettings.create({
+      data: { userId, enabledDomains: ["flight", "lodging", "roadtrip"], data: {} },
+    });
     const res = await resolveTravelAccountHotelNights(
       userId,
       { period: { kind: "allTime" } },
       { offset: 0, limit: 50 }
-    );
+    ).finally(() => updateInstanceSettings({ betaFeaturesEnabled: betaBefore }));
     expect(res.measure.value).toBe(3);
     assertSumInvariant(res, Math.round);
     expect(res.entries.find((e) => e.domain === "roadtrip")).toMatchObject({

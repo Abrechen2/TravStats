@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import { useEffect, useState } from "react";
 import { statsApi } from "../../../lib/api/stats";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { useRailVisible } from "../../../hooks/useRailVisible";
 import { logger } from "../../../lib/logger";
 import type { TravelAccountResponse, TravelAccountYear } from "../../../types/travelAccount";
 import StatCard from "../StatCard";
@@ -36,6 +37,11 @@ type BucketKey = (typeof BUCKETS)[number]["key"];
  */
 export default function TravelAccountSection(): JSX.Element | null {
   const { t } = useTranslation(["stats", "common"]);
+  // Rail sits behind the beta switch. The server already leaves a hidden
+  // domain's nights out (forgejo#274 review I2); the legend and the help line
+  // must not name it either.
+  const railVisible = useRailVisible();
+  const buckets = railVisible ? BUCKETS : BUCKETS.filter((b) => b.key !== "railNights");
   const [data, setData] = useState<TravelAccountResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -81,21 +87,27 @@ export default function TravelAccountSection(): JSX.Element | null {
         {t("stats:travelAccount.subtitle")}
         {account.contestedNights > 0 &&
           ` · ${t("stats:travelAccount.contested", { count: account.contestedNights })}`}
-        {(account.undatedNightTrains ?? 0) > 0 &&
+        {railVisible &&
+          (account.undatedNightTrains ?? 0) > 0 &&
           ` · ${t("stats:travelAccount.undatedNightTrains", { count: account.undatedNightTrains })}`}
       </p>
       <p className="-mt-4 mb-6 text-xs" style={{ color: "var(--text-muted)" }}>
-        {t("stats:travelAccount.help")}
+        {t(railVisible ? "stats:travelAccount.helpWithRail" : "stats:travelAccount.help")}
       </p>
 
       <div className="flex flex-col gap-3">
         {account.years.map((year) => (
-          <YearBar key={year.year} year={year} label={(key) => t(`stats:travelAccount.${key}`)} />
+          <YearBar
+            key={year.year}
+            year={year}
+            buckets={buckets}
+            label={(key) => t(`stats:travelAccount.${key}`)}
+          />
         ))}
       </div>
 
       <div className="mt-6 flex flex-wrap gap-4">
-        {BUCKETS.map((bucket) => (
+        {buckets.map((bucket) => (
           <span key={bucket.key} className="flex items-center gap-2 text-xs">
             <span
               className="inline-block h-3 w-3 rounded-sm"
@@ -185,9 +197,11 @@ export default function TravelAccountSection(): JSX.Element | null {
 /** A single year as one full-width bar. The width IS the year, so the buckets are read as shares. */
 function YearBar({
   year,
+  buckets,
   label,
 }: {
   year: TravelAccountYear;
+  buckets: readonly (typeof BUCKETS)[number][];
   label: (key: BucketKey) => string;
 }): JSX.Element {
   const awayNights = year.hotelNights + year.seaNights + year.railNights + year.airNights;
@@ -203,7 +217,7 @@ function YearBar({
         className="flex h-5 flex-1 overflow-hidden rounded"
         style={{ background: "var(--color-border)" }}
       >
-        {BUCKETS.map((bucket) => {
+        {buckets.map((bucket) => {
           const nights = year[bucket.key];
           if (nights === 0) return null;
           return (

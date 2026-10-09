@@ -3,6 +3,9 @@ import { hashPassword } from "../../../utils/password";
 import { mostExpensiveTrip } from "../tripCostSuperlative";
 import { loadTravelAccountData } from "../../stats/travelAccountData";
 import { buildTripAccount } from "../../stats/tripAccount";
+import { AVAILABLE_DOMAINS } from "../../../shared/domains";
+/** Every domain shown — these cases are about the rule, not the gate (trips.cost.test.ts is). */
+const EVERY_DOMAIN = new Set(AVAILABLE_DOMAINS);
 
 /**
  * forgejo#274: the "most expensive trip" and the travel account are two views
@@ -32,7 +35,7 @@ describe("most expensive trip and travel account — one cost rule", () => {
     });
 
   const accountSpend = async (tripId: string) => {
-    const account = buildTripAccount((await loadTravelAccountData(userId)).trips);
+    const account = buildTripAccount((await loadTravelAccountData(userId, EVERY_DOMAIN)).trips);
     return account.trips.find((row) => row.id === tripId)!;
   };
 
@@ -66,7 +69,7 @@ describe("most expensive trip and travel account — one cost rule", () => {
     await flight({ tripId: trip.id, price: 100, taxes: 20, fees: 10 });
 
     expect((await accountSpend(trip.id)).spendByCurrency).toEqual({ EUR: 130 });
-    expect(await mostExpensiveTrip(userId)).toMatchObject({
+    expect(await mostExpensiveTrip(userId, EVERY_DOMAIN)).toMatchObject({
       tripId: trip.id,
       amount: 130,
       currency: "EUR",
@@ -81,7 +84,10 @@ describe("most expensive trip and travel account — one cost rule", () => {
     await flight({ tripId: trip.id, bookingId: booking.id, price: 100, taxes: 20, fees: 10 });
 
     expect((await accountSpend(trip.id)).spendByCurrency).toEqual({ EUR: 130 });
-    expect(await mostExpensiveTrip(userId)).toMatchObject({ tripId: trip.id, amount: 130 });
+    expect(await mostExpensiveTrip(userId, EVERY_DOMAIN)).toMatchObject({
+      tripId: trip.id,
+      amount: 130,
+    });
   });
 
   it("counter-example 3: A at 130 with fees beats B at 120", async () => {
@@ -90,7 +96,10 @@ describe("most expensive trip and travel account — one cost rule", () => {
     const b = await prisma.trip.create({ data: { userId, name: "B", status: "completed" } });
     await flight({ tripId: b.id, price: 120 });
 
-    expect(await mostExpensiveTrip(userId)).toMatchObject({ tripId: a.id, amount: 130 });
+    expect(await mostExpensiveTrip(userId, EVERY_DOMAIN)).toMatchObject({
+      tripId: a.id,
+      amount: 130,
+    });
   });
 
   it("counts a booking shared by two segments once, and a free booking as free, on both", async () => {
@@ -111,7 +120,10 @@ describe("most expensive trip and travel account — one cost rule", () => {
     const row = await accountSpend(trip.id);
     expect(row.spendByCurrency).toEqual({ EUR: 300 });
     expect(row.unpricedEntries).toBe(0);
-    expect(await mostExpensiveTrip(userId)).toMatchObject({ tripId: trip.id, amount: 300 });
+    expect(await mostExpensiveTrip(userId, EVERY_DOMAIN)).toMatchObject({
+      tripId: trip.id,
+      amount: 300,
+    });
   });
 
   it("does not bill a booking to the trip it is attached to when its segments sit on another", async () => {
@@ -124,7 +136,10 @@ describe("most expensive trip and travel account — one cost rule", () => {
 
     expect((await accountSpend(home.id)).spendByCurrency).toEqual({});
     expect((await accountSpend(away.id)).spendByCurrency).toEqual({ EUR: 500 });
-    expect(await mostExpensiveTrip(userId)).toMatchObject({ tripId: away.id, amount: 500 });
+    expect(await mostExpensiveTrip(userId, EVERY_DOMAIN)).toMatchObject({
+      tripId: away.id,
+      amount: 500,
+    });
   });
 
   it("names an unpriced flight instead of reading it as free", async () => {
@@ -136,6 +151,6 @@ describe("most expensive trip and travel account — one cost rule", () => {
     const row = await accountSpend(trip.id);
     expect(row.spendByCurrency).toEqual({});
     expect(row.unpricedEntries).toBe(1);
-    expect(await mostExpensiveTrip(userId)).toBeNull();
+    expect(await mostExpensiveTrip(userId, EVERY_DOMAIN)).toBeNull();
   });
 });

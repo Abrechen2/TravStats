@@ -46,10 +46,9 @@
 
 import { prisma } from "../../db";
 import { getBaseCurrency } from "../fx/snapshot";
-import { loadVisibleDomains } from "../domainVisibility";
+import { loadVisibleDomainSet, type VisibleDomains } from "../domainVisibility";
 import { tripBaseTotal, tripCostItems, tripSpend } from "../../shared/tripCost";
 import { TRIP_COST_SELECT, toTripCostInput } from "./tripCostLoad";
-import type { DomainKey } from "../../shared/domains";
 
 export interface TripCostSuperlative {
   tripId: string;
@@ -105,13 +104,14 @@ export interface TripCostInsights {
  * The superlative and every trip's own cost from ONE load and ONE rule, so the
  * trips page cannot rank a trip on one figure and print another on its card.
  *
- * `visible` (`services/domainVisibility`) drops the rows of domains the user
- * does not see — the card and the tile may not fold in a hidden domain's money.
- * Without it every source counts, as on the statistics' travel account.
+ * `visible` (`domainVisibility.loadVisibleDomainSet`) drops the rows of
+ * domains the user does not see — the card and the tile may not fold in a
+ * hidden domain's money. It is required, not defaulted: `/stats/travel-account`
+ * passes the same set, and an ungated default is how the two once disagreed.
  */
 export async function tripCostInsights(
   userId: string,
-  visible?: ReadonlySet<DomainKey>
+  visible: VisibleDomains
 ): Promise<TripCostInsights> {
   // The base currency can change (Settings → Instance). Read it ONCE, up
   // front, and compare every snapshot's `fxBaseCurrency` against this same
@@ -184,7 +184,7 @@ export async function tripCostInsights(
  *  started trip carries a recorded cost (0 included). */
 export async function mostExpensiveTrip(
   userId: string,
-  visible?: ReadonlySet<DomainKey>
+  visible: VisibleDomains
 ): Promise<TripCostSuperlative | null> {
   return (await tripCostInsights(userId, visible)).mostExpensiveTrip;
 }
@@ -193,7 +193,7 @@ export async function mostExpensiveTrip(
 export async function tripCostSummary(
   userId: string,
   tripId: string,
-  visible?: ReadonlySet<DomainKey>
+  visible: VisibleDomains
 ): Promise<TripCostSummary | null> {
   const trip = await prisma.trip.findFirst({
     where: { id: tripId, userId },
@@ -208,7 +208,7 @@ export async function tripCostSummary(
 
 /** `tripCostInsights` behind the user's own domain gate — what the trips page is served. */
 export async function tripsPageCosts(userId: string): Promise<TripCostInsights> {
-  return tripCostInsights(userId, new Set(await loadVisibleDomains(userId)));
+  return tripCostInsights(userId, await loadVisibleDomainSet(userId));
 }
 
 /** `tripCostSummary` behind the user's own domain gate — what a trip's page is served. */
@@ -216,5 +216,5 @@ export async function tripPageCost(
   userId: string,
   tripId: string
 ): Promise<TripCostSummary | null> {
-  return tripCostSummary(userId, tripId, new Set(await loadVisibleDomains(userId)));
+  return tripCostSummary(userId, tripId, await loadVisibleDomainSet(userId));
 }

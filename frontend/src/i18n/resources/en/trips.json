@@ -168,8 +168,7 @@
     "logistics": {
       "flights": "Flights",
       "cruises": "Cruises",
-      "bookings": "Bookings",
-      "totalBooked": "Total"
+      "bookings": "Bookings"
     },
     "timeline": {
       "addEntry": "+ Add entry",

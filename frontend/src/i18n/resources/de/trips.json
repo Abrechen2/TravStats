@@ -168,8 +168,7 @@
     "logistics": {
       "flights": "Flüge",
       "cruises": "Kreuzfahrten",
-      "bookings": "Buchungen",
-      "totalBooked": "Gesamt"
+      "bookings": "Buchungen"
     },
     "timeline": {
       "addEntry": "+ Eintrag hinzufügen",

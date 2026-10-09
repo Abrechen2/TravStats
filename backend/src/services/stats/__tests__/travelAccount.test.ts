@@ -1,5 +1,6 @@
 import { attributeTravelNights, buildTravelAccount } from "../travelAccount";
 import { buildTripAccount, type TripAccountInput } from "../tripAccount";
+import type { TripCostInput } from "../../../shared/tripCost";
 
 const NOW = new Date("2026-08-15T12:00:00Z");
 const d = (iso: string): Date => new Date(`${iso}T00:00:00Z`);
@@ -267,25 +268,43 @@ const costFlight = (o: Partial<TripAccountInput["flights"][number]> = {}) => ({
   ...o,
 });
 
-const trip = (o: Partial<TripAccountInput> = {}): TripAccountInput => ({
-  id: "t1",
-  name: "Norwegen",
-  startDate: d("2025-06-01"),
-  endDate: d("2025-06-08"),
-  status: "completed",
-  category: "vacation",
-  tags: [],
-  journalEntries: [],
-  photoCount: 0,
-  bookings: [],
-  stays: [],
-  cruises: [],
-  flights: [],
-  rail: [],
-  rentals: [],
-  expenses: [],
-  ...o,
-});
+/**
+ * A trip whose priced rows are also its dated rows, as the loader builds it
+ * when every domain is shown: `cost` is derived from the same stays, cruises
+ * and flights the coverage reads.
+ */
+const trip = (
+  o: Partial<Omit<TripAccountInput, "cost">> & Partial<TripCostInput> = {}
+): TripAccountInput => {
+  const rows = {
+    stays: [],
+    cruises: [],
+    flights: [],
+    rail: [],
+    ...o,
+  } as unknown as TripAccountInput;
+  return {
+    id: "t1",
+    name: "Norwegen",
+    startDate: d("2025-06-01"),
+    endDate: d("2025-06-08"),
+    status: "completed",
+    category: "vacation",
+    tags: [],
+    journalEntries: [],
+    photoCount: 0,
+    ...rows,
+    cost: {
+      bookings: o.bookings ?? [],
+      flights: (o.flights ?? []) as TripCostInput["flights"],
+      cruises: (o.cruises ?? []) as TripCostInput["cruises"],
+      stays: (o.stays ?? []) as TripCostInput["stays"],
+      rail: (o.rail ?? []) as TripCostInput["rail"],
+      rentals: o.rentals ?? [],
+      expenses: o.expenses ?? [],
+    },
+  };
+};
 
 describe("buildTripAccount", () => {
   it("adds a roadtrip's ferry, tolls and pitch fees to the trip's spend, per currency", () => {

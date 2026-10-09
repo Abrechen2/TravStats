@@ -9,6 +9,7 @@
 import type { Prisma } from "../../prisma";
 import type { TripCostInput } from "../../shared/tripCost";
 import type { DomainKey } from "../../shared/domains";
+import { rowsIfVisible, type VisibleDomains } from "../domainVisibility";
 
 const PRICE = { price: true, currency: true, priceBase: true, fxBaseCurrency: true } as const;
 const BOOKING_PRICE = { select: PRICE } as const;
@@ -88,16 +89,16 @@ export const expenseMoney = (e: { amount: Prisma.Decimal; currency: string }) =>
 });
 
 /**
- * The rule's input for one trip. With `visible` (`services/domainVisibility`)
- * the rows of a domain the user does not see are dropped BEFORE the rule runs,
- * so a booking reached only through a hidden segment goes with it: a figure on
- * screen may not fold in a domain the UI hides (the beta switches stay, owner
- * 2026-10-08). Without it — the statistics' travel account — every source counts.
+ * The rule's input for one trip, behind the user's domain gate
+ * (`domainVisibility.rowsIfVisible`): the rows of a domain the user does not
+ * see are dropped BEFORE the rule runs, so a booking reached only through a
+ * hidden segment goes with it. Every surface that shows a trip's cost passes
+ * the same set — the trips page and `/stats/travel-account` alike — so one
+ * trip never has two totals and a beta-gated domain's money never shows.
  * A segment-less booking and a trip-wide expense belong to no domain and stay.
  */
-export function toTripCostInput(row: TripCostRow, visible?: ReadonlySet<DomainKey>): TripCostInput {
-  const shown = (domain: DomainKey): boolean => visible === undefined || visible.has(domain);
-  const when = <T>(domain: DomainKey, rows: T[]): T[] => (shown(domain) ? rows : []);
+export function toTripCostInput(row: TripCostRow, visible: VisibleDomains): TripCostInput {
+  const when = <T>(domain: DomainKey, rows: T[]): T[] => rowsIfVisible(visible, domain, rows);
   return {
     bookings: row.bookings.map(({ _count, ...booking }) => ({
       ...booking,
@@ -107,10 +108,17 @@ export function toTripCostInput(row: TripCostRow, visible?: ReadonlySet<DomainKe
     cruises: when("cruise", row.cruises),
     stays: when("lodging", row.lodgingStays),
     rail: when("rail", row.railJourneys),
-    rentals: when("rental", [
-      ...row.rentalBookings,
-      ...row.routes.flatMap((route) => route.rentals),
-    ]),
+    rentals: [
+      ...when("rental", row.rentalBookings),
+      // Reached only through a roadtrip: shown only where both are.
+      ...when(
+        "rental",
+        when(
+          "roadtrip",
+          row.routes.flatMap((route) => route.rentals)
+        )
+      ),
+    ],
     // A section's expenses are shown on its roadtrip page, behind that gate.
     expenses: [
       ...row.expenses,

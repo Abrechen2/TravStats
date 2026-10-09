@@ -235,13 +235,19 @@ describe("a trip's coverage counts the night on the train", () => {
       tags: [],
       journalEntries: [],
       photoCount: 0,
-      bookings: [],
+      cost: {
+        bookings: [],
+        stays: [],
+        cruises: [],
+        flights: [],
+        rail: [ride],
+        rentals: [],
+        expenses: [],
+      },
       stays: [],
       cruises: [],
       flights: [],
       rail: [ride],
-      rentals: [],
-      expenses: [],
     };
     const row = buildTripAccount([trip]).trips[0];
     expect(row.coveredDays).toBe(1);

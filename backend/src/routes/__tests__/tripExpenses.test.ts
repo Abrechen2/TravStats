@@ -4,6 +4,10 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
+import {
+  getInstanceSettings,
+  updateInstanceSettings,
+} from "../../services/instanceSettingsService";
 
 /**
  * Expenses (forgejo#140): a ferry ticket, a toll, a pitch fee, fuel — on a
@@ -431,6 +435,24 @@ describe("expenses", () => {
   });
 
   describe("in the statistics", () => {
+    // A section's expense lives on its roadtrip page, behind the roadtrip
+    // gate, and the statistics read the trips page's own gate (forgejo#274
+    // review I1) — so the case shows roadtrips, as the app would.
+    let betaBefore: boolean;
+    beforeAll(async () => {
+      betaBefore = (await getInstanceSettings()).betaFeaturesEnabled;
+      await updateInstanceSettings({ betaFeaturesEnabled: true });
+      await prisma.userSettings.upsert({
+        where: { userId },
+        create: { userId, enabledDomains: ["flight", "roadtrip"], data: {} },
+        update: { enabledDomains: ["flight", "roadtrip"] },
+      });
+    });
+    afterAll(async () => {
+      await updateInstanceSettings({ betaFeaturesEnabled: betaBefore });
+      await prisma.userSettings.deleteMany({ where: { userId } });
+    });
+
     it("counts per year and per trip, per currency, never summed across them", async () => {
       await post(`/roadtrips/${roadtripId}/expenses`, {
         kind: "ferry",

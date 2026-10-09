@@ -18,11 +18,14 @@ import { nightTrainNights, type NightTrainFacts } from "../../shared/railRideKin
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * A trip's cost inputs (`TripCostInput`), with the dates coverage needs on the
- * same rows — one load, so the money and the days cannot describe different
- * entries.
+ * A trip: its cost inputs (`cost`, the rule's own shape, already through the
+ * user's domain gate) and, apart, the dated rows coverage reads — loaded in
+ * one pass through the same gate, so the money and the days cannot describe
+ * different entries. They are kept apart because the coverage rows are a
+ * superset in shape only: pricing them instead of `cost` once let ungated
+ * rows back into a total (review of forgejo#274, I1).
  */
-export interface TripAccountInput extends TripCostInput {
+export interface TripAccountInput {
   id: string;
   name: string;
   startDate: Date | null;
@@ -32,22 +35,25 @@ export interface TripAccountInput extends TripCostInput {
   tags: string[];
   journalEntries: { mood: string | null; weather: string | null }[];
   photoCount: number;
-  stays: (TripCostInput["stays"][number] & {
+  cost: TripCostInput;
+  stays: {
+    status: string;
     checkIn: Date | null;
     checkOut: Date | null;
     datePrecision: string;
     nights: number | null;
-  })[];
-  cruises: (TripCostInput["cruises"][number] & {
-    startDate: Date | null;
-    endDate: Date | null;
-  })[];
-  flights: (TripCostInput["flights"][number] & {
-    departureTime: Date | null;
-    arrivalTime: Date | null;
-  })[];
-  /** A night train covers the nights it ran through (forgejo#266). */
-  rail: (TripCostInput["rail"][number] & NightTrainFacts)[];
+  }[];
+  cruises: { status: string; startDate: Date | null; endDate: Date | null }[];
+  flights: { status: string; departureTime: Date | null; arrivalTime: Date | null }[];
+  /**
+   * A night train covers the nights it ran through (forgejo#266). Like every
+   * coverage row here it counts unless cancelled — a planned trip's booked
+   * sleeper covers its night as a booked stay does — while the night account
+   * counts completed rides only (`railCounting`), as it counts only stays
+   * that are over. Coverage asks "is this night planned for", the account
+   * "where was it spent".
+   */
+  rail: ({ status: string } & NightTrainFacts)[];
 }
 
 // Published by /stats/travel-account (forgejo#52).
@@ -74,7 +80,7 @@ export function buildTripAccount(trips: TripAccountInput[]): TripAccount {
 
   for (const trip of trips) {
     const { spendByCurrency, spendBaseByCurrency, unpricedEntries } = tripSpend(
-      tripCostItems(trip)
+      tripCostItems(trip.cost)
     );
     const covered = new Set<number>();
 

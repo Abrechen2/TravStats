@@ -115,6 +115,7 @@ describe("TripCard cost tile", () => {
       </MemoryRouter>
     );
     expect(screen.getByText(/1\.?130.*\+.*210/)).toBeInTheDocument();
+    expect(screen.getByText(/1\.?130/).textContent).not.toContain("≥");
     expect(screen.queryByText(/999/)).not.toBeInTheDocument();
   });
 
@@ -128,6 +129,9 @@ describe("TripCard cost tile", () => {
         <TripCard trip={partial} onOpen={() => {}} />
       </MemoryRouter>
     );
-    expect(screen.getByText(/300/)).toHaveAttribute("title", "trips:costUnpriced");
+    const figure = screen.getByText(/300/);
+    expect(figure).toHaveAttribute("title", "trips:costUnpriced");
+    // Visible on a touch screen too, where no tooltip ever shows.
+    expect(figure.textContent).toMatch(/^≥ 300/);
   });
 });
