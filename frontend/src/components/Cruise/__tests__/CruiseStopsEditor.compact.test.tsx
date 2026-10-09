@@ -41,7 +41,7 @@ function Harness({ initial }: { initial: CruiseStopInput[] }): JSX.Element {
   return (
     <>
       <CruiseStopsEditor stops={stops} onChange={setStops} idPrefix="t" />
-      <output data-testid="order">{stops.map((s) => s.port?.name ?? "sea").join(",")}</output>
+      <div data-testid="order">{stops.map((s) => s.port?.name ?? "sea").join(",")}</div>
     </>
   );
 }
@@ -79,8 +79,8 @@ describe("CruiseStopsEditor — compact day list (forgejo#221)", () => {
     expect(summaries()[1].textContent).toContain("stops.at_sea");
     // Every day folded: no date field, no move button is visible.
     for (const input of screen.getAllByLabelText("stops.date")) expect(input).not.toBeVisible();
-    for (const button of screen.getAllByRole("button", { name: /stops.moveUp/ }))
-      expect(button).not.toBeVisible();
+    // The move and remove buttons exist for the opened day only.
+    expect(screen.queryAllByRole("button", { name: /stops.moveUp/ })).toHaveLength(0);
   });
 
   it("unfolds only the chosen day", async () => {
@@ -96,10 +96,10 @@ describe("CruiseStopsEditor — compact day list (forgejo#221)", () => {
     expect(document.querySelectorAll("details[open]")).toHaveLength(1);
   });
 
-  it("names the move and remove buttons in words, with a touch size on a coarse pointer", () => {
+  it("names the move and remove buttons in words, with a touch size on a coarse pointer", async () => {
     render(<Harness initial={ITINERARY} />);
     fireEvent.click(summaries()[2]);
-    const group = screen.getByRole("group", { name: "stops.actionsLabel:3" });
+    const group = await screen.findByRole("group", { name: "stops.actionsLabel:3" });
 
     for (const name of ["stops.moveUp", "stops.moveDown", "stops.remove"]) {
       const button = within(group).getByRole("button", { name });
@@ -112,7 +112,7 @@ describe("CruiseStopsEditor — compact day list (forgejo#221)", () => {
   it("keeps the moved stop open and focused while it travels up the list", async () => {
     const user = userEvent.setup();
     render(<Harness initial={ITINERARY} />);
-    fireEvent.click(summaries()[3]);
+    await user.click(summaries()[3]);
 
     await user.click(within(openDay()).getByRole("button", { name: "stops.moveUp" }));
     expect(screen.getByTestId("order").textContent).toBe("Kiel,sea,Kopenhagen,Oslo");
@@ -133,9 +133,11 @@ describe("CruiseStopsEditor — compact day list (forgejo#221)", () => {
   it("puts focus on the day that took a removed day's place", async () => {
     const user = userEvent.setup();
     render(<Harness initial={ITINERARY} />);
-    fireEvent.click(summaries()[1]);
+    await user.click(summaries()[1]);
 
     await user.click(within(openDay()).getByRole("button", { name: "stops.remove" }));
+    // Since forgejo#224 a removal asks once more.
+    await user.click(screen.getByRole("button", { name: "stops.removeConfirm.confirm" }));
     expect(screen.getByTestId("order").textContent).toBe("Kiel,Oslo,Kopenhagen");
     expect(document.activeElement).toBe(summaries()[1]);
     expect(summaries()[1].textContent).toContain("Oslo");

@@ -148,7 +148,35 @@
     "departure": "Departure (port's local time)",
     "noPort": "Port missing",
     "hasExcursion": "Excursion",
-    "actionsLabel": "Move or remove day {{day}}"
+    "actionsLabel": "Move or remove day {{day}}",
+    "preview": {
+      "up": "Move up: {{effect}}",
+      "down": "Move down: {{effect}}",
+      "orderOnly": "only the order changes",
+      "shift": "{{title}} day {{from}} → {{to}}",
+      "shiftDate": "{{from}} → {{to}}",
+      "noteTravels": "The excursion note stays with this port."
+    },
+    "removeConfirm": {
+      "title": "Remove “{{title}}” (day {{day}})?",
+      "date": "Date: {{date}}",
+      "times": "Arrival {{arrive}}, departure {{depart}}",
+      "noteLost": "The excursion note goes with it: “{{note}}”",
+      "othersKeep": "The other days keep their numbers and dates.",
+      "othersShift": "Afterwards these change: {{list}}",
+      "undoHint": "Can be taken back afterwards with “Undo itinerary change”.",
+      "keep": "Keep",
+      "confirm": "Remove"
+    },
+    "undo": {
+      "button": "Undo itinerary change",
+      "scope": "Affects only the order of the days, not the route drawn on the map.",
+      "last": "Last change: {{action}}.",
+      "done": "Taken back: {{action}}.",
+      "removed": "“{{title}}” (day {{day}}) removed",
+      "moved": "“{{title}}” moved",
+      "added": "Day {{day}} added"
+    }
   },
   "picker": {
     "ship_placeholder": "Search ship …",

@@ -428,6 +428,7 @@ export function CruiseEditModal({
               onChange={setStops}
               idPrefix={STOPS_PREFIX}
               missingHintId={HINT_ID}
+              startDate={draft.startDate}
             />
           </div>
         </FormSection>

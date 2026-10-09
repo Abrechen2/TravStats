@@ -148,7 +148,35 @@
     "departure": "Abfahrt (Ortszeit des Hafens)",
     "noPort": "Hafen fehlt",
     "hasExcursion": "Ausflug",
-    "actionsLabel": "Tag {{day}} verschieben oder entfernen"
+    "actionsLabel": "Tag {{day}} verschieben oder entfernen",
+    "preview": {
+      "up": "Nach oben: {{effect}}",
+      "down": "Nach unten: {{effect}}",
+      "orderOnly": "nur die Reihenfolge ändert sich",
+      "shift": "{{title}} Tag {{from}} → {{to}}",
+      "shiftDate": "{{from}} → {{to}}",
+      "noteTravels": "Die Ausflugsnotiz bleibt bei diesem Hafen."
+    },
+    "removeConfirm": {
+      "title": "„{{title}}“ (Tag {{day}}) entfernen?",
+      "date": "Datum: {{date}}",
+      "times": "Ankunft {{arrive}}, Abfahrt {{depart}}",
+      "noteLost": "Die Ausflugsnotiz geht mit: „{{note}}“",
+      "othersKeep": "Die übrigen Tage behalten ihre Nummern und Daten.",
+      "othersShift": "Danach ändern sich: {{list}}",
+      "undoHint": "Lässt sich danach mit „Hafenfolge rückgängig“ zurücknehmen.",
+      "keep": "Behalten",
+      "confirm": "Entfernen"
+    },
+    "undo": {
+      "button": "Hafenfolge rückgängig",
+      "scope": "Betrifft nur die Reihenfolge der Tage, nicht die auf der Karte gezeichnete Route.",
+      "last": "Zuletzt: {{action}}.",
+      "done": "Zurückgenommen: {{action}}.",
+      "removed": "„{{title}}“ (Tag {{day}}) entfernt",
+      "moved": "„{{title}}“ verschoben",
+      "added": "Tag {{day}} hinzugefügt"
+    }
   },
   "picker": {
     "ship_placeholder": "Schiff suchen …",

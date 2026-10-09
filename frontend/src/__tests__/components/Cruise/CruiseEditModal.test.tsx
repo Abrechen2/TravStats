@@ -317,7 +317,10 @@ describe("CruiseEditModal", () => {
     vi.mocked(cruiseApi.update).mockResolvedValue(baseCruise);
     render(<CruiseEditModal mode="edit" cruise={withStop} onClose={vi.fn()} onSaved={vi.fn()} />);
 
+    // Open the day, ask to remove it, confirm (forgejo#221, #224).
+    await userEvent.click(document.querySelectorAll("summary[id$='-summary']")[0] as HTMLElement);
     await userEvent.click(screen.getByRole("button", { name: "stops.remove" }));
+    await userEvent.click(screen.getByRole("button", { name: "stops.removeConfirm.confirm" }));
     await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
 
     await waitFor(() => expect(cruiseApi.update).toHaveBeenCalled());
