@@ -11,7 +11,7 @@ import {
   DEFAULT_SNAPSHOT_DIR,
   type SnapshotEntry,
 } from "../snapshot";
-import { syncSnapshot } from "../snapshotSync";
+import { syncSnapshot, validateRepository } from "../snapshotSync";
 import { validTemplate } from "./fixtures";
 
 /**
@@ -181,5 +181,25 @@ describe("syncSnapshot", () => {
     expect(report.copied).toEqual([]);
     expect(report.failures.join("\n")).toMatch(/lodging:broken/);
     expect(fs.readdirSync(to)).toEqual([]);
+  });
+
+  // The template repository's CI (`scripts/validate.mjs` there, this app's
+  // `scripts/validate-template-repo.ts` here) checks a clone without a sync.
+  it("validateRepository names an unindexed file and a version out of step, and writes nothing", () => {
+    const from = tmp();
+    writeRepo(from, [validTemplate()]);
+    fs.writeFileSync(path.join(from, "lodging", "stray.json"), "{}");
+    expect(validateRepository(from)).toMatchObject({
+      failures: [],
+      unindexed: ["lodging/stray.json"],
+    });
+    const index = JSON.parse(fs.readFileSync(path.join(from, "index.json"), "utf-8"));
+    index.templates[0].version = "2099.1.1";
+    fs.writeFileSync(path.join(from, "index.json"), JSON.stringify(index));
+    expect(validateRepository(from).failures.join("\n")).toMatch(/index says 2099\.1\.1/);
+  });
+
+  it("validateRepository reports an unreadable index instead of throwing", () => {
+    expect(validateRepository(tmp()).failures[0]).toMatch(/unreadable/);
   });
 });

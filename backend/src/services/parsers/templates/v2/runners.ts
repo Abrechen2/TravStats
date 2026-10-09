@@ -22,9 +22,10 @@ import type {
   TemplateTestInput,
 } from "./envelope";
 import { TEMPLATE_DOMAINS } from "./envelope";
-import { boundedAny, extract, EXTRACT_TIMEOUT_MS } from "./extract";
+import { boundedRun, extract, EXTRACT_TIMEOUT_MS, MAX_INPUT_CHARS } from "./extract";
 import { remainingBudgetMs } from "./budget";
 import logger from "../../../../utils/logger";
+import { compileSpec, specPart, type MailPart, type MatchRegex } from "./regexSpec";
 
 export type TestDecision = "match" | "decline";
 
@@ -55,30 +56,19 @@ export function testInputHaystack(input: TemplateTestInput): string {
   return [input.from, input.subject, input.text].filter((p) => p !== undefined).join("\n");
 }
 
-/** Every marker AND at least one anchor, case-insensitive — the lodging engine's rule. */
-export function envelopeMatches(template: TemplateEnvelope, haystack: string): boolean {
-  const text = haystack.toLowerCase();
-  const has = (needle: string): boolean => text.includes(needle.toLowerCase());
-  return template.match.markers.every(has) && template.match.anchors.some(has);
+/** The parts of a mail a matcher regex may be confined to (`in`). A plain string is all body. */
+function mailParts(input: TemplateTestInput): Record<MailPart, string> {
+  if (typeof input === "string") return { from: "", subject: "", text: input };
+  return { from: input.from ?? "", subject: input.subject ?? "", text: input.text };
 }
 
-export interface TemplateApplication {
-  matched: boolean;
-  values: Record<string, unknown>;
-  missing: string[];
-  /** The matcher recognised the issuer AND a `notBookingIf` pattern: a cancellation or the like. */
-  nonBooking?: boolean;
-  /** The document's time budget ran out before this template could run. */
-  budgetExhausted?: boolean;
-}
+const cap = (text: string): string =>
+  text.length > MAX_INPUT_CHARS ? text.slice(0, MAX_INPUT_CHARS) : text;
 
-/** Whether a document the matcher accepted is one of the issuer's non-bookings. */
-export function isNonBooking(
-  template: TemplateEnvelope,
-  haystack: string,
-  timeoutMs = EXTRACT_TIMEOUT_MS
-): boolean {
-  return boundedAny(template.match.notBookingIf ?? [], "im", haystack, timeoutMs).matched;
+/** Unbounded on its own — only ever called inside `boundedRun`. */
+function regexHits(spec: MatchRegex, input: TemplateTestInput, haystack: string): boolean {
+  const part = specPart(spec);
+  return compileSpec(spec, "im").test(cap(part ? mailParts(input)[part] : haystack));
 }
 
 /** This run's bound: the per-run cap, or less when the document's budget is nearly spent. */
@@ -96,6 +86,57 @@ function budgetSpent(template: TemplateEnvelope): TemplateApplication {
 }
 
 /**
+ * Every marker and `allOf` regex, at least one anchor or `anyOf` regex, and no
+ * `noneOf` regex. Markers and anchors are case-insensitive substrings — the
+ * lodging engine's rule; the regexes carry their own flags (default `im`).
+ */
+export function envelopeMatches(template: TemplateEnvelope, input: TemplateTestInput): boolean {
+  const haystack = testInputHaystack(input);
+  const text = haystack.toLowerCase();
+  const has = (needle: string): boolean => text.includes(needle.toLowerCase());
+  const { markers, anchors, allOf = [], anyOf = [], noneOf = [] } = template.match;
+  if (!markers.every(has)) return false;
+  const anchored = anchors.some(has);
+  if (allOf.length === 0 && noneOf.length === 0 && (anchored || anyOf.length === 0)) {
+    return anchored;
+  }
+  // Template regexes are remote input: all of them run in ONE bounded run,
+  // within what is left of the document's budget. A run that times out
+  // decides nothing for this document only.
+  const timeout = runTimeout();
+  if (timeout <= 0) return false;
+  const hits = (spec: MatchRegex): boolean => regexHits(spec, input, haystack);
+  return boundedRun(
+    () => allOf.every(hits) && (anchored || anyOf.some(hits)) && !noneOf.some(hits),
+    false,
+    timeout
+  ).result;
+}
+
+export interface TemplateApplication {
+  matched: boolean;
+  values: Record<string, unknown>;
+  missing: string[];
+  /** The matcher recognised the issuer AND a `notBookingIf` pattern: a cancellation or the like. */
+  nonBooking?: boolean;
+  /** The document's time budget ran out before this template could run. */
+  budgetExhausted?: boolean;
+}
+
+/** Whether a document the matcher accepted is one of the issuer's non-bookings. */
+export function isNonBooking(
+  template: TemplateEnvelope,
+  input: TemplateTestInput,
+  timeoutMs = EXTRACT_TIMEOUT_MS
+): boolean {
+  const patterns = template.match.notBookingIf ?? [];
+  if (patterns.length === 0) return false;
+  const haystack = testInputHaystack(input);
+  return boundedRun(() => patterns.some((p) => regexHits(p, input, haystack)), false, timeoutMs)
+    .result;
+}
+
+/**
  * Applies a template to a document: the matcher first, then extraction. When
  * the matcher declines, nothing is extracted (`values` and `missing` are
  * empty) — a template that does not recognise the document has nothing to
@@ -108,18 +149,19 @@ export function applyTemplate(
   text: TemplateTestInput
 ): TemplateApplication {
   const haystack = testInputHaystack(text);
-  if (!envelopeMatches(template, haystack)) return { matched: false, values: {}, missing: [] };
   if (runTimeout() <= 0) return budgetSpent(template);
-  if (isNonBooking(template, haystack, runTimeout())) {
+  if (!envelopeMatches(template, text)) return { matched: false, values: {}, missing: [] };
+  if (runTimeout() <= 0) return budgetSpent(template);
+  if (isNonBooking(template, text, runTimeout())) {
     return { matched: false, values: {}, missing: [], nonBooking: true };
   }
   if (runTimeout() <= 0) return budgetSpent(template);
-  const { values, missing } = extract(template.extraction, haystack, runTimeout());
+  const { values, missing } = extract(template.extraction, haystack, mailParts(text), runTimeout());
   return { matched: missing.length === 0, values, missing };
 }
 
 export const matchOnlyRunner: TemplateTestRunner = (template, input) => ({
-  decision: envelopeMatches(template, testInputHaystack(input)) ? "match" : "decline",
+  decision: envelopeMatches(template, input) ? "match" : "decline",
 });
 
 export const extractionRunner: TemplateTestRunner = (template, input) => {

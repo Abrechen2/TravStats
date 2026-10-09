@@ -11,6 +11,7 @@
 import fs from "fs";
 import path from "path";
 import {
+  TEMPLATE_DOMAINS,
   templateIndexEntrySchema,
   templateIndexSchema,
   validateEnvelope,
@@ -59,15 +60,31 @@ function checkEntry(fromDir: string, entry: TemplateIndexEntry): string[] {
   return [];
 }
 
+export interface RepositoryValidation {
+  /** Every well-formed index entry, in index order. */
+  entries: TemplateIndexEntry[];
+  failures: string[];
+  /** `.json` files under a domain folder that the index does not name. */
+  unindexed: string[];
+}
+
 /**
- * Validate every template the repository index names; when ALL pass, replace
- * the snapshot with them. Any failure leaves the snapshot untouched.
+ * Everything the app would refuse in a template repository clone: a malformed
+ * or duplicate index entry, a file that is missing, not JSON, invalid, out of
+ * step with its index line, or whose own test cases fail. The template
+ * repository's CI runs this through `backend/scripts/validate-template-repo.ts`.
  */
-export function syncSnapshot(fromDir: string, toDir: string): SnapshotSyncReport {
+export function validateRepository(fromDir: string): RepositoryValidation {
   const indexFile = path.join(fromDir, "index.json");
-  const index = templateIndexSchema.safeParse(JSON.parse(fs.readFileSync(indexFile, "utf-8")));
+  let rawIndex: unknown;
+  try {
+    rawIndex = JSON.parse(fs.readFileSync(indexFile, "utf-8")) as unknown;
+  } catch (err) {
+    return { entries: [], unindexed: [], failures: [`${indexFile} unreadable (${String(err)})`] };
+  }
+  const index = templateIndexSchema.safeParse(rawIndex);
   if (!index.success) {
-    return { copied: [], removed: [], failures: [`${indexFile} is not a version-2 index`] };
+    return { entries: [], unindexed: [], failures: [`${indexFile} is not a version-2 index`] };
   }
   const entries: TemplateIndexEntry[] = [];
   const failures: string[] = [];
@@ -79,6 +96,20 @@ export function syncSnapshot(fromDir: string, toDir: string): SnapshotSyncReport
   const ids = entries.map((e) => e.id);
   for (const id of ids.filter((id, i) => ids.indexOf(id) !== i)) failures.push(`${id}: duplicate`);
   for (const entry of entries) failures.push(...checkEntry(fromDir, entry));
+  const named = new Set(entries.map((e) => e.path));
+  const unindexed = TEMPLATE_DOMAINS.flatMap((domain) =>
+    listJson(path.join(fromDir, domain)).map((rel) => `${domain}/${rel}`)
+  ).filter((rel) => !named.has(rel));
+  return { entries, failures, unindexed };
+}
+
+/**
+ * Validate every template the repository index names; when ALL pass, replace
+ * the snapshot with them. Any failure leaves the snapshot untouched.
+ */
+export function syncSnapshot(fromDir: string, toDir: string): SnapshotSyncReport {
+  const indexFile = path.join(fromDir, "index.json");
+  const { entries, failures } = validateRepository(fromDir);
   if (failures.length > 0) return { copied: [], removed: [], failures };
 
   const keep = new Set(["index.json", ...entries.map((e) => e.path)]);

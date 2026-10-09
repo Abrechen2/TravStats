@@ -101,7 +101,7 @@ function shiftDays(localDateTimeValue: string, days: number): string {
 function definedKeys(template: TemplateEnvelope): LegKey[] {
   const legs = template.extraction.repeats?.legs;
   const names = new Set([
-    ...Object.keys(legs?.fields ?? {}),
+    ...Object.keys(legs && "fields" in legs ? legs.fields : {}),
     ...Object.keys(template.extraction.fields ?? {}),
   ]);
   return LEG_KEYS.filter((k) => names.has(k));

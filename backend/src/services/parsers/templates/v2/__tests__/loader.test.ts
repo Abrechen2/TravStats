@@ -146,7 +146,7 @@ describe("V2TemplateStore.sync", () => {
     expect(store.getActive()).toEqual([]);
     const [entry] = store.getStatus().templates;
     expect(entry).toMatchObject({ state: "rejected", reason: "invalid" });
-    expect(entry.detail).toContain("match.markers");
+    expect(entry.detail).toContain("needs at least one anchor");
   });
 
   it("rejects a template that needs a newer app, without running it", async () => {

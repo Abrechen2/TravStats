@@ -2,6 +2,12 @@
   "version": 2,
   "templates": [
     {
+      "id": "lodging:booking.com",
+      "domain": "lodging",
+      "version": "2026.10.9",
+      "path": "lodging/bookingcom.json"
+    },
+    {
       "id": "lodging:koa",
       "domain": "lodging",
       "version": "2026.10.9",
@@ -90,6 +96,78 @@
       "domain": "flight",
       "version": "2026.10.9",
       "path": "flight/AB.json"
+    },
+    {
+      "id": "rental:sixt-confirmation",
+      "domain": "rental",
+      "version": "2026.10.9",
+      "path": "rental/sixt-confirmation.json"
+    },
+    {
+      "id": "rental:sixt-invoice",
+      "domain": "rental",
+      "version": "2026.10.9",
+      "path": "rental/sixt-invoice.json"
+    },
+    {
+      "id": "cruise:tui-cruises-confirmation",
+      "domain": "cruise",
+      "version": "2026.10.9",
+      "path": "cruise/tui-cruises-confirmation.json"
+    },
+    {
+      "id": "rail:db-confirmation",
+      "domain": "rail",
+      "version": "2026.10.9",
+      "path": "rail/db-confirmation.json"
+    },
+    {
+      "id": "rail:db-online-ticket",
+      "domain": "rail",
+      "version": "2026.10.9",
+      "path": "rail/db-online-ticket.json"
+    },
+    {
+      "id": "rail:db-postal-order",
+      "domain": "rail",
+      "version": "2026.10.9",
+      "path": "rail/db-postal-order.json"
+    },
+    {
+      "id": "rail:db-connection-info",
+      "domain": "rail",
+      "version": "2026.10.9",
+      "path": "rail/db-connection-info.json"
+    },
+    {
+      "id": "rail:db-order-facts",
+      "domain": "rail",
+      "version": "2026.10.9",
+      "path": "rail/db-order-facts.json"
+    },
+    {
+      "id": "rail:db-reservation-ticket",
+      "domain": "rail",
+      "version": "2026.10.9",
+      "path": "rail/db-reservation-ticket.json"
+    },
+    {
+      "id": "rail:db-reservation-mail",
+      "domain": "rail",
+      "version": "2026.10.9",
+      "path": "rail/db-reservation-mail.json"
+    },
+    {
+      "id": "package:berge-meer-invoice",
+      "domain": "package",
+      "version": "2026.10.09",
+      "path": "package/berge-meer-invoice.json"
+    },
+    {
+      "id": "package:berge-meer-documents",
+      "domain": "package",
+      "version": "2026.10.09",
+      "path": "package/berge-meer-documents.json"
     }
   ]
 }

@@ -1,10 +1,4 @@
-import {
-  dbOrderFacts,
-  parseDbConfirmation,
-  parseDbConnectionInfo,
-  parseDbPostalOrder,
-} from "../dbConfirmation";
-import { parseDbOnlineTicket } from "../dbOnlineTicket";
+import { READERS } from "./readers";
 import { decodeCalendar, parseCalendarLegs } from "../icsCalendar";
 import { readRailTemplates } from "../railBookingParser";
 import { travelClassOf, trainTokenIn } from "../ticketText";
@@ -32,69 +26,77 @@ import {
  * What matters most is what they do NOT do: invent a train number, read a
  * delay alert as a booking, or take the BahnCard's class for the ticket's.
  */
-describe("DB booking confirmation (2020s)", () => {
-  it("reads the single short-distance ride, and invents no train", () => {
-    const booking = parseDbConfirmation(DB_CONFIRMATION_SINGLE);
-    expect(booking).toMatchObject({
-      bookingReference: "123456789012",
-      travelClass: "second",
-      tariff: "Einzelfahrkarte Kurzstrecke",
-      price: 3.2,
-      currency: "EUR",
-      source: "db-confirmation",
+describe.each(READERS)(
+  "DB booking confirmation (2020s) (%s)",
+  (_reader, { parseDbConfirmation, parseDbOnlineTicket, parseDbPostalOrder, dbOrderFacts }) => {
+    it("reads the single short-distance ride, and invents no train", () => {
+      const booking = parseDbConfirmation(DB_CONFIRMATION_SINGLE);
+      expect(booking).toMatchObject({
+        bookingReference: "123456789012",
+        travelClass: "second",
+        tariff: "Einzelfahrkarte Kurzstrecke",
+        price: 3.2,
+        currency: "EUR",
+        source: "db-confirmation",
+      });
+      expect(booking?.legs).toEqual([
+        {
+          depStationName: "Neufahrn(b Freising)",
+          arrStationName: "München Flughafen Terminal",
+          departureLocal: "2025-06-14T10:12",
+          arrivalLocal: "2025-06-14T10:22",
+          trainCategory: null,
+          trainNumber: null,
+          coach: null,
+          seat: null,
+          direction: null,
+        },
+      ]);
     });
-    expect(booking?.legs).toEqual([
-      {
-        depStationName: "Neufahrn(b Freising)",
-        arrStationName: "München Flughafen Terminal",
-        departureLocal: "2025-06-14T10:12",
-        arrivalLocal: "2025-06-14T10:22",
-        trainCategory: null,
-        trainNumber: null,
-        coach: null,
-        seat: null,
-        direction: null,
-      },
-    ]);
-  });
 
-  it("reads a change as two legs, each with its own train, and a total with thousands", () => {
-    const booking = parseDbConfirmation(DB_CONFIRMATION_CHANGE);
-    expect(booking?.price).toBe(1084.5);
-    expect(booking?.travelClass).toBe("first");
-    expect(
-      booking?.legs.map((l) => [l.depStationName, l.arrStationName, l.trainCategory, l.trainNumber])
-    ).toEqual([
-      ["Kiel Hbf", "Hamburg Hbf", "RE", "7"],
-      ["Hamburg Hbf", "Bremen Hbf", "ICE", "1507"],
-    ]);
-  });
+    it("reads a change as two legs, each with its own train, and a total with thousands", () => {
+      const booking = parseDbConfirmation(DB_CONFIRMATION_CHANGE);
+      expect(booking?.price).toBe(1084.5);
+      expect(booking?.travelClass).toBe("first");
+      expect(
+        booking?.legs.map((l) => [
+          l.depStationName,
+          l.arrStationName,
+          l.trainCategory,
+          l.trainNumber,
+        ])
+      ).toEqual([
+        ["Kiel Hbf", "Hamburg Hbf", "RE", "7"],
+        ["Hamburg Hbf", "Bremen Hbf", "ICE", "1507"],
+      ]);
+    });
 
-  it("marks Hinfahrt and Rückfahrt, and keeps an arrival after midnight on its own day", () => {
-    const booking = parseDbConfirmation(DB_CONFIRMATION_RETURN);
-    expect(booking?.legs.map((l) => [l.direction, l.departureLocal, l.arrivalLocal])).toEqual([
-      ["outbound", "2026-12-20T22:30", "2026-12-21T00:05"],
-      ["return", "2026-12-27T16:10", "2026-12-27T17:25"],
-    ]);
-    expect(booking?.price).toBe(39.8);
-  });
+    it("marks Hinfahrt and Rückfahrt, and keeps an arrival after midnight on its own day", () => {
+      const booking = parseDbConfirmation(DB_CONFIRMATION_RETURN);
+      expect(booking?.legs.map((l) => [l.direction, l.departureLocal, l.arrivalLocal])).toEqual([
+        ["outbound", "2026-12-20T22:30", "2026-12-21T00:05"],
+        ["return", "2026-12-27T16:10", "2026-12-27T17:25"],
+      ]);
+      expect(booking?.price).toBe(39.8);
+    });
 
-  it("does not read a delay alert or a newsletter as a booking", () => {
-    for (const text of [DB_DELAY_ALERT, DB_NEWSLETTER]) {
-      expect(parseDbConfirmation(text)).toBeNull();
-      expect(parseDbPostalOrder(text)).toBeNull();
-      expect(parseDbOnlineTicket(text)).toBeNull();
-      expect(dbOrderFacts(text)).toBeNull();
-    }
-  });
+    it("does not read a delay alert or a newsletter as a booking", () => {
+      for (const text of [DB_DELAY_ALERT, DB_NEWSLETTER]) {
+        expect(parseDbConfirmation(text)).toBeNull();
+        expect(parseDbPostalOrder(text)).toBeNull();
+        expect(parseDbOnlineTicket(text)).toBeNull();
+        expect(dbOrderFacts(text)).toBeNull();
+      }
+    });
 
-  it("does not read a flight mail that mentions Deutsche Bahn", () => {
-    expect(parseDbConfirmation(FLIGHT_MAIL)).toBeNull();
-    expect(dbOrderFacts(FLIGHT_MAIL)).toBeNull();
-  });
-});
+    it("does not read a flight mail that mentions Deutsche Bahn", () => {
+      expect(parseDbConfirmation(FLIGHT_MAIL)).toBeNull();
+      expect(dbOrderFacts(FLIGHT_MAIL)).toBeNull();
+    });
+  }
+);
 
-describe("DB Online-Ticket", () => {
+describe.each(READERS)("DB Online-Ticket (%s)", (_reader, { parseDbOnlineTicket }) => {
   it("reads one leg per train with coach and seat, the return section, the total and the fare", () => {
     const booking = parseDbOnlineTicket(DB_ONLINE_TICKET);
     expect(booking).toMatchObject({
@@ -151,38 +153,43 @@ describe("DB Online-Ticket", () => {
   });
 });
 
-describe("DB postal order and connection info", () => {
-  it("reads the whole-journey lines without a train, and the ticket's class, not the BahnCard's", () => {
-    const booking = parseDbPostalOrder(DB_POSTAL_ORDER);
-    expect(booking).toMatchObject({
-      bookingReference: "ZZ12AB",
-      price: 153.9,
-      travelClass: "second",
+describe.each(READERS)(
+  "DB postal order and connection info (%s)",
+  (_reader, { parseDbPostalOrder, parseDbConnectionInfo }) => {
+    it("reads the whole-journey lines without a train, and the ticket's class, not the BahnCard's", () => {
+      const booking = parseDbPostalOrder(DB_POSTAL_ORDER);
+      expect(booking).toMatchObject({
+        bookingReference: "ZZ12AB",
+        price: 153.9,
+        travelClass: "second",
+      });
+      expect(booking?.legs.map((l) => [l.depStationName, l.arrStationName, l.trainNumber])).toEqual(
+        [
+          ["Rostock Hbf", "Erfurt Hbf", null],
+          ["Erfurt Hbf", "Rostock Hbf", null],
+        ]
+      );
     });
-    expect(booking?.legs.map((l) => [l.depStationName, l.arrStationName, l.trainNumber])).toEqual([
-      ["Rostock Hbf", "Erfurt Hbf", null],
-      ["Erfurt Hbf", "Rostock Hbf", null],
-    ]);
-  });
 
-  it("reads each train row, skips the walk, and rolls an after-midnight arrival to the next day", () => {
-    const booking = parseDbConnectionInfo(DB_CONNECTION_INFO);
-    expect(booking?.bookingReference).toBe("11223344");
-    expect(booking?.price).toBe(55.2);
-    expect(
-      booking?.legs.map((l) => [
-        l.depStationName,
-        l.arrStationName,
-        l.departureLocal,
-        l.arrivalLocal,
-        l.trainNumber,
-      ])
-    ).toEqual([
-      ["Kiel Hbf", "Hamburg Hbf", "2008-03-21T23:10", "2008-03-22T00:25", "21013"],
-      ["Hamburg Hbf", "Bremen Hbf", "2008-03-22T06:01", "2008-03-22T06:59", "870"],
-    ]);
-  });
-});
+    it("reads each train row, skips the walk, and rolls an after-midnight arrival to the next day", () => {
+      const booking = parseDbConnectionInfo(DB_CONNECTION_INFO);
+      expect(booking?.bookingReference).toBe("11223344");
+      expect(booking?.price).toBe(55.2);
+      expect(
+        booking?.legs.map((l) => [
+          l.depStationName,
+          l.arrStationName,
+          l.departureLocal,
+          l.arrivalLocal,
+          l.trainNumber,
+        ])
+      ).toEqual([
+        ["Kiel Hbf", "Hamburg Hbf", "2008-03-21T23:10", "2008-03-22T00:25", "21013"],
+        ["Hamburg Hbf", "Bremen Hbf", "2008-03-22T06:01", "2008-03-22T06:59", "870"],
+      ]);
+    });
+  }
+);
 
 describe("calendar attachment", () => {
   it("reads the verified DB layout, folded lines and the malformed zone id included", () => {
@@ -265,76 +272,79 @@ describe("ticketText", () => {
   });
 });
 
-describe("DB Online-Ticket, the layout since spring 2024", () => {
-  const rows = (text: string) =>
-    parseDbOnlineTicket(text)?.legs.map((l) => [
-      l.direction,
-      l.depStationName,
-      l.arrStationName,
-      l.departureLocal,
-      l.arrivalLocal,
-      l.trainCategory === null ? null : `${l.trainCategory} ${l.trainNumber}`,
-      l.coach,
-      l.seat,
-    ]);
+describe.each(READERS)(
+  "DB Online-Ticket, the layout since spring 2024 (%s)",
+  (_reader, { parseDbOnlineTicket }) => {
+    const rows = (text: string) =>
+      parseDbOnlineTicket(text)?.legs.map((l) => [
+        l.direction,
+        l.depStationName,
+        l.arrStationName,
+        l.departureLocal,
+        l.arrivalLocal,
+        l.trainCategory === null ? null : `${l.trainCategory} ${l.trainNumber}`,
+        l.coach,
+        l.seat,
+      ]);
 
-  it("reads a ticket whose table is extracted column by column", () => {
-    expect(parseDbOnlineTicket(DB_ONLINE_TICKET_2024)).toMatchObject({
-      bookingReference: "123456789012",
-      travelClass: "first",
-      tariff: "Flexpreis (Einfache Fahrt)",
-      price: 91.6,
-      currency: "EUR",
-      source: "db-online-ticket",
+    it("reads a ticket whose table is extracted column by column", () => {
+      expect(parseDbOnlineTicket(DB_ONLINE_TICKET_2024)).toMatchObject({
+        bookingReference: "123456789012",
+        travelClass: "first",
+        tariff: "Flexpreis (Einfache Fahrt)",
+        price: 91.6,
+        currency: "EUR",
+        source: "db-online-ticket",
+      });
+      expect(rows(DB_ONLINE_TICKET_2024)).toEqual([
+        [
+          "outbound",
+          "Musterstadt Hbf",
+          "Beispielburg Hbf",
+          "2024-04-19T19:55",
+          "2024-04-19T23:58",
+          "ICE 615",
+          "12",
+          "133",
+        ],
+      ]);
     });
-    expect(rows(DB_ONLINE_TICKET_2024)).toEqual([
-      [
-        "outbound",
-        "Musterstadt Hbf",
-        "Beispielburg Hbf",
-        "2024-04-19T19:55",
-        "2024-04-19T23:58",
-        "ICE 615",
-        "12",
-        "133",
-      ],
-    ]);
-  });
 
-  it("reads a change of trains: one block of columns per train, each with its own train and seat", () => {
-    // rc.5 read only the first block, and that one without its train.
-    expect(rows(DB_ONLINE_TICKET_2024_CHANGE)).toEqual([
-      [
-        "outbound",
-        "Musterstadt Hbf",
-        "Mittelhausen",
-        "2024-12-30T08:00",
-        "2024-12-30T09:10",
-        "ICE 615",
-        "12",
-        "33",
-      ],
-      [
-        "outbound",
-        "Mittelhausen",
-        "Beispielburg Hbf",
-        "2024-12-30T09:25",
-        "2024-12-30T10:40",
-        "IC 4711",
-        "4",
-        "87",
-      ],
-    ]);
-  });
+    it("reads a change of trains: one block of columns per train, each with its own train and seat", () => {
+      // rc.5 read only the first block, and that one without its train.
+      expect(rows(DB_ONLINE_TICKET_2024_CHANGE)).toEqual([
+        [
+          "outbound",
+          "Musterstadt Hbf",
+          "Mittelhausen",
+          "2024-12-30T08:00",
+          "2024-12-30T09:10",
+          "ICE 615",
+          "12",
+          "33",
+        ],
+        [
+          "outbound",
+          "Mittelhausen",
+          "Beispielburg Hbf",
+          "2024-12-30T09:25",
+          "2024-12-30T10:40",
+          "IC 4711",
+          "4",
+          "87",
+        ],
+      ]);
+    });
 
-  it("reads a journey printed as one block of four stops the same way", () => {
-    expect(rows(DB_ONLINE_TICKET_2024_ONE_BLOCK)?.map((r) => [r[1], r[2], r[5]])).toEqual([
-      ["Musterstadt Hbf", "Mittelhausen", "ICE 615"],
-      ["Mittelhausen", "Beispielburg Hbf", "RE 4711"],
-    ]);
-  });
+    it("reads a journey printed as one block of four stops the same way", () => {
+      expect(rows(DB_ONLINE_TICKET_2024_ONE_BLOCK)?.map((r) => [r[1], r[2], r[5]])).toEqual([
+        ["Musterstadt Hbf", "Mittelhausen", "ICE 615"],
+        ["Mittelhausen", "Beispielburg Hbf", "RE 4711"],
+      ]);
+    });
 
-  it("reads nothing from columns of unequal length rather than pairing them by guess", () => {
-    expect(parseDbOnlineTicket(DB_ONLINE_TICKET_2024_RAGGED)).toBeNull();
-  });
-});
+    it("reads nothing from columns of unequal length rather than pairing them by guess", () => {
+      expect(parseDbOnlineTicket(DB_ONLINE_TICKET_2024_RAGGED)).toBeNull();
+    });
+  }
+);

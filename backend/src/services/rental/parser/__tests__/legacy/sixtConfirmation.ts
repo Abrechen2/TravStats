@@ -1,6 +1,9 @@
-import { cleanLines, currencyOf, monthNumber, parseAmount, wallClock } from "./textLines";
-import type { ParsedRentalConfirmation } from "./types";
-import type { RENTAL_INCLUSIONS } from "../../../schemas/rental";
+// PARITY REFERENCE ONLY (plan 2026-10-09 P4b): the compiled-in reader this provider's
+// v2 template file replaced. Production reads the template; tests compare the two.
+
+import { cleanLines, currencyOf, monthNumber, parseAmount, wallClock } from "../../textLines";
+import type { ParsedRentalConfirmation } from "../../types";
+import type { RENTAL_INCLUSIONS } from "../../../../../schemas/rental";
 
 /**
  * Today's Sixt booking confirmation (spec 2026-10-01-rental-domain-design

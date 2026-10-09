@@ -1,5 +1,5 @@
 import { parseEnglishDate } from "../../lodging/templates/engine";
-import { parseGermanDate } from "../../lodging/bookingComTemplate";
+import { parseGermanDate } from "../../lodging/parsedLodgingBooking";
 import type {
   FieldRule,
   LodgingFieldRules,

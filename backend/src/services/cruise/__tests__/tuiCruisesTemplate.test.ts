@@ -2,9 +2,23 @@ import {
   cabinTypeFromCategory,
   matchesTuiCruises,
   parseItinerary,
-  parseTuiCruisesConfirmation,
+  parseTuiCruisesConfirmation as legacyRead,
   TUI_TEMPLATE_ID,
-} from "../tuiCruisesTemplate";
+} from "./legacy/tuiCruisesTemplate";
+import { snapshotTemplate } from "../../parsers/templates/v2/__tests__/snapshotTemplates";
+import { applyV2CruiseTemplate } from "../v2Cruise";
+import type { ParsedCruise } from "../../cruiseBookingParser";
+
+/**
+ * Every reading case runs through BOTH readers: the compiled-in one it started
+ * as (`legacy/`) and the v2 template file it became (plan 2026-10-09 P4b).
+ */
+const v2Read = (text: string): ParsedCruise[] =>
+  applyV2CruiseTemplate(snapshotTemplate("cruise:tui-cruises-confirmation"), text);
+const READERS: Array<[string, (text: string) => ParsedCruise[]]> = [
+  ["legacy reader", legacyRead],
+  ["v2 template", v2Read],
+];
 
 /**
  * The fixtures below are INVENTED. The real confirmations this reader was
@@ -77,12 +91,18 @@ Premium Alles Inklusive
 2 x Kreuzfahrtpreis 600,00 €\t300,00 €\t1-2
 `;
 
-describe("TUI Cruises confirmation template", () => {
+describe("TUI Cruises issuer check (legacy)", () => {
   it("recognises the issuer, and only the issuer", () => {
     expect(matchesTuiCruises(SINGLE)).toBe(true);
     // A mail that merely mentions the ship is not a confirmation, and reading
     // it with this grammar would produce a booking out of an advertisement.
     expect(matchesTuiCruises("Mein Schiff 4 ab 799 € — jetzt buchen!")).toBe(false);
+  });
+});
+
+describe.each(READERS)("TUI Cruises confirmation (%s)", (_name, parseTuiCruisesConfirmation) => {
+  it("reads nothing from an advertisement that names a ship", () => {
+    expect(parseTuiCruisesConfirmation("Mein Schiff 4 ab 799 € — jetzt buchen!")).toEqual([]);
   });
 
   it("reads every field of a single-cruise confirmation", () => {
@@ -153,6 +173,16 @@ describe("TUI Cruises confirmation template", () => {
     expect(parseTuiCruisesConfirmation("TUI Cruises GmbH\nDanke für Ihre Anfrage.")).toEqual([]);
   });
 
+  it("names what it could not read instead of inventing it", () => {
+    const withoutPrice = SINGLE.replace(/2 x Kreuzfahrtpreis.*\n/, "");
+    const [cruise] = parseTuiCruisesConfirmation(withoutPrice);
+    expect(cruise.price).toBeUndefined();
+    expect(cruise.currency).toBeUndefined();
+    expect(cruise.missing).toContain("price");
+  });
+});
+
+describe("TUI Cruises — helpers of the legacy reader", () => {
   describe("cabin category", () => {
     it.each([
       ["Innenkabine (2er Belegung)", "inside"],
@@ -169,14 +199,6 @@ describe("TUI Cruises confirmation template", () => {
     it("answers undefined for a category it does not know", () => {
       expect(cabinTypeFromCategory("Kabine")).toBeUndefined();
     });
-  });
-
-  it("names what it could not read instead of inventing it", () => {
-    const withoutPrice = SINGLE.replace(/2 x Kreuzfahrtpreis.*\n/, "");
-    const [cruise] = parseTuiCruisesConfirmation(withoutPrice);
-    expect(cruise.price).toBeUndefined();
-    expect(cruise.currency).toBeUndefined();
-    expect(cruise.missing).toContain("price");
   });
 
   it("numbers stops from one and dates them", () => {

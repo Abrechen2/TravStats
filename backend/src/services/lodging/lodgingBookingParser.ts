@@ -25,12 +25,7 @@ import {
   type LlmTarget,
 } from "../llm/llmProvider";
 import { isLlmAvailable, recordLlmProbe } from "../parsers/llmAvailability";
-import {
-  isBookingComConfirmation,
-  parseBookingComEmail,
-  type LodgingCurrency,
-  type ParsedLodgingBooking,
-} from "./bookingComTemplate";
+import { type LodgingCurrency, type ParsedLodgingBooking } from "./parsedLodgingBooking";
 import { resolveReachableLlmTarget } from "../llm/reachableTarget";
 
 export interface LodgingBookingParserOptions {
@@ -383,24 +378,14 @@ export async function parseLodgingBookingText(
 
   const readTemplate = (): ParsedLodgingBooking | null => {
     const subject = firstLineAsSubject(text);
-    if (isBookingComConfirmation(undefined, text)) {
-      const booking = parseBookingComEmail(subject, text);
-      if (booking) return booking;
-      // Declined: an older one-line layout this reader does not know. The
-      // declarative readers below include one for exactly that layout, and a
-      // mail no reader understands still ends as null. Returning here used
-      // to end every Booking.com mail at this reader — about thirty
-      // confirmations of 2008–2018 on a private mailbox (2026-10-01).
-    }
-    // Booking.com keeps priority: it is the most-measured reader here (97 of
-    // the owner's 108 mails) and the only one that reads an address. The
-    // declarative readers take what it declines — six KOA campgrounds, a
-    // Hilton and two travelclick properties, which read as NOTHING before
-    // 2026-09-17 on an instance without an LLM (forgejo#122).
-    //
-    // Since P4a (plan 2026-10-09) those readers are v2 template FILES, not
-    // code: the bundled snapshot, the disk cache or the template repository,
-    // whichever is newest, each activated only after its own test cases pass.
+    // The issuer readers are v2 template FILES, not code (plan 2026-10-09 P4a
+    // and P4b): the bundled snapshot, the disk cache or the template
+    // repository, whichever is newest, each activated only after its own test
+    // cases pass. Booking.com comes first — it is the most-measured reader (97
+    // of the owner's 108 mails) and the index lists it first; its older
+    // one-line layout and the declarative readers (KOA, Hilton, travelclick, …)
+    // take what it declines, so a Booking.com mail it cannot read still ends
+    // with the next reader, never at the first one.
     const issuerHit = readWithV2LodgingTemplates(
       templateRegistry.getActiveV2({ domain: "lodging" }),
       subject ?? "",

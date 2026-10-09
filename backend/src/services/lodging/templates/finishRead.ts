@@ -1,5 +1,6 @@
-import type { LodgingCurrency, ParsedLodgingBooking } from "../bookingComTemplate";
+import type { LodgingCurrency, ParsedLodgingBooking } from "../parsedLodgingBooking";
 import type { LodgingFieldRules } from "./types";
+import type { LodgingReportableField as ReportableField } from "../../parsers/templates/v2/outputSchemas";
 
 /** What a declarative reader extracted, field by field; an absent key was not read. */
 export type LodgingRead = Partial<Record<keyof LodgingFieldRules, string | number>>;
@@ -11,7 +12,15 @@ export interface FinishOptions {
   checkOutYearBorrowed: boolean;
   type: ParsedLodgingBooking["type"] | null;
   chainName: string | null;
+  /** The night count the document prints; it wins over the date span when present. */
+  printedNights?: number | null;
+  /** Fields whose absence `missing` reports, in this order. Default: city, total, number. */
+  report?: readonly ReportableField[];
+  /** `parserConfidence` with nothing missing / with something missing. Default 75 / 65. */
+  confidence?: { complete: number; partial: number };
 }
+
+const DEFAULT_REPORT: readonly ReportableField[] = ["city", "totalPrice", "confirmationNumber"];
 
 const DAY_MS = 86_400_000;
 
@@ -81,19 +90,29 @@ export function finishLodgingRead(
   // states something the sender did not.
   const priced = currency !== null;
 
-  const missing: string[] = [];
-  const note = (field: string, value: unknown): void => {
-    if (value === null) missing.push(field);
+  const readValue: Record<ReportableField, unknown> = {
+    roomCategory: str("roomCategory"),
+    address: str("address"),
+    postcode: str("postcode"),
+    city: str("city"),
+    country: str("country"),
+    totalPrice: priced ? totalPrice : null,
+    pricePerNight: priced ? pricePerNight : null,
+    guests: num("guests"),
+    confirmationNumber: str("confirmationNumber"),
   };
-  note("city", str("city"));
-  note("totalPrice", priced ? totalPrice : null);
-  note("confirmationNumber", str("confirmationNumber"));
+  const missing = (options.report ?? DEFAULT_REPORT).filter((field) => readValue[field] === null);
+  // Deliberately below Booking.com's figures (95 / 80) by default. These readers
+  // are younger and measured against a handful of mails each; the number
+  // should say that until the corpus says otherwise.
+  const confidence = options.confidence ?? { complete: 75, partial: 65 };
 
   return {
     hotelName: str("hotelName") ?? "",
     checkIn,
     checkOut,
-    nights,
+    // The printed night count is authoritative; the date span is the fallback.
+    nights: options.printedNights ?? nights,
     roomCategory: str("roomCategory"),
     address: str("address"),
     postcode: str("postcode"),
@@ -108,10 +127,7 @@ export function finishLodgingRead(
     chainName: options.chainName,
     confirmationNumber: str("confirmationNumber"),
     parserTemplate: options.parserTemplate,
-    // Deliberately below the two Booking.com figures (80 / 95). These readers
-    // are younger and measured against a handful of mails each; the number
-    // should say that until the corpus says otherwise.
-    parserConfidence: missing.length === 0 ? 75 : 65,
+    parserConfidence: missing.length === 0 ? confidence.complete : confidence.partial,
     missing,
   };
 }

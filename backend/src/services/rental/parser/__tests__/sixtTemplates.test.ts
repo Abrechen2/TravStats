@@ -1,6 +1,5 @@
-import { parseSixtConfirmation } from "../sixtConfirmation";
-import { parseSixtInvoice } from "../sixtInvoice";
 import { looksLikeParking, parseCancellation } from "../rentalBookingParser";
+import { CONFIRMATION_READERS, INVOICE_READERS } from "./readers";
 import {
   SIXT_INVOICE_ONE_CAR,
   SIXT_INVOICE_SWAP,
@@ -12,8 +11,11 @@ import {
  * The Sixt readers on synthetic documents in the measured shapes. The real
  * mails are the measuring corpus (`test-samples/Mietwagen/expectations.json`,
  * run by `scripts/parser-corpus.ts --domain rental`); nothing of them is here.
+ *
+ * Every case runs through BOTH readers: the compiled-in one it started as and
+ * the v2 template file it became (plan 2026-10-09 P4b).
  */
-describe("Sixt confirmation", () => {
+describe.each(CONFIRMATION_READERS)("Sixt confirmation (%s)", (_name, parseSixtConfirmation) => {
   it("reads layout A: station line, then its date", () => {
     const r = parseSixtConfirmation(SIXT_LAYOUT_A, "reservation@e.sixt.com");
     expect(r).toMatchObject({
@@ -59,7 +61,7 @@ describe("Sixt confirmation", () => {
   });
 });
 
-describe("Sixt invoice", () => {
+describe.each(INVOICE_READERS)("Sixt invoice (%s)", (_name, parseSixtInvoice) => {
   it("reads the booking number, km, car, actual times and the gross total", () => {
     expect(
       parseSixtInvoice(

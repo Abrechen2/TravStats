@@ -1,0 +1,200 @@
+{
+  "id": "rail:db-reservation-mail",
+  "domain": "rail",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Deutsche Bahn",
+    "kind": "rail",
+    "keys": {
+      "senderDomains": ["bahn.de"]
+    }
+  },
+  "markets": ["DE"],
+  "match": {
+    "markers": [],
+    "anchors": [],
+    "allOf": [
+      {
+        "pattern": "Deutsche(n)? Bahn|bahn\\.de|DB Fernverkehr|DB Vertrieb|DB Regio|DEUTSCHE BAHN",
+        "flags": "i"
+      },
+      {
+        "pattern": "(wie\\s+folgt\\s+gebucht|Ihre\\s+Buchung\\s+(wurde|erfolgte|wird)|Ihre\\s+Bestellung\\s+(erfolgte|wird\\s+unter)|Eingang\\s+Ihrer\\s+Bestellung|vielen\\s+Dank\\s+f(ü|ue)r\\s+Ihre[nr]?\\s+(Online-Ticket-)?(Buchung|Fahrkartenkauf|Fahrkartenbestellung)|Auftragsbest(ä|ae)tigung\\s+zum\\s+Auftrag)",
+        "flags": "i"
+      }
+    ],
+    "anyOf": [
+      {
+        "pattern": "^(?:Online-)?(?:Sitzplatz)?[Rr]eservierung\\s*$",
+        "flags": "m"
+      },
+      {
+        "pattern": "^Sitzplatzreservierung\\b",
+        "flags": "m"
+      },
+      {
+        "pattern": "(?:gilt|g(?:ü|ue)ltig)\\s+nur\\s+(?:in\\s+Verbindung\\s+)?mit\\s+(?:einer|einem)\\s+g(?:ü|ue)ltigen\\s+Fahr(?:karte|schein|ausweis)",
+        "flags": "i"
+      }
+    ],
+    "noneOf": [
+      {
+        "pattern": "^(?:[A-Z]{1,5}(?:\\/[A-Z]{1,5})?\\s+)?Fahrkarte\\s*$",
+        "flags": "m"
+      },
+      {
+        "pattern": "^Online-Ticket\\s*$",
+        "flags": "m"
+      },
+      {
+        "pattern": "\\((?:Einfache Fahrt|Hin- und R(?:ü|ue)ckfahrt)\\)",
+        "flags": ""
+      },
+      {
+        "pattern": "^(?:Flexpreis|(?:Super )?Sparpreis|Normalpreis|Einzelfahrkarte|Deutschland-Ticket)\\b",
+        "flags": "m"
+      }
+    ]
+  },
+  "extraction": {
+    "preprocess": ["stripCarriageReturns"],
+    "fields": {
+      "documentKind": {
+        "value": "reservation"
+      },
+      "source": {
+        "value": "db-reservation"
+      },
+      "operator": {
+        "value": "Deutsche Bahn"
+      },
+      "bookingReference": {
+        "patterns": [
+          "Auftragsnummer:?\\s+([A-Z0-9]{6,14})\\b",
+          "Auftrag(?:sbestätigung zum Auftrag)?\\s+([A-Z0-9]{6,14})\\b"
+        ],
+        "flags": ""
+      },
+      "travelClass": {
+        "patterns": ["^(?:Klasse\\b.*|Sitzplatzreservierung.*)$"],
+        "flags": "m",
+        "transform": "travelClass"
+      }
+    },
+    "repeats": {
+      "seatBlocks": {
+        "mode": "split",
+        "splitPattern": "^[ \\t]*von[^\\S\\n]+[^\\n]+?,[^\\S\\n]*\\d{1,2}\\.\\d{1,2}\\.\\d{4}[^\\S\\n]+\\d{1,2}:\\d{2}[^\\S\\n]*Uhr",
+        "flags": "gim",
+        "skipPreamble": true,
+        "fields": {
+          "ride": {
+            "patterns": ["^[ \\t]*von\\s"],
+            "flags": "i"
+          },
+          "coach": {
+            "patterns": [
+              "(?:Wg\\.|Wagen)\\s*(?<c>[\\w-]+),\\s*(?:Pl\\.|Pl(?:ä|ae)tze|Platz)\\s*(?<s>\\d+(?:\\s+\\d+)*)(?=\\s*(?:,|$))"
+            ],
+            "flags": "m",
+            "format": "{c}"
+          },
+          "seat": {
+            "patterns": [
+              "(?:Wg\\.|Wagen)\\s*(?<c>[\\w-]+),\\s*(?:Pl\\.|Pl(?:ä|ae)tze|Platz)\\s*(?<s>\\d+(?:\\s+\\d+)*)(?=\\s*(?:,|$))"
+            ],
+            "flags": "m",
+            "format": "{s}",
+            "replace": [["\\s+", " "]]
+          }
+        },
+        "minimum": 0
+      },
+      "legs": {
+        "mode": "matchAll",
+        "pattern": "^[ \\t]*von[^\\S\\n]+(?<dep>[^\\n]+?),[^\\S\\n]*(?<depDate>\\d{1,2}\\.\\d{1,2}\\.\\d{4})[^\\S\\n]+(?<depTime>\\d{1,2}:\\d{2})[^\\S\\n]*(?<r1>Uhr\\b[^\\n]*)(?<between>(?:(?:\\n[ \\t]*)*\\n[ \\t]*\\S[^\\n]*){0,2}?(?:\\n[ \\t]*)*\\n)[ \\t]*nach[^\\S\\n]+(?<arr>[^\\n]+?),[^\\S\\n]*(?<arrDate>\\d{1,2}\\.\\d{1,2}\\.\\d{4})[^\\S\\n]+(?<arrTime>\\d{1,2}:\\d{2})[^\\S\\n]*(?<r2>Uhr\\b[^\\n]*)",
+        "flags": "gim",
+        "fields": {
+          "depStationName": {
+            "group": "dep",
+            "replace": [
+              ["\\s+Gl\\.\\s*[\\d-]+$", "", "i"],
+              ["\\s{2,}", " "]
+            ],
+            "transform": "trim"
+          },
+          "arrStationName": {
+            "group": "arr",
+            "replace": [
+              ["\\s+Gl\\.\\s*[\\d-]+$", "", "i"],
+              ["\\s{2,}", " "]
+            ],
+            "transform": "trim"
+          },
+          "departureLocal": {
+            "format": "{depDate}T{depTime}",
+            "transform": "dateTime"
+          },
+          "arrivalLocal": {
+            "format": "{arrDate}T{arrTime}",
+            "transform": "dateTime"
+          },
+          "trainCategory": {
+            "format": "{r1} {between} {r2}",
+            "find": {
+              "pattern": "\\b(ICE|ECE|IC|EC|EN|NJ|CNL|IRE|RE|RB|S|TGV|RJX|RJ|WB|FLX|IR|ALX|BRB|MEX|M|ERB|HLB|NWB|ICN|EST|TER|OUIGO)\\s?\\d{1,6}\\b",
+              "flags": ""
+            }
+          },
+          "trainNumber": {
+            "format": "{r1} {between} {r2}",
+            "find": {
+              "pattern": "\\b(?:ICE|ECE|IC|EC|EN|NJ|CNL|IRE|RE|RB|S|TGV|RJX|RJ|WB|FLX|IR|ALX|BRB|MEX|M|ERB|HLB|NWB|ICN|EST|TER|OUIGO)\\s?(?<v>\\d{1,6})\\b",
+              "flags": ""
+            }
+          },
+          "direction": {
+            "lastBefore": {
+              "pattern": "^[ \\t]*(Hinfahrt|R(?:ü|ue)ckfahrt)\\b",
+              "flags": "im"
+            },
+            "map": [
+              ["^h", "outbound"],
+              ["^r", "return"]
+            ]
+          }
+        },
+        "skipItemsWithout": ["departureLocal"],
+        "zip": {
+          "with": "seatBlocks",
+          "strict": true
+        }
+      }
+    },
+    "required": ["legs"]
+  },
+  "testCases": [
+    {
+      "name": "a reservation-only confirmation mail",
+      "input": "vielen Dank für Ihre Buchung bei der Deutschen Bahn.\nAuftragsnummer 443322110099 wie folgt gebucht:\nSitzplatzreservierung, 2. Klasse\nvon Probestadt Hbf, 05.05.2027 08:00 Uhr\nIC 2345\nnach Zielstadt Hbf, 05.05.2027 10:10 Uhr\nWagen 6, Platz 55\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 4,90 EUR wird per PayPal durchgeführt.",
+      "expect": "match",
+      "expected": {
+        "bookingReference": "443322110099",
+        "travelClass": "second",
+        "legs": [
+          {
+            "trainCategory": "IC",
+            "trainNumber": "2345",
+            "coach": "6",
+            "seat": "55"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a ticket mail that also books a seat is a ticket",
+      "input": "vielen Dank für Ihre Buchung bei der Deutschen Bahn.\nAuftragsnummer 443322110099 wie folgt gebucht:\nFlexpreis, 2. Klasse\nSitzplatzreservierung\nvon Probestadt Hbf, 05.05.2027 08:00 Uhr\nnach Zielstadt Hbf, 05.05.2027 10:10 Uhr",
+      "expect": "decline"
+    }
+  ]
+}
