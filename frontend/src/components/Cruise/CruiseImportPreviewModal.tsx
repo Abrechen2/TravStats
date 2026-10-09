@@ -16,10 +16,6 @@ import type {
 // AirportAutocomplete + airportsApi use the lib/api Airport (stricter `name`);
 // use the same one so its value/onChange line up, then it flows into FlightInput.
 import type { Airport } from "../../lib/api";
-import { cruiseApi } from "../../lib/api/cruise";
-import { flightsApi } from "../../lib/api/flights";
-import { tripsApi } from "../../lib/api/trips";
-import { createImportBatch } from "../../lib/api/importBatches";
 import { useToastStore } from "../../store/toastStore";
 import { airportZone } from "../FlightForm/flightPayload";
 import { MissingZoneError, dayInput } from "../../lib/api/timeInput";
@@ -36,8 +32,10 @@ import { PortPicker } from "./PortPicker";
 import { CruiseStopsEditor } from "./CruiseStopsEditor";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import AirportAutocomplete from "../AirportAutocomplete";
-import { alreadyImportedId, deriveTripMeta, isAlreadyImported } from "./cruiseImportEntry";
 import type { EntryData } from "./cruiseImportEntry";
+import { storeCruiseImport } from "./cruiseImportSave";
+import type { CruiseImportOutcome } from "./cruiseImportSave";
+import { CruiseImportFlightGap } from "./CruiseImportFlightGap";
 import { CruiseReimportCompare } from "./CruiseReimportCompare";
 import type { ReimportConflict, ReimportSummary } from "./CruiseReimportCompare";
 
@@ -89,10 +87,12 @@ export function CruiseImportPreviewModal({
   const anyFlightsDetected = entries.some((e) => (e.flights?.length ?? 0) > 0);
   const [groupAsTrip, setGroupAsTrip] = useState(anyFlightsDetected || entries.length > 1);
   const [tripName, setTripName] = useState("");
-  /** Bookings the server already holds whose plan the user is comparing (forgejo#225). */
+  /** Bookings the server already held whose plan the user is comparing (forgejo#225). */
   const [reimports, setReimports] = useState<ReimportConflict[] | null>(null);
-  /** The rest of the save — its messages and `onSaved` — waiting for that comparison. */
-  const finishRef = useRef<(() => Promise<void>) | null>(null);
+  /** Flights the import did not store, named with a retry (re-review residual of I4). */
+  const [flightGap, setFlightGap] = useState<CruiseImportOutcome | null>(null);
+  /** The stored outcome while the comparison and the flight list are open. */
+  const outcomeRef = useRef<CruiseImportOutcome | null>(null);
 
   const handleEntryChange = useCallback((idx: number, data: EntryData): void => {
     setEntryData((prev) => prev.map((p, i) => (i === idx ? data : p)));
@@ -111,94 +111,15 @@ export function CruiseImportPreviewModal({
     setSaving(true);
     try {
       const allFlights = entryData.flatMap((e) => e.flightInputs);
-      // The trip is made when the first cruise is actually about to be
-      // stored, and taken back if every booking was already there: a re-read
-      // must not leave a second, empty "Norwegen 2026" (review I4).
-      const wantTrip = groupAsTrip && (allFlights.length > 0 || entryData.length > 1);
-      let tripId: string | undefined;
-      const ensureTrip = async (): Promise<string | undefined> => {
-        if (wantTrip && !tripId) {
-          const trip = await tripsApi.create({
-            name: tripName.trim() || defaultTripName,
-            ...deriveTripMeta(entryData, new Date()),
-          });
-          tripId = trip.id;
-        }
-        return tripId;
-      };
-
-      // One import, one entry in the log — and a booking that was already read
-      // once is counted, not created twice. A batch that cannot be created
-      // must not cost the user their import, so it falls back to unbatched.
-      let batchId: string | null = null;
-      try {
-        batchId = await createImportBatch("cruise", "email", sourceFileName ?? null);
-      } catch (err: unknown) {
-        logger.error("CruiseImportPreviewModal: import batch create failed", err);
-      }
-
-      let alreadyThere = 0;
-      const conflicts: ReimportConflict[] = [];
-      // Only the flights of a booking stored NOW: an already-imported one's
-      // flights were made by its first import (review I4).
-      const flights: FlightInput[] = [];
-      for (const e of entryData) {
-        try {
-          const trip = await ensureTrip();
-          await cruiseApi.create({ ...e.input, tripId: trip, importBatchId: batchId });
-          flights.push(...e.flightInputs);
-        } catch (err: unknown) {
-          // 409 is the server saying "you already have this one" — the normal
-          // answer to re-reading a forwarded confirmation, not a failure. Its
-          // plan may have changed since (a swapped port, a moved time): that
-          // is compared with the stored one before the import is done.
-          if (isAlreadyImported(err)) {
-            alreadyThere += 1;
-            const existingId = alreadyImportedId(err);
-            if (existingId) conflicts.push({ existingId, stops: e.stops });
-            continue;
-          }
-          throw err;
-        }
-      }
-      const created = entryData.length - alreadyThere;
-      if (tripId && created === 0) {
-        await tripsApi.delete(tripId).catch((err: unknown) => {
-          logger.error("CruiseImportPreviewModal: removing the unused trip failed", err);
-        });
-        tripId = undefined;
-      }
-
-      const flightIds: string[] = [];
-      for (const f of flights) {
-        const stored = await flightsApi.create(f, { force: true });
-        if (stored.id) flightIds.push(stored.id);
-      }
-      if (tripId && flightIds.length > 0) {
-        await tripsApi.assignFlights(tripId, { flightIds, action: "add" });
-      }
-
-      const finish = async (): Promise<void> => {
-        if (alreadyThere > 0) {
-          addToast("info", t("cruise:import.alreadyImported", { count: alreadyThere }));
-        }
-        // Counts what this import STORED, not what it read.
-        if (created > 0) {
-          addToast(
-            "success",
-            flights.length > 0
-              ? t("cruise:import.savedWithFlights", { cruises: created, flights: flights.length })
-              : t("cruise:import.saved", { count: created })
-          );
-        }
-        await onSaved();
-      };
-      if (conflicts.length > 0) {
-        finishRef.current = finish;
-        setReimports(conflicts);
-        return;
-      }
-      await finish();
+      const outcome = await storeCruiseImport({
+        entryData,
+        wantTrip: groupAsTrip && (allFlights.length > 0 || entryData.length > 1),
+        tripName: tripName.trim() || defaultTripName,
+        sourceFileName: sourceFileName ?? null,
+      });
+      outcomeRef.current = outcome;
+      if (outcome.conflicts.length > 0) setReimports(outcome.conflicts);
+      else afterComparison();
     } catch (err: unknown) {
       logger.error("CruiseImportPreviewModal: save failed", err);
       addToast("error", saveErrorMessage(err, t, "cruise:import.saveError"));
@@ -207,17 +128,47 @@ export function CruiseImportPreviewModal({
     }
   };
 
+  /** Last step: the import's own messages, then `onSaved`. */
+  const finish = (addedFlights: number, stillMissing: number): void => {
+    const outcome = outcomeRef.current;
+    outcomeRef.current = null;
+    setFlightGap(null);
+    if (!outcome) return;
+    if (outcome.alreadyThere > 0) {
+      addToast("info", t("cruise:import.alreadyImported", { count: outcome.alreadyThere }));
+    }
+    // Counts what this import STORED, not what it read.
+    const flights = outcome.storedFlights + addedFlights;
+    if (outcome.created > 0) {
+      addToast(
+        "success",
+        flights > 0
+          ? t("cruise:import.savedWithFlights", { cruises: outcome.created, flights })
+          : t("cruise:import.saved", { count: outcome.created })
+      );
+    }
+    if (stillMissing > 0) {
+      addToast("warning", t("cruise:flightGap.leftOut", { count: stillMissing }));
+    }
+    void Promise.resolve(onSaved()).catch((err: unknown) => {
+      logger.error("CruiseImportPreviewModal: finishing the import failed", err);
+      addToast("error", saveErrorMessage(err, t, "cruise:import.saveError"));
+    });
+  };
+
+  /** After the comparison: flights that were not stored are named before the end. */
+  const afterComparison = (): void => {
+    const outcome = outcomeRef.current;
+    if (outcome && outcome.gap.length > 0) setFlightGap(outcome);
+    else finish(0, 0);
+  };
+
   const onReimportDone = (summary: ReimportSummary): void => {
     setReimports(null);
     if (summary.applied > 0) {
       addToast("success", t("cruise:reimport.appliedToast", { count: summary.applied }));
     }
-    const finish = finishRef.current;
-    finishRef.current = null;
-    void finish?.().catch((err: unknown) => {
-      logger.error("CruiseImportPreviewModal: finishing after the comparison failed", err);
-      addToast("error", saveErrorMessage(err, t, "cruise:import.saveError"));
-    });
+    afterComparison();
   };
 
   // The shared frame, like the lodging preview (forgejo#166): in place, the
@@ -225,6 +176,14 @@ export function CruiseImportPreviewModal({
   return (
     <>
       {reimports && <CruiseReimportCompare conflicts={reimports} onDone={onReimportDone} />}
+      {flightGap && (
+        <CruiseImportFlightGap
+          items={flightGap.gap}
+          created={flightGap.created > 0}
+          tripId={flightGap.tripId}
+          onDone={({ added, stillMissing }) => finish(added, stillMissing)}
+        />
+      )}
       <Modal
         open
         onClose={onCancel}

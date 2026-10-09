@@ -28,7 +28,7 @@ vi.mock("../../../lib/api", () => ({
 vi.mock("../../../lib/api/cruise", () => ({
   cruiseApi: { create: vi.fn(), get: vi.fn(), update: vi.fn() },
 }));
-vi.mock("../../../lib/api/flights", () => ({ flightsApi: { create: vi.fn() } }));
+vi.mock("../../../lib/api/flights", () => ({ flightsApi: { create: vi.fn(), getAll: vi.fn() } }));
 vi.mock("../../../lib/api/trips", () => ({
   tripsApi: { create: vi.fn(), assignFlights: vi.fn(), delete: vi.fn() },
 }));
@@ -148,8 +148,29 @@ describe("CruiseImportPreviewModal — a booking read again", () => {
       response: { status: 409, data: { error: "already_imported", data: { id: "existing-1" } } },
     };
 
+    /** The logbook's copy of LH123 on 5 Oct, as the server lists it. */
+    const storedLh123 = {
+      id: "f-old",
+      flightNumber: "LH123",
+      depIata: "FRA",
+      arrIata: "BGO",
+      times: {
+        departure: {
+          utc: "2026-10-04T22:00:00.000Z",
+          zone: "Europe/Berlin",
+          offset: "+02:00",
+          local: "2026-10-05T00:00:00",
+          precision: "day",
+        },
+      },
+    };
+    const logbook = (flights: unknown[]): void => {
+      vi.mocked(flightsApi.getAll).mockResolvedValue({ flights, total: flights.length } as never);
+    };
+
     beforeEach(() => {
       vi.clearAllMocks();
+      logbook([storedLh123]);
       vi.mocked(tripsApi.create).mockResolvedValue({ id: "trip-new" } as never);
       vi.mocked(tripsApi.delete).mockResolvedValue(undefined);
       vi.mocked(flightsApi.create).mockResolvedValue({ id: "f1" } as never);
@@ -202,6 +223,84 @@ describe("CruiseImportPreviewModal — a booking read again", () => {
         flightIds: ["f1"],
         action: "add",
       });
+    });
+
+    /**
+     * Re-review residual of I4: a flight that failed after its cruise was
+     * stored was lost for good — the next read answers 409 and skips the
+     * booking's flights. It is named now, with a retry that stores only what
+     * the logbook lacks.
+     */
+    it("names a flight that failed after its cruise was stored, and stores it on retry", async () => {
+      logbook([]);
+      vi.mocked(cruiseApi.create).mockResolvedValue({ id: "c-new" } as Cruise);
+      vi.mocked(flightsApi.create)
+        .mockRejectedValueOnce(new Error("timeout"))
+        .mockResolvedValueOnce({ id: "f2" } as never);
+      const onSaved = vi.fn();
+      render(
+        <CruiseImportPreviewModal
+          entries={[withFlight("NEW1")]}
+          onCancel={vi.fn()}
+          onSaved={onSaved}
+        />
+      );
+      await userEvent.click(screen.getByRole("button", { name: "cruise:import.save" }));
+
+      expect(await screen.findByText("flightGap.introSaved")).toBeInTheDocument();
+      expect(screen.getByText("flightGap.item")).toBeInTheDocument();
+      expect(onSaved).not.toHaveBeenCalled();
+      await userEvent.click(screen.getByRole("button", { name: "flightGap.retry" }));
+
+      await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+      expect(flightsApi.create).toHaveBeenCalledTimes(2);
+      expect(tripsApi.assignFlights).toHaveBeenLastCalledWith("trip-new", {
+        flightIds: ["f2"],
+        action: "add",
+      });
+    });
+
+    it("does not create a flight twice when the failed request had in fact arrived", async () => {
+      logbook([]);
+      vi.mocked(cruiseApi.create).mockResolvedValue({ id: "c-new" } as Cruise);
+      vi.mocked(flightsApi.create).mockRejectedValueOnce(new Error("timeout"));
+      const onSaved = vi.fn();
+      render(
+        <CruiseImportPreviewModal
+          entries={[withFlight("NEW1")]}
+          onCancel={vi.fn()}
+          onSaved={onSaved}
+        />
+      );
+      await userEvent.click(screen.getByRole("button", { name: "cruise:import.save" }));
+      await screen.findByText("flightGap.introSaved");
+
+      // The server stored it after all; the retry finds it in the logbook.
+      logbook([storedLh123]);
+      await userEvent.click(screen.getByRole("button", { name: "flightGap.retry" }));
+
+      await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+      expect(flightsApi.create).toHaveBeenCalledTimes(1);
+    });
+
+    it("offers a known booking's flight the logbook lacks, and creates nothing unasked", async () => {
+      logbook([]);
+      vi.mocked(cruiseApi.create).mockRejectedValue(conflict);
+      const onSaved = vi.fn();
+      render(
+        <CruiseImportPreviewModal
+          entries={[withFlight("ABC123")]}
+          onCancel={vi.fn()}
+          onSaved={onSaved}
+        />
+      );
+      await userEvent.click(screen.getByRole("button", { name: "cruise:import.save" }));
+      await userEvent.click(await screen.findByRole("button", { name: "reimport.keepStored" }));
+
+      expect(await screen.findByText("flightGap.introKnown")).toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "flightGap.skip" }));
+      await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+      expect(flightsApi.create).not.toHaveBeenCalled();
     });
   });
 });

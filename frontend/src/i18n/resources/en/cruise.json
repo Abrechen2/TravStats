@@ -492,5 +492,25 @@
     "ochre": "Ochre",
     "cyan": "Cyan",
     "olive": "Olive"
+  },
+  "flightGap": {
+    "title": "Not all flights are in the logbook",
+    "introSaved_one": "The cruise is saved, one flight is not:",
+    "introSaved_other": "The cruise is saved, {{count}} flights are not:",
+    "introKnown_one": "This booking was already saved; one of its flights is missing from the logbook:",
+    "introKnown_other": "This booking was already saved; {{count}} of its flights are missing from the logbook:",
+    "item": "{{flight}} – {{reason}}",
+    "reason": {
+      "failed": "could not be saved",
+      "missing": "missing from the logbook",
+      "unchecked": "could not be checked"
+    },
+    "hint": "“Add missing flights” looks in the logbook first (flight number and departure day) and adds only what is not there – a flight is never created twice.",
+    "retry_one": "Add missing flight",
+    "retry_other": "Add {{count}} missing flights",
+    "retryFailed": "Not all flights could be added. You can try again.",
+    "skip": "Finish without these flights",
+    "leftOut_one": "One flight of the booking is not in the logbook.",
+    "leftOut_other": "{{count}} flights of the booking are not in the logbook."
   }
 }

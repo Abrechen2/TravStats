@@ -492,5 +492,25 @@
     "ochre": "Ocker",
     "cyan": "Cyan",
     "olive": "Oliv"
+  },
+  "flightGap": {
+    "title": "Nicht alle Flüge sind im Logbuch",
+    "introSaved_one": "Die Kreuzfahrt ist gespeichert, ein Flug nicht:",
+    "introSaved_other": "Die Kreuzfahrt ist gespeichert, {{count}} Flüge nicht:",
+    "introKnown_one": "Diese Buchung war schon gespeichert; ein Flug davon fehlt im Logbuch:",
+    "introKnown_other": "Diese Buchung war schon gespeichert; {{count}} Flüge davon fehlen im Logbuch:",
+    "item": "{{flight}} – {{reason}}",
+    "reason": {
+      "failed": "konnte nicht gespeichert werden",
+      "missing": "fehlt im Logbuch",
+      "unchecked": "konnte nicht geprüft werden"
+    },
+    "hint": "„Fehlende Flüge anlegen“ sieht zuerst im Logbuch nach (Flugnummer und Abflugtag) und legt nur an, was dort nicht steht – ein Flug entsteht nie doppelt.",
+    "retry_one": "Fehlenden Flug anlegen",
+    "retry_other": "{{count}} fehlende Flüge anlegen",
+    "retryFailed": "Nicht alle Flüge konnten angelegt werden. Du kannst es noch einmal versuchen.",
+    "skip": "Ohne diese Flüge abschließen",
+    "leftOut_one": "Ein Flug der Buchung ist nicht im Logbuch.",
+    "leftOut_other": "{{count}} Flüge der Buchung sind nicht im Logbuch."
   }
 }
