@@ -1,6 +1,6 @@
 import CurrencySelect from "../common/CurrencySelect";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import type { JSX, ReactNode } from "react";
 import type { ParsedCruiseEntry, ParsedFlightSuggestion } from "../../lib/api/parse";
 import type {
@@ -12,15 +12,10 @@ import type {
   FlightInput,
   Port,
   Ship,
-  TripStatus,
 } from "../../types";
 // AirportAutocomplete + airportsApi use the lib/api Airport (stricter `name`);
 // use the same one so its value/onChange line up, then it flows into FlightInput.
 import type { Airport } from "../../lib/api";
-import { cruiseApi } from "../../lib/api/cruise";
-import { flightsApi } from "../../lib/api/flights";
-import { tripsApi } from "../../lib/api/trips";
-import { createImportBatch } from "../../lib/api/importBatches";
 import { useToastStore } from "../../store/toastStore";
 import { airportZone } from "../FlightForm/flightPayload";
 import { MissingZoneError, dayInput } from "../../lib/api/timeInput";
@@ -37,6 +32,14 @@ import { PortPicker } from "./PortPicker";
 import { CruiseStopsEditor } from "./CruiseStopsEditor";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import AirportAutocomplete from "../AirportAutocomplete";
+import type { EntryData } from "./cruiseImportEntry";
+import { storeCruiseImport } from "./cruiseImportSave";
+import type { CruiseImportOutcome } from "./cruiseImportSave";
+import { CruiseImportFlightGap } from "./CruiseImportFlightGap";
+import { CruiseReimportCompare } from "./CruiseReimportCompare";
+import type { ReimportConflict, ReimportSummary } from "./CruiseReimportCompare";
+
+export { deriveTripMeta } from "./cruiseImportEntry";
 
 interface CruiseImportPreviewModalProps {
   entries: ParsedCruiseEntry[];
@@ -58,55 +61,11 @@ const dateOnly = (iso: string | null | undefined): string => (iso ? iso.slice(0,
 // A cruise's first/last day travels as a bare `YYYY-MM-DD` (ADR 0002).
 const toDay = (d: string): string | undefined => dayInput(d) ?? undefined;
 
-interface EntryData {
-  input: CruiseWriteBody;
-  flightInputs: FlightInput[];
-  tripLabel: string;
-  /** A time whose place brings no zone (a portless stop, a zoneless airport):
-   *  the save refuses with its sentence before writing anything. */
-  timeError?: MissingZoneError;
-}
-
-/**
- * Derive the auto-created trip's date span + status from the imported cruises.
- * Without an explicit status the backend falls back to the Trip Prisma default
- * ("completed"), which mislabels an upcoming fly & cruise booking — an
- * embarkation two days from now would otherwise show as "Abgeschlossen".
- */
-export function deriveTripMeta(
-  data: EntryData[],
-  now: Date
-): { startDate?: string; endDate?: string; status: TripStatus } {
-  const starts = data.map((e) => e.input.startDate).filter((d): d is string => !!d);
-  const ends = data.map((e) => e.input.endDate).filter((d): d is string => !!d);
-  const startDate = starts.length ? starts.reduce((a, b) => (a < b ? a : b)) : undefined;
-  const endDate = ends.length ? ends.reduce((a, b) => (a > b ? a : b)) : undefined;
-
-  let status: TripStatus = "completed";
-  if (startDate && new Date(startDate) > now) status = "planned";
-  else if (endDate && new Date(endDate) < now) status = "completed";
-  else if (startDate) status = "in_progress";
-
-  return { startDate, endDate, status };
-}
-
 /**
  * Post-parse review for imported cruises + bundled fly & cruise flights.
  * Each cruise is an editable audit card; detected flights become opt-in
  * editable cards; everything can be grouped into one Trip on save.
  */
-
-/**
- * A 409 from `POST /cruises` means the server already holds this booking —
- * the ordinary answer to re-reading a forwarded confirmation. Recognised by
- * the fixed code rather than by prose, so a reworded message never turns a
- * known outcome back into an unexplained failure.
- */
-function isAlreadyImported(err: unknown): boolean {
-  const res = (err as { response?: { status?: number; data?: { error?: string } } }).response;
-  return res?.status === 409 && res.data?.error === "already_imported";
-}
-
 export function CruiseImportPreviewModal({
   entries,
   sourceFileName,
@@ -118,11 +77,22 @@ export function CruiseImportPreviewModal({
   const [saving, setSaving] = useState(false);
   const [entryData, setEntryData] = useState<EntryData[]>(() =>
     // Placeholder until each card's effect builds the write body on mount.
-    entries.map((e) => ({ input: { ...e.input, stops: [] }, flightInputs: [], tripLabel: "" }))
+    entries.map((e) => ({
+      input: { ...e.input, stops: [] },
+      stops: [],
+      flightInputs: [],
+      tripLabel: "",
+    }))
   );
   const anyFlightsDetected = entries.some((e) => (e.flights?.length ?? 0) > 0);
   const [groupAsTrip, setGroupAsTrip] = useState(anyFlightsDetected || entries.length > 1);
   const [tripName, setTripName] = useState("");
+  /** Bookings the server already held whose plan the user is comparing (forgejo#225). */
+  const [reimports, setReimports] = useState<ReimportConflict[] | null>(null);
+  /** Flights the import did not store, named with a retry (re-review residual of I4). */
+  const [flightGap, setFlightGap] = useState<CruiseImportOutcome | null>(null);
+  /** The stored outcome while the comparison and the flight list are open. */
+  const outcomeRef = useRef<CruiseImportOutcome | null>(null);
 
   const handleEntryChange = useCallback((idx: number, data: EntryData): void => {
     setEntryData((prev) => prev.map((p, i) => (i === idx ? data : p)));
@@ -141,62 +111,15 @@ export function CruiseImportPreviewModal({
     setSaving(true);
     try {
       const allFlights = entryData.flatMap((e) => e.flightInputs);
-      let tripId: string | undefined;
-      if (groupAsTrip && (allFlights.length > 0 || entryData.length > 1)) {
-        const trip = await tripsApi.create({
-          name: tripName.trim() || defaultTripName,
-          ...deriveTripMeta(entryData, new Date()),
-        });
-        tripId = trip.id;
-      }
-
-      // One import, one entry in the log — and a booking that was already read
-      // once is counted, not created twice. A batch that cannot be created
-      // must not cost the user their import, so it falls back to unbatched.
-      let batchId: string | null = null;
-      try {
-        batchId = await createImportBatch("cruise", "email", sourceFileName ?? null);
-      } catch (err: unknown) {
-        logger.error("CruiseImportPreviewModal: import batch create failed", err);
-      }
-
-      let alreadyThere = 0;
-      for (const e of entryData) {
-        try {
-          await cruiseApi.create({ ...e.input, tripId, importBatchId: batchId });
-        } catch (err: unknown) {
-          // 409 is the server saying "you already have this one" — the normal
-          // answer to re-reading a forwarded confirmation, not a failure.
-          if (isAlreadyImported(err)) {
-            alreadyThere += 1;
-            continue;
-          }
-          throw err;
-        }
-      }
-
-      const flightIds: string[] = [];
-      for (const f of allFlights) {
-        const created = await flightsApi.create(f, { force: true });
-        if (created.id) flightIds.push(created.id);
-      }
-      if (tripId && flightIds.length > 0) {
-        await tripsApi.assignFlights(tripId, { flightIds, action: "add" });
-      }
-
-      if (alreadyThere > 0) {
-        addToast("info", t("cruise:import.alreadyImported", { count: alreadyThere }));
-      }
-      addToast(
-        "success",
-        allFlights.length > 0
-          ? t("cruise:import.savedWithFlights", {
-              cruises: entryData.length,
-              flights: allFlights.length,
-            })
-          : t("cruise:import.saved", { count: entryData.length })
-      );
-      await onSaved();
+      const outcome = await storeCruiseImport({
+        entryData,
+        wantTrip: groupAsTrip && (allFlights.length > 0 || entryData.length > 1),
+        tripName: tripName.trim() || defaultTripName,
+        sourceFileName: sourceFileName ?? null,
+      });
+      outcomeRef.current = outcome;
+      if (outcome.conflicts.length > 0) setReimports(outcome.conflicts);
+      else afterComparison();
     } catch (err: unknown) {
       logger.error("CruiseImportPreviewModal: save failed", err);
       addToast("error", saveErrorMessage(err, t, "cruise:import.saveError"));
@@ -205,76 +128,130 @@ export function CruiseImportPreviewModal({
     }
   };
 
+  /** Last step: the import's own messages, then `onSaved`. */
+  const finish = (addedFlights: number, stillMissing: number): void => {
+    const outcome = outcomeRef.current;
+    outcomeRef.current = null;
+    setFlightGap(null);
+    if (!outcome) return;
+    if (outcome.alreadyThere > 0) {
+      addToast("info", t("cruise:import.alreadyImported", { count: outcome.alreadyThere }));
+    }
+    // Counts what this import STORED, not what it read.
+    const flights = outcome.storedFlights + addedFlights;
+    if (outcome.created > 0) {
+      addToast(
+        "success",
+        flights > 0
+          ? t("cruise:import.savedWithFlights", { cruises: outcome.created, flights })
+          : t("cruise:import.saved", { count: outcome.created })
+      );
+    }
+    if (stillMissing > 0) {
+      addToast("warning", t("cruise:flightGap.leftOut", { count: stillMissing }));
+    }
+    void Promise.resolve(onSaved()).catch((err: unknown) => {
+      logger.error("CruiseImportPreviewModal: finishing the import failed", err);
+      addToast("error", saveErrorMessage(err, t, "cruise:import.saveError"));
+    });
+  };
+
+  /** After the comparison: flights that were not stored are named before the end. */
+  const afterComparison = (): void => {
+    const outcome = outcomeRef.current;
+    if (outcome && outcome.gap.length > 0) setFlightGap(outcome);
+    else finish(0, 0);
+  };
+
+  const onReimportDone = (summary: ReimportSummary): void => {
+    setReimports(null);
+    if (summary.applied > 0) {
+      addToast("success", t("cruise:reimport.appliedToast", { count: summary.applied }));
+    }
+    afterComparison();
+  };
+
   // The shared frame, like the lodging preview (forgejo#166): in place, the
   // preview sat before the add chooser's portal and never got the keyboard.
   return (
-    <Modal
-      open
-      onClose={onCancel}
-      busy={saving}
-      maxWidth={672}
-      closeLabel={t("common:buttons.close")}
-      title={t("cruise:import.previewTitle", { count: entries.length })}
-      footer={
-        <div className="flex w-full items-center justify-between gap-3">
-          <span className="text-xs text-(--text-muted)">
-            {totalFlights > 0 && t("cruise:import.flightCount", { count: totalFlights })}
-          </span>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={saving}
-              className="rounded-md border border-border px-4 py-2 text-sm text-(--text-muted) hover:text-(--text-primary) disabled:opacity-50"
-            >
-              {t("common:buttons.cancel")}
-            </button>
-            <button
-              type="button"
-              onClick={(): void => void handleSave()}
-              disabled={saving}
-              className="btn-primary px-4 py-2 text-sm"
-            >
-              {saving ? t("common:loading.default") : t("cruise:import.save")}
-            </button>
-          </div>
-        </div>
-      }
-    >
-      <p className="mb-4 text-sm text-(--text-muted)">{t("cruise:import.editHint")}</p>
-
-      <div className="space-y-4">
-        {entries.map((entry, idx) => (
-          <CruiseImportEntryEditor
-            key={idx}
-            index={idx}
-            entry={entry}
-            onChange={handleEntryChange}
-          />
-        ))}
-      </div>
-
-      {showTripToggle && (
-        <div className="mt-4 rounded-lg border border-border bg-(--bg-base) p-3">
-          <label className="flex items-center gap-2 text-sm text-(--text-primary)">
-            <input
-              type="checkbox"
-              checked={groupAsTrip}
-              onChange={(e): void => setGroupAsTrip(e.target.checked)}
-            />
-            {t("cruise:import.groupAsTrip")}
-          </label>
-          {groupAsTrip && (
-            <input
-              value={tripName}
-              onChange={(e): void => setTripName(e.target.value)}
-              placeholder={defaultTripName}
-              className={`${INPUT} mt-2`}
-            />
-          )}
-        </div>
+    <>
+      {reimports && <CruiseReimportCompare conflicts={reimports} onDone={onReimportDone} />}
+      {flightGap && (
+        <CruiseImportFlightGap
+          items={flightGap.gap}
+          created={flightGap.created > 0}
+          tripId={flightGap.tripId}
+          onDone={({ added, stillMissing }) => finish(added, stillMissing)}
+        />
       )}
-    </Modal>
+      <Modal
+        open
+        onClose={onCancel}
+        busy={saving}
+        maxWidth={672}
+        closeLabel={t("common:buttons.close")}
+        title={t("cruise:import.previewTitle", { count: entries.length })}
+        footer={
+          <div className="flex w-full items-center justify-between gap-3">
+            <span className="text-xs text-(--text-muted)">
+              {totalFlights > 0 && t("cruise:import.flightCount", { count: totalFlights })}
+            </span>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onCancel}
+                disabled={saving}
+                className="rounded-md border border-border px-4 py-2 text-sm text-(--text-muted) hover:text-(--text-primary) disabled:opacity-50"
+              >
+                {t("common:buttons.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={(): void => void handleSave()}
+                disabled={saving}
+                className="btn-primary px-4 py-2 text-sm"
+              >
+                {saving ? t("common:loading.default") : t("cruise:import.save")}
+              </button>
+            </div>
+          </div>
+        }
+      >
+        <p className="mb-4 text-sm text-(--text-muted)">{t("cruise:import.editHint")}</p>
+
+        <div className="space-y-4">
+          {entries.map((entry, idx) => (
+            <CruiseImportEntryEditor
+              key={idx}
+              index={idx}
+              entry={entry}
+              onChange={handleEntryChange}
+            />
+          ))}
+        </div>
+
+        {showTripToggle && (
+          <div className="mt-4 rounded-lg border border-border bg-(--bg-base) p-3">
+            <label className="flex items-center gap-2 text-sm text-(--text-primary)">
+              <input
+                type="checkbox"
+                checked={groupAsTrip}
+                onChange={(e): void => setGroupAsTrip(e.target.checked)}
+              />
+              {t("cruise:import.groupAsTrip")}
+            </label>
+            {groupAsTrip && (
+              <input
+                value={tripName}
+                onChange={(e): void => setTripName(e.target.value)}
+                placeholder={defaultTripName}
+                className={`${INPUT} mt-2`}
+              />
+            )}
+          </div>
+        )}
+      </Modal>
+    </>
   );
 }
 
@@ -433,7 +410,7 @@ function CruiseImportEntryEditor({
     if (!timeError && flightInputs.some((f) => !f.depTimezone || !f.arrTimezone)) {
       timeError = new MissingZoneError("flights");
     }
-    onChange(index, { input: builtInput, flightInputs, tripLabel, timeError });
+    onChange(index, { input: builtInput, stops, flightInputs, tripLabel, timeError });
   }, [
     ship,
     cruiseLine,

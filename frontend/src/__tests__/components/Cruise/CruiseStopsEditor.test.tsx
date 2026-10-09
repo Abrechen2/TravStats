@@ -51,8 +51,10 @@ describe("CruiseStopsEditor", () => {
     const onChange = vi.fn();
     render(<CruiseStopsEditor stops={stops} onChange={onChange} />);
     // Remove the first row — find all remove buttons by accessible name and click the first.
-    const removeBtns = screen.getAllByRole("button", { name: /remove|×/i });
-    await userEvent.click(removeBtns[0]);
+    // Open the first day, ask to remove it, confirm (forgejo#221, #224).
+    await userEvent.click(document.querySelectorAll("summary")[0]);
+    await userEvent.click(screen.getByRole("button", { name: "stops.remove" }));
+    await userEvent.click(screen.getByRole("button", { name: "stops.removeConfirm.confirm" }));
     const emitted = onChange.mock.calls[0][0] as Array<{ dayNumber: number }>;
     expect(emitted.length).toBe(2);
     expect(emitted[0].dayNumber).toBe(2);
@@ -81,8 +83,9 @@ describe("CruiseStopsEditor", () => {
         onChange={onChange}
       />
     );
-    // The unresolved name is visible.
-    expect(screen.getByText(/Taranto/)).toBeInTheDocument();
+    // The unresolved name is visible — in the day's compact line and in the
+    // opened day's banner (forgejo#221 added the line).
+    expect(screen.getAllByText(/Taranto/)).toHaveLength(2);
 
     // Resolving via the PortPicker sets portId and clears unresolvedPortName.
     await userEvent.type(screen.getByRole("combobox"), "Taranto");

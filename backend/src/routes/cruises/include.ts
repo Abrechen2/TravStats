@@ -17,4 +17,9 @@ export const CRUISE_INCLUDE = {
   trip: { select: { id: true, name: true, color: true } },
   stops: { include: { port: true }, orderBy: { dayNumber: "asc" as const } },
   legs: { orderBy: { ordinal: "asc" as const } },
+  // What a delete takes with it besides the stops and the documents
+  // (forgejo#250, review I1): GPS recordings and the routes the user redrew
+  // on the map both cascade, and the question has to name them. Counts only —
+  // one aggregate per relation, not the rows.
+  _count: { select: { tracks: true, legRoutes: true } },
 } satisfies Prisma.CruiseInclude;

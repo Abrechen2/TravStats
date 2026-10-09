@@ -46,6 +46,9 @@ interface Props {
    * under a category at once. Only for a `rentalBooking` entry.
    */
   rentalCategories?: boolean;
+  /** After an upload or a delete stored here — for a view beside it that
+   *  shows the same documents (the cruise day card, review M3). */
+  onChanged?: () => void;
 }
 
 /** The formats the text parsers read; an image or a wallet pass is not offered. */
@@ -88,6 +91,7 @@ export default function DocumentsSection({
   layout = "card",
   extract,
   rentalCategories = false,
+  onChanged,
 }: Props): JSX.Element {
   const { t } = useTranslation(["documents", "common"]);
   const format = useDisplayFormat();
@@ -186,6 +190,7 @@ export default function DocumentsSection({
         // bytes with the document already on file, so appending would show it
         // twice.
         await reload();
+        onChanged?.();
       } catch (err: unknown) {
         if (isDemoForbidden(err)) {
           setDemoRefused(true);
@@ -200,7 +205,7 @@ export default function DocumentsSection({
         if (inputRef.current) inputRef.current.value = "";
       }
     },
-    [entryType, entryId, limits, reload, t, rentalCategories, uploadCategory]
+    [entryType, entryId, limits, reload, t, rentalCategories, uploadCategory, onChanged]
   );
 
   // Re-filing changes a label on the same document; the answer is the truth.
@@ -233,6 +238,7 @@ export default function DocumentsSection({
       await documentsApi.remove(id);
       setDocuments((prev) => prev.filter((doc) => doc.id !== id));
       setError(null);
+      onChanged?.();
     } catch (err: unknown) {
       if (isDemoForbidden(err)) {
         setDemoRefused(true);
@@ -248,7 +254,7 @@ export default function DocumentsSection({
       setPendingDelete(null);
       setBusy(false);
     }
-  }, [pendingDelete, t]);
+  }, [pendingDelete, t, onChanged]);
 
   const locked = isSharedDemo || demoRefused;
 

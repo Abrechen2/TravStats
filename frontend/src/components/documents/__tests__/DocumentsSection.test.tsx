@@ -116,6 +116,17 @@ describe("DocumentsSection", () => {
     expect(await screen.findByText("bill.pdf")).toBeInTheDocument();
   });
 
+  // Review M3 (cruises): a view beside the section — the cruise day card —
+  // shows the same documents and is told when they changed.
+  it("tells its page after an upload was stored", async () => {
+    const onChanged = vi.fn();
+    render(<DocumentsSection entry={{ type: "cruise", id: "c1" }} onChanged={onChanged} />);
+    await screen.findByText("documents:empty");
+    const file = new File(["x"], "ticket.pdf", { type: "application/pdf" });
+    fireEvent.change(screen.getByTestId("documents-file-input"), { target: { files: [file] } });
+    await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
+  });
+
   it("refuses a file larger than its format's limit without spending the upload", async () => {
     render(<DocumentsSection entry={FLIGHT} />);
     await screen.findByText("documents:limitHint");

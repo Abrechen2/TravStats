@@ -49,21 +49,23 @@
     "edit": "Edit",
     "delete": "Delete",
     "deleteConfirmTitle": "Delete cruise?",
-    "deleteConfirmMessage": "“{{name}}” will be permanently deleted, along with its {{count}} port calls. Trips it belongs to are kept.",
+    "deleteConfirmMessage": "“{{name}}” will be permanently deleted, along with its {{count}} port calls.",
     "deleteConfirm": "Delete permanently",
     "deleteCancel": "Cancel",
     "deleteSuccess": "Cruise deleted",
     "deleteError": "Could not delete the cruise",
     "loadError": "The cruise could not be loaded.",
-    "deleteConfirmMessage_one": "“{{name}}” will be permanently deleted, along with its one port call. Trips it belongs to are kept.",
-    "deleteConfirmMessage_other": "“{{name}}” will be permanently deleted, along with its {{count}} port calls. Trips it belongs to are kept.",
-    "deleteConfirmMessageNoStops": "“{{name}}” will be permanently deleted. Trips it belongs to are kept.",
+    "deleteConfirmMessage_one": "“{{name}}” will be permanently deleted, along with its one port call.",
+    "deleteConfirmMessage_other": "“{{name}}” will be permanently deleted, along with its {{count}} port calls.",
+    "deleteConfirmMessageNoStops": "“{{name}}” will be permanently deleted.",
     "backToLogbook": "Logbook · Cruises",
     "itinerary": "Itinerary",
     "nights": "Nights",
     "countries": "Countries",
     "priceKpi": "Price",
-    "day": "Day"
+    "day": "Day",
+    "unresolvedKpi_one": "{{count}} unresolved",
+    "unresolvedKpi_other": "{{count}} unresolved"
   },
   "field": {
     "ship": "Ship",
@@ -107,7 +109,9 @@
     "departPortAirport": "From airport",
     "arrivePortAirport": "To airport",
     "color": "Color",
-    "colorAuto": "Automatic (derived from cruise ID)"
+    "colorAuto": "Automatic (derived from cruise ID)",
+    "startDate": "Departure date",
+    "endDate": "Arrival date"
   },
   "seatClass": {
     "economy": "Economy",
@@ -140,7 +144,43 @@
     "moveDown": "Move down",
     "remove": "Remove stop",
     "unresolved": "Unresolved port",
-    "unresolvedHint": "Pick a port from the catalog to resolve this stop."
+    "unresolvedHint": "Pick a port from the catalog to resolve this stop.",
+    "port": "Port",
+    "arrival": "Arrival (port's local time)",
+    "departure": "Departure (port's local time)",
+    "noPort": "Port missing",
+    "hasExcursion": "Excursion",
+    "actionsLabel": "Move or remove day {{day}}",
+    "preview": {
+      "up": "Move up: {{effect}}",
+      "down": "Move down: {{effect}}",
+      "orderOnly": "only the order changes",
+      "shift": "{{title}} day {{from}} → {{to}}",
+      "shiftDate": "{{from}} → {{to}}",
+      "noteTravels": "The excursion note stays with this port."
+    },
+    "removeConfirm": {
+      "title": "Remove “{{title}}” (day {{day}})?",
+      "date": "Date: {{date}}",
+      "times": "Arrival {{arrive}}, departure {{depart}}",
+      "noteLost": "The excursion note goes with it: “{{note}}”",
+      "othersKeep": "The other days keep their numbers and dates.",
+      "othersShift": "Afterwards these change: {{list}}",
+      "undoHint": "Can be taken back afterwards with “Undo itinerary change”.",
+      "keep": "Keep",
+      "confirm": "Remove"
+    },
+    "undo": {
+      "button": "Undo itinerary change",
+      "scope": "Affects only the order of the days, not the route drawn on the map.",
+      "last": "Last change: {{action}}.",
+      "done": "Taken back: {{action}}.",
+      "removed": "“{{title}}” (day {{day}}) removed",
+      "moved": "“{{title}}” moved",
+      "added": "Day {{day}} added"
+    },
+    "allAboard": "All aboard (local time)",
+    "allAboardHint": "Printed in the ship's daily programme. TravStats does not derive it from the departure."
   },
   "picker": {
     "ship_placeholder": "Search ship …",
@@ -217,8 +257,18 @@
     "editTitle": "Edit cruise",
     "saveError": "Could not save the cruise",
     "routeNameSuggestion": "Use suggestion: {{name}}",
-    "identityRequired": "Enter a ship, a route name, a cruise line or the departure port – otherwise the cruise cannot be recognised.",
-    "startDateRequired": "Enter the departure date."
+    "missing": {
+      "identity": "a ship, line, route name or departure port (any one)",
+      "startDate": "departure date",
+      "stopPort": "port for day {{day}} (or “At sea”)"
+    },
+    "identityHint": "One of these is required: ship, line, route name or departure port – otherwise the cruise cannot be recognised.",
+    "errors": {
+      "endBeforeStart": "The arrival date is before the departure date.",
+      "deck": "A deck is a whole number from 1 to 30.",
+      "price": "The price cannot be negative."
+    },
+    "colorPicked": "Chosen colour: {{color}}"
   },
   "add": {
     "title": "Add cruise"
@@ -351,5 +401,116 @@
     "saveError": "The track could not be saved.",
     "alreadyImported": "This recording is already on the cruise.",
     "removeError": "The track could not be removed."
+  },
+  "deleteSurvivors": {
+    "trip": "the trip “{{name}}”",
+    "tripUnnamed": "the linked trip"
+  },
+  "dayCard": {
+    "today": "Today",
+    "port": "Port",
+    "inPort": "In port",
+    "inPortTimes": "{{arrive}} – {{depart}} local time",
+    "open": "open",
+    "hours_one": "{{count}} hr",
+    "hours_other": "{{count}} hrs",
+    "minutes_one": "{{count}} min",
+    "minutes_other": "{{count}} min",
+    "hoursMinutes": "{{hours}} h {{minutes}} min",
+    "allAboard": "All aboard",
+    "localTime": "{{time}} local time",
+    "allAboardOpen": "not recorded – it is in the ship's daily programme and can be entered on the day under “Edit”",
+    "excursion": "Excursion",
+    "noExcursion": "none entered",
+    "documents": "Documents",
+    "documentsLoading": "Loading documents …",
+    "documentsFailed": "The documents could not be loaded.",
+    "noDocuments_zero": "No document is filed for this cruise.",
+    "noDocuments_one": "None with this date – the cruise's one document is under “Documents” below.",
+    "noDocuments_other": "None with this date – the cruise's {{count}} documents are under “Documents” below.",
+    "localNote": "Date and times are the port's (local time). Missing times stay open; the all-aboard time is never derived from the departure.",
+    "pickHint": "Tap a day of the itinerary to open its day card.",
+    "openDay": "Open the day card:",
+    "documentsDated": "Dated this day:"
+  },
+  "unresolved": {
+    "title_one": "One unresolved port",
+    "title_other": "{{count}} unresolved ports",
+    "incomplete_one": "Until it is matched to a catalogue entry it counts as a port call but not as a port – the port count reads {{matched}} (+{{count}} unresolved). The country count and the map leave it out, and the sea miles of the legs to and from it are missing.",
+    "incomplete_other": "Until they are matched to catalogue entries they count as port calls but not as ports – the port count reads {{matched}} (+{{count}} unresolved). The country count and the map leave them out, and the sea miles of the legs to and from them are missing.",
+    "days_one": "Day {{days}}",
+    "days_other": "Days {{days}}",
+    "candidates": "Matches in the port catalogue",
+    "searching": "Searching the catalogue …",
+    "searchFailed": "The catalogue could not be searched.",
+    "noCandidates": "No match in the catalogue – search for another name below, or add the port there.",
+    "searchOther": "Search for another port",
+    "confirm": "Assign “{{port}}”",
+    "confirmNone": "Choose a port first",
+    "saving": "Assigning …",
+    "saveError": "The assignment could not be saved.",
+    "done": "“{{name}}” is now assigned to “{{port}}”."
+  },
+  "reimport": {
+    "title": "“{{name}}” is already saved – the new itinerary differs",
+    "titleLoading": "Comparing with the saved itinerary",
+    "loading": "Loading the saved itinerary …",
+    "loadFailed": "The saved itinerary could not be loaded.",
+    "intro": "Tick what to take from the new plan. Your excursion notes, all-aboard times and entered dates stay – only when a day gets another port do the old port's times go. A day missing from the new plan is only removed if you tick it.",
+    "added": "New in the plan: day {{day}} · {{title}}",
+    "removed": "No longer in the plan: day {{day}} · {{title}}",
+    "port": "Day {{day}}: {{from}} → {{to}}",
+    "times": "Day {{day}} · {{title}}: {{from}} → {{to}} (local time)",
+    "noteStays": "Your note stays: “{{note}}”",
+    "noteGoes": "The excursion note “{{note}}” would go with it.",
+    "keepStored": "Keep the saved plan",
+    "apply_zero": "Nothing selected",
+    "apply_one": "Apply {{count}} change",
+    "apply_other": "Apply {{count}} changes",
+    "progress": "Booking {{current}} of {{total}}",
+    "saveError": "The new itinerary could not be applied.",
+    "appliedToast_one": "The new itinerary was applied to one cruise.",
+    "appliedToast_other": "The new itinerary was applied to {{count}} cruises.",
+    "allAboardGoes": "The all-aboard time {{time}} belonged to {{port}} and is dropped."
+  },
+  "deleteParts": {
+    "alsoGoes": "Also deleted: {{list}}.",
+    "and": " and ",
+    "tracks_one": "one recorded track",
+    "tracks_other": "{{count}} recorded tracks",
+    "legRoutes_one": "one route redrawn on the map",
+    "legRoutes_other": "{{count}} routes redrawn on the map"
+  },
+  "colorName": {
+    "coral": "Coral",
+    "gold": "Gold",
+    "green": "Green",
+    "teal": "Teal",
+    "blue": "Blue",
+    "violet": "Violet",
+    "pink": "Pink",
+    "ochre": "Ochre",
+    "cyan": "Cyan",
+    "olive": "Olive"
+  },
+  "flightGap": {
+    "title": "Not all flights are in the logbook",
+    "introSaved_one": "The cruise is saved, one flight is not:",
+    "introSaved_other": "The cruise is saved, {{count}} flights are not:",
+    "introKnown_one": "This booking was already saved; one of its flights is missing from the logbook:",
+    "introKnown_other": "This booking was already saved; {{count}} of its flights are missing from the logbook:",
+    "item": "{{flight}} – {{reason}}",
+    "reason": {
+      "failed": "could not be saved",
+      "missing": "missing from the logbook",
+      "unchecked": "could not be checked"
+    },
+    "hint": "“Add missing flights” looks in the logbook first (flight number and departure day) and adds only what is not there – a flight is never created twice.",
+    "retry_one": "Add missing flight",
+    "retry_other": "Add {{count}} missing flights",
+    "retryFailed": "Not all flights could be added. You can try again.",
+    "skip": "Finish without these flights",
+    "leftOut_one": "One flight of the booking is not in the logbook.",
+    "leftOut_other": "{{count}} flights of the booking are not in the logbook."
   }
 }
