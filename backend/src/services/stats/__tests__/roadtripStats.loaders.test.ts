@@ -145,15 +145,21 @@ describe("roadtrips in the passport, the nights account and days away", () => {
     // The resolver reads the user's own domain gate (forgejo#274 review I1):
     // lodging and roadtrips shown, roadtrips behind the beta switch.
     const betaBefore = (await getInstanceSettings()).betaFeaturesEnabled;
-    await updateInstanceSettings({ betaFeaturesEnabled: true });
-    await prisma.userSettings.create({
-      data: { userId, enabledDomains: ["flight", "lodging", "roadtrip"], data: {} },
-    });
-    const res = await resolveTravelAccountHotelNights(
-      userId,
-      { period: { kind: "allTime" } },
-      { offset: 0, limit: 50 }
-    ).finally(() => updateInstanceSettings({ betaFeaturesEnabled: betaBefore }));
+    let res: Awaited<ReturnType<typeof resolveTravelAccountHotelNights>>;
+    try {
+      await updateInstanceSettings({ betaFeaturesEnabled: true });
+      await prisma.userSettings.create({
+        data: { userId, enabledDomains: ["flight", "lodging", "roadtrip"], data: {} },
+      });
+      res = await resolveTravelAccountHotelNights(
+        userId,
+        { period: { kind: "allTime" } },
+        { offset: 0, limit: 50 }
+      );
+    } finally {
+      // Whatever throws above, the shared instance gets its switch back.
+      await updateInstanceSettings({ betaFeaturesEnabled: betaBefore });
+    }
     expect(res.measure.value).toBe(3);
     assertSumInvariant(res, Math.round);
     expect(res.entries.find((e) => e.domain === "roadtrip")).toMatchObject({

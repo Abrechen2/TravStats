@@ -99,8 +99,9 @@ const tripCostSuperlative = registry.register(
     })
     .describe(
       "Ranked on each trip's total FX base-currency amount across all its " +
-        "cost sources the user sees (the domain gate `TripCost` and " +
-        "/stats/travel-account apply too), computed over every trip the user has — never the " +
+        "cost sources in the domains the user sees — switched on, and not hidden " +
+        "behind the instance's beta switch; `TripCost` and /stats/travel-account " +
+        "apply the same gate. Computed over every trip the user has — never the " +
         "500-trip / 200-row caps `GET /trips` applies to the list itself. A " +
         "trip carrying any cost item with no FX snapshot (no currency, no " +
         "date, or a failed rate lookup) leaves the comparison rather than " +

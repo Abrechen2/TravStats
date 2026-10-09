@@ -220,4 +220,58 @@ describe("GET /trips and /trips/:id — the trip's cost", () => {
     await updateInstanceSettings({ betaFeaturesEnabled: true });
     expect(await surfaces()).toEqual({ card: { EUR: 334 }, stats: { EUR: 334 }, railNights: 1 });
   }, 30_000);
+
+  /**
+   * Re-review n2: the mixed state. Rentals shown, roadtrips hidden: a car
+   * reached ONLY through the trip's roadtrip is out of both surfaces (it needs
+   * both domains), a car filed under the trip itself is in both.
+   */
+  it("keeps a roadtrip-only rental out of both while roadtrips are hidden, a direct one in both", async () => {
+    const trip = await prisma.trip.create({
+      data: { userId, name: "Bretagne", status: "completed" },
+    });
+    const roadtrip = await prisma.tripRoute.create({
+      data: { userId, tripId: trip.id, name: "Côte", mode: "road", kind: "roadtrip" },
+    });
+    const rental = (data: Record<string, unknown>) =>
+      prisma.rentalBooking.create({
+        data: {
+          userId,
+          provider: "Testcar",
+          pickupStationName: "Rennes",
+          pickupLat: 48.1,
+          pickupLon: -1.67,
+          pickupTimezone: "Europe/Paris",
+          returnStationName: "Rennes",
+          returnLat: 48.1,
+          returnLon: -1.67,
+          returnTimezone: "Europe/Paris",
+          pickupTime: new Date("2025-05-02T08:00:00Z"),
+          returnTime: new Date("2025-05-05T08:00:00Z"),
+          status: "completed",
+          currency: "EUR",
+          ...data,
+        },
+      });
+    await rental({ tripId: trip.id, price: 210 });
+    await rental({ routeId: roadtrip.id, price: 400 });
+
+    const surfaces = async () => {
+      const list = await request(app)
+        .get("/api/v1/trips?includeInsights=true")
+        .set("Cookie", cookie);
+      const stats = await request(app).get("/api/v1/stats/travel-account").set("Cookie", cookie);
+      return {
+        card: list.body.trips.find((t: { id: string }) => t.id === trip.id).cost.spendByCurrency,
+        stats: stats.body.trips.trips.find((t: { id: string }) => t.id === trip.id).spendByCurrency,
+      };
+    };
+
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    await enableDomains(["flight", "rental"]);
+    expect(await surfaces()).toEqual({ card: { EUR: 210 }, stats: { EUR: 210 } });
+
+    await enableDomains(["flight", "rental", "roadtrip"]);
+    expect(await surfaces()).toEqual({ card: { EUR: 610 }, stats: { EUR: 610 } });
+  }, 30_000);
 });
