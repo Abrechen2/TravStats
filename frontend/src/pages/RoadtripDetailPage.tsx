@@ -22,6 +22,7 @@ import StationEditor, {
 import EditorSaveStatus from "../components/Roadtrips/EditorSaveStatus";
 import StationDraftBanner from "../components/Roadtrips/StationDraftBanner";
 import StationTimeline from "../components/Roadtrips/StationTimeline";
+import RoadtripDayView from "../components/Roadtrips/RoadtripDayView";
 import { stationHighlightLayer } from "../components/Roadtrips/stationHighlightLayer";
 import { toEditorStation } from "../lib/roadtrip/editorStation";
 import {
@@ -98,6 +99,8 @@ export default function RoadtripDetailPage(): JSX.Element {
   const [storedDraft, setStoredDraft] = useState<StoredStationDraft | null>(null);
   const [restoreDraft, setRestoreDraft] = useState<StoredStationDraft | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  /** Stations one by one, or the trip read day by day (forgejo#243). */
+  const [view, setView] = useState<"stations" | "days">("stations");
   const draftChecked = useRef(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [costsBlock, setCostsBlock] = useState<number | null>(null);
@@ -390,7 +393,42 @@ export default function RoadtripDetailPage(): JSX.Element {
         style={{ gap: "var(--ts-space-xl)", marginTop: "var(--ts-space-xl)" }}
       >
         <section className="order-2 flex min-w-0 flex-col lg:order-1" style={{ gap: 8 }}>
-          <h2 className="t-card-title">{t("roadtrips:stations.title")}</h2>
+          <div className="flex flex-wrap items-center justify-between" style={{ gap: 8 }}>
+            <h2 className="t-card-title">
+              {view === "days" && !editing
+                ? t("roadtrips:days.title")
+                : t("roadtrips:stations.title")}
+            </h2>
+            {!editing && (
+              <div
+                role="group"
+                aria-label={t("roadtrips:days.viewLabel")}
+                className="flex"
+                style={{ gap: 4 }}
+              >
+                {(["stations", "days"] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    aria-pressed={view === v}
+                    onClick={() => setView(v)}
+                    style={{
+                      minHeight: "var(--ts-size-touch-min)",
+                      padding: "0 14px",
+                      borderRadius: "var(--ts-radius-button)",
+                      border: `1px solid ${view === v ? "var(--domain-roadtrip)" : "var(--ts-border-button)"}`,
+                      background: view === v ? "var(--domain-roadtrip-soft)" : "transparent",
+                      color: "var(--ts-text)",
+                      fontSize: 14,
+                      fontWeight: view === v ? 700 : 500,
+                    }}
+                  >
+                    {t(`roadtrips:days.view.${v}`)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           {!editing && storedDraft && userId && (
             <StationDraftBanner
               draft={storedDraft}
@@ -418,6 +456,12 @@ export default function RoadtripDetailPage(): JSX.Element {
               onSaved={() => void load()}
               onStatus={onStatus}
               onEditLeg={(leg, from, to) => setLegEdit({ leg, from, to })}
+            />
+          ) : view === "days" ? (
+            <RoadtripDayView
+              stations={detail.stations}
+              legs={detail.legs}
+              startDate={detail.startDate}
             />
           ) : (
             <StationTimeline

@@ -596,5 +596,31 @@
     "done_other": "{{count}} stations shifted ({{days}} days)",
     "undoRestores_one": "Undo restores this station's previous dates ({{from}} – {{to}}).",
     "undoRestores_other": "Undo restores the previous dates of these {{count}} stations ({{from}} – {{to}})."
+  },
+  "days": {
+    "title": "Day by day",
+    "viewLabel": "View",
+    "view": {
+      "stations": "Stations",
+      "days": "Days"
+    },
+    "undated": "Undated",
+    "via": "On the way: {{places}}",
+    "night": "Night:",
+    "noNight": "No night recorded",
+    "nightsUnknown": "Departure not recorded — number of nights open",
+    "km": "{{km}} km",
+    "kmBy": {
+      "track": "{{km}} km from the recording",
+      "routed": "{{km}} km along the road",
+      "drawn": "{{km}} km drawn by hand",
+      "straight": "{{km}} km as the crow flies"
+    },
+    "ferry": "of which {{km}} km by ferry",
+    "driving": "Driving time {{h}} h {{m}} (calculated)",
+    "drivingUnknown": "Driving time unknown — not every leg is calculated along the road",
+    "missingLeg": "One stretch has no saved leg yet — the distance is incomplete.",
+    "stayOn_one": "Then {{count}} more day in {{place}}",
+    "stayOn_other": "Then {{count}} more days in {{place}}"
   }
 }

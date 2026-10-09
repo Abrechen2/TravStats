@@ -596,5 +596,31 @@
     "done_other": "{{count}} Stationen verschoben ({{days}} Tage)",
     "undoRestores_one": "Rückgängig stellt das bisherige Datum dieser Station wieder her ({{from}} – {{to}}).",
     "undoRestores_other": "Rückgängig stellt die bisherigen Daten dieser {{count}} Stationen wieder her ({{from}} – {{to}})."
+  },
+  "days": {
+    "title": "Tag für Tag",
+    "viewLabel": "Ansicht",
+    "view": {
+      "stations": "Stationen",
+      "days": "Tage"
+    },
+    "undated": "Ohne Datum",
+    "via": "Unterwegs: {{places}}",
+    "night": "Nacht:",
+    "noNight": "Keine Übernachtung erfasst",
+    "nightsUnknown": "Abfahrt nicht erfasst – Zahl der Nächte offen",
+    "km": "{{km}} km",
+    "kmBy": {
+      "track": "{{km}} km aus der Aufzeichnung",
+      "routed": "{{km}} km entlang der Straße",
+      "drawn": "{{km}} km von Hand gezeichnet",
+      "straight": "{{km}} km Luftlinie"
+    },
+    "ferry": "davon {{km}} km mit der Fähre",
+    "driving": "Fahrzeit {{h}} h {{m}} (berechnet)",
+    "drivingUnknown": "Fahrzeit unbekannt – nicht jede Etappe ist entlang der Straße berechnet",
+    "missingLeg": "Für einen Abschnitt ist noch keine Etappe gespeichert – die Strecke ist unvollständig.",
+    "stayOn_one": "Danach {{count}} weiterer Tag in {{place}}",
+    "stayOn_other": "Danach {{count}} weitere Tage in {{place}}"
   }
 }
