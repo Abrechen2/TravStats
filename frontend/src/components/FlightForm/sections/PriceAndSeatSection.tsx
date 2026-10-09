@@ -2,6 +2,7 @@ import { useId, type JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
 import CostFields, { type CostFieldsValue } from "../fields/CostFields";
+import { FLIGHT_FORM_IDS } from "../createFormState";
 import SuggestionChips from "../../common/SuggestionChips";
 import type { ExtractTarget } from "../../../lib/extractValues";
 
@@ -137,6 +138,7 @@ export default function PriceAndSeatSection({
       {/* Cost (#192, #199) — shared with the edit modal; the tax/fee
           breakdown stays behind cost tracking (details in CostFields). */}
       <CostFields
+        idPrefix={FLIGHT_FORM_IDS.cost}
         value={cost}
         onChange={onCostChange}
         showBreakdown={showCostBreakdown}

@@ -193,6 +193,17 @@ describe("FlightEditModal — the shared form blocks", () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
+  it("refuses a negative price at its field and sends nothing", async () => {
+    const onSave = vi.fn();
+    renderModal({ onSave });
+    const price = document.getElementById("flight-edit-cost-price") as HTMLInputElement;
+    fireEvent.change(price, { target: { value: "-1" } });
+    expect(price).toHaveAttribute("aria-invalid", "true");
+    save();
+    await waitFor(() => expect(document.activeElement).toBe(price));
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
   it("stays open and says so when the save went through but the trip move failed", async () => {
     assignFlights.mockRejectedValueOnce(networkError).mockResolvedValueOnce(undefined);
     const props = renderModal();

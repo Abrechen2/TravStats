@@ -182,10 +182,14 @@
       "arrivalDate": "Ankunftsdatum",
       "arrivalTime": "Ankunftszeit",
       "actualDepartureTime": "tatsächliche Abflugzeit (zum Datum)",
-      "actualArrivalTime": "tatsächliche Ankunftszeit (zum Datum)"
+      "actualArrivalTime": "tatsächliche Ankunftszeit (zum Datum)",
+      "price": "Preis ≥ 0",
+      "taxes": "Steuern ≥ 0",
+      "fees": "Gebühren ≥ 0"
     },
     "errors": {
-      "actualTimeMissing": "Zum tatsächlichen Datum fehlt die Uhrzeit – ergänze sie oder leere das Datum."
+      "actualTimeMissing": "Zum tatsächlichen Datum fehlt die Uhrzeit – ergänze sie oder leere das Datum.",
+      "negativeAmount": "Ein Betrag kann nicht negativ sein."
     }
   },
   "list": {

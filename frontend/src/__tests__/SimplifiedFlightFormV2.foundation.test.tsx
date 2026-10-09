@@ -225,6 +225,19 @@ describe("SimplifiedFlightFormV2 — the shared form blocks", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it("refuses a negative price at its field, now that the browser bubble is off", async () => {
+    const onSubmit = vi.fn();
+    await openManual(onSubmit);
+    pickBothAirports();
+    const price = document.getElementById("flight-form-cost-price") as HTMLInputElement;
+    fireEvent.change(price, { target: { value: "-5" } });
+    expect(price).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("button", { name: "flights:form.missing.price" })).toBeInTheDocument();
+    fireEvent.submit(form());
+    await waitFor(() => expect(document.activeElement).toBe(price));
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
   it("starts the discard guard over after 'save and return' prepared the next leg", async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     await openManual(onSubmit);

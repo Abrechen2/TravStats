@@ -65,3 +65,11 @@ describe("flightCreateSnapshot", () => {
     expect(c).not.toBe(b);
   });
 });
+
+describe("negative amounts", () => {
+  it("names a negative price or fee, never a zero", () => {
+    expect(flightCreateGaps({ ...base, price: -1, fees: 0 }, t)).toEqual([
+      { field: "flight-form-cost-price", label: "flights:form.missing.price" },
+    ]);
+  });
+});

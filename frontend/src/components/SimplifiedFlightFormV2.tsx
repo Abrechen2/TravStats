@@ -152,21 +152,30 @@ export default function SimplifiedFlightFormV2({
    * hook's own `!canSubmit` guards stay exactly as they were — they are what
    * keeps the refusal real ("canSubmit only greys out the button").
    */
-  const focusFirstGapIfIncomplete = (): void => {
+  /** False when the click is refused here — a gap `canSubmit` does not know (a negative amount). */
+  const focusFirstGapIfIncomplete = (): boolean => {
     setAttempted(true);
-    if (form.canSubmit) return;
-    // A required field still empty first; otherwise the half-filled actual
-    // pair, whose error renders with this click.
+    if (form.canSubmit && missing.length === 0) return true;
+    // A required field still empty first; otherwise the first field whose
+    // error renders with this click (a half-filled actual pair, an amount).
     if (!focusFirstMissingRequired(formRef.current)) setFocusRequest((n) => n + 1);
+    // `canSubmit` failing is still the hook's refusal to make (its banner).
+    return !form.canSubmit;
   };
 
   const handleSubmitWithFocus = (e: React.FormEvent): void => {
-    focusFirstGapIfIncomplete();
+    if (!focusFirstGapIfIncomplete()) {
+      e.preventDefault();
+      return;
+    }
     void form.handleSubmit(e);
   };
 
   const handleSubmitAndReturnWithFocus = (e: React.FormEvent): void => {
-    focusFirstGapIfIncomplete();
+    if (!focusFirstGapIfIncomplete()) {
+      e.preventDefault();
+      return;
+    }
     void form.handleSubmitAndReturn(e);
   };
 

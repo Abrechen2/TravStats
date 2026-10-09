@@ -12,6 +12,7 @@ import {
 import { buildLocalString } from "./flightFormModel";
 import type { MissingStep } from "../form";
 import type { TimesFieldErrors } from "./fields/TimesFields";
+import { negativeCostGaps } from "./createFormState";
 import { tripsApi } from "../../lib/api/trips";
 
 /**
@@ -56,6 +57,7 @@ export const EDIT_IDS = {
   terminal: "flight-edit-terminal",
   boardingGroup: "flight-edit-boarding-group",
   notes: "flight-edit-notes",
+  cost: "flight-edit-cost",
   depDate: "editDepartureDate",
   depTime: "editDepartureTime",
   arrDate: "editArrivalDate",
@@ -247,6 +249,7 @@ export function editFormGaps(formData: EditFormData, t: (k: string) => string): 
   if (formData.actualArrivalDate && !formData.actualArrivalTime) {
     add(EDIT_IDS.actualArrTime, "actualArrivalTime");
   }
+  gaps.push(...negativeCostGaps(formData, EDIT_IDS.cost, t));
   return gaps;
 }
 

@@ -680,6 +680,7 @@ export default function FlightEditModal({
               CostFields does, so nothing is converted here and a 0 survives
               the round trip (SRV-UI-001). */}
           <CostFields
+            idPrefix={EDIT_IDS.cost}
             value={{
               price: formData.price,
               currency: formData.currency || "EUR",

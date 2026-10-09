@@ -16,9 +16,31 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 export const FLIGHT_FORM_IDS = {
   departureAirport: "flight-form-departure-airport",
   arrivalAirport: "flight-form-arrival-airport",
+  /** Prefix of the cost inputs (CostFields): `-price`, `-taxes`, `-fees`. */
+  cost: "flight-form-cost",
 } as const;
 
+/**
+ * A negative price, tax or fee — refused at its field by CostFields; listed
+ * here so the line beside the save names it and a click goes there.
+ */
+export function negativeCostGaps(
+  cost: { price?: number; taxes?: number; fees?: number },
+  idPrefix: string,
+  t: Translate
+): MissingStep[] {
+  return (["price", "taxes", "fees"] as const)
+    .filter((key) => {
+      const n = cost[key];
+      return n !== undefined && Number.isFinite(n) && n < 0;
+    })
+    .map((key) => ({ field: `${idPrefix}-${key}`, label: t(`flights:form.missing.${key}`) }));
+}
+
 export interface CreateFormFields {
+  price?: number;
+  taxes?: number;
+  fees?: number;
   departure: Airport | null;
   arrival: Airport | null;
   status: string;
@@ -44,6 +66,7 @@ export function flightCreateGaps(form: CreateFormFields, t: Translate): MissingS
   };
   if (!form.departure) add(FLIGHT_FORM_IDS.departureAirport, "departureAirport");
   if (!form.arrival) add(FLIGHT_FORM_IDS.arrivalAirport, "arrivalAirport");
+  gaps.push(...negativeCostGaps(form, FLIGHT_FORM_IDS.cost, t));
   if (form.status === "historical") return gaps;
   if (!form.departureDate) add(TIMES_FIELD_DEFAULT_IDS.depDate, "departureDate");
   if (!form.departureTime) add(TIMES_FIELD_DEFAULT_IDS.depTime, "departureTime");

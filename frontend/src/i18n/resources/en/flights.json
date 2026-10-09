@@ -182,10 +182,14 @@
       "arrivalDate": "arrival date",
       "arrivalTime": "arrival time",
       "actualDepartureTime": "actual departure time (for its date)",
-      "actualArrivalTime": "actual arrival time (for its date)"
+      "actualArrivalTime": "actual arrival time (for its date)",
+      "price": "price ≥ 0",
+      "taxes": "taxes ≥ 0",
+      "fees": "fees ≥ 0"
     },
     "errors": {
-      "actualTimeMissing": "The actual date has no time – add it or clear the date."
+      "actualTimeMissing": "The actual date has no time – add it or clear the date.",
+      "negativeAmount": "An amount cannot be negative."
     }
   },
   "list": {
