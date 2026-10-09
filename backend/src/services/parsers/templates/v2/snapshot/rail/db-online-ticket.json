@@ -1,0 +1,380 @@
+{
+  "id": "rail:db-online-ticket",
+  "domain": "rail",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Deutsche Bahn",
+    "kind": "rail",
+    "keys": {
+      "senderDomains": ["bahn.de"]
+    }
+  },
+  "markets": ["DE"],
+  "match": {
+    "markers": [],
+    "anchors": [],
+    "anyOf": [
+      {
+        "pattern": "Deutsche(n)? Bahn|bahn\\.de|DB Fernverkehr|DB Vertrieb|DB Regio|DEUTSCHE BAHN",
+        "flags": "i"
+      }
+    ],
+    "allOf": [
+      {
+        "pattern": "Ihre Reiseverbindung und Reservierung[^\\S\\n]+(?:-[^\\S\\n]+)?(?<kind>Hinfahrt|R(?:ü|ue)ckfahrt|Einfache Fahrt)[^\\S\\n]+am[^\\S\\n]+(?<date>\\d{1,2}\\.\\d{1,2}\\.\\d{4})",
+        "flags": "i"
+      },
+      {
+        "pattern": "Halt\\s+Datum\\s+Zeit",
+        "flags": ""
+      }
+    ]
+  },
+  "extraction": {
+    "preprocess": ["stripCarriageReturns"],
+    "fields": {
+      "documentKind": {
+        "value": "booking"
+      },
+      "operator": {
+        "value": "Deutsche Bahn"
+      },
+      "bookingReference": {
+        "patterns": [
+          "Auftragsnummer:?\\s+([A-Z0-9]{6,14})\\b",
+          "Auftrag(?:sbestätigung zum Auftrag)?\\s+([A-Z0-9]{6,14})\\b"
+        ],
+        "flags": ""
+      },
+      "travelClass": {
+        "patterns": ["^Klasse\\b.*$"],
+        "flags": "m",
+        "transform": "travelClass"
+      },
+      "tariff": {
+        "patterns": ["^(.+?\\((?:Einfache Fahrt|Hin- und Rückfahrt)\\))\\s*$"],
+        "flags": "m",
+        "transform": "trim"
+      },
+      "price": {
+        "patterns": ["^Summe\\s+([\\d.,]+)\\s*€", "^Gesamtpreis\\s+(\\d[\\d.]*,\\d{2})\\s*€"],
+        "flags": "m",
+        "transform": "amount"
+      },
+      "currency": {
+        "value": "EUR"
+      }
+    },
+    "repeats": {
+      "legs": {
+        "mode": "split",
+        "splitPattern": "^[^\\n]*Ihre Reiseverbindung und Reservierung[^\\S\\n]+(?:-[^\\S\\n]+)?(?<kind>Hinfahrt|R(?:ü|ue)ckfahrt|Einfache Fahrt)[^\\S\\n]+am[^\\S\\n]+(?<date>\\d{1,2}\\.\\d{1,2}\\.\\d{4})",
+        "flags": "gim",
+        "skipPreamble": true,
+        "fields": {
+          "date": {
+            "patterns": [
+              "Ihre Reiseverbindung und Reservierung[^\\S\\n]+(?:-[^\\S\\n]+)?(?<kind>Hinfahrt|R(?:ü|ue)ckfahrt|Einfache Fahrt)[^\\S\\n]+am[^\\S\\n]+(?<date>\\d{1,2}\\.\\d{1,2}\\.\\d{4})"
+            ],
+            "format": "{date}",
+            "transform": "numericDate"
+          },
+          "direction": {
+            "patterns": [
+              "Ihre Reiseverbindung und Reservierung[^\\S\\n]+(?:-[^\\S\\n]+)?(?<kind>Hinfahrt|R(?:ü|ue)ckfahrt|Einfache Fahrt)[^\\S\\n]+am[^\\S\\n]+(?<date>\\d{1,2}\\.\\d{1,2}\\.\\d{4})"
+            ],
+            "format": "{kind}",
+            "map": [
+              ["^r", "return"],
+              [".", "outbound"]
+            ]
+          }
+        },
+        "repeats": {
+          "rowLegs": {
+            "mode": "matchAll",
+            "within": {
+              "endBefore": "^[ \\t]*(?:Hinweise|Wichtige Nutzungshinweise|Bitte informieren Sie sich)"
+            },
+            "pattern": "^[ \\t]*(?<dep>[^\\n]+?)[^\\S\\n]+(?<depDm>\\d{1,2}\\.\\d{1,2}\\.)[^\\S\\n]+ab[^\\S\\n]+(?<depTime>\\d{1,2}:\\d{2})(?:[^\\S\\n]+[^\\n]*)?[ \\t]*$(?:\\n(?![ \\t]*[^\\n]+?[^\\S\\n]+\\d{1,2}\\.\\d{1,2}\\.[^\\S\\n]+(?:ab|an)[^\\S\\n]+\\d{1,2}:\\d{2}(?:[^\\S\\n]+[^\\n]*)?[ \\t]*$)[^\\n]*)*?\\n[ \\t]*(?<arr>[^\\n]+?)[^\\S\\n]+(?<arrDm>\\d{1,2}\\.\\d{1,2}\\.)[^\\S\\n]+an[^\\S\\n]+(?<arrTime>\\d{1,2}:\\d{2})(?:[^\\S\\n]+[^\\n]*)?[ \\t]*$(?:(?:\\n(?![ \\t]*[^\\n]+?[^\\S\\n]+\\d{1,2}\\.\\d{1,2}\\.[^\\S\\n]+(?:ab|an)[^\\S\\n]+\\d{1,2}:\\d{2}(?:[^\\S\\n]+[^\\n]*)?[ \\t]*$)[^\\n]*)*?\\n[ \\t]*(?<cat>[A-Za-z]{1,5})[^\\S\\n]?(?<num>\\d{1,6})\\b(?<prest>[^\\n]*))?",
+            "flags": "gm",
+            "fields": {
+              "depStationName": {
+                "group": "dep",
+                "replace": [
+                  ["\\s+Gl\\.\\s*[\\d-]+$", "", "i"],
+                  ["\\s{2,}", " "]
+                ],
+                "transform": "trim"
+              },
+              "arrStationName": {
+                "group": "arr",
+                "replace": [
+                  ["\\s+Gl\\.\\s*[\\d-]+$", "", "i"],
+                  ["\\s{2,}", " "]
+                ],
+                "transform": "trim"
+              },
+              "depDm": {
+                "group": "depDm"
+              },
+              "arrDm": {
+                "group": "arrDm"
+              },
+              "depTime": {
+                "group": "depTime",
+                "transform": "time"
+              },
+              "arrTime": {
+                "group": "arrTime",
+                "transform": "time"
+              },
+              "trainCategory": {
+                "group": "cat"
+              },
+              "trainNumber": {
+                "group": "num"
+              },
+              "coach": {
+                "group": "prest",
+                "find": {
+                  "pattern": "Wg\\.\\s*(?<v>[\\w-]+),\\s*Pl\\.\\s*[\\d\\s]+?(?:,|$)",
+                  "flags": ""
+                }
+              },
+              "seat": {
+                "group": "prest",
+                "find": {
+                  "pattern": "Wg\\.\\s*[\\w-]+,\\s*Pl\\.\\s*(?<v>[\\d\\s]+?)(?:,|$)",
+                  "flags": ""
+                },
+                "replace": [["\\s+", " "]],
+                "transform": "trim"
+              }
+            },
+            "compute": {
+              "depDay": {
+                "format": "{depDm} {parent.date}",
+                "transform": "dayMonthNear"
+              },
+              "arrDay": {
+                "format": "{arrDm} {parent.date}",
+                "transform": "dayMonthNear"
+              },
+              "departureLocal": {
+                "format": "{depDay}T{depTime}"
+              },
+              "arrivalLocal": {
+                "format": "{arrDay}T{arrTime}"
+              },
+              "direction": {
+                "format": "{parent.direction}"
+              }
+            },
+            "skipItemsWithout": ["departureLocal", "arrivalLocal"],
+            "minimum": 0
+          },
+          "stops": {
+            "mode": "columns",
+            "within": {
+              "startAfter": "^[ \\t]*Halt[^\\S\\n]+Datum[^\\S\\n]+Zeit[^\\n]*$",
+              "endBefore": "^[ \\t]*(?:Hinweise|Wichtige Nutzungshinweise|Bitte informieren Sie sich)",
+              "lenient": true
+            },
+            "flags": "gm",
+            "columns": {
+              "station": {
+                "pattern": "^[ \\t]*(?!\\d{1,2}\\.\\d{1,2}\\.[ \\t]*$)(?!(?:ab|an)[^\\S\\n]+\\d{1,2}:\\d{2}[ \\t]*$)(?!\\d{1,3}(?:[^\\S\\n]+[A-Z](?:-[A-Z])?)?[ \\t]*$)(?![A-Za-z]{1,5}[^\\S\\n]?\\d{1,6}\\b)(?![^\\n]*(?:,|Res\\.?\\s?-?Nr))(\\S[^\\n]*?)[ \\t]*$(?=(?:\\n[^\\n]*)*?\\n[ \\t]*\\d{1,2}\\.\\d{1,2}\\.[ \\t]*$)",
+                "replace": [
+                  ["\\s+Gl\\.\\s*[\\d-]+$", "", "i"],
+                  ["\\s{2,}", " "]
+                ],
+                "transform": "trim"
+              },
+              "dm": {
+                "pattern": "^[ \\t]*(\\d{1,2}\\.\\d{1,2}\\.)[ \\t]*$"
+              },
+              "kind": {
+                "pattern": "^[ \\t]*(ab|an)[^\\S\\n]+\\d{1,2}:\\d{2}[ \\t]*$"
+              },
+              "time": {
+                "pattern": "^[ \\t]*(?:ab|an)[^\\S\\n]+(\\d{1,2}:\\d{2})[ \\t]*$",
+                "transform": "time"
+              }
+            },
+            "minimum": 0
+          },
+          "products": {
+            "mode": "matchAll",
+            "within": {
+              "startAfter": "^[ \\t]*Halt[^\\S\\n]+Datum[^\\S\\n]+Zeit[^\\n]*$",
+              "endBefore": "^[ \\t]*(?:Hinweise|Wichtige Nutzungshinweise|Bitte informieren Sie sich)",
+              "lenient": true
+            },
+            "pattern": "^[ \\t]*(?!(?:ab|an)[^\\S\\n]+\\d{1,2}:\\d{2}[ \\t]*$)(?<cat>[A-Za-z]{1,5})[^\\S\\n]?(?<num>\\d{1,6})\\b(?<prest>[^\\n]*)",
+            "flags": "gm",
+            "fields": {
+              "trainCategory": {
+                "group": "cat"
+              },
+              "trainNumber": {
+                "group": "num"
+              },
+              "coach": {
+                "group": "prest",
+                "find": {
+                  "pattern": "Wg\\.\\s*(?<v>[\\w-]+),\\s*Pl\\.\\s*[\\d\\s]+?(?:,|$)",
+                  "flags": ""
+                }
+              },
+              "seat": {
+                "group": "prest",
+                "find": {
+                  "pattern": "Wg\\.\\s*[\\w-]+,\\s*Pl\\.\\s*(?<v>[\\d\\s]+?)(?:,|$)",
+                  "flags": ""
+                },
+                "replace": [["\\s+", " "]],
+                "transform": "trim"
+              }
+            },
+            "minimum": 0
+          },
+          "columnLegs": {
+            "mode": "pairs",
+            "of": "stops",
+            "open": {
+              "field": "kind",
+              "pattern": "^ab$"
+            },
+            "close": {
+              "field": "kind",
+              "pattern": "^an$"
+            },
+            "fields": {
+              "depStationName": {
+                "from": "open",
+                "field": "station"
+              },
+              "depDm": {
+                "from": "open",
+                "field": "dm"
+              },
+              "depTime": {
+                "from": "open",
+                "field": "time"
+              },
+              "arrStationName": {
+                "from": "close",
+                "field": "station"
+              },
+              "arrDm": {
+                "from": "close",
+                "field": "dm"
+              },
+              "arrTime": {
+                "from": "close",
+                "field": "time"
+              }
+            },
+            "zip": {
+              "with": "products",
+              "strict": true
+            },
+            "compute": {
+              "depDay": {
+                "format": "{depDm} {parent.date}",
+                "transform": "dayMonthNear"
+              },
+              "arrDay": {
+                "format": "{arrDm} {parent.date}",
+                "transform": "dayMonthNear"
+              },
+              "departureLocal": {
+                "format": "{depDay}T{depTime}"
+              },
+              "arrivalLocal": {
+                "format": "{arrDay}T{arrTime}"
+              },
+              "direction": {
+                "format": "{parent.direction}"
+              }
+            },
+            "skipItemsWithout": ["departureLocal", "arrivalLocal"],
+            "minimum": 0
+          }
+        },
+        "emit": ["rowLegs", "columnLegs"]
+      }
+    },
+    "required": ["legs"]
+  },
+  "testCases": [
+    {
+      "name": "the 2024 column-wise table, two trains over New Year",
+      "input": "Online-Ticket\nICE Fahrkarte\nFlexpreis (Einfache Fahrt)\nKlasse 2. Klasse\nGesamtpreis 64,30 €. Gebucht am 01.08.2026 um 10:00 Uhr.\nAuftragsnummer: 776655443322\nIhre Reiseverbindung und Reservierung - Einfache Fahrt am 30.12.2026\nHalt Datum Zeit Gleis Produkte Reservierung / Hinweise\nProbestadt Hbf\nMittelort\n30.12.\n30.12.\nab 22:40\nan 23:50\n3\n1\nICE 999 1 Sitzplatz, Wg. 5, Pl. 21, 1 Fenster,\nRes.-Nr. 800000000099\nMittelort\nZielstadt Hbf\n31.12.\n31.12.\nab 00:10\nan 01:05\n4\n2\nRE 12\nWichtige Nutzungshinweise:\n- Es gelten die Beförderungsbedingungen der DB AG, siehe www.bahn.de/agb.",
+      "expect": "match",
+      "expected": {
+        "bookingReference": "776655443322",
+        "travelClass": "second",
+        "tariff": "Flexpreis (Einfache Fahrt)",
+        "price": 64.3,
+        "legs": [
+          {
+            "depStationName": "Probestadt Hbf",
+            "arrStationName": "Mittelort",
+            "departureLocal": "2026-12-30T22:40",
+            "arrivalLocal": "2026-12-30T23:50",
+            "trainCategory": "ICE",
+            "trainNumber": "999",
+            "coach": "5",
+            "seat": "21",
+            "direction": "outbound"
+          },
+          {
+            "depStationName": "Mittelort",
+            "departureLocal": "2026-12-31T00:10",
+            "trainCategory": "RE",
+            "trainNumber": "12",
+            "coach": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "the older row-wise table, outward and return",
+      "input": "Online-Ticket\nICE Fahrkarte\nFlexpreis (Hin- und Rückfahrt)\nKlasse: 1\nSumme 210,00€ 210,00€ 33,53€\nDie Buchung Ihres Online-Tickets erfolgte am 10.03.2017. DB Fernverkehr AG\nAuftragsnummer: K4L5MN\nIhre Reiseverbindung und Reservierung Hinfahrt am 20.03.2017\nHalt Datum Zeit Gleis Produkte Reservierung\nProbestadt Hbf 20.03. ab 06:12 7\nZielstadt Hbf 20.03. an 09:40 2\nICE 1001 1 Sitzplatz, Wg. 9, Pl. 61 62, Großraum\nIhre Reiseverbindung und Reservierung Rückfahrt am 22.03.2017\nHalt Datum Zeit Gleis Produkte Reservierung\nZielstadt Hbf 22.03. ab 17:00 4\nProbestadt Hbf 22.03. an 20:31 6\nIC 2002\nWichtige Nutzungshinweise:",
+      "expect": "match",
+      "expected": {
+        "travelClass": "first",
+        "price": 210,
+        "legs": [
+          {
+            "departureLocal": "2017-03-20T06:12",
+            "arrivalLocal": "2017-03-20T09:40",
+            "trainCategory": "ICE",
+            "trainNumber": "1001",
+            "coach": "9",
+            "seat": "61 62",
+            "direction": "outbound"
+          },
+          {
+            "departureLocal": "2017-03-22T17:00",
+            "trainCategory": "IC",
+            "trainNumber": "2002",
+            "direction": "return"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a column that lost a cell reads nothing rather than a time beside the wrong station",
+      "input": "Online-Ticket\nICE Fahrkarte\nFlexpreis (Einfache Fahrt)\nKlasse 2. Klasse\nGesamtpreis 64,30 €. Gebucht am 01.08.2026 um 10:00 Uhr.\nAuftragsnummer: 776655443322\nIhre Reiseverbindung und Reservierung - Einfache Fahrt am 30.12.2026\nHalt Datum Zeit Gleis Produkte Reservierung / Hinweise\nProbestadt Hbf\nMittelort\n30.12.\nab 22:40\nan 23:50\n3\n1\nICE 999 1 Sitzplatz, Wg. 5, Pl. 21, 1 Fenster,\nRes.-Nr. 800000000099\nMittelort\nZielstadt Hbf\n31.12.\n31.12.\nab 00:10\nan 01:05\n4\n2\nRE 12\nWichtige Nutzungshinweise:\n- Es gelten die Beförderungsbedingungen der DB AG, siehe www.bahn.de/agb.",
+      "expect": "decline"
+    },
+    {
+      "name": "a newsletter is no ticket",
+      "input": "Ihr Punktestand bei bahn.bonus\nJetzt Prämien auswählen auf www.bahn.de",
+      "expect": "decline"
+    }
+  ]
+}

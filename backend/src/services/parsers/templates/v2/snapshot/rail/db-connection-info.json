@@ -1,0 +1,176 @@
+{
+  "id": "rail:db-connection-info",
+  "domain": "rail",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Deutsche Bahn",
+    "kind": "rail",
+    "keys": {
+      "senderDomains": ["bahn.de"]
+    }
+  },
+  "markets": ["DE"],
+  "match": {
+    "markers": [],
+    "anchors": [],
+    "anyOf": [
+      {
+        "pattern": "Deutsche(n)? Bahn|bahn\\.de|DB Fernverkehr|DB Vertrieb|DB Regio|DEUTSCHE BAHN",
+        "flags": "i"
+      }
+    ],
+    "allOf": [
+      {
+        "pattern": "(wie\\s+folgt\\s+gebucht|Ihre\\s+Buchung\\s+(wurde|erfolgte|wird)|Ihre\\s+Bestellung\\s+(erfolgte|wird\\s+unter)|Eingang\\s+Ihrer\\s+Bestellung|vielen\\s+Dank\\s+f(ü|ue)r\\s+Ihre[nr]?\\s+(Online-Ticket-)?(Buchung|Fahrkartenkauf|Fahrkartenbestellung)|Auftragsbest(ä|ae)tigung\\s+zum\\s+Auftrag)",
+        "flags": "i"
+      },
+      {
+        "pattern": "Verbindungsauskunft",
+        "flags": ""
+      }
+    ]
+  },
+  "extraction": {
+    "preprocess": ["stripCarriageReturns"],
+    "fields": {
+      "documentKind": {
+        "value": "booking"
+      },
+      "bookingReference": {
+        "patterns": [
+          "Auftragsnummer:?\\s+([A-Z0-9]{6,14})\\b",
+          "Auftrag(?:sbestätigung zum Auftrag)?\\s+([A-Z0-9]{6,14})\\b"
+        ],
+        "flags": ""
+      },
+      "travelClass": {
+        "patterns": ["^[\\s\\S]+"],
+        "flags": "",
+        "transform": "travelClass"
+      },
+      "price": {
+        "patterns": [
+          "Gesamtpreis(?:es)?\\s+dieser\\s+Reise\\s+in\\s+Höhe\\s+von\\s+([\\d.,]+)\\s*(EUR|€|CHF)",
+          "^\\s*Gesamtpreis:\\s*([\\d.,]+)\\s*(EUR|€|CHF)",
+          "Den\\s+Betrag\\s+in\\s+Höhe\\s+von\\s+([\\d.,]+)\\s*(EUR|€|CHF)"
+        ],
+        "flags": "m",
+        "transform": "amount"
+      },
+      "currency": {
+        "patterns": [
+          "Gesamtpreis(?:es)?\\s+dieser\\s+Reise\\s+in\\s+Höhe\\s+von\\s+([\\d.,]+)\\s*(EUR|€|CHF)",
+          "^\\s*Gesamtpreis:\\s*([\\d.,]+)\\s*(EUR|€|CHF)",
+          "Den\\s+Betrag\\s+in\\s+Höhe\\s+von\\s+([\\d.,]+)\\s*(EUR|€|CHF)"
+        ],
+        "flags": "m",
+        "format": "{2}",
+        "transform": "currency"
+      }
+    },
+    "repeats": {
+      "legs": {
+        "mode": "matchAll",
+        "pattern": "^[ \\t]*[^\\n]+?,[^\\S\\n]*(?<d>\\d{1,2}\\.\\d{1,2}\\.\\d{2,4}),[^\\S\\n]*\\((?<product>[^)\\n]+)\\),[^\\S\\n]*Abfahrt[^\\S\\n]+(?<dep>[^\\n]+?):[^\\S\\n]*(?<dt>\\d{1,2}:\\d{2})[^\\S\\n]*Uhr(?:,[^\\S\\n]*Gleis[^,\\n]*)?,[^\\S\\n]*Ankunft[^\\S\\n]+(?<arr>[^\\n]+?):[^\\S\\n]*(?<at>\\d{1,2}:\\d{2})[^\\S\\n]*Uhr",
+        "flags": "gm",
+        "fields": {
+          "depStationName": {
+            "group": "dep",
+            "replace": [
+              ["\\s+Gl\\.\\s*[\\d-]+$", "", "i"],
+              ["\\s{2,}", " "]
+            ],
+            "transform": "trim"
+          },
+          "arrStationName": {
+            "group": "arr",
+            "replace": [
+              ["\\s+Gl\\.\\s*[\\d-]+$", "", "i"],
+              ["\\s{2,}", " "]
+            ],
+            "transform": "trim"
+          },
+          "day": {
+            "group": "d",
+            "transform": "date"
+          },
+          "depTime": {
+            "group": "dt",
+            "transform": "time"
+          },
+          "arrTime": {
+            "group": "at",
+            "transform": "time"
+          },
+          "trainCategory": {
+            "group": "product",
+            "find": {
+              "pattern": "\\b(ICE|ECE|IC|EC|EN|NJ|CNL|IRE|RE|RB|S|TGV|RJX|RJ|WB|FLX|IR|ALX|BRB|MEX|M|ERB|HLB|NWB|ICN|EST|TER|OUIGO)\\s?\\d{1,6}\\b",
+              "flags": ""
+            }
+          },
+          "trainNumber": {
+            "group": "product",
+            "find": {
+              "pattern": "\\b(?:ICE|ECE|IC|EC|EN|NJ|CNL|IRE|RE|RB|S|TGV|RJX|RJ|WB|FLX|IR|ALX|BRB|MEX|M|ERB|HLB|NWB|ICN|EST|TER|OUIGO)\\s?(?<v>\\d{1,6})\\b",
+              "flags": ""
+            }
+          },
+          "direction": {
+            "lastBefore": {
+              "pattern": "^[ \\t]*(Hinfahrt|R(?:ü|ue)ckfahrt)\\b",
+              "flags": "im"
+            },
+            "map": [
+              ["^h", "outbound"],
+              ["^r", "return"]
+            ]
+          }
+        },
+        "compute": {
+          "departureLocal": {
+            "format": "{day}T{depTime}"
+          },
+          "arrivalLocal": {
+            "format": "{day}T{depTime} {arrTime}",
+            "transform": "laterClock"
+          }
+        },
+        "skipItemsWithout": ["departureLocal"]
+      }
+    },
+    "required": ["legs"]
+  },
+  "testCases": [
+    {
+      "name": "a connection over midnight with a walk between the trains",
+      "input": "DB Vertrieb GmbH\nAuftragsbestätigung zum Auftrag 55667788 vom 01.02.2008.\nReservierung, Klasse: 1, Anzahl Personen: 1\nGesamtpreis: 42,00 EUR\nVerbindungsauskunft zur Leistung 1\nHinfahrt:\nProbestadt Hbf-Mittelort Hbf, 01.03.08, (RE 12345), Abfahrt Probestadt Hbf: 23:20 Uhr, Gleis 2, Ankunft Mittelort Hbf: 00:15 Uhr, Gleis 5\nMittelort Hbf-Mittelort Hbf Gl.1-3, 02.03.08, (Fußweg)\nMittelort Hbf-Zielstadt Hbf, 02.03.08, (ICE 77), Abfahrt Mittelort Hbf Gl.1-3: 06:05 Uhr, Gleis 1, Ankunft Zielstadt Hbf: 07:00 Uhr, Gleis 8",
+      "expect": "match",
+      "expected": {
+        "bookingReference": "55667788",
+        "travelClass": "first",
+        "price": 42,
+        "legs": [
+          {
+            "departureLocal": "2008-03-01T23:20",
+            "arrivalLocal": "2008-03-02T00:15",
+            "trainCategory": "RE",
+            "trainNumber": "12345",
+            "direction": "outbound"
+          },
+          {
+            "depStationName": "Mittelort Hbf",
+            "departureLocal": "2008-03-02T06:05",
+            "trainCategory": "ICE",
+            "trainNumber": "77"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a booking mail that is no connection info",
+      "input": "vielen Dank für Ihre Buchung bei der Deutschen Bahn.\nAuftragsnummer 112233445566 wie folgt gebucht:",
+      "expect": "decline"
+    }
+  ]
+}

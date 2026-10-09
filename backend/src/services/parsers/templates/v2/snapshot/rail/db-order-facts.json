@@ -1,0 +1,80 @@
+{
+  "id": "rail:db-order-facts",
+  "domain": "rail",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Deutsche Bahn",
+    "kind": "rail",
+    "keys": {
+      "senderDomains": ["bahn.de"]
+    }
+  },
+  "markets": ["DE"],
+  "match": {
+    "markers": [],
+    "anchors": [],
+    "anyOf": [
+      {
+        "pattern": "Deutsche(n)? Bahn|bahn\\.de|DB Fernverkehr|DB Vertrieb|DB Regio|DEUTSCHE BAHN",
+        "flags": "i"
+      }
+    ],
+    "allOf": [
+      {
+        "pattern": "(wie\\s+folgt\\s+gebucht|Ihre\\s+Buchung\\s+(wurde|erfolgte|wird)|Ihre\\s+Bestellung\\s+(erfolgte|wird\\s+unter)|Eingang\\s+Ihrer\\s+Bestellung|vielen\\s+Dank\\s+f(ü|ue)r\\s+Ihre[nr]?\\s+(Online-Ticket-)?(Buchung|Fahrkartenkauf|Fahrkartenbestellung)|Auftragsbest(ä|ae)tigung\\s+zum\\s+Auftrag)",
+        "flags": "i"
+      }
+    ]
+  },
+  "extraction": {
+    "preprocess": ["stripCarriageReturns"],
+    "fields": {
+      "documentKind": {
+        "value": "orderFacts"
+      },
+      "bookingReference": {
+        "patterns": [
+          "Auftragsnummer:?\\s+([A-Z0-9]{6,14})\\b",
+          "Auftrag(?:sbestätigung zum Auftrag)?\\s+([A-Z0-9]{6,14})\\b"
+        ],
+        "flags": ""
+      },
+      "price": {
+        "patterns": [
+          "Gesamtpreis(?:es)?\\s+dieser\\s+Reise\\s+in\\s+Höhe\\s+von\\s+([\\d.,]+)\\s*(EUR|€|CHF)",
+          "^\\s*Gesamtpreis:\\s*([\\d.,]+)\\s*(EUR|€|CHF)",
+          "Den\\s+Betrag\\s+in\\s+Höhe\\s+von\\s+([\\d.,]+)\\s*(EUR|€|CHF)"
+        ],
+        "flags": "m",
+        "transform": "amount"
+      },
+      "currency": {
+        "patterns": [
+          "Gesamtpreis(?:es)?\\s+dieser\\s+Reise\\s+in\\s+Höhe\\s+von\\s+([\\d.,]+)\\s*(EUR|€|CHF)",
+          "^\\s*Gesamtpreis:\\s*([\\d.,]+)\\s*(EUR|€|CHF)",
+          "Den\\s+Betrag\\s+in\\s+Höhe\\s+von\\s+([\\d.,]+)\\s*(EUR|€|CHF)"
+        ],
+        "flags": "m",
+        "format": "{2}",
+        "transform": "currency"
+      }
+    }
+  },
+  "testCases": [
+    {
+      "name": "an order mail whose itinerary is in the attachment",
+      "input": "Buchungsbestätigung (Auftrag P2Q3RS)\nvielen Dank für Ihren Fahrkartenkauf.\nAuftragsnummer: P2Q3RS\nDen Betrag in Höhe von 88,40 EUR buchen wir unter Ihrer Mandatsreferenz ab.\nDB Vertrieb GmbH",
+      "expect": "match",
+      "expected": {
+        "bookingReference": "P2Q3RS",
+        "price": 88.4,
+        "currency": "EUR"
+      }
+    },
+    {
+      "name": "a loyalty newsletter names neither",
+      "input": "Ihr aktueller Punktestand bei bahn.bonus\nmit Ihrer BahnCard sammeln Sie Punkte.",
+      "expect": "decline"
+    }
+  ]
+}

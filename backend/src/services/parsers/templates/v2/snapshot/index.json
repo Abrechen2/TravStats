@@ -114,6 +114,48 @@
       "domain": "cruise",
       "version": "2026.10.9",
       "path": "cruise/tui-cruises-confirmation.json"
+    },
+    {
+      "id": "rail:db-confirmation",
+      "domain": "rail",
+      "version": "2026.10.9",
+      "path": "rail/db-confirmation.json"
+    },
+    {
+      "id": "rail:db-online-ticket",
+      "domain": "rail",
+      "version": "2026.10.9",
+      "path": "rail/db-online-ticket.json"
+    },
+    {
+      "id": "rail:db-postal-order",
+      "domain": "rail",
+      "version": "2026.10.9",
+      "path": "rail/db-postal-order.json"
+    },
+    {
+      "id": "rail:db-connection-info",
+      "domain": "rail",
+      "version": "2026.10.9",
+      "path": "rail/db-connection-info.json"
+    },
+    {
+      "id": "rail:db-order-facts",
+      "domain": "rail",
+      "version": "2026.10.9",
+      "path": "rail/db-order-facts.json"
+    },
+    {
+      "id": "rail:db-reservation-ticket",
+      "domain": "rail",
+      "version": "2026.10.9",
+      "path": "rail/db-reservation-ticket.json"
+    },
+    {
+      "id": "rail:db-reservation-mail",
+      "domain": "rail",
+      "version": "2026.10.9",
+      "path": "rail/db-reservation-mail.json"
     }
   ]
 }

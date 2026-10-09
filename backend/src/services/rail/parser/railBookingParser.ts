@@ -4,14 +4,15 @@ import { getParserOrder } from "../../parserSettings";
 import { isLlmAvailable, recordLlmProbe } from "../../parsers/llmAvailability";
 import { cleanEmailBody } from "../../parsers/shared/utils";
 import { extractTextFromPdf } from "../../pdfParser";
+import { templateRegistry } from "../../parsers/templates/registry";
+import type { TemplateEnvelope } from "../../parsers/templates/v2/envelope";
 import {
-  dbOrderFacts,
-  parseDbConfirmation,
-  parseDbConnectionInfo,
-  parseDbPostalOrder,
-} from "./dbConfirmation";
-import { parseDbOnlineTicket } from "./dbOnlineTicket";
-import { isDbReservationDocument, parseDbReservation } from "./dbReservation";
+  isReservationDocument,
+  railTemplateSet,
+  readRailBooking,
+  readRailOrderFacts,
+  readRailReservation,
+} from "./v2Rail";
 import { decodeCalendar, isCalendarAttachment, parseCalendarLegs } from "./icsCalendar";
 import { withLabelledFacts } from "./labelledFacts";
 import { parseRailWithLlm, resolveRailLlmChain } from "./railLlmParser";
@@ -142,41 +143,34 @@ function fillSeats(legs: ParsedRailLeg[], others: ParsedRailLeg[]): ParsedRailLe
 }
 
 /**
- * The first reader that recognises the text itself as a booking. A
- * reservation reads as a booking to every one of them — it prints the same
- * table, the same "von … nach" — so it is excluded here and read on its own.
- */
-function readBody(text: string): ParsedRailBooking | null {
-  if (isDbReservationDocument(text)) return null;
-  return (
-    parseDbConfirmation(text) ??
-    parseDbOnlineTicket(text) ??
-    parseDbPostalOrder(text) ??
-    parseDbConnectionInfo(text)
-  );
-}
-
-/**
  * Every template over the text and the attachments. The per-train ticket
  * wins for the legs (it names each train); the mail wins for the order's
  * reference and total (it covers every ticket of the order); the calendar
  * file supplies legs only when nothing else does, and trains where it has one.
+ *
+ * The readers are v2 template FILES since plan 2026-10-09 P4b (the Deutsche
+ * Bahn layouts in the template repository's `rail/`), split by the kind of
+ * document they read (`v2Rail.ts`). A reservation reads as a booking to every
+ * booking template — it prints the same table, the same "von … nach" — so a
+ * document a reservation template recognises is read only as a reservation.
  */
 export async function readRailTemplates(
   text: string,
-  attachments: readonly RailAttachment[] = []
+  attachments: readonly RailAttachment[] = [],
+  templates: readonly TemplateEnvelope[] = templateRegistry.getActiveV2({ domain: "rail" })
 ): Promise<{ booking: ParsedRailBooking | null; orderReference: string | null }> {
-  const body = readBody(text);
+  const set = railTemplateSet(templates);
+  const body = readRailBooking(set, text);
   const { pdfs, calendars } = await attachmentTexts(attachments);
   const reservations = [text, ...pdfs]
-    .map(parseDbReservation)
+    .map((doc) => readRailReservation(set, doc))
     .filter((r): r is ParsedRailBooking => r !== null);
   const tickets = pdfs
-    .filter((pdf) => !isDbReservationDocument(pdf))
-    .map((pdf) => parseDbOnlineTicket(pdf) ?? parseDbConfirmation(pdf))
+    .filter((pdf) => !isReservationDocument(set, pdf))
+    .map((pdf) => readRailBooking(set, pdf))
     .filter((t): t is ParsedRailBooking => t !== null);
   const calendarLegs = calendars.flatMap(parseCalendarLegs);
-  const facts = dbOrderFacts(text);
+  const facts = readRailOrderFacts(set, text);
   const reservationLegs = dedupeLegs(reservations.flatMap((r) => r.legs));
 
   const ticketLegs = dedupeLegs(tickets.flatMap((t) => t.legs));

@@ -1,3 +1,6 @@
+// PARITY REFERENCE ONLY (plan 2026-10-09 P4b): a compiled-in Deutsche Bahn reader the v2
+// templates in the template repository's rail/ replaced. Production reads the templates.
+
 import { dbBookingReference, isDeutscheBahnDocument } from "./dbConfirmation";
 import {
   amountOf,
@@ -7,8 +10,8 @@ import {
   isoDay,
   travelClassOf,
   wallClock,
-} from "./ticketText";
-import type { ParsedRailBooking, ParsedRailLeg } from "./types";
+} from "../../ticketText";
+import type { ParsedRailBooking, ParsedRailLeg } from "../../types";
 
 /**
  * DB's "Online-Ticket" PDF, the one layout that carries the itinerary per

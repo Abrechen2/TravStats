@@ -1,7 +1,10 @@
+// PARITY REFERENCE ONLY (plan 2026-10-09 P4b): a compiled-in Deutsche Bahn reader the v2
+// templates in the template repository's rail/ replaced. Production reads the templates.
+
 import { dbBookingReference, isDeutscheBahnDocument, parseDbConfirmation } from "./dbConfirmation";
 import { parseDbOnlineTicket } from "./dbOnlineTicket";
-import { travelClassOf } from "./ticketText";
-import type { ParsedRailBooking, ParsedRailLeg } from "./types";
+import { travelClassOf } from "../../ticketText";
+import type { ParsedRailBooking, ParsedRailLeg } from "../../types";
 
 /**
  * A DB seat reservation booked AFTER the ticket (forgejo#203): a document of
