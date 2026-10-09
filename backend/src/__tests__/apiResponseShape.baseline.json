@@ -169,6 +169,7 @@
     "sync.ts",
     "tripPhotoWindows.ts",
     "tripSuggestions.ts",
+    "trips/tripPackage.ts",
     "upcoming.ts",
     "uploads.ts",
     "xlsxImport.ts"
