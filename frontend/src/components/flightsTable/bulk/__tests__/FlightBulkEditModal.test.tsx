@@ -14,6 +14,7 @@ vi.mock("../../../../lib/logger", () => ({
 }));
 const edit = vi.fn();
 vi.mock("../../../../lib/api/flightBulkEdit", () => ({
+  BULK_EDIT_MAX_FLIGHTS: 200,
   flightBulkEditApi: { edit: (...a: unknown[]) => edit(...a) },
 }));
 // The chip inputs have their own suites and fetch suggestions on mount; here
@@ -48,10 +49,10 @@ const flight = (id: string, over: Partial<Flight> = {}): Flight =>
 const FLIGHTS = [flight("a", { tags: ["work"] }), flight("b"), flight("c")];
 const TRIPS = [{ id: "t1", name: "Herbst" } as Trip];
 
-function renderModal(onApplied = vi.fn(), onClose = vi.fn()) {
+function renderModal(onApplied = vi.fn(), onClose = vi.fn(), flights: Flight[] = FLIGHTS) {
   render(
     <FlightBulkEditModal
-      flights={FLIGHTS}
+      flights={flights}
       trips={TRIPS}
       labelOf={(id) => `Flight ${id}`}
       onClose={onClose}
@@ -142,7 +143,8 @@ describe("FlightBulkEditModal", () => {
     await user.click(screen.getByRole("radio", { name: "flights:bulk.tripClear" }));
     await user.click(confirmButton());
     const banner = await screen.findByRole("alert");
-    expect(banner).toHaveTextContent("common:saveErrors.network");
+    // No answer: the outcome is unknown, never "nothing changed" (review I2).
+    expect(banner).toHaveTextContent("flights:bulk.outcomeUnknown");
     expect(screen.getByRole("radio", { name: "flights:bulk.tripClear" })).toBeChecked();
     await user.click(within(banner).getByRole("button", { name: "common:buttons.retry" }));
     expect(await screen.findByTestId("bulk-results")).toBeInTheDocument();
@@ -169,5 +171,65 @@ describe("FlightBulkEditModal", () => {
     renderModal();
     const label = screen.getByRole("radio", { name: "flights:bulk.tripClear" }).closest("label");
     expect(label?.className).toContain("pointer-coarse:min-h-(--ts-size-touch-min)");
+  });
+
+  it("caps the selection at 200 with the reason beside the grey confirm (review I2)", async () => {
+    const many = Array.from({ length: 201 }, (_, i) => flight(`m${i}`));
+    renderModal(vi.fn(), vi.fn(), many);
+    await userEvent.setup().click(screen.getByRole("radio", { name: "flights:bulk.tripClear" }));
+    expect(confirmButton()).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: 'flights:bulk.missing.tooMany {"max":200,"count":201}' })
+    ).toBeInTheDocument();
+    expect(edit).not.toHaveBeenCalled();
+  });
+
+  it("after a timeout says the outcome is unknown and offers a reload", async () => {
+    edit.mockRejectedValueOnce(
+      Object.assign(new Error("timeout of 60000ms exceeded"), {
+        isAxiosError: true,
+        code: "ECONNABORTED",
+      })
+    );
+    const user = userEvent.setup();
+    const { onApplied } = renderModal();
+    await user.click(screen.getByRole("radio", { name: "flights:bulk.tripClear" }));
+    await user.click(confirmButton());
+    expect(await screen.findByRole("alert")).toHaveTextContent("flights:bulk.outcomeUnknown");
+    await user.click(screen.getByRole("button", { name: "flights:bulk.reloadList" }));
+    expect(onApplied).toHaveBeenCalledTimes(1);
+  });
+
+  it("says so when retrying the failed ones fails as a request (review I3)", async () => {
+    edit
+      .mockResolvedValueOnce({
+        results: [
+          { flightId: "a", status: "updated" },
+          { flightId: "b", status: "failed", code: "UPDATE_FAILED" },
+          { flightId: "c", status: "updated" },
+        ],
+        summary: { updated: 2, unchanged: 0, failed: 1 },
+      })
+      .mockRejectedValueOnce(Object.assign(new Error("Network Error"), { isAxiosError: true }))
+      .mockResolvedValueOnce({
+        results: [{ flightId: "b", status: "updated" }],
+        summary: { updated: 1, unchanged: 0, failed: 0 },
+      });
+    const user = userEvent.setup();
+    renderModal();
+    await user.click(screen.getByRole("radio", { name: "flights:bulk.tripClear" }));
+    await user.click(confirmButton());
+    await user.click(
+      await screen.findByRole("button", { name: /flights:bulk\.result\.retryFailed/ })
+    );
+    const banner = (await screen.findByText("flights:bulk.outcomeUnknown")).closest(
+      "[data-form-error-banner]"
+    ) as HTMLElement;
+    expect(banner).toBeInTheDocument();
+    // Its retry sends the same failed ones again.
+    await user.click(within(banner).getByRole("button", { name: "common:buttons.retry" }));
+    await waitFor(() => expect(edit).toHaveBeenCalledTimes(3));
+    expect(edit).toHaveBeenLastCalledWith({ flightIds: ["b"], trip: { mode: "clear" } });
+    await waitFor(() => expect(screen.queryByTestId("bulk-failed-b")).toBeNull());
   });
 });

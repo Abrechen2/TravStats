@@ -6,6 +6,7 @@ import CompanionPicker from "../../CompanionPicker";
 import { FormErrorBanner, SaveBlockedHint, useDirtyGuard } from "../../form";
 import { useTranslation } from "../../../hooks/useTranslation";
 import {
+  BULK_EDIT_MAX_FLIGHTS,
   flightBulkEditApi,
   type FlightBulkEditResult,
   type ListEditMode,
@@ -100,10 +101,24 @@ export default function FlightBulkEditModal({
             : FIRST_CHOICE_ID,
     label: t(`flights:bulk.missing.${gap}`),
   }));
+  // The server takes at most 200 at once; more is said here, not answered
+  // with a validation sentence about fields nobody marked (review I2).
+  if (flights.length > BULK_EDIT_MAX_FLIGHTS) {
+    missing.unshift({
+      field: FIRST_CHOICE_ID,
+      label: t("flights:bulk.missing.tooMany", {
+        max: BULK_EDIT_MAX_FLIGHTS,
+        count: flights.length,
+      }),
+    });
+  }
+  // The ids of the last request — what a retry after a failed REQUEST sends again.
+  const lastSent = useRef<string[]>([]);
 
   const send = async (flightIds: string[]): Promise<void> => {
     if (inFlight.current || flightIds.length === 0) return;
     inFlight.current = true;
+    lastSent.current = flightIds;
     setSending(true);
     setRequestError(null);
     try {
@@ -116,7 +131,15 @@ export default function FlightBulkEditModal({
       if (answer.summary.updated > 0) onApplied();
     } catch (err: unknown) {
       logger.warn({ err }, "FlightBulkEditModal: bulk edit failed");
-      setRequestError(saveErrorKey(err, "flights:bulk.requestFailed"));
+      // No answer, or a server error: some flights may have changed before it
+      // broke off — say the outcome is unknown, never "nothing changed". A
+      // retry is safe (every mode is idempotent) and a reload shows the truth.
+      const status = (err as { response?: { status?: number } } | null)?.response?.status;
+      setRequestError(
+        status !== undefined && status < 500
+          ? saveErrorKey(err, "flights:bulk.requestFailed")
+          : "flights:bulk.outcomeUnknown"
+      );
     } finally {
       inFlight.current = false;
       setSending(false);
@@ -129,6 +152,31 @@ export default function FlightBulkEditModal({
         .map((r) => r.flightId)
     : [];
   const sendAll = (): void => void send(flights.map((f) => f.id));
+  const outcomeUnknown = requestError === "flights:bulk.outcomeUnknown";
+  // Shown in BOTH views: a failed "retry the failed ones" lands in the results
+  // view, where it used to say nothing (review I3).
+  const requestFailure = (
+    <>
+      <FormErrorBanner
+        message={requestError ? t(requestError) : null}
+        onRetry={
+          requestError && (outcomeUnknown || isTransientSaveError(requestError))
+            ? () => void send(lastSent.current)
+            : undefined
+        }
+        retryDisabled={sending}
+      />
+      {outcomeUnknown ? (
+        <button
+          type="button"
+          className="btn-secondary self-start pointer-coarse:min-h-(--ts-size-touch-min)"
+          onClick={onApplied}
+        >
+          {t("flights:bulk.reloadList")}
+        </button>
+      ) : null}
+    </>
+  );
   const button = "btn-primary";
   const secondary = "btn-secondary";
 
@@ -182,7 +230,10 @@ export default function FlightBulkEditModal({
       }
     >
       {results !== null ? (
-        <BulkEditResults results={results} labelOf={labelOf} />
+        <div className="flex flex-col" style={{ gap: 12 }}>
+          <BulkEditResults results={results} labelOf={labelOf} />
+          {requestFailure}
+        </div>
       ) : (
         <div className="flex flex-col" style={{ gap: 16 }}>
           <p className="text-sm" style={{ color: "var(--text-muted)" }}>
@@ -267,11 +318,7 @@ export default function FlightBulkEditModal({
             ) : null}
           </div>
           <BulkEditPreviewText preview={preview} />
-          <FormErrorBanner
-            message={requestError ? t(requestError) : null}
-            onRetry={requestError && isTransientSaveError(requestError) ? sendAll : undefined}
-            retryDisabled={sending}
-          />
+          {requestFailure}
         </div>
       )}
     </Modal>

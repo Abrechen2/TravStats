@@ -608,12 +608,13 @@
     "tripPickPlaceholder": "– please choose –",
     "confirm_one": "Apply to 1 flight",
     "confirm_other": "Apply to {{count}} flights",
-    "requestFailed": "The change could not be sent. Nothing was changed.",
+    "requestFailed": "The change was not accepted.",
     "missing": {
       "nothing": "choose a change",
       "trip": "the trip",
       "tags": "at least one tag",
-      "companions": "at least one person"
+      "companions": "at least one person",
+      "tooMany": "at most {{max}} flights at once (selected: {{count}})"
     },
     "preview": {
       "title": "Before you apply",
@@ -653,7 +654,9 @@
         "FLIGHT_NOT_FOUND": "no longer exists",
         "UPDATE_FAILED": "could not be saved"
       }
-    }
+    },
+    "outcomeUnknown": "Whether anything changed is unknown – the answer did not arrive. Trying again changes nothing twice; reloading the list shows where things stand.",
+    "reloadList": "Reload the list"
   },
   "deleteSurvivors": {
     "trip": "the trip “{{name}}”",

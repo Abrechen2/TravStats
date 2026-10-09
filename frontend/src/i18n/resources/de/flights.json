@@ -608,12 +608,13 @@
     "tripPickPlaceholder": "– bitte wählen –",
     "confirm_one": "Für 1 Flug übernehmen",
     "confirm_other": "Für {{count}} Flüge übernehmen",
-    "requestFailed": "Die Änderung konnte nicht gesendet werden. Es wurde nichts geändert.",
+    "requestFailed": "Die Änderung wurde nicht angenommen.",
     "missing": {
       "nothing": "eine Änderung wählen",
       "trip": "die Reise",
       "tags": "mindestens ein Tag",
-      "companions": "mindestens eine Person"
+      "companions": "mindestens eine Person",
+      "tooMany": "höchstens {{max}} Flüge auf einmal (ausgewählt: {{count}})"
     },
     "preview": {
       "title": "Vor dem Übernehmen",
@@ -653,7 +654,9 @@
         "FLIGHT_NOT_FOUND": "nicht mehr vorhanden",
         "UPDATE_FAILED": "konnte nicht gespeichert werden"
       }
-    }
+    },
+    "outcomeUnknown": "Ob etwas geändert wurde, ist unklar – die Antwort kam nicht an. Erneut versuchen ändert nichts doppelt; die Liste neu zu laden zeigt den Stand.",
+    "reloadList": "Liste neu laden"
   },
   "deleteSurvivors": {
     "trip": "die Reise „{{name}}“",

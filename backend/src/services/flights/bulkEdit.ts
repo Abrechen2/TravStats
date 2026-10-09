@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
+import { canonicalizeCompanionName } from "../../utils/companionName";
 import { linkRowsFor, resolveCompanions } from "../companionService";
 import { recomputeTripStatus } from "../tripStatusService";
 import type { FlightBulkEdit } from "../../schemas/flightBulkEdit";
@@ -9,12 +10,21 @@ import type { FlightBulkEdit } from "../../schemas/flightBulkEdit";
  * Bulk edit of trip, tags and companions over an explicit list of flights
  * (forgejo#217).
  *
- * Each flight is its own unit of work: one transaction per flight, one result
- * per flight. A failure on one never rolls back another, and the answer names
- * exactly which ones failed and why — so the client can offer "retry the
- * failed ones" and send only those. Every mode is idempotent (a set union, a
- * replacement, a trip id), so a retry that reaches a flight which in fact went
- * through answers `unchanged`, never a second change.
+ * Each changed flight is its own unit of work: one transaction per flight,
+ * one result per flight. A failure on one never rolls back another, and the
+ * answer names exactly which ones failed and why — so the client can offer
+ * "retry the failed ones" and send only those. Every mode is idempotent (a
+ * set union, a replacement, a trip id), so a retry that reaches a flight which
+ * in fact went through answers `unchanged`, never a second change.
+ *
+ * Built for 200 flights at once (review I2): the selected flights are read in
+ * ONE query and the people they name in ONE more; every diff is computed in
+ * memory, and only a flight that changes is written. Companions are looked up,
+ * not upserted — only a name nobody has yet is created, once — so a bulk edit
+ * never renames a person to the spelling some other flight happened to store
+ * (the single-flight path's "newest spelling wins" is a per-edit rule, not one
+ * for two hundred stored spellings at once). An identical repeat is therefore
+ * two reads and no write.
  */
 
 export type BulkEditStatus = "updated" | "unchanged" | "failed";
@@ -48,19 +58,105 @@ export async function assertTripOwned(userId: string, edit: FlightBulkEdit): Pro
   if (!trip) throw new AppError("Trip not found", 404, "TRIP_NOT_FOUND", "trip");
 }
 
-async function editOne(
-  userId: string,
-  flightId: string,
-  edit: FlightBulkEdit,
-  touchedTrips: Set<string>
-): Promise<BulkEditResult> {
-  const flight = await prisma.flight.findFirst({
-    where: { id: flightId, userId },
-    select: { id: true, tripId: true, tags: true, companions: true },
-  });
-  if (!flight) return { flightId, status: "failed", code: "FLIGHT_NOT_FOUND" };
+interface Person {
+  id: string;
+  displayName: string;
+}
 
-  const data: { tripId?: string | null; tags?: string[]; companions?: string[] } = {};
+interface NamedPerson {
+  canonical: string;
+  spelling: string;
+}
+
+/** One person per canonical name, in first-seen order, keeping the first spelling. */
+function people(names: readonly string[]): NamedPerson[] {
+  const seen = new Set<string>();
+  const out: NamedPerson[] = [];
+  for (const raw of names) {
+    const canonical = canonicalizeCompanionName(raw);
+    if (!canonical || seen.has(canonical)) continue;
+    seen.add(canonical);
+    out.push({ canonical, spelling: raw.trim() });
+  }
+  return out;
+}
+
+/**
+ * Every person the request touches, by canonical name: one read, then one
+ * find-or-create for the names that have no row yet (with the spelling they
+ * were written in). Existing people keep their display name.
+ */
+async function directory(
+  userId: string,
+  names: readonly NamedPerson[]
+): Promise<Map<string, Person>> {
+  const map = new Map<string, Person>();
+  if (names.length === 0) return map;
+  const canonicals = [...new Set(names.map((n) => n.canonical))];
+  const rows = await prisma.companion.findMany({
+    where: { userId, canonicalName: { in: canonicals } },
+    select: { id: true, displayName: true, canonicalName: true },
+  });
+  for (const row of rows) map.set(row.canonicalName, { id: row.id, displayName: row.displayName });
+  const missing = people(names.filter((n) => !map.has(n.canonical)).map((n) => n.spelling));
+  if (missing.length > 0) {
+    const created = await resolveCompanions(
+      userId,
+      missing.map((n) => n.spelling)
+    );
+    for (const person of created) map.set(canonicalizeCompanionName(person.displayName), person);
+  }
+  return map;
+}
+
+interface FlightRow {
+  id: string;
+  tripId: string | null;
+  tags: string[];
+  companions: string[];
+}
+
+interface Plan {
+  data: { tripId?: string | null; tags?: string[]; companions?: string[] };
+  companionIds: string[] | null;
+}
+
+function companionPlan(
+  flight: FlightRow,
+  edit: NonNullable<FlightBulkEdit["companions"]>,
+  persons: Map<string, Person>,
+  typed: readonly NamedPerson[]
+): Pick<Plan, "companionIds"> & { companions?: string[] } {
+  const current = people(flight.companions);
+  const target =
+    edit.mode === "add"
+      ? [...current, ...typed.filter((p) => !current.some((c) => c.canonical === p.canonical))]
+      : [...typed];
+  const unchanged =
+    target.length === current.length &&
+    target.every((p, i) => p.canonical === current[i].canonical);
+  if (unchanged) return { companionIds: null };
+  // The flight's own spelling for a person it already lists; the person's
+  // stored name for one it gains.
+  const own = new Map(current.map((c) => [c.canonical, c.spelling]));
+  return {
+    companions: target.map(
+      (p) => own.get(p.canonical) ?? persons.get(p.canonical)?.displayName ?? p.spelling
+    ),
+    companionIds: target
+      .map((p) => persons.get(p.canonical)?.id)
+      .filter((id): id is string => Boolean(id)),
+  };
+}
+
+/** What one flight becomes, or null when it already is. */
+function planFor(
+  flight: FlightRow,
+  edit: FlightBulkEdit,
+  persons: Map<string, Person>,
+  typed: readonly NamedPerson[]
+): Plan | null {
+  const data: Plan["data"] = {};
   if (edit.trip) {
     const tripId = edit.trip.mode === "set" ? edit.trip.tripId : null;
     if (tripId !== flight.tripId) data.tripId = tripId;
@@ -74,41 +170,29 @@ async function editOne(
   }
   let companionIds: string[] | null = null;
   if (edit.companions) {
-    const names =
-      edit.companions.mode === "add"
-        ? addValues(flight.companions, edit.companions.values)
-        : dedupe(edit.companions.values);
-    // The same find-or-create the single-flight PUT uses, so "Anna" and
-    // "anna" stay one person and the display array matches the links.
-    const resolved = await resolveCompanions(userId, names);
-    const displayNames = resolved.map((c) => c.displayName);
-    if (!sameList(displayNames, flight.companions)) {
-      data.companions = displayNames;
-      companionIds = resolved.map((c) => c.id);
-    }
+    const plan = companionPlan(flight, edit.companions, persons, typed);
+    companionIds = plan.companionIds;
+    if (plan.companions) data.companions = plan.companions;
   }
-  if (Object.keys(data).length === 0) return { flightId, status: "unchanged" };
+  return Object.keys(data).length === 0 ? null : { data, companionIds };
+}
 
+async function writePlan(userId: string, flightId: string, plan: Plan): Promise<void> {
   await prisma.$transaction(async (tx) => {
-    if (companionIds !== null) {
+    if (plan.companionIds !== null) {
       await tx.flightCompanion.deleteMany({ where: { flightId } });
-      if (companionIds.length > 0) {
+      if (plan.companionIds.length > 0) {
         await tx.flightCompanion.createMany({
-          data: linkRowsFor(companionIds).map((row) => ({ ...row, flightId })),
+          data: linkRowsFor(plan.companionIds).map((row) => ({ ...row, flightId })),
           skipDuplicates: true,
         });
       }
     }
     await tx.flight.update({
       where: { id: flightId, userId },
-      data: { ...data, lastModifiedBy: "user" },
+      data: { ...plan.data, lastModifiedBy: "user" },
     });
   });
-  if (data.tripId !== undefined) {
-    if (flight.tripId) touchedTrips.add(flight.tripId);
-    if (data.tripId) touchedTrips.add(data.tripId);
-  }
-  return { flightId, status: "updated" };
 }
 
 export async function bulkEditFlights(
@@ -116,13 +200,41 @@ export async function bulkEditFlights(
   edit: FlightBulkEdit
 ): Promise<BulkEditResult[]> {
   await assertTripOwned(userId, edit);
+  const rows = await prisma.flight.findMany({
+    where: { id: { in: edit.flightIds }, userId },
+    select: { id: true, tripId: true, tags: true, companions: true },
+  });
+  const byId = new Map(rows.map((row) => [row.id, row]));
+
+  const typed = edit.companions ? people(edit.companions.values) : [];
+  const persons = edit.companions
+    ? await directory(userId, [
+        ...typed,
+        // Names a flight keeps in add mode, so its links can be rebuilt.
+        ...(edit.companions.mode === "add" ? rows.flatMap((r) => people(r.companions)) : []),
+      ])
+    : new Map<string, Person>();
+
   const touchedTrips = new Set<string>();
   const results: BulkEditResult[] = [];
-  // Sequential on purpose: one flight's companion upserts must not race
-  // another's for the same new person.
   for (const flightId of edit.flightIds) {
+    const flight = byId.get(flightId);
+    if (!flight) {
+      results.push({ flightId, status: "failed", code: "FLIGHT_NOT_FOUND" });
+      continue;
+    }
+    const plan = planFor(flight, edit, persons, typed);
+    if (!plan) {
+      results.push({ flightId, status: "unchanged" });
+      continue;
+    }
     try {
-      results.push(await editOne(userId, flightId, edit, touchedTrips));
+      await writePlan(userId, flightId, plan);
+      if (plan.data.tripId !== undefined) {
+        if (flight.tripId) touchedTrips.add(flight.tripId);
+        if (plan.data.tripId) touchedTrips.add(plan.data.tripId);
+      }
+      results.push({ flightId, status: "updated" });
     } catch (err: unknown) {
       logger.error({
         operation: "flight_bulk_edit_failed",
