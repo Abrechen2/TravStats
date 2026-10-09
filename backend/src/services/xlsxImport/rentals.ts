@@ -54,15 +54,16 @@ type Body = Record<string, unknown>;
 
 /** The rental refusals by code, as the preview words them. */
 const REFUSALS: Record<string, string> = {
-  RENTAL_STATION_UNRESOLVED: "unknown_station",
-  RENTAL_GEOCODER_UNAVAILABLE: "unknown_station",
-  TZ_UNRESOLVED: "unknown_station",
-  LOCAL_TIME_NONEXISTENT: "invalid_date",
-  RENTAL_RETURN_BEFORE_PICKUP: "invalid_date",
-  RENTAL_ACTUAL_RETURN_BEFORE_PICKUP: "invalid_date",
-  RENTAL_DEPOSIT_RETURNED_BEFORE_PAID: "invalid_date",
-  RENTAL_ODOMETER_REVERSED: "invalid_number",
-  RENTAL_DEPOSIT_RETURN_EXCEEDS: "invalid_number",
+  RENTAL_STATION_UNRESOLVED: "unknown_rental_station",
+  TZ_UNRESOLVED: "unknown_rental_station",
+  // Transient: the address search did not answer — never "not found".
+  RENTAL_GEOCODER_UNAVAILABLE: "geocoder_unavailable",
+  LOCAL_TIME_NONEXISTENT: "nonexistent_time",
+  RENTAL_RETURN_BEFORE_PICKUP: "rental_order",
+  RENTAL_ACTUAL_RETURN_BEFORE_PICKUP: "rental_order",
+  RENTAL_DEPOSIT_RETURNED_BEFORE_PAID: "deposit_order",
+  RENTAL_ODOMETER_REVERSED: "odometer_order",
+  RENTAL_DEPOSIT_RETURN_EXCEEDS: "deposit_return_exceeds",
 };
 
 const zoneOf = (r: RentalBooking, end: RentalTimeEnd): string =>

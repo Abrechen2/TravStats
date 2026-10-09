@@ -257,7 +257,14 @@
       "invalid_currency": "Die Währung ist kein ISO-Code wie EUR oder NOK.",
       "expense_needs_roadtrip": "Die Ausgabe nennt keinen Roadtrip.",
       "expense_station_or_leg": "Eine Ausgabe gehört zu einer Station ODER zu einer Strecke – nicht zu beidem.",
-      "rental_needs_booking": "Eine neue Miete braucht Anbieter, Abholstation sowie gebuchte Abholung und Rückgabe."
+      "rental_needs_booking": "Eine neue Miete braucht Anbieter, Abholstation sowie gebuchte Abholung und Rückgabe.",
+      "unknown_rental_station": "Die Mietstation ließ sich nicht verorten – bitte IATA-Code, Breite und Länge oder eine Adresse angeben.",
+      "geocoder_unavailable": "Die Adresssuche antwortet gerade nicht – die Zeile wurde nicht übernommen. Bitte später erneut importieren.",
+      "nonexistent_time": "Diese Uhrzeit gibt es an der Station nicht (Zeitumstellung).",
+      "rental_order": "Die Rückgabe liegt vor der Abholung.",
+      "deposit_order": "Die Kaution kam laut Zeile vor dem Hinterlegen zurück.",
+      "odometer_order": "Der Kilometerstand bei Rückgabe liegt unter dem bei Abholung.",
+      "deposit_return_exceeds": "Zurück kam mehr Kaution, als hinterlegt wurde."
     },
     "modeLabel": "Was soll mit vorhandenen Einträgen passieren?",
     "modes": {

@@ -257,7 +257,14 @@
       "invalid_currency": "The currency is not an ISO code such as EUR or NOK.",
       "expense_needs_roadtrip": "The cost names no roadtrip.",
       "expense_station_or_leg": "A cost belongs to a station OR to a leg — not both.",
-      "rental_needs_booking": "A new rental needs a provider, a pickup station and the booked pickup and return."
+      "rental_needs_booking": "A new rental needs a provider, a pickup station and the booked pickup and return.",
+      "unknown_rental_station": "The rental station could not be placed – please give an IATA code, latitude and longitude, or an address.",
+      "geocoder_unavailable": "The address search is not answering – the row was not applied. Please import again later.",
+      "nonexistent_time": "This time does not exist at the station (clock change).",
+      "rental_order": "The return is before the pickup.",
+      "deposit_order": "According to the row, the deposit came back before it was held.",
+      "odometer_order": "The odometer at return is below the one at pickup.",
+      "deposit_return_exceeds": "More deposit came back than was held."
     },
     "modeLabel": "What should happen to entries that already exist?",
     "modes": {

@@ -109,7 +109,12 @@ export function mergeRental(
 
   const pickupAt = timeOf(existing, input, "pickup", pickup, ret);
   const returnAt = timeOf(existing, input, "return", pickup, ret);
-  if (returnAt.utc.getTime() < pickupAt.utc.getTime()) {
+  if (
+    returnCertainlyBeforePickup(
+      { ...pickupAt, zone: pickup.timezone },
+      { ...returnAt, zone: ret.timezone }
+    )
+  ) {
     throw new AppError(
       "the return must not precede the pickup",
       400,
@@ -132,11 +137,21 @@ export function mergeRental(
     ret,
     "actualReturnLocal"
   );
-  assertActualOrder(
-    actualPickup && { ...actualPickup, zone: pickup.timezone },
-    actualReturn && { ...actualReturn, zone: ret.timezone },
-    input
-  );
+  // Only when this write moved an actual end or a station (the odometer's
+  // rule): a stored pair the write did not touch never blocks an unrelated
+  // edit — legacy rows hold invoice days stored as midnight minutes.
+  const movesActualOrder =
+    input.actualPickupLocal !== undefined ||
+    input.actualReturnLocal !== undefined ||
+    input.pickupStation !== undefined ||
+    input.returnStation !== undefined;
+  if (movesActualOrder) {
+    assertActualOrder(
+      actualPickup && { ...actualPickup, zone: pickup.timezone },
+      actualReturn && { ...actualReturn, zone: ret.timezone },
+      input
+    );
+  }
 
   const requested = input.status ?? existing?.status ?? "scheduled";
   const status = deriveRentalStatus({
@@ -218,14 +233,34 @@ function actualOf(
   return sentWallClock(sent, station.timezone, field, fold);
 }
 
-/** The first instant a recorded end can mean: the instant, or its day's start at the station. */
-const earliestOf = (end: ActualEnd): number => end.utc.getTime();
+/** A recorded end on its station's clock: a minute is a point, a day its whole local day. */
+interface TimedEnd {
+  utc: Date;
+  precision: string;
+  zone: string;
+}
 
-/** The last instant a recorded end can mean: the instant, or the start of the next day there. */
-function latestOf(end: ActualEnd & { zone: string }): number {
-  if (end.precision !== "day") return end.utc.getTime();
+/** The start of the day after a day-only end, at its station — the day's exclusive bound. */
+function nextDayStart(end: TimedEnd): number {
   const next = fromDbDate(new Date(toDbDate(localDay(end.utc, end.zone)).getTime() + 86_400_000));
   return toInstant(`${next}T00:00`, end.zone, { origin: "machine" }).utc.getTime();
+}
+
+/**
+ * Whether a return CERTAINLY lies before its pickup — the one order rule of
+ * both the booked and the actual ends (the rail/bus rule as intervals). A
+ * minute end is a point; a day-only end is its whole local day at its own
+ * station, `[dayStart, nextDayStart)`, stored at its day start. So a day-only
+ * return on the pickup's own day is valid, and is refused only when its day
+ * ENDS at or before the pickup begins; two day-only ends are refused only
+ * when the return day lies before the pickup day. Instants, never labels: a
+ * one-way rental's two stations may keep different clocks.
+ */
+export function returnCertainlyBeforePickup(pickup: TimedEnd, ret: TimedEnd): boolean {
+  const pickupStart = pickup.utc.getTime();
+  return ret.precision === "day"
+    ? nextDayStart(ret) <= pickupStart
+    : ret.utc.getTime() < pickupStart;
 }
 
 /**
@@ -237,12 +272,12 @@ function latestOf(end: ActualEnd & { zone: string }): number {
  * (the return when both or neither moved — the end a reader fixes first).
  */
 function assertActualOrder(
-  pickup: (ActualEnd & { zone: string }) | null,
-  ret: (ActualEnd & { zone: string }) | null,
+  pickup: TimedEnd | null,
+  ret: TimedEnd | null,
   input: UpdateRentalInput
 ): void {
   if (!pickup || !ret) return;
-  if (latestOf(ret) >= earliestOf(pickup)) return;
+  if (!returnCertainlyBeforePickup(pickup, ret)) return;
   const field =
     input.actualPickupLocal !== undefined && input.actualReturnLocal === undefined
       ? "actualPickupLocal"

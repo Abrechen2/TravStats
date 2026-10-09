@@ -330,11 +330,54 @@ describe("spreadsheet import — rentals", () => {
       ctx(userId, "merge", true)
     );
     expect(outcome).toMatchObject({ created: 1, errors: 2 });
+    // Each refusal says its own reason (review minor 2): the order, not "unreadable".
     expect(outcome.rows.filter((r) => r.action === "error").map((r) => r.message)).toEqual([
-      "invalid_date",
+      "rental_order",
       "invalid_date",
     ]);
     expect(await prisma.rentalBooking.count({ where: { userId } })).toBe(1);
+  });
+
+  // Review I1: a clock-less return on the pickup's day is a valid same-day rental.
+  it("creates a row whose booked return is the pickup's own day, given only as a date", async () => {
+    const [outcome] = await importSheets(
+      sheetOf([
+        {
+          provider: "Testcar",
+          confirmationNumber: "R-DAY",
+          pickupStationName: "Frankfurt Flughafen",
+          pickupIata: "FRA",
+          pickupLocal: "2025-10-27T10:00:00.000Z",
+          returnLocal: "27.10.2025",
+        },
+      ]),
+      ctx(userId)
+    );
+    expect(outcome).toMatchObject({ created: 1, errors: 0 });
+    const row = await prisma.rentalBooking.findFirstOrThrow({
+      where: { userId, confirmationNumber: "R-DAY" },
+    });
+    expect(row.returnPrecision).toBe("day");
+  });
+
+  it("names an unplaceable rental station as a rental station, and a reversed odometer as such", async () => {
+    const dto = await storedRental(userId);
+    const nowhere = {
+      ...exportRow(dto),
+      id: "",
+      confirmationNumber: "R-5",
+      pickupIata: "",
+      pickupLat: "",
+      pickupLon: "",
+      pickupAddress: "",
+      pickupStationName: "Irgendwo",
+    };
+    const reversed = { ...exportRow(dto), id: "", confirmationNumber: "R-6", odometerInKm: "100" };
+    const [outcome] = await importSheets(sheetOf([nowhere, reversed]), ctx(userId, "merge", true));
+    expect(outcome.rows.map((r) => r.message)).toEqual([
+      "unknown_rental_station",
+      "odometer_order",
+    ]);
   });
 
   it("reports an unknown value and still applies the row", async () => {
