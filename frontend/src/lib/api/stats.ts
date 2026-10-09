@@ -2,6 +2,8 @@ import type { TravelAccountResponse } from "../../types/travelAccount";
 import type { CountryDetail, Passport } from "../../types/passport";
 import type { TravelRecord, TravelRecordsResponse } from "../../types/travelRecords";
 import type { Wrapped } from "../../types/wrapped";
+import type { FlightInsights } from "../../types/flightInsights";
+import type { CruiseInsights } from "../../types/cruiseInsights";
 import type {
   AircraftProfileResponse,
   AircraftRankingResponse,
@@ -94,6 +96,30 @@ export const statsApi = {
   getWrapped: async (year?: number): Promise<Wrapped> => {
     const { data } = await api.get<Wrapped>("/stats/wrapped", {
       params: year === undefined ? undefined : { year },
+    });
+    return data;
+  },
+
+  /**
+   * Discovery, returns, network growth, transfer times and the year's story
+   * (forgejo#256). `year` picks the story's year; without it the server tells
+   * the latest year with a counted flight.
+   */
+  getFlightInsights: async (year?: number | null): Promise<FlightInsights> => {
+    const { data } = await api.get<FlightInsights>("/stats/flight-insights", {
+      params: year == null ? undefined : { year },
+    });
+    return data;
+  },
+
+  /**
+   * Special events per voyage, new ports, time in port, shore excursions and
+   * sea-day patterns (forgejo#257). `year` cuts the per-cruise lists to the
+   * cruises that started that year.
+   */
+  getCruiseInsights: async (year?: number | null): Promise<CruiseInsights> => {
+    const { data } = await api.get<CruiseInsights>("/stats/cruise-insights", {
+      params: year == null ? undefined : { year },
     });
     return data;
   },

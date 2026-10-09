@@ -13,6 +13,10 @@ import type { CruiseStatsResponse } from "../../../lib/api/stats";
 const api = vi.hoisted(() => ({ getCruiseStats: vi.fn() }));
 
 vi.mock("../../../lib/api/stats", () => ({ statsApi: api }));
+// The insights block (forgejo#257) makes its own request and has its own suite
+// (`insights/__tests__/CruiseInsightsSection.test.tsx`); this one is about the
+// blocks above it, so it is left out rather than given a second fixture.
+vi.mock("../insights/CruiseInsightsSection", () => ({ default: () => null }));
 
 // The section reads the cruise ROWS as well as the rollup now — the calendar,
 // the money and the firsts are not in the rollup and never were.

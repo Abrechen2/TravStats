@@ -35,6 +35,7 @@ export const ACHIEVEMENT_PROGRESS_UNIT: Record<string, string> = {
   roadtrip_free_nights: "nights",
   rail_km: "km",
   rail_longest_km: "km",
+  flight_airport_reunion_years: "years",
 };
 
 /** The unit i18n suffix for a rule, or null when the number counts itself. */

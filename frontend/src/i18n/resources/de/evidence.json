@@ -211,5 +211,20 @@
   "evidence.metric.railOperatorsCount": "Bahngesellschaften",
   "evidence.metric.railNightTrainCount": "Nachtzüge",
   "evidence.metric.railHighSpeedRideCount": "Hochgeschwindigkeitsfahrten",
-  "evidence.metric.railCrossBorderRideCount": "Grenzüberschreitende Fahrten"
+  "evidence.metric.railCrossBorderRideCount": "Grenzüberschreitende Fahrten",
+  "evidence.metric.flightNewAirportsCount": "Erstmals erfasste Flughäfen",
+  "evidence.metric.flightNewConnectionsCount": "Neue Verbindungen",
+  "evidence.metric.flightRepeatedConnectionsCount": "Wiederholte Verbindungen",
+  "evidence.metric.flightTransferCount": "Gemessene Umstiege",
+  "evidence.metric.cruiseNewPortsCount": "Erstmals angelaufene Häfen",
+  "evidence.metric.cruisePortRevisitCount": "Wiedergesehene Häfen",
+  "evidence.metric.cruiseMeasuredPortStayCount": "Hafenstopps mit gemessener Liegezeit",
+  "evidence.metric.cruiseDocumentedExcursionCount": "Dokumentierte Landausflüge",
+  "evidence.metric.cruisePortDaysTotal": "Hafentage",
+  "evidence.metric.cruiseEquatorCruiseCount": "Kreuzfahrten über den Äquator",
+  "evidence.metric.cruiseDatelineCruiseCount": "Kreuzfahrten über die Datumsgrenze",
+  "evidence.metric.cruiseBirthdayAtSeaCruiseCount": "Kreuzfahrten mit Geburtstag an Bord",
+  "evidence.metric.cruiseNewYearAtSeaCruiseCount": "Kreuzfahrten mit Silvester an Bord",
+  "evidence.metric.cruiseCanalCruiseCount": "Kreuzfahrten mit Kanalpassage",
+  "evidence.metric.cruisePolarCruiseCount": "Kreuzfahrten in Polargewässern"
 }

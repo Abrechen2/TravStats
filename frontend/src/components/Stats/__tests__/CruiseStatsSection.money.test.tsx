@@ -24,6 +24,10 @@ import type { CruiseStatsResponse } from "../../../lib/api/stats";
 
 const api = vi.hoisted(() => ({ getCruiseStats: vi.fn() }));
 vi.mock("../../../lib/api/stats", () => ({ statsApi: api }));
+// The insights block (forgejo#257) makes its own request and has its own suite
+// (`insights/__tests__/CruiseInsightsSection.test.tsx`); this one is about the
+// blocks above it, so it is left out rather than given a second fixture.
+vi.mock("../insights/CruiseInsightsSection", () => ({ default: () => null }));
 
 const cruiseList = vi.hoisted(() => ({ list: vi.fn() }));
 vi.mock("../../../lib/api/cruise", () => ({ cruiseApi: cruiseList }));

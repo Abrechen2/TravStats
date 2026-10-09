@@ -3,6 +3,7 @@ import { departureClockOf } from "./timezone";
 import { prisma } from "../db";
 import { calculateRoadtripAchievementStats } from "./roadtripAchievements";
 import { calculateRailAchievementStats } from "./railAchievements";
+import { calculateInsightAchievementStats } from "./insightAchievements";
 import logger from "./logger";
 import {
   applyAchievementWrites,
@@ -664,7 +665,13 @@ async function runAchievementCheck(
       augmentedStats,
       flights as FlightData[],
       await calculateRoadtripAchievementStats(userId),
-      await calculateRailAchievementStats(userId)
+      await calculateRailAchievementStats(userId),
+      // The rows loaded above, handed over rather than read again.
+      await calculateInsightAchievementStats(userId, {
+        flights,
+        cruises: cruises.map((c, i) => ({ id: c.id, input: cruiseStatsInput[i], stops: c.stops })),
+        userBirthday,
+      })
     );
 
     // `return await`, not `return`: a bare return would hand the promise out

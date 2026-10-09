@@ -25,6 +25,7 @@ export const FLIGHT_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "distance", label: t("stats:sections.distance") },
   { key: "breakdown", label: t("stats:sections.breakdown") },
   { key: "records", label: t("stats:sections.records") },
+  { key: "insights", label: t("stats:sections.insights") },
   { key: "punctuality", label: t("stats:sections.punctuality") },
   { key: "fun", label: t("stats:sections.fun") },
   { key: "business", label: t("stats:sections.business") },
@@ -54,6 +55,7 @@ export const CRUISE_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "rhythm", label: t("cruise:stats.rhythm.title") },
   { key: "money", label: t("cruise:stats.money.title") },
   { key: "fun", label: t("cruise:stats.fun.title") },
+  { key: "insights", label: t("stats:insights.cruise.title") },
 ];
 
 export const LODGING_SECTIONS = (t: Translate): SectionOption[] => [

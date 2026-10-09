@@ -26,6 +26,11 @@ import {
   EMPTY_RAIL_STATS,
   type RailAchievementStats,
 } from "./railAchievements";
+import {
+  checkInsightAchievement,
+  EMPTY_INSIGHT_STATS,
+  type InsightAchievementStats,
+} from "./insightAchievements";
 import type { Achievement, UserAchievement } from "../prisma";
 import logger from "./logger";
 import { checkAchievement } from "./achievementChecks";
@@ -100,7 +105,9 @@ export function planAchievementWrites(
   /** Roadtrip measures (2.7) — their badges are checked by their own module. */
   roadtripStats: RoadtripAchievementStats = EMPTY_ROADTRIP_STATS,
   /** Rail measures (2.7) — likewise checked by their own module. */
-  railStats: RailAchievementStats = EMPTY_RAIL_STATS
+  railStats: RailAchievementStats = EMPTY_RAIL_STATS,
+  /** Statistics-expansion measures (forgejo#256/#257) — likewise. */
+  insightStats: InsightAchievementStats = EMPTY_INSIGHT_STATS
 ): AchievementWritePlan {
   const writes: PlannedWrite[] = [];
   const belowRequirement: string[] = [];
@@ -128,9 +135,14 @@ export function planAchievementWrites(
     // requirement was first met — `unlockedAt` is a historical fact and is
     // never cleared or overwritten, which is how the page can explain the drop
     // instead of letting a total fall in silence.
+    // An insight measure that failed this run leaves its row as it was —
+    // neither unlocked nor written down to zero (`insightAchievements.ts`).
+    const insight = checkInsightAchievement(achievement, insightStats);
+    if (insight === "unmeasured") continue;
     const { isUnlocked, progress } =
       checkRoadtripAchievement(achievement, roadtripStats) ??
       checkRailAchievement(achievement, railStats) ??
+      insight ??
       checkAchievement(achievement, stats, flights);
 
     if (isUnlocked) {

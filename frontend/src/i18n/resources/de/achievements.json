@@ -61,7 +61,8 @@
       "km": "km",
       "hours": "Std.",
       "days": "Tage",
-      "nights": "Nächte"
+      "nights": "Nächte",
+      "years": "Jahre"
     },
     "evidence": {
       "trigger": "Die Einträge dahinter",
@@ -1291,6 +1292,30 @@
     "RAIL_OPERATORS_5": {
       "name": "Bahngesellschaften-Sammler",
       "description": "Mit fünf verschiedenen Bahngesellschaften gefahren"
+    },
+    "NEW_GROUND_YEAR": {
+      "name": "Neulandjahr",
+      "description": "Mindestens fünf Flughäfen in einem Jahr zum ersten Mal erfasst (ohne das erste erfasste Jahr)"
+    },
+    "LONG_TIME_NO_SEE": {
+      "name": "Lange nicht gesehen",
+      "description": "Zu einem Flughafen zurückgekehrt, nach mindestens zehn erfassten Jahren"
+    },
+    "FOUR_QUARTERS_AIRPORT": {
+      "name": "Jahreszeiten-Wiedersehen",
+      "description": "Denselben Flughafen in allen vier Kalenderquartalen eines Jahres genutzt"
+    },
+    "PORT_REUNION_3": {
+      "name": "Hafen-Wiedersehen",
+      "description": "Denselben Hafen auf drei verschiedenen Kreuzfahrten als Hafenstopp angelaufen"
+    },
+    "SHORE_EXCURSIONS_5": {
+      "name": "Land und Leute",
+      "description": "An fünf verschiedenen Häfen einen Landausflug dokumentiert"
+    },
+    "SAME_ITINERARY_2": {
+      "name": "Eine Runde mehr",
+      "description": "Zwei Kreuzfahrten mit genau derselben Hafenfolge"
     }
   },
   "header": {

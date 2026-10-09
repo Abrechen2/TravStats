@@ -119,6 +119,25 @@ import {
   resolvePassportAirportCount,
   resolvePassportEntryCount,
 } from "./metricEvidencePassport";
+import {
+  resolveFlightNewAirportsCount,
+  resolveFlightNewConnectionsCount,
+  resolveFlightRepeatedConnectionsCount,
+  resolveFlightTransferCount,
+} from "./metricEvidenceFlightInsights";
+import {
+  resolveCruiseNewPortsCount,
+  resolveCruisePortRevisitCount,
+  resolveCruiseMeasuredPortStayCount,
+  resolveCruiseDocumentedExcursionCount,
+  resolveCruisePortDaysTotal,
+  resolveCruiseEquatorCruiseCount,
+  resolveCruiseDatelineCruiseCount,
+  resolveCruiseBirthdayAtSeaCruiseCount,
+  resolveCruiseNewYearAtSeaCruiseCount,
+  resolveCruiseCanalCruiseCount,
+  resolveCruisePolarCruiseCount,
+} from "./metricEvidenceCruiseInsights";
 
 /**
  * `EvidenceResolver` for `kind: "metric"` (Task 7,
@@ -237,6 +256,21 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   placeCitiesCount: resolvePlaceCitiesCount,
   placeListCount: resolvePlaceListCount,
   placeWishlistCount: resolvePlaceWishlistCount,
+  flightNewAirportsCount: resolveFlightNewAirportsCount,
+  flightNewConnectionsCount: resolveFlightNewConnectionsCount,
+  flightRepeatedConnectionsCount: resolveFlightRepeatedConnectionsCount,
+  flightTransferCount: resolveFlightTransferCount,
+  cruiseNewPortsCount: resolveCruiseNewPortsCount,
+  cruisePortRevisitCount: resolveCruisePortRevisitCount,
+  cruiseMeasuredPortStayCount: resolveCruiseMeasuredPortStayCount,
+  cruiseDocumentedExcursionCount: resolveCruiseDocumentedExcursionCount,
+  cruisePortDaysTotal: resolveCruisePortDaysTotal,
+  cruiseEquatorCruiseCount: resolveCruiseEquatorCruiseCount,
+  cruiseDatelineCruiseCount: resolveCruiseDatelineCruiseCount,
+  cruiseBirthdayAtSeaCruiseCount: resolveCruiseBirthdayAtSeaCruiseCount,
+  cruiseNewYearAtSeaCruiseCount: resolveCruiseNewYearAtSeaCruiseCount,
+  cruiseCanalCruiseCount: resolveCruiseCanalCruiseCount,
+  cruisePolarCruiseCount: resolveCruisePolarCruiseCount,
 };
 
 /**
