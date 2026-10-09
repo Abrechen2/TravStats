@@ -54,7 +54,13 @@ router.post(
                 body.fee ?? null,
                 sentAt
               )
-            : await applyInvoice(userId, body.invoice, body.replaceUserDistance ?? false, sentAt);
+            : await applyInvoice(
+                userId,
+                body.invoice,
+                body.replaceUserDistance ?? false,
+                sentAt,
+                body.adopt ?? {}
+              );
       // The mail or invoice the row came from is kept with it (§4.5).
       await linkDocuments(userId, documentIds, { type: "rentalBooking", id: result.row.id });
       logger.info({

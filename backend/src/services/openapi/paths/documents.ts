@@ -41,6 +41,13 @@ const notFound = {
   content: errorContent,
 };
 const badInput = { description: "Invalid input", content: errorContent };
+/** Upload and PATCH also refuse a rental evidence category off a rental (forgejo#239). */
+const badInputOrCategory = {
+  description:
+    "Invalid input; `DOCUMENT_CATEGORY_NOT_RENTAL` (`field: rentalCategory`) when a " +
+    "`rentalCategory` is set on a document that is not filed with a rental",
+  content: errorContent,
+};
 
 registry.registerPath({
   method: "get",
@@ -101,7 +108,7 @@ registry.registerPath({
       description: "Already on file — the existing document",
       content: json(envelope(documentDto)),
     },
-    400: badInput,
+    400: badInputOrCategory,
     404: notFound,
     413: { description: "Larger than the limit for its format", content: errorContent },
     415: { description: "Not an accepted format, or not the declared one", content: errorContent },
@@ -178,7 +185,7 @@ registry.registerPath({
   request: { params: idParams, body: { content: json(updateDocumentSchema) } },
   responses: {
     200: { description: "Updated", content: json(envelope(documentDto)) },
-    400: badInput,
+    400: badInputOrCategory,
     404: notFound,
     409: { description: "Filed with another entry", content: errorContent },
   },

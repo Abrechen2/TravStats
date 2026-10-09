@@ -9,7 +9,6 @@
   "saved": "Miete gespeichert.",
   "deleted": "Miete gelöscht.",
   "deleteError": "Die Miete konnte nicht gelöscht werden.",
-  "deleteConfirm": "Diese Miete endgültig löschen?",
   "edit": "Bearbeiten",
   "delete": "Löschen",
   "status": {
@@ -84,7 +83,9 @@
     "allStatuses": "Alle Status",
     "allYears": "Alle Jahre",
     "allProviders": "Alle Anbieter",
-    "emptyHint": "Trage deine erste Miete ein oder lies eine Buchungsmail ein."
+    "emptyHint": "Trage deine erste Miete ein oder lies eine Buchungsmail ein.",
+    "emptyAction": "Miete hinzufügen",
+    "depositOpen": "Kaution offen"
   },
   "summary": {
     "rentals_one": "Miete",
@@ -117,8 +118,8 @@
     "returnStation": "Rückgabe",
     "sameStation": "Rückgabe an derselben Station",
     "stationName": "Name der Station",
-    "pickupLocal": "Abholung (Ortszeit der Station)",
-    "returnLocal": "Rückgabe (Ortszeit der Station)",
+    "pickupLocal": "Gebuchte Abholung (Ortszeit der Station)",
+    "returnLocal": "Gebuchte Rückgabe (Ortszeit der Station)",
     "stationClockHint": "Zeiten gelten in der Ortszeit der jeweiligen Station, wie in der Buchung gedruckt.",
     "vehicleClass": "Fahrzeuggruppe",
     "acrissCode": "ACRISS-Code",
@@ -152,8 +153,43 @@
       "roadtripNotFound": "Dieser Roadtrip wurde nicht gefunden.",
       "invalid": "Eine Angabe wurde nicht angenommen. Bitte prüfe das Formular.",
       "nonexistentTime": "Diese Uhrzeit gibt es an der Station nicht (Zeitumstellung).",
-      "unknownBooking": "Zu dieser Buchungsnummer gibt es keine Miete."
-    }
+      "unknownBooking": "Zu dieser Buchungsnummer gibt es keine Miete.",
+      "timeShape": "Bitte ein vollständiges Datum mit Uhrzeit angeben – oder „nur Datum“ wählen.",
+      "actualReturnBeforePickup": "Die tatsächliche Rückgabe liegt vor der tatsächlichen Abholung.",
+      "day": "Bitte ein Datum angeben.",
+      "depositReturnExceeds": "Zurück kann nicht mehr kommen als hinterlegt wurde.",
+      "depositReturnedBeforePaid": "Die Kaution kann nicht vor dem Hinterlegen zurückgekommen sein."
+    },
+    "dayOnly": "nur Datum",
+    "actualPickupLocal": "Tatsächliche Abholung (Ortszeit der Station)",
+    "actualReturnLocal": "Tatsächliche Rückgabe (Ortszeit der Station)",
+    "arrivalFlightNumber": "Ankunftsflug",
+    "fuelPolicy": "Tankregel",
+    "notesHint": "Eigene Hinweise – sie erscheinen auch auf der Rückgabekarte.",
+    "invoice": "Rechnung",
+    "finalAmount": "Endbetrag laut Rechnung",
+    "finalCurrency": "Währung des Endbetrags",
+    "invoiceNumber": "Rechnungsnummer",
+    "invoiceHint": "Ein Endbetrag, den du hier änderst, wird als Korrektur von Hand gespeichert; ein Betrag aus einer eingelesenen Rechnung bleibt sonst unverändert.",
+    "steps": {
+      "label": "Schritte der Miete",
+      "booking": "Buchung",
+      "pickup": "Abholung",
+      "return": "Rückgabe",
+      "gaps_one": "{{count}} offene Angabe",
+      "gaps_other": "{{count}} offene Angaben",
+      "next": "Weiter: {{step}}",
+      "pickupIntro": "Was am Schalter geschah – alles optional. Die gebuchten Zeiten stehen unter „Buchung“."
+    },
+    "deposit": "Kaution",
+    "depositAmount": "Kaution (Betrag)",
+    "depositCurrency": "Währung der Kaution",
+    "depositPaidOn": "Hinterlegt am",
+    "depositHint": "Die Kaution ist hinterlegtes Geld, keine Ausgabe – sie zählt nie zu den Kosten. Eine andere Währung als beim Preis wird so gespeichert, nichts wird umgerechnet.",
+    "depositBack": "Kaution zurück",
+    "depositReturnedOn": "Zurückerhalten am",
+    "depositReturnedAmount": "Zurückerhaltener Betrag ({{currency}})",
+    "depositReturnedHint": "Weniger als hinterlegt ist eine Teilrückzahlung; der Rest bleibt als offen sichtbar. Kam die Rückzahlung in einer anderen Währung an, trage den Betrag in der Währung der Kaution ein – eine zweite Währung speichert TravStats für die Kaution nicht."
   },
   "detail": {
     "loading": "Lädt …",
@@ -191,7 +227,6 @@
     "priceBooked": "Gebucht",
     "priceFinal": "Endbetrag",
     "deposit": "Kaution",
-    "depositNever": "zählt nie als Kosten und wird nicht gespeichert",
     "roadtrip": "Roadtrip",
     "roadtripUnnamed": "Roadtrip ohne Namen",
     "companions": "Mitfahrer",
@@ -205,7 +240,16 @@
     "mapSame": "Rückgabe am selben Ort: ein Punkt.",
     "mapOneWay": "Einwegmiete: Die gestrichelte Linie verbindet Abholung und Rückgabe – sie ist nicht die gefahrene Strecke.",
     "mapRoadtrip": "Die gefahrene Strecke zeigt der verknüpfte Roadtrip.",
-    "cancellationFee": "Stornogebühr"
+    "cancellationFee": "Stornogebühr",
+    "priceDifference": "Differenz",
+    "differenceCurrencies": "verschiedene Währungen – keine Differenz berechnet, nichts umgerechnet",
+    "differenceMissing": "erst mit beiden Beträgen",
+    "costCounts": {
+      "final": "Als Kosten zählt der Endbetrag – einmal, nicht zusätzlich zum gebuchten Preis.",
+      "booked": "Als Kosten zählt der gebuchte Preis, bis eine Rechnung vorliegt.",
+      "cancellationFee": "Als Kosten zählt nur die Stornogebühr.",
+      "none": "Noch kein Betrag bekannt – die Miete zählt in keiner Kostensumme."
+    }
   },
   "import": {
     "panelTitle": "Mietwagen hinzufügen",
@@ -277,5 +321,68 @@
     "span_one": "{{count}} Miettag bis zur Rückgabe",
     "span_other": "{{count}} Miettage bis zur Rückgabe"
   },
-  "invoiceMissing": "Die Rechnung fehlt noch – erst mit ihr kennt TravStats die gefahrenen Kilometer. Lies sie ein, sobald du sie hast."
+  "invoiceMissing": "Die Rechnung fehlt noch – erst mit ihr kennt TravStats die gefahrenen Kilometer. Lies sie ein, sobald du sie hast.",
+  "deleteConfirmNamed": "Die Miete {{provider}} · {{where}} wirklich löschen?",
+  "deleteSurvivors": {
+    "trip": "die Reise „{{name}}“",
+    "roadtrip": "der Roadtrip „{{name}}“",
+    "companions_one": "{{count}} Mitreisende Person",
+    "companions_other": "{{count}} Mitreisende"
+  },
+  "priceSource": {
+    "booking": "aus der Buchungsbestätigung",
+    "user": "von Hand eingetragen",
+    "unknown": "Herkunft nicht vermerkt",
+    "none": "kein gebuchter Preis bekannt"
+  },
+  "finalSource": {
+    "invoice": "laut Rechnung",
+    "user": "von Hand korrigiert",
+    "cancellationFee": "Stornogebühr",
+    "unknown": "Herkunft nicht vermerkt"
+  },
+  "invoiceReview": {
+    "loadFailed": "Die Miete zu dieser Rechnung konnte nicht geladen werden – der Vergleich fehlt.",
+    "noDifference": "nicht berechenbar",
+    "feesNote": "Einzelne Posten liest TravStats aus Rechnungen noch nicht aus; die Differenz kann Gebühren, Zusatztage oder Preisänderungen enthalten. Der gebuchte Preis bleibt in jedem Fall erhalten.",
+    "part": {
+      "finalAmount": "Endbetrag",
+      "vehicleDriven": "Gefahrenes Fahrzeug",
+      "odometer": "Kilometerstände (Abholung → Rückgabe)",
+      "distance": "Gefahrene Kilometer",
+      "actualTimes": "Tatsächliche Zeiten (Abholung → Rückgabe)"
+    },
+    "now": "Bisher: {{value}}",
+    "invoice": "Rechnung: {{value}}",
+    "nothingYet": "nichts",
+    "same": "Stimmt mit der Miete überein.",
+    "adopt": "Übernehmen"
+  },
+  "deposit": {
+    "title": "Kaution",
+    "none": "keine Kaution erfasst",
+    "open": "offen: {{amount}} hinterlegt, noch nicht zurück",
+    "openUnknownAmount": "offen: hinterlegt, Betrag nicht erfasst",
+    "partial": "teilweise zurück: {{returned}} von {{amount}} – offen {{outstanding}}",
+    "returned": "zurückerhalten: {{returned}}",
+    "returnedAmountUnknown": "zurückerhalten am {{day}}, Betrag nicht erfasst",
+    "paidOn": "hinterlegt am {{day}}",
+    "returnedOn": "zurück am {{day}}",
+    "neverCost": "zählt nie als Kosten"
+  },
+  "returnCard": {
+    "title": "Rückgabe",
+    "oneWay": "Einwegmiete – andere Station als bei der Abholung",
+    "station": "Station",
+    "when": "Wann",
+    "localTime": "Ortszeit {{zone}}",
+    "whenMissing": "keine Rückgabezeit erfasst",
+    "fuel": "Tankregel",
+    "fuelMissing": "keine Tankregel erfasst",
+    "notes": "Eigene Hinweise",
+    "notesMissing": "keine eigenen Hinweise erfasst",
+    "navigate": "Navigation zur Rückgabe: {{station}}",
+    "noPosition": "Für die Rückgabestation sind keine Koordinaten gespeichert – Navigation nicht möglich. Die Abholstation wird nicht ersatzweise verwendet.",
+    "record": "Rückgabe erfassen"
+  }
 }

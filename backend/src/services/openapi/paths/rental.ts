@@ -151,6 +151,38 @@ export const rentalBookingSchema = registry.register(
           "What the rental cost: the invoice's final amount, else the booked price; for a " +
             "cancelled rental only its cancellation fee; null when none is known"
         ),
+      depositAmount: z
+        .number()
+        .nullable()
+        .describe(
+          "Deposit held at the counter, in `depositCurrency` — money held, NEVER a cost: no " +
+            "total or statistic reads it. Null = none recorded"
+        ),
+      depositCurrency: z
+        .string()
+        .nullable()
+        .describe("The deposit's own currency; may differ from the price's, never converted"),
+      depositPaidOn: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .nullable()
+        .describe("Day the deposit was held (`times.depositPaid`)"),
+      depositReturnedOn: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .nullable()
+        .describe("Day it came back; null while held (`times.depositReturned`)"),
+      depositReturnedAmount: z
+        .number()
+        .nullable()
+        .describe("What came back; below `depositAmount` = a partial refund, the rest outstanding"),
+      priceSource: z
+        .enum(["booking", "user"])
+        .nullable()
+        .describe(
+          "Where the booked `price` came from: the booking mail it was imported from, or typed " +
+            "by hand. An invoice never writes it, so it stays beside `finalAmount`; null without a price"
+        ),
       invoiceMissing: z
         .boolean()
         .describe(
@@ -307,7 +339,11 @@ registry.registerPath({
     "sent → the address geocoded) and reads the clock in its zone. A station nothing places " +
     "is refused — never stored at a guessed position. Without `returnStation` the car is " +
     "returned where it was picked up. `distanceKm` and `finalAmount` here are labelled " +
-    "corrections (`user`); the invoice is their real source.",
+    "corrections (`user`); the invoice is their real source. Each of the four wall clocks " +
+    "(`pickupLocal`, `returnLocal`, `actualPickupLocal`, `actualReturnLocal`) has its own fold " +
+    "key (`pickupFold`, `returnFold`, `actualPickupFold`, `actualReturnFold`): `later` picks the " +
+    "second occurrence of a repeated autumn hour, absent or null the earlier. Any other " +
+    "`…Fold` key is refused (`RENTAL_INVALID_INPUT`, `field` names it).",
   tags: ["Rentals"],
   request: {
     body: {
@@ -328,7 +364,11 @@ registry.registerPath({
     400: {
       description:
         "Validation failed (`RENTAL_INVALID_INPUT`, `RENTAL_RETURN_BEFORE_PICKUP`, " +
-        "`RENTAL_ODOMETER_REVERSED` — the return odometer below the pick-up one)",
+        "`RENTAL_ACTUAL_RETURN_BEFORE_PICKUP` — the actual return before the actual pickup, " +
+        "compared as instants, a day-only end standing for its whole day; " +
+        "`RENTAL_ODOMETER_REVERSED` — the return odometer below the pick-up one; " +
+        "`RENTAL_DEPOSIT_RETURN_EXCEEDS` — more of the deposit back than held; " +
+        "`RENTAL_DEPOSIT_RETURNED_BEFORE_PAID`)",
       content: errorContent,
     },
     404: { description: "Trip or roadtrip not found", content: errorContent },
@@ -343,7 +383,10 @@ registry.registerPath({
   description:
     "Partial update. A station is replaced whole; `returnStation: null` ties the return to the " +
     "pickup station again. A wall clock not sent keeps the booking's reading, re-read in the " +
-    "(possibly new) station's zone. Every field sent is recorded as edited by hand.",
+    "(possibly new) station's zone. A field is recorded as edited by hand only when the sent " +
+    "value differs from the stored one; a value re-sent unchanged keeps its source (the " +
+    "booking's price, an invoice's km and amount) and re-derives nothing. A key " +
+    "not sent is unchanged — never cleared; a fold is read only beside its own wall clock.",
   tags: ["Rentals"],
   request: {
     params: z.object({ id: z.string().uuid() }),
@@ -360,8 +403,11 @@ registry.registerPath({
     },
     400: {
       description:
-        "Validation failed; `RENTAL_ODOMETER_REVERSED` when the merged row's return odometer " +
-        "is below the pick-up one",
+        "Validation failed; the deposit rules (`RENTAL_DEPOSIT_RETURN_EXCEEDS`, " +
+        "`RENTAL_DEPOSIT_RETURNED_BEFORE_PAID`, an amount without `depositCurrency`) are held " +
+        "against the merged row; `RENTAL_ODOMETER_REVERSED` when the merged row's return odometer " +
+        "is below the pick-up one; `RENTAL_ACTUAL_RETURN_BEFORE_PICKUP` when the merged row's " +
+        "actual return precedes its actual pickup (`field`: the actual end this write sent)",
       content: errorContent,
     },
     404: { description: "Not found", content: errorContent },
@@ -394,7 +440,10 @@ registry.registerPath({
     "`RENTAL_UNKNOWN_BOOKING` and nothing is written. A cancellation's `fee` becomes the " +
     "cancelled rental's cost, flagged `cancellationFee`. With `mailSentAt` (the mail's own " +
     "send time) the newest mail's data stands whatever the import order: an older one only " +
-    "fills empty fields and an older cancellation does not cancel (`stale`).",
+    "fills empty fields and an older cancellation does not cancel (`stale`). An invoice's " +
+    "`adopt` names the parts the review took over (`finalAmount`, `vehicleDriven`, " +
+    "`odometer`, `distance`, `actualTimes`); `false` leaves that part as it is, absent takes " +
+    "it. The booked `price` is never written by an invoice.",
   tags: ["Rentals"],
   request: {
     body: {

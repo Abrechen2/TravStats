@@ -51,6 +51,10 @@ export const rentalTimesSchema = z
     return: time.describe("Booked return at the return station's clock."),
     actualPickup: time.describe("Pickup as an agreement, an invoice or the user recorded it."),
     actualReturn: time,
+    depositPaid: day.describe(
+      "The day the deposit was held, as the statement shows it — no zone (forgejo#238)."
+    ),
+    depositReturned: day.describe("The day the deposit came back; null while it is held."),
   })
   .openapi("RentalTimes", { description: "Booked and actual times at their stations." });
 export type RentalTimes = z.infer<typeof rentalTimesSchema>;

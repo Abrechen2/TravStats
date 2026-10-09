@@ -13,8 +13,10 @@ import {
   isDemoForbidden,
   type DocumentEntryRef,
   type DocumentLimits,
+  type RentalDocumentCategory,
   type TravelDocument,
 } from "../../lib/api/documents";
+import { RentalCategorySelect, groupByRentalCategory } from "./rentalCategories";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { useDisplayFormat, type DisplayFormatter } from "../../lib/displayFormat";
 import { formatBytes } from "../../lib/fileSize";
@@ -38,6 +40,12 @@ interface Props {
    * with no cost block (a trip, a place visit), and then no row offers it.
    */
   extract?: ExtractTarget;
+  /**
+   * A rental's evidence (forgejo#239): the list is grouped by what each
+   * document shows, each row can be re-filed, and an upload can be filed
+   * under a category at once. Only for a `rentalBooking` entry.
+   */
+  rentalCategories?: boolean;
 }
 
 /** The formats the text parsers read; an image or a wallet pass is not offered. */
@@ -75,7 +83,12 @@ function issuedOrCreated(document: TravelDocument, format: DisplayFormatter): st
     : format.date(document.createdAt);
 }
 
-export default function DocumentsSection({ entry, layout = "card", extract }: Props): JSX.Element {
+export default function DocumentsSection({
+  entry,
+  layout = "card",
+  extract,
+  rentalCategories = false,
+}: Props): JSX.Element {
   const { t } = useTranslation(["documents", "common"]);
   const format = useDisplayFormat();
   const isSharedDemo = useIsDemoAccount();
@@ -103,6 +116,10 @@ export default function DocumentsSection({ entry, layout = "card", extract }: Pr
    */
   const [demoRefused, setDemoRefused] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<TravelDocument | null>(null);
+  /** The category the next upload is filed under (rental evidence only). */
+  const [uploadCategory, setUploadCategory] = useState<RentalDocumentCategory | null>(null);
+  /** A remark about the last upload that is not a failure. */
+  const [notice, setNotice] = useState<string | null>(null);
 
   const entryType = entry.type;
   const entryId = entry.id;
@@ -143,8 +160,28 @@ export default function DocumentsSection({ entry, layout = "card", extract }: Pr
       }
       setBusy(true);
       setError(null);
+      setNotice(null);
       try {
-        await documentsApi.upload({ entry: { type: entryType, id: entryId }, file });
+        const kept = await documentsApi.upload({
+          entry: { type: entryType, id: entryId },
+          file,
+          ...(rentalCategories && uploadCategory ? { rentalCategory: uploadCategory } : {}),
+        });
+        // The same file was already filed under another category: the server
+        // keeps that one, and the section says so (review, minor 4).
+        if (
+          rentalCategories &&
+          uploadCategory &&
+          kept.rentalCategory &&
+          kept.rentalCategory !== uploadCategory
+        ) {
+          setNotice(
+            t("documents:rentalCategory.alreadyFiled", {
+              name: kept.displayName,
+              category: t(`documents:rentalCategory.${kept.rentalCategory}`),
+            })
+          );
+        }
         // Re-read rather than append: the server answers a repeat of the same
         // bytes with the document already on file, so appending would show it
         // twice.
@@ -163,7 +200,29 @@ export default function DocumentsSection({ entry, layout = "card", extract }: Pr
         if (inputRef.current) inputRef.current.value = "";
       }
     },
-    [entryType, entryId, limits, reload, t]
+    [entryType, entryId, limits, reload, t, rentalCategories, uploadCategory]
+  );
+
+  // Re-filing changes a label on the same document; the answer is the truth.
+  const handleCategory = useCallback(
+    async (doc: TravelDocument, next: RentalDocumentCategory | null): Promise<void> => {
+      setBusy(true);
+      try {
+        const saved = await documentsApi.setRentalCategory(doc.id, next);
+        setDocuments((prev) => prev.map((d) => (d.id === saved.id ? saved : d)));
+        setError(null);
+      } catch (err: unknown) {
+        if (isDemoForbidden(err)) {
+          setDemoRefused(true);
+        } else {
+          logger.error({ err, id: doc.id }, "DocumentsSection: category change failed");
+          setError(t("documents:rentalCategory.saveFailed"));
+        }
+      } finally {
+        setBusy(false);
+      }
+    },
+    [t]
   );
 
   const handleDelete = useCallback(async (): Promise<void> => {
@@ -193,6 +252,66 @@ export default function DocumentsSection({ entry, layout = "card", extract }: Pr
 
   const locked = isSharedDemo || demoRefused;
 
+  const renderRow = (doc: TravelDocument): JSX.Element => (
+    <li key={doc.id} className="flex min-w-0 items-center" style={{ gap: "var(--ts-space-md)" }}>
+      <Icon
+        name={DOCUMENT_FORMAT_ICON[doc.format]}
+        size={16}
+        label={t(`documents:format.${doc.format}`)}
+        style={{ color: "var(--ts-muted)" }}
+      />
+      <a
+        // A plain link, not a fetch: the JWT is an HttpOnly cookie and
+        // a top-level navigation carries it.
+        href={documentFileUrl(doc)}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={t("documents:openLabel", { name: doc.displayName })}
+        className="min-w-0 flex-1 truncate text-sm"
+        style={{ color: "var(--ts-text-bright)", fontWeight: 600 }}
+      >
+        {doc.displayName}
+      </a>
+      <span className="t-caption shrink-0">
+        {[
+          doc.kind ? t(`documents:kind.${doc.kind}`) : t(`documents:format.${doc.format}`),
+          formatBytes(doc.sizeBytes),
+          issuedOrCreated(doc, format),
+        ].join(" · ")}
+      </span>
+      {extract && !locked && EXTRACTABLE.has(doc.format) && (
+        <ExtractValuesAction documentId={doc.id} target={extract} />
+      )}
+      {rentalCategories && !locked && (
+        <RentalCategorySelect
+          id={`document-category-${doc.id}`}
+          label={t("documents:rentalCategory.rowLabel", { name: doc.displayName })}
+          value={doc.rentalCategory ?? null}
+          disabled={busy}
+          onChange={(next) => void handleCategory(doc, next)}
+        />
+      )}
+      {!locked && (
+        <button
+          type="button"
+          onClick={() => setPendingDelete(doc)}
+          aria-label={t("documents:removeLabel", { name: doc.displayName })}
+          // A finger-sized target beside the category select (review, minor 10).
+          className="shrink-0 text-sm pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:px-2"
+          style={{
+            background: "none",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+            color: "var(--ts-muted)",
+          }}
+        >
+          {t("documents:remove")}
+        </button>
+      )}
+    </li>
+  );
+
   const body = (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
       {loadFailed && (
@@ -209,64 +328,34 @@ export default function DocumentsSection({ entry, layout = "card", extract }: Pr
         loadFailed ? null : (
           <p className="t-caption">{t("documents:empty")}</p>
         )
+      ) : rentalCategories ? (
+        groupByRentalCategory(documents).map((group) => (
+          <section
+            key={group.category ?? "none"}
+            aria-label={t(`documents:rentalCategory.${group.category ?? "none"}`)}
+          >
+            <h3
+              className="t-caption mb-1"
+              data-testid={`documents-group-${group.category ?? "none"}`}
+            >
+              {t(`documents:rentalCategory.${group.category ?? "none"}`)}
+            </h3>
+            <ul className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
+              {group.documents.map(renderRow)}
+            </ul>
+          </section>
+        ))
       ) : (
         <ul className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
-          {documents.map((doc) => (
-            <li
-              key={doc.id}
-              className="flex min-w-0 items-center"
-              style={{ gap: "var(--ts-space-md)" }}
-            >
-              <Icon
-                name={DOCUMENT_FORMAT_ICON[doc.format]}
-                size={16}
-                label={t(`documents:format.${doc.format}`)}
-                style={{ color: "var(--ts-muted)" }}
-              />
-              <a
-                // A plain link, not a fetch: the JWT is an HttpOnly cookie and
-                // a top-level navigation carries it.
-                href={documentFileUrl(doc)}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={t("documents:openLabel", { name: doc.displayName })}
-                className="min-w-0 flex-1 truncate text-sm"
-                style={{ color: "var(--ts-text-bright)", fontWeight: 600 }}
-              >
-                {doc.displayName}
-              </a>
-              <span className="t-caption shrink-0">
-                {[
-                  doc.kind ? t(`documents:kind.${doc.kind}`) : t(`documents:format.${doc.format}`),
-                  formatBytes(doc.sizeBytes),
-                  issuedOrCreated(doc, format),
-                ].join(" · ")}
-              </span>
-              {extract && !locked && EXTRACTABLE.has(doc.format) && (
-                <ExtractValuesAction documentId={doc.id} target={extract} />
-              )}
-              {!locked && (
-                <button
-                  type="button"
-                  onClick={() => setPendingDelete(doc)}
-                  aria-label={t("documents:removeLabel", { name: doc.displayName })}
-                  className="shrink-0 text-sm"
-                  style={{
-                    background: "none",
-                    border: "none",
-                    padding: 0,
-                    cursor: "pointer",
-                    color: "var(--ts-muted)",
-                  }}
-                >
-                  {t("documents:remove")}
-                </button>
-              )}
-            </li>
-          ))}
+          {documents.map(renderRow)}
         </ul>
       )}
 
+      {notice !== null && (
+        <p className="t-caption" role="status" data-testid="documents-notice">
+          {notice}
+        </p>
+      )}
       {error !== null && (
         <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
           {error}
@@ -277,6 +366,20 @@ export default function DocumentsSection({ entry, layout = "card", extract }: Pr
         <DemoLockedNotice />
       ) : (
         <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-md)" }}>
+          {rentalCategories && (
+            <span className="flex items-center gap-2 text-xs">
+              <label htmlFor="document-upload-category">
+                {t("documents:rentalCategory.uploadLabel")}
+              </label>
+              <RentalCategorySelect
+                id="document-upload-category"
+                label={t("documents:rentalCategory.uploadLabel")}
+                value={uploadCategory}
+                disabled={busy}
+                onChange={setUploadCategory}
+              />
+            </span>
+          )}
           <label
             className="cursor-pointer rounded-md px-3 py-2 text-xs"
             style={{ border: "1px dashed var(--ts-border)", color: "var(--ts-muted)" }}

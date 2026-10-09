@@ -14,11 +14,18 @@ import DocumentsSection from "../components/documents/DocumentsSection";
 import { RentalFormModal } from "../components/rental/RentalFormModal";
 import { RentalSuggestionBanner } from "../components/rental/RentalSuggestionBanner";
 import { RentalRouteMap } from "../components/rental/RentalRouteMap";
+import { RentalPriceComparison } from "../components/rental/RentalPriceComparison";
+import { RentalReturnCard } from "../components/rental/RentalReturnCard";
+import { showsReturnCard } from "../lib/rental/rentalReturnCard";
+import type { RentalFormStep } from "../components/rental/rentalFormSteps";
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
 import { rentalApi } from "../lib/api/rental";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
-import { DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { rentalDeleteMessage } from "../lib/rental/rentalDeleteMessage";
+import { depositSummary } from "../lib/rental/rentalDeposit";
+import { formatDayLong } from "../shared/time";
 import { formatAmount } from "../lib/units";
 import { formatStationMoment } from "../lib/rentalTime";
 import type { TimeValue } from "../shared/time";
@@ -47,7 +54,8 @@ export default function RentalDetailPage(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<LoadFailure | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [editing, setEditing] = useState(false);
+  // The step the form opens on: the return card opens it at "Rückgabe".
+  const [editing, setEditing] = useState<false | RentalFormStep | true>(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [stationOffer, setStationOffer] = useState<string | null>(null);
@@ -133,6 +141,8 @@ export default function RentalDetailPage(): JSX.Element {
         )
       : null;
 
+  const withNeverCost = (line: string | null): string | null =>
+    line === null ? null : `${line} (${t("rental:deposit.neverCost")})`;
   const driven = rentalDrivenKm(rental);
   const reading = (km: number | null): string | null =>
     km === null ? null : `${km.toLocaleString(locale)} km`;
@@ -213,6 +223,11 @@ export default function RentalDetailPage(): JSX.Element {
         <p className="t-caption mb-3" role="status" data-testid="rental-station-offer">
           {stationOffer}
         </p>
+      ) : null}
+      {showsReturnCard(rental) ? (
+        <div className="mb-4">
+          <RentalReturnCard rental={rental} onRecordReturn={() => setEditing("return")} />
+        </div>
       ) : null}
       <RentalSuggestionBanner
         rental={rental}
@@ -306,20 +321,31 @@ export default function RentalDetailPage(): JSX.Element {
             title={t("rental:detail.price")}
             facts={[
               { label: t("rental:detail.priceBooked"), value: priceLine || null, mono: true },
+              // Held, never a cost (forgejo#238): where it stands, in its own currency.
               {
-                label:
-                  rental.finalAmountSource === "cancellationFee"
-                    ? t("rental:detail.cancellationFee")
-                    : t("rental:detail.priceFinal"),
-                value:
-                  money(rental.finalAmount, rental.finalCurrency) ?? t("rental:detail.fromInvoice"),
-                mono: rental.finalAmount !== null,
+                label: t("rental:detail.deposit"),
+                value: withNeverCost(
+                  depositSummary(
+                    t,
+                    rental,
+                    (amount, currency) =>
+                      formatAmount(amount, currency, { language: i18n.language }),
+                    (day) =>
+                      formatDayLong(day, locale, {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })
+                  )
+                ),
               },
-              { label: t("rental:detail.deposit"), value: t("rental:detail.depositNever") },
             ]}
-          />
+          >
+            {/* Booked, final and their difference side by side (forgejo#237). */}
+            <RentalPriceComparison rental={rental} />
+          </DetailSection>
 
-          <DocumentsSection entry={{ type: "rentalBooking", id: rental.id }} />
+          <DocumentsSection entry={{ type: "rentalBooking", id: rental.id }} rentalCategories />
         </div>
 
         <aside className="flex flex-col gap-6 md:col-span-2">
@@ -372,6 +398,8 @@ export default function RentalDetailPage(): JSX.Element {
       {editing && (
         <RentalFormModal
           rental={rental}
+          initialStep={editing === true ? undefined : editing}
+          afterSaveFailedKey="common:form.savedButViewRefreshFailed"
           onClose={() => setEditing(false)}
           onSaved={() => {
             setEditing(false);
@@ -387,7 +415,7 @@ export default function RentalDetailPage(): JSX.Element {
         onConfirm={() => void handleDelete()}
         isLoading={deleting}
         title={t("rental:delete")}
-        message={withDocumentNote(t("rental:deleteConfirm"), t, documentCount)}
+        message={rentalDeleteMessage(t, rental, documentCount)}
         confirmText={t("common:buttons.delete")}
         confirmButtonClass={DELETE_BUTTON_CLASS}
       />

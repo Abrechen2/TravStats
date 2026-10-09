@@ -3481,6 +3481,10 @@ model Document {
   placeVisitId    String? @map("place_visit_id")
   railJourneyId   String? @map("rail_journey_id")
   rentalBookingId String? @map("rental_booking_id")
+  /// What a rental's evidence shows (forgejo#239): pickup | return | damage |
+  /// fuel | odometer. Only while filed with a rental; null = uncategorised —
+  /// every attachment from before the column, and any the user leaves so.
+  rentalCategory  String? @map("rental_category")
 
   createdAt  DateTime  @default(now()) @map("created_at")
   /// When it was filed with an entry; null while unlinked.
@@ -3750,8 +3754,12 @@ model RentalBooking {
   returnPrecision String   @default("minute") @map("return_precision")
 
   /// What happened at the counter, from an agreement/invoice or typed; null = nobody recorded it.
-  actualPickupTime DateTime? @map("actual_pickup_time")
-  actualReturnTime DateTime? @map("actual_return_time")
+  actualPickupTime      DateTime? @map("actual_pickup_time")
+  actualReturnTime      DateTime? @map("actual_return_time")
+  /// minute | day — how much of the actual hand-over is known; null with no
+  /// actual time. A row written before this column existed reads as minute.
+  actualPickupPrecision String?   @map("actual_pickup_precision")
+  actualReturnPrecision String?   @map("actual_return_precision")
 
   /// The class as printed ("Compact", "Gruppe C").
   vehicleClass   String? @map("vehicle_class")
@@ -3787,6 +3795,17 @@ model RentalBooking {
   /// mail arriving later only fills what is still empty — it never overwrites
   /// what a newer one set. Null = no dated mail yet (pasted text carries none).
   lastMailSentAt      DateTime? @map("last_mail_sent_at")
+
+  /// The deposit held at the counter (forgejo#238) — money held, never a cost:
+  /// no total, statistic or travel account reads these. In its OWN currency,
+  /// which may differ from the price's; nothing is converted. A returned
+  /// amount below the held one is a partial refund. Days are ADR 0002 D1
+  /// floating dates — the statement's booking day, no zone. All null = none.
+  depositAmount         Float?    @map("deposit_amount")
+  depositCurrency       String?   @map("deposit_currency")
+  depositPaidOn         DateTime? @map("deposit_paid_on") @db.Date
+  depositReturnedOn     DateTime? @map("deposit_returned_on") @db.Date
+  depositReturnedAmount Float?    @map("deposit_returned_amount")
 
   /// unlimited | capped | null; the cap beside it.
   mileagePolicy String? @map("mileage_policy")

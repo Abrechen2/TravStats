@@ -32,12 +32,29 @@ vi.mock("../../components/import/adapters/rentalAdapter", () => ({
   useRentalImportAdapter: () => ({ domain: "rental" }),
 }));
 vi.mock("../../components/Training/ConfirmModal", () => ({
-  default: ({ isOpen, onConfirm }: { isOpen: boolean; onConfirm: () => void }) =>
+  default: ({
+    isOpen,
+    onConfirm,
+    message,
+    confirmButtonClass,
+  }: {
+    isOpen: boolean;
+    onConfirm: () => void;
+    message: string;
+    confirmButtonClass?: string;
+  }) =>
     isOpen ? (
-      <button type="button" onClick={onConfirm}>
-        confirm-delete
-      </button>
+      <div>
+        <p data-testid="confirm-message">{message}</p>
+        <button type="button" onClick={onConfirm} className={confirmButtonClass}>
+          confirm-delete
+        </button>
+      </div>
     ) : null,
+}));
+const listForEntry = vi.fn();
+vi.mock("../../lib/api/documents", () => ({
+  documentsApi: { listForEntry: (...a: unknown[]) => listForEntry(...a) },
 }));
 
 const list = vi.fn();
@@ -78,6 +95,7 @@ describe("RentalsPage", () => {
       summary: { rentals: 1, days: 3, providers: 1 },
     });
     remove.mockReset();
+    listForEntry.mockReset().mockResolvedValue([]);
     navigate.mockReset();
     addToast.mockReset();
     stats.mockReset().mockResolvedValue({
@@ -154,5 +172,45 @@ describe("RentalsPage", () => {
     fireEvent.click(screen.getByText("confirm-delete"));
     await waitFor(() => expect(remove).toHaveBeenCalledWith("r1"));
     expect(await screen.findByText("rental:empty")).toBeInTheDocument();
+  });
+
+  // forgejo#250: what goes and what stays, on a red button.
+  it("names the rental, its documents and what stays before deleting", async () => {
+    list.mockReset().mockResolvedValue({
+      rentals: [
+        makeRental({
+          id: "r1",
+          trip: { id: "t1", name: "Kalifornien", color: "#fff" },
+          companions: ["Alex"],
+        }),
+      ],
+      total: 1,
+      summary: { rentals: 1, days: 3, providers: 1 },
+    });
+    listForEntry.mockResolvedValue([{ id: "d1" }, { id: "d2" }]);
+    renderPage();
+    await screen.findByTestId("rental-row-r1");
+    fireEvent.click(screen.getByRole("button", { name: "rental:delete" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("confirm-message").textContent).toContain(
+        "documents:deleteCascadeNote/2"
+      )
+    );
+    const message = screen.getByTestId("confirm-message").textContent ?? "";
+    expect(message).toContain("rental:deleteConfirmNamed");
+    expect(message).toContain("common:delete.survivors");
+    expect(listForEntry).toHaveBeenCalledWith({ type: "rentalBooking", id: "r1" });
+    expect(screen.getByText("confirm-delete").className).toContain("danger");
+  });
+
+  it("offers to add a rental when the logbook is empty, and only then", async () => {
+    list.mockReset().mockResolvedValue({
+      rentals: [],
+      total: 0,
+      summary: { rentals: 0, days: 0, providers: 0 },
+    });
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "rental:list.emptyAction" }));
+    expect(screen.getByTestId("rental-import")).toBeInTheDocument();
   });
 });

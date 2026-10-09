@@ -153,6 +153,7 @@ router.post(
         source: fields.source ?? "upload",
         kind: fields.kind ?? null,
         issuedOn: toDate(fields.issuedOn) ?? null,
+        rentalCategory: fields.rentalCategory ?? null,
         entry:
           fields.entryType && fields.entryId
             ? { type: fields.entryType, id: fields.entryId }
@@ -245,6 +246,7 @@ router.patch(
         kind: input.kind,
         issuedOn: toDate(input.issuedOn),
         entry: input.entry,
+        rentalCategory: input.rentalCategory,
       });
       res.json({ success: true, data: toDocumentDto(document) });
     } catch (error) {

@@ -1,4 +1,5 @@
 import { now as clockNow } from "./time/clock";
+import { rideEndsAt } from "./railClock";
 import { legacyDayOf, startOfDayAt } from "./time/legacyValues";
 /**
  * Single source of truth for temporal status derivation (spec
@@ -178,18 +179,33 @@ export const RENTAL_PASSTHROUGH = ["cancelled"] as const;
  * rail's rule over the two booked instants. The booked return, not an actual
  * one: an actual return is known only from an invoice, and a rental with no
  * invoice is still over once its booked return has passed.
+ *
+ * A DAY-ONLY return is stored at its day's start but is over only when its
+ * day is (rail's `rideEndsAt`, forgejo#132): a same-day rental with a
+ * day-only return is `in_progress` from the pickup, not `completed` at it
+ * (re-review, fix round 3).
  */
 export function deriveRentalStatus(input: {
   pickupTime: Date;
   returnTime: Date;
   current: string;
   now?: Date;
+  returnPrecision?: string | null;
+  returnTimezone?: string | null;
 }): string {
   return deriveRailStatus({
     departureTime: input.pickupTime,
     arrivalTime: input.returnTime,
     current: input.current,
     now: input.now,
+    endsAt: rideEndsAt({
+      departureTime: input.pickupTime,
+      arrivalTime: input.returnTime,
+      depTimezone: null,
+      arrTimezone: input.returnTimezone ?? null,
+      depPrecision: null,
+      arrPrecision: input.returnPrecision ?? null,
+    }),
   });
 }
 

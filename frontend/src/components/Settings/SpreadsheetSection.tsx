@@ -34,6 +34,8 @@ import {
 import type { ParsedSheet } from "../../lib/xlsx/workbook";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useRailVisible } from "../../hooks/useRailVisible";
+import { useRentalVisible } from "../../hooks/useRentalVisible";
+import { rentalApi } from "../../lib/api/rental";
 import { Icon } from "../ui/Icon";
 import { SettingRow } from "../ui/SettingRow";
 
@@ -110,6 +112,8 @@ export default function SpreadsheetSection(): JSX.Element {
   const { isEnabled } = useEnabledDomains();
   // Rail is beta: behind the `railDomain` gate the export carries no rail sheet.
   const railVisible = useRailVisible();
+  // Rentals likewise: behind `rentalDomain` and the user's domain (forgejo#267).
+  const rentalVisible = useRentalVisible();
   const toursVisible = useToursVisible();
   const [status, setStatus] = useState<Status>("idle");
 
@@ -119,36 +123,40 @@ export default function SpreadsheetSection(): JSX.Element {
       // Only domains this instance actually runs. Asking the cruise endpoint
       // on an instance with cruises switched off would 404 and fail the whole
       // export over data the user does not have.
-      const [flights, cruises, lodging, places, roadtrips, tours, rail] = await Promise.all([
-        // Walked page by page, like the other domains. One "large" page was
-        // never enough: the server caps `limit` at 500 whatever is asked for,
-        // so an account with 501 flights exported 500 of them and said
-        // nothing (beta audit 2026-09-20, SRV-EXPORT-002).
-        isEnabled("flight") ? flightsApi.getEvery() : Promise.resolve([]),
-        isEnabled("cruise") ? cruiseApi.list() : Promise.resolve([]),
-        isEnabled("lodging") ? listLodgings() : Promise.resolve([]),
-        isEnabled("poi") ? placesApi.list() : Promise.resolve([]),
-        // A station sheet needs every station, which only the detail carries.
-        isEnabled("roadtrip")
-          ? roadtripsApi.list().then((rows) => Promise.all(rows.map((r) => roadtripsApi.get(r.id))))
-          : Promise.resolve([]),
-        // The points sheet needs every tour's points, which only the detail carries.
-        toursVisible
-          ? tourIndexApi.list("tour").then((rows) =>
-              Promise.all(
-                rows.map(async (r) => ({
-                  ...r,
-                  points: (await toursApi.get(undefined, r.id)).stops,
-                }))
+      const [flights, cruises, lodging, places, roadtrips, tours, rail, rentals] =
+        await Promise.all([
+          // Walked page by page, like the other domains. One "large" page was
+          // never enough: the server caps `limit` at 500 whatever is asked for,
+          // so an account with 501 flights exported 500 of them and said
+          // nothing (beta audit 2026-09-20, SRV-EXPORT-002).
+          isEnabled("flight") ? flightsApi.getEvery() : Promise.resolve([]),
+          isEnabled("cruise") ? cruiseApi.list() : Promise.resolve([]),
+          isEnabled("lodging") ? listLodgings() : Promise.resolve([]),
+          isEnabled("poi") ? placesApi.list() : Promise.resolve([]),
+          // A station sheet needs every station, which only the detail carries.
+          isEnabled("roadtrip")
+            ? roadtripsApi
+                .list()
+                .then((rows) => Promise.all(rows.map((r) => roadtripsApi.get(r.id))))
+            : Promise.resolve([]),
+          // The points sheet needs every tour's points, which only the detail carries.
+          toursVisible
+            ? tourIndexApi.list("tour").then((rows) =>
+                Promise.all(
+                  rows.map(async (r) => ({
+                    ...r,
+                    points: (await toursApi.get(undefined, r.id)).stops,
+                  }))
+                )
               )
-            )
-          : Promise.resolve([]),
-        railVisible ? railApi.listAll() : Promise.resolve([]),
-      ]);
+            : Promise.resolve([]),
+          railVisible ? railApi.listAll() : Promise.resolve([]),
+          rentalVisible ? rentalApi.listAll() : Promise.resolve([]),
+        ]);
 
       const blob = await exportWorkbook(
         t,
-        { flights, cruises, lodging, places, roadtrips, tours, rail },
+        { flights, cruises, lodging, places, roadtrips, tours, rail, rentals },
         i18n.language
       );
       if (!blob) {
@@ -170,7 +178,7 @@ export default function SpreadsheetSection(): JSX.Element {
     } catch {
       setStatus("failed");
     }
-  }, [isEnabled, toursVisible, railVisible, t, i18n.language]);
+  }, [isEnabled, toursVisible, railVisible, rentalVisible, t, i18n.language]);
 
   const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
@@ -191,7 +199,12 @@ export default function SpreadsheetSection(): JSX.Element {
         const otherLanguages = WORKBOOK_LANGUAGES.filter((lng) => lng !== i18n.language).map(
           (lng) => i18n.getFixedT(lng, ["xlsx", "common"])
         );
-        const sheets = await readWorkbookForImport(t, file, { rail: railVisible }, otherLanguages);
+        const sheets = await readWorkbookForImport(
+          t,
+          file,
+          { rail: railVisible, rental: rentalVisible },
+          otherLanguages
+        );
         if (sheets.length === 0) {
           setImportStatus("nothing");
           return;
@@ -205,7 +218,7 @@ export default function SpreadsheetSection(): JSX.Element {
         setImportStatus("failed");
       }
     },
-    [t, mode, railVisible]
+    [t, mode, railVisible, rentalVisible]
   );
 
   const handleApply = useCallback(async () => {

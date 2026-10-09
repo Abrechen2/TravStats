@@ -24,6 +24,11 @@ vi.mock("../../../lib/api/rental", () => ({
 import { RentalFormModal } from "../RentalFormModal";
 import { makeRental } from "./rentalFixture";
 
+/** The form is three steps over one draft (forgejo#236); a field is reached by its step. */
+const toStep = (step: "booking" | "pickup" | "return"): void => {
+  fireEvent.click(screen.getByRole("tab", { name: new RegExp(`rental:form\\.steps\\.${step}`) }));
+};
+
 const HITS = [
   {
     kind: "earlier",
@@ -131,6 +136,7 @@ describe("RentalFormModal", () => {
   it("sends the typed licence plate with the rental", async () => {
     update.mockResolvedValue(makeRental());
     render(<RentalFormModal rental={makeRental()} onClose={vi.fn()} onSaved={vi.fn()} />);
+    toStep("pickup");
     fireEvent.change(screen.getByLabelText("rental:form.licensePlate"), {
       target: { value: " F-TS 2026 " },
     });
@@ -143,10 +149,13 @@ describe("RentalFormModal", () => {
   it("takes both odometer readings, says the km they give, and sends them", async () => {
     update.mockResolvedValue(makeRental());
     render(<RentalFormModal rental={makeRental()} onClose={vi.fn()} onSaved={vi.fn()} />);
+    toStep("return");
     expect(screen.getByTestId("rental-form-driven").textContent).toBe("rental:form.drivenUnknown");
+    toStep("pickup");
     fireEvent.change(screen.getByLabelText("rental:form.odometerOutKm"), {
       target: { value: "12.000" },
     });
+    toStep("return");
     fireEvent.change(screen.getByLabelText("rental:form.odometerInKm"), {
       target: { value: "12.634" },
     });
@@ -160,16 +169,21 @@ describe("RentalFormModal", () => {
 
   it("refuses a return reading below the pick-up one beside that field, and does not save", async () => {
     render(<RentalFormModal rental={makeRental()} onClose={vi.fn()} onSaved={vi.fn()} />);
+    toStep("pickup");
     fireEvent.change(screen.getByLabelText("rental:form.odometerOutKm"), {
       target: { value: "12634" },
     });
-    const returnReading = screen.getByLabelText("rental:form.odometerInKm");
-    fireEvent.change(returnReading, { target: { value: "12000" } });
+    toStep("return");
+    fireEvent.change(screen.getByLabelText("rental:form.odometerInKm"), {
+      target: { value: "12000" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "rental:form.save" }));
-    const field = returnReading.closest("label") as HTMLElement;
-    expect(within(field).getByRole("alert").textContent).toBe(
-      "rental:form.errors.odometerReversed"
-    );
+    // The error sits beside the field and is its description (forgejo#246).
+    const returnReading = screen.getByLabelText("rental:form.odometerInKm");
+    expect(returnReading.getAttribute("aria-invalid")).toBe("true");
+    expect(
+      document.getElementById(returnReading.getAttribute("aria-describedby") ?? "")?.textContent
+    ).toBe("rental:form.errors.odometerReversed");
     expect(update).not.toHaveBeenCalled();
   });
 });

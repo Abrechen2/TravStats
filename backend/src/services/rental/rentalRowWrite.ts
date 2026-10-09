@@ -6,12 +6,15 @@ import { fxColumnsFor, getBaseCurrency } from "../fx/snapshot";
 import { recomputeTripStatus } from "../tripStatusService";
 import { resolveRentalStation } from "./rentalStations";
 import {
+  assertDepositConsistent,
   assertOdometerOrder,
+  depositColumns,
   distanceColumns,
   mergeRental,
   type ResolvedStations,
 } from "./rentalWrite";
 import { rentalDayRange, soleOverlappingTrip } from "./rentalLinks";
+import { changedInput } from "./rentalChanges";
 
 /**
  * The one write path of a rental row — the form (`routes/rental.ts`) and the
@@ -53,7 +56,11 @@ function plainColumns(input: UpdateRentalInput) {
     returnFold: _rf,
     actualPickupLocal: _ap,
     actualReturnLocal: _ar,
+    actualPickupFold: _apf,
+    actualReturnFold: _arf,
     distanceKm: _d,
+    depositPaidOn: _dp,
+    depositReturnedOn: _dr,
     status: _s,
     companions: _c,
     ...rest
@@ -109,10 +116,11 @@ export async function restatusTrips(...tripIds: Array<string | null | undefined>
 export async function createRentalRow(
   userId: string,
   input: CreateRentalInput,
-  options: WriteOptions
+  options: WriteOptions & { extra?: Partial<Prisma.RentalBookingUncheckedCreateInput> }
 ): Promise<RentalRow> {
   const state = mergeRental(null, input, await resolveStations(input));
   assertOdometerOrder(null, input);
+  assertDepositConsistent(null, input);
   // Linked by itself only when EXACTLY one trip overlaps; a trip the client
   // named (or an explicit null) is never second-guessed.
   const tripId =
@@ -140,6 +148,7 @@ export async function createRentalRow(
         ...plainColumns(input),
         ...state,
         ...distanceColumns(input),
+        ...depositColumns(input),
         ...(input.finalAmount != null && { finalAmountSource: "user" }),
         ...(finalFx as Prisma.RentalBookingUncheckedCreateInput),
         ...fxColumns,
@@ -149,6 +158,9 @@ export async function createRentalRow(
         lastMailSentAt: options.mailSentAt ?? null,
         companions: companions.map((c) => c.displayName),
         userEditedFields: options.manual ? editedFields(input) : [],
+        // Columns only a document path writes (an invoice's km source), kept
+        // when a spreadsheet moves the rental (forgejo#267).
+        ...options.extra,
       },
     });
     if (companions.length > 0) {
@@ -172,21 +184,31 @@ export async function createRentalRow(
 export async function updateRentalRow(
   userId: string,
   existing: StoredRental,
-  input: UpdateRentalInput,
+  sentInput: UpdateRentalInput,
   options: WriteOptions & { extra?: Prisma.RentalBookingUncheckedUpdateInput }
 ): Promise<RentalRow> {
   // The MERGED state, so a one-field PATCH is checked against the stored rest
   // (a return moved before an untouched pickup is refused here).
-  const state = mergeRental(existing, input, await resolveStations(input));
+  const state = mergeRental(existing, sentInput, await resolveStations(sentInput));
+  // From here on only what CHANGED: a value re-sent as stored is no edit, no
+  // new source and no re-derivation (`rentalChanges.ts`, fix round 2).
+  const input = changedInput(existing, sentInput, state);
   assertOdometerOrder(existing, input);
+  assertDepositConsistent(existing, input);
   const resolved =
     input.companions === undefined ? undefined : await resolveCompanions(userId, input.companions);
   // Re-snapshotted only when an input it depends on moved (silent-failure
   // class 4: a re-derivation never runs for nothing and never downgrades).
+  // A snapshot that failed before (no base amount for a known price) is
+  // taken again on any save — the price stays as it was, and unedited
+  // (re-review, fix round 3: an unchanged re-send no longer re-derives).
+  const fxMissing =
+    existing.price !== null && existing.currency !== null && existing.priceBase === null;
   const fxInputsChanged =
     input.price !== undefined ||
     input.currency !== undefined ||
-    state.pickupTime.getTime() !== existing.pickupTime.getTime();
+    state.pickupTime.getTime() !== existing.pickupTime.getTime() ||
+    fxMissing;
   const fxColumns = fxInputsChanged
     ? await fxColumnsFor(
         {
@@ -197,10 +219,15 @@ export async function updateRentalRow(
         await getBaseCurrency(userId)
       )
     : undefined;
+  const finalFxMissing =
+    existing.finalAmount !== null &&
+    existing.finalCurrency !== null &&
+    existing.finalAmountBase === null;
   const finalChanged =
     input.finalAmount !== undefined ||
     input.finalCurrency !== undefined ||
-    state.returnTime.getTime() !== existing.returnTime.getTime();
+    state.returnTime.getTime() !== existing.returnTime.getTime() ||
+    finalFxMissing;
   const finalFx = finalChanged
     ? await finalFxColumns(
         userId,
@@ -229,6 +256,7 @@ export async function updateRentalRow(
         ...plainColumns(input),
         ...state,
         ...distanceColumns(input),
+        ...depositColumns(input),
         ...(input.finalAmount !== undefined && {
           finalAmountSource: input.finalAmount === null ? null : "user",
         }),

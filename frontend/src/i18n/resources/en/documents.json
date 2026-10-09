@@ -52,5 +52,17 @@
       "coach": "Coach"
     },
     "applied": "The values from the receipt were applied."
+  },
+  "rentalCategory": {
+    "pickup": "Pickup",
+    "return": "Return",
+    "damage": "Damage",
+    "fuel": "Fuel level",
+    "odometer": "Odometer",
+    "none": "Uncategorised",
+    "rowLabel": "Category of {{name}}",
+    "uploadLabel": "File the next upload under",
+    "saveFailed": "The category could not be changed. Please try again.",
+    "alreadyFiled": "\"{{name}}\" was already filed under \"{{category}}\" – it stays there. Use the select in its row to move it."
   }
 }

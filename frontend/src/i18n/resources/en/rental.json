@@ -9,7 +9,6 @@
   "saved": "Rental saved.",
   "deleted": "Rental deleted.",
   "deleteError": "The rental could not be deleted.",
-  "deleteConfirm": "Delete this rental for good?",
   "edit": "Edit",
   "delete": "Delete",
   "status": {
@@ -84,7 +83,9 @@
     "allStatuses": "All statuses",
     "allYears": "All years",
     "allProviders": "All providers",
-    "emptyHint": "Add your first rental or read in a booking mail."
+    "emptyHint": "Add your first rental or read in a booking mail.",
+    "emptyAction": "Add a rental",
+    "depositOpen": "Deposit outstanding"
   },
   "summary": {
     "rentals_one": "Rental",
@@ -117,8 +118,8 @@
     "returnStation": "Return",
     "sameStation": "Returned at the same station",
     "stationName": "Station name",
-    "pickupLocal": "Pickup (station local time)",
-    "returnLocal": "Return (station local time)",
+    "pickupLocal": "Booked pickup (station local time)",
+    "returnLocal": "Booked return (station local time)",
     "stationClockHint": "Times are in each station's local time, as the booking prints them.",
     "vehicleClass": "Car group",
     "acrissCode": "ACRISS code",
@@ -152,8 +153,43 @@
       "roadtripNotFound": "This roadtrip was not found.",
       "invalid": "A value was not accepted. Please check the form.",
       "nonexistentTime": "This time does not exist at the station (clock change).",
-      "unknownBooking": "There is no rental with this booking number."
-    }
+      "unknownBooking": "There is no rental with this booking number.",
+      "timeShape": "Please enter a full date and time – or choose \"date only\".",
+      "actualReturnBeforePickup": "The actual return is before the actual pickup.",
+      "day": "Please enter a date.",
+      "depositReturnExceeds": "More cannot come back than was held.",
+      "depositReturnedBeforePaid": "The deposit cannot have come back before it was held."
+    },
+    "dayOnly": "date only",
+    "actualPickupLocal": "Actual pickup (station local time)",
+    "actualReturnLocal": "Actual return (station local time)",
+    "arrivalFlightNumber": "Arriving flight",
+    "fuelPolicy": "Fuel policy",
+    "notesHint": "Your own notes – they also appear on the return card.",
+    "invoice": "Invoice",
+    "finalAmount": "Final amount on the invoice",
+    "finalCurrency": "Currency of the final amount",
+    "invoiceNumber": "Invoice number",
+    "invoiceHint": "A final amount you change here is saved as a correction by hand; an amount from an imported invoice otherwise stays as it is.",
+    "steps": {
+      "label": "Rental steps",
+      "booking": "Booking",
+      "pickup": "Pickup",
+      "return": "Return",
+      "gaps_one": "{{count}} open entry",
+      "gaps_other": "{{count}} open entries",
+      "next": "Next: {{step}}",
+      "pickupIntro": "What happened at the counter – all optional. The booked times are under \"Booking\"."
+    },
+    "deposit": "Deposit",
+    "depositAmount": "Deposit (amount)",
+    "depositCurrency": "Deposit currency",
+    "depositPaidOn": "Held on",
+    "depositHint": "A deposit is money held, not spent – it never counts as a cost. A currency other than the price's is stored as it is; nothing is converted.",
+    "depositBack": "Deposit back",
+    "depositReturnedOn": "Returned on",
+    "depositReturnedAmount": "Amount returned ({{currency}})",
+    "depositReturnedHint": "Less than was held is a partial refund; the rest stays visible as outstanding. If the refund arrived in another currency, enter the amount in the deposit's currency – TravStats stores no second currency for the deposit."
   },
   "detail": {
     "loading": "Loading …",
@@ -191,7 +227,6 @@
     "priceBooked": "Booked",
     "priceFinal": "Final amount",
     "deposit": "Deposit",
-    "depositNever": "never counts as a cost and is not stored",
     "roadtrip": "Roadtrip",
     "roadtripUnnamed": "Unnamed roadtrip",
     "companions": "Fellow travellers",
@@ -205,7 +240,16 @@
     "mapSame": "Returned where picked up: one point.",
     "mapOneWay": "One-way rental: the dashed line joins pickup and return – it is not the route driven.",
     "mapRoadtrip": "The linked roadtrip shows the route driven.",
-    "cancellationFee": "Cancellation fee"
+    "cancellationFee": "Cancellation fee",
+    "priceDifference": "Difference",
+    "differenceCurrencies": "different currencies – no difference computed, nothing converted",
+    "differenceMissing": "needs both amounts",
+    "costCounts": {
+      "final": "The cost counted is the final amount – once, not on top of the booked price.",
+      "booked": "The cost counted is the booked price until an invoice arrives.",
+      "cancellationFee": "Only the cancellation fee counts as a cost.",
+      "none": "No amount known yet – the rental is in no cost total."
+    }
   },
   "import": {
     "panelTitle": "Add a rental car",
@@ -277,5 +321,68 @@
     "span_one": "{{count}} rental day to the return",
     "span_other": "{{count}} rental days to the return"
   },
-  "invoiceMissing": "The invoice is still missing: it supplies the kilometres driven. Read it in once you have it."
+  "invoiceMissing": "The invoice is still missing: it supplies the kilometres driven. Read it in once you have it.",
+  "deleteConfirmNamed": "Really delete the rental {{provider}} · {{where}}?",
+  "deleteSurvivors": {
+    "trip": "the trip \"{{name}}\"",
+    "roadtrip": "the roadtrip \"{{name}}\"",
+    "companions_one": "{{count}} companion",
+    "companions_other": "{{count}} companions"
+  },
+  "priceSource": {
+    "booking": "from the booking confirmation",
+    "user": "entered by hand",
+    "unknown": "origin not recorded",
+    "none": "no booked price known"
+  },
+  "finalSource": {
+    "invoice": "per invoice",
+    "user": "corrected by hand",
+    "cancellationFee": "cancellation fee",
+    "unknown": "origin not recorded"
+  },
+  "invoiceReview": {
+    "loadFailed": "The rental for this invoice could not be loaded – the comparison is missing.",
+    "noDifference": "cannot be computed",
+    "feesNote": "TravStats does not read single items out of invoices yet; the difference may contain fees, extra days or price changes. The booked price is kept either way.",
+    "part": {
+      "finalAmount": "Final amount",
+      "vehicleDriven": "Car driven",
+      "odometer": "Odometer (pickup → return)",
+      "distance": "Kilometres driven",
+      "actualTimes": "Actual times (pickup → return)"
+    },
+    "now": "So far: {{value}}",
+    "invoice": "Invoice: {{value}}",
+    "nothingYet": "nothing",
+    "same": "Matches the rental.",
+    "adopt": "Take over"
+  },
+  "deposit": {
+    "title": "Deposit",
+    "none": "no deposit recorded",
+    "open": "outstanding: {{amount}} held, not back yet",
+    "openUnknownAmount": "outstanding: held, amount not recorded",
+    "partial": "partly back: {{returned}} of {{amount}} – {{outstanding}} outstanding",
+    "returned": "returned: {{returned}}",
+    "returnedAmountUnknown": "returned on {{day}}, amount not recorded",
+    "paidOn": "held on {{day}}",
+    "returnedOn": "back on {{day}}",
+    "neverCost": "never counts as a cost"
+  },
+  "returnCard": {
+    "title": "Return",
+    "oneWay": "One-way rental – another station than at pickup",
+    "station": "Station",
+    "when": "When",
+    "localTime": "local time {{zone}}",
+    "whenMissing": "no return time recorded",
+    "fuel": "Fuel policy",
+    "fuelMissing": "no fuel policy recorded",
+    "notes": "Your notes",
+    "notesMissing": "no notes of your own recorded",
+    "navigate": "Directions to the return: {{station}}",
+    "noPosition": "No coordinates are stored for the return station – no directions. The pickup station is not used instead.",
+    "record": "Record the return"
+  }
 }
