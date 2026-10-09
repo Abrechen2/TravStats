@@ -24,6 +24,8 @@
   "cruiseCount_other": "{{count}} Kreuzfahrten",
   "pnrLabel": "Buchungsref.",
   "totalCost": "Gesamtkosten",
+  "costUnpriced_one": "{{count}} Eintrag ohne Preis",
+  "costUnpriced_other": "{{count}} Einträge ohne Preis",
   "costPerKm": "Kosten/km",
   "distance": "Strecke",
   "status": {

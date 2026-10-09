@@ -5,7 +5,7 @@ import { useRailVisible } from "../../hooks/useRailVisible";
 import { useRentalVisible } from "../../hooks/useRentalVisible";
 import { tripEntryCounts, tripEntryTotal } from "../../lib/tripEntryCount";
 import { useTranslation } from "../../hooks/useTranslation";
-import { sumByCurrency, tripCostSources } from "../../lib/bookingCost";
+import { tripCostTotals } from "../../lib/tripCost";
 import { formatLocalDate } from "../../lib/displayFormat";
 import { flightArrival, flightDeparture, tripEnd, tripStart } from "../../lib/entityTimes";
 import { dayOf } from "../../shared/time";
@@ -75,7 +75,6 @@ export default function TripCard({ trip, onOpen }: TripCardProps): JSX.Element {
   // advertise cruise segments — not as an icon, not inside the km or cost.
   const { isEnabled } = useEnabledDomains();
   const cruiseEnabled = isEnabled("cruise");
-  const lodgingEnabled = isEnabled("lodging");
   const railVisible = useRailVisible();
   const rentalVisible = useRentalVisible();
   // Every area the trip page lists counts (forgejo#169), each behind the same
@@ -90,17 +89,14 @@ export default function TripCard({ trip, onOpen }: TripCardProps): JSX.Element {
   const cruiseCount = counts.cruise;
   const stayCount = counts.lodging;
   const cruises = cruiseEnabled ? (trip.cruises ?? []) : [];
-  const stays = lodgingEnabled ? (trip.lodgingStays ?? []) : [];
 
-  // Same sources as the trip detail page: bookings PLUS any flight, cruise or
-  // stay carrying its own price and no booking. Summing bookings alone made a
-  // hand-entered flight price vanish from the card while the detail page
-  // counted it, and left a cruise- or hotel-only trip at "—" on both.
+  // The server's figure (forgejo#274), the same one the "most expensive trip"
+  // tile ranks on and with the same domain gate. This card used to add the
+  // prices up itself: a flight without its taxes, never a train or a rental.
   // NOT gated on features.enableCostTracking: since #192 that toggle gates the
   // taxes/fees breakdown, not whether a price is visible at all.
-  const costTotals = sumByCurrency(
-    tripCostSources(trip.bookings ?? [], trip.flights ?? [], cruises, stays)
-  );
+  const costTotals = tripCostTotals(trip.cost);
+  const unpriced = trip.cost?.unpricedEntries ?? 0;
   const distanceKm = estimateTripDistanceKm(trip.flights ?? [], cruises);
   const entries = tripEntryTotal(counts);
 
@@ -206,7 +202,10 @@ export default function TripCard({ trip, onOpen }: TripCardProps): JSX.Element {
           <span>
             <span style={figure}>{distanceKm > 0 ? formatDistance(distanceKm) : "—"}</span> km
           </span>
-          <span style={figure}>
+          <span
+            style={figure}
+            title={unpriced > 0 ? t("trips:costUnpriced", { count: unpriced }) : undefined}
+          >
             {costTotals.length > 0
               ? costTotals
                   .map((c) =>

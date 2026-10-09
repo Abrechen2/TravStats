@@ -8,6 +8,7 @@
  */
 import type { Prisma } from "../../prisma";
 import type { TripCostInput } from "../../shared/tripCost";
+import type { DomainKey } from "../../shared/domains";
 
 const PRICE = { price: true, currency: true, priceBase: true, fxBaseCurrency: true } as const;
 const BOOKING_PRICE = { select: PRICE } as const;
@@ -86,17 +87,37 @@ export const expenseMoney = (e: { amount: Prisma.Decimal; currency: string }) =>
   currency: e.currency,
 });
 
-export function toTripCostInput(row: TripCostRow): TripCostInput {
+/**
+ * The rule's input for one trip. With `visible` (`services/domainVisibility`)
+ * the rows of a domain the user does not see are dropped BEFORE the rule runs,
+ * so a booking reached only through a hidden segment goes with it: a figure on
+ * screen may not fold in a domain the UI hides (the beta switches stay, owner
+ * 2026-10-08). Without it — the statistics' travel account — every source counts.
+ * A segment-less booking and a trip-wide expense belong to no domain and stay.
+ */
+export function toTripCostInput(row: TripCostRow, visible?: ReadonlySet<DomainKey>): TripCostInput {
+  const shown = (domain: DomainKey): boolean => visible === undefined || visible.has(domain);
+  const when = <T>(domain: DomainKey, rows: T[]): T[] => (shown(domain) ? rows : []);
   return {
     bookings: row.bookings.map(({ _count, ...booking }) => ({
       ...booking,
       segmentCount: _count.flights + _count.cruises + _count.lodgingStays + _count.railJourneys,
     })),
-    flights: row.flights,
-    cruises: row.cruises,
-    stays: row.lodgingStays,
-    rail: row.railJourneys,
-    rentals: [...row.rentalBookings, ...row.routes.flatMap((route) => route.rentals)],
-    expenses: [...row.expenses, ...row.routes.flatMap((route) => route.expenses)].map(expenseMoney),
+    flights: when("flight", row.flights),
+    cruises: when("cruise", row.cruises),
+    stays: when("lodging", row.lodgingStays),
+    rail: when("rail", row.railJourneys),
+    rentals: when("rental", [
+      ...row.rentalBookings,
+      ...row.routes.flatMap((route) => route.rentals),
+    ]),
+    // A section's expenses are shown on its roadtrip page, behind that gate.
+    expenses: [
+      ...row.expenses,
+      ...when(
+        "roadtrip",
+        row.routes.flatMap((route) => route.expenses)
+      ),
+    ].map(expenseMoney),
   };
 }

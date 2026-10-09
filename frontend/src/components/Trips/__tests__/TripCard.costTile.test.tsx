@@ -52,6 +52,8 @@ const trip = {
   startDate: null,
   endDate: null,
   _count: { flights: 2, cruises: 0 },
+  // The server's figure (forgejo#274) — the card reads it, it sums nothing.
+  cost: { spendByCurrency: { EUR: 2832 }, unpricedEntries: 0 },
 } as unknown as Trip;
 
 describe("TripCard cost tile", () => {
@@ -85,12 +87,47 @@ describe("TripCard cost tile", () => {
   });
 
   it("still shows a dash when the trip genuinely carries no price", () => {
-    const free = { ...trip, bookings: [], flights: [] } as unknown as Trip;
+    const free = {
+      ...trip,
+      bookings: [],
+      cost: { spendByCurrency: {}, unpricedEntries: 0 },
+    } as unknown as Trip;
     render(
       <MemoryRouter>
         <TripCard trip={free} onOpen={() => {}} />
       </MemoryRouter>
     );
     expect(screen.queryByText(/2\.?832/)).not.toBeInTheDocument();
+  });
+
+  // forgejo#274: the card used to rebuild the total from the rows it held —
+  // a flight's bare price, never a train or a rental — and could print a
+  // figure the "most expensive trip" tile beside it contradicted.
+  it("shows the server's cost, not a sum of the rows the card happens to hold", () => {
+    const disagreeing = {
+      ...trip,
+      bookings: [{ id: "b1", pnr: "AB12CD", price: 999, currency: "EUR" }],
+      cost: { spendByCurrency: { EUR: 1130, CHF: 210 }, unpricedEntries: 0 },
+    } as unknown as Trip;
+    render(
+      <MemoryRouter>
+        <TripCard trip={disagreeing} onOpen={() => {}} />
+      </MemoryRouter>
+    );
+    expect(screen.getByText(/1\.?130.*\+.*210/)).toBeInTheDocument();
+    expect(screen.queryByText(/999/)).not.toBeInTheDocument();
+  });
+
+  it("says when an entry has no price instead of reading it as free", () => {
+    const partial = {
+      ...trip,
+      cost: { spendByCurrency: { EUR: 300 }, unpricedEntries: 2 },
+    } as unknown as Trip;
+    render(
+      <MemoryRouter>
+        <TripCard trip={partial} onOpen={() => {}} />
+      </MemoryRouter>
+    );
+    expect(screen.getByText(/300/)).toHaveAttribute("title", "trips:costUnpriced");
   });
 });

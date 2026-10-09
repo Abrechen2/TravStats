@@ -46,8 +46,10 @@
 
 import { prisma } from "../../db";
 import { getBaseCurrency } from "../fx/snapshot";
+import { loadVisibleDomains } from "../domainVisibility";
 import { tripBaseTotal, tripCostItems, tripSpend } from "../../shared/tripCost";
 import { TRIP_COST_SELECT, toTripCostInput } from "./tripCostLoad";
+import type { DomainKey } from "../../shared/domains";
 
 export interface TripCostSuperlative {
   tripId: string;
@@ -85,25 +87,47 @@ function dominantCurrencyBucket(
   return { currency: best[0], amount: best[1] };
 }
 
-/** The most expensive trip across the user's ENTIRE logbook, or null when no
- *  started trip carries a recorded cost (0 included). */
-export async function mostExpensiveTrip(userId: string): Promise<TripCostSuperlative | null> {
+/** What a trip cost, as the trips page shows it — the server's figure, not a client sum. */
+export interface TripCostSummary {
+  /** Amounts by the currency they were paid in, never summed across currencies. */
+  spendByCurrency: Record<string, number>;
+  /** Entries with no usable price; above 0 the spend is a lower bound. */
+  unpricedEntries: number;
+}
+
+export interface TripCostInsights {
+  mostExpensiveTrip: TripCostSuperlative | null;
+  /** Every trip the user has, by id — uncapped, like the superlative. */
+  tripCosts: Record<string, TripCostSummary>;
+}
+
+/**
+ * The superlative and every trip's own cost from ONE load and ONE rule, so the
+ * trips page cannot rank a trip on one figure and print another on its card.
+ *
+ * `visible` (`services/domainVisibility`) drops the rows of domains the user
+ * does not see — the card and the tile may not fold in a hidden domain's money.
+ * Without it every source counts, as on the statistics' travel account.
+ */
+export async function tripCostInsights(
+  userId: string,
+  visible?: ReadonlySet<DomainKey>
+): Promise<TripCostInsights> {
   // The base currency can change (Settings → Instance). Read it ONCE, up
   // front, and compare every snapshot's `fxBaseCurrency` against this same
   // value — never against each other — so a switch mid-history downgrades
   // the OLD snapshots to unconvertible instead of silently mixing them in.
-  const currentBaseCurrency = await getBaseCurrency(userId);
+  const [currentBaseCurrency, trips] = await Promise.all([
+    getBaseCurrency(userId),
+    prisma.trip.findMany({
+      where: { userId },
+      // The travel account's own cost columns (forgejo#274): this select once
+      // lacked a flight's taxes and fees, so no rule could have priced them.
+      select: { id: true, name: true, status: true, ...TRIP_COST_SELECT },
+    }),
+  ]);
 
-  // A trip still on the drawing board hasn't spent anything yet — mirrors
-  // `computeTripInsights`'s `t.status !== "planned"` filter so the two never
-  // disagree about which trips are even eligible.
-  const trips = await prisma.trip.findMany({
-    where: { userId, status: { not: "planned" } },
-    // The travel account's own cost columns (forgejo#274): this select once
-    // lacked a flight's taxes and fees, so no rule could have priced them.
-    select: { id: true, name: true, ...TRIP_COST_SELECT },
-  });
-
+  const tripCosts: Record<string, TripCostSummary> = {};
   let winner: {
     tripId: string;
     name: string;
@@ -114,7 +138,14 @@ export async function mostExpensiveTrip(userId: string): Promise<TripCostSuperla
   let excludedCount = 0;
 
   for (const trip of trips) {
-    const costs = tripCostItems(toTripCostInput(trip));
+    const costs = tripCostItems(toTripCostInput(trip, visible));
+    const { spendByCurrency, unpricedEntries } = tripSpend(costs);
+    tripCosts[trip.id] = { spendByCurrency, unpricedEntries };
+
+    // A trip still on the drawing board hasn't spent anything yet — mirrors
+    // `computeTripInsights`'s `t.status !== "planned"` filter so the two never
+    // disagree about which trips are even eligible.
+    if (trip.status === "planned") continue;
     const base = tripBaseTotal(costs.items, currentBaseCurrency);
     if (base.kind === "none") continue; // no cost on this trip — not a candidate
     if (base.kind === "unconvertible") {
@@ -122,11 +153,11 @@ export async function mostExpensiveTrip(userId: string): Promise<TripCostSuperla
       continue;
     }
     if (winner === null || base.amount > winner.baseTotal) {
-      // Displayed from the SAME per-currency totals the travel account
-      // reports, so the tile and the account can never name two amounts.
+      // Displayed from the SAME per-currency totals the card and the travel
+      // account report, so no two surfaces name two amounts for one trip.
       // Every item converted, so every non-zero one carries a currency; a
       // trip of unit-less zeros reads as 0 in the base currency.
-      const bucket = dominantCurrencyBucket(tripSpend(costs).spendByCurrency) ?? {
+      const bucket = dominantCurrencyBucket(spendByCurrency) ?? {
         amount: 0,
         currency: currentBaseCurrency,
       };
@@ -134,12 +165,56 @@ export async function mostExpensiveTrip(userId: string): Promise<TripCostSuperla
     }
   }
 
-  if (winner === null) return null;
   return {
-    tripId: winner.tripId,
-    name: winner.name,
-    amount: winner.amount,
-    currency: winner.currency,
-    excluded: { count: excludedCount, reason: "unconvertible" },
+    mostExpensiveTrip:
+      winner === null
+        ? null
+        : {
+            tripId: winner.tripId,
+            name: winner.name,
+            amount: winner.amount,
+            currency: winner.currency,
+            excluded: { count: excludedCount, reason: "unconvertible" },
+          },
+    tripCosts,
   };
+}
+
+/** The most expensive trip across the user's ENTIRE logbook, or null when no
+ *  started trip carries a recorded cost (0 included). */
+export async function mostExpensiveTrip(
+  userId: string,
+  visible?: ReadonlySet<DomainKey>
+): Promise<TripCostSuperlative | null> {
+  return (await tripCostInsights(userId, visible)).mostExpensiveTrip;
+}
+
+/** One trip's cost, for its own page — the same rule and gate as the list. */
+export async function tripCostSummary(
+  userId: string,
+  tripId: string,
+  visible?: ReadonlySet<DomainKey>
+): Promise<TripCostSummary | null> {
+  const trip = await prisma.trip.findFirst({
+    where: { id: tripId, userId },
+    select: TRIP_COST_SELECT,
+  });
+  if (trip === null) return null;
+  const { spendByCurrency, unpricedEntries } = tripSpend(
+    tripCostItems(toTripCostInput(trip, visible))
+  );
+  return { spendByCurrency, unpricedEntries };
+}
+
+/** `tripCostInsights` behind the user's own domain gate — what the trips page is served. */
+export async function tripsPageCosts(userId: string): Promise<TripCostInsights> {
+  return tripCostInsights(userId, new Set(await loadVisibleDomains(userId)));
+}
+
+/** `tripCostSummary` behind the user's own domain gate — what a trip's page is served. */
+export async function tripPageCost(
+  userId: string,
+  tripId: string
+): Promise<TripCostSummary | null> {
+  return tripCostSummary(userId, tripId, new Set(await loadVisibleDomains(userId)));
 }
