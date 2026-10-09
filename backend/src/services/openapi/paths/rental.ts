@@ -383,7 +383,9 @@ registry.registerPath({
   description:
     "Partial update. A station is replaced whole; `returnStation: null` ties the return to the " +
     "pickup station again. A wall clock not sent keeps the booking's reading, re-read in the " +
-    "(possibly new) station's zone. Every field sent is recorded as edited by hand. A key " +
+    "(possibly new) station's zone. A field is recorded as edited by hand only when the sent " +
+    "value differs from the stored one; a value re-sent unchanged keeps its source (the " +
+    "booking's price, an invoice's km and amount) and re-derives nothing. A key " +
     "not sent is unchanged — never cleared; a fold is read only beside its own wall clock.",
   tags: ["Rentals"],
   request: {

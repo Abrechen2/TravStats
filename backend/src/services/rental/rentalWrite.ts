@@ -137,19 +137,26 @@ export function mergeRental(
     ret,
     "actualReturnLocal"
   );
-  // Only when this write moved an actual end or a station (the odometer's
-  // rule): a stored pair the write did not touch never blocks an unrelated
-  // edit — legacy rows hold invoice days stored as midnight minutes.
-  const movesActualOrder =
-    input.actualPickupLocal !== undefined ||
-    input.actualReturnLocal !== undefined ||
-    input.pickupStation !== undefined ||
-    input.returnStation !== undefined;
-  if (movesActualOrder) {
+  // Only when this write MOVED an actual end (the odometer's rule): a stored
+  // pair the write left as it was — absent, or re-sent unchanged as a form
+  // does — never blocks an unrelated edit; legacy rows hold days stored as
+  // midnight minutes. A moved station keeps the actual instants, so it
+  // cannot change their order.
+  const moved = {
+    pickup: actualMoved(
+      existing && { utc: existing.actualPickupTime, precision: existing.actualPickupPrecision },
+      actualPickup
+    ),
+    return: actualMoved(
+      existing && { utc: existing.actualReturnTime, precision: existing.actualReturnPrecision },
+      actualReturn
+    ),
+  };
+  if (moved.pickup || moved.return) {
     assertActualOrder(
       actualPickup && { ...actualPickup, zone: pickup.timezone },
       actualReturn && { ...actualReturn, zone: ret.timezone },
-      input
+      moved
     );
   }
 
@@ -212,6 +219,19 @@ interface ActualEnd {
   precision: string;
 }
 
+/** Whether a write changed an actual end — its instant or its precision (a legacy null is a minute). */
+export function actualMoved(
+  stored: { utc: Date | null; precision: string | null } | null,
+  next: ActualEnd | null
+): boolean {
+  const before = stored?.utc
+    ? { at: stored.utc.getTime(), precision: stored.precision ?? "minute" }
+    : null;
+  const after = next ? { at: next.utc.getTime(), precision: next.precision } : null;
+  if (before === null || after === null) return before !== after;
+  return before.at !== after.at || before.precision !== after.precision;
+}
+
 /**
  * An actual hand-over after the write: absent keeps what is stored (with its
  * precision — a legacy row without one reads as minute), null clears it, a
@@ -269,19 +289,16 @@ export function returnCertainlyBeforePickup(pickup: TimedEnd, ret: TimedEnd): bo
  * end stands for its whole day at its station, so a return recorded only as
  * the pickup's own day is never refused. 400
  * `RENTAL_ACTUAL_RETURN_BEFORE_PICKUP`, `field` = the end this write moved
- * (the return when both or neither moved — the end a reader fixes first).
+ * (the return when both moved — the end a reader fixes first).
  */
 function assertActualOrder(
   pickup: TimedEnd | null,
   ret: TimedEnd | null,
-  input: UpdateRentalInput
+  moved: { pickup: boolean; return: boolean }
 ): void {
   if (!pickup || !ret) return;
   if (!returnCertainlyBeforePickup(pickup, ret)) return;
-  const field =
-    input.actualPickupLocal !== undefined && input.actualReturnLocal === undefined
-      ? "actualPickupLocal"
-      : "actualReturnLocal";
+  const field = moved.pickup && !moved.return ? "actualPickupLocal" : "actualReturnLocal";
   throw new AppError(
     "the actual return must not precede the actual pickup",
     400,

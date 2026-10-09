@@ -14,6 +14,7 @@ import {
   type ResolvedStations,
 } from "./rentalWrite";
 import { rentalDayRange, soleOverlappingTrip } from "./rentalLinks";
+import { changedInput } from "./rentalChanges";
 
 /**
  * The one write path of a rental row — the form (`routes/rental.ts`) and the
@@ -183,12 +184,15 @@ export async function createRentalRow(
 export async function updateRentalRow(
   userId: string,
   existing: StoredRental,
-  input: UpdateRentalInput,
+  sentInput: UpdateRentalInput,
   options: WriteOptions & { extra?: Prisma.RentalBookingUncheckedUpdateInput }
 ): Promise<RentalRow> {
   // The MERGED state, so a one-field PATCH is checked against the stored rest
   // (a return moved before an untouched pickup is refused here).
-  const state = mergeRental(existing, input, await resolveStations(input));
+  const state = mergeRental(existing, sentInput, await resolveStations(sentInput));
+  // From here on only what CHANGED: a value re-sent as stored is no edit, no
+  // new source and no re-derivation (`rentalChanges.ts`, fix round 2).
+  const input = changedInput(existing, sentInput, state);
   assertOdometerOrder(existing, input);
   assertDepositConsistent(existing, input);
   const resolved =
