@@ -50,8 +50,10 @@ export const flightAdapter: EntityAdapter = {
   async load(c, ids) {
     return (await c.flight.findMany({ where: { id: { in: [...ids] } } })).map(flightRow);
   },
-  async copiesOf(c, shareKey) {
-    return (await c.flight.findMany({ where: { shareKey } })).map(flightRow);
+  async copiesOf(c, shareKey, groupId) {
+    return (await c.flight.findMany({ where: { shareKey, trip: { shareGroupId: groupId } } })).map(
+      flightRow
+    );
   },
   async setKey(c, id, key) {
     await c.flight.update({ where: { id }, data: { shareKey: key } });
@@ -108,8 +110,10 @@ export const railAdapter: EntityAdapter = {
   async load(c, ids) {
     return (await c.railJourney.findMany({ where: { id: { in: [...ids] } } })).map(railRow);
   },
-  async copiesOf(c, shareKey) {
-    return (await c.railJourney.findMany({ where: { shareKey } })).map(railRow);
+  async copiesOf(c, shareKey, groupId) {
+    return (
+      await c.railJourney.findMany({ where: { shareKey, trip: { shareGroupId: groupId } } })
+    ).map(railRow);
   },
   async setKey(c, id, key) {
     await c.railJourney.update({ where: { id }, data: { shareKey: key } });
@@ -161,8 +165,10 @@ export const rentalAdapter: EntityAdapter = {
   async load(c, ids) {
     return (await c.rentalBooking.findMany({ where: { id: { in: [...ids] } } })).map(rentalRow);
   },
-  async copiesOf(c, shareKey) {
-    return (await c.rentalBooking.findMany({ where: { shareKey } })).map(rentalRow);
+  async copiesOf(c, shareKey, groupId) {
+    return (
+      await c.rentalBooking.findMany({ where: { shareKey, trip: { shareGroupId: groupId } } })
+    ).map(rentalRow);
   },
   async setKey(c, id, key) {
     await c.rentalBooking.update({ where: { id }, data: { shareKey: key } });

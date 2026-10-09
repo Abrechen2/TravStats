@@ -95,8 +95,11 @@ export const stopAdapter: EntityAdapter = {
     const rows = await c.tripStop.findMany({ where: { id: { in: [...ids] } }, include: INCLUDE });
     return stopRows(c, rows);
   },
-  async copiesOf(c, shareKey) {
-    const rows = await c.tripStop.findMany({ where: { shareKey }, include: INCLUDE });
+  async copiesOf(c, shareKey, groupId) {
+    const rows = await c.tripStop.findMany({
+      where: { shareKey, trip: { shareGroupId: groupId } },
+      include: INCLUDE,
+    });
     return stopRows(c, rows);
   },
   async setKey(c, id, key) {

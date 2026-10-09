@@ -53,7 +53,7 @@ const notice = z.object({
   entityKey: z
     .string()
     .nullable()
-    .describe("The entry's shareKey; for `trip` the caller's own trip id"),
+    .describe("For `trip` notices the caller's own trip id; null for entry notices"),
   after: z.unknown().nullable(),
   createdAt: instant,
   readAt: instant.nullable(),

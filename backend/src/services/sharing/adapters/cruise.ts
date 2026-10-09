@@ -76,8 +76,13 @@ export const cruiseAdapter: EntityAdapter = {
     const rows = await c.cruise.findMany({ where: { id: { in: [...ids] } }, include: INCLUDE });
     return rows.map(cruiseRow);
   },
-  async copiesOf(c, shareKey) {
-    return (await c.cruise.findMany({ where: { shareKey }, include: INCLUDE })).map(cruiseRow);
+  async copiesOf(c, shareKey, groupId) {
+    return (
+      await c.cruise.findMany({
+        where: { shareKey, trip: { shareGroupId: groupId } },
+        include: INCLUDE,
+      })
+    ).map(cruiseRow);
   },
   async setKey(c, id, key) {
     await c.cruise.update({ where: { id }, data: { shareKey: key } });

@@ -114,8 +114,11 @@ export const lodgingStayAdapter: EntityAdapter = {
     });
     return rows.map(stayRow);
   },
-  async copiesOf(c, shareKey) {
-    const rows = await c.lodgingStay.findMany({ where: { shareKey }, include: INCLUDE });
+  async copiesOf(c, shareKey, groupId) {
+    const rows = await c.lodgingStay.findMany({
+      where: { shareKey, trip: { shareGroupId: groupId } },
+      include: INCLUDE,
+    });
     return rows.map(stayRow);
   },
   async setKey(c, id, key) {

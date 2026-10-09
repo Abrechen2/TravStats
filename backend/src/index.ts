@@ -1,4 +1,5 @@
 import express from "express";
+import { withoutShareKeys } from "./services/sharing/wireGuard";
 import cors from "cors";
 import { corsOriginCheck } from "./middleware/corsOrigin";
 import helmet from "helmet";
@@ -57,6 +58,8 @@ const PORT = parseInt(process.env.PORT || "8000", 10);
 // or every visitor shares its address and its rate-limit buckets — see
 // utils/trustProxy.ts for the prod measurement and why `true` is refused.
 app.set("trust proxy", resolveTrustProxy(process.env.TRUST_PROXY));
+// Share keys stay on the server (`services/sharing/wireGuard.ts`).
+app.set("json replacer", withoutShareKeys);
 
 // Security middleware with CSP configuration
 app.use(

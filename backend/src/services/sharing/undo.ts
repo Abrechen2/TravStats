@@ -34,12 +34,17 @@ function entityOf(type: string | null): ShareEntity {
 async function ownCopy(
   c: DbTransaction,
   entity: ShareEntity,
-  shareKey: string | null,
+  notice: { entityKey: string | null; groupId: string | null },
   userId: string
 ): Promise<SharedRow> {
-  const own = shareKey
-    ? (await ADAPTERS[entity].copiesOf(c, shareKey)).find((r) => r.userId === userId)
-    : undefined;
+  // Inside the notice's group only: after a leave or a withdrawal the copy is
+  // the member's own independent row and no notice reaches it any more.
+  const own =
+    notice.entityKey && notice.groupId
+      ? (await ADAPTERS[entity].copiesOf(c, notice.entityKey, notice.groupId)).find(
+          (r) => r.userId === userId
+        )
+      : undefined;
   if (!own) {
     throw new AppError("Your copy of this entry no longer exists", 409, "SHARE_COPY_NOT_FOUND");
   }
@@ -80,7 +85,7 @@ export async function undoNotice(userId: string, noticeId: string): Promise<Undo
   }
 
   return prisma.$transaction(async (tx) => {
-    const own = await ownCopy(tx, entity, notice.entityKey, userId);
+    const own = await ownCopy(tx, entity, notice, userId);
     const changedSince = keys.filter((k) => !sameFact(own.facts[k], after[k]));
     if (changedSince.length > 0) {
       throw new AppError(
@@ -114,7 +119,7 @@ export async function deleteOwnCopy(userId: string, noticeId: string): Promise<{
   }
   const entity = entityOf(notice.entityType);
   return prisma.$transaction(async (tx) => {
-    const own = await ownCopy(tx, entity, notice.entityKey, userId);
+    const own = await ownCopy(tx, entity, notice, userId);
     const snapshot = await shareSnapshot(tx, entity, own.id);
     await ADAPTERS[entity].remove(tx, own.id);
     await tx.shareNotice.update({

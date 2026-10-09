@@ -60,11 +60,12 @@ async function inTransaction<T>(c: ShareClient, fn: (tx: DbTransaction) => Promi
   return "$transaction" in c ? (c as Db).$transaction(run, { timeout: 30_000 }) : run(c);
 }
 
-async function groupsOfTrips(c: DbTransaction, tripIds: (string | null)[]) {
+/** trip id → its share group; with `ownerId`, only trips that are that user's own. */
+async function groupsOfTrips(c: DbTransaction, tripIds: (string | null)[], ownerId?: string) {
   const ids = [...new Set(tripIds.filter((t): t is string => t !== null))];
   if (ids.length === 0) return new Map<string, string | null>();
   const trips = await c.trip.findMany({
-    where: { id: { in: ids } },
+    where: { id: { in: ids }, ...(ownerId ? { userId: ownerId } : {}) },
     select: { id: true, shareGroupId: true },
   });
   return new Map(trips.map((t) => [t.id, t.shareGroupId]));
@@ -77,16 +78,18 @@ async function snapshotsWith(
 ): Promise<Map<string, ShareSnapshot>> {
   if (ids.length === 0) return new Map();
   const rows = await ADAPTERS[entity].load(c, ids);
-  const groups = await groupsOfTrips(
-    c,
-    rows.map((r) => r.tripId)
-  );
-  return new Map(
-    rows.map((r) => [
-      r.id,
-      { ...r, entity, groupId: r.tripId ? (groups.get(r.tripId) ?? null) : null },
-    ])
-  );
+  const tripIds = [...new Set(rows.flatMap((r) => (r.tripId ? [r.tripId] : [])))];
+  const trips = await c.trip.findMany({
+    where: { id: { in: tripIds } },
+    select: { id: true, userId: true, shareGroupId: true },
+  });
+  const byId = new Map(trips.map((t) => [t.id, t]));
+  // A group counts only through the row owner's OWN trip.
+  const groupOf = (r: SharedRow) => {
+    const trip = r.tripId ? byId.get(r.tripId) : undefined;
+    return trip && trip.userId === r.userId ? trip.shareGroupId : null;
+  };
+  return new Map(rows.map((r) => [r.id, { ...r, entity, groupId: groupOf(r) }]));
 }
 
 /** The entries as they are now — taken BEFORE a write, handed to propagation after it. */
@@ -178,7 +181,7 @@ async function noticeRemoval(
   reason: "deleted" | "movedOut"
 ): Promise<void> {
   const key = row.shareKey as string;
-  const copies = await adapter.copiesOf(c, key);
+  const copies = await adapter.copiesOf(c, key, groupId);
   for (const member of await receivingMembers(c, groupId, actorId)) {
     const copy = copyOf(copies, member);
     if (!copy) continue;
@@ -204,7 +207,7 @@ async function updateCopies(
 ): Promise<void> {
   const changed = changedKeys(before.facts, row.facts, adapter.fields);
   if (changed.length === 0) return;
-  const copies = await adapter.copiesOf(c, row.shareKey as string);
+  const copies = await adapter.copiesOf(c, row.shareKey as string, groupId);
   for (const member of await receivingMembers(c, groupId, actorId)) {
     const copy = copyOf(copies, member);
     if (!copy) continue;
@@ -224,16 +227,21 @@ async function updateCopies(
   }
 }
 
-/** The group a keyed entry's copies sit in, when the caller had no snapshot. */
+/**
+ * The group a keyed entry's copies sit in, when the caller had no snapshot.
+ * Looked for only among the groups the actor is a member of — never by the
+ * key alone across the database.
+ */
 async function groupOfCopies(c: DbTransaction, adapter: EntityAdapter, row: SharedRow) {
-  const copies = (await adapter.copiesOf(c, row.shareKey as string)).filter(
-    (r) => r.userId !== row.userId
-  );
-  const groups = await groupsOfTrips(
-    c,
-    copies.map((r) => r.tripId)
-  );
-  return [...groups.values()].find((g): g is string => g !== null) ?? null;
+  const actorTrips = await c.trip.findMany({
+    where: { userId: row.userId, shareGroupId: { not: null } },
+    select: { shareGroupId: true },
+  });
+  for (const groupId of new Set(actorTrips.map((t) => t.shareGroupId as string))) {
+    const copies = await adapter.copiesOf(c, row.shareKey as string, groupId);
+    if (copies.some((r) => r.userId !== row.userId)) return groupId;
+  }
+  return null;
 }
 
 async function reconcile(
@@ -281,7 +289,8 @@ export async function propagateWrites(
     const rows = (await adapter.load(tx, ids)).filter((r) => r.userId === actorId);
     const groups = await groupsOfTrips(
       tx,
-      rows.map((r) => r.tripId)
+      rows.map((r) => r.tripId),
+      actorId
     );
     for (const row of rows) {
       const groupId = row.tripId ? (groups.get(row.tripId) ?? null) : null;

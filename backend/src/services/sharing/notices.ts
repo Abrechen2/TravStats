@@ -38,7 +38,9 @@ export async function listNotices(userId: string): Promise<ShareNoticeView[]> {
     id: row.id,
     kind: row.kind,
     entityType: row.entityType,
-    entityKey: row.entityKey,
+    // An entry notice's key is a share key — never sent (wireGuard.ts). A
+    // `trip` notice's key is the recipient's own trip id.
+    entityKey: row.entityType === "trip" ? row.entityKey : null,
     after: row.after,
     createdAt: row.createdAt.toISOString(),
     readAt: row.readAt?.toISOString() ?? null,

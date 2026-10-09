@@ -52,8 +52,11 @@ export interface EntityAdapter {
   /** The facts compared and carried, pseudo-fields included. */
   fields: readonly string[];
   load(c: DbTransaction, ids: readonly string[]): Promise<SharedRow[]>;
-  /** Every row holding `shareKey`, in any account. */
-  copiesOf(c: DbTransaction, shareKey: string): Promise<SharedRow[]>;
+  /**
+   * The rows holding `shareKey` on a trip of `groupId` — never by key alone:
+   * a key that leaked or collided must not reach a row outside the group.
+   */
+  copiesOf(c: DbTransaction, shareKey: string, groupId: string): Promise<SharedRow[]>;
   setKey(c: DbTransaction, id: string, key: string | null): Promise<void>;
   /** A new copy of `source` in the recipient's trip; returns its id. */
   createCopy(
