@@ -22,7 +22,7 @@ import type {
   TemplateTestInput,
 } from "./envelope";
 import { TEMPLATE_DOMAINS } from "./envelope";
-import { extract } from "./extract";
+import { boundedTest, extract } from "./extract";
 
 export type TestDecision = "match" | "decline";
 
@@ -70,7 +70,7 @@ export interface TemplateApplication {
 
 /** Whether a document the matcher accepted is one of the issuer's non-bookings. */
 export function isNonBooking(template: TemplateEnvelope, haystack: string): boolean {
-  return (template.match.notBookingIf ?? []).some((p) => new RegExp(p, "im").test(haystack));
+  return (template.match.notBookingIf ?? []).some((p) => boundedTest(p, "im", haystack));
 }
 
 /**

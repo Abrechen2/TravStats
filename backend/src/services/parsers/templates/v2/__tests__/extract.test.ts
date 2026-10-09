@@ -1,6 +1,6 @@
 import { describe, it, expect } from "@jest/globals";
 import { extractionSchema, type Extraction } from "../extraction";
-import { extract, MAX_REPEAT_ITEMS, EXTRACT_TIMEOUT_MS } from "../extract";
+import { boundedTest, extract, MAX_REPEAT_ITEMS, EXTRACT_TIMEOUT_MS } from "../extract";
 
 /** Parses through the real schema, so every test reads a VALIDATED extraction. */
 function spec(raw: unknown): Extraction {
@@ -288,5 +288,14 @@ describe("v2 extraction — catastrophic backtracking", () => {
     expect(Date.now() - started).toBeLessThan(EXTRACT_TIMEOUT_MS + 1500);
     expect(result.timedOut).toBe(true);
     expect(result.missing).toEqual(["x"]);
+  });
+});
+
+describe("v2 extraction — every template regex is bounded", () => {
+  it("bounds a template regex tested outside extract (e.g. match.notBookingIf)", () => {
+    const started = Date.now();
+    expect(boundedTest("^(a+)+$", "im", `${"a".repeat(40)}!`)).toBe(false);
+    expect(Date.now() - started).toBeLessThan(EXTRACT_TIMEOUT_MS + 1500);
+    expect(boundedTest("storniert", "im", "Ihre Buchung wurde storniert")).toBe(true);
   });
 });
