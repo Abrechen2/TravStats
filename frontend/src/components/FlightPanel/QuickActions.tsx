@@ -36,7 +36,8 @@ export function QuickActions({
           key={title}
           onClick={onClick}
           title={title}
-          className="w-7 h-7 flex items-center justify-center rounded-sm text-sm transition-colors"
+          // 28 px for a mouse, 44 px on a coarse pointer (forgejo#249).
+          className="w-7 h-7 flex items-center justify-center rounded-sm text-sm transition-colors pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:min-w-(--ts-size-touch-min)"
           style={{ background: "var(--bg-surface)" }}
           type="button"
           aria-label={title}
