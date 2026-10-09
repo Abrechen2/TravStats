@@ -310,8 +310,20 @@ function localEndpointDates(
 ): [string, string] {
   return [
     toLocalDateString(flight.departureTime, departureTimezoneOf(flight, timezoneByCode)),
-    toLocalDateString(flight.arrivalTime, arrivalTimezoneOf(flight, timezoneByCode)),
+    localArrivalDay(flight, timezoneByCode),
   ];
+}
+
+/**
+ * The calendar day a flight landed on, on the arrival airport's clock — the
+ * arrival half of the same-day and midnight rules, for a caller that needs
+ * only that end (the home-airport check on a layover, forgejo#273).
+ */
+export function localArrivalDay(
+  flight: FlightEndpoints & { arrivalTime: Date },
+  timezoneByCode: Map<string, string>
+): string {
+  return toLocalDateString(flight.arrivalTime, arrivalTimezoneOf(flight, timezoneByCode));
 }
 
 /**
