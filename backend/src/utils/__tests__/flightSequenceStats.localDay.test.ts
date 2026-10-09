@@ -7,6 +7,9 @@
  */
 import { computeFlightSequenceStats } from "../flightSequenceStats";
 import type { FlightData } from "../achievementStats";
+import { toUtcDate } from "../../services/flights/mergedChronology";
+
+const isoOf = (at: Date | null): string => (at as Date).toISOString();
 
 function flight(
   dep: string,
@@ -88,7 +91,11 @@ describe("Hat-Trick — flights on one LOCAL day", () => {
 
   it("keeps a date-only flight on its recorded date", () => {
     const stats = computeFlightSequenceStats([
-      nrtKix("2026-09-02T12:00:00Z", { depTimeSemantics: "DATE_ONLY", status: "historical" }),
+      // The form's noon anchor, written through the zone (forgejo#273).
+      nrtKix(isoOf(toUtcDate("2026-09-02T12:00", "Asia/Tokyo")), {
+        depTimeSemantics: "DATE_ONLY",
+        status: "historical",
+      }),
       nrtKix("2026-09-01T23:30:00Z"),
     ]);
     expect(stats.maxFlightsOneDay).toBe(2);
@@ -97,11 +104,12 @@ describe("Hat-Trick — flights on one LOCAL day", () => {
   it.each([
     ["Auckland (UTC+12)", "Pacific/Auckland"],
     ["Kiritimati (UTC+14)", "Pacific/Kiritimati"],
-  ])("keeps a date-only flight from %s on its stored date", (_name, zone) => {
-    // Stored as 12:00Z of the recorded day; through a zone east of UTC+12 that
-    // instant is already the next local day. The recorded day wins.
+  ])("keeps a date-only flight from %s on its recorded date", (_name, zone) => {
+    // Written as 12:00 LOCAL through the zone (`toUtcDate`); east of UTC+12 the
+    // stored instant is on the previous UTC date, and the zone reads it back
+    // as the recorded day (forgejo#273, `shared/time/dateOnlyFlights.json`).
     const stats = computeFlightSequenceStats([
-      nrtKix("2026-09-02T12:00:00Z", {
+      nrtKix(isoOf(toUtcDate("2026-09-02T12:00", zone)), {
         depTimezone: zone,
         depTimeSemantics: "DATE_ONLY",
         status: "historical",

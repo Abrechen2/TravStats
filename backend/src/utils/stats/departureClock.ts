@@ -27,18 +27,17 @@ export function departureClockOf(flight: DepartureClockRow): LocalWallClock | nu
 
 /**
  * The calendar day a flight left on - the record / sequence-badge reading of
- * the departure clock.
+ * the departure clock, the same day every other flight statistic files it
+ * under.
  *
- * A DATE_ONLY row stores 12:00Z of the day the user recorded; that date IS the
- * answer, so the zone is deliberately not applied. Read through a zone east of
- * UTC+12 (Auckland in summer, Suva, Kiritimati) the placeholder instant is
- * already the next local day and the flight would silently move a day.
- * Everything else is read on the departure airport's clock; a row with no
+ * A DATE_ONLY row is no exception. Its writers send a LOCAL wall clock with
+ * the airport's zone (the historical form's noon, the cruise import's
+ * midnight) and the server converts it through that zone, so the day is the
+ * local day of the stored instant — its UTC date is the day before for
+ * Auckland in summer, Tonga, Kiritimati and every cruise-import flight east
+ * of UTC (forgejo#273; `shared/time/dateOnlyFlights.json`). A row with no
  * usable zone is read on its stored components.
  */
 export function departureDayOf(flight: DepartureClockRow): string | null {
-  const dateOnly = flight.depTimeSemantics === "DATE_ONLY";
-  return (
-    departureClockOf({ ...flight, depTimezone: dateOnly ? null : flight.depTimezone })?.date ?? null
-  );
+  return departureClockOf(flight)?.date ?? null;
 }

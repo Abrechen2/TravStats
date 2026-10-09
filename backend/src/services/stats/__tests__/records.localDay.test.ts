@@ -1,4 +1,5 @@
 import { buildTravelRecords, type RecordFlightInput } from "../records";
+import { toUtcDate } from "../../flights/mergedChronology";
 
 /**
  * Forgejo #255 — the busiest-day record, the longest-streak run and their dates
@@ -91,7 +92,8 @@ describe("busiest day — the departure airport's local day (forgejo#255)", () =
       [
         flight({
           id: "a",
-          departureTime: new Date("2026-09-02T12:00:00Z"),
+          // The form's noon anchor, written through the zone (forgejo#273).
+          departureTime: toUtcDate("2026-09-02T12:00", "Asia/Tokyo") as Date,
           depTimeSemantics: "DATE_ONLY",
         }),
         flight({ id: "b", departureTime: new Date("2026-09-01T23:30:00Z") }),
@@ -106,16 +108,18 @@ describe("busiest day — the departure airport's local day (forgejo#255)", () =
     ["Auckland (UTC+12)", "AKL", "Pacific/Auckland"],
     ["Suva (UTC+12)", "SUV", "Pacific/Fiji"],
     ["Kiritimati (UTC+14)", "CXI", "Pacific/Kiritimati"],
-  ])("keeps a date-only flight from %s on its stored date", (_name, iata, zone) => {
-    // A date-only row is stored as 12:00Z of the recorded day. Read through a
-    // zone east of UTC+12 that instant is already the NEXT local day.
+  ])("keeps a date-only flight from %s on its recorded date", (_name, iata, zone) => {
+    // A date-only row is written as 12:00 LOCAL through the airport's zone
+    // (the form's noon anchor, `toUtcDate`). East of UTC+12 the stored instant
+    // falls on the PREVIOUS UTC date; read through the zone it is the recorded
+    // day (forgejo#273, `shared/time/dateOnlyFlights.json`).
     const dateOnly = (id: string, day: string) =>
       flight({
         id,
         depIata: iata,
         depTimezone: zone,
         depTimeSemantics: "DATE_ONLY",
-        departureTime: new Date(`${day}T12:00:00Z`),
+        departureTime: toUtcDate(`${day}T12:00`, zone) as Date,
       });
     const rec = record(
       [dateOnly("a", "2026-09-02"), dateOnly("b", "2026-09-02"), dateOnly("c", "2026-09-04")],
