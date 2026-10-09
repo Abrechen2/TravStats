@@ -1,6 +1,6 @@
 import { prisma } from "../../db";
 import { deriveRentalStatus } from "../../shared/statusDerivation";
-import { sweepStatuses } from "../statusSweep";
+import { dayReturnRentalsToDerive, sweepStatuses } from "../statusSweep";
 
 /**
  * A same-day rental whose return is known only by its day (re-review, fix
@@ -45,6 +45,24 @@ describe("rental status with a day-only return", () => {
       ).id;
     });
 
+    const base = () => ({
+      userId,
+      provider: "Testcar",
+      pickupStationName: "Testport",
+      pickupLat: 50,
+      pickupLon: 8,
+      pickupTimezone: "Europe/Berlin",
+      returnStationName: "Testport",
+      returnLat: 50,
+      returnLon: 8,
+      returnTimezone: "Europe/Berlin",
+    });
+
+    afterEach(async () => {
+      jest.restoreAllMocks();
+      await prisma.rentalBooking.deleteMany({ where: { userId } });
+    });
+
     afterAll(async () => {
       await prisma.user.deleteMany({ where: { id: userId } });
       await prisma.$disconnect();
@@ -54,6 +72,7 @@ describe("rental status with a day-only return", () => {
       // The DB backstop allows a day-only return before a timed pickup.
       const row = await prisma.rentalBooking.create({
         data: {
+          ...base(),
           userId,
           provider: "Testcar",
           pickupStationName: "Testport",
@@ -67,7 +86,7 @@ describe("rental status with a day-only return", () => {
           pickupTime,
           returnTime,
           returnPrecision: "day",
-          status: "completed",
+          status: "scheduled",
         },
       });
       await sweepStatuses(NOON);
@@ -78,6 +97,52 @@ describe("rental status with a day-only return", () => {
       expect((await prisma.rentalBooking.findUniqueOrThrow({ where: { id: row.id } })).status).toBe(
         "completed"
       );
+    });
+
+    // Fix round 3: the per-row pass is bounded in the query, not in JS.
+    it("never reads an old rental, completed or not — the query bounds the pass", async () => {
+      const longAgo = {
+        ...base(),
+        pickupTime: new Date("2026-05-01T08:00:00Z"),
+        returnTime: new Date("2026-05-02T22:00:00Z"),
+        returnPrecision: "day",
+      };
+      const done = await prisma.rentalBooking.create({ data: { ...longAgo, status: "completed" } });
+      const stuck = await prisma.rentalBooking.create({
+        data: { ...longAgo, status: "in_progress" },
+      });
+      const findMany = jest.spyOn(prisma.rentalBooking, "findMany");
+      await sweepStatuses(NOON);
+      const passes = findMany.mock.calls.filter(
+        ([args]) =>
+          (args as { where?: { returnPrecision?: string } })?.where?.returnPrecision === "day"
+      );
+      expect(passes).toHaveLength(1);
+      expect(passes[0][0]?.where).toEqual(dayReturnRentalsToDerive(NOON));
+      const read = (await findMany.mock.results[findMany.mock.calls.indexOf(passes[0])]
+        .value) as Array<{
+        id: string;
+      }>;
+      expect(read.map((r) => r.id)).not.toContain(done.id);
+      expect(read.map((r) => r.id)).not.toContain(stuck.id);
+      // The old open one is completed in bulk; the completed one is untouched.
+      expect(
+        (await prisma.rentalBooking.findUniqueOrThrow({ where: { id: stuck.id } })).status
+      ).toBe("completed");
+      expect(
+        (
+          await prisma.rentalBooking.findUniqueOrThrow({ where: { id: done.id } })
+        ).updatedAt.getTime()
+      ).toBe(done.updatedAt.getTime());
+    });
+
+    it("bounds the pass to open rentals whose return day may not have ended", () => {
+      expect(dayReturnRentalsToDerive(NOON)).toEqual({
+        returnPrecision: "day",
+        status: { in: ["scheduled", "in_progress"] },
+        pickupTime: { lte: NOON },
+        returnTime: { gt: new Date(NOON.getTime() - 26 * 3_600_000) },
+      });
     });
   });
 });

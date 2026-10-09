@@ -364,14 +364,41 @@ function arrivalClockedWhere() {
  * on the stored instant expresses. Only rides that may have changed are read —
  * not cancelled, and begun by now — so the set stays small.
  */
+/**
+ * A local day lasts at most 25 h, so a day-only return stored at its day's
+ * start is certainly over 26 h later, wherever its station is.
+ */
+const DAY_RETURN_SETTLED_MS = 26 * 60 * 60 * 1000;
+
+/**
+ * The rentals with a day-only booked return whose status the per-row pass
+ * may still have to change — bounded in the QUERY (fix round 3): not yet
+ * completed or cancelled, already picked up, and a return day that may not
+ * have ended yet. Older open ones are completed in bulk beside it, so the
+ * pass reads a few rows per hour however long the history grows.
+ */
+export function dayReturnRentalsToDerive(now: Date) {
+  return {
+    returnPrecision: "day",
+    status: { in: ["scheduled", "in_progress"] },
+    pickupTime: { lte: now },
+    returnTime: { gt: new Date(now.getTime() - DAY_RETURN_SETTLED_MS) },
+  };
+}
+
 /** Rentals with a day-only booked return, each derived with its day's end. */
 async function sweepDayReturnRentals(now: Date): Promise<number> {
-  const rentals = await prisma.rentalBooking.findMany({
+  // Certainly over: the return day ended at least an hour ago in any zone.
+  const settled = await prisma.rentalBooking.updateMany({
     where: {
       returnPrecision: "day",
-      status: { in: ["scheduled", "in_progress", "completed"] },
-      pickupTime: { lte: now },
+      status: { in: ["scheduled", "in_progress"] },
+      returnTime: { lte: new Date(now.getTime() - DAY_RETURN_SETTLED_MS) },
     },
+    data: { status: "completed" },
+  });
+  const rentals = await prisma.rentalBooking.findMany({
+    where: dayReturnRentalsToDerive(now),
     select: {
       id: true,
       status: true,
@@ -381,7 +408,7 @@ async function sweepDayReturnRentals(now: Date): Promise<number> {
       returnTimezone: true,
     },
   });
-  let changed = 0;
+  let changed = settled.count;
   for (const r of rentals) {
     const status = deriveRentalStatus({ ...r, current: r.status, now });
     if (status === r.status) continue;
