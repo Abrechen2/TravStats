@@ -52,7 +52,7 @@ const stored = {
       excursionNote: "Holmenkollen",
       allAboardTime: "16:30",
     }),
-    storedStop("s4", 4, port(3, "Bergen")),
+    storedStop("s4", 4, port(3, "Bergen"), { allAboardTime: "16:30" }),
     storedStop("s6", 6, port(4, "Ålesund"), { excursionNote: "Aksla" }),
   ],
 } as unknown as Cruise;
@@ -93,6 +93,10 @@ describe("CruiseReimportCompare", () => {
     });
     expect(removal).not.toBeChecked();
     expect(screen.getByText(/reimport\.noteGoes\(note=Aksla\)/)).toBeInTheDocument();
+    // Review I3: the swapped port's all-aboard time is named as going.
+    expect(
+      screen.getByText(/reimport\.allAboardGoes\(time=16:30,port=Bergen\)/)
+    ).toBeInTheDocument();
   });
 
   it("applies only what is ticked, keeping the own note and the all-aboard time", async () => {

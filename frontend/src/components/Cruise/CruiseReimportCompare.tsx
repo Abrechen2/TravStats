@@ -70,13 +70,27 @@ function describe(t: Translate, change: ReimportChange): string {
 }
 
 /** What the user wrote for that day and what happens to it, in words. */
-function ownNote(t: Translate, change: ReimportChange): string | null {
-  if (change.kind === "added") return null;
+function ownNotes(t: Translate, change: ReimportChange): string[] {
+  if (change.kind === "added") return [];
+  const notes: string[] = [];
   const note = change.stored.excursionNote?.trim();
-  if (!note) return null;
-  return change.kind === "removed"
-    ? t("reimport.noteGoes", { note })
-    : t("reimport.noteStays", { note });
+  if (note) {
+    notes.push(
+      change.kind === "removed"
+        ? t("reimport.noteGoes", { note })
+        : t("reimport.noteStays", { note })
+    );
+  }
+  // The all-aboard time belongs to the port, so a new port does not keep it.
+  if (change.kind === "port" && change.stored.allAboardTime) {
+    notes.push(
+      t("reimport.allAboardGoes", {
+        time: formatLocalClock(change.stored.allAboardTime),
+        port: stopTitle(change.stored, t),
+      })
+    );
+  }
+  return notes;
 }
 
 /**
@@ -85,7 +99,8 @@ function ownNote(t: Translate, change: ReimportChange): string | null {
  * port swapped, a time moved — each taken or left by its own checkbox.
  *
  * What the user wrote is not part of the comparison and survives whatever is
- * taken: the excursion note, the all-aboard time, a typed date. A removal is
+ * taken: the excursion note, the all-aboard time, a typed date — except the
+ * all-aboard time of a port the plan swaps for another, which the row names. A removal is
  * the one change that would delete such things, so it starts unticked. The
  * merge matches by day of the cruise, so taking the same plan twice finds
  * nothing left the second time and adds no port call twice.
@@ -226,7 +241,7 @@ export function CruiseReimportCompare({
           <p className="mb-3 text-sm text-(--text-muted)">{t("reimport.intro")}</p>
           <ul className="flex flex-col gap-2">
             {ready.changes.map((change) => {
-              const note = ownNote(t, change);
+              const notes = ownNotes(t, change);
               return (
                 <li key={change.id} className="rounded-md border border-border p-2">
                   <label className={CHECK_ROW}>
@@ -238,7 +253,11 @@ export function CruiseReimportCompare({
                     />
                     <span>
                       {describe(t, change)}
-                      {note && <span className="block text-xs text-(--text-muted)">{note}</span>}
+                      {notes.map((n) => (
+                        <span key={n} className="block text-xs text-(--text-muted)">
+                          {n}
+                        </span>
+                      ))}
                     </span>
                   </label>
                 </li>

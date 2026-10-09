@@ -455,7 +455,7 @@
     "titleLoading": "Comparing with the saved itinerary",
     "loading": "Loading the saved itinerary …",
     "loadFailed": "The saved itinerary could not be loaded.",
-    "intro": "Tick what to take from the new plan. Your excursion notes, all-aboard times and entered dates stay in any case. A day missing from the new plan is only removed if you tick it.",
+    "intro": "Tick what to take from the new plan. Your excursion notes, all-aboard times and entered dates stay – only when a day gets another port do the old port's times go. A day missing from the new plan is only removed if you tick it.",
     "added": "New in the plan: day {{day}} · {{title}}",
     "removed": "No longer in the plan: day {{day}} · {{title}}",
     "port": "Day {{day}}: {{from}} → {{to}}",
@@ -469,7 +469,8 @@
     "progress": "Booking {{current}} of {{total}}",
     "saveError": "The new itinerary could not be applied.",
     "appliedToast_one": "The new itinerary was applied to one cruise.",
-    "appliedToast_other": "The new itinerary was applied to {{count}} cruises."
+    "appliedToast_other": "The new itinerary was applied to {{count}} cruises.",
+    "allAboardGoes": "The all-aboard time {{time}} belonged to {{port}} and is dropped."
   },
   "deleteParts": {
     "alsoGoes": "Also deleted: {{list}}.",

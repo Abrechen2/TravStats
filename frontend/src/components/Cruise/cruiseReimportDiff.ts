@@ -14,7 +14,9 @@ import { normalizePortName } from "./cruiseUnresolved";
  * - **added** / **removed**: a day only one side has.
  *
  * What is the user's own is not compared and never overwritten: the
- * excursion note, the all-aboard time and a typed date (forgejo#223/#224).
+ * excursion note, the all-aboard time and a typed date (forgejo#223/#224) —
+ * except that a taken PORT change drops the old port's all-aboard time and
+ * clock times, which belonged to that port, not to the day (review I3).
  */
 export type ReimportChange =
   | { id: string; kind: "added"; day: number; imported: CruiseStopInput }
@@ -63,6 +65,28 @@ export function diffItinerary(
     // Same place first, so a day with two calls is not read as two swaps.
     for (let i = right.length - 1; i >= 0; i -= 1) {
       const match = left.findIndex((s) => place(s) === place(right[i]));
+      if (match < 0) continue;
+      const [s] = left.splice(match, 1);
+      const [m] = right.splice(i, 1);
+      if (timesDiffer(s, m)) {
+        changes.push({
+          id: `times-${day}-${changes.length}`,
+          kind: "times",
+          day,
+          stored: s,
+          imported: m,
+        });
+      }
+    }
+    // A port the user assigned (#222 work list) against the same day's name
+    // the parser still cannot match: the same call, already resolved. It is
+    // never offered as a change back to the unresolved name, which would
+    // drop the call from the map and the sea miles (review I2). The other
+    // way round — an imported catalogue port for a stored name — is an
+    // upgrade and stays a proposed change.
+    for (let i = right.length - 1; i >= 0; i -= 1) {
+      if (right[i].isAtSea || right[i].portId != null || !right[i].unresolvedPortName) continue;
+      const match = left.findIndex((s) => !s.isAtSea && s.portId != null);
       if (match < 0) continue;
       const [s] = left.splice(match, 1);
       const [m] = right.splice(i, 1);
@@ -136,18 +160,27 @@ export function mergeItinerary(
     if (!change || change.kind === "removed" || change.kind === "added") return stop;
     if (change.kind === "times")
       return keepOwn(withImportedTimes(stop, change.imported), change.imported);
+    // Another port, or a sea day: what belonged to the OLD port goes with it
+    // (review I3). Its all-aboard time is that port's; its clock times are
+    // replaced as a pair by the new plan's (missing ones become null, not
+    // the old port's); a sea day keeps none. The note stays — it is the
+    // user's, and the row says so.
+    const imported = change.imported;
+    const sea = imported.isAtSea;
     return keepOwn(
-      withImportedTimes(
-        {
-          ...stop,
-          isAtSea: change.imported.isAtSea,
-          portId: change.imported.portId,
-          port: change.imported.port ?? null,
-          unresolvedPortName: change.imported.unresolvedPortName ?? null,
-        },
-        change.imported
-      ),
-      change.imported
+      {
+        ...stop,
+        isAtSea: sea,
+        portId: imported.portId,
+        port: imported.port ?? null,
+        unresolvedPortName: imported.unresolvedPortName ?? null,
+        allAboardTime: null,
+        arrivalTime: sea ? null : (imported.arrivalTime ?? null),
+        arrivalFold: sea ? undefined : imported.arrivalFold,
+        departureTime: sea ? null : (imported.departureTime ?? null),
+        departureFold: sea ? undefined : imported.departureFold,
+      },
+      imported
     );
   });
   const removed = new Set(taken.flatMap((c) => (c.kind === "removed" ? [c.stored] : [])));

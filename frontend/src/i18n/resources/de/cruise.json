@@ -455,7 +455,7 @@
     "titleLoading": "Gespeicherten Reiseplan vergleichen",
     "loading": "Der gespeicherte Reiseplan wird geladen …",
     "loadFailed": "Der gespeicherte Reiseplan konnte nicht geladen werden.",
-    "intro": "Kreuze an, was aus dem neuen Plan übernommen wird. Deine Ausflugsnotizen, Alle-an-Bord-Zeiten und eingetragenen Daten bleiben in jedem Fall erhalten. Ein Tag, der im neuen Plan fehlt, wird nur entfernt, wenn du es ankreuzt.",
+    "intro": "Kreuze an, was aus dem neuen Plan übernommen wird. Deine Ausflugsnotizen, Alle-an-Bord-Zeiten und eingetragenen Daten bleiben erhalten – nur wenn ein Tag einen anderen Hafen bekommt, entfallen die Zeiten des alten Hafens. Ein Tag, der im neuen Plan fehlt, wird nur entfernt, wenn du es ankreuzt.",
     "added": "Neu im Plan: Tag {{day}} · {{title}}",
     "removed": "Nicht mehr im Plan: Tag {{day}} · {{title}}",
     "port": "Tag {{day}}: {{from}} → {{to}}",
@@ -469,7 +469,8 @@
     "progress": "Buchung {{current}} von {{total}}",
     "saveError": "Der neue Reiseplan konnte nicht übernommen werden.",
     "appliedToast_one": "Der neue Reiseplan wurde für eine Kreuzfahrt übernommen.",
-    "appliedToast_other": "Der neue Reiseplan wurde für {{count}} Kreuzfahrten übernommen."
+    "appliedToast_other": "Der neue Reiseplan wurde für {{count}} Kreuzfahrten übernommen.",
+    "allAboardGoes": "Die Alle-an-Bord-Zeit {{time}} gehörte zu {{port}} und entfällt."
   },
   "deleteParts": {
     "alsoGoes": "Ebenfalls gelöscht: {{list}}.",

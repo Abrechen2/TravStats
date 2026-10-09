@@ -97,3 +97,61 @@ describe("mergeItinerary", () => {
     expect(mergeItinerary(stored, changes, new Set())).toEqual(stored);
   });
 });
+
+/** Review I2/I3: a re-read never undoes the user's resolution, nor moves one port's times to another. */
+describe("re-import edge cases", () => {
+  it("never offers a resolved port back to the name the parser still cannot match", () => {
+    const resolved = [
+      call(4, 77, "Cristóbal (Colón)", { arrivalTime: "2026-10-08T07:00:00.000Z" }),
+    ];
+    const reread: CruiseStopInput[] = [
+      { dayNumber: 4, isAtSea: false, portId: null, unresolvedPortName: "Colón" },
+    ];
+    expect(diffItinerary(resolved, reread)).toEqual([]);
+  });
+
+  it("still offers an imported catalogue port for a stored unresolved name", () => {
+    const named: CruiseStopInput[] = [
+      { dayNumber: 4, isAtSea: false, portId: null, unresolvedPortName: "Colón" },
+    ];
+    expect(diffItinerary(named, [call(4, 77, "Cristóbal (Colón)")]).map((c) => c.kind)).toEqual([
+      "port",
+    ]);
+  });
+
+  it("drops the old port's all-aboard time and takes the new times as a pair", () => {
+    const bergen = [
+      call(4, 3, "Bergen", {
+        arrivalTime: "2026-10-08T08:00:00.000Z",
+        departureTime: "2026-10-08T17:00:00.000Z",
+        allAboardTime: "16:30",
+        excursionNote: "Fløibanen",
+      }),
+    ];
+    const stavanger = [call(4, 5, "Stavanger", { arrivalTime: "2026-10-08T09:00:00.000Z" })];
+    const changes = diffItinerary(bergen, stavanger);
+    const [merged] = mergeItinerary(bergen, changes, new Set(changes.map((c) => c.id)));
+    expect(merged).toMatchObject({
+      portId: 5,
+      arrivalTime: "2026-10-08T09:00:00.000Z",
+      departureTime: null,
+      allAboardTime: null,
+      excursionNote: "Fløibanen",
+    });
+  });
+
+  it("carries no times onto a day that became a sea day", () => {
+    const bergen = [
+      call(4, 3, "Bergen", { departureTime: "2026-10-08T17:00:00.000Z", allAboardTime: "16:30" }),
+    ];
+    const changes = diffItinerary(bergen, [sea(4)]);
+    const [merged] = mergeItinerary(bergen, changes, new Set(changes.map((c) => c.id)));
+    expect(merged).toMatchObject({
+      isAtSea: true,
+      portId: null,
+      arrivalTime: null,
+      departureTime: null,
+      allAboardTime: null,
+    });
+  });
+});
