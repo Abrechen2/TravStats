@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { useToursVisible } from "../../../hooks/useToursVisible";
 import { logger } from "../../../lib/logger";
 import { statsInsightsApi } from "../../../lib/api/statsInsights";
 import type { TourInsights } from "../../../types/statsInsights";
@@ -16,17 +17,24 @@ import { formatDuration, helpText, totalFor } from "../insight/insightFold";
  *
  * Lives on the roadtrip tab because tours share its beta switch and its
  * engine; it loads on its own, so a user with tours and no roadtrip still
- * sees it. Every figure is the server's (`GET /stats/insights/tours`): a tour
- * counts once recorded or dated before today, and climb, moving time and
- * height come only from recordings.
+ * sees it. Where the roadtrip tab is not there (the user switched roadtrips
+ * off) the overview carries it instead. Every figure is the server's
+ * (`GET /stats/insights/tours`): a tour counts once recorded or dated before
+ * today, and climb, moving time and height come only from recordings.
+ *
+ * Drawn only while `useToursVisible` says tours exist on this instance — the
+ * one tour rule, never the roadtrip domain toggle.
  */
-export default function TourStatsSection({
-  year,
-  accent,
-}: {
+interface Props {
   year: number | null;
   accent: string;
-}): JSX.Element | null {
+}
+
+export default function TourStatsSection(props: Props): JSX.Element | null {
+  return useToursVisible() ? <TourStatsBody {...props} /> : null;
+}
+
+function TourStatsBody({ year, accent }: Props): JSX.Element | null {
   const { t, i18n } = useTranslation(["roadtrips", "stats", "common"]);
   const [data, setData] = useState<TourInsights | null>(null);
   const [failed, setFailed] = useState(false);

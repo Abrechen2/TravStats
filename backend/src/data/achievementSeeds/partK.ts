@@ -142,7 +142,7 @@ export const seedsPartK: AchievementDefinition[] = [
     name: "Erste Schritte",
     description: "Die erste Tagestour abgeschlossen",
     category: "explorer",
-    domain: "roadtrip",
+    domain: "shared",
     icon: "👣",
     tier: "bronze",
     // threshold: proposal forgejo#264, owner to confirm
@@ -155,7 +155,7 @@ export const seedsPartK: AchievementDefinition[] = [
     name: "Drei Arten unterwegs",
     description: "Tagestouren mit drei verschiedenen Aktivitäten abgeschlossen",
     category: "explorer",
-    domain: "roadtrip",
+    domain: "shared",
     icon: "🚵",
     tier: "silver",
     // threshold: proposal forgejo#264, owner to confirm
@@ -168,7 +168,7 @@ export const seedsPartK: AchievementDefinition[] = [
     name: "Höhen gesammelt",
     description: "1.000 aufgezeichnete Höhenmeter im Aufstieg auf abgeschlossenen Touren",
     category: "distance",
-    domain: "roadtrip",
+    domain: "shared",
     icon: "⛰️",
     tier: "silver",
     // threshold: proposal forgejo#264, owner to confirm
@@ -177,3 +177,16 @@ export const seedsPartK: AchievementDefinition[] = [
     points: 50,
   },
 ];
+
+/**
+ * The day-tour badges. Tours are not a domain, so these carry `shared` and
+ * are listed by the web's tour rule alone — `useToursVisible`, the instance's
+ * `roadtrips` beta switch — never by the roadtrip DOMAIN toggle (coordinator
+ * ruling 2026-10-09, one tour rule everywhere). Read by
+ * `services/achievementVisibility.ts`.
+ */
+export const TOUR_BADGE_CODES: ReadonlySet<string> = new Set([
+  "TOUR_FIRST_STEPS",
+  "TOUR_THREE_KINDS",
+  "TOUR_ASCENT_1000",
+]);

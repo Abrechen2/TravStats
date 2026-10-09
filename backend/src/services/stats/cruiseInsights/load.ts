@@ -14,7 +14,7 @@
  * the web does not ask it either.
  */
 
-import { getInstanceSettings } from "../../instanceSettingsService";
+import { toursVisible } from "../../tourVisibility";
 import {
   excursionToursFromFacts,
   linkTours,
@@ -29,11 +29,6 @@ export interface CruiseInsightContext extends CruiseInsightData {
   toursVisible: boolean;
   /** Cruise id → the tours linked to its calls. Empty while tours are hidden. */
   linked: Map<string, LinkedTour[]>;
-}
-
-/** Does the instance show tours? The server's half of `useToursVisible`. */
-export async function toursVisible(): Promise<boolean> {
-  return (await getInstanceSettings()).betaFeaturesEnabled;
 }
 
 /**

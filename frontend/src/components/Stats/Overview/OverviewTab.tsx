@@ -24,6 +24,9 @@ import DomainToggleChips from "./DomainToggleChips";
 import DomainSummaryCard from "./DomainSummaryCard";
 import TravelAccountSection from "./TravelAccountSection";
 import DomainRecordsSection from "./DomainRecordsSection";
+import TourStatsSection from "../roadtrip/TourStatsSection";
+import { useToursVisible } from "../../../hooks/useToursVisible";
+import { useDomainColors } from "../../../hooks/useDomainColors";
 import { todayZoneNow } from "../../../hooks/useTodayZone";
 import { todayIn } from "../../../shared/time";
 
@@ -65,6 +68,11 @@ export default function OverviewTab({
   );
   const { selectedYear, compareYear, compareEnabled } = period;
   const show = visibility.isVisible;
+  // Day tours are not a domain: they follow `useToursVisible` alone. Their
+  // home is the roadtrip tab; where that tab is not there (roadtrips switched
+  // off), the overview carries them, so a shown tour always has its figures.
+  const toursHere = useToursVisible() && !enabled.includes("roadtrip");
+  const roadtripAccent = useDomainColors().colorOf("roadtrip");
 
   const [visible, setVisible] = useState<Partial<Record<DomainKey, boolean>>>(() =>
     Object.fromEntries(enabled.map((k) => [k, true]))
@@ -192,6 +200,10 @@ export default function OverviewTab({
 
       {/* Records beyond flights (forgejo#265), one per visible domain. */}
       {show("domainRecords") && <DomainRecordsSection />}
+
+      {toursHere && show("tours") && (
+        <TourStatsSection year={selectedYear} accent={roadtripAccent} />
+      )}
     </div>
   );
 }

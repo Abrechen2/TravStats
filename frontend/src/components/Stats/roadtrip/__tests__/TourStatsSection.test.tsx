@@ -9,6 +9,8 @@ vi.mock("../../../../hooks/useTranslation", async () => {
   return { useTranslation: germanUseTranslationNs };
 });
 vi.mock("../../../../lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn() } }));
+const gate = vi.hoisted(() => ({ tours: true }));
+vi.mock("../../../../hooks/useToursVisible", () => ({ useToursVisible: () => gate.tours }));
 const tours = vi.fn();
 vi.mock("../../../../lib/api/statsInsights", () => ({
   statsInsightsApi: { tours: (...a: unknown[]) => tours(...a) },
@@ -188,5 +190,23 @@ describe("TourStatsSection (forgejo#264)", () => {
     expect(screen.getByTestId("tour-activities-help").textContent).toContain(
       "2 haben weder Tag noch Aufzeichnung"
     );
+  });
+});
+
+// The one tour rule (`useToursVisible`): no tours on the instance, no section
+// and no request.
+describe("TourStatsSection while tours are not shown", () => {
+  it("draws nothing", () => {
+    gate.tours = false;
+    try {
+      const { container } = render(
+        <MemoryRouter>
+          <TourStatsSection year={null} accent="#000" />
+        </MemoryRouter>
+      );
+      expect(container).toBeEmptyDOMElement();
+    } finally {
+      gate.tours = true;
+    }
   });
 });

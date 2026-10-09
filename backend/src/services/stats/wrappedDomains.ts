@@ -11,6 +11,7 @@ import { localDay } from "../../shared/time/instant";
 import { now as clockNow } from "../../shared/time/clock";
 import type { DomainKey } from "../../shared/domains";
 import { loadVisibleDomainSet, type VisibleDomains } from "../domainVisibility";
+import { toursVisible } from "../tourVisibility";
 import { roadtripHasStarted } from "./roadtripEvidence";
 import type { WrappedCruise, WrappedRail } from "./wrapped";
 import type { WrappedChapterRows } from "./wrappedChapters";
@@ -33,7 +34,9 @@ import { loadPassport, type PassportLoaderFlight } from "./passportLoader";
  *    check-in's year where the record can be placed in one (`lodgingTiming`);
  *  - places: visits that happened, on the place's calendar (`placeCounting`);
  *  - roadtrips: those that have started, under their first station's year;
- *  - tours: dated day tours whose day is past (`tourDate`, a floating date);
+ *  - tours: dated day tours whose day is past (`tourDate`, a floating date),
+ *    while the instance shows tours (`toursVisible`, the web's rule — not the
+ *    roadtrip domain toggle);
  *  - rentals: completed, under the pickup's year (`rentalCounting`);
  *  - bus: completed rides, the year they left (`busCounting`), with the nights
  *    a night bus ran through (`busRideKinds`).
@@ -92,7 +95,7 @@ async function loadChapterRows(
   visible: VisibleDomains,
   now: Date
 ): Promise<WrappedChapterRows> {
-  const [stays, visits, routes, rentals, bus] = await Promise.all([
+  const [stays, visits, roadtripRoutes, tourRoutes, rentals, bus] = await Promise.all([
     whenVisible(visible, "lodging", () =>
       prisma.lodgingStay.findMany({
         where: { userId },
@@ -105,19 +108,26 @@ async function loadChapterRows(
         select: { placeId: true, visitedAt: true, visitedAtUtc: true, visitedZone: true },
       })
     ),
-    // Roadtrips and day tours share the `roadtrips` beta key (betaFeatures.ts).
+    // Roadtrips follow the user's domain gate; day tours are not a domain and
+    // follow `toursVisible` alone — the web's `useToursVisible` (one rule).
     whenVisible(visible, "roadtrip", () =>
       prisma.tripRoute.findMany({
-        where: { userId },
+        where: { userId, kind: "roadtrip" },
         select: {
-          kind: true,
-          tourDate: true,
           stops: {
             where: { viaPoint: false },
             select: { startDate: true, lodgingStay: { select: { checkIn: true } } },
           },
         },
       })
+    ),
+    toursVisible().then((shown) =>
+      shown
+        ? prisma.tripRoute.findMany({
+            where: { userId, kind: "tour" },
+            select: { tourDate: true },
+          })
+        : null
     ),
     whenVisible(visible, "rental", () =>
       prisma.rentalBooking.findMany({
@@ -166,10 +176,10 @@ async function loadChapterRows(
             return year === null ? [] : [{ year, placeId: v.placeId }];
           }),
     roadtrips:
-      routes === null
+      roadtripRoutes === null
         ? null
-        : routes.flatMap((route) => {
-            if (route.kind !== "roadtrip" || !roadtripHasStarted(route.stops, now)) return [];
+        : roadtripRoutes.flatMap((route) => {
+            if (!roadtripHasStarted(route.stops, now)) return [];
             const starts = route.stops
               .map((s) => s.startDate ?? s.lodgingStay?.checkIn ?? null)
               .filter((d): d is Date => d !== null)
@@ -178,10 +188,10 @@ async function loadChapterRows(
             return starts.length === 0 ? [] : [{ year: starts[0].getUTCFullYear() }];
           }),
     tours:
-      routes === null
+      tourRoutes === null
         ? null
-        : routes.flatMap((route) => {
-            if (route.kind !== "tour" || route.tourDate === null) return [];
+        : tourRoutes.flatMap((route) => {
+            if (route.tourDate === null) return [];
             // A floating date: its stored components ARE the day (ADR 0002 D1).
             const day = route.tourDate.toISOString().slice(0, 10);
             return day > today ? [] : [{ year: Number(day.slice(0, 4)) }];

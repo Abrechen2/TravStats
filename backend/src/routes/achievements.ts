@@ -323,7 +323,8 @@ async function leaderboardVisibility(
     let rule = cache.get(userId);
     if (!rule) {
       rule = achievementVisibility(
-        visibleDomainKeys(byUser.get(userId), instance.betaFeaturesEnabled)
+        visibleDomainKeys(byUser.get(userId), instance.betaFeaturesEnabled),
+        instance.betaFeaturesEnabled
       );
       cache.set(userId, rule);
     }

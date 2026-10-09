@@ -23,6 +23,11 @@ vi.mock("@/lib/api/stats", async (importOriginal) => {
   };
 });
 
+// The tour figures fetch on their own; here only WHERE they are drawn matters.
+vi.mock("../../roadtrip/TourStatsSection", () => ({
+  default: () => <div data-testid="tour-stats" />,
+}));
+
 import OverviewTab from "../OverviewTab";
 import { useSettingsStore } from "../../../../store/settingsStore";
 import { hiding } from "../../__tests__/sectionVisibilityStub";
@@ -119,5 +124,35 @@ describe("OverviewTab hides the blocks the reader switched off", () => {
     renderOverview(hiding("kpis"));
     expect(screen.queryByText("stats:overview.kpisLabel")).not.toBeInTheDocument();
     expect(screen.getByText("stats:overview.perDomainLabel")).toBeInTheDocument();
+  });
+});
+
+// Integration of the statistics branches (coordinator ruling 2026-10-09): tours
+// follow `useToursVisible` alone. Their home is the roadtrip tab; without that
+// tab the overview carries them, so a shown tour always has its figures.
+describe("OverviewTab carries the tour figures where the roadtrip tab is not", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("draws them with roadtrips switched off while tours are shown", () => {
+    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
+    renderOverview();
+    expect(screen.getByTestId("tour-stats")).toBeInTheDocument();
+  });
+
+  it("leaves them to the roadtrip tab when that tab is there", () => {
+    useSettingsStore.setState({
+      enabledDomains: ["flight", "roadtrip"],
+      betaFeaturesEnabled: true,
+    });
+    renderOverview();
+    expect(screen.queryByTestId("tour-stats")).not.toBeInTheDocument();
+  });
+
+  it("draws none while tours are not shown", () => {
+    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: false });
+    renderOverview();
+    expect(screen.queryByTestId("tour-stats")).not.toBeInTheDocument();
   });
 });
