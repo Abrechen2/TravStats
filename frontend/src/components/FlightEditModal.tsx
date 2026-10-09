@@ -240,24 +240,49 @@ export default function FlightEditModal({
   };
   // The flight is stored; only the trip assignment after it failed.
   const [savedTripFailed, setSavedTripFailed] = useState(false);
+  const [movingTrip, setMovingTrip] = useState(false);
   const inFlight = useRef(false);
+  // The trip the user asked for, captured at submit: a refreshed `flight`
+  // prop or draft must not change what "Erneut versuchen" sends (review I1).
+  const requestedTrip = useRef<string | null>(null);
 
-  const finishAfterSave = async (): Promise<void> => {
+  /** After a stored save: the caller reloads ONCE, when the dialog closes. */
+  const closeAfterSave = (): void => {
+    onAfterSave?.();
+    onClose();
+  };
+
+  /** False when the trip move failed — the dialog then stays open and says so. */
+  const finishAfterSave = async (): Promise<boolean> => {
+    setMovingTrip(true);
     try {
       // Trip assignment lives on its own endpoint and runs only after the save
       // went through, so a refused save never moves the flight between trips.
-      const changed = await applyTripChange(flight, formData.tripId);
+      const changed = await applyTripChange(flight, requestedTrip.current ?? formData.tripId);
       if (changed) addToast("success", t("flights:edit.tripAssignedToast"));
     } catch (tripErr) {
       logger.warn("Failed to update trip assignment:", tripErr);
-      // Said in the dialog, which stays open: it used to be set on a dialog
-      // its caller had already closed, so nobody ever saw it.
+      // Said in the dialog, which stays open — and nothing reloads under it:
+      // a reload here unmounted the dialog on the flight's page and brought
+      // it back fresh, the failure gone (review I1).
       setSavedTripFailed(true);
-      onAfterSave?.();
-      return;
+      return false;
+    } finally {
+      setMovingTrip(false);
     }
-    onAfterSave?.();
-    onClose();
+    closeAfterSave();
+    return true;
+  };
+
+  const retryTripMove = async (): Promise<void> => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    // The failure line stays up while the move is retried; success closes.
+    try {
+      await finishAfterSave();
+    } finally {
+      inFlight.current = false;
+    }
   };
 
   const handleSubmit = async (e?: React.FormEvent): Promise<void> => {
@@ -273,32 +298,37 @@ export default function FlightEditModal({
     inFlight.current = true;
     setLoading(true);
     failure.clear();
+    requestedTrip.current = formData.tripId;
     try {
-      // The airports' zones once both resolved; null = send no time at all.
-      const last = lastZones.current;
-      const zones = editSubmitZones({ hydrated, depTz, arrTz }, formData, [
-        buildEditFormData(flight),
-        ...(last ? [airportLocalInputs(flight, last.dep, last.arr)] : []),
-      ]);
-      await onSave(
-        flight.id,
-        buildEditUpdates({ formData, flight, zones, folds, departureAirport, arrivalAirport })
-      );
-      markSaved();
-    } catch (err: unknown) {
-      // Not `err.message`: for a refused save that is axios's own
-      // "Request failed with status code 400", in English.
-      const data = (err as { response?: { data?: { field?: unknown } } } | null)?.response?.data;
-      setServerField(
-        apiErrorMachineCode(err) && typeof data?.field === "string" ? data.field : null
-      );
-      failure.fail(saveErrorKey(err, "errors:updateFailed"));
-      return;
+      try {
+        // The airports' zones once both resolved; null = send no time at all.
+        const last = lastZones.current;
+        const zones = editSubmitZones({ hydrated, depTz, arrTz }, formData, [
+          buildEditFormData(flight),
+          ...(last ? [airportLocalInputs(flight, last.dep, last.arr)] : []),
+        ]);
+        await onSave(
+          flight.id,
+          buildEditUpdates({ formData, flight, zones, folds, departureAirport, arrivalAirport })
+        );
+        markSaved();
+      } catch (err: unknown) {
+        // Not `err.message`: for a refused save that is axios's own
+        // "Request failed with status code 400", in English.
+        const data = (err as { response?: { data?: { field?: unknown } } } | null)?.response?.data;
+        setServerField(
+          apiErrorMachineCode(err) && typeof data?.field === "string" ? data.field : null
+        );
+        failure.fail(saveErrorKey(err, "errors:updateFailed"));
+        return;
+      }
+      // Busy until the trip move settled too: a second click in between sent
+      // a second PUT and a second move (review I1).
+      await finishAfterSave();
     } finally {
       inFlight.current = false;
       setLoading(false);
     }
-    await finishAfterSave();
   };
 
   // The shared frame brings the close button, Escape, the scroll lock and the
@@ -308,7 +338,7 @@ export default function FlightEditModal({
     <Modal
       open={isOpen}
       onClose={onClose}
-      busy={loading}
+      busy={loading || movingTrip}
       dirty={dirty && !savedTripFailed}
       maxWidth={672}
       closeLabel={t("common:buttons.close")}
@@ -330,14 +360,17 @@ export default function FlightEditModal({
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => {
-                setSavedTripFailed(false);
-                void finishAfterSave();
-              }}
+              disabled={movingTrip}
+              onClick={() => void retryTripMove()}
             >
               {t("common:buttons.retry")}
             </button>
-            <button type="button" className="btn-primary" onClick={onClose}>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={movingTrip}
+              onClick={closeAfterSave}
+            >
               {t("common:buttons.close")}
             </button>
           </>
@@ -357,7 +390,7 @@ export default function FlightEditModal({
             <button
               type="submit"
               form={formId}
-              disabled={loading}
+              disabled={loading || movingTrip}
               className="btn-primary"
               aria-describedby={hintId}
             >

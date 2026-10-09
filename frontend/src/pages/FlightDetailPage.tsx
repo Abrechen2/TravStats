@@ -151,7 +151,10 @@ export default function FlightDetailPage(): JSX.Element {
     }
   }, [flight, addToast, navigate, t]);
 
-  if (loading) {
+  // Only before THIS flight is there: a reload of the flight on screen must
+  // not unmount an open dialog (review I1); moving to another segment still
+  // shows the loading view instead of the previous flight.
+  if (loading && flight?.id !== id) {
     return (
       <AppShell width="list">
         <p className="text-[var(--text-muted)]">{t("flights:table.loading")}</p>

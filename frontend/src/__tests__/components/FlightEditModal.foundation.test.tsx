@@ -213,12 +213,33 @@ describe("FlightEditModal — the shared form blocks", () => {
     save();
     expect(await screen.findByText("flights:edit.savedTripAssignFailed")).toBeInTheDocument();
     expect(props.onClose).not.toHaveBeenCalled();
+    // The caller reloads only when the dialog closes (review I1).
+    expect(props.onAfterSave).not.toHaveBeenCalled();
     expect(props.onSave).toHaveBeenCalledTimes(1);
     // The retry moves the trip only — the flight is not saved a second time.
     fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
     await waitFor(() => expect(props.onClose).toHaveBeenCalledTimes(1));
     expect(props.onSave).toHaveBeenCalledTimes(1);
     expect(assignFlights).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps Save disabled while the trip move after the save runs (review I1)", async () => {
+    let settle: () => void = () => {};
+    assignFlights.mockImplementationOnce(() => new Promise<void>((r) => (settle = r)));
+    const props = renderModal();
+    await waitFor(() => expect(document.querySelector('option[value="t2"]')).not.toBeNull());
+    const tripSelect = document.querySelector('option[value="t2"]')!.closest("select")!;
+    fireEvent.change(tripSelect, { target: { value: "t2" } });
+    save();
+    await waitFor(() => expect(assignFlights).toHaveBeenCalledTimes(1));
+    const busy = screen.getByRole("button", { name: /common:buttons\.saving/ });
+    expect(busy).toBeDisabled();
+    fireEvent.click(busy);
+    await act(async () => settle());
+    await waitFor(() => expect(props.onClose).toHaveBeenCalledTimes(1));
+    expect(props.onSave).toHaveBeenCalledTimes(1);
+    expect(assignFlights).toHaveBeenCalledTimes(1);
+    expect(props.onAfterSave).toHaveBeenCalledTimes(1);
   });
 
   it("names its fields by their visible labels", async () => {
