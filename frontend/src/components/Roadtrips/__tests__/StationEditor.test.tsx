@@ -292,9 +292,10 @@ describe("StationEditor", () => {
     fireEvent.click(screen.getByLabelText("roadtrips:stations.remove"));
     expect(screen.getByText("roadtrips:editor.removed:Hamburg")).toBeInTheDocument();
     fireEvent.click(screen.getByText("roadtrips:editor.undo"));
-    await pause();
-    // The last word was "keep it": the list goes out with Hamburg in it.
-    const calls = vi.mocked(roadtripsApi.replaceStations).mock.calls;
-    expect(calls[calls.length - 1][1]).toEqual([expect.objectContaining({ id: HAMBURG_ID })]);
+    await pause(PAST_HOLD);
+    // The removal was held, so nothing reached the server and nothing needs
+    // to: Hamburg is back on screen without a request (review C2).
+    expect(roadtripsApi.replaceStations).not.toHaveBeenCalled();
+    expect(screen.getByText("Hamburg")).toBeInTheDocument();
   });
 });

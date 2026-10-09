@@ -392,7 +392,9 @@
     "errors": {
       "endBeforeStart": "Die Abfahrt liegt vor der Ankunft. So wird nichts gespeichert – bitte ein Datum korrigieren.",
       "viaOnTimeline": "Ein Halt aus dem Reiseverlauf kann keine Streckenkorrektur werden. Wähle für ihn eine andere Art."
-    }
+    },
+    "removedRestores": "Rückgängig stellt die Station samt ihren Etappen wieder her – gespeichert wird erst danach.",
+    "removedRestoresLine": "Daneben liegt eine aufgezeichnete oder von Hand gezeichnete Linie: sie geht verloren, wenn du nicht rückgängig machst. Gespeichert wird erst danach."
   },
   "legDialog": {
     "title": "Etappe",
@@ -524,7 +526,10 @@
     "discard": "Verwerfen",
     "discardTitle": "Lokale Änderungen verwerfen?",
     "discardMessage": "Die auf diesem Gerät gesicherte Fassung der Stationen wird gelöscht – eine andere Kopie davon gibt es nicht.",
-    "discardConfirm": "Verwerfen"
+    "discardConfirm": "Verwerfen",
+    "firstTitle": "Erst die gesicherten Änderungen?",
+    "firstMessage": "Auf diesem Gerät liegen Änderungen an den Stationen, die den Server nie erreicht haben. Stell sie wieder her, oder verwirf sie bewusst, bevor du neu bearbeitest – sonst würden sie beim ersten Tippen überschrieben.",
+    "discardAndEdit": "Verwerfen und bearbeiten"
   },
   "conflict": {
     "title": "Änderungen zusammenführen",

@@ -21,6 +21,7 @@ import StationEditor, {
 } from "../components/Roadtrips/StationEditor";
 import EditorSaveStatus from "../components/Roadtrips/EditorSaveStatus";
 import StationDraftBanner from "../components/Roadtrips/StationDraftBanner";
+import DraftFirstDialog from "../components/Roadtrips/DraftFirstDialog";
 import StationTimeline from "../components/Roadtrips/StationTimeline";
 import RoadtripDayView from "../components/Roadtrips/RoadtripDayView";
 import { stationHighlightLayer } from "../components/Roadtrips/stationHighlightLayer";
@@ -100,6 +101,7 @@ export default function RoadtripDetailPage(): JSX.Element {
   const [storedDraft, setStoredDraft] = useState<StoredStationDraft | null>(null);
   const [restoreDraft, setRestoreDraft] = useState<StoredStationDraft | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [askDraftFirst, setAskDraftFirst] = useState(false);
   /** Stations one by one, or the trip read day by day (forgejo#243). */
   const [view, setView] = useState<"stations" | "days">("stations");
   const draftChecked = useRef(false);
@@ -132,12 +134,28 @@ export default function RoadtripDetailPage(): JSX.Element {
         }),
       ]);
       if (!mountedRef.current) return;
+      // Once per visit, and BEFORE the stations render: is there a local draft
+      // the server never got? Decided in the same update that brings the
+      // detail, so an editor opened by `?station=…` cannot mount, write its
+      // placeholder over the draft and then be closed by this check (review
+      // C1). A draft that says what the server now holds reached it after all.
+      if (!draftChecked.current) {
+        draftChecked.current = true;
+        const found = userId ? readStationDraft(userId, id) : null;
+        const server = d.stations.filter((s) => s.lat !== null).map(toEditorStation);
+        if (found && userId && sameStationList(found.drafts, server)) {
+          clearStationDraft(userId, id);
+        } else if (found) {
+          setStoredDraft(found);
+          setEditing(false);
+        }
+      }
       setDetail(d);
       setGeometry(g);
     } catch {
       if (mountedRef.current) setLoadError(true);
     }
-  }, [id]);
+  }, [id, userId]);
 
   useEffect(() => {
     void load();
@@ -145,21 +163,17 @@ export default function RoadtripDetailPage(): JSX.Element {
 
   const onStatus = useCallback((state: EditorSaveState) => setSave(state), []);
 
-  // Once per visit: is there a local draft the server never got? One that
-  // says exactly what the server now holds reached it after all — forgotten.
-  useEffect(() => {
-    if (!detail || !userId || draftChecked.current) return;
-    draftChecked.current = true;
-    const found = readStationDraft(userId, id);
-    if (!found) return;
-    const server = detail.stations.filter((s) => s.lat !== null).map(toEditorStation);
-    if (sameStationList(found.drafts, server)) {
-      clearStationDraft(userId, id);
-      return;
-    }
-    setStoredDraft(found);
-    setEditing(false);
-  }, [detail, userId, id]);
+  /** Into the editor with the stored draft (the banner's or the question's restore). */
+  const restoreStored = (): void => {
+    setRestoreDraft(storedDraft);
+    setStoredDraft(null);
+    setAskDraftFirst(false);
+    setEditing(true);
+  };
+  const discardStored = (): void => {
+    if (userId) clearStationDraft(userId, id);
+    setStoredDraft(null);
+  };
 
   const mapContent = useMemo<TripMapContent>(
     () => ({
@@ -346,7 +360,8 @@ export default function RoadtripDetailPage(): JSX.Element {
       <Button
         variant="primary"
         icon={<Icon name="pencil" size={16} />}
-        onClick={() => setEditing(true)}
+        // With an undecided draft, the reader decides first (review I1).
+        onClick={() => (storedDraft ? setAskDraftFirst(true) : setEditing(true))}
       >
         {t("roadtrips:detail.edit")}
       </Button>
@@ -433,15 +448,8 @@ export default function RoadtripDetailPage(): JSX.Element {
           {!editing && storedDraft && userId && (
             <StationDraftBanner
               draft={storedDraft}
-              onRestore={() => {
-                setRestoreDraft(storedDraft);
-                setStoredDraft(null);
-                setEditing(true);
-              }}
-              onDiscard={() => {
-                clearStationDraft(userId, id);
-                setStoredDraft(null);
-              }}
+              onRestore={restoreStored}
+              onDiscard={discardStored}
             />
           )}
           {editing ? (
@@ -449,6 +457,13 @@ export default function RoadtripDetailPage(): JSX.Element {
               routeId={id}
               userId={userId}
               restore={restoreDraft}
+              // Cancelling the restore's merge leaves the draft as it was and
+              // the banner back in place — never "the next edit replaces it".
+              onRestoreCancelled={() => {
+                setStoredDraft(restoreDraft);
+                setRestoreDraft(null);
+                setEditing(false);
+              }}
               stations={detail.stations.filter((s) => s.lat !== null)}
               legs={detail.legs}
               tripId={detail.trip?.id ?? null}
@@ -541,6 +556,18 @@ export default function RoadtripDetailPage(): JSX.Element {
           message={t("roadtrips:deleteWithCosts.message", { name: r.name, count: costsBlock })}
           confirmText={t("roadtrips:deleteWithCosts.confirm")}
           confirmButtonClass={DELETE_BUTTON_CLASS}
+        />
+      )}
+
+      {askDraftFirst && (
+        <DraftFirstDialog
+          onClose={() => setAskDraftFirst(false)}
+          onRestore={restoreStored}
+          onDiscard={() => {
+            discardStored();
+            setAskDraftFirst(false);
+            setEditing(true);
+          }}
         />
       )}
 

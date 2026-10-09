@@ -16,6 +16,13 @@ export interface EditorStation extends StationDraft {
   stayPlace?: { lat: number | null; lon: number | null };
   /** The name of the place a pass-through names, for the card. */
   placeLabel?: string;
+  /**
+   * Put in by the editor and not touched since — the empty station "Neuer
+   * Roadtrip" and "Heutige Nacht eintragen" open with. It is not the reader's
+   * work, so it is never kept as a local draft (review C1): a placeholder must
+   * not turn into "unsaved changes", let alone replace an earlier real draft.
+   */
+  seed?: boolean;
 }
 
 /**

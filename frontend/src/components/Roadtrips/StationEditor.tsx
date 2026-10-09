@@ -100,6 +100,7 @@ export default function StationEditor({
   onEditLeg,
   userId = null,
   restore = null,
+  onRestoreCancelled,
 }: {
   routeId: string;
   stations: RoadtripStation[];
@@ -113,6 +114,8 @@ export default function StationEditor({
   userId?: string | null;
   /** A local draft from an earlier visit the reader chose to restore. */
   restore?: StoredStationDraft | null;
+  /** The restore's merge was cancelled: the page puts the draft back (review I1). */
+  onRestoreCancelled?: () => void;
   onEditLeg: (
     leg: TourLeg,
     from: { id: string; title: string },
@@ -227,6 +230,8 @@ export default function StationEditor({
       ...stationAfter(drafts[index - 1] ?? null),
       ...seed,
       key: newStationKey(),
+      // Not the reader's work until they touch it (review C1).
+      seed: true,
     };
     change((prev) => [...prev.slice(0, index), station, ...prev.slice(index)]);
     setOpenKey(station.key);
@@ -248,7 +253,7 @@ export default function StationEditor({
   }, [undoable]);
 
   const update = (key: string, patch: Partial<EditorStation>): void =>
-    change((prev) => prev.map((s) => (s.key === key ? { ...s, ...patch } : s)));
+    change((prev) => prev.map((s) => (s.key === key ? { ...s, ...patch, seed: false } : s)));
 
   /**
    * forgejo#242: a move is asked first — new neighbours, the legs that go and
@@ -281,11 +286,29 @@ export default function StationEditor({
   const remove = (index: number): void => {
     const station = drafts[index];
     if (station.key === openKey) setOpenKey(null);
-    // Held like a move: the server drops the legs on both sides of it.
+    // Held like a move: the server drops the legs on both sides of it — a
+    // recorded or hand-drawn one included, which the bar then says (review M3).
+    const losesLine = legs.some(
+      (l) =>
+        station.id !== undefined &&
+        (l.fromStopId === station.id || l.toStopId === station.id) &&
+        isProtectedSource(l.source)
+    );
     change((prev) => prev.filter((_, i) => i !== index), { hold: true });
     setUndoable({
       label: t("roadtrips:editor.removed", { name: name(station) }),
-      restore: () => change((prev) => [...prev.slice(0, index), station, ...prev.slice(index)]),
+      restores: t(
+        losesLine ? "roadtrips:editor.removedRestoresLine" : "roadtrips:editor.removedRestores"
+      ),
+      // A station the server no longer holds comes back as a new one: its old
+      // id would be refused ("does not belong to this roadtrip") on every
+      // later save. Only reachable if the hold was ever bypassed (review C2).
+      restore: () =>
+        change((prev) => {
+          const known = serverStations().some((s) => s.id === station.id);
+          const back = known ? station : { ...station, id: undefined };
+          return [...prev.slice(0, index), back, ...prev.slice(index)];
+        }),
     });
   };
 
@@ -540,7 +563,10 @@ export default function StationEditor({
         <StationConflictDialog
           merge={pendingMerge.merge}
           origin={pendingMerge.origin}
-          onClose={() => setPendingMerge(null)}
+          onClose={() => {
+            setPendingMerge(null);
+            if (pendingMerge.origin === "restore") onRestoreCancelled?.();
+          }}
           onApply={(merged) => {
             rebase(pendingMerge.server, merged);
             setPendingMerge(null);

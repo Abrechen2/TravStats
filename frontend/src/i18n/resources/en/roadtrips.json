@@ -392,7 +392,9 @@
     "errors": {
       "endBeforeStart": "The departure is before the arrival. Nothing is saved like this — please correct a date.",
       "viaOnTimeline": "A stop from the trip's timeline cannot become a route correction. Choose another kind for it."
-    }
+    },
+    "removedRestores": "Undo restores the station with its legs — nothing is saved until then.",
+    "removedRestoresLine": "A recorded or hand-drawn line runs next to it: it is lost unless you undo. Nothing is saved until then."
   },
   "legDialog": {
     "title": "Leg",
@@ -524,7 +526,10 @@
     "discard": "Discard",
     "discardTitle": "Discard the local changes?",
     "discardMessage": "The version of the stations kept on this device is deleted. It is not stored anywhere else.",
-    "discardConfirm": "Discard"
+    "discardConfirm": "Discard",
+    "firstTitle": "The kept changes first?",
+    "firstMessage": "This device holds station changes that never reached the server. Restore them, or discard them on purpose before editing afresh — otherwise the first keystroke would overwrite them.",
+    "discardAndEdit": "Discard and edit"
   },
   "conflict": {
     "title": "Merge changes",

@@ -155,8 +155,14 @@ describe("StationEditor — reordering (forgejo#242)", () => {
     expect(screen.getByText("roadtrips:editor.movedRestores")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("roadtrips:editor.undo"));
-    await wait(800);
-    expect(sentTitles()).toEqual(["Bergen", "Voss", "Flåm"]);
+    await wait(9000);
+    // Nothing held was ever sent, so the undo needs no request at all (review C2).
+    expect(roadtripsApi.replaceStations).not.toHaveBeenCalled();
+    expect(screen.getAllByText(/^(Bergen|Voss|Flåm)$/).map((el) => el.textContent)).toEqual([
+      "Bergen",
+      "Voss",
+      "Flåm",
+    ]);
   });
 
   it("sends the move once the undo window has passed", async () => {

@@ -6,6 +6,7 @@ import { saveErrorKey } from "../../lib/saveErrorMessage";
 import { logger } from "../../lib/logger";
 import { isSavable } from "../../lib/roadtrip/roadtripView";
 import { toEditorStation, type EditorStation } from "../../lib/roadtrip/editorStation";
+import { sameStationList } from "../../lib/roadtrip/stationMerge";
 import type { RoadtripNights, RoadtripStation, StationInput } from "../../types/roadtrip";
 import type { TourLeg, TourRoute } from "../../types/tour";
 
@@ -165,7 +166,15 @@ export function useStationAutosave({
   const keepLocally = useCallback((): void => {
     const target = sinkRef.current;
     if (!target) return;
-    setLocal(target.write({ base: server.current, drafts: latest.current }) ? "kept" : "failed");
+    // An untouched placeholder is nobody's work: left out, and a list that is
+    // then the server's own needs no draft at all (review C1).
+    const work = latest.current.filter((s) => !s.seed);
+    if (sameStationList(work, server.current)) {
+      target.clear();
+      setLocal("none");
+      return;
+    }
+    setLocal(target.write({ base: server.current, drafts: work }) ? "kept" : "failed");
   }, []);
 
   const forgetLocally = useCallback((): void => {
@@ -244,7 +253,13 @@ export function useStationAutosave({
       do {
         again.current = false;
         await sendOnce();
-      } while (again.current && statusRef.current !== "conflict");
+        // A held change (a removal, a move) waits for its undo window to close
+        // even when a save in flight asked to send again: sending `latest` now
+        // would put the held change on the server inside the window, and the
+        // undo could then restore the order but not the legs (review C2). The
+        // hold's own timer sends it.
+      } while (again.current && !held.current && statusRef.current !== "conflict");
+      if (held.current) again.current = false;
       return statusRef.current;
     })();
     active.current = loop;
@@ -265,8 +280,16 @@ export function useStationAutosave({
       clearTimeout(held.current);
       held.current = null;
     }
-    if (statusRef.current !== "conflict" && statusRef.current !== "saved") schedule();
-  }, [schedule]);
+    if (statusRef.current === "conflict" || statusRef.current === "saved") return;
+    // An undo inside the window that leaves exactly what the server holds
+    // needs no request at all: nothing held was ever sent (review C2).
+    if (!active.current && sameStationList(latest.current, server.current)) {
+      forgetLocally();
+      setStatus("saved");
+      return;
+    }
+    schedule();
+  }, [schedule, forgetLocally, setStatus]);
 
   const change = useCallback(
     (next: (prev: EditorStation[]) => EditorStation[], options: { hold?: boolean } = {}): void => {
