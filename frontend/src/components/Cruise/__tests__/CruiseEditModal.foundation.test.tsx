@@ -219,4 +219,12 @@ describe("CruiseEditModal — the shared form blocks", () => {
     const body = vi.mocked(cruiseApi.create).mock.calls[0][0];
     expect(JSON.stringify(body)).not.toContain("uiKey");
   });
+
+  // Review M10: a screen reader said "#e88374".
+  it("names the map colours by their hue", async () => {
+    render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+    await act(async () => {});
+    fireEvent.click(screen.getByRole("button", { name: "colorName.coral" }));
+    expect(screen.getByText("form.colorPicked")).toBeInTheDocument();
+  });
 });

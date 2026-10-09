@@ -164,4 +164,24 @@ describe("CruiseUnresolvedPorts", () => {
     await userEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
     expect(await screen.findByRole("radio", { name: /Colón/ })).toBeChecked();
   });
+
+  // Review M5: names that fold to the same id ("Colón", "Colán") kept one
+  // radio group between them.
+  it("gives each row its own choice, whatever the names fold to", async () => {
+    vi.mocked(portsApi.search).mockResolvedValue([colon]);
+    const twins = {
+      ...cruise,
+      stops: [
+        stop("a", 2, { unresolvedPortName: "Colón" }),
+        stop("b", 3, { unresolvedPortName: "Colán" }),
+      ],
+    } as unknown as Cruise;
+    render(<CruiseUnresolvedPorts cruise={twins} onUpdated={vi.fn()} />);
+    const [first, second] = screen.getAllByRole("listitem");
+    const a = await within(first).findByRole("radio");
+    const b = await within(second).findByRole("radio");
+    expect(a.getAttribute("name")).not.toBe(b.getAttribute("name"));
+    expect(a).toBeChecked();
+    expect(b).toBeChecked();
+  });
 });

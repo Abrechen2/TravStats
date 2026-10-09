@@ -32,6 +32,20 @@ const CABIN_TYPES: CabinType[] = ["inside", "oceanview", "balcony", "suite"];
 const toHex = (rgb: readonly number[]): string =>
   `#${rgb.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
 const COLOR_PALETTE = CRUISE_DISTINCT_PALETTE.map(toHex);
+/** Spoken names of the palette's hues, in its order (review M10: a screen
+ *  reader read out each swatch's hex code). */
+const COLOR_NAMES = [
+  "coral",
+  "gold",
+  "green",
+  "teal",
+  "blue",
+  "violet",
+  "pink",
+  "ochre",
+  "cyan",
+  "olive",
+] as const;
 
 // 28 px swatches for a mouse, the 44 px minimum for a finger (forgejo#249).
 const SWATCH_CLASS = "h-7 w-7 pointer-coarse:h-11 pointer-coarse:w-11";
@@ -78,12 +92,12 @@ export function CruiseColorSection({
         >
           ×
         </button>
-        {COLOR_PALETTE.map((c) => (
+        {COLOR_PALETTE.map((c, index) => (
           <button
             key={c}
             type="button"
             onClick={(): void => onChange(c)}
-            aria-label={c}
+            aria-label={t(`colorName.${COLOR_NAMES[index]}`)}
             aria-pressed={color === c}
             className={`rounded-full transition-transform hover:scale-110 ${SWATCH_CLASS}`}
             style={{
@@ -103,7 +117,13 @@ export function CruiseColorSection({
       </div>
       {/* Said in words: the dashed swatch's name was only its aria-label. */}
       <p className="mt-2 text-xs text-(--text-muted)">
-        {color === null ? t("field.colorAuto") : t("form.colorPicked", { color })}
+        {color === null
+          ? t("field.colorAuto")
+          : t("form.colorPicked", {
+              color: COLOR_PALETTE.includes(color.toLowerCase())
+                ? t(`colorName.${COLOR_NAMES[COLOR_PALETTE.indexOf(color.toLowerCase())]}`)
+                : color,
+            })}
       </p>
     </FormSection>
   );

@@ -480,5 +480,17 @@
     "tracks_other": "{{count}} recorded tracks",
     "legRoutes_one": "one route redrawn on the map",
     "legRoutes_other": "{{count}} routes redrawn on the map"
+  },
+  "colorName": {
+    "coral": "Coral",
+    "gold": "Gold",
+    "green": "Green",
+    "teal": "Teal",
+    "blue": "Blue",
+    "violet": "Violet",
+    "pink": "Pink",
+    "ochre": "Ochre",
+    "cyan": "Cyan",
+    "olive": "Olive"
   }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { JSX } from "react";
 import type { Cruise, Port } from "../../types";
 import { cruiseApi, portsApi } from "../../lib/api";
@@ -117,7 +117,9 @@ function UnresolvedRow({
   const [attempt, setAttempt] = useState(0);
   const [chosen, setChosen] = useState<Port | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
-  const idBase = `cruise-unresolved-${group.key.replace(/[^a-z0-9]+/g, "-")}`;
+  // Per row, not from the name: "Colón" and "Colán" folded to the same id and
+  // shared one radio group (review M5).
+  const idBase = `cruise-unresolved-${useId().replace(/:/g, "")}`;
 
   useEffect(() => {
     let cancelled = false;
