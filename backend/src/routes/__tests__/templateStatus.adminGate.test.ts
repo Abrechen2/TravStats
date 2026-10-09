@@ -91,4 +91,40 @@ describe("template-status — the refresh is an admin action (forgejo#67)", () =
       templates: expect.any(Array),
     });
   });
+
+  it("shows a v2 rejection detail to an admin only", async () => {
+    // The detail is raw diagnostics that can name the template source URL.
+    const v2 = jest.spyOn(templateRegistry, "getV2Status").mockReturnValue({
+      index: "available",
+      templates: [
+        {
+          id: "lodging:x",
+          domain: "lodging",
+          version: "1.0.0",
+          state: "rejected",
+          source: "remote",
+          reason: "fetch_failed",
+          detail: "GET https://user:secret@mirror.internal/lodging/x.json failed",
+        },
+      ],
+    });
+    try {
+      const plain = await request(app)
+        .get("/api/v1/template-status")
+        .set("Cookie", [`auth_token=${plainUserToken}`]);
+      expect(plain.status).toBe(200);
+      expect(plain.body.v2.templates[0]).toEqual(
+        expect.objectContaining({ id: "lodging:x", reason: "fetch_failed" })
+      );
+      expect(plain.body.v2.templates[0]).not.toHaveProperty("detail");
+      expect(JSON.stringify(plain.body)).not.toContain("secret");
+
+      const admin = await request(app)
+        .get("/api/v1/template-status")
+        .set("Cookie", [`auth_token=${adminToken}`]);
+      expect(admin.body.v2.templates[0].detail).toContain("mirror.internal");
+    } finally {
+      v2.mockRestore();
+    }
+  });
 });
