@@ -1,4 +1,6 @@
 import { classifyTour, type TourState } from "../../shared/tour/tourCounting";
+import { localDay } from "../../shared/time/instant";
+import { isValidZone } from "../../shared/time/zonedParts";
 
 /**
  * What one day tour measured (forgejo#264, and the tours along a roadtrip in
@@ -71,10 +73,14 @@ export function tourFacts(tour: InsightTour, now: Date): TourFacts {
   const firstTrack = [...tour.tracks].sort(
     (a, b) => a.startedAt.getTime() - b.startedAt.getTime()
   )[0];
+  // `tourDate` is already the local day at the tour's place. A recording's
+  // start is an instant, so its day is read on the tour's own clock — a hike
+  // begun on New Year's Eve in California is a December hike, not a January
+  // one in UTC.
   const day = tour.tourDate
     ? tour.tourDate.toISOString().slice(0, 10)
     : firstTrack
-      ? firstTrack.startedAt.toISOString().slice(0, 10)
+      ? localDay(firstTrack.startedAt, tour.zone && isValidZone(tour.zone) ? tour.zone : "UTC")
       : null;
   const recorded = tour.tracks.length > 0;
   const trackKm = tour.tracks.reduce((sum, t) => sum + t.distanceKm, 0);

@@ -37,7 +37,13 @@ function zoneAt(
  */
 export async function loadInsightTours(
   userId: string,
-  resolver: Pick<CountryResolver, "countryAt">
+  resolver: Pick<CountryResolver, "countryAt">,
+  /**
+   * The elevation profiles are the bulk of a track row and serve one figure,
+   * the highest point. The badge re-check runs inside every save and needs
+   * none of it, so it asks without (review I4).
+   */
+  { withElevation = true }: { withElevation?: boolean } = {}
 ): Promise<InsightTour[]> {
   const rows = await prisma.tripRoute.findMany({
     where: { userId, kind: "tour" },
@@ -63,7 +69,7 @@ export async function loadInsightTours(
           distanceKm: true,
           ascentM: true,
           movingSeconds: true,
-          elevations: true,
+          elevations: withElevation,
           truncated: true,
         },
       },
@@ -111,7 +117,7 @@ export async function loadInsightTours(
         distanceKm: t.distanceKm,
         ascentM: t.ascentM,
         movingSeconds: t.movingSeconds,
-        maxElevationM: profileMax(t.elevations),
+        maxElevationM: withElevation ? profileMax(t.elevations) : null,
         truncated: t.truncated,
       })),
     };

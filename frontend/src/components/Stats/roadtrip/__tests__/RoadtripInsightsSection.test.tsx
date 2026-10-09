@@ -15,8 +15,10 @@ const row = (over: Partial<RoadtripInsightRow>): RoadtripInsightRow => ({
   id: "r1",
   name: "Skandinavien",
   year: 2026,
+  firstDay: "2026-07-10",
   phase: "current",
   km: { recorded: 540, current: 0, planned: 450, unplaced: 0 },
+  roadKm: { recorded: 400, current: 0, planned: 450, unplaced: 0 },
   kmBySource: { routed: 400, straight: 140 },
   kmByMode: { road: 400, ferry: 140 },
   nights: { recorded: 4, planned: 1 },
@@ -47,7 +49,6 @@ const DATA: RoadtripInsights = {
     fullyDatedTrips: 1,
   },
   totals: {
-    roadtripRecordedKm: { allTime: 1440, byYear: { "2024": 900, "2026": 540 } },
     roadtripDrivenKm: { allTime: 400, byYear: { "2026": 400 } },
     roadtripFerryKm: { allTime: 140, byYear: { "2026": 140 } },
     roadtripRecordedNights: { allTime: 4, byYear: { "2026": 4 } },
@@ -68,11 +69,18 @@ function renderAt(year: number | null, data: RoadtripInsights = DATA): void {
 }
 
 describe("RoadtripInsightsSection (forgejo#260)", () => {
-  it("keeps what was driven apart from what is still planned", () => {
+  it("keeps what was driven apart from what is still planned — road only, the ferry beside it", () => {
     renderAt(2026);
     const tile = screen.getByTestId("insight-progress");
-    expect(tile.textContent).toContain("540 km");
+    // Review I2: 400 km of road were driven; the 140 km ferry is not "driven".
+    expect(tile.textContent).toContain("400 km");
+    expect(tile.textContent).not.toContain("540 km");
     expect(tile.textContent).toContain("noch geplant 450 km");
+    expect(within(tile).getByTestId("insight-progress-other-modes").textContent).toContain(
+      "Fähre 140 km"
+    );
+    fireEvent.click(within(tile).getByRole("button", { name: "Gefahrene Kilometer (Straße)" }));
+    expect(screen.getByTestId("url").textContent).toContain("evidence=metric%3AroadtripDrivenKm");
     expect(within(tile).getByTestId("insight-progress-sources").textContent).toContain(
       "Route 400 km"
     );

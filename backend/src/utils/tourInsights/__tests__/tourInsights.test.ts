@@ -80,6 +80,21 @@ describe("tour insights", () => {
     expect(insights.all.pauseSeconds).toEqual({ total: 0, tours: 0 });
   });
 
+  it("takes an undated recorded tour's day on its own clock, not in UTC (review I5)", () => {
+    // 31 Dec 2025, 17:30 in California = 1 Jan 2026, 01:30 UTC.
+    const start = new Date("2026-01-01T01:30:00Z");
+    const f = tourFacts(
+      tour({
+        tourDate: null,
+        zone: "America/Los_Angeles",
+        tracks: [track({ startedAt: start, endedAt: new Date("2026-01-01T04:00:00Z") })],
+      }),
+      NOW
+    );
+    expect(f.day).toBe("2025-12-31");
+    expect(f.year).toBe(2025);
+  });
+
   it("keeps a climb unknown unless every recording of the tour measured it", () => {
     const f = tourFacts(tour({ tracks: [track(), track({ ascentM: null })] }), NOW);
     expect(f.ascentM).toBeNull();

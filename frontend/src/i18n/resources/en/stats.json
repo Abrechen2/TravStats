@@ -769,6 +769,11 @@
       "exclusions": "Left out"
     },
     "entries_one": "{{count}} entry",
-    "entries_other": "{{count}} entries"
+    "entries_other": "{{count}} entries",
+    "duration": {
+      "minutes": "{{m}} min",
+      "hours": "{{h}} h",
+      "hoursMinutes": "{{h}} h {{m}} min"
+    }
   }
 }

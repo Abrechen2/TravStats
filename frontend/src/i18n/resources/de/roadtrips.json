@@ -188,11 +188,12 @@
       "mode": {
         "rail": "Bahn",
         "foot": "zu Fuß",
-        "bike": "Rad"
+        "bike": "Rad",
+        "ferry": "Fähre"
       },
       "progress": {
         "title": "Gefahren, heute, geplant",
-        "recorded": "Gefahrene Kilometer",
+        "recorded": "Gefahrene Kilometer (Straße)",
         "recordedNights": "Erfasste Nächte",
         "description": "heute {{current}} · noch geplant {{planned}}",
         "nights": "Nächte (noch geplant: {{planned}}) – erfasst:",
@@ -200,12 +201,13 @@
         "sources": "Distanzquelle: {{sources}}",
         "empty": "Erscheint mit dem ersten Roadtrip.",
         "help": {
-          "unit": "Kilometer, Nächte und Länder je Roadtrip.",
+          "unit": "Gefahrene Kilometer sind Straßenetappen; Fähre, Bahn, zu Fuß und Rad stehen getrennt daneben. Dazu Nächte und Länder je Roadtrip.",
           "time": "Jede Etappe zählt nach dem Ortsdatum ihrer Ankunftsstation: vor heute ist sie gefahren, heute ist sie die aktuelle, danach geplant. Ein Roadtrip gehört in das Jahr seiner ersten Station.",
           "source": "Etappen und Stationen deiner Roadtrips; die Distanz stammt aus Aufzeichnung, berechneter Route, gezeichneter Linie oder Luftlinie – die Zeile „Distanzquelle“ nennt den Anteil.",
           "coverage": "Etappen ohne Datum zählen, wenn der Roadtrip vorbei ist oder gar keine Daten hat; auf einem laufenden Roadtrip bleiben sie offen ({{unplaced}}).",
           "exclusions": "Geplante Etappen, Nächte und Länder zählen für keine Auszeichnung, bis sie erreicht sind."
-        }
+        },
+        "otherModes": "Dazu nicht selbst gefahren: {{modes}}"
       },
       "pace": {
         "title": "Tagesetappen und Tempo",
@@ -217,7 +219,7 @@
         "restDays_other": "{{count}} Tage ohne Ortswechsel auf {{trips}} vollständig datierten Roadtrips",
         "empty": "Erscheint, sobald eine gefahrene Etappe an Abfahrts- und Ankunftsstation denselben Tag trägt.",
         "help": {
-          "unit": "Ein Fahrtag: alle gefahrenen Kilometer zwischen zwei Stationen mit demselben Abfahrts- und Ankunftstag. Streckenkorrekturen gehören zur Etappe.",
+          "unit": "Ein Fahrtag: alle Straßenkilometer zwischen zwei Stationen mit demselben Abfahrts- und Ankunftstag. Streckenkorrekturen gehören zur Etappe; ein Tag nur an Bord einer Fähre ist kein Fahrtag.",
           "time": "Ortsdatum der Stationen.",
           "source": "Datierte Stationen und Etappen deiner Roadtrips.",
           "coverage": "{{unstaged}} gefahrene Etappen haben keinen gemeinsamen bekannten Tag und sind in keinem Fahrtag. Tage ohne Ortswechsel zählen nur auf {{dated}} abgeschlossenen Roadtrips, deren Stationen alle datiert sind.",
@@ -273,7 +275,8 @@
           "coverage": "Höhenmeter nur aus Aufzeichnungen, die sie mitbringen.",
           "exclusions": "Tourkilometer werden nie zur Fahrstrecke addiert, ein geführter Ausflug nie als Busfahrt."
         }
-      }
+      },
+      "lifetime": "über alle Jahre"
     },
     "tours": {
       "title": "Tagestouren",
@@ -285,23 +288,22 @@
         "km": "Tourkilometer",
         "ascent": "Aufstieg aus Aufzeichnungen",
         "ascentValue": "{{m}} Hm",
-        "row_one": "{{count}} Tour · {{km}} km ({{kmTours}} mit Strecke) · {{ascent}} Hm ({{ascentTours}} gemessen) · {{hours}} h in Bewegung ({{movingTours}} aufgezeichnet)",
-        "row_other": "{{count}} Touren · {{km}} km ({{kmTours}} mit Strecke) · {{ascent}} Hm ({{ascentTours}} gemessen) · {{hours}} h in Bewegung ({{movingTours}} aufgezeichnet)",
+        "row_one": "{{count}} Tour · {{km}} km ({{kmTours}} mit Strecke) · {{ascent}} Hm ({{ascentTours}} gemessen) · {{duration}} in Bewegung ({{movingTours}} aufgezeichnet)",
+        "row_other": "{{count}} Touren · {{km}} km ({{kmTours}} mit Strecke) · {{ascent}} Hm ({{ascentTours}} gemessen) · {{duration}} in Bewegung ({{movingTours}} aufgezeichnet)",
         "empty": "Erscheint, sobald eine Tagestour aufgezeichnet ist oder ihr Datum vorbei ist.",
         "help": {
           "unit": "Eine abgeschlossene Tagestour – Wanderung, Radtour, geführter Ausflug und jede andere Aktivität.",
           "time": "Abgeschlossen ist eine Tour mit Aufzeichnung oder mit einem Tag vor heute am Ort ihres Starts; gezählt wird sie im Jahr ihres Tages, ohne Tag im Jahr ihrer ersten Aufzeichnung.",
           "source": "Deine Touren. Strecke aus der Aufzeichnung, wo es eine gibt, sonst aus der Route; Höhenmeter und Zeit nur aus Aufzeichnungen.",
           "coverage": "{{planned}} Touren liegen noch vor dir, {{undated}} haben weder Tag noch Aufzeichnung und zählen nicht. {{partial}} Aufzeichnungen endeten am Importlimit – ihre Strecke ist eine Untergrenze.",
-          "exclusions": "Ein unbekannter Aufstieg bleibt unbekannt und wird nicht aus der Route geschätzt. Jede Zahl nennt, auf wie vielen Touren sie beruht."
+          "exclusions": "Ein unbekannter Aufstieg bleibt unbekannt und wird nicht aus der Route geschätzt. Jede Zahl nennt, auf wie vielen Touren sie beruht. Geführte Ausflüge zählen mit ihrer Route in die Tourkilometer – je Aktivität getrennt ausgewiesen, nie als Bus- oder Fahrkilometer."
         }
       },
       "moving": {
         "title": "Bewegung und Pausen",
         "moving": "Bewegungszeit aus Aufzeichnungen",
-        "hours": "{{h}} h in Bewegung",
-        "pause_one": "{{h}} h Pause – aus {{count}} von {{of}} Touren",
-        "pause_other": "{{h}} h Pause – aus {{count}} von {{of}} Touren",
+        "pause_one": "{{duration}} Pause – aus {{count}} von {{of}} Touren, {{scope}}",
+        "pause_other": "{{duration}} Pause – aus {{count}} von {{of}} Touren, {{scope}}",
         "empty": "Erscheint, sobald eine Aufzeichnung mit Zeitstempeln vorliegt.",
         "help": {
           "unit": "Stunden. Bewegungszeit misst die Aufzeichnung selbst; Pause ist die aufgezeichnete Gesamtdauer abzüglich der Bewegungszeit.",
@@ -309,7 +311,8 @@
           "source": "Aufzeichnungen deiner Touren (GPX, Dawarich, Strava).",
           "coverage": "Nur Touren, deren jede Aufzeichnung Zeiten trägt.",
           "exclusions": "Eine geplante Startzeit oder eine reine Gesamtdauer ist keine Bewegungszeit und zählt hier nie."
-        }
+        },
+        "value": "{{duration}} in Bewegung"
       },
       "records": {
         "title": "Persönliche Rekorde je Aktivität",
@@ -371,7 +374,7 @@
           "unit": "Eine abgeschlossene Tour; eine Tour kann zugleich zu einer Reise und zu einem Roadtrip gehören.",
           "time": "Eine Tour gilt als Kreuzfahrt-Ausflug, wenn ihre Reise eine Kreuzfahrt enthält und ihr Tag in deren Zeitraum liegt.",
           "source": "Die Reise einer Tour, die Roadtrip-Station, von der sie startet, und die Kreuzfahrten der Reise.",
-          "coverage": "Touren ohne Reise und ohne Station stehen für sich.",
+          "coverage": "Touren ohne Reise und ohne Station stehen für sich. Eine Tour kann zugleich auf einer Reise und von einer Roadtrip-Station aus stattfinden – die Zahlen überschneiden sich und ergeben zusammen keine Summe.",
           "exclusions": "Tourkilometer fließen in keine Fahrt- oder Busstatistik; ein geführter Ausflug ist keine Busfahrt."
         }
       }

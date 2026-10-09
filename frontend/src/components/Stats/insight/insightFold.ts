@@ -56,3 +56,18 @@ export function helpText(
     exclusions: t(`${base}.help.exclusions`, values),
   };
 }
+
+/**
+ * A duration to the minute: "25 Min.", "3 Std.", "1 Std. 30 Min." — the units
+ * are copy (`stats:insight.duration.*`), the numbers go through the page's own
+ * number format. Never rounded to whole hours, where a 25-minute walk read as
+ * "0" and three and a half hours as "4".
+ */
+export function formatDuration(seconds: number, t: Translate, nf: Intl.NumberFormat): string {
+  const total = Math.max(0, Math.round(seconds / 60));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h === 0) return t("stats:insight.duration.minutes", { m: nf.format(m) });
+  if (m === 0) return t("stats:insight.duration.hours", { h: nf.format(h) });
+  return t("stats:insight.duration.hoursMinutes", { h: nf.format(h), m: nf.format(m) });
+}

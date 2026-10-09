@@ -150,8 +150,13 @@ export interface RoadtripInsightRow {
   id: string;
   name: string;
   year: number | null;
+  /** Local day of the first dated station, or null. */
+  firstDay: string | null;
   phase: RoadtripPhase;
+  /** Every mode — what was travelled. */
   km: { recorded: number; current: number; planned: number; unplaced: number };
+  /** Road legs only — what was driven. */
+  roadKm: { recorded: number; current: number; planned: number; unplaced: number };
   kmBySource: Record<string, number>;
   kmByMode: Record<string, number>;
   nights: { recorded: number; planned: number };

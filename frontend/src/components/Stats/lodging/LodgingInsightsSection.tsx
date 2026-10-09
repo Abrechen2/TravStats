@@ -94,7 +94,10 @@ export default function LodgingInsightsSection({
 
   // ── Trip bases ────────────────────────────────────────────────────────
   const trips = data.tripBases.trips.filter((b) => year === null || b.year === year);
-  const changesMedian = median(trips.map((b) => b.changes));
+  // A trip still under way has not made all its moves yet (review M7): the
+  // median reads finished trips only; the list below names every trip.
+  const finishedTrips = trips.filter((b) => b.completed);
+  const changesMedian = median(finishedTrips.map((b) => b.changes));
   const longestBase = trips.reduce<(typeof trips)[number] | null>(
     (best, b) => (!best || b.longestBaseNights > best.longestBaseNights ? b : best),
     null
@@ -246,7 +249,9 @@ export default function LodgingInsightsSection({
               : t("lodging:stats.insights.tripBases.value", { count: changesMedian })
           }
           empty={t("lodging:stats.insights.tripBases.empty")}
-          description={t("lodging:stats.insights.tripBases.description", { count: trips.length })}
+          description={t("lodging:stats.insights.tripBases.description", {
+            count: finishedTrips.length,
+          })}
           help={help("tripBases", {
             withoutTrip: data.tripBases.staysWithoutTrip,
             undated: data.tripBases.undatedTripStays,

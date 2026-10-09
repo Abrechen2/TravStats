@@ -79,7 +79,50 @@ describe("roadtrip insights", () => {
     expect(r.kmBySource).toEqual({ straight: 300 });
     expect(r.kmByMode).toEqual({ road: 300 });
     expect(r.countries).toEqual({ recorded: ["DE", "DK"], planned: ["NO"] });
-    expect(totalsOf(items).roadtripRecordedKm).toEqual({ allTime: 300, byYear: { "2026": 300 } });
+    expect(r.roadKm).toEqual({ recorded: 300, current: 0, planned: 500, unplaced: 0 });
+    expect(totalsOf(items).roadtripDrivenKm).toEqual({ allTime: 300, byYear: { "2026": 300 } });
+    // Review I3: the evidence row carries the first station's real day.
+    expect(items.roadtripDrivenKm[0].entry.date).toEqual({ value: "2026-07-12", precision: "day" });
+  });
+
+  it("drives a day on the road only: a long ferry crossing is never the longest driving day", () => {
+    const { insights } = computeRoadtripInsights(
+      [
+        trip(
+          [
+            station("a", { startDate: d("2026-06-01"), endDate: d("2026-06-01") }),
+            station("b", { startDate: d("2026-06-01"), endDate: d("2026-06-02") }),
+            station("c", { startDate: d("2026-06-02"), endDate: d("2026-06-03") }),
+            station("e", { startDate: d("2026-06-03") }),
+          ],
+          [
+            // 1 June: 150 km of road, then a 600 km overnight-free ferry the same day.
+            leg("a", "b", 150),
+            // 2 June: ferry only — a day on board, no driving day at all.
+            leg("b", "c", 600, "ferry"),
+            leg("c", "e", 200),
+          ]
+        ),
+      ],
+      [],
+      resolver,
+      NOW
+    );
+    expect(insights.pace.dayStages).toBe(2);
+    expect(insights.pace.longestDay).toMatchObject({ day: "2026-06-03", km: 200 });
+    expect(insights.roadtrips[0].roadKm.recorded).toBe(350);
+    expect(insights.roadtrips[0].km.recorded).toBe(950);
+  });
+
+  it("gives an undated roadtrip's evidence rows no date rather than an invented one", () => {
+    const { items } = computeRoadtripInsights(
+      [trip([station("a"), station("b")], [leg("a", "b", 50)])],
+      [],
+      resolver,
+      NOW
+    );
+    expect(items.roadtripDrivenKm[0].entry.date).toBeNull();
+    expect(items.roadtripDrivenKm[0].year).toBeNull();
   });
 
   it("reports ferry kilometres beside the road, never as driven", () => {

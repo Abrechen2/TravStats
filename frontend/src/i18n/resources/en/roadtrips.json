@@ -188,11 +188,12 @@
       "mode": {
         "rail": "rail",
         "foot": "on foot",
-        "bike": "bike"
+        "bike": "bike",
+        "ferry": "ferry"
       },
       "progress": {
         "title": "Driven, today, planned",
-        "recorded": "Kilometres driven",
+        "recorded": "Kilometres driven (road)",
         "recordedNights": "Recorded nights",
         "description": "today {{current}} · still planned {{planned}}",
         "nights": "Nights (still planned: {{planned}}) — recorded:",
@@ -200,12 +201,13 @@
         "sources": "Distance source: {{sources}}",
         "empty": "Appears with the first roadtrip.",
         "help": {
-          "unit": "Kilometres, nights and countries per roadtrip.",
+          "unit": "Kilometres driven are road stages; ferry, rail, on foot and bike are shown apart. Plus nights and countries per roadtrip.",
           "time": "Each stage counts by the local date of the station it arrives at: before today it is driven, today it is the current one, after that planned. A roadtrip belongs to the year of its first station.",
           "source": "The stages and stations of your roadtrips; distances come from a recording, a computed route, a drawn line or a straight line — the “distance source” line gives the shares.",
           "coverage": "Undated stages count when the roadtrip is over or has no dates at all; on a roadtrip under way they stay open ({{unplaced}}).",
           "exclusions": "Planned stages, nights and countries count towards no badge until they are reached."
-        }
+        },
+        "otherModes": "Plus, not driven yourself: {{modes}}"
       },
       "pace": {
         "title": "Day stages and pace",
@@ -217,7 +219,7 @@
         "restDays_other": "{{count}} days without a change of place on {{trips}} fully dated roadtrips",
         "empty": "Appears once a driven stage carries the same day at its departure and arrival station.",
         "help": {
-          "unit": "A driving day: all kilometres driven between two stations with the same departure and arrival day. Route corrections belong to the stage.",
+          "unit": "A driving day: all road kilometres between two stations with the same departure and arrival day. Route corrections belong to the stage; a day only on board a ferry is no driving day.",
           "time": "The stations' local dates.",
           "source": "Dated stations and stages of your roadtrips.",
           "coverage": "{{unstaged}} driven stages have no shared known day and are in no driving day. Days without a change of place count only on {{dated}} finished roadtrips whose stations are all dated.",
@@ -273,7 +275,8 @@
           "coverage": "Climb only from recordings that carry it.",
           "exclusions": "Tour kilometres are never added to the driving, and a guided excursion is never a bus ride."
         }
-      }
+      },
+      "lifetime": "across all years"
     },
     "tours": {
       "title": "Day tours",
@@ -285,23 +288,22 @@
         "km": "Tour kilometres",
         "ascent": "Climb from recordings",
         "ascentValue": "{{m}} m climbed",
-        "row_one": "{{count}} tour · {{km}} km ({{kmTours}} with a distance) · {{ascent}} m climbed ({{ascentTours}} measured) · {{hours}} h moving ({{movingTours}} recorded)",
-        "row_other": "{{count}} tours · {{km}} km ({{kmTours}} with a distance) · {{ascent}} m climbed ({{ascentTours}} measured) · {{hours}} h moving ({{movingTours}} recorded)",
+        "row_one": "{{count}} tour · {{km}} km ({{kmTours}} with a distance) · {{ascent}} m climbed ({{ascentTours}} measured) · {{duration}} moving ({{movingTours}} recorded)",
+        "row_other": "{{count}} tours · {{km}} km ({{kmTours}} with a distance) · {{ascent}} m climbed ({{ascentTours}} measured) · {{duration}} moving ({{movingTours}} recorded)",
         "empty": "Appears once a day tour is recorded or its day has passed.",
         "help": {
           "unit": "One completed day tour — hike, bike ride, guided excursion and any other activity.",
           "time": "A tour is completed when it has a recording or a day before today at its start. It belongs to the year of its day, or without one to the year of its first recording.",
           "source": "Your tours. Distance from the recording where there is one, else from the route; climb and time only from recordings.",
           "coverage": "{{planned}} tours are still ahead, {{undated}} have neither a day nor a recording and do not count. {{partial}} recordings stopped at the import limit — their distance is a lower bound.",
-          "exclusions": "An unknown climb stays unknown and is never estimated from the route. Every figure says how many tours it rests on."
+          "exclusions": "An unknown climb stays unknown and is never estimated from the route. Every figure says how many tours it rests on. Guided excursions count into the tour kilometres with their route — shown per activity, never as bus or driven kilometres."
         }
       },
       "moving": {
         "title": "Moving and pauses",
         "moving": "Moving time from recordings",
-        "hours": "{{h}} h moving",
-        "pause_one": "{{h}} h of pauses — from {{count}} of {{of}} tours",
-        "pause_other": "{{h}} h of pauses — from {{count}} of {{of}} tours",
+        "pause_one": "{{duration}} of pauses — from {{count}} of {{of}} tours, {{scope}}",
+        "pause_other": "{{duration}} of pauses — from {{count}} of {{of}} tours, {{scope}}",
         "empty": "Appears once a recording with timestamps exists.",
         "help": {
           "unit": "Hours. Moving time is measured by the recording itself; a pause is the recorded duration minus the moving time.",
@@ -309,7 +311,8 @@
           "source": "Recordings of your tours (GPX, Dawarich, Strava).",
           "coverage": "Only tours whose every recording carries times.",
           "exclusions": "A planned start time or a bare total duration is not moving time and never counts here."
-        }
+        },
+        "value": "{{duration}} moving"
       },
       "records": {
         "title": "Personal records per activity",
@@ -371,7 +374,7 @@
           "unit": "One completed tour; a tour can belong to a trip and a roadtrip at once.",
           "time": "A tour is a cruise excursion when its trip holds a cruise and its day falls within it.",
           "source": "A tour's trip, the roadtrip station it starts from, and the trip's cruises.",
-          "coverage": "Tours with neither a trip nor a station stand on their own.",
+          "coverage": "Tours with neither a trip nor a station stand on their own. A tour can be on a trip and start from a roadtrip station at once — the figures overlap and do not add up.",
           "exclusions": "Tour kilometres go into no driving or bus statistic; a guided excursion is not a bus ride."
         }
       }

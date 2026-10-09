@@ -7,7 +7,7 @@ import type { TourInsights } from "../../../types/statsInsights";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import EvidenceNumber from "../EvidenceNumber";
 import InsightTile from "../insight/InsightTile";
-import { helpText, totalFor } from "../insight/insightFold";
+import { formatDuration, helpText, totalFor } from "../insight/insightFold";
 
 /**
  * Day tours and planned guided excursions (forgejo#264): what each activity
@@ -70,7 +70,8 @@ export default function TourStatsSection({
     key === "unknown"
       ? t("roadtrips:stats.tours.noActivity")
       : t(`roadtrips:activity.${key}`, { defaultValue: key });
-  const hours = (seconds: number): string => nf.format(Math.round(seconds / 360) / 10);
+  // Minutes-accurate (review I1): a 25-minute walk is "25 Min.", never "0 h".
+  const duration = (seconds: number): string => formatDuration(seconds, t, nf);
   const country = (code: string): string => regions?.of(code) ?? code;
 
   const count = totalFor(data.totals, "tourCompletedCount", year);
@@ -130,7 +131,7 @@ export default function TourStatsSection({
                     kmTours: a.km.tours,
                     ascent: nf.format(a.ascentM.total),
                     ascentTours: a.ascentM.tours,
-                    hours: hours(a.movingSeconds.total),
+                    duration: duration(a.movingSeconds.total),
                     movingTours: a.movingSeconds.tours,
                   })}
                 </li>
@@ -152,17 +153,20 @@ export default function TourStatsSection({
                 renderedValue={moving}
                 label={t("roadtrips:stats.tours.moving.moving")}
               >
-                {t("roadtrips:stats.tours.moving.hours", { h: hours(moving * 60) })}
+                {t("roadtrips:stats.tours.moving.value", { duration: duration(moving * 60) })}
               </EvidenceNumber>
             ) : null
           }
           empty={t("roadtrips:stats.tours.moving.empty")}
           description={
             data.all.pauseSeconds.tours > 0
-              ? t("roadtrips:stats.tours.moving.pause", {
-                  h: hours(data.all.pauseSeconds.total),
+              ? // The pause total has no year of its own, so it says it is lifetime
+                // rather than standing beside a year's moving time as if it were.
+                t("roadtrips:stats.tours.moving.pause", {
+                  duration: duration(data.all.pauseSeconds.total),
                   count: data.all.pauseSeconds.tours,
                   of: data.all.completed,
+                  scope: lifetime,
                 })
               : undefined
           }

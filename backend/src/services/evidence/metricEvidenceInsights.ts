@@ -36,7 +36,6 @@ const OWNER: Record<string, keyof typeof LOADERS> = {
   placeVisitsWithPhoto: "places",
   placeVisitsWithNote: "places",
   placeVisitsWithRating: "places",
-  roadtripRecordedKm: "roadtrips",
   roadtripDrivenKm: "roadtrips",
   roadtripFerryKm: "roadtrips",
   roadtripRecordedNights: "roadtrips",

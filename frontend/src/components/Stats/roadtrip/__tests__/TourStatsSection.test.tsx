@@ -132,12 +132,35 @@ describe("TourStatsSection (forgejo#264)", () => {
     tours.mockResolvedValueOnce(FULL);
     renderAt(2024);
     const moving = await screen.findByTestId("tour-moving");
-    expect(moving.textContent).toContain("6 h in Bewegung");
-    expect(moving.textContent).toContain("1 h Pause – aus 1 von 3 Touren");
+    expect(moving.textContent).toContain("6 Std. in Bewegung");
+    expect(moving.textContent).toContain("1 Std. Pause – aus 1 von 3 Touren, über alle Jahre");
     fireEvent.click(
       within(moving).getByRole("button", { name: "Bewegungszeit aus Aufzeichnungen" })
     );
     expect(screen.getByTestId("url").textContent).toContain("evidence=metric%3AtourMovingMinutes");
+  });
+
+  it("formats moving time to the minute, never rounded to whole hours (review I1)", async () => {
+    tours.mockResolvedValueOnce({
+      ...FULL,
+      byActivity: [
+        { ...hike, completed: 1, movingSeconds: { total: 1500, tours: 1 } },
+        { ...hike, activity: "bike", completed: 1, movingSeconds: { total: 12600, tours: 1 } },
+      ],
+      all: {
+        ...FULL.all,
+        movingSeconds: { total: 5400, tours: 2 },
+        pauseSeconds: { total: 1500, tours: 2 },
+      },
+      totals: { ...FULL.totals, tourMovingMinutes: { allTime: 90, byYear: { "2024": 90 } } },
+    });
+    renderAt(null);
+    const rows = await screen.findByTestId("tour-activities-rows");
+    expect(rows.textContent).toContain("25 Min. in Bewegung");
+    expect(rows.textContent).toContain("3 Std. 30 Min. in Bewegung");
+    const moving = screen.getByTestId("tour-moving");
+    expect(moving.textContent).toContain("1 Std. 30 Min. in Bewegung");
+    expect(moving.textContent).toContain("25 Min. Pause");
   });
 
   it("names records with their source and links each to its tour", async () => {

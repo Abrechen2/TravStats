@@ -57,8 +57,13 @@ export interface RoadtripRow {
   name: string;
   /** Year it started — the tab's year rule; null when undated. */
   year: number | null;
+  /** `YYYY-MM-DD` of the first dated station, at that station; null when none is dated. */
+  firstDay: string | null;
   phase: RoadtripPhase;
+  /** Every mode: what was travelled. The badges' `roadtrip_km` reads `recorded`. */
   km: PhaseKm;
+  /** Road legs only: what the vehicle itself drove. */
+  roadKm: PhaseKm;
   /** Recorded km per distance source: straight | drawn | routed | track. */
   kmBySource: Record<string, number>;
   /** Recorded km per leg mode: road | ferry | rail | foot | bike. */
@@ -85,7 +90,7 @@ export interface RoadtripInsights {
     dayStages: number;
     medianDayKm: number | null;
     longestDay: DayStage | null;
-    /** Recorded legs whose two ends are not on one known day — no day stage. */
+    /** Recorded stretches whose two ends are not on one known day — no day stage. */
     unstagedLegs: number;
     restDays: number;
     /** Roadtrips whose every station is dated — the only ones a rest day can be read from. */

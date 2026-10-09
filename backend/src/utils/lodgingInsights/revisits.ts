@@ -37,19 +37,24 @@ export function computeRevisits(counted: readonly PreparedStay[]): Revisits {
     const dated = stays
       .filter((p) => p.timing.walkable)
       .sort((a, b) => a.stay.checkIn!.getTime() - b.stay.checkIn!.getTime());
+    // The break runs from the LATEST check-out so far, not the previous
+    // stay's: a short second booking inside a long one (1–10 and 2–3) is the
+    // same visit, and measuring from its check-out would invent a break.
+    let latest = dated[0]?.stay;
     for (let i = 1; i < dated.length; i += 1) {
-      const before = dated[i - 1].stay;
       const after = dated[i].stay;
-      const days = Math.round((after.checkIn!.getTime() - before.checkOut!.getTime()) / DAY_MS);
+      const opened = latest;
+      const days = Math.round((after.checkIn!.getTime() - opened.checkOut!.getTime()) / DAY_MS);
+      if (after.checkOut!.getTime() > latest.checkOut!.getTime()) latest = after;
       if (days <= 0) continue;
       if (!longestGap || days > longestGap.days) {
         longestGap = {
           lodgingId,
           name,
           days,
-          fromStayId: before.id,
+          fromStayId: opened.id,
           toStayId: after.id,
-          from: dayOf(before.checkOut!),
+          from: dayOf(opened.checkOut!),
           to: dayOf(after.checkIn!),
         };
       }

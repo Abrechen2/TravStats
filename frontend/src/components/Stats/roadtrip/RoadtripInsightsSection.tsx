@@ -45,7 +45,6 @@ export default function RoadtripInsightsSection({
   const rows = data.roadtrips.filter((r) => year === null || r.year === year);
   const sum = (pick: (r: (typeof rows)[number]) => number): number =>
     rows.reduce((s, r) => s + pick(r), 0);
-  const recordedKm = totalFor(data.totals, "roadtripRecordedKm", year);
   const recordedNights = totalFor(data.totals, "roadtripRecordedNights", year);
   const roadKm = totalFor(data.totals, "roadtripDrivenKm", year);
   const ferryKm = totalFor(data.totals, "roadtripFerryKm", year);
@@ -77,21 +76,21 @@ export default function RoadtripInsightsSection({
           value={
             rows.length > 0 ? (
               <EvidenceNumber
-                evidenceKey="roadtripRecordedKm"
+                evidenceKey="roadtripDrivenKm"
                 scope={scope}
-                renderedValue={recordedKm}
+                renderedValue={roadKm}
                 label={t("roadtrips:stats.insights.progress.recorded")}
               >
-                {km(recordedKm)}
+                {km(roadKm)}
               </EvidenceNumber>
             ) : null
           }
           empty={t("roadtrips:stats.insights.progress.empty")}
           description={t("roadtrips:stats.insights.progress.description", {
-            current: km(sum((r) => r.km.current)),
-            planned: km(sum((r) => r.km.planned + r.km.unplaced)),
+            current: km(sum((r) => r.roadKm.current)),
+            planned: km(sum((r) => r.roadKm.planned + r.roadKm.unplaced)),
           })}
-          help={help("progress", { unplaced: km(sum((r) => r.km.unplaced)) })}
+          help={help("progress", { unplaced: km(sum((r) => r.roadKm.unplaced)) })}
         >
           {rows.length > 0 && (
             <ul className="mt-2 space-y-0.5 text-xs opacity-75">
@@ -108,6 +107,17 @@ export default function RoadtripInsightsSection({
                   {nf.format(recordedNights)}
                 </EvidenceNumber>
               </li>
+              {sum((r) => r.km.recorded - r.roadKm.recorded) > 0 && (
+                <li data-testid="insight-progress-other-modes">
+                  {t("roadtrips:stats.insights.progress.otherModes", {
+                    modes: ["ferry", ...otherModes.map((m) => m.mode)]
+                      .map((mode) => ({ mode, km: sum((r) => r.kmByMode[mode] ?? 0) }))
+                      .filter((m) => m.km > 0)
+                      .map((m) => `${t(`roadtrips:stats.insights.mode.${m.mode}`)} ${km(m.km)}`)
+                      .join(" · "),
+                  })}
+                </li>
+              )}
               <li>
                 {t("roadtrips:stats.insights.progress.countries", {
                   recorded: [...recordedCountries].sort().join(" · ") || "–",

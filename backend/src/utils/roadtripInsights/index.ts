@@ -108,14 +108,19 @@ function rowOf(
     .sort()[0];
 
   const km = { recorded: 0, current: 0, planned: 0, unplaced: 0 };
+  // Road legs only: the kilometres the vehicle itself drove. A ferry, a train
+  // or a walk is reported per mode and never becomes "driven" (forgejo#260).
+  const roadKm = { recorded: 0, current: 0, planned: 0, unplaced: 0 };
   const kmBySource: Record<string, number> = {};
   const kmByMode: Record<string, number> = {};
   const stageDays = new Set<string>();
   let unstaged = 0;
   for (const seg of segmentsOf(r.stations, r.legs)) {
     const phase = legPhase(seg.from, seg.to, ctx.now);
+    const segRoad = seg.legs.reduce((s, l) => (l.mode === "road" ? s + l.distanceKm : s), 0);
     if (isRecorded(phase, tripPhase)) {
       km.recorded += seg.km;
+      roadKm.recorded += segRoad;
       for (const leg of seg.legs) {
         kmBySource[leg.source] = (kmBySource[leg.source] ?? 0) + leg.distanceKm;
         kmByMode[leg.mode] = (kmByMode[leg.mode] ?? 0) + leg.distanceKm;
@@ -124,9 +129,13 @@ function rowOf(
       const arrive = stationDays(seg.to).first;
       if (leave !== null && leave === arrive) {
         stageDays.add(arrive);
-        const key = stages.find((d) => d.roadtripId === r.id && d.day === arrive);
-        if (key) key.km += seg.km;
-        else stages.push({ roadtripId: r.id, name: r.name, day: arrive, km: seg.km });
+        // A driving day counts the road only: a 600 km ferry crossing is a
+        // day on board, never the longest day behind the wheel.
+        if (segRoad > 0) {
+          const key = stages.find((d) => d.roadtripId === r.id && d.day === arrive);
+          if (key) key.km += segRoad;
+          else stages.push({ roadtripId: r.id, name: r.name, day: arrive, km: segRoad });
+        }
       } else {
         unstaged += 1;
         // A drive over several days is no rest on any of them.
@@ -143,9 +152,11 @@ function rowOf(
           if (arrive) stageDays.add(arrive);
         }
       }
-    } else if (phase === "current") km.current += seg.km;
-    else if (phase === "planned") km.planned += seg.km;
-    else km.unplaced += seg.km;
+    } else {
+      const bucket = phase === "current" ? "current" : phase === "planned" ? "planned" : "unplaced";
+      km[bucket] += seg.km;
+      roadKm[bucket] += segRoad;
+    }
   }
 
   const recordedStations = real.filter((s) => isRecorded(stationPhase(s, ctx.now), tripPhase));
@@ -174,8 +185,10 @@ function rowOf(
       id: r.id,
       name: r.name,
       year: firstDay ? Number(firstDay.slice(0, 4)) : null,
+      firstDay: firstDay ?? null,
       phase: tripPhase,
       km,
+      roadKm,
       kmBySource,
       kmByMode,
       nights: { recorded: recordedNights.nights, planned: plannedNights.nights },
@@ -202,7 +215,9 @@ function itemsOf(rows: readonly RoadtripRow[]): MeasureItems {
       href: `/roadtrips/${r.id}`,
       title: { text: r.name },
       subtitle: null,
-      date: dayPrecisionDate(r.year === null ? null : new Date(`${r.year}-01-01T00:00:00Z`)),
+      // The first station's own local day — or no date at all. Never a
+      // 1 January standing in for "some day that year".
+      date: dayPrecisionDate(r.firstDay === null ? null : new Date(`${r.firstDay}T00:00:00Z`)),
     },
     year: r.year,
     contribution,
@@ -210,7 +225,6 @@ function itemsOf(rows: readonly RoadtripRow[]): MeasureItems {
   const nonZero = (pick: (r: RoadtripRow) => number): MeasureItem[] =>
     rows.filter((r) => pick(r) > 0).map((r) => item(r, pick(r)));
   return {
-    roadtripRecordedKm: nonZero((r) => r.km.recorded),
     roadtripDrivenKm: nonZero((r) => r.kmByMode.road ?? 0),
     roadtripFerryKm: nonZero((r) => r.kmByMode.ferry ?? 0),
     roadtripRecordedNights: nonZero((r) => r.nights.recorded),

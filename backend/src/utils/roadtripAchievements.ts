@@ -1,6 +1,7 @@
 import type { Achievement } from "../prisma";
 import { now as clockNow } from "../shared/time/clock";
 import { roadtripInsights } from "../services/stats/insights";
+import type { TourFacts } from "./tourInsights/tourFacts";
 
 /**
  * The roadtrip badges (2.7, Part I; and the three of the statistics expansion,
@@ -41,9 +42,11 @@ export const EMPTY_ROADTRIP_STATS: RoadtripAchievementStats = {
 
 export async function calculateRoadtripAchievementStats(
   userId: string,
-  now: Date = clockNow()
+  now: Date = clockNow(),
+  /** The tours a badge check already loaded — read once per check, not per builder. */
+  tours?: TourFacts[]
 ): Promise<RoadtripAchievementStats> {
-  const { awards } = await roadtripInsights(userId, now);
+  const { awards } = await roadtripInsights(userId, now, { tours });
   return {
     roadtripsCount: awards.roadtripsCount,
     roadtripKm: awards.recordedKm,
@@ -67,13 +70,19 @@ const MEASURE: Record<string, keyof RoadtripAchievementStats> = {
   roadtrip_tour_stations: "roadtripTourStations",
 };
 
-/** The badge's progress, or `null` when it is not a roadtrip badge. */
+/**
+ * The badge's progress, `null` when it is not a roadtrip badge, or `"skip"`
+ * when it is one but its measures could not be computed this time (`stats`
+ * null): then the stored row stays exactly as it is — a failed read is not a
+ * fallen measure, and must not cost a badge.
+ */
 export function checkRoadtripAchievement(
   achievement: Pick<Achievement, "requirementType" | "requirement">,
-  stats: RoadtripAchievementStats
-): { isUnlocked: boolean; progress: number } | null {
+  stats: RoadtripAchievementStats | null
+): { isUnlocked: boolean; progress: number } | "skip" | null {
   const key = MEASURE[achievement.requirementType];
   if (!key) return null;
+  if (stats === null) return "skip";
   const progress = Math.floor(stats[key]);
   return { isUnlocked: progress >= achievement.requirement, progress };
 }

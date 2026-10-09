@@ -40,14 +40,24 @@ export async function placeInsights(
 }
 
 /** Every tour of a user with its facts — shared by the roadtrip and tour insights. */
-export async function loadTourFacts(userId: string, at: Date = now()): Promise<TourFacts[]> {
+export async function loadTourFacts(
+  userId: string,
+  at: Date = now(),
+  options: { withElevation?: boolean } = {}
+): Promise<TourFacts[]> {
   const resolver = await getCountryResolver();
-  return (await loadInsightTours(userId, resolver)).map((t) => tourFacts(t, at));
+  return (await loadInsightTours(userId, resolver, options)).map((t) => tourFacts(t, at));
+}
+
+/** Rows a caller already loaded, so one badge check reads each source once (review I4). */
+export interface Preloaded {
+  tours?: TourFacts[];
 }
 
 export async function roadtripInsights(
   userId: string,
-  at: Date = now()
+  at: Date = now(),
+  preloaded: Preloaded = {}
 ): Promise<{
   response: RoadtripInsightsResponse;
   items: MeasureItems;
@@ -55,7 +65,7 @@ export async function roadtripInsights(
 }> {
   const [roadtrips, tours, resolver] = await Promise.all([
     loadInsightRoadtrips(userId),
-    loadTourFacts(userId, at),
+    preloaded.tours ?? loadTourFacts(userId, at),
     getCountryResolver(),
   ]);
   const { insights, items } = computeRoadtripInsights(roadtrips, tours, resolver, at);
@@ -65,8 +75,11 @@ export async function roadtripInsights(
 
 export async function tourInsights(
   userId: string,
-  at: Date = now()
+  at: Date = now(),
+  preloaded: Preloaded = {}
 ): Promise<{ response: TourInsightsResponse; items: MeasureItems }> {
-  const { insights, items } = computeTourInsights(await loadTourFacts(userId, at));
+  const { insights, items } = computeTourInsights(
+    preloaded.tours ?? (await loadTourFacts(userId, at))
+  );
   return { response: { ...insights, totals: totalsOf(items) }, items };
 }

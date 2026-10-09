@@ -11,7 +11,18 @@ export const roadtripInsightsResponseSchema = z
         id: z.string(),
         name: z.string(),
         year: z.number().int().nullable(),
+        firstDay: z.string().nullable().openapi({
+          description: "Local day of the first dated station; null when no station is dated.",
+        }),
         phase,
+        roadKm: z
+          .object({
+            recorded: z.number(),
+            current: z.number(),
+            planned: z.number(),
+            unplaced: z.number(),
+          })
+          .openapi({ description: "Road legs only — what was driven. Same phases as `km`." }),
         km: z
           .object({
             recorded: z.number(),
@@ -21,7 +32,7 @@ export const roadtripInsightsResponseSchema = z
           })
           .openapi({
             description:
-              "Recorded = driven by the timeline rule (shared/tour/roadtripTimeline.ts); " +
+              "Every mode. Recorded = happened by the timeline rule (shared/tour/roadtripTimeline.ts); " +
               "current = today's stage; planned = ahead; unplaced = undated on a roadtrip under way.",
           }),
         kmBySource: z.record(z.string(), z.number()).openapi({
@@ -56,7 +67,8 @@ export const roadtripInsightsResponseSchema = z
       medianDayKm: z.number().nullable(),
       longestDay: z
         .object({ roadtripId: z.string(), name: z.string(), day: z.string(), km: z.number() })
-        .nullable(),
+        .nullable()
+        .openapi({ description: "Road km of one driving day; a ferry day is no driving day." }),
       unstagedLegs: z.number().int(),
       restDays: z.number().int(),
       fullyDatedTrips: z.number().int(),

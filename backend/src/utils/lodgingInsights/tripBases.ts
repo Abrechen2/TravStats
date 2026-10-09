@@ -31,9 +31,19 @@ function baseOf(trip: InsightTrip, stays: PreparedStay[], completed: boolean): T
     .sort((a, b) => a.nightDays[0] - b.nightDays[0]);
   if (dated.length === 0) return null;
 
+  // A booking whose every night is also held at ANOTHER house (a second
+  // room, a booking changed mid-trip) is parallel to the base, not a move:
+  // it stays out of the sequence, and its nights show as `overlapNights`.
+  const nightsElsewhere = (p: PreparedStay): boolean =>
+    p.nightDays.every((day) =>
+      dated.some(
+        (q) => q !== p && q.stay.lodgingId !== p.stay.lodgingId && q.nightDays.includes(day)
+      )
+    );
+  const sequence = dated.filter((p) => !nightsElsewhere(p));
   let changes = 0;
-  for (let i = 1; i < dated.length; i += 1) {
-    if (dated[i].stay.lodgingId !== dated[i - 1].stay.lodgingId) changes += 1;
+  for (let i = 1; i < sequence.length; i += 1) {
+    if (sequence[i].stay.lodgingId !== sequence[i - 1].stay.lodgingId) changes += 1;
   }
 
   const nightsByHouse = new Map<string, number[]>();

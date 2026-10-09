@@ -197,3 +197,33 @@ describe("LodgingInsightsSection (forgejo#258)", () => {
     expect(screen.getByTestId("insight-trip-bases").textContent).not.toMatch(/\b0 Wechsel/);
   });
 });
+
+describe("LodgingInsightsSection — changes of house (review M7)", () => {
+  beforeEach(() => lodging.mockReset());
+
+  it("takes the median over finished trips only and still lists the one under way", async () => {
+    const base = {
+      year: 2025,
+      longestBaseNights: 2,
+      longestBaseLodgingId: "h1",
+      longestBaseName: "Haus",
+      overlapNights: 0,
+      types: ["hotel"],
+    };
+    lodging.mockResolvedValueOnce({
+      ...EMPTY,
+      tripBases: {
+        ...EMPTY.tripBases,
+        trips: [
+          { ...base, tripId: "a", tripName: "Fertig", houses: 4, changes: 3, completed: true },
+          { ...base, tripId: "b", tripName: "Unterwegs", houses: 1, changes: 0, completed: false },
+        ],
+      },
+    });
+    renderAt(null);
+    const tile = await screen.findByTestId("insight-trip-bases");
+    expect(tile.textContent).toContain("3 Wechsel");
+    expect(tile.textContent).toContain("Median über 1 abgeschlossene Reise");
+    expect(tile.textContent).toContain("Unterwegs");
+  });
+});

@@ -1,9 +1,8 @@
 import { birthdayOf } from "../services/timeModel/readDay";
 import { departureClockOf } from "./timezone";
 import { prisma } from "../db";
-import { calculateRoadtripAchievementStats } from "./roadtripAchievements";
 import { calculateRailAchievementStats } from "./railAchievements";
-import { calculateInsightAchievementStats } from "./insightAchievements";
+import { calculateInsightBadgeStats } from "./insightAchievements";
 import logger from "./logger";
 import {
   applyAchievementWrites,
@@ -659,14 +658,17 @@ async function runAchievementCheck(
     // Decide first, write second — the plan is a value that exists before any
     // transaction opens. See `./achievementWrites` for why that ordering is the
     // fix for forgejo#39 and not merely tidier.
+    // Roadtrip and Part K measures: each source read once, a failing one
+    // skipped rather than aborting the whole check (`insightAchievements.ts`).
+    const { roadtripStats, insightStats } = await calculateInsightBadgeStats(userId);
     const plan = planAchievementWrites(
       allAchievements,
       existingAchievementMap,
       augmentedStats,
       flights as FlightData[],
-      await calculateRoadtripAchievementStats(userId),
+      roadtripStats,
       await calculateRailAchievementStats(userId),
-      await calculateInsightAchievementStats(userId)
+      insightStats
     );
 
     // `return await`, not `return`: a bare return would hand the promise out

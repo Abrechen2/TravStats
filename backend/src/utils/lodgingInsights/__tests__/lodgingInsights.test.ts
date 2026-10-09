@@ -106,6 +106,18 @@ describe("lodging insights — coming back (item 2)", () => {
     });
   });
 
+  it("measures a break from the latest check-out, not from a short booking inside a long one", () => {
+    const { insights } = computeLodgingInsights(
+      [
+        stay({ checkIn: "2024-03-01", checkOut: "2024-03-10" }),
+        stay({ checkIn: "2024-03-02", checkOut: "2024-03-03" }),
+        stay({ checkIn: "2024-03-20", checkOut: "2024-03-21" }),
+      ],
+      NOW
+    );
+    expect(insights.revisits.longestGap).toMatchObject({ days: 10, from: "2024-03-10" });
+  });
+
   it("does not read touching stays at one house as a gap", () => {
     const { insights } = computeLodgingInsights(
       [
@@ -158,6 +170,19 @@ describe("lodging insights — bases on a trip (item 3)", () => {
       NOW
     );
     expect(insights.tripBases.trips[0]).toMatchObject({ changes: 1, overlapNights: 1 });
+  });
+
+  it("reads a second room booked inside the base stay as parallel, not as a move there and back", () => {
+    const t = trip("t6");
+    const { insights } = computeLodgingInsights(
+      [
+        stay({ trip: t, lodgingId: "A", checkIn: "2024-09-01", checkOut: "2024-09-10" }),
+        stay({ trip: t, lodgingId: "B", checkIn: "2024-09-05", checkOut: "2024-09-06" }),
+        stay({ trip: t, lodgingId: "A", checkIn: "2024-09-10", checkOut: "2024-09-12" }),
+      ],
+      NOW
+    );
+    expect(insights.tripBases.trips[0]).toMatchObject({ changes: 0, overlapNights: 1 });
   });
 
   it("only calls a trip completed when nothing of it is still ahead", () => {
