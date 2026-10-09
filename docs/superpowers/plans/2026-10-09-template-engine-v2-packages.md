@@ -166,7 +166,9 @@ match/decline from `markers`/`anchors` and ignores `expected`), `loader.ts`
   `TRIP_NOT_FOUND`). **#356** `PATCH /trips/bookings/:id` takes `tripId`;
   `POST /trips/bookings/:id/flights` files flights on a booking (all or nothing). The booking
   routes moved to `routes/trips/tripBookings.ts` (trips.ts was at 800 lines).
-  Not done: `POST /flights/batch` still ignores a `tripId` in its rows.
+  `POST /flights/batch` keeps a row's `tripId` too (follow-up): every named trip is checked
+  before any write (foreign → 404 `TRIP_NOT_FOUND` with `row`, whole batch refused), and a row
+  with an explicit `tripId` is left out of the PNR grouping.
 - **Frontend**: the trip import's drop zone parses as `package` (`parseAs`), keeps the PDF,
   and opens `PackageImportPreviewModal` (badges, reasons, warnings, airport picks, trip
   name); commit is the one server call.
@@ -177,8 +179,13 @@ match/decline from `markers`/`anchors` and ignores `expected`), `loader.ts`
   carries — `tripDocumentParser.ts` reads no issue date, so whether the real documents print
   one is open; run `scripts/measureTripSamples.ts`-style measurement before publishing. The
   invoice template reads no stays (the reference reader does not either).
-- Still open from P3: a mail's PDF attachment is not routed to the package reader (spec
-  package 2); `tripDocumentParser.ts` stays until the templates pass the measurement.
+- Mail attachments (follow-up, `services/parsing/packageAttachments.ts`): when the body
+  yields no package reading, each PDF attachment (at most six) is read by the package
+  templates, first whole reading wins; `auto` scores the attachments when the body is not a
+  package. With `retain` the kept document is that attachment (`sourceAttachment` →
+  `retainedInputFor`), and the body carries `readFromAttachment`. A `.msg` with `retain` is
+  still refused before parsing, as for every domain.
+- Still open from P3: `tripDocumentParser.ts` stays until the templates pass the measurement.
 
 ### P4 — move the issuer readers out
 - Airlines v1 → v2 `flight/`; lodging built-ins (koa, hilton, travelclick, check24, accor, hrs)
