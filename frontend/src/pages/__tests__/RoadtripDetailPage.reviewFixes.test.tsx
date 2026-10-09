@@ -283,4 +283,30 @@ describe("RoadtripDetailPage — review fixes, signed in", () => {
         .some((el) => el.textContent?.includes("roadtrips:editor.status.saved"))
     ).toBe(true);
   });
+
+  // Review M2: a legacy station without a coordinate is in no editor's list;
+  // merging it in after a 409 held every later save on "Ort fehlt".
+  it("leaves a station without a coordinate out of a live merge, so the merged list saves", async () => {
+    vi.mocked(roadtripsApi.replaceStations)
+      .mockRejectedValueOnce(
+        Object.assign(new Error("conflict"), {
+          isAxiosError: true,
+          response: { status: 409, data: { code: "ROADTRIP_STATIONS_CHANGED" } },
+        })
+      )
+      .mockImplementation(echo);
+    renderPage();
+    const legacy = { ...station("Altlast"), id: ID2, lat: null, lon: null };
+    vi.mocked(roadtripsApi.get).mockResolvedValue({
+      ...detail("Bergen"),
+      stations: [station("Bergen"), legacy],
+    });
+    await renameInEditor("Bergen sentrum");
+    await settle();
+    const dialog = screen.getByRole("dialog", { name: "roadtrips:conflict.title" });
+    expect(within(dialog).queryByTestId("conflict-added")).not.toBeInTheDocument();
+    fireEvent.click(within(dialog).getByText("roadtrips:conflict.apply"));
+    await settle(800);
+    expect(sentTitles().at(-1)).toBe("Bergen sentrum");
+  });
 });

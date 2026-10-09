@@ -207,6 +207,13 @@ export type ApiErrorCode =
   | "TRACK_DOES_NOT_COVER_LEG"
   /** The recording stops and restarts between a leg's two stops (409). */
   | "TRACK_GAP_IN_LEG"
+  /** Assigning stops to a route section (review M4): a stop that is not on
+   *  this trip/tour, one without a coordinate, one already in another
+   *  section, and one another request claimed meanwhile (409). */
+  | "ROUTE_STOP_NOT_OWNED"
+  | "ROUTE_STOP_NO_COORDINATE"
+  | "ROUTE_STOP_IN_OTHER_SECTION"
+  | "ROUTE_STOP_CLAIMED_MEANWHILE"
   /** A trip photo was linked to a stop that is not on its trip — neither on
    *  the trip's timeline nor a station of a roadtrip filed on it (forgejo#139).
    *  Also answered for a stop that does not exist, so a probe learns nothing

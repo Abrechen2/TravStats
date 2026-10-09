@@ -530,19 +530,25 @@ router.put(
           section.tripId !== null
             ? "Every stop must belong to this trip"
             : "Every stop must belong to this tour",
-          400
+          400,
+          "ROUTE_STOP_NOT_OWNED"
         );
       }
       const missing = stops.find((s) => s.lat === null || s.lon === null);
       if (missing) {
         throw new AppError(
           `Every route stop needs a coordinate — "${missing.title}" has none`,
-          400
+          400,
+          "ROUTE_STOP_NO_COORDINATE"
         );
       }
       const stolen = stops.find((s) => s.routeId !== null && s.routeId !== routeId);
       if (stolen) {
-        throw new AppError(`Stop "${stolen.title}" already belongs to another route section`, 400);
+        throw new AppError(
+          `Stop "${stolen.title}" already belongs to another route section`,
+          400,
+          "ROUTE_STOP_IN_OTHER_SECTION"
+        );
       }
 
       const byId = new Map(stops.map((s) => [s.id, s]));
@@ -574,7 +580,11 @@ router.put(
               data: { routeId, routeOrderIdx: idx },
             });
             if (hit.count !== 1) {
-              throw new AppError("A stop changed section while this request was in flight", 409);
+              throw new AppError(
+                "A stop changed section while this request was in flight",
+                409,
+                "ROUTE_STOP_CLAIMED_MEANWHILE"
+              );
             }
           }
           const route = await tx.tripRoute.findUniqueOrThrow({

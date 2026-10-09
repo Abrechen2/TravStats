@@ -563,6 +563,12 @@
       "message_one": "„{{name}}“ hat {{count}} erfasste Ausgabe und gehört zu keiner Reise, die sie übernehmen könnte. Beim Löschen geht sie mit.",
       "message_other": "„{{name}}“ hat {{count}} erfasste Ausgaben und gehört zu keiner Reise, die sie übernehmen könnte. Beim Löschen gehen sie mit.",
       "confirm": "Mit Kosten löschen"
+    },
+    "assignErrors": {
+      "notOwned": "Ein gewählter Halt gehört nicht zu dieser Reise oder Tour. Lade die Seite neu und wähle noch einmal.",
+      "noCoordinate": "Ein gewählter Halt hat keinen Ort. Gib ihm im Reiseverlauf erst einen Ort, dann lässt er sich zuordnen.",
+      "inOtherSection": "Ein gewählter Halt gehört schon zu einem anderen Streckenabschnitt. Nimm ihn dort zuerst heraus.",
+      "claimedMeanwhile": "Ein Halt wurde gerade von einer anderen Änderung einem Abschnitt zugeordnet. Nichts wurde gespeichert – versuche es noch einmal."
     }
   },
   "head": {

@@ -3,6 +3,7 @@ import type { JSX } from "react";
 
 import { FormErrorBanner } from "../form";
 import { isTransientSaveError, saveErrorKey } from "../../lib/saveErrorMessage";
+import { RETRYABLE_ROUTE_STOP_KEYS } from "../../lib/routeStopErrorKeys";
 
 /**
  * The route editor's sections say what happened to them IN them (forgejo#246,
@@ -73,7 +74,10 @@ export function useRouteEditorReports(t: Translate): {
       report(section, {
         kind: "error",
         message: t(key),
-        retry: retry && isTransientSaveError(key) ? retry : undefined,
+        retry:
+          retry && (isTransientSaveError(key) || RETRYABLE_ROUTE_STOP_KEYS.has(key))
+            ? retry
+            : undefined,
       });
     },
     [report, t]

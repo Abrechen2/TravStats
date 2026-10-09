@@ -3,6 +3,7 @@ import { act, renderHook } from "@testing-library/react";
 
 import { useRouteEditorReports } from "../routeEditorReports";
 import { TRACK_ERROR_KEYS } from "../../../lib/trackErrorKeys";
+import { ROUTE_STOP_ERROR_KEYS } from "../../../lib/routeStopErrorKeys";
 
 const t = (k: string): string => k;
 const refused = (code: string): unknown =>
@@ -39,5 +40,40 @@ describe("useRouteEditorReports", () => {
     });
     act(() => result.current.clear("legs"));
     expect(result.current.reports).toEqual({ tracks: { kind: "notice", message: "b" } });
+  });
+
+  // Review M4: an assignment refusal says its own reason; a claim lost to a
+  // concurrent change offers the retry that can cure it.
+  it("names an assignment refusal by its code, and retries only the lost claim", () => {
+    const retry = (): void => {};
+    const { result } = renderHook(() => useRouteEditorReports(t));
+    act(() =>
+      result.current.fail(
+        "stops",
+        refused("ROUTE_STOP_IN_OTHER_SECTION"),
+        "trips:tours.assignError",
+        retry,
+        ROUTE_STOP_ERROR_KEYS
+      )
+    );
+    expect(result.current.reports.stops).toEqual({
+      kind: "error",
+      message: "trips:tours.assignErrors.inOtherSection",
+      retry: undefined,
+    });
+    act(() =>
+      result.current.fail(
+        "stops",
+        refused("ROUTE_STOP_CLAIMED_MEANWHILE"),
+        "trips:tours.assignError",
+        retry,
+        ROUTE_STOP_ERROR_KEYS
+      )
+    );
+    expect(result.current.reports.stops).toEqual({
+      kind: "error",
+      message: "trips:tours.assignErrors.claimedMeanwhile",
+      retry,
+    });
   });
 });

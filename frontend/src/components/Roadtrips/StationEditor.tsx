@@ -197,7 +197,10 @@ export default function StationEditor({
     setMergeFailed(false);
     try {
       const fresh = await roadtripsApi.get(routeId);
-      const server = fresh.stations.map(toEditorStation);
+      // The same stations the editor was given: one without a coordinate is in
+      // no editor's list (and the server leaves it out of its check too) —
+      // merging it in would hold every save on "Ort fehlt" (review M2).
+      const server = fresh.stations.filter((s) => s.lat !== null).map(toEditorStation);
       setPendingMerge({
         origin: "live",
         merge: mergeStations(serverStations(), drafts, server),

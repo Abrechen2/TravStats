@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { TRACK_ERROR_KEYS } from "../lib/trackErrorKeys";
+import { ROUTE_STOP_ERROR_KEYS as STOP_KEYS } from "../lib/routeStopErrorKeys";
 
 import AppShell from "../components/ui/AppShell";
 import TripMap, { type TripMapContent } from "../components/Trips/TripMap";
@@ -22,17 +23,15 @@ import { useTourTracks } from "../hooks/useTourTracks";
 import { useTourTrackCoverage } from "../hooks/useTourTrackCoverage";
 import { tripsApi } from "../lib/api";
 import { toursApi, type TourPointInput } from "../lib/api/tours";
-import { trackArchiveApi } from "../lib/api/trackArchive";
-import { downloadBlob } from "../lib/export";
-import { dawarichFailureKey, dawarichFailureKind } from "../lib/api/dawarich";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { logger } from "../lib/logger";
 import {
   RouteEditorReportLine,
   useRouteEditorReports,
 } from "../components/Trips/routeEditorReports";
+import { useRouteTrackActions } from "../components/Trips/useRouteTrackActions";
 import type { Trip, TripStop } from "../types";
-import type { TourGeometry, TourLeg, TourRoute, TourStop, TourTrackMeta } from "../types/tour";
+import type { TourGeometry, TourLeg, TourRoute, TourStop } from "../types/tour";
 
 /**
  * `TripStop` (`types/index.ts`) does not declare `routeId`/`routeOrderIdx` —
@@ -354,7 +353,13 @@ export default function TripRouteEditorPage(): JSX.Element {
           // concurrent claim (409) can only be found out by asking — both
           // must read as an actual message, never a switch that silently
           // flips back with no explanation.
-          fail("stops", err, "trips:tours.assignError", () => handleAssignChange(orderedIds));
+          fail(
+            "stops",
+            err,
+            "trips:tours.assignError",
+            () => handleAssignChange(orderedIds),
+            STOP_KEYS
+          );
         }
       })();
     },
@@ -522,89 +527,16 @@ export default function TripRouteEditorPage(): JSX.Element {
     [id, routeId, load, clear, fail]
   );
 
-  const handleUploadTrack = useCallback(
-    (file: File): void => {
-      clear("tracks");
-      void (async (): Promise<void> => {
-        try {
-          await uploadTrack(file);
-        } catch (err) {
-          // A malformed file, one without timestamps, an oversized one and a
-          // duplicate each carry their own server CODE — mapped to DE/EN copy,
-          // never the server's English prose.
-          fail(
-            "tracks",
-            err,
-            "trips:tours.tracks.uploadError",
-            () => handleUploadTrack(file),
-            TRACK_ERROR_KEYS
-          );
-        }
-      })();
-    },
-    [uploadTrack, clear, fail]
-  );
-
-  const handleDeleteTrack = useCallback(
-    (track: TourTrackMeta): void => {
-      clear("tracks");
-      void (async (): Promise<void> => {
-        try {
-          await deleteTrack(track.id);
-        } catch (err) {
-          fail("tracks", err, "trips:tours.tracks.deleteError", () => handleDeleteTrack(track));
-        }
-      })();
-    },
-    [deleteTrack, clear, fail]
-  );
-
-  const handleDownloadTrack = useCallback(
-    (track: TourTrackMeta): void => {
-      if (!routeId) return;
-      clear("tracks");
-      void (async (): Promise<void> => {
-        try {
-          const file = await trackArchiveApi.downloadTrack(id, routeId, track.id);
-          downloadBlob(file.blob, file.filename);
-        } catch (err) {
-          fail("tracks", err, "roadtrips:trackArchive.downloadFailed", () =>
-            handleDownloadTrack(track)
-          );
-        }
-      })();
-    },
-    [id, routeId, clear, fail]
-  );
-
-  /**
-   * Pulls the section's own date span from Dawarich (an empty body — the
-   * server derives the window from the section's stops). Three failure
-   * shapes, per `toursApi.tracks.pullDawarich`'s doc comment: a fixed-kind
-   * 409 (`dawarichFailureKind` parses it, `notConfigured` included), or a
-   * `code` (an empty window, too few points, no dated stops to derive one
-   * from) that `TRACK_ERROR_KEYS` turns into its own DE/EN sentence.
-   */
-  const handlePullDawarich = useCallback((): void => {
-    clear("tracks");
-    void (async (): Promise<void> => {
-      try {
-        await pullDawarichTrack();
-      } catch (err) {
-        const kind = dawarichFailureKind(err);
-        if (kind) report("tracks", { kind: "error", message: t(dawarichFailureKey(kind)) });
-        else {
-          fail(
-            "tracks",
-            err,
-            "trips:tours.tracks.dawarich.error",
-            () => handlePullDawarich(),
-            TRACK_ERROR_KEYS
-          );
-        }
-      }
-    })();
-  }, [pullDawarichTrack, clear, report, fail, t]);
+  const { handleUploadTrack, handleDeleteTrack, handleDownloadTrack, handlePullDawarich } =
+    useRouteTrackActions({
+      tripId: id,
+      routeId,
+      uploadTrack,
+      deleteTrack,
+      pullDawarichTrack,
+      reports: { clear, report, fail },
+      t,
+    });
 
   if (loading) {
     return (

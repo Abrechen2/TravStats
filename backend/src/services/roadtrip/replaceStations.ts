@@ -6,6 +6,7 @@ import { autoRouteNewLegs } from "../tour/routing/autoRouteLegs";
 import { STATION_DTO_SELECT } from "./roadtripSummary";
 import { readRouteAndLegs, ROUTE_SELECT } from "../../routes/trips/tourRoutes";
 import { stationTimeColumns } from "../timeModel/tripColumns";
+import { lockRoute } from "./lockRoute";
 
 export type Station = StationsInput["stations"][number];
 
@@ -120,14 +121,22 @@ export async function replaceStations(
 
   const result = await prisma.$transaction(
     async (tx) => {
+      await lockRoute(tx, routeId);
       const existing = await tx.tripStop.findMany({
         where: { routeId },
-        select: { id: true, tripId: true },
+        select: { id: true, tripId: true, lat: true, lon: true },
       });
       const known = new Set(existing.map((s) => s.id));
       if (options.expectedStationIds !== undefined) {
+        // Compared against the stations a writer CAN list: one without a
+        // coordinate (only legacy rows — every writer refuses to create one)
+        // is in no editor's list, and counting it made every write 409 for
+        // good (review M2). It is dropped by this write, as it always was.
+        const placed = new Set(
+          existing.flatMap((s) => (s.lat !== null && s.lon !== null ? [s.id] : []))
+        );
         const expected = new Set(options.expectedStationIds);
-        const same = expected.size === known.size && [...known].every((id) => expected.has(id));
+        const same = expected.size === placed.size && [...placed].every((id) => expected.has(id));
         if (!same) {
           throw new AppError(
             "The stations changed since they were read; read the roadtrip again",

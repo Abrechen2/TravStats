@@ -2,6 +2,7 @@ import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import { haversineKm } from "../../shared/geo/haversine";
 import { reverseGeocode } from "../geo/nominatim";
+import { lockRoute } from "./lockRoute";
 import { recomputeLegs, type StopCoords } from "../tour/legRecompute";
 import { autoRouteNewLegs } from "../tour/routing/autoRouteLegs";
 import {
@@ -185,6 +186,14 @@ export async function appendStation(
 
   const { stationId, newLegs } = await prisma.$transaction(
     async (tx) => {
+      // Read again under the route lock: a full-list write may have changed
+      // the stations since the resend check above (review M1).
+      await lockRoute(tx, routeId);
+      const current = await tx.tripStop.findMany({
+        where: { routeId },
+        orderBy: { routeOrderIdx: "asc" },
+        select: { id: true, lat: true, lon: true, routeOrderIdx: true },
+      });
       const station = await tx.tripStop.create({
         data: {
           tripId: null,
@@ -205,12 +214,12 @@ export async function appendStation(
           routeId,
           // After the highest position, not at the count: a gap in the
           // numbering would otherwise collide with @@unique([routeId, routeOrderIdx]).
-          routeOrderIdx: Math.max(-1, ...stations.map((s) => s.routeOrderIdx ?? -1)) + 1,
+          routeOrderIdx: Math.max(-1, ...current.map((s) => s.routeOrderIdx ?? -1)) + 1,
         },
         select: { id: true, lat: true, lon: true },
       });
       const ordered: StopCoords[] = [
-        ...stations.map((s) => ({ id: s.id, lat: s.lat, lon: s.lon })),
+        ...current.map((s) => ({ id: s.id, lat: s.lat, lon: s.lon })),
         station,
       ];
       return { stationId: station.id, newLegs: await recomputeLegs(tx, routeId, mode, ordered) };
@@ -250,7 +259,6 @@ export async function removeStation(
   });
   const target = stations.find((s) => s.id === stationId);
   if (!target) throw new AppError("Station not found", 404);
-  const rest = stations.filter((s) => s.id !== stationId);
   const released = target.tripId !== null;
   const { mode } = await prisma.tripRoute.findUniqueOrThrow({
     where: { id: routeId },
@@ -259,6 +267,17 @@ export async function removeStation(
 
   const newLegs = await prisma.$transaction(
     async (tx) => {
+      // Renumber what the route holds NOW, under its lock — not the list read
+      // before (review M1): a station the web added meanwhile would otherwise
+      // be left without a position.
+      await lockRoute(tx, routeId);
+      const rest = (
+        await tx.tripStop.findMany({
+          where: { routeId },
+          orderBy: { routeOrderIdx: "asc" },
+          select: { id: true, lat: true, lon: true },
+        })
+      ).filter((s) => s.id !== stationId);
       if (released) {
         await tx.tripStop.update({
           where: { id: stationId },

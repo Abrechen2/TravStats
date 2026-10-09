@@ -4,6 +4,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
+import * as routeLock from "../../services/roadtrip/lockRoute";
 
 /**
  * forgejo#244 / forgejo#271: the web editor writes the WHOLE station list, the
@@ -123,6 +124,97 @@ describe("PUT /roadtrips/:id/stations with expectedStationIds", () => {
     });
     expect(res.status).toBe(409);
     expect(res.body.code).toBe("ROADTRIP_STATIONS_CHANGED");
+  });
+
+  // Review M2: a legacy station without a coordinate is in no editor's list.
+  // Counting it made every write from the web 409, for good.
+  it("does not count a legacy station without a coordinate against the writer's set", async () => {
+    const placed = await put({ stations: [BERGEN, FLAM] });
+    const ids: string[] = placed.body.stations.map((s: { id: string }) => s.id);
+    await prisma.tripStop.create({
+      data: { routeId: roadtripId, routeOrderIdx: 2, title: "Altlast", domain: "roadtrip" },
+    });
+    const res = await put({
+      stations: [BERGEN, FLAM].map((s, i) => ({ ...s, id: ids[i] })),
+      expectedStationIds: ids,
+    });
+    expect(res.status).toBe(200);
+  });
+
+  // Review M1: a station the phone appends while a list write is already
+  // running must not be deleted by it. The write now takes the route's row lock
+  // BEFORE it reads the stations; before, it read them first and only then
+  // waited, so its precondition checked a set that was about to change.
+  it("sees a station committed while it waited, and refuses instead of deleting it", async () => {
+    const before = await request(app).get(`/api/v1/roadtrips/${roadtripId}`).set("Cookie", cookie);
+    const ids: string[] = before.body.stations
+      .filter((s: { lat: number | null }) => s.lat !== null)
+      .map((s: { id: string }) => s.id);
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    // The "phone": holds the route, appends a station, commits on release.
+    const phone = prisma.$transaction(
+      async (tx) => {
+        await tx.$queryRaw`SELECT id FROM trip_routes WHERE id = ${roadtripId} FOR UPDATE`;
+        await gate;
+        await tx.tripStop.create({
+          data: {
+            routeId: roadtripId,
+            routeOrderIdx: 99,
+            title: "Vom Handy",
+            lat: 61.5,
+            lon: 7.5,
+            domain: "roadtrip",
+          },
+        });
+      },
+      { timeout: 20_000 }
+    );
+    const write = put({
+      stations: before.body.stations
+        .filter((s: { lat: number | null }) => s.lat !== null)
+        .map((s: { id: string; title: string; lat: number; lon: number }) => ({
+          id: s.id,
+          title: s.title || "x",
+          lat: s.lat,
+          lon: s.lon,
+          night: { kind: "pass" },
+        })),
+      expectedStationIds: ids,
+      // supertest sends only once it is awaited or `then`ed: start it now, so
+      // it is already waiting on the route while the phone appends.
+    }).then((r) => r);
+    await new Promise((r) => setTimeout(r, 1000));
+    release();
+    await phone;
+    const res = await write;
+    expect(res.status).toBe(409);
+    const after = await prisma.tripStop.count({
+      where: { routeId: roadtripId, title: "Vom Handy" },
+    });
+    expect(after).toBe(1);
+  });
+
+  // The test above cannot tell the lock from the connection pool (the test
+  // database serialises the two connections anyway), so the lock itself is
+  // pinned here: every writer of the station list takes it.
+  it("takes the route lock in all three writers: the list write, the append, the removal", async () => {
+    const spy = jest.spyOn(routeLock, "lockRoute");
+    try {
+      const placed = await put({ stations: [BERGEN] });
+      const added = await request(app)
+        .post(`/api/v1/roadtrips/${roadtripId}/stations`)
+        .set("Cookie", cookie)
+        .send({ lat: 62.5, lon: 7.2, date: "2026-07-21", night: "pass", title: "Lock" });
+      await request(app)
+        .delete(`/api/v1/roadtrips/${roadtripId}/stations/${added.body.station.id}`)
+        .set("Cookie", cookie);
+      expect(placed.status).toBe(200);
+      expect(spy).toHaveBeenCalledTimes(3);
+      expect(spy.mock.calls.every((call) => call[1] === roadtripId)).toBe(true);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("serves a writer that names no expectation exactly as before", async () => {
