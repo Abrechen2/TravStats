@@ -137,3 +137,82 @@ overview panel "Geteilt" (members, a share tick per linked companion, Gruppe ver
 - Cruise leg routes (`CruiseLegRoute` overrides) are not copied; the recipient's map draws the
   default schematic route.
 - The companion editor is the settings list — there is still no standalone companion editor.
+
+## S2 — as built (2026-10-09)
+
+**Propagation** — `backend/src/services/sharing/propagate.ts`, one adapter per type under
+`sharing/adapters/` (load, copies in a group, create a copy, apply facts, remove). Every write
+path calls it explicitly: `shareSnapshot(s)` before the write, `propagateWrite(s)` /
+`propagateDelete(s)` after it, inside the write's transaction where there is one (otherwise
+propagation opens its own). `propagate.writePaths.test.ts` scans the tree for every writer of
+the six types (plus houses, port calls and legs) and fails on a writer that neither propagates
+nor stands in its exemption list with a reason, and on a stale exemption. Background jobs that
+maintain each account's rows alike (status sweep, provider tracking, time migrations, geocoding)
+are exempt; the spreadsheet import is propagated once per run (`bulkSync.ts`).
+
+One function decides what a write was, from the entry's trip and key: an unkeyed entry on a
+shared trip is a **create** (it gets a key; every receiving member a copy and a `created`
+notice); a keyed entry that stayed is an **update**; a keyed entry now outside its trip is a
+**move out** (key cleared; members holding a copy get a `deleted` notice with
+`reason: "movedOut"`; their copies stay); a delete is **notices only** (`reason: "deleted"`).
+A copy a member deleted or moved away is never re-created by a later change.
+
+An update carries only the facts THIS write changed (snapshot vs. now, by the whitelist), and
+writes them only onto copies that differ. A private-only write changes nothing anywhere. A fact
+the writer did not touch is never pushed — a gate a provider filled in on one account is not
+overwritten by another account's stale value (defect class 4). Pseudo-facts: a stay's house
+(`lodging`: re-used when it is the same house, `isSameHouse`, and then updated in place;
+otherwise the stay is re-pointed at a matching or a new house — the recipient's other stays
+never move), a cruise's port calls (matched by position, so a member's own excursion note stays
+on its day) and legs (replaced), a stop's wrapped entry (by share key, resolved per account).
+A change to the house itself (`PATCH /lodging/:id`) propagates through its shared stays.
+
+**No recursion**: propagation runs inside an AsyncLocalStorage flag (`propagationGuard.ts`);
+every propagate call inside it is a no-op.
+
+**The boundary** (security review): copies are looked up by key AND the source's share group,
+never by key alone; a row's group counts only through its owner's own trip; a row that is not
+the actor's is ignored. Share keys never leave the server: a json replacer on the app drops
+`shareKey` from every response (the all-data export included), entry notices carry no key,
+request schemas strip unknown keys and the `.travstats` schemas are strict.
+
+**Consent withdrawn** (open point, decided): withdrawing a consent detaches the TARGET's trips
+from every group the requester is also in — keys and group cleared, the others get a `left`
+notice, the copies stay as independent trips — unless an accepted consent remains in the other
+direction. Propagation also skips any member with a withdrawn and no accepted consent towards
+the actor. Two members brought in by a third have no consent row between them: membership is
+the consent. Deleting a shared trip, and merging one away, detaches it first; a shared trip is
+never dissolved as a "micro trip".
+
+**Move in/out** (open point, decided): moving an entry out of a shared trip clears its key and
+notifies as a delete; moving one in (assign, booking filing, suggestions, merge, imports onto a
+shared trip) keys it and propagates as a create.
+
+**Notices**: `updated` stores `before: {facts, zones}` (the recipient's old values) and
+`after: {facts, zones, label, tripId, entryId}`; `GET /notices` adds `changes` — one row per
+fact with both values in the API time shapes (`TimeValue`/`LocalDateValue`, wall-clock shadows
+shown only alone), and `undoneAt`.
+
+**Undo** — `POST /sharing/notices/:id/undo`: on the caller's OWN copy inside the notice's group,
+only if its current facts equal `after` (else 409 `SHARE_UNDO_STALE`, `fields` names what
+changed since); restores `before`, sets `undoneAt`. It is a write by the caller and propagates
+like any change, with its own notice (owner decision 3) — so the original author can undo the
+undo. `POST /sharing/notices/:id/delete-copy` deletes the caller's own copy after a `deleted`
+notice and notifies whoever still holds one. Codes: `SHARE_UNDO_STALE`,
+`SHARE_UNDO_UNAVAILABLE` (not a change, or already undone), `SHARE_COPY_NOT_FOUND`.
+
+**Booking total** (decision 2): `GET /sharing/trips/:tripId` carries `bookingTotals` — the other
+members' booking prices for their trip of the group, one sum per currency, read through the
+group (only a member's own trip opens it). No booking row crosses.
+
+**UI**: the inbox tab lists each notice with actor, entry and every changed fact (labels DE/EN,
+values through the time helpers), Rückgängig / Bei mir auch löschen / Gelesen; a refusal stays
+on the notice in its own words. The trip panel shows the members' booking totals.
+
+**Open for later**
+- Trip-level facts (name, dates) are not propagated; only the six entry types.
+- Roadtrip stations, tour points and route membership stay unshared (S1 scope).
+- Writes without a transaction around them (stay create/update, accepted pending updates, the
+  booking/assign routes) propagate in a transaction of their own right after the write; a
+  failure there is reported, but the member's own write is already stored.
+- A cruise's leg-route overrides still do not travel.
