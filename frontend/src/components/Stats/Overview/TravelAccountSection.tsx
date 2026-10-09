@@ -7,12 +7,18 @@ import type { TravelAccountResponse, TravelAccountYear } from "../../../types/tr
 import StatCard from "../StatCard";
 import DualFigureCard from "../DualFigureCard";
 
-/** One colour per bucket — the domain tokens, plus a muted one for home. */
+/**
+ * One colour per bucket — the domain tokens, plus the bar's own muted ground
+ * for the remainder. The remainder is "not accounted for", never "at home"
+ * (forgejo#266): it is drawn as the empty part of the year because that is
+ * what it is.
+ */
 const BUCKETS = [
   { key: "hotelNights", colour: "var(--domain-lodging, #d4778f)" },
   { key: "seaNights", colour: "var(--domain-cruise, #6fa0d6)" },
+  { key: "railNights", colour: "var(--domain-rail, #5fb39b)" },
   { key: "airNights", colour: "var(--domain-flight, #f0a947)" },
-  { key: "homeNights", colour: "var(--color-border)" },
+  { key: "unassignedNights", colour: "var(--color-border)" },
 ] as const;
 
 type BucketKey = (typeof BUCKETS)[number]["key"];
@@ -23,8 +29,10 @@ type BucketKey = (typeof BUCKETS)[number]["key"];
  * With flights alone you can say how far someone went; with cruises you can add
  * how long they were at sea. Only once hotel nights are recorded can a year be
  * closed out: so many nights in a bed away from home, so many at sea, so many
- * in a seat, and the rest at home. The bar is a full year every time, which is
- * what makes "you were away 14 % of 2025" legible without a second figure.
+ * on a night train, so many in a seat. The rest is what no record accounts for
+ * — the server's `unassignedNights`, never "at home" (forgejo#266) — and the
+ * help line under the title says so. The bar is a full year every time, which
+ * is what makes "you were away 14 % of 2025" legible without a second figure.
  */
 export default function TravelAccountSection(): JSX.Element | null {
   const { t } = useTranslation(["stats", "common"]);
@@ -73,6 +81,11 @@ export default function TravelAccountSection(): JSX.Element | null {
         {t("stats:travelAccount.subtitle")}
         {account.contestedNights > 0 &&
           ` · ${t("stats:travelAccount.contested", { count: account.contestedNights })}`}
+        {(account.undatedNightTrains ?? 0) > 0 &&
+          ` · ${t("stats:travelAccount.undatedNightTrains", { count: account.undatedNightTrains })}`}
+      </p>
+      <p className="-mt-4 mb-6 text-xs" style={{ color: "var(--text-muted)" }}>
+        {t("stats:travelAccount.help")}
       </p>
 
       <div className="flex flex-col gap-3">
@@ -102,7 +115,7 @@ export default function TravelAccountSection(): JSX.Element | null {
         the card should be split — it is a `DualFigureCard` now, one card with
         a trigger per figure. `avgTripDays` is a `ratio`, which release 1 does
         not serve at all.
-        The five NIGHT measures are served too and still have no tile here to
+        The six NIGHT measures are served too and still have no tile here to
         open them: this section draws its nights as per-year bars, and a bar is
         not a number. There is no all-time night figure on screen to attach a
         trigger to, so all five stay reachable by `?evidence=metric:<key>` only.
@@ -177,7 +190,7 @@ function YearBar({
   year: TravelAccountYear;
   label: (key: BucketKey) => string;
 }): JSX.Element {
-  const awayNights = year.hotelNights + year.seaNights + year.airNights;
+  const awayNights = year.hotelNights + year.seaNights + year.railNights + year.airNights;
   return (
     <div className="flex items-center gap-3">
       <span

@@ -20,6 +20,7 @@ import type {
   AccountCruise,
   AccountFlight,
   AccountFreeNight,
+  AccountRail,
   AccountStay,
   TravelAccountInput,
 } from "./travelAccount";
@@ -45,6 +46,11 @@ export interface TravelAccountFlightRow extends AccountFlight {
   arrIata: string | null;
 }
 
+/** A train ride, plus the name its evidence entry renders (forgejo#266). */
+export interface TravelAccountRailRow extends AccountRail {
+  label: string;
+}
+
 /** A free-pitch station, plus the roadtrip it belongs to — where it is edited. */
 export interface TravelAccountFreeNightRow extends AccountFreeNight {
   roadtripId: string;
@@ -57,14 +63,32 @@ export interface TravelAccountData extends TravelAccountInput {
   cruises: TravelAccountCruiseRow[];
   flights: TravelAccountFlightRow[];
   freeNights: TravelAccountFreeNightRow[];
+  rail: TravelAccountRailRow[];
   trips: TripAccountInput[];
   /** Every expense of the caller's, trip-wide or on a section (forgejo#140). */
   expenses: ExpenseAccountRow[];
 }
 
+/**
+ * What a night train's nights are read from (`railRideKinds.nightTrainNights`):
+ * its kind, both instants with their precision, and the stations' zones.
+ */
+const RAIL_NIGHT_SELECT = {
+  id: true,
+  status: true,
+  trainCategory: true,
+  travelClass: true,
+  departureTime: true,
+  arrivalTime: true,
+  depTimezone: true,
+  arrTimezone: true,
+  depPrecision: true,
+  arrPrecision: true,
+} as const;
+
 export async function loadTravelAccountData(userId: string): Promise<TravelAccountData> {
   const now = new Date();
-  const [stays, cruises, flights, trips, roadtrips, expenses] = await Promise.all([
+  const [stays, cruises, flights, trips, roadtrips, expenses, rail] = await Promise.all([
     prisma.lodgingStay.findMany({
       where: { userId },
       select: {
@@ -139,6 +163,10 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
         flights: {
           select: { ...TRIP_COST_SELECT.flights.select, departureTime: true, arrivalTime: true },
         },
+        // A night train covers its nights on the trip, as on the account.
+        railJourneys: {
+          select: { ...TRIP_COST_SELECT.railJourneys.select, ...RAIL_NIGHT_SELECT },
+        },
       },
     }),
     // Roadtrip stations, for the nights spent at a free pitch. The linked
@@ -174,6 +202,15 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
     prisma.tripExpense.findMany({
       where: { userId },
       select: { amount: true, currency: true, date: true },
+    }),
+    prisma.railJourney.findMany({
+      where: { userId },
+      select: {
+        ...RAIL_NIGHT_SELECT,
+        trainNumber: true,
+        depStationName: true,
+        arrStationName: true,
+      },
     }),
   ]);
 
@@ -245,6 +282,11 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
             : [];
         })
       ),
+    rail: rail.map(({ trainNumber, depStationName, arrStationName, ...ride }) => {
+      const train = [ride.trainCategory, trainNumber].filter(Boolean).join(" ");
+      const route = `${depStationName} → ${arrStationName}`;
+      return { ...ride, label: train ? `${train} · ${route}` : route };
+    }),
     trips: trips.map((t) => ({
       id: t.id,
       name: t.name,
@@ -259,6 +301,7 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
       stays: t.lodgingStays,
       cruises: t.cruises,
       flights: t.flights,
+      rail: t.railJourneys,
     })),
     expenses: expenses.map((e) => ({ ...expenseMoney(e), date: e.date })),
     now,

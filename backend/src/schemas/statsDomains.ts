@@ -71,15 +71,33 @@ export const travelAccountYearSchema = z.object({
     .int()
     .openapi({
       description:
-        "Days the year contributes — shortened for the current year to days elapsed, " +
-        "so a year in progress is not measured against a length it has not reached.",
+        "Nights the year contributes — its length, or for the current year the nights " +
+        "that are over (up to last night), so a year in progress is not measured " +
+        "against a length it has not reached. The buckets add up to this.",
     }),
   hotelNights: z.number().int(),
   seaNights: z.number().int(),
+  railNights: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "Nights on a completed night train — a sleeper, a couchette, a night category " +
+        "(NJ, EN, NZ), or a ride timed overnight — from its departure day to its arrival " +
+        "day on the stations' calendars.",
+    }),
   airNights: z.number().int().openapi({
     description: "A flight whose departure and arrival fall on different dates.",
   }),
-  homeNights: z.number().int(),
+  unassignedNights: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "Nights no record accounts for — the remainder. NOT nights at home: a missing " +
+        "record proves nothing, and no record type says a night was spent at home " +
+        "(forgejo#266). An incomplete logbook shows up here.",
+    }),
 });
 
 export const travelAccountSchema = z.object({
@@ -94,9 +112,22 @@ export const travelAccountSchema = z.object({
         "position would be indistinguishable from a known one. Includes free-pitch " +
         "nights at an undated roadtrip station, which are the same fact.",
     }),
-  contestedNights: z.number().int().openapi({
-    description: "Nights claimed by more than one record, reported rather than silently picked.",
-  }),
+  undatedNightTrains: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "Completed night trains with no known arrival day: a night on board that no " +
+        "year can hold. Their nights are in no bucket.",
+    }),
+  contestedNights: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "Nights claimed by more than one record, counted once and given to the first of " +
+        "sea, hotel, night train, air — reported rather than silently picked.",
+    }),
 });
 
 export const tripAccountRowSchema = z.object({
@@ -107,9 +138,15 @@ export const tripAccountRowSchema = z.object({
   days: z.number().int().nullable().openapi({
     description: "Null when the trip carries no dates at all — then coverage is unanswerable.",
   }),
-  coveredDays: z.number().int().nullable().openapi({
-    description: "Days inside the trip with a hotel night, a night at sea, or a night in the air.",
-  }),
+  coveredDays: z
+    .number()
+    .int()
+    .nullable()
+    .openapi({
+      description:
+        "Days inside the trip with a hotel night, a night at sea, a night on a night train, " +
+        "or a night in the air.",
+    }),
   uncoveredDays: z.number().int().nullable().openapi({
     description: "Days inside the trip with none of those. The nudge: something is missing here.",
   }),

@@ -13,6 +13,7 @@
  */
 import { tripCostItems, tripSpend, type TripCostInput } from "../../shared/tripCost";
 import { resolveStayTiming } from "../../shared/lodgingTiming";
+import { nightTrainNights, type NightTrainFacts } from "../../shared/railRideKinds";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -45,6 +46,8 @@ export interface TripAccountInput extends TripCostInput {
     departureTime: Date | null;
     arrivalTime: Date | null;
   })[];
+  /** A night train covers the nights it ran through (forgejo#266). */
+  rail: (TripCostInput["rail"][number] & NightTrainFacts)[];
 }
 
 // Published by /stats/travel-account (forgejo#52).
@@ -95,6 +98,10 @@ export function buildTripAccount(trips: TripAccountInput[]): TripAccount {
       const dep = dayKey(flight.departureTime);
       const arr = dayKey(flight.arrivalTime);
       for (let c = dep; c < arr; c += DAY_MS) covered.add(c);
+    }
+    for (const ride of trip.rail) {
+      if (ride.status === "cancelled") continue;
+      for (const key of nightTrainNights(ride) ?? []) covered.add(Date.parse(`${key}T00:00:00Z`));
     }
 
     // Two counts over the same dates, kept apart on purpose (forgejo#170).
