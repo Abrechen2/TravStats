@@ -28,8 +28,21 @@
   "deleteError": "The roadtrip could not be deleted.",
   "deleteConfirm": {
     "title": "Delete roadtrip?",
-    "message": "“{{name}}” is deleted with its stations, legs and recordings. Linked accommodation and stays are kept, and its day tours stay as tours without a station.",
-    "confirm": "Delete"
+    "confirm": "Delete",
+    "goes": "“{{name}}” will be deleted — with {{list}}. This cannot be undone.",
+    "goesEmpty": "“{{name}}” will be deleted. This cannot be undone.",
+    "stations_one": "{{count}} station",
+    "stations_other": "{{count}} stations",
+    "legs_one": "{{count}} leg",
+    "legs_other": "{{count}} legs",
+    "tracks": "every recording of the route",
+    "costsToTrip_one": "The recorded cost goes to the trip “{{trip}}”.",
+    "costsToTrip_other": "The {{count}} recorded costs go to the trip “{{trip}}”.",
+    "survivorTrip": "the trip “{{name}}”",
+    "survivorLodging": "the lodging “{{name}}” with its stays",
+    "survivorTour": "the day tour “{{name}}” (without a station)",
+    "survivorPhotos_one": "{{count}} photo on its trip",
+    "survivorPhotos_other": "{{count}} photos on their trip"
   },
   "kind": {
     "roadtrip": "Roadtrip",
@@ -211,7 +224,6 @@
     "sectionUnderway": "On the road now",
     "sectionPlanned": "Planned",
     "sectionUndated": "Undated",
-    "noMatch": "No roadtrip matches this search.",
     "today": "Today: {{station}}",
     "todayStay": "Today: {{station}}, {{stay}}",
     "next": "Next up: {{station}}",
@@ -239,11 +251,14 @@
     "railHint": "Going by train? Train journeys get a section of their own.",
     "vehicleName": "Vehicle's own name",
     "odometer": "Odometer at the start",
-    "optional": "optional",
     "trip": "Part of a trip?",
     "tripHint": "It then shows on that trip too.",
     "noTrip": "No trip",
-    "submit": "Create and add the first station"
+    "submit": "Create and add the first station",
+    "odometerHint": "In whole kilometres, e.g. 84,210.",
+    "odometerInvalid": "Please enter whole kilometres, from 0 to 10,000,000.",
+    "odometerMissing": "a valid odometer reading",
+    "tripsFailed": "Your trips could not be loaded — you can link one later."
   },
   "detail": {
     "edit": "Edit",
@@ -307,12 +322,15 @@
   "editor": {
     "hint": "Tap a station to edit it. Tap a leg for ferry or line. Every change is saved at once and can be undone.",
     "status": {
-      "pending": "Changes will be saved shortly",
-      "saving": "Saving …",
-      "saved": "All saved",
-      "error": "Not saved",
+      "pending": "About to be saved on the server",
+      "saving": "Saving on the server …",
+      "saved": "Saved on the server",
+      "error": "Not saved on the server",
       "waiting": "Waiting — a station is not complete yet",
-      "retry": "Try again"
+      "retry": "Try again",
+      "conflict": "Not saved — the station list changed on the server",
+      "merge": "Merge",
+      "discard": "Discard changes"
     },
     "whatHere": "What was here?",
     "choice": {
@@ -353,10 +371,31 @@
       "noPlace": "{{name}}: place missing",
       "beforePrevious": "{{name}} is before the previous station — check the date",
       "noDeparture": "{{name}}: departure missing",
-      "noStay": "{{name}}: stay not linked yet"
+      "noStay": "{{name}}: stay not linked yet",
+      "endBeforeStart": "{{name}}: departure before arrival"
     },
-    "warningsNote": "Hints only — everything is saved anyway. Only a station without a place or without its linked stay waits.",
-    "viaNote": "Only shapes the route: not shown as a station on maps or in lists, and counted nowhere."
+    "warningsNote": "Hints only — saving goes ahead. Only a station without a place, without its linked stay, or with a departure before its arrival waits.",
+    "viaNote": "Only shapes the route: not shown as a station on maps or in lists, and counted nowhere.",
+    "local": {
+      "kept": "kept locally on this device",
+      "failed": "not kept on this device either — do not close the page"
+    },
+    "discardConfirm": {
+      "title": "Discard changes?",
+      "message": "The station changes the server does not have yet are lost — the copy on this device too. You then see what the server holds again.",
+      "confirm": "Discard"
+    },
+    "moved": "“{{name}}” moved",
+    "movedRestores": "Undo restores the previous order with its legs — nothing is saved until then.",
+    "placeRequired": "Place of the station",
+    "viaNameHint": "A route correction may stay without a name.",
+    "saveFailed": "The stations could not be saved. Your changes are kept.",
+    "errors": {
+      "endBeforeStart": "The departure is before the arrival. Nothing is saved like this — please correct a date.",
+      "viaOnTimeline": "A stop from the trip's timeline cannot become a route correction. Choose another kind for it."
+    },
+    "removedRestores": "Undo restores the station with its legs — nothing is saved until then.",
+    "removedRestoresLine": "A recorded or hand-drawn line runs next to it: it is lost unless you undo. Nothing is saved until then."
   },
   "legDialog": {
     "title": "Leg",
@@ -374,7 +413,13 @@
     "apply": "Apply",
     "error": "The leg could not be saved.",
     "fallback": "No route calculated. {{reason}}",
-    "fallbackKept": "The leg stays as it was. Choose “Straight line” to save it as a straight line."
+    "fallbackKept": "The leg stays as it was. Choose “Straight line” to save it as a straight line.",
+    "track": "From the recording (keep it)",
+    "trackHint": "The line follows the recorded route.",
+    "trackModeHint": "While the leg follows its recording, its mode stays too. Choose another line to change it.",
+    "replacesTrack": "The line from the recording is replaced. The recording itself stays under “Route & recordings”.",
+    "replacesDrawn": "The line drawn by hand is replaced.",
+    "applyReplace": "Replace the line"
   },
   "trackArchive": {
     "downloadOne": "As GPX",
@@ -457,8 +502,15 @@
       "error": {
         "invalid": "The entry was refused — please check amount, currency, date and station.",
         "gone": "The roadtrip, the station or the entry no longer exists. Please reload the page.",
-        "unreachable": "The server cannot be reached right now. Nothing was saved — please try again."
-      }
+        "unreachable": "The server cannot be reached right now. Nothing was saved — please try again.",
+        "conflict": "This cost was changed elsewhere in the meantime, for example in the app. Nothing was overwritten — please reload the page and make the change again."
+      },
+      "amountMissingValid": "a valid amount"
+    },
+    "deleteConfirm": {
+      "title": "Delete this cost?",
+      "message": "“{{name}}” ({{place}}) will be deleted. This cannot be undone.\nKept: the roadtrip, its stations and every other cost.",
+      "confirm": "Delete cost"
     }
   },
   "deleteWithCosts": {
@@ -466,5 +518,136 @@
     "message_one": "“{{name}}” has {{count}} recorded cost and belongs to no trip that could take it over. Deleting removes it too.",
     "message_other": "“{{name}}” has {{count}} recorded costs and belongs to no trip that could take them over. Deleting removes them too.",
     "confirm": "Delete with costs"
+  },
+  "draft": {
+    "title": "Unsaved station changes",
+    "body_one": "This device holds a version with {{count}} station that never reached the server (last kept {{when}}).",
+    "body_other": "This device holds a version with {{count}} stations that never reached the server (last kept {{when}}).",
+    "restore": "Restore",
+    "discard": "Discard",
+    "discardTitle": "Discard the local changes?",
+    "discardMessage": "The version of the stations kept on this device is deleted. It is not stored anywhere else.",
+    "discardConfirm": "Discard",
+    "firstTitle": "The kept changes first?",
+    "firstMessage": "This device holds station changes that never reached the server. Restore them, or discard them on purpose before editing afresh — otherwise the first keystroke would overwrite them.",
+    "discardAndEdit": "Discard and edit"
+  },
+  "conflict": {
+    "title": "Merge changes",
+    "intro": {
+      "restore": "Something changed on the server since these changes were kept. Where both sides changed the same detail, you choose which applies. The server's version is preselected.",
+      "live": "While you were editing, the station list changed on the server — through the app, for example. Nothing was overwritten. Where both sides changed the same detail, you choose which applies."
+    },
+    "addedThere_one": "New on the server, kept: {{names}}",
+    "addedThere_other": "New on the server, kept: {{names}}",
+    "removedThereKept_one": "Removed on the server and not changed here, stays removed: {{names}}",
+    "removedThereKept_other": "Removed on the server and not changed here, stay removed: {{names}}",
+    "none": "No detail was changed on both sides — everything merges without a question.",
+    "fieldLegend": "“{{name}}” — {{field}}",
+    "field": {
+      "title": "Name",
+      "place": "Place",
+      "startDate": "Arrival",
+      "endDate": "Departure",
+      "notes": "Note",
+      "night": "Night"
+    },
+    "mine": "On this device: {{value}}",
+    "theirs": "On the server: {{value}}",
+    "empty": "empty",
+    "removedThere": "“{{name}}” was removed on the server but changed here",
+    "restoreMine": "Restore it with the changes from this device",
+    "leaveRemoved": "Leave it removed",
+    "removedHere": "You removed “{{name}}”, but it was changed on the server",
+    "removeAnyway": "Remove it anyway",
+    "keepServers": "Keep it as the server has it",
+    "orderLegend": "Order of the stations",
+    "orderMine": "Order from this device",
+    "orderTheirs": "Order from the server",
+    "apply": "Apply",
+    "readFailed": "The current state could not be read from the server. Your changes stay kept on this device — try “Merge” again in a moment."
+  },
+  "reorder": {
+    "title": "Move “{{name}}”?",
+    "between": "New neighbours: after “{{before}}” and before “{{after}}”.",
+    "first": "New neighbours: at the very start, before “{{after}}”.",
+    "last": "New neighbours: at the very end, after “{{before}}”.",
+    "droppedTitle": "These legs are dropped",
+    "noLegs": "No saved leg is dropped.",
+    "createdTitle": "These legs are added — as a straight line at first",
+    "source": {
+      "track": "from the recording",
+      "drawn": "corrected by hand",
+      "routed": "along the road",
+      "straight": "straight line"
+    },
+    "lossTrack": "This leg loses the line from the recording. The recording itself stays under “Route & recordings”.",
+    "lossDrawn": "The line drawn by hand for this leg is lost.",
+    "dateConflictsTitle": "Possible date conflicts",
+    "dateConflict": "“{{name}}” ({{date}}) then comes after “{{previous}}” ({{previousDate}}) although it is earlier.",
+    "undoNote": "You can undo this for a few seconds afterwards — nothing is saved until that time is up.",
+    "confirm": "Move",
+    "confirmLoss": "Move and drop the line"
+  },
+  "shift": {
+    "open": "Shift from here …",
+    "openHint": "Move this and every following station by days — with a preview.",
+    "title": "Shift from “{{name}}”",
+    "intro": "This station and every one after it move by the same number of days. Linked stays keep their booking dates — they are listed below to check.",
+    "days": "By how many days?",
+    "daysHint": "A positive number moves later, a negative one earlier.",
+    "daysInvalid": "Please enter a whole number, e.g. 2 or -1.",
+    "earlier": "One day earlier",
+    "later": "One day later",
+    "missingDays": "a number of days other than 0",
+    "missingDated": "a dated station from here on",
+    "colStation": "Station",
+    "colBefore": "Before",
+    "colAfter": "New",
+    "noticesTitle": "Please check",
+    "notice": {
+      "beforePrevious": "“{{name}}” then begins before “{{previous}}” ends.",
+      "gap_one": "There is then {{count}} day without a station between “{{previous}}” and “{{name}}”.",
+      "gap_other": "There are then {{count}} days without a station between “{{previous}}” and “{{name}}”.",
+      "linkedStay": "The stay “{{name}}” ({{dates}}) keeps its booking dates.",
+      "otherStay": "“{{name}}” then falls into the stay “{{stay}}” ({{dates}}).",
+      "outsideTrip": "The roadtrip then runs partly outside its trip “{{trip}}” ({{dates}}).",
+      "overlapsTrip": "The roadtrip then overlaps the trip “{{trip}}” ({{dates}}).",
+      "overlapsRoadtrip": "The roadtrip then overlaps the roadtrip “{{roadtrip}}” ({{dates}})."
+    },
+    "check": "check",
+    "contextFailed": "Your trips and other roadtrips could not be loaded — overlaps with them are not checked.",
+    "apply": "Shift",
+    "done_one": "{{count}} station shifted ({{days}} days)",
+    "done_other": "{{count}} stations shifted ({{days}} days)",
+    "undoRestores_one": "Undo restores this station's previous dates ({{from}} – {{to}}).",
+    "undoRestores_other": "Undo restores the previous dates of these {{count}} stations ({{from}} – {{to}})."
+  },
+  "days": {
+    "title": "Day by day",
+    "viewLabel": "View",
+    "view": {
+      "stations": "Stations",
+      "days": "Days"
+    },
+    "undated": "Undated",
+    "via": "On the way: {{places}}",
+    "night": "Night:",
+    "noNight": "No night recorded",
+    "nightsUnknown": "Departure not recorded — number of nights open",
+    "km": "{{km}} km",
+    "kmBy": {
+      "track": "{{km}} km from the recording",
+      "routed": "{{km}} km along the road",
+      "drawn": "{{km}} km drawn by hand",
+      "straight": "{{km}} km as the crow flies"
+    },
+    "ferry": "of which {{km}} km by ferry",
+    "driving": "Driving time {{h}} h {{m}} (calculated)",
+    "drivingUnknown": "Driving time unknown — not every leg is calculated along the road",
+    "missingLeg": "One stretch has no saved leg yet — the distance is incomplete.",
+    "stayOn_one": "Then {{count}} more day in {{place}}",
+    "stayOn_other": "Then {{count}} more days in {{place}}",
+    "drivingEntered": "Driving time {{h}} h {{m}} (entered)"
   }
 }

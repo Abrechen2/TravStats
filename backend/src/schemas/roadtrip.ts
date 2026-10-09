@@ -81,6 +81,23 @@ const station = z
 /** The complete, ordered station list; replaces whatever was there. */
 export const stationsSchema = z.object({
   stations: z.array(station).max(300),
+  /**
+   * The ids of the stations the writer last read from the server. A full-list
+   * write replaces everything — so a list read before the phone appended a
+   * station ("Heute Nacht hier", forgejo#271) would delete that station
+   * without anyone deciding to. With this, the write is refused (409
+   * `ROADTRIP_STATIONS_CHANGED`) when the stored set is no longer the one the
+   * writer saw. Optional: a writer that sends none is served as before.
+   */
+  expectedStationIds: z
+    .array(z.string().uuid())
+    .max(600)
+    .optional()
+    .describe(
+      "Ids of the stations as last read. When the stored set differs (a station added or " +
+        "removed elsewhere, e.g. by the phone), the write is refused with 409 " +
+        "ROADTRIP_STATIONS_CHANGED instead of deleting or overwriting it."
+    ),
 });
 
 /** Move a row between the tour and roadtrip pages. */

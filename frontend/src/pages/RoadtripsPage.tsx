@@ -9,6 +9,9 @@ import { Icon } from "../components/ui/Icon";
 import { SectionLabel } from "../components/ui/StatTile";
 import LogbookTabs from "../components/table/LogbookTabs";
 import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
+import ListEmptyState from "../components/table/ListEmptyState";
+import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
+import { navigateAfterSave } from "../components/form";
 import KindReviewNotice from "../components/Roadtrips/KindReviewNotice";
 import NewRoadtripDialog from "../components/Roadtrips/NewRoadtripDialog";
 import RoadtripCard from "../components/Roadtrips/RoadtripCard";
@@ -57,6 +60,7 @@ export default function RoadtripsPage(): JSX.Element {
 
   const [rows, setRows] = useState<RoadtripSummary[] | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [loadLog, setLoadLog] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [query, setQuery] = useState("");
   const [vehicle, setVehicle] = useState<StoredRoadtripVehicle | "">("");
@@ -74,10 +78,11 @@ export default function RoadtripsPage(): JSX.Element {
     try {
       const data = await roadtripsApi.list();
       if (mountedRef.current) setRows(data);
-    } catch {
+    } catch (err) {
       if (!mountedRef.current) return;
       setRows(null);
       setLoadError(true);
+      setLoadLog(loadFailureLog(err));
     }
   }, []);
 
@@ -173,14 +178,10 @@ export default function RoadtripsPage(): JSX.Element {
       )}
 
       {loadError && (
-        <EmptyState
-          kind="degraded"
+        <ListLoadFailed
           title={t("roadtrips:loadError")}
-          action={
-            <Button variant="secondary" onClick={() => void load()}>
-              {t("common:buttons.retry")}
-            </Button>
-          }
+          onRetry={() => void load()}
+          log={loadLog}
         />
       )}
 
@@ -197,8 +198,15 @@ export default function RoadtripsPage(): JSX.Element {
         />
       )}
 
+      {/* Filtered to nothing: the way out is the reset — a filter set and
+          forgotten must not read as "no roadtrips" (forgejo#250). */}
       {rows !== null && rows.length > 0 && shown.length === 0 && (
-        <p className="t-caption py-8 text-center">{t("roadtrips:list.noMatch")}</p>
+        <ListEmptyState
+          filtered
+          emptyTitle={t("roadtrips:list.emptyTitle")}
+          emptyHint={t("roadtrips:empty")}
+          onReset={resetFilters}
+        />
       )}
 
       {shown.length > 0 && (
@@ -232,8 +240,12 @@ export default function RoadtripsPage(): JSX.Element {
         open={creating}
         onClose={() => setCreating(false)}
         // Straight to the new roadtrip, first station open: an empty
-        // roadtrip has nothing to show, and its first station is next.
-        onCreated={(route) => navigate(`/roadtrips/${route.id}?station=neu`)}
+        // roadtrip has nothing to show, and its first station is next. Through
+        // `navigateAfterSave`, because the dialog's unsaved-input guard may
+        // still hold a history entry that a plain `navigate` would race.
+        onCreated={(route) =>
+          void navigateAfterSave(navigate, `/roadtrips/${route.id}?station=neu`)
+        }
       />
     </AppShell>
   );

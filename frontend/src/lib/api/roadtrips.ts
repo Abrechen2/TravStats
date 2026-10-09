@@ -33,10 +33,16 @@ export const roadtripsApi = {
     return data.roadtrip;
   },
 
-  /** The complete, ordered station list — replaces whatever was there. */
+  /**
+   * The complete, ordered station list — replaces whatever was there.
+   * `expectedStationIds` (the ids as last read) makes the server refuse with
+   * 409 `ROADTRIP_STATIONS_CHANGED` when stations were added or removed
+   * elsewhere meanwhile, instead of deleting them (forgejo#244).
+   */
   replaceStations: async (
     id: string,
-    stations: StationInput[]
+    stations: StationInput[],
+    expectedStationIds?: string[]
   ): Promise<{
     roadtrip: TourRoute;
     nights: RoadtripNights;
@@ -48,7 +54,10 @@ export const roadtripsApi = {
       nights: RoadtripNights;
       stations: RoadtripStation[];
       legs: TourLeg[];
-    }>(`/roadtrips/${id}/stations`, { stations });
+    }>(`/roadtrips/${id}/stations`, {
+      stations,
+      ...(expectedStationIds ? { expectedStationIds } : {}),
+    });
     return data;
   },
 

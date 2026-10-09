@@ -171,6 +171,14 @@ describe("stationWarnings", () => {
     expect(isSavable(draft({ night: { kind: "stay", lodgingStayId: "s1" } }))).toBe(true);
   });
 
+  // forgejo#246: the server refuses it; held and named instead of sent and refused.
+  it("holds a station whose departure lies before its arrival, and names it", () => {
+    const backwards = draft({ startDate: "2026-09-20", endDate: "2026-09-19T00:00:00.000Z" });
+    expect(isSavable(backwards)).toBe(false);
+    expect(stationWarnings([backwards])).toContainEqual({ kind: "endBeforeStart", index: 0 });
+    expect(isSavable(draft({ startDate: "2026-09-20", endDate: "2026-09-20" }))).toBe(true);
+  });
+
   it("starts a new station where the one before it was left", () => {
     expect(stationAfter(draft({ startDate: "2026-09-20", endDate: "2026-09-22" }))).toMatchObject({
       startDate: "2026-09-22",

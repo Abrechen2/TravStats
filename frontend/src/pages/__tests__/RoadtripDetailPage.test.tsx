@@ -110,6 +110,51 @@ describe("RoadtripDetailPage", () => {
     ]);
   });
 
+  // forgejo#243: the same stations, read day by day.
+  it("switches between the stations and the day-by-day view", async () => {
+    vi.mocked(roadtripsApi.get).mockResolvedValue({
+      ...DETAIL,
+      stations: [
+        {
+          id: "s1",
+          title: "Bergen",
+          lat: 60.39,
+          lon: 5.32,
+          startDate: at("2026-09-18"),
+          endDate: at("2026-09-19"),
+          notes: null,
+          order: 0,
+          state: "free",
+          lodgingStayId: null,
+          stay: null,
+        },
+      ],
+    });
+    renderAt("/roadtrips/rt");
+    const days = await screen.findByRole("button", { name: "roadtrips:days.view.days" });
+    expect(days).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(days);
+    expect(days).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("roadtrips:days.title")).toBeInTheDocument();
+    expect(screen.getByText(/^roadtrips:timeline.day · /)).toBeInTheDocument();
+  });
+
+  // forgejo#250: the question names what goes and what stays; the confirm is red.
+  it("asks before deleting, naming what goes and what stays", async () => {
+    vi.mocked(roadtripsApi.get).mockResolvedValue({
+      ...DETAIL,
+      trip: { id: "t", name: "Norwegen" },
+    });
+    renderAt("/roadtrips/rt");
+    fireEvent.click(await screen.findByText("roadtrips:delete"));
+    const dialog = screen.getByTestId("confirm-modal");
+    expect(dialog).toHaveTextContent("roadtrips:deleteConfirm.goesEmpty");
+    expect(dialog).toHaveTextContent("common:delete.survivors");
+    const confirm = screen.getByRole("button", { name: "roadtrips:deleteConfirm.confirm" });
+    expect(confirm.className).toContain("bg-[var(--danger)]");
+    expect(toursApi.removeStandalone).not.toHaveBeenCalled();
+  });
+
   it("arrives from “Heutige Nacht eintragen” with the editor open on tonight", async () => {
     renderAt("/roadtrips/rt?station=heute");
     expect(await screen.findByTestId("editor")).toHaveTextContent("today");

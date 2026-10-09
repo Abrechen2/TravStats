@@ -144,7 +144,7 @@ export default function TourLegList({
           type="button"
           disabled={routingAllInProgress || !routingAvailable}
           title={routingAvailable ? undefined : t("trips:tours.routing.unavailableReason")}
-          className="rounded-sm border border-(--color-border) px-3 py-1.5 text-xs hover:bg-(--bg-surface) disabled:opacity-40"
+          className="rounded-sm border border-(--color-border) px-3 py-1.5 text-xs hover:bg-(--bg-surface) disabled:opacity-40 pointer-coarse:min-h-(--ts-size-touch-min)"
           onClick={onRouteAll}
         >
           {routingAllInProgress
@@ -192,7 +192,7 @@ export default function TourLegList({
                     onSetSource(leg, value as ManualLegSource);
                   }
                 }}
-                className="rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-xs disabled:opacity-40"
+                className="rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-xs disabled:opacity-40 pointer-coarse:min-h-(--ts-size-touch-min)"
               >
                 {options.map((option) => (
                   <option key={option.source} value={option.source} disabled={option.disabled}>
@@ -216,7 +216,7 @@ export default function TourLegList({
               <button
                 type="button"
                 disabled={leg.source === "straight"}
-                className="text-xs underline disabled:opacity-40 disabled:no-underline"
+                className="text-xs underline disabled:opacity-40 disabled:no-underline pointer-coarse:min-h-(--ts-size-touch-min)"
                 onClick={() => onClear(leg)}
               >
                 {t("trips:tours.clearLeg")}

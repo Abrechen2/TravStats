@@ -1,36 +1,48 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { roadtripsApi } from "../../lib/api/roadtrips";
+import { apiErrorMachineCode } from "../../lib/apiError";
+import { saveErrorKey } from "../../lib/saveErrorMessage";
 import { logger } from "../../lib/logger";
-import { isSavable, type StationDraft } from "../../lib/roadtrip/roadtripView";
+import { isSavable } from "../../lib/roadtrip/roadtripView";
+import { toEditorStation, type EditorStation } from "../../lib/roadtrip/editorStation";
+import { sameStationList } from "../../lib/roadtrip/stationMerge";
 import type { RoadtripNights, RoadtripStation, StationInput } from "../../types/roadtrip";
 import type { TourLeg, TourRoute } from "../../types/tour";
 
-/** A station in the editor: a draft plus what only the editor needs. */
-export interface EditorStation extends StationDraft {
-  /** Stable across saves; a new station has no id until the server gives it one. */
-  key: string;
-  stayLabel?: string;
-  stayCancelled?: boolean;
-  /** The linked stay's lodging, to find where it is in the lodging library. */
-  stayLodgingId?: string;
-  /**
-   * Where the lodging picked in this session is. A lodging made by the picker
-   * is not in the library the editor loaded, so its point travels here.
-   */
-  stayPlace?: { lat: number | null; lon: number | null };
-  /** The name of the place a pass-through names, for the card. */
-  placeLabel?: string;
-}
+export { toEditorStation, type EditorStation };
 
 /**
- * `saved` — nothing to send. `pending` — a change waits for the pause.
- * `saving` — on its way. `error` — the last send failed; the edits are kept.
- * `waiting` — a station is not complete yet (no place, or a stay night
- * without its stay), and nothing is sent until it is.
+ * `saved` — the server holds every change. `pending` — a change waits for the
+ * pause. `saving` — on its way. `error` — the last send failed; the edits are
+ * kept. `waiting` — a station is not complete yet (no place, or a stay night
+ * without its stay), and nothing is sent until it is. `conflict` — the server's
+ * station list changed since it was read (the phone added or removed one);
+ * nothing was sent, and the edits wait to be merged (forgejo#244).
  */
-export const SAVE_STATUSES = ["saved", "pending", "saving", "error", "waiting"] as const;
+export const SAVE_STATUSES = [
+  "saved",
+  "pending",
+  "saving",
+  "error",
+  "waiting",
+  "conflict",
+] as const;
 export type SaveStatus = (typeof SAVE_STATUSES)[number];
+
+/**
+ * Where the edits the server does not hold yet are kept, apart from the page:
+ * `none` — there are none; `kept` — in this browser (`stationDraftStore`), so
+ * a reload or a closed tab does not lose them; `failed` — the browser refused
+ * to keep them, and they live only on this page.
+ */
+export type LocalDraftState = "none" | "kept" | "failed";
+
+/** Persists the local draft; the editor's caller binds it to user and roadtrip. */
+export interface StationDraftSink {
+  write: (draft: { base: EditorStation[]; drafts: EditorStation[] }) => boolean;
+  clear: () => void;
+}
 
 export interface SavedStations {
   roadtrip: TourRoute;
@@ -42,40 +54,9 @@ export interface SavedStations {
 let keySeq = 0;
 export function newStationKey(): string {
   keySeq += 1;
-  return `new-${Date.now()}-${keySeq}`;
-}
-
-/**
- * The night a loaded station is edited as. Every state maps to itself: a
- * route correction read as "pass" would be saved back as a counted, named
- * station on the next autosave (tester 2026-09-26).
- */
-function nightOf(s: RoadtripStation): EditorStation["night"] {
-  if (s.state === "stay" && s.lodgingStayId)
-    return { kind: "stay", lodgingStayId: s.lodgingStayId };
-  if (s.state === "free") return { kind: "free" };
-  if (s.state === "via") return { kind: "via" };
-  // The place travels with the night: dropping it here would unlink it on
-  // the next autosave of any other change.
-  return s.placeId ? { kind: "pass", placeId: s.placeId } : { kind: "pass" };
-}
-
-export function toEditorStation(s: RoadtripStation): EditorStation {
-  return {
-    key: s.id,
-    id: s.id,
-    title: s.title,
-    lat: s.lat,
-    lon: s.lon,
-    startDate: s.startDate,
-    endDate: s.endDate,
-    notes: s.notes,
-    night: nightOf(s),
-    stayLabel: s.stay?.lodgingName,
-    stayLodgingId: s.stay?.lodgingId,
-    stayCancelled: s.stay?.status === "cancelled",
-    placeLabel: s.place?.name,
-  };
+  // A counter alone restarts at every page load, and a restored draft may
+  // carry keys from an earlier one; the random part keeps them apart.
+  return `new-${keySeq}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function toInput(d: EditorStation & { lat: number; lon: number }): StationInput {
@@ -91,7 +72,14 @@ function toInput(d: EditorStation & { lat: number; lon: number }): StationInput 
   };
 }
 
+/** The roadtrip's own refusals, in the editor's words. */
+const STATION_ERROR_KEYS: Readonly<Record<string, string>> = {
+  VIA_POINT_ON_TIMELINE: "roadtrips:editor.errors.viaOnTimeline",
+};
+
 const PAUSE_MS = 700;
+/** The editor's undo window; a held change waits this long. */
+export const HOLD_MS = 8000;
 
 /**
  * The editor's save loop (design 2026-09-25: "Alles wird sofort
@@ -101,99 +89,311 @@ const PAUSE_MS = 700;
  * lands, so the last word is always the reader's. A station that is not
  * complete holds the send back rather than being dropped from it: dropping
  * it would delete it on the server.
+ *
+ * forgejo#244, three additions:
+ * - every unsent change is also written to the LOCAL draft (`sink`), and the
+ *   draft is cleared once the server confirmed the last change — so the
+ *   status can say "lokal gesichert" apart from "auf dem Server gespeichert";
+ * - each write names the station ids it was based on (`expectedStationIds`).
+ *   A station the phone appended meanwhile makes the server refuse the write
+ *   (status `conflict`) instead of being deleted by a list that never knew it;
+ * - `rebase` continues from a merged list after such a conflict (or a restored
+ *   draft), and `discard` returns to what the server holds.
+ *
+ * forgejo#242: a change made with `{ hold: true }` (a removal, a reorder) is
+ * not sent until `holdMs` has passed or `releaseHold` is called. The server
+ * drops the legs of every pair that stops being adjacent — a recorded or
+ * hand-drawn line with them — so an "undo" after the write could restore the
+ * order but never the line. Held, the undo restores both, because nothing
+ * was sent. "Fertig" and leaving the page still send at once.
  */
 export function useStationAutosave({
   routeId,
   initial,
+  restored = null,
   onSaved,
+  sink = null,
   pauseMs = PAUSE_MS,
+  holdMs = HOLD_MS,
 }: {
   routeId: string;
+  /** The station list as the server holds it — the base of every write. */
   initial: EditorStation[];
+  /** A local draft to continue from (already merged with `initial`). */
+  restored?: EditorStation[] | null;
   onSaved: (saved: SavedStations) => void;
+  sink?: StationDraftSink | null;
   pauseMs?: number;
+  /** How long a held change waits — the undo window. */
+  holdMs?: number;
 }): {
   drafts: EditorStation[];
   status: SaveStatus;
-  change: (next: (prev: EditorStation[]) => EditorStation[]) => void;
-  flush: () => Promise<void>;
+  local: LocalDraftState;
+  /** The reason of the last failed send (`status === "error"`), as a key. */
+  errorKey: string | null;
+  /** The list the server confirmed last — `base` of a merge. */
+  serverStations: () => EditorStation[];
+  change: (next: (prev: EditorStation[]) => EditorStation[], options?: { hold?: boolean }) => void;
+  /** Send a held change now (after its undo, or when the window closes). */
+  releaseHold: () => void;
+  flush: () => Promise<SaveStatus>;
+  rebase: (server: EditorStation[], merged: EditorStation[]) => void;
+  discard: () => void;
 } {
-  const [drafts, setDrafts] = useState<EditorStation[]>(initial);
-  const [status, setStatus] = useState<SaveStatus>("saved");
-  const latest = useRef(initial);
+  const start = restored ?? initial;
+  const [drafts, setDrafts] = useState<EditorStation[]>(start);
+  const [status, setStatusState] = useState<SaveStatus>("saved");
+  const [local, setLocal] = useState<LocalDraftState>("none");
+  /** Why the last send failed, as a translation key (forgejo#246). */
+  const [errorKey, setErrorKey] = useState<string | null>(null);
+  const statusRef = useRef<SaveStatus>("saved");
+  const latest = useRef(start);
+  const server = useRef(initial);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inFlight = useRef<Promise<void> | null>(null);
+  const held = useRef<ReturnType<typeof setTimeout> | null>(null);
   const again = useRef(false);
   const onSavedRef = useRef(onSaved);
   onSavedRef.current = onSaved;
+  const sinkRef = useRef(sink);
+  sinkRef.current = sink;
 
-  const save = useCallback(async (): Promise<void> => {
-    if (timer.current) {
-      clearTimeout(timer.current);
-      timer.current = null;
+  const setStatus = useCallback((next: SaveStatus): void => {
+    statusRef.current = next;
+    setStatusState(next);
+  }, []);
+
+  const keepLocally = useCallback((): void => {
+    const target = sinkRef.current;
+    if (!target) return;
+    // An untouched placeholder is nobody's work: left out, and a list that is
+    // then the server's own needs no draft at all (review C1).
+    const work = latest.current.filter((s) => !s.seed);
+    if (sameStationList(work, server.current)) {
+      target.clear();
+      setLocal("none");
+      return;
     }
+    setLocal(target.write({ base: server.current, drafts: work }) ? "kept" : "failed");
+  }, []);
+
+  const forgetLocally = useCallback((): void => {
+    sinkRef.current?.clear();
+    setLocal("none");
+  }, []);
+
+  /** One write of the list as it stands now. */
+  const sendOnce = useCallback(async (): Promise<void> => {
     const snapshot = latest.current;
     if (!snapshot.every(isSavable)) {
       setStatus("waiting");
       return;
     }
-    if (inFlight.current) {
-      again.current = true;
-      return inFlight.current;
-    }
     setStatus("saving");
-    const run = (async () => {
-      try {
-        const saved = await roadtripsApi.replaceStations(
-          routeId,
-          (snapshot as Array<EditorStation & { lat: number; lon: number }>).map(toInput)
-        );
-        // New stations learn their ids by position in the list as SENT.
-        const idByKey = new Map(snapshot.map((d, i) => [d.key, saved.stations[i]?.id]));
-        const merged = latest.current.map((d) => {
-          const id = d.id ?? idByKey.get(d.key);
-          return id && id !== d.id ? { ...d, id } : d;
-        });
-        latest.current = merged;
-        setDrafts(merged);
-        onSavedRef.current(saved);
-        setStatus(again.current ? "pending" : "saved");
-      } catch (err) {
+    setErrorKey(null);
+    try {
+      const saved = await roadtripsApi.replaceStations(
+        routeId,
+        (snapshot as Array<EditorStation & { lat: number; lon: number }>).map(toInput),
+        server.current.flatMap((s) => (s.id ? [s.id] : []))
+      );
+      // The server answers the list in the order it was SENT; that is how
+      // new stations learn their ids, and what the next write is based on.
+      server.current = snapshot.map((d, i) =>
+        saved.stations[i] ? { ...toEditorStation(saved.stations[i]), key: d.key } : d
+      );
+      const changedMeanwhile = latest.current !== snapshot;
+      const idByKey = new Map(snapshot.map((d, i) => [d.key, saved.stations[i]?.id]));
+      const merged = latest.current.map((d) => {
+        const id = d.id ?? idByKey.get(d.key);
+        return id && id !== d.id ? { ...d, id } : d;
+      });
+      latest.current = merged;
+      setDrafts(merged);
+      onSavedRef.current(saved);
+      if (changedMeanwhile) {
+        keepLocally();
+        setStatus("pending");
+      } else {
+        forgetLocally();
+        setStatus("saved");
+      }
+    } catch (err) {
+      if (apiErrorMachineCode(err) === "ROADTRIP_STATIONS_CHANGED") {
+        logger.warn("Roadtrip stations changed on the server; the edits wait to be merged");
+        setStatus("conflict");
+      } else {
         logger.warn("Saving roadtrip stations failed", err);
+        setErrorKey(saveErrorKey(err, "roadtrips:editor.saveFailed", STATION_ERROR_KEYS));
         setStatus("error");
       }
-    })();
-    inFlight.current = run;
-    await run;
-    inFlight.current = null;
-    if (again.current) {
-      again.current = false;
-      await save();
     }
-  }, [routeId]);
+  }, [routeId, keepLocally, forgetLocally, setStatus]);
+
+  const active = useRef<Promise<SaveStatus> | null>(null);
+
+  const save = useCallback(async (): Promise<SaveStatus> => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    if (held.current) {
+      clearTimeout(held.current);
+      held.current = null;
+    }
+    // A conflict is settled by `rebase` or `discard`, never by sending again.
+    if (statusRef.current === "conflict") return "conflict";
+    // A save already running sends once more when it lands — and this caller
+    // waits for that, so "Fertig" never reads a status from half-way.
+    if (active.current) {
+      again.current = true;
+      return active.current;
+    }
+    const loop = (async (): Promise<SaveStatus> => {
+      do {
+        again.current = false;
+        await sendOnce();
+        // A held change (a removal, a move) waits for its undo window to close
+        // even when a save in flight asked to send again: sending `latest` now
+        // would put the held change on the server inside the window, and the
+        // undo could then restore the order but not the legs (review C2). The
+        // hold's own timer sends it.
+      } while (again.current && !held.current && statusRef.current !== "conflict");
+      if (held.current) again.current = false;
+      return statusRef.current;
+    })();
+    active.current = loop;
+    try {
+      return await loop;
+    } finally {
+      active.current = null;
+    }
+  }, [sendOnce]);
+
+  const schedule = useCallback((): void => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => void save(), pauseMs);
+  }, [save, pauseMs]);
+
+  const releaseHold = useCallback((): void => {
+    if (held.current) {
+      clearTimeout(held.current);
+      held.current = null;
+    }
+    if (statusRef.current === "conflict" || statusRef.current === "saved") return;
+    // An undo inside the window that leaves exactly what the server holds
+    // needs no request at all: nothing held was ever sent (review C2).
+    if (!active.current && sameStationList(latest.current, server.current)) {
+      forgetLocally();
+      setStatus("saved");
+      return;
+    }
+    schedule();
+  }, [schedule, forgetLocally, setStatus]);
 
   const change = useCallback(
-    (next: (prev: EditorStation[]) => EditorStation[]): void => {
+    (next: (prev: EditorStation[]) => EditorStation[], options: { hold?: boolean } = {}): void => {
       const value = next(latest.current);
       latest.current = value;
       setDrafts(value);
+      keepLocally();
+      if (statusRef.current === "conflict") return;
       setStatus(value.every(isSavable) ? "pending" : "waiting");
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => void save(), pauseMs);
+      if (options.hold) {
+        if (timer.current) {
+          clearTimeout(timer.current);
+          timer.current = null;
+        }
+        if (held.current) clearTimeout(held.current);
+        held.current = setTimeout(() => {
+          held.current = null;
+          schedule();
+        }, holdMs);
+        return;
+      }
+      // While a change is held, nothing goes out early: the hold sends it all.
+      if (held.current) return;
+      schedule();
     },
-    [save, pauseMs]
+    [keepLocally, schedule, setStatus, holdMs]
   );
 
-  // Leaving the page with a change still waiting for its pause sends it.
+  const rebase = useCallback(
+    (nextServer: EditorStation[], merged: EditorStation[]): void => {
+      server.current = nextServer;
+      latest.current = merged;
+      setDrafts(merged);
+      keepLocally();
+      setStatus(merged.every(isSavable) ? "pending" : "waiting");
+      schedule();
+    },
+    [keepLocally, schedule, setStatus]
+  );
+
+  const discard = useCallback((): void => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    if (held.current) {
+      clearTimeout(held.current);
+      held.current = null;
+    }
+    latest.current = server.current;
+    setDrafts(server.current);
+    forgetLocally();
+    setStatus("saved");
+  }, [forgetLocally, setStatus]);
+
+  // A restored draft is unsent work: keep it locally and send it after the pause.
+  useEffect(() => {
+    if (!restored) return;
+    keepLocally();
+    setStatus(restored.every(isSavable) ? "pending" : "waiting");
+    schedule();
+  }, []);
+
+  // Leaving the page with a change still waiting for its pause sends it. If
+  // that send fails, the local draft is still there for the next opening.
   useEffect(
     () => () => {
-      if (timer.current) {
-        clearTimeout(timer.current);
+      if (timer.current || held.current) {
+        if (timer.current) clearTimeout(timer.current);
+        if (held.current) clearTimeout(held.current);
+        timer.current = null;
+        held.current = null;
         void save();
       }
     },
     [save]
   );
 
-  return { drafts, status, change, flush: save };
+  // A reload or a closed tab with unsent changes: the browser asks first
+  // (forgejo#248). The local draft would bring them back, but only on this
+  // device — the question is the cheaper rescue.
+  const unsent = status !== "saved";
+  useEffect(() => {
+    if (!unsent) return;
+    const ask = (event: BeforeUnloadEvent): void => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", ask);
+    return () => window.removeEventListener("beforeunload", ask);
+  }, [unsent]);
+
+  const serverStations = useCallback((): EditorStation[] => server.current, []);
+
+  return {
+    drafts,
+    status,
+    local,
+    errorKey,
+    serverStations,
+    change,
+    releaseHold,
+    flush: save,
+    rebase,
+    discard,
+  };
 }

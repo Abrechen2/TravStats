@@ -28,8 +28,21 @@
   "deleteError": "Der Roadtrip konnte nicht gelöscht werden.",
   "deleteConfirm": {
     "title": "Roadtrip löschen?",
-    "message": "„{{name}}“ wird mit seinen Stationen, Etappen und Aufzeichnungen gelöscht. Verknüpfte Unterkünfte und Aufenthalte bleiben erhalten, seine Tagestouren als Touren ohne Station.",
-    "confirm": "Löschen"
+    "confirm": "Löschen",
+    "goes": "„{{name}}“ wird gelöscht – mit {{list}}. Das lässt sich nicht rückgängig machen.",
+    "goesEmpty": "„{{name}}“ wird gelöscht. Das lässt sich nicht rückgängig machen.",
+    "stations_one": "{{count}} Station",
+    "stations_other": "{{count}} Stationen",
+    "legs_one": "{{count}} Etappe",
+    "legs_other": "{{count}} Etappen",
+    "tracks": "allen Aufzeichnungen der Strecke",
+    "costsToTrip_one": "Die erfasste Ausgabe geht an die Reise „{{trip}}“.",
+    "costsToTrip_other": "Die {{count}} erfassten Ausgaben gehen an die Reise „{{trip}}“.",
+    "survivorTrip": "die Reise „{{name}}“",
+    "survivorLodging": "die Unterkunft „{{name}}“ mit ihren Aufenthalten",
+    "survivorTour": "die Tagestour „{{name}}“ (ohne Station)",
+    "survivorPhotos_one": "{{count}} Foto bei seiner Reise",
+    "survivorPhotos_other": "{{count}} Fotos bei ihrer Reise"
   },
   "kind": {
     "roadtrip": "Roadtrip",
@@ -211,7 +224,6 @@
     "sectionUnderway": "Gerade unterwegs",
     "sectionPlanned": "Geplant",
     "sectionUndated": "Ohne Datum",
-    "noMatch": "Kein Roadtrip passt zu dieser Suche.",
     "today": "Heute: {{station}}",
     "todayStay": "Heute: {{station}}, {{stay}}",
     "next": "Als Nächstes {{station}}",
@@ -239,11 +251,14 @@
     "railHint": "Mit dem Zug unterwegs? Zugreisen bekommen einen eigenen Bereich.",
     "vehicleName": "Eigenname des Fahrzeugs",
     "odometer": "Kilometerstand beim Start",
-    "optional": "optional",
     "trip": "Gehört zu einer Reise?",
     "tripHint": "Dann erscheint der Roadtrip auch dort.",
     "noTrip": "Keine Reise",
-    "submit": "Anlegen und erste Station setzen"
+    "submit": "Anlegen und erste Station setzen",
+    "odometerHint": "In ganzen Kilometern, z. B. 84 210.",
+    "odometerInvalid": "Bitte ganze Kilometer eingeben, von 0 bis 10.000.000.",
+    "odometerMissing": "einen gültigen Kilometerstand",
+    "tripsFailed": "Deine Reisen konnten nicht geladen werden – die Zuordnung geht auch später."
   },
   "detail": {
     "edit": "Bearbeiten",
@@ -307,12 +322,15 @@
   "editor": {
     "hint": "Station antippen, um sie zu bearbeiten. Etappe antippen für Fähre oder Linienführung. Jede Änderung wird sofort gespeichert und lässt sich rückgängig machen.",
     "status": {
-      "pending": "Änderungen werden gleich gespeichert",
-      "saving": "Wird gespeichert …",
-      "saved": "Alles gespeichert",
-      "error": "Nicht gespeichert",
+      "pending": "Wird gleich auf dem Server gespeichert",
+      "saving": "Wird auf dem Server gespeichert …",
+      "saved": "Auf dem Server gespeichert",
+      "error": "Nicht auf dem Server gespeichert",
       "waiting": "Wartet — eine Station ist noch nicht vollständig",
-      "retry": "Erneut versuchen"
+      "retry": "Erneut versuchen",
+      "conflict": "Nicht gespeichert – die Stationsliste hat sich auf dem Server geändert",
+      "merge": "Zusammenführen",
+      "discard": "Änderungen verwerfen"
     },
     "whatHere": "Was war hier?",
     "choice": {
@@ -353,10 +371,31 @@
       "noPlace": "{{name}}: Ort fehlt noch",
       "beforePrevious": "{{name}} liegt vor der vorherigen Station — Datum prüfen",
       "noDeparture": "{{name}}: Abfahrt fehlt",
-      "noStay": "{{name}}: Unterkunft noch nicht verknüpft"
+      "noStay": "{{name}}: Unterkunft noch nicht verknüpft",
+      "endBeforeStart": "{{name}}: Abfahrt liegt vor der Ankunft"
     },
-    "warningsNote": "Nur Hinweise — gespeichert wird trotzdem. Nur eine Station ohne Ort oder ohne verknüpfte Unterkunft wartet.",
-    "viaNote": "Nur für die Linienführung: erscheint nicht als Station auf Karten und in Listen und zählt nirgends mit."
+    "warningsNote": "Nur Hinweise – gespeichert wird trotzdem. Nur eine Station ohne Ort, ohne verknüpfte Unterkunft oder mit Abfahrt vor der Ankunft wartet.",
+    "viaNote": "Nur für die Linienführung: erscheint nicht als Station auf Karten und in Listen und zählt nirgends mit.",
+    "local": {
+      "kept": "lokal auf diesem Gerät gesichert",
+      "failed": "auch auf diesem Gerät nicht gesichert – Seite nicht schließen"
+    },
+    "discardConfirm": {
+      "title": "Änderungen verwerfen?",
+      "message": "Die Änderungen an den Stationen, die noch nicht auf dem Server sind, gehen verloren – auch die Sicherung auf diesem Gerät. Danach siehst du wieder den Stand vom Server.",
+      "confirm": "Verwerfen"
+    },
+    "moved": "„{{name}}“ verschoben",
+    "movedRestores": "Rückgängig stellt die alte Reihenfolge samt ihren Etappen wieder her – gespeichert wird erst danach.",
+    "placeRequired": "Ort der Station",
+    "viaNameHint": "Bei einer Streckenkorrektur kann der Name leer bleiben.",
+    "saveFailed": "Die Stationen konnten nicht gespeichert werden. Deine Änderungen bleiben erhalten.",
+    "errors": {
+      "endBeforeStart": "Die Abfahrt liegt vor der Ankunft. So wird nichts gespeichert – bitte ein Datum korrigieren.",
+      "viaOnTimeline": "Ein Halt aus dem Reiseverlauf kann keine Streckenkorrektur werden. Wähle für ihn eine andere Art."
+    },
+    "removedRestores": "Rückgängig stellt die Station samt ihren Etappen wieder her – gespeichert wird erst danach.",
+    "removedRestoresLine": "Daneben liegt eine aufgezeichnete oder von Hand gezeichnete Linie: sie geht verloren, wenn du nicht rückgängig machst. Gespeichert wird erst danach."
   },
   "legDialog": {
     "title": "Etappe",
@@ -374,7 +413,13 @@
     "apply": "Übernehmen",
     "error": "Die Etappe konnte nicht gespeichert werden.",
     "fallback": "Keine Strecke berechnet. {{reason}}",
-    "fallbackKept": "Die Etappe bleibt, wie sie war. Wähle „Gerade Linie“, wenn du sie als Luftlinie speichern willst."
+    "fallbackKept": "Die Etappe bleibt, wie sie war. Wähle „Gerade Linie“, wenn du sie als Luftlinie speichern willst.",
+    "track": "Aus der Aufzeichnung (so lassen)",
+    "trackHint": "Die Linie folgt der aufgezeichneten Strecke.",
+    "trackModeHint": "Solange die Etappe der Aufzeichnung folgt, bleibt auch ihr Verkehrsmittel. Wähle eine andere Linie, um es zu ändern.",
+    "replacesTrack": "Die Linie aus der Aufzeichnung wird ersetzt. Die Aufzeichnung selbst bleibt unter „Strecke & Aufzeichnungen“ erhalten.",
+    "replacesDrawn": "Die von Hand gezeichnete Linie wird ersetzt.",
+    "applyReplace": "Linie ersetzen"
   },
   "trackArchive": {
     "downloadOne": "Als GPX",
@@ -457,8 +502,15 @@
       "error": {
         "invalid": "Die Angaben wurden abgelehnt — bitte Betrag, Währung, Datum und Station prüfen.",
         "gone": "Der Roadtrip, die Station oder der Eintrag existiert nicht mehr. Bitte die Seite neu laden.",
-        "unreachable": "Der Server ist gerade nicht erreichbar. Nichts wurde gespeichert — bitte erneut versuchen."
-      }
+        "unreachable": "Der Server ist gerade nicht erreichbar. Nichts wurde gespeichert — bitte erneut versuchen.",
+        "conflict": "Diese Kosten wurden inzwischen an anderer Stelle geändert, etwa in der App. Nichts wurde überschrieben – bitte die Seite neu laden und die Änderung noch einmal machen."
+      },
+      "amountMissingValid": "einen gültigen Betrag"
+    },
+    "deleteConfirm": {
+      "title": "Kosten löschen?",
+      "message": "„{{name}}“ ({{place}}) wird gelöscht. Das lässt sich nicht rückgängig machen.\nErhalten bleiben: der Roadtrip, seine Stationen und alle anderen Kosten.",
+      "confirm": "Kosten löschen"
     }
   },
   "deleteWithCosts": {
@@ -466,5 +518,136 @@
     "message_one": "„{{name}}“ hat {{count}} erfasste Ausgabe und gehört zu keiner Reise, die sie übernehmen könnte. Beim Löschen geht sie mit.",
     "message_other": "„{{name}}“ hat {{count}} erfasste Ausgaben und gehört zu keiner Reise, die sie übernehmen könnte. Beim Löschen gehen sie mit.",
     "confirm": "Mit Kosten löschen"
+  },
+  "draft": {
+    "title": "Nicht gespeicherte Änderungen an den Stationen",
+    "body_one": "Auf diesem Gerät liegt eine Fassung mit {{count}} Station, die den Server nicht erreicht hat (zuletzt gesichert {{when}}).",
+    "body_other": "Auf diesem Gerät liegt eine Fassung mit {{count}} Stationen, die den Server nicht erreicht hat (zuletzt gesichert {{when}}).",
+    "restore": "Wiederherstellen",
+    "discard": "Verwerfen",
+    "discardTitle": "Lokale Änderungen verwerfen?",
+    "discardMessage": "Die auf diesem Gerät gesicherte Fassung der Stationen wird gelöscht – eine andere Kopie davon gibt es nicht.",
+    "discardConfirm": "Verwerfen",
+    "firstTitle": "Erst die gesicherten Änderungen?",
+    "firstMessage": "Auf diesem Gerät liegen Änderungen an den Stationen, die den Server nie erreicht haben. Stell sie wieder her, oder verwirf sie bewusst, bevor du neu bearbeitest – sonst würden sie beim ersten Tippen überschrieben.",
+    "discardAndEdit": "Verwerfen und bearbeiten"
+  },
+  "conflict": {
+    "title": "Änderungen zusammenführen",
+    "intro": {
+      "restore": "Seit diese Änderungen gesichert wurden, hat sich auf dem Server etwas geändert. Wo beide Seiten dieselbe Angabe geändert haben, wählst du, was gelten soll. Vorausgewählt ist der Stand vom Server.",
+      "live": "Während du bearbeitet hast, hat sich die Stationsliste auf dem Server geändert – etwa über die App. Nichts wurde überschrieben. Wo beide Seiten dieselbe Angabe geändert haben, wählst du, was gelten soll."
+    },
+    "addedThere_one": "Neu auf dem Server, bleibt erhalten: {{names}}",
+    "addedThere_other": "Neu auf dem Server, bleiben erhalten: {{names}}",
+    "removedThereKept_one": "Auf dem Server entfernt und hier nicht geändert, bleibt entfernt: {{names}}",
+    "removedThereKept_other": "Auf dem Server entfernt und hier nicht geändert, bleiben entfernt: {{names}}",
+    "none": "Keine Angabe wurde auf beiden Seiten geändert – alles lässt sich ohne Rückfrage zusammenführen.",
+    "fieldLegend": "„{{name}}“ – {{field}}",
+    "field": {
+      "title": "Name",
+      "place": "Ort",
+      "startDate": "Ankunft",
+      "endDate": "Abfahrt",
+      "notes": "Notiz",
+      "night": "Übernachtung"
+    },
+    "mine": "Auf diesem Gerät: {{value}}",
+    "theirs": "Auf dem Server: {{value}}",
+    "empty": "leer",
+    "removedThere": "„{{name}}“ wurde auf dem Server entfernt, hier aber geändert",
+    "restoreMine": "Mit den Änderungen von diesem Gerät wiederherstellen",
+    "leaveRemoved": "Entfernt lassen",
+    "removedHere": "„{{name}}“ hast du entfernt, auf dem Server wurde sie geändert",
+    "removeAnyway": "Trotzdem entfernen",
+    "keepServers": "Behalten, wie sie auf dem Server ist",
+    "orderLegend": "Reihenfolge der Stationen",
+    "orderMine": "Reihenfolge von diesem Gerät",
+    "orderTheirs": "Reihenfolge vom Server",
+    "apply": "Übernehmen",
+    "readFailed": "Der aktuelle Stand konnte nicht vom Server gelesen werden. Deine Änderungen bleiben auf diesem Gerät gesichert – versuche „Zusammenführen“ gleich noch einmal."
+  },
+  "reorder": {
+    "title": "„{{name}}“ verschieben?",
+    "between": "Neue Nachbarn: nach „{{before}}“ und vor „{{after}}“.",
+    "first": "Neue Nachbarn: ganz vorne, vor „{{after}}“.",
+    "last": "Neue Nachbarn: ganz hinten, nach „{{before}}“.",
+    "droppedTitle": "Diese Etappen fallen weg",
+    "noLegs": "Keine gespeicherte Etappe fällt weg.",
+    "createdTitle": "Diese Etappen kommen neu dazu – zuerst als gerade Linie",
+    "source": {
+      "track": "aus der Aufzeichnung",
+      "drawn": "von Hand korrigiert",
+      "routed": "entlang der Straße",
+      "straight": "gerade Linie"
+    },
+    "lossTrack": "Die Linie aus der Aufzeichnung geht für diese Etappe verloren. Die Aufzeichnung selbst bleibt unter „Strecke & Aufzeichnungen“ erhalten.",
+    "lossDrawn": "Die von Hand gezeichnete Linie dieser Etappe geht verloren.",
+    "dateConflictsTitle": "Mögliche Datumskonflikte",
+    "dateConflict": "„{{name}}“ ({{date}}) liegt dann hinter „{{previous}}“ ({{previousDate}}), obwohl es früher ist.",
+    "undoNote": "Danach lässt sich das einige Sekunden lang rückgängig machen – gespeichert wird erst, wenn diese Frist vorbei ist.",
+    "confirm": "Verschieben",
+    "confirmLoss": "Verschieben und Linie verwerfen"
+  },
+  "shift": {
+    "open": "Ab hier verschieben …",
+    "openHint": "Diese und alle folgenden Stationen um Tage verschieben – mit Vorschau.",
+    "title": "Ab „{{name}}“ verschieben",
+    "intro": "Diese Station und alle danach rücken um dieselbe Zahl von Tagen. Verknüpfte Unterkünfte behalten ihre Buchungsdaten – sie stehen unten zum Prüfen.",
+    "days": "Um wie viele Tage?",
+    "daysHint": "Eine positive Zahl verschiebt nach hinten (später), eine negative nach vorne (früher).",
+    "daysInvalid": "Bitte eine ganze Zahl eingeben, z. B. 2 oder -1.",
+    "earlier": "Einen Tag früher",
+    "later": "Einen Tag später",
+    "missingDays": "eine Zahl von Tagen ungleich 0",
+    "missingDated": "eine Station mit Datum ab hier",
+    "colStation": "Station",
+    "colBefore": "Bisher",
+    "colAfter": "Neu",
+    "noticesTitle": "Bitte prüfen",
+    "notice": {
+      "beforePrevious": "„{{name}}“ beginnt dann, bevor „{{previous}}“ endet.",
+      "gap_one": "Zwischen „{{previous}}“ und „{{name}}“ liegt dann {{count}} Tag ohne Station.",
+      "gap_other": "Zwischen „{{previous}}“ und „{{name}}“ liegen dann {{count}} Tage ohne Station.",
+      "linkedStay": "Die Unterkunft „{{name}}“ ({{dates}}) behält ihre Buchungsdaten.",
+      "otherStay": "„{{name}}“ fällt dann in den Aufenthalt „{{stay}}“ ({{dates}}).",
+      "outsideTrip": "Der Roadtrip liegt dann teilweise außerhalb seiner Reise „{{trip}}“ ({{dates}}).",
+      "overlapsTrip": "Der Roadtrip überschneidet sich dann mit der Reise „{{trip}}“ ({{dates}}).",
+      "overlapsRoadtrip": "Der Roadtrip überschneidet sich dann mit dem Roadtrip „{{roadtrip}}“ ({{dates}})."
+    },
+    "check": "prüfen",
+    "contextFailed": "Deine Reisen und anderen Roadtrips konnten nicht geladen werden – Überschneidungen damit sind nicht geprüft.",
+    "apply": "Verschieben",
+    "done_one": "{{count}} Station verschoben ({{days}} Tage)",
+    "done_other": "{{count}} Stationen verschoben ({{days}} Tage)",
+    "undoRestores_one": "Rückgängig stellt das bisherige Datum dieser Station wieder her ({{from}} – {{to}}).",
+    "undoRestores_other": "Rückgängig stellt die bisherigen Daten dieser {{count}} Stationen wieder her ({{from}} – {{to}})."
+  },
+  "days": {
+    "title": "Tag für Tag",
+    "viewLabel": "Ansicht",
+    "view": {
+      "stations": "Stationen",
+      "days": "Tage"
+    },
+    "undated": "Ohne Datum",
+    "via": "Unterwegs: {{places}}",
+    "night": "Nacht:",
+    "noNight": "Keine Übernachtung erfasst",
+    "nightsUnknown": "Abfahrt nicht erfasst – Zahl der Nächte offen",
+    "km": "{{km}} km",
+    "kmBy": {
+      "track": "{{km}} km aus der Aufzeichnung",
+      "routed": "{{km}} km entlang der Straße",
+      "drawn": "{{km}} km von Hand gezeichnet",
+      "straight": "{{km}} km Luftlinie"
+    },
+    "ferry": "davon {{km}} km mit der Fähre",
+    "driving": "Fahrzeit {{h}} h {{m}} (berechnet)",
+    "drivingUnknown": "Fahrzeit unbekannt – nicht jede Etappe ist entlang der Straße berechnet",
+    "missingLeg": "Für einen Abschnitt ist noch keine Etappe gespeichert – die Strecke ist unvollständig.",
+    "stayOn_one": "Danach {{count}} weiterer Tag in {{place}}",
+    "stayOn_other": "Danach {{count}} weitere Tage in {{place}}",
+    "drivingEntered": "Fahrzeit {{h}} h {{m}} (eingetragen)"
   }
 }

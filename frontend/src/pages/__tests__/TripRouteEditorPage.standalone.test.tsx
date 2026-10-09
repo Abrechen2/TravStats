@@ -54,6 +54,7 @@ vi.mock("../../lib/api/tours", async (importOriginal) => {
       get: vi.fn(),
       geometry: vi.fn(),
       routeAll: vi.fn(),
+      clearLeg: vi.fn(),
     },
   };
 });
@@ -147,10 +148,80 @@ describe("TripRouteEditorPage — routing the whole tour", () => {
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "trips:tours.routing.routeAll" }));
 
-    await waitFor(() =>
-      expect(useToastStore.getState().toasts.map((toast) => toast.message)).toContain(
-        "trips:tours.routing.resultFallback"
-      )
+    // Said in the legs section and kept there (forgejo#247), not as a toast.
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "trips:tours.routing.resultFallback"
     );
+    expect(useToastStore.getState().toasts).toEqual([]);
+  });
+});
+
+describe("TripRouteEditorPage — failures stay in their section (forgejo#246, forgejo#247)", () => {
+  const stop = (id: string, title: string, lat: number): Record<string, unknown> => ({
+    id,
+    tripId: null,
+    title,
+    lat,
+    lon: 6.2,
+    routeOrderIdx: 0,
+  });
+  const leg = {
+    id: "leg",
+    fromStopId: "a",
+    toStopId: "b",
+    distanceKm: 4,
+    source: "drawn" as const,
+    mode: "foot" as const,
+    confidence: "high",
+    waypoints: null,
+    drivingMinutes: null,
+  };
+
+  it("keeps a failed leg change on screen with a retry, never as a passing toast", async () => {
+    vi.mocked(toursApi.get).mockResolvedValue({
+      route: ROUTE,
+      stops: [stop("a", "Parkplatz", 58.99), stop("b", "Preikestolen", 58.98)] as never,
+      legs: [leg],
+      routingAvailable: false,
+    });
+    vi.mocked(toursApi.geometry).mockResolvedValue({ type: "FeatureCollection", features: [] });
+    vi.mocked(toursApi.clearLeg)
+      .mockRejectedValueOnce(
+        Object.assign(new Error("Network Error"), { isAxiosError: true, response: undefined })
+      )
+      .mockResolvedValueOnce(undefined as never);
+
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "trips:tours.clearLeg" }));
+
+    const banner = await screen.findByRole("alert");
+    expect(banner).toHaveTextContent("common:saveErrors.network");
+    expect(useToastStore.getState().toasts).toEqual([]);
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    await waitFor(() => expect(toursApi.clearLeg).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  });
+
+  it("says a refusal in the reader's language, never the server's English", async () => {
+    vi.mocked(toursApi.get).mockResolvedValue({
+      route: ROUTE,
+      stops: [stop("a", "Parkplatz", 58.99), stop("b", "Preikestolen", 58.98)] as never,
+      legs: [leg],
+      routingAvailable: false,
+    });
+    vi.mocked(toursApi.geometry).mockResolvedValue({ type: "FeatureCollection", features: [] });
+    vi.mocked(toursApi.clearLeg).mockRejectedValueOnce(
+      Object.assign(new Error("refused"), {
+        isAxiosError: true,
+        response: { status: 409, data: { error: "Leg's from stop lost its coordinates" } },
+      })
+    );
+
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "trips:tours.clearLeg" }));
+    const banner = await screen.findByRole("alert");
+    expect(banner).toHaveTextContent("trips:tours.legError");
+    expect(banner).not.toHaveTextContent("lost its coordinates");
+    expect(screen.queryByRole("button", { name: "common:buttons.retry" })).not.toBeInTheDocument();
   });
 });
