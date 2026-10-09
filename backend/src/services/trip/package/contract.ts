@@ -56,14 +56,17 @@ export function canonicalFlightNumber(raw: string): string | null {
   return `${m[1]}${digits}${m[3]}`;
 }
 
-const flightNumber = z.string().transform((raw, ctx) => {
-  const canonical = canonicalFlightNumber(raw);
-  if (canonical === null) {
-    ctx.addIssue({ code: "custom", message: `"${raw}" is not a flight number` });
-    return z.NEVER;
-  }
-  return canonical;
-});
+const flightNumber = z
+  .string()
+  .max(12)
+  .transform((raw, ctx) => {
+    const canonical = canonicalFlightNumber(raw);
+    if (canonical === null) {
+      ctx.addIssue({ code: "custom", message: `"${raw}" is not a flight number` });
+      return z.NEVER;
+    }
+    return canonical;
+  });
 
 export const packageFlightSchema = z
   .object({
@@ -71,12 +74,12 @@ export const packageFlightSchema = z
     date: isoDay,
     depIata: iataCode.nullish(),
     arrIata: iataCode.nullish(),
-    depCity: text.nullish(),
-    arrCity: text.nullish(),
+    depCity: text.max(120).nullish(),
+    arrCity: text.max(120).nullish(),
     depTime: wallClock.nullish(),
     arrTime: wallClock.nullish(),
     arrDayOffset: z.number().int().min(0).max(3).nullish(),
-    airline: text.nullish(),
+    airline: text.max(80).nullish(),
   })
   .refine((f) => Boolean(f.depIata || f.depCity), {
     message: "needs depIata or depCity",
@@ -96,7 +99,7 @@ export const packageStaySchema = z
     address: text.max(300).nullish(),
     city: text.max(120).nullish(),
     country: text.max(120).nullish(),
-    board: text.nullish(),
+    board: text.max(120).nullish(),
     room: text.max(120).nullish(),
   })
   .refine((s) => s.checkOut >= s.checkIn, {

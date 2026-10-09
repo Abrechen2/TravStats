@@ -134,6 +134,8 @@ export interface PackageProposal {
  * is skipped with reason `excluded`; a trip name replaces the proposed one
  * when the trip is created.
  */
+export const MAX_AIRPORT_PICKS = 40;
+
 export const packageChoicesSchema = z
   .object({
     airports: z
@@ -144,6 +146,11 @@ export const packageChoicesSchema = z
           .regex(/^[A-Za-z]{3}$/)
           .transform((v) => v.toUpperCase())
       )
+      // Bounded like every list in the contract: a package names a few dozen
+      // places at most, and the map is read per leg.
+      .refine((r) => Object.keys(r).length <= MAX_AIRPORT_PICKS, {
+        message: `at most ${MAX_AIRPORT_PICKS} airport picks`,
+      })
       .optional(),
     tripName: z.string().trim().min(1).max(200).optional(),
     excludeFlights: z.array(z.number().int().min(0)).max(40).optional(),

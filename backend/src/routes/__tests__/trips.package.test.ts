@@ -335,6 +335,27 @@ describe("POST /trips/package/{preview,commit}", () => {
     expect(res.body.issues).toMatch(/^bookingReference/);
   });
 
+  it("refuses an oversized request body before reading it", async () => {
+    const airports = Object.fromEntries(Array.from({ length: 41 }, (_, i) => [`City ${i}`, "FRA"]));
+    const tooManyPicks = await preview({ reading: invoiceReading(), choices: { airports } });
+    expect(tooManyPicks.status).toBe(400);
+
+    const reading = Object.fromEntries(Array.from({ length: 41 }, (_, i) => [`k${i}`, 1]));
+    expect((await preview({ reading })).status).toBe(400);
+
+    // Inside the bounds of the request, the contract bounds every string and list.
+    const longCity = await preview({
+      reading: {
+        ...invoiceReading(),
+        flights: [
+          { flightNumber: "ET707", date: "2026-05-18", depCity: "x".repeat(500), arrIata: "ADD" },
+        ],
+      },
+    });
+    expect(longCity.status).toBe(422);
+    expect(longCity.body.code).toBe("PACKAGE_READING_INVALID");
+  });
+
   it("says when a document holds no package reading, and hides another account's", async () => {
     const plain = await keptDocument(userId, { parsedDomain: "flight", parsedPayload: {} });
     const missing = await preview({ documentId: plain.id }).expect(422);

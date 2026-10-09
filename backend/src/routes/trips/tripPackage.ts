@@ -26,10 +26,22 @@ import { packageChoicesSchema } from "../../services/trip/package/types";
 
 const router = Router();
 
+/**
+ * The contract names 18 fields; the margin admits a template's extra names,
+ * which the contract strips. Every list and string inside is bounded by the
+ * contract itself (`contract.ts`), and the whole body by the JSON limit.
+ */
+const MAX_READING_KEYS = 40;
+
 export const packageRequestSchema = z
   .object({
     /** The `package` field of a package parse body. Validated against the contract below. */
-    reading: z.record(z.string(), z.unknown()).optional(),
+    reading: z
+      .record(z.string().max(40), z.unknown())
+      .refine((r) => Object.keys(r).length <= MAX_READING_KEYS, {
+        message: `at most ${MAX_READING_KEYS} fields`,
+      })
+      .optional(),
     documentId: z.string().uuid().optional(),
     choices: packageChoicesSchema.optional(),
   })
