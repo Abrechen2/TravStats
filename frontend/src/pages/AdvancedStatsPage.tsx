@@ -53,6 +53,7 @@ import PoiStatsSection from "../components/Stats/PoiStatsSection";
 import RailStatsSection from "../components/Stats/rail/RailStatsSection";
 import RentalStatsSection from "../components/Stats/rental/RentalStatsSection";
 import BusStatsSection from "../components/Stats/bus/BusStatsSection";
+import { mergeYears, useBetaDomainYears } from "../lib/stats/useBetaDomainYears";
 import RoadtripStatsSection from "../components/Stats/RoadtripStatsSection";
 import OverviewTab from "../components/Stats/Overview/OverviewTab";
 import FlightScorecardBlock from "../components/Stats/scorecard/FlightScorecardBlock";
@@ -170,7 +171,11 @@ export default function AdvancedStatsPage(): JSX.Element {
     flights,
     ready: !loading,
   });
-  const periodYears = useMemo(() => collectYears(domainStats, {}), [domainStats]);
+  const betaYears = useBetaDomainYears(); // rental and bus years (forgejo#265)
+  const periodYears = useMemo(
+    () => mergeYears(collectYears(domainStats, {}), betaYears),
+    [domainStats, betaYears]
+  );
   const period = useUrlStatsPeriod(periodYears, domainStatsLoading);
   const { selectedYear, compareYear, compareEnabled, scope } = period;
   const [yearSummary, setYearSummary] = useState<SummaryStats | null>(null);

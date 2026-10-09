@@ -731,9 +731,8 @@
     "yearLabel": "Jahr",
     "loadError": "Dein Jahr konnte nicht geladen werden.",
     "loadErrorYear": "{{year}} konnte nicht geladen werden.",
-    "nothingYet": "Noch nichts zum Zurückblicken. Sobald ein Flug oder eine Kreuzfahrt erfasst ist, entsteht hier ein Rückblick.",
-    "emptyYear": "In {{year}} ist kein Flug erfasst.",
-    "needsFlights": "Dieser Rückblick wird aus Flügen gebaut. Schalte den Bereich Flüge ein, um ihn zu sehen.",
+    "nothingYet": "Noch nichts zum Zurückblicken. Sobald ein Flug, eine Fahrt, ein Aufenthalt, ein Ortsbesuch oder eine Miete erfasst ist, entsteht hier ein Rückblick.",
+    "emptyYear": "In {{year}} ist nichts erfasst.",
     "rankTop": "Dein flugreichstes Jahr bisher.",
     "rankSecond": "Nur {{year}} hatte mehr Flüge.",
     "flights": "Flüge",
@@ -756,12 +755,57 @@
     "none": "—",
     "rail": "Bahnfahrten",
     "railDesc": "{{km}} km mit der Bahn",
-    "railDescStraight": "{{km}} km mit der Bahn, davon {{straight}} km Luftlinie"
+    "railDescStraight": "{{km}} km mit der Bahn, davon {{straight}} km Luftlinie",
+    "chapters": {
+      "stays": "Aufenthalte",
+      "staysDesc_one": "{{count}} Nacht in Unterkünften",
+      "staysDesc_other": "{{count}} Nächte in Unterkünften",
+      "staysDescUnknown_one": "{{nights}} bekannte Nächte; bei {{count}} Aufenthalt ist die Zahl der Nächte nicht erfasst",
+      "staysDescUnknown_other": "{{nights}} bekannte Nächte; bei {{count}} Aufenthalten ist die Zahl der Nächte nicht erfasst",
+      "places": "Ortsbesuche",
+      "placesDesc_one": "an {{count}} Ort",
+      "placesDesc_other": "an {{count}} verschiedenen Orten",
+      "roadtrips": "Roadtrips",
+      "roadtripsDesc": "in diesem Jahr begonnen",
+      "tours": "Touren",
+      "toursDesc": "Tagestouren mit Datum in diesem Jahr",
+      "rentals": "Mietwagen",
+      "rentalsDesc_one": "{{count}} Miettag — zählt nicht zusätzlich als Reisetag",
+      "rentalsDesc_other": "{{count}} Miettage — zählen nicht zusätzlich als Reisetage",
+      "bus": "Busfahrten",
+      "busDesc": "{{km}} km mit dem Bus",
+      "busDescNights_one": "{{km}} km mit dem Bus, {{count}} Nacht an Bord",
+      "busDescNights_other": "{{km}} km mit dem Bus, {{count}} Nächte an Bord"
+    }
   },
   "period": {
     "emptyYear": "Für {{year}} ist hier nichts erfasst."
   },
   "metricHelp": {
     "summary": "So wird gezählt"
+  },
+  "domainRecords": {
+    "title": "Rekorde über alle Reisearten",
+    "ids": {
+      "longest-cruise": "Längste Kreuzfahrt",
+      "longest-stay": "Längster Aufenthalt",
+      "most-visited-place": "Meistbesuchter Ort",
+      "longest-roadtrip": "Längster Roadtrip",
+      "longest-rail-ride": "Längste Bahnfahrt",
+      "longest-rental": "Längste Miete",
+      "longest-bus-ride": "Längste Busfahrt"
+    },
+    "units": {
+      "days_one": "{{value}} Tag",
+      "days_other": "{{value}} Tage",
+      "nights_one": "{{value}} Nacht",
+      "nights_other": "{{value}} Nächte",
+      "visits_one": "{{value}} Besuch",
+      "visits_other": "{{value}} Besuche",
+      "km_one": "{{value}} km",
+      "km_other": "{{value}} km"
+    },
+    "straightLine": "Luftlinie (die echte Strecke ist länger)",
+    "help": "Ein Rekord je Reiseart, die du siehst, über alle Jahre — jeder in seiner eigenen Einheit, nie gegeneinander gewertet. Gezählt wird nach der Regel der jeweiligen Reiseart: nur abgeschlossene Fahrten und Mieten, nur Aufenthalte und Roadtrips, die schon stattgefunden haben, nur Ortsbesuche, die passiert sind (ein Ort braucht mindestens zwei). Kreuzfahrten, Roadtrips und Mieten in Kalendertagen nach dem Kalender der Station; ein Aufenthalt in Nächten, nur wenn sie bekannt sind; Bahn und Bus in Kilometern, die Luftlinie als solche benannt. Eine Reiseart ohne messbaren Eintrag hat keinen Rekord. Die Flugrekorde stehen im Reiter Flüge."
   }
 }

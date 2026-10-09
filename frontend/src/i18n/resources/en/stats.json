@@ -731,9 +731,8 @@
     "yearLabel": "Year",
     "loadError": "Your year could not be loaded.",
     "loadErrorYear": "{{year}} could not be loaded.",
-    "nothingYet": "Nothing to look back on yet. Once a flight or a cruise is recorded, a review appears here.",
-    "emptyYear": "No flight recorded in {{year}}.",
-    "needsFlights": "This review is built from flights. Switch the flights area on to see it.",
+    "nothingYet": "Nothing to look back on yet. Once a flight, a ride, a stay, a place visit or a rental is recorded, a review appears here.",
+    "emptyYear": "Nothing is recorded in {{year}}.",
     "rankTop": "Your biggest flying year so far.",
     "rankSecond": "Only {{year}} had more flights.",
     "flights": "Flights",
@@ -756,12 +755,57 @@
     "none": "—",
     "rail": "Train rides",
     "railDesc": "{{km}} km by train",
-    "railDescStraight": "{{km}} km by train, {{straight}} km of it straight line"
+    "railDescStraight": "{{km}} km by train, {{straight}} km of it straight line",
+    "chapters": {
+      "stays": "Stays",
+      "staysDesc_one": "{{count}} night in lodgings",
+      "staysDesc_other": "{{count}} nights in lodgings",
+      "staysDescUnknown_one": "{{nights}} known nights; {{count}} stay does not say how many nights",
+      "staysDescUnknown_other": "{{nights}} known nights; {{count}} stays do not say how many nights",
+      "places": "Place visits",
+      "placesDesc_one": "at {{count}} place",
+      "placesDesc_other": "at {{count}} different places",
+      "roadtrips": "Roadtrips",
+      "roadtripsDesc": "started this year",
+      "tours": "Tours",
+      "toursDesc": "day tours dated this year",
+      "rentals": "Rental cars",
+      "rentalsDesc_one": "{{count}} rental day — not counted again as a travel day",
+      "rentalsDesc_other": "{{count}} rental days — not counted again as travel days",
+      "bus": "Bus rides",
+      "busDesc": "{{km}} km by bus",
+      "busDescNights_one": "{{km}} km by bus, {{count}} night on board",
+      "busDescNights_other": "{{km}} km by bus, {{count}} nights on board"
+    }
   },
   "period": {
     "emptyYear": "Nothing recorded here for {{year}}."
   },
   "metricHelp": {
     "summary": "How this is counted"
+  },
+  "domainRecords": {
+    "title": "Records across all kinds of travel",
+    "ids": {
+      "longest-cruise": "Longest cruise",
+      "longest-stay": "Longest stay",
+      "most-visited-place": "Most visited place",
+      "longest-roadtrip": "Longest roadtrip",
+      "longest-rail-ride": "Longest train ride",
+      "longest-rental": "Longest rental",
+      "longest-bus-ride": "Longest bus ride"
+    },
+    "units": {
+      "days_one": "{{value}} day",
+      "days_other": "{{value}} days",
+      "nights_one": "{{value}} night",
+      "nights_other": "{{value}} nights",
+      "visits_one": "{{value}} visit",
+      "visits_other": "{{value}} visits",
+      "km_one": "{{value}} km",
+      "km_other": "{{value}} km"
+    },
+    "straightLine": "straight line (the real route is longer)",
+    "help": "One record per kind of travel you see, across all years — each in its own unit, never ranked against each other. Each counts by its own kind's rule: only completed rides and rentals, only stays and roadtrips that have happened, only place visits that took place (a place needs at least two). Cruises, roadtrips and rentals in calendar days on the station's calendar; a stay in nights, only where they are known; train and bus in kilometres, the straight line named as such. A kind of travel with nothing measurable has no record. Flight records are on the Flights tab."
   }
 }

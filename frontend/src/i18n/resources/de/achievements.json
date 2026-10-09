@@ -1328,11 +1328,23 @@
     "BUS_TERMINALS_10": {
       "name": "Neue Haltestellen",
       "description": "Zehn verschiedene Bus-Terminals besucht"
+    },
+    "TRIP_THREE_MODES": {
+      "name": "Drei Verkehrsmittel",
+      "description": "Eine abgeschlossene Reise mit drei verschiedenen Verkehrsmitteln"
+    },
+    "TRIP_ARRIVE_DISCOVER": {
+      "name": "Ankommen und entdecken",
+      "description": "Mit Bahn oder Bus angereist, übernachtet und einen Ort besucht – auf derselben Reise"
     }
   },
   "header": {
     "meta": "{{unlocked}} von {{total}} freigeschaltet · {{points}} Punkte",
     "retired_one": "{{count}} eingestellter Erfolg zählt nur zu den Punkten",
     "retired_other": "{{count}} eingestellte Erfolge zählen nur zu den Punkten"
+  },
+  "planning": {
+    "badge": "Planung",
+    "note": "Zählt gebuchte, noch nicht angetretene Reisen — keine, die schon stattgefunden haben."
   }
 }

@@ -22,6 +22,7 @@ import CrossDomainHeatmap from "./CrossDomainHeatmap";
 import DomainToggleChips from "./DomainToggleChips";
 import DomainSummaryCard from "./DomainSummaryCard";
 import TravelAccountSection from "./TravelAccountSection";
+import DomainRecordsSection from "./DomainRecordsSection";
 import { todayZoneNow } from "../../../hooks/useTodayZone";
 import { todayIn } from "../../../shared/time";
 
@@ -184,6 +185,9 @@ export default function OverviewTab({
           of the per-domain adapters can, and a failure in it must not take
           the rest of the overview down. */}
       {show("travelAccount") && <TravelAccountSection />}
+
+      {/* Records beyond flights (forgejo#265), one per visible domain. */}
+      {show("domainRecords") && <DomainRecordsSection />}
     </div>
   );
 }

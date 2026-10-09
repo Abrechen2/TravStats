@@ -91,4 +91,44 @@ export const seedsPartK: AchievementDefinition[] = [
     requirementType: "bus_terminals",
     points: 40,
   },
+  // Shared trip badges (forgejo#265), measured by `utils/crossDomainAchievements.ts`.
+  {
+    code: "TRIP_THREE_MODES",
+    name: "Drei Verkehrsmittel",
+    description: "Eine abgeschlossene Reise mit drei verschiedenen Verkehrsmitteln",
+    category: "special",
+    domain: "shared",
+    icon: "🔁",
+    tier: "gold",
+    // threshold: proposal forgejo#265, owner to confirm
+    requirement: 1,
+    requirementType: "trips_three_modes",
+    points: 80,
+  },
+  {
+    code: "TRIP_ARRIVE_DISCOVER",
+    name: "Ankommen und entdecken",
+    description:
+      "Mit Bahn oder Bus angereist, übernachtet und einen Ort besucht – auf derselben Reise",
+    category: "special",
+    domain: "shared",
+    icon: "🚉🏨📍",
+    tier: "gold",
+    // threshold: proposal forgejo#265, owner to confirm
+    requirement: 1,
+    requirementType: "trips_arrive_and_discover",
+    points: 60,
+  },
 ];
+
+/**
+ * Shared badges that only a beta domain can earn (forgejo#265): such a badge
+ * is listed while at least one of its domains is visible, and hidden with all
+ * of them — "Ankommen und entdecken" needs a train or a coach; three modes on
+ * one trip cannot be reached with flights and cruises alone. Read by
+ * `services/achievementVisibility.ts`.
+ */
+export const SHARED_BADGE_DOMAINS: Readonly<Record<string, readonly string[]>> = {
+  TRIP_THREE_MODES: ["rail", "bus", "roadtrip"],
+  TRIP_ARRIVE_DISCOVER: ["rail", "bus"],
+};

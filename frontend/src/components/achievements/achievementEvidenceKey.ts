@@ -94,6 +94,16 @@ export const ACHIEVEMENT_EVIDENCE_KEY: Record<string, string> = {
   // fold. The station return and the year with the most new connections are
   // extrema — release 1 serves neither, so their dialogs say so.
   rail_documented_transfer_journeys: "railDocumentedTransferJourneyCount",
+
+  // Rental and bus (forgejo#262, #263) — the badge folds and these measures
+  // read the same rows (`utils/rentalAchievements.ts`, `services/bus/busStats.ts`),
+  // so a badge's progress and its list are one number (forgejo#265).
+  rental_count: "rentalCount",
+  rental_one_way: "rentalOneWayCount",
+  rental_odometer_documented: "rentalOdometerDocumentedCount",
+  bus_count: "busRideCount",
+  bus_night_rides: "busNightRideCount",
+  bus_terminals: "busTerminalsCount",
 };
 
 /** The served measure behind this rule, or null when nobody can list it yet. */

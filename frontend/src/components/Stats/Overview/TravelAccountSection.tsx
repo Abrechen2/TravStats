@@ -20,7 +20,7 @@ const BUCKETS = [
   { key: "seaNights", colour: "var(--domain-cruise, #6fa0d6)" },
   { key: "railNights", colour: "var(--domain-rail, #5fb39b)" },
   // forgejo#263 — a night bus, after the night train in the server's precedence.
-  { key: "busNights", colour: "var(--domain-bus, #c49a6c)" },
+  { key: "busNights", colour: "var(--ts-domain-bus)" },
   { key: "airNights", colour: "var(--domain-flight, #f0a947)" },
   { key: "unassignedNights", colour: "var(--color-border)" },
 ] as const;

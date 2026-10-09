@@ -31,6 +31,7 @@ import tripSuggestionRoutes from "./tripSuggestions";
 import flightLookupRoutes from "./flightLookup";
 import statsRoutes from "./stats";
 import statsNetworkRouteRoutes from "./stats/networkRoute";
+import statsDomainRecordsRoutes from "./stats/domainRecords";
 import airportRoutes from "./airports";
 import airlineLogoRoutes from "./airlineLogos";
 import countryFlagRoutes from "./countryFlags";
@@ -208,6 +209,12 @@ export const apiMounts: ApiMount[] = [
     id: "stats.networkRoute",
     base: "/api/v1/stats/network/route",
     router: statsNetworkRouteRoutes,
+  },
+  // forgejo#265 — records beyond flights; the same reason as the route above.
+  {
+    id: "stats.domainRecords",
+    base: "/api/v1/stats/domain-records",
+    router: statsDomainRecordsRoutes,
   },
   { id: "stats", base: "/api/v1/stats", router: statsRoutes },
   { id: "airports", base: "/api/v1/airports", router: airportRoutes },

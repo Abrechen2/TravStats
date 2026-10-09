@@ -2,6 +2,7 @@ import type { TravelAccountResponse } from "../../types/travelAccount";
 import type { CountryDetail, Passport } from "../../types/passport";
 import type { TravelRecord, TravelRecordsResponse } from "../../types/travelRecords";
 import type { Wrapped } from "../../types/wrapped";
+import type { DomainRecord } from "../../types/domainRecords";
 import type {
   AircraftProfileResponse,
   AircraftRankingResponse,
@@ -96,6 +97,12 @@ export const statsApi = {
       params: year === undefined ? undefined : { year },
     });
     return data;
+  },
+
+  /** Travel records beyond flights (forgejo#265) — one per domain the user sees. */
+  getDomainRecords: async (): Promise<DomainRecord[]> => {
+    const { data } = await api.get<{ records: DomainRecord[] }>("/stats/domain-records");
+    return data.records;
   },
 
   getTravelAccount: async (): Promise<TravelAccountResponse> => {

@@ -67,7 +67,13 @@ const isCancelled = (row: RoadtripStationRow): boolean => row.lodgingStay?.statu
  * roadtrip the overview calls planned must not raise a country here, and one
  * it counts must not be missing.
  */
-export function roadtripHasStarted(stations: readonly RoadtripStationRow[], now: Date): boolean {
+export function roadtripHasStarted(
+  stations: readonly {
+    startDate: Date | null;
+    lodgingStay: { checkIn: Date | null } | null;
+  }[],
+  now: Date
+): boolean {
   let start: Date | null = null;
   for (const s of stations) {
     const from = s.startDate ?? s.lodgingStay?.checkIn ?? null;

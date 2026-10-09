@@ -153,6 +153,51 @@ describe("statistics ETag", () => {
     expect(afterEdit.status).toBe(200);
   });
 
+  // forgejo#263/#265: the year in review, the travel account and the domain
+  // records read bus rides and rentals, so a new or edited one must be seen.
+  it("sees a new and an EDITED bus ride and rental", async () => {
+    const before = (await get()).headers.etag;
+    const ride = await prisma.busJourney.create({
+      data: {
+        userId,
+        depStationName: "Berlin ZOB",
+        depLat: 52.507,
+        depLon: 13.28,
+        arrStationName: "Praha Florenc",
+        arrLat: 50.09,
+        arrLon: 14.44,
+        departureTime: new Date("2025-03-01T07:00:00Z"),
+        status: "completed",
+      },
+    });
+    const afterBus = await get(before);
+    expect(afterBus.status).toBe(200);
+    await prisma.busJourney.update({ where: { id: ride.id }, data: { distanceKm: 280 } });
+    const afterBusEdit = await get(afterBus.headers.etag);
+    expect(afterBusEdit.status).toBe(200);
+    const rental = await prisma.rentalBooking.create({
+      data: {
+        userId,
+        provider: "Sixt",
+        pickupStationName: "Lisboa",
+        pickupLat: 38.77,
+        pickupLon: -9.13,
+        pickupTimezone: "Europe/Lisbon",
+        returnStationName: "Lisboa",
+        returnLat: 38.77,
+        returnLon: -9.13,
+        returnTimezone: "Europe/Lisbon",
+        pickupTime: new Date("2025-04-01T09:00:00Z"),
+        returnTime: new Date("2025-04-05T09:00:00Z"),
+        status: "completed",
+      },
+    });
+    const afterRental = await get(afterBusEdit.headers.etag);
+    expect(afterRental.status).toBe(200);
+    await prisma.rentalBooking.update({ where: { id: rental.id }, data: { distanceKm: 400 } });
+    expect((await get(afterRental.headers.etag)).status).toBe(200);
+  });
+
   it("sees a roadtrip station moving", async () => {
     const route = await prisma.tripRoute.create({
       data: { userId, name: "Norwegen", mode: "road", kind: "roadtrip" },

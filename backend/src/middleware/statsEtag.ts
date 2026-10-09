@@ -25,7 +25,9 @@ import type { AuthRequest } from "./auth";
  *    trip's journal and photos (the travel account reads both) were missing
  *    until 2026-09-26, so a new train ride answered 304 with the old rail
  *    tab. A recording is never edited in place, so its `created_at` plus the
- *    count is its whole history;
+ *    count is its whole history. Bus rides and rentals joined on 2026-10-09
+ *    (forgejo#263/#265): the year in review, the travel account and the
+ *    domain records read them;
  *  - the user's settings (base currency, home airport, timezone) and
  *    birthdate, and the instance settings;
  *  - the build and the process start, so a deploy or a catalogue re-seed on
@@ -60,6 +62,8 @@ function fingerprintQuery(userId: string): Prisma.Sql {
     UNION ALL SELECT 'place_visits', count(*), max(updated_at) FROM place_visits WHERE user_id = ${userId}
     UNION ALL SELECT 'country_days', count(*), max(updated_at) FROM country_days WHERE user_id = ${userId}
     UNION ALL SELECT 'rail_journeys', count(*), max(updated_at) FROM rail_journeys WHERE user_id = ${userId}
+    UNION ALL SELECT 'bus_journeys', count(*), max(updated_at) FROM bus_journeys WHERE user_id = ${userId}
+    UNION ALL SELECT 'rental_bookings', count(*), max(updated_at) FROM rental_bookings WHERE user_id = ${userId}
     UNION ALL SELECT 'trip_routes', count(*), max(updated_at) FROM trip_routes WHERE user_id = ${userId}
     UNION ALL SELECT 'trip_stops', count(*), max(s.updated_at) FROM trip_stops s LEFT JOIN trip_routes r ON r.id = s.route_id LEFT JOIN trips t ON t.id = s.trip_id WHERE r.user_id = ${userId} OR t.user_id = ${userId}
     UNION ALL SELECT 'trip_route_legs', count(*), max(l.updated_at) FROM trip_route_legs l JOIN trip_routes r ON r.id = l.route_id WHERE r.user_id = ${userId}

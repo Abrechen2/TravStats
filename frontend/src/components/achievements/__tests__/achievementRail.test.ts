@@ -40,4 +40,14 @@ describe("rail badges in the achievement dialog", () => {
     expect(progressUnitForRule("roadtrip_free_nights")).toBe("nights");
     expect(progressUnitForRule("rail_count")).toBeNull();
   });
+
+  // forgejo#265: every rental and bus badge names the entries behind it.
+  it("lists the rentals and bus rides behind their badges", () => {
+    expect(evidenceKeyForRule("rental_count")).toBe("rentalCount");
+    expect(evidenceKeyForRule("rental_one_way")).toBe("rentalOneWayCount");
+    expect(evidenceKeyForRule("rental_odometer_documented")).toBe("rentalOdometerDocumentedCount");
+    expect(evidenceKeyForRule("bus_count")).toBe("busRideCount");
+    expect(evidenceKeyForRule("bus_night_rides")).toBe("busNightRideCount");
+    expect(evidenceKeyForRule("bus_terminals")).toBe("busTerminalsCount");
+  });
 });

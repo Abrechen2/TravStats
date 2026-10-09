@@ -43,6 +43,7 @@ export const OVERVIEW_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "heatmap", label: t("stats:sections.heatmap") },
   { key: "perDomain", label: t("stats:overview.perDomainLabel") },
   { key: "travelAccount", label: t("stats:travelAccount.title") },
+  { key: "domainRecords", label: t("stats:domainRecords.title") },
 ];
 
 export const CRUISE_SECTIONS = (t: Translate): SectionOption[] => [

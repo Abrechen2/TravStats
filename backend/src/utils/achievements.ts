@@ -232,16 +232,14 @@ async function runAchievementCheck(
       // DB `where` can express "flown or historical" for flights/cruises, but
       // it cannot express `classifyStay`'s date-derived "visited" for lodging
       // stays, so all three counts get computed in JS below (see
-      // `tripDomainCounts` / `tripsFullyDocumented`). journalEntries/photos
-      // stay `_count`s — a written entry or an uploaded photo IS done, no
-      // status to filter on.
+      // `tripDomainCounts`). The fully documented trip is measured with the
+      // other cross-domain trip badges (`crossDomainAchievements.ts`).
       prisma.trip.findMany({
         where: { userId },
         select: {
           flights: { select: { status: true } },
           cruises: { select: { status: true } },
           lodgingStays: { select: { status: true, checkIn: true, checkOut: true } },
-          _count: { select: { journalEntries: true, photos: true } },
         },
       }),
       prisma.userSettings.findUnique({ where: { userId }, select: { baseCurrency: true } }),
@@ -466,8 +464,6 @@ async function runAchievementCheck(
       flightCount: t.flights.filter((f) => isDoneStatus(f.status)).length,
       cruiseCount: t.cruises.filter((c) => isDoneStatus(c.status)).length,
       lodgingStayCount: t.lodgingStays.filter((s) => classifyStay(s) === "visited").length,
-      journalEntries: t._count.journalEntries,
-      photos: t._count.photos,
     }));
 
     // Fly & Stay / Grand Tour — derived per-trip so a flight in one trip and
@@ -535,6 +531,9 @@ async function runAchievementCheck(
     // The badge set counts like the passport — `achievementCountries` holds
     // the rule and says why; the union above is its floor.
     const finalCountries = await achievementCountries(userId, unionedCountries);
+
+    // Rental, bus and the cross-domain trip badges (forgejo#262/#263/#265).
+    const domainBadges = await loadDomainAchievementChecks(userId);
 
     const augmentedStats = {
       ...stats,
@@ -623,15 +622,9 @@ async function runAchievementCheck(
       hasLodgingBirthdayStay,
       hasLodgingXmasStay,
       // A trip is "fully documented" when it records the journey, the bed, the
-      // words and the pictures. A cruise counts as the journey too — a
-      // flightless cruise trip is not an undocumented one.
-      tripsFullyDocumented: doneTrips.filter(
-        (t) =>
-          t.flightCount + t.cruiseCount > 0 &&
-          t.lodgingStayCount > 0 &&
-          t.journalEntries > 0 &&
-          t.photos > 0
-      ).length,
+      // words and the pictures — the journey by ANY mode since forgejo#265
+      // (`crossDomainAchievements.ts`, the one home of the rule).
+      tripsFullyDocumented: domainBadges.crossDomain.tripsFullyDocumented,
       // Cross-domain (lodging)
       flyAndStay,
       grandTour,
@@ -666,7 +659,7 @@ async function runAchievementCheck(
       flights as FlightData[],
       await calculateRoadtripAchievementStats(userId),
       await calculateRailAchievementStats(userId),
-      await loadDomainAchievementChecks(userId)
+      domainBadges.checks
     );
 
     // `return await`, not `return`: a bare return would hand the promise out

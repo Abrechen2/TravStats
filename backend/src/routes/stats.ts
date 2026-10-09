@@ -960,9 +960,8 @@ router.get(
       const flightsWithClock = await withDepartureClock(flights);
 
       const wrapped = buildWrapped(
-        // Great-circle from the coordinates, the same measure
-        // `/stats/timeseries` buckets — so the year's distance agrees with the
-        // year's bar on the trend chart.
+        // Great-circle from the coordinates, the measure `/stats/timeseries`
+        // buckets — so the year's distance agrees with its bar on the chart.
         flightsWithClock.map((f) => ({
           ...f,
           departureYear:
@@ -974,7 +973,8 @@ router.get(
         domains.cruises,
         passport.countries,
         parsed.data.year ?? null,
-        domains.rail
+        domains.rail,
+        domains.chapters
       );
 
       if (!wrapped) {

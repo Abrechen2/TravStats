@@ -3,6 +3,10 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
+import {
+  getInstanceSettings,
+  updateInstanceSettings,
+} from "../../services/instanceSettingsService";
 
 /**
  * Rail reaches the passport, the country drill-down and the year in review
@@ -86,8 +90,21 @@ describe("stats — rail as evidence and as a year", () => {
     ).toBe(404);
   });
 
+  // The year in review counts rail only where the reader SEES rail — their
+  // domain choice and the beta switch (forgejo#265); hidden, it adds no year.
   it("tells a year of train rides, with its new countries", async () => {
+    const betaBefore = (await getInstanceSettings()).betaFeaturesEnabled;
+    await prisma.userSettings.upsert({
+      where: { userId },
+      create: { userId, enabledDomains: ["flight", "rail"], data: {} },
+      update: { enabledDomains: ["flight", "rail"] },
+    });
+    await updateInstanceSettings({ betaFeaturesEnabled: false });
+    const hidden = await request(app).get("/api/v1/stats/wrapped").set("Cookie", cookie);
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
     const res = await request(app).get("/api/v1/stats/wrapped").set("Cookie", cookie);
+    await updateInstanceSettings({ betaFeaturesEnabled: betaBefore });
+    expect(hidden.status).toBe(404);
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
       year: 2025,
