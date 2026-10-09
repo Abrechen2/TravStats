@@ -150,7 +150,8 @@ export interface BusStats {
     buckets: Array<{ upToMinutes: number | null; count: number }>;
     averageMinutes: number | null;
   };
-  byYear: Array<{ year: number; rides: number; km: number }>;
+  /** `km` null when no ride of the year has a distance — unknown, never 0. */
+  byYear: Array<{ year: number; rides: number; km: number | null; unmeasured?: number }>;
   journeys: { total: number; withTransfer: number };
   transfers: { count: number; averageMinutes: number | null };
   favouriteConnections: Array<{ from: string; to: string; rides: number; latestRideId: string }>;

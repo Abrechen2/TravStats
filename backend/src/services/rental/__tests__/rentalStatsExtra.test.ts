@@ -137,6 +137,12 @@ describe("rental records", () => {
     expect(stats.odometerDocumented).toBe(1);
   });
 
+  // Review M2: a stored 0 km is no farthest-distance record.
+  it("names no farthest distance from a rental that drove 0 km", () => {
+    const stats = computeRentalExtraStats([rental({ distanceKm: 0, distanceSource: "invoice" })]);
+    expect(stats.records.farthest).toBeNull();
+  });
+
   it("counts brokered and direct rentals apart", () => {
     const stats = computeRentalExtraStats([rental({ broker: "Check24" }), rental()]);
     expect(stats.brokered).toEqual({ viaBroker: 1, direct: 1 });

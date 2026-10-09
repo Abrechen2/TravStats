@@ -73,5 +73,6 @@ export interface WrappedChapters {
   roadtrips: { roadtrips: number } | null;
   tours: { tours: number } | null;
   rentals: { rentals: number; days: number } | null;
-  bus: { rides: number; km: number; nights: number } | null;
+  /** `km` null when no ride has a distance — unknown, never 0. */
+  bus: { rides: number; km: number | null; unmeasured?: number; nights: number } | null;
 }

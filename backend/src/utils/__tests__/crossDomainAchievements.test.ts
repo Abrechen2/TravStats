@@ -35,7 +35,14 @@ const done = [{ status: "flown" }];
 const ride = [{ status: "completed" }];
 const stayed = [{ status: "completed", checkIn: PAST, checkOut: LATER }];
 const visited = [{ visitedAt: PAST, visitedAtUtc: PAST }];
-const roadtrip = [{ stops: [{ startDate: PAST, lodgingStay: null }] }];
+const station = (startDate: Date | null) => ({
+  lodgingStayId: null,
+  overnight: false,
+  startDate,
+  endDate: null,
+  lodgingStay: null,
+});
+const roadtrip = [{ stops: [station(PAST)] }];
 const ALL_VISIBLE = badgeDomainCounts([
   "flight",
   "cruise",
@@ -60,7 +67,7 @@ describe("three modes on one trip", () => {
     const planned = trip({
       flights: done,
       railJourneys: ride,
-      routes: [{ stops: [{ startDate: new Date("2027-01-01T00:00:00Z"), lodgingStay: null }] }],
+      routes: [{ stops: [station(new Date("2027-01-01T00:00:00Z"))] }],
     });
     expect(foldCrossDomainAchievementStats([planned], ALL_VISIBLE, NOW).tripsThreeModes).toBe(0);
     const running = trip({
@@ -70,6 +77,14 @@ describe("three modes on one trip", () => {
       busJourneys: ride,
     });
     expect(foldCrossDomainAchievementStats([running], ALL_VISIBLE, NOW).tripsThreeModes).toBe(0);
+  });
+
+  // Review I1: an empty or undated roadtrip draft moved nobody.
+  it("does not count an empty or undated roadtrip as a mode of travel", () => {
+    for (const routes of [[{ stops: [] }], [{ stops: [station(null)] }]]) {
+      const t = trip({ flights: done, railJourneys: ride, routes });
+      expect(foldCrossDomainAchievementStats([t], ALL_VISIBLE, NOW).tripsThreeModes).toBe(0);
+    }
   });
 
   it("lets no beta domain that is switched off feed the badge", () => {
@@ -110,6 +125,18 @@ describe("the fully documented trip", () => {
     );
     const byPlane = trip({ ...documented, flights: done });
     expect(foldCrossDomainAchievementStats([byPlane], BETA_OFF, NOW).tripsFullyDocumented).toBe(1);
+  });
+
+  // Review I1: "Lückenlos festgehalten" needs a real movement, not an empty roadtrip section.
+  it("does not count a trip whose only 'movement' is an empty or undated roadtrip", () => {
+    for (const routes of [[{ stops: [] }], [{ stops: [station(null)] }]]) {
+      const t = trip({ ...documented, routes });
+      expect(foldCrossDomainAchievementStats([t], ALL_VISIBLE, NOW).tripsFullyDocumented).toBe(0);
+    }
+    const driven = trip({ ...documented, routes: roadtrip });
+    expect(foldCrossDomainAchievementStats([driven], ALL_VISIBLE, NOW).tripsFullyDocumented).toBe(
+      1
+    );
   });
 
   it("does not count a trip whose only movement is hidden, nor one without photos", () => {

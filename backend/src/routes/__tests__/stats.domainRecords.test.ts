@@ -105,4 +105,53 @@ describe("travel records beyond flights", () => {
     await updateInstanceSettings({ betaFeaturesEnabled: false });
     expect((await records()).map((r: { domain: string }) => r.domain)).toEqual(["lodging"]);
   });
+
+  // Review I2: the longest roadtrip is the span its stations ATTEST — a planned
+  // station ahead and a MONTH placeholder stay must not stretch it.
+  it("measures the longest roadtrip over attested days only", async () => {
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { enabledDomains: ["flight", "lodging", "rail", "poi", "roadtrip"] },
+    });
+    const DAY = 86_400_000;
+    const dayOf = (offset: number): Date =>
+      new Date(`${new Date(Date.now() + offset * DAY).toISOString().slice(0, 10)}T00:00:00Z`);
+    const route = await prisma.tripRoute.create({
+      data: { userId, name: "Norwegen", mode: "road", kind: "roadtrip" },
+    });
+    const stop = (order: number, startDate: Date | null, lodgingStayId: string | null = null) =>
+      prisma.tripStop.create({
+        data: {
+          title: `S${order}`,
+          lat: 60,
+          lon: 10,
+          routeId: route.id,
+          routeOrderIdx: order,
+          orderIdx: order,
+          startDate,
+          lodgingStayId,
+        },
+      });
+    await stop(0, dayOf(-10));
+    await stop(1, dayOf(-8));
+    await stop(2, dayOf(30)); // planned — not a day travelled yet
+    // A station whose only dates are a MONTH placeholder stay names no exact day.
+    const house = await prisma.lodging.create({
+      data: { userId, name: "Hytte", type: "cabin", lat: 60, lon: 10 },
+    });
+    const month = await prisma.lodgingStay.create({
+      data: {
+        userId,
+        lodgingId: house.id,
+        checkIn: new Date("2020-01-01T00:00:00Z"),
+        checkOut: new Date("2020-01-31T00:00:00Z"),
+        datePrecision: "MONTH",
+        status: "completed",
+      },
+    });
+    await stop(3, null, month.id);
+    const roadtrip = (await records()).find((r: { domain: string }) => r.domain === "roadtrip");
+    expect(roadtrip).toMatchObject({ id: "longest-roadtrip", value: 3, unit: "days" });
+  });
 });

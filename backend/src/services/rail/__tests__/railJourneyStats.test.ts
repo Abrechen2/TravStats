@@ -174,6 +174,14 @@ describe("rail punctuality", () => {
     ]);
   });
 
+  // Review M3: a ride with no arrival has no clock to be late against.
+  it("leaves a delay on a ride without an arrival out of the sample", () => {
+    const rides = [
+      ride("koeln", "basel", "2025-01-01T07:00Z", null, { delayMinutes: 25, arrPrecision: null }),
+    ];
+    expect(computeRailJourneyFigures(rides).punctuality.byOperator).toEqual([]);
+  });
+
   it("folds operator spellings into one row", () => {
     const rides = [
       ride("koeln", "basel", "2025-01-01T07:00Z", "2025-01-01T11:00Z", { delayMinutes: 5 }),

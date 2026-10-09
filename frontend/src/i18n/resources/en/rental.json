@@ -371,7 +371,7 @@
       "oneWay": "A rental returned at a different station than it was picked up at: two different airports, else more than a kilometre apart.",
       "brokers": "The provider is the company at the counter (Sixt, Alamo). A broker is the portal or tour operator the booking went through. Providers are ranked by rental days, brokers by rentals.",
       "kmPerDay": "The km of the rentals with known km, divided by the rental days of exactly those rentals — never the km of some by the days of others.",
-      "costPerKm": "Per currency: the cost of the rentals that have both a price and known km, divided by their km.",
+      "costPerKm": "Per currency: the cost of the rentals that have both a price and known km — the invoice's final amount where there is one, else the booked price — divided by their km.",
       "bookedVsFinal": "Only rentals whose final amount came from the invoice or a hand correction, and only in the same currency as the booked price. Extras are part of the final amount. Nothing is converted.",
       "promisedVsDriven": "Compares the booked example model (\"VW Golf or similar\") with the car driven, without judgement: there is no fixed order of vehicle classes, so nothing here is called an upgrade.",
       "records": "Longest rental by rental days; farthest distance from known km only; a provider is new in the period its first completed rental falls in."

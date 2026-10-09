@@ -177,7 +177,8 @@ function records(
     const days = rentalDays(r);
     if (longest === null || days > longest.days) longest = { id: r.id, days, provider: r.provider };
     const driven = rentalDrivenKm(r);
-    if (driven !== null && (farthest === null || driven.km > farthest.km)) {
+    // A stored 0 km is no distance record (review M2).
+    if (driven !== null && driven.km > 0 && (farthest === null || driven.km > farthest.km)) {
       farthest = { id: r.id, km: driven.km, source: driven.source };
     }
   }

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "@jest/globals";
 
 import {
+  longestReturnDays,
   isNightBusRide,
   nightBusNights,
   sameTerminal,
@@ -81,5 +82,36 @@ describe("terminal identity", () => {
     const { registry, ends } = terminalsOf(rides);
     expect(registry.size).toBe(2);
     expect(busConnectionKey(ends.get("a")!)).toBe(busConnectionKey(ends.get("b")!));
+  });
+});
+
+// Review I3: an arrival and the ride out of the same stay are ONE visit.
+describe("the longest wait before a return", () => {
+  const ev = (kind: "arr" | "dep", iso: string) => ({
+    kind,
+    at: new Date(iso),
+    day: iso.slice(0, 10),
+  });
+
+  it("does not read a three-week stay at Praha as a return to Praha", () => {
+    // Berlin → Praha on 1 June, Praha → Berlin on 22 June.
+    const praha = [ev("arr", "2025-06-01T12:00:00Z"), ev("dep", "2025-06-22T08:00:00Z")];
+    expect(longestReturnDays(praha)).toBeNull();
+    // Berlin, though, was left on 1 June and arrived at again on 22 June.
+    const berlin = [ev("dep", "2025-06-01T08:00:00Z"), ev("arr", "2025-06-22T12:00:00Z")];
+    expect(longestReturnDays(berlin)).toBe(21);
+  });
+
+  it("finds no return in a one-way chain", () => {
+    // Berlin → Praha on day 1, Praha → Wien on day 3: Praha is passed through once.
+    expect(
+      longestReturnDays([ev("arr", "2025-06-01T12:00:00Z"), ev("dep", "2025-06-03T08:00:00Z")])
+    ).toBeNull();
+  });
+
+  it("counts a revisit when the ride out in between was not recorded", () => {
+    expect(
+      longestReturnDays([ev("arr", "2024-04-01T12:00:00Z"), ev("arr", "2025-06-01T12:00:00Z")])
+    ).toBe(426);
   });
 });

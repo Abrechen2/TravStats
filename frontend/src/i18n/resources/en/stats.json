@@ -780,8 +780,11 @@
       "rentalsDesc_other": "{{count}} rental days — not counted again as travel days",
       "bus": "Bus rides",
       "busDesc": "{{km}} km by bus",
-      "busDescNights_one": "{{km}} km by bus, {{count}} night on board",
-      "busDescNights_other": "{{km}} km by bus, {{count}} nights on board"
+      "busNoKm": "distance not recorded",
+      "busUnmeasured_one": "{{count}} ride without a distance",
+      "busUnmeasured_other": "{{count}} rides without a distance",
+      "busNights_one": "{{count}} night on board",
+      "busNights_other": "{{count}} nights on board"
     }
   },
   "period": {

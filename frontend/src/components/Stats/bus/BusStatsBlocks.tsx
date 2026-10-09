@@ -77,7 +77,13 @@ export default function BusStatsBlocks({
     label: String(y.year),
     weight: y.rides,
     value: String(y.rides),
-    hint: `${num(y.km)} km`,
+    // Unknown stays unknown (review I4): no "0 km" for a year of unmeasured rides.
+    hint: [
+      y.km === null ? null : `${num(y.km)} km`,
+      (y.unmeasured ?? 0) > 0 ? t("bus:stats.kmUnmeasured", { count: y.unmeasured }) : null,
+    ]
+      .filter(Boolean)
+      .join(" · "),
   }));
 
   return (

@@ -371,7 +371,7 @@
       "oneWay": "Eine Miete, deren Rückgabestation eine andere ist als die Abholstation: zwei verschiedene Flughäfen, sonst mehr als einen Kilometer auseinander.",
       "brokers": "Der Vermieter ist die Firma am Schalter (Sixt, Alamo). Ein Vermittler ist das Portal oder der Reiseveranstalter, über den gebucht wurde (Check24, billiger-mietwagen). Vermieter werden nach Miettagen gereiht, Vermittler nach Mieten.",
       "kmPerDay": "Die Kilometer der Mieten mit bekannten Kilometern, geteilt durch die Miettage genau dieser Mieten — nie Kilometer der einen durch Tage der anderen.",
-      "costPerKm": "Je Währung: die Kosten der Mieten, die zugleich einen Preis und bekannte Kilometer haben, geteilt durch deren Kilometer.",
+      "costPerKm": "Je Währung: die Kosten der Mieten, die zugleich einen Preis und bekannte Kilometer haben — der Endbetrag der Rechnung, wo es einen gibt, sonst der gebuchte Preis —, geteilt durch deren Kilometer.",
       "bookedVsFinal": "Nur Mieten, deren Endbetrag aus der Rechnung stammt oder von Hand korrigiert wurde, und nur in derselben Währung wie der gebuchte Preis. Zusatzkosten stecken im Endbetrag. Nichts wird umgerechnet.",
       "promisedVsDriven": "Vergleicht das gebuchte Beispielmodell („VW Golf oder ähnlich“) mit dem gefahrenen Auto, ohne Wertung: Eine feste Rangfolge der Fahrzeugklassen gibt es nicht, deshalb ist hier nie von einem Upgrade die Rede.",
       "records": "Längste Miete nach Miettagen; weiteste Strecke nur aus bekannten Kilometern; ein Vermieter gilt als neu in dem Zeitraum, in dem seine erste abgeschlossene Miete liegt."

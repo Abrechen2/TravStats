@@ -42,12 +42,21 @@ export type UserAchievementWithRelation = UserAchievement & { achievement: Achie
  */
 export type DomainAchievementCheck = (
   achievement: Pick<Achievement, "requirementType" | "requirement">
-) => { isUnlocked: boolean; progress: number } | null;
+) => DomainCheckResult | null;
+
+/**
+ * `skip`: the module owns this rule but could not measure it this run (its
+ * loader threw). The badge's stored row is left exactly as it is — neither
+ * revoked by a progress of 0 nor written — the verdict the sibling insight
+ * loaders give, so one failing domain neither aborts every badge nor costs
+ * a held one.
+ */
+export type DomainCheckResult = { isUnlocked: boolean; progress: number } | { skip: true };
 
 function firstDomainCheck(
   checks: readonly DomainAchievementCheck[],
   achievement: Achievement
-): { isUnlocked: boolean; progress: number } | null {
+): DomainCheckResult | null {
   for (const check of checks) {
     const result = check(achievement);
     if (result) return result;
@@ -151,11 +160,13 @@ export function planAchievementWrites(
     // requirement was first met — `unlockedAt` is a historical fact and is
     // never cleared or overwritten, which is how the page can explain the drop
     // instead of letting a total fall in silence.
-    const { isUnlocked, progress } =
+    const verdict =
       checkRoadtripAchievement(achievement, roadtripStats) ??
       checkRailAchievement(achievement, railStats) ??
       firstDomainCheck(domainChecks, achievement) ??
       checkAchievement(achievement, stats, flights);
+    if ("skip" in verdict) continue;
+    const { isUnlocked, progress } = verdict;
 
     if (isUnlocked) {
       // Steady state: the user already holds it, the stored progress is already

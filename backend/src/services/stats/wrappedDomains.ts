@@ -14,6 +14,7 @@ import { loadVisibleDomainSet, type VisibleDomains } from "../domainVisibility";
 import { roadtripHasStarted } from "./roadtripEvidence";
 import type { WrappedCruise, WrappedRail } from "./wrapped";
 import type { WrappedChapterRows } from "./wrappedChapters";
+import { loadPassport, type PassportLoaderFlight } from "./passportLoader";
 
 /**
  * The non-flight rows the year in review reads — loaded here so the stats
@@ -196,4 +197,24 @@ async function loadChapterRows(
             nights: nightBusNights(r).length,
           })),
   };
+}
+
+/**
+ * The passport the year in review takes `newCountries` from, cut to what the
+ * user sees (forgejo#265 review M1): flights, rail, bus, roadtrips and places
+ * of a hidden domain prove no country here, as they add no chapter and no
+ * year. Cruises and stays have no source switch in the passport loader yet and
+ * still count, as before.
+ */
+export async function loadWrappedPassport(
+  userId: string,
+  flights: PassportLoaderFlight[]
+): Promise<Awaited<ReturnType<typeof loadPassport>>> {
+  const visible = await loadVisibleDomainSet(userId);
+  return loadPassport(userId, visible.has("flight") ? flights : [], {
+    rail: visible.has("rail"),
+    bus: visible.has("bus"),
+    roadtrip: visible.has("roadtrip"),
+    place: visible.has("poi"),
+  });
 }

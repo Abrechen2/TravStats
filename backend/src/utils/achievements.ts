@@ -624,7 +624,8 @@ async function runAchievementCheck(
       // A trip is "fully documented" when it records the journey, the bed, the
       // words and the pictures — the journey by ANY mode since forgejo#265
       // (`crossDomainAchievements.ts`, the one home of the rule).
-      tripsFullyDocumented: domainBadges.crossDomain.tripsFullyDocumented,
+      // Null when that loader failed: the badge then answers "skip" first.
+      tripsFullyDocumented: domainBadges.crossDomain?.tripsFullyDocumented ?? 0,
       // Cross-domain (lodging)
       flyAndStay,
       grandTour,

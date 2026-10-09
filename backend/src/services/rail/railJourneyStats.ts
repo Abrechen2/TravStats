@@ -201,7 +201,7 @@ function favourites(rows: readonly RailJourneyRow[]): RailJourneyFigures["favour
 
 /** A recorded delay on a ride with both clocks — the sample the delay chart is drawn over. */
 const delaySample = (r: RailJourneyRow): number | null =>
-  r.delayMinutes !== null && rideHasClocks(r) ? r.delayMinutes : null;
+  r.delayMinutes !== null && r.arrivalTime !== null && rideHasClocks(r) ? r.delayMinutes : null;
 
 function punctualityBy(
   rows: readonly RailJourneyRow[],

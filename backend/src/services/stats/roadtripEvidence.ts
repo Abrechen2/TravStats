@@ -127,6 +127,22 @@ export function attestStation(row: RoadtripStationRow, now: Date): AttestedStati
   return { night, at: first ? new Date(`${first}T00:00:00Z`) : null, days };
 }
 
+/**
+ * The first and last day a roadtrip ATTESTS — every station read by
+ * `attestStation`, so no planned station, no day after today, no cancelled
+ * stay and no MONTH placeholder (`stationSpan`) widens it. Null when no
+ * station attests a day: an empty or undated roadtrip has moved nobody
+ * (forgejo#265 review I1/I2 — the cross-domain badges and the longest-roadtrip
+ * record both ask this, not a raw min/max of the stored dates).
+ */
+export function roadtripAttestedSpan(
+  stations: readonly RoadtripStationRow[],
+  now: Date
+): { first: string; last: string } | null {
+  const days = stations.flatMap((row) => attestStation(row, now)?.days ?? []).sort();
+  return days.length === 0 ? null : { first: days[0], last: days[days.length - 1] };
+}
+
 /** A station as the passport reads it — its country already resolved by the loader. */
 export interface PassportRoadtripStation extends AttestedStation {
   /** ISO 3166-1 alpha-2, or null when neither the point nor a stay could place it. */

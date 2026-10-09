@@ -3,7 +3,7 @@ import { prisma } from "../db";
 import { classifyStay } from "../shared/lodgingCounting";
 import { classifyVisit } from "../shared/placeCounting";
 import { arrivedOverland, tripMovementModes, type DomainCounts } from "../shared/tripMovement";
-import { roadtripHasStarted } from "../services/stats/roadtripEvidence";
+import { roadtripAttestedSpan, type RoadtripStationRow } from "../services/stats/roadtripEvidence";
 import { BETA_GATED_DOMAINS, loadVisibleDomains } from "../services/domainVisibility";
 import { now as clockNow } from "../shared/time/clock";
 
@@ -52,7 +52,22 @@ export const CROSS_DOMAIN_TRIP_SELECT = {
     select: {
       stops: {
         where: { viaPoint: false },
-        select: { startDate: true, lodgingStay: { select: { checkIn: true } } },
+        // What `attestStation` reads: an undated or planned station moves nobody.
+        select: {
+          lodgingStayId: true,
+          overnight: true,
+          startDate: true,
+          endDate: true,
+          lodgingStay: {
+            select: {
+              checkIn: true,
+              checkOut: true,
+              datePrecision: true,
+              nights: true,
+              status: true,
+            },
+          },
+        },
       },
     },
   },
@@ -67,7 +82,7 @@ export interface CrossDomainTripRow {
   busJourneys: { status: string }[];
   lodgingStays: { status: string; checkIn: Date | null; checkOut: Date | null }[];
   placeVisits: { visitedAt: Date | null; visitedAtUtc: Date | null }[];
-  routes: { stops: { startDate: Date | null; lodgingStay: { checkIn: Date | null } | null }[] }[];
+  routes: { stops: RoadtripStationRow[] }[];
   _count: { journalEntries: number; photos: number };
 }
 
@@ -79,8 +94,11 @@ export function foldCrossDomainAchievementStats(
 ): CrossDomainAchievementStats {
   const stats = { ...EMPTY_CROSS_DOMAIN_STATS };
   for (const trip of trips) {
-    const startedRoadtrips = trip.routes.filter((route) =>
-      roadtripHasStarted(route.stops, now)
+    // A roadtrip moved the traveller only when a station ATTESTS a day — dated,
+    // not planned, not a cancelled stay (review I1): an empty or undated
+    // roadtrip draft is no mode of travel.
+    const startedRoadtrips = trip.routes.filter(
+      (route) => roadtripAttestedSpan(route.stops, now) !== null
     ).length;
     const modes = tripMovementModes({ ...trip, startedRoadtrips }, counts);
     const stayed =

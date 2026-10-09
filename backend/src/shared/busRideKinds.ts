@@ -158,3 +158,41 @@ export function busConnectionKey(ends: { dep: number; arr: number }): string | n
   if (ends.dep === ends.arr) return null;
   return ends.dep < ends.arr ? `${ends.dep}|${ends.arr}` : `${ends.arr}|${ends.dep}`;
 }
+
+/** One moment at a terminal: the traveller arrived there, or left it. */
+export interface TerminalEvent {
+  kind: "arr" | "dep";
+  /** The real instant — orders two events of one day. */
+  at: Date;
+  /** `YYYY-MM-DD` on the terminal's calendar — what a gap is measured in. */
+  day: string;
+}
+
+/**
+ * The most days between two SEPARATE visits of one terminal (review I3 of
+ * forgejo#263/#265). A visit runs from an arrival to the next departure, so an
+ * arrival and the ride out of the same stay are ONE visit, never a return.
+ * A return is measured from the end of a visit to the start of the next:
+ *   - a departure with no open visit is a visit on its own (the arrival was
+ *     not recorded — the logbook's home terminal, typically);
+ *   - an arrival while a visit is still open means the departure in between
+ *     was not recorded: the earlier visit ended at its last known day.
+ * Null when no terminal was visited twice. A one-way chain A → B → C returns
+ * to nothing; leaving A and arriving back at A three weeks later does.
+ */
+export function longestReturnDays(events: readonly TerminalEvent[]): number | null {
+  const ordered = [...events].sort((a, b) => a.at.getTime() - b.at.getTime());
+  let best: number | null = null;
+  let open = false;
+  let lastDay: string | null = null;
+  for (const event of ordered) {
+    const startsVisit = event.kind === "arr" || !open;
+    if (startsVisit && lastDay !== null) {
+      const gap = Math.round((Date.parse(event.day) - Date.parse(lastDay)) / 86_400_000);
+      if (gap > 0 && (best === null || gap > best)) best = gap;
+    }
+    open = event.kind === "arr";
+    lastDay = event.day;
+  }
+  return best;
+}

@@ -71,7 +71,8 @@ export interface WrappedChapters {
   roadtrips: { roadtrips: number } | null;
   tours: { tours: number } | null;
   rentals: { rentals: number; days: number } | null;
-  bus: { rides: number; km: number; nights: number } | null;
+  /** `km` null when no ride of the year has a distance — unknown, never 0 (review I4). */
+  bus: { rides: number; km: number | null; unmeasured: number; nights: number } | null;
 }
 
 /** Every year any visible chapter has a row in. */
@@ -116,7 +117,10 @@ export function buildWrappedChapters(rows: WrappedChapterRows, year: number): Wr
         ? null
         : {
             rides: bus.length,
-            km: Math.round(bus.reduce((n, r) => n + (r.distanceKm ?? 0), 0)),
+            km: bus.some((r) => r.distanceKm !== null)
+              ? Math.round(bus.reduce((n, r) => n + (r.distanceKm ?? 0), 0))
+              : null,
+            unmeasured: bus.filter((r) => r.distanceKm === null).length,
             nights: bus.reduce((n, r) => n + r.nights, 0),
           },
   };

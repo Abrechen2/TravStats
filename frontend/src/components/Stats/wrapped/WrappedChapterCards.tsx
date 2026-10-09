@@ -69,11 +69,18 @@ export default function WrappedChapterCards({
         <StatCard
           title={t("stats:wrapped.chapters.bus")}
           value={count(bus.rides)}
-          description={
-            bus.nights > 0
-              ? t("stats:wrapped.chapters.busDescNights", { km: count(bus.km), count: bus.nights })
-              : t("stats:wrapped.chapters.busDesc", { km: count(bus.km) })
-          }
+          description={[
+            // Unknown stays unknown (review I4): no "0 km" for unmeasured rides.
+            bus.km === null
+              ? t("stats:wrapped.chapters.busNoKm")
+              : t("stats:wrapped.chapters.busDesc", { km: count(bus.km) }),
+            (bus.unmeasured ?? 0) > 0 && bus.km !== null
+              ? t("stats:wrapped.chapters.busUnmeasured", { count: bus.unmeasured })
+              : null,
+            bus.nights > 0 ? t("stats:wrapped.chapters.busNights", { count: bus.nights }) : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         />
       )}
     </>

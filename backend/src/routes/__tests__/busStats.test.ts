@@ -5,6 +5,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
+import { computeBusStats, type BusStatsRow } from "../../services/bus/busStats";
 
 /**
  * GET /bus/stats (spec 2026-10-07 §6, B2; forgejo#263): completed rides only,
@@ -111,6 +112,12 @@ describe("bus statistics", () => {
     expect(s.delays.averageMinutes).toBe(10);
     expect(s.operators).toEqual([{ label: "FlixBus", count: 3 }]);
     expect(s.countries).toEqual(["CZ", "DE"]);
+    // Review I4: a year's km say how many rides they leave out, and a year of
+    // unmeasured rides would read null, never 0.
+    expect(s.byYear).toEqual([
+      { year: 2024, rides: 1, km: 255, unmeasured: 0 },
+      { year: 2025, rides: 3, km: 570, unmeasured: 1 },
+    ]);
     expect(s.rideKinds).toEqual([
       { label: "unknown", count: 3 },
       { label: "intercity", count: 1 },
@@ -146,5 +153,44 @@ describe("bus statistics", () => {
   it("cuts a running year at a month-day and refuses `until` without a year", async () => {
     expect((await get("?year=2025&until=06-05")).body.data.rides).toBe(2);
     expect((await get("?until=06-05")).status).toBe(400);
+  });
+
+  // Review I3: the 426-day figure above hid that a single stay read as a
+  // return. A round trip returns to its home terminal, never to where it
+  // stayed; a one-way chain returns nowhere.
+  it("measures a return between two separate visits, never across one stay", () => {
+    const row = (id: string, from: Stop, to: Stop, dep: string, arr: string): BusStatsRow => ({
+      id,
+      operator: null,
+      rideKind: null,
+      depStationName: from.name,
+      arrStationName: to.name,
+      depLat: from.lat,
+      depLon: from.lon,
+      arrLat: to.lat,
+      arrLon: to.lon,
+      depCountry: from.cc,
+      arrCountry: to.cc,
+      depTimezone: from.tz,
+      arrTimezone: to.tz,
+      departureTime: new Date(dep),
+      arrivalTime: new Date(arr),
+      depPrecision: "minute",
+      arrPrecision: "minute",
+      distanceKm: null,
+      distanceSource: null,
+      delayMinutes: null,
+      bookingId: null,
+    });
+    const roundTrip = computeBusStats([
+      row("a", BERLIN, PRAHA, "2025-06-01T08:00Z", "2025-06-01T12:00Z"),
+      row("b", PRAHA, BERLIN, "2025-06-22T08:00Z", "2025-06-22T12:00Z"),
+    ]);
+    expect(roundTrip.longestReturn).toEqual({ days: 21, terminal: "Berlin ZOB" });
+    const chain = computeBusStats([
+      row("c", BERLIN, PRAHA, "2025-06-01T08:00Z", "2025-06-01T12:00Z"),
+      row("d", PRAHA, HAMBURG, "2025-06-03T08:00Z", "2025-06-03T18:00Z"),
+    ]);
+    expect(chain.longestReturn).toBeNull();
   });
 });

@@ -120,4 +120,38 @@ describe("wrapped and badges across domains", () => {
     expect(off.body.availableYears).toEqual([2024]);
     expect(off.body.flights).toBe(0);
   });
+
+  // Review M1: "new countries" follow the same gate — a hidden domain proves none.
+  it("counts no new country from a hidden domain", async () => {
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    await prisma.railJourney.create({
+      data: {
+        userId,
+        status: "completed",
+        depStationName: "Lisboa Oriente",
+        depLat: 38.768,
+        depLon: -9.099,
+        depCountry: "PT",
+        depTimezone: "Europe/Lisbon",
+        arrStationName: "Vigo Guixar",
+        arrLat: 42.235,
+        arrLon: -8.713,
+        arrCountry: "ES",
+        arrTimezone: "Europe/Madrid",
+        departureTime: new Date("2024-04-02T09:00:00Z"),
+        arrivalTime: new Date("2024-04-02T15:00:00Z"),
+      },
+    });
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { enabledDomains: ["rental", "rail"] },
+    });
+    const withRail = await request(app)
+      .get("/api/v1/stats/wrapped?year=2024")
+      .set("Cookie", cookie);
+    expect(withRail.body.newCountries).toBe(2);
+    await prisma.userSettings.update({ where: { userId }, data: { enabledDomains: ["rental"] } });
+    const hidden = await request(app).get("/api/v1/stats/wrapped?year=2024").set("Cookie", cookie);
+    expect(hidden.body.newCountries).toBe(0);
+  });
 });

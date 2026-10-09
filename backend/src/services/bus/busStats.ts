@@ -10,6 +10,8 @@ import {
   isNightBusRide,
   nightBusNights,
   terminalsOf,
+  longestReturnDays,
+  type TerminalEvent,
 } from "../../shared/busRideKinds";
 import { railJourneysOf } from "../rail/railJourneyStats";
 
@@ -38,7 +40,6 @@ import { railJourneysOf } from "../rail/railJourneyStats";
 const TOP = 10;
 const DELAY_BUCKETS = [0, 5, 15, 30, 60] as const;
 const FAVOURITE_MIN_RIDES = 2;
-const DAY_MS = 86_400_000;
 
 export interface BusStatsRow {
   id: string;
@@ -98,7 +99,8 @@ export interface BusStats {
     buckets: Array<{ upToMinutes: number | null; count: number }>;
     averageMinutes: number | null;
   };
-  byYear: Array<{ year: number; rides: number; km: number }>;
+  /** `km` null when no ride of the year has a distance — unknown, never 0 (review I4). */
+  byYear: Array<{ year: number; rides: number; km: number | null; unmeasured: number }>;
   journeys: { total: number; withTransfer: number };
   transfers: { count: number; averageMinutes: number | null };
   favouriteConnections: Array<{ from: string; to: string; rides: number; latestRideId: string }>;
@@ -117,7 +119,7 @@ const rankMap = (counts: Map<string, number>): Ranked[] =>
 
 /** A recorded delay on a ride with both clocks — the only delay that is a measurement. */
 const delayOf = (r: BusStatsRow): number | null =>
-  r.delayMinutes !== null && rideHasClocks(r) ? r.delayMinutes : null;
+  r.delayMinutes !== null && r.arrivalTime !== null && rideHasClocks(r) ? r.delayMinutes : null;
 
 function delays(rows: readonly BusStatsRow[]): BusStats["delays"] {
   const recorded = rows.flatMap((r) => {
@@ -180,17 +182,29 @@ function terminalFigures(
   // ride touched. The home terminal a logbook starts from is never one.
   const seen = new Set<number>();
   const firstArrivals: BusStatsRow[] = [];
-  const visitDays = new Map<number, string[]>();
+  const visitEvents = new Map<number, TerminalEvent[]>();
   for (const ride of inTravelOrder(all)) {
     const e = ends.get(ride.id)!;
     if (!seen.has(e.arr) && e.arr !== e.dep) firstArrivals.push(ride);
     seen.add(e.dep);
     seen.add(e.arr);
-    const depDay = localDay(ride.departureTime, ride.depTimezone ?? "UTC");
-    visitDays.set(e.dep, [...(visitDays.get(e.dep) ?? []), depDay]);
+    visitEvents.set(e.dep, [
+      ...(visitEvents.get(e.dep) ?? []),
+      {
+        kind: "dep",
+        at: ride.departureTime,
+        day: localDay(ride.departureTime, ride.depTimezone ?? "UTC"),
+      },
+    ]);
     if (ride.arrivalTime) {
-      const arrDay = localDay(ride.arrivalTime, ride.arrTimezone ?? "UTC");
-      visitDays.set(e.arr, [...(visitDays.get(e.arr) ?? []), arrDay]);
+      visitEvents.set(e.arr, [
+        ...(visitEvents.get(e.arr) ?? []),
+        {
+          kind: "arr",
+          at: ride.arrivalTime,
+          day: localDay(ride.arrivalTime, ride.arrTimezone ?? "UTC"),
+        },
+      ]);
     }
   }
   const destinationsByYear = new Map<number, number>();
@@ -199,14 +213,13 @@ function terminalFigures(
     destinationsByYear.set(year, (destinationsByYear.get(year) ?? 0) + 1);
   }
 
+  // Between two SEPARATE visits — an arrival and the ride out of the same stay
+  // are one visit, never a return (`longestReturnDays`, review I3).
   let longestReturn: BusStats["longestReturn"] = null;
-  for (const [terminal, days] of visitDays) {
-    const sorted = [...new Set(days)].sort();
-    for (let i = 1; i < sorted.length; i += 1) {
-      const gap = Math.round((Date.parse(sorted[i]) - Date.parse(sorted[i - 1])) / DAY_MS);
-      if (longestReturn === null || gap > longestReturn.days) {
-        longestReturn = { days: gap, terminal: registry.nameOf(terminal) };
-      }
+  for (const [terminal, events] of visitEvents) {
+    const days = longestReturnDays(events);
+    if (days !== null && (longestReturn === null || days > longestReturn.days)) {
+      longestReturn = { days, terminal: registry.nameOf(terminal) };
     }
   }
 
@@ -278,12 +291,16 @@ export function computeBusStats(
       best === null || (r.distanceKm as number) > (best.distanceKm as number) ? r : best,
     null
   );
-  const years = new Map<number, { rides: number; km: number }>();
+  const years = new Map<number, { rides: number; km: number | null; unmeasured: number }>();
   const kinds = new Map<string, number>();
   for (const r of rows) {
     const year = busYear(r);
-    const entry = years.get(year) ?? { rides: 0, km: 0 };
-    years.set(year, { rides: entry.rides + 1, km: entry.km + (r.distanceKm ?? 0) });
+    const entry = years.get(year) ?? { rides: 0, km: null, unmeasured: 0 };
+    years.set(year, {
+      rides: entry.rides + 1,
+      km: r.distanceKm === null ? entry.km : (entry.km ?? 0) + r.distanceKm,
+      unmeasured: entry.unmeasured + (r.distanceKm === null ? 1 : 0),
+    });
     const kind = r.rideKind ?? "unknown";
     kinds.set(kind, (kinds.get(kind) ?? 0) + 1);
   }

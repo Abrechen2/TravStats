@@ -46,7 +46,11 @@ const wrappedChaptersSchema = z
     bus: z
       .object({
         rides: z.number().int(),
-        km: z.number().describe("Every distance source together; a ride without one adds none"),
+        km: z
+          .number()
+          .nullable()
+          .describe("Every distance source together; null when no ride has one — never 0"),
+        unmeasured: z.number().int().describe("Rides without a distance, outside `km`"),
         nights: z.number().int().describe("Nights on a night bus, by its clocks"),
       })
       .nullable(),

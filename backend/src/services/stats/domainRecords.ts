@@ -10,7 +10,7 @@ import { countableBusWhere } from "../../shared/busCounting";
 import { now as clockNow } from "../../shared/time/clock";
 import type { DomainKey } from "../../shared/domains";
 import { loadVisibleDomainSet, type VisibleDomains } from "../domainVisibility";
-import { roadtripHasStarted } from "./roadtripEvidence";
+import { roadtripAttestedSpan } from "./roadtripEvidence";
 import type { DomainRecord } from "../../schemas/statsDomainRecords";
 
 /**
@@ -139,27 +139,32 @@ async function roadtripRecord(userId: string, now: Date): Promise<DomainRecord |
       stops: {
         where: { viaPoint: false },
         select: {
+          lodgingStayId: true,
+          overnight: true,
           startDate: true,
           endDate: true,
-          lodgingStay: { select: { checkIn: true, checkOut: true } },
+          lodgingStay: {
+            select: {
+              checkIn: true,
+              checkOut: true,
+              datePrecision: true,
+              nights: true,
+              status: true,
+            },
+          },
         },
       },
     },
   });
-  // Calendar days from the first station's day to the last's, both counted.
-  const best = longest(
-    routes.filter((r) => roadtripHasStarted(r.stops, now)),
-    (r) => {
-      const days = r.stops.flatMap((s) =>
-        [s.startDate ?? s.lodgingStay?.checkIn, s.endDate ?? s.lodgingStay?.checkOut].filter(
-          (d): d is Date => d instanceof Date
-        )
-      );
-      if (days.length === 0) return null;
-      const ms = days.map(utcDayOf);
-      return Math.round((Math.max(...ms) - Math.min(...ms)) / DAY_MS) + 1;
-    }
-  );
+  // Calendar days the roadtrip ATTESTS, first to last, both counted — the
+  // passport's station rule (`roadtripAttestedSpan`): no planned station, no
+  // day after today, no cancelled stay, no MONTH placeholder (review I2).
+  const best = longest(routes, (r) => {
+    const span = roadtripAttestedSpan(r.stops, now);
+    return span === null
+      ? null
+      : Math.round((Date.parse(span.last) - Date.parse(span.first)) / DAY_MS) + 1;
+  });
   if (!best) return null;
   return {
     domain: "roadtrip",

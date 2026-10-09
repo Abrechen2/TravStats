@@ -61,7 +61,12 @@ const busStats = registry.register(
         averageMinutes: z.number().nullable().describe("Null when no ride carries a delay"),
       }),
       byYear: z.array(
-        z.object({ year: z.number().int(), rides: z.number().int(), km: z.number() })
+        z.object({
+          year: z.number().int(),
+          rides: z.number().int(),
+          km: z.number().nullable().describe("Null when no ride of the year has a distance"),
+          unmeasured: z.number().int(),
+        })
       ),
       journeys: z
         .object({ total: z.number().int(), withTransfer: z.number().int() })

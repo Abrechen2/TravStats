@@ -37,7 +37,7 @@ import { fetchFlightDatedRows, fetchCruiseDatedRows } from "../services/stats/ti
 import { buildTravelRecords } from "../services/stats/records";
 import { enrichFlightsWithAirportFacts } from "../services/flightAirportFacts";
 import { countableFlightWhere } from "../shared/flightCounting";
-import { loadWrappedDomains } from "../services/stats/wrappedDomains";
+import { loadWrappedDomains, loadWrappedPassport } from "../services/stats/wrappedDomains";
 import {
   resolveWindow,
   bucketSeries,
@@ -950,7 +950,7 @@ router.get(
 
       // For `newCountries` only — the passport already decides what counts as
       // a country and when it was first reached.
-      const passport = await loadPassport(userId, flights);
+      const passport = await loadWrappedPassport(userId, flights);
 
       // Which YEAR a flight belongs to is read on the departure airport's
       // clock, not on the stored instant — the rule `departureClock.ts` states

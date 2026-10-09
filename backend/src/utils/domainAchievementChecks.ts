@@ -1,9 +1,19 @@
 import type { DomainAchievementCheck } from "./achievementWrites";
-import { calculateRentalAchievementStats, checkRentalAchievement } from "./rentalAchievements";
-import { calculateBusAchievementStats, checkBusAchievement } from "./busAchievements";
+import logger from "./logger";
+import {
+  calculateRentalAchievementStats,
+  checkRentalAchievement,
+  RENTAL_REQUIREMENT_TYPES,
+} from "./rentalAchievements";
+import {
+  BUS_REQUIREMENT_TYPES,
+  calculateBusAchievementStats,
+  checkBusAchievement,
+} from "./busAchievements";
 import {
   calculateCrossDomainAchievementStats,
   checkCrossDomainAchievement,
+  CROSS_DOMAIN_REQUIREMENT_TYPES,
   type CrossDomainAchievementStats,
 } from "./crossDomainAchievements";
 
@@ -18,24 +28,51 @@ import {
  * exception and say why in `crossDomainAchievements.ts`: a SHARED badge is
  * always listed, so a hidden domain must not feed it.
  *
- * `crossDomain` is handed back too: `achievements.ts` still files the fully
+ * A module whose loader THROWS does not abort the run: its rules answer
+ * "skip", and their stored rows stay exactly as they are — no revocation by a
+ * zero, no write (the sibling insight loaders' verdict). Every other badge is
+ * checked as usual.
+ *
+ * `crossDomain` is handed back too (null after a failure): `achievements.ts` still files the fully
  * documented trip under `UserStats`, and it must be this number, not a second
  * count.
  */
+/** A loader that threw: every rule of that module answers "skip" (`DomainCheckResult`). */
+async function orSkip<T>(module: string, load: () => Promise<T>): Promise<T | null> {
+  try {
+    return await load();
+  } catch (error) {
+    logger.error({
+      operation: "domain_achievements_skipped",
+      message: `${module} badge measures failed; their stored rows are left untouched this run`,
+      error: { message: error instanceof Error ? error.message : "Unknown error" },
+    });
+    return null;
+  }
+}
+
 export async function loadDomainAchievementChecks(userId: string): Promise<{
   checks: DomainAchievementCheck[];
-  crossDomain: CrossDomainAchievementStats;
+  crossDomain: CrossDomainAchievementStats | null;
 }> {
   const [rental, bus, crossDomain] = await Promise.all([
-    calculateRentalAchievementStats(userId),
-    calculateBusAchievementStats(userId),
-    calculateCrossDomainAchievementStats(userId),
+    orSkip("rental", () => calculateRentalAchievementStats(userId)),
+    orSkip("bus", () => calculateBusAchievementStats(userId)),
+    orSkip("crossDomain", () => calculateCrossDomainAchievementStats(userId)),
   ]);
+  const or = <S>(
+    stats: S | null,
+    types: readonly string[],
+    check: (a: Parameters<DomainAchievementCheck>[0], s: S) => ReturnType<DomainAchievementCheck>
+  ): DomainAchievementCheck =>
+    stats === null
+      ? (a) => (types.includes(a.requirementType) ? { skip: true } : null)
+      : (a) => check(a, stats);
   return {
     checks: [
-      (achievement) => checkRentalAchievement(achievement, rental),
-      (achievement) => checkBusAchievement(achievement, bus),
-      (achievement) => checkCrossDomainAchievement(achievement, crossDomain),
+      or(rental, RENTAL_REQUIREMENT_TYPES, checkRentalAchievement),
+      or(bus, BUS_REQUIREMENT_TYPES, checkBusAchievement),
+      or(crossDomain, CROSS_DOMAIN_REQUIREMENT_TYPES, checkCrossDomainAchievement),
     ],
     crossDomain,
   };

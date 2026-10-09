@@ -780,8 +780,11 @@
       "rentalsDesc_other": "{{count}} Miettage — zählen nicht zusätzlich als Reisetage",
       "bus": "Busfahrten",
       "busDesc": "{{km}} km mit dem Bus",
-      "busDescNights_one": "{{km}} km mit dem Bus, {{count}} Nacht an Bord",
-      "busDescNights_other": "{{km}} km mit dem Bus, {{count}} Nächte an Bord"
+      "busNoKm": "Strecke nicht erfasst",
+      "busUnmeasured_one": "{{count}} Fahrt ohne Strecke",
+      "busUnmeasured_other": "{{count}} Fahrten ohne Strecke",
+      "busNights_one": "{{count}} Nacht an Bord",
+      "busNights_other": "{{count}} Nächte an Bord"
     }
   },
   "period": {

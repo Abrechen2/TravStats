@@ -157,7 +157,11 @@ const clocked = (r: RailStatsRow): boolean =>
   rideHasClocks({ depPrecision: r.depPrecision ?? null, arrPrecision: r.arrPrecision ?? null });
 
 function delayBuckets(rows: readonly RailStatsRow[]): RailStats["delays"] {
-  const recorded = rows.filter((r) => r.delayMinutes !== null && clocked(r));
+  // An arrival delay needs an arrival: a ride with none has no clock to be
+  // late against (review M3), whatever its null precision column reads as.
+  const recorded = rows.filter(
+    (r) => r.delayMinutes !== null && r.arrivalTime !== null && clocked(r)
+  );
   const buckets = [...DELAY_BUCKETS, null].map((upTo, i) => {
     const lower = i === 0 ? -Infinity : DELAY_BUCKETS[i - 1];
     const count = recorded.filter((r) => {

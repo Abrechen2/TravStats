@@ -57,7 +57,7 @@ describe("buildWrapped — chapters beyond flights", () => {
       roadtrips: { roadtrips: 1 },
       tours: { tours: 2 },
       rentals: { rentals: 0, days: 0 },
-      bus: { rides: 2, km: 255, nights: 1 },
+      bus: { rides: 2, km: 255, unmeasured: 1, nights: 1 },
     });
   });
 
@@ -88,5 +88,14 @@ describe("buildWrapped — chapters beyond flights", () => {
     expect(
       buildWrapped([flight], [], [], null, [], { ...NO_CHAPTERS, flightsVisible: false })
     ).toBeNull();
+  });
+
+  // Review I4: a year of bus rides without any distance has unknown km, not 0.
+  it("keeps the bus kilometres unknown when no ride of the year has a distance", () => {
+    const wrapped = buildWrapped([], [], [], null, [], {
+      ...NO_CHAPTERS,
+      bus: [{ year: 2025, distanceKm: null, nights: 0 }],
+    });
+    expect(wrapped?.chapters?.bus).toEqual({ rides: 1, km: null, unmeasured: 1, nights: 0 });
   });
 });
