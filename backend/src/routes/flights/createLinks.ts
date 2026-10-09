@@ -39,3 +39,26 @@ export async function ownedTripId(
   if (!trip) throw new AppError("Trip not found", 404, "TRIP_NOT_FOUND", "tripId");
   return trip.id;
 }
+
+/**
+ * The batch form of `ownedTripId`: every distinct trip the rows name, in one
+ * query. The first row naming a trip that is not the caller's refuses the
+ * whole batch, and `row` (0-based) says which one.
+ */
+export async function ownedTripIds(
+  userId: string,
+  tripIds: ReadonlyArray<string | null | undefined>
+): Promise<void> {
+  const named = [...new Set(tripIds.filter((id): id is string => !!id))];
+  if (named.length === 0) return;
+  const owned = new Set(
+    (
+      await prisma.trip.findMany({
+        where: { id: { in: named }, userId },
+        select: { id: true },
+      })
+    ).map((t) => t.id)
+  );
+  const row = tripIds.findIndex((id) => !!id && !owned.has(id));
+  if (row >= 0) throw new AppError("Trip not found", 404, "TRIP_NOT_FOUND", "tripId", { row });
+}

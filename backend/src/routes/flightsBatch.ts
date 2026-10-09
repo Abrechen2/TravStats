@@ -28,6 +28,7 @@ import {
 import { toUtcDate } from "../services/flights/mergedChronology";
 import { buildFlightCreateData } from "../services/flights/flightCreateData";
 import { enrichFlightsForClients } from "../services/flightAirportFacts";
+import { ownedTripIds } from "./flights/createLinks";
 
 const router = Router();
 
@@ -88,6 +89,14 @@ router.post(
         }
         importBatchId = batch?.id ?? null;
       }
+
+      // A row may name the trip it belongs to (#355, batch half). Checked for
+      // the whole batch before anything is written: one foreign trip refuses the
+      // request, the same way one invalid row already does.
+      await ownedTripIds(
+        userId,
+        parsedFlights.map((data) => data.tripId)
+      );
 
       // Provenance, so importing the same export twice recognises what it
       // already holds instead of doubling it. Only for rows that came FROM a
@@ -204,14 +213,17 @@ router.post(
         const flights = [];
         for (const { data, enriched, resolvedCompanions, fx, externalRef } of enrichedDataList) {
           const flight = await tx.flight.create({
-            data: await buildFlightCreateData(data, {
-              userId,
-              externalRef,
-              importBatchId,
-              enriched,
-              companionNames: resolvedCompanions.map((c) => c.displayName),
-              fx,
-            }),
+            data: {
+              ...(await buildFlightCreateData(data, {
+                userId,
+                externalRef,
+                importBatchId,
+                enriched,
+                companionNames: resolvedCompanions.map((c) => c.displayName),
+                fx,
+              })),
+              tripId: data.tripId ?? null,
+            },
           });
 
           if (resolvedCompanions.length > 0) {
@@ -241,7 +253,12 @@ router.post(
         const pnrGroups = new Map<string, CreatedFlight[]>();
         if (autoCreateTrips) {
           for (const f of flights) {
-            if (f.bookingReference) {
+            // An explicit tripId wins over the PNR grouping: the caller said
+            // where the flight belongs (a client filing a package's legs on
+            // the trip it just created), and grouping would move it onto a
+            // trip invented here instead — the #355 defect by another route.
+            // Its booking reference stays on the row, so nothing is lost.
+            if (f.bookingReference && !f.tripId) {
               const group = pnrGroups.get(f.bookingReference) ?? [];
               group.push(f);
               pnrGroups.set(f.bookingReference, group);
@@ -352,7 +369,12 @@ router.post(
         await prisma.booking.update({ where: { id: booking.id }, data: columns });
       }
 
-      for (const tripId of createdTripIds) {
+      const namedTripIds = new Set(
+        createdFlights.flatMap((f) =>
+          f.tripId && !createdTripIds.includes(f.tripId) ? [f.tripId] : []
+        )
+      );
+      for (const tripId of [...createdTripIds, ...namedTripIds]) {
         await recomputeTripStatus(tripId);
       }
 
