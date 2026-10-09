@@ -66,7 +66,7 @@ export default function FlightRowActions({
                 e.stopPropagation();
                 onDuplicate(flight, "same");
               }}
-              className="block w-full text-left px-3 py-2 text-xs hover:bg-(--bg-elevated)"
+              className="block w-full text-left px-3 py-2 text-xs hover:bg-(--bg-elevated) pointer-coarse:min-h-(--ts-size-touch-min)"
               style={{ color: "var(--text-primary)" }}
             >
               {t("flights:table.duplicate.same")}
@@ -77,7 +77,7 @@ export default function FlightRowActions({
                 e.stopPropagation();
                 onDuplicate(flight, "return");
               }}
-              className="block w-full text-left px-3 py-2 text-xs hover:bg-(--bg-elevated)"
+              className="block w-full text-left px-3 py-2 text-xs hover:bg-(--bg-elevated) pointer-coarse:min-h-(--ts-size-touch-min)"
               style={{ color: "var(--text-primary)" }}
             >
               {t("flights:table.duplicate.return")}

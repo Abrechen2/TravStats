@@ -270,5 +270,8 @@ describe("SimplifiedFlightFormV2 — the shared form blocks", () => {
   it("sizes its inputs for a finger on a coarse pointer", async () => {
     await openManual(vi.fn());
     expect(form().className).toContain("pointer-coarse:[&_select]:min-h-(--ts-size-touch-min)");
+    // The 16 px help icons get a 44 px hit area (iPad check D1).
+    expect(form().className).toContain("pointer-coarse:[&_button.cursor-help]:after:-inset-3.5");
+    expect(form().querySelector("button.cursor-help")).not.toBeNull();
   });
 });

@@ -70,4 +70,13 @@ describe("FlightRowActions", () => {
     expect(onDuplicate).toHaveBeenCalledWith(flight, "return");
     expect(onRow).not.toHaveBeenCalled();
   });
+
+  it("sizes the duplicate menu's two entries for a finger on a coarse pointer (forgejo#249)", () => {
+    renderInRow("f1");
+    for (const name of ["flights:table.duplicate.same", "flights:table.duplicate.return"]) {
+      expect(screen.getByRole("button", { name }).className).toContain(
+        "pointer-coarse:min-h-(--ts-size-touch-min)"
+      );
+    }
+  });
 });
