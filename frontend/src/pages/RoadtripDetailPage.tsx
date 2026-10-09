@@ -15,10 +15,22 @@ import RoadtripFigures from "../components/Roadtrips/RoadtripFigures";
 import RoadtripTourCards from "../components/Roadtrips/RoadtripTourCards";
 import RoadtripCostsSection from "../components/Roadtrips/RoadtripCostsSection";
 import { RoadtripRailConversion } from "../components/rail/RoadtripRailConversion";
-import StationEditor, { type EditorStart } from "../components/Roadtrips/StationEditor";
+import StationEditor, {
+  type EditorSaveState,
+  type EditorStart,
+} from "../components/Roadtrips/StationEditor";
+import EditorSaveStatus from "../components/Roadtrips/EditorSaveStatus";
+import StationDraftBanner from "../components/Roadtrips/StationDraftBanner";
 import StationTimeline from "../components/Roadtrips/StationTimeline";
 import { stationHighlightLayer } from "../components/Roadtrips/stationHighlightLayer";
-import type { SaveStatus } from "../components/Roadtrips/useStationAutosave";
+import { toEditorStation } from "../lib/roadtrip/editorStation";
+import {
+  clearStationDraft,
+  readStationDraft,
+  type StoredStationDraft,
+} from "../lib/roadtrip/stationDraftStore";
+import { sameStationList } from "../lib/roadtrip/stationMerge";
+import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import { useDomainColors } from "../hooks/useDomainColors";
 import { roadtripsApi } from "../lib/api/roadtrips";
@@ -41,14 +53,6 @@ type LegEdit = {
   to: { id: string; title: string };
 };
 
-const STATUS_COLOR: Record<SaveStatus, string> = {
-  saved: "var(--ts-good)",
-  pending: "var(--ts-muted)",
-  saving: "var(--ts-muted)",
-  error: "var(--ts-bad)",
-  waiting: "var(--ts-warn)",
-};
-
 /**
  * One roadtrip (design 2026-09-25, board 2): the head and its figures, the
  * stations by day beside a map that follows the selection, then the day
@@ -58,6 +62,9 @@ const STATUS_COLOR: Record<SaveStatus, string> = {
  * `?station=neu` opens the editor with a new station (from "Neuer
  * Roadtrip"), `?station=heute` with one dated today (from "Heutige Nacht
  * eintragen").
+ *
+ * A local station draft from an earlier visit (forgejo#244) is offered before
+ * anything else: the editor would otherwise write the next change over it.
  */
 export default function RoadtripDetailPage(): JSX.Element {
   const { id = "" } = useParams<{ id: string }>();
@@ -80,10 +87,18 @@ export default function RoadtripDetailPage(): JSX.Element {
   const [loadError, setLoadError] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [legEdit, setLegEdit] = useState<LegEdit | null>(null);
-  const [save, setSave] = useState<{ status: SaveStatus; flush: () => Promise<void> }>({
+  const [save, setSave] = useState<EditorSaveState>({
     status: "saved",
-    flush: async () => {},
+    local: "none",
+    flush: async () => "saved",
+    discard: () => {},
+    merge: () => {},
   });
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  const [storedDraft, setStoredDraft] = useState<StoredStationDraft | null>(null);
+  const [restoreDraft, setRestoreDraft] = useState<StoredStationDraft | null>(null);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const draftChecked = useRef(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [costsBlock, setCostsBlock] = useState<number | null>(null);
 
@@ -124,10 +139,23 @@ export default function RoadtripDetailPage(): JSX.Element {
     void load();
   }, [load]);
 
-  const onStatus = useCallback(
-    (status: SaveStatus, flush: () => Promise<void>) => setSave({ status, flush }),
-    []
-  );
+  const onStatus = useCallback((state: EditorSaveState) => setSave(state), []);
+
+  // Once per visit: is there a local draft the server never got? One that
+  // says exactly what the server now holds reached it after all — forgotten.
+  useEffect(() => {
+    if (!detail || !userId || draftChecked.current) return;
+    draftChecked.current = true;
+    const found = readStationDraft(userId, id);
+    if (!found) return;
+    const server = detail.stations.filter((s) => s.lat !== null).map(toEditorStation);
+    if (sameStationList(found.drafts, server)) {
+      clearStationDraft(userId, id);
+      return;
+    }
+    setStoredDraft(found);
+    setEditing(false);
+  }, [detail, userId, id]);
 
   const mapContent = useMemo<TripMapContent>(
     () => ({
@@ -193,10 +221,14 @@ export default function RoadtripDetailPage(): JSX.Element {
   // A station that is not complete keeps the editor open: closing would
   // leave it unsaved with nothing on screen saying so. Its hint is already
   // in the "still open" list.
+  // A save that failed or met a conflict keeps the editor open too: the
+  // status line says where the edits are and what can be done about them.
   const finishEditing = async (): Promise<void> => {
     if (save.status === "waiting") return;
-    await save.flush();
+    const result = await save.flush();
+    if (result !== "saved") return;
     setEditing(false);
+    setRestoreDraft(null);
     await load();
   };
 
@@ -279,19 +311,13 @@ export default function RoadtripDetailPage(): JSX.Element {
 
   const actions = editing ? (
     <div className="flex flex-wrap items-center" style={{ gap: 12 }}>
-      <span
-        role="status"
-        className="flex items-center"
-        style={{ gap: 6, fontSize: 13, color: STATUS_COLOR[save.status] }}
-      >
-        {save.status === "saved" && <Icon name="check" size={14} />}
-        {t(`roadtrips:editor.status.${save.status}`)}
-        {save.status === "error" && (
-          <button type="button" className="underline" onClick={() => void save.flush()}>
-            {t("roadtrips:editor.status.retry")}
-          </button>
-        )}
-      </span>
+      <EditorSaveStatus
+        status={save.status}
+        local={save.local}
+        onRetry={() => void save.flush()}
+        onMerge={save.merge}
+        onDiscard={() => setConfirmDiscard(true)}
+      />
       <Button variant="primary" onClick={() => void finishEditing()}>
         {t("roadtrips:detail.done")}
       </Button>
@@ -365,9 +391,25 @@ export default function RoadtripDetailPage(): JSX.Element {
       >
         <section className="order-2 flex min-w-0 flex-col lg:order-1" style={{ gap: 8 }}>
           <h2 className="t-card-title">{t("roadtrips:stations.title")}</h2>
+          {!editing && storedDraft && userId && (
+            <StationDraftBanner
+              draft={storedDraft}
+              onRestore={() => {
+                setRestoreDraft(storedDraft);
+                setStoredDraft(null);
+                setEditing(true);
+              }}
+              onDiscard={() => {
+                clearStationDraft(userId, id);
+                setStoredDraft(null);
+              }}
+            />
+          )}
           {editing ? (
             <StationEditor
               routeId={id}
+              userId={userId}
+              restore={restoreDraft}
               stations={detail.stations.filter((s) => s.lat !== null)}
               legs={detail.legs}
               tripId={detail.trip?.id ?? null}
@@ -453,6 +495,26 @@ export default function RoadtripDetailPage(): JSX.Element {
           title={t("roadtrips:deleteWithCosts.title")}
           message={t("roadtrips:deleteWithCosts.message", { name: r.name, count: costsBlock })}
           confirmText={t("roadtrips:deleteWithCosts.confirm")}
+          confirmButtonClass={DELETE_BUTTON_CLASS}
+        />
+      )}
+
+      {confirmDiscard && (
+        <ConfirmModal
+          isOpen
+          onClose={() => setConfirmDiscard(false)}
+          onConfirm={() => {
+            setConfirmDiscard(false);
+            // Back to what the server holds — read afresh, because after a
+            // conflict the server has moved past what the editor last saw.
+            save.discard();
+            setEditing(false);
+            setRestoreDraft(null);
+            void load();
+          }}
+          title={t("roadtrips:editor.discardConfirm.title")}
+          message={t("roadtrips:editor.discardConfirm.message")}
+          confirmText={t("roadtrips:editor.discardConfirm.confirm")}
           confirmButtonClass={DELETE_BUTTON_CLASS}
         />
       )}

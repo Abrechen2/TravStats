@@ -205,6 +205,28 @@ describe("StationEditor", () => {
     expect(sent(1)[1]).toMatchObject({ lat: 58.95, lon: 5.72 });
   });
 
+  // forgejo#248: a reload or a closed tab with unsent edits asks first; once
+  // the server has them, it does not.
+  it("asks the browser to hold a reload while edits are unsent, and lets go once saved", async () => {
+    renderEditor();
+    fireEvent.click(screen.getByLabelText("roadtrips:stations.remove"));
+    const pending = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(pending);
+    expect(pending.defaultPrevented).toBe(true);
+
+    await pause();
+    const saved = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(saved);
+    expect(saved.defaultPrevented).toBe(false);
+  });
+
+  it("names the station ids it read with every write, so a station added elsewhere is not deleted", async () => {
+    renderEditor();
+    fireEvent.click(screen.getByLabelText("roadtrips:stations.remove"));
+    await pause();
+    expect(vi.mocked(roadtripsApi.replaceStations).mock.calls[0][2]).toEqual([HAMBURG_ID]);
+  });
+
   it("takes a removal back when asked", async () => {
     renderEditor();
     fireEvent.click(screen.getByLabelText("roadtrips:stations.remove"));

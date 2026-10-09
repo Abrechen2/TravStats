@@ -254,7 +254,9 @@ registry.registerPath({
     "caller's own `placeId`; 404 for another account's place) or `via` (a route " +
     "correction with no date and possibly no name; 400 `VIA_POINT_ON_TIMELINE` for a " +
     "trip's timeline stop). A timeline stop " +
-    "dropped from the list goes back to its trip rather than being deleted.",
+    "dropped from the list goes back to its trip rather than being deleted. With " +
+    "`expectedStationIds` the write is refused with 409 `ROADTRIP_STATIONS_CHANGED` when " +
+    "the stored station set differs from the one the writer read.",
   tags: ["Roadtrips"],
   request: {
     params: idParams,
@@ -277,6 +279,12 @@ registry.registerPath({
     },
     400: { description: "Validation failed", content: errorContent },
     404: { description: "Roadtrip or stay not found", content: errorContent },
+    409: {
+      description:
+        "`ROADTRIP_STATIONS_CHANGED`: stations were added or removed since `expectedStationIds` " +
+        "was read; nothing was written",
+      content: errorContent,
+    },
   },
 });
 

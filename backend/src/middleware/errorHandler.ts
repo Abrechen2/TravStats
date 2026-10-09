@@ -199,6 +199,10 @@ export type ApiErrorCode =
   | "TOUR_POINTS_FROM_TRIP"
   /** A trip's timeline stop was sent as a route correction (via point). */
   | "VIA_POINT_ON_TIMELINE"
+  /** A full station list was written against a station set that has changed
+   *  since the writer read it (a station added or removed elsewhere — the
+   *  phone). Nothing was written; read the roadtrip again and merge. */
+  | "ROADTRIP_STATIONS_CHANGED"
   /** A trip photo was linked to a stop that is not on its trip — neither on
    *  the trip's timeline nor a station of a roadtrip filed on it (forgejo#139).
    *  Also answered for a stop that does not exist, so a probe learns nothing

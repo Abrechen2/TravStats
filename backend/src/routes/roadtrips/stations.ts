@@ -16,7 +16,9 @@ const router = Router();
  * The complete, ordered station list — added, moved, removed, renumbered and
  * re-linked in one write, the same all-or-nothing shape as a standalone
  * tour's `/points`. The rules live in `replaceStations`, which the
- * spreadsheet import shares.
+ * spreadsheet import shares. With `expectedStationIds` the write is refused
+ * (409 `ROADTRIP_STATIONS_CHANGED`) when the stored stations are no longer the
+ * set the writer read — see the schema.
  */
 router.put(
   "/roadtrips/:id/stations",
@@ -26,8 +28,12 @@ router.put(
     try {
       const userId = req.userId!;
       const routeId = await resolveRoadtrip(userId, req.params.id);
-      const { stations } = stationsSchema.parse(req.body);
-      const { route, legs, stations: saved } = await replaceStations(userId, routeId, stations);
+      const { stations, expectedStationIds } = stationsSchema.parse(req.body);
+      const {
+        route,
+        legs,
+        stations: saved,
+      } = await replaceStations(userId, routeId, stations, { expectedStationIds });
 
       logger.info({ operation: "roadtrip.stations.replace", routeId, count: stations.length });
       res.json({

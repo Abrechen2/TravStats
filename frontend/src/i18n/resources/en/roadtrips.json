@@ -309,12 +309,15 @@
   "editor": {
     "hint": "Tap a station to edit it. Tap a leg for ferry or line. Every change is saved at once and can be undone.",
     "status": {
-      "pending": "Changes will be saved shortly",
-      "saving": "Saving …",
-      "saved": "All saved",
-      "error": "Not saved",
+      "pending": "About to be saved on the server",
+      "saving": "Saving on the server …",
+      "saved": "Saved on the server",
+      "error": "Not saved on the server",
       "waiting": "Waiting — a station is not complete yet",
-      "retry": "Try again"
+      "retry": "Try again",
+      "conflict": "Not saved — the station list changed on the server",
+      "merge": "Merge",
+      "discard": "Discard changes"
     },
     "whatHere": "What was here?",
     "choice": {
@@ -358,7 +361,16 @@
       "noStay": "{{name}}: stay not linked yet"
     },
     "warningsNote": "Hints only — everything is saved anyway. Only a station without a place or without its linked stay waits.",
-    "viaNote": "Only shapes the route: not shown as a station on maps or in lists, and counted nowhere."
+    "viaNote": "Only shapes the route: not shown as a station on maps or in lists, and counted nowhere.",
+    "local": {
+      "kept": "kept locally on this device",
+      "failed": "not kept on this device either — do not close the page"
+    },
+    "discardConfirm": {
+      "title": "Discard changes?",
+      "message": "The station changes the server does not have yet are lost — the copy on this device too. You then see what the server holds again.",
+      "confirm": "Discard"
+    }
   },
   "legDialog": {
     "title": "Leg",
@@ -475,5 +487,50 @@
     "message_one": "“{{name}}” has {{count}} recorded cost and belongs to no trip that could take it over. Deleting removes it too.",
     "message_other": "“{{name}}” has {{count}} recorded costs and belongs to no trip that could take them over. Deleting removes them too.",
     "confirm": "Delete with costs"
+  },
+  "draft": {
+    "title": "Unsaved station changes",
+    "body_one": "This device holds a version with {{count}} station that never reached the server (last kept {{when}}).",
+    "body_other": "This device holds a version with {{count}} stations that never reached the server (last kept {{when}}).",
+    "restore": "Restore",
+    "discard": "Discard",
+    "discardTitle": "Discard the local changes?",
+    "discardMessage": "The version of the stations kept on this device is deleted. It is not stored anywhere else.",
+    "discardConfirm": "Discard"
+  },
+  "conflict": {
+    "title": "Merge changes",
+    "intro": {
+      "restore": "Something changed on the server since these changes were kept. Where both sides changed the same detail, you choose which applies. The server's version is preselected.",
+      "live": "While you were editing, the station list changed on the server — through the app, for example. Nothing was overwritten. Where both sides changed the same detail, you choose which applies."
+    },
+    "addedThere_one": "New on the server, kept: {{names}}",
+    "addedThere_other": "New on the server, kept: {{names}}",
+    "removedThereKept_one": "Removed on the server and not changed here, stays removed: {{names}}",
+    "removedThereKept_other": "Removed on the server and not changed here, stay removed: {{names}}",
+    "none": "No detail was changed on both sides — everything merges without a question.",
+    "fieldLegend": "“{{name}}” — {{field}}",
+    "field": {
+      "title": "Name",
+      "place": "Place",
+      "startDate": "Arrival",
+      "endDate": "Departure",
+      "notes": "Note",
+      "night": "Night"
+    },
+    "mine": "On this device: {{value}}",
+    "theirs": "On the server: {{value}}",
+    "empty": "empty",
+    "removedThere": "“{{name}}” was removed on the server but changed here",
+    "restoreMine": "Restore it with the changes from this device",
+    "leaveRemoved": "Leave it removed",
+    "removedHere": "You removed “{{name}}”, but it was changed on the server",
+    "removeAnyway": "Remove it anyway",
+    "keepServers": "Keep it as the server has it",
+    "orderLegend": "Order of the stations",
+    "orderMine": "Order from this device",
+    "orderTheirs": "Order from the server",
+    "apply": "Apply",
+    "readFailed": "The current state could not be read from the server. Your changes stay kept on this device — try “Merge” again in a moment."
   }
 }

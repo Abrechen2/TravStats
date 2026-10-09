@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, JSX } from "react";
 
 import Button from "../ui/Button";
@@ -6,9 +6,18 @@ import IconButton from "../ui/IconButton";
 import { Icon } from "../ui/Icon";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
+import { roadtripsApi } from "../../lib/api/roadtrips";
+import { logger } from "../../lib/logger";
 import { stationAfter, stationWarnings } from "../../lib/roadtrip/roadtripView";
+import {
+  clearStationDraft,
+  writeStationDraft,
+  type StoredStationDraft,
+} from "../../lib/roadtrip/stationDraftStore";
+import { mergeStations, type StationMerge } from "../../lib/roadtrip/stationMerge";
 import type { RoadtripStation } from "../../types/roadtrip";
 import type { TourLeg } from "../../types/tour";
+import StationConflictDialog from "./StationConflictDialog";
 import StationEditCard from "./StationEditCard";
 import StationMarker from "./StationMarker";
 import { useLodgingLibrary } from "./StayPicker";
@@ -17,8 +26,10 @@ import {
   toEditorStation,
   useStationAutosave,
   type EditorStation,
+  type LocalDraftState,
   type SaveStatus,
   type SavedStations,
+  type StationDraftSink,
 } from "./useStationAutosave";
 
 const UNDO_MS = 8000;
@@ -36,6 +47,22 @@ const DASHED: CSSProperties = {
 /** How the editor opens: plainly, with a new station, or with tonight's. */
 export type EditorStart = "plain" | "new" | "today";
 
+/** What the page's header shows about the editor, and the actions it offers. */
+export interface EditorSaveState {
+  status: SaveStatus;
+  local: LocalDraftState;
+  flush: () => Promise<SaveStatus>;
+  discard: () => void;
+  merge: () => void;
+}
+
+/** A merge waiting for the reader: from a restored draft, or a refused save. */
+interface PendingMerge {
+  origin: "restore" | "live";
+  merge: StationMerge;
+  server: EditorStation[];
+}
+
 /**
  * The stations of a roadtrip, edited in place (design 2026-09-25, board 3).
  * One station is open at a time; the rest are one line each with move and
@@ -43,6 +70,12 @@ export type EditorStart = "plain" | "new" | "today";
  * (`useStationAutosave`), and a removal can be taken back for a few seconds.
  * A new station goes in where it belongs — between two, or at the end — and
  * starts where the one before it left off.
+ *
+ * forgejo#244: unsent edits are kept in this browser too (`stationDraftStore`,
+ * keyed by user and roadtrip), so a dropped connection or a closed tab does not
+ * lose them; `restore` continues from such a draft. Before a draft goes over a
+ * server state that moved on — or when a save meets a list the phone changed —
+ * `StationConflictDialog` asks per field.
  */
 export default function StationEditor({
   routeId,
@@ -54,6 +87,8 @@ export default function StationEditor({
   onSaved,
   onStatus,
   onEditLeg,
+  userId = null,
+  restore = null,
 }: {
   routeId: string;
   stations: RoadtripStation[];
@@ -62,7 +97,11 @@ export default function StationEditor({
   start: EditorStart;
   today: string;
   onSaved: (saved: SavedStations) => void;
-  onStatus: (status: SaveStatus, flush: () => Promise<void>) => void;
+  onStatus: (state: EditorSaveState) => void;
+  /** Whose local draft this is; without one, nothing is kept locally. */
+  userId?: string | null;
+  /** A local draft from an earlier visit the reader chose to restore. */
+  restore?: StoredStationDraft | null;
   onEditLeg: (
     leg: TourLeg,
     from: { id: string; title: string },
@@ -71,17 +110,85 @@ export default function StationEditor({
 }): JSX.Element {
   const { t } = useTranslation(["roadtrips"]);
   const display = useDisplayFormat();
-  const { drafts, status, change, flush } = useStationAutosave({
-    routeId,
-    initial: stations.map(toEditorStation),
-    onSaved,
+  const sink = useMemo<StationDraftSink | null>(
+    () =>
+      userId
+        ? {
+            write: (draft) => writeStationDraft(userId, routeId, draft),
+            clear: () => clearStationDraft(userId, routeId),
+          }
+        : null,
+    [userId, routeId]
+  );
+  // A restored draft whose server side did not move on goes straight back
+  // into the editor; otherwise the reader decides per field first.
+  const [opening] = useState(() => {
+    const initial = stations.map(toEditorStation);
+    if (!restore) return { initial, restored: null, merge: null };
+    const merge = mergeStations(restore.base, restore.drafts, initial);
+    const quiet =
+      merge.conflicts.length === 0 &&
+      merge.addedThere.length === 0 &&
+      merge.removedThere.length === 0;
+    return {
+      initial,
+      restored: quiet ? merge.resolve() : null,
+      merge: quiet ? null : merge,
+    };
   });
+  const { drafts, status, local, serverStations, change, flush, rebase, discard } =
+    useStationAutosave({
+      routeId,
+      initial: opening.initial,
+      restored: opening.restored,
+      onSaved,
+      sink,
+    });
+  const [pendingMerge, setPendingMerge] = useState<PendingMerge | null>(() =>
+    opening.merge ? { origin: "restore", merge: opening.merge, server: opening.initial } : null
+  );
+  const [mergeFailed, setMergeFailed] = useState(false);
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [removed, setRemoved] = useState<{ station: EditorStation; index: number } | null>(null);
   const lodgings = useLodgingLibrary(true);
   const started = useRef(false);
 
-  useEffect(() => onStatus(status, flush), [status, onStatus, flush]);
+  /**
+   * A save the server refused because the phone changed the list: read what
+   * the server holds now and ask how to merge. A failed read says so and
+   * leaves the edits where they are (kept locally).
+   */
+  const openMerge = useCallback(async (): Promise<void> => {
+    setMergeFailed(false);
+    try {
+      const fresh = await roadtripsApi.get(routeId);
+      const server = fresh.stations.map(toEditorStation);
+      setPendingMerge({
+        origin: "live",
+        merge: mergeStations(serverStations(), drafts, server),
+        server,
+      });
+    } catch (err) {
+      logger.warn("Reading the roadtrip for a merge failed", err);
+      setMergeFailed(true);
+    }
+  }, [routeId, serverStations, drafts]);
+
+  const conflictSeen = useRef(false);
+  useEffect(() => {
+    if (status !== "conflict") {
+      conflictSeen.current = false;
+      return;
+    }
+    if (conflictSeen.current) return;
+    conflictSeen.current = true;
+    void openMerge();
+  }, [status, openMerge]);
+
+  useEffect(
+    () => onStatus({ status, local, flush, discard, merge: () => void openMerge() }),
+    [status, local, onStatus, flush, discard, openMerge]
+  );
 
   const insertAt = (index: number, seed?: Partial<EditorStation>): void => {
     const station: EditorStation = {
@@ -297,6 +404,24 @@ export default function StationEditor({
           ))}
           <span className="t-caption">{t("roadtrips:editor.warningsNote")}</span>
         </div>
+      )}
+
+      {mergeFailed && (
+        <p role="alert" style={{ fontSize: 13, color: "var(--ts-bad)" }}>
+          {t("roadtrips:conflict.readFailed")}
+        </p>
+      )}
+
+      {pendingMerge && (
+        <StationConflictDialog
+          merge={pendingMerge.merge}
+          origin={pendingMerge.origin}
+          onClose={() => setPendingMerge(null)}
+          onApply={(merged) => {
+            rebase(pendingMerge.server, merged);
+            setPendingMerge(null);
+          }}
+        />
       )}
 
       {removed && (

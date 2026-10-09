@@ -95,11 +95,17 @@ export async function assertStaysOwned(
  * deleting it — the trip's timeline is not the roadtrip's to destroy.
  *
  * `routeId` must already be resolved as the caller's roadtrip.
+ *
+ * `expectedStationIds` is the writer's precondition: the station ids it last
+ * read. Checked INSIDE the transaction, against the rows the write is about to
+ * replace, so a station appended elsewhere between the writer's read and this
+ * write is never deleted by a list that did not know it existed.
  */
 export async function replaceStations(
   userId: string,
   routeId: string,
-  stations: readonly Station[]
+  stations: readonly Station[],
+  options: { expectedStationIds?: readonly string[] } = {}
 ) {
   const givenIds = stations.flatMap((s) => (s.id === undefined ? [] : [s.id]));
   if (new Set(givenIds).size !== givenIds.length) {
@@ -119,6 +125,17 @@ export async function replaceStations(
         select: { id: true, tripId: true },
       });
       const known = new Set(existing.map((s) => s.id));
+      if (options.expectedStationIds !== undefined) {
+        const expected = new Set(options.expectedStationIds);
+        const same = expected.size === known.size && [...known].every((id) => expected.has(id));
+        if (!same) {
+          throw new AppError(
+            "The stations changed since they were read; read the roadtrip again",
+            409,
+            "ROADTRIP_STATIONS_CHANGED"
+          );
+        }
+      }
       const unknown = givenIds.find((id) => !known.has(id));
       if (unknown !== undefined) {
         throw new AppError("A station id does not belong to this roadtrip", 400);

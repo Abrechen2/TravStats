@@ -309,12 +309,15 @@
   "editor": {
     "hint": "Station antippen, um sie zu bearbeiten. Etappe antippen für Fähre oder Linienführung. Jede Änderung wird sofort gespeichert und lässt sich rückgängig machen.",
     "status": {
-      "pending": "Änderungen werden gleich gespeichert",
-      "saving": "Wird gespeichert …",
-      "saved": "Alles gespeichert",
-      "error": "Nicht gespeichert",
+      "pending": "Wird gleich auf dem Server gespeichert",
+      "saving": "Wird auf dem Server gespeichert …",
+      "saved": "Auf dem Server gespeichert",
+      "error": "Nicht auf dem Server gespeichert",
       "waiting": "Wartet — eine Station ist noch nicht vollständig",
-      "retry": "Erneut versuchen"
+      "retry": "Erneut versuchen",
+      "conflict": "Nicht gespeichert – die Stationsliste hat sich auf dem Server geändert",
+      "merge": "Zusammenführen",
+      "discard": "Änderungen verwerfen"
     },
     "whatHere": "Was war hier?",
     "choice": {
@@ -358,7 +361,16 @@
       "noStay": "{{name}}: Unterkunft noch nicht verknüpft"
     },
     "warningsNote": "Nur Hinweise — gespeichert wird trotzdem. Nur eine Station ohne Ort oder ohne verknüpfte Unterkunft wartet.",
-    "viaNote": "Nur für die Linienführung: erscheint nicht als Station auf Karten und in Listen und zählt nirgends mit."
+    "viaNote": "Nur für die Linienführung: erscheint nicht als Station auf Karten und in Listen und zählt nirgends mit.",
+    "local": {
+      "kept": "lokal auf diesem Gerät gesichert",
+      "failed": "auch auf diesem Gerät nicht gesichert – Seite nicht schließen"
+    },
+    "discardConfirm": {
+      "title": "Änderungen verwerfen?",
+      "message": "Die Änderungen an den Stationen, die noch nicht auf dem Server sind, gehen verloren – auch die Sicherung auf diesem Gerät. Danach siehst du wieder den Stand vom Server.",
+      "confirm": "Verwerfen"
+    }
   },
   "legDialog": {
     "title": "Etappe",
@@ -475,5 +487,50 @@
     "message_one": "„{{name}}“ hat {{count}} erfasste Ausgabe und gehört zu keiner Reise, die sie übernehmen könnte. Beim Löschen geht sie mit.",
     "message_other": "„{{name}}“ hat {{count}} erfasste Ausgaben und gehört zu keiner Reise, die sie übernehmen könnte. Beim Löschen gehen sie mit.",
     "confirm": "Mit Kosten löschen"
+  },
+  "draft": {
+    "title": "Nicht gespeicherte Änderungen an den Stationen",
+    "body_one": "Auf diesem Gerät liegt eine Fassung mit {{count}} Station, die den Server nicht erreicht hat (zuletzt gesichert {{when}}).",
+    "body_other": "Auf diesem Gerät liegt eine Fassung mit {{count}} Stationen, die den Server nicht erreicht hat (zuletzt gesichert {{when}}).",
+    "restore": "Wiederherstellen",
+    "discard": "Verwerfen",
+    "discardTitle": "Lokale Änderungen verwerfen?",
+    "discardMessage": "Die auf diesem Gerät gesicherte Fassung der Stationen wird gelöscht – eine andere Kopie davon gibt es nicht.",
+    "discardConfirm": "Verwerfen"
+  },
+  "conflict": {
+    "title": "Änderungen zusammenführen",
+    "intro": {
+      "restore": "Seit diese Änderungen gesichert wurden, hat sich auf dem Server etwas geändert. Wo beide Seiten dieselbe Angabe geändert haben, wählst du, was gelten soll. Vorausgewählt ist der Stand vom Server.",
+      "live": "Während du bearbeitet hast, hat sich die Stationsliste auf dem Server geändert – etwa über die App. Nichts wurde überschrieben. Wo beide Seiten dieselbe Angabe geändert haben, wählst du, was gelten soll."
+    },
+    "addedThere_one": "Neu auf dem Server, bleibt erhalten: {{names}}",
+    "addedThere_other": "Neu auf dem Server, bleiben erhalten: {{names}}",
+    "removedThereKept_one": "Auf dem Server entfernt und hier nicht geändert, bleibt entfernt: {{names}}",
+    "removedThereKept_other": "Auf dem Server entfernt und hier nicht geändert, bleiben entfernt: {{names}}",
+    "none": "Keine Angabe wurde auf beiden Seiten geändert – alles lässt sich ohne Rückfrage zusammenführen.",
+    "fieldLegend": "„{{name}}“ – {{field}}",
+    "field": {
+      "title": "Name",
+      "place": "Ort",
+      "startDate": "Ankunft",
+      "endDate": "Abfahrt",
+      "notes": "Notiz",
+      "night": "Übernachtung"
+    },
+    "mine": "Auf diesem Gerät: {{value}}",
+    "theirs": "Auf dem Server: {{value}}",
+    "empty": "leer",
+    "removedThere": "„{{name}}“ wurde auf dem Server entfernt, hier aber geändert",
+    "restoreMine": "Mit den Änderungen von diesem Gerät wiederherstellen",
+    "leaveRemoved": "Entfernt lassen",
+    "removedHere": "„{{name}}“ hast du entfernt, auf dem Server wurde sie geändert",
+    "removeAnyway": "Trotzdem entfernen",
+    "keepServers": "Behalten, wie sie auf dem Server ist",
+    "orderLegend": "Reihenfolge der Stationen",
+    "orderMine": "Reihenfolge von diesem Gerät",
+    "orderTheirs": "Reihenfolge vom Server",
+    "apply": "Übernehmen",
+    "readFailed": "Der aktuelle Stand konnte nicht vom Server gelesen werden. Deine Änderungen bleiben auf diesem Gerät gesichert – versuche „Zusammenführen“ gleich noch einmal."
   }
 }
