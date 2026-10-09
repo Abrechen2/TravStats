@@ -149,4 +149,25 @@ describe("FlightPlanActual", () => {
       "flights:planActual.unknownReason.planNotToMinute"
     );
   });
+
+  it("cuts a date to its precision and says a time without zone has none (review M5)", () => {
+    render(
+      <FlightPlanActual
+        flight={flight({
+          departure: {
+            ...at("1998-05-01T00:00:00", "1998-05-01T00:00:00Z", "Europe/Berlin", "+02:00"),
+            precision: "month",
+          },
+          arrival: {
+            ...at("1998-05-12T09:00:00", "1998-05-12T07:00:00Z", "Europe/Berlin", "+02:00"),
+            precision: "unknown",
+          },
+        })}
+      />
+    );
+    expect(screen.getByTestId("plan-actual-departure-planned")).not.toHaveTextContent("01.05.1998");
+    expect(screen.getByTestId("plan-actual-arrival-planned")).toHaveTextContent(
+      "flights:planActual.zoneNotRecorded"
+    );
+  });
 });

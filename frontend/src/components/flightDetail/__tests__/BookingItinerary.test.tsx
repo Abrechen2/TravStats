@@ -136,4 +136,26 @@ describe("BookingItinerary", () => {
     await userEvent.setup().click(screen.getByRole("button", { name: "common:buttons.retry" }));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
+
+  it("marks a cancelled segment and measures no gap through it (review M3)", () => {
+    const cancelled = {
+      ...seg("x9", "FRA", "JFK", cest("2026-10-12T08:30:00", "2026-10-12T06:30:00Z"), null),
+      status: "cancelled",
+    } as Flight;
+    const replacement = seg(
+      "lh400",
+      "FRA",
+      "JFK",
+      cest("2026-10-12T11:00:00", "2026-10-12T09:00:00Z"),
+      null
+    );
+    renderIt(loaded([first, cancelled, replacement]));
+    const items = screen.getAllByRole("listitem");
+    expect(items[1]).toHaveTextContent("flights:itinerary.cancelled");
+    expect(screen.queryByTestId("itinerary-transfer-1")).toBeNull();
+    // The replacement's gap is measured from the first flight: 08:05 → 11:00.
+    expect(screen.getByTestId("itinerary-transfer-2")).toHaveTextContent(
+      'flights:itinerary.transfer {"airport":"FRA","duration":"flights:planActual.durationHM {\\"h\\":2,\\"m\\":55}"}'
+    );
+  });
 });

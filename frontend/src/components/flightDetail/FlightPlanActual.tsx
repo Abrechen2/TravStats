@@ -1,7 +1,7 @@
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { minutesText } from "../../lib/flights/minutesText";
-import { formatLocalClock, formatLocalDate } from "../../lib/displayFormat";
+import { formatLocalClock, formatTimeValueShown } from "../../lib/displayFormat";
 import {
   flightPlanActual,
   type Deviation,
@@ -43,6 +43,9 @@ function arrivalDayText(offset: number | null, t: Translate): string | null {
 
 /** The airport's zone as the value carries it; "UTC" with a reason where none is known. */
 function zoneText(value: TimeValue, t: Translate): string {
+  // A time recorded without a zone (`UNKNOWN` semantics): the AIRPORT's zone
+  // may well be known — it is the time that has none (review M5).
+  if (value.precision === "unknown") return t("flights:planActual.zoneNotRecorded");
   if (readsAsUtc(value)) return t("flights:planActual.zoneUnknown");
   if (!value.zone) return `UTC${value.offset}`;
   return value.precision === "minute" ? `${value.zone} · UTC${value.offset}` : value.zone;
@@ -70,7 +73,8 @@ function TimeCell({
         {value ? (
           <>
             <span style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text-bright)" }}>
-              {formatLocalDate(value.local)}
+              {/* Cut to its precision: a month-precise value shows no day (review M5). */}
+              {formatTimeValueShown(value, { dateOnly: true })}
               {clock ? (
                 <span style={{ fontFamily: "var(--ts-font-mono)", marginLeft: 6 }}>
                   {formatLocalClock(clock)}

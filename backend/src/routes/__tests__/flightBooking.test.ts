@@ -173,6 +173,24 @@ describe("GET /flights/:id/booking", () => {
       ]);
     });
 
+    it("gives a cancelled flight no share — it costs nothing (review M2)", async () => {
+      const { booking, a, b } = await bookedPair(100);
+      const cancelled = await flight(userId, {
+        bookingId: booking.id,
+        status: "cancelled",
+        departureTime: new Date("2026-11-02T20:00:00Z"),
+        arrivalTime: new Date("2026-11-02T21:00:00Z"),
+      });
+      const res = await put(a.id, { method: "equal" });
+      expect(res.status).toBe(200);
+      expect(res.body.booking.split.shares).toEqual([
+        { flightId: a.id, amount: 50 },
+        { flightId: b.id, amount: 50 },
+      ]);
+      expect(res.body.booking.split.staleReason).toBeNull();
+      expect(res.body.segments.map((s: { id: string }) => s.id)).toContain(cancelled.id);
+    });
+
     it("marks the split stale once the booking total changes", async () => {
       const { booking, a } = await bookedPair(100);
       await put(a.id, { method: "equal" });

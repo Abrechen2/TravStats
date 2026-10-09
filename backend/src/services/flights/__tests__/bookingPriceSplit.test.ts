@@ -127,3 +127,22 @@ describe("readBookingSplit", () => {
     expect(readBookingSplit({ junk: true }, { price: 100, currency: "EUR" }, [])).toBeNull();
   });
 });
+
+describe("a total with more decimals than its currency (review M4)", () => {
+  it("splits the total the currency can hold, and reads it as current", () => {
+    const out = computeBookingSplit(
+      { price: 1.005, currency: "EUR", otherEntries: 0 },
+      [
+        { id: "a", routeDistance: 1 },
+        { id: "b", routeDistance: 1 },
+      ],
+      "equal"
+    );
+    if (!("split" in out)) throw new Error("expected a split");
+    expect(out.split.price).toBe(1.01);
+    expect(out.split.shares.reduce((a, s) => a + Math.round(s.amount * 100), 0)).toBe(101);
+    expect(
+      readBookingSplit(out.split, { price: 1.005, currency: "EUR" }, ["a", "b"])?.staleReason
+    ).toBeNull();
+  });
+});

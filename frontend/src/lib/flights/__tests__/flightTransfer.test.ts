@@ -217,4 +217,52 @@ describe("flightTransfers", () => {
       { kind: "transfer", minutes: 110, airport: { kind: "same" } },
     ]);
   });
+
+  // The rail transfer rule's re-review cases N1 and N2 (feat/ux-rail, round 3),
+  // pinned for the flight copy of it (review M6).
+  it("N1: a day-only flight between two timed flights of its day makes both gaps unknown", () => {
+    const morning = seg(
+      "MUC",
+      "FRA",
+      cest("2026-10-12T06:15:00", "2026-10-12T04:15:00Z"),
+      cest("2026-10-12T07:10:00", "2026-10-12T05:10:00Z")
+    );
+    const dayOnly = seg(
+      "FRA",
+      "LHR",
+      cest("2026-10-12T00:00:00", "2026-10-11T22:00:00Z", "day"),
+      null
+    );
+    const later = seg(
+      "LHR",
+      "JFK",
+      at("2026-10-12T09:00:00", "2026-10-12T08:00:00Z", "Europe/London", "+01:00"),
+      null
+    );
+    // In the server's order: the day-only one sorts first at its midnight.
+    expect(flightTransfers([dayOnly, morning, later])).toEqual([
+      { kind: "unknown", reason: "order" },
+      { kind: "unknown", reason: "order" },
+    ]);
+  });
+
+  it("N2: a Berlin day against a Tokyo clock is compared as instants, not labels", () => {
+    // 00:30 on 13 Oct in Tokyo is still 12 Oct in Berlin — inside the day-only
+    // Berlin flight's day, so their order is not known.
+    const berlinDay = seg(
+      "MUC",
+      "FRA",
+      cest("2026-10-12T00:00:00", "2026-10-11T22:00:00Z", "day"),
+      null
+    );
+    const tokyo = {
+      ...seg(
+        "FRA",
+        "JFK",
+        at("2026-10-13T00:30:00", "2026-10-12T15:30:00Z", "Asia/Tokyo", "+09:00"),
+        null
+      ),
+    };
+    expect(flightTransfers([berlinDay, tokyo])).toEqual([{ kind: "unknown", reason: "order" }]);
+  });
 });

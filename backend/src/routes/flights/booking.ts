@@ -67,6 +67,14 @@ async function segmentRows(userId: string, bookingId: string) {
   });
 }
 
+/**
+ * The segments a split shares the total between: a cancelled flight costs
+ * nothing (the cost contract, forgejo#274), so it takes no share (review M2).
+ */
+function payingSegments<T extends { status: string }>(segments: T[]): T[] {
+  return segments.filter((s) => s.status !== "cancelled");
+}
+
 /** The answer GET, PUT and DELETE all give: the booking as it is now, and its segments. */
 async function bookingAnswer(userId: string, bookingId: string | null) {
   if (!bookingId) return { booking: null, segments: [] };
@@ -82,7 +90,7 @@ async function bookingAnswer(userId: string, bookingId: string | null) {
       split: readBookingSplit(
         priceSplit,
         booking,
-        segments.map((s) => s.id)
+        payingSegments(segments).map((s) => s.id)
       ),
     },
     segments: await enrichFlightsForClients(segments),
@@ -124,7 +132,7 @@ router.put("/:id/booking/split", async (req: AuthRequest, res: Response, next: N
         currency: row.currency,
         otherEntries: row._count.cruises + row._count.railJourneys + row._count.lodgingStays,
       },
-      segments,
+      payingSegments(segments),
       method
     );
     if ("refusal" in outcome) {

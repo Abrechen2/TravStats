@@ -2,10 +2,10 @@ import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { minutesText } from "../../lib/flights/minutesText";
-import { formatLocalClock, formatLocalDate } from "../../lib/displayFormat";
+import { formatTimeValueShown } from "../../lib/displayFormat";
 import { flightArrival, flightDeparture } from "../../lib/entityTimes";
 import { flightTransfers, type FlightTransfer } from "../../lib/flights/flightTransfer";
-import { clockOf, type TimeValue } from "../../shared/time";
+import type { TimeValue } from "../../shared/time";
 import type { Flight } from "../../types";
 import DetailSection from "../ui/DetailSection";
 import { DAY_CARD_TOUCH } from "./FlightDayCard";
@@ -16,11 +16,9 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 const route = (f: Flight): string =>
   [f.depIata || f.depIcao, f.arrIata || f.arrIcao].filter(Boolean).join(" → ");
 
+/** The airport's date and clock, cut to the value's precision (review M5). */
 function when(value: TimeValue | null): string | null {
-  if (!value) return null;
-  const clock = clockOf(value);
-  const day = formatLocalDate(value.local);
-  return clock ? `${day} ${formatLocalClock(clock)}` : day;
+  return value ? formatTimeValueShown(value) : null;
 }
 
 /** The sentences for one gap. Never "reachable": only what the times and codes say. */
@@ -103,7 +101,11 @@ function Segment({
   const dep = when(flightDeparture(segment));
   const arr = when(flightArrival(segment));
   const title = `${index + 1}. ${route(segment) || t("common:labels.unknown")}`;
-  const caption = [segment.flightNumber, [dep, arr].filter(Boolean).join(" – ")]
+  const caption = [
+    segment.flightNumber,
+    [dep, arr].filter(Boolean).join(" – "),
+    segment.status === "cancelled" ? t("flights:itinerary.cancelled") : null,
+  ]
     .filter(Boolean)
     .join(" · ");
   return (
@@ -172,25 +174,34 @@ export default function BookingItinerary({
   }
   const { booking, segments } = state.answer;
   if (!booking || segments.length < 2) return null;
-  const transfers = flightTransfers(segments);
+  // A cancelled segment (a rebooked connection keeps the original on the
+  // booking) is shown and marked, but no gap is measured through it — it was
+  // not flown (review M3).
+  const active = segments.filter((s) => s.status !== "cancelled");
+  const transfers = flightTransfers(active);
+  const activeIndex = new Map(active.map((s, k) => [s.id, k]));
   return (
     <DetailSection
       title={t("flights:itinerary.title")}
       aside={booking.pnr ? t("flights:itinerary.pnr", { pnr: booking.pnr }) : undefined}
     >
       <ol className="flex flex-col" data-testid="booking-itinerary">
-        {segments.map((segment, i) => (
-          <li key={segment.id}>
-            {i > 0 ? (
-              <TransferNote
-                transfer={transfers[i - 1]}
-                arrivingAt={segments[i - 1].arrIata || segments[i - 1].arrIcao || "?"}
-                index={i}
-              />
-            ) : null}
-            <Segment segment={segment} index={i} current={segment.id === flightId} />
-          </li>
-        ))}
+        {segments.map((segment, i) => {
+          const k = activeIndex.get(segment.id);
+          const before = k !== undefined && k > 0 ? active[k - 1] : null;
+          return (
+            <li key={segment.id}>
+              {before && k !== undefined ? (
+                <TransferNote
+                  transfer={transfers[k - 1]}
+                  arrivingAt={before.arrIata || before.arrIcao || "?"}
+                  index={i}
+                />
+              ) : null}
+              <Segment segment={segment} index={i} current={segment.id === flightId} />
+            </li>
+          );
+        })}
       </ol>
       <p className="t-caption" style={{ marginTop: 8 }}>
         {t("flights:itinerary.noReachabilityClaim")}

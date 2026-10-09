@@ -516,7 +516,8 @@
       "noPlan": "Without a planned time there is nothing to compare.",
       "planNotToMinute": "The plan is recorded with its date only.",
       "actualNotToMinute": "The actual time is not recorded to the minute."
-    }
+    },
+    "zoneNotRecorded": "time recorded without a time zone"
   },
   "dayCard": {
     "title": "For the day of travel",
@@ -546,14 +547,15 @@
     "airportChangeKm": "Change of airport: {{from}} → {{to}} · about {{km}} km in a straight line",
     "airportUnconfirmed": "Whether the airport changes is unknown – an airport code is missing.",
     "noReachabilityClaim": "These are the recorded times. Whether a connection can be made is something TravStats cannot know.",
-    "loadFailed": "The other flights of this booking could not be loaded."
+    "loadFailed": "The other flights of this booking could not be loaded.",
+    "cancelled": "cancelled – no change measured"
   },
   "bookingPrice": {
     "total": "Booking total: {{amount}}",
     "storedOnBooking": "This price is stored on the booking, not on the individual flights.",
-    "countedOnce": "Every total counts it exactly once for the whole booking, taxes and fees included. Prices, taxes and fees that single flights carry on top are then not counted.",
+    "countedOnce": "In every total that includes this booking's flights it counts exactly once, taxes and fees included; prices, taxes and fees that single flights carry on top are then not counted. Where the booking's flights sit on two trips, today the full total appears on each of those trips. A cancelled flight costs nothing.",
     "zeroIsFree": "0 means: recorded as free. An empty field would mean: unknown.",
-    "noTotal": "No total is recorded for this booking. Totals therefore count each flight with its own price plus taxes and fees; a flight with no price at all counts as unknown, not as 0.",
+    "noTotal": "No total is recorded for this booking. Totals therefore count each flight with its own price plus taxes and fees; a flight without price, taxes and fees counts as unknown, not as 0. A cancelled flight costs nothing.",
     "otherEntries_one": "Besides flights, the booking holds one more entry (train, cruise or stay); its total covers everything together.",
     "otherEntries_other": "Besides flights, the booking holds {{count}} more entries (train, cruise or stay); its total covers everything together.",
     "editOnTrip": "Edit the total on the trip's page",

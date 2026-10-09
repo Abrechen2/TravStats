@@ -61,6 +61,15 @@ export function splitMinorUnits(totalMinor: number, weights: readonly number[]):
   return shares;
 }
 
+/**
+ * An amount in whole minor units. Through 12 significant digits first: 1.005 *
+ * 100 is 100.49999999999999 in binary floating point, and a plain round would
+ * make 1.005 € a 1.00 € split beside a 1,01 € total on screen (review M4).
+ */
+export function toMinorUnits(amount: number, scale: number): number {
+  return Math.round(Number((amount * scale).toPrecision(12)));
+}
+
 export type SplitRefusalCode =
   | "BOOKING_PRICE_MISSING"
   | "BOOKING_SPLIT_SINGLE_SEGMENT"
@@ -100,11 +109,14 @@ export function computeBookingSplit(
   }
   const digits = minorDigits(booking.currency);
   const scale = 10 ** digits;
-  const minor = splitMinorUnits(Math.round(booking.price * scale), weights);
+  const totalMinor = toMinorUnits(booking.price, scale);
+  const minor = splitMinorUnits(totalMinor, weights);
   return {
     split: {
       method,
-      price: booking.price,
+      // The total as the currency can hold it: a stored 1.005 EUR splits as
+      // 1.01, and the sum shown beside it is that same 1.01 (review M4).
+      price: totalMinor / scale,
       currency: booking.currency,
       shares: segments.map((s, i) => ({ flightId: s.id, amount: minor[i] / scale })),
     },
@@ -129,13 +141,16 @@ export function readBookingSplit(
   if (!parsed.success) return null;
   const split = parsed.data;
   const ids = new Set(segmentIds);
-  const staleReason: SplitStaleReason | null =
-    booking.price !== split.price
-      ? "price"
-      : booking.currency !== split.currency
-        ? "currency"
-        : split.shares.length !== ids.size || split.shares.some((s) => !ids.has(s.flightId))
-          ? "segments"
-          : null;
+  const scale = 10 ** minorDigits(split.currency);
+  const sameTotal =
+    booking.price !== null &&
+    toMinorUnits(booking.price, scale) === toMinorUnits(split.price, scale);
+  const staleReason: SplitStaleReason | null = !sameTotal
+    ? "price"
+    : booking.currency !== split.currency
+      ? "currency"
+      : split.shares.length !== ids.size || split.shares.some((s) => !ids.has(s.flightId))
+        ? "segments"
+        : null;
   return { ...split, staleReason };
 }
