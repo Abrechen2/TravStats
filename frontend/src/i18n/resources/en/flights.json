@@ -501,5 +501,20 @@
       "planNotToMinute": "The plan is recorded with its date only.",
       "actualNotToMinute": "The actual time is not recorded to the minute."
     }
+  },
+  "dayCard": {
+    "title": "For the day of travel",
+    "boardingPass": "Boarding pass",
+    "missing": "missing",
+    "copy": "Copy",
+    "copyLabel": "Copy {{field}}",
+    "copied": "copied",
+    "copyFailed": "Copying is not possible here – please select the number and copy it by hand.",
+    "passesLoading": "Loading documents …",
+    "passesFailed": "This flight's documents could not be loaded.",
+    "passesHint": "You can add a boarding pass below under “Documents”.",
+    "openPass": "Open {{name}}",
+    "passesOthers_one": "No file is filed as a boarding pass; there is one other document below under “Documents”.",
+    "passesOthers_other": "No file is filed as a boarding pass; there are {{count}} other documents below under “Documents”."
   }
 }

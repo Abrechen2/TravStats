@@ -501,5 +501,20 @@
       "planNotToMinute": "Der Plan ist nur mit Datum erfasst.",
       "actualNotToMinute": "Die tatsächliche Zeit ist nicht minutengenau erfasst."
     }
+  },
+  "dayCard": {
+    "title": "Für den Reisetag",
+    "boardingPass": "Bordkarte",
+    "missing": "fehlt",
+    "copy": "Kopieren",
+    "copyLabel": "{{field}} kopieren",
+    "copied": "kopiert",
+    "copyFailed": "Kopieren ist hier nicht möglich – bitte die Nummer markieren und von Hand kopieren.",
+    "passesLoading": "Dokumente werden geladen …",
+    "passesFailed": "Die Dokumente dieses Flugs konnten nicht geladen werden.",
+    "passesHint": "Eine Bordkarte kannst du unten unter „Dokumente“ ablegen.",
+    "openPass": "{{name}} öffnen",
+    "passesOthers_one": "Keine Datei ist als Bordkarte abgelegt; unten unter „Dokumente“ liegt ein anderes Dokument.",
+    "passesOthers_other": "Keine Datei ist als Bordkarte abgelegt; unten unter „Dokumente“ liegen {{count}} andere Dokumente."
   }
 }

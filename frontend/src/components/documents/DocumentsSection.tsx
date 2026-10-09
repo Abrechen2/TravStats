@@ -38,6 +38,12 @@ interface Props {
    * with no cost block (a trip, a place visit), and then no row offers it.
    */
   extract?: ExtractTarget;
+  /**
+   * After an upload or a removal went through — so another view of the same
+   * entry's documents (the flight's day card, forgejo#220) can re-read
+   * instead of going stale. Not called for the first load: that is no change.
+   */
+  onChanged?: () => void;
 }
 
 /** The formats the text parsers read; an image or a wallet pass is not offered. */
@@ -75,7 +81,12 @@ function issuedOrCreated(document: TravelDocument, format: DisplayFormatter): st
     : format.date(document.createdAt);
 }
 
-export default function DocumentsSection({ entry, layout = "card", extract }: Props): JSX.Element {
+export default function DocumentsSection({
+  entry,
+  layout = "card",
+  extract,
+  onChanged,
+}: Props): JSX.Element {
   const { t } = useTranslation(["documents", "common"]);
   const format = useDisplayFormat();
   const isSharedDemo = useIsDemoAccount();
@@ -149,6 +160,7 @@ export default function DocumentsSection({ entry, layout = "card", extract }: Pr
         // bytes with the document already on file, so appending would show it
         // twice.
         await reload();
+        onChanged?.();
       } catch (err: unknown) {
         if (isDemoForbidden(err)) {
           setDemoRefused(true);
@@ -163,7 +175,7 @@ export default function DocumentsSection({ entry, layout = "card", extract }: Pr
         if (inputRef.current) inputRef.current.value = "";
       }
     },
-    [entryType, entryId, limits, reload, t]
+    [entryType, entryId, limits, reload, t, onChanged]
   );
 
   const handleDelete = useCallback(async (): Promise<void> => {
@@ -174,6 +186,7 @@ export default function DocumentsSection({ entry, layout = "card", extract }: Pr
       await documentsApi.remove(id);
       setDocuments((prev) => prev.filter((doc) => doc.id !== id));
       setError(null);
+      onChanged?.();
     } catch (err: unknown) {
       if (isDemoForbidden(err)) {
         setDemoRefused(true);
@@ -189,7 +202,7 @@ export default function DocumentsSection({ entry, layout = "card", extract }: Pr
       setPendingDelete(null);
       setBusy(false);
     }
-  }, [pendingDelete, t]);
+  }, [pendingDelete, t, onChanged]);
 
   const locked = isSharedDemo || demoRefused;
 

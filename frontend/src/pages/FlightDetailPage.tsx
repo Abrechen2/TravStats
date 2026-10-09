@@ -35,6 +35,7 @@ import type { Flight, FlightInput, Trip } from "../types";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import FlightTrackSection from "../components/flightTrack/FlightTrackSection";
 import FlightPlanActual from "../components/flightDetail/FlightPlanActual";
+import FlightDayCard, { dayCardShown } from "../components/flightDetail/FlightDayCard";
 
 /**
  * Reading a flight without editing it.
@@ -78,6 +79,8 @@ export default function FlightDetailPage(): JSX.Element {
     confirmingDelete && flight ? { type: "flight", id: flight.id } : null
   );
   const [deleting, setDeleting] = useState<boolean>(false);
+  /** Moves when the documents section changed a file, so the day card re-reads. */
+  const [documentsVersion, setDocumentsVersion] = useState<number>(0);
 
   useEffect(() => {
     if (!id) return;
@@ -188,6 +191,7 @@ export default function FlightDetailPage(): JSX.Element {
         )} ${getDistanceLabel(distanceUnit, t)}`
       : null;
   const departure = flightDeparture(flight);
+  const withDayCard = dayCardShown(flight);
 
   return (
     <AppShell width="list">
@@ -232,6 +236,9 @@ export default function FlightDetailPage(): JSX.Element {
         }
       />
 
+      {/* What the day of travel needs, first (forgejo#220). */}
+      <FlightDayCard flight={flight} documentsVersion={documentsVersion} />
+
       <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
         <div className="flex flex-col gap-6 md:col-span-3">
           {/* Plan against record per end, with the local day, the airport's
@@ -270,16 +277,26 @@ export default function FlightDetailPage(): JSX.Element {
             ]}
           />
 
+          {/* Reference, ticket, seat and baggage sit in the day card above
+              when it is drawn — once on a page, not twice. */}
           <DetailSection
             title={t("flights:detail.booking")}
             facts={[
               {
                 label: t("flights:form.bookingReference"),
-                value: flight.bookingReference,
+                value: withDayCard ? null : flight.bookingReference,
                 mono: true,
               },
-              { label: t("flights:form.ticketNumber"), value: flight.ticketNumber, mono: true },
-              { label: t("flights:form.seat"), value: flight.seatNumber, mono: true },
+              {
+                label: t("flights:form.ticketNumber"),
+                value: withDayCard ? null : flight.ticketNumber,
+                mono: true,
+              },
+              {
+                label: t("flights:form.seat"),
+                value: withDayCard ? null : flight.seatNumber,
+                mono: true,
+              },
               {
                 label: t("flights:form.seatClass"),
                 value: flight.seatClass
@@ -296,7 +313,9 @@ export default function FlightDetailPage(): JSX.Element {
               { label: t("flights:form.gate"), value: flight.gate, mono: true },
               {
                 label: t("flights:form.baggageAllowance"),
-                value: formatBaggageAllowance(flight.baggageAllowance, weightUnit),
+                value: withDayCard
+                  ? null
+                  : formatBaggageAllowance(flight.baggageAllowance, weightUnit),
               },
               {
                 label: t("flights:form.frequentFlyerNumber"),
@@ -319,6 +338,7 @@ export default function FlightDetailPage(): JSX.Element {
               "Beleg" is the one file the price links to, this is the folder. */}
           <DocumentsSection
             entry={{ type: "flight", id: flight.id }}
+            onChanged={() => setDocumentsVersion((v) => v + 1)}
             extract={flightExtractTarget(flight, async (updates) => {
               await flightsApi.update(flight.id, updates);
               addToast("success", t("documents:extract.applied"));

@@ -134,6 +134,18 @@ describe("FlightDetailPage", () => {
     );
   });
 
+  it("puts the day-of-travel card at the top of an upcoming flight (forgejo#220)", async () => {
+    getByIdMock.mockResolvedValue(makeFlight({ bookingReference: "XY7Z9Q" }));
+    renderPage();
+
+    const card = await screen.findByRole("region", { name: "flights:dayCard.title" });
+    expect(card).toHaveTextContent("XY7Z9Q");
+    expect(card).toHaveTextContent("flights:dayCard.missing");
+    await waitFor(() =>
+      expect(listForEntryMock).toHaveBeenCalledWith({ type: "flight", id: "f1" })
+    );
+  });
+
   it("gives a baggage allowance typed as a bare number its unit (forgejo#186)", async () => {
     // "Freigepäck 23" — the tester typed only the number, and the page
     // repeated it without saying 23 of what.
@@ -201,7 +213,9 @@ describe("FlightDetailPage", () => {
   });
 
   it("counts nothing until the dialog is opening", async () => {
-    getByIdMock.mockResolvedValue(makeFlight());
+    // A past flight with no day-of-travel values, so the day card (forgejo#220),
+    // which lists the flight's documents for its boarding pass, is not drawn.
+    getByIdMock.mockResolvedValue(makeFlight({ status: "flown" }));
     renderPage();
 
     await waitFor(() => expect(screen.getByText(/LH2462/)).toBeInTheDocument());
