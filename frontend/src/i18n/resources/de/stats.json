@@ -696,7 +696,8 @@
     "cruiseFlags": "Besonderheiten",
     "rankings": "Ranglisten",
     "records": "Rekorde",
-    "insights": "Entdeckungen und Umstiege"
+    "flightInsights": "Entdeckungen und Umstiege",
+    "insights": "Auswertungen"
   },
   "records": {
     "title": "Rekorde",
@@ -974,6 +975,23 @@
         "recorded": "{{km}} aufgezeichnet",
         "planned": "{{km}} geplant (ohne Aufzeichnung)"
       }
+    }
+  },
+  "insight": {
+    "help": {
+      "summary": "Wie gezählt?",
+      "unit": "Zähleinheit",
+      "time": "Zeitregel",
+      "source": "Quelle",
+      "coverage": "Abdeckung",
+      "exclusions": "Nicht enthalten"
+    },
+    "entries_one": "{{count}} Eintrag",
+    "entries_other": "{{count}} Einträge",
+    "duration": {
+      "minutes": "{{m}} Min.",
+      "hours": "{{h}} Std.",
+      "hoursMinutes": "{{h}} Std. {{m}} Min."
     }
   }
 }

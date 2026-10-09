@@ -607,6 +607,120 @@
       "staysCount_one": "{{count}} Aufenthalt",
       "noHotels": "Noch kein abgeschlossener Aufenthalt.",
       "more": "+ {{count}} weitere"
+    },
+    "insights": {
+      "title": "Auswertungen",
+      "loadFailed": "Die Auswertungen konnten nicht geladen werden.",
+      "lifetime": "über alle Jahre",
+      "nights_one": "{{count}} Nacht",
+      "nights_other": "{{count}} Nächte",
+      "sleepStyle": {
+        "title": "Schlafstil",
+        "byType": "Anteil der Nächte je Unterkunftsart",
+        "empty": "Erscheint, sobald ein Aufenthalt mit Datum oder Nächtezahl vorbei ist.",
+        "help": {
+          "unit": "Eine Nacht. Der Anteil je Art ist ihre Nächte geteilt durch alle bekannten Nächte des Zeitraums.",
+          "time": "Eine Nacht zählt in dem Jahr, in dem ihr Abend liegt – nach dem Ortsdatum der Unterkunft.",
+          "source": "Deine Aufenthalte und die Art der jeweiligen Unterkunft (Hotel, Apartment, Campingplatz …).",
+          "coverage": "{{unknown}} Aufenthalte ohne bekannte Nächtezahl und {{unplaced}} Nächte ohne Jahr stehen in keinem Anteil.",
+          "exclusions": "Aufenthalte, deren Check-out noch bevorsteht, und stornierte zählen nicht."
+        }
+      },
+      "week": {
+        "title": "Wochenende und Werktage",
+        "weekend": "Wochenendnächte",
+        "weekday": "Werktagsnächte",
+        "description": "Nächte Fr–Sa und Sa–So gegen alle übrigen",
+        "empty": "Erscheint mit dem ersten vergangenen Aufenthalt mit genauem An- und Abreisetag.",
+        "help": {
+          "unit": "Eine Nacht. Wochenendnacht ist die Nacht von Freitag auf Samstag oder von Samstag auf Sonntag, jede andere eine Werktagsnacht.",
+          "time": "Der Wochentag gilt am Ort der Unterkunft (ihr Ortsdatum des Abends), nicht auf deinem Gerät. Jahreszeiten nach meteorologischem Kalender der Nordhalbkugel.",
+          "source": "Aufenthalte mit genauem An- und Abreisetag.",
+          "coverage": "{{notWalkable}} Nächte mit Monats-, Jahres- oder ohne Datum haben keinen Wochentag und fehlen hier.",
+          "exclusions": "Aufenthalte, deren Check-out noch bevorsteht, und stornierte zählen nicht. Nichts wird geschätzt."
+        }
+      },
+      "business": {
+        "title": "Nächte auf Geschäftsreisen",
+        "description": "Nur Reisen mit der Kategorie „Geschäftlich“",
+        "empty": "Erscheint, sobald Aufenthalte zu einer Reise gehören, deren Kategorie „Geschäftlich“ ist.",
+        "help": {
+          "unit": "Eine Nacht.",
+          "time": "Jahr der Nacht nach dem Ortsdatum der Unterkunft.",
+          "source": "Aufenthalte, deren Reise ausdrücklich als „Geschäftlich“ eingestuft ist.",
+          "coverage": "{{unlabelled}} Nächte liegen auf Aufenthalten ohne Reise oder ohne Reisekategorie – über sie wird nichts behauptet.",
+          "exclusions": "Kein Rückschluss aus Wochentag, Kette oder Preis: eine Dienstagsnacht ist genauso oft Urlaub."
+        }
+      },
+      "revisits": {
+        "title": "Wiedersehen mit Häusern",
+        "description": "Häuser, in denen du in mindestens zwei Kalenderjahren warst",
+        "empty": "Erscheint, sobald du ein Haus in einem zweiten Kalenderjahr wieder besuchst.",
+        "longestGap": "Längste Pause: {{days}} Tage ({{from}} → {{to}}) –",
+        "help": {
+          "unit": "Ein Haus (eine Unterkunft), nicht ein Aufenthalt.",
+          "time": "Jahr des Check-ins nach Ortsdatum. Die Pause reicht vom Check-out bis zum nächsten Check-in im selben Haus.",
+          "source": "Deine Aufenthalte je Unterkunft.",
+          "coverage": "{{returned}} Häuser hast du mehr als einmal besucht. Für die Pause zählen nur Aufenthalte mit genauem An- und Abreisetag.",
+          "exclusions": "Ein nur mit Monat oder Jahr erfasster Aufenthalt belegt das Jahr, aber keine Pause in Tagen; einer ohne Datum belegt nichts. Geplante zählen nicht."
+        }
+      },
+      "tripBases": {
+        "title": "Unterkunftswechsel pro Reise",
+        "value_one": "{{count}} Wechsel",
+        "value_other": "{{count}} Wechsel",
+        "description_one": "Median über {{count}} abgeschlossene Reise",
+        "description_other": "Median über {{count}} abgeschlossene Reisen",
+        "houses_one": "{{count}} Haus",
+        "houses_other": "{{count}} Häuser",
+        "changes_one": "{{count}} Wechsel",
+        "changes_other": "{{count}} Wechsel",
+        "overlap_one": "{{count}} Nacht doppelt gebucht",
+        "overlap_other": "{{count}} Nächte doppelt gebucht",
+        "longestBase_one": "Längste Basis ohne Wechsel: {{count}} Nacht auf „{{trip}}“ –",
+        "longestBase_other": "Längste Basis ohne Wechsel: {{count}} Nächte auf „{{trip}}“ –",
+        "empty": "Erscheint, sobald Aufenthalte mit genauem An- und Abreisetag einer Reise zugeordnet sind.",
+        "help": {
+          "unit": "Ein Wechsel ist ein Umzug in ein anderes Haus innerhalb derselben Reise. Die erste Ankunft ist kein Wechsel.",
+          "time": "Reihenfolge nach dem Ortsdatum des Check-ins. Aneinandergrenzende Aufenthalte im selben Haus sind eine Basis.",
+          "source": "Aufenthalte, die einer Reise zugeordnet sind.",
+          "coverage": "{{withoutTrip}} Aufenthalte ohne Reise und {{undated}} Reise-Aufenthalte ohne genaue Daten fehlen hier.",
+          "exclusions": "Zwei Buchungen, die dieselbe Nacht in verschiedenen Häusern belegen, gelten nicht als Hin- und Rückwechsel; die Nacht wird als „doppelt gebucht“ ausgewiesen."
+        }
+      },
+      "prices": {
+        "title": "Preisentwicklung im selben Haus",
+        "value_one": "{{count}} Vergleich",
+        "value_other": "{{count}} Vergleiche",
+        "row_one": "{{first}} ({{firstDate}}) → {{last}} ({{lastDate}}), {{change}} % · {{count}} Aufenthalt",
+        "row_other": "{{first}} ({{firstDate}}) → {{last}} ({{lastDate}}), {{change}} % · {{count}} Aufenthalte",
+        "thin": "dünne Stichprobe",
+        "empty": "Erscheint, sobald du dasselbe Haus mit gleicher Zimmer- und Verpflegungsart zweimal mit Preis und Nächtezahl erfasst hast.",
+        "help": {
+          "unit": "Preis pro Nacht: Gesamtpreis geteilt durch die Nächte des Aufenthalts.",
+          "time": "Erster gegen letzten Aufenthalt, so genau datiert wie erfasst.",
+          "source": "Gesamtpreis, Währung, Zimmerkategorie und Verpflegung deiner Aufenthalte.",
+          "coverage": "{{single}} Aufenthalte ohne Vergleichspartner, {{unpriced}} ohne Preis oder Nächtezahl und {{undated}} ohne Datum fehlen hier.",
+          "exclusions": "Währungen werden nie umgerechnet oder gemischt – jeder Vergleich hat genau eine. Prämiennächte ({{award}}) sind kein Preis von 0 und fehlen. Unter drei Aufenthalten ist der Vergleich als dünne Stichprobe markiert."
+        }
+      },
+      "calendar": {
+        "title": "Monate mit Übernachtung",
+        "value_one": "{{count}} von 12 Monaten",
+        "value_other": "{{count}} von 12 Monaten",
+        "bestYear": "Bestes Jahr: {{year}}",
+        "fullYears": "Ganzes Jahr belegt: {{years}}",
+        "filled": "mit Übernachtung",
+        "open": "ohne erfasste Übernachtung",
+        "empty": "Erscheint mit dem ersten vergangenen Aufenthalt mit genauem Datum oder Monat.",
+        "help": {
+          "unit": "Ein Kalendermonat mit mindestens einer belegten Nacht.",
+          "time": "Ortsdatum der Nacht. Ein nur mit Monat erfasster Aufenthalt belegt diesen Monat.",
+          "source": "Deine Aufenthalte.",
+          "coverage": "Aufenthalte, die nur mit Jahr oder ohne Datum erfasst sind, belegen keinen Monat.",
+          "exclusions": "Fehlende Monate werden nie ergänzt oder geschätzt. Geplante Aufenthalte zählen nicht."
+        }
+      }
     }
   },
   "period": {

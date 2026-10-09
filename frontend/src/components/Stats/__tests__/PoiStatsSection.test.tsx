@@ -11,6 +11,11 @@ const listPlacesMock = vi.fn();
 const listPlaceListsMock = vi.fn();
 const listCuratedMock = vi.fn();
 
+// The insights block (forgejo#259) loads on its own endpoint and has its own
+// suite; here it stays pending so this test reaches no network.
+vi.mock("../../../lib/api/statsInsights", () => ({
+  statsInsightsApi: { places: () => new Promise(() => {}) },
+}));
 vi.mock("../../../lib/api/places", () => ({
   listPlaces: (...a: unknown[]) => listPlacesMock(...a),
 }));

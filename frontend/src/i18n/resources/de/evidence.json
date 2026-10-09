@@ -95,7 +95,11 @@
     "cities_one": "Stadt",
     "lists_one": "Liste",
     "rides_one": "Fahrt",
-    "operators_one": "Bahngesellschaft"
+    "operators_one": "Bahngesellschaft",
+    "tours": "Touren",
+    "tours_one": "Tour",
+    "metres": "Höhenmeter",
+    "metres_one": "Höhenmeter"
   },
   "evidence.metric.flightCount": "Anzahl Flüge",
   "evidence.metric.flightTimeMinutes": "Flugzeit gesamt",
@@ -226,5 +230,21 @@
   "evidence.metric.cruiseBirthdayAtSeaCruiseCount": "Kreuzfahrten mit Geburtstag an Bord",
   "evidence.metric.cruiseNewYearAtSeaCruiseCount": "Kreuzfahrten mit Silvester an Bord",
   "evidence.metric.cruiseCanalCruiseCount": "Kreuzfahrten mit Kanalpassage",
-  "evidence.metric.cruisePolarCruiseCount": "Kreuzfahrten in Polargewässern"
+  "evidence.metric.cruisePolarCruiseCount": "Kreuzfahrten in Polargewässern",
+  "evidence.metric.lodgingWeekendNights": "Wochenendnächte",
+  "evidence.metric.lodgingWeekdayNights": "Werktagsnächte",
+  "evidence.metric.lodgingBusinessNights": "Nächte auf Geschäftsreisen",
+  "evidence.metric.lodgingReturnHouseCount": "Häuser, besucht in mehreren Jahren",
+  "evidence.metric.placeDiscoveryVisits": "Erstbesuche",
+  "evidence.metric.placeRevisitVisits": "Wiederbesuche",
+  "evidence.metric.placeVisitsWithPhoto": "Besuche mit Foto",
+  "evidence.metric.placeVisitsWithNote": "Besuche mit Notiz",
+  "evidence.metric.placeVisitsWithRating": "Besuche mit Bewertung",
+  "evidence.metric.roadtripDrivenKm": "Gefahrene Kilometer auf Roadtrips (Straße)",
+  "evidence.metric.roadtripFerryKm": "Fährkilometer auf Roadtrips",
+  "evidence.metric.roadtripRecordedNights": "Roadtrip-Nächte (erfasst)",
+  "evidence.metric.tourCompletedCount": "Abgeschlossene Tagestouren",
+  "evidence.metric.tourDistanceKm": "Tourkilometer",
+  "evidence.metric.tourAscentM": "Aufstieg aus Aufzeichnungen",
+  "evidence.metric.tourMovingMinutes": "Bewegungszeit aus Aufzeichnungen"
 }

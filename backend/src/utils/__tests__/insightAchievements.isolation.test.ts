@@ -2,7 +2,7 @@ import { describe, it, expect, jest } from "@jest/globals";
 
 import type { Achievement } from "../../prisma";
 import logger from "../logger";
-import { calculateInsightAchievementStats } from "../insightAchievements";
+import { calculateInsightBadgeStats, EMPTY_INSIGHT_STATS } from "../insightAchievements";
 import { planAchievementWrites } from "../achievementWrites";
 import type { UserStats } from "../achievementStats";
 import { cruise } from "../../services/stats/cruiseInsights/__tests__/fixtures";
@@ -34,12 +34,12 @@ describe("insight badge measures that fail", () => {
   it("log the failure and come back unmeasured, the other half still measured", async () => {
     const spy = jest.spyOn(logger, "error").mockImplementation(() => logger);
     const broken = cruise("x", "2024-01-01", "2024-01-02", null, null, []);
-    const stats = await calculateInsightAchievementStats("user-isolation", {
+    const { insightStats: stats } = await calculateInsightBadgeStats("user-isolation", {
       flights: [],
       // A stop list that is not a list: the cruise half throws while mapping it.
       cruises: [{ id: broken.id, input: broken.input, stops: null as unknown as [] }],
     });
-    expect(stats).toEqual({
+    expect(stats).toMatchObject({
       flightNewAirportsYearMax: 0,
       flightAirportReunionYears: 0,
       flightAirportQuartersMax: 0,
@@ -48,7 +48,10 @@ describe("insight badge measures that fail", () => {
       cruiseRepeatedItineraryMax: null,
     });
     expect(spy).toHaveBeenCalledWith(
-      expect.objectContaining({ operation: "insight_achievement_measure_failed" })
+      expect.objectContaining({
+        operation: "badge_source_failed",
+        context: expect.objectContaining({ source: "cruiseInsights" }),
+      })
     );
     spy.mockRestore();
   });
@@ -90,9 +93,8 @@ describe("insight badge measures that fail", () => {
       undefined,
       undefined,
       {
+        ...EMPTY_INSIGHT_STATS,
         flightNewAirportsYearMax: 1,
-        flightAirportReunionYears: 0,
-        flightAirportQuartersMax: 0,
         cruisePortCruisesMax: null,
         cruiseExcursionPorts: null,
         cruiseRepeatedItineraryMax: null,

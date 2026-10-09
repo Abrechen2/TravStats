@@ -12,6 +12,7 @@ import LodgingGeoSection from "./lodging/LodgingGeoSection";
 import LodgingRhythmSection from "./lodging/LodgingRhythmSection";
 import LodgingLoyaltySection from "./lodging/LodgingLoyaltySection";
 import LodgingRecordsSection from "./lodging/LodgingRecordsSection";
+import LodgingInsightsSection from "./lodging/LodgingInsightsSection";
 import PeriodComparisonStrip from "./PeriodComparisonStrip";
 import { dimWhile, sameScope, type PeriodScope } from "./useStatsPeriod";
 import type { SectionVisibility } from "../../hooks/useSectionVisibility";
@@ -191,6 +192,8 @@ export default function LodgingStatsSection({
       {show("rhythm") && <LodgingRhythmSection stats={stats} evidenceScope={evidenceScope} />}
       {show("loyalty") && <LodgingLoyaltySection stats={stats} />}
       {show("records") && <LodgingRecordsSection stats={stats} evidenceScope={evidenceScope} />}
+      {/* forgejo#258 — lifetime readings with per-year slices, from their own endpoint. */}
+      {show("insights") && <LodgingInsightsSection year={shown.year} />}
     </div>
   );
 }

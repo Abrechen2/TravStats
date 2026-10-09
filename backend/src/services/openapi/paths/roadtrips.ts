@@ -40,6 +40,22 @@ const roadtripNights = registry.register(
         .boolean()
         .describe("False once any overnight station's length is not actually known"),
       placesSlept: z.number().int().describe("Distinct stays plus free stations"),
+      nightsByStyle: z
+        .object({
+          pitch: z.number().int().describe("Free stations — no accommodation record"),
+          campsite: z.number().int().describe("Linked stays at a house of type campsite"),
+          lodging: z.number().int().describe("Linked stays at any other house"),
+        })
+        .describe(
+          "The same nights by where they were slept (forgejo#260); the three add up to `nights`."
+        ),
+      unknownLengthStations: z
+        .number()
+        .int()
+        .describe(
+          "Overnight stations whose length is not known — the reason `nightsKnown` is false. " +
+            "Counted, never turned into a guessed number of nights."
+        ),
     })
     .openapi("RoadtripNights")
 );

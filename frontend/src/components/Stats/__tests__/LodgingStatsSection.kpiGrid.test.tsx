@@ -33,6 +33,11 @@ const stats: LodgingStats = {
   ...EMPTY_LODGING_STATS_BLOCKS,
 };
 
+// The insights block (forgejo#258) loads on its own endpoint and has its own
+// suite; here it stays pending so this test reaches no network.
+vi.mock("../../../lib/api/statsInsights", () => ({
+  statsInsightsApi: { lodging: () => new Promise(() => {}) },
+}));
 vi.mock("../../../lib/api/lodging", () => ({
   getLodgingStats: vi.fn(async () => stats),
 }));

@@ -138,6 +138,7 @@ import {
   resolveCruiseCanalCruiseCount,
   resolveCruisePolarCruiseCount,
 } from "./metricEvidenceCruiseInsights";
+import { INSIGHT_RESOLVERS } from "./metricEvidenceInsights";
 
 /**
  * `EvidenceResolver` for `kind: "metric"` (Task 7,
@@ -271,6 +272,8 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   cruiseNewYearAtSeaCruiseCount: resolveCruiseNewYearAtSeaCruiseCount,
   cruiseCanalCruiseCount: resolveCruiseCanalCruiseCount,
   cruisePolarCruiseCount: resolveCruisePolarCruiseCount,
+  // The statistics expansion (forgejo#258/#259/#260/#264), one shape for all.
+  ...INSIGHT_RESOLVERS,
 };
 
 /**

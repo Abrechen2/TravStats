@@ -25,7 +25,7 @@ export const FLIGHT_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "distance", label: t("stats:sections.distance") },
   { key: "breakdown", label: t("stats:sections.breakdown") },
   { key: "records", label: t("stats:sections.records") },
-  { key: "insights", label: t("stats:sections.insights") },
+  { key: "insights", label: t("stats:sections.flightInsights") },
   { key: "punctuality", label: t("stats:sections.punctuality") },
   { key: "fun", label: t("stats:sections.fun") },
   { key: "business", label: t("stats:sections.business") },
@@ -68,6 +68,7 @@ export const LODGING_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "rhythm", label: t("lodging:stats.rhythm.title") },
   { key: "loyalty", label: t("lodging:stats.loyalty.title") },
   { key: "records", label: t("lodging:stats.records.title") },
+  { key: "insights", label: t("stats:sections.insights") },
 ];
 
 export const POI_SECTIONS = (t: Translate): SectionOption[] => [
@@ -77,12 +78,15 @@ export const POI_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "rhythm", label: t("places:stats.rhythm.title") },
   { key: "quality", label: t("places:stats.quality.title") },
   { key: "fun", label: t("places:stats.fun.title") },
+  { key: "insights", label: t("stats:sections.insights") },
 ];
 
 export const ROADTRIP_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "kpis", label: t("stats:sections.keyFigures") },
   { key: "records", label: t("roadtrips:stats.recordsLabel") },
   { key: "vehicles", label: t("roadtrips:stats.vehicles") },
+  { key: "insights", label: t("stats:sections.insights") },
+  { key: "tours", label: t("roadtrips:stats.tours.title") },
 ];
 
 export const RAIL_SECTIONS = (t: Translate): SectionOption[] => [

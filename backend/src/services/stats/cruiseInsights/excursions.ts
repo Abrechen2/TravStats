@@ -30,6 +30,7 @@ import { Prisma } from "../../../prisma";
 import { haversineKm } from "../../../shared/geo/haversine";
 import { travelledKm } from "../../tour/tourDistance";
 import type { CruiseCall, CruiseInsightRow } from "./rows";
+import type { TourFacts } from "../../../utils/tourInsights/tourFacts";
 
 /** How far from the port a tour may start and still be that call's excursion. */
 export const EXCURSION_LINK_KM = 100; // threshold: proposal forgejo#257, owner to confirm
@@ -133,6 +134,44 @@ export async function loadExcursionTours(
       recordedKm: recorded,
       plannedKm: recorded === null ? positive(travelledKm(t.legs)) : null,
       ascentM: sumOrNull(t.tracks.map((k) => k.ascentM)),
+    };
+  });
+}
+
+/**
+ * The same excursion candidates as `loadExcursionTours`, made from tours the
+ * caller already loaded (`utils/tourInsights`' tour facts) — the badge check
+ * loads the tours once and hands them to both the tour badges and these
+ * (integration of forgejo#257 with #264). Same rule: the tour's own day
+ * (`tourDate`) is one of `days`, it starts at its first positioned station,
+ * else at its recording's first point.
+ */
+export async function excursionToursFromFacts(
+  facts: readonly TourFacts[],
+  days: readonly string[]
+): Promise<ExcursionTour[]> {
+  const wanted = new Set(days);
+  const onDay = facts.filter(
+    (f) => f.tour.tourDate !== null && wanted.has(f.tour.tourDate.toISOString().slice(0, 10))
+  );
+  if (onDay.length === 0) return [];
+  const fallback = await firstTrackPoints(
+    onDay.filter((f) => f.tour.start === null && f.tour.tracks.length > 0).map((f) => f.tour.id)
+  );
+  return onDay.map(({ tour }) => {
+    const recorded =
+      tour.tracks.length > 0
+        ? positive(tour.tracks.reduce((sum, k) => sum + k.distanceKm, 0))
+        : null;
+    return {
+      id: tour.id,
+      name: tour.name,
+      activity: tour.activity,
+      day: tour.tourDate!.toISOString().slice(0, 10),
+      start: tour.start ?? fallback.get(tour.id) ?? null,
+      recordedKm: recorded,
+      plannedKm: recorded === null ? positive(tour.routeKm) : null,
+      ascentM: sumOrNull(tour.tracks.map((k) => k.ascentM)),
     };
   });
 }

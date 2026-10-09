@@ -79,6 +79,12 @@ export const ACHIEVEMENT_EVIDENCE_KEY: Record<string, string> = {
   place_countries: "placeCountriesCount",
   place_cities: "placeCitiesCount",
 
+  // Day tours (forgejo#264) — the badge reads the same completed-tour count
+  // the tour tab folds (`services/stats/insights`). The climb is absent: the
+  // badge floors metres, the panel rounds them, and a one-metre difference
+  // would read as "recomputed".
+  tour_count: "tourCompletedCount",
+
   // Rail (2.7) — the badges and these measures fold the same rides through
   // `utils/railAchievements.ts`, so progress and panel are one number.
   // `rail_longest_km` is absent: the longest ride is an extremum, which

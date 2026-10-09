@@ -58,6 +58,7 @@ function fingerprintQuery(userId: string): Prisma.Sql {
     UNION ALL SELECT 'loyalty_memberships', count(*), max(updated_at) FROM loyalty_memberships WHERE user_id = ${userId}
     UNION ALL SELECT 'places', count(*), max(updated_at) FROM places WHERE user_id = ${userId}
     UNION ALL SELECT 'place_visits', count(*), max(updated_at) FROM place_visits WHERE user_id = ${userId}
+    UNION ALL SELECT 'place_visit_photos', count(*), max(ph.created_at) FROM place_visit_photos ph JOIN place_visits v ON v.id = ph.place_visit_id WHERE v.user_id = ${userId}
     UNION ALL SELECT 'country_days', count(*), max(updated_at) FROM country_days WHERE user_id = ${userId}
     UNION ALL SELECT 'rail_journeys', count(*), max(updated_at) FROM rail_journeys WHERE user_id = ${userId}
     UNION ALL SELECT 'trip_routes', count(*), max(updated_at) FROM trip_routes WHERE user_id = ${userId}

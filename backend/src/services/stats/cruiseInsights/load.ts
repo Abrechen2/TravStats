@@ -15,7 +15,13 @@
  */
 
 import { getInstanceSettings } from "../../instanceSettingsService";
-import { linkTours, loadExcursionTours, type LinkedTour } from "./excursions";
+import {
+  excursionToursFromFacts,
+  linkTours,
+  loadExcursionTours,
+  type LinkedTour,
+} from "./excursions";
+import type { TourFacts } from "../../../utils/tourInsights/tourFacts";
 import { loadCruiseInsightData, type CruiseInsightData } from "./rows";
 
 export interface CruiseInsightContext extends CruiseInsightData {
@@ -36,13 +42,22 @@ export async function toursVisible(): Promise<boolean> {
  */
 export async function cruiseInsightContextOf(
   userId: string,
-  data: CruiseInsightData
+  data: CruiseInsightData,
+  /**
+   * The user's tours, when the caller already loaded them (the badge check):
+   * they are then filtered here instead of being read a second time.
+   */
+  preloaded?: { tours: readonly TourFacts[] }
 ): Promise<CruiseInsightContext> {
   const visible = await toursVisible();
   const days = data.rows.flatMap((r) =>
     r.calls.filter((c) => !c.isAtSea && c.day !== null).map((c) => c.day as string)
   );
-  const tours = visible ? await loadExcursionTours(userId, days) : [];
+  const tours = !visible
+    ? []
+    : preloaded
+      ? await excursionToursFromFacts(preloaded.tours, days)
+      : await loadExcursionTours(userId, days);
   return { ...data, toursVisible: visible, linked: linkTours(data.rows, tours) };
 }
 

@@ -25,6 +25,7 @@ vi.mock("../lodging/LodgingGeoSection", () => ({ default: () => <p>block:geo</p>
 vi.mock("../lodging/LodgingRhythmSection", () => ({ default: () => <p>block:rhythm</p> }));
 vi.mock("../lodging/LodgingLoyaltySection", () => ({ default: () => <p>block:loyalty</p> }));
 vi.mock("../lodging/LodgingRecordsSection", () => ({ default: () => <p>block:records</p> }));
+vi.mock("../lodging/LodgingInsightsSection", () => ({ default: () => <p>block:insights</p> }));
 
 import LodgingStatsSection from "../LodgingStatsSection";
 import { hiding } from "./sectionVisibilityStub";
@@ -45,6 +46,7 @@ describe("LodgingStatsSection hides the blocks the reader switched off", () => {
       "rhythm",
       "loyalty",
       "records",
+      "insights",
     ]) {
       expect(await screen.findByText(`block:${block}`)).toBeInTheDocument();
     }
@@ -55,6 +57,12 @@ describe("LodgingStatsSection hides the blocks the reader switched off", () => {
     expect(await screen.findByText("block:quality")).toBeInTheDocument();
     expect(screen.queryByText("block:money")).not.toBeInTheDocument();
     expect(screen.queryByText("block:currency")).not.toBeInTheDocument();
+  });
+
+  it("takes the insights (forgejo#258) away with their own switch", async () => {
+    render(<LodgingStatsSection scope={LIFETIME} visibility={hiding("insights")} />);
+    expect(await screen.findByText("block:records")).toBeInTheDocument();
+    expect(screen.queryByText("block:insights")).not.toBeInTheDocument();
   });
 
   // CT106 audit B12: an empty currency card beside "no prices recorded".

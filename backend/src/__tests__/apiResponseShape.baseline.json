@@ -91,6 +91,7 @@
     "stats/aircraft.ts",
     "stats/cruiseInsights.ts",
     "stats/flightInsights.ts",
+    "stats/insights.ts",
     "stats/networkRoute.ts",
     "stats/page.ts",
     "suggestions.ts",

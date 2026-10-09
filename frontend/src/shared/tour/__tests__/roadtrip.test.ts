@@ -50,6 +50,9 @@ describe("countRoadtripNights", () => {
       nights: 3,
       nightsKnown: true,
       placesSlept: 2,
+      // forgejo#260: the same nights by where they were slept.
+      nightsByStyle: { pitch: 1, campsite: 0, lodging: 2 },
+      unknownLengthStations: 0,
     });
   });
 
@@ -77,6 +80,8 @@ describe("countRoadtripNights", () => {
       nights: 1,
       nightsKnown: true,
       placesSlept: 1,
+      nightsByStyle: { pitch: 0, campsite: 0, lodging: 1 },
+      unknownLengthStations: 0,
     });
   });
 

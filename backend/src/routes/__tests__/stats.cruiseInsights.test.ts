@@ -5,6 +5,8 @@ import { generateToken } from "../../utils/jwt";
 import { resolveMetricEvidence } from "../../services/evidence/metricEvidence";
 import { checkAndUpdateAchievements } from "../../utils/achievements";
 import { ensureAchievements } from "../../data/achievements";
+import * as excursions from "../../services/stats/cruiseInsights/excursions";
+import * as insightBuilders from "../../services/stats/insights";
 import {
   getInstanceSettings,
   updateInstanceSettings,
@@ -248,6 +250,19 @@ describe("GET /stats/cruise-insights", () => {
       // Oslo by its note, Bergen by the linked hike — the domain toggle is off.
       SHORE_EXCURSIONS_5: 2,
     });
+  });
+
+  it("links the excursion from the tours the check loaded once (integration of #257 with #264)", async () => {
+    const tourLoad = jest.spyOn(insightBuilders, "loadTourFacts");
+    const excursionLoad = jest.spyOn(excursions, "loadExcursionTours");
+    try {
+      expect((await badgeProgress(userId, ["SHORE_EXCURSIONS_5"])).SHORE_EXCURSIONS_5).toBe(2);
+      expect(tourLoad).toHaveBeenCalledTimes(1);
+      expect(excursionLoad).not.toHaveBeenCalled();
+    } finally {
+      tourLoad.mockRestore();
+      excursionLoad.mockRestore();
+    }
   });
 
   it("drops the tours, and only the tours, while the reader does not see them", async () => {

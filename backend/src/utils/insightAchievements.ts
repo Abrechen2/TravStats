@@ -1,5 +1,5 @@
 import type { Achievement } from "../prisma";
-import logger from "./logger";
+import { now as clockNow } from "../shared/time/clock";
 import {
   airportVisits,
   airportsByYear,
@@ -19,28 +19,46 @@ import {
 } from "../services/stats/cruiseInsights/load";
 import { cruisesPerPort, repeatedItineraries } from "../services/stats/cruiseInsights/ports";
 import { cruiseInsightRowOf, type CruiseStopSource } from "../services/stats/cruiseInsights/rows";
+import {
+  loadTourFacts,
+  lodgingInsights,
+  placeInsights,
+  tourInsights,
+} from "../services/stats/insights";
+import type { TourFacts } from "./tourInsights/tourFacts";
 import type { CruiseData } from "./cruiseStats";
+import { SKIP, settleBadgeSource, type BadgeVerdict } from "./badgeSource";
+import {
+  calculateRoadtripAchievementStats,
+  type RoadtripAchievementStats,
+} from "./roadtripAchievements";
 
 /**
- * The badges of the statistics expansion (forgejo#256 flights, #257 cruises),
- * measured by the SAME folds the insights sections draw
- * (`services/stats/flightInsights/`, `services/stats/cruiseInsights/`)
- * — so a badge's progress and the figure on the statistics page are one
- * computation. A module of its own like `./railAchievements.ts`: the flight
- * check and stats modules are frozen at their size by the file-size ratchet.
+ * The badges of the statistics expansion — flights (forgejo#256), cruises
+ * (#257), lodging (#258), places (#259), roadtrips (#260) and tours (#264) —
+ * measured by the SAME builders the statistics sections draw
+ * (`services/stats/flightInsights/`, `services/stats/cruiseInsights/`,
+ * `services/stats/insights/`), so a badge's progress and the figure on the
+ * statistics page are one computation. A module of its own: the flight check
+ * and stats modules are frozen at their size by the file-size ratchet.
  *
  * Every measure is LIVE (owner ruling 2026-09-20, `achievementHeld.ts`): a
  * corrected date or a deleted flight can take a badge away again.
  *
- * ## Cost and failure (review of forgejo#256/#257, fix round 1)
+ * ## One check, each source read once
  *
  * The badge check has already loaded the user's counted flights and sailed
  * cruises with their stops; those rows are handed in (`InsightSources`), so
- * neither table is read a second time. A half with no rows is not measured
- * at all, and tours are asked for only when the instance shows them and a
- * port call has a day. A half that throws is logged and comes back UNMEASURED
- * (`null`): its badges keep their stored progress for this run instead of
- * aborting every other badge, or being written down to zero.
+ * neither table is read a second time. The tours are loaded ONCE, without
+ * elevation profiles (no badge reads them), and serve the tour badges, the
+ * roadtrip badges and the cruise excursion link alike.
+ *
+ * ## Failure
+ *
+ * Every source runs through `settleBadgeSource` (`badgeSource.ts`, the one
+ * failure rule of the check): a source that throws is logged, its measures
+ * come back `null`, and their badges answer `SKIP` — the stored rows stay as
+ * they are, every other badge is still checked.
  */
 
 /** `null` = not measured this run: the badge keeps what it had. */
@@ -60,6 +78,15 @@ export interface InsightAchievementStats {
   cruiseExcursionPorts: number | null;
   /** Most sailed cruises sharing one identical port sequence. */
   cruiseRepeatedItineraryMax: number | null;
+  lodgingTripTypesMax: number | null;
+  lodgingSameHouseYears: number | null;
+  lodgingMonthsInYear: number | null;
+  placeRevisitGapYears: number | null;
+  placeTripCategoriesMax: number | null;
+  placeDocumentedVisits: number | null;
+  tourCount: number | null;
+  tourActivitiesUnique: number | null;
+  tourAscentM: number | null;
 }
 
 type FlightHalf = Pick<
@@ -92,7 +119,19 @@ const UNMEASURED_CRUISE: CruiseHalf = {
   cruiseRepeatedItineraryMax: null,
 };
 
-export const EMPTY_INSIGHT_STATS: InsightAchievementStats = { ...ZERO_FLIGHT, ...ZERO_CRUISE };
+export const EMPTY_INSIGHT_STATS: InsightAchievementStats = {
+  ...ZERO_FLIGHT,
+  ...ZERO_CRUISE,
+  lodgingTripTypesMax: 0,
+  lodgingSameHouseYears: 0,
+  lodgingMonthsInYear: 0,
+  placeRevisitGapYears: 0,
+  placeTripCategoriesMax: 0,
+  placeDocumentedVisits: 0,
+  tourCount: 0,
+  tourActivitiesUnique: 0,
+  tourAscentM: 0,
+};
 
 export function foldFlightInsightStats(rows: readonly FlightInsightRow[]): FlightHalf {
   const visits = airportVisits(rows);
@@ -136,43 +175,93 @@ export interface InsightSources {
   userBirthday?: { month: number; day: number };
 }
 
-/** Runs one half; a throw is logged and the half comes back unmeasured. */
-async function isolated<T>(
-  userId: string,
-  half: string,
-  unmeasured: T,
-  measure: () => Promise<T>
-): Promise<T> {
-  try {
-    return await measure();
-  } catch (error) {
-    logger.error({
-      operation: "insight_achievement_measure_failed",
-      message: "An insight badge measure failed; its badges keep their stored progress",
-      context: { userId, half },
-      error: { message: error instanceof Error ? error.message : String(error) },
-    });
-    return unmeasured;
-  }
+async function flightHalf(userId: string, sources: InsightSources): Promise<FlightHalf> {
+  if (sources.flights.length === 0) return ZERO_FLIGHT;
+  const half = await settleBadgeSource(userId, "flightInsights", async () =>
+    foldFlightInsightStats(await toFlightInsightRows(sources.flights))
+  );
+  return half ?? UNMEASURED_FLIGHT;
 }
 
-export async function calculateInsightAchievementStats(
+/**
+ * The cruise half. `tours` null = the tour load failed: the two measures that
+ * never read a tour are still taken, the excursion count is left unmeasured
+ * while the instance shows tours (a notes-only count could write it down).
+ */
+async function cruiseHalf(
   userId: string,
-  sources: InsightSources
-): Promise<InsightAchievementStats> {
-  const flights = await isolated(userId, "flight", UNMEASURED_FLIGHT, async () =>
-    sources.flights.length === 0
-      ? ZERO_FLIGHT
-      : foldFlightInsightStats(await toFlightInsightRows(sources.flights))
-  );
-  const cruises = await isolated(userId, "cruise", UNMEASURED_CRUISE, async () => {
-    if (sources.cruises.length === 0) return ZERO_CRUISE;
+  sources: InsightSources,
+  tours: readonly TourFacts[] | null
+): Promise<CruiseHalf> {
+  if (sources.cruises.length === 0) return ZERO_CRUISE;
+  const half = await settleBadgeSource(userId, "cruiseInsights", async () => {
     const rows = sources.cruises.map((c) => cruiseInsightRowOf({ ...c, label: "" }, c.stops));
-    return foldCruiseInsightStats(
-      await cruiseInsightContextOf(userId, { rows, userBirthday: sources.userBirthday })
+    const ctx = await cruiseInsightContextOf(
+      userId,
+      { rows, userBirthday: sources.userBirthday },
+      { tours: tours ?? [] }
     );
+    const folded = foldCruiseInsightStats(ctx);
+    return tours === null && ctx.toursVisible ? { ...folded, cruiseExcursionPorts: null } : folded;
   });
-  return { ...flights, ...cruises };
+  return half ?? UNMEASURED_CRUISE;
+}
+
+/**
+ * Every statistics-expansion measure plus the roadtrip ones, each source read
+ * ONCE (see the module comment).
+ */
+export async function calculateInsightBadgeStats(
+  userId: string,
+  sources: InsightSources,
+  at: Date = clockNow()
+): Promise<{
+  roadtripStats: RoadtripAchievementStats | null;
+  insightStats: InsightAchievementStats;
+}> {
+  const tours = await settleBadgeSource(userId, "tours", () =>
+    loadTourFacts(userId, at, { withElevation: false })
+  );
+  const [flights, cruises, roadtripStats, lodging, places, tourView] = await Promise.all([
+    flightHalf(userId, sources),
+    cruiseHalf(userId, sources, tours),
+    tours === null
+      ? null
+      : settleBadgeSource(userId, "roadtrips", () =>
+          calculateRoadtripAchievementStats(userId, at, tours)
+        ),
+    settleBadgeSource(userId, "lodging", () => lodgingInsights(userId, at).then((r) => r.response)),
+    settleBadgeSource(userId, "places", () => placeInsights(userId, at).then((r) => r.response)),
+    tours === null
+      ? null
+      : settleBadgeSource(userId, "tourInsights", () =>
+          tourInsights(userId, at, { tours }).then((r) => r.response)
+        ),
+  ]);
+  return {
+    roadtripStats,
+    insightStats: {
+      ...flights,
+      ...cruises,
+      lodgingTripTypesMax: lodging?.tripBases.typesPerCompletedTripMax ?? null,
+      lodgingSameHouseYears: lodging?.revisits.sameHouseYearsMax ?? null,
+      lodgingMonthsInYear: lodging?.calendar.monthsInYearMax ?? null,
+      placeRevisitGapYears: places?.revisits.longestGapYears ?? null,
+      placeTripCategoriesMax: places?.diversity.tripCategoriesMax ?? null,
+      // A visit "documented" for the badge carries its OWN note and its OWN
+      // photo — both are attached to the visit row itself, so the attribution
+      // is explicit, never inferred from a trip's album.
+      placeDocumentedVisits: places?.documentation.withNoteAndPhoto ?? null,
+      tourCount: tourView?.all.completed ?? null,
+      // A tour with no activity recorded is not a kind of its own.
+      tourActivitiesUnique: tourView
+        ? tourView.byActivity.filter((a) => a.activity !== "unknown").length
+        : null,
+      // Only climbs a recording measured; an unknown climb stays unknown, never
+      // estimated from the route.
+      tourAscentM: tourView?.all.ascentM.total ?? null,
+    },
+  };
 }
 
 const MEASURE: Record<string, keyof InsightAchievementStats> = {
@@ -182,23 +271,33 @@ const MEASURE: Record<string, keyof InsightAchievementStats> = {
   cruise_port_cruises: "cruisePortCruisesMax",
   cruise_excursion_ports: "cruiseExcursionPorts",
   cruise_repeated_itinerary: "cruiseRepeatedItineraryMax",
+  lodging_trip_types_max: "lodgingTripTypesMax",
+  lodging_same_house_years: "lodgingSameHouseYears",
+  lodging_months_in_year: "lodgingMonthsInYear",
+  place_revisit_gap_years: "placeRevisitGapYears",
+  place_trip_categories_max: "placeTripCategoriesMax",
+  place_documented_visits: "placeDocumentedVisits",
+  tour_count: "tourCount",
+  tour_activities_unique: "tourActivitiesUnique",
+  tour_ascent_m: "tourAscentM",
 };
 
 /** The requirement types this module answers — the seeds are checked against it. */
 export const INSIGHT_REQUIREMENT_TYPES: readonly string[] = Object.keys(MEASURE);
 
 /**
- * The badge's progress; `"unmeasured"` when its measure failed this run (the
- * caller then leaves the stored row alone); `null` when it is not one of
- * these badges.
+ * The badge's progress; `SKIP` when its source failed this run (the planner
+ * then leaves the stored row alone); `null` when it is not one of these
+ * badges.
  */
 export function checkInsightAchievement(
   achievement: Pick<Achievement, "requirementType" | "requirement">,
   stats: InsightAchievementStats
-): { isUnlocked: boolean; progress: number } | "unmeasured" | null {
+): BadgeVerdict | null {
   const key = MEASURE[achievement.requirementType];
   if (!key) return null;
-  const progress = stats[key];
-  if (progress === null) return "unmeasured";
+  const value = stats[key];
+  if (value === null) return SKIP;
+  const progress = Math.floor(value);
   return { isUnlocked: progress >= achievement.requirement, progress };
 }

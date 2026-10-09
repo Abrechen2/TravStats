@@ -98,3 +98,20 @@ export function bucketNights(
   }
   return nights;
 }
+
+/**
+ * The night DATES of a stay walked by `walkNights`, as UTC-midnight
+ * milliseconds — for the readers that need to know WHICH nights (a weekday,
+ * a month, an overlap with another booking), not just how many. Same rule and
+ * the same cap as `walkNights`, so the two can never disagree on a stay.
+ */
+export function nightDates(checkIn: Date, checkOut: Date): number[] {
+  const out: number[] = [];
+  let cursor = Date.UTC(checkIn.getUTCFullYear(), checkIn.getUTCMonth(), checkIn.getUTCDate());
+  const end = Date.UTC(checkOut.getUTCFullYear(), checkOut.getUTCMonth(), checkOut.getUTCDate());
+  while (cursor < end && out.length < MAX_WALK_NIGHTS) {
+    out.push(cursor);
+    cursor += 24 * 60 * 60 * 1000;
+  }
+  return out;
+}
