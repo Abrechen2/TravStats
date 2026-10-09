@@ -129,10 +129,8 @@ export default function FlightBulkEditModal({
         .map((r) => r.flightId)
     : [];
   const sendAll = (): void => void send(flights.map((f) => f.id));
-  const button =
-    "rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50 bg-[var(--accent)] text-neutral-900 hover:bg-[var(--accent-dim)]";
-  const secondary =
-    "rounded-md border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--bg-surface)] disabled:opacity-50";
+  const button = "btn-primary";
+  const secondary = "btn-secondary";
 
   return (
     <Modal

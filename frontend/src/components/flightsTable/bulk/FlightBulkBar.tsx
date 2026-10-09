@@ -47,7 +47,7 @@ export default function FlightBulkBar({
       </button>
       <button
         type="button"
-        className={`${BAR_BUTTON} bg-[var(--accent)] text-neutral-900`}
+        className={`${BAR_BUTTON} btn-primary`}
         onClick={() => setEditing(true)}
         disabled={count === 0}
       >
