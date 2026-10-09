@@ -145,7 +145,6 @@
       "optional": "optional"
     },
     "validation": {
-      "selectAirportsAndDates": "Bitte wähle beide Flughäfen und Daten aus",
       "selectAirports": "Bitte wähle Abflug- und Ankunftsflughafen aus",
       "selectDate": "Bitte wähle ein Abflugdatum aus",
       "invalidPrice": "Preis, Steuern und Gebühren müssen positive Zahlen sein"
@@ -167,7 +166,6 @@
     },
     "alreadyImported": "Dieser Flug war schon eingelesen — es wurde nichts doppelt angelegt.",
     "flightNumberRequired": "Gib zuerst eine Flugnummer ein, zum Beispiel LH400.",
-    "requiredLegend": "* Pflichtfeld",
     "sections": {
       "core": "Route, Zeiten & Airline",
       "priceAndSeat": "Preis, Klasse & Sitzplatz",
@@ -175,7 +173,20 @@
       "booking": "Buchung, Reise & Notizen",
       "filledIn": "ausgefüllt"
     },
-    "llmUnreachable": "In der E-Mail wurde kein Flug erkannt – der KI-Parser war dabei nicht erreichbar. Bitte später erneut versuchen oder den Flug manuell eintragen."
+    "llmUnreachable": "In der E-Mail wurde kein Flug erkannt – der KI-Parser war dabei nicht erreichbar. Bitte später erneut versuchen oder den Flug manuell eintragen.",
+    "missing": {
+      "departureAirport": "Abflughafen",
+      "arrivalAirport": "Zielflughafen",
+      "departureDate": "Abflugdatum",
+      "departureTime": "Abflugzeit",
+      "arrivalDate": "Ankunftsdatum",
+      "arrivalTime": "Ankunftszeit",
+      "actualDepartureTime": "tatsächliche Abflugzeit (zum Datum)",
+      "actualArrivalTime": "tatsächliche Ankunftszeit (zum Datum)"
+    },
+    "errors": {
+      "actualTimeMissing": "Zum tatsächlichen Datum fehlt die Uhrzeit – ergänze sie oder leere das Datum."
+    }
   },
   "list": {
     "title": "Flüge",

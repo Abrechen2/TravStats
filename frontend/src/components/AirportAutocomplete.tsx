@@ -11,6 +11,8 @@ interface AirportAutocompleteProps {
   label: string;
   placeholder?: string;
   required?: boolean;
+  /** The input's id, so a visible label can name it with `htmlFor` (forgejo#249). */
+  id?: string;
 }
 
 /**
@@ -43,6 +45,7 @@ export default function AirportAutocomplete({
   label,
   placeholder,
   required = false,
+  id,
 }: AirportAutocompleteProps): JSX.Element {
   const { t, i18n } = useTranslation(["flights", "common"]);
   const [query, setQuery] = useState("");
@@ -199,6 +202,7 @@ export default function AirportAutocomplete({
         </label>
       )}
       <input
+        id={id}
         type="text"
         value={query}
         onChange={handleInputChange}

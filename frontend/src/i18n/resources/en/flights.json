@@ -145,7 +145,6 @@
       "optional": "optional"
     },
     "validation": {
-      "selectAirportsAndDates": "Please select both airports and dates",
       "selectAirports": "Please select departure and arrival airports",
       "selectDate": "Please select departure date",
       "invalidPrice": "Price, taxes, and fees must be positive numbers"
@@ -167,7 +166,6 @@
     },
     "alreadyImported": "This flight had already been read in — nothing was created twice.",
     "flightNumberRequired": "Enter a flight number first, for example LH400.",
-    "requiredLegend": "* Required field",
     "sections": {
       "core": "Route, times & airline",
       "priceAndSeat": "Price, class & seat",
@@ -175,7 +173,20 @@
       "booking": "Booking, trip & notes",
       "filledIn": "filled in"
     },
-    "llmUnreachable": "No flight was recognised in the email – and the AI parser could not be reached. Please try again later or enter the flight manually."
+    "llmUnreachable": "No flight was recognised in the email – and the AI parser could not be reached. Please try again later or enter the flight manually.",
+    "missing": {
+      "departureAirport": "departure airport",
+      "arrivalAirport": "arrival airport",
+      "departureDate": "departure date",
+      "departureTime": "departure time",
+      "arrivalDate": "arrival date",
+      "arrivalTime": "arrival time",
+      "actualDepartureTime": "actual departure time (for its date)",
+      "actualArrivalTime": "actual arrival time (for its date)"
+    },
+    "errors": {
+      "actualTimeMissing": "The actual date has no time – add it or clear the date."
+    }
   },
   "list": {
     "title": "Flights",
