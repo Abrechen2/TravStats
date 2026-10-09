@@ -140,7 +140,13 @@
     "moveDown": "Nach unten verschieben",
     "remove": "Stopp entfernen",
     "unresolved": "Nicht aufgelöster Hafen",
-    "unresolvedHint": "Wähle einen Hafen aus dem Katalog, um diesen Stopp aufzulösen."
+    "unresolvedHint": "Wähle einen Hafen aus dem Katalog, um diesen Stopp aufzulösen.",
+    "port": "Hafen",
+    "arrival": "Ankunft (Ortszeit des Hafens)",
+    "departure": "Abfahrt (Ortszeit des Hafens)",
+    "noPort": "Hafen fehlt",
+    "hasExcursion": "Ausflug",
+    "actionsLabel": "Tag {{day}} verschieben oder entfernen"
   },
   "picker": {
     "ship_placeholder": "Schiff suchen …",

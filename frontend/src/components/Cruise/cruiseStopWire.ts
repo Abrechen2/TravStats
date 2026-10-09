@@ -53,13 +53,14 @@ export function storedStopFold(
  *   place to take a zone from: sent as `{ local }` alone, which the server
  *   keeps as a wall clock with precision `unknown` — not refused, which made
  *   an imported cruise with an unresolved port unsavable, and not UTC.
- * The UI-only fields (`port`, `originalDay`, `dateSource`) are dropped.
+ * The UI-only fields (`port`, `originalDay`, `dateSource`, `uiKey`) are dropped.
  */
 export function cruiseStopToWire(stop: CruiseStopInput, index: number): CruiseStopWire {
   const {
     port: _port,
     originalDay: _originalDay,
     dateSource: _dateSource,
+    uiKey: _uiKey,
     arrivalFold,
     departureFold,
     date,

@@ -140,7 +140,13 @@
     "moveDown": "Move down",
     "remove": "Remove stop",
     "unresolved": "Unresolved port",
-    "unresolvedHint": "Pick a port from the catalog to resolve this stop."
+    "unresolvedHint": "Pick a port from the catalog to resolve this stop.",
+    "port": "Port",
+    "arrival": "Arrival (port's local time)",
+    "departure": "Departure (port's local time)",
+    "noPort": "Port missing",
+    "hasExcursion": "Excursion",
+    "actionsLabel": "Move or remove day {{day}}"
   },
   "picker": {
     "ship_placeholder": "Search ship …",

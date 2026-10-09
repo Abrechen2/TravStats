@@ -120,6 +120,11 @@ export interface CruiseStopInput {
    *  Q5). Sent as the time's `fold`, stripped from the stop itself. */
   arrivalFold?: "later";
   departureFold?: "later";
+  /** UI-only: which stop this is while the list is reordered, so the open day
+   *  and the keyboard focus follow a moved stop instead of staying at its old
+   *  position (forgejo#221). The stored stop's id where there is one. Stripped
+   *  on submit like `port`. */
+  uiKey?: string;
 }
 
 export interface CruiseInput {

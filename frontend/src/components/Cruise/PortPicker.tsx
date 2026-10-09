@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { portsApi, type GeocodedPort, type PortGeocodeFailure } from "../../lib/api";
 import type { Port } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -11,6 +11,12 @@ interface Props {
   onChange: (port: Port) => void;
   /** Visible field label (e.g. departure vs arrival port). */
   label?: string;
+  /** Id of the search field, so a "still needed" hint can take focus to it. */
+  id?: string;
+  /** Ids of messages that describe the field (a missing port, forgejo#245/#246). */
+  describedBy?: string;
+  /** The form refused the stop for lacking a port (forgejo#246). */
+  invalid?: boolean;
 }
 
 /**
@@ -21,8 +27,17 @@ interface Props {
  * - Offers an "add custom" flow when no exact-name match is present, capturing
  *   required lat/lon and optional city/country, then creating via `portsApi.create`.
  */
-export function PortPicker({ value, onChange, label }: Props): JSX.Element {
+export function PortPicker({
+  value,
+  onChange,
+  label,
+  id,
+  describedBy,
+  invalid,
+}: Props): JSX.Element {
   const { t } = useTranslation(["cruise", "location"]);
+  const generatedId = useId();
+  const inputId = id ?? `port-picker-${generatedId}`;
   const [query, setQuery] = useState<string>(value?.name ?? "");
   // Forgejo #9: out-of-range coordinates used to vanish silently and the
   // record saved without them. LocationInput now says so; this stops the
@@ -192,15 +207,22 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
 
   return (
     <div className="relative">
+      {/* A real <label>, not a span beside an aria-label: a tap on the
+          visible name now focuses the field (forgejo#249). */}
       {label !== undefined && (
-        <span className="mb-1 block text-xs text-(--text-muted)">{label}</span>
+        <label htmlFor={inputId} className="mb-1 block text-xs text-(--text-muted)">
+          {label}
+        </label>
       )}
       <input
+        id={inputId}
         role="combobox"
         aria-expanded={results.length > 0}
         aria-autocomplete="list"
-        aria-label={label ?? t("picker.port_placeholder")}
-        className="w-full rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden"
+        aria-label={label === undefined ? t("picker.port_placeholder") : undefined}
+        aria-describedby={describedBy}
+        aria-invalid={invalid || undefined}
+        className="w-full rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden pointer-coarse:min-h-(--ts-size-touch-min)"
         placeholder={t("picker.port_placeholder")}
         value={query}
         onChange={(e): void => setQuery(e.target.value)}
@@ -213,7 +235,7 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
               <li key={r.id}>
                 <button
                   type="button"
-                  className="w-full px-3 py-2 text-left text-sm text-(--text-primary) hover:bg-(--bg-elevated)"
+                  className="w-full px-3 py-2 text-left text-sm text-(--text-primary) hover:bg-(--bg-elevated) pointer-coarse:min-h-(--ts-size-touch-min)"
                   onClick={(): void => handleSelect(r)}
                 >
                   {r.name}
@@ -237,7 +259,7 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
                 <button
                   type="button"
                   disabled={saving}
-                  className="w-full px-3 py-2 text-left text-sm text-(--text-primary) hover:bg-(--bg-elevated) disabled:opacity-50"
+                  className="w-full px-3 py-2 text-left text-sm text-(--text-primary) hover:bg-(--bg-elevated) disabled:opacity-50 pointer-coarse:min-h-(--ts-size-touch-min)"
                   onClick={(): void => {
                     void handleSelectGeocoded(g);
                   }}
@@ -273,7 +295,7 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
         !showAdd && (
           <button
             type="button"
-            className="mt-2 text-xs text-(--accent) hover:underline"
+            className="mt-2 text-xs text-(--accent) hover:underline pointer-coarse:min-h-(--ts-size-touch-min)"
             onClick={(): void => {
               setNewName(query);
               setShowAdd(true);

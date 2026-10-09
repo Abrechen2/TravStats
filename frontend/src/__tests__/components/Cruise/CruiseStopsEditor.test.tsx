@@ -81,8 +81,9 @@ describe("CruiseStopsEditor", () => {
         onChange={onChange}
       />
     );
-    // The unresolved name is visible.
-    expect(screen.getByText(/Taranto/)).toBeInTheDocument();
+    // The unresolved name is visible — in the day's compact line and in the
+    // opened day's banner (forgejo#221 added the line).
+    expect(screen.getAllByText(/Taranto/)).toHaveLength(2);
 
     // Resolving via the PortPicker sets portId and clears unresolvedPortName.
     await userEvent.type(screen.getByRole("combobox"), "Taranto");
