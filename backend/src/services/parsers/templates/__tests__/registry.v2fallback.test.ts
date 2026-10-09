@@ -110,4 +110,34 @@ describe("TemplateRegistry — v2 beside the v1 airline path", () => {
     // v2 is cached in its own directory, which the v1 cache reader does not descend into.
     expect(fs.existsSync(path.join(tmp, "cache", "v2", "lodging__examplechain.json"))).toBe(true);
   });
+
+  it("getActiveV2 orders home-market templates first and drops none (P5)", async () => {
+    const es = validTemplate({ id: "lodging:spainchain", markets: ["ES"] });
+    const de = validTemplate({ id: "lodging:germanychain", markets: ["DE"] });
+    const entry = (t: typeof es, file: string) => ({
+      id: t.id,
+      domain: t.domain,
+      version: t.version,
+      path: `lodging/${file}.json`,
+    });
+    const { fn } = fakeFetch({
+      ...v1Routes,
+      [V2_INDEX]: {
+        version: 2,
+        templates: [entry(es, "spainchain"), entry(de, "germanychain")],
+      },
+      [`${BASE}/lodging/spainchain.json`]: es,
+      [`${BASE}/lodging/germanychain.json`]: de,
+    });
+    const registry = makeRegistry(fn);
+    await registry.syncNow();
+
+    const unordered = registry.getActiveV2().map((x) => x.id);
+    expect(unordered).toEqual(["lodging:spainchain", "lodging:germanychain"]);
+    expect(registry.getActiveV2("DE").map((x) => x.id)).toEqual([
+      "lodging:germanychain",
+      "lodging:spainchain",
+    ]);
+    expect(registry.getActiveV2(null).map((x) => x.id)).toEqual(unordered);
+  });
 });

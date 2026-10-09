@@ -113,6 +113,7 @@ export const USER_EXPORT_SELECT = {
       data: true,
       appPrefs: true,
       autoCreateTrips: true,
+      homeCountry: true,
       preferredVisionParser: true,
       preferredTextParser: true,
       immichDefaultMode: true,

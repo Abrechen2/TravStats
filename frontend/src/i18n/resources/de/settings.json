@@ -771,6 +771,12 @@
       "description": "Flüge mit derselben Buchungsnummer werden beim Import automatisch zu einer Reise mit Buchung gruppiert. Ausgeschaltet bleibt die Buchungsnummer erhalten – über „Reisen erkennen“ lässt sich die Gruppierung später jederzeit nachholen."
     }
   },
+  "homeCountry": {
+    "label": "Heimatland",
+    "description": "Bestimmt, welche Buchungsvorlagen zuerst geprüft werden. Vorlagen anderer Länder bleiben aktiv.",
+    "none": "Nicht festgelegt",
+    "loadFailed": "Heimatland konnte nicht geladen werden."
+  },
   "devices": {
     "title": "Geräte",
     "description": "Verbinde die TravStats-App auf deinem Smartphone. Scanne den QR-Code in der App, um das Gerät anzumelden — ein gerätegebundenes Token wird dabei automatisch erstellt.",
