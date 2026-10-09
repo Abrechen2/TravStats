@@ -53,7 +53,7 @@ describe("a port call's all-aboard time", () => {
     expect(res.status).toBe(201);
     const stops = res.body.data.stops as Array<{ dayNumber: number; allAboardTime: unknown }>;
     expect(stops.find((s) => s.dayNumber === 2)?.allAboardTime).toBe("17:30");
-    // Not derived: a stop without one says nothing, even with a departure.
+    // A sea day has none.
     expect(stops.find((s) => s.dayNumber === 3)?.allAboardTime).toBeNull();
   });
 
@@ -102,5 +102,85 @@ describe("a port call's all-aboard time", () => {
       { dayNumber: 1, isAtSea: false, unresolvedPortName: "Hafen", allAboardTime: value },
     ]);
     expect(res.status).toBe(400);
+  });
+
+  /**
+   * Review C1: a client that does not know the field — the Companion's route
+   * editor rebuilds every stop without it — must not erase it. An ABSENT key
+   * keeps the matched stored stop's value; matching never goes by day alone.
+   */
+  describe("a PATCH that does not send the key", () => {
+    const at = (name: string, day: number, extra: Record<string, unknown> = {}) => ({
+      dayNumber: day,
+      isAtSea: false,
+      unresolvedPortName: name,
+      ...extra,
+    });
+    const patch = (id: string, stops: unknown[]) =>
+      request(app).patch(`/api/v1/cruises/${id}`).set("Cookie", cookie).send({ stops });
+    const times = (res: request.Response): Record<string, unknown> =>
+      Object.fromEntries(
+        (res.body.data.stops as Array<{ dayNumber: number; allAboardTime: unknown }>).map((s) => [
+          s.dayNumber,
+          s.allAboardTime,
+        ])
+      );
+
+    async function cruiseWith(stops: unknown[]): Promise<string> {
+      const res = await create(stops);
+      expect(res.status).toBe(201);
+      return res.body.data.id as string;
+    }
+
+    it("keeps the stored time for the same stops", async () => {
+      const id = await cruiseWith([at("Oslo", 3, { allAboardTime: "17:30" })]);
+      const res = await patch(id, [at("Oslo", 3)]);
+      expect(res.status).toBe(200);
+      expect(times(res)).toEqual({ 3: "17:30" });
+    });
+
+    it("keeps it when a reorder renumbered the day", async () => {
+      const id = await cruiseWith([
+        at("Oslo", 3, { allAboardTime: "17:30" }),
+        at("Bergen", 4, { allAboardTime: "16:45" }),
+      ]);
+      const res = await patch(id, [at("Bergen", 3), at("Oslo", 4)]);
+      expect(times(res)).toEqual({ 3: "16:45", 4: "17:30" });
+    });
+
+    it("does not give a swapped port the old port's time", async () => {
+      const id = await cruiseWith([at("Bergen", 4, { allAboardTime: "16:45" })]);
+      const res = await patch(id, [at("Stavanger", 4)]);
+      expect(times(res)).toEqual({ 4: null });
+    });
+
+    it("still clears it on an explicit null", async () => {
+      const id = await cruiseWith([at("Oslo", 3, { allAboardTime: "17:30" })]);
+      const res = await patch(id, [at("Oslo", 3, { allAboardTime: null })]);
+      expect(times(res)).toEqual({ 3: null });
+    });
+
+    it("never puts one on a day that became a sea day", async () => {
+      const id = await cruiseWith([at("Oslo", 3, { allAboardTime: "17:30" })]);
+      const res = await patch(id, [{ dayNumber: 3, isAtSea: true }]);
+      expect(times(res)).toEqual({ 3: null });
+    });
+
+    it("keeps both times of a round trip calling at one port twice, by day", async () => {
+      const id = await cruiseWith([
+        at("Kiel", 1, { allAboardTime: "16:00" }),
+        at("Kiel", 8, { allAboardTime: "07:30" }),
+      ]);
+      const res = await patch(id, [at("Kiel", 1), at("Kiel", 8)]);
+      expect(times(res)).toEqual({ 1: "16:00", 8: "07:30" });
+    });
+
+    it("follows a stop by its id when the client sends one", async () => {
+      const created = await create([at("Oslo", 3, { allAboardTime: "17:30" })]);
+      const stopId = created.body.data.stops[0].id as string;
+      // Renamed and moved: only the id still says it is the same call.
+      const res = await patch(created.body.data.id as string, [at("Oslo Havn", 5, { id: stopId })]);
+      expect(times(res)).toEqual({ 5: "17:30" });
+    });
   });
 });

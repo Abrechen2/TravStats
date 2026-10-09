@@ -64,6 +64,17 @@ const stopTime = z.preprocess(
 
 export const cruiseStopSchema = z
   .object({
+    // The stored stop this one IS, when the client knows it. Stop ids change
+    // on every save (a PATCH recreates the list), so it is a matching hint
+    // and never written: today only `allAboardTime` uses it to survive a
+    // client that does not send that key (`services/cruise/stopCarryOver.ts`).
+    id: z
+      .string()
+      .uuid()
+      .optional()
+      .describe(
+        "The stored stop this one is (a matching hint, never written; ids change on every save)."
+      ),
     portId: z.number().int().positive().nullable().optional(),
     dayNumber: z.number().int().min(1).max(365),
     // Calendar date of the stop. Booking confirmations list a date per stop
@@ -76,11 +87,18 @@ export const cruiseStopSchema = z
     excursionNote: z.string().max(500).optional(),
     // "All aboard" at this port (forgejo#223): `HH:mm` on the port's clock,
     // as the ship's daily programme prints it. Only ever the user's entry —
-    // nothing derives it from the departure. "" and null clear it.
-    allAboardTime: z.preprocess(
-      emptyAsNull,
-      z.string().regex(ALL_ABOARD_TIME, "allAboardTime must be HH:mm").nullable().optional()
-    ),
+    // nothing derives it from the departure. "" and null clear it; on a PATCH
+    // an ABSENT key keeps the matched stored stop's value (stopCarryOver.ts).
+    allAboardTime: z
+      .preprocess(
+        emptyAsNull,
+        z.string().regex(ALL_ABOARD_TIME, "allAboardTime must be HH:mm").nullable().optional()
+      )
+      .describe(
+        'HH:mm on the port\'s clock. null or "" clears it. ABSENT on a PATCH keeps the value ' +
+          "of the matched stored stop (by id, else same day and port, else the only stop at that " +
+          "port); a sea day never has one."
+      ),
     // Third stop state: an imported port whose name could not be matched to the
     // catalog. Carried as a name-only stop (no portId, not a sea day) so it is
     // never lost; the user resolves it later via the PortPicker.

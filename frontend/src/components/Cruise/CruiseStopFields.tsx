@@ -79,12 +79,34 @@ export function CruiseStopFields({
           type="checkbox"
           checked={stop.isAtSea}
           onChange={(e): void =>
-            onPatch({
-              isAtSea: e.target.checked,
-              portId: e.target.checked ? null : stop.portId,
-              port: e.target.checked ? null : stop.port,
-              unresolvedPortName: e.target.checked ? null : stop.unresolvedPortName,
-            })
+            onPatch(
+              e.target.checked
+                ? {
+                    // Kept aside, so unticking brings the port or the
+                    // unresolved name back: one tap must not turn an imported
+                    // port into a sea day for good (review M2, forgejo#222).
+                    // A sea day has no all-aboard time (review M1).
+                    isAtSea: true,
+                    beforeSea: {
+                      portId: stop.portId,
+                      port: stop.port,
+                      unresolvedPortName: stop.unresolvedPortName,
+                      allAboardTime: stop.allAboardTime,
+                    },
+                    portId: null,
+                    port: null,
+                    unresolvedPortName: null,
+                    allAboardTime: null,
+                  }
+                : {
+                    isAtSea: false,
+                    portId: stop.beforeSea?.portId ?? null,
+                    port: stop.beforeSea?.port ?? null,
+                    unresolvedPortName: stop.beforeSea?.unresolvedPortName ?? null,
+                    allAboardTime: stop.beforeSea?.allAboardTime ?? null,
+                    beforeSea: undefined,
+                  }
+            )
           }
           className="pointer-coarse:h-5 pointer-coarse:w-5"
         />

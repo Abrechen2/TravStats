@@ -167,4 +167,27 @@ describe("CruiseStopsEditor — compact day list (forgejo#221)", () => {
     fireEvent.change(field, { target: { value: "16:30" } });
     expect(field.value).toBe("16:30");
   });
+
+  // Review M2/M1: ticking "Auf See" on an imported port is undone by unticking
+  // it — the name and the all-aboard time come back — and a sea day carries no
+  // all-aboard time meanwhile.
+  it("brings an unresolved port back when 'Auf See' is unticked again", async () => {
+    const user = userEvent.setup();
+    const colon = {
+      portId: null,
+      dayNumber: 4,
+      isAtSea: false,
+      unresolvedPortName: "Colón",
+      allAboardTime: "16:30",
+    } as CruiseStopInput;
+    render(<Harness initial={[colon]} />);
+    await user.click(summaries()[0]);
+    const sea = within(openDay()).getByRole("checkbox", { name: "stops.at_sea" });
+
+    await user.click(sea);
+    expect(summaries()[0].textContent).toContain("stops.at_sea");
+    await user.click(sea);
+    expect(summaries()[0].textContent).toContain("Colón");
+    expect((document.getElementById("t-at-0-all-aboard") as HTMLInputElement).value).toBe("16:30");
+  });
 });

@@ -53,7 +53,12 @@ export function storedStopFold(
  *   place to take a zone from: sent as `{ local }` alone, which the server
  *   keeps as a wall clock with precision `unknown` — not refused, which made
  *   an imported cruise with an unresolved port unsavable, and not UTC.
- * The UI-only fields (`port`, `originalDay`, `dateSource`, `uiKey`) are dropped.
+ * - the all-aboard time ALWAYS, null when empty: the server keeps a stored
+ *   value for a stop that does not send the key (for clients that do not know
+ *   it, review C1), so a day added here on a removed day's port would
+ *   otherwise inherit that day's time. A sea day sends null.
+ * The UI-only fields (`port`, `originalDay`, `dateSource`, `uiKey`,
+ * `beforeSea`) are dropped.
  */
 export function cruiseStopToWire(stop: CruiseStopInput, index: number): CruiseStopWire {
   const {
@@ -61,6 +66,8 @@ export function cruiseStopToWire(stop: CruiseStopInput, index: number): CruiseSt
     originalDay: _originalDay,
     dateSource: _dateSource,
     uiKey: _uiKey,
+    beforeSea: _beforeSea,
+    allAboardTime,
     arrivalFold,
     departureFold,
     date,
@@ -68,7 +75,10 @@ export function cruiseStopToWire(stop: CruiseStopInput, index: number): CruiseSt
     departureTime,
     ...rest
   } = stop;
-  const wire: CruiseStopWire = { ...rest };
+  const wire: CruiseStopWire = {
+    ...rest,
+    allAboardTime: stop.isAtSea ? null : (allAboardTime ?? null),
+  };
   if (date !== undefined) wire.date = date === null ? null : dayInput(date.slice(0, 10));
   const arrival = stopTime(stop, arrivalTime, `stops.${index}.arrivalTime`, arrivalFold);
   const departure = stopTime(stop, departureTime, `stops.${index}.departureTime`, departureFold);

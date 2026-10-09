@@ -131,6 +131,10 @@ export interface CruiseStopInput {
    *  position (forgejo#221). The stored stop's id where there is one. Stripped
    *  on submit like `port`. */
   uiKey?: string;
+  /** UI-only: what the day was before "Auf See" was ticked, so unticking it
+   *  brings the port (or the unresolved name) back instead of leaving "Hafen
+   *  fehlt" (review M2). Stripped on submit. */
+  beforeSea?: Pick<CruiseStopInput, "portId" | "port" | "unresolvedPortName" | "allAboardTime">;
 }
 
 export interface CruiseInput {
@@ -187,6 +191,7 @@ export type CruiseStopWire = Omit<
   | "arrivalFold"
   | "departureFold"
   | "uiKey"
+  | "beforeSea"
 > & {
   date?: string | null;
   arrivalTime?: LocalTimeInput | null;
