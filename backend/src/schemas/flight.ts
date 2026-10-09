@@ -447,6 +447,9 @@ const requireStatusTimeAxisSanity = (
 };
 
 export const createFlightSchema = baseFlightSchema
+  // Create only (#355): an update moves a flight between trips through the
+  // trip routes, whose ownership checks this schema cannot see.
+  .extend({ tripId: z.string().uuid().nullable().optional() })
   .superRefine(requirePairedTimezone)
   .superRefine(requireExistingWallClock)
   .superRefine(requireChronologicalOrder)

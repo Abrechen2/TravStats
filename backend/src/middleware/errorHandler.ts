@@ -125,6 +125,16 @@ export type ApiErrorCode =
   /** An accepted trip suggestion named members it does not hold, none at all,
    *  or an end before its start. */
   | "TRIP_SUGGESTION_SELECTION_INVALID"
+  /** Package import (plan 2026-10-09 P3): the document holds no package
+   *  reading — it was parsed as something else, or not at all. */
+  | "PACKAGE_READING_MISSING"
+  /** The package reading does not satisfy the contract; `extra.issues` names it. */
+  | "PACKAGE_READING_INVALID"
+  /** One leg of the package cannot be written as a flight; `field` names it. */
+  | "PACKAGE_FLIGHT_INVALID"
+  /** A trip, booking or flight id the request named is not the caller's. */
+  | "TRIP_NOT_FOUND"
+  | "BOOKING_NOT_FOUND"
   /** A request body failed its schema. Sent on every ZodError answer, so a
    *  form shows its own sentence instead of zod's JSON issue dump. */
   | "VALIDATION_FAILED"
