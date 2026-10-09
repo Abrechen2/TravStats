@@ -26,9 +26,10 @@ vi.mock("../../../lib/api/lodging", () => ({
   // The overlap notice asks which stays touch the saved dates (forgejo#229).
   listStayPage: vi.fn(async () => ({ rows: [], total: 0 })),
 }));
-vi.mock("../../../lib/api", () => ({
-  tripsApi: { getAll: vi.fn() },
-}));
+vi.mock("../../../lib/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/api")>();
+  return { ...actual, tripsApi: { getAll: vi.fn() } };
+});
 vi.mock("@/hooks/useRecentCurrencies", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/hooks/useRecentCurrencies")>();
   return { ...actual, useRecentCurrencies: () => [] };
