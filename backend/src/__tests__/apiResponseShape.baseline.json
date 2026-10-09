@@ -170,6 +170,7 @@
     "sync.ts",
     "tripPhotoWindows.ts",
     "tripSuggestions.ts",
+    "trips/tripExchange.ts",
     "trips/tripPackage.ts",
     "upcoming.ts",
     "uploads.ts",

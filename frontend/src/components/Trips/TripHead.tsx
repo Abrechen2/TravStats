@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import type { useTranslation } from "../../hooks/useTranslation";
@@ -8,6 +9,7 @@ import { FlagImg } from "../../lib/countryFlag";
 import { countryName } from "../../shared/geo/countryCode";
 import { statusPillStyle } from "../table/statusPillStyle";
 import Button from "../ui/Button";
+import { TripExportModal } from "./TripExportModal";
 
 /** Trip status → the shared status palette (planned reads as scheduled). */
 const STATUS_TONE: Record<Trip["status"], string> = {
@@ -41,6 +43,9 @@ export default function TripHead({
   onEdit,
   onDelete,
 }: TripHeadProps): JSX.Element {
+  // The export dialog lives here, beside its button, so the trip page itself
+  // does not have to carry one more piece of state.
+  const [exporting, setExporting] = useState(false);
   // The trip's days at its places (`times`), never moved by the reader's zone.
   const start = tripStart(trip)?.date;
   const end = tripEnd(trip)?.date;
@@ -141,6 +146,7 @@ export default function TripHead({
             )}
           </div>
           <div className="flex shrink-0 flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
+            <Button onClick={() => setExporting(true)}>{t("trips:export.button")}</Button>
             <Button onClick={onEdit}>{t("common:buttons.edit")}</Button>
             <Button variant="danger" onClick={onDelete}>
               {t("common:buttons.delete")}
@@ -148,6 +154,7 @@ export default function TripHead({
           </div>
         </div>
       </div>
+      {exporting && <TripExportModal tripId={trip.id} onClose={() => setExporting(false)} />}
     </div>
   );
 }

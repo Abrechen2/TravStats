@@ -132,6 +132,17 @@ export type ApiErrorCode =
   | "PACKAGE_READING_INVALID"
   /** One leg of the package cannot be written as a flight; `field` names it. */
   | "PACKAGE_FLIGHT_INVALID"
+  /** Single-trip import (spec 2026-10-09 S3): the upload is not a readable
+   *  `.travstats` file — not a ZIP, no manifest/trip.json, or a schema
+   *  failure (`extra.issues` names the paths). */
+  | "TRIP_FILE_INVALID"
+  /** The `.travstats` file names a format version this server cannot read
+   *  (`extra.formatVersion`, `extra.supported`). */
+  | "TRIP_FILE_VERSION_UNSUPPORTED"
+  /** The `.travstats` file (or one entry in it) is past its size or entry cap (413). */
+  | "TRIP_FILE_TOO_LARGE"
+  /** An entry of the `.travstats` file names a path outside the archive. */
+  | "TRIP_FILE_UNSAFE_PATH"
   /** A trip, booking or flight id the request named is not the caller's. */
   | "TRIP_NOT_FOUND"
   | "BOOKING_NOT_FOUND"

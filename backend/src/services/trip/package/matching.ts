@@ -220,15 +220,26 @@ export async function existingCruise(
   userId: string,
   contract: PackageContract
 ): Promise<ExistingEntry | null> {
-  const ref = packageCruiseRef(contract);
+  return existingCruiseByRef(userId, {
+    externalRef: packageCruiseRef(contract),
+    bookingReference: contract.bookingReference,
+  });
+}
+
+/** The cruise rule on its own: the provenance key, or the booking reference. */
+export async function existingCruiseByRef(
+  userId: string,
+  ref: { externalRef: string | null; bookingReference: string | null }
+): Promise<ExistingEntry | null> {
+  const or = [
+    ...(ref.externalRef ? [{ externalRef: ref.externalRef }] : []),
+    ...(ref.bookingReference
+      ? [{ bookingReference: { equals: ref.bookingReference, mode: "insensitive" as const } }]
+      : []),
+  ];
+  if (or.length === 0) return null;
   return prisma.cruise.findFirst({
-    where: {
-      userId,
-      OR: [
-        ...(ref ? [{ externalRef: ref }] : []),
-        { bookingReference: { equals: contract.bookingReference, mode: "insensitive" as const } },
-      ],
-    },
+    where: { userId, OR: or },
     select: { id: true, tripId: true, bookingId: true },
   });
 }
