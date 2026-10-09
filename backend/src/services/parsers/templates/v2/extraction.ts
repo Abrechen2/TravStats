@@ -77,6 +77,12 @@ const repeatCommon = {
   within: withinSchema.optional(),
   flags: FLAGS.optional(),
   minimum: z.number().int().min(0).optional(),
+  /**
+   * Fields EVERY item must carry. One item without them makes the whole
+   * repeat count as unread — a flight leg without its number is not a leg the
+   * template understood, and dropping it quietly would answer one leg of two.
+   */
+  required: z.array(z.string().min(1)).optional(),
 };
 
 const matchAllRepeatSchema = z
@@ -226,9 +232,17 @@ function checkWithin(rule: RepeatRule, path: (string | number)[]): Issue[] {
   });
 }
 
+function checkItemRequired(rule: RepeatRule, path: (string | number)[]): Issue[] {
+  return (rule.required ?? []).flatMap((name, i) =>
+    name in rule.fields
+      ? []
+      : [{ path: [...path, "required", i], message: `"${name}" is not a field of this repeat` }]
+  );
+}
+
 function checkRepeat(rule: RepeatRule, path: (string | number)[]): Issue[] {
   const flags = repeatFlags(rule.flags);
-  const issues = checkWithin(rule, path);
+  const issues = [...checkWithin(rule, path), ...checkItemRequired(rule, path)];
   if (rule.mode === "split") {
     issues.push(
       ...checkRegex(rule.splitPattern, flags, [...path, "splitPattern"], { nonEmpty: true }).issues

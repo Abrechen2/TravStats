@@ -169,6 +169,9 @@ export class TemplateRegistry {
    * of any kind is contained here, so it cannot take the v1 sync down with it.
    */
   private async syncFromGitHub(): Promise<void> {
+    // A sync refines what boot loaded; loading the local sources AFTER it
+    // would throw its result away.
+    if (!this.v2LocalLoaded) this.loadLocalV2();
     try {
       await this.v2.sync();
     } catch (err) {

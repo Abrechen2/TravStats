@@ -1,0 +1,46 @@
+{
+  "airline": "Emirates (2014/2015 layout)",
+  "iata": "EK-old",
+  "version": "2026-10",
+  "from": ["@emirates.com"],
+  "subject": ["Buchungsbestätigung"],
+  "selectors": {},
+  "textPatterns": {
+    "flightNumber": ["^(EK\\s?\\d{3,4})\\s*$"],
+    "pnr": ["BOOKING REFERENCE\\s*\\n\\s*([A-Z0-9]{6})\\b"],
+    "departureCode": [
+      "^EK\\s?\\d{3,4}\\s*\\n\\s*\\S+\\s+\\d{1,2}-[A-Za-zä]{3}-\\d{2}\\s+\\d{1,2}:\\d{2}[^(]*?\\(([A-Z]{3})\\)"
+    ],
+    "arrivalCode": [
+      "^EK\\s?\\d{3,4}\\s*\\n\\s*\\S+\\s+\\d{1,2}-[A-Za-zä]{3}-\\d{2}\\s+\\d{1,2}:\\d{2}[\\s\\S]*?\\s\\S+\\s+\\d{1,2}-[A-Za-zä]{3}-\\d{2}\\s+\\d{1,2}:\\d{2}[^(]*?\\(([A-Z]{3})\\)"
+    ],
+    "departureTime": [
+      "^EK\\s?\\d{3,4}\\s*\\n\\s*\\S+\\s+(\\d{1,2}-[A-Za-zä]{3}-\\d{2})\\s+(\\d{1,2}:\\d{2})"
+    ],
+    "arrivalTime": [
+      "^EK\\s?\\d{3,4}\\s*\\n\\s*\\S+\\s+\\d{1,2}-[A-Za-zä]{3}-\\d{2}\\s+\\d{1,2}:\\d{2}[\\s\\S]*?\\s\\S+\\s+(\\d{1,2}-[A-Za-zä]{3}-\\d{2})\\s+(\\d{1,2}:\\d{2})"
+    ]
+  },
+  "segments": {
+    "splitPattern": "^EK\\s?\\d{3,4}\\s*$"
+  },
+  "transforms": {
+    "flightNumber": "removeSpaces",
+    "pnr": "uppercase",
+    "departureTime": "parseIso",
+    "arrivalTime": "parseIso"
+  },
+  "testCases": [
+    {
+      "input": "BOOKING REFERENCE\nQX7TSU\nEK0123\nDi 17-Feb-15 09:10 Franz Josef Strauß - Flughafen (MUC) 5Std. 55Min.\n0 Zwischenstopps Economy\nDi 17-Feb-15 18:05 Dubai - Internationaler Flughafen (DXB)",
+      "expected": {
+        "flightNumber": "EK0123",
+        "pnr": "QX7TSU",
+        "departureCode": "MUC",
+        "arrivalCode": "DXB",
+        "departureTime": "2015-02-17T09:10",
+        "arrivalTime": "2015-02-17T18:05"
+      }
+    }
+  ]
+}

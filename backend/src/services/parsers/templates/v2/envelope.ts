@@ -34,6 +34,15 @@ const ID_RE = new RegExp(`^(${TEMPLATE_DOMAINS.join("|")}):${SLUG}$`);
 
 const nonEmpty = z.string().trim().min(1);
 
+const REGEX_MESSAGE = "must be a valid regex that does not match the empty string";
+function isUsableRegex(source: string): boolean {
+  try {
+    return !new RegExp(source, "im").test("");
+  } catch {
+    return false;
+  }
+}
+
 export const versionSchema = z
   .string()
   .refine(isValidVersion, "must be a version like 2.7.0 or 2026.10.01");
@@ -90,6 +99,15 @@ export const templateEnvelopeSchema = z
     match: z.object({
       markers: z.array(nonEmpty).min(1),
       anchors: z.array(nonEmpty).min(1),
+      /**
+       * Regexes (flags `im`) that mark a document from this issuer as NOT a
+       * booking — a cancellation, a schedule change, a points receipt. They
+       * print the same lines as the booking they refer to, so a template that
+       * reads lines would propose the cancelled trip as a new one. A hit makes
+       * the template answer "not a booking" (`nonBooking`), which a consumer
+       * may treat as the end of the search.
+       */
+      notBookingIf: z.array(z.string().min(1).refine(isUsableRegex, REGEX_MESSAGE)).optional(),
     }),
     extraction: extractionSchema,
     testCases: z.array(testCaseSchema),

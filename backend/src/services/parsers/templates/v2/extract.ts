@@ -215,8 +215,10 @@ function extractUnbounded(extraction: Extraction, text: string): ExtractionResul
   const missing = (extraction.required ?? []).filter((name) => {
     const repeat = compiled.repeats.get(name);
     if (!repeat) return isEmpty(values[name]);
-    const items = values[name] as unknown[];
-    return items.length < (repeat.rule.minimum ?? 1);
+    const items = values[name] as Item[];
+    const itemRequired = repeat.rule.required ?? [];
+    const incomplete = items.some((item) => itemRequired.some((field) => isEmpty(item[field])));
+    return incomplete || items.length < (repeat.rule.minimum ?? 1);
   });
   return { values, missing };
 }

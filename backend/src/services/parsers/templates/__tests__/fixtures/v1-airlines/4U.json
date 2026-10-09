@@ -1,0 +1,56 @@
+{
+  "airline": "Germanwings",
+  "iata": "4U",
+  "version": "2026-10",
+  "from": ["@germanwings.com"],
+  "subject": ["Germanwings Buchungsbestätigung"],
+  "selectors": {},
+  "textPatterns": {
+    "flightNumber": [
+      "^Flug:\\s*\\d{2}\\.\\d{2}\\.\\d{4}\\s*\\|\\s*Flugnummer\\s*:?\\s*(4U\\s?\\d{1,4})\\b"
+    ],
+    "pnr": ["Individueller Buchungscode \\(beim Check-In angeben\\)\\s*\\n\\s*([A-Z0-9]{6})\\b"],
+    "departureTime": [
+      "^Flug:\\s*(\\d{2}\\.\\d{2}\\.\\d{4})\\s*\\|[\\s\\S]*?^(\\d{1,2}:\\d{2}) [A-ZÄÖÜ]"
+    ],
+    "arrivalTime": [
+      "^Flug:\\s*(\\d{2}\\.\\d{2}\\.\\d{4})\\s*\\|[\\s\\S]*?^\\d{1,2}:\\d{2} [A-ZÄÖÜ][\\s\\S]*?(?:^| )(\\d{1,2}:\\d{2}) [A-ZÄÖÜ]"
+    ],
+    "departureCode": [
+      "^Flug:\\s*\\d{2}\\.\\d{2}\\.\\d{4}\\s*\\|[\\s\\S]*?^\\d{1,2}:\\d{2} ([A-ZÄÖÜ][^\\n]*?)(?= \\d{1,2}:\\d{2}| Landung|\\s*$)"
+    ],
+    "arrivalCode": [
+      "^Flug:\\s*\\d{2}\\.\\d{2}\\.\\d{4}\\s*\\|[\\s\\S]*?^\\d{1,2}:\\d{2} [A-ZÄÖÜ][\\s\\S]*?(?:^| )\\d{1,2}:\\d{2} ([A-ZÄÖÜ][^\\n]*?)(?= \\d{1,2}:\\d{2}| Landung|\\s*$)"
+    ]
+  },
+  "segments": {
+    "splitPattern": "^Flug:\\s*\\d{2}\\.\\d{2}\\.\\d{4}\\s*\\|\\s*Flugnummer"
+  },
+  "declineIf": [
+    "Ihre Buchung wurde storniert",
+    "Stornierungsbestätigung",
+    "Ihre Stornierung",
+    "Flugplanänderung"
+  ],
+  "transforms": {
+    "flightNumber": "removeSpaces",
+    "pnr": "uppercase",
+    "departureCode": "airportName",
+    "arrivalCode": "airportName",
+    "departureTime": "parseIso",
+    "arrivalTime": "parseIso"
+  },
+  "testCases": [
+    {
+      "input": "Individueller Buchungscode (beim Check-In angeben)\nQX7TST Tag der Buchung: 02.01.2009 10:15\nFlug: 20.02.2009 | Flugnummer 4U 1234:\nStart Landung\n07:10 Dortmund 08:20 München",
+      "expected": {
+        "flightNumber": "4U1234",
+        "pnr": "QX7TST",
+        "departureCode": "DTM",
+        "arrivalCode": "MUC",
+        "departureTime": "2009-02-20T07:10",
+        "arrivalTime": "2009-02-20T08:20"
+      }
+    }
+  ]
+}

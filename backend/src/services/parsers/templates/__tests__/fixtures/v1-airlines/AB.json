@@ -1,0 +1,54 @@
+{
+  "airline": "Air Berlin",
+  "iata": "AB",
+  "version": "2026-10",
+  "from": ["@airberlin.com", "@invoices.airberlin.com"],
+  "subject": ["Ihre Buchungsbestätigung", "Ihre Rechnung/Buchungsbestätigung"],
+  "selectors": {},
+  "textPatterns": {
+    "flightNumber": [
+      "^(?:[A-Z]{3} - [A-Z]{3} \\d{2}\\.\\d{2}\\.? \\d{1,2}:\\d{2}|(?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) - (?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) ?(?:\\t|\\n(?:Operated by[^\\n]*\\n)?[^\\t\\n]*\\t)\\d{2}\\.\\d{2}\\.\\d{4})[^\\n]*?\\b(AB[ \\t]*\\d{2,4})\\b"
+    ],
+    "pnr": ["^Buchungs(?:code|nummer)[ \\t]+([A-Z0-9]{6})[ \\t]*$"],
+    "departureCode": [
+      "^([A-Z]{3}) - [A-Z]{3} \\d{2}\\.\\d{2}\\.? \\d{1,2}:\\d{2}",
+      "^((?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?)) - (?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) ?(?:\\t|\\n(?:Operated by[^\\n]*\\n)?[^\\t\\n]*\\t)\\d{2}\\.\\d{2}\\.\\d{4}"
+    ],
+    "arrivalCode": [
+      "^[A-Z]{3} - ([A-Z]{3}) \\d{2}\\.\\d{2}\\.? \\d{1,2}:\\d{2}",
+      "^(?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) - ((?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?)) ?(?:\\t|\\n(?:Operated by[^\\n]*\\n)?[^\\t\\n]*\\t)\\d{2}\\.\\d{2}\\.\\d{4}"
+    ],
+    "departureTime": [
+      "^[A-Z]{3} - [A-Z]{3} (?<day>\\d{2})\\.(?<month>\\d{2})\\.? (?<time>\\d{1,2}:\\d{2})(?<=(?:Hinflug|R(?:ü|ue)ckflug)[ :]+\\k<day>\\.\\k<month>\\.(?<year>\\d{4})[\\s\\S]*)",
+      "^(?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) - (?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) ?(?:\\t|\\n(?:Operated by[^\\n]*\\n)?[^\\t\\n]*\\t)(\\d{2}\\.\\d{2}\\.\\d{4})[ \\t]+(\\d{1,2}:\\d{2})"
+    ],
+    "arrivalTime": [
+      "^[A-Z]{3} - [A-Z]{3} (?<day>\\d{2})\\.(?<month>\\d{2})\\.? \\d{1,2}:\\d{2} - (?<time>\\d{1,2}:\\d{2})(?<=(?:Hinflug|R(?:ü|ue)ckflug)[ :]+\\k<day>\\.\\k<month>\\.(?<year>\\d{4})[\\s\\S]*)",
+      "^(?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) - (?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) ?(?:\\t|\\n(?:Operated by[^\\n]*\\n)?[^\\t\\n]*\\t)(\\d{2}\\.\\d{2}\\.\\d{4})[ \\t]+\\d{1,2}:\\d{2} - (\\d{1,2}:\\d{2})"
+    ]
+  },
+  "segments": {
+    "splitPattern": "^(?:[A-Z]{3} - [A-Z]{3} \\d{2}\\.\\d{2}\\.? \\d{1,2}:\\d{2}|(?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) - (?:Berlin - (?:Tegel|Sch(?:ö|oe)nefeld)|[^\\t\\n]+?) ?(?:\\t|\\n(?:Operated by[^\\n]*\\n)?[^\\t\\n]*\\t)\\d{2}\\.\\d{2}\\.\\d{4})"
+  },
+  "transforms": {
+    "flightNumber": "removeSpaces",
+    "pnr": "uppercase",
+    "departureCode": "airportName",
+    "arrivalCode": "airportName",
+    "departureTime": "parseIso",
+    "arrivalTime": "parseIso"
+  },
+  "testCases": [
+    {
+      "input": "Buchungscode \tQX7TST\nSTRECKE \tDATUM \tFLUGZEITEN \tFLUG\nMunich - Dusseldorf \t09.09.2013 \t15:05 - 16:20 \tAB 4441,X",
+      "expected": {
+        "flightNumber": "AB4441",
+        "pnr": "QX7TST",
+        "departureCode": "MUC",
+        "arrivalCode": "DUS",
+        "departureTime": "2013-09-09T15:05",
+        "arrivalTime": "2013-09-09T16:20"
+      }
+    }
+  ]
+}

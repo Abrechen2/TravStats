@@ -1,7 +1,9 @@
 import { describe, it, expect } from "@jest/globals";
 import { extractionSchema, type Extraction } from "../extraction";
 import { extract } from "../extract";
-import { testInputHaystack } from "../runners";
+import { applyTemplate, testInputHaystack } from "../runners";
+import { validateEnvelope, type TemplateEnvelope } from "../envelope";
+import { validTemplate } from "./fixtures";
 
 /**
  * The rule options P4a added so the compiled-in issuer readers can become
@@ -157,5 +159,59 @@ describe("testInputHaystack", () => {
     expect(testInputHaystack({ subject: "S", text: "T" })).toBe("S\nT");
     expect(testInputHaystack({ from: "F", subject: "S", text: "T" })).toBe("F\nS\nT");
     expect(testInputHaystack({ text: "T" })).toBe("T");
+  });
+});
+
+describe("v2 extraction — every item must carry its required fields", () => {
+  const x = spec({
+    repeats: {
+      legs: {
+        mode: "split",
+        splitPattern: "^Leg$",
+        required: ["flight"],
+        fields: {
+          flight: { patterns: ["^Flight (\\w+)$"] },
+          gate: { patterns: ["^Gate (\\w+)$"] },
+        },
+      },
+    },
+    required: ["legs"],
+  });
+
+  it("counts the whole repeat as unread when one item lacks a required field", () => {
+    const out = extract(x, "Leg\nFlight LH1\nLeg\nGate B12");
+    expect(out.values.legs).toHaveLength(2);
+    expect(out.missing).toEqual(["legs"]);
+    expect(extract(x, "Leg\nFlight LH1\nLeg\nFlight LH2").missing).toEqual([]);
+  });
+
+  it("refuses an item requirement that names no field of the repeat", () => {
+    const bad = { mode: "split", splitPattern: "^X$", required: ["nope"], fields: {} };
+    expect(issues({ repeats: { r: bad } })[0]).toMatch(/"nope" is not a field of this repeat/);
+  });
+});
+
+describe("notBookingIf — the issuer's own non-bookings", () => {
+  const envelope = (notBookingIf?: string[]): TemplateEnvelope =>
+    validTemplate({
+      match: { markers: ["example hotels"], anchors: ["reservierung nr."], notBookingIf },
+      extraction: { fields: { ref: { patterns: ["Nr\\. (\\w+)"] } }, required: ["ref"] },
+    });
+
+  it("declines a recognised cancellation and says it is one", () => {
+    const cancellation =
+      "Example Hotels\nReservierung Nr. ABC123\nIhre Reservierung wurde storniert";
+    expect(applyTemplate(envelope(["wurde storniert"]), cancellation)).toEqual({
+      matched: false,
+      values: {},
+      missing: [],
+      nonBooking: true,
+    });
+    expect(applyTemplate(envelope(), cancellation).matched).toBe(true);
+  });
+
+  it("refuses a notBookingIf that does not compile or matches everything", () => {
+    expect(validateEnvelope(envelope(["("])).ok).toBe(false);
+    expect(validateEnvelope(envelope([".*"])).ok).toBe(false);
   });
 });

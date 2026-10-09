@@ -1,0 +1,193 @@
+{
+  "id": "flight:LH",
+  "domain": "flight",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Lufthansa",
+    "kind": "airline",
+    "keys": {
+      "iata": "LH",
+      "senderDomains": ["lufthansa.com", "miles-and-more.com", "lufthansa.de"]
+    }
+  },
+  "markets": [],
+  "match": {
+    "markers": ["lufthansa"],
+    "anchors": [
+      "flugnummer",
+      "flight",
+      "buchungsübersicht",
+      "booking overview",
+      "buchungsreferenz",
+      "booking reference",
+      "buchungscode"
+    ]
+  },
+  "extraction": {
+    "repeats": {
+      "legs": {
+        "mode": "split",
+        "splitPattern": "^\\d{2}\\.\\d{2}\\.\\d{4} - \\d{2}:\\d{2}$",
+        "prependHeader": true,
+        "wholeTextUnlessSplit": true,
+        "required": ["flightNumber"],
+        "fields": {
+          "flightNumber": {
+            "patterns": [
+              "Flugnummer:\\s*([A-Z]{2}\\s?\\d{1,4})\\b",
+              "Flight\\s*(?:number)?:\\s*([A-Z]{2}\\s?\\d{1,4})\\b",
+              "^Flugnummer\\s+([A-Z]{2}\\s?\\d{1,4})\\b",
+              "^([A-Z]{2}\\d{1,4})$"
+            ],
+            "flags": "im",
+            "transform": ["trim", "removeSpaces"]
+          },
+          "pnr": {
+            "patterns": [
+              "Buchungsreferenz:\\s*([A-Z0-9]{5,8})\\b",
+              "Booking\\s*Reference:\\s*([A-Z0-9]{5,8})\\b",
+              "PNR:\\s*([A-Z0-9]{5,8})\\b",
+              "Buchungscode:\\s*([A-Z0-9]{5,8})\\b"
+            ],
+            "flags": "im",
+            "transform": ["trim", "upper"]
+          },
+          "departureCode": {
+            "patterns": [
+              "(?:Von|Ab):[^(\\n]*\\(([A-Z]{3})\\)",
+              "IATA-Code des Abflughafens\\s+([A-Z]{3})\\b",
+              "^([A-Z]{3}) [A-Z]{3}$"
+            ],
+            "flags": "im",
+            "transform": ["trim", "upper"]
+          },
+          "arrivalCode": {
+            "patterns": [
+              "(?:In|Nach|To):[^(\\n]*\\(([A-Z]{3})\\)",
+              "IATA-Code des Ankunftsflughafens\\s+([A-Z]{3})\\b",
+              "^[A-Z]{3} ([A-Z]{3})$"
+            ],
+            "flags": "im",
+            "transform": ["trim", "upper"]
+          },
+          "departureTime": {
+            "patterns": [
+              "Abflug\\s*-\\s*Datum:\\s*(\\d{1,2}\\s+\\w+\\s+\\d{4})[\\s\\S]{0,80}?Zeit:\\s*(\\d{1,2}:\\d{2})",
+              "^(\\d{2}\\.\\d{2}\\.\\d{4}) - (\\d{2}:\\d{2})$"
+            ],
+            "flags": "im",
+            "format": "{1}T{2}",
+            "transform": "dateTime"
+          },
+          "arrivalTime": {
+            "patterns": [
+              "Ankunft\\s*-\\s*Datum:\\s*(\\d{1,2}\\s+\\w+\\s+\\d{4})[\\s\\S]{0,80}?Zeit:\\s*(\\d{1,2}:\\d{2})"
+            ],
+            "flags": "im",
+            "format": "{1}T{2}",
+            "transform": "dateTime"
+          },
+          "seat": {
+            "patterns": ["Sitzplatz:\\s*([0-9]{1,3}[A-F])", "Seat:\\s*([0-9]{1,3}[A-F])"],
+            "flags": "im",
+            "transform": "trim"
+          },
+          "seatClass": {
+            "patterns": [
+              "(?:Reiseklasse|Kabine|Klasse):\\s*(Economy|Business|First|Premium[\\w\\s]*)"
+            ],
+            "flags": "im",
+            "transform": "trim"
+          },
+          "ticketNumber": {
+            "patterns": ["Ticketnummer:\\s*([0-9]{10,14})", "\\b(220[0-9]{10})\\b"],
+            "flags": "im",
+            "transform": "trim"
+          }
+        },
+        "within": {
+          "startAfter": "^Buchungs(?:ü|ue)bersicht$|^Booking overview$",
+          "endBefore": "^Buchung verwalten$|^Manage booking$",
+          "lenient": true
+        }
+      }
+    },
+    "required": ["legs"]
+  },
+  "testCases": [
+    {
+      "name": "the labelled single-leg layout",
+      "input": {
+        "subject": "Ihre Lufthansa Buchungsbestätigung",
+        "text": "Flugnummer: LH 2062\nVon: München (MUC)\nIn: Helsinki (HEL)\nAbflug - Datum: 18 Sep 2025\nZeit:           07:25\nAnkunft - Datum: 18 Sep 2025\nZeit:           10:50\nBuchungsreferenz: ABC123"
+      },
+      "expect": "match",
+      "expected": {
+        "legs": [
+          {
+            "flightNumber": "LH2062",
+            "departureCode": "MUC",
+            "arrivalCode": "HEL",
+            "departureTime": "2025-09-18T07:25"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the 2025 compact layout",
+      "input": {
+        "subject": "Ihre Reise nach Osaka",
+        "text": "Ihre Reise nach Osaka: Alle Details zur Buchung\nBuchungscode: K7QZ2R\nBuchungsübersicht\n23.05.2025 - 12:25\nLH742\nMUC KIX\nMünchen Osaka\n06.06.2025 - 09:30\nLH715\nHND MUC\nTokio München\nBuchung verwalten\nReiseplan\n23.05.2025 - 12:25\nMünchen\nBestätigt\n24.05.2025 - 07:15\nOsaka\nLH742 Durchgeführt von: Lufthansa"
+      },
+      "expect": "match",
+      "expected": {
+        "legs": [
+          {
+            "flightNumber": "LH742",
+            "departureCode": "MUC",
+            "arrivalCode": "KIX",
+            "departureTime": "2025-05-23T12:25"
+          },
+          {
+            "flightNumber": "LH715",
+            "departureCode": "HND",
+            "arrivalCode": "MUC",
+            "departureTime": "2025-06-06T09:30"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the 2025 labelled layout",
+      "input": {
+        "subject": "Ihre Lufthansa Buchungsbestätigung",
+        "text": "Buchungscode: 9RFAA7\nBuchungsübersicht\n18.09.2025 - 08:25\nDatum der Abreise 18.09.2025 Abflugzeit 08:25\nLH2460\nFlugnummer LH2460\nMUC\nIATA-Code des Abflughafens MUC\nHEL\nIATA-Code des Ankunftsflughafens HEL\n21.09.2025 - 19:40\nDatum der Abreise 21.09.2025 Abflugzeit 19:40\nLH2465\nFlugnummer LH2465\nHEL\nIATA-Code des Abflughafens HEL\nMUC\nIATA-Code des Ankunftsflughafens MUC\nBuchung verwalten\nReiseplan\n18.09.2025 - 08:25\nMünchen"
+      },
+      "expect": "match",
+      "expected": {
+        "legs": [
+          {
+            "flightNumber": "LH2460",
+            "departureCode": "MUC",
+            "arrivalCode": "HEL",
+            "departureTime": "2025-09-18T08:25"
+          },
+          {
+            "flightNumber": "LH2465",
+            "departureCode": "HEL",
+            "arrivalCode": "MUC",
+            "departureTime": "2025-09-21T19:40"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a Lufthansa newsletter",
+      "input": {
+        "subject": "Lufthansa Angebote",
+        "text": "Entdecken Sie Europa mit Lufthansa.\nIhr Buchungscode für Rabatte: im Newsletter.\nJetzt buchen."
+      },
+      "expect": "decline"
+    }
+  ]
+}

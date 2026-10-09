@@ -54,6 +54,42 @@
       "domain": "lodging",
       "version": "2026.10.9",
       "path": "lodging/bookingcom-legacy.json"
+    },
+    {
+      "id": "flight:LH-old",
+      "domain": "flight",
+      "version": "2026.10.9",
+      "path": "flight/LH-old.json"
+    },
+    {
+      "id": "flight:LH",
+      "domain": "flight",
+      "version": "2026.10.9",
+      "path": "flight/LH.json"
+    },
+    {
+      "id": "flight:4U",
+      "domain": "flight",
+      "version": "2026.10.9",
+      "path": "flight/4U.json"
+    },
+    {
+      "id": "flight:EK",
+      "domain": "flight",
+      "version": "2026.10.9",
+      "path": "flight/EK.json"
+    },
+    {
+      "id": "flight:EK-old",
+      "domain": "flight",
+      "version": "2026.10.9",
+      "path": "flight/EK-old.json"
+    },
+    {
+      "id": "flight:AB",
+      "domain": "flight",
+      "version": "2026.10.9",
+      "path": "flight/AB.json"
     }
   ]
 }
