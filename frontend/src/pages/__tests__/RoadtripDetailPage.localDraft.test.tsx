@@ -94,7 +94,7 @@ async function renameInEditor(name: string): Promise<void> {
   fireEvent.click(await screen.findByText("roadtrips:detail.edit"));
   await settle();
   fireEvent.click(screen.getByText("Bergen"));
-  fireEvent.change(screen.getByLabelText("roadtrips:editor.name"), { target: { value: name } });
+  fireEvent.change(screen.getByLabelText(/roadtrips:editor.name/), { target: { value: name } });
   await settle(800);
 }
 
@@ -131,7 +131,7 @@ describe("RoadtripDetailPage — local station drafts (forgejo#244)", () => {
     // "Fertig" does not close over edits the server does not have.
     fireEvent.click(screen.getByText("roadtrips:detail.done"));
     await settle(10);
-    expect(screen.getByLabelText("roadtrips:editor.name")).toBeInTheDocument();
+    expect(screen.getByLabelText(/roadtrips:editor.name/)).toBeInTheDocument();
   });
 
   it("offers the kept draft on the next visit and sends it once restored", async () => {

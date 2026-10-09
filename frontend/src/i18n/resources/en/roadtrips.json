@@ -358,9 +358,10 @@
       "noPlace": "{{name}}: place missing",
       "beforePrevious": "{{name}} is before the previous station — check the date",
       "noDeparture": "{{name}}: departure missing",
-      "noStay": "{{name}}: stay not linked yet"
+      "noStay": "{{name}}: stay not linked yet",
+      "endBeforeStart": "{{name}}: departure before arrival"
     },
-    "warningsNote": "Hints only — everything is saved anyway. Only a station without a place or without its linked stay waits.",
+    "warningsNote": "Hints only — saving goes ahead. Only a station without a place, without its linked stay, or with a departure before its arrival waits.",
     "viaNote": "Only shapes the route: not shown as a station on maps or in lists, and counted nowhere.",
     "local": {
       "kept": "kept locally on this device",
@@ -372,7 +373,14 @@
       "confirm": "Discard"
     },
     "moved": "“{{name}}” moved",
-    "movedRestores": "Undo restores the previous order with its legs — nothing is saved until then."
+    "movedRestores": "Undo restores the previous order with its legs — nothing is saved until then.",
+    "placeRequired": "Place of the station",
+    "viaNameHint": "A route correction may stay without a name.",
+    "saveFailed": "The stations could not be saved. Your changes are kept.",
+    "errors": {
+      "endBeforeStart": "The departure is before the arrival. Nothing is saved like this — please correct a date.",
+      "viaOnTimeline": "A stop from the trip's timeline cannot become a route correction. Choose another kind for it."
+    }
   },
   "legDialog": {
     "title": "Leg",

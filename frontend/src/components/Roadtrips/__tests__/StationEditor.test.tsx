@@ -147,13 +147,13 @@ describe("StationEditor", () => {
   it("sends a burst of changes once, and a later change carries the id the server gave", async () => {
     renderEditor("new");
     fireEvent.click(screen.getByText("pick-location"));
-    fireEvent.change(screen.getByLabelText("roadtrips:editor.name"), {
+    fireEvent.change(screen.getByLabelText(/roadtrips:editor.name/), {
       target: { value: "Stavanger Hafen" },
     });
     await pause();
     expect(roadtripsApi.replaceStations).toHaveBeenCalledTimes(1);
 
-    fireEvent.change(screen.getByLabelText("roadtrips:editor.name"), {
+    fireEvent.change(screen.getByLabelText(/roadtrips:editor.name/), {
       target: { value: "Stavanger" },
     });
     await pause();
@@ -228,6 +228,63 @@ describe("StationEditor", () => {
     fireEvent.click(screen.getByLabelText("roadtrips:stations.remove"));
     await pause(PAST_HOLD);
     expect(vi.mocked(roadtripsApi.replaceStations).mock.calls[0][2]).toEqual([HAMBURG_ID]);
+  });
+
+  // forgejo#245: what a station cannot do without is marked at the field.
+  it("marks the name as required and explains the mark", async () => {
+    renderEditor("new");
+    await pause(0); // the lodging library arrives
+    expect(screen.getByLabelText(/roadtrips:editor.name/)).toHaveAttribute("aria-required", "true");
+    expect(screen.getByText("common:form.requiredLegend")).toBeInTheDocument();
+    expect(screen.getByText("roadtrips:editor.placeRequired")).toBeInTheDocument();
+  });
+
+  // forgejo#246: a departure before the arrival used to be sent, refused, and
+  // reported as "Nicht gespeichert" without naming the field.
+  it("says at the departure that it lies before the arrival, and holds the save", async () => {
+    renderEditor();
+    await pause();
+    fireEvent.click(screen.getByText("Hamburg"));
+    fireEvent.click(screen.getByRole("radio", { name: /roadtrips:editor.choice.free.label/ }));
+    const departure = screen.getByLabelText("roadtrips:editor.departure");
+    fireEvent.change(departure, { target: { value: "2026-07-10" } });
+    await pause();
+    expect(roadtripsApi.replaceStations).not.toHaveBeenCalled();
+    expect(departure).toHaveAttribute("aria-invalid", "true");
+    expect(departure).toHaveAccessibleDescription(/roadtrips:editor.errors.endBeforeStart/);
+    expect(
+      screen.getByText("roadtrips:editor.warnings.endBeforeStart:Hamburg")
+    ).toBeInTheDocument();
+  });
+
+  // forgejo#246/#247: the reason of a failed save, in the editor, kept, with a
+  // retry only where retrying can help.
+  it("says why a save was refused, in the editor, without a pointless retry", async () => {
+    vi.mocked(roadtripsApi.replaceStations).mockRejectedValueOnce(
+      Object.assign(new Error("refused"), {
+        isAxiosError: true,
+        response: { status: 400, data: { code: "VIA_POINT_ON_TIMELINE" } },
+      })
+    );
+    renderEditor();
+    fireEvent.click(screen.getByLabelText("roadtrips:stations.remove"));
+    await pause(PAST_HOLD);
+    expect(screen.getByRole("alert")).toHaveTextContent("roadtrips:editor.errors.viaOnTimeline");
+    expect(screen.queryByRole("button", { name: "common:buttons.retry" })).not.toBeInTheDocument();
+  });
+
+  it("offers a retry after a dropped connection, and sends again", async () => {
+    vi.mocked(roadtripsApi.replaceStations).mockRejectedValueOnce(
+      Object.assign(new Error("Network Error"), { isAxiosError: true, response: undefined })
+    );
+    renderEditor();
+    fireEvent.click(screen.getByLabelText("roadtrips:stations.remove"));
+    await pause(PAST_HOLD);
+    expect(screen.getByRole("alert")).toHaveTextContent("common:saveErrors.network");
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    await pause();
+    expect(roadtripsApi.replaceStations).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("takes a removal back when asked", async () => {

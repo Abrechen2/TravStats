@@ -3,10 +3,11 @@ import type { CSSProperties, JSX } from "react";
 
 import Button from "../ui/Button";
 import { Field, Input } from "../ui/Field";
+import { RequiredLegend, RequiredMark } from "../form";
 import { LocationInput } from "../location/LocationInput";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
-import { nextMorning } from "../../lib/roadtrip/roadtripView";
+import { endsBeforeStart, nextMorning } from "../../lib/roadtrip/roadtripView";
 import type { StationState } from "../../shared/tour/roadtrip";
 import StationMarker from "./StationMarker";
 import StayPicker, { type PickableStay } from "./StayPicker";
@@ -78,6 +79,7 @@ export default function StationEditCard({
   const arrival = dayInput(station.startDate);
   const departure = dayInput(station.endDate);
   const idBase = `station-${station.key}`;
+  const backwards = endsBeforeStart(station);
 
   const choose = (next: StationState): void => {
     if (next === kind) return;
@@ -223,6 +225,12 @@ export default function StationEditCard({
         </div>
       </fieldset>
 
+      {/* Pflicht (forgejo#245): a station without a place waits and is never
+          sent. `LocationInput` takes only a text label, so the mark sits on
+          this group heading; the search below is one way to give the place. */}
+      <span className="t-caption" style={{ marginBottom: -12 }}>
+        {t("roadtrips:editor.placeRequired")} <RequiredMark />
+      </span>
       <LocationInput
         compact
         idPrefix={`${idBase}-location`}
@@ -242,10 +250,24 @@ export default function StationEditCard({
           })
         }
       />
-      <Field label={t("roadtrips:editor.name")} htmlFor={`${idBase}-title`}>
+      <Field
+        label={
+          kind === "via" ? (
+            t("roadtrips:editor.name")
+          ) : (
+            <>
+              {t("roadtrips:editor.name")} <RequiredMark />
+            </>
+          )
+        }
+        htmlFor={`${idBase}-title`}
+        // A route correction needs no name; every other station does.
+        hint={kind === "via" ? t("roadtrips:editor.viaNameHint") : undefined}
+      >
         <Input
           id={`${idBase}-title`}
           value={station.title}
+          aria-required={kind === "via" ? undefined : "true"}
           onChange={(e) => onChange({ title: e.target.value })}
         />
       </Field>
@@ -265,13 +287,22 @@ export default function StationEditCard({
             />
           </Field>
           {kind !== "pass" && (
-            <Field label={t("roadtrips:editor.departure")} htmlFor={`${idBase}-end`}>
+            <Field
+              label={t("roadtrips:editor.departure")}
+              htmlFor={`${idBase}-end`}
+              // The server refuses a departure before the arrival; the editor
+              // holds the save and says why here, at the field (forgejo#246).
+              error={backwards ? t("roadtrips:editor.errors.endBeforeStart") : undefined}
+            >
               <Input
                 id={`${idBase}-end`}
                 type="date"
                 value={departure}
                 min={arrival || undefined}
-                invalid={arrival !== "" && departure === ""}
+                invalid={backwards || (arrival !== "" && departure === "")}
+                aria-describedby={
+                  arrival !== "" && departure === "" ? `${idBase}-no-departure` : undefined
+                }
                 onChange={(e) => onChange({ endDate: e.target.value || null })}
               />
             </Field>
@@ -288,6 +319,7 @@ export default function StationEditCard({
       )}
       {kind !== "pass" && kind !== "via" && arrival !== "" && departure === "" && (
         <div
+          id={`${idBase}-no-departure`}
           className="flex flex-wrap items-center"
           style={{ gap: 10, fontSize: 13, color: "var(--ts-warn)" }}
         >
@@ -377,6 +409,7 @@ export default function StationEditCard({
         </div>
       )}
 
+      <RequiredLegend />
       <div className="flex justify-end">
         <Button variant="primary" onClick={onClose}>
           {t("roadtrips:editor.close")}

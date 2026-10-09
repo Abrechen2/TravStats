@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { roadtripsApi } from "../../lib/api/roadtrips";
 import { apiErrorMachineCode } from "../../lib/apiError";
+import { saveErrorKey } from "../../lib/saveErrorMessage";
 import { logger } from "../../lib/logger";
 import { isSavable } from "../../lib/roadtrip/roadtripView";
 import { toEditorStation, type EditorStation } from "../../lib/roadtrip/editorStation";
@@ -70,6 +71,11 @@ function toInput(d: EditorStation & { lat: number; lon: number }): StationInput 
   };
 }
 
+/** The roadtrip's own refusals, in the editor's words. */
+const STATION_ERROR_KEYS: Readonly<Record<string, string>> = {
+  VIA_POINT_ON_TIMELINE: "roadtrips:editor.errors.viaOnTimeline",
+};
+
 const PAUSE_MS = 700;
 /** The editor's undo window; a held change waits this long. */
 export const HOLD_MS = 8000;
@@ -123,6 +129,8 @@ export function useStationAutosave({
   drafts: EditorStation[];
   status: SaveStatus;
   local: LocalDraftState;
+  /** The reason of the last failed send (`status === "error"`), as a key. */
+  errorKey: string | null;
   /** The list the server confirmed last — `base` of a merge. */
   serverStations: () => EditorStation[];
   change: (next: (prev: EditorStation[]) => EditorStation[], options?: { hold?: boolean }) => void;
@@ -136,6 +144,8 @@ export function useStationAutosave({
   const [drafts, setDrafts] = useState<EditorStation[]>(start);
   const [status, setStatusState] = useState<SaveStatus>("saved");
   const [local, setLocal] = useState<LocalDraftState>("none");
+  /** Why the last send failed, as a translation key (forgejo#246). */
+  const [errorKey, setErrorKey] = useState<string | null>(null);
   const statusRef = useRef<SaveStatus>("saved");
   const latest = useRef(start);
   const server = useRef(initial);
@@ -171,6 +181,7 @@ export function useStationAutosave({
       return;
     }
     setStatus("saving");
+    setErrorKey(null);
     try {
       const saved = await roadtripsApi.replaceStations(
         routeId,
@@ -204,6 +215,7 @@ export function useStationAutosave({
         setStatus("conflict");
       } else {
         logger.warn("Saving roadtrip stations failed", err);
+        setErrorKey(saveErrorKey(err, "roadtrips:editor.saveFailed", STATION_ERROR_KEYS));
         setStatus("error");
       }
     }
@@ -353,6 +365,7 @@ export function useStationAutosave({
     drafts,
     status,
     local,
+    errorKey,
     serverStations,
     change,
     releaseHold,

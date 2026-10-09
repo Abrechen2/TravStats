@@ -26,6 +26,8 @@ import type { ShiftRow } from "../../lib/roadtrip/shiftDays";
 import ReorderPreviewDialog from "./ReorderPreviewDialog";
 import ShiftDaysDialog from "./ShiftDaysDialog";
 import StationConflictDialog from "./StationConflictDialog";
+import { FormErrorBanner } from "../form";
+import { isTransientSaveError } from "../../lib/saveErrorMessage";
 import UndoBar from "./UndoBar";
 import StationEditCard from "./StationEditCard";
 import StationMarker from "./StationMarker";
@@ -43,7 +45,8 @@ import {
 } from "./useStationAutosave";
 
 const DASHED: CSSProperties = {
-  minHeight: 40,
+  // 44 px: these are tapped on an iPad more than anywhere (forgejo#249).
+  minHeight: "var(--ts-size-touch-min)",
   borderRadius: "var(--ts-radius-button)",
   background: "none",
   border: "1px dashed color-mix(in srgb, var(--domain-roadtrip) 50%, transparent)",
@@ -144,14 +147,24 @@ export default function StationEditor({
       merge: quiet ? null : merge,
     };
   });
-  const { drafts, status, local, serverStations, change, releaseHold, flush, rebase, discard } =
-    useStationAutosave({
-      routeId,
-      initial: opening.initial,
-      restored: opening.restored,
-      onSaved,
-      sink,
-    });
+  const {
+    drafts,
+    status,
+    local,
+    errorKey,
+    serverStations,
+    change,
+    releaseHold,
+    flush,
+    rebase,
+    discard,
+  } = useStationAutosave({
+    routeId,
+    initial: opening.initial,
+    restored: opening.restored,
+    onSaved,
+    sink,
+  });
   const [pendingMerge, setPendingMerge] = useState<PendingMerge | null>(() =>
     opening.merge ? { origin: "restore", merge: opening.merge, server: opening.initial } : null
   );
@@ -351,6 +364,16 @@ export default function StationEditor({
         {t("roadtrips:editor.hint")}
       </p>
 
+      {/* Why the last save failed, said where the editing happens and kept
+          until the next save (forgejo#246/#247) — not only as two words in the
+          page header. The edits stay; a retry is offered where it can help. */}
+      {status === "error" && (
+        <FormErrorBanner
+          message={t(errorKey ?? "roadtrips:editor.saveFailed")}
+          onRetry={!errorKey || isTransientSaveError(errorKey) ? () => void flush() : undefined}
+        />
+      )}
+
       {drafts.map((s, index) => {
         const next = drafts[index + 1];
         const leg = next ? legBetween(s, next) : undefined;
@@ -488,7 +511,7 @@ export default function StationEditor({
               key={`${w.kind}-${w.index}`}
               type="button"
               onClick={() => setOpenKey(drafts[w.index].key)}
-              className="flex items-center text-left"
+              className="flex items-center text-left pointer-coarse:min-h-(--ts-size-touch-min)"
               style={{
                 gap: 8,
                 fontSize: 13,
