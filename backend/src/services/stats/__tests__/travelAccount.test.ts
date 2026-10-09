@@ -279,6 +279,8 @@ const trip = (o: Partial<TripAccountInput> = {}): TripAccountInput => ({
   stays: [],
   cruises: [],
   flights: [],
+  rail: [],
+  rentals: [],
   expenses: [],
   ...o,
 });

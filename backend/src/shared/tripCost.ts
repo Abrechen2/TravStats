@@ -1,5 +1,5 @@
 /**
- * What a trip cost — the ONE server rule (forgejo#274).
+ * What a trip cost — the ONE server rule (forgejo#274, forgejo#275).
  *
  * Owner rule of 2026-10-08: the server defines the calculation and the data
  * contract; web and Companion take its RESULT and add no price logic of their
@@ -13,7 +13,7 @@
  * lost "most expensive" to a 120 EUR one. Both now read the items below.
  *
  * THE RULE, per entry on the trip:
- *  - A segment (flight, cruise, stay) sold on a booking with a
+ *  - A segment (flight, cruise, stay, train ride) sold on a booking with a
  *    RECORDED price contributes that booking price — once per trip, however
  *    many segments share it, and all-in: the segments' own columns are not
  *    added on top. A booking recorded at 0 is free and does NOT fall back to
@@ -25,8 +25,13 @@
  *    costs on the trip it is attached to. A booking WITH segments costs on
  *    the trips its live segments are on, and only there: attaching it as well
  *    would bill it twice whenever its segments sit on another trip.
- *  - A cancelled segment costs nothing.
+ *  - A cancelled segment costs nothing. A rental costs what
+ *    `rentalCounting.rentalCost` says (D10 b: the invoice's final amount,
+ *    else the booked price; a cancelled one only its cancellation fee). A
+ *    rental deposit is never a cost — nothing here reads one.
  *  - Trip expenses (forgejo#140: ferry, toll, fuel …) are their own items.
+ *    The rental price is NOT copied into them (rental spec §7.3), so a rental
+ *    driven on the trip's roadtrip plus its fuel are two different costs.
  *
  * Amounts stay in the currency they were paid in. Conversion happened on
  * WRITE (`services/fx/snapshot.ts`); a reader that needs one figure uses the
@@ -37,6 +42,7 @@
  * /trips?includeInsights=true`), never a mirror of the rule.
  */
 import { hasRecordedBookingPrice, isAmountRecorded, recordedOwnAmount } from "./flightPricing";
+import { rentalCost } from "./rentalCounting";
 
 /** A price as every priced model stores it: amount, currency, FX snapshot. */
 export interface StoredPrice {
@@ -115,10 +121,25 @@ export interface TripCostInput {
     totalPriceBase: number | null;
     fxBaseCurrency: string | null;
   })[];
+  /** Train rides (forgejo#275): their own price, or their shared booking's — a connection is one booking. */
+  rail: (BookedSegment & StoredPrice)[];
+  /** Rentals on the trip, and those driven on its roadtrips with no trip of their own. */
+  rentals: (StoredPrice & {
+    status: string;
+    finalAmount: number | null;
+    finalCurrency: string | null;
+    finalAmountBase: number | null;
+    finalFxBaseCurrency: string | null;
+  })[];
   expenses: { amount: number; currency: string }[];
+  // EXTENSION POINT — bus (dev/bus-domain, not on main): a bus ride is a
+  // `BookedSegment & StoredPrice` like a train ride. Add `bus` here, walk it
+  // through `segmentCostShare` with the same `counted` set below, and select
+  // it in `services/trip/tripCostLoad.ts`. Nothing else needs to change.
 }
 
-export type TripCostSource = "booking" | "flight" | "cruise" | "stay" | "expense";
+export type TripCostSource =
+  "booking" | "flight" | "cruise" | "stay" | "rail" | "rental" | "expense";
 
 /** One recorded amount on a trip. `amount` is never null; 0 is a recorded free price. */
 export interface TripCostItem {
@@ -182,6 +203,28 @@ export function tripCostItems(trip: TripCostInput): TripCostItems {
       fxBaseCurrency: stay.fxBaseCurrency,
     });
     take("stay", segmentCostShare({ ...stay, own }, counted));
+  }
+  for (const ride of live(trip.rail)) {
+    take("rail", segmentCostShare({ ...ride, own: ownPrice(ride) }, counted));
+  }
+  for (const rental of trip.rentals) {
+    const cost = rentalCost(rental);
+    if (cost === null) {
+      // A cancelled rental without a fee cost nothing known and is no live
+      // entry; any other rental without an amount is an unpriced one.
+      if (rental.status !== "cancelled") unpricedEntries += 1;
+      continue;
+    }
+    // The snapshot of the amount actually chosen: the invoice's own for a
+    // final amount or a fee, the booking's for the booked price.
+    const booked = cost.source === "booked";
+    items.push({
+      source: "rental",
+      amount: cost.amount,
+      currency: cost.currency,
+      amountBase: booked ? rental.priceBase : rental.finalAmountBase,
+      snapshotCurrency: booked ? rental.fxBaseCurrency : rental.finalFxBaseCurrency,
+    });
   }
   for (const expense of trip.expenses) {
     // No FX columns on an expense (forgejo#140): a raw amount only.

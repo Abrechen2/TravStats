@@ -47,11 +47,30 @@ const stay = (o: Partial<TripCostInput["stays"][number]> = {}) => ({
   ...o,
 });
 
+const ride = (o: Partial<TripCostInput["rail"][number]> = {}) => ({
+  status: "completed",
+  ...none,
+  bookingId: null,
+  booking: null,
+  ...o,
+});
+const rental = (o: Partial<TripCostInput["rentals"][number]> = {}) => ({
+  status: "completed",
+  ...none,
+  finalAmount: null,
+  finalCurrency: null,
+  finalAmountBase: null,
+  finalFxBaseCurrency: null,
+  ...o,
+});
+
 const trip = (o: Partial<TripCostInput> = {}): TripCostInput => ({
   bookings: [],
   flights: [],
   cruises: [],
   stays: [],
+  rail: [],
+  rentals: [],
   expenses: [],
   ...o,
 });
@@ -168,6 +187,103 @@ describe("tripCostItems — what an entry on a trip costs", () => {
       spendBaseByCurrency: {},
       unpricedEntries: 1,
     });
+  });
+});
+
+describe("tripCostItems — train rides and rentals (forgejo#275)", () => {
+  it("prices a pure rail trip by its rides' own prices", () => {
+    const input = trip({ rail: [ride({ ...eur(89.9) }), ride({ ...eur(29.9) })] });
+    expect(spend(input).spendByCurrency).toEqual({ EUR: 119.8 });
+  });
+
+  it("counts a connection sold on one booking once, not once per train", () => {
+    const booking = eur(149, 149);
+    const input = trip({
+      rail: [
+        ride({ bookingId: "con", booking }),
+        ride({ bookingId: "con", booking }),
+        ride({ bookingId: "con", booking }),
+      ],
+    });
+    expect(spend(input)).toEqual({
+      spendByCurrency: { EUR: 149 },
+      spendBaseByCurrency: { EUR: 149 },
+      unpricedEntries: 0,
+    });
+  });
+
+  it("prices a rental by its invoice when there is one, else by the booked price (D10 b)", () => {
+    const invoiced = rental({
+      ...eur(300, 300),
+      finalAmount: 342.5,
+      finalCurrency: "EUR",
+      finalAmountBase: 342.5,
+      finalFxBaseCurrency: "EUR",
+    });
+    expect(spend(trip({ rentals: [invoiced] }))).toEqual({
+      spendByCurrency: { EUR: 342.5 },
+      spendBaseByCurrency: { EUR: 342.5 },
+      unpricedEntries: 0,
+    });
+    expect(spend(trip({ rentals: [rental({ ...eur(300, 300) })] })).spendByCurrency).toEqual({
+      EUR: 300,
+    });
+  });
+
+  it("takes the snapshot of the amount it chose, not the booked one", () => {
+    const usd = rental({
+      price: 400,
+      currency: "USD",
+      priceBase: 360,
+      fxBaseCurrency: "EUR",
+      finalAmount: 455,
+      finalCurrency: "USD",
+      finalAmountBase: 410,
+      finalFxBaseCurrency: "EUR",
+    });
+    const { items } = tripCostItems(trip({ rentals: [usd] }));
+    expect(tripBaseTotal(items, "EUR")).toEqual({ kind: "total", amount: 410 });
+  });
+
+  it("never sums a deposit, whatever a row may carry beside its price", () => {
+    // `feat/ux-rental` adds deposit columns; this rule reads named amounts only.
+    const withDeposit = { ...rental({ ...eur(300) }), depositAmount: 1000, depositCurrency: "EUR" };
+    expect(spend(trip({ rentals: [withDeposit] })).spendByCurrency).toEqual({ EUR: 300 });
+  });
+
+  it("counts a cancelled rental's fee and nothing else; a cancelled ride not at all", () => {
+    const input = trip({
+      rentals: [
+        rental({ status: "cancelled", ...eur(500), finalAmount: 45, finalCurrency: "EUR" }),
+        rental({ status: "cancelled", ...eur(500) }),
+      ],
+      rail: [ride({ status: "cancelled", ...eur(120) }), ride({ status: "cancelled" })],
+    });
+    expect(spend(input)).toEqual({
+      spendByCurrency: { EUR: 45 },
+      spendBaseByCurrency: {},
+      unpricedEntries: 0,
+    });
+  });
+
+  it("reports a ride or rental with no price as unpriced", () => {
+    const input = trip({ rail: [ride()], rentals: [rental()] });
+    expect(spend(input)).toEqual({
+      spendByCurrency: {},
+      spendBaseByCurrency: {},
+      unpricedEntries: 2,
+    });
+  });
+
+  it("adds a mixed trip once per source: flight booking shared with a train, a rental, fuel", () => {
+    const railAndFly = eur(250);
+    const input = trip({
+      flights: [flight({ bookingId: "rail-and-fly", booking: railAndFly })],
+      rail: [ride({ bookingId: "rail-and-fly", booking: railAndFly })],
+      rentals: [rental({ price: 210, currency: "CHF" })],
+      expenses: [{ amount: 60, currency: "CHF" }],
+    });
+    expect(spend(input).spendByCurrency).toEqual({ EUR: 250, CHF: 270 });
   });
 });
 

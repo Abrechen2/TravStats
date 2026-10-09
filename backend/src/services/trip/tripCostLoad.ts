@@ -12,6 +12,19 @@ import type { TripCostInput } from "../../shared/tripCost";
 const PRICE = { price: true, currency: true, priceBase: true, fxBaseCurrency: true } as const;
 const BOOKING_PRICE = { select: PRICE } as const;
 const AMOUNT = { select: { amount: true, currency: true } } as const;
+/**
+ * The two amounts `rentalCounting.rentalCost` chooses between, each with its
+ * own snapshot. Named columns only, never a spread of the model: a deposit
+ * is not a cost (rental spec §4.6) and must not be selectable from here.
+ */
+const RENTAL_PRICE = {
+  status: true,
+  ...PRICE,
+  finalAmount: true,
+  finalCurrency: true,
+  finalAmountBase: true,
+  finalFxBaseCurrency: true,
+} as const;
 
 export const TRIP_COST_SELECT = {
   bookings: {
@@ -46,11 +59,23 @@ export const TRIP_COST_SELECT = {
       booking: BOOKING_PRICE,
     },
   },
+  // Train rides price like any segment: their own price, or the booking a
+  // connection shares (forgejo#275).
+  railJourneys: { select: { status: true, ...PRICE, bookingId: true, booking: BOOKING_PRICE } },
+  rentalBookings: { select: RENTAL_PRICE },
   // Trip-wide expenses, and those of its sections — a section's is stored on
   // the section (exactly one of the two is set, a CHECK), so it follows a
   // roadtrip that changes trip and is never read twice.
   expenses: AMOUNT,
-  routes: { select: { expenses: AMOUNT } },
+  routes: {
+    select: {
+      expenses: AMOUNT,
+      // A rental driven on this trip's roadtrip but filed under no trip of
+      // its own costs here. One filed under a trip is read there, through
+      // `rentalBookings` — never through its roadtrip as well (spec §7.3).
+      rentals: { where: { tripId: null }, select: RENTAL_PRICE },
+    },
+  },
 } satisfies Prisma.TripSelect;
 
 export type TripCostRow = Prisma.TripGetPayload<{ select: typeof TRIP_COST_SELECT }>;
@@ -70,6 +95,8 @@ export function toTripCostInput(row: TripCostRow): TripCostInput {
     flights: row.flights,
     cruises: row.cruises,
     stays: row.lodgingStays,
+    rail: row.railJourneys,
+    rentals: [...row.rentalBookings, ...row.routes.flatMap((route) => route.rentals)],
     expenses: [...row.expenses, ...row.routes.flatMap((route) => route.expenses)].map(expenseMoney),
   };
 }
