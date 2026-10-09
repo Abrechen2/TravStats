@@ -75,7 +75,7 @@
         "within": {
           "startAfter": "^VON - NACH AIRLINE FLUGNR"
         },
-        "pattern": "^(?<dep>[A-Z]{3}) - (?<arr>[A-Z]{3}) (?<fn>(?<al>[A-Z0-9]{2}) ?\\d{1,4}) (?<date>\\d{2}\\.\\d{2}\\.\\d{2}) (?<dt>\\d{1,2}:\\d{2}) (?<at>\\d{1,2}:\\d{2})(?<off>\\+\\d)?[ \\t]*$",
+        "pattern": "^(?<dep>[A-Z]{3}) - (?<arr>[A-Z]{3}) (?<fn>(?<al>[A-Z0-9]{2}) ?\\d{1,4}) (?<date>\\d{2}\\.\\d{2}\\.\\d{2}) (?<dt>\\d{1,2}:\\d{2}) (?<at>\\d{1,2}:\\d{2})(?<off>\\+\\d)?(?:[ \\t]+[0-9]X\\d{2}KG|[ \\t]+\\d{2}K|[ \\t]+\\d PC)?[ \\t]*$",
         "fields": {
           "depIata": {
             "group": "dep",
@@ -124,6 +124,47 @@
     {
       "name": "an invented invoice is read: reference without its revision suffix, price, four legs",
       "input": "Berge & Meer Touristik GmbH · Beispielallee 1 · 99999 Musterstadt\nRECHNUNG\nBuchungs-Nr. 9Z123456/2\nDatum: 02.03.26\nSie haben bei uns gebucht: Kenia & Tansania – Erlebnisreise\nIhr Reisetag: 18.05.2026\nREISETEILNEHMER NAME GEBURTSDATUM\n1 Frau Erika Beispiel 01.01.70\n2 Herr Max Muster 02.02.71\nIHRE FLUGSTRECKE\nVON - NACH AIRLINE FLUGNR DATUM ABFLUG ANKUNFT\nFRA - ADD ET 707 18.05.26 21:35 06:25+1\nADD - NBO ET 308 19.05.26 08:40 10:55\nNBO - ADD ET 309 30.05.26 12:00 14:10\nADD - FRA ET 706 30.05.26 23:15 05:50+1\n* Flugzeiten unter Vorbehalt\nLEISTUNGEN\nRundreise laut Programm\nHotel für 2 Erw.\nGesamtbetrag 3.249,00 EUR",
+      "expect": "match",
+      "expected": {
+        "bookingReference": "9Z123456",
+        "issuedOn": "2026-03-02",
+        "tripName": "Kenia & Tansania – Erlebnisreise",
+        "startDate": "2026-05-18",
+        "travellers": 2,
+        "totalPrice": 3249,
+        "currency": "EUR",
+        "flights": [
+          {
+            "depIata": "FRA",
+            "arrIata": "ADD",
+            "flightNumber": "ET707",
+            "airline": "ET",
+            "date": "2026-05-18",
+            "depTime": "21:35",
+            "arrTime": "06:25",
+            "arrDayOffset": 1
+          },
+          {
+            "depIata": "ADD",
+            "arrIata": "NBO",
+            "flightNumber": "ET308",
+            "arrDayOffset": 0
+          },
+          {
+            "depIata": "NBO",
+            "arrIata": "ADD",
+            "date": "2026-05-30"
+          },
+          {
+            "flightNumber": "ET706",
+            "arrDayOffset": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "flight table with the baggage remark column (BEMERKUNG)",
+      "input": "Berge & Meer Touristik GmbH · Beispielallee 1 · 99999 Musterstadt\nRECHNUNG\nBuchungs-Nr. 9Z123456/2\nDatum: 02.03.26\nSie haben bei uns gebucht: Kenia & Tansania – Erlebnisreise\nIhr Reisetag: 18.05.2026\nREISETEILNEHMER NAME GEBURTSDATUM\n1 Frau Erika Beispiel 01.01.70\n2 Herr Max Muster 02.02.71\nIHRE FLUGSTRECKE\nVON - NACH AIRLINE FLUGNR DATUM ABFLUG ANKUNFT BEMERKUNG\nFRA - ADD ET 707 18.05.26 21:35 06:25+1 2X23KG\nADD - NBO ET 308 19.05.26 08:40 10:55 2X23KG\nNBO - ADD ET 309 30.05.26 12:00 14:10 1X23KG\nADD - FRA ET 706 30.05.26 23:15 05:50+1 2X23KG\n* Flugzeiten unter Vorbehalt\nLEISTUNGEN\nRundreise laut Programm\nHotel für 2 Erw.\nGesamtbetrag 3.249,00 EUR",
       "expect": "match",
       "expected": {
         "bookingReference": "9Z123456",
