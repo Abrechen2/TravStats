@@ -287,6 +287,21 @@ export const trackArchiveLimiter = rateLimit({
   keyGenerator: userOrIpKey,
 });
 
+/**
+ * Per-user limit for the single-trip file (`.travstats`, spec 2026-10-09 S3):
+ * an export zips every document and photo of a trip, and an import unpacks up
+ * to a few hundred MB. Thirty in a quarter of an hour covers exporting,
+ * previewing and importing a handful of times over.
+ */
+export const tripFileLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: patAwareMax(30),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many trip file requests, please try again later" },
+  keyGenerator: userOrIpKey,
+});
+
 /** Flight creation, per user (`FLIGHT_CREATION_MAX` an hour); every request counts. */
 export const flightCreationLimiter = rateLimit({
   windowMs: RATE_LIMITS.FLIGHT_CREATION_WINDOW_MS,

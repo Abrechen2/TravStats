@@ -49,13 +49,7 @@ export type TripArchiveLimits = typeof TRIP_FILE_LIMITS;
 const SLICE = 16 * 1024;
 
 const invalid = (message: string, issues?: string): AppError =>
-  new AppError(
-    message,
-    422,
-    "TRIP_FILE_INVALID",
-    undefined,
-    issues ? { issues } : undefined
-  );
+  new AppError(message, 422, "TRIP_FILE_INVALID", undefined, issues ? { issues } : undefined);
 const tooLarge = (): AppError =>
   new AppError("The file is larger than a trip file may be", 413, "TRIP_FILE_TOO_LARGE");
 

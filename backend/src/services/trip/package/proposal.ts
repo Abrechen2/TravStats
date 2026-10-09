@@ -48,17 +48,26 @@ export interface ProposalOptions {
   choices?: PackageChoices;
 }
 
-interface Decision {
+export interface Decision {
   action: EntityAction;
   id: string | null;
   reason?: ProposalReason;
 }
 
-/** What to do with an existing row, given the trip the package lands on. */
-function decideExisting(existing: ExistingEntry, tripId: string | null): Decision {
+/**
+ * What to do with an existing row, given the trip the package lands on.
+ * `bookingWanted` is false for an entry the import has no booking for (a
+ * rental, a visit, a flight booked without one): a row already on the trip
+ * is then a duplicate, not something to attach a booking to.
+ */
+export function decideExisting(
+  existing: ExistingEntry,
+  tripId: string | null,
+  bookingWanted = true
+): Decision {
   if (existing.tripId === null) return { action: "attach", id: existing.id };
   if (existing.tripId === tripId) {
-    return existing.bookingId === null
+    return existing.bookingId === null && bookingWanted
       ? { action: "attach", id: existing.id }
       : { action: "skip", id: existing.id, reason: "duplicate" };
   }

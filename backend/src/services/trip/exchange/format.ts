@@ -20,6 +20,7 @@
  * this one than the file needs to.
  */
 import { z } from "zod";
+import { isValidZone } from "../../../shared/time/zonedParts";
 
 export const TRIP_FILE_FORMAT = "travstats-trip";
 export const TRIP_FILE_VERSION = 1;
@@ -48,7 +49,9 @@ const day = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/)
   .nullable();
-const zone = optStr(200);
+/** A zone is stored and later computed with — one this runtime cannot read is refused here. */
+const requiredZone = z.string().max(64).refine(isValidZone, "unknown time zone");
+const zone = requiredZone.nullable();
 const lat = z.number().min(-90).max(90);
 const lon = z.number().min(-180).max(180);
 const money = z.number().finite().nullable();
@@ -110,9 +113,7 @@ const tripSchema = z
   })
   .strict();
 
-const bookingSchema = z
-  .object({ key, pnr: optStr(200), price: money, currency })
-  .strict();
+const bookingSchema = z.object({ key, pnr: optStr(200), price: money, currency }).strict();
 
 const flightPrivate = z
   .object({
@@ -344,7 +345,7 @@ const rentalEnd = z
     lat,
     lon,
     country: optStr(200),
-    timezone: str(200),
+    timezone: requiredZone,
   })
   .strict();
 

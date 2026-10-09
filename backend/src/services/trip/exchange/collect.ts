@@ -162,7 +162,8 @@ export async function collectTrip(
   const railKey = keyer("r");
   const rentalKey = keyer("rt");
   const stopKey = keyer("st");
-  const bk = (id: string | null) => (id && trip.bookings.some((b) => b.id === id) ? bookingKey(id) : null);
+  const bk = (id: string | null) =>
+    id && trip.bookings.some((b) => b.id === id) ? bookingKey(id) : null;
 
   const { places, visits, visitKey, addPlace } = placesAndVisits(trip, priv);
   const stopPlaces = await prisma.place.findMany({
@@ -513,8 +514,7 @@ export async function collectTrip(
         lat: p.lat,
         lon: p.lon,
         sortIdx: p.sortIdx,
-        stopKey:
-          p.stopId && trip.stops.some((s) => s.id === p.stopId) ? stopKey(p.stopId) : null,
+        stopKey: p.stopId && trip.stops.some((s) => s.id === p.stopId) ? stopKey(p.stopId) : null,
       });
     });
   }
