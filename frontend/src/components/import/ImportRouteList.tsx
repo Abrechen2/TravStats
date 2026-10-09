@@ -108,7 +108,7 @@ export function ImportManualFooter({ label, onSelect }: ManualFooterProps): JSX.
       <button
         type="button"
         onClick={onSelect}
-        className="text-xs text-(--text-muted) underline underline-offset-4 hover:text-(--text-primary)"
+        className="text-xs text-(--text-muted) underline underline-offset-4 hover:text-(--text-primary) pointer-coarse:inline-flex pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:items-center"
       >
         {label}
       </button>

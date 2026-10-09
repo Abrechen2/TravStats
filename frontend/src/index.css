@@ -195,6 +195,14 @@
   &:focus {
     border-color: var(--accent);
   }
+  /* Touch sizing follows the pointer (forgejo#249): the web build is drawn for
+     iPads, where a 38 px field was measured as a missed tap. Every form field
+     that uses this class — and the shared ones built on it (LocationInput,
+     TagInput) — reaches the touch minimum on a coarse pointer only, so the
+     desktop layout keeps its density. */
+  @media (pointer: coarse) {
+    min-height: var(--ts-size-touch-min);
+  }
 }
 
 @utility checkbox {

@@ -2,6 +2,17 @@ import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { unfoldAncestors } from "./requiredFields";
 
+/**
+ * The items sit INSIDE a sentence, so they keep their text size (a 44 px link
+ * in the middle of a line breaks the line - the Modal footer exempts
+ * `data-inline-action` for that reason). On a coarse pointer the HIT area grows
+ * instead: an `::after` reaching 14 px above and below the line and 8 px to each
+ * side, 16 + 2 x 14 = 44 px tall, with no layout change (forgejo#249; measured
+ * 30 x 16 on an iPad).
+ */
+export const INLINE_TOUCH_CLASS =
+  "relative underline underline-offset-2 hover:text-[var(--text-primary)] pointer-coarse:after:absolute pointer-coarse:after:-inset-y-3.5 pointer-coarse:after:-inset-x-2";
+
 export interface MissingStep {
   /** The DOM id of the control that resolves it — the item focuses it. */
   field: string;
@@ -51,7 +62,7 @@ export default function SaveBlockedHint({
       type="button"
       data-inline-action=""
       onClick={() => focusField(step.field)}
-      className="underline underline-offset-2 hover:text-[var(--text-primary)]"
+      className={INLINE_TOUCH_CLASS}
     >
       {step.label}
     </button>
