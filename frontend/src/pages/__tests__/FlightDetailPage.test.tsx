@@ -34,6 +34,12 @@ vi.mock("../../lib/api", () => ({
   tripsApi: { getAll: vi.fn().mockResolvedValue([]) },
 }));
 
+// The booking and its segments (forgejo#218) — its own API module.
+const getBookingMock = vi.fn();
+vi.mock("../../lib/api/flightBooking", () => ({
+  flightBookingApi: { get: (...args: unknown[]) => getBookingMock(...args) },
+}));
+
 vi.mock("../../components/NavigationBar", () => ({ default: () => <div /> }));
 vi.mock("../../components/FlightEditModal", () => ({ default: () => null }));
 vi.mock("../../components/SpecialFlightModal", () => ({ default: () => null }));
@@ -72,6 +78,7 @@ function renderPage() {
 describe("FlightDetailPage", () => {
   beforeEach(() => {
     getByIdMock.mockReset();
+    getBookingMock.mockReset();
     listForEntryMock.mockReset();
     listForEntryMock.mockResolvedValue([]);
   });
@@ -144,6 +151,36 @@ describe("FlightDetailPage", () => {
     await waitFor(() =>
       expect(listForEntryMock).toHaveBeenCalledWith({ type: "flight", id: "f1" })
     );
+  });
+
+  it("shows the booking's other flights as one journey, each linked (forgejo#218)", async () => {
+    const own = makeFlight({ bookingId: "b1" });
+    const onward = makeFlight({
+      id: "f2",
+      flightNumber: "LH400",
+      depIata: "CPH",
+      arrIata: "JFK",
+      bookingId: "b1",
+      departureTime: "2026-12-21T21:00:00.000Z",
+    });
+    getByIdMock.mockResolvedValue(own);
+    getBookingMock.mockResolvedValue({
+      booking: { id: "b1", pnr: "ABC123", price: null, currency: null, otherEntries: 0 },
+      segments: [own, onward],
+    });
+    renderPage();
+
+    const list = await screen.findByTestId("booking-itinerary");
+    expect(getBookingMock).toHaveBeenCalledWith("f1");
+    expect(list).toHaveTextContent("MUC → CPH");
+    expect(screen.getByRole("link", { name: /CPH → JFK/ })).toHaveAttribute("href", "/flights/f2");
+  });
+
+  it("asks for no booking when the flight is linked to none", async () => {
+    getByIdMock.mockResolvedValue(makeFlight());
+    renderPage();
+    await waitFor(() => expect(screen.getByText(/LH2462/)).toBeInTheDocument());
+    expect(getBookingMock).not.toHaveBeenCalled();
   });
 
   it("gives a baggage allowance typed as a bare number its unit (forgejo#186)", async () => {

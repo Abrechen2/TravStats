@@ -23,6 +23,7 @@ import flightRoutes from "./flights";
 import flightEntrySuggestionRoutes from "./flights/entrySuggestions";
 import flightTrackRoutes from "./flights/track";
 import flightObservedTimesRoutes from "./flights/observedTimes";
+import flightBookingRoutes from "./flights/booking";
 import upcomingRoutes from "./upcoming";
 import photoJourneyRoutes from "./photoJourneys";
 import tripSuggestionRoutes from "./tripSuggestions";
@@ -183,6 +184,8 @@ export const apiMounts: ApiMount[] = [
   // at the same prefix, the `cruises.tracks` pattern: flights.ts is frozen.
   { id: "flights.track", base: "/api/v1/flights", router: flightTrackRoutes },
   { id: "flights.observedTimes", base: "/api/v1/flights", router: flightObservedTimesRoutes },
+  // A flight's booking and its segments (forgejo#218/#219).
+  { id: "flights.booking", base: "/api/v1/flights", router: flightBookingRoutes },
   // The dashboard tab strip's "next up" line — one route for every domain,
   // so the strip never depends on which tab happens to have loaded.
   { id: "upcoming", base: "/api/v1/upcoming", router: upcomingRoutes },

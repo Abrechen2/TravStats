@@ -516,5 +516,20 @@
     "openPass": "{{name}} öffnen",
     "passesOthers_one": "Keine Datei ist als Bordkarte abgelegt; unten unter „Dokumente“ liegt ein anderes Dokument.",
     "passesOthers_other": "Keine Datei ist als Bordkarte abgelegt; unten unter „Dokumente“ liegen {{count}} andere Dokumente."
+  },
+  "itinerary": {
+    "title": "Reiseablauf dieser Buchung",
+    "pnr": "Buchung {{pnr}}",
+    "thisFlight": "(dieser Flug)",
+    "transfer": "Umstieg in {{airport}} · {{duration}} Umsteigezeit",
+    "conflict": "Zeitkonflikt: Der nächste Flug startet {{duration}} vor der Landung dieses Flugs.",
+    "timeUnknown": "Umstieg in {{airport}} · Umsteigezeit unbekannt – eine der Zeiten ist nur mit Datum erfasst oder fehlt.",
+    "orderUnknown": "Reihenfolge unbekannt: Ein Flug dieses Tages ist nur mit Datum erfasst, daher ist kein Umstieg bestimmbar.",
+    "separate": "Eigene Reise – kein Umstieg (Rückflug oder mehr als 24 Std. Aufenthalt).",
+    "airportChange": "Flughafenwechsel: {{from}} → {{to}}",
+    "airportChangeKm": "Flughafenwechsel: {{from}} → {{to}} · ca. {{km}} km Luftlinie",
+    "airportUnconfirmed": "Ob der Flughafen wechselt, ist unbekannt – ein Flughafencode fehlt.",
+    "noReachabilityClaim": "Gezeigt sind die erfassten Zeiten. Ob ein Anschluss erreichbar ist, kann TravStats nicht wissen.",
+    "loadFailed": "Die übrigen Flüge dieser Buchung konnten nicht geladen werden."
   }
 }

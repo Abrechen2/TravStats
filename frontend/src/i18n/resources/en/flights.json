@@ -516,5 +516,20 @@
     "openPass": "Open {{name}}",
     "passesOthers_one": "No file is filed as a boarding pass; there is one other document below under “Documents”.",
     "passesOthers_other": "No file is filed as a boarding pass; there are {{count}} other documents below under “Documents”."
+  },
+  "itinerary": {
+    "title": "This booking's journey",
+    "pnr": "Booking {{pnr}}",
+    "thisFlight": "(this flight)",
+    "transfer": "Change at {{airport}} · {{duration}} connecting time",
+    "conflict": "Time conflict: the next flight leaves {{duration}} before this flight lands.",
+    "timeUnknown": "Change at {{airport}} · connecting time unknown – one of the times is recorded with its date only, or missing.",
+    "orderUnknown": "Order unknown: a flight on this day is recorded with its date only, so no change can be worked out.",
+    "separate": "A journey of its own – no change of planes (a return, or a stay of more than 24 h).",
+    "airportChange": "Change of airport: {{from}} → {{to}}",
+    "airportChangeKm": "Change of airport: {{from}} → {{to}} · about {{km}} km in a straight line",
+    "airportUnconfirmed": "Whether the airport changes is unknown – an airport code is missing.",
+    "noReachabilityClaim": "These are the recorded times. Whether a connection can be made is something TravStats cannot know.",
+    "loadFailed": "The other flights of this booking could not be loaded."
   }
 }

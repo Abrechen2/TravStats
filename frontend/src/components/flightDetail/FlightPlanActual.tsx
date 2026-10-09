@@ -1,5 +1,6 @@
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { minutesText } from "../../lib/flights/minutesText";
 import { formatLocalClock, formatLocalDate } from "../../lib/displayFormat";
 import {
   flightPlanActual,
@@ -12,16 +13,6 @@ import YourTimeHint from "../time/YourTimeHint";
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
-/** "42 Min." / "1 Std. 12 Min." — always the magnitude; the sign is the caller's word. */
-function durationText(minutes: number, t: Translate): string {
-  const abs = Math.abs(minutes);
-  const h = Math.floor(abs / 60);
-  const m = abs % 60;
-  if (h === 0) return t("flights:planActual.durationM", { m });
-  if (m === 0) return t("flights:planActual.durationH", { h });
-  return t("flights:planActual.durationHM", { h, m });
-}
-
 /**
  * The deviation spelled out. Colour is never the only signal (forgejo#216):
  * the sign, the word "später"/"früher" and "unbekannt" carry the meaning, and
@@ -30,7 +21,7 @@ function durationText(minutes: number, t: Translate): string {
 export function deviationText(deviation: Deviation, t: Translate): string {
   if (deviation.kind === "unknown") return t("flights:planActual.unknown");
   if (deviation.minutes === 0) return t("flights:planActual.onTime");
-  const duration = durationText(deviation.minutes, t);
+  const duration = minutesText(deviation.minutes, t);
   return deviation.minutes > 0
     ? t("flights:planActual.later", { duration })
     : t("flights:planActual.earlier", { duration });

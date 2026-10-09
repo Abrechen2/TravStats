@@ -36,6 +36,8 @@ import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import FlightTrackSection from "../components/flightTrack/FlightTrackSection";
 import FlightPlanActual from "../components/flightDetail/FlightPlanActual";
 import FlightDayCard, { dayCardShown } from "../components/flightDetail/FlightDayCard";
+import BookingItinerary from "../components/flightDetail/BookingItinerary";
+import { useFlightBooking } from "../components/flightDetail/useFlightBooking";
 
 /**
  * Reading a flight without editing it.
@@ -122,6 +124,9 @@ export default function FlightDetailPage(): JSX.Element {
       cancelled = true;
     };
   }, [flight?.tripId]);
+
+  /** The booking's segments (forgejo#218); re-read with the flight after an edit. */
+  const booking = useFlightBooking(flight?.id ?? null, flight?.bookingId, reloadKey);
 
   // `?edit=1` — the inbox sending the user here to fill in a time or an
   // airport the time-model migration could not resolve (timeFlagLinks.ts).
@@ -256,6 +261,8 @@ export default function FlightDetailPage(): JSX.Element {
               },
             ]}
           />
+
+          <BookingItinerary flightId={flight.id} state={booking.state} onRetry={booking.retry} />
 
           <DetailSection
             title={t("flights:detail.route")}
