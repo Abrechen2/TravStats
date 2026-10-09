@@ -69,24 +69,6 @@ describe("rental deposit in the form", () => {
     expect("price" in update.mock.calls[0][1]).toBe(false);
   });
 
-  // Review minor 6: an untouched deposit currency is the booking's, not EUR.
-  it("holds a deposit in the booking's currency unless another is picked", async () => {
-    render(
-      <RentalFormModal
-        rental={makeRental({ price: 400, currency: "USD" })}
-        initialStep="pickup"
-        onClose={vi.fn()}
-        onSaved={vi.fn()}
-      />
-    );
-    fireEvent.change(screen.getByLabelText("rental:form.depositAmount"), {
-      target: { value: "300" },
-    });
-    fireEvent.click(save());
-    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
-    expect(update.mock.calls[0][1]).toMatchObject({ depositAmount: 300, depositCurrency: "USD" });
-  });
-
   it("refuses more back than was held at that field, on the return step", async () => {
     render(
       <RentalFormModal

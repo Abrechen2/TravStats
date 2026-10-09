@@ -57,6 +57,13 @@ describe("rentalFormModel", () => {
     expect("price" in rentalInputFromDraft({ ...placed, price: "" })).toBe(false);
   });
 
+  // Review minor 6: on a new rental an untouched deposit currency is the booking's, not EUR.
+  it("holds a new rental's deposit in the booking's currency unless another is picked", () => {
+    const draft = { ...placed, price: "400", currency: "USD", depositAmount: "300" };
+    expect(rentalInputFromDraft(draft).depositCurrency).toBe("USD");
+    expect(rentalInputFromDraft({ ...draft, depositCurrency: "EUR" }).depositCurrency).toBe("EUR");
+  });
+
   // Review I4: an unchanged booked price is not sent, so it is not recorded as
   // typed by hand and keeps "aus der Buchungsbestätigung".
   it("sends the booked price only when it changed", () => {
