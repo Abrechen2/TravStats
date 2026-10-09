@@ -1,3 +1,4 @@
+import vm from "vm";
 /**
  * The generic v2 extraction engine (plan 2026-10-09 P2): reads an
  * `extraction` block against a document's text. Domain-agnostic on purpose —
@@ -30,6 +31,8 @@ export const MAX_REPEAT_ITEMS = 200;
 export interface ExtractionResult {
   values: Record<string, unknown>;
   missing: string[];
+  /** True when the run hit `EXTRACT_TIMEOUT_MS` and was stopped. */
+  timedOut?: boolean;
 }
 
 interface CompiledField {
@@ -218,7 +221,7 @@ function isEmpty(value: unknown): boolean {
 }
 
 /** Reads every field and repeat of `extraction` from `text`, and names what `required` lacks. */
-export function extract(extraction: Extraction, text: string): ExtractionResult {
+function extractUnbounded(extraction: Extraction, text: string): ExtractionResult {
   const compiled = compile(extraction);
   const input = text.length > MAX_INPUT_CHARS ? text.slice(0, MAX_INPUT_CHARS) : text;
   const values: Record<string, unknown> = {};
@@ -232,4 +235,29 @@ export function extract(extraction: Extraction, text: string): ExtractionResult 
     return items.length < (repeat.rule.minimum ?? 1);
   });
   return { values, missing };
+}
+
+/** Wall-clock budget for one extraction; a document never needs more than a few ms. */
+export const EXTRACT_TIMEOUT_MS = 1000;
+
+/**
+ * Runs the extraction under a hard time bound. A `vm` timeout terminates
+ * execution even inside a backtracking regex, so a pathological pattern from the
+ * template repo costs one second, not the server. A timed-out run
+ * extracts nothing and reports every required name as missing, so the
+ * template declines the document (and fails its own test cases at load).
+ */
+export function extract(extraction: Extraction, text: string): ExtractionResult {
+  try {
+    return vm.runInNewContext(
+      "run()",
+      { run: () => extractUnbounded(extraction, text) },
+      {
+        timeout: EXTRACT_TIMEOUT_MS,
+      }
+    ) as ExtractionResult;
+  } catch (err) {
+    if ((err as { code?: string }).code !== "ERR_SCRIPT_EXECUTION_TIMEOUT") throw err;
+    return { values: {}, missing: [...(extraction.required ?? [])], timedOut: true };
+  }
 }

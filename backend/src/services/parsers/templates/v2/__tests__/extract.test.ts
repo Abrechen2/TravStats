@@ -1,6 +1,6 @@
 import { describe, it, expect } from "@jest/globals";
 import { extractionSchema, type Extraction } from "../extraction";
-import { extract, MAX_REPEAT_ITEMS } from "../extract";
+import { extract, MAX_REPEAT_ITEMS, EXTRACT_TIMEOUT_MS } from "../extract";
 
 /** Parses through the real schema, so every test reads a VALIDATED extraction. */
 function spec(raw: unknown): Extraction {
@@ -272,5 +272,21 @@ describe("v2 extraction — repeats", () => {
     expect(extract(x, "a1").values.a).toBe("1");
     expect(extract(x, "a2").values.a).toBe("2");
     expect(extract(x, "a3").values.a).toBe("3");
+  });
+});
+
+describe("v2 extraction — catastrophic backtracking", () => {
+  it("stops a pathological pattern that slipped past validation within the time bound", () => {
+    // Template regexes come from a remote repo; a static ReDoS check refuses
+    // common optional groups, so the time bound is the guard that holds.
+    const extraction = {
+      fields: { x: { patterns: ["^(a+)+$"] } },
+      required: ["x"],
+    } as unknown as Extraction;
+    const started = Date.now();
+    const result = extract(extraction, `${"a".repeat(40)}!`);
+    expect(Date.now() - started).toBeLessThan(EXTRACT_TIMEOUT_MS + 1500);
+    expect(result.timedOut).toBe(true);
+    expect(result.missing).toEqual(["x"]);
   });
 });
