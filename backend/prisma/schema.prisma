@@ -3481,6 +3481,10 @@ model Document {
   placeVisitId    String? @map("place_visit_id")
   railJourneyId   String? @map("rail_journey_id")
   rentalBookingId String? @map("rental_booking_id")
+  /// What a rental's evidence shows (forgejo#239): pickup | return | damage |
+  /// fuel | odometer. Only while filed with a rental; null = uncategorised —
+  /// every attachment from before the column, and any the user leaves so.
+  rentalCategory  String? @map("rental_category")
 
   createdAt  DateTime  @default(now()) @map("created_at")
   /// When it was filed with an entry; null while unlinked.

@@ -52,5 +52,16 @@
       "coach": "Wagen"
     },
     "applied": "Die Werte aus dem Beleg wurden übernommen."
+  },
+  "rentalCategory": {
+    "pickup": "Abholung",
+    "return": "Rückgabe",
+    "damage": "Schäden",
+    "fuel": "Tankstand",
+    "odometer": "Kilometerstand",
+    "none": "Ohne Kategorie",
+    "rowLabel": "Kategorie von {{name}}",
+    "uploadLabel": "Nächsten Upload ablegen unter",
+    "saveFailed": "Die Kategorie konnte nicht geändert werden. Bitte versuche es noch einmal."
   }
 }

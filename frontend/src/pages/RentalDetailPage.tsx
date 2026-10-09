@@ -336,7 +336,7 @@ export default function RentalDetailPage(): JSX.Element {
             <RentalPriceComparison rental={rental} />
           </DetailSection>
 
-          <DocumentsSection entry={{ type: "rentalBooking", id: rental.id }} />
+          <DocumentsSection entry={{ type: "rentalBooking", id: rental.id }} rentalCategories />
         </div>
 
         <aside className="flex flex-col gap-6 md:col-span-2">

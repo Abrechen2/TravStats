@@ -40,6 +40,19 @@ export interface DocumentEntryRef {
   id: string;
 }
 
+/**
+ * What a rental's hand-over evidence shows (forgejo#239). Mirrors
+ * `RENTAL_DOCUMENT_CATEGORIES` in backend/src/services/documents/documentFormats.ts.
+ */
+export const RENTAL_DOCUMENT_CATEGORIES = [
+  "pickup",
+  "return",
+  "damage",
+  "fuel",
+  "odometer",
+] as const;
+export type RentalDocumentCategory = (typeof RENTAL_DOCUMENT_CATEGORIES)[number];
+
 /** Mirrors `toDocumentDto` in `backend/src/services/documents/documentService.ts`. */
 export interface TravelDocument {
   id: string;
@@ -52,6 +65,8 @@ export interface TravelDocument {
   /** What to call it on screen — already resolved server-side. */
   displayName: string;
   issuedOn: string | null;
+  /** A rental's evidence category; null = uncategorised (forgejo#239). Absent from older servers. */
+  rentalCategory?: RentalDocumentCategory | null;
   source: string;
   parsedDomain: string | null;
   entry: DocumentEntryRef | null;
@@ -134,6 +149,8 @@ export interface UploadDocumentInput {
   kind?: DocumentKind;
   /** YYYY-MM-DD. */
   issuedOn?: string;
+  /** Only with a rentalBooking entry (forgejo#239). */
+  rentalCategory?: RentalDocumentCategory;
 }
 
 /**
@@ -180,13 +197,20 @@ export const documentsApi = {
     return limitsRequest;
   },
 
-  upload: async ({ entry, file, kind, issuedOn }: UploadDocumentInput): Promise<TravelDocument> => {
+  upload: async ({
+    entry,
+    file,
+    kind,
+    issuedOn,
+    rentalCategory,
+  }: UploadDocumentInput): Promise<TravelDocument> => {
     const form = new FormData();
     form.append("file", file);
     form.append("entryType", entry.type);
     form.append("entryId", entry.id);
     if (kind) form.append("kind", kind);
     if (issuedOn) form.append("issuedOn", issuedOn);
+    if (rentalCategory) form.append("rentalCategory", rentalCategory);
     // No explicit `format`: the server decides from the BYTES and treats a
     // declaration as a hint, so sending our guess could only ever disagree.
     //
@@ -196,6 +220,17 @@ export const documentsApi = {
     // header is either ignored or wrong, never right.
     const { data } = await api.post<Envelope<TravelDocument>>("/documents", form, {
       timeout: DOCUMENT_UPLOAD_TIMEOUT_MS,
+    });
+    return data.data;
+  },
+
+  /** Re-file a rental's evidence under another category, or none (null) — the same document. */
+  setRentalCategory: async (
+    id: string,
+    rentalCategory: RentalDocumentCategory | null
+  ): Promise<TravelDocument> => {
+    const { data } = await api.patch<Envelope<TravelDocument>>(`/documents/${id}`, {
+      rentalCategory,
     });
     return data.data;
   },

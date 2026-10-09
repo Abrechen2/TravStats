@@ -8,6 +8,7 @@ import logger from "../../utils/logger";
 import { documentIdsBodySchema } from "../../schemas/document";
 import {
   DOCUMENT_KINDS,
+  type RentalDocumentCategory,
   ENTRY_TYPES,
   detectDocumentFormat,
   type DocumentFormat,
@@ -179,6 +180,8 @@ interface OwnerColumns {
   rentalBookingId: string | null;
   linkedAt: Date | null;
   unlinkedAt: Date | null;
+  /** Cleared off a rental; kept (absent) while the document stays with one. */
+  rentalCategory?: null;
 }
 
 function ownerData(entry: EntryRef | null): OwnerColumns {
@@ -195,6 +198,9 @@ function ownerData(entry: EntryRef | null): OwnerColumns {
     // `linkedAt` is: this is the ONE place the owner columns are decided, so
     // create, link, unlink and update cannot disagree about it.
     unlinkedAt: entry ? null : new Date(),
+    // A rental's evidence label means nothing anywhere else (forgejo#239);
+    // the database refuses it there too (`documents_rental_category_check`).
+    ...(entry?.type !== "rentalBooking" && { rentalCategory: null }),
   };
 }
 
@@ -246,6 +252,8 @@ export interface CreateDocumentInput {
   parsedDomain?: string | null;
   parsedPayload?: Prisma.InputJsonValue | null;
   entry?: EntryRef | null;
+  /** A rental's evidence category (forgejo#239); only with a rentalBooking entry. */
+  rentalCategory?: RentalDocumentCategory | null;
 }
 
 export interface CreateDocumentResult {
@@ -307,6 +315,7 @@ export async function createDocument(input: CreateDocumentInput): Promise<Create
     throw new AppError("Unknown document kind", 400);
 
   const entry = input.entry ?? null;
+  assertCategoryFits(input.rentalCategory, entry);
   if (entry) await assertEntryOwned(input.userId, entry);
 
   const sha256 = sha256Hex(input.buffer);
@@ -352,6 +361,7 @@ export async function createDocument(input: CreateDocumentInput): Promise<Create
         parsedDomain: input.parsedDomain ?? null,
         ...(input.parsedPayload != null && { parsedPayload: input.parsedPayload }),
         ...ownerData(entry),
+        rentalCategory: input.rentalCategory ?? null,
       },
     });
     logger.info(
@@ -439,6 +449,28 @@ export interface UpdateDocumentInput {
   issuedOn?: Date | null;
   /** An entry files it there; null takes it off its entry; absent leaves it. */
   entry?: EntryRef | null;
+  /** A rental evidence category; null uncategorises; absent leaves it (forgejo#239). */
+  rentalCategory?: RentalDocumentCategory | null;
+}
+
+/**
+ * A category belongs to a rental's evidence: set on a document filed with
+ * anything else it would be a label nothing reads. 400
+ * `DOCUMENT_CATEGORY_NOT_RENTAL`, `field: rentalCategory`.
+ */
+function assertCategoryFits(
+  category: RentalDocumentCategory | null | undefined,
+  entry: EntryRef | null
+): void {
+  if (category == null) return;
+  if (entry?.type !== "rentalBooking") {
+    throw new AppError(
+      "A rental category needs a document filed with a rental",
+      400,
+      "DOCUMENT_CATEGORY_NOT_RENTAL",
+      "rentalCategory"
+    );
+  }
 }
 
 /**
@@ -471,12 +503,25 @@ export async function updateDocument(
     }
   }
 
+  // The entry the document ends up with decides whether a category may stand:
+  // taken off its rental (or onto anything else) it loses the label.
+  const finalEntry =
+    input.entry === undefined ? entryOf(document) : input.entry === null ? null : input.entry;
+  assertCategoryFits(input.rentalCategory, finalEntry);
+  const category =
+    finalEntry?.type !== "rentalBooking"
+      ? { rentalCategory: null }
+      : input.rentalCategory !== undefined
+        ? { rentalCategory: input.rentalCategory }
+        : {};
+
   return prisma.document.update({
     where: { id: document.id },
     data: {
       ...(input.kind !== undefined && { kind: input.kind }),
       ...(input.issuedOn !== undefined && { issuedOn: input.issuedOn }),
       ...owner,
+      ...category,
     },
   });
 }
@@ -596,6 +641,8 @@ export interface DocumentDto {
   /** What to call it on screen: the client's name, or a generic one with the right extension. */
   displayName: string;
   issuedOn: string | null;
+  /** A rental evidence category; null = uncategorised or not a rental's (forgejo#239). */
+  rentalCategory: string | null;
   source: string;
   parsedDomain: string | null;
   entry: EntryRef | null;
@@ -632,6 +679,7 @@ export function toDocumentDto(document: Document): DocumentDto {
     originalName: document.originalName,
     displayName: document.originalName ?? `document${path.extname(document.storedName)}`,
     issuedOn: document.issuedOn ? document.issuedOn.toISOString().slice(0, 10) : null,
+    rentalCategory: document.rentalCategory,
     source: document.source,
     parsedDomain: document.parsedDomain,
     entry: entryOf(document),
