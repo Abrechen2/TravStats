@@ -1,84 +1,18 @@
-import { splitPostcodeFromCity } from "./lodgingFieldNormalization";
-import { parseAmount as parseMoney } from "./documentTotal";
-import { type CurrencyCode, isCurrencyCode } from "../../shared/currencies";
-import type { LodgingBoard } from "./lodgingFieldNormalization";
-import type { LODGING_TYPES } from "../../schemas/lodging";
-
-type LodgingType = (typeof LODGING_TYPES)[number];
-
-export type LodgingCurrency = CurrencyCode;
-
-export interface ParsedLodgingBooking {
-  hotelName: string;
-  checkIn: string;
-  checkOut: string;
-  nights: number;
-  roomCategory: string | null;
-  address: string | null;
-  postcode: string | null;
-  city: string | null;
-  country: string | null;
-  totalPrice: number | null;
-  /** Per-night rate as printed. 47 % of real confirmations state one. */
-  pricePerNight: number | null;
-  currency: LodgingCurrency | null;
-  /** Meal plan as printed, mapped onto BOARD_TYPES. 61 % state one. */
-  board: LodgingBoard | null;
-  /**
-   * How many people the booking covers. 42 % of confirmations state it.
-   * A COUNT only — a confirmation names the booker, never the companion, so
-   * the name stays the user's to supply.
-   */
-  guests: number | null;
-  /** What kind of place: a KOA is a campsite, not a hotel. Null = unjudged. */
-  type: LodgingType | null;
-  /** The group behind the brand — "Courtyard by Marriott" -> "Marriott". */
-  chainName: string | null;
-  confirmationNumber: string | null;
-  parserTemplate: string;
-  parserConfidence: number;
-  missing: string[];
-}
+// PARITY REFERENCE ONLY (plan 2026-10-09 P4b): the compiled-in Booking.com reader the v2
+// template lodging/bookingcom.json replaced. Production reads the template; tests compare
+// the two. Its generic parts (types, German dates, currency symbols, the address split)
+// stayed in production: `lodging/parsedLodgingBooking.ts`, `v2/addressParts.ts`.
+import { parseAmount as parseMoney } from "../../../documentTotal";
+import { isCurrencyCode } from "../../../../../shared/currencies";
+import {
+  CURRENCY_SYMBOLS,
+  parseGermanDate,
+  parseLage,
+  type LodgingCurrency,
+  type ParsedLodgingBooking,
+} from "../../../parsedLodgingBooking";
 
 const TEMPLATE_NAME = "booking.com";
-
-const GERMAN_MONTHS: Record<string, number> = {
-  januar: 1,
-  februar: 2,
-  märz: 3,
-  maerz: 3,
-  april: 4,
-  mai: 5,
-  juni: 6,
-  juli: 7,
-  august: 8,
-  september: 9,
-  oktober: 10,
-  november: 11,
-  dezember: 12,
-};
-
-/**
- * Symbols only — three-letter codes are resolved against the ISO-4217 registry
- * instead, so this table never has to grow for a new currency. Booking.com
- * writes the dollar family with a country prefix and no space ("US$628,70",
- * "S$ 1.324,90"), which is why those forms are listed rather than folded into
- * a bare "$".
- */
-export const CURRENCY_SYMBOLS: Record<string, LodgingCurrency> = {
-  "€": "EUR",
-  $: "USD",
-  "£": "GBP",
-  "¥": "JPY",
-  US$: "USD",
-  A$: "AUD",
-  C$: "CAD",
-  CA$: "CAD",
-  NZ$: "NZD",
-  HK$: "HKD",
-  S$: "SGD",
-  R$: "BRL",
-};
 
 /**
  * A confirmation says "Bestätigungsnummer:"; a CHANGED booking says
@@ -174,38 +108,6 @@ function findValue(lines: string[], label: string): string | null {
   return null;
 }
 
-/** "Donnerstag, 4. Juni 2026 (ab 14:00)" -> "2026-06-04". */
-/**
- * "Mittwoch, 26. Juni 2024" — and "Samstag, 26 November 2022", which is the
- * same sender writing the same field without the ordinal dot.
- *
- * The dot was required until 2026-09-17, and one missing character cost the
- * WHOLE mail: `checkIn` came back null, the template declined, and a
- * confirmation the reader understood in every other respect fell through to
- * the LLM — or, with no LLM, to manual entry. Measured on the owner's corpus,
- * where exactly this shape was one of the two mails nothing could read.
- *
- * Widening it is safe because the shape stays tight: a 1-2 digit day, a word
- * that must be in the month table, and a four-digit year.
- */
-export function parseGermanDate(value: string | null): string | null {
-  if (!value) return null;
-  const m = value.match(/(\d{1,2})\.?\s*([A-Za-zÄÖÜäöüß]+)\s+(\d{4})/);
-  if (!m) return null;
-  const month = GERMAN_MONTHS[m[2].toLowerCase()];
-  if (!month) return null;
-  const day = Number(m[1]);
-  if (!Number.isInteger(day) || day < 1 || day > 31) return null;
-  const year = Number(m[3]);
-  // A day the calendar does not have. "31 April 2026" passed the range check
-  // above and came back as "2026-04-31", which `Date.parse` then quietly
-  // normalises to the first of May — so a line that is not a date produced a
-  // stay that looked read. The round trip is the only honest check.
-  const date = new Date(Date.UTC(year, month - 1, day));
-  if (date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
-  return `${m[3]}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
-
 /**
  * "3 Nächte, Deluxe Zimmer mit Kingsize-Bett" / "1 Nacht, Comfort Zimmer".
  * The label "Ihre Buchung" is not unique — some confirmations also contain an
@@ -234,112 +136,6 @@ function findBookingLine(lines: string[]): { nights: number | null; room: string
     }
   }
   return { nights: null, room: null };
-}
-
-interface AddressParts {
-  address: string | null;
-  postcode: string | null;
-  city: string | null;
-  country: string | null;
-}
-
-/**
- * "Zilverstraat 6, 2718 RL Zoetermeer, Niederlande"
- * "Anhalter Str. 2, Friedrichshain-Kreuzberg, 10963 Berlin, Deutschland"
- * The last segment is the country; the LAST segment that starts with a postal
- * code carries the city. Everything before it is the street (which may include
- * a district, as in the Berlin sample — preserved rather than dropped).
- */
-export function parseLage(raw: string | null): AddressParts {
-  if (!raw) return { address: null, postcode: null, city: null, country: null };
-  const segments = raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-  if (segments.length === 0) return { address: null, postcode: null, city: null, country: null };
-
-  const country = segments.length > 1 ? segments[segments.length - 1] : null;
-  const rest = country ? segments.slice(0, -1) : segments;
-
-  // North America first, because its shape defeats the European one below.
-  // "4949 Regent Boulevard, Irving, TX 75063, USA" has a HOUSE NUMBER of four
-  // digits, which the European pattern reads as a postal code and the street
-  // name as the city — measured on a real Courtyard confirmation, which
-  // imported with the city "Regent Boulevard". A state or province code
-  // followed by a ZIP is unambiguous, and the city is the segment before it.
-  //
-  // Only the LAST segment before the country counts, which is where that form
-  // always puts it. Scanning for it anywhere would let a European address
-  // whose middle segment happens to read "IT 00186" hand back the segment
-  // before it as the city and drop the real one that follows — two capitals
-  // and five digits is not rare enough to trust out of position.
-  const statePostcodeRe = /^([A-Z]{2})\s+(\d{5}(?:-\d{4})?|[A-Z]\d[A-Z]\s?\d[A-Z]\d)$/;
-  const last = rest.length - 1;
-  const stateMatch = last >= 1 ? rest[last].match(statePostcodeRe) : null;
-  if (stateMatch) {
-    const address = rest.slice(0, last - 1).join(", ");
-    return {
-      address: address.length > 0 ? address : null,
-      postcode: stateMatch[2],
-      city: rest[last - 1],
-      country,
-    };
-  }
-
-  // NL codes look like "2718 RL"; DE/AT/CH are 4-5 digits; CZ/SK/SE/GR write
-  // "767 01".
-  const postcodeRe = /^(\d{3}\s\d{2}|\d{4,5}(?:\s+[A-Z]{2})?)\s+(.+)$/;
-  for (let i = rest.length - 1; i >= 0; i--) {
-    const m = rest[i].match(postcodeRe);
-    if (m) {
-      const address = rest.slice(0, i).join(", ");
-      return {
-        address: address.length > 0 ? address : null,
-        postcode: m[1],
-        city: m[2],
-        country,
-      };
-    }
-  }
-
-  // Luxembourg (and the same shape elsewhere) writes the code as its OWN
-  // segment, AFTER the city: "2, Rue Nicolas Wester, Luxemburg (Stadt),
-  // L-5836, Luxemburg". The loop above finds nothing, and the fallback below
-  // would then report "L-5836" as the city. Recognise a segment that is
-  // NOTHING BUT a postal code and read the city off the segment before it.
-  // The spaced CZ/SK form does the same: "…, Kroměříž, 767 01, Tschechische
-  // Republik" — unrecognised, "767 01" became the city "767" (corpus
-  // 2026-09-30).
-  const bareCodeRe = /^(?:(?:[A-Z]{1,2}-)?\d{4,5}|\d{3}\s\d{2})$/;
-  for (let i = rest.length - 1; i >= 1; i--) {
-    if (!bareCodeRe.test(rest[i])) continue;
-    const address = rest.slice(0, i - 1).join(", ");
-    return {
-      address: address.length > 0 ? address : null,
-      postcode: rest[i],
-      city: splitPostcodeFromCity(rest[i - 1]).city,
-      country,
-    };
-  }
-  // A plus-code or bare code in the city slot ("F869C3J") is not a city —
-  // the UAE line put one there, and it became the stay's city.
-  const codeShaped = /^(?=.*\d)[A-Z0-9+]{4,}$/;
-  const cityRest =
-    rest.length >= 2 && codeShaped.test(rest[rest.length - 1]) ? rest.slice(0, -1) : rest;
-
-  // The last segment before the country is the city — but not always ONLY
-  // the city. "188973 Singapur" has six digits, which `postcodeRe` above does
-  // not admit, and "BW 78467 Konstanz" starts with a state abbreviation; both
-  // reached the database verbatim (forgejo#85). The shared splitter takes
-  // the code off and keeps it for the address.
-  const lastSegment = cityRest[cityRest.length - 1] ?? null;
-  const split = splitPostcodeFromCity(lastSegment);
-  return {
-    address: cityRest.slice(0, -1).join(", ") || null,
-    postcode: split.postcode,
-    city: split.city,
-    country,
-  };
 }
 
 /**

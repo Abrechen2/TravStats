@@ -3,7 +3,7 @@ import path from "path";
 import { extractEmailFromFile } from "../../../emailExtractor";
 import { applyLodgingTemplate, parseEnglishDate, templateMatches } from "../engine";
 import { readWithV2LodgingTemplates } from "../v2Lodging";
-import type { ParsedLodgingBooking } from "../../bookingComTemplate";
+import type { ParsedLodgingBooking } from "../../parsedLodgingBooking";
 import { LODGING_TEMPLATES } from "./legacy/builtins";
 import type { LodgingTemplate } from "../types";
 import { READERS, snapshotTemplates } from "./readers";

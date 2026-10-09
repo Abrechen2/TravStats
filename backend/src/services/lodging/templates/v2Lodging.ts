@@ -16,10 +16,11 @@
 import { z } from "zod";
 import logger from "../../../utils/logger";
 import { LODGING_TYPES } from "../../../schemas/lodging";
-import type { ParsedLodgingBooking } from "../bookingComTemplate";
+import type { ParsedLodgingBooking } from "../parsedLodgingBooking";
 import { applyTemplate } from "../../parsers/templates/v2/runners";
 import type { TemplateEnvelope } from "../../parsers/templates/v2/envelope";
 import { finishLodgingRead, type LodgingRead } from "./finishRead";
+import { lodgingOutputSchema } from "../../parsers/templates/v2/outputSchemas";
 
 const text = z.string().min(1).nullish();
 const isoDay = z
@@ -47,7 +48,10 @@ export const lodgingValuesSchema = z.object({
   confirmationNumber: text,
   type: z.enum(LODGING_TYPES).nullish(),
   chainName: text,
+  /** The night count the document prints — authoritative over the date span. */
+  nights: z.number().int().nonnegative().max(366).nullish(),
 });
+
 export type LodgingValues = z.infer<typeof lodgingValuesSchema>;
 
 const READ_KEYS = [
@@ -98,6 +102,14 @@ export function applyV2LodgingTemplate(
     );
     return null;
   }
+  const output = lodgingOutputSchema.safeParse(template.output ?? {});
+  if (!output.success) {
+    logger.warn(
+      { template: template.id, version: template.version },
+      "v2 lodging template has an output block of the wrong shape — declined"
+    );
+    return null;
+  }
   const values = parsed.data;
   const read: LodgingRead = {};
   for (const key of READ_KEYS) {
@@ -109,6 +121,9 @@ export function applyV2LodgingTemplate(
     checkOutYearBorrowed: template.extraction.fields?.checkOut?.yearFrom !== undefined,
     type: values.type ?? null,
     chainName: values.chainName ?? null,
+    printedNights: values.nights ?? null,
+    ...(output.data.report ? { report: output.data.report } : {}),
+    ...(output.data.confidence ? { confidence: output.data.confidence } : {}),
   });
 }
 

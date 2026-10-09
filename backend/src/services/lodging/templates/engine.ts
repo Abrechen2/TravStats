@@ -4,7 +4,7 @@ import {
   CURRENCY_SYMBOLS,
   parseGermanDate,
   type ParsedLodgingBooking,
-} from "../bookingComTemplate";
+} from "../parsedLodgingBooking";
 import { finishLodgingRead, type LodgingRead } from "./finishRead";
 import type { FieldRule, LodgingFieldRules, LodgingTemplate, TransformName } from "./types";
 

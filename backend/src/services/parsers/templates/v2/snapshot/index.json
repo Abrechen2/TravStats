@@ -2,6 +2,12 @@
   "version": 2,
   "templates": [
     {
+      "id": "lodging:booking.com",
+      "domain": "lodging",
+      "version": "2026.10.9",
+      "path": "lodging/bookingcom.json"
+    },
+    {
       "id": "lodging:koa",
       "domain": "lodging",
       "version": "2026.10.9",

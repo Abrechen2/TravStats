@@ -8,10 +8,11 @@
  * A test written against `READERS` is a parity test: the same fixture, the
  * same expectation, both readers.
  */
-import type { ParsedLodgingBooking } from "../../bookingComTemplate";
+import type { ParsedLodgingBooking } from "../../parsedLodgingBooking";
 import { applyLodgingTemplate } from "../engine";
 import { applyV2LodgingTemplate } from "../v2Lodging";
 import { LODGING_TEMPLATES as LEGACY_LODGING_TEMPLATES } from "./legacy/builtins";
+import { parseBookingComEmail } from "./legacy/bookingCom";
 import { createMemoryTemplateCache } from "../../../parsers/templates/v2/cache";
 import { V2TemplateStore } from "../../../parsers/templates/v2/loader";
 import { createDirSnapshot } from "../../../parsers/templates/v2/snapshot";
@@ -54,14 +55,22 @@ export function snapshotTemplate(id: string): TemplateEnvelope {
   return found;
 }
 
+/** The Booking.com reader was code, not a declarative spec (moved in plan P4b). */
+const BOOKING_COM_ID = "lodging:booking.com";
+
 export const legacyReader: LodgingReader = (id, subject, body) =>
-  applyLodgingTemplate(legacyTemplate(id), subject, body);
+  id === BOOKING_COM_ID
+    ? parseBookingComEmail(subject, `${subject}\n${body}`)
+    : applyLodgingTemplate(legacyTemplate(id), subject, body);
 
 export const v2Reader: LodgingReader = (id, subject, body) =>
   applyV2LodgingTemplate(snapshotTemplate(id), subject, body);
 
 /** Every compiled-in reader the v2 files replaced. */
-export const LEGACY_IDS: readonly string[] = LEGACY_LODGING_TEMPLATES.map((t) => t.id);
+export const LEGACY_IDS: readonly string[] = [
+  BOOKING_COM_ID,
+  ...LEGACY_LODGING_TEMPLATES.map((t) => t.id),
+];
 
 export const READERS: Array<[string, LodgingReader]> = [
   ["legacy reader", legacyReader],

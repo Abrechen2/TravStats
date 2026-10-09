@@ -1,12 +1,27 @@
 import fs from "fs";
 import path from "path";
 import { extractEmailFromFile } from "../services/emailExtractor";
+import { parseLage, type ParsedLodgingBooking } from "../services/lodging/parsedLodgingBooking";
 import {
   isBookingComConfirmation,
-  parseBookingComEmail,
-  parseLage,
-  type ParsedLodgingBooking,
-} from "../services/lodging/bookingComTemplate";
+  parseBookingComEmail as legacyParse,
+} from "../services/lodging/templates/__tests__/legacy/bookingCom";
+import { applyV2LodgingTemplate } from "../services/lodging/templates/v2Lodging";
+import { snapshotTemplate } from "../services/parsers/templates/v2/__tests__/snapshotTemplates";
+
+/**
+ * Plan 2026-10-09 P4b moved the Booking.com reader into the template
+ * repository (`lodging/bookingcom.json`). Every reading test below runs
+ * through BOTH readers: the compiled-in one it started as (`legacy/`) and the
+ * v2 template file production reads now.
+ */
+type Reader = (subject: string | undefined, body: string) => ParsedLodgingBooking | null;
+const v2Parse: Reader = (subject, body) =>
+  applyV2LodgingTemplate(snapshotTemplate("lodging:booking.com"), subject ?? "", body);
+const READERS: Array<[string, Reader]> = [
+  ["legacy reader", legacyParse],
+  ["v2 template", v2Parse],
+];
 
 // The owner's REAL booking confirmations. Gitignored, present only on his
 // machine — the suite skips itself everywhere else so CI stays green. We assert
@@ -40,424 +55,431 @@ function loadSample(nameFragment: string): { subject: string; text: string } {
   return { subject: extracted.subject, text: extracted.text };
 }
 
-function parseSample(nameFragment: string): ParsedLodgingBooking {
-  const { subject, text } = loadSample(nameFragment);
-  const parsed = parseBookingComEmail(subject, text);
-  if (!parsed) throw new Error(`Template parser returned null for "${nameFragment}"`);
-  return parsed;
-}
+describe.each(READERS)("Booking.com (%s)", (_readerName, parseBookingComEmail) => {
+  function parseSample(nameFragment: string): ParsedLodgingBooking {
+    const { subject, text } = loadSample(nameFragment);
+    const parsed = parseBookingComEmail(subject, text);
+    if (!parsed) throw new Error(`Template parser returned null for "${nameFragment}"`);
+    return parsed;
+  }
 
-describeSamples("Booking.com template parser (real samples)", () => {
-  it("recognises a Booking.com confirmation and rejects a direct hotel booking", () => {
-    const booking = loadSample("Bastion");
-    expect(isBookingComConfirmation(booking.subject, booking.text)).toBe(true);
+  describeSamples("Booking.com template parser (real samples)", () => {
+    it("recognises a Booking.com confirmation and rejects a direct hotel booking", () => {
+      const booking = loadSample("Bastion");
+      expect(isBookingComConfirmation(booking.subject, booking.text)).toBe(true);
 
-    const direct = loadSample("Buchungsbestätigung _Novina");
-    expect(isBookingComConfirmation(direct.subject, direct.text)).toBe(false);
-    expect(parseBookingComEmail(direct.subject, direct.text)).toBeNull();
+      const direct = loadSample("Buchungsbestätigung _Novina");
+      expect(isBookingComConfirmation(direct.subject, direct.text)).toBe(false);
+      expect(parseBookingComEmail(direct.subject, direct.text)).toBeNull();
+    });
+
+    it("parses the Bastion Hotel Zoetermeer confirmation (3 nights, NL postcode)", () => {
+      const r = parseSample("Bastion");
+      expect(r.hotelName).toBe("Bastion Hotel Zoetermeer");
+      expect(r.confirmationNumber).toBe("6546766578");
+      expect(r.checkIn).toBe("2026-06-04");
+      expect(r.checkOut).toBe("2026-06-07");
+      expect(r.nights).toBe(3);
+      expect(r.roomCategory).toBe("Deluxe Zimmer mit Kingsize-Bett");
+      expect(r.address).toBe("Zilverstraat 6");
+      expect(r.postcode).toBe("2718 RL");
+      expect(r.city).toBe("Zoetermeer");
+      expect(r.country).toBe("Niederlande");
+      expect(r.totalPrice).toBeCloseTo(451.7, 2);
+      expect(r.currency).toBe("EUR");
+      expect(r.missing).toEqual([]);
+    });
+
+    it("parses the Engimatt confirmation (1 night, CHF, district in the address)", () => {
+      const r = parseSample("Engimatt");
+      expect(r.hotelName).toBe("Engimatt City & Garden Hotel");
+      expect(r.confirmationNumber).toBe("5980532080");
+      expect(r.checkIn).toBe("2026-06-30");
+      expect(r.checkOut).toBe("2026-07-01");
+      expect(r.nights).toBe(1);
+      expect(r.roomCategory).toBe("Comfort Doppelzimmer mit Balkon");
+      expect(r.address).toBe("Engimattstrasse 14, Enge");
+      expect(r.postcode).toBe("8002");
+      expect(r.city).toBe("Zürich");
+      expect(r.country).toBe("Schweiz");
+      expect(r.totalPrice).toBeCloseTo(292.83, 2);
+      expect(r.currency).toBe("CHF");
+    });
+
+    it("parses the Hotel Stiegler confirmation (AT)", () => {
+      const r = parseSample("Stiegler");
+      expect(r.hotelName).toBe("Hotel Stiegler Bed & Breakfast");
+      expect(r.confirmationNumber).toBe("5803862656");
+      expect(r.checkIn).toBe("2026-07-19");
+      expect(r.checkOut).toBe("2026-07-20");
+      expect(r.nights).toBe(1);
+      expect(r.roomCategory).toBe("Standard Doppelzimmer");
+      expect(r.address).toBe("13 Leidern");
+      expect(r.postcode).toBe("4850");
+      expect(r.city).toBe("Timelkam");
+      expect(r.country).toBe("Österreich");
+      expect(r.totalPrice).toBeCloseTo(103.2, 2);
+      expect(r.currency).toBe("EUR");
+    });
+
+    it("parses the NH Ludwigsburg confirmation (DE)", () => {
+      const r = parseSample("NH Ludwigsburg");
+      expect(r.hotelName).toBe("NH Ludwigsburg");
+      expect(r.confirmationNumber).toBe("5087376273");
+      expect(r.checkIn).toBe("2026-03-30");
+      expect(r.checkOut).toBe("2026-03-31");
+      expect(r.nights).toBe(1);
+      expect(r.roomCategory).toBe("Standard Doppel- oder Zweibettzimmer");
+      expect(r.address).toBe("Pflugfelder Straße 36");
+      expect(r.postcode).toBe("71636");
+      expect(r.city).toBe("Ludwigsburg");
+      expect(r.country).toBe("Deutschland");
+      expect(r.totalPrice).toBeCloseTo(98.1, 2);
+    });
+
+    it("parses the Novotel Suites Berlin confirmation (2 nights, district in the address)", () => {
+      const r = parseSample("Novotel Suites Berlin");
+      expect(r.hotelName).toBe("Novotel Suites Berlin City Potsdamer Platz");
+      expect(r.confirmationNumber).toBe("5967563369");
+      expect(r.checkIn).toBe("2026-04-22");
+      expect(r.checkOut).toBe("2026-04-24");
+      expect(r.nights).toBe(2);
+      expect(r.roomCategory).toBe("Standard Suite mit 1 Doppelbett und 1 Sofa");
+      expect(r.address).toBe("Anhalter Str. 2, Friedrichshain-Kreuzberg");
+      expect(r.postcode).toBe("10963");
+      expect(r.city).toBe("Berlin");
+      expect(r.totalPrice).toBeCloseTo(385.07, 2);
+    });
+
+    it("parses the Vienna House confirmation (whole-euro total, no decimals)", () => {
+      const r = parseSample("Vienna House");
+      expect(r.hotelName).toBe("Vienna House Easy by Wyndham Landsberg");
+      expect(r.confirmationNumber).toBe("6220453895");
+      expect(r.checkIn).toBe("2025-12-03");
+      expect(r.checkOut).toBe("2025-12-04");
+      expect(r.nights).toBe(1);
+      expect(r.roomCategory).toBe("Comfort Zimmer");
+      expect(r.city).toBe("Landsberg am Lech");
+      expect(r.totalPrice).toBeCloseTo(112, 2);
+      expect(r.currency).toBe("EUR");
+    });
+
+    // Booking.com sends TWO layouts. The cases above are the inline one, where
+    // the label and its value share a line ("Anreise\tMittwoch, …"). This one is
+    // the stacked layout: the label sits alone on its line and the value follows
+    // on the next. 22 of the owner's 95 samples arrived that way and every single
+    // one fell through to the LLM (measured 2026-08-13) because `findValue` only
+    // ever looked at the label's own line.
+    it("parses the Hotel Alzinn confirmation (stacked label/value layout)", () => {
+      const r = parseSample("Alzinn");
+      expect(r.hotelName).toBe("Hotel Alzinn");
+      expect(r.confirmationNumber).toBe("4914064941");
+      expect(r.checkIn).toBe("2024-06-26");
+      expect(r.checkOut).toBe("2024-06-28");
+      expect(r.nights).toBe(2);
+      expect(r.totalPrice).toBeCloseTo(324, 2);
+      expect(r.currency).toBe("EUR");
+      // Luxembourg writes the postal code as "L-5836" and puts it AFTER the city,
+      // so the city must not be read off the last-segment-before-country rule.
+      expect(r.city).toBe("Luxemburg (Stadt)");
+      expect(r.postcode).toBe("L-5836");
+      expect(r.country).toBe("Luxemburg");
+    });
+
+    // forgejo#122 — this one read as NOTHING until 2026-09-17, and it is the
+    // kind of mail that matters most: the stay already exists and its dates have
+    // moved. Same brand, same inline layout; only the number's label differs
+    // ("Reservierungsnummer", no colon) and the property is named in the subject
+    // as prose rather than after "bestätigt:".
+    it("parses a CHANGED booking (Reservierungsnummer, property named in prose)", () => {
+      const r = parseSample("nderte Buchung");
+      expect(r.hotelName).toBe("City Premiere Hotel Apartments");
+      expect(r.confirmationNumber).toBe("369011280");
+      expect(r.checkIn).toBe("2015-04-02");
+      expect(r.checkOut).toBe("2015-04-07");
+      expect(r.nights).toBe(5);
+      // A changed booking writes "Adresse:" over two lines instead of the single
+      // "Lage" line the template reads, so the city stays null and says so.
+      // Guessing one out of "Dubai, , Vereinigte Arabische Emirate" would be a
+      // plausible-looking wrong value in 97 other mails' worth of code.
+      expect(r.city).toBeNull();
+      expect(r.missing).toContain("city");
+    });
   });
 
-  it("parses the Bastion Hotel Zoetermeer confirmation (3 nights, NL postcode)", () => {
-    const r = parseSample("Bastion");
-    expect(r.hotelName).toBe("Bastion Hotel Zoetermeer");
-    expect(r.confirmationNumber).toBe("6546766578");
-    expect(r.checkIn).toBe("2026-06-04");
-    expect(r.checkOut).toBe("2026-06-07");
-    expect(r.nights).toBe(3);
-    expect(r.roomCategory).toBe("Deluxe Zimmer mit Kingsize-Bett");
-    expect(r.address).toBe("Zilverstraat 6");
-    expect(r.postcode).toBe("2718 RL");
-    expect(r.city).toBe("Zoetermeer");
-    expect(r.country).toBe("Niederlande");
-    expect(r.totalPrice).toBeCloseTo(451.7, 2);
-    expect(r.currency).toBe("EUR");
-    expect(r.missing).toEqual([]);
-  });
-
-  it("parses the Engimatt confirmation (1 night, CHF, district in the address)", () => {
-    const r = parseSample("Engimatt");
-    expect(r.hotelName).toBe("Engimatt City & Garden Hotel");
-    expect(r.confirmationNumber).toBe("5980532080");
-    expect(r.checkIn).toBe("2026-06-30");
-    expect(r.checkOut).toBe("2026-07-01");
-    expect(r.nights).toBe(1);
-    expect(r.roomCategory).toBe("Comfort Doppelzimmer mit Balkon");
-    expect(r.address).toBe("Engimattstrasse 14, Enge");
-    expect(r.postcode).toBe("8002");
-    expect(r.city).toBe("Zürich");
-    expect(r.country).toBe("Schweiz");
-    expect(r.totalPrice).toBeCloseTo(292.83, 2);
-    expect(r.currency).toBe("CHF");
-  });
-
-  it("parses the Hotel Stiegler confirmation (AT)", () => {
-    const r = parseSample("Stiegler");
-    expect(r.hotelName).toBe("Hotel Stiegler Bed & Breakfast");
-    expect(r.confirmationNumber).toBe("5803862656");
-    expect(r.checkIn).toBe("2026-07-19");
-    expect(r.checkOut).toBe("2026-07-20");
-    expect(r.nights).toBe(1);
-    expect(r.roomCategory).toBe("Standard Doppelzimmer");
-    expect(r.address).toBe("13 Leidern");
-    expect(r.postcode).toBe("4850");
-    expect(r.city).toBe("Timelkam");
-    expect(r.country).toBe("Österreich");
-    expect(r.totalPrice).toBeCloseTo(103.2, 2);
-    expect(r.currency).toBe("EUR");
-  });
-
-  it("parses the NH Ludwigsburg confirmation (DE)", () => {
-    const r = parseSample("NH Ludwigsburg");
-    expect(r.hotelName).toBe("NH Ludwigsburg");
-    expect(r.confirmationNumber).toBe("5087376273");
-    expect(r.checkIn).toBe("2026-03-30");
-    expect(r.checkOut).toBe("2026-03-31");
-    expect(r.nights).toBe(1);
-    expect(r.roomCategory).toBe("Standard Doppel- oder Zweibettzimmer");
-    expect(r.address).toBe("Pflugfelder Straße 36");
-    expect(r.postcode).toBe("71636");
-    expect(r.city).toBe("Ludwigsburg");
-    expect(r.country).toBe("Deutschland");
-    expect(r.totalPrice).toBeCloseTo(98.1, 2);
-  });
-
-  it("parses the Novotel Suites Berlin confirmation (2 nights, district in the address)", () => {
-    const r = parseSample("Novotel Suites Berlin");
-    expect(r.hotelName).toBe("Novotel Suites Berlin City Potsdamer Platz");
-    expect(r.confirmationNumber).toBe("5967563369");
-    expect(r.checkIn).toBe("2026-04-22");
-    expect(r.checkOut).toBe("2026-04-24");
-    expect(r.nights).toBe(2);
-    expect(r.roomCategory).toBe("Standard Suite mit 1 Doppelbett und 1 Sofa");
-    expect(r.address).toBe("Anhalter Str. 2, Friedrichshain-Kreuzberg");
-    expect(r.postcode).toBe("10963");
-    expect(r.city).toBe("Berlin");
-    expect(r.totalPrice).toBeCloseTo(385.07, 2);
-  });
-
-  it("parses the Vienna House confirmation (whole-euro total, no decimals)", () => {
-    const r = parseSample("Vienna House");
-    expect(r.hotelName).toBe("Vienna House Easy by Wyndham Landsberg");
-    expect(r.confirmationNumber).toBe("6220453895");
-    expect(r.checkIn).toBe("2025-12-03");
-    expect(r.checkOut).toBe("2025-12-04");
-    expect(r.nights).toBe(1);
-    expect(r.roomCategory).toBe("Comfort Zimmer");
-    expect(r.city).toBe("Landsberg am Lech");
-    expect(r.totalPrice).toBeCloseTo(112, 2);
-    expect(r.currency).toBe("EUR");
-  });
-
-  // Booking.com sends TWO layouts. The cases above are the inline one, where
-  // the label and its value share a line ("Anreise\tMittwoch, …"). This one is
-  // the stacked layout: the label sits alone on its line and the value follows
-  // on the next. 22 of the owner's 95 samples arrived that way and every single
-  // one fell through to the LLM (measured 2026-08-13) because `findValue` only
-  // ever looked at the label's own line.
-  it("parses the Hotel Alzinn confirmation (stacked label/value layout)", () => {
-    const r = parseSample("Alzinn");
-    expect(r.hotelName).toBe("Hotel Alzinn");
-    expect(r.confirmationNumber).toBe("4914064941");
-    expect(r.checkIn).toBe("2024-06-26");
-    expect(r.checkOut).toBe("2024-06-28");
-    expect(r.nights).toBe(2);
-    expect(r.totalPrice).toBeCloseTo(324, 2);
-    expect(r.currency).toBe("EUR");
-    // Luxembourg writes the postal code as "L-5836" and puts it AFTER the city,
-    // so the city must not be read off the last-segment-before-country rule.
-    expect(r.city).toBe("Luxemburg (Stadt)");
-    expect(r.postcode).toBe("L-5836");
-    expect(r.country).toBe("Luxemburg");
-  });
-
-  // forgejo#122 — this one read as NOTHING until 2026-09-17, and it is the
-  // kind of mail that matters most: the stay already exists and its dates have
-  // moved. Same brand, same inline layout; only the number's label differs
-  // ("Reservierungsnummer", no colon) and the property is named in the subject
-  // as prose rather than after "bestätigt:".
-  it("parses a CHANGED booking (Reservierungsnummer, property named in prose)", () => {
-    const r = parseSample("nderte Buchung");
-    expect(r.hotelName).toBe("City Premiere Hotel Apartments");
-    expect(r.confirmationNumber).toBe("369011280");
-    expect(r.checkIn).toBe("2015-04-02");
-    expect(r.checkOut).toBe("2015-04-07");
-    expect(r.nights).toBe(5);
-    // A changed booking writes "Adresse:" over two lines instead of the single
-    // "Lage" line the template reads, so the city stays null and says so.
-    // Guessing one out of "Dubai, , Vereinigte Arabische Emirate" would be a
-    // plausible-looking wrong value in 97 other mails' worth of code.
-    expect(r.city).toBeNull();
-    expect(r.missing).toContain("city");
-  });
-});
-
-// These run everywhere — they use synthetic text, not the private samples.
-describe("Booking.com template parser (synthetic)", () => {
-  const synthetic = [
-    "<https://booking.com> \t Bestätigungsnummer: 1234567890",
-    "Buchungsinformationen",
-    "Anreise\t Montag, 5. Januar 2026 (ab 15:00)\t",
-    "Abreise\t Mittwoch, 7. Januar 2026 (bis 11:00)\t",
-    "Ihre Buchung\t 2 Nächte, Superior Zimmer\t",
-    "Lage\t Musterweg 1, 12345 Musterstadt, Deutschland",
-    "Preisangaben",
-    "Gesamtpreis",
-    "€ 1.234,50",
-    "",
-  ].join("\n");
-
-  it("parses a synthetic confirmation including a thousands separator", () => {
-    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", synthetic);
-    expect(r?.hotelName).toBe("Musterhotel");
-    expect(r?.checkIn).toBe("2026-01-05");
-    expect(r?.checkOut).toBe("2026-01-07");
-    expect(r?.nights).toBe(2);
-    expect(r?.totalPrice).toBeCloseTo(1234.5, 2);
-    expect(r?.currency).toBe("EUR");
-  });
-
-  // AUD-052: every dot was stripped as a grouping mark, so a decimal POINT
-  // multiplied the price by a hundred — and the row read as a clean hit.
-  it("reads a decimal point as a decimal point, not a thousands mark (AUD-052)", () => {
-    const withPoint = synthetic.replace("€ 1.234,50", "US$ 135.87");
-    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", withPoint);
-    expect(r?.totalPrice).toBeCloseTo(135.87, 2);
-    expect(r?.currency).toBe("USD");
-    expect(r?.missing).toEqual([]);
-
-    const grouped = synthetic.replace("€ 1.234,50", "EUR 1,234.50");
-    expect(parseBookingComEmail("x bestätigt: M", grouped)?.totalPrice).toBeCloseTo(1234.5, 2);
-
-    // The German forms the template was written for are unchanged.
-    const comma = synthetic.replace("€ 1.234,50", "US$ 135,87");
-    expect(parseBookingComEmail("x bestätigt: M", comma)?.totalPrice).toBeCloseTo(135.87, 2);
-    const whole = synthetic.replace("€ 1.234,50", "NOK 3.380");
-    expect(parseBookingComEmail("x bestätigt: M", whole)?.totalPrice).toBe(3380);
-  });
-
-  const stacked = [
-    "<https://booking.com> \t Bestätigungsnummer: 1234567890",
-    "Buchungsinformationen",
-    "Anreise",
-    "Montag, 5. Januar 2026 (ab 15:00)",
-    "Abreise",
-    "Mittwoch, 7. Januar 2026 (bis 11:00)",
-    "Ihre Buchung",
-    "2 Nächte, Superior Zimmer",
-    "Lage",
-    "Musterweg 1, 12345 Musterstadt, Deutschland",
-    "Preisangaben",
-    "Gesamtpreis",
-    "€ 1.234,50",
-    "",
-  ].join("\n");
-
-  // forgejo#85 — a six-digit Singapore postcode and a state-prefixed German one
-  // both slipped past the template's five-digit regex into the city column.
-  it("reads the city off '122 Middle Road, Victoria, 188973 Singapur, Singapur' without the postcode", () => {
-    const singapore = stacked.replace(
-      "Musterweg 1, 12345 Musterstadt, Deutschland",
-      "122 Middle Road, Victoria, 188973 Singapur, Singapur"
-    );
-    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", singapore);
-    expect(r?.city).toBe("Singapur");
-    expect(r?.postcode).toBe("188973");
-    expect(r?.address).toBe("122 Middle Road, Victoria");
-    expect(r?.country).toBe("Singapur");
-  });
-
-  it("reads the city off 'Seestraße 1, BW 78467 Konstanz, Deutschland' without the state and the code", () => {
-    const konstanz = stacked.replace(
-      "Musterweg 1, 12345 Musterstadt, Deutschland",
-      "Seestraße 1, BW 78467 Konstanz, Deutschland"
-    );
-    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", konstanz);
-    expect(r?.city).toBe("Konstanz");
-    expect(r?.postcode).toBe("78467");
-    expect(r?.address).toBe("Seestraße 1");
-  });
-
-  it("parses the stacked layout, where each value sits on the line below its label", () => {
-    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", stacked);
-    expect(r?.checkIn).toBe("2026-01-05");
-    expect(r?.checkOut).toBe("2026-01-07");
-    expect(r?.nights).toBe(2);
-    expect(r?.roomCategory).toBe("Superior Zimmer");
-    expect(r?.city).toBe("Musterstadt");
-    expect(r?.totalPrice).toBeCloseTo(1234.5, 2);
-  });
-
-  it("does not read the NEXT label as a stacked value", () => {
-    // A label with no value at all must stay null rather than swallow whatever
-    // line follows it — otherwise "Anreise" would report "Abreise" as its date
-    // and the booking would carry a nonsense field instead of an honest gap.
-    const labelsOnly = [
+  // These run everywhere — they use synthetic text, not the private samples.
+  describe("Booking.com template parser (synthetic)", () => {
+    const synthetic = [
       "<https://booking.com> \t Bestätigungsnummer: 1234567890",
-      "Anreise",
-      "Abreise",
-      "Mittwoch, 7. Januar 2026 (bis 11:00)",
+      "Buchungsinformationen",
+      "Anreise\t Montag, 5. Januar 2026 (ab 15:00)\t",
+      "Abreise\t Mittwoch, 7. Januar 2026 (bis 11:00)\t",
+      "Ihre Buchung\t 2 Nächte, Superior Zimmer\t",
+      "Lage\t Musterweg 1, 12345 Musterstadt, Deutschland",
+      "Preisangaben",
+      "Gesamtpreis",
+      "€ 1.234,50",
       "",
     ].join("\n");
-    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", labelsOnly);
-    expect(r).toBeNull(); // no check-in => the template declines, as it always has
-  });
 
-  it("accepts the short 'Preis' total label as well as 'Gesamtpreis'", () => {
-    const shortLabel = stacked.replace("Gesamtpreis", "Preis");
-    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", shortLabel);
-    expect(r?.totalPrice).toBeCloseTo(1234.5, 2);
-    expect(r?.missing).not.toContain("totalPrice");
-  });
+    it("parses a synthetic confirmation including a thousands separator", () => {
+      const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", synthetic);
+      expect(r?.hotelName).toBe("Musterhotel");
+      expect(r?.checkIn).toBe("2026-01-05");
+      expect(r?.checkOut).toBe("2026-01-07");
+      expect(r?.nights).toBe(2);
+      expect(r?.totalPrice).toBeCloseTo(1234.5, 2);
+      expect(r?.currency).toBe("EUR");
+    });
 
-  // The four shapes the owner's own 95 confirmations actually use for a
-  // currency outside the euro. Measured 2026-08-13 against the sample folder:
-  // six mails matched the template and still lost their price, three of them
-  // in NOK. `US$` is the telling one — USD was a "supported" currency all
-  // along; the SYMBOL form simply was not in the table, so the price fell out.
-  it.each([
-    ["NOK 3.380", 3380, "NOK"],
-    ["AUD 2.886", 2886, "AUD"],
-    ["S$ 1.324,90", 1324.9, "SGD"],
-    ["US$628,70", 628.7, "USD"],
-  ])("reads a total written as %s", (line, amount, currency) => {
-    const mail = stacked.replace("€ 1.234,50", line);
-    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", mail);
-    expect(r?.totalPrice).toBeCloseTo(amount, 2);
-    expect(r?.currency).toBe(currency);
-  });
+    // AUD-052: every dot was stripped as a grouping mark, so a decimal POINT
+    // multiplied the price by a hundred — and the row read as a clean hit.
+    it("reads a decimal point as a decimal point, not a thousands mark (AUD-052)", () => {
+      const withPoint = synthetic.replace("€ 1.234,50", "US$ 135.87");
+      const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", withPoint);
+      expect(r?.totalPrice).toBeCloseTo(135.87, 2);
+      expect(r?.currency).toBe("USD");
+      expect(r?.missing).toEqual([]);
 
-  it("does not mistake a three-letter word that is not a currency for one", () => {
-    const mail = stacked.replace("€ 1.234,50", "TEL 1.234,50");
-    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", mail);
-    expect(r?.totalPrice).toBeNull();
-  });
+      const grouped = synthetic.replace("€ 1.234,50", "EUR 1,234.50");
+      expect(parseBookingComEmail("x bestätigt: M", grouped)?.totalPrice).toBeCloseTo(1234.5, 2);
 
-  it("still ignores the word Gesamtpreis inside cancellation prose", () => {
-    const prose = stacked.replace(
-      "Gesamtpreis\n€ 1.234,50",
-      "Bei einer Stornierung zahlen Sie einen Betrag in Höhe des Gesamtpreises.\n€ 1.234,50"
-    );
-    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", prose);
-    expect(r?.totalPrice).toBeNull();
-  });
+      // The German forms the template was written for are unchanged.
+      const comma = synthetic.replace("€ 1.234,50", "US$ 135,87");
+      expect(parseBookingComEmail("x bestätigt: M", comma)?.totalPrice).toBeCloseTo(135.87, 2);
+      const whole = synthetic.replace("€ 1.234,50", "NOK 3.380");
+      expect(parseBookingComEmail("x bestätigt: M", whole)?.totalPrice).toBe(3380);
+    });
 
-  it("reads a postcode that follows the city as its own segment", () => {
-    const luxembourg = stacked.replace(
-      "Musterweg 1, 12345 Musterstadt, Deutschland",
-      "2, Rue Nicolas Wester, Luxemburg (Stadt), L-5836, Luxemburg"
-    );
-    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", luxembourg);
-    expect(r?.address).toBe("2, Rue Nicolas Wester");
-    expect(r?.city).toBe("Luxemburg (Stadt)");
-    expect(r?.postcode).toBe("L-5836");
-    expect(r?.country).toBe("Luxemburg");
-  });
-
-  // forgejo#122. The synthetic twin of the sample above, so the rule holds
-  // where the private corpus is absent.
-  it("accepts a changed booking's 'Reservierungsnummer' and its prose subject", () => {
-    const changed = stacked.replace(
-      "Bestätigungsnummer: 1234567890",
-      "Reservierungsnummer\t 1234567890"
-    );
-    const r = parseBookingComEmail("Ihre geänderte Buchung in der Unterkunft Musterhotel", changed);
-    expect(r?.hotelName).toBe("Musterhotel");
-    expect(r?.confirmationNumber).toBe("1234567890");
-    expect(r?.checkIn).toBe("2026-01-05");
-    expect(r?.nights).toBe(2);
-  });
-
-  it("still declines a direct hotel booking's 'Buchungsnummer'", () => {
-    // The label a hotel's own confirmation uses must NOT open this template —
-    // widening the number's label is not a licence to read foreign mails.
-    const direct = stacked
-      .replace(
-        "<https://booking.com> \t Bestätigungsnummer: 1234567890",
-        "Buchungsnummer: 1234567890"
-      )
-      .replace("Lage", "Lage");
-    expect(parseBookingComEmail("Buchungsbestätigung Musterhotel", direct)).toBeNull();
-  });
-
-  // Measured 2026-09-17 on the owner's corpus: the same sender writes the
-  // date BOTH ways, and the reader demanded the ordinal dot. One missing
-  // character cost the whole mail — `checkIn` came back null and the template
-  // declined a confirmation it understood in every other respect.
-  it("reads a German date written without the ordinal dot", () => {
-    const dotless = stacked
-      .replace("Montag, 5. Januar 2026 (ab 15:00)", "Samstag, 26 November 2022 (15:00 - 00:00)")
-      .replace("Mittwoch, 7. Januar 2026 (bis 11:00)", "Sonntag, 27 November 2022 (bis 13:00)");
-    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", dotless);
-    expect(r?.checkIn).toBe("2022-11-26");
-    expect(r?.checkOut).toBe("2022-11-27");
-    // Nights are not asserted here: this fixture states them on its own
-    // "Ihre Buchung" line, which the reader prefers over the span — that
-    // preference is pinned elsewhere, and repeating it would hide what this
-    // test is actually about.
-  });
-
-  // A North American address defeats the European rule: the HOUSE NUMBER has
-  // four digits, so "4949 Regent Boulevard" was read as postcode 4949 in the
-  // city "Regent Boulevard". A real Courtyard confirmation imported that way.
-  it("reads the city off a US address, not the street", () => {
-    const us = stacked.replace(
-      "Musterweg 1, 12345 Musterstadt, Deutschland",
-      "4949 Regent Boulevard, Irving, TX 75063, USA"
-    );
-    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", us);
-    expect(r?.city).toBe("Irving");
-    expect(r?.postcode).toBe("75063");
-    expect(r?.address).toBe("4949 Regent Boulevard");
-    expect(r?.country).toBe("USA");
-  });
-
-  it("reads a Canadian address the same way", () => {
-    const ca = stacked.replace(
-      "Musterweg 1, 12345 Musterstadt, Deutschland",
-      "123 Front Street West, Toronto, ON M5V 2T6, Kanada"
-    );
-    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", ca);
-    expect(r?.city).toBe("Toronto");
-    expect(r?.postcode).toBe("M5V 2T6");
-  });
-
-  // Cold review round two: the day range said 1..31, so "31. April 2026"
-  // produced "2026-04-31" — which `Date.parse` quietly normalises to 1 May.
-  // A line that is not a date must not become a stay that looks read.
-  it("refuses a day the calendar does not have", () => {
-    const impossible = stacked.replace(
+    const stacked = [
+      "<https://booking.com> \t Bestätigungsnummer: 1234567890",
+      "Buchungsinformationen",
+      "Anreise",
       "Montag, 5. Januar 2026 (ab 15:00)",
-      "Montag, 31. April 2026 (ab 15:00)"
-    );
-    expect(parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", impossible)).toBeNull();
-  });
-
-  // The North-American rule only holds for the LAST segment before the
-  // country. Scanning for it anywhere would let a European address whose
-  // middle segment reads "IT 00186" hand back the segment before it as the
-  // city and drop the real one that follows.
-  it("leaves a European address alone when a middle segment looks like a state code", () => {
-    const italian = stacked.replace(
+      "Abreise",
+      "Mittwoch, 7. Januar 2026 (bis 11:00)",
+      "Ihre Buchung",
+      "2 Nächte, Superior Zimmer",
+      "Lage",
       "Musterweg 1, 12345 Musterstadt, Deutschland",
-      "Via Roma 1, Centro Storico, IT 00186, Roma, Italien"
-    );
-    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", italian);
-    expect(r?.city).toBe("Roma");
-    expect(r?.country).toBe("Italien");
-  });
+      "Preisangaben",
+      "Gesamtpreis",
+      "€ 1.234,50",
+      "",
+    ].join("\n");
 
-  it("returns null for text that is not a Booking.com confirmation", () => {
-    expect(
-      parseBookingComEmail("Rechnung", "Sehr geehrter Kunde, anbei Ihre Rechnung.")
-    ).toBeNull();
-  });
+    // forgejo#85 — a six-digit Singapore postcode and a state-prefixed German one
+    // both slipped past the template's five-digit regex into the city column.
+    it("reads the city off '122 Middle Road, Victoria, 188973 Singapur, Singapur' without the postcode", () => {
+      const singapore = stacked.replace(
+        "Musterweg 1, 12345 Musterstadt, Deutschland",
+        "122 Middle Road, Victoria, 188973 Singapur, Singapur"
+      );
+      const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", singapore);
+      expect(r?.city).toBe("Singapur");
+      expect(r?.postcode).toBe("188973");
+      expect(r?.address).toBe("122 Middle Road, Victoria");
+      expect(r?.country).toBe("Singapur");
+    });
 
-  it("reports a missing total price instead of failing", () => {
-    const withoutPrice = synthetic.replace("Gesamtpreis\n€ 1.234,50", "");
-    const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", withoutPrice);
-    expect(r).not.toBeNull();
-    expect(r?.totalPrice).toBeNull();
-    expect(r?.missing).toContain("totalPrice");
+    it("reads the city off 'Seestraße 1, BW 78467 Konstanz, Deutschland' without the state and the code", () => {
+      const konstanz = stacked.replace(
+        "Musterweg 1, 12345 Musterstadt, Deutschland",
+        "Seestraße 1, BW 78467 Konstanz, Deutschland"
+      );
+      const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", konstanz);
+      expect(r?.city).toBe("Konstanz");
+      expect(r?.postcode).toBe("78467");
+      expect(r?.address).toBe("Seestraße 1");
+    });
+
+    it("parses the stacked layout, where each value sits on the line below its label", () => {
+      const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", stacked);
+      expect(r?.checkIn).toBe("2026-01-05");
+      expect(r?.checkOut).toBe("2026-01-07");
+      expect(r?.nights).toBe(2);
+      expect(r?.roomCategory).toBe("Superior Zimmer");
+      expect(r?.city).toBe("Musterstadt");
+      expect(r?.totalPrice).toBeCloseTo(1234.5, 2);
+    });
+
+    it("does not read the NEXT label as a stacked value", () => {
+      // A label with no value at all must stay null rather than swallow whatever
+      // line follows it — otherwise "Anreise" would report "Abreise" as its date
+      // and the booking would carry a nonsense field instead of an honest gap.
+      const labelsOnly = [
+        "<https://booking.com> \t Bestätigungsnummer: 1234567890",
+        "Anreise",
+        "Abreise",
+        "Mittwoch, 7. Januar 2026 (bis 11:00)",
+        "",
+      ].join("\n");
+      const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", labelsOnly);
+      expect(r).toBeNull(); // no check-in => the template declines, as it always has
+    });
+
+    it("accepts the short 'Preis' total label as well as 'Gesamtpreis'", () => {
+      const shortLabel = stacked.replace("Gesamtpreis", "Preis");
+      const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", shortLabel);
+      expect(r?.totalPrice).toBeCloseTo(1234.5, 2);
+      expect(r?.missing).not.toContain("totalPrice");
+    });
+
+    // The four shapes the owner's own 95 confirmations actually use for a
+    // currency outside the euro. Measured 2026-08-13 against the sample folder:
+    // six mails matched the template and still lost their price, three of them
+    // in NOK. `US$` is the telling one — USD was a "supported" currency all
+    // along; the SYMBOL form simply was not in the table, so the price fell out.
+    it.each([
+      ["NOK 3.380", 3380, "NOK"],
+      ["AUD 2.886", 2886, "AUD"],
+      ["S$ 1.324,90", 1324.9, "SGD"],
+      ["US$628,70", 628.7, "USD"],
+    ])("reads a total written as %s", (line, amount, currency) => {
+      const mail = stacked.replace("€ 1.234,50", line);
+      const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", mail);
+      expect(r?.totalPrice).toBeCloseTo(amount, 2);
+      expect(r?.currency).toBe(currency);
+    });
+
+    it("does not mistake a three-letter word that is not a currency for one", () => {
+      const mail = stacked.replace("€ 1.234,50", "TEL 1.234,50");
+      const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", mail);
+      expect(r?.totalPrice).toBeNull();
+    });
+
+    it("still ignores the word Gesamtpreis inside cancellation prose", () => {
+      const prose = stacked.replace(
+        "Gesamtpreis\n€ 1.234,50",
+        "Bei einer Stornierung zahlen Sie einen Betrag in Höhe des Gesamtpreises.\n€ 1.234,50"
+      );
+      const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", prose);
+      expect(r?.totalPrice).toBeNull();
+    });
+
+    it("reads a postcode that follows the city as its own segment", () => {
+      const luxembourg = stacked.replace(
+        "Musterweg 1, 12345 Musterstadt, Deutschland",
+        "2, Rue Nicolas Wester, Luxemburg (Stadt), L-5836, Luxemburg"
+      );
+      const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", luxembourg);
+      expect(r?.address).toBe("2, Rue Nicolas Wester");
+      expect(r?.city).toBe("Luxemburg (Stadt)");
+      expect(r?.postcode).toBe("L-5836");
+      expect(r?.country).toBe("Luxemburg");
+    });
+
+    // forgejo#122. The synthetic twin of the sample above, so the rule holds
+    // where the private corpus is absent.
+    it("accepts a changed booking's 'Reservierungsnummer' and its prose subject", () => {
+      const changed = stacked.replace(
+        "Bestätigungsnummer: 1234567890",
+        "Reservierungsnummer\t 1234567890"
+      );
+      const r = parseBookingComEmail(
+        "Ihre geänderte Buchung in der Unterkunft Musterhotel",
+        changed
+      );
+      expect(r?.hotelName).toBe("Musterhotel");
+      expect(r?.confirmationNumber).toBe("1234567890");
+      expect(r?.checkIn).toBe("2026-01-05");
+      expect(r?.nights).toBe(2);
+    });
+
+    it("still declines a direct hotel booking's 'Buchungsnummer'", () => {
+      // The label a hotel's own confirmation uses must NOT open this template —
+      // widening the number's label is not a licence to read foreign mails.
+      const direct = stacked
+        .replace(
+          "<https://booking.com> \t Bestätigungsnummer: 1234567890",
+          "Buchungsnummer: 1234567890"
+        )
+        .replace("Lage", "Lage");
+      expect(parseBookingComEmail("Buchungsbestätigung Musterhotel", direct)).toBeNull();
+    });
+
+    // Measured 2026-09-17 on the owner's corpus: the same sender writes the
+    // date BOTH ways, and the reader demanded the ordinal dot. One missing
+    // character cost the whole mail — `checkIn` came back null and the template
+    // declined a confirmation it understood in every other respect.
+    it("reads a German date written without the ordinal dot", () => {
+      const dotless = stacked
+        .replace("Montag, 5. Januar 2026 (ab 15:00)", "Samstag, 26 November 2022 (15:00 - 00:00)")
+        .replace("Mittwoch, 7. Januar 2026 (bis 11:00)", "Sonntag, 27 November 2022 (bis 13:00)");
+      const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", dotless);
+      expect(r?.checkIn).toBe("2022-11-26");
+      expect(r?.checkOut).toBe("2022-11-27");
+      // Nights are not asserted here: this fixture states them on its own
+      // "Ihre Buchung" line, which the reader prefers over the span — that
+      // preference is pinned elsewhere, and repeating it would hide what this
+      // test is actually about.
+    });
+
+    // A North American address defeats the European rule: the HOUSE NUMBER has
+    // four digits, so "4949 Regent Boulevard" was read as postcode 4949 in the
+    // city "Regent Boulevard". A real Courtyard confirmation imported that way.
+    it("reads the city off a US address, not the street", () => {
+      const us = stacked.replace(
+        "Musterweg 1, 12345 Musterstadt, Deutschland",
+        "4949 Regent Boulevard, Irving, TX 75063, USA"
+      );
+      const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", us);
+      expect(r?.city).toBe("Irving");
+      expect(r?.postcode).toBe("75063");
+      expect(r?.address).toBe("4949 Regent Boulevard");
+      expect(r?.country).toBe("USA");
+    });
+
+    it("reads a Canadian address the same way", () => {
+      const ca = stacked.replace(
+        "Musterweg 1, 12345 Musterstadt, Deutschland",
+        "123 Front Street West, Toronto, ON M5V 2T6, Kanada"
+      );
+      const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", ca);
+      expect(r?.city).toBe("Toronto");
+      expect(r?.postcode).toBe("M5V 2T6");
+    });
+
+    // Cold review round two: the day range said 1..31, so "31. April 2026"
+    // produced "2026-04-31" — which `Date.parse` quietly normalises to 1 May.
+    // A line that is not a date must not become a stay that looks read.
+    it("refuses a day the calendar does not have", () => {
+      const impossible = stacked.replace(
+        "Montag, 5. Januar 2026 (ab 15:00)",
+        "Montag, 31. April 2026 (ab 15:00)"
+      );
+      expect(
+        parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", impossible)
+      ).toBeNull();
+    });
+
+    // The North-American rule only holds for the LAST segment before the
+    // country. Scanning for it anywhere would let a European address whose
+    // middle segment reads "IT 00186" hand back the segment before it as the
+    // city and drop the real one that follows.
+    it("leaves a European address alone when a middle segment looks like a state code", () => {
+      const italian = stacked.replace(
+        "Musterweg 1, 12345 Musterstadt, Deutschland",
+        "Via Roma 1, Centro Storico, IT 00186, Roma, Italien"
+      );
+      const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", italian);
+      expect(r?.city).toBe("Roma");
+      expect(r?.country).toBe("Italien");
+    });
+
+    it("returns null for text that is not a Booking.com confirmation", () => {
+      expect(
+        parseBookingComEmail("Rechnung", "Sehr geehrter Kunde, anbei Ihre Rechnung.")
+      ).toBeNull();
+    });
+
+    it("reports a missing total price instead of failing", () => {
+      const withoutPrice = synthetic.replace("Gesamtpreis\n€ 1.234,50", "");
+      const r = parseBookingComEmail("Ihre Buchung ist bestätigt: Musterhotel", withoutPrice);
+      expect(r).not.toBeNull();
+      expect(r?.totalPrice).toBeNull();
+      expect(r?.missing).toContain("totalPrice");
+    });
   });
 });
 

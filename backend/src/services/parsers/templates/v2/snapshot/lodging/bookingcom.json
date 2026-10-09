@@ -1,0 +1,191 @@
+{
+  "id": "lodging:booking.com",
+  "domain": "lodging",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Booking.com",
+    "kind": "portal",
+    "keys": {
+      "senderDomains": ["booking.com"]
+    }
+  },
+  "markets": ["DE"],
+  "match": {
+    "markers": [],
+    "anchors": ["booking.com"],
+    "allOf": [
+      {
+        "pattern": "(?:Bestätigungs|Reservierungs)nummer:?\\s*‌?\\s*(\\d{6,})",
+        "flags": ""
+      }
+    ]
+  },
+  "extraction": {
+    "preprocess": ["stripCarriageReturns"],
+    "labels": [
+      "Anreise",
+      "Abreise",
+      "Ihre Buchung",
+      "Sie haben gebucht für",
+      "Lage",
+      "Telefon",
+      "Kontakt",
+      "Stornierungsbedingungen",
+      "Stornierungsgebühren",
+      "Preisangaben",
+      "Gesamtpreis",
+      "Buchungsinformationen",
+      "Zahlungsangaben",
+      "Reservierungsnummer",
+      "PIN-Code",
+      "Gebucht von",
+      "Ihre Änderungen"
+    ],
+    "fields": {
+      "hotelName": {
+        "patterns": [
+          "^[^\\n]*?bestätigt:[ \\t]*([^\\n]+)",
+          "^[^\\n]*?in der Unterkunft[ \\t]+([^\\n]+)",
+          "booking\\.com\\/hotel\\/[^\\n]*\\n(?:[ \\t]*\\n){0,3}[ \\t]*([^\\n]*\\S)"
+        ],
+        "flags": "i",
+        "transform": "trim"
+      },
+      "checkIn": {
+        "patterns": [
+          "^[ \\t ]*Anreise(?:[ \\t ]+(?=\\S)|[ \\t ]*\\n(?:[ \\t ]*\\n)?[ \\t ]*(?!(?:Anreise|Abreise|Ihre\\ Buchung|Sie\\ haben\\ gebucht\\ für|Lage|Telefon|Kontakt|Stornierungsbedingungen|Stornierungsgebühren|Preisangaben|Gesamtpreis|Buchungsinformationen|Zahlungsangaben|Reservierungsnummer|PIN-Code|Gebucht\\ von|Ihre\\ Änderungen)[ \\t ]*$))([^\\n]*\\S)[ \\t ]*$"
+        ],
+        "flags": "m",
+        "transform": "germanDate"
+      },
+      "checkOut": {
+        "patterns": [
+          "^[ \\t ]*Abreise(?:[ \\t ]+(?=\\S)|[ \\t ]*\\n(?:[ \\t ]*\\n)?[ \\t ]*(?!(?:Anreise|Abreise|Ihre\\ Buchung|Sie\\ haben\\ gebucht\\ für|Lage|Telefon|Kontakt|Stornierungsbedingungen|Stornierungsgebühren|Preisangaben|Gesamtpreis|Buchungsinformationen|Zahlungsangaben|Reservierungsnummer|PIN-Code|Gebucht\\ von|Ihre\\ Änderungen)[ \\t ]*$))([^\\n]*\\S)[ \\t ]*$"
+        ],
+        "flags": "m",
+        "transform": "germanDate"
+      },
+      "nights": {
+        "patterns": [
+          "^[ \\t ]*Ihre Buchung(?:[ \\t ]+|[ \\t ]*\\n(?:[ \\t ]*\\n)?[ \\t ]*)(\\d+)[ \\t ]+N(?:acht|ächte)[ \\t ]*,[ \\t ]*([^\\n]*\\S)[ \\t ]*$"
+        ],
+        "flags": "m",
+        "transform": "integer"
+      },
+      "roomCategory": {
+        "patterns": [
+          "^[ \\t ]*Ihre Buchung(?:[ \\t ]+|[ \\t ]*\\n(?:[ \\t ]*\\n)?[ \\t ]*)(\\d+)[ \\t ]+N(?:acht|ächte)[ \\t ]*,[ \\t ]*([^\\n]*\\S)[ \\t ]*$"
+        ],
+        "flags": "m",
+        "format": "{2}"
+      },
+      "address": {
+        "patterns": [
+          "^[ \\t ]*Lage(?:[ \\t ]+(?=\\S)|[ \\t ]*\\n(?:[ \\t ]*\\n)?[ \\t ]*(?!(?:Anreise|Abreise|Ihre\\ Buchung|Sie\\ haben\\ gebucht\\ für|Lage|Telefon|Kontakt|Stornierungsbedingungen|Stornierungsgebühren|Preisangaben|Gesamtpreis|Buchungsinformationen|Zahlungsangaben|Reservierungsnummer|PIN-Code|Gebucht\\ von|Ihre\\ Änderungen)[ \\t ]*$))([^\\n]*\\S)[ \\t ]*$"
+        ],
+        "flags": "m",
+        "transform": "addressStreet"
+      },
+      "postcode": {
+        "patterns": [
+          "^[ \\t ]*Lage(?:[ \\t ]+(?=\\S)|[ \\t ]*\\n(?:[ \\t ]*\\n)?[ \\t ]*(?!(?:Anreise|Abreise|Ihre\\ Buchung|Sie\\ haben\\ gebucht\\ für|Lage|Telefon|Kontakt|Stornierungsbedingungen|Stornierungsgebühren|Preisangaben|Gesamtpreis|Buchungsinformationen|Zahlungsangaben|Reservierungsnummer|PIN-Code|Gebucht\\ von|Ihre\\ Änderungen)[ \\t ]*$))([^\\n]*\\S)[ \\t ]*$"
+        ],
+        "flags": "m",
+        "transform": "addressPostcode"
+      },
+      "city": {
+        "patterns": [
+          "^[ \\t ]*Lage(?:[ \\t ]+(?=\\S)|[ \\t ]*\\n(?:[ \\t ]*\\n)?[ \\t ]*(?!(?:Anreise|Abreise|Ihre\\ Buchung|Sie\\ haben\\ gebucht\\ für|Lage|Telefon|Kontakt|Stornierungsbedingungen|Stornierungsgebühren|Preisangaben|Gesamtpreis|Buchungsinformationen|Zahlungsangaben|Reservierungsnummer|PIN-Code|Gebucht\\ von|Ihre\\ Änderungen)[ \\t ]*$))([^\\n]*\\S)[ \\t ]*$"
+        ],
+        "flags": "m",
+        "transform": "addressCity"
+      },
+      "country": {
+        "patterns": [
+          "^[ \\t ]*Lage(?:[ \\t ]+(?=\\S)|[ \\t ]*\\n(?:[ \\t ]*\\n)?[ \\t ]*(?!(?:Anreise|Abreise|Ihre\\ Buchung|Sie\\ haben\\ gebucht\\ für|Lage|Telefon|Kontakt|Stornierungsbedingungen|Stornierungsgebühren|Preisangaben|Gesamtpreis|Buchungsinformationen|Zahlungsangaben|Reservierungsnummer|PIN-Code|Gebucht\\ von|Ihre\\ Änderungen)[ \\t ]*$))([^\\n]*\\S)[ \\t ]*$"
+        ],
+        "flags": "m",
+        "transform": "addressCountry"
+      },
+      "totalPrice": {
+        "patterns": [
+          "^[ \\t ]*(?:Gesamtpreis|Preis)[ \\t ]*\\n(?:[ \\t ]*\\n){0,2}[ \\t ]*([^\\n]*\\S)[ \\t ]*$"
+        ],
+        "flags": "m",
+        "scan": true,
+        "transform": "leadingAmount"
+      },
+      "currency": {
+        "patterns": [
+          "^[ \\t ]*(?:Gesamtpreis|Preis)[ \\t ]*\\n(?:[ \\t ]*\\n){0,2}[ \\t ]*([^\\n]*\\S)[ \\t ]*$"
+        ],
+        "flags": "m",
+        "scan": true,
+        "transform": "leadingCurrency"
+      },
+      "confirmationNumber": {
+        "patterns": ["(?:Bestätigungs|Reservierungs)nummer:?\\s*‌?\\s*(\\d{6,})"],
+        "flags": ""
+      }
+    },
+    "required": ["hotelName", "checkIn", "checkOut"]
+  },
+  "output": {
+    "report": ["roomCategory", "city", "totalPrice", "confirmationNumber"],
+    "confidence": {
+      "complete": 95,
+      "partial": 80
+    }
+  },
+  "testCases": [
+    {
+      "name": "the inline layout, label and value on one line",
+      "input": {
+        "subject": "Danke! Ihre Buchung ist bestätigt: Pension Probehof",
+        "text": "<https://booking.com> \t Bestätigungsnummer: 9988776655\nAnreise\t Donnerstag, 1. Oktober 2026 (ab 15:00)\t\nAbreise\t Samstag, 3. Oktober 2026 (bis 11:00)\t\nIhre Buchung\t 2 Nächte, Einzelzimmer\t\nLage\t Probeweg 9, 6020 Teststadt, Österreich\nGesamtpreis\n€ 2.150,00"
+      },
+      "expect": "match",
+      "expected": {
+        "hotelName": "Pension Probehof",
+        "checkIn": "2026-10-01",
+        "checkOut": "2026-10-03",
+        "nights": 2,
+        "roomCategory": "Einzelzimmer",
+        "address": "Probeweg 9",
+        "postcode": "6020",
+        "city": "Teststadt",
+        "country": "Österreich",
+        "totalPrice": 2150,
+        "currency": "EUR",
+        "confirmationNumber": "9988776655"
+      }
+    },
+    {
+      "name": "the stacked layout, the name after the property link, a currency code",
+      "input": "<https://www.booking.com/hotel/de/beispielhaus.html> \t Bestätigungsnummer: 1122334455\nBeispielhaus am See\nBuchungsinformationen\nAnreise\nFreitag, 4. September 2026 (ab 14:00)\nAbreise\nSonntag, 6. September 2026 (bis 10:00)\nIhre Buchung\n2 Nächte, Doppelzimmer mit Seeblick\nLage\nUferweg 4, 82211 Probedorf, Deutschland\nPreisangaben\nGesamtpreis\nCHF 318,40",
+      "expect": "match",
+      "expected": {
+        "hotelName": "Beispielhaus am See",
+        "checkIn": "2026-09-04",
+        "checkOut": "2026-09-06",
+        "roomCategory": "Doppelzimmer mit Seeblick",
+        "city": "Probedorf",
+        "totalPrice": 318.4,
+        "currency": "CHF"
+      }
+    },
+    {
+      "name": "a label with no value does not report the next label as its value",
+      "input": "<https://booking.com> \t Bestätigungsnummer: 1122334455\nAnreise\nAbreise\nSonntag, 6. September 2026 (bis 10:00)",
+      "expect": "decline"
+    },
+    {
+      "name": "a direct hotel booking says Buchungsnummer and is not ours",
+      "input": {
+        "subject": "Buchungsbestätigung Musterhotel",
+        "text": "Buchungsnummer: 1122334455\nBeispielhaus am See\nBuchungsinformationen\nAnreise\nFreitag, 4. September 2026 (ab 14:00)\nAbreise\nSonntag, 6. September 2026 (bis 10:00)\nIhre Buchung\n2 Nächte, Doppelzimmer mit Seeblick\nLage\nUferweg 4, 82211 Probedorf, Deutschland\nPreisangaben\nGesamtpreis\nCHF 318,40"
+      },
+      "expect": "decline"
+    }
+  ]
+}
