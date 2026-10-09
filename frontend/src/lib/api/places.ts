@@ -197,6 +197,29 @@ export async function setPlaceCover(placeId: string, photoId: string | null): Pr
   await api.put(`/places/${placeId}/cover`, { photoId });
 }
 
+/** A named thing hanging off a place — a list it is in, a trip a visit is filed under. */
+export interface NamedRef {
+  id: string;
+  name: string;
+}
+
+/** What hangs off one place, counted — see `GET /places/:id/related`. */
+export interface PlaceRelations {
+  /** Every visit row, planned ones included. */
+  visitCount: number;
+  plannedVisitCount: number;
+  photoCount: number;
+  documentCount: number;
+  lists: NamedRef[];
+  trips: NamedRef[];
+  roadtripStationCount: number;
+}
+
+export async function getPlaceRelations(placeId: string): Promise<PlaceRelations> {
+  const res = await api.get<Envelope<PlaceRelations>>(`/places/${placeId}/related`);
+  return res.data.data;
+}
+
 export const placesApi = {
   list: listPlaces,
   count: countPlaces,

@@ -5,6 +5,7 @@ import type { Place } from "../../types/place";
 import { countRenderedRows, paginationControlsRendered } from "./tablePaginationTestSupport";
 
 const listPlacesMock = vi.fn();
+const getPlaceRelationsMock = vi.fn();
 
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-stub" />,
@@ -13,6 +14,7 @@ vi.mock("../../components/NavigationBar", () => ({
 vi.mock("../../lib/api/places", () => ({
   listPlaces: (...args: unknown[]) => listPlacesMock(...args),
   deletePlace: vi.fn(),
+  getPlaceRelations: (...args: unknown[]) => getPlaceRelationsMock(...args),
 }));
 
 // The lists dropdown is a separate concern — an empty list keeps the panel's
@@ -113,6 +115,32 @@ describe("PlacesListPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
     expect(await screen.findByText("Wartburg")).toBeInTheDocument();
     expect(listPlacesMock).toHaveBeenCalledTimes(2);
+  });
+
+  // forgejo#250: the list asks the same question as the detail page — what
+  // goes with the place and what stays — counted only once it is asked.
+  it("names what goes and what stays before deleting from the list", async () => {
+    listPlacesMock.mockResolvedValue([
+      makePlace({ id: "p1", name: "Wartburg", visitCount: 1, plannedVisitCount: 1 }),
+    ]);
+    getPlaceRelationsMock.mockResolvedValue({
+      visitCount: 2,
+      plannedVisitCount: 1,
+      photoCount: 2,
+      documentCount: 0,
+      lists: [],
+      trips: [{ id: "t1", name: "Thüringen" }],
+      roadtripStationCount: 0,
+    });
+    renderListPage();
+    await screen.findByText("Wartburg");
+    expect(getPlaceRelationsMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getAllByRole("button", { name: "common:buttons.delete" })[0]);
+    const dialog = await screen.findByTestId("confirm-modal");
+    await waitFor(() => expect(dialog.textContent).toContain("places:delete.photos"));
+    expect(getPlaceRelationsMock).toHaveBeenCalledWith("p1");
+    expect(dialog.textContent).toContain("common:delete.survivors");
   });
 
   // The add button was filled with the place domain colour, which is an

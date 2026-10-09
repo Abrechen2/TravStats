@@ -20,7 +20,9 @@ import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import { STATUS_PILL_CLASS, statusPillStyle } from "../components/table/statusPillStyle";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import ConfirmModal from "../components/Training/ConfirmModal";
-import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { placeDeleteMessage } from "../lib/placeDeleteMessage";
+import { usePlaceRelations } from "../hooks/usePlaceRelations";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import { navigateAfterSave } from "../components/form";
 import { useTranslation } from "../hooks/useTranslation";
@@ -150,6 +152,9 @@ export default function PlacesListPage(): JSX.Element {
   const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Place | null>(null);
   const [creating, setCreating] = useState(false);
+  // Counted only while the question is open; the dialog opens at once and
+  // names photos, documents, lists and trips as soon as they are known.
+  const deleteRelations = usePlaceRelations(pendingDelete?.id ?? null);
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<CategoryFilter>("all");
@@ -630,17 +635,15 @@ export default function PlacesListPage(): JSX.Element {
         <ConfirmModal
           isOpen
           title={t("places:list.deleteTitle")}
-          // Same shape as the other five delete dialogs: what · how much goes
-          // with it · what stays. It already named the place and the visits;
-          // it lacked the COUNT and the reassurance that trips survive.
-          message={countedDeleteMessage(
+          // What goes (visits, proof photos, kept documents, list
+          // memberships) and what stays (trips, the lists themselves), from
+          // the same function the detail page asks with (forgejo#250). The
+          // row's own figure leaves planned visits out; every visit goes.
+          message={placeDeleteMessage(
             t,
-            {
-              counted: "places:list.deleteMessage",
-              empty: "places:list.deleteMessageNoVisits",
-            },
             pendingDelete.name,
-            pendingDelete.visitCount
+            pendingDelete.visitCount + pendingDelete.plannedVisitCount,
+            deleteRelations
           )}
           confirmText={t("common:buttons.delete")}
           cancelText={t("common:buttons.cancel")}

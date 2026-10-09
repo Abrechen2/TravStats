@@ -45,6 +45,7 @@ import "./loyalty";
 import "./settings";
 import "./places";
 import "./placePhotos";
+import "./placeRelations";
 import "./operations";
 import "./dataQuality";
 import "./accounts";

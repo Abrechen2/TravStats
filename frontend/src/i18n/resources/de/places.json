@@ -27,7 +27,7 @@
     "deleted": "„{{name}}“ wurde gelöscht.",
     "deleteFailed": "Der Ort konnte nicht gelöscht werden.",
     "deleteTitle": "Ort löschen?",
-    "deleteMessage": "„{{name}}“ wird mit {{count}} Besuchen dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
+    "deleteMessage": "„{{name}}“ wird mit {{count}} Besuchen dauerhaft gelöscht.",
     "columns": {
       "name": "Name",
       "category": "Kategorie",
@@ -53,8 +53,8 @@
     },
     "addPlace": "Ort",
     "emptyHint": "Füge deinen ersten Ort hinzu.",
-    "deleteMessage_one": "„{{name}}“ wird mit einem Besuch dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
-    "deleteMessage_other": "„{{name}}“ wird mit {{count}} Besuchen dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
+    "deleteMessage_one": "„{{name}}“ wird mit einem Besuch dauerhaft gelöscht.",
+    "deleteMessage_other": "„{{name}}“ wird mit {{count}} Besuchen dauerhaft gelöscht.",
     "deleteMessageNoVisits": "„{{name}}“ wird dauerhaft gelöscht.",
     "addFirst": "Ersten Ort anlegen"
   },
@@ -114,7 +114,6 @@
     "visitFailed": "Der Besuch konnte nicht eingetragen werden.",
     "visitDeleteFailed": "Der Besuch konnte nicht gelöscht werden.",
     "visitDeleteTitle": "Besuch löschen?",
-    "visitDeleteMessage": "Der Besuch vom {{visit}} wird dauerhaft gelöscht, samt seiner Beleg-Fotos. Der Ort selbst bleibt bestehen.",
     "notes": "Notiz",
     "masterData": "Stammdaten",
     "position": "Position",
@@ -131,7 +130,10 @@
     "editVisit": "Besuch bearbeiten",
     "visitUpdated": "Besuch gespeichert.",
     "visitUpdateFailed": "Der Besuch konnte nicht gespeichert werden.",
-    "visitNotFound": "Diesen Besuch gibt es an diesem Ort nicht mehr."
+    "visitNotFound": "Diesen Besuch gibt es an diesem Ort nicht mehr.",
+    "visitDeleteMessageNoPhotos": "Der Besuch vom {{visit}} wird dauerhaft gelöscht. Der Ort selbst bleibt bestehen.",
+    "visitDeleteMessagePhotos_one": "Der Besuch vom {{visit}} wird dauerhaft gelöscht, samt seinem Beleg-Foto. Der Ort selbst bleibt bestehen.",
+    "visitDeleteMessagePhotos_other": "Der Besuch vom {{visit}} wird dauerhaft gelöscht, samt seinen {{count}} Beleg-Fotos. Der Ort selbst bleibt bestehen."
   },
   "lists": {
     "title": "Listen",
@@ -389,5 +391,14 @@
     "lead": "Titelbild von {{name}}",
     "makeCover": "Als Titelbild verwenden",
     "coverFailed": "Das Titelbild konnte nicht gespeichert werden."
+  },
+  "delete": {
+    "tripsStayUnnamed": "Verknüpfte Reisen bleiben erhalten.",
+    "photos_one": "Dazu ein Beleg-Foto, das mit gelöscht wird.",
+    "photos_other": "Dazu {{count}} Beleg-Fotos, die mit gelöscht werden.",
+    "lists_one": "Er verschwindet aus der Liste {{names}}; die Liste selbst bleibt.",
+    "lists_other": "Er verschwindet aus {{count}} Listen ({{names}}); die Listen selbst bleiben.",
+    "stations_one": "Eine Roadtrip-Station, die ihn nennt, bleibt erhalten.",
+    "stations_other": "{{count}} Roadtrip-Stationen, die ihn nennen, bleiben erhalten."
   }
 }

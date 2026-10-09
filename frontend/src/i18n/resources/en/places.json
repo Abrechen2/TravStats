@@ -27,7 +27,7 @@
     "deleted": "“{{name}}” was deleted.",
     "deleteFailed": "The place could not be deleted.",
     "deleteTitle": "Delete place?",
-    "deleteMessage": "“{{name}}” will be permanently deleted, along with its {{count}} visits. Trips it belongs to are kept.",
+    "deleteMessage": "“{{name}}” will be permanently deleted, along with its {{count}} visits.",
     "columns": {
       "name": "Name",
       "category": "Category",
@@ -53,8 +53,8 @@
     },
     "addPlace": "Place",
     "emptyHint": "Add your first place.",
-    "deleteMessage_one": "“{{name}}” will be permanently deleted, along with its one visit. Trips it belongs to are kept.",
-    "deleteMessage_other": "“{{name}}” will be permanently deleted, along with its {{count}} visits. Trips it belongs to are kept.",
+    "deleteMessage_one": "“{{name}}” will be permanently deleted, along with its one visit.",
+    "deleteMessage_other": "“{{name}}” will be permanently deleted, along with its {{count}} visits.",
     "deleteMessageNoVisits": "“{{name}}” will be permanently deleted.",
     "addFirst": "Add your first place"
   },
@@ -114,7 +114,6 @@
     "visitFailed": "The visit could not be recorded.",
     "visitDeleteFailed": "The visit could not be deleted.",
     "visitDeleteTitle": "Delete visit?",
-    "visitDeleteMessage": "The visit of {{visit}} will be permanently deleted, along with its photographs. The place itself stays.",
     "notes": "Note",
     "masterData": "Details",
     "position": "Position",
@@ -131,7 +130,10 @@
     "editVisit": "Edit visit",
     "visitUpdated": "Visit saved.",
     "visitUpdateFailed": "The visit could not be saved.",
-    "visitNotFound": "This visit no longer exists at this place."
+    "visitNotFound": "This visit no longer exists at this place.",
+    "visitDeleteMessageNoPhotos": "The visit of {{visit}} will be permanently deleted. The place itself stays.",
+    "visitDeleteMessagePhotos_one": "The visit of {{visit}} will be permanently deleted, along with its proof photo. The place itself stays.",
+    "visitDeleteMessagePhotos_other": "The visit of {{visit}} will be permanently deleted, along with its {{count}} proof photos. The place itself stays."
   },
   "lists": {
     "title": "Lists",
@@ -389,5 +391,14 @@
     "lead": "Cover photo of {{name}}",
     "makeCover": "Use as cover photo",
     "coverFailed": "The cover photo could not be saved."
+  },
+  "delete": {
+    "tripsStayUnnamed": "Linked trips are kept.",
+    "photos_one": "Along with it goes one proof photo.",
+    "photos_other": "Along with them go {{count}} proof photos.",
+    "lists_one": "It leaves the list {{names}}; the list itself stays.",
+    "lists_other": "It leaves {{count}} lists ({{names}}); the lists themselves stay.",
+    "stations_one": "One roadtrip station that names it is kept.",
+    "stations_other": "{{count}} roadtrip stations that name it are kept."
   }
 }

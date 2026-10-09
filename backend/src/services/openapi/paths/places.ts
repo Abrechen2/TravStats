@@ -680,3 +680,6 @@ registry.registerPath({
     429: { description: "Rate-limited", content: errorContent },
   },
 });
+
+/** The `Place` component, for the satellite modules that answer with one (`placeRelations.ts`). */
+export { place as placeSchema };

@@ -22,7 +22,9 @@ import { FlagImg } from "../lib/countryFlag";
 import { placeCountryLabel, placeCountryCode } from "../lib/placeCountry";
 import { logger } from "../lib/logger";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
-import { countedDeleteMessage, DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
+import { DELETE_BUTTON_CLASS, survivorsNote, withDocumentNote } from "../lib/deleteConfirm";
+import { placeDeleteMessage } from "../lib/placeDeleteMessage";
+import { usePlaceRelations } from "../hooks/usePlaceRelations";
 import { createVisit, deletePlace, deleteVisit, getPlace, updateVisit } from "../lib/api/places";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { wallClockInput } from "../lib/api/timeInput";
@@ -66,6 +68,7 @@ export default function PlaceDetailPage(): JSX.Element {
   const [failure, setFailure] = useState<LoadFailure | null>(null);
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const deleteRelations = usePlaceRelations(confirmDelete && id ? id : null);
   /**
    * Which visit the reader is being asked about, if any.
    *
@@ -598,13 +601,28 @@ export default function PlaceDetailPage(): JSX.Element {
         <ConfirmModal
           isOpen
           title={t("places:detail.visitDeleteTitle")}
-          message={withDocumentNote(
-            t("places:detail.visitDeleteMessage", {
-              visit: formatVisit(confirmVisitDelete),
-            }),
-            t,
-            visitDocumentCount
-          )}
+          // Counted, and with what stays named (forgejo#250): its proof photos
+          // go with it, the place and the trip it was filed under stay.
+          message={[
+            withDocumentNote(
+              (confirmVisitDelete.photos?.length ?? 0) > 0
+                ? t("places:detail.visitDeleteMessagePhotos", {
+                    visit: formatVisit(confirmVisitDelete),
+                    count: confirmVisitDelete.photos?.length ?? 0,
+                  })
+                : t("places:detail.visitDeleteMessageNoPhotos", {
+                    visit: formatVisit(confirmVisitDelete),
+                  }),
+              t,
+              visitDocumentCount
+            ),
+            survivorsNote(
+              t,
+              trips.filter((trip) => trip.id === confirmVisitDelete.tripId).map((trip) => trip.name)
+            ),
+          ]
+            .filter((line): line is string => line !== null)
+            .join("\n")}
           confirmText={t("common:buttons.delete")}
           cancelText={t("common:buttons.cancel")}
           onConfirm={() => void removeVisit(confirmVisitDelete.id)}
@@ -621,15 +639,7 @@ export default function PlaceDetailPage(): JSX.Element {
           // once passed no count and showed "mit {{count}} Besuchen" raw
           // (browser acceptance 2026-09-26). Every visit goes with the place,
           // planned ones included.
-          message={countedDeleteMessage(
-            t,
-            {
-              counted: "places:list.deleteMessage",
-              empty: "places:list.deleteMessageNoVisits",
-            },
-            place.name,
-            place.visits?.length ?? 0
-          )}
+          message={placeDeleteMessage(t, place.name, place.visits?.length ?? 0, deleteRelations)}
           confirmButtonClass={DELETE_BUTTON_CLASS}
           confirmText={t("common:buttons.delete")}
           cancelText={t("common:buttons.cancel")}
