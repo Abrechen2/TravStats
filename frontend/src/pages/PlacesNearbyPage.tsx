@@ -160,7 +160,7 @@ export default function PlacesNearbyPage(): JSX.Element {
       <Link to="/places" className="ts-back-link text-sm">
         ← {t("places:detail.backToLogbook")}
       </Link>
-      <h1 className="t-screen-title mt-3 mb-1">{t("places:nearby.title")}</h1>
+      <h1 className="t-screen-title mt-2 mb-1">{t("places:nearby.title")}</h1>
       <p className="mb-5 text-sm" style={{ color: "var(--text-muted)" }}>
         {t("places:nearby.subtitle")}
       </p>
