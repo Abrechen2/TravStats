@@ -98,8 +98,13 @@ describe("PlaceFormModal — adding to lists on create", () => {
     await user.click(screen.getByText("Maccis"));
     await fillAndSave();
 
-    // The place was created and is reported as created. Only the filing failed.
-    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(saved));
+    // The place was created; only the filing failed, and the form says so
+    // instead of a toast that vanishes (forgejo#247). The caller hears of the
+    // stored place once the user moves on.
+    expect(await screen.findByText("places:form.listPartial")).toBeInTheDocument();
+    expect(createPlaceMock).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByText("places:form.listContinue"));
+    expect(onSaved).toHaveBeenCalledWith(saved);
     expect(createPlaceMock).toHaveBeenCalledTimes(1);
   });
 

@@ -15,12 +15,14 @@ import { Table, type TableColumn } from "../components/ui/Table";
 import { SortableHeader } from "../components/table/SortableHeader";
 import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
 import ListEmptyState from "../components/table/ListEmptyState";
+import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import { STATUS_PILL_CLASS, statusPillStyle } from "../components/table/statusPillStyle";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
+import { navigateAfterSave } from "../components/form";
 import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { FlagImg } from "../lib/countryFlag";
@@ -145,6 +147,7 @@ export default function PlacesListPage(): JSX.Element {
   const [rows, setRows] = useState<Place[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Place | null>(null);
   const [creating, setCreating] = useState(false);
 
@@ -181,6 +184,7 @@ export default function PlacesListPage(): JSX.Element {
     } catch (err: unknown) {
       logger.error({ err }, "PlacesListPage: failed to load places");
       setLoadError(true);
+      setLoadFailure(loadFailureLog(err));
     } finally {
       setLoading(false);
     }
@@ -508,20 +512,13 @@ export default function PlacesListPage(): JSX.Element {
           {loading ? (
             <SkeletonTable rows={10} />
           ) : loadError ? (
-            <div
-              className="overflow-hidden rounded-lg bg-[var(--bg-surface)] px-4 py-8 text-center"
-              style={{ border: "1px solid var(--color-border)" }}
-            >
-              <p className="text-[var(--danger)]">{t("places:list.loadError")}</p>
-              <button
-                type="button"
-                onClick={() => void load()}
-                className="mt-2 text-sm underline"
-                style={{ color: "var(--accent)" }}
-              >
-                {t("places:list.retry")}
-              </button>
-            </div>
+            // Distinct from "no places yet" (forgejo#247/#250): the shared
+            // degraded state with a retry, never a red paragraph.
+            <ListLoadFailed
+              title={t("places:list.loadError")}
+              onRetry={() => void load()}
+              log={loadFailure}
+            />
           ) : filtered.length === 0 ? (
             /* Was its own inline ternary saying the same thing the other
                  three lists say — the shared component so the wording and the
@@ -535,6 +532,9 @@ export default function PlacesListPage(): JSX.Element {
                 emptyTitle={t("places:list.empty")}
                 emptyHint={t("places:list.emptyHint")}
                 onReset={resetFilters}
+                // Nothing filtered and nothing there: the next step is the
+                // first place, offered right here (forgejo#250).
+                action={{ label: t("places:list.addFirst"), onClick: () => setCreating(true) }}
               />
             </div>
           ) : (
@@ -617,9 +617,11 @@ export default function PlacesListPage(): JSX.Element {
         <PlaceFormModal
           place={null}
           onClose={() => setCreating(false)}
-          onSaved={(saved) => {
+          onSaved={async (saved) => {
             setCreating(false);
-            navigate(`/places/${saved.id}`);
+            // The form's guard may still hold a history entry; this replaces
+            // it instead of stacking the new page on top (rollout rule).
+            await navigateAfterSave(navigate, `/places/${saved.id}`);
           }}
         />
       )}

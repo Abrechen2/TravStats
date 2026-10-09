@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { Place } from "../../types/place";
 import { countRenderedRows, paginationControlsRendered } from "./tablePaginationTestSupport";
@@ -87,6 +87,32 @@ describe("PlacesListPage", () => {
     renderListPage();
 
     expect(await screen.findByText("places:list.empty")).toBeInTheDocument();
+  });
+
+  // forgejo#250: the genuinely empty list names its next step, right there.
+  it("offers the first place from the empty, unfiltered list", async () => {
+    listPlacesMock.mockResolvedValue([]);
+    renderListPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "places:list.addFirst" }));
+    expect(await screen.findByText("places:form.createTitle")).toBeInTheDocument();
+  });
+
+  // forgejo#247: a list that could not be read is not an empty one, and the
+  // way forward is a retry that reads it again.
+  it("tells a failed load from an empty list and retries it", async () => {
+    listPlacesMock
+      .mockRejectedValueOnce({ isAxiosError: true, response: { status: 503 } })
+      .mockResolvedValueOnce([makePlace({ id: "p1", name: "Wartburg" })]);
+    renderListPage();
+
+    expect(await screen.findByText("places:list.loadError")).toBeInTheDocument();
+    expect(screen.queryByText("places:list.empty")).not.toBeInTheDocument();
+    expect(screen.getByText("HTTP 503")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    expect(await screen.findByText("Wartburg")).toBeInTheDocument();
+    expect(listPlacesMock).toHaveBeenCalledTimes(2);
   });
 
   // The add button was filled with the place domain colour, which is an

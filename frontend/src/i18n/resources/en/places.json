@@ -51,12 +51,12 @@
       "wishlist": "Wishlist",
       "planned": "Planned"
     },
-    "retry": "Try again",
     "addPlace": "Place",
     "emptyHint": "Add your first place.",
     "deleteMessage_one": "“{{name}}” will be permanently deleted, along with its one visit. Trips it belongs to are kept.",
     "deleteMessage_other": "“{{name}}” will be permanently deleted, along with its {{count}} visits. Trips it belongs to are kept.",
-    "deleteMessageNoVisits": "“{{name}}” will be permanently deleted."
+    "deleteMessageNoVisits": "“{{name}}” will be permanently deleted.",
+    "addFirst": "Add your first place"
   },
   "filter": {
     "allStatuses": "All statuses",
@@ -81,12 +81,18 @@
     "onWishlist": "☆ Wishlist",
     "statusHint": "New places go on the wishlist by default and only start counting once you pick “I’ve been here” or record a visit.",
     "notes": "Note",
-    "positionRequired": "A place cannot be saved without a position — search for it, click it on the map, or enter coordinates.",
     "created": "Place added.",
     "updated": "Place saved.",
     "saveFailed": "The place could not be saved.",
     "addToLists": "Add to lists",
-    "listAddFailed": "Could not add to these lists: {{lists}}"
+    "missing": {
+      "position": "Position",
+      "coordinates": "valid coordinates"
+    },
+    "listPartial_one": "Place saved. The list “{{lists}}” did not take it.",
+    "listPartial_other": "Place saved. These lists did not take it: {{lists}}.",
+    "listRetry": "Assign again",
+    "listContinue": "Continue"
   },
   "detail": {
     "backToList": "Back to the list",
@@ -171,7 +177,8 @@
     "subscribeFailed": "Could not follow that checklist.",
     "moveUp": "Move “{{name}}” up",
     "moveDown": "Move “{{name}}” down",
-    "reorderFailed": "The new order could not be saved."
+    "reorderFailed": "The new order could not be saved.",
+    "nameRequired": "A list needs a name."
   },
   "checklist": {
     "notFound": "There is no such checklist.",

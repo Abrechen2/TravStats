@@ -51,12 +51,12 @@
       "wishlist": "Merkliste",
       "planned": "Geplant"
     },
-    "retry": "Erneut versuchen",
     "addPlace": "Ort",
     "emptyHint": "Füge deinen ersten Ort hinzu.",
     "deleteMessage_one": "„{{name}}“ wird mit einem Besuch dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
     "deleteMessage_other": "„{{name}}“ wird mit {{count}} Besuchen dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
-    "deleteMessageNoVisits": "„{{name}}“ wird dauerhaft gelöscht."
+    "deleteMessageNoVisits": "„{{name}}“ wird dauerhaft gelöscht.",
+    "addFirst": "Ersten Ort anlegen"
   },
   "filter": {
     "allStatuses": "Alle Status",
@@ -81,12 +81,18 @@
     "onWishlist": "☆ Merkliste",
     "statusHint": "Neue Orte landen standardmäßig auf der Merkliste und zählen erst mit, wenn du „War ich schon“ wählst oder einen Besuch einträgst.",
     "notes": "Notiz",
-    "positionRequired": "Ohne Position lässt sich der Ort nicht speichern — such ihn, klick ihn auf der Karte an oder gib Koordinaten ein.",
     "created": "Ort angelegt.",
     "updated": "Ort gespeichert.",
     "saveFailed": "Der Ort konnte nicht gespeichert werden.",
     "addToLists": "Zu Listen hinzufügen",
-    "listAddFailed": "Konnte nicht zu diesen Listen hinzufügen: {{lists}}"
+    "missing": {
+      "position": "Position",
+      "coordinates": "gültige Koordinaten"
+    },
+    "listPartial_one": "Ort gespeichert. Die Liste „{{lists}}“ hat ihn nicht aufgenommen.",
+    "listPartial_other": "Ort gespeichert. Diese Listen haben ihn nicht aufgenommen: {{lists}}.",
+    "listRetry": "Erneut zuordnen",
+    "listContinue": "Weiter"
   },
   "detail": {
     "backToList": "Zurück zur Übersicht",
@@ -171,7 +177,8 @@
     "subscribeFailed": "Der Checkliste konnte nicht gefolgt werden.",
     "moveUp": "„{{name}}“ nach oben schieben",
     "moveDown": "„{{name}}“ nach unten schieben",
-    "reorderFailed": "Die Reihenfolge konnte nicht gespeichert werden."
+    "reorderFailed": "Die Reihenfolge konnte nicht gespeichert werden.",
+    "nameRequired": "Eine Liste braucht einen Namen."
   },
   "checklist": {
     "notFound": "Diese Checkliste gibt es nicht.",
