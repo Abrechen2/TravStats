@@ -1,0 +1,289 @@
+{
+  "version": 1,
+  "note": "The server's grouping rule (backend/src/shared/railJourneyGrouping.ts) and the web's transfer verdicts (frontend/src/lib/rail/railTransfer.ts) must agree on these cases. Both suites read this file; change the rule and the file together.",
+  "sameStationKm": 1,
+  "maxTransferMinutes": 240,
+  "displaySameStationMeters": 150,
+  "sameStation": [
+    {
+      "id": "same-catalogue-row",
+      "a": {
+        "id": 7604,
+        "name": "Frankfurt (Main) Hbf",
+        "lat": 50.1071,
+        "lon": 8.6632
+      },
+      "b": {
+        "id": 7604,
+        "name": "Frankfurt Hauptbahnhof",
+        "lat": 50.1071,
+        "lon": 8.6632
+      },
+      "same": true
+    },
+    {
+      "id": "same-name-different-ids-far-apart",
+      "note": "the folded name alone is enough, even across catalogue rows",
+      "a": {
+        "id": 1,
+        "name": "Fulda",
+        "lat": 50.5545,
+        "lon": 9.6839
+      },
+      "b": {
+        "id": 2,
+        "name": "  fulda ",
+        "lat": 51.0,
+        "lon": 10.0
+      },
+      "same": true
+    },
+    {
+      "id": "geocoder-pick-beside-catalogue-row",
+      "note": "300 m apart, different names, one without an id: the same place to change at",
+      "a": {
+        "id": 7604,
+        "name": "Frankfurt(Main)Hbf",
+        "lat": 50.1071,
+        "lon": 8.6632
+      },
+      "b": {
+        "id": null,
+        "name": "Frankfurt Hauptbahnhof",
+        "lat": 50.1098,
+        "lon": 8.6632
+      },
+      "same": true
+    },
+    {
+      "id": "two-catalogue-rows-one-station",
+      "note": "Hbf and Hbf (tief), 200 m apart: different ids do not decide alone",
+      "a": {
+        "id": 10,
+        "name": "Frankfurt (Main) Hbf",
+        "lat": 50.1071,
+        "lon": 8.6632
+      },
+      "b": {
+        "id": 11,
+        "name": "Frankfurt (Main) Hbf (tief)",
+        "lat": 50.1068,
+        "lon": 8.6658
+      },
+      "same": true
+    },
+    {
+      "id": "paris-est-and-nord",
+      "note": "about 500 m apart: inside the radius, so the server reads them as one place",
+      "a": {
+        "id": 20,
+        "name": "Paris Est",
+        "lat": 48.8768,
+        "lon": 2.3591
+      },
+      "b": {
+        "id": 21,
+        "name": "Paris Nord",
+        "lat": 48.8809,
+        "lon": 2.3553
+      },
+      "same": true
+    },
+    {
+      "id": "paris-est-and-gare-de-lyon",
+      "note": "about 2.6 km apart, different names and ids: a change of station",
+      "a": {
+        "id": 20,
+        "name": "Paris Est",
+        "lat": 48.8768,
+        "lon": 2.3591
+      },
+      "b": {
+        "id": 22,
+        "name": "Paris Gare de Lyon",
+        "lat": 48.8443,
+        "lon": 2.3743
+      },
+      "same": false
+    },
+    {
+      "id": "just-outside-the-radius",
+      "a": {
+        "id": null,
+        "name": "A",
+        "lat": 50.0,
+        "lon": 8.0
+      },
+      "b": {
+        "id": null,
+        "name": "B",
+        "lat": 50.0099,
+        "lon": 8.0
+      },
+      "same": false
+    },
+    {
+      "id": "just-inside-the-radius",
+      "a": {
+        "id": null,
+        "name": "A",
+        "lat": 50.0,
+        "lon": 8.0
+      },
+      "b": {
+        "id": null,
+        "name": "B",
+        "lat": 50.0089,
+        "lon": 8.0
+      },
+      "same": true
+    }
+  ],
+  "transferLimit": [
+    {
+      "id": "four-hours-is-still-a-change",
+      "waitMinutes": 240,
+      "change": true
+    },
+    {
+      "id": "a-minute-more-is-another-ride",
+      "waitMinutes": 241,
+      "change": false
+    }
+  ],
+  "transferStationNote": "Two rules, two questions. 'sameStation' (server, 1 km) decides GROUPING: do these trains form one ride? Paris Est and Paris Nord, 500 m apart, rightly do. 'transferStation' (web, 150 m) decides what the transfer line says: must the traveller go to another station? For the same pair the answer is yes, and 'kein Bahnhofswechsel' would be a false statement a traveller acts on. 150 m covers one station's own records (a geocoder pick beside its catalogue row), not its neighbours. The display threshold must stay inside the grouping one: a pair the transfer line calls the same station must also group.",
+  "transferStation": [
+    {
+      "id": "same-catalogue-row",
+      "a": {
+        "id": 7604,
+        "name": "Frankfurt (Main) Hbf",
+        "lat": 50.1071,
+        "lon": 8.6632
+      },
+      "b": {
+        "id": 7604,
+        "name": "Frankfurt Hauptbahnhof",
+        "lat": 50.1071,
+        "lon": 8.6632
+      },
+      "expect": {
+        "kind": "same"
+      }
+    },
+    {
+      "id": "same-name-no-position",
+      "note": "the same name is the same station, positions or not",
+      "a": {
+        "id": null,
+        "name": "Fulda",
+        "lat": null,
+        "lon": null
+      },
+      "b": {
+        "id": null,
+        "name": " fulda",
+        "lat": 50.5545,
+        "lon": 9.6839
+      },
+      "expect": {
+        "kind": "same"
+      }
+    },
+    {
+      "id": "naming-variant-80m",
+      "note": "a geocoder pick 80 m from its catalogue row: two names for one station",
+      "a": {
+        "id": 7604,
+        "name": "Frankfurt(Main)Hbf",
+        "lat": 50.1071,
+        "lon": 8.6632
+      },
+      "b": {
+        "id": null,
+        "name": "Frankfurt Hauptbahnhof",
+        "lat": 50.10782,
+        "lon": 8.6632
+      },
+      "expect": {
+        "kind": "same"
+      }
+    },
+    {
+      "id": "paris-est-to-nord",
+      "note": "about 530 m: one ride for the grouping, but another station to walk to",
+      "a": {
+        "id": 20,
+        "name": "Paris Est",
+        "lat": 48.8768,
+        "lon": 2.3591
+      },
+      "b": {
+        "id": 21,
+        "name": "Paris Nord",
+        "lat": 48.8809,
+        "lon": 2.3553
+      },
+      "expect": {
+        "kind": "change",
+        "meters": 534
+      }
+    },
+    {
+      "id": "just-under-150m",
+      "a": {
+        "id": null,
+        "name": "A",
+        "lat": 50.0,
+        "lon": 8.0
+      },
+      "b": {
+        "id": null,
+        "name": "B",
+        "lat": 50.0013,
+        "lon": 8.0
+      },
+      "expect": {
+        "kind": "same"
+      }
+    },
+    {
+      "id": "just-over-150m",
+      "a": {
+        "id": null,
+        "name": "A",
+        "lat": 50.0,
+        "lon": 8.0
+      },
+      "b": {
+        "id": null,
+        "name": "B",
+        "lat": 50.00136,
+        "lon": 8.0
+      },
+      "expect": {
+        "kind": "change",
+        "meters": 151
+      }
+    },
+    {
+      "id": "missing-position-other-name",
+      "note": "another name and no position: neither 'same' nor 'change' can be claimed",
+      "a": {
+        "id": null,
+        "name": "Paris Est",
+        "lat": 48.8768,
+        "lon": 2.3591
+      },
+      "b": {
+        "id": null,
+        "name": "Paris Gare de Lyon",
+        "lat": null,
+        "lon": null
+      },
+      "expect": {
+        "kind": "unconfirmed"
+      }
+    }
+  ]
+}

@@ -15,7 +15,7 @@ import { railExtractTarget } from "../lib/extractTargets";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import { RailFormModal } from "../components/rail/RailFormModal";
 import { RailRouteMap } from "../components/rail/RailRouteMap";
-import { RailConnectionLegs } from "../components/rail/RailConnectionLegs";
+import { RailConnectionView } from "../components/rail/RailConnectionView";
 import { RailConnectionLink } from "../components/rail/RailConnectionLink";
 import { formatRailDuration } from "../lib/rail/railDuration";
 import { trainLabel } from "../components/rail/trainLabel";
@@ -25,7 +25,9 @@ import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
 import { railApi } from "../lib/api/rail";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
-import { DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { railDeleteMessage } from "../lib/rail/railDeleteMessage";
+import { navigateAfterSave } from "../components/form";
 import { formatAmount } from "../lib/units";
 import { formatStationTime, railDurationMinutes } from "../lib/railTime";
 import {
@@ -63,6 +65,19 @@ export default function RailDetailPage(): JSX.Element {
   const [failure, setFailure] = useState<LoadFailure | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [editing, setEditing] = useState<Editing>(null);
+  /**
+   * "Save and add a connection" stored a leg while the dialog stayed open.
+   * The page reads its booking again when the dialog closes — not before:
+   * reloading underneath would unmount the dialog with the next leg in it.
+   */
+  const [legAdded, setLegAdded] = useState(false);
+  const closeEditor = (): void => {
+    setEditing(null);
+    if (legAdded) {
+      setLegAdded(false);
+      setReloadKey((k) => k + 1);
+    }
+  };
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const documentCount = useDocumentCount(
@@ -108,12 +123,15 @@ export default function RailDetailPage(): JSX.Element {
     }
   };
 
-  const handleSaved = (saved: RailJourney): void => {
+  const handleSaved = async (saved: RailJourney): Promise<void> => {
     setEditing(null);
+    setLegAdded(false);
     addToast("success", t("rail:saved"));
     // A new connection is its own page; an edit reloads this one, so the
-    // booking's leg list is read again rather than patched by hand.
-    if (saved.id !== journey?.id) navigate(`/rail/${saved.id}`);
+    // booking's leg list is read again rather than patched by hand. The move
+    // goes through `navigateAfterSave`: the dialog's Back guard may still
+    // hold a history entry, and a plain navigate would land behind it.
+    if (saved.id !== journey?.id) await navigateAfterSave(navigate, `/rail/${saved.id}`);
     else setReloadKey((k) => k + 1);
   };
 
@@ -294,7 +312,7 @@ export default function RailDetailPage(): JSX.Element {
 
           {journey.booking && journey.booking.railJourneys.length > 1 && (
             <DetailSection title={t("rail:connection.title")}>
-              <RailConnectionLegs
+              <RailConnectionView
                 currentId={journey.id}
                 legs={journey.booking.railJourneys}
                 pnr={journey.booking.pnr}
@@ -364,8 +382,10 @@ export default function RailDetailPage(): JSX.Element {
           journey={editing.mode === "edit" ? journey : null}
           initialDraft={editing.mode === "connection" ? connectionDraftFrom(journey) : undefined}
           connectsFrom={editing.mode === "connection" ? journey.id : undefined}
-          onClose={() => setEditing(null)}
+          onClose={closeEditor}
           onSaved={handleSaved}
+          onProgress={() => setLegAdded(true)}
+          afterSaveFailedKey="common:form.savedButViewRefreshFailed"
         />
       )}
 
@@ -375,7 +395,10 @@ export default function RailDetailPage(): JSX.Element {
         onConfirm={() => void handleDelete()}
         isLoading={deleting}
         title={t("rail:delete")}
-        message={withDocumentNote(t("rail:deleteConfirm"), t, documentCount)}
+        message={railDeleteMessage(t, journey, {
+          documentCount,
+          otherLegs: journey.booking ? journey.booking.railJourneys.length - 1 : null,
+        })}
         confirmText={t("common:buttons.delete")}
         confirmButtonClass={DELETE_BUTTON_CLASS}
       />

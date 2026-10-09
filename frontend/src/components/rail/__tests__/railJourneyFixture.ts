@@ -1,4 +1,4 @@
-import type { RailJourney } from "../../../types/rail";
+import type { RailBookingLeg, RailJourney } from "../../../types/rail";
 
 /** One traced ICE ride, completed — the rail tests' shared starting point. */
 export const RAIL_JOURNEY_FIXTURE = {
@@ -42,6 +42,7 @@ export const RAIL_JOURNEY_FIXTURE = {
   currency: "EUR",
   status: "completed",
   delayMinutes: null,
+  tightConnection: false,
   notes: null,
   tags: [],
   companions: [],
@@ -54,3 +55,34 @@ export const RAIL_JOURNEY_FIXTURE = {
 export function makeRailJourney(overrides: Partial<RailJourney> = {}): RailJourney {
   return { ...RAIL_JOURNEY_FIXTURE, ...overrides };
 }
+
+/** A leg of a booking, as the detail read lists it — Frankfurt → Fulda by default. */
+export function makeRailBookingLeg(overrides: Partial<RailBookingLeg> = {}): RailBookingLeg {
+  return {
+    id: "j1",
+    depStationName: "Frankfurt",
+    arrStationName: "Fulda",
+    depStationId: null,
+    arrStationId: null,
+    depLat: 50.1,
+    depLon: 8.66,
+    arrLat: 50.55,
+    arrLon: 9.68,
+    departureTime: "2026-09-26T04:15:00.000Z",
+    arrivalTime: null,
+    depTimezone: "Europe/Berlin",
+    arrTimezone: "Europe/Berlin",
+    trainCategory: "ICE",
+    trainNumber: "1",
+    status: "completed",
+    travelClass: null,
+    coach: null,
+    seat: null,
+    bookingReference: null,
+    tightConnection: false,
+    ...overrides,
+  };
+}
+
+/** Positions of a Fulda → Berlin leg, for fixtures that rename the default ride. */
+export const FULDA_TO_BERLIN = { depLat: 50.5545, depLon: 9.6839, arrLat: 52.525, arrLon: 13.3694 };

@@ -41,12 +41,17 @@ export function useRailImportAdapter(): DomainImportAdapter {
     panelTitle: t("rail:import.panelTitle"),
     panelHint: t("rail:import.panelHint"),
     acceptedEmailExtensions: [...RAIL_ACCEPTED_EMAIL_EXTENSIONS],
-    renderManual: ({ onClose, onSaved }) => (
+    renderManual: ({ onClose, onSaved, onProgress }) => (
       <RailFormModal
         journey={null}
         onClose={onClose}
         onSaved={async () => {
           await onSaved();
+        }}
+        // A leg stored by "save and add a connection" shows in the list at
+        // once, so a cancelled next leg leaves nothing missing behind.
+        onProgress={async () => {
+          await onProgress?.();
         }}
       />
     ),

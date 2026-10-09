@@ -253,6 +253,7 @@ export default function DomainImportPanel({
           // behind on purpose, so there is nothing to fall back to.
           onClose,
           onSaved: handleManualSaved,
+          onProgress: onItemsCreated,
         })}
     </>
   );

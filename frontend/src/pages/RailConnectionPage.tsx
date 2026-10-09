@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { Link, useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
@@ -7,7 +7,6 @@ import DetailKpis, { type DetailKpi } from "../components/ui/DetailKpis";
 import DetailSection from "../components/ui/DetailSection";
 import Button from "../components/ui/Button";
 import { Icon } from "../components/ui/Icon";
-import { trainLabel } from "../components/rail/trainLabel";
 import { useTranslation } from "../hooks/useTranslation";
 import { railApi } from "../lib/api/rail";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
@@ -17,8 +16,8 @@ import {
   connectionSpan,
   connectionStations,
   connectionStatus,
-  transferMinutes,
 } from "../lib/rail/railConnection";
+import { RailConnectionView } from "../components/rail/RailConnectionView";
 import { formatRailDuration } from "../lib/rail/railDuration";
 import { formatRailSpan } from "../lib/railTime";
 import type { RailConnectionDetail } from "../types/rail";
@@ -148,36 +147,7 @@ export default function RailConnectionPage(): JSX.Element {
       />
 
       <DetailSection title={t("rail:connection.legs")}>
-        <ol className="flex flex-col gap-3" data-testid="rail-connection-page-legs">
-          {legs.map((leg, index) => {
-            const wait = index > 0 ? transferMinutes(legs[index - 1], leg) : null;
-            const when = formatRailSpan(leg, locale);
-            return (
-              <Fragment key={leg.id}>
-                {index > 0 && (
-                  <li className="t-caption" data-testid={`rail-connection-transfer-${index}`}>
-                    {wait !== null
-                      ? t("rail:connection.transfer", {
-                          station: leg.depStationName,
-                          wait: formatRailDuration(wait, t),
-                        })
-                      : t("rail:connection.transferUnknown", { station: leg.depStationName })}
-                  </li>
-                )}
-                <li data-testid={`rail-connection-leg-${leg.id}`} className="text-sm">
-                  <Link to={`/rail/${leg.id}`} className="font-semibold underline">
-                    {index + 1}. {leg.depStationName} → {leg.arrStationName}
-                  </Link>
-                  <div className="t-caption">
-                    {[when, trainLabel(leg), t(`rail:status.${leg.status}`)]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </div>
-                </li>
-              </Fragment>
-            );
-          })}
-        </ol>
+        <RailConnectionView legs={legs} pnr={connection.booking?.pnr ?? null} showPnr={false} />
       </DetailSection>
     </AppShell>
   );

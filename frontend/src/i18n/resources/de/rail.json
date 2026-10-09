@@ -33,7 +33,13 @@
   "onTime": "pünktlich",
   "edit": "Bearbeiten",
   "delete": "Löschen",
-  "deleteConfirm": "Diese Fahrt wirklich löschen?",
+  "deleteConfirmNamed": "Die Fahrt {{route}} wirklich löschen?",
+  "deleteSurvivors": {
+    "trip": "Reise „{{name}}“",
+    "otherLegs_one": "{{count}} weitere Fahrt derselben Buchung",
+    "otherLegs_other": "{{count}} weitere Fahrten derselben Buchung",
+    "bookingLegs": "ggf. andere Fahrten derselben Buchung"
+  },
   "deleted": "Fahrt gelöscht",
   "deleteError": "Die Fahrt konnte nicht gelöscht werden.",
   "saved": "Fahrt gespeichert",
@@ -68,6 +74,8 @@
     "departureTime": "Abfahrt (Ortszeit am Bahnhof)",
     "arrivalTime": "Ankunft (Ortszeit am Bahnhof)",
     "timeHint": "Die Uhrzeit, die auf dem Ticket steht. Die Zeitzone ergibt sich aus dem Bahnhof.",
+    "dayOnly": "Nur das Datum ist bekannt",
+    "delayNeedsClock": "Eine Verspätung braucht die Uhrzeiten der Fahrt.",
     "distance": "Entfernung in km",
     "distanceHint": "Leer lassen: TravStats misst entlang der von Transitous übernommenen Strecke, sonst die Luftlinie. Eintragen, wenn das Ticket die Strecke nennt.",
     "seat": "Platz",
@@ -95,7 +103,14 @@
       "invalidField": "Die Angabe „{{field}}“ wurde nicht angenommen. Bitte prüf sie.",
       "invalid": "Eine Angabe wurde nicht angenommen. Bitte prüf die Felder."
     },
-    "suggestionsFailed": "Vorschläge aus deinen bisherigen Fahrten konnten nicht geladen werden — das Formular funktioniert trotzdem."
+    "suggestionsFailed": "Vorschläge aus deinen bisherigen Fahrten konnten nicht geladen werden — das Formular funktioniert trotzdem.",
+    "missing": {
+      "depCoordinates": "gültige Koordinaten des Abfahrtsbahnhofs",
+      "arrCoordinates": "gültige Koordinaten des Ankunftsbahnhofs",
+      "departureTime": "Abfahrtszeit",
+      "depName": "Name des Abfahrtsbahnhofs",
+      "arrName": "Name des Ankunftsbahnhofs"
+    }
   },
   "tracedLine": "entlang der Strecke, Transitous",
   "roadtripLine": "entlang der Roadtrip-Route",
@@ -194,8 +209,6 @@
     "trainsLabel_other": "Züge",
     "totalDuration": "Gesamtdauer",
     "legs": "Züge dieser Verbindung",
-    "transfer": "Umstieg in {{station}} · {{wait}} Aufenthalt",
-    "transferUnknown": "Umstieg in {{station}}",
     "whole": "Ganze Verbindung ansehen: {{route}}",
     "loadError": "Die Verbindung konnte nicht geladen werden.",
     "notFound": "Diese Verbindung gibt es nicht (mehr)."
@@ -363,5 +376,31 @@
     "stations_other": "Bahnhöfe",
     "withoutOperator_one": "{{count}} ohne Betreiber",
     "withoutOperator_other": "{{count}} ohne Betreiber"
+  },
+  "transfer": {
+    "wait": "Umstieg in {{station}} · {{wait}} Umstiegszeit",
+    "unknown": "Umstieg in {{station}} · Umstiegszeit unbekannt",
+    "unknownWhy": "Eine der beiden Zeiten fehlt oder ist nur als Datum bekannt.",
+    "conflict": "Zeitkonflikt: Der nächste Zug fährt {{wait}} vor der Ankunft dieses Zugs ab.",
+    "stationChange": "Bahnhofswechsel: {{from}} → {{to}} · ca. {{distance}} Luftlinie",
+    "shortHint": "Hinweis: weniger als {{minutes}} Min. zum Umsteigen. Ob der Anschluss klappt, kann TravStats nicht wissen.",
+    "separate": "Eigene Fahrt – kein Umstieg",
+    "markTight": "Als knapp markiert",
+    "markFailed": "Die Markierung konnte nicht gespeichert werden. Bitte versuch es erneut.",
+    "orderUnknown": "Umstieg unbekannt: Eine Fahrt dieses Tages ist nur mit Datum erfasst, daher ist die Reihenfolge der Züge nicht bekannt.",
+    "stationUnconfirmed": "Bahnhofswechsel? {{from}} → {{to}}: anderer Bahnhofsname – Lage unbekannt",
+    "distanceM": "{{value}} m",
+    "distanceKm": "{{value}} km"
+  },
+  "connectionView": {
+    "coach": "Wagen {{coach}}",
+    "seat": "Platz {{seat}}",
+    "noReservation": "keine Reservierung erfasst",
+    "reference": "Auftragsnummer {{reference}}",
+    "documents": "Dokumente:",
+    "noDocuments": "Keine Dokumente abgelegt",
+    "documentsLoading": "Dokumente werden geladen …",
+    "documentsFailed": "Die Dokumente dieser Fahrt konnten nicht geladen werden.",
+    "documentsBelow": "Dokumente dieser Fahrt: im Abschnitt „Dokumente“ weiter unten."
   }
 }

@@ -81,6 +81,13 @@ export interface DomainImportAdapter {
      * reported as "saved, but not refreshed" instead of vanishing with the form.
      */
     onSaved: () => void | Promise<void>;
+    /**
+     * Reload the list behind the panel WITHOUT closing it — for a form that
+     * stores one record and stays open for the next (rail's "save and add a
+     * connection"). Without it, cancelling after the first leg left the list
+     * without the leg that was stored.
+     */
+    onProgress?: () => void | Promise<void>;
   }) => ReactNode;
   /**
    * Render the post-parse review/preview UI (e.g. FlightReviewModal,

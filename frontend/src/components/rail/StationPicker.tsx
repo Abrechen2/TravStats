@@ -8,13 +8,15 @@ import { countryName } from "../../shared/geo/countryCode";
 import { EMPTY_STATION, RailStationField, type RailStationDraft } from "./RailStationField";
 import { isPlausibleStation } from "./railImportModel";
 import { StationShortCode } from "./StationShortCode";
+import { RequiredMark } from "../form/requiredFields";
 
 interface Props {
   label: string;
   idPrefix: string;
   value: RailStationDraft;
   onChange: (next: RailStationDraft) => void;
-  onValidityChange?: (valid: boolean) => void;
+  /** As `LocationInput` reports it: `field` names the coordinate at fault. */
+  onValidityChange?: (valid: boolean, field?: "lat" | "lon") => void;
   inputClassName: string;
   /**
    * The name a ticket printed, when the picker opens on it (the import
@@ -22,9 +24,13 @@ interface Props {
    * offered — see `isPlausibleStation`; once the user types, the plain search.
    */
   printedName?: string;
+  /** Marks the field as required (forgejo#245): the shared asterisk and `aria-required`. */
+  required?: boolean;
 }
 
 const MIN_QUERY = 2;
+/** A text-link button a finger can hit on a coarse pointer (forgejo#249). */
+const TOUCH_TEXT_BUTTON = "pointer-coarse:min-h-(--ts-size-touch-min)";
 const DEBOUNCE_MS = 250;
 
 type SearchState =
@@ -62,6 +68,7 @@ export function StationPicker({
   onValidityChange,
   inputClassName,
   printedName,
+  required = false,
 }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["rail"]);
   // A station already chosen through the geocoder opens in that mode, so an
@@ -129,10 +136,11 @@ export function StationPicker({
           onChange={onChange}
           onValidityChange={onValidityChange}
           inputClassName={inputClassName}
+          required={required}
         />
         <button
           type="button"
-          className="text-xs text-(--accent) underline"
+          className={`text-xs text-(--accent) underline ${TOUCH_TEXT_BUTTON}`}
           onClick={(): void => switchMode("catalogue")}
         >
           {t("rail:station.backToCatalogue")}
@@ -153,9 +161,16 @@ export function StationPicker({
     <div className="space-y-1">
       <label className="text-sm" htmlFor={`${idPrefix}-search`}>
         {label}
+        {required && (
+          <>
+            {" "}
+            <RequiredMark />
+          </>
+        )}
       </label>
       <input
         id={`${idPrefix}-search`}
+        aria-required={required || undefined}
         className={inputClassName}
         role="combobox"
         aria-expanded={offered.length > 0}
@@ -216,7 +231,7 @@ export function StationPicker({
       ) : null}
       <button
         type="button"
-        className="text-xs text-(--accent) underline"
+        className={`text-xs text-(--accent) underline ${TOUCH_TEXT_BUTTON}`}
         onClick={(): void => switchMode("geocoder")}
       >
         {t("rail:station.useGeocoder")}

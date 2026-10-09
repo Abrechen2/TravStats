@@ -3611,6 +3611,13 @@ model RailJourney {
   status       String   @default("scheduled")
   /// Arrival delay as experienced. Null = not recorded, 0 = on time.
   delayMinutes Int?     @map("delay_minutes")
+
+  /// The user's own "this change is tight" (forgejo#234), stored on the leg
+  /// that ARRIVES at the change: the transfer is the gap after this train.
+  /// A judgement, never derived — the automatic "under ten minutes" hint is
+  /// computed on read and is not written here.
+  tightConnection Boolean @default(false) @map("tight_connection")
+
   notes        String?
   tags         String[] @default([])
   companions   String[] @default([])

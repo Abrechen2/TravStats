@@ -33,7 +33,13 @@
   "onTime": "on time",
   "edit": "Edit",
   "delete": "Delete",
-  "deleteConfirm": "Really delete this journey?",
+  "deleteConfirmNamed": "Really delete the journey {{route}}?",
+  "deleteSurvivors": {
+    "trip": "trip “{{name}}”",
+    "otherLegs_one": "{{count}} other journey of the same booking",
+    "otherLegs_other": "{{count}} other journeys of the same booking",
+    "bookingLegs": "any other journeys of the same booking"
+  },
   "deleted": "Journey deleted",
   "deleteError": "The journey could not be deleted.",
   "saved": "Journey saved",
@@ -68,6 +74,8 @@
     "departureTime": "Departure (local time at the station)",
     "arrivalTime": "Arrival (local time at the station)",
     "timeHint": "The time printed on the ticket. The time zone follows from the station.",
+    "dayOnly": "Only the date is known",
+    "delayNeedsClock": "A delay needs the ride's times.",
     "distance": "Distance in km",
     "distanceHint": "Leave empty: TravStats measures along the line taken from Transitous, otherwise the straight line. Fill it in when the ticket names the distance.",
     "seat": "Seat",
@@ -95,7 +103,14 @@
       "invalidField": "“{{field}}” was not accepted. Please check it.",
       "invalid": "An entry was not accepted. Please check the fields."
     },
-    "suggestionsFailed": "Suggestions from your earlier rides could not be loaded — the form works all the same."
+    "suggestionsFailed": "Suggestions from your earlier rides could not be loaded — the form works all the same.",
+    "missing": {
+      "depCoordinates": "valid coordinates of the departure station",
+      "arrCoordinates": "valid coordinates of the arrival station",
+      "departureTime": "departure time",
+      "depName": "name of the departure station",
+      "arrName": "name of the arrival station"
+    }
   },
   "tracedLine": "along the line, Transitous",
   "roadtripLine": "along the roadtrip route",
@@ -194,8 +209,6 @@
     "trainsLabel_other": "Trains",
     "totalDuration": "Total time",
     "legs": "Trains of this journey",
-    "transfer": "Change at {{station}} · {{wait}} wait",
-    "transferUnknown": "Change at {{station}}",
     "whole": "View the whole journey: {{route}}",
     "loadError": "The journey could not be loaded.",
     "notFound": "This journey does not exist (any more)."
@@ -363,5 +376,31 @@
     "stations_other": "Stations",
     "withoutOperator_one": "{{count}} without an operator",
     "withoutOperator_other": "{{count}} without an operator"
+  },
+  "transfer": {
+    "wait": "Change at {{station}} · {{wait}} to change",
+    "unknown": "Change at {{station}} · transfer time unknown",
+    "unknownWhy": "One of the two times is missing or known only by its date.",
+    "conflict": "Time conflict: the next train leaves {{wait}} before this one arrives.",
+    "stationChange": "Change of station: {{from}} → {{to}} · approx. {{distance}} as the crow flies",
+    "shortHint": "Hint: less than {{minutes}} min to change. Whether the connection works out, TravStats cannot know.",
+    "separate": "A separate ride – not a change",
+    "markTight": "Marked as tight",
+    "markFailed": "The mark could not be saved. Please try again.",
+    "orderUnknown": "Change unknown: a ride on this day is recorded by its date only, so the order of the trains is not known.",
+    "stationUnconfirmed": "Change of station? {{from}} → {{to}}: different station name – location unknown",
+    "distanceM": "{{value}} m",
+    "distanceKm": "{{value}} km"
+  },
+  "connectionView": {
+    "coach": "Coach {{coach}}",
+    "seat": "Seat {{seat}}",
+    "noReservation": "no reservation recorded",
+    "reference": "Booking reference {{reference}}",
+    "documents": "Documents:",
+    "noDocuments": "No documents filed",
+    "documentsLoading": "Loading documents …",
+    "documentsFailed": "The documents of this ride could not be loaded.",
+    "documentsBelow": "Documents of this ride: in the “Documents” section below."
   }
 }
