@@ -63,7 +63,9 @@
     "nights": "Nächte",
     "countries": "Länder",
     "priceKpi": "Preis",
-    "day": "Tag"
+    "day": "Tag",
+    "unresolvedKpi_one": "{{count}} ungeklärt",
+    "unresolvedKpi_other": "{{count}} ungeklärt"
   },
   "field": {
     "ship": "Schiff",
@@ -429,5 +431,23 @@
     "localNote": "Datum und Zeiten gelten am Hafen (Ortszeit). Fehlende Zeiten bleiben offen; die Alle-an-Bord-Zeit wird nie aus der Abfahrt abgeleitet.",
     "pickHint": "Tippe auf einen Tag der Hafenfolge, um seine Tageskarte zu öffnen.",
     "openDay": "Tageskarte öffnen:"
+  },
+  "unresolved": {
+    "title_one": "Ein ungeklärter Hafen",
+    "title_other": "{{count}} ungeklärte Häfen",
+    "incomplete_one": "Bis er einem Katalogeintrag zugeordnet ist, zählt er als Hafenanlauf, aber nicht als Hafen – die Hafenzahl steht bei {{matched}} (+{{count}} ungeklärt). Die Länderzählung und die Karte lassen ihn aus, und die Seemeilen der Abschnitte zu ihm und von ihm fehlen.",
+    "incomplete_other": "Bis sie Katalogeinträgen zugeordnet sind, zählen sie als Hafenanläufe, aber nicht als Häfen – die Hafenzahl steht bei {{matched}} (+{{count}} ungeklärt). Die Länderzählung und die Karte lassen sie aus, und die Seemeilen der Abschnitte zu ihnen und von ihnen fehlen.",
+    "days_one": "Tag {{days}}",
+    "days_other": "Tage {{days}}",
+    "candidates": "Treffer im Hafenkatalog",
+    "searching": "Suche im Katalog …",
+    "searchFailed": "Der Katalog konnte nicht durchsucht werden.",
+    "noCandidates": "Kein Treffer im Katalog – unten nach einem anderen Namen suchen oder den Hafen dort neu anlegen.",
+    "searchOther": "Anderen Hafen suchen",
+    "confirm": "„{{port}}“ zuordnen",
+    "confirmNone": "Zuerst einen Hafen wählen",
+    "saving": "Ordne zu …",
+    "saveError": "Die Zuordnung konnte nicht gespeichert werden.",
+    "done": "„{{name}}“ ist jetzt „{{port}}“ zugeordnet."
   }
 }

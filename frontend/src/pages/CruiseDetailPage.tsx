@@ -15,6 +15,7 @@ import { CruiseDayCard } from "../components/Cruise/CruiseDayCard";
 import { todayEntryKey } from "../components/Cruise/cruiseDayCardModel";
 import { useCruiseDocuments } from "../components/Cruise/useCruiseDocuments";
 import { useTodayZone } from "../hooks/useTodayZone";
+import { CruiseUnresolvedPorts } from "../components/Cruise/CruiseUnresolvedPorts";
 import TripPill from "../components/Trips/TripPill";
 import AppShell from "../components/ui/AppShell";
 import DetailHeader from "../components/ui/DetailHeader";
@@ -210,7 +211,13 @@ export default function CruiseDetailPage(): JSX.Element {
           )}
         </>
       ),
-      label: `${t("field.ports", { count: portsCount })} · ${seaDays} ${t("field.sea_days", { count: seaDays })}`,
+      // The "+N" beside the number was explained only by a hover title; the
+      // label now says it in words (forgejo#222, forgejo#176).
+      label: [
+        t("field.ports", { count: portsCount }),
+        `${seaDays} ${t("field.sea_days", { count: seaDays })}`,
+        ...(unresolvedCount > 0 ? [t("detail.unresolvedKpi", { count: unresolvedCount })] : []),
+      ].join(" · "),
     },
     ...(countries > 0
       ? [{ key: "countries", value: countries, label: t("detail.countries", { count: countries }) }]
@@ -275,6 +282,18 @@ export default function CruiseDetailPage(): JSX.Element {
             ) : (
               <p className="t-caption">{t("detail.stopsEmpty")}</p>
             )}
+            {/* The ports an import could not match, to settle in one place
+                (forgejo#222) — beside the itinerary they belong to. */}
+            <div className="mt-4">
+              <CruiseUnresolvedPorts
+                cruise={cruise}
+                onUpdated={(updated) => {
+                  setCruise(updated);
+                  // A resolved port gains coordinates: the map draws new legs.
+                  setGeometryVersion((v) => v + 1);
+                }}
+              />
+            </div>
           </DetailSection>
 
           {isFeatureVisible("cruiseTracks") && (

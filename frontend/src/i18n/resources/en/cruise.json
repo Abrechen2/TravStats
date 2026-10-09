@@ -63,7 +63,9 @@
     "nights": "Nights",
     "countries": "Countries",
     "priceKpi": "Price",
-    "day": "Day"
+    "day": "Day",
+    "unresolvedKpi_one": "{{count}} unresolved",
+    "unresolvedKpi_other": "{{count}} unresolved"
   },
   "field": {
     "ship": "Ship",
@@ -429,5 +431,23 @@
     "localNote": "Date and times are the port's (local time). Missing times stay open; the all-aboard time is never derived from the departure.",
     "pickHint": "Tap a day of the itinerary to open its day card.",
     "openDay": "Open the day card:"
+  },
+  "unresolved": {
+    "title_one": "One unresolved port",
+    "title_other": "{{count}} unresolved ports",
+    "incomplete_one": "Until it is matched to a catalogue entry it counts as a port call but not as a port – the port count reads {{matched}} (+{{count}} unresolved). The country count and the map leave it out, and the sea miles of the legs to and from it are missing.",
+    "incomplete_other": "Until they are matched to catalogue entries they count as port calls but not as ports – the port count reads {{matched}} (+{{count}} unresolved). The country count and the map leave them out, and the sea miles of the legs to and from them are missing.",
+    "days_one": "Day {{days}}",
+    "days_other": "Days {{days}}",
+    "candidates": "Matches in the port catalogue",
+    "searching": "Searching the catalogue …",
+    "searchFailed": "The catalogue could not be searched.",
+    "noCandidates": "No match in the catalogue – search for another name below, or add the port there.",
+    "searchOther": "Search for another port",
+    "confirm": "Assign “{{port}}”",
+    "confirmNone": "Choose a port first",
+    "saving": "Assigning …",
+    "saveError": "The assignment could not be saved.",
+    "done": "“{{name}}” is now assigned to “{{port}}”."
   }
 }
