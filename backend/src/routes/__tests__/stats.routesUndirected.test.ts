@@ -80,4 +80,27 @@ describe("GET /stats/routes groups a pair, not a direction", () => {
     // first — otherwise two accounts with the same travel would disagree.
     expect(res.body.routes[0].route).toBe("FRA-WAW");
   });
+
+  it("puts a flight with an unknown airport on no route at all (forgejo#254)", async () => {
+    // It used to become a route called "null-FRA" and could even top the list.
+    await fly("FRA", "WAW", 50.03, 52.17);
+    await prisma.flight.create({
+      data: {
+        userId,
+        status: "flown",
+        depIata: null,
+        arrIata: "FRA",
+        depLat: 0,
+        depLon: 0,
+        arrLat: 50.03,
+        arrLon: 8.57,
+        departureTime: new Date("2024-04-13T08:00:00Z"),
+        arrivalTime: new Date("2024-04-13T10:00:00Z"),
+      },
+    });
+
+    const res = await request(app).get("/api/v1/stats/routes").set("Cookie", authCookie);
+
+    expect(res.body.routes.map((r: { route: string }) => r.route)).toEqual(["FRA-WAW"]);
+  });
 });

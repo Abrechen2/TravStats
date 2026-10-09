@@ -60,6 +60,7 @@ import type { TimeseriesResponse } from "../lib/api/types";
 import { achievementsApi } from "../lib/api/achievements";
 import type { AchievementSummary } from "../types";
 import { generateYearReportPdf } from "../lib/yearReportPdf";
+import { favoriteConnection } from "../lib/stats/favoriteConnection";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
 import { GlobeLoader } from "../components/GlobeLoader";
@@ -486,22 +487,8 @@ export default function AdvancedStatsPage(): JSX.Element {
   // naming "iata:LH" would be a leak of the identity into the copy.
   const topAirline: string | null = sortedAirlines.length > 0 ? sortedAirlines[0][1].label : null;
 
-  const routeCounts = flights.reduce(
-    (acc, flight) => {
-      const dep = flight.depIata || flight.depIcao || null;
-      const arr = flight.arrIata || flight.arrIcao || null;
-      if (dep && arr) {
-        const key = `${dep} → ${arr}`;
-        acc[key] = (acc[key] || 0) + 1;
-      }
-      return acc;
-    },
-    {} as Record<string, number>
-  );
-  const favoriteRoute: string | null =
-    Object.keys(routeCounts).length > 0
-      ? Object.entries(routeCounts).sort(([, a], [, b]) => b - a)[0][0]
-      : null;
+  // The most flown CONNECTION, both directions as one (forgejo#254).
+  const favoriteRoute: string | null = favoriteConnection(flights);
 
   const yearsActive: number[] = [
     ...new Set(

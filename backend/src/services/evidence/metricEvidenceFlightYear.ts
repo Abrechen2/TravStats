@@ -49,7 +49,7 @@ export async function resolveYearFlightCount(
   const { rows, stats } = await loadYearRows(userId, year);
   const matched = rows.map((r) => ({
     id: r.id,
-    date: flightDateOf(r.departureTime),
+    date: flightDateOf(r),
     contribution: 1,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
@@ -84,7 +84,7 @@ export async function resolveYearDistanceKm(
   const { rows, stats } = await loadYearRows(userId, year);
   const matched = rows.map((r) => ({
     id: r.id,
-    date: flightDateOf(r.departureTime),
+    date: flightDateOf(r),
     contribution: r.distanceKm,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
@@ -119,7 +119,7 @@ export async function resolveYearFlightTimeMinutes(
   const { rows, stats } = await loadYearRows(userId, year);
   const matched = rows.map((r) => ({
     id: r.id,
-    date: flightDateOf(r.departureTime),
+    date: flightDateOf(r),
     contribution: r.durationMinutes ?? 0,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
@@ -160,7 +160,7 @@ export async function resolveYearTotalCost(
   const { rows, stats } = await loadYearRows(userId, year);
   const matched = rows.map((r) => ({
     id: r.id,
-    date: flightDateOf(r.departureTime),
+    date: flightDateOf(r),
     contribution: r.costContributionBase,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
@@ -197,7 +197,7 @@ export async function resolveYearUnpricedFlightCount(
   const { rows, stats } = await loadYearRows(userId, year);
   const matched = rows
     .filter((r) => !r.priced)
-    .map((r) => ({ id: r.id, date: flightDateOf(r.departureTime), contribution: 1 }));
+    .map((r) => ({ id: r.id, date: flightDateOf(r), contribution: 1 }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
     userId,
     matched,

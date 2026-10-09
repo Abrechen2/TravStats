@@ -71,16 +71,28 @@ export async function buildTzMap(
     if (f.arrIata) codes.add(f.arrIata);
     if (f.arrIcao) codes.add(f.arrIcao);
   }
-  const map = new Map<string, string>();
+  let map = new Map<string, string>();
   try {
-    const airports = await getCachedAirports(Array.from(codes));
-    for (const [code, data] of airports.entries()) {
-      if (data?.timezone) map.set(code, data.timezone);
-    }
+    map = tzMapFromAirports(await getCachedAirports(Array.from(codes)));
   } catch (error) {
     // Durations fall back to a naive diff and a row without a stored zone is
     // read in UTC — logged, so a broken catalogue is not a silent shift.
     logger.warn({ operation: "departure_clock_catalogue_failed", error });
+  }
+  return map;
+}
+
+/**
+ * The code → zone map `flightEndZone` reads, from an airport map the caller has
+ * already loaded for its own purposes (a country, a continent) — so a figure
+ * that needs both does not ask the catalogue twice.
+ */
+export function tzMapFromAirports(
+  airports: ReadonlyMap<string, { timezone?: string | null } | null | undefined>
+): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const [code, data] of airports.entries()) {
+    if (data?.timezone) map.set(code, data.timezone);
   }
   return map;
 }

@@ -542,7 +542,7 @@ export const seedsPartA: AchievementDefinition[] = [
   {
     code: "FAVORITE_ROUTE",
     name: "Favorite Route",
-    description: "Fly the same route 5 times",
+    description: "Fly the same route 5 times (either direction)",
     category: "special",
     domain: "flight",
     icon: "🔄",
@@ -554,7 +554,7 @@ export const seedsPartA: AchievementDefinition[] = [
   {
     code: "ROUTE_MASTER",
     name: "Route Master",
-    description: "Fly the same route 10 times",
+    description: "Fly the same route 10 times (either direction)",
     category: "special",
     domain: "flight",
     icon: "🔁",
@@ -566,7 +566,7 @@ export const seedsPartA: AchievementDefinition[] = [
   {
     code: "COMMUTER",
     name: "Commuter",
-    description: "Fly the same route 25 times",
+    description: "Fly the same route 25 times (either direction)",
     category: "special",
     domain: "flight",
     icon: "💼",

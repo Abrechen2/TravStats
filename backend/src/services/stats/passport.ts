@@ -100,8 +100,9 @@ import {
   type EvidenceInput,
   type EvidenceKind,
 } from "../../shared/countryEvidence";
-import { FLOWN, flightEvidence, isoDayOf, type PassportFlight } from "./flightEvidence";
+import { FLOWN, flightDay, flightEvidence, isoDayOf, type PassportFlight } from "./flightEvidence";
 import { trackEvidence, type CountryDayRow } from "./trackEvidence";
+import { localDay } from "../../shared/time/instant";
 import { roadtripEvidence, type PassportRoadtripStation } from "./roadtripEvidence";
 import { railEvidence, type RailEnd } from "./railEvidence";
 import { countEvidencePerCountry } from "./evidenceCountry";
@@ -427,9 +428,15 @@ export function buildPassport(
    */
   roadtripStations: readonly PassportRoadtripStation[] = [],
   /** Station ends of completed train rides, graded by `./railEvidence.ts`. */
-  railEnds: readonly RailEnd[] = []
+  railEnds: readonly RailEnd[] = [],
+  /**
+   * The user's profile zone: "this year" for `isNew` is THEIR year. Stamps are
+   * dated on local days, so a UTC year disagreed for the hours between the two
+   * New Years — a Tokyo user at 08:00 on 1 January still in the old one.
+   */
+  profileZone: string = "UTC"
 ): Passport {
-  const thisYear = now.getUTCFullYear();
+  const thisYear = Number(localDay(now, profileZone).slice(0, 4));
   const home = new Set(homeIatas.map((c) => c.toUpperCase()));
 
   const byCountry = new Map<string, CountryAcc>();
@@ -437,8 +444,10 @@ export function buildPassport(
 
   for (const flight of flights) {
     if (!FLOWN.has(flight.status)) continue;
-    const year = flight.departureTime ? flight.departureTime.getUTCFullYear() : null;
-    const isoDate = flight.departureTime ? flight.departureTime.toISOString().slice(0, 10) : null;
+    // The departure airport's day, the one the spells below are read on — a
+    // UTC cut made a Tokyo 07:30 on 1 January a stamp of the year before (forgejo#273).
+    const isoDate = flightDay(flight);
+    const year = isoDate === null ? null : Number(isoDate.slice(0, 4));
 
     for (const touch of touchesOf(flight)) {
       const code = touch.iata.toUpperCase();

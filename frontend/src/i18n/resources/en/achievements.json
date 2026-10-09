@@ -325,15 +325,15 @@
     },
     "FAVORITE_ROUTE": {
       "name": "Favorite Route",
-      "description": "Fly the same route 5 times"
+      "description": "Fly the same route 5 times (either direction)"
     },
     "ROUTE_MASTER": {
       "name": "Route Master",
-      "description": "Fly the same route 10 times"
+      "description": "Fly the same route 10 times (either direction)"
     },
     "COMMUTER": {
       "name": "Commuter",
-      "description": "Fly the same route 25 times"
+      "description": "Fly the same route 25 times (either direction)"
     },
     "BUSY_MONTH": {
       "name": "Busy Month",
@@ -477,7 +477,7 @@
     },
     "GROUNDHOG_DAY": {
       "name": "Groundhog Day",
-      "description": "Same route on three consecutive days"
+      "description": "The same route, in the same direction, on three consecutive days"
     },
     "SCHEDULE_KEEPER": {
       "name": "Schedule Keeper",

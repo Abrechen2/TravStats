@@ -83,7 +83,21 @@ export interface PassportFlight {
 }
 
 /** The day a flight belongs to — see `PassportFlight.localDay`. */
-const flightDay = (f: PassportFlight): string | null => f.localDay ?? isoDayOf(f.departureTime);
+export const flightDay = (f: {
+  localDay?: string | null;
+  departureTime: Date | null;
+}): string | null => f.localDay ?? isoDayOf(f.departureTime);
+
+/**
+ * The `at` a flight hands the fold: its local day as UTC midnight. The fold
+ * dates a record by the UTC day of `at` (`shared/countryEvidence.ts`) and
+ * widens a country's first and last date with it, so the raw departure instant
+ * put a Tokyo 07:30 departure on 1 January into the year before, beside the
+ * local `days` it was handed (forgejo#273). UTC midnight is a carrier for the
+ * day, the convention `airportCalendarDay` uses — not a claim about the zone.
+ */
+const dayCarrier = (day: string | null): Date | null =>
+  day === null ? null : new Date(`${day}T00:00:00Z`);
 
 /** Undated rows sort last: they cannot take part in a day comparison. */
 const departedAt = (f: PassportFlight): number =>
@@ -257,7 +271,7 @@ export function flightEvidence(
             : returned
               ? "visited"
               : "connection",
-        at: chain[i].departureTime,
+        at: dayCarrier(segment.arrivalDay),
         // The two ends of the spell and nothing between them — the days the
         // records attest. Read on the airports' own clocks, never on the UTC
         // instant beside them: a red-eye that lands after midnight UTC would
@@ -286,7 +300,7 @@ export function flightEvidence(
         country: countryOf(f.depIata),
         kind: "flight",
         tier: "visited",
-        at: f.departureTime,
+        at: dayCarrier(day),
         days,
       });
     }
@@ -295,7 +309,7 @@ export function flightEvidence(
         country: countryOf(f.arrIata),
         kind: "flight",
         tier: "visited",
-        at: f.departureTime,
+        at: dayCarrier(day),
         days,
       });
     }

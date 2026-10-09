@@ -8,7 +8,13 @@ import { sortEntries, sliceEntries } from "./paging";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { airlineGroupKey, normalizeAirline } from "../../shared/airlineNormalize";
 import { airlineResolvers } from "../../utils/airlineNormalize";
-import { flightDateOf, hydrateFlightSumEntries } from "./entryMappers";
+import {
+  FLIGHT_DAY_SELECT,
+  flightDateOf,
+  hydrateFlightSumEntries,
+  type FlightDayRow,
+} from "./entryMappers";
+import { withDepartureClock } from "../stats/departureClock";
 import { getCachedAirports } from "../../services/airportCache";
 import { resolvePassportCountryEntries } from "./metricEvidencePassport";
 
@@ -73,13 +79,16 @@ export async function resolveRankingEvidence(
   }
 }
 
-/** Minimal identity projection: the three columns `airlineGroupKey` reads, plus what sorting needs. */
-interface AirlineIdentityRow {
+/**
+ * Minimal identity projection: the three columns `airlineGroupKey` reads, plus
+ * what dating and sorting need — the departure clock, so an entry is labelled
+ * with the departure airport's day rather than the UTC one (forgejo#273).
+ */
+interface AirlineIdentityRow extends FlightDayRow {
   id: string;
   airline: string | null;
   airlineIata: string | null;
   airlineIcao: string | null;
-  departureTime: Date | null;
 }
 
 /** The only two shapes `airlineGroupKey`/`groupAirlines` (`shared/airlineNormalize.ts`) can produce. */
@@ -115,10 +124,18 @@ async function resolveAirlineRankingEvidence(
     );
   }
 
-  const identityRows: AirlineIdentityRow[] = await prisma.flight.findMany({
-    where: { userId, ...countableFlightWhere() },
-    select: { id: true, airline: true, airlineIata: true, airlineIcao: true, departureTime: true },
-  });
+  const identityRows: AirlineIdentityRow[] = await withDepartureClock(
+    await prisma.flight.findMany({
+      where: { userId, ...countableFlightWhere() },
+      select: {
+        id: true,
+        airline: true,
+        airlineIata: true,
+        airlineIcao: true,
+        ...FLIGHT_DAY_SELECT,
+      },
+    })
+  );
 
   // `groupAirlines`'s fold has no inverse — its output is a key, its input
   // three nullable columns resolved through a catalogue — so the only
@@ -152,7 +169,7 @@ async function resolveAirlineRankingEvidence(
     userId,
     matched.map((row) => ({
       id: row.id,
-      date: flightDateOf(row.departureTime),
+      date: flightDateOf(row),
       contribution: 1,
     })),
     page
@@ -203,14 +220,13 @@ function airlineDisplayLabel(groupKey: string, matchedRows: AirlineIdentityRow[]
 
 // ─── Airport ────────────────────────────────────────────────────────────────
 
-/** Minimal identity: the two endpoint codes plus what sorting needs. */
-interface AirportIdentityRow {
+/** Minimal identity: the two endpoint codes plus what dating and sorting need. */
+interface AirportIdentityRow extends FlightDayRow {
   id: string;
   depIata: string | null;
   depIcao: string | null;
   arrIata: string | null;
   arrIcao: string | null;
-  departureTime: Date | null;
 }
 
 /** Which end(s) of a flight credited the requested airport. */
@@ -272,17 +288,12 @@ async function resolveAirportRankingEvidence(
     );
   }
 
-  const identityRows: AirportIdentityRow[] = await prisma.flight.findMany({
-    where: { userId, ...countableFlightWhere() },
-    select: {
-      id: true,
-      depIata: true,
-      depIcao: true,
-      arrIata: true,
-      arrIcao: true,
-      departureTime: true,
-    },
-  });
+  const identityRows: AirportIdentityRow[] = await withDepartureClock(
+    await prisma.flight.findMany({
+      where: { userId, ...countableFlightWhere() },
+      select: { id: true, ...FLIGHT_DAY_SELECT },
+    })
+  );
 
   const credits = identityRows
     .map((row) => matchAirportCredit(row, code))
@@ -295,9 +306,7 @@ async function resolveAirportRankingEvidence(
     href: `/flights/${c.row.id}`,
     title: { text: "" },
     subtitle: null,
-    date: c.row.departureTime
-      ? { value: c.row.departureTime.toISOString().slice(0, 10), precision: "day" as const }
-      : null,
+    date: flightDateOf(c.row),
     contribution: c.contribution,
   }));
   const sorted = sortEntries(skeletons);
@@ -383,14 +392,13 @@ async function resolveAirportRankingEvidence(
 
 // ─── Country ────────────────────────────────────────────────────────────────
 
-/** Minimal identity: the two endpoint codes plus what sorting needs. */
-interface CountryIdentityRow {
+/** Minimal identity: the two endpoint codes plus what dating and sorting need. */
+interface CountryIdentityRow extends FlightDayRow {
   id: string;
   depIata: string | null;
   depIcao: string | null;
   arrIata: string | null;
   arrIcao: string | null;
-  departureTime: Date | null;
 }
 
 /**
@@ -452,17 +460,12 @@ async function resolveCountryRankingEvidence(
     );
   }
 
-  const identityRows: CountryIdentityRow[] = await prisma.flight.findMany({
-    where: { userId, ...countableFlightWhere() },
-    select: {
-      id: true,
-      depIata: true,
-      depIcao: true,
-      arrIata: true,
-      arrIcao: true,
-      departureTime: true,
-    },
-  });
+  const identityRows: CountryIdentityRow[] = await withDepartureClock(
+    await prisma.flight.findMany({
+      where: { userId, ...countableFlightWhere() },
+      select: { id: true, ...FLIGHT_DAY_SELECT },
+    })
+  );
 
   const airportCodes = new Set<string>();
   for (const row of identityRows) {
@@ -479,7 +482,7 @@ async function resolveCountryRankingEvidence(
     userId,
     matched.map((row) => ({
       id: row.id,
-      date: flightDateOf(row.departureTime),
+      date: flightDateOf(row),
       contribution: 1,
     })),
     page
@@ -509,9 +512,8 @@ async function resolveCountryRankingEvidence(
 
 // ─── Aircraft type ──────────────────────────────────────────────────────────
 
-interface AircraftTypeIdentityRow {
+interface AircraftTypeIdentityRow extends FlightDayRow {
   id: string;
-  departureTime: Date | null;
 }
 
 /**
@@ -552,16 +554,18 @@ async function resolveAircraftTypeRankingEvidence(
   // needed, so this identity pass already returns only matching flights (one
   // query narrower than the airline/airport/country resolvers, which have to
   // load every countable flight to re-run their fold in JS).
-  const identityRows: AircraftTypeIdentityRow[] = await prisma.flight.findMany({
-    where: { userId, ...countableFlightWhere(), aircraft },
-    select: { id: true, departureTime: true },
-  });
+  const identityRows: AircraftTypeIdentityRow[] = await withDepartureClock(
+    await prisma.flight.findMany({
+      where: { userId, ...countableFlightWhere(), aircraft },
+      select: { id: true, ...FLIGHT_DAY_SELECT },
+    })
+  );
 
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
     userId,
     identityRows.map((row) => ({
       id: row.id,
-      date: flightDateOf(row.departureTime),
+      date: flightDateOf(row),
       contribution: 1,
     })),
     page

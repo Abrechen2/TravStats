@@ -282,12 +282,13 @@ describe("GET /api/v1/stats/timeseries — buckets read the clock at the departu
   });
 
   it("buckets a DATE_ONLY row on the date it carries", async () => {
-    // A historical row has no real clock: it stores a 12:00 placeholder and is
-    // tagged DATE_ONLY. `localWallClockOf` still reads such a row through the
-    // airport's zone — only the HOUR is dropped — but 12:00 sits far enough
-    // from midnight that no real airport offset can move the DATE. So the day
-    // the row carries is the day it buckets on, east and west of UTC alike,
-    // and no timezone shifting is ever visible on it.
+    // A historical row has no real clock and is tagged DATE_ONLY. It is
+    // written as a LOCAL wall clock through the airport's zone (the form's
+    // noon, the cruise import's midnight) and read back through the same zone
+    // — only the HOUR is dropped — so the day it carries is the day it buckets
+    // on. The fixtures below are 12:00Z read in BKK (+7) and LAX (−7), which
+    // no offset within UTC±12 moves; the writer's contract and the cases where
+    // the UTC date differs are in `shared/time/dateOnlyFlights.json`.
     mockFlightFindMany.mockResolvedValue([
       flightRow("BKK", "SIN", "2020-06-15T12:00:00Z", {
         depTimeSemantics: "DATE_ONLY",

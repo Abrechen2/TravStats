@@ -12,10 +12,11 @@ import { normalizeAircraft } from "./aircraftNormalize";
 import { localWallClockOf, type FlightTimeSemantics } from "./timezone";
 import { isCountableFlight } from "../shared/flightCounting";
 import { flightDurationOf } from "../shared/flightDuration";
+import { routePairKey } from "../shared/routePair";
 import {
   B777_SUBSTRINGS,
   HIGH_ALTITUDE_AIRPORTS,
-  ISLAND_AIRPORTS,
+  touchesIslandAirport,
   JUMBO_SUBSTRINGS,
   LONG_HAUL_MIN_KM,
   MICRO_STATES,
@@ -598,17 +599,19 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
       stats.flightsByYear.set(yearKey, yearCount + 1);
     }
 
-    // Route counts
-    const routeKey = `${depCode}-${arrCode}`;
-    const routeCount = stats.routeCounts.get(routeKey) || 0;
-    stats.routeCounts.set(routeKey, routeCount + 1);
+    // Route counts — per CONNECTION, the unordered airport pair (forgejo#254).
+    const routeKey = routePairKey(depCode, arrCode);
+    if (routeKey !== null)
+      stats.routeCounts.set(routeKey, (stats.routeCounts.get(routeKey) || 0) + 1);
 
     // ── v1.1 expansion ──────────────────────────────────────────────
 
-    // Airport-based: islands, high altitude, pilgrim routes, alphabet
+    // Island Hopper counts FLIGHTS: one per flight, however many ends are islands (forgejo#252).
+    if (touchesIslandAirport(depCode, arrCode)) stats.islandFlights++;
+
+    // Airport-based: high altitude, pilgrim routes, alphabet
     for (const code of [depCode, arrCode]) {
       if (!code) continue;
-      if (ISLAND_AIRPORTS.has(code)) stats.islandFlights++;
       if (HIGH_ALTITUDE_AIRPORTS.has(code)) stats.highAltitudeFlights++;
       if (PILGRIM_AIRPORTS.has(code)) stats.pilgrimFlights++;
       if (SCANDINAVIA_AIRPORTS.has(code)) stats.scandinaviaSet.add(code);
@@ -749,7 +752,7 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
 
   // Cross-flight computations — everything that needs the flights in relation
   // to each other rather than one at a time. See `./flightSequenceStats`.
-  const sequence = computeFlightSequenceStats(flights);
+  const sequence = computeFlightSequenceStats(flights, airportMap);
   stats.windowStreak = sequence.windowStreak;
   stats.middleStreak = sequence.middleStreak;
   stats.aisleStreak = sequence.aisleStreak;

@@ -445,7 +445,7 @@
     "milestoneYear": "Milestone Year",
     "milestoneYearDesc": "{{year}} with {{count}} flights",
     "routeMaster": "Route Master",
-    "routeMasterDesc": "{{route}} (flown {{count}}×)"
+    "routeMasterDesc": "{{route}} (flown {{count}}×, both directions)"
   },
   "business": {
     "title": "💼 Business Statistics",
@@ -641,7 +641,7 @@
     "onTimeRate": "On time (< 15 min)",
     "bestAirline": "Most punctual airline",
     "worstAirline": "Least punctual airline",
-    "worstRoute": "Least punctual route"
+    "worstRoute": "Least punctual route (per direction)"
   },
   "travelAccount": {
     "title": "Where you slept",

@@ -77,9 +77,13 @@ export function placeZone(
 /**
  * The place-local day and hour of an INSTANT (a departure, an arrival).
  *
- * `DATE_ONLY` and `LEGACY_FAKE_UTC` rows store the local wall clock already
- * and need no zone. Any other instant needs the place's zone; without it the
- * UTC day is used and `zoneKnown` says it is only approximate.
+ * `LEGACY_FAKE_UTC` rows store the local wall clock already and need no zone.
+ * Every other row needs the place's zone — a `DATE_ONLY` one included: its
+ * writers send a LOCAL wall clock (the form's noon, the cruise import's
+ * midnight) that the server converted through the airport's zone, so its UTC
+ * date is the day before east of UTC for a midnight write and at UTC+13/+14
+ * for a noon one (forgejo#273). Without a zone the UTC day is used and
+ * `zoneKnown` says it is only approximate.
  */
 export function placeClock(
   at: Date,
@@ -87,9 +91,11 @@ export function placeClock(
   semantics: FlightTimeSemantics,
   fallbackHour: number
 ): { day: string; hour: number; zoneKnown: boolean } {
-  const storedIsLocal = semantics === "DATE_ONLY" || semantics === "LEGACY_FAKE_UTC";
+  const storedIsLocal = semantics === "LEGACY_FAKE_UTC";
   if (!zone && !storedIsLocal) {
-    return { day: storedDay(at), hour: at.getUTCHours(), zoneKnown: false };
+    // A date-only row's clock is a placeholder in any zone: the caller's hour.
+    const hour = semantics === "DATE_ONLY" ? fallbackHour : at.getUTCHours();
+    return { day: storedDay(at), hour, zoneKnown: false };
   }
   const clock = localWallClockOf(at, zone, semantics);
   return { day: clock.date, hour: clock.hour ?? fallbackHour, zoneKnown: true };

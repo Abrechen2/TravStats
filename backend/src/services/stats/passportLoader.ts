@@ -20,11 +20,9 @@ import { getCachedAirports } from "../airportCache";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { allHomeAirports } from "../../utils/homeAirport";
 import { loadHomePeriods } from "../home/homeStore";
-import {
-  localWallClockOf,
-  normalizeFlightTimeUtc,
-  type FlightTimeSemantics,
-} from "../../utils/timezone";
+import { normalizeFlightTimeUtc, type FlightTimeSemantics } from "../../utils/timezone";
+import { departureDayOf } from "../../utils/stats/departureClock";
+import { profileZoneOf } from "../../shared/time/profileZone";
 import { countryThresholdFor } from "../countryThresholdResolver";
 import {
   FLIGHT_CLOCK_SELECT,
@@ -189,13 +187,17 @@ export async function loadPassport(
    * both read the same `getCachedAirports` cache, and widening that helper would
    * touch every "when did I fly" figure on the server for one new column here.
    */
-  const [dated, tzMap] = await Promise.all([withDepartureClock(flights), buildTzMap(flights)]);
+  const [dated, tzMap, profile] = await Promise.all([
+    withDepartureClock(flights),
+    buildTzMap(flights),
+    // "This year" for `isNew` is the user's own year (ADR 0002 D4), now that
+    // every stamp is dated on a local day rather than a UTC one (forgejo#273).
+    profileZoneOf(userId),
+  ]);
 
   const passportFlights = dated.map((f) => ({
     ...f,
-    localDay: f.departureTime
-      ? localWallClockOf(f.departureTime, f.depTimezone, f.depTimeSemantics).date
-      : null,
+    localDay: departureDayOf(f),
     departureInstant: realInstant(f.departureTime, f.depTimeSemantics, f.depTimezone),
     arrivalInstant: realInstant(
       f.arrivalTime,
@@ -351,6 +353,7 @@ export async function loadPassport(
       partialWindow: row.partialWindow,
     })),
     roadtripStations,
-    railEnds
+    railEnds,
+    profile.zone
   );
 }

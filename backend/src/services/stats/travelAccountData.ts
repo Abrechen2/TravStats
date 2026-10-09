@@ -14,7 +14,7 @@
  * loading the account in one pass.
  */
 import { prisma } from "../../db";
-import { buildTzMap, airportCalendarDay } from "./departureClock";
+import { buildTzMap, airportCalendarDay, flightEndZone } from "./departureClock";
 import type { FlightTimeSemantics } from "../../utils/timezone";
 import type {
   AccountCruise,
@@ -43,6 +43,9 @@ export interface TravelAccountFlightRow extends AccountFlight {
   flightNumber: string | null;
   depIata: string | null;
   arrIata: string | null;
+  /** The zone `depLocalDay` was read in — the evidence entry dates the flight on it too (forgejo#273). */
+  depTimezone: string | null;
+  depTimeSemantics: FlightTimeSemantics;
 }
 
 /** A free-pitch station, plus the roadtrip it belongs to — where it is edited. */
@@ -112,6 +115,8 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
         arrIcao: true,
         depTimeSemantics: true,
         arrTimeSemantics: true,
+        depTimezone: true,
+        arrTimezone: true,
       },
     }),
     prisma.trip.findMany({
@@ -238,14 +243,10 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
       label: c.routeName ?? c.shipNameOverride ?? c.ship?.name ?? "—",
     })),
     flights: flights.map((f) => {
-      const depTz =
-        (f.depIata ? tzMap.get(f.depIata) : undefined) ??
-        (f.depIcao ? tzMap.get(f.depIcao) : undefined) ??
-        null;
-      const arrTz =
-        (f.arrIata ? tzMap.get(f.arrIata) : undefined) ??
-        (f.arrIcao ? tzMap.get(f.arrIcao) : undefined) ??
-        null;
+      // Each end in the zone it was written with, else today's catalogue
+      // zone — `flightEndZone`, as every other flight figure (forgejo#273).
+      const depTz = flightEndZone(f.depTimezone, tzMap, f.depIata, f.depIcao);
+      const arrTz = flightEndZone(f.arrTimezone, tzMap, f.arrIata, f.arrIcao);
       return {
         id: f.id,
         status: f.status,
@@ -254,6 +255,8 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
         flightNumber: f.flightNumber,
         depIata: f.depIata,
         arrIata: f.arrIata,
+        depTimezone: depTz,
+        depTimeSemantics: f.depTimeSemantics as FlightTimeSemantics,
         depLocalDay:
           f.departureTime && depTz
             ? airportCalendarDay(f.departureTime, depTz, f.depTimeSemantics as FlightTimeSemantics)

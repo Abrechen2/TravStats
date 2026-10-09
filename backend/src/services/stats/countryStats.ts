@@ -11,6 +11,7 @@
  */
 
 import { getCachedAirports } from "../airportCache";
+import { flightEndZone, tzMapFromAirports } from "./departureClock";
 import { localWallClockOf, type FlightTimeSemantics } from "../../utils/timezone";
 import { normalizeCountrySet } from "../../shared/countryEvidence";
 import type { CountryStat, CountryStatsResponse } from "../../schemas/statsFlights";
@@ -23,6 +24,8 @@ export interface CountryRow {
   arrIcao: string | null;
   departureTime: Date | null;
   depTimeSemantics: string;
+  /** The zone the departure was written with; absent → today's catalogue zone. */
+  depTimezone?: string | null;
 }
 
 /**
@@ -58,6 +61,7 @@ export async function computeCountryStats(
   }
 
   const airportMap = await getCachedAirports([...airportCodes]);
+  const tzMap = tzMapFromAirports(airportMap);
 
   const countryCounts = new Map<string, number>();
   const countriesByYear = new Map<number, Set<string>>();
@@ -87,14 +91,16 @@ export async function computeCountryStats(
     // An undated flight cannot be attributed to a year. It stays in the
     // lifetime tally rather than being guessed into the current one.
     if (!f.departureTime) continue;
-    // The timezone lives on the airport, not the flight — same source the
-    // flight list uses to derive depTimezone. Both endpoints land in the
-    // DEPARTURE year: a red-eye that lands after midnight is still one
-    // journey, and splitting its two ends across two years would count a
-    // country as visited in a year the traveller never flew.
+    // The zone the flight was written with, else today's catalogue zone
+    // (`flightEndZone`, the chain every other flight figure reads) — so a
+    // catalogue correction cannot move a past flight's year here alone
+    // (forgejo#273). Both endpoints land in the DEPARTURE year: a red-eye
+    // that lands after midnight is still one journey, and splitting its two
+    // ends across two years would count a country as visited in a year the
+    // traveller never flew.
     const year = localWallClockOf(
       f.departureTime,
-      depAirport?.timezone ?? null,
+      flightEndZone(f.depTimezone, tzMap, f.depIata, f.depIcao),
       f.depTimeSemantics as FlightTimeSemantics
     ).year;
     if (!Number.isFinite(year)) continue;

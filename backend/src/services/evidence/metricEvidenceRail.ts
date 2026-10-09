@@ -52,7 +52,12 @@ function entryOf(
   fields: Pick<EvidenceEntry, "contribution" | "credits" | "creditLabels">
 ): EvidenceEntry {
   return railEvidenceEntry(
-    { id: row.id, label: label(row), departureTime: row.departureTime },
+    {
+      id: row.id,
+      label: label(row),
+      departureTime: row.departureTime,
+      depTimezone: row.depTimezone,
+    },
     { ...fields, subtitle: null }
   );
 }

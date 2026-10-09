@@ -20,6 +20,7 @@ import {
   isOceanCrossing,
   isSameLocalDayFlight,
   isTimeTravelFlight,
+  localArrivalDay,
   longitudeDirectionOf,
   touchesTropics,
 } from "./flightPredicates";
@@ -387,7 +388,10 @@ export async function calculateUniqueStats(
 
       // Exclude every home airport active at the time of arrival — a change of
       // planes at DUS is a trip home for someone who flies from CGN and DUS.
-      const arrivalDay = new Date(current.arrivalTime).toISOString().slice(0, 10);
+      // The day is the one on that airport's clock: a home period begins and
+      // ends on a local day, and a UTC cut judged a Tokyo landing at 07:30
+      // against the day before (forgejo#273).
+      const arrivalDay = localArrivalDay(current, timezoneMap);
       if (isHomeAirportAt(homePeriods, arrivalDay, currentArrCode)) continue;
 
       const layoverHours =
