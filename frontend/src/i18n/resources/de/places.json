@@ -92,7 +92,8 @@
     "listPartial_one": "Ort gespeichert. Die Liste „{{lists}}“ hat ihn nicht aufgenommen.",
     "listPartial_other": "Ort gespeichert. Diese Listen haben ihn nicht aufgenommen: {{lists}}.",
     "listRetry": "Erneut zuordnen",
-    "listContinue": "Weiter"
+    "listContinue": "Weiter",
+    "forList": "Nach dem Speichern kommt der Ort in die Liste „{{list}}“."
   },
   "detail": {
     "backToList": "Zurück zur Übersicht",
@@ -162,7 +163,7 @@
     "backToLists": "Zurück zu den Listen",
     "addPlace": "Ort hinzufügen",
     "addPlacePlaceholder": "Erfassten Ort suchen …",
-    "addNoMatches": "Kein passender Ort. Lege ihn zuerst unter „Orte“ an.",
+    "addNoMatches": "Kein passender Ort in deinem Logbuch.",
     "listEmpty": "Diese Liste ist noch leer.",
     "removeFromList": "„{{name}}“ aus der Liste entfernen",
     "deleteList": "Liste löschen",
@@ -180,7 +181,11 @@
     "moveUp": "„{{name}}“ nach oben schieben",
     "moveDown": "„{{name}}“ nach unten schieben",
     "reorderFailed": "Die Reihenfolge konnte nicht gespeichert werden.",
-    "nameRequired": "Eine Liste braucht einen Namen."
+    "nameRequired": "Eine Liste braucht einen Namen.",
+    "createAndAdd": "„{{name}}“ als Ort anlegen und hinzufügen",
+    "unassigned": "„{{name}}“ ist gespeichert, steht aber noch nicht in dieser Liste.",
+    "assignAgain": "Erneut zuordnen",
+    "dismissUnassigned": "Ausblenden"
   },
   "checklist": {
     "notFound": "Diese Checkliste gibt es nicht.",

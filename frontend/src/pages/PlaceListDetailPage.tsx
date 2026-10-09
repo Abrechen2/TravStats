@@ -1,7 +1,7 @@
 import { LIST_PALETTE_HEX } from "../lib/listPalette";
 import { PlaceListLabelFields, hasSymbol } from "../components/places/PlaceListLabelFields";
 import type { PlaceLabelMode } from "../lib/placeLabel";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
@@ -24,6 +24,8 @@ import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { isTransientSaveError, saveErrorKey } from "../lib/saveErrorMessage";
 import { FieldError, FormErrorBanner, fieldErrorProps } from "../components/form";
 import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
+import { PlaceFormModal } from "../components/places/PlaceFormModal";
+import { PlaceListAddPanel, type UnassignedPlace } from "../components/places/PlaceListAddPanel";
 import { useToastStore } from "../store/toastStore";
 import type { Place } from "../types/place";
 import type { PlaceList } from "../types/placeList";
@@ -76,6 +78,12 @@ export default function PlaceListDetailPage(): JSX.Element {
     fallbackKey?: string;
   } | null>(null);
   const [addQuery, setAddQuery] = useState("");
+  /** The name a new place starts with while the form is open over the list. */
+  const [creatingName, setCreatingName] = useState<string | null>(null);
+  /** Places created from here that the list did not take (yet). */
+  const [unassigned, setUnassigned] = useState<UnassignedPlace[]>([]);
+  /** Filings on their way, by place — a second tap must not send a second one. */
+  const assigning = useRef(new Set<string>());
 
   const load = useCallback(async (): Promise<void> => {
     if (!id) return;
@@ -142,6 +150,37 @@ export default function PlaceListDetailPage(): JSX.Element {
       if (done) setAddQuery("");
     },
     [list, runChange]
+  );
+
+  /**
+   * File a place created from this list into it — once. The place exists
+   * already, so a refusal leaves it in the logbook and puts a row in the add
+   * panel that says so and offers "Erneut zuordnen" for this place alone.
+   */
+  const assignCreated = useCallback(
+    async (placeId: string, created?: Place): Promise<void> => {
+      if (!list || assigning.current.has(placeId)) return;
+      assigning.current.add(placeId);
+      setUnassigned((rows) =>
+        rows.map((row) => (row.place.id === placeId ? { ...row, retrying: true } : row))
+      );
+      try {
+        setList(await addPlaceToList(list.id, placeId));
+        setUnassigned((rows) => rows.filter((row) => row.place.id !== placeId));
+      } catch (err: unknown) {
+        logger.error({ err, placeId }, "PlaceListDetailPage: the list did not take a new place");
+        const reasonKey = saveErrorKey(err, "places:lists.addFailed");
+        setUnassigned((rows) => {
+          const known = rows.find((row) => row.place.id === placeId)?.place ?? created;
+          if (!known) return rows;
+          const rest = rows.filter((row) => row.place.id !== placeId);
+          return [...rest, { place: known, reasonKey, retrying: false }];
+        });
+      } finally {
+        assigning.current.delete(placeId);
+      }
+    },
+    [list]
   );
 
   /**
@@ -459,58 +498,20 @@ export default function PlaceListDetailPage(): JSX.Element {
           />
         </div>
 
-        {/* Add a place. Search-as-you-type over the places the user already has
-            — a list groups the logbook, it does not create entries in it. */}
-        <div
-          className="mb-6 rounded-xl p-4"
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-        >
-          <label
-            htmlFor="place-list-add"
-            className="mb-2 block text-sm"
-            style={{ color: "var(--text-muted)" }}
-          >
-            {t("places:lists.addPlace")}
-          </label>
-          <input
-            id="place-list-add"
-            value={addQuery}
-            onChange={(e) => setAddQuery(e.target.value)}
-            placeholder={t("places:lists.addPlacePlaceholder")}
-            className={`w-full rounded-lg px-3 py-2 text-sm ${COARSE_BOX}`}
-            style={{
-              background: "var(--bg-elevated)",
-              border: "1px solid var(--color-border)",
-              color: "var(--text-primary)",
-            }}
-          />
-          {addQuery.trim().length > 0 && (
-            <ul className="mt-2" style={{ listStyle: "none", padding: 0 }}>
-              {candidates.length === 0 ? (
-                <li className="py-2 text-sm" style={{ color: "var(--text-muted)" }}>
-                  {t("places:lists.addNoMatches")}
-                </li>
-              ) : (
-                candidates.map((p) => (
-                  <li key={p.id}>
-                    <button
-                      type="button"
-                      onClick={() => void handleAdd(p.id)}
-                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm ${COARSE_BOX}`}
-                      style={{ color: "var(--text-secondary)" }}
-                    >
-                      <span aria-hidden>{PLACE_CATEGORY_ICONS[p.category]}</span>
-                      <span className="truncate">{p.name}</span>
-                      <span className="ml-auto text-xs" style={{ color: "var(--text-muted)" }}>
-                        {p.city ?? ""}
-                      </span>
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
-          )}
-        </div>
+        {/* Add a place: search the logbook, or create the place right here
+            when the search finds nothing (forgejo#230). */}
+        <PlaceListAddPanel
+          query={addQuery}
+          onQueryChange={setAddQuery}
+          candidates={candidates}
+          onAdd={(placeId) => void handleAdd(placeId)}
+          onCreate={() => setCreatingName(addQuery.trim())}
+          unassigned={unassigned}
+          onRetry={(placeId) => void assignCreated(placeId)}
+          onDismiss={(placeId) =>
+            setUnassigned((rows) => rows.filter((row) => row.place.id !== placeId))
+          }
+        />
 
         {entries.length === 0 ? (
           <p className="py-10 text-center text-sm" style={{ color: "var(--text-muted)" }}>
@@ -593,6 +594,23 @@ export default function PlaceListDetailPage(): JSX.Element {
               );
             })}
           </ul>
+        )}
+
+        {creatingName !== null && (
+          <PlaceFormModal
+            place={null}
+            initialName={creatingName}
+            forList={list.name}
+            onClose={() => setCreatingName(null)}
+            onSaved={(created) => {
+              // Back on the list at once; the filing follows, and only it can
+              // fail from here on — the place itself is stored.
+              setCreatingName(null);
+              setAddQuery("");
+              setAllPlaces((rows) => [...rows, created]);
+              void assignCreated(created.id, created);
+            }}
+          />
         )}
 
         {/* Removing a list removes the GROUPING, never the places. Said out loud

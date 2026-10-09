@@ -92,7 +92,8 @@
     "listPartial_one": "Place saved. The list “{{lists}}” did not take it.",
     "listPartial_other": "Place saved. These lists did not take it: {{lists}}.",
     "listRetry": "Assign again",
-    "listContinue": "Continue"
+    "listContinue": "Continue",
+    "forList": "Once saved, the place goes into the list “{{list}}”."
   },
   "detail": {
     "backToList": "Back to the list",
@@ -162,7 +163,7 @@
     "backToLists": "Back to lists",
     "addPlace": "Add a place",
     "addPlacePlaceholder": "Search a recorded place …",
-    "addNoMatches": "No matching place. Add it under “Places” first.",
+    "addNoMatches": "No matching place in your logbook.",
     "listEmpty": "This list is still empty.",
     "removeFromList": "Remove “{{name}}” from the list",
     "deleteList": "Delete list",
@@ -180,7 +181,11 @@
     "moveUp": "Move “{{name}}” up",
     "moveDown": "Move “{{name}}” down",
     "reorderFailed": "The new order could not be saved.",
-    "nameRequired": "A list needs a name."
+    "nameRequired": "A list needs a name.",
+    "createAndAdd": "Create “{{name}}” as a place and add it",
+    "unassigned": "“{{name}}” is saved but not in this list yet.",
+    "assignAgain": "Assign again",
+    "dismissUnassigned": "Hide"
   },
   "checklist": {
     "notFound": "There is no such checklist.",

@@ -1,0 +1,170 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+
+/**
+ * A new place straight from a list (forgejo#230). A search that found nothing
+ * used to say "Lege ihn zuerst unter „Orte“ an" — leave the list, create the
+ * place, come back, search again, add it.
+ */
+
+const getPlaceList = vi.fn();
+const addPlaceToList = vi.fn();
+const formProps = vi.hoisted(() => ({ last: null as null | Record<string, unknown> }));
+
+vi.mock("../../lib/api/placeLists", () => ({
+  getPlaceList: (...a: unknown[]) => getPlaceList(...a),
+  addPlaceToList: (...a: unknown[]) => addPlaceToList(...a),
+  updatePlaceList: vi.fn(),
+  reorderPlaceList: vi.fn(),
+  removePlaceFromList: vi.fn(),
+  deletePlaceList: vi.fn(),
+}));
+vi.mock("../../lib/api/places", () => ({
+  listPlaces: vi.fn(async () => [
+    { id: "a", name: "Pantheon", category: "landmark", city: "Rom", country: null },
+  ]),
+}));
+vi.mock("../../store/toastStore", () => ({
+  useToastStore: (selector: (s: { addToast: () => void }) => unknown) =>
+    selector({ addToast: vi.fn() }),
+}));
+vi.mock("../../hooks/useTranslation", async () => {
+  const { germanUseTranslationNs } = await import("../../__tests__/helpers/germanT");
+  return { useTranslation: germanUseTranslationNs };
+});
+vi.mock("../../hooks/usePlacesVisible", () => ({ usePlacesAccess: () => "allowed" }));
+vi.mock("../../components/NavigationBar", () => ({ default: () => <div /> }));
+vi.mock("../../components/places/PlaceListLabelFields", () => ({
+  PlaceListLabelFields: () => null,
+  hasSymbol: (v: string) => v.trim().length > 0,
+}));
+// The form has its own tests; here it stands for "the user saved a new place".
+vi.mock("../../components/places/PlaceFormModal", () => ({
+  PlaceFormModal: (props: Record<string, unknown>) => {
+    formProps.last = props;
+    const onSaved = props.onSaved as (p: unknown) => void;
+    return (
+      <div role="dialog" aria-label="place-form">
+        <button type="button" onClick={() => onSaved(CREATED)}>
+          mock-save
+        </button>
+      </div>
+    );
+  },
+}));
+
+import PlaceListDetailPage from "../PlaceListDetailPage";
+
+const CREATED = { id: "new", name: "Bocca della Verità", category: "landmark", city: null };
+
+const LIST = {
+  id: "l1",
+  name: "Rom",
+  color: "#f0a947",
+  icon: null,
+  curatedKey: null,
+  labelMode: "name",
+  sortIdx: 0,
+  description: null,
+  placeCount: 0,
+  visitedCount: 0,
+  countryCount: 0,
+  createdAt: "",
+  updatedAt: "",
+  entries: [],
+};
+
+const withNew = {
+  ...LIST,
+  placeCount: 1,
+  entries: [{ id: "e1", placeId: "new", sortIdx: 0, place: { ...CREATED, visited: false } }],
+};
+
+async function searchForNothing(): Promise<void> {
+  render(
+    <MemoryRouter initialEntries={["/places/lists/l1"]}>
+      <Routes>
+        <Route path="/places/lists/:id" element={<PlaceListDetailPage />} />
+      </Routes>
+    </MemoryRouter>
+  );
+  fireEvent.change(await screen.findByLabelText("Ort hinzufügen"), {
+    target: { value: "Bocca della Verità" },
+  });
+}
+
+const network = { isAxiosError: true, message: "Network Error" };
+
+describe("PlaceListDetailPage — a new place from the list", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    formProps.last = null;
+    getPlaceList.mockResolvedValue(LIST);
+  });
+
+  it("offers to create the place when the search finds nothing, named as typed", async () => {
+    await searchForNothing();
+    expect(screen.getByText("Kein passender Ort in deinem Logbuch.")).toBeInTheDocument();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "„Bocca della Verità“ als Ort anlegen und hinzufügen" })
+    );
+    expect(screen.getByRole("dialog", { name: "place-form" })).toBeInTheDocument();
+    expect(formProps.last).toMatchObject({ initialName: "Bocca della Verità", forList: "Rom" });
+  });
+
+  it("returns to the list and files the new place in it exactly once", async () => {
+    addPlaceToList.mockResolvedValue(withNew);
+    await searchForNothing();
+    fireEvent.click(screen.getByRole("button", { name: /als Ort anlegen/ }));
+    fireEvent.click(screen.getByRole("button", { name: "mock-save" }));
+
+    await waitFor(() => expect(addPlaceToList).toHaveBeenCalledWith("l1", "new"));
+    expect(addPlaceToList).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog", { name: "place-form" })).not.toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Bocca della Verità" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Ort hinzufügen")).toHaveValue("");
+  });
+
+  it("keeps the saved place when only the filing fails, and files it again on request", async () => {
+    addPlaceToList.mockRejectedValueOnce(network).mockResolvedValueOnce(withNew);
+    await searchForNothing();
+    fireEvent.click(screen.getByRole("button", { name: /als Ort anlegen/ }));
+    fireEvent.click(screen.getByRole("button", { name: "mock-save" }));
+
+    const row = await screen.findByRole("alert");
+    expect(row).toHaveTextContent(
+      "„Bocca della Verità“ ist gespeichert, steht aber noch nicht in dieser Liste."
+    );
+    expect(row).toHaveTextContent("Der Server ist nicht erreichbar");
+
+    // Two quick taps send one request.
+    const again = screen.getByRole("button", { name: "Erneut zuordnen" });
+    await act(async () => {
+      fireEvent.click(again);
+      fireEvent.click(again);
+    });
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+    expect(addPlaceToList).toHaveBeenCalledTimes(2);
+    expect(addPlaceToList).toHaveBeenLastCalledWith("l1", "new");
+    expect(screen.getByRole("link", { name: "Bocca della Verità" })).toBeInTheDocument();
+  });
+
+  it("the row can be hidden — the place stays in the logbook either way", async () => {
+    addPlaceToList.mockRejectedValue(network);
+    await searchForNothing();
+    fireEvent.click(screen.getByRole("button", { name: /als Ort anlegen/ }));
+    fireEvent.click(screen.getByRole("button", { name: "mock-save" }));
+    await screen.findByRole("alert");
+    fireEvent.click(screen.getByRole("button", { name: "Ausblenden" }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("does not offer to create while the search still finds a place", async () => {
+    await searchForNothing();
+    fireEvent.change(screen.getByLabelText("Ort hinzufügen"), { target: { value: "Panth" } });
+    expect(screen.getByRole("button", { name: /Pantheon/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /als Ort anlegen/ })).not.toBeInTheDocument();
+  });
+});

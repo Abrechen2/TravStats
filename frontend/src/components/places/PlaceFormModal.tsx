@@ -45,6 +45,14 @@ interface Props {
   onSaved: (place: Place) => void | Promise<void>;
   /** What the "stored, but the follow-up failed" notice names (`useSaveOnce`). */
   afterSaveFailedKey?: string;
+  /** A new place's starting name — the text a list search found nothing for. */
+  initialName?: string;
+  /**
+   * The list this place is created FOR (forgejo#230). The form says the place
+   * goes there next, and leaves out its own list picker: the list page files
+   * it, once, after the save.
+   */
+  forList?: string;
 }
 
 /**
@@ -67,12 +75,14 @@ export function PlaceFormModal({
   onClose,
   onSaved,
   afterSaveFailedKey,
+  initialName = "",
+  forList,
 }: Props): JSX.Element {
   const { t } = useTranslation(["places", "common"]);
   const addToast = useToastStore((s) => s.addToast);
   const isEdit = place !== null;
 
-  const initial = placeFormFields(place);
+  const initial = placeFormFields(place, initialName);
   const [name, setName] = useState(initial.name);
   const [localName, setLocalName] = useState(initial.localName);
   const [category, setCategory] = useState<PlaceCategory>(initial.category);
@@ -123,7 +133,7 @@ export function PlaceFormModal({
   const [finishFailed, setFinishFailed] = useState(false);
 
   useEffect(() => {
-    if (isEdit) return;
+    if (isEdit || forList !== undefined) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -137,7 +147,7 @@ export function PlaceFormModal({
     return (): void => {
       cancelled = true;
     };
-  }, [isEdit]);
+  }, [isEdit, forList]);
 
   const fields = {
     name,
@@ -328,6 +338,11 @@ export function PlaceFormModal({
       }
     >
       <div ref={failure.rootRef}>
+        {forList !== undefined && (
+          <p className="mb-3 text-sm" style={{ color: "var(--text-secondary)" }}>
+            {t("places:form.forList", { list: forList })}
+          </p>
+        )}
         <div className="space-y-4">
           {/* FIRST field, as the lodging form already does — it was moved
               there in July for this exact reason and places were never
