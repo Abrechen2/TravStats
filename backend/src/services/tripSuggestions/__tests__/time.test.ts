@@ -3,6 +3,7 @@ import { describe, expect, it } from "@jest/globals";
 import { composeSuggestions } from "../compose";
 import { addDays, daysBetween, placeClock, todayIn } from "../time";
 import { AT, input, stay, visit } from "./fixtures";
+import { toUtcDate } from "../../flights/mergedChronology";
 
 /**
  * The engine's time rules (ADR 0002): the place's day for "which day", the
@@ -28,10 +29,29 @@ describe("trip-suggestion time", () => {
     });
   });
 
-  it("needs no zone for a date-only or legacy wall-clock row", () => {
+  it("needs no zone for a legacy wall-clock row", () => {
     const at = new Date("2025-05-02T00:00:00Z");
-    expect(placeClock(at, null, "DATE_ONLY", 12).zoneKnown).toBe(true);
     expect(placeClock(at, null, "LEGACY_FAKE_UTC", 12).zoneKnown).toBe(true);
+  });
+
+  // forgejo#273: a date-only row is written as a LOCAL wall clock through the
+  // airport's zone (`toUtcDate`), so its day is read in that zone too.
+  it.each([
+    ["Frankfurt, cruise import at 00:00 local", "2026-05-10T00:00", "Europe/Berlin", "2026-05-10"],
+    ["Auckland in summer, form noon", "2026-01-15T12:00", "Pacific/Auckland", "2026-01-15"],
+  ])("reads a date-only row (%s) on its recorded day", (_name, local, zone, day) => {
+    const at = toUtcDate(local, zone) as Date;
+    expect(at.toISOString().slice(0, 10)).not.toBe(day); // the UTC date is the day before
+    expect(placeClock(at, zone, "DATE_ONLY", 12)).toEqual({ day, hour: 12, zoneKnown: true });
+  });
+
+  it("flags a date-only row with no zone instead of passing its UTC date off as local", () => {
+    const at = toUtcDate("2026-05-10T00:00", "Europe/Berlin") as Date;
+    expect(placeClock(at, null, "DATE_ONLY", 12)).toEqual({
+      day: "2026-05-09",
+      hour: 12,
+      zoneKnown: false,
+    });
   });
 
   it("takes today from the profile zone", () => {

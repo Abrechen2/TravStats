@@ -53,6 +53,8 @@ export async function loadFlights(userId: string): Promise<Loaded> {
       arrivalTime: true,
       depTimeSemantics: true,
       arrTimeSemantics: true,
+      depTimezone: true,
+      arrTimezone: true,
     },
   });
   const kept = rows.slice(0, ROW_CAP);
@@ -67,16 +69,18 @@ export async function loadFlights(userId: string): Promise<Loaded> {
     if (state === "excluded" || !row.departureTime) continue;
     const dep = at(row.depIata, row.depIcao);
     const arr = at(row.arrIata, row.arrIcao);
+    // The zone each end was WRITTEN with first, as every flight statistic
+    // reads it — a date-only row is only its day in that zone (forgejo#273).
     const out = placeClock(
       row.departureTime,
-      placeZone(dep?.timezone, row.depLat, row.depLon),
+      row.depTimezone ?? placeZone(dep?.timezone, row.depLat, row.depLon),
       row.depTimeSemantics as FlightTimeSemantics,
       8
     );
     const inn = row.arrivalTime
       ? placeClock(
           row.arrivalTime,
-          placeZone(arr?.timezone, row.arrLat, row.arrLon),
+          row.arrTimezone ?? placeZone(arr?.timezone, row.arrLat, row.arrLon),
           row.arrTimeSemantics as FlightTimeSemantics,
           12
         )
