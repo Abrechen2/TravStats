@@ -19,7 +19,7 @@ import { visitTimeColumns } from "./places/visitTime";
 import { timeErrorFromZod } from "../shared/time/errors";
 import { normaliseNamePair } from "../services/geo/gluedPlaceName";
 import { tripForVisitDay } from "../services/places/visitTrip";
-import { findPlaceIdByRef, refHeldElsewhere } from "../services/places/placeRefs";
+import { findPlaceIdByRef, promoteOwnAlias, refHeldElsewhere } from "../services/places/placeRefs";
 import {
   createPlaceSchema,
   updatePlaceSchema,
@@ -447,10 +447,13 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       data.isoCountryCode = resolveCountryCode(input.country);
     }
 
-    const place = await prisma.place.update({
-      where: { id: existing.id },
-      data,
-      include: PLACE_INCLUDE,
+    // One transaction: promoting one of the place's own aliases to its primary
+    // swaps the two (`promoteOwnAlias`) together with the write.
+    const place = await prisma.$transaction(async (tx) => {
+      if (input.externalRef) {
+        await promoteOwnAlias(tx, userId, existing.id, existing.externalRef, input.externalRef);
+      }
+      return tx.place.update({ where: { id: existing.id }, data, include: PLACE_INCLUDE });
     });
 
     await recheckAchievements(userId, "place update");

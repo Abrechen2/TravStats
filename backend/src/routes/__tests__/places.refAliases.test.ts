@@ -216,4 +216,50 @@ describe("place reference aliases", () => {
       .send({ name: "Colosseo", category: "landmark", lat: 41.89, lon: 12.49, externalRef: GMAPS });
     expect(res.status).toBe(201);
   });
+
+  // Re-review N1: making one of the place's own aliases its primary swaps the
+  // two, and the place can still be merged afterwards.
+  it("promoting an own alias swaps it with the primary, and a later merge still works", async () => {
+    const { kept } = await mergedPair(); // primary OSM, alias GMAPS
+    const res = await request(app)
+      .patch(`/api/v1/places/${kept.id}`)
+      .set("Cookie", cookie)
+      .send({ externalRef: GMAPS });
+    expect(res.status).toBe(200);
+    expect((await prisma.place.findUniqueOrThrow({ where: { id: kept.id } })).externalRef).toBe(
+      GMAPS
+    );
+    const aliases = await prisma.placeExternalRef.findMany({ where: { placeId: kept.id } });
+    expect(aliases.map((a) => a.ref)).toEqual([OSM]);
+
+    const other = await prisma.place.create({
+      data: { userId, name: "Flavium", lat: 41.89, lon: 12.49, externalRef: "wd:Q10285" },
+    });
+    const merged = await request(app)
+      .post(`/api/v1/places/${other.id}/merge`)
+      .set("Cookie", cookie)
+      .send({ sourceId: kept.id, fields: ALL_TARGET });
+    expect(merged.status).toBe(200);
+    const all = await prisma.placeExternalRef.findMany({ where: { placeId: other.id } });
+    expect(all.map((a) => a.ref).sort()).toEqual([GMAPS, OSM].sort());
+  });
+
+  it("a merge does not fail on a reference the kept place already holds as an alias", async () => {
+    // The state an edit could leave before the swap existed: a value both
+    // primary and alias of one place.
+    const kept = await prisma.place.create({
+      data: { userId, name: "Kolosseum", lat: 1, lon: 1, externalRef: OSM },
+    });
+    await prisma.placeExternalRef.create({ data: { userId, placeId: kept.id, ref: OSM } });
+    const other = await prisma.place.create({
+      data: { userId, name: "Flavium", lat: 1, lon: 1, externalRef: "wd:Q10285" },
+    });
+    const res = await request(app)
+      .post(`/api/v1/places/${other.id}/merge`)
+      .set("Cookie", cookie)
+      .send({ sourceId: kept.id, fields: ALL_TARGET });
+    expect(res.status).toBe(200);
+    const all = await prisma.placeExternalRef.findMany({ where: { placeId: other.id } });
+    expect(all.map((a) => a.ref)).toEqual([OSM]);
+  });
 });

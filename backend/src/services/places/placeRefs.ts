@@ -75,8 +75,41 @@ export async function carryRefsIntoMerge(
   });
   const distinct = [...new Set(refsToAlias)];
   if (distinct.length > 0) {
+    // `skipDuplicates`: a reference the kept place already answers to as an
+    // alias stays one row — a second insert must never make the whole merge
+    // fail on the unique index (re-review N1).
     await tx.placeExternalRef.createMany({
       data: distinct.map((ref) => ({ userId, placeId: keptId, ref })),
+      skipDuplicates: true,
+    });
+  }
+}
+
+/**
+ * An edit that makes one of a place's OWN aliases its primary reference swaps
+ * the two: the alias row goes (a value is never both primary and alias of one
+ * place — a later merge would insert it twice), and the old primary, if there
+ * was one, stays as an alias so nothing the place answered to is lost
+ * (re-review N1). A reference that is not one of the place's aliases changes
+ * nothing here: a new pick is a new identity, as before.
+ */
+export async function promoteOwnAlias(
+  tx: Db,
+  userId: string,
+  placeId: string,
+  oldPrimary: string | null,
+  newPrimary: string
+): Promise<void> {
+  const own = await tx.placeExternalRef.findFirst({
+    where: { userId, placeId, ref: newPrimary },
+    select: { id: true },
+  });
+  if (!own) return;
+  await tx.placeExternalRef.delete({ where: { id: own.id } });
+  if (oldPrimary !== null && oldPrimary !== newPrimary) {
+    await tx.placeExternalRef.createMany({
+      data: [{ userId, placeId, ref: oldPrimary }],
+      skipDuplicates: true,
     });
   }
 }
