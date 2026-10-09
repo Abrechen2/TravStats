@@ -370,7 +370,9 @@
       "title": "Discard changes?",
       "message": "The station changes the server does not have yet are lost — the copy on this device too. You then see what the server holds again.",
       "confirm": "Discard"
-    }
+    },
+    "moved": "“{{name}}” moved",
+    "movedRestores": "Undo restores the previous order with its legs — nothing is saved until then."
   },
   "legDialog": {
     "title": "Leg",
@@ -388,7 +390,13 @@
     "apply": "Apply",
     "error": "The leg could not be saved.",
     "fallback": "No route calculated. {{reason}}",
-    "fallbackKept": "The leg stays as it was. Choose “Straight line” to save it as a straight line."
+    "fallbackKept": "The leg stays as it was. Choose “Straight line” to save it as a straight line.",
+    "track": "From the recording (keep it)",
+    "trackHint": "The line follows the recorded route.",
+    "trackModeHint": "While the leg follows its recording, its mode stays too. Choose another line to change it.",
+    "replacesTrack": "The line from the recording is replaced. The recording itself stays under “Route & recordings”.",
+    "replacesDrawn": "The line drawn by hand is replaced.",
+    "applyReplace": "Replace the line"
   },
   "trackArchive": {
     "downloadOne": "As GPX",
@@ -532,5 +540,27 @@
     "orderTheirs": "Order from the server",
     "apply": "Apply",
     "readFailed": "The current state could not be read from the server. Your changes stay kept on this device — try “Merge” again in a moment."
+  },
+  "reorder": {
+    "title": "Move “{{name}}”?",
+    "between": "New neighbours: after “{{before}}” and before “{{after}}”.",
+    "first": "New neighbours: at the very start, before “{{after}}”.",
+    "last": "New neighbours: at the very end, after “{{before}}”.",
+    "droppedTitle": "These legs are dropped",
+    "noLegs": "No saved leg is dropped.",
+    "createdTitle": "These legs are added — as a straight line at first",
+    "source": {
+      "track": "from the recording",
+      "drawn": "corrected by hand",
+      "routed": "along the road",
+      "straight": "straight line"
+    },
+    "lossTrack": "This leg loses the line from the recording. The recording itself stays under “Route & recordings”.",
+    "lossDrawn": "The line drawn by hand for this leg is lost.",
+    "dateConflictsTitle": "Possible date conflicts",
+    "dateConflict": "“{{name}}” ({{date}}) then comes after “{{previous}}” ({{previousDate}}) although it is earlier.",
+    "undoNote": "You can undo this for a few seconds afterwards — nothing is saved until that time is up.",
+    "confirm": "Move",
+    "confirmLoss": "Move and drop the line"
   }
 }

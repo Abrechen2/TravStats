@@ -90,11 +90,14 @@ function renderEditor(start: "plain" | "new" = "plain"): void {
   );
 }
 
-async function pause(): Promise<void> {
+async function pause(ms = 800): Promise<void> {
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(800);
+    await vi.advanceTimersByTimeAsync(ms);
   });
 }
+
+/** Past the undo window a removal or a move is held for (forgejo#242). */
+const PAST_HOLD = 8800;
 
 function sent(call = 0): StationInput[] {
   return vi.mocked(roadtripsApi.replaceStations).mock.calls[call][1];
@@ -214,7 +217,7 @@ describe("StationEditor", () => {
     window.dispatchEvent(pending);
     expect(pending.defaultPrevented).toBe(true);
 
-    await pause();
+    await pause(PAST_HOLD);
     const saved = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(saved);
     expect(saved.defaultPrevented).toBe(false);
@@ -223,7 +226,7 @@ describe("StationEditor", () => {
   it("names the station ids it read with every write, so a station added elsewhere is not deleted", async () => {
     renderEditor();
     fireEvent.click(screen.getByLabelText("roadtrips:stations.remove"));
-    await pause();
+    await pause(PAST_HOLD);
     expect(vi.mocked(roadtripsApi.replaceStations).mock.calls[0][2]).toEqual([HAMBURG_ID]);
   });
 

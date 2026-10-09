@@ -103,7 +103,8 @@ describe("LegDialog", () => {
       ],
     });
     fireEvent.click(screen.getByRole("radio", { name: /roadtrips:legDialog.routed/ }));
-    fireEvent.click(screen.getByText("roadtrips:legDialog.apply"));
+    // Replacing a hand-drawn line is said on the button (forgejo#242).
+    fireEvent.click(screen.getByText("roadtrips:legDialog.applyReplace"));
 
     await screen.findByText("roadtrips:legDialog.fallback");
     expect(toursApi.setLeg).not.toHaveBeenCalled();
@@ -112,7 +113,7 @@ describe("LegDialog", () => {
   it("saves a straight line when the reader picks one", async () => {
     const onSaved = renderDialog(true, vi.fn(), { ...LEG, source: "drawn" });
     fireEvent.click(screen.getByRole("radio", { name: /roadtrips:legDialog.straight/ }));
-    fireEvent.click(screen.getByText("roadtrips:legDialog.apply"));
+    fireEvent.click(screen.getByText("roadtrips:legDialog.applyReplace"));
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(toursApi.setLeg).toHaveBeenCalledWith(undefined, "rt", "a", "b", {
       source: "straight",
@@ -174,5 +175,32 @@ describe("LegDialog", () => {
     await userEvent.keyboard("{Escape}");
     expect(onClose).not.toHaveBeenCalled();
     await act(async () => resolve());
+  });
+
+  // forgejo#242: a recorded leg opened on "Gerade Linie", so "Übernehmen"
+  // without a second look replaced the recording's line with a straight one.
+  it("opens a recorded leg on its recording and leaves it alone when applied", async () => {
+    const onClose = vi.fn();
+    renderDialog(true, vi.fn(), { ...LEG, source: "track" }, onClose);
+    expect(screen.getByRole("radio", { name: /roadtrips:legDialog.track/ })).toBeChecked();
+    fireEvent.click(screen.getByText("roadtrips:legDialog.apply"));
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(toursApi.setLeg).not.toHaveBeenCalled();
+    expect(toursApi.routeLeg).not.toHaveBeenCalled();
+  });
+
+  it("says a recorded line is being replaced, and the button says so too", async () => {
+    const onSaved = renderDialog(true, vi.fn(), { ...LEG, source: "track" });
+    fireEvent.click(screen.getByRole("radio", { name: /roadtrips:legDialog.straight/ }));
+    expect(screen.getByText("roadtrips:legDialog.replacesTrack")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("roadtrips:legDialog.applyReplace"));
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+  });
+
+  it("warns before a hand-drawn line is replaced by a routed one", () => {
+    renderDialog(true, vi.fn(), { ...LEG, source: "drawn" });
+    fireEvent.click(screen.getByRole("radio", { name: /roadtrips:legDialog.routed/ }));
+    expect(screen.getByText("roadtrips:legDialog.replacesDrawn")).toBeInTheDocument();
+    expect(screen.getByText("roadtrips:legDialog.applyReplace")).toBeInTheDocument();
   });
 });

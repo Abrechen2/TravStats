@@ -12,13 +12,23 @@ import { isTransientSaveError, saveErrorKey } from "../../lib/saveErrorMessage";
 import type { RouteFallbackReason, TourLeg } from "../../types/tour";
 
 type Mode = "road" | "ferry";
-type Line = "routed" | "straight" | "drawn";
+type Line = "routed" | "straight" | "drawn" | "track";
 
 /** What the dialog opens on — the state's start AND the dirty baseline. */
 function legChoice(leg: TourLeg): { mode: Mode; line: Line } {
   return {
     mode: leg.mode === "ferry" ? "ferry" : "road",
-    line: leg.source === "routed" ? "routed" : leg.source === "drawn" ? "drawn" : "straight",
+    // A recorded leg opens on its recording: before, it opened on "Gerade
+    // Linie", and "Übernehmen" without a second look replaced the recorded
+    // line with a straight one (forgejo#242).
+    line:
+      leg.source === "routed"
+        ? "routed"
+        : leg.source === "drawn"
+          ? "drawn"
+          : leg.source === "track"
+            ? "track"
+            : "straight",
   };
 }
 
@@ -73,8 +83,19 @@ export default function LegDialog({
 
   const routedOff = mode === "ferry" || !routingAvailable;
   const effectiveLine: Line = routedOff && line === "routed" ? "straight" : line;
+  const keepsRecording = effectiveLine === "track";
+  // A line someone recorded or drew is replaced only on a press that says so.
+  const replacing =
+    (leg.source === "track" || leg.source === "drawn") &&
+    (effectiveLine === "straight" || effectiveLine === "routed");
 
   const apply = async (): Promise<void> => {
+    if (keepsRecording) {
+      // The recording stays and so does its mode: nothing to send.
+      markSaved();
+      onClose();
+      return;
+    }
     if (effectiveLine === "drawn") {
       // Leaving with a changed choice: the guard's history entry is replaced,
       // never raced by a plain `navigate` (see `navigateAfterSave`).
@@ -126,6 +147,16 @@ export default function LegDialog({
   });
 
   const lines: Array<{ id: Line; label: string; hint: string; off: boolean }> = [
+    ...(leg.source === "track"
+      ? [
+          {
+            id: "track" as const,
+            label: t("roadtrips:legDialog.track"),
+            hint: t("roadtrips:legDialog.trackHint"),
+            off: false,
+          },
+        ]
+      : []),
     {
       id: "routed",
       label: t("roadtrips:legDialog.routed"),
@@ -170,7 +201,7 @@ export default function LegDialog({
       dismissLabel={t("common:buttons.cancel")}
       action={
         <Button variant="primary" disabled={saving} onClick={() => void apply()}>
-          {t("roadtrips:legDialog.apply")}
+          {replacing ? t("roadtrips:legDialog.applyReplace") : t("roadtrips:legDialog.apply")}
         </Button>
       }
     >
@@ -183,6 +214,7 @@ export default function LegDialog({
             <button
               type="button"
               aria-pressed={mode === "road"}
+              disabled={keepsRecording}
               onClick={() => setMode("road")}
               style={tile(mode === "road", "var(--domain-roadtrip)")}
             >
@@ -199,6 +231,7 @@ export default function LegDialog({
             <button
               type="button"
               aria-pressed={mode === "ferry"}
+              disabled={keepsRecording}
               onClick={() => setMode("ferry")}
               style={tile(mode === "ferry", "var(--domain-cruise)")}
             >
@@ -253,6 +286,16 @@ export default function LegDialog({
           })}
         </fieldset>
 
+        {keepsRecording && <p className="t-caption">{t("roadtrips:legDialog.trackModeHint")}</p>}
+        {replacing && (
+          <p role="status" style={{ fontSize: 13, color: "var(--ts-warn)" }}>
+            {t(
+              leg.source === "track"
+                ? "roadtrips:legDialog.replacesTrack"
+                : "roadtrips:legDialog.replacesDrawn"
+            )}
+          </p>
+        )}
         <p className="t-caption">
           {t("roadtrips:legDialog.distance", { km: nf.format(leg.distanceKm) })}
         </p>

@@ -370,7 +370,9 @@
       "title": "Änderungen verwerfen?",
       "message": "Die Änderungen an den Stationen, die noch nicht auf dem Server sind, gehen verloren – auch die Sicherung auf diesem Gerät. Danach siehst du wieder den Stand vom Server.",
       "confirm": "Verwerfen"
-    }
+    },
+    "moved": "„{{name}}“ verschoben",
+    "movedRestores": "Rückgängig stellt die alte Reihenfolge samt ihren Etappen wieder her – gespeichert wird erst danach."
   },
   "legDialog": {
     "title": "Etappe",
@@ -388,7 +390,13 @@
     "apply": "Übernehmen",
     "error": "Die Etappe konnte nicht gespeichert werden.",
     "fallback": "Keine Strecke berechnet. {{reason}}",
-    "fallbackKept": "Die Etappe bleibt, wie sie war. Wähle „Gerade Linie“, wenn du sie als Luftlinie speichern willst."
+    "fallbackKept": "Die Etappe bleibt, wie sie war. Wähle „Gerade Linie“, wenn du sie als Luftlinie speichern willst.",
+    "track": "Aus der Aufzeichnung (so lassen)",
+    "trackHint": "Die Linie folgt der aufgezeichneten Strecke.",
+    "trackModeHint": "Solange die Etappe der Aufzeichnung folgt, bleibt auch ihr Verkehrsmittel. Wähle eine andere Linie, um es zu ändern.",
+    "replacesTrack": "Die Linie aus der Aufzeichnung wird ersetzt. Die Aufzeichnung selbst bleibt unter „Strecke & Aufzeichnungen“ erhalten.",
+    "replacesDrawn": "Die von Hand gezeichnete Linie wird ersetzt.",
+    "applyReplace": "Linie ersetzen"
   },
   "trackArchive": {
     "downloadOne": "Als GPX",
@@ -532,5 +540,27 @@
     "orderTheirs": "Reihenfolge vom Server",
     "apply": "Übernehmen",
     "readFailed": "Der aktuelle Stand konnte nicht vom Server gelesen werden. Deine Änderungen bleiben auf diesem Gerät gesichert – versuche „Zusammenführen“ gleich noch einmal."
+  },
+  "reorder": {
+    "title": "„{{name}}“ verschieben?",
+    "between": "Neue Nachbarn: nach „{{before}}“ und vor „{{after}}“.",
+    "first": "Neue Nachbarn: ganz vorne, vor „{{after}}“.",
+    "last": "Neue Nachbarn: ganz hinten, nach „{{before}}“.",
+    "droppedTitle": "Diese Etappen fallen weg",
+    "noLegs": "Keine gespeicherte Etappe fällt weg.",
+    "createdTitle": "Diese Etappen kommen neu dazu – zuerst als gerade Linie",
+    "source": {
+      "track": "aus der Aufzeichnung",
+      "drawn": "von Hand korrigiert",
+      "routed": "entlang der Straße",
+      "straight": "gerade Linie"
+    },
+    "lossTrack": "Die Linie aus der Aufzeichnung geht für diese Etappe verloren. Die Aufzeichnung selbst bleibt unter „Strecke & Aufzeichnungen“ erhalten.",
+    "lossDrawn": "Die von Hand gezeichnete Linie dieser Etappe geht verloren.",
+    "dateConflictsTitle": "Mögliche Datumskonflikte",
+    "dateConflict": "„{{name}}“ ({{date}}) liegt dann hinter „{{previous}}“ ({{previousDate}}), obwohl es früher ist.",
+    "undoNote": "Danach lässt sich das einige Sekunden lang rückgängig machen – gespeichert wird erst, wenn diese Frist vorbei ist.",
+    "confirm": "Verschieben",
+    "confirmLoss": "Verschieben und Linie verwerfen"
   }
 }

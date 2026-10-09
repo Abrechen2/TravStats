@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, JSX } from "react";
 
-import Button from "../ui/Button";
 import IconButton from "../ui/IconButton";
 import { Icon } from "../ui/Icon";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -17,11 +16,20 @@ import {
 import { mergeStations, type StationMerge } from "../../lib/roadtrip/stationMerge";
 import type { RoadtripStation } from "../../types/roadtrip";
 import type { TourLeg } from "../../types/tour";
+import {
+  isProtectedSource,
+  moveStation,
+  reorderImpact,
+  type ReorderImpact,
+} from "../../lib/roadtrip/reorderImpact";
+import ReorderPreviewDialog from "./ReorderPreviewDialog";
 import StationConflictDialog from "./StationConflictDialog";
+import UndoBar from "./UndoBar";
 import StationEditCard from "./StationEditCard";
 import StationMarker from "./StationMarker";
 import { useLodgingLibrary } from "./StayPicker";
 import {
+  HOLD_MS,
   newStationKey,
   toEditorStation,
   useStationAutosave,
@@ -31,8 +39,6 @@ import {
   type SavedStations,
   type StationDraftSink,
 } from "./useStationAutosave";
-
-const UNDO_MS = 8000;
 
 const DASHED: CSSProperties = {
   minHeight: 40,
@@ -136,7 +142,7 @@ export default function StationEditor({
       merge: quiet ? null : merge,
     };
   });
-  const { drafts, status, local, serverStations, change, flush, rebase, discard } =
+  const { drafts, status, local, serverStations, change, releaseHold, flush, rebase, discard } =
     useStationAutosave({
       routeId,
       initial: opening.initial,
@@ -149,7 +155,17 @@ export default function StationEditor({
   );
   const [mergeFailed, setMergeFailed] = useState(false);
   const [openKey, setOpenKey] = useState<string | null>(null);
-  const [removed, setRemoved] = useState<{ station: EditorStation; index: number } | null>(null);
+  /** The one step "Rückgängig" takes back — a removal or a reorder (forgejo#242). */
+  const [undoable, setUndoable] = useState<{
+    label: string;
+    restores?: string;
+    restore: () => void;
+  } | null>(null);
+  const [reorder, setReorder] = useState<{
+    from: number;
+    to: number;
+    impact: ReorderImpact;
+  } | null>(null);
   const lodgings = useLodgingLibrary(true);
   const started = useRef(false);
 
@@ -208,35 +224,60 @@ export default function StationEditor({
     insertAt(drafts.length, start === "today" ? { startDate: today } : undefined);
   }, []);
 
+  // The undo window is the hold's: when it closes, the held change goes out.
   useEffect(() => {
-    if (!removed) return;
-    const timer = setTimeout(() => setRemoved(null), UNDO_MS);
+    if (!undoable) return;
+    const timer = setTimeout(() => setUndoable(null), HOLD_MS);
     return () => clearTimeout(timer);
-  }, [removed]);
+  }, [undoable]);
 
   const update = (key: string, patch: Partial<EditorStation>): void =>
     change((prev) => prev.map((s) => (s.key === key ? { ...s, ...patch } : s)));
 
-  const move = (index: number, delta: number): void =>
-    change((prev) => {
-      const target = index + delta;
-      if (target < 0 || target >= prev.length) return prev;
-      const next = [...prev];
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
+  /**
+   * forgejo#242: a move is asked first — new neighbours, the legs that go and
+   * come, the dates that would read backwards — and then held for the undo
+   * window, so "Rückgängig" restores the legs as well as the order.
+   */
+  const askMove = (index: number, delta: number): void => {
+    const target = index + delta;
+    if (target < 0 || target >= drafts.length) return;
+    setReorder({ from: index, to: target, impact: reorderImpact(drafts, legs, index, target) });
+  };
+
+  const confirmMove = (): void => {
+    if (!reorder) return;
+    const { from, to, impact } = reorder;
+    const key = impact.moved.key;
+    setReorder(null);
+    change((prev) => moveStation(prev, from, to), { hold: true });
+    setUndoable({
+      label: t("roadtrips:editor.moved", { name: name(impact.moved) }),
+      restores: t("roadtrips:editor.movedRestores"),
+      restore: () =>
+        change((prev) => {
+          const at = prev.findIndex((s) => s.key === key);
+          return at < 0 ? prev : moveStation(prev, at, Math.min(from, prev.length - 1));
+        }),
     });
+  };
 
   const remove = (index: number): void => {
-    setRemoved({ station: drafts[index], index });
-    if (drafts[index].key === openKey) setOpenKey(null);
-    change((prev) => prev.filter((_, i) => i !== index));
+    const station = drafts[index];
+    if (station.key === openKey) setOpenKey(null);
+    // Held like a move: the server drops the legs on both sides of it.
+    change((prev) => prev.filter((_, i) => i !== index), { hold: true });
+    setUndoable({
+      label: t("roadtrips:editor.removed", { name: name(station) }),
+      restore: () => change((prev) => [...prev.slice(0, index), station, ...prev.slice(index)]),
+    });
   };
 
   const undo = (): void => {
-    if (!removed) return;
-    const { station, index } = removed;
-    change((prev) => [...prev.slice(0, index), station, ...prev.slice(index)]);
-    setRemoved(null);
+    if (!undoable) return;
+    undoable.restore();
+    releaseHold();
+    setUndoable(null);
   };
 
   const legBetween = (a: EditorStation, b: EditorStation): TourLeg | undefined =>
@@ -316,14 +357,14 @@ export default function StationEditor({
                 </button>
                 <IconButton
                   label={t("roadtrips:stations.moveUp")}
-                  onClick={() => move(index, -1)}
+                  onClick={() => askMove(index, -1)}
                   disabled={index === 0}
                 >
                   <Icon name="chevron-up" size={16} />
                 </IconButton>
                 <IconButton
                   label={t("roadtrips:stations.moveDown")}
-                  onClick={() => move(index, 1)}
+                  onClick={() => askMove(index, 1)}
                   disabled={index === drafts.length - 1}
                 >
                   <Icon name="chevron-down" size={16} />
@@ -352,8 +393,17 @@ export default function StationEditor({
                   color: "var(--ts-muted)",
                 }}
               >
-                {t(`roadtrips:timeline.leg.${leg.mode}`)} · {Math.round(leg.distanceKm)} km —{" "}
-                {t("roadtrips:timeline.legEdit")}
+                {t(`roadtrips:timeline.leg.${leg.mode}`)} · {Math.round(leg.distanceKm)} km ·{" "}
+                {/* What the line is made of, said in the editor too (forgejo#242):
+                    a recorded or hand-drawn leg is one a reorder can cost. */}
+                <span
+                  style={{
+                    color: isProtectedSource(leg.source) ? "var(--ts-warn)" : undefined,
+                  }}
+                >
+                  {t(`roadtrips:timeline.source.${leg.source}`)}
+                </span>{" "}
+                — {t("roadtrips:timeline.legEdit")}
               </button>
             )}
             {next && (
@@ -424,30 +474,15 @@ export default function StationEditor({
         />
       )}
 
-      {removed && (
-        <div
-          role="status"
-          className="fixed flex items-center"
-          style={{
-            left: "50%",
-            bottom: 28,
-            transform: "translateX(-50%)",
-            zIndex: 60,
-            gap: 14,
-            padding: "12px 16px",
-            borderRadius: 14,
-            background: "var(--ts-surface2)",
-            border: "1px solid var(--ts-border-input)",
-            boxShadow: "var(--ts-shadow-dialog)",
-            fontSize: 14,
-          }}
-        >
-          {t("roadtrips:editor.removed", { name: name(removed.station) })}
-          <Button variant="secondary" icon={<Icon name="undo-2" size={16} />} onClick={undo}>
-            {t("roadtrips:editor.undo")}
-          </Button>
-        </div>
+      {reorder && (
+        <ReorderPreviewDialog
+          impact={reorder.impact}
+          onConfirm={confirmMove}
+          onClose={() => setReorder(null)}
+        />
       )}
+
+      {undoable && <UndoBar label={undoable.label} restores={undoable.restores} onUndo={undo} />}
     </div>
   );
 }
