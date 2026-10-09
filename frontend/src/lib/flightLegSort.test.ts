@@ -146,4 +146,29 @@ describe("sortFlightsByLegOrder", () => {
       "later-day",
     ]);
   });
+
+  it("windows by the LOCAL day, so a placeholder and a timed flight of one Auckland day are repaired together (forgejo#273)", () => {
+    // AKL→ZQN is date-only for 15 January: the form's 12:00 local is 23:00Z on
+    // the 14th. WLG→AKL leaves at 14:00 local on the 15th (01:00Z). By UTC date
+    // they are two days and the timestamp order (AKL→ZQN first) stood.
+    const flights = [
+      f({
+        id: "akl-zqn",
+        depIata: "AKL",
+        arrIata: "ZQN",
+        departureTime: "2026-01-14T23:00:00Z",
+        depTimezone: "Pacific/Auckland",
+        depTimeSemantics: "DATE_ONLY",
+      }),
+      f({
+        id: "wlg-akl",
+        depIata: "WLG",
+        arrIata: "AKL",
+        departureTime: "2026-01-15T01:00:00Z",
+        depTimezone: "Pacific/Auckland",
+        depTimeSemantics: "UTC",
+      }),
+    ];
+    expect(sortFlightsByLegOrder(flights).map((x) => x.id)).toEqual(["wlg-akl", "akl-zqn"]);
+  });
 });
