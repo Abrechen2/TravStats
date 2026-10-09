@@ -119,6 +119,7 @@ import {
   resolvePassportAirportCount,
   resolvePassportEntryCount,
 } from "./metricEvidencePassport";
+import { INSIGHT_RESOLVERS } from "./metricEvidenceInsights";
 
 /**
  * `EvidenceResolver` for `kind: "metric"` (Task 7,
@@ -237,6 +238,8 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   placeCitiesCount: resolvePlaceCitiesCount,
   placeListCount: resolvePlaceListCount,
   placeWishlistCount: resolvePlaceWishlistCount,
+  // The statistics expansion (forgejo#258/#259/#260/#264), one shape for all.
+  ...INSIGHT_RESOLVERS,
 };
 
 /**

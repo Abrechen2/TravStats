@@ -26,6 +26,11 @@ import {
   EMPTY_RAIL_STATS,
   type RailAchievementStats,
 } from "./railAchievements";
+import {
+  checkInsightAchievement,
+  EMPTY_INSIGHT_STATS,
+  type InsightAchievementStats,
+} from "./insightAchievements";
 import type { Achievement, UserAchievement } from "../prisma";
 import logger from "./logger";
 import { checkAchievement } from "./achievementChecks";
@@ -100,7 +105,9 @@ export function planAchievementWrites(
   /** Roadtrip measures (2.7) — their badges are checked by their own module. */
   roadtripStats: RoadtripAchievementStats = EMPTY_ROADTRIP_STATS,
   /** Rail measures (2.7) — likewise checked by their own module. */
-  railStats: RailAchievementStats = EMPTY_RAIL_STATS
+  railStats: RailAchievementStats = EMPTY_RAIL_STATS,
+  /** Part K measures — the statistics expansion (forgejo#258/#259/#260/#264). */
+  insightStats: InsightAchievementStats = EMPTY_INSIGHT_STATS
 ): AchievementWritePlan {
   const writes: PlannedWrite[] = [];
   const belowRequirement: string[] = [];
@@ -131,6 +138,7 @@ export function planAchievementWrites(
     const { isUnlocked, progress } =
       checkRoadtripAchievement(achievement, roadtripStats) ??
       checkRailAchievement(achievement, railStats) ??
+      checkInsightAchievement(achievement, insightStats) ??
       checkAchievement(achievement, stats, flights);
 
     if (isUnlocked) {

@@ -695,7 +695,8 @@
     "cruiseTags": "Lines, regions, countries",
     "cruiseFlags": "Highlights",
     "rankings": "Rankings",
-    "records": "Records"
+    "records": "Records",
+    "insights": "Insights"
   },
   "records": {
     "title": "Records",
@@ -757,5 +758,17 @@
   },
   "period": {
     "emptyYear": "Nothing recorded here for {{year}}."
+  },
+  "insight": {
+    "help": {
+      "summary": "How is this counted?",
+      "unit": "Unit",
+      "time": "Time rule",
+      "source": "Source",
+      "coverage": "Coverage",
+      "exclusions": "Left out"
+    },
+    "entries_one": "{{count}} entry",
+    "entries_other": "{{count}} entries"
   }
 }

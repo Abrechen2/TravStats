@@ -607,6 +607,120 @@
       "staysCount_one": "{{count}} stay",
       "noHotels": "No completed stay yet.",
       "more": "+ {{count}} more"
+    },
+    "insights": {
+      "title": "Insights",
+      "loadFailed": "The insights could not be loaded.",
+      "lifetime": "across all years",
+      "nights_one": "{{count}} night",
+      "nights_other": "{{count}} nights",
+      "sleepStyle": {
+        "title": "How you sleep",
+        "byType": "Share of nights by kind of accommodation",
+        "empty": "Appears once a stay with dates or a number of nights is over.",
+        "help": {
+          "unit": "One night. A kind's share is its nights divided by all known nights of the period.",
+          "time": "A night counts in the year its evening falls in, on the accommodation's local date.",
+          "source": "Your stays and the kind of each accommodation (hotel, apartment, campsite …).",
+          "coverage": "{{unknown}} stays with no known number of nights and {{unplaced}} nights without a year are in no share.",
+          "exclusions": "Stays whose check-out is still ahead, and cancelled ones, do not count."
+        }
+      },
+      "week": {
+        "title": "Weekends and weekdays",
+        "weekend": "Weekend nights",
+        "weekday": "Weekday nights",
+        "description": "Fri–Sat and Sat–Sun nights against all others",
+        "empty": "Appears with the first past stay that has exact arrival and departure days.",
+        "help": {
+          "unit": "One night. A weekend night is Friday to Saturday or Saturday to Sunday; every other one is a weekday night.",
+          "time": "The weekday is the accommodation's own (its local date of the evening), not your device's. Seasons follow the northern meteorological calendar.",
+          "source": "Stays with exact arrival and departure days.",
+          "coverage": "{{notWalkable}} nights recorded only to the month or year, or undated, have no weekday and are missing here.",
+          "exclusions": "Stays whose check-out is still ahead, and cancelled ones, do not count. Nothing is estimated."
+        }
+      },
+      "business": {
+        "title": "Nights on business trips",
+        "description": "Only trips in the “Business” category",
+        "empty": "Appears once stays belong to a trip whose category is “Business”.",
+        "help": {
+          "unit": "One night.",
+          "time": "Year of the night, on the accommodation's local date.",
+          "source": "Stays whose trip is explicitly categorised as “Business”.",
+          "coverage": "{{unlabelled}} nights are on stays with no trip or no trip category — nothing is claimed about them.",
+          "exclusions": "Nothing is inferred from the weekday, the chain or the price: a Tuesday night is a holiday just as often."
+        }
+      },
+      "revisits": {
+        "title": "Coming back to houses",
+        "description": "Houses you stayed at in two or more calendar years",
+        "empty": "Appears once you come back to a house in a second calendar year.",
+        "longestGap": "Longest break: {{days}} days ({{from}} → {{to}}) —",
+        "help": {
+          "unit": "One house (one accommodation), not one stay.",
+          "time": "Year of the check-in on the local date. The break runs from a check-out to the next check-in at the same house.",
+          "source": "Your stays, per accommodation.",
+          "coverage": "You visited {{returned}} houses more than once. Only stays with exact arrival and departure days measure a break.",
+          "exclusions": "A stay recorded only to the month or year proves the year but no break in days; an undated one proves nothing. Planned stays do not count."
+        }
+      },
+      "tripBases": {
+        "title": "Changes of accommodation per trip",
+        "value_one": "{{count}} change",
+        "value_other": "{{count}} changes",
+        "description_one": "Median over {{count}} trip",
+        "description_other": "Median over {{count}} trips",
+        "houses_one": "{{count}} house",
+        "houses_other": "{{count}} houses",
+        "changes_one": "{{count}} change",
+        "changes_other": "{{count}} changes",
+        "overlap_one": "{{count}} night booked twice",
+        "overlap_other": "{{count}} nights booked twice",
+        "longestBase_one": "Longest base without a change: {{count}} night on “{{trip}}” —",
+        "longestBase_other": "Longest base without a change: {{count}} nights on “{{trip}}” —",
+        "empty": "Appears once stays with exact arrival and departure days belong to a trip.",
+        "help": {
+          "unit": "A change is a move to another house within the same trip. The first arrival is not a change.",
+          "time": "Order by the local check-in date. Touching stays at the same house are one base.",
+          "source": "Stays that belong to a trip.",
+          "coverage": "{{withoutTrip}} stays with no trip and {{undated}} trip stays without exact dates are missing here.",
+          "exclusions": "Two bookings holding the same night at different houses are not read as a move there and back; that night is shown as “booked twice”."
+        }
+      },
+      "prices": {
+        "title": "Price changes at the same house",
+        "value_one": "{{count}} comparison",
+        "value_other": "{{count}} comparisons",
+        "row_one": "{{first}} ({{firstDate}}) → {{last}} ({{lastDate}}), {{change}} % · {{count}} stay",
+        "row_other": "{{first}} ({{firstDate}}) → {{last}} ({{lastDate}}), {{change}} % · {{count}} stays",
+        "thin": "thin sample",
+        "empty": "Appears once you have recorded the same house with the same room and board twice, with price and number of nights.",
+        "help": {
+          "unit": "Price per night: the total price divided by the stay's nights.",
+          "time": "First against last stay, dated as precisely as recorded.",
+          "source": "Total price, currency, room category and board of your stays.",
+          "coverage": "{{single}} stays with nothing to compare against, {{unpriced}} without a price or number of nights and {{undated}} undated ones are missing here.",
+          "exclusions": "Currencies are never converted or mixed — each comparison has exactly one. Award nights ({{award}}) are not a price of 0 and are left out. Below three stays a comparison is marked as a thin sample."
+        }
+      },
+      "calendar": {
+        "title": "Months with a night away",
+        "value_one": "{{count}} of 12 months",
+        "value_other": "{{count}} of 12 months",
+        "bestYear": "Best year: {{year}}",
+        "fullYears": "Every month covered: {{years}}",
+        "filled": "with a night away",
+        "open": "no night recorded",
+        "empty": "Appears with the first past stay recorded to the day or the month.",
+        "help": {
+          "unit": "A calendar month with at least one recorded night.",
+          "time": "The night's local date. A stay recorded only to the month covers that month.",
+          "source": "Your stays.",
+          "coverage": "Stays recorded only to the year, or undated, cover no month.",
+          "exclusions": "Missing months are never filled in or estimated. Planned stays do not count."
+        }
+      }
     }
   },
   "period": {

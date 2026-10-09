@@ -31,6 +31,7 @@ import tripSuggestionRoutes from "./tripSuggestions";
 import flightLookupRoutes from "./flightLookup";
 import statsRoutes from "./stats";
 import statsNetworkRouteRoutes from "./stats/networkRoute";
+import statsInsightRoutes from "./stats/insights";
 import airportRoutes from "./airports";
 import airlineLogoRoutes from "./airlineLogos";
 import countryFlagRoutes from "./countryFlags";
@@ -208,6 +209,9 @@ export const apiMounts: ApiMount[] = [
     base: "/api/v1/stats/network/route",
     router: statsNetworkRouteRoutes,
   },
+  // The statistics expansion (forgejo#258/#259/#260/#264), likewise beside
+  // the frozen stats router rather than in it.
+  { id: "stats.insights", base: "/api/v1/stats/insights", router: statsInsightRoutes },
   { id: "stats", base: "/api/v1/stats", router: statsRoutes },
   { id: "airports", base: "/api/v1/airports", router: airportRoutes },
   { id: "airlineLogos", base: "/api/v1/airline-logos", router: airlineLogoRoutes },

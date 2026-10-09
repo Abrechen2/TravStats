@@ -211,5 +211,9 @@
   "evidence.metric.railOperatorsCount": "Operators",
   "evidence.metric.railNightTrainCount": "Night trains",
   "evidence.metric.railHighSpeedRideCount": "High-speed rides",
-  "evidence.metric.railCrossBorderRideCount": "Rides across a border"
+  "evidence.metric.railCrossBorderRideCount": "Rides across a border",
+  "evidence.metric.lodgingWeekendNights": "Weekend nights",
+  "evidence.metric.lodgingWeekdayNights": "Weekday nights",
+  "evidence.metric.lodgingBusinessNights": "Nights on business trips",
+  "evidence.metric.lodgingReturnHouseCount": "Houses visited in several years"
 }

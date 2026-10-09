@@ -1291,6 +1291,18 @@
     "RAIL_OPERATORS_5": {
       "name": "Bahngesellschaften-Sammler",
       "description": "Mit fünf verschiedenen Bahngesellschaften gefahren"
+    },
+    "LODGING_FOUR_WORLDS": {
+      "name": "Vier Schlafwelten",
+      "description": "Vier verschiedene Unterkunftsarten auf einer abgeschlossenen Reise"
+    },
+    "LODGING_WELCOME_YEARS_5": {
+      "name": "Jahrelang willkommen",
+      "description": "Dasselbe Haus in fünf verschiedenen Kalenderjahren besucht"
+    },
+    "LODGING_FULL_CALENDAR": {
+      "name": "Einmal durch den Kalender",
+      "description": "In jedem Monat eines Kalenderjahres mindestens eine Nacht auswärts geschlafen"
     }
   },
   "header": {

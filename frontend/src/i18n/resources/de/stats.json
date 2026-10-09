@@ -695,7 +695,8 @@
     "cruiseTags": "Reedereien, Regionen, Länder",
     "cruiseFlags": "Besonderheiten",
     "rankings": "Ranglisten",
-    "records": "Rekorde"
+    "records": "Rekorde",
+    "insights": "Auswertungen"
   },
   "records": {
     "title": "Rekorde",
@@ -757,5 +758,17 @@
   },
   "period": {
     "emptyYear": "Für {{year}} ist hier nichts erfasst."
+  },
+  "insight": {
+    "help": {
+      "summary": "Wie gezählt?",
+      "unit": "Zähleinheit",
+      "time": "Zeitregel",
+      "source": "Quelle",
+      "coverage": "Abdeckung",
+      "exclusions": "Nicht enthalten"
+    },
+    "entries_one": "{{count}} Eintrag",
+    "entries_other": "{{count}} Einträge"
   }
 }

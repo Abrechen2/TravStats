@@ -1,0 +1,21 @@
+import { now } from "../../../shared/time/clock";
+import { computeLodgingInsights } from "../../../utils/lodgingInsights";
+import type { LodgingInsightsResponse } from "../../../schemas/statsInsights/lodging";
+import { loadLodgingInsightStays } from "./lodgingInsightData";
+import { totalsOf, type MeasureItems } from "./measureItems";
+
+/**
+ * The statistics-expansion insights, one builder per domain. Each returns the
+ * view the statistics tab draws AND — through the same computation — the
+ * entries the evidence panel lists, so a tile and its panel are one pass.
+ */
+export async function lodgingInsights(
+  userId: string,
+  at: Date = now()
+): Promise<{ response: LodgingInsightsResponse; items: MeasureItems }> {
+  const { insights, items, plannedStays } = computeLodgingInsights(
+    await loadLodgingInsightStays(userId),
+    at
+  );
+  return { response: { ...insights, plannedStays, totals: totalsOf(items) }, items };
+}

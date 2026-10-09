@@ -13,8 +13,8 @@ import type { LodgingRhythmStats } from "./types";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Meteorological seasons, northern hemisphere — the convention the UI labels. */
-type Season = "winter" | "spring" | "summer" | "autumn";
-const SEASON_BY_MONTH: readonly Season[] = [
+export type Season = "winter" | "spring" | "summer" | "autumn";
+export const SEASON_BY_MONTH: readonly Season[] = [
   "winter", // Jan
   "winter",
   "spring",

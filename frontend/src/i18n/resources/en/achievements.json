@@ -1291,6 +1291,18 @@
     "RAIL_OPERATORS_5": {
       "name": "Operator collector",
       "description": "Travelled with five different rail operators"
+    },
+    "LODGING_FOUR_WORLDS": {
+      "name": "Four ways to sleep",
+      "description": "Four different kinds of accommodation on one completed trip"
+    },
+    "LODGING_WELCOME_YEARS_5": {
+      "name": "Welcome back, year after year",
+      "description": "The same house in five different calendar years"
+    },
+    "LODGING_FULL_CALENDAR": {
+      "name": "All around the calendar",
+      "description": "At least one night away in every month of one calendar year"
     }
   },
   "header": {

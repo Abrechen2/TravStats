@@ -66,6 +66,7 @@ export const LODGING_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "rhythm", label: t("lodging:stats.rhythm.title") },
   { key: "loyalty", label: t("lodging:stats.loyalty.title") },
   { key: "records", label: t("lodging:stats.records.title") },
+  { key: "insights", label: t("stats:sections.insights") },
 ];
 
 export const POI_SECTIONS = (t: Translate): SectionOption[] => [

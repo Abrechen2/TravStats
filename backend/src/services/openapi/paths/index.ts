@@ -28,6 +28,7 @@ import "./airports";
 import "./stats";
 import "./statsPage";
 import "./statsNetworkRoute";
+import "./statsInsights";
 import "./parsing";
 import "./training";
 import "./tokens";
