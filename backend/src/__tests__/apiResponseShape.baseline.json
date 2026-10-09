@@ -48,6 +48,7 @@
     "flights/next.ts",
     "flights/observedTimes.ts",
     "flights/queryFilters.ts",
+    "flights/remove.ts",
     "flights/timeInput.ts",
     "flights/track.ts",
     "flightsBatch.ts",
