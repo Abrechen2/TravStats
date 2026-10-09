@@ -28,8 +28,21 @@
   "deleteError": "The roadtrip could not be deleted.",
   "deleteConfirm": {
     "title": "Delete roadtrip?",
-    "message": "“{{name}}” is deleted with its stations, legs and recordings. Linked accommodation and stays are kept, and its day tours stay as tours without a station.",
-    "confirm": "Delete"
+    "confirm": "Delete",
+    "goes": "“{{name}}” will be deleted — with {{list}}. This cannot be undone.",
+    "goesEmpty": "“{{name}}” will be deleted. This cannot be undone.",
+    "stations_one": "{{count}} station",
+    "stations_other": "{{count}} stations",
+    "legs_one": "{{count}} leg",
+    "legs_other": "{{count}} legs",
+    "tracks": "every recording of the route",
+    "costsToTrip_one": "The recorded cost goes to the trip “{{trip}}”.",
+    "costsToTrip_other": "The {{count}} recorded costs go to the trip “{{trip}}”.",
+    "survivorTrip": "the trip “{{name}}”",
+    "survivorLodging": "the lodging “{{name}}” with its stays",
+    "survivorTour": "the day tour “{{name}}” (without a station)",
+    "survivorPhotos_one": "{{count}} photo on its trip",
+    "survivorPhotos_other": "{{count}} photos on their trip"
   },
   "kind": {
     "roadtrip": "Roadtrip",
@@ -210,7 +223,6 @@
     "sectionUnderway": "On the road now",
     "sectionPlanned": "Planned",
     "sectionUndated": "Undated",
-    "noMatch": "No roadtrip matches this search.",
     "today": "Today: {{station}}",
     "todayStay": "Today: {{station}}, {{stay}}",
     "next": "Next up: {{station}}",

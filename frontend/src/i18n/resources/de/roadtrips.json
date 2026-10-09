@@ -28,8 +28,21 @@
   "deleteError": "Der Roadtrip konnte nicht gelöscht werden.",
   "deleteConfirm": {
     "title": "Roadtrip löschen?",
-    "message": "„{{name}}“ wird mit seinen Stationen, Etappen und Aufzeichnungen gelöscht. Verknüpfte Unterkünfte und Aufenthalte bleiben erhalten, seine Tagestouren als Touren ohne Station.",
-    "confirm": "Löschen"
+    "confirm": "Löschen",
+    "goes": "„{{name}}“ wird gelöscht – mit {{list}}. Das lässt sich nicht rückgängig machen.",
+    "goesEmpty": "„{{name}}“ wird gelöscht. Das lässt sich nicht rückgängig machen.",
+    "stations_one": "{{count}} Station",
+    "stations_other": "{{count}} Stationen",
+    "legs_one": "{{count}} Etappe",
+    "legs_other": "{{count}} Etappen",
+    "tracks": "allen Aufzeichnungen der Strecke",
+    "costsToTrip_one": "Die erfasste Ausgabe geht an die Reise „{{trip}}“.",
+    "costsToTrip_other": "Die {{count}} erfassten Ausgaben gehen an die Reise „{{trip}}“.",
+    "survivorTrip": "die Reise „{{name}}“",
+    "survivorLodging": "die Unterkunft „{{name}}“ mit ihren Aufenthalten",
+    "survivorTour": "die Tagestour „{{name}}“ (ohne Station)",
+    "survivorPhotos_one": "{{count}} Foto bei seiner Reise",
+    "survivorPhotos_other": "{{count}} Fotos bei ihrer Reise"
   },
   "kind": {
     "roadtrip": "Roadtrip",
@@ -210,7 +223,6 @@
     "sectionUnderway": "Gerade unterwegs",
     "sectionPlanned": "Geplant",
     "sectionUndated": "Ohne Datum",
-    "noMatch": "Kein Roadtrip passt zu dieser Suche.",
     "today": "Heute: {{station}}",
     "todayStay": "Heute: {{station}}, {{stay}}",
     "next": "Als Nächstes {{station}}",

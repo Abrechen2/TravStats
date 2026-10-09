@@ -31,6 +31,7 @@ import {
   type StoredStationDraft,
 } from "../lib/roadtrip/stationDraftStore";
 import { sameStationList } from "../lib/roadtrip/stationMerge";
+import { roadtripDeleteMessage } from "../lib/roadtrip/roadtripDeleteMessage";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import { useDomainColors } from "../hooks/useDomainColors";
@@ -572,7 +573,7 @@ export default function RoadtripDetailPage(): JSX.Element {
             void remove();
           }}
           title={t("roadtrips:deleteConfirm.title")}
-          message={t("roadtrips:deleteConfirm.message", { name: r.name })}
+          message={roadtripDeleteMessage(t, detail)}
           confirmText={t("roadtrips:deleteConfirm.confirm")}
           confirmButtonClass={DELETE_BUTTON_CLASS}
         />

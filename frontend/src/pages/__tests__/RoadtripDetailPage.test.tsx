@@ -139,6 +139,22 @@ describe("RoadtripDetailPage", () => {
     expect(screen.getByText(/^roadtrips:timeline.day · /)).toBeInTheDocument();
   });
 
+  // forgejo#250: the question names what goes and what stays; the confirm is red.
+  it("asks before deleting, naming what goes and what stays", async () => {
+    vi.mocked(roadtripsApi.get).mockResolvedValue({
+      ...DETAIL,
+      trip: { id: "t", name: "Norwegen" },
+    });
+    renderAt("/roadtrips/rt");
+    fireEvent.click(await screen.findByText("roadtrips:delete"));
+    const dialog = screen.getByTestId("confirm-modal");
+    expect(dialog).toHaveTextContent("roadtrips:deleteConfirm.goesEmpty");
+    expect(dialog).toHaveTextContent("common:delete.survivors");
+    const confirm = screen.getByRole("button", { name: "roadtrips:deleteConfirm.confirm" });
+    expect(confirm.className).toContain("bg-[var(--danger)]");
+    expect(toursApi.removeStandalone).not.toHaveBeenCalled();
+  });
+
   it("arrives from “Heutige Nacht eintragen” with the editor open on tonight", async () => {
     renderAt("/roadtrips/rt?station=heute");
     expect(await screen.findByTestId("editor")).toHaveTextContent("today");
