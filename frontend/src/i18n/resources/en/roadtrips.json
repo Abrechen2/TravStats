@@ -174,7 +174,107 @@
     "longestByNights": "Most nights",
     "vehicles": "Vehicles",
     "empty": "No roadtrip in this period.",
-    "loadFailed": "The roadtrips could not be loaded."
+    "loadFailed": "The roadtrips could not be loaded.",
+    "insights": {
+      "title": "Insights",
+      "loadFailed": "The roadtrip insights could not be loaded.",
+      "aheadFootnote": "{{km}} km of this are still ahead of you — they count towards badges once driven.",
+      "source": {
+        "track": "recording",
+        "routed": "route",
+        "drawn": "drawn",
+        "straight": "straight line"
+      },
+      "mode": {
+        "rail": "rail",
+        "foot": "on foot",
+        "bike": "bike"
+      },
+      "progress": {
+        "title": "Driven, today, planned",
+        "recorded": "Kilometres driven",
+        "recordedNights": "Recorded nights",
+        "description": "today {{current}} · still planned {{planned}}",
+        "nights": "Nights (still planned: {{planned}}) — recorded:",
+        "countries": "Countries reached: {{recorded}} · still ahead: {{planned}}",
+        "sources": "Distance source: {{sources}}",
+        "empty": "Appears with the first roadtrip.",
+        "help": {
+          "unit": "Kilometres, nights and countries per roadtrip.",
+          "time": "Each stage counts by the local date of the station it arrives at: before today it is driven, today it is the current one, after that planned. A roadtrip belongs to the year of its first station.",
+          "source": "The stages and stations of your roadtrips; distances come from a recording, a computed route, a drawn line or a straight line — the “distance source” line gives the shares.",
+          "coverage": "Undated stages count when the roadtrip is over or has no dates at all; on a roadtrip under way they stay open ({{unplaced}}).",
+          "exclusions": "Planned stages, nights and countries count towards no badge until they are reached."
+        }
+      },
+      "pace": {
+        "title": "Day stages and pace",
+        "value": "{{km}} a day",
+        "description_one": "Median over {{count}} driving day",
+        "description_other": "Median over {{count}} driving days",
+        "longestDay": "Longest driving day: {{km}} on {{day}} —",
+        "restDays_one": "{{count}} day without a change of place on {{trips}} fully dated roadtrips",
+        "restDays_other": "{{count}} days without a change of place on {{trips}} fully dated roadtrips",
+        "empty": "Appears once a driven stage carries the same day at its departure and arrival station.",
+        "help": {
+          "unit": "A driving day: all kilometres driven between two stations with the same departure and arrival day. Route corrections belong to the stage.",
+          "time": "The stations' local dates.",
+          "source": "Dated stations and stages of your roadtrips.",
+          "coverage": "{{unstaged}} driven stages have no shared known day and are in no driving day. Days without a change of place count only on {{dated}} finished roadtrips whose stations are all dated.",
+          "exclusions": "Planned stages and anything whose day is not known — nothing is spread out or estimated."
+        }
+      },
+      "modes": {
+        "title": "Road and ferry",
+        "road": "Road kilometres",
+        "ferry": "Ferry kilometres",
+        "description": "road / ferry — counted apart",
+        "empty": "Appears with the first driven stage.",
+        "help": {
+          "unit": "A stage's kilometres by its mode of transport.",
+          "time": "Driven stages only (see “Driven, today, planned”).",
+          "source": "The mode of each stage (road, ferry, rail, on foot, bike).",
+          "coverage": "Every stage has exactly one mode.",
+          "exclusions": "Ferry kilometres are never kilometres you drove; only the road counts as driven."
+        }
+      },
+      "nightStyle": {
+        "title": "Where the nights were slept",
+        "value_one": "{{count}} night",
+        "value_other": "{{count}} nights",
+        "byStyle": "Nights by kind",
+        "pitch": "Pitch / free",
+        "campsite": "Campsite",
+        "lodging": "Accommodation",
+        "unknown_one": "{{count}} overnight station of unknown length",
+        "unknown_other": "{{count}} overnight stations of unknown length",
+        "empty": "Appears with the first past overnight station.",
+        "help": {
+          "unit": "One night. A pitch is an overnight station without a linked stay; campsite and accommodation are linked stays, by the house's kind.",
+          "time": "Nights of stations before today.",
+          "source": "Overnight stations and the stays linked to them.",
+          "coverage": "{{unknown}} stations have no known length and are not counted as nights here.",
+          "exclusions": "A stay linked from two stations counts once — and the same night is in the lodging statistics, never twice in one sum."
+        }
+      },
+      "toursAlong": {
+        "title": "Day tours along the way",
+        "value_one": "{{count}} tour",
+        "value_other": "{{count}} tours",
+        "description": "{{km}} on your own steam or guided — beside the driving, not in it",
+        "row_one": "{{count}} tour · {{km}} beside {{driven}} driving",
+        "row_other": "{{count}} tours · {{km}} beside {{driven}} driving",
+        "ascent": "{{m}} m climbed",
+        "empty": "Appears once a completed day tour starts from a roadtrip station.",
+        "help": {
+          "unit": "A completed day tour, its distance and its climb.",
+          "time": "A tour is completed when it has a recording or a day before today.",
+          "source": "Tours that start from one of the roadtrip's stations; distance from the recording, else from the route.",
+          "coverage": "Climb only from recordings that carry it.",
+          "exclusions": "Tour kilometres are never added to the driving, and a guided excursion is never a bus ride."
+        }
+      }
+    }
   },
   "strava": {
     "title": "Strava",

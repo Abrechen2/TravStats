@@ -26,6 +26,11 @@ const trip = (id: string, startDate: string, km: number, countries: string[]): R
     vehicle: null,
   }) as unknown as RoadtripSummary;
 
+// The insights (forgejo#260) load beside the list and have their own suite;
+// here they stay pending so this test reaches no network.
+vi.mock("../../../lib/api/statsInsights", () => ({
+  statsInsightsApi: { roadtrips: () => new Promise(() => {}) },
+}));
 vi.mock("../../../lib/api/roadtrips", () => ({
   roadtripsApi: {
     list: vi.fn(async () => [

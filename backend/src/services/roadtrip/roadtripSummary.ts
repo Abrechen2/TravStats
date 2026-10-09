@@ -140,6 +140,7 @@ export function nightsOf(stations: readonly StationRow[]): RoadtripNights {
             datePrecision: s.lodgingStay.datePrecision,
             nights: s.lodgingStay.nights,
             status: s.lodgingStay.status,
+            lodgingType: s.lodgingStay.lodging.type,
           }
         : null,
     }))

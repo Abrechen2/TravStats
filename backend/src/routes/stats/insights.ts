@@ -17,7 +17,7 @@ import { Router, Response, NextFunction } from "express";
 
 import { authenticate, AuthRequest } from "../../middleware/auth";
 import { statsEtag } from "../../middleware/statsEtag";
-import { lodgingInsights, placeInsights } from "../../services/stats/insights";
+import { lodgingInsights, placeInsights, roadtripInsights } from "../../services/stats/insights";
 
 const router = Router();
 router.use(authenticate);
@@ -34,6 +34,17 @@ router.get("/lodging", async (req: AuthRequest, res: Response, next: NextFunctio
 router.get("/places", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     res.json((await placeInsights(req.userId!)).response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Roadtrips and day tours sit behind the instance's beta switch in the UI
+// (`useEnabledDomains`, `useToursVisible`). Like every other domain endpoint,
+// this one answers whatever the switch says; the gate is the tab.
+router.get("/roadtrips", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    res.json((await roadtripInsights(req.userId!)).response);
   } catch (error) {
     next(error);
   }

@@ -49,6 +49,9 @@ describe("countRoadtripNights", () => {
       nights: 3,
       nightsKnown: true,
       placesSlept: 2,
+      // forgejo#260: the same nights by where they were slept.
+      nightsByStyle: { pitch: 1, campsite: 0, lodging: 2 },
+      unknownLengthStations: 0,
     });
   });
 
@@ -76,6 +79,8 @@ describe("countRoadtripNights", () => {
       nights: 1,
       nightsKnown: true,
       placesSlept: 1,
+      nightsByStyle: { pitch: 0, campsite: 0, lodging: 1 },
+      unknownLengthStations: 0,
     });
   });
 
@@ -99,5 +104,24 @@ describe("countRoadtripNights", () => {
     ]);
     expect(result.stayNights).toBe(0);
     expect(result.nightsKnown).toBe(false);
+  });
+
+  it("files a night by where it was slept, adding up to the total (forgejo#260)", () => {
+    const camp = stayStation("camp-1", "2026-07-12", "2026-07-14");
+    const result = countRoadtripNights([
+      { ...camp, stay: { ...camp.stay!, lodgingType: "campsite" } },
+      {
+        lodgingStayId: null,
+        overnight: true,
+        startDate: d("2026-07-14"),
+        endDate: null,
+        stay: null,
+      },
+      { lodgingStayId: "gone", overnight: true, startDate: null, endDate: null, stay: null },
+    ]);
+    expect(result.nightsByStyle).toEqual({ pitch: 1, campsite: 2, lodging: 0 });
+    expect(result.unknownLengthStations).toBe(1);
+    const { pitch, campsite, lodging } = result.nightsByStyle;
+    expect(pitch + campsite + lodging).toBe(result.nights);
   });
 });

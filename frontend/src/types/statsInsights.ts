@@ -143,3 +143,34 @@ export interface PlaceInsights {
   plannedVisits: number;
   totals: MeasureTotals;
 }
+
+export type RoadtripPhase = "past" | "current" | "planned" | "undated";
+
+export interface RoadtripInsightRow {
+  id: string;
+  name: string;
+  year: number | null;
+  phase: RoadtripPhase;
+  km: { recorded: number; current: number; planned: number; unplaced: number };
+  kmBySource: Record<string, number>;
+  kmByMode: Record<string, number>;
+  nights: { recorded: number; planned: number };
+  nightsByStyle: { pitch: number; campsite: number; lodging: number };
+  unknownLengthStations: number;
+  countries: { recorded: string[]; planned: string[] };
+  restDays: number | null;
+  tours: { completed: number; km: number; ascentM: number | null };
+}
+
+export interface RoadtripInsights {
+  roadtrips: RoadtripInsightRow[];
+  pace: {
+    dayStages: number;
+    medianDayKm: number | null;
+    longestDay: { roadtripId: string; name: string; day: string; km: number } | null;
+    unstagedLegs: number;
+    restDays: number;
+    fullyDatedTrips: number;
+  };
+  totals: MeasureTotals;
+}

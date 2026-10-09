@@ -2,6 +2,7 @@ import { prisma } from "../../db";
 import {
   calculateRoadtripAchievementStats,
   checkRoadtripAchievement,
+  EMPTY_ROADTRIP_STATS,
 } from "../roadtripAchievements";
 
 /**
@@ -98,11 +99,15 @@ describe("roadtrip achievements", () => {
       roadtripFreeNights: 1,
       roadtripLongestKm: 3200,
       roadtripCountriesMax: 3,
+      roadtripBaseCamps: 0,
+      roadtripLandAndWater: 0,
+      roadtripTourStations: 0,
     });
   });
 
   it("checks a roadtrip badge and leaves every other badge to the flight checker", () => {
     const stats = {
+      ...EMPTY_ROADTRIP_STATS,
       roadtripsCount: 1,
       roadtripKm: 3200,
       roadtripFreeNights: 1,

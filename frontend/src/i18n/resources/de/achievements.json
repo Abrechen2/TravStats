@@ -1315,6 +1315,18 @@
     "PLACE_WELL_REMEMBERED_10": {
       "name": "Gut erinnert",
       "description": "Zehn Besuche mit eigener Notiz und eigenem Foto dokumentiert"
+    },
+    "ROADTRIP_BASE_CAMP": {
+      "name": "Basislager",
+      "description": "Drei Nächte an einer Station und von dort zwei Tagestouren unternommen"
+    },
+    "ROADTRIP_LAND_AND_WATER": {
+      "name": "Land und Wasser",
+      "description": "Auf einem Roadtrip sowohl Straßen- als auch Fährstrecken zurückgelegt"
+    },
+    "ROADTRIP_MUSCLE_POWER_3": {
+      "name": "Mit Muskelkraft weiter",
+      "description": "Von drei verschiedenen Roadtrip-Stationen aus Tagestouren unternommen"
     }
   },
   "header": {

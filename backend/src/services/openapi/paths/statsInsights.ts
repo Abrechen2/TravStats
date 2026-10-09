@@ -7,6 +7,7 @@ import { registry } from "../registry";
 import { errorContent } from "./shared";
 import { lodgingInsightsResponseSchema } from "../../../schemas/statsInsights/lodging";
 import { placeInsightsResponseSchema } from "../../../schemas/statsInsights/places";
+import { roadtripInsightsResponseSchema } from "../../../schemas/statsInsights/roadtrips";
 
 const STANDARD_ERRORS = {
   304: { description: "Not modified since the ETag in If-None-Match" },
@@ -56,6 +57,30 @@ registry.registerPath({
     200: {
       description: "The insights",
       content: { "application/json": { schema: placeInsights } },
+    },
+    ...STANDARD_ERRORS,
+  },
+});
+
+const roadtripInsights = registry.register(
+  "RoadtripInsights",
+  roadtripInsightsResponseSchema.openapi("RoadtripInsights")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/insights/roadtrips",
+  summary: "Roadtrip insights: recorded against planned, day stages, road and ferry, nights, tours",
+  description:
+    "Each stretch between two stations is placed on its own calendar: before today it is " +
+    "recorded, today it is current, after today planned. Ferry km are never driven km; a " +
+    "linked stay's night is counted once; day tours from a station are reported beside the " +
+    "driving, never added to it.",
+  tags: ["Stats"],
+  responses: {
+    200: {
+      description: "The insights",
+      content: { "application/json": { schema: roadtripInsights } },
     },
     ...STANDARD_ERRORS,
   },

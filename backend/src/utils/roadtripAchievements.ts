@@ -1,32 +1,31 @@
 import type { Achievement } from "../prisma";
-import { prisma } from "../db";
-import { getCountryResolver } from "../services/geo/countryFromCoordinates";
-import {
-  nightsOf,
-  spanOf,
-  stationCountries,
-  STATION_SELECT,
-} from "../services/roadtrip/roadtripSummary";
-import { travelledKm } from "../services/tour/tourDistance";
+import { now as clockNow } from "../shared/time/clock";
+import { roadtripInsights } from "../services/stats/insights";
 
 /**
- * The roadtrip badges (2.7) — their measures and their check, in a module of
- * their own. The flight/place check and stats modules are frozen at their
- * size by the file-size ratchet; a new domain's badges belong beside them, not
- * inside them.
+ * The roadtrip badges (2.7, Part I; and the three of the statistics expansion,
+ * Part K) — their measures and their check, in a module of their own. The
+ * flight/place check and stats modules are frozen at their size by the
+ * file-size ratchet; a new domain's badges belong beside them, not inside them.
  *
- * Counting follows the one roadtrip rule: a roadtrip that has not started is
- * planned and counts for nothing, nights come from `countRoadtripNights` (so
- * a stay night is never counted twice), and countries from the one
- * station-country rule.
+ * Every measure is read off the roadtrip insights (`utils/roadtripInsights`),
+ * the same computation the statistics tab draws, through the one timeline rule
+ * (`shared/tour/roadtripTimeline.ts`): a roadtrip that has not started counts
+ * for nothing, and — since forgejo#260 — of one that HAS started only what has
+ * happened counts. Until then the kilometres of next week's ferry reached the
+ * badges on the first morning (the extension to #179). Nights come from
+ * `countRoadtripNights` (a stay night is never counted twice), countries from
+ * the one station-country rule.
  */
-
 export interface RoadtripAchievementStats {
   roadtripsCount: number;
   roadtripKm: number;
   roadtripFreeNights: number;
   roadtripLongestKm: number;
   roadtripCountriesMax: number;
+  roadtripBaseCamps: number;
+  roadtripLandAndWater: number;
+  roadtripTourStations: number;
 }
 
 export const EMPTY_ROADTRIP_STATS: RoadtripAchievementStats = {
@@ -35,37 +34,26 @@ export const EMPTY_ROADTRIP_STATS: RoadtripAchievementStats = {
   roadtripFreeNights: 0,
   roadtripLongestKm: 0,
   roadtripCountriesMax: 0,
+  roadtripBaseCamps: 0,
+  roadtripLandAndWater: 0,
+  roadtripTourStations: 0,
 };
 
 export async function calculateRoadtripAchievementStats(
   userId: string,
-  now = new Date()
+  now: Date = clockNow()
 ): Promise<RoadtripAchievementStats> {
-  const rows = await prisma.tripRoute.findMany({
-    where: { userId, kind: "roadtrip" },
-    select: {
-      legs: { select: { distanceKm: true } },
-      stops: { select: STATION_SELECT },
-    },
-  });
-  if (rows.length === 0) return EMPTY_ROADTRIP_STATS;
-
-  const resolver = await getCountryResolver();
-  const stats = { ...EMPTY_ROADTRIP_STATS };
-  for (const row of rows) {
-    const { startDate } = spanOf(row.stops);
-    if (startDate && Date.parse(startDate) > now.getTime()) continue;
-    const km = travelledKm(row.legs);
-    stats.roadtripsCount += 1;
-    stats.roadtripKm += km;
-    stats.roadtripFreeNights += nightsOf(row.stops).freeNights;
-    stats.roadtripLongestKm = Math.max(stats.roadtripLongestKm, km);
-    stats.roadtripCountriesMax = Math.max(
-      stats.roadtripCountriesMax,
-      stationCountries(row.stops, resolver).length
-    );
-  }
-  return stats;
+  const { awards } = await roadtripInsights(userId, now);
+  return {
+    roadtripsCount: awards.roadtripsCount,
+    roadtripKm: awards.recordedKm,
+    roadtripFreeNights: awards.recordedFreeNights,
+    roadtripLongestKm: awards.longestRecordedKm,
+    roadtripCountriesMax: awards.recordedCountriesMax,
+    roadtripBaseCamps: awards.baseCampStations,
+    roadtripLandAndWater: awards.landAndWaterTrips,
+    roadtripTourStations: awards.tourStations,
+  };
 }
 
 const MEASURE: Record<string, keyof RoadtripAchievementStats> = {
@@ -74,6 +62,9 @@ const MEASURE: Record<string, keyof RoadtripAchievementStats> = {
   roadtrip_free_nights: "roadtripFreeNights",
   roadtrip_longest_km: "roadtripLongestKm",
   roadtrip_countries_single: "roadtripCountriesMax",
+  roadtrip_base_camp: "roadtripBaseCamps",
+  roadtrip_land_and_water: "roadtripLandAndWater",
+  roadtrip_tour_stations: "roadtripTourStations",
 };
 
 /** The badge's progress, or `null` when it is not a roadtrip badge. */

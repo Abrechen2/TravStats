@@ -33,4 +33,12 @@ export const INSIGHT_MEASURES: Record<string, MeasureSpec> = {
   placeVisitsWithPhoto: insight("sum", "visits", "PoiInsightsSection"),
   placeVisitsWithNote: insight("sum", "visits", "PoiInsightsSection"),
   placeVisitsWithRating: insight("sum", "visits", "PoiInsightsSection"),
+
+  /** Kilometres that have HAPPENED (shared/tour/roadtripTimeline.ts) — never next week's. */
+  roadtripRecordedKm: insight("sum", "km", "RoadtripInsightsSection"),
+  /** Road legs only: what the vehicle itself rolled. */
+  roadtripDrivenKm: insight("sum", "km", "RoadtripInsightsSection"),
+  /** Ferry legs — carried, never driven. */
+  roadtripFerryKm: insight("sum", "km", "RoadtripInsightsSection"),
+  roadtripRecordedNights: insight("sum", "nights", "RoadtripInsightsSection"),
 };

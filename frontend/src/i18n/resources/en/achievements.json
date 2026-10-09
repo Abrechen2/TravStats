@@ -1315,6 +1315,18 @@
     "PLACE_WELL_REMEMBERED_10": {
       "name": "Well remembered",
       "description": "Ten visits documented with their own note and their own photo"
+    },
+    "ROADTRIP_BASE_CAMP": {
+      "name": "Base camp",
+      "description": "Three nights at one station and two day tours from there"
+    },
+    "ROADTRIP_LAND_AND_WATER": {
+      "name": "Land and water",
+      "description": "Covered both road and ferry stretches on one roadtrip"
+    },
+    "ROADTRIP_MUSCLE_POWER_3": {
+      "name": "Under your own steam",
+      "description": "Day tours from three different roadtrip stations"
     }
   },
   "header": {

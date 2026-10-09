@@ -97,4 +97,44 @@ export const seedsPartK: AchievementDefinition[] = [
     requirementType: "place_documented_visits",
     points: 30,
   },
+  {
+    code: "ROADTRIP_BASE_CAMP",
+    name: "Basislager",
+    description: "Drei Nächte an einer Station und von dort zwei Tagestouren unternommen",
+    category: "special",
+    domain: "roadtrip",
+    icon: "⛺",
+    tier: "silver",
+    // threshold: proposal forgejo#260, owner to confirm (3 nights + 2 tours:
+    // BASE_CAMP_NIGHTS / BASE_CAMP_TOURS in utils/roadtripInsights)
+    requirement: 1,
+    requirementType: "roadtrip_base_camp",
+    points: 60,
+  },
+  {
+    code: "ROADTRIP_LAND_AND_WATER",
+    name: "Land und Wasser",
+    description: "Auf einem Roadtrip sowohl Straßen- als auch Fährstrecken zurückgelegt",
+    category: "explorer",
+    domain: "roadtrip",
+    icon: "⛴️",
+    tier: "bronze",
+    // threshold: proposal forgejo#260, owner to confirm
+    requirement: 1,
+    requirementType: "roadtrip_land_and_water",
+    points: 30,
+  },
+  {
+    code: "ROADTRIP_MUSCLE_POWER_3",
+    name: "Mit Muskelkraft weiter",
+    description: "Von drei verschiedenen Roadtrip-Stationen aus Tagestouren unternommen",
+    category: "explorer",
+    domain: "roadtrip",
+    icon: "🥾",
+    tier: "silver",
+    // threshold: proposal forgejo#260, owner to confirm
+    requirement: 3,
+    requirementType: "roadtrip_tour_stations",
+    points: 60,
+  },
 ];

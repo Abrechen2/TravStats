@@ -220,5 +220,9 @@
   "evidence.metric.placeRevisitVisits": "Wiederbesuche",
   "evidence.metric.placeVisitsWithPhoto": "Besuche mit Foto",
   "evidence.metric.placeVisitsWithNote": "Besuche mit Notiz",
-  "evidence.metric.placeVisitsWithRating": "Besuche mit Bewertung"
+  "evidence.metric.placeVisitsWithRating": "Besuche mit Bewertung",
+  "evidence.metric.roadtripRecordedKm": "Gefahrene Roadtrip-Kilometer (erfasst)",
+  "evidence.metric.roadtripDrivenKm": "Straßenkilometer auf Roadtrips",
+  "evidence.metric.roadtripFerryKm": "Fährkilometer auf Roadtrips",
+  "evidence.metric.roadtripRecordedNights": "Roadtrip-Nächte (erfasst)"
 }
