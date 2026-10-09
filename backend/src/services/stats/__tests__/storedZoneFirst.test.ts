@@ -16,6 +16,7 @@ import { FLIGHT_CLOCK_SELECT } from "../departureClock";
 import { computeCountryStats } from "../countryStats";
 import { fetchFlightDatedRows } from "../timeseriesRows";
 import { loadTravelAccountData } from "../travelAccountData";
+import { AVAILABLE_DOMAINS } from "../../../shared/domains";
 import { resolveEvidence } from "../../evidence";
 
 jest.mock("../../airportCache", () => {
@@ -101,7 +102,9 @@ describe("a flight's day is read in its stored zone in every figure (forgejo#273
   });
 
   it("the travel account reads the same departure day", async () => {
-    const data = await loadTravelAccountData(userId);
+    // Every domain visible: the zone rule is under test, not the domain gate
+    // (fix/trip-account-contract gave the loader its visibility argument).
+    const data = await loadTravelAccountData(userId, new Set(AVAILABLE_DOMAINS));
     const row = data.flights.find((f) => f.id === flightId);
     expect(row?.depLocalDay?.toISOString().slice(0, 10)).toBe("2026-01-01");
     expect(row?.depTimezone).toBe("Asia/Tokyo");
