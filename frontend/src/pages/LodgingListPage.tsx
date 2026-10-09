@@ -718,6 +718,7 @@ export default function LodgingListPage(): JSX.Element {
             introText={t("lodging:restay.intro", { name: restayAt.name })}
             afterSaveFailedKey="common:form.savedButRefreshFailed"
             onClose={() => setRestayAt(null)}
+            onReload={() => void reloadAll()}
             onSaved={async () => {
               setRestayAt(null);
               await reloadAll();

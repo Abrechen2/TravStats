@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
+import { OUTCOME_UNKNOWN_KEY, isTransientSaveError } from "../../lib/saveErrorMessage";
 import { useFlightSubmit } from "./useFlightSubmit";
 import type { Airport } from "../../lib/api";
 
@@ -30,6 +31,11 @@ function setup(onSubmit: (...args: unknown[]) => unknown, over: Record<string, u
 
 const event = { preventDefault: () => {} } as React.FormEvent;
 const networkError = Object.assign(new Error("Network Error"), { isAxiosError: true });
+// A refusal the server answered (nothing stored), so a create may retry.
+const dbDown = Object.assign(new Error("503"), {
+  isAxiosError: true,
+  response: { status: 503, data: { code: "DB_UNAVAILABLE" } },
+});
 
 /** forgejo#247 — the create form's save: once, with a failure that remembers what it was. */
 describe("useFlightSubmit", () => {
@@ -52,19 +58,34 @@ describe("useFlightSubmit", () => {
   });
 
   it("keeps the failure's key, and a retry repeats the path that failed", async () => {
-    const onSubmit = vi.fn().mockRejectedValueOnce(networkError).mockResolvedValueOnce(undefined);
+    const onSubmit = vi.fn().mockRejectedValueOnce(dbDown).mockResolvedValueOnce(undefined);
     const { hook, deps } = setup(onSubmit);
     await act(() => hook.result.current.handleSubmitAndReturn(event));
     expect(hook.result.current.failure).toEqual({
-      key: "common:saveErrors.network",
+      key: "common:saveErrors.dbUnavailable",
       field: null,
       variant: "saveAndReturn",
     });
-    expect(deps.setError).toHaveBeenLastCalledWith("common:saveErrors.network");
+    expect(deps.setError).toHaveBeenLastCalledWith("common:saveErrors.dbUnavailable");
     await act(() => hook.result.current.retry());
     expect(onSubmit).toHaveBeenLastCalledWith({ flightNumber: "LH1" }, { hasMoreFlights: true });
     expect(deps.prepareReturnFlightForm).toHaveBeenCalledTimes(1);
     expect(hook.result.current.failure).toBeNull();
+  });
+
+  // Bus review, Minor 2 (integration wiring): a create whose answer was lost
+  // may have stored the flight, so its key is not a retryable one. A merge
+  // writes into the flight already there and keeps "network".
+  it("reads a lost answer to a create as outcome unknown, and a merge as network", async () => {
+    const onSubmit = vi.fn().mockRejectedValue(networkError);
+    const { hook, deps } = setup(onSubmit);
+    await act(() => hook.result.current.handleSubmit(event));
+    expect(hook.result.current.failure?.key).toBe(OUTCOME_UNKNOWN_KEY);
+    expect(isTransientSaveError(hook.result.current.failure?.key ?? "")).toBe(false);
+    expect(deps.setError).toHaveBeenLastCalledWith(OUTCOME_UNKNOWN_KEY);
+
+    await act(() => hook.result.current.handleMergeSubmit());
+    expect(hook.result.current.failure?.key).toBe("common:saveErrors.network");
   });
 
   it("names the field a time refusal belongs to", async () => {

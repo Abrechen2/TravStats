@@ -531,6 +531,7 @@ export default function CruisesPage(): JSX.Element {
             mode="create"
             cruise={duplicateSource}
             onClose={() => setDuplicateSource(null)}
+            onReload={() => void reload()}
             onSaved={async () => {
               setDuplicateSource(null);
               await reload();

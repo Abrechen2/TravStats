@@ -138,6 +138,17 @@ export default function PlaceDetailPage(): JSX.Element {
     setPlace(await getPlace(id));
   }, [id]);
 
+  // For a new visit whose answer was lost: the page re-reads in place (no
+  // loading screen), so the dialog and its draft stay while the user looks.
+  const refreshQuietly = useCallback(async (): Promise<void> => {
+    try {
+      await refresh();
+    } catch (err: unknown) {
+      logger.error({ err }, "PlaceDetailPage: reload from the visit dialog failed");
+      addToast("error", t("places:detail.loadError"));
+    }
+  }, [refresh, addToast, t]);
+
   const openVisitEditor = useCallback((visit: PlaceVisit): void => {
     setVisitDialog({ visit });
   }, []);
@@ -520,6 +531,7 @@ export default function PlaceDetailPage(): JSX.Element {
           place={place}
           visit={visitDialog.visit}
           onClose={() => setVisitDialog(null)}
+          onReload={visitDialog.visit ? undefined : () => void refreshQuietly()}
           afterSaveFailedKey="common:form.savedButViewRefreshFailed"
           onSaved={async () => {
             await refresh();

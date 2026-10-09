@@ -84,6 +84,8 @@ import { rideFixture } from "./busFixture";
 
 const DEPARTURE_TIME = /^bus:form\.departureTime\s*\*?$/;
 const NETWORK = { isAxiosError: true, message: "Network Error" };
+// A refusal the server answered (nothing stored), so a create may retry.
+const DB_DOWN = { isAxiosError: true, response: { status: 503, data: { code: "DB_UNAVAILABLE" } } };
 
 const saveButton = (): HTMLElement => screen.getByTestId("bus-form-save");
 /** Lets the mount-time lookups (trips, suggestions) land inside `act`. */
@@ -95,6 +97,7 @@ async function renderForm(
     onClose: () => void;
     onSaved: (ride: BusJourney) => void | Promise<void>;
     afterSaveFailedKey: string;
+    onReload: () => void;
   }> = {}
 ): Promise<void> {
   await act(async () => {
@@ -104,6 +107,7 @@ async function renderForm(
         onClose={props.onClose ?? vi.fn()}
         onSaved={props.onSaved ?? vi.fn()}
         afterSaveFailedKey={props.afterSaveFailedKey}
+        onReload={props.onReload}
       />
     );
   });
@@ -205,15 +209,15 @@ describe("BusFormModal — shared form blocks", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("keeps the draft after a dropped connection, says so in a banner that takes focus, and retries", async () => {
-    create.mockRejectedValueOnce(NETWORK);
+  it("keeps the draft after a database restart, says so in a banner that takes focus, and retries", async () => {
+    create.mockRejectedValueOnce(DB_DOWN);
     create.mockResolvedValueOnce({ ...rideFixture(), id: "new" });
     const onSaved = vi.fn();
     await readyForm({ onSaved });
     fireEvent.click(saveButton());
 
     const banner = await screen.findByRole("alert");
-    expect(banner).toHaveTextContent("common:saveErrors.network");
+    expect(banner).toHaveTextContent("common:saveErrors.dbUnavailable");
     await waitFor(() => expect(banner).toHaveFocus());
     expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("2026-09-20T09:00");
     expect(onSaved).not.toHaveBeenCalled();
@@ -221,6 +225,22 @@ describe("BusFormModal — shared form blocks", () => {
     fireEvent.click(within(banner).getByRole("button", { name: "common:buttons.retry" }));
     await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
     expect(create).toHaveBeenCalledTimes(2);
+  });
+
+  // Bus review, Minor 2 (integration wiring): the ride may be stored.
+  it("offers no retry after a create whose answer was lost, and offers a reload instead", async () => {
+    create.mockRejectedValueOnce(NETWORK);
+    const onReload = vi.fn();
+    await readyForm({ onReload });
+    fireEvent.click(saveButton());
+
+    const banner = await screen.findByRole("alert");
+    expect(banner).toHaveTextContent("common:saveErrors.outcomeUnknown");
+    expect(within(banner).queryByRole("button", { name: "common:buttons.retry" })).toBeNull();
+    expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("2026-09-20T09:00");
+    fireEvent.click(within(banner).getByRole("button", { name: "common:buttons.reloadList" }));
+    expect(onReload).toHaveBeenCalledTimes(1);
+    expect(create).toHaveBeenCalledTimes(1);
   });
 
   it("clears the banner with the next edit, and offers no retry for a refused input", async () => {

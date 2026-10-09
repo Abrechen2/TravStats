@@ -335,6 +335,7 @@ export default function BusPage(): JSX.Element {
         <BusFormModal
           journey={editing.journey}
           onClose={(): void => setEditing(null)}
+          onReload={editing.journey ? undefined : reload}
           onSaved={handleSaved}
         />
       )}

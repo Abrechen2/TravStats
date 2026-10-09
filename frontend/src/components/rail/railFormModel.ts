@@ -1,4 +1,4 @@
-import { saveErrorKey } from "../../lib/saveErrorMessage";
+import { saveErrorKey, type SaveErrorOptions } from "../../lib/saveErrorMessage";
 import type {
   RailGeometryReport,
   RailJourney,
@@ -499,8 +499,11 @@ const TIME_FIELDS: readonly string[] = ["departureLocal", "arrivalLocal"];
  * A failed save, read by its stable `code` and `field` (review 2026-09-26,
  * finding 5). The server's `error` prose is English and written for a log —
  * it is never shown; an unknown refusal gets the generic sentence.
+ *
+ * `options.create`: the save CREATES a ride — a lost answer then reads
+ * "outcome unknown" and offers no blind retry (`saveErrorKey`).
  */
-export function saveErrorFrom(err: unknown): RailSaveError {
+export function saveErrorFrom(err: unknown, options: SaveErrorOptions = {}): RailSaveError {
   const data = (err as { response?: { data?: { code?: unknown; field?: unknown } } })?.response
     ?.data;
   const code = typeof data?.code === "string" ? data.code : null;
@@ -527,7 +530,7 @@ export function saveErrorFrom(err: unknown): RailSaveError {
       // Everything that is not a rail field code reads through the shared
       // save rule (validation, duplicate, database down, demo, rate limit,
       // no network), so the rail dialog says what every other form says.
-      return { key: saveErrorKey(err, "rail:form.saveError"), field: null };
+      return { key: saveErrorKey(err, "rail:form.saveError", {}, options), field: null };
   }
 }
 

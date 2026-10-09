@@ -370,6 +370,7 @@ export default function PlacesNearbyPage(): JSX.Element {
         <VisitDialog
           place={recordingFor}
           onClose={() => setRecordingFor(null)}
+          onReload={() => void loadPlaces()}
           onSaved={async () => {
             setPlaces(await listPlaces({}));
             addToast("success", t("places:visit.recorded", { name: recordingFor.name }));

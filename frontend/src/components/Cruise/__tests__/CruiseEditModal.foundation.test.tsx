@@ -171,8 +171,12 @@ describe("CruiseEditModal — the shared form blocks", () => {
   });
 
   it("keeps the draft on a failed save, says why in a focused banner, and retries", async () => {
+    // A refusal the server answered (nothing stored), so a create may retry.
     vi.mocked(cruiseApi.create)
-      .mockRejectedValueOnce({ isAxiosError: true, message: "Network Error" })
+      .mockRejectedValueOnce({
+        isAxiosError: true,
+        response: { status: 503, data: { code: "DB_UNAVAILABLE" } },
+      })
       .mockResolvedValueOnce(stored);
     const onSaved = vi.fn();
     render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={onSaved} />);
@@ -180,13 +184,34 @@ describe("CruiseEditModal — the shared form blocks", () => {
     await userEvent.click(save());
 
     const banner = await screen.findByRole("alert");
-    expect(banner).toHaveTextContent("common:saveErrors.network");
+    expect(banner).toHaveTextContent("common:saveErrors.dbUnavailable");
     expect(screen.getByLabelText("field.routeName")).toHaveValue("Nordland");
     await waitFor(() => expect(document.activeElement).toBe(banner));
 
     await userEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(stored));
     expect(cruiseApi.create).toHaveBeenCalledTimes(2);
+  });
+
+  // Bus review, Minor 2 (integration wiring): the cruise may be stored.
+  it("offers no retry after a create whose answer was lost, and offers a reload instead", async () => {
+    vi.mocked(cruiseApi.create).mockRejectedValueOnce({
+      isAxiosError: true,
+      message: "Network Error",
+    });
+    const onReload = vi.fn();
+    render(
+      <CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} onReload={onReload} />
+    );
+    fillIdentityAndStart();
+    await userEvent.click(save());
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("common:saveErrors.outcomeUnknown");
+    expect(screen.queryByRole("button", { name: "common:buttons.retry" })).toBeNull();
+    expect(screen.getByLabelText("field.routeName")).toHaveValue("Nordland");
+    await userEvent.click(screen.getByRole("button", { name: "common:buttons.reloadList" }));
+    expect(onReload).toHaveBeenCalledTimes(1);
+    expect(cruiseApi.create).toHaveBeenCalledTimes(1);
   });
 
   it("refuses an end before the start at the field, goes there, and sends nothing", async () => {

@@ -19,7 +19,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { busApi } from "../../lib/api/bus";
 import { tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
-import { isTransientSaveError } from "../../lib/saveErrorMessage";
+import { isOutcomeUnknownSaveError, isTransientSaveError } from "../../lib/saveErrorMessage";
 import type { Trip } from "../../types";
 import { BUS_RIDE_KINDS, type BusJourney, type BusRideKind } from "../../types/bus";
 import { BusStationField, type BusStationDraft } from "./BusStationField";
@@ -55,6 +55,12 @@ interface Props {
    * default; the detail page passes the view's wording.
    */
   afterSaveFailedKey?: string;
+  /**
+   * Re-reads the caller's list WITHOUT closing this form — offered when a
+   * create's answer was lost (`isOutcomeUnknownSaveError`), so the user can
+   * look before sending again. Omitted where the caller cannot do that.
+   */
+  onReload?: () => void;
 }
 
 const HINT_ID = "bus-form-save-blocked";
@@ -80,6 +86,7 @@ export function BusFormModal({
   onClose,
   onSaved,
   afterSaveFailedKey,
+  onReload,
 }: Props): JSX.Element {
   const { t } = useTranslation(["bus", "common"]);
   // One function builds the state AND the dirty baseline, so an edit form
@@ -205,7 +212,7 @@ export function BusFormModal({
     );
     if (outcome.status === "failed") {
       logger.error("BusFormModal: save failed", outcome.error);
-      const refused = saveErrorFrom(outcome.error);
+      const refused = saveErrorFrom(outcome.error, { create: !journey });
       setRefusal(refused);
       failure.fail(refused.key);
     } else if (outcome.status === "savedButAfterFailed") {
@@ -459,6 +466,11 @@ export function BusFormModal({
               : undefined
           }
           retryDisabled={saving.saving}
+          onReload={
+            failure.failureKey !== null && isOutcomeUnknownSaveError(failure.failureKey)
+              ? onReload
+              : undefined
+          }
         />
         <RequiredLegend className="mt-3" />
       </div>

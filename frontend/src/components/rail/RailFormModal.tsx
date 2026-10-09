@@ -7,7 +7,7 @@ import { railApi } from "../../lib/api/rail";
 import { tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
-import { isTransientSaveError } from "../../lib/saveErrorMessage";
+import { isOutcomeUnknownSaveError, isTransientSaveError } from "../../lib/saveErrorMessage";
 import {
   FieldError,
   FormErrorBanner,
@@ -67,6 +67,12 @@ interface Props {
    * default; the detail page passes the view's wording.
    */
   afterSaveFailedKey?: string;
+  /**
+   * Re-reads the caller's list WITHOUT closing this form — offered when a
+   * create's answer was lost (`isOutcomeUnknownSaveError`), so the user can
+   * look before sending again. Omitted where the caller cannot do that.
+   */
+  onReload?: () => void;
 }
 
 const HINT_ID = "rail-form-save-blocked";
@@ -108,6 +114,7 @@ export function RailFormModal({
   onSaved,
   onProgress,
   afterSaveFailedKey,
+  onReload,
 }: Props): JSX.Element {
   const { t } = useTranslation(["rail", "common"]);
   const addToast = useToastStore((s) => s.addToast);
@@ -345,7 +352,7 @@ export function RailFormModal({
     );
     if (outcome.status === "failed") {
       logger.error("RailFormModal: save failed", outcome.error);
-      const refused = saveErrorFrom(outcome.error);
+      const refused = saveErrorFrom(outcome.error, { create: !journey });
       setRefusal(refused);
       failure.fail(refused.key);
       return;
@@ -673,6 +680,11 @@ export function RailFormModal({
               : undefined
           }
           retryDisabled={saving.saving}
+          onReload={
+            failure.failureKey !== null && isOutcomeUnknownSaveError(failure.failureKey)
+              ? onReload
+              : undefined
+          }
         />
         <RequiredLegend className="mt-3" />
       </div>

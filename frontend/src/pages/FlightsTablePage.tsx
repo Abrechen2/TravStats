@@ -693,6 +693,7 @@ export default function FlightsTablePage(): JSX.Element {
         <SimplifiedFlightFormV2
           onSubmit={handleAddFlight}
           onCancel={closeAddFlight}
+          onReload={reload}
           onPickSpecialFlight={() => {
             closeAddFlight();
             setShowSpecialModal(true);
@@ -704,6 +705,7 @@ export default function FlightsTablePage(): JSX.Element {
       <SpecialFlightModal
         isOpen={showSpecialModal || !!editingSpecialFlight}
         flight={editingSpecialFlight}
+        onReload={editingSpecialFlight ? undefined : reload}
         onClose={() => {
           setShowSpecialModal(false);
           setEditingSpecialFlight(null);

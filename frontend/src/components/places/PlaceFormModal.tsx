@@ -7,7 +7,11 @@ import Modal from "../Modal";
 import { logger } from "../../lib/logger";
 import { createPlace, updatePlace } from "../../lib/api/places";
 import { listPlaceLists } from "../../lib/api/placeLists";
-import { isTransientSaveError, saveErrorKey } from "../../lib/saveErrorMessage";
+import {
+  isOutcomeUnknownSaveError,
+  isTransientSaveError,
+  saveErrorKey,
+} from "../../lib/saveErrorMessage";
 import type { PlaceList } from "../../types/placeList";
 import { useToastStore } from "../../store/toastStore";
 import {
@@ -53,6 +57,12 @@ interface Props {
    * it, once, after the save.
    */
   forList?: string;
+  /**
+   * Re-reads the caller's list WITHOUT closing this form — offered when a
+   * create's answer was lost (`isOutcomeUnknownSaveError`), so the user can
+   * look before sending again. Omitted where the caller cannot do that.
+   */
+  onReload?: () => void;
 }
 
 /**
@@ -77,6 +87,7 @@ export function PlaceFormModal({
   afterSaveFailedKey,
   initialName = "",
   forList,
+  onReload,
 }: Props): JSX.Element {
   const { t } = useTranslation(["places", "common"]);
   const addToast = useToastStore((s) => s.addToast);
@@ -256,7 +267,7 @@ export function PlaceFormModal({
     );
     if (outcome.status === "failed") {
       logger.error({ err: outcome.error }, "PlaceFormModal: save failed");
-      failure.fail(saveErrorKey(outcome.error, "places:form.saveFailed"));
+      failure.fail(saveErrorKey(outcome.error, "places:form.saveFailed", {}, { create: !isEdit }));
     }
   };
 
@@ -517,6 +528,11 @@ export function PlaceFormModal({
               : undefined
           }
           retryDisabled={saving.saving}
+          onReload={
+            failure.failureKey !== null && isOutcomeUnknownSaveError(failure.failureKey)
+              ? onReload
+              : undefined
+          }
         />
         <RequiredLegend className="mt-3" />
       </div>

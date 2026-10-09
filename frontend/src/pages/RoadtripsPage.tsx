@@ -239,6 +239,7 @@ export default function RoadtripsPage(): JSX.Element {
       <NewRoadtripDialog
         open={creating}
         onClose={() => setCreating(false)}
+        onReload={() => void load()}
         // Straight to the new roadtrip, first station open: an empty
         // roadtrip has nothing to show, and its first station is next. Through
         // `navigateAfterSave`, because the dialog's unsaved-input guard may

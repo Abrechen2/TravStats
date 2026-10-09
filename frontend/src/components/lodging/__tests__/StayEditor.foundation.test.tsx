@@ -90,6 +90,8 @@ const existing = {
 } as LodgingStay;
 
 const networkError = Object.assign(new Error("Network Error"), { isAxiosError: true });
+// A refusal the server answered: retryable for a create too (nothing stored).
+const dbDown = { isAxiosError: true, response: { status: 503, data: { code: "DB_UNAVAILABLE" } } };
 const checkIn = (): HTMLElement => screen.getByLabelText(/^lodging:field\.checkIn\b/);
 const checkOut = (): HTMLElement => screen.getByLabelText(/^lodging:field\.checkOut\b/);
 
@@ -160,15 +162,15 @@ describe("StayEditor - the shared form blocks", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps the draft on a failed save, offers a retry for a network drop, and sends once more only on retry", async () => {
-    vi.mocked(createStay).mockRejectedValueOnce(networkError).mockResolvedValueOnce(stored);
+  it("keeps the draft on a failed save, offers a retry for a database restart, and sends once more only on retry", async () => {
+    vi.mocked(createStay).mockRejectedValueOnce(dbDown).mockResolvedValueOnce(stored);
     const onSaved = vi.fn();
     await renderEditor({ onSaved });
     await userEvent.type(screen.getByLabelText("lodging:field.bookingReference"), "AB12");
     await fillDates();
 
     await userEvent.click(screen.getByTestId("stay-editor-save"));
-    const banner = await screen.findByText("common:saveErrors.network");
+    const banner = await screen.findByText("common:saveErrors.dbUnavailable");
     expect(banner.closest("[role=alert]")).toHaveFocus();
     expect(screen.getByLabelText("lodging:field.bookingReference")).toHaveValue("AB12");
     expect(onSaved).not.toHaveBeenCalled();
@@ -179,14 +181,43 @@ describe("StayEditor - the shared form blocks", () => {
   });
 
   it("the failure notice goes away with the next edit", async () => {
-    vi.mocked(createStay).mockRejectedValueOnce(networkError);
+    vi.mocked(createStay).mockRejectedValueOnce(dbDown);
     await renderEditor();
     await fillDates();
     await userEvent.click(screen.getByTestId("stay-editor-save"));
-    await screen.findByText("common:saveErrors.network");
+    await screen.findByText("common:saveErrors.dbUnavailable");
 
     await userEvent.type(screen.getByLabelText("lodging:field.bookingReference"), "x");
-    expect(screen.queryByText("common:saveErrors.network")).toBeNull();
+    expect(screen.queryByText("common:saveErrors.dbUnavailable")).toBeNull();
+  });
+
+  // Bus review, Minor 2 (integration wiring): a new stay whose answer was lost
+  // may be stored, so the editor offers a look at the list, never a retry.
+  it("offers no retry after a create whose answer was lost, keeps the draft, and offers a reload", async () => {
+    vi.mocked(createStay).mockRejectedValueOnce(networkError);
+    const onReload = vi.fn();
+    await renderEditor({ onReload });
+    await userEvent.type(screen.getByLabelText("lodging:field.bookingReference"), "AB12");
+    await fillDates();
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    expect(await screen.findByText("common:saveErrors.outcomeUnknown")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "common:buttons.retry" })).toBeNull();
+    expect(screen.getByLabelText("lodging:field.bookingReference")).toHaveValue("AB12");
+    await userEvent.click(screen.getByRole("button", { name: "common:buttons.reloadList" }));
+    expect(onReload).toHaveBeenCalledTimes(1);
+    expect(createStay).toHaveBeenCalledTimes(1);
+  });
+
+  it("still retries a dropped connection when the editor UPDATES a stay", async () => {
+    vi.mocked(updateStay).mockRejectedValueOnce(networkError);
+    await renderEditor({ mode: "edit", stay: existing, onReload: vi.fn() });
+    await userEvent.type(screen.getByLabelText("lodging:field.bookingReference"), "x");
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    expect(await screen.findByText("common:saveErrors.network")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "common:buttons.retry" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "common:buttons.reloadList" })).toBeNull();
   });
 
   it("a stored stay whose follow-up fails says so and cannot be created twice", async () => {

@@ -127,7 +127,7 @@ export default function ExpenseDialog({
     );
     if (outcome.status === "failed") {
       logger.warn("Saving a roadtrip expense failed", outcome.error);
-      failure.fail(expenseFailureKey(outcome.error));
+      failure.fail(expenseFailureKey(outcome.error, { create: !expense }));
     }
   };
 

@@ -356,7 +356,8 @@ export default function FlightReviewModal({
               ? data.field
               : null;
         setServerField(field);
-        failure.fail(saveErrorKey(err, "errors:saveFailed"));
+        // Confirming here creates the flight: a lost answer offers no blind retry.
+        failure.fail(saveErrorKey(err, "errors:saveFailed", {}, { create: true }));
       }
     } finally {
       inFlight.current = false;

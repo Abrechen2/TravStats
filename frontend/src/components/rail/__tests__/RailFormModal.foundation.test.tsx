@@ -76,6 +76,8 @@ import { makeRailJourney } from "./railJourneyFixture";
 
 const DEPARTURE_TIME = /^rail:form\.departureTime\s*\*?$/;
 const NETWORK = { isAxiosError: true, message: "Network Error" };
+// A refusal the server answered (nothing stored), so a create may retry.
+const DB_DOWN = { isAxiosError: true, response: { status: 503, data: { code: "DB_UNAVAILABLE" } } };
 
 const saveButton = (): HTMLElement => screen.getByRole("button", { name: "rail:form.save" });
 
@@ -142,20 +144,42 @@ describe("RailFormModal — shared form blocks", () => {
     expect(saveButton()).not.toBeDisabled();
   });
 
-  it("keeps the draft after a dropped connection, says so in a banner that takes focus, and retries", async () => {
-    create.mockRejectedValueOnce(NETWORK);
+  it("keeps the draft after a database restart, says so in a banner that takes focus, and retries", async () => {
+    create.mockRejectedValueOnce(DB_DOWN);
     create.mockResolvedValueOnce({ journey: makeRailJourney({ id: "new" }), geometry: null });
     const { onSaved } = await readyForm();
     fireEvent.click(saveButton());
 
     const banner = await screen.findByRole("alert");
-    expect(banner).toHaveTextContent("common:saveErrors.network");
+    expect(banner).toHaveTextContent("common:saveErrors.dbUnavailable");
     await waitFor(() => expect(banner).toHaveFocus());
     expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("2026-07-01T08:15");
 
     fireEvent.click(within(banner).getByRole("button", { name: "common:buttons.retry" }));
     await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
     expect(create).toHaveBeenCalledTimes(2);
+  });
+
+  // Bus review, Minor 2 (integration wiring): the ride may be stored.
+  it("offers no retry after a create whose answer was lost, and offers a reload instead", async () => {
+    create.mockRejectedValueOnce(NETWORK);
+    const onReload = vi.fn();
+    render(
+      <RailFormModal journey={null} onClose={vi.fn()} onSaved={vi.fn()} onReload={onReload} />
+    );
+    await waitFor(() => expect(getAllTrips).toHaveBeenCalled());
+    pickBothViaGeocoder();
+    fireEvent.change(screen.getByLabelText(DEPARTURE_TIME), {
+      target: { value: "2026-07-01T08:15" },
+    });
+    fireEvent.click(saveButton());
+
+    const banner = await screen.findByRole("alert");
+    expect(banner).toHaveTextContent("common:saveErrors.outcomeUnknown");
+    expect(within(banner).queryByRole("button", { name: "common:buttons.retry" })).toBeNull();
+    fireEvent.click(within(banner).getByRole("button", { name: "common:buttons.reloadList" }));
+    expect(onReload).toHaveBeenCalledTimes(1);
+    expect(create).toHaveBeenCalledTimes(1);
   });
 
   it("clears the banner with the next edit, and offers no retry for a refused input", async () => {
@@ -332,7 +356,7 @@ describe("RailFormModal — shared form blocks", () => {
   });
 
   it("repeats 'save and add a connection' when its retry is pressed", async () => {
-    create.mockRejectedValueOnce(NETWORK);
+    create.mockRejectedValueOnce(DB_DOWN);
     create.mockResolvedValueOnce({ journey: makeRailJourney({ id: "leg1" }), geometry: null });
     const onSaved = vi.fn();
     render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={onSaved} />);

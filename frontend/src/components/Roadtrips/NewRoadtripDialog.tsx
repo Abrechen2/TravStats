@@ -18,7 +18,11 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { roadtripsApi } from "../../lib/api/roadtrips";
 import { tripsApi } from "../../lib/api/trips";
 import { logger } from "../../lib/logger";
-import { isTransientSaveError, saveErrorKey } from "../../lib/saveErrorMessage";
+import {
+  isOutcomeUnknownSaveError,
+  isTransientSaveError,
+  saveErrorKey,
+} from "../../lib/saveErrorMessage";
 import { vehicleChoices } from "../../lib/roadtrip/roadtripView";
 import type { RoadtripVehicle } from "../../shared/tour/roadtrip";
 import type { TourRoute } from "../../types/tour";
@@ -69,10 +73,17 @@ export default function NewRoadtripDialog({
   open,
   onClose,
   onCreated,
+  onReload,
 }: {
   open: boolean;
   onClose: () => void;
   onCreated: (route: TourRoute) => void;
+  /**
+   * Re-reads the caller's list WITHOUT closing this form — offered when a
+   * create's answer was lost (`isOutcomeUnknownSaveError`), so the user can
+   * look before sending again. Omitted where the caller cannot do that.
+   */
+  onReload?: () => void;
 }): JSX.Element | null {
   const { t } = useTranslation(["roadtrips", "common"]);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
@@ -137,7 +148,8 @@ export default function NewRoadtripDialog({
     );
     if (outcome.status === "failed") {
       logger.warn("Creating a roadtrip failed", outcome.error);
-      failure.fail(saveErrorKey(outcome.error, "roadtrips:createError"));
+      // Always a create: a lost answer may have stored the roadtrip.
+      failure.fail(saveErrorKey(outcome.error, "roadtrips:createError", {}, { create: true }));
     }
   };
 
@@ -289,6 +301,7 @@ export default function NewRoadtripDialog({
               failureKey && isTransientSaveError(failureKey) ? () => void submit() : undefined
             }
             retryDisabled={saving.saving}
+            onReload={failureKey && isOutcomeUnknownSaveError(failureKey) ? onReload : undefined}
           />
           {saving.afterSaveFailed && (
             <p role="status" className="t-caption">

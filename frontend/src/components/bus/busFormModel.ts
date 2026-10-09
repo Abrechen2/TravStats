@@ -1,4 +1,4 @@
-import { saveErrorKey } from "../../lib/saveErrorMessage";
+import { saveErrorKey, type SaveErrorOptions } from "../../lib/saveErrorMessage";
 import type { Fold } from "../../lib/api/timeInput";
 import type { BusJourney, BusJourneyInput, BusRideKind } from "../../types/bus";
 import { toStationWallClock } from "../../lib/railTime";
@@ -348,8 +348,11 @@ const isFieldErrorField = (field: string | null): field is BusFormErrorField =>
  * A failed save, read by its stable `code` and `field`. The server's `error`
  * prose is English and written for a log — it is never shown; an unknown
  * refusal gets the generic sentence.
+ *
+ * `options.create`: the save CREATES a ride — a lost answer then reads
+ * "outcome unknown" and offers no blind retry (`saveErrorKey`).
  */
-export function saveErrorFrom(err: unknown): BusSaveError {
+export function saveErrorFrom(err: unknown, options: SaveErrorOptions = {}): BusSaveError {
   const data = (err as { response?: { data?: { code?: unknown; field?: unknown } } })?.response
     ?.data;
   const code = typeof data?.code === "string" ? data.code : null;
@@ -378,7 +381,7 @@ export function saveErrorFrom(err: unknown): BusSaveError {
       // Everything that is not a bus field code reads through the shared save
       // rule (validation, duplicate, database down, demo, rate limit, no
       // network), so this dialog says what every other form says.
-      return { key: saveErrorKey(err, "bus:form.saveError"), field: null };
+      return { key: saveErrorKey(err, "bus:form.saveError", {}, options), field: null };
   }
 }
 

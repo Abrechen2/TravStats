@@ -1,7 +1,11 @@
 import { useEffect, useId, useState } from "react";
 import type { JSX } from "react";
 import { dayInput } from "../../lib/api/timeInput";
-import { isTransientSaveError, saveErrorKey } from "../../lib/saveErrorMessage";
+import {
+  isOutcomeUnknownSaveError,
+  isTransientSaveError,
+  saveErrorKey,
+} from "../../lib/saveErrorMessage";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useSettingsStore } from "../../store/settingsStore";
 import { currencyForCountry } from "../../shared/countryCurrency";
@@ -82,6 +86,12 @@ interface StayEditorProps {
    * delete, so the caller simply omits it.
    */
   onRequestDelete?: () => void;
+  /**
+   * Re-reads the caller's list WITHOUT closing this form — offered when a
+   * create's answer was lost (`isOutcomeUnknownSaveError`), so the user can
+   * look before sending again. Omitted where the caller cannot do that.
+   */
+  onReload?: () => void;
 }
 
 // `pointer-coarse:` - touch sizing follows the POINTER, not the width
@@ -132,6 +142,7 @@ export function StayEditor({
   onSaved,
   afterSaveFailedKey = "common:form.savedButViewRefreshFailed",
   onRequestDelete,
+  onReload,
 }: StayEditorProps): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "common"]);
   const fid = useId();
@@ -443,7 +454,14 @@ export function StayEditor({
     );
     if (outcome.status === "failed") {
       logger.error("StayEditor: save failed", outcome.error);
-      failure.fail(saveErrorKey(outcome.error, "lodging:stayEditor.saveError"));
+      failure.fail(
+        saveErrorKey(
+          outcome.error,
+          "lodging:stayEditor.saveError",
+          {},
+          { create: mode === "create" || !stay }
+        )
+      );
     }
   };
 
@@ -741,6 +759,11 @@ export function StayEditor({
               : undefined
           }
           retryDisabled={saving.saving}
+          onReload={
+            failure.failureKey !== null && isOutcomeUnknownSaveError(failure.failureKey)
+              ? onReload
+              : undefined
+          }
         />
         <RequiredLegend className="mt-3" />
       </div>

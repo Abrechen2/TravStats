@@ -79,9 +79,11 @@ vi.mock("../../lib/api/flights", () => ({
 import SpecialFlightModal from "../SpecialFlightModal";
 
 const networkError = Object.assign(new Error("Network Error"), { isAxiosError: true });
+// A refusal the server answered (nothing stored), so a create may retry.
+const dbDown = { isAxiosError: true, response: { status: 503, data: { code: "DB_UNAVAILABLE" } } };
 
 function renderModal(flight: Flight | null = null) {
-  const props = { isOpen: true, onClose: vi.fn(), onSaved: vi.fn(), flight };
+  const props = { isOpen: true, onClose: vi.fn(), onSaved: vi.fn(), onReload: vi.fn(), flight };
   render(<SpecialFlightModal {...props} />);
   return props;
 }
@@ -144,13 +146,13 @@ describe("SpecialFlightModal — the shared form blocks", () => {
     expect(props.onClose).not.toHaveBeenCalled();
   });
 
-  it("keeps the draft after a dropped connection; the retry saves once more", async () => {
-    create.mockRejectedValueOnce(networkError).mockResolvedValueOnce({ id: "new" });
+  it("keeps the draft after a database restart; the retry saves once more", async () => {
+    create.mockRejectedValueOnce(dbDown).mockResolvedValueOnce({ id: "new" });
     const props = renderModal();
     pickSightseeing();
     fireEvent.click(screen.getByText("pick-special-departure-airport"));
     save();
-    const banner = (await screen.findByText("common:saveErrors.network")).closest(
+    const banner = (await screen.findByText("common:saveErrors.dbUnavailable")).closest(
       "[data-form-error-banner]"
     ) as HTMLElement;
     expect(banner).toHaveAttribute("role", "alert");
@@ -158,6 +160,21 @@ describe("SpecialFlightModal — the shared form blocks", () => {
     await waitFor(() => expect(props.onSaved).toHaveBeenCalledTimes(1));
     expect(create).toHaveBeenCalledTimes(2);
     expect(props.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  // Bus review, Minor 2 (integration wiring): the flight may be stored.
+  it("offers no retry after a create whose answer was lost, and offers a reload instead", async () => {
+    create.mockRejectedValueOnce(networkError);
+    const props = renderModal();
+    pickSightseeing();
+    fireEvent.click(screen.getByText("pick-special-departure-airport"));
+    save();
+    expect(await screen.findByText("common:saveErrors.outcomeUnknown")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "common:buttons.retry" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.reloadList" }));
+    expect(props.onReload).toHaveBeenCalledTimes(1);
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(props.onClose).not.toHaveBeenCalled();
   });
 
   it("creates once for a double submit", async () => {

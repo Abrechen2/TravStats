@@ -23,6 +23,12 @@ function renderDialog(onCreated = vi.fn()): ReturnType<typeof vi.fn> {
 
 const networkError = (): Error =>
   Object.assign(new Error("Network Error"), { isAxiosError: true, response: undefined });
+// A refusal the server answered (nothing stored), so a create may retry.
+const dbDown = (): Error =>
+  Object.assign(new Error("503"), {
+    isAxiosError: true,
+    response: { status: 503, data: { code: "DB_UNAVAILABLE" } },
+  });
 
 const submitButton = (): HTMLElement =>
   screen.getByText("roadtrips:newDialog.submit").closest("button") as HTMLElement;
@@ -102,10 +108,10 @@ describe("NewRoadtripDialog", () => {
   });
 
   // forgejo#246/#247: a failed create is said in the dialog and stays; the
-  // draft is kept; a network failure offers a retry that sends once more.
+  // draft is kept; a database restart offers a retry that sends once more.
   it("keeps the draft on a failed create, says why in a banner and retries once", async () => {
     vi.mocked(roadtripsApi.create)
-      .mockRejectedValueOnce(networkError())
+      .mockRejectedValueOnce(dbDown())
       .mockResolvedValueOnce({ id: "new" } as never);
     const onCreated = renderDialog();
     fireEvent.change(screen.getByLabelText(/roadtrips:newDialog.name/), {
@@ -114,13 +120,31 @@ describe("NewRoadtripDialog", () => {
     fireEvent.click(submitButton());
 
     const banner = await screen.findByRole("alert");
-    expect(banner).toHaveTextContent("common:saveErrors.network");
+    expect(banner).toHaveTextContent("common:saveErrors.dbUnavailable");
     expect(screen.getByLabelText(/roadtrips:newDialog.name/)).toHaveValue("Fjorde");
     expect(onCreated).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
     await waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1));
     expect(roadtripsApi.create).toHaveBeenCalledTimes(2);
+  });
+
+  // Bus review, Minor 2 (integration wiring): the roadtrip may be stored.
+  it("offers no retry after a create whose answer was lost, and offers a reload instead", async () => {
+    vi.mocked(roadtripsApi.create).mockRejectedValueOnce(networkError());
+    const onReload = vi.fn();
+    render(<NewRoadtripDialog open onClose={vi.fn()} onCreated={vi.fn()} onReload={onReload} />);
+    fireEvent.change(screen.getByLabelText(/roadtrips:newDialog.name/), {
+      target: { value: "Fjorde" },
+    });
+    fireEvent.click(submitButton());
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("common:saveErrors.outcomeUnknown");
+    expect(screen.queryByRole("button", { name: "common:buttons.retry" })).toBeNull();
+    expect(screen.getByLabelText(/roadtrips:newDialog.name/)).toHaveValue("Fjorde");
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.reloadList" }));
+    expect(onReload).toHaveBeenCalledTimes(1);
+    expect(roadtripsApi.create).toHaveBeenCalledTimes(1);
   });
 
   it("creates once however fast the button is pressed twice", async () => {

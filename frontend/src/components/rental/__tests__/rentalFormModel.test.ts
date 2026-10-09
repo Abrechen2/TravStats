@@ -113,6 +113,30 @@ describe("rentalFormModel", () => {
       field: "returnLocal",
     });
   });
+
+  // Bus review, Minor 2 (integration wiring): a create whose answer was lost
+  // may have stored the rental — no retryable "network" for it. An update may
+  // be sent again, so it keeps "network".
+  it("reads a lost answer to a create as outcome unknown, and to an update as network", () => {
+    const dropped = { isAxiosError: true, code: "ERR_NETWORK", message: "Network Error" };
+    expect(rentalSaveError(dropped, { create: true })).toEqual({
+      key: "common:saveErrors.outcomeUnknown",
+      field: null,
+    });
+    expect(rentalSaveError(dropped)).toEqual({ key: "common:saveErrors.network", field: null });
+    const gateway = { isAxiosError: true, response: { status: 504, data: {} } };
+    expect(rentalSaveError(gateway, { create: true }).key).toBe("common:saveErrors.outcomeUnknown");
+    // A server code still wins: the server answered, nothing is in doubt.
+    const refused = {
+      response: {
+        status: 400,
+        data: { code: "RENTAL_RETURN_BEFORE_PICKUP", field: "returnLocal" },
+      },
+    };
+    expect(rentalSaveError(refused, { create: true }).key).toBe(
+      "rental:form.errors.returnBeforePickup"
+    );
+  });
 });
 
 /**

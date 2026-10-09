@@ -180,6 +180,20 @@ export default function LodgingDetailPage(): JSX.Element {
     };
   }, []);
 
+  // Re-reads the house in place — no loading screen, so an open stay editor
+  // keeps its draft. For a create whose answer was lost: the user looks at the
+  // stays before deciding to send again.
+  const reloadLodgingQuietly = async (): Promise<void> => {
+    if (!id) return;
+    try {
+      setLodging(await getLodging(id));
+      setAggregatesStale(false);
+    } catch (err: unknown) {
+      logger.error("LodgingDetailPage: reload from the stay editor failed", err);
+      addToast("error", t("lodging:detail.loadError"));
+    }
+  };
+
   // The owner-decided-and-non-negotiable safety net: deletion cascades to
   // every stay in the DB (no `Restrict`), so this is the ONLY confirmation
   // standing between the user and losing every stay attached to this
@@ -622,6 +636,8 @@ export default function LodgingDetailPage(): JSX.Element {
             setEditingStay(null);
             setRestaying(false);
           }}
+          // A create whose answer was lost: re-read the house, editor stays open.
+          onReload={editingStay === "new" ? () => void reloadLodgingQuietly() : undefined}
           onSaved={async (savedStay) => {
             setEditingStay(null);
             setRestaying(false);

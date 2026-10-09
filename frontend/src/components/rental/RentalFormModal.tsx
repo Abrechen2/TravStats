@@ -10,7 +10,7 @@ import {
 } from "../form";
 import { useTranslation } from "../../hooks/useTranslation";
 import { rentalApi } from "../../lib/api/rental";
-import { isTransientSaveError } from "../../lib/saveErrorMessage";
+import { isOutcomeUnknownSaveError, isTransientSaveError } from "../../lib/saveErrorMessage";
 import { logger } from "../../lib/logger";
 import type { RentalBooking } from "../../types/rental";
 import {
@@ -40,6 +40,12 @@ interface Props {
   initialStep?: RentalFormStep;
   /** What the "stored, but the follow-up failed" notice names; the list's wording by default. */
   afterSaveFailedKey?: string;
+  /**
+   * Re-reads the caller's list WITHOUT closing this form — offered when a
+   * create's answer was lost (`isOutcomeUnknownSaveError`), so the user can
+   * look before sending again. Omitted where the caller cannot do that.
+   */
+  onReload?: () => void;
 }
 
 const tabId = (step: RentalFormStep): string => `rental-form-step-${step}`;
@@ -77,6 +83,7 @@ export function RentalFormModal({
   onSaved,
   initialStep,
   afterSaveFailedKey,
+  onReload,
 }: Props): JSX.Element {
   const { t } = useTranslation(["rental", "common"]);
   // ONE source for the starting draft — the state AND the dirty baseline —
@@ -127,7 +134,7 @@ export function RentalFormModal({
     );
     if (outcome.status !== "failed") return;
     logger.error("RentalFormModal: save failed", outcome.error);
-    const refused = rentalSaveError(outcome.error);
+    const refused = rentalSaveError(outcome.error, { create: !rental });
     if (refused.field !== null) {
       setRefusal({ field: refused.field, key: refused.key, draft: draftKey });
       setStep(FIELD_STEP[refused.field]);
@@ -210,6 +217,11 @@ export function RentalFormModal({
               : undefined
           }
           retryDisabled={saving.saving}
+          onReload={
+            failure.failureKey !== null && isOutcomeUnknownSaveError(failure.failureKey)
+              ? onReload
+              : undefined
+          }
         />
         <div
           role="tablist"

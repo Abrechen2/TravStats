@@ -64,8 +64,12 @@ describe("PlaceListCreateDialog", () => {
   });
 
   it("keeps the input on a refusal, says why in the dialog, and offers a retry", async () => {
+    // A refusal the server answered (nothing stored), so a create may retry.
     createPlaceList
-      .mockRejectedValueOnce({ isAxiosError: true, message: "Network Error" })
+      .mockRejectedValueOnce({
+        isAxiosError: true,
+        response: { status: 503, data: { code: "DB_UNAVAILABLE" } },
+      })
       .mockResolvedValueOnce(created);
     const onCreated = vi.fn();
     render(<PlaceListCreateDialog onClose={vi.fn()} onCreated={onCreated} />);
@@ -73,10 +77,29 @@ describe("PlaceListCreateDialog", () => {
       target: { value: "Burgen" },
     });
     fireEvent.click(save());
-    expect(await screen.findByRole("alert")).toHaveTextContent("Der Server ist nicht erreichbar");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Die Datenbank ist gerade nicht erreichbar"
+    );
     expect(screen.getByRole("textbox", { name: /^Name/ })).toHaveValue("Burgen");
     fireEvent.click(screen.getByRole("button", { name: "Erneut versuchen" }));
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith(created));
+  });
+
+  // Bus review, Minor 2 (integration wiring): the list may be stored.
+  it("offers no retry after a create whose answer was lost, and offers a reload instead", async () => {
+    createPlaceList.mockRejectedValueOnce({ isAxiosError: true, message: "Network Error" });
+    const onReload = vi.fn();
+    render(<PlaceListCreateDialog onClose={vi.fn()} onCreated={vi.fn()} onReload={onReload} />);
+    fireEvent.change(screen.getByRole("textbox", { name: /^Name/ }), {
+      target: { value: "Burgen" },
+    });
+    fireEvent.click(save());
+    expect(await screen.findByRole("alert")).toHaveTextContent("Ob gespeichert wurde, ist unklar");
+    expect(screen.queryByRole("button", { name: "Erneut versuchen" })).toBeNull();
+    expect(screen.getByRole("textbox", { name: /^Name/ })).toHaveValue("Burgen");
+    fireEvent.click(screen.getByRole("button", { name: "Liste neu laden" }));
+    expect(onReload).toHaveBeenCalledTimes(1);
+    expect(createPlaceList).toHaveBeenCalledTimes(1);
   });
 
   it("asks before a typed name is dropped; an untouched dialog closes at once", async () => {

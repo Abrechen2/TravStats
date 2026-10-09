@@ -7,7 +7,11 @@ import { formatDayLong, todayIn } from "../../shared/time";
 import { createVisit, updateVisit, uploadVisitPhotos } from "../../lib/api/places";
 import { tripsApi } from "../../lib/api/trips";
 import { logger } from "../../lib/logger";
-import { isTransientSaveError, saveErrorKey } from "../../lib/saveErrorMessage";
+import {
+  isOutcomeUnknownSaveError,
+  isTransientSaveError,
+  saveErrorKey,
+} from "../../lib/saveErrorMessage";
 import type { Trip } from "../../types";
 import type { PlaceVisit } from "../../types/place";
 import {
@@ -46,6 +50,12 @@ interface Props {
   onSaved: (visit: PlaceVisit) => void | Promise<void>;
   /** What the "stored, but the follow-up failed" notice names. */
   afterSaveFailedKey?: string;
+  /**
+   * Re-reads the caller's list WITHOUT closing this form — offered when a
+   * create's answer was lost (`isOutcomeUnknownSaveError`), so the user can
+   * look before sending again. Omitted where the caller cannot do that.
+   */
+  onReload?: () => void;
 }
 
 /**
@@ -73,6 +83,7 @@ export function VisitDialog({
   onClose,
   onSaved,
   afterSaveFailedKey,
+  onReload,
 }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["places", "common"]);
   const isEdit = visit !== null;
@@ -177,7 +188,9 @@ export function VisitDialog({
       failure.fail(
         saveErrorKey(
           outcome.error,
-          isEdit ? "places:detail.visitUpdateFailed" : "places:detail.visitFailed"
+          isEdit ? "places:detail.visitUpdateFailed" : "places:detail.visitFailed",
+          {},
+          { create: !isEdit }
         )
       );
     }
@@ -416,6 +429,11 @@ export function VisitDialog({
               : undefined
           }
           retryDisabled={saving.saving}
+          onReload={
+            failure.failureKey !== null && isOutcomeUnknownSaveError(failure.failureKey)
+              ? onReload
+              : undefined
+          }
         />
       </div>
     </Modal>

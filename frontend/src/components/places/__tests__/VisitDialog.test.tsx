@@ -34,6 +34,8 @@ import { VisitDialog } from "../VisitDialog";
 const PLACE = { id: "p1", name: "Wartburg" };
 const stored = { id: "v-new", placeId: "p1" } as unknown as PlaceVisit;
 const network = { isAxiosError: true, message: "Network Error" };
+// A refusal the server answered (nothing stored), so a create may retry.
+const dbDown = { isAxiosError: true, response: { status: 503, data: { code: "DB_UNAVAILABLE" } } };
 
 async function renderDialog(
   props: Partial<Parameters<typeof VisitDialog>[0]> = {}
@@ -132,19 +134,35 @@ describe("VisitDialog", () => {
   });
 
   it("a failure keeps everything typed, says why in the dialog, and offers a retry", async () => {
-    createVisit.mockRejectedValueOnce(network).mockResolvedValueOnce(stored);
+    createVisit.mockRejectedValueOnce(dbDown).mockResolvedValueOnce(stored);
     const { onSaved } = await renderDialog();
     await userEvent.type(screen.getByLabelText("Notiz zum Besuch"), "Lutherstube");
     await userEvent.click(save());
 
     const banner = await screen.findByRole("alert");
-    expect(banner).toHaveTextContent("Der Server ist nicht erreichbar");
+    expect(banner).toHaveTextContent("Die Datenbank ist gerade nicht erreichbar");
     expect(screen.getByLabelText("Notiz zum Besuch")).toHaveValue("Lutherstube");
     expect(onSaved).not.toHaveBeenCalled();
 
     await userEvent.click(screen.getByRole("button", { name: "Erneut versuchen" }));
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(stored));
     expect(createVisit).toHaveBeenCalledTimes(2);
+  });
+
+  // Bus review, Minor 2 (integration wiring): the visit may be stored.
+  it("offers no retry after a new visit whose answer was lost, and offers a reload", async () => {
+    createVisit.mockRejectedValueOnce(network);
+    const onReload = vi.fn();
+    await renderDialog({ onReload });
+    await userEvent.type(screen.getByLabelText("Notiz zum Besuch"), "Lutherstube");
+    await userEvent.click(save());
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Ob gespeichert wurde, ist unklar");
+    expect(screen.queryByRole("button", { name: "Erneut versuchen" })).toBeNull();
+    expect(screen.getByLabelText("Notiz zum Besuch")).toHaveValue("Lutherstube");
+    await userEvent.click(screen.getByRole("button", { name: "Liste neu laden" }));
+    expect(onReload).toHaveBeenCalledTimes(1);
+    expect(createVisit).toHaveBeenCalledTimes(1);
   });
 
   it("uploads a picked photo after the visit is stored", async () => {

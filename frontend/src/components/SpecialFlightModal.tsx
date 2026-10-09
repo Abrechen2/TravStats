@@ -23,7 +23,11 @@ import { logger } from "../lib/logger";
 import { flightArrival, flightDeparture } from "../lib/entityTimes";
 import { datetimeLocalOf, shiftWallClock } from "../lib/wallClockMath";
 import { apiErrorMachineCode } from "../lib/apiError";
-import { isTransientSaveError, saveErrorKey } from "../lib/saveErrorMessage";
+import {
+  isOutcomeUnknownSaveError,
+  isTransientSaveError,
+  saveErrorKey,
+} from "../lib/saveErrorMessage";
 import Modal from "./Modal";
 import {
   FormErrorBanner,
@@ -57,6 +61,12 @@ interface SpecialFlightModalProps {
   onSaved: () => void;
   /** When non-null, modal runs in edit mode. */
   flight?: Flight | null;
+  /**
+   * Re-reads the caller's list WITHOUT closing this form — offered when a
+   * create's answer was lost (`isOutcomeUnknownSaveError`), so the user can
+   * look before sending again. Omitted where the caller cannot do that.
+   */
+  onReload?: () => void;
 }
 
 const csvToArray = (v: string): string[] =>
@@ -115,6 +125,7 @@ export default function SpecialFlightModal({
   onClose,
   onSaved,
   flight,
+  onReload,
 }: SpecialFlightModalProps): JSX.Element | null {
   const { t } = useTranslation(["specialFlights", "common", "errors"]);
 
@@ -480,7 +491,9 @@ export default function SpecialFlightModal({
       setServerField(
         apiErrorMachineCode(err) && typeof data?.field === "string" ? data.field : null
       );
-      failure.fail(saveErrorKey(err, "specialFlights:error.saveFailed"));
+      failure.fail(
+        saveErrorKey(err, "specialFlights:error.saveFailed", {}, { create: !isEditMode })
+      );
       return;
     } finally {
       inFlight.current = false;
@@ -549,6 +562,11 @@ export default function SpecialFlightModal({
               : undefined
           }
           retryDisabled={loading}
+          onReload={
+            failure.failureKey && isOutcomeUnknownSaveError(failure.failureKey)
+              ? onReload
+              : undefined
+          }
         />
 
         {kind === null ? (

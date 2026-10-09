@@ -156,6 +156,23 @@ describe("RoadtripCostsSection", () => {
   });
 
   it("says the server is unreachable, not that the entry is wrong, on a network failure", async () => {
+    vi.mocked(expensesApi.updateForRoadtrip).mockRejectedValueOnce(axiosError());
+    renderSection([expense({ id: "e" })], { ...NO_COSTS, total: { EUR: 10 } });
+    fireEvent.click(screen.getByText("roadtrips:costs.kind.fuel"));
+    fireEvent.change(screen.getByLabelText(/roadtrips:costs.dialog.amount/), {
+      target: { value: "11" },
+    });
+    fireEvent.click(screen.getByText("roadtrips:costs.dialog.save"));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "roadtrips:costs.dialog.error.unreachable"
+    );
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    await waitFor(() => expect(expensesApi.updateForRoadtrip).toHaveBeenCalledTimes(2));
+  });
+
+  // Bus review, Minor 2 (integration wiring): a NEW cost whose answer was lost
+  // may be booked already; a retry here would book it twice.
+  it("offers no retry when a new cost's answer was lost", async () => {
     vi.mocked(expensesApi.createForRoadtrip).mockRejectedValueOnce(axiosError());
     renderSection();
     fireEvent.click(screen.getByText("roadtrips:costs.add"));
@@ -163,11 +180,9 @@ describe("RoadtripCostsSection", () => {
       target: { value: "12" },
     });
     fireEvent.click(screen.getByText("roadtrips:costs.dialog.save"));
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "roadtrips:costs.dialog.error.unreachable"
-    );
-    fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
-    await waitFor(() => expect(expensesApi.createForRoadtrip).toHaveBeenCalledTimes(2));
+    expect(await screen.findByRole("alert")).toHaveTextContent("common:saveErrors.outcomeUnknown");
+    expect(screen.queryByRole("button", { name: "common:buttons.retry" })).toBeNull();
+    expect(expensesApi.createForRoadtrip).toHaveBeenCalledTimes(1);
   });
 
   it("refuses to send an amount that is not a number", () => {

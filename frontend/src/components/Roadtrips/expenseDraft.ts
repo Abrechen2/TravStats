@@ -1,7 +1,11 @@
 import axios from "axios";
 
 import { apiErrorMachineCode } from "../../lib/apiError";
-import { saveErrorKey } from "../../lib/saveErrorMessage";
+import {
+  isOutcomeUnknownSaveError,
+  saveErrorKey,
+  type SaveErrorOptions,
+} from "../../lib/saveErrorMessage";
 import type { ExpenseKind } from "../../shared/expenses";
 import type { ExpenseInput, TripExpense } from "../../types/expense";
 
@@ -97,11 +101,17 @@ const EXPENSE_FAILURE_KEYS = {
  * A newer record on the server (409 `VERSION_CONFLICT`) is its own case: the
  * reader's input is fine, the page is out of date.
  */
-export function expenseFailureKey(err: unknown): string {
+export function expenseFailureKey(err: unknown, options: SaveErrorOptions = {}): string {
   if (apiErrorMachineCode(err) === "VERSION_CONFLICT") return EXPENSE_FAILURE_KEYS.conflict;
   const status = axios.isAxiosError(err) ? err.response?.status : undefined;
   if (status === 400) return EXPENSE_FAILURE_KEYS.invalid;
   if (status === 404) return EXPENSE_FAILURE_KEYS.gone;
+  // A new expense whose answer was lost may be stored already: "unreachable"
+  // would invite the second press that books it twice.
+  if (options.create === true) {
+    const key = saveErrorKey(err, EXPENSE_FAILURE_KEYS.unreachable, {}, options);
+    if (isOutcomeUnknownSaveError(key)) return key;
+  }
   if (axios.isAxiosError(err) && !err.response) return EXPENSE_FAILURE_KEYS.unreachable;
   return saveErrorKey(err, EXPENSE_FAILURE_KEYS.unreachable);
 }

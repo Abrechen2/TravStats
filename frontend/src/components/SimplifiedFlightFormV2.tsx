@@ -21,7 +21,7 @@ import FlightCompleteStep from "./FlightForm/FlightCompleteStep";
 import { useFlightForm, type FlightSubmitOptions } from "./FlightForm/useFlightForm";
 import { focusFirstMissingRequired } from "./FlightForm/requiredFields";
 import { FormErrorBanner, SaveBlockedHint, focusFirstError, useDirtyGuard } from "./form";
-import { isTransientSaveError } from "../lib/saveErrorMessage";
+import { isOutcomeUnknownSaveError, isTransientSaveError } from "../lib/saveErrorMessage";
 import {
   SERVER_TIME_FIELDS,
   actualPairErrors,
@@ -45,6 +45,12 @@ interface SimplifiedFlightFormProps {
   /** Open straight into the e-mail/PDF uploader (entered from the import hub). */
   /** A document another import dialog handed over as a flight booking (D1). */
   initialDocument?: ImportDocument | null;
+  /**
+   * Re-reads the caller's list WITHOUT closing this form — offered when a
+   * create's answer was lost (`isOutcomeUnknownSaveError`), so the user can
+   * look before sending again. Omitted where the caller cannot do that.
+   */
+  onReload?: () => void;
 }
 
 export default function SimplifiedFlightFormV2({
@@ -53,6 +59,7 @@ export default function SimplifiedFlightFormV2({
   onBatchComplete,
   onPickSpecialFlight,
   initialDocument = null,
+  onReload,
 }: SimplifiedFlightFormProps): JSX.Element {
   const { t } = useTranslation(["flights", "errors", "common"]);
 
@@ -264,6 +271,7 @@ export default function SimplifiedFlightFormV2({
                 : undefined
             }
             retryDisabled={form.loading}
+            onReload={failure && isOutcomeUnknownSaveError(failure.key) ? onReload : undefined}
           />
 
           {/* There was a SECOND banner here, derived from state rather than from

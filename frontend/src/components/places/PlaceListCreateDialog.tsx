@@ -6,7 +6,11 @@ import { createPlaceList } from "../../lib/api/placeLists";
 import { LIST_PALETTE_HEX } from "../../lib/listPalette";
 import { logger } from "../../lib/logger";
 import type { PlaceLabelMode } from "../../lib/placeLabel";
-import { isTransientSaveError, saveErrorKey } from "../../lib/saveErrorMessage";
+import {
+  isOutcomeUnknownSaveError,
+  isTransientSaveError,
+  saveErrorKey,
+} from "../../lib/saveErrorMessage";
 import type { PlaceList } from "../../types/placeList";
 import {
   FormErrorBanner,
@@ -36,10 +40,17 @@ const HINT_ID = "place-list-create-blocked";
 export function PlaceListCreateDialog({
   onClose,
   onCreated,
+  onReload,
 }: {
   onClose: () => void;
   /** Moves on to the new list. */
   onCreated: (list: PlaceList) => void | Promise<void>;
+  /**
+   * Re-reads the caller's list WITHOUT closing this form — offered when a
+   * create's answer was lost (`isOutcomeUnknownSaveError`), so the user can
+   * look before sending again. Omitted where the caller cannot do that.
+   */
+  onReload?: () => void;
 }): JSX.Element {
   const { t } = useTranslation(["places", "common"]);
   const initial = { name: "", color: LIST_PALETTE_HEX[0], icon: "", labelMode: "name" };
@@ -76,7 +87,8 @@ export function PlaceListCreateDialog({
     );
     if (outcome.status === "failed") {
       logger.error({ err: outcome.error }, "PlaceListCreateDialog: create failed");
-      failure.fail(saveErrorKey(outcome.error, "places:lists.createFailed"));
+      // Always a create: a lost answer may have stored the list.
+      failure.fail(saveErrorKey(outcome.error, "places:lists.createFailed", {}, { create: true }));
     }
   };
 
@@ -194,6 +206,11 @@ export function PlaceListCreateDialog({
               : undefined
           }
           retryDisabled={saving.saving}
+          onReload={
+            failure.failureKey !== null && isOutcomeUnknownSaveError(failure.failureKey)
+              ? onReload
+              : undefined
+          }
         />
         <RequiredLegend />
       </div>

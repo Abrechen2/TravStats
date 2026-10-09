@@ -177,8 +177,12 @@ describe("PlaceFormModal — the shared form blocks", () => {
   });
 
   it("keeps the draft on a failed save, says why in the form, and offers a retry", async () => {
+    // A refusal the server answered (nothing stored), so a create may retry.
     createPlace
-      .mockRejectedValueOnce({ isAxiosError: true, message: "Network Error" })
+      .mockRejectedValueOnce({
+        isAxiosError: true,
+        response: { status: 503, data: { code: "DB_UNAVAILABLE" } },
+      })
       .mockResolvedValueOnce(stored);
     const onSaved = vi.fn();
     render(<PlaceFormModal place={null} onClose={vi.fn()} onSaved={onSaved} />);
@@ -186,7 +190,7 @@ describe("PlaceFormModal — the shared form blocks", () => {
     await userEvent.click(saveButton());
 
     const banner = await screen.findByRole("alert");
-    expect(banner).toHaveTextContent("common:saveErrors.network");
+    expect(banner).toHaveTextContent("common:saveErrors.dbUnavailable");
     expect(nameField()).toHaveValue("Trevi");
     expect(onSaved).not.toHaveBeenCalled();
     await waitFor(() => expect(document.activeElement).toBe(banner));
@@ -194,6 +198,22 @@ describe("PlaceFormModal — the shared form blocks", () => {
     await userEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(stored));
     expect(createPlace).toHaveBeenCalledTimes(2);
+  });
+
+  // Bus review, Minor 2 (integration wiring): the place may be stored.
+  it("offers no retry after a create whose answer was lost, and offers a reload instead", async () => {
+    createPlace.mockRejectedValueOnce({ isAxiosError: true, message: "Network Error" });
+    const onReload = vi.fn();
+    render(<PlaceFormModal place={null} onClose={vi.fn()} onSaved={vi.fn()} onReload={onReload} />);
+    await fillValid();
+    await userEvent.click(saveButton());
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("common:saveErrors.outcomeUnknown");
+    expect(screen.queryByRole("button", { name: "common:buttons.retry" })).toBeNull();
+    expect(nameField()).toHaveValue("Trevi");
+    await userEvent.click(screen.getByRole("button", { name: "common:buttons.reloadList" }));
+    expect(onReload).toHaveBeenCalledTimes(1);
+    expect(createPlace).toHaveBeenCalledTimes(1);
   });
 
   it("a refusal that a retry would not cure has no retry, and leaves at the next edit", async () => {

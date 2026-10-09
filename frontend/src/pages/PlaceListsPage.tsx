@@ -125,6 +125,7 @@ export default function PlaceListsPage(): JSX.Element {
         {creating && (
           <PlaceListCreateDialog
             onClose={() => setCreating(false)}
+            onReload={() => void load()}
             onCreated={async (created) => {
               setCreating(false);
               await navigateAfterSave(navigate, `/places/lists/${created.id}`);

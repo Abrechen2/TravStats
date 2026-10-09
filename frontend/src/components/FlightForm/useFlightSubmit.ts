@@ -122,12 +122,16 @@ export function useFlightSubmit(deps: Deps): {
         d.afterReturnPrepared();
       }
     } catch (err: unknown) {
-      const outcome = flightSaveFailure(err, d.t);
+      // Save, save-and-return and force-save create a flight; a lost answer
+      // may have stored it, so no blind retry (`OUTCOME_UNKNOWN_KEY`). A merge
+      // writes into the flight already there and may be sent again.
+      const saveOptions = { create: variant !== "merge" };
+      const outcome = flightSaveFailure(err, d.t, saveOptions);
       if (outcome.kind === "duplicate" && (variant === "save" || variant === "saveAndReturn")) {
         d.setDuplicateFlight(outcome.existing);
         return;
       }
-      const key = saveErrorKey(err, "errors:saveFailed");
+      const key = saveErrorKey(err, "errors:saveFailed", {}, saveOptions);
       d.setError(outcome.kind === "message" ? outcome.message : d.t(key));
       setFailure({
         key,

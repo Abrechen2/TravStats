@@ -1,4 +1,4 @@
-import { saveErrorKey } from "../../lib/saveErrorMessage";
+import { saveErrorKey, type SaveErrorOptions } from "../../lib/saveErrorMessage";
 import { parseDecimalInput } from "../../lib/decimalInput";
 import { rentalDrivenKm, type RentalDrivenKm } from "../../shared/rentalCounting";
 import type {
@@ -573,11 +573,15 @@ export interface RentalSaveError {
   field: RentalFormField | null;
 }
 
-/** A failed save, read by its `code` and `field`; anything else through the shared rule. */
-export function rentalSaveError(err: unknown): RentalSaveError {
+/**
+ * A failed save, read by its `code` and `field`; anything else through the
+ * shared rule. `options.create`: the save CREATES a rental — a lost answer
+ * then reads "outcome unknown" and offers no blind retry (`saveErrorKey`).
+ */
+export function rentalSaveError(err: unknown, options: SaveErrorOptions = {}): RentalSaveError {
   const data = (err as { response?: { data?: { field?: unknown } } })?.response?.data;
   const raw = typeof data?.field === "string" ? data.field : null;
   const field =
     raw && (FIELDS as readonly string[]).includes(raw) ? (raw as RentalFormField) : null;
-  return { key: saveErrorKey(err, "rental:form.saveError", RENTAL_CODE_KEYS), field };
+  return { key: saveErrorKey(err, "rental:form.saveError", RENTAL_CODE_KEYS, options), field };
 }

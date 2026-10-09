@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import Modal from "../Modal";
-import { isTransientSaveError, saveErrorKey } from "../../lib/saveErrorMessage";
+import {
+  isOutcomeUnknownSaveError,
+  isTransientSaveError,
+  saveErrorKey,
+} from "../../lib/saveErrorMessage";
 import { useSettingsStore } from "../../store/settingsStore";
 import type { Cruise, CruiseStatus, CruiseStopInput, Port, Ship, Trip } from "../../types";
 import { cruiseApi, tripsApi } from "../../lib/api";
@@ -62,6 +66,12 @@ interface Props {
    * wording by default; the detail page passes the view's.
    */
   afterSaveFailedKey?: string;
+  /**
+   * Re-reads the caller's list WITHOUT closing this form — offered when a
+   * create's answer was lost (`isOutcomeUnknownSaveError`), so the user can
+   * look before sending again. Omitted where the caller cannot do that.
+   */
+  onReload?: () => void;
 }
 
 const SHIP_ID = "cruise-form-ship";
@@ -97,6 +107,7 @@ export function CruiseEditModal({
   onClose,
   onSaved,
   afterSaveFailedKey,
+  onReload,
 }: Props): JSX.Element {
   const { t } = useTranslation(["cruise", "common"]);
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
@@ -233,7 +244,14 @@ export function CruiseEditModal({
     );
     if (outcome.status === "failed") {
       logger.error("CruiseEditModal: save failed", outcome.error);
-      failure.fail(saveErrorKey(outcome.error, "cruise:form.saveError"));
+      failure.fail(
+        saveErrorKey(
+          outcome.error,
+          "cruise:form.saveError",
+          {},
+          { create: mode === "create" || !cruise }
+        )
+      );
     }
   };
 
@@ -451,6 +469,11 @@ export function CruiseEditModal({
               : undefined
           }
           retryDisabled={saving.saving}
+          onReload={
+            failure.failureKey !== null && isOutcomeUnknownSaveError(failure.failureKey)
+              ? onReload
+              : undefined
+          }
         />
         {required && <RequiredLegend className="mt-3" />}
       </div>

@@ -402,6 +402,7 @@ export default function RailPage(): JSX.Element {
         <RailFormModal
           journey={editing.journey}
           onClose={(): void => setEditing(null)}
+          onReload={editing.journey ? undefined : () => void reload()}
           onSaved={handleSaved}
           onProgress={reload}
         />

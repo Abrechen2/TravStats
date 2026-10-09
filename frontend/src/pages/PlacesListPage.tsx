@@ -669,6 +669,7 @@ export default function PlacesListPage(): JSX.Element {
         <PlaceFormModal
           place={null}
           onClose={() => setCreating(false)}
+          onReload={() => void load()}
           onSaved={async (saved) => {
             setCreating(false);
             // The form's guard may still hold a history entry; this replaces
@@ -682,6 +683,7 @@ export default function PlacesListPage(): JSX.Element {
         <VisitDialog
           place={recordingFor}
           onClose={() => setRecordingFor(null)}
+          onReload={() => void load()}
           onSaved={async () => {
             // Re-read the rows without the page's loading state, so the
             // dialog stays mounted; a failure is said there as "gespeichert,

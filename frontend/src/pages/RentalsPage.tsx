@@ -379,6 +379,7 @@ export default function RentalsPage(): JSX.Element {
         <RentalFormModal
           rental={editing.rental}
           onClose={(): void => setEditing(null)}
+          onReload={editing.rental ? undefined : () => void reload()}
           onSaved={handleSaved}
         />
       )}
