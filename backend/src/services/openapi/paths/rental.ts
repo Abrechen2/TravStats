@@ -8,6 +8,8 @@
  */
 
 import { z } from "zod";
+import { rentalExtraStatsSchema } from "./rentalStatsExtra";
+import { rentalStatsQuerySchema } from "../../../routes/rental/stats";
 
 import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
@@ -512,6 +514,7 @@ const rentalStatsSchema = z
     cancellationFees: z
       .array(z.object({ currency: z.string(), amount: z.number(), rentals: z.number().int() }))
       .describe("Fees billed for cancelled rentals, per currency — never a rental-day cost"),
+    extra: rentalExtraStatsSchema,
   })
   .openapi("RentalStats");
 
@@ -521,7 +524,7 @@ registry.registerPath({
   summary: "Rental statistics",
   description: "Completed rentals only, on the stations' calendars (rental spec §7.4).",
   tags: ["Rentals"],
-  request: { query: z.object({ year: z.coerce.number().int().min(1900).max(2200).optional() }) },
+  request: { query: rentalStatsQuerySchema },
   responses: {
     200: {
       description: "The figures",

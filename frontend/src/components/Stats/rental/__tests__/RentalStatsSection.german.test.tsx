@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../../../../hooks/useTranslation", async () => {
   const { germanUseTranslationNs } = await import("../../../../__tests__/helpers/germanT");
@@ -35,7 +36,11 @@ describe("RentalStatsSection cost tile, in German (forgejo#167)", () => {
 
   it("labels an empty cost tile without empty brackets", async () => {
     stats.mockResolvedValueOnce(EMPTY);
-    render(<RentalStatsSection year={null} />);
+    render(
+      <MemoryRouter>
+        <RentalStatsSection scope={{ year: null, compareYear: null }} />
+      </MemoryRouter>
+    );
     const cost = await screen.findByTestId("rental-stat-cost");
     expect(cost.textContent).toContain("–");
     expect(cost.textContent).not.toContain("()");
@@ -49,7 +54,11 @@ describe("RentalStatsSection cost tile, in German (forgejo#167)", () => {
       days: 3,
       costPerDay: [{ currency: "EUR", perDay: 50, rentals: 1, days: 3 }],
     });
-    render(<RentalStatsSection year={null} />);
+    render(
+      <MemoryRouter>
+        <RentalStatsSection scope={{ year: null, compareYear: null }} />
+      </MemoryRouter>
+    );
     const cost = await screen.findByTestId("rental-stat-cost");
     expect(cost.textContent).toContain("pro Tag (EUR)");
   });

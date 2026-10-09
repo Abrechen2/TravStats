@@ -95,6 +95,18 @@ export const RAIL_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "years", label: t("rail:stats.sections.years") },
 ];
 
+export const RENTAL_SECTIONS = (t: Translate): SectionOption[] => [
+  { key: "kpis", label: t("rental:stats.sections.kpis") },
+  { key: "providers", label: t("rental:stats.sections.providers") },
+  // forgejo#262 — one-way and brokers, efficiency, billing, vehicles, records.
+  { key: "brokers", label: t("rental:stats.sections.brokers") },
+  { key: "efficiency", label: t("rental:stats.sections.efficiency") },
+  { key: "billing", label: t("rental:stats.sections.billing") },
+  { key: "vehicles", label: t("rental:stats.sections.vehicles") },
+  { key: "records", label: t("rental:stats.sections.records") },
+  { key: "years", label: t("rental:stats.sections.years") },
+];
+
 const BY_TAB: Record<DomainKey | "all", (t: Translate) => SectionOption[]> = {
   all: OVERVIEW_SECTIONS,
   flight: FLIGHT_SECTIONS,
@@ -103,8 +115,7 @@ const BY_TAB: Record<DomainKey | "all", (t: Translate) => SectionOption[]> = {
   poi: POI_SECTIONS,
   roadtrip: ROADTRIP_SECTIONS,
   rail: RAIL_SECTIONS,
-  // Rental figures are not on the statistics page yet (package R4).
-  rental: () => [],
+  rental: RENTAL_SECTIONS,
   // B2 (spec 2026-10-07 §6): the bus statistics tab arrives with its endpoint.
   bus: () => [],
 };

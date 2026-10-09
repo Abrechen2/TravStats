@@ -17,6 +17,8 @@ import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useRailVisible } from "../hooks/useRailVisible";
+import { useRentalVisible } from "../hooks/useRentalVisible";
+import { useBusVisible } from "../hooks/useBusVisible";
 import { countAchievements } from "../lib/achievementCounts";
 import { AVAILABLE_DOMAINS, type DomainKey } from "../shared/domains";
 
@@ -44,8 +46,25 @@ export function filterAchievementsByDomain(
  * `useEnabledDomains`), and a rail badge must not show on an instance where
  * rail does not exist — `useRailVisible` is that rule's one home.
  */
-export function achievementDomains(enabled: DomainKey[], railVisible: boolean): DomainKey[] {
-  return railVisible ? enabled : enabled.filter((d) => d !== "rail");
+export function achievementDomains(
+  enabled: DomainKey[],
+  railVisible: boolean,
+  /**
+   * Rental and bus (forgejo#262, #263) sit behind beta gates of their own,
+   * asked the same way. Omitted reads as closed, so a caller that forgets
+   * them hides a beta domain rather than showing it.
+   */
+  {
+    rentalVisible = false,
+    busVisible = false,
+  }: { rentalVisible?: boolean; busVisible?: boolean } = {}
+): DomainKey[] {
+  return enabled.filter(
+    (d) =>
+      (d !== "rail" || railVisible) &&
+      (d !== "rental" || rentalVisible) &&
+      (d !== "bus" || busVisible)
+  );
 }
 
 const TIERS = ["bronze", "silver", "gold", "platinum", "diamond"] as const;
@@ -123,9 +142,11 @@ export default function AchievementsPage(): JSX.Element {
   const { addToast } = useToastStore();
   const { enabled: enabledDomains } = useEnabledDomains();
   const railVisible = useRailVisible();
+  const rentalVisible = useRentalVisible();
+  const busVisible = useBusVisible();
   const enabled = useMemo(
-    () => achievementDomains(enabledDomains, railVisible),
-    [enabledDomains, railVisible]
+    () => achievementDomains(enabledDomains, railVisible, { rentalVisible, busVisible }),
+    [enabledDomains, railVisible, rentalVisible, busVisible]
   );
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   /** The card whose detail dialog is open, or null (#330). */

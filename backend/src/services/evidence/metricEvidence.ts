@@ -56,6 +56,12 @@ import {
   resolveRoundTripFlightCount,
 } from "./metricEvidenceFlightUnique";
 import {
+  resolveRentalCount,
+  resolveRentalDaysTotal,
+  resolveRentalOneWayCount,
+  resolveRentalOdometerDocumentedCount,
+} from "./metricEvidenceRental";
+import {
   resolveTravelAccountHotelNights,
   resolveTravelAccountSeaNights,
   resolveTravelAccountAirNights,
@@ -215,6 +221,10 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   railDocumentedTransferJourneyCount: resolveRailDocumentedTransferJourneyCount,
   railNightTrainNights: resolveRailNightTrainNights,
   railNewConnectionsCount: resolveRailNewConnectionsCount,
+  rentalCount: resolveRentalCount,
+  rentalDaysTotal: resolveRentalDaysTotal,
+  rentalOneWayCount: resolveRentalOneWayCount,
+  rentalOdometerDocumentedCount: resolveRentalOdometerDocumentedCount,
   passportCountryCount: resolvePassportCountryCount,
   passportContinentCount: resolvePassportContinentCount,
   passportAirportCount: resolvePassportAirportCount,

@@ -35,6 +35,27 @@ import type { FlightData, UserStats } from "./achievementStats";
 export type UserAchievementWithRelation = UserAchievement & { achievement: Achievement };
 
 /**
+ * One domain module's check: the badge's progress when the rule is that
+ * module's, else `null` so the next module is asked. The rental, bus and
+ * cross-domain badges (forgejo#262, #263, #265) arrive this way, so a new
+ * domain adds a list entry rather than another positional parameter.
+ */
+export type DomainAchievementCheck = (
+  achievement: Pick<Achievement, "requirementType" | "requirement">
+) => { isUnlocked: boolean; progress: number } | null;
+
+function firstDomainCheck(
+  checks: readonly DomainAchievementCheck[],
+  achievement: Achievement
+): { isUnlocked: boolean; progress: number } | null {
+  for (const check of checks) {
+    const result = check(achievement);
+    if (result) return result;
+  }
+  return null;
+}
+
+/**
  * What a run will actually write, decided before a transaction is opened.
  *
  * Forgejo #39. The transaction used to wrap the whole planning loop — all ~259
@@ -100,7 +121,9 @@ export function planAchievementWrites(
   /** Roadtrip measures (2.7) — their badges are checked by their own module. */
   roadtripStats: RoadtripAchievementStats = EMPTY_ROADTRIP_STATS,
   /** Rail measures (2.7) — likewise checked by their own module. */
-  railStats: RailAchievementStats = EMPTY_RAIL_STATS
+  railStats: RailAchievementStats = EMPTY_RAIL_STATS,
+  /** Every further domain module's check, asked in order (forgejo#262/#263/#265). */
+  domainChecks: readonly DomainAchievementCheck[] = []
 ): AchievementWritePlan {
   const writes: PlannedWrite[] = [];
   const belowRequirement: string[] = [];
@@ -131,6 +154,7 @@ export function planAchievementWrites(
     const { isUnlocked, progress } =
       checkRoadtripAchievement(achievement, roadtripStats) ??
       checkRailAchievement(achievement, railStats) ??
+      firstDomainCheck(domainChecks, achievement) ??
       checkAchievement(achievement, stats, flights);
 
     if (isUnlocked) {

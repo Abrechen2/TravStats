@@ -3,6 +3,7 @@ import { departureClockOf } from "./timezone";
 import { prisma } from "../db";
 import { calculateRoadtripAchievementStats } from "./roadtripAchievements";
 import { calculateRailAchievementStats } from "./railAchievements";
+import { loadDomainAchievementChecks } from "./domainAchievementChecks";
 import logger from "./logger";
 import {
   applyAchievementWrites,
@@ -664,7 +665,8 @@ async function runAchievementCheck(
       augmentedStats,
       flights as FlightData[],
       await calculateRoadtripAchievementStats(userId),
-      await calculateRailAchievementStats(userId)
+      await calculateRailAchievementStats(userId),
+      await loadDomainAchievementChecks(userId)
     );
 
     // `return await`, not `return`: a bare return would hand the promise out

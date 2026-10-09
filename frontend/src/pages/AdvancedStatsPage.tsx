@@ -592,7 +592,9 @@ export default function AdvancedStatsPage(): JSX.Element {
             <RoadtripStatsSection scope={scope} visibility={sections} />
           )}
           {effectiveFilter === "rail" && <RailStatsSection scope={scope} visibility={sections} />}
-          {effectiveFilter === "rental" && <RentalStatsSection year={selectedYear} />}
+          {effectiveFilter === "rental" && (
+            <RentalStatsSection scope={scope} visibility={sections} />
+          )}
 
           {/* Generate Certificate + Year Report Buttons — flight-only now. */}
           {effectiveFilter === "flight" && flights.length > 0 && (

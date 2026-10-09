@@ -1304,6 +1304,18 @@
     "RAIL_NEW_CONNECTIONS_10": {
       "name": "Neue Schienen",
       "description": "Zehn erstmals gefahrene Verbindungen in einem Jahr"
+    },
+    "RENTAL_FIRST": {
+      "name": "Erste Schlüssel",
+      "description": "Die erste Miete abgeschlossen"
+    },
+    "RENTAL_ONE_WAY": {
+      "name": "Anderswo abgegeben",
+      "description": "Einen Mietwagen an einer anderen Station zurückgegeben als abgeholt"
+    },
+    "RENTAL_ODOMETER_5": {
+      "name": "Kilometerbuch",
+      "description": "Fünf abgeschlossene Mieten mit Anfangs- und Endkilometerstand"
     }
   },
   "header": {

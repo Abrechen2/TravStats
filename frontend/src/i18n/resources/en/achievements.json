@@ -1304,6 +1304,18 @@
     "RAIL_NEW_CONNECTIONS_10": {
       "name": "New rails",
       "description": "Ten connections ridden for the first time in one year"
+    },
+    "RENTAL_FIRST": {
+      "name": "First keys",
+      "description": "Completed your first rental"
+    },
+    "RENTAL_ONE_WAY": {
+      "name": "Dropped off elsewhere",
+      "description": "Returned a rental car at a different station than you picked it up"
+    },
+    "RENTAL_ODOMETER_5": {
+      "name": "Logbook",
+      "description": "Five completed rentals with both the start and end odometer reading"
     }
   },
   "header": {

@@ -1,0 +1,264 @@
+import { localDay } from "../../shared/time/instant";
+import {
+  odometerDistanceKm,
+  rentalCost,
+  rentalDays,
+  rentalDrivenKm,
+  rentalYear,
+  type RentalDrivenKmSource,
+} from "../../shared/rentalCounting";
+
+/**
+ * The rental figures forgejo#262 adds to the statistics tab, over the rentals
+ * `shared/rentalCounting.ts` already counted (completed only).
+ *
+ * Three rules carry them:
+ *
+ *  - **One subset per ratio.** Km per rental day and cost per km are each
+ *    computed over the rentals that carry BOTH halves of the ratio — never km
+ *    from one set divided by days or money from another, which would invent
+ *    a figure no rental supports. Each ratio names how many rentals it stands on.
+ *  - **Booked against billed only where the bill is secured.** The comparison
+ *    reads a rental whose final amount came from the invoice (or a labelled
+ *    hand correction) AND whose booked price is in the same currency. A
+ *    rental billed in another currency than it was booked in is counted as
+ *    such, never converted. A deposit is never read: it is money held, not a
+ *    cost (forgejo#238).
+ *  - **No upgrade without an order.** There is no explicit ordering of
+ *    vehicle classes in the data, so the promised and the driven car are
+ *    compared NEUTRALLY — same model or another one — and nothing is called
+ *    an upgrade.
+ *
+ * Pure: the caller loads the rows.
+ */
+
+export interface RentalExtraRow {
+  id: string;
+  status: string;
+  provider: string;
+  broker: string | null;
+  pickupTime: Date;
+  pickupTimezone: string;
+  returnTime: Date;
+  returnTimezone: string;
+  price: number | null;
+  currency: string | null;
+  finalAmount: number | null;
+  finalCurrency: string | null;
+  finalAmountSource: string | null;
+  distanceKm: number | null;
+  distanceSource: string | null;
+  odometerOutKm: number | null;
+  odometerInKm: number | null;
+  vehicleClass: string | null;
+  acrissCode: string | null;
+  vehicleExample: string | null;
+  vehicleDriven: string | null;
+}
+
+export interface RentalExtraStats {
+  /** Rentals booked through a broker, and directly with the counter's company. */
+  brokered: { viaBroker: number; direct: number };
+  /** Km per rental day over the rentals with known km; null when none has any. */
+  kmPerDay: { value: number | null; rentals: number; km: number; days: number };
+  /** Per currency, over rentals carrying both a known cost and known km. */
+  costPerKm: Array<{ currency: string; perKm: number; rentals: number; km: number }>;
+  /** Per currency, booked vs billed, over rentals with a secured final amount in the booked currency. */
+  bookedVsFinal: {
+    byCurrency: Array<{
+      currency: string;
+      rentals: number;
+      booked: number;
+      final: number;
+      difference: number;
+    }>;
+    /** Billed in another currency than booked: compared nowhere, said here. */
+    otherCurrency: number;
+  };
+  vehicles: {
+    /** Distinct driven models, spelling folded, among rentals that name one. */
+    distinctDriven: number;
+    withDriven: number;
+    /** Booked classes as printed (or the ACRISS code), most rented first. */
+    classes: Array<{ label: string; rentals: number }>;
+    /** Promised example against the car driven, neutrally — no class order exists. */
+    promisedVsDriven: { compared: number; sameModel: number; otherModel: number };
+  };
+  records: {
+    longest: { id: string; days: number; provider: string } | null;
+    farthest: { id: string; km: number; source: RentalDrivenKmSource | null } | null;
+    /** Providers whose FIRST completed rental falls in the period, oldest first. */
+    newProviders: string[];
+  };
+  /** Rentals with BOTH odometer readings — the "Kilometerbuch" badge's figure. */
+  odometerDocumented: number;
+}
+
+const round2 = (n: number): number => Math.round(n * 100) / 100;
+const round1 = (n: number): number => Math.round(n * 10) / 10;
+const fold = (s: string): string => s.trim().replace(/\s+/g, " ").toLocaleLowerCase();
+const providerKey = (p: string): string => fold(p);
+
+/** The final amount is secured when the invoice gave it or the user corrected it by hand. */
+const SECURED_FINAL_SOURCES: readonly string[] = ["invoice", "user"];
+
+function bookedVsFinal(rows: readonly RentalExtraRow[]): RentalExtraStats["bookedVsFinal"] {
+  const byCurrency = new Map<string, { rentals: number; booked: number; final: number }>();
+  let otherCurrency = 0;
+  for (const r of rows) {
+    if (r.price === null || !r.currency || r.finalAmount === null || !r.finalCurrency) continue;
+    if (!SECURED_FINAL_SOURCES.includes(r.finalAmountSource ?? "")) continue;
+    if (r.currency !== r.finalCurrency) {
+      otherCurrency += 1;
+      continue;
+    }
+    const cur = byCurrency.get(r.currency) ?? { rentals: 0, booked: 0, final: 0 };
+    byCurrency.set(r.currency, {
+      rentals: cur.rentals + 1,
+      booked: cur.booked + r.price,
+      final: cur.final + r.finalAmount,
+    });
+  }
+  return {
+    byCurrency: [...byCurrency.entries()]
+      .map(([currency, v]) => ({
+        currency,
+        rentals: v.rentals,
+        booked: round2(v.booked),
+        final: round2(v.final),
+        difference: round2(v.final - v.booked),
+      }))
+      .sort((a, b) => b.rentals - a.rentals || a.currency.localeCompare(b.currency)),
+    otherCurrency,
+  };
+}
+
+function vehicles(rows: readonly RentalExtraRow[]): RentalExtraStats["vehicles"] {
+  const driven = rows.flatMap((r) => (r.vehicleDriven?.trim() ? [fold(r.vehicleDriven)] : []));
+  const classes = new Map<string, { label: string; rentals: number }>();
+  for (const r of rows) {
+    const label = r.vehicleClass?.trim() || r.acrissCode?.trim().toUpperCase() || null;
+    if (!label) continue;
+    const key = fold(label);
+    const cur = classes.get(key) ?? { label, rentals: 0 };
+    classes.set(key, { ...cur, rentals: cur.rentals + 1 });
+  }
+  const compared = rows.filter((r) => r.vehicleExample?.trim() && r.vehicleDriven?.trim());
+  // "VW Golf or similar" promises a Golf; the "or similar" is not part of the model.
+  const model = (s: string): string =>
+    fold(s).replace(/\s+(or similar|oder ähnlich|o\.\s?ä\.)\s*$/u, "");
+  const sameModel = compared.filter(
+    (r) => model(r.vehicleExample as string) === model(r.vehicleDriven as string)
+  ).length;
+  return {
+    distinctDriven: new Set(driven).size,
+    withDriven: driven.length,
+    classes: [...classes.values()]
+      .sort((a, b) => b.rentals - a.rentals || a.label.localeCompare(b.label))
+      .slice(0, 10),
+    promisedVsDriven: {
+      compared: compared.length,
+      sameModel,
+      otherModel: compared.length - sameModel,
+    },
+  };
+}
+
+const pickupDay = (r: Pick<RentalExtraRow, "pickupTime" | "pickupTimezone">): string =>
+  localDay(r.pickupTime, r.pickupTimezone);
+
+function records(
+  scoped: readonly RentalExtraRow[],
+  all: readonly RentalExtraRow[]
+): RentalExtraStats["records"] {
+  let longest: RentalExtraStats["records"]["longest"] = null;
+  let farthest: RentalExtraStats["records"]["farthest"] = null;
+  for (const r of scoped) {
+    const days = rentalDays(r);
+    if (longest === null || days > longest.days) longest = { id: r.id, days, provider: r.provider };
+    const driven = rentalDrivenKm(r);
+    if (driven !== null && (farthest === null || driven.km > farthest.km)) {
+      farthest = { id: r.id, km: driven.km, source: driven.source };
+    }
+  }
+  const firstOf = new Map<string, RentalExtraRow>();
+  for (const r of [...all].sort(
+    (a, b) => pickupDay(a).localeCompare(pickupDay(b)) || a.id.localeCompare(b.id)
+  )) {
+    if (!firstOf.has(providerKey(r.provider))) firstOf.set(providerKey(r.provider), r);
+  }
+  const scopedIds = new Set(scoped.map((r) => r.id));
+  return {
+    longest,
+    farthest,
+    newProviders: [...firstOf.values()]
+      .filter((r) => scopedIds.has(r.id))
+      .map((r) => r.provider.trim()),
+  };
+}
+
+/**
+ * @param scoped the counted rentals of the period on screen
+ * @param all    every counted rental — a provider is NEW in the period its
+ *               first rental falls in, which the period cannot see alone
+ */
+export function computeRentalExtraStats(
+  scoped: readonly RentalExtraRow[],
+  all: readonly RentalExtraRow[] = scoped
+): RentalExtraStats {
+  let kmSum = 0;
+  let kmDays = 0;
+  let kmRentals = 0;
+  const perKm = new Map<string, { amount: number; km: number; rentals: number }>();
+  for (const r of scoped) {
+    const driven = rentalDrivenKm(r);
+    if (driven === null) continue;
+    kmSum += driven.km;
+    kmDays += rentalDays(r);
+    kmRentals += 1;
+    const cost = rentalCost(r);
+    // A driven 0 km cannot carry a price per km.
+    if (cost === null || driven.km <= 0) continue;
+    const cur = perKm.get(cost.currency) ?? { amount: 0, km: 0, rentals: 0 };
+    perKm.set(cost.currency, {
+      amount: cur.amount + cost.amount,
+      km: cur.km + driven.km,
+      rentals: cur.rentals + 1,
+    });
+  }
+  const viaBroker = scoped.filter((r) => r.broker?.trim()).length;
+  return {
+    brokered: { viaBroker, direct: scoped.length - viaBroker },
+    kmPerDay: {
+      value: kmRentals > 0 ? round1(kmSum / kmDays) : null,
+      rentals: kmRentals,
+      km: kmSum,
+      days: kmDays,
+    },
+    costPerKm: [...perKm.entries()]
+      .map(([currency, v]) => ({
+        currency,
+        perKm: round2(v.amount / v.km),
+        rentals: v.rentals,
+        km: v.km,
+      }))
+      .sort((a, b) => b.rentals - a.rentals || a.currency.localeCompare(b.currency)),
+    bookedVsFinal: bookedVsFinal(scoped),
+    vehicles: vehicles(scoped),
+    records: records(scoped, all),
+    odometerDocumented: scoped.filter(
+      (r) => odometerDistanceKm(r.odometerOutKm, r.odometerInKm) !== null
+    ).length,
+  };
+}
+
+/** The year cut the statistics apply: the pickup's year, up to "MM-DD" when a running year is compared. */
+export function inRentalPeriod(
+  r: Pick<RentalExtraRow, "pickupTime" | "pickupTimezone">,
+  year: number | null,
+  until: string | null
+): boolean {
+  if (year === null) return true;
+  if (rentalYear(r) !== year) return false;
+  return until === null || pickupDay(r) <= `${year}-${until}`;
+}

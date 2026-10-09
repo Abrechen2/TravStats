@@ -82,6 +82,21 @@ describe("AchievementsPage — rail badges follow the rail beta gate", () => {
     expect(achievementDomains(["flight", "rail"], true)).toEqual(["flight", "rail"]);
   });
 
+  // forgejo#262 / #263: rental and bus badges follow their own beta gates.
+  it("drops rental and bus unless their gates are open, and reads a missing gate as closed", () => {
+    const all = ["flight", "rental", "bus"] as const;
+    expect(achievementDomains([...all], false)).toEqual(["flight"]);
+    expect(achievementDomains([...all], false, { rentalVisible: true })).toEqual([
+      "flight",
+      "rental",
+    ]);
+    expect(achievementDomains([...all], false, { rentalVisible: true, busVisible: true })).toEqual([
+      "flight",
+      "rental",
+      "bus",
+    ]);
+  });
+
   it("hides rail badges and the rail pill with the gate closed", async () => {
     railGate.open = false;
     await renderPage();
