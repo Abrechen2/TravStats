@@ -203,6 +203,10 @@ export type ApiErrorCode =
    *  since the writer read it (a station added or removed elsewhere — the
    *  phone). Nothing was written; read the roadtrip again and merge. */
   | "ROADTRIP_STATIONS_CHANGED"
+  /** A recording offered for a leg does not come near both of its stops (409). */
+  | "TRACK_DOES_NOT_COVER_LEG"
+  /** The recording stops and restarts between a leg's two stops (409). */
+  | "TRACK_GAP_IN_LEG"
   /** A trip photo was linked to a stop that is not on its trip — neither on
    *  the trip's timeline nor a station of a roadtrip filed on it (forgejo#139).
    *  Also answered for a stop that does not exist, so a probe learns nothing

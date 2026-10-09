@@ -462,7 +462,9 @@
         "noDatedStops": "Die Stationen dieses Abschnitts haben kein Datum – daraus lässt sich kein Zeitraum für Dawarich ableiten.",
         "windowInvalid": "Der Zeitraum endet vor seinem Beginn.",
         "windowEmpty": "Dawarich hat für diesen Zeitraum keine Standortdaten.",
-        "tooFewPoints": "Dawarich hat für diesen Zeitraum nur einen Standortpunkt – zu wenig für einen Track."
+        "tooFewPoints": "Dawarich hat für diesen Zeitraum nur einen Standortpunkt – zu wenig für einen Track.",
+        "doesNotCoverLeg": "Diese Aufzeichnung kommt nicht in die Nähe beider Stationen dieser Etappe – vermutlich ein anderer Tag oder Ort. Die Etappe bleibt, wie sie war.",
+        "gapInLeg": "Die Aufzeichnung setzt zwischen den beiden Stationen aus; ein Teil des Wegs wurde nie aufgezeichnet. Die Etappe bleibt, wie sie war."
       },
       "pointCount_one": "{{count}} Punkt",
       "pointCount_other": "{{count}} Punkte",

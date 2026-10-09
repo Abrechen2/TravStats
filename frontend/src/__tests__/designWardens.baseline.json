@@ -119,7 +119,6 @@
     "pages/LoginPage.tsx",
     "pages/ResetPasswordPage.tsx",
     "pages/SetupPage.tsx",
-    "pages/TripRouteEditorPage.tsx",
     "pages/TwoFactorChallengePage.tsx"
   ],
   "darkVariants": [],

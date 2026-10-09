@@ -43,7 +43,8 @@ describe("Tour route legs — adopting a track", () => {
 
   async function createTrack(
     forRouteId: string,
-    geometry: Array<[number, number]>
+    geometry: Array<[number, number]>,
+    segmentStarts?: number[]
   ): Promise<string> {
     const track = await prisma.tripRouteTrack.create({
       data: {
@@ -55,6 +56,7 @@ describe("Tour route legs — adopting a track", () => {
         geometry: geometry as unknown as object,
         pointCount: geometry.length,
         distanceKm: 1,
+        ...(segmentStarts ? { segmentStarts } : {}),
       },
     });
     return track.id;
@@ -181,6 +183,8 @@ describe("Tour route legs — adopting a track", () => {
 
     expect(res.status).toBe(409);
     expect(String(res.body.error ?? "")).toMatch(/\d/); // names the anchor tolerance (a number)
+    // A stable code, so the page says it in the reader's language (forgejo#246).
+    expect(res.body.code).toBe("TRACK_DOES_NOT_COVER_LEG");
 
     const after = await prisma.tripRouteLeg.findUnique({
       where: {
@@ -190,6 +194,16 @@ describe("Tour route legs — adopting a track", () => {
     expect(after?.source).toBe(before?.source);
     expect(after?.distanceKm).toBe(before?.distanceKm);
     expect(after?.waypoints).toEqual(before?.waypoints);
+  });
+
+  it("a recording with a gap between the two stops 409s with its own code", async () => {
+    const trackId = await createTrack(routeId, coveringTrack, [0, 2]);
+    const res = await request(app)
+      .put(legUrl())
+      .set("Cookie", cookie)
+      .send({ source: "track", trackId });
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("TRACK_GAP_IN_LEG");
   });
 
   it("a trackId belonging to a DIFFERENT route 404s rather than adopting", async () => {

@@ -462,7 +462,9 @@
         "noDatedStops": "This section's stops have no dates, so no time window for Dawarich can be derived.",
         "windowInvalid": "The time window ends before it starts.",
         "windowEmpty": "Dawarich has no location data for this time window.",
-        "tooFewPoints": "Dawarich has only one location point for this time window – too few for a track."
+        "tooFewPoints": "Dawarich has only one location point for this time window – too few for a track.",
+        "doesNotCoverLeg": "This recording does not come near both stations of this leg — probably another day or place. The leg stays as it was.",
+        "gapInLeg": "The recording stops between the two stations; part of the way was never recorded. The leg stays as it was."
       },
       "pointCount_one": "{{count}} point",
       "pointCount_other": "{{count}} points",
