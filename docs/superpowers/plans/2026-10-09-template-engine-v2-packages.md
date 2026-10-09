@@ -40,6 +40,25 @@ should produce the same result as a reviewable proposal.
 - Source URL becomes an admin setting (default: the public repo).
 - Guard: a template whose test case fails is never active; a test pins that.
 
+**P1 as built (2026-10-09).** `services/parsers/templates/v2/`: `envelope.ts` (the one Zod
+schema + index schema), `version.ts` (numeric compare for semver and `YYYY.MM.DD[.N]`),
+`runners.ts` (domain → test runner; P1 registers the matcher for all five domains — it decides
+match/decline from `markers`/`anchors` and ignores `expected`), `loader.ts`
+(`V2TemplateStore`), `cache.ts` (`.template-cache/v2/<domain>__<slug>.json`), `status.ts`.
+- The v1 airline sync still runs on every sync, after v2: airlines have no v2 templates
+  until P4, and with the v2 index absent the v1 requests are byte-for-byte the old ones.
+- A newer version that fails keeps the older active one (status carries a `detail`); a
+  template the index stops naming is deactivated and uncached; a domain with no runner is
+  `invalid`.
+- `/template-status` gains a `v2` field (`index`, `templates[]` with `state`, `reason`,
+  `detail`); the v1 fields are unchanged.
+- **Source URL is still an environment variable, not yet an admin setting:**
+  `TEMPLATE_REPO_BASE_URL` (repository raw root, https only, default the public repo).
+  Moving it into `admin_settings` with a settings UI field is the open remainder of P1.
+- The repository's `rail/db.json` draft does not validate yet: its test case has no
+  `expect` and no must-decline case. `testCases[].input` accepts the draft's
+  `{ subject, text, from? }` object as well as a plain string.
+
 ### P2 — generic extraction constructs
 - `repeat` block for every domain (`mode: split | matchAll`, `startAfter`, `endBefore`,
   per-field rules) — generalises flight `segments` and the rail draft's `legs.repeat`.

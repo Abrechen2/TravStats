@@ -6,15 +6,26 @@ import { adminReseedLimiter } from "../middleware/rateLimit";
 
 const router = Router();
 
+const GITHUB_REPO = "https://github.com/Abrechen2/travstats-templates";
+
+/**
+ * The v1 fields keep their meaning (airline templates only); `v2` is added
+ * beside them so an existing client reads exactly what it read before.
+ */
+function statusBody(total: number) {
+  return {
+    templates: templateRegistry.getStatus(),
+    total,
+    githubRepo: GITHUB_REPO,
+    v2: templateRegistry.getV2Status(),
+  };
+}
+
 // GET is a read of the in-memory registry — no I/O at all, so no limiter, and
 // every signed-in user may look: the list explains which airlines the mail
 // parser understands, which is a user question, not an admin one.
 router.get("/", authenticate, (_req: AuthRequest, res: Response): void => {
-  res.json({
-    templates: templateRegistry.getStatus(),
-    total: templateRegistry.getAll().length,
-    githubRepo: "https://github.com/Abrechen2/travstats-templates",
-  });
+  res.json(statusBody(templateRegistry.getAll().length));
 });
 
 // POST /sync changes INSTANCE-GLOBAL state: it fans out HTTP requests to
@@ -37,11 +48,7 @@ router.post(
     void templateRegistry
       .syncNow()
       .then((count) => {
-        res.json({
-          templates: templateRegistry.getStatus(),
-          total: count,
-          githubRepo: "https://github.com/Abrechen2/travstats-templates",
-        });
+        res.json(statusBody(count));
       })
       .catch((err: unknown) => {
         res.status(500).json({ error: String(err) });

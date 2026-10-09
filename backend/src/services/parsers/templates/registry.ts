@@ -1,15 +1,27 @@
 import fs from "fs";
 import path from "path";
-import https from "https";
 import { isValidAirlineTemplate, type AirlineTemplate } from "./types";
 import logger from "../../../utils/logger";
+import { appVersion as runningAppVersion } from "../../../utils/version";
+import { fetchJson as httpsFetchJson } from "./fetchJson";
+import { createFsTemplateCache } from "./v2/cache";
+import { V2TemplateStore, type FetchJson } from "./v2/loader";
+import { resolveTemplateRepoBaseUrl } from "./v2/source";
+import type { V2Status } from "./v2/status";
+import type { TemplateEnvelope } from "./v2/envelope";
 
-const BUILTIN_DIR = path.join(__dirname, "airlines");
-const CACHE_DIR = path.join(process.cwd(), ".template-cache");
-const GITHUB_RAW_BASE =
-  "https://raw.githubusercontent.com/Abrechen2/travstats-templates/main/templates";
-const INDEX_URL = `${GITHUB_RAW_BASE}/index.json`;
+const DEFAULT_BUILTIN_DIR = path.join(__dirname, "airlines");
+const DEFAULT_CACHE_DIR = path.join(process.cwd(), ".template-cache");
 const SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h
+
+export interface TemplateRegistryOptions {
+  fetchJson?: FetchJson;
+  /** Repository raw root; v1 airlines live under `<base>/templates`. */
+  baseUrl?: string;
+  builtinDir?: string;
+  cacheDir?: string;
+  appVersion?: string;
+}
 
 interface TemplateIndex {
   version: string;
@@ -23,22 +35,43 @@ export interface TemplateStatusEntry {
   source: "builtin" | "cached";
 }
 
-class TemplateRegistry {
+export class TemplateRegistry {
   private templates: Map<string, AirlineTemplate> = new Map();
   private templateSources: Map<string, "builtin" | "cached"> = new Map();
+  private readonly fetchJson: FetchJson;
+  private readonly v1Base: string;
+  private readonly builtinDir: string;
+  private readonly cacheDir: string;
+  private readonly v2: V2TemplateStore;
+
+  constructor(options: TemplateRegistryOptions = {}) {
+    const baseUrl =
+      options.baseUrl ?? resolveTemplateRepoBaseUrl(process.env.TEMPLATE_REPO_BASE_URL);
+    this.fetchJson = options.fetchJson ?? httpsFetchJson;
+    this.v1Base = `${baseUrl}/templates`;
+    this.builtinDir = options.builtinDir ?? DEFAULT_BUILTIN_DIR;
+    this.cacheDir = options.cacheDir ?? DEFAULT_CACHE_DIR;
+    this.v2 = new V2TemplateStore({
+      fetchJson: this.fetchJson,
+      baseUrl,
+      appVersion: options.appVersion ?? runningAppVersion,
+      cache: createFsTemplateCache(path.join(this.cacheDir, "v2")),
+    });
+  }
 
   async initialize(): Promise<void> {
     await this.loadBuiltinTemplates();
     await this.loadCachedTemplates();
+    this.v2.loadFromCache();
     this.scheduleSync();
   }
 
   private async loadBuiltinTemplates(): Promise<void> {
-    if (!fs.existsSync(BUILTIN_DIR)) return;
-    const files = fs.readdirSync(BUILTIN_DIR).filter((f) => f.endsWith(".json"));
+    if (!fs.existsSync(this.builtinDir)) return;
+    const files = fs.readdirSync(this.builtinDir).filter((f) => f.endsWith(".json"));
     for (const file of files) {
       try {
-        const raw = fs.readFileSync(path.join(BUILTIN_DIR, file), "utf-8");
+        const raw = fs.readFileSync(path.join(this.builtinDir, file), "utf-8");
         const content: unknown = JSON.parse(raw);
         if (isValidAirlineTemplate(content)) {
           this.templates.set(content.iata, content);
@@ -52,12 +85,12 @@ class TemplateRegistry {
   }
 
   private async loadCachedTemplates(): Promise<void> {
-    if (!fs.existsSync(CACHE_DIR)) return;
-    const files = fs.readdirSync(CACHE_DIR).filter((f) => f.endsWith(".json"));
+    if (!fs.existsSync(this.cacheDir)) return;
+    const files = fs.readdirSync(this.cacheDir).filter((f) => f.endsWith(".json"));
     for (const file of files) {
       if (file === "index.json") continue;
       try {
-        const raw = fs.readFileSync(path.join(CACHE_DIR, file), "utf-8");
+        const raw = fs.readFileSync(path.join(this.cacheDir, file), "utf-8");
         const content: unknown = JSON.parse(raw);
         if (isValidAirlineTemplate(content)) {
           const existing = this.templates.get(content.iata);
@@ -89,7 +122,16 @@ class TemplateRegistry {
     }));
   }
 
-  /** Trigger an immediate GitHub sync and return the new template count. */
+  /** v2 templates that validated and passed their own test cases. */
+  getActiveV2(): TemplateEnvelope[] {
+    return this.v2.getActive();
+  }
+
+  getV2Status(): V2Status {
+    return this.v2.getStatus();
+  }
+
+  /** Trigger an immediate sync and return the new v1 airline template count. */
   async syncNow(): Promise<number> {
     await this.syncFromGitHub();
     return this.templates.size;
@@ -105,54 +147,45 @@ class TemplateRegistry {
     }, SYNC_INTERVAL_MS);
   }
 
+  /**
+   * v2 first, then the v1 airline index. The v1 sync runs either way: until
+   * the airlines move to v2 (plan P4) it is the only flight path, and when the
+   * v2 index is absent it is exactly what ran before v2 existed. A v2 failure
+   * of any kind is contained here, so it cannot take the v1 sync down with it.
+   */
   private async syncFromGitHub(): Promise<void> {
     try {
-      const index = await this.fetchJson<TemplateIndex>(INDEX_URL);
-      if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
+      await this.v2.sync();
+    } catch (err) {
+      logger.warn({ err }, "v2 template sync failed — v1 airline templates unaffected");
+    }
+    await this.syncV1();
+  }
+
+  private async syncV1(): Promise<void> {
+    try {
+      const index = (await this.fetchJson(`${this.v1Base}/index.json`)) as TemplateIndex;
+      if (!fs.existsSync(this.cacheDir)) fs.mkdirSync(this.cacheDir, { recursive: true });
 
       for (const entry of index.airlines) {
         const existing = this.templates.get(entry.iata);
         if (existing && existing.version >= entry.version) continue;
 
-        const url = `${GITHUB_RAW_BASE}/${entry.iata}.json`;
-        const template = await this.fetchJson<unknown>(url);
+        const url = `${this.v1Base}/${entry.iata}.json`;
+        const template = await this.fetchJson(url);
         if (isValidAirlineTemplate(template)) {
           this.templates.set(template.iata, template);
           this.templateSources.set(template.iata, "cached");
-          fs.writeFileSync(path.join(CACHE_DIR, `${template.iata}.json`), JSON.stringify(template));
+          fs.writeFileSync(
+            path.join(this.cacheDir, `${template.iata}.json`),
+            JSON.stringify(template)
+          );
         }
       }
       logger.info({ count: index.airlines.length }, "Templates synced from GitHub");
     } catch (err) {
       logger.warn({ err }, "GitHub template sync failed — using cached/builtin templates");
     }
-  }
-
-  private fetchJson<T>(url: string): Promise<T> {
-    return new Promise((resolve, reject) => {
-      const req = https.get(url, (res) => {
-        if (res.statusCode !== 200) {
-          reject(new Error(`HTTP ${res.statusCode ?? "unknown"} from ${url}`));
-          res.resume(); // drain the response
-          return;
-        }
-        let data = "";
-        res.on("data", (chunk: string) => {
-          data += chunk;
-        });
-        res.on("end", () => {
-          try {
-            resolve(JSON.parse(data) as T);
-          } catch (e) {
-            reject(e);
-          }
-        });
-      });
-      req.setTimeout(10000, () => {
-        req.destroy(new Error(`Timeout fetching ${url}`));
-      });
-      req.on("error", reject);
-    });
   }
 }
 

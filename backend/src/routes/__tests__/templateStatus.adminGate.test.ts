@@ -78,4 +78,17 @@ describe("template-status — the refresh is an admin action (forgejo#67)", () =
       expect.objectContaining({ templates: expect.any(Array), total: expect.any(Number) })
     );
   });
+
+  it("adds the v2 status beside the v1 fields without changing them", async () => {
+    const res = await request(app)
+      .get("/api/v1/template-status")
+      .set("Cookie", [`auth_token=${plainUserToken}`]);
+
+    expect(res.status).toBe(200);
+    expect(Object.keys(res.body).sort()).toEqual(["githubRepo", "templates", "total", "v2"]);
+    expect(res.body.v2).toEqual({
+      index: expect.stringMatching(/^(unknown|available|unavailable)$/),
+      templates: expect.any(Array),
+    });
+  });
 });
