@@ -19,7 +19,8 @@ import {
 import { continentLabel } from "../lib/continentLabel";
 import { countryName } from "../shared/geo/countryCode";
 
-import { useToastStore } from "../store/toastStore";
+import { FormErrorBanner } from "../components/form";
+import { saveErrorKey } from "../lib/saveErrorMessage";
 import type { CuratedProgress, CuratedProgressItem, VisitSuggestion } from "../types/placeList";
 import { useDomainColors } from "../hooks/useDomainColors";
 
@@ -78,7 +79,6 @@ export default function CuratedChecklistPage(): JSX.Element {
   const { t, i18n } = useTranslation(["places", "common"]);
   const navigate = useNavigate();
   const access = usePlacesAccess();
-  const addToast = useToastStore((s) => s.addToast);
 
   const [progress, setProgress] = useState<CuratedProgress | null>(null);
   const [suggestions, setSuggestions] = useState<VisitSuggestion[]>([]);
@@ -86,6 +86,11 @@ export default function CuratedChecklistPage(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<LoadFailure | null>(null);
   const [busyItem, setBusyItem] = useState<string | null>(null);
+  /**
+   * A refused tick or subscription, kept on the page until the next one works
+   * (forgejo#246) — it was a toast, gone before a list of 1247 rows was read.
+   */
+  const [actionFailure, setActionFailure] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
   const [country, setCountry] = useState<string>("all");
@@ -131,6 +136,7 @@ export default function CuratedChecklistPage(): JSX.Element {
   const handleToggle = useCallback(
     async (item: CuratedProgressItem, visitedAt?: string | null): Promise<void> => {
       setBusyItem(item.itemId);
+      setActionFailure(null);
       try {
         if (item.ticked) {
           await untickCuratedItem(item.itemId);
@@ -143,16 +149,17 @@ export default function CuratedChecklistPage(): JSX.Element {
         await load();
       } catch (err: unknown) {
         logger.error({ err }, "CuratedChecklistPage: failed to toggle item");
-        addToast("error", t("places:checklist.tickFailed"));
+        setActionFailure(saveErrorKey(err, "places:checklist.tickFailed"));
       } finally {
         setBusyItem(null);
       }
     },
-    [load, addToast, t]
+    [load]
   );
 
   const handleSubscription = useCallback(async (): Promise<void> => {
     if (!progress || !key) return;
+    setActionFailure(null);
     try {
       if (progress.subscribed) {
         await unsubscribeChecklist(key);
@@ -162,9 +169,9 @@ export default function CuratedChecklistPage(): JSX.Element {
       await load();
     } catch (err: unknown) {
       logger.error({ err }, "CuratedChecklistPage: failed to change subscription");
-      addToast("error", t("places:checklist.subscribeFailed"));
+      setActionFailure(saveErrorKey(err, "places:checklist.subscribeFailed"));
     }
-  }, [progress, key, load, addToast, t]);
+  }, [progress, key, load]);
 
   // Continent options come from the ITEMS, so a list that touches three
   // continents offers three — never the full seven as dead entries.
@@ -416,6 +423,10 @@ export default function CuratedChecklistPage(): JSX.Element {
             {t("places:checklist.unsubscribeHint")}
           </p>
         )}
+
+        <div className="mb-4">
+          <FormErrorBanner message={actionFailure !== null ? t(actionFailure) : null} />
+        </div>
 
         {/* Filters. A seven-item list does not need them; a 1247-item one is
             unusable without them, and one page serves both. */}

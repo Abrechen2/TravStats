@@ -77,6 +77,10 @@ export function ChecklistRow({
         disabled={busy}
         onClick={() => onToggle(item, suggestion?.visitedAt ?? null)}
         aria-pressed={item.ticked}
+        // The box stays 22 px; on a coarse pointer an ::after reaches 11 px
+        // out on every side, a 44 px hit area with no layout change
+        // (forgejo#249 — the iPad check measured boxes like this one).
+        className="relative pointer-coarse:after:absolute pointer-coarse:after:-inset-[11px]"
         aria-label={
           item.ticked
             ? t("places:checklist.untickItem", { name: item.name })
@@ -156,7 +160,7 @@ export function ChecklistRow({
               type="button"
               disabled={busy}
               onClick={() => onToggle(item, suggestion.visitedAt)}
-              className="rounded px-2 py-0.5"
+              className="rounded px-2 py-0.5 pointer-coarse:min-h-(--ts-size-touch-min)"
               style={{
                 border: "1px solid rgba(63,185,80,0.45)",
                 color: "var(--success)",

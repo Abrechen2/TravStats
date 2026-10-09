@@ -185,7 +185,9 @@
     "createAndAdd": "„{{name}}“ als Ort anlegen und hinzufügen",
     "unassigned": "„{{name}}“ ist gespeichert, steht aber noch nicht in dieser Liste.",
     "assignAgain": "Erneut zuordnen",
-    "dismissUnassigned": "Ausblenden"
+    "dismissUnassigned": "Ausblenden",
+    "createTitle": "Neue Liste",
+    "createFirst": "Erste Liste anlegen"
   },
   "checklist": {
     "notFound": "Diese Checkliste gibt es nicht.",

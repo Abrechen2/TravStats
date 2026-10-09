@@ -185,7 +185,9 @@
     "createAndAdd": "Create “{{name}}” as a place and add it",
     "unassigned": "“{{name}}” is saved but not in this list yet.",
     "assignAgain": "Assign again",
-    "dismissUnassigned": "Hide"
+    "dismissUnassigned": "Hide",
+    "createTitle": "New list",
+    "createFirst": "Create your first list"
   },
   "checklist": {
     "notFound": "There is no such checklist.",

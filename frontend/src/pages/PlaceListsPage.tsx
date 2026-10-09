@@ -1,4 +1,3 @@
-import { LIST_PALETTE_HEX } from "../lib/listPalette";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -7,25 +6,13 @@ import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { curatedText } from "../lib/curatedCopy";
 import { logger } from "../lib/logger";
-import { PlaceListLabelFields, hasSymbol } from "../components/places/PlaceListLabelFields";
-import type { PlaceLabelMode } from "../lib/placeLabel";
-import {
-  createPlaceList,
-  listCuratedChecklists,
-  listPlaceLists,
-  subscribeChecklist,
-} from "../lib/api/placeLists";
+import { PlaceListCreateDialog } from "../components/places/PlaceListCreateDialog";
+import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
+import { FormErrorBanner, navigateAfterSave } from "../components/form";
+import { saveErrorKey } from "../lib/saveErrorMessage";
+import { listCuratedChecklists, listPlaceLists, subscribeChecklist } from "../lib/api/placeLists";
 import { DOMAINS } from "../shared/domains";
-import { useToastStore } from "../store/toastStore";
 import type { CuratedListSummary, PlaceList } from "../types/placeList";
-
-/** Quick-pick list colours. Deliberately far apart — two lists in near-identical
- *  hues make `list` colour mode say nothing on a map. */
-// The shared ten from `listColor.palette`. The six that used to stand here
-// included the green and blue the system reserves for `good` and `info`, and a
-// map reads colour as meaning — a list painted in "planned blue" breaks the
-// legend for whoever picked it.
-const LIST_COLOR_PRESETS = LIST_PALETTE_HEX;
 
 /**
  * Lists and checklists, one screen.
@@ -44,20 +31,16 @@ export default function PlaceListsPage(): JSX.Element {
   const { t, i18n } = useTranslation(["places", "common"]);
   const navigate = useNavigate();
   const access = usePlacesAccess();
-  const addToast = useToastStore((s) => s.addToast);
 
   const [lists, setLists] = useState<PlaceList[]>([]);
   const [curated, setCurated] = useState<CuratedListSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [loadFailure, setLoadFailure] = useState<string | null>(null);
+  /** A refused subscription, kept on the page — it was a toast that vanished. */
+  const [subscribeFailure, setSubscribeFailure] = useState<string | null>(null);
 
   const [creating, setCreating] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newColor, setNewColor] = useState<string>(LIST_COLOR_PRESETS[0]);
-  const [newIcon, setNewIcon] = useState("");
-  const [newLabelMode, setNewLabelMode] = useState<PlaceLabelMode>("name");
-  const [saving, setSaving] = useState(false);
-
   const load = useCallback(async (): Promise<void> => {
     setLoading(true);
     setLoadError(false);
@@ -68,6 +51,7 @@ export default function PlaceListsPage(): JSX.Element {
     } catch (err: unknown) {
       logger.error({ err }, "PlaceListsPage: failed to load lists");
       setLoadError(true);
+      setLoadFailure(loadFailureLog(err));
     } finally {
       setLoading(false);
     }
@@ -82,41 +66,18 @@ export default function PlaceListsPage(): JSX.Element {
   // is filtered out of the own-lists section rather than rendered twice.
   const ownLists = useMemo(() => lists.filter((l) => l.curatedKey === null), [lists]);
 
-  const handleCreate = useCallback(async (): Promise<void> => {
-    const name = newName.trim();
-    if (!name) return;
-    setSaving(true);
-    try {
-      const created = await createPlaceList({
-        name,
-        color: newColor,
-        // An empty input means "no symbol", which the column stores as null
-        // rather than as an empty string nothing can tell apart from a space.
-        icon: hasSymbol(newIcon) ? newIcon.trim() : null,
-        labelMode: newLabelMode,
-      });
-      setCreating(false);
-      setNewName("");
-      navigate(`/places/lists/${created.id}`);
-    } catch (err: unknown) {
-      logger.error({ err }, "PlaceListsPage: failed to create list");
-      addToast("error", t("places:lists.createFailed"));
-    } finally {
-      setSaving(false);
-    }
-  }, [newName, newColor, newIcon, newLabelMode, navigate, addToast, t]);
-
   const handleSubscribe = useCallback(
     async (key: string): Promise<void> => {
+      setSubscribeFailure(null);
       try {
         await subscribeChecklist(key);
         navigate(`/places/checklists/${key}`);
       } catch (err: unknown) {
         logger.error({ err }, "PlaceListsPage: failed to subscribe");
-        addToast("error", t("places:lists.subscribeFailed"));
+        setSubscribeFailure(saveErrorKey(err, "places:lists.subscribeFailed"));
       }
     },
-    [navigate, addToast, t]
+    [navigate]
   );
 
   if (access === "pending") {
@@ -153,8 +114,8 @@ export default function PlaceListsPage(): JSX.Element {
           </div>
           <button
             type="button"
-            onClick={() => setCreating((v) => !v)}
-            className="rounded-lg px-4 py-2 text-sm font-medium"
+            onClick={() => setCreating(true)}
+            className="rounded-lg px-4 py-2 text-sm font-medium pointer-coarse:min-h-(--ts-size-touch-min)"
             style={{ background: "var(--accent)", color: "#0d1117" }}
           >
             + {t("places:lists.newList")}
@@ -162,75 +123,18 @@ export default function PlaceListsPage(): JSX.Element {
         </div>
 
         {creating && (
-          <div
-            className="mb-6 rounded-xl p-4"
-            style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-          >
-            <label className="mb-2 block text-sm" style={{ color: "var(--text-muted)" }}>
-              {t("places:lists.nameLabel")}
-            </label>
-            <input
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder={t("places:lists.namePlaceholder")}
-              className="w-full rounded-lg px-3 py-2 text-sm"
-              style={{
-                background: "var(--bg-elevated)",
-                border: "1px solid var(--color-border)",
-                color: "var(--text-primary)",
-              }}
-            />
-            <div className="mt-3 flex items-center gap-2">
-              <span className="text-sm" style={{ color: "var(--text-muted)" }}>
-                {t("places:lists.colorLabel")}
-              </span>
-              {LIST_COLOR_PRESETS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  aria-label={c}
-                  onClick={() => setNewColor(c)}
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: "50%",
-                    background: c,
-                    border:
-                      newColor === c
-                        ? "2px solid var(--text-primary)"
-                        : "1px solid var(--color-border)",
-                    cursor: "pointer",
-                  }}
-                />
-              ))}
-            </div>
-            <PlaceListLabelFields
-              icon={newIcon}
-              onIconChange={setNewIcon}
-              labelMode={newLabelMode}
-              onLabelModeChange={setNewLabelMode}
-            />
-            <div className="mt-4 flex gap-2">
-              <button
-                type="button"
-                disabled={saving || newName.trim().length === 0}
-                onClick={() => void handleCreate()}
-                className="rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50"
-                style={{ background: "var(--accent)", color: "#0d1117" }}
-              >
-                {t("common:buttons.save")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setCreating(false)}
-                className="rounded-lg px-4 py-2 text-sm"
-                style={{ border: "1px solid var(--color-border)", color: "var(--text-secondary)" }}
-              >
-                {t("common:buttons.cancel")}
-              </button>
-            </div>
-          </div>
+          <PlaceListCreateDialog
+            onClose={() => setCreating(false)}
+            onCreated={async (created) => {
+              setCreating(false);
+              await navigateAfterSave(navigate, `/places/lists/${created.id}`);
+            }}
+          />
         )}
+
+        <div className="mb-4">
+          <FormErrorBanner message={subscribeFailure !== null ? t(subscribeFailure) : null} />
+        </div>
 
         {loading && (
           <p className="py-10 text-center text-sm" style={{ color: "var(--text-muted)" }}>
@@ -239,19 +143,11 @@ export default function PlaceListsPage(): JSX.Element {
         )}
 
         {loadError && (
-          <div className="py-10 text-center">
-            <p role="alert" style={{ color: "var(--danger)" }}>
-              {t("places:lists.loadError")}
-            </p>
-            <button
-              type="button"
-              onClick={() => void load()}
-              className="mt-3 text-sm underline"
-              style={{ color: "var(--accent)" }}
-            >
-              {t("common:buttons.retry")}
-            </button>
-          </div>
+          <ListLoadFailed
+            title={t("places:lists.loadError")}
+            onRetry={() => void load()}
+            log={loadFailure}
+          />
         )}
 
         {!loading && !loadError && (
@@ -264,9 +160,20 @@ export default function PlaceListsPage(): JSX.Element {
                 {t("places:lists.ownSection")}
               </h2>
               {ownLists.length === 0 ? (
-                <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  {t("places:lists.ownEmpty")}
-                </p>
+                // forgejo#250: the empty section names its next step.
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="text-sm" style={{ color: "var(--text-muted)" }}>
+                    {t("places:lists.ownEmpty")}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCreating(true)}
+                    className="rounded-lg px-3 py-1.5 text-sm pointer-coarse:min-h-(--ts-size-touch-min)"
+                    style={{ border: "1px solid var(--color-border)" }}
+                  >
+                    {t("places:lists.createFirst")}
+                  </button>
+                </div>
               ) : (
                 <ul
                   className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
