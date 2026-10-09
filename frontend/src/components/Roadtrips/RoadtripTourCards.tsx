@@ -16,6 +16,7 @@ const ACTIVITY_ICON: Record<TourActivity, IconName> = {
   ski: "mountain",
   paddle: "route",
   climb: "mountain",
+  excursion: "bus",
   other: "route",
 };
 

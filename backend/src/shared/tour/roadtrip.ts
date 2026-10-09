@@ -20,6 +20,10 @@ export const TOUR_ACTIVITIES = [
   "ski",
   "paddle",
   "climb",
+  // A guided excursion — a coach day tour with a guide (owner, 2026-10-07,
+  // bus spec D10): a tour, never a bus ride, because it has no ticket
+  // between two terminals; the coach is how the tour moves.
+  "excursion",
   "other",
 ] as const;
 export type TourActivity = (typeof TOUR_ACTIVITIES)[number];
