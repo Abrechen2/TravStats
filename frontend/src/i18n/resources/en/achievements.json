@@ -61,7 +61,8 @@
       "km": "km",
       "hours": "h",
       "days": "days",
-      "nights": "nights"
+      "nights": "nights",
+      "years": "years"
     },
     "evidence": {
       "trigger": "The entries behind it",
@@ -1291,6 +1292,18 @@
     "RAIL_OPERATORS_5": {
       "name": "Operator collector",
       "description": "Travelled with five different rail operators"
+    },
+    "NEW_GROUND_YEAR": {
+      "name": "New ground",
+      "description": "At least five airports recorded for the first time in one year"
+    },
+    "LONG_TIME_NO_SEE": {
+      "name": "Long time no see",
+      "description": "Returned to an airport after at least ten recorded years"
+    },
+    "FOUR_QUARTERS_AIRPORT": {
+      "name": "All-season regular",
+      "description": "Used the same airport in all four calendar quarters of one year"
     }
   },
   "header": {

@@ -20,6 +20,7 @@ import { seedsPartG } from "./achievementSeeds/partG";
 import { seedsPartH } from "./achievementSeeds/partH";
 import { seedsPartI } from "./achievementSeeds/partI";
 import { seedsPartJ } from "./achievementSeeds/partJ";
+import { seedsInsights } from "./achievementSeeds/insights";
 
 export interface AchievementDefinition {
   code: string;
@@ -46,6 +47,7 @@ export const achievements: AchievementDefinition[] = [
   ...seedsPartH,
   ...seedsPartI,
   ...seedsPartJ,
+  ...seedsInsights,
 ];
 
 type DefinitionFields = Omit<Required<AchievementDefinition>, "code">;

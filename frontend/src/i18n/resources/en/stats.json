@@ -695,7 +695,8 @@
     "cruiseTags": "Lines, regions, countries",
     "cruiseFlags": "Highlights",
     "rankings": "Rankings",
-    "records": "Records"
+    "records": "Records",
+    "insights": "Discoveries and transfers"
   },
   "records": {
     "title": "Records",
@@ -757,5 +758,108 @@
   },
   "period": {
     "emptyYear": "Nothing recorded here for {{year}}."
+  },
+  "insights": {
+    "title": "Discoveries, returns and transfers",
+    "intro": "“New” means recorded for the first time in your logbook. The reference is everything you have entered since {{firstYear}} – the app knows nothing about travel before that.",
+    "empty": "No flown flights with a date yet. These figures come from flown and back-filled flights with a departure date and airports.",
+    "openFlight": "Open flight",
+    "coverage": {
+      "undated": "{{flights}} flights without a date are in no year.",
+      "unknownEnd": "{{flights}} flights without an airport code at one end are on no connection."
+    },
+    "story": {
+      "title": "Your flying year {{year}}",
+      "titleNoYear": "Your flying year",
+      "latestYearHint": "No year selected – this is the latest year with recorded flights.",
+      "noFlightsInYear": "There are no recorded flights in {{year}}.",
+      "newAirports": "New destinations",
+      "noNewAirports": "No new airports this year.",
+      "biggestChange": "Biggest change",
+      "change": "{{measure}}: {{previous}} → {{current}} ({{delta}} against {{previousYear}})",
+      "noComparison": "Nothing to compare: {{previousYear}} has no recorded flights or the same figures.",
+      "measures": {
+        "flights": "Flights",
+        "distanceKm": "Kilometres",
+        "airports": "Airports used",
+        "connections": "Connections"
+      },
+      "repetition": "Most curious repetition",
+      "reunion_one": "Back at {{airport}} after {{count}} year ({{from}} → {{to}}).",
+      "reunion_other": "Back at {{airport}} after {{count}} years ({{from}} → {{to}}).",
+      "connection": "{{connection}}: flown {{flights}} times this year.",
+      "noRepetition": "No striking repetition this year.",
+      "funFacts": "Fun facts of the year",
+      "fastestDay": "Busiest day: {{date}} with {{flights}} flights",
+      "routeMaster": "Most flown connection: {{route}} ({{flights}}×, both directions)",
+      "timezones": "{{zones}} time zones touched",
+      "transfers": "{{transfers}} measured transfers, the shortest {{shortest}}",
+      "noTransfers": "No measurable transfers this year"
+    },
+    "discovery": {
+      "title": "Discovery rate and new connections per year",
+      "year": "Year",
+      "flights": "Flights",
+      "airportsUsed": "Airports",
+      "newAirports": "Of which new",
+      "rate": "Rate",
+      "newConnections": "New connections",
+      "repeatedConnections": "Repeated"
+    },
+    "reunions": {
+      "title": "Long time no see",
+      "years_one": "{{count}} year away",
+      "years_other": "{{count}} years away",
+      "days_one": "{{count}} day away",
+      "days_other": "{{count}} days away",
+      "empty": "No airport visited on two different days yet."
+    },
+    "quarters": {
+      "title": "In all four quarters",
+      "row": "{{airport}} in {{year}}",
+      "quarter": "Q{{quarter}}",
+      "empty": "No airport used in all four calendar quarters of a year yet."
+    },
+    "transfers": {
+      "title": "Transfer times",
+      "empty": "No transfer time can be measured yet. It appears once flights are linked into one booking and the landing and the onward departure are recorded to the minute.",
+      "measured": "Measured transfers",
+      "measuredCount": "{{transfers}} measured transfers",
+      "shortest": "Shortest",
+      "longest": "Longest",
+      "count": "Transfers",
+      "median": "Median",
+      "arriving": "Arrival",
+      "departing": "Onward flight",
+      "airportChange": "change of airport {{from}} → {{to}}",
+      "coverage": "{{measured}} of {{gaps}} gaps in {{bookings}} bookings measured.",
+      "coverageDetail": "Not measured: {{unknownTime}} without minute-precise times, {{unknownOrder}} with an unclear order, {{notFlown}} not both flown, {{conflict}} leaving before the landing, {{separate}} separate journeys (a return or over 24 hours)."
+    },
+    "help": {
+      "discovery": {
+        "short": "New airports relative to every airport used that year.",
+        "long": "Counting unit: an airport a flight leaves from or lands at – each end on its own local day (the departure on the day it left, the arrival on the day it landed). An airport is new in the year it first appears in your whole logbook; in the first recorded year everything is therefore new. Rate = new ÷ airports used that year. Source: flown and back-filled flights. Not included: planned and cancelled flights, flights without a date, ends without an airport code. Tap a number to see the flights behind it."
+      },
+      "routes": {
+        "short": "Connections flown for the first time against connections flown again.",
+        "long": "Counting unit: a connection is the airport pair without direction – MUC→JFK and JFK→MUC are the same connection, so a return flight is a repetition. A connection is new in the year of its first flight in the logbook and repeated in every later year you fly it again. Year: the departure day at the departure airport. Not included: flights with an unknown airport at one end, planned and cancelled flights."
+      },
+      "reunions": {
+        "short": "The longest pause between two visits of the same airport.",
+        "long": "Counting unit: days between two consecutive visit days of an airport, each on the airport's own calendar. A change of planes on one day is no reunion. Years count whole calendar years only. Each airport shows its longest pause; the ten longest are listed with both flights linked. Source: flown and back-filled flights with a date."
+      },
+      "quarters": {
+        "short": "Airports you used in all four calendar quarters of one year.",
+        "long": "Calendar quarters (Jan–Mar, Apr–Jun, Jul–Sep, Oct–Dec) on the airport's local calendar – explicitly not seasons, which fall differently in the southern hemisphere. Counting unit: a departure or an arrival at that airport. The first flight of each quarter is linked."
+      },
+      "transfers": {
+        "short": "The wait between two flights of the same booking.",
+        "long": "Measured only between two flights linked into one booking – never between flights that merely happen to be close in time. Both must have been flown (back-filled flights often carry placeholder times), the landing and the departure known to the minute and their order certain. The wait is the real distance between the two instants, across time zones too. More than 24 hours on the ground, or a return to an airport already visited, is a separate journey. The figure does not say whether a connection was feasible. Year: the landing day at the connecting airport. What could not be measured is listed below with its reason."
+      },
+      "story": {
+        "short": "The year's story, told from proven extremes.",
+        "long": "New destinations: airports the year recorded for the first time. Biggest change: of flights, kilometres (great circle), airports used and connections, the figure that moved most, relatively, against the calendar year before – without flights in that year there is no comparison. Most curious repetition: the longest return to an airport this year after at least a whole year away, otherwise the connection flown most often this year with at least three flights. The fun facts come from the same calculator as the fun facts block, run over this year's flights only. Year: the departure day at the departure airport."
+      }
+    }
   }
 }

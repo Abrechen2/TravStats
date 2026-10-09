@@ -695,7 +695,8 @@
     "cruiseTags": "Reedereien, Regionen, Länder",
     "cruiseFlags": "Besonderheiten",
     "rankings": "Ranglisten",
-    "records": "Rekorde"
+    "records": "Rekorde",
+    "insights": "Entdeckungen und Umstiege"
   },
   "records": {
     "title": "Rekorde",
@@ -757,5 +758,108 @@
   },
   "period": {
     "emptyYear": "Für {{year}} ist hier nichts erfasst."
+  },
+  "insights": {
+    "title": "Entdeckungen, Wiedersehen und Umstiege",
+    "intro": "„Neu“ heißt: zum ersten Mal in deinem Logbuch erfasst. Referenz ist alles, was du seit {{firstYear}} eingetragen hast – Reisen davor kennt die App nicht.",
+    "empty": "Noch keine geflogenen Flüge mit Datum. Diese Auswertungen entstehen aus geflogenen und nachgetragenen Flügen mit Abflugdatum und Flughäfen.",
+    "openFlight": "Flug öffnen",
+    "coverage": {
+      "undated": "{{flights}} Flüge ohne Datum stehen in keinem Jahr.",
+      "unknownEnd": "{{flights}} Flüge ohne Flughafen-Code an einem Ende gehören zu keiner Verbindung."
+    },
+    "story": {
+      "title": "Dein Flugjahr {{year}}",
+      "titleNoYear": "Dein Flugjahr",
+      "latestYearHint": "Kein Jahr gewählt – hier steht das letzte Jahr mit erfassten Flügen.",
+      "noFlightsInYear": "Für {{year}} gibt es keine erfassten Flüge.",
+      "newAirports": "Neue Ziele",
+      "noNewAirports": "Keine neuen Flughäfen in diesem Jahr.",
+      "biggestChange": "Größte Veränderung",
+      "change": "{{measure}}: {{previous}} → {{current}} ({{delta}} gegenüber {{previousYear}})",
+      "noComparison": "Nichts zu vergleichen: {{previousYear}} hat keine erfassten Flüge oder dieselben Zahlen.",
+      "measures": {
+        "flights": "Flüge",
+        "distanceKm": "Kilometer",
+        "airports": "Genutzte Flughäfen",
+        "connections": "Verbindungen"
+      },
+      "repetition": "Kurioseste Wiederholung",
+      "reunion_one": "Zurück in {{airport}} nach {{count}} Jahr ({{from}} → {{to}}).",
+      "reunion_other": "Zurück in {{airport}} nach {{count}} Jahren ({{from}} → {{to}}).",
+      "connection": "{{connection}}: {{flights}}-mal in diesem Jahr geflogen.",
+      "noRepetition": "Keine auffällige Wiederholung in diesem Jahr.",
+      "funFacts": "Fun Facts des Jahres",
+      "fastestDay": "Vollster Tag: {{date}} mit {{flights}} Flügen",
+      "routeMaster": "Häufigste Verbindung: {{route}} ({{flights}}×, beide Richtungen)",
+      "timezones": "{{zones}} Zeitzonen berührt",
+      "transfers": "{{transfers}} gemessene Umstiege, der kürzeste {{shortest}}",
+      "noTransfers": "Keine messbaren Umstiege in diesem Jahr"
+    },
+    "discovery": {
+      "title": "Entdeckerquote und neue Verbindungen pro Jahr",
+      "year": "Jahr",
+      "flights": "Flüge",
+      "airportsUsed": "Flughäfen",
+      "newAirports": "Davon neu",
+      "rate": "Quote",
+      "newConnections": "Neue Verbindungen",
+      "repeatedConnections": "Wiederholt"
+    },
+    "reunions": {
+      "title": "Lange nicht gesehen",
+      "years_one": "{{count}} Jahr Pause",
+      "years_other": "{{count}} Jahre Pause",
+      "days_one": "{{count}} Tag Pause",
+      "days_other": "{{count}} Tage Pause",
+      "empty": "Noch kein Flughafen an zwei verschiedenen Tagen besucht."
+    },
+    "quarters": {
+      "title": "In allen vier Quartalen",
+      "row": "{{airport}} im Jahr {{year}}",
+      "quarter": "Q{{quarter}}",
+      "empty": "Noch kein Flughafen in allen vier Kalenderquartalen eines Jahres genutzt."
+    },
+    "transfers": {
+      "title": "Umsteigezeiten",
+      "empty": "Noch keine Umsteigezeit messbar. Messbar wird eine, sobald Flüge zu einer Buchung verknüpft sind und Landung und Weiterflug minutengenau eingetragen sind.",
+      "measured": "Gemessene Umstiege",
+      "measuredCount": "{{transfers}} gemessene Umstiege",
+      "shortest": "Kürzester",
+      "longest": "Längster",
+      "count": "Umstiege",
+      "median": "Median",
+      "arriving": "Ankunft",
+      "departing": "Weiterflug",
+      "airportChange": "Flughafenwechsel {{from}} → {{to}}",
+      "coverage": "{{measured}} von {{gaps}} Abständen in {{bookings}} Buchungen gemessen.",
+      "coverageDetail": "Nicht gemessen: {{unknownTime}} ohne minutengenaue Zeiten, {{unknownOrder}} mit unklarer Reihenfolge, {{notFlown}} nicht beide geflogen, {{conflict}} mit Abflug vor der Landung, {{separate}} eigene Reisen (Rückflug oder über 24 Stunden)."
+    },
+    "help": {
+      "discovery": {
+        "short": "Neue Flughäfen im Verhältnis zu allen in diesem Jahr genutzten Flughäfen.",
+        "long": "Zähleinheit: ein Flughafen, an dem ein Flug startet oder landet – jedes Ende an seinem eigenen Ortstag (Abflug am Abflugtag, Ankunft am Landetag). Neu ist ein Flughafen in dem Jahr, in dem er zum ersten Mal in deinem ganzen Logbuch auftaucht; im ersten erfassten Jahr ist deshalb alles neu. Quote = neue ÷ genutzte Flughäfen des Jahres. Quelle: geflogene und nachgetragene Flüge. Nicht enthalten: geplante und stornierte Flüge, Flüge ohne Datum, Enden ohne Flughafen-Code. Tippe auf eine Zahl, um die Flüge dahinter zu sehen."
+      },
+      "routes": {
+        "short": "Erstmals geflogene gegenüber erneut geflogenen Verbindungen.",
+        "long": "Zähleinheit: eine Verbindung ist das Flughafenpaar ohne Richtung – MUC→JFK und JFK→MUC sind dieselbe Verbindung, ein Rückflug ist also eine Wiederholung. Neu ist eine Verbindung im Jahr ihres ersten Flugs im Logbuch, wiederholt in jedem späteren Jahr, in dem du sie wieder fliegst. Jahr: Abflugtag am Abflughafen. Nicht enthalten: Flüge mit unbekanntem Flughafen an einem Ende, geplante und stornierte Flüge."
+      },
+      "reunions": {
+        "short": "Die längste Pause zwischen zwei Besuchen desselben Flughafens.",
+        "long": "Zähleinheit: Tage zwischen zwei aufeinanderfolgenden Besuchstagen eines Flughafens, jeweils am Ortskalender des Flughafens. Ein Umstieg am selben Tag ist kein Wiedersehen. Jahre zählen nur volle Kalenderjahre. Je Flughafen steht seine längste Pause; die zehn längsten werden gezeigt, beide Flüge sind verlinkt. Quelle: geflogene und nachgetragene Flüge mit Datum."
+      },
+      "quarters": {
+        "short": "Flughäfen, die du in einem Jahr in allen vier Kalenderquartalen genutzt hast.",
+        "long": "Kalenderquartale (Jan–Mär, Apr–Jun, Jul–Sep, Okt–Dez) nach dem Ortskalender des Flughafens – ausdrücklich keine Jahreszeiten, die auf der Südhalbkugel anders liegen. Zähleinheit: ein Abflug oder eine Ankunft an diesem Flughafen. Je Quartal ist der erste Flug verlinkt."
+      },
+      "transfers": {
+        "short": "Wartezeit zwischen zwei Flügen derselben Buchung.",
+        "long": "Gemessen wird nur zwischen zwei Flügen, die in einer Buchung verknüpft sind – nie zwischen zufällig benachbarten Flügen. Beide müssen geflogen sein (nachgetragene Flüge haben oft Platzhalterzeiten), Landung und Abflug auf die Minute bekannt und ihre Reihenfolge sicher. Die Wartezeit ist der echte Abstand der beiden Zeitpunkte, auch über Zeitzonen hinweg. Mehr als 24 Stunden am Boden oder ein Rückflug zu einem schon besuchten Flughafen gelten als eigene Reise. Ob ein Anschluss machbar war, sagt die Zahl nicht. Jahr: Landetag am Umsteigeflughafen. Was nicht gemessen werden konnte, steht unten mit Grund."
+      },
+      "story": {
+        "short": "Die Geschichte des Jahres aus belegten Extremen.",
+        "long": "Neue Ziele: Flughäfen, die das Jahr zum ersten Mal erfasst hat. Größte Veränderung: von Flügen, Kilometern (Luftlinie), genutzten Flughäfen und Verbindungen die Kennzahl, die sich gegenüber dem Kalenderjahr davor relativ am stärksten verändert hat – ohne Flüge im Vorjahr gibt es keinen Vergleich. Kurioseste Wiederholung: die längste Rückkehr zu einem Flughafen in diesem Jahr ab einem vollen Jahr Pause, sonst die in diesem Jahr am häufigsten geflogene Verbindung ab drei Flügen. Die Fun Facts rechnet derselbe Rechner wie im Fun-Facts-Block, nur über die Flüge dieses Jahres. Jahr: Abflugtag am Abflughafen."
+      }
+    }
   }
 }

@@ -119,6 +119,12 @@ import {
   resolvePassportAirportCount,
   resolvePassportEntryCount,
 } from "./metricEvidencePassport";
+import {
+  resolveFlightNewAirportsCount,
+  resolveFlightNewConnectionsCount,
+  resolveFlightRepeatedConnectionsCount,
+  resolveFlightTransferCount,
+} from "./metricEvidenceFlightInsights";
 
 /**
  * `EvidenceResolver` for `kind: "metric"` (Task 7,
@@ -237,6 +243,10 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   placeCitiesCount: resolvePlaceCitiesCount,
   placeListCount: resolvePlaceListCount,
   placeWishlistCount: resolvePlaceWishlistCount,
+  flightNewAirportsCount: resolveFlightNewAirportsCount,
+  flightNewConnectionsCount: resolveFlightNewConnectionsCount,
+  flightRepeatedConnectionsCount: resolveFlightRepeatedConnectionsCount,
+  flightTransferCount: resolveFlightTransferCount,
 };
 
 /**

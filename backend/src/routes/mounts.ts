@@ -30,6 +30,7 @@ import photoJourneyRoutes from "./photoJourneys";
 import tripSuggestionRoutes from "./tripSuggestions";
 import flightLookupRoutes from "./flightLookup";
 import statsRoutes from "./stats";
+import statsFlightInsightsRoutes from "./stats/flightInsights";
 import statsNetworkRouteRoutes from "./stats/networkRoute";
 import airportRoutes from "./airports";
 import airlineLogoRoutes from "./airlineLogos";
@@ -207,6 +208,12 @@ export const apiMounts: ApiMount[] = [
     id: "stats.networkRoute",
     base: "/api/v1/stats/network/route",
     router: statsNetworkRouteRoutes,
+  },
+  // Flight insights (forgejo#256), on their own base for the same reason.
+  {
+    id: "stats.flightInsights",
+    base: "/api/v1/stats/flight-insights",
+    router: statsFlightInsightsRoutes,
   },
   { id: "stats", base: "/api/v1/stats", router: statsRoutes },
   { id: "airports", base: "/api/v1/airports", router: airportRoutes },

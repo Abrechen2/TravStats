@@ -211,5 +211,9 @@
   "evidence.metric.railOperatorsCount": "Bahngesellschaften",
   "evidence.metric.railNightTrainCount": "Nachtzüge",
   "evidence.metric.railHighSpeedRideCount": "Hochgeschwindigkeitsfahrten",
-  "evidence.metric.railCrossBorderRideCount": "Grenzüberschreitende Fahrten"
+  "evidence.metric.railCrossBorderRideCount": "Grenzüberschreitende Fahrten",
+  "evidence.metric.flightNewAirportsCount": "Erstmals erfasste Flughäfen",
+  "evidence.metric.flightNewConnectionsCount": "Neue Verbindungen",
+  "evidence.metric.flightRepeatedConnectionsCount": "Wiederholte Verbindungen",
+  "evidence.metric.flightTransferCount": "Gemessene Umstiege"
 }

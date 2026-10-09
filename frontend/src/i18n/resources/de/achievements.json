@@ -61,7 +61,8 @@
       "km": "km",
       "hours": "Std.",
       "days": "Tage",
-      "nights": "Nächte"
+      "nights": "Nächte",
+      "years": "Jahre"
     },
     "evidence": {
       "trigger": "Die Einträge dahinter",
@@ -1291,6 +1292,18 @@
     "RAIL_OPERATORS_5": {
       "name": "Bahngesellschaften-Sammler",
       "description": "Mit fünf verschiedenen Bahngesellschaften gefahren"
+    },
+    "NEW_GROUND_YEAR": {
+      "name": "Neulandjahr",
+      "description": "Mindestens fünf Flughäfen in einem Jahr zum ersten Mal erfasst"
+    },
+    "LONG_TIME_NO_SEE": {
+      "name": "Lange nicht gesehen",
+      "description": "Zu einem Flughafen zurückgekehrt, nach mindestens zehn erfassten Jahren"
+    },
+    "FOUR_QUARTERS_AIRPORT": {
+      "name": "Jahreszeiten-Wiedersehen",
+      "description": "Denselben Flughafen in allen vier Kalenderquartalen eines Jahres genutzt"
     }
   },
   "header": {
