@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { JSX } from "react";
+import type { JSX, KeyboardEvent } from "react";
 import Modal from "../Modal";
 import {
   FormErrorBanner,
@@ -42,8 +42,13 @@ interface Props {
   afterSaveFailedKey?: string;
 }
 
-const PANEL_ID = "rental-form-step-panel";
 const tabId = (step: RentalFormStep): string => `rental-form-step-${step}`;
+const panelId = (step: RentalFormStep): string => `rental-form-panel-${step}`;
+const STEP_VIEWS = {
+  booking: RentalBookingStep,
+  pickup: RentalPickupStep,
+  return: RentalReturnStep,
+} as const;
 
 /** A refusal the server tied to one field, kept for the draft it refused. */
 interface FieldRefusal {
@@ -139,6 +144,15 @@ export function RentalFormModal({
     errorOf,
   };
   const next = RENTAL_FORM_STEPS[RENTAL_FORM_STEPS.indexOf(step) + 1];
+  const moveBetweenTabs = (e: KeyboardEvent<HTMLDivElement>): void => {
+    const delta = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+    if (delta === 0) return;
+    e.preventDefault();
+    const count = RENTAL_FORM_STEPS.length;
+    const to = RENTAL_FORM_STEPS[(RENTAL_FORM_STEPS.indexOf(step) + delta + count) % count];
+    setStep(to);
+    document.getElementById(tabId(to))?.focus();
+  };
 
   return (
     <Modal
@@ -197,7 +211,12 @@ export function RentalFormModal({
           }
           retryDisabled={saving.saving}
         />
-        <div role="tablist" aria-label={t("rental:form.steps.label")} className="flex gap-1">
+        <div
+          role="tablist"
+          aria-label={t("rental:form.steps.label")}
+          className="flex gap-1"
+          onKeyDown={moveBetweenTabs}
+        >
           {RENTAL_FORM_STEPS.map((s) => (
             <button
               key={s}
@@ -205,7 +224,10 @@ export function RentalFormModal({
               type="button"
               role="tab"
               aria-selected={step === s}
-              aria-controls={PANEL_ID}
+              aria-controls={panelId(s)}
+              // Roving tab stop (WAI-ARIA tabs): Tab reaches the chosen step,
+              // the arrow keys move between steps.
+              tabIndex={step === s ? 0 : -1}
               onClick={(): void => setStep(s)}
               className={`flex-1 rounded-md border px-3 py-2 text-sm pointer-coarse:min-h-(--ts-size-touch-min) ${
                 step === s
@@ -225,11 +247,23 @@ export function RentalFormModal({
             </button>
           ))}
         </div>
-        <div id={PANEL_ID} role="tabpanel" aria-labelledby={tabId(step)}>
-          {step === "booking" ? <RentalBookingStep {...stepProps} /> : null}
-          {step === "pickup" ? <RentalPickupStep {...stepProps} /> : null}
-          {step === "return" ? <RentalReturnStep {...stepProps} /> : null}
-        </div>
+        {/* Every step stays mounted, the others hidden: a station search typed
+            but not yet picked, or the address mode, survives a step switch
+            (review, minor 5). The draft itself lives above all three. */}
+        {RENTAL_FORM_STEPS.map((s) => {
+          const View = STEP_VIEWS[s];
+          return (
+            <div
+              key={s}
+              id={panelId(s)}
+              role="tabpanel"
+              aria-labelledby={tabId(s)}
+              hidden={step !== s}
+            >
+              <View {...stepProps} />
+            </div>
+          );
+        })}
         {next ? (
           <button
             type="button"

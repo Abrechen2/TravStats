@@ -11,6 +11,7 @@ import { RentalStationPicker } from "./RentalStationPicker";
 import { RENTAL_PROVIDER_SUGGESTIONS } from "./rentalProviders";
 import {
   RENTAL_LICENSE_PLATE_MAX,
+  depositCurrencyOf,
   draftDrivenKm,
   type RentalDraft,
   type RentalFormField,
@@ -351,7 +352,7 @@ export function RentalPickupStep(props: RentalStepProps): JSX.Element {
               <CurrencySelect
                 id={wiring.id}
                 aria-label={t("rental:form.depositCurrency")}
-                value={draft.depositCurrency}
+                value={depositCurrencyOf(draft)}
                 onChange={(code): void => set("depositCurrency", code)}
                 recent={recentCurrencies}
                 className={INPUT_CLASS}
@@ -448,7 +449,7 @@ export function RentalReturnStep(props: RentalStepProps): JSX.Element {
           />
           <TextInput
             id={rentalFieldId("depositReturnedAmount")}
-            label={t("rental:form.depositReturnedAmount", { currency: draft.depositCurrency })}
+            label={t("rental:form.depositReturnedAmount", { currency: depositCurrencyOf(draft) })}
             inputMode="decimal"
             value={draft.depositReturnedAmount}
             onChange={(v): void => set("depositReturnedAmount", v)}

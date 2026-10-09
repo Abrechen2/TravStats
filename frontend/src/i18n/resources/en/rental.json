@@ -189,7 +189,7 @@
     "depositBack": "Deposit back",
     "depositReturnedOn": "Returned on",
     "depositReturnedAmount": "Amount returned ({{currency}})",
-    "depositReturnedHint": "Less than was held is a partial refund; the rest stays visible as outstanding."
+    "depositReturnedHint": "Less than was held is a partial refund; the rest stays visible as outstanding. If the refund arrived in another currency, enter the amount in the deposit's currency – TravStats stores no second currency for the deposit."
   },
   "detail": {
     "loading": "Loading …",
@@ -344,7 +344,7 @@
   "invoiceReview": {
     "loadFailed": "The rental for this invoice could not be loaded – the comparison is missing.",
     "noDifference": "cannot be computed",
-    "feesNote": "TravStats does not read single fees out of invoices yet; the difference is their sum. The booked price is kept either way.",
+    "feesNote": "TravStats does not read single items out of invoices yet; the difference may contain fees, extra days or price changes. The booked price is kept either way.",
     "part": {
       "finalAmount": "Final amount",
       "vehicleDriven": "Car driven",

@@ -189,7 +189,7 @@
     "depositBack": "Kaution zurück",
     "depositReturnedOn": "Zurückerhalten am",
     "depositReturnedAmount": "Zurückerhaltener Betrag ({{currency}})",
-    "depositReturnedHint": "Weniger als hinterlegt ist eine Teilrückzahlung; der Rest bleibt als offen sichtbar."
+    "depositReturnedHint": "Weniger als hinterlegt ist eine Teilrückzahlung; der Rest bleibt als offen sichtbar. Kam die Rückzahlung in einer anderen Währung an, trage den Betrag in der Währung der Kaution ein – eine zweite Währung speichert TravStats für die Kaution nicht."
   },
   "detail": {
     "loading": "Lädt …",
@@ -344,7 +344,7 @@
   "invoiceReview": {
     "loadFailed": "Die Miete zu dieser Rechnung konnte nicht geladen werden – der Vergleich fehlt.",
     "noDifference": "nicht berechenbar",
-    "feesNote": "Einzelne Gebühren liest TravStats aus Rechnungen noch nicht aus; die Differenz ist ihre Summe. Der gebuchte Preis bleibt in jedem Fall erhalten.",
+    "feesNote": "Einzelne Posten liest TravStats aus Rechnungen noch nicht aus; die Differenz kann Gebühren, Zusatztage oder Preisänderungen enthalten. Der gebuchte Preis bleibt in jedem Fall erhalten.",
     "part": {
       "finalAmount": "Endbetrag",
       "vehicleDriven": "Gefahrenes Fahrzeug",

@@ -44,10 +44,34 @@ describe("rentalFormModel", () => {
     expect(body.returnStation).toBeNull();
   });
 
-  it("sends an empty price as null, never 0, and no currency without a price", () => {
-    const body = rentalInputFromDraft({ ...placed, price: "" });
+  it("sends an emptied price as null, never 0, and no currency without a price", () => {
+    const body = rentalInputFromDraft({
+      ...placed,
+      storedPrice: 120,
+      storedCurrency: "EUR",
+      price: "",
+    });
     expect(body.price).toBeNull();
     expect(body.currency).toBeNull();
+    // A price nobody ever knew stays unknown: not sent, never 0.
+    expect("price" in rentalInputFromDraft({ ...placed, price: "" })).toBe(false);
+  });
+
+  // Review I4: an unchanged booked price is not sent, so it is not recorded as
+  // typed by hand and keeps "aus der Buchungsbestätigung".
+  it("sends the booked price only when it changed", () => {
+    const draft = draftFromRental(makeRental({ price: 123.45, currency: "EUR" }));
+    const unchanged = rentalInputFromDraft({ ...draft, odometerInKm: "12634" });
+    expect("price" in unchanged).toBe(false);
+    expect("currency" in unchanged).toBe(false);
+    expect(rentalInputFromDraft({ ...draft, price: "130" })).toMatchObject({
+      price: 130,
+      currency: "EUR",
+    });
+    expect(rentalInputFromDraft({ ...draft, currency: "USD" })).toMatchObject({
+      price: 123.45,
+      currency: "USD",
+    });
   });
 
   it("reads the stored times on the station's clock, not the reader's", () => {

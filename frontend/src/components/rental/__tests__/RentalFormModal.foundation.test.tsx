@@ -270,6 +270,33 @@ describe("RentalFormModal — steps and form blocks", () => {
     });
   });
 
+  // Review I4: opened at the counter, only the odometer typed — the booked
+  // price is not sent, so its origin stays the booking confirmation.
+  it("does not send the booked price when only the odometer changed", async () => {
+    update.mockResolvedValue(makeRental());
+    render(
+      <RentalFormModal
+        rental={makeRental({
+          status: "in_progress",
+          price: 123.45,
+          currency: "EUR",
+          priceSource: "booking",
+        })}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+    fireEvent.change(screen.getByLabelText("rental:form.odometerInKm"), {
+      target: { value: "12634" },
+    });
+    fireEvent.click(save());
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    const body = update.mock.calls[0][1];
+    expect(body.odometerInKm).toBe(12634);
+    expect("price" in body).toBe(false);
+    expect("currency" in body).toBe(false);
+  });
+
   it("leaves an invoice's final amount alone unless it is changed", async () => {
     update.mockResolvedValue(makeRental());
     const rental = makeRental({
@@ -292,6 +319,30 @@ describe("RentalFormModal — steps and form blocks", () => {
     fireEvent.click(save());
     await waitFor(() => expect(update).toHaveBeenCalledTimes(2));
     expect(update.mock.calls[1][1]).toMatchObject({ finalAmount: 162.5, finalCurrency: "EUR" });
+  });
+
+  // Review minor 5: the picker's own state (the address mode chosen before
+  // a pick) survives a step switch — the panels stay mounted.
+  it("keeps the station picker's address mode across a step switch", () => {
+    render(<RentalFormModal rental={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+    fireEvent.click(screen.getAllByText("rental:station.useAddress")[0]);
+    fireEvent.click(tab("return"));
+    fireEvent.click(tab("booking"));
+    expect(
+      screen.getByLabelText(/rental:form\.pickupStation: rental:form\.stationName/)
+    ).toBeInTheDocument();
+  });
+
+  it("moves between the steps with the arrow keys, one tab stop for the set", () => {
+    render(<RentalFormModal rental={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+    expect(tab("booking").getAttribute("tabindex")).toBe("0");
+    expect(tab("pickup").getAttribute("tabindex")).toBe("-1");
+    fireEvent.keyDown(tab("booking"), { key: "ArrowRight" });
+    expect(tab("pickup").getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(tab("pickup"));
+    fireEvent.keyDown(tab("pickup"), { key: "ArrowLeft" });
+    fireEvent.keyDown(tab("booking"), { key: "ArrowLeft" });
+    expect(tab("return").getAttribute("aria-selected")).toBe("true");
   });
 
   it("gives the station name a visible label in address mode", () => {

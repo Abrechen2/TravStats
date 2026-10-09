@@ -90,6 +90,13 @@ export interface RentalDraft {
   paymentTiming: RentalPaymentTiming | "";
   price: string;
   currency: string;
+  /**
+   * The booked price as loaded — never edited. The price goes out only when it
+   * differs (`priceInput`): re-sending it would record it as typed by hand and
+   * turn "aus der Buchungsbestätigung" into "von Hand" (review I4).
+   */
+  storedPrice: number | null;
+  storedCurrency: string | null;
   inclusions: RentalInclusion[];
   fuelPolicy: RentalFuelPolicy | "";
   /**
@@ -108,6 +115,7 @@ export interface RentalDraft {
    * less than held is a partial refund. Days `YYYY-MM-DD`; empty = unknown.
    */
   depositAmount: string;
+  /** Empty = the booking's currency, until the user picks another (review, minor 6). */
   depositCurrency: string;
   depositPaidOn: string;
   depositReturnedOn: string;
@@ -150,6 +158,8 @@ export const EMPTY_RENTAL_DRAFT: RentalDraft = {
   paymentTiming: "",
   price: "",
   currency: "EUR",
+  storedPrice: null,
+  storedCurrency: null,
   inclusions: [],
   fuelPolicy: "",
   finalAmount: "",
@@ -158,7 +168,7 @@ export const EMPTY_RENTAL_DRAFT: RentalDraft = {
   storedFinalCurrency: null,
   invoiceNumber: "",
   depositAmount: "",
-  depositCurrency: "EUR",
+  depositCurrency: "",
   depositPaidOn: "",
   depositReturnedOn: "",
   depositReturnedAmount: "",
@@ -254,6 +264,8 @@ export function draftFromRental(r: RentalBooking): RentalDraft {
     paymentTiming: r.paymentTiming ?? "",
     price: r.price === null ? "" : String(r.price),
     currency: r.currency ?? "EUR",
+    storedPrice: r.price,
+    storedCurrency: r.currency,
     inclusions: r.inclusions,
     fuelPolicy: r.fuelPolicy ?? "",
     finalAmount: r.finalAmount === null ? "" : String(r.finalAmount),
@@ -262,7 +274,7 @@ export function draftFromRental(r: RentalBooking): RentalDraft {
     storedFinalCurrency: r.finalCurrency,
     invoiceNumber: r.invoiceNumber ?? "",
     depositAmount: r.depositAmount === null ? "" : String(r.depositAmount),
-    depositCurrency: r.depositCurrency ?? r.currency ?? "EUR",
+    depositCurrency: r.depositCurrency ?? "",
     depositPaidOn: r.depositPaidOn ?? "",
     depositReturnedOn: r.depositReturnedOn ?? "",
     depositReturnedAmount: r.depositReturnedAmount === null ? "" : String(r.depositReturnedAmount),
@@ -350,6 +362,9 @@ export function validateRentalDraft(d: RentalDraft): RentalDraftErrors {
   return errors;
 }
 
+/** The deposit's currency: the one picked, else the booking's. */
+export const depositCurrencyOf = (d: RentalDraft): string => d.depositCurrency || d.currency;
+
 /** The server's deposit rules (`assertDepositConsistent`), said at the field before saving. */
 function depositErrors(d: RentalDraft): RentalDraftErrors {
   const errors: RentalDraftErrors = {};
@@ -424,6 +439,19 @@ function correctionInput(d: RentalDraft): Pick<RentalInput, "distanceKm"> {
 }
 
 /**
+ * The booked price as the write body carries it: ABSENT while it is what was
+ * stored, so a save that only adds an odometer reading keeps the price's
+ * origin; the typed figure (or null, emptied) once the user changed it. An
+ * empty price is null — unknown, never 0 (§2).
+ */
+function priceInput(d: RentalDraft): Pick<RentalInput, "price" | "currency"> {
+  const typed = parseDecimalInput(d.price);
+  const currency = typed === null ? null : d.currency;
+  const unchanged = typed === d.storedPrice && (typed === null || currency === d.storedCurrency);
+  return unchanged ? {} : { price: typed, currency };
+}
+
+/**
  * The invoice amount as the write body carries it: ABSENT while it is what
  * was stored (an invoice's figure stays the invoice's), the typed figure — or
  * null, emptied — once the user changed it; that is a labelled correction.
@@ -456,7 +484,7 @@ function depositInput(
   const back = parseDecimalInput(d.depositReturnedAmount);
   return {
     depositAmount: held,
-    depositCurrency: held !== null || back !== null ? d.depositCurrency : null,
+    depositCurrency: held !== null || back !== null ? depositCurrencyOf(d) : null,
     depositPaidOn: d.depositPaidOn === "" ? null : d.depositPaidOn,
     depositReturnedOn: d.depositReturnedOn === "" ? null : d.depositReturnedOn,
     depositReturnedAmount: back,
@@ -469,7 +497,6 @@ function depositInput(
  * as whole km, an empty one as null.
  */
 export function rentalInputFromDraft(d: RentalDraft): RentalInput {
-  const price = parseDecimalInput(d.price);
   return {
     provider: d.provider.trim(),
     broker: text(d.broker),
@@ -491,8 +518,7 @@ export function rentalInputFromDraft(d: RentalDraft): RentalInput {
     vehicleDriven: text(d.vehicleDriven),
     licensePlate: text(d.licensePlate),
     paymentTiming: d.paymentTiming === "" ? null : d.paymentTiming,
-    price,
-    currency: price === null ? null : d.currency,
+    ...priceInput(d),
     inclusions: d.inclusions,
     fuelPolicy: d.fuelPolicy === "" ? null : d.fuelPolicy,
     invoiceNumber: text(d.invoiceNumber),

@@ -223,6 +223,16 @@ describe("POST /api/v1/rentals/import", () => {
     expect(res.body.data).toMatchObject({ distanceKm: 400, distanceSource: "user" });
   });
 
+  // Review I4: the form now sends what changed; the origin survives such a save.
+  it("keeps the booked price's origin through a save that does not send the price", async () => {
+    const created = (await post(confirmation())).body.data;
+    const res = await request(app)
+      .patch(`/api/v1/rentals/${created.id}`)
+      .set("Cookie", cookie)
+      .send({ odometerInKm: 12634, notes: "zurück" });
+    expect(res.body.data).toMatchObject({ price: 123.45, priceSource: "booking" });
+  });
+
   it("refuses an adopt key it does not know", async () => {
     await post(confirmation());
     const res = await post({ ...invoice(), adopt: { fees: true } });
