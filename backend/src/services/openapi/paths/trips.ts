@@ -39,6 +39,7 @@ import {
   assignFlightsSchema,
   createBookingSchema,
   updateBookingSchema,
+  bookingFlightsSchema,
   createStopSchema,
   updateStopSchema,
   createJournalSchema,
@@ -667,10 +668,45 @@ registry.registerPath({
   method: "patch",
   path: "/trips/bookings/{id}",
   summary: "Update a booking",
+  description:
+    "Reference, price and currency, and the trip the booking belongs to (`tripId`; null " +
+    "takes it off its trip). A trip that is not the caller's answers 404 `TRIP_NOT_FOUND`. " +
+    "The booking's flights stay where they are.",
   tags: ["Trips"],
   request: {
     params: tripId,
     body: { content: { "application/json": { schema: bookingUpdateInput } }, required: true },
   },
   responses: { 200: { description: "Updated" }, 400: badInput, 404: notFound },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/trips/bookings/{id}/flights",
+  summary: "File existing flights on a booking",
+  description:
+    "Sets the booking on every named flight. A flight on no trip joins the booking's trip; " +
+    "one already on another trip keeps it. All or nothing: an id that is not the caller's " +
+    "answers 404 `FLIGHT_NOT_FOUND` and files none; another account's booking answers 404 " +
+    "`BOOKING_NOT_FOUND`.",
+  tags: ["Trips"],
+  request: {
+    params: tripId,
+    body: {
+      content: { "application/json": { schema: bookingFlightsSchema } },
+      required: true,
+    },
+  },
+  responses: {
+    200: {
+      description: "Filed",
+      content: {
+        "application/json": {
+          schema: z.object({ bookingId: z.string().uuid(), count: z.number().int() }),
+        },
+      },
+    },
+    400: badInput,
+    404: notFound,
+  },
 });

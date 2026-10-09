@@ -135,6 +135,7 @@ export type ApiErrorCode =
   /** A trip, booking or flight id the request named is not the caller's. */
   | "TRIP_NOT_FOUND"
   | "BOOKING_NOT_FOUND"
+  | "FLIGHT_NOT_FOUND"
   /** A request body failed its schema. Sent on every ZodError answer, so a
    *  form shows its own sentence instead of zod's JSON issue dump. */
   | "VALIDATION_FAILED"

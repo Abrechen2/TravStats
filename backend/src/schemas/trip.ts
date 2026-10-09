@@ -151,6 +151,8 @@ export const createBookingSchema = z.object({
 });
 
 export const updateBookingSchema = z.object({
+  /** The trip the booking belongs to; null takes it off its trip (#356). */
+  tripId: z.string().uuid().nullable().optional(),
   pnr: z.string().max(20).nullable().optional(),
   price: z.number().min(0).nullable().optional(),
   currency: z
@@ -158,6 +160,11 @@ export const updateBookingSchema = z.object({
     .regex(/^[A-Z]{3}$/, "Must be a 3-letter ISO 4217 code (e.g. EUR, USD, INR)")
     .nullable()
     .optional(),
+});
+
+/** `POST /trips/bookings/:id/flights` — file existing flights on a booking (#356). */
+export const bookingFlightsSchema = z.object({
+  flightIds: z.array(z.string().uuid()).min(1).max(100),
 });
 
 export type CreateTripInput = z.infer<typeof createTripSchema>;
