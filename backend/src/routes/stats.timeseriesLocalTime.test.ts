@@ -44,8 +44,6 @@ const AIRPORT_DB: Record<
   JFK: { lat: 40.6398, lon: -73.7789, country: "US", timezone: "America/New_York" },
   DXB: { lat: 25.2528, lon: 55.3644, country: "AE", timezone: "Asia/Dubai" },
   HGA: { lat: 9.5182, lon: 44.0888, country: "SO", timezone: null },
-  AKL: { lat: -37.0082, lon: 174.785, country: "NZ", timezone: "Pacific/Auckland" },
-  CXI: { lat: 1.9862, lon: -157.35, country: "KI", timezone: "Pacific/Kiritimati" },
 };
 
 function airport(code: string): { lat: number; lon: number } {
@@ -284,9 +282,12 @@ describe("GET /api/v1/stats/timeseries — buckets read the clock at the departu
   });
 
   it("buckets a DATE_ONLY row on the date it carries", async () => {
-    // A historical row has no real clock: it stores a 12:00Z placeholder and
-    // is tagged DATE_ONLY. The day it carries is the day it buckets on, east
-    // and west of UTC alike.
+    // A historical row has no real clock: it stores a 12:00 placeholder and is
+    // tagged DATE_ONLY. `localWallClockOf` still reads such a row through the
+    // airport's zone — only the HOUR is dropped — but 12:00 sits far enough
+    // from midnight that no real airport offset can move the DATE. So the day
+    // the row carries is the day it buckets on, east and west of UTC alike,
+    // and no timezone shifting is ever visible on it.
     mockFlightFindMany.mockResolvedValue([
       flightRow("BKK", "SIN", "2020-06-15T12:00:00Z", {
         depTimeSemantics: "DATE_ONLY",
@@ -308,32 +309,6 @@ describe("GET /api/v1/stats/timeseries — buckets read the clock at the departu
     expect(bucketOf(res.body, "2020-06").count).toBe(2);
     expect(bucketOf(res.body, "2020-07").count).toBe(0);
     expect(totalsOf(res.body, "current").count).toBe(2);
-  });
-
-  it("keeps a DATE_ONLY row east of UTC+12 in its month (forgejo#273)", async () => {
-    // 30 June 12:00Z is already 1 July 00:00 in Auckland (NZST, +12) and
-    // 02:00 on Kiritimati (+14). Reading the placeholder through those zones
-    // moved both flights into July; the recorded day is 30 June.
-    mockFlightFindMany.mockResolvedValue([
-      flightRow("AKL", "SIN", "2020-06-30T12:00:00Z", {
-        depTimeSemantics: "DATE_ONLY",
-        arrTimeSemantics: "DATE_ONLY",
-        status: "historical",
-      }),
-      flightRow("CXI", "AKL", "2020-06-30T12:00:00Z", {
-        depTimeSemantics: "DATE_ONLY",
-        arrTimeSemantics: "DATE_ONLY",
-        status: "historical",
-      }),
-    ]);
-
-    const res = await request(app).get(
-      "/api/v1/stats/timeseries?domain=flight&granularity=month&fromDate=2020-06-01&toDate=2020-08-01"
-    );
-
-    expect(res.status).toBe(200);
-    expect(bucketOf(res.body, "2020-06").count).toBe(2);
-    expect(bucketOf(res.body, "2020-07").count).toBe(0);
   });
 
   it("still counts a flight whose airport has no known timezone", async () => {

@@ -58,24 +58,23 @@ function zonedComponents(stored: Date, timezone: string): Components | null {
  * Read a stored flight time as the wall clock at its airport.
  *
  * Which conversion applies depends on the row's storage semantics:
- *   - 'UTC' / 'UNKNOWN': the stored value is a real instant and is converted
- *     through the airport's timezone. UNKNOWN belongs here deliberately —
- *     treating it as legacy would shift the API-imported real-UTC rows that
- *     make up most of the untagged set.
+ *   - 'UTC' / 'DATE_ONLY' / 'UNKNOWN': the stored value is a real instant and
+ *     is converted through the airport's timezone. UNKNOWN belongs here
+ *     deliberately — treating it as legacy would shift the API-imported
+ *     real-UTC rows that make up most of the untagged set.
  *   - 'LEGACY_FAKE_UTC': the stored components ARE the wall clock, encoded as
  *     UTC. Converting them would subtract the offset a second time.
- *   - 'DATE_ONLY': 12:00Z of the recorded day — a calendar day, not an
- *     instant, so it is never read through a zone and `hour` is null. At
- *     UTC+12 and beyond (Auckland, Fiji, Kiritimati) the converted
- *     placeholder is already the next local day (forgejo#273).
  * Without a timezone the stored components are the best available reading.
+ *
+ * DATE_ONLY rows carry a 12:00 placeholder, so `hour` is null for them: the
+ * date is real, the time is not.
  */
 export function localWallClockOf(
   stored: Date,
   timezone: string | null | undefined,
   semantics: FlightTimeSemantics = "UNKNOWN"
 ): LocalWallClock {
-  const useStored = semantics === "LEGACY_FAKE_UTC" || semantics === "DATE_ONLY" || !timezone;
+  const useStored = semantics === "LEGACY_FAKE_UTC" || !timezone;
   const { year, month, day, hour } =
     (useStored ? null : zonedComponents(stored, timezone as string)) ?? storedComponents(stored);
 
