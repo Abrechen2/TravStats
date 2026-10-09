@@ -65,8 +65,12 @@ registry.registerPath({
     "`{id}` stays, `sourceId` is folded into it and deleted — in one transaction, so a " +
     "failure changes nothing. Every visit (with its photos and documents), list " +
     "membership, roadtrip station and photo finding moves; a list both were in keeps one " +
-    "entry. Each master-data group comes from the side picked in `fields`; `visited` is " +
-    "true if either was; the OSM/Wikidata identity follows the position. Both places must " +
+    "entry. Each master-data group comes from the side picked in `fields` (the name pair " +
+    "normalised); `visited` is true if either was. The primary source reference follows " +
+    "the position; the other one, and the folded place's own aliases, stay as aliases of " +
+    "the kept place, so every dedup (create, import, photo finding) still finds either " +
+    "object. The kept place leaves its import batch unless both came from the same one. " +
+    "Both places must " +
     "be the caller's (404 otherwise). 400 `PLACE_MERGE_SAME` for one id twice, 409 " +
     "`PLACE_MERGE_BOTH_CURATED` when each stands for a different checklist item. Never " +
     "run automatically.",

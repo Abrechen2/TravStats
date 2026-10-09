@@ -3,6 +3,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
+import { revertImportBatch } from "../../services/importBatchService";
 
 /**
  * `POST /places/:id/merge` (forgejo#232): two of the user's own places become
@@ -79,6 +80,7 @@ describe("POST /places/:id/merge", () => {
     await prisma.placeVisit.deleteMany({ where });
     await prisma.place.updateMany({ where: { ...where, name: FAIL_NAME }, data: { name: "x" } });
     await prisma.place.deleteMany({ where });
+    await prisma.importBatch.deleteMany({ where });
     await prisma.trip.deleteMany({ where });
   });
 
@@ -291,6 +293,57 @@ describe("POST /places/:id/merge", () => {
     expect((await prisma.photoJourney.findUnique({ where: { id: f.journey.id } }))?.placeId).toBe(
       f.source.id
     );
+  });
+
+  // Review I2: "Import rückgängig" deletes a batch's places — it must not take
+  // the history that was merged into an imported place from elsewhere.
+  it("takes the merged place out of the import batch, so undoing the import keeps the moved history", async () => {
+    const f = await twoColosseums();
+    const batch = await prisma.importBatch.create({
+      data: { userId, domain: "poi", source: "csv", fileName: "takeout.csv" },
+    });
+    await prisma.place.update({ where: { id: f.target.id }, data: { batchId: batch.id } });
+
+    const res = await merge(f.target.id, { sourceId: f.source.id, fields: ALL_TARGET });
+    expect(res.status).toBe(200);
+    expect((await prisma.place.findUniqueOrThrow({ where: { id: f.target.id } })).batchId).toBe(
+      null
+    );
+
+    await revertImportBatch(userId, batch.id);
+    expect(await prisma.place.findUnique({ where: { id: f.target.id } })).not.toBeNull();
+    expect(await prisma.placeVisit.count({ where: { placeId: f.target.id } })).toBe(3);
+  });
+
+  it("keeps the batch when both places came from the same import", async () => {
+    const f = await twoColosseums();
+    const batch = await prisma.importBatch.create({
+      data: { userId, domain: "poi", source: "csv", fileName: "takeout.csv" },
+    });
+    await prisma.place.updateMany({
+      where: { id: { in: [f.target.id, f.source.id] } },
+      data: { batchId: batch.id },
+    });
+    await merge(f.target.id, { sourceId: f.source.id, fields: ALL_TARGET });
+    expect((await prisma.place.findUniqueOrThrow({ where: { id: f.target.id } })).batchId).toBe(
+      batch.id
+    );
+  });
+
+  // Review M1: the name pair is normalised like every other write.
+  it("stores no second name equal to the first", async () => {
+    const a = await prisma.place.create({
+      data: { userId, name: "Kolosseum", localName: "Colosseo", lat: 1, lon: 1 },
+    });
+    const b = await prisma.place.create({ data: { userId, name: "Colosseo", lat: 1, lon: 1 } });
+    await merge(a.id, {
+      sourceId: b.id,
+      fields: { ...ALL_TARGET, name: "source", localName: "target" },
+    });
+    expect(await prisma.place.findUniqueOrThrow({ where: { id: a.id } })).toMatchObject({
+      name: "Colosseo",
+      localName: null,
+    });
   });
 
   it("refuses another account's place with 404 and touches neither", async () => {

@@ -34,6 +34,7 @@ import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import { haversineKm } from "../../shared/geo/haversine";
 import { splitGluedName } from "../geo/gluedPlaceName";
+import { refHeldElsewhere } from "./placeRefs";
 import { isNonLatin, mergePlaceNames } from "../geo/placeNames";
 import type { PlaceResult } from "../geo/photon";
 
@@ -183,10 +184,9 @@ export async function refToAdopt(
     return { ref: row.externalRef, collision: false };
   }
   const key = `${row.userId}\u0000${ref}`;
-  const holder = await prisma.place.findFirst({
-    where: { userId: row.userId, externalRef: ref, id: { not: row.id } },
-    select: { id: true },
-  });
+  // Held by another place — as its own reference or as an alias a merge left
+  // on it (forgejo#232).
+  const holder = await refHeldElsewhere(prisma, row.userId, ref, row.id);
   if (holder || claimed.has(key)) return { ref: row.externalRef, collision: true };
   claimed.add(key);
   return { ref, collision: false };

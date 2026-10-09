@@ -2,6 +2,8 @@ import { prisma } from "../../db";
 import type { Place as PlaceRow, Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import type { MergePlaceInput } from "../../schemas/place";
+import { normaliseNamePair } from "../geo/gluedPlaceName";
+import { carryRefsIntoMerge } from "./placeRefs";
 
 type Pick = "target" | "source";
 
@@ -31,11 +33,20 @@ export interface MergeCounts {
  *   decided for them here.
  * - `visited` is the OR of the two: a place one of them had been to stays
  *   visited — the flag is one-directional everywhere else as well.
- * - The identity columns (`externalRef`, `wikidataId`) follow the POSITION —
- *   they name the object at those coordinates — and fall back to the other
- *   side's rather than to nothing, so the merged place still dedups against a
- *   later import of either. `curatedItemId` is kept from whichever side has
- *   one; two DIFFERENT checklist items cannot become one place (409).
+ * - The primary source reference (`externalRef`) follows the POSITION — it
+ *   names the object at those coordinates — and falls back to the other side's.
+ *   The reference that is NOT kept as the primary is not dropped: it becomes an
+ *   alias of the place that stays (`PlaceExternalRef`), and the folded place's
+ *   own aliases move along, so every dedup path still finds a later import or
+ *   search pick of either object (review I1; `placeRefs.ts`). `wikidataId` is
+ *   a re-derivable cache, so one of the two is enough. `curatedItemId` is kept
+ *   from whichever side has one; two DIFFERENT checklist items cannot become
+ *   one place (409).
+ * - The merged place leaves its import batch unless both came from the same
+ *   one: "Import rückgängig" deletes a batch's places, and must not take the
+ *   history that was merged in from elsewhere (review I2).
+ * - The name pair goes through `normaliseNamePair`, like every other write: a
+ *   second name equal to the first is stored as none.
  *
  * Both places must be the caller's; anything else is 404, the same answer as
  * for a place that does not exist. Nothing here merges by proximity — this
@@ -68,6 +79,10 @@ export async function mergePlaces(
     }
 
     const merged = mergedData(target, source, input.fields);
+    const keptRef = merged.externalRef as string | null;
+    const refsToAlias = [target.externalRef, source.externalRef].filter(
+      (ref): ref is string => ref !== null && ref !== keptRef
+    );
 
     // The duplicate gives up its unique identity columns BEFORE the place that
     // stays takes them over — `@@unique([userId, externalRef])` and
@@ -76,6 +91,8 @@ export async function mergePlaces(
       where: { id: source.id },
       data: { externalRef: null, curatedItemId: null },
     });
+
+    await carryRefsIntoMerge(tx, userId, target.id, source.id, refsToAlias);
 
     const visits = await tx.placeVisit.updateMany({
       where: { placeId: source.id, userId },
@@ -133,9 +150,10 @@ function mergedData(
   const positioned = from(fields.position);
   const other = positioned === source ? target : source;
   const address = from(fields.address);
+  const names = normaliseNamePair(from(fields.name).name, from(fields.localName).localName);
   return {
-    name: from(fields.name).name,
-    localName: from(fields.localName).localName,
+    name: names.name,
+    localName: names.localName,
     category: from(fields.category).category,
     lat: positioned.lat,
     lon: positioned.lon,
@@ -150,6 +168,11 @@ function mergedData(
     visited: target.visited || source.visited,
     curatedItemId: target.curatedItemId ?? source.curatedItemId,
     coverPhoto: coverFor(target, source),
+    // A merged row is no longer "what that import created" — unless both were.
+    batch:
+      target.batchId !== null && target.batchId === source.batchId
+        ? { connect: { id: target.batchId } }
+        : { disconnect: true },
   };
 }
 

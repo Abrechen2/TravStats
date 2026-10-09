@@ -189,6 +189,14 @@ describe("PlaceMergeDialog", () => {
     expect(impact).toHaveTextContent("zählt als besucht");
   });
 
+  // Review I1: the folded place's source reference survives as an alias.
+  it("says the duplicate's source reference is kept", async () => {
+    listPlaces.mockResolvedValue([{ ...COLOSSEUM, externalRef: "gmaps:123" }]);
+    await openDialog();
+    await pickColosseum();
+    expect(screen.getByText(/bleibt als Zweitverweis erhalten/)).toBeInTheDocument();
+  });
+
   it("says when the counts could not be had — and that everything moves anyway", async () => {
     getPlaceRelations.mockRejectedValue(new Error("503"));
     await openDialog();

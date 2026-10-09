@@ -215,6 +215,8 @@ registry.registerPath({
   path: "/places",
   summary: "Create a place",
   description:
+    "An `externalRef` the user already has — as a place's own or as an alias a merge " +
+    "left — answers that place (200, `deduped`) instead of creating one. " +
     "Address, city and country are filled in from the coordinates when they are " +
     "left out, and a nightly pass fills in older entries. Names come back in " +
     "Latin script: a logbook collected in the local script of every place is text " +
@@ -240,7 +242,16 @@ registry.registerPath({
     params: z.object({ id: uuid }),
     body: { content: { "application/json": { schema: updatePlaceSchema } } },
   },
-  responses: { 200: { description: "Updated" }, 400: badInput, 404: notFound },
+  responses: {
+    200: { description: "Updated" },
+    400: badInput,
+    404: notFound,
+    409: {
+      description:
+        "`externalRef` is already another place's reference, its own or an alias a merge left",
+      content: errorContent,
+    },
+  },
 });
 
 registry.registerPath({

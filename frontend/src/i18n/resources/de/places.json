@@ -489,7 +489,8 @@
       "unknown": "Was umzieht, ließ sich nicht zählen – alle Besuche, Fotos, Dokumente und Listen ziehen trotzdem mit um.",
       "deleted": "Danach wird „{{name}}“ gelöscht.",
       "visited": "Der Ort zählt als besucht, weil einer der beiden besucht war.",
-      "wishlist": "Der Ort bleibt auf der Merkliste."
+      "wishlist": "Der Ort bleibt auf der Merkliste.",
+      "refKept": "Seine Kennung aus der Quelle bleibt als Zweitverweis erhalten – ein späterer Import findet ihn wieder."
     }
   },
   "nearby": {

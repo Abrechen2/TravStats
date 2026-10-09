@@ -2,6 +2,7 @@ import { classifyVisit } from "../../shared/placeCounting";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
 import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
+import { findPlaceIdByRef } from "./placeRefs";
 import logger from "../../utils/logger";
 import {
   PLACE_IMPORT_FAILURE_MESSAGES,
@@ -74,6 +75,14 @@ export async function commitPlaceImport(
           code: "no_position",
           error: PLACE_IMPORT_FAILURE_MESSAGES.no_position,
         });
+        continue;
+      }
+
+      // Already here — as a place's own reference or as an alias a merge left
+      // (forgejo#232). The unique index below cannot see the alias table.
+      const ref = row.externalRef?.trim() || null;
+      if (ref !== null && (await findPlaceIdByRef(prisma, userId, ref)) !== null) {
+        skipped += 1;
         continue;
       }
 

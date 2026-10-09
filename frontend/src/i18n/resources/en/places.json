@@ -489,7 +489,8 @@
       "unknown": "What moves could not be counted — every visit, photo, document and list moves along anyway.",
       "deleted": "Afterwards “{{name}}” is deleted.",
       "visited": "The place counts as visited, because one of the two was.",
-      "wishlist": "The place stays on the wishlist."
+      "wishlist": "The place stays on the wishlist.",
+      "refKept": "Its source reference is kept as a second reference — a later import still finds it."
     }
   },
   "nearby": {

@@ -66,6 +66,9 @@ export function PlaceMergeImpact({
       )}
       <p className="mt-2" style={{ color: "var(--text-secondary)" }}>
         {t("places:merge.impact.deleted", { name: source.name })}{" "}
+        {/* Its source reference stays as a second reference of the kept place,
+            so a later import or search pick of it finds that place (review I1). */}
+        {source.externalRef ? `${t("places:merge.impact.refKept", { name: source.name })} ` : ""}
         {visitedEither ? t("places:merge.impact.visited") : t("places:merge.impact.wishlist")}
       </p>
     </section>
