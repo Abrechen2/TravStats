@@ -182,6 +182,8 @@ interface PackageParseFields {
   issues?: string[];
   /** Present when the document was kept (`retain: true`). */
   documentId?: string;
+  /** Present when a mail's PDF attachment was read (and kept), not its body. */
+  readFromAttachment?: { filename: string | null };
   domainMismatch?: { detected: ParseDomain; confidence: number };
 }
 

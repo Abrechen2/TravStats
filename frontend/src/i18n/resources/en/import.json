@@ -56,7 +56,7 @@
     "triggerLabel": "Add trip",
     "document": {
       "title": "Read travel documents",
-      "description": "Your tour operator's PDF — invoice or travel documents. Flights, hotels and price become one trip you review first."
+      "description": "Your tour operator's PDF — invoice or travel documents — or the e-mail it came with. Flights, hotels and price become one trip you review first."
     },
     "fromExisting": {
       "title": "Build from existing entries",

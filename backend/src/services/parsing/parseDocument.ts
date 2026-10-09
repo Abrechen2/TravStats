@@ -57,6 +57,14 @@ import {
   type PackageTemplateRef,
 } from "../trip/package/parsePackage";
 import type { PackageContract } from "../trip/package/contract";
+import type { MailAttachment } from "../parsers/pdfAttachmentFlights";
+import {
+  detectPackageAttachment,
+  hasPackageTemplates,
+  pdfAttachmentTexts,
+  readPackageFromAttachments,
+  type AttachmentText,
+} from "./packageAttachments";
 
 /** What a caller may ask for. `auto` is the addition — see the header. */
 export const REQUESTABLE_DOMAINS = [...PARSER_SUPPORTED_DOMAINS, "auto"] as const;
@@ -86,8 +94,10 @@ export interface ParseDocumentInput {
    */
   referenceDate?: Date;
   /**
-   * Files that came with a mail — a calendar file, a PDF ticket. Only the rail
-   * reader looks at them: a DB booking mail prints its itinerary nowhere else.
+   * Files that came with a mail — a calendar file, a PDF ticket. The rail
+   * reader looks at them (a DB booking mail prints its itinerary nowhere
+   * else); the flight and package readers open a PDF when the body read
+   * nothing.
    */
   attachments?: RailAttachment[];
   /**
@@ -176,6 +186,8 @@ type PackageBody = {
   fallbackReason?: string;
   /** The contract paths a recognising template failed, for `invalidReading`. */
   issues?: string[];
+  /** Present when the reading came from a mail's PDF attachment, not its body. */
+  readFromAttachment?: { filename: string | null };
   domainMismatch?: DomainMismatch;
 };
 
@@ -219,6 +231,12 @@ export interface ParseDocumentOutcome {
   /** Present only when the domain was detected: the evidence and the runners-up. */
   detection?: DomainDetection;
   body: ParsedDocumentBody;
+  /**
+   * The mail attachment the reading came from, when it was not the mail
+   * itself. A route that keeps the original keeps THESE bytes: a trip is
+   * filed with the operator's invoice, not with the cover mail around it.
+   */
+  sourceAttachment?: MailAttachment;
 }
 
 /**
@@ -235,13 +253,38 @@ export function combineSubjectAndText(subject: string | undefined, text: string)
  * server decides something the caller did not — and `detection` being present
  * is exactly what marks that in the answer.
  */
-function resolveDomain(
+async function resolveDomain(
   requested: RequestedDomain,
-  combined: string
-): { domain: ParserSupportedDomain; detection?: DomainDetection } {
+  combined: string,
+  attachmentTexts: () => Promise<AttachmentText[]>
+): Promise<{ domain: ParserSupportedDomain; detection?: DomainDetection }> {
   if (requested !== "auto") return { domain: requested };
   const detection = scoreDocument(combined);
+  if (detection.domain === "package") return { domain: detection.domain, detection };
+  // A tour operator's mail often prints nothing but "anbei Ihre Unterlagen":
+  // the evidence is the attached invoice, so it is scored too. Only while a
+  // package template is active at all — otherwise no PDF is opened.
+  const templates = templateRegistry.getActiveV2();
+  if (hasPackageTemplates(templates)) {
+    const fromAttachment = detectPackageAttachment(await attachmentTexts(), templates);
+    if (fromAttachment) return { domain: "package", detection: fromAttachment };
+  }
   return { domain: detection.domain, detection };
+}
+
+/**
+ * The PDF attachments' text, extracted at most once per parse and only when
+ * asked for: detection and the package reader may both need it.
+ */
+function attachmentTextsOnce(input: ParseDocumentInput): () => Promise<AttachmentText[]> {
+  let pending: Promise<AttachmentText[]> | null = null;
+  return () => {
+    pending ??=
+      input.source === "email" && input.attachments?.length
+        ? pdfAttachmentTexts(input.attachments)
+        : Promise.resolve([]);
+    return pending;
+  };
 }
 
 /**
@@ -295,12 +338,15 @@ async function mismatchBody(
 
 export async function parseDocument(input: ParseDocumentInput): Promise<ParseDocumentOutcome> {
   const combined = combineSubjectAndText(input.subject, input.text);
-  const { domain, detection } = resolveDomain(input.domain, combined);
+  const attachmentTexts = attachmentTextsOnce(input);
+  const { domain, detection } = await resolveDomain(input.domain, combined, attachmentTexts);
 
   const mismatch = mismatchFor(input.domain, domain, combined);
+  const packageRead =
+    !mismatch && domain === "package" ? await readPackage(input, combined, attachmentTexts) : null;
   const domainBody = mismatch
     ? await mismatchBody(domain, mismatch, input.userId)
-    : await parseAs(domain, input, combined);
+    : (packageRead?.body ?? (await parseAs(domain, input, combined)));
   const body = {
     ...domainBody,
     llmDisabledByAdmin: !(await isLlmEnabledByAdmin()),
@@ -312,6 +358,7 @@ export async function parseDocument(input: ParseDocumentInput): Promise<ParseDoc
     domainSource: detection ? "detected" : "requested",
     ...(detection ? { detection } : {}),
     body,
+    ...(packageRead?.sourceAttachment ? { sourceAttachment: packageRead.sourceAttachment } : {}),
   };
 }
 
@@ -324,32 +371,48 @@ async function homeCountryOf(userId: string | undefined): Promise<string | null>
   return settings?.homeCountry ?? null;
 }
 
+async function readPackage(
+  input: ParseDocumentInput,
+  combined: string,
+  attachmentTexts: () => Promise<AttachmentText[]>
+): Promise<{ body: PackageBody; sourceAttachment?: MailAttachment }> {
+  // First matching template wins, so the user's home market goes first
+  // (owner, 2026-10-09: markets order candidates, they never filter them).
+  const templates = templateRegistry.getActiveV2(await homeCountryOf(input.userId));
+  const fromBody = parsePackageText(combined, templates);
+  // The body read nothing: the operator's invoice may be the attachment. Its
+  // reading replaces the empty answer; its `invalidReading` replaces only a
+  // "no template", which says less to the template's author.
+  const fromAttachment =
+    fromBody.reading || !hasPackageTemplates(templates)
+      ? null
+      : readPackageFromAttachments(await attachmentTexts(), templates);
+  const chosen =
+    fromAttachment && (fromAttachment.result.reading || fromBody.fallbackCode === "noTemplate")
+      ? fromAttachment
+      : null;
+  const result = chosen?.result ?? fromBody;
+  const body: PackageBody = {
+    domain: "package",
+    package: result.reading,
+    template: result.template,
+    parserUsed: result.reading ? "template" : "none",
+    ollamaAvailable: await isLlmAvailable(
+      input.userId !== undefined ? { userId: input.userId } : {}
+    ),
+    ...(result.fallbackCode !== undefined ? { fallbackCode: result.fallbackCode } : {}),
+    ...(result.fallbackReason !== undefined ? { fallbackReason: result.fallbackReason } : {}),
+    ...(result.issues !== undefined ? { issues: result.issues } : {}),
+    ...(chosen ? { readFromAttachment: { filename: chosen.attachment.filename ?? null } } : {}),
+  };
+  return chosen ? { body, sourceAttachment: chosen.attachment } : { body };
+}
+
 async function parseAs(
   domain: ParserSupportedDomain,
   input: ParseDocumentInput,
   combined: string
 ): Promise<DomainBody> {
-  if (domain === "package") {
-    // First matching template wins, so the user's home market goes first
-    // (owner, 2026-10-09: markets order candidates, they never filter them).
-    const result = parsePackageText(
-      combined,
-      templateRegistry.getActiveV2(await homeCountryOf(input.userId))
-    );
-    return {
-      domain: "package",
-      package: result.reading,
-      template: result.template,
-      parserUsed: result.reading ? "template" : "none",
-      ollamaAvailable: await isLlmAvailable(
-        input.userId !== undefined ? { userId: input.userId } : {}
-      ),
-      ...(result.fallbackCode !== undefined ? { fallbackCode: result.fallbackCode } : {}),
-      ...(result.fallbackReason !== undefined ? { fallbackReason: result.fallbackReason } : {}),
-      ...(result.issues !== undefined ? { issues: result.issues } : {}),
-    };
-  }
-
   if (domain === "cruise") {
     // The userId is what lets the parser refuse the ADMIN's Ollama to the
     // shared demo account (security audit of 2026-09-19, finding 3). The flight

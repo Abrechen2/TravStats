@@ -56,7 +56,7 @@
     "triggerLabel": "Reise hinzufügen",
     "document": {
       "title": "Reiseunterlagen einlesen",
-      "description": "Das PDF deines Veranstalters — Rechnung oder Reiseunterlagen. Flüge, Hotels und Preis werden zu einer Reise, die du vorher prüfst."
+      "description": "Das PDF deines Veranstalters — Rechnung oder Reiseunterlagen — oder die E-Mail, an der es hängt. Flüge, Hotels und Preis werden zu einer Reise, die du vorher prüfst."
     },
     "fromExisting": {
       "title": "Aus vorhandenen Einträgen bauen",
