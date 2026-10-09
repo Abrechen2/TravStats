@@ -50,6 +50,8 @@ export function row(
     arrival: arrTv,
     departureDay: depTv ? depTv.local.slice(0, 10) : null,
     arrivalDay: arrTv ? arrTv.local.slice(0, 10) : depTv ? depTv.local.slice(0, 10) : null,
+    departureDayExact: true,
+    arrivalDayExact: true,
     ...extra,
   };
 }

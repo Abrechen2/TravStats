@@ -79,6 +79,24 @@ describe("long time no see (forgejo#256)", () => {
   });
 });
 
+describe("placeholder dates (review fix round 1)", () => {
+  it("file a year-only entry under its year but take it out of pauses and quarters", () => {
+    const placeholder = { departureDayExact: false, arrivalDayExact: false };
+    const visits = airportVisits([
+      row("HAV", "MIA", "1986-12-31T00:00", "1986-12-31T01:00", placeholder),
+      row("MIA", "HAV", "1996-06-01T10:00", "1996-06-01T11:00"),
+      row("HAV", "MIA", "1996-09-01T10:00", "1996-09-01T11:00"),
+    ]);
+    expect(airportsByYear(visits)[0]).toMatchObject({ year: 1986, discovered: ["HAV", "MIA"] });
+    // The only pause is the 1996 one: the placeholder day starts none.
+    expect(longestReunions(visits).map((r) => [r.airport, r.fromDay])).toEqual([
+      ["HAV", "1996-06-01"],
+      ["MIA", "1996-06-01"],
+    ]);
+    expect(quartersByAirportYear(visits).some((q) => q.year === 1986)).toBe(false);
+  });
+});
+
 describe("the four quarters (forgejo#256)", () => {
   it("needs the SAME airport in all four calendar quarters of ONE year", () => {
     const visits = airportVisits([

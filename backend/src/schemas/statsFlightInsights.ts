@@ -70,6 +70,9 @@ export const storyMeasureSchema = z.enum(["flights", "distanceKm", "airports", "
 export const flightYearStorySchema = z.object({
   year: z.number().int(),
   availableYears: z.array(z.number().int()),
+  firstRecordedYear: z.boolean().openapi({
+    description: "The logbook's first year: every airport in it is new by definition.",
+  }),
   newAirports: z.array(z.string()),
   biggestChange: z
     .object({
@@ -117,6 +120,14 @@ export const flightInsightsSchema = z.object({
     undatedFlights: z.number().int().openapi({
       description: "Counted flights with no date: in no year, and in no discovery.",
     }),
+    placeholderDateFlights: z
+      .number()
+      .int()
+      .openapi({
+        description:
+          "Counted flights whose date is a placeholder (a year-only entry): in their year, " +
+          "but in no pause between visits and no calendar quarter, which need the real day.",
+      }),
     unknownEndFlights: z.number().int().openapi({
       description: "Counted flights with an end that names no airport: on no connection.",
     }),

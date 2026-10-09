@@ -766,7 +766,8 @@
     "openFlight": "Open flight",
     "coverage": {
       "undated": "{{flights}} flights without a date are in no year.",
-      "unknownEnd": "{{flights}} flights without an airport code at one end are on no connection."
+      "unknownEnd": "{{flights}} flights without an airport code at one end are on no connection.",
+      "placeholderDate": "{{flights}} flights with a placeholder date (only the year known) count in their year, but in no pause and no quarter."
     },
     "story": {
       "title": "Your flying year {{year}}",
@@ -794,7 +795,8 @@
       "routeMaster": "Most flown connection: {{route}} ({{flights}}×, both directions)",
       "timezones": "{{zones}} time zones touched",
       "transfers": "{{transfers}} measured transfers, the shortest {{shortest}}",
-      "noTransfers": "No measurable transfers this year"
+      "noTransfers": "No measurable transfers this year",
+      "firstRecordedYear": "Your first recorded year – every airport is new here."
     },
     "discovery": {
       "title": "Discovery rate and new connections per year",
@@ -846,11 +848,11 @@
       },
       "reunions": {
         "short": "The longest pause between two visits of the same airport.",
-        "long": "Counting unit: days between two consecutive visit days of an airport, each on the airport's own calendar. A change of planes on one day is no reunion. Years count whole calendar years only. Each airport shows its longest pause; the ten longest are listed with both flights linked. Source: flown and back-filled flights with a date."
+        "long": "Counting unit: days between two consecutive visit days of an airport, each on the airport's own calendar. A change of planes on one day is no reunion. Years count whole calendar years only. Each airport shows its longest pause; the ten longest are listed with both flights linked. Source: flown and back-filled flights with a date. Flights with a placeholder date (only the year known) take no part."
       },
       "quarters": {
         "short": "Airports you used in all four calendar quarters of one year.",
-        "long": "Calendar quarters (Jan–Mar, Apr–Jun, Jul–Sep, Oct–Dec) on the airport's local calendar – explicitly not seasons, which fall differently in the southern hemisphere. Counting unit: a departure or an arrival at that airport. The first flight of each quarter is linked."
+        "long": "Calendar quarters (Jan–Mar, Apr–Jun, Jul–Sep, Oct–Dec) on the airport's local calendar – explicitly not seasons, which fall differently in the southern hemisphere. Counting unit: a departure or an arrival at that airport. The first flight of each quarter is linked. Flights with a placeholder date take no part."
       },
       "transfers": {
         "short": "The wait between two flights of the same booking.",
@@ -886,7 +888,7 @@
       },
       "cruiseExcursions": {
         "short": "Documented shore excursions per cruise.",
-        "long": "An excursion is a call with an excursion note, or with a tour you recorded on the same local day that starts at most 100 km from the port (the tour's first point, else the start of its recording) – there is no stored link, hence this rule. Activity, distance and climb come from the tours; distance on foot counts hikes, walks, runs and climbs. With neither, the cruise reads “no excursions documented” – which does not mean there were none."
+        "long": "An excursion is a call with an excursion note, or with a tour you recorded on the same local day that starts at most 100 km from the port (the tour's first point, else the start of its recording) – there is no stored link, hence this rule. Activity, distance and climb come from the tours: recorded kilometres from the recording, or for a tour without one the planned kilometres of its route – kept apart, never in one sum. On foot counts hikes, walks, runs and climbs. Tours are shown when your instance shows tours (beta switch). With neither, the cruise reads “no excursions documented” – which does not mean there were none."
       },
       "cruiseExcursionsNotes": {
         "short": "Documented shore excursions per cruise.",
@@ -967,9 +969,10 @@
         "empty": "No excursion documented yet. An excursion counts when a call has an excursion note, or when you recorded a tour that day starting at most {{km}} km from the port.",
         "emptyNotesOnly": "No excursion documented yet. An excursion counts when a call has an excursion note.",
         "unspecified": "No activity",
-        "onFoot": "{{km}} on foot",
-        "distance": "{{km}} in total",
-        "ascent": "{{m}} m climbed"
+        "ascent": "{{m}} m climbed",
+        "onFootRecorded": "{{km}} on foot, recorded",
+        "recorded": "{{km}} recorded",
+        "planned": "{{km}} planned (no recording)"
       }
     }
   }

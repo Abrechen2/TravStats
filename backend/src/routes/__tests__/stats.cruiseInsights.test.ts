@@ -3,7 +3,8 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { generateToken } from "../../utils/jwt";
 import { resolveMetricEvidence } from "../../services/evidence/metricEvidence";
-import { calculateInsightAchievementStats } from "../../utils/insightAchievements";
+import { checkAndUpdateAchievements } from "../../utils/achievements";
+import { ensureAchievements } from "../../data/achievements";
 import {
   getInstanceSettings,
   updateInstanceSettings,
@@ -16,6 +17,21 @@ import {
  * while the reader does not see tours. The endpoint, the evidence resolvers
  * and the badge fold must agree.
  */
+
+/**
+ * The badges' progress after the REAL check — the path every save takes, which
+ * hands its own rows to the insight measures instead of loading them again.
+ */
+async function badgeProgress(userId: string, codes: string[]): Promise<Record<string, number>> {
+  await ensureAchievements();
+  await checkAndUpdateAchievements(userId);
+  const rows = await prisma.userAchievement.findMany({
+    where: { userId, achievement: { code: { in: codes } } },
+    select: { progress: true, achievement: { select: { code: true } } },
+  });
+  return Object.fromEntries(rows.map((r) => [r.achievement.code, r.progress]));
+}
+
 describe("GET /stats/cruise-insights", () => {
   let userId: string;
   let cookie: string;
@@ -48,7 +64,9 @@ describe("GET /stats/cruise-insights", () => {
     userId = user.id;
     cookie = `auth_token=${generateToken(userId)}`;
     await prisma.userSettings.create({
-      data: { userId, enabledDomains: ["flight", "cruise", "roadtrip"], data: {} },
+      // No "roadtrip" domain on purpose: tours follow the web's
+      // `useToursVisible` — the beta switch alone (ruling 2026-10-09).
+      data: { userId, enabledDomains: ["flight", "cruise"], data: {} },
     });
 
     const kiel = await port("Kiel", 54.32, 10.14);
@@ -105,10 +123,37 @@ describe("GET /stats/cruise-insights", () => {
     await prisma.tripStop.create({
       data: { routeId: tour.id, routeOrderIdx: 0, title: "Start", lat: 60.395, lon: 5.33 },
     });
+    // A recorded walk in Oslo on the FIRST cruise's Oslo day, with no station:
+    // its position comes from the first point of its recording alone.
+    const walk = await prisma.tripRoute.create({
+      data: {
+        userId,
+        name: "Vigeland",
+        mode: "foot",
+        kind: "tour",
+        activity: "walk",
+        tourDate: day("2019-06-02"),
+      },
+    });
+    await prisma.tripRouteTrack.create({
+      data: {
+        routeId: walk.id,
+        source: "gpx",
+        startedAt: new Date("2019-06-02T08:00:00Z"),
+        endedAt: new Date("2019-06-02T10:00:00Z"),
+        geometry: [
+          [10.7, 59.927],
+          [10.71, 59.93],
+        ],
+        pointCount: 2,
+        distanceKm: 4.2,
+      },
+    });
   });
 
   afterAll(async () => {
     await updateInstanceSettings({ betaFeaturesEnabled: betaBefore });
+    await prisma.userAchievement.deleteMany({ where: { userId } });
     await prisma.tripRoute.deleteMany({ where: { userId } });
     await prisma.cruise.deleteMany({ where: { userId } });
     await prisma.userSettings.deleteMany({ where: { userId } });
@@ -152,7 +197,8 @@ describe("GET /stats/cruise-insights", () => {
     const first = body.excursions.perCruise.find(
       (c: { cruise: { id: string } }) => c.cruise.id === cruiseIds.first
     );
-    expect(first).toMatchObject({ documentedCalls: 0, tours: [] });
+    expect(first).toMatchObject({ documentedCalls: 1, onFootRecordedKm: 4.2, plannedKm: null });
+    expect(first.tours.map((t: { name: string }) => t.name)).toEqual(["Vigeland"]);
 
     expect(body.dayPattern.perCruise[0]).toMatchObject({
       seaDays: 1,
@@ -193,10 +239,15 @@ describe("GET /stats/cruise-insights", () => {
   });
 
   it("feeds the badges from the same fold", async () => {
-    const stats = await calculateInsightAchievementStats(userId);
-    expect(stats.cruisePortCruisesMax).toBe(2);
-    expect(stats.cruiseRepeatedItineraryMax).toBe(2);
-    expect(stats.cruiseExcursionPorts).toBe(2);
+    expect(
+      await badgeProgress(userId, ["PORT_REUNION_3", "SAME_ITINERARY_2", "SHORE_EXCURSIONS_5"])
+    ).toEqual({
+      // Oslo and Bergen are calls on both cruises; Kiel (embark/disembark) is not counted.
+      PORT_REUNION_3: 2,
+      SAME_ITINERARY_2: 2,
+      // Oslo by its note, Bergen by the linked hike — the domain toggle is off.
+      SHORE_EXCURSIONS_5: 2,
+    });
   });
 
   it("drops the tours, and only the tours, while the reader does not see them", async () => {
@@ -208,7 +259,7 @@ describe("GET /stats/cruise-insights", () => {
         (c: { cruise: { id: string } }) => c.cruise.id === cruiseIds.second
       );
       expect(second).toMatchObject({ documentedCalls: 1, tours: null, activities: null });
-      expect((await calculateInsightAchievementStats(userId)).cruiseExcursionPorts).toBe(1);
+      expect((await badgeProgress(userId, ["SHORE_EXCURSIONS_5"])).SHORE_EXCURSIONS_5).toBe(1);
     } finally {
       await updateInstanceSettings({ betaFeaturesEnabled: true });
     }

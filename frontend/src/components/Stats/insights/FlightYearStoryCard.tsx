@@ -64,6 +64,9 @@ export default function FlightYearStoryCard({
         <div>
           <dt className="font-medium">{t("stats:insights.story.newAirports")}</dt>
           <dd style={muted}>
+            {story.firstRecordedYear && (
+              <span className="block text-xs">{t("stats:insights.story.firstRecordedYear")}</span>
+            )}
             {story.newAirports.length === 0 ? (
               t("stats:insights.story.noNewAirports")
             ) : (

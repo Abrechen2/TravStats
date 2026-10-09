@@ -30,7 +30,9 @@ export interface LinkedTour {
   activity: string | null;
   day: string;
   portName: string;
-  distanceKm: number | null;
+  /** From the recordings; a tour with no recording carries `plannedKm` instead. */
+  recordedKm: number | null;
+  plannedKm: number | null;
   ascentM: number | null;
 }
 
@@ -94,8 +96,11 @@ export interface CruiseInsights {
       /** Null while the reader does not see tours. */
       tours: LinkedTour[] | null;
       activities: Record<string, number> | null;
-      distanceKm: number | null;
-      onFootKm: number | null;
+      /** Recorded and planned kilometres, summed apart — never one figure. */
+      recordedKm: number | null;
+      plannedKm: number | null;
+      onFootRecordedKm: number | null;
+      onFootPlannedKm: number | null;
       ascentM: number | null;
     }>;
   };

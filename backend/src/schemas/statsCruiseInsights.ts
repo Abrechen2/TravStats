@@ -42,7 +42,11 @@ const linkedTourSchema = z.object({
   activity: z.string().nullable(),
   day,
   portName: z.string(),
-  distanceKm: z.number().nullable(),
+  recordedKm: z.number().nullable().openapi({ description: "From the tour's recordings." }),
+  plannedKm: z
+    .number()
+    .nullable()
+    .openapi({ description: "From the planned legs — only for a tour with no recording." }),
   ascentM: z.number().nullable(),
 });
 
@@ -127,8 +131,10 @@ export const cruiseInsightsSchema = z.object({
         documentedCalls: z.number().int(),
         tours: z.array(linkedTourSchema).nullable(),
         activities: z.record(z.string(), z.number().int()).nullable(),
-        distanceKm: z.number().nullable(),
-        onFootKm: z.number().nullable(),
+        recordedKm: z.number().nullable(),
+        plannedKm: z.number().nullable(),
+        onFootRecordedKm: z.number().nullable(),
+        onFootPlannedKm: z.number().nullable(),
         ascentM: z.number().nullable(),
       })
     ),

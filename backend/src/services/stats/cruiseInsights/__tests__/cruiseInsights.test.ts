@@ -112,7 +112,8 @@ describe("shore excursions (forgejo#257)", () => {
     activity: "hike",
     day: "2019-06-04",
     start: { lat: 60.39, lon: 5.33 },
-    distanceKm: 7.5,
+    recordedKm: 7.5,
+    plannedKm: null,
     ascentM: 320,
   };
 
@@ -125,15 +126,36 @@ describe("shore excursions (forgejo#257)", () => {
     expect(ex).toMatchObject({
       documentedStopIds: [NORWAY_2019.calls[2].stopId],
       activities: { hike: 1 },
-      distanceKm: 7.5,
-      onFootKm: 7.5,
+      recordedKm: 7.5,
+      plannedKm: null,
+      onFootRecordedKm: 7.5,
+      onFootPlannedKm: null,
       ascentM: 320,
+    });
+  });
+
+  it("never adds a planned route to a recorded one", () => {
+    const planned: ExcursionTour = {
+      ...hike,
+      id: "t4",
+      activity: "walk",
+      start: { lat: 60.38, lon: 5.32 },
+      recordedKm: null,
+      plannedKm: 3,
+      ascentM: null,
+    };
+    const linked = linkTours([NORWAY_2019], [hike, planned]).get("a")!;
+    expect(excursionsOf(NORWAY_2019, linked)).toMatchObject({
+      recordedKm: 7.5,
+      plannedKm: 3,
+      onFootRecordedKm: 7.5,
+      onFootPlannedKm: 3,
     });
   });
 
   it("counts a note as documented and claims no distance it never measured", () => {
     const ex = excursionsOf(NORWAY_2024, []);
-    expect(ex).toMatchObject({ notedCalls: 1, distanceKm: null, ascentM: null });
+    expect(ex).toMatchObject({ notedCalls: 1, recordedKm: null, plannedKm: null, ascentM: null });
     expect(ex.documentedStopIds).toHaveLength(1);
   });
 
@@ -141,7 +163,8 @@ describe("shore excursions (forgejo#257)", () => {
     expect(excursionsOf(NORWAY_2019, null)).toMatchObject({
       tours: null,
       activities: null,
-      distanceKm: null,
+      recordedKm: null,
+      plannedKm: null,
       documentedStopIds: [],
     });
   });

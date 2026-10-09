@@ -47,6 +47,7 @@ const INSIGHTS: FlightInsights = {
     connectionsTotal: 4,
     countedFlights: 5,
     undatedFlights: 0,
+    placeholderDateFlights: 0,
     unknownEndFlights: 0,
   },
   years: [
@@ -103,6 +104,7 @@ const INSIGHTS: FlightInsights = {
   story: {
     year: 2024,
     availableYears: [2014, 2024],
+    firstRecordedYear: false,
     newAirports: ["BOS", "JFK", "MUC"],
     biggestChange: null,
     curiousRepetition: {
@@ -231,6 +233,36 @@ describe("FlightInsightsSection (forgejo#256)", () => {
     await waitFor(() => expect(getFlightInsights).toHaveBeenCalled());
     await waitFor(() => expect(screen.queryByText("stats:insights.empty")).toBeNull());
     expect(screen.queryByText("common:loading.default")).toBeNull();
+  });
+
+  it("never lets a slow answer for the previous year overwrite the current one", async () => {
+    let answerOld: (value: FlightInsights) => void = () => undefined;
+    getFlightInsights
+      .mockImplementationOnce(() => new Promise<FlightInsights>((resolve) => (answerOld = resolve)))
+      .mockResolvedValueOnce({ ...INSIGHTS, story: { ...INSIGHTS.story!, year: 2024 } });
+    const view = render(
+      <MemoryRouter>
+        <FlightInsightsSection flights={[]} year={2014} />
+      </MemoryRouter>
+    );
+    view.rerender(
+      <MemoryRouter>
+        <FlightInsightsSection flights={[]} year={2024} />
+      </MemoryRouter>
+    );
+    await screen.findByText("stats:insights.story.title|2024");
+    await act(async () => answerOld({ ...INSIGHTS, story: { ...INSIGHTS.story!, year: 2014 } }));
+    expect(screen.queryByText("stats:insights.story.title|2014")).toBeNull();
+    expect(screen.getByText("stats:insights.story.title|2024")).toBeTruthy();
+  });
+
+  it("says the first recorded year discovers everything", async () => {
+    getFlightInsights.mockResolvedValue({
+      ...INSIGHTS,
+      story: { ...INSIGHTS.story!, firstRecordedYear: true },
+    });
+    renderSection();
+    expect(await screen.findByText("stats:insights.story.firstRecordedYear")).toBeTruthy();
   });
 
   it("explains which records would enable the section when there are none", async () => {

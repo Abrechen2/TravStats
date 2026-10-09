@@ -1,11 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
 import type { JSX } from "react";
 
 import StatsSectionsLoadError from "../StatsSectionsLoadError";
+import { useLatestLoad } from "./useLatestLoad";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { statsApi } from "../../../lib/api";
-import { logger } from "../../../lib/logger";
-import type { CruiseInsights } from "../../../types/cruiseInsights";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import CruiseEventsBlock from "./CruiseEventsBlock";
 import CruisePortsBlock from "./CruisePortsBlock";
@@ -21,24 +19,11 @@ import CruiseDayPatternBlock from "./CruiseDayPatternBlock";
  */
 export default function CruiseInsightsSection({ year }: { year: number | null }): JSX.Element {
   const { t } = useTranslation(["stats", "common"]);
-  const [insights, setInsights] = useState<CruiseInsights | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  const load = useCallback((): void => {
-    setFailed(false);
-    statsApi
-      .getCruiseInsights(year)
-      .then(setInsights)
-      .catch((err) => {
-        setInsights(null);
-        setFailed(true);
-        logger.error("Failed to load cruise insights:", err);
-      });
-  }, [year]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const {
+    data: insights,
+    failed,
+    reload: load,
+  } = useLatestLoad(statsApi.getCruiseInsights, year, "cruise insights");
 
   const scope: EvidenceScopeParams =
     year === null ? { period: "allTime" } : { period: "year", year };

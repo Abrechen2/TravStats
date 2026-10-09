@@ -666,7 +666,12 @@ async function runAchievementCheck(
       flights as FlightData[],
       await calculateRoadtripAchievementStats(userId),
       await calculateRailAchievementStats(userId),
-      await calculateInsightAchievementStats(userId)
+      // The rows loaded above, handed over rather than read again.
+      await calculateInsightAchievementStats(userId, {
+        flights,
+        cruises: cruises.map((c, i) => ({ id: c.id, input: cruiseStatsInput[i], stops: c.stops })),
+        userBirthday,
+      })
     );
 
     // `return await`, not `return`: a bare return would hand the promise out

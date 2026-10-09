@@ -13,7 +13,8 @@ import type { EvidenceScopeParams } from "../../evidence/useEvidence";
  * Shore excursions per cruise (forgejo#257) from excursion notes and the day
  * tours linked to a port call. A cruise with nothing documented reads "nothing
  * documented", never "0 excursions"; distance and climb appear only where a
- * tour measured them; tours are not mentioned at all while they are hidden.
+ * tour measured them, recorded and planned kilometres apart; tours are not
+ * mentioned at all while they are hidden.
  */
 export default function CruiseExcursionsBlock({
   excursions,
@@ -80,11 +81,13 @@ export default function CruiseExcursionsBlock({
                       : `${t(`roadtrips:activity.${activity}`)} ${n}`
                   )
                   .join(" · ")}
-                {c.onFootKm !== null &&
-                  ` · ${t("stats:insights.cruise.excursions.onFoot", { km: km(c.onFootKm) })}`}
-                {c.distanceKm !== null &&
-                  c.distanceKm !== c.onFootKm &&
-                  ` · ${t("stats:insights.cruise.excursions.distance", { km: km(c.distanceKm) })}`}
+                {c.onFootRecordedKm !== null &&
+                  ` · ${t("stats:insights.cruise.excursions.onFootRecorded", { km: km(c.onFootRecordedKm) })}`}
+                {c.recordedKm !== null &&
+                  c.recordedKm !== c.onFootRecordedKm &&
+                  ` · ${t("stats:insights.cruise.excursions.recorded", { km: km(c.recordedKm) })}`}
+                {c.plannedKm !== null &&
+                  ` · ${t("stats:insights.cruise.excursions.planned", { km: km(c.plannedKm) })}`}
                 {c.ascentM !== null &&
                   ` · ${t("stats:insights.cruise.excursions.ascent", { m: fmt.num(Math.round(c.ascentM)) })}`}
               </span>

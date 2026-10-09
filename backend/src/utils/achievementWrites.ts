@@ -135,10 +135,14 @@ export function planAchievementWrites(
     // requirement was first met — `unlockedAt` is a historical fact and is
     // never cleared or overwritten, which is how the page can explain the drop
     // instead of letting a total fall in silence.
+    // An insight measure that failed this run leaves its row as it was —
+    // neither unlocked nor written down to zero (`insightAchievements.ts`).
+    const insight = checkInsightAchievement(achievement, insightStats);
+    if (insight === "unmeasured") continue;
     const { isUnlocked, progress } =
       checkRoadtripAchievement(achievement, roadtripStats) ??
       checkRailAchievement(achievement, railStats) ??
-      checkInsightAchievement(achievement, insightStats) ??
+      insight ??
       checkAchievement(achievement, stats, flights);
 
     if (isUnlocked) {

@@ -766,7 +766,8 @@
     "openFlight": "Flug öffnen",
     "coverage": {
       "undated": "{{flights}} Flüge ohne Datum stehen in keinem Jahr.",
-      "unknownEnd": "{{flights}} Flüge ohne Flughafen-Code an einem Ende gehören zu keiner Verbindung."
+      "unknownEnd": "{{flights}} Flüge ohne Flughafen-Code an einem Ende gehören zu keiner Verbindung.",
+      "placeholderDate": "{{flights}} Flüge mit Platzhalterdatum (nur das Jahr bekannt) zählen in ihrem Jahr, aber in keiner Pause und keinem Quartal."
     },
     "story": {
       "title": "Dein Flugjahr {{year}}",
@@ -794,7 +795,8 @@
       "routeMaster": "Häufigste Verbindung: {{route}} ({{flights}}×, beide Richtungen)",
       "timezones": "{{zones}} Zeitzonen berührt",
       "transfers": "{{transfers}} gemessene Umstiege, der kürzeste {{shortest}}",
-      "noTransfers": "Keine messbaren Umstiege in diesem Jahr"
+      "noTransfers": "Keine messbaren Umstiege in diesem Jahr",
+      "firstRecordedYear": "Dein erstes erfasstes Jahr – hier ist jeder Flughafen neu."
     },
     "discovery": {
       "title": "Entdeckerquote und neue Verbindungen pro Jahr",
@@ -846,11 +848,11 @@
       },
       "reunions": {
         "short": "Die längste Pause zwischen zwei Besuchen desselben Flughafens.",
-        "long": "Zähleinheit: Tage zwischen zwei aufeinanderfolgenden Besuchstagen eines Flughafens, jeweils am Ortskalender des Flughafens. Ein Umstieg am selben Tag ist kein Wiedersehen. Jahre zählen nur volle Kalenderjahre. Je Flughafen steht seine längste Pause; die zehn längsten werden gezeigt, beide Flüge sind verlinkt. Quelle: geflogene und nachgetragene Flüge mit Datum."
+        "long": "Zähleinheit: Tage zwischen zwei aufeinanderfolgenden Besuchstagen eines Flughafens, jeweils am Ortskalender des Flughafens. Ein Umstieg am selben Tag ist kein Wiedersehen. Jahre zählen nur volle Kalenderjahre. Je Flughafen steht seine längste Pause; die zehn längsten werden gezeigt, beide Flüge sind verlinkt. Quelle: geflogene und nachgetragene Flüge mit Datum. Flüge mit Platzhalterdatum (nur das Jahr bekannt) nehmen nicht teil."
       },
       "quarters": {
         "short": "Flughäfen, die du in einem Jahr in allen vier Kalenderquartalen genutzt hast.",
-        "long": "Kalenderquartale (Jan–Mär, Apr–Jun, Jul–Sep, Okt–Dez) nach dem Ortskalender des Flughafens – ausdrücklich keine Jahreszeiten, die auf der Südhalbkugel anders liegen. Zähleinheit: ein Abflug oder eine Ankunft an diesem Flughafen. Je Quartal ist der erste Flug verlinkt."
+        "long": "Kalenderquartale (Jan–Mär, Apr–Jun, Jul–Sep, Okt–Dez) nach dem Ortskalender des Flughafens – ausdrücklich keine Jahreszeiten, die auf der Südhalbkugel anders liegen. Zähleinheit: ein Abflug oder eine Ankunft an diesem Flughafen. Je Quartal ist der erste Flug verlinkt. Flüge mit Platzhalterdatum nehmen nicht teil."
       },
       "transfers": {
         "short": "Wartezeit zwischen zwei Flügen derselben Buchung.",
@@ -886,7 +888,7 @@
       },
       "cruiseExcursions": {
         "short": "Dokumentierte Landausflüge je Kreuzfahrt.",
-        "long": "Ein Ausflug ist ein Hafenstopp mit Ausflugsnotiz oder mit einer Tour, die du am selben Ortstag erfasst hast und die höchstens 100 km vom Hafen beginnt (erster Punkt der Tour, sonst Beginn der Aufzeichnung) – eine feste Verknüpfung gibt es nicht, deshalb diese Regel. Aktivität, Strecke und Höhenmeter kommen aus den Touren; Strecke zu Fuß zählt Wandern, Spaziergang, Lauf und Klettern. Fehlt beides, steht „keine Ausflüge dokumentiert“ – das heißt nicht, dass es keine gab."
+        "long": "Ein Ausflug ist ein Hafenstopp mit Ausflugsnotiz oder mit einer Tour, die du am selben Ortstag erfasst hast und die höchstens 100 km vom Hafen beginnt (erster Punkt der Tour, sonst Beginn der Aufzeichnung) – eine feste Verknüpfung gibt es nicht, deshalb diese Regel. Aktivität, Strecke und Höhenmeter kommen aus den Touren: aufgezeichnete Kilometer aus der Aufzeichnung, bei einer Tour ohne Aufzeichnung geplante Kilometer aus der Route – beide getrennt, nie in einer Summe. Zu Fuß zählen Wandern, Spaziergang, Lauf und Klettern. Touren werden gezeigt, wenn deine Instanz Touren zeigt (Beta-Schalter). Fehlt beides, steht „keine Ausflüge dokumentiert“ – das heißt nicht, dass es keine gab."
       },
       "cruiseExcursionsNotes": {
         "short": "Dokumentierte Landausflüge je Kreuzfahrt.",
@@ -967,9 +969,10 @@
         "empty": "Noch kein Ausflug dokumentiert. Ein Ausflug zählt, wenn ein Hafenstopp eine Ausflugsnotiz hat oder du an dem Tag eine Tour erfasst hast, die höchstens {{km}} km vom Hafen beginnt.",
         "emptyNotesOnly": "Noch kein Ausflug dokumentiert. Ein Ausflug zählt, wenn ein Hafenstopp eine Ausflugsnotiz hat.",
         "unspecified": "Ohne Aktivität",
-        "onFoot": "{{km}} zu Fuß",
-        "distance": "{{km}} insgesamt",
-        "ascent": "{{m}} Hm"
+        "ascent": "{{m}} Hm",
+        "onFootRecorded": "{{km}} zu Fuß aufgezeichnet",
+        "recorded": "{{km}} aufgezeichnet",
+        "planned": "{{km}} geplant (ohne Aufzeichnung)"
       }
     }
   }

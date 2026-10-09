@@ -117,6 +117,9 @@ export async function buildFlightInsights(
       connectionsTotal: new Set(flightsOnConnections.map((f) => f.connection)).size,
       countedFlights: counted.length,
       undatedFlights: counted.filter((row) => row.departureDay === null).length,
+      placeholderDateFlights: counted.filter(
+        (row) => row.departureDay !== null && (!row.departureDayExact || !row.arrivalDayExact)
+      ).length,
       unknownEndFlights: counted.filter((row) => row.depCode === null || row.arrCode === null)
         .length,
     },

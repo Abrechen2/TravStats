@@ -19,12 +19,14 @@
  * A cruise with no note and no linked tour has NO DOCUMENTED excursion — not
  * "0 excursions": nobody wrote down that they stayed aboard. Distance and
  * climb are summed only over tours that measured them, and stay null where
- * none did. Tours sit behind the instance's roadtrip/tour beta switch; while
+ * none did. Recorded and planned kilometres are summed apart: a tour counts
+ * its recording where it has one, its planned legs otherwise, never both. Tours sit behind the instance's roadtrip/tour beta switch; while
  * the reader does not see tours, no tour is linked or counted and the section
  * says so (`toursVisible: false`).
  */
 
 import { prisma } from "../../../db";
+import { Prisma } from "../../../prisma";
 import { haversineKm } from "../../../shared/geo/haversine";
 import { travelledKm } from "../../tour/tourDistance";
 import type { CruiseCall, CruiseInsightRow } from "./rows";
@@ -41,8 +43,14 @@ export interface ExcursionTour {
   activity: string | null;
   day: string;
   start: { lat: number; lon: number } | null;
-  /** Recorded km where a recording exists, else the planned legs; null when neither measured anything. */
-  distanceKm: number | null;
+  /**
+   * Kilometres RECORDED (the tour's tracks) — or, for a tour with no
+   * recording, kilometres PLANNED (its legs). Exactly one of the two is set
+   * where anything was measured, so the sums below never add a plan to a
+   * recording. A recording of 0 km measured nothing and counts as none.
+   */
+  recordedKm: number | null;
+  plannedKm: number | null;
   ascentM: number | null;
 }
 
@@ -51,10 +59,30 @@ const sumOrNull = (values: ReadonlyArray<number | null>): number | null => {
   return known.length === 0 ? null : known.reduce((a, b) => a + b, 0);
 };
 
-function firstTrackPoint(geometry: unknown): { lat: number; lon: number } | null {
-  if (!Array.isArray(geometry) || !Array.isArray(geometry[0])) return null;
-  const [lon, lat] = geometry[0] as unknown[];
-  return typeof lat === "number" && typeof lon === "number" ? { lat, lon } : null;
+const positive = (km: number): number | null => (km > 0 ? km : null);
+
+/**
+ * The first recorded point of each tour's first track, for tours that have no
+ * positioned station. Read in SQL so only that one point crosses the wire,
+ * never the whole line (`geometry` is `[[lon, lat], …]`).
+ */
+async function firstTrackPoints(
+  routeIds: readonly string[]
+): Promise<Map<string, { lat: number; lon: number }>> {
+  if (routeIds.length === 0) return new Map();
+  const rows = await prisma.$queryRaw<
+    Array<{ route_id: string; lon: number | null; lat: number | null }>
+  >(Prisma.sql`
+    SELECT DISTINCT ON (route_id) route_id,
+      (geometry->0->>0)::float8 AS lon, (geometry->0->>1)::float8 AS lat
+    FROM trip_route_tracks
+    WHERE route_id IN (${Prisma.join([...routeIds])})
+    ORDER BY route_id, started_at ASC`);
+  return new Map(
+    rows
+      .filter((r) => r.lat !== null && r.lon !== null)
+      .map((r) => [r.route_id, { lat: r.lat as number, lon: r.lon as number }])
+  );
 }
 
 /** The user's day tours that fall on one of `days`, with what links and measures them. */
@@ -80,17 +108,19 @@ export async function loadExcursionTours(
         orderBy: [{ routeOrderIdx: "asc" }, { orderIdx: "asc" }],
         take: 1,
       },
-      tracks: {
-        select: { distanceKm: true, ascentM: true, geometry: true },
-        orderBy: { startedAt: "asc" },
-      },
+      tracks: { select: { distanceKm: true, ascentM: true } },
       legs: { select: { distanceKm: true } },
     },
     orderBy: { id: "asc" },
   });
+  if (tours.length === 0) return [];
+  const fallback = await firstTrackPoints(
+    tours.filter((t) => t.stops.length === 0 && t.tracks.length > 0).map((t) => t.id)
+  );
   return tours.map((t) => {
     const stop = t.stops[0];
-    const legsKm = travelledKm(t.legs);
+    const recorded =
+      t.tracks.length > 0 ? positive(t.tracks.reduce((sum, k) => sum + k.distanceKm, 0)) : null;
     return {
       id: t.id,
       name: t.name,
@@ -99,13 +129,9 @@ export async function loadExcursionTours(
       start:
         stop && stop.lat !== null && stop.lon !== null
           ? { lat: stop.lat, lon: stop.lon }
-          : firstTrackPoint(t.tracks[0]?.geometry),
-      distanceKm:
-        t.tracks.length > 0
-          ? t.tracks.reduce((sum, k) => sum + k.distanceKm, 0)
-          : legsKm > 0
-            ? legsKm
-            : null,
+          : (fallback.get(t.id) ?? null),
+      recordedKm: recorded,
+      plannedKm: recorded === null ? positive(travelledKm(t.legs)) : null,
       ascentM: sumOrNull(t.tracks.map((k) => k.ascentM)),
     };
   });
@@ -157,8 +183,11 @@ export interface CruiseExcursions {
   /** Catalogue ports among them, for the badge. */
   documentedPortIds: number[];
   activities: Record<string, number> | null;
-  distanceKm: number | null;
-  onFootKm: number | null;
+  /** Recorded and planned kilometres, summed apart — never one figure. */
+  recordedKm: number | null;
+  plannedKm: number | null;
+  onFootRecordedKm: number | null;
+  onFootPlannedKm: number | null;
   ascentM: number | null;
 }
 
@@ -169,6 +198,7 @@ export function excursionsOf(
   const portCalls = row.calls.filter((c) => !c.isAtSea && c.portName !== null);
   const tourStops = new Set((linked ?? []).map((t) => t.stopId));
   const documented = portCalls.filter((c) => c.excursionNote !== null || tourStops.has(c.stopId));
+  const onFoot = (linked ?? []).filter((t) => ON_FOOT.has(t.activity ?? ""));
   const activities: Record<string, number> = {};
   for (const tour of linked ?? []) {
     const key = tour.activity ?? "unspecified";
@@ -184,11 +214,10 @@ export function excursionsOf(
       ...new Set(documented.map((c) => c.portId).filter((id): id is number => id !== null)),
     ],
     activities: linked === null ? null : activities,
-    distanceKm: linked === null ? null : sumOrNull(linked.map((t) => t.distanceKm)),
-    onFootKm:
-      linked === null
-        ? null
-        : sumOrNull(linked.filter((t) => ON_FOOT.has(t.activity ?? "")).map((t) => t.distanceKm)),
+    recordedKm: linked === null ? null : sumOrNull(linked.map((t) => t.recordedKm)),
+    plannedKm: linked === null ? null : sumOrNull(linked.map((t) => t.plannedKm)),
+    onFootRecordedKm: linked === null ? null : sumOrNull(onFoot.map((t) => t.recordedKm)),
+    onFootPlannedKm: linked === null ? null : sumOrNull(onFoot.map((t) => t.plannedKm)),
     ascentM: linked === null ? null : sumOrNull(linked.map((t) => t.ascentM)),
   };
 }

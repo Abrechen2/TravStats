@@ -3,13 +3,29 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { generateToken } from "../../utils/jwt";
 import { resolveMetricEvidence } from "../../services/evidence/metricEvidence";
-import { calculateInsightAchievementStats } from "../../utils/insightAchievements";
+import { checkAndUpdateAchievements } from "../../utils/achievements";
+import { ensureAchievements } from "../../data/achievements";
 
 /**
  * forgejo#256, end to end: discovery, the long return, network growth and a
  * transfer measured only between two flights of one booking — through the
  * endpoint, the evidence resolvers and the badge fold, which must agree.
  */
+
+/**
+ * The badges' progress after the REAL check — the path every save takes, which
+ * hands its own rows to the insight measures instead of loading them again.
+ */
+async function badgeProgress(userId: string, codes: string[]): Promise<Record<string, number>> {
+  await ensureAchievements();
+  await checkAndUpdateAchievements(userId);
+  const rows = await prisma.userAchievement.findMany({
+    where: { userId, achievement: { code: { in: codes } } },
+    select: { progress: true, achievement: { select: { code: true } } },
+  });
+  return Object.fromEntries(rows.map((r) => [r.achievement.code, r.progress]));
+}
+
 describe("GET /stats/flight-insights", () => {
   let userId: string;
   let authCookie: string;
@@ -79,6 +95,7 @@ describe("GET /stats/flight-insights", () => {
   });
 
   afterAll(async () => {
+    await prisma.userAchievement.deleteMany({ where: { userId } });
     await prisma.flight.deleteMany({ where: { userId } });
     await prisma.booking.deleteMany({ where: { userId } });
     await prisma.user.deleteMany({ where: { id: userId } });
@@ -159,9 +176,16 @@ describe("GET /stats/flight-insights", () => {
   });
 
   it("feeds the badges from the same fold", async () => {
-    const stats = await calculateInsightAchievementStats(userId);
-    expect(stats.flightAirportReunionYears).toBe(10);
-    expect(stats.flightNewAirportsYearMax).toBe(3);
-    expect(stats.flightAirportQuartersMax).toBe(2);
+    const progress = await badgeProgress(userId, [
+      "LONG_TIME_NO_SEE",
+      "NEW_GROUND_YEAR",
+      "FOUR_QUARTERS_AIRPORT",
+    ]);
+    expect(progress).toEqual({
+      LONG_TIME_NO_SEE: 10,
+      // 2014 is the first recorded year and does not count; 2024 found three.
+      NEW_GROUND_YEAR: 3,
+      FOUR_QUARTERS_AIRPORT: 2,
+    });
   });
 });

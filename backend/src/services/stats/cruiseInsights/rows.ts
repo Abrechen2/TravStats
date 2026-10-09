@@ -20,10 +20,9 @@
  */
 
 import { prisma } from "../../../db";
-import { countableCruiseWhere } from "../../../shared/cruiseCounting";
 import type { TimeValue } from "../../../shared/time/wire";
 import type { CruiseData } from "../../../utils/cruiseStats";
-import { cruiseStopTimes } from "../../cruise/timesDto";
+import { cruiseStopTimes, type CruiseStopTimeColumns } from "../../cruise/timesDto";
 import { loadCruiseStatsData } from "../cruiseStatsData";
 
 export interface CruiseCall {
@@ -68,10 +67,62 @@ export const addDays = (day: string, n: number): string =>
 export const daysBetween = (a: string, b: string): number =>
   Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY_MS);
 
+/** The stop columns the insights read — a full stop row with its port is a superset. */
+export interface CruiseStopSource extends CruiseStopTimeColumns {
+  id: string;
+  dayNumber: number;
+  isAtSea: boolean;
+  portId: number | null;
+  excursionNote: string | null;
+  unresolvedPortName: string | null;
+  port: { name: string; lat: number; lon: number } | null;
+}
+
+/**
+ * One cruise → its insight row, from data already in memory: the calculator
+ * input the caller built and the cruise's stops. The badge check passes the
+ * cruises it loaded itself, so no cruise is read twice.
+ */
+export function cruiseInsightRowOf(
+  base: { id: string; label: string; input: CruiseData },
+  stops: readonly CruiseStopSource[]
+): CruiseInsightRow {
+  const startDay = dayOf(base.input.startDate);
+  const endDay = dayOf(base.input.endDate) ?? startDay;
+  const calls = [...stops]
+    .sort((a, b) => a.dayNumber - b.dayNumber || a.id.localeCompare(b.id))
+    .map((s): CruiseCall => {
+      const times = cruiseStopTimes(s);
+      return {
+        stopId: s.id,
+        dayNumber: s.dayNumber,
+        day: times.date?.date ?? (startDay ? addDays(startDay, s.dayNumber - 1) : null),
+        isAtSea: s.isAtSea,
+        portId: s.isAtSea ? null : s.portId,
+        portName: s.isAtSea ? null : (s.port?.name ?? s.unresolvedPortName ?? null),
+        lat: s.port?.lat ?? null,
+        lon: s.port?.lon ?? null,
+        arrival: times.arrival,
+        departure: times.departure,
+        excursionNote: s.excursionNote?.trim() ? s.excursionNote.trim() : null,
+      };
+    });
+  return {
+    id: base.id,
+    label: base.label,
+    startDay,
+    endDay,
+    year: base.input.startDate ? base.input.startDate.getUTCFullYear() : null,
+    input: base.input,
+    calls,
+  };
+}
+
 export async function loadCruiseInsightData(userId: string): Promise<CruiseInsightData> {
   const { rows, userBirthday } = await loadCruiseStatsData(userId, undefined, "sailed");
+  if (rows.length === 0) return { rows: [], userBirthday };
   const stops = await prisma.cruiseStop.findMany({
-    where: { cruise: { userId, ...countableCruiseWhere() } },
+    where: { cruiseId: { in: rows.map((r) => r.id) } },
     select: {
       id: true,
       cruiseId: true,
@@ -90,42 +141,12 @@ export async function loadCruiseInsightData(userId: string): Promise<CruiseInsig
       unresolvedPortName: true,
       port: { select: { name: true, lat: true, lon: true } },
     },
-    orderBy: [{ dayNumber: "asc" }, { id: "asc" }],
   });
   const byCruise = new Map<string, typeof stops>();
   for (const stop of stops)
     byCruise.set(stop.cruiseId, [...(byCruise.get(stop.cruiseId) ?? []), stop]);
-
   return {
     userBirthday,
-    rows: rows.map((r) => {
-      const startDay = dayOf(r.input.startDate);
-      const endDay = dayOf(r.input.endDate) ?? startDay;
-      const calls = (byCruise.get(r.id) ?? []).map((s): CruiseCall => {
-        const times = cruiseStopTimes(s);
-        return {
-          stopId: s.id,
-          dayNumber: s.dayNumber,
-          day: times.date?.date ?? (startDay ? addDays(startDay, s.dayNumber - 1) : null),
-          isAtSea: s.isAtSea,
-          portId: s.isAtSea ? null : s.portId,
-          portName: s.isAtSea ? null : (s.port?.name ?? s.unresolvedPortName ?? null),
-          lat: s.port?.lat ?? null,
-          lon: s.port?.lon ?? null,
-          arrival: times.arrival,
-          departure: times.departure,
-          excursionNote: s.excursionNote?.trim() ? s.excursionNote.trim() : null,
-        };
-      });
-      return {
-        id: r.id,
-        label: r.label,
-        startDay,
-        endDay,
-        year: r.input.startDate ? r.input.startDate.getUTCFullYear() : null,
-        input: r.input,
-        calls,
-      };
-    }),
+    rows: rows.map((r) => cruiseInsightRowOf(r, byCruise.get(r.id) ?? [])),
   };
 }

@@ -57,6 +57,8 @@ export type StoryMeasure = "flights" | "distanceKm" | "airports" | "connections"
 export interface FlightYearStory {
   year: number;
   availableYears: number[];
+  /** The logbook's first year: every airport in it is new by definition. */
+  firstRecordedYear: boolean;
   newAirports: string[];
   biggestChange: {
     measure: StoryMeasure;
@@ -98,6 +100,8 @@ export interface FlightInsights {
     connectionsTotal: number;
     countedFlights: number;
     undatedFlights: number;
+    /** Year-only/unclassified dates: in their year, but in no pause or quarter. */
+    placeholderDateFlights: number;
     unknownEndFlights: number;
   };
   years: FlightInsightYear[];

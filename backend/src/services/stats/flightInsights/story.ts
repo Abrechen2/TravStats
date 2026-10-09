@@ -4,7 +4,9 @@
  *
  * Three beats, each of which may be absent rather than invented:
  *
- * 1. NEW GROUND — the airports the year first recorded (`./airports.ts`).
+ * 1. NEW GROUND — the airports the year first recorded (`./airports.ts`). In
+ *    the first recorded year that is every airport, and `firstRecordedYear`
+ *    lets the card say so.
  * 2. THE BIGGEST CHANGE — of four figures (flights, kilometres, airports
  *    used, connections), the one that moved most, relatively, against the
  *    CALENDAR year before. A year after a year with no counted flight has no
@@ -103,6 +105,9 @@ export function buildYearStory(inputs: StoryInputs): FlightYearStory {
   return {
     year: inputs.year,
     availableYears: inputs.availableYears,
+    // Everything is "new" in the first recorded year by definition; the card
+    // says so instead of presenting it as a year of discovery.
+    firstRecordedYear: inputs.year === inputs.availableYears[0],
     newAirports: inputs.airports.find((a) => a.year === inputs.year)?.discovered ?? [],
     biggestChange: biggestChange(inputs),
     curiousRepetition: curiousRepetition(inputs),

@@ -34,7 +34,17 @@ export interface AirportVisit {
    * Infinity where the end has no instant, so it sorts after the timed ones.
    */
   at: number;
+  /** False for a placeholder date (`rows.ts`): it files a year, not a day. */
+  exact: boolean;
 }
+
+/**
+ * The visits whose DAY is real. Pauses in days and calendar quarters read the
+ * day itself, so a placeholder date (a year-only entry) takes no part in them;
+ * it still counts for the year it names.
+ */
+const exactOnly = (visits: readonly AirportVisit[]): AirportVisit[] =>
+  visits.filter((v) => v.exact);
 
 const instantOf = (utc: string | undefined): number => {
   const ms = utc ? Date.parse(utc) : NaN;
@@ -52,6 +62,7 @@ export function airportVisits(rows: readonly FlightInsightRow[]): AirportVisit[]
         day: row.departureDay,
         flightId: row.id,
         at: instantOf(row.departure?.utc),
+        exact: row.departureDayExact,
       });
     }
     if (row.arrCode && row.arrivalDay) {
@@ -60,6 +71,7 @@ export function airportVisits(rows: readonly FlightInsightRow[]): AirportVisit[]
         day: row.arrivalDay,
         flightId: row.id,
         at: instantOf(row.arrival?.utc ?? row.departure?.utc),
+        exact: row.arrivalDayExact,
       });
     }
   }
@@ -133,7 +145,7 @@ export function completedYears(a: string, b: string): number {
 export function longestReunions(visits: readonly AirportVisit[]): Reunion[] {
   /** airport → day → the first and the last flight seen there that day. */
   const days = new Map<string, Map<string, { first: string; last: string }>>();
-  for (const visit of visits) {
+  for (const visit of exactOnly(visits)) {
     const byDay = days.get(visit.airport) ?? new Map<string, { first: string; last: string }>();
     const seen = byDay.get(visit.day);
     byDay.set(visit.day, { first: seen?.first ?? visit.flightId, last: visit.flightId });
@@ -167,7 +179,7 @@ export function longestReunions(visits: readonly AirportVisit[]): Reunion[] {
 export function reunionsEndingIn(visits: readonly AirportVisit[], year: number): Reunion[] {
   const seen = new Map<string, { day: string; flightId: string }>();
   const out: Reunion[] = [];
-  for (const visit of visits) {
+  for (const visit of exactOnly(visits)) {
     const last = seen.get(visit.airport);
     if (last && last.day !== visit.day && yearOf(visit.day) === year) {
       out.push({
@@ -202,7 +214,7 @@ export interface AirportQuarters {
  */
 export function quartersByAirportYear(visits: readonly AirportVisit[]): AirportQuarters[] {
   const seen = new Map<string, Map<number, { day: string; flightId: string }>>();
-  for (const visit of visits) {
+  for (const visit of exactOnly(visits)) {
     const key = `${visit.airport}|${yearOf(visit.day)}`;
     const byQuarter = seen.get(key) ?? new Map<number, { day: string; flightId: string }>();
     const quarter = quarterOf(visit.day);

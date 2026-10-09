@@ -30,7 +30,7 @@ import { COUNTABLE_FLIGHT_STATUSES } from "../../../shared/flightCounting";
 import type { TimeValue } from "../../../shared/time/wire";
 import { departureDayOf } from "../../../utils/stats/departureClock";
 import type { FlightTimeSemantics } from "../../../utils/timezone";
-import { flightTimes } from "../../flights/timesDto";
+import { flightTimes, type FlightTimeColumns } from "../../flights/timesDto";
 import { buildTzMap, flightEndZone } from "../departureClock";
 
 /** Statuses a booking's itinerary is read over: everything but cancelled and drafts. */
@@ -67,7 +67,18 @@ export interface FlightInsightRow {
   departureDay: string | null;
   /** `YYYY-MM-DD` at the arrival airport; the departure day when the arrival is unknown. */
   arrivalDay: string | null;
+  /**
+   * Is the day of that end a real calendar day (precision `minute` or `day`)?
+   * A year-only or unclassified entry (`unknown`) carries a placeholder date —
+   * often 1 January read through a western zone into 31 December of the year
+   * before — which says the year at best, never the day.
+   */
+  departureDayExact: boolean;
+  arrivalDayExact: boolean;
 }
+
+const isExactDay = (value: TimeValue | null): boolean =>
+  value !== null && (value.precision === "minute" || value.precision === "day");
 
 /** Does this row count as a flight that happened (`shared/flightCounting.ts`)? */
 export const isCountedRow = (row: Pick<FlightInsightRow, "status">): boolean =>
@@ -78,41 +89,75 @@ const codeOf = (iata: string | null, icao: string | null): string | null => {
   return code ? code.toUpperCase() : null;
 };
 
+/** The columns the insights read — a full flight row is a superset (the badge check passes one). */
+const FLIGHT_INSIGHT_SELECT = {
+  id: true,
+  flightNumber: true,
+  status: true,
+  airline: true,
+  seatClass: true,
+  createdAt: true,
+  bookingId: true,
+  depIata: true,
+  depIcao: true,
+  arrIata: true,
+  arrIcao: true,
+  depLat: true,
+  depLon: true,
+  arrLat: true,
+  arrLon: true,
+  departureTime: true,
+  arrivalTime: true,
+  depTimeSemantics: true,
+  arrTimeSemantics: true,
+  depTimezone: true,
+  arrTimezone: true,
+  depPrecision: true,
+  arrPrecision: true,
+  actualDeparture: true,
+  actualArrival: true,
+  runwayDepartureTime: true,
+  runwayArrivalTime: true,
+} as const;
+
+export type FlightInsightSource = FlightTimeColumns & {
+  id: string;
+  flightNumber: string | null;
+  status: string;
+  airline: string | null;
+  seatClass: string | null;
+  createdAt: Date;
+  bookingId: string | null;
+  depIata: string | null;
+  depIcao: string | null;
+  arrIata: string | null;
+  arrIcao: string | null;
+  depLat: number;
+  depLon: number;
+  arrLat: number;
+  arrLon: number;
+};
+
 export async function loadFlightInsightRows(userId: string): Promise<FlightInsightRow[]> {
   const flights = await prisma.flight.findMany({
     where: { userId, status: { in: [...ITINERARY_STATUSES] } },
-    select: {
-      id: true,
-      flightNumber: true,
-      status: true,
-      airline: true,
-      seatClass: true,
-      createdAt: true,
-      bookingId: true,
-      depIata: true,
-      depIcao: true,
-      arrIata: true,
-      arrIcao: true,
-      depLat: true,
-      depLon: true,
-      arrLat: true,
-      arrLon: true,
-      departureTime: true,
-      arrivalTime: true,
-      depTimeSemantics: true,
-      arrTimeSemantics: true,
-      depTimezone: true,
-      arrTimezone: true,
-      depPrecision: true,
-      arrPrecision: true,
-      actualDeparture: true,
-      actualArrival: true,
-      runwayDepartureTime: true,
-      runwayArrivalTime: true,
-    },
+    select: FLIGHT_INSIGHT_SELECT,
     orderBy: [{ departureTime: "asc" }, { id: "asc" }],
   });
-  const tzMap = await buildTzMap(flights);
+  return toFlightInsightRows(flights);
+}
+
+/**
+ * Flight rows already in memory → insight rows, with no second query of the
+ * flight table: the badge check hands over the rows it loaded itself. Only
+ * the airport catalogue's zones are asked for (cached), and only for rows
+ * that stored none.
+ */
+export async function toFlightInsightRows(
+  flights: readonly FlightInsightSource[]
+): Promise<FlightInsightRow[]> {
+  if (flights.length === 0) return [];
+  const tzMap = await buildTzMap([...flights]);
   return flights.map((f) => {
     const catalogue = {
       dep: flightEndZone(null, tzMap, f.depIata, f.depIcao),
@@ -152,6 +197,8 @@ export async function loadFlightInsightRows(userId: string): Promise<FlightInsig
       arrival: times.arrival,
       departureDay,
       arrivalDay: times.arrival ? times.arrival.local.slice(0, 10) : departureDay,
+      departureDayExact: isExactDay(times.departure),
+      arrivalDayExact: times.arrival ? isExactDay(times.arrival) : isExactDay(times.departure),
     };
   });
 }

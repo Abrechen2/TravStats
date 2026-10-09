@@ -72,6 +72,15 @@ describe("the year's story (forgejo#256)", () => {
     expect(story.newAirports).toEqual(["FRA", "LHR"]);
   });
 
+  it("marks the first recorded year, where every airport is new by definition", () => {
+    const rows = [
+      row("FRA", "LHR", "2023-02-01T10:00", "2023-02-01T11:00"),
+      row("FRA", "CDG", "2024-02-01T10:00", "2024-02-01T11:00"),
+    ];
+    expect(buildYearStory(inputs(rows, 2023)).firstRecordedYear).toBe(true);
+    expect(buildYearStory(inputs(rows, 2024)).firstRecordedYear).toBe(false);
+  });
+
   it("claims nothing when nothing stands out", () => {
     const rows = [row("FRA", "LHR", "2024-02-01T10:00", "2024-02-01T11:00")];
     expect(buildYearStory(inputs(rows, 2024)).curiousRepetition).toBeNull();

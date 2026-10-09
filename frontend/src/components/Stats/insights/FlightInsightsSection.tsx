@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { JSX } from "react";
 
 import StatsSectionsLoadError from "../StatsSectionsLoadError";
+import { useLatestLoad } from "./useLatestLoad";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { statsApi } from "../../../lib/api";
-import { logger } from "../../../lib/logger";
 import type { Flight } from "../../../types";
-import type { FlightInsights } from "../../../types/flightInsights";
 import FlightYearStoryCard from "./FlightYearStoryCard";
 import FlightDiscoveryTable from "./FlightDiscoveryTable";
 import FlightReunionsBlock from "./FlightReunionsBlock";
@@ -33,25 +32,11 @@ export default function FlightInsightsSection({
   year: number | null;
 }): JSX.Element {
   const { t } = useTranslation(["stats", "common"]);
-  const [insights, setInsights] = useState<FlightInsights | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  const load = useCallback((): void => {
-    setFailed(false);
-    statsApi
-      .getFlightInsights(year)
-      .then(setInsights)
-      .catch((err) => {
-        // A failed load must not read as "nothing discovered".
-        setInsights(null);
-        setFailed(true);
-        logger.error("Failed to load flight insights:", err);
-      });
-  }, [year]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
+  const {
+    data: insights,
+    failed,
+    reload: load,
+  } = useLatestLoad(statsApi.getFlightInsights, year, "flight insights");
 
   const nameOf = useMemo(() => {
     const names = new Map<string, string>();
@@ -89,12 +74,18 @@ export default function FlightInsightsSection({
           <p className="mb-2 text-sm" style={muted}>
             {t("stats:insights.intro", { firstYear: insights.history.firstYear })}
           </p>
-          {(insights.history.undatedFlights > 0 || insights.history.unknownEndFlights > 0) && (
+          {(insights.history.undatedFlights > 0 ||
+            insights.history.placeholderDateFlights > 0 ||
+            insights.history.unknownEndFlights > 0) && (
             <p className="mb-6 text-xs" style={muted}>
               {[
                 insights.history.undatedFlights > 0 &&
                   t("stats:insights.coverage.undated", {
                     flights: insights.history.undatedFlights,
+                  }),
+                insights.history.placeholderDateFlights > 0 &&
+                  t("stats:insights.coverage.placeholderDate", {
+                    flights: insights.history.placeholderDateFlights,
                   }),
                 insights.history.unknownEndFlights > 0 &&
                   t("stats:insights.coverage.unknownEnd", {

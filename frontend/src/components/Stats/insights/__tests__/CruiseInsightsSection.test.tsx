@@ -83,13 +83,16 @@ const INSIGHTS: CruiseInsights = {
             activity: "hike",
             day: "2024-06-04",
             portName: "Bergen",
-            distanceKm: 7.5,
+            recordedKm: 7.5,
+            plannedKm: null,
             ascentM: 320,
           },
         ],
         activities: { hike: 1 },
-        distanceKm: 7.5,
-        onFootKm: 7.5,
+        recordedKm: 7.5,
+        plannedKm: null,
+        onFootRecordedKm: 7.5,
+        onFootPlannedKm: null,
         ascentM: 320,
       },
       {
@@ -99,8 +102,10 @@ const INSIGHTS: CruiseInsights = {
         documentedCalls: 0,
         tours: [],
         activities: {},
-        distanceKm: null,
-        onFootKm: null,
+        recordedKm: null,
+        plannedKm: null,
+        onFootRecordedKm: null,
+        onFootPlannedKm: null,
         ascentM: null,
       },
     ],
@@ -222,8 +227,10 @@ describe("CruiseInsightsSection (forgejo#257)", () => {
           documentedCalls: 0,
           tours: null,
           activities: null,
-          distanceKm: null,
-          onFootKm: null,
+          recordedKm: null,
+          plannedKm: null,
+          onFootRecordedKm: null,
+          onFootPlannedKm: null,
           ascentM: null,
         })),
       },
@@ -242,6 +249,27 @@ describe("CruiseInsightsSection (forgejo#257)", () => {
     await screen.findByText("stats:insights.cruise.ports.title");
     // events, ports, reunion, itineraries, stays, days, excursions
     expect(screen.getAllByRole("button", { name: "accessibility.showHelp" })).toHaveLength(7);
+  });
+
+  it("never lets a slow answer for the previous year overwrite the current one", async () => {
+    let answerOld: (value: CruiseInsights) => void = () => undefined;
+    getCruiseInsights
+      .mockImplementationOnce(() => new Promise<CruiseInsights>((resolve) => (answerOld = resolve)))
+      .mockResolvedValueOnce(INSIGHTS);
+    const view = render(
+      <MemoryRouter>
+        <CruiseInsightsSection year={2023} />
+      </MemoryRouter>
+    );
+    view.rerender(
+      <MemoryRouter>
+        <CruiseInsightsSection year={2024} />
+      </MemoryRouter>
+    );
+    await screen.findByText("stats:insights.cruise.ports.title");
+    await act(async () => answerOld({ ...INSIGHTS, cruises: 0 }));
+    expect(screen.queryByText("stats:insights.cruise.empty")).toBeNull();
+    expect(screen.getByText("stats:insights.cruise.ports.title")).toBeTruthy();
   });
 
   it("explains what would enable the section when no cruise was sailed", async () => {
