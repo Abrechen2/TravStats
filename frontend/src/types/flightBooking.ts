@@ -11,6 +11,9 @@ export interface FlightBookingSummary {
   /** The booking's all-in total, counted once for the whole booking. 0 = free, null = none recorded. */
   price: number | null;
   currency: string | null;
+  /** The trip the BOOKING belongs to — where its price is edited. May differ from a segment's trip. */
+  tripId: string | null;
+  tripName: string | null;
   /** Cruises, train journeys and stays filed on the same booking. */
   otherEntries: number;
   /** The optional split across the segments (forgejo#219), or null. */

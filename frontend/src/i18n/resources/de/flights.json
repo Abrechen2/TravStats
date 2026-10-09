@@ -580,7 +580,9 @@
       "distanceUnknown": "Für mindestens einen Flug ist keine Strecke bekannt. Teile gleichmäßig auf oder ergänze die Flughäfen.",
       "noBooking": "Dieser Flug gehört zu keiner Buchung mehr.",
       "generic": "Die Aufteilung konnte nicht gespeichert werden."
-    }
+    },
+    "editOnNamedTrip": "Gesamtpreis auf der Seite der Reise „{{name}}“ bearbeiten",
+    "noTrip": "Die Buchung hängt an keiner Reise; ihr Gesamtpreis lässt sich daher hier nicht öffnen."
   },
   "bulk": {
     "start": "Mehrere bearbeiten",

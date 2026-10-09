@@ -53,6 +53,8 @@ function answer(
       pnr: "ABC123",
       price: 480,
       currency: "EUR",
+      tripId: null,
+      tripName: null,
       otherEntries: 0,
       split: null,
       ...over,
@@ -84,10 +86,9 @@ describe("BookingPrice", () => {
     expect(box).toHaveTextContent("480 €");
     expect(box).toHaveTextContent("flights:bookingPrice.storedOnBooking");
     expect(box).toHaveTextContent("flights:bookingPrice.countedOnce");
-    expect(screen.getByRole("link", { name: "flights:bookingPrice.editOnTrip" })).toHaveAttribute(
-      "href",
-      "/trips/t1"
-    );
+    // No booking trip in this fixture: said, not linked to the flight's trip.
+    expect(box).toHaveTextContent("flights:bookingPrice.noTrip");
+    expect(screen.queryByRole("link")).toBeNull();
   });
 
   it("explains the fallback when the booking has no total, and offers no split", () => {
@@ -187,5 +188,15 @@ describe("BookingPrice", () => {
     await user.click(await screen.findByRole("button", { name: "common:buttons.retry" }));
     await waitFor(() => expect(onAnswer).toHaveBeenCalledTimes(1));
     expect(split).toHaveBeenLastCalledWith("a", "distance");
+  });
+
+  it("links to the trip the BOOKING hangs on, not the flight's (review I4)", () => {
+    // The flight sits on t1 (moved there by a bulk edit); the booking stays on tA.
+    renderIt(answer({ tripId: "tA", tripName: "Buchungsreise" }));
+    expect(
+      screen.getByRole("link", {
+        name: 'flights:bookingPrice.editOnNamedTrip {"name":"Buchungsreise"}',
+      })
+    ).toHaveAttribute("href", "/trips/tA");
   });
 });

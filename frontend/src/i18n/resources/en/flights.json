@@ -580,7 +580,9 @@
       "distanceUnknown": "At least one flight has no known distance. Split equally, or complete its airports.",
       "noBooking": "This flight no longer belongs to a booking.",
       "generic": "The split could not be saved."
-    }
+    },
+    "editOnNamedTrip": "Edit the total on the page of the trip “{{name}}”",
+    "noTrip": "The booking belongs to no trip, so its total cannot be opened from here."
   },
   "bulk": {
     "start": "Edit several",

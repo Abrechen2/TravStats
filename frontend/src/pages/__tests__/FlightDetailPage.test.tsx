@@ -165,7 +165,15 @@ describe("FlightDetailPage", () => {
     });
     getByIdMock.mockResolvedValue(own);
     getBookingMock.mockResolvedValue({
-      booking: { id: "b1", pnr: "ABC123", price: null, currency: null, otherEntries: 0 },
+      booking: {
+        id: "b1",
+        pnr: "ABC123",
+        price: null,
+        currency: null,
+        tripId: null,
+        tripName: null,
+        otherEntries: 0,
+      },
       segments: [own, onward],
     });
     renderPage();
@@ -180,7 +188,16 @@ describe("FlightDetailPage", () => {
     const own = makeFlight({ bookingId: "b1" });
     getByIdMock.mockResolvedValue(own);
     getBookingMock.mockResolvedValue({
-      booking: { id: "b1", pnr: null, price: 480, currency: "EUR", otherEntries: 0, split: null },
+      booking: {
+        id: "b1",
+        pnr: null,
+        price: 480,
+        currency: "EUR",
+        tripId: null,
+        tripName: null,
+        otherEntries: 0,
+        split: null,
+      },
       segments: [own, makeFlight({ id: "f2", bookingId: "b1" })],
     });
     renderPage();
@@ -274,6 +291,8 @@ describe("FlightDetailPage", () => {
         pnr: "ABC123",
         price: null,
         currency: null,
+        tripId: null,
+        tripName: null,
         otherEntries: 0,
         split: null,
       },

@@ -39,6 +39,8 @@ const BOOKING = {
   pnr: "ABC123",
   price: 480,
   currency: "EUR",
+  tripId: null,
+  tripName: null,
   otherEntries: 0,
   split: null,
 };

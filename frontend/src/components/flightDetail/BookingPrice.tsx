@@ -200,15 +200,22 @@ export default function BookingPrice({
       {booking.otherEntries > 0 ? (
         <p>{t("flights:bookingPrice.otherEntries", { count: booking.otherEntries })}</p>
       ) : null}
-      {flight.tripId ? (
+      {/* The booking's own trip, where its price is edited — not the
+          flight's: segments can move to another trip while the booking
+          stays (review I4). */}
+      {booking.tripId ? (
         <Link
-          to={`/trips/${flight.tripId}`}
+          to={`/trips/${booking.tripId}`}
           className={`inline-flex items-center underline underline-offset-4 ${DAY_CARD_TOUCH}`}
           style={{ color: "var(--ts-accent)", fontWeight: 600 }}
         >
-          {t("flights:bookingPrice.editOnTrip")}
+          {booking.tripName
+            ? t("flights:bookingPrice.editOnNamedTrip", { name: booking.tripName })
+            : t("flights:bookingPrice.editOnTrip")}
         </Link>
-      ) : null}
+      ) : (
+        <p>{t("flights:bookingPrice.noTrip")}</p>
+      )}
       {splittable ? <SplitControls flight={flight} answer={answer} onAnswer={onAnswer} /> : null}
     </div>
   );

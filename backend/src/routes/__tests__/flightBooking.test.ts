@@ -52,6 +52,7 @@ describe("GET /flights/:id/booking", () => {
   beforeEach(async () => {
     await prisma.flight.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await prisma.booking.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
+    await prisma.trip.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
   });
 
   afterAll(async () => {
@@ -82,6 +83,8 @@ describe("GET /flights/:id/booking", () => {
       pnr: "ABC123",
       price: 480,
       currency: "EUR",
+      tripId: null,
+      tripName: null,
       otherEntries: 0,
       split: null,
     });
@@ -89,6 +92,22 @@ describe("GET /flights/:id/booking", () => {
     expect(res.body.segments[0].times.departure.utc).toBe("2026-11-02T06:00:00.000Z");
     // Bare — no envelope (ADR 0001).
     expect(res.body.success).toBeUndefined();
+  });
+
+  it("names the trip the BOOKING hangs on, also after its flights moved to another (review I4)", async () => {
+    const tripA = await prisma.trip.create({ data: { userId, name: "Buchungsreise" } });
+    const tripB = await prisma.trip.create({ data: { userId, name: "Andere Reise" } });
+    const booking = await prisma.booking.create({ data: { userId, tripId: tripA.id, price: 300 } });
+    const seg = await flight(userId, { bookingId: booking.id, tripId: tripA.id });
+    const moved = await request(app)
+      .post("/api/v1/flights/bulk-edit")
+      .set("Cookie", cookie)
+      .send({ flightIds: [seg.id], trip: { mode: "set", tripId: tripB.id } });
+    expect(moved.body.summary.updated).toBe(1);
+    const res = await get(seg.id);
+    expect(res.body.booking.tripId).toBe(tripA.id);
+    expect(res.body.booking.tripName).toBe("Buchungsreise");
+    expect(res.body.segments[0].tripId).toBe(tripB.id);
   });
 
   it("answers an unbooked flight with no booking and no segments", async () => {
@@ -188,4 +207,3 @@ describe("GET /flights/:id/booking", () => {
     });
   });
 });
-

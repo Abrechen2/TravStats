@@ -49,6 +49,11 @@ async function bookingRow(userId: string, bookingId: string) {
       pnr: true,
       price: true,
       currency: true,
+      // The trip the BOOKING hangs on — where its price is edited. Not the
+      // flight's trip: segments can move to another trip while the booking
+      // stays (review I4).
+      tripId: true,
+      trip: { select: { name: true } },
       priceSplit: true,
       _count: { select: { cruises: true, railJourneys: true, lodgingStays: true } },
     },
@@ -68,10 +73,11 @@ async function bookingAnswer(userId: string, bookingId: string | null) {
   const row = await bookingRow(userId, bookingId);
   if (!row) return { booking: null, segments: [] };
   const segments = await segmentRows(userId, bookingId);
-  const { _count, priceSplit, ...booking } = row;
+  const { _count, priceSplit, trip, ...booking } = row;
   return {
     booking: {
       ...booking,
+      tripName: trip?.name ?? null,
       otherEntries: _count.cruises + _count.railJourneys + _count.lodgingStays,
       split: readBookingSplit(
         priceSplit,

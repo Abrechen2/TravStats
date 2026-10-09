@@ -26,9 +26,7 @@ const bookingSplit = registry.register(
         .nullable()
         .describe("Null while the split still describes the booking; else what changed since"),
     })
-    .describe(
-      "DISPLAY ONLY. No cost total reads it — totals count the booking price once, all-in."
-    )
+    .describe("DISPLAY ONLY. No cost total reads it — totals count the booking price once, all-in.")
     .openapi("FlightBookingSplit")
 );
 
@@ -45,6 +43,14 @@ export const flightBookingSummary = registry.register(
           "The booking's all-in total. Counted ONCE for the whole booking; 0 = free, null = no total recorded"
         ),
       currency: z.string().nullable(),
+      tripId: z
+        .string()
+        .uuid()
+        .nullable()
+        .describe(
+          "The trip the BOOKING belongs to — where its price is edited; may differ from a segment's trip"
+        ),
+      tripName: z.string().nullable(),
       otherEntries: z
         .number()
         .int()
@@ -81,7 +87,8 @@ registry.registerPath({
 
 const splitRefusals = {
   404: {
-    description: "Flight not found (`FLIGHT_NOT_FOUND`) or linked to no booking (`BOOKING_NOT_FOUND`)",
+    description:
+      "Flight not found (`FLIGHT_NOT_FOUND`) or linked to no booking (`BOOKING_NOT_FOUND`)",
     content: errorContent,
   },
 };
