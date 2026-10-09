@@ -11,6 +11,7 @@ import { lodgingCountryKey } from "../../utils/stats/lodgingCountryKey";
 import { localWallClockOf, type FlightTimeSemantics } from "../../utils/timezone";
 import { getCachedAirports } from "../airportCache";
 import { flightEvidenceEntry } from "./entryMappers";
+import { flightEndZone, tzMapFromAirports } from "../stats/departureClock";
 import {
   cruiseEvidenceEntry,
   placeEvidenceEntry,
@@ -144,6 +145,7 @@ async function loadFlights(userId: string): Promise<CrossDomainPopulation> {
       arrIcao: true,
       departureTime: true,
       depTimeSemantics: true,
+      depTimezone: true,
     },
   });
 
@@ -155,10 +157,15 @@ async function loadFlights(userId: string): Promise<CrossDomainPopulation> {
     if (arr) codes.add(arr);
   }
   const airports = await getCachedAirports([...codes]);
+  const tzMap = tzMapFromAirports(airports);
 
   const events: CrossDomainEventRow[] = [];
   const countryRows: CrossDomainCountryRow[] = [];
   for (const row of rows) {
+    // Stored zone first, then the catalogue's — the chain every flight figure
+    // reads (`flightEndZone`), so a corrected catalogue zone cannot move a
+    // past flight's year or day here alone (forgejo#273).
+    const depZone = flightEndZone(row.depTimezone, tzMap, row.depIata, row.depIcao);
     const depCode = row.depIata ?? row.depIcao;
     const arrCode = row.arrIata ?? row.arrIcao;
     const depAirport = depCode ? airports.get(depCode) : undefined;
@@ -169,7 +176,7 @@ async function loadFlights(userId: string): Promise<CrossDomainPopulation> {
     if (row.departureTime) {
       const clock = localWallClockOf(
         row.departureTime,
-        depAirport?.timezone ?? null,
+        depZone,
         row.depTimeSemantics as FlightTimeSemantics
       );
       if (Number.isFinite(clock.year)) {
@@ -188,7 +195,7 @@ async function loadFlights(userId: string): Promise<CrossDomainPopulation> {
           departureTime: row.departureTime,
           // The clock `year` and `dayKeys` were just read on, so the entry's
           // label names the same day it is counted under (forgejo#273).
-          depTimezone: depAirport?.timezone ?? null,
+          depTimezone: depZone,
           depTimeSemantics: row.depTimeSemantics as FlightTimeSemantics,
         },
         1
