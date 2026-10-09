@@ -272,35 +272,19 @@ export const lodgingImportLimiter = rateLimit({
   keyGenerator: userOrIpKey,
 });
 
-/**
- * Per-user limit for the recording archive (`/track-archive`): the ZIP of
- * every recording is built in memory from every track's line, and an import
- * parses up to a few hundred files. Thirty in a quarter of an hour covers a
- * person trying, checking the preview and applying several times over.
- */
-export const trackArchiveLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: patAwareMax(30),
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many recording archive requests, please try again later" },
-  keyGenerator: userOrIpKey,
-});
-
-/**
- * Per-user limit for the single-trip file (`.travstats`, spec 2026-10-09 S3):
- * an export zips every document and photo of a trip, and an import unpacks up
- * to a few hundred MB. Thirty in a quarter of an hour covers exporting,
- * previewing and importing a handful of times over.
- */
-export const tripFileLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: patAwareMax(30),
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many trip file requests, please try again later" },
-  keyGenerator: userOrIpKey,
-});
+/** Per-user limits for the ZIP routes (`/track-archive`, the `.travstats` trip file): 30 per
+ *  15 min covers trying, previewing and applying several times over. One bucket each. */
+const archiveLimiter = (what: string) =>
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: patAwareMax(30),
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: `Too many ${what} requests, please try again later` },
+    keyGenerator: userOrIpKey,
+  });
+export const trackArchiveLimiter = archiveLimiter("recording archive");
+export const tripFileLimiter = archiveLimiter("trip file");
 
 /** Flight creation, per user (`FLIGHT_CREATION_MAX` an hour); every request counts. */
 export const flightCreationLimiter = rateLimit({
