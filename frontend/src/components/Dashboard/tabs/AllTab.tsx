@@ -329,17 +329,23 @@ export function AllTab(): JSX.Element {
     [navigate]
   );
 
+  // Stores the update only; the dialog closes itself after the trip move, and
+  // the map refresh runs after both (`onAfterSave`). A failed refresh used to
+  // be reported as a failed save of an edit that was stored.
   const handleFlightSave = useCallback(
     async (id: string, updates: Partial<FlightInput>): Promise<void> => {
       await flightsApi.update(id, updates);
-      // Refresh GeoJSON so the map reflects the edit; full-flight lookup
-      // will catch up on the next mount.
-      const collection = await flightsApi.getAllGeoJSON();
-      setFlights(collection.features);
-      setEditingFlight(null);
     },
     []
   );
+  // Refresh GeoJSON so the map reflects the edit; full-flight lookup will
+  // catch up on the next mount.
+  const refreshFlightsAfterSave = useCallback((): void => {
+    flightsApi
+      .getAllGeoJSON()
+      .then((collection) => setFlights(collection.features))
+      .catch((err: unknown) => logger.warn({ err }, "AllTab: map refresh after edit failed"));
+  }, []);
 
   // Domain-gating: a disabled domain's data is never fetched, not just
   // hidden at render time.
@@ -662,6 +668,7 @@ export function AllTab(): JSX.Element {
       isOpen={true}
       onClose={() => setEditingFlight(null)}
       onSave={handleFlightSave}
+      onAfterSave={refreshFlightsAfterSave}
     />
   );
 

@@ -15,6 +15,8 @@ import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
 import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { flightDeleteMessage } from "../lib/flights/flightDeleteMessage";
+import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import type { Flight, FlightFacets, FlightInput, Trip } from "../types";
 import SimplifiedFlightFormV2 from "../components/SimplifiedFlightFormV2";
@@ -101,6 +103,11 @@ export default function FlightsTablePage(): JSX.Element {
   const [editingSpecialFlight, setEditingSpecialFlight] = useState<Flight | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [flightToDelete, setFlightToDelete] = useState<Flight | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  /** Its documents cascade with it — counted only while the question is open. */
+  const deleteDocumentCount = useDocumentCount(
+    deleteConfirmOpen && flightToDelete ? { type: "flight", id: flightToDelete.id } : null
+  );
   const [duplicateMenuFor, setDuplicateMenuFor] = useState<string | null>(null);
   // Newest first everywhere, and the choice survives a reload — the
   // column choice already did (useColumnPrefs), the sort never had.
@@ -174,8 +181,9 @@ export default function FlightsTablePage(): JSX.Element {
   };
 
   const handleDelete = async () => {
-    if (!flightToDelete) return;
+    if (!flightToDelete || deleting) return;
 
+    setDeleting(true);
     try {
       await flightsApi.delete(flightToDelete.id);
       addToast("success", t("flights:table.toast.deleted"));
@@ -187,6 +195,8 @@ export default function FlightsTablePage(): JSX.Element {
       addToast("error", t("dashboard:errors.deleteFlight"));
       setDeleteConfirmOpen(false);
       setFlightToDelete(null);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -716,13 +726,28 @@ export default function FlightsTablePage(): JSX.Element {
           setFlightToDelete(null);
         }}
         onConfirm={handleDelete}
+        isLoading={deleting}
         title={t("flights:table.deleteConfirm.title")}
-        // Names the flight, like the other five dialogs do now. "Diesen
-        // Flug" was fine on a detail page and wrong in a list, where the
-        // row you clicked may not be the row you meant.
-        message={t("flights:table.deleteConfirm.message", {
-          name: flightToDelete ? flightLabel(flightToDelete) : "",
-        })}
+        // Names the flight ("Diesen Flug" was wrong in a list, where the row
+        // you clicked may not be the row you meant), the documents that go
+        // with it and what stays, by name (forgejo#250).
+        message={
+          flightToDelete
+            ? flightDeleteMessage(
+                t,
+                {
+                  name: flightLabel(flightToDelete),
+                  tripName: flightToDelete.tripId
+                    ? (tripMap.get(flightToDelete.tripId)?.name ?? flightToDelete.trip?.name ?? "")
+                    : null,
+                  booking: flightToDelete.bookingId
+                    ? { pnr: flightToDelete.bookingReference ?? null, otherFlights: null }
+                    : null,
+                },
+                deleteDocumentCount
+              )
+            : ""
+        }
         confirmText={t("flights:table.deleteConfirm.confirm")}
         cancelText={t("flights:table.deleteConfirm.cancel")}
         confirmButtonClass={DELETE_BUTTON_CLASS}

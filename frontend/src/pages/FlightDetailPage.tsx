@@ -21,7 +21,8 @@ import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
 import { flightsApi, tripsApi } from "../lib/api";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
-import { DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { flightDeleteMessage } from "../lib/flights/flightDeleteMessage";
 import { getFlightDuration } from "../lib/flightDuration";
 import { flightExtractTarget } from "../lib/extractTargets";
 import { convertDistance, formatAmount, getDistanceLabel } from "../lib/units";
@@ -448,14 +449,24 @@ export default function FlightDetailPage(): JSX.Element {
         // documents cascade with it (`onDelete: Cascade`, proven live by
         // `backend/src/__tests__/integrity/cascades.integrity.test.ts`) and
         // the dialog named only the flight.
-        message={withDocumentNote(
-          t("flights:table.deleteConfirm.message", {
+        message={flightDeleteMessage(
+          t,
+          {
             name:
               [flight.flightNumber, [flight.depIata, flight.arrIata].filter(Boolean).join(" → ")]
                 .filter(Boolean)
                 .join(" ") || t("common:labels.unknown"),
-          }),
-          t,
+            tripName: flight.tripId ? (trip?.name ?? flight.trip?.name ?? "") : null,
+            // The booking read for the itinerary counts its other flights.
+            booking: flight.bookingId
+              ? booking.state.kind === "loaded" && booking.state.answer.booking
+                ? {
+                    pnr: booking.state.answer.booking.pnr,
+                    otherFlights: Math.max(0, booking.state.answer.segments.length - 1),
+                  }
+                : { pnr: flight.bookingReference ?? null, otherFlights: null }
+              : null,
+          },
           documentCount
         )}
         confirmText={t("flights:table.deleteConfirm.confirm")}

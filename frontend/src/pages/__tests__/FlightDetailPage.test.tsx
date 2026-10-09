@@ -265,6 +265,32 @@ describe("FlightDetailPage", () => {
     expect(listForEntryMock).toHaveBeenCalledWith({ type: "flight", id: "f1" });
   });
 
+  it("says what stays — the booking and its other flight — when deleting (forgejo#250)", async () => {
+    const own = makeFlight({ bookingId: "b1" });
+    getByIdMock.mockResolvedValue(own);
+    getBookingMock.mockResolvedValue({
+      booking: {
+        id: "b1",
+        pnr: "ABC123",
+        price: null,
+        currency: null,
+        otherEntries: 0,
+        split: null,
+      },
+      segments: [own, makeFlight({ id: "f2", bookingId: "b1" })],
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByTestId("booking-itinerary");
+    await user.click(screen.getByRole("button", { name: "common:buttons.delete" }));
+    const dialog = await screen.findByTestId("confirm-modal");
+    // The suite's translation mock drops interpolation, so the names inside
+    // the line are pinned in lib/flights/__tests__/flightDeleteMessage.test.ts;
+    // here: the page says what stays at all.
+    expect(dialog.textContent).toContain("common:delete.survivors");
+  });
+
   it("counts nothing until the dialog is opening", async () => {
     // A past flight with no day-of-travel values, so the day card (forgejo#220),
     // which lists the flight's documents for its boarding pass, is not drawn.

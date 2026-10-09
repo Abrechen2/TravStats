@@ -223,7 +223,7 @@
     "actions": "Actions",
     "deleteConfirm": {
       "title": "Delete flight?",
-      "message": "“{{name}}” will be permanently deleted. A trip it belongs to is kept.",
+      "message": "“{{name}}” will be deleted permanently.",
       "confirm": "Yes, delete",
       "cancel": "Cancel"
     },
@@ -650,5 +650,13 @@
         "UPDATE_FAILED": "could not be saved"
       }
     }
+  },
+  "deleteSurvivors": {
+    "trip": "the trip “{{name}}”",
+    "tripUnnamed": "the trip it belongs to",
+    "booking": "the booking {{pnr}}",
+    "bookingMaybe": "the booking {{pnr}} and any other flights of it",
+    "bookingWithFlights_one": "the booking {{pnr}} with its other flight",
+    "bookingWithFlights_other": "the booking {{pnr}} with its {{count}} other flights"
   }
 }

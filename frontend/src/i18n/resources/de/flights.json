@@ -223,7 +223,7 @@
     "actions": "Aktionen",
     "deleteConfirm": {
       "title": "Flug löschen?",
-      "message": "„{{name}}“ wird dauerhaft gelöscht. Eine zugehörige Reise bleibt erhalten.",
+      "message": "„{{name}}“ wird dauerhaft gelöscht.",
       "confirm": "Ja, löschen",
       "cancel": "Abbrechen"
     },
@@ -650,5 +650,13 @@
         "UPDATE_FAILED": "konnte nicht gespeichert werden"
       }
     }
+  },
+  "deleteSurvivors": {
+    "trip": "die Reise „{{name}}“",
+    "tripUnnamed": "die zugehörige Reise",
+    "booking": "die Buchung {{pnr}}",
+    "bookingMaybe": "die Buchung {{pnr}} und ggf. ihre anderen Flüge",
+    "bookingWithFlights_one": "die Buchung {{pnr}} mit ihrem anderen Flug",
+    "bookingWithFlights_other": "die Buchung {{pnr}} mit ihren {{count}} anderen Flügen"
   }
 }
