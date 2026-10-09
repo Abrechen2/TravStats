@@ -177,4 +177,35 @@ describe("TablePagination", () => {
       screen.getByRole("navigation", { name: "common:table.pagination.landmark.bottom" })
     ).toBeInTheDocument();
   });
+
+  // forgejo#249: the iPad check measured 21-24 x 26 px. Touch sizing follows the
+  // pointer, so the classes are the contract (jsdom cannot measure).
+  it("sizes every pager control to the touch minimum on a coarse pointer", () => {
+    render(
+      <TablePagination
+        page={2}
+        pageCount={4}
+        pageSize={50}
+        total={200}
+        setPage={vi.fn()}
+        setPageSize={vi.fn()}
+      />
+    );
+    const targets = [
+      ...[
+        "common:table.pagination.first",
+        "common:table.pagination.previous",
+        "common:table.pagination.next",
+        "common:table.pagination.last",
+      ].map((name) => screen.getByRole("button", { name })),
+      screen.getByRole("combobox"),
+    ];
+    for (const target of targets) {
+      expect(target.className).toContain("pointer-coarse:min-h-(--ts-size-touch-min)");
+    }
+    // Buttons need width too: a bare chevron is far narrower than a finger.
+    for (const button of targets.slice(0, 4)) {
+      expect(button.className).toContain("pointer-coarse:min-w-(--ts-size-touch-min)");
+    }
+  });
 });
