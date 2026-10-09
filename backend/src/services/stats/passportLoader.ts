@@ -20,11 +20,8 @@ import { getCachedAirports } from "../airportCache";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { allHomeAirports } from "../../utils/homeAirport";
 import { loadHomePeriods } from "../home/homeStore";
-import {
-  localWallClockOf,
-  normalizeFlightTimeUtc,
-  type FlightTimeSemantics,
-} from "../../utils/timezone";
+import { normalizeFlightTimeUtc, type FlightTimeSemantics } from "../../utils/timezone";
+import { departureDayOf } from "../../utils/stats/departureClock";
 import { countryThresholdFor } from "../countryThresholdResolver";
 import {
   FLIGHT_CLOCK_SELECT,
@@ -193,9 +190,7 @@ export async function loadPassport(
 
   const passportFlights = dated.map((f) => ({
     ...f,
-    localDay: f.departureTime
-      ? localWallClockOf(f.departureTime, f.depTimezone, f.depTimeSemantics).date
-      : null,
+    localDay: departureDayOf(f),
     departureInstant: realInstant(f.departureTime, f.depTimeSemantics, f.depTimezone),
     arrivalInstant: realInstant(
       f.arrivalTime,

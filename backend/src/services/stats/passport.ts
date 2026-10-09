@@ -100,7 +100,7 @@ import {
   type EvidenceInput,
   type EvidenceKind,
 } from "../../shared/countryEvidence";
-import { FLOWN, flightEvidence, isoDayOf, type PassportFlight } from "./flightEvidence";
+import { FLOWN, flightDay, flightEvidence, isoDayOf, type PassportFlight } from "./flightEvidence";
 import { trackEvidence, type CountryDayRow } from "./trackEvidence";
 import { roadtripEvidence, type PassportRoadtripStation } from "./roadtripEvidence";
 import { railEvidence, type RailEnd } from "./railEvidence";
@@ -437,8 +437,10 @@ export function buildPassport(
 
   for (const flight of flights) {
     if (!FLOWN.has(flight.status)) continue;
-    const year = flight.departureTime ? flight.departureTime.getUTCFullYear() : null;
-    const isoDate = flight.departureTime ? flight.departureTime.toISOString().slice(0, 10) : null;
+    // The departure airport's day, the one the spells below are read on — a
+    // UTC cut made a Tokyo 07:30 on 1 January a stamp of the year before (forgejo#273).
+    const isoDate = flightDay(flight);
+    const year = isoDate === null ? null : Number(isoDate.slice(0, 4));
 
     for (const touch of touchesOf(flight)) {
       const code = touch.iata.toUpperCase();

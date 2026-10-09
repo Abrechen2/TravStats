@@ -68,6 +68,7 @@ import {
 } from "../../utils/continents";
 import { lodgingEvidence, type CountableStay } from "../../shared/countryEvidence";
 import { lodgingCountry, placeVisitCountry, portCallCountry } from "./evidenceCountry";
+import { flightDay } from "./flightEvidence";
 import type { PassportEvidence } from "./passport";
 import type { LoadedRoadtripStation } from "./roadtripEvidenceLoader";
 import type { RailEnd } from "./railEvidence";
@@ -91,6 +92,13 @@ export interface CountryDetailFlight {
   arrLon: number;
   departureTime: Date | null;
   status: string;
+  /**
+   * The day the flight left on at its DEPARTURE airport — the passport's
+   * `PassportFlight.localDay`, resolved by the loader the same way, so a row
+   * and its page file the flight under the same day and year (forgejo#273).
+   * Absent: the stored instant's UTC day, the passport's fallback too.
+   */
+  localDay?: string | null;
 }
 
 /** A port a SAILED cruise called at. Same cut rule 1 makes for flights. */
@@ -247,11 +255,11 @@ export function buildCountryDetail(
     const arrHere = arr !== null && isoCountryCode(airportCountries.get(arr) ?? null) === wanted;
     if (!depHere && !arrHere) continue;
 
-    const date = isoDay(flight.departureTime);
+    const date = flightDay(flight);
 
     // Rule 3: one entry per flight, so a domestic leg does not count twice.
     entries += 1;
-    stretchYears(flight.departureTime);
+    stretchYears(date === null ? null : new Date(`${date}T00:00:00Z`));
 
     const touch = (iata: string, lat: number, lon: number): void => {
       const acc = airports.get(iata) ?? {

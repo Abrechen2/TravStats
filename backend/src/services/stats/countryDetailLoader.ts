@@ -26,6 +26,8 @@ import { countableCruiseWhere } from "../../shared/cruiseCounting";
 import { classifyVisit } from "../../shared/placeCounting";
 import { loadRoadtripStations } from "./roadtripEvidenceLoader";
 import { loadRailEnds } from "./railEvidenceLoader";
+import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "./departureClock";
+import { departureDayOf } from "../../utils/stats/departureClock";
 
 /** Every argument `buildCountryDetail` takes after the country code, in its order. */
 export type CountryDetailInputs =
@@ -58,21 +60,26 @@ export async function loadCountryDetailInputs(userId: string): Promise<CountryDe
   // about whether a visit has happened yet.
   const now = new Date();
 
-  const flights = await prisma.flight.findMany({
+  const flightRows = await prisma.flight.findMany({
     where: { userId, ...countableFlightWhere() },
     select: {
       id: true,
       flightNumber: true,
-      depIata: true,
+      ...FLIGHT_CLOCK_SELECT,
       depLat: true,
       depLon: true,
-      arrIata: true,
       arrLat: true,
       arrLon: true,
       departureTime: true,
       status: true,
     },
   });
+  // Each flight's day at its departure airport — what the passport row files it
+  // under (`passportLoader`), so the page behind the row agrees (forgejo#273).
+  const flights = (await withDepartureClock(flightRows)).map((f) => ({
+    ...f,
+    localDay: departureDayOf(f),
+  }));
 
   // The same sources the passport counts, so the row and the page can only ever
   // agree.
