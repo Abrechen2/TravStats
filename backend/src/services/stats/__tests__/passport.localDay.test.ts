@@ -117,4 +117,16 @@ describe("buildPassport — years and first visits on the departure airport's da
     );
     expect(p.countries.find((c) => c.code === "US")?.firstYear).toBe(2026);
   });
+
+  it("judges 'new this year' in the user's profile zone (forgejo#273)", () => {
+    // 23:00Z on 31 December 2025 is 08:00 on 1 January 2026 in Tokyo. A
+    // country first stamped that morning is new THIS year for a Tokyo user;
+    // the UTC year still said 2025.
+    const morning = new Date("2025-12-31T23:00:00Z");
+    const flights = [flight("NRT", "MUC", "2025-12-31T22:30:00Z", "2026-01-01")];
+    const build = (zone?: string) =>
+      buildPassport(flights, COUNTRIES, [], morning, [], [], [], undefined, [], [], [], zone);
+    expect(build("Asia/Tokyo").countries.find((c) => c.code === "JP")?.isNew).toBe(true);
+    expect(build().countries.find((c) => c.code === "JP")?.isNew).toBe(false);
+  });
 });
