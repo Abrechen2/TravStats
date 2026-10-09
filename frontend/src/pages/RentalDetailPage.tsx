@@ -15,6 +15,9 @@ import { RentalFormModal } from "../components/rental/RentalFormModal";
 import { RentalSuggestionBanner } from "../components/rental/RentalSuggestionBanner";
 import { RentalRouteMap } from "../components/rental/RentalRouteMap";
 import { RentalPriceComparison } from "../components/rental/RentalPriceComparison";
+import { RentalReturnCard } from "../components/rental/RentalReturnCard";
+import { showsReturnCard } from "../lib/rental/rentalReturnCard";
+import type { RentalFormStep } from "../components/rental/rentalFormSteps";
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
 import { rentalApi } from "../lib/api/rental";
@@ -51,7 +54,8 @@ export default function RentalDetailPage(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<LoadFailure | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-  const [editing, setEditing] = useState(false);
+  // The step the form opens on: the return card opens it at "Rückgabe".
+  const [editing, setEditing] = useState<false | RentalFormStep | true>(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [stationOffer, setStationOffer] = useState<string | null>(null);
@@ -219,6 +223,11 @@ export default function RentalDetailPage(): JSX.Element {
         <p className="t-caption mb-3" role="status" data-testid="rental-station-offer">
           {stationOffer}
         </p>
+      ) : null}
+      {showsReturnCard(rental) ? (
+        <div className="mb-4">
+          <RentalReturnCard rental={rental} onRecordReturn={() => setEditing("return")} />
+        </div>
       ) : null}
       <RentalSuggestionBanner
         rental={rental}
@@ -389,6 +398,7 @@ export default function RentalDetailPage(): JSX.Element {
       {editing && (
         <RentalFormModal
           rental={rental}
+          initialStep={editing === true ? undefined : editing}
           afterSaveFailedKey="common:form.savedButViewRefreshFailed"
           onClose={() => setEditing(false)}
           onSaved={() => {

@@ -369,5 +369,20 @@
     "paidOn": "hinterlegt am {{day}}",
     "returnedOn": "zurück am {{day}}",
     "neverCost": "zählt nie als Kosten"
+  },
+  "returnCard": {
+    "title": "Rückgabe",
+    "oneWay": "Einwegmiete – andere Station als bei der Abholung",
+    "station": "Station",
+    "when": "Wann",
+    "localTime": "Ortszeit {{zone}}",
+    "whenMissing": "keine Rückgabezeit erfasst",
+    "fuel": "Tankregel",
+    "fuelMissing": "keine Tankregel erfasst",
+    "notes": "Eigene Hinweise",
+    "notesMissing": "keine eigenen Hinweise erfasst",
+    "navigate": "Navigation zur Rückgabe: {{station}}",
+    "noPosition": "Für die Rückgabestation sind keine Koordinaten gespeichert – Navigation nicht möglich. Die Abholstation wird nicht ersatzweise verwendet.",
+    "record": "Rückgabe erfassen"
   }
 }

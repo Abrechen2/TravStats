@@ -369,5 +369,20 @@
     "paidOn": "held on {{day}}",
     "returnedOn": "back on {{day}}",
     "neverCost": "never counts as a cost"
+  },
+  "returnCard": {
+    "title": "Return",
+    "oneWay": "One-way rental – another station than at pickup",
+    "station": "Station",
+    "when": "When",
+    "localTime": "local time {{zone}}",
+    "whenMissing": "no return time recorded",
+    "fuel": "Fuel policy",
+    "fuelMissing": "no fuel policy recorded",
+    "notes": "Your notes",
+    "notesMissing": "no notes of your own recorded",
+    "navigate": "Directions to the return: {{station}}",
+    "noPosition": "No coordinates are stored for the return station – no directions. The pickup station is not used instead.",
+    "record": "Record the return"
   }
 }
