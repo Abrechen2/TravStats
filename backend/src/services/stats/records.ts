@@ -92,8 +92,10 @@ function distanceKm(flight: RecordFlightInput): number | null {
  * midnight, so two Tokyo departures on 2 September, at 23:30Z on the 1st and
  * 01:30Z on the 2nd, were two days of one flight each.
  *
- * A DATE_ONLY row keeps its recorded date (its 12:00Z placeholder is not read
- * through the zone); a row with no usable zone is read on its stored components.
+ * A DATE_ONLY row is read through its zone like any other: it is written as a
+ * local wall clock through that zone, so the local day IS its recorded day
+ * (forgejo#273, `shared/time/dateOnlyFlights.json`). A row with no usable zone
+ * is read on its stored components.
  */
 function dayOf(flight: RecordFlightInput): string | null {
   return departureDayOf({
