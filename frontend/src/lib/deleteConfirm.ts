@@ -63,5 +63,26 @@ export function withDocumentNote(
   return `${message}\n${t("documents:deleteCascadeNote", { count: documentCount })}`;
 }
 
+/**
+ * The "what stays" line — the part of the shape only the trip dialog ever said
+ * (forgejo#250). A delete confirm that lists what goes but not what survives
+ * leaves the user to guess whether the trip, the photos or the linked flights
+ * go with it; most people then do not delete at all, or delete and are
+ * surprised.
+ *
+ * Names, not counts: "Erhalten bleiben: Reise Japan 2025, 3 Fotos" is a
+ * sentence the caller assembles from things the user recognises. An empty
+ * list says nothing — "Erhalten bleiben:" followed by nothing would be noise.
+ * Append it like `withDocumentNote`, as a line of its own.
+ *
+ * The English is "Kept: …", not "Stays: …" — in this app a "stay" is a lodging
+ * record, so "Stays: Hotel Adlon" read as a list of hotel visits.
+ */
+export function survivorsNote(t: Translate, names: readonly string[]): string | null {
+  const named = names.map((name) => name.trim()).filter((name) => name.length > 0);
+  if (named.length === 0) return null;
+  return t("common:delete.survivors", { names: named.join(", ") });
+}
+
 /** Red confirm button — the same one on every delete dialog. */
 export const DELETE_BUTTON_CLASS = "bg-[var(--danger)] hover:opacity-90";

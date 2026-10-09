@@ -59,7 +59,9 @@ vi.mock("../../components/flightsTable/FlightRow", () => ({
   FlightRow: ({ flight }: { flight: { id: string } }) => <tr data-testid={`row-${flight.id}`} />,
   FLIGHT_COLUMN_LAYOUT: new Proxy({}, { get: () => ({}) }),
 }));
-vi.mock("../../components/SimplifiedFlightFormV2", () => ({ default: () => null }));
+vi.mock("../../components/SimplifiedFlightFormV2", () => ({
+  default: () => <div data-testid="add-flight-form" />,
+}));
 vi.mock("../../components/SpecialFlightModal", () => ({ default: () => null }));
 vi.mock("../../components/FlightEditModal", () => ({ default: () => null }));
 vi.mock("../../components/FlightRowActions", () => ({ default: () => null }));
@@ -294,5 +296,37 @@ describe("FlightsTablePage — nothing is filtered or sliced in the browser", ()
 
   it("debounces the search rather than querying per keystroke", () => {
     expect(source).toContain("useDebouncedValue");
+  });
+});
+
+describe("FlightsTablePage — a failed read and an empty logbook have a next step", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    urlParams.current = "";
+    getAll.mockReset();
+    getFacets.mockReset().mockResolvedValue(FACETS);
+    tripsGetAll.mockReset().mockResolvedValue([]);
+  });
+
+  // forgejo#247: the failure was a red sentence with nothing to press, and the
+  // issue names the flight list in particular.
+  it("offers a retry on a failed read, and the retry reads again", async () => {
+    getAll.mockRejectedValueOnce(new Error("503")).mockResolvedValue(page(50));
+    render(<FlightsTablePage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "common:buttons.retry" }));
+
+    await waitFor(() => expect(getAll).toHaveBeenCalledTimes(2));
+    await screen.findByTestId("row-f0");
+    expect(screen.queryByText("flights:table.loadError")).toBeNull();
+  });
+
+  // forgejo#250: "noch keine Flüge" now comes with the way to add one.
+  it("offers to add the first flight when the logbook is empty", async () => {
+    getAll.mockResolvedValue({ flights: [], total: 0, limit: 50, offset: 0 });
+    render(<FlightsTablePage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "dashboard:addFlight" }));
+    expect(await screen.findByTestId("add-flight-form")).toBeInTheDocument();
   });
 });

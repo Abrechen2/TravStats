@@ -156,6 +156,14 @@ describe("LocationInput", () => {
     expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ name: "Zürichberg" }));
   });
 
+  // forgejo#249: "Auf Karte wählen" measured 100 x 16 px on an iPad.
+  it("gives the map link the touch minimum height on a coarse pointer", () => {
+    render(<LocationInput value={null} onChange={vi.fn()} />);
+    expect(screen.getByText("location:mapPick").className).toContain(
+      "pointer-coarse:min-h-(--ts-size-touch-min)"
+    );
+  });
+
   // The inline mini-map is gone (owner decision 2026-08-21): the ONE map way
   // is the modal. Nothing reaches the parent before "Übernehmen".
   it("picks a point through the map modal — confirm reports, cancel discards", async () => {

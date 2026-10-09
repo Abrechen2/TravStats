@@ -185,7 +185,14 @@
     "createTitle": "New lodging",
     "editTitle": "Edit lodging",
     "saveError": "Could not save lodging",
-    "searchLabel": "Search accommodation"
+    "searchLabel": "Search accommodation",
+    "missing": {
+      "coordinates": "valid coordinates"
+    },
+    "errors": {
+      "stars": "Stars: a whole number from 1 to 5.",
+      "website": "A web address starts with http:// or https://."
+    }
   },
   "fx": {
     "source": "ECB",

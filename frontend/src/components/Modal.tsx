@@ -3,6 +3,10 @@ import { createPortal } from "react-dom";
 import type { CSSProperties, JSX, ReactNode } from "react";
 import { useDialogChrome } from "./ui/useDialogChrome";
 import { useScrimDismiss } from "./ui/useScrimDismiss";
+import { useDiscardGuard } from "./form/useDiscardGuard";
+import { useTranslation } from "../hooks/useTranslation";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { useCoarsePointer } from "../hooks/useCoarsePointer";
 
 /**
  * The frame every blocking dialog sits in.
@@ -45,14 +49,35 @@ import { useScrimDismiss } from "./ui/useScrimDismiss";
 
 interface ModalProps {
   open: boolean;
+  /**
+   * Close the dialog — and nothing else. It must not navigate: with `dirty`,
+   * a "Verwerfen" after the browser's Back has already gone back
+   * (`form/unsavedChanges`), and a navigating `onClose` would move the user
+   * twice. A save that moves on uses `navigateAfterSave`.
+   */
   onClose: () => void;
   /** Rendered as the dialog's accessible name. */
   title: ReactNode;
   children: ReactNode;
-  /** The action row. Omit for a dialog that is only read. */
-  footer?: ReactNode;
+  /**
+   * The action row. Omit for a dialog that is only read.
+   *
+   * As a function it receives `requestClose` — the guarded close — so a form's
+   * own Cancel button asks the same "discard changes?" question as Escape,
+   * the scrim and the ×. A Cancel wired straight to `onClose` would be the
+   * one close path the guard does not cover.
+   */
+  footer?: ReactNode | ((requestClose: () => void) => ReactNode);
   /** Blocks Escape and the backdrop while an action is in flight. */
   busy?: boolean;
+  /**
+   * The form holds input that is not saved (see `form/useDirtyGuard`). While
+   * true, every close path asks "discard changes?" first; while false, they
+   * close at once, as before.
+   */
+  dirty?: boolean;
+  /** The confirm label of that question — "Verwerfen" unless a form needs its own word. */
+  discardLabel?: string;
   /**
    * The panel's maximum width in pixels, like `Dialog`'s. It was a Tailwind
    * class until 2026-09-15; once the panel moved onto the shared shell that
@@ -84,6 +109,8 @@ export default function Modal({
   children,
   footer,
   busy = false,
+  dirty = false,
+  discardLabel,
   maxWidth = 560,
   showClose = true,
   closeLabel = "Close",
@@ -96,14 +123,24 @@ export default function Modal({
     titleIdRef.current = `modal-title-${idCounter}`;
   }
 
-  useDialogChrome({ open, onClose, panelRef, busy });
-  const scrim = useScrimDismiss(panelRef, () => {
-    if (!busy) onClose();
-  });
+  const guard = useDiscardGuard({ open, dirty, busy, onClose, panelRef });
+  const { requestClose } = guard;
+  // Touch sizing follows the POINTER, not the width (CLAUDE.md, forgejo#249):
+  // an iPad is wide and finger-operated, and measured the × at ~28 px and the
+  // footer buttons at ~36 px — under the 44 px the design's own sheet uses.
+  // The layout stays width-based; only the target sizes grow.
+  // Inline actions INSIDE a sentence (SaveBlockedHint's "Name") carry
+  // `data-inline-action` and keep their text size: a 44 px link in the middle
+  // of a line breaks the line, and WCAG exempts inline targets for that reason.
+  const coarse = useCoarsePointer();
+  useDialogChrome({ open, onClose: requestClose, panelRef, busy });
+  const scrim = useScrimDismiss(panelRef, requestClose);
 
   if (!open) return null;
 
-  return createPortal(
+  const footerContent = typeof footer === "function" ? footer(requestClose) : footer;
+
+  const frame = createPortal(
     <div className="ts-dialog-scrim" data-testid={testId} {...scrim}>
       <div
         data-testid="modal-backdrop"
@@ -135,11 +172,17 @@ export default function Modal({
           {showClose && (
             <button
               type="button"
-              onClick={onClose}
+              onClick={requestClose}
               disabled={busy}
               aria-label={closeLabel}
-              className="-mr-1 shrink-0 rounded-sm p-1 disabled:opacity-50"
-              style={{ color: "var(--text-muted)" }}
+              className="-mr-1 inline-flex shrink-0 items-center justify-center rounded-sm p-1 disabled:opacity-50"
+              style={{
+                color: "var(--text-muted)",
+                ...(coarse && {
+                  minWidth: "var(--ts-size-touch-min)",
+                  minHeight: "var(--ts-size-touch-min)",
+                }),
+              }}
             >
               <svg
                 className="h-5 w-5"
@@ -155,16 +198,86 @@ export default function Modal({
           )}
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-5 pt-3 pb-4">{children}</div>
-        {footer && (
+        {footerContent && (
           <div
-            className="flex shrink-0 flex-wrap justify-end gap-2 px-5 py-3"
+            data-touch={coarse ? "coarse" : undefined}
+            className={`flex shrink-0 flex-wrap justify-end gap-2 px-5 py-3 ${
+              coarse ? "[&_button:not([data-inline-action])]:min-h-(--ts-size-touch-min)" : ""
+            }`}
             style={{ background: "var(--ts-surface)", borderTop: "1px solid var(--ts-border)" }}
           >
-            {footer}
+            {footerContent}
           </div>
         )}
       </div>
     </div>,
     document.body
+  );
+
+  // Rendered BESIDE the frame's portal, not inside it: a React event from the
+  // question would otherwise bubble through the frame's scrim handlers, and a
+  // click on the question's own scrim would count as a click beside the form.
+  // Its portal lands after the form's in the DOM, which is what makes it the
+  // top dialog for Escape (see `useDialogChrome`).
+  return (
+    <>
+      {frame}
+      {guard.asking && (
+        <DiscardQuestion
+          onDiscard={guard.discard}
+          onKeepEditing={guard.keepEditing}
+          discardLabel={discardLabel}
+        />
+      )}
+    </>
+  );
+}
+
+/**
+ * "Änderungen verwerfen?" — drawn by `Modal` itself rather than through
+ * `useConfirmDialog`, because that hook renders `ConfirmModal`, which IS a
+ * `Modal`: importing it here would close a module cycle (Modal → hook →
+ * ConfirmModal → Modal). Same frame, same two-button shape, same red confirm.
+ * Exported for `ui/Dialog`, which asks the same question.
+ */
+export function DiscardQuestion({
+  onDiscard,
+  onKeepEditing,
+  discardLabel,
+}: {
+  onDiscard: () => void;
+  onKeepEditing: () => void;
+  discardLabel?: string;
+}): JSX.Element {
+  const { t } = useTranslation(["common"]);
+  return (
+    <Modal
+      open
+      onClose={onKeepEditing}
+      title={t("common:discard.title")}
+      maxWidth={440}
+      testId="discard-question"
+      closeLabel={t("common:buttons.close")}
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onKeepEditing}
+            className="inline-flex justify-center rounded-md border border-border px-4 py-2 text-sm font-medium text-(--text-primary) hover:bg-(--bg-base)"
+          >
+            {t("common:discard.keepEditing")}
+          </button>
+          <button
+            type="button"
+            onClick={onDiscard}
+            className={`inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white ${DELETE_BUTTON_CLASS}`}
+          >
+            {discardLabel ?? t("common:discard.confirm")}
+          </button>
+        </>
+      }
+    >
+      <p className="text-sm text-(--text-muted)">{t("common:discard.message")}</p>
+    </Modal>
   );
 }

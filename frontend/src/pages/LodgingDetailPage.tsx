@@ -592,6 +592,7 @@ export default function LodgingDetailPage(): JSX.Element {
         <LodgingFormModal
           mode="edit"
           lodging={lodging}
+          afterSaveFailedKey="common:form.savedButViewRefreshFailed"
           onClose={() => setEditing(false)}
           onSaved={(updated) => {
             setLodging(updated);

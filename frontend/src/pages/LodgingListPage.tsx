@@ -22,6 +22,7 @@ import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
+import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
 import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
@@ -109,6 +110,7 @@ export default function LodgingListPage(): JSX.Element {
   const [facets, setFacets] = useState<LodgingFacets | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<boolean>(false);
+  const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState<boolean>(false);
   const [editing, setEditing] = useState<Lodging | null>(null);
   const [toDelete, setToDelete] = useState<Lodging | null>(null);
@@ -236,6 +238,7 @@ export default function LodgingListPage(): JSX.Element {
         if (cancelled) return;
         logger.error("LodgingListPage: failed to load lodgings", err);
         setLoadError(true);
+        setLoadFailure(loadFailureLog(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -550,12 +553,12 @@ export default function LodgingListPage(): JSX.Element {
         />
 
         {loadError ? (
-          <div
-            role="alert"
-            className="rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-4 py-4 text-sm text-[var(--danger)]"
-          >
-            {t("lodging:list.loadError")}
-          </div>
+          // A failed read with a way forward (forgejo#247), not a dead end.
+          <ListLoadFailed
+            title={t("lodging:list.loadError")}
+            onRetry={(): void => void reloadAll()}
+            log={loadFailure}
+          />
         ) : (
           <>
             {loading ? (
@@ -570,6 +573,7 @@ export default function LodgingListPage(): JSX.Element {
                   emptyTitle={t("lodging:list.empty")}
                   emptyHint={t("lodging:list.emptyHint")}
                   onReset={resetFilters}
+                  action={{ label: t("lodging:add.title"), onClick: () => setShowAdd(true) }}
                 />
               </div>
             ) : (
