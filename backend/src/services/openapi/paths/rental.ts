@@ -151,6 +151,31 @@ export const rentalBookingSchema = registry.register(
           "What the rental cost: the invoice's final amount, else the booked price; for a " +
             "cancelled rental only its cancellation fee; null when none is known"
         ),
+      depositAmount: z
+        .number()
+        .nullable()
+        .describe(
+          "Deposit held at the counter, in `depositCurrency` — money held, NEVER a cost: no " +
+            "total or statistic reads it. Null = none recorded"
+        ),
+      depositCurrency: z
+        .string()
+        .nullable()
+        .describe("The deposit's own currency; may differ from the price's, never converted"),
+      depositPaidOn: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .nullable()
+        .describe("Day the deposit was held (`times.depositPaid`)"),
+      depositReturnedOn: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .nullable()
+        .describe("Day it came back; null while held (`times.depositReturned`)"),
+      depositReturnedAmount: z
+        .number()
+        .nullable()
+        .describe("What came back; below `depositAmount` = a partial refund, the rest outstanding"),
       priceSource: z
         .enum(["booking", "user"])
         .nullable()
@@ -341,7 +366,9 @@ registry.registerPath({
         "Validation failed (`RENTAL_INVALID_INPUT`, `RENTAL_RETURN_BEFORE_PICKUP`, " +
         "`RENTAL_ACTUAL_RETURN_BEFORE_PICKUP` — the actual return before the actual pickup, " +
         "compared as instants, a day-only end standing for its whole day; " +
-        "`RENTAL_ODOMETER_REVERSED` — the return odometer below the pick-up one)",
+        "`RENTAL_ODOMETER_REVERSED` — the return odometer below the pick-up one; " +
+        "`RENTAL_DEPOSIT_RETURN_EXCEEDS` — more of the deposit back than held; " +
+        "`RENTAL_DEPOSIT_RETURNED_BEFORE_PAID`)",
       content: errorContent,
     },
     404: { description: "Trip or roadtrip not found", content: errorContent },
@@ -374,7 +401,9 @@ registry.registerPath({
     },
     400: {
       description:
-        "Validation failed; `RENTAL_ODOMETER_REVERSED` when the merged row's return odometer " +
+        "Validation failed; the deposit rules (`RENTAL_DEPOSIT_RETURN_EXCEEDS`, " +
+        "`RENTAL_DEPOSIT_RETURNED_BEFORE_PAID`, an amount without `depositCurrency`) are held " +
+        "against the merged row; `RENTAL_ODOMETER_REVERSED` when the merged row's return odometer " +
         "is below the pick-up one; `RENTAL_ACTUAL_RETURN_BEFORE_PICKUP` when the merged row's " +
         "actual return precedes its actual pickup (`field`: the actual end this write sent)",
       content: errorContent,

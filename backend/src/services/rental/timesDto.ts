@@ -1,5 +1,7 @@
+import { fromDbDate } from "../../shared/time/localDate";
 import {
   TIME_PRECISIONS,
+  serializeDay,
   serializeTime,
   type TimePrecision,
   type TimeValue,
@@ -22,7 +24,16 @@ export interface RentalTimeColumns {
   returnPrecision: string;
   actualPickupPrecision: string | null;
   actualReturnPrecision: string | null;
+  depositPaidOn?: Date | null;
+  depositReturnedOn?: Date | null;
 }
+
+/**
+ * A deposit day as the card statement shows it: a calendar day with NO zone —
+ * the bank's booking day belongs to no station clock (forgejo#238).
+ */
+const statementDay = (value: Date | null | undefined) =>
+  value ? serializeDay(fromDbDate(value), null) : null;
 
 const precisionOf = (value: string): TimePrecision =>
   (TIME_PRECISIONS as readonly string[]).includes(value) ? (value as TimePrecision) : "minute";
@@ -40,6 +51,8 @@ export function rentalTimes(r: RentalTimeColumns): RentalTimes {
       r.pickupTimezone,
       precisionOf(r.actualPickupPrecision ?? "minute")
     ),
+    depositPaid: statementDay(r.depositPaidOn),
+    depositReturned: statementDay(r.depositReturnedOn),
     actualReturn: at(
       r.actualReturnTime,
       r.returnTimezone,

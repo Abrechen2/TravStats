@@ -1,6 +1,7 @@
 import { z } from "./zod";
 import { currencyField } from "./lodging";
 import { partialForUpdate } from "./partialUpdate";
+import { isLocalDate } from "../shared/time/localDate";
 
 /**
  * Car rentals — spec docs/superpowers/specs/2026-10-01-rental-domain-design.md.
@@ -163,6 +164,12 @@ export function strayFoldKey(body: unknown): string | null {
 
 const money = z.number().min(0).max(10_000_000);
 
+/** A calendar day, `YYYY-MM-DD`, as a statement prints it — no clock, no zone. */
+const calendarDay = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "must be a day YYYY-MM-DD")
+  .refine((v) => isLocalDate(v), "is not a real day");
+
 const baseRentalSchema = z.object({
   provider: z.string().trim().min(1).max(100),
   operatedBy: optionalText(100),
@@ -231,6 +238,16 @@ const baseRentalSchema = z.object({
    */
   finalAmount: money.nullable().optional(),
   finalCurrency: currencyField.nullable().optional(),
+  /**
+   * The deposit (forgejo#238): held amount and ITS currency, the day it was
+   * held and the day and amount it came back — less than held is a partial
+   * refund. Never a cost. Null clears one; absent leaves it.
+   */
+  depositAmount: money.nullable().optional(),
+  depositCurrency: currencyField.nullable().optional(),
+  depositPaidOn: calendarDay.nullable().optional(),
+  depositReturnedOn: calendarDay.nullable().optional(),
+  depositReturnedAmount: money.nullable().optional(),
   inclusions: z.array(z.enum(RENTAL_INCLUSIONS)).max(RENTAL_INCLUSIONS.length).optional(),
   arrivalFlightNumber: optionalText(12),
   status: z.enum(RENTAL_WRITE_STATUSES).default("scheduled"),

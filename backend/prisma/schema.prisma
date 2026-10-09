@@ -3785,6 +3785,17 @@ model RentalBooking {
   /// what a newer one set. Null = no dated mail yet (pasted text carries none).
   lastMailSentAt      DateTime? @map("last_mail_sent_at")
 
+  /// The deposit held at the counter (forgejo#238) — money held, never a cost:
+  /// no total, statistic or travel account reads these. In its OWN currency,
+  /// which may differ from the price's; nothing is converted. A returned
+  /// amount below the held one is a partial refund. Days are calendar days as
+  /// the statement shows them. All null = no deposit recorded.
+  depositAmount         Float?    @map("deposit_amount")
+  depositCurrency       String?   @map("deposit_currency")
+  depositPaidOn         DateTime? @map("deposit_paid_on") @db.Date
+  depositReturnedOn     DateTime? @map("deposit_returned_on") @db.Date
+  depositReturnedAmount Float?    @map("deposit_returned_amount")
+
   /// unlimited | capped | null; the cap beside it.
   mileagePolicy String? @map("mileage_policy")
   mileageCapKm  Int?    @map("mileage_cap_km")

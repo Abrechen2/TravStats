@@ -1,4 +1,4 @@
-import type { TimeValue } from "../shared/time";
+import type { LocalDateValue, TimeValue } from "../shared/time";
 
 /**
  * Car rentals — spec docs/superpowers/specs/2026-10-01-rental-domain-design.md.
@@ -32,6 +32,9 @@ export interface RentalTimes {
   return: TimeValue | null;
   actualPickup: TimeValue | null;
   actualReturn: TimeValue | null;
+  /** Deposit days as the statement shows them — no zone (forgejo#238). */
+  depositPaid?: LocalDateValue | null;
+  depositReturned?: LocalDateValue | null;
 }
 
 export interface RentalBooking {
@@ -102,6 +105,12 @@ export interface RentalBooking {
     currency: string;
     source: "final" | "booked" | "cancellationFee";
   } | null;
+  /** The deposit (forgejo#238): held, never a cost; in its own currency. Days `YYYY-MM-DD`. */
+  depositAmount: number | null;
+  depositCurrency: string | null;
+  depositPaidOn: string | null;
+  depositReturnedOn: string | null;
+  depositReturnedAmount: number | null;
   /** Where the booked `price` came from — the booking mail, or typed; null without a price. */
   priceSource: "booking" | "user" | null;
   /** Returned, and no km from an invoice or a correction yet (D11 b). */
@@ -158,6 +167,11 @@ export interface RentalInput {
   finalCurrency?: string | null;
   invoiceNumber?: string | null;
   fuelPolicy?: RentalFuelPolicy | null;
+  depositAmount?: number | null;
+  depositCurrency?: string | null;
+  depositPaidOn?: string | null;
+  depositReturnedOn?: string | null;
+  depositReturnedAmount?: number | null;
   inclusions?: RentalInclusion[];
   arrivalFlightNumber?: string | null;
   status?: "scheduled" | "cancelled";

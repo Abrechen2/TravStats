@@ -5,6 +5,7 @@ import { rentalDrivenKm } from "../../shared/rentalCounting";
 import type { RentalBooking } from "../../types/rental";
 import { OperatorTile } from "../table/OperatorTile";
 import { statusPillProps } from "../table/statusPillStyle";
+import { rentalDeposit } from "../../lib/rental/rentalDeposit";
 import TripPill from "../Trips/TripPill";
 import { TableRow, type TableColumn } from "../ui/Table";
 
@@ -89,6 +90,8 @@ export function RentalTableRow({ rental, columns, onOpen, actions }: Props): JSX
   // it (forgejo#205) — "Compact" says what was promised, not what was driven.
   const vehicle = rental.vehicleDriven || rental.vehicleClass;
 
+  const depositState = rentalDeposit(rental).state;
+  const depositOutstanding = depositState === "open" || depositState === "partial";
   const cell: Record<RentalColumnId, ReactNode> = {
     provider: <OperatorTile name={rental.provider} domain="rental" />,
     route: (
@@ -122,8 +125,16 @@ export function RentalTableRow({ rental, columns, onOpen, actions }: Props): JSX
     // cache of `deriveRentalStatus` the status sweep keeps current, and an
     // empty cell read as "unknown" rather than "done".
     status: (
-      <span {...statusPillProps(rental.status)} data-testid="rental-status">
-        {t(`rental:status.${rental.status}`)}
+      <span className="inline-flex flex-col items-start gap-1">
+        <span {...statusPillProps(rental.status)} data-testid="rental-status">
+          {t(`rental:status.${rental.status}`)}
+        </span>
+        {/* A deposit still held after the car is back is easy to forget (forgejo#238). */}
+        {depositOutstanding ? (
+          <span className="t-caption text-(--warning)" data-testid="rental-deposit-open">
+            {t("rental:list.depositOpen")}
+          </span>
+        ) : null}
       </span>
     ),
     trip: <TripPill trip={rental.trip ?? null} />,

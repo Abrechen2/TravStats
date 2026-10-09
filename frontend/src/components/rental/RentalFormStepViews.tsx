@@ -15,7 +15,14 @@ import {
   type RentalDraft,
   type RentalFormField,
 } from "./rentalFormModel";
-import { CHECK_ROW, INPUT_CLASS, Labelled, RentalTimeField, TextInput } from "./rentalFormFields";
+import {
+  CHECK_ROW,
+  DARK_PICKER_STYLE,
+  INPUT_CLASS,
+  Labelled,
+  RentalTimeField,
+  TextInput,
+} from "./rentalFormFields";
 import {
   withDayOnly,
   withFold,
@@ -292,10 +299,11 @@ export function RentalBookingStep(props: RentalStepProps): JSX.Element {
   );
 }
 
-/** Step 2 — at the counter: when the keys changed hands, the odometer, the car. */
+/** Step 2 — at the counter: when the keys changed hands, the odometer, the car, the deposit. */
 export function RentalPickupStep(props: RentalStepProps): JSX.Element {
   const { draft, update, errorOf } = props;
   const { t } = useTranslation(["rental"]);
+  const recentCurrencies = useRecentCurrencies();
   const set = useSetter(update);
   return (
     <div className="space-y-4">
@@ -326,6 +334,42 @@ export function RentalPickupStep(props: RentalStepProps): JSX.Element {
           onChange={(v): void => set("licensePlate", v)}
         />
       </div>
+      {/* Held, not spent (forgejo#238): its own currency, never a price. */}
+      <fieldset className="space-y-3 rounded-md border border-border p-3">
+        <legend className="px-1 text-sm font-medium">{t("rental:form.deposit")}</legend>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <TextInput
+            id={rentalFieldId("depositAmount")}
+            label={t("rental:form.depositAmount")}
+            inputMode="decimal"
+            value={draft.depositAmount}
+            onChange={(v): void => set("depositAmount", v)}
+            error={errorOf("depositAmount")}
+          />
+          <Labelled id="rental-depositCurrency" label={t("rental:form.depositCurrency")}>
+            {(wiring) => (
+              <CurrencySelect
+                id={wiring.id}
+                aria-label={t("rental:form.depositCurrency")}
+                value={draft.depositCurrency}
+                onChange={(code): void => set("depositCurrency", code)}
+                recent={recentCurrencies}
+                className={INPUT_CLASS}
+              />
+            )}
+          </Labelled>
+          <TextInput
+            id={rentalFieldId("depositPaidOn")}
+            label={t("rental:form.depositPaidOn")}
+            type="date"
+            style={DARK_PICKER_STYLE}
+            value={draft.depositPaidOn}
+            onChange={(v): void => set("depositPaidOn", v)}
+            error={errorOf("depositPaidOn")}
+          />
+        </div>
+        <p className="t-caption">{t("rental:form.depositHint")}</p>
+      </fieldset>
     </div>
   );
 }
@@ -388,6 +432,30 @@ export function RentalReturnStep(props: RentalStepProps): JSX.Element {
           />
         </div>
         <p className="t-caption">{t("rental:form.invoiceHint")}</p>
+      </fieldset>
+
+      <fieldset className="space-y-3 rounded-md border border-border p-3">
+        <legend className="px-1 text-sm font-medium">{t("rental:form.depositBack")}</legend>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <TextInput
+            id={rentalFieldId("depositReturnedOn")}
+            label={t("rental:form.depositReturnedOn")}
+            type="date"
+            style={DARK_PICKER_STYLE}
+            value={draft.depositReturnedOn}
+            onChange={(v): void => set("depositReturnedOn", v)}
+            error={errorOf("depositReturnedOn")}
+          />
+          <TextInput
+            id={rentalFieldId("depositReturnedAmount")}
+            label={t("rental:form.depositReturnedAmount", { currency: draft.depositCurrency })}
+            inputMode="decimal"
+            value={draft.depositReturnedAmount}
+            onChange={(v): void => set("depositReturnedAmount", v)}
+            error={errorOf("depositReturnedAmount")}
+            hint={t("rental:form.depositReturnedHint")}
+          />
+        </div>
       </fieldset>
 
       <TextInput

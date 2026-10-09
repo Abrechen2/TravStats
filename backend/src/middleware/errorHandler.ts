@@ -95,6 +95,8 @@ export type ApiErrorCode =
   | "RENTAL_ROADTRIP_NOT_FOUND"
   | "RENTAL_RETURN_BEFORE_PICKUP"
   | "RENTAL_ACTUAL_RETURN_BEFORE_PICKUP"
+  | "RENTAL_DEPOSIT_RETURN_EXCEEDS"
+  | "RENTAL_DEPOSIT_RETURNED_BEFORE_PAID"
   /** The return odometer below the pick-up one, on the merged row. `field` is `odometerInKm`. */
   | "RENTAL_ODOMETER_REVERSED"
   | "RENTAL_STATION_UNRESOLVED"

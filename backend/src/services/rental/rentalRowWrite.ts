@@ -6,7 +6,9 @@ import { fxColumnsFor, getBaseCurrency } from "../fx/snapshot";
 import { recomputeTripStatus } from "../tripStatusService";
 import { resolveRentalStation } from "./rentalStations";
 import {
+  assertDepositConsistent,
   assertOdometerOrder,
+  depositColumns,
   distanceColumns,
   mergeRental,
   type ResolvedStations,
@@ -56,6 +58,8 @@ function plainColumns(input: UpdateRentalInput) {
     actualPickupFold: _apf,
     actualReturnFold: _arf,
     distanceKm: _d,
+    depositPaidOn: _dp,
+    depositReturnedOn: _dr,
     status: _s,
     companions: _c,
     ...rest
@@ -115,6 +119,7 @@ export async function createRentalRow(
 ): Promise<RentalRow> {
   const state = mergeRental(null, input, await resolveStations(input));
   assertOdometerOrder(null, input);
+  assertDepositConsistent(null, input);
   // Linked by itself only when EXACTLY one trip overlaps; a trip the client
   // named (or an explicit null) is never second-guessed.
   const tripId =
@@ -142,6 +147,7 @@ export async function createRentalRow(
         ...plainColumns(input),
         ...state,
         ...distanceColumns(input),
+        ...depositColumns(input),
         ...(input.finalAmount != null && { finalAmountSource: "user" }),
         ...(finalFx as Prisma.RentalBookingUncheckedCreateInput),
         ...fxColumns,
@@ -181,6 +187,7 @@ export async function updateRentalRow(
   // (a return moved before an untouched pickup is refused here).
   const state = mergeRental(existing, input, await resolveStations(input));
   assertOdometerOrder(existing, input);
+  assertDepositConsistent(existing, input);
   const resolved =
     input.companions === undefined ? undefined : await resolveCompanions(userId, input.companions);
   // Re-snapshotted only when an input it depends on moved (silent-failure
@@ -231,6 +238,7 @@ export async function updateRentalRow(
         ...plainColumns(input),
         ...state,
         ...distanceColumns(input),
+        ...depositColumns(input),
         ...(input.finalAmount !== undefined && {
           finalAmountSource: input.finalAmount === null ? null : "user",
         }),

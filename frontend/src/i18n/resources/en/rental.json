@@ -84,7 +84,8 @@
     "allYears": "All years",
     "allProviders": "All providers",
     "emptyHint": "Add your first rental or read in a booking mail.",
-    "emptyAction": "Add a rental"
+    "emptyAction": "Add a rental",
+    "depositOpen": "Deposit outstanding"
   },
   "summary": {
     "rentals_one": "Rental",
@@ -154,7 +155,10 @@
       "nonexistentTime": "This time does not exist at the station (clock change).",
       "unknownBooking": "There is no rental with this booking number.",
       "timeShape": "Please enter a full date and time – or choose \"date only\".",
-      "actualReturnBeforePickup": "The actual return is before the actual pickup."
+      "actualReturnBeforePickup": "The actual return is before the actual pickup.",
+      "day": "Please enter a date.",
+      "depositReturnExceeds": "More cannot come back than was held.",
+      "depositReturnedBeforePaid": "The deposit cannot have come back before it was held."
     },
     "dayOnly": "date only",
     "actualPickupLocal": "Actual pickup (station local time)",
@@ -176,7 +180,16 @@
       "gaps_other": "{{count}} open entries",
       "next": "Next: {{step}}",
       "pickupIntro": "What happened at the counter – all optional. The booked times are under \"Booking\"."
-    }
+    },
+    "deposit": "Deposit",
+    "depositAmount": "Deposit (amount)",
+    "depositCurrency": "Deposit currency",
+    "depositPaidOn": "Held on",
+    "depositHint": "A deposit is money held, not spent – it never counts as a cost. A currency other than the price's is stored as it is; nothing is converted.",
+    "depositBack": "Deposit back",
+    "depositReturnedOn": "Returned on",
+    "depositReturnedAmount": "Amount returned ({{currency}})",
+    "depositReturnedHint": "Less than was held is a partial refund; the rest stays visible as outstanding."
   },
   "detail": {
     "loading": "Loading …",
@@ -214,7 +227,6 @@
     "priceBooked": "Booked",
     "priceFinal": "Final amount",
     "deposit": "Deposit",
-    "depositNever": "never counts as a cost and is not stored",
     "roadtrip": "Roadtrip",
     "roadtripUnnamed": "Unnamed roadtrip",
     "companions": "Fellow travellers",
@@ -345,5 +357,17 @@
     "nothingYet": "nothing",
     "same": "Matches the rental.",
     "adopt": "Take over"
+  },
+  "deposit": {
+    "title": "Deposit",
+    "none": "no deposit recorded",
+    "open": "outstanding: {{amount}} held, not back yet",
+    "openUnknownAmount": "outstanding: held, amount not recorded",
+    "partial": "partly back: {{returned}} of {{amount}} – {{outstanding}} outstanding",
+    "returned": "returned: {{returned}}",
+    "returnedAmountUnknown": "returned on {{day}}, amount not recorded",
+    "paidOn": "held on {{day}}",
+    "returnedOn": "back on {{day}}",
+    "neverCost": "never counts as a cost"
   }
 }

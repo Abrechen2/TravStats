@@ -103,6 +103,16 @@ export interface RentalDraft {
   storedFinalCurrency: string | null;
   invoiceNumber: string;
   /**
+   * The deposit (forgejo#238), as typed: held amount in ITS currency (which
+   * may differ from the price's), held on, returned on, returned amount —
+   * less than held is a partial refund. Days `YYYY-MM-DD`; empty = unknown.
+   */
+  depositAmount: string;
+  depositCurrency: string;
+  depositPaidOn: string;
+  depositReturnedOn: string;
+  depositReturnedAmount: string;
+  /**
    * A typed km figure is a labelled correction; empty = leave it to the
    * invoice or the odometer. Filled from a stored figure only when that figure
    * IS a correction — an invoice's km loaded here would come back as "user".
@@ -147,6 +157,11 @@ export const EMPTY_RENTAL_DRAFT: RentalDraft = {
   storedFinalAmount: null,
   storedFinalCurrency: null,
   invoiceNumber: "",
+  depositAmount: "",
+  depositCurrency: "EUR",
+  depositPaidOn: "",
+  depositReturnedOn: "",
+  depositReturnedAmount: "",
   distanceKm: "",
   odometerOutKm: "",
   odometerInKm: "",
@@ -246,6 +261,11 @@ export function draftFromRental(r: RentalBooking): RentalDraft {
     storedFinalAmount: r.finalAmount,
     storedFinalCurrency: r.finalCurrency,
     invoiceNumber: r.invoiceNumber ?? "",
+    depositAmount: r.depositAmount === null ? "" : String(r.depositAmount),
+    depositCurrency: r.depositCurrency ?? r.currency ?? "EUR",
+    depositPaidOn: r.depositPaidOn ?? "",
+    depositReturnedOn: r.depositReturnedOn ?? "",
+    depositReturnedAmount: r.depositReturnedAmount === null ? "" : String(r.depositReturnedAmount),
     distanceKm: r.distanceKm !== null && r.distanceSource === "user" ? String(r.distanceKm) : "",
     odometerOutKm: r.odometerOutKm === null ? "" : String(r.odometerOutKm),
     odometerInKm: r.odometerInKm === null ? "" : String(r.odometerInKm),
@@ -267,6 +287,10 @@ export type RentalFormField =
   | "actualReturnLocal"
   | "price"
   | "finalAmount"
+  | "depositAmount"
+  | "depositPaidOn"
+  | "depositReturnedOn"
+  | "depositReturnedAmount"
   | "distanceKm"
   | "odometerOutKm"
   | "odometerInKm"
@@ -310,6 +334,7 @@ export function validateRentalDraft(d: RentalDraft): RentalDraftErrors {
   if (price !== null && !(price >= 0)) errors.price = "rental:form.errors.number";
   const final = parseDecimalInput(d.finalAmount);
   if (final !== null && !(final >= 0)) errors.finalAmount = "rental:form.errors.number";
+  Object.assign(errors, depositErrors(d));
   const km = parseDecimalInput(d.distanceKm);
   if (km !== null && !Number.isInteger(km)) errors.distanceKm = "rental:form.errors.number";
   const out = parseKmReading(d.odometerOutKm);
@@ -324,6 +349,32 @@ export function validateRentalDraft(d: RentalDraft): RentalDraftErrors {
     errors.acrissCode = "rental:form.errors.acriss";
   return errors;
 }
+
+/** The server's deposit rules (`assertDepositConsistent`), said at the field before saving. */
+function depositErrors(d: RentalDraft): RentalDraftErrors {
+  const errors: RentalDraftErrors = {};
+  const held = parseDecimalInput(d.depositAmount);
+  const back = parseDecimalInput(d.depositReturnedAmount);
+  if (held !== null && !(held >= 0)) errors.depositAmount = "rental:form.errors.number";
+  if (back !== null && !(back >= 0)) errors.depositReturnedAmount = "rental:form.errors.number";
+  else if (held !== null && back !== null && held >= 0 && back > held) {
+    errors.depositReturnedAmount = "rental:form.errors.depositReturnExceeds";
+  }
+  if (d.depositPaidOn !== "" && !DAY.test(d.depositPaidOn)) {
+    errors.depositPaidOn = "rental:form.errors.day";
+  }
+  if (d.depositReturnedOn !== "" && !DAY.test(d.depositReturnedOn)) {
+    errors.depositReturnedOn = "rental:form.errors.day";
+  } else if (d.depositPaidOn !== "" && d.depositReturnedOn !== "") {
+    // ISO days compare as text.
+    if (d.depositReturnedOn < d.depositPaidOn) {
+      errors.depositReturnedOn = "rental:form.errors.depositReturnedBeforePaid";
+    }
+  }
+  return errors;
+}
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 const text = (v: string): string | null => (v.trim() === "" ? null : v.trim());
 
@@ -386,6 +437,33 @@ function finalAmountInput(d: RentalDraft): Pick<RentalInput, "finalAmount" | "fi
 }
 
 /**
+ * The deposit as the write body carries it: a currency only beside an amount
+ * (the server refuses an amount without one, and a currency alone says
+ * nothing); empty fields as null, so emptying one clears it. Never part of
+ * any price — it travels in its own keys.
+ */
+function depositInput(
+  d: RentalDraft
+): Pick<
+  RentalInput,
+  | "depositAmount"
+  | "depositCurrency"
+  | "depositPaidOn"
+  | "depositReturnedOn"
+  | "depositReturnedAmount"
+> {
+  const held = parseDecimalInput(d.depositAmount);
+  const back = parseDecimalInput(d.depositReturnedAmount);
+  return {
+    depositAmount: held,
+    depositCurrency: held !== null || back !== null ? d.depositCurrency : null,
+    depositPaidOn: d.depositPaidOn === "" ? null : d.depositPaidOn,
+    depositReturnedOn: d.depositReturnedOn === "" ? null : d.depositReturnedOn,
+    depositReturnedAmount: back,
+  };
+}
+
+/**
  * The write body. An empty price is null — unknown, never 0 (§2). A typed km
  * figure goes out as the labelled correction it is; the two odometer readings
  * as whole km, an empty one as null.
@@ -418,6 +496,7 @@ export function rentalInputFromDraft(d: RentalDraft): RentalInput {
     inclusions: d.inclusions,
     fuelPolicy: d.fuelPolicy === "" ? null : d.fuelPolicy,
     invoiceNumber: text(d.invoiceNumber),
+    ...depositInput(d),
     ...finalAmountInput(d),
     ...correctionInput(d),
     odometerOutKm: parseKmReading(d.odometerOutKm),
@@ -435,6 +514,8 @@ const RENTAL_CODE_KEYS: Readonly<Record<string, string>> = {
   RENTAL_RETURN_BEFORE_PICKUP: "rental:form.errors.returnBeforePickup",
   RENTAL_ACTUAL_RETURN_BEFORE_PICKUP: "rental:form.errors.actualReturnBeforePickup",
   RENTAL_ODOMETER_REVERSED: "rental:form.errors.odometerReversed",
+  RENTAL_DEPOSIT_RETURN_EXCEEDS: "rental:form.errors.depositReturnExceeds",
+  RENTAL_DEPOSIT_RETURNED_BEFORE_PAID: "rental:form.errors.depositReturnedBeforePaid",
   RENTAL_ROADTRIP_NOT_FOUND: "rental:form.errors.roadtripNotFound",
   RENTAL_UNKNOWN_BOOKING: "rental:form.errors.unknownBooking",
   RENTAL_INVALID_INPUT: "rental:form.errors.invalid",
@@ -451,6 +532,10 @@ const FIELDS: readonly RentalFormField[] = [
   "actualReturnLocal",
   "price",
   "finalAmount",
+  "depositAmount",
+  "depositPaidOn",
+  "depositReturnedOn",
+  "depositReturnedAmount",
   "distanceKm",
   "odometerOutKm",
   "odometerInKm",

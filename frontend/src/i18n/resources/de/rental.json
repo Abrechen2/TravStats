@@ -84,7 +84,8 @@
     "allYears": "Alle Jahre",
     "allProviders": "Alle Anbieter",
     "emptyHint": "Trage deine erste Miete ein oder lies eine Buchungsmail ein.",
-    "emptyAction": "Miete hinzufügen"
+    "emptyAction": "Miete hinzufügen",
+    "depositOpen": "Kaution offen"
   },
   "summary": {
     "rentals_one": "Miete",
@@ -154,7 +155,10 @@
       "nonexistentTime": "Diese Uhrzeit gibt es an der Station nicht (Zeitumstellung).",
       "unknownBooking": "Zu dieser Buchungsnummer gibt es keine Miete.",
       "timeShape": "Bitte ein vollständiges Datum mit Uhrzeit angeben – oder „nur Datum“ wählen.",
-      "actualReturnBeforePickup": "Die tatsächliche Rückgabe liegt vor der tatsächlichen Abholung."
+      "actualReturnBeforePickup": "Die tatsächliche Rückgabe liegt vor der tatsächlichen Abholung.",
+      "day": "Bitte ein Datum angeben.",
+      "depositReturnExceeds": "Zurück kann nicht mehr kommen als hinterlegt wurde.",
+      "depositReturnedBeforePaid": "Die Kaution kann nicht vor dem Hinterlegen zurückgekommen sein."
     },
     "dayOnly": "nur Datum",
     "actualPickupLocal": "Tatsächliche Abholung (Ortszeit der Station)",
@@ -176,7 +180,16 @@
       "gaps_other": "{{count}} offene Angaben",
       "next": "Weiter: {{step}}",
       "pickupIntro": "Was am Schalter geschah – alles optional. Die gebuchten Zeiten stehen unter „Buchung“."
-    }
+    },
+    "deposit": "Kaution",
+    "depositAmount": "Kaution (Betrag)",
+    "depositCurrency": "Währung der Kaution",
+    "depositPaidOn": "Hinterlegt am",
+    "depositHint": "Die Kaution ist hinterlegtes Geld, keine Ausgabe – sie zählt nie zu den Kosten. Eine andere Währung als beim Preis wird so gespeichert, nichts wird umgerechnet.",
+    "depositBack": "Kaution zurück",
+    "depositReturnedOn": "Zurückerhalten am",
+    "depositReturnedAmount": "Zurückerhaltener Betrag ({{currency}})",
+    "depositReturnedHint": "Weniger als hinterlegt ist eine Teilrückzahlung; der Rest bleibt als offen sichtbar."
   },
   "detail": {
     "loading": "Lädt …",
@@ -214,7 +227,6 @@
     "priceBooked": "Gebucht",
     "priceFinal": "Endbetrag",
     "deposit": "Kaution",
-    "depositNever": "zählt nie als Kosten und wird nicht gespeichert",
     "roadtrip": "Roadtrip",
     "roadtripUnnamed": "Roadtrip ohne Namen",
     "companions": "Mitfahrer",
@@ -345,5 +357,17 @@
     "nothingYet": "nichts",
     "same": "Stimmt mit der Miete überein.",
     "adopt": "Übernehmen"
+  },
+  "deposit": {
+    "title": "Kaution",
+    "none": "keine Kaution erfasst",
+    "open": "offen: {{amount}} hinterlegt, noch nicht zurück",
+    "openUnknownAmount": "offen: hinterlegt, Betrag nicht erfasst",
+    "partial": "teilweise zurück: {{returned}} von {{amount}} – offen {{outstanding}}",
+    "returned": "zurückerhalten: {{returned}}",
+    "returnedAmountUnknown": "zurückerhalten am {{day}}, Betrag nicht erfasst",
+    "paidOn": "hinterlegt am {{day}}",
+    "returnedOn": "zurück am {{day}}",
+    "neverCost": "zählt nie als Kosten"
   }
 }

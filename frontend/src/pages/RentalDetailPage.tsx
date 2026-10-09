@@ -21,6 +21,8 @@ import { rentalApi } from "../lib/api/rental";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { rentalDeleteMessage } from "../lib/rental/rentalDeleteMessage";
+import { depositSummary } from "../lib/rental/rentalDeposit";
+import { formatDayLong } from "../shared/time";
 import { formatAmount } from "../lib/units";
 import { formatStationMoment } from "../lib/rentalTime";
 import type { TimeValue } from "../shared/time";
@@ -135,6 +137,8 @@ export default function RentalDetailPage(): JSX.Element {
         )
       : null;
 
+  const withNeverCost = (line: string | null): string | null =>
+    line === null ? null : `${line} (${t("rental:deposit.neverCost")})`;
   const driven = rentalDrivenKm(rental);
   const reading = (km: number | null): string | null =>
     km === null ? null : `${km.toLocaleString(locale)} km`;
@@ -308,7 +312,24 @@ export default function RentalDetailPage(): JSX.Element {
             title={t("rental:detail.price")}
             facts={[
               { label: t("rental:detail.priceBooked"), value: priceLine || null, mono: true },
-              { label: t("rental:detail.deposit"), value: t("rental:detail.depositNever") },
+              // Held, never a cost (forgejo#238): where it stands, in its own currency.
+              {
+                label: t("rental:detail.deposit"),
+                value: withNeverCost(
+                  depositSummary(
+                    t,
+                    rental,
+                    (amount, currency) =>
+                      formatAmount(amount, currency, { language: i18n.language }),
+                    (day) =>
+                      formatDayLong(day, locale, {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })
+                  )
+                ),
+              },
             ]}
           >
             {/* Booked, final and their difference side by side (forgejo#237). */}

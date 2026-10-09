@@ -2,6 +2,7 @@ import { acrissTraits } from "../../schemas/rental";
 import { rentalCost, rentalDays, rentalDrivenKm } from "../../shared/rentalCounting";
 import { isOneWay } from "./rentalWrite";
 import { rentalTimes, type RentalTimeColumns } from "./timesDto";
+import { fromDbDate } from "../../shared/time/localDate";
 
 /**
  * What a rental row carries beyond its columns when it is read: the D3
@@ -48,10 +49,16 @@ export function rentalPriceSource(row: {
   return row.externalRef ? "booking" : "user";
 }
 
+/** A `@db.Date` column as the day it holds, `YYYY-MM-DD`. */
+const dayOf = (value: Date | null | undefined): string | null => (value ? fromDbDate(value) : null);
+
 export function withRentalReadFields<T extends RentalReadColumns>(row: T) {
   const { pickupAirport, returnAirport, ...rest } = row;
   return {
     ...rest,
+    // Days, never instants: the deposit columns are calendar days.
+    depositPaidOn: dayOf(row.depositPaidOn),
+    depositReturnedOn: dayOf(row.depositReturnedOn),
     pickupIata: pickupAirport?.iata ?? null,
     returnIata: returnAirport?.iata ?? null,
     oneWay: isOneWay(row),

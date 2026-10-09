@@ -145,3 +145,18 @@ describe("RentalTableRow — tile and status", () => {
     }
   );
 });
+
+// forgejo#238: a deposit still held is visible in the logbook; a returned one is not.
+describe("RentalTableRow deposit", () => {
+  it("marks a deposit still outstanding", () => {
+    renderRow(makeRental({ depositAmount: 300, depositCurrency: "EUR" }));
+    expect(screen.getByTestId("rental-deposit-open").textContent).toBe("rental:list.depositOpen");
+  });
+
+  it("does not mark a deposit returned in full", () => {
+    renderRow(
+      makeRental({ depositAmount: 300, depositCurrency: "EUR", depositReturnedAmount: 300 })
+    );
+    expect(screen.queryByTestId("rental-deposit-open")).toBeNull();
+  });
+});

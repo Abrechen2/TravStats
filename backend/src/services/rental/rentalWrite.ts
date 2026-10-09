@@ -1,4 +1,4 @@
-import { AppError } from "../../middleware/errorHandler";
+import { AppError, type ApiErrorCode } from "../../middleware/errorHandler";
 import type { UpdateRentalInput } from "../../schemas/rental";
 import { deriveRentalStatus } from "../../shared/statusDerivation";
 import { LocalTimeNonexistentError } from "../../shared/time/errors";
@@ -316,4 +316,87 @@ export function distanceColumns(
   return input.distanceKm === null
     ? { distanceKm: null, distanceSource: null }
     : { distanceKm: input.distanceKm, distanceSource: "user" };
+}
+
+type DepositInput = Pick<
+  UpdateRentalInput,
+  | "depositAmount"
+  | "depositCurrency"
+  | "depositPaidOn"
+  | "depositReturnedOn"
+  | "depositReturnedAmount"
+>;
+
+interface StoredDeposit {
+  depositAmount: number | null;
+  depositCurrency: string | null;
+  depositPaidOn: Date | null;
+  depositReturnedOn: Date | null;
+  depositReturnedAmount: number | null;
+}
+
+/**
+ * The deposit columns a write leaves (forgejo#238): days as `@db.Date`, the
+ * rest as sent; absent keys are absent, so a client that never sends a
+ * deposit (the Companion today) never clears one.
+ */
+export function depositColumns(input: DepositInput): Partial<StoredDeposit> {
+  const day = (v: string | null | undefined): Date | null | undefined =>
+    v === undefined ? undefined : v === null ? null : toDbDate(v);
+  const columns: Partial<StoredDeposit> = {
+    depositAmount: input.depositAmount,
+    depositCurrency: input.depositCurrency,
+    depositPaidOn: day(input.depositPaidOn),
+    depositReturnedOn: day(input.depositReturnedOn),
+    depositReturnedAmount: input.depositReturnedAmount,
+  };
+  return Object.fromEntries(
+    Object.entries(columns).filter(([, v]) => v !== undefined)
+  ) as Partial<StoredDeposit>;
+}
+
+/**
+ * A deposit that cannot be true, refused on the MERGED row (as the odometer):
+ * an amount without its currency (it would be read in some other one); more
+ * back than was held; back before it was held. 400 with `field` on the value
+ * to fix. A partial refund (less back than held) is valid and stays so.
+ */
+export function assertDepositConsistent(existing: StoredDeposit | null, input: DepositInput): void {
+  const keys = Object.keys(depositColumns(input));
+  if (keys.length === 0) return;
+  const merged = { ...emptyDeposit(existing), ...depositColumns(input) };
+  const refuse = (message: string, code: ApiErrorCode, field: string): never => {
+    throw new AppError(message, 400, code, field);
+  };
+  const held = merged.depositAmount ?? null;
+  const back = merged.depositReturnedAmount ?? null;
+  if ((held !== null || back !== null) && !merged.depositCurrency) {
+    refuse("a deposit amount needs its currency", "RENTAL_INVALID_INPUT", "depositCurrency");
+  }
+  if (held !== null && back !== null && back > held) {
+    refuse(
+      "more of the deposit came back than was held",
+      "RENTAL_DEPOSIT_RETURN_EXCEEDS",
+      "depositReturnedAmount"
+    );
+  }
+  const paid = merged.depositPaidOn ?? null;
+  const returned = merged.depositReturnedOn ?? null;
+  if (paid !== null && returned !== null && returned.getTime() < paid.getTime()) {
+    refuse(
+      "the deposit came back before it was held",
+      "RENTAL_DEPOSIT_RETURNED_BEFORE_PAID",
+      "depositReturnedOn"
+    );
+  }
+}
+
+function emptyDeposit(existing: StoredDeposit | null): StoredDeposit {
+  return {
+    depositAmount: existing?.depositAmount ?? null,
+    depositCurrency: existing?.depositCurrency ?? null,
+    depositPaidOn: existing?.depositPaidOn ?? null,
+    depositReturnedOn: existing?.depositReturnedOn ?? null,
+    depositReturnedAmount: existing?.depositReturnedAmount ?? null,
+  };
 }
