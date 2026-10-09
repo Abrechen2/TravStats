@@ -1,0 +1,139 @@
+{
+  "id": "lodging:bookingcom-legacy",
+  "domain": "lodging",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Booking.com (one-line layout, 2008–2018)",
+    "kind": "portal"
+  },
+  "markets": ["DE"],
+  "match": {
+    "markers": ["booking.com", "anreise", "abreise"],
+    "anchors": ["gesamtpreis"]
+  },
+  "extraction": {
+    "fields": {
+      "hotelName": {
+        "patterns": [
+          "^(?:(?:WG|AW|FW|Fwd|RE)[ \\t]*:[ \\t]*)*Ihre Reservierung im ([^\\n]+)",
+          "^(?:(?:WG|AW|FW|Fwd|RE)[ \\t]*:[ \\t]*)*Ihre Buchung in der Unterkunft (?![^\\n]*wurde (?:aktualisiert|storniert|geändert))([^\\n]+)",
+          "^(?:(?:WG|AW|FW|Fwd|RE)[ \\t]*:[ \\t]*)*[^\\n]*?Danke! Ihre Buchung ist bestätigt:[ \\t]*([^\\n]+)"
+        ],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "checkIn": {
+        "patterns": [
+          "Anreise:?[ \\t]+[A-Za-zÄÖÜäöü]+,[ \\t]*(\\d{1,2}\\.[ \\t]*[A-Za-zÄÖÜäöü]+[ \\t]+\\d{4})"
+        ],
+        "flags": "i",
+        "transform": "germanDate"
+      },
+      "checkOut": {
+        "patterns": [
+          "Abreise:?[ \\t]+[A-Za-zÄÖÜäöü]+,[ \\t]*(\\d{1,2}\\.[ \\t]*[A-Za-zÄÖÜäöü]+[ \\t]+\\d{4})"
+        ],
+        "flags": "i",
+        "transform": "germanDate"
+      },
+      "confirmationNumber": {
+        "patterns": ["Buchungsnummer:?[ \\t]+(\\d{6,})", "[?&;]bn=(\\d{6,})"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "totalPrice": {
+        "patterns": ["Gesamtpreis:?[ \\t]+(?:€|£|EUR|CHF|US\\$)[ \\t]*([\\d.,]+)"],
+        "flags": "i",
+        "transform": "money"
+      },
+      "currency": {
+        "patterns": ["Gesamtpreis:?[ \\t]+((?:€|£|EUR|CHF|US\\$))"],
+        "flags": "i",
+        "transform": "currency"
+      },
+      "address": {
+        "patterns": [
+          "Adresse:?[ \\t]+([^\\n]+?)[ \\t\\r]*\\n",
+          "booking\\.com/hotel/[^\\n]*\\n[ \\t]*([^\\n]+?),[ \\t]*[^,\\n]+,[ \\t]*\\d{4,5},"
+        ],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "city": {
+        "patterns": [
+          "Adresse:?[ \\t]+[^\\n]*\\n[ \\t]*([^,\\n]+),[ \\t]*\\d{4,5}[ \\t\\r]*\\n",
+          "booking\\.com/hotel/[^\\n]*\\n[ \\t]*[^\\n]*?,[ \\t]*([^,\\n]+),[ \\t]*\\d{4,5},"
+        ],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "postcode": {
+        "patterns": [
+          "Adresse:?[ \\t]+[^\\n]*\\n[ \\t]*[^,\\n]+,[ \\t]*(\\d{4,5})[ \\t\\r]*\\n",
+          "booking\\.com/hotel/[^\\n]*\\n[ \\t]*[^\\n]*?,[ \\t]*[^,\\n]+,[ \\t]*(\\d{4,5}),"
+        ],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "country": {
+        "patterns": [
+          "Adresse:?[ \\t]+[^\\n]*\\n[ \\t]*[^,\\n]+,[ \\t]*\\d{4,5}[ \\t\\r]*\\n[ \\t]*([A-Za-zÄÖÜäöüß ]+?)[ \\t\\r]*\\n",
+          "booking\\.com/hotel/[^\\n]*\\n[ \\t]*[^\\n]*?,[ \\t]*\\d{4,5},[ \\t]*([^,\\n]+?)[ \\t]+-"
+        ],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      }
+    },
+    "required": ["hotelName", "checkIn", "checkOut"]
+  },
+  "testCases": [
+    {
+      "name": "the 2008–2014 one-line layout",
+      "input": "Ihre Reservierung im Hotel Musterhof\nIhre Reservierung im Hotel Musterhof\nVielen Dank! Ihre Buchung ist nun bestätigt. \t\nBuchungsnummer\t 123456789\t \nPIN-Code \t1234\t \nIhre Buchung:\t 2 Nächte, 1 Zimmer, 2 Personen \t\nAnreise:\t Sonntag, 7. Februar 2016 ( nach 15:00 )\t \nAbreise:\t Dienstag, 9. Februar 2016 ( vor 12:00 )\t \nGesamtpreis\t € 158 \t\n\tHotel Musterhof <http://www.booking.com/hotel/de/musterhof.html> \t\nAdresse:\t Beispielweg 7, Altstadt\nMusterstadt, 12345\nDeutschland\nSie können Ihre Buchung über Mein Booking.com selber ändern oder stornieren.",
+      "expect": "match",
+      "expected": {
+        "hotelName": "Hotel Musterhof",
+        "checkIn": "2016-02-07",
+        "checkOut": "2016-02-09",
+        "confirmationNumber": "123456789"
+      }
+    },
+    {
+      "name": "the 2015–2018 layout",
+      "input": "Ihre Buchung in der Unterkunft Hotel Beispiel\nIhre Buchung in der Unterkunft Hotel Beispiel\nPIN-Code: 1234 \t\nVielen Dank! Ihre Reservierung ist nun bestätigt. \t\nHotel Beispiel <https://www.booking.com/hotel/gb/beispiel.html?aid=1> \t\n1 Beispiel Road, Docklands, London, 12345, Vereinigtes Königreich - Wegbeschreibung anzeigen <http://www.booking.com/x>\nIhre Buchung\t 2 Nächte, 1 Zimmer \t\nAnreise\t Mittwoch, 8. März 2017 (ab 14:00) \t\nAbreise\t Freitag, 10. März 2017 (bis 11:00) \t\nGesamtpreis \t£199\t \nBuchung stornieren <https://secure.booking.com/myreservations.de.html?bn=987654321&pincode=1234>",
+      "expect": "match",
+      "expected": {
+        "hotelName": "Hotel Beispiel",
+        "checkIn": "2017-03-08",
+        "checkOut": "2017-03-10",
+        "confirmationNumber": "987654321"
+      }
+    },
+    {
+      "name": "a forward",
+      "input": "WG: Ihre Reservierung im Hotel Musterhof\nWG: Ihre Reservierung im Hotel Musterhof\nVielen Dank! Ihre Buchung ist nun bestätigt. \t\nBuchungsnummer\t 123456789\t \nPIN-Code \t1234\t \nIhre Buchung:\t 2 Nächte, 1 Zimmer, 2 Personen \t\nAnreise:\t Sonntag, 7. Februar 2016 ( nach 15:00 )\t \nAbreise:\t Dienstag, 9. Februar 2016 ( vor 12:00 )\t \nGesamtpreis\t € 158 \t\n\tHotel Musterhof <http://www.booking.com/hotel/de/musterhof.html> \t\nAdresse:\t Beispielweg 7, Altstadt\nMusterstadt, 12345\nDeutschland\nSie können Ihre Buchung über Mein Booking.com selber ändern oder stornieren.",
+      "expect": "match",
+      "expected": {
+        "hotelName": "Hotel Musterhof",
+        "checkIn": "2016-02-07",
+        "checkOut": "2016-02-09",
+        "confirmationNumber": "123456789"
+      }
+    },
+    {
+      "name": "an updated booking",
+      "input": "Ihre Buchung in der Unterkunft Hotel Beispiel wurde aktualisiert\nIhre Buchung in der Unterkunft Hotel Beispiel wurde aktualisiert\nPIN-Code: 1234 \t\nVielen Dank! Ihre Reservierung ist nun bestätigt. \t\nHotel Beispiel <https://www.booking.com/hotel/gb/beispiel.html?aid=1> \t\n1 Beispiel Road, Docklands, London, 12345, Vereinigtes Königreich - Wegbeschreibung anzeigen <http://www.booking.com/x>\nIhre Buchung\t 2 Nächte, 1 Zimmer \t\nAnreise\t Mittwoch, 8. März 2017 (ab 14:00) \t\nAbreise\t Freitag, 10. März 2017 (bis 11:00) \t\nGesamtpreis \t£199\t \nBuchung stornieren <https://secure.booking.com/myreservations.de.html?bn=987654321&pincode=1234>",
+      "expect": "decline"
+    },
+    {
+      "name": "a cancellation",
+      "input": "Buchung storniert für die Unterkunft Hotel Beispiel\nBuchung storniert für die Unterkunft Hotel Beispiel\nPIN-Code: 1234 \t\nVielen Dank! Ihre Reservierung ist nun bestätigt. \t\nHotel Beispiel <https://www.booking.com/hotel/gb/beispiel.html?aid=1> \t\n1 Beispiel Road, Docklands, London, 12345, Vereinigtes Königreich - Wegbeschreibung anzeigen <http://www.booking.com/x>\nIhre Buchung\t 2 Nächte, 1 Zimmer \t\nAnreise\t Mittwoch, 8. März 2017 (ab 14:00) \t\nAbreise\t Freitag, 10. März 2017 (bis 11:00) \t\nGesamtpreis \t£199\t \nBuchung stornieren <https://secure.booking.com/myreservations.de.html?bn=987654321&pincode=1234>",
+      "expect": "decline"
+    },
+    {
+      "name": "a newsletter",
+      "input": "Wir vermissen Sie!\nWir vermissen Sie!\nWir vermissen Sie!\nEntdecken Sie Angebote auf Booking.com — Anreise flexibel.",
+      "expect": "decline"
+    }
+  ]
+}

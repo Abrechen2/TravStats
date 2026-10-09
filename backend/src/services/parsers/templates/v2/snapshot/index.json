@@ -1,0 +1,59 @@
+{
+  "version": 2,
+  "templates": [
+    {
+      "id": "lodging:koa",
+      "domain": "lodging",
+      "version": "2026.10.9",
+      "path": "lodging/koa.json"
+    },
+    {
+      "id": "lodging:hilton",
+      "domain": "lodging",
+      "version": "2026.10.9",
+      "path": "lodging/hilton.json"
+    },
+    {
+      "id": "lodging:travelclick",
+      "domain": "lodging",
+      "version": "2026.10.9",
+      "path": "lodging/travelclick.json"
+    },
+    {
+      "id": "lodging:check24",
+      "domain": "lodging",
+      "version": "2026.10.9",
+      "path": "lodging/check24.json"
+    },
+    {
+      "id": "lodging:accor",
+      "domain": "lodging",
+      "version": "2026.10.9",
+      "path": "lodging/accor.json"
+    },
+    {
+      "id": "lodging:hrs",
+      "domain": "lodging",
+      "version": "2026.10.9",
+      "path": "lodging/hrs.json"
+    },
+    {
+      "id": "lodging:nh",
+      "domain": "lodging",
+      "version": "2026.10.9",
+      "path": "lodging/nh.json"
+    },
+    {
+      "id": "lodging:armani",
+      "domain": "lodging",
+      "version": "2026.10.9",
+      "path": "lodging/armani.json"
+    },
+    {
+      "id": "lodging:bookingcom-legacy",
+      "domain": "lodging",
+      "version": "2026.10.9",
+      "path": "lodging/bookingcom-legacy.json"
+    }
+  ]
+}

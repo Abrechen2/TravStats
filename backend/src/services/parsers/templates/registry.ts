@@ -7,8 +7,9 @@ import { fetchJson as httpsFetchJson } from "./fetchJson";
 import { createFsTemplateCache } from "./v2/cache";
 import { V2TemplateStore, type FetchJson } from "./v2/loader";
 import { resolveTemplateRepoBaseUrl } from "./v2/source";
+import { createDirSnapshot, DEFAULT_SNAPSHOT_DIR } from "./v2/snapshot";
 import type { V2Status } from "./v2/status";
-import type { TemplateEnvelope } from "./v2/envelope";
+import type { TemplateDomain, TemplateEnvelope } from "./v2/envelope";
 
 const DEFAULT_BUILTIN_DIR = path.join(__dirname, "airlines");
 const DEFAULT_CACHE_DIR = path.join(process.cwd(), ".template-cache");
@@ -20,6 +21,8 @@ export interface TemplateRegistryOptions {
   baseUrl?: string;
   builtinDir?: string;
   cacheDir?: string;
+  /** The bundled v2 templates (`v2/snapshot/`); the lowest-priority v2 source. */
+  snapshotDir?: string;
   appVersion?: string;
 }
 
@@ -43,6 +46,7 @@ export class TemplateRegistry {
   private readonly builtinDir: string;
   private readonly cacheDir: string;
   private readonly v2: V2TemplateStore;
+  private v2LocalLoaded = false;
 
   constructor(options: TemplateRegistryOptions = {}) {
     const baseUrl =
@@ -56,13 +60,14 @@ export class TemplateRegistry {
       baseUrl,
       appVersion: options.appVersion ?? runningAppVersion,
       cache: createFsTemplateCache(path.join(this.cacheDir, "v2")),
+      snapshot: createDirSnapshot(options.snapshotDir ?? DEFAULT_SNAPSHOT_DIR),
     });
   }
 
   async initialize(): Promise<void> {
     await this.loadBuiltinTemplates();
     await this.loadCachedTemplates();
-    this.v2.loadFromCache();
+    this.loadLocalV2();
     this.scheduleSync();
   }
 
@@ -122,9 +127,19 @@ export class TemplateRegistry {
     }));
   }
 
-  /** v2 templates that validated and passed their own test cases. */
-  getActiveV2(): TemplateEnvelope[] {
-    return this.v2.getActive();
+  /** v2 templates that validated and passed their own test cases, optionally of one domain. */
+  getActiveV2(domain?: TemplateDomain): TemplateEnvelope[] {
+    // A caller that runs before boot finished (a script, a test) still gets
+    // the bundled templates rather than an empty set.
+    if (!this.v2LocalLoaded) this.loadLocalV2();
+    const all = this.v2.getActive();
+    return domain === undefined ? all : all.filter((t) => t.domain === domain);
+  }
+
+  /** Load the bundled snapshot and the disk cache, without scheduling any sync. */
+  loadLocalV2(): void {
+    this.v2LocalLoaded = true;
+    this.v2.loadFromCache();
   }
 
   getV2Status(): V2Status {

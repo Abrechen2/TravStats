@@ -25,6 +25,7 @@ import {
   type TemplateIndexEntry,
 } from "./envelope";
 import { defaultRunners, runTestCases, type RunnerRegistry } from "./runners";
+import type { TemplateSnapshot } from "./snapshot";
 import type { V2RejectionReason, V2Status, V2TemplateStatusEntry } from "./status";
 import { compareVersions, isValidVersion } from "./version";
 
@@ -37,10 +38,12 @@ export interface V2LoaderDeps {
   /** The running app's version, pre-release suffix stripped. */
   appVersion: string;
   cache: TemplateCache;
+  /** The bundled templates — the lowest-priority source (remote > cache > snapshot). */
+  snapshot?: TemplateSnapshot;
   runners?: RunnerRegistry;
 }
 
-type Source = "remote" | "cached";
+type Source = "remote" | "cached" | "snapshot";
 
 interface ActiveTemplate {
   readonly template: TemplateEnvelope;
@@ -113,33 +116,60 @@ export class V2TemplateStore {
     return { index: this.indexState, templates: [...this.status] };
   }
 
-  /** Boot: activate whatever in the disk cache still validates and passes its tests. */
+  /**
+   * Boot: activate the bundled snapshot, then whatever in the disk cache
+   * still validates and passes its tests. A cached template replaces a
+   * snapshot one of the same id at an equal or higher version (the cache is
+   * the higher-priority source); among cached files the highest version wins.
+   */
   loadFromCache(): void {
-    try {
-      const nextActive = new Map<string, ActiveTemplate>();
-      const nextStatus = new Map<string, V2TemplateStatusEntry>();
-      this.deps.cache.list().forEach((raw, i) => {
-        const verdict = this.evaluate(raw);
-        if (!verdict.ok) {
-          const ref = describeRaw(raw, `cache[${i}]`);
-          if (!nextActive.has(ref.id)) {
-            nextStatus.set(ref.id, rejectedStatus(ref, "cached", verdict.reason, verdict.detail));
-          }
-          return;
+    const nextActive = new Map<string, ActiveTemplate>();
+    const nextStatus = new Map<string, V2TemplateStatusEntry>();
+    const consider = (
+      raw: unknown,
+      source: Source,
+      fallbackId: string,
+      entry?: TemplateIndexEntry,
+      readError?: string
+    ): void => {
+      const verdict: Verdict = readError
+        ? { ok: false, reason: "invalid", detail: readError }
+        : this.evaluate(raw, entry);
+      if (!verdict.ok) {
+        const ref = entry ?? describeRaw(raw, fallbackId);
+        if (!nextActive.has(ref.id)) {
+          nextStatus.set(ref.id, rejectedStatus(ref, source, verdict.reason, verdict.detail));
         }
-        const { template } = verdict;
-        const existing = nextActive.get(template.id);
-        if (existing && compareVersions(existing.template.version, template.version) >= 0) return;
-        const active: ActiveTemplate = { template, source: "cached" };
-        nextActive.set(template.id, active);
-        nextStatus.set(template.id, activeStatus(active));
-      });
-      this.active = nextActive;
-      this.status = Array.from(nextStatus.values());
-      logger.info({ active: nextActive.size }, "v2 templates loaded from cache");
+        return;
+      }
+      const { template } = verdict;
+      const existing = nextActive.get(template.id);
+      if (existing) {
+        const order = compareVersions(existing.template.version, template.version);
+        const replaces =
+          existing.source === "snapshot" && source === "cached" ? order <= 0 : order < 0;
+        if (!replaces) return;
+      }
+      const active: ActiveTemplate = { template, source };
+      nextActive.set(template.id, active);
+      nextStatus.set(template.id, activeStatus(active));
+    };
+
+    try {
+      for (const item of this.deps.snapshot?.list() ?? []) {
+        consider(item.raw, "snapshot", item.label, item.entry, item.error);
+      }
+    } catch (err) {
+      logger.warn({ err }, "bundled v2 template snapshot could not be read — starting without it");
+    }
+    try {
+      this.deps.cache.list().forEach((raw, i) => consider(raw, "cached", `cache[${i}]`));
     } catch (err) {
       logger.warn({ err }, "v2 template cache could not be read — starting without it");
     }
+    this.active = nextActive;
+    this.status = Array.from(nextStatus.values());
+    logger.info({ active: nextActive.size }, "v2 templates loaded from snapshot and cache");
   }
 
   /**

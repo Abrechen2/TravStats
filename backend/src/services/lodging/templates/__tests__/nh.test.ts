@@ -1,12 +1,4 @@
-import { LODGING_TEMPLATES } from "../builtins";
-import { applyLodgingTemplate } from "../engine";
-import type { LodgingTemplate } from "../types";
-
-const nh = (): LodgingTemplate => {
-  const found = LODGING_TEMPLATES.find((t) => t.id === "lodging:nh");
-  if (!found) throw new Error("No template lodging:nh");
-  return found;
-};
+import { READERS } from "./readers";
 
 /**
  * NH Hotels' own confirmations, 2014–2016: the hotel under
@@ -36,10 +28,10 @@ const BODY = [
   "192.60 EUR ",
 ].join("\r\n");
 
-const read = (subject: string, body: string) =>
-  applyLodgingTemplate(nh(), subject, `${subject}\r\n${body}`);
+describe.each(READERS)("the NH Hotels reader — %s", (_reader, apply) => {
+  const read = (subject: string, body: string) =>
+    apply("lodging:nh", subject, `${subject}\r\n${body}`);
 
-describe("the NH Hotels reader", () => {
   it("reads the hotel, its address, both dates (day first) and the stay's total", () => {
     const r = read(
       "Ihre Reservierung für NH Musterstadt City, 14. Februar 2017, QXAB123456789",

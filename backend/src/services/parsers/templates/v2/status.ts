@@ -25,8 +25,10 @@ export const v2TemplateStatusEntrySchema = z.object({
     .describe("The version that is active, or the one that was rejected"),
   state: z.enum(["active", "rejected"]),
   source: z
-    .enum(["remote", "cached"])
-    .describe("Fetched in the last sync, or read from this instance's disk cache"),
+    .enum(["remote", "cached", "snapshot"])
+    .describe(
+      "Fetched in the last sync, read from this instance's disk cache, or bundled with this release"
+    ),
   reason: z.enum(V2_REJECTION_REASONS).optional().describe("Why a template is not active"),
   detail: z
     .string()
