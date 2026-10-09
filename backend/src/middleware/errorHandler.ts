@@ -302,7 +302,15 @@ export type ApiErrorCode =
   /** Leaving a group with a trip that is in none (409). */
   | "SHARE_TRIP_NOT_SHARED"
   /** No share notice of this caller under that id (404). */
-  | "SHARE_NOTICE_NOT_FOUND";
+  | "SHARE_NOTICE_NOT_FOUND"
+  /** Undo refused: the copy changed since the notice; `extra.fields` names
+   *  the facts that differ (409). */
+  | "SHARE_UNDO_STALE"
+  /** The notice is not one that can be acted on that way (not a change, or
+   *  already undone) (409). */
+  | "SHARE_UNDO_UNAVAILABLE"
+  /** The caller's own copy of the entry is gone (deleted or moved away) (409). */
+  | "SHARE_COPY_NOT_FOUND";
 
 interface AuthRequest extends Request {
   user?: {

@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { Prisma } from "../../prisma";
+import { noticeChanges, type NoticeChange } from "./noticeChanges";
 import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
 
 /**
@@ -16,7 +17,11 @@ export interface ShareNoticeView {
   after: Prisma.JsonValue | null;
   createdAt: string;
   readAt: string | null;
+  /** When the recipient undid the change (S2); null otherwise. */
+  undoneAt: string | null;
   actor: SharePerson | null;
+  /** For `updated`: every changed fact, old and new, ready to display. */
+  changes: NoticeChange[];
 }
 
 /** Up to this many notices per list answer; the inbox shows the newest. */
@@ -37,7 +42,9 @@ export async function listNotices(userId: string): Promise<ShareNoticeView[]> {
     after: row.after,
     createdAt: row.createdAt.toISOString(),
     readAt: row.readAt?.toISOString() ?? null,
+    undoneAt: row.undoneAt?.toISOString() ?? null,
     actor: row.actor ? toPerson(row.actor) : null,
+    changes: row.kind === "updated" ? noticeChanges(row.before, row.after) : [],
   }));
 }
 

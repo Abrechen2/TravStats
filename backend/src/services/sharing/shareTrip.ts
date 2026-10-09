@@ -14,6 +14,8 @@ import {
   type CopyContext,
   type CopyCounts,
 } from "./copyEntries";
+import { groupBookingTotals, type MemberBookingTotal } from "./bookingTotals";
+import { detachTrip } from "./detach";
 import { tripFacts } from "./facts";
 import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
 
@@ -142,44 +144,10 @@ export async function shareTrip(
 export async function leaveGroup(userId: string, tripId: string): Promise<{ left: true }> {
   return prisma.$transaction(async (tx) => {
     const trip = await ownTrip(tx, userId, tripId);
-    const groupId = trip.shareGroupId;
-    if (!groupId) {
+    if (!trip.shareGroupId) {
       throw new AppError("This trip is not shared", 409, "SHARE_TRIP_NOT_SHARED");
     }
-    const own = { tripId: trip.id, userId, shareKey: { not: null } };
-    const clear = { shareKey: null };
-    await tx.flight.updateMany({ where: own, data: clear });
-    await tx.lodgingStay.updateMany({ where: own, data: clear });
-    await tx.cruise.updateMany({ where: own, data: clear });
-    await tx.railJourney.updateMany({ where: own, data: clear });
-    await tx.rentalBooking.updateMany({ where: own, data: clear });
-    await tx.tripStop.updateMany({
-      where: { tripId: trip.id, shareKey: { not: null } },
-      data: clear,
-    });
-    await tx.trip.update({ where: { id: trip.id }, data: { shareGroupId: null } });
-
-    const others = await tx.trip.findMany({
-      where: { shareGroupId: groupId },
-      select: { id: true, userId: true },
-    });
-    if (others.length === 0) {
-      // Nobody left to join: the group has no reason to exist. Notices that
-      // named it keep their text; their group link goes null.
-      await tx.tripShareGroup.delete({ where: { id: groupId } });
-      return { left: true as const };
-    }
-    await tx.shareNotice.createMany({
-      data: others.map((other) => ({
-        userId: other.userId,
-        groupId,
-        actorId: userId,
-        kind: "left",
-        entityType: "trip",
-        entityKey: other.id,
-        after: { tripName: trip.name },
-      })),
-    });
+    await detachTrip(tx, userId, trip);
     return { left: true as const };
   });
 }
@@ -199,6 +167,8 @@ export interface TripSharingView {
   /** The other members — never the caller, never their trip ids. */
   members: SharePerson[];
   candidates: ShareCandidate[];
+  /** The other members' booking totals for their trip of the group, read-only (decision 2). */
+  bookingTotals: MemberBookingTotal[];
 }
 
 /** Who holds this trip besides the caller, and whom the caller could share it with. */
@@ -228,6 +198,7 @@ export async function tripSharingView(userId: string, tripId: string): Promise<T
   return {
     groupId: trip.shareGroupId,
     members,
+    bookingTotals: trip.shareGroupId ? await groupBookingTotals(trip.shareGroupId, userId) : [],
     candidates: companions.flatMap((c) =>
       c.linkedUser
         ? [

@@ -17,9 +17,10 @@ import {
 } from "../services/sharing/consent";
 import { inboxCount, listNotices, markNoticeRead } from "../services/sharing/notices";
 import { leaveGroup, shareTrip, tripSharingView } from "../services/sharing/shareTrip";
+import { deleteOwnCopy, undoNotice } from "../services/sharing/undo";
 
 /**
- * `/api/v1/sharing` — shared trips, phase S1 (design
+ * `/api/v1/sharing` — shared trips, phases S1 and S2 (design
  * `docs/superpowers/specs/2026-10-09-trip-sharing-design.md`): consent between
  * two accounts, a companion linked to an account, a trip copied into a linked
  * companion's account, and leaving a share group again.
@@ -154,6 +155,22 @@ router.post(
     const id = idSchema.parse(req.params.id);
     await markNoticeRead(req.userId!, id);
     res.json({ success: true, data: { read: true } });
+  })
+);
+
+router.post(
+  "/notices/:id/undo",
+  handle(async (req, res) => {
+    const id = idSchema.parse(req.params.id);
+    res.json({ success: true, data: await undoNotice(req.userId!, id) });
+  })
+);
+
+router.post(
+  "/notices/:id/delete-copy",
+  handle(async (req, res) => {
+    const id = idSchema.parse(req.params.id);
+    res.json({ success: true, data: await deleteOwnCopy(req.userId!, id) });
   })
 );
 

@@ -57,7 +57,17 @@ const notice = z.object({
   after: z.unknown().nullable(),
   createdAt: instant,
   readAt: instant.nullable(),
+  undoneAt: instant.nullable().describe("When the caller undid this change (S2)"),
   actor: person.nullable(),
+  changes: z
+    .array(
+      z.object({
+        field: z.string().describe("The fact's name; a house fact is `lodging.<name>`"),
+        before: z.unknown().describe("Display value: `{kind, value}` in the API's time shapes"),
+        after: z.unknown(),
+      })
+    )
+    .describe("For `updated`: every changed fact, old and new value"),
 });
 
 const idParam = z.object({ id: z.string() });
@@ -171,6 +181,14 @@ registry.registerPath({
       z.object({
         groupId: z.string().nullable(),
         members: z.array(person),
+        bookingTotals: z
+          .array(
+            z.object({
+              member: person,
+              totals: z.array(z.object({ currency: z.string(), amount: z.number() })),
+            })
+          )
+          .describe("The other members' booking totals for their trip of the group, read-only"),
         candidates: z.array(
           z.object({
             companionId: z.string(),
@@ -238,6 +256,39 @@ registry.registerPath({
   responses: {
     200: ok("Read", z.object({ read: z.boolean() })),
     404: err("`SHARE_NOTICE_NOT_FOUND`"),
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/sharing/notices/{id}/undo",
+  summary: "Undo another member's change on the caller's own copy",
+  description:
+    "Restores the values the change replaced, on the caller's copy only, when the copy still " +
+    "holds exactly what the change wrote. The undo is a change by the caller and propagates " +
+    "to the other members with a notice of its own.",
+  tags,
+  request: { params: idParam },
+  responses: {
+    200: ok("Undone", z.object({ undone: z.literal(true), entryId: z.string() })),
+    404: err("`SHARE_NOTICE_NOT_FOUND`"),
+    409: err(
+      "`SHARE_UNDO_STALE` (the copy changed since; `fields` names what), " +
+        "`SHARE_UNDO_UNAVAILABLE` or `SHARE_COPY_NOT_FOUND`"
+    ),
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/sharing/notices/{id}/delete-copy",
+  summary: "After another member deleted an entry, delete the caller's own copy too",
+  tags,
+  request: { params: idParam },
+  responses: {
+    200: ok("Deleted", z.object({ deleted: z.literal(true) })),
+    404: err("`SHARE_NOTICE_NOT_FOUND`"),
+    409: err("`SHARE_UNDO_UNAVAILABLE` or `SHARE_COPY_NOT_FOUND`"),
   },
 });
 

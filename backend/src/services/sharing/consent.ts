@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import type { DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
+import { detachAfterWithdrawal } from "./detach";
 import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
 
 /**
@@ -120,8 +121,10 @@ export async function decideConsent(
 }
 
 /**
- * Either side ends the pair. Nothing already copied is touched (decision 4):
- * the copies are the recipient's trips. What stops is any further share.
+ * Either side ends the pair. Nothing already copied is deleted (decision 4):
+ * the copies are the recipient's trips. What stops is any further share AND
+ * any further change: the target's copies of trips shared with the requester
+ * leave their groups and stay as independent trips (spec, "S2 as built").
  */
 export async function withdrawConsent(userId: string, consentId: string): Promise<ConsentView> {
   const row = await prisma.shareConsent.findFirst({
@@ -132,9 +135,15 @@ export async function withdrawConsent(userId: string, consentId: string): Promis
   const updated =
     row.status === "withdrawn"
       ? row
-      : await prisma.shareConsent.update({
-          where: { id: row.id },
-          data: { status: "withdrawn", decidedAt: new Date() },
+      : await prisma.$transaction(async (tx) => {
+          const done = await tx.shareConsent.update({
+            where: { id: row.id },
+            data: { status: "withdrawn", decidedAt: new Date() },
+          });
+          // S2: the target stops receiving the requester's changes — their
+          // copies become independent trips (`detach.ts`).
+          await detachAfterWithdrawal(tx, row.requesterId, row.targetId);
+          return done;
         });
   return view(updated, row.requesterId === userId ? row.target : row.requester);
 }

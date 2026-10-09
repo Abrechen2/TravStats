@@ -199,3 +199,38 @@ export async function makeFullTrip(owner: TestAccount) {
   ]);
   return { trip, flight, lodging, stay, cruise, rail, rental, stops };
 }
+
+/**
+ * S2: Anna shares a full trip with Ben through the service (the S1 route is
+ * covered by its own suite) and both hold a copy.
+ */
+export async function sharedPair(owner: TestAccount, member: TestAccount) {
+  const { shareTrip } = await import("../../services/sharing/shareTrip");
+  const full = await makeFullTrip(owner);
+  const companion = await linkWithConsent(owner, member);
+  await shareTrip(owner.id, full.trip.id, companion.id);
+  const memberTrip = await prisma.trip.findFirstOrThrow({
+    where: { userId: member.id, shareGroupId: { not: null } },
+  });
+  return { full, companion, memberTrip, groupId: memberTrip.shareGroupId as string };
+}
+
+/** The member's copy of an owner's keyed row, by share key. */
+export async function copyKeyOf(
+  table: "flight" | "lodgingStay" | "cruise" | "railJourney" | "rentalBooking",
+  id: string
+): Promise<string> {
+  const select = { shareKey: true } as const;
+  const where = { id };
+  const row =
+    table === "flight"
+      ? await prisma.flight.findUniqueOrThrow({ where, select })
+      : table === "lodgingStay"
+        ? await prisma.lodgingStay.findUniqueOrThrow({ where, select })
+        : table === "cruise"
+          ? await prisma.cruise.findUniqueOrThrow({ where, select })
+          : table === "railJourney"
+            ? await prisma.railJourney.findUniqueOrThrow({ where, select })
+            : await prisma.rentalBooking.findUniqueOrThrow({ where, select });
+  return row.shareKey as string;
+}
