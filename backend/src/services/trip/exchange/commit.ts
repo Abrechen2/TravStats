@@ -12,6 +12,7 @@
  * What it never does, like the package commit: overwrite. An attached row
  * keeps its booking; a row on another trip stays where it is.
  */
+import { propagateWrites } from "../../sharing/propagate";
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
@@ -368,8 +369,22 @@ async function writeAll(
       },
     });
   }
+  // Imported into a shared trip: copied to its other members. Stops last,
+  // so the entries they wrap are keyed first.
+  for (const [kind, entity] of SHARED_KINDS) {
+    await propagateWrites(tx, userId, entity, [...ids[kind].values()]);
+  }
   return ids;
 }
+
+const SHARED_KINDS = [
+  ["flight", "flight"],
+  ["stay", "lodgingStay"],
+  ["cruise", "cruise"],
+  ["rail", "rail"],
+  ["rental", "rental"],
+  ["stop", "stop"],
+] as const;
 
 function bookingOfEntry(
   file: TripFile,

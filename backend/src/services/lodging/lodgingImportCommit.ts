@@ -1,4 +1,5 @@
 import { Prisma } from "../../prisma";
+import { propagateWrite, shareSnapshot } from "../sharing/propagate";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
@@ -520,7 +521,10 @@ async function updateStay(
     );
   }
 
+  // A changed booking moved the dates: on a shared trip, the copies follow.
+  const before = await shareSnapshot(prisma, "lodgingStay", stored.id);
   await prisma.lodgingStay.update({ where: { id: stored.id }, data });
+  await propagateWrite(prisma, userId, "lodgingStay", stored.id, before);
   logger.info(
     {
       operation: "lodging_import_stay_updated",

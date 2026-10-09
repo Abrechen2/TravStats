@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { propagateWrite, shareSnapshot } from "../sharing/propagate";
 import { Prisma } from "../../prisma";
 import type { CreateRentalInput, UpdateRentalInput } from "../../schemas/rental";
 import { resolveCompanions, linkRowsFor } from "../companionService";
@@ -160,6 +161,7 @@ export async function createRentalRow(
         skipDuplicates: true,
       });
     }
+    await propagateWrite(tx, userId, "rental", created.id);
     return tx.rentalBooking.findUniqueOrThrow({
       where: { id: created.id },
       include: RENTAL_INCLUDE,
@@ -211,6 +213,7 @@ export async function updateRentalRow(
     : {};
 
   const row = await prisma.$transaction(async (tx) => {
+    const before = await shareSnapshot(tx, "rental", existing.id);
     if (resolved !== undefined) {
       await tx.rentalBookingCompanion.deleteMany({ where: { rentalBookingId: existing.id } });
       if (resolved.length > 0) {
@@ -239,6 +242,7 @@ export async function updateRentalRow(
         ...options.extra,
       },
     });
+    await propagateWrite(tx, userId, "rental", existing.id, before);
     return tx.rentalBooking.findUniqueOrThrow({
       where: { id: existing.id },
       include: RENTAL_INCLUDE,

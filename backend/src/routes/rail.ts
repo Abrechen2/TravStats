@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from "express";
+import { propagateDelete, propagateWrite, shareSnapshot } from "../services/sharing/propagate";
 import type { z } from "zod";
 
 import { prisma } from "../db";
@@ -428,6 +429,7 @@ router.post(
             skipDuplicates: true,
           });
         }
+        await propagateWrite(tx, userId, "rail", created.id);
         return tx.railJourney.findUniqueOrThrow({
           where: { id: created.id },
           include: RAIL_INCLUDE,
@@ -528,6 +530,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       : undefined;
 
     const journey = await prisma.$transaction(async (tx) => {
+      const before = await shareSnapshot(tx, "rail", existing.id);
       if (resolved !== undefined) {
         await tx.railJourneyCompanion.deleteMany({ where: { railJourneyId: existing.id } });
         if (resolved.length > 0) {
@@ -550,6 +553,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
           ...(resolved !== undefined && { companions: resolved.map((c) => c.displayName) }),
         },
       });
+      await propagateWrite(tx, userId, "rail", existing.id, before);
       return tx.railJourney.findUniqueOrThrow({
         where: { id: existing.id },
         include: RAIL_INCLUDE,
@@ -575,7 +579,11 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
       select: { id: true, tripId: true },
     });
     if (!existing) throw new AppError("Rail journey not found", 404);
-    await prisma.railJourney.delete({ where: { id: existing.id } });
+    await prisma.$transaction(async (tx) => {
+      const gone = await shareSnapshot(tx, "rail", existing.id);
+      await tx.railJourney.delete({ where: { id: existing.id } });
+      await propagateDelete(tx, userId, gone);
+    });
     await restatusTrips(existing.tripId);
     res.status(204).send();
   } catch (err) {

@@ -50,6 +50,8 @@ import { editedTripDays, typedTripDays } from "../services/timeModel/tripColumns
 import { enrichFlightsForClients } from "../services/flightAirportFacts";
 import { withTripTimes } from "../services/trips/timesDto";
 import { withTripDetailTimes } from "../services/trips/tripDetailTimes";
+import { detachTrip } from "../services/sharing/detach";
+import { propagateWrites, shareSnapshots } from "../services/sharing/propagate";
 
 // Re-exported for the Immich trip routers, which import it from here.
 export { resolveTrip };
@@ -569,6 +571,9 @@ router.delete(
           },
           data: { tripId: null },
         });
+        // A shared trip leaves its group first: the others keep their copies
+        // and are told (design 2026-10-09, decision 5).
+        await detachTrip(tx, userId, existing);
         await tx.trip.delete({ where: { id: existing.id } });
       });
       logger.info({ tripId: req.params.id, userId }, "[Trips] Deleted trip");
@@ -602,6 +607,7 @@ router.post(
         throw new AppError("One or more flights not found", 404);
       }
 
+      const before = await shareSnapshots(prisma, "flight", flightIds);
       if (action === "add") {
         await prisma.flight.updateMany({
           where: { id: { in: flightIds }, userId },
@@ -614,6 +620,8 @@ router.post(
         });
       }
 
+      // Into a shared trip: copied to the others; out of one: they are told.
+      await propagateWrites(prisma, userId, "flight", flightIds, before);
       await recomputeTripStatus(trip.id);
 
       res.json({

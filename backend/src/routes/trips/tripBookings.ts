@@ -16,6 +16,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { bookingFlightsSchema, createBookingSchema, updateBookingSchema } from "../../schemas/trip";
 import { recomputeTripStatus } from "../../services/tripStatusService";
 import { fxColumnsFor, getBaseCurrency } from "../../services/fx/snapshot";
+import { propagateWrites, shareSnapshots } from "../../services/sharing/propagate";
 
 const router = Router();
 
@@ -59,6 +60,7 @@ router.post(
       });
 
       if (body.flightIds && body.flightIds.length > 0) {
+        const before = await shareSnapshots(prisma, "flight", body.flightIds);
         await prisma.flight.updateMany({
           where: { id: { in: body.flightIds }, userId },
           data: {
@@ -66,6 +68,7 @@ router.post(
             ...(body.tripId ? { tripId: body.tripId } : {}),
           },
         });
+        await propagateWrites(prisma, userId, "flight", body.flightIds, before);
         if (body.tripId) {
           await recomputeTripStatus(body.tripId);
         }
@@ -159,6 +162,7 @@ router.post(
       }
 
       const count = await prisma.$transaction(async (tx) => {
+        const before = await shareSnapshots(tx, "flight", unique);
         const filed = await tx.flight.updateMany({
           where: { id: { in: unique }, userId },
           data: { bookingId: booking.id },
@@ -169,6 +173,7 @@ router.post(
             data: { tripId: booking.tripId },
           });
         }
+        await propagateWrites(tx, userId, "flight", unique, before);
         return filed.count;
       });
       if (booking.tripId) await recomputeTripStatus(booking.tripId);

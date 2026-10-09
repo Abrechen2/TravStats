@@ -15,6 +15,7 @@
  * has one; an attached flight or stay keeps its booking when it has one; a
  * row on another trip stays where it is (the proposal skipped it already).
  */
+import { propagateWrites } from "../../sharing/propagate";
 import { prisma, type DbTransaction } from "../../../db";
 import { AppError } from "../../../middleware/errorHandler";
 import { createFlightSchema } from "../../../schemas/flight";
@@ -397,6 +398,12 @@ export async function commitPackageProposal(
           throw new AppError("Document is already filed with another entry", 409);
         }
       }
+
+      // Filed on a shared trip: copied to its other members.
+      const idsOf = (rows: { id: string | null }[]) => rows.flatMap((r) => (r.id ? [r.id] : []));
+      await propagateWrites(tx, userId, "flight", idsOf(flights));
+      await propagateWrites(tx, userId, "lodgingStay", idsOf(stays));
+      await propagateWrites(tx, userId, "cruise", idsOf(cruiseResult ? [cruiseResult] : []));
 
       return { tripId, bookingId, flights, stays, cruise: cruiseResult };
     },

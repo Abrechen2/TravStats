@@ -30,6 +30,7 @@ import { keepStoredDay } from "../services/timeModel/dayColumns";
 import { dayAnchorNow } from "../shared/time/clock";
 import { profileZoneOf } from "../shared/time/profileZone";
 import { withCruiseTimes } from "../services/cruise/timesDto";
+import { propagateDelete, propagateWrite, shareSnapshot } from "../services/sharing/propagate";
 
 const router = Router();
 router.use(authenticate);
@@ -425,6 +426,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     const fxColumns = fx.columns;
 
     const updated = await prisma.$transaction(async (tx) => {
+      const before = await shareSnapshot(tx, "cruise", existing.id);
       if (resolvedCompanionsForUpdate !== undefined) {
         await tx.cruiseCompanion.deleteMany({ where: { cruiseId: existing.id } });
         if (resolvedCompanionsForUpdate.length > 0) {
@@ -476,6 +478,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       if (stops !== undefined || portsChanged) {
         await recomputeLegsForCruise(existing.id, tx);
       }
+      await propagateWrite(tx, userId, "cruise", existing.id, before);
 
       return tx.cruise.findUniqueOrThrow({ where: { id: existing.id }, include: CRUISE_INCLUDE });
     });
@@ -521,7 +524,11 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
     const userId = requireUser(req);
     const existing = await prisma.cruise.findFirst({ where: { id: req.params.id, userId } });
     if (!existing) throw new AppError("Cruise not found", 404);
-    await prisma.cruise.delete({ where: { id: existing.id } });
+    await prisma.$transaction(async (tx) => {
+      const gone = await shareSnapshot(tx, "cruise", existing.id);
+      await tx.cruise.delete({ where: { id: existing.id } });
+      await propagateDelete(tx, userId, gone);
+    });
     res.status(204).send();
   } catch (err) {
     next(err);

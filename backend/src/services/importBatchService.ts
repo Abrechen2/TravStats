@@ -1,4 +1,5 @@
 import { prisma } from "../db";
+import { propagateDeletes, shareSnapshots } from "./sharing/propagate";
 import { AppError } from "../middleware/errorHandler";
 import { revertLodgingImportBatch } from "./lodging/lodgingImportBatches";
 
@@ -337,10 +338,21 @@ export async function revertImportBatch(userId: string, batchId: string): Promis
     // belong to this user, and the second condition keeps that true even if a
     // row were ever stamped with someone else's batch.
     const where = { userId, importBatchId: batchId };
+    // Rows of a shared trip among them: the other members are told (their
+    // copies stay — design 2026-10-09, decision 3).
+    const keyed = { ...where, shareKey: { not: null } };
+    const select = { id: true } as const;
+    const ids = (
+      domain === "flight"
+        ? await tx.flight.findMany({ where: keyed, select })
+        : await tx.cruise.findMany({ where: keyed, select })
+    ).map((r) => r.id);
+    const gone = await shareSnapshots(tx, domain === "flight" ? "flight" : "cruise", ids);
     const deleted =
       domain === "flight"
         ? (await tx.flight.deleteMany({ where })).count
         : (await tx.cruise.deleteMany({ where })).count;
+    await propagateDeletes(tx, userId, [...gone.values()]);
     await tx.importBatch.delete({ where: { id: batchId } });
     return { domain, deleted };
   });

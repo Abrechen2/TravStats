@@ -20,6 +20,8 @@
  * offered either, since dissolving it cascades that section away.
  */
 
+import { detachTrip } from "./sharing/detach";
+import { propagateWrites } from "./sharing/propagate";
 import type { Prisma } from "../prisma";
 import { prisma } from "../db";
 import { linkRowsFor, resolveCompanions } from "./companionService";
@@ -183,7 +185,8 @@ export async function dissolveMicroTrips(
   // express "at most two" in a where clause — and gaining a third flight is not
   // the loss this guards against: dissolving keeps flights either way.
   const result = await prisma.trip.deleteMany({
-    where: { id: { in: ids }, userId, ...EMPTY_TRIP_WHERE },
+    // A shared trip is never a stray: the other members hold copies of it.
+    where: { id: { in: ids }, userId, shareGroupId: null, ...EMPTY_TRIP_WHERE },
   });
 
   logger.info({
@@ -247,6 +250,16 @@ export async function mergeTrips(
   let mergedDuplicates = { albums: 0, photos: 0 };
 
   await prisma.$transaction(async (tx) => {
+    // A shared source trip leaves its group before it goes (its members keep
+    // their copies and are told); what lands on a shared target is copied.
+    for (const source of sources) await detachTrip(tx, userId, source);
+    const onSources = { where: { tripId: { in: sourceIds } }, select: { id: true } } as const;
+    const moved = {
+      flight: await tx.flight.findMany(onSources),
+      cruise: await tx.cruise.findMany(onSources),
+      lodgingStay: await tx.lodgingStay.findMany(onSources),
+      stop: await tx.tripStop.findMany(onSources),
+    };
     const move = { where: { tripId: { in: sourceIds } }, data: { tripId: targetId } };
     await tx.flight.updateMany(move);
     await tx.cruise.updateMany(move);
@@ -321,6 +334,14 @@ export async function mergeTrips(
     }
 
     await tx.trip.deleteMany({ where: { id: { in: sourceIds }, userId } });
+    for (const [entity, rows] of Object.entries(moved)) {
+      await propagateWrites(
+        tx,
+        userId,
+        entity as keyof typeof moved,
+        rows.map((r) => r.id)
+      );
+    }
   });
 
   // Segments from every source trip are now linked to the target — its
