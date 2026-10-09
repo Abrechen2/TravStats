@@ -115,6 +115,7 @@ import lodgingImportRoutes from "./lodgingImport";
 import placeImportRoutes from "./placeImport";
 import importBatchRoutes from "./importBatches";
 import companionRoutes from "./companions";
+import sharingRoutes from "./sharing";
 import tagRoutes from "./tags";
 import openapiRoutes from "./openapi";
 import importRoutes from "./import";
@@ -384,6 +385,8 @@ export const apiMounts: ApiMount[] = [
   { id: "placeImport", base: "/api/v1/place-import", router: placeImportRoutes },
   { id: "importBatches", base: "/api/v1/import-batches", router: importBatchRoutes },
   { id: "companions", base: "/api/v1/companions", router: companionRoutes },
+  // Shared trips (design 2026-10-09): consent, companion link, share, leave.
+  { id: "sharing", base: "/api/v1/sharing", router: sharingRoutes },
   { id: "tags", base: "/api/v1/tags", router: tagRoutes },
   { id: "import", base: "/api/v1/import", router: importRoutes },
   { id: "pairing", base: "/api/v1/pairing", router: pairingRoutes },

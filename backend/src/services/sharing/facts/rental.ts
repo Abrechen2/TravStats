@@ -51,7 +51,8 @@ export const RENTAL_FACT_FIELDS = [
 export type RentalFactField = (typeof RENTAL_FACT_FIELDS)[number];
 
 export function rentalFacts(row: Pick<RentalBooking, RentalFactField>) {
-  return pickFacts(row, RENTAL_FACT_FIELDS) satisfies Partial<
-    Prisma.RentalBookingUncheckedCreateInput
-  >;
+  return pickFacts(
+    row,
+    RENTAL_FACT_FIELDS
+  ) satisfies Partial<Prisma.RentalBookingUncheckedCreateInput>;
 }

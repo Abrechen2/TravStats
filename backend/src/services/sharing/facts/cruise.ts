@@ -47,9 +47,10 @@ export const CRUISE_STOP_FACT_FIELDS = [
 export type CruiseStopFactField = (typeof CRUISE_STOP_FACT_FIELDS)[number];
 
 export function cruiseStopFacts(row: Pick<CruiseStop, CruiseStopFactField>) {
-  return pickFacts(row, CRUISE_STOP_FACT_FIELDS) satisfies Partial<
-    Prisma.CruiseStopUncheckedCreateInput
-  >;
+  return pickFacts(
+    row,
+    CRUISE_STOP_FACT_FIELDS
+  ) satisfies Partial<Prisma.CruiseStopUncheckedCreateInput>;
 }
 
 /**
@@ -71,7 +72,8 @@ export const CRUISE_LEG_FACT_FIELDS = [
 export type CruiseLegFactField = (typeof CRUISE_LEG_FACT_FIELDS)[number];
 
 export function cruiseLegFacts(row: Pick<CruiseLeg, CruiseLegFactField>) {
-  return pickFacts(row, CRUISE_LEG_FACT_FIELDS) satisfies Partial<
-    Prisma.CruiseLegUncheckedCreateInput
-  >;
+  return pickFacts(
+    row,
+    CRUISE_LEG_FACT_FIELDS
+  ) satisfies Partial<Prisma.CruiseLegUncheckedCreateInput>;
 }

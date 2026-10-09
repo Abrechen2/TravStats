@@ -165,6 +165,7 @@
     "rental/stations.ts",
     "rental/stats.ts",
     "settings/profilePicture.ts",
+    "sharing.ts",
     "ships.ts",
     "sync.ts",
     "tripPhotoWindows.ts",

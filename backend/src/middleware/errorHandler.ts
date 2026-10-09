@@ -266,7 +266,32 @@ export type ApiErrorCode =
    *  or a section or the account's total is over its byte cap (413). The web
    *  keeps its local value either way. */
   | "WEB_PREFS_INVALID"
-  | "WEB_PREFS_TOO_LARGE";
+  | "WEB_PREFS_TOO_LARGE"
+  /** Trip sharing (`routes/sharing.ts`, design 2026-10-09). No account of
+   *  that name on this server (404) — sharing never leaves the instance. */
+  | "SHARE_USER_NOT_FOUND"
+  /** A consent request addressed to the requester's own account (400). */
+  | "SHARE_SELF"
+  /** A consent between these two is already pending or accepted (409). */
+  | "SHARE_CONSENT_DUPLICATE"
+  /** No consent of this caller under that id (404) — also answered for
+   *  another pair's consent, so a probe learns nothing. */
+  | "SHARE_CONSENT_NOT_FOUND"
+  /** Accept/decline on a consent that is no longer pending (409). */
+  | "SHARE_CONSENT_NOT_PENDING"
+  /** Linking or sharing needs an accepted consent the other account gave to
+   *  the caller (403). */
+  | "SHARE_CONSENT_REQUIRED"
+  /** No companion of this caller under that id (404). */
+  | "COMPANION_NOT_FOUND"
+  /** Another of the caller's companions is already linked to that account (409). */
+  | "SHARE_COMPANION_ALREADY_LINKED"
+  /** Sharing with a companion that is not linked to an account (409). */
+  | "SHARE_COMPANION_NOT_LINKED"
+  /** Leaving a group with a trip that is in none (409). */
+  | "SHARE_TRIP_NOT_SHARED"
+  /** No share notice of this caller under that id (404). */
+  | "SHARE_NOTICE_NOT_FOUND";
 
 interface AuthRequest extends Request {
   user?: {

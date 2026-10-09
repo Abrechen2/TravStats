@@ -50,6 +50,9 @@ const BOOKKEEPING_INSTANTS = new Set([
   "nextApiCheckAt",
   "aerodataboxLastUpdatedUtc",
   "summaryGeneratedAt",
+  // Trip sharing: when a consent was answered, when a notice was read.
+  "decidedAt",
+  "readAt",
 ]);
 
 const doc = buildOpenApiDocument() as unknown as { paths: Json; components: { schemas: Json } };
