@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 import DataQualityFlagCard from "../../components/DataQuality/DataQualityFlagCard";
 import { useSettingsStore } from "../../store/settingsStore";
@@ -224,24 +226,51 @@ describe("time questions in the inbox", () => {
 
 /**
  * Measured on a copy of the Beta server's data after 2.7.0-beta.16 ran its
- * backfill: the inbox showed a date-only flight's kept value as
- * "31.03.2009 22:00 (America/New_York)" while the flight itself shows
- * 01.04.2009 and the question says the stored day was kept; and a visit whose
- * time of day is unknown as "12.05.2024 00:00", a clock nobody entered.
+ * backfill: the inbox showed a date-only flight's kept value with a clock
+ * ("31.03.2009 22:00 (America/New_York)") under a sentence saying the stored
+ * day was kept; and a visit whose time of day is unknown as "12.05.2024 00:00",
+ * a clock nobody entered.
+ *
+ * forgejo#273: the kept DAY is the one the flight page shows — the local day of
+ * the stored instant in the row's zone (`timesDto.ts`), because a date-only
+ * flight is written as a local wall clock through that zone. The case is the
+ * shared contract vector's (`shared/time/dateOnlyFlights.json`), the same one
+ * the backend's DTO test reads back as 10 May.
  */
+const VECTORS = JSON.parse(
+  readFileSync(resolve(__dirname, "../../../../shared/time/dateOnlyFlights.json"), "utf8")
+) as { cases: Array<{ id: string; zone: string; day: string; stored: string }> };
+const FRA_MIDNIGHT = VECTORS.cases.find((c) => c.id === "fra-cruise-import-midnight")!;
+
 describe("the kept value of a time question reads as what the record shows", () => {
-  it("shows a date-only flight's kept day as its own day, without a clock", () => {
+  it("shows a date-only flight's kept day as the flight page does — its local day, without a clock", () => {
+    // Stored 22:00Z on 9 May; the flight page shows 10.05.2026.
     renderCard(
       timeFlag("time_day_ambiguous", "flight", null, {
         column: "departure",
         reason: "date_only_day_differs",
-        legacyValue: "2009-04-01T02:00:00.000Z",
-        keptValue: "2009-04-01T02:00:00.000Z",
-        zone: "America/New_York",
+        legacyValue: FRA_MIDNIGHT.stored,
+        keptValue: FRA_MIDNIGHT.stored,
+        zone: FRA_MIDNIGHT.zone,
       })
     );
-    expect(screen.getByText("01.04.2009")).toBeInTheDocument();
-    expect(screen.queryByText(/31\.03\.2009/)).not.toBeInTheDocument();
+    expect(FRA_MIDNIGHT.day).toBe("2026-05-10");
+    expect(screen.getByText("10.05.2026")).toBeInTheDocument();
+    expect(screen.queryByText("09.05.2026")).not.toBeInTheDocument();
+  });
+
+  it("falls back to the stored date for a date-only flight with no zone", () => {
+    renderCard(
+      timeFlag("time_day_ambiguous", "flight", null, {
+        column: "departure",
+        reason: "date_only_day_differs",
+        legacyValue: FRA_MIDNIGHT.stored,
+        keptValue: FRA_MIDNIGHT.stored,
+        zone: null,
+      })
+    );
+    expect(screen.getAllByText(/09\.05\.2026/).length).toBeGreaterThan(0);
+    expect(screen.queryByText("10.05.2026")).not.toBeInTheDocument();
   });
 
   it("shows a visit whose time of day is unknown as its day in the place's zone", () => {
