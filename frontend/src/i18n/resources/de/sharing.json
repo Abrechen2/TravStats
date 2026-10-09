@@ -1,0 +1,113 @@
+{
+  "inbox": {
+    "title": "Geteilte Reisen",
+    "description": "Wer mit dir Reisen teilen möchte, und was in geteilten Reisen passiert ist.",
+    "requests": {
+      "title": "Anfragen",
+      "body": "{{name}} (@{{username}}) möchte Reisen mit dir teilen. Wenn du zustimmst, kann {{name}} Reisen in dein Konto kopieren — jede als deine eigene Reise.",
+      "accept": "Zustimmen",
+      "decline": "Ablehnen"
+    },
+    "notices": {
+      "title": "Mitteilungen",
+      "shared": "{{name}} hat die Reise „{{trip}}“ mit dir geteilt.",
+      "left": "{{name}} hat die geteilte Reise „{{trip}}“ verlassen. Die eigene Kopie behält {{name}}.",
+      "other": "{{name}} hat die geteilte Reise „{{trip}}“ geändert.",
+      "someone": "Jemand",
+      "unknownTrip": "eine Reise",
+      "open": "Reise öffnen",
+      "markRead": "Gelesen"
+    },
+    "empty": {
+      "title": "Nichts Neues",
+      "description": "Anfragen zum Teilen und Mitteilungen zu geteilten Reisen erscheinen hier."
+    },
+    "messages": {
+      "accepted": "Zugestimmt — {{name}} kann jetzt Reisen mit dir teilen.",
+      "declined": "Abgelehnt."
+    },
+    "errors": {
+      "loadFailed": "Geteilte Reisen konnten nicht geladen werden.",
+      "loadFailedHint": "Das heißt nicht, dass es nichts gibt. Versuche es erneut.",
+      "retry": "Erneut versuchen",
+      "answerFailed": "Die Antwort konnte nicht gespeichert werden.",
+      "markReadFailed": "Die Mitteilung konnte nicht als gelesen markiert werden."
+    }
+  },
+  "settings": {
+    "title": "Reisen teilen",
+    "description": "Teile Reisen mit Mitreisenden, die ein Konto auf diesem Server haben. Jede Person bekommt eine eigene Kopie; Sitzplatz, Preis, Bewertungen und Notizen bleiben privat.",
+    "request": {
+      "label": "Benutzername",
+      "placeholder": "z. B. anna",
+      "submit": "Anfrage senden",
+      "sent": "Anfrage an {{name}} gesendet."
+    },
+    "consents": {
+      "title": "Zustimmungen",
+      "outgoing": "Du an {{name}}",
+      "incoming": "{{name}} an dich",
+      "withdraw": "Zurückziehen",
+      "withdrawn": "Zustimmung zurückgezogen. Bereits geteilte Reisen bleiben bestehen.",
+      "none": "Noch keine Anfragen.",
+      "status": {
+        "pending": "offen",
+        "accepted": "zugestimmt",
+        "declined": "abgelehnt",
+        "withdrawn": "zurückgezogen"
+      }
+    },
+    "companions": {
+      "title": "Mitreisende",
+      "hint": "Verknüpfe Mitreisende mit dem Konto, das deiner Anfrage zugestimmt hat. Dann kannst du Reisen mit ihnen teilen.",
+      "linkLabel": "Mit Konto verknüpfen",
+      "notLinked": "Nicht verknüpft",
+      "unlink": "Verknüpfung lösen",
+      "linked": "{{companion}} ist jetzt mit @{{username}} verknüpft.",
+      "unlinked": "Verknüpfung gelöst.",
+      "none": "Noch keine Mitreisenden. Trag sie bei Flügen, Reisen oder Kreuzfahrten ein, dann erscheinen sie hier.",
+      "noLinkable": "Noch hat niemand deiner Anfrage zugestimmt."
+    },
+    "errors": {
+      "loadFailed": "Die Freigaben konnten nicht geladen werden.",
+      "requestFailed": "Die Anfrage konnte nicht gesendet werden.",
+      "withdrawFailed": "Die Zustimmung konnte nicht zurückgezogen werden.",
+      "linkFailed": "Die Verknüpfung konnte nicht gespeichert werden."
+    }
+  },
+  "trip": {
+    "title": "Geteilt",
+    "notShared": "Diese Reise ist mit niemandem geteilt.",
+    "members": "Geteilt mit",
+    "candidates": "Teilen mit",
+    "shareTick": "Mit {{name}} teilen",
+    "sharedTick": "Mit {{name}} geteilt",
+    "noConsent": "{{name}} hat dem Teilen (noch) nicht zugestimmt.",
+    "noCandidates": "Verknüpfe Mitreisende mit ihrem Konto, um Reisen zu teilen.",
+    "settingsLink": "Zu den Einstellungen",
+    "leave": "Gruppe verlassen",
+    "leaveConfirm": "Gruppe verlassen? Deine Kopie bleibt als eigene Reise erhalten; die anderen werden benachrichtigt.",
+    "left": "Du hast die Gruppe verlassen. Deine Reise bleibt erhalten.",
+    "shared": "Mit {{name}} geteilt.",
+    "privateHint": "Kopiert werden nur Fakten — Flüge, Unterkünfte, Kreuzfahrten, Bahnfahrten, Mietwagen und Stopps. Sitzplatz, Zimmer, Preis, Bewertungen und Notizen bleiben privat.",
+    "errors": {
+      "loadFailed": "Die Freigabe dieser Reise konnte nicht geladen werden.",
+      "shareFailed": "Die Reise konnte nicht geteilt werden.",
+      "leaveFailed": "Die Gruppe konnte nicht verlassen werden."
+    }
+  },
+  "errors": {
+    "userNotFound": "Auf diesem Server gibt es kein Konto mit diesem Benutzernamen.",
+    "self": "Das ist dein eigenes Konto.",
+    "duplicate": "Diese Anfrage ist bereits offen oder angenommen.",
+    "consentNotFound": "Diese Anfrage gibt es nicht mehr.",
+    "notPending": "Diese Anfrage wurde bereits beantwortet.",
+    "consentRequired": "Diese Person hat dem Teilen mit dir nicht zugestimmt.",
+    "companionNotFound": "Diesen Eintrag unter Mitreisende gibt es nicht mehr.",
+    "alreadyLinked": "Ein anderer Mitreisender ist bereits mit diesem Konto verknüpft.",
+    "notLinked": "Diese Person ist mit keinem Konto verknüpft.",
+    "notShared": "Diese Reise ist nicht geteilt.",
+    "tripNotFound": "Diese Reise gibt es nicht mehr.",
+    "noticeNotFound": "Diese Mitteilung gibt es nicht mehr."
+  }
+}

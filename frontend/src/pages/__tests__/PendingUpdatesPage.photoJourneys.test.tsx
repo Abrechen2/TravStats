@@ -22,6 +22,18 @@ import type { PhotoJourney } from "../../types/photoJourney";
  */
 
 const visible = vi.hoisted(() => ({ value: true }));
+// Shared trips (2026-10-09): the trip overview, the settings and the inbox
+// read the sharing API on mount; answered empty so no request escapes.
+vi.mock("@/lib/api/sharing", () => ({
+  sharingApi: {
+    tripSharing: vi.fn().mockResolvedValue({ groupId: null, members: [], candidates: [] }),
+    listConsents: vi.fn().mockResolvedValue({ incoming: [], outgoing: [] }),
+    listCompanions: vi.fn().mockResolvedValue({ companions: [], linkableUsers: [] }),
+    listNotices: vi.fn().mockResolvedValue([]),
+    inboxCount: vi.fn().mockResolvedValue(0),
+  },
+}));
+
 vi.mock("../../components/inbox/usePhotoJourneysVisible", () => ({
   usePhotoJourneysVisible: () => visible.value,
 }));
@@ -113,11 +125,11 @@ describe("PendingUpdatesPage — the photo-journey tab", () => {
     vi.mocked(immichApi.getSettings).mockRejectedValue(new Error("not asked in these cases"));
   });
 
-  it("offers four tabs, with the photo tab counting the pending rows", async () => {
+  it("offers five tabs, with the photo tab counting the pending rows", async () => {
     vi.mocked(photoJourneysApi.list).mockResolvedValue([makeJourney("a"), makeJourney("b")]);
     renderPage();
 
-    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(4));
+    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(5));
     const tab = screen.getByRole("tab", { name: new RegExp(PHOTO_TAB) });
     await waitFor(() => expect(within(tab).getByText("2")).toBeInTheDocument());
   });
@@ -125,7 +137,7 @@ describe("PendingUpdatesPage — the photo-journey tab", () => {
   it("is there with no rows at all — the scan lives behind it", async () => {
     renderPage();
 
-    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(4));
+    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(5));
     expect(screen.getByRole("tab", { name: new RegExp(PHOTO_TAB) })).toBeInTheDocument();
   });
 
@@ -164,7 +176,7 @@ describe("PendingUpdatesPage — the photo-journey tab", () => {
     visible.value = false;
     renderPage("/pending-updates?tab=photos");
 
-    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(3));
+    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(4));
     expect(screen.queryByRole("tab", { name: new RegExp(PHOTO_TAB) })).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /inbox.review.title/ })).toHaveAttribute(
       "aria-selected",

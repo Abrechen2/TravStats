@@ -1,0 +1,113 @@
+{
+  "inbox": {
+    "title": "Shared trips",
+    "description": "Who wants to share trips with you, and what happened in shared trips.",
+    "requests": {
+      "title": "Requests",
+      "body": "{{name}} (@{{username}}) would like to share trips with you. If you agree, {{name}} can copy trips into your account — each one as your own trip.",
+      "accept": "Agree",
+      "decline": "Decline"
+    },
+    "notices": {
+      "title": "Notices",
+      "shared": "{{name}} shared the trip “{{trip}}” with you.",
+      "left": "{{name}} left the shared trip “{{trip}}”. {{name}} keeps their own copy.",
+      "other": "{{name}} changed the shared trip “{{trip}}”.",
+      "someone": "Someone",
+      "unknownTrip": "a trip",
+      "open": "Open trip",
+      "markRead": "Read"
+    },
+    "empty": {
+      "title": "Nothing new",
+      "description": "Sharing requests and notices about shared trips appear here."
+    },
+    "messages": {
+      "accepted": "Agreed — {{name}} can now share trips with you.",
+      "declined": "Declined."
+    },
+    "errors": {
+      "loadFailed": "Shared trips could not be loaded.",
+      "loadFailedHint": "That does not mean there is nothing. Try again.",
+      "retry": "Try again",
+      "answerFailed": "Your answer could not be saved.",
+      "markReadFailed": "The notice could not be marked as read."
+    }
+  },
+  "settings": {
+    "title": "Share trips",
+    "description": "Share trips with companions who have an account on this server. Everyone gets their own copy; seat, price, ratings and notes stay private.",
+    "request": {
+      "label": "Username",
+      "placeholder": "e.g. anna",
+      "submit": "Send request",
+      "sent": "Request sent to {{name}}."
+    },
+    "consents": {
+      "title": "Consents",
+      "outgoing": "You to {{name}}",
+      "incoming": "{{name}} to you",
+      "withdraw": "Withdraw",
+      "withdrawn": "Consent withdrawn. Trips already shared stay where they are.",
+      "none": "No requests yet.",
+      "status": {
+        "pending": "pending",
+        "accepted": "agreed",
+        "declined": "declined",
+        "withdrawn": "withdrawn"
+      }
+    },
+    "companions": {
+      "title": "Companions",
+      "hint": "Link a companion to the account that agreed to your request. Then you can share trips with them.",
+      "linkLabel": "Link to account",
+      "notLinked": "Not linked",
+      "unlink": "Unlink",
+      "linked": "{{companion}} is now linked to @{{username}}.",
+      "unlinked": "Link removed.",
+      "none": "No companions yet. They appear when you add them to flights, trips or cruises.",
+      "noLinkable": "Nobody has agreed to your request yet."
+    },
+    "errors": {
+      "loadFailed": "Sharing could not be loaded.",
+      "requestFailed": "The request could not be sent.",
+      "withdrawFailed": "The consent could not be withdrawn.",
+      "linkFailed": "The link could not be saved."
+    }
+  },
+  "trip": {
+    "title": "Shared",
+    "notShared": "This trip is not shared with anyone.",
+    "members": "Shared with",
+    "candidates": "Share with",
+    "shareTick": "Share with {{name}}",
+    "sharedTick": "Shared with {{name}}",
+    "noConsent": "{{name}} has not agreed to sharing (yet).",
+    "noCandidates": "Link companions to their account to share trips.",
+    "settingsLink": "Go to settings",
+    "leave": "Leave group",
+    "leaveConfirm": "Leave the group? Your copy stays as your own trip; the others are notified.",
+    "left": "You left the group. Your trip stays.",
+    "shared": "Shared with {{name}}.",
+    "privateHint": "Only facts are copied — flights, stays, cruises, rail journeys, rentals and stops. Seat, room, price, ratings and notes stay private.",
+    "errors": {
+      "loadFailed": "This trip's sharing could not be loaded.",
+      "shareFailed": "The trip could not be shared.",
+      "leaveFailed": "The group could not be left."
+    }
+  },
+  "errors": {
+    "userNotFound": "There is no account with that username on this server.",
+    "self": "That is your own account.",
+    "duplicate": "This request is already pending or accepted.",
+    "consentNotFound": "This request no longer exists.",
+    "notPending": "This request has already been answered.",
+    "consentRequired": "This person has not agreed to sharing with you.",
+    "companionNotFound": "This companion no longer exists.",
+    "alreadyLinked": "Another companion is already linked to this account.",
+    "notLinked": "This person is not linked to an account.",
+    "notShared": "This trip is not shared.",
+    "tripNotFound": "This trip no longer exists.",
+    "noticeNotFound": "This notice no longer exists."
+  }
+}

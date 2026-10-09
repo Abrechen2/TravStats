@@ -35,6 +35,7 @@ import enCompanions from "./resources/en/companions.json";
 import enPlaces from "./resources/en/places.json";
 import enXlsx from "./resources/en/xlsx.json";
 import enDataQuality from "./resources/en/dataQuality.json";
+import enSharing from "./resources/en/sharing.json";
 import enEvidence from "./resources/en/evidence.json";
 import enDocuments from "./resources/en/documents.json";
 import enRoadtrips from "./resources/en/roadtrips.json";
@@ -73,6 +74,7 @@ import deCompanions from "./resources/de/companions.json";
 import dePlaces from "./resources/de/places.json";
 import deXlsx from "./resources/de/xlsx.json";
 import deDataQuality from "./resources/de/dataQuality.json";
+import deSharing from "./resources/de/sharing.json";
 import deEvidence from "./resources/de/evidence.json";
 import deDocuments from "./resources/de/documents.json";
 import deRoadtrips from "./resources/de/roadtrips.json";
@@ -134,6 +136,7 @@ const resources = {
     places: enPlaces,
     xlsx: enXlsx,
     dataQuality: enDataQuality,
+    sharing: enSharing,
     evidence: enEvidence,
     documents: enDocuments,
     roadtrips: enRoadtrips,
@@ -173,6 +176,7 @@ const resources = {
     places: dePlaces,
     xlsx: deXlsx,
     dataQuality: deDataQuality,
+    sharing: deSharing,
     evidence: deEvidence,
     documents: deDocuments,
     roadtrips: deRoadtrips,
@@ -222,6 +226,7 @@ i18n.use(initReactI18next).init({
     "places",
     "xlsx",
     "dataQuality",
+    "sharing",
     "evidence",
     "documents",
     "roadtrips",
