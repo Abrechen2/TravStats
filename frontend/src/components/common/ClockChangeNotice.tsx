@@ -42,7 +42,8 @@ export function ClockChangeNotice({ local, zone, fold, onFoldChange }: Props): J
     <div className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
       <p style={{ margin: 0 }}>{t("common:clockChange.repeated")}</p>
       {onFoldChange && (
-        <label className="mt-1 flex items-center gap-2">
+        // The row is the label, so on a coarse pointer it is the touch target (forgejo#249).
+        <label className="mt-1 flex items-center gap-2 pointer-coarse:min-h-(--ts-size-touch-min)">
           <input
             type="checkbox"
             checked={fold === "later"}
