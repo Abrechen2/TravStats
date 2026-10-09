@@ -6,12 +6,18 @@ import { withCruiseDayNumbers } from "./cruiseDayNumbers";
 import { newStopKey, stopKeyAt, withStopKeys } from "./cruiseStopKeys";
 import { CruiseStopFields } from "./CruiseStopFields";
 import { CruiseStopSummary } from "./CruiseStopSummary";
+import { stopLacksPort } from "./cruiseFormDraft";
 
 interface Props {
   stops: CruiseStopInput[];
   onChange: (stops: CruiseStopInput[]) => void;
   /** Prefix for the ids of the controls; defaults to one unique per editor. */
   idPrefix?: string;
+  /**
+   * The form's "still needed" hint: a day without a port and not at sea is
+   * refused by the server, and its port field points at the line that says so.
+   */
+  missingHintId?: string;
 }
 
 type FocusTarget = "up" | "down" | "summary";
@@ -41,7 +47,12 @@ const ACTION_CLASS =
  *   resolved by `withCruiseDayNumbers`: a stop keeps its day of the cruise, a
  *   new one takes the next free day (forgejo#126).
  */
-export function CruiseStopsEditor({ stops, onChange, idPrefix }: Props): JSX.Element {
+export function CruiseStopsEditor({
+  stops,
+  onChange,
+  idPrefix,
+  missingHintId,
+}: Props): JSX.Element {
   const { t } = useTranslation("cruise");
   const generatedId = useId();
   const prefix = idPrefix ?? `cruise-stops-${generatedId.replace(/:/g, "")}`;
@@ -181,6 +192,7 @@ export function CruiseStopsEditor({ stops, onChange, idPrefix }: Props): JSX.Ele
                     stop={stop}
                     idBase={`${prefix}-${key}`}
                     onPatch={(patch): void => update(i, patch)}
+                    portDescribedBy={stopLacksPort(stop) ? missingHintId : undefined}
                   />
                 </div>
               </details>

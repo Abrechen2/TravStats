@@ -49,15 +49,15 @@
     "edit": "Bearbeiten",
     "delete": "Löschen",
     "deleteConfirmTitle": "Kreuzfahrt löschen?",
-    "deleteConfirmMessage": "„{{name}}“ wird mit {{count}} Hafenanläufen dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
+    "deleteConfirmMessage": "„{{name}}“ wird mit {{count}} Hafenanläufen dauerhaft gelöscht.",
     "deleteConfirm": "Endgültig löschen",
     "deleteCancel": "Abbrechen",
     "deleteSuccess": "Kreuzfahrt gelöscht",
     "deleteError": "Kreuzfahrt konnte nicht gelöscht werden",
     "loadError": "Die Kreuzfahrt konnte nicht geladen werden.",
-    "deleteConfirmMessage_one": "„{{name}}“ wird mit einem Hafenanlauf dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
-    "deleteConfirmMessage_other": "„{{name}}“ wird mit {{count}} Hafenanläufen dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
-    "deleteConfirmMessageNoStops": "„{{name}}“ wird dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
+    "deleteConfirmMessage_one": "„{{name}}“ wird mit einem Hafenanlauf dauerhaft gelöscht.",
+    "deleteConfirmMessage_other": "„{{name}}“ wird mit {{count}} Hafenanläufen dauerhaft gelöscht.",
+    "deleteConfirmMessageNoStops": "„{{name}}“ wird dauerhaft gelöscht.",
     "backToLogbook": "Logbuch · Kreuzfahrten",
     "itinerary": "Hafenfolge",
     "nights": "Nächte",
@@ -107,7 +107,9 @@
     "departPortAirport": "Abflughafen",
     "arrivePortAirport": "Zielflughafen",
     "color": "Farbe",
-    "colorAuto": "Automatisch (aus Kreuzfahrt-ID abgeleitet)"
+    "colorAuto": "Automatisch (aus Kreuzfahrt-ID abgeleitet)",
+    "startDate": "Abfahrtsdatum",
+    "endDate": "Ankunftsdatum"
   },
   "seatClass": {
     "economy": "Economy",
@@ -223,8 +225,18 @@
     "editTitle": "Kreuzfahrt bearbeiten",
     "saveError": "Kreuzfahrt konnte nicht gespeichert werden",
     "routeNameSuggestion": "Vorschlag übernehmen: {{name}}",
-    "identityRequired": "Gib ein Schiff, einen Routennamen, eine Reederei oder den Abfahrtshafen an – sonst lässt sich die Kreuzfahrt nicht wiedererkennen.",
-    "startDateRequired": "Gib das Abfahrtsdatum an."
+    "missing": {
+      "identity": "Schiff, Reederei, Routenname oder Abfahrtshafen (eins davon)",
+      "startDate": "Abfahrtsdatum",
+      "stopPort": "Hafen für Tag {{day}} (oder „Auf See“)"
+    },
+    "identityHint": "Pflicht ist eins davon: Schiff, Reederei, Routenname oder Abfahrtshafen – sonst lässt sich die Kreuzfahrt nicht wiedererkennen.",
+    "errors": {
+      "endBeforeStart": "Das Ankunftsdatum liegt vor dem Abfahrtsdatum.",
+      "deck": "Das Deck ist eine ganze Zahl von 1 bis 30.",
+      "price": "Der Preis darf nicht negativ sein."
+    },
+    "colorPicked": "Gewählte Farbe: {{color}}"
   },
   "add": {
     "title": "Kreuzfahrt hinzufügen"
@@ -357,5 +369,9 @@
     "saveError": "Die Spur konnte nicht gespeichert werden.",
     "alreadyImported": "Diese Aufzeichnung ist bereits bei der Kreuzfahrt.",
     "removeError": "Die Spur konnte nicht entfernt werden."
+  },
+  "deleteSurvivors": {
+    "trip": "die Reise „{{name}}“",
+    "tripUnnamed": "die verknüpfte Reise"
   }
 }

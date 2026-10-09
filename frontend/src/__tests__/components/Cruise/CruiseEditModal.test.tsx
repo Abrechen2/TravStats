@@ -38,7 +38,8 @@ vi.mock("@/hooks/useRecentCurrencies", async (importOriginal) => {
 function fillRequired(): void {
   const routeName = screen.getByLabelText("field.routeName") as HTMLInputElement;
   if (!routeName.value) fireEvent.change(routeName, { target: { value: "Nordland" } });
-  const depart = screen.getAllByLabelText("field.depart")[0] as HTMLInputElement;
+  // The start date's label now ends in the shared required asterisk (forgejo#245).
+  const depart = screen.getByLabelText(/^field\.startDate/) as HTMLInputElement;
   if (!depart.value) fireEvent.change(depart, { target: { value: "2026-07-01" } });
 }
 
@@ -75,28 +76,24 @@ describe("CruiseEditModal", () => {
   });
 
   // Acceptance 2026-09-26: "Speichern" with nothing entered saved a row that
-  // read "— | — – — | 0". The form now names what is missing, at the field,
-  // and sends nothing.
+  // read "— | — – — | 0". Since forgejo#245 the save stays greyed out and the
+  // line beside it names what is missing — live, without a click first.
   it("refuses to save an empty cruise and names both missing fields", async () => {
     vi.mocked(cruiseApi.create).mockReset();
     render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
-    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
 
-    const alerts = await screen.findAllByRole("alert");
-    expect(alerts.map((a) => a.textContent)).toEqual([
-      "form.identityRequired",
-      "form.startDateRequired",
-    ]);
-    expect(screen.getByLabelText("field.routeName")).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByLabelText("field.depart")).toHaveAttribute("aria-invalid", "true");
+    const save = screen.getByRole("button", { name: /form\.save/i });
+    expect(save).toBeDisabled();
+    const hint = screen.getByTestId("save-blocked-hint");
+    expect(hint.textContent).toContain("cruise:form.missing.identity");
+    expect(hint.textContent).toContain("cruise:form.missing.startDate");
     expect(cruiseApi.create).not.toHaveBeenCalled();
 
     // A cruise line alone says what sailed; the start date is still missing.
     await userEvent.type(screen.getByLabelText("field.line"), "AIDA");
-    expect(screen.queryByText("form.identityRequired")).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
-    expect(screen.getByText("form.startDateRequired")).toBeInTheDocument();
-    expect(cruiseApi.create).not.toHaveBeenCalled();
+    expect(hint.textContent).not.toContain("cruise:form.missing.identity");
+    expect(hint.textContent).toContain("cruise:form.missing.startDate");
+    expect(save).toBeDisabled();
   });
 
   // The server's `error` is English prose or zod's JSON issue dump; the form
@@ -423,7 +420,7 @@ describe("CruiseEditModal", () => {
       );
       expect(select.value).toBe("");
 
-      await userEvent.type(screen.getByLabelText("field.depart"), "2026-05-20");
+      await userEvent.type(screen.getByLabelText(/^field\.startDate/), "2026-05-20");
       await waitFor(() => expect(select.value).toBe("trip-1"));
 
       fillRequired();

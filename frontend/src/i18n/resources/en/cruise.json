@@ -49,15 +49,15 @@
     "edit": "Edit",
     "delete": "Delete",
     "deleteConfirmTitle": "Delete cruise?",
-    "deleteConfirmMessage": "“{{name}}” will be permanently deleted, along with its {{count}} port calls. Trips it belongs to are kept.",
+    "deleteConfirmMessage": "“{{name}}” will be permanently deleted, along with its {{count}} port calls.",
     "deleteConfirm": "Delete permanently",
     "deleteCancel": "Cancel",
     "deleteSuccess": "Cruise deleted",
     "deleteError": "Could not delete the cruise",
     "loadError": "The cruise could not be loaded.",
-    "deleteConfirmMessage_one": "“{{name}}” will be permanently deleted, along with its one port call. Trips it belongs to are kept.",
-    "deleteConfirmMessage_other": "“{{name}}” will be permanently deleted, along with its {{count}} port calls. Trips it belongs to are kept.",
-    "deleteConfirmMessageNoStops": "“{{name}}” will be permanently deleted. Trips it belongs to are kept.",
+    "deleteConfirmMessage_one": "“{{name}}” will be permanently deleted, along with its one port call.",
+    "deleteConfirmMessage_other": "“{{name}}” will be permanently deleted, along with its {{count}} port calls.",
+    "deleteConfirmMessageNoStops": "“{{name}}” will be permanently deleted.",
     "backToLogbook": "Logbook · Cruises",
     "itinerary": "Itinerary",
     "nights": "Nights",
@@ -107,7 +107,9 @@
     "departPortAirport": "From airport",
     "arrivePortAirport": "To airport",
     "color": "Color",
-    "colorAuto": "Automatic (derived from cruise ID)"
+    "colorAuto": "Automatic (derived from cruise ID)",
+    "startDate": "Departure date",
+    "endDate": "Arrival date"
   },
   "seatClass": {
     "economy": "Economy",
@@ -223,8 +225,18 @@
     "editTitle": "Edit cruise",
     "saveError": "Could not save the cruise",
     "routeNameSuggestion": "Use suggestion: {{name}}",
-    "identityRequired": "Enter a ship, a route name, a cruise line or the departure port – otherwise the cruise cannot be recognised.",
-    "startDateRequired": "Enter the departure date."
+    "missing": {
+      "identity": "a ship, line, route name or departure port (any one)",
+      "startDate": "departure date",
+      "stopPort": "port for day {{day}} (or “At sea”)"
+    },
+    "identityHint": "One of these is required: ship, line, route name or departure port – otherwise the cruise cannot be recognised.",
+    "errors": {
+      "endBeforeStart": "The arrival date is before the departure date.",
+      "deck": "A deck is a whole number from 1 to 30.",
+      "price": "The price cannot be negative."
+    },
+    "colorPicked": "Chosen colour: {{color}}"
   },
   "add": {
     "title": "Add cruise"
@@ -357,5 +369,9 @@
     "saveError": "The track could not be saved.",
     "alreadyImported": "This recording is already on the cruise.",
     "removeError": "The track could not be removed."
+  },
+  "deleteSurvivors": {
+    "trip": "the trip “{{name}}”",
+    "tripUnnamed": "the linked trip"
   }
 }

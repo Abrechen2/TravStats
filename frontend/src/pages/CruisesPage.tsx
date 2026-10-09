@@ -27,8 +27,9 @@ import { useCruiseImportAdapter } from "../components/import/adapters/cruiseAdap
 import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
 import { SkeletonTable } from "../components/SkeletonLoader";
 import { useTranslation } from "../hooks/useTranslation";
-import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
-import { countPortCalls } from "../components/Cruise/cruisePorts";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { cruiseDeleteMessage } from "../components/Cruise/cruiseDeleteMessage";
+import { useDocumentCount } from "../hooks/useDocumentCount";
 import type { CruiseFacets, CruiseListQuery } from "../lib/api/cruise";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
@@ -106,6 +107,11 @@ export default function CruisesPage(): JSX.Element {
   const [editingCruise, setEditingCruise] = useState<Cruise | null>(null);
   const [cruiseToDelete, setCruiseToDelete] = useState<Cruise | null>(null);
   const [deleting, setDeleting] = useState<boolean>(false);
+  // Asked only while the question is open (forgejo#250): the originals go
+  // with the cruise, and the question names them — as the detail page did.
+  const documentCount = useDocumentCount(
+    cruiseToDelete ? { type: "cruise", id: cruiseToDelete.id } : null
+  );
   const [duplicateSource, setDuplicateSource] = useState<Cruise | null>(null);
 
   // Filter state — mirrors the flights filter panel conceptually but the
@@ -141,10 +147,6 @@ export default function CruisesPage(): JSX.Element {
       setSort(col, col === "ship" || col === "line" || col === "status" ? "asc" : "desc");
     }
   };
-
-  /** Ship name, falling back to the free-text override the parser may set. */
-  const cruiseName = (c: Cruise): string =>
-    c.ship?.name ?? c.shipNameOverride ?? t("list.unnamedShip");
 
   const confirmDelete = async (): Promise<void> => {
     if (!cruiseToDelete) return;
@@ -545,19 +547,7 @@ export default function CruisesPage(): JSX.Element {
           onConfirm={() => void confirmDelete()}
           isLoading={deleting}
           title={t("detail.deleteConfirmTitle")}
-          message={
-            cruiseToDelete
-              ? countedDeleteMessage(
-                  t,
-                  {
-                    counted: "cruise:detail.deleteConfirmMessage",
-                    empty: "cruise:detail.deleteConfirmMessageNoStops",
-                  },
-                  cruiseName(cruiseToDelete),
-                  countPortCalls(cruiseToDelete)
-                )
-              : ""
-          }
+          message={cruiseToDelete ? cruiseDeleteMessage(t, cruiseToDelete, documentCount) : ""}
           confirmText={t("common:buttons.delete")}
           confirmButtonClass={DELETE_BUTTON_CLASS}
         />

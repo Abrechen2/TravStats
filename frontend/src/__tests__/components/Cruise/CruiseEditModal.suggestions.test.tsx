@@ -45,11 +45,24 @@ vi.mock("@/hooks/useTagSuggestions", () => ({
 const stopDates = (): string[] =>
   screen.getAllByLabelText("stops.date").map((el) => (el as HTMLInputElement).value);
 
+/**
+ * Stops added in these tests have no port. Since forgejo#245 such a day blocks
+ * the save (the server refuses it: a stop is a port, a sea day or an
+ * unresolved port), so they are made sea days first — the dates under test
+ * do not depend on what the day is.
+ */
+function markAddedStopsAtSea(): void {
+  for (const box of screen.queryAllByRole("checkbox", { name: "stops.at_sea" })) {
+    if (!(box as HTMLInputElement).checked) fireEvent.click(box);
+  }
+}
+
 async function savedPayload(): Promise<Parameters<typeof cruiseApi.create>[0]> {
+  markAddedStopsAtSea();
   // A new cruise needs something that sailed and a start date before it is sent.
   const routeName = screen.getByLabelText("field.routeName") as HTMLInputElement;
   if (!routeName.value) fireEvent.change(routeName, { target: { value: "Nordland" } });
-  const depart = screen.getAllByLabelText("field.depart")[0] as HTMLInputElement;
+  const depart = screen.getByLabelText(/^field\.startDate/) as HTMLInputElement;
   if (!depart.value) fireEvent.change(depart, { target: { value: "2026-07-01" } });
   await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
   await waitFor(() => expect(cruiseApi.create).toHaveBeenCalled());
@@ -69,7 +82,7 @@ describe("CruiseEditModal — entry suggestions", () => {
   describe("stop dates", () => {
     it("dates each added stop from the start date and its day of the cruise", async () => {
       render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
-      fireEvent.change(screen.getByLabelText("field.depart"), {
+      fireEvent.change(screen.getByLabelText(/^field\.startDate/), {
         target: { value: "2026-07-01" },
       });
       const add = screen.getByRole("button", { name: /stops.add/ });
@@ -86,7 +99,7 @@ describe("CruiseEditModal — entry suggestions", () => {
 
     it("keeps a date the user typed when the start date moves", async () => {
       render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
-      const start = screen.getByLabelText("field.depart");
+      const start = screen.getByLabelText(/^field\.startDate/);
       fireEvent.change(start, { target: { value: "2026-07-01" } });
       const add = screen.getByRole("button", { name: /stops.add/ });
       await userEvent.click(add);
@@ -128,11 +141,11 @@ describe("CruiseEditModal — entry suggestions", () => {
 
   describe("end date", () => {
     const endInput = (): HTMLInputElement =>
-      screen.getAllByLabelText("field.arrive")[0] as HTMLInputElement;
+      screen.getByLabelText("field.endDate") as HTMLInputElement;
 
     it("follows the last day of the cruise while the user has not touched it", async () => {
       render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
-      fireEvent.change(screen.getByLabelText("field.depart"), {
+      fireEvent.change(screen.getByLabelText(/^field\.startDate/), {
         target: { value: "2026-07-01" },
       });
       const add = screen.getByRole("button", { name: /stops.add/ });
@@ -146,7 +159,7 @@ describe("CruiseEditModal — entry suggestions", () => {
 
     it("stops following once the user edits it", async () => {
       render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
-      fireEvent.change(screen.getByLabelText("field.depart"), {
+      fireEvent.change(screen.getByLabelText(/^field\.startDate/), {
         target: { value: "2026-07-01" },
       });
       const add = screen.getByRole("button", { name: /stops.add/ });

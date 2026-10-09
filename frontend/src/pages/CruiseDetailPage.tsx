@@ -6,7 +6,6 @@ import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
 import { CruiseRouteMap } from "../components/Cruise/CruiseRouteMap";
 import {
   buildEffectiveTimeline,
-  countPortCalls,
   countUniquePorts,
   countUnresolvedPorts,
 } from "../components/Cruise/cruisePorts";
@@ -30,7 +29,8 @@ import { useToastStore } from "../store/toastStore";
 import { cruiseExtractTarget } from "../lib/extractTargets";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
-import { countedDeleteMessage, DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { cruiseDeleteMessage } from "../components/Cruise/cruiseDeleteMessage";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { logger } from "../lib/logger";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
@@ -357,19 +357,7 @@ export default function CruiseDetailPage(): JSX.Element {
         // confirmation filed with a cruise cascades with it (`onDelete:
         // Cascade`, proven live by
         // `backend/src/__tests__/integrity/cascades.integrity.test.ts`).
-        message={withDocumentNote(
-          countedDeleteMessage(
-            t,
-            {
-              counted: "cruise:detail.deleteConfirmMessage",
-              empty: "cruise:detail.deleteConfirmMessageNoStops",
-            },
-            cruise.ship?.name ?? cruise.shipNameOverride ?? t("list.unnamedShip"),
-            countPortCalls(cruise)
-          ),
-          t,
-          documentCount
-        )}
+        message={cruiseDeleteMessage(t, cruise, documentCount)}
         confirmText={t("detail.deleteConfirm")}
         cancelText={t("detail.deleteCancel")}
         confirmButtonClass={DELETE_BUTTON_CLASS}

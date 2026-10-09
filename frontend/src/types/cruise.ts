@@ -180,6 +180,7 @@ export type CruiseStopWire = Omit<
   | "departureTime"
   | "arrivalFold"
   | "departureFold"
+  | "uiKey"
 > & {
   date?: string | null;
   arrivalTime?: LocalTimeInput | null;
