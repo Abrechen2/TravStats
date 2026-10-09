@@ -56,7 +56,7 @@
     "triggerLabel": "Reise hinzufügen",
     "document": {
       "title": "Reiseunterlagen einlesen",
-      "description": "Die Mail deines Veranstalters samt PDF — Flüge, Hotels und Termine stehen dort vollständig drin."
+      "description": "Das PDF deines Veranstalters — Rechnung oder Reiseunterlagen. Flüge, Hotels und Preis werden zu einer Reise, die du vorher prüfst."
     },
     "fromExisting": {
       "title": "Aus vorhandenen Einträgen bauen",
@@ -102,12 +102,94 @@
       "flight": "Als Flug importieren",
       "cruise": "Als Kreuzfahrt importieren",
       "lodging": "Als Unterkunft importieren",
-      "rail": "Als Bahnfahrt importieren"
+      "rail": "Als Bahnfahrt importieren",
+      "package": "Als Reise importieren"
     },
-    "dismiss": "Schließen"
+    "dismiss": "Schließen",
+    "package": "Das sind Reiseunterlagen eines Veranstalters — importiere sie unter Reisen."
   },
   "readBy": {
     "local": "Gelesen vom KI-Modell {{model}} in deinem Netzwerk.",
     "cloud": "Gelesen vom KI-Modell {{model}} bei {{host}} (Cloud-Anbieter)."
+  },
+  "package": {
+    "title": "Reise aus Veranstalter-Unterlagen",
+    "intro": "Gelesen mit der Vorlage für {{issuer}}. Nichts wird gespeichert, bevor du übernimmst.",
+    "loading": "Abgleich mit deinem Reisetagebuch …",
+    "sections": {
+      "trip": "Reise",
+      "booking": "Buchung",
+      "flights": "Flüge",
+      "stays": "Unterkünfte",
+      "cruise": "Kreuzfahrt",
+      "warnings": "Bitte prüfen",
+      "document": "Dokument"
+    },
+    "tripName": "Name der Reise",
+    "tripAction": {
+      "create": "Neue Reise",
+      "attach": "Vorhandene Reise wird ergänzt"
+    },
+    "matchedBy": {
+      "bookingReference": "über die Buchungsnummer gefunden",
+      "dateOverlap": "über den Reisezeitraum gefunden"
+    },
+    "bookingAction": {
+      "create": "Neue Buchung",
+      "attach": "Vorhandene Buchung"
+    },
+    "reference": "Buchungsnummer {{reference}}",
+    "price": "Gesamtpreis {{price}}",
+    "noPrice": "Kein Preis im Dokument",
+    "storedPrice": "Gespeichert ist {{price}} — dieser Preis bleibt.",
+    "action": {
+      "create": "Neu",
+      "attach": "Wird zugeordnet",
+      "skip": "Übersprungen"
+    },
+    "reason": {
+      "duplicate": "schon an dieser Reise",
+      "onOtherTrip": "gehört zu einer anderen Reise",
+      "unresolvedAirport": "Flughafen unklar",
+      "excluded": "abgewählt",
+      "undated": "ohne Datum"
+    },
+    "lodgingReuse": "vorhandene Unterkunft",
+    "airport": {
+      "pick": "Flughafen für „{{city}}“ wählen",
+      "pickPlaceholder": "Bitte wählen …",
+      "code": "IATA-Code für „{{city}}“",
+      "apply": "Übernehmen"
+    },
+    "warning": {
+      "airportAmbiguous": "„{{subject}}“ passt zu mehreren Flughäfen — bitte wählen.",
+      "airportUnknown": "„{{subject}}“ ist kein bekannter Flughafen — bitte den IATA-Code eintragen.",
+      "priceConflict": "Die Buchung {{subject}} hat schon einen anderen Preis; er bleibt erhalten.",
+      "flightOnOtherTrip": "Flug {{subject}} gehört schon zu einer anderen Reise und bleibt dort.",
+      "stayOnOtherTrip": "„{{subject}}“ gehört schon zu einer anderen Reise und bleibt dort.",
+      "cruiseUndated": "Die Kreuzfahrt „{{subject}}“ hat im Dokument kein Datum und wird nicht angelegt.",
+      "documentFiledElsewhere": "Das Dokument liegt schon bei einem anderen Eintrag und wird nicht verschoben."
+    },
+    "document": {
+      "file": "Das Dokument wird an der Reise abgelegt.",
+      "alreadyOnTrip": "Das Dokument liegt schon an dieser Reise.",
+      "filedElsewhere": "Das Dokument liegt bei einem anderen Eintrag."
+    },
+    "nothingNew": "Alles aus diesem Dokument ist schon vorhanden.",
+    "commit": "Reise übernehmen",
+    "committing": "Wird gespeichert …",
+    "saved": "Reise gespeichert.",
+    "errors": {
+      "preview": "Der Abgleich ist fehlgeschlagen. Bitte erneut versuchen.",
+      "commit": "Die Reise konnte nicht gespeichert werden. Es wurde nichts angelegt.",
+      "readingInvalid": "Die Vorlage hat Werte gelesen, die nicht zu einer Reise passen. Es wurde nichts angelegt.",
+      "readingMissing": "Dieses Dokument wurde nicht als Veranstalter-Unterlage gelesen.",
+      "flightInvalid": "Flug {{flight}} kann so nicht angelegt werden (z. B. Ankunft vor Abflug). Es wurde nichts angelegt.",
+      "documentFiled": "Das Dokument wurde inzwischen woanders abgelegt. Es wurde nichts angelegt."
+    },
+    "empty": {
+      "noTemplate": "Für dieses Dokument gibt es noch keine Veranstalter-Vorlage. Es wurde nichts ausgelesen.",
+      "invalidReading": "Die Vorlage für {{issuer}} erkennt das Dokument, liest aber unvollständig. Es wurde nichts ausgelesen."
+    }
   }
 }

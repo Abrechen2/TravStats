@@ -118,12 +118,90 @@ export interface ParseEmailRailResult extends RailParseFields {
   html?: string;
 }
 
+/**
+ * A package tour's reading (plan 2026-10-09 P3) — the names the backend's
+ * `services/trip/package/contract.ts` fixes. Dates are `YYYY-MM-DD`, times
+ * `HH:MM`, calendar strings with no zone.
+ */
+export interface PackageFlightReading {
+  flightNumber: string;
+  date: string;
+  depIata?: string | null;
+  arrIata?: string | null;
+  depCity?: string | null;
+  arrCity?: string | null;
+  depTime?: string | null;
+  arrTime?: string | null;
+  arrDayOffset?: number | null;
+  airline?: string | null;
+}
+
+export interface PackageStayReading {
+  name: string;
+  checkIn: string;
+  checkOut: string;
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
+  board?: string | null;
+  room?: string | null;
+}
+
+export interface PackageReading {
+  bookingReference: string;
+  issuedOn: string;
+  tripName?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  travellers?: number | null;
+  totalPrice?: number | null;
+  currency?: string | null;
+  flights: PackageFlightReading[];
+  stays: PackageStayReading[];
+  cruiseShip?: string | null;
+  cruiseFrom?: string | null;
+  cruiseTo?: string | null;
+  cruiseCabin?: string | null;
+  cruiseStart?: string | null;
+  cruiseEnd?: string | null;
+}
+
+/** Why a package document came back empty — worded by the client. */
+export type PackageParseFallbackCode = "noTemplate" | "invalidReading";
+
+interface PackageParseFields {
+  domain: "package";
+  package: PackageReading | null;
+  template: { id: string; version: string; issuer: string } | null;
+  parserUsed: "template" | "none";
+  ollamaAvailable: boolean;
+  fallbackCode?: PackageParseFallbackCode;
+  /** English, for the log — never shown. */
+  fallbackReason?: string;
+  /** The contract paths a recognising template failed. */
+  issues?: string[];
+  /** Present when the document was kept (`retain: true`). */
+  documentId?: string;
+  domainMismatch?: { detected: ParseDomain; confidence: number };
+}
+
+export interface ParsePdfPackageResult extends PackageParseFields {
+  pdfTextLength: number;
+}
+
+export interface ParseEmailPackageResult extends PackageParseFields {
+  subject?: string;
+  text?: string;
+  html?: string;
+}
+
 export type ParsePdfResult =
   | ParsePdfFlightResult
   | ParsePdfCruiseResult
   | ParsePdfLodgingResult
   | ParsePdfRailResult
-  | ParsePdfRentalResult;
+  | ParsePdfRentalResult
+  | ParsePdfPackageResult;
 
 export function isCruisePdfResult(r: ParsePdfResult): r is ParsePdfCruiseResult {
   return r.domain === "cruise";
@@ -139,6 +217,10 @@ export function isRailPdfResult(r: ParsePdfResult): r is ParsePdfRailResult {
 
 export function isRentalPdfResult(r: ParsePdfResult): r is ParsePdfRentalResult {
   return r.domain === "rental";
+}
+
+export function isPackagePdfResult(r: ParsePdfResult): r is ParsePdfPackageResult {
+  return r.domain === "package";
 }
 
 interface ParserCheckResult {
@@ -178,10 +260,21 @@ export type ParseEmailResult =
   | ParseEmailCruiseResult
   | ParseEmailLodgingResult
   | ParseEmailRailResult
-  | ParseEmailRentalResult;
+  | ParseEmailRentalResult
+  | ParseEmailPackageResult;
 
-/** The domains a document can be parsed for — `components/import/types.ts` mirrors it. */
-export type ParseDomain = "flight" | "cruise" | "lodging" | "rail" | "rental";
+/**
+ * The domains a document can be parsed for — `components/import/types.ts`
+ * mirrors it. `package` is a parse target, not a domain: its reading becomes
+ * a trip proposal (`lib/api/tripPackage.ts`).
+ */
+export type ParseDomain = "flight" | "cruise" | "lodging" | "rail" | "rental" | "package";
+
+/** What every parse call may also ask for. */
+export interface ParseOptions {
+  /** Keep the uploaded document; the answer then carries its `documentId`. */
+  retain?: boolean;
+}
 
 export function isCruiseEmailResult(r: ParseEmailResult): r is ParseEmailCruiseResult {
   return r.domain === "cruise";
@@ -197,6 +290,10 @@ export function isRailEmailResult(r: ParseEmailResult): r is ParseEmailRailResul
 
 export function isRentalEmailResult(r: ParseEmailResult): r is ParseEmailRentalResult {
   return r.domain === "rental";
+}
+
+export function isPackageEmailResult(r: ParseEmailResult): r is ParseEmailPackageResult {
+  return r.domain === "package";
 }
 
 // Parse API (Email & Boarding Pass) - Uses parserApi with 180s timeout
@@ -238,14 +335,24 @@ export const parseApi = {
     (
       emailContent: string,
       subject: string | undefined,
+      domain: "package"
+    ): Promise<ParseEmailPackageResult>;
+    (
+      emailContent: string,
+      subject: string | undefined,
       domain: ParseDomain
     ): Promise<ParseEmailResult>;
   },
 
-  parseEmailFile: (async (file: File, domain: ParseDomain = "flight") => {
+  parseEmailFile: (async (
+    file: File,
+    domain: ParseDomain = "flight",
+    options: ParseOptions = {}
+  ) => {
     const formData = new FormData();
     formData.append("email", file);
     formData.append("domain", domain);
+    if (options.retain) formData.append("retain", "true");
 
     const { data } = await parserApi.post<ParseEmailResult>("/parse-email-file", formData, {
       headers: {
@@ -260,7 +367,8 @@ export const parseApi = {
     (file: File, domain: "lodging"): Promise<ParseEmailLodgingResult>;
     (file: File, domain: "rail"): Promise<ParseEmailRailResult>;
     (file: File, domain: "rental"): Promise<ParseEmailRentalResult>;
-    (file: File, domain: ParseDomain): Promise<ParseEmailResult>;
+    (file: File, domain: "package", options?: ParseOptions): Promise<ParseEmailPackageResult>;
+    (file: File, domain: ParseDomain, options?: ParseOptions): Promise<ParseEmailResult>;
   },
 
   parseBoardingpass: async (
@@ -274,8 +382,16 @@ export const parseApi = {
     return data;
   },
 
-  parsePdf: (async (pdfBase64: string, domain: ParseDomain = "flight") => {
-    const { data } = await parserApi.post<ParsePdfResult>("/parse-pdf", { pdfBase64, domain });
+  parsePdf: (async (
+    pdfBase64: string,
+    domain: ParseDomain = "flight",
+    options: ParseOptions = {}
+  ) => {
+    const { data } = await parserApi.post<ParsePdfResult>("/parse-pdf", {
+      pdfBase64,
+      domain,
+      ...(options.retain ? { retain: true } : {}),
+    });
     return data;
   }) as {
     (pdfBase64: string): Promise<ParsePdfFlightResult>;
@@ -284,7 +400,8 @@ export const parseApi = {
     (pdfBase64: string, domain: "lodging"): Promise<ParsePdfLodgingResult>;
     (pdfBase64: string, domain: "rail"): Promise<ParsePdfRailResult>;
     (pdfBase64: string, domain: "rental"): Promise<ParsePdfRentalResult>;
-    (pdfBase64: string, domain: ParseDomain): Promise<ParsePdfResult>;
+    (pdfBase64: string, domain: "package", options?: ParseOptions): Promise<ParsePdfPackageResult>;
+    (pdfBase64: string, domain: ParseDomain, options?: ParseOptions): Promise<ParsePdfResult>;
   },
 
   checkOllamaVision: async (): Promise<ParserCheckResult> => {

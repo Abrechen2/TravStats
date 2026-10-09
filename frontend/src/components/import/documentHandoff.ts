@@ -8,7 +8,14 @@ import type { ParseDomain } from "../../lib/api/parse";
  */
 export type ImportDocument = { kind: "file"; file: File } | { kind: "text"; text: string };
 
-const PARSE_DOMAINS: readonly ParseDomain[] = ["flight", "cruise", "lodging", "rail", "rental"];
+const PARSE_DOMAINS: readonly ParseDomain[] = [
+  "flight",
+  "cruise",
+  "lodging",
+  "rail",
+  "rental",
+  "package",
+];
 
 /**
  * The domain the server says a document really is, when that is not the one
