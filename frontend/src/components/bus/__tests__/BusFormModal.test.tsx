@@ -76,6 +76,8 @@ import { rideFixture } from "./busFixture";
 const NO_CHIPS = { operators: [], fareClasses: [], terminals: [] };
 
 const saveButton = (): HTMLElement => screen.getByTestId("bus-form-save");
+/** The departure's label ends in the required mark (forgejo#245). */
+const DEPARTURE_TIME = /^bus:form\.departureTime\s*\*?$/;
 
 /**
  * Renders and lets the two mount-time lookups (trips, entry suggestions)
@@ -102,7 +104,7 @@ function pickBothTerminals(): void {
 }
 
 function typeDeparture(value: string): void {
-  fireEvent.change(screen.getByLabelText("bus:form.departureTime"), { target: { value } });
+  fireEvent.change(screen.getByLabelText(DEPARTURE_TIME), { target: { value } });
 }
 
 describe("BusFormModal", () => {
@@ -253,10 +255,13 @@ describe("BusFormModal", () => {
     fireEvent.click(saveButton());
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(saveButton()).toBeDisabled());
+    // Said as saved (the shared notice), never as a refusal; the save button
+    // is gone, so there is nothing left to file the ride a second time with.
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "common:form.savedButRefreshFailed"
+    );
     expect(screen.queryByRole("alert")).toBeNull();
-    // Stored once; a second click has nothing to send.
-    fireEvent.click(saveButton());
+    expect(screen.queryByTestId("bus-form-save")).toBeNull();
     expect(create).toHaveBeenCalledTimes(1);
     await settle();
   });
@@ -395,8 +400,8 @@ describe("BusFormModal", () => {
       });
 
       fireEvent.click(screen.getByLabelText(DEP_BOX));
-      expect(screen.getByLabelText("bus:form.departureTime")).toHaveAttribute("type", "date");
-      expect(screen.getByLabelText("bus:form.departureTime")).toHaveValue("2026-09-20");
+      expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveAttribute("type", "date");
+      expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("2026-09-20");
       // The other end is untouched.
       expect(screen.getByLabelText("bus:form.arrivalTime")).toHaveAttribute(
         "type",
@@ -452,7 +457,7 @@ describe("BusFormModal", () => {
       await renderModal(ride);
       expect(screen.getByLabelText(DEP_BOX)).toBeChecked();
       expect(screen.getByLabelText(ARR_BOX)).not.toBeChecked();
-      expect(screen.getByLabelText("bus:form.departureTime")).toHaveValue("2026-09-20");
+      expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("2026-09-20");
     });
 
     it("opens a mixed ride with only the arrival box ticked and saves one day and one clock", async () => {
@@ -495,7 +500,8 @@ describe("BusFormModal", () => {
 
       fireEvent.click(screen.getByLabelText(ARR_BOX));
       expect(delay).toBeDisabled();
-      expect(delay).toHaveAccessibleDescription("bus:form.delayNeedsClock");
+      // The always-visible hint is the description now, with the reason added.
+      expect(delay).toHaveAccessibleDescription(/bus:form\.delayNeedsClock/);
 
       fireEvent.click(saveButton());
       await waitFor(() => expect(update).toHaveBeenCalled());
@@ -548,7 +554,7 @@ describe("BusFormModal", () => {
       const later = screen.getByLabelText("common:clockChange.later");
       expect(later).toBeChecked();
 
-      fireEvent.change(screen.getByLabelText("bus:form.departureTime"), {
+      fireEvent.change(screen.getByLabelText(DEPARTURE_TIME), {
         target: { value: "2026-10-25T02:45" },
       });
       expect(screen.getByLabelText("common:clockChange.later")).not.toBeChecked();
@@ -582,7 +588,7 @@ describe("BusFormModal", () => {
       fireEvent.click(screen.getByLabelText(box));
       fireEvent.click(screen.getByLabelText(box));
       // The clock comes back as midnight, which is not the repeated hour.
-      expect(screen.getByLabelText("bus:form.departureTime")).toHaveValue("2026-10-25T00:00");
+      expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("2026-10-25T00:00");
       fireEvent.click(saveButton());
       await waitFor(() => expect(update).toHaveBeenCalled());
       expect(update).toHaveBeenCalledWith("r1", expect.objectContaining({ departureFold: null }));
@@ -591,7 +597,7 @@ describe("BusFormModal", () => {
     it("a time changed away and back keeps the stored occurrence", async () => {
       update.mockResolvedValue({ id: "r1" });
       await renderModal(repeatedRide());
-      const input = screen.getByLabelText("bus:form.departureTime");
+      const input = screen.getByLabelText(DEPARTURE_TIME);
       fireEvent.change(input, { target: { value: "2026-10-25T04:00" } });
       expect(screen.queryByLabelText("common:clockChange.later")).toBeNull();
       fireEvent.change(input, { target: { value: "2026-10-25T02:30" } });

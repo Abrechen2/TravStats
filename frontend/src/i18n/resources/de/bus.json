@@ -73,6 +73,14 @@
     "stationName": "Name wie auf dem Ticket",
     "stationAddress": "Adresse (optional)",
     "stationMissing": "Beide Terminals brauchen einen Ort — über die Suche oder einen Vorschlag wählen.",
+    "missing": {
+      "depName": "Name des Abfahrtsterminals",
+      "arrName": "Name des Ankunftsterminals",
+      "depCoordinates": "gültige Koordinaten des Abfahrtsterminals",
+      "arrCoordinates": "gültige Koordinaten des Ankunftsterminals",
+      "departureTime": "Abfahrtszeit",
+      "departureDay": "Abfahrtsdatum"
+    },
     "suggestionsFailed": "Vorschläge aus deinen Fahrten konnten nicht geladen werden.",
     "departureTime": "Abfahrt (Ortszeit am Terminal)",
     "arrivalTime": "Ankunft (Ortszeit am Terminal)",

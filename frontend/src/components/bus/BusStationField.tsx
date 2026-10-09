@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import type { JSX } from "react";
 import { LocationInput, type LocationSelection } from "../location/LocationInput";
+import { RequiredMark } from "../form";
 import { useTranslation } from "../../hooks/useTranslation";
 
 /** A terminal as the form holds it; `lat`/`lon` null until one is picked. */
@@ -25,7 +26,13 @@ interface Props {
   idPrefix: string;
   value: BusStationDraft;
   onChange: (next: BusStationDraft) => void;
-  onValidityChange?: (valid: boolean) => void;
+  /** Reports a refused typed coordinate, and which of the two (`LocationInput`'s second argument). */
+  onValidityChange?: (valid: boolean, field?: "lat" | "lon") => void;
+  /**
+   * The ride cannot be saved without this terminal (forgejo#245): the search
+   * and the name carry the shared mark and `aria-required`.
+   */
+  required?: boolean;
   inputClassName: string;
 }
 
@@ -44,6 +51,7 @@ export function BusStationField({
   value,
   onChange,
   onValidityChange,
+  required = false,
   inputClassName,
 }: Props): JSX.Element {
   const { t } = useTranslation(["bus"]);
@@ -69,6 +77,11 @@ export function BusStationField({
   const position =
     value.lat !== null && value.lon !== null ? { lat: value.lat, lon: value.lon } : null;
 
+  // Visible labels (forgejo#249): with only a placeholder, a filled-in name
+  // field no longer said what it was. The accessible name keeps the terminal
+  // in front, because the two terminals' fields read the same on screen.
+  const nameId = `${idPrefix}-name`;
+  const addressId = `${idPrefix}-address`;
   return (
     <div className="space-y-2">
       <LocationInput
@@ -77,22 +90,40 @@ export function BusStationField({
         value={position}
         onChange={handlePick}
         onValidityChange={onValidityChange}
+        required={required}
         compact
       />
-      <input
-        className={inputClassName}
-        aria-label={`${label}: ${t("bus:form.stationName")}`}
-        placeholder={t("bus:form.stationName")}
-        value={value.name}
-        onChange={(e): void => onChange({ ...value, name: e.target.value })}
-      />
-      <input
-        className={inputClassName}
-        aria-label={`${label}: ${t("bus:form.stationAddress")}`}
-        placeholder={t("bus:form.stationAddress")}
-        value={value.address}
-        onChange={(e): void => onChange({ ...value, address: e.target.value })}
-      />
+      <div>
+        <label htmlFor={nameId} className="block text-sm">
+          {t("bus:form.stationName")}
+          {required && (
+            <>
+              {" "}
+              <RequiredMark />
+            </>
+          )}
+        </label>
+        <input
+          id={nameId}
+          className={`mt-1 ${inputClassName}`}
+          aria-label={`${label}: ${t("bus:form.stationName")}`}
+          {...(required ? { "aria-required": true } : {})}
+          value={value.name}
+          onChange={(e): void => onChange({ ...value, name: e.target.value })}
+        />
+      </div>
+      <div>
+        <label htmlFor={addressId} className="block text-sm">
+          {t("bus:form.stationAddress")}
+        </label>
+        <input
+          id={addressId}
+          className={`mt-1 ${inputClassName}`}
+          aria-label={`${label}: ${t("bus:form.stationAddress")}`}
+          value={value.address}
+          onChange={(e): void => onChange({ ...value, address: e.target.value })}
+        />
+      </div>
     </div>
   );
 }

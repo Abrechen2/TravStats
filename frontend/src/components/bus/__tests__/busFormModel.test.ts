@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canSubmit, draftFrom, saveErrorFrom, toBusInput } from "../busFormModel";
+import { canSubmit, draftFrom, missingSteps, saveErrorFrom, toBusInput } from "../busFormModel";
 import type { BusJourney } from "../../../types/bus";
 import type { TimeValue } from "../../../shared/time";
 import { EMPTY_TERMINAL } from "../BusStationField";
@@ -123,15 +123,65 @@ describe("busFormModel", () => {
       key: "bus:form.errors.noZone",
       field: "departureLocal",
     });
-    expect(saveErrorFrom(refused("BUS_INVALID_INPUT", "seat"))).toMatchObject({
+    expect(saveErrorFrom(refused("BUS_INVALID_INPUT", "seat"))).toEqual({
       key: "bus:form.errors.invalidField",
+      // At the seat field (forgejo#246), not only named in the banner.
+      field: "seat",
       fieldLabelKey: "bus:form.seatNumber",
+    });
+    // A composite control has no single input to mark: the banner names it.
+    expect(saveErrorFrom(refused("BUS_INVALID_INPUT", "departureStation"))).toEqual({
+      key: "bus:form.errors.invalidField",
+      field: null,
+      fieldLabelKey: "bus:form.departureStation",
     });
     expect(saveErrorFrom(refused("BUS_INVALID_INPUT"))).toEqual({
       key: "bus:form.errors.invalid",
       field: null,
     });
   });
+  describe("missingSteps — why the save is greyed out (forgejo#245)", () => {
+    const none = { departure: null, arrival: null } as const;
+
+    it("names both terminals and the departure time on an empty form, in the form's order", () => {
+      expect(missingSteps(draftFrom(null), none)).toEqual([
+        { field: "bus-dep-search", labelKey: "bus:form.departureStation" },
+        { field: "bus-arr-search", labelKey: "bus:form.arrivalStation" },
+        { field: "bus-departureLocal", labelKey: "bus:form.missing.departureTime" },
+      ]);
+    });
+
+    it("asks for a date, not a clock, when only the departure's date is known", () => {
+      expect(missingSteps({ ...placed, departureDayOnly: true }, none)).toEqual([
+        { field: "bus-departureLocal", labelKey: "bus:form.missing.departureDay" },
+      ]);
+    });
+
+    it("names the NAME of a terminal that has a position but no name", () => {
+      const steps = missingSteps(
+        { ...placed, arrival: { ...SEOUL, name: "  " }, departureLocal: "2026-09-20T09:00" },
+        none
+      );
+      expect(steps).toEqual([{ field: "bus-arr-name", labelKey: "bus:form.missing.arrName" }]);
+    });
+
+    it("names a refused coordinate and points at the one that was refused", () => {
+      const steps = missingSteps(
+        { ...placed, departureLocal: "2026-09-20T09:00" },
+        { departure: "lon", arrival: null }
+      );
+      expect(steps).toEqual([
+        { field: "bus-dep-lon", labelKey: "bus:form.missing.depCoordinates" },
+      ]);
+    });
+
+    it("is empty exactly when the form can be submitted", () => {
+      const ready = { ...placed, departureLocal: "2026-09-20T09:00" };
+      expect(canSubmit(ready)).toBe(true);
+      expect(missingSteps(ready, none)).toEqual([]);
+    });
+  });
+
   describe("the repeated autumn hour (forgejo#214)", () => {
     // 2026-10-25: Europe/Berlin goes back at 03:00 CEST, so 02:30 happens twice.
     const berlinRide = (utc: string, offset: string): BusJourney => {

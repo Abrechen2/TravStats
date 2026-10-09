@@ -151,6 +151,64 @@ export function canSubmit(draft: BusFormDraft): boolean {
   );
 }
 
+/** Which typed coordinate of a terminal `LocationInput` refused, if any. */
+export type BadCoordinate = "lat" | "lon" | null;
+
+/** One reason the save is greyed out: the control that resolves it, and its words. */
+export interface BusMissingStep {
+  field: string;
+  labelKey: string;
+}
+
+/**
+ * What still keeps the save greyed out (forgejo#245), one step per gap and in
+ * the form's order — the same conditions as `canSubmit` plus a refused
+ * coordinate, so the hint can never name less than what blocks the button.
+ * A terminal with a position but no name (a map click, a pasted coordinate)
+ * names its NAME field: sending the user back to the search would be wrong.
+ */
+export function missingSteps(
+  draft: BusFormDraft,
+  bad: { departure: BadCoordinate; arrival: BadCoordinate }
+): BusMissingStep[] {
+  const terminal = (end: "departure" | "arrival"): BusMissingStep[] => {
+    const prefix = end === "departure" ? "bus-dep" : "bus-arr";
+    const short = end === "departure" ? "dep" : "arr";
+    const station = draft[end];
+    const steps: BusMissingStep[] = [];
+    if (!isTerminalComplete(station)) {
+      steps.push(
+        station.lat !== null && station.lon !== null
+          ? { field: `${prefix}-name`, labelKey: `bus:form.missing.${short}Name` }
+          : { field: `${prefix}-search`, labelKey: `bus:form.${end}Station` }
+      );
+    }
+    const refused = bad[end];
+    if (refused !== null) {
+      steps.push({
+        field: `${prefix}-${refused}`,
+        labelKey: `bus:form.missing.${short}Coordinates`,
+      });
+    }
+    return steps;
+  };
+  return [
+    ...terminal("departure"),
+    ...terminal("arrival"),
+    ...(draft.departureLocal === ""
+      ? [
+          {
+            field: busFieldId("departureLocal"),
+            // A day-only departure asks for a date, not a clock.
+            labelKey: draft.departureDayOnly
+              ? "bus:form.missing.departureDay"
+              : "bus:form.missing.departureTime",
+          },
+        ]
+      : []),
+  ];
+}
+
 const orNull = (value: string): string | null => (value.trim() === "" ? null : value.trim());
 const numberOrNull = (value: string): number | null => {
   if (value.trim() === "") return null;
@@ -226,8 +284,31 @@ export function toBusInput(draft: BusFormDraft): BusJourneyInput {
   };
 }
 
-/** The form fields a refusal can be shown beside. */
-export type BusFormErrorField = "departureLocal" | "arrivalLocal";
+/**
+ * The form fields a refusal can be shown beside (forgejo#246): every plain
+ * input the server can name. Terminals, currency, tags and companions are
+ * composite controls with no single input to mark, so a refusal naming one
+ * stays in the banner, which names the field.
+ */
+export const BUS_FIELD_ERROR_FIELDS = [
+  "departureLocal",
+  "arrivalLocal",
+  "operator",
+  "lineName",
+  "rideKind",
+  "distanceKm",
+  "fareClass",
+  "seat",
+  "delayMinutes",
+  "bookingReference",
+  "price",
+  "tripId",
+  "notes",
+] as const;
+export type BusFormErrorField = (typeof BUS_FIELD_ERROR_FIELDS)[number];
+
+/** The DOM id of the input a refusal names — and the target a missing step focuses. */
+export const busFieldId = (field: BusFormErrorField): string => `bus-${field}`;
 
 /** A refused save as the form shows it: a message key, maybe beside one field. */
 export interface BusSaveError {
@@ -260,6 +341,8 @@ const FIELD_LABEL_KEYS: Record<string, string> = {
 };
 
 const TIME_FIELDS: readonly string[] = ["departureLocal", "arrivalLocal"];
+const isFieldErrorField = (field: string | null): field is BusFormErrorField =>
+  field !== null && (BUS_FIELD_ERROR_FIELDS as readonly string[]).includes(field);
 
 /**
  * A failed save, read by its stable `code` and `field`. The server's `error`
@@ -271,7 +354,8 @@ export function saveErrorFrom(err: unknown): BusSaveError {
     ?.data;
   const code = typeof data?.code === "string" ? data.code : null;
   const field = typeof data?.field === "string" ? data.field : null;
-  const timeField = field && TIME_FIELDS.includes(field) ? (field as BusFormErrorField) : null;
+  const timeField =
+    field !== null && TIME_FIELDS.includes(field) && isFieldErrorField(field) ? field : null;
   switch (code) {
     case "BUS_ARRIVAL_BEFORE_DEPARTURE":
       return { key: "bus:form.errors.arrivalBeforeDeparture", field: "arrivalLocal" };
@@ -283,7 +367,11 @@ export function saveErrorFrom(err: unknown): BusSaveError {
     case "BUS_INVALID_INPUT": {
       const fieldLabelKey = field ? FIELD_LABEL_KEYS[field] : undefined;
       return fieldLabelKey
-        ? { key: "bus:form.errors.invalidField", field: timeField, fieldLabelKey }
+        ? {
+            key: "bus:form.errors.invalidField",
+            field: isFieldErrorField(field) ? field : null,
+            fieldLabelKey,
+          }
         : { key: "bus:form.errors.invalid", field: null };
     }
     default:

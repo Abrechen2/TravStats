@@ -73,6 +73,14 @@
     "stationName": "Name as printed on the ticket",
     "stationAddress": "Address (optional)",
     "stationMissing": "Both terminals need a position — pick one through the search or a suggestion.",
+    "missing": {
+      "depName": "name of the departure terminal",
+      "arrName": "name of the arrival terminal",
+      "depCoordinates": "valid coordinates of the departure terminal",
+      "arrCoordinates": "valid coordinates of the arrival terminal",
+      "departureTime": "departure time",
+      "departureDay": "departure date"
+    },
     "suggestionsFailed": "Suggestions from your rides could not be loaded.",
     "departureTime": "Departure (local time at the terminal)",
     "arrivalTime": "Arrival (local time at the terminal)",
