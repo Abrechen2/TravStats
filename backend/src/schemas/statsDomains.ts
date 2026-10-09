@@ -114,11 +114,25 @@ export const tripAccountRowSchema = z.object({
     description: "Days inside the trip with none of those. The nudge: something is missing here.",
   }),
   spendByCurrency: z.record(z.string(), z.number()).openapi({
-    description: "Amounts by original currency, NEVER summed across them.",
+    description:
+      "Amounts by original currency, NEVER summed across them. The server's one trip-cost " +
+      "rule (shared/tripCost.ts): a booking price once and all-in, else the entry's own " +
+      "price (a flight's with taxes and fees); a recorded 0 is free, a missing price is " +
+      "left out and counted in `unpricedEntries`.",
   }),
   spendBaseByCurrency: z.record(z.string(), z.number()).openapi({
-    description: "The lodging slice that HAS an FX snapshot, by the base currency it was taken in.",
+    description:
+      "The slice of the spend that carries an FX snapshot, by the base currency the " +
+      "snapshot was taken in. Amounts without one are in `spendByCurrency` only.",
   }),
+  unpricedEntries: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "Live entries whose cost cannot be stated — no price recorded on them or their " +
+        "booking, or an amount with no currency. Above 0, `spendByCurrency` is a lower bound.",
+    }),
   journalEntries: z.number().int(),
   photoCount: z.number().int(),
 });

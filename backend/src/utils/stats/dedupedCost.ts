@@ -1,8 +1,5 @@
-import {
-  hasRecordedBookingPrice,
-  hasRecordedOwnCost,
-  recordedOwnAmount,
-} from "../../shared/flightPricing";
+import { recordedOwnAmount } from "../../shared/flightPricing";
+import { segmentCostShare } from "../../shared/tripCost";
 
 export interface CostFlight {
   price: number | null;
@@ -135,27 +132,22 @@ export function flightCostShare(
   flight: CostFlight,
   countedBookingIds: Set<string>
 ): FlightCostShare {
-  if (flight.bookingId && hasRecordedBookingPrice(flight.booking)) {
-    // Every segment of a priced booking is a priced flight, even though the
-    // booking's amount is added once.
-    const first = !countedBookingIds.has(flight.bookingId);
-    if (first) countedBookingIds.add(flight.bookingId);
-    return {
-      amount: first ? flight.booking!.price : null,
-      currency: flight.booking!.currency,
-      amountBase: first ? flight.booking!.priceBase : null,
-      snapshotCurrency: flight.booking!.fxBaseCurrency,
-      priced: true,
-    };
-  }
-
-  return {
-    amount: recordedOwnAmount(flight),
-    currency: flight.currency,
-    amountBase: flight.priceBase,
-    snapshotCurrency: flight.fxBaseCurrency,
-    priced: hasRecordedOwnCost(flight),
-  };
+  // The booking half is `shared/tripCost.ts`'s, shared with every other
+  // segment a trip's cost is built from (forgejo#274) — one rule, so the
+  // flight statistics and the trip account cannot disagree about a booking.
+  return segmentCostShare(
+    {
+      bookingId: flight.bookingId,
+      booking: flight.booking,
+      own: {
+        amount: recordedOwnAmount(flight),
+        currency: flight.currency,
+        amountBase: flight.priceBase,
+        snapshotCurrency: flight.fxBaseCurrency,
+      },
+    },
+    countedBookingIds
+  );
 }
 
 export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: string): DedupedCost {

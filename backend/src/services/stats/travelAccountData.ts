@@ -26,7 +26,7 @@ import type {
 import { freeStationNights, roadtripHasStarted } from "./roadtripEvidence";
 import type { TripAccountInput } from "./tripAccount";
 import type { ExpenseAccountRow } from "./expenseAccount";
-import type { Prisma } from "../../prisma";
+import { TRIP_COST_SELECT, expenseMoney, toTripCostInput } from "../trip/tripCostLoad";
 
 /** A stay, plus what an evidence entry needs to name it and to link to it. */
 export interface TravelAccountStayRow extends AccountStay {
@@ -61,12 +61,6 @@ export interface TravelAccountData extends TravelAccountInput {
   /** Every expense of the caller's, trip-wide or on a section (forgejo#140). */
   expenses: ExpenseAccountRow[];
 }
-
-/** An expense amount as the account sums it; the column is an exact decimal. */
-const money = (e: { amount: Prisma.Decimal; currency: string }) => ({
-  amount: e.amount.toNumber(),
-  currency: e.currency,
-});
 
 export async function loadTravelAccountData(userId: string): Promise<TravelAccountData> {
   const now = new Date();
@@ -126,56 +120,24 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
         tags: true,
         journalEntries: { select: { mood: true, weather: true } },
         _count: { select: { photos: true } },
+        // The cost rule's own columns (`TRIP_COST_SELECT`, shared with the
+        // "most expensive trip" superlative — forgejo#274), plus the dates
+        // coverage needs on the same rows.
+        ...TRIP_COST_SELECT,
         lodgingStays: {
           select: {
-            status: true,
+            ...TRIP_COST_SELECT.lodgingStays.select,
             checkIn: true,
             checkOut: true,
             datePrecision: true,
             nights: true,
-            totalPrice: true,
-            currency: true,
-            totalPriceBase: true,
-            fxBaseCurrency: true,
           },
         },
         cruises: {
-          select: {
-            status: true,
-            startDate: true,
-            endDate: true,
-            price: true,
-            currency: true,
-          },
+          select: { ...TRIP_COST_SELECT.cruises.select, startDate: true, endDate: true },
         },
-        // Trip-wide expenses, and those of its sections — a section's is
-        // stored on the section, so it follows a roadtrip that changes trip.
-        expenses: { select: { amount: true, currency: true } },
-        routes: { select: { expenses: { select: { amount: true, currency: true } } } },
         flights: {
-          select: {
-            status: true,
-            departureTime: true,
-            arrivalTime: true,
-            // The full cost shape `flightCostShare` needs: a flight's own
-            // cost is price PLUS taxes and fees, and a booking shared by
-            // several segments is counted once (AUD-080).
-            price: true,
-            taxes: true,
-            fees: true,
-            currency: true,
-            priceBase: true,
-            fxBaseCurrency: true,
-            bookingId: true,
-            booking: {
-              select: {
-                price: true,
-                currency: true,
-                priceBase: true,
-                fxBaseCurrency: true,
-              },
-            },
-          },
+          select: { ...TRIP_COST_SELECT.flights.select, departureTime: true, arrivalTime: true },
         },
       },
     }),
@@ -293,12 +255,12 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
       tags: t.tags,
       journalEntries: t.journalEntries,
       photoCount: t._count.photos,
+      ...toTripCostInput(t),
       stays: t.lodgingStays,
       cruises: t.cruises,
       flights: t.flights,
-      expenses: [...t.expenses, ...t.routes.flatMap((r) => r.expenses)].map(money),
     })),
-    expenses: expenses.map((e) => ({ ...money(e), date: e.date })),
+    expenses: expenses.map((e) => ({ ...expenseMoney(e), date: e.date })),
     now,
   };
 }
