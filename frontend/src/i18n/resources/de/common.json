@@ -36,6 +36,7 @@
     "details": "Details",
     "dismiss": "Verwerfen",
     "retry": "Erneut versuchen",
+    "reloadList": "Liste neu laden",
     "showLess": "Weniger anzeigen",
     "moreActions": "Weitere Aktionen"
   },
@@ -143,6 +144,7 @@
     "rateLimited": "Zu viele Anfragen in kurzer Zeit. Bitte warte einen Moment.",
     "demo": "Im Demo-Konto lässt sich das nicht speichern.",
     "network": "Der Server ist nicht erreichbar. Bitte prüfe die Verbindung.",
+    "outcomeUnknown": "Ob gespeichert wurde, ist unklar. Bitte prüfe die Liste, bevor du es erneut versuchst.",
     "timezoneUnavailable": "Die Zeitzone des Ortes lässt sich auf dem Server gerade nicht bestimmen. Die Zeit wurde nicht gespeichert, damit sie nicht falsch als UTC abgelegt wird — bitte den Administrator informieren.",
     "timezoneUnresolved": "Für diesen Ort ist keine Zeitzone bekannt, weil ihm Koordinaten oder ein Katalogeintrag fehlen. Die Zeit wurde nicht gespeichert, damit sie nicht falsch als UTC abgelegt wird — bitte den Ort vervollständigen oder einen anderen wählen.",
     "localTimeNonexistent": "Diese Uhrzeit gibt es an dem Tag dort nicht (Zeitumstellung). Bitte wähle eine Uhrzeit davor oder danach.",

@@ -1,5 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { isTransientSaveError, saveErrorMessage } from "../saveErrorMessage";
+import { afterEach, describe, it, expect, vi } from "vitest";
+import {
+  isOutcomeUnknownSaveError,
+  isTransientSaveError,
+  saveErrorKey,
+  saveErrorMessage,
+} from "../saveErrorMessage";
 import { TRACK_ERROR_KEYS } from "../trackErrorKeys";
 
 const t = (key: string): string => key;
@@ -91,5 +96,59 @@ describe("isTransientSaveError", () => {
     expect(isTransientSaveError("common:saveErrors.validation")).toBe(false);
     expect(isTransientSaveError("common:saveErrors.duplicate")).toBe(false);
     expect(isTransientSaveError("lodging:form.saveError")).toBe(false);
+  });
+});
+
+// Bus review, Minor 2: a create has no idempotency key. When its answer was
+// lost the record may exist, and "Erneut versuchen" would file it twice.
+describe("saveErrorKey for a create whose outcome is unknown", () => {
+  const FALLBACK = "form.saveError";
+  const create = { create: true };
+  const timeout = {
+    isAxiosError: true,
+    code: "ECONNABORTED",
+    message: "timeout of 10000ms exceeded",
+  };
+  const dropped = { isAxiosError: true, code: "ERR_NETWORK", message: "Network Error" };
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it("is not retryable after a timeout or a dropped connection", () => {
+    for (const err of [timeout, dropped]) {
+      const key = saveErrorKey(err, FALLBACK, {}, create);
+      expect(key).toBe("common:saveErrors.outcomeUnknown");
+      expect(isOutcomeUnknownSaveError(key)).toBe(true);
+      expect(isTransientSaveError(key)).toBe(false);
+    }
+  });
+
+  it("treats a gateway that gave up as unknown, too", () => {
+    for (const status of [502, 504, 524]) {
+      expect(saveErrorKey(refused(status, {}), FALLBACK, {}, create)).toBe(
+        "common:saveErrors.outcomeUnknown"
+      );
+    }
+  });
+
+  it("keeps a retry for a clear refusal the server answered", () => {
+    expect(saveErrorKey(refused(503, { code: "DB_UNAVAILABLE" }), FALLBACK, {}, create)).toBe(
+      "common:saveErrors.dbUnavailable"
+    );
+    expect(saveErrorKey(refused(429, {}), FALLBACK, {}, create)).toBe(
+      "common:saveErrors.rateLimited"
+    );
+    expect(isTransientSaveError("common:saveErrors.rateLimited")).toBe(true);
+  });
+
+  it("keeps a retry when the browser is offline: the request cannot have left", () => {
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    expect(saveErrorKey(dropped, FALLBACK, {}, create)).toBe("common:saveErrors.network");
+  });
+
+  it("leaves an update (and the default) as before: idempotent, so retryable", () => {
+    expect(saveErrorKey(dropped, FALLBACK)).toBe("common:saveErrors.network");
+    expect(saveErrorKey(timeout, FALLBACK, {}, { create: false })).toBe(
+      "common:saveErrors.network"
+    );
   });
 });

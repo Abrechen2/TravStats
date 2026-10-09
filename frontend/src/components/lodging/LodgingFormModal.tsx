@@ -13,7 +13,11 @@ import { LodgingOsmNearby } from "./LodgingOsmNearby";
 import { lodgingTypeForKind, osmFillFor } from "./lodgingFromOsm";
 import TagInput from "../TagInput";
 import { useLodgingEntrySuggestions } from "../../hooks/useLodgingEntrySuggestions";
-import { isTransientSaveError, saveErrorKey } from "../../lib/saveErrorMessage";
+import {
+  isOutcomeUnknownSaveError,
+  isTransientSaveError,
+  saveErrorKey,
+} from "../../lib/saveErrorMessage";
 import {
   FieldError,
   FormErrorBanner,
@@ -47,6 +51,12 @@ interface LodgingFormModalProps {
    * wording by default; the detail page passes the view's.
    */
   afterSaveFailedKey?: string;
+  /**
+   * Reload the list behind this form WITHOUT closing it. Offered as "Liste neu
+   * laden" when a create's answer was lost and it is unknown whether the
+   * lodging was stored; absent, the notice still asks to check the list.
+   */
+  onReload?: () => void;
 }
 
 /**
@@ -61,6 +71,7 @@ export function LodgingFormModal({
   onClose,
   onSaved,
   afterSaveFailedKey,
+  onReload,
 }: LodgingFormModalProps): JSX.Element {
   const { t } = useTranslation(["lodging", "common", "location", "openData"]);
   // ONE source for the starting values, read by the state below AND by the
@@ -262,7 +273,11 @@ export function LodgingFormModal({
     );
     if (outcome.status === "failed") {
       logger.error("LodgingFormModal: save failed", outcome.error);
-      failure.fail(saveErrorKey(outcome.error, "lodging:form.saveError"));
+      failure.fail(
+        // A create has no idempotency key: after a lost answer a blind retry
+        // could file the lodging twice, so that failure offers no retry.
+        saveErrorKey(outcome.error, "lodging:form.saveError", {}, { create: mode === "create" })
+      );
     }
   };
 
@@ -487,6 +502,11 @@ export function LodgingFormModal({
               : undefined
           }
           retryDisabled={saving.saving}
+          onReload={
+            failure.failureKey !== null && isOutcomeUnknownSaveError(failure.failureKey)
+              ? onReload
+              : undefined
+          }
         />
         <RequiredLegend className="mt-3" />
       </div>

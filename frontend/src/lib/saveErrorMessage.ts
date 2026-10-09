@@ -26,6 +26,51 @@ const SHARED_CODE_KEYS: Readonly<Record<string, string>> = {
 };
 
 /**
+ * A create whose answer never came back. The record may or may not exist, so
+ * the sentence must not invite the blind second try that files it twice.
+ */
+export const OUTCOME_UNKNOWN_KEY = "common:saveErrors.outcomeUnknown";
+
+/** What a form says about the request it is saving — see `saveErrorKey`. */
+export interface SaveErrorOptions {
+  /**
+   * The request CREATES a record. A create has no idempotency key, so when its
+   * outcome is unknown (timeout, a connection that dropped after the request
+   * was sent, a gateway that gave up) the failure reads `OUTCOME_UNKNOWN_KEY`
+   * instead of "network", and offers no retry (bus review, Minor 2). Default
+   * `false`: an update (PATCH/PUT of an existing entry) is idempotent and may
+   * be sent again as before.
+   */
+  create?: boolean;
+}
+
+/**
+ * Gateway statuses that say "the proxy gave up", not "the server refused":
+ * the application behind it may well have stored the record. 503 and 429 are
+ * NOT here — those are answers the server (or its limiter) gave before doing
+ * any work.
+ */
+function isGatewayGiveUp(status: number | undefined): boolean {
+  return (
+    status === 502 || status === 504 || (status !== undefined && status >= 520 && status <= 524)
+  );
+}
+
+/**
+ * Did the request possibly reach the server without its answer coming back?
+ * No response at all (timeout, dropped connection) or a gateway that gave up.
+ * A browser that is offline NOW counts as "never left": the usual cause is
+ * that it was offline when the user pressed Save, and a retry is the cure.
+ */
+function isOutcomeUnknown(err: unknown): boolean {
+  if (err === null || typeof err !== "object") return false;
+  const response = (err as { response?: { status?: number } }).response;
+  if (response) return isGatewayGiveUp(response.status);
+  if (!("isAxiosError" in err)) return false;
+  return typeof navigator === "undefined" || navigator.onLine !== false;
+}
+
+/**
  * The sentence a failed save shows, in the reader's language.
  *
  * Never the server's `error` text: that is English prose written for a log —
@@ -38,9 +83,10 @@ export function saveErrorMessage(
   err: unknown,
   t: Translate,
   fallbackKey: string,
-  extraCodeKeys: Readonly<Record<string, string>> = {}
+  extraCodeKeys: Readonly<Record<string, string>> = {},
+  options: SaveErrorOptions = {}
 ): string {
-  return t(saveErrorKey(err, fallbackKey, extraCodeKeys));
+  return t(saveErrorKey(err, fallbackKey, extraCodeKeys, options));
 }
 
 /**
@@ -51,7 +97,8 @@ export function saveErrorMessage(
 export function saveErrorKey(
   err: unknown,
   fallbackKey: string,
-  extraCodeKeys: Readonly<Record<string, string>> = {}
+  extraCodeKeys: Readonly<Record<string, string>> = {},
+  options: SaveErrorOptions = {}
 ): string {
   // Refused before the request: the picked place brought no zone source.
   if (err instanceof MissingZoneError) return SHARED_CODE_KEYS.TZ_UNRESOLVED;
@@ -61,6 +108,7 @@ export function saveErrorKey(
     if (key) return key;
   }
   if (apiErrorCode(err) === DEMO_FORBIDDEN_CODE) return "common:saveErrors.demo";
+  if (options.create === true && isOutcomeUnknown(err)) return OUTCOME_UNKNOWN_KEY;
   const response = (err as { response?: { status?: number } } | null)?.response;
   if (response?.status === 429) return SHARED_CODE_KEYS.RATE_LIMITED;
   if (err !== null && typeof err === "object" && "isAxiosError" in err && !response) {
@@ -85,4 +133,13 @@ const TRANSIENT_KEYS: ReadonlySet<string> = new Set([
 /** Takes the key `saveErrorKey` returned. */
 export function isTransientSaveError(key: string): boolean {
   return TRANSIENT_KEYS.has(key);
+}
+
+/**
+ * Takes the key `saveErrorKey` returned: true when a create may or may not
+ * have been stored. The form shows no retry for it and, if it can, a "Liste
+ * neu laden" (`FormErrorBanner`'s `onReload`) so the user can look first.
+ */
+export function isOutcomeUnknownSaveError(key: string): boolean {
+  return key === OUTCOME_UNKNOWN_KEY;
 }

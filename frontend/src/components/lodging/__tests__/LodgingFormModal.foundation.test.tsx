@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LodgingFormModal } from "../LodgingFormModal";
-import { createLodging } from "../../../lib/api/lodging";
+import { createLodging, updateLodging } from "../../../lib/api/lodging";
 import type { Lodging } from "../../../types/lodging";
 
 vi.mock("../../../hooks/useLodgingEntrySuggestions", () => ({
@@ -158,7 +158,10 @@ describe("LodgingFormModal — the shared form blocks", () => {
 
   it("keeps the draft on a failed save, says why in an announced banner, and offers a retry", async () => {
     vi.mocked(createLodging)
-      .mockRejectedValueOnce({ isAxiosError: true, message: "Network Error" })
+      .mockRejectedValueOnce({
+        isAxiosError: true,
+        response: { status: 503, data: { code: "DB_UNAVAILABLE" } },
+      })
       .mockResolvedValueOnce(stored);
     const onSaved = vi.fn();
     render(<LodgingFormModal mode="create" onClose={vi.fn()} onSaved={onSaved} />);
@@ -167,7 +170,7 @@ describe("LodgingFormModal — the shared form blocks", () => {
     await userEvent.click(saveButton());
 
     const banner = await screen.findByRole("alert");
-    expect(banner).toHaveTextContent("common:saveErrors.network");
+    expect(banner).toHaveTextContent("common:saveErrors.dbUnavailable");
     expect(nameField()).toHaveValue("Hotel Adlon");
     expect(onSaved).not.toHaveBeenCalled();
     await waitFor(() => expect(document.activeElement).toBe(banner));
@@ -175,6 +178,44 @@ describe("LodgingFormModal — the shared form blocks", () => {
     await userEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(stored));
     expect(createLodging).toHaveBeenCalledTimes(2);
+  });
+
+  // Bus review, Minor 2: the answer to a create was lost, so the lodging may
+  // exist. A retry button here is a way to file it twice.
+  it("offers no retry after a create whose answer was lost, and keeps the draft", async () => {
+    vi.mocked(createLodging).mockRejectedValueOnce({
+      isAxiosError: true,
+      code: "ECONNABORTED",
+      message: "timeout of 10000ms exceeded",
+    });
+    const onReload = vi.fn();
+    render(
+      <LodgingFormModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} onReload={onReload} />
+    );
+    await userEvent.type(nameField(), "Hotel Adlon");
+    await userEvent.click(saveButton());
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("common:saveErrors.outcomeUnknown");
+    expect(screen.queryByRole("button", { name: "common:buttons.retry" })).not.toBeInTheDocument();
+    expect(nameField()).toHaveValue("Hotel Adlon");
+    await userEvent.click(screen.getByRole("button", { name: "common:buttons.reloadList" }));
+    expect(onReload).toHaveBeenCalledTimes(1);
+    expect(createLodging).toHaveBeenCalledTimes(1);
+  });
+
+  it("still retries a lost answer when the form EDITS an existing lodging", async () => {
+    vi.mocked(updateLodging)
+      .mockRejectedValueOnce({ isAxiosError: true, message: "Network Error" })
+      .mockResolvedValueOnce(stored);
+    render(<LodgingFormModal mode="edit" lodging={stored} onClose={vi.fn()} onSaved={vi.fn()} />);
+    await userEvent.type(nameField(), "!");
+    await userEvent.click(saveButton());
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("common:saveErrors.network");
+    expect(screen.getByRole("button", { name: "common:buttons.retry" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "common:buttons.reloadList" })
+    ).not.toBeInTheDocument();
   });
 
   it("drops the banner at the next edit", async () => {
