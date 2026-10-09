@@ -23,6 +23,7 @@ import type {
 } from "./envelope";
 import { TEMPLATE_DOMAINS } from "./envelope";
 import { extract } from "./extract";
+import { compileSpec, specPart, type MailPart, type MatchRegex } from "./regexSpec";
 
 export type TestDecision = "match" | "decline";
 
@@ -53,11 +54,34 @@ export function testInputHaystack(input: TemplateTestInput): string {
   return [input.from, input.subject, input.text].filter((p) => p !== undefined).join("\n");
 }
 
-/** Every marker AND at least one anchor, case-insensitive — the lodging engine's rule. */
-export function envelopeMatches(template: TemplateEnvelope, haystack: string): boolean {
+/** The parts of a mail a matcher regex may be confined to (`in`). A plain string is all body. */
+function mailParts(input: TemplateTestInput): Record<MailPart, string> {
+  if (typeof input === "string") return { from: "", subject: "", text: input };
+  return { from: input.from ?? "", subject: input.subject ?? "", text: input.text };
+}
+
+function regexHits(spec: MatchRegex, input: TemplateTestInput, haystack: string): boolean {
+  const part = specPart(spec);
+  return compileSpec(spec, "im").test(part ? mailParts(input)[part] : haystack);
+}
+
+/**
+ * Every marker and `allOf` regex, at least one anchor or `anyOf` regex, and no
+ * `noneOf` regex. Markers and anchors are case-insensitive substrings — the
+ * lodging engine's rule; the regexes carry their own flags (default `im`).
+ */
+export function envelopeMatches(template: TemplateEnvelope, input: TemplateTestInput): boolean {
+  const haystack = testInputHaystack(input);
   const text = haystack.toLowerCase();
   const has = (needle: string): boolean => text.includes(needle.toLowerCase());
-  return template.match.markers.every(has) && template.match.anchors.some(has);
+  const hits = (spec: MatchRegex): boolean => regexHits(spec, input, haystack);
+  const { markers, anchors, allOf = [], anyOf = [], noneOf = [] } = template.match;
+  return (
+    markers.every(has) &&
+    allOf.every(hits) &&
+    (anchors.some(has) || anyOf.some(hits)) &&
+    !noneOf.some(hits)
+  );
 }
 
 export interface TemplateApplication {
@@ -69,8 +93,9 @@ export interface TemplateApplication {
 }
 
 /** Whether a document the matcher accepted is one of the issuer's non-bookings. */
-export function isNonBooking(template: TemplateEnvelope, haystack: string): boolean {
-  return (template.match.notBookingIf ?? []).some((p) => new RegExp(p, "im").test(haystack));
+export function isNonBooking(template: TemplateEnvelope, input: TemplateTestInput): boolean {
+  const haystack = testInputHaystack(input);
+  return (template.match.notBookingIf ?? []).some((p) => regexHits(p, input, haystack));
 }
 
 /**
@@ -86,16 +111,16 @@ export function applyTemplate(
   text: TemplateTestInput
 ): TemplateApplication {
   const haystack = testInputHaystack(text);
-  if (!envelopeMatches(template, haystack)) return { matched: false, values: {}, missing: [] };
-  if (isNonBooking(template, haystack)) {
+  if (!envelopeMatches(template, text)) return { matched: false, values: {}, missing: [] };
+  if (isNonBooking(template, text)) {
     return { matched: false, values: {}, missing: [], nonBooking: true };
   }
-  const { values, missing } = extract(template.extraction, haystack);
+  const { values, missing } = extract(template.extraction, haystack, mailParts(text));
   return { matched: missing.length === 0, values, missing };
 }
 
 export const matchOnlyRunner: TemplateTestRunner = (template, input) => ({
-  decision: envelopeMatches(template, testInputHaystack(input)) ? "match" : "decline",
+  decision: envelopeMatches(template, input) ? "match" : "decline",
 });
 
 export const extractionRunner: TemplateTestRunner = (template, input) => {

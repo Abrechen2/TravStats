@@ -7,18 +7,20 @@
 /** English and German month names and their common abbreviations, lower case. */
 export const MONTH_NAMES: Readonly<Record<string, number>> = (() => {
   const table: Array<[number, string[]]> = [
-    [1, ["january", "januar", "jänner", "jan", "jän"]],
-    [2, ["february", "februar", "feb"]],
-    [3, ["march", "märz", "maerz", "mar", "mär", "mrz"]],
-    [4, ["april", "apr"]],
-    [5, ["may", "mai"]],
-    [6, ["june", "juni", "jun"]],
-    [7, ["july", "juli", "jul"]],
-    [8, ["august", "aug"]],
-    [9, ["september", "sep", "sept"]],
-    [10, ["october", "oktober", "oct", "okt"]],
-    [11, ["november", "nov"]],
-    [12, ["december", "dezember", "dec", "dez"]],
+    // English, German, and the French and Dutch names a rental station's
+    // own-language invoice prints (Sixt, plan 2026-10-09 P4b).
+    [1, ["january", "januar", "jänner", "jan", "jän", "janvier", "januari"]],
+    [2, ["february", "februar", "feb", "fevrier", "février", "februari"]],
+    [3, ["march", "märz", "maerz", "mar", "mär", "mrz", "mars", "maart"]],
+    [4, ["april", "apr", "avril"]],
+    [5, ["may", "mai", "mei"]],
+    [6, ["june", "juni", "jun", "juin"]],
+    [7, ["july", "juli", "jul", "juillet"]],
+    [8, ["august", "aug", "aout", "août", "augustus"]],
+    [9, ["september", "sep", "sept", "septembre"]],
+    [10, ["october", "oktober", "oct", "okt", "octobre"]],
+    [11, ["november", "nov", "novembre"]],
+    [12, ["december", "dezember", "dec", "dez", "decembre", "décembre"]],
   ];
   return Object.fromEntries(table.flatMap(([n, names]) => names.map((name) => [name, n])));
 })();

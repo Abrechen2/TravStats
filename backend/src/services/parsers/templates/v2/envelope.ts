@@ -14,9 +14,18 @@
  */
 import { z } from "zod";
 import { extractionSchema } from "./extraction";
+import { OUTPUT_SCHEMAS } from "./outputSchemas";
+import { matchRegexSchema } from "./regexSpec";
 import { isValidVersion } from "./version";
 
-export const TEMPLATE_DOMAINS = ["flight", "lodging", "cruise", "rail", "package"] as const;
+export const TEMPLATE_DOMAINS = [
+  "flight",
+  "lodging",
+  "cruise",
+  "rail",
+  "rental",
+  "package",
+] as const;
 export type TemplateDomain = (typeof TEMPLATE_DOMAINS)[number];
 
 export const ISSUER_KINDS = [
@@ -33,15 +42,6 @@ const SLUG = "[A-Za-z0-9][A-Za-z0-9._-]*";
 const ID_RE = new RegExp(`^(${TEMPLATE_DOMAINS.join("|")}):${SLUG}$`);
 
 const nonEmpty = z.string().trim().min(1);
-
-const REGEX_MESSAGE = "must be a valid regex that does not match the empty string";
-function isUsableRegex(source: string): boolean {
-  try {
-    return !new RegExp(source, "im").test("");
-  } catch {
-    return false;
-  }
-}
 
 export const versionSchema = z
   .string()
@@ -93,23 +93,48 @@ export const templateEnvelopeSchema = z
     issuer: issuerSchema,
     // Empty means global. Order, never filter (owner ruling 3, 2026-10-09).
     markets: z.array(z.string().regex(/^[A-Z]{2}$/, "must be ISO 3166-1 alpha-2")),
-    // Same semantics as the lodging engine: every marker AND at least one
-    // anchor, case-insensitive. Both must be non-empty — an empty anchor list
-    // can never match, and an empty marker list matches too cheaply.
-    match: z.object({
-      markers: z.array(nonEmpty).min(1),
-      anchors: z.array(nonEmpty).min(1),
-      /**
-       * Regexes (flags `im`) that mark a document from this issuer as NOT a
-       * booking — a cancellation, a schedule change, a points receipt. They
-       * print the same lines as the booking they refer to, so a template that
-       * reads lines would propose the cancelled trip as a new one. A hit makes
-       * the template answer "not a booking" (`nonBooking`), which a consumer
-       * may treat as the end of the search.
-       */
-      notBookingIf: z.array(z.string().min(1).refine(isUsableRegex, REGEX_MESSAGE)).optional(),
-    }),
+    // Every marker AND every `allOf` regex, at least one anchor or `anyOf`
+    // regex, and no `noneOf` regex — markers and anchors case-insensitive
+    // substrings, the regexes with their own flags (default `im`). Something
+    // positive must identify the issuer: anchors and `anyOf` may not both be
+    // empty. Markers may be, for an issuer one of several names identifies.
+    match: z
+      .object({
+        markers: z.array(nonEmpty),
+        anchors: z.array(nonEmpty),
+        /** Regexes that must ALL find something — a sentence substrings cannot pin. */
+        allOf: z.array(matchRegexSchema).optional(),
+        /** Regexes of which at least one must find something, alongside the anchors. */
+        anyOf: z.array(matchRegexSchema).optional(),
+        /**
+         * Regexes that make the template decline outright — a document of the
+         * issuer this template is not for (a ticket where it reads
+         * reservations). Unlike `notBookingIf` it says nothing about whether
+         * the document is a booking.
+         */
+        noneOf: z.array(matchRegexSchema).optional(),
+        /**
+         * Regexes (flags `im`) that mark a document from this issuer as NOT a
+         * booking — a cancellation, a schedule change, a points receipt. They
+         * print the same lines as the booking they refer to, so a template that
+         * reads lines would propose the cancelled trip as a new one. A hit makes
+         * the template answer "not a booking" (`nonBooking`), which a consumer
+         * may treat as the end of the search.
+         */
+        notBookingIf: z.array(matchRegexSchema).optional(),
+      })
+      .refine((m) => m.anchors.length + (m.anyOf?.length ?? 0) > 0, {
+        message: "needs at least one anchor or anyOf regex",
+      }),
     extraction: extractionSchema,
+    /**
+     * Options for the DOMAIN consumer — what the app makes of the values, not
+     * how they are read: e.g. a lodging template's confidence figures and the
+     * fields whose absence it reports. Each domain's consumer validates the
+     * keys it reads (and its README in the template repository lists them);
+     * the engine never looks inside.
+     */
+    output: z.record(z.string(), z.unknown()).optional(),
     testCases: z.array(testCaseSchema),
     minAppVersion: versionSchema.optional(),
   })
@@ -123,6 +148,17 @@ export const templateEnvelopeSchema = z
     }
     if (!t.testCases.some((c) => c.expect === "decline")) {
       ctx.addIssue({ code: "custom", path: ["testCases"], message: "needs a decline case" });
+    }
+    if (t.output !== undefined) {
+      const schema = OUTPUT_SCHEMAS[t.domain];
+      const result = schema ? schema.safeParse(t.output) : null;
+      if (!schema) {
+        ctx.addIssue({ code: "custom", path: ["output"], message: `${t.domain} takes no output` });
+      } else if (result && !result.success) {
+        for (const issue of result.error.issues) {
+          ctx.addIssue({ code: "custom", path: ["output", ...issue.path], message: issue.message });
+        }
+      }
     }
   });
 

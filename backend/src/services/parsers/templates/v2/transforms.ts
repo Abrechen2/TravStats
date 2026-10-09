@@ -27,6 +27,18 @@ import {
   type TransformValue,
 } from "./documentTransforms";
 import { fullYear, isoDate, LETTERS, monthNumber } from "./calendar";
+import {
+  addressCity,
+  addressCountry,
+  addressPostcode,
+  addressStreet,
+  amount,
+  dayMonthNear,
+  laterClock,
+  leadingAmount,
+  leadingCurrency,
+  travelClass,
+} from "./vocabularyTransforms";
 
 export type { TransformContext, TransformValue };
 export type Transform = (input: TransformValue, ctx?: TransformContext) => TransformValue;
@@ -211,6 +223,17 @@ export const TRANSFORMS = {
   dropFirstWord,
   stripTrailingSeparator,
   removeSpaces,
+  // Shared conventions the P4b readers needed (vocabularyTransforms.ts).
+  amount,
+  travelClass,
+  dayMonthNear,
+  laterClock,
+  leadingCurrency,
+  leadingAmount,
+  addressStreet,
+  addressPostcode,
+  addressCity,
+  addressCountry,
 } satisfies Record<string, Transform>;
 
 export type TransformName = keyof typeof TRANSFORMS;
