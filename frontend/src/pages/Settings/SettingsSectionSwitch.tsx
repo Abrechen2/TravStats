@@ -4,6 +4,7 @@ import type { SettingsSectionId } from "./settingsModel";
 import type { useSettingsPage } from "../../components/Settings/useSettingsPage";
 
 import ProfileSection from "../../components/Settings/ProfileSection";
+import HomeCountryCard from "../../components/Settings/HomeCountryCard";
 import HomeAirportSection from "../../components/Settings/HomeAirportSection";
 import DisplaySection from "../../components/Settings/DisplaySection";
 import DomainColorSection from "../../components/Settings/DomainColorSection";
@@ -56,14 +57,18 @@ export default function SettingsSectionSwitch({
   switch (section) {
     case "profile":
       return (
-        <ProfileSection
-          profile={page.profile}
-          uploadingProfilePicture={page.uploadingProfilePicture}
-          removingProfilePicture={page.removingProfilePicture}
-          onAvatarUpload={page.handleAvatarUpload}
-          onAvatarDelete={page.handleAvatarDelete}
-          onSetProfile={page.setProfile}
-        />
+        <div className="space-y-4">
+          <ProfileSection
+            profile={page.profile}
+            uploadingProfilePicture={page.uploadingProfilePicture}
+            removingProfilePicture={page.removingProfilePicture}
+            onAvatarUpload={page.handleAvatarUpload}
+            onAvatarDelete={page.handleAvatarDelete}
+            onSetProfile={page.setProfile}
+          />
+          {/* A personal fact like the name above; it orders booking templates. */}
+          <HomeCountryCard />
+        </div>
       );
     case "security":
       return <SecuritySection onChangePassword={() => page.setShowPasswordModal(true)} />;

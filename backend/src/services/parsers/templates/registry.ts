@@ -9,6 +9,7 @@ import { V2TemplateStore, type FetchJson } from "./v2/loader";
 import { resolveTemplateRepoBaseUrl } from "./v2/source";
 import type { V2Status } from "./v2/status";
 import type { TemplateEnvelope } from "./v2/envelope";
+import { orderByMarket } from "./v2/markets";
 
 const DEFAULT_BUILTIN_DIR = path.join(__dirname, "airlines");
 const DEFAULT_CACHE_DIR = path.join(process.cwd(), ".template-cache");
@@ -122,9 +123,12 @@ export class TemplateRegistry {
     }));
   }
 
-  /** v2 templates that validated and passed their own test cases. */
-  getActiveV2(): TemplateEnvelope[] {
-    return this.v2.getActive();
+  /**
+   * v2 templates that validated and passed their own test cases, home-market
+   * first when a home country is given (`orderByMarket` — order, never filter).
+   */
+  getActiveV2(homeCountry?: string | null): TemplateEnvelope[] {
+    return orderByMarket(this.v2.getActive(), homeCountry);
   }
 
   getV2Status(): V2Status {

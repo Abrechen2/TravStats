@@ -65,7 +65,9 @@ registry.registerPath({
   description:
     "Includes which domains are switched on. Switching one off hides it " +
     "everywhere and deletes nothing — the data is waiting if it is switched " +
-    "back on.",
+    "back on. `homeCountry` (ISO 3166-1 alpha-2, upper-case, or null to " +
+    "clear) decides which booking templates are tried first; templates for " +
+    "other countries stay active.",
   tags: settingsTag,
   responses: { 422: timeRefused, 200: { description: "Saved" }, 400: badInput },
 });
