@@ -1,7 +1,7 @@
 import { BOOKING_COM_LEGACY } from "./bookingComLegacy";
 import { NH_HOTELS } from "./nhHotels";
 import { ARMANI } from "./armani";
-import type { LodgingTemplate } from "./types";
+import type { LodgingTemplate } from "../../types";
 
 /**
  * HRS's "Ihr ausgewähltes Hotel" heading and the blank lines under it — one,
@@ -11,6 +11,14 @@ import type { LodgingTemplate } from "./types";
 const HRS_HOTEL = "Ihr ausgewähltes Hotel[ \\t\\r]*(?:\\n[ \\t\\r]*)+";
 
 /**
+ * TEST REFERENCE ONLY since plan 2026-10-09 P4a. These were the compiled-in
+ * lodging readers; the app now reads these senders with the v2 template files
+ * in `parsers/templates/v2/snapshot/lodging/` (and their newer versions from
+ * the template repository). They stay here, unchanged, as the oracle the
+ * parity tests compare every v2 file against (`v2Parity.test.ts`,
+ * `readers.ts`). Do not import them from app code; change a reader in the
+ * template repository instead.
+ *
  * The built-in lodging readers beyond Booking.com.
  *
  * Each was written against the owner's own corpus and is measured by

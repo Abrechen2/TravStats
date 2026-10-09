@@ -5,27 +5,16 @@ interface DetectionRule {
   htmlFingerprints: string[];
 }
 
+/**
+ * Detection for the v1 airline templates only — the HTML-selector templates
+ * the template repository's v1 index still serves (LX, OS, FR, U2, EW, W6,
+ * SN). Since plan 2026-10-09 P4a the airlines with v2 template files
+ * (Lufthansa in both layouts, Germanwings, Emirates in both layouts, Air
+ * Berlin) recognise their own mail through the file's `match` block, and their
+ * rules no longer live in code. A v1 template whose name a v2 file carries is
+ * skipped by the parser even if a rule here named it.
+ */
 const DETECTION_RULES: DetectionRule[] = [
-  // Old Lufthansa format ("Buchungsdetails" in subject) — no domain match, subject-only detection
-  // must come before generic LH rule so it wins on matching subjects
-  {
-    iata: "LH-old",
-    fromDomains: [],
-    subjectPatterns: [/buchungsdetails/i],
-    htmlFingerprints: [],
-  },
-  {
-    iata: "LH",
-    fromDomains: ["@lufthansa.com", "@miles-and-more.com", "@lufthansa.de"],
-    subjectPatterns: [
-      /buchungsbest.?tigung/i,
-      /lufthansa.*booking confirmation/i,
-      /ihre buchung/i,
-      /m.nchen nach/i,
-      /flugbuchung/i,
-    ],
-    htmlFingerprints: ["lufthansa", "miles-and-more"],
-  },
   {
     iata: "LX",
     fromDomains: ["@swiss.com", "@newsletter.swiss.com"],
@@ -67,41 +56,6 @@ const DETECTION_RULES: DetectionRule[] = [
     fromDomains: ["@brusselsairlines.com"],
     subjectPatterns: [/brussels airlines.*booking/i],
     htmlFingerprints: ["brusselsairlines", "brussels airlines"],
-  },
-  // The three below were written against a private mailbox (2026-10-01) and
-  // sit LAST on purpose: a mail an earlier rule already reads keeps that
-  // reading, because `detectAirlines` offers them only after the earlier
-  // templates have declined. A Germanwings confirmation names "Lufthansa
-  // AirPlus" in its small print, so the Lufthansa rule claims it first — and
-  // declines it, which is what lets this one read it.
-  {
-    iata: "4U",
-    fromDomains: ["@germanwings.com"],
-    subjectPatterns: [/germanwings/i],
-    htmlFingerprints: ["germanwings"],
-  },
-  // Two Emirates layouts, one rule each, the newer first: the 2018+ mails
-  // ("Ihre Buchung ist bestätigt") and the 2014/2015 German ones. Each
-  // template finds only its own layout and declines the other's.
-  {
-    iata: "EK",
-    fromDomains: ["@emirates.com", "@emirates.email"],
-    subjectPatterns: [/emirates/i],
-    htmlFingerprints: ["emirates"],
-  },
-  {
-    iata: "EK-old",
-    fromDomains: ["@emirates.com"],
-    subjectPatterns: [/emirates/i],
-    htmlFingerprints: ["emirates"],
-  },
-  // Air Berlin's mails carry the itinerary only in their PDF invoice; the
-  // template reads that PDF's text (`pdfAttachmentFlights.ts`).
-  {
-    iata: "AB",
-    fromDomains: ["@airberlin.com"],
-    subjectPatterns: [/airberlin|air berlin/i],
-    htmlFingerprints: ["airberlin", "air berlin"],
   },
 ];
 

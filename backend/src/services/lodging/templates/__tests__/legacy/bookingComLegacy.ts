@@ -1,4 +1,4 @@
-import type { LodgingTemplate } from "./types";
+import type { LodgingTemplate } from "../../types";
 
 /** A forward's "WG:", "Fwd:", "AW:" in front of the subject. */
 const FORWARD = "^(?:(?:WG|AW|FW|Fwd|RE)[ \\t]*:[ \\t]*)*";

@@ -11,7 +11,7 @@
 import type { ParsedLodgingBooking } from "../../bookingComTemplate";
 import { applyLodgingTemplate } from "../engine";
 import { applyV2LodgingTemplate } from "../v2Lodging";
-import { LODGING_TEMPLATES as LEGACY_LODGING_TEMPLATES } from "../builtins";
+import { LODGING_TEMPLATES as LEGACY_LODGING_TEMPLATES } from "./legacy/builtins";
 import { createMemoryTemplateCache } from "../../../parsers/templates/v2/cache";
 import { V2TemplateStore } from "../../../parsers/templates/v2/loader";
 import { createDirSnapshot } from "../../../parsers/templates/v2/snapshot";

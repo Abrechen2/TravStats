@@ -49,7 +49,6 @@ describe("TemplateRegistry — v2 beside the v1 airline path", () => {
 
   beforeEach(() => {
     tmp = fs.mkdtempSync(path.join(os.tmpdir(), "tpl-registry-"));
-    fs.mkdirSync(path.join(tmp, "builtin"));
   });
 
   afterEach(() => {
@@ -60,7 +59,6 @@ describe("TemplateRegistry — v2 beside the v1 airline path", () => {
     return new TemplateRegistry({
       fetchJson,
       baseUrl: BASE,
-      builtinDir: path.join(tmp, "builtin"),
       cacheDir: path.join(tmp, "cache"),
       // No bundled snapshot: these cases are about the v1/v2 sync alone.
       snapshotDir: path.join(tmp, "no-snapshot"),

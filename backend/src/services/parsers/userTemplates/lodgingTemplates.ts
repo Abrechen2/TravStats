@@ -5,8 +5,9 @@ import type { LodgingTemplate } from "../../lodging/templates/types";
  * The user's own lodging templates, read back out of `ParserTemplate.patterns`.
  *
  * forgejo#124 phase 6. A lodging workshop template stores the declarative spec
- * itself — the same object `services/lodging/templates/builtins.ts` holds for
- * KOA or Hilton — so reading one back is a shape check, not a conversion.
+ * itself — the same `LodgingTemplate` shape the compiled-in KOA and Hilton
+ * readers had before they became v2 template files (plan 2026-10-09 P4a) — so
+ * reading one back is a shape check, not a conversion.
  *
  * The shape check is not decoration: `patterns` is a JSON column, the rows
  * outlive any given release, and a template written by an older version (or by

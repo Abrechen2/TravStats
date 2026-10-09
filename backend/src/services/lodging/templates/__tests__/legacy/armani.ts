@@ -1,4 +1,4 @@
-import type { LodgingTemplate } from "./types";
+import type { LodgingTemplate } from "../../types";
 
 /**
  * Armani Hotels' own confirmation, "Your Reservation Confirmation at <hotel> -
