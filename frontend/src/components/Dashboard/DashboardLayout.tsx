@@ -26,6 +26,7 @@ import DomainImportPanel from "../import/DomainImportPanel";
 import { useLodgingImportAdapter } from "../import/adapters/lodgingAdapter";
 import { DashboardEmptyState } from "./DashboardEmptyState";
 import { PlaceFormModal } from "../places/PlaceFormModal";
+import { QuickVisitHost } from "../places/QuickVisitHost";
 import type { Flight, FlightInput } from "../../types";
 import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
 import type { ImportDocument } from "../import/documentHandoff";
@@ -380,6 +381,9 @@ export function DashboardLayout({
         onOpenOtherImport={openOtherImport}
         openableDomains={openableImports}
       />
+      {/* "Besuch erfassen" from a place pin's card (forgejo#231); the map
+          reloads afterwards so the pin shows the visit. */}
+      {placesVisible && <QuickVisitHost onSaved={() => onDataChanged?.()} />}
       {addingDomain === "poi" && (
         <PlaceFormModal
           place={null}

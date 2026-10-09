@@ -7,6 +7,7 @@ import { classifyVisit } from "../../shared/placeCounting";
 import { resolveTimeField } from "../../shared/time/resolveInput";
 import { zoneOf } from "../../shared/time/zoneOf";
 import { normaliseNamePair } from "../geo/gluedPlaceName";
+import { findPlaceIdByRef } from "../places/placeRefs";
 import { visitColumnsFromResolved } from "../timeModel/visitColumns";
 import { recheckAchievements } from "../../utils/achievements";
 
@@ -74,7 +75,9 @@ async function existingPlace(
     if (own) return own;
   }
   if (row.suggestedRef) {
-    return prisma.place.findFirst({ where: { userId, externalRef: row.suggestedRef }, select });
+    // Its own reference or an alias a merge left on it (forgejo#232).
+    const holderId = await findPlaceIdByRef(prisma, userId, row.suggestedRef);
+    return holderId ? prisma.place.findFirst({ where: { id: holderId, userId }, select }) : null;
   }
   return null;
 }

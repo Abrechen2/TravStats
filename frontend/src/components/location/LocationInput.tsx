@@ -26,6 +26,8 @@ import type { PlaceSearchResult } from "../../lib/api/geo";
 import { useLocationSearch } from "./useLocationSearch";
 import { LocationSuggestions } from "./LocationSuggestions";
 import { LocationMapModal } from "./LocationMapModal";
+// The module, not the `form` index: that one pulls in `Modal`, which this
+// field is rendered inside of.
 import { RequiredMark } from "../form/requiredFields";
 
 export interface LocationCoordinates {
@@ -85,8 +87,9 @@ export interface LocationInputProps {
    */
   onValidityChange?: (valid: boolean, field?: "lat" | "lon") => void;
   /**
-   * Marks the search as a required field (forgejo#245): the shared asterisk
-   * beside the label and `aria-required` on the input. Off by default.
+   * The form cannot be saved without a position (forgejo#245): the label
+   * carries the required mark and the search field `aria-required`. A string
+   * `label` cannot carry the mark itself, which is why this is a prop.
    */
   required?: boolean;
 }
@@ -299,6 +302,18 @@ export function LocationInput({
   );
 
   const listboxId = `${idPrefix}-listbox`;
+  // The refusal names its value (forgejo#246): the field at fault is marked
+  // invalid and reads the message as its description, so a screen reader that
+  // lands on it — and `focusFirstError` looking for it — find the complaint.
+  const rangeErrorId = `${idPrefix}-range-error`;
+  const latRefused =
+    rangeError === "location:outOfRange" || rangeError === "location:latOutOfRange";
+  const lonRefused =
+    rangeError === "location:outOfRange" || rangeError === "location:lonOutOfRange";
+  const refusedProps = (
+    refused: boolean
+  ): { "aria-invalid"?: true; "aria-describedby"?: string } =>
+    refused ? { "aria-invalid": true, "aria-describedby": rangeErrorId } : {};
 
   return (
     <div className="space-y-2">
@@ -314,7 +329,7 @@ export function LocationInput({
         </label>
         <input
           id={`${idPrefix}-search`}
-          aria-required={required || undefined}
+          {...(required ? { "aria-required": true } : {})}
           role="combobox"
           aria-expanded={isDropdownOpen}
           aria-autocomplete="list"
@@ -410,6 +425,7 @@ export function LocationInput({
               min={-90}
               max={90}
               className="input"
+              {...refusedProps(latRefused)}
               value={latInput}
               onChange={(e) => handleAdvancedLatChange(e.target.value)}
             />
@@ -425,6 +441,7 @@ export function LocationInput({
               min={-180}
               max={180}
               className="input"
+              {...refusedProps(lonRefused)}
               value={lonInput}
               onChange={(e) => handleAdvancedLonChange(e.target.value)}
             />
@@ -432,6 +449,7 @@ export function LocationInput({
         </div>
         {rangeError && (
           <p
+            id={rangeErrorId}
             className="mt-2 text-sm"
             role="alert"
             data-testid="location-range-error"

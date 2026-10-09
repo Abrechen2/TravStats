@@ -4,7 +4,6 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { setPlaceCover } from "../../lib/api/places";
-import { useToastStore } from "../../store/toastStore";
 import type { Place } from "../../types/place";
 import type { PlaceVisitPhoto } from "../../types/placeList";
 
@@ -24,8 +23,9 @@ interface Props {
  */
 export function PlaceGallery({ place }: Props): JSX.Element | null {
   const { t } = useTranslation(["places"]);
-  const addToast = useToastStore((s) => s.addToast);
   const [coverId, setCoverId] = useState<string | null>(place.coverPhotoId ?? null);
+  /** A cover that could not be saved — said under the gallery, not in a toast. */
+  const [coverFailed, setCoverFailed] = useState(false);
 
   const photos = galleryPhotos(place);
   if (photos.length === 0) return null;
@@ -34,12 +34,13 @@ export function PlaceGallery({ place }: Props): JSX.Element | null {
   const choose = async (photoId: string): Promise<void> => {
     const previous = coverId;
     setCoverId(photoId);
+    setCoverFailed(false);
     try {
       await setPlaceCover(place.id, photoId);
     } catch (err: unknown) {
       logger.error("PlaceGallery: cover failed", err);
       setCoverId(previous);
-      addToast("error", t("places:gallery.coverFailed"));
+      setCoverFailed(true);
     }
   };
 
@@ -59,7 +60,9 @@ export function PlaceGallery({ place }: Props): JSX.Element | null {
               type="button"
               onClick={() => void choose(photo.id)}
               aria-pressed={photo.id === lead.id}
-              title={t("places:gallery.makeCover")}
+              // What a tap does is in the name, not in a hover-only `title`
+              // (forgejo#249); the hint below says it for the eye.
+              aria-label={`${t("places:gallery.makeCover")}: ${photo.caption ?? t("places:photos.alt")}`}
               style={{
                 padding: 0,
                 borderRadius: 6,
@@ -85,6 +88,12 @@ export function PlaceGallery({ place }: Props): JSX.Element | null {
             </button>
           ))}
         </div>
+      )}
+      {photos.length > 1 && <p className="t-caption">{t("places:gallery.makeCoverHint")}</p>}
+      {coverFailed && (
+        <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>
+          {t("places:gallery.coverFailed")}
+        </p>
       )}
     </section>
   );

@@ -115,6 +115,8 @@ describe("PlaceDetailPage — attaching a visit to a trip", () => {
     renderPage();
 
     await user.click(await screen.findByRole("button", { name: /detail\.addVisit/ }));
+    // The suggestions belong to "Anderes Datum" (forgejo#231).
+    await user.click(screen.getByRole("button", { name: /visit\.mode\.other/ }));
     await user.click(await screen.findByRole("button", { name: /suggestionChip/ }));
     await user.click(screen.getByRole("button", { name: /buttons\.save/ }));
 

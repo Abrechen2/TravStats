@@ -19,6 +19,7 @@ import { visitTimeColumns } from "./places/visitTime";
 import { timeErrorFromZod } from "../shared/time/errors";
 import { normaliseNamePair } from "../services/geo/gluedPlaceName";
 import { tripForVisitDay } from "../services/places/visitTrip";
+import { findPlaceIdByRef, promoteOwnAlias, refHeldElsewhere } from "../services/places/placeRefs";
 import {
   createPlaceSchema,
   updatePlaceSchema,
@@ -119,7 +120,7 @@ type DecoratedPlace = PlaceRow & PlaceAggregates;
  * TYPE and not only at runtime — a spread that silently widens the payload
  * while the signature claims otherwise is how a field ends up undocumented.
  */
-function decorate<
+export function decorate<
   T extends {
     visits: PlaceRow["visits"];
     lat: number;
@@ -332,11 +333,13 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     // Dedup on the geocoder reference, so picking the same restaurant out of
     // search twice yields one row rather than a second pin on top of the
     // first. Hand-entered places carry no ref and are never blocked by this.
+    // The reference may also be an alias a merge left on a place (forgejo#232):
+    // `findPlaceIdByRef` asks the column AND the aliases.
     if (input.externalRef) {
-      const existing = await prisma.place.findFirst({
-        where: { userId, externalRef: input.externalRef },
-        include: PLACE_INCLUDE,
-      });
+      const holderId = await findPlaceIdByRef(prisma, userId, input.externalRef);
+      const existing = holderId
+        ? await prisma.place.findFirst({ where: { id: holderId, userId }, include: PLACE_INCLUDE })
+        : null;
       if (existing) {
         res.status(200).json({ success: true, data: decorate(existing), deduped: true });
         return;
@@ -424,7 +427,19 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     if (input.city !== undefined) data.city = input.city;
     if (input.notes !== undefined) data.notes = input.notes;
     if (input.visited !== undefined) data.visited = input.visited;
-    if (input.externalRef !== undefined) data.externalRef = input.externalRef;
+    if (input.externalRef !== undefined) {
+      // A reference another place answers to — as its own or as an alias a
+      // merge left on it — is that place's identity; writing it here would make
+      // two places one object again. Refused like the column's own unique
+      // index refuses a second holder (409 DUPLICATE).
+      if (
+        input.externalRef !== null &&
+        (await refHeldElsewhere(prisma, userId, input.externalRef, existing.id))
+      ) {
+        throw new AppError("Another place already answers to this reference", 409, "DUPLICATE");
+      }
+      data.externalRef = input.externalRef;
+    }
     // The derived code moves with the text it was derived from, always in the
     // same statement — the two must never disagree.
     if (input.country !== undefined) {
@@ -432,10 +447,13 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       data.isoCountryCode = resolveCountryCode(input.country);
     }
 
-    const place = await prisma.place.update({
-      where: { id: existing.id },
-      data,
-      include: PLACE_INCLUDE,
+    // One transaction: promoting one of the place's own aliases to its primary
+    // swaps the two (`promoteOwnAlias`) together with the write.
+    const place = await prisma.$transaction(async (tx) => {
+      if (input.externalRef) {
+        await promoteOwnAlias(tx, userId, existing.id, existing.externalRef, input.externalRef);
+      }
+      return tx.place.update({ where: { id: existing.id }, data, include: PLACE_INCLUDE });
     });
 
     await recheckAchievements(userId, "place update");

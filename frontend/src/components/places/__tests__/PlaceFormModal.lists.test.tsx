@@ -98,8 +98,13 @@ describe("PlaceFormModal — adding to lists on create", () => {
     await user.click(screen.getByText("Maccis"));
     await fillAndSave();
 
-    // The place was created and is reported as created. Only the filing failed.
-    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(saved));
+    // The place was created; only the filing failed, and the form says so
+    // instead of a toast that vanishes (forgejo#247). The caller hears of the
+    // stored place once the user moves on.
+    expect(await screen.findByText("places:form.listPartial")).toBeInTheDocument();
+    expect(createPlaceMock).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByText("places:form.listContinue"));
+    expect(onSaved).toHaveBeenCalledWith(saved);
     expect(createPlaceMock).toHaveBeenCalledTimes(1);
   });
 
@@ -139,4 +144,33 @@ describe("PlaceFormModal — adding to lists on create", () => {
     expect(listPlaceListsMock).not.toHaveBeenCalled();
     expect(screen.queryByText("places:form.addToLists")).not.toBeInTheDocument();
   });
+
+  // forgejo#230: opened from a list whose search found nothing.
+  it("starts with the searched name, names the list, and leaves the filing to the list", async () => {
+    render(
+      <PlaceFormModal
+        place={null}
+        initialName="Bocca della Verità"
+        forList="Rom"
+        onClose={() => {}}
+        onSaved={() => {}}
+      />
+    );
+    expect(screen.getByDisplayValue("Bocca della Verità")).toBeInTheDocument();
+    expect(screen.getByText("places:form.forList")).toBeInTheDocument();
+    // No second way to file it from here — the list does that, once.
+    expect(listPlaceListsMock).not.toHaveBeenCalled();
+    expect(screen.queryByText("places:form.addToLists")).not.toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await fillAndSaveWith(user);
+    await waitFor(() => expect(createPlaceMock).toHaveBeenCalledTimes(1));
+    expect(createPlaceMock.mock.calls[0][0]).toMatchObject({ name: "Bocca della Verità" });
+    expect(addPlaceToListMock).not.toHaveBeenCalled();
+  });
 });
+
+async function fillAndSaveWith(user: ReturnType<typeof userEvent.setup>): Promise<void> {
+  await user.click(screen.getByTestId("pick-location"));
+  await user.click(screen.getByText("common:buttons.save"));
+}

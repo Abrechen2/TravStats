@@ -109,7 +109,7 @@ describe("PlaceDetailPage — editing a visit", () => {
   it("?editVisit opens that visit's form, filled in, and drops the parameter", async () => {
     renderAt("/places/p1?editVisit=v1");
 
-    expect(await screen.findByText("Besuch bearbeiten", { selector: "h3" })).toBeInTheDocument();
+    expect(await screen.findByRole("dialog", { name: "Besuch bearbeiten" })).toBeInTheDocument();
     expect((document.querySelector('input[type="date"]') as HTMLInputElement).value).toBe(
       "2024-05-02"
     );
@@ -122,7 +122,7 @@ describe("PlaceDetailPage — editing a visit", () => {
   it("saving updates the visit with the typed time at this place — it never adds a second one", async () => {
     const user = userEvent.setup();
     renderAt("/places/p1?editVisit=v1");
-    await screen.findByText("Besuch bearbeiten", { selector: "h3" });
+    await screen.findByRole("dialog", { name: "Besuch bearbeiten" });
 
     fireEvent.change(document.querySelector('input[type="time"]')!, { target: { value: "14:30" } });
     await user.click(screen.getByRole("button", { name: "Speichern" }));
@@ -138,24 +138,19 @@ describe("PlaceDetailPage — editing a visit", () => {
     expect(toasts.addToast).toHaveBeenCalledWith("success", "Besuch gespeichert.");
   });
 
-  it("a refused save says so in German and keeps the form open", async () => {
+  it("a refused save says so in German, in the form, and keeps it open", async () => {
     updateVisit.mockRejectedValue(refused("SOMETHING_UNMAPPED"));
     const user = userEvent.setup();
     renderAt("/places/p1?editVisit=v1");
-    await screen.findByText("Besuch bearbeiten", { selector: "h3" });
+    await screen.findByRole("dialog", { name: "Besuch bearbeiten" });
     await user.click(screen.getByRole("button", { name: "Speichern" }));
 
-    await waitFor(() =>
-      expect(toasts.addToast).toHaveBeenCalledWith(
-        "error",
-        "Der Besuch konnte nicht gespeichert werden."
-      )
-    );
-    expect(toasts.addToast).not.toHaveBeenCalledWith(
-      "error",
-      expect.stringMatching(/English|status code/)
-    );
-    expect(screen.getByText("Besuch bearbeiten", { selector: "h3" })).toBeInTheDocument();
+    // In the dialog and persistent (forgejo#246) — the toast vanished.
+    const banner = await screen.findByRole("alert");
+    expect(banner).toHaveTextContent("Der Besuch konnte nicht gespeichert werden.");
+    expect(banner.textContent).not.toMatch(/English|status code/);
+    expect(toasts.addToast).not.toHaveBeenCalledWith("error", expect.anything());
+    expect(screen.getByRole("dialog", { name: "Besuch bearbeiten" })).toBeInTheDocument();
   });
 
   it("a link to a visit that is gone says so instead of opening an empty form", async () => {
@@ -167,7 +162,7 @@ describe("PlaceDetailPage — editing a visit", () => {
         "Diesen Besuch gibt es an diesem Ort nicht mehr."
       )
     );
-    expect(screen.queryByText("Besuch bearbeiten", { selector: "h3" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Besuch bearbeiten" })).not.toBeInTheDocument();
   });
 
   it("the row's edit button opens the same form", async () => {
@@ -175,7 +170,7 @@ describe("PlaceDetailPage — editing a visit", () => {
     renderAt("/places/p1");
     await user.click(await screen.findByRole("button", { name: "Besuch bearbeiten" }));
 
-    expect(screen.getByText("Besuch bearbeiten", { selector: "h3" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Besuch bearbeiten" })).toBeInTheDocument();
     expect(screen.getByDisplayValue("Lutherstube")).toBeInTheDocument();
   });
 

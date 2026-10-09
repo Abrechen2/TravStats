@@ -111,6 +111,7 @@ model User {
   loyaltyMemberships     LoyaltyMembership[]
   lodgingChains          LodgingChain[]
   places                 Place[]
+  placeExternalRefs      PlaceExternalRef[]
   placeVisits            PlaceVisit[]
   visitPhotoRefusals     VisitPhotoRefusal[]
   placeLists             PlaceList[]
@@ -2776,7 +2777,7 @@ model Place {
   id     String @id @default(uuid())
   userId String @map("user_id")
 
-  name     String
+  name      String
   /// The name in the place's own script, kept beside a Latin `name` — "반포대교"
   /// beside "Banpo Bridge" (forgejo#199). Null when the two would be the same,
   /// or when no second name is known; never transliterated or invented.
@@ -2784,7 +2785,7 @@ model Place {
   /// Drives the pin ICON, deliberately not the pin hue: on a map any two
   /// categories can end up adjacent, and only ~3 categorical hues survive that
   /// all-pairs separation test. Mirrored in frontend/src/shared/placeCategories.ts.
-  category String @default("other")
+  category  String  @default("other")
 
   /// REQUIRED, unlike Lodging.lat/lon — a place that cannot be drawn defeats
   /// the point of the domain, and every creation path (search hit, map click,
@@ -2834,14 +2835,17 @@ model Place {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  batch            ImportBatch?     @relation(fields: [batchId], references: [id], onDelete: SetNull)
-  coverPhoto       PlaceVisitPhoto? @relation("PlaceCover", fields: [coverPhotoId], references: [id], onDelete: SetNull)
-  visits           PlaceVisit[]
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  batch              ImportBatch?       @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  coverPhoto         PlaceVisitPhoto?   @relation("PlaceCover", fields: [coverPhotoId], references: [id], onDelete: SetNull)
+  visits             PlaceVisit[]
   /// Roadtrip pass-throughs that name this place. The place does not own them.
-  roadtripStations TripStop[]
-  listEntries      PlaceListEntry[]
-  photoJourneys    PhotoJourney[]
+  roadtripStations   TripStop[]
+  listEntries        PlaceListEntry[]
+  photoJourneys      PhotoJourney[]
+  /// References this place answers to besides `externalRef` — what a merge
+  /// left of the place folded into it (forgejo#232).
+  externalRefAliases PlaceExternalRef[]
 
   @@unique([userId, externalRef])
   @@unique([userId, curatedItemId])
@@ -2849,6 +2853,37 @@ model Place {
   @@index([userId, category])
   @@index([userId, visited])
   @@map("places")
+}
+
+/// A second geocoder reference of a place — the identity of a duplicate that
+/// was merged into it (forgejo#232).
+///
+/// `Place.externalRef` is one column, so a merge of two places that both came
+/// from a source (an OSM pick and a Google Takeout row) could keep only one of
+/// the two references. Dropping the other made every dedup path miss it: the
+/// next search pick or Takeout re-import of that object created the very
+/// duplicate the merge had removed. The losing reference lives on here, and
+/// every "does this user already have a place for ref X?" question asks the
+/// column AND this table (`services/places/placeRefs.ts`).
+///
+/// Unique per user like the column, and never the same value as any of the
+/// user's `Place.externalRef` — the write paths go through `placeRefs.ts`,
+/// which refuses that (there is no cross-table constraint to do it). Cascade:
+/// a deleted place takes its aliases; a place merged away hands them on first.
+/// Not in the sync feed (no trigger) — a server-side dedup key.
+model PlaceExternalRef {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  placeId   String   @map("place_id")
+  ref       String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ref])
+  @@index([placeId])
+  @@map("place_external_refs")
 }
 
 /// One visit to a Place. Replaces `TripStop` rows with `domain = 'poi'`.

@@ -34,6 +34,7 @@ import {
 } from "./cardChrome";
 import { CardFlights } from "./CardFlights";
 import { LocalName } from "../../places/LocalName";
+import { useQuickVisitStore } from "../../../store/quickVisitStore";
 
 export interface BodyCommonProps {
   locale: string;
@@ -228,6 +229,10 @@ export function PlaceBody({
   data: PlaceCardDatum;
   onPlaceOpen?: (placeId: string) => void;
 } & BodyCommonProps): JSX.Element {
+  // "Besuch erfassen" from the pin (forgejo#231) — only where a page hosts the
+  // dialog, so the card never offers a button that does nothing.
+  const canRecordVisit = useQuickVisitStore((s) => s.hosts > 0);
+  const recordVisit = useQuickVisitStore((s) => s.open);
   return (
     <>
       <LocalName value={data.localName} block className="mb-1" testId="pinned-place-local-name" />
@@ -250,6 +255,14 @@ export function PlaceBody({
         primary={
           onPlaceOpen
             ? { label: t("map:globe.pinned.openPlace"), onClick: () => onPlaceOpen(data.id) }
+            : undefined
+        }
+        secondary={
+          canRecordVisit
+            ? {
+                label: t("places:visit.action"),
+                onClick: () => recordVisit({ id: data.id, name: data.name }),
+              }
             : undefined
         }
       />

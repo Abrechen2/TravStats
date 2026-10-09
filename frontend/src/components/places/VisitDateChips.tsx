@@ -79,7 +79,7 @@ export function VisitDateChips({
                 field: t("places:detail.date"),
                 value: shown,
               })}
-              className="rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-(--text-muted) hover:border-(--accent) hover:text-(--accent)"
+              className="rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-(--text-muted) hover:border-(--accent) hover:text-(--accent) pointer-coarse:min-h-(--ts-size-touch-min)"
             >
               {shown}
               {detail ? ` · ${detail}` : ""}

@@ -27,7 +27,7 @@
     "deleted": "„{{name}}“ wurde gelöscht.",
     "deleteFailed": "Der Ort konnte nicht gelöscht werden.",
     "deleteTitle": "Ort löschen?",
-    "deleteMessage": "„{{name}}“ wird mit {{count}} Besuchen dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
+    "deleteMessage": "„{{name}}“ wird mit {{count}} Besuchen dauerhaft gelöscht.",
     "columns": {
       "name": "Name",
       "category": "Kategorie",
@@ -51,12 +51,13 @@
       "wishlist": "Merkliste",
       "planned": "Geplant"
     },
-    "retry": "Erneut versuchen",
     "addPlace": "Ort",
     "emptyHint": "Füge deinen ersten Ort hinzu.",
-    "deleteMessage_one": "„{{name}}“ wird mit einem Besuch dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
-    "deleteMessage_other": "„{{name}}“ wird mit {{count}} Besuchen dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
-    "deleteMessageNoVisits": "„{{name}}“ wird dauerhaft gelöscht."
+    "deleteMessage_one": "„{{name}}“ wird mit einem Besuch dauerhaft gelöscht.",
+    "deleteMessage_other": "„{{name}}“ wird mit {{count}} Besuchen dauerhaft gelöscht.",
+    "deleteMessageNoVisits": "„{{name}}“ wird dauerhaft gelöscht.",
+    "addFirst": "Ersten Ort anlegen",
+    "deleteFailedFor": "„{{name}}“ wurde nicht gelöscht. {{reason}}"
   },
   "filter": {
     "allStatuses": "Alle Status",
@@ -81,12 +82,19 @@
     "onWishlist": "☆ Merkliste",
     "statusHint": "Neue Orte landen standardmäßig auf der Merkliste und zählen erst mit, wenn du „War ich schon“ wählst oder einen Besuch einträgst.",
     "notes": "Notiz",
-    "positionRequired": "Ohne Position lässt sich der Ort nicht speichern — such ihn, klick ihn auf der Karte an oder gib Koordinaten ein.",
     "created": "Ort angelegt.",
     "updated": "Ort gespeichert.",
     "saveFailed": "Der Ort konnte nicht gespeichert werden.",
     "addToLists": "Zu Listen hinzufügen",
-    "listAddFailed": "Konnte nicht zu diesen Listen hinzufügen: {{lists}}"
+    "missing": {
+      "position": "Position",
+      "coordinates": "gültige Koordinaten"
+    },
+    "listPartial_one": "Ort gespeichert. Die Liste „{{lists}}“ hat ihn nicht aufgenommen.",
+    "listPartial_other": "Ort gespeichert. Diese Listen haben ihn nicht aufgenommen: {{lists}}.",
+    "listRetry": "Erneut zuordnen",
+    "listContinue": "Weiter",
+    "forList": "Nach dem Speichern kommt der Ort in die Liste „{{list}}“."
   },
   "detail": {
     "backToList": "Zurück zur Übersicht",
@@ -108,7 +116,6 @@
     "visitFailed": "Der Besuch konnte nicht eingetragen werden.",
     "visitDeleteFailed": "Der Besuch konnte nicht gelöscht werden.",
     "visitDeleteTitle": "Besuch löschen?",
-    "visitDeleteMessage": "Der Besuch vom {{visit}} wird dauerhaft gelöscht, samt seiner Beleg-Fotos. Der Ort selbst bleibt bestehen.",
     "notes": "Notiz",
     "masterData": "Stammdaten",
     "position": "Position",
@@ -125,7 +132,11 @@
     "editVisit": "Besuch bearbeiten",
     "visitUpdated": "Besuch gespeichert.",
     "visitUpdateFailed": "Der Besuch konnte nicht gespeichert werden.",
-    "visitNotFound": "Diesen Besuch gibt es an diesem Ort nicht mehr."
+    "visitNotFound": "Diesen Besuch gibt es an diesem Ort nicht mehr.",
+    "visitDeleteMessageNoPhotos": "Der Besuch vom {{visit}} wird dauerhaft gelöscht. Der Ort selbst bleibt bestehen.",
+    "visitDeleteMessagePhotos_one": "Der Besuch vom {{visit}} wird dauerhaft gelöscht, samt seinem Beleg-Foto. Der Ort selbst bleibt bestehen.",
+    "visitDeleteMessagePhotos_other": "Der Besuch vom {{visit}} wird dauerhaft gelöscht, samt seinen {{count}} Beleg-Fotos. Der Ort selbst bleibt bestehen.",
+    "deletedViewStale": "Gelöscht. Die Ansicht konnte nicht aktualisiert werden – lade die Seite neu."
   },
   "lists": {
     "title": "Listen",
@@ -154,7 +165,7 @@
     "backToLists": "Zurück zu den Listen",
     "addPlace": "Ort hinzufügen",
     "addPlacePlaceholder": "Erfassten Ort suchen …",
-    "addNoMatches": "Kein passender Ort. Lege ihn zuerst unter „Orte“ an.",
+    "addNoMatches": "Kein passender Ort in deinem Logbuch.",
     "listEmpty": "Diese Liste ist noch leer.",
     "removeFromList": "„{{name}}“ aus der Liste entfernen",
     "deleteList": "Liste löschen",
@@ -171,7 +182,15 @@
     "subscribeFailed": "Der Checkliste konnte nicht gefolgt werden.",
     "moveUp": "„{{name}}“ nach oben schieben",
     "moveDown": "„{{name}}“ nach unten schieben",
-    "reorderFailed": "Die Reihenfolge konnte nicht gespeichert werden."
+    "reorderFailed": "Die Reihenfolge konnte nicht gespeichert werden.",
+    "nameRequired": "Eine Liste braucht einen Namen.",
+    "createAndAdd": "„{{name}}“ als Ort anlegen und hinzufügen",
+    "unassigned": "„{{name}}“ ist gespeichert, steht aber noch nicht in dieser Liste.",
+    "assignAgain": "Erneut zuordnen",
+    "dismissUnassigned": "Ausblenden",
+    "createTitle": "Neue Liste",
+    "createFirst": "Erste Liste anlegen",
+    "alreadyInList": "„{{name}}“ steht schon in dieser Liste."
   },
   "checklist": {
     "notFound": "Diese Checkliste gibt es nicht.",
@@ -242,11 +261,11 @@
       "link_other": "{{count}} Fotos verknüpfen",
       "linked_one": "{{count}} Foto verknüpft.",
       "linked_other": "{{count}} Fotos verknüpft.",
-      "distance": "{{metres}} m vom Ort entfernt",
       "alt": {
         "trip": "Foto aus deiner Reise",
         "library": "Foto aus der Fotobibliothek"
-      }
+      },
+      "distanceShort": "{{metres}} m"
     }
   },
   "stats": {
@@ -381,6 +400,151 @@
     "title": "Galerie",
     "lead": "Titelbild von {{name}}",
     "makeCover": "Als Titelbild verwenden",
-    "coverFailed": "Das Titelbild konnte nicht gespeichert werden."
+    "coverFailed": "Das Titelbild konnte nicht gespeichert werden.",
+    "makeCoverHint": "Tippe ein Foto an, um es zum Titelbild zu machen."
+  },
+  "delete": {
+    "tripsStayUnnamed": "Verknüpfte Reisen bleiben erhalten.",
+    "photos_one": "Dazu ein Beleg-Foto, das mit gelöscht wird.",
+    "photos_other": "Dazu {{count}} Beleg-Fotos, die mit gelöscht werden.",
+    "lists_one": "Er verschwindet aus der Liste {{names}}; die Liste selbst bleibt.",
+    "lists_other": "Er verschwindet aus {{count}} Listen ({{names}}); die Listen selbst bleiben.",
+    "stations_one": "Eine Roadtrip-Station, die ihn nennt, bleibt erhalten.",
+    "stations_other": "{{count}} Roadtrip-Stationen, die ihn nennen, bleiben erhalten."
+  },
+  "visit": {
+    "action": "Besuch erfassen",
+    "recordTitle": "Besuch erfassen · {{name}}",
+    "when": "Wann warst du dort?",
+    "mode": {
+      "today": "Heute",
+      "other": "Anderes Datum",
+      "unknown": "Datum unbekannt"
+    },
+    "timeOptional": "Uhrzeit (optional)",
+    "unknownHint": "Der Besuch wird ohne Datum gespeichert – er zählt trotzdem.",
+    "aheadHint": "Dieser Tag liegt in der Zukunft: Der Besuch ist geplant und zählt erst, wenn er da ist. Fotos kannst du danach ergänzen.",
+    "tripsFailed": "Deine Reisen konnten nicht geladen werden. Den Besuch kannst du trotzdem nach Datum zuordnen lassen.",
+    "photos": "Fotos (optional)",
+    "photosHint": "Bis zu {{max}} Fotos – sie werden hochgeladen, sobald der Besuch gespeichert ist.",
+    "photosPicked_one": "1 Foto ausgewählt",
+    "photosPicked_other": "{{count}} Fotos ausgewählt",
+    "photoFailed": "Die Fotos konnten nicht hochgeladen werden.",
+    "savedPhotoFailed": "Besuch gespeichert. {{reason}}",
+    "photoRetry": "Fotos erneut hochladen",
+    "continueWithoutPhoto": "Weiter ohne Fotos",
+    "recorded": "Besuch bei „{{name}}“ eingetragen.",
+    "photosTooMany": "höchstens {{max}} Fotos"
+  },
+  "merge": {
+    "action": "Dublette zusammenführen",
+    "title": "Dublette zusammenführen · {{name}}",
+    "intro": "„{{name}}“ bleibt bestehen. Wähle den doppelten Ort, der darin aufgehen soll – danach entscheidest du für jede Angabe, welche bleibt.",
+    "pickLabel": "Doppelten Ort wählen",
+    "pickPlaceholder": "Name oder Stadt …",
+    "pickStep": "den doppelten Ort wählen",
+    "pickFailed": "Deine Orte konnten nicht geladen werden.",
+    "pickNone": "Kein anderer Ort passt.",
+    "metres_one": "{{count}} m entfernt",
+    "metres_other": "{{count}} m entfernt",
+    "kilometres_one": "{{count}} km entfernt",
+    "kilometres_other": "{{count}} km entfernt",
+    "pickedLine": "Wird zusammengeführt mit „{{name}}“.",
+    "pickOther": "Anderen Ort wählen",
+    "group": {
+      "name": "Name",
+      "localName": "Name in Landesschrift",
+      "category": "Kategorie",
+      "position": "Position",
+      "address": "Adresse",
+      "notes": "Notiz"
+    },
+    "side": {
+      "target": "Dieser Ort",
+      "source": "Der andere",
+      "both": "Beide"
+    },
+    "bothNotes": "Beide Notizen behalten",
+    "none": "—",
+    "same": "bei beiden gleich",
+    "apart": "Die beiden Positionen liegen {{metres}} m auseinander.",
+    "confirm": "Zusammenführen",
+    "failed": "Die Orte konnten nicht zusammengeführt werden. Es wurde nichts verändert.",
+    "merged": "„{{name}}“ ist zusammengeführt.",
+    "errors": {
+      "bothCurated": "Beide Orte sind Einträge von Checklisten – zusammengeführt ginge ein Haken verloren. Es wurde nichts verändert.",
+      "same": "Ein Ort kann nicht mit sich selbst zusammengeführt werden."
+    },
+    "impact": {
+      "title": "Von „{{name}}“ zu „{{kept}}“ ziehen um:",
+      "visits_one": "1 Besuch",
+      "visits_other": "{{count}} Besuche",
+      "photos_one": "1 Beleg-Foto",
+      "photos_other": "{{count}} Beleg-Fotos",
+      "documents_one": "1 Dokument",
+      "documents_other": "{{count}} Dokumente",
+      "lists_one": "die Liste {{names}}",
+      "lists_other": "{{count}} Listen: {{names}} – steht der Ort schon darin, bleibt es ein Eintrag",
+      "stations_one": "1 Roadtrip-Station",
+      "stations_other": "{{count}} Roadtrip-Stationen",
+      "counting": "Wird gezählt …",
+      "unknown": "Was umzieht, ließ sich nicht zählen – alle Besuche, Fotos, Dokumente und Listen ziehen trotzdem mit um.",
+      "deleted": "Danach wird „{{name}}“ gelöscht.",
+      "visited": "Der Ort zählt als besucht, weil einer der beiden besucht war.",
+      "wishlist": "Der Ort bleibt auf der Merkliste.",
+      "refKept": "Seine Kennung aus der Quelle bleibt als Zweitverweis erhalten – ein späterer Import findet ihn wieder."
+    },
+    "curated": {
+      "twoLists": "„{{kept}}“ und „{{other}}“ sind Einträge zweier Checklisten ({{lists}}). Zusammengeführt ginge ein Haken verloren – deshalb bleiben beide bestehen.",
+      "sameList": "„{{kept}}“ und „{{other}}“ sind zwei verschiedene Einträge der Checkliste {{list}}. Zusammengeführt ginge ein Haken verloren – deshalb bleiben beide bestehen."
+    }
+  },
+  "nearby": {
+    "title": "In der Nähe",
+    "subtitle": "Deine gespeicherten Orte rund um eine Unterkunft oder einen Punkt – ohne Standortfreigabe.",
+    "metres": "{{value}} m",
+    "kilometres": "{{value}} km",
+    "origin": {
+      "title": "Ausgangspunkt",
+      "mode": {
+        "lodging": "Unterkunft",
+        "point": "Ort oder Punkt",
+        "device": "Mein Standort"
+      },
+      "lodgingLabel": "Unterkunft",
+      "lodgingPlaceholder": "Unterkunft wählen …",
+      "lodgingsFailed": "Deine Unterkünfte konnten nicht geladen werden.",
+      "noLodgings": "Keine Unterkunft mit Standort. Wähle einen Ort oder Punkt.",
+      "unplacedLodgings_one": "Eine Unterkunft ohne Standort ist nicht wählbar.",
+      "unplacedLodgings_other": "{{count}} Unterkünfte ohne Standort sind nicht wählbar.",
+      "pointLabel": "Ort suchen oder Punkt setzen",
+      "deviceHint": "Dein Standort wird einmal abgefragt, nur für diese Ansicht – er wird nirgends gespeichert. Ohne Freigabe geht es über Unterkunft oder Punkt genauso.",
+      "deviceUse": "Standort einmal verwenden",
+      "deviceAsking": "Standort wird abgefragt …",
+      "device_denied": "Standort nicht freigegeben. Wähle stattdessen eine Unterkunft oder einen Punkt.",
+      "device_unavailable": "Der Standort ist gerade nicht verfügbar. Wähle stattdessen eine Unterkunft oder einen Punkt.",
+      "deviceLabel": "dein Standort",
+      "current": "Ausgangspunkt: {{label}}",
+      "linkedLodgingUnusable": "Diese Unterkunft hat keinen Standort – wähle einen anderen Ausgangspunkt."
+    },
+    "filter": {
+      "title": "Filter",
+      "radius": "Umkreis",
+      "states": "Zeigen"
+    },
+    "state": {
+      "visited": "Besucht",
+      "planned": "Geplant",
+      "excluded": "Gemerkt"
+    },
+    "results": {
+      "title": "Orte",
+      "count_one": "1 Ort bis {{radius}} um {{label}}",
+      "count_other": "{{count}} Orte bis {{radius}} um {{label}}",
+      "noOrigin": "Wähle einen Ausgangspunkt – eine Unterkunft, einen Ort oder einen Punkt auf der Karte.",
+      "none": "Keine gespeicherten Orte bis {{radius}}.",
+      "noneFiltered": "Keine Orte passen zu den Filtern.",
+      "wider": "Umkreis auf {{radius}} erweitern"
+    }
   }
 }

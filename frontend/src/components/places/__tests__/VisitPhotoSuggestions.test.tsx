@@ -74,4 +74,18 @@ describe("VisitPhotoSuggestions", () => {
     expect(await screen.findByText("places:photos.suggest.undated")).toBeInTheDocument();
     expect(screen.getByText("places:photos.suggest.libraryDown")).toBeInTheDocument();
   });
+
+  // forgejo#249: the distance was a hover-only `title` — never seen on an iPad.
+  it("shows each suggestion's distance as text, not as a tooltip", async () => {
+    getVisitPhotoSuggestions.mockResolvedValue({
+      day: "2024-05-01",
+      suggestions: [TRIP],
+      library: "ok",
+    });
+    render(<VisitPhotoSuggestions visitId="v1" onLinked={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: "places:photos.suggest.open" }));
+    const tiles = await screen.findAllByRole("button", { pressed: false });
+    expect(tiles[0]).toHaveTextContent("places:photos.suggest.distanceShort");
+    expect(tiles[0]).not.toHaveAttribute("title");
+  });
 });

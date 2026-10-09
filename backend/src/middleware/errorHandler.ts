@@ -267,7 +267,13 @@ export type ApiErrorCode =
   | "WEB_PREFS_INVALID"
   | "WEB_PREFS_TOO_LARGE"
   /** A rental evidence category on a document not filed with a rental (forgejo#239). */
-  | "DOCUMENT_CATEGORY_NOT_RENTAL";
+  | "DOCUMENT_CATEGORY_NOT_RENTAL"
+  /** Merging two places (forgejo#232, `services/places/placeMerge.ts`): a
+   *  place cannot be merged into itself (400), and two places that each
+   *  stand for a DIFFERENT checklist item cannot become one (409) — one
+   *  checklist's tick would be lost. */
+  | "PLACE_MERGE_SAME"
+  | "PLACE_MERGE_BOTH_CURATED";
 
 interface AuthRequest extends Request {
   user?: {
