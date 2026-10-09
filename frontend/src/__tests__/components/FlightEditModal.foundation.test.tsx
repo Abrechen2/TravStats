@@ -223,6 +223,20 @@ describe("FlightEditModal — the shared form blocks", () => {
     expect(assignFlights).toHaveBeenCalledTimes(2);
   });
 
+  it("reloads the caller when the saved-but-not-moved dialog is closed with Escape (re-review N1)", async () => {
+    assignFlights.mockRejectedValueOnce(networkError);
+    const props = renderModal();
+    await waitFor(() => expect(document.querySelector('option[value="t2"]')).not.toBeNull());
+    const tripSelect = document.querySelector('option[value="t2"]')!.closest("select")!;
+    fireEvent.change(tripSelect, { target: { value: "t2" } });
+    save();
+    expect(await screen.findByText("flights:edit.savedTripAssignFailed")).toBeInTheDocument();
+    // The edit IS stored: closing any way must let the caller show it.
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await waitFor(() => expect(props.onClose).toHaveBeenCalledTimes(1));
+    expect(props.onAfterSave).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps Save disabled while the trip move after the save runs (review I1)", async () => {
     let settle: () => void = () => {};
     assignFlights.mockImplementationOnce(() => new Promise<void>((r) => (settle = r)));

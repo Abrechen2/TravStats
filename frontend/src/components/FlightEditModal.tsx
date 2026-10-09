@@ -337,7 +337,9 @@ export default function FlightEditModal({
   return (
     <Modal
       open={isOpen}
-      onClose={onClose}
+      // Once the flight is stored, every way out (×, Escape, scrim) must let
+      // the caller show the edit — not only the footer buttons (re-review N1).
+      onClose={savedTripFailed ? closeAfterSave : onClose}
       busy={loading || movingTrip}
       dirty={dirty && !savedTripFailed}
       maxWidth={672}
