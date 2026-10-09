@@ -1316,6 +1316,18 @@
     "RENTAL_ODOMETER_5": {
       "name": "Kilometerbuch",
       "description": "Fünf abgeschlossene Mieten mit Anfangs- und Endkilometerstand"
+    },
+    "BUS_FIRST": {
+      "name": "Erste Reihe im Logbuch",
+      "description": "Die erste Busfahrt abgeschlossen"
+    },
+    "BUS_NIGHT": {
+      "name": "Über Nacht unterwegs",
+      "description": "Eine Busfahrt über Nacht, belegt durch Abfahrts- und Ankunftszeit"
+    },
+    "BUS_TERMINALS_10": {
+      "name": "Neue Haltestellen",
+      "description": "Zehn verschiedene Bus-Terminals besucht"
     }
   },
   "header": {

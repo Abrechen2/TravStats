@@ -35,7 +35,13 @@ export const TRIP_COST_SELECT = {
       // Every domain that can be sold on a booking: one with no segment at
       // all is the only kind the trip's own booking list is read for.
       _count: {
-        select: { flights: true, cruises: true, lodgingStays: true, railJourneys: true },
+        select: {
+          flights: true,
+          cruises: true,
+          lodgingStays: true,
+          railJourneys: true,
+          busJourneys: true,
+        },
       },
     },
   },
@@ -64,6 +70,8 @@ export const TRIP_COST_SELECT = {
   // Train rides price like any segment: their own price, or the booking a
   // connection shares (forgejo#275).
   railJourneys: { select: { status: true, ...PRICE, bookingId: true, booking: BOOKING_PRICE } },
+  // Bus rides price like train rides (forgejo#263): their own price, or their booking's.
+  busJourneys: { select: { status: true, ...PRICE, bookingId: true, booking: BOOKING_PRICE } },
   rentalBookings: { select: RENTAL_PRICE },
   // Trip-wide expenses, and those of its sections — a section's is stored on
   // the section (exactly one of the two is set, a CHECK), so it follows a
@@ -102,12 +110,18 @@ export function toTripCostInput(row: TripCostRow, visible: VisibleDomains): Trip
   return {
     bookings: row.bookings.map(({ _count, ...booking }) => ({
       ...booking,
-      segmentCount: _count.flights + _count.cruises + _count.lodgingStays + _count.railJourneys,
+      segmentCount:
+        _count.flights +
+        _count.cruises +
+        _count.lodgingStays +
+        _count.railJourneys +
+        _count.busJourneys,
     })),
     flights: when("flight", row.flights),
     cruises: when("cruise", row.cruises),
     stays: when("lodging", row.lodgingStays),
     rail: when("rail", row.railJourneys),
+    bus: when("bus", row.busJourneys),
     rentals: [
       ...when("rental", row.rentalBookings),
       // Reached only through a roadtrip: shown only where both are.

@@ -18,6 +18,11 @@ export interface TravelAccountYear {
   seaNights: number;
   /** Nights on a completed night train (forgejo#266). */
   railNights: number;
+  /**
+   * Nights on a completed night bus, by its clocks (forgejo#263). Optional:
+   * a server older than the bus bucket does not send it.
+   */
+  busNights?: number;
   /** A flight whose departure and arrival fall on different dates. */
   airNights: number;
   /**

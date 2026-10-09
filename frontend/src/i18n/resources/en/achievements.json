@@ -1316,6 +1316,18 @@
     "RENTAL_ODOMETER_5": {
       "name": "Logbook",
       "description": "Five completed rentals with both the start and end odometer reading"
+    },
+    "BUS_FIRST": {
+      "name": "Front row in the logbook",
+      "description": "Completed your first bus ride"
+    },
+    "BUS_NIGHT": {
+      "name": "On the road overnight",
+      "description": "A bus ride through the night, shown by its departure and arrival times"
+    },
+    "BUS_TERMINALS_10": {
+      "name": "New stops",
+      "description": "Visited ten different bus terminals"
     }
   },
   "header": {

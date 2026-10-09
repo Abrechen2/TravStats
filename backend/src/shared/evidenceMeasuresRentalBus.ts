@@ -31,9 +31,22 @@ const RENTAL = (aggregation: "sum" | "distinct", unit: string): MeasureSpec =>
     "services/evidence/metricEvidenceRental.ts over utils/rentalAchievements.ts"
   );
 
+const BUS = (aggregation: "sum" | "distinct", unit: string): MeasureSpec =>
+  measure(
+    aggregation,
+    unit,
+    "BusStatsSection",
+    "services/evidence/metricEvidenceBus.ts over services/bus/busStats.ts"
+  );
+
 export const RENTAL_BUS_MEASURES: Record<string, MeasureSpec> = {
   rentalCount: RENTAL("sum", "rentals"),
   rentalDaysTotal: RENTAL("sum", "days"),
   rentalOneWayCount: RENTAL("sum", "rentals"),
   rentalOdometerDocumentedCount: RENTAL("sum", "rentals"),
+  busRideCount: BUS("sum", "rides"),
+  busDistanceKmTotal: BUS("sum", "km"),
+  busCountriesCount: BUS("distinct", "countries"),
+  busNightRideCount: BUS("sum", "rides"),
+  busTerminalsCount: BUS("distinct", "terminals"),
 };

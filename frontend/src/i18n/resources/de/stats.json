@@ -670,7 +670,10 @@
     "avgTripDaysDesc_one": "Längste Reise: {{count}} Tag",
     "avgTripDaysDesc_other": "Längste Reise: {{count}} Tage",
     "journalEntries": "Tagebucheinträge",
-    "noMoods": "Noch keine Stimmung erfasst"
+    "noMoods": "Noch keine Stimmung erfasst",
+    "helpWithBus": "Der graue Rest ist nicht zugeordnet: Nächte, für die kein Eintrag sagt, wo du warst. Das heißt nicht zuhause — ein fehlender Eintrag beweist nichts, und je vollständiger dein Logbuch, desto kleiner der Rest. Belegen zwei Einträge dieselbe Nacht, zählt sie einmal: Schiff vor Unterkunft vor Nachtbus vor Flugzeug. Das laufende Jahr zählt bis zur letzten Nacht.",
+    "helpWithRailAndBus": "Der graue Rest ist nicht zugeordnet: Nächte, für die kein Eintrag sagt, wo du warst. Das heißt nicht zuhause — ein fehlender Eintrag beweist nichts, und je vollständiger dein Logbuch, desto kleiner der Rest. Belegen zwei Einträge dieselbe Nacht, zählt sie einmal: Schiff vor Unterkunft vor Nachtzug vor Nachtbus vor Flugzeug. Das laufende Jahr zählt bis zur letzten Nacht.",
+    "busNights": "Nachtbus"
   },
   "sections": {
     "button": "Abschnitte",

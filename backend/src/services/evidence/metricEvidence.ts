@@ -62,10 +62,18 @@ import {
   resolveRentalOdometerDocumentedCount,
 } from "./metricEvidenceRental";
 import {
+  resolveBusRideCount,
+  resolveBusDistanceKmTotal,
+  resolveBusCountriesCount,
+  resolveBusNightRideCount,
+  resolveBusTerminalsCount,
+} from "./metricEvidenceBus";
+import {
   resolveTravelAccountHotelNights,
   resolveTravelAccountSeaNights,
   resolveTravelAccountAirNights,
   resolveTravelAccountRailNights,
+  resolveTravelAccountBusNights,
   resolveTravelAccountUnassignedNights,
   resolveTravelAccountContestedNights,
   resolveTravelAccountFullyCoveredTripCount,
@@ -201,6 +209,7 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   travelAccountSeaNights: resolveTravelAccountSeaNights,
   travelAccountAirNights: resolveTravelAccountAirNights,
   travelAccountRailNights: resolveTravelAccountRailNights,
+  travelAccountBusNights: resolveTravelAccountBusNights,
   travelAccountUnassignedNights: resolveTravelAccountUnassignedNights,
   travelAccountContestedNights: resolveTravelAccountContestedNights,
   travelAccountFullyCoveredTripCount: resolveTravelAccountFullyCoveredTripCount,
@@ -225,6 +234,11 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   rentalDaysTotal: resolveRentalDaysTotal,
   rentalOneWayCount: resolveRentalOneWayCount,
   rentalOdometerDocumentedCount: resolveRentalOdometerDocumentedCount,
+  busRideCount: resolveBusRideCount,
+  busDistanceKmTotal: resolveBusDistanceKmTotal,
+  busCountriesCount: resolveBusCountriesCount,
+  busNightRideCount: resolveBusNightRideCount,
+  busTerminalsCount: resolveBusTerminalsCount,
   passportCountryCount: resolvePassportCountryCount,
   passportContinentCount: resolvePassportContinentCount,
   passportAirportCount: resolvePassportAirportCount,

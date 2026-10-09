@@ -86,6 +86,15 @@ export const travelAccountYearSchema = z.object({
         "(NJ, EN, NZ), or a ride timed overnight — from its departure day to its arrival " +
         "day on the stations' calendars.",
     }),
+  busNights: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "Nights on a completed night bus — a ride whose clocks say it ran overnight (at " +
+        "least six hours, a later arrival day on the terminals' calendars); a date-only " +
+        "ride claims none (forgejo#263). 0 while the bus domain is hidden.",
+    }),
   airNights: z.number().int().openapi({
     description: "A flight whose departure and arrival fall on different dates.",
   }),

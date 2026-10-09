@@ -1,5 +1,6 @@
 import type { DomainAchievementCheck } from "./achievementWrites";
 import { calculateRentalAchievementStats, checkRentalAchievement } from "./rentalAchievements";
+import { calculateBusAchievementStats, checkBusAchievement } from "./busAchievements";
 
 /**
  * The badge checks of the domains that arrived after rail (forgejo#262 ff.),
@@ -12,6 +13,12 @@ import { calculateRentalAchievementStats, checkRentalAchievement } from "./renta
 export async function loadDomainAchievementChecks(
   userId: string
 ): Promise<DomainAchievementCheck[]> {
-  const rental = await calculateRentalAchievementStats(userId);
-  return [(achievement) => checkRentalAchievement(achievement, rental)];
+  const [rental, bus] = await Promise.all([
+    calculateRentalAchievementStats(userId),
+    calculateBusAchievementStats(userId),
+  ]);
+  return [
+    (achievement) => checkRentalAchievement(achievement, rental),
+    (achievement) => checkBusAchievement(achievement, bus),
+  ];
 }

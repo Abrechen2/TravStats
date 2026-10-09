@@ -122,6 +122,7 @@
     "backup.ts",
     "bus.ts",
     "bus/entrySuggestions.ts",
+    "bus/stats.ts",
     "cruises.ts",
     "cruises/facets.ts",
     "cruises/list.ts",

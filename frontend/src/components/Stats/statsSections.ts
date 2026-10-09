@@ -107,6 +107,15 @@ export const RENTAL_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "years", label: t("rental:stats.sections.years") },
 ];
 
+export const BUS_SECTIONS = (t: Translate): SectionOption[] => [
+  { key: "kpis", label: t("bus:stats.sections.kpis") },
+  { key: "rankings", label: t("bus:stats.sections.rankings") },
+  { key: "connections", label: t("bus:stats.sections.connections") },
+  { key: "delays", label: t("bus:stats.sections.delays") },
+  { key: "records", label: t("bus:stats.sections.records") },
+  { key: "years", label: t("bus:stats.sections.years") },
+];
+
 const BY_TAB: Record<DomainKey | "all", (t: Translate) => SectionOption[]> = {
   all: OVERVIEW_SECTIONS,
   flight: FLIGHT_SECTIONS,
@@ -116,8 +125,7 @@ const BY_TAB: Record<DomainKey | "all", (t: Translate) => SectionOption[]> = {
   roadtrip: ROADTRIP_SECTIONS,
   rail: RAIL_SECTIONS,
   rental: RENTAL_SECTIONS,
-  // B2 (spec 2026-10-07 §6): the bus statistics tab arrives with its endpoint.
-  bus: () => [],
+  bus: BUS_SECTIONS,
 };
 
 /** The menu's options for a tab. */

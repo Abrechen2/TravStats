@@ -55,15 +55,16 @@ export function visibleStatsTabs(
   enabledDomains: readonly DomainKey[],
   placesAccess: PlacesAccess,
   railOffered = false,
-  rentalOffered = false
+  rentalOffered = false,
+  /** The `busDomain` gate (forgejo#263); hidden unless a caller says otherwise, as rail. */
+  busOffered = false
 ): DomainKey[] {
   return enabledDomains.filter(
     (key) =>
       (key !== "poi" || placesAccess !== "denied") &&
       (key !== "rail" || railOffered) &&
       (key !== "rental" || rentalOffered) &&
-      // B2 (spec 2026-10-07 §6): bus is no statistics tab until its endpoint lands.
-      key !== "bus"
+      (key !== "bus" || busOffered)
   );
 }
 
@@ -72,15 +73,15 @@ export function resolveStatsTab(
   enabledDomains: readonly DomainKey[],
   placesAccess: PlacesAccess,
   railOffered = false,
-  rentalOffered = false
+  rentalOffered = false,
+  busOffered = false
 ): StatsTab {
   if (requested === "all") return "all";
   if (requested === "poi") return placesAccess === "denied" ? "all" : "poi";
   // Rail behind a closed beta gate has no tab to land on, however it was asked.
   if (requested === "rail" && !railOffered) return "all";
   if (requested === "rental" && !rentalOffered) return "all";
-  // B2 (spec 2026-10-07 §6): bus has no statistics tab yet.
-  if (requested === "bus") return "all";
+  if (requested === "bus" && !busOffered) return "all";
   // Falling back to the overview rather than showing nothing: the reader asked
   // for statistics, and a page they can use beats an empty panel.
   return enabledDomains.includes(requested) ? requested : "all";

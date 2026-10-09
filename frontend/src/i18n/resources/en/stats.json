@@ -670,7 +670,10 @@
     "avgTripDaysDesc_one": "Longest trip: {{count}} day",
     "avgTripDaysDesc_other": "Longest trip: {{count}} days",
     "journalEntries": "Journal entries",
-    "noMoods": "No mood recorded yet"
+    "noMoods": "No mood recorded yet",
+    "helpWithBus": "The grey remainder is not accounted for: nights no entry says where you were. That does not mean at home — a missing entry proves nothing, and the more complete your logbook, the smaller the remainder. A night two entries claim counts once: ship before lodging before night bus before plane. The current year counts up to last night.",
+    "helpWithRailAndBus": "The grey remainder is not accounted for: nights no entry says where you were. That does not mean at home — a missing entry proves nothing, and the more complete your logbook, the smaller the remainder. A night two entries claim counts once: ship before lodging before night train before night bus before plane. The current year counts up to last night.",
+    "busNights": "Night bus"
   },
   "sections": {
     "button": "Sections",

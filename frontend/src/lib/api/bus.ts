@@ -1,5 +1,5 @@
 import { api } from "./client";
-import type { BusEntrySuggestions, BusJourney, BusJourneyInput } from "../../types/bus";
+import type { BusEntrySuggestions, BusJourney, BusJourneyInput, BusStats } from "../../types/bus";
 
 /** `/api/v1/bus` — the bus logbook (spec 2026-10-07-bus-domain-design). Enveloped. */
 
@@ -80,6 +80,18 @@ export const busApi = {
     const res = await api.get<Envelope<BusEntrySuggestions>>("/bus/entry-suggestions", {
       params: query,
     });
+    return res.data.data;
+  },
+
+  /**
+   * `GET /bus/stats` (forgejo#263) — the year a ride left in, optionally cut
+   * at "MM-DD" so a running year is compared with the same span of another.
+   */
+  async stats(year: number | null, until: string | null = null): Promise<BusStats> {
+    const params: Record<string, string | number> = {};
+    if (year !== null) params.year = year;
+    if (until !== null) params.until = until;
+    const res = await api.get<Envelope<BusStats>>("/bus/stats", { params });
     return res.data.data;
   },
 };

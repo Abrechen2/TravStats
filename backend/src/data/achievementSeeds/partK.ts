@@ -52,4 +52,43 @@ export const seedsPartK: AchievementDefinition[] = [
     requirementType: "rental_odometer_documented",
     points: 40,
   },
+  {
+    code: "BUS_FIRST",
+    name: "Erste Reihe im Logbuch",
+    description: "Die erste Busfahrt abgeschlossen",
+    category: "explorer",
+    domain: "bus",
+    icon: "🚌",
+    tier: "bronze",
+    // threshold: proposal forgejo#263, owner to confirm
+    requirement: 1,
+    requirementType: "bus_count",
+    points: 10,
+  },
+  {
+    code: "BUS_NIGHT",
+    name: "Über Nacht unterwegs",
+    description: "Eine Busfahrt über Nacht, belegt durch Abfahrts- und Ankunftszeit",
+    category: "special",
+    domain: "bus",
+    icon: "🌙",
+    tier: "bronze",
+    // threshold: proposal forgejo#263, owner to confirm
+    requirement: 1,
+    requirementType: "bus_night_rides",
+    points: 20,
+  },
+  {
+    code: "BUS_TERMINALS_10",
+    name: "Neue Haltestellen",
+    description: "Zehn verschiedene Bus-Terminals besucht",
+    category: "collector",
+    domain: "bus",
+    icon: "🚏",
+    tier: "silver",
+    // threshold: proposal forgejo#263, owner to confirm
+    requirement: 10,
+    requirementType: "bus_terminals",
+    points: 40,
+  },
 ];

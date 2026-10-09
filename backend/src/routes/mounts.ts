@@ -91,6 +91,7 @@ import railConnectionsRouter from "./rail/connections";
 import railRoadtripConversionRouter from "./rail/roadtripConversion";
 import busRouter from "./bus";
 import busEntrySuggestionsRouter from "./bus/entrySuggestions";
+import busStatsRouter from "./bus/stats";
 import rentalRouter from "./rental";
 import rentalStationsRouter from "./rental/stations";
 import rentalImportRouter from "./rental/import";
@@ -335,6 +336,7 @@ export const apiMounts: ApiMount[] = [
     base: "/api/v1/bus/entry-suggestions",
     router: busEntrySuggestionsRouter,
   },
+  { id: "bus.stats", base: "/api/v1/bus/stats", router: busStatsRouter },
   { id: "bus", base: "/api/v1/bus", router: busRouter },
   // Car rentals (spec 2026-10-01-rental-domain-design). Behind the beta switch in
   // the UI only. Sub-routers mount FIRST: '/:id' would answer them as a 404.

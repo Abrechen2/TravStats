@@ -12,9 +12,11 @@ import deRail from "../../../i18n/resources/de/rail.json";
 import enRail from "../../../i18n/resources/en/rail.json";
 import deRental from "../../../i18n/resources/de/rental.json";
 import enRental from "../../../i18n/resources/en/rental.json";
+import deBus from "../../../i18n/resources/de/bus.json";
+import enBus from "../../../i18n/resources/en/bus.json";
 
 // Rail and rental since forgejo#261/#262 — their blocks have switches too.
-const TABS = ["all", "flight", "cruise", "lodging", "poi", "rail", "rental"] as const;
+const TABS = ["all", "flight", "cruise", "lodging", "poi", "rail", "rental", "bus"] as const;
 
 type Tree = { [key: string]: unknown };
 const LOCALES: Record<string, Record<string, Tree>> = {
@@ -25,6 +27,7 @@ const LOCALES: Record<string, Record<string, Tree>> = {
     places: dePlaces,
     rail: deRail,
     rental: deRental,
+    bus: deBus,
   },
   en: {
     stats: enStats,
@@ -33,6 +36,7 @@ const LOCALES: Record<string, Record<string, Tree>> = {
     places: enPlaces,
     rail: enRail,
     rental: enRental,
+    bus: enBus,
   },
 };
 
