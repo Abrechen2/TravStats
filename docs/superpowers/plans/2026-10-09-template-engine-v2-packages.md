@@ -124,6 +124,62 @@ match/decline from `markers`/`anchors` and ignores `expected`), `loader.ts`
   The TypeScript reader `services/trip/tripDocumentParser.ts` is the reference and is deleted
   once the templates pass the same measurement (`scripts/measureTripSamples.ts`).
 
+**P3 as built (2026-10-09).**
+- **Contract** `services/trip/package/contract.ts`: one Zod schema over
+  `applyTemplate(...).values`. Fields `bookingReference` (≤20), `issuedOn` (both required),
+  `tripName`, `startDate`, `endDate`, `travellers`, `totalPrice` (needs `currency`),
+  `currency`, `cruiseShip`, `cruiseFrom`, `cruiseTo`, `cruiseCabin`, plus `cruiseStart` /
+  `cruiseEnd` (beyond the plan: a cruise row needs a start day; an undated cruise is skipped
+  with `cruiseUndated`, never dated from the package span). Repeats `flights`
+  (`flightNumber`, `date`, `depIata|depCity`, `arrIata|arrCity`, `depTime`, `arrTime`,
+  `arrDayOffset`, `airline`; ≤40) and `stays` (`name`, `checkIn`, `checkOut`, `address`,
+  `city`, `country`, `board`, `room`; ≤60). Flight numbers are canonicalised (`GF 0086` →
+  `GF86`); every string and list is bounded.
+- **Parsing**: `package` is in `PARSER_SUPPORTED_DOMAINS` as a parse target that is not a
+  `DomainKey` (`PACKAGE_PARSE_TARGET`). `parseAs("package")` tries the active v2 `package`
+  templates (`parsePackage.ts`); first match whose values pass the contract wins. No reader
+  is compiled in; `fallbackCode` `noTemplate` / `invalidReading` (+ `issues`).
+  `documentDomain.scoreDocument` gives `package` no static signal — an active package
+  template's matcher scores 25 (`package-template:<id>`), above what the same invoice
+  scores as flight. `documentValues` / `storedReading` read a stored package body.
+- **City → IATA** (`airportByCity.ts`): active airports with IATA, three passes — city equals
+  the name (parenthesised district ignored), airport name starts with it, city starts with
+  it. Several hits = `ambiguous` with candidates, none = `unknown`; both skip the leg
+  (`unresolvedAirport`) until the reviewer picks (`choices.airports`). The catalogue has no
+  scheduled-service flag (the OurAirports column is dropped at seeding), so "prefer
+  scheduled service" is not applied — store `scheduled_service` first if it is wanted.
+- **Proposal / commit** (`proposal.ts`, `matching.ts`, `commit.ts`): trip by booking
+  reference (case-insensitive) else `soleOverlappingTrip`; flights by `flightExternalRef`,
+  else number (spaced or not) + local departure day; stays by `normalizeLodgingName` +
+  check-in; cruise by `cruiseExternalRef` or reference. A row on another trip is `skip` +
+  warning, never moved; an attach sets only a missing `tripId` / `bookingId`; a booking keeps
+  a stored price (`priceConflict`). The commit rebuilds the proposal, prepares every row
+  before the transaction (`buildFlightCreateData`, `buildLodgingCreateData`,
+  `buildStayCreateData` — split out of the batch route and the lodging writers) and writes
+  trip, booking (FX on `issuedOn`), flights, lodgings, stays, cruise and the document's
+  filing (`linkDocumentsInTx`) in ONE transaction. Invalid leg → 422 `PACKAGE_FLIGHT_INVALID`
+  (`field: flights[i]`), nothing written.
+- **Routes** `POST /trips/package/preview` and `/commit` (`routes/trips/tripPackage.ts`,
+  enveloped, mounted before `trips`), body `{ reading?, documentId?, choices? }`; OpenAPI in
+  `paths/tripPackage.ts`.
+- **#355** `POST /flights` keeps `tripId` (create schema only, ownership → 404
+  `TRIP_NOT_FOUND`). **#356** `PATCH /trips/bookings/:id` takes `tripId`;
+  `POST /trips/bookings/:id/flights` files flights on a booking (all or nothing). The booking
+  routes moved to `routes/trips/tripBookings.ts` (trips.ts was at 800 lines).
+  Not done: `POST /flights/batch` still ignores a `tripId` in its rows.
+- **Frontend**: the trip import's drop zone parses as `package` (`parseAs`), keeps the PDF,
+  and opens `PackageImportPreviewModal` (badges, reasons, warnings, airport picks, trip
+  name); commit is the one server call.
+- **Templates**: `docs/templates-drafts/package/berge-meer-{invoice,documents}.json` with
+  invented cases; `__tests__/templateDrafts.test.ts` proves validation, own cases and
+  contract conformance. Not yet in the template repository. **Unverified against the real
+  PDFs**: `issuedOn` is read from a `Datum:`/`Rechnungsdatum` line the invented layout
+  carries — `tripDocumentParser.ts` reads no issue date, so whether the real documents print
+  one is open; run `scripts/measureTripSamples.ts`-style measurement before publishing. The
+  invoice template reads no stays (the reference reader does not either).
+- Still open from P3: a mail's PDF attachment is not routed to the package reader (spec
+  package 2); `tripDocumentParser.ts` stays until the templates pass the measurement.
+
 ### P4 — move the issuer readers out
 - Airlines v1 → v2 `flight/`; lodging built-ins (koa, hilton, travelclick, check24, accor, hrs)
   → `lodging/` (exports exist, need test cases); rail DB → `rail/`; cruise AIDA/TUI → `cruise/`;
