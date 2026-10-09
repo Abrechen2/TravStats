@@ -12,6 +12,12 @@ import type { AchievementDefinition } from "../achievements";
  * it counts northern-hemisphere seasons over any flights, while the quarter
  * badge asks one airport in all four CALENDAR quarters of one year.
  *
+ * Cruises (forgejo#257): the catalogue counts distinct ports
+ * (`cruise_ports_unique`), ports on ONE cruise (`MEGA_CRUISE_10`) and loyalty
+ * to a ship or a line — nothing measures one port across cruises, shore
+ * excursions, or a repeated itinerary, so the three below are new rather
+ * than extensions.
+ *
  * Copy is German (the seed language); English lives in
  * `frontend/src/i18n/resources/en/achievements.json` under `codes.<CODE>`.
  */
@@ -51,5 +57,42 @@ export const seedsInsights: AchievementDefinition[] = [
     requirement: 4, // threshold: proposal forgejo#256, owner to confirm
     requirementType: "flight_airport_all_quarters",
     points: 50,
+  },
+
+  {
+    code: "PORT_REUNION_3",
+    name: "Hafen-Wiedersehen",
+    description: "Denselben Hafen auf drei verschiedenen Kreuzfahrten angelaufen",
+    category: "collector",
+    domain: "cruise",
+    icon: "⚓",
+    tier: "silver",
+    requirement: 3, // threshold: proposal forgejo#257, owner to confirm
+    requirementType: "cruise_port_cruises",
+    points: 40,
+  },
+  {
+    code: "SHORE_EXCURSIONS_5",
+    name: "Land und Leute",
+    description: "An fünf verschiedenen Häfen einen Landausflug dokumentiert",
+    category: "explorer",
+    domain: "cruise",
+    icon: "🥾",
+    tier: "silver",
+    requirement: 5, // threshold: proposal forgejo#257, owner to confirm
+    requirementType: "cruise_excursion_ports",
+    points: 50,
+  },
+  {
+    code: "SAME_ITINERARY_2",
+    name: "Eine Runde mehr",
+    description: "Zwei Kreuzfahrten mit genau derselben Hafenfolge",
+    category: "kurios",
+    domain: "cruise",
+    icon: "🔄",
+    tier: "silver",
+    requirement: 2, // threshold: proposal forgejo#257, owner to confirm
+    requirementType: "cruise_repeated_itinerary",
+    points: 40,
   },
 ];

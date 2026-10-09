@@ -215,5 +215,16 @@
   "evidence.metric.flightNewAirportsCount": "Airports recorded for the first time",
   "evidence.metric.flightNewConnectionsCount": "New connections",
   "evidence.metric.flightRepeatedConnectionsCount": "Repeated connections",
-  "evidence.metric.flightTransferCount": "Measured transfers"
+  "evidence.metric.flightTransferCount": "Measured transfers",
+  "evidence.metric.cruiseNewPortsCount": "Ports called at for the first time",
+  "evidence.metric.cruisePortRevisitCount": "Ports seen again",
+  "evidence.metric.cruiseMeasuredPortStayCount": "Calls with a measured time in port",
+  "evidence.metric.cruiseDocumentedExcursionCount": "Documented shore excursions",
+  "evidence.metric.cruisePortDaysTotal": "Port days",
+  "evidence.metric.cruiseEquatorCruiseCount": "Cruises across the equator",
+  "evidence.metric.cruiseDatelineCruiseCount": "Cruises across the date line",
+  "evidence.metric.cruiseBirthdayAtSeaCruiseCount": "Cruises with a birthday aboard",
+  "evidence.metric.cruiseNewYearAtSeaCruiseCount": "Cruises with New Year's Eve aboard",
+  "evidence.metric.cruiseCanalCruiseCount": "Cruises with a canal transit",
+  "evidence.metric.cruisePolarCruiseCount": "Cruises in polar waters"
 }

@@ -31,6 +31,7 @@ import tripSuggestionRoutes from "./tripSuggestions";
 import flightLookupRoutes from "./flightLookup";
 import statsRoutes from "./stats";
 import statsFlightInsightsRoutes from "./stats/flightInsights";
+import statsCruiseInsightsRoutes from "./stats/cruiseInsights";
 import statsNetworkRouteRoutes from "./stats/networkRoute";
 import airportRoutes from "./airports";
 import airlineLogoRoutes from "./airlineLogos";
@@ -214,6 +215,12 @@ export const apiMounts: ApiMount[] = [
     id: "stats.flightInsights",
     base: "/api/v1/stats/flight-insights",
     router: statsFlightInsightsRoutes,
+  },
+  // Cruise insights (forgejo#257), likewise.
+  {
+    id: "stats.cruiseInsights",
+    base: "/api/v1/stats/cruise-insights",
+    router: statsCruiseInsightsRoutes,
   },
   { id: "stats", base: "/api/v1/stats", router: statsRoutes },
   { id: "airports", base: "/api/v1/airports", router: airportRoutes },

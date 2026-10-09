@@ -859,6 +859,117 @@
       "story": {
         "short": "The year's story, told from proven extremes.",
         "long": "New destinations: airports the year recorded for the first time. Biggest change: of flights, kilometres (great circle), airports used and connections, the figure that moved most, relatively, against the calendar year before – without flights in that year there is no comparison. Most curious repetition: the longest return to an airport this year after at least a whole year away, otherwise the connection flown most often this year with at least three flights. The fun facts come from the same calculator as the fun facts block, run over this year's flights only. Year: the departure day at the departure airport."
+      },
+      "cruiseEvents": {
+        "short": "Events the badges detect – with the cruises that prove them.",
+        "long": "Counting unit: a sailed cruise on which the event happened. It is the badges' own rule: the equator and the date line are detected between two consecutive ports with a known position (a port without a recognised catalogue entry has no position and proves nothing); a birthday or New Year's Eve when the day lies between the start and end date; canal and polar waters by the ports called at. Year: the cruise's start year. Tap the number for the list."
+      },
+      "cruisePorts": {
+        "short": "New ports against ports you already know from an earlier cruise.",
+        "long": "Counting unit: a catalogue port of a cruise – embarkation port, calls in day order, disembarkation port; the same port twice on one cruise counts once. A port is new on the first cruise (by start date) it appears on in your logbook; every sailed cruise is the reference, also with a year selected. Not included: booked cruises; cruises without a start date and calls at an unrecognised port are named but counted neither as new nor as a return."
+      },
+      "cruiseReunion": {
+        "short": "How long a port had to wait for you.",
+        "long": "Counting unit: days from a port's last day on one cruise to its first day on the next cruise that calls there. A call's day: its recorded local day, else the start day plus the day of the cruise. Below: ports on at least two sailed cruises, with the cruises linked."
+      },
+      "cruiseItineraries": {
+        "short": "Cruises with exactly the same sequence of ports.",
+        "long": "The full sequence is compared: embarkation port, every call in day order, disembarkation port – sea days do not count, the order does. At least two ports. A cruise with an unrecognised port takes no part, because it cannot be shown to be the same port. Sailed cruises only."
+      },
+      "cruiseStays": {
+        "short": "Time in port, from a call's arrival to its departure.",
+        "long": "Measured only where arrival and departure are recorded to the minute; the time in port is the real distance between the two instants, across a clock change too. Calls without these times are not in the average and are listed in the footer, never as zero minutes. The embarkation and disembarkation ports have no times of their own and are left out. Period: cruises that started in the selected year."
+      },
+      "cruiseDays": {
+        "short": "Sea days against port days, and the cruise type that follows.",
+        "long": "A day is a day of the itinerary: a sea day when it is recorded as one, a port day when at least one call is on it (two ports on one day are one port day). Days without an entry are named, not guessed. Type from the recorded days: at least half sea days = sea-day cruise, at most a fifth = port-intensive cruise, otherwise mixed; under two days no type. Year: the start year."
+      },
+      "cruiseExcursions": {
+        "short": "Documented shore excursions per cruise.",
+        "long": "An excursion is a call with an excursion note, or with a tour you recorded on the same local day that starts at most 100 km from the port (the tour's first point, else the start of its recording) – there is no stored link, hence this rule. Activity, distance and climb come from the tours; distance on foot counts hikes, walks, runs and climbs. With neither, the cruise reads “no excursions documented” – which does not mean there were none."
+      },
+      "cruiseExcursionsNotes": {
+        "short": "Documented shore excursions per cruise.",
+        "long": "An excursion is a call with an excursion note. Without one, the cruise reads “no excursions documented” – which does not mean there were none."
+      }
+    },
+    "cruise": {
+      "title": "Ports, time in port and excursions",
+      "intro": "Sailed cruises are counted. “New” means called at on no earlier cruise in your logbook.",
+      "empty": "No sailed cruise in this period. These figures come from sailed cruises with ports in their itinerary.",
+      "events": {
+        "title": "Special events",
+        "names": {
+          "equator": "Crossed the equator",
+          "dateline": "Crossed the date line",
+          "birthdayAtSea": "Birthday aboard",
+          "newYearAtSea": "New Year's Eve aboard",
+          "canal": "Canal transit",
+          "polar": "Polar waters"
+        },
+        "cruises": "{{cruises}}× ",
+        "none": "on no cruise yet",
+        "noBirthday": "no birthday in your profile – with one this can be counted"
+      },
+      "ports": {
+        "title": "New ports and returns",
+        "cruises": "Cruises",
+        "ports": "Ports",
+        "new": "New",
+        "again": "Again",
+        "perCruise": "Per cruise",
+        "cruiseRow": "{{ports}} ports, {{fresh}} new and {{again}} seen again",
+        "undatedRow": "{{ports}} ports – without a start date neither new nor seen again",
+        "coverage": "Not placed: {{undated}} cruises without a start date, {{unresolved}} calls at an unrecognised port."
+      },
+      "reunion": {
+        "title": "Longest pause before a return",
+        "days_one": "{{count}} day",
+        "days_other": "{{count}} days",
+        "empty": "No port on two dated cruises yet.",
+        "repeatPorts": "Ports on several cruises",
+        "noRepeatPorts": "No port on two cruises yet."
+      },
+      "itineraries": {
+        "title": "Same sequence of ports",
+        "empty": "No two cruises with exactly the same sequence of ports yet."
+      },
+      "stays": {
+        "title": "Time in port",
+        "average": "On average {{average}} in port,",
+        "measured": "measured on {{calls}} calls",
+        "measuredLabel": "Calls with a measured time in port",
+        "longest": "Longest call",
+        "shortest": "Shortest call",
+        "empty": "No time in port can be measured yet. It appears once a call has its arrival and departure recorded to the minute.",
+        "coverage": "{{measured}} of {{calls}} calls measured; {{missing}} without a minute-precise arrival and departure, {{inconsistent}} leaving before arriving – they are not in the average."
+      },
+      "days": {
+        "title": "Sea days and port days",
+        "seaDays": "Sea days",
+        "portDays": "Port days",
+        "types": "Cruise types",
+        "typeCounts": "{{seaHeavy}} sea · {{balanced}} mixed · {{portIntensive}} port",
+        "typeNames": {
+          "seaHeavy": "Sea-day cruise",
+          "balanced": "Mixed cruise",
+          "portIntensive": "Port-intensive cruise"
+        },
+        "unclassified": "too few days in the itinerary",
+        "row": "{{sea}} sea days, {{port}} port days",
+        "unlisted": "{{days}} days without an itinerary entry"
+      },
+      "excursions": {
+        "title": "Shore excursions",
+        "summary": "{{calls}} documented excursions at {{ports}} ports on {{cruises}} cruises",
+        "cruiseRow": "{{documented}} of {{calls}} calls with an excursion ({{notes}} notes, {{tours}} tours)",
+        "noneDocumented": "no excursions documented",
+        "empty": "No excursion documented yet. An excursion counts when a call has an excursion note, or when you recorded a tour that day starting at most {{km}} km from the port.",
+        "emptyNotesOnly": "No excursion documented yet. An excursion counts when a call has an excursion note.",
+        "unspecified": "No activity",
+        "onFoot": "{{km}} on foot",
+        "distance": "{{km}} in total",
+        "ascent": "{{m}} m climbed"
       }
     }
   }

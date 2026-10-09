@@ -47,6 +47,7 @@ import { ACHIEVEMENT_MEASURES } from "./evidenceMeasuresAchievements";
 import { RAIL_MEASURES } from "./evidenceMeasuresRail";
 import { PASSPORT_MEASURES } from "./evidenceMeasuresPassport";
 import { FLIGHT_INSIGHT_MEASURES } from "./evidenceMeasuresFlightInsights";
+import { CRUISE_INSIGHT_MEASURES } from "./evidenceMeasuresCruiseInsights";
 /**
  * `Aggregation` is owned by `./evidence` — the contract the payload is
  * described in — not redeclared here. Two structurally identical unions of
@@ -91,5 +92,6 @@ export const EVIDENCE_MEASURES: Record<string, MeasureSpec> = {
   ...RAIL_MEASURES,
   ...PASSPORT_MEASURES,
   ...FLIGHT_INSIGHT_MEASURES,
+  ...CRUISE_INSIGHT_MEASURES,
   ...ACHIEVEMENT_MEASURES,
 };

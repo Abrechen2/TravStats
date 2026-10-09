@@ -3,6 +3,7 @@ import type { CountryDetail, Passport } from "../../types/passport";
 import type { TravelRecord, TravelRecordsResponse } from "../../types/travelRecords";
 import type { Wrapped } from "../../types/wrapped";
 import type { FlightInsights } from "../../types/flightInsights";
+import type { CruiseInsights } from "../../types/cruiseInsights";
 import type {
   AircraftProfileResponse,
   AircraftRankingResponse,
@@ -106,6 +107,18 @@ export const statsApi = {
    */
   getFlightInsights: async (year?: number | null): Promise<FlightInsights> => {
     const { data } = await api.get<FlightInsights>("/stats/flight-insights", {
+      params: year == null ? undefined : { year },
+    });
+    return data;
+  },
+
+  /**
+   * Special events per voyage, new ports, time in port, shore excursions and
+   * sea-day patterns (forgejo#257). `year` cuts the per-cruise lists to the
+   * cruises that started that year.
+   */
+  getCruiseInsights: async (year?: number | null): Promise<CruiseInsights> => {
+    const { data } = await api.get<CruiseInsights>("/stats/cruise-insights", {
       params: year == null ? undefined : { year },
     });
     return data;

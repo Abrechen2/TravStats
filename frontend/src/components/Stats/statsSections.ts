@@ -55,6 +55,7 @@ export const CRUISE_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "rhythm", label: t("cruise:stats.rhythm.title") },
   { key: "money", label: t("cruise:stats.money.title") },
   { key: "fun", label: t("cruise:stats.fun.title") },
+  { key: "insights", label: t("stats:insights.cruise.title") },
 ];
 
 export const LODGING_SECTIONS = (t: Translate): SectionOption[] => [

@@ -1304,6 +1304,18 @@
     "FOUR_QUARTERS_AIRPORT": {
       "name": "Jahreszeiten-Wiedersehen",
       "description": "Denselben Flughafen in allen vier Kalenderquartalen eines Jahres genutzt"
+    },
+    "PORT_REUNION_3": {
+      "name": "Hafen-Wiedersehen",
+      "description": "Denselben Hafen auf drei verschiedenen Kreuzfahrten angelaufen"
+    },
+    "SHORE_EXCURSIONS_5": {
+      "name": "Land und Leute",
+      "description": "An fünf verschiedenen Häfen einen Landausflug dokumentiert"
+    },
+    "SAME_ITINERARY_2": {
+      "name": "Eine Runde mehr",
+      "description": "Zwei Kreuzfahrten mit genau derselben Hafenfolge"
     }
   },
   "header": {

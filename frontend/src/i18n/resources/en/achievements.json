@@ -1304,6 +1304,18 @@
     "FOUR_QUARTERS_AIRPORT": {
       "name": "All-season regular",
       "description": "Used the same airport in all four calendar quarters of one year"
+    },
+    "PORT_REUNION_3": {
+      "name": "Port regular",
+      "description": "Called at the same port on three different cruises"
+    },
+    "SHORE_EXCURSIONS_5": {
+      "name": "Going ashore",
+      "description": "Documented a shore excursion at five different ports"
+    },
+    "SAME_ITINERARY_2": {
+      "name": "One more lap",
+      "description": "Two cruises with exactly the same sequence of ports"
     }
   },
   "header": {

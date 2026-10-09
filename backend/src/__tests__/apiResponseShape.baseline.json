@@ -89,6 +89,7 @@
     "setup.ts",
     "stats.ts",
     "stats/aircraft.ts",
+    "stats/cruiseInsights.ts",
     "stats/flightInsights.ts",
     "stats/networkRoute.ts",
     "stats/page.ts",

@@ -1,0 +1,216 @@
+import request from "supertest";
+import app from "../../index";
+import { prisma } from "../../db";
+import { generateToken } from "../../utils/jwt";
+import { resolveMetricEvidence } from "../../services/evidence/metricEvidence";
+import { calculateInsightAchievementStats } from "../../utils/insightAchievements";
+import {
+  getInstanceSettings,
+  updateInstanceSettings,
+} from "../../services/instanceSettingsService";
+
+/**
+ * forgejo#257, end to end: new ports and ports seen again, time in port from
+ * minute-precise calls only, a shore excursion from a note and from a day tour
+ * linked by day and place — and that tour vanishing, not turning into zero,
+ * while the reader does not see tours. The endpoint, the evidence resolvers
+ * and the badge fold must agree.
+ */
+describe("GET /stats/cruise-insights", () => {
+  let userId: string;
+  let cookie: string;
+  let betaBefore: boolean;
+  const portIds: number[] = [];
+  const cruiseIds: Record<string, string> = {};
+  const page = { offset: 0, limit: 50 };
+  const day = (iso: string): Date => new Date(`${iso}T00:00:00Z`);
+
+  async function port(name: string, lat: number, lon: number): Promise<number> {
+    const row = await prisma.port.create({
+      data: {
+        name: `${name} (insights test)`,
+        lat,
+        lon,
+        timezone: "Europe/Oslo",
+        isUserAdded: true,
+      },
+    });
+    portIds.push(row.id);
+    return row.id;
+  }
+
+  beforeAll(async () => {
+    betaBefore = (await getInstanceSettings()).betaFeaturesEnabled;
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    const user = await prisma.user.create({
+      data: { username: `cruise-insights-${Date.now()}`, passwordHash: "x" },
+    });
+    userId = user.id;
+    cookie = `auth_token=${generateToken(userId)}`;
+    await prisma.userSettings.create({
+      data: { userId, enabledDomains: ["flight", "cruise", "roadtrip"], data: {} },
+    });
+
+    const kiel = await port("Kiel", 54.32, 10.14);
+    const oslo = await port("Oslo", 59.9, 10.73);
+    const bergen = await port("Bergen", 60.39, 5.32);
+
+    for (const [key, start, end] of [
+      ["first", "2019-06-01", "2019-06-04"],
+      ["second", "2024-06-01", "2024-06-04"],
+    ] as const) {
+      const cruise = await prisma.cruise.create({
+        data: {
+          userId,
+          status: "flown",
+          routeName: `Norway ${key}`,
+          startDate: day(start),
+          endDate: day(end),
+          departurePortId: kiel,
+          arrivalPortId: kiel,
+        },
+      });
+      cruiseIds[key] = cruise.id;
+      const y = start.slice(0, 4);
+      await prisma.cruiseStop.createMany({
+        data: [
+          {
+            cruiseId: cruise.id,
+            dayNumber: 2,
+            portId: oslo,
+            stopDate: day(`${y}-06-02`),
+            stopZone: "Europe/Oslo",
+            arrivalUtc: new Date(`${y}-06-02T06:00:00Z`),
+            departureUtc: new Date(`${y}-06-02T15:30:00Z`),
+            timePrecision: "minute",
+            excursionNote: key === "second" ? "Holmenkollen" : null,
+          },
+          { cruiseId: cruise.id, dayNumber: 3, isAtSea: true },
+          { cruiseId: cruise.id, dayNumber: 4, portId: bergen, stopDate: day(`${y}-06-04`) },
+        ],
+      });
+    }
+
+    // A hike in Bergen on the second cruise's Bergen day: a shore excursion.
+    const tour = await prisma.tripRoute.create({
+      data: {
+        userId,
+        name: "Fløyen",
+        mode: "foot",
+        kind: "tour",
+        activity: "hike",
+        tourDate: day("2024-06-04"),
+      },
+    });
+    await prisma.tripStop.create({
+      data: { routeId: tour.id, routeOrderIdx: 0, title: "Start", lat: 60.395, lon: 5.33 },
+    });
+  });
+
+  afterAll(async () => {
+    await updateInstanceSettings({ betaFeaturesEnabled: betaBefore });
+    await prisma.tripRoute.deleteMany({ where: { userId } });
+    await prisma.cruise.deleteMany({ where: { userId } });
+    await prisma.userSettings.deleteMany({ where: { userId } });
+    await prisma.user.deleteMany({ where: { id: userId } });
+    await prisma.port.deleteMany({ where: { id: { in: portIds } } });
+  });
+
+  it("answers ports, stays, excursions and day patterns", async () => {
+    const res = await request(app).get("/api/v1/stats/cruise-insights").set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    const body = res.body;
+
+    expect(body.cruises).toBe(2);
+    expect(
+      body.ports.years.map((y: { year: number; newPorts: unknown[]; revisitedPorts: number }) => [
+        y.year,
+        y.newPorts.length,
+        y.revisitedPorts,
+      ])
+    ).toEqual([
+      [2019, 3, 0],
+      [2024, 0, 3],
+    ]);
+    expect(body.ports.repeatPorts[0].cruises).toHaveLength(2);
+    expect(body.repeatedItineraries).toHaveLength(1);
+
+    // Oslo is measured twice (9 h 30), Bergen never: no times, out of the average.
+    expect(body.portStays).toMatchObject({
+      calls: 4,
+      measured: 2,
+      missingTime: 2,
+      totalMinutes: 1140,
+      averageMinutes: 570,
+    });
+
+    const second = body.excursions.perCruise.find(
+      (c: { cruise: { id: string } }) => c.cruise.id === cruiseIds.second
+    );
+    expect(second).toMatchObject({ notedCalls: 1, documentedCalls: 2, activities: { hike: 1 } });
+    expect(second.tours[0]).toMatchObject({ name: "Fløyen", portName: "Bergen (insights test)" });
+    const first = body.excursions.perCruise.find(
+      (c: { cruise: { id: string } }) => c.cruise.id === cruiseIds.first
+    );
+    expect(first).toMatchObject({ documentedCalls: 0, tours: [] });
+
+    expect(body.dayPattern.perCruise[0]).toMatchObject({
+      seaDays: 1,
+      portDays: 2,
+      unlistedDays: 1,
+      type: "balanced",
+    });
+    expect(body.events.birthdayKnown).toBe(false);
+  });
+
+  it("cuts the per-cruise lists to a year but judges 'new' against every cruise", async () => {
+    const res = await request(app)
+      .get("/api/v1/stats/cruise-insights?year=2024")
+      .set("Cookie", cookie);
+    expect(res.body.ports.perCruise).toEqual([
+      expect.objectContaining({ newPorts: 0, revisitedPorts: 3 }),
+    ]);
+  });
+
+  it("lists behind each count exactly the cruises the section counted", async () => {
+    const year2024 = { period: { kind: "year" as const, year: 2024 } };
+    const all = { period: { kind: "allTime" as const } };
+    const newPorts = await resolveMetricEvidence(userId, "cruiseNewPortsCount", all, page);
+    expect(newPorts!.measure.value).toBe(3);
+    expect(newPorts!.entries.map((e) => e.id)).toEqual([cruiseIds.first]);
+
+    const excursions = await resolveMetricEvidence(
+      userId,
+      "cruiseDocumentedExcursionCount",
+      year2024,
+      page
+    );
+    expect(excursions!.measure.value).toBe(2);
+    expect(excursions!.entries.map((e) => [e.id, e.contribution])).toEqual([[cruiseIds.second, 2]]);
+
+    const stays = await resolveMetricEvidence(userId, "cruiseMeasuredPortStayCount", all, page);
+    expect(stays!.measure.value).toBe(2);
+  });
+
+  it("feeds the badges from the same fold", async () => {
+    const stats = await calculateInsightAchievementStats(userId);
+    expect(stats.cruisePortCruisesMax).toBe(2);
+    expect(stats.cruiseRepeatedItineraryMax).toBe(2);
+    expect(stats.cruiseExcursionPorts).toBe(2);
+  });
+
+  it("drops the tours, and only the tours, while the reader does not see them", async () => {
+    await updateInstanceSettings({ betaFeaturesEnabled: false });
+    try {
+      const res = await request(app).get("/api/v1/stats/cruise-insights").set("Cookie", cookie);
+      expect(res.body.excursions.toursVisible).toBe(false);
+      const second = res.body.excursions.perCruise.find(
+        (c: { cruise: { id: string } }) => c.cruise.id === cruiseIds.second
+      );
+      expect(second).toMatchObject({ documentedCalls: 1, tours: null, activities: null });
+      expect((await calculateInsightAchievementStats(userId)).cruiseExcursionPorts).toBe(1);
+    } finally {
+      await updateInstanceSettings({ betaFeaturesEnabled: true });
+    }
+  });
+});

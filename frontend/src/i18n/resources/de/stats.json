@@ -859,6 +859,117 @@
       "story": {
         "short": "Die Geschichte des Jahres aus belegten Extremen.",
         "long": "Neue Ziele: Flughäfen, die das Jahr zum ersten Mal erfasst hat. Größte Veränderung: von Flügen, Kilometern (Luftlinie), genutzten Flughäfen und Verbindungen die Kennzahl, die sich gegenüber dem Kalenderjahr davor relativ am stärksten verändert hat – ohne Flüge im Vorjahr gibt es keinen Vergleich. Kurioseste Wiederholung: die längste Rückkehr zu einem Flughafen in diesem Jahr ab einem vollen Jahr Pause, sonst die in diesem Jahr am häufigsten geflogene Verbindung ab drei Flügen. Die Fun Facts rechnet derselbe Rechner wie im Fun-Facts-Block, nur über die Flüge dieses Jahres. Jahr: Abflugtag am Abflughafen."
+      },
+      "cruiseEvents": {
+        "short": "Ereignisse, die die Auszeichnungen erkennen – mit den Kreuzfahrten, die sie belegen.",
+        "long": "Zähleinheit: eine gefahrene Kreuzfahrt, auf der das Ereignis eintrat. Es ist dieselbe Regel wie bei den Auszeichnungen: Äquator und Datumsgrenze werden zwischen zwei aufeinanderfolgenden Häfen mit bekannter Position erkannt (Hafen ohne erkannten Katalogeintrag: keine Position, kein Nachweis); Geburtstag und Silvester, wenn der Tag zwischen Start- und Enddatum liegt; Kanal und Polargewässer an den angelaufenen Häfen. Jahr: Startjahr der Kreuzfahrt. Tippe auf die Zahl für die Liste."
+      },
+      "cruisePorts": {
+        "short": "Neue Häfen gegenüber Häfen, die du schon von einer früheren Kreuzfahrt kennst.",
+        "long": "Zähleinheit: ein Katalog-Hafen einer Kreuzfahrt – Einschiffungshafen, Hafenstopps in Tagesreihenfolge, Ausschiffungshafen; zweimal derselbe Hafen auf einer Reise zählt einmal. Neu ist ein Hafen auf der ersten Kreuzfahrt (nach Startdatum), auf der er in deinem Logbuch vorkommt; alle gefahrenen Kreuzfahrten sind die Referenz, auch bei gewähltem Jahr. Nicht enthalten: gebuchte Kreuzfahrten; Kreuzfahrten ohne Startdatum und Hafenstopps ohne erkannten Hafen werden genannt, aber weder als neu noch als Wiedersehen gezählt."
+      },
+      "cruiseReunion": {
+        "short": "Wie lange ein Hafen auf dich warten musste.",
+        "long": "Zähleinheit: Tage vom letzten Tag eines Hafens auf einer Kreuzfahrt bis zum ersten Tag auf der nächsten Kreuzfahrt, die ihn anläuft. Tag eines Stopps: sein eingetragener Ortstag, sonst Starttag plus Reisetag. Darunter: Häfen, die auf mindestens zwei gefahrenen Kreuzfahrten vorkommen, mit den Reisen verlinkt."
+      },
+      "cruiseItineraries": {
+        "short": "Kreuzfahrten mit genau derselben Hafenfolge.",
+        "long": "Verglichen wird die vollständige Folge: Einschiffungshafen, jeder Hafenstopp in Tagesreihenfolge, Ausschiffungshafen – Seetage zählen nicht mit, die Reihenfolge schon. Mindestens zwei Häfen. Eine Kreuzfahrt mit einem nicht erkannten Hafen nimmt nicht teil, weil sich nicht belegen lässt, dass es derselbe Hafen ist. Nur gefahrene Kreuzfahrten."
+      },
+      "cruiseStays": {
+        "short": "Liegezeit von der Ankunft bis zur Abfahrt eines Hafenstopps.",
+        "long": "Gemessen nur, wo Ankunft und Abfahrt minutengenau eingetragen sind; die Liegezeit ist der echte Abstand der beiden Zeitpunkte, auch über eine Zeitumstellung. Stopps ohne diese Zeiten zählen nicht im Schnitt und stehen in der Fußzeile, nie als null Minuten. Ein- und Ausschiffungshafen haben keine eigenen Zeiten und bleiben außen vor. Zeitraum: Kreuzfahrten, die im gewählten Jahr begonnen haben."
+      },
+      "cruiseDays": {
+        "short": "Seetage gegenüber Hafentagen und der Reisetyp, der sich daraus ergibt.",
+        "long": "Ein Tag ist ein Reisetag des Reiseverlaufs: Seetag, wenn er als Seetag eingetragen ist, Hafentag, wenn mindestens ein Hafenstopp an dem Tag liegt (zwei Häfen an einem Tag sind ein Hafentag). Tage ohne Eintrag werden genannt, nicht geraten. Reisetyp nach den eingetragenen Tagen: mindestens die Hälfte Seetage = Seetage-Reise, höchstens ein Fünftel = Hafen-Reise, sonst gemischt; unter zwei Tagen kein Typ. Jahr: Startjahr."
+      },
+      "cruiseExcursions": {
+        "short": "Dokumentierte Landausflüge je Kreuzfahrt.",
+        "long": "Ein Ausflug ist ein Hafenstopp mit Ausflugsnotiz oder mit einer Tour, die du am selben Ortstag erfasst hast und die höchstens 100 km vom Hafen beginnt (erster Punkt der Tour, sonst Beginn der Aufzeichnung) – eine feste Verknüpfung gibt es nicht, deshalb diese Regel. Aktivität, Strecke und Höhenmeter kommen aus den Touren; Strecke zu Fuß zählt Wandern, Spaziergang, Lauf und Klettern. Fehlt beides, steht „keine Ausflüge dokumentiert“ – das heißt nicht, dass es keine gab."
+      },
+      "cruiseExcursionsNotes": {
+        "short": "Dokumentierte Landausflüge je Kreuzfahrt.",
+        "long": "Ein Ausflug ist ein Hafenstopp mit Ausflugsnotiz. Fehlt sie, steht „keine Ausflüge dokumentiert“ – das heißt nicht, dass es keine gab."
+      }
+    },
+    "cruise": {
+      "title": "Häfen, Liegezeiten und Ausflüge",
+      "intro": "Gezählt werden gefahrene Kreuzfahrten. „Neu“ heißt: auf keiner früheren Kreuzfahrt in deinem Logbuch angelaufen.",
+      "empty": "Keine gefahrene Kreuzfahrt in diesem Zeitraum. Diese Auswertungen entstehen aus gefahrenen Kreuzfahrten mit Häfen im Reiseverlauf.",
+      "events": {
+        "title": "Besondere Ereignisse",
+        "names": {
+          "equator": "Äquator überquert",
+          "dateline": "Datumsgrenze überquert",
+          "birthdayAtSea": "Geburtstag an Bord",
+          "newYearAtSea": "Silvester an Bord",
+          "canal": "Kanalpassage",
+          "polar": "Polargewässer"
+        },
+        "cruises": "{{cruises}}× ",
+        "none": "noch auf keiner Kreuzfahrt",
+        "noBirthday": "kein Geburtstag im Profil hinterlegt – mit ihm lässt sich das auswerten"
+      },
+      "ports": {
+        "title": "Neue Häfen und Wiedersehen",
+        "cruises": "Reisen",
+        "ports": "Häfen",
+        "new": "Neu",
+        "again": "Wieder",
+        "perCruise": "Je Kreuzfahrt",
+        "cruiseRow": "{{ports}} Häfen, davon {{fresh}} neu und {{again}} wiedergesehen",
+        "undatedRow": "{{ports}} Häfen – ohne Startdatum weder neu noch wiedergesehen",
+        "coverage": "Nicht eingeordnet: {{undated}} Kreuzfahrten ohne Startdatum, {{unresolved}} Hafenstopps ohne erkannten Hafen."
+      },
+      "reunion": {
+        "title": "Längste Pause bis zum Wiedersehen",
+        "days_one": "{{count}} Tag",
+        "days_other": "{{count}} Tage",
+        "empty": "Noch kein Hafen auf zwei datierten Kreuzfahrten.",
+        "repeatPorts": "Häfen auf mehreren Kreuzfahrten",
+        "noRepeatPorts": "Noch kein Hafen auf zwei Kreuzfahrten."
+      },
+      "itineraries": {
+        "title": "Gleiche Hafenfolge",
+        "empty": "Noch keine zwei Kreuzfahrten mit genau derselben Hafenfolge."
+      },
+      "stays": {
+        "title": "Liegezeiten",
+        "average": "Im Schnitt {{average}} im Hafen,",
+        "measured": "gemessen an {{calls}} Hafenstopps",
+        "measuredLabel": "Hafenstopps mit gemessener Liegezeit",
+        "longest": "Längster Aufenthalt",
+        "shortest": "Kürzester Aufenthalt",
+        "empty": "Noch keine Liegezeit messbar. Messbar wird eine, sobald bei einem Hafenstopp Ankunft und Abfahrt minutengenau eingetragen sind.",
+        "coverage": "{{measured}} von {{calls}} Hafenstopps gemessen; {{missing}} ohne minutengenaue Ankunft und Abfahrt, {{inconsistent}} mit Abfahrt vor der Ankunft – sie zählen nicht im Schnitt."
+      },
+      "days": {
+        "title": "Seetage und Hafentage",
+        "seaDays": "Seetage",
+        "portDays": "Hafentage",
+        "types": "Reisetypen",
+        "typeCounts": "{{seaHeavy}} See · {{balanced}} gemischt · {{portIntensive}} Hafen",
+        "typeNames": {
+          "seaHeavy": "Seetage-Reise",
+          "balanced": "Gemischte Reise",
+          "portIntensive": "Hafen-Reise"
+        },
+        "unclassified": "zu wenige Tage im Reiseverlauf",
+        "row": "{{sea}} Seetage, {{port}} Hafentage",
+        "unlisted": "{{days}} Tage ohne Eintrag im Reiseverlauf"
+      },
+      "excursions": {
+        "title": "Landausflüge",
+        "summary": "{{calls}} dokumentierte Ausflüge an {{ports}} Häfen auf {{cruises}} Kreuzfahrten",
+        "cruiseRow": "{{documented}} von {{calls}} Hafenstopps mit Ausflug ({{notes}} Notizen, {{tours}} Touren)",
+        "noneDocumented": "keine Ausflüge dokumentiert",
+        "empty": "Noch kein Ausflug dokumentiert. Ein Ausflug zählt, wenn ein Hafenstopp eine Ausflugsnotiz hat oder du an dem Tag eine Tour erfasst hast, die höchstens {{km}} km vom Hafen beginnt.",
+        "emptyNotesOnly": "Noch kein Ausflug dokumentiert. Ein Ausflug zählt, wenn ein Hafenstopp eine Ausflugsnotiz hat.",
+        "unspecified": "Ohne Aktivität",
+        "onFoot": "{{km}} zu Fuß",
+        "distance": "{{km}} insgesamt",
+        "ascent": "{{m}} Hm"
       }
     }
   }
