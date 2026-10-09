@@ -125,15 +125,22 @@ describe("rental stats, upcoming and reminders", () => {
       returnTime: new Date(now + 96 * H),
       provider: "Nextcar",
     });
-    await updateInstanceSettings({ betaFeaturesEnabled: true });
-    let res = await request(app).get("/api/v1/upcoming").set("Cookie", cookie);
-    const entry = res.body.data.entries.find((e: { domain: string }) => e.domain === "rental");
-    expect(entry).toMatchObject({ primary: "Nextcar · Testport" });
-    await updateInstanceSettings({ betaFeaturesEnabled: false });
-    res = await request(app).get("/api/v1/upcoming").set("Cookie", cookie);
-    expect(
-      res.body.data.entries.find((e: { domain: string }) => e.domain === "rental")
-    ).toBeUndefined();
+    // The flag is shared instance state: whatever happens here, it goes back
+    // to what it was before this test, not only at the end of the suite.
+    const before = (await getInstanceSettings()).betaFeaturesEnabled;
+    try {
+      await updateInstanceSettings({ betaFeaturesEnabled: true });
+      let res = await request(app).get("/api/v1/upcoming").set("Cookie", cookie);
+      const entry = res.body.data.entries.find((e: { domain: string }) => e.domain === "rental");
+      expect(entry).toMatchObject({ primary: "Nextcar · Testport" });
+      await updateInstanceSettings({ betaFeaturesEnabled: false });
+      res = await request(app).get("/api/v1/upcoming").set("Cookie", cookie);
+      expect(
+        res.body.data.entries.find((e: { domain: string }) => e.domain === "rental")
+      ).toBeUndefined();
+    } finally {
+      await updateInstanceSettings({ betaFeaturesEnabled: before });
+    }
   });
 
   it("reminds about a recently returned rental without km, and not about one with them", async () => {
