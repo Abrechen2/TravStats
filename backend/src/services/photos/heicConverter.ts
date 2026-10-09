@@ -136,13 +136,15 @@ function ensureWorker(): Worker {
   // not wait for an idle converter.
   w.unref();
   w.on("message", (reply: WorkerReply) => settle(reply));
-  w.on("error", (error) => {
+  // The worker can throw anything, not only an Error — @types/node types it unknown.
+  w.on("error", (error: unknown) => {
+    const reason = error instanceof Error ? error.message : String(error);
     logger.warn({
       operation: "heic_worker_error",
       message: "The HEIC converter worker failed",
-      error: { message: error.message },
+      error: { message: reason },
     });
-    if (worker === w) failActive(new HeicConverterUnavailableError(error.message));
+    if (worker === w) failActive(new HeicConverterUnavailableError(reason));
   });
   w.on("exit", (code) => {
     if (worker !== w) return;
