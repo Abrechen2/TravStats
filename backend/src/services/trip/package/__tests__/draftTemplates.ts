@@ -1,13 +1,14 @@
 /**
- * The two Berge & Meer drafts under `docs/templates-drafts/package/`, loaded
- * the way the template loader would load them. Shared by the tests that prove
- * the drafts before they go to the template repository.
+ * The two Berge & Meer templates, loaded the way the template loader would
+ * load them. They started as drafts in this repository and live in the
+ * template repository's `package/` since plan 2026-10-09 P4b; this reads the
+ * app's bundled snapshot copy of them (byte for byte the repository's file).
  */
 import fs from "fs";
 import path from "path";
 import { validateEnvelope, type TemplateEnvelope } from "../../../parsers/templates/v2/envelope";
 
-export const DRAFT_DIR = path.join(__dirname, "../../../../../../docs/templates-drafts/package");
+export const DRAFT_DIR = path.join(__dirname, "../../../parsers/templates/v2/snapshot/package");
 export const DRAFT_FILES = ["berge-meer-invoice.json", "berge-meer-documents.json"] as const;
 
 export function readDraft(file: string): unknown {

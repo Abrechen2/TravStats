@@ -193,6 +193,36 @@ match/decline from `markers`/`anchors` and ignores `expected`), `loader.ts`
   Booking.com and TUI code readers → templates (engine gaps found here go back to P2).
 - Each move: template passes the same fixtures the code reader passed, then the code is deleted.
 
+**P4b as built (2026-10-09).** Every remaining issuer reader is a template file:
+`cruise:tui-cruises-confirmation`, the seven `rail:db-*` files (confirmation,
+Online-Ticket incl. the 2024 column layout, postal order, connection info, order
+facts, two reservation layouts), `rental:sixt-confirmation` / `rental:sixt-invoice`,
+`lodging:booking.com` (first in the index; file `lodging/bookingcom.json`) and the
+two Berge & Meer `package/` files (moved unchanged; `docs/templates-drafts/` is gone).
+Consumers: `cruise/v2Cruise.ts`, `rail/parser/v2Rail.ts` (`documentKind`:
+booking / reservation / orderFacts), `rental/parser/v2Rental.ts` (`kind`), and
+`lodging/templates/v2Lodging.ts` (+ `nights`, `output.report`, `output.confidence`).
+- Engine (generic): matcher `allOf` / `anyOf` / `noneOf` with flags and `in`;
+  value steps `replace` → transforms → `map`; field `scan` and `in`; item fields
+  `format` / `value` / `lastBefore` / `find`; modes `columns` and `pairs`; `zip`,
+  `compute` (`{parent.x}`), `skipItemsWithout`; nested split repeats with `emit`
+  and `skipPreamble`; `preprocess`; envelope `output` (validated per domain);
+  transforms `amount`, `travelClass`, `dayMonthNear`, `laterClock`,
+  `leadingCurrency` / `leadingAmount`, `address*`; FR/NL month names; domain
+  `rental`. All matcher regexes run in one bounded run within the document budget.
+- The old readers live in `__tests__/legacy/` as parity references; each domain
+  has a `v2Parity.test.ts` comparing old and new on every fixture.
+- No AIDA reader existed (AIDA is LLM-only). What stays compiled in is generic:
+  the LLM paths, ICS calendars, labelled facts, rental parking / on-request /
+  cancellation rules.
+- Repository check: `backend/scripts/validate-template-repo.ts <clone>`, called by
+  the repository's `scripts/validate.mjs` (and its CI workflow).
+- Deliberate differences found by the parity work, none on a fixture: the Sixt
+  sender condition accepts SIXT in the body even when `from` is another address
+  (a forwarded mail); rail booking templates are also tried on attached PDFs
+  (the old code tried only two of them there); Booking.com now applies the shared
+  lodging guards (a checkout before the checkin, or > 365 nights, declines).
+
 ### P5 — markets
 - `markets` on every template; user setting "Heimatland / Home country" (DE/EN);
   engine orders candidates home-market first. No filtering.
