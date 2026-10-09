@@ -93,10 +93,10 @@ export function CruiseStopFields({
       {!stop.isAtSea && (
         <>
           {stop.portId == null && stop.unresolvedPortName ? (
-            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-200">
+            <div className="rounded-md border border-(--warning)/40 bg-(--warning)/10 px-2 py-1.5 text-xs text-(--warning)">
               <span className="font-medium">🔶 {t("stops.unresolved")}:</span>{" "}
               {stop.unresolvedPortName}
-              <div className="mt-0.5 text-[11px] text-amber-300/80">
+              <div className="mt-0.5 text-[11px] text-(--warning)/80">
                 {t("stops.unresolvedHint")}
               </div>
             </div>

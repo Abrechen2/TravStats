@@ -151,7 +151,7 @@ function UnresolvedRow({
         : [];
 
   return (
-    <li className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
+    <li className="rounded-md border border-(--warning)/40 bg-(--warning)/5 p-3">
       <p className="text-sm font-medium text-(--text-primary)">
         <span aria-hidden="true">🔶 </span>
         {group.name}

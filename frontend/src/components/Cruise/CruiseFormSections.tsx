@@ -1,5 +1,6 @@
 import type { JSX, ReactNode } from "react";
 import { minorUnits } from "../../shared/currencies";
+import { CRUISE_DISTINCT_PALETTE } from "../../lib/cruiseColor";
 import type { CabinType, Trip } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
@@ -24,21 +25,13 @@ export const CRUISE_PRICE_ID = "cruise-form-price";
 
 const CABIN_TYPES: CabinType[] = ["inside", "oceanview", "balcony", "suite"];
 
-// Hex mirror of CRUISE_DISTINCT_PALETTE (lib/cruiseColor.ts) — the same
-// distinct hues the map's auto-derive falls back to, so a manual pick still
-// looks consistent with un-colored cruises. Keep both palettes in sync.
-const COLOR_PALETTE = [
-  "#e88374",
-  "#f4bf4f",
-  "#7ec87a",
-  "#5fc2b2",
-  "#82aaff",
-  "#b284e0",
-  "#e88ac4",
-  "#d6a05c",
-  "#78cdd6",
-  "#b0c46c",
-] as const;
+// The same distinct hues the map's auto-derive falls back to, so a manual pick
+// still looks consistent with un-coloured cruises. Read from the map's own
+// palette rather than restated as hex: the two copies carried a "keep both in
+// sync" comment and nothing that kept them so.
+const toHex = (rgb: readonly number[]): string =>
+  `#${rgb.map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+const COLOR_PALETTE = CRUISE_DISTINCT_PALETTE.map(toHex);
 
 // 28 px swatches for a mouse, the 44 px minimum for a finger (forgejo#249).
 const SWATCH_CLASS = "h-7 w-7 pointer-coarse:h-11 pointer-coarse:w-11";
@@ -103,7 +96,7 @@ export function CruiseColorSection({
         <input
           type="color"
           aria-label={t("field.color")}
-          value={color ?? "#000000"}
+          value={color ?? COLOR_PALETTE[0]}
           onChange={(e): void => onChange(e.target.value)}
           className="h-7 w-9 cursor-pointer rounded-sm border border-border bg-transparent p-0 pointer-coarse:h-11 pointer-coarse:w-14"
         />
