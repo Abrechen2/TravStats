@@ -126,13 +126,28 @@ export function longestPortReunion(rows: readonly CruiseInsightRow[]): PortReuni
   return best;
 }
 
-/** Every catalogue port and the sailed cruises it was on — dated or not. */
+/** A cruise's distinct catalogue ports among its PORT CALLS only — no embarkation or disembarkation port. */
+function calledPortsOf(row: CruiseInsightRow): Array<{ id: number; name: string }> {
+  const out = new Map<number, string>();
+  for (const c of row.calls) {
+    if (!c.isAtSea && c.portId !== null && !out.has(c.portId)) out.set(c.portId, c.portName ?? "");
+  }
+  return [...out.entries()].map(([id, name]) => ({ id, name }));
+}
+
+/**
+ * Every catalogue port and the sailed cruises it was on — dated or not.
+ * `callsOnly` leaves the embarkation and disembarkation ports out: the badge
+ * counts port calls only (owner ruling 2026-10-09), because a home port every
+ * cruise starts from would otherwise earn it.
+ */
 export function cruisesPerPort(
-  rows: readonly CruiseInsightRow[]
+  rows: readonly CruiseInsightRow[],
+  { callsOnly = false }: { callsOnly?: boolean } = {}
 ): Array<{ portId: number; portName: string; cruiseIds: string[] }> {
   const ports = new Map<number, { portName: string; cruiseIds: string[] }>();
   for (const row of rows) {
-    for (const port of portsOfCruise(row)) {
+    for (const port of callsOnly ? calledPortsOf(row) : portsOfCruise(row)) {
       const entry = ports.get(port.id) ?? { portName: port.name, cruiseIds: [] };
       ports.set(port.id, { ...entry, cruiseIds: [...entry.cruiseIds, row.id] });
     }

@@ -1295,7 +1295,7 @@
     },
     "NEW_GROUND_YEAR": {
       "name": "Neulandjahr",
-      "description": "Mindestens fünf Flughäfen in einem Jahr zum ersten Mal erfasst"
+      "description": "Mindestens fünf Flughäfen in einem Jahr zum ersten Mal erfasst (ohne das erste erfasste Jahr)"
     },
     "LONG_TIME_NO_SEE": {
       "name": "Lange nicht gesehen",
@@ -1307,7 +1307,7 @@
     },
     "PORT_REUNION_3": {
       "name": "Hafen-Wiedersehen",
-      "description": "Denselben Hafen auf drei verschiedenen Kreuzfahrten angelaufen"
+      "description": "Denselben Hafen auf drei verschiedenen Kreuzfahrten als Hafenstopp angelaufen"
     },
     "SHORE_EXCURSIONS_5": {
       "name": "Land und Leute",

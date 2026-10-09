@@ -30,13 +30,13 @@ import { cruisesPerPort, repeatedItineraries } from "../services/stats/cruiseIns
  */
 
 export interface InsightAchievementStats {
-  /** Most airports first recorded in a single year. */
+  /** Most airports first recorded in a single year, the first recorded year excluded. */
   flightNewAirportsYearMax: number;
   /** Most whole years between two visits of one airport. */
   flightAirportReunionYears: number;
   /** Most calendar quarters one airport was used in within one year (0-4). */
   flightAirportQuartersMax: number;
-  /** Most sailed cruises one catalogue port was on. */
+  /** Most sailed cruises one catalogue port was CALLED at on (embarkation/disembarkation excluded). */
   cruisePortCruisesMax: number;
   /**
    * Catalogue ports with a documented shore excursion (a note, or a linked
@@ -64,9 +64,13 @@ export function foldFlightInsightStats(
 > {
   const visits = airportVisits(rows);
   return {
+    // The first recorded year is left out (owner ruling 2026-10-09): every
+    // airport is "new" there, so any account with one year would earn it.
     flightNewAirportsYearMax: Math.max(
       0,
-      ...airportsByYear(visits).map((y) => y.discovered.length)
+      ...airportsByYear(visits)
+        .slice(1)
+        .map((y) => y.discovered.length)
     ),
     flightAirportReunionYears: Math.max(0, ...longestReunions(visits).map((r) => r.years)),
     flightAirportQuartersMax: Math.max(0, ...quartersByAirportYear(visits).map((q) => q.quarters)),
@@ -83,7 +87,10 @@ export function foldCruiseInsightStats(
     ctx.rows.flatMap((row) => excursionsOf(row, linkedToursOf(ctx, row.id)).documentedPortIds)
   );
   return {
-    cruisePortCruisesMax: Math.max(0, ...cruisesPerPort(ctx.rows).map((p) => p.cruiseIds.length)),
+    cruisePortCruisesMax: Math.max(
+      0,
+      ...cruisesPerPort(ctx.rows, { callsOnly: true }).map((p) => p.cruiseIds.length)
+    ),
     cruiseExcursionPorts: excursionPorts.size,
     cruiseRepeatedItineraryMax: Math.max(
       0,

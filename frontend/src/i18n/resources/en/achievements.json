@@ -1295,7 +1295,7 @@
     },
     "NEW_GROUND_YEAR": {
       "name": "New ground",
-      "description": "At least five airports recorded for the first time in one year"
+      "description": "At least five airports recorded for the first time in one year (the first recorded year excluded)"
     },
     "LONG_TIME_NO_SEE": {
       "name": "Long time no see",
@@ -1307,7 +1307,7 @@
     },
     "PORT_REUNION_3": {
       "name": "Port regular",
-      "description": "Called at the same port on three different cruises"
+      "description": "Called at the same port on three different cruises (port calls, not embarkation)"
     },
     "SHORE_EXCURSIONS_5": {
       "name": "Going ashore",

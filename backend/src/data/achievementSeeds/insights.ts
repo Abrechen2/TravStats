@@ -25,11 +25,13 @@ export const seedsInsights: AchievementDefinition[] = [
   {
     code: "NEW_GROUND_YEAR",
     name: "Neulandjahr",
-    description: "Mindestens fünf Flughäfen in einem Jahr zum ersten Mal erfasst",
+    description:
+      "Mindestens fünf Flughäfen in einem Jahr zum ersten Mal erfasst (ohne das erste erfasste Jahr)",
     category: "explorer",
     domain: "flight",
     icon: "🧭",
     tier: "silver",
+    // The first recorded year does not count (owner ruling 2026-10-09).
     requirement: 5, // threshold: proposal forgejo#256, owner to confirm
     requirementType: "flight_new_airports_year",
     points: 50,
@@ -62,11 +64,13 @@ export const seedsInsights: AchievementDefinition[] = [
   {
     code: "PORT_REUNION_3",
     name: "Hafen-Wiedersehen",
-    description: "Denselben Hafen auf drei verschiedenen Kreuzfahrten angelaufen",
+    description: "Denselben Hafen auf drei verschiedenen Kreuzfahrten als Hafenstopp angelaufen",
     category: "collector",
     domain: "cruise",
     icon: "⚓",
     tier: "silver",
+    // Port calls only — embarkation and disembarkation ports do not count
+    // (owner ruling 2026-10-09), or a home port would earn it.
     requirement: 3, // threshold: proposal forgejo#257, owner to confirm
     requirementType: "cruise_port_cruises",
     points: 40,
