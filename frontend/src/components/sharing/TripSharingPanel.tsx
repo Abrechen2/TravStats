@@ -8,6 +8,7 @@ import { sharingApi } from "../../lib/api/sharing";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import type { ShareCandidate, TripSharing } from "../../types/sharing";
+import { formatCurrency } from "../../lib/units";
 import Button from "../ui/Button";
 import DetailSection from "../ui/DetailSection";
 import { sharingErrorKey } from "./sharingCopy";
@@ -16,7 +17,8 @@ const NS = "sharing:trip";
 
 /**
  * "Geteilt" on the trip overview (design 2026-10-09, decision 5): who else
- * holds this trip, a share tick per linked companion, and leaving the group.
+ * holds this trip, their booking totals read-only (decision 2), a share tick
+ * per linked companion, and leaving the group.
  *
  * A tick that is set cannot be unset here — un-sharing is not a thing in S1;
  * the other member leaves on their side, which keeps their copy. A companion
@@ -31,7 +33,7 @@ export default function TripSharingPanel({
   /** The trip's own data may change (leaving clears its group). */
   onChanged?: () => void;
 }): JSX.Element {
-  const { t } = useTranslation(["sharing"]);
+  const { t, i18n } = useTranslation(["sharing"]);
   const addToast = useToastStore((state) => state.addToast);
   const { confirm, confirmDialog } = useConfirmDialog();
   const [view, setView] = useState<TripSharing | null>(null);
@@ -108,6 +110,27 @@ export default function TripSharingPanel({
             </p>
           ) : (
             <p className="t-caption">{t(`${NS}.notShared`)}</p>
+          )}
+
+          {view.bookingTotals.length > 0 && (
+            <div data-testid="share-booking-totals">
+              <p className="t-label-mono">{t(`${NS}.bookingTotals`)}</p>
+              <ul className="flex flex-col gap-1">
+                {view.bookingTotals.map((entry) => (
+                  <li key={entry.member.id}>
+                    {entry.member.displayName}:{" "}
+                    {entry.totals
+                      .map((sum) =>
+                        formatCurrency(sum.amount, sum.currency, {
+                          language: i18n.language,
+                        })
+                      )
+                      .join(" + ")}
+                  </li>
+                ))}
+              </ul>
+              <p className="t-caption">{t(`${NS}.bookingTotalsHint`)}</p>
+            </div>
           )}
 
           {view.candidates.length === 0 ? (

@@ -46,7 +46,9 @@ const notice: ShareNotice = {
   after: { tripName: "Lissabon" },
   createdAt: "2026-10-09T10:05:00.000Z",
   readAt: null,
+  undoneAt: null,
   actor: { id: "u-anna", username: "anna", displayName: "Anna" },
+  changes: [],
 };
 
 function renderTab(onCount = vi.fn()) {

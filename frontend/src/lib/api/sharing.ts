@@ -88,6 +88,16 @@ export const sharingApi = {
     await api.post(`/sharing/notices/${enc(id)}/read`);
   },
 
+  /** Restore what another member's change replaced, on the reader's own copy. */
+  undoNotice: async (id: string): Promise<void> => {
+    await api.post(`/sharing/notices/${enc(id)}/undo`);
+  },
+
+  /** After another member deleted an entry: delete the reader's own copy too. */
+  deleteOwnCopy: async (id: string): Promise<void> => {
+    await api.post(`/sharing/notices/${enc(id)}/delete-copy`);
+  },
+
   inboxCount: async (): Promise<number> => {
     const { data } = await api.get<Envelope<{ count: number }>>("/sharing/inbox/count");
     return data.data.count;

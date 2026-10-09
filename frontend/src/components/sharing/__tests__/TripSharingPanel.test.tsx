@@ -30,6 +30,7 @@ const carl = { id: "u-carl", username: "carl", displayName: "Carl" };
 const unshared: TripSharing = {
   groupId: null,
   members: [],
+  bookingTotals: [],
   candidates: [
     { companionId: "c-ben", name: "Ben", user: ben, consenting: true, shared: false },
     { companionId: "c-carl", name: "Carl", user: carl, consenting: false, shared: false },
@@ -73,6 +74,7 @@ describe("TripSharingPanel", () => {
     api.tripSharing.mockResolvedValue({
       groupId: "g1",
       members: [ben],
+      bookingTotals: [],
       candidates: [{ ...unshared.candidates[0], shared: true }, unshared.candidates[1]],
     });
     await userEvent.click(benBox);
@@ -98,6 +100,19 @@ describe("TripSharingPanel", () => {
     );
   });
 
+  it("shows the other member's booking total read-only", async () => {
+    api.tripSharing.mockResolvedValue({
+      groupId: "g1",
+      members: [ben],
+      bookingTotals: [{ member: ben, totals: [{ currency: "EUR", amount: 980.5 }] }],
+      candidates: [{ ...unshared.candidates[0], shared: true }],
+    });
+    renderPanel();
+    const totals = await screen.findByTestId("share-booking-totals");
+    expect(totals.textContent).toContain("Ben");
+    expect(totals.textContent).toContain("980");
+  });
+
   it("shows a failed load as a failure", async () => {
     api.tripSharing.mockRejectedValue(new Error("down"));
     renderPanel();
@@ -109,6 +124,7 @@ describe("TripSharingPanel", () => {
     api.tripSharing.mockResolvedValue({
       groupId: "g1",
       members: [ben],
+      bookingTotals: [],
       candidates: [{ ...unshared.candidates[0], shared: true }],
     });
     api.leaveGroup.mockResolvedValue(undefined);

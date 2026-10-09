@@ -1,21 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { sharingApi } from "../../lib/api/sharing";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import type { ShareConsent, ShareNotice } from "../../types/sharing";
-import { sharingErrorKey } from "../sharing/sharingCopy";
+import { shareFieldLabel } from "../sharing/noticeValues";
+import { sharingErrorKey, staleUndoFields } from "../sharing/sharingCopy";
 import Button from "../ui/Button";
 import EmptyState from "../ui/EmptyState";
+import ShareNoticeRow from "./ShareNoticeRow";
 
 const NS = "sharing:inbox";
 
 /**
  * "Geteilte Reisen" — the Posteingang tab for trip sharing (design
  * 2026-10-09): consent requests waiting for the reader's answer, and notices
- * about shared trips. A failed load is a failure state with a retry, never an
+ * about shared trips — what another member changed, with undo (S2). A failed load is a failure state with a retry, never an
  * empty inbox; a failed answer keeps the request and says why.
  */
 export default function SharingTab({
@@ -30,6 +31,7 @@ export default function SharingTab({
   const [notices, setNotices] = useState<ShareNotice[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
 
   const load = useCallback(async () => {
     try {
@@ -80,6 +82,38 @@ export default function SharingTab({
     } catch (error) {
       logger.error("Failed to mark notice read:", error);
       addToast("error", t(sharingErrorKey(error, `${NS}.errors.markReadFailed`)));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /**
+   * Undo a change on the reader's own copy, or delete the own copy after a
+   * delete. A refusal stays on the notice in its own words — a stale undo
+   * names the facts that changed since.
+   */
+  const act = async (notice: ShareNotice, action: "undo" | "deleteCopy"): Promise<void> => {
+    setBusy(notice.id);
+    setRowErrors(({ [notice.id]: _gone, ...rest }) => rest);
+    try {
+      if (action === "undo") await sharingApi.undoNotice(notice.id);
+      else await sharingApi.deleteOwnCopy(notice.id);
+      addToast("success", t(`${NS}.messages.${action === "undo" ? "undone" : "copyDeleted"}`));
+      await load();
+    } catch (error) {
+      logger.error(`Failed to ${action} share notice:`, error);
+      const fields = staleUndoFields(error).map((f) => shareFieldLabel(f, t));
+      const message =
+        fields.length > 0
+          ? t("sharing:errors.undoStaleFields", { fields: fields.join(", ") })
+          : t(
+              sharingErrorKey(
+                error,
+                `${NS}.errors.${action === "undo" ? "undoFailed" : "deleteCopyFailed"}`
+              )
+            );
+      setRowErrors((prev) => ({ ...prev, [notice.id]: message }));
+      addToast("error", message);
     } finally {
       setBusy(null);
     }
@@ -150,58 +184,18 @@ export default function SharingTab({
         <section aria-label={t(`${NS}.notices.title`)} className="space-y-3">
           <h2 className="t-label-mono">{t(`${NS}.notices.title`)}</h2>
           {notices.map((notice) => (
-            <NoticeRow
+            <ShareNoticeRow
               key={notice.id}
               notice={notice}
               busy={busy === notice.id}
+              error={rowErrors[notice.id] ?? null}
               onRead={() => void markRead(notice)}
+              onUndo={() => void act(notice, "undo")}
+              onDeleteCopy={() => void act(notice, "deleteCopy")}
             />
           ))}
         </section>
       )}
-    </div>
-  );
-}
-
-function NoticeRow({
-  notice,
-  busy,
-  onRead,
-}: {
-  notice: ShareNotice;
-  busy: boolean;
-  onRead: () => void;
-}): JSX.Element {
-  const { t } = useTranslation(["sharing"]);
-  const kind = notice.kind === "shared" || notice.kind === "left" ? notice.kind : "other";
-  const text = t(`${NS}.notices.${kind}`, {
-    name: notice.actor?.displayName ?? t(`${NS}.notices.someone`),
-    trip: notice.after?.tripName ?? t(`${NS}.notices.unknownTrip`),
-  });
-  const unread = notice.readAt === null;
-  return (
-    <div
-      data-testid="share-notice"
-      className="flex flex-wrap items-center justify-between gap-3 rounded-lg p-4"
-      style={{
-        border: "1px solid var(--ts-border)",
-        background: unread ? "var(--ts-tile)" : "transparent",
-        fontWeight: unread ? 600 : 400,
-      }}
-    >
-      <p className="text-sm">{text}</p>
-      <div className="flex gap-2">
-        {notice.entityType === "trip" && notice.entityKey && (
-          <Link to={`/trips/${notice.entityKey}`} className="text-sm">
-            {t(`${NS}.notices.open`)}
-          </Link>
-        )}
-        {unread && (
-          <Button disabled={busy} onClick={onRead}>
-            {t(`${NS}.notices.markRead`)}
-          </Button>
-        )}
-      </div>
     </div>
   );
 }
