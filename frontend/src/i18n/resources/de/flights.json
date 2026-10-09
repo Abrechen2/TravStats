@@ -457,11 +457,6 @@
     "overflownCountries": "Überflogene Länder",
     "openTrip": "Reise öffnen",
     "backToLogbook": "Logbuch · Flüge",
-    "departurePlanned": "Abflug (plan)",
-    "departureActual": "Tatsächl. Abflug",
-    "arrivalPlanned": "Ankunft (plan)",
-    "arrivalActual": "Tatsächl. Landung",
-    "timezones": "Zeitzonen",
     "planned": "plan",
     "flightTime": "Flugzeit"
   },
@@ -475,5 +470,36 @@
     "gaps_one": "Eine Lücke ohne GPS-Empfang ist nicht eingezeichnet.",
     "gaps_other": "{{count}} Lücken ohne GPS-Empfang sind nicht eingezeichnet.",
     "loadError": "Die Aufzeichnung dieses Flugs konnte nicht geladen werden."
+  },
+  "planActual": {
+    "departure": "Abflug",
+    "arrival": "Ankunft",
+    "planned": "Plan",
+    "actual": "Ist",
+    "deviation": "Abweichung",
+    "plannedMissing": "kein Plan erfasst",
+    "unknown": "unbekannt",
+    "clockUnknown": "Uhrzeit unbekannt",
+    "onTime": "wie geplant (±0 Min.)",
+    "later": "+{{duration}} später",
+    "earlier": "−{{duration}} früher",
+    "durationM": "{{m}} Min.",
+    "durationH": "{{h}} Std.",
+    "durationHM": "{{h}} Std. {{m}} Min.",
+    "dayShiftLater_one": "einen Tag später als geplant",
+    "dayShiftLater_other": "{{count}} Tage später als geplant",
+    "dayShiftEarlier_one": "einen Tag früher als geplant",
+    "dayShiftEarlier_other": "{{count}} Tage früher als geplant",
+    "arrivalLaterDay_one": "Ankunft am nächsten Tag",
+    "arrivalLaterDay_other": "Ankunft {{count}} Tage nach dem Abflugtag",
+    "arrivalEarlierDay_one": "Ankunft am Vortag (Datumsgrenze)",
+    "arrivalEarlierDay_other": "Ankunft {{count}} Tage vor dem Abflugtag",
+    "zoneUnknown": "UTC – Zeitzone des Flughafens unbekannt",
+    "unknownReason": {
+      "noActual": "Keine tatsächliche Zeit erfasst.",
+      "noPlan": "Ohne geplante Zeit gibt es keinen Vergleich.",
+      "planNotToMinute": "Der Plan ist nur mit Datum erfasst.",
+      "actualNotToMinute": "Die tatsächliche Zeit ist nicht minutengenau erfasst."
+    }
   }
 }

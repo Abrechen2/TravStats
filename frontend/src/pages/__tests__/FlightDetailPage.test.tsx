@@ -94,6 +94,46 @@ describe("FlightDetailPage", () => {
     expect(screen.getByText("1 x 23 kg")).toBeInTheDocument();
   });
 
+  it("compares plan and record per end, and says an unrecorded time is unknown (forgejo#216)", async () => {
+    getByIdMock.mockResolvedValue(
+      makeFlight({
+        times: {
+          departure: {
+            utc: "2026-12-21T18:06:00.000Z",
+            local: "2026-12-21T19:06:00",
+            zone: "Europe/Berlin",
+            offset: "+01:00",
+            precision: "minute",
+          },
+          arrival: {
+            utc: "2026-12-21T19:36:00.000Z",
+            local: "2026-12-21T20:36:00",
+            zone: "Europe/Copenhagen",
+            offset: "+01:00",
+            precision: "minute",
+          },
+          actualDeparture: {
+            utc: "2026-12-21T18:31:00.000Z",
+            local: "2026-12-21T19:31:00",
+            zone: "Europe/Berlin",
+            offset: "+01:00",
+            precision: "minute",
+          },
+          actualArrival: null,
+        },
+      })
+    );
+    renderPage();
+
+    const departure = await screen.findByTestId("plan-actual-departure");
+    expect(departure).toHaveTextContent("19:06");
+    expect(departure).toHaveTextContent("19:31");
+    expect(departure).toHaveTextContent("flights:planActual.later");
+    expect(screen.getByTestId("plan-actual-arrival-actual")).toHaveTextContent(
+      "flights:planActual.unknown"
+    );
+  });
+
   it("gives a baggage allowance typed as a bare number its unit (forgejo#186)", async () => {
     // "Freigepäck 23" — the tester typed only the number, and the page
     // repeated it without saying 23 of what.

@@ -457,11 +457,6 @@
     "overflownCountries": "Countries overflown",
     "openTrip": "Open trip",
     "backToLogbook": "Logbook · Flights",
-    "departurePlanned": "Departure (planned)",
-    "departureActual": "Actual departure",
-    "arrivalPlanned": "Arrival (planned)",
-    "arrivalActual": "Actual landing",
-    "timezones": "Time zones",
     "planned": "planned",
     "flightTime": "Flight time"
   },
@@ -475,5 +470,36 @@
     "gaps_one": "One stretch without GPS reception is not drawn.",
     "gaps_other": "{{count}} stretches without GPS reception are not drawn.",
     "loadError": "The recording of this flight could not be loaded."
+  },
+  "planActual": {
+    "departure": "Departure",
+    "arrival": "Arrival",
+    "planned": "Planned",
+    "actual": "Actual",
+    "deviation": "Difference",
+    "plannedMissing": "no planned time",
+    "unknown": "unknown",
+    "clockUnknown": "time unknown",
+    "onTime": "as planned (±0 min)",
+    "later": "+{{duration}} late",
+    "earlier": "−{{duration}} early",
+    "durationM": "{{m}} min",
+    "durationH": "{{h}} h",
+    "durationHM": "{{h}} h {{m}} min",
+    "dayShiftLater_one": "one day later than planned",
+    "dayShiftLater_other": "{{count}} days later than planned",
+    "dayShiftEarlier_one": "one day earlier than planned",
+    "dayShiftEarlier_other": "{{count}} days earlier than planned",
+    "arrivalLaterDay_one": "Arrives the next day",
+    "arrivalLaterDay_other": "Arrives {{count}} days after the departure day",
+    "arrivalEarlierDay_one": "Arrives the previous day (date line)",
+    "arrivalEarlierDay_other": "Arrives {{count}} days before the departure day",
+    "zoneUnknown": "UTC – the airport's time zone is unknown",
+    "unknownReason": {
+      "noActual": "No actual time recorded.",
+      "noPlan": "Without a planned time there is nothing to compare.",
+      "planNotToMinute": "The plan is recorded with its date only.",
+      "actualNotToMinute": "The actual time is not recorded to the minute."
+    }
   }
 }
