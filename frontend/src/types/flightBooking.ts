@@ -13,6 +13,23 @@ export interface FlightBookingSummary {
   currency: string | null;
   /** Cruises, train journeys and stays filed on the same booking. */
   otherEntries: number;
+  /** The optional split across the segments (forgejo#219), or null. */
+  split: FlightBookingSplit | null;
+}
+
+/**
+ * A DISPLAY-ONLY split of the booking total across its flights: no total
+ * reads it, totals count the booking price once. The shares sum to `price`
+ * to the currency's minor unit.
+ */
+export interface FlightBookingSplit {
+  method: "equal" | "distance";
+  /** The total the split was computed from. */
+  price: number;
+  currency: string | null;
+  shares: Array<{ flightId: string; amount: number }>;
+  /** Null while the split still describes the booking; otherwise what changed since. */
+  staleReason: "price" | "currency" | "segments" | null;
 }
 
 export interface FlightBookingAnswer {

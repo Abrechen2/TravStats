@@ -37,6 +37,7 @@ import FlightTrackSection from "../components/flightTrack/FlightTrackSection";
 import FlightPlanActual from "../components/flightDetail/FlightPlanActual";
 import FlightDayCard, { dayCardShown } from "../components/flightDetail/FlightDayCard";
 import BookingItinerary from "../components/flightDetail/BookingItinerary";
+import BookingPrice from "../components/flightDetail/BookingPrice";
 import { useFlightBooking } from "../components/flightDetail/useFlightBooking";
 
 /**
@@ -339,7 +340,16 @@ export default function FlightDetailPage(): JSX.Element {
               { label: t("flights:form.taxes"), value: money(flight.taxes), mono: true },
               { label: t("flights:form.fees"), value: money(flight.fees), mono: true },
             ]}
-          />
+          >
+            {/* Where the booking total lives and how it is counted (forgejo#219). */}
+            {booking.state.kind === "loaded" && booking.state.answer.booking ? (
+              <BookingPrice
+                flight={flight}
+                answer={booking.state.answer}
+                onAnswer={booking.replace}
+              />
+            ) : null}
+          </DetailSection>
 
           {/* Beside the costs, not instead of the receipt above them: the
               "Beleg" is the one file the price links to, this is the folder. */}

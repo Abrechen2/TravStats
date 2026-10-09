@@ -176,6 +176,22 @@ describe("FlightDetailPage", () => {
     expect(screen.getByRole("link", { name: /CPH → JFK/ })).toHaveAttribute("href", "/flights/f2");
   });
 
+  it("explains under the costs where the booking total lives and how it counts (forgejo#219)", async () => {
+    const own = makeFlight({ bookingId: "b1" });
+    getByIdMock.mockResolvedValue(own);
+    getBookingMock.mockResolvedValue({
+      booking: { id: "b1", pnr: null, price: 480, currency: "EUR", otherEntries: 0, split: null },
+      segments: [own, makeFlight({ id: "f2", bookingId: "b1" })],
+    });
+    renderPage();
+
+    const box = await screen.findByTestId("booking-price");
+    expect(box).toHaveTextContent("flights:bookingPrice.countedOnce");
+    expect(
+      screen.getByRole("button", { name: "flights:bookingPrice.splitEqual" })
+    ).toBeInTheDocument();
+  });
+
   it("asks for no booking when the flight is linked to none", async () => {
     getByIdMock.mockResolvedValue(makeFlight());
     renderPage();

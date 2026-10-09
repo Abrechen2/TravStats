@@ -20,7 +20,12 @@ export function useFlightBooking(
   flightId: string | null,
   bookingId: string | null | undefined,
   version = 0
-): { state: FlightBookingState; retry: () => void } {
+): {
+  state: FlightBookingState;
+  retry: () => void;
+  /** Put a fresh answer in place — what a split or its removal returned. */
+  replace: (answer: FlightBookingAnswer) => void;
+} {
   const [state, setState] = useState<FlightBookingState>({ kind: "none" });
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
@@ -44,5 +49,9 @@ export function useFlightBooking(
     };
   }, [flightId, bookingId, version, attempt]);
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
-  return { state, retry };
+  const replace = useCallback(
+    (answer: FlightBookingAnswer) => setState({ kind: "loaded", answer }),
+    []
+  );
+  return { state, retry, replace };
 }

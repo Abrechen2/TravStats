@@ -83,6 +83,7 @@ describe("GET /flights/:id/booking", () => {
       price: 480,
       currency: "EUR",
       otherEntries: 0,
+      split: null,
     });
     expect(res.body.segments.map((s: { id: string }) => s.id)).toEqual([first.id, second.id]);
     expect(res.body.segments[0].times.departure.utc).toBe("2026-11-02T06:00:00.000Z");
@@ -103,4 +104,88 @@ describe("GET /flights/:id/booking", () => {
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("FLIGHT_NOT_FOUND");
   });
+
+  describe("the price split (forgejo#219)", () => {
+    const put = (id: string, body: unknown) =>
+      request(app)
+        .put(`/api/v1/flights/${id}/booking/split`)
+        .set("Cookie", cookie)
+        .send(body as object);
+
+    async function bookedPair(price: number | null, currency = "EUR") {
+      const booking = await prisma.booking.create({ data: { userId, price, currency } });
+      const a = await flight(userId, { bookingId: booking.id, price: 70, taxes: 12, fees: 3 });
+      const b = await flight(userId, {
+        bookingId: booking.id,
+        depIata: "FRA",
+        arrIata: "JFK",
+        departureTime: new Date("2026-11-02T09:00:00Z"),
+        arrivalTime: new Date("2026-11-02T17:30:00Z"),
+      });
+      return { booking, a, b };
+    }
+
+    it("stores an equal split that sums to the total, and touches no price column", async () => {
+      const { booking, a, b } = await bookedPair(100.01);
+      const res = await put(a.id, { method: "equal" });
+      expect(res.status).toBe(200);
+      expect(res.body.booking.split).toEqual({
+        method: "equal",
+        price: 100.01,
+        currency: "EUR",
+        shares: [
+          { flightId: a.id, amount: 50.01 },
+          { flightId: b.id, amount: 50 },
+        ],
+        staleReason: null,
+      });
+      // Totals keep reading the booking once: neither the booking's price nor
+      // any segment's own price, taxes or fees changed.
+      const after = await prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
+      expect(after.price).toBe(100.01);
+      const rows = await prisma.flight.findMany({
+        where: { bookingId: booking.id },
+        orderBy: { departureTime: "asc" },
+        select: { price: true, taxes: true, fees: true },
+      });
+      expect(rows).toEqual([
+        { price: 70, taxes: 12, fees: 3 },
+        { price: null, taxes: null, fees: null },
+      ]);
+    });
+
+    it("marks the split stale once the booking total changes", async () => {
+      const { booking, a } = await bookedPair(100);
+      await put(a.id, { method: "equal" });
+      await prisma.booking.update({ where: { id: booking.id }, data: { price: 140 } });
+      const res = await get(a.id);
+      expect(res.body.booking.split.staleReason).toBe("price");
+    });
+
+    it("refuses a booking without a total, with a code", async () => {
+      const { a } = await bookedPair(null);
+      const res = await put(a.id, { method: "equal" });
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe("BOOKING_PRICE_MISSING");
+    });
+
+    it("refuses a flight without a booking, and an unknown method", async () => {
+      const lone = await flight(userId, {});
+      expect((await put(lone.id, { method: "equal" })).body.code).toBe("BOOKING_NOT_FOUND");
+      const { a } = await bookedPair(100);
+      expect((await put(a.id, { method: "guess" })).status).toBe(400);
+    });
+
+    it("removes the split, and removing it twice is no error", async () => {
+      const { a } = await bookedPair(100);
+      await put(a.id, { method: "equal" });
+      const del = () =>
+        request(app).delete(`/api/v1/flights/${a.id}/booking/split`).set("Cookie", cookie);
+      const first = await del();
+      expect(first.status).toBe(200);
+      expect(first.body.booking.split).toBeNull();
+      expect((await del()).status).toBe(200);
+    });
+  });
 });
+

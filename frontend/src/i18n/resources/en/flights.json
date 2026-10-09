@@ -531,5 +531,39 @@
     "airportUnconfirmed": "Whether the airport changes is unknown – an airport code is missing.",
     "noReachabilityClaim": "These are the recorded times. Whether a connection can be made is something TravStats cannot know.",
     "loadFailed": "The other flights of this booking could not be loaded."
+  },
+  "bookingPrice": {
+    "total": "Booking total: {{amount}}",
+    "storedOnBooking": "This price is stored on the booking, not on the individual flights.",
+    "countedOnce": "Every total counts it exactly once for the whole booking, taxes and fees included. Prices, taxes and fees that single flights carry on top are then not counted.",
+    "zeroIsFree": "0 means: recorded as free. An empty field would mean: unknown.",
+    "noTotal": "No total is recorded for this booking. Totals therefore count each flight with its own price plus taxes and fees; a flight with no price at all counts as unknown, not as 0.",
+    "otherEntries_one": "Besides flights, the booking holds one more entry (train, cruise or stay); its total covers everything together.",
+    "otherEntries_other": "Besides flights, the booking holds {{count}} more entries (train, cruise or stay); its total covers everything together.",
+    "editOnTrip": "Edit the total on the trip's page",
+    "splitTitle": "Split across the flights (optional)",
+    "splitDisplayOnly": "For reading only: totals still count the booking total once, never the shares on top. The shares add up to the total to the cent.",
+    "splitEqual": "Split equally",
+    "splitDistance": "Split by distance",
+    "splitRemove": "Remove split",
+    "splitSum": "Sum of shares: {{sum}} · Booking total: {{total}} · {{method}}",
+    "removedSegment": "Flight no longer in the booking",
+    "method": {
+      "equal": "split equally",
+      "distance": "split by distance"
+    },
+    "stale": {
+      "price": "Out of date: the booking total has changed since the split. Please split again.",
+      "currency": "Out of date: the currency has changed since the split. Please split again.",
+      "segments": "Out of date: the booking's flights have changed since the split. Please split again."
+    },
+    "errors": {
+      "priceMissing": "Without a booking total there is nothing to split.",
+      "single": "The booking has only one flight – the total is its price.",
+      "mixed": "The booking also holds a train, cruise or stay; splitting it across the flights alone would be wrong.",
+      "distanceUnknown": "At least one flight has no known distance. Split equally, or complete its airports.",
+      "noBooking": "This flight no longer belongs to a booking.",
+      "generic": "The split could not be saved."
+    }
   }
 }

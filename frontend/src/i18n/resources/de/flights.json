@@ -531,5 +531,39 @@
     "airportUnconfirmed": "Ob der Flughafen wechselt, ist unbekannt – ein Flughafencode fehlt.",
     "noReachabilityClaim": "Gezeigt sind die erfassten Zeiten. Ob ein Anschluss erreichbar ist, kann TravStats nicht wissen.",
     "loadFailed": "Die übrigen Flüge dieser Buchung konnten nicht geladen werden."
+  },
+  "bookingPrice": {
+    "total": "Gesamtpreis der Buchung: {{amount}}",
+    "storedOnBooking": "Dieser Preis ist an der Buchung gespeichert, nicht an den einzelnen Flügen.",
+    "countedOnce": "In allen Summen zählt er genau einmal für die ganze Buchung und schließt Steuern und Gebühren ein. Preise, Steuern und Gebühren, die einzelne Flüge zusätzlich tragen, zählen dann nicht mit.",
+    "zeroIsFree": "0 bedeutet: als kostenlos erfasst. Ein leeres Feld hieße: unbekannt.",
+    "noTotal": "Für diese Buchung ist kein Gesamtpreis erfasst. In Summen zählt deshalb jeder Flug mit seinem eigenen Preis plus Steuern und Gebühren; ein Flug ganz ohne Preis zählt als unbekannt, nicht als 0.",
+    "otherEntries_one": "Zur Buchung gehört außer Flügen noch ein weiterer Eintrag (Bahn, Kreuzfahrt oder Unterkunft); ihr Gesamtpreis gilt für alles zusammen.",
+    "otherEntries_other": "Zur Buchung gehören außer Flügen noch {{count}} weitere Einträge (Bahn, Kreuzfahrt oder Unterkunft); ihr Gesamtpreis gilt für alles zusammen.",
+    "editOnTrip": "Gesamtpreis auf der Seite der Reise bearbeiten",
+    "splitTitle": "Aufteilung auf die Flüge (optional)",
+    "splitDisplayOnly": "Nur zur Ansicht: Summen zählen weiterhin den Gesamtpreis einmal, nie die Anteile dazu. Die Anteile ergeben den Gesamtpreis auf den Cent genau.",
+    "splitEqual": "Gleichmäßig aufteilen",
+    "splitDistance": "Nach Strecke aufteilen",
+    "splitRemove": "Aufteilung entfernen",
+    "splitSum": "Summe der Anteile: {{sum}} · Gesamtpreis: {{total}} · {{method}}",
+    "removedSegment": "Flug nicht mehr in der Buchung",
+    "method": {
+      "equal": "gleichmäßig aufgeteilt",
+      "distance": "nach Strecke aufgeteilt"
+    },
+    "stale": {
+      "price": "Veraltet: Der Gesamtpreis hat sich seit der Aufteilung geändert. Bitte neu aufteilen.",
+      "currency": "Veraltet: Die Währung hat sich seit der Aufteilung geändert. Bitte neu aufteilen.",
+      "segments": "Veraltet: Die Flüge der Buchung haben sich seit der Aufteilung geändert. Bitte neu aufteilen."
+    },
+    "errors": {
+      "priceMissing": "Ohne Gesamtpreis gibt es nichts aufzuteilen.",
+      "single": "Die Buchung hat nur einen Flug – der Gesamtpreis ist sein Preis.",
+      "mixed": "Zur Buchung gehören auch Bahn, Kreuzfahrt oder Unterkunft; eine Aufteilung nur auf die Flüge wäre falsch.",
+      "distanceUnknown": "Für mindestens einen Flug ist keine Strecke bekannt. Teile gleichmäßig auf oder ergänze die Flughäfen.",
+      "noBooking": "Dieser Flug gehört zu keiner Buchung mehr.",
+      "generic": "Die Aufteilung konnte nicht gespeichert werden."
+    }
   }
 }

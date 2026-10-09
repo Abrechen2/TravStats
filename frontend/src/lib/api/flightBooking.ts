@@ -13,4 +13,20 @@ export const flightBookingApi = {
     );
     return data;
   },
+
+  /** Store a display-only split of the booking total (forgejo#219); answers the booking as it now is. */
+  split: async (flightId: string, method: "equal" | "distance"): Promise<FlightBookingAnswer> => {
+    const { data } = await api.put<FlightBookingAnswer>(
+      `/flights/${encodeURIComponent(flightId)}/booking/split`,
+      { method }
+    );
+    return data;
+  },
+
+  removeSplit: async (flightId: string): Promise<FlightBookingAnswer> => {
+    const { data } = await api.delete<FlightBookingAnswer>(
+      `/flights/${encodeURIComponent(flightId)}/booking/split`
+    );
+    return data;
+  },
 };

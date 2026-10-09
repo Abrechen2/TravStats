@@ -34,7 +34,14 @@ function seg(id: string, from: string, to: string, dep: TimeValue, arr: TimeValu
   } as unknown as Flight;
 }
 
-const BOOKING = { id: "b1", pnr: "ABC123", price: 480, currency: "EUR", otherEntries: 0 };
+const BOOKING = {
+  id: "b1",
+  pnr: "ABC123",
+  price: 480,
+  currency: "EUR",
+  otherEntries: 0,
+  split: null,
+};
 
 const loaded = (segments: Flight[]): FlightBookingState => ({
   kind: "loaded",
