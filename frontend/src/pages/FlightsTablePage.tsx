@@ -217,12 +217,12 @@ export default function FlightsTablePage(): JSX.Element {
     }
   };
 
+  // Stores the update; the dialog closes itself once the trip assignment that
+  // follows has gone through (FlightEditModal), and `reload` runs after both.
   const handleUpdate = async (id: string, updates: Partial<FlightInput>) => {
     try {
       await flightsApi.update(id, updates);
       addToast("success", t("flights:table.toast.updated"));
-      setEditingFlight(null);
-      reload();
     } catch (error) {
       logger.error("Failed to update flight:", error);
       addToast("error", t("dashboard:errors.updateFlight"));
@@ -669,6 +669,7 @@ export default function FlightsTablePage(): JSX.Element {
           isOpen={!!editingFlight}
           onClose={() => setEditingFlight(null)}
           onSave={handleUpdate}
+          onAfterSave={reload}
         />
       )}
 

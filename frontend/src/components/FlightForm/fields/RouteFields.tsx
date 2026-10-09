@@ -15,6 +15,8 @@ interface RouteFieldsProps {
   arrival: Airport | null;
   onDepartureChange: (airport: Airport | null) => void;
   onArrivalChange: (airport: Airport | null) => void;
+  /** Input ids, so the visible labels name the pickers (forgejo#249). */
+  ids?: { departure: string; arrival: string };
 }
 
 /** Departure + arrival airport pickers, shared between the create and edit
@@ -58,14 +60,18 @@ export default function RouteFields({
   arrival,
   onDepartureChange,
   onArrivalChange,
+  ids,
 }: RouteFieldsProps): JSX.Element {
   const { t } = useTranslation(["flights"]);
 
   return (
     <div className="grid grid-cols-2 gap-4">
       <div>
-        <label className="label">{t("flights:form.from")}</label>
+        <label className="label" htmlFor={ids?.departure}>
+          {t("flights:form.from")}
+        </label>
         <AirportAutocomplete
+          id={ids?.departure}
           value={departure}
           onChange={onDepartureChange}
           label=""
@@ -73,8 +79,11 @@ export default function RouteFields({
         />
       </div>
       <div>
-        <label className="label">{t("flights:form.to")}</label>
+        <label className="label" htmlFor={ids?.arrival}>
+          {t("flights:form.to")}
+        </label>
         <AirportAutocomplete
+          id={ids?.arrival}
           value={arrival}
           onChange={onArrivalChange}
           label=""

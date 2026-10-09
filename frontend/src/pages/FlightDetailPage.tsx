@@ -422,9 +422,9 @@ export default function FlightDetailPage(): JSX.Element {
           onSave={async (flightId: string, updates: Partial<FlightInput>) => {
             await flightsApi.update(flightId, updates);
             addToast("success", t("flights:table.toast.updated"));
-            setEditing(false);
-            setReloadKey((k) => k + 1);
           }}
+          // The dialog closes itself after the trip assignment that follows.
+          onAfterSave={() => setReloadKey((k) => k + 1)}
         />
       )}
 

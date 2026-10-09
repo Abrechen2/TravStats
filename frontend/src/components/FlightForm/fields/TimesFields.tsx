@@ -105,11 +105,11 @@ interface TimesFieldsProps {
    * Mark the four SCHEDULED fields as required — an asterisk in the label and
    * `aria-required` on the input (forgejo#88, point 9).
    *
-   * Opt-in because the edit modal renders this too, and there the four are
-   * already filled: an asterisk on a field that has a value states a rule
-   * nobody is about to break. The create form passes it; the edit form does
-   * not. The ACTUAL pair is never marked either way — it is optional by
-   * design, and a half-filled pair is refused by `canSubmit`, not by a star.
+   * Both flight forms pass it since forgejo#245: the edit form refuses a
+   * cleared scheduled time exactly as the create form refuses an empty one,
+   * so the mark states a rule the user CAN break there too (the special-flight
+   * form does not). The ACTUAL pair is never marked — it is optional by
+   * design, and a half-filled pair is refused at its missing time instead.
    */
   markRequired?: boolean;
   errors?: TimesFieldErrors;

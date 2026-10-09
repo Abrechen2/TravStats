@@ -21,6 +21,8 @@ interface CatalogueComboboxProps {
   inputClassName?: string;
   /** Accessible name, for a form that labels its inputs without a <label>. */
   ariaLabel?: string;
+  /** The input's id, for a form whose visible <label htmlFor> names it. */
+  id?: string;
   /**
    * On focus, while the value is not the user's own typing (empty, seeded by
    * an edit dialog, or a previous pick), list the whole catalogue (`search("")`)
@@ -82,6 +84,7 @@ export default function CatalogueCombobox({
   inputClassName = "",
   ariaLabel,
   browseOnFocus = false,
+  id,
 }: CatalogueComboboxProps): JSX.Element {
   const [results, setResults] = useState<CatalogueOption[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -163,6 +166,7 @@ export default function CatalogueCombobox({
         onChange={handleInputChange}
         onFocus={() => void handleFocus()}
         placeholder={placeholder}
+        id={id}
         aria-label={ariaLabel}
         className={`input ${inputClassName}`.trim()}
         autoComplete="off"
