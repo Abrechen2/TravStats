@@ -24,6 +24,7 @@ import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { placeDeleteMessage } from "../lib/placeDeleteMessage";
 import { usePlaceRelations } from "../hooks/usePlaceRelations";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
+import { VisitDialog } from "../components/places/VisitDialog";
 import { navigateAfterSave } from "../components/form";
 import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
@@ -152,6 +153,8 @@ export default function PlacesListPage(): JSX.Element {
   const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Place | null>(null);
   const [creating, setCreating] = useState(false);
+  /** The place a visit is being recorded for, from its row (forgejo#231). */
+  const [recordingFor, setRecordingFor] = useState<Place | null>(null);
   // Counted only while the question is open; the dialog opens at once and
   // names photos, documents, lists and trips as soon as they are known.
   const deleteRelations = usePlaceRelations(pendingDelete?.id ?? null);
@@ -553,6 +556,8 @@ export default function PlacesListPage(): JSX.Element {
                     onOpen={() => navigate(`/places/${p.id}`)}
                     onEdit={() => navigate(`/places/${p.id}`)}
                     onDelete={() => setPendingDelete(p)}
+                    onRecordVisit={() => setRecordingFor(p)}
+                    recordVisitLabel={t("places:visit.action")}
                     editLabel={t("common:buttons.edit")}
                     deleteLabel={t("common:buttons.delete")}
                     cells={{
@@ -627,6 +632,21 @@ export default function PlacesListPage(): JSX.Element {
             // The form's guard may still hold a history entry; this replaces
             // it instead of stacking the new page on top (rollout rule).
             await navigateAfterSave(navigate, `/places/${saved.id}`);
+          }}
+        />
+      )}
+
+      {recordingFor && (
+        <VisitDialog
+          place={recordingFor}
+          onClose={() => setRecordingFor(null)}
+          onSaved={async () => {
+            // Re-read the rows without the page's loading state, so the
+            // dialog stays mounted; a failure is said there as "gespeichert,
+            // Liste nicht aktualisiert", never as a failed save.
+            setRows(await listPlaces({}));
+            addToast("success", t("places:visit.recorded", { name: recordingFor.name }));
+            setRecordingFor(null);
           }}
         />
       )}

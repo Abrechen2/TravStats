@@ -6,6 +6,7 @@ import { countRenderedRows, paginationControlsRendered } from "./tablePagination
 
 const listPlacesMock = vi.fn();
 const getPlaceRelationsMock = vi.fn();
+const createVisitMock = vi.fn();
 
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-stub" />,
@@ -15,6 +16,8 @@ vi.mock("../../lib/api/places", () => ({
   listPlaces: (...args: unknown[]) => listPlacesMock(...args),
   deletePlace: vi.fn(),
   getPlaceRelations: (...args: unknown[]) => getPlaceRelationsMock(...args),
+  createVisit: (...args: unknown[]) => createVisitMock(...args),
+  getVisitDateSuggestions: vi.fn(async () => []),
 }));
 
 // The lists dropdown is a separate concern — an empty list keeps the panel's
@@ -33,6 +36,8 @@ vi.mock("../../store/toastStore", () => ({
 // unmocked here the same way LodgingListPage.test.tsx unmocks it for
 // baseCurrency — real store, `poi` turned on for this file only.
 vi.unmock("../../store/settingsStore");
+
+vi.mock("../../lib/api/trips", () => ({ tripsApi: { getAll: vi.fn(async () => []) } }));
 
 // Imported after the mocks above so the module graph picks them up.
 import PlacesListPage from "../PlacesListPage";
@@ -141,6 +146,25 @@ describe("PlacesListPage", () => {
     await waitFor(() => expect(dialog.textContent).toContain("places:delete.photos"));
     expect(getPlaceRelationsMock).toHaveBeenCalledWith("p1");
     expect(dialog.textContent).toContain("common:delete.survivors");
+  });
+
+  // forgejo#231: a visit straight from the row, without opening the place.
+  it("records a visit from the row and re-reads the rows afterwards", async () => {
+    listPlacesMock.mockResolvedValue([makePlace({ id: "p1", name: "Wartburg", visited: false })]);
+    createVisitMock.mockResolvedValue({ id: "v1" });
+    renderListPage();
+    await screen.findByText("Wartburg");
+
+    fireEvent.click(screen.getByRole("button", { name: "places:visit.action" }));
+    const save = await screen.findByRole("button", { name: "common:buttons.save" });
+    fireEvent.click(save);
+
+    await waitFor(() => expect(createVisitMock).toHaveBeenCalledTimes(1));
+    expect(createVisitMock.mock.calls[0][0]).toBe("p1");
+    await waitFor(() => expect(listPlacesMock).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "common:buttons.save" })).not.toBeInTheDocument()
+    );
   });
 
   // The add button was filled with the place domain colour, which is an

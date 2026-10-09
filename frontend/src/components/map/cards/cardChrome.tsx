@@ -131,7 +131,7 @@ export function Actions({
         <button
           type="button"
           onClick={primary.onClick}
-          className="flex-1 cursor-pointer rounded-sm px-2 py-1.5 text-[11px] font-medium transition-colors"
+          className="flex-1 cursor-pointer rounded-sm px-2 py-1.5 text-[11px] font-medium transition-colors pointer-coarse:min-h-(--ts-size-touch-min)"
           style={{
             background: ACCENT_FILL,
             border: `1px solid ${ACCENT_EDGE}`,
@@ -145,7 +145,7 @@ export function Actions({
         <button
           type="button"
           onClick={secondary.onClick}
-          className="cursor-pointer rounded-sm px-2 py-1.5 text-[11px] font-medium transition-colors"
+          className="cursor-pointer rounded-sm px-2 py-1.5 text-[11px] font-medium transition-colors pointer-coarse:min-h-(--ts-size-touch-min)"
           style={{
             background: "rgba(255,255,255,0.08)",
             border: `1px solid ${tokens.color.border}`,

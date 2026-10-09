@@ -38,7 +38,8 @@ export const PLACE_COLUMN_LAYOUT: Record<
   visits: { min: 64, align: "end", mono: true, priority: 3 },
   lastVisit: { min: 100, mono: true, onNarrow: "subtitle" },
   status: { min: 110, onNarrow: "trailing" },
-  actions: { min: 80, align: "end" },
+  // Three buttons since "Besuch erfassen" joined edit and delete (forgejo#231).
+  actions: { min: 112, align: "end" },
 };
 
 interface Props {
@@ -47,6 +48,9 @@ interface Props {
   onOpen: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  /** Record a visit straight from the row (forgejo#231). */
+  onRecordVisit?: () => void;
+  recordVisitLabel?: string;
   editLabel: string;
   deleteLabel: string;
   columns: readonly TableColumn[];
@@ -66,6 +70,8 @@ export function PlaceRow({
   onOpen,
   onEdit,
   onDelete,
+  onRecordVisit,
+  recordVisitLabel,
   editLabel,
   deleteLabel,
   columns,
@@ -74,6 +80,9 @@ export function PlaceRow({
     ...cells,
     actions: (
       <RowActions>
+        {onRecordVisit && recordVisitLabel && (
+          <RowActionButton icon="checkIn" label={recordVisitLabel} onClick={onRecordVisit} />
+        )}
         <RowActionButton icon="edit" label={editLabel} onClick={onEdit} />
         <RowActionButton icon="delete" label={deleteLabel} onClick={onDelete} />
       </RowActions>

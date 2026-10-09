@@ -400,5 +400,28 @@
     "lists_other": "It leaves {{count}} lists ({{names}}); the lists themselves stay.",
     "stations_one": "One roadtrip station that names it is kept.",
     "stations_other": "{{count}} roadtrip stations that name it are kept."
+  },
+  "visit": {
+    "action": "Record a visit",
+    "recordTitle": "Record a visit · {{name}}",
+    "when": "When were you there?",
+    "mode": {
+      "today": "Today",
+      "other": "Another date",
+      "unknown": "Date unknown"
+    },
+    "timeOptional": "Time (optional)",
+    "unknownHint": "The visit is saved without a date — it still counts.",
+    "aheadHint": "This day is in the future: the visit is planned and only counts once it has happened. You can add photos afterwards.",
+    "tripsFailed": "Your trips could not be loaded. You can still let the visit be filed by its date.",
+    "photos": "Photos (optional)",
+    "photosHint": "They are uploaded as soon as the visit is saved.",
+    "photosPicked_one": "1 photo selected",
+    "photosPicked_other": "{{count}} photos selected",
+    "photoFailed": "The photos could not be uploaded.",
+    "savedPhotoFailed": "Visit saved. {{reason}}",
+    "photoRetry": "Upload photos again",
+    "continueWithoutPhoto": "Continue without photos",
+    "recorded": "Visit to “{{name}}” recorded."
   }
 }

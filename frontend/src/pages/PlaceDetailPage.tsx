@@ -12,7 +12,7 @@ import { LocationMiniMap } from "../components/location/LocationMiniMap";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import { VisitPhotoStrip } from "../components/places/VisitPhotoStrip";
 import { PlaceGallery } from "../components/places/PlaceGallery";
-import { VisitDateChips } from "../components/places/VisitDateChips";
+import { VisitDialog } from "../components/places/VisitDialog";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import { RowActionButton, RowActions } from "../components/table/RowActionButton";
 import { useDocumentCount } from "../hooks/useDocumentCount";
@@ -25,10 +25,8 @@ import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { DELETE_BUTTON_CLASS, survivorsNote, withDocumentNote } from "../lib/deleteConfirm";
 import { placeDeleteMessage } from "../lib/placeDeleteMessage";
 import { usePlaceRelations } from "../hooks/usePlaceRelations";
-import { createVisit, deletePlace, deleteVisit, getPlace, updateVisit } from "../lib/api/places";
+import { deletePlace, deleteVisit, getPlace } from "../lib/api/places";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
-import { wallClockInput } from "../lib/api/timeInput";
-import { saveErrorMessage } from "../lib/saveErrorMessage";
 import { tripsApi } from "../lib/api/trips";
 import type { Trip } from "../types";
 import { useToastStore } from "../store/toastStore";
@@ -37,20 +35,6 @@ import { classifyVisit } from "../shared/placeCounting";
 import { splitTimeValue } from "../lib/tripTimeline";
 import { visitTime as visitTimeOf } from "../lib/entityTimes";
 import type { Place, PlaceVisit } from "../types/place";
-
-/** The trip picker's "on no trip" — distinct from "" (let the server file it by date). */
-const NO_TRIP = "none";
-
-/**
- * The trip half of a visit payload. Three answers, not two (forgejo#199): ""
- * leaves `tripId` out, so the server files a NEW visit under the one trip
- * whose days hold its day; NO_TRIP says "no trip" and is kept; an id is that
- * trip. "" is offered on create only — on an edit, left out means "unchanged".
- */
-function tripIdField(value: string): { tripId?: string | null } {
-  if (value === "") return {};
-  return { tripId: value === NO_TRIP ? null : value };
-}
 
 export default function PlaceDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -84,20 +68,12 @@ export default function PlaceDetailPage(): JSX.Element {
   const visitDocumentCount = useDocumentCount(
     confirmVisitDelete ? { type: "placeVisit", id: confirmVisitDelete.id } : null
   );
-  const [addingVisit, setAddingVisit] = useState(false);
-  const [visitDate, setVisitDate] = useState("");
-  const [visitTime, setVisitTime] = useState("");
-  const [visitNotes, setVisitNotes] = useState("");
-  /* Which trip this visit belongs to. `PlaceVisit.tripId` has been accepted by
-   * the API since the visit routes were written — create and update both take
-   * it and `assertTripOwned` even checks the ownership — but no component ever
-   * SET it, so a place could never be attached to a trip from the interface.
-   * Lodging offers the same choice on a stay. */
-  const [visitTripId, setVisitTripId] = useState("");
-  /** The visit the form edits; null while it adds a new one. The web had no
-   *  way to correct a visit's date or time until the time-model migration
-   *  began asking users for the time of day it could not establish. */
-  const [editingVisitId, setEditingVisitId] = useState<string | null>(null);
+  /**
+   * The visit dialog: `{ visit: null }` records a new one, `{ visit }` edits
+   * that one (forgejo#231). It replaced the inline panel, whose errors were
+   * toasts and whose second tap could store a second visit.
+   */
+  const [visitDialog, setVisitDialog] = useState<{ visit: PlaceVisit | null } | null>(null);
   const [trips, setTrips] = useState<Trip[]>([]);
 
   const load = useCallback(async (): Promise<void> => {
@@ -138,68 +114,21 @@ export default function PlaceDetailPage(): JSX.Element {
     };
   }, [place]);
 
-  const submitVisit = useCallback(async (): Promise<void> => {
-    if (!place) return;
-    try {
-      // The wall clock as typed, at THIS place: the server resolves the place's
-      // zone and stores the instant (ADR 0002, D3). A date without a time is
-      // sent as the day alone — it used to become midnight "UTC", a fake
-      // instant the Companion's real ones could not be told apart from. An
-      // empty date is null, a valid visit ("I was here, no idea when").
-      const visitedAt = wallClockInput("visitedAt", visitDate, visitTime, {
-        placeRef: { kind: "place", id: place.id },
-      });
-      const input = { visitedAt, notes: visitNotes.trim() || null, ...tripIdField(visitTripId) };
-      if (editingVisitId) await updateVisit(editingVisitId, input);
-      else await createVisit(place.id, input);
-      addToast(
-        "success",
-        t(editingVisitId ? "places:detail.visitUpdated" : "places:detail.visitAdded")
-      );
-      setAddingVisit(false);
-      setEditingVisitId(null);
-      setVisitDate("");
-      setVisitTime("");
-      setVisitNotes("");
-      setVisitTripId("");
-      await load();
-    } catch (err: unknown) {
-      logger.error({ err }, "PlaceDetailPage: saving the visit failed");
-      addToast(
-        "error",
-        saveErrorMessage(
-          err,
-          t,
-          editingVisitId ? "places:detail.visitUpdateFailed" : "places:detail.visitFailed"
-        )
-      );
-    }
-  }, [place, editingVisitId, visitDate, visitTime, visitNotes, visitTripId, addToast, t, load]);
+  /**
+   * Re-read the place after a visit was stored, WITHOUT the page's loading
+   * state: `load` swaps the whole page for "Laden …", which would unmount the
+   * dialog in the middle of its save. A failure is thrown to the dialog, which
+   * says "gespeichert, Ansicht nicht aktualisiert" instead of "nicht
+   * gespeichert" (forgejo#247).
+   */
+  const refresh = useCallback(async (): Promise<void> => {
+    if (!id) return;
+    setPlace(await getPlace(id));
+  }, [id]);
 
-  /** Opens the visit form on an existing visit, filled as the list shows it. */
   const openVisitEditor = useCallback((visit: PlaceVisit): void => {
-    const { date, time } = splitTimeValue(visitTimeOf(visit));
-    setVisitDate(date);
-    setVisitTime(time);
-    setVisitNotes(visit.notes ?? "");
-    setVisitTripId(visit.tripId ?? NO_TRIP);
-    setEditingVisitId(visit.id);
-    setAddingVisit(true);
+    setVisitDialog({ visit });
   }, []);
-
-  // Closing an EDIT drops its values, so "+ Besuch" afterwards starts empty
-  // instead of offering the edited visit as a new one. A half-typed new visit
-  // is kept, as it always was.
-  const closeVisitForm = (): void => {
-    if (editingVisitId) {
-      setVisitDate("");
-      setVisitTime("");
-      setVisitNotes("");
-      setVisitTripId("");
-    }
-    setAddingVisit(false);
-    setEditingVisitId(null);
-  };
 
   // `?edit=1` opens the place form (a missing zone comes from the place's
   // coordinates), `?editVisit=<id>` that visit's form — the inbox's two links
@@ -427,86 +356,10 @@ export default function PlaceDetailPage(): JSX.Element {
               <h2 className="t-label-mono">
                 {t("places:detail.visits")} · {visitCount}
               </h2>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  if (addingVisit) return closeVisitForm();
-                  setEditingVisitId(null);
-                  setAddingVisit(true);
-                }}
-              >
+              <Button variant="primary" onClick={() => setVisitDialog({ visit: null })}>
                 + {t("places:detail.addVisit")}
               </Button>
             </div>
-
-            {addingVisit && (
-              <div className="rounded-[var(--ts-radius-card)] p-4" style={PANEL}>
-                {editingVisitId && (
-                  <h3 className="t-label-mono mb-3">{t("places:detail.editVisit")}</h3>
-                )}
-                <div className="grid grid-cols-2 gap-3">
-                  <label className="flex flex-col gap-1">
-                    <span className="t-caption">{t("places:detail.date")}</span>
-                    <input
-                      type="date"
-                      className={INPUT}
-                      value={visitDate}
-                      onChange={(e) => setVisitDate(e.target.value)}
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1">
-                    <span className="t-caption">{t("places:detail.time")}</span>
-                    <input
-                      type="time"
-                      className={INPUT}
-                      value={visitTime}
-                      onChange={(e) => setVisitTime(e.target.value)}
-                    />
-                  </label>
-                </div>
-                <VisitDateChips
-                  placeId={place.id}
-                  tripId={visitTripId === NO_TRIP ? "" : visitTripId}
-                  value={visitDate}
-                  onPick={setVisitDate}
-                />
-                <label className="mt-3 flex flex-col gap-1">
-                  <span className="t-caption">{t("places:detail.visitNotes")}</span>
-                  <input
-                    className={INPUT}
-                    value={visitNotes}
-                    onChange={(e) => setVisitNotes(e.target.value)}
-                  />
-                </label>
-                <label className="mt-3 flex flex-col gap-1">
-                  <span className="t-caption">{t("places:detail.visitTrip")}</span>
-                  <select
-                    className={INPUT}
-                    value={visitTripId}
-                    onChange={(e) => setVisitTripId(e.target.value)}
-                  >
-                    {!editingVisitId && (
-                      <option value="">{t("places:detail.visitTripByDate")}</option>
-                    )}
-                    <option value={NO_TRIP}>{t("places:detail.visitNoTrip")}</option>
-                    {trips.map((trip) => (
-                      <option key={trip.id} value={trip.id}>
-                        {trip.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {/* Both halves of the rule, said plainly, because both surprise
-                    people: a date is optional, and a future one does not count. */}
-                <p className="t-caption mt-2">{t("places:detail.dateHint")}</p>
-                <div className="mt-3 flex justify-end gap-2">
-                  <Button onClick={closeVisitForm}>{t("common:buttons.cancel")}</Button>
-                  <Button variant="primary" onClick={() => void submitVisit()}>
-                    {t("common:buttons.save")}
-                  </Button>
-                </div>
-              </div>
-            )}
 
             <div className="rounded-[var(--ts-radius-card)] px-5 py-1" style={PANEL}>
               {visitCount === 0 ? (
@@ -597,6 +450,23 @@ export default function PlaceDetailPage(): JSX.Element {
         />
       )}
 
+      {visitDialog !== null && (
+        <VisitDialog
+          place={place}
+          visit={visitDialog.visit}
+          onClose={() => setVisitDialog(null)}
+          afterSaveFailedKey="common:form.savedButViewRefreshFailed"
+          onSaved={async () => {
+            await refresh();
+            addToast(
+              "success",
+              t(visitDialog.visit ? "places:detail.visitUpdated" : "places:detail.visitAdded")
+            );
+            setVisitDialog(null);
+          }}
+        />
+      )}
+
       {confirmVisitDelete !== null && (
         <ConfirmModal
           isOpen
@@ -655,6 +525,3 @@ const PANEL = {
   background: "var(--ts-surface)",
   border: "1px solid var(--ts-border)",
 } as const;
-
-const INPUT =
-  "rounded-md border border-[var(--color-border)] bg-[var(--bg-base)] px-3 py-2 text-sm text-[var(--text-primary)]";

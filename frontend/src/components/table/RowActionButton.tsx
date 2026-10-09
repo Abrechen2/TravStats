@@ -12,7 +12,7 @@ import type { JSX, MouseEvent, ReactNode } from "react";
  * without it, clicking "delete" would also open the entry underneath.
  */
 
-export type RowActionIcon = "edit" | "duplicate" | "delete";
+export type RowActionIcon = "edit" | "duplicate" | "delete" | "checkIn";
 
 const PATHS: Record<RowActionIcon, ReactNode> = {
   edit: <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />,
@@ -20,6 +20,13 @@ const PATHS: Record<RowActionIcon, ReactNode> = {
     <>
       <rect x="9" y="9" width="13" height="13" rx="2" />
       <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </>
+  ),
+  // A pin with a tick: "I was here" — record a visit (places, forgejo#231).
+  checkIn: (
+    <>
+      <path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12Z" />
+      <path d="m9 10 2 2 4-4" />
     </>
   ),
   delete: (
@@ -36,6 +43,7 @@ const HOVER_CLASS: Record<RowActionIcon, string> = {
   edit: "hover:bg-(--bg-muted) hover:text-[#388bfd]",
   duplicate: "hover:bg-(--bg-muted) hover:text-(--text-primary)",
   delete: "hover:bg-(--bg-muted) hover:text-(--danger)",
+  checkIn: "hover:bg-(--bg-muted) hover:text-(--domain-poi)",
 };
 
 /**
