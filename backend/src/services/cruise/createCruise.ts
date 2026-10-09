@@ -143,6 +143,7 @@ export async function createCruiseRecord(
           isAtSea: s.isAtSea,
           ...stopTimes[index],
           excursionNote: s.excursionNote ?? null,
+          allAboardTime: s.allAboardTime ?? null,
           unresolvedPortName: s.unresolvedPortName ?? null,
         })),
       });

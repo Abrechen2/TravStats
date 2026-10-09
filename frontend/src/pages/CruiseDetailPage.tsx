@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { cruiseApi } from "../lib/api";
 import type { Cruise } from "../types";
@@ -11,6 +11,10 @@ import {
 } from "../components/Cruise/cruisePorts";
 import { cruiseStatusPillStyle } from "../components/Cruise/cruiseStatusStyle";
 import CruiseItinerary from "../components/Cruise/CruiseItinerary";
+import { CruiseDayCard } from "../components/Cruise/CruiseDayCard";
+import { todayEntryKey } from "../components/Cruise/cruiseDayCardModel";
+import { useCruiseDocuments } from "../components/Cruise/useCruiseDocuments";
+import { useTodayZone } from "../hooks/useTodayZone";
 import TripPill from "../components/Trips/TripPill";
 import AppShell from "../components/ui/AppShell";
 import DetailHeader from "../components/ui/DetailHeader";
@@ -65,6 +69,14 @@ export default function CruiseDetailPage(): JSX.Element {
   const [deleting, setDeleting] = useState<boolean>(false);
   const addToast = useToastStore((s) => s.addToast);
   const { isFeatureVisible } = useBetaFeatures();
+  const todayZone = useTodayZone();
+  /** The day whose card the reader opened; undefined = today's, if any (forgejo#223). */
+  const [pickedDay, setPickedDay] = useState<string | null | undefined>(undefined);
+  const timeline = useMemo(() => (cruise ? buildEffectiveTimeline(cruise) : []), [cruise]);
+  const todayKey = useMemo(() => todayEntryKey(timeline, todayZone), [timeline, todayZone]);
+  const dayKey = pickedDay === undefined ? todayKey : pickedDay;
+  const dayEntry = timeline.find((e) => e.key === dayKey && e.stop !== null) ?? null;
+  const dayDocuments = useCruiseDocuments(dayEntry && cruise ? cruise.id : null);
   /** Bumped when a recording changes the legs: the map reads its lines again. */
   const [geometryVersion, setGeometryVersion] = useState<number>(0);
 
@@ -243,8 +255,23 @@ export default function CruiseDetailPage(): JSX.Element {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
         <div className="flex flex-col gap-6 md:col-span-3">
           <DetailSection title={t("detail.itinerary")}>
+            {dayEntry !== null && (
+              <CruiseDayCard
+                entry={dayEntry}
+                isToday={dayEntry.key === todayKey}
+                documents={dayDocuments.state}
+                onRetryDocuments={dayDocuments.retry}
+              />
+            )}
+            {dayEntry === null && cruise.stops.length > 0 && (
+              <p className="t-caption mb-2">{t("dayCard.pickHint")}</p>
+            )}
             {cruise.stops.length > 0 || cruise.departurePort ? (
-              <CruiseItinerary cruise={cruise} />
+              <CruiseItinerary
+                cruise={cruise}
+                selectedKey={dayEntry?.key ?? null}
+                onSelect={(key) => setPickedDay(dayKey === key ? null : key)}
+              />
             ) : (
               <p className="t-caption">{t("detail.stopsEmpty")}</p>
             )}

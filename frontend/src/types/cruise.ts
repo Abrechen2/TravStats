@@ -38,6 +38,9 @@ export interface CruiseStop {
   arrivalTime: string | null;
   departureTime: string | null;
   excursionNote: string | null;
+  /** "All aboard", `HH:mm` on the port's clock — only ever the user's entry
+   *  (forgejo#223). Absent on rows read before the column existed. */
+  allAboardTime?: string | null;
   /** Set on an unresolved port: name-only stop, portId=null, isAtSea=false. */
   unresolvedPortName: string | null;
   /** The real instants and the port's zone (ADR 0002 phase 2); absent on older rows. */
@@ -100,6 +103,9 @@ export interface CruiseStopInput {
   arrivalTime?: string | null;
   departureTime?: string | null;
   excursionNote?: string;
+  /** "All aboard", `HH:mm` on the port's clock (forgejo#223). Typed by the
+   *  user from the ship's programme; never filled from the departure. */
+  allAboardTime?: string | null;
   /** Unresolved port name (import couldn't match the catalog). Cleared when
    *  the user picks a real port. */
   unresolvedPortName?: string | null;

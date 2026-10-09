@@ -11,6 +11,9 @@ import {
 export const CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
 const STATUSES = ["scheduled", "flown", "cancelled", "historical"] as const;
 
+/** A port's wall clock, 00:00–23:59 — the shape of an "all aboard" time. */
+export const ALL_ABOARD_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+
 /**
  * What the list can be FILTERED to — one value wider than what it can be
  * written to.
@@ -71,6 +74,13 @@ export const cruiseStopSchema = z
     arrivalTime: stopTime,
     departureTime: stopTime,
     excursionNote: z.string().max(500).optional(),
+    // "All aboard" at this port (forgejo#223): `HH:mm` on the port's clock,
+    // as the ship's daily programme prints it. Only ever the user's entry —
+    // nothing derives it from the departure. "" and null clear it.
+    allAboardTime: z.preprocess(
+      emptyAsNull,
+      z.string().regex(ALL_ABOARD_TIME, "allAboardTime must be HH:mm").nullable().optional()
+    ),
     // Third stop state: an imported port whose name could not be matched to the
     // catalog. Carried as a name-only stop (no portId, not a sea day) so it is
     // never lost; the user resolves it later via the PortPicker.

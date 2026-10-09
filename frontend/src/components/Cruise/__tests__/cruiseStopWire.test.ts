@@ -70,4 +70,15 @@ describe("cruiseStopToWire — a port call in the time model's write shape", () 
     expect(wire.arrivalTime).toBeNull();
     expect(wire).not.toHaveProperty("departureTime");
   });
+
+  // forgejo#223: the all-aboard time travels as typed, and the editor's key
+  // (forgejo#221) never does.
+  it("sends the all-aboard time as typed and drops the editor's key", () => {
+    const wire = cruiseStopToWire(
+      stop({ allAboardTime: "17:30", uiKey: "s3", departureTime: "2027-06-02T18:00:00.000Z" }),
+      0
+    );
+    expect(wire.allAboardTime).toBe("17:30");
+    expect(wire).not.toHaveProperty("uiKey");
+  });
 });

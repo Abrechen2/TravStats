@@ -60,6 +60,7 @@ export function stopInputsOf(stops: readonly CruiseStop[]): CruiseStopInput[] {
     arrivalFold: storedStopFold(s.arrivalTime, s.arrivalUtc, s.stopZone),
     departureFold: storedStopFold(s.departureTime, s.departureUtc, s.stopZone),
     excursionNote: s.excursionNote ?? undefined,
+    allAboardTime: s.allAboardTime ?? null,
     unresolvedPortName: s.unresolvedPortName,
   }));
 }
@@ -134,6 +135,7 @@ export function cruiseFormSnapshot(fields: CruiseFormFields): Record<string, unk
       arrivalFold: s.arrivalFold,
       departureFold: s.departureFold,
       excursionNote: s.excursionNote,
+      allAboardTime: s.allAboardTime,
     })),
   };
 }

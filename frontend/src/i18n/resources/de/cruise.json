@@ -176,7 +176,9 @@
       "removed": "„{{title}}“ (Tag {{day}}) entfernt",
       "moved": "„{{title}}“ verschoben",
       "added": "Tag {{day}} hinzugefügt"
-    }
+    },
+    "allAboard": "Alle an Bord (Ortszeit)",
+    "allAboardHint": "Steht im Tagesprogramm des Schiffs. TravStats leitet sie nicht aus der Abfahrt ab."
   },
   "picker": {
     "ship_placeholder": "Schiff suchen …",
@@ -401,5 +403,31 @@
   "deleteSurvivors": {
     "trip": "die Reise „{{name}}“",
     "tripUnnamed": "die verknüpfte Reise"
+  },
+  "dayCard": {
+    "today": "Heute",
+    "port": "Hafen",
+    "inPort": "Liegezeit",
+    "inPortTimes": "{{arrive}} – {{depart}} Ortszeit",
+    "open": "offen",
+    "hours_one": "{{count}} Std.",
+    "hours_other": "{{count}} Std.",
+    "minutes_one": "{{count}} Min.",
+    "minutes_other": "{{count}} Min.",
+    "hoursMinutes": "{{hours}} Std. {{minutes}} Min.",
+    "allAboard": "Alle an Bord",
+    "localTime": "{{time}} Ortszeit",
+    "allAboardOpen": "nicht erfasst – steht im Tagesprogramm des Schiffs und lässt sich unter „Bearbeiten“ beim Tag eintragen",
+    "excursion": "Ausflug",
+    "noExcursion": "keiner eingetragen",
+    "documents": "Dokumente",
+    "documentsLoading": "Dokumente werden geladen …",
+    "documentsFailed": "Die Dokumente konnten nicht geladen werden.",
+    "noDocuments_zero": "Für diese Kreuzfahrt ist kein Dokument abgelegt.",
+    "noDocuments_one": "Keins mit diesem Datum – das Dokument der Kreuzfahrt steht unten unter „Dokumente“.",
+    "noDocuments_other": "Keins mit diesem Datum – die {{count}} Dokumente der Kreuzfahrt stehen unten unter „Dokumente“.",
+    "localNote": "Datum und Zeiten gelten am Hafen (Ortszeit). Fehlende Zeiten bleiben offen; die Alle-an-Bord-Zeit wird nie aus der Abfahrt abgeleitet.",
+    "pickHint": "Tippe auf einen Tag der Hafenfolge, um seine Tageskarte zu öffnen.",
+    "openDay": "Tageskarte öffnen:"
   }
 }

@@ -157,6 +157,26 @@ export function CruiseStopFields({
               />
             </div>
           </div>
+          {/* Its own field, typed from the ship's daily programme: the time
+              to be back on board is NOT the departure, and the gap differs
+              by line and port — so nothing fills it in (forgejo#223). */}
+          <div className="flex flex-col gap-1">
+            <label className={LABEL_CLASS}>
+              {t("stops.allAboard")}
+              <input
+                id={`${idBase}-all-aboard`}
+                type="time"
+                value={stop.allAboardTime ?? ""}
+                onChange={(e): void => onPatch({ allAboardTime: e.target.value || null })}
+                aria-describedby={`${idBase}-all-aboard-hint`}
+                style={{ colorScheme: "dark" }}
+                className={INPUT_CLASS}
+              />
+            </label>
+            <p id={`${idBase}-all-aboard-hint`} className="text-xs text-(--text-muted)">
+              {t("stops.allAboardHint")}
+            </p>
+          </div>
           <label className={LABEL_CLASS}>
             {t("stops.excursion")}
             <textarea

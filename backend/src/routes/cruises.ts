@@ -464,6 +464,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
               isAtSea: s.isAtSea,
               ...stopTimes[index],
               excursionNote: s.excursionNote ?? null,
+              allAboardTime: s.allAboardTime ?? null,
               unresolvedPortName: s.unresolvedPortName ?? null,
             })),
           });

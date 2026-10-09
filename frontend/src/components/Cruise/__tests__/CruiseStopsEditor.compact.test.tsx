@@ -153,4 +153,18 @@ describe("CruiseStopsEditor — compact day list (forgejo#221)", () => {
     expect(summaries()[1].closest("details")).toHaveAttribute("open");
     expect(document.activeElement).toBe(summaries()[1]);
   });
+
+  // forgejo#223: its own field, never filled from the departure.
+  it("takes the all-aboard time in a field of its own, empty beside a departure", async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={ITINERARY} />);
+    await user.click(summaries()[0]);
+    const field = document.getElementById("t-at-0-all-aboard") as HTMLInputElement;
+    expect(field).toHaveAccessibleName("stops.allAboard");
+    expect(field).toHaveAccessibleDescription("stops.allAboardHint");
+    // Kiel departs 17:00; nothing is put into the all-aboard time for it.
+    expect(field.value).toBe("");
+    fireEvent.change(field, { target: { value: "16:30" } });
+    expect(field.value).toBe("16:30");
+  });
 });

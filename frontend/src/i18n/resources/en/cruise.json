@@ -176,7 +176,9 @@
       "removed": "“{{title}}” (day {{day}}) removed",
       "moved": "“{{title}}” moved",
       "added": "Day {{day}} added"
-    }
+    },
+    "allAboard": "All aboard (local time)",
+    "allAboardHint": "Printed in the ship's daily programme. TravStats does not derive it from the departure."
   },
   "picker": {
     "ship_placeholder": "Search ship …",
@@ -401,5 +403,31 @@
   "deleteSurvivors": {
     "trip": "the trip “{{name}}”",
     "tripUnnamed": "the linked trip"
+  },
+  "dayCard": {
+    "today": "Today",
+    "port": "Port",
+    "inPort": "In port",
+    "inPortTimes": "{{arrive}} – {{depart}} local time",
+    "open": "open",
+    "hours_one": "{{count}} hr",
+    "hours_other": "{{count}} hrs",
+    "minutes_one": "{{count}} min",
+    "minutes_other": "{{count}} min",
+    "hoursMinutes": "{{hours}} h {{minutes}} min",
+    "allAboard": "All aboard",
+    "localTime": "{{time}} local time",
+    "allAboardOpen": "not recorded – it is in the ship's daily programme and can be entered on the day under “Edit”",
+    "excursion": "Excursion",
+    "noExcursion": "none entered",
+    "documents": "Documents",
+    "documentsLoading": "Loading documents …",
+    "documentsFailed": "The documents could not be loaded.",
+    "noDocuments_zero": "No document is filed for this cruise.",
+    "noDocuments_one": "None with this date – the cruise's one document is under “Documents” below.",
+    "noDocuments_other": "None with this date – the cruise's {{count}} documents are under “Documents” below.",
+    "localNote": "Date and times are the port's (local time). Missing times stay open; the all-aboard time is never derived from the departure.",
+    "pickHint": "Tap a day of the itinerary to open its day card.",
+    "openDay": "Open the day card:"
   }
 }

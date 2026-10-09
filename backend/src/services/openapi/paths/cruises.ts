@@ -40,6 +40,13 @@ const cruiseStop = registry.register(
       arrivalTime: z.string().datetime().nullable(),
       departureTime: z.string().datetime().nullable(),
       excursionNote: z.string().nullable(),
+      allAboardTime: z
+        .string()
+        .nullable()
+        .describe(
+          "Latest time to be back on board, HH:mm on the port's clock, on the stop's day. " +
+            "Only ever entered by the user, never derived from the departure."
+        ),
       port: includedRow("port").nullable().optional(),
       times: cruiseStopTimesSchema,
     })

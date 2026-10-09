@@ -2401,6 +2401,12 @@ model CruiseStop {
   timePrecision      String?   @map("time_precision")
   updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at")
   excursionNote      String?   @map("excursion_note")
+  /// "All aboard" (forgejo#223): the latest time to be back on the ship at
+  /// this port, `HH:mm` on the PORT's clock, on the stop's own day. Only ever
+  /// what the user typed from the ship's daily programme — it is never derived
+  /// from the departure, because the gap between the two differs by line and
+  /// port, and a guessed time to be back on board is worse than none.
+  allAboardTime      String?   @map("all_aboard_time")
   // Third stop state: a port whose name could not be matched to the catalog on
   // import. portId=null AND isAtSea=false AND this set => unresolved port.
   unresolvedPortName String?   @map("unresolved_port_name")
