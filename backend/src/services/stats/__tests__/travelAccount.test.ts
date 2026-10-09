@@ -1,5 +1,6 @@
 import { attributeTravelNights, buildTravelAccount } from "../travelAccount";
 import { buildTripAccount, type TripAccountInput } from "../tripAccount";
+import type { TripCostInput } from "../../../shared/tripCost";
 
 const NOW = new Date("2026-08-15T12:00:00Z");
 const d = (iso: string): Date => new Date(`${iso}T00:00:00Z`);
@@ -57,7 +58,7 @@ describe("buildTravelAccount", () => {
     expect(y.hotelNights).toBe(3);
     expect(y.seaNights).toBe(7);
     expect(y.airNights).toBe(1);
-    expect(y.hotelNights + y.seaNights + y.airNights + y.homeNights).toBe(365);
+    expect(y.hotelNights + y.seaNights + y.railNights + y.airNights + y.unassignedNights).toBe(365);
   });
 
   it("does not treat a daytime flight as a night in the air", () => {
@@ -95,7 +96,7 @@ describe("buildTravelAccount", () => {
     expect(account.years).toEqual([]);
   });
 
-  it("shortens the current year to the days elapsed", () => {
+  it("shortens the current year to the nights that are over", () => {
     const account = buildTravelAccount({
       stays: [stay("2026-01-01", "2026-01-11")],
       cruises: [],
@@ -103,14 +104,16 @@ describe("buildTravelAccount", () => {
       now: NOW,
     });
     const y = account.years.find((r) => r.year === "2026")!;
-    // 15 August is day 227 of 2026.
-    expect(y.days).toBe(227);
-    expect(y.homeNights).toBe(217);
+    // 15 August is day 227 of 2026; tonight is not over yet, so 226 nights —
+    // counting it made every running year carry one remainder night that no
+    // record could ever claim.
+    expect(y.days).toBe(226);
+    expect(y.unassignedNights).toBe(216);
   });
 
   it("fills a year with no travel at all rather than leaving a hole", () => {
-    // A gap year drawn as missing reads as "no data"; drawn as all-home it
-    // reads as what actually happened.
+    // A gap year drawn as missing would read as "no data"; its row says what
+    // the logbook knows — no night of it accounted for.
     const account = buildTravelAccount({
       stays: [stay("2023-05-01", "2023-05-03"), stay("2025-05-01", "2025-05-03")],
       cruises: [],
@@ -118,7 +121,7 @@ describe("buildTravelAccount", () => {
       now: NOW,
     });
     const y2024 = account.years.find((r) => r.year === "2024")!;
-    expect(y2024.homeNights).toBe(366);
+    expect(y2024.unassignedNights).toBe(366);
     expect(y2024.hotelNights).toBe(0);
   });
 
@@ -265,22 +268,43 @@ const costFlight = (o: Partial<TripAccountInput["flights"][number]> = {}) => ({
   ...o,
 });
 
-const trip = (o: Partial<TripAccountInput> = {}): TripAccountInput => ({
-  id: "t1",
-  name: "Norwegen",
-  startDate: d("2025-06-01"),
-  endDate: d("2025-06-08"),
-  status: "completed",
-  category: "vacation",
-  tags: [],
-  journalEntries: [],
-  photoCount: 0,
-  stays: [],
-  cruises: [],
-  flights: [],
-  expenses: [],
-  ...o,
-});
+/**
+ * A trip whose priced rows are also its dated rows, as the loader builds it
+ * when every domain is shown: `cost` is derived from the same stays, cruises
+ * and flights the coverage reads.
+ */
+const trip = (
+  o: Partial<Omit<TripAccountInput, "cost">> & Partial<TripCostInput> = {}
+): TripAccountInput => {
+  const rows = {
+    stays: [],
+    cruises: [],
+    flights: [],
+    rail: [],
+    ...o,
+  } as unknown as TripAccountInput;
+  return {
+    id: "t1",
+    name: "Norwegen",
+    startDate: d("2025-06-01"),
+    endDate: d("2025-06-08"),
+    status: "completed",
+    category: "vacation",
+    tags: [],
+    journalEntries: [],
+    photoCount: 0,
+    ...rows,
+    cost: {
+      bookings: o.bookings ?? [],
+      flights: (o.flights ?? []) as TripCostInput["flights"],
+      cruises: (o.cruises ?? []) as TripCostInput["cruises"],
+      stays: (o.stays ?? []) as TripCostInput["stays"],
+      rail: (o.rail ?? []) as TripCostInput["rail"],
+      rentals: o.rentals ?? [],
+      expenses: o.expenses ?? [],
+    },
+  };
+};
 
 describe("buildTripAccount", () => {
   it("adds a roadtrip's ferry, tolls and pitch fees to the trip's spend, per currency", () => {

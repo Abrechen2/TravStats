@@ -192,9 +192,10 @@ export const lodgingRhythmStatsSchema = z.object({
     .int()
     .openapi({
       description:
-        "Longest stretch at home, counted only BETWEEN the first and last night away — " +
-        "before the first recorded night the user was not at home for decades, they " +
-        "simply had no data.",
+        "Longest stretch of nights with no recorded stay, counted only BETWEEN the first " +
+        "and last night away — before the first recorded night there is simply no data. " +
+        "Not nights at home: a gap may hold a cruise, a night train or an unrecorded " +
+        "hotel, and a missing record proves no night at home (forgejo#266).",
     }),
   awayShareByYear: z.record(z.string(), z.number()).openapi({
     description:

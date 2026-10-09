@@ -1,7 +1,6 @@
 import type { Trip } from "../../types";
 import type { TripCostSuperlative } from "../api/trips";
 import { calculateDistance } from "../geo";
-import { sumByCurrency, tripCostSources } from "../bookingCost";
 import { formatCurrency } from "../units";
 
 /**
@@ -18,9 +17,8 @@ import { formatCurrency } from "../units";
  * moving the ranking to the backend (`services/trip/tripCostSuperlative.ts`),
  * which compares the FX base-currency amount instead; the caller fetches it
  * via `tripsApi.getAllWithInsights()` and passes it in here. `tripDominantCost`
- * stays exported below — it is still correct for what it does (a trip's OWN
- * display total, never a converted figure) — but it no longer decides a
- * cross-trip ranking.
+ * itself is gone (forgejo#274): a trip's own cost is the server's `trip.cost`
+ * now, and a second client rule beside it could only disagree.
  */
 export interface TripInsightWinner {
   tripId: string;
@@ -56,28 +54,6 @@ export function tripDistanceKm(trip: Trip): number {
   }
   for (const c of trip.cruises ?? []) km += c.distanceKm ?? 0;
   return km;
-}
-
-/**
- * The single largest per-currency total of a trip, as {currency, amount}. A
- * trip mixing currencies picks its biggest bucket — the cost model never
- * converts, so a cross-currency "total" would be a fiction. null when the trip
- * has no recorded cost; a trip priced only at 0 answers 0.
- */
-export function tripDominantCost(trip: Trip): { currency: string; amount: number } | null {
-  const totals = sumByCurrency(
-    tripCostSources(
-      trip.bookings ?? [],
-      trip.flights ?? [],
-      trip.cruises ?? [],
-      trip.lodgingStays ?? []
-    )
-  );
-  let best: { currency: string; amount: number } | null = null;
-  for (const t of totals) {
-    if (best === null || t.total > best.amount) best = { currency: t.currency, amount: t.total };
-  }
-  return best;
 }
 
 /** Picks the trip maximising `amount`, formatting its headline via `format`. */

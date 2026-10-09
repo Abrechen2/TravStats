@@ -43,3 +43,26 @@ export async function loadVisibleDomains(userId: string): Promise<DomainKey[]> {
   ]);
   return visibleDomainKeys(settings?.enabledDomains, instance.betaFeaturesEnabled);
 }
+
+/** The domains a user sees, as a set — the one gate a trip's money and nights pass. */
+export type VisibleDomains = ReadonlySet<DomainKey>;
+
+/**
+ * The source set of every trip-cost and night figure: the trips page, a trip's
+ * page and `/stats/travel-account` with its evidence all load it HERE, so one
+ * trip never shows two totals (forgejo#274/#275/#266, controller ruling
+ * 2026-10-09) and a domain behind the beta switch never reaches either.
+ */
+export async function loadVisibleDomainSet(userId: string): Promise<VisibleDomains> {
+  return new Set(await loadVisibleDomains(userId));
+}
+
+/**
+ * `rows` when the user sees `domain`, else none — the ONE filter those figures
+ * apply. Flights pass whatever the setting says: every trip surface lists a
+ * trip's flights ungated (`TripCard`, `TripOverview`), so leaving their money
+ * or nights out would price a trip without entries it shows.
+ */
+export function rowsIfVisible<T>(visible: VisibleDomains, domain: DomainKey, rows: T[]): T[] {
+  return domain === "flight" || visible.has(domain) ? rows : [];
+}

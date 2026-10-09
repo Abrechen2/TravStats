@@ -24,6 +24,8 @@
   "cruiseCount_other": "{{count}} Cruises",
   "pnrLabel": "Booking ref.",
   "totalCost": "Total Cost",
+  "costUnpriced_one": "{{count}} entry without a price",
+  "costUnpriced_other": "{{count}} entries without a price",
   "costPerKm": "Cost/km",
   "distance": "Distance",
   "status": {
@@ -166,8 +168,7 @@
     "logistics": {
       "flights": "Flights",
       "cruises": "Cruises",
-      "bookings": "Bookings",
-      "totalBooked": "Total"
+      "bookings": "Bookings"
     },
     "timeline": {
       "addEntry": "+ Add entry",

@@ -126,8 +126,8 @@ export function assertSumInvariant(res: EvidenceResponse, round: (n: number) => 
   // was no term here at all, which made it unreachable for every `sum` key
   // in the registry: a resolver naming it had to report `value: null` and so
   // claim a derivable figure could not be derived.
-  // `travelAccountHomeNights` is that case — the nights away are subtracted
-  // from the year and the remainder was slept at home, with no row that
+  // `travelAccountUnassignedNights` is that case — the nights away are subtracted
+  // from the year and the remainder is what no record accounts for, with no row that
   // could ever be listed.
   //
   // The other reasons are counts of ROWS, not of units of the measure:

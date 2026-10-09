@@ -122,7 +122,7 @@ describe("assertSumInvariant", () => {
    * The unattributed term, added in task 7b-2. Without it a `sum` measure
    * could never name `notPerEntry` for a figure it HAD derived — the reason
    * the vocabulary carries for exactly that case — and
-   * `travelAccountHomeNights`, a remainder with no row that could ever be
+   * `travelAccountUnassignedNights`, a remainder with no row that could ever be
    * listed, would have had to claim it could not be derived at all.
    */
   it("counts units that have no row to name, as the distinct rule already does", () => {

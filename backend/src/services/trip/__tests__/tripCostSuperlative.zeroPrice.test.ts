@@ -1,6 +1,9 @@
 import { prisma } from "../../../db";
 import { hashPassword } from "../../../utils/password";
 import { mostExpensiveTrip } from "../tripCostSuperlative";
+import { AVAILABLE_DOMAINS } from "../../../shared/domains";
+/** Every domain shown — these cases are about the rule, not the gate (trips.cost.test.ts is). */
+const EVERY_DOMAIN = new Set(AVAILABLE_DOMAINS);
 
 /**
  * A recorded price of 0 is a price; null is "nobody wrote one down".
@@ -40,7 +43,7 @@ describe("mostExpensiveTrip — a price of 0 is a price", () => {
     // An unknown price stays out of the sum without excluding anything.
     await prisma.booking.create({ data: { userId, tripId: trip.id, price: null } });
 
-    expect(await mostExpensiveTrip(userId)).toEqual({
+    expect(await mostExpensiveTrip(userId, EVERY_DOMAIN)).toEqual({
       tripId: trip.id,
       name: "Prize voyage",
       amount: 0,
@@ -55,7 +58,7 @@ describe("mostExpensiveTrip — a price of 0 is a price", () => {
     });
     await prisma.booking.create({ data: { userId, tripId: paid.id, price: 10, currency: "EUR" } });
 
-    const result = await mostExpensiveTrip(userId);
+    const result = await mostExpensiveTrip(userId, EVERY_DOMAIN);
     expect(result?.tripId).toBe(paid.id);
     expect(result?.amount).toBe(10);
   });

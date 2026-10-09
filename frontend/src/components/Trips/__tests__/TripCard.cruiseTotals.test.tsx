@@ -7,7 +7,8 @@ import type { Trip } from "../../../types";
  * A trip made only of cruises read "— km" and "— Gesamtkosten" on its card,
  * although the cruises carried prices and their legs carried distances. The
  * card summed flights and nothing else, so a trip with `flights: []` summed to
- * nothing at all.
+ * nothing at all. The money now comes from the server's `trip.cost`
+ * (forgejo#274), which prices the cruise; the kilometres are still the card's.
  */
 const settings = vi.hoisted(() => ({
   value: {
@@ -59,6 +60,7 @@ const cruiseOnlyTrip = {
   startDate: null,
   endDate: null,
   _count: { flights: 0, cruises: 1 },
+  cost: { spendByCurrency: { EUR: 1290 }, unpricedEntries: 0 },
 } as unknown as Trip;
 
 function renderCard(trip: Trip): void {
@@ -70,7 +72,7 @@ function renderCard(trip: Trip): void {
 }
 
 describe("TripCard totals on a cruise-only trip", () => {
-  it("counts the cruise price towards the trip total", () => {
+  it("shows the cruise-only trip's total the server sent", () => {
     renderCard(cruiseOnlyTrip);
     expect(screen.getByText(/1\.?290/)).toBeInTheDocument();
   });
@@ -114,6 +116,7 @@ describe("TripCard totals on a cruise-only trip", () => {
           distanceKm: 0,
         },
       ],
+      cost: { spendByCurrency: {}, unpricedEntries: 1 },
     } as unknown as Trip;
 
     renderCard(bare);

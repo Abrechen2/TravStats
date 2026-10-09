@@ -217,6 +217,8 @@ export interface Trip {
   times?: TripTimes;
 
   _count?: import("./tripCounts").TripCounts;
+  /** Sent by `GET /trips/:id`, and by `GET /trips` with `includeInsights`. */
+  cost?: import("./tripCost").TripCost | null;
   bookings?: Booking[];
   flights?: Pick<
     Flight,

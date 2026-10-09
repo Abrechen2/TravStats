@@ -35,7 +35,7 @@ import {
 import { emailParseLimiter } from "../middleware/rateLimit";
 import { assertLlmCloudConsent, assertLlmEnabled } from "../services/llm/llmGate";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
-import { mostExpensiveTrip } from "../services/trip/tripCostSuperlative";
+import { tripPageCost, tripsPageCosts } from "../services/trip/tripCostSuperlative";
 import { TRIPS_LIST_INCLUDE, TRIP_RAIL_SELECT } from "../services/trip/tripsListInclude";
 import { withRoadtripCounts } from "../services/trip/tripRoadtripCounts";
 import { TRIP_DETAIL_RENTALS } from "../services/trip/tripsListInclude";
@@ -128,11 +128,8 @@ router.get(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      // Opt-in: the cost superlative below runs an UNCAPPED query over every
-      // trip the user has, specifically so it is not limited by the `take`s
-      // in the main query below — computing it on every caller of this very
-      // popular endpoint (StayEditor, PlaceDetailPage, FlightsTablePage, …)
-      // would tax pages that never show it. Only the trips page asks.
+      // Opt-in: the costs below run their own UNCAPPED query (never the
+      // `take`s here); the many other callers of this list never show them.
       const { includeInsights } = tripsListQuerySchema.parse(req.query);
       const listed = await prisma.trip.findMany({
         where: { userId },
@@ -165,10 +162,8 @@ router.get(
       const distanceByCruise = new Map(
         legSums.map((row) => [row.cruiseId, row._sum.distanceKm ?? 0])
       );
-      // Uncapped by design (see the comment above `includeInsights`) — it
-      // runs its OWN query over every trip the user has, never the 500/200
-      // caps this handler applies above.
-      const mostExpensive = includeInsights ? await mostExpensiveTrip(userId) : undefined;
+      // Every card's cost and the superlative: one load, one rule (forgejo#274).
+      const insights = includeInsights ? await tripsPageCosts(userId) : undefined;
       res.json({
         trips: trips.map((t) => ({
           ...withTripTimes(t),
@@ -184,8 +179,9 @@ router.get(
             lodgingCountries.get(t.id) ?? [],
             roadtripCountries.get(t.id) ?? []
           ),
+          ...(insights && { cost: insights.tripCosts[t.id] }),
         })),
-        ...(includeInsights && { mostExpensiveTrip: mostExpensive }),
+        ...(insights && { mostExpensiveTrip: insights.mostExpensiveTrip }),
       });
     } catch (error) {
       next(error);
@@ -415,12 +411,16 @@ router.get(
       // off), and the countries tile stayed at 0 because `trips.countries` is a
       // stored column nobody derives and `overflownCountries` is empty for
       // manually created flights.
-      const [facts, cruiseCountries, lodgingCountries, roadtripCountries] = await Promise.all([
-        airportFactsFor(trip.flights),
-        cruiseCountriesByTrip([trip.id]),
-        lodgingCountriesByTrip([trip.id]),
-        roadtripCountriesByTrip([trip.id]),
-      ]);
+      // `cost`: the server's figure (forgejo#274), the page sums nothing itself.
+      const [facts, cruiseCountries, lodgingCountries, roadtripCountries, cost] = await Promise.all(
+        [
+          airportFactsFor(trip.flights),
+          cruiseCountriesByTrip([trip.id]),
+          lodgingCountriesByTrip([trip.id]),
+          roadtripCountriesByTrip([trip.id]),
+          tripPageCost(userId, trip.id),
+        ]
+      );
       // The stored zone first, then the catalogue — with `times` (ADR 0002).
       const flights = await enrichFlightsForClients(trip.flights);
       const countries = tripCountries(
@@ -437,7 +437,7 @@ router.get(
         photos: links.map((link) => toPhotoDto(link.tripPhoto)),
       }));
       res.json({
-        trip: withTripDetailTimes({ ...trip, photos, flights, countries, journalEntries }),
+        trip: withTripDetailTimes({ ...trip, photos, flights, countries, journalEntries, cost }),
       });
     } catch (error) {
       next(error);
