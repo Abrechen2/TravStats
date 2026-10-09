@@ -35,7 +35,9 @@ const uuid = z.string().uuid();
 const idParams = z.object({ id: uuid });
 const tags = ["Documents"];
 const notFound = {
-  description: "Not found — also for another user's document or entry",
+  description:
+    "Not found — also for another user's document or entry. A missing entry carries " +
+    "`code: DOCUMENT_ENTRY_NOT_FOUND`; a missing document has no code.",
   content: errorContent,
 };
 const badInput = { description: "Invalid input", content: errorContent };
