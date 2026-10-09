@@ -62,7 +62,7 @@ export default function RoadtripDayView({
         )}
         <span className="t-caption" data-testid="day-driving">
           {facts.drivingMinutes !== null
-            ? t("roadtrips:days.driving", {
+            ? t(facts.drivingRouted ? "roadtrips:days.driving" : "roadtrips:days.drivingEntered", {
                 h: Math.floor(facts.drivingMinutes / 60),
                 m: String(facts.drivingMinutes % 60).padStart(2, "0"),
               })
@@ -109,6 +109,7 @@ export default function RoadtripDayView({
                 {d.overnight.station.stay ? (
                   <Link
                     to={`/lodging/${d.overnight.station.stay.lodgingId}`}
+                    className="pointer-coarse:inline-flex pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:items-center"
                     style={{
                       color: "var(--domain-lodging)",
                       textDecoration: d.overnight.cancelled ? "line-through" : undefined,

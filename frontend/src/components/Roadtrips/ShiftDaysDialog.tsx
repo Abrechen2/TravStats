@@ -174,7 +174,8 @@ export default function ShiftDaysDialog({
                 to={`/lodging/${n.stay.lodgingId}`}
                 target="_blank"
                 rel="noopener"
-                className="underline"
+                // An inline link a finger must hit on an iPad (review M6).
+                className="underline pointer-coarse:inline-flex pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:items-center"
               >
                 {t("roadtrips:shift.check")}
               </Link>

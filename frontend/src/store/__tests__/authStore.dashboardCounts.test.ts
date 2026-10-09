@@ -125,3 +125,27 @@ describe("authStore: an account switch forgets the bulk-refresh refusal", () => 
     expect(wasQuotaRefused("user-a")).toBe(false);
   });
 });
+
+/** Review M5: unsent roadtrip station drafts and the end of a session. */
+describe("authStore — local station drafts", () => {
+  const key = "travstats:roadtrip-station-draft:u1:rt";
+  beforeEach(() => {
+    window.localStorage.clear();
+    window.localStorage.setItem(key, "{}");
+    window.localStorage.setItem("other-key", "kept");
+    mocks.logout.mockResolvedValue(undefined);
+  });
+
+  it("drops every station draft on a deliberate logout, and nothing else", async () => {
+    await useAuthStore.getState().logout();
+    expect(window.localStorage.getItem(key)).toBeNull();
+    expect(window.localStorage.getItem("other-key")).toBe("kept");
+  });
+
+  it("keeps them when the session merely expired — they are the unsent work", async () => {
+    await useAuthStore.getState().logout({ keepLocalDrafts: true });
+    expect(window.localStorage.getItem(key)).toBe("{}");
+    useAuthStore.getState().clearSession();
+    expect(window.localStorage.getItem(key)).toBe("{}");
+  });
+});

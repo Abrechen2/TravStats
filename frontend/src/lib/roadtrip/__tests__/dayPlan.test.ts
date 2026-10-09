@@ -87,6 +87,17 @@ describe("dayPlan", () => {
     expect(days[2].legs?.drivingMinutes).toBe(150);
   });
 
+  // Review M7: a time typed on a leg is not one the router computed.
+  it("tells a routed driving time from one typed on a leg", () => {
+    expect(days[0].legs?.drivingRouted).toBe(true);
+    const typed = dayPlan(
+      [st("A", "pass", "2026-07-10"), st("B", "free", "2026-07-10", "2026-07-11")],
+      [leg("A", "B", "straight", 50, 45)],
+      null
+    );
+    expect(typed[0].legs).toMatchObject({ drivingMinutes: 45, drivingRouted: false });
+  });
+
   it("says when a stretch has no stored leg, instead of a shorter distance as if complete", () => {
     const partial = dayPlan(stations, legs.slice(0, 4), null);
     expect(partial[2].legs).toMatchObject({ missingLeg: true, drivingMinutes: null, totalKm: 0 });

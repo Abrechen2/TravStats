@@ -115,6 +115,24 @@ export function readStationDraft(userId: string, routeId: string): StoredStation
   return null;
 }
 
+/**
+ * Every station draft in this browser, of every user (review M5): called on a
+ * deliberate logout, so a shared browser keeps nobody's unsent titles, notes
+ * and coordinates — and drafts of roadtrips deleted meanwhile go with them.
+ */
+export function clearAllStationDrafts(): void {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i += 1) {
+      const key = window.localStorage.key(i);
+      if (key?.startsWith(`${PREFIX}:`)) keys.push(key);
+    }
+    keys.forEach((key) => window.localStorage.removeItem(key));
+  } catch (err) {
+    logger.warn("Removing the roadtrip station drafts failed", err);
+  }
+}
+
 /** After a confirmed save, or when the reader discards the draft on purpose. */
 export function clearStationDraft(userId: string, routeId: string): void {
   try {

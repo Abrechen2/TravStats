@@ -94,4 +94,33 @@ describe("RoadtripDayView", () => {
     );
     expect(second).not.toHaveTextContent("roadtrips:days.driving ");
   });
+
+  it("labels a typed driving time as entered, and makes the lodging link a touch target", () => {
+    render(
+      <MemoryRouter>
+        <RoadtripDayView
+          stations={[
+            st("Bergen", "pass", "2026-07-11"),
+            {
+              ...st("Flåm", "stay", "2026-07-11", "2026-07-12"),
+              lodgingStayId: "s",
+              stay: {
+                id: "s",
+                lodgingId: "l",
+                lodgingName: "Flåm Camping",
+                nights: 1,
+                status: "completed",
+              } as never,
+            },
+          ]}
+          legs={[leg("Bergen", "Flåm", "straight", 100, 90)]}
+          startDate="2026-07-11T00:00:00.000Z"
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByTestId("day-driving")).toHaveTextContent("roadtrips:days.drivingEntered");
+    expect(screen.getByText("Flåm Camping").closest("a")?.className).toContain(
+      "pointer-coarse:min-h-(--ts-size-touch-min)"
+    );
+  });
 });

@@ -646,6 +646,7 @@
     "drivingUnknown": "Fahrzeit unbekannt – nicht jede Etappe ist entlang der Straße berechnet",
     "missingLeg": "Für einen Abschnitt ist noch keine Etappe gespeichert – die Strecke ist unvollständig.",
     "stayOn_one": "Danach {{count}} weiterer Tag in {{place}}",
-    "stayOn_other": "Danach {{count}} weitere Tage in {{place}}"
+    "stayOn_other": "Danach {{count}} weitere Tage in {{place}}",
+    "drivingEntered": "Fahrzeit {{h}} h {{m}} (eingetragen)"
   }
 }

@@ -646,6 +646,7 @@
     "drivingUnknown": "Driving time unknown — not every leg is calculated along the road",
     "missingLeg": "One stretch has no saved leg yet — the distance is incomplete.",
     "stayOn_one": "Then {{count}} more day in {{place}}",
-    "stayOn_other": "Then {{count}} more days in {{place}}"
+    "stayOn_other": "Then {{count}} more days in {{place}}",
+    "drivingEntered": "Driving time {{h}} h {{m}} (entered)"
   }
 }

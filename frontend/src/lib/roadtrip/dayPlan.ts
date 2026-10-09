@@ -23,6 +23,12 @@ export interface DayLegFacts {
   totalKm: number;
   /** Null unless every piece of the day's route has a driving time. */
   drivingMinutes: number | null;
+  /**
+   * True when every piece came from the routing provider. A driving time can
+   * also be TYPED on any leg, a straight one included (`PUT …/legs`), and must
+   * then not be labelled "berechnet" (review M7).
+   */
+  drivingRouted: boolean;
   /** A pair of consecutive stations with no stored leg: the distance is incomplete. */
   missingLeg: boolean;
 }
@@ -63,6 +69,7 @@ function factsBetween(
     kmByMode: {},
     totalKm: 0,
     drivingMinutes: 0,
+    drivingRouted: true,
     missingLeg: false,
   };
   for (let i = from; i < to; i += 1) {
@@ -75,6 +82,7 @@ function factsBetween(
     facts.kmBySource[leg.source] = (facts.kmBySource[leg.source] ?? 0) + leg.distanceKm;
     facts.kmByMode[leg.mode] = (facts.kmByMode[leg.mode] ?? 0) + leg.distanceKm;
     facts.totalKm += leg.distanceKm;
+    if (leg.source !== "routed") facts.drivingRouted = false;
     facts.drivingMinutes =
       facts.drivingMinutes === null || leg.drivingMinutes === null
         ? null

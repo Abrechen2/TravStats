@@ -296,7 +296,31 @@ describe("RoadtripCostsSection", () => {
     expect(button.className).toContain("bg-[var(--danger)]");
     fireEvent.click(button);
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
-    expect(expensesApi.removeForRoadtrip).toHaveBeenCalledWith("rt", "x");
+    // With the version it was read at (review M8).
+    expect(expensesApi.removeForRoadtrip).toHaveBeenCalledWith(
+      "rt",
+      "x",
+      "2026-07-01T00:00:00.000Z"
+    );
+  });
+
+  it("does not delete a cost the phone changed meanwhile, and says so", async () => {
+    vi.mocked(expensesApi.removeForRoadtrip).mockRejectedValueOnce(
+      Object.assign(new Error("conflict"), {
+        isAxiosError: true,
+        response: { status: 409, data: { code: "VERSION_CONFLICT" } },
+      })
+    );
+    const onChanged = renderSection([expense({ id: "x" })], { ...NO_COSTS, total: { EUR: 10 } });
+    fireEvent.click(screen.getByText("roadtrips:costs.kind.fuel"));
+    fireEvent.click(screen.getByText("roadtrips:costs.dialog.delete"));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "roadtrips:costs.deleteConfirm.confirm" })
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "roadtrips:costs.dialog.error.conflict"
+    );
+    expect(onChanged).not.toHaveBeenCalled();
   });
 
   it("keeps the cost when the delete question is answered with cancel", async () => {

@@ -5,12 +5,20 @@ import { authApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useDashboardCountsStore } from "./dashboardCountsStore";
 import { forgetQuotaRefusals } from "../lib/bulkRefreshRefusal";
+import { clearAllStationDrafts } from "../lib/roadtrip/stationDraftStore";
 
 interface AuthState {
   user: User | null;
   _hasHydrated: boolean;
   setAuth: (user: User) => void;
-  logout: () => Promise<void>;
+  /**
+   * `keepLocalDrafts`: an EXPIRED session (the 401 listener) keeps this
+   * device's unsent roadtrip station drafts — they are exactly what a lost
+   * connection or a timed-out login must not cost. A deliberate logout drops
+   * them (review M5): titles, notes and coordinates should not outlive their
+   * user on a shared browser.
+   */
+  logout: (options?: { keepLocalDrafts?: boolean }) => Promise<void>;
   clearSession: () => void;
   setHasHydrated: (value: boolean) => void;
 }
@@ -23,7 +31,7 @@ export const useAuthStore = create<AuthState>()(
         window.addEventListener("auth:unauthorized", async () => {
           const store = get();
           if (store.user) {
-            await store.logout();
+            await store.logout({ keepLocalDrafts: true });
           }
         });
       }
@@ -57,7 +65,7 @@ export const useAuthStore = create<AuthState>()(
           forgetQuotaRefusals();
           set({ user: null });
         },
-        logout: async () => {
+        logout: async (options = {}) => {
           try {
             // Clear the HttpOnly cookie on server
             await authApi.logout();
@@ -67,6 +75,7 @@ export const useAuthStore = create<AuthState>()(
             // Clear local user state regardless of API result
             useDashboardCountsStore.getState().reset();
             forgetQuotaRefusals();
+            if (!options.keepLocalDrafts) clearAllStationDrafts();
             set({ user: null });
           }
         },

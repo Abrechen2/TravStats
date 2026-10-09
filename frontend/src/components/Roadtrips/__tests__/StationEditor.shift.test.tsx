@@ -156,10 +156,10 @@ describe("StationEditor — shifting the following days (forgejo#241)", () => {
 
     const notices = within(dialog).getByTestId("shift-notices");
     expect(notices).toHaveTextContent("roadtrips:shift.notice.linkedStay:Camping Lom");
-    expect(within(notices).getByText("roadtrips:shift.check").closest("a")).toHaveAttribute(
-      "href",
-      "/lodging/l-lom"
-    );
+    const check = within(notices).getByText("roadtrips:shift.check").closest("a");
+    expect(check).toHaveAttribute("href", "/lodging/l-lom");
+    // A touch target, not a 16 px inline link (review M6).
+    expect(check?.className).toContain("pointer-coarse:min-h-(--ts-size-touch-min)");
   });
 
   it("changes nothing when cancelled", async () => {

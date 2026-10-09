@@ -136,7 +136,7 @@ export default function ExpenseDialog({
     setRemoving(true);
     failure.clear();
     try {
-      await expensesApi.removeForRoadtrip(roadtripId, expense.id);
+      await expensesApi.removeForRoadtrip(roadtripId, expense.id, expense.updatedAt);
       setConfirmDelete(false);
       markSaved();
       onSaved();

@@ -307,6 +307,7 @@ describe("RoadtripDetailPage — review fixes, signed in", () => {
     expect(within(dialog).queryByTestId("conflict-added")).not.toBeInTheDocument();
     fireEvent.click(within(dialog).getByText("roadtrips:conflict.apply"));
     await settle(800);
-    expect(sentTitles().at(-1)).toBe("Bergen sentrum");
+    const titles = sentTitles();
+    expect(titles[titles.length - 1]).toBe("Bergen sentrum");
   });
 });
