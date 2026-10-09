@@ -5,6 +5,7 @@ import type {
   RentalInvoiceReading,
   RentalStationHit,
 } from "../../types/rental";
+import type { RentalInvoicePart } from "../rental/rentalInvoiceDiff";
 
 /**
  * `/api/v1/rentals` — the rental logbook (spec 2026-10-01-rental-domain-design).
@@ -104,6 +105,8 @@ export const rentalApi = {
           invoice: RentalInvoiceReading;
           replaceUserDistance?: boolean;
           mailSentAt?: string | null;
+          /** The invoice's parts the review took over; `false` leaves one as it is (forgejo#237). */
+          adopt?: Partial<Record<RentalInvoicePart, boolean>>;
         }
   ): Promise<{ rental: RentalBooking; outcome: string }> {
     const res = await api.post<Envelope<RentalBooking> & { meta: { outcome: string } }>(

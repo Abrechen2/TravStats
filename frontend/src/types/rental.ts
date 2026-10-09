@@ -102,6 +102,8 @@ export interface RentalBooking {
     currency: string;
     source: "final" | "booked" | "cancellationFee";
   } | null;
+  /** Where the booked `price` came from — the booking mail, or typed; null without a price. */
+  priceSource: "booking" | "user" | null;
   /** Returned, and no km from an invoice or a correction yet (D11 b). */
   invoiceMissing: boolean;
   trip?: { id: string; name: string; color: string } | null;

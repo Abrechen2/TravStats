@@ -41,6 +41,30 @@ export const rentalInvoiceSchema = z.object({
  */
 const mailSentAt = z.string().datetime({ offset: true }).nullable().optional();
 
+/**
+ * Which of an invoice's readings the user took over in the review
+ * (forgejo#237) — each one on its own. Absent = every reading the invoice
+ * carries, as before, so a client that never asks keeps working; `false`
+ * leaves that part of the rental exactly as it is.
+ */
+export const RENTAL_INVOICE_PARTS = [
+  "finalAmount",
+  "vehicleDriven",
+  "odometer",
+  "distance",
+  "actualTimes",
+] as const;
+export type RentalInvoicePart = (typeof RENTAL_INVOICE_PARTS)[number];
+export const rentalInvoiceAdoptSchema = z
+  .object({
+    finalAmount: z.boolean().optional(),
+    vehicleDriven: z.boolean().optional(),
+    odometer: z.boolean().optional(),
+    distance: z.boolean().optional(),
+    actualTimes: z.boolean().optional(),
+  })
+  .strict();
+
 export const rentalCancellationFeeSchema = z.object({
   amount: z.number().positive().max(10_000_000),
   currency: z.string().regex(/^[A-Z]{3}$/),
@@ -66,6 +90,7 @@ export const rentalImportSchema = z.discriminatedUnion("kind", [
      * and the import answers 409 with both.
      */
     replaceUserDistance: z.boolean().optional(),
+    adopt: rentalInvoiceAdoptSchema.optional(),
   }),
 ]);
 

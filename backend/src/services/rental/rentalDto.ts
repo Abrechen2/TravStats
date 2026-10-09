@@ -26,8 +26,26 @@ export interface RentalReadColumns extends RentalTimeColumns {
   distanceSource: string | null;
   odometerOutKm: number | null;
   odometerInKm: number | null;
+  userEditedFields: string[];
+  externalRef: string | null;
   pickupAirport?: { iata: string | null } | null;
   returnAirport?: { iata: string | null } | null;
+}
+
+/**
+ * Where the BOOKED price came from (forgejo#237): the booking mail it was
+ * imported from, unless a person typed or changed it since. The invoice never
+ * writes the booked price, so the two amounts stay side by side with their
+ * origins. Null without a price.
+ */
+export function rentalPriceSource(row: {
+  price: number | null;
+  userEditedFields: string[];
+  externalRef: string | null;
+}): "booking" | "user" | null {
+  if (row.price === null) return null;
+  if (row.userEditedFields.includes("price")) return "user";
+  return row.externalRef ? "booking" : "user";
 }
 
 export function withRentalReadFields<T extends RentalReadColumns>(row: T) {
@@ -40,6 +58,7 @@ export function withRentalReadFields<T extends RentalReadColumns>(row: T) {
     rentalDays: rentalDays(row),
     vehicleTraits: acrissTraits(row.acrissCode),
     cost: rentalCost(row),
+    priceSource: rentalPriceSource(row),
     // Returned, and no driven km yet — not from an invoice, a correction or
     // both odometer readings (`rentalDrivenKm`, forgejo#206). The reminder the
     // Companion shows after a return (D11 b).

@@ -228,7 +228,16 @@
     "mapSame": "Returned where picked up: one point.",
     "mapOneWay": "One-way rental: the dashed line joins pickup and return – it is not the route driven.",
     "mapRoadtrip": "The linked roadtrip shows the route driven.",
-    "cancellationFee": "Cancellation fee"
+    "cancellationFee": "Cancellation fee",
+    "priceDifference": "Difference",
+    "differenceCurrencies": "different currencies – no difference computed, nothing converted",
+    "differenceMissing": "needs both amounts",
+    "costCounts": {
+      "final": "The cost counted is the final amount – once, not on top of the booked price.",
+      "booked": "The cost counted is the booked price until an invoice arrives.",
+      "cancellationFee": "Only the cancellation fee counts as a cost.",
+      "none": "No amount known yet – the rental is in no cost total."
+    }
   },
   "import": {
     "panelTitle": "Add a rental car",
@@ -307,5 +316,34 @@
     "roadtrip": "the roadtrip \"{{name}}\"",
     "companions_one": "{{count}} companion",
     "companions_other": "{{count}} companions"
+  },
+  "priceSource": {
+    "booking": "from the booking confirmation",
+    "user": "entered by hand",
+    "unknown": "origin not recorded",
+    "none": "no booked price known"
+  },
+  "finalSource": {
+    "invoice": "per invoice",
+    "user": "corrected by hand",
+    "cancellationFee": "cancellation fee",
+    "unknown": "origin not recorded"
+  },
+  "invoiceReview": {
+    "loadFailed": "The rental for this invoice could not be loaded – the comparison is missing.",
+    "noDifference": "cannot be computed",
+    "feesNote": "TravStats does not read single fees out of invoices yet; the difference is their sum. The booked price is kept either way.",
+    "part": {
+      "finalAmount": "Final amount",
+      "vehicleDriven": "Car driven",
+      "odometer": "Odometer (pickup → return)",
+      "distance": "Kilometres driven",
+      "actualTimes": "Actual times (pickup → return)"
+    },
+    "now": "So far: {{value}}",
+    "invoice": "Invoice: {{value}}",
+    "nothingYet": "nothing",
+    "same": "Matches the rental.",
+    "adopt": "Take over"
   }
 }

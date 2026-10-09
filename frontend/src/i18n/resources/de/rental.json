@@ -228,7 +228,16 @@
     "mapSame": "Rückgabe am selben Ort: ein Punkt.",
     "mapOneWay": "Einwegmiete: Die gestrichelte Linie verbindet Abholung und Rückgabe – sie ist nicht die gefahrene Strecke.",
     "mapRoadtrip": "Die gefahrene Strecke zeigt der verknüpfte Roadtrip.",
-    "cancellationFee": "Stornogebühr"
+    "cancellationFee": "Stornogebühr",
+    "priceDifference": "Differenz",
+    "differenceCurrencies": "verschiedene Währungen – keine Differenz berechnet, nichts umgerechnet",
+    "differenceMissing": "erst mit beiden Beträgen",
+    "costCounts": {
+      "final": "Als Kosten zählt der Endbetrag – einmal, nicht zusätzlich zum gebuchten Preis.",
+      "booked": "Als Kosten zählt der gebuchte Preis, bis eine Rechnung vorliegt.",
+      "cancellationFee": "Als Kosten zählt nur die Stornogebühr.",
+      "none": "Noch kein Betrag bekannt – die Miete zählt in keiner Kostensumme."
+    }
   },
   "import": {
     "panelTitle": "Mietwagen hinzufügen",
@@ -307,5 +316,34 @@
     "roadtrip": "der Roadtrip „{{name}}“",
     "companions_one": "{{count}} Mitreisende Person",
     "companions_other": "{{count}} Mitreisende"
+  },
+  "priceSource": {
+    "booking": "aus der Buchungsbestätigung",
+    "user": "von Hand eingetragen",
+    "unknown": "Herkunft nicht vermerkt",
+    "none": "kein gebuchter Preis bekannt"
+  },
+  "finalSource": {
+    "invoice": "laut Rechnung",
+    "user": "von Hand korrigiert",
+    "cancellationFee": "Stornogebühr",
+    "unknown": "Herkunft nicht vermerkt"
+  },
+  "invoiceReview": {
+    "loadFailed": "Die Miete zu dieser Rechnung konnte nicht geladen werden – der Vergleich fehlt.",
+    "noDifference": "nicht berechenbar",
+    "feesNote": "Einzelne Gebühren liest TravStats aus Rechnungen noch nicht aus; die Differenz ist ihre Summe. Der gebuchte Preis bleibt in jedem Fall erhalten.",
+    "part": {
+      "finalAmount": "Endbetrag",
+      "vehicleDriven": "Gefahrenes Fahrzeug",
+      "odometer": "Kilometerstände (Abholung → Rückgabe)",
+      "distance": "Gefahrene Kilometer",
+      "actualTimes": "Tatsächliche Zeiten (Abholung → Rückgabe)"
+    },
+    "now": "Bisher: {{value}}",
+    "invoice": "Rechnung: {{value}}",
+    "nothingYet": "nichts",
+    "same": "Stimmt mit der Miete überein.",
+    "adopt": "Übernehmen"
   }
 }

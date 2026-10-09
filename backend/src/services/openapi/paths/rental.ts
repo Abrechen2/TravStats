@@ -151,6 +151,13 @@ export const rentalBookingSchema = registry.register(
           "What the rental cost: the invoice's final amount, else the booked price; for a " +
             "cancelled rental only its cancellation fee; null when none is known"
         ),
+      priceSource: z
+        .enum(["booking", "user"])
+        .nullable()
+        .describe(
+          "Where the booked `price` came from: the booking mail it was imported from, or typed " +
+            "by hand. An invoice never writes it, so it stays beside `finalAmount`; null without a price"
+        ),
       invoiceMissing: z
         .boolean()
         .describe(
@@ -402,7 +409,10 @@ registry.registerPath({
     "`RENTAL_UNKNOWN_BOOKING` and nothing is written. A cancellation's `fee` becomes the " +
     "cancelled rental's cost, flagged `cancellationFee`. With `mailSentAt` (the mail's own " +
     "send time) the newest mail's data stands whatever the import order: an older one only " +
-    "fills empty fields and an older cancellation does not cancel (`stale`).",
+    "fills empty fields and an older cancellation does not cancel (`stale`). An invoice's " +
+    "`adopt` names the parts the review took over (`finalAmount`, `vehicleDriven`, " +
+    "`odometer`, `distance`, `actualTimes`); `false` leaves that part as it is, absent takes " +
+    "it. The booked `price` is never written by an invoice.",
   tags: ["Rentals"],
   request: {
     body: {

@@ -14,6 +14,7 @@ import DocumentsSection from "../components/documents/DocumentsSection";
 import { RentalFormModal } from "../components/rental/RentalFormModal";
 import { RentalSuggestionBanner } from "../components/rental/RentalSuggestionBanner";
 import { RentalRouteMap } from "../components/rental/RentalRouteMap";
+import { RentalPriceComparison } from "../components/rental/RentalPriceComparison";
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
 import { rentalApi } from "../lib/api/rental";
@@ -307,18 +308,12 @@ export default function RentalDetailPage(): JSX.Element {
             title={t("rental:detail.price")}
             facts={[
               { label: t("rental:detail.priceBooked"), value: priceLine || null, mono: true },
-              {
-                label:
-                  rental.finalAmountSource === "cancellationFee"
-                    ? t("rental:detail.cancellationFee")
-                    : t("rental:detail.priceFinal"),
-                value:
-                  money(rental.finalAmount, rental.finalCurrency) ?? t("rental:detail.fromInvoice"),
-                mono: rental.finalAmount !== null,
-              },
               { label: t("rental:detail.deposit"), value: t("rental:detail.depositNever") },
             ]}
-          />
+          >
+            {/* Booked, final and their difference side by side (forgejo#237). */}
+            <RentalPriceComparison rental={rental} />
+          </DetailSection>
 
           <DocumentsSection entry={{ type: "rentalBooking", id: rental.id }} />
         </div>
