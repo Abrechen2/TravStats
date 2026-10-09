@@ -88,9 +88,9 @@
     "noLocation": "No location on file",
     "setLocationNow": "Find location now",
     "deleteConfirmTitle": "Delete lodging?",
-    "deleteConfirmMessage": "“{{name}}” will be permanently deleted, along with its {{count}} stays. Trips it belongs to are kept.",
-    "deleteConfirmMessage_one": "“{{name}}” will be permanently deleted, along with its one stay. Trips it belongs to are kept.",
-    "deleteConfirmMessage_other": "“{{name}}” will be permanently deleted, along with its {{count}} stays. Trips it belongs to are kept.",
+    "deleteConfirmMessage": "“{{name}}” will be permanently deleted, along with its {{count}} stays.",
+    "deleteConfirmMessage_one": "“{{name}}” will be permanently deleted, along with its one stay.",
+    "deleteConfirmMessage_other": "“{{name}}” will be permanently deleted, along with its {{count}} stays.",
     "deleteSuccess": "Lodging deleted",
     "deleteError": "Could not delete lodging",
     "loadError": "The stay could not be loaded.",
@@ -98,7 +98,11 @@
     "backToLogbook": "Logbook · Stays",
     "location": "Location",
     "nights": "Nights",
-    "stayNotFound": "This stay no longer exists at this lodging."
+    "stayNotFound": "This stay no longer exists at this lodging.",
+    "survivorChain": "chain “{{name}}”",
+    "deletePhotosNote_one": "Plus 1 photo of the house, deleted with it.",
+    "deletePhotosNote_other": "Plus {{count}} photos of the house, deleted with it.",
+    "survivorTripsUnnamed": "linked trips"
   },
   "field": {
     "name": "Name",
@@ -234,7 +238,6 @@
     "createTitle": "New stay",
     "editTitle": "Edit stay",
     "datesSection": "Dates",
-    "datesRequired": "Please provide check-in and check-out dates",
     "ratingsSection": "Ratings",
     "priceSection": "Price",
     "amenitiesSection": "Amenities & notes",
@@ -250,6 +253,11 @@
       "both": "Use the trip's dates: {{from}} – {{to}}",
       "checkIn": "Trip start as check-in: {{date}}",
       "checkOut": "Trip end as check-out: {{date}}"
+    },
+    "errors": {
+      "checkIn": "Please enter the check-in date.",
+      "checkOut": "Please enter the check-out date.",
+      "checkOutBeforeCheckIn": "The check-out is before the check-in."
     }
   },
   "membership": {
@@ -624,5 +632,70 @@
   },
   "photos": {
     "title": "Photos"
+  },
+  "stayView": {
+    "toggle": {
+      "label": "View",
+      "houses": "Lodgings",
+      "stays": "Stays"
+    },
+    "title": "Stays",
+    "columns": {
+      "period": "Period",
+      "house": "Lodging",
+      "trip": "Trip",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "filter": {
+      "from": "From",
+      "to": "To",
+      "trip": "Trip",
+      "allTrips": "All trips",
+      "invalidWindow": "The period ends before it begins.",
+      "tripsFailed": "The trips could not be loaded – the trip filter is empty because of that."
+    },
+    "room": "Room {{room}}",
+    "reference": "Booking {{reference}}",
+    "openHouse": "Open the lodging {{name}}",
+    "loadError": "Stays could not be loaded",
+    "empty": "No stays recorded yet",
+    "emptyHint": "A stay belongs to a lodging: add a lodging first or read in a booking.",
+    "footer": "Latest check-in first; stays without a date come last."
+  },
+  "conflict": {
+    "title": "These days overlap other stays",
+    "titleDuplicate": "This lodging already has a stay for these days – this may be a duplicate.",
+    "sameHouse": "this lodging",
+    "rule": "A check-out and a check-in on the same day do not count as an overlap. Two rooms or two lodgings on the same night are allowed – you only confirm it.",
+    "proceed": "Save as it is, on purpose",
+    "changeDates": "Change the dates",
+    "unchecked": "Overlaps could not be checked.",
+    "saveAnyway": "Save anyway",
+    "retry": "Check again",
+    "incomplete": "Not every stay in this period could be compared – check the dates yourself.",
+    "incompleteMore": "This list may not be complete."
+  },
+  "restay": {
+    "action": "Stay here again",
+    "intro": "A new stay at “{{name}}”. Enter check-in, check-out, room, booking reference and price afresh; the earlier stay stays as it is."
+  },
+  "repair": {
+    "title": "Add the location",
+    "intro": "“{{name}}” has no point on the map. Search the address again or set the point yourself – you see the result before you take it. Taking it fills empty address fields from the new position, and a country field that names no country is replaced by the position's country. The name and everything else stay.",
+    "queryLabel": "Search text",
+    "search": "Search the address again",
+    "searching": "Searching …",
+    "searchFailed": "The place search is not reachable right now.",
+    "noResults": "Nothing was found. Adjust the search text or set the point on the map.",
+    "resultsLabel": "Places found – pick the right one",
+    "setOnMap": "Set the point on the map",
+    "pointOnMap": "Point on the map",
+    "previewTitle": "Preview of the new location",
+    "missing": "pick a place found or set a point",
+    "take": "Take this location",
+    "saveError": "The location could not be saved.",
+    "saved": "Location saved",
+    "openFor": "Add the location: {{issue}}"
   }
 }

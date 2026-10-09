@@ -16,14 +16,15 @@ import { LodgingStayCard } from "../components/lodging/LodgingStayCard";
 import { StarRating } from "../components/lodging/StarRating";
 import { LodgingPhotoSection } from "../components/lodging/LodgingPhotoSection";
 import { StayEditor } from "../components/lodging/StayEditor";
+import { StayDeleteConfirm } from "../components/lodging/StayDeleteConfirm";
+import { LodgingLocationRepair } from "../components/lodging/LodgingLocationRepair";
 import { ChainNameLink } from "../components/lodging/ChainNameLink";
-import { useDocumentCount } from "../hooks/useDocumentCount";
+import { useLodgingDeleteFacts } from "../hooks/useLodgingDeleteFacts";
 import { useTranslation } from "../hooks/useTranslation";
 import { deleteLodging, deleteStay, getLodging, listMemberships } from "../lib/api/lodging";
 import { tripsApi } from "../lib/api";
 import { formatCurrency } from "../lib/units";
 import { countedStays, countUnconvertedStays } from "../lib/lodgingFormat";
-import { formatStayPeriod, hasUnknownLength, stayNights } from "../lib/lodgingDateDisplay";
 import { PlannedSpendNote } from "../components/lodging/PlannedSpendNote";
 import {
   averageRatingsByCategory,
@@ -36,7 +37,8 @@ import { logger } from "../lib/logger";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import ConfirmModal from "../components/Training/ConfirmModal";
-import { countedDeleteMessage, DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { lodgingDeleteMessage } from "../lib/lodgingDeleteMessage";
 import { deriveStayMembership } from "../shared/membershipDerivation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
@@ -62,7 +64,7 @@ export default function LodgingDetailPage(): JSX.Element {
   const fromChain =
     (location.state as { fromChain?: { id: number; name: string } } | null)?.fromChain ?? null;
   const backTo = fromChain ? `/lodging/chains/${fromChain.id}` : "/lodging";
-  const { t, i18n } = useTranslation(["lodging", "common", "openData"]);
+  const { t } = useTranslation(["lodging", "common", "openData"]);
   const backLabel = fromChain ? fromChain.name : t("lodging:list.title");
   const addToast = useToastStore((s) => s.addToast);
   // `totalSpendBase` is computed by the backend in the user's actual base
@@ -79,23 +81,24 @@ export default function LodgingDetailPage(): JSX.Element {
   /** Bumped by the retry button; the fetch effect watches it. */
   const [reloadKey, setReloadKey] = useState<number>(0);
   const [editing, setEditing] = useState<boolean>(false);
+  // The small dialog for a missing pin (forgejo#228) - not the whole house form.
+  const [repairingLocation, setRepairingLocation] = useState<boolean>(false);
   const [confirmingDelete, setConfirmingDelete] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<boolean>(false);
   // "new" = create mode, a LodgingStay = edit mode for that stay, null = closed.
   const [editingStay, setEditingStay] = useState<LodgingStay | "new" | null>(null);
+  // The new stay was opened by "Wieder hier übernachten" (forgejo#227): same
+  // empty editor, plus a line saying what was carried over from the house.
+  const [restaying, setRestaying] = useState<boolean>(false);
   // The stay whose deletion has been ASKED about but not yet answered — null
   // while no question is open. Holding the stay itself (not just its id) is
   // what lets the confirmation name the dates it is about.
   const [confirmingStayDelete, setConfirmingStayDelete] = useState<LodgingStay | null>(null);
-  /**
-   * Asked only while the stay's confirmation is opening. The page already
-   * mounts a documents section for the HOUSE; this is the STAY's own folder,
-   * which nothing on the page has counted.
-   */
-  const stayDocumentCount = useDocumentCount(
-    confirmingStayDelete ? { type: "lodgingStay", id: confirmingStayDelete.id } : null
-  );
   const [deletingStay, setDeletingStay] = useState<boolean>(false);
+  // What the house delete takes with it besides its stays (photographs, kept
+  // originals) and what stays (linked trips) - asked only while the question
+  // is open, like the stay's own document count (forgejo#250).
+  const deleteFacts = useLodgingDeleteFacts(confirmingDelete ? lodging : null);
   /**
    * The header figures no longer describe the list below them.
    *
@@ -245,34 +248,6 @@ export default function LodgingDetailPage(): JSX.Element {
     }
   };
 
-  /**
-   * What the confirmation says about one stay: the period as the rest of the
-   * app writes it, the nights in the same plural-aware wording the card uses,
-   * and — only when there is one — that the receipt goes too.
-   *
-   * The period comes from `formatStayPeriod` rather than two raw dates: a
-   * month-precision or undated stay has no "from – to" to print, and inventing
-   * one is exactly what that helper exists to prevent.
-   */
-  const stayDeleteMessage = (stay: LodgingStay): string => {
-    const period = formatStayPeriod(stay, i18n.language, t).label;
-    const body = hasUnknownLength(stay)
-      ? t("lodging:stay.confirmDelete.bodyUnknownLength", { period })
-      : t("lodging:stay.confirmDelete.body", {
-          period,
-          nights: t("lodging:field.nightsCount", { count: stayNights(stay) }),
-        });
-    const withReceipt =
-      stay.receiptUrl === null ? body : `${body}\n${t("lodging:stay.confirmDelete.receiptNote")}`;
-    // Finding 6 of the write-path audit (2026-09-19): the note above covers
-    // the LEGACY single `receiptUrl` only, while `Document.lodgingStayId`
-    // cascades too (`onDelete: Cascade`, proven live by
-    // `backend/src/__tests__/integrity/cascades.integrity.test.ts`). The two
-    // are different things — one file the cost block links to, versus the
-    // whole folder — so both lines stand.
-    return withDocumentNote(withReceipt, t, stayDocumentCount);
-  };
-
   if (loading) {
     return (
       <AppShell width="list">
@@ -419,6 +394,18 @@ export default function LodgingDetailPage(): JSX.Element {
         actions={
           <>
             <LodgingEnrichButton lodgingId={lodging.id} onDone={() => setReloadKey((k) => k + 1)} />
+            {/* The quickest way to the next visit (forgejo#227): a new stay at
+                THIS house, nothing carried over but the house itself - dates,
+                room, booking reference and price are the new visit's own. */}
+            <Button
+              data-testid="lodging-restay-button"
+              onClick={() => {
+                setRestaying(true);
+                setEditingStay("new");
+              }}
+            >
+              {t("lodging:restay.action")}
+            </Button>
             <Button onClick={() => setEditing(true)}>{t("common:buttons.edit")}</Button>
             <Button
               variant="danger"
@@ -535,7 +522,7 @@ export default function LodgingDetailPage(): JSX.Element {
 
         <aside className="flex flex-col gap-6 md:col-span-2">
           <DetailSection title={t("lodging:detail.location")}>
-            <LodgingMiniMap lodging={lodging} onSetLocation={() => setEditing(true)} />
+            <LodgingMiniMap lodging={lodging} onSetLocation={() => setRepairingLocation(true)} />
           </DetailSection>
 
           <DetailSection title={t("lodging:detail.avgRating")}>
@@ -601,10 +588,29 @@ export default function LodgingDetailPage(): JSX.Element {
         />
       )}
 
+      {repairingLocation && (
+        <LodgingLocationRepair
+          lodging={lodging}
+          afterSaveFailedKey="common:form.savedButViewRefreshFailed"
+          onClose={() => setRepairingLocation(false)}
+          onSaved={(updated) => {
+            setLodging(updated);
+            setRepairingLocation(false);
+            addToast("success", t("lodging:repair.saved"));
+          }}
+        />
+      )}
+
       {editingStay !== null && (
         <StayEditor
           mode={editingStay === "new" ? "create" : "edit"}
           lodgingId={lodging.id}
+          lodgingName={lodging.name}
+          introText={
+            restaying && editingStay === "new"
+              ? t("lodging:restay.intro", { name: lodging.name })
+              : undefined
+          }
           lodgingChainId={lodging.chainId}
           lodgingCountryCode={lodging.isoCountryCode}
           stay={editingStay === "new" ? null : editingStay}
@@ -612,9 +618,13 @@ export default function LodgingDetailPage(): JSX.Element {
           onRequestDelete={
             editingStay === "new" ? undefined : () => setConfirmingStayDelete(editingStay)
           }
-          onClose={() => setEditingStay(null)}
+          onClose={() => {
+            setEditingStay(null);
+            setRestaying(false);
+          }}
           onSaved={async (savedStay) => {
             setEditingStay(null);
+            setRestaying(false);
             // A stay write doesn't return the parent lodging's recomputed
             // aggregates (nights/stayCount/overallRating/totalSpendBase) —
             // those are only ever attached server-side via
@@ -648,15 +658,7 @@ export default function LodgingDetailPage(): JSX.Element {
         onConfirm={() => void handleDelete()}
         isLoading={deleting}
         title={t("lodging:detail.deleteConfirmTitle")}
-        message={countedDeleteMessage(
-          t,
-          {
-            counted: "lodging:detail.deleteConfirmMessage",
-            empty: "lodging:detail.deleteConfirmMessageNoStays",
-          },
-          lodging.name,
-          lodging.stayCount
-        )}
+        message={lodgingDeleteMessage(t, lodging, deleteFacts)}
         confirmText={t("common:buttons.delete")}
         confirmButtonClass={DELETE_BUTTON_CLASS}
       />
@@ -664,15 +666,11 @@ export default function LodgingDetailPage(): JSX.Element {
       {/* The same dialog for the stay — rendered after the editor so that, at
           equal z-index, the later portal is the one on top. Both entry points
           lead here, so there is exactly one place a stay can be deleted from. */}
-      <ConfirmModal
-        isOpen={confirmingStayDelete !== null}
+      <StayDeleteConfirm
+        stay={confirmingStayDelete}
         onClose={() => setConfirmingStayDelete(null)}
         onConfirm={() => void handleStayDelete()}
-        isLoading={deletingStay}
-        title={t("lodging:stay.confirmDelete.title")}
-        message={confirmingStayDelete === null ? "" : stayDeleteMessage(confirmingStayDelete)}
-        confirmText={t("common:buttons.delete")}
-        confirmButtonClass={DELETE_BUTTON_CLASS}
+        deleting={deletingStay}
       />
     </AppShell>
   );

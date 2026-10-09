@@ -13,6 +13,10 @@ const listLodgingPageMock = vi.fn();
 const getLodgingFacetsMock = vi.fn();
 const getLodgingStatsMock = vi.fn();
 const deleteLodgingMock = vi.fn();
+const deleteFactsMock = vi.fn();
+const listStayPageMock = vi.fn();
+const listForEntryMock = vi.fn();
+const getTripsMock = vi.fn();
 const navigateMock = vi.fn();
 
 // The row navigates, so proving that a row action does NOT navigate needs a
@@ -55,6 +59,19 @@ vi.mock("../../lib/api/lodging", () => ({
   getLodgingFacets: (...args: unknown[]) => getLodgingFacetsMock(...args),
   getLodgingStats: () => getLodgingStatsMock(),
   deleteLodging: (...args: unknown[]) => deleteLodgingMock(...args),
+  // The delete question counts what goes with the house (forgejo#250).
+  getLodgingDeleteFacts: (...args: unknown[]) => deleteFactsMock(...args),
+  // The chronological stay view (forgejo#226).
+  listStayPage: (...args: unknown[]) => listStayPageMock(...args),
+}));
+
+vi.mock("../../lib/api/documents", () => ({
+  documentsApi: { listForEntry: (...args: unknown[]) => listForEntryMock(...args) },
+}));
+
+vi.mock("../../lib/api", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/api")>()),
+  tripsApi: { getAll: (...args: unknown[]) => getTripsMock(...args) },
 }));
 
 const getLoyaltyMembershipMock = vi.fn();
@@ -68,6 +85,30 @@ vi.mock("../../components/NavigationBar", () => ({
 
 vi.mock("../../components/lodging/LodgingFormModal", () => ({
   LodgingFormModal: () => null,
+}));
+
+// The location repair has its own suite (needs MapLibre for its preview).
+vi.mock("../../components/lodging/LodgingLocationRepair", () => ({
+  LodgingLocationRepair: (props: { lodging: { id: string } }) => (
+    <div data-testid="repair-stub">{props.lodging.id}</div>
+  ),
+}));
+
+// The stay editor has its own suites; here it only has to arrive for the right house.
+vi.mock("../../components/lodging/StayEditor", () => ({
+  StayEditor: (props: {
+    mode: string;
+    lodgingId: string;
+    lodgingName?: string;
+    onSaved: (saved: unknown) => void;
+  }) => (
+    <div data-testid="stay-editor-stub">
+      {props.mode}|{props.lodgingId}|{props.lodgingName}
+      <button type="button" onClick={() => props.onSaved({})}>
+        stub-save-stay
+      </button>
+    </div>
+  ),
 }));
 
 // The import log used to render (and fetch) on this page; it now lives in
@@ -238,6 +279,14 @@ describe("LodgingListPage", () => {
     mockFacets();
     getLodgingStatsMock.mockReset();
     getLodgingStatsMock.mockResolvedValue(defaultStats);
+    deleteFactsMock.mockReset();
+    deleteFactsMock.mockResolvedValue({ photoCount: 0, documentCount: 0 });
+    listStayPageMock.mockReset();
+    listStayPageMock.mockResolvedValue({ rows: [], total: 0 });
+    listForEntryMock.mockReset();
+    listForEntryMock.mockResolvedValue([]);
+    getTripsMock.mockReset();
+    getTripsMock.mockResolvedValue([]);
     useSettingsStore.setState({
       baseCurrency: "EUR",
       units: { distanceUnit: "kilometers" },
@@ -837,6 +886,131 @@ describe("LodgingListPage", () => {
       await waitFor(() => expect(deleteLodgingMock).toHaveBeenCalledWith("l1"));
     });
 
+    // forgejo#250: the list-page delete named only the stays. It now also names
+    // the house's photographs and its stays' kept originals (both cascade) and
+    // what stays - the linked trips and the chain.
+    it("names the photographs and originals that go, and the trips and chain that stay", async () => {
+      const lodging = makeLodging({
+        id: "l1",
+        name: "Hotel Adlon",
+        stayCount: 2,
+        chain: { id: 7, name: "Kempinski" } as Lodging["chain"],
+        stays: [
+          makeStay({ id: "s1", lodgingId: "l1", tripId: "t1" }),
+          makeStay({ id: "s2", lodgingId: "l1", tripId: null }),
+        ],
+      });
+      mockRows([lodging]);
+      deleteFactsMock.mockResolvedValue({ photoCount: 3, documentCount: 3 });
+      getTripsMock.mockResolvedValue([
+        { id: "t1", name: "Berlin 2024" },
+        { id: "t2", name: "Unrelated" },
+      ]);
+      renderListPage();
+
+      await screen.findByText("Hotel Adlon");
+      await userEvent.click(screen.getByTestId("lodging-delete-l1"));
+      const dialog = await screen.findByRole("dialog");
+
+      await waitFor(() => {
+        expect(dialog).toHaveTextContent("lodging:detail.deletePhotosNote");
+        expect(dialog).toHaveTextContent("documents:deleteCascadeNote");
+        expect(dialog).toHaveTextContent("common:delete.survivors");
+      });
+      // ONE request for both counts - not one per stay.
+      expect(deleteFactsMock).toHaveBeenCalledTimes(1);
+      expect(deleteFactsMock).toHaveBeenCalledWith("l1");
+      expect(listForEntryMock).not.toHaveBeenCalled();
+    });
+
+    // Nothing counted yet, or the count failed: the question must still open and
+    // must not claim "no documents".
+    // forgejo#250 review: a failed trips call must not make the question go
+    // quiet about what stays.
+    it("still says what stays when the trips cannot be named", async () => {
+      mockRows([
+        makeLodging({
+          id: "l1",
+          name: "Hotel Adlon",
+          stayCount: 1,
+          stays: [makeStay({ id: "s1", lodgingId: "l1", tripId: "t1" })],
+        }),
+      ]);
+      getTripsMock.mockRejectedValue(new Error("down"));
+      renderListPage();
+
+      await screen.findByText("Hotel Adlon");
+      await userEvent.click(screen.getByTestId("lodging-delete-l1"));
+      const dialog = await screen.findByRole("dialog");
+
+      await waitFor(() => expect(getTripsMock).toHaveBeenCalled());
+      // (The names go in through the key's interpolation, which this stub does
+      // not render; the unit test pins the unnamed wording.)
+      expect(dialog).toHaveTextContent("common:delete.survivors");
+    });
+
+    it("opens with its base sentence when the counts cannot be read", async () => {
+      mockRows([makeLodging({ id: "l1", name: "Hotel Adlon", stayCount: 1 })]);
+      deleteFactsMock.mockRejectedValue(new Error("down"));
+      renderListPage();
+
+      await screen.findByText("Hotel Adlon");
+      await userEvent.click(screen.getByTestId("lodging-delete-l1"));
+      const dialog = await screen.findByRole("dialog");
+
+      await waitFor(() => expect(deleteFactsMock).toHaveBeenCalled());
+      expect(dialog).toHaveTextContent("lodging:detail.deleteConfirmMessage");
+      expect(dialog).not.toHaveTextContent("documents:deleteCascadeNote");
+      expect(dialog).not.toHaveTextContent("lodging:detail.deletePhotosNote");
+    });
+
+    // forgejo#227: "Wieder hier übernachten" from the row - a new stay at that
+    // house, without opening the house and without walking to its page first.
+    it("starts a new stay at the row's house, without opening the house", async () => {
+      mockRows([makeLodging({ id: "l1", name: "Hotel Adlon" })]);
+      renderListPage();
+
+      await screen.findByText("Hotel Adlon");
+      await userEvent.click(screen.getByTestId("lodging-restay-l1"));
+
+      expect(await screen.findByTestId("stay-editor-stub")).toHaveTextContent(
+        "create|l1|Hotel Adlon"
+      );
+      expect(navigateMock).not.toHaveBeenCalled();
+    });
+
+    // forgejo#228: the "not found" tag on a house without a pin is the way in to
+    // the small repair dialog - not a label that sends the user to find the form.
+    it("a house without a pin offers the repair from its tag, without opening the house", async () => {
+      mockRows([
+        makeLodging({
+          id: "l1",
+          name: "Hotel Adlon",
+          address: "Unter den Linden 77",
+          lat: null,
+          lon: null,
+        }),
+      ]);
+      renderListPage();
+
+      await screen.findByText("Hotel Adlon");
+      await userEvent.click(screen.getByTestId("lodging-repair-l1"));
+
+      expect(await screen.findByTestId("repair-stub")).toHaveTextContent("l1");
+      expect(navigateMock).not.toHaveBeenCalled();
+    });
+
+    it("a house that has its pin keeps the plain tag", async () => {
+      mockRows([
+        makeLodging({ id: "l2", name: "Hotel Bristol", address: null, lat: 48.2, lon: 16.4 }),
+      ]);
+      renderListPage();
+
+      await screen.findByText("Hotel Bristol");
+      // "noAddress" is data entry, not a missing point: no button.
+      expect(screen.queryByTestId("lodging-repair-l2")).toBeNull();
+    });
+
     it("does not open the lodging when an action is clicked", async () => {
       mockRows([makeLodging({ id: "l1", name: "Hotel Adlon" })]);
       renderListPage();
@@ -847,6 +1021,71 @@ describe("LodgingListPage", () => {
       // The row navigates; without stopPropagation the delete click would
       // also open the very lodging it is about to remove.
       expect(navigateMock).not.toHaveBeenCalled();
+    });
+  });
+
+  // forgejo#226: the same logbook read as houses or as a chronological stay list.
+  describe("houses or stays", () => {
+    it("switches to the stay list and back, keeping the choice in the URL", async () => {
+      mockRows([makeLodging({ id: "l1", name: "Hotel Adlon" })]);
+      render(
+        <MemoryRouter initialEntries={["/lodging"]}>
+          <LodgingListPage />
+        </MemoryRouter>
+      );
+      await screen.findByText("Hotel Adlon");
+      expect(screen.getByTestId("lodging-view-houses")).toHaveAttribute("aria-pressed", "true");
+      expect(listStayPageMock).not.toHaveBeenCalled();
+
+      await userEvent.click(screen.getByTestId("lodging-view-stays"));
+      await waitFor(() => expect(listStayPageMock).toHaveBeenCalled());
+      expect(screen.getByTestId("lodging-view-stays")).toHaveAttribute("aria-pressed", "true");
+      // The house table and its filter bar give way to the stay list.
+      expect(screen.queryByText("Hotel Adlon")).toBeNull();
+      expect(await screen.findByText("lodging:stayView.empty")).toBeInTheDocument();
+
+      await userEvent.click(screen.getByTestId("lodging-view-houses"));
+      expect(await screen.findByText("Hotel Adlon")).toBeInTheDocument();
+    });
+
+    // The house rows carry stay counts, nights and spend: editing a stay in the
+    // stay list must refresh them, or switching back shows yesterday's numbers.
+    it("reloads the houses after a stay was saved in the stay list", async () => {
+      const stay = {
+        id: "s1",
+        lodgingId: "l1",
+        lodging: { id: "l1", name: "Hotel Adlon", chainId: null, isoCountryCode: null },
+        trip: null,
+        checkIn: "2024-01-01T00:00:00.000Z",
+        checkOut: "2024-01-02T00:00:00.000Z",
+        datePrecision: "DAY",
+        nights: null,
+        status: "completed",
+        roomNumber: null,
+        bookingReference: null,
+      };
+      listStayPageMock.mockResolvedValue({ rows: [stay], total: 1 });
+      render(
+        <MemoryRouter initialEntries={["/lodging?view=stays"]}>
+          <LodgingListPage />
+        </MemoryRouter>
+      );
+      await userEvent.click(await screen.findByTestId("stay-view-row-s1"));
+      await waitFor(() => expect(listLodgingPageMock).toHaveBeenCalled());
+      const before = listLodgingPageMock.mock.calls.length;
+
+      await userEvent.click(await screen.findByRole("button", { name: "stub-save-stay" }));
+      await waitFor(() => expect(listLodgingPageMock.mock.calls.length).toBeGreaterThan(before));
+    });
+
+    it("opens on the stay list when the link says so", async () => {
+      render(
+        <MemoryRouter initialEntries={["/lodging?view=stays"]}>
+          <LodgingListPage />
+        </MemoryRouter>
+      );
+      expect(await screen.findByText("lodging:stayView.empty")).toBeInTheDocument();
+      expect(screen.getByTestId("lodging-view-stays")).toHaveAttribute("aria-pressed", "true");
     });
   });
 

@@ -23,6 +23,8 @@ vi.mock("../../../lib/api/lodging", () => ({
   updateStay: vi.fn(),
   listMemberships: vi.fn(),
   getFxPreview: vi.fn(),
+  // The overlap notice asks which stays touch the saved dates (forgejo#229).
+  listStayPage: vi.fn(async () => ({ rows: [], total: 0 })),
 }));
 vi.mock("../../../lib/api", () => ({
   tripsApi: { getAll: vi.fn() },
@@ -68,12 +70,12 @@ describe("StayEditor — trip preselection by check-in", () => {
     await tripsLoaded();
     expect(tripSelect().value).toBe("");
 
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2026-07-14" },
     });
     await waitFor(() => expect(tripSelect().value).toBe("trip-summer"));
 
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2026-08-01" },
     });
     await waitFor(() => expect(tripSelect().value).toBe(""));
@@ -84,7 +86,7 @@ describe("StayEditor — trip preselection by check-in", () => {
     await tripsLoaded();
     fireEvent.change(tripSelect(), { target: { value: "trip-autumn" } });
 
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2026-07-05" },
     });
     // Give a stray preselection the chance to land before asserting its absence.
@@ -120,21 +122,21 @@ describe("StayEditor — trip preselection by check-in", () => {
     await tripsLoaded();
     fireEvent.change(tripSelect(), { target: { value: "trip-autumn" } });
 
-    expect(screen.getByLabelText("lodging:field.checkIn")).toHaveValue("2026-10-03");
-    expect(screen.getByLabelText("lodging:field.checkOut")).toHaveValue("2026-10-05");
+    expect(screen.getByLabelText(/^lodging:field\.checkIn\b/)).toHaveValue("2026-10-03");
+    expect(screen.getByLabelText(/^lodging:field\.checkOut\b/)).toHaveValue("2026-10-05");
   });
 
   it("with the check-in typed, only offers the trip's last day as check-out", async () => {
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
     await tripsLoaded();
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2026-07-10" },
     });
     await waitFor(() => expect(tripSelect().value).toBe("trip-summer"));
-    expect(screen.getByLabelText("lodging:field.checkOut")).toHaveValue("");
+    expect(screen.getByLabelText(/^lodging:field\.checkOut\b/)).toHaveValue("");
 
     fireEvent.click(screen.getByTestId("stay-trip-dates-offer"));
-    expect(screen.getByLabelText("lodging:field.checkOut")).toHaveValue("2026-07-14");
+    expect(screen.getByLabelText(/^lodging:field\.checkOut\b/)).toHaveValue("2026-07-14");
     expect(screen.queryByTestId("stay-trip-dates-offer")).not.toBeInTheDocument();
   });
 });

@@ -60,7 +60,7 @@ export function LodgingMiniMap({ lodging, onSetLocation }: LodgingMiniMapProps):
           <button
             type="button"
             onClick={onSetLocation}
-            className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-elevated,rgba(255,255,255,0.05))]"
+            className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--bg-elevated,rgba(255,255,255,0.05))] pointer-coarse:min-h-(--ts-size-touch-min)"
           >
             {t("lodging:detail.setLocationNow")}
           </button>

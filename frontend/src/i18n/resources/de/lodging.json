@@ -88,9 +88,9 @@
     "noLocation": "Kein Standort hinterlegt",
     "setLocationNow": "Standort jetzt suchen",
     "deleteConfirmTitle": "Unterkunft löschen?",
-    "deleteConfirmMessage": "„{{name}}“ wird mit {{count}} Aufenthalten dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
-    "deleteConfirmMessage_one": "„{{name}}“ wird mit einem Aufenthalt dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
-    "deleteConfirmMessage_other": "„{{name}}“ wird mit {{count}} Aufenthalten dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
+    "deleteConfirmMessage": "„{{name}}“ wird mit {{count}} Aufenthalten dauerhaft gelöscht.",
+    "deleteConfirmMessage_one": "„{{name}}“ wird mit einem Aufenthalt dauerhaft gelöscht.",
+    "deleteConfirmMessage_other": "„{{name}}“ wird mit {{count}} Aufenthalten dauerhaft gelöscht.",
     "deleteSuccess": "Unterkunft gelöscht",
     "deleteError": "Unterkunft konnte nicht gelöscht werden",
     "loadError": "Die Unterkunft konnte nicht geladen werden.",
@@ -98,7 +98,11 @@
     "backToLogbook": "Logbuch · Unterkünfte",
     "location": "Standort",
     "nights": "Nächte",
-    "stayNotFound": "Diesen Aufenthalt gibt es in dieser Unterkunft nicht mehr."
+    "stayNotFound": "Diesen Aufenthalt gibt es in dieser Unterkunft nicht mehr.",
+    "survivorChain": "Kette „{{name}}“",
+    "deletePhotosNote_one": "Dazu 1 Foto der Unterkunft, das mit gelöscht wird.",
+    "deletePhotosNote_other": "Dazu {{count}} Fotos der Unterkunft, die mit gelöscht werden.",
+    "survivorTripsUnnamed": "verknüpfte Reisen"
   },
   "field": {
     "name": "Name",
@@ -234,7 +238,6 @@
     "createTitle": "Neuer Aufenthalt",
     "editTitle": "Aufenthalt bearbeiten",
     "datesSection": "Termine",
-    "datesRequired": "Bitte An- und Abreisedatum angeben",
     "ratingsSection": "Bewertungen",
     "priceSection": "Preis",
     "amenitiesSection": "Ausstattung & Notizen",
@@ -250,6 +253,11 @@
       "both": "Reisezeitraum übernehmen: {{from}} – {{to}}",
       "checkIn": "Reisebeginn als Check-in: {{date}}",
       "checkOut": "Reiseende als Check-out: {{date}}"
+    },
+    "errors": {
+      "checkIn": "Bitte die Anreise angeben.",
+      "checkOut": "Bitte die Abreise angeben.",
+      "checkOutBeforeCheckIn": "Die Abreise liegt vor der Anreise."
     }
   },
   "membership": {
@@ -624,5 +632,70 @@
   },
   "photos": {
     "title": "Fotos"
+  },
+  "stayView": {
+    "toggle": {
+      "label": "Ansicht",
+      "houses": "Unterkünfte",
+      "stays": "Aufenthalte"
+    },
+    "title": "Aufenthalte",
+    "columns": {
+      "period": "Zeitraum",
+      "house": "Unterkunft",
+      "trip": "Reise",
+      "status": "Status",
+      "actions": "Aktionen"
+    },
+    "filter": {
+      "from": "Von",
+      "to": "Bis",
+      "trip": "Reise",
+      "allTrips": "Alle Reisen",
+      "invalidWindow": "Der Zeitraum endet vor seinem Beginn.",
+      "tripsFailed": "Die Reisen konnten nicht geladen werden – der Reisefilter ist deshalb leer."
+    },
+    "room": "Zimmer {{room}}",
+    "reference": "Buchung {{reference}}",
+    "openHouse": "Zur Unterkunft {{name}}",
+    "loadError": "Aufenthalte konnten nicht geladen werden",
+    "empty": "Noch keine Aufenthalte erfasst",
+    "emptyHint": "Ein Aufenthalt gehört zu einer Unterkunft: lege zuerst eine Unterkunft an oder lies eine Buchung ein.",
+    "footer": "Neueste Anreise zuerst; Aufenthalte ohne Datum stehen am Ende."
+  },
+  "conflict": {
+    "title": "Diese Tage überschneiden sich mit anderen Aufenthalten",
+    "titleDuplicate": "In diesem Haus gibt es für diese Tage schon einen Aufenthalt – vielleicht ist das ein Duplikat.",
+    "sameHouse": "dieses Haus",
+    "rule": "Abreise und Anreise am selben Tag zählen nicht als Überschneidung. Zwei Zimmer oder zwei Häuser in derselben Nacht sind erlaubt – du bestätigst es nur.",
+    "proceed": "Absichtlich so speichern",
+    "changeDates": "Termine ändern",
+    "unchecked": "Überschneidungen konnten nicht geprüft werden.",
+    "saveAnyway": "Trotzdem speichern",
+    "retry": "Erneut prüfen",
+    "incomplete": "Nicht alle Aufenthalte in diesem Zeitraum konnten verglichen werden – prüfe die Termine selbst.",
+    "incompleteMore": "Die Liste ist möglicherweise nicht vollständig."
+  },
+  "restay": {
+    "action": "Wieder hier übernachten",
+    "intro": "Ein neuer Aufenthalt in „{{name}}“. Anreise, Abreise, Zimmer, Buchungsnummer und Preis trägst du neu ein; der frühere Aufenthalt bleibt unverändert."
+  },
+  "repair": {
+    "title": "Standort ergänzen",
+    "intro": "Zu „{{name}}“ fehlt der Punkt auf der Karte. Such die Adresse erneut oder setz den Punkt selbst – du siehst das Ergebnis, bevor du es übernimmst. Beim Übernehmen werden leere Adressfelder aus der neuen Position ergänzt, und ein Länderfeld, das gar kein Land nennt, wird durch das Land der Position ersetzt. Name und alle übrigen Angaben bleiben.",
+    "queryLabel": "Suchtext",
+    "search": "Adresse erneut suchen",
+    "searching": "Suche läuft …",
+    "searchFailed": "Die Ortssuche ist gerade nicht erreichbar.",
+    "noResults": "Dazu wurde nichts gefunden. Passe den Suchtext an oder setze den Punkt auf der Karte.",
+    "resultsLabel": "Gefundene Orte – wähle den richtigen",
+    "setOnMap": "Punkt auf der Karte setzen",
+    "pointOnMap": "Punkt auf der Karte",
+    "previewTitle": "Vorschau des neuen Standorts",
+    "missing": "einen gefundenen Ort wählen oder einen Punkt setzen",
+    "take": "Standort übernehmen",
+    "saveError": "Der Standort konnte nicht gespeichert werden.",
+    "saved": "Standort gespeichert",
+    "openFor": "Standort ergänzen: {{issue}}"
   }
 }

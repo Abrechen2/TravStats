@@ -107,7 +107,7 @@ export function StayEditorBoardSection({
               type="button"
               aria-pressed={active}
               onClick={(): void => onBoardChange(b)}
-              className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
+              className="rounded-md px-3 py-1.5 text-sm font-medium transition-colors pointer-coarse:min-h-(--ts-size-touch-min)"
               style={{
                 background: active ? "var(--accent)" : "transparent",
                 color: active ? "var(--ts-accent-text)" : "var(--text-secondary)",

@@ -288,4 +288,12 @@ describe("LodgingFormModal — the shared form blocks", () => {
     await userEvent.click(saveButton());
     expect(await screen.findByText("common:form.savedButViewRefreshFailed")).toBeInTheDocument();
   });
+
+  // forgejo#249: the house form's inputs were ~38 px tall (py-2 text-sm).
+  it("gives the form's own fields the touch minimum height on a coarse pointer", () => {
+    render(<LodgingFormModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+    for (const field of [nameField(), screen.getByLabelText("lodging:field.city")]) {
+      expect(field.className).toContain("pointer-coarse:min-h-(--ts-size-touch-min)");
+    }
+  });
 });
