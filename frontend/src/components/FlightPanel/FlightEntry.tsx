@@ -6,6 +6,24 @@ import { useFlightSelectionStore } from "../../store/flightSelectionStore";
 import SpecialTypeBadge from "../specialFlights/SpecialTypeBadge";
 import type { SpecialType } from "../specialFlights/specialTypeMeta";
 import { formatDate } from "../../lib/displayFormat";
+import { useCoarsePointer } from "../../hooks/useCoarsePointer";
+import { useTranslation } from "../../hooks/useTranslation";
+
+/**
+ * When the row's quick actions (edit, duplicate, delete, …) are shown
+ * (forgejo#249, review I5). They were drawn on mouse hover only: on an iPad a
+ * tap selects the row and `mouseenter` is no signal, and Tab never showed them
+ * — so the delete this package confirms could not be reached at all. Now also
+ * on a coarse pointer, while focus is inside the row, and for the selected row.
+ */
+export function quickActionsVisible(state: {
+  hovered: boolean;
+  coarse: boolean;
+  focusWithin: boolean;
+  selected: boolean;
+}): boolean {
+  return state.hovered || state.coarse || state.focusWithin || state.selected;
+}
 
 interface FlightEntryProps {
   flight: Flight;
@@ -22,7 +40,10 @@ export function FlightEntry({
   onDelete,
   indented = false,
 }: FlightEntryProps): JSX.Element {
+  const { t } = useTranslation(["flights"]);
   const [hovered, setHovered] = useState(false);
+  const [focusWithin, setFocusWithin] = useState(false);
+  const coarse = useCoarsePointer();
   const [statsOpen, setStatsOpen] = useState(false);
   const selectedIds = useFlightSelectionStore((s) => s.selectedIds);
   const setSelection = useFlightSelectionStore((s) => s.setSelection);
@@ -33,6 +54,11 @@ export function FlightEntry({
       <div
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
+        onFocus={() => setFocusWithin(true)}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocusWithin(false);
+        }}
+        data-testid={`flight-entry-${flight.id}`}
         className="transition-colors border-b flex items-center justify-between gap-2"
         style={{
           borderColor: "var(--color-border)",
@@ -64,7 +90,7 @@ export function FlightEntry({
                   className="text-[9px] font-sans font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider"
                   style={{ background: "rgba(100,200,220,0.2)", color: "rgb(100,200,220)" }}
                 >
-                  geplant
+                  {t("flights:status.scheduled")}
                 </span>
               )}
               {flight.status === "cancelled" && (
@@ -72,7 +98,7 @@ export function FlightEntry({
                   className="text-[9px] font-sans font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider"
                   style={{ background: "rgba(239,68,68,0.2)", color: "rgb(239,68,68)" }}
                 >
-                  storniert
+                  {t("flights:status.cancelled")}
                 </span>
               )}
               {flight.status === "historical" && (
@@ -80,7 +106,7 @@ export function FlightEntry({
                   className="text-[9px] font-sans font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider"
                   style={{ background: "rgba(150,150,150,0.2)", color: "rgb(160,160,160)" }}
                 >
-                  historisch
+                  {t("flights:status.historical")}
                 </span>
               )}
               {flight.status === "duplicated" && (
@@ -88,7 +114,7 @@ export function FlightEntry({
                   className="text-[9px] font-sans font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider"
                   style={{ background: "rgba(251,191,36,0.2)", color: "rgb(251,191,36)" }}
                 >
-                  dupliziert
+                  {t("flights:status.duplicated")}
                 </span>
               )}
               {flight.specialType && <SpecialTypeBadge type={flight.specialType as SpecialType} />}
@@ -99,7 +125,7 @@ export function FlightEntry({
             </div>
           </div>
         </button>
-        {hovered && (
+        {quickActionsVisible({ hovered, coarse, focusWithin, selected: isSelected }) && (
           <QuickActions
             flight={flight}
             onEdit={onEdit}

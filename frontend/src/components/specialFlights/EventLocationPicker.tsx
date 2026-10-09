@@ -29,6 +29,7 @@ import { logger } from "../../lib/logger";
 import { searchPlaces, type PlaceSearchResult } from "../../lib/api/geo";
 import { LocationMapModal } from "../location/LocationMapModal";
 import type { LocationSelection } from "../location/LocationInput";
+import { FieldError, fieldErrorProps } from "../form";
 
 /** MapLibre styles — reuse the same CartoCDN basemaps as DeckGLMap so the
  *  mini-map blends visually with the main map. */
@@ -53,6 +54,8 @@ interface EventLocationPickerProps {
   onChange: (next: EventLocationValue) => void;
   /** Optional id prefix so multiple pickers on the same page don't collide. */
   idPrefix?: string;
+  /** Errors at the latitude/longitude inputs, already translated (forgejo#246). */
+  errors?: { lat?: string | null; lon?: string | null };
 }
 
 function isValidLat(n: number): boolean {
@@ -89,6 +92,7 @@ export function EventLocationPicker({
   value,
   onChange,
   idPrefix = "event-location",
+  errors,
 }: EventLocationPickerProps): JSX.Element {
   const { t } = useTranslation(["specialFlights", "location"]);
 
@@ -451,9 +455,11 @@ export function EventLocationPicker({
               max={90}
               className="input"
               style={{ colorScheme: "dark" }}
+              {...fieldErrorProps(`${idPrefix}-lat`, errors?.lat)}
               value={numToInput(value.lat)}
               onChange={(e) => handleLatInput(e.target.value)}
             />
+            <FieldError id={`${idPrefix}-lat`} error={errors?.lat} />
           </div>
           <div>
             <label className="label" htmlFor={`${idPrefix}-lon`}>
@@ -467,9 +473,11 @@ export function EventLocationPicker({
               max={180}
               className="input"
               style={{ colorScheme: "dark" }}
+              {...fieldErrorProps(`${idPrefix}-lon`, errors?.lon)}
               value={numToInput(value.lon)}
               onChange={(e) => handleLonInput(e.target.value)}
             />
+            <FieldError id={`${idPrefix}-lon`} error={errors?.lon} />
           </div>
         </div>
       </details>

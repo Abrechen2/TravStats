@@ -4,6 +4,7 @@ import CopyActionButton from "../CopyActionButton";
 import HelpIcon from "../../Help/HelpIcon";
 import { ClockChangeNotice } from "../../common/ClockChangeNotice";
 import type { FlightFolds } from "../../../lib/flightFolds";
+import { FieldError, fieldErrorProps } from "../../form";
 
 /** The four date/time inputs a flight leg needs, always kept in the SAME
  *  timezone basis by the caller — see FlightEditModal's hydration effect for
@@ -27,6 +28,25 @@ export interface ActualTimesFieldsValue {
   actualArrDate: string;
   actualArrTime: string;
 }
+
+/**
+ * An error at one of the eight inputs, already translated (forgejo#246): the
+ * input gets `aria-invalid` and points at the message below it. The form owns
+ * the rules — a half-filled actual pair, a time the server refused.
+ */
+export type TimesFieldErrors = Partial<Record<keyof TimesFieldsIds, string | null>>;
+
+/** The inputs' ids where a form passes none — what a hint or a refusal focuses. */
+export const TIMES_FIELD_DEFAULT_IDS = {
+  depDate: "timesFieldsDepDate",
+  depTime: "timesFieldsDepTime",
+  arrDate: "timesFieldsArrDate",
+  arrTime: "timesFieldsArrTime",
+  actualDepDate: "timesFieldsActualDepDate",
+  actualDepTime: "timesFieldsActualDepTime",
+  actualArrDate: "timesFieldsActualArrDate",
+  actualArrTime: "timesFieldsActualArrTime",
+} as const;
 
 interface TimesFieldsIds {
   depDate?: string;
@@ -85,13 +105,14 @@ interface TimesFieldsProps {
    * Mark the four SCHEDULED fields as required — an asterisk in the label and
    * `aria-required` on the input (forgejo#88, point 9).
    *
-   * Opt-in because the edit modal renders this too, and there the four are
-   * already filled: an asterisk on a field that has a value states a rule
-   * nobody is about to break. The create form passes it; the edit form does
-   * not. The ACTUAL pair is never marked either way — it is optional by
-   * design, and a half-filled pair is refused by `canSubmit`, not by a star.
+   * Both flight forms pass it since forgejo#245: the edit form refuses a
+   * cleared scheduled time exactly as the create form refuses an empty one,
+   * so the mark states a rule the user CAN break there too (the special-flight
+   * form does not). The ACTUAL pair is never marked — it is optional by
+   * design, and a half-filled pair is refused at its missing time instead.
    */
   markRequired?: boolean;
+  errors?: TimesFieldErrors;
   /**
    * The airports' zones and the chosen folds: with them, a time in a clock
    * change says so beside the field and a repeated hour offers "die spätere
@@ -133,18 +154,19 @@ export default function TimesFields({
   actualValue,
   onActualChange,
   markRequired = false,
+  errors,
   clockChange,
 }: TimesFieldsProps): JSX.Element {
   const { t } = useTranslation(["flights"]);
 
-  const depDateId = ids?.depDate ?? "timesFieldsDepDate";
-  const depTimeId = ids?.depTime ?? "timesFieldsDepTime";
-  const arrDateId = ids?.arrDate ?? "timesFieldsArrDate";
-  const arrTimeId = ids?.arrTime ?? "timesFieldsArrTime";
-  const actualDepDateId = ids?.actualDepDate ?? "timesFieldsActualDepDate";
-  const actualDepTimeId = ids?.actualDepTime ?? "timesFieldsActualDepTime";
-  const actualArrDateId = ids?.actualArrDate ?? "timesFieldsActualArrDate";
-  const actualArrTimeId = ids?.actualArrTime ?? "timesFieldsActualArrTime";
+  const depDateId = ids?.depDate ?? TIMES_FIELD_DEFAULT_IDS.depDate;
+  const depTimeId = ids?.depTime ?? TIMES_FIELD_DEFAULT_IDS.depTime;
+  const arrDateId = ids?.arrDate ?? TIMES_FIELD_DEFAULT_IDS.arrDate;
+  const arrTimeId = ids?.arrTime ?? TIMES_FIELD_DEFAULT_IDS.arrTime;
+  const actualDepDateId = ids?.actualDepDate ?? TIMES_FIELD_DEFAULT_IDS.actualDepDate;
+  const actualDepTimeId = ids?.actualDepTime ?? TIMES_FIELD_DEFAULT_IDS.actualDepTime;
+  const actualArrDateId = ids?.actualArrDate ?? TIMES_FIELD_DEFAULT_IDS.actualArrDate;
+  const actualArrTimeId = ids?.actualArrTime ?? TIMES_FIELD_DEFAULT_IDS.actualArrTime;
   const showActualTimes = Boolean(actualValue && onActualChange);
 
   /**
@@ -242,9 +264,11 @@ export default function TimesFields({
             type="date"
             className="input"
             aria-required={markRequired || undefined}
+            {...fieldErrorProps(depDateId, errors?.depDate)}
             value={value.depDate}
             onChange={(e) => onChange({ ...value, depDate: e.target.value })}
           />
+          <FieldError id={depDateId} error={errors?.depDate} />
         </div>
         <div>
           <div className="flex items-center gap-2">
@@ -264,9 +288,11 @@ export default function TimesFields({
             type="time"
             className="input"
             aria-required={markRequired || undefined}
+            {...fieldErrorProps(depTimeId, errors?.depTime)}
             value={value.depTime}
             onChange={(e) => onChange({ ...value, depTime: e.target.value })}
           />
+          <FieldError id={depTimeId} error={errors?.depTime} />
           {clockChange && (
             <ClockChangeNotice
               local={value.depDate && value.depTime ? `${value.depDate}T${value.depTime}` : ""}
@@ -308,9 +334,11 @@ export default function TimesFields({
             type="date"
             className="input"
             aria-required={markRequired || undefined}
+            {...fieldErrorProps(arrDateId, errors?.arrDate)}
             value={value.arrDate}
             onChange={(e) => onChange({ ...value, arrDate: e.target.value })}
           />
+          <FieldError id={arrDateId} error={errors?.arrDate} />
           {arrivalDayOffset > 0 && (
             <p className="text-xs mt-1 text-(--accent)">
               {arrivalDayOffset === 1
@@ -349,9 +377,11 @@ export default function TimesFields({
             type="time"
             className="input"
             aria-required={markRequired || undefined}
+            {...fieldErrorProps(arrTimeId, errors?.arrTime)}
             value={value.arrTime}
             onChange={(e) => onChange({ ...value, arrTime: e.target.value })}
           />
+          <FieldError id={arrTimeId} error={errors?.arrTime} />
           {clockChange && (
             <ClockChangeNotice
               local={value.arrDate && value.arrTime ? `${value.arrDate}T${value.arrTime}` : ""}
@@ -395,9 +425,11 @@ export default function TimesFields({
                 id={actualDepDateId}
                 type="date"
                 className="input"
+                {...fieldErrorProps(actualDepDateId, errors?.actualDepDate)}
                 value={actualValue.actualDepDate}
                 onChange={(e) => onActualChange({ ...actualValue, actualDepDate: e.target.value })}
               />
+              <FieldError id={actualDepDateId} error={errors?.actualDepDate} />
             </div>
             <div>
               <label className="label" htmlFor={actualDepTimeId}>
@@ -407,9 +439,11 @@ export default function TimesFields({
                 id={actualDepTimeId}
                 type="time"
                 className="input"
+                {...fieldErrorProps(actualDepTimeId, errors?.actualDepTime)}
                 value={actualValue.actualDepTime}
                 onChange={(e) => onActualChange({ ...actualValue, actualDepTime: e.target.value })}
               />
+              <FieldError id={actualDepTimeId} error={errors?.actualDepTime} />
             </div>
             <div>
               <label className="label" htmlFor={actualArrDateId}>
@@ -419,9 +453,11 @@ export default function TimesFields({
                 id={actualArrDateId}
                 type="date"
                 className="input"
+                {...fieldErrorProps(actualArrDateId, errors?.actualArrDate)}
                 value={actualValue.actualArrDate}
                 onChange={(e) => onActualChange({ ...actualValue, actualArrDate: e.target.value })}
               />
+              <FieldError id={actualArrDateId} error={errors?.actualArrDate} />
             </div>
             <div>
               <label className="label" htmlFor={actualArrTimeId}>
@@ -431,9 +467,11 @@ export default function TimesFields({
                 id={actualArrTimeId}
                 type="time"
                 className="input"
+                {...fieldErrorProps(actualArrTimeId, errors?.actualArrTime)}
                 value={actualValue.actualArrTime}
                 onChange={(e) => onActualChange({ ...actualValue, actualArrTime: e.target.value })}
               />
+              <FieldError id={actualArrTimeId} error={errors?.actualArrTime} />
             </div>
           </div>
           {delayText && (

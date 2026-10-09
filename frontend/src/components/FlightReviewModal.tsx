@@ -1,6 +1,17 @@
 ﻿import { useState, useEffect, useRef, useId } from "react";
-import { createPortal } from "react-dom";
-import { useDialogChrome } from "./ui/useDialogChrome";
+import Modal from "./Modal";
+import {
+  FieldError,
+  FormErrorBanner,
+  RequiredLegend,
+  SaveBlockedHint,
+  fieldErrorProps,
+  useDirtyGuard,
+  useFormFailure,
+} from "./form";
+import { apiErrorMachineCode } from "../lib/apiError";
+import { isTransientSaveError, saveErrorKey } from "../lib/saveErrorMessage";
+import { FLIGHT_FORM_TOUCH } from "./FlightForm/formTouch";
 import type { FlightInput, ParsedBooking } from "../types";
 import type { Airport } from "../lib/api";
 import { airportResolutionMessage, resolveAirportByCode } from "../lib/airportResolve";
@@ -11,7 +22,6 @@ import { flightSaveFailure } from "./FlightForm/flightSaveFailure";
 import type { DuplicateFlight } from "./FlightForm/flightFormModel";
 import ReviewDuplicateNotice from "./FlightForm/ReviewDuplicateNotice";
 import { useTranslation } from "../hooks/useTranslation";
-import { RequiredMark } from "./FlightForm/requiredFields";
 import { filterEmailText } from "../lib/filterEmailText";
 import { getAirlineFromFlightNumber } from "../lib/airlineUtils";
 import AirportAutocomplete from "./AirportAutocomplete";
@@ -24,8 +34,8 @@ import {
   isInferred,
   mapSeatClass,
 } from "../lib/flightReviewFields";
-import InferredBadge from "./FlightForm/InferredBadge";
 import ReviewCostSection from "./FlightForm/ReviewCostSection";
+import ReviewField, { REVIEW_INPUT } from "./FlightForm/ReviewField";
 
 interface FlightReviewModalProps {
   isOpen: boolean;
@@ -88,15 +98,17 @@ export default function FlightReviewModal({
 
   // UI state
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [duplicate, setDuplicate] = useState<DuplicateFlight | null>(null);
+  // Which parsed flight the fields were filled from — the discard guard takes
+  // its baseline only once they are (forgejo#248).
+  const [filledFrom, setFilledFrom] = useState<ParsedBooking | null>(null);
   const [showSourceText, setShowSourceText] = useState(false);
 
   // Initialize form with parsed data
   useEffect(() => {
     if (initialData) {
       // Reset form state when switching to a new flight
-      setError("");
+      setFilledFrom(initialData);
       setAirportError("");
       setShowSourceText(false);
       setDepartureAirport(null);
@@ -212,22 +224,84 @@ export default function FlightReviewModal({
     }
   }, [flightNumber]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
-    e.preventDefault();
-    setError("");
+  // The user-visible, saved fields (forgejo#248). Two of them are filled by
+  // the review itself after the parsed values land — the airports' lookup and
+  // the airline derived from the flight number — so they are read the way
+  // those fill them: the airports by the code a pick also writes, the airline
+  // as it will be once derived. Otherwise merely opening a review "changed" it.
+  const snapshot = {
+    flightNumber,
+    airline: airline || getAirlineFromFlightNumber(flightNumber) || "",
+    departure: departureCode,
+    arrival: arrivalCode,
+    departureTime,
+    arrivalTime,
+    aircraft,
+    seatClass,
+    seat,
+    terminal,
+    gate,
+    bookingReference,
+    boardingGroup,
+    ticketNumber,
+    price,
+    currency,
+    taxes,
+    fees,
+  };
+  const settled = isOpen && filledFrom === initialData;
+  const { dirty } = useDirtyGuard(snapshot, snapshot, { open: settled });
+
+  /**
+   * Pattern: "disabled save + SaveBlockedHint" — the review already greyed
+   * out its confirm while an airport was unresolved, and now says why beside
+   * it, item by item, live (forgejo#245). The items are the marked fields.
+   */
+  const formId = useId();
+  const hintId = `${formId}-blocked`;
+  const ids = {
+    flightNumber: fid(1),
+    departure: `${fieldId}-departure-airport`,
+    arrival: `${fieldId}-arrival-airport`,
+    departureTime: fid(3),
+    arrivalTime: fid(4),
+  };
+  const missing = [
+    !flightNumber.trim() && { field: ids.flightNumber, label: t("flights:form.flightNumber") },
+    !departureAirport && {
+      field: ids.departure,
+      label: t("flights:form.missing.departureAirport"),
+    },
+    !arrivalAirport && { field: ids.arrival, label: t("flights:form.missing.arrivalAirport") },
+    !departureTime && { field: ids.departureTime, label: t("flights:form.missing.departureTime") },
+    !arrivalTime && { field: ids.arrivalTime, label: t("flights:form.missing.arrivalTime") },
+  ].filter((step): step is { field: string; label: string } => Boolean(step));
+  const failure = useFormFailure(JSON.stringify(snapshot));
+  const [serverField, setServerField] = useState<string | null>(null);
+  const fieldError = (
+    field: "departureLocal" | "arrivalLocal" | "departureAirport" | "arrivalAirport"
+  ): string | null => (failure.failureKey && serverField === field ? t(failure.failureKey) : null);
+  const fieldFailure = Boolean(
+    failure.failureKey &&
+    ["departureLocal", "arrivalLocal", "departureAirport", "arrivalAirport"].includes(
+      serverField ?? ""
+    )
+  );
+  const inFlight = useRef(false);
+
+  const handleSubmit = async (e?: React.FormEvent<HTMLFormElement>): Promise<void> => {
+    e?.preventDefault();
+    if (!departureAirport || !arrivalAirport || missing.length > 0) {
+      // Enter in a field while something is missing: go to the first gap.
+      if (missing.length > 0) document.getElementById(missing[0].field)?.focus();
+      return;
+    }
+    // One request at a time: Enter and a click in one frame both passed the
+    // `loading` check, and a single-flight review created the flight twice.
+    if (inFlight.current) return;
+    inFlight.current = true;
     setDuplicate(null);
-
-    // Validation
-    if (!departureAirport || !arrivalAirport) {
-      setError(t("errors:missingAirports"));
-      return;
-    }
-
-    if (!departureTime || !arrivalTime) {
-      setError(t("errors:missingTimes"));
-      return;
-    }
-
+    failure.clear();
     setLoading(true);
 
     try {
@@ -266,18 +340,29 @@ export default function FlightReviewModal({
     } catch (err: unknown) {
       // A code becomes a sentence; never the server's English text or axios's.
       // A 409 with the existing flight is not a failure at all (forgejo#159).
-      const failure = flightSaveFailure(err, t);
-      if (failure.kind === "duplicate") setDuplicate(failure.existing);
-      else setError(failure.message);
+      const outcome = flightSaveFailure(err, t);
+      if (outcome.kind === "duplicate") {
+        setDuplicate(outcome.existing);
+      } else {
+        const data = (err as { response?: { data?: { field?: unknown } } } | null)?.response?.data;
+        // An airport without a zone belongs at that airport; a refused time
+        // at that time.
+        const field =
+          err instanceof MissingZoneError
+            ? err.field === "departureLocal"
+              ? "departureAirport"
+              : "arrivalAirport"
+            : apiErrorMachineCode(err) && typeof data?.field === "string"
+              ? data.field
+              : null;
+        setServerField(field);
+        failure.fail(saveErrorKey(err, "errors:saveFailed"));
+      }
     } finally {
+      inFlight.current = false;
       setLoading(false);
     }
   };
-
-  const panelRef = useRef<HTMLDivElement>(null);
-  useDialogChrome({ open: isOpen, onClose, panelRef, busy: loading });
-
-  if (!isOpen) return null;
 
   const title = t("flights:review.title");
   const showProgress = totalFlights && totalFlights > 1 && flightIndex !== undefined;
@@ -292,147 +377,162 @@ export default function FlightReviewModal({
    */
   const isFinalStep = showProgress && flightIndex! + 1 === totalFlights;
 
-  // Portalled and wired to the shared chrome (CT106 design-6 recheck R01):
-  // opened from the flight form, it is the dialog ON TOP, and only a scrim
-  // later in the document than the form's answers Escape — so this closes the
-  // review and leaves the form underneath open.
-  return createPortal(
-    <div className="ts-dialog-scrim">
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        tabIndex={-1}
-        className="bg-(--bg-surface) rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto outline-none"
-      >
-        {/* Header */}
-        <div className="sticky top-0 bg-(--bg-surface) border-b px-6 py-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-(--text-primary)">{title}</h2>
-            {showProgress && (
-              <p className="text-sm text-(--text-muted) mt-1">
-                {t("flights:review.flightIndex", { index: flightIndex! + 1, total: totalFlights })}
-              </p>
-            )}
-            {(initialData.parserTemplate || initialData.parserConfidence !== undefined) && (
-              <div
-                data-testid="parser-info-row"
-                className="flex items-center gap-2 mt-1.5 flex-wrap"
+  // On the shared frame since forgejo#248 (it was a portal of its own on
+  // `useDialogChrome`): the discard question comes with it. Opened from the
+  // flight form, it is the dialog ON TOP, so Escape closes the review and
+  // leaves the form underneath open.
+  return (
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      busy={loading}
+      dirty={settled && dirty}
+      maxWidth={672}
+      closeLabel={t("common:buttons.close")}
+      title={
+        <span className="flex flex-col">
+          <span>{title}</span>
+          {showProgress && (
+            <span className="text-sm font-normal text-(--text-muted)">
+              {t("flights:review.flightIndex", { index: flightIndex! + 1, total: totalFlights })}
+            </span>
+          )}
+        </span>
+      }
+      footer={(requestClose) => (
+        <>
+          <div className="mr-auto self-center">
+            <SaveBlockedHint id={hintId} missing={missing} />
+          </div>
+          <button type="button" onClick={requestClose} className="btn-secondary" disabled={loading}>
+            {showProgress ? t("common:buttons.cancel") : t("flights:review.discard")}
+          </button>
+          <button
+            type="submit"
+            form={formId}
+            className="btn-primary"
+            disabled={loading || airportLoading || missing.length > 0}
+            aria-describedby={hintId}
+          >
+            {loading
+              ? t("flights:review.saving")
+              : isFinalStep
+                ? // Names the write and its size. The intermediate steps only
+                  // ACCUMULATE — no request leaves the browser until this one.
+                  t("flights:review.importAll", { count: totalFlights! })
+                : showProgress
+                  ? t("common:buttons.next")
+                  : t("flights:review.confirm")}
+          </button>
+        </>
+      )}
+    >
+      <div ref={failure.rootRef}>
+        {(initialData.parserTemplate || initialData.parserConfidence !== undefined) && (
+          <div data-testid="parser-info-row" className="flex items-center gap-2 mb-3 flex-wrap">
+            <span className="text-xs text-(--text-muted) flex items-center gap-1">
+              <span aria-hidden="true">🤖</span>
+              <span>{initialData.parserTemplate ?? t("flights:review.unknownParser")}</span>
+            </span>
+            {initialData.parserConfidence !== undefined && (
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full font-medium ${getConfidenceColor(initialData.parserConfidence)}`}
               >
-                <span className="text-xs text-(--text-muted) flex items-center gap-1">
-                  <span aria-hidden="true">🤖</span>
-                  <span>{initialData.parserTemplate ?? t("flights:review.unknownParser")}</span>
-                </span>
-                {initialData.parserConfidence !== undefined && (
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${getConfidenceColor(initialData.parserConfidence)}`}
-                  >
-                    {initialData.parserConfidence}% {t("flights:review.confidenceLabel")}
-                  </span>
-                )}
-                {originalData?.text && (
-                  <button
-                    type="button"
-                    onClick={() => setShowSourceText((v) => !v)}
-                    className="text-xs px-2 py-0.5 rounded-sm border border-border text-(--text-muted) hover:bg-(--bg-elevated) transition-colors"
-                  >
-                    {showSourceText
-                      ? t("flights:review.hideSourceText")
-                      : t("flights:review.sourceText")}
-                  </button>
-                )}
-              </div>
+                {initialData.parserConfidence}% {t("flights:review.confidenceLabel")}
+              </span>
+            )}
+            {originalData?.text && (
+              <button
+                type="button"
+                onClick={() => setShowSourceText((v) => !v)}
+                aria-expanded={showSourceText}
+                className="text-xs px-2 py-0.5 rounded-sm border border-border text-(--text-muted) hover:bg-(--bg-elevated) transition-colors pointer-coarse:min-h-(--ts-size-touch-min)"
+              >
+                {showSourceText
+                  ? t("flights:review.hideSourceText")
+                  : t("flights:review.sourceText")}
+              </button>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-(--text-muted) hover:bg-(--bg-elevated) rounded-lg transition-colors"
-            aria-label={t("common:buttons.close")}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
+        )}
 
-        {/* Source text panel */}
         {showSourceText && originalData?.text && (
-          <div className="border-b border-border bg-(--bg-elevated) px-6 py-3">
+          <div className="mb-3 rounded-md border border-border bg-(--bg-elevated) px-4 py-3">
             <pre className="whitespace-pre-wrap font-mono text-xs text-(--text-secondary) max-h-48 overflow-y-auto leading-relaxed">
               {filterEmailText(originalData.text)}
             </pre>
           </div>
         )}
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form
+          id={formId}
+          onSubmit={(e) => void handleSubmit(e)}
+          // The form's own rules decide, at the field (see the create form).
+          noValidate
+          className={`space-y-4 ${FLIGHT_FORM_TOUCH}`}
+        >
           {duplicate && <ReviewDuplicateNotice existing={duplicate} onCancel={onClose} />}
-          {error && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-800">{error}</p>
-            </div>
-          )}
+          <FormErrorBanner
+            message={failure.failureKey && !fieldFailure ? t(failure.failureKey) : null}
+            onRetry={
+              failure.failureKey && isTransientSaveError(failure.failureKey)
+                ? () => void handleSubmit()
+                : undefined
+            }
+            retryDisabled={loading}
+          />
 
           {airportError && (
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-yellow-800">{airportError}</p>
-            </div>
+            <p role="status" className="rounded-md border p-3 text-sm" style={NOTICE_STYLE}>
+              {airportError}
+            </p>
           )}
 
           {airportLoading && (
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-blue-800">{t("flights:review.loadingAirports")}</p>
-            </div>
+            <p role="status" className="text-sm text-(--text-muted)">
+              {t("flights:review.loadingAirports")}
+            </p>
           )}
 
           {/* Flight Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor={fid(1)}
-                className="block text-sm font-medium text-(--text-primary) mb-2"
-              >
-                {t("flights:form.flightNumber")} <RequiredMark />
-                <InferredBadge
-                  show={isInferred("flightNumber", initialData.inferredFields)}
-                  hint={t("flights:review.inferredHint")}
-                />
-              </label>
+            <ReviewField
+              id={fid(1)}
+              label={t("flights:form.flightNumber")}
+              required
+              inferredHint={
+                isInferred("flightNumber", initialData.inferredFields)
+                  ? t("flights:review.inferredHint")
+                  : null
+              }
+            >
               <input
                 id={fid(1)}
                 type="text"
                 value={flightNumber}
                 onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
                 maxLength={10}
-                className={`w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("flightNumber", initialData.fieldSources)}`}
+                className={`${REVIEW_INPUT} ${getFieldBorderClass("flightNumber", initialData.fieldSources)}`}
                 placeholder={t("flights:form.placeholders.flightNumber")}
                 required
               />
-            </div>
+            </ReviewField>
 
-            <div>
-              <label
-                htmlFor={fid(2)}
-                className="block text-sm font-medium text-(--text-primary) mb-2"
-              >
-                {t("flights:form.airline")}
-                <InferredBadge
-                  show={isInferred("airline", initialData.inferredFields)}
-                  hint={t("flights:review.inferredHint")}
-                />
-              </label>
+            <ReviewField
+              id={fid(2)}
+              label={t("flights:form.airline")}
+              inferredHint={
+                isInferred("airline", initialData.inferredFields)
+                  ? t("flights:review.inferredHint")
+                  : null
+              }
+            >
               <input
                 id={fid(2)}
                 type="text"
                 value={airline}
                 onChange={(e) => setAirline(e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
+                className={REVIEW_INPUT}
                 placeholder={t("flights:form.placeholders.airline")}
                 list="airline-suggestions-review"
               />
@@ -441,13 +541,15 @@ export default function FlightReviewModal({
                   <option key={name} value={name} />
                 ))}
               </datalist>
-            </div>
+            </ReviewField>
           </div>
 
           {/* Route */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <AirportAutocomplete
+                id={ids.departure}
+                error={fieldError("departureAirport")}
                 value={departureAirport}
                 onChange={(a) => {
                   setDepartureAirport(a);
@@ -461,6 +563,8 @@ export default function FlightReviewModal({
 
             <div>
               <AirportAutocomplete
+                id={ids.arrival}
+                error={fieldError("arrivalAirport")}
                 value={arrivalAirport}
                 onChange={(a) => {
                   setArrivalAirport(a);
@@ -475,68 +579,68 @@ export default function FlightReviewModal({
 
           {/* Times */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor={fid(3)}
-                className="block text-sm font-medium text-(--text-primary) mb-2"
-              >
-                {t("flights:form.departureTime")} <RequiredMark />
-                <InferredBadge
-                  show={isInferred("departureTime", initialData.inferredFields)}
-                  hint={t("flights:review.inferredDateHint")}
-                />
-              </label>
+            <ReviewField
+              id={fid(3)}
+              label={t("flights:form.departureTime")}
+              required
+              inferredHint={
+                isInferred("departureTime", initialData.inferredFields)
+                  ? t("flights:review.inferredDateHint")
+                  : null
+              }
+            >
               <input
                 id={fid(3)}
+                {...fieldErrorProps(fid(3), fieldError("departureLocal"))}
                 type="datetime-local"
                 value={departureTime}
                 onChange={(e) => setDepartureTime(e.target.value)}
-                className={`w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("departureTime", initialData.fieldSources)}`}
+                className={`${REVIEW_INPUT} ${getFieldBorderClass("departureTime", initialData.fieldSources)}`}
                 required
               />
-            </div>
+              <FieldError id={fid(3)} error={fieldError("departureLocal")} />
+            </ReviewField>
 
-            <div>
-              <label
-                htmlFor={fid(4)}
-                className="block text-sm font-medium text-(--text-primary) mb-2"
-              >
-                {t("flights:form.arrivalTime")} <RequiredMark />
-                <InferredBadge
-                  show={isInferred("arrivalTime", initialData.inferredFields)}
-                  hint={t("flights:review.inferredDateHint")}
-                />
-              </label>
+            <ReviewField
+              id={fid(4)}
+              label={t("flights:form.arrivalTime")}
+              required
+              inferredHint={
+                isInferred("arrivalTime", initialData.inferredFields)
+                  ? t("flights:review.inferredDateHint")
+                  : null
+              }
+            >
               <input
                 id={fid(4)}
+                {...fieldErrorProps(fid(4), fieldError("arrivalLocal"))}
                 type="datetime-local"
                 value={arrivalTime}
                 onChange={(e) => setArrivalTime(e.target.value)}
-                className={`w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("arrivalTime", initialData.fieldSources)}`}
+                className={`${REVIEW_INPUT} ${getFieldBorderClass("arrivalTime", initialData.fieldSources)}`}
                 required
               />
-            </div>
+              <FieldError id={fid(4)} error={fieldError("arrivalLocal")} />
+            </ReviewField>
           </div>
 
           {/* Aircraft and Class */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor={fid(5)}
-                className="block text-sm font-medium text-(--text-primary) mb-2"
-              >
-                {t("flights:form.aircraft")}
-                <InferredBadge
-                  show={isInferred("aircraft", initialData.inferredFields)}
-                  hint={t("flights:review.inferredHint")}
-                />
-              </label>
+            <ReviewField
+              id={fid(5)}
+              label={t("flights:form.aircraft")}
+              inferredHint={
+                isInferred("aircraft", initialData.inferredFields)
+                  ? t("flights:review.inferredHint")
+                  : null
+              }
+            >
               <input
                 id={fid(5)}
                 type="text"
                 value={aircraft}
                 onChange={(e) => setAircraft(e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
+                className={REVIEW_INPUT}
                 placeholder={t("flights:form.placeholders.aircraft")}
                 list="aircraft-suggestions-review"
               />
@@ -545,19 +649,17 @@ export default function FlightReviewModal({
                   <option key={name} value={name} />
                 ))}
               </datalist>
-            </div>
+            </ReviewField>
 
-            <div>
-              <label
-                htmlFor={fid(6)}
-                className="block text-sm font-medium text-(--text-primary) mb-2"
-              >
-                {t("flights:form.seatClass")}
-                <InferredBadge
-                  show={isInferred("seatClass", initialData.inferredFields)}
-                  hint={t("flights:review.inferredHint")}
-                />
-              </label>
+            <ReviewField
+              id={fid(6)}
+              label={t("flights:form.seatClass")}
+              inferredHint={
+                isInferred("seatClass", initialData.inferredFields)
+                  ? t("flights:review.inferredHint")
+                  : null
+              }
+            >
               <select
                 id={fid(6)}
                 value={seatClass}
@@ -566,132 +668,100 @@ export default function FlightReviewModal({
                     e.target.value as "economy" | "premium_economy" | "business" | "first"
                   )
                 }
-                className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
+                className={REVIEW_INPUT}
               >
                 <option value="economy">{t("flights:seatClass.economy")}</option>
                 <option value="premium_economy">{t("flights:seatClass.premium_economy")}</option>
                 <option value="business">{t("flights:seatClass.business")}</option>
                 <option value="first">{t("flights:seatClass.first")}</option>
               </select>
-            </div>
+            </ReviewField>
           </div>
 
           {/* Seat Details */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label
-                htmlFor={fid(7)}
-                className="block text-sm font-medium text-(--text-primary) mb-2"
-              >
-                {t("flights:form.seat")}
-              </label>
+            <ReviewField id={fid(7)} label={t("flights:form.seat")}>
               <input
                 id={fid(7)}
                 type="text"
                 value={seat}
                 onChange={(e) => setSeat(e.target.value.toUpperCase())}
                 maxLength={10}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
+                className={REVIEW_INPUT}
                 placeholder={t("flights:form.placeholders.seat")}
               />
-            </div>
+            </ReviewField>
 
-            <div>
-              <label
-                htmlFor={fid(8)}
-                className="block text-sm font-medium text-(--text-primary) mb-2"
-              >
-                {t("flights:form.terminal")}
-              </label>
+            <ReviewField id={fid(8)} label={t("flights:form.terminal")}>
               <input
                 id={fid(8)}
                 type="text"
                 value={terminal}
                 onChange={(e) => setTerminal(e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
+                className={REVIEW_INPUT}
                 placeholder={t("flights:form.placeholders.terminal")}
               />
-            </div>
+            </ReviewField>
 
-            <div>
-              <label
-                htmlFor={fid(9)}
-                className="block text-sm font-medium text-(--text-primary) mb-2"
-              >
-                {t("flights:form.gate")}
-              </label>
+            <ReviewField id={fid(9)} label={t("flights:form.gate")}>
               <input
                 id={fid(9)}
                 type="text"
                 value={gate}
                 onChange={(e) => setGate(e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
+                className={REVIEW_INPUT}
                 placeholder={t("flights:form.placeholders.gate")}
               />
-            </div>
+            </ReviewField>
           </div>
 
           {/* Booking Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor={fid(10)}
-                className="block text-sm font-medium text-(--text-primary) mb-2"
-              >
-                {t("flights:form.bookingReference")}
-                <InferredBadge
-                  show={isInferred("bookingReference", initialData.inferredFields, ["pnr"])}
-                  hint={t("flights:review.inferredHint")}
-                />
-              </label>
+            <ReviewField
+              id={fid(10)}
+              label={t("flights:form.bookingReference")}
+              inferredHint={
+                isInferred("bookingReference", initialData.inferredFields, ["pnr"])
+                  ? t("flights:review.inferredHint")
+                  : null
+              }
+            >
               <input
                 id={fid(10)}
                 type="text"
                 value={bookingReference}
                 onChange={(e) => setBookingReference(e.target.value.toUpperCase())}
-                className={`w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500 ${getFieldBorderClass("pnr", initialData.fieldSources)}`}
+                className={`${REVIEW_INPUT} ${getFieldBorderClass("pnr", initialData.fieldSources)}`}
                 placeholder={t("flights:form.placeholders.bookingReference")}
                 maxLength={6}
               />
-            </div>
+            </ReviewField>
 
-            <div>
-              <label
-                htmlFor={fid(11)}
-                className="block text-sm font-medium text-(--text-primary) mb-2"
-              >
-                {t("flights:form.boardingGroup")}
-              </label>
+            <ReviewField id={fid(11)} label={t("flights:form.boardingGroup")}>
               <input
                 id={fid(11)}
                 type="text"
                 value={boardingGroup}
                 onChange={(e) => setBoardingGroup(e.target.value)}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
+                className={REVIEW_INPUT}
                 placeholder={t("flights:form.placeholders.boardingGroup")}
                 maxLength={3}
               />
-            </div>
+            </ReviewField>
           </div>
 
           {/* Ticket Number */}
-          <div>
-            <label
-              htmlFor={fid(12)}
-              className="block text-sm font-medium text-(--text-primary) mb-2"
-            >
-              {t("flights:form.ticketNumber")}
-            </label>
+          <ReviewField id={fid(12)} label={t("flights:form.ticketNumber")}>
             <input
               id={fid(12)}
               type="text"
               value={ticketNumber}
               onChange={(e) => setTicketNumber(e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
+              className={REVIEW_INPUT}
               placeholder={t("flights:form.placeholders.ticketNumber")}
               maxLength={13}
             />
-          </div>
+          </ReviewField>
 
           <ReviewCostSection
             price={price}
@@ -706,35 +776,16 @@ export default function FlightReviewModal({
             withTaxesAndFees={features.enableCostTracking}
           />
 
-          {/* Buttons */}
-          <div className="flex gap-3 pt-4 border-t">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 px-4 py-2 bg-(--bg-muted) text-(--text-primary) rounded-lg hover:bg-(--bg-elevated) transition-colors font-semibold"
-              disabled={loading}
-            >
-              {showProgress ? t("common:buttons.cancel") : t("flights:review.discard")}
-            </button>
-            <button
-              type="submit"
-              className="btn-primary flex-1"
-              disabled={loading || airportLoading || !departureAirport || !arrivalAirport}
-            >
-              {loading
-                ? t("flights:review.saving")
-                : isFinalStep
-                  ? // Names the write and its size. The intermediate steps only
-                    // ACCUMULATE — no request leaves the browser until this one.
-                    t("flights:review.importAll", { count: totalFlights! })
-                  : showProgress
-                    ? t("common:buttons.next")
-                    : t("flights:review.confirm")}
-            </button>
-          </div>
+          <RequiredLegend />
         </form>
       </div>
-    </div>,
-    document.body
+    </Modal>
   );
 }
+
+/** A notice, not an error: the warning tone, from the token layer. */
+const NOTICE_STYLE = {
+  color: "var(--ts-text)",
+  borderColor: "color-mix(in srgb, var(--warning) 45%, transparent)",
+  background: "color-mix(in srgb, var(--warning) 12%, transparent)",
+} as const;

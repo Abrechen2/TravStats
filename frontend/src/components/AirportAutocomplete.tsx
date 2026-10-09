@@ -3,6 +3,7 @@ import { airportsApi, Airport, setupApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
 import { RequiredMark } from "./FlightForm/requiredFields";
+import { FieldError, fieldErrorProps } from "./form";
 import { countryName } from "../shared/geo/countryCode";
 
 interface AirportAutocompleteProps {
@@ -11,6 +12,10 @@ interface AirportAutocompleteProps {
   label: string;
   placeholder?: string;
   required?: boolean;
+  /** The input's id, so a visible label can name it with `htmlFor` (forgejo#249). */
+  id?: string;
+  /** An error at this field, already translated (forgejo#246); needs `id`. */
+  error?: string | null;
 }
 
 /**
@@ -43,6 +48,8 @@ export default function AirportAutocomplete({
   label,
   placeholder,
   required = false,
+  id,
+  error,
 }: AirportAutocompleteProps): JSX.Element {
   const { t, i18n } = useTranslation(["flights", "common"]);
   const [query, setQuery] = useState("");
@@ -194,11 +201,13 @@ export default function AirportAutocomplete({
           content is "*" (#239). No htmlFor was ever set here, so this element
           is decorative and safe to omit entirely. */}
       {label !== "" && (
-        <label className="label">
+        <label className="label" htmlFor={id}>
           {label} {required && <RequiredMark />}
         </label>
       )}
       <input
+        id={id}
+        {...(id ? fieldErrorProps(id, error) : {})}
         type="text"
         value={query}
         onChange={handleInputChange}
@@ -210,6 +219,8 @@ export default function AirportAutocomplete({
         disabled={isSeeding}
         title={isSeeding ? t("flights:airportAutocomplete.seedingTitle") : undefined}
       />
+
+      {id ? <FieldError id={id} error={error} /> : null}
 
       {/* Dropdown */}
       {isOpen && (

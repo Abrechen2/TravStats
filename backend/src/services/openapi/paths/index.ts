@@ -40,6 +40,8 @@ import "./railRoadtripConversion";
 import "./rental";
 import "./cruiseTracks";
 import "./flightDevice";
+import "./flightBooking";
+import "./flightBulkEdit";
 import "./lodging";
 import "./loyalty";
 import "./settings";

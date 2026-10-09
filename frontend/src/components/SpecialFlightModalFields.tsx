@@ -13,6 +13,7 @@ import { splitTagText } from "../lib/tagList";
 import CatalogueCombobox, { searchAircraftOptions } from "./FlightForm/fields/CatalogueCombobox";
 import { useTranslation } from "../hooks/useTranslation";
 import { EventLocationPicker, type EventLocationValue } from "./specialFlights/EventLocationPicker";
+import { FieldError, fieldErrorProps } from "./form";
 
 export type SpecialKind = "sightseeing" | "event" | "zerog";
 export type EventSubtype = "eclipse" | "rocket_launch" | "aurora" | "other";
@@ -28,6 +29,21 @@ export const ZEROG_PROVIDER_OTHER = "__other__";
 interface TypePickerProps {
   onPick: (k: SpecialKind) => void;
 }
+
+/** The special-flight form's input ids — labels name them, a refusal focuses them. */
+export const SPECIAL_IDS = {
+  departureAirport: "special-departure-airport",
+  arrivalAirport: "special-arrival-airport",
+  eventLat: "event-lat",
+  eventLon: "event-lon",
+  patternLat: "zerog-pattern-lat",
+  patternLon: "zerog-pattern-lon",
+  departureTime: "special-departure-time",
+  arrivalTime: "special-arrival-time",
+} as const;
+
+/** Errors at the special-flight fields, already translated (forgejo#246). */
+export type SpecialFieldErrors = Partial<Record<keyof typeof SPECIAL_IDS, string | null>>;
 
 export function TypePicker({ onPick }: TypePickerProps): JSX.Element {
   const { t } = useTranslation(["specialFlights"]);
@@ -64,6 +80,7 @@ export function TypePicker({ onPick }: TypePickerProps): JSX.Element {
 }
 
 interface SightseeingFieldsProps {
+  errors?: SpecialFieldErrors;
   airport: Airport | null;
   onAirportChange: (a: Airport | null) => void;
   aircraft: string;
@@ -71,6 +88,7 @@ interface SightseeingFieldsProps {
 }
 
 export function SightseeingFields({
+  errors,
   airport,
   onAirportChange,
   aircraft,
@@ -80,22 +98,26 @@ export function SightseeingFields({
   return (
     <div className="space-y-4">
       <AirportAutocomplete
+        id={SPECIAL_IDS.departureAirport}
+        error={errors?.departureAirport}
         label={t("specialFlights:field.airport")}
         value={airport}
         onChange={onAirportChange}
         required
       />
       <div>
-        <label className="label">{t("specialFlights:field.aircraft")}</label>
+        <label className="label" htmlFor="special-aircraft">
+          {t("specialFlights:field.aircraft")}
+        </label>
         {/* The same catalogue the flight forms offer, so a sightseeing flight's
             "Cessna 172" is spelled the way the statistics group it; free text
             stays valid for a type the catalogue does not know. */}
         <CatalogueCombobox
+          id="special-aircraft"
           value={aircraft}
           onChange={onAircraftChange}
           search={searchAircraftOptions}
           placeholder={t("specialFlights:field.aircraftHint")}
-          ariaLabel={t("specialFlights:field.aircraft")}
         />
       </div>
     </div>
@@ -103,6 +125,7 @@ export function SightseeingFields({
 }
 
 interface EventFieldsProps {
+  errors?: SpecialFieldErrors;
   subtype: EventSubtype;
   onSubtypeChange: (s: EventSubtype) => void;
   departureAirport: Airport | null;
@@ -118,6 +141,7 @@ interface EventFieldsProps {
 }
 
 export function EventFields({
+  errors,
   subtype,
   onSubtypeChange,
   departureAirport,
@@ -152,7 +176,9 @@ export function EventFields({
                 key={key}
                 type="button"
                 onClick={() => onSubtypeChange(key)}
-                className="px-3 py-1.5 rounded-full border text-sm transition-colors"
+                // The choice is said, not only coloured (forgejo#249).
+                aria-pressed={active}
+                className="px-3 py-1.5 rounded-full border text-sm transition-colors pointer-coarse:min-h-(--ts-size-touch-min)"
                 style={{
                   borderColor: active ? "var(--accent)" : "var(--color-border)",
                   background: active ? "rgba(255,193,7,0.12)" : "transparent",
@@ -171,12 +197,15 @@ export function EventFields({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <AirportAutocomplete
+          id={SPECIAL_IDS.departureAirport}
+          error={errors?.departureAirport}
           label={t("specialFlights:field.departureAirport")}
           value={departureAirport}
           onChange={onDepartureAirportChange}
           required
         />
         <AirportAutocomplete
+          id={SPECIAL_IDS.arrivalAirport}
           label={t("specialFlights:field.arrivalAirport")}
           value={arrivalAirport}
           onChange={onArrivalAirportChange}
@@ -199,6 +228,7 @@ export function EventFields({
 
       <EventLocationPicker
         idPrefix="event"
+        errors={{ lat: errors?.eventLat, lon: errors?.eventLon }}
         value={toLocationValue(eventLat, eventLon)}
         onChange={(next) => {
           onEventLatChange(fromLocationCoord(next.lat));
@@ -225,6 +255,7 @@ function fromLocationCoord(n: number | null): string {
 }
 
 interface ZeroGFieldsProps {
+  errors?: SpecialFieldErrors;
   airport: Airport | null;
   onAirportChange: (a: Airport | null) => void;
   patternLat: string;
@@ -240,6 +271,7 @@ interface ZeroGFieldsProps {
 }
 
 export function ZeroGFields({
+  errors,
   airport,
   onAirportChange,
   patternLat,
@@ -257,6 +289,8 @@ export function ZeroGFields({
   return (
     <div className="space-y-4">
       <AirportAutocomplete
+        id={SPECIAL_IDS.departureAirport}
+        error={errors?.departureAirport}
         label={t("specialFlights:field.airport")}
         value={airport}
         onChange={onAirportChange}
@@ -275,9 +309,11 @@ export function ZeroGFields({
             min={-90}
             max={90}
             className="input"
+            {...fieldErrorProps(SPECIAL_IDS.patternLat, errors?.patternLat)}
             value={patternLat}
             onChange={(e) => onPatternLatChange(e.target.value)}
           />
+          <FieldError id={SPECIAL_IDS.patternLat} error={errors?.patternLat} />
         </div>
         <div>
           <label className="label" htmlFor="zerog-pattern-lon">
@@ -290,9 +326,11 @@ export function ZeroGFields({
             min={-180}
             max={180}
             className="input"
+            {...fieldErrorProps(SPECIAL_IDS.patternLon, errors?.patternLon)}
             value={patternLon}
             onChange={(e) => onPatternLonChange(e.target.value)}
           />
+          <FieldError id={SPECIAL_IDS.patternLon} error={errors?.patternLon} />
         </div>
       </div>
 
@@ -368,9 +406,11 @@ interface CommonTimeAndMetaFieldsProps {
   onTagsCsvChange: (v: string) => void;
   companions: string[];
   onCompanionsChange: (v: string[]) => void;
+  errors?: SpecialFieldErrors;
 }
 
 export function CommonTimeAndMetaFields({
+  errors,
   departureTime,
   onDepartureTimeChange,
   arrivalTime,
@@ -395,9 +435,11 @@ export function CommonTimeAndMetaFields({
             type="datetime-local"
             className="input"
             style={{ colorScheme: "dark" }}
+            {...fieldErrorProps(SPECIAL_IDS.departureTime, errors?.departureTime)}
             value={departureTime}
             onChange={(e) => onDepartureTimeChange(e.target.value)}
           />
+          <FieldError id={SPECIAL_IDS.departureTime} error={errors?.departureTime} />
         </div>
         <div>
           <label className="label" htmlFor="special-arrival-time">
@@ -408,9 +450,11 @@ export function CommonTimeAndMetaFields({
             type="datetime-local"
             className="input"
             style={{ colorScheme: "dark" }}
+            {...fieldErrorProps(SPECIAL_IDS.arrivalTime, errors?.arrivalTime)}
             value={arrivalTime}
             onChange={(e) => onArrivalTimeChange(e.target.value)}
           />
+          <FieldError id={SPECIAL_IDS.arrivalTime} error={errors?.arrivalTime} />
         </div>
       </div>
 

@@ -21,9 +21,9 @@ import { describe, expect, it } from "vitest";
  *
  * Deliberately a whole-tree rule rather than a list of the five keys that
  * were wrong: the next one would be added by someone who never read this
- * file. `flights:form.requiredLegend` ("* Pflichtfeld") is untouched — it
- * OPENS with the mark because it is the sentence that explains it, and the
- * rule only refuses a trailing one.
+ * file. The legend (`common:form.requiredLegend`, which the flight form now
+ * shares with every domain) OPENS with the mark because it is the sentence
+ * that explains it, and the rule only refuses a trailing one.
  */
 
 const RESOURCES_ROOT = path.resolve(__dirname, "..", "resources");

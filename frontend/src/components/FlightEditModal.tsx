@@ -1,20 +1,32 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useId, useRef } from "react";
 import type { Flight } from "../types";
 import TimesFields from "./FlightForm/fields/TimesFields";
 import HistoricalToggleField from "./FlightForm/fields/HistoricalToggleField";
 import { applyHistoricalToggle } from "./FlightForm/historicalToggle";
+import { editSubmitZones, airportLocalInputs, storedZoneAt } from "./FlightForm/editModalDatetime";
 import {
-  seedTimes,
-  historicalShapeFor,
-  editSubmitZones,
-  airportLocalInputs,
-  storedZoneAt,
-} from "./FlightForm/editModalDatetime";
+  EDIT_IDS,
+  applyTripChange,
+  buildEditFormData,
+  buildEditUpdates,
+  buildFlightAirports,
+  editActualPairErrors,
+  editFormGaps,
+  editFormSnapshot,
+} from "./FlightForm/editFormModel";
+import { SERVER_TIME_FIELDS } from "./FlightForm/createFormState";
+import { FLIGHT_FORM_TOUCH } from "./FlightForm/formTouch";
+import { focusFirstMissingRequired } from "./FlightForm/requiredFields";
+import {
+  FormErrorBanner,
+  RequiredLegend,
+  SaveBlockedHint,
+  useDirtyGuard,
+  useFormFailure,
+} from "./form";
 import Modal from "./Modal";
 import RouteFields from "./FlightForm/fields/RouteFields";
-import HistoricalDateFields, {
-  historicalDateShape,
-} from "./FlightForm/fields/HistoricalDateFields";
+import HistoricalDateFields from "./FlightForm/fields/HistoricalDateFields";
 import CatalogueCombobox, {
   searchAirlineOptions,
   searchAircraftOptions,
@@ -25,10 +37,10 @@ import { flightFormExtract, flightHints } from "../lib/extractTargets";
 import TripSelectField from "./FlightForm/fields/TripSelectField";
 import StatusField from "./FlightForm/fields/StatusField";
 import { useAirportLocalTimes } from "./FlightForm/useAirportLocalTimes";
-import { buildLocalString } from "./FlightForm/useFlightForm";
 import CompanionsField from "./FlightForm/fields/CompanionsField";
 import TagInput from "./TagInput";
 import { splitTagText } from "../lib/tagList";
+import { apiErrorMachineCode } from "../lib/apiError";
 import SuggestionChips from "./common/SuggestionChips";
 import { useFlightEntrySuggestions } from "../hooks/useFlightEntrySuggestions";
 import { useTranslation } from "../hooks/useTranslation";
@@ -36,37 +48,23 @@ import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
 import { estimateArrivalFromDeparture } from "../lib/timeEstimation";
 import { airportsApi } from "../lib/api/airports";
-import { tripsApi } from "../lib/api/trips";
 import { logger } from "../lib/logger";
 
 import type { FlightInput } from "../types";
 import type { Airport } from "../lib/api";
-import { saveErrorMessage } from "../lib/saveErrorMessage";
+import { isTransientSaveError, saveErrorKey } from "../lib/saveErrorMessage";
 import { flightArrival, flightDeparture } from "../lib/entityTimes";
-import { foldFields, storedFlightFolds, wallOf, type FlightFolds } from "../lib/flightFolds";
+import { storedFlightFolds, type FlightFolds } from "../lib/flightFolds";
 
 interface FlightEditModalProps {
   flight: Flight;
   isOpen: boolean;
   onClose: () => void;
+  /** Stores the update. Must NOT close the dialog: the dialog closes itself
+   *  once the trip assignment that follows the save has gone through too. */
   onSave: (id: string, updates: Partial<FlightInput>) => Promise<void>;
-}
-
-/** Build the `Airport` shape RouteFields expects from a flight's stored
- *  departure/arrival columns, falling back to the code when no name was
- *  ever captured. */
-function buildFlightAirports(f: Flight): { departure: Airport; arrival: Airport } {
-  const side = (iata?: string, icao?: string, name?: string, lat = 0, lon = 0): Airport => ({
-    iata,
-    icao,
-    name: name || iata || icao || "",
-    lat,
-    lon,
-  });
-  return {
-    departure: side(f.depIata, f.depIcao, f.depName, f.depLat, f.depLon),
-    arrival: side(f.arrIata, f.arrIcao, f.arrName, f.arrLat, f.arrLon),
-  };
+  /** After the save and the trip assignment — the caller reloads its view. */
+  onAfterSave?: () => void;
 }
 
 export default function FlightEditModal({
@@ -74,66 +72,17 @@ export default function FlightEditModal({
   isOpen,
   onClose,
   onSave,
+  onAfterSave,
 }: FlightEditModalProps): JSX.Element | null {
   const { t } = useTranslation(["flights", "common", "errors"]);
   const { features } = useSettingsStore();
 
-  const buildFormData = (f: Flight) => {
-    const isHistorical = f.status === "historical";
-    // The airports' own clocks from `times`; actual times (#200) empty when none.
-    const { dep, arr, actualDep, actualArr } = seedTimes(f);
-    return {
-      airline: f.airline || "",
-      operatingAirline: f.operatingAirline || "",
-      flightNumber: f.flightNumber || "",
-      aircraft: f.aircraft || "",
-      status: f.status || "scheduled",
-      category: f.category || "",
-      seatClass: f.seatClass || "",
-      seatNumber: f.seatNumber || "",
-      gate: f.gate || "",
-      terminal: f.terminal || "",
-      boardingGroup: f.boardingGroup || "",
-      bookingReference: f.bookingReference || "",
-      ticketNumber: f.ticketNumber || "",
-      bookingClassLetter: f.bookingClassLetter || "",
-      baggageAllowance: f.baggageAllowance || "",
-      frequentFlyerNumber: f.frequentFlyerNumber || "",
-      companions: f.companions ?? [],
-      // `?? undefined`, never `|| 0`: the modal used to load a stored 0 and a
-      // stored null into the same form state, and write `> 0 ? … : null`
-      // back — so changing only the seat number DELETED a valid zero price,
-      // and `priceBase`, `fxRate` and the currency metadata went with it
-      // (audit 2026-09-20, SRV-UI-001). `undefined` is the one value
-      // `CostFields` reads as "not recorded".
-      price: f.price ?? undefined,
-      currency: f.currency || "EUR",
-      taxes: f.taxes ?? undefined,
-      fees: f.fees ?? undefined,
-      notes: f.notes || "",
-      tags: f.tags?.join(", ") || "",
-      receiptUrl: f.receiptUrl || "",
-      // Historical: shape string, empty time (buildLocalString anchors the
-      // expanded date itself — 00:00 for partial shapes, 12:00 for full).
-      departureDate: isHistorical ? historicalShapeFor(dep.date, f.depTimeSemantics) : dep.date,
-      departureTime: isHistorical ? "" : dep.time,
-      arrivalDate: isHistorical ? historicalShapeFor(dep.date, f.depTimeSemantics) : arr.date,
-      arrivalTime: isHistorical ? "" : arr.time,
-      actualDepartureDate: actualDep.date,
-      actualDepartureTime: actualDep.time,
-      actualArrivalDate: actualArr.date,
-      actualArrivalTime: actualArr.time,
-      tripId: f.tripId ?? "",
-    };
-  };
-
-  const [formData, setFormData] = useState(buildFormData(flight));
+  const [formData, setFormData] = useState(() => buildEditFormData(flight));
   // Q5: the occurrence of a repeated hour the flight was stored with, re-sent unless changed.
   const [folds, setFolds] = useState<FlightFolds>(() =>
     storedFlightFolds(flightDeparture(flight), flightArrival(flight))
   );
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const addToast = useToastStore((s) => s.addToast);
 
   // Editable departure/arrival airports — changing either feeds a new code
@@ -231,11 +180,10 @@ export default function FlightEditModal({
   };
 
   useEffect(() => {
-    setFormData(buildFormData(flight));
+    setFormData(buildEditFormData(flight));
     const airports = buildFlightAirports(flight);
     setDepartureAirport(airports.departure);
     setArrivalAirport(airports.arrival);
-    setError("");
   }, [flight]);
 
   // Once useAirportLocalTimes resolves BOTH zones, re-render the date/time
@@ -256,196 +204,144 @@ export default function FlightEditModal({
     setFormData((prev) => ({ ...prev, ...airportLocalInputs(flight, depTz, arrTz) }));
   }, [hydrated, depTz, arrTz, flight]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
+  // The time inputs as stored — the seed, and the airport-local reading once
+  // the zones resolved: neither is the user's change (editFormSnapshot).
+  const storedTimes = [
+    buildEditFormData(flight),
+    ...(hydrated ? [airportLocalInputs(flight, depTz, arrTz)] : []),
+    ...(lastZones.current
+      ? [airportLocalInputs(flight, lastZones.current.dep, lastZones.current.arr)]
+      : []),
+  ];
+  const snapshot = editFormSnapshot(
+    formData,
+    storedTimes,
+    { departure: departureAirport, arrival: arrivalAirport },
+    folds
+  );
+  const [initialSnapshot] = useState(snapshot);
+  const { dirty, markSaved } = useDirtyGuard(initialSnapshot, snapshot, { open: isOpen });
 
-    // Scheduled times are REQUIRED on a non-historical flight — unlike the
-    // clearable optional fields, blanking one of these four cannot mean
-    // "delete": a flight without scheduled times is not a meaningful state.
-    // Without this check the submit silently omitted the pair and the old
-    // instant survived — the save looked accepted while ignoring the edit.
-    if (
-      formData.status !== "historical" &&
-      (!formData.departureDate ||
-        !formData.departureTime ||
-        !formData.arrivalDate ||
-        !formData.arrivalTime)
-    ) {
-      setError(t("errors:missingTimes"));
-      return;
-    }
+  /**
+   * Pattern: "enabled save, a refused click focuses the first gap" — the
+   * create form's (forgejo#245), so creating and editing a flight answer a
+   * missing time the same way. What is missing is listed beside the save.
+   */
+  const formId = useId();
+  const hintId = `${formId}-blocked`;
+  const missing = editFormGaps(formData, t);
+  const failure = useFormFailure(JSON.stringify(snapshot));
+  const [serverField, setServerField] = useState<string | null>(null);
+  const serverTimeField =
+    failure.failureKey && serverField ? SERVER_TIME_FIELDS[serverField] : undefined;
+  const timeErrors = {
+    ...(failure.attempted ? editActualPairErrors(formData, t) : {}),
+    ...(serverTimeField ? { [serverTimeField]: t(failure.failureKey!) } : {}),
+  };
+  // The flight is stored; only the trip assignment after it failed.
+  const [savedTripFailed, setSavedTripFailed] = useState(false);
+  const [movingTrip, setMovingTrip] = useState(false);
+  const inFlight = useRef(false);
+  // The trip the user asked for, captured at submit: a refreshed `flight`
+  // prop or draft must not change what "Erneut versuchen" sends (review I1).
+  const requestedTrip = useRef<string | null>(null);
 
-    // An actual time is a recorded observation, so a date without its clock
-    // reading is incomplete rather than "clear it". Left unguarded this shape
-    // reached buildLocalString and came back as noon, which the server then
-    // used to recompute delayMinutes — a four-hour delay out of a blank field.
-    if (
-      (formData.actualDepartureDate && !formData.actualDepartureTime) ||
-      (formData.actualArrivalDate && !formData.actualArrivalTime)
-    ) {
-      setError(t("errors:missingTimes"));
-      return;
-    }
+  /** After a stored save: the caller reloads ONCE, when the dialog closes. */
+  const closeAfterSave = (): void => {
+    onAfterSave?.();
+    onClose();
+  };
 
-    setLoading(true);
-
+  /** False when the trip move failed — the dialog then stays open and says so. */
+  const finishAfterSave = async (): Promise<boolean> => {
+    setMovingTrip(true);
     try {
-      // The airports' zones once both resolved; null = send no time at all.
-      const last = lastZones.current;
-      const zones = editSubmitZones({ hydrated, depTz, arrTz }, formData, [
-        buildFormData(flight),
-        ...(last ? [airportLocalInputs(flight, last.dep, last.arr)] : []),
-      ]);
-
-      // Historical flights carry their precision in the date SHAPE — the
-      // create form's derivation. ALWAYS sent with departureLocal: without
-      // explicit semantics the server reads a real time edit and flips the
-      // column to UTC (flights.test.ts pins it) — which the browser UAT caught
-      // silently downgrading DATE_ONLY on a year change.
-      const histShape =
-        formData.status === "historical" ? historicalDateShape(formData.departureDate) : "unknown";
-      const sendSemantics: FlightInput["depTimeSemantics"] =
-        histShape === "year_month_day"
-          ? "DATE_ONLY"
-          : histShape !== "unknown"
-            ? "UNKNOWN"
-            : undefined;
-
-      const updates: Partial<FlightInput> = {
-        // Server needs lat/lon to recompute status/CO2/distance.
-        departure: departureAirport ?? undefined,
-        arrival: arrivalAirport ?? undefined,
-        // For every text/number field below: "" (a blanked input) maps to
-        // null — an explicit CLEAR on the wire. undefined would omit the
-        // field and the server would keep the old value while the UI showed
-        // it removed. Same contract the category/seatClass fix established.
-        airline: formData.airline || null,
-        operatingAirline: formData.operatingAirline || null,
-        flightNumber: formData.flightNumber || null,
-        aircraft: formData.aircraft || null,
-        status: formData.status as FlightInput["status"],
-        // "" (the "(optional)" choice) is null too — the same explicit CLEAR.
-        category: (formData.category || null) as FlightInput["category"],
-        seatClass: (formData.seatClass || null) as FlightInput["seatClass"],
-        seatNumber: formData.seatNumber || null,
-        gate: formData.gate || null,
-        terminal: formData.terminal || null,
-        boardingGroup: formData.boardingGroup || null,
-        bookingReference: formData.bookingReference || null,
-        ticketNumber: formData.ticketNumber || null,
-        bookingClassLetter: formData.bookingClassLetter || null,
-        baggageAllowance: formData.baggageAllowance || null,
-        frequentFlyerNumber: formData.frequentFlyerNumber || null,
-        companions: formData.companions,
-        // A recorded 0 is a price — an award flight, a staff ticket — and
-        // only an empty field is `null`. See `shared/flightPricing.ts`.
-        price: formData.price ?? null,
-        currency: formData.currency as FlightInput["currency"],
-        taxes: formData.taxes ?? null,
-        fees: formData.fees ?? null,
-        notes: formData.notes || null,
-        tags: splitTagText(formData.tags),
-        receiptUrl: formData.receiptUrl || null,
-        ...(zones && {
-          // Recombine with the SAME buildLocalString the create form uses —
-          // no second implementation of date+time recombination.
-          // Only a historical row may anchor a bare day to noon — see
-          // buildLocalString. On the ordinary path a blank time is incomplete
-          // input, and the submit guard above refuses it rather than letting a
-          // fabricated midday depart.
-          departureLocal: formData.departureDate
-            ? (buildLocalString(formData.departureDate, formData.departureTime, {
-                anchorDateOnly: formData.status === "historical",
-              }) ?? undefined)
-            : undefined,
-          depTimezone: formData.departureDate ? zones.dep : undefined,
-          arrivalLocal: formData.arrivalDate
-            ? (buildLocalString(formData.arrivalDate, formData.arrivalTime, {
-                anchorDateOnly: formData.status === "historical",
-              }) ?? undefined)
-            : undefined,
-          arrTimezone: formData.arrivalDate ? zones.arr : undefined,
-          depTimeSemantics: sendSemantics,
-          arrTimeSemantics: sendSemantics,
-          // Actual departure/arrival (#200) — three-way contract: a filled
-          // field submits its value; an empty field on a flight that HAS a
-          // stored actual time submits null (the user cleared it — delay
-          // resets with it server-side); an empty field on a flight that
-          // never had one omits the key entirely, so the no-op save stays a
-          // no-op. Blank-means-omit alone made clearing a recorded actual
-          // time impossible — the same silent-keep family as the text fields.
-          actualDepartureLocal: formData.actualDepartureDate
-            ? buildLocalString(formData.actualDepartureDate, formData.actualDepartureTime)
-            : flight.actualDeparture
-              ? null
-              : undefined,
-          actualDepartureTz: formData.actualDepartureDate ? zones.dep : undefined,
-          actualArrivalLocal: formData.actualArrivalDate
-            ? buildLocalString(formData.actualArrivalDate, formData.actualArrivalTime)
-            : flight.actualArrival
-              ? null
-              : undefined,
-          actualArrivalTz: formData.actualArrivalDate ? zones.arr : undefined,
-          ...foldFields(
-            folds,
-            wallOf(formData.departureDate, formData.departureTime, zones.dep),
-            wallOf(formData.arrivalDate, formData.arrivalTime, zones.arr)
-          ),
-        }),
-      };
-
-      await onSave(flight.id, updates);
-
-      // Trip assignment lives on a separate endpoint (POST /trips/:id/flights)
-      // because Flight.tripId is owned by the Trip relation, not by the
-      // generic flight-update path. Apply it after onSave succeeds so a
-      // failed field-save doesn't silently move the flight between trips.
-      const previousTripId = flight.tripId ?? "";
-      const nextTripId = formData.tripId;
-      if (nextTripId !== previousTripId) {
-        try {
-          if (nextTripId) {
-            // Add to new trip — backend uses updateMany so this also
-            // moves the flight away from any prior trip atomically.
-            await tripsApi.assignFlights(nextTripId, {
-              flightIds: [flight.id],
-              action: "add",
-            });
-          } else if (previousTripId) {
-            // Cleared selection — detach from current trip.
-            await tripsApi.assignFlights(previousTripId, {
-              flightIds: [flight.id],
-              action: "remove",
-            });
-          }
-          addToast("success", t("flights:edit.tripAssignedToast"));
-        } catch (tripErr) {
-          logger.warn("Failed to update trip assignment:", tripErr);
-          setError(t("flights:edit.tripAssignFailed"));
-          return; // keep modal open so user sees the partial state
-        }
-      }
-
-      onClose();
-    } catch (err: unknown) {
-      // Not `err.message`: for a refused save that is axios's own
-      // "Request failed with status code 400", in English.
-      setError(saveErrorMessage(err, t, "errors:updateFailed"));
+      // Trip assignment lives on its own endpoint and runs only after the save
+      // went through, so a refused save never moves the flight between trips.
+      const changed = await applyTripChange(flight, requestedTrip.current ?? formData.tripId);
+      if (changed) addToast("success", t("flights:edit.tripAssignedToast"));
+    } catch (tripErr) {
+      logger.warn("Failed to update trip assignment:", tripErr);
+      // Said in the dialog, which stays open — and nothing reloads under it:
+      // a reload here unmounted the dialog on the flight's page and brought
+      // it back fresh, the failure gone (review I1).
+      setSavedTripFailed(true);
+      return false;
     } finally {
+      setMovingTrip(false);
+    }
+    closeAfterSave();
+    return true;
+  };
+
+  const retryTripMove = async (): Promise<void> => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    // The failure line stays up while the move is retried; success closes.
+    try {
+      await finishAfterSave();
+    } finally {
+      inFlight.current = false;
+    }
+  };
+
+  const handleSubmit = async (e?: React.FormEvent): Promise<void> => {
+    e?.preventDefault();
+    failure.markAttempted();
+    if (missing.length > 0) {
+      // A required field first; otherwise the half-filled actual pair, whose
+      // error renders with this click.
+      if (!focusFirstMissingRequired(failure.rootRef.current)) failure.focusFirstProblem();
+      return;
+    }
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setLoading(true);
+    failure.clear();
+    requestedTrip.current = formData.tripId;
+    try {
+      try {
+        // The airports' zones once both resolved; null = send no time at all.
+        const last = lastZones.current;
+        const zones = editSubmitZones({ hydrated, depTz, arrTz }, formData, [
+          buildEditFormData(flight),
+          ...(last ? [airportLocalInputs(flight, last.dep, last.arr)] : []),
+        ]);
+        await onSave(
+          flight.id,
+          buildEditUpdates({ formData, flight, zones, folds, departureAirport, arrivalAirport })
+        );
+        markSaved();
+      } catch (err: unknown) {
+        // Not `err.message`: for a refused save that is axios's own
+        // "Request failed with status code 400", in English.
+        const data = (err as { response?: { data?: { field?: unknown } } } | null)?.response?.data;
+        setServerField(
+          apiErrorMachineCode(err) && typeof data?.field === "string" ? data.field : null
+        );
+        failure.fail(saveErrorKey(err, "errors:updateFailed"));
+        return;
+      }
+      // Busy until the trip move settled too: a second click in between sent
+      // a second PUT and a second move (review I1).
+      await finishAfterSave();
+    } finally {
+      inFlight.current = false;
       setLoading(false);
     }
   };
 
   // The shared frame brings the close button, Escape, the scroll lock and the
-  // focus return. The action buttons stay INSIDE the form rather than moving
-  // to the frame's footer, because the submit button belongs to the form that
-  // owns it — pulling it out would need an id-and-`form=` dance for nothing.
+  // focus return. The actions sit in its footer (as in the create form), tied
+  // to the form by `form=`, so "Abbrechen" goes through the discard question.
   return (
     <Modal
       open={isOpen}
-      onClose={onClose}
-      busy={loading}
+      // Once the flight is stored, every way out (×, Escape, scrim) must let
+      // the caller show the edit — not only the footer buttons (re-review N1).
+      onClose={savedTripFailed ? closeAfterSave : onClose}
+      busy={loading || movingTrip}
+      dirty={dirty && !savedTripFailed}
       maxWidth={672}
       closeLabel={t("common:buttons.close")}
       title={
@@ -457,338 +353,424 @@ export default function FlightEditModal({
           </span>
         </span>
       }
+      footer={(requestClose) =>
+        savedTripFailed ? (
+          <>
+            <p role="status" className="mr-auto self-center text-sm text-[var(--text-muted)]">
+              {t("flights:edit.savedTripAssignFailed")}
+            </p>
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={movingTrip}
+              onClick={() => void retryTripMove()}
+            >
+              {t("common:buttons.retry")}
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={movingTrip}
+              onClick={closeAfterSave}
+            >
+              {t("common:buttons.close")}
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="mr-auto self-center">
+              <SaveBlockedHint id={hintId} missing={missing} />
+            </div>
+            <button
+              type="button"
+              onClick={requestClose}
+              className="btn-secondary"
+              disabled={loading}
+            >
+              {t("common:buttons.cancel")}
+            </button>
+            <button
+              type="submit"
+              form={formId}
+              disabled={loading || movingTrip}
+              className="btn-primary"
+              aria-describedby={hintId}
+            >
+              {loading ? t("common:buttons.saving") : t("flights:edit.saveChanges")}
+            </button>
+          </>
+        )
+      }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-sm">
-            {error}
-          </div>
-        )}
+      <div ref={failure.rootRef}>
+        <form
+          id={formId}
+          // The form's own rules decide, at the field (see the create form).
+          noValidate
+          onSubmit={(e) => void handleSubmit(e)}
+          className={`space-y-4 ${FLIGHT_FORM_TOUCH}`}
+        >
+          {/* Announced and focusable (forgejo#246); a time the server refused is
+            shown at that time instead. */}
+          <FormErrorBanner
+            message={failure.failureKey && !serverTimeField ? t(failure.failureKey) : null}
+            onRetry={
+              failure.failureKey && isTransientSaveError(failure.failureKey)
+                ? () => void handleSubmit()
+                : undefined
+            }
+            retryDisabled={loading}
+          />
 
-        {/* Changing either side re-resolves its timezone (useAirportLocalTimes above). */}
-        <RouteFields
-          departure={departureAirport}
-          arrival={arrivalAirport}
-          onDepartureChange={setDepartureAirport}
-          onArrivalChange={setArrivalAirport}
-        />
+          {/* Changing either side re-resolves its timezone (useAirportLocalTimes above). */}
+          <RouteFields
+            departure={departureAirport}
+            arrival={arrivalAirport}
+            onDepartureChange={setDepartureAirport}
+            onArrivalChange={setArrivalAirport}
+            ids={{ departure: EDIT_IDS.departureAirport, arrival: EDIT_IDS.arrivalAirport }}
+          />
 
-        {/* The way out of "historical" — see HistoricalToggleField and
+          {/* The way out of "historical" — see HistoricalToggleField and
               applyHistoricalToggle for why each exists. */}
-        <HistoricalToggleField
-          id="editHistoricalToggle"
-          checked={formData.status === "historical"}
-          onChange={(checked) => setFormData((prev) => applyHistoricalToggle(prev, checked))}
-        />
+          <HistoricalToggleField
+            id="editHistoricalToggle"
+            checked={formData.status === "historical"}
+            onChange={(checked) => setFormData((prev) => applyHistoricalToggle(prev, checked))}
+          />
 
-        {/* Date & Time — year/month/day for historical (shared with the
+          {/* Date & Time — year/month/day for historical (shared with the
               create form via HistoricalDateFields, so a DATE_ONLY flight's
               known day is editable instead of being rewritten to 01),
               split date+time for others */}
-        {formData.status === "historical" ? (
-          <HistoricalDateFields
-            value={formData.departureDate}
-            onChange={(next) =>
-              setFormData((prev) => ({
-                ...prev,
-                departureDate: next,
-                arrivalDate: next,
-                departureTime: "",
-                arrivalTime: "",
-              }))
-            }
-            idPrefix="edit"
-          />
-        ) : (
-          <TimesFields
+          {formData.status === "historical" ? (
+            <HistoricalDateFields
+              value={formData.departureDate}
+              onChange={(next) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  departureDate: next,
+                  arrivalDate: next,
+                  departureTime: "",
+                  arrivalTime: "",
+                }))
+              }
+              idPrefix="edit"
+            />
+          ) : (
+            <TimesFields
+              value={{
+                depDate: formData.departureDate,
+                depTime: formData.departureTime,
+                arrDate: formData.arrivalDate,
+                arrTime: formData.arrivalTime,
+              }}
+              onChange={(next) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  departureDate: next.depDate,
+                  departureTime: next.depTime,
+                  arrivalDate: next.arrDate,
+                  arrivalTime: next.arrTime,
+                }))
+              }
+              onEstimateArrival={() => void handleEstimateArrival()}
+              canEstimateArrival={canEstimateArrival}
+              ids={{
+                depDate: "editDepartureDate",
+                depTime: "editDepartureTime",
+                arrDate: "editArrivalDate",
+                arrTime: "editArrivalTime",
+                actualDepDate: "editActualDepartureDate",
+                actualDepTime: "editActualDepartureTime",
+                actualArrDate: "editActualArrivalDate",
+                actualArrTime: "editActualArrivalTime",
+              }}
+              actualValue={{
+                actualDepDate: formData.actualDepartureDate,
+                actualDepTime: formData.actualDepartureTime,
+                actualArrDate: formData.actualArrivalDate,
+                actualArrTime: formData.actualArrivalTime,
+              }}
+              clockChange={
+                hydrated
+                  ? { depZone: depTz, arrZone: arrTz, folds, onFoldsChange: setFolds }
+                  : undefined
+              }
+              markRequired
+              errors={timeErrors}
+              onActualChange={(next) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  actualDepartureDate: next.actualDepDate,
+                  actualDepartureTime: next.actualDepTime,
+                  actualArrivalDate: next.actualArrDate,
+                  actualArrivalTime: next.actualArrTime,
+                }))
+              }
+            />
+          )}
+
+          {/* Airline / Operating / FlightNo */}
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="label" htmlFor={EDIT_IDS.airline}>
+                {t("flights:form.airline")}
+              </label>
+              <CatalogueCombobox
+                id={EDIT_IDS.airline}
+                value={formData.airline}
+                onChange={(v) => update("airline", v)}
+                search={searchAirlineOptions}
+                placeholder={t("flights:form.placeholders.airline")}
+              />
+            </div>
+
+            <div>
+              <label className="label" htmlFor={EDIT_IDS.operatingAirline}>
+                {t("flights:form.operatingAirline")}
+              </label>
+              <CatalogueCombobox
+                id={EDIT_IDS.operatingAirline}
+                value={formData.operatingAirline}
+                onChange={(v) => update("operatingAirline", v)}
+                search={searchAirlineOptions}
+                placeholder={t("flights:form.placeholders.operatingAirline")}
+              />
+            </div>
+
+            <div>
+              <label className="label" htmlFor={EDIT_IDS.flightNumber}>
+                {t("flights:form.flightNumber")}
+              </label>
+              <input
+                id={EDIT_IDS.flightNumber}
+                type="text"
+                value={formData.flightNumber}
+                onChange={(e) => update("flightNumber", e.target.value.toUpperCase())}
+                className="input"
+                placeholder={t("flights:form.placeholders.flightNumber")}
+                maxLength={10}
+              />
+              <SuggestionChips
+                value={formData.flightNumber}
+                suggestions={suggestions.flightNumbers}
+                onPick={(v) => update("flightNumber", v)}
+                fieldLabel={t("flights:form.flightNumber")}
+              />
+            </div>
+          </div>
+
+          {/* Aircraft */}
+          <div>
+            <label className="label" htmlFor={EDIT_IDS.aircraft}>
+              {t("flights:form.aircraft")}
+            </label>
+            <CatalogueCombobox
+              id={EDIT_IDS.aircraft}
+              value={formData.aircraft}
+              onChange={(v) => update("aircraft", v)}
+              search={searchAircraftOptions}
+              placeholder={t("flights:form.placeholders.aircraft")}
+            />
+          </div>
+
+          {/* Status / Category / Seat Class */}
+          <div className="grid grid-cols-3 gap-4">
+            <StatusField status={formData.status} onStatusChange={(v) => update("status", v)} />
+
+            <div>
+              <label className="label" htmlFor={EDIT_IDS.category}>
+                {t("flights:form.category")}
+              </label>
+              <select
+                id={EDIT_IDS.category}
+                value={formData.category}
+                onChange={(e) => update("category", e.target.value)}
+                className="input"
+              >
+                <option value="">{t("common:labels.optional")}</option>
+                <option value="business">{t("flights:category.business")}</option>
+                <option value="private">{t("flights:category.private")}</option>
+                <option value="vacation">{t("flights:category.vacation")}</option>
+              </select>
+            </div>
+
+            <TripSelectField
+              value={formData.tripId}
+              onChange={(v) => update("tripId", v)}
+              hint={t("flights:edit.tripHint")}
+            />
+
+            <div>
+              <label className="label" htmlFor={EDIT_IDS.seatClass}>
+                {t("flights:form.seatClass")}
+              </label>
+              <select
+                id={EDIT_IDS.seatClass}
+                value={formData.seatClass}
+                onChange={(e) => update("seatClass", e.target.value)}
+                className="input"
+              >
+                <option value="">{t("common:labels.optional")}</option>
+                <option value="economy">{t("flights:seatClass.economy")}</option>
+                <option value="premium_economy">{t("flights:seatClass.premium_economy")}</option>
+                <option value="business">{t("flights:seatClass.business")}</option>
+                <option value="first">{t("flights:seatClass.first")}</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Seat / Gate / Terminal / Boarding */}
+          <div className="grid grid-cols-4 gap-4">
+            <div>
+              <label className="label" htmlFor={EDIT_IDS.seat}>
+                {t("flights:form.seat")}
+              </label>
+              <input
+                id={EDIT_IDS.seat}
+                type="text"
+                value={formData.seatNumber}
+                onChange={(e) => update("seatNumber", e.target.value.toUpperCase())}
+                className="input"
+                placeholder={t("flights:form.placeholders.seat")}
+              />
+              <SuggestionChips
+                value={formData.seatNumber}
+                suggestions={suggestions.seats}
+                onPick={(v) => update("seatNumber", v)}
+                fieldLabel={t("flights:form.seat")}
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor={EDIT_IDS.gate}>
+                {t("flights:form.gate")}
+              </label>
+              <input
+                id={EDIT_IDS.gate}
+                type="text"
+                value={formData.gate}
+                onChange={(e) => update("gate", e.target.value)}
+                className="input"
+                placeholder={t("flights:form.placeholders.gate")}
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor={EDIT_IDS.terminal}>
+                {t("flights:form.terminal")}
+              </label>
+              <input
+                id={EDIT_IDS.terminal}
+                type="text"
+                value={formData.terminal}
+                onChange={(e) => update("terminal", e.target.value)}
+                className="input"
+                placeholder={t("flights:form.placeholders.terminal")}
+              />
+              <SuggestionChips
+                value={formData.terminal}
+                suggestions={suggestions.departureTerminals}
+                onPick={(v) => update("terminal", v)}
+                fieldLabel={t("flights:form.terminal")}
+              />
+            </div>
+            <div>
+              <label className="label" htmlFor={EDIT_IDS.boardingGroup}>
+                {t("flights:form.boardingGroup")}
+              </label>
+              <input
+                id={EDIT_IDS.boardingGroup}
+                type="text"
+                value={formData.boardingGroup}
+                onChange={(e) => update("boardingGroup", e.target.value)}
+                className="input"
+                placeholder={t("flights:form.placeholders.boardingGroup")}
+                maxLength={20}
+              />
+            </div>
+          </div>
+
+          {/* Booking (#197, #199) — shared with the create form */}
+          <BookingFields
             value={{
-              depDate: formData.departureDate,
-              depTime: formData.departureTime,
-              arrDate: formData.arrivalDate,
-              arrTime: formData.arrivalTime,
+              bookingReference: formData.bookingReference,
+              ticketNumber: formData.ticketNumber,
+              bookingClassLetter: formData.bookingClassLetter,
+              baggageAllowance: formData.baggageAllowance,
+              frequentFlyerNumber: formData.frequentFlyerNumber,
             }}
-            onChange={(next) =>
-              setFormData((prev) => ({
-                ...prev,
-                departureDate: next.depDate,
-                departureTime: next.depTime,
-                arrivalDate: next.arrDate,
-                arrivalTime: next.arrTime,
-              }))
-            }
-            onEstimateArrival={() => void handleEstimateArrival()}
-            canEstimateArrival={canEstimateArrival}
-            ids={{
-              depDate: "editDepartureDate",
-              depTime: "editDepartureTime",
-              arrDate: "editArrivalDate",
-              arrTime: "editArrivalTime",
-              actualDepDate: "editActualDepartureDate",
-              actualDepTime: "editActualDepartureTime",
-              actualArrDate: "editActualArrivalDate",
-              actualArrTime: "editActualArrivalTime",
-            }}
-            actualValue={{
-              actualDepDate: formData.actualDepartureDate,
-              actualDepTime: formData.actualDepartureTime,
-              actualArrDate: formData.actualArrivalDate,
-              actualArrTime: formData.actualArrivalTime,
-            }}
-            clockChange={
-              hydrated
-                ? { depZone: depTz, arrZone: arrTz, folds, onFoldsChange: setFolds }
-                : undefined
-            }
-            onActualChange={(next) =>
-              setFormData((prev) => ({
-                ...prev,
-                actualDepartureDate: next.actualDepDate,
-                actualDepartureTime: next.actualDepTime,
-                actualArrivalDate: next.actualArrDate,
-                actualArrivalTime: next.actualArrTime,
-              }))
-            }
-          />
-        )}
-
-        {/* Airline / Operating / FlightNo */}
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="label">{t("flights:form.airline")}</label>
-            <CatalogueCombobox
-              value={formData.airline}
-              onChange={(v) => update("airline", v)}
-              search={searchAirlineOptions}
-              placeholder={t("flights:form.placeholders.airline")}
-            />
-          </div>
-
-          <div>
-            <label className="label">{t("flights:form.operatingAirline")}</label>
-            <CatalogueCombobox
-              value={formData.operatingAirline}
-              onChange={(v) => update("operatingAirline", v)}
-              search={searchAirlineOptions}
-              placeholder={t("flights:form.placeholders.operatingAirline")}
-            />
-          </div>
-
-          <div>
-            <label className="label">{t("flights:form.flightNumber")}</label>
-            <input
-              type="text"
-              value={formData.flightNumber}
-              onChange={(e) => update("flightNumber", e.target.value.toUpperCase())}
-              className="input"
-              placeholder={t("flights:form.placeholders.flightNumber")}
-              maxLength={10}
-            />
-            <SuggestionChips
-              value={formData.flightNumber}
-              suggestions={suggestions.flightNumbers}
-              onPick={(v) => update("flightNumber", v)}
-              fieldLabel={t("flights:form.flightNumber")}
-            />
-          </div>
-        </div>
-
-        {/* Aircraft */}
-        <div>
-          <label className="label">{t("flights:form.aircraft")}</label>
-          <CatalogueCombobox
-            value={formData.aircraft}
-            onChange={(v) => update("aircraft", v)}
-            search={searchAircraftOptions}
-            placeholder={t("flights:form.placeholders.aircraft")}
-          />
-        </div>
-
-        {/* Status / Category / Seat Class */}
-        <div className="grid grid-cols-3 gap-4">
-          <StatusField status={formData.status} onStatusChange={(v) => update("status", v)} />
-
-          <div>
-            <label className="label">{t("flights:form.category")}</label>
-            <select
-              value={formData.category}
-              onChange={(e) => update("category", e.target.value)}
-              className="input"
-            >
-              <option value="">{t("common:labels.optional")}</option>
-              <option value="business">{t("flights:category.business")}</option>
-              <option value="private">{t("flights:category.private")}</option>
-              <option value="vacation">{t("flights:category.vacation")}</option>
-            </select>
-          </div>
-
-          <TripSelectField
-            value={formData.tripId}
-            onChange={(v) => update("tripId", v)}
-            hint={t("flights:edit.tripHint")}
+            onChange={(v) => setFormData((prev) => ({ ...prev, ...v }))}
+            frequentFlyerSuggestion={suggestions.frequentFlyerNumber}
           />
 
-          <div>
-            <label className="label">{t("flights:form.seatClass")}</label>
-            <select
-              value={formData.seatClass}
-              onChange={(e) => update("seatClass", e.target.value)}
-              className="input"
-            >
-              <option value="">{t("common:labels.optional")}</option>
-              <option value="economy">{t("flights:seatClass.economy")}</option>
-              <option value="premium_economy">{t("flights:seatClass.premium_economy")}</option>
-              <option value="business">{t("flights:seatClass.business")}</option>
-              <option value="first">{t("flights:seatClass.first")}</option>
-            </select>
-          </div>
-        </div>
+          {/* Companions */}
+          <CompanionsField
+            companions={formData.companions}
+            onCompanionsChange={(v) => update("companions", v)}
+            coPassengers={flight.coPassengers}
+          />
 
-        {/* Seat / Gate / Terminal / Boarding */}
-        <div className="grid grid-cols-4 gap-4">
-          <div>
-            <label className="label">{t("flights:form.seat")}</label>
-            <input
-              type="text"
-              value={formData.seatNumber}
-              onChange={(e) => update("seatNumber", e.target.value.toUpperCase())}
-              className="input"
-              placeholder={t("flights:form.placeholders.seat")}
-            />
-            <SuggestionChips
-              value={formData.seatNumber}
-              suggestions={suggestions.seats}
-              onPick={(v) => update("seatNumber", v)}
-              fieldLabel={t("flights:form.seat")}
-            />
-          </div>
-          <div>
-            <label className="label">{t("flights:form.gate")}</label>
-            <input
-              type="text"
-              value={formData.gate}
-              onChange={(e) => update("gate", e.target.value)}
-              className="input"
-              placeholder={t("flights:form.placeholders.gate")}
-            />
-          </div>
-          <div>
-            <label className="label">{t("flights:form.terminal")}</label>
-            <input
-              type="text"
-              value={formData.terminal}
-              onChange={(e) => update("terminal", e.target.value)}
-              className="input"
-              placeholder={t("flights:form.placeholders.terminal")}
-            />
-            <SuggestionChips
-              value={formData.terminal}
-              suggestions={suggestions.departureTerminals}
-              onPick={(v) => update("terminal", v)}
-              fieldLabel={t("flights:form.terminal")}
-            />
-          </div>
-          <div>
-            <label className="label">{t("flights:form.boardingGroup")}</label>
-            <input
-              type="text"
-              value={formData.boardingGroup}
-              onChange={(e) => update("boardingGroup", e.target.value)}
-              className="input"
-              placeholder={t("flights:form.placeholders.boardingGroup")}
-              maxLength={20}
-            />
-          </div>
-        </div>
-
-        {/* Booking (#197, #199) — shared with the create form */}
-        <BookingFields
-          value={{
-            bookingReference: formData.bookingReference,
-            ticketNumber: formData.ticketNumber,
-            bookingClassLetter: formData.bookingClassLetter,
-            baggageAllowance: formData.baggageAllowance,
-            frequentFlyerNumber: formData.frequentFlyerNumber,
-          }}
-          onChange={(v) => setFormData((prev) => ({ ...prev, ...v }))}
-          frequentFlyerSuggestion={suggestions.frequentFlyerNumber}
-        />
-
-        {/* Companions */}
-        <CompanionsField
-          companions={formData.companions}
-          onCompanionsChange={(v) => update("companions", v)}
-          coPassengers={flight.coPassengers}
-        />
-
-        {/* Cost (#192, #199) — shared with the create form. The modal's own
+          {/* Cost (#192, #199) — shared with the create form. The modal's own
               state now speaks the same undefined-means-unrecorded language
               CostFields does, so nothing is converted here and a 0 survives
               the round trip (SRV-UI-001). */}
-        <CostFields
-          value={{
-            price: formData.price,
-            currency: formData.currency || "EUR",
-            taxes: formData.taxes,
-            fees: formData.fees,
-            receiptUrl: formData.receiptUrl,
-          }}
-          onChange={(v) =>
-            setFormData((prev) => ({
-              ...prev,
-              price: v.price,
-              currency: v.currency,
-              taxes: v.taxes,
-              fees: v.fees,
-              receiptUrl: v.receiptUrl,
-            }))
-          }
-          showBreakdown={features.enableCostTracking}
-          receiptExtract={flightFormExtract(flightHints(flight), formData, (v) =>
-            setFormData((prev) => ({ ...prev, ...v }))
-          )}
-        />
-
-        {/* Tags */}
-        <div>
-          <label className="label">{t("flights:form.tags")}</label>
-          <TagInput
-            value={splitTagText(formData.tags)}
-            onChange={(tags) => update("tags", tags.join(", "))}
-            ariaLabel={t("flights:form.tags")}
-            placeholder={t("flights:form.placeholders.tags")}
+          <CostFields
+            idPrefix={EDIT_IDS.cost}
+            value={{
+              price: formData.price,
+              currency: formData.currency || "EUR",
+              taxes: formData.taxes,
+              fees: formData.fees,
+              receiptUrl: formData.receiptUrl,
+            }}
+            onChange={(v) =>
+              setFormData((prev) => ({
+                ...prev,
+                price: v.price,
+                currency: v.currency,
+                taxes: v.taxes,
+                fees: v.fees,
+                receiptUrl: v.receiptUrl,
+              }))
+            }
+            showBreakdown={features.enableCostTracking}
+            receiptExtract={flightFormExtract(flightHints(flight), formData, (v) =>
+              setFormData((prev) => ({ ...prev, ...v }))
+            )}
           />
-          <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
-            {t("flights:form.tagsHint")}
-          </p>
-        </div>
 
-        {/* Notes */}
-        <div>
-          <label className="label">{t("common:labels.notes")}</label>
-          <textarea
-            value={formData.notes}
-            onChange={(e) => update("notes", e.target.value)}
-            className="input"
-            rows={3}
-            placeholder={t("flights:form.placeholders.notes")}
-          />
-        </div>
+          {/* Tags */}
+          <div>
+            <label className="label">{t("flights:form.tags")}</label>
+            <TagInput
+              value={splitTagText(formData.tags)}
+              onChange={(tags) => update("tags", tags.join(", "))}
+              ariaLabel={t("flights:form.tags")}
+              placeholder={t("flights:form.placeholders.tags")}
+            />
+            <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>
+              {t("flights:form.tagsHint")}
+            </p>
+          </div>
 
-        {/* Actions */}
-        <div className="flex gap-3 pt-4">
-          <button type="submit" disabled={loading} className="btn-primary flex-1">
-            {loading ? t("common:buttons.saving") : t("flights:edit.saveChanges")}
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="btn-secondary flex-1"
-            disabled={loading}
-          >
-            {t("common:buttons.cancel")}
-          </button>
-        </div>
-      </form>
+          {/* Notes */}
+          <div>
+            <label className="label" htmlFor={EDIT_IDS.notes}>
+              {t("common:labels.notes")}
+            </label>
+            <textarea
+              id={EDIT_IDS.notes}
+              value={formData.notes}
+              onChange={(e) => update("notes", e.target.value)}
+              className="input"
+              rows={3}
+              placeholder={t("flights:form.placeholders.notes")}
+            />
+          </div>
+
+          <RequiredLegend />
+        </form>
+      </div>
     </Modal>
   );
 }

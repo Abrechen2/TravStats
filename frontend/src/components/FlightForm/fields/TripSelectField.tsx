@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { tripsApi } from "../../../lib/api/trips";
 import { logger } from "../../../lib/logger";
@@ -32,6 +32,8 @@ export default function TripSelectField({
   labelClassName = "",
   inputClassName = "",
 }: TripSelectFieldProps): JSX.Element {
+  // Every visible label names its control (forgejo#249).
+  const uid = useId();
   const { t } = useTranslation(["flights"]);
   const [trips, setTrips] = useState<Trip[]>([]);
 
@@ -60,8 +62,11 @@ export default function TripSelectField({
 
   return (
     <div>
-      <label className={`label ${labelClassName}`.trim()}>{t("flights:edit.tripLabel")}</label>
+      <label className={`label ${labelClassName}`.trim()} htmlFor={`${uid}-edit-tripLabel`}>
+        {t("flights:edit.tripLabel")}
+      </label>
       <select
+        id={`${uid}-edit-tripLabel`}
         value={value}
         onChange={(e) => pick(e.target.value)}
         className={`input ${inputClassName}`.trim()}

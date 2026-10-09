@@ -2115,6 +2115,15 @@ model Booking {
   fxBaseCurrency String?   @map("fx_base_currency")
   fxSource       String?   @map("fx_source")
 
+  /// An optional split of `price` across the booking's flight segments
+  /// (forgejo#219): `{ method, price, currency, shares: [{ flightId, amount }] }`,
+  /// the shares summing to `price` to the minor unit. DISPLAY ONLY — no cost
+  /// total reads it; totals keep counting `price` once
+  /// (`utils/stats/dedupedCost.ts`). It records the price, currency and
+  /// segments it was computed from, so a later change shows it as stale
+  /// instead of silently disagreeing with the total.
+  priceSplit Json? @map("price_split")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

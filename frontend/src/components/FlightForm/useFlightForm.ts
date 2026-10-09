@@ -24,8 +24,7 @@ export type { FlightLookupResult, DuplicateFlight, FlightSubmitOptions } from ".
 export { buildLocalString } from "./flightFormModel";
 import { isAlreadyImported } from "./flightFormModel";
 import { airportZone, buildFlightPayload as buildFlightPayloadFrom } from "./flightPayload";
-import { flightSaveFailure } from "./flightSaveFailure";
-import { saveErrorMessage } from "../../lib/saveErrorMessage";
+import { useFlightSubmit } from "./useFlightSubmit";
 import { reportBatchOutcome } from "./flightReviewBatch";
 import type { FlightLookupResult, DuplicateFlight, FlightSubmitOptions } from "./flightFormModel";
 import type { FlightFolds } from "../../lib/flightFolds";
@@ -495,119 +494,27 @@ export function useFlightForm(
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!departure || !arrival) {
-      setError(t("errors:missingAirports"));
-      return;
-    }
-    // canSubmit only greys out the button; Enter in any input still submits
-    // the form. The time rules have to hold here too, or the guard is
-    // decorative — that is how a blank required time reached the wire as noon.
-    if (!canSubmit) {
-      setError(t("errors:missingTimes"));
-      return;
-    }
-    setLoading(true);
-    setError("");
-    try {
-      storeHistoricalData();
-      setTimeEstimationWarning(null);
-      await maybeAssignTrip(await onSubmit(buildFlightPayload()));
-    } catch (err: unknown) {
-      const failure = flightSaveFailure(err, t);
-      if (failure.kind === "duplicate") {
-        setDuplicateFlight(failure.existing);
-        setLoading(false);
-        return;
-      }
-      setError(failure.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
-   * Save the current flight, then immediately prepare the form for a return
-   * leg. Passes hasMoreFlights=true so the parent keeps the modal open.
-   */
-  const handleSubmitAndReturn = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault();
-    if (!departure || !arrival) {
-      setError(t("errors:missingAirports"));
-      return;
-    }
-    // canSubmit only greys out the button; Enter in any input still submits
-    // the form. The time rules have to hold here too, or the guard is
-    // decorative — that is how a blank required time reached the wire as noon.
-    if (!canSubmit) {
-      setError(t("errors:missingTimes"));
-      return;
-    }
-    setLoading(true);
-    setError("");
-    try {
-      storeHistoricalData();
-      setTimeEstimationWarning(null);
-      await maybeAssignTrip(await onSubmit(buildFlightPayload(), { hasMoreFlights: true }));
-      prepareReturnFlightForm();
-      useToastStore.getState().addToast("info", t("flights:form.returnFlightHint"));
-    } catch (err: unknown) {
-      const failure = flightSaveFailure(err, t);
-      if (failure.kind === "duplicate") {
-        setDuplicateFlight(failure.existing);
-        return;
-      }
-      setError(failure.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForceSubmit = async (): Promise<void> => {
-    setDuplicateFlight(null);
-    if (!departure || !arrival) {
-      setError(t("errors:missingAirports"));
-      return;
-    }
-    setLoading(true);
-    setError("");
-    try {
-      storeHistoricalData();
-      setTimeEstimationWarning(null);
-      await maybeAssignTrip(await onSubmit(buildFlightPayload(), { force: true }));
-    } catch (err: unknown) {
-      setError(saveErrorMessage(err, t, "errors:saveFailed"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /**
-   * Resolve the duplicate dialog by merging new fields into the existing
-   * flight. Backend fills only nullish fields on the existing row, so the
-   * user's curated values are never overwritten — this is the safe path
-   * when the second source (boarding pass / email) carries metadata the
-   * first source didn't have (seat, gate, ticket number, …).
-   */
-  const handleMergeSubmit = async (): Promise<void> => {
-    setDuplicateFlight(null);
-    if (!departure || !arrival) {
-      setError(t("errors:missingAirports"));
-      return;
-    }
-    setLoading(true);
-    setError("");
-    try {
-      storeHistoricalData();
-      setTimeEstimationWarning(null);
-      await maybeAssignTrip(await onSubmit(buildFlightPayload(), { merge: true }));
-    } catch (err: unknown) {
-      setError(saveErrorMessage(err, t, "errors:saveFailed"));
-    } finally {
-      setLoading(false);
-    }
-  };
+  // The four submit paths — save, save-and-return, force, merge — share one
+  // runner: one request at a time, and a failure that keeps its key and field
+  // (forgejo#246, #247). See useFlightSubmit.ts.
+  const submit = useFlightSubmit({
+    t,
+    departure,
+    arrival,
+    canSubmit,
+    onSubmit,
+    buildFlightPayload,
+    storeHistoricalData,
+    maybeAssignTrip,
+    prepareReturnFlightForm,
+    afterReturnPrepared: () =>
+      useToastStore.getState().addToast("info", t("flights:form.returnFlightHint")),
+    setLoading,
+    setError,
+    setDuplicateFlight,
+    setTimeEstimationWarning,
+  });
+  const { handleSubmit, handleSubmitAndReturn, handleForceSubmit, handleMergeSubmit } = submit;
 
   const handleFlightReviewConfirm = async (flightData: FlightInput) => {
     const sourceFlight = parsedFlights[currentFlightIndex];
@@ -810,5 +717,11 @@ export function useFlightForm(
     handleForceSubmit,
     handleMergeSubmit,
     handleFlightReviewConfirm,
+    /** The last refused save, with its key and field — or null. */
+    submitFailure: submit.failure,
+    clearSubmitFailure: submit.clearFailure,
+    /** Repeats the save path that failed. */
+    retrySubmit: submit.retry,
+    savedCount: submit.savedCount,
   };
 }

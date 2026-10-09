@@ -1,4 +1,4 @@
-import type { Dispatch, JSX, SetStateAction } from "react";
+import { useId, type Dispatch, type JSX, type SetStateAction } from "react";
 
 import HelpIcon from "../../Help/HelpIcon";
 import TagInput from "../../TagInput";
@@ -67,6 +67,8 @@ export default function BookingAndNotesSection({
   frequentFlyerSuggestion,
   frequentFlyerSuggested,
 }: BookingAndNotesSectionProps): JSX.Element {
+  // Every visible label names its control (forgejo#249).
+  const uid = useId();
   const { t } = useTranslation(["flights"]);
 
   return (
@@ -118,8 +120,11 @@ export default function BookingAndNotesSection({
       />
 
       <div>
-        <label className={`label ${labelClassName}`}>{t("flights:form.notes")}</label>
+        <label className={`label ${labelClassName}`} htmlFor={`${uid}-form-notes`}>
+          {t("flights:form.notes")}
+        </label>
         <textarea
+          id={`${uid}-form-notes`}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           className={`input ${inputClassName}`}

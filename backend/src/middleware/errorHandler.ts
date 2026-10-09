@@ -163,6 +163,19 @@ export type ApiErrorCode =
    *  so "the entry is gone" is never confused with "this server has no route"
    *  (the prose "Entry not found" stays for clients that matched on it). */
   | "DOCUMENT_ENTRY_NOT_FOUND"
+  /** A flight's booking split (forgejo#219): the flight is linked to no booking. */
+  | "BOOKING_NOT_FOUND"
+  /** Booking split: the booking has no total recorded, so there is nothing to split (409). */
+  | "BOOKING_PRICE_MISSING"
+  /** Booking split: the booking has one flight — its total is that flight's (409). */
+  | "BOOKING_SPLIT_SINGLE_SEGMENT"
+  /** Booking split: cruises, journeys or stays share the booking, so its total
+   *  is not the flights' alone and a flights-only split would misstate it (409). */
+  | "BOOKING_SPLIT_MIXED"
+  /** Booking split by distance: a segment has no known route distance (422). */
+  | "BOOKING_SPLIT_DISTANCE_UNKNOWN"
+  /** Bulk flight edit (forgejo#217): the trip named is not this account's — refused before any write. */
+  | "TRIP_NOT_FOUND"
   /** Flight recording (forgejo#193): the flight already has a recording under
    *  another upload id; resend with `replace: true` to swap it. */
   | "TRACK_ALREADY_RECORDED"

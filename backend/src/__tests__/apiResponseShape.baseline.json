@@ -39,6 +39,8 @@
     "evidence.ts",
     "flightLookup.ts",
     "flights.ts",
+    "flights/booking.ts",
+    "flights/bulkEdit.ts",
     "flights/departureLocalDay.ts",
     "flights/entrySuggestions.ts",
     "flights/facets.ts",

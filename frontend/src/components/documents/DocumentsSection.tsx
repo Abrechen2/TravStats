@@ -46,8 +46,12 @@ interface Props {
    * under a category at once. Only for a `rentalBooking` entry.
    */
   rentalCategories?: boolean;
-  /** After an upload or a delete stored here — for a view beside it that
-   *  shows the same documents (the cruise day card, review M3). */
+  /**
+   * After an upload or a removal went through — so another view of the same
+   * entry's documents (the flight's day card, forgejo#220; the cruise day
+   * card, review M3) can re-read instead of going stale. Not called for the
+   * first load: that is no change.
+   */
   onChanged?: () => void;
 }
 

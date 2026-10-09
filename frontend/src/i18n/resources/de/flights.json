@@ -145,7 +145,6 @@
       "optional": "optional"
     },
     "validation": {
-      "selectAirportsAndDates": "Bitte wähle beide Flughäfen und Daten aus",
       "selectAirports": "Bitte wähle Abflug- und Ankunftsflughafen aus",
       "selectDate": "Bitte wähle ein Abflugdatum aus",
       "invalidPrice": "Preis, Steuern und Gebühren müssen positive Zahlen sein"
@@ -167,7 +166,6 @@
     },
     "alreadyImported": "Dieser Flug war schon eingelesen — es wurde nichts doppelt angelegt.",
     "flightNumberRequired": "Gib zuerst eine Flugnummer ein, zum Beispiel LH400.",
-    "requiredLegend": "* Pflichtfeld",
     "sections": {
       "core": "Route, Zeiten & Airline",
       "priceAndSeat": "Preis, Klasse & Sitzplatz",
@@ -175,7 +173,24 @@
       "booking": "Buchung, Reise & Notizen",
       "filledIn": "ausgefüllt"
     },
-    "llmUnreachable": "In der E-Mail wurde kein Flug erkannt – der KI-Parser war dabei nicht erreichbar. Bitte später erneut versuchen oder den Flug manuell eintragen."
+    "llmUnreachable": "In der E-Mail wurde kein Flug erkannt – der KI-Parser war dabei nicht erreichbar. Bitte später erneut versuchen oder den Flug manuell eintragen.",
+    "missing": {
+      "departureAirport": "Abflughafen",
+      "arrivalAirport": "Zielflughafen",
+      "departureDate": "Abflugdatum",
+      "departureTime": "Abflugzeit",
+      "arrivalDate": "Ankunftsdatum",
+      "arrivalTime": "Ankunftszeit",
+      "actualDepartureTime": "tatsächliche Abflugzeit (zum Datum)",
+      "actualArrivalTime": "tatsächliche Ankunftszeit (zum Datum)",
+      "price": "Preis ≥ 0",
+      "taxes": "Steuern ≥ 0",
+      "fees": "Gebühren ≥ 0"
+    },
+    "errors": {
+      "actualTimeMissing": "Zum tatsächlichen Datum fehlt die Uhrzeit – ergänze sie oder leere das Datum.",
+      "negativeAmount": "Ein Betrag kann nicht negativ sein."
+    }
   },
   "list": {
     "title": "Flüge",
@@ -212,7 +227,7 @@
     "actions": "Aktionen",
     "deleteConfirm": {
       "title": "Flug löschen?",
-      "message": "„{{name}}“ wird dauerhaft gelöscht. Eine zugehörige Reise bleibt erhalten.",
+      "message": "„{{name}}“ wird dauerhaft gelöscht.",
       "confirm": "Ja, löschen",
       "cancel": "Abbrechen"
     },
@@ -326,7 +341,8 @@
     "tripNone": "Keiner Reise zugeordnet",
     "tripHint": "Verlinkt diesen Flug mit einer manuell angelegten Reise. Reisen werden im Flüge-Tab erstellt.",
     "tripAssignedToast": "Reise-Zuordnung aktualisiert",
-    "tripAssignFailed": "Reise-Zuordnung fehlgeschlagen — andere Änderungen wurden gespeichert"
+    "tripAssignFailed": "Reise-Zuordnung fehlgeschlagen — andere Änderungen wurden gespeichert",
+    "savedTripAssignFailed": "Gespeichert. Die Reisezuordnung konnte aber nicht geändert werden."
   },
   "quickActions": {
     "showOnMap": "Auf Karte zeigen",
@@ -457,11 +473,6 @@
     "overflownCountries": "Überflogene Länder",
     "openTrip": "Reise öffnen",
     "backToLogbook": "Logbuch · Flüge",
-    "departurePlanned": "Abflug (plan)",
-    "departureActual": "Tatsächl. Abflug",
-    "arrivalPlanned": "Ankunft (plan)",
-    "arrivalActual": "Tatsächl. Landung",
-    "timezones": "Zeitzonen",
     "planned": "plan",
     "flightTime": "Flugzeit"
   },
@@ -475,5 +486,192 @@
     "gaps_one": "Eine Lücke ohne GPS-Empfang ist nicht eingezeichnet.",
     "gaps_other": "{{count}} Lücken ohne GPS-Empfang sind nicht eingezeichnet.",
     "loadError": "Die Aufzeichnung dieses Flugs konnte nicht geladen werden."
+  },
+  "planActual": {
+    "departure": "Abflug",
+    "arrival": "Ankunft",
+    "planned": "Plan",
+    "actual": "Ist",
+    "deviation": "Abweichung",
+    "plannedMissing": "kein Plan erfasst",
+    "unknown": "unbekannt",
+    "clockUnknown": "Uhrzeit unbekannt",
+    "onTime": "wie geplant (±0 Min.)",
+    "later": "+{{duration}} später",
+    "earlier": "−{{duration}} früher",
+    "durationM": "{{m}} Min.",
+    "durationH": "{{h}} Std.",
+    "durationHM": "{{h}} Std. {{m}} Min.",
+    "dayShiftLater_one": "einen Tag später als geplant",
+    "dayShiftLater_other": "{{count}} Tage später als geplant",
+    "dayShiftEarlier_one": "einen Tag früher als geplant",
+    "dayShiftEarlier_other": "{{count}} Tage früher als geplant",
+    "arrivalLaterDay_one": "Ankunft am nächsten Tag",
+    "arrivalLaterDay_other": "Ankunft {{count}} Tage nach dem Abflugtag",
+    "arrivalEarlierDay_one": "Ankunft am Vortag (Datumsgrenze)",
+    "arrivalEarlierDay_other": "Ankunft {{count}} Tage vor dem Abflugtag",
+    "zoneUnknown": "UTC – Zeitzone des Flughafens unbekannt",
+    "unknownReason": {
+      "noActual": "Keine tatsächliche Zeit erfasst.",
+      "noPlan": "Ohne geplante Zeit gibt es keinen Vergleich.",
+      "planNotToMinute": "Der Plan ist nur mit Datum erfasst.",
+      "actualNotToMinute": "Die tatsächliche Zeit ist nicht minutengenau erfasst."
+    },
+    "zoneNotRecorded": "Uhrzeit ohne Zeitzone erfasst"
+  },
+  "dayCard": {
+    "title": "Für den Reisetag",
+    "boardingPass": "Bordkarte",
+    "missing": "fehlt",
+    "copy": "Kopieren",
+    "copyLabel": "{{field}} kopieren",
+    "copied": "kopiert",
+    "copyFailed": "Kopieren ist hier nicht möglich – bitte die Nummer markieren und von Hand kopieren.",
+    "passesLoading": "Dokumente werden geladen …",
+    "passesFailed": "Die Dokumente dieses Flugs konnten nicht geladen werden.",
+    "passesHint": "Eine Bordkarte kannst du unten unter „Dokumente“ ablegen.",
+    "openPass": "{{name}} öffnen",
+    "passesOthers_one": "Keine Datei ist als Bordkarte abgelegt; unten unter „Dokumente“ liegt ein anderes Dokument.",
+    "passesOthers_other": "Keine Datei ist als Bordkarte abgelegt; unten unter „Dokumente“ liegen {{count}} andere Dokumente."
+  },
+  "itinerary": {
+    "title": "Reiseablauf dieser Buchung",
+    "pnr": "Buchung {{pnr}}",
+    "thisFlight": "(dieser Flug)",
+    "transfer": "Umstieg in {{airport}} · {{duration}} Umsteigezeit",
+    "conflict": "Zeitkonflikt: Der nächste Flug startet {{duration}} vor der Landung dieses Flugs.",
+    "timeUnknown": "Umstieg in {{airport}} · Umsteigezeit unbekannt – eine der Zeiten ist nur mit Datum erfasst oder fehlt.",
+    "orderUnknown": "Reihenfolge unbekannt: Ein Flug dieses Tages ist nur mit Datum erfasst, daher ist kein Umstieg bestimmbar.",
+    "separate": "Eigene Reise – kein Umstieg (Rückflug oder mehr als 24 Std. Aufenthalt).",
+    "airportChange": "Flughafenwechsel: {{from}} → {{to}}",
+    "airportChangeKm": "Flughafenwechsel: {{from}} → {{to}} · ca. {{km}} km Luftlinie",
+    "airportUnconfirmed": "Ob der Flughafen wechselt, ist unbekannt – ein Flughafencode fehlt.",
+    "noReachabilityClaim": "Gezeigt sind die erfassten Zeiten. Ob ein Anschluss erreichbar ist, kann TravStats nicht wissen.",
+    "loadFailed": "Die übrigen Flüge dieser Buchung konnten nicht geladen werden.",
+    "cancelled": "annulliert – kein Umstieg gemessen"
+  },
+  "bookingPrice": {
+    "total": "Gesamtpreis der Buchung: {{amount}}",
+    "storedOnBooking": "Dieser Preis ist an der Buchung gespeichert, nicht an den einzelnen Flügen.",
+    "countedOnce": "In jeder Summe, die Flüge dieser Buchung enthält, zählt er genau einmal und schließt Steuern und Gebühren ein; Preise, Steuern und Gebühren, die einzelne Flüge zusätzlich tragen, zählen dann nicht mit. Liegen Flüge dieser Buchung auf zwei Reisen, steht der volle Gesamtpreis heute bei jeder dieser Reisen. Ein annullierter Flug kostet nichts.",
+    "zeroIsFree": "0 bedeutet: als kostenlos erfasst. Ein leeres Feld hieße: unbekannt.",
+    "noTotal": "Für diese Buchung ist kein Gesamtpreis erfasst. In Summen zählt deshalb jeder Flug mit seinem eigenen Preis plus Steuern und Gebühren; ein Flug ohne Preis, Steuern und Gebühren zählt als unbekannt, nicht als 0. Ein annullierter Flug kostet nichts.",
+    "otherEntries_one": "Zur Buchung gehört außer Flügen noch ein weiterer Eintrag (Bahn, Kreuzfahrt oder Unterkunft); ihr Gesamtpreis gilt für alles zusammen.",
+    "otherEntries_other": "Zur Buchung gehören außer Flügen noch {{count}} weitere Einträge (Bahn, Kreuzfahrt oder Unterkunft); ihr Gesamtpreis gilt für alles zusammen.",
+    "editOnTrip": "Gesamtpreis auf der Seite der Reise bearbeiten",
+    "splitTitle": "Aufteilung auf die Flüge (optional)",
+    "splitDisplayOnly": "Nur zur Ansicht: Summen zählen weiterhin den Gesamtpreis einmal, nie die Anteile dazu. Die Anteile ergeben den Gesamtpreis auf den Cent genau.",
+    "splitEqual": "Gleichmäßig aufteilen",
+    "splitDistance": "Nach Strecke aufteilen",
+    "splitRemove": "Aufteilung entfernen",
+    "splitSum": "Summe der Anteile: {{sum}} · Gesamtpreis: {{total}} · {{method}}",
+    "removedSegment": "Flug nicht mehr in der Buchung",
+    "method": {
+      "equal": "gleichmäßig aufgeteilt",
+      "distance": "nach Strecke aufgeteilt"
+    },
+    "stale": {
+      "price": "Veraltet: Der Gesamtpreis hat sich seit der Aufteilung geändert. Bitte neu aufteilen.",
+      "currency": "Veraltet: Die Währung hat sich seit der Aufteilung geändert. Bitte neu aufteilen.",
+      "segments": "Veraltet: Die Flüge der Buchung haben sich seit der Aufteilung geändert. Bitte neu aufteilen."
+    },
+    "errors": {
+      "priceMissing": "Ohne Gesamtpreis gibt es nichts aufzuteilen.",
+      "single": "Die Buchung hat nur einen Flug – der Gesamtpreis ist sein Preis.",
+      "mixed": "Zur Buchung gehören auch Bahn, Kreuzfahrt oder Unterkunft; eine Aufteilung nur auf die Flüge wäre falsch.",
+      "distanceUnknown": "Für mindestens einen Flug ist keine Strecke bekannt. Teile gleichmäßig auf oder ergänze die Flughäfen.",
+      "noBooking": "Dieser Flug gehört zu keiner Buchung mehr.",
+      "generic": "Die Aufteilung konnte nicht gespeichert werden."
+    },
+    "editOnNamedTrip": "Gesamtpreis auf der Seite der Reise „{{name}}“ bearbeiten",
+    "noTrip": "Die Buchung hängt an keiner Reise; ihr Gesamtpreis lässt sich daher hier nicht öffnen."
+  },
+  "bulk": {
+    "start": "Mehrere bearbeiten",
+    "stop": "Auswahl beenden",
+    "selected_one": "1 Flug ausgewählt",
+    "selected_other": "{{count}} Flüge ausgewählt",
+    "selectPage": "Alle auf dieser Seite auswählen",
+    "clearSelection": "Auswahl aufheben",
+    "selectOne": "{{name}} auswählen",
+    "edit_one": "Reise, Tags, Mitreisende für 1 Flug …",
+    "edit_other": "Reise, Tags, Mitreisende für {{count}} Flüge …",
+    "title_one": "1 Flug gemeinsam bearbeiten",
+    "title_other": "{{count}} Flüge gemeinsam bearbeiten",
+    "intro_one": "Was du hier wählst, gilt für den ausgewählten Flug. Alles, was auf „nicht ändern“ steht, bleibt, wie es ist.",
+    "intro_other": "Was du hier wählst, gilt für alle {{count}} ausgewählten Flüge. Alles, was auf „nicht ändern“ steht, bleibt, wie es ist.",
+    "trip": "Reise",
+    "tags": "Tags",
+    "companions": "Mitreisende",
+    "keep": "nicht ändern",
+    "add": "ergänzen",
+    "replace": "ersetzen",
+    "tripSet": "zuordnen",
+    "tripClear": "Zuordnung entfernen",
+    "tripPick": "Reise auswählen",
+    "tripPickPlaceholder": "– bitte wählen –",
+    "confirm_one": "Für 1 Flug übernehmen",
+    "confirm_other": "Für {{count}} Flüge übernehmen",
+    "requestFailed": "Die Änderung wurde nicht angenommen.",
+    "missing": {
+      "nothing": "eine Änderung wählen",
+      "trip": "die Reise",
+      "tags": "mindestens ein Tag",
+      "companions": "mindestens eine Person",
+      "tooMany": "höchstens {{max}} Flüge auf einmal (ausgewählt: {{count}})"
+    },
+    "preview": {
+      "title": "Vor dem Übernehmen",
+      "nothing": "Noch ist nichts zum Ändern gewählt.",
+      "tripSet": "Zuordnung zu „{{name}}“.",
+      "tripGain_one": "1 Flug ohne Reise bekommt sie neu.",
+      "tripGain_other": "{{count}} Flüge ohne Reise bekommen sie neu.",
+      "tripReplace_one": "Bei 1 Flug wird eine andere Reise ersetzt.",
+      "tripReplace_other": "Bei {{count}} Flügen wird eine andere Reise ersetzt.",
+      "tripClear_one": "1 Flug verliert seine Reisezuordnung.",
+      "tripClear_other": "{{count}} Flüge verlieren ihre Reisezuordnung.",
+      "tagsAdd_one": "Ergänzt werden: {{values}} – vorhandene Tags bleiben; 1 Flug ändert sich.",
+      "tagsAdd_other": "Ergänzt werden: {{values}} – vorhandene Tags bleiben; {{count}} Flüge ändern sich.",
+      "tagsReplace_one": "Ersetzt: Die Tags werden zu {{values}}; 1 Flug ändert sich.",
+      "tagsReplace_other": "Ersetzt: Die Tags werden zu {{values}}; {{count}} Flüge ändern sich.",
+      "tagsClear_one": "Ersetzt durch nichts: 1 Flug verliert alle Tags.",
+      "tagsClear_other": "Ersetzt durch nichts: {{count}} Flüge verlieren alle Tags.",
+      "companionsAdd_one": "Ergänzt werden: {{values}} – vorhandene Mitreisende bleiben; 1 Flug ändert sich.",
+      "companionsAdd_other": "Ergänzt werden: {{values}} – vorhandene Mitreisende bleiben; {{count}} Flüge ändern sich.",
+      "companionsReplace_one": "Ersetzt: Mitreisende werden {{values}}; 1 Flug ändert sich.",
+      "companionsReplace_other": "Ersetzt: Mitreisende werden {{values}}; {{count}} Flüge ändern sich.",
+      "companionsClear_one": "Ersetzt durch niemanden: 1 Flug verliert alle Mitreisenden.",
+      "companionsClear_other": "Ersetzt durch niemanden: {{count}} Flüge verlieren alle Mitreisenden.",
+      "lost": "Dabei fallen weg: {{values}}",
+      "already_one": "1 Flug ist schon so und bleibt unverändert.",
+      "already_other": "{{count}} Flüge sind schon so und bleiben unverändert."
+    },
+    "result": {
+      "summary": "{{updated}} geändert · {{unchanged}} unverändert · {{failed}} fehlgeschlagen",
+      "failedTitle_one": "Dieser Flug wurde nicht geändert:",
+      "failedTitle_other": "Diese {{count}} Flüge wurden nicht geändert:",
+      "unchangedHint_one": "1 Flug war schon wie gewünscht.",
+      "unchangedHint_other": "{{count}} Flüge waren schon wie gewünscht.",
+      "retryFailed_one": "Den fehlgeschlagenen erneut versuchen",
+      "retryFailed_other": "Die {{count}} fehlgeschlagenen erneut versuchen",
+      "code": {
+        "FLIGHT_NOT_FOUND": "nicht mehr vorhanden",
+        "UPDATE_FAILED": "konnte nicht gespeichert werden"
+      }
+    },
+    "outcomeUnknown": "Ob etwas geändert wurde, ist unklar – die Antwort kam nicht an. Erneut versuchen ändert nichts doppelt; die Liste neu zu laden zeigt den Stand.",
+    "reloadList": "Liste neu laden"
+  },
+  "deleteSurvivors": {
+    "trip": "die Reise „{{name}}“",
+    "tripUnnamed": "die zugehörige Reise",
+    "booking": "die Buchung {{pnr}}",
+    "bookingMaybe": "die Buchung {{pnr}} und ggf. ihre anderen Flüge",
+    "bookingWithFlights_one": "die Buchung {{pnr}} mit ihrem anderen Flug",
+    "bookingWithFlights_other": "die Buchung {{pnr}} mit ihren {{count}} anderen Flügen"
+  },
+  "deleteParts": {
+    "recording_one": "Ebenfalls gelöscht: die Aufzeichnung vom Telefon mit einem Punkt.",
+    "recording_other": "Ebenfalls gelöscht: die Aufzeichnung vom Telefon mit {{count}} Punkten."
   }
 }

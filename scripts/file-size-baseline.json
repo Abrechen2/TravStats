@@ -13,7 +13,6 @@
     "frontend/src/components/Training/BoardingPassAnnotation.tsx": 963,
     "backend/src/services/flightEnrichmentService.ts": 919,
     "frontend/src/components/FlightCertificate.tsx": 883,
-    "backend/src/utils/achievementChecks.ts": 861,
-    "frontend/src/components/FlightForm/useFlightForm.ts": 814
+    "backend/src/utils/achievementChecks.ts": 861
   }
 }

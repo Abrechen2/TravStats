@@ -127,6 +127,35 @@ describe("DocumentsSection", () => {
     await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
   });
 
+  it("tells the page after an upload and after a removal, not after the first read (forgejo#220)", async () => {
+    // The flight's day card lists the same entry's boarding passes; without
+    // this it kept showing "fehlt" next to a pass the user had just added.
+    const onChanged = vi.fn();
+    documentsApiMock.listForEntry.mockResolvedValue([makeDocument()]);
+    render(<DocumentsSection entry={FLIGHT} onChanged={onChanged} />);
+    await screen.findByText("LH2462.pdf");
+    expect(onChanged).not.toHaveBeenCalled();
+
+    const file = new File(["x"], "pass.pdf", { type: "application/pdf" });
+    fireEvent.change(screen.getByTestId("documents-file-input"), { target: { files: [file] } });
+    await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(await screen.findByRole("button", { name: "documents:removeLabel" }));
+    fireEvent.click(await screen.findByRole("button", { name: "common:buttons.delete" }));
+    await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(2));
+  });
+
+  it("does not tell the page about an upload that failed", async () => {
+    const onChanged = vi.fn();
+    documentsApiMock.upload.mockRejectedValue(new Error("Network Error"));
+    render(<DocumentsSection entry={FLIGHT} onChanged={onChanged} />);
+    await screen.findByText("documents:empty");
+    const file = new File(["x"], "pass.pdf", { type: "application/pdf" });
+    fireEvent.change(screen.getByTestId("documents-file-input"), { target: { files: [file] } });
+    expect(await screen.findByText("documents:uploadFailed")).toBeInTheDocument();
+    expect(onChanged).not.toHaveBeenCalled();
+  });
+
   it("refuses a file larger than its format's limit without spending the upload", async () => {
     render(<DocumentsSection entry={FLIGHT} />);
     await screen.findByText("documents:limitHint");

@@ -14,6 +14,11 @@ import { useToastStore } from "../../../store/toastStore";
 import type { Flight, FlightInput, GeoJSONFeature } from "../../../types";
 import type { FlightMode } from "../../../types/dashboard";
 import FlightEditModal from "../../FlightEditModal";
+import ConfirmModal from "../../Training/ConfirmModal";
+import { DELETE_BUTTON_CLASS } from "../../../lib/deleteConfirm";
+import { flightDeleteMessage } from "../../../lib/flights/flightDeleteMessage";
+import { useDocumentCount } from "../../../hooks/useDocumentCount";
+import { useFlightRecordingPoints } from "../../../hooks/useFlightRecordingPoints";
 import { FlightPanel } from "../../FlightPanel";
 import MapContainer3D, { type MapMode } from "../../MapContainer3D";
 import SimplifiedFlightFormV2 from "../../SimplifiedFlightFormV2";
@@ -55,6 +60,13 @@ export function FlightsTab(): JSX.Element {
   const [loaded, setLoaded] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
+  // The panel's delete asks first (forgejo#250) — it deleted on the click.
+  const [flightToDelete, setFlightToDelete] = useState<Flight | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const deleteDocumentCount = useDocumentCount(
+    flightToDelete ? { type: "flight", id: flightToDelete.id } : null
+  );
+  const deleteRecordingPoints = useFlightRecordingPoints(flightToDelete?.id ?? null);
   const [editingSpecialFlight, setEditingSpecialFlight] = useState<Flight | null>(null);
   const [showAddFlight, setShowAddFlight] = useState(false);
   const [showSpecialModal, setShowSpecialModal] = useState(false);
@@ -174,13 +186,18 @@ export function FlightsTab(): JSX.Element {
 
   const handleDelete = useCallback(
     async (flightId: string): Promise<void> => {
+      setDeleting(true);
       try {
         await flightsApi.delete(flightId);
         addToast("success", t("flights:table.toast.deleted"));
+        setFlightToDelete(null);
         await refreshAll();
       } catch (err: unknown) {
         logger.error("FlightsTab: delete failed", err);
         addToast("error", t("dashboard:errors.deleteFlight"));
+        setFlightToDelete(null);
+      } finally {
+        setDeleting(false);
       }
     },
     [addToast, refreshAll, t]
@@ -208,13 +225,14 @@ export function FlightsTab(): JSX.Element {
     [addToast, refreshAll, t]
   );
 
+  // Stores the update only. The dialog closes itself once the trip move that
+  // follows went through, and `onAfterSave` refreshes the map — a failed
+  // refresh used to be reported as a failed save of a stored edit.
   const handleFlightSave = useCallback(
     async (id: string, updates: Partial<FlightInput>): Promise<void> => {
       await flightsApi.update(id, updates);
-      await refreshAll();
-      setEditingFlight(null);
     },
-    [refreshAll]
+    []
   );
 
   // Current dashboard mode narrowed to FlightMode; fall back to "routes" if the
@@ -282,7 +300,7 @@ export function FlightsTab(): JSX.Element {
         onClose={() => setSidebarOpen(false)}
         onEdit={handleEdit}
         onDuplicate={(f) => void handleDuplicate(f)}
-        onDelete={(id) => void handleDelete(id)}
+        onDelete={(id) => setFlightToDelete(structuredFlights.find((f) => f.id === id) ?? null)}
         onAddFlight={handleAdd}
         allFlights={structuredFlights}
       />
@@ -292,8 +310,43 @@ export function FlightsTab(): JSX.Element {
           isOpen={true}
           onClose={() => setEditingFlight(null)}
           onSave={handleFlightSave}
+          onAfterSave={() => void refreshAll()}
         />
       )}
+      <ConfirmModal
+        isOpen={flightToDelete !== null}
+        onClose={() => setFlightToDelete(null)}
+        onConfirm={() => {
+          if (flightToDelete && !deleting) void handleDelete(flightToDelete.id);
+        }}
+        isLoading={deleting}
+        title={t("flights:table.deleteConfirm.title")}
+        message={
+          flightToDelete
+            ? flightDeleteMessage(
+                t,
+                {
+                  name:
+                    [
+                      flightToDelete.flightNumber,
+                      [flightToDelete.depIata, flightToDelete.arrIata].filter(Boolean).join(" → "),
+                    ]
+                      .filter(Boolean)
+                      .join(" ") || t("common:labels.unknown"),
+                  tripName: flightToDelete.tripId ? (flightToDelete.trip?.name ?? "") : null,
+                  booking: flightToDelete.bookingId
+                    ? { pnr: flightToDelete.bookingReference ?? null, otherFlights: null }
+                    : null,
+                  recordingPoints: deleteRecordingPoints,
+                },
+                deleteDocumentCount
+              )
+            : ""
+        }
+        confirmText={t("flights:table.deleteConfirm.confirm")}
+        cancelText={t("flights:table.deleteConfirm.cancel")}
+        confirmButtonClass={DELETE_BUTTON_CLASS}
+      />
       {showAddFlight && (
         <SimplifiedFlightFormV2
           onSubmit={handleAddSubmit}

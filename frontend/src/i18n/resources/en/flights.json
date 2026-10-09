@@ -145,7 +145,6 @@
       "optional": "optional"
     },
     "validation": {
-      "selectAirportsAndDates": "Please select both airports and dates",
       "selectAirports": "Please select departure and arrival airports",
       "selectDate": "Please select departure date",
       "invalidPrice": "Price, taxes, and fees must be positive numbers"
@@ -167,7 +166,6 @@
     },
     "alreadyImported": "This flight had already been read in — nothing was created twice.",
     "flightNumberRequired": "Enter a flight number first, for example LH400.",
-    "requiredLegend": "* Required field",
     "sections": {
       "core": "Route, times & airline",
       "priceAndSeat": "Price, class & seat",
@@ -175,7 +173,24 @@
       "booking": "Booking, trip & notes",
       "filledIn": "filled in"
     },
-    "llmUnreachable": "No flight was recognised in the email – and the AI parser could not be reached. Please try again later or enter the flight manually."
+    "llmUnreachable": "No flight was recognised in the email – and the AI parser could not be reached. Please try again later or enter the flight manually.",
+    "missing": {
+      "departureAirport": "departure airport",
+      "arrivalAirport": "arrival airport",
+      "departureDate": "departure date",
+      "departureTime": "departure time",
+      "arrivalDate": "arrival date",
+      "arrivalTime": "arrival time",
+      "actualDepartureTime": "actual departure time (for its date)",
+      "actualArrivalTime": "actual arrival time (for its date)",
+      "price": "price ≥ 0",
+      "taxes": "taxes ≥ 0",
+      "fees": "fees ≥ 0"
+    },
+    "errors": {
+      "actualTimeMissing": "The actual date has no time – add it or clear the date.",
+      "negativeAmount": "An amount cannot be negative."
+    }
   },
   "list": {
     "title": "Flights",
@@ -212,7 +227,7 @@
     "actions": "Actions",
     "deleteConfirm": {
       "title": "Delete flight?",
-      "message": "“{{name}}” will be permanently deleted. A trip it belongs to is kept.",
+      "message": "“{{name}}” will be deleted permanently.",
       "confirm": "Yes, delete",
       "cancel": "Cancel"
     },
@@ -326,7 +341,8 @@
     "tripNone": "Not assigned to a trip",
     "tripHint": "Links this flight to a manually-created trip. Trips are created in the Flights tab.",
     "tripAssignedToast": "Trip assignment updated",
-    "tripAssignFailed": "Trip assignment failed — other changes were saved"
+    "tripAssignFailed": "Trip assignment failed — other changes were saved",
+    "savedTripAssignFailed": "Saved. The trip assignment could not be changed, though."
   },
   "quickActions": {
     "showOnMap": "Show on map",
@@ -457,11 +473,6 @@
     "overflownCountries": "Countries overflown",
     "openTrip": "Open trip",
     "backToLogbook": "Logbook · Flights",
-    "departurePlanned": "Departure (planned)",
-    "departureActual": "Actual departure",
-    "arrivalPlanned": "Arrival (planned)",
-    "arrivalActual": "Actual landing",
-    "timezones": "Time zones",
     "planned": "planned",
     "flightTime": "Flight time"
   },
@@ -475,5 +486,192 @@
     "gaps_one": "One stretch without GPS reception is not drawn.",
     "gaps_other": "{{count}} stretches without GPS reception are not drawn.",
     "loadError": "The recording of this flight could not be loaded."
+  },
+  "planActual": {
+    "departure": "Departure",
+    "arrival": "Arrival",
+    "planned": "Planned",
+    "actual": "Actual",
+    "deviation": "Difference",
+    "plannedMissing": "no planned time",
+    "unknown": "unknown",
+    "clockUnknown": "time unknown",
+    "onTime": "as planned (±0 min)",
+    "later": "+{{duration}} late",
+    "earlier": "−{{duration}} early",
+    "durationM": "{{m}} min",
+    "durationH": "{{h}} h",
+    "durationHM": "{{h}} h {{m}} min",
+    "dayShiftLater_one": "one day later than planned",
+    "dayShiftLater_other": "{{count}} days later than planned",
+    "dayShiftEarlier_one": "one day earlier than planned",
+    "dayShiftEarlier_other": "{{count}} days earlier than planned",
+    "arrivalLaterDay_one": "Arrives the next day",
+    "arrivalLaterDay_other": "Arrives {{count}} days after the departure day",
+    "arrivalEarlierDay_one": "Arrives the previous day (date line)",
+    "arrivalEarlierDay_other": "Arrives {{count}} days before the departure day",
+    "zoneUnknown": "UTC – the airport's time zone is unknown",
+    "unknownReason": {
+      "noActual": "No actual time recorded.",
+      "noPlan": "Without a planned time there is nothing to compare.",
+      "planNotToMinute": "The plan is recorded with its date only.",
+      "actualNotToMinute": "The actual time is not recorded to the minute."
+    },
+    "zoneNotRecorded": "time recorded without a time zone"
+  },
+  "dayCard": {
+    "title": "For the day of travel",
+    "boardingPass": "Boarding pass",
+    "missing": "missing",
+    "copy": "Copy",
+    "copyLabel": "Copy {{field}}",
+    "copied": "copied",
+    "copyFailed": "Copying is not possible here – please select the number and copy it by hand.",
+    "passesLoading": "Loading documents …",
+    "passesFailed": "This flight's documents could not be loaded.",
+    "passesHint": "You can add a boarding pass below under “Documents”.",
+    "openPass": "Open {{name}}",
+    "passesOthers_one": "No file is filed as a boarding pass; there is one other document below under “Documents”.",
+    "passesOthers_other": "No file is filed as a boarding pass; there are {{count}} other documents below under “Documents”."
+  },
+  "itinerary": {
+    "title": "This booking's journey",
+    "pnr": "Booking {{pnr}}",
+    "thisFlight": "(this flight)",
+    "transfer": "Change at {{airport}} · {{duration}} connecting time",
+    "conflict": "Time conflict: the next flight leaves {{duration}} before this flight lands.",
+    "timeUnknown": "Change at {{airport}} · connecting time unknown – one of the times is recorded with its date only, or missing.",
+    "orderUnknown": "Order unknown: a flight on this day is recorded with its date only, so no change can be worked out.",
+    "separate": "A journey of its own – no change of planes (a return, or a stay of more than 24 h).",
+    "airportChange": "Change of airport: {{from}} → {{to}}",
+    "airportChangeKm": "Change of airport: {{from}} → {{to}} · about {{km}} km in a straight line",
+    "airportUnconfirmed": "Whether the airport changes is unknown – an airport code is missing.",
+    "noReachabilityClaim": "These are the recorded times. Whether a connection can be made is something TravStats cannot know.",
+    "loadFailed": "The other flights of this booking could not be loaded.",
+    "cancelled": "cancelled – no change measured"
+  },
+  "bookingPrice": {
+    "total": "Booking total: {{amount}}",
+    "storedOnBooking": "This price is stored on the booking, not on the individual flights.",
+    "countedOnce": "In every total that includes this booking's flights it counts exactly once, taxes and fees included; prices, taxes and fees that single flights carry on top are then not counted. Where the booking's flights sit on two trips, today the full total appears on each of those trips. A cancelled flight costs nothing.",
+    "zeroIsFree": "0 means: recorded as free. An empty field would mean: unknown.",
+    "noTotal": "No total is recorded for this booking. Totals therefore count each flight with its own price plus taxes and fees; a flight without price, taxes and fees counts as unknown, not as 0. A cancelled flight costs nothing.",
+    "otherEntries_one": "Besides flights, the booking holds one more entry (train, cruise or stay); its total covers everything together.",
+    "otherEntries_other": "Besides flights, the booking holds {{count}} more entries (train, cruise or stay); its total covers everything together.",
+    "editOnTrip": "Edit the total on the trip's page",
+    "splitTitle": "Split across the flights (optional)",
+    "splitDisplayOnly": "For reading only: totals still count the booking total once, never the shares on top. The shares add up to the total to the cent.",
+    "splitEqual": "Split equally",
+    "splitDistance": "Split by distance",
+    "splitRemove": "Remove split",
+    "splitSum": "Sum of shares: {{sum}} · Booking total: {{total}} · {{method}}",
+    "removedSegment": "Flight no longer in the booking",
+    "method": {
+      "equal": "split equally",
+      "distance": "split by distance"
+    },
+    "stale": {
+      "price": "Out of date: the booking total has changed since the split. Please split again.",
+      "currency": "Out of date: the currency has changed since the split. Please split again.",
+      "segments": "Out of date: the booking's flights have changed since the split. Please split again."
+    },
+    "errors": {
+      "priceMissing": "Without a booking total there is nothing to split.",
+      "single": "The booking has only one flight – the total is its price.",
+      "mixed": "The booking also holds a train, cruise or stay; splitting it across the flights alone would be wrong.",
+      "distanceUnknown": "At least one flight has no known distance. Split equally, or complete its airports.",
+      "noBooking": "This flight no longer belongs to a booking.",
+      "generic": "The split could not be saved."
+    },
+    "editOnNamedTrip": "Edit the total on the page of the trip “{{name}}”",
+    "noTrip": "The booking belongs to no trip, so its total cannot be opened from here."
+  },
+  "bulk": {
+    "start": "Edit several",
+    "stop": "End selection",
+    "selected_one": "1 flight selected",
+    "selected_other": "{{count}} flights selected",
+    "selectPage": "Select all on this page",
+    "clearSelection": "Clear selection",
+    "selectOne": "Select {{name}}",
+    "edit_one": "Trip, tags, companions for 1 flight …",
+    "edit_other": "Trip, tags, companions for {{count}} flights …",
+    "title_one": "Edit 1 flight together",
+    "title_other": "Edit {{count}} flights together",
+    "intro_one": "What you choose here applies to the selected flight. Anything left at “don't change” stays as it is.",
+    "intro_other": "What you choose here applies to all {{count}} selected flights. Anything left at “don't change” stays as it is.",
+    "trip": "Trip",
+    "tags": "Tags",
+    "companions": "Companions",
+    "keep": "don't change",
+    "add": "add",
+    "replace": "replace",
+    "tripSet": "assign",
+    "tripClear": "remove assignment",
+    "tripPick": "Choose a trip",
+    "tripPickPlaceholder": "– please choose –",
+    "confirm_one": "Apply to 1 flight",
+    "confirm_other": "Apply to {{count}} flights",
+    "requestFailed": "The change was not accepted.",
+    "missing": {
+      "nothing": "choose a change",
+      "trip": "the trip",
+      "tags": "at least one tag",
+      "companions": "at least one person",
+      "tooMany": "at most {{max}} flights at once (selected: {{count}})"
+    },
+    "preview": {
+      "title": "Before you apply",
+      "nothing": "Nothing has been chosen to change yet.",
+      "tripSet": "Assignment to “{{name}}”.",
+      "tripGain_one": "1 flight without a trip gets it.",
+      "tripGain_other": "{{count}} flights without a trip get it.",
+      "tripReplace_one": "For 1 flight, another trip is replaced.",
+      "tripReplace_other": "For {{count}} flights, another trip is replaced.",
+      "tripClear_one": "1 flight loses its trip assignment.",
+      "tripClear_other": "{{count}} flights lose their trip assignment.",
+      "tagsAdd_one": "Added: {{values}} – existing tags stay; 1 flight changes.",
+      "tagsAdd_other": "Added: {{values}} – existing tags stay; {{count}} flights change.",
+      "tagsReplace_one": "Replaced: the tags become {{values}}; 1 flight changes.",
+      "tagsReplace_other": "Replaced: the tags become {{values}}; {{count}} flights change.",
+      "tagsClear_one": "Replaced with nothing: 1 flight loses all tags.",
+      "tagsClear_other": "Replaced with nothing: {{count}} flights lose all tags.",
+      "companionsAdd_one": "Added: {{values}} – existing companions stay; 1 flight changes.",
+      "companionsAdd_other": "Added: {{values}} – existing companions stay; {{count}} flights change.",
+      "companionsReplace_one": "Replaced: the companions become {{values}}; 1 flight changes.",
+      "companionsReplace_other": "Replaced: the companions become {{values}}; {{count}} flights change.",
+      "companionsClear_one": "Replaced with nobody: 1 flight loses all companions.",
+      "companionsClear_other": "Replaced with nobody: {{count}} flights lose all companions.",
+      "lost": "Dropped along the way: {{values}}",
+      "already_one": "1 flight is already like this and stays unchanged.",
+      "already_other": "{{count}} flights are already like this and stay unchanged."
+    },
+    "result": {
+      "summary": "{{updated}} changed · {{unchanged}} unchanged · {{failed}} failed",
+      "failedTitle_one": "This flight was not changed:",
+      "failedTitle_other": "These {{count}} flights were not changed:",
+      "unchangedHint_one": "1 flight already was as asked.",
+      "unchangedHint_other": "{{count}} flights already were as asked.",
+      "retryFailed_one": "Try the failed one again",
+      "retryFailed_other": "Try the {{count}} failed ones again",
+      "code": {
+        "FLIGHT_NOT_FOUND": "no longer exists",
+        "UPDATE_FAILED": "could not be saved"
+      }
+    },
+    "outcomeUnknown": "Whether anything changed is unknown – the answer did not arrive. Trying again changes nothing twice; reloading the list shows where things stand.",
+    "reloadList": "Reload the list"
+  },
+  "deleteSurvivors": {
+    "trip": "the trip “{{name}}”",
+    "tripUnnamed": "the trip it belongs to",
+    "booking": "the booking {{pnr}}",
+    "bookingMaybe": "the booking {{pnr}} and any other flights of it",
+    "bookingWithFlights_one": "the booking {{pnr}} with its other flight",
+    "bookingWithFlights_other": "the booking {{pnr}} with its {{count}} other flights"
+  },
+  "deleteParts": {
+    "recording_one": "Also deleted: the phone's recording, with one point.",
+    "recording_other": "Also deleted: the phone's recording, with {{count}} points."
   }
 }

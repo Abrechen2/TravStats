@@ -1,7 +1,8 @@
-import type { JSX } from "react";
+import { useId, type JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
 import CostFields, { type CostFieldsValue } from "../fields/CostFields";
+import { FLIGHT_FORM_IDS } from "../createFormState";
 import SuggestionChips from "../../common/SuggestionChips";
 import type { ExtractTarget } from "../../../lib/extractValues";
 
@@ -57,14 +58,19 @@ export default function PriceAndSeatSection({
   seatSuggestions = [],
   receiptExtract,
 }: PriceAndSeatSectionProps): JSX.Element {
+  // Every visible label names its control (forgejo#249).
+  const uid = useId();
   const { t } = useTranslation(["flights", "common"]);
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-4 gap-4">
         <div>
-          <label className={`label ${labelClassName}`}>{t("flights:form.seat")}</label>
+          <label className={`label ${labelClassName}`} htmlFor={`${uid}-form-seat`}>
+            {t("flights:form.seat")}
+          </label>
           <input
+            id={`${uid}-form-seat`}
             type="text"
             value={seatNumber}
             onChange={(e) => setSeatNumber(e.target.value.toUpperCase())}
@@ -81,8 +87,11 @@ export default function PriceAndSeatSection({
         <div>
           {/* #199 — the edit modal had this all along; the create form
               dropped a parser-provided boarding group on the way in. */}
-          <label className={`label ${labelClassName}`}>{t("flights:form.boardingGroup")}</label>
+          <label className={`label ${labelClassName}`} htmlFor={`${uid}-form-boardingGroup`}>
+            {t("flights:form.boardingGroup")}
+          </label>
           <input
+            id={`${uid}-form-boardingGroup`}
             type="text"
             value={boardingGroup}
             onChange={(e) => setBoardingGroup(e.target.value)}
@@ -92,8 +101,11 @@ export default function PriceAndSeatSection({
           />
         </div>
         <div>
-          <label className={`label ${labelClassName}`}>{t("flights:form.seatClass")}</label>
+          <label className={`label ${labelClassName}`} htmlFor={`${uid}-form-seatClass`}>
+            {t("flights:form.seatClass")}
+          </label>
           <select
+            id={`${uid}-form-seatClass`}
             value={seatClass}
             onChange={(e) => setSeatClass(e.target.value as SeatClass)}
             className={`input ${inputClassName}`}
@@ -106,8 +118,11 @@ export default function PriceAndSeatSection({
           </select>
         </div>
         <div>
-          <label className={`label ${labelClassName}`}>{t("flights:form.category")}</label>
+          <label className={`label ${labelClassName}`} htmlFor={`${uid}-form-category`}>
+            {t("flights:form.category")}
+          </label>
           <select
+            id={`${uid}-form-category`}
             value={category}
             onChange={(e) => setCategory(e.target.value as FlightCategory)}
             className={`input ${inputClassName}`}
@@ -123,6 +138,7 @@ export default function PriceAndSeatSection({
       {/* Cost (#192, #199) — shared with the edit modal; the tax/fee
           breakdown stays behind cost tracking (details in CostFields). */}
       <CostFields
+        idPrefix={FLIGHT_FORM_IDS.cost}
         value={cost}
         onChange={onCostChange}
         showBreakdown={showCostBreakdown}
