@@ -55,6 +55,9 @@ import {
 } from "../lib/flights/flightListQuery";
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
+import FlightBulkBar from "../components/flightsTable/bulk/FlightBulkBar";
+import SelectCheckbox from "../components/flightsTable/bulk/SelectCheckbox";
+import { useFlightSelection } from "../components/flightsTable/bulk/useFlightSelection";
 
 // Trips moved to their own /trips page; the trip badge is a Link to /trips/:id.
 
@@ -109,6 +112,9 @@ export default function FlightsTablePage(): JSX.Element {
   ] as const);
   const flightColumnPrefs = useColumnPrefs("flights-list", FLIGHT_ALWAYS_VISIBLE);
   const [showAddFlight, setShowAddFlight] = useState(false);
+  /** An explicit selection for the bulk edit of trip, tags and companions (forgejo#217). */
+  const selection = useFlightSelection();
+  const refreshSelection = selection.refresh;
   const [showSpecialModal, setShowSpecialModal] = useState(false);
   const addToast = useToastStore((state) => state.addToast);
 
@@ -348,6 +354,8 @@ export default function FlightsTablePage(): JSX.Element {
         if (cancelled) return;
         setFlights(data.flights);
         setTotal(data.total);
+        // A reload after a bulk edit: the chosen rows read their new values.
+        refreshSelection(data.flights);
       } catch (error) {
         if (cancelled) return;
         // Logged only, until 2.7: a network failure left an empty table that
@@ -363,7 +371,7 @@ export default function FlightsTablePage(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [filterState, sortBy, sortOrder, limit, offset, reloadToken]);
+  }, [filterState, sortBy, sortOrder, limit, offset, reloadToken, refreshSelection]);
 
   // The option lists and the summary figures. Separate from the page fetch on
   // purpose: paging and re-sorting do not change a single one of these
@@ -450,6 +458,15 @@ export default function FlightsTablePage(): JSX.Element {
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h1 className="t-screen-title">{t("dashboard:flightsTitle")}</h1>
           <div className="flex items-center gap-2">
+            {!selection.selecting && (
+              <button
+                type="button"
+                className="btn-secondary whitespace-nowrap pointer-coarse:min-h-(--ts-size-touch-min)"
+                onClick={selection.start}
+              >
+                {t("flights:bulk.start")}
+              </button>
+            )}
             <ColumnPicker
               columns={FLIGHT_COLUMN_IDS.map((id) => ({
                 id,
@@ -501,6 +518,17 @@ export default function FlightsTablePage(): JSX.Element {
             />
           </div>
         )}
+
+        <FlightBulkBar
+          selection={selection}
+          pageFlights={flights}
+          trips={trips}
+          labelOf={(id) => {
+            const f = selection.selected.get(id) ?? flights.find((x) => x.id === id);
+            return f ? flightLabel(f) : id;
+          }}
+          onApplied={reload}
+        />
 
         <FlightsFilterBar
           search={search}
@@ -585,24 +613,33 @@ export default function FlightsTablePage(): JSX.Element {
                         ),
                     }}
                     actions={
-                      <FlightRowActions
-                        flight={flight}
-                        openDuplicateMenuFor={duplicateMenuFor}
-                        onToggleDuplicateMenu={setDuplicateMenuFor}
-                        onEdit={(f) => {
-                          // Special flights → SpecialFlightModal so the user
-                          // edits eclipse coords / parabolas / etc. through the
-                          // same UI that created them, not the generic edit
-                          // modal (which hides those fields entirely).
-                          if (f.specialType) {
-                            setEditingSpecialFlight(f);
-                          } else {
-                            setEditingFlight(f);
-                          }
-                        }}
-                        onDuplicate={(f, mode) => void handleDuplicate(f, mode)}
-                        onDelete={handleDeleteClick}
-                      />
+                      <>
+                        {selection.selecting && (
+                          <SelectCheckbox
+                            checked={selection.isSelected(flight.id)}
+                            label={t("flights:bulk.selectOne", { name: flightLabel(flight) })}
+                            onToggle={() => selection.toggle(flight)}
+                          />
+                        )}
+                        <FlightRowActions
+                          flight={flight}
+                          openDuplicateMenuFor={duplicateMenuFor}
+                          onToggleDuplicateMenu={setDuplicateMenuFor}
+                          onEdit={(f) => {
+                            // Special flights → SpecialFlightModal so the user
+                            // edits eclipse coords / parabolas / etc. through the
+                            // same UI that created them, not the generic edit
+                            // modal (which hides those fields entirely).
+                            if (f.specialType) {
+                              setEditingSpecialFlight(f);
+                            } else {
+                              setEditingFlight(f);
+                            }
+                          }}
+                          onDuplicate={(f, mode) => void handleDuplicate(f, mode)}
+                          onDelete={handleDeleteClick}
+                        />
+                      </>
                     }
                   />
                 ))}

@@ -164,6 +164,8 @@ export type ApiErrorCode =
   | "BOOKING_SPLIT_MIXED"
   /** Booking split by distance: a segment has no known route distance (422). */
   | "BOOKING_SPLIT_DISTANCE_UNKNOWN"
+  /** Bulk flight edit (forgejo#217): the trip named is not this account's — refused before any write. */
+  | "TRIP_NOT_FOUND"
   /** Flight recording (forgejo#193): the flight already has a recording under
    *  another upload id; resend with `replace: true` to swap it. */
   | "TRACK_ALREADY_RECORDED"

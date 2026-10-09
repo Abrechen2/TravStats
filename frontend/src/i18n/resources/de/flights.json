@@ -565,5 +565,78 @@
       "noBooking": "Dieser Flug gehört zu keiner Buchung mehr.",
       "generic": "Die Aufteilung konnte nicht gespeichert werden."
     }
+  },
+  "bulk": {
+    "start": "Mehrere bearbeiten",
+    "stop": "Auswahl beenden",
+    "selected_one": "1 Flug ausgewählt",
+    "selected_other": "{{count}} Flüge ausgewählt",
+    "selectPage": "Alle auf dieser Seite auswählen",
+    "clearSelection": "Auswahl aufheben",
+    "selectOne": "{{name}} auswählen",
+    "edit_one": "Reise, Tags, Mitreisende für 1 Flug …",
+    "edit_other": "Reise, Tags, Mitreisende für {{count}} Flüge …",
+    "title_one": "1 Flug gemeinsam bearbeiten",
+    "title_other": "{{count}} Flüge gemeinsam bearbeiten",
+    "intro_one": "Was du hier wählst, gilt für den ausgewählten Flug. Alles, was auf „nicht ändern“ steht, bleibt, wie es ist.",
+    "intro_other": "Was du hier wählst, gilt für alle {{count}} ausgewählten Flüge. Alles, was auf „nicht ändern“ steht, bleibt, wie es ist.",
+    "trip": "Reise",
+    "tags": "Tags",
+    "companions": "Mitreisende",
+    "keep": "nicht ändern",
+    "add": "ergänzen",
+    "replace": "ersetzen",
+    "tripSet": "zuordnen",
+    "tripClear": "Zuordnung entfernen",
+    "tripPick": "Reise auswählen",
+    "tripPickPlaceholder": "– bitte wählen –",
+    "confirm_one": "Für 1 Flug übernehmen",
+    "confirm_other": "Für {{count}} Flüge übernehmen",
+    "requestFailed": "Die Änderung konnte nicht gesendet werden. Es wurde nichts geändert.",
+    "missing": {
+      "nothing": "eine Änderung wählen",
+      "trip": "die Reise",
+      "tags": "mindestens ein Tag",
+      "companions": "mindestens eine Person"
+    },
+    "preview": {
+      "title": "Vor dem Übernehmen",
+      "nothing": "Noch ist nichts zum Ändern gewählt.",
+      "tripSet": "Zuordnung zu „{{name}}“.",
+      "tripGain_one": "1 Flug ohne Reise bekommt sie neu.",
+      "tripGain_other": "{{count}} Flüge ohne Reise bekommen sie neu.",
+      "tripReplace_one": "Bei 1 Flug wird eine andere Reise ersetzt.",
+      "tripReplace_other": "Bei {{count}} Flügen wird eine andere Reise ersetzt.",
+      "tripClear_one": "1 Flug verliert seine Reisezuordnung.",
+      "tripClear_other": "{{count}} Flüge verlieren ihre Reisezuordnung.",
+      "tagsAdd_one": "Ergänzt werden: {{values}} – vorhandene Tags bleiben; 1 Flug ändert sich.",
+      "tagsAdd_other": "Ergänzt werden: {{values}} – vorhandene Tags bleiben; {{count}} Flüge ändern sich.",
+      "tagsReplace_one": "Ersetzt: Die Tags werden zu {{values}}; 1 Flug ändert sich.",
+      "tagsReplace_other": "Ersetzt: Die Tags werden zu {{values}}; {{count}} Flüge ändern sich.",
+      "tagsClear_one": "Ersetzt durch nichts: 1 Flug verliert alle Tags.",
+      "tagsClear_other": "Ersetzt durch nichts: {{count}} Flüge verlieren alle Tags.",
+      "companionsAdd_one": "Ergänzt werden: {{values}} – vorhandene Mitreisende bleiben; 1 Flug ändert sich.",
+      "companionsAdd_other": "Ergänzt werden: {{values}} – vorhandene Mitreisende bleiben; {{count}} Flüge ändern sich.",
+      "companionsReplace_one": "Ersetzt: Mitreisende werden {{values}}; 1 Flug ändert sich.",
+      "companionsReplace_other": "Ersetzt: Mitreisende werden {{values}}; {{count}} Flüge ändern sich.",
+      "companionsClear_one": "Ersetzt durch niemanden: 1 Flug verliert alle Mitreisenden.",
+      "companionsClear_other": "Ersetzt durch niemanden: {{count}} Flüge verlieren alle Mitreisenden.",
+      "lost": "Dabei fallen weg: {{values}}",
+      "already_one": "1 Flug ist schon so und bleibt unverändert.",
+      "already_other": "{{count}} Flüge sind schon so und bleiben unverändert."
+    },
+    "result": {
+      "summary": "{{updated}} geändert · {{unchanged}} unverändert · {{failed}} fehlgeschlagen",
+      "failedTitle_one": "Dieser Flug wurde nicht geändert:",
+      "failedTitle_other": "Diese {{count}} Flüge wurden nicht geändert:",
+      "unchangedHint_one": "1 Flug war schon wie gewünscht.",
+      "unchangedHint_other": "{{count}} Flüge waren schon wie gewünscht.",
+      "retryFailed_one": "Den fehlgeschlagenen erneut versuchen",
+      "retryFailed_other": "Die {{count}} fehlgeschlagenen erneut versuchen",
+      "code": {
+        "FLIGHT_NOT_FOUND": "nicht mehr vorhanden",
+        "UPDATE_FAILED": "konnte nicht gespeichert werden"
+      }
+    }
   }
 }

@@ -565,5 +565,78 @@
       "noBooking": "This flight no longer belongs to a booking.",
       "generic": "The split could not be saved."
     }
+  },
+  "bulk": {
+    "start": "Edit several",
+    "stop": "End selection",
+    "selected_one": "1 flight selected",
+    "selected_other": "{{count}} flights selected",
+    "selectPage": "Select all on this page",
+    "clearSelection": "Clear selection",
+    "selectOne": "Select {{name}}",
+    "edit_one": "Trip, tags, companions for 1 flight …",
+    "edit_other": "Trip, tags, companions for {{count}} flights …",
+    "title_one": "Edit 1 flight together",
+    "title_other": "Edit {{count}} flights together",
+    "intro_one": "What you choose here applies to the selected flight. Anything left at “don't change” stays as it is.",
+    "intro_other": "What you choose here applies to all {{count}} selected flights. Anything left at “don't change” stays as it is.",
+    "trip": "Trip",
+    "tags": "Tags",
+    "companions": "Companions",
+    "keep": "don't change",
+    "add": "add",
+    "replace": "replace",
+    "tripSet": "assign",
+    "tripClear": "remove assignment",
+    "tripPick": "Choose a trip",
+    "tripPickPlaceholder": "– please choose –",
+    "confirm_one": "Apply to 1 flight",
+    "confirm_other": "Apply to {{count}} flights",
+    "requestFailed": "The change could not be sent. Nothing was changed.",
+    "missing": {
+      "nothing": "choose a change",
+      "trip": "the trip",
+      "tags": "at least one tag",
+      "companions": "at least one person"
+    },
+    "preview": {
+      "title": "Before you apply",
+      "nothing": "Nothing has been chosen to change yet.",
+      "tripSet": "Assignment to “{{name}}”.",
+      "tripGain_one": "1 flight without a trip gets it.",
+      "tripGain_other": "{{count}} flights without a trip get it.",
+      "tripReplace_one": "For 1 flight, another trip is replaced.",
+      "tripReplace_other": "For {{count}} flights, another trip is replaced.",
+      "tripClear_one": "1 flight loses its trip assignment.",
+      "tripClear_other": "{{count}} flights lose their trip assignment.",
+      "tagsAdd_one": "Added: {{values}} – existing tags stay; 1 flight changes.",
+      "tagsAdd_other": "Added: {{values}} – existing tags stay; {{count}} flights change.",
+      "tagsReplace_one": "Replaced: the tags become {{values}}; 1 flight changes.",
+      "tagsReplace_other": "Replaced: the tags become {{values}}; {{count}} flights change.",
+      "tagsClear_one": "Replaced with nothing: 1 flight loses all tags.",
+      "tagsClear_other": "Replaced with nothing: {{count}} flights lose all tags.",
+      "companionsAdd_one": "Added: {{values}} – existing companions stay; 1 flight changes.",
+      "companionsAdd_other": "Added: {{values}} – existing companions stay; {{count}} flights change.",
+      "companionsReplace_one": "Replaced: the companions become {{values}}; 1 flight changes.",
+      "companionsReplace_other": "Replaced: the companions become {{values}}; {{count}} flights change.",
+      "companionsClear_one": "Replaced with nobody: 1 flight loses all companions.",
+      "companionsClear_other": "Replaced with nobody: {{count}} flights lose all companions.",
+      "lost": "Dropped along the way: {{values}}",
+      "already_one": "1 flight is already like this and stays unchanged.",
+      "already_other": "{{count}} flights are already like this and stay unchanged."
+    },
+    "result": {
+      "summary": "{{updated}} changed · {{unchanged}} unchanged · {{failed}} failed",
+      "failedTitle_one": "This flight was not changed:",
+      "failedTitle_other": "These {{count}} flights were not changed:",
+      "unchangedHint_one": "1 flight already was as asked.",
+      "unchangedHint_other": "{{count}} flights already were as asked.",
+      "retryFailed_one": "Try the failed one again",
+      "retryFailed_other": "Try the {{count}} failed ones again",
+      "code": {
+        "FLIGHT_NOT_FOUND": "no longer exists",
+        "UPDATE_FAILED": "could not be saved"
+      }
+    }
   }
 }
