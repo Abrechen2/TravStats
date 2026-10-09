@@ -90,6 +90,18 @@
       "domain": "flight",
       "version": "2026.10.9",
       "path": "flight/AB.json"
+    },
+    {
+      "id": "rental:sixt-confirmation",
+      "domain": "rental",
+      "version": "2026.10.9",
+      "path": "rental/sixt-confirmation.json"
+    },
+    {
+      "id": "rental:sixt-invoice",
+      "domain": "rental",
+      "version": "2026.10.9",
+      "path": "rental/sixt-invoice.json"
     }
   ]
 }

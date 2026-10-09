@@ -1,5 +1,8 @@
-import { cleanLines, parseAmount, wallClock } from "./textLines";
-import type { ParsedRentalInvoice } from "./types";
+// PARITY REFERENCE ONLY (plan 2026-10-09 P4b): the compiled-in reader this provider's
+// v2 template file replaced. Production reads the template; tests compare the two.
+
+import { cleanLines, parseAmount, wallClock } from "../../textLines";
+import type { ParsedRentalInvoice } from "../../types";
 
 /**
  * Sixt's final invoice — the `RENTAL_INV` PDF a Sixt invoice mail carries

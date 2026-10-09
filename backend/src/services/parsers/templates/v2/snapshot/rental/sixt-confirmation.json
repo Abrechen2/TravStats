@@ -1,0 +1,224 @@
+{
+  "id": "rental:sixt-confirmation",
+  "domain": "rental",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Sixt",
+    "kind": "other",
+    "keys": {
+      "senderDomains": ["sixt.com", "e.sixt.com"]
+    }
+  },
+  "markets": ["DE"],
+  "match": {
+    "markers": [],
+    "anchors": [],
+    "anyOf": [
+      {
+        "pattern": "\\bsixt\\b",
+        "flags": "i",
+        "in": "from"
+      },
+      {
+        "pattern": "\\bSIXT\\b",
+        "flags": ""
+      }
+    ],
+    "allOf": [
+      {
+        "pattern": "(ihre buchung (ist |bei .{1,80} ist )?bestätigt|IHRE BUCHUNG IST BESTÄTIGT)",
+        "flags": "i"
+      }
+    ]
+  },
+  "extraction": {
+    "preprocess": [
+      "stripZeroWidth",
+      "stripCarriageReturns",
+      "stripLinks",
+      "collapseSpaces",
+      "stripLeadingPipe",
+      "trimLines",
+      "dropBlankLines"
+    ],
+    "fields": {
+      "kind": {
+        "value": "confirmation"
+      },
+      "provider": {
+        "value": "Sixt"
+      },
+      "confirmationNumber": {
+        "patterns": ["^Buchung(?:snummer)?:[ \\t]*(\\d{10})\\b", "#\\s*(\\d{10})\\b"]
+      },
+      "pickupStation": {
+        "patterns": ["^Abholung:[ \\t]+(.+)$", "^Abholung in[ \\t]+(.+)$"],
+        "flags": "m",
+        "transform": "trim"
+      },
+      "pickupLocal": {
+        "patterns": [
+          "^Abholung:[ \\t]+[^\\n]+\\n(?:Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag),[ \\t]*(?<d>\\d{1,2})\\.[ \\t]*(?<mon>[A-Za-zÄÖÜäöü]{3,9})\\.?,?[ \\t]*(?<y>\\d{4})[ \\t]+um[ \\t]+(?<h>\\d{1,2}):(?<mi>\\d{2})",
+          "^(?:Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag),[ \\t]*(?<d>\\d{1,2})\\.[ \\t]*(?<mon>[A-Za-zÄÖÜäöü]{3,9})\\.?,?[ \\t]*(?<y>\\d{4})[ \\t]+um[ \\t]+(?<h>\\d{1,2}):(?<mi>\\d{2})[^\\n]*\\nAbholung in[ \\t]+[^\\n]+$"
+        ],
+        "flags": "m",
+        "format": "{d} {mon} {y}T{h}:{mi}",
+        "transform": "dateTime"
+      },
+      "returnStation": {
+        "patterns": ["^Rückgabe:[ \\t]+(.+)$", "^Rückgabe in[ \\t]+(.+)$"],
+        "flags": "m",
+        "transform": "trim"
+      },
+      "returnLocal": {
+        "patterns": [
+          "^Rückgabe:[ \\t]+[^\\n]+\\n(?:Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag),[ \\t]*(?<d>\\d{1,2})\\.[ \\t]*(?<mon>[A-Za-zÄÖÜäöü]{3,9})\\.?,?[ \\t]*(?<y>\\d{4})[ \\t]+um[ \\t]+(?<h>\\d{1,2}):(?<mi>\\d{2})",
+          "^(?:Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag),[ \\t]*(?<d>\\d{1,2})\\.[ \\t]*(?<mon>[A-Za-zÄÖÜäöü]{3,9})\\.?,?[ \\t]*(?<y>\\d{4})[ \\t]+um[ \\t]+(?<h>\\d{1,2}):(?<mi>\\d{2})[^\\n]*\\nRückgabe in[ \\t]+[^\\n]+$"
+        ],
+        "flags": "m",
+        "format": "{d} {mon} {y}T{h}:{mi}",
+        "transform": "dateTime"
+      },
+      "vehicleExample": {
+        "patterns": ["^(?:Fahrzeugkategorie|Fahrzeuggruppe)\\n(.+?)[ \\t]+oder ähnlich$"],
+        "transform": "trim"
+      },
+      "paymentTiming": {
+        "patterns": [
+          "^(Im Voraus bezahlter Gesamtbetrag|Mietpreis im Voraus bezahlt|Gesamtsumme bei Abholung)[ \\t]+([\\d.,]+)[ \\t]*(€|EUR)[ \\t]*$"
+        ],
+        "map": [
+          ["bei Abholung", "pay_at_counter"],
+          [".", "prepaid"]
+        ]
+      },
+      "price": {
+        "patterns": [
+          "^(Im Voraus bezahlter Gesamtbetrag|Mietpreis im Voraus bezahlt|Gesamtsumme bei Abholung)[ \\t]+([\\d.,]+)[ \\t]*(€|EUR)[ \\t]*$"
+        ],
+        "format": "{2}",
+        "transform": "amount"
+      },
+      "currency": {
+        "patterns": [
+          "^(Im Voraus bezahlter Gesamtbetrag|Mietpreis im Voraus bezahlt|Gesamtsumme bei Abholung)[ \\t]+([\\d.,]+)[ \\t]*(€|EUR)[ \\t]*$"
+        ],
+        "format": "{3}",
+        "transform": "currency"
+      },
+      "mileagePolicy": {
+        "patterns": ["^Unbegrenzte Kilometer$"],
+        "map": [[".", "unlimited"]]
+      },
+      "placeCountry": {
+        "patterns": ["(?:^|\\|)country:([A-Z]{2})\\|"],
+        "flags": "m"
+      }
+    },
+    "repeats": {
+      "inclusions": {
+        "mode": "matchAll",
+        "within": {
+          "startAfter": "^(?:Ihre Buchungsübersicht|Extras, die bereits in Ihrer Buchung enthalten sind)$",
+          "endBefore": "^(?:(?:Im Voraus bezahlter Gesamtbetrag|Mietpreis im Voraus bezahlt|Gesamtsumme bei Abholung)[ \\t]+[\\d.,]+[ \\t]*(?:€|EUR)[ \\t]*$|Informationen zur Zahlung$)"
+        },
+        "pattern": "^(?:24/7 Pannenhilfe$|Selbstbeteiligung bis(?: zu)? [\\d.]+ ?EUR (?:bei|für))",
+        "fields": {
+          "code": {
+            "group": 0,
+            "map": [
+              ["^24/7", "roadside"],
+              ["^Selbst", "cdw,tp"]
+            ]
+          }
+        },
+        "minimum": 0
+      },
+      "airportWords": {
+        "mode": "matchAll",
+        "pattern": "A[ée]roport de (?<w>[A-ZÀ-Ý][a-zà-ÿ]+)",
+        "flags": "g",
+        "fields": {
+          "word": {
+            "group": "w",
+            "transform": "trim"
+          }
+        },
+        "minimum": 0
+      }
+    },
+    "required": [
+      "confirmationNumber",
+      "pickupStation",
+      "pickupLocal",
+      "returnStation",
+      "returnLocal"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "layout A: station line, then its date; pay at the counter",
+      "input": {
+        "from": "reservierung@e.sixt.com",
+        "subject": "Ihre Buchung bei SIXT Beispielstadt Flughafen ist bestätigt: #4455667788",
+        "text": "<https://click.example.invalid/1>  \tBuchung: \t‌ 4455667788‌\nIhre Buchung ist bestätigt\n<https://click.example.invalid/2> \tAbholung: Beispielstadt Flughafen\nDienstag, 03. Mär, 2026 um 08:30\n<https://click.example.invalid/3> \tRückgabe: Beispielstadt Flughafen\nFreitag, 06. Mär, 2026 um 19:00\nFahrzeugkategorie\nMusterwagen Kombi oder ähnlich\nVollkaskoschutz bei Kollisionsschäden und Diebstahl\nIhre Buchungsübersicht\n<https://click.example.invalid/4> \t‌24/7 Pannenhilfe‌\nUnbegrenzte Kilometer\nGesamtsumme bei Abholung \t210,40 €\nIhr SIXT Team"
+      },
+      "expect": "match",
+      "expected": {
+        "confirmationNumber": "4455667788",
+        "pickupStation": "Beispielstadt Flughafen",
+        "pickupLocal": "2026-03-03T08:30",
+        "returnLocal": "2026-03-06T19:00",
+        "vehicleExample": "Musterwagen Kombi",
+        "paymentTiming": "pay_at_counter",
+        "price": 210.4,
+        "currency": "EUR",
+        "mileagePolicy": "unlimited",
+        "inclusions": [
+          {
+            "code": "roadside"
+          }
+        ]
+      }
+    },
+    {
+      "name": "layout B: date first, a one-way return, prepaid, a country tag",
+      "input": {
+        "from": "buchung@sixt.com",
+        "subject": "Ihre Buchung bei SIXT Musterhafen ist bestätigt: #5566778899",
+        "text": "Ihre Buchung ist bestätigt!\nBuchung: ‌5566778899‌\nSamstag, 10. Okt, 2026 um 11:00\nAbholung in Musterhafen Bahnhof\nMontag, 12. Okt, 2026 um 09:45\nRückgabe in Testdorf Flughafen\nFahrzeuggruppe\nProbeauto A, Probeauto B oder ähnlich\nExtras, die bereits in Ihrer Buchung enthalten sind\n‌Selbstbeteiligung bis 800 EUR bei Unfall oder Diebstahl‌\nInformationen zur Zahlung\nMietpreis im Voraus bezahlt \t388,00 €\n|country:DE|language:de|name:Erika|"
+      },
+      "expect": "match",
+      "expected": {
+        "returnStation": "Testdorf Flughafen",
+        "returnLocal": "2026-10-12T09:45",
+        "paymentTiming": "prepaid",
+        "price": 388,
+        "placeCountry": "DE",
+        "inclusions": [
+          {
+            "code": "cdw,tp"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a Sixt offer is no booking",
+      "input": {
+        "from": "news@e.sixt.com",
+        "subject": "Sommerangebote bei SIXT",
+        "text": "Jetzt buchen und sparen."
+      },
+      "expect": "decline"
+    },
+    {
+      "name": "a confirmation whose dates cannot be read is declined, not guessed",
+      "input": {
+        "from": "reservierung@e.sixt.com",
+        "subject": "Ihre Buchung bei SIXT Beispielstadt ist bestätigt: #4455667788",
+        "text": "Ihre Buchung ist bestätigt\nAbholung: Beispielstadt\nbald\nRückgabe: Beispielstadt\nspäter"
+      },
+      "expect": "decline"
+    }
+  ]
+}
