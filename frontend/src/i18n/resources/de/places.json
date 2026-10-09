@@ -189,7 +189,8 @@
     "assignAgain": "Erneut zuordnen",
     "dismissUnassigned": "Ausblenden",
     "createTitle": "Neue Liste",
-    "createFirst": "Erste Liste anlegen"
+    "createFirst": "Erste Liste anlegen",
+    "alreadyInList": "„{{name}}“ steht schon in dieser Liste."
   },
   "checklist": {
     "notFound": "Diese Checkliste gibt es nicht.",

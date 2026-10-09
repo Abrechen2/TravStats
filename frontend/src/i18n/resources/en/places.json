@@ -189,7 +189,8 @@
     "assignAgain": "Assign again",
     "dismissUnassigned": "Hide",
     "createTitle": "New list",
-    "createFirst": "Create your first list"
+    "createFirst": "Create your first list",
+    "alreadyInList": "“{{name}}” is already in this list."
   },
   "checklist": {
     "notFound": "There is no such checklist.",

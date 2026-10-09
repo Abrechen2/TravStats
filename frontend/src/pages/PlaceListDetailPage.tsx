@@ -115,13 +115,25 @@ export default function PlaceListDetailPage(): JSX.Element {
   const entries = useMemo(() => list?.entries ?? [], [list]);
   const memberIds = useMemo(() => new Set(entries.map((e) => e.placeId)), [entries]);
 
-  const candidates = useMemo(() => {
+  /**
+   * What the add search finds — over ALL the user's places, by name, the name
+   * on the sign and city (review I3). Places already in the list are said as
+   * such instead of vanishing: before, typing a member's name read as "not in
+   * your logbook" and offered to create it a second time.
+   */
+  const { candidates, members } = useMemo(() => {
     const q = addQuery.trim().toLowerCase();
-    if (q.length === 0) return [];
-    return allPlaces
-      .filter((p) => !memberIds.has(p.id))
-      .filter((p) => p.name.toLowerCase().includes(q) || (p.city ?? "").toLowerCase().includes(q))
-      .slice(0, 8);
+    if (q.length === 0) return { candidates: [], members: [] };
+    const hits = allPlaces.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.localName ?? "").toLowerCase().includes(q) ||
+        (p.city ?? "").toLowerCase().includes(q)
+    );
+    return {
+      candidates: hits.filter((p) => !memberIds.has(p.id)).slice(0, 8),
+      members: hits.filter((p) => memberIds.has(p.id)).slice(0, 8),
+    };
   }, [allPlaces, memberIds, addQuery]);
 
   /** Send one change; a refusal stays on the page with a way to send it again. */
@@ -504,6 +516,7 @@ export default function PlaceListDetailPage(): JSX.Element {
           query={addQuery}
           onQueryChange={setAddQuery}
           candidates={candidates}
+          members={members}
           onAdd={(placeId) => void handleAdd(placeId)}
           onCreate={() => setCreatingName(addQuery.trim())}
           unassigned={unassigned}
@@ -607,7 +620,9 @@ export default function PlaceListDetailPage(): JSX.Element {
               // fail from here on — the place itself is stored.
               setCreatingName(null);
               setAddQuery("");
-              setAllPlaces((rows) => [...rows, created]);
+              // A deduped create answers a place already here (same reference):
+              // replace by id, never list it twice (review M2).
+              setAllPlaces((rows) => [...rows.filter((p) => p.id !== created.id), created]);
               void assignCreated(created.id, created);
             }}
           />

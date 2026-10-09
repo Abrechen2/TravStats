@@ -10,7 +10,10 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 const getPlaceList = vi.fn();
 const addPlaceToList = vi.fn();
-const formProps = vi.hoisted(() => ({ last: null as null | Record<string, unknown> }));
+const formProps = vi.hoisted(() => ({
+  last: null as null | Record<string, unknown>,
+  saves: null as null | Record<string, unknown>,
+}));
 
 vi.mock("../../lib/api/placeLists", () => ({
   getPlaceList: (...a: unknown[]) => getPlaceList(...a),
@@ -23,6 +26,15 @@ vi.mock("../../lib/api/placeLists", () => ({
 vi.mock("../../lib/api/places", () => ({
   listPlaces: vi.fn(async () => [
     { id: "a", name: "Pantheon", category: "landmark", city: "Rom", country: null },
+    {
+      id: "c",
+      name: "Trevi Fountain",
+      localName: "Fontana di Trevi",
+      category: "landmark",
+      city: "Rom",
+      country: null,
+    },
+    { id: "m", name: "Kolosseum", category: "landmark", city: "Rom", country: null },
   ]),
 }));
 vi.mock("../../store/toastStore", () => ({
@@ -46,7 +58,7 @@ vi.mock("../../components/places/PlaceFormModal", () => ({
     const onSaved = props.onSaved as (p: unknown) => void;
     return (
       <div role="dialog" aria-label="place-form">
-        <button type="button" onClick={() => onSaved(CREATED)}>
+        <button type="button" onClick={() => onSaved(formProps.saves ?? CREATED)}>
           mock-save
         </button>
       </div>
@@ -72,13 +84,23 @@ const LIST = {
   countryCount: 0,
   createdAt: "",
   updatedAt: "",
-  entries: [],
+  entries: [
+    {
+      id: "e0",
+      placeId: "m",
+      sortIdx: 0,
+      place: { id: "m", name: "Kolosseum", category: "landmark", city: "Rom", visited: false },
+    },
+  ],
 };
 
 const withNew = {
   ...LIST,
   placeCount: 1,
-  entries: [{ id: "e1", placeId: "new", sortIdx: 0, place: { ...CREATED, visited: false } }],
+  entries: [
+    ...LIST.entries,
+    { id: "e1", placeId: "new", sortIdx: 1, place: { ...CREATED, visited: false } },
+  ],
 };
 
 async function searchForNothing(): Promise<void> {
@@ -100,6 +122,7 @@ describe("PlaceListDetailPage — a new place from the list", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     formProps.last = null;
+    formProps.saves = null;
     getPlaceList.mockResolvedValue(LIST);
   });
 
@@ -166,5 +189,41 @@ describe("PlaceListDetailPage — a new place from the list", () => {
     fireEvent.change(screen.getByLabelText("Ort hinzufügen"), { target: { value: "Panth" } });
     expect(screen.getByRole("button", { name: /Pantheon/ })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /als Ort anlegen/ })).not.toBeInTheDocument();
+  });
+
+  // Review I3: a member is said as a member, never offered as "new".
+  it("says a place is already in the list instead of offering to create it again", async () => {
+    await searchForNothing();
+    fireEvent.change(screen.getByLabelText("Ort hinzufügen"), { target: { value: "Kolosseum" } });
+    expect(screen.getByText("„Kolosseum“ steht schon in dieser Liste.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /als Ort anlegen/ })).not.toBeInTheDocument();
+    expect(screen.queryByText("Kein passender Ort in deinem Logbuch.")).not.toBeInTheDocument();
+  });
+
+  it("finds a place by the name on the sign", async () => {
+    await searchForNothing();
+    fireEvent.change(screen.getByLabelText("Ort hinzufügen"), {
+      target: { value: "Fontana di" },
+    });
+    expect(screen.getByRole("button", { name: /Trevi Fountain/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /als Ort anlegen/ })).not.toBeInTheDocument();
+  });
+
+  // Review M2: a create the server answered with an existing place lists it once.
+  it("lists a place the create answered with (deduped) only once", async () => {
+    formProps.saves = {
+      id: "a",
+      name: "Pantheon",
+      category: "landmark",
+      city: "Rom",
+      country: null,
+    };
+    addPlaceToList.mockRejectedValue(network);
+    await searchForNothing();
+    fireEvent.click(screen.getByRole("button", { name: /als Ort anlegen/ }));
+    fireEvent.click(screen.getByRole("button", { name: "mock-save" }));
+    await screen.findByRole("alert");
+    fireEvent.change(screen.getByLabelText("Ort hinzufügen"), { target: { value: "Panth" } });
+    expect(screen.getAllByRole("button", { name: /Pantheon/ })).toHaveLength(1);
   });
 });

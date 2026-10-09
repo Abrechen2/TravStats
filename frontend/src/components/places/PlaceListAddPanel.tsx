@@ -20,6 +20,8 @@ interface Props {
   onQueryChange: (q: string) => void;
   /** Own places matching the query that are not in the list yet. */
   candidates: readonly Place[];
+  /** Places the search matched that are already in this list. */
+  members: readonly Place[];
   onAdd: (placeId: string) => void;
   /** Create a new place named after the query, then file it here (forgejo#230). */
   onCreate: () => void;
@@ -44,6 +46,7 @@ export function PlaceListAddPanel({
   query,
   onQueryChange,
   candidates,
+  members,
   onAdd,
   onCreate,
   unassigned,
@@ -79,7 +82,15 @@ export function PlaceListAddPanel({
       />
       {searching && (
         <ul className="mt-2" style={{ listStyle: "none", padding: 0 }}>
-          {candidates.length === 0 ? (
+          {members.map((p) => (
+            <li key={p.id} className="flex items-center gap-2 py-2 text-sm">
+              <span aria-hidden>{PLACE_CATEGORY_ICONS[p.category]}</span>
+              <span style={{ color: "var(--text-muted)" }}>
+                {t("places:lists.alreadyInList", { name: p.name })}
+              </span>
+            </li>
+          ))}
+          {candidates.length === 0 && members.length > 0 ? null : candidates.length === 0 ? (
             <li className="flex flex-wrap items-center gap-2 py-2 text-sm">
               <span style={{ color: "var(--text-muted)" }}>{t("places:lists.addNoMatches")}</span>
               <button
