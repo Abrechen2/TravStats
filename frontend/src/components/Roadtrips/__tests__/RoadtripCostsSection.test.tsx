@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import RoadtripCostsSection, { formatAmounts } from "../RoadtripCostsSection";
 import { expensesApi } from "../../../lib/api/expenses";
@@ -9,7 +10,11 @@ import type { RoadtripStation } from "../../../types/roadtrip";
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (k: string, o?: Record<string, unknown>) =>
-      o && "from" in o ? `${k}:${String(o.from)}>${String(o.to)}` : k,
+      o && "from" in o
+        ? `${k}:${String(o.from)}>${String(o.to)}`
+        : o && "place" in o
+          ? `${k}:${String(o.name)}@${String(o.place)}`
+          : k,
     i18n: { language: "de" },
   }),
 }));
@@ -100,10 +105,10 @@ describe("RoadtripCostsSection", () => {
   it("records a new cost at a station and reloads the page's figures", async () => {
     const onChanged = renderSection();
     fireEvent.click(screen.getByText("roadtrips:costs.add"));
-    fireEvent.change(screen.getByLabelText("roadtrips:costs.dialog.kind"), {
+    fireEvent.change(screen.getByLabelText(/roadtrips:costs.dialog.kind/), {
       target: { value: "pitch" },
     });
-    fireEvent.change(screen.getByLabelText("roadtrips:costs.dialog.amount"), {
+    fireEvent.change(screen.getByLabelText(/roadtrips:costs.dialog.amount/), {
       target: { value: "35,50" },
     });
     fireEvent.change(screen.getByLabelText("roadtrips:costs.dialog.date"), {
@@ -136,15 +141,16 @@ describe("RoadtripCostsSection", () => {
     vi.mocked(expensesApi.createForRoadtrip).mockRejectedValueOnce(axiosError(400));
     const onChanged = renderSection();
     fireEvent.click(screen.getByText("roadtrips:costs.add"));
-    fireEvent.change(screen.getByLabelText("roadtrips:costs.dialog.amount"), {
+    fireEvent.change(screen.getByLabelText(/roadtrips:costs.dialog.amount/), {
       target: { value: "12" },
     });
     fireEvent.click(screen.getByText("roadtrips:costs.dialog.save"));
 
-    expect(await screen.findByRole("alert")).toHaveProperty(
-      "textContent",
+    expect(await screen.findByRole("alert")).toHaveTextContent(
       "roadtrips:costs.dialog.error.invalid"
     );
+    // A refusal of the input is not cured by pressing again: no retry offered.
+    expect(screen.queryByRole("button", { name: "common:buttons.retry" })).not.toBeInTheDocument();
     expect(onChanged).not.toHaveBeenCalled();
     expect(screen.getByText("roadtrips:costs.dialog.save")).toBeTruthy();
   });
@@ -153,24 +159,46 @@ describe("RoadtripCostsSection", () => {
     vi.mocked(expensesApi.createForRoadtrip).mockRejectedValueOnce(axiosError());
     renderSection();
     fireEvent.click(screen.getByText("roadtrips:costs.add"));
-    fireEvent.change(screen.getByLabelText("roadtrips:costs.dialog.amount"), {
+    fireEvent.change(screen.getByLabelText(/roadtrips:costs.dialog.amount/), {
       target: { value: "12" },
     });
     fireEvent.click(screen.getByText("roadtrips:costs.dialog.save"));
-    expect((await screen.findByRole("alert")).textContent).toBe(
+    expect(await screen.findByRole("alert")).toHaveTextContent(
       "roadtrips:costs.dialog.error.unreachable"
     );
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    await waitFor(() => expect(expensesApi.createForRoadtrip).toHaveBeenCalledTimes(2));
   });
 
   it("refuses to send an amount that is not a number", () => {
     renderSection();
     fireEvent.click(screen.getByText("roadtrips:costs.add"));
-    fireEvent.change(screen.getByLabelText("roadtrips:costs.dialog.amount"), {
+    fireEvent.change(screen.getByLabelText(/roadtrips:costs.dialog.amount/), {
       target: { value: "zwölf" },
     });
     const save = screen.getByText("roadtrips:costs.dialog.save").closest("button");
     expect(save?.disabled).toBe(true);
-    expect(screen.getByText("roadtrips:costs.dialog.amountInvalid")).toBeTruthy();
+    const amount = screen.getByLabelText(/roadtrips:costs.dialog.amount/);
+    expect(amount).toHaveAttribute("aria-invalid", "true");
+    expect(amount).toHaveAccessibleDescription("roadtrips:costs.dialog.amountInvalid");
+    expect(screen.getByTestId("save-blocked-hint")).toHaveTextContent(
+      "roadtrips:costs.dialog.amountMissingValid"
+    );
+  });
+
+  // forgejo#245: the amount is marked as required and the greyed-out button
+  // says that it is what is missing — no hover needed.
+  it("marks the amount as required and names it beside the disabled button", () => {
+    renderSection();
+    fireEvent.click(screen.getByText("roadtrips:costs.add"));
+    const amount = screen.getByLabelText(/roadtrips:costs.dialog.amount/);
+    expect(amount).toHaveAttribute("aria-required", "true");
+    expect(screen.getByText("common:form.requiredLegend")).toBeInTheDocument();
+    expect(screen.getByTestId("save-blocked-hint")).toHaveTextContent(
+      "roadtrips:costs.dialog.amount"
+    );
+    fireEvent.change(amount, { target: { value: "12" } });
+    expect(screen.queryByTestId("save-blocked-hint")).not.toBeInTheDocument();
   });
 
   it("keeps a toll's leg when the edit names no station", async () => {
@@ -184,23 +212,116 @@ describe("RoadtripCostsSection", () => {
     const onChanged = renderSection([toll], { ...NO_COSTS, total: { EUR: 12.5 } });
     fireEvent.click(screen.getByText("roadtrips:costs.kind.toll"));
     expect(screen.getByText("roadtrips:costs.dialog.keepLeg:Hirtshals>Lom")).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("roadtrips:costs.dialog.amount"), {
+    fireEvent.change(screen.getByLabelText(/roadtrips:costs.dialog.amount/), {
       target: { value: "14" },
     });
     fireEvent.click(screen.getByText("roadtrips:costs.dialog.save"));
 
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
     const body = vi.mocked(expensesApi.updateForRoadtrip).mock.calls[0][2];
-    expect(body).toMatchObject({ amount: 14, stopId: null });
-    expect(body).not.toHaveProperty("legFromStopId");
+    // Only what changed, with the version it was read at: the leg (and every
+    // field the phone might have changed meanwhile) is not sent back.
+    expect(body).toEqual({ amount: 14, baseVersion: "2026-07-01T00:00:00.000Z" });
   });
 
-  it("deletes from inside the edit dialog", async () => {
-    const onChanged = renderSection([expense({ id: "x" })], { ...NO_COSTS, total: { EUR: 10 } });
+  // forgejo#271: the phone edits expenses too; a full body would write the
+  // opened values over its change.
+  it("sends a station change as the station alone, and a note change as the note alone", async () => {
+    const onChanged = renderSection([expense({ id: "e", note: "Diesel" })], {
+      ...NO_COSTS,
+      total: { EUR: 10 },
+    });
+    fireEvent.click(screen.getByText(/roadtrips:costs.kind.fuel/));
+    fireEvent.change(screen.getByLabelText("roadtrips:costs.dialog.station"), {
+      target: { value: "lom" },
+    });
+    fireEvent.change(screen.getByLabelText("roadtrips:costs.dialog.note"), {
+      target: { value: "Diesel, voll" },
+    });
+    fireEvent.click(screen.getByText("roadtrips:costs.dialog.save"));
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+    expect(vi.mocked(expensesApi.updateForRoadtrip).mock.calls[0][2]).toEqual({
+      stopId: "lom",
+      legFromStopId: null,
+      legToStopId: null,
+      note: "Diesel, voll",
+      baseVersion: "2026-07-01T00:00:00.000Z",
+    });
+  });
+
+  it("says the cost changed elsewhere when the server holds a newer version", async () => {
+    vi.mocked(expensesApi.updateForRoadtrip).mockRejectedValueOnce(
+      Object.assign(new Error("conflict"), {
+        isAxiosError: true,
+        response: { status: 409, data: { code: "VERSION_CONFLICT" } },
+      })
+    );
+    const onChanged = renderSection([expense({ id: "e" })], { ...NO_COSTS, total: { EUR: 10 } });
+    fireEvent.click(screen.getByText("roadtrips:costs.kind.fuel"));
+    fireEvent.change(screen.getByLabelText(/roadtrips:costs.dialog.amount/), {
+      target: { value: "11" },
+    });
+    fireEvent.click(screen.getByText("roadtrips:costs.dialog.save"));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "roadtrips:costs.dialog.error.conflict"
+    );
+    expect(onChanged).not.toHaveBeenCalled();
+  });
+
+  it("closes an unchanged edit without sending anything", async () => {
+    renderSection([expense({ id: "e" })], { ...NO_COSTS, total: { EUR: 10 } });
+    fireEvent.click(screen.getByText("roadtrips:costs.kind.fuel"));
+    fireEvent.click(screen.getByText("roadtrips:costs.dialog.save"));
+    await waitFor(() =>
+      expect(screen.queryByText("roadtrips:costs.dialog.save")).not.toBeInTheDocument()
+    );
+    expect(expensesApi.updateForRoadtrip).not.toHaveBeenCalled();
+  });
+
+  // forgejo#250: deleting was one unconfirmed tap; now it names the cost that goes.
+  it("asks before deleting and names the cost and where it was paid, then deletes", async () => {
+    const onChanged = renderSection([expense({ id: "x", stopId: "lom", date: "2026-07-15" })], {
+      ...NO_COSTS,
+      total: { EUR: 10 },
+    });
     fireEvent.click(screen.getByText("roadtrips:costs.kind.fuel"));
     fireEvent.click(screen.getByText("roadtrips:costs.dialog.delete"));
+    expect(expensesApi.removeForRoadtrip).not.toHaveBeenCalled();
+
+    const confirm = await screen.findByTestId("confirm-modal");
+    expect(confirm).toHaveTextContent(
+      /roadtrips:costs.deleteConfirm.message:roadtrips:costs.kind.fuel · 10\s€ · 15\.07\.2026@Lom/
+    );
+    const button = screen.getByRole("button", { name: "roadtrips:costs.deleteConfirm.confirm" });
+    expect(button.className).toContain("bg-[var(--danger)]");
+    fireEvent.click(button);
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
     expect(expensesApi.removeForRoadtrip).toHaveBeenCalledWith("rt", "x");
+  });
+
+  it("keeps the cost when the delete question is answered with cancel", async () => {
+    renderSection([expense({ id: "x" })], { ...NO_COSTS, total: { EUR: 10 } });
+    fireEvent.click(screen.getByText("roadtrips:costs.kind.fuel"));
+    fireEvent.click(screen.getByText("roadtrips:costs.dialog.delete"));
+    const confirm = await screen.findByTestId("confirm-modal");
+    fireEvent.click(
+      Array.from(confirm.querySelectorAll("button")).find(
+        (b) => b.textContent === "common:buttons.cancel"
+      ) as HTMLElement
+    );
+    await waitFor(() => expect(screen.queryByTestId("confirm-modal")).not.toBeInTheDocument());
+    expect(expensesApi.removeForRoadtrip).not.toHaveBeenCalled();
+  });
+
+  // forgejo#248
+  it("asks before a typed amount is dismissed with Escape", async () => {
+    renderSection();
+    fireEvent.click(screen.getByText("roadtrips:costs.add"));
+    fireEvent.change(screen.getByLabelText(/roadtrips:costs.dialog.amount/), {
+      target: { value: "12" },
+    });
+    await userEvent.keyboard("{Escape}");
+    expect(await screen.findByText("common:discard.title")).toBeInTheDocument();
   });
 
   it("says so when nothing was recorded, instead of a zero total", () => {

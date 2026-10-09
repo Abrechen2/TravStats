@@ -9,6 +9,7 @@ import { Icon } from "../components/ui/Icon";
 import { SectionLabel } from "../components/ui/StatTile";
 import LogbookTabs from "../components/table/LogbookTabs";
 import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
+import { navigateAfterSave } from "../components/form";
 import KindReviewNotice from "../components/Roadtrips/KindReviewNotice";
 import NewRoadtripDialog from "../components/Roadtrips/NewRoadtripDialog";
 import RoadtripCard from "../components/Roadtrips/RoadtripCard";
@@ -232,8 +233,12 @@ export default function RoadtripsPage(): JSX.Element {
         open={creating}
         onClose={() => setCreating(false)}
         // Straight to the new roadtrip, first station open: an empty
-        // roadtrip has nothing to show, and its first station is next.
-        onCreated={(route) => navigate(`/roadtrips/${route.id}?station=neu`)}
+        // roadtrip has nothing to show, and its first station is next. Through
+        // `navigateAfterSave`, because the dialog's unsaved-input guard may
+        // still hold a history entry that a plain `navigate` would race.
+        onCreated={(route) =>
+          void navigateAfterSave(navigate, `/roadtrips/${route.id}?station=neu`)
+        }
       />
     </AppShell>
   );

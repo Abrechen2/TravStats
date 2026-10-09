@@ -238,11 +238,14 @@
     "railHint": "Going by train? Train journeys get a section of their own.",
     "vehicleName": "Vehicle's own name",
     "odometer": "Odometer at the start",
-    "optional": "optional",
     "trip": "Part of a trip?",
     "tripHint": "It then shows on that trip too.",
     "noTrip": "No trip",
-    "submit": "Create and add the first station"
+    "submit": "Create and add the first station",
+    "odometerHint": "In whole kilometres, e.g. 84,210.",
+    "odometerInvalid": "Please enter whole kilometres, from 0 to 10,000,000.",
+    "odometerMissing": "a valid odometer reading",
+    "tripsFailed": "Your trips could not be loaded — you can link one later."
   },
   "detail": {
     "edit": "Edit",
@@ -456,8 +459,15 @@
       "error": {
         "invalid": "The entry was refused — please check amount, currency, date and station.",
         "gone": "The roadtrip, the station or the entry no longer exists. Please reload the page.",
-        "unreachable": "The server cannot be reached right now. Nothing was saved — please try again."
-      }
+        "unreachable": "The server cannot be reached right now. Nothing was saved — please try again.",
+        "conflict": "This cost was changed elsewhere in the meantime, for example in the app. Nothing was overwritten — please reload the page and make the change again."
+      },
+      "amountMissingValid": "a valid amount"
+    },
+    "deleteConfirm": {
+      "title": "Delete this cost?",
+      "message": "“{{name}}” ({{place}}) will be deleted. This cannot be undone.\nKept: the roadtrip, its stations and every other cost.",
+      "confirm": "Delete cost"
     }
   },
   "deleteWithCosts": {

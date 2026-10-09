@@ -238,11 +238,14 @@
     "railHint": "Mit dem Zug unterwegs? Zugreisen bekommen einen eigenen Bereich.",
     "vehicleName": "Eigenname des Fahrzeugs",
     "odometer": "Kilometerstand beim Start",
-    "optional": "optional",
     "trip": "Gehört zu einer Reise?",
     "tripHint": "Dann erscheint der Roadtrip auch dort.",
     "noTrip": "Keine Reise",
-    "submit": "Anlegen und erste Station setzen"
+    "submit": "Anlegen und erste Station setzen",
+    "odometerHint": "In ganzen Kilometern, z. B. 84 210.",
+    "odometerInvalid": "Bitte ganze Kilometer eingeben, von 0 bis 10.000.000.",
+    "odometerMissing": "einen gültigen Kilometerstand",
+    "tripsFailed": "Deine Reisen konnten nicht geladen werden – die Zuordnung geht auch später."
   },
   "detail": {
     "edit": "Bearbeiten",
@@ -456,8 +459,15 @@
       "error": {
         "invalid": "Die Angaben wurden abgelehnt — bitte Betrag, Währung, Datum und Station prüfen.",
         "gone": "Der Roadtrip, die Station oder der Eintrag existiert nicht mehr. Bitte die Seite neu laden.",
-        "unreachable": "Der Server ist gerade nicht erreichbar. Nichts wurde gespeichert — bitte erneut versuchen."
-      }
+        "unreachable": "Der Server ist gerade nicht erreichbar. Nichts wurde gespeichert — bitte erneut versuchen.",
+        "conflict": "Diese Kosten wurden inzwischen an anderer Stelle geändert, etwa in der App. Nichts wurde überschrieben – bitte die Seite neu laden und die Änderung noch einmal machen."
+      },
+      "amountMissingValid": "einen gültigen Betrag"
+    },
+    "deleteConfirm": {
+      "title": "Kosten löschen?",
+      "message": "„{{name}}“ ({{place}}) wird gelöscht. Das lässt sich nicht rückgängig machen.\nErhalten bleiben: der Roadtrip, seine Stationen und alle anderen Kosten.",
+      "confirm": "Kosten löschen"
     }
   },
   "deleteWithCosts": {

@@ -15,11 +15,15 @@ export const expensesApi = {
     return data.expense;
   },
 
-  /** Partial: an omitted field is left alone, `null` clears it. */
+  /**
+   * Partial: an omitted field is left alone, `null` clears it. `baseVersion`
+   * (the expense's `updatedAt` as read) makes the server answer 409
+   * `VERSION_CONFLICT` instead of overwriting a newer record (forgejo#141).
+   */
   updateForRoadtrip: async (
     roadtripId: string,
     expenseId: string,
-    input: Partial<ExpenseInput>
+    input: Partial<ExpenseInput> & { baseVersion?: string }
   ): Promise<TripExpense> => {
     const { data } = await api.patch<{ expense: TripExpense }>(
       `/roadtrips/${roadtripId}/expenses/${expenseId}`,
