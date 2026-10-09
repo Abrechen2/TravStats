@@ -17,6 +17,11 @@ const MAX_PDFS = 6;
 const isPdf = (a: MailAttachment): boolean =>
   /\.pdf$/i.test(a.filename ?? "") || /application\/pdf/i.test(a.mediaType);
 
+/** The PDFs of a mail a reader opens, in mail order and at most `MAX_PDFS`. */
+export function pdfAttachmentsToRead(attachments: readonly MailAttachment[]): MailAttachment[] {
+  return attachments.filter(isPdf).slice(0, MAX_PDFS);
+}
+
 /**
  * Flights a mail prints only in its PDF attachment.
  *
@@ -44,7 +49,7 @@ export async function readFlightsFromPdfAttachments(
   userId?: string
 ): Promise<ParsedBooking[]> {
   const parser = new TemplateParser();
-  for (const attachment of attachments.filter(isPdf).slice(0, MAX_PDFS)) {
+  for (const attachment of pdfAttachmentsToRead(attachments)) {
     let text: string;
     try {
       text = await extractTextFromPdf(attachment.content);

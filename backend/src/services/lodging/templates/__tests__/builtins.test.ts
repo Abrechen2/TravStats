@@ -1,9 +1,12 @@
 import fs from "fs";
 import path from "path";
 import { extractEmailFromFile } from "../../../emailExtractor";
-import { LODGING_TEMPLATES } from "../builtins";
 import { applyLodgingTemplate, parseEnglishDate, templateMatches } from "../engine";
+import { readWithV2LodgingTemplates } from "../v2Lodging";
+import type { ParsedLodgingBooking } from "../../parsedLodgingBooking";
+import { LODGING_TEMPLATES } from "./legacy/builtins";
 import type { LodgingTemplate } from "../types";
+import { READERS, snapshotTemplates } from "./readers";
 
 const byId = (id: string): LodgingTemplate => {
   const found = LODGING_TEMPLATES.find((t) => t.id === id);
@@ -19,7 +22,11 @@ const byId = (id: string): LodgingTemplate => {
  * the owner's real mails where they exist, and asserts on EXTRACTED VALUES
  * only — no sample content is ever printed.
  */
-describe("the declarative lodging readers", () => {
+/**
+ * Every case runs twice: through the compiled-in reader and through the v2
+ * template file that replaced it (plan 2026-10-09 P4a) — the parity proof.
+ */
+describe.each(READERS)("the declarative lodging readers — %s", (_reader, read) => {
   describe("dates", () => {
     it.each([
       ["November 25, 2022", undefined, "2022-11-25"],
@@ -60,7 +67,7 @@ describe("the declarative lodging readers", () => {
     ].join("\n");
 
     it("reads the campground, both dates, the money and what kind of place it is", () => {
-      const r = applyLodgingTemplate(byId("lodging:koa"), mail.split("\n")[0], mail);
+      const r = read("lodging:koa", mail.split("\n")[0], mail);
       expect(r).not.toBeNull();
       expect(r?.hotelName).toBe("Canton KOA Holiday");
       expect(r?.checkIn).toBe("2022-11-25");
@@ -85,9 +92,7 @@ describe("the declarative lodging readers", () => {
         "Friday, November 25, 2022 - Saturday, November 26, 2022 (1 Night)",
         "Friday, November 25, 2022 - Saturday, November 26, 2026 (1 Night)"
       );
-      expect(
-        applyLodgingTemplate(byId("lodging:koa"), fourYears.split("\n")[0], fourYears)
-      ).toBeNull();
+      expect(read("lodging:koa", fourYears.split("\n")[0], fourYears)).toBeNull();
     });
 
     it("declines a mail that mentions KOA but carries no stay", () => {
@@ -95,7 +100,7 @@ describe("the declarative lodging readers", () => {
         "KOA Reservation Confirmation tips for your next trip",
         "Kampgrounds of America has 500 locations.",
       ].join("\n");
-      expect(applyLodgingTemplate(byId("lodging:koa"), "KOA news", newsletter)).toBeNull();
+      expect(read("lodging:koa", "KOA news", newsletter)).toBeNull();
     });
   });
 
@@ -114,7 +119,7 @@ describe("the declarative lodging readers", () => {
     ].join("\n");
 
     it("takes the year from the subject for a body that dates without one", () => {
-      const r = applyLodgingTemplate(byId("lodging:hilton"), mail.split("\n")[0], mail);
+      const r = read("lodging:hilton", mail.split("\n")[0], mail);
       expect(r?.hotelName).toBe("Hilton Garden Inn Dubai Al Mina");
       expect(r?.checkIn).toBe("2018-10-01");
       expect(r?.checkOut).toBe("2018-10-07");
@@ -133,11 +138,7 @@ describe("the declarative lodging readers", () => {
         .replace("Your 01 Oct 2018 Confirmation", "Your 30 Dec 2026 Confirmation")
         .replace("Check In:	 Oct 01 3:00 PM", "Check In:	 Dec 30 3:00 PM")
         .replace("Check Out:	 Oct 07 12:00 PM", "Check Out:	 Jan 02 12:00 PM");
-      const r = applyLodgingTemplate(
-        byId("lodging:hilton"),
-        "Your 30 Dec 2026 Confirmation #3451920609",
-        overNewYear
-      );
+      const r = read("lodging:hilton", "Your 30 Dec 2026 Confirmation #3451920609", overNewYear);
       expect(r?.checkIn).toBe("2026-12-30");
       expect(r?.checkOut).toBe("2027-01-02");
       expect(r?.nights).toBe(3);
@@ -155,11 +156,7 @@ describe("the declarative lodging readers", () => {
         .replace("Your 01 Oct 2018 Confirmation", "Your 30 Dec 2025 Confirmation")
         .replace("Check In:\t Oct 01 3:00 PM", "Check In:\t Dec 30 3:00 PM")
         .replace("Check Out:\t Oct 07 12:00 PM", "Check Out:\t Jan 02 12:00 PM");
-      const r = applyLodgingTemplate(
-        byId("lodging:hilton"),
-        "Your 30 Dec 2025 Confirmation #3451920609",
-        overNewYear
-      );
+      const r = read("lodging:hilton", "Your 30 Dec 2025 Confirmation #3451920609", overNewYear);
       expect(r?.checkIn).toBe("2025-12-30");
       expect(r?.checkOut).toBe("2026-01-02");
       expect(r?.nights).toBe(3);
@@ -167,7 +164,7 @@ describe("the declarative lodging readers", () => {
 
     it("declines rather than guess a year, when the subject carries none", () => {
       const noYear = mail.replace("Your 01 Oct 2018 Confirmation", "Your Confirmation");
-      expect(applyLodgingTemplate(byId("lodging:hilton"), "Your Confirmation", noYear)).toBeNull();
+      expect(read("lodging:hilton", "Your Confirmation", noYear)).toBeNull();
     });
   });
 
@@ -183,7 +180,7 @@ describe("the declarative lodging readers", () => {
     ].join("\n");
 
     it("reads the property out of the prose subject and the total out of the long label", () => {
-      const r = applyLodgingTemplate(byId("lodging:travelclick"), mail.split("\n")[0], mail);
+      const r = read("lodging:travelclick", mail.split("\n")[0], mail);
       expect(r?.hotelName).toBe("Armani Hotel Dubai");
       expect(r?.checkIn).toBe("2023-04-30");
       expect(r?.checkOut).toBe("2023-05-03");
@@ -218,7 +215,7 @@ describe("the declarative lodging readers", () => {
     ].join("\n");
 
     it("reads the stacked German labels, the price and the address", () => {
-      const r = applyLodgingTemplate(byId("lodging:check24"), mail.split("\n")[0], mail);
+      const r = read("lodging:check24", mail.split("\n")[0], mail);
       expect(r).not.toBeNull();
       expect(r?.hotelName).toBe("Novina Sleep Inn Herzogenaurach");
       expect(r?.checkIn).toBe("2026-03-10");
@@ -235,9 +232,7 @@ describe("the declarative lodging readers", () => {
 
     it("does not read a Booking.com confirmation, which has its own reader", () => {
       const bookingCom = mail.replace("CHECK24", "booking.com");
-      expect(
-        applyLodgingTemplate(byId("lodging:check24"), bookingCom.split("\n")[0], bookingCom)
-      ).toBeNull();
+      expect(read("lodging:check24", bookingCom.split("\n")[0], bookingCom)).toBeNull();
     });
   });
 
@@ -286,7 +281,7 @@ describe("the declarative lodging readers", () => {
     ].join("\n");
 
     it("reads the hotel, both numeric dates across New Year, the total and the room", () => {
-      const r = applyLodgingTemplate(byId("lodging:accor"), subject, mail);
+      const r = read("lodging:accor", subject, mail);
       expect(r).not.toBeNull();
       expect(r?.parserTemplate).toBe("accor");
       expect(r?.hotelName).toBe("Novotel Musterstadt Zentrum");
@@ -307,14 +302,14 @@ describe("the declarative lodging readers", () => {
       // The first cut matched only "\n" and read the room as null on both
       // real mails, while this synthetic case — written with "\n" — passed.
       const crlf = mail.replace(/\n/g, "\r\n");
-      const r = applyLodgingTemplate(byId("lodging:accor"), subject, crlf);
+      const r = read("lodging:accor", subject, crlf);
       expect(r?.roomCategory).toBe("Superior Zimmer mit 1 Doppelbett");
       expect(r?.totalPrice).toBeCloseTo(630.9, 2);
       expect(r?.city).toBe("Musterstadt");
     });
 
     it("reads the address line, and does not shout the city", () => {
-      const r = applyLodgingTemplate(byId("lodging:accor"), subject, mail);
+      const r = read("lodging:accor", subject, mail);
       expect(r?.address).toBe("Musterallee 7");
       expect(r?.postcode).toBe("1234");
       expect(r?.city).toBe("Musterstadt");
@@ -323,12 +318,12 @@ describe("the declarative lodging readers", () => {
 
     it("declines an Accor mail that carries no stay dates", () => {
       const newsletter = "Ihre Vorteile bei ALL Accor\nReservierung Nr. QRTEST42\nh0000@accor.com";
-      expect(applyLodgingTemplate(byId("lodging:accor"), "Ihre Vorteile", newsletter)).toBeNull();
+      expect(read("lodging:accor", "Ihre Vorteile", newsletter)).toBeNull();
     });
 
     it("refuses a date the calendar does not have", () => {
       const broken = mail.replace(/vom 28\.12\.2026/g, "vom 31.04.2026");
-      expect(applyLodgingTemplate(byId("lodging:accor"), subject, broken)).toBeNull();
+      expect(read("lodging:accor", subject, broken)).toBeNull();
     });
   });
 
@@ -353,8 +348,8 @@ describe("the declarative lodging readers", () => {
       ].join("\n");
 
     it("crosses a blank line to find its value", () => {
-      const r = applyLodgingTemplate(
-        byId("lodging:check24"),
+      const r = read(
+        "lodging:check24",
         'Buchungsbestätigung "Musterhotel" (123456789012)',
         withLabels("")
       );
@@ -364,8 +359,8 @@ describe("the declarative lodging readers", () => {
     });
 
     it("reads the value that is really there", () => {
-      const r = applyLodgingTemplate(
-        byId("lodging:check24"),
+      const r = read(
+        "lodging:check24",
         'Buchungsbestätigung "Musterhotel" (123456789012)',
         withLabels("Di. 10. März 2026 (Check-in: 15:00 - 22:00 Uhr)")
       );
@@ -383,9 +378,7 @@ describe("the declarative lodging readers", () => {
         "Canton KOA Holiday Reservation Confirmation #12874330",
         "Kampgrounds of America",
       ].join("\n");
-      expect(
-        applyLodgingTemplate(byId("lodging:koa"), datesGone.split("\n")[0], datesGone)
-      ).toBeNull();
+      expect(read("lodging:koa", datesGone.split("\n")[0], datesGone)).toBeNull();
     });
 
     it("leaves a price without its currency out entirely", () => {
@@ -395,7 +388,7 @@ describe("the declarative lodging readers", () => {
         "Friday, November 25, 2022 - Saturday, November 26, 2022 (1 Night)",
         "Estimated Total For Your Stay* \t47.87",
       ].join("\n");
-      const r = applyLodgingTemplate(byId("lodging:koa"), noCurrency.split("\n")[0], noCurrency);
+      const r = read("lodging:koa", noCurrency.split("\n")[0], noCurrency);
       expect(r).not.toBeNull();
       expect(r?.totalPrice).toBeNull();
       expect(r?.currency).toBeNull();
@@ -423,43 +416,61 @@ describe("the declarative lodging readers", () => {
 const SAMPLE_DIR = path.resolve(__dirname, "../../../../../..", "test-samples", "Hotel Buchungen");
 const describeSamples = fs.existsSync(SAMPLE_DIR) ? describe : describe.skip;
 
-describeSamples("the declarative readers against the real corpus", () => {
-  function parseSample(fragment: string): ReturnType<typeof applyLodgingTemplate> {
-    const file = fs.readdirSync(SAMPLE_DIR).find((f) => f.includes(fragment) && f.endsWith(".msg"));
-    if (!file) throw new Error(`No sample matching "${fragment}"`);
-    const mail = extractEmailFromFile(fs.readFileSync(path.join(SAMPLE_DIR, file)), file);
-    const subject = mail.subject ?? "";
-    for (const template of LODGING_TEMPLATES) {
-      const hit = applyLodgingTemplate(template, subject, `${subject}\n${mail.text ?? ""}`);
-      if (hit) return hit;
+const CHAINS: Array<[string, (subject: string, body: string) => ParsedLodgingBooking | null]> = [
+  [
+    "legacy readers",
+    (subject, body) => {
+      for (const template of LODGING_TEMPLATES) {
+        const hit = applyLodgingTemplate(template, subject, body);
+        if (hit) return hit;
+      }
+      return null;
+    },
+  ],
+  [
+    "v2 templates",
+    (subject, body) => readWithV2LodgingTemplates(snapshotTemplates(), subject, body),
+  ],
+];
+
+describeSamples.each(CHAINS)(
+  "the declarative readers against the real corpus — %s",
+  (_n, chain) => {
+    function parseSample(fragment: string): ParsedLodgingBooking | null {
+      const file = fs
+        .readdirSync(SAMPLE_DIR)
+        .find((f) => f.includes(fragment) && f.endsWith(".msg"));
+      if (!file) throw new Error(`No sample matching "${fragment}"`);
+      const mail = extractEmailFromFile(fs.readFileSync(path.join(SAMPLE_DIR, file)), file);
+      const subject = mail.subject ?? "";
+      return chain(subject, `${subject}\n${mail.text ?? ""}`);
     }
-    return null;
+
+    it("reads the Canton KOA reservation", () => {
+      const r = parseSample("Canton KOA");
+      expect(r?.parserTemplate).toBe("koa");
+      expect(r?.checkIn).toBe("2022-11-25");
+      expect(r?.checkOut).toBe("2022-11-26");
+      expect(r?.totalPrice).toBeCloseTo(47.87, 2);
+      expect(r?.currency).toBe("USD");
+      expect(r?.type).toBe("campsite");
+    });
+
+    it("reads the Hilton Garden Inn confirmation, year and all", () => {
+      const r = parseSample("res.hilton.com");
+      expect(r?.parserTemplate).toBe("hilton");
+      expect(r?.checkIn).toBe("2018-10-01");
+      expect(r?.checkOut).toBe("2018-10-07");
+      expect(r?.nights).toBe(6);
+      expect(r?.currency).toBe("AED");
+    });
+
+    it("reads the travelclick property", () => {
+      const r = parseSample("2022-09-25_armanihotels");
+      expect(r?.parserTemplate).toBe("travelclick");
+      expect(r?.checkIn).toBe("2023-04-30");
+      expect(r?.checkOut).toBe("2023-05-03");
+      expect(r?.totalPrice).toBeCloseTo(11662, 2);
+    });
   }
-
-  it("reads the Canton KOA reservation", () => {
-    const r = parseSample("Canton KOA");
-    expect(r?.parserTemplate).toBe("koa");
-    expect(r?.checkIn).toBe("2022-11-25");
-    expect(r?.checkOut).toBe("2022-11-26");
-    expect(r?.totalPrice).toBeCloseTo(47.87, 2);
-    expect(r?.currency).toBe("USD");
-    expect(r?.type).toBe("campsite");
-  });
-
-  it("reads the Hilton Garden Inn confirmation, year and all", () => {
-    const r = parseSample("res.hilton.com");
-    expect(r?.parserTemplate).toBe("hilton");
-    expect(r?.checkIn).toBe("2018-10-01");
-    expect(r?.checkOut).toBe("2018-10-07");
-    expect(r?.nights).toBe(6);
-    expect(r?.currency).toBe("AED");
-  });
-
-  it("reads the travelclick property", () => {
-    const r = parseSample("2022-09-25_armanihotels");
-    expect(r?.parserTemplate).toBe("travelclick");
-    expect(r?.checkIn).toBe("2023-04-30");
-    expect(r?.checkOut).toBe("2023-05-03");
-    expect(r?.totalPrice).toBeCloseTo(11662, 2);
-  });
-});
+);

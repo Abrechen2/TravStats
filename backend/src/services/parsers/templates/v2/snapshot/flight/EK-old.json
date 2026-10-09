@@ -1,0 +1,124 @@
+{
+  "id": "flight:EK-old",
+  "domain": "flight",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Emirates (2014/2015 layout)",
+    "kind": "airline",
+    "keys": {
+      "iata": "EK",
+      "senderDomains": ["emirates.com"]
+    }
+  },
+  "markets": [],
+  "match": {
+    "markers": ["emirates"],
+    "anchors": ["booking reference", "abflug / ankunft"]
+  },
+  "extraction": {
+    "repeats": {
+      "legs": {
+        "mode": "split",
+        "splitPattern": "^EK\\s?\\d{3,4}\\s*$",
+        "prependHeader": true,
+        "wholeTextUnlessSplit": true,
+        "required": ["flightNumber"],
+        "fields": {
+          "flightNumber": {
+            "patterns": ["^(EK\\s?\\d{3,4})\\s*$"],
+            "flags": "im",
+            "transform": ["trim", "removeSpaces"]
+          },
+          "pnr": {
+            "patterns": ["BOOKING REFERENCE\\s*\\n\\s*([A-Z0-9]{6})\\b"],
+            "flags": "im",
+            "transform": ["trim", "upper"]
+          },
+          "departureCode": {
+            "patterns": [
+              "^EK\\s?\\d{3,4}\\s*\\n\\s*\\S+\\s+\\d{1,2}-[A-Za-zä]{3}-\\d{2}\\s+\\d{1,2}:\\d{2}[^(]*?\\(([A-Z]{3})\\)"
+            ],
+            "flags": "im",
+            "transform": "trim"
+          },
+          "arrivalCode": {
+            "patterns": [
+              "^EK\\s?\\d{3,4}\\s*\\n\\s*\\S+\\s+\\d{1,2}-[A-Za-zä]{3}-\\d{2}\\s+\\d{1,2}:\\d{2}[\\s\\S]*?\\s\\S+\\s+\\d{1,2}-[A-Za-zä]{3}-\\d{2}\\s+\\d{1,2}:\\d{2}[^(]*?\\(([A-Z]{3})\\)"
+            ],
+            "flags": "im",
+            "transform": "trim"
+          },
+          "departureTime": {
+            "patterns": [
+              "^EK\\s?\\d{3,4}\\s*\\n\\s*\\S+\\s+(\\d{1,2}-[A-Za-zä]{3}-\\d{2})\\s+(\\d{1,2}:\\d{2})"
+            ],
+            "flags": "im",
+            "format": "{1}T{2}",
+            "transform": "dateTime"
+          },
+          "arrivalTime": {
+            "patterns": [
+              "^EK\\s?\\d{3,4}\\s*\\n\\s*\\S+\\s+\\d{1,2}-[A-Za-zä]{3}-\\d{2}\\s+\\d{1,2}:\\d{2}[\\s\\S]*?\\s\\S+\\s+(\\d{1,2}-[A-Za-zä]{3}-\\d{2})\\s+(\\d{1,2}:\\d{2})"
+            ],
+            "flags": "im",
+            "format": "{1}T{2}",
+            "transform": "dateTime"
+          }
+        }
+      }
+    },
+    "required": ["legs"]
+  },
+  "testCases": [
+    {
+      "name": "the 2014/2015 layout",
+      "input": {
+        "subject": "Buchungsbestätigung - QX7TSU",
+        "text": "Buchungsbestätigung\nVielen Dank für Ihre Buchung auf Emirates.com.\nBOOKING REFERENCE\nQX7TSU\nFlüge\nHINFLUG 17-Feb-15 München, Deutschland nach Dubai, Vereinigte Arabische Emirate\nFlug\nAbflug / Ankunft\nEK0123\nDi 17-Feb-15 09:10 Franz Josef Strauß - Flughafen (MUC) 5Std. 55Min.\n0 Zwischenstopps Economy\nAirbus A380-800\nDi 17-Feb-15 18:05 Dubai - Internationaler Flughafen (DXB)\nRÜCKFLUG 03-Mrz-15 Dubai, Vereinigte Arabische Emirate nach München, Deutschland\nFlug\nEK0124\nSo 03-Mrz-15 07:40 Dubai - Internationaler Flughafen (DXB) 6Std. 40Min.\n0 Zwischenstopps Economy\nSo 03-Mrz-15 11:20 Franz Josef Strauß - Flughafen (MUC)\nDiese Buchung verwalten"
+      },
+      "expect": "match",
+      "expected": {
+        "legs": [
+          {
+            "flightNumber": "EK0123",
+            "departureCode": "MUC",
+            "arrivalCode": "DXB",
+            "departureTime": "2015-02-17T09:10"
+          },
+          {
+            "flightNumber": "EK0124",
+            "departureCode": "DXB",
+            "arrivalCode": "MUC",
+            "departureTime": "2015-03-03T07:40"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a single leg",
+      "input": {
+        "subject": "Emirates Buchungsbestätigung - QX7TSU",
+        "text": "BOOKING REFERENCE\nQX7TSU\nEK0123\nDi 17-Feb-15 09:10 Franz Josef Strauß - Flughafen (MUC) 5Std. 55Min.\n0 Zwischenstopps Economy\nDi 17-Feb-15 18:05 Dubai - Internationaler Flughafen (DXB)"
+      },
+      "expect": "match",
+      "expected": {
+        "legs": [
+          {
+            "flightNumber": "EK0123",
+            "departureCode": "MUC",
+            "arrivalCode": "DXB",
+            "departureTime": "2015-02-17T09:10"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the 2018+ layout",
+      "input": {
+        "subject": "Ihre Buchung ist bestätigt - QX7TST",
+        "text": "Ihre Buchung ist bestätigt\nDas Emirates-Team\nBuchungsnummer\nQX7TST\nHinflug\nMittwoch 04. März 2026\nMUC DXB\nIhr Emirates\nSkywards-Konto\nMitgliedsnummer\nEK00999999999\nIhr Reiseplan\nAbflug | München nach Dubai | Reisezeit: 5 Std. 50 Min.\nStart Ankunft\nMUC\nMünchen DXB\nDubai\n21:10\nMittwoch\n04. März 26 05:20\nDonnerstag\n05. März 26\nFlug\nEK111\nFlugzeugtyp\nAirbus A380-800\nAnkunft | Dubai nach München | Reisezeit: 6 Std. 25 Min.\nStart Ankunft\nDXB\nDubai MUC\nMünchen\n15:05\nMontag\n16. Mrz. 26 19:25\nMontag\n16. Mrz. 26\nFlug\nEK112\nAlle Zeitangaben in Ortszeit\nPassagiere"
+      },
+      "expect": "decline"
+    }
+  ]
+}

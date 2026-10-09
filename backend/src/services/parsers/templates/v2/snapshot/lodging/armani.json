@@ -1,0 +1,98 @@
+{
+  "id": "lodging:armani",
+  "domain": "lodging",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Armani Hotels",
+    "kind": "hotel-chain"
+  },
+  "markets": [],
+  "match": {
+    "markers": ["armani", "confirmation number:"],
+    "anchors": ["check-in:"]
+  },
+  "extraction": {
+    "fields": {
+      "hotelName": {
+        "patterns": [
+          "^(?:(?:WG|FW|Fwd)[ \\t]*:[ \\t]*)*Your Reservation Confirmation at ([^\\n]+?)[ \\t]*-[ \\t]*\\("
+        ],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "confirmationNumber": {
+        "patterns": ["CONFIRMATION NUMBER:\\s*(\\d+)"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "checkIn": {
+        "patterns": ["Check-In:\\s*[A-Za-z]+,[ \\t]*(\\d{1,2} [A-Za-z]+ \\d{4})"],
+        "flags": "i",
+        "transform": "englishDate"
+      },
+      "checkOut": {
+        "patterns": ["Check-Out:\\s*[A-Za-z]+,[ \\t]*(\\d{1,2} [A-Za-z]+ \\d{4})"],
+        "flags": "i",
+        "transform": "englishDate"
+      },
+      "guests": {
+        "patterns": ["Guests:\\s*(\\d+)[ \\t]+Adults?"],
+        "flags": "i",
+        "transform": "integer"
+      },
+      "roomCategory": {
+        "patterns": ["Brief description of your Room category[ \\t\\r]*\\n[ \\t]*([^\\r\\n]+)"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "totalPrice": {
+        "patterns": ["Total cost of stay:\\s*[A-Z]{3}[ \\t]*([\\d.,]+)"],
+        "flags": "i",
+        "transform": "money"
+      },
+      "currency": {
+        "patterns": ["Total cost of stay:\\s*([A-Z]{3})"],
+        "flags": "i",
+        "transform": "currency"
+      },
+      "type": {
+        "value": "hotel"
+      }
+    },
+    "required": ["hotelName", "checkIn", "checkOut"]
+  },
+  "testCases": [
+    {
+      "name": "an Armani confirmation",
+      "input": "Your Reservation Confirmation at Armani Hotel Beispielstadt - (12345678) - Ms. Mustermann\nYour Reservation Confirmation at Armani Hotel Beispielstadt - (12345678) - Ms. Mustermann\r\nDear Ms. Erika Mustermann,\r\nThank you for choosing to Stay with Armani.\r\nWe are delighted to confirm your room reservation as follows:\t \r\nCONFIRMATION NUMBER: 12345678 \r\nGuest Name:\t Ms. Erika Mustermann\t \r\nCheck-In:\t Tuesday, 7 March 2028\t \r\nCheck-Out:\t Friday, 10 March 2028\t \r\nNumber of Rooms:\t 1\t \r\nGuests:\t 2 Adults\t \r\nBrief description of your Room category \r\nDeluxe Room\r\nRate per room per night \r\nAED 1500.00\r\nTotal cost of stay: AED 4500.00",
+      "expect": "match",
+      "expected": {
+        "hotelName": "Armani Hotel Beispielstadt",
+        "checkIn": "2028-03-07",
+        "checkOut": "2028-03-10",
+        "confirmationNumber": "12345678"
+      }
+    },
+    {
+      "name": "a forward with stacked values",
+      "input": "Fwd: Your Reservation Confirmation at Armani Hotel Beispielstadt - (12345678) - Ms. Mustermann\nFwd: Your Reservation Confirmation at Armani Hotel Beispielstadt - (12345678) - Ms. Mustermann\r\nDear Ms. Erika Mustermann,\r\nThank you for choosing to Stay with Armani.\r\nWe are delighted to confirm your room reservation as follows:\r\n\r\n\r\nCONFIRMATION NUMBER: 12345678 \r\nGuest Name:\r\n\r\nMs. Erika Mustermann\t \r\nCheck-In:\r\n\r\nTuesday, 7 March 2028\t \r\nCheck-Out:\r\n\r\nFriday, 10 March 2028\t \r\nNumber of Rooms:\r\n\r\n1\t \r\nGuests:\r\n\r\n2 Adults\t \r\nBrief description of your Room category \r\nDeluxe Room\r\nRate per room per night \r\nAED 1500.00\r\nTotal cost of stay: AED 4500.00",
+      "expect": "match",
+      "expected": {
+        "hotelName": "Armani Hotel Beispielstadt",
+        "checkIn": "2028-03-07",
+        "checkOut": "2028-03-10",
+        "confirmationNumber": "12345678"
+      }
+    },
+    {
+      "name": "the hotel's reply in the same thread",
+      "input": "RE: Your Reservation Confirmation at Armani Hotel Beispielstadt - (12345678) - Ms. Mustermann\nRE: Your Reservation Confirmation at Armani Hotel Beispielstadt - (12345678) - Ms. Mustermann\r\nDear Ms. Erika Mustermann,\r\nThank you for choosing to Stay with Armani.\r\nWe are delighted to confirm your room reservation as follows:\t \r\nCONFIRMATION NUMBER: 12345678 \r\nGuest Name:\t Ms. Erika Mustermann\t \r\nCheck-In:\t Tuesday, 7 March 2028\t \r\nCheck-Out:\t Friday, 10 March 2028\t \r\nNumber of Rooms:\t 1\t \r\nGuests:\t 2 Adults\t \r\nBrief description of your Room category \r\nDeluxe Room\r\nRate per room per night \r\nAED 1500.00\r\nTotal cost of stay: AED 4500.00",
+      "expect": "decline"
+    },
+    {
+      "name": "a newsletter",
+      "input": "Summer at Armani\nSummer at Armani\r\nDiscover the Armani Hotel Beispielstadt\r\nCheck-In: from 3 pm\r\nBook now.",
+      "expect": "decline"
+    }
+  ]
+}

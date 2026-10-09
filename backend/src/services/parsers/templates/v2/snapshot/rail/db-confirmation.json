@@ -1,0 +1,190 @@
+{
+  "id": "rail:db-confirmation",
+  "domain": "rail",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Deutsche Bahn",
+    "kind": "rail",
+    "keys": {
+      "senderDomains": ["bahn.de"]
+    }
+  },
+  "markets": ["DE"],
+  "match": {
+    "markers": [],
+    "anchors": [],
+    "anyOf": [
+      {
+        "pattern": "Deutsche(n)? Bahn|bahn\\.de|DB Fernverkehr|DB Vertrieb|DB Regio|DEUTSCHE BAHN",
+        "flags": "i"
+      }
+    ],
+    "allOf": [
+      {
+        "pattern": "(wie\\s+folgt\\s+gebucht|Ihre\\s+Buchung\\s+(wurde|erfolgte|wird)|Ihre\\s+Bestellung\\s+(erfolgte|wird\\s+unter)|Eingang\\s+Ihrer\\s+Bestellung|vielen\\s+Dank\\s+f(ü|ue)r\\s+Ihre[nr]?\\s+(Online-Ticket-)?(Buchung|Fahrkartenkauf|Fahrkartenbestellung)|Auftragsbest(ä|ae)tigung\\s+zum\\s+Auftrag)",
+        "flags": "i"
+      }
+    ]
+  },
+  "extraction": {
+    "preprocess": ["stripCarriageReturns"],
+    "fields": {
+      "documentKind": {
+        "value": "booking"
+      },
+      "bookingReference": {
+        "patterns": [
+          "Auftragsnummer:?\\s+([A-Z0-9]{6,14})\\b",
+          "Auftrag(?:sbestätigung zum Auftrag)?\\s+([A-Z0-9]{6,14})\\b"
+        ],
+        "flags": ""
+      },
+      "travelClass": {
+        "patterns": [
+          "^(?:(?![ \\t]*von[^\\S\\n]+[^\\n]+?,[^\\S\\n]*\\d{1,2}\\.\\d{1,2}\\.\\d{4}[^\\S\\n]+\\d{1,2}:\\d{2}[^\\S\\n]*Uhr)[^\\n]*\\n)*?[ \\t]*(?=[^\\n]*(?:Klasse|fahrkarte|preis|ticket))([^\\n]*\\S)[ \\t]*\\n(?:[ \\t]*\\n)*[ \\t]*von[^\\S\\n]+[^\\n]+?,[^\\S\\n]*\\d{1,2}\\.\\d{1,2}\\.\\d{4}[^\\S\\n]+\\d{1,2}:\\d{2}[^\\S\\n]*Uhr\\b",
+          "^[\\s\\S]+"
+        ],
+        "flags": "i",
+        "transform": "travelClass"
+      },
+      "tariff": {
+        "patterns": [
+          "^(?:(?![ \\t]*von[^\\S\\n]+[^\\n]+?,[^\\S\\n]*\\d{1,2}\\.\\d{1,2}\\.\\d{4}[^\\S\\n]+\\d{1,2}:\\d{2}[^\\S\\n]*Uhr)[^\\n]*\\n)*?[ \\t]*(?=[^\\n]*(?:Klasse|fahrkarte|preis|ticket))([^\\n]*\\S)[ \\t]*\\n(?:[ \\t]*\\n)*[ \\t]*von[^\\S\\n]+[^\\n]+?,[^\\S\\n]*\\d{1,2}\\.\\d{1,2}\\.\\d{4}[^\\S\\n]+\\d{1,2}:\\d{2}[^\\S\\n]*Uhr\\b"
+        ],
+        "flags": "i",
+        "replace": [[",?\\s*[12]\\.\\s*Klasse.*$", "", "i"]],
+        "transform": "trim"
+      },
+      "price": {
+        "patterns": [
+          "Gesamtpreis(?:es)?\\s+dieser\\s+Reise\\s+in\\s+Höhe\\s+von\\s+([\\d.,]+)\\s*(EUR|€|CHF)",
+          "^\\s*Gesamtpreis:\\s*([\\d.,]+)\\s*(EUR|€|CHF)",
+          "Den\\s+Betrag\\s+in\\s+Höhe\\s+von\\s+([\\d.,]+)\\s*(EUR|€|CHF)"
+        ],
+        "flags": "m",
+        "transform": "amount"
+      },
+      "currency": {
+        "patterns": [
+          "Gesamtpreis(?:es)?\\s+dieser\\s+Reise\\s+in\\s+Höhe\\s+von\\s+([\\d.,]+)\\s*(EUR|€|CHF)",
+          "^\\s*Gesamtpreis:\\s*([\\d.,]+)\\s*(EUR|€|CHF)",
+          "Den\\s+Betrag\\s+in\\s+Höhe\\s+von\\s+([\\d.,]+)\\s*(EUR|€|CHF)"
+        ],
+        "flags": "m",
+        "format": "{2}",
+        "transform": "currency"
+      }
+    },
+    "repeats": {
+      "legs": {
+        "mode": "matchAll",
+        "pattern": "^[ \\t]*von[^\\S\\n]+(?<dep>[^\\n]+?),[^\\S\\n]*(?<depDate>\\d{1,2}\\.\\d{1,2}\\.\\d{4})[^\\S\\n]+(?<depTime>\\d{1,2}:\\d{2})[^\\S\\n]*(?<r1>Uhr\\b[^\\n]*)(?<between>(?:(?:\\n[ \\t]*)*\\n[ \\t]*\\S[^\\n]*){0,2}?(?:\\n[ \\t]*)*\\n)[ \\t]*nach[^\\S\\n]+(?<arr>[^\\n]+?),[^\\S\\n]*(?<arrDate>\\d{1,2}\\.\\d{1,2}\\.\\d{4})[^\\S\\n]+(?<arrTime>\\d{1,2}:\\d{2})[^\\S\\n]*(?<r2>Uhr\\b[^\\n]*)",
+        "flags": "gim",
+        "fields": {
+          "depStationName": {
+            "group": "dep",
+            "replace": [
+              ["\\s+Gl\\.\\s*[\\d-]+$", "", "i"],
+              ["\\s{2,}", " "]
+            ],
+            "transform": "trim"
+          },
+          "arrStationName": {
+            "group": "arr",
+            "replace": [
+              ["\\s+Gl\\.\\s*[\\d-]+$", "", "i"],
+              ["\\s{2,}", " "]
+            ],
+            "transform": "trim"
+          },
+          "departureLocal": {
+            "format": "{depDate}T{depTime}",
+            "transform": "dateTime"
+          },
+          "arrivalLocal": {
+            "format": "{arrDate}T{arrTime}",
+            "transform": "dateTime"
+          },
+          "trainCategory": {
+            "format": "{r1} {between} {r2}",
+            "find": {
+              "pattern": "\\b(ICE|ECE|IC|EC|EN|NJ|CNL|IRE|RE|RB|S|TGV|RJX|RJ|WB|FLX|IR|ALX|BRB|MEX|M|ERB|HLB|NWB|ICN|EST|TER|OUIGO)\\s?\\d{1,6}\\b",
+              "flags": ""
+            }
+          },
+          "trainNumber": {
+            "format": "{r1} {between} {r2}",
+            "find": {
+              "pattern": "\\b(?:ICE|ECE|IC|EC|EN|NJ|CNL|IRE|RE|RB|S|TGV|RJX|RJ|WB|FLX|IR|ALX|BRB|MEX|M|ERB|HLB|NWB|ICN|EST|TER|OUIGO)\\s?(?<v>\\d{1,6})\\b",
+              "flags": ""
+            }
+          },
+          "direction": {
+            "lastBefore": {
+              "pattern": "^[ \\t]*(Hinfahrt|R(?:ü|ue)ckfahrt)\\b",
+              "flags": "im"
+            },
+            "map": [
+              ["^h", "outbound"],
+              ["^r", "return"]
+            ]
+          }
+        },
+        "skipItemsWithout": ["departureLocal"]
+      }
+    },
+    "required": ["legs"]
+  },
+  "testCases": [
+    {
+      "name": "a change of trains, each leg with its own train, a total with thousands",
+      "input": "Hier Ihre Buchungsbestätigung.\nvielen Dank für Ihre Buchung bei der Deutschen Bahn.\nAuftragsnummer 998877665544 wie folgt gebucht:\nLeistungen\nFlexpreis, 1. Klasse\nvon Probestadt Hbf, 03.05.2026 07:10 Uhr\nRE 3\nnach Mittelort Hbf, 03.05.2026 08:02 Uhr\nvon Mittelort Hbf, 03.05.2026 08:30 Uhr\nICE 801\nnach Zielstadt Hbf, 03.05.2026 11:15 Uhr\nDie Zahlung des Gesamtpreises dieser Reise in Höhe von 1.102,40 EUR wird\nper Kreditkarte durchgeführt.\nDB Fernverkehr AG",
+      "expect": "match",
+      "expected": {
+        "bookingReference": "998877665544",
+        "travelClass": "first",
+        "tariff": "Flexpreis",
+        "price": 1102.4,
+        "currency": "EUR",
+        "legs": [
+          {
+            "depStationName": "Probestadt Hbf",
+            "arrStationName": "Mittelort Hbf",
+            "departureLocal": "2026-05-03T07:10",
+            "trainCategory": "RE",
+            "trainNumber": "3",
+            "direction": null
+          },
+          {
+            "depStationName": "Mittelort Hbf",
+            "arrivalLocal": "2026-05-03T11:15",
+            "trainCategory": "ICE",
+            "trainNumber": "801"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Hinfahrt and Rückfahrt, no train printed, none invented",
+      "input": "vielen Dank für Ihre Buchung bei der Deutschen Bahn.\nAuftragsnummer 112233445566 wie folgt gebucht:\nSparpreis, 2. Klasse\nHinfahrt\nvon Hafenstadt Hbf, 11.11.2026 18:00 Uhr\nnach Binnenstadt Hbf, 11.11.2026 19:30 Uhr\nRückfahrt\nvon Binnenstadt Hbf, 13.11.2026 09:00 Uhr\nnach Hafenstadt Hbf, 13.11.2026 10:30 Uhr\nTipp: Zum Bahnhof fahren auch die S 1 und der RE 22.",
+      "expect": "match",
+      "expected": {
+        "legs": [
+          {
+            "direction": "outbound",
+            "trainCategory": null
+          },
+          {
+            "direction": "return",
+            "trainNumber": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "a delay alert names an order and a ride but books nothing",
+      "input": "Verspaetungs-Alarm (Auftrag ZZ99YY)\nfür Ihre gebuchte Verbindung haben sich Abweichungen ergeben.\nKiel Hbf 04.11.2026 ab 12:55\nIhr Team von www.bahn.de",
+      "expect": "decline"
+    }
+  ]
+}

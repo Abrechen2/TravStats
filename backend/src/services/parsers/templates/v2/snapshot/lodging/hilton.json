@@ -1,0 +1,105 @@
+{
+  "id": "lodging:hilton",
+  "domain": "lodging",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Hilton",
+    "kind": "hotel-chain"
+  },
+  "markets": [],
+  "match": {
+    "markers": ["hilton"],
+    "anchors": ["confirmation #", "your plan information"]
+  },
+  "extraction": {
+    "fields": {
+      "subjectYear": {
+        "patterns": ["^[^\\n]*?\\b(20\\d{2})\\b"],
+        "flags": "i",
+        "transform": "integer"
+      },
+      "hotelName": {
+        "patterns": ["^\\s*((?:Hilton|Conrad|Waldorf|DoubleTree|Hampton|Embassy)[^\\n]*)"],
+        "flags": "im",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "confirmationNumber": {
+        "patterns": ["Confirmation\\s*#\\s*(\\d+)"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "checkIn": {
+        "patterns": ["Check\\s*In:?\\s*\\t?\\s*([A-Za-z]{3,9}\\.?\\s+\\d{1,2})"],
+        "flags": "i",
+        "transform": "englishDate",
+        "yearFrom": "subjectYear"
+      },
+      "checkOut": {
+        "patterns": ["Check\\s*Out:?\\s*\\t?\\s*([A-Za-z]{3,9}\\.?\\s+\\d{1,2})"],
+        "flags": "i",
+        "transform": "englishDate",
+        "yearFrom": "subjectYear"
+      },
+      "roomCategory": {
+        "patterns": ["Your Room Information:?\\s*\\t?\\s*([^\\n,]+)"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "totalPrice": {
+        "patterns": ["Total for Stay\\s*:?\\s*\\t?\\s*([\\d.,]+)"],
+        "flags": "i",
+        "transform": "money"
+      },
+      "currency": {
+        "patterns": ["Total for Stay\\s*:?\\s*\\t?\\s*[\\d.,]+\\s*([A-Z]{3})"],
+        "flags": "i",
+        "transform": "currency"
+      },
+      "pricePerNight": {
+        "patterns": ["Rate per\\s*night\\s*:?\\s*\\t?\\s*([\\d.,]+)"],
+        "flags": "i",
+        "transform": "money"
+      },
+      "guests": {
+        "patterns": ["Guests:?\\s*\\t?\\s*(\\d+)"],
+        "flags": "i",
+        "transform": "integer"
+      },
+      "type": {
+        "value": "hotel"
+      },
+      "chainName": {
+        "value": "Hilton"
+      }
+    },
+    "required": ["hotelName", "checkIn", "checkOut"]
+  },
+  "testCases": [
+    {
+      "name": "a stay dated by the subject's year",
+      "input": "Your 01 Oct 2018 Confirmation #3451920609\nYour 01 Oct 2018 Confirmation #3451920609\nHilton Garden Inn Dubai Al Mina\nAl Mina Road, Port Rashid, Dubai, AE\nYour Room Information: \tTWIN BEDS ROOM,\nGuests: \t2  Adults\nCheck In:\t Oct 01 3:00 PM\nCheck Out:\t Oct 07 12:00 PM\nYour Plan Information:\nRate per  night :  \t304.58   AED\nTotal for Stay : \t2,383.49   AED",
+      "expect": "match",
+      "expected": {
+        "hotelName": "Hilton Garden Inn Dubai Al Mina",
+        "checkIn": "2018-10-01",
+        "checkOut": "2018-10-07",
+        "confirmationNumber": "3451920609"
+      }
+    },
+    {
+      "name": "a stay over New Year",
+      "input": "Your 30 Dec 2026 Confirmation #3451920609\nYour 30 Dec 2026 Confirmation #3451920609\nHilton Garden Inn Dubai Al Mina\nAl Mina Road, Port Rashid, Dubai, AE\nYour Room Information: \tTWIN BEDS ROOM,\nGuests: \t2  Adults\nCheck In:\t Dec 30 3:00 PM\nCheck Out:\t Jan 02 12:00 PM\nYour Plan Information:\nRate per  night :  \t304.58   AED\nTotal for Stay : \t2,383.49   AED",
+      "expect": "match",
+      "expected": {
+        "hotelName": "Hilton Garden Inn Dubai Al Mina",
+        "checkIn": "2026-12-30",
+        "confirmationNumber": "3451920609"
+      }
+    },
+    {
+      "name": "no year anywhere",
+      "input": "Your Confirmation\nYour Confirmation #3451920609\nHilton Garden Inn Dubai Al Mina\nAl Mina Road, Port Rashid, Dubai, AE\nYour Room Information: \tTWIN BEDS ROOM,\nGuests: \t2  Adults\nCheck In:\t Oct 01 3:00 PM\nCheck Out:\t Oct 07 12:00 PM\nYour Plan Information:\nRate per  night :  \t304.58   AED\nTotal for Stay : \t2,383.49   AED",
+      "expect": "decline"
+    }
+  ]
+}

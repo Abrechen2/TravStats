@@ -1,13 +1,18 @@
 import logger from "../../../utils/logger";
 import { extractTextFromPdf } from "../../pdfParser";
-import { parseSixtConfirmation } from "./sixtConfirmation";
-import { parseSixtInvoice } from "./sixtInvoice";
+import { templateRegistry } from "../../parsers/templates/registry";
+import type { TemplateEnvelope } from "../../parsers/templates/v2/envelope";
 import { currencyOf, parseAmount } from "./textLines";
+import { readWithV2RentalTemplates } from "./v2Rental";
 import type { ParsedRentalCancellation, ParsedRentalDocument } from "./types";
 
 /**
  * Template, else (from package R3) the model, else decline — no generic regex
- * reader (spec 2026-10-01-rental-domain-design §4). A generic "two dates, a
+ * reader (spec 2026-10-01-rental-domain-design §4). Since plan 2026-10-09 P4b
+ * the provider readers (Sixt's confirmation and final invoice) are v2
+ * template FILES in the template repository, read by `v2Rental.ts`; only the
+ * provider-agnostic rules below — parking, "on request", cancellations — are
+ * compiled in. A generic "two dates, a
  * station word and a price" reader files airport-parking mails as rentals;
  * the corpus held five of them.
  *
@@ -148,10 +153,18 @@ export async function parseRentalBookingText(
     subject?: string;
     from?: string | null;
     attachments?: readonly RentalAttachment[];
+    /** The active v2 rental templates; defaults to the registry's. */
+    templates?: readonly TemplateEnvelope[];
   } = {}
 ): Promise<RentalParseResult> {
   const combined = options.subject ? `${options.subject}\n\n${text}` : text;
-  const withPdfs = [combined, ...(await pdfTexts(options.attachments ?? []))].join("\n\n");
+  const pdfs = await pdfTexts(options.attachments ?? []);
+  const withPdfs = [combined, ...pdfs].join("\n\n");
+  const templates = options.templates ?? templateRegistry.getActiveV2({ domain: "rental" });
+  const mail = {
+    ...(options.from ? { from: options.from } : {}),
+    ...(options.subject ? { subject: options.subject } : {}),
+  };
 
   if (looksLikeParking(withPdfs)) {
     return decline("parking", "The document is an airport-parking booking, not a rental");
@@ -160,12 +173,22 @@ export async function parseRentalBookingText(
     return decline("notConfirmed", "The rental is on request and not confirmed yet");
   }
 
-  const invoice = parseSixtInvoice(withPdfs, options.subject);
-  if (invoice) return { document: invoice, parserUsed: "template", parserTemplate: "sixt-invoice" };
+  // An invoice prints its figures in the attached PDF; a confirmation is the mail itself.
+  const invoice = readWithV2RentalTemplates(templates, "invoice", {
+    ...mail,
+    text: [text, ...pdfs].join("\n\n"),
+  });
+  if (invoice) {
+    return { document: invoice.read, parserUsed: "template", parserTemplate: invoice.read.source };
+  }
 
-  const confirmation = parseSixtConfirmation(combined, options.from);
+  const confirmation = readWithV2RentalTemplates(templates, "confirmation", { ...mail, text });
   if (confirmation) {
-    return { document: confirmation, parserUsed: "template", parserTemplate: "sixt-confirmation" };
+    return {
+      document: confirmation.read,
+      parserUsed: "template",
+      parserTemplate: confirmation.read.source,
+    };
   }
 
   const cancellation = parseCancellation(combined, options.from, withPdfs);

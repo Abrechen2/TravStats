@@ -15,7 +15,16 @@ import type { AirlineTemplate } from "../../templates/types";
  * detected as `LH-old`, and its `testCases[0].input` with the flight-number
  * line removed.
  */
-const TEMPLATE_PATH = path.join(__dirname, "..", "..", "templates", "airlines", "LH-old.json");
+const TEMPLATE_PATH = path.join(
+  __dirname,
+  "..",
+  "..",
+  "templates",
+  "__tests__",
+  "fixtures",
+  "v1-airlines",
+  "LH-old.json"
+);
 const TEMPLATE = JSON.parse(fs.readFileSync(TEMPLATE_PATH, "utf-8")) as AirlineTemplate;
 const TEST_CASE = TEMPLATE.testCases[0];
 

@@ -8,7 +8,7 @@ import { bookingsToCandidates } from "../services/lodging/lodgingCandidates";
 import { getAdminParserSettings } from "../services/parserSettings";
 import { clearLlmAvailabilityCache, settleLlmProbes } from "../services/parsers/llmAvailability";
 import { clearReachableTargetCache } from "../services/llm/reachableTarget";
-import type { ParsedLodgingBooking } from "../services/lodging/bookingComTemplate";
+import type { ParsedLodgingBooking } from "../services/lodging/parsedLodgingBooking";
 
 jest.mock("../services/parserSettings", () => ({
   getAdminParserSettings: jest.fn(async () => ({ ollamaUrl: null, ollamaModel: null })),

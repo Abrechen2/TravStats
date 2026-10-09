@@ -3,9 +3,9 @@ import { parseAmount } from "../documentTotal";
 import {
   CURRENCY_SYMBOLS,
   parseGermanDate,
-  type LodgingCurrency,
   type ParsedLodgingBooking,
-} from "../bookingComTemplate";
+} from "../parsedLodgingBooking";
+import { finishLodgingRead, type LodgingRead } from "./finishRead";
 import type { FieldRule, LodgingFieldRules, LodgingTemplate, TransformName } from "./types";
 
 const MONTHS: Record<string, number> = {
@@ -22,17 +22,6 @@ const MONTHS: Record<string, number> = {
   nov: 11,
   dec: 12,
 };
-
-const DAY_MS = 86_400_000;
-
-/**
- * The longest span a lodging confirmation can plausibly describe.
- *
- * A year of hotel nights is not a booking; it is a date read wrongly. The
- * number is deliberately generous — long stays exist — and it exists only to
- * catch a repair that produced something worse than the problem.
- */
-const MAX_PLAUSIBLE_NIGHTS = 365;
 
 function iso(year: number, month: number, day: number): string | null {
   if (month < 1 || month > 12 || day < 1 || day > 31) return null;
@@ -251,7 +240,7 @@ export function applyLodgingTemplate(
   const subjectYear = yearFromSubject(subject);
   const lines = haystack.split("\n").map((l) => l.replace(/\r$/, ""));
   const labels = template.labels ?? [];
-  const read: Partial<Record<keyof LodgingFieldRules, string | number>> = {};
+  const read: LodgingRead = {};
   for (const [field, rule] of Object.entries(template.fields) as Array<
     [keyof LodgingFieldRules, FieldRule]
   >) {
@@ -263,82 +252,10 @@ export function applyLodgingTemplate(
     if (read[field] === undefined) return null;
   }
 
-  const str = (field: keyof LodgingFieldRules): string | null => {
-    const value = read[field];
-    return typeof value === "string" && value.length > 0 ? value : null;
-  };
-  const num = (field: keyof LodgingFieldRules): number | null => {
-    const value = read[field];
-    return typeof value === "number" && Number.isFinite(value) ? value : null;
-  };
-
-  const checkIn = str("checkIn");
-  let checkOut = str("checkOut");
-  if (!checkIn || !checkOut) return null;
-
-  // A stay over New Year, dated without years. Hilton writes "Check In: Dec
-  // 30" / "Check Out: Jan 02" and puts one year in the subject, so both dates
-  // borrow it and the stay comes out ending before it began. The year-less
-  // half is the one to move, and only by one: a checkout more than a year
-  // after the checkin is not a hotel stay, it is a misread.
-  if (Date.parse(checkOut) < Date.parse(checkIn) && template.fields.checkOut?.yearFrom) {
-    const [y, rest] = [checkOut.slice(0, 4), checkOut.slice(4)];
-    checkOut = `${Number(y) + 1}${rest}`;
-  }
-  // Still inconsistent means the document was not understood. Declining is
-  // the result; a stay that ends before it starts would be proposed to the
-  // user as fact, and the import's own date guard would then reject the row.
-  if (Date.parse(checkOut) < Date.parse(checkIn)) return null;
-
-  const nights = Math.round((Date.parse(checkOut) - Date.parse(checkIn)) / DAY_MS);
-
-  // The repair above turns one wrong year into a plausible-looking stay when
-  // the year it borrowed belonged to the CHECK-OUT: "Your Jan 02 2025
-  // Confirmation" over "Dec 30"/"Jan 02" becomes 2025-12-30 → 2026-01-02, a
-  // 368-night booking that reads like data. Nobody books a hotel for a year,
-  // so a span that long is the misread saying so, and the document falls
-  // through to a reader — or a human — that can do better.
-  if (nights > MAX_PLAUSIBLE_NIGHTS) return null;
-
-  const currency = str("currency") as LodgingCurrency | null;
-  const totalPrice = num("totalPrice");
-  const pricePerNight = num("pricePerNight");
-  // The same guard the commit applies: an amount whose unit the document
-  // never stated is not a price, and writing it against a default currency
-  // states something the sender did not.
-  const priced = currency !== null;
-
-  const missing: string[] = [];
-  const note = (field: string, value: unknown): void => {
-    if (value === null) missing.push(field);
-  };
-  note("city", str("city"));
-  note("totalPrice", priced ? totalPrice : null);
-  note("confirmationNumber", str("confirmationNumber"));
-
-  return {
-    hotelName: str("hotelName") ?? "",
-    checkIn,
-    checkOut,
-    nights,
-    roomCategory: str("roomCategory"),
-    address: str("address"),
-    postcode: str("postcode"),
-    city: str("city"),
-    country: str("country"),
-    totalPrice: priced ? totalPrice : null,
-    pricePerNight: priced ? pricePerNight : null,
-    currency,
-    board: null,
-    guests: num("guests"),
+  return finishLodgingRead(read, {
+    parserTemplate: template.name,
+    checkOutYearBorrowed: Boolean(template.fields.checkOut?.yearFrom),
     type: template.classify?.type ?? null,
     chainName: template.classify?.chainName ?? null,
-    confirmationNumber: str("confirmationNumber"),
-    parserTemplate: template.name,
-    // Deliberately below the two Booking.com figures (80 / 95). These readers
-    // are younger and measured against a handful of mails each; the number
-    // should say that until the corpus says otherwise.
-    parserConfidence: missing.length === 0 ? 75 : 65,
-    missing,
-  };
+  });
 }

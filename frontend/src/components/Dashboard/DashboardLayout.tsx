@@ -74,6 +74,9 @@ export function DashboardLayout({
     setAddingDomainState(domain);
   };
   const openOtherImport = (domain: ParseDomain, document: ImportDocument): void => {
+    // A package tour is imported on the trips page; it is never in
+    // `openableImports`, so no dialog here offers the jump.
+    if (domain === "package") return;
     setAddingDomainState(domain);
     setHandedOver(document);
   };

@@ -3,16 +3,26 @@ import type { ReactNode } from "react";
 export type ImportDomain = "flight" | "cruise" | "lodging" | "trip" | "poi" | "rail" | "rental";
 
 /**
- * The domains a document can actually be parsed FOR. Deliberately narrower
- * than `ImportDomain`: a place is never booked, and the tour-operator parser
- * for trips does not exist yet. The chooser uses this to decide whether a drop
+ * The targets a document can actually be parsed FOR. Not a subset of
+ * `ImportDomain`: a place is never booked, and a trip is parsed as a
+ * `package` (a tour operator's documents), which the trip adapter names
+ * through `parseAs`. The chooser uses this to decide whether a drop
  * zone may appear at all, so a domain cannot offer a reading the backend has
  * no route for — a type error rather than a runtime 400.
  */
-export const PARSEABLE_IMPORT_DOMAINS = ["flight", "cruise", "lodging", "rail", "rental"] as const;
+export const PARSEABLE_IMPORT_DOMAINS = [
+  "flight",
+  "cruise",
+  "lodging",
+  "rail",
+  "rental",
+  "package",
+] as const;
 export type ParseableImportDomain = (typeof PARSEABLE_IMPORT_DOMAINS)[number];
 
-export function isParseableDomain(domain: ImportDomain): domain is ParseableImportDomain {
+export function isParseableDomain(
+  domain: ImportDomain
+): domain is Extract<ImportDomain, ParseableImportDomain> {
   return (PARSEABLE_IMPORT_DOMAINS as readonly string[]).includes(domain);
 }
 
@@ -66,6 +76,11 @@ export interface DomainImportAdapter {
    * cannot happen.
    */
   supportsDocumentImport?: boolean;
+  /**
+   * What the drop zone parses FOR when it is not the adapter's own domain —
+   * the trip import reads a tour operator's documents as `package`.
+   */
+  parseAs?: ParseableImportDomain;
   /** Copy for the shared drop-zone route. Falls back to generic wording. */
   documentRoute?: Pick<ImportRoute, "title" | "description">;
   /** Domain-specific routes, rendered after the drop zone in this order. */

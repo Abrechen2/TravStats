@@ -1,0 +1,154 @@
+{
+  "id": "rail:db-postal-order",
+  "domain": "rail",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "Deutsche Bahn",
+    "kind": "rail",
+    "keys": {
+      "senderDomains": ["bahn.de"]
+    }
+  },
+  "markets": ["DE"],
+  "match": {
+    "markers": [],
+    "anchors": [],
+    "anyOf": [
+      {
+        "pattern": "Deutsche(n)? Bahn|bahn\\.de|DB Fernverkehr|DB Vertrieb|DB Regio|DEUTSCHE BAHN",
+        "flags": "i"
+      }
+    ],
+    "allOf": [
+      {
+        "pattern": "(wie\\s+folgt\\s+gebucht|Ihre\\s+Buchung\\s+(wurde|erfolgte|wird)|Ihre\\s+Bestellung\\s+(erfolgte|wird\\s+unter)|Eingang\\s+Ihrer\\s+Bestellung|vielen\\s+Dank\\s+f(ü|ue)r\\s+Ihre[nr]?\\s+(Online-Ticket-)?(Buchung|Fahrkartenkauf|Fahrkartenbestellung)|Auftragsbest(ä|ae)tigung\\s+zum\\s+Auftrag)",
+        "flags": "i"
+      }
+    ]
+  },
+  "extraction": {
+    "preprocess": ["stripCarriageReturns"],
+    "fields": {
+      "documentKind": {
+        "value": "booking"
+      },
+      "bookingReference": {
+        "patterns": [
+          "Auftragsnummer:?\\s+([A-Z0-9]{6,14})\\b",
+          "Auftrag(?:sbestätigung zum Auftrag)?\\s+([A-Z0-9]{6,14})\\b"
+        ],
+        "flags": ""
+      },
+      "travelClass": {
+        "patterns": [
+          "(?:^|\\n)[ \\t]*((?:Einfache Fahrt|Hin- und Rückfahrt)\\b[^\\n]*)",
+          "^(?![\\s\\S]*(?:^|\\n)[ \\t]*(?:Einfache Fahrt|Hin- und Rückfahrt)\\b)[\\s\\S]+"
+        ],
+        "flags": "",
+        "transform": "travelClass"
+      },
+      "tariff": {
+        "patterns": [
+          "(?:^|\\n)[ \\t]*((?:Einfache Fahrt|Hin- und Rückfahrt)\\b[^,\\n]*(?:,[^,\\n]*)?)"
+        ],
+        "flags": "",
+        "transform": "trim"
+      },
+      "price": {
+        "patterns": [
+          "Gesamtpreis(?:es)?\\s+dieser\\s+Reise\\s+in\\s+Höhe\\s+von\\s+([\\d.,]+)\\s*(EUR|€|CHF)",
+          "^\\s*Gesamtpreis:\\s*([\\d.,]+)\\s*(EUR|€|CHF)",
+          "Den\\s+Betrag\\s+in\\s+Höhe\\s+von\\s+([\\d.,]+)\\s*(EUR|€|CHF)"
+        ],
+        "flags": "m",
+        "transform": "amount"
+      },
+      "currency": {
+        "patterns": [
+          "Gesamtpreis(?:es)?\\s+dieser\\s+Reise\\s+in\\s+Höhe\\s+von\\s+([\\d.,]+)\\s*(EUR|€|CHF)",
+          "^\\s*Gesamtpreis:\\s*([\\d.,]+)\\s*(EUR|€|CHF)",
+          "Den\\s+Betrag\\s+in\\s+Höhe\\s+von\\s+([\\d.,]+)\\s*(EUR|€|CHF)"
+        ],
+        "flags": "m",
+        "format": "{2}",
+        "transform": "currency"
+      }
+    },
+    "repeats": {
+      "legs": {
+        "mode": "matchAll",
+        "pattern": "^[ \\t]*(?<d>\\d{1,2}\\.\\d{1,2}\\.\\d{4}):[^\\S\\n]+(?<dep>[^\\n]+?)[^\\S\\n]+(?<dt>\\d{1,2}:\\d{2})[^\\S\\n]+-[^\\S\\n]+(?<arr>[^\\n]+?)[^\\S\\n]+(?<at>\\d{1,2}:\\d{2})[ \\t]*$",
+        "flags": "gm",
+        "fields": {
+          "depStationName": {
+            "group": "dep",
+            "replace": [
+              ["\\s+Gl\\.\\s*[\\d-]+$", "", "i"],
+              ["\\s{2,}", " "]
+            ],
+            "transform": "trim"
+          },
+          "arrStationName": {
+            "group": "arr",
+            "replace": [
+              ["\\s+Gl\\.\\s*[\\d-]+$", "", "i"],
+              ["\\s{2,}", " "]
+            ],
+            "transform": "trim"
+          },
+          "day": {
+            "group": "d",
+            "transform": "numericDate"
+          },
+          "depTime": {
+            "group": "dt",
+            "transform": "time"
+          },
+          "arrTime": {
+            "group": "at",
+            "transform": "time"
+          }
+        },
+        "compute": {
+          "departureLocal": {
+            "format": "{day}T{depTime}"
+          },
+          "arrivalLocal": {
+            "format": "{day}T{depTime} {arrTime}",
+            "transform": "laterClock"
+          }
+        },
+        "skipItemsWithout": ["departureLocal"]
+      }
+    },
+    "required": ["legs"]
+  },
+  "testCases": [
+    {
+      "name": "a postal order, an overnight return",
+      "input": "vielen Dank für Ihre Fahrkartenbestellung. Wir stellen Ihnen die Fahrkarte per Post zu.\nAuftragsnummer: AB12CD\nReisedaten:\n01.08.2014: Probestadt Hbf 10:00 - Zielstadt Hbf 13:30\n05.08.2014: Zielstadt Hbf 22:15 - Probestadt Hbf 01:40\nEinfache Fahrt, Sparpreis, 1 Reisender, 2. Kl., Probestadt/Zielstadt\nGesamtpreis: 79,90 EUR\nDB Vertrieb GmbH",
+      "expect": "match",
+      "expected": {
+        "bookingReference": "AB12CD",
+        "travelClass": "second",
+        "tariff": "Einfache Fahrt, Sparpreis",
+        "price": 79.9,
+        "legs": [
+          {
+            "departureLocal": "2014-08-01T10:00",
+            "arrivalLocal": "2014-08-01T13:30"
+          },
+          {
+            "departureLocal": "2014-08-05T22:15",
+            "arrivalLocal": "2014-08-06T01:40"
+          }
+        ]
+      }
+    },
+    {
+      "name": "an order mail without travel dates",
+      "input": "Eingang Ihrer Bestellung\nAuftragsnummer: AB12CD\nDB Vertrieb GmbH",
+      "expect": "decline"
+    }
+  ]
+}

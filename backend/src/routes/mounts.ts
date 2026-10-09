@@ -54,6 +54,8 @@ import templateStatusRoutes from "./templateStatus";
 import parserTemplatesRoutes from "./parserTemplates";
 import trainingRoutes from "./training";
 import tripsRoutes from "./trips";
+import tripBookingRoutes from "./trips/tripBookings";
+import tripPackageRoutes from "./trips/tripPackage";
 import tripEntrySuggestionRoutes from "./trips/entrySuggestions";
 import tripStopRoutes from "./trips/tripStops";
 import tripPhotoRoutes from "./trips/tripPhotos";
@@ -233,6 +235,11 @@ export const apiMounts: ApiMount[] = [
     base: "/api/v1/trips",
     router: tripEntrySuggestionRoutes,
   },
+  // Bookings (#356): split out of trips.ts; BEFORE it, so `/trips/bookings`
+  // is never read as a trip id.
+  { id: "trips.bookings", base: "/api/v1", router: tripBookingRoutes },
+  // Package tours → trips (plan 2026-10-09 P3), same reason.
+  { id: "trips.package", base: "/api/v1", router: tripPackageRoutes },
   { id: "trips", base: "/api/v1", router: tripsRoutes },
   // Stops + journal, and photos + cover: split out of trips.ts (forgejo#59).
   // Mounted directly after `trips`, before every other satellite, so Express

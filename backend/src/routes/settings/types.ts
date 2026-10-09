@@ -141,6 +141,11 @@ export interface SettingsResponse extends SettingsDataJson {
    * passport derives properly.
    */
   hasCountryTracks: boolean;
+  /**
+   * ISO 3166-1 alpha-2 home country, or null when not chosen. Orders booking
+   * templates home market first; never filters them (plan 2026-10-09 P5).
+   */
+  homeCountry: string | null;
 }
 
 export interface UserSettingsUpdateData {
@@ -159,6 +164,8 @@ export interface UserSettingsUpdateData {
   autoCreateTrips?: boolean;
   /** `null` clears the override and returns the user to the instance default. */
   countryThreshold?: CountryTier | null;
+  /** `null` clears the home country. */
+  homeCountry?: string | null;
 }
 
 export interface ParserSettingsUpdateData {

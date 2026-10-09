@@ -47,6 +47,9 @@
  */
 
 import { PARSER_SUPPORTED_DOMAINS, type ParserSupportedDomain } from "../../shared/domains";
+import { templateRegistry } from "../parsers/templates/registry";
+import { envelopeMatches } from "../parsers/templates/v2/runners";
+import type { TemplateEnvelope } from "../parsers/templates/v2/envelope";
 
 /** One piece of evidence: a pattern, what it is worth, and a name for it. */
 interface Signal {
@@ -237,7 +240,31 @@ const SIGNALS: Record<ParserSupportedDomain, readonly Signal[]> = {
     },
     // No bare "Mietwagen"/"rental car": every airline confirmation offers one.
   ],
+  // No static signal: a package tour is recognised by an active `package`
+  // template from the template repository and by nothing else — its text is
+  // flights and hotels, which the other domains' signals already score. See
+  // `packageTemplateSignals` below.
+  package: [],
 };
+
+/**
+ * What an active package template's matcher is worth. A matcher is every
+ * marker of ONE operator plus one of its anchors — evidence no generic signal
+ * reaches — and it must outweigh the flight and lodging signals the same
+ * document carries (an invoice listing four flights and two hotels scores
+ * about 15 and 10 there), or a recognised package would be read as a flight.
+ */
+export const PACKAGE_TEMPLATE_WEIGHT = 25;
+
+/** The active package templates whose matcher accepts the text, as signals. */
+function packageTemplateSignals(
+  haystack: string,
+  templates: readonly TemplateEnvelope[]
+): string[] {
+  return templates
+    .filter((t) => t.domain === "package" && envelopeMatches(t, haystack))
+    .map((t) => `package-template:${t.id}`);
+}
 
 /**
  * The score above which the evidence is considered substantial rather than
@@ -275,7 +302,10 @@ export interface DomainDetection {
  * first — the historical default. A tie means the evidence did not decide, and
  * preserving the old behaviour there is the least surprising thing to do.
  */
-export function scoreDocument(text: string): DomainDetection {
+export function scoreDocument(
+  text: string,
+  templates: readonly TemplateEnvelope[] = templateRegistry.getActiveV2()
+): DomainDetection {
   const haystack = text.slice(0, SCAN_LIMIT);
 
   const scored = PARSER_SUPPORTED_DOMAINS.map((domain) => {
@@ -286,6 +316,14 @@ export function scoreDocument(text: string): DomainDetection {
       if (signal.pattern.test(haystack)) {
         matched.push(signal.id);
         score += signal.weight;
+      }
+    }
+    if (domain === "package") {
+      // Rule 1 again: several templates of one operator are one piece of evidence.
+      const hits = packageTemplateSignals(haystack, templates);
+      if (hits.length > 0) {
+        matched.push(...hits);
+        score += PACKAGE_TEMPLATE_WEIGHT;
       }
     }
     return { domain, score, matched, confidence: 0 };

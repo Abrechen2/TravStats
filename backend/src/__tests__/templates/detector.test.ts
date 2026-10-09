@@ -1,10 +1,6 @@
 import { detectAirline } from "../../services/parsers/templates/detector";
 
 describe("detectAirline", () => {
-  it("detects Lufthansa by from-address", () => {
-    expect(detectAirline("noreply@lufthansa.com", "Buchungsbestätigung", "")).toBe("LH");
-  });
-
   it("detects Ryanair by from-address", () => {
     expect(detectAirline("noreply@ryanair.com", "Your booking", "")).toBe("FR");
   });
@@ -18,27 +14,30 @@ describe("detectAirline", () => {
   });
 
   it("detects an airline by a brand word in the cleaned text, with the URLs long gone", () => {
-    expect(detectAirline("", "Vielen Dank für Ihre Buchung", "", "Ihr Lufthansa Team")).toBe("LH");
-  });
-
-  /**
-   * 2026-09-05, owner's corpus: a forwarded Emirates confirmation with the
-   * subject "Ihre Buchung ist bestätigt" was read as Lufthansa on the subject
-   * rule alone. The Lufthansa template then answered ONE leg out of two with
-   * confidence high enough to beat the regex parser that had found both.
-   */
-  it("does not take a generic subject for Lufthansa when nothing else says so", () => {
-    const forwardedEmirates =
-      "Von: Emirates\nBetreff: Ihre Buchung ist bestätigt - JLNBLW\nEmirates zu Ihrer sicheren Senderliste hinzufügen";
-    // Since 2026-10-01 Emirates has a rule of its own, so the mail is now
-    // detected as what it is — the point stands: never as Lufthansa.
-    expect(detectAirline("", "Ihre Buchung ist bestätigt - JLNBLW", "", forwardedEmirates)).toBe(
-      "EK"
+    expect(detectAirline("", "Vielen Dank für Ihre Buchung", "", "Ihr SWISS Team, swiss.com")).toBe(
+      "LX"
     );
   });
 
-  it("still accepts the subject alone for the old Buchungsdetails rule, which has no fingerprint", () => {
-    expect(detectAirline("", "Buchungsdetails | 23 November 2023", "", "")).toBe("LH-old");
+  /**
+   * Plan 2026-10-09 P4a: Lufthansa (both layouts), Germanwings, Emirates
+   * (both layouts) and Air Berlin read their mail through v2 template files,
+   * whose `match` blocks recognise the issuer. Their rules left this list, so
+   * a compiled-in rule can no longer route such a mail to an older v1
+   * template of the same airline.
+   */
+  it.each([
+    ["noreply@lufthansa.com", "Buchungsbestätigung", ""],
+    ["", "Buchungsdetails | 23 November 2023", ""],
+    ["", "Ihre Buchung ist bestätigt", "Das Emirates-Team"],
+    ["", "Germanwings Buchungsbestätigung", "Germanwings GmbH"],
+    ["", "Ihre Rechnung", "Air Berlin PLC & Co. Luftverkehrs KG"],
+  ])("detects no v1 rule for a v2-read airline (%s / %s)", (from, subject, text) => {
+    expect(detectAirline(from, subject, "", text)).toBeNull();
+  });
+
+  it("does not take a generic subject for an airline when nothing else says so", () => {
+    expect(detectAirline("", "Ihre Buchung ist bestätigt - JLNBLW", "", "Vielen Dank")).toBeNull();
   });
 
   it("returns null for unknown airline", () => {

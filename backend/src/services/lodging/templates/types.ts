@@ -1,4 +1,4 @@
-import type { ParsedLodgingBooking } from "../bookingComTemplate";
+import type { ParsedLodgingBooking } from "../parsedLodgingBooking";
 
 /**
  * A declarative reader for one lodging sender.

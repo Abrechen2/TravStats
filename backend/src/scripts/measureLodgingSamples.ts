@@ -17,10 +17,14 @@
 import * as fs from "fs";
 import * as path from "path";
 import { extractEmailFromFile } from "../services/emailExtractor";
-import {
-  isBookingComConfirmation,
-  parseBookingComEmail,
-} from "../services/lodging/bookingComTemplate";
+import { readWithV2LodgingTemplates } from "../services/lodging/templates/v2Lodging";
+import { templateRegistry } from "../services/parsers/templates/registry";
+
+// The Booking.com reader is the v2 template `lodging:bookingcom` since plan
+// 2026-10-09 P4b; this measures exactly that file as the app loads it.
+const BOOKING_COM = templateRegistry
+  .getActiveV2({ domain: "lodging" })
+  .filter((t) => t.id === "lodging:booking.com");
 
 const DIR =
   process.env.SAMPLE_DIR ?? path.resolve(__dirname, "../../..", "test-samples", "Hotel Buchungen");
@@ -86,9 +90,7 @@ for (const f of files) {
   }
 
   const combined = extracted.subject ? `${extracted.subject}\n\n${extracted.text}` : extracted.text;
-  const hit = isBookingComConfirmation(undefined, combined)
-    ? parseBookingComEmail(firstLineAsSubject(combined), combined)
-    : null;
+  const hit = readWithV2LodgingTemplates(BOOKING_COM, firstLineAsSubject(combined), combined);
 
   rows.push({
     file: f,

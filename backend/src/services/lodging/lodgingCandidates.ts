@@ -1,5 +1,5 @@
 import type { LodgingImportCandidate } from "../../schemas/lodgingImport";
-import type { ParsedLodgingBooking } from "./bookingComTemplate";
+import type { ParsedLodgingBooking } from "./parsedLodgingBooking";
 
 /** Join the street with the postcode so the geocoder has a full address line. */
 function composeAddress(booking: ParsedLodgingBooking): string | null {

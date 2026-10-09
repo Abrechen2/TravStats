@@ -153,6 +153,11 @@ export interface UserSettings {
    */
   countryThreshold?: CountryTier | null;
   /**
+   * ISO 3166-1 alpha-2 home country, or `null` when not set. Orders booking
+   * templates home market first and never filters them; `null` clears it.
+   */
+  homeCountry?: string | null;
+  /**
    * The instance default for the same setting — READ-ONLY, like
    * `betaFeaturesEnabled` below. Served so the UI can NAME what applies while
    * the user has not chosen; PUT /settings ignores it.

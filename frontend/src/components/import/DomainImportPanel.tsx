@@ -160,7 +160,8 @@ export default function DomainImportPanel({
   // while its parser is being built, and a domain the backend cannot parse at
   // all must never show a drop zone — the type guard is what stops that from
   // becoming a runtime 400 nobody sees until a user drops a file.
-  const parseDomain = isParseableDomain(adapter.domain) ? adapter.domain : null;
+  const parseDomain =
+    adapter.parseAs ?? (isParseableDomain(adapter.domain) ? adapter.domain : null);
   const showDocumentRoute = adapter.supportsDocumentImport !== false && parseDomain !== null;
 
   return (

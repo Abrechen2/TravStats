@@ -1,7 +1,6 @@
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
-import { Prisma } from "../prisma";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { rejectDemo } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";
@@ -10,8 +9,6 @@ import {
   createTripSchema,
   updateTripSchema,
   assignFlightsSchema,
-  createBookingSchema,
-  updateBookingSchema,
   TRIP_COLORS,
 } from "../schemas/trip";
 import { assertMergedTripDates } from "../services/trip/tripDateOrder";
@@ -34,7 +31,6 @@ import {
 } from "../services/tripSummaryService";
 import { emailParseLimiter } from "../middleware/rateLimit";
 import { assertLlmCloudConsent, assertLlmEnabled } from "../services/llm/llmGate";
-import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 import { mostExpensiveTrip } from "../services/trip/tripCostSuperlative";
 import { TRIPS_LIST_INCLUDE, TRIP_RAIL_SELECT } from "../services/trip/tripsListInclude";
 import { withRoadtripCounts } from "../services/trip/tripRoadtripCounts";
@@ -187,111 +183,6 @@ router.get(
         })),
         ...(includeInsights && { mostExpensiveTrip: mostExpensive }),
       });
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-/** POST /trips/bookings — create a booking (must come before /trips/:id) */
-router.post(
-  "/trips/bookings",
-  authenticate,
-  requireWriteScope,
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const userId = req.userId!;
-      const body = createBookingSchema.parse(req.body);
-
-      if (body.tripId) {
-        const trip = await prisma.trip.findFirst({
-          where: { id: body.tripId, userId },
-        });
-        if (!trip) throw new AppError("Trip not found", 404);
-      }
-
-      // FX snapshot (#267). A booking carries no travel date of its own, so the
-      // rate is taken for the day it was recorded. That is the only day it has,
-      // and it is honest as long as it is stored alongside the rate rather than
-      // implied.
-      const bookingCurrency = body.currency ?? "EUR";
-      const bookingFx = await fxColumnsFor(
-        { amount: body.price ?? null, currency: bookingCurrency, date: new Date() },
-        await getBaseCurrency(userId)
-      );
-
-      const booking = await prisma.booking.create({
-        data: {
-          userId,
-          tripId: body.tripId ?? null,
-          pnr: body.pnr ?? null,
-          price: body.price ?? null,
-          currency: bookingCurrency,
-          ...bookingFx,
-        },
-      });
-
-      if (body.flightIds && body.flightIds.length > 0) {
-        await prisma.flight.updateMany({
-          where: { id: { in: body.flightIds }, userId },
-          data: {
-            bookingId: booking.id,
-            ...(body.tripId ? { tripId: body.tripId } : {}),
-          },
-        });
-        if (body.tripId) {
-          await recomputeTripStatus(body.tripId);
-        }
-      }
-
-      res.status(201).json({ booking });
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-/** PATCH /trips/bookings/:id — edit pnr/price/currency. Never touches the
- *  booking's flights (their prices stay whatever they are). */
-router.patch(
-  "/trips/bookings/:id",
-  authenticate,
-  requireWriteScope,
-  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const userId = req.userId!;
-      const body = updateBookingSchema.parse(req.body);
-
-      const existing = await prisma.booking.findFirst({
-        where: { id: req.params.id, userId },
-      });
-      if (!existing) throw new AppError("Booking not found", 404);
-
-      const data: Prisma.BookingUpdateInput = {};
-      if (body.pnr !== undefined) data.pnr = body.pnr;
-      if (body.price !== undefined) data.price = body.price;
-      if (body.currency !== undefined) data.currency = body.currency;
-
-      // Re-snapshot only when the amount or its unit actually moved (#267).
-      if (body.price !== undefined || body.currency !== undefined) {
-        Object.assign(
-          data,
-          await fxColumnsFor(
-            {
-              amount: body.price !== undefined ? body.price : existing.price,
-              currency: body.currency !== undefined ? body.currency : existing.currency,
-              date: existing.createdAt,
-            },
-            await getBaseCurrency(userId)
-          )
-        );
-      }
-
-      const booking = await prisma.booking.update({
-        where: { id: existing.id },
-        data,
-      });
-      res.json({ booking });
     } catch (error) {
       next(error);
     }

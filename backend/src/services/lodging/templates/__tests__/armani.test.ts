@@ -1,12 +1,4 @@
-import { LODGING_TEMPLATES } from "../builtins";
-import { applyLodgingTemplate } from "../engine";
-import type { LodgingTemplate } from "../types";
-
-const armani = (): LodgingTemplate => {
-  const found = LODGING_TEMPLATES.find((t) => t.id === "lodging:armani");
-  if (!found) throw new Error("No template lodging:armani");
-  return found;
-};
+import { READERS } from "./readers";
 
 /**
  * Armani Hotels' own confirmation ("Your Reservation Confirmation at …"),
@@ -33,9 +25,9 @@ const BODY = [
   "Total cost of stay: AED 4500.00",
 ].join("\r\n");
 
-const read = (subject: string) => applyLodgingTemplate(armani(), subject, `${subject}\r\n${BODY}`);
+describe.each(READERS)("the Armani Hotels reader — %s", (_reader, apply) => {
+  const read = (subject: string) => apply("lodging:armani", subject, `${subject}\r\n${BODY}`);
 
-describe("the Armani Hotels reader", () => {
   it("reads the hotel from the subject, both dates, the guests and the total", () => {
     const r = read(SUBJECT);
     expect(r).not.toBeNull();
@@ -56,7 +48,7 @@ describe("the Armani Hotels reader", () => {
   it("reads a forward whose mail program put every value on its own line", () => {
     const stacked = BODY.replace(/:\t /g, ":\r\n\r\n");
     expect(stacked).toContain("Check-In:\r\n\r\nTuesday");
-    const r = applyLodgingTemplate(armani(), `Fwd: ${SUBJECT}`, `Fwd: ${SUBJECT}\r\n${stacked}`);
+    const r = apply("lodging:armani", `Fwd: ${SUBJECT}`, `Fwd: ${SUBJECT}\r\n${stacked}`);
     expect([r?.checkIn, r?.checkOut, r?.guests]).toEqual(["2028-03-07", "2028-03-10", 2]);
   });
 
@@ -68,7 +60,7 @@ describe("the Armani Hotels reader", () => {
     const newsletter =
       "Discover the Armani Hotel Beispielstadt\r\nCheck-In: from 3 pm\r\nBook now.";
     expect(
-      applyLodgingTemplate(armani(), "Summer at Armani", `Summer at Armani\r\n${newsletter}`)
+      apply("lodging:armani", "Summer at Armani", `Summer at Armani\r\n${newsletter}`)
     ).toBeNull();
   });
 });

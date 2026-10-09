@@ -1,0 +1,227 @@
+{
+  "id": "cruise:tui-cruises-confirmation",
+  "domain": "cruise",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "TUI Cruises",
+    "kind": "cruise-line",
+    "keys": {
+      "senderDomains": ["meinschiff.com", "tuicruises.com"]
+    }
+  },
+  "markets": ["DE", "AT", "CH"],
+  "match": {
+    "markers": [],
+    "anchors": [],
+    "anyOf": [
+      {
+        "pattern": "TUI\\s+Cruises\\s+GmbH",
+        "flags": "i"
+      },
+      {
+        "pattern": "meinschiff\\.com",
+        "flags": "i"
+      }
+    ]
+  },
+  "extraction": {
+    "preprocess": ["stripCarriageReturns"],
+    "fields": {
+      "cruiseLine": {
+        "value": "TUI Cruises"
+      },
+      "currency": {
+        "value": "EUR"
+      },
+      "bookingReference": {
+        "patterns": ["Vorgang-Nr\\.?:\\s*([0-9]+)(?:\\/[0-9]+)?"],
+        "flags": ""
+      }
+    },
+    "repeats": {
+      "routes": {
+        "mode": "matchAll",
+        "pattern": "^[ \\t]*(?:Ihre Reise:[ \\t]*)?\\d+[ \\t]+N[äa]chte[ \\t]*-[ \\t]*(?<name>[^\\n]+?)[ \\t]*-[ \\t]*ab(?:\\/bis|[ \\t])",
+        "flags": "gim",
+        "fields": {
+          "routeName": {
+            "group": "name"
+          }
+        },
+        "minimum": 0
+      },
+      "cruises": {
+        "mode": "split",
+        "splitPattern": "^[ \\t]*Mein Schiff[ \\t]+[0-9A-Za-z]+\\b(?=[^\\n]*\\n(?:[^\\n]*\\n){0,3}?[ \\t]*Deck[ \\t]+\\d{1,2}[ \\t]+-[ \\t]+[^-\\n]+-[ \\t]+Kabine[ \\t]+[0-9A-Za-z]+[ \\t]*$)",
+        "flags": "gm",
+        "skipPreamble": true,
+        "zip": {
+          "with": "routes"
+        },
+        "fields": {
+          "shipName": {
+            "patterns": ["^[ \\t]*(Mein Schiff[ \\t]+[0-9A-Za-z]+\\b)"],
+            "flags": "",
+            "transform": "text"
+          },
+          "deck": {
+            "patterns": [
+              "^[ \\t]*Deck[ \\t]+(\\d{1,2})[ \\t]+-[ \\t]+[^-\\n]+-[ \\t]+Kabine[ \\t]+([0-9A-Za-z]+)[ \\t]*$"
+            ],
+            "flags": "m",
+            "transform": "integer"
+          },
+          "cabinNumber": {
+            "patterns": [
+              "^[ \\t]*Deck[ \\t]+(\\d{1,2})[ \\t]+-[ \\t]+[^-\\n]+-[ \\t]+Kabine[ \\t]+([0-9A-Za-z]+)[ \\t]*$"
+            ],
+            "flags": "m",
+            "format": "{2}"
+          },
+          "cabinType": {
+            "patterns": [
+              "^[ \\t]*(?!Mein Schiff[ \\t]+[0-9A-Za-z]+\\b)([^\\d\\s][^\\n]*?)[ \\t]*\\n(?:[ \\t]*(?:\\d[^\\n]*)?\\n){0,3}?[ \\t]*Deck[ \\t]+\\d{1,2}[ \\t]+-[ \\t]+[^-\\n]+-[ \\t]+Kabine[ \\t]+[0-9A-Za-z]+[ \\t]*$"
+            ],
+            "flags": "m"
+          },
+          "price": {
+            "patterns": ["\\d+\\s*x\\s*Kreuzfahrtpreis\\s+([\\d.]+,\\d{2})\\s*€"],
+            "flags": "m",
+            "transform": "amount"
+          }
+        },
+        "repeats": {
+          "stops": {
+            "mode": "matchAll",
+            "within": {
+              "startAfter": "^[ \\t]*Deck[ \\t]+\\d{1,2}[ \\t]+-[ \\t]+[^-\\n]+-[ \\t]+Kabine[ \\t]+[0-9A-Za-z]+[ \\t]*$",
+              "endBefore": "^(?![ \\t]*(?:Änderungen der Termine|vorbehalten[ \\t]*$|--[ \\t]*\\d+[ \\t]+of[ \\t]+\\d+[ \\t]*--[ \\t]*$|Seite[ \\t]+\\d+[ \\t]*$|(?:Datum|Vorgang)\\b))(?![^\\n]*\\d{2}\\.\\d{2}\\.\\d{4})[ \\t]*\\S"
+            },
+            "pattern": "(?<d>\\d{2})\\.(?<m>\\d{2})\\.(?<y>\\d{4})\\s+(?<label>[\\s\\S]*?)(?=\\d{2}\\.\\d{2}\\.\\d{4}\\s|(?![\\s\\S]))",
+            "flags": "g",
+            "fields": {
+              "date": {
+                "format": "{d}.{m}.{y}",
+                "transform": "numericDate"
+              },
+              "portName": {
+                "group": "label",
+                "replace": [
+                  ["\\s+", " "],
+                  ["\\s*-\\s*$", ""]
+                ],
+                "transform": "trim"
+              },
+              "isAtSea": {
+                "group": "label",
+                "replace": [
+                  ["\\s+", " "],
+                  ["\\s*-\\s*$", ""]
+                ],
+                "transform": "trim",
+                "map": [["^seetag$", true]]
+              }
+            },
+            "skipItemsWithout": ["portName"],
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "required": ["cruises"]
+  },
+  "testCases": [
+    {
+      "name": "a single cruise with sea days, a hyphenated port and a qualifier",
+      "input": "TUI Cruises GmbH • Beispielallee 3 • 20000 Hamburg\nMein Schiff 7\tIhr Schiff:\nIhre Reise: 5 Nächte - Probeküste mit Testinseln - ab/bis Hafenstadt\nIhr Reisedatum: 02.09. - 07.09.2027\nwww.meinschiff.com\nVorgang-Nr.: 2468135/1\nDatum: 10.03.2026\n1-2 02.09.2027 -\n07.09.2027\nMein Schiff 7\nBalkonkabine (2er Belegung)\nDeck 9 - Brise - Kabine 9120\nÄnderungen der Termine, Route, Tendern, Liegezeiten\nvorbehalten\n02.09.2027 Hafenstadt - 03.09.2027 Seetag - 04.09.2027 Sankt-Probe\n- 05.09.2027 Teststadt\n(Altstadt) - 06.09.2027 Seetag - 07.09.2027 Hafenstadt\nPremium Alles Inklusive\n2 x Kreuzfahrtpreis 2.640,00 €\t1.320,00 €\t1-2",
+      "expect": "match",
+      "expected": {
+        "bookingReference": "2468135",
+        "cruises": [
+          {
+            "shipName": "Mein Schiff 7",
+            "routeName": "Probeküste mit Testinseln",
+            "cabinType": "Balkonkabine (2er Belegung)",
+            "deck": 9,
+            "cabinNumber": "9120",
+            "price": 2640,
+            "stops": [
+              {
+                "date": "2027-09-02",
+                "portName": "Hafenstadt",
+                "isAtSea": null
+              },
+              {
+                "date": "2027-09-03",
+                "portName": "Seetag",
+                "isAtSea": true
+              },
+              {
+                "date": "2027-09-04",
+                "portName": "Sankt-Probe"
+              },
+              {
+                "date": "2027-09-05",
+                "portName": "Teststadt (Altstadt)"
+              },
+              {
+                "date": "2027-09-06",
+                "isAtSea": true
+              },
+              {
+                "date": "2027-09-07",
+                "portName": "Hafenstadt"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "a back-to-back booking is two cruises, each with its own route and price",
+      "input": "TUI Cruises GmbH • Beispielallee 3 • 20000 Hamburg\nMein Schiff 3\tIhr Schiff:\nIhre Reise: 2 Nächte - Kurz und gut - ab/bis Hafenstadt\n3 Nächte - Lang und besser - ab/bis Hafenstadt\nwww.meinschiff.com\nVorgang-Nr.: 1357924/2\n1-2 01.07.2027 -\n03.07.2027\nMein Schiff 3\nInnenkabine (2er Belegung)\nDeck 4 - Welle - Kabine 4010\nvorbehalten\n01.07.2027 Hafenstadt - 02.07.2027 Seetag - 03.07.2027 Hafenstadt\nPremium Alles Inklusive\n2 x Kreuzfahrtpreis 900,00 €\t450,00 €\t1-2\n-- 1 of 2 --\nSeite 2\nVorgang 1357924/2\n1-2 03.07.2027 -\n06.07.2027\nMein Schiff 3\nInnenkabine (2er Belegung)\nDeck 4 - Welle - Kabine 4010\nvorbehalten\n03.07.2027 Hafenstadt - 04.07.2027 Probehafen - 05.07.2027 Seetag - 06.07.2027 Hafenstadt\nPremium Alles Inklusive\n2 x Kreuzfahrtpreis 1.100,00 €\t550,00 €\t1-2",
+      "expect": "match",
+      "expected": {
+        "cruises": [
+          {
+            "routeName": "Kurz und gut",
+            "price": 900,
+            "stops": [
+              {
+                "date": "2027-07-01"
+              },
+              {},
+              {
+                "date": "2027-07-03"
+              }
+            ]
+          },
+          {
+            "routeName": "Lang und besser",
+            "price": 1100,
+            "stops": [
+              {
+                "date": "2027-07-03"
+              },
+              {},
+              {},
+              {
+                "date": "2027-07-06"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "an advertisement that names a ship is no confirmation",
+      "input": "Mein Schiff 4 ab 799 € — jetzt buchen!",
+      "expect": "decline"
+    },
+    {
+      "name": "the issuer without a cabin block reads nothing",
+      "input": "TUI Cruises GmbH\nDanke für Ihre Anfrage.",
+      "expect": "decline"
+    }
+  ]
+}

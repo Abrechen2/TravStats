@@ -771,6 +771,12 @@
       "description": "Flights sharing a booking reference are grouped into a trip with a booking during import. When off, the booking reference is kept – you can still group them later via “Detect trips”."
     }
   },
+  "homeCountry": {
+    "label": "Home country",
+    "description": "Decides which booking templates are tried first. Templates for other countries stay active.",
+    "none": "Not set",
+    "loadFailed": "Home country could not be loaded."
+  },
   "devices": {
     "title": "Devices",
     "description": "Connect the TravStats app on your phone. Scan the QR code in the app to pair the device — a device-bound token is created automatically.",

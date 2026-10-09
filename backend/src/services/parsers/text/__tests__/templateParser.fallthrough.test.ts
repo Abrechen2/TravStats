@@ -5,7 +5,19 @@ import { templateRegistry } from "../../templates/registry";
 import type { AirlineTemplate } from "../../templates/types";
 
 const LH_OLD = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "..", "..", "templates", "airlines", "LH-old.json"), "utf-8")
+  fs.readFileSync(
+    path.join(
+      __dirname,
+      "..",
+      "..",
+      "templates",
+      "__tests__",
+      "fixtures",
+      "v1-airlines",
+      "LH-old.json"
+    ),
+    "utf-8"
+  )
 ) as AirlineTemplate;
 
 describe("TemplateParser — walking the detected templates", () => {

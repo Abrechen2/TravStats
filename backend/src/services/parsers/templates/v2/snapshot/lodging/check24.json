@@ -1,0 +1,126 @@
+{
+  "id": "lodging:check24",
+  "domain": "lodging",
+  "version": "2026.10.9",
+  "issuer": {
+    "name": "CHECK24",
+    "kind": "portal"
+  },
+  "markets": ["DE"],
+  "match": {
+    "markers": ["check24"],
+    "anchors": ["buchungsinformationen", "buchungsnummer"]
+  },
+  "extraction": {
+    "fields": {
+      "hotelName": {
+        "patterns": ["Buchungsbestätigung\\s*\"([^\"]+)\""],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "confirmationNumber": {
+        "stacked": "Buchungsnummer",
+        "transform": "firstDigits"
+      },
+      "checkIn": {
+        "stacked": "Anreise",
+        "transform": ["dropFirstWord", "germanDate"]
+      },
+      "checkOut": {
+        "stacked": "Abreise",
+        "transform": ["dropFirstWord", "germanDate"]
+      },
+      "totalPrice": {
+        "stacked": "Buchungspreis",
+        "transform": "money"
+      },
+      "currency": {
+        "stacked": "Buchungspreis",
+        "transform": "currency"
+      },
+      "roomCategory": {
+        "stacked": "Zimmername",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "guests": {
+        "stacked": "Anzahl der Gäste",
+        "transform": "integer"
+      },
+      "address": {
+        "patterns": ["\\n([^\\n,]+),\\s*\\d{5}\\s+[^,\\n]+,\\s*[A-Za-zÄÖÜäöüß ]+\\s*<"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "postcode": {
+        "patterns": [",\\s*(\\d{5})\\s+[^,\\n]+,\\s*[A-Za-zÄÖÜäöüß ]+\\s*<"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "city": {
+        "patterns": [",\\s*\\d{5}\\s+([^,\\n]+),\\s*[A-Za-zÄÖÜäöüß ]+\\s*<"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "country": {
+        "patterns": [",\\s*\\d{5}\\s+[^,\\n]+,\\s*([A-Za-zÄÖÜäöüß ]+?)\\s*<"],
+        "flags": "i",
+        "transform": ["text", "stripTrailingSeparator"]
+      },
+      "type": {
+        "value": "hotel"
+      }
+    },
+    "required": ["hotelName", "checkIn", "checkOut"],
+    "labels": [
+      "Buchungsnummer",
+      "PIN-Code",
+      "Anreise",
+      "Abreise",
+      "Anzahl der Gäste",
+      "Zimmername",
+      "Zimmerkategorie",
+      "Verpflegung",
+      "Zahlungsart",
+      "Zahlung beim Buchen",
+      "Belastung durch",
+      "Buchungspreis",
+      "Hinweis zu Ihrer Zahlung",
+      "Buchungsinformationen",
+      "Kontakt zur Unterkunft"
+    ]
+  },
+  "testCases": [
+    {
+      "name": "a stacked CHECK24 confirmation",
+      "input": "Buchungsbestätigung \"Novina Sleep Inn Herzogenaurach\" (260308233983)\nBuchungsbestätigung \"Novina Sleep Inn Herzogenaurach\" (260308233983)\nNovina Sleep Inn Herzogenaurach\n60 Erlanger Straße, 91074 Herzogenaurach, Deutschland <https://maps.google.com/?q=x>\nBuchungsinformationen\nBuchungsnummer\n260308233983 (gebucht am Mo. 9. März 2026)\nAnreise\nDi. 10. März 2026 (Check-in: 15:00 - 22:00 Uhr)\nAbreise\nMi. 11. März 2026 (Check-out bis 11:00 Uhr)\nAnzahl der Gäste\n1 Erwachsener\nZimmername\nAppartement\nBuchungspreis\n156,60 EUR\nIhre Buchung wurde über CHECK24 gebucht.",
+      "expect": "match",
+      "expected": {
+        "hotelName": "Novina Sleep Inn Herzogenaurach",
+        "checkIn": "2026-03-10",
+        "checkOut": "2026-03-11",
+        "confirmationNumber": "260308233983"
+      }
+    },
+    {
+      "name": "a value across a blank line",
+      "input": "Buchungsbestätigung \"Musterhotel\" (123456789012)\nBuchungsbestätigung \"Musterhotel\" (123456789012)\nCHECK24\nBuchungsinformationen\nBuchungsnummer\n\n123456789012 (gebucht am Mo. 9. März 2026)\nAnreise\nDi. 10. März 2026 (Check-in: 15:00 - 22:00 Uhr)\nAbreise\n\nMi. 11. März 2026 (Check-out bis 11:00 Uhr)",
+      "expect": "match",
+      "expected": {
+        "hotelName": "Musterhotel",
+        "checkIn": "2026-03-10",
+        "checkOut": "2026-03-11",
+        "confirmationNumber": "123456789012"
+      }
+    },
+    {
+      "name": "an empty arrival is not the departure",
+      "input": "Buchungsbestätigung \"Musterhotel\" (123456789012)\nBuchungsbestätigung \"Musterhotel\" (123456789012)\nCHECK24\nBuchungsinformationen\nBuchungsnummer\n\n123456789012 (gebucht am Mo. 9. März 2026)\nAnreise\n\nAbreise\n\nMi. 11. März 2026 (Check-out bis 11:00 Uhr)",
+      "expect": "decline"
+    },
+    {
+      "name": "a Booking.com confirmation in the same layout",
+      "input": "Buchungsbestätigung \"Novina Sleep Inn Herzogenaurach\" (260308233983)\nBuchungsbestätigung \"Novina Sleep Inn Herzogenaurach\" (260308233983)\nNovina Sleep Inn Herzogenaurach\n60 Erlanger Straße, 91074 Herzogenaurach, Deutschland <https://maps.google.com/?q=x>\nBuchungsinformationen\nBuchungsnummer\n260308233983 (gebucht am Mo. 9. März 2026)\nAnreise\nDi. 10. März 2026 (Check-in: 15:00 - 22:00 Uhr)\nAbreise\nMi. 11. März 2026 (Check-out bis 11:00 Uhr)\nAnzahl der Gäste\n1 Erwachsener\nZimmername\nAppartement\nBuchungspreis\n156,60 EUR\nIhre Buchung wurde über booking.com gebucht.",
+      "expect": "decline"
+    }
+  ]
+}

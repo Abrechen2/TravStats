@@ -119,7 +119,11 @@ export default function EmailImportTab({
             binary += String.fromCharCode(bytes[i]);
           }
           const pdfBase64 = btoa(binary);
-          const result = await parseApi.parsePdf(pdfBase64, domain);
+          // A package's document is kept: the commit files it on the trip.
+          const result =
+            domain === "package"
+              ? await parseApi.parsePdf(pdfBase64, domain, { retain: true })
+              : await parseApi.parsePdf(pdfBase64, domain);
           onPdfResult(result, file.name, { kind: "file", file });
         } catch (err) {
           logger.error("EmailImportTab: PDF parse failed", err);
@@ -137,7 +141,10 @@ export default function EmailImportTab({
 
       setDropState("loading");
       try {
-        const result = await parseApi.parseEmailFile(file, domain);
+        const result =
+          domain === "package"
+            ? await parseApi.parseEmailFile(file, domain, { retain: true })
+            : await parseApi.parseEmailFile(file, domain);
         onEmailResult(result, file.name, { kind: "file", file });
       } catch (err) {
         logger.error("EmailImportTab: email file parse failed", err);
