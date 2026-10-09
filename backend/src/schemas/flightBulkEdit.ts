@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 /**
  * `POST /flights/bulk-edit` (forgejo#217): trip, tags and companions over an

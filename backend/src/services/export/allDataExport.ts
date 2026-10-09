@@ -74,6 +74,10 @@ export const USER_EXPORT_SELECT = {
   // Catalogue chains (no owner) are re-seeded and stay out.
   lodgingChains: true,
   places: true,
+  // The other OSM/Google references a place answers to after a merge
+  // (forgejo#232): without them a re-import of the export's source would
+  // bring the merged duplicate back.
+  placeExternalRefs: true,
   placeVisits: { include: { photos: true } },
   placeLists: { include: { entries: true } },
   // Rail (spec 2026-09-25-rail-domain): the rides with their companion links,

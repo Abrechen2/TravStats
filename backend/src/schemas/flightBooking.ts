@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 /**
  * A booking's optional price split across its flight segments (forgejo#219).
