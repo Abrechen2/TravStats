@@ -84,6 +84,12 @@ export const USER_EXPORT_SELECT = {
   // invoice could supply again.
   rentalBookings: { include: { companionLinks: true } },
   companions: true,
+  // Trip sharing (design 2026-10-09): the consents this account asked for and
+  // gave, the groups it started and the notices addressed to it.
+  shareConsentsAsked: true,
+  shareConsentsGiven: true,
+  shareGroupsCreated: true,
+  shareNotices: true,
   // Kept originals (forgejo#116): the rows — what each is, where it is filed,
   // what its parse read. The bytes stay out, as a photo's do.
   documents: true,
@@ -141,6 +147,10 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   parseLogs: "parser training log, operational",
   pendingFlightUpdates: "transient queue of suggested flight changes",
   dataQualityFlags: "derived by the data-quality sweep, recomputed from the rows",
+  linkedAsCompanion:
+    "other accounts' companion rows that name this user — their data, not this user's",
+  shareNoticesActed:
+    "notices addressed to other accounts about what this user did — their inbox, not this user's",
 };
 
 /**
