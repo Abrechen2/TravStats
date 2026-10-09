@@ -62,6 +62,7 @@
     "none": "Ohne Kategorie",
     "rowLabel": "Kategorie von {{name}}",
     "uploadLabel": "Nächsten Upload ablegen unter",
-    "saveFailed": "Die Kategorie konnte nicht geändert werden. Bitte versuche es noch einmal."
+    "saveFailed": "Die Kategorie konnte nicht geändert werden. Bitte versuche es noch einmal.",
+    "alreadyFiled": "„{{name}}“ lag schon unter „{{category}}“ – dort bleibt die Datei. Mit der Auswahl in ihrer Zeile kannst du sie umlegen."
   }
 }

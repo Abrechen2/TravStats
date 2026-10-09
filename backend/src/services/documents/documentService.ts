@@ -324,7 +324,20 @@ export async function createDocument(input: CreateDocumentInput): Promise<Create
   const sameTarget = await prisma.document.findFirst({
     where: { userId: input.userId, sha256, ...(entry ? ownerWhere(entry) : NO_OWNER) },
   });
-  if (sameTarget) return { document: sameTarget, created: false };
+  if (sameTarget) {
+    // The same file sent again for the same rental under a category: a still
+    // uncategorised copy takes it (review, minor 4). One already filed under
+    // another category keeps it — the answer carries that one, and the client
+    // says so rather than pretending the new choice was applied.
+    if (input.rentalCategory && sameTarget.rentalCategory === null) {
+      const document = await prisma.document.update({
+        where: { id: sameTarget.id },
+        data: { rentalCategory: input.rentalCategory },
+      });
+      return { document, created: false };
+    }
+    return { document: sameTarget, created: false };
+  }
 
   // A retried offline send may arrive with a target after the first attempt
   // went up unfiled: file that one rather than keeping two copies.

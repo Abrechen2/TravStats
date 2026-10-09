@@ -107,6 +107,22 @@ describe("rental document categories", () => {
     expect(cleared.body.data.rentalCategory).toBeNull();
   });
 
+  it("files a re-sent, still uncategorised copy under the chosen category, and keeps a chosen one", async () => {
+    const first = await upload({ entryType: "rentalBooking", entryId: rentalId }, 9);
+    expect(first.body.data.rentalCategory).toBeNull();
+    const again = await upload(
+      { entryType: "rentalBooking", entryId: rentalId, rentalCategory: "damage" },
+      9
+    );
+    expect(again.status).toBe(200);
+    expect(again.body.data).toMatchObject({ id: first.body.data.id, rentalCategory: "damage" });
+    const third = await upload(
+      { entryType: "rentalBooking", entryId: rentalId, rentalCategory: "fuel" },
+      9
+    );
+    expect(third.body.data.rentalCategory).toBe("damage");
+  });
+
   it("refuses a category on a document filed with anything but a rental", async () => {
     const res = await upload({ entryType: "flight", entryId: flightId, rentalCategory: "fuel" }, 3);
     expect(res.status).toBe(400);

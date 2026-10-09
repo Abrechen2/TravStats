@@ -130,6 +130,23 @@ describe("DocumentsSection — rental categories", () => {
     expect(documentsApiMock.upload.mock.calls[0][0]).toMatchObject({ rentalCategory: "pickup" });
   });
 
+  it("says when the same file was already filed under another category", async () => {
+    documentsApiMock.upload.mockResolvedValue(
+      makeDocument({ id: "a", displayName: "kratzer.jpg", rentalCategory: "damage" })
+    );
+    render(<DocumentsSection entry={RENTAL} rentalCategories />);
+    await screen.findByTestId("documents-group-none");
+    fireEvent.change(
+      screen.getByRole("combobox", { name: "documents:rentalCategory.uploadLabel" }),
+      { target: { value: "fuel" } }
+    );
+    const file = new File(["x"], "kratzer.jpg", { type: "image/jpeg" });
+    fireEvent.change(screen.getByTestId("documents-file-input"), { target: { files: [file] } });
+    expect((await screen.findByTestId("documents-notice")).textContent).toBe(
+      "documents:rentalCategory.alreadyFiled"
+    );
+  });
+
   it("offers no categories on any other entry", async () => {
     render(<DocumentsSection entry={{ type: "flight", id: "f1" }} />);
     await waitFor(() => expect(documentsApiMock.listForEntry).toHaveBeenCalled());

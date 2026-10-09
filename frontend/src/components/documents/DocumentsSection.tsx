@@ -118,6 +118,8 @@ export default function DocumentsSection({
   const [pendingDelete, setPendingDelete] = useState<TravelDocument | null>(null);
   /** The category the next upload is filed under (rental evidence only). */
   const [uploadCategory, setUploadCategory] = useState<RentalDocumentCategory | null>(null);
+  /** A remark about the last upload that is not a failure. */
+  const [notice, setNotice] = useState<string | null>(null);
 
   const entryType = entry.type;
   const entryId = entry.id;
@@ -158,12 +160,28 @@ export default function DocumentsSection({
       }
       setBusy(true);
       setError(null);
+      setNotice(null);
       try {
-        await documentsApi.upload({
+        const kept = await documentsApi.upload({
           entry: { type: entryType, id: entryId },
           file,
           ...(rentalCategories && uploadCategory ? { rentalCategory: uploadCategory } : {}),
         });
+        // The same file was already filed under another category: the server
+        // keeps that one, and the section says so (review, minor 4).
+        if (
+          rentalCategories &&
+          uploadCategory &&
+          kept.rentalCategory &&
+          kept.rentalCategory !== uploadCategory
+        ) {
+          setNotice(
+            t("documents:rentalCategory.alreadyFiled", {
+              name: kept.displayName,
+              category: t(`documents:rentalCategory.${kept.rentalCategory}`),
+            })
+          );
+        }
         // Re-read rather than append: the server answers a repeat of the same
         // bytes with the document already on file, so appending would show it
         // twice.
@@ -278,7 +296,8 @@ export default function DocumentsSection({
           type="button"
           onClick={() => setPendingDelete(doc)}
           aria-label={t("documents:removeLabel", { name: doc.displayName })}
-          className="shrink-0 text-sm"
+          // A finger-sized target beside the category select (review, minor 10).
+          className="shrink-0 text-sm pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:px-2"
           style={{
             background: "none",
             border: "none",
@@ -332,6 +351,11 @@ export default function DocumentsSection({
         </ul>
       )}
 
+      {notice !== null && (
+        <p className="t-caption" role="status" data-testid="documents-notice">
+          {notice}
+        </p>
+      )}
       {error !== null && (
         <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
           {error}

@@ -96,7 +96,6 @@ export type ApiErrorCode =
   | "RENTAL_RETURN_BEFORE_PICKUP"
   | "RENTAL_ACTUAL_RETURN_BEFORE_PICKUP"
   | "RENTAL_DEPOSIT_RETURN_EXCEEDS"
-  | "DOCUMENT_CATEGORY_NOT_RENTAL"
   | "RENTAL_DEPOSIT_RETURNED_BEFORE_PAID"
   /** The return odometer below the pick-up one, on the merged row. `field` is `odometerInKm`. */
   | "RENTAL_ODOMETER_REVERSED"
@@ -259,7 +258,9 @@ export type ApiErrorCode =
    *  or a section or the account's total is over its byte cap (413). The web
    *  keeps its local value either way. */
   | "WEB_PREFS_INVALID"
-  | "WEB_PREFS_TOO_LARGE";
+  | "WEB_PREFS_TOO_LARGE"
+  /** A rental evidence category on a document not filed with a rental (forgejo#239). */
+  | "DOCUMENT_CATEGORY_NOT_RENTAL";
 
 interface AuthRequest extends Request {
   user?: {
