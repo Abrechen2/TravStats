@@ -111,14 +111,21 @@ export function CruiseImportPreviewModal({
     setSaving(true);
     try {
       const allFlights = entryData.flatMap((e) => e.flightInputs);
+      // The trip is made when the first cruise is actually about to be
+      // stored, and taken back if every booking was already there: a re-read
+      // must not leave a second, empty "Norwegen 2026" (review I4).
+      const wantTrip = groupAsTrip && (allFlights.length > 0 || entryData.length > 1);
       let tripId: string | undefined;
-      if (groupAsTrip && (allFlights.length > 0 || entryData.length > 1)) {
-        const trip = await tripsApi.create({
-          name: tripName.trim() || defaultTripName,
-          ...deriveTripMeta(entryData, new Date()),
-        });
-        tripId = trip.id;
-      }
+      const ensureTrip = async (): Promise<string | undefined> => {
+        if (wantTrip && !tripId) {
+          const trip = await tripsApi.create({
+            name: tripName.trim() || defaultTripName,
+            ...deriveTripMeta(entryData, new Date()),
+          });
+          tripId = trip.id;
+        }
+        return tripId;
+      };
 
       // One import, one entry in the log — and a booking that was already read
       // once is counted, not created twice. A batch that cannot be created
@@ -132,9 +139,14 @@ export function CruiseImportPreviewModal({
 
       let alreadyThere = 0;
       const conflicts: ReimportConflict[] = [];
+      // Only the flights of a booking stored NOW: an already-imported one's
+      // flights were made by its first import (review I4).
+      const flights: FlightInput[] = [];
       for (const e of entryData) {
         try {
-          await cruiseApi.create({ ...e.input, tripId, importBatchId: batchId });
+          const trip = await ensureTrip();
+          await cruiseApi.create({ ...e.input, tripId: trip, importBatchId: batchId });
+          flights.push(...e.flightInputs);
         } catch (err: unknown) {
           // 409 is the server saying "you already have this one" — the normal
           // answer to re-reading a forwarded confirmation, not a failure. Its
@@ -149,11 +161,18 @@ export function CruiseImportPreviewModal({
           throw err;
         }
       }
+      const created = entryData.length - alreadyThere;
+      if (tripId && created === 0) {
+        await tripsApi.delete(tripId).catch((err: unknown) => {
+          logger.error("CruiseImportPreviewModal: removing the unused trip failed", err);
+        });
+        tripId = undefined;
+      }
 
       const flightIds: string[] = [];
-      for (const f of allFlights) {
-        const created = await flightsApi.create(f, { force: true });
-        if (created.id) flightIds.push(created.id);
+      for (const f of flights) {
+        const stored = await flightsApi.create(f, { force: true });
+        if (stored.id) flightIds.push(stored.id);
       }
       if (tripId && flightIds.length > 0) {
         await tripsApi.assignFlights(tripId, { flightIds, action: "add" });
@@ -163,15 +182,15 @@ export function CruiseImportPreviewModal({
         if (alreadyThere > 0) {
           addToast("info", t("cruise:import.alreadyImported", { count: alreadyThere }));
         }
-        addToast(
-          "success",
-          allFlights.length > 0
-            ? t("cruise:import.savedWithFlights", {
-                cruises: entryData.length,
-                flights: allFlights.length,
-              })
-            : t("cruise:import.saved", { count: entryData.length })
-        );
+        // Counts what this import STORED, not what it read.
+        if (created > 0) {
+          addToast(
+            "success",
+            flights.length > 0
+              ? t("cruise:import.savedWithFlights", { cruises: created, flights: flights.length })
+              : t("cruise:import.saved", { count: created })
+          );
+        }
         await onSaved();
       };
       if (conflicts.length > 0) {

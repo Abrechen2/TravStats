@@ -1,8 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CruiseImportPreviewModal } from "../../../components/Cruise/CruiseImportPreviewModal";
 import { cruiseApi } from "../../../lib/api/cruise";
+import { flightsApi } from "../../../lib/api/flights";
+import { tripsApi } from "../../../lib/api/trips";
+import type { Airport } from "../../../lib/api";
 import type { ParsedCruiseEntry } from "../../../lib/api/parse";
 import type { Cruise, Port } from "../../../types";
 
@@ -27,7 +30,7 @@ vi.mock("../../../lib/api/cruise", () => ({
 }));
 vi.mock("../../../lib/api/flights", () => ({ flightsApi: { create: vi.fn() } }));
 vi.mock("../../../lib/api/trips", () => ({
-  tripsApi: { create: vi.fn(), assignFlights: vi.fn() },
+  tripsApi: { create: vi.fn(), assignFlights: vi.fn(), delete: vi.fn() },
 }));
 vi.mock("../../../store/toastStore", () => ({
   useToastStore: (selector: (s: { addToast: (...args: unknown[]) => void }) => unknown) =>
@@ -104,5 +107,101 @@ describe("CruiseImportPreviewModal — a booking read again", () => {
     // One call on day 4, now at Stavanger, with the note written for that day.
     expect(body.stops).toHaveLength(1);
     expect(body.stops?.[0]).toMatchObject({ dayNumber: 4, portId: 5, excursionNote: "Fløibanen" });
+  });
+
+  /**
+   * Review I4: re-reading a fly & cruise booking created its flights again,
+   * and a new trip for them. Flights belong to the booking stored NOW; the
+   * trip is taken back when nothing was stored.
+   */
+  describe("a fly & cruise booking read again", () => {
+    const fra = {
+      iata: "FRA",
+      name: "Frankfurt",
+      lat: 50,
+      lon: 8,
+      timezone: "Europe/Berlin",
+    } as Airport;
+    const bgo = {
+      iata: "BGO",
+      name: "Bergen",
+      lat: 60,
+      lon: 5,
+      timezone: "Europe/Oslo",
+    } as Airport;
+    const withFlight = (ref: string): ParsedCruiseEntry =>
+      ({
+        ...entry,
+        input: { ...entry.input, bookingReference: ref },
+        flights: [
+          {
+            flightNumber: "LH123",
+            airline: "Lufthansa",
+            date: "2026-10-05",
+            departureAirport: fra,
+            arrivalAirport: bgo,
+            direction: "outbound",
+          },
+        ],
+      }) as ParsedCruiseEntry;
+    const conflict = {
+      response: { status: 409, data: { error: "already_imported", data: { id: "existing-1" } } },
+    };
+
+    beforeEach(() => {
+      vi.clearAllMocks();
+      vi.mocked(tripsApi.create).mockResolvedValue({ id: "trip-new" } as never);
+      vi.mocked(tripsApi.delete).mockResolvedValue(undefined);
+      vi.mocked(flightsApi.create).mockResolvedValue({ id: "f1" } as never);
+      vi.mocked(cruiseApi.get).mockResolvedValue(stored);
+    });
+
+    it("creates no flights and leaves no trip behind when the booking was already there", async () => {
+      vi.mocked(cruiseApi.create).mockRejectedValue(conflict);
+      const onSaved = vi.fn();
+      render(
+        <CruiseImportPreviewModal
+          entries={[withFlight("ABC123")]}
+          onCancel={vi.fn()}
+          onSaved={onSaved}
+        />
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "cruise:import.save" }));
+      await userEvent.click(await screen.findByRole("button", { name: "reimport.keepStored" }));
+
+      await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+      expect(flightsApi.create).not.toHaveBeenCalled();
+      expect(tripsApi.assignFlights).not.toHaveBeenCalled();
+      // A trip made before the answer is taken back again.
+      const made = vi.mocked(tripsApi.create).mock.calls.length;
+      expect(vi.mocked(tripsApi.delete).mock.calls.length).toBe(made);
+    });
+
+    it("creates the flights of the booking that is new, and only those", async () => {
+      vi.mocked(cruiseApi.create)
+        .mockRejectedValueOnce(conflict)
+        .mockResolvedValueOnce({ id: "c-new" } as Cruise);
+      const onSaved = vi.fn();
+      render(
+        <CruiseImportPreviewModal
+          entries={[withFlight("ABC123"), withFlight("NEW999")]}
+          onCancel={vi.fn()}
+          onSaved={onSaved}
+        />
+      );
+
+      await userEvent.click(screen.getByRole("button", { name: "cruise:import.save" }));
+      await userEvent.click(await screen.findByRole("button", { name: "reimport.keepStored" }));
+
+      await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+      expect(flightsApi.create).toHaveBeenCalledTimes(1);
+      expect(tripsApi.create).toHaveBeenCalledTimes(1);
+      expect(tripsApi.delete).not.toHaveBeenCalled();
+      expect(tripsApi.assignFlights).toHaveBeenCalledWith("trip-new", {
+        flightIds: ["f1"],
+        action: "add",
+      });
+    });
   });
 });
