@@ -23,6 +23,7 @@ import { listPlaces } from "../lib/api/places";
 import { listLodgings } from "../lib/api/lodging";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
+import { useSettingsStore } from "../store/settingsStore";
 import { PLACE_CATEGORIES, PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
 import type { PlaceCategory } from "../shared/placeCategories";
 import type { PlaceCountState } from "../shared/placeCounting";
@@ -105,8 +106,12 @@ export default function PlacesNearbyPage(): JSX.Element {
   // A linked lodging that cannot be a start — gone, without a position, or the
   // lodging domain is off — is said, not silently ignored (review M5).
   const [linkUnusable, setLinkUnusable] = useState(false);
+  // Until the settings have arrived, `enabledDomains` is a placeholder
+  // (["flight"]): judging the link then flashed — and kept — the warning on a
+  // cold deep link whose lodging resolves a moment later (re-review N2).
+  const domainsLoaded = useSettingsStore((st) => st.enabledDomainsLoaded);
   useEffect(() => {
-    if (linkedLodging === null || origin !== null) return;
+    if (linkedLodging === null || origin !== null || !domainsLoaded) return;
     if (!lodgingEnabled) {
       setLinkUnusable(true);
       return;
@@ -117,6 +122,7 @@ export default function PlacesNearbyPage(): JSX.Element {
       setLinkUnusable(true);
       return;
     }
+    setLinkUnusable(false);
     setMode("lodging");
     setOrigin({
       mode: "lodging",
@@ -125,7 +131,7 @@ export default function PlacesNearbyPage(): JSX.Element {
       lon: found.lon,
       label: found.name,
     });
-  }, [linkedLodging, lodgings, origin, lodgingEnabled]);
+  }, [linkedLodging, lodgings, origin, lodgingEnabled, domainsLoaded]);
 
   const chooseOrigin = (next: ChosenOrigin): void => {
     setOrigin(next);

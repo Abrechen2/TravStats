@@ -10,7 +10,7 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 const listPlaces = vi.fn();
 const listLodgings = vi.fn();
 const createVisit = vi.fn();
-const domains = vi.hoisted(() => ({ lodging: true }));
+const domains = vi.hoisted(() => ({ lodging: true, loaded: true }));
 
 vi.mock("../../lib/api/places", () => ({
   listPlaces: (...a: unknown[]) => listPlaces(...a),
@@ -26,6 +26,10 @@ vi.mock("../../hooks/useEnabledDomains", () => ({
     enabled: [],
     isEnabled: (k: string) => (k === "lodging" ? domains.lodging : true),
   }),
+}));
+vi.mock("../../store/settingsStore", () => ({
+  useSettingsStore: (selector: (s: { enabledDomainsLoaded: boolean }) => unknown) =>
+    selector({ enabledDomainsLoaded: domains.loaded }),
 }));
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (selector: (s: { addToast: () => void }) => unknown) =>
@@ -102,6 +106,7 @@ describe("PlacesNearbyPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     domains.lodging = true;
+    domains.loaded = true;
     listPlaces.mockResolvedValue(PLACES);
     listLodgings.mockResolvedValue(LODGINGS);
     createVisit.mockResolvedValue({ id: "v1" });
@@ -149,6 +154,34 @@ describe("PlacesNearbyPage", () => {
   it("says when a linked lodging has no position", async () => {
     await renderAt("/places/nearby?lodging=h2");
     expect(screen.getByRole("alert")).toHaveTextContent("Diese Unterkunft hat keinen Standort");
+  });
+
+  // Re-review N2: before the settings arrive the domains are a placeholder;
+  // a cold deep link must not judge (or keep) the warning on it.
+  it("waits for the settings before judging a cold lodging link", async () => {
+    domains.loaded = false;
+    domains.lodging = false;
+    // A fresh element each time: an identical one would let React skip the
+    // re-render that reads the now-loaded settings.
+    const tree = (): JSX.Element => (
+      <MemoryRouter initialEntries={["/places/nearby?lodging=h1"]}>
+        <Routes>
+          <Route path="/places/nearby" element={<PlacesNearbyPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    const { rerender } = render(tree());
+    await act(async () => {});
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    domains.loaded = true;
+    domains.lodging = true;
+    rerender(tree());
+    await act(async () => {});
+    await waitFor(() =>
+      expect(screen.getByText("3 Orte bis 5 km um Hotel am Markt")).toBeInTheDocument()
+    );
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("starts from a point on the map without any permission", async () => {
