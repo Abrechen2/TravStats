@@ -37,4 +37,20 @@ describe("flightDeleteMessage", () => {
     expect(message).toContain("flights:deleteSurvivors.bookingMaybe");
     expect(message).not.toContain("documents:deleteCascadeNote");
   });
+
+  it("names the phone's recording that goes with the flight, counted (review M8)", () => {
+    const message = flightDeleteMessage(
+      t,
+      { name: "LH1", tripName: null, booking: null, recordingPoints: 1234 },
+      0
+    );
+    expect(message.split("\n")[1]).toBe('flights:deleteParts.recording {"count":1234}');
+    expect(
+      flightDeleteMessage(
+        t,
+        { name: "LH1", tripName: null, booking: null, recordingPoints: null },
+        0
+      )
+    ).not.toContain("deleteParts.recording");
+  });
 });

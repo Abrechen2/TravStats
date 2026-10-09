@@ -78,6 +78,7 @@ vi.mock("../../components/FlightRowActions", () => ({
 vi.mock("../../components/table/ColumnPicker", () => ({ ColumnPicker: () => null }));
 
 const deleteFlight = vi.fn();
+const getTrack = vi.fn();
 const listForEntry = vi.fn();
 vi.mock("../../lib/api/documents", () => ({
   documentsApi: { listForEntry: (...a: unknown[]) => listForEntry(...a) },
@@ -92,6 +93,7 @@ vi.mock("../../lib/api", () => ({
     create: vi.fn(),
     update: vi.fn(),
     delete: (...a: unknown[]) => deleteFlight(...a),
+    getTrack: (...a: unknown[]) => getTrack(...a),
   },
   tripsApi: { getAll: (...a: unknown[]) => tripsGetAll(...a) },
 }));
@@ -124,6 +126,7 @@ describe("FlightsTablePage delete", () => {
     tripsGetAll.mockReset().mockResolvedValue([{ id: "t1", name: "Herbst" }]);
     listForEntry.mockReset().mockResolvedValue([{ id: "d1" }, { id: "d2" }]);
     deleteFlight.mockReset().mockResolvedValue(undefined);
+    getTrack.mockReset().mockResolvedValue({ id: "tr1", pointCount: 1234 });
   });
 
   it("counts the documents and names the trip and booking that stay", async () => {
@@ -134,6 +137,10 @@ describe("FlightsTablePage delete", () => {
       expect(dialog).toHaveTextContent('documents:deleteCascadeNote {"count":2}')
     );
     expect(listForEntry).toHaveBeenCalledWith({ type: "flight", id: "f1" });
+    // The phone's recording goes too (review M8).
+    await waitFor(() =>
+      expect(dialog).toHaveTextContent('flights:deleteParts.recording {"count":1234}')
+    );
     expect(dialog).toHaveTextContent('flights:deleteSurvivors.trip {\\"name\\":\\"Herbst\\"}');
     expect(dialog).toHaveTextContent(
       'flights:deleteSurvivors.bookingMaybe {\\"pnr\\":\\"ABC123\\"}'
@@ -146,6 +153,7 @@ describe("FlightsTablePage delete", () => {
     render(<FlightsTablePage />);
     await screen.findByText("delete-f1");
     expect(listForEntry).not.toHaveBeenCalled();
+    expect(getTrack).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("delete-f1"));
     const confirm = await screen.findByRole("button", {
       name: "flights:table.deleteConfirm.confirm",

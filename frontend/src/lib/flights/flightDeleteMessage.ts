@@ -13,6 +13,11 @@ export interface FlightDeleteFacts {
    * the booking); null where it does not (a list row).
    */
   booking: { pnr: string | null; otherFlights: number | null } | null;
+  /**
+   * Points of the phone's recording of this flight, which goes with it; null
+   * when there is none or it is not known — then nothing is claimed.
+   */
+  recordingPoints?: number | null;
 }
 
 /**
@@ -46,11 +51,16 @@ export function flightDeleteMessage(
           : t("flights:deleteSurvivors.booking", { pnr })
     );
   }
-  const base = withDocumentNote(
+  const withDocuments = withDocumentNote(
     t("flights:table.deleteConfirm.message", { name: facts.name }),
     t,
     documentCount
   );
+  const points = facts.recordingPoints;
+  const base =
+    points !== null && points !== undefined
+      ? `${withDocuments}\n${t("flights:deleteParts.recording", { count: points })}`
+      : withDocuments;
   const survivors = survivorsNote(t, stays);
   return survivors ? `${base}\n${survivors}` : base;
 }

@@ -17,6 +17,7 @@ import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFail
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { flightDeleteMessage } from "../lib/flights/flightDeleteMessage";
 import { useDocumentCount } from "../hooks/useDocumentCount";
+import { useFlightRecordingPoints } from "../hooks/useFlightRecordingPoints";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import type { Flight, FlightFacets, FlightInput, Trip } from "../types";
 import SimplifiedFlightFormV2 from "../components/SimplifiedFlightFormV2";
@@ -107,6 +108,10 @@ export default function FlightsTablePage(): JSX.Element {
   /** Its documents cascade with it — counted only while the question is open. */
   const deleteDocumentCount = useDocumentCount(
     deleteConfirmOpen && flightToDelete ? { type: "flight", id: flightToDelete.id } : null
+  );
+  /** The phone's recording goes with the flight too (review M8). */
+  const deleteRecordingPoints = useFlightRecordingPoints(
+    deleteConfirmOpen && flightToDelete ? flightToDelete.id : null
   );
   const [duplicateMenuFor, setDuplicateMenuFor] = useState<string | null>(null);
   // Newest first everywhere, and the choice survives a reload — the
@@ -743,6 +748,7 @@ export default function FlightsTablePage(): JSX.Element {
                   booking: flightToDelete.bookingId
                     ? { pnr: flightToDelete.bookingReference ?? null, otherFlights: null }
                     : null,
+                  recordingPoints: deleteRecordingPoints,
                 },
                 deleteDocumentCount
               )

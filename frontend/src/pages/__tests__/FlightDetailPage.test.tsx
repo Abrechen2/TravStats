@@ -10,6 +10,7 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 import type { Flight } from "../../types";
 
 const getByIdMock = vi.fn();
+const getTrackMock = vi.fn();
 
 // The documents section fetches its entry's kept originals on mount. It has
 // its own suite, and `__tests__/documentsMountPoints.test.tsx` checks that
@@ -27,7 +28,7 @@ vi.mock("../../lib/api/documents", () => ({
 vi.mock("../../lib/api", () => ({
   flightsApi: {
     getById: (...args: unknown[]) => getByIdMock(...args),
-    getTrack: vi.fn().mockResolvedValue(null),
+    getTrack: (...args: unknown[]) => getTrackMock(...args),
     update: vi.fn(),
     delete: vi.fn(),
   },
@@ -41,6 +42,9 @@ vi.mock("../../lib/api/flightBooking", () => ({
 }));
 
 vi.mock("../../components/NavigationBar", () => ({ default: () => <div /> }));
+// The recording's own section has its suite; here only the delete question
+// reads the recording's point count (review M8).
+vi.mock("../../components/flightTrack/FlightTrackSection", () => ({ default: () => null }));
 vi.mock("../../components/FlightEditModal", () => ({ default: () => null }));
 vi.mock("../../components/SpecialFlightModal", () => ({ default: () => null }));
 
@@ -78,6 +82,7 @@ function renderPage() {
 describe("FlightDetailPage", () => {
   beforeEach(() => {
     getByIdMock.mockReset();
+    getTrackMock.mockReset().mockResolvedValue(null);
     getBookingMock.mockReset();
     listForEntryMock.mockReset();
     listForEntryMock.mockResolvedValue([]);
@@ -308,6 +313,17 @@ describe("FlightDetailPage", () => {
     // the line are pinned in lib/flights/__tests__/flightDeleteMessage.test.ts;
     // here: the page says what stays at all.
     expect(dialog.textContent).toContain("common:delete.survivors");
+  });
+
+  it("names the phone's recording that goes with the flight (review M8)", async () => {
+    getByIdMock.mockResolvedValue(makeFlight({ status: "flown" }));
+    getTrackMock.mockResolvedValue({ id: "tr1", pointCount: 1234 });
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.getByText(/LH2462/)).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "common:buttons.delete" }));
+    const dialog = await screen.findByTestId("confirm-modal");
+    await waitFor(() => expect(dialog.textContent).toContain("flights:deleteParts.recording"));
   });
 
   it("counts nothing until the dialog is opening", async () => {

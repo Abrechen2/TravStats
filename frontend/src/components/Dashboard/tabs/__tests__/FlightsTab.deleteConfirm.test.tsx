@@ -52,6 +52,10 @@ vi.mock("../../modes/buildStatsMapLayer", () => ({ buildStatsMapLayer: () => nul
 vi.mock("../DomainDisabledNotice", () => ({ DomainDisabledNotice: () => null }));
 
 const deleteFlight = vi.fn();
+// The recording count reads through the API barrel.
+vi.mock("../../../../lib/api", () => ({
+  flightsApi: { getTrack: vi.fn().mockResolvedValue({ id: "tr1", pointCount: 1 }) },
+}));
 vi.mock("../../../../lib/api/documents", () => ({
   documentsApi: { listForEntry: vi.fn().mockResolvedValue([{ id: "d1" }]) },
 }));
@@ -87,6 +91,7 @@ describe("FlightsTab — delete asks first", () => {
     expect(deleteFlight).not.toHaveBeenCalled();
     const dialog = await screen.findByTestId("confirm-modal");
     await waitFor(() => expect(dialog).toHaveTextContent("documents:deleteCascadeNote"));
+    await waitFor(() => expect(dialog).toHaveTextContent("flights:deleteParts.recording"));
     const confirm = screen.getByRole("button", { name: "flights:table.deleteConfirm.confirm" });
     expect(confirm.className).toContain("bg-[var(--danger)]");
     fireEvent.click(confirm);

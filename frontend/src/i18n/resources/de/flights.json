@@ -669,5 +669,9 @@
     "bookingMaybe": "die Buchung {{pnr}} und ggf. ihre anderen Flüge",
     "bookingWithFlights_one": "die Buchung {{pnr}} mit ihrem anderen Flug",
     "bookingWithFlights_other": "die Buchung {{pnr}} mit ihren {{count}} anderen Flügen"
+  },
+  "deleteParts": {
+    "recording_one": "Ebenfalls gelöscht: die Aufzeichnung vom Telefon mit einem Punkt.",
+    "recording_other": "Ebenfalls gelöscht: die Aufzeichnung vom Telefon mit {{count}} Punkten."
   }
 }

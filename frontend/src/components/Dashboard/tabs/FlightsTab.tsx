@@ -18,6 +18,7 @@ import ConfirmModal from "../../Training/ConfirmModal";
 import { DELETE_BUTTON_CLASS } from "../../../lib/deleteConfirm";
 import { flightDeleteMessage } from "../../../lib/flights/flightDeleteMessage";
 import { useDocumentCount } from "../../../hooks/useDocumentCount";
+import { useFlightRecordingPoints } from "../../../hooks/useFlightRecordingPoints";
 import { FlightPanel } from "../../FlightPanel";
 import MapContainer3D, { type MapMode } from "../../MapContainer3D";
 import SimplifiedFlightFormV2 from "../../SimplifiedFlightFormV2";
@@ -65,6 +66,7 @@ export function FlightsTab(): JSX.Element {
   const deleteDocumentCount = useDocumentCount(
     flightToDelete ? { type: "flight", id: flightToDelete.id } : null
   );
+  const deleteRecordingPoints = useFlightRecordingPoints(flightToDelete?.id ?? null);
   const [editingSpecialFlight, setEditingSpecialFlight] = useState<Flight | null>(null);
   const [showAddFlight, setShowAddFlight] = useState(false);
   const [showSpecialModal, setShowSpecialModal] = useState(false);
@@ -335,6 +337,7 @@ export function FlightsTab(): JSX.Element {
                   booking: flightToDelete.bookingId
                     ? { pnr: flightToDelete.bookingReference ?? null, otherFlights: null }
                     : null,
+                  recordingPoints: deleteRecordingPoints,
                 },
                 deleteDocumentCount
               )

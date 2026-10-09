@@ -18,6 +18,7 @@ import ConfirmModal from "../components/Training/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import FlightStatusCell from "../components/flightsTable/FlightStatusCell";
 import { useDocumentCount } from "../hooks/useDocumentCount";
+import { useFlightRecordingPoints } from "../hooks/useFlightRecordingPoints";
 import { useTranslation } from "../hooks/useTranslation";
 import { flightsApi, tripsApi } from "../lib/api";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
@@ -82,6 +83,8 @@ export default function FlightDetailPage(): JSX.Element {
   const documentCount = useDocumentCount(
     confirmingDelete && flight ? { type: "flight", id: flight.id } : null
   );
+  /** The phone's recording goes with the flight too (review M8). */
+  const recordingPoints = useFlightRecordingPoints(confirmingDelete && flight ? flight.id : null);
   const [deleting, setDeleting] = useState<boolean>(false);
   /** Moves when the documents section changed a file, so the day card re-reads. */
   const [documentsVersion, setDocumentsVersion] = useState<number>(0);
@@ -469,6 +472,7 @@ export default function FlightDetailPage(): JSX.Element {
                   }
                 : { pnr: flight.bookingReference ?? null, otherFlights: null }
               : null,
+            recordingPoints,
           },
           documentCount
         )}
