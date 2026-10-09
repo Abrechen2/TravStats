@@ -260,11 +260,11 @@
       "link_other": "Link {{count}} photos",
       "linked_one": "{{count}} photo linked.",
       "linked_other": "{{count}} photos linked.",
-      "distance": "{{metres}} m from the place",
       "alt": {
         "trip": "Photo from your trip",
         "library": "Photo from the photo library"
-      }
+      },
+      "distanceShort": "{{metres}} m"
     }
   },
   "stats": {
@@ -399,7 +399,8 @@
     "title": "Gallery",
     "lead": "Cover photo of {{name}}",
     "makeCover": "Use as cover photo",
-    "coverFailed": "The cover photo could not be saved."
+    "coverFailed": "The cover photo could not be saved.",
+    "makeCoverHint": "Tap a photo to make it the cover."
   },
   "delete": {
     "tripsStayUnnamed": "Linked trips are kept.",

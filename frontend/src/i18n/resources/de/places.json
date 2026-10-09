@@ -260,11 +260,11 @@
       "link_other": "{{count}} Fotos verknüpfen",
       "linked_one": "{{count}} Foto verknüpft.",
       "linked_other": "{{count}} Fotos verknüpft.",
-      "distance": "{{metres}} m vom Ort entfernt",
       "alt": {
         "trip": "Foto aus deiner Reise",
         "library": "Foto aus der Fotobibliothek"
-      }
+      },
+      "distanceShort": "{{metres}} m"
     }
   },
   "stats": {
@@ -399,7 +399,8 @@
     "title": "Galerie",
     "lead": "Titelbild von {{name}}",
     "makeCover": "Als Titelbild verwenden",
-    "coverFailed": "Das Titelbild konnte nicht gespeichert werden."
+    "coverFailed": "Das Titelbild konnte nicht gespeichert werden.",
+    "makeCoverHint": "Tippe ein Foto an, um es zum Titelbild zu machen."
   },
   "delete": {
     "tripsStayUnnamed": "Verknüpfte Reisen bleiben erhalten.",
