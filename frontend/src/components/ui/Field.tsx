@@ -4,7 +4,8 @@ import type {
   SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from "react";
-import { useId } from "react";
+import { cloneElement, isValidElement, useId } from "react";
+import { fieldErrorId } from "../form/fieldErrorProps";
 
 const CONTROL_STYLE = {
   minHeight: "var(--ts-size-touch-min)",
@@ -31,16 +32,26 @@ interface FieldProps {
   children: ReactNode;
 }
 
-/** Label above, control, then hint or error. The order never changes. */
+/**
+ * Label above, control, then hint or error. The order never changes.
+ *
+ * With `htmlFor` and an `error`, the control is also TOLD about the error: it
+ * gets `aria-invalid` and an `aria-describedby` pointing at the message, the
+ * same contract as `form/fieldErrorProps`. Before, the message was only drawn —
+ * a screen reader on the field heard the label and nothing about what was
+ * wrong, and `form/focusFirstError` could not find the field. Wired here so
+ * every existing `Field` caller gets it without touching its control.
+ */
 export function Field({ label, htmlFor, error, hint, children }: FieldProps): JSX.Element {
+  const errorId = htmlFor && error ? fieldErrorId(htmlFor) : undefined;
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
       <label htmlFor={htmlFor} className="t-caption" style={{ color: "var(--ts-muted)" }}>
         {label}
       </label>
-      {children}
+      {errorId ? describedByError(children, htmlFor, errorId) : children}
       {error ? (
-        <span className="t-caption" style={{ color: "var(--ts-bad)" }} role="alert">
+        <span id={errorId} className="t-caption" style={{ color: "var(--ts-bad)" }} role="alert">
           {error}
         </span>
       ) : hint ? (
@@ -48,6 +59,28 @@ export function Field({ label, htmlFor, error, hint, children }: FieldProps): JS
       ) : null}
     </div>
   );
+}
+
+type DescribableProps = { id?: string; "aria-describedby"?: string; "aria-invalid"?: unknown };
+
+/**
+ * Hand the error to the control the label names — only that one, identified by
+ * its `id`, so a `Field` wrapping a composite (a row of chips) is left alone
+ * rather than guessed at.
+ */
+function describedByError(
+  children: ReactNode,
+  controlId: string | undefined,
+  errorId: string
+): ReactNode {
+  if (!isValidElement<DescribableProps>(children) || children.props.id !== controlId) {
+    return children;
+  }
+  const existing = children.props["aria-describedby"];
+  return cloneElement(children, {
+    "aria-invalid": true,
+    "aria-describedby": existing ? `${existing} ${errorId}` : errorId,
+  });
 }
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { saveErrorMessage } from "../saveErrorMessage";
+import { isTransientSaveError, saveErrorMessage } from "../saveErrorMessage";
 import { TRACK_ERROR_KEYS } from "../trackErrorKeys";
 
 const t = (key: string): string => key;
@@ -75,5 +75,21 @@ describe("saveErrorMessage", () => {
     expect(
       saveErrorMessage(refused(403, { error: "DEMO_ACCOUNT_FORBIDDEN" }), t, "form.saveError")
     ).toBe("common:saveErrors.demo");
+  });
+});
+
+// Review fix round 1: "is trying again likely to help?" has one home, so the
+// eight forms offering a retry cannot disagree about it.
+describe("isTransientSaveError", () => {
+  it("is true for failures a second try can cure", () => {
+    expect(isTransientSaveError("common:saveErrors.network")).toBe(true);
+    expect(isTransientSaveError("common:saveErrors.dbUnavailable")).toBe(true);
+    expect(isTransientSaveError("common:saveErrors.rateLimited")).toBe(true);
+  });
+
+  it("is false for a refusal of the input itself", () => {
+    expect(isTransientSaveError("common:saveErrors.validation")).toBe(false);
+    expect(isTransientSaveError("common:saveErrors.duplicate")).toBe(false);
+    expect(isTransientSaveError("lodging:form.saveError")).toBe(false);
   });
 });

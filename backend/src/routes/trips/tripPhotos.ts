@@ -23,6 +23,7 @@ import {
 } from "../../schemas/tripPhoto";
 import { NOT_A_COVER, assertStopOnTrip } from "../../services/trips/photoStation";
 import { ingestUploadedPhotos } from "../../services/photos/ingestPhotos";
+import { parseCaptureFields, withCaptureFields } from "../../services/photos/captureFields";
 import {
   parsePhotoVariant,
   photoFileToServe,
@@ -75,9 +76,15 @@ router.post(
       // cleanup below, so the files multer already stored go too.
       const { stopId } = tripPhotoUploadFieldsSchema.parse(req.body ?? {});
       if (stopId !== undefined) await assertStopOnTrip(userId, req.params.id, stopId);
+      // What the client says about the one photo it sent (companion#59),
+      // refused here when malformed or beside several files.
+      const fields = parseCaptureFields(req.body, uploaded.length);
       // Capture time and position from each file's own metadata, and a JPEG
       // display copy for a HEIC/HEIF original — or a refusal, before any row.
-      const exif = await ingestUploadedPhotos(getTripPhotoDir(), uploaded);
+      // EXIF wins; the fields fill only what the file did not say.
+      const exif = (await ingestUploadedPhotos(getTripPhotoDir(), uploaded)).map((read) =>
+        withCaptureFields(read, fields)
+      );
 
       const last = await prisma.tripPhoto.findFirst({
         where: { tripId: req.params.id },

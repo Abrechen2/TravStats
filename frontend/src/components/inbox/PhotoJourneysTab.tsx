@@ -14,6 +14,7 @@ import EmptyState from "../ui/EmptyState";
 import {
   createFromPhotoJourney,
   linkPhotoJourney,
+  type AcceptInput,
   type PhotoJourneyCreated,
 } from "./acceptPhotoJourney";
 import PhotoJourneyCard from "./PhotoJourneyCard";
@@ -173,12 +174,12 @@ export default function PhotoJourneysTab({
    * already said nothing was created: the row was still pending, because only
    * the PATCH had failed.
    */
-  const handleAccept = async (journey: PhotoJourney): Promise<void> => {
+  const handleAccept = async (journey: PhotoJourney, input: AcceptInput): Promise<void> => {
     markBusy(journey.id, true);
     let created = createdByRow[journey.id];
     try {
       if (created === undefined) {
-        const made = await createFromPhotoJourney(journey, photoJourneyLabel(journey));
+        const made = await createFromPhotoJourney(journey, photoJourneyLabel(journey), input);
         created = made;
         // Recorded BEFORE the link is attempted — that is the whole point.
         setCreatedByRow((current) => ({ ...current, [journey.id]: made }));
@@ -214,7 +215,9 @@ export default function PhotoJourneysTab({
       logger.error("Failed to mark a photo journey accepted:", error);
       addToast(
         "error",
-        created.kind === "none"
+        // A server-made visit that failed made nothing: the PATCH is the
+        // whole act, so there is nothing a retry would merely link.
+        created.kind === "none" || created.kind === "serverVisit"
           ? t("dataQuality:inbox.photoJourneys.errors.acceptFailed")
           : // Names what DOES exist now, and that a retry only links it.
             t(`dataQuality:inbox.photoJourneys.errors.acceptLinkFailed.${created.kind}`)
@@ -314,7 +317,7 @@ export default function PhotoJourneysTab({
               journey={journey}
               label={photoJourneyLabel(journey)}
               busy={busyIds.has(journey.id)}
-              onAccept={() => void handleAccept(journey)}
+              onAccept={(input) => void handleAccept(journey, input)}
               onDismiss={() => void handleDismiss(journey)}
             />
           ))}

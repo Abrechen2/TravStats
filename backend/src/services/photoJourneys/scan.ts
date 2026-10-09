@@ -26,6 +26,8 @@ import {
 } from "./cluster";
 import { journeyFingerprint } from "./fingerprint";
 import { travelWindows } from "./windows";
+import { scanVisitFindings } from "./visitScan";
+import type { PlaceNameGeocoder } from "../places/placeNameBackfill";
 
 /**
  * The photo-journey scan: what the library knows that the journal does not.
@@ -68,6 +70,8 @@ export interface ScanOptions {
   /** How far back to look. */
   since: Date;
   until: Date;
+  /** The Photon geocoder that names a `visit` finding; injected by tests. */
+  geocoder?: PlaceNameGeocoder;
 }
 
 /** One burst, and what the strongest fitting reading took it for. */
@@ -90,7 +94,7 @@ export interface Finding {
  */
 export async function scanPhotoJourneys(
   userId: string,
-  { since, until }: ScanOptions
+  { since, until, geocoder }: ScanOptions
 ): Promise<ScanOutcome> {
   const connection = await getImmichConnection(userId);
   if (connection === null) {
@@ -132,7 +136,7 @@ export async function scanPhotoJourneys(
     }),
     prisma.trip.findMany({
       where: { userId },
-      select: { startDate: true, endDate: true },
+      select: { id: true, name: true, startDate: true, endDate: true },
     }),
     prisma.cruise.findMany({
       where: { userId },
@@ -140,13 +144,14 @@ export async function scanPhotoJourneys(
     }),
     prisma.lodgingStay.findMany({
       where: { userId },
-      select: { checkIn: true, checkOut: true },
+      select: { checkIn: true, checkOut: true, lodging: { select: { lat: true, lon: true } } },
     }),
     prisma.place.findMany({
       where: { userId },
       select: {
         id: true,
         name: true,
+        localName: true,
         lat: true,
         lon: true,
         visits: { select: { visitedAt: true } },
@@ -227,6 +232,21 @@ export async function scanPhotoJourneys(
     }
   }
 
+  // The other question the library can answer (forgejo#211): the stops INSIDE
+  // those trips that no visit explains. Read from the same photos and the
+  // same rows, written with the same fingerprint rule.
+  const visits = await scanVisitFindings(
+    userId,
+    photos,
+    {
+      trips,
+      places,
+      lodgings: stays.map((stay) => stay.lodging),
+      flights,
+    },
+    geocoder
+  );
+
   logger.info({
     message: "photo_journey_scan_complete",
     context: {
@@ -236,8 +256,10 @@ export async function scanPhotoJourneys(
       uncovered: uncovered.length,
       findings: findings.length,
       lookups,
-      created,
-      updated,
+      visitStops: visits.stops,
+      visitLookups: visits.lookups,
+      created: created + visits.created,
+      updated: updated + visits.updated,
       truncated,
     },
   });
@@ -246,8 +268,8 @@ export async function scanPhotoJourneys(
     kind: "scanned",
     photosSeen: photos.length,
     truncated,
-    created,
-    updated,
+    created: created + visits.created,
+    updated: updated + visits.updated,
   };
 }
 

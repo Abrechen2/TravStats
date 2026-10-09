@@ -3,6 +3,8 @@ import { createPortal } from "react-dom";
 import IconButton from "./IconButton";
 import { useDialogChrome } from "./useDialogChrome";
 import { useScrimDismiss } from "./useScrimDismiss";
+import { useDiscardGuard } from "../form/useDiscardGuard";
+import { DiscardQuestion } from "../Modal";
 
 interface DialogProps {
   open: boolean;
@@ -19,6 +21,16 @@ interface DialogProps {
   /** Accessible name for the close button. */
   closeLabel?: string;
   maxWidth?: number;
+  /**
+   * Blocks Escape, the scrim, the × and the dismiss button while an action is
+   * in flight — `Modal` has always had this, and without it a roadtrip dialog
+   * could be cancelled in the middle of its save.
+   */
+  busy?: boolean;
+  /** Unsaved input: every close path asks "discard changes?" first. See `Modal`. */
+  dirty?: boolean;
+  /** The confirm label of that question, if "Verwerfen" is the wrong word. */
+  discardLabel?: string;
 }
 
 /**
@@ -49,14 +61,19 @@ export default function Dialog({
   dismissLabel,
   closeLabel = "Schließen",
   maxWidth = 440,
+  busy = false,
+  dirty = false,
+  discardLabel,
 }: DialogProps): JSX.Element | null {
   const panelRef = useRef<HTMLDivElement>(null);
-  useDialogChrome({ open, onClose, panelRef });
-  const scrim = useScrimDismiss(panelRef, onClose);
+  const guard = useDiscardGuard({ open, dirty, busy, onClose, panelRef });
+  const { requestClose } = guard;
+  useDialogChrome({ open, onClose: requestClose, panelRef, busy });
+  const scrim = useScrimDismiss(panelRef, requestClose);
 
   if (!open) return null;
 
-  return createPortal(
+  const frame = createPortal(
     // Everything about the shell lives in `theme/ui.css`, and only the caller's
     // width comes through as a custom property. Written as inline styles it
     // looked right and was wrong: an inline `align-items: center` outranks any
@@ -79,7 +96,8 @@ export default function Dialog({
           </div>
           <IconButton
             label={closeLabel}
-            onClick={onClose}
+            onClick={requestClose}
+            disabled={busy}
             style={{ margin: "-8px -8px 0 0", background: "var(--ts-surface)" }}
           >
             <svg
@@ -108,7 +126,8 @@ export default function Dialog({
             {dismissLabel ? (
               <button
                 type="button"
-                onClick={onClose}
+                onClick={requestClose}
+                disabled={busy}
                 className="ts-button"
                 data-variant="secondary"
                 style={{
@@ -131,5 +150,19 @@ export default function Dialog({
       </div>
     </div>,
     document.body
+  );
+
+  // Beside the frame, never inside it — the reason is spelled out in `Modal`.
+  return (
+    <>
+      {frame}
+      {guard.asking && (
+        <DiscardQuestion
+          onDiscard={guard.discard}
+          onKeepEditing={guard.keepEditing}
+          discardLabel={discardLabel}
+        />
+      )}
+    </>
   );
 }

@@ -1,9 +1,13 @@
+import { useState } from "react";
+
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { photoJourneyPreviewUrl } from "../../lib/api/photoJourneys";
 import type { PhotoJourney } from "../../types/photoJourney";
 import Button from "../ui/Button";
+import { Field, Input } from "../ui/Field";
 
+import type { AcceptInput } from "./acceptPhotoJourney";
 import { photoJourneyPlan } from "./photoJourneyPlan";
 
 /**
@@ -26,6 +30,13 @@ import { photoJourneyPlan } from "./photoJourneyPlan";
  * sixty, and hiding the difference would present them as equal. The heading is
  * whatever `photoJourneyLabel` made of the row — including coordinates where
  * the reverse lookup answered nothing.
+ *
+ * ## A visit finding may need a name from the reader
+ *
+ * A `visit` finding (forgejo#211) whose lookup named nothing still stands on
+ * its dates and photographs, but the place it creates needs a name, and the
+ * server refuses to mint "unknown" (`VISIT_NAME_REQUIRED`). The card asks for
+ * one, and accept waits until it is given.
  */
 
 /**
@@ -41,7 +52,7 @@ interface PhotoJourneyCardProps {
   journey: PhotoJourney;
   /** Localized place line, built by the tab so both card and message agree. */
   label: string;
-  onAccept: () => void;
+  onAccept: (input: AcceptInput) => void;
   onDismiss: () => void;
   busy?: boolean;
 }
@@ -55,23 +66,24 @@ export default function PhotoJourneyCard({
 }: PhotoJourneyCardProps): JSX.Element {
   const { t } = useTranslation(["dataQuality", "common"]);
   const format = useDisplayFormat();
+  const [name, setName] = useState("");
+
+  const plan = photoJourneyPlan(journey);
+  // The lookup named nothing and no own place takes the visit: the reader names it.
+  const needsName = plan === "visitInTrip" && !journey.suggestedName;
+  const nameMissing = needsName && name.trim().length === 0;
 
   const thumbIndexes = journey.previewAssetIds
     .slice(0, MAX_PREVIEW_THUMBS)
     .map((_, index) => index);
-  // The days where the photos were taken, as the server reads them (ADR 0002
-  // D4); the instants only from a server that does not send them yet.
-  const first = journey.startDay ?? journey.startDate;
-  const last = journey.endDay ?? journey.endDate;
-  const span =
-    first.slice(0, 10) === last.slice(0, 10)
-      ? format.date(first)
-      : `${format.date(first)} – ${format.date(last)}`;
 
   const facts = [
     t("dataQuality:inbox.photoJourneys.facts.photos", { photos: journey.photoCount }),
     journey.locatedCount !== journey.photoCount
       ? t("dataQuality:inbox.photoJourneys.facts.located", { located: journey.locatedCount })
+      : null,
+    journey.tripName
+      ? t("dataQuality:inbox.photoJourneys.facts.trip", { name: journey.tripName })
       : null,
     journey.nights
       ? t("dataQuality:inbox.photoJourneys.facts.nights", { nights: journey.nights })
@@ -94,7 +106,7 @@ export default function PhotoJourneyCard({
           {t(`dataQuality:inbox.photoJourneys.kind.${journey.kind}`)}
         </span>
         <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
-          {span}
+          {spanOf(journey, format)}
         </span>
       </div>
 
@@ -122,17 +134,37 @@ export default function PhotoJourneyCard({
         </div>
       )}
 
+      {needsName && (
+        <div className="mt-3">
+          <Field
+            label={t("dataQuality:inbox.photoJourneys.nameField.label")}
+            htmlFor={`journey-name-${journey.id}`}
+            hint={t("dataQuality:inbox.photoJourneys.nameField.hint")}
+          >
+            <Input
+              id={`journey-name-${journey.id}`}
+              value={name}
+              maxLength={200}
+              onChange={(event) => setName(event.target.value)}
+              placeholder={t("dataQuality:inbox.photoJourneys.nameField.placeholder")}
+            />
+          </Field>
+        </div>
+      )}
+
       {/* What accepting will do, permanently rather than in a tooltip, and read
           from `photoJourneyPlan` — the same rule the act uses. Keyed on the row
           KIND, this line promised a visit for a `place` finding whose place had
           since been deleted, while the code correctly created nothing: one rule,
           two derivations, so one of them was wrong. */}
-      <p className="t-caption mt-3">
-        {t(`dataQuality:inbox.photoJourneys.creates.${photoJourneyPlan(journey)}`)}
-      </p>
+      <p className="t-caption mt-3">{t(`dataQuality:inbox.photoJourneys.creates.${plan}`)}</p>
 
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button variant="primary" onClick={onAccept} disabled={busy}>
+        <Button
+          variant="primary"
+          onClick={() => onAccept(needsName ? { name: name.trim() } : {})}
+          disabled={busy || nameMissing}
+        >
           {t("dataQuality:inbox.photoJourneys.actions.accept")}
         </Button>
         <Button onClick={onDismiss} disabled={busy}>
@@ -141,4 +173,22 @@ export default function PhotoJourneyCard({
       </div>
     </div>
   );
+}
+
+/**
+ * When, on the clock of the place where the photos were taken (ADR 0002 D4).
+ * A visit finding is an afternoon, so it shows the day and the two clocks;
+ * the other kinds show their days. The instants are used only against a
+ * server that does not send the local readings yet.
+ */
+function spanOf(journey: PhotoJourney, format: ReturnType<typeof useDisplayFormat>): string {
+  if (journey.kind === "visit" && journey.startLocal && journey.endLocal) {
+    const clocks = `${format.localClock(journey.startLocal)} – ${format.localClock(journey.endLocal)}`;
+    return `${format.localDate(journey.startLocal)} · ${clocks}`;
+  }
+  const first = journey.startDay ?? journey.startDate;
+  const last = journey.endDay ?? journey.endDate;
+  return first.slice(0, 10) === last.slice(0, 10)
+    ? format.date(first)
+    : `${format.date(first)} – ${format.date(last)}`;
 }

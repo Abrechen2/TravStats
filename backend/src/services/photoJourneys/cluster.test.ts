@@ -1,4 +1,5 @@
 import {
+  clusterPhotosByStop,
   clusterPhotosByTime,
   distanceKm,
   findUncoveredClusters,
@@ -192,6 +193,70 @@ describe("which journeys nobody recorded", () => {
 
   it("explains everything when the user has recorded nothing... by not explaining any of it", () => {
     expect(findUncoveredClusters([cluster(0, 2 * DAY)], [], { padDays: 3 })).toHaveLength(1);
+  });
+});
+
+describe("grouping photos into stops (forgejo#211)", () => {
+  const MINUTE = 60_000;
+  const STOP = { maxGapMinutes: 45, radiusM: 300, minPhotos: 3, minDwellMinutes: 5 };
+  // Gyeongbokgung, where prod's Korea trip held 82 located photos and no visit.
+  const PALACE = { lat: 37.5796, lon: 126.977 };
+  /** One degree of latitude is ~111 km, so this is ~100 m north. */
+  const north = (at: { lat: number; lon: number }, metres: number) => ({
+    lat: at.lat + metres / 111_000,
+    lon: at.lon,
+  });
+
+  it("keeps a dwell of three or more located photos together", () => {
+    const stops = clusterPhotosByStop(
+      [0, 4 * MINUTE, 9 * MINUTE, 20 * MINUTE].map((o, i) =>
+        photo(`p${i}`, o, north(PALACE, i * 40))
+      ),
+      STOP
+    );
+    expect(stops).toHaveLength(1);
+    expect(stops[0].photoCount).toBe(4);
+    expect(stops[0].locatedCount).toBe(4);
+    expect(distanceKm(stops[0].position!, PALACE) * 1000).toBeLessThan(100);
+  });
+
+  it("does not take a bus ride for a stop: photos minutes apart, hundreds of metres on", () => {
+    // Twelve photos from a window seat over a bridge, one every two minutes,
+    // each 400 m further on. The time gap passes; the radius never does.
+    const ride = Array.from({ length: 12 }, (_, i) =>
+      photo(`bus${i}`, i * 2 * MINUTE, north(PALACE, i * 400))
+    );
+    expect(clusterPhotosByStop(ride, STOP)).toHaveLength(0);
+  });
+
+  it("does not take a snapshot for a stop: three photos inside a minute", () => {
+    expect(
+      clusterPhotosByStop(
+        [0, 20_000, 50_000].map((o, i) => photo(`snap${i}`, o, PALACE)),
+        STOP
+      )
+    ).toHaveLength(0);
+  });
+
+  it("ends a stop on a long pause even at the same spot", () => {
+    const morning = [0, 5 * MINUTE, 10 * MINUTE].map((o, i) => photo(`m${i}`, o, PALACE));
+    const afternoon = [0, 5 * MINUTE, 10 * MINUTE].map((o, i) =>
+      photo(`a${i}`, 3 * HOUR + o, PALACE)
+    );
+    expect(clusterPhotosByStop([...morning, ...afternoon], STOP)).toHaveLength(2);
+  });
+
+  it("leaves photos without a coordinate out entirely", () => {
+    const stops = clusterPhotosByStop(
+      [
+        photo("nowhere", 2 * MINUTE),
+        ...[0, 5 * MINUTE, 10 * MINUTE].map((o, i) => photo(`p${i}`, o, PALACE)),
+      ],
+      STOP
+    );
+    expect(stops).toHaveLength(1);
+    expect(stops[0].photoIds).not.toContain("nowhere");
+    expect(stops[0].photoCount).toBe(3);
   });
 });
 

@@ -357,5 +357,20 @@
   },
   "list": {
     "loadFailedHint": "Das liegt nicht an deinen Daten — sie sind noch da. Versuch es gleich noch einmal."
+  },
+  "discard": {
+    "title": "Änderungen verwerfen?",
+    "message": "Deine Eingaben in diesem Formular gehen verloren.",
+    "confirm": "Verwerfen",
+    "keepEditing": "Weiter bearbeiten"
+  },
+  "form": {
+    "requiredLegend": "Mit * markierte Felder sind Pflicht.",
+    "saveBlocked": "Zum Speichern fehlt noch:",
+    "savedButRefreshFailed": "Gespeichert. Die Liste konnte nicht aktualisiert werden.",
+    "savedButViewRefreshFailed": "Gespeichert. Die Ansicht konnte nicht aktualisiert werden."
+  },
+  "delete": {
+    "survivors": "Erhalten bleiben: {{names}}"
   }
 }

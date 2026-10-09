@@ -1624,6 +1624,7 @@ model Trip {
   placeVisits    PlaceVisit[]
   immichAlbums   TripImmichAlbum[]
   companionLinks TripCompanion[]
+  photoJourneys  PhotoJourney[]
 
   documents Document[]
 
@@ -3338,6 +3339,22 @@ model PhotoJourney {
   /// Rundreise is not a point.
   spreadKm    Float?  @map("spread_km")
 
+  /// `visit` (forgejo#211): a stop INSIDE a recorded trip where the photos
+  /// dwelt and no visit, stay or flight explains it — the trip is the anchor.
+  /// Deleting the trip deletes the question: a stop of no trip is a `place`
+  /// or `trip` finding's business, and the next scan asks it that way.
+  tripId             String? @map("trip_id")
+  /// `visit`: what the reverse lookup called the nearest named object — its
+  /// English name, its own-script name where that differs, and its `osm:` ref
+  /// so accepting dedupes against a place the user already has. All null when
+  /// nothing within reach had a name; the finding still stands on its dates.
+  suggestedName      String? @map("suggested_name")
+  suggestedLocalName String? @map("suggested_local_name")
+  suggestedRef       String? @map("suggested_ref")
+  /// The place category the object's OSM tag maps to (`shared/placeCategories`),
+  /// kept so accepting needs no second lookup; null falls back to `landmark`.
+  suggestedCategory  String? @map("suggested_category")
+
   /// Set when the user accepted it and something was created from it.
   createdTripId        String? @map("created_trip_id")
   /// Accepting a `place` finding records a visit; a `stay` finding, a stay.
@@ -3351,6 +3368,7 @@ model PhotoJourney {
   user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// A finding about a place that no longer exists asks about nothing.
   place Place? @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  trip  Trip?  @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
   @@unique([userId, fingerprint])
   @@index([userId, status])

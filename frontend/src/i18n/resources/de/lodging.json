@@ -185,7 +185,14 @@
     "createTitle": "Neue Unterkunft",
     "editTitle": "Unterkunft bearbeiten",
     "saveError": "Unterkunft konnte nicht gespeichert werden",
-    "searchLabel": "Unterkunft suchen"
+    "searchLabel": "Unterkunft suchen",
+    "missing": {
+      "coordinates": "gültige Koordinaten"
+    },
+    "errors": {
+      "stars": "Sterne: eine ganze Zahl von 1 bis 5.",
+      "website": "Eine Webadresse beginnt mit http:// oder https://."
+    }
   },
   "fx": {
     "source": "EZB",

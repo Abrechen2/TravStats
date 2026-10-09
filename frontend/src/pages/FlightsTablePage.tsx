@@ -13,6 +13,7 @@ import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
+import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import type { Flight, FlightFacets, FlightInput, Trip } from "../types";
@@ -92,6 +93,7 @@ export default function FlightsTablePage(): JSX.Element {
   const [airlineFilter, setAirlineFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
   const [editingSpecialFlight, setEditingSpecialFlight] = useState<Flight | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -352,6 +354,7 @@ export default function FlightsTablePage(): JSX.Element {
         // looked exactly like an account with no flights.
         logger.error("Failed to load flights:", error);
         setLoadError(true);
+        setLoadFailure(loadFailureLog(error));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -526,12 +529,10 @@ export default function FlightsTablePage(): JSX.Element {
         />
 
         {loadError ? (
-          <div
-            role="alert"
-            className="rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-4 py-4 text-sm text-[var(--danger)]"
-          >
-            {t("flights:table.loadError")}
-          </div>
+          // A failed read with a way forward (forgejo#247) — it was a red
+          // sentence with nothing to press, so the only retry was a reload of
+          // the whole page.
+          <ListLoadFailed title={t("flights:table.loadError")} onRetry={reload} log={loadFailure} />
         ) : (
           <>
             {!loading && flights.length > 0 && (
@@ -549,6 +550,10 @@ export default function FlightsTablePage(): JSX.Element {
                   emptyTitle={t("flights:table.noFlights")}
                   emptyHint={t("flights:table.noFlightsHint")}
                   onReset={resetFilters}
+                  action={{
+                    label: t("dashboard:addFlight"),
+                    onClick: () => setShowAddFlight(true),
+                  }}
                 />
               </div>
             ) : (

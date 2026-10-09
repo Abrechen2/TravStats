@@ -47,6 +47,10 @@ export type ApiErrorCode =
   /** A workshop template was activated before its preview had run — the
    *  parser page turns this into "run the preview", not a generic toast. */
   | "PREVIEW_REQUIRED"
+  /** A `visit` photo finding was accepted with no name for the place it would
+   *  create (forgejo#211): the lookup named nothing and the body sent nothing.
+   *  The card asks for one instead of minting "unknown". */
+  | "VISIT_NAME_REQUIRED"
   /** A training annotation whose offsets do not cut their own value out of
    *  the text being saved. The two used to be allowed to disagree, which
    *  corrupted every derivation built on it in silence. */

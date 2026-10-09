@@ -259,6 +259,55 @@ describe("PhotoJourneysTab", () => {
     );
   });
 
+  // forgejo#211: the server creates the place and the visit inside the PATCH,
+  // so the web sends one request and makes nothing through the normal
+  // endpoints — a half-made place with no visit on it cannot happen here.
+  it("accepting a visit finding sends ONE accept and creates nothing on the client", async () => {
+    vi.mocked(photoJourneysApi.accept).mockResolvedValue(null);
+    await renderTab([
+      makeJourney({
+        kind: "visit",
+        airportIata: null,
+        nights: null,
+        tripId: "trip-korea",
+        tripName: "Korea",
+        suggestedName: "Gyeongbokgung",
+        suggestedLocalName: "경복궁",
+      }),
+    ]);
+    expect(screen.getByRole("heading")).toHaveTextContent("Gyeongbokgung · 경복궁");
+
+    vi.mocked(photoJourneysApi.list).mockResolvedValue([]);
+    await userEvent.click(screen.getByRole("button", { name: ACCEPT }));
+
+    await waitFor(() => expect(photoJourneysApi.accept).toHaveBeenCalledWith("journey-1", {}));
+    expect(tripsApi.create).not.toHaveBeenCalled();
+    expect(createVisit).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith(
+        "success",
+        "dataQuality:inbox.photoJourneys.messages.accepted.serverVisit"
+      )
+    );
+  });
+
+  it("accepting a nameless visit finding carries the typed name to the server", async () => {
+    vi.mocked(photoJourneysApi.accept).mockResolvedValue(null);
+    await renderTab([
+      makeJourney({ kind: "visit", airportIata: null, nights: null, suggestedName: null }),
+    ]);
+
+    vi.mocked(photoJourneysApi.list).mockResolvedValue([]);
+    await userEvent.type(screen.getByRole("textbox"), "Palace Grounds");
+    await userEvent.click(screen.getByRole("button", { name: ACCEPT }));
+
+    await waitFor(() =>
+      expect(photoJourneysApi.accept).toHaveBeenCalledWith("journey-1", {
+        name: "Palace Grounds",
+      })
+    );
+  });
+
   it("accepting a stay finding creates nothing — a stay needs a lodging the row does not name", async () => {
     await renderTab([makeJourney({ kind: "stay", placeId: "place-7" })]);
 

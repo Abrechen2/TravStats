@@ -13,6 +13,14 @@ import type { PhotoJourney } from "../../types/photoJourney";
  * they never claim a city the lookup did not name.
  */
 export function photoJourneyLabel(journey: PhotoJourney): string {
+  // A `visit` finding is named by what the lookup found at the stop, and
+  // shows the sign beside the name where the two differ — "Gyeongbokgung ·
+  // 경복궁" — so the reader can match it to the one on the gate (forgejo#199).
+  if (journey.kind === "visit" && journey.suggestedName) {
+    return journey.suggestedLocalName
+      ? `${journey.suggestedName} · ${journey.suggestedLocalName}`
+      : journey.suggestedName;
+  }
   const named = [journey.city, journey.countryName].filter(
     (part): part is string => typeof part === "string" && part.length > 0
   );

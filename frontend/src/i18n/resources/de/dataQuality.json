@@ -44,19 +44,28 @@
       "kind": {
         "place": "Ort besucht?",
         "trip": "Reise?",
-        "stay": "Übernachtung?"
+        "stay": "Übernachtung?",
+        "visit": "Halt auf der Reise?"
       },
       "facts": {
         "photos": "{{photos}} Fotos",
         "located": "{{located}} mit Ort",
         "nights": "{{nights}} Nächte",
-        "airport": "nächster eigener Flughafen: {{iata}}"
+        "airport": "nächster eigener Flughafen: {{iata}}",
+        "trip": "Reise: {{name}}"
       },
       "creates": {
         "trip": "Übernehmen legt eine Reise mit diesem Zeitraum an.",
         "placeVisit": "Übernehmen legt einen Besuch an diesem Ort am ersten Tag an.",
         "stayAnswerOnly": "Übernehmen merkt die Frage nur als beantwortet. Eine Übernachtung braucht eine Unterkunft, die dieser Fund nicht nennt — die legst du selbst an.",
-        "placeMissingAnswerOnly": "Übernehmen merkt die Frage nur als beantwortet. Den Ort, den dieser Fund nannte, gibt es nicht mehr — angelegt wird nichts."
+        "placeMissingAnswerOnly": "Übernehmen merkt die Frage nur als beantwortet. Den Ort, den dieser Fund nannte, gibt es nicht mehr — angelegt wird nichts.",
+        "visitInTrip": "Übernehmen legt den Ort an und trägt einen Besuch zur Zeit des ersten Fotos in der Reise ein.",
+        "visitInTripOwnPlace": "Übernehmen trägt einen Besuch an diesem Ort zur Zeit des ersten Fotos in der Reise ein — der Ort ist schon da."
+      },
+      "nameField": {
+        "label": "Name des Ortes",
+        "hint": "Die Suche hat hier nichts Benanntes gefunden — gib dem Ort einen Namen, dann kann er angelegt werden.",
+        "placeholder": "z. B. Gyeongbokgung"
       },
       "actions": {
         "accept": "Übernehmen",
@@ -78,7 +87,8 @@
         "accepted": {
           "trip": "Reise angelegt.",
           "placeVisit": "Besuch am Ort eingetragen.",
-          "none": "Als beantwortet gemerkt. Angelegt wurde nichts."
+          "none": "Als beantwortet gemerkt. Angelegt wurde nichts.",
+          "serverVisit": "Besuch in der Reise eingetragen."
         },
         "dismissed": "Verworfen. Diese Fotoserie wird nicht mehr vorgeschlagen.",
         "photosLinked": "{{count}} Fotos mit dem Besuch verknüpft.",

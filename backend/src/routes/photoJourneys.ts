@@ -1,5 +1,5 @@
 import { Router, Response, NextFunction } from "express";
-import { localDay } from "../shared/time/instant";
+import { toLocal } from "../shared/time/instant";
 import { zoneOfCoordinates } from "../shared/time/resolveInput";
 import { z } from "zod";
 
@@ -8,6 +8,7 @@ import { AppError } from "../middleware/errorHandler";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { immichImportLimiter } from "../middleware/rateLimit";
 import { scanPhotoJourneys } from "../services/photoJourneys/scan";
+import { acceptVisitFinding } from "../services/photoJourneys/acceptVisit";
 import { attachJourneyPhotosToVisit } from "../services/places/visitPhotoLinks";
 import { startJob } from "../services/jobs/jobRegistry";
 
@@ -57,6 +58,13 @@ const patchBodySchema = z.object({
   /** Accepting a `place` finding records a visit; a `stay` finding, a stay. */
   createdPlaceVisitId: z.string().uuid().optional(),
   createdLodgingStayId: z.string().uuid().optional(),
+  /**
+   * `visit` findings only (forgejo#211): the server creates the place, and
+   * these override what the scan called it. `name` is required by the server
+   * when the scan named nothing.
+   */
+  name: z.string().trim().min(1).max(200).optional(),
+  localName: z.string().trim().max(200).optional(),
 });
 
 /**
@@ -136,13 +144,23 @@ router.put(
  * The place must be the caller's; the scan only ever writes their own, but a
  * name is read out of the database here, so the check costs nothing.
  */
-function withNames<T extends { place: { name: string; userId: string } | null }>(
-  journey: T & { city: string | null; countryName: string | null },
-  userId: string
-) {
-  const { place, ...row } = journey;
+function withNames<
+  T extends {
+    place: { name: string; userId: string } | null;
+    trip: { name: string } | null;
+    suggestedName: string | null;
+  },
+>(journey: T & { city: string | null; countryName: string | null }, userId: string) {
+  const { place, trip, ...row } = journey;
   const placeName = place && place.userId === userId ? place.name : null;
-  return { ...row, placeName, label: placeName ?? row.city ?? row.countryName ?? null };
+  return {
+    ...row,
+    placeName,
+    // A `visit` finding is named by what the lookup found at the stop; the
+    // own place it points at, where there is one, is that name already.
+    tripName: trip?.name ?? null,
+    label: placeName ?? row.suggestedName ?? row.city ?? row.countryName ?? null,
+  };
 }
 
 /**
@@ -151,15 +169,28 @@ function withNames<T extends { place: { name: string; userId: string } | null }>
  * finding creates the trip with these days; the first photo's instant, read
  * as a day, is its UTC date — a Tokyo trip whose first photo was taken at
  * 01:00 on 2 May started on 1 May. Null when the position has no zone.
+ *
+ * The wall clocks travel too (`startLocal`/`endLocal`, `YYYY-MM-DDTHH:mm:ss`):
+ * a `visit` finding is an afternoon, not a span of days, and the card shows
+ * when on the place's clock — never on the reader's.
  */
 function withLocalDays<T extends { startDate: Date; endDate: Date; lat: number; lon: number }>(
   journey: T
-): T & { startDay: string | null; endDay: string | null } {
+): T & {
+  startDay: string | null;
+  endDay: string | null;
+  startLocal: string | null;
+  endLocal: string | null;
+} {
   const zone = zoneOfCoordinates(journey.lat, journey.lon);
+  const startLocal = zone ? toLocal(journey.startDate, zone).local : null;
+  const endLocal = zone ? toLocal(journey.endDate, zone).local : null;
   return {
     ...journey,
-    startDay: zone ? localDay(journey.startDate, zone) : null,
-    endDay: zone ? localDay(journey.endDate, zone) : null,
+    startDay: startLocal?.slice(0, 10) ?? null,
+    endDay: endLocal?.slice(0, 10) ?? null,
+    startLocal,
+    endLocal,
   };
 }
 
@@ -172,7 +203,10 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     const journeys = await prisma.photoJourney.findMany({
       where: { userId, status: parsed.data.status },
       orderBy: { startDate: "desc" },
-      include: { place: { select: { name: true, userId: true } } },
+      include: {
+        place: { select: { name: true, userId: true } },
+        trip: { select: { name: true } },
+      },
     });
 
     res.json({
@@ -295,6 +329,26 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
     await assertCreatedOwned(req.userId!, parsed.data);
 
+    // A `visit` finding is the one kind the server accepts by CREATING: the
+    // place (unless an own one takes it) and the visit in the trip, in one
+    // transaction — see `services/photoJourneys/acceptVisit.ts`. Its photos
+    // come along the same way a place finding's do. Dismissing it is the
+    // ordinary path below.
+    const row = await prisma.photoJourney.findFirst({
+      where: { id: req.params.id, userId: req.userId! },
+      select: { kind: true },
+    });
+    if (row?.kind === "visit" && parsed.data.status === "accepted") {
+      const created = await acceptVisitFinding(req.userId!, req.params.id, parsed.data);
+      const photos = await attachJourneyPhotosToVisit(
+        req.userId!,
+        req.params.id,
+        created.placeVisitId
+      );
+      res.json({ success: true, data: { photos, created } });
+      return;
+    }
+
     // Scoped by userId in the WHERE, not checked after loading: a
     // journey belonging to someone else must be a 404, never a row we
     // fetched and then decided not to show.
@@ -324,7 +378,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
           )
         : null;
 
-    res.json({ success: true, data: { photos } });
+    res.json({ success: true, data: { photos, created: null } });
   } catch (err) {
     next(err);
   }

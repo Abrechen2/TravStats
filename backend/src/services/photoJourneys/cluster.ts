@@ -93,14 +93,87 @@ export function clusterPhotosByTime(
   return runs.filter((run) => run.length >= minPhotos).map((run) => toCluster(run));
 }
 
-function toCluster(run: readonly ScanPhoto[]): PhotoCluster {
-  const located = run.filter(
-    (photo): photo is ScanPhoto & { lat: number; lon: number } =>
-      typeof photo.lat === "number" &&
-      typeof photo.lon === "number" &&
-      Number.isFinite(photo.lat) &&
-      Number.isFinite(photo.lon)
+type LocatedPhoto = ScanPhoto & { lat: number; lon: number };
+
+const isLocated = (photo: ScanPhoto): photo is LocatedPhoto =>
+  typeof photo.lat === "number" &&
+  typeof photo.lon === "number" &&
+  Number.isFinite(photo.lat) &&
+  Number.isFinite(photo.lon);
+
+export interface StopClusterOptions {
+  /** A pause longer than this between two photos ends the stop. */
+  maxGapMinutes: number;
+  /** A photo farther than this from the stop's running centre is somewhere else. */
+  radiusM: number;
+  /** Fewer located photos than this is a snapshot, not a stop. */
+  minPhotos: number;
+  /** First to last photo. A burst shorter than this did not stay anywhere. */
+  minDwellMinutes: number;
+}
+
+/**
+ * Group photos into STOPS: the places a traveller stood still at inside one
+ * day (forgejo#211). The journey clustering above asks "which days", with a
+ * 48-hour gap; this asks "where, for how long", with a gap of minutes and a
+ * radius of metres, and only photos WITH a coordinate take part — a stop is a
+ * position, and a photo without one cannot say it was there.
+ *
+ * A photo joins the current stop when it follows the previous one within
+ * `maxGapMinutes` AND lies within `radiusM` of the stop's running centre. The
+ * centre is the mean of the photos so far, so a stop grows around where the
+ * photos actually are rather than around its first one.
+ *
+ * The dwell floor is what keeps transit out. A bus crossing a bridge yields a
+ * burst of photos minutes apart, each a few hundred metres on from the last:
+ * every one of them fails the radius against the centre of the previous ones,
+ * so they fall into stops of one photo each, and a stop of one photo has no
+ * dwell. What survives is three or more photos, inside a few hundred metres,
+ * over at least `minDwellMinutes` — a palace, not a window seat.
+ */
+export function clusterPhotosByStop(
+  photos: readonly ScanPhoto[],
+  { maxGapMinutes, radiusM, minPhotos, minDwellMinutes }: StopClusterOptions
+): PhotoCluster[] {
+  const usable = photos
+    .filter((photo) => Number.isFinite(photo.takenAtMs) && photo.takenAtMs > 0)
+    .filter(isLocated)
+    .sort((a, b) => a.takenAtMs - b.takenAtMs);
+
+  const gapMs = maxGapMinutes * 60_000;
+  const dwellMs = minDwellMinutes * 60_000;
+  const runs: LocatedPhoto[][] = [];
+  for (const photo of usable) {
+    const current = runs[runs.length - 1];
+    const previous = current?.[current.length - 1];
+    const joins =
+      previous !== undefined &&
+      photo.takenAtMs - previous.takenAtMs <= gapMs &&
+      distanceKm(meanPosition(current), photo) * 1000 <= radiusM;
+    if (joins) {
+      current.push(photo);
+    } else {
+      runs.push([photo]);
+    }
+  }
+
+  return runs
+    .filter((run) => run.length >= minPhotos)
+    .filter((run) => run[run.length - 1].takenAtMs - run[0].takenAtMs >= dwellMs)
+    .map((run) => ({ ...toCluster(run), position: meanPosition(run) }));
+}
+
+/** The centre of a stop: the mean, because every photo of a stop IS at the stop. */
+function meanPosition(photos: readonly LocatedPhoto[]): { lat: number; lon: number } {
+  const sum = photos.reduce(
+    (acc, photo) => ({ lat: acc.lat + photo.lat, lon: acc.lon + photo.lon }),
+    { lat: 0, lon: 0 }
   );
+  return { lat: sum.lat / photos.length, lon: sum.lon / photos.length };
+}
+
+function toCluster(run: readonly ScanPhoto[]): PhotoCluster {
+  const located = run.filter(isLocated);
 
   return {
     startMs: run[0].takenAtMs,

@@ -26,12 +26,19 @@ registry.registerPath({
   description:
     "Each row is ONE reading of a burst of photos nothing recorded explains, the strongest that fits: " +
     "`place` (photos within 2 km of an own place, no visit that day; `placeId`, `distanceKm`), " +
-    "`trip` (an own, flown airport other than home within 300 km; `airportIata`, `distanceKm`, `spreadKm`) " +
-    "or `stay` (nights away with no dated stay, named by an own place nearby; `placeId`, `nights`). " +
-    "Suggestions only: nothing is recorded until the client creates the entry and PATCHes the row. " +
+    "`trip` (an own, flown airport other than home within 300 km; `airportIata`, `distanceKm`, `spreadKm`), " +
+    "`stay` (nights away with no dated stay, named by an own place nearby; `placeId`, `nights`) " +
+    "or `visit` (a stop of at least three located photos over five minutes INSIDE a recorded " +
+    "trip's days — `tripId`, `tripName` — that no visit, slept-in lodging or flown airport within " +
+    "200 m explains; `suggestedName`, `suggestedLocalName`, `suggestedRef` and `suggestedCategory` " +
+    "are what the reverse lookup found within 150 m, all null when nothing there had a name; " +
+    "`placeId` is set when an own place within 200 m has no visit that day, and accepting " +
+    "records the visit there). " +
+    "Suggestions only: nothing is recorded until the client creates the entry and PATCHes the row " +
+    "— except a `visit`, whose place and visit the PATCH itself creates. " +
     "Each row is named from what is stored (no lookup per request): `placeName` is the own place " +
-    "a finding points at, `label` that name or else the city, then the country, the scan's reverse " +
-    "lookup stored — null when nothing is known.",
+    "a finding points at, `label` that name or else `suggestedName`, else the city, then the " +
+    "country, the scan's reverse lookup stored — null when nothing is known.",
   tags: miscTag,
   request: {
     query: z.object({ status: z.enum(["pending", "accepted", "dismissed"]).optional() }),
@@ -53,7 +60,25 @@ registry.registerPath({
                 label: z
                   .string()
                   .nullable()
-                  .describe("What to call the finding: placeName, else city, else countryName"),
+                  .describe(
+                    "What to call the finding: placeName, else suggestedName, else city, else countryName"
+                  ),
+                tripName: z
+                  .string()
+                  .nullable()
+                  .describe(
+                    "The name of the trip a `visit` finding falls in; null for the other kinds"
+                  ),
+                startLocal: z
+                  .string()
+                  .nullable()
+                  .describe(
+                    "The first photo's wall clock where it was taken (YYYY-MM-DDTHH:mm:ss); null without a zone"
+                  ),
+                endLocal: z
+                  .string()
+                  .nullable()
+                  .describe("The last photo's wall clock where it was taken; null without a zone"),
                 startDay: z
                   .string()
                   .nullable()
@@ -203,7 +228,14 @@ registry.registerPath({
     "`createdPlaceVisitId` or `createdLodgingStayId` — and each must be the caller's own entry (404 otherwise). " +
     "Accepting with `createdPlaceVisitId` links the journey's preview photographs to that visit (no bytes " +
     "copied), after re-finding each id in the caller's own Immich; `data.photos` reports the outcome and is " +
-    "null when nothing was to be linked.",
+    "null when nothing was to be linked. " +
+    "Accepting a `visit` finding (forgejo#211) is the one case the SERVER creates: the place — reusing " +
+    "the own place the row points at, else one with the same `osm:` ref, else a new one from " +
+    "`suggestedName`/`suggestedLocalName`/`suggestedCategory` (`name`/`localName` in the body override " +
+    "them; `name` is required, 400 `VISIT_NAME_REQUIRED`, when the scan named nothing) — and the visit at " +
+    "the first photo's instant, filed on the finding's trip, in one transaction. `data.created` says what " +
+    "was made; its photographs are linked as for a place finding. Accepting it again returns the same " +
+    "visit and creates nothing more.",
   tags: miscTag,
   request: {
     params: z.object({ id: uuid }),
@@ -215,6 +247,19 @@ registry.registerPath({
             createdTripId: uuid.optional(),
             createdPlaceVisitId: uuid.optional(),
             createdLodgingStayId: uuid.optional(),
+            name: z
+              .string()
+              .min(1)
+              .max(200)
+              .optional()
+              .describe(
+                "`visit` only: the name of the place to create, overriding `suggestedName`"
+              ),
+            localName: z
+              .string()
+              .max(200)
+              .optional()
+              .describe("`visit` only: the own-script name, overriding `suggestedLocalName`"),
           }),
         },
       },
@@ -242,11 +287,22 @@ registry.registerPath({
                   }),
                 ])
                 .nullable(),
+              created: z
+                .object({
+                  placeId: uuid,
+                  placeVisitId: uuid,
+                  placeCreated: z
+                    .boolean()
+                    .describe("False when an existing place of the caller's took the visit"),
+                })
+                .nullable()
+                .describe("What accepting a `visit` finding made; null for every other answer"),
             }),
           }),
         },
       },
     },
+    400: badInput,
     404: notFound,
   },
 });

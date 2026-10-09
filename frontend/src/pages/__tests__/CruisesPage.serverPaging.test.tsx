@@ -54,7 +54,9 @@ vi.mock("../../components/Cruise/CruiseRow", () => ({
 }));
 vi.mock("../../components/Cruise/CruiseRowActions", () => ({ default: () => null }));
 vi.mock("../../components/Cruise/CruiseEditModal", () => ({ CruiseEditModal: () => null }));
-vi.mock("../../components/import/DomainImportPanel", () => ({ default: () => null }));
+vi.mock("../../components/import/DomainImportPanel", () => ({
+  default: ({ open }: { open: boolean }) => (open ? <div data-testid="import-panel" /> : null),
+}));
 vi.mock("../../components/import/adapters/cruiseAdapter", () => ({
   useCruiseImportAdapter: () => ({}),
 }));
@@ -255,5 +257,34 @@ describe("CruisesPage — nothing is filtered or sliced in the browser", () => {
 
   it("debounces the search rather than querying per keystroke", () => {
     expect(source).toContain("useDebouncedValue");
+  });
+});
+
+describe("CruisesPage — a failed read and an empty list have a next step", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    listPage.mockReset();
+    facets.mockReset().mockResolvedValue(FACETS);
+  });
+
+  // forgejo#247: a failed read offers the retry instead of a dead end.
+  it("offers a retry on a failed read, and the retry reads again", async () => {
+    listPage.mockRejectedValueOnce(new Error("503")).mockResolvedValue(page(50));
+    render(<CruisesPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "common:buttons.retry" }));
+
+    await waitFor(() => expect(listPage).toHaveBeenCalledTimes(2));
+    await screen.findByTestId("row-c0");
+    expect(screen.queryByText("list.loadError")).toBeNull();
+  });
+
+  // forgejo#250: the empty list opens the same add/import chooser as the header.
+  it("offers to add the first cruise when the list is empty", async () => {
+    listPage.mockResolvedValue({ items: [], total: 0 });
+    render(<CruisesPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "add.title" }));
+    expect(await screen.findByTestId("import-panel")).toBeInTheDocument();
   });
 });

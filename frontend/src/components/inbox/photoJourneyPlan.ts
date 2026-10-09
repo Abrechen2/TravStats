@@ -23,11 +23,22 @@ import type { PhotoJourney } from "../../types/photoJourney";
  *   FK cascades, so the row is normally deleted with the place; this is the
  *   window between a scan and a deletion. Answering it is still right,
  *   inventing a place is not.
+ * - `visitInTrip` / `visitInTripOwnPlace` — a `visit` finding (forgejo#211).
+ *   The SERVER creates on accept: a new place and a visit in the trip, or —
+ *   when the row points at an own place within reach — the visit at that
+ *   place. The web sends one PATCH and creates nothing itself.
  */
-export type PhotoJourneyPlan = "trip" | "placeVisit" | "stayAnswerOnly" | "placeMissingAnswerOnly";
+export type PhotoJourneyPlan =
+  | "trip"
+  | "placeVisit"
+  | "stayAnswerOnly"
+  | "placeMissingAnswerOnly"
+  | "visitInTrip"
+  | "visitInTripOwnPlace";
 
 export function photoJourneyPlan(journey: PhotoJourney): PhotoJourneyPlan {
   if (journey.kind === "trip") return "trip";
   if (journey.kind === "stay") return "stayAnswerOnly";
+  if (journey.kind === "visit") return journey.placeId ? "visitInTripOwnPlace" : "visitInTrip";
   return journey.placeId ? "placeVisit" : "placeMissingAnswerOnly";
 }

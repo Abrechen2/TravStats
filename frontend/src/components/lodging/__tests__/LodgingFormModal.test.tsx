@@ -136,7 +136,8 @@ describe("LodgingFormModal", () => {
 
     render(<LodgingFormModal mode="create" onClose={vi.fn()} onSaved={onSaved} />);
 
-    fireEvent.change(screen.getByLabelText("lodging:field.name"), {
+    // The label now ends in the required mark ("lodging:field.name *").
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.name/), {
       target: { value: "New Hotel" },
     });
     await userEvent.click(screen.getByText("common:buttons.save"));
