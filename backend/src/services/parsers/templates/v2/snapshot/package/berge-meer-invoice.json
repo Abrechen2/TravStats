@@ -1,7 +1,7 @@
 {
   "id": "package:berge-meer-invoice",
   "domain": "package",
-  "version": "2026.10.09",
+  "version": "2026.10.10",
   "issuer": {
     "name": "Berge & Meer",
     "kind": "tour-operator",
@@ -123,15 +123,15 @@
   "testCases": [
     {
       "name": "an invented invoice is read: reference without its revision suffix, price, four legs",
-      "input": "Berge & Meer Touristik GmbH · Beispielallee 1 · 99999 Musterstadt\nRECHNUNG\nBuchungs-Nr. 9Z123456/2\nDatum: 02.03.26\nSie haben bei uns gebucht: Kenia & Tansania – Erlebnisreise\nIhr Reisetag: 18.05.2026\nREISETEILNEHMER NAME GEBURTSDATUM\n1 Frau Erika Beispiel 01.01.70\n2 Herr Max Muster 02.02.71\nIHRE FLUGSTRECKE\nVON - NACH AIRLINE FLUGNR DATUM ABFLUG ANKUNFT\nFRA - ADD ET 707 18.05.26 21:35 06:25+1\nADD - NBO ET 308 19.05.26 08:40 10:55\nNBO - ADD ET 309 30.05.26 12:00 14:10\nADD - FRA ET 706 30.05.26 23:15 05:50+1\n* Flugzeiten unter Vorbehalt\nLEISTUNGEN\nRundreise laut Programm\nHotel für 2 Erw.\nGesamtbetrag 3.249,00 EUR",
+      "input": "Berge & Meer Touristik GmbH · Beispielallee 1 · 99999 Musterstadt\nRECHNUNG\nBuchungs-Nr. 9Z123456/2\nDatum: 27.01.26\nSie haben bei uns gebucht: Kenia & Tansania – Erlebnisreise\nIhr Reisetag: 14.04.2026\nREISETEILNEHMER NAME GEBURTSDATUM\n1 Frau Erika Beispiel 28.11.69\n2 Herr Max Muster 30.12.70\nIHRE FLUGSTRECKE\nVON - NACH AIRLINE FLUGNR DATUM ABFLUG ANKUNFT\nFRA - ADD ET 707 14.04.26 21:35 06:25+1\nADD - NBO ET 308 15.04.26 08:40 10:55\nNBO - ADD ET 309 26.04.26 12:00 14:10\nADD - FRA ET 706 26.04.26 23:15 05:50+1\n* Flugzeiten unter Vorbehalt\nLEISTUNGEN\nRundreise laut Programm\nHotel für 2 Erw.\nGesamtbetrag 2.899,00 EUR",
       "expect": "match",
       "expected": {
         "bookingReference": "9Z123456",
-        "issuedOn": "2026-03-02",
+        "issuedOn": "2026-01-27",
         "tripName": "Kenia & Tansania – Erlebnisreise",
-        "startDate": "2026-05-18",
+        "startDate": "2026-04-14",
         "travellers": 2,
-        "totalPrice": 3249,
+        "totalPrice": 2899,
         "currency": "EUR",
         "flights": [
           {
@@ -139,7 +139,7 @@
             "arrIata": "ADD",
             "flightNumber": "ET707",
             "airline": "ET",
-            "date": "2026-05-18",
+            "date": "2026-04-14",
             "depTime": "21:35",
             "arrTime": "06:25",
             "arrDayOffset": 1
@@ -153,7 +153,7 @@
           {
             "depIata": "NBO",
             "arrIata": "ADD",
-            "date": "2026-05-30"
+            "date": "2026-04-26"
           },
           {
             "flightNumber": "ET706",
@@ -164,15 +164,15 @@
     },
     {
       "name": "flight table with the baggage remark column (BEMERKUNG)",
-      "input": "Berge & Meer Touristik GmbH · Beispielallee 1 · 99999 Musterstadt\nRECHNUNG\nBuchungs-Nr. 9Z123456/2\nDatum: 02.03.26\nSie haben bei uns gebucht: Kenia & Tansania – Erlebnisreise\nIhr Reisetag: 18.05.2026\nREISETEILNEHMER NAME GEBURTSDATUM\n1 Frau Erika Beispiel 01.01.70\n2 Herr Max Muster 02.02.71\nIHRE FLUGSTRECKE\nVON - NACH AIRLINE FLUGNR DATUM ABFLUG ANKUNFT BEMERKUNG\nFRA - ADD ET 707 18.05.26 21:35 06:25+1 2X23KG\nADD - NBO ET 308 19.05.26 08:40 10:55 2X23KG\nNBO - ADD ET 309 30.05.26 12:00 14:10 1X23KG\nADD - FRA ET 706 30.05.26 23:15 05:50+1 2X23KG\n* Flugzeiten unter Vorbehalt\nLEISTUNGEN\nRundreise laut Programm\nHotel für 2 Erw.\nGesamtbetrag 3.249,00 EUR",
+      "input": "Berge & Meer Touristik GmbH · Beispielallee 1 · 99999 Musterstadt\nRECHNUNG\nBuchungs-Nr. 9Z123456/2\nDatum: 27.01.26\nSie haben bei uns gebucht: Kenia & Tansania – Erlebnisreise\nIhr Reisetag: 14.04.2026\nREISETEILNEHMER NAME GEBURTSDATUM\n1 Frau Erika Beispiel 28.11.69\n2 Herr Max Muster 30.12.70\nIHRE FLUGSTRECKE\nVON - NACH AIRLINE FLUGNR DATUM ABFLUG ANKUNFT BEMERKUNG\nFRA - ADD ET 707 14.04.26 21:35 06:25+1 2X23KG\nADD - NBO ET 308 15.04.26 08:40 10:55 2X23KG\nNBO - ADD ET 309 26.04.26 12:00 14:10 1X23KG\nADD - FRA ET 706 26.04.26 23:15 05:50+1 2X23KG\n* Flugzeiten unter Vorbehalt\nLEISTUNGEN\nRundreise laut Programm\nHotel für 2 Erw.\nGesamtbetrag 2.899,00 EUR",
       "expect": "match",
       "expected": {
         "bookingReference": "9Z123456",
-        "issuedOn": "2026-03-02",
+        "issuedOn": "2026-01-27",
         "tripName": "Kenia & Tansania – Erlebnisreise",
-        "startDate": "2026-05-18",
+        "startDate": "2026-04-14",
         "travellers": 2,
-        "totalPrice": 3249,
+        "totalPrice": 2899,
         "currency": "EUR",
         "flights": [
           {
@@ -180,7 +180,7 @@
             "arrIata": "ADD",
             "flightNumber": "ET707",
             "airline": "ET",
-            "date": "2026-05-18",
+            "date": "2026-04-14",
             "depTime": "21:35",
             "arrTime": "06:25",
             "arrDayOffset": 1
@@ -194,7 +194,7 @@
           {
             "depIata": "NBO",
             "arrIata": "ADD",
-            "date": "2026-05-30"
+            "date": "2026-04-26"
           },
           {
             "flightNumber": "ET706",
@@ -205,7 +205,7 @@
     },
     {
       "name": "the operator's travel documents are not an invoice",
-      "input": "Berge & Meer Touristik GmbH\nBuchungs-Nr. 9Z123456\nDatum: 05.03.26\nIhr Reiseablauf\n18.05.26 Frankfurt - Addis Ababa 21:35 Uhr - 06:25+1 Uhr ET 0707",
+      "input": "Berge & Meer Touristik GmbH\nBuchungs-Nr. 9Z123456\nDatum: 30.01.26\nIhr Reiseablauf\n14.04.26 Frankfurt - Addis Ababa 21:35 Uhr - 06:25+1 Uhr ET 0707",
       "expect": "decline"
     },
     {

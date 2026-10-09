@@ -7,7 +7,7 @@ import { parsePackageText } from "../../services/trip/package/parsePackage";
 import { loadDrafts, matchInput } from "../../services/trip/package/__tests__/draftTemplates";
 
 /**
- * Package tour → trip, end to end over the two routes (plan 2026-10-09 P3).
+ * Package tour → trip, end to end over the two routes (plan 2026-09-05 P3).
  * The invoice reading comes from the Berge & Meer draft template run on its
  * own invented test document; the travel-documents reading of the SAME
  * booking is written out here, because the draft's own case is a different
@@ -25,11 +25,11 @@ const invoiceReading = (): Record<string, unknown> => {
 /** The travel documents of the invoice's booking: legs by city, the hotels. */
 const documentsReading = {
   bookingReference: "9z123456",
-  issuedOn: "2026-03-05",
+  issuedOn: "2026-01-30",
   flights: [
     {
       flightNumber: "ET0707",
-      date: "2026-05-18",
+      date: "2026-04-14",
       depCity: "Frankfurt",
       arrCity: "Addis Ababa",
       depTime: "21:35",
@@ -40,16 +40,16 @@ const documentsReading = {
   stays: [
     {
       name: "Savanna Example Lodge",
-      checkIn: "2026-05-19",
-      checkOut: "2026-05-23",
+      checkIn: "2026-04-15",
+      checkOut: "2026-04-19",
       city: "Nanyuki",
       country: "Kenia",
       board: "Halbpension",
     },
     {
       name: "Hotel Seeblick Muster",
-      checkIn: "2026-05-23",
-      checkOut: "2026-05-30",
+      checkIn: "2026-04-19",
+      checkOut: "2026-04-26",
       city: "Naivasha",
       country: "Kenia",
     },
@@ -101,10 +101,10 @@ describe("POST /trips/package/{preview,commit}", () => {
     expect(proposal.trip).toMatchObject({
       action: "create",
       name: "Kenia & Tansania – Erlebnisreise",
-      startDate: "2026-05-18",
-      endDate: "2026-05-31",
+      startDate: "2026-04-14",
+      endDate: "2026-04-27",
     });
-    expect(proposal.booking).toMatchObject({ action: "create", price: 3249, currency: "EUR" });
+    expect(proposal.booking).toMatchObject({ action: "create", price: 2899, currency: "EUR" });
     expect(proposal.flights.map((f: { action: string }) => f.action)).toEqual([
       "create",
       "create",
@@ -127,9 +127,9 @@ describe("POST /trips/package/{preview,commit}", () => {
     const trip = await prisma.trip.findUniqueOrThrow({ where: { id: result.trip.id } });
     expect(trip.name).toBe("Kenia & Tansania – Erlebnisreise");
     const booking = await prisma.booking.findUniqueOrThrow({ where: { id: result.booking.id } });
-    expect(booking).toMatchObject({ tripId: trip.id, pnr: "9Z123456", price: 3249 });
+    expect(booking).toMatchObject({ tripId: trip.id, pnr: "9Z123456", price: 2899 });
     // FX on the issue day, never on the day of the import.
-    expect(booking.fxRateDate?.toISOString()).toBe("2026-03-02T00:00:00.000Z");
+    expect(booking.fxRateDate?.toISOString()).toBe("2026-01-27T00:00:00.000Z");
 
     const flights = await prisma.flight.findMany({
       where: { userId },
@@ -139,8 +139,8 @@ describe("POST /trips/package/{preview,commit}", () => {
     expect(flights.every((f) => f.tripId === trip.id && f.bookingId === booking.id)).toBe(true);
     expect(flights[0]).toMatchObject({ depIata: "FRA", arrIata: "ADD", airlineIata: "ET" });
     // 21:35 in Frankfurt (CEST) is 19:35Z; the +1 arrival lands the next day.
-    expect(flights[0].departureTime?.toISOString()).toBe("2026-05-18T19:35:00.000Z");
-    expect(flights[0].arrivalTime?.toISOString()).toBe("2026-05-19T03:25:00.000Z");
+    expect(flights[0].departureTime?.toISOString()).toBe("2026-04-14T19:35:00.000Z");
+    expect(flights[0].arrivalTime?.toISOString()).toBe("2026-04-15T03:25:00.000Z");
 
     const filed = await prisma.document.findUniqueOrThrow({ where: { id: document.id } });
     expect(filed.tripId).toBe(trip.id);
@@ -191,24 +191,24 @@ describe("POST /trips/package/{preview,commit}", () => {
     expect(stays[0].board).toBe("half");
     // The documents carry no price: the invoice's stands.
     const booking = await prisma.booking.findUniqueOrThrow({ where: { id: result.booking.id } });
-    expect(booking.price).toBe(3249);
+    expect(booking.price).toBe(2899);
   });
 
   it("keeps a stored price and says so when a later document disagrees", async () => {
     const res = await preview({ reading: { ...invoiceReading(), totalPrice: 2999 } }).expect(200);
     const { proposal } = res.body.data;
-    expect(proposal.booking.storedPrice).toEqual({ price: 3249, currency: "EUR" });
+    expect(proposal.booking.storedPrice).toEqual({ price: 2899, currency: "EUR" });
     expect(proposal.warnings).toContainEqual({ code: "priceConflict", subject: "9Z123456" });
   });
 
   it("never guesses an airport: an ambiguous city skips the leg until the reviewer picks one", async () => {
     const reading = {
       bookingReference: "AMB-1",
-      issuedOn: "2026-01-10",
+      issuedOn: "2025-12-07",
       flights: [
         {
           flightNumber: "KQ100",
-          date: "2026-08-01",
+          date: "2026-06-28",
           depCity: "Nairobi",
           arrIata: "MBA",
           depTime: "08:00",
@@ -248,18 +248,18 @@ describe("POST /trips/package/{preview,commit}", () => {
         arrLat: 40.64,
         arrLon: -73.78,
         depTimezone: "Europe/Berlin",
-        departureTime: new Date("2026-09-01T08:00:00Z"),
-        arrivalTime: new Date("2026-09-01T16:00:00Z"),
+        departureTime: new Date("2026-07-29T08:00:00Z"),
+        arrivalTime: new Date("2026-07-29T16:00:00Z"),
       },
     });
     const res = await commit({
       reading: {
         bookingReference: "ATT-1",
-        issuedOn: "2026-02-01",
+        issuedOn: "2025-12-29",
         flights: [
           {
             flightNumber: "LH400",
-            date: "2026-09-01",
+            date: "2026-07-29",
             depIata: "FRA",
             arrIata: "JFK",
             depTime: "10:00",
@@ -277,7 +277,7 @@ describe("POST /trips/package/{preview,commit}", () => {
   it("writes a dated cruise on the trip, and reports an undated one instead of inventing days", async () => {
     const cruise = {
       bookingReference: "CRU-1",
-      issuedOn: "2026-01-05",
+      issuedOn: "2025-12-02",
       cruiseShip: "Example Star",
       cruiseFrom: "Hamburg",
       cruiseTo: "Bergen",
@@ -291,7 +291,7 @@ describe("POST /trips/package/{preview,commit}", () => {
     });
 
     const res = await commit({
-      reading: { ...cruise, cruiseStart: "2026-07-01", cruiseEnd: "2026-07-08" },
+      reading: { ...cruise, cruiseStart: "2026-05-28", cruiseEnd: "2026-06-04" },
     }).expect(201);
     expect(res.body.data.cruise.action).toBe("create");
     const stored = await prisma.cruise.findUniqueOrThrow({
@@ -311,11 +311,11 @@ describe("POST /trips/package/{preview,commit}", () => {
     const res = await commit({
       reading: {
         bookingReference: "BAD-1",
-        issuedOn: "2026-02-01",
+        issuedOn: "2025-12-29",
         flights: [
           {
             flightNumber: "LH401",
-            date: "2026-09-02",
+            date: "2026-07-30",
             depIata: "FRA",
             arrIata: "JFK",
             depTime: "10:00",
@@ -330,7 +330,7 @@ describe("POST /trips/package/{preview,commit}", () => {
   });
 
   it("answers an invalid reading with the contract paths", async () => {
-    const res = await preview({ reading: { issuedOn: "2026-02-01" } }).expect(422);
+    const res = await preview({ reading: { issuedOn: "2025-12-29" } }).expect(422);
     expect(res.body.code).toBe("PACKAGE_READING_INVALID");
     expect(res.body.issues).toMatch(/^bookingReference/);
   });
@@ -348,7 +348,7 @@ describe("POST /trips/package/{preview,commit}", () => {
       reading: {
         ...invoiceReading(),
         flights: [
-          { flightNumber: "ET707", date: "2026-05-18", depCity: "x".repeat(500), arrIata: "ADD" },
+          { flightNumber: "ET707", date: "2026-04-14", depCity: "x".repeat(500), arrIata: "ADD" },
         ],
       },
     });

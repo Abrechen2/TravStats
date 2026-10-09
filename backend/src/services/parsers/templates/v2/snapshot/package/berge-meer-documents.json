@@ -1,7 +1,7 @@
 {
   "id": "package:berge-meer-documents",
   "domain": "package",
-  "version": "2026.10.09",
+  "version": "2026.10.10",
   "issuer": {
     "name": "Berge & Meer",
     "kind": "tour-operator",
@@ -153,15 +153,15 @@
   "testCases": [
     {
       "name": "invented travel documents are read: ticketed legs by city, hotels with address",
-      "input": "Berge & Meer Touristik GmbH · Beispielallee 1 · 99999 Musterstadt\nIhre Reiseunterlagen\nBuchungs-Nr. 7Q654321\nDatum: 01.03.25\nReisedatum 21.03.2025\nIhr Reiseablauf\n20.03.25 Zug zum Flug\n21.03.25 Munich - Bahrain 11:40 Uhr - 19:20 Uhr GF 0086\n21.03.25 Bahrain - Hanoi 21:05 Uhr - 08:10+1 Uhr GF 0156\n22.03.25 - 29.03.25 div. Rundreisehotels Vietnam\n24.03.25 Hanoi - Hue 00:00 Uhr - 00:01 Uhr XX XXX\n26.03.25 Hue - Da Nang sep. Ticket*\n29.03.25 Hanoi - Bahrain 23:55 Uhr - 04:30+1 Uhr GF 0157\n30.03.25 Bahrain - Munich 07:40 Uhr - 12:35 Uhr GF 0017\nIhre Unterkünfte\nDetails zu Ihren Unterkünften\n22.03.25 - 24.03.25 Hotel Lotus Example\n12 Beispielgasse\nHanoi\nVietnam\nTel.: +84 000 0000\n24.03.25 - 26.03.25 Song Huong Muster Resort\n7 Uferweg\nHue\nVietnam\n26.03.25 - 29.03.25 Hotel Lotus Example\n12 Beispielgasse\nHanoi\nVietnam\nwww.lotus-example.invalid\nXY0000 MUC 21.03.2025 - 7Q654321.1 - 1/1 - ABCD Seite 3 von 8\nNotfallnummern\nReiseleitung vor Ort: +84 111 1111",
+      "input": "Berge & Meer Touristik GmbH · Beispielallee 1 · 99999 Musterstadt\nIhre Reiseunterlagen\nBuchungs-Nr. 7Q654321\nDatum: 24.03.25\nReisedatum 13.04.2025\nIhr Reiseablauf\n12.04.25 Zug zum Flug\n13.04.25 Munich - Bahrain 11:40 Uhr - 19:20 Uhr GF 0086\n13.04.25 Bahrain - Hanoi 21:05 Uhr - 08:10+1 Uhr GF 0156\n14.04.25 - 21.04.25 div. Rundreisehotels Vietnam\n16.04.25 Hanoi - Hue 00:00 Uhr - 00:01 Uhr XX XXX\n18.04.25 Hue - Da Nang sep. Ticket*\n21.04.25 Hanoi - Bahrain 23:55 Uhr - 04:30+1 Uhr GF 0157\n22.04.25 Bahrain - Munich 07:40 Uhr - 12:35 Uhr GF 0017\nIhre Unterkünfte\nDetails zu Ihren Unterkünften\n14.04.25 - 16.04.25 Hotel Lotus Example\n12 Beispielgasse\nHanoi\nVietnam\nTel.: +84 000 0000\n16.04.25 - 18.04.25 Song Huong Muster Resort\n7 Uferweg\nHue\nVietnam\n18.04.25 - 21.04.25 Hotel Lotus Example\n12 Beispielgasse\nHanoi\nVietnam\nwww.lotus-example.invalid\nXY0000 MUC 13.04.2025 - 7Q654321.1 - 1/1 - ABCD Seite 3 von 8\nNotfallnummern\nReiseleitung vor Ort: +84 111 1111",
       "expect": "match",
       "expected": {
         "bookingReference": "7Q654321",
-        "issuedOn": "2025-03-01",
-        "startDate": "2025-03-21",
+        "issuedOn": "2025-03-24",
+        "startDate": "2025-04-13",
         "flights": [
           {
-            "date": "2025-03-21",
+            "date": "2025-04-13",
             "depCity": "Munich",
             "arrCity": "Bahrain",
             "depTime": "11:40",
@@ -178,7 +178,7 @@
           {
             "depCity": "Hanoi",
             "arrCity": "Bahrain",
-            "date": "2025-03-29",
+            "date": "2025-04-21",
             "arrDayOffset": 1
           },
           {
@@ -189,8 +189,8 @@
         ],
         "stays": [
           {
-            "checkIn": "2025-03-22",
-            "checkOut": "2025-03-24",
+            "checkIn": "2025-04-14",
+            "checkOut": "2025-04-16",
             "name": "Hotel Lotus Example",
             "address": "12 Beispielgasse",
             "city": "Hanoi",
@@ -202,8 +202,8 @@
             "country": "Vietnam"
           },
           {
-            "checkIn": "2025-03-26",
-            "checkOut": "2025-03-29",
+            "checkIn": "2025-04-18",
+            "checkOut": "2025-04-21",
             "city": "Hanoi",
             "country": "Vietnam"
           }
@@ -212,7 +212,7 @@
     },
     {
       "name": "the operator's invoice is not a travel document",
-      "input": "Berge & Meer Touristik GmbH · Beispielallee 1 · 99999 Musterstadt\nRECHNUNG\nBuchungs-Nr. 9Z123456/2\nDatum: 02.03.26\nSie haben bei uns gebucht: Kenia & Tansania – Erlebnisreise\nIhr Reisetag: 18.05.2026\nREISETEILNEHMER NAME GEBURTSDATUM\n1 Frau Erika Beispiel 01.01.70\n2 Herr Max Muster 02.02.71\nIHRE FLUGSTRECKE\nVON - NACH AIRLINE FLUGNR DATUM ABFLUG ANKUNFT\nFRA - ADD ET 707 18.05.26 21:35 06:25+1\nADD - NBO ET 308 19.05.26 08:40 10:55\nNBO - ADD ET 309 30.05.26 12:00 14:10\nADD - FRA ET 706 30.05.26 23:15 05:50+1\n* Flugzeiten unter Vorbehalt\nLEISTUNGEN\nRundreise laut Programm\nHotel für 2 Erw.\nGesamtbetrag 3.249,00 EUR",
+      "input": "Berge & Meer Touristik GmbH · Beispielallee 1 · 99999 Musterstadt\nRECHNUNG\nBuchungs-Nr. 9Z123456/2\nDatum: 25.03.26\nSie haben bei uns gebucht: Kenia & Tansania – Erlebnisreise\nIhr Reisetag: 10.06.2026\nREISETEILNEHMER NAME GEBURTSDATUM\n1 Frau Erika Beispiel 24.01.70\n2 Herr Max Muster 25.02.71\nIHRE FLUGSTRECKE\nVON - NACH AIRLINE FLUGNR DATUM ABFLUG ANKUNFT\nFRA - ADD ET 707 10.06.26 21:35 06:25+1\nADD - NBO ET 308 11.06.26 08:40 10:55\nNBO - ADD ET 309 22.06.26 12:00 14:10\nADD - FRA ET 706 22.06.26 23:15 05:50+1\n* Flugzeiten unter Vorbehalt\nLEISTUNGEN\nRundreise laut Programm\nHotel für 2 Erw.\nGesamtbetrag 2.899,00 EUR",
       "expect": "decline"
     },
     {

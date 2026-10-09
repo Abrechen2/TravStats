@@ -160,13 +160,13 @@
     {
       "id": "package:berge-meer-invoice",
       "domain": "package",
-      "version": "2026.10.09",
+      "version": "2026.10.10",
       "path": "package/berge-meer-invoice.json"
     },
     {
       "id": "package:berge-meer-documents",
       "domain": "package",
-      "version": "2026.10.09",
+      "version": "2026.10.10",
       "path": "package/berge-meer-documents.json"
     }
   ]

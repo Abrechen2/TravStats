@@ -1,6 +1,6 @@
 import { prisma } from "../../../db";
 /**
- * The `package` parse target (plan 2026-10-09 P3): read by active `package`
+ * The `package` parse target (plan 2026-09-05 P3): read by active `package`
  * templates only, and recognised by `auto` through those templates' matchers.
  */
 jest.mock("../../parsers/llmAvailability", () => ({
@@ -36,7 +36,7 @@ describe("parseDocument — package", () => {
       domain: "package",
       parserUsed: "template",
       template: { id: "package:berge-meer-invoice", issuer: "Berge & Meer" },
-      package: { bookingReference: "9Z123456", totalPrice: 3249, currency: "EUR" },
+      package: { bookingReference: "9Z123456", totalPrice: 2899, currency: "EUR" },
     });
   });
 

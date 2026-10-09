@@ -40,7 +40,7 @@ describe("parsePackageText", () => {
     const result = parsePackageText(matchInput(invoice), drafts);
     expect(result.template?.id).toBe("package:berge-meer-invoice");
     expect(result.reading?.bookingReference).toBe("9Z123456");
-    expect(result.reading?.totalPrice).toBe(3249);
+    expect(result.reading?.totalPrice).toBe(2899);
     expect(result.reading?.flights).toHaveLength(4);
   });
 
