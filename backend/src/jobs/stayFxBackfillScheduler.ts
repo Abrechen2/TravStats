@@ -7,6 +7,7 @@
  */
 
 import cron from "node-cron";
+import type { ScheduledTask } from "node-cron";
 import logger from "../utils/logger";
 import { backfillMissingStayFx } from "../services/lodging/stayFxBackfill";
 import { schedulerZone } from "../shared/time/schedulerZone";
@@ -15,7 +16,7 @@ const CRON_EXPRESSION = "30 3 * * *";
 /** Out of the way of startup (migrations, seeds, the first requests). */
 const BOOT_DELAY_MS = 3 * 60 * 1000;
 
-let schedulerTask: cron.ScheduledTask | null = null;
+let schedulerTask: ScheduledTask | null = null;
 let bootTimer: NodeJS.Timeout | null = null;
 
 async function runLogged(operation: string): Promise<void> {

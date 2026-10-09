@@ -1,4 +1,5 @@
 import cron from "node-cron";
+import type { ScheduledTask } from "node-cron";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { createBackup } from "./backupService";
@@ -14,7 +15,7 @@ function toBackupInterval(value: string | null | undefined): BackupInterval {
   return "weekly";
 }
 
-let scheduledJob: cron.ScheduledTask | null = null;
+let scheduledJob: ScheduledTask | null = null;
 
 /**
  * Read backup settings from AdminSettings DB row

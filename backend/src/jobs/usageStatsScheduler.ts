@@ -1,9 +1,10 @@
 import cron from "node-cron";
+import type { ScheduledTask } from "node-cron";
 import logger from "../utils/logger";
 import { usageStatsTick } from "../services/usageStats";
 import { schedulerZone } from "../shared/time/schedulerZone";
 
-let scheduledJob: cron.ScheduledTask | null = null;
+let scheduledJob: ScheduledTask | null = null;
 
 /** Random 0-59 minute offset so a thousand installs do not all ping at 03:00 UTC. */
 function jitteredDailyPattern(): string {

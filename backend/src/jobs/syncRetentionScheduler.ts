@@ -11,6 +11,7 @@
  */
 
 import cron from "node-cron";
+import type { ScheduledTask } from "node-cron";
 
 import { pruneSyncChanges } from "../services/sync/state";
 import logger from "../utils/logger";
@@ -18,7 +19,7 @@ import { schedulerZone } from "../shared/time/schedulerZone";
 
 const CRON_EXPRESSION = "50 3 * * *";
 
-let schedulerTask: cron.ScheduledTask | null = null;
+let schedulerTask: ScheduledTask | null = null;
 
 export async function runSyncRetention(): Promise<void> {
   try {
