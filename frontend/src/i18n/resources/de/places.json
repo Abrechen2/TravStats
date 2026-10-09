@@ -56,7 +56,8 @@
     "deleteMessage_one": "„{{name}}“ wird mit einem Besuch dauerhaft gelöscht.",
     "deleteMessage_other": "„{{name}}“ wird mit {{count}} Besuchen dauerhaft gelöscht.",
     "deleteMessageNoVisits": "„{{name}}“ wird dauerhaft gelöscht.",
-    "addFirst": "Ersten Ort anlegen"
+    "addFirst": "Ersten Ort anlegen",
+    "deleteFailedFor": "„{{name}}“ wurde nicht gelöscht. {{reason}}"
   },
   "filter": {
     "allStatuses": "Alle Status",
@@ -134,7 +135,8 @@
     "visitNotFound": "Diesen Besuch gibt es an diesem Ort nicht mehr.",
     "visitDeleteMessageNoPhotos": "Der Besuch vom {{visit}} wird dauerhaft gelöscht. Der Ort selbst bleibt bestehen.",
     "visitDeleteMessagePhotos_one": "Der Besuch vom {{visit}} wird dauerhaft gelöscht, samt seinem Beleg-Foto. Der Ort selbst bleibt bestehen.",
-    "visitDeleteMessagePhotos_other": "Der Besuch vom {{visit}} wird dauerhaft gelöscht, samt seinen {{count}} Beleg-Fotos. Der Ort selbst bleibt bestehen."
+    "visitDeleteMessagePhotos_other": "Der Besuch vom {{visit}} wird dauerhaft gelöscht, samt seinen {{count}} Beleg-Fotos. Der Ort selbst bleibt bestehen.",
+    "deletedViewStale": "Gelöscht. Die Ansicht konnte nicht aktualisiert werden – lade die Seite neu."
   },
   "lists": {
     "title": "Listen",

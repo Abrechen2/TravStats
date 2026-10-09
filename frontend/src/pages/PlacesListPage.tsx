@@ -25,7 +25,8 @@ import { placeDeleteMessage } from "../lib/placeDeleteMessage";
 import { usePlaceRelations } from "../hooks/usePlaceRelations";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import { VisitDialog } from "../components/places/VisitDialog";
-import { navigateAfterSave } from "../components/form";
+import { FormErrorBanner, navigateAfterSave } from "../components/form";
+import { isTransientSaveError, saveErrorKey } from "../lib/saveErrorMessage";
 import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { FlagImg } from "../lib/countryFlag";
@@ -155,6 +156,8 @@ export default function PlacesListPage(): JSX.Element {
   const [creating, setCreating] = useState(false);
   /** The place a visit is being recorded for, from its row (forgejo#231). */
   const [recordingFor, setRecordingFor] = useState<Place | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteFailure, setDeleteFailure] = useState<{ key: string; place: Place } | null>(null);
   // Counted only while the question is open; the dialog opens at once and
   // names photos, documents, lists and trips as soon as they are known.
   const deleteRelations = usePlaceRelations(pendingDelete?.id ?? null);
@@ -356,18 +359,32 @@ export default function PlacesListPage(): JSX.Element {
     setVisited("all");
   }, []);
 
-  const confirmDelete = useCallback(async (): Promise<void> => {
-    if (!pendingDelete) return;
-    try {
-      await deletePlace(pendingDelete.id);
-      addToast("success", t("places:list.deleted", { name: pendingDelete.name }));
+  /**
+   * Delete, once. A refusal closes the question and stays on the page, naming
+   * the place and why (forgejo#246) — it was a toast — with a retry when
+   * asking again can help. The reload after a delete has its own failure
+   * state (`ListLoadFailed`), so a stored delete never reads as a refused one.
+   */
+  const runDelete = useCallback(
+    async (target: Place): Promise<void> => {
+      setDeleting(true);
+      setDeleteFailure(null);
+      try {
+        await deletePlace(target.id);
+      } catch (err: unknown) {
+        logger.error({ err }, "PlacesListPage: delete failed");
+        setDeleteFailure({ key: saveErrorKey(err, "places:list.deleteFailed"), place: target });
+        setPendingDelete(null);
+        setDeleting(false);
+        return;
+      }
+      setDeleting(false);
       setPendingDelete(null);
+      addToast("success", t("places:list.deleted", { name: target.name }));
       await load();
-    } catch (err: unknown) {
-      logger.error({ err }, "PlacesListPage: delete failed");
-      addToast("error", t("places:list.deleteFailed"));
-    }
-  }, [pendingDelete, addToast, t, load]);
+    },
+    [addToast, t, load]
+  );
 
   const formatDate = useCallback(
     // ISO in the table (E7). A visit is a calendar date, stored as UTC midnight.
@@ -436,6 +453,23 @@ export default function PlacesListPage(): JSX.Element {
             </button>
           </div>
         </div>
+
+        {deleteFailure !== null && (
+          <div className="mb-3">
+            <FormErrorBanner
+              message={t("places:list.deleteFailedFor", {
+                name: deleteFailure.place.name,
+                reason: t(deleteFailure.key),
+              })}
+              onRetry={
+                isTransientSaveError(deleteFailure.key)
+                  ? () => void runDelete(deleteFailure.place)
+                  : undefined
+              }
+              retryDisabled={deleting}
+            />
+          </div>
+        )}
 
         <ListSummaryStrip
           figures={summaryFigures}
@@ -676,7 +710,8 @@ export default function PlacesListPage(): JSX.Element {
           confirmText={t("common:buttons.delete")}
           cancelText={t("common:buttons.cancel")}
           confirmButtonClass={DELETE_BUTTON_CLASS}
-          onConfirm={() => void confirmDelete()}
+          onConfirm={() => void runDelete(pendingDelete)}
+          isLoading={deleting}
           onClose={() => setPendingDelete(null)}
         />
       )}

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { Place } from "../../types/place";
 import { countRenderedRows, paginationControlsRendered } from "./tablePaginationTestSupport";
@@ -7,6 +7,7 @@ import { countRenderedRows, paginationControlsRendered } from "./tablePagination
 const listPlacesMock = vi.fn();
 const getPlaceRelationsMock = vi.fn();
 const createVisitMock = vi.fn();
+const deletePlaceMock = vi.fn();
 
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-stub" />,
@@ -14,7 +15,7 @@ vi.mock("../../components/NavigationBar", () => ({
 
 vi.mock("../../lib/api/places", () => ({
   listPlaces: (...args: unknown[]) => listPlacesMock(...args),
-  deletePlace: vi.fn(),
+  deletePlace: (...args: unknown[]) => deletePlaceMock(...args),
   getPlaceRelations: (...args: unknown[]) => getPlaceRelationsMock(...args),
   createVisit: (...args: unknown[]) => createVisitMock(...args),
   getVisitDateSuggestions: vi.fn(async () => []),
@@ -165,6 +166,31 @@ describe("PlacesListPage", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "common:buttons.save" })).not.toBeInTheDocument()
     );
+  });
+
+  // forgejo#246: a refused delete stays on the page, named, with a retry.
+  it("keeps a refused delete on the page and sends it again on retry", async () => {
+    listPlacesMock.mockResolvedValue([makePlace({ id: "p1", name: "Wartburg" })]);
+    getPlaceRelationsMock.mockRejectedValue(new Error("not counted"));
+    deletePlaceMock
+      .mockRejectedValueOnce({ isAxiosError: true, message: "Network Error" })
+      .mockResolvedValueOnce(undefined);
+    renderListPage();
+    await screen.findByText("Wartburg");
+
+    fireEvent.click(screen.getAllByRole("button", { name: "common:buttons.delete" })[0]);
+    const dialog = await screen.findByTestId("confirm-modal");
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole("button", { name: "common:buttons.delete" }));
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("places:list.deleteFailedFor");
+    expect(screen.queryByTestId("confirm-modal")).not.toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    });
+    expect(deletePlaceMock).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   });
 
   // The add button was filled with the place domain colour, which is an

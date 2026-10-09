@@ -14,6 +14,8 @@ import { VisitPhotoStrip } from "../components/places/VisitPhotoStrip";
 import { PlaceGallery } from "../components/places/PlaceGallery";
 import { VisitDialog } from "../components/places/VisitDialog";
 import { PlaceMergeDialog } from "../components/places/PlaceMergeDialog";
+import { FormErrorBanner } from "../components/form";
+import { isTransientSaveError, saveErrorKey } from "../lib/saveErrorMessage";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import { RowActionButton, RowActions } from "../components/table/RowActionButton";
 import { useDocumentCount } from "../hooks/useDocumentCount";
@@ -55,6 +57,13 @@ export default function PlaceDetailPage(): JSX.Element {
   /** The duplicate merge (forgejo#232) — only ever on the user's say-so. */
   const [merging, setMerging] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  /** A refused delete, kept on the page with its retry (forgejo#246) — it was a toast. */
+  const [actionFailure, setActionFailure] = useState<{
+    key: string;
+    /** What "Erneut versuchen" sends again — only offered for a transient failure. */
+    redo?: { kind: "visit"; id: string } | { kind: "place" };
+  } | null>(null);
   const deleteRelations = usePlaceRelations(confirmDelete && id ? id : null);
   /**
    * Which visit the reader is being asked about, if any.
@@ -161,32 +170,53 @@ export default function PlaceDetailPage(): JSX.Element {
     };
   }, []);
 
+  /**
+   * Delete a visit. The delete and the re-read after it are two steps: a
+   * re-read that fails said "konnte nicht gelöscht werden" about a visit that
+   * WAS deleted (forgejo#247). Each failure now stays on the page, named.
+   */
   const removeVisit = useCallback(
     async (visitId: string): Promise<void> => {
+      setDeleting(true);
+      setActionFailure(null);
       try {
         await deleteVisit(visitId);
-        await load();
       } catch (err: unknown) {
         logger.error({ err }, "PlaceDetailPage: delete visit failed");
-        addToast("error", t("places:detail.visitDeleteFailed"));
+        const key = saveErrorKey(err, "places:detail.visitDeleteFailed");
+        setActionFailure({ key, redo: { kind: "visit", id: visitId } });
+        return;
       } finally {
+        setDeleting(false);
         setConfirmVisitDelete(null);
       }
+      try {
+        await refresh();
+      } catch (err: unknown) {
+        logger.error({ err }, "PlaceDetailPage: re-read after deleting a visit failed");
+        setActionFailure({ key: "places:detail.deletedViewStale" });
+      }
     },
-    [addToast, t, load]
+    [refresh]
   );
 
   const removePlace = useCallback(async (): Promise<void> => {
     if (!place) return;
+    setDeleting(true);
+    setActionFailure(null);
     try {
       await deletePlace(place.id);
-      addToast("success", t("places:list.deleted", { name: place.name }));
-      navigate("/places");
     } catch (err: unknown) {
       logger.error({ err }, "PlaceDetailPage: delete failed");
-      addToast("error", t("places:list.deleteFailed"));
+      const key = saveErrorKey(err, "places:list.deleteFailed");
+      setActionFailure({ key, redo: { kind: "place" } });
       setConfirmDelete(false);
+      setDeleting(false);
+      return;
     }
+    setDeleting(false);
+    addToast("success", t("places:list.deleted", { name: place.name }));
+    navigate("/places");
   }, [place, addToast, t, navigate]);
 
   // ISO date in the visit list, as every table row in round 4 (E7).
@@ -351,6 +381,24 @@ export default function PlaceDetailPage(): JSX.Element {
         }
       />
 
+      {actionFailure !== null && (
+        <div className="mb-4">
+          <FormErrorBanner
+            message={t(actionFailure.key)}
+            onRetry={
+              actionFailure.redo && isTransientSaveError(actionFailure.key)
+                ? () => {
+                    const redo = actionFailure.redo;
+                    if (redo?.kind === "visit") void removeVisit(redo.id);
+                    else if (redo?.kind === "place") void removePlace();
+                  }
+                : undefined
+            }
+            retryDisabled={deleting}
+          />
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_1fr]">
         <div className="flex flex-col gap-6">
           <PlaceGallery key={place.id} place={place} />
@@ -513,6 +561,7 @@ export default function PlaceDetailPage(): JSX.Element {
           confirmText={t("common:buttons.delete")}
           cancelText={t("common:buttons.cancel")}
           onConfirm={() => void removeVisit(confirmVisitDelete.id)}
+          isLoading={deleting}
           onClose={() => setConfirmVisitDelete(null)}
           confirmButtonClass={DELETE_BUTTON_CLASS}
         />
@@ -531,6 +580,7 @@ export default function PlaceDetailPage(): JSX.Element {
           confirmText={t("common:buttons.delete")}
           cancelText={t("common:buttons.cancel")}
           onConfirm={() => void removePlace()}
+          isLoading={deleting}
           onClose={() => setConfirmDelete(false)}
         />
       )}

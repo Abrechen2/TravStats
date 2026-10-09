@@ -56,7 +56,8 @@
     "deleteMessage_one": "“{{name}}” will be permanently deleted, along with its one visit.",
     "deleteMessage_other": "“{{name}}” will be permanently deleted, along with its {{count}} visits.",
     "deleteMessageNoVisits": "“{{name}}” will be permanently deleted.",
-    "addFirst": "Add your first place"
+    "addFirst": "Add your first place",
+    "deleteFailedFor": "“{{name}}” was not deleted. {{reason}}"
   },
   "filter": {
     "allStatuses": "All statuses",
@@ -134,7 +135,8 @@
     "visitNotFound": "This visit no longer exists at this place.",
     "visitDeleteMessageNoPhotos": "The visit of {{visit}} will be permanently deleted. The place itself stays.",
     "visitDeleteMessagePhotos_one": "The visit of {{visit}} will be permanently deleted, along with its proof photo. The place itself stays.",
-    "visitDeleteMessagePhotos_other": "The visit of {{visit}} will be permanently deleted, along with its {{count}} proof photos. The place itself stays."
+    "visitDeleteMessagePhotos_other": "The visit of {{visit}} will be permanently deleted, along with its {{count}} proof photos. The place itself stays.",
+    "deletedViewStale": "Deleted. The view could not be refreshed — reload the page."
   },
   "lists": {
     "title": "Lists",
