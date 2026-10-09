@@ -3,6 +3,7 @@ import { createRentalSchema } from "../../../schemas/rental";
 import { createRentalRow, RENTAL_INCLUDE } from "../../rental/rentalRowWrite";
 import { withRentalReadFields } from "../../rental/rentalDto";
 import { importSheets } from "../importSheets";
+import { getCountryResolver } from "../../geo/countryFromCoordinates";
 
 /**
  * Rentals back from the spreadsheet (forgejo#267). `exportRow` writes a
@@ -197,7 +198,12 @@ describe("spreadsheet import — rentals", () => {
     await prisma.user.deleteMany({ where: { username: { in: USERS } } });
     userId = (await prisma.user.create({ data: { username: USERS[0], passwordHash: "x" } })).id;
     otherId = (await prisma.user.create({ data: { username: USERS[1], passwordHash: "x" } })).id;
-  });
+    // The rail sheet in the mixed-file test loads the country boundaries on
+    // first use — 2.5 s idle, past Jest's 5 s under a loaded host. That load
+    // timed the test out once in a batch (fix round 2); it is paid here,
+    // where it is a fixture cost and not a verdict.
+    await getCountryResolver();
+  }, 60_000);
 
   beforeEach(async () => {
     await prisma.rentalBooking.deleteMany({ where: { userId: { in: [userId, otherId] } } });
