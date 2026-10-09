@@ -5,7 +5,7 @@
 import { useState } from "react";
 import type { JSX } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import SaveBlockedHint from "../SaveBlockedHint";
 import RequiredLegend from "../RequiredLegend";
@@ -60,6 +60,27 @@ describe("SaveBlockedHint", () => {
     // the spacing is matched loosely on purpose.
     expect(save).toHaveAccessibleDescription(/^common:form\.saveBlocked Name\s+and\s+Breitengrad$/);
     expect(document.getElementById("f-hint")).toHaveAttribute("aria-live", "polite");
+  });
+
+  // forgejo#249: the item links are text inside a sentence (30 x 16 px on an
+  // iPad). They keep their text size and gain a 44 px hit area on a coarse
+  // pointer - classes are the contract, jsdom cannot measure.
+  it("gives each item a 44 px hit area on a coarse pointer without growing the text", () => {
+    render(<Form />);
+    const items = within(screen.getByTestId("save-blocked-hint")).getAllByRole("button");
+    expect(items.length).toBeGreaterThan(0);
+    for (const item of items) {
+      const classes = item.className.split(/\s+/);
+      expect(classes).toEqual(
+        expect.arrayContaining([
+          "relative",
+          "pointer-coarse:after:absolute",
+          "pointer-coarse:after:-inset-y-3.5",
+          "pointer-coarse:after:-inset-x-2",
+        ])
+      );
+      expect(classes.some((c) => /^pointer-coarse:(min-h|h)-/.test(c))).toBe(false);
+    }
   });
 
   it("shrinks as fields become valid and disappears when nothing is missing", async () => {
