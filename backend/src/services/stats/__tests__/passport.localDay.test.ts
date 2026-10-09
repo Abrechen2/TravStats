@@ -16,6 +16,7 @@ const COUNTRIES = new Map<string, string | null>([
   ["JFK", "US"],
   ["LAX", "US"],
   ["MUC", "DE"],
+  ["LHR", "GB"],
 ]);
 
 const AT: Record<string, { lat: number; lon: number }> = {
@@ -24,6 +25,7 @@ const AT: Record<string, { lat: number; lon: number }> = {
   JFK: { lat: 40.6413, lon: -73.7781 },
   LAX: { lat: 33.9416, lon: -118.4085 },
   MUC: { lat: 48.3538, lon: 11.7861 },
+  LHR: { lat: 51.47, lon: -0.4543 },
 };
 
 const flight = (
@@ -85,6 +87,23 @@ describe("buildPassport — years and first visits on the departure airport's da
       NOW
     );
     expect(p.countries.find((c) => c.code === "JP")?.airports).toEqual(["NRT", "HND"]);
+  });
+
+  it("dates a ground spell by the inbound flight's local day, not its UTC instant", () => {
+    // The spell in Britain is handed to the fold with `at` = the inbound
+    // flight's LOCAL day (`dayCarrier`), the same day its `days` carry. With
+    // the raw instant the fold took 31 December (UTC) as Britain's first date
+    // for a flight that left Tokyo at 07:30 on 1 January.
+    const p = buildPassport(
+      [
+        flight("NRT", "LHR", "2025-12-31T22:30:00Z", "2026-01-01"),
+        flight("LHR", "MUC", "2026-01-02T10:00:00Z", "2026-01-02"),
+      ],
+      COUNTRIES,
+      [],
+      NOW
+    );
+    expect(p.countries.find((c) => c.code === "GB")?.firstYear).toBe(2026);
   });
 
   it("falls back to the stored day when the caller resolved none", () => {

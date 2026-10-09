@@ -5,7 +5,8 @@
  * records, the passport); the panel cut the stored instant at UTC midnight
  * instead, so a Tokyo departure at 07:30 local showed the day before and a New
  * York departure at 22:00 the day after. A date-only flight shows the day it
- * was recorded on, whatever its zone; a flight with no stored zone is read in
+ * was recorded on — the local day of its stored instant, which its writer
+ * converted from a local wall clock through the same zone; a flight with no stored zone is read in
  * the catalogue's, and with neither on its stored components — the fallback
  * `localWallClockOf` makes for every flight statistic.
  *
@@ -22,6 +23,7 @@ import { prisma } from "../../../db";
 import type { EvidenceKind, EvidenceScope } from "../../../shared/evidence";
 import type { EvidenceResponse } from "../../../schemas/evidence";
 import { resolveEvidence } from "../index";
+import { toUtcDate } from "../../flights/mergedChronology";
 
 jest.mock("../../airportCache", () => {
   const actual = jest.requireActual("../../airportCache");
@@ -119,19 +121,20 @@ describe("evidence rows are dated on the day they are counted under (forgejo#273
       { depTimezone: "America/New_York" },
       "2026-09-01"
     );
-    // Date-only east of UTC+12: recorded for 30 June, stored 12:00Z.
+    // Date-only, written as the form writes it: 12:00 LOCAL through the zone.
+    // In Auckland's summer that is 23:00Z on the day before (forgejo#273).
     await addFlight(
       "AKL",
       "SYD",
-      "2026-06-30T12:00:00Z",
+      (toUtcDate("2026-01-15T12:00", "Pacific/Auckland") as Date).toISOString(), // 23:00Z on the 14th
       {
         depTimezone: "Pacific/Auckland",
         depTimeSemantics: "DATE_ONLY",
         arrTimeSemantics: "DATE_ONLY",
-        arrivalTime: new Date("2026-06-30T12:00:00Z"),
+        arrivalTime: toUtcDate("2026-01-15T12:00", "Australia/Sydney"),
         status: "historical",
       },
-      "2026-06-30"
+      "2026-01-15"
     );
     // No stored zone: the catalogue's (Tokyo) — 20:00Z on 1 March is 05:00 on the 2nd.
     await addFlight("NRT", "MUC", "2026-03-01T20:00:00Z", { depTimezone: null }, "2026-03-02");
@@ -226,6 +229,6 @@ describe("evidence rows are dated on the day they are counted under (forgejo#273
   it("lists both sides of UTC midnight on their local days", async () => {
     const response = await resolve("metric", "flightCount");
     const days = response.entries.map((e) => e.date?.value).sort();
-    expect(days).toEqual(["2026-03-02", "2026-03-10", "2026-06-30", "2026-09-01", "2026-09-02"]);
+    expect(days).toEqual(["2026-01-15", "2026-03-02", "2026-03-10", "2026-09-01", "2026-09-02"]);
   });
 });
