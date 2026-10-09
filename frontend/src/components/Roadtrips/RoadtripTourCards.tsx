@@ -98,6 +98,17 @@ export default function RoadtripTourCards({
                 {tour.movingSeconds === null ? "—" : hoursMinutes(tour.movingSeconds)}
               </span>
             </div>
+            {(tour.ascentM === null || tour.movingSeconds === null) && (
+              // The dash's reason, visible (forgejo#249) — not only a hover title.
+              <span className="t-caption" data-testid="tour-card-reasons">
+                {[
+                  tour.ascentM === null ? t("roadtrips:detail.noElevation") : null,
+                  tour.movingSeconds === null ? t("roadtrips:detail.noMoving") : null,
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+              </span>
+            )}
             {foot && <span className="t-caption">{foot}</span>}
           </Link>
         );

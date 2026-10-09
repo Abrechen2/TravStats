@@ -159,3 +159,16 @@ describe("StayPicker — every lodging, not only those with a stay", () => {
     expect(screen.getByText("roadtrips:stay.noCoords")).toBeInTheDocument();
   });
 });
+
+/** forgejo#249: the search keeps a visible label, and rows reach touch size. */
+describe("StayPicker — labels and touch", () => {
+  it("labels the search visibly and sizes rows for a finger", () => {
+    renderWith([lodging({ id: "l-y", name: "Camping Lom" })]);
+    const search = screen.getByLabelText("roadtrips:stay.search");
+    expect(search.closest("label")).toHaveTextContent("roadtrips:stay.search");
+    expect(search.className).toContain("pointer-coarse:min-h-(--ts-size-touch-min)");
+    expect(screen.getByText("Camping Lom").closest("button")?.className).toContain(
+      "pointer-coarse:min-h-(--ts-size-touch-min)"
+    );
+  });
+});

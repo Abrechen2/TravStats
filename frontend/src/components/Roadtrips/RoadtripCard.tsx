@@ -130,6 +130,18 @@ export default function RoadtripCard({
             label={t("roadtrips:list.figTours", { count: r.tourCount })}
           />
         </div>
+        {/* Why a figure is a dash or "≈", said on the card (forgejo#249): the
+            hover title alone never reached a finger or a screen reader. */}
+        {(!kmKnown || !r.nightsKnown) && (
+          <span className="t-caption" data-testid="roadtrip-card-reasons">
+            {[
+              kmKnown ? null : t("roadtrips:list.kmUnknown"),
+              r.nightsKnown ? null : t("roadtrips:list.nightsApprox"),
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          </span>
+        )}
       </div>
     </Link>
   );
