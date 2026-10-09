@@ -159,4 +159,43 @@ describe("Rental writes record only what changed", () => {
     const res = await patch(created.id, { ...resend(fresh), notes: "Schlüssel abgegeben" });
     expect(res.status).toBe(200);
   });
+
+  // Re-review, fix round 3: an unchanged re-send derives nothing new — except
+  // a snapshot that never succeeded, which any save takes again.
+  it("retries a missing FX snapshot on a save that does not touch the price", async () => {
+    const created = (await post("/import", confirmation)).body.data;
+    await prisma.rentalBooking.update({
+      where: { id: created.id },
+      data: {
+        priceBase: null,
+        fxRate: null,
+        fxRateDate: null,
+        fxBaseCurrency: null,
+        fxSource: null,
+        finalAmount: 150.75,
+        finalCurrency: "EUR",
+        finalAmountSource: "invoice",
+        finalAmountBase: null,
+      },
+    });
+    const res = await patch(created.id, { price: 123.45, currency: "EUR", notes: "x" });
+    expect(res.status).toBe(200);
+    const row = await prisma.rentalBooking.findUniqueOrThrow({ where: { id: created.id } });
+    expect(row.priceBase).toBe(123.45);
+    expect(row.finalAmountBase).toBe(150.75);
+    expect(row.finalAmountSource).toBe("invoice");
+    expect(res.body.data.priceSource).toBe("booking");
+    expect(res.body.data.userEditedFields).toEqual(["notes"]);
+  });
+
+  it("does not re-take a snapshot that exists when nothing it depends on changed", async () => {
+    const created = (await post("/import", confirmation)).body.data;
+    await prisma.rentalBooking.update({
+      where: { id: created.id },
+      data: { fxSource: "kept-marker" },
+    });
+    await patch(created.id, { price: 123.45, notes: "y" });
+    const row = await prisma.rentalBooking.findUniqueOrThrow({ where: { id: created.id } });
+    expect(row.fxSource).toBe("kept-marker");
+  });
 });

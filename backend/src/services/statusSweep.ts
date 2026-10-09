@@ -6,6 +6,7 @@ import {
   FLIGHT_TRACKED_ARRIVAL_WINDOW_HOURS,
   CRUISE_SLACK_HOURS,
   deriveRailStatus,
+  deriveRentalStatus,
   deriveTripStatus,
   tripStatusBounds,
 } from "../shared/statusDerivation";
@@ -263,8 +264,12 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
   const railClockless = await sweepClocklessRail(now);
 
   // Rentals: rail's split over the booked pickup and return (`deriveRentalStatus`).
+  // A day-only return is swept apart (`sweepDayReturnRentals`): stored at its
+  // day's start, it is not over until that day is — the rail rule.
+  const timedReturn = { returnPrecision: { not: "day" } };
   const rentalToInProgress = await prisma.rentalBooking.updateMany({
     where: {
+      ...timedReturn,
       status: { in: ["scheduled", "completed"] },
       pickupTime: { lte: now },
       returnTime: { gt: now },
@@ -272,9 +277,14 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
     data: { status: "in_progress" },
   });
   const rentalToCompleted = await prisma.rentalBooking.updateMany({
-    where: { status: { in: ["scheduled", "in_progress"] }, returnTime: { lte: now } },
+    where: {
+      ...timedReturn,
+      status: { in: ["scheduled", "in_progress"] },
+      returnTime: { lte: now },
+    },
     data: { status: "completed" },
   });
+  const rentalDayReturns = await sweepDayReturnRentals(now);
   const rentalToScheduled = await prisma.rentalBooking.updateMany({
     where: { status: { in: ["in_progress", "completed"] }, pickupTime: { gt: now } },
     data: { status: "scheduled" },
@@ -330,7 +340,8 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
   const flights = staleFlights.count + futureFlown.count;
   const rail =
     railToInProgress.count + railToCompleted.count + railToScheduled.count + railClockless;
-  const rentals = rentalToInProgress.count + rentalToCompleted.count + rentalToScheduled.count;
+  const rentals =
+    rentalToInProgress.count + rentalToCompleted.count + rentalToScheduled.count + rentalDayReturns;
   if (flights + cruises + lodging + rail + rentals + tripFlips > 0) {
     logger.info({
       operation: "status_sweep_done",
@@ -353,6 +364,33 @@ function arrivalClockedWhere() {
  * on the stored instant expresses. Only rides that may have changed are read —
  * not cancelled, and begun by now — so the set stays small.
  */
+/** Rentals with a day-only booked return, each derived with its day's end. */
+async function sweepDayReturnRentals(now: Date): Promise<number> {
+  const rentals = await prisma.rentalBooking.findMany({
+    where: {
+      returnPrecision: "day",
+      status: { in: ["scheduled", "in_progress", "completed"] },
+      pickupTime: { lte: now },
+    },
+    select: {
+      id: true,
+      status: true,
+      pickupTime: true,
+      returnTime: true,
+      returnPrecision: true,
+      returnTimezone: true,
+    },
+  });
+  let changed = 0;
+  for (const r of rentals) {
+    const status = deriveRentalStatus({ ...r, current: r.status, now });
+    if (status === r.status) continue;
+    await prisma.rentalBooking.update({ where: { id: r.id }, data: { status } });
+    changed += 1;
+  }
+  return changed;
+}
+
 async function sweepClocklessRail(now: Date): Promise<number> {
   const rides = await prisma.railJourney.findMany({
     where: {

@@ -166,6 +166,8 @@ export function mergeRental(
     returnTime: returnAt.utc,
     current: requested,
     now,
+    returnPrecision: returnAt.precision,
+    returnTimezone: ret.timezone,
   });
 
   return {

@@ -123,6 +123,20 @@ describe("rental document categories", () => {
     expect(third.body.data.rentalCategory).toBe("damage");
   });
 
+  it("files an unfiled copy of the same bytes under the chosen category, not uncategorised", async () => {
+    const first = await upload({ entryType: "rentalBooking", entryId: rentalId }, 11);
+    await patch(first.body.data.id, { entry: null });
+    const again = await upload(
+      { entryType: "rentalBooking", entryId: rentalId, rentalCategory: "fuel" },
+      11
+    );
+    expect(again.body.data).toMatchObject({
+      id: first.body.data.id,
+      rentalCategory: "fuel",
+      entry: { type: "rentalBooking", id: rentalId },
+    });
+  });
+
   it("refuses a category on a document filed with anything but a rental", async () => {
     const res = await upload({ entryType: "flight", entryId: flightId, rentalCategory: "fuel" }, 3);
     expect(res.status).toBe(400);

@@ -199,10 +199,16 @@ export async function updateRentalRow(
     input.companions === undefined ? undefined : await resolveCompanions(userId, input.companions);
   // Re-snapshotted only when an input it depends on moved (silent-failure
   // class 4: a re-derivation never runs for nothing and never downgrades).
+  // A snapshot that failed before (no base amount for a known price) is
+  // taken again on any save — the price stays as it was, and unedited
+  // (re-review, fix round 3: an unchanged re-send no longer re-derives).
+  const fxMissing =
+    existing.price !== null && existing.currency !== null && existing.priceBase === null;
   const fxInputsChanged =
     input.price !== undefined ||
     input.currency !== undefined ||
-    state.pickupTime.getTime() !== existing.pickupTime.getTime();
+    state.pickupTime.getTime() !== existing.pickupTime.getTime() ||
+    fxMissing;
   const fxColumns = fxInputsChanged
     ? await fxColumnsFor(
         {
@@ -213,10 +219,15 @@ export async function updateRentalRow(
         await getBaseCurrency(userId)
       )
     : undefined;
+  const finalFxMissing =
+    existing.finalAmount !== null &&
+    existing.finalCurrency !== null &&
+    existing.finalAmountBase === null;
   const finalChanged =
     input.finalAmount !== undefined ||
     input.finalCurrency !== undefined ||
-    state.returnTime.getTime() !== existing.returnTime.getTime();
+    state.returnTime.getTime() !== existing.returnTime.getTime() ||
+    finalFxMissing;
   const finalFx = finalChanged
     ? await finalFxColumns(
         userId,

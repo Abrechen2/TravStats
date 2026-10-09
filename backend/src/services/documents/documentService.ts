@@ -346,9 +346,14 @@ export async function createDocument(input: CreateDocumentInput): Promise<Create
       where: { userId: input.userId, sha256, ...NO_OWNER },
     });
     if (unfiled) {
+      // Filed now, so filed with the category the user chose (re-review,
+      // fix round 3) — `assertCategoryFits` already held it to a rental.
       const document = await prisma.document.update({
         where: { id: unfiled.id },
-        data: ownerData(entry),
+        data: {
+          ...ownerData(entry),
+          ...(input.rentalCategory && { rentalCategory: input.rentalCategory }),
+        },
       });
       return { document, created: false };
     }
