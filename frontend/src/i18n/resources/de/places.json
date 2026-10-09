@@ -426,14 +426,15 @@
     "aheadHint": "Dieser Tag liegt in der Zukunft: Der Besuch ist geplant und zählt erst, wenn er da ist. Fotos kannst du danach ergänzen.",
     "tripsFailed": "Deine Reisen konnten nicht geladen werden. Den Besuch kannst du trotzdem nach Datum zuordnen lassen.",
     "photos": "Fotos (optional)",
-    "photosHint": "Die Fotos werden hochgeladen, sobald der Besuch gespeichert ist.",
+    "photosHint": "Bis zu {{max}} Fotos – sie werden hochgeladen, sobald der Besuch gespeichert ist.",
     "photosPicked_one": "1 Foto ausgewählt",
     "photosPicked_other": "{{count}} Fotos ausgewählt",
     "photoFailed": "Die Fotos konnten nicht hochgeladen werden.",
     "savedPhotoFailed": "Besuch gespeichert. {{reason}}",
     "photoRetry": "Fotos erneut hochladen",
     "continueWithoutPhoto": "Weiter ohne Fotos",
-    "recorded": "Besuch bei „{{name}}“ eingetragen."
+    "recorded": "Besuch bei „{{name}}“ eingetragen.",
+    "photosTooMany": "höchstens {{max}} Fotos"
   },
   "merge": {
     "action": "Dublette zusammenführen",
@@ -523,7 +524,8 @@
       "device_denied": "Standort nicht freigegeben. Wähle stattdessen eine Unterkunft oder einen Punkt.",
       "device_unavailable": "Der Standort ist gerade nicht verfügbar. Wähle stattdessen eine Unterkunft oder einen Punkt.",
       "deviceLabel": "dein Standort",
-      "current": "Ausgangspunkt: {{label}}"
+      "current": "Ausgangspunkt: {{label}}",
+      "linkedLodgingUnusable": "Diese Unterkunft hat keinen Standort – wähle einen anderen Ausgangspunkt."
     },
     "filter": {
       "title": "Filter",

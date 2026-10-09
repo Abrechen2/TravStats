@@ -145,6 +145,12 @@ describe("PlacesNearbyPage", () => {
     );
   });
 
+  // Review M5: a link to a lodging that cannot be a start says so.
+  it("says when a linked lodging has no position", async () => {
+    await renderAt("/places/nearby?lodging=h2");
+    expect(screen.getByRole("alert")).toHaveTextContent("Diese Unterkunft hat keinen Standort");
+  });
+
   it("starts from a point on the map without any permission", async () => {
     await renderAt();
     fireEvent.click(screen.getByRole("button", { name: "Ort oder Punkt" }));

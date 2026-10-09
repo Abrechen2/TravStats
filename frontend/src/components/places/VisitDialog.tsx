@@ -3,7 +3,7 @@ import type { JSX, ReactNode } from "react";
 import Modal from "../Modal";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useTodayZone } from "../../hooks/useTodayZone";
-import { todayIn } from "../../shared/time";
+import { formatDayLong, todayIn } from "../../shared/time";
 import { createVisit, updateVisit, uploadVisitPhotos } from "../../lib/api/places";
 import { tripsApi } from "../../lib/api/trips";
 import { logger } from "../../lib/logger";
@@ -32,6 +32,9 @@ import {
 const COARSE = "pointer-coarse:min-h-(--ts-size-touch-min)";
 const DATE_ID = "visit-dialog-date";
 const HINT_ID = "visit-dialog-save-blocked";
+const PHOTOS_ID = "visit-dialog-photos";
+/** `uploadPlacePhotos.array("photos", 20)` on the server. */
+const MAX_PHOTOS = 20;
 const MODES: readonly VisitDateMode[] = ["today", "other", "unknown"];
 
 interface Props {
@@ -71,7 +74,7 @@ export function VisitDialog({
   onSaved,
   afterSaveFailedKey,
 }: Props): JSX.Element {
-  const { t } = useTranslation(["places", "common"]);
+  const { t, i18n } = useTranslation(["places", "common"]);
   const isEdit = visit !== null;
   const today = todayIn(useTodayZone());
 
@@ -123,8 +126,16 @@ export function VisitDialog({
   const ahead = isAheadOf(day, today);
   const offerPhotos = !isEdit && !ahead;
 
-  const missing: MissingStep[] =
-    mode === "other" && date === "" ? [{ field: DATE_ID, label: t("places:detail.date") }] : [];
+  const missing: MissingStep[] = [
+    ...(mode === "other" && date === ""
+      ? [{ field: DATE_ID, label: t("places:detail.date") }]
+      : []),
+    // The server takes at most 20 photographs per upload (review M3) — said
+    // here, before the visit is stored, not as a refusal afterwards.
+    ...(offerPhotos && files.length > MAX_PHOTOS
+      ? [{ field: PHOTOS_ID, label: t("places:visit.photosTooMany", { max: MAX_PHOTOS }) }]
+      : []),
+  ];
 
   const finish = async (saved: PlaceVisit): Promise<void> => {
     try {
@@ -216,15 +227,19 @@ export function VisitDialog({
             >
               {t("places:visit.savedPhotoFailed", { reason: t(photoFailure) })}
             </p>
-            <button
-              type="button"
-              onClick={() => void retryPhotos()}
-              disabled={uploading}
-              className={`rounded-lg px-4 py-2 text-sm disabled:opacity-50 ${COARSE}`}
-              style={{ border: "1px solid var(--color-border)", color: "var(--text-secondary)" }}
-            >
-              {uploading ? t("common:buttons.saving") : t("places:visit.photoRetry")}
-            </button>
+            {/* Only where asking again can help (review M3): a demo account or
+                an unsupported file is refused identically every time. */}
+            {isTransientSaveError(photoFailure) && (
+              <button
+                type="button"
+                onClick={() => void retryPhotos()}
+                disabled={uploading}
+                className={`rounded-lg px-4 py-2 text-sm disabled:opacity-50 ${COARSE}`}
+                style={{ border: "1px solid var(--color-border)", color: "var(--text-secondary)" }}
+              >
+                {uploading ? t("common:buttons.saving") : t("places:visit.photoRetry")}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => void finish(stored)}
@@ -283,7 +298,11 @@ export function VisitDialog({
                 }
               >
                 {t(`places:visit.mode.${m}`)}
-                {m === "today" && mode === "today" ? ` · ${today}` : ""}
+                {/* The day in words, not ISO: the default writes a date, so it
+                    has to be legible at a glance (review M6). */}
+                {m === "today" && mode === "today"
+                  ? ` · ${formatDayLong(today, i18n.language, { day: "numeric", month: "short" })}`
+                  : ""}
               </button>
             ))}
           </div>
@@ -369,7 +388,7 @@ export function VisitDialog({
         {offerPhotos && (
           <Labelled id="visit-dialog-photos" label={t("places:visit.photos")}>
             <input
-              id="visit-dialog-photos"
+              id={PHOTOS_ID}
               type="file"
               accept="image/*"
               multiple
@@ -380,7 +399,7 @@ export function VisitDialog({
             <span id="visit-dialog-photos-hint" className="t-caption">
               {files.length > 0
                 ? t("places:visit.photosPicked", { count: files.length })
-                : t("places:visit.photosHint")}
+                : t("places:visit.photosHint", { max: MAX_PHOTOS })}
             </span>
           </Labelled>
         )}

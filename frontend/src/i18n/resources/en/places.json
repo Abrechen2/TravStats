@@ -426,14 +426,15 @@
     "aheadHint": "This day is in the future: the visit is planned and only counts once it has happened. You can add photos afterwards.",
     "tripsFailed": "Your trips could not be loaded. You can still let the visit be filed by its date.",
     "photos": "Photos (optional)",
-    "photosHint": "They are uploaded as soon as the visit is saved.",
+    "photosHint": "Up to {{max}} photos — they are uploaded as soon as the visit is saved.",
     "photosPicked_one": "1 photo selected",
     "photosPicked_other": "{{count}} photos selected",
     "photoFailed": "The photos could not be uploaded.",
     "savedPhotoFailed": "Visit saved. {{reason}}",
     "photoRetry": "Upload photos again",
     "continueWithoutPhoto": "Continue without photos",
-    "recorded": "Visit to “{{name}}” recorded."
+    "recorded": "Visit to “{{name}}” recorded.",
+    "photosTooMany": "at most {{max}} photos"
   },
   "merge": {
     "action": "Merge a duplicate",
@@ -523,7 +524,8 @@
       "device_denied": "Location not permitted. Choose a lodging or a point instead.",
       "device_unavailable": "Your location is not available right now. Choose a lodging or a point instead.",
       "deviceLabel": "your location",
-      "current": "Starting point: {{label}}"
+      "current": "Starting point: {{label}}",
+      "linkedLodgingUnusable": "This lodging has no location — choose another starting point."
     },
     "filter": {
       "title": "Filters",

@@ -102,23 +102,34 @@ export default function PlacesNearbyPage(): JSX.Element {
 
   // A `?lodging=` link resolves once the lodgings are there.
   const linkedLodging = params.get("lodging");
+  // A linked lodging that cannot be a start — gone, without a position, or the
+  // lodging domain is off — is said, not silently ignored (review M5).
+  const [linkUnusable, setLinkUnusable] = useState(false);
   useEffect(() => {
-    if (linkedLodging === null || lodgings === null || origin !== null) return;
-    const found = lodgings.find((l) => l.id === linkedLodging);
-    if (found && found.lat !== null && found.lon !== null) {
-      setMode("lodging");
-      setOrigin({
-        mode: "lodging",
-        lodgingId: found.id,
-        lat: found.lat,
-        lon: found.lon,
-        label: found.name,
-      });
+    if (linkedLodging === null || origin !== null) return;
+    if (!lodgingEnabled) {
+      setLinkUnusable(true);
+      return;
     }
-  }, [linkedLodging, lodgings, origin]);
+    if (lodgings === null) return;
+    const found = lodgings.find((l) => l.id === linkedLodging);
+    if (!found || found.lat === null || found.lon === null) {
+      setLinkUnusable(true);
+      return;
+    }
+    setMode("lodging");
+    setOrigin({
+      mode: "lodging",
+      lodgingId: found.id,
+      lat: found.lat,
+      lon: found.lon,
+      label: found.name,
+    });
+  }, [linkedLodging, lodgings, origin, lodgingEnabled]);
 
   const chooseOrigin = (next: ChosenOrigin): void => {
     setOrigin(next);
+    setLinkUnusable(false);
     // Lodging and map point are shareable starts; the device's position is
     // not, and is kept out of the address bar on purpose.
     if (next.mode === "lodging" && next.lodgingId) {
@@ -167,6 +178,11 @@ export default function PlacesNearbyPage(): JSX.Element {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1.4fr]">
         <div className="flex flex-col gap-5">
+          {linkUnusable && (
+            <p role="alert" className="text-sm" style={{ color: "var(--ts-warn)" }}>
+              {t("places:nearby.origin.linkedLodgingUnusable")}
+            </p>
+          )}
           <NearbyOriginPicker
             mode={mode}
             onModeChange={setMode}

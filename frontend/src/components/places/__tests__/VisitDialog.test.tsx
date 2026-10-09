@@ -244,4 +244,42 @@ describe("VisitDialog", () => {
       "pointer-coarse:min-h-(--ts-size-touch-min)"
     );
   });
+
+  // Review M6: the default writes a date, so the chip says it in words.
+  it("names today's day in words on the chip", async () => {
+    await renderDialog();
+    expect(screen.getByRole("button", { name: /Heute/ })).toHaveTextContent("Heute · 9. Okt.");
+  });
+
+  // Review M3: a refusal a second press would meet again offers no retry.
+  it("offers no photo retry for a refusal that would only repeat", async () => {
+    uploadVisitPhotos.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 403, data: { error: "demo", code: "DEMO_FORBIDDEN" } },
+    });
+    const { onSaved } = await renderDialog();
+    await userEvent.upload(
+      screen.getByLabelText("Fotos (optional)"),
+      new File(["x"], "a.jpg", { type: "image/jpeg" })
+    );
+    await userEvent.click(save());
+    expect(await screen.findByRole("alert")).toHaveTextContent("Besuch gespeichert.");
+    expect(
+      screen.queryByRole("button", { name: "Fotos erneut hochladen" })
+    ).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Weiter ohne Fotos" }));
+    expect(onSaved).toHaveBeenCalledWith(stored);
+  });
+
+  it("says beforehand that more than 20 photos cannot go up at once", async () => {
+    await renderDialog();
+    const files = Array.from(
+      { length: 21 },
+      (_, i) => new File(["x"], `p${i}.jpg`, { type: "image/jpeg" })
+    );
+    await userEvent.upload(screen.getByLabelText("Fotos (optional)"), files);
+    expect(save()).toBeDisabled();
+    expect(screen.getByTestId("save-blocked-hint")).toHaveTextContent("höchstens 20 Fotos");
+    expect(createVisit).not.toHaveBeenCalled();
+  });
 });

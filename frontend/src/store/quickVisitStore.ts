@@ -33,6 +33,12 @@ export const useQuickVisitStore = create<QuickVisitState>((set) => ({
   close: () => set({ target: null }),
   register: () => {
     set((s) => ({ hosts: s.hosts + 1 }));
-    return () => set((s) => ({ hosts: Math.max(0, s.hosts - 1), target: null }));
+    // An open dialog closes only with the LAST host — another host going away
+    // must not drop a visit someone is typing (review M4).
+    return () =>
+      set((s) => {
+        const hosts = Math.max(0, s.hosts - 1);
+        return hosts === 0 ? { hosts, target: null } : { hosts };
+      });
   },
 }));
