@@ -103,5 +103,9 @@
     "clear": "✕ Clear position",
     "attribution": "© OpenStreetMap contributors",
     "mapAriaLabel": "Map for choosing the event position"
+  },
+  "missing": {
+    "airport": "airport",
+    "coordinates": "valid coordinates"
   }
 }

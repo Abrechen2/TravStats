@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import SuggestionChips from "../../common/SuggestionChips";
 import { isBareBaggageNumber, resolveWeightUnit } from "../../../lib/baggageAllowance";
@@ -38,6 +39,8 @@ export default function BookingFields({
   frequentFlyerSuggestion = null,
   frequentFlyerSuggested = false,
 }: BookingFieldsProps): JSX.Element {
+  // Every visible label names its control (forgejo#249).
+  const uid = useId();
   const { t } = useTranslation(["flights"]);
 
   const set = (field: keyof BookingFieldsValue, fieldValue: string): void =>
@@ -54,8 +57,11 @@ export default function BookingFields({
     <>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className={labelClass}>{t("flights:form.bookingReference")}</label>
+          <label className={labelClass} htmlFor={`${uid}-form-bookingReference`}>
+            {t("flights:form.bookingReference")}
+          </label>
           <input
+            id={`${uid}-form-bookingReference`}
             type="text"
             value={value.bookingReference}
             // A PNR is canonically uppercase — the create form always did
@@ -66,8 +72,11 @@ export default function BookingFields({
           />
         </div>
         <div>
-          <label className={labelClass}>{t("flights:form.ticketNumber")}</label>
+          <label className={labelClass} htmlFor={`${uid}-form-ticketNumber`}>
+            {t("flights:form.ticketNumber")}
+          </label>
           <input
+            id={`${uid}-form-ticketNumber`}
             type="text"
             value={value.ticketNumber}
             onChange={(e) => set("ticketNumber", e.target.value)}
@@ -78,8 +87,11 @@ export default function BookingFields({
       </div>
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className={labelClass}>{t("flights:form.bookingClassLetter")}</label>
+          <label className={labelClass} htmlFor={`${uid}-form-bookingClassLetter`}>
+            {t("flights:form.bookingClassLetter")}
+          </label>
           <input
+            id={`${uid}-form-bookingClassLetter`}
             type="text"
             value={value.bookingClassLetter}
             onChange={(e) => set("bookingClassLetter", e.target.value.toUpperCase())}
@@ -90,9 +102,12 @@ export default function BookingFields({
           />
         </div>
         <div>
-          <label className={labelClass}>{t("flights:form.baggageAllowance")}</label>
+          <label className={labelClass} htmlFor={`${uid}-form-baggageAllowance`}>
+            {t("flights:form.baggageAllowance")}
+          </label>
           <div className="relative">
             <input
+              id={`${uid}-form-baggageAllowance`}
               type="text"
               value={value.baggageAllowance}
               onChange={(e) => set("baggageAllowance", e.target.value)}
@@ -118,8 +133,11 @@ export default function BookingFields({
           </div>
         </div>
         <div>
-          <label className={labelClass}>{t("flights:form.frequentFlyerNumber")}</label>
+          <label className={labelClass} htmlFor={`${uid}-form-frequentFlyerNumber`}>
+            {t("flights:form.frequentFlyerNumber")}
+          </label>
           <input
+            id={`${uid}-form-frequentFlyerNumber`}
             type="text"
             value={value.frequentFlyerNumber}
             onChange={(e) => set("frequentFlyerNumber", e.target.value)}

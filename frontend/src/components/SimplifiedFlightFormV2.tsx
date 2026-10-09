@@ -271,6 +271,11 @@ export default function SimplifiedFlightFormV2({
           <form
             id={formId}
             ref={formRef}
+            // The form's own rules decide: the browser's bubble for the
+            // `required` airport inputs would refuse the primary button before
+            // the refusal above could name and focus the gap — in the
+            // browser's language, and only for the airports.
+            noValidate
             onSubmit={handleSubmitWithFocus}
             className={`space-y-6 pt-2 ${FLIGHT_FORM_TOUCH}`}
           >

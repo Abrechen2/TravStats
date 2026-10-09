@@ -14,7 +14,7 @@
  * `flight` is non-null, fields are prefilled and Save calls
  * `flightsApi.update` instead of `.create`.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { Flight, FlightInput } from "../types";
 import type { Airport } from "../lib/api";
 import { flightsApi } from "../lib/api/flights";
@@ -22,6 +22,23 @@ import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 import { flightArrival, flightDeparture } from "../lib/entityTimes";
 import { datetimeLocalOf, shiftWallClock } from "../lib/wallClockMath";
+import { apiErrorMachineCode } from "../lib/apiError";
+import { isTransientSaveError, saveErrorKey } from "../lib/saveErrorMessage";
+import Modal from "./Modal";
+import {
+  FormErrorBanner,
+  RequiredLegend,
+  SaveBlockedHint,
+  useDirtyGuard,
+  useFormFailure,
+} from "./form";
+import { focusFirstMissingRequired } from "./FlightForm/requiredFields";
+import { FLIGHT_FORM_TOUCH } from "./FlightForm/formTouch";
+import {
+  SPECIAL_SERVER_FIELDS,
+  specialFlightFieldErrors,
+  specialFlightGaps,
+} from "./specialFlights/specialFlightRules";
 import {
   CommonTimeAndMetaFields,
   EventFields,
@@ -47,9 +64,6 @@ const csvToArray = (v: string): string[] =>
     .split(",")
     .map((s) => s.trim())
     .filter(Boolean);
-
-const isValidLat = (n: number): boolean => Number.isFinite(n) && n >= -90 && n <= 90;
-const isValidLon = (n: number): boolean => Number.isFinite(n) && n >= -180 && n <= 180;
 
 /**
  * Map a Flight.specialType value onto one of the three UI "kinds".
@@ -108,7 +122,9 @@ export default function SpecialFlightModal({
 
   const [kind, setKind] = useState<SpecialKind | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  // Which opening the fields were filled for — the discard guard takes its
+  // baseline only once they are (forgejo#248).
+  const [prefilledFor, setPrefilledFor] = useState<string | null>(null);
 
   // Shared fields
   const [departureAirport, setDepartureAirport] = useState<Airport | null>(null);
@@ -140,7 +156,11 @@ export default function SpecialFlightModal({
   // twice in a row still re-seeds fields.
   useEffect(() => {
     if (!isOpen) return;
-    if (!flight) return;
+    if (!flight) {
+      setPrefilledFor("new");
+      return;
+    }
+    setPrefilledFor(flight.id);
     const k = classifySpecialType(flight.specialType);
     setKind(k);
     setDepartureAirport(airportFromFlight(flight, "departure"));
@@ -174,10 +194,54 @@ export default function SpecialFlightModal({
       setProviderPick(ZEROG_PROVIDERS[0]);
       setProviderOther("");
     }
-    setError("");
   }, [flight, isOpen]);
 
-  if (!isOpen) return null;
+  // The user-visible, saved fields (forgejo#248).
+  const snapshot = {
+    kind,
+    departure: departureAirport?.icao ?? departureAirport?.iata ?? "",
+    arrival: arrivalAirport?.icao ?? arrivalAirport?.iata ?? "",
+    departureTime,
+    arrivalTime,
+    notes,
+    tagsCsv,
+    companions,
+    aircraft,
+    eventSubtype,
+    eventLat,
+    eventLon,
+    eventLabel,
+    patternLat,
+    patternLon,
+    parabolas,
+    providerPick,
+    providerOther,
+  };
+  const settled = isOpen && prefilledFor === (flight ? flight.id : "new");
+  const { dirty } = useDirtyGuard(snapshot, snapshot, { open: settled });
+
+  /**
+   * Pattern: "enabled save, a refused click focuses the first gap" — the
+   * flight forms' (forgejo#245). The rules are per field (specialFlightRules):
+   * shown from the first attempt on, then live; what is missing is listed
+   * beside the save.
+   */
+  const formId = useId();
+  const hintId = `${formId}-blocked`;
+  const failure = useFormFailure(JSON.stringify(snapshot));
+  const [serverField, setServerField] = useState<string | null>(null);
+  const fieldErrors = specialFlightFieldErrors(
+    { kind, departureAirport, eventLat, eventLon, patternLat, patternLon },
+    t
+  );
+  const missing = specialFlightGaps(fieldErrors, t);
+  const serverInput =
+    failure.failureKey && serverField ? SPECIAL_SERVER_FIELDS[serverField] : undefined;
+  const shownErrors = {
+    ...(failure.attempted ? fieldErrors : {}),
+    ...(serverInput ? { [serverInput]: t(failure.failureKey!) } : {}),
+  };
+  const inFlight = useRef(false);
 
   const resetAll = (): void => {
     setKind(null);
@@ -198,7 +262,8 @@ export default function SpecialFlightModal({
     setParabolas(15);
     setProviderPick(ZEROG_PROVIDERS[0]);
     setProviderOther("");
-    setError("");
+    setPrefilledFor(null);
+    failure.clear();
   };
 
   const handleClose = (): void => {
@@ -208,7 +273,7 @@ export default function SpecialFlightModal({
 
   const backToTypeSelector = (): void => {
     setKind(null);
-    setError("");
+    failure.clear();
   };
 
   const orUndef = (s: string): string | undefined => (s ? s : undefined);
@@ -298,11 +363,9 @@ export default function SpecialFlightModal({
     companions,
   });
 
+  // The builders run only after the field rules passed (handleSubmit).
   const buildSightseeingInput = (): FlightInput | null => {
-    if (!departureAirport) {
-      setError(t("specialFlights:error.missingAirport"));
-      return null;
-    }
+    if (!departureAirport) return null;
     return {
       ...baseSharedFields(),
       specialType: "sightseeing",
@@ -329,20 +392,9 @@ export default function SpecialFlightModal({
   };
 
   const buildEventInput = (): FlightInput | null => {
-    if (!departureAirport) {
-      setError(t("specialFlights:error.missingAirport"));
-      return null;
-    }
+    if (!departureAirport) return null;
     const latNum = Number(eventLat);
     const lonNum = Number(eventLon);
-    if (eventLat !== "" && !isValidLat(latNum)) {
-      setError(t("specialFlights:error.invalidCoordinates"));
-      return null;
-    }
-    if (eventLon !== "" && !isValidLon(lonNum)) {
-      setError(t("specialFlights:error.invalidCoordinates"));
-      return null;
-    }
     return {
       ...baseSharedFields(),
       specialType: eventSubtypeToSpecialType(eventSubtype),
@@ -355,20 +407,9 @@ export default function SpecialFlightModal({
   };
 
   const buildZeroGInput = (): FlightInput | null => {
-    if (!departureAirport) {
-      setError(t("specialFlights:error.missingAirport"));
-      return null;
-    }
+    if (!departureAirport) return null;
     const latNum = Number(patternLat);
     const lonNum = Number(patternLon);
-    if (patternLat !== "" && !isValidLat(latNum)) {
-      setError(t("specialFlights:error.invalidCoordinates"));
-      return null;
-    }
-    if (patternLon !== "" && !isValidLon(lonNum)) {
-      setError(t("specialFlights:error.invalidCoordinates"));
-      return null;
-    }
     const providerName =
       providerPick === ZEROG_PROVIDER_OTHER ? providerOther.trim() : providerPick;
     return {
@@ -385,9 +426,15 @@ export default function SpecialFlightModal({
     };
   };
 
-  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault();
-    setError("");
+  const handleSubmit = async (e?: React.FormEvent): Promise<void> => {
+    e?.preventDefault();
+    failure.markAttempted();
+    if (missing.length > 0) {
+      // The airport first (a required field), else the first invalid
+      // coordinate, whose error renders with this click.
+      if (!focusFirstMissingRequired(failure.rootRef.current)) failure.focusFirstProblem();
+      return;
+    }
 
     let input: FlightInput | null = null;
     if (kind === "sightseeing") input = buildSightseeingInput();
@@ -416,6 +463,10 @@ export default function SpecialFlightModal({
       input = normalized;
     }
 
+    // One request at a time: Enter and a click in the same frame both saw
+    // `loading === false`, and a create went out twice.
+    if (inFlight.current) return;
+    inFlight.current = true;
     try {
       setLoading(true);
       if (isEditMode && flight) {
@@ -423,168 +474,168 @@ export default function SpecialFlightModal({
       } else {
         await flightsApi.create(input);
       }
-      resetAll();
-      onSaved();
-      onClose();
     } catch (err) {
       logger.error("Failed to save special flight:", err);
-      setError(t("specialFlights:error.saveFailed"));
+      const data = (err as { response?: { data?: { field?: unknown } } } | null)?.response?.data;
+      setServerField(
+        apiErrorMachineCode(err) && typeof data?.field === "string" ? data.field : null
+      );
+      failure.fail(saveErrorKey(err, "specialFlights:error.saveFailed"));
+      return;
     } finally {
+      inFlight.current = false;
       setLoading(false);
     }
+    // Stored. What follows (the caller's toast and reload) is synchronous;
+    // the dialog closes either way, so nothing here can send it again.
+    resetAll();
+    onSaved();
+    onClose();
   };
 
+  // On the shared frame since forgejo#248: it was a hand-rolled overlay with
+  // no dialog role, no Escape, no focus trap and no focus return — and it is
+  // what now asks before a changed form is discarded.
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-100 p-4">
-      <div
-        className="rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-        style={{ background: "var(--bg-surface)" }}
-      >
-        {/* Header */}
-        <div
-          className="sticky top-0 px-6 py-4"
-          style={{
-            background: "var(--bg-surface)",
-            borderBottom: "1px solid var(--color-border)",
-          }}
-        >
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
-              {isEditMode ? t("specialFlights:modal.editTitle") : t("specialFlights:modal.title")}
-            </h2>
-            <button
-              type="button"
-              onClick={handleClose}
-              className="transition-colors"
-              style={{ color: "var(--text-muted)" }}
-              aria-label={t("common:buttons.close")}
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-          <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
+    <Modal
+      open={isOpen}
+      onClose={handleClose}
+      busy={loading}
+      dirty={settled && dirty}
+      maxWidth={672}
+      closeLabel={t("common:buttons.close")}
+      title={
+        <span className="flex flex-col">
+          <span>
+            {isEditMode ? t("specialFlights:modal.editTitle") : t("specialFlights:modal.title")}
+          </span>
+          <span className="text-sm font-normal" style={{ color: "var(--text-muted)" }}>
             {kind === null
               ? t("specialFlights:step.pick_type")
               : t("specialFlights:modal.subtitle")}
-          </p>
-        </div>
-
-        {/* Body */}
-        <div className="p-6 space-y-4">
-          {error && (
-            <div
-              role="alert"
-              className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-sm"
-            >
-              {error}
+          </span>
+        </span>
+      }
+      footer={(requestClose) => (
+        <>
+          {kind !== null && (
+            <div className="mr-auto self-center">
+              <SaveBlockedHint id={hintId} missing={missing} />
             </div>
           )}
-
-          {kind === null ? (
-            <TypePicker onPick={(k) => setKind(k)} />
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <button
-                type="button"
-                onClick={backToTypeSelector}
-                className="text-sm"
-                style={{ color: "var(--accent)" }}
-              >
-                {t("specialFlights:step.back")}
-              </button>
-
-              {kind === "sightseeing" && (
-                <SightseeingFields
-                  airport={departureAirport}
-                  onAirportChange={setDepartureAirport}
-                  aircraft={aircraft}
-                  onAircraftChange={setAircraft}
-                />
-              )}
-
-              {kind === "event" && (
-                <EventFields
-                  subtype={eventSubtype}
-                  onSubtypeChange={setEventSubtype}
-                  departureAirport={departureAirport}
-                  onDepartureAirportChange={setDepartureAirport}
-                  arrivalAirport={arrivalAirport}
-                  onArrivalAirportChange={setArrivalAirport}
-                  eventLat={eventLat}
-                  onEventLatChange={setEventLat}
-                  eventLon={eventLon}
-                  onEventLonChange={setEventLon}
-                  eventLabel={eventLabel}
-                  onEventLabelChange={setEventLabel}
-                />
-              )}
-
-              {kind === "zerog" && (
-                <ZeroGFields
-                  airport={departureAirport}
-                  onAirportChange={setDepartureAirport}
-                  patternLat={patternLat}
-                  onPatternLatChange={setPatternLat}
-                  patternLon={patternLon}
-                  onPatternLonChange={setPatternLon}
-                  parabolas={parabolas}
-                  onParabolasChange={setParabolas}
-                  providerPick={providerPick}
-                  onProviderPickChange={setProviderPick}
-                  providerOther={providerOther}
-                  onProviderOtherChange={setProviderOther}
-                />
-              )}
-
-              <CommonTimeAndMetaFields
-                departureTime={departureTime}
-                onDepartureTimeChange={setDepartureTime}
-                arrivalTime={arrivalTime}
-                onArrivalTimeChange={setArrivalTime}
-                notes={notes}
-                onNotesChange={setNotes}
-                tagsCsv={tagsCsv}
-                onTagsCsvChange={setTagsCsv}
-                companions={companions}
-                onCompanionsChange={setCompanions}
-              />
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="px-4 py-2 rounded-sm border"
-                  style={{
-                    borderColor: "var(--color-border)",
-                    color: "var(--text-muted)",
-                    background: "transparent",
-                  }}
-                >
-                  {t("specialFlights:actions.cancel")}
-                </button>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-4 py-2 rounded-sm font-medium disabled:opacity-50"
-                  style={{
-                    background: "var(--accent)",
-                    color: "#fff",
-                  }}
-                >
-                  {loading ? t("specialFlights:actions.saving") : t("specialFlights:actions.save")}
-                </button>
-              </div>
-            </form>
+          <button type="button" onClick={requestClose} className="btn-secondary" disabled={loading}>
+            {t("specialFlights:actions.cancel")}
+          </button>
+          {kind !== null && (
+            <button
+              type="submit"
+              form={formId}
+              disabled={loading}
+              className="btn-primary"
+              aria-describedby={hintId}
+            >
+              {loading ? t("specialFlights:actions.saving") : t("specialFlights:actions.save")}
+            </button>
           )}
-        </div>
+        </>
+      )}
+    >
+      <div ref={failure.rootRef} className="space-y-4">
+        <FormErrorBanner
+          message={failure.failureKey && !serverInput ? t(failure.failureKey) : null}
+          onRetry={
+            failure.failureKey && isTransientSaveError(failure.failureKey)
+              ? () => void handleSubmit()
+              : undefined
+          }
+          retryDisabled={loading}
+        />
+
+        {kind === null ? (
+          <TypePicker onPick={(k) => setKind(k)} />
+        ) : (
+          <form
+            id={formId}
+            // The form's own rules decide (at the field, focused); the
+            // browser's bubble would refuse an out-of-range number first and
+            // say it in its own words, in the browser's language.
+            noValidate
+            onSubmit={(e) => void handleSubmit(e)}
+            className={`space-y-5 ${FLIGHT_FORM_TOUCH}`}
+          >
+            <button
+              type="button"
+              onClick={backToTypeSelector}
+              className="text-sm pointer-coarse:min-h-(--ts-size-touch-min)"
+              style={{ color: "var(--accent)" }}
+            >
+              {t("specialFlights:step.back")}
+            </button>
+
+            {kind === "sightseeing" && (
+              <SightseeingFields
+                errors={shownErrors}
+                airport={departureAirport}
+                onAirportChange={setDepartureAirport}
+                aircraft={aircraft}
+                onAircraftChange={setAircraft}
+              />
+            )}
+
+            {kind === "event" && (
+              <EventFields
+                errors={shownErrors}
+                subtype={eventSubtype}
+                onSubtypeChange={setEventSubtype}
+                departureAirport={departureAirport}
+                onDepartureAirportChange={setDepartureAirport}
+                arrivalAirport={arrivalAirport}
+                onArrivalAirportChange={setArrivalAirport}
+                eventLat={eventLat}
+                onEventLatChange={setEventLat}
+                eventLon={eventLon}
+                onEventLonChange={setEventLon}
+                eventLabel={eventLabel}
+                onEventLabelChange={setEventLabel}
+              />
+            )}
+
+            {kind === "zerog" && (
+              <ZeroGFields
+                errors={shownErrors}
+                airport={departureAirport}
+                onAirportChange={setDepartureAirport}
+                patternLat={patternLat}
+                onPatternLatChange={setPatternLat}
+                patternLon={patternLon}
+                onPatternLonChange={setPatternLon}
+                parabolas={parabolas}
+                onParabolasChange={setParabolas}
+                providerPick={providerPick}
+                onProviderPickChange={setProviderPick}
+                providerOther={providerOther}
+                onProviderOtherChange={setProviderOther}
+              />
+            )}
+
+            <CommonTimeAndMetaFields
+              errors={shownErrors}
+              departureTime={departureTime}
+              onDepartureTimeChange={setDepartureTime}
+              arrivalTime={arrivalTime}
+              onArrivalTimeChange={setArrivalTime}
+              notes={notes}
+              onNotesChange={setNotes}
+              tagsCsv={tagsCsv}
+              onTagsCsvChange={setTagsCsv}
+              companions={companions}
+              onCompanionsChange={setCompanions}
+            />
+
+            <RequiredLegend />
+          </form>
+        )}
       </div>
-    </div>
+    </Modal>
   );
 }

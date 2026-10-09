@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import CurrencySelect from "../../common/CurrencySelect";
 import { useRecentCurrencies } from "../../../hooks/useRecentCurrencies";
@@ -53,6 +54,8 @@ export default function CostFields({
   const { t } = useTranslation(["flights", "common"]);
   const recentCurrencies = useRecentCurrencies();
 
+  // Every visible label names its control (forgejo#249).
+  const uid = useId();
   const labelClass = `label ${labelClassName}`.trim();
   const inputClass = `input ${inputClassName}`.trim();
 
@@ -63,7 +66,7 @@ export default function CostFields({
     <>
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-2">
-          <label className={`${labelClass} flex items-center gap-2`}>
+          <label className={`${labelClass} flex items-center gap-2`} htmlFor={`${uid}-price`}>
             {t("flights:form.price")}
             {priceHelp && (
               <HelpIcon
@@ -74,6 +77,7 @@ export default function CostFields({
             )}
           </label>
           <input
+            id={`${uid}-price`}
             type="number"
             step="0.01"
             min="0"
@@ -84,8 +88,11 @@ export default function CostFields({
           />
         </div>
         <div>
-          <label className={labelClass}>{t("flights:form.currency")}</label>
+          <label className={labelClass} htmlFor={`${uid}-currency`}>
+            {t("flights:form.currency")}
+          </label>
           <CurrencySelect
+            id={`${uid}-currency`}
             value={value.currency || "EUR"}
             onChange={(v) => set("currency", v)}
             recent={recentCurrencies}
@@ -96,8 +103,11 @@ export default function CostFields({
       {showBreakdown && (
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>{t("common:labels.taxes")}</label>
+            <label className={labelClass} htmlFor={`${uid}-taxes`}>
+              {t("common:labels.taxes")}
+            </label>
             <input
+              id={`${uid}-taxes`}
               type="number"
               step="0.01"
               min="0"
@@ -108,8 +118,11 @@ export default function CostFields({
             />
           </div>
           <div>
-            <label className={labelClass}>{t("common:labels.fees")}</label>
+            <label className={labelClass} htmlFor={`${uid}-fees`}>
+              {t("common:labels.fees")}
+            </label>
             <input
+              id={`${uid}-fees`}
               type="number"
               step="0.01"
               min="0"

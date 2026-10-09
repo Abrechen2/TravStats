@@ -555,8 +555,11 @@ export default function FlightCompleteStep({
           {/* Additional Fields */}
           <div className="grid grid-cols-4 gap-4">
             <div>
-              <label className={`label ${textClass}`}>{t("flights:form.airline")}</label>
+              <label className={`label ${textClass}`} htmlFor="flight-form-airline">
+                {t("flights:form.airline")}
+              </label>
               <CatalogueCombobox
+                id="flight-form-airline"
                 value={airline}
                 onChange={setAirline}
                 search={searchAirlineOptions}
@@ -565,8 +568,11 @@ export default function FlightCompleteStep({
               />
             </div>
             <div>
-              <label className={`label ${textClass}`}>{t("flights:form.operatingAirline")}</label>
+              <label className={`label ${textClass}`} htmlFor="flight-form-operating-airline">
+                {t("flights:form.operatingAirline")}
+              </label>
               <CatalogueCombobox
+                id="flight-form-operating-airline"
                 value={operatingAirline}
                 onChange={setOperatingAirline}
                 search={searchAirlineOptions}
@@ -575,8 +581,11 @@ export default function FlightCompleteStep({
               />
             </div>
             <div>
-              <label className={`label ${textClass}`}>{t("flights:form.flightNumber")}</label>
+              <label className={`label ${textClass}`} htmlFor="flight-form-flight-number">
+                {t("flights:form.flightNumber")}
+              </label>
               <input
+                id="flight-form-flight-number"
                 type="text"
                 value={flightNumber}
                 onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}

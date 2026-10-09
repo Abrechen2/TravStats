@@ -370,6 +370,8 @@ export default function FlightEditModal({
       <div ref={failure.rootRef}>
         <form
           id={formId}
+          // The form's own rules decide, at the field (see the create form).
+          noValidate
           onSubmit={(e) => void handleSubmit(e)}
           className={`space-y-4 ${FLIGHT_FORM_TOUCH}`}
         >

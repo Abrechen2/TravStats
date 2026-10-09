@@ -247,6 +247,26 @@ describe("SimplifiedFlightFormV2 — the shared form blocks", () => {
     expect(label).toHaveTextContent("flights:form.from");
   });
 
+  it("names every field by its visible label, not by a placeholder", async () => {
+    await openManual(vi.fn());
+    for (const key of [
+      "flights:form.airline",
+      "flights:form.flightNumber",
+      "flights:form.seat",
+      "flights:form.seatClass",
+      "flights:form.category",
+      "flights:form.terminal",
+      "flights:form.gate",
+      "flights:form.bookingReference",
+      "flights:form.ticketNumber",
+      "flights:form.frequentFlyerNumber",
+      "flights:form.notes",
+      "flights:form.currency",
+    ]) {
+      expect(screen.getByLabelText(key), key).toBeInTheDocument();
+    }
+  });
+
   it("sizes its inputs for a finger on a coarse pointer", async () => {
     await openManual(vi.fn());
     expect(form().className).toContain("pointer-coarse:[&_select]:min-h-(--ts-size-touch-min)");
