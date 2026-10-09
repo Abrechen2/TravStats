@@ -428,5 +428,63 @@
     "photoRetry": "Fotos erneut hochladen",
     "continueWithoutPhoto": "Weiter ohne Fotos",
     "recorded": "Besuch bei „{{name}}“ eingetragen."
+  },
+  "merge": {
+    "action": "Dublette zusammenführen",
+    "title": "Dublette zusammenführen · {{name}}",
+    "intro": "„{{name}}“ bleibt bestehen. Wähle den doppelten Ort, der darin aufgehen soll – danach entscheidest du für jede Angabe, welche bleibt.",
+    "pickLabel": "Doppelten Ort wählen",
+    "pickPlaceholder": "Name oder Stadt …",
+    "pickStep": "den doppelten Ort wählen",
+    "pickFailed": "Deine Orte konnten nicht geladen werden.",
+    "pickNone": "Kein anderer Ort passt.",
+    "metres_one": "{{count}} m entfernt",
+    "metres_other": "{{count}} m entfernt",
+    "kilometres_one": "{{count}} km entfernt",
+    "kilometres_other": "{{count}} km entfernt",
+    "pickedLine": "Wird zusammengeführt mit „{{name}}“.",
+    "pickOther": "Anderen Ort wählen",
+    "group": {
+      "name": "Name",
+      "localName": "Name in Landesschrift",
+      "category": "Kategorie",
+      "position": "Position",
+      "address": "Adresse",
+      "notes": "Notiz"
+    },
+    "side": {
+      "target": "Dieser Ort",
+      "source": "Der andere",
+      "both": "Beide"
+    },
+    "bothNotes": "Beide Notizen behalten",
+    "none": "—",
+    "same": "bei beiden gleich",
+    "apart": "Die beiden Positionen liegen {{metres}} m auseinander.",
+    "confirm": "Zusammenführen",
+    "failed": "Die Orte konnten nicht zusammengeführt werden. Es wurde nichts verändert.",
+    "merged": "„{{name}}“ ist zusammengeführt.",
+    "errors": {
+      "bothCurated": "Beide Orte stehen für verschiedene Einträge einer Checkliste – zusammengeführt ginge ein Haken verloren. Es wurde nichts verändert.",
+      "same": "Ein Ort kann nicht mit sich selbst zusammengeführt werden."
+    },
+    "impact": {
+      "title": "Von „{{name}}“ zu „{{kept}}“ ziehen um:",
+      "visits_one": "1 Besuch",
+      "visits_other": "{{count}} Besuche",
+      "photos_one": "1 Beleg-Foto",
+      "photos_other": "{{count}} Beleg-Fotos",
+      "documents_one": "1 Dokument",
+      "documents_other": "{{count}} Dokumente",
+      "lists_one": "die Liste {{names}}",
+      "lists_other": "{{count}} Listen: {{names}} – steht der Ort schon darin, bleibt es ein Eintrag",
+      "stations_one": "1 Roadtrip-Station",
+      "stations_other": "{{count}} Roadtrip-Stationen",
+      "counting": "Wird gezählt …",
+      "unknown": "Was umzieht, ließ sich nicht zählen – alle Besuche, Fotos, Dokumente und Listen ziehen trotzdem mit um.",
+      "deleted": "Danach wird „{{name}}“ gelöscht.",
+      "visited": "Der Ort zählt als besucht, weil einer der beiden besucht war.",
+      "wishlist": "Der Ort bleibt auf der Merkliste."
+    }
   }
 }

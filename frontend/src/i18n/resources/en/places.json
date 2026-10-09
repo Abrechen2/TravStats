@@ -428,5 +428,63 @@
     "photoRetry": "Upload photos again",
     "continueWithoutPhoto": "Continue without photos",
     "recorded": "Visit to “{{name}}” recorded."
+  },
+  "merge": {
+    "action": "Merge a duplicate",
+    "title": "Merge a duplicate · {{name}}",
+    "intro": "“{{name}}” stays. Choose the duplicate that should be folded into it — then decide, for each detail, which one is kept.",
+    "pickLabel": "Choose the duplicate",
+    "pickPlaceholder": "Name or city …",
+    "pickStep": "choose the duplicate",
+    "pickFailed": "Your places could not be loaded.",
+    "pickNone": "No other place matches.",
+    "metres_one": "{{count}} m away",
+    "metres_other": "{{count}} m away",
+    "kilometres_one": "{{count}} km away",
+    "kilometres_other": "{{count}} km away",
+    "pickedLine": "Merging with “{{name}}”.",
+    "pickOther": "Choose another place",
+    "group": {
+      "name": "Name",
+      "localName": "Name in local script",
+      "category": "Category",
+      "position": "Position",
+      "address": "Address",
+      "notes": "Note"
+    },
+    "side": {
+      "target": "This place",
+      "source": "The other",
+      "both": "Both"
+    },
+    "bothNotes": "Keep both notes",
+    "none": "—",
+    "same": "the same on both",
+    "apart": "The two positions are {{metres}} m apart.",
+    "confirm": "Merge",
+    "failed": "The places could not be merged. Nothing was changed.",
+    "merged": "“{{name}}” is merged.",
+    "errors": {
+      "bothCurated": "Both places stand for different entries of a checklist — merged, one tick would be lost. Nothing was changed.",
+      "same": "A place cannot be merged with itself."
+    },
+    "impact": {
+      "title": "Moving from “{{name}}” to “{{kept}}”:",
+      "visits_one": "1 visit",
+      "visits_other": "{{count}} visits",
+      "photos_one": "1 proof photo",
+      "photos_other": "{{count}} proof photos",
+      "documents_one": "1 document",
+      "documents_other": "{{count}} documents",
+      "lists_one": "the list {{names}}",
+      "lists_other": "{{count}} lists: {{names}} — where the place is in one already, it stays one entry",
+      "stations_one": "1 roadtrip station",
+      "stations_other": "{{count}} roadtrip stations",
+      "counting": "Counting …",
+      "unknown": "What moves could not be counted — every visit, photo, document and list moves along anyway.",
+      "deleted": "Afterwards “{{name}}” is deleted.",
+      "visited": "The place counts as visited, because one of the two was.",
+      "wishlist": "The place stays on the wishlist."
+    }
   }
 }

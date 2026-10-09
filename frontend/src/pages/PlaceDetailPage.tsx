@@ -13,6 +13,7 @@ import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import { VisitPhotoStrip } from "../components/places/VisitPhotoStrip";
 import { PlaceGallery } from "../components/places/PlaceGallery";
 import { VisitDialog } from "../components/places/VisitDialog";
+import { PlaceMergeDialog } from "../components/places/PlaceMergeDialog";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import { RowActionButton, RowActions } from "../components/table/RowActionButton";
 import { useDocumentCount } from "../hooks/useDocumentCount";
@@ -51,6 +52,8 @@ export default function PlaceDetailPage(): JSX.Element {
   // their place had been deleted.
   const [failure, setFailure] = useState<LoadFailure | null>(null);
   const [editing, setEditing] = useState(false);
+  /** The duplicate merge (forgejo#232) — only ever on the user's say-so. */
+  const [merging, setMerging] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const deleteRelations = usePlaceRelations(confirmDelete && id ? id : null);
   /**
@@ -340,6 +343,7 @@ export default function PlaceDetailPage(): JSX.Element {
         actions={
           <>
             <Button onClick={() => setEditing(true)}>{t("common:buttons.edit")}</Button>
+            <Button onClick={() => setMerging(true)}>{t("places:merge.action")}</Button>
             <Button variant="danger" onClick={() => setConfirmDelete(true)}>
               {t("places:detail.deletePlace")}
             </Button>
@@ -446,6 +450,19 @@ export default function PlaceDetailPage(): JSX.Element {
             // The update answers without photos; the visits did not change.
             setPlace({ ...saved, visits: place.visits });
             setEditing(false);
+          }}
+        />
+      )}
+
+      {merging && (
+        <PlaceMergeDialog
+          place={place}
+          onClose={() => setMerging(false)}
+          onMerged={async () => {
+            // The merge answers without photos; the page re-reads in full.
+            await refresh();
+            addToast("success", t("places:merge.merged", { name: place.name }));
+            setMerging(false);
           }}
         />
       )}

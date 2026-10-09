@@ -255,7 +255,13 @@ export type ApiErrorCode =
    *  or a section or the account's total is over its byte cap (413). The web
    *  keeps its local value either way. */
   | "WEB_PREFS_INVALID"
-  | "WEB_PREFS_TOO_LARGE";
+  | "WEB_PREFS_TOO_LARGE"
+  /** Merging two places (forgejo#232, `services/places/placeMerge.ts`): a
+   *  place cannot be merged into itself (400), and two places that each
+   *  stand for a DIFFERENT checklist item cannot become one (409) — one
+   *  checklist's tick would be lost. */
+  | "PLACE_MERGE_SAME"
+  | "PLACE_MERGE_BOTH_CURATED";
 
 interface AuthRequest extends Request {
   user?: {

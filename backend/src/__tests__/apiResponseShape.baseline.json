@@ -144,6 +144,7 @@
     "placeLists.ts",
     "placeLists/curated.ts",
     "places.ts",
+    "places/merge.ts",
     "places/placeCover.ts",
     "places/relations.ts",
     "places/visitDateSuggestions.ts",

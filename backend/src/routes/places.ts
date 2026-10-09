@@ -119,7 +119,7 @@ type DecoratedPlace = PlaceRow & PlaceAggregates;
  * TYPE and not only at runtime — a spread that silently widens the payload
  * while the signature claims otherwise is how a field ends up undocumented.
  */
-function decorate<
+export function decorate<
   T extends {
     visits: PlaceRow["visits"];
     lat: number;

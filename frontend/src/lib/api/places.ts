@@ -220,6 +220,26 @@ export async function getPlaceRelations(placeId: string): Promise<PlaceRelations
   return res.data.data;
 }
 
+/** Which place a merged group comes from — see `POST /places/:id/merge`. */
+export interface PlaceMergeInput {
+  /** The duplicate, folded into the place in the URL and then deleted. */
+  sourceId: string;
+  fields: {
+    name: "target" | "source";
+    localName: "target" | "source";
+    category: "target" | "source";
+    position: "target" | "source";
+    address: "target" | "source";
+    notes: "target" | "source" | "both";
+  };
+}
+
+/** Fold `input.sourceId` into `targetId` in one transaction; answers with the place that stays. */
+export async function mergePlace(targetId: string, input: PlaceMergeInput): Promise<Place> {
+  const res = await api.post<Envelope<Place>>(`/places/${targetId}/merge`, input);
+  return res.data.data;
+}
+
 export const placesApi = {
   list: listPlaces,
   count: countPlaces,
