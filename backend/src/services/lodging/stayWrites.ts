@@ -70,6 +70,35 @@ export async function createStayRecord(
   // whose they are. Without this, a stay could be filed under a stranger's
   // trip and would then show up on their timeline (AUD-038).
   await assertReferencesOwned(userId, data);
+  const columns = await buildStayCreateData(
+    userId,
+    await zoneOfLodging(lodgingId),
+    data,
+    provenance
+  );
+  return prisma.lodgingStay.create({ data: { ...columns, lodgingId, userId } });
+}
+
+/** A new stay's columns, without its lodging and owner. */
+export type StayCreateColumns = Omit<
+  Prisma.LodgingStayUncheckedCreateInput,
+  "lodgingId" | "userId"
+>;
+
+/**
+ * Every derivation a new stay goes through, as columns — split from
+ * `createStayRecord` so a caller that writes inside its own transaction (the
+ * package-tour commit, whose lodging may not exist before it) gets the same
+ * row. Reads no reference: the caller has checked the trip/booking ids are the
+ * user's own, and supplies the lodging's zone (null for a lodging without a
+ * place yet).
+ */
+export async function buildStayCreateData(
+  userId: string,
+  lodgingZone: string | null,
+  data: CreateStayData,
+  provenance: StayProvenance = {}
+): Promise<StayCreateColumns> {
   // totalPrice is the source of truth: the UI types it, but an importer or
   // API client may send only a per-night price — derive the total so it is
   // always stored, and the FX snapshot below converts the right amount.
@@ -84,14 +113,14 @@ export async function createStayRecord(
       checkInTime: input.checkInTime ?? null,
       checkOutTime: input.checkOutTime ?? null,
     },
-    await zoneOfLodging(lodgingId),
+    lodgingZone,
     provenance.origin
   );
 
   const baseCurrency = await getBaseCurrency(userId);
   const fxOutcome = await applyFxSnapshot(input, baseCurrency);
   if (fxOutcome.status === "lookupFailed") {
-    logger.warn({ operation: "lodging_fx_lookup_failed", lodgingId, userId });
+    logger.warn({ operation: "lodging_fx_lookup_failed", userId });
   }
   const fxFields =
     manualFxRate != null
@@ -107,40 +136,36 @@ export async function createStayRecord(
         )
       : resolveFxFields(fxOutcome);
 
-  return prisma.lodgingStay.create({
-    data: {
-      ...input,
-      ...fxFields,
-      ...timeColumns,
-      // Status follows the dates (see deriveLodgingStatus). Whatever the
-      // client sent is only consulted for the one value derivation honours,
-      // "cancelled" — so an old client, an importer or a stale form can no
-      // longer store a status the dates contradict.
-      // With no dates there is nothing to derive from and the deriver
-      // returns `current` — which is correct: an undated stay is recorded
-      // after the fact, so what the client says is a statement, not a cache.
-      status: deriveLodgingStatus({
-        checkIn: input.checkIn ? new Date(input.checkIn) : null,
-        checkOut: input.checkOut ? new Date(input.checkOut) : null,
-        current: input.status,
-        now: await stayStatusNow(userId),
-      }),
-      // Likewise derived, not accepted: the overall score follows the three
-      // components wherever a stay is written — form, CSV, e-mail/PDF — so
-      // an importer cannot leave it null and a client cannot store one that
-      // contradicts them. `current` only carries a source-supplied overall
-      // through for a stay that has no component rating at all.
-      ratingOverall: deriveStayOverallRating({
-        room: input.ratingRoom ?? null,
-        breakfast: input.ratingBreakfast ?? null,
-        service: input.ratingService ?? null,
-        current: input.ratingOverall ?? null,
-      }),
-      ...(provenance.dataSource ? { dataSource: provenance.dataSource } : {}),
-      lodgingId,
-      userId,
-    },
-  });
+  return {
+    ...input,
+    ...fxFields,
+    ...timeColumns,
+    // Status follows the dates (see deriveLodgingStatus). Whatever the
+    // client sent is only consulted for the one value derivation honours,
+    // "cancelled" — so an old client, an importer or a stale form can no
+    // longer store a status the dates contradict.
+    // With no dates there is nothing to derive from and the deriver
+    // returns `current` — which is correct: an undated stay is recorded
+    // after the fact, so what the client says is a statement, not a cache.
+    status: deriveLodgingStatus({
+      checkIn: input.checkIn ? new Date(input.checkIn) : null,
+      checkOut: input.checkOut ? new Date(input.checkOut) : null,
+      current: input.status,
+      now: await stayStatusNow(userId),
+    }),
+    // Likewise derived, not accepted: the overall score follows the three
+    // components wherever a stay is written — form, CSV, e-mail/PDF — so
+    // an importer cannot leave it null and a client cannot store one that
+    // contradicts them. `current` only carries a source-supplied overall
+    // through for a stay that has no component rating at all.
+    ratingOverall: deriveStayOverallRating({
+      room: input.ratingRoom ?? null,
+      breakfast: input.ratingBreakfast ?? null,
+      service: input.ratingService ?? null,
+      current: input.ratingOverall ?? null,
+    }),
+    ...(provenance.dataSource ? { dataSource: provenance.dataSource } : {}),
+  };
 }
 
 /**

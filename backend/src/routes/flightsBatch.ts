@@ -12,16 +12,11 @@ import {
 } from "../services/trip/tripGrouping";
 import logger from "../utils/logger";
 import { enrichFlightAirports } from "../services/airportLookup";
-import { calculateCo2Kg, haversineKm, toSeatClass } from "../services/co2Calculator";
-import { resolveAirlineCodes } from "../utils/airlineNormalize";
 import { checkAndUpdateAchievements } from "../utils/achievements";
-import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
-import { deriveFlightStatus, FLIGHT_PASSTHROUGH, tripDateBounds } from "../shared/statusDerivation";
+import { tripDateBounds } from "../shared/statusDerivation";
 import { recomputeTripStatus } from "../services/tripStatusService";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { flightExternalRef, isDocumentImport } from "../services/importProvenance";
-import { normalizeAircraft } from "../utils/aircraftNormalize";
-import { sharedFlightCreateFields } from "../services/flights/flightCreateFields";
 import { flightEnds, segmentTripDays } from "../services/timeModel/tripColumns";
 import {
   fxColumnsFor,
@@ -31,7 +26,7 @@ import {
 } from "../services/fx/snapshot";
 
 import { toUtcDate } from "../services/flights/mergedChronology";
-import { flightZoneColumns } from "./flights/timeInput";
+import { buildFlightCreateData } from "../services/flights/flightCreateData";
 import { enrichFlightsForClients } from "../services/flightAirportFacts";
 
 const router = Router();
@@ -208,134 +203,15 @@ router.post(
         // Create all flights
         const flights = [];
         for (const { data, enriched, resolvedCompanions, fx, externalRef } of enrichedDataList) {
-          const departureUtc = toUtcDate(data.departureLocal, data.depTimezone, data.departureFold);
-          const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone, data.arrivalFold);
-          const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
-          const actualArrivalUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
-          // The status field is a client-sent HINT, not the source of truth
-          // (spec 2026-07-17-status-from-dates) — same rule as the single-create
-          // route in flights.ts.
-          const effectiveStatus = (FLIGHT_PASSTHROUGH as readonly string[]).includes(
-            data.status ?? ""
-          )
-            ? data.status!
-            : deriveFlightStatus({
-                departureTime: departureUtc,
-                arrivalTime: arrivalUtc,
-                current: data.status ?? "scheduled",
-              });
-          // Auto-resolve IATA/ICAO from a free-text airline name (issue #106B).
-          // Importers (Generic-CSV, FR24, AI-agent) often only supply a name —
-          // without codes downstream features like airline filters and codeshare
-          // detection treat spelling variants as separate carriers.
-          const resolvedAirline =
-            data.airline && !data.airlineIata && !data.airlineIcao
-              ? resolveAirlineCodes(data.airline)
-              : null;
-          const resolvedOperating =
-            data.operatingAirline && !data.operatingAirlineIata && !data.operatingAirlineIcao
-              ? resolveAirlineCodes(data.operatingAirline)
-              : null;
-
           const flight = await tx.flight.create({
-            data: {
+            data: await buildFlightCreateData(data, {
               userId,
               externalRef,
               importBatchId,
-              // The zone each end was written with (ADR 0002 phase 2).
-              ...(await flightZoneColumns(data, enriched)),
-              airline: data.airline,
-              airlineIata: data.airlineIata ?? resolvedAirline?.iata,
-              airlineIcao: data.airlineIcao ?? resolvedAirline?.icao,
-              operatingAirline: data.operatingAirline,
-              operatingAirlineIata: data.operatingAirlineIata ?? resolvedOperating?.iata,
-              operatingAirlineIcao: data.operatingAirlineIcao ?? resolvedOperating?.icao,
-              isCodeshare: data.isCodeshare,
-              flightNumber: data.flightNumber,
-              callsign: data.callsign,
-              // Normalised, like the single-create route — an unnormalised
-              // model string makes the same aircraft read as two.
-              aircraft: data.aircraft ? normalizeAircraft(data.aircraft) : null,
-              depIcao: enriched.departure.icao,
-              depIata: enriched.departure.iata,
-              depName: enriched.departure.name,
-              depLat: enriched.departure.lat,
-              depLon: enriched.departure.lon,
-              arrIcao: enriched.arrival.icao,
-              arrIata: enriched.arrival.iata,
-              arrName: enriched.arrival.name,
-              arrLat: enriched.arrival.lat,
-              arrLon: enriched.arrival.lon,
-              departureTime: departureUtc,
-              arrivalTime: arrivalUtc,
-              actualDeparture: actualDepartureUtc,
-              actualArrival: actualArrivalUtc,
-              depTimeSemantics: data.depTimeSemantics ?? "UTC",
-              arrTimeSemantics: data.arrTimeSemantics ?? "UTC",
-              delayMinutes:
-                actualDepartureUtc && departureUtc
-                  ? Math.round((actualDepartureUtc.getTime() - departureUtc.getTime()) / 60000)
-                  : null,
-              co2Kg: calculateCo2Kg({
-                depLat: enriched.departure.lat,
-                depLon: enriched.departure.lon,
-                arrLat: enriched.arrival.lat,
-                arrLon: enriched.arrival.lon,
-                seatClass: toSeatClass(data.seatClass),
-              }),
-              // Haversine route distance — written on every insert so stats
-              // ("total km", "longest flight", distance achievements) work
-              // immediately, not only after a Provider lookup. v1.5.0-rc.3.
-              routeDistance: haversineKm(
-                enriched.departure.lat,
-                enriched.departure.lon,
-                enriched.arrival.lat,
-                enriched.arrival.lon
-              ),
-              status: effectiveStatus,
-              notes: data.notes,
-              price: data.price,
-              taxes: data.taxes,
-              fees: data.fees,
-              currency: data.currency,
-              category: data.category,
-              tags: data.tags ?? [],
-              // Dual write: resolved display names keep this legacy array in
-              // agreement with `companionLinks` below (trimmed, blanks dropped,
-              // newest spelling wins) — same rule as the single-create route.
-              companions: resolvedCompanions.map((c) => c.displayName),
-              receiptUrl: data.receiptUrl,
-              seatNumber: data.seatNumber,
-              boardingGroup: data.boardingGroup,
-              gate: data.gate,
-              terminal: data.terminal,
-              bookingReference: data.bookingReference,
-              ticketNumber: data.ticketNumber,
-              baggageAllowance: data.baggageAllowance,
-              frequentFlyerNumber: data.frequentFlyerNumber,
-              bookingClassLetter: data.bookingClassLetter,
-              coPassengers: data.coPassengers ?? [],
-              // The columns both create paths must write. Ten of them were
-              // missing here, so a bulk import answered 201 and stored nulls for
-              // the cabin, the registration, the Mode-S address and every
-              // special-flight field (AUD-022).
-              ...sharedFlightCreateFields(data),
-              // The same FX snapshot the single-create route takes. Resolved
-              // BEFORE the transaction (it goes to the network), so a slow rate
-              // lookup cannot hold a write transaction open.
-              ...fx,
-              // Default to 'email_import' for backward compat (this route was
-              // originally only called from the email/PDF parsers). AI-agent
-              // and xlsx imports can override with 'bulk_import'.
-              dataSource: data.dataSource ?? "email_import",
-              lastModifiedBy: "user",
-              nextApiCheckAt: calculateNextApiCheckAt(
-                departureUtc,
-                arrivalUtc,
-                effectiveStatus,
-                data.flightNumber
-              ),
-            },
+              enriched,
+              companionNames: resolvedCompanions.map((c) => c.displayName),
+              fx,
+            }),
           });
 
           if (resolvedCompanions.length > 0) {

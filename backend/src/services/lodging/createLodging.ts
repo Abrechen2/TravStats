@@ -33,26 +33,39 @@ export async function createLodgingRecord<I extends Prisma.LodgingInclude>(
   input: LodgingInput & { visited?: boolean },
   opts: { dataSource: string; location?: LodgingLocationPatch; include?: I }
 ): Promise<Prisma.LodgingGetPayload<{ include: I }>> {
+  // Typed as the plain args, not through the generic `I`: with the 2.7 schema
+  // TypeScript gives up comparing the generic include ("excessive stack
+  // depth"). The result is re-typed below, where `I` is what callers read.
+  const args: Prisma.LodgingCreateArgs = {
+    data: await buildLodgingCreateData(userId, input, opts),
+    include: opts.include,
+  };
+  return prisma.lodging.create(args) as unknown as Promise<
+    Prisma.LodgingGetPayload<{ include: I }>
+  >;
+}
+
+/**
+ * The row `createLodgingRecord` writes, for a caller that writes it inside its
+ * own transaction (the package-tour commit). Checks the chain reference and
+ * resolves the OSM reference, both reads, so it runs before the transaction.
+ */
+export async function buildLodgingCreateData(
+  userId: string,
+  input: LodgingInput & { visited?: boolean },
+  opts: { dataSource: string; location?: LodgingLocationPatch }
+): Promise<Prisma.LodgingUncheckedCreateInput> {
   const { osmRef, ...fields } = input;
   // A chain id is a reference to a row the caller may not own: another
   // account's chain is refused like one that does not exist.
   if (fields.chainId != null) await assertChainsVisible(userId, [fields.chainId]);
   const created = { ...fields, ...(opts.location ?? {}) };
   const externalRef = await osmRefToStore(userId, osmRef);
-  // Typed as the plain args, not through the generic `I`: with the 2.7 schema
-  // TypeScript gives up comparing the generic include ("excessive stack
-  // depth"). The result is re-typed below, where `I` is what callers read.
-  const args: Prisma.LodgingCreateArgs = {
-    data: {
-      ...created,
-      isoCountryCode: resolveCountryCode(created.country ?? null),
-      ...(externalRef !== undefined && { externalRef }),
-      userId,
-      dataSource: opts.dataSource,
-    },
-    include: opts.include,
+  return {
+    ...created,
+    isoCountryCode: resolveCountryCode(created.country ?? null),
+    ...(externalRef !== undefined && { externalRef }),
+    userId,
+    dataSource: opts.dataSource,
   };
-  return prisma.lodging.create(args) as unknown as Promise<
-    Prisma.LodgingGetPayload<{ include: I }>
-  >;
 }
