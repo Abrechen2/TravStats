@@ -81,3 +81,59 @@ export is the whole account (`services/export/allDataExport.ts`).
 ## Out of scope
 
 Server-to-server sharing; sharing with someone who has no account; the phone app.
+
+## S1 — as built (2026-10-09)
+
+**Migration** `20261009112351_trip_sharing_s1`, as proposed with three refinements:
+`TripStop.shareKey` is unique per `(tripId, shareKey)` — a stop has no user column, and a
+trip has exactly one owner, so that is per user. `TripShareGroup.createdById` is nullable
+(SetNull): the creator's account going away must not dissolve the others' group.
+`ShareNotice.groupId`/`actorId` are nullable (SetNull) for the same reason. A pending consent
+request is read from `ShareConsent` itself; it writes no notice.
+
+**Facts** — `backend/src/services/sharing/facts/`, one module per type (trip, flight,
+stay + lodging, cruise + stops + legs, rail, rental, stop), each a whitelist and the function
+that copies exactly those columns as stored. A column not listed is private. Beyond the
+decision-2 list, the measured route of a flight (`actualRoute`, `routeDistance`, overflown
+countries, CO₂) and a cruise's computed legs are copied, because they describe the vehicle's
+path and let the recipient's statistics count the copy without a lookup. A copied stay's
+`status` is re-derived from its dates (`deriveLodgingStatus`).
+
+**Lodging reuse** (security review): the recipient's own lodging is reused only for the same
+house — same normalised name AND coordinates within 300 m, or, when either side has none, the
+same city and country (`isSameHouse`). Otherwise a new lodging is created; a sharer-owned
+chain is not carried over, a catalogue chain is.
+
+**API** — `/api/v1/sharing`, enveloped, demo account read-only:
+`GET|POST /consents`, `POST /consents/:id/{accept,decline,withdraw}`,
+`GET /companions`, `PUT|DELETE /companions/:id/link`, `GET /trips/:tripId`,
+`POST /trips/:tripId/{share,leave}`, `GET /notices`, `POST /notices/:id/read`,
+`GET /inbox/count`. Codes: `SHARE_USER_NOT_FOUND`, `SHARE_SELF`, `SHARE_CONSENT_DUPLICATE`,
+`SHARE_CONSENT_NOT_FOUND`, `SHARE_CONSENT_NOT_PENDING`, `SHARE_CONSENT_REQUIRED`,
+`COMPANION_NOT_FOUND`, `SHARE_COMPANION_ALREADY_LINKED`, `SHARE_COMPANION_NOT_LINKED`,
+`SHARE_TRIP_NOT_SHARED`, `SHARE_NOTICE_NOT_FOUND`, `TRIP_NOT_FOUND`. Consent requests are
+limited to 30 an hour per user (a request answers whether a username exists).
+
+**Share** copies in one transaction, keys the sharer's rows on first share, and is idempotent
+by `shareKey`: sharing again creates only what the recipient lacks (so an entry added since is
+copied too). A stop wrapping an entry is re-pointed at the recipient's copy. Roadtrip
+stations, route corrections and `placeId` are not copied; nor are bookings, photos, journal,
+documents, expenses, tours or roadtrips. **Leave** clears the caller's keys and group (own copy
+stays), notifies the others (`left`), and deletes a group nobody is left in.
+
+**UI** — Posteingang tab "Geteilte Reisen" (requests with Zustimmen/Ablehnen, notices with
+Reise öffnen/Gelesen) and a fourth badge source; Einstellungen → Reisen → "Reisen teilen"
+(request by username, consents with withdraw, per companion "Mit Konto verknüpfen"); trip
+overview panel "Geteilt" (members, a share tick per linked companion, Gruppe verlassen).
+
+**Open for S2**
+- Withdrawing a consent blocks further shares only; S2's propagation must also check it,
+  and decide whether a withdrawal detaches existing group copies (decision 4 says they stay).
+- `before`/`undoneAt` are unused until propagation; notice kinds `created|updated|deleted`
+  are reserved.
+- Entries moved out of a shared trip keep their `shareKey`; propagation must define what that
+  means (leave currently clears keys only on rows still filed on the trip).
+- Re-sharing after leaving creates a fresh copy (the old one has no key); no merge.
+- Cruise leg routes (`CruiseLegRoute` overrides) are not copied; the recipient's map draws the
+  default schematic route.
+- The companion editor is the settings list — there is still no standalone companion editor.

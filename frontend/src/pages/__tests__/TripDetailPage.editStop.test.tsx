@@ -13,6 +13,18 @@ import type { Trip } from "../../types";
 const getByIdMock = vi.fn();
 const toasts = vi.hoisted(() => ({ addToast: vi.fn() }));
 
+// Shared trips (2026-10-09): the trip overview, the settings and the inbox
+// read the sharing API on mount; answered empty so no request escapes.
+vi.mock("@/lib/api/sharing", () => ({
+  sharingApi: {
+    tripSharing: vi.fn().mockResolvedValue({ groupId: null, members: [], candidates: [] }),
+    listConsents: vi.fn().mockResolvedValue({ incoming: [], outgoing: [] }),
+    listCompanions: vi.fn().mockResolvedValue({ companions: [], linkableUsers: [] }),
+    listNotices: vi.fn().mockResolvedValue([]),
+    inboxCount: vi.fn().mockResolvedValue(0),
+  },
+}));
+
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (selector: (s: { addToast: (...a: unknown[]) => void }) => unknown) =>
     selector({ addToast: toasts.addToast }),
