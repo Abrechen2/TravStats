@@ -8,9 +8,12 @@
  * way to prove anything, which makes its templates `invalid`, never "loaded,
  * untested".
  *
- * Phase P1 ships ONE runner: the matcher. It decides match vs decline from
- * `match.markers` / `match.anchors` and ignores `expected`. The extraction
- * runners of P2/P3 replace it per domain and compare `expected` as well.
+ * Since P2 every domain runs the generic extraction engine: a case is a
+ * match only when the matcher accepts the text AND every `required` name was
+ * read, and a match case that carries `expected` must also have extracted
+ * those values. `matchOnlyRunner` (the P1 default) remains for tests; it
+ * reports no values, so a case with `expected` FAILS under it rather than
+ * passing unchecked.
  */
 import type {
   TemplateDomain,
@@ -19,13 +22,22 @@ import type {
   TemplateTestInput,
 } from "./envelope";
 import { TEMPLATE_DOMAINS } from "./envelope";
+import { extract } from "./extract";
 
 export type TestDecision = "match" | "decline";
+
+export interface RunnerOutcome {
+  decision: TestDecision;
+  /** What the engine read; absent when the runner does not extract. */
+  values?: Record<string, unknown>;
+  /** `required` names that came out empty. */
+  missing?: string[];
+}
 
 export type TemplateTestRunner = (
   template: TemplateEnvelope,
   input: TemplateTestInput
-) => TestDecision;
+) => RunnerOutcome;
 
 export type RunnerRegistry = ReadonlyMap<TemplateDomain, TemplateTestRunner>;
 
@@ -42,33 +54,121 @@ export function envelopeMatches(template: TemplateEnvelope, haystack: string): b
   return template.match.markers.every(has) && template.match.anchors.some(has);
 }
 
-export const matchOnlyRunner: TemplateTestRunner = (template, input) =>
-  envelopeMatches(template, testInputHaystack(input)) ? "match" : "decline";
+export interface TemplateApplication {
+  matched: boolean;
+  values: Record<string, unknown>;
+  missing: string[];
+}
 
-/** P1 default: every domain is checked by its matcher until an extraction runner exists. */
+/**
+ * Applies a template to a document: the matcher first, then extraction. When
+ * the matcher declines, nothing is extracted (`values` and `missing` are
+ * empty) — a template that does not recognise the document has nothing to
+ * say about it. `matched` is true only when nothing `required` is missing.
+ */
+export function applyTemplate(
+  template: TemplateEnvelope,
+  text: TemplateTestInput
+): TemplateApplication {
+  const haystack = testInputHaystack(text);
+  if (!envelopeMatches(template, haystack)) return { matched: false, values: {}, missing: [] };
+  const { values, missing } = extract(template.extraction, haystack);
+  return { matched: missing.length === 0, values, missing };
+}
+
+export const matchOnlyRunner: TemplateTestRunner = (template, input) => ({
+  decision: envelopeMatches(template, testInputHaystack(input)) ? "match" : "decline",
+});
+
+export const extractionRunner: TemplateTestRunner = (template, input) => {
+  const { matched, values, missing } = applyTemplate(template, input);
+  return { decision: matched ? "match" : "decline", values, missing };
+};
+
 export const defaultRunners: RunnerRegistry = new Map(
-  TEMPLATE_DOMAINS.map((domain) => [domain, matchOnlyRunner] as const)
+  TEMPLATE_DOMAINS.map((domain) => [domain, extractionRunner] as const)
 );
+
+// ------------------------------------------------------------------ expected
+
+export interface Difference {
+  path: string;
+  expected: unknown;
+  actual: unknown;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The first place `actual` departs from `expected`, or null. Partial: an
+ * object compares only the keys `expected` names; an array must have the
+ * same length and each element must partially equal its counterpart in
+ * order; anything else compares strictly (null and absent are the same).
+ */
+export function firstDifference(
+  expected: unknown,
+  actual: unknown,
+  path: string
+): Difference | null {
+  if (Array.isArray(expected)) {
+    if (!Array.isArray(actual)) return { path, expected, actual };
+    if (actual.length !== expected.length) {
+      return { path: `${path}.length`, expected: expected.length, actual: actual.length };
+    }
+    for (const [i, item] of expected.entries()) {
+      const diff = firstDifference(item, actual[i], `${path}[${i}]`);
+      if (diff) return diff;
+    }
+    return null;
+  }
+  if (isRecord(expected)) {
+    if (!isRecord(actual)) return { path, expected, actual };
+    for (const [key, value] of Object.entries(expected)) {
+      const diff = firstDifference(value, actual[key], `${path}.${key}`);
+      if (diff) return diff;
+    }
+    return null;
+  }
+  const same = expected === actual || (expected === null && actual === undefined);
+  return same ? null : { path, expected, actual };
+}
+
+// ------------------------------------------------------------------ test cases
 
 export type TestRunResult =
   { kind: "passed" } | { kind: "no_runner" } | { kind: "failed"; failures: string[] };
 
-function describeFailure(testCase: TemplateTestCase, actual: TestDecision | Error): string {
-  if (actual instanceof Error) return `"${testCase.name}": runner threw: ${actual.message}`;
-  return `"${testCase.name}": expected ${testCase.expect}, got ${actual}`;
+function show(value: unknown): string {
+  return value === undefined ? "nothing" : JSON.stringify(value);
+}
+
+/** Null when the case passes, else the failure message. */
+function judge(testCase: TemplateTestCase, outcome: RunnerOutcome): string | null {
+  const name = `"${testCase.name}"`;
+  if (outcome.decision !== testCase.expect) {
+    const missing = outcome.missing?.length ? ` (missing: ${outcome.missing.join(", ")})` : "";
+    return `${name}: expected ${testCase.expect}, got ${outcome.decision}${missing}`;
+  }
+  if (testCase.expect !== "match" || !testCase.expected) return null;
+  if (!outcome.values) return `${name}: this runner cannot check expected values`;
+  const diff = firstDifference(testCase.expected, outcome.values, "expected");
+  if (!diff) return null;
+  return `${name}: ${diff.path}: expected ${show(diff.expected)}, got ${show(diff.actual)}`;
 }
 
 export function runTestCases(template: TemplateEnvelope, runners: RunnerRegistry): TestRunResult {
   const runner = runners.get(template.domain);
   if (!runner) return { kind: "no_runner" };
   const failures = template.testCases.flatMap((testCase) => {
-    let actual: TestDecision | Error;
     try {
-      actual = runner(template, testCase.input);
+      const failure = judge(testCase, runner(template, testCase.input));
+      return failure === null ? [] : [failure];
     } catch (err) {
-      actual = err instanceof Error ? err : new Error(String(err));
+      const message = err instanceof Error ? err.message : String(err);
+      return [`"${testCase.name}": runner threw: ${message}`];
     }
-    return actual === testCase.expect ? [] : [describeFailure(testCase, actual)];
   });
   return failures.length === 0 ? { kind: "passed" } : { kind: "failed", failures };
 }

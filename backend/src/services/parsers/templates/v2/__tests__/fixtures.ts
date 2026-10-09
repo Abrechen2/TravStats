@@ -16,7 +16,7 @@ export function validTemplate(overrides: Partial<TemplateEnvelope> = {}): Templa
     },
     markets: ["DE"],
     match: { markers: ["example hotels"], anchors: ["reservierung nr."] },
-    extraction: { domain: "lodging", fields: {} },
+    extraction: { fields: {} },
     testCases: [
       {
         name: "a confirmation is read",

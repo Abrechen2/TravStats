@@ -65,6 +65,49 @@ match/decline from `markers`/`anchors` and ignores `expected`), `loader.ts`
 - Transforms the corpus needs: two-digit-year dates, `+1` day rollover, `QR 070` flight numbers,
   city name → IATA via the airport catalogue, money with German separators.
 
+**P2 as built (2026-10-09).** One generic, domain-agnostic engine in
+`services/parsers/templates/v2/`; nothing in it knows what a flight or a stay is (that is P3).
+- `extraction.ts` — the Zod schema that replaces the opaque `extraction` record (strict: an
+  unknown key such as `field` is refused):
+  `{ fields?: name → FieldRule, repeats?: name → RepeatRule, required?: string[] }`.
+  A `FieldRule` is `patterns` (value = named group `v`, else group 1, else the whole match;
+  first pattern whose value survives its transforms wins; flags default `im`, `g` ignored) XOR
+  a constant `value`, plus `transform` (one name or a list, applied in order). A `RepeatRule`
+  is `mode: "matchAll"` (`pattern`, `fields: name → { group: name | index, transform? }`) or
+  `mode: "split"` (`splitPattern`, `fields: name → FieldRule` per block), both with optional
+  `within: { startAfter?, endBefore? }`, `flags` (default `gim`, `g` forced) and `minimum`
+  (default 1). Refused at validation: a regex that does not compile, a repeat or `within`
+  pattern that matches the empty string, a matchAll `group` the pattern lacks, an unknown
+  transform, flags outside `gimsu`, a `required` name that is neither field nor repeat, a
+  name that is both.
+- `transforms.ts` — pure and total (unreadable input → `null`, never a throw): `trim`, `text`,
+  `upper`, `lower`, `titleCase`, `digits`, `integer`, `money`, `currency`, `date`
+  (`YYYY-MM-DD`; `dd.mm.yy` is 20yy; German/English month names and abbreviations),
+  `time` (`HH:MM`), `dayOffset` (`+1` → 1, missing → 0), `flightNumber`, `iata`. Dates and
+  times stay calendar strings — no `Date`, so no host zone.
+- `extract.ts` — `extract(extraction, text) → { values, missing }`. Regexes compiled once per
+  extraction object (WeakMap). Split blocks start AT each `splitPattern` match (the header
+  line is part of its block); text before the first match is a block too. A repeat item the
+  text contributed nothing to is dropped (constants and a defaulted `dayOffset` do not count
+  as "read"). Bounds: input capped at 200 000 characters, each repeat at 200 items.
+- `runners.ts` — `extractionRunner` is now the default for all five domains: match iff the
+  matcher accepts AND nothing `required` is missing. A match case with `expected` must
+  deep-partially equal the values (objects: expected keys only; arrays: same length, in
+  order); a failure names the first differing path, e.g.
+  `"the invoice is read": expected.flights[1].to: expected "MBA", got "NBO"`, and a decline
+  that should have matched lists what was `missing`. A runner that reports no values
+  (`matchOnlyRunner`, kept for tests) FAILS a case with `expected` instead of passing it
+  unchecked. `applyTemplate(template, input) → { matched, values, missing }` is the public
+  entry for P3/P4; when the matcher declines it extracts nothing.
+- Pinned by `__tests__/{transforms,extract,runners}.test.ts`, including an invented
+  tour-operator invoice (`tourOperatorFixture.ts`: four flight lines with `+1` arrivals, two
+  stays in split mode, total `3.249,00 EUR`) read end to end through `validateEnvelope` and
+  its own test cases.
+- **Not done here:** city name → IATA via the airport catalogue. It needs the catalogue, so
+  it cannot be a pure transform; it belongs to the consumer (P3) or to a lookup step injected
+  into `extract`. The rail draft's `legs.repeat` shape still differs from `repeats` and is
+  refused until the template repository moves to it.
+
 ### P3 — package domain + trip proposal
 - `extraction` for `domain: "package"`: `booking` fields (reference, issued on, travellers,
   total, currency, line items), repeat blocks `flights[]`, `stays[]`, optional `cruise`.

@@ -6,13 +6,14 @@
  * tested, and the template repository's CI is meant to call the same module,
  * so "valid" cannot mean two things.
  *
- * `extraction` is deliberately opaque here. It is checked to be an object and
- * nothing more; the per-domain extraction specs arrive with the engines that
- * read them (P2/P3). What IS enforced now is the lifecycle a template must
- * carry to be trusted at all: an identity, a version that can be ordered, a
- * matcher, and test cases that prove it both reads AND declines.
+ * `extraction` is the generic, domain-agnostic block of extraction.ts (P2):
+ * fields, repeats and required names, every regex compiled at validation.
+ * Beyond it, the envelope enforces the lifecycle a template must carry to be
+ * trusted at all: an identity, a version that can be ordered, a matcher, and
+ * test cases that prove it both reads AND declines.
  */
 import { z } from "zod";
+import { extractionSchema } from "./extraction";
 import { isValidVersion } from "./version";
 
 export const TEMPLATE_DOMAINS = ["flight", "lodging", "cruise", "rail", "package"] as const;
@@ -90,7 +91,7 @@ export const templateEnvelopeSchema = z
       markers: z.array(nonEmpty).min(1),
       anchors: z.array(nonEmpty).min(1),
     }),
-    extraction: z.record(z.string(), z.unknown()),
+    extraction: extractionSchema,
     testCases: z.array(testCaseSchema),
     minAppVersion: versionSchema.optional(),
   })
