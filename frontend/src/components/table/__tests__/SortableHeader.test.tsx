@@ -78,4 +78,13 @@ describe("SortableHeader", () => {
     await userEvent.click(screen.getByRole("button"));
     expect(onSort).toHaveBeenCalledWith("chain");
   });
+
+  // forgejo#249: measured 16 px high on an iPad. A header cell is a button row,
+  // so it grows to the touch minimum under a coarse pointer (class = contract).
+  it("is at least the touch minimum high on a coarse pointer", () => {
+    renderHeader();
+    expect(screen.getByRole("button").className).toContain(
+      "pointer-coarse:min-h-(--ts-size-touch-min)"
+    );
+  });
 });

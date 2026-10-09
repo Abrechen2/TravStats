@@ -30,7 +30,7 @@ export function SortableHeader<K extends string>({
       type="button"
       onClick={() => onSort(column)}
       aria-label={ariaLabel}
-      className="flex items-center gap-1 text-left uppercase tracking-wider"
+      className="flex items-center gap-1 text-left uppercase tracking-wider pointer-coarse:min-h-(--ts-size-touch-min)"
       // Colour AND underline for the active column. The underline came from
       // the flights table, which marked its sorted column most clearly of the
       // three; lifting it here gives every list the same signal instead of
