@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatLocalClock, formatLocalDate } from "../../lib/displayFormat";
@@ -11,6 +12,13 @@ interface Props {
   isToday: boolean;
   documents: CruiseDocumentsState;
   onRetryDocuments: () => void;
+  /**
+   * Bumped when the reader picks a day: the card may sit far above the row
+   * that was tapped on a long itinerary, so it is brought into view and takes
+   * the focus (review I5). 0 — the card opened by itself on "today" — moves
+   * nothing.
+   */
+  focusRequest?: number;
 }
 
 const LINK_CLASS =
@@ -34,8 +42,22 @@ function duration(minutes: number, t: (k: string, o?: Record<string, unknown>) =
  * marked "Ortszeit". A time that is not recorded says "offen" — the card never
  * fills a gap, least of all the all-aboard time from the departure.
  */
-export function CruiseDayCard({ entry, isToday, documents, onRetryDocuments }: Props): JSX.Element {
+export function CruiseDayCard({
+  entry,
+  isToday,
+  documents,
+  onRetryDocuments,
+  focusRequest = 0,
+}: Props): JSX.Element {
   const { t } = useTranslation("cruise");
+  const headingRef = useRef<HTMLHeadingElement | null>(null);
+  useEffect(() => {
+    if (focusRequest === 0) return;
+    const heading = headingRef.current;
+    if (!heading) return;
+    heading.scrollIntoView?.({ block: "nearest" });
+    heading.focus({ preventScroll: true });
+  }, [focusRequest]);
   const stop = entry.stop;
   const stay = stop ? portStay(stop) : { arrive: null, depart: null, minutes: null };
   const place = entry.isAtSea
@@ -53,6 +75,8 @@ export function CruiseDayCard({ entry, isToday, documents, onRetryDocuments }: P
       style={{ background: "var(--bg-surface)" }}
     >
       <h3
+        ref={headingRef}
+        tabIndex={-1}
         id="cruise-day-card-title"
         className="flex flex-wrap items-center gap-2 text-sm font-semibold text-(--text-primary)"
       >
@@ -114,20 +138,25 @@ export function CruiseDayCard({ entry, isToday, documents, onRetryDocuments }: P
           )}
           {documents.status === "ready" &&
             (ofDay.length > 0 ? (
-              <ul className="flex flex-col gap-1">
-                {ofDay.map((d) => (
-                  <li key={d.id}>
-                    <a
-                      href={documentFileUrl(d)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={LINK_CLASS}
-                    >
-                      {d.displayName}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+              <>
+                {/* Matched by the date printed on them, not filed with the
+                    day — so the card says what it knows (review M4). */}
+                <span className="text-xs text-(--text-muted)">{t("dayCard.documentsDated")}</span>
+                <ul className="flex flex-col gap-1">
+                  {ofDay.map((d) => (
+                    <li key={d.id}>
+                      <a
+                        href={documentFileUrl(d)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={LINK_CLASS}
+                      >
+                        {d.displayName}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </>
             ) : (
               <span className="text-(--text-muted)">
                 {t("dayCard.noDocuments", { count: documents.documents.length })}

@@ -430,7 +430,8 @@
     "noDocuments_other": "Keins mit diesem Datum – die {{count}} Dokumente der Kreuzfahrt stehen unten unter „Dokumente“.",
     "localNote": "Datum und Zeiten gelten am Hafen (Ortszeit). Fehlende Zeiten bleiben offen; die Alle-an-Bord-Zeit wird nie aus der Abfahrt abgeleitet.",
     "pickHint": "Tippe auf einen Tag der Hafenfolge, um seine Tageskarte zu öffnen.",
-    "openDay": "Tageskarte öffnen:"
+    "openDay": "Tageskarte öffnen:",
+    "documentsDated": "Mit diesem Datum:"
   },
   "unresolved": {
     "title_one": "Ein ungeklärter Hafen",

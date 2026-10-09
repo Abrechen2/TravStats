@@ -83,6 +83,9 @@ function renderPage(): void {
   );
 }
 
+const scrollIntoView = vi.fn();
+Element.prototype.scrollIntoView = scrollIntoView;
+
 describe("CruiseDetailPage — day card", () => {
   afterEach(() => {
     setClockForTests(null);
@@ -97,6 +100,8 @@ describe("CruiseDetailPage — day card", () => {
 
     const card = await screen.findByRole("region", { name: /detail\.day 3/ });
     expect(card.textContent).toContain("dayCard.today");
+    // Opened by itself on "today": nothing scrolls, the focus stays put.
+    expect(scrollIntoView).not.toHaveBeenCalled();
     expect(card.textContent).toContain("Holmenkollen");
     expect(listForEntry).toHaveBeenCalledWith({ type: "cruise", id: "cruise-1" });
   });
@@ -117,5 +122,10 @@ describe("CruiseDetailPage — day card", () => {
     const card = await screen.findByRole("region", { name: /detail\.day 1/ });
     expect(within(card).queryByText("dayCard.today")).toBeNull();
     expect(kiel).toHaveAttribute("aria-pressed", "true");
+    // Review I5: on a long itinerary the card sits above the row that was
+    // tapped — it is brought into view and takes the focus.
+    const heading = within(card).getByRole("heading");
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest" });
+    expect(document.activeElement).toBe(heading);
   });
 });

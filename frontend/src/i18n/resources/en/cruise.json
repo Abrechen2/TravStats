@@ -430,7 +430,8 @@
     "noDocuments_other": "None with this date – the cruise's {{count}} documents are under “Documents” below.",
     "localNote": "Date and times are the port's (local time). Missing times stay open; the all-aboard time is never derived from the departure.",
     "pickHint": "Tap a day of the itinerary to open its day card.",
-    "openDay": "Open the day card:"
+    "openDay": "Open the day card:",
+    "documentsDated": "Dated this day:"
   },
   "unresolved": {
     "title_one": "One unresolved port",

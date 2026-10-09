@@ -71,12 +71,28 @@ export default function CruiseDetailPage(): JSX.Element {
   const addToast = useToastStore((s) => s.addToast);
   const { isFeatureVisible } = useBetaFeatures();
   const todayZone = useTodayZone();
-  /** The day whose card the reader opened; undefined = today's, if any (forgejo#223). */
-  const [pickedDay, setPickedDay] = useState<string | null | undefined>(undefined);
+  /**
+   * The day of the cruise whose card the reader opened; undefined = today's,
+   * if any (forgejo#223). Kept as the DAY, not the stop id: every save
+   * recreates the stops with new ids, and the open card closed after
+   * resolving a port (review M3).
+   */
+  const [pickedDay, setPickedDay] = useState<number | null | undefined>(undefined);
+  const [cardFocus, setCardFocus] = useState(0);
   const timeline = useMemo(() => (cruise ? buildEffectiveTimeline(cruise) : []), [cruise]);
   const todayKey = useMemo(() => todayEntryKey(timeline, todayZone), [timeline, todayZone]);
-  const dayKey = pickedDay === undefined ? todayKey : pickedDay;
-  const dayEntry = timeline.find((e) => e.key === dayKey && e.stop !== null) ?? null;
+  const todayDay = timeline.find((e) => e.key === todayKey)?.stop?.dayNumber ?? null;
+  const dayNumber = pickedDay === undefined ? todayDay : pickedDay;
+  const dayEntry = timeline.find((e) => e.stop !== null && e.stop.dayNumber === dayNumber) ?? null;
+  const pickDay = (key: string): void => {
+    const day = timeline.find((e) => e.key === key)?.stop?.dayNumber ?? null;
+    if (day === null || day === dayNumber) {
+      setPickedDay(null);
+      return;
+    }
+    setPickedDay(day);
+    setCardFocus((n) => n + 1);
+  };
   const dayDocuments = useCruiseDocuments(dayEntry && cruise ? cruise.id : null);
   /** Bumped when a recording changes the legs: the map reads its lines again. */
   const [geometryVersion, setGeometryVersion] = useState<number>(0);
@@ -268,6 +284,7 @@ export default function CruiseDetailPage(): JSX.Element {
                 isToday={dayEntry.key === todayKey}
                 documents={dayDocuments.state}
                 onRetryDocuments={dayDocuments.retry}
+                focusRequest={cardFocus}
               />
             )}
             {dayEntry === null && cruise.stops.length > 0 && (
@@ -277,7 +294,7 @@ export default function CruiseDetailPage(): JSX.Element {
               <CruiseItinerary
                 cruise={cruise}
                 selectedKey={dayEntry?.key ?? null}
-                onSelect={(key) => setPickedDay(dayKey === key ? null : key)}
+                onSelect={pickDay}
               />
             ) : (
               <p className="t-caption">{t("detail.stopsEmpty")}</p>
@@ -324,6 +341,7 @@ export default function CruiseDetailPage(): JSX.Element {
 
           <DocumentsSection
             entry={{ type: "cruise", id: cruise.id }}
+            onChanged={dayDocuments.retry}
             extract={cruiseExtractTarget(cruise, async (updates) => {
               await cruiseApi.update(cruise.id, updates);
               addToast("success", t("documents:extract.applied"));

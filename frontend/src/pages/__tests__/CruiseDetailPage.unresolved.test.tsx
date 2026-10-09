@@ -13,6 +13,10 @@ const getMock = vi.fn();
 const updateMock = vi.fn();
 
 vi.mock("../../components/documents/DocumentsSection", () => ({ default: () => null }));
+vi.mock("../../lib/api/documents", () => ({
+  documentsApi: { listForEntry: () => Promise.resolve([]) },
+  documentFileUrl: (d: { url: string }) => d.url,
+}));
 vi.mock("../../lib/api", () => ({
   cruiseApi: {
     get: (...a: unknown[]) => getMock(...a),
@@ -71,9 +75,10 @@ describe("CruiseDetailPage — unresolved ports", () => {
       ...base,
       stops: [stop("s2", 2, { unresolvedPortName: "Colon" })],
     });
+    // Every save recreates the stops: the same day comes back with a new id.
     updateMock.mockResolvedValue({
       ...base,
-      stops: [stop("s2", 2, { portId: 77, port: { id: 77, name: "Colón" } as Port })],
+      stops: [stop("s2-new", 2, { portId: 77, port: { id: 77, name: "Colón" } as Port })],
     });
     render(
       <MemoryRouter initialEntries={["/cruises/cruise-1"]}>
@@ -84,6 +89,12 @@ describe("CruiseDetailPage — unresolved ports", () => {
     );
 
     expect(await screen.findByText(/detail\.unresolvedKpi/)).toBeInTheDocument();
+    // Open day 2's card first; it must stay open through the save (review M3).
+    const row = screen
+      .getAllByRole("button", { pressed: false })
+      .find((r) => r.textContent?.includes("Colon"));
+    await userEvent.click(row!);
+    expect(await screen.findByRole("region", { name: /detail\.day 2/ })).toBeInTheDocument();
     const list = screen.getByRole("region", { name: "unresolved.title" });
     await within(list).findByRole("radio", { name: /Colón/ });
     await userEvent.click(within(list).getByRole("button", { name: "unresolved.confirm" }));
@@ -93,5 +104,6 @@ describe("CruiseDetailPage — unresolved ports", () => {
     );
     expect(screen.queryByText(/detail\.unresolvedKpi/)).toBeNull();
     expect(screen.getByRole("status")).toHaveTextContent("unresolved.done");
+    expect(screen.getByRole("region", { name: /detail\.day 2/ })).toBeInTheDocument();
   });
 });
