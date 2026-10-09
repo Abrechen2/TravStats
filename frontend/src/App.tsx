@@ -42,6 +42,7 @@ const LodgingListPage = lazy(() => import("./pages/LodgingListPage"));
 const PlacesListPage = lazy(() => import("./pages/PlacesListPage"));
 const PlaceDetailPage = lazy(() => import("./pages/PlaceDetailPage"));
 const PlaceListsPage = lazy(() => import("./pages/PlaceListsPage"));
+const PlacesNearbyPage = lazy(() => import("./pages/PlacesNearbyPage"));
 const PlaceListDetailPage = lazy(() => import("./pages/PlaceListDetailPage"));
 const CuratedChecklistPage = lazy(() => import("./pages/CuratedChecklistPage"));
 import { PlacesRouteGuard } from "./components/places/PlacesRouteGuard";
@@ -417,6 +418,19 @@ function AppContent() {
                   them higher regardless of order, but keeping them adjacent is
                   what makes the relationship readable — a place can never be
                   shadowed by being named "lists". */}
+              {/* Saved places around a lodging or a point (forgejo#233). */}
+              <Route
+                path="/places/nearby"
+                element={
+                  isAuthenticated ? (
+                    <PlacesRouteGuard>
+                      <PlacesNearbyPage />
+                    </PlacesRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
               <Route
                 path="/places/lists"
                 element={

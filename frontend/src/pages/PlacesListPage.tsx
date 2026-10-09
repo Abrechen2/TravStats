@@ -411,6 +411,14 @@ export default function PlacesListPage(): JSX.Element {
             {/* The only entry point to lists and checklists. Deliberately here
                 rather than in the nav: a list is a view OF the logbook, so it
                 hangs off the logbook rather than competing with it. */}
+            {/* The logbook seen from where one stands (forgejo#233). */}
+            <Link
+              to="/places/nearby"
+              className="rounded-lg px-4 py-2 text-sm pointer-coarse:min-h-(--ts-size-touch-min)"
+              style={{ border: "1px solid var(--color-border)", color: "var(--text-secondary)" }}
+            >
+              {t("places:nearby.title")}
+            </Link>
             <Link
               to="/places/lists"
               className="rounded-lg px-4 py-2 text-sm"

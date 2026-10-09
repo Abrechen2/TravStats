@@ -486,5 +486,52 @@
       "visited": "The place counts as visited, because one of the two was.",
       "wishlist": "The place stays on the wishlist."
     }
+  },
+  "nearby": {
+    "title": "Nearby",
+    "subtitle": "Your saved places around a lodging or a point — no location permission needed.",
+    "metres": "{{value}} m",
+    "kilometres": "{{value}} km",
+    "origin": {
+      "title": "Starting point",
+      "mode": {
+        "lodging": "Lodging",
+        "point": "Place or point",
+        "device": "My location"
+      },
+      "lodgingLabel": "Lodging",
+      "lodgingPlaceholder": "Choose a lodging …",
+      "lodgingsFailed": "Your lodgings could not be loaded.",
+      "noLodgings": "No lodging with a location. Choose a place or point.",
+      "unplacedLodgings_one": "One lodging without a location cannot be chosen.",
+      "unplacedLodgings_other": "{{count}} lodgings without a location cannot be chosen.",
+      "pointLabel": "Search a place or set a point",
+      "deviceHint": "Your location is asked for once, for this view only — it is stored nowhere. Without permission, a lodging or a point works just as well.",
+      "deviceUse": "Use my location once",
+      "deviceAsking": "Asking for your location …",
+      "device_denied": "Location not permitted. Choose a lodging or a point instead.",
+      "device_unavailable": "Your location is not available right now. Choose a lodging or a point instead.",
+      "deviceLabel": "your location",
+      "current": "Starting point: {{label}}"
+    },
+    "filter": {
+      "title": "Filters",
+      "radius": "Radius",
+      "states": "Show"
+    },
+    "state": {
+      "visited": "Visited",
+      "planned": "Planned",
+      "excluded": "Saved"
+    },
+    "results": {
+      "title": "Places",
+      "count_one": "1 place within {{radius}} of {{label}}",
+      "count_other": "{{count}} places within {{radius}} of {{label}}",
+      "noOrigin": "Choose a starting point — a lodging, a place or a point on the map.",
+      "none": "No saved places within {{radius}}.",
+      "noneFiltered": "No places match the filters.",
+      "wider": "Widen to {{radius}}"
+    }
   }
 }

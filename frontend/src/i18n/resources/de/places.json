@@ -486,5 +486,52 @@
       "visited": "Der Ort zählt als besucht, weil einer der beiden besucht war.",
       "wishlist": "Der Ort bleibt auf der Merkliste."
     }
+  },
+  "nearby": {
+    "title": "In der Nähe",
+    "subtitle": "Deine gespeicherten Orte rund um eine Unterkunft oder einen Punkt – ohne Standortfreigabe.",
+    "metres": "{{value}} m",
+    "kilometres": "{{value}} km",
+    "origin": {
+      "title": "Ausgangspunkt",
+      "mode": {
+        "lodging": "Unterkunft",
+        "point": "Ort oder Punkt",
+        "device": "Mein Standort"
+      },
+      "lodgingLabel": "Unterkunft",
+      "lodgingPlaceholder": "Unterkunft wählen …",
+      "lodgingsFailed": "Deine Unterkünfte konnten nicht geladen werden.",
+      "noLodgings": "Keine Unterkunft mit Standort. Wähle einen Ort oder Punkt.",
+      "unplacedLodgings_one": "Eine Unterkunft ohne Standort ist nicht wählbar.",
+      "unplacedLodgings_other": "{{count}} Unterkünfte ohne Standort sind nicht wählbar.",
+      "pointLabel": "Ort suchen oder Punkt setzen",
+      "deviceHint": "Dein Standort wird einmal abgefragt, nur für diese Ansicht – er wird nirgends gespeichert. Ohne Freigabe geht es über Unterkunft oder Punkt genauso.",
+      "deviceUse": "Standort einmal verwenden",
+      "deviceAsking": "Standort wird abgefragt …",
+      "device_denied": "Standort nicht freigegeben. Wähle stattdessen eine Unterkunft oder einen Punkt.",
+      "device_unavailable": "Der Standort ist gerade nicht verfügbar. Wähle stattdessen eine Unterkunft oder einen Punkt.",
+      "deviceLabel": "dein Standort",
+      "current": "Ausgangspunkt: {{label}}"
+    },
+    "filter": {
+      "title": "Filter",
+      "radius": "Umkreis",
+      "states": "Zeigen"
+    },
+    "state": {
+      "visited": "Besucht",
+      "planned": "Geplant",
+      "excluded": "Gemerkt"
+    },
+    "results": {
+      "title": "Orte",
+      "count_one": "1 Ort bis {{radius}} um {{label}}",
+      "count_other": "{{count}} Orte bis {{radius}} um {{label}}",
+      "noOrigin": "Wähle einen Ausgangspunkt – eine Unterkunft, einen Ort oder einen Punkt auf der Karte.",
+      "none": "Keine gespeicherten Orte bis {{radius}}.",
+      "noneFiltered": "Keine Orte passen zu den Filtern.",
+      "wider": "Umkreis auf {{radius}} erweitern"
+    }
   }
 }
