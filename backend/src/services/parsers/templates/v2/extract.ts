@@ -109,3 +109,46 @@ export function extract(
     return { values: {}, missing: [...(extraction.required ?? [])], timedOut: true };
   }
 }
+
+/**
+ * Runs any template-driven regex work under the same bound as `extract` (vm
+ * timeout). The caller caps its input. A timed-out run returns `fallback` and
+ * says so — used for the matcher's regex conditions, which are remote input
+ * like every extraction rule.
+ */
+export function boundedRun<T>(work: () => T, fallback: T): { result: T; timedOut: boolean } {
+  try {
+    const result = vm.runInNewContext("run()", { run: work }, { timeout: EXTRACT_TIMEOUT_MS }) as T;
+    return { result, timedOut: false };
+  } catch (err) {
+    if ((err as { code?: string }).code !== "ERR_SCRIPT_EXECUTION_TIMEOUT") throw err;
+    return { result: fallback, timedOut: true };
+  }
+}
+
+/**
+ * Runs a template's own regex tests (not only the extraction rules — also e.g.
+ * `match.notBookingIf`) in ONE run under the same bound as `extract`: these
+ * are remote input and must never run unbounded, and testing them together
+ * keeps a template with many patterns at one budget, not one per pattern.
+ * A timed-out run decides nothing (`matched: false`) and says so.
+ */
+export function boundedAny(
+  sources: readonly string[],
+  flags: string,
+  text: string
+): { matched: boolean; timedOut: boolean } {
+  if (sources.length === 0) return { matched: false, timedOut: false };
+  const input = text.length > MAX_INPUT_CHARS ? text.slice(0, MAX_INPUT_CHARS) : text;
+  try {
+    const matched = vm.runInNewContext(
+      "run()",
+      { run: () => sources.some((source) => new RegExp(source, flags).test(input)) },
+      { timeout: EXTRACT_TIMEOUT_MS }
+    ) as boolean;
+    return { matched, timedOut: false };
+  } catch (err) {
+    if ((err as { code?: string }).code !== "ERR_SCRIPT_EXECUTION_TIMEOUT") throw err;
+    return { matched: false, timedOut: true };
+  }
+}

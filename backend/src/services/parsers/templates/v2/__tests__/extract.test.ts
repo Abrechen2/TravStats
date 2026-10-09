@@ -1,6 +1,8 @@
 import { describe, it, expect } from "@jest/globals";
 import { extractionSchema, type Extraction } from "../extraction";
-import { extract, MAX_REPEAT_ITEMS, EXTRACT_TIMEOUT_MS } from "../extract";
+import { applyTemplate, isQuarantined } from "../runners";
+import type { TemplateEnvelope } from "../envelope";
+import { boundedAny, extract, MAX_REPEAT_ITEMS, EXTRACT_TIMEOUT_MS } from "../extract";
 
 /** Parses through the real schema, so every test reads a VALIDATED extraction. */
 function spec(raw: unknown): Extraction {
@@ -288,5 +290,40 @@ describe("v2 extraction — catastrophic backtracking", () => {
     expect(Date.now() - started).toBeLessThan(EXTRACT_TIMEOUT_MS + 1500);
     expect(result.timedOut).toBe(true);
     expect(result.missing).toEqual(["x"]);
+  });
+});
+
+describe("v2 extraction — every template regex is bounded", () => {
+  it("bounds a template regex tested outside extract (e.g. match.notBookingIf)", () => {
+    const started = Date.now();
+    // Many patterns share ONE budget, not one each.
+    const slow = Array.from({ length: 5 }, () => "^(a+)+$");
+    expect(boundedAny(slow, "im", `${"a".repeat(40)}!`)).toEqual({
+      matched: false,
+      timedOut: true,
+    });
+    expect(Date.now() - started).toBeLessThan(EXTRACT_TIMEOUT_MS + 1500);
+    expect(boundedAny(["storno", "storniert"], "im", "Ihre Buchung wurde storniert")).toEqual({
+      matched: true,
+      timedOut: false,
+    });
+  });
+});
+
+describe("v2 runner — a template that hits the bound is set aside", () => {
+  it("costs the bound once, then declines at once until its next version", () => {
+    const template = {
+      id: "lodging:slow",
+      version: "1.0.0",
+      domain: "lodging",
+      match: { markers: ["slowhotel"], anchors: ["buchung"], notBookingIf: ["^(a+)+$"] },
+      extraction: { fields: { name: { patterns: ["Hotel (\\w+)"] } }, required: ["name"] },
+    } as unknown as TemplateEnvelope;
+    const doc = `slowhotel buchung\n${"a".repeat(40)}!`;
+    applyTemplate(template, doc);
+    expect(isQuarantined(template)).toBe(true);
+    const started = Date.now();
+    expect(applyTemplate(template, doc)).toEqual({ matched: false, values: {}, missing: [] });
+    expect(Date.now() - started).toBeLessThan(200);
   });
 });

@@ -49,7 +49,7 @@ const groupRef = z.union([z.string().min(1), z.number().int().min(0)]);
 
 export const fieldRuleSchema = z
   .object({
-    patterns: z.array(z.string().min(1)).min(1).optional(),
+    patterns: z.array(z.string().min(1)).min(1).max(10).optional(),
     flags: FLAGS.optional(),
     value: z.string().optional(),
     /**
@@ -267,7 +267,10 @@ export const innerRepeatSchema = z.discriminatedUnion("mode", [
 const splitRepeatSchema = z
   .object({
     ...splitCommon,
-    repeats: z.record(z.string().min(1), innerRepeatSchema).optional(),
+    repeats: z
+      .record(z.string().min(1), innerRepeatSchema)
+      .refine((r) => Object.keys(r).length <= 20, "at most 20 repeats")
+      .optional(),
     emit: z.array(z.string().min(1)).min(1).optional(),
   })
   .strict();

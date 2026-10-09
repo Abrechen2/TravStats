@@ -1,7 +1,8 @@
 import { describe, it, expect } from "@jest/globals";
 import { applyTransforms } from "../transforms";
 import { validateEnvelope } from "../envelope";
-import { applyTemplate, envelopeMatches } from "../runners";
+import { applyTemplate, envelopeMatches, isQuarantined } from "../runners";
+import { EXTRACT_TIMEOUT_MS } from "../extract";
 import { validTemplate } from "./fixtures";
 
 /** The transforms and matcher conditions plan 2026-10-09 P4b added; invented inputs only. */
@@ -121,5 +122,17 @@ describe("v2 matcher conditions added in P4b", () => {
     const text = "Example Hotels\nReservierung Nr. ABC123";
     expect(applyTemplate(t, `${text}\nstorno`).nonBooking).toBeUndefined();
     expect(applyTemplate(t, `${text}\nSTORNO`).nonBooking).toBe(true);
+  });
+
+  it("runs the matcher's regexes under the extraction's bound and sets a slow template aside", () => {
+    const slow = {
+      ...base,
+      match: { markers: [], anchors: [], anyOf: ["^(a+)+$"] },
+    };
+    const started = Date.now();
+    expect(envelopeMatches(slow, `${"a".repeat(40)}!`)).toBe(false);
+    expect(Date.now() - started).toBeLessThan(EXTRACT_TIMEOUT_MS + 1500);
+    expect(isQuarantined(slow)).toBe(true);
+    expect(envelopeMatches(slow, "aaa")).toBe(false);
   });
 });

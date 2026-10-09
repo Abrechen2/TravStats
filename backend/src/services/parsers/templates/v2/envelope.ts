@@ -43,6 +43,9 @@ const ID_RE = new RegExp(`^(${TEMPLATE_DOMAINS.join("|")}):${SLUG}$`);
 
 const nonEmpty = z.string().trim().min(1);
 
+/** Per matcher list (`allOf`, `anyOf`, `noneOf`, `notBookingIf`): a bound on what one template may make us test. */
+export const MAX_MATCH_REGEXES = 10;
+
 export const versionSchema = z
   .string()
   .refine(isValidVersion, "must be a version like 2.7.0 or 2026.10.01");
@@ -103,16 +106,16 @@ export const templateEnvelopeSchema = z
         markers: z.array(nonEmpty),
         anchors: z.array(nonEmpty),
         /** Regexes that must ALL find something — a sentence substrings cannot pin. */
-        allOf: z.array(matchRegexSchema).optional(),
+        allOf: z.array(matchRegexSchema).max(MAX_MATCH_REGEXES).optional(),
         /** Regexes of which at least one must find something, alongside the anchors. */
-        anyOf: z.array(matchRegexSchema).optional(),
+        anyOf: z.array(matchRegexSchema).max(MAX_MATCH_REGEXES).optional(),
         /**
          * Regexes that make the template decline outright — a document of the
          * issuer this template is not for (a ticket where it reads
          * reservations). Unlike `notBookingIf` it says nothing about whether
          * the document is a booking.
          */
-        noneOf: z.array(matchRegexSchema).optional(),
+        noneOf: z.array(matchRegexSchema).max(MAX_MATCH_REGEXES).optional(),
         /**
          * Regexes (flags `im`) that mark a document from this issuer as NOT a
          * booking — a cancellation, a schedule change, a points receipt. They
@@ -121,7 +124,7 @@ export const templateEnvelopeSchema = z
          * the template answer "not a booking" (`nonBooking`), which a consumer
          * may treat as the end of the search.
          */
-        notBookingIf: z.array(matchRegexSchema).optional(),
+        notBookingIf: z.array(matchRegexSchema).max(MAX_MATCH_REGEXES).optional(),
       })
       .refine((m) => m.anchors.length + (m.anyOf?.length ?? 0) > 0, {
         message: "needs at least one anchor or anyOf regex",

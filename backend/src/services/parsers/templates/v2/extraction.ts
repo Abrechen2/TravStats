@@ -333,8 +333,14 @@ function checkRepeats(repeats: Record<string, InnerRepeatRule | RepeatRule>, pat
 
 export const extractionSchema = z
   .object({
-    fields: z.record(z.string().min(1), fieldRuleSchema).optional(),
-    repeats: z.record(z.string().min(1), repeatRuleSchema).optional(),
+    fields: z
+      .record(z.string().min(1), fieldRuleSchema)
+      .refine((r) => Object.keys(r).length <= 60, "at most 60 fields")
+      .optional(),
+    repeats: z
+      .record(z.string().min(1), repeatRuleSchema)
+      .refine((r) => Object.keys(r).length <= 20, "at most 20 repeats")
+      .optional(),
     required: z.array(z.string().min(1)).optional(),
     /**
      * Every label the sender puts on a line of its own — the stop list of a
