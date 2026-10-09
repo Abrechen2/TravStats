@@ -359,7 +359,7 @@ export function LocationInput({
       <button
         type="button"
         onClick={() => setModalOpen(true)}
-        className="text-xs hover:underline"
+        className="text-xs hover:underline pointer-coarse:min-h-(--ts-size-touch-min)"
         style={{ color: "var(--accent, #ffc107)" }}
       >
         {t("location:mapPick")}
