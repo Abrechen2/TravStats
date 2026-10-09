@@ -11,6 +11,65 @@ import { railStatsQuerySchema } from "../../../routes/rail/stats";
 
 const ranked = z.array(z.object({ label: z.string(), count: z.number().int() }));
 
+const punctualityRows = z.array(
+  z.object({
+    label: z.string(),
+    measured: z.number().int().describe("Rides with a recorded delay and both clocks"),
+    onTime: z.number().int().describe("Of those, arrived no later than scheduled"),
+    averageMinutes: z.number().describe("Mean delay over the sample, early arrivals negative"),
+  })
+);
+
+/** forgejo#261 — journeys, changes, connections, punctuality, nights on board. */
+const railJourneyFigures = z
+  .object({
+    journeys: z.object({
+      total: z
+        .number()
+        .int()
+        .describe(
+          "Rides read as journeys: legs of ONE booking that meet at a station within " +
+            "four hours are one journey; a leg back to a station already left is a return " +
+            "and starts a new one; rides not linked by a booking are never joined."
+        ),
+      withTransfer: z.number().int().describe("Journeys of two or more trains"),
+    }),
+    transfers: z.object({
+      count: z.number().int().describe("Changes between trains of one journey, each measured"),
+      averageMinutes: z.number().nullable(),
+      shortestMinutes: z.number().nullable(),
+      longestMinutes: z.number().nullable(),
+    }),
+    favouriteConnections: z
+      .array(
+        z.object({
+          from: z.string(),
+          to: z.string(),
+          rides: z.number().int(),
+          latestRideId: z.string().uuid(),
+        })
+      )
+      .describe("Connections (both directions together) taken at least twice, top five"),
+    newConnections: z.object({
+      inScope: z
+        .number()
+        .int()
+        .describe("Connections whose FIRST counted ride falls in the requested period"),
+      byYear: z
+        .array(z.object({ year: z.number().int(), count: z.number().int() }))
+        .describe("Lifetime: connections per year of their first ride"),
+    }),
+    punctuality: z.object({
+      byOperator: punctualityRows,
+      byConnection: punctualityRows,
+    }),
+    nightTrainNights: z.object({
+      nights: z.number().int().describe("Nights slept on board, on the stations' calendars"),
+      undated: z.number().int().describe("Night trains whose arrival day is unknown"),
+    }),
+  })
+  .describe("Journey-level figures over the same counted rides (forgejo#261)");
+
 const railStats = registry.register(
   "RailStats",
   z
@@ -74,6 +133,7 @@ const railStats = registry.register(
           operators: z.number().int().describe("Distinct operators, spelling folded"),
         })
         .describe("Rides of a kind, counted by the rule the rail badges use"),
+      connected: railJourneyFigures,
     })
     .openapi("RailStats")
 );

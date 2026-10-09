@@ -342,6 +342,36 @@ export interface RailStats {
   byYear: Array<{ year: number; journeys: number; km: number }>;
   /** Rides of a kind, counted by the rule the rail badges use. */
   rideKinds: { nightTrains: number; highSpeed: number; crossBorder: number; operators: number };
+  /**
+   * Journeys, changes, connections, punctuality and nights on board
+   * (forgejo#261). Optional only because a server older than this field
+   * answers without it; the section then draws none of these blocks.
+   */
+  connected?: RailJourneyFigures;
+}
+
+export interface RailPunctualityRow {
+  label: string;
+  /** Rides with a recorded delay and both clocks. */
+  measured: number;
+  /** Of those, arrived no later than scheduled. */
+  onTime: number;
+  averageMinutes: number;
+}
+
+/** Mirrors `RailJourneyFigures` in `backend/src/services/rail/railJourneyStats.ts`. */
+export interface RailJourneyFigures {
+  journeys: { total: number; withTransfer: number };
+  transfers: {
+    count: number;
+    averageMinutes: number | null;
+    shortestMinutes: number | null;
+    longestMinutes: number | null;
+  };
+  favouriteConnections: Array<{ from: string; to: string; rides: number; latestRideId: string }>;
+  newConnections: { inScope: number; byYear: Array<{ year: number; count: number }> };
+  punctuality: { byOperator: RailPunctualityRow[]; byConnection: RailPunctualityRow[] };
+  nightTrainNights: { nights: number; undated: number };
 }
 
 /** A train the user has ridden, as a ticket prints it ("ICE 578"). */

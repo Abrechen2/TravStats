@@ -238,7 +238,7 @@ export interface UserStats {
   hasLodgingBirthdayStay: boolean;
   /** True when a day-precise, visited stay spans 24 or 25 December. */
   hasLodgingXmasStay: boolean;
-  /** Trips carrying a flight or cruise, a stay, a journal entry AND a photo. */
+  /** Movement of any mode, a stay, a journal entry AND a photo (crossDomainAchievements.ts). */
   tripsFullyDocumented: number;
   // Cross-domain (lodging)
   /** True when a single trip links at least one flight AND at least one

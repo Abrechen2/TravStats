@@ -64,6 +64,8 @@ const linkFor = (entry: CountryTimelineEntry): string => {
       return `/roadtrips/${entry.roadtripId}`;
     case "rail":
       return `/rail/${entry.rideId}`;
+    case "bus":
+      return `/bus/${entry.rideId}`;
     case "track":
       // There is no record to open — a country-day is a reduction of a
       // location history, not something anybody typed. What CAN be reached is
@@ -101,7 +103,8 @@ const labelFor = (
       // where, the roadtrip is what the link opens.
       return `${entry.stationTitle} · ${entry.roadtripName}`;
     case "rail":
-      // The station in this country, then the ride the link opens.
+    case "bus":
+      // The station (or terminal) in this country, then the ride the link opens.
       return `${entry.stationName} · ${entry.rideLabel}`;
     case "track":
       // The two observable facts, and no verdict between them (§8.3): how many

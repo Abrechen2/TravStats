@@ -1365,11 +1365,59 @@
     "TOUR_ASCENT_1000": {
       "name": "Height collected",
       "description": "1,000 recorded metres of climb on completed tours"
+    },
+    "RAIL_STATION_REUNION": {
+      "name": "Station reunion",
+      "description": "Returned to a station after at least five years"
+    },
+    "RAIL_TRANSFERS_5": {
+      "name": "Smooth connections",
+      "description": "Five fully documented rail journeys with a linked change of trains"
+    },
+    "RAIL_NEW_CONNECTIONS_10": {
+      "name": "New rails",
+      "description": "Ten connections ridden for the first time in one year"
+    },
+    "RENTAL_FIRST": {
+      "name": "First keys",
+      "description": "Completed your first rental"
+    },
+    "RENTAL_ONE_WAY": {
+      "name": "Dropped off elsewhere",
+      "description": "Returned a rental car at a different station than you picked it up"
+    },
+    "RENTAL_ODOMETER_5": {
+      "name": "Logbook",
+      "description": "Five completed rentals with both the start and end odometer reading"
+    },
+    "BUS_FIRST": {
+      "name": "Front row in the logbook",
+      "description": "Completed your first bus ride"
+    },
+    "BUS_NIGHT": {
+      "name": "On the road overnight",
+      "description": "A bus ride through the night, shown by its departure and arrival times"
+    },
+    "BUS_TERMINALS_10": {
+      "name": "New stops",
+      "description": "Visited ten different bus terminals"
+    },
+    "TRIP_THREE_MODES": {
+      "name": "Three ways to travel",
+      "description": "A completed trip with three different modes of transport"
+    },
+    "TRIP_ARRIVE_DISCOVER": {
+      "name": "Arrive and discover",
+      "description": "Arrived by train or bus, stayed the night and visited a place – on the same trip"
     }
   },
   "header": {
     "meta": "{{unlocked}} of {{total}} unlocked · {{points}} points",
     "retired_one": "{{count}} retired achievement counts toward points only",
     "retired_other": "{{count}} retired achievements count toward points only"
+  },
+  "planning": {
+    "badge": "Planning",
+    "note": "Counts booked trips not yet taken — not trips that already happened."
   }
 }

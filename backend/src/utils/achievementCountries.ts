@@ -49,6 +49,7 @@ export async function achievementCountries(
   const visible = new Set(await loadVisibleDomains(userId));
   const passport = await loadPassport(userId, undefined, {
     rail: visible.has("rail"),
+    bus: visible.has("bus"),
     roadtrip: visible.has("roadtrip"),
     place: false,
     track: false,

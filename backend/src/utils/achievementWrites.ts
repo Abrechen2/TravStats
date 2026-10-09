@@ -31,7 +31,7 @@ import {
   EMPTY_INSIGHT_STATS,
   type InsightAchievementStats,
 } from "./insightAchievements";
-import { SKIP } from "./badgeSource";
+import { SKIP, type BadgeVerdict } from "./badgeSource";
 import type { Achievement, UserAchievement } from "../prisma";
 import logger from "./logger";
 import { checkAchievement } from "./achievementChecks";
@@ -39,6 +39,28 @@ import { isAchievementHeld } from "./achievementHeld";
 import type { FlightData, UserStats } from "./achievementStats";
 
 export type UserAchievementWithRelation = UserAchievement & { achievement: Achievement };
+
+/**
+ * One domain module's check: the badge's verdict when the rule is that
+ * module's (`SKIP` when its source failed this run — `badgeSource.ts`), else
+ * `null` so the next module is asked. The rental, bus and cross-domain badges
+ * (forgejo#262, #263, #265) arrive this way, so a new domain adds a list
+ * entry rather than another positional parameter.
+ */
+export type DomainAchievementCheck = (
+  achievement: Pick<Achievement, "requirementType" | "requirement">
+) => BadgeVerdict | null;
+
+function firstDomainCheck(
+  checks: readonly DomainAchievementCheck[],
+  achievement: Achievement
+): BadgeVerdict | null {
+  for (const check of checks) {
+    const result = check(achievement);
+    if (result) return result;
+  }
+  return null;
+}
 
 /**
  * What a run will actually write, decided before a transaction is opened.
@@ -115,7 +137,9 @@ export function planAchievementWrites(
    * The statistics-expansion measures (forgejo#256/#257 flights and cruises,
    * #258/#259/#260/#264 lodging, places, roadtrips, tours) — likewise.
    */
-  insightStats: InsightAchievementStats = EMPTY_INSIGHT_STATS
+  insightStats: InsightAchievementStats = EMPTY_INSIGHT_STATS,
+  /** Every further domain module's check, asked in order (forgejo#262/#263/#265). */
+  domainChecks: readonly DomainAchievementCheck[] = []
 ): AchievementWritePlan {
   const writes: PlannedWrite[] = [];
   const belowRequirement: string[] = [];
@@ -147,6 +171,7 @@ export function planAchievementWrites(
       checkRoadtripAchievement(achievement, roadtripStats) ??
       checkRailAchievement(achievement, railStats) ??
       checkInsightAchievement(achievement, insightStats) ??
+      firstDomainCheck(domainChecks, achievement) ??
       checkAchievement(achievement, stats, flights);
     // A source that failed this run says nothing about the measure: the row
     // keeps its progress and its badge until a run that CAN read it

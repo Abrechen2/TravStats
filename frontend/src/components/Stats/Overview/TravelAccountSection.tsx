@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { statsApi } from "../../../lib/api/stats";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useRailVisible } from "../../../hooks/useRailVisible";
+import { useBusVisible } from "../../../hooks/useBusVisible";
 import { logger } from "../../../lib/logger";
 import type { TravelAccountResponse, TravelAccountYear } from "../../../types/travelAccount";
 import StatCard from "../StatCard";
@@ -18,6 +19,8 @@ const BUCKETS = [
   { key: "hotelNights", colour: "var(--domain-lodging, #d4778f)" },
   { key: "seaNights", colour: "var(--domain-cruise, #6fa0d6)" },
   { key: "railNights", colour: "var(--domain-rail, #5fb39b)" },
+  // forgejo#263 — a night bus, after the night train in the server's precedence.
+  { key: "busNights", colour: "var(--ts-domain-bus)" },
   { key: "airNights", colour: "var(--domain-flight, #f0a947)" },
   { key: "unassignedNights", colour: "var(--color-border)" },
 ] as const;
@@ -41,7 +44,19 @@ export default function TravelAccountSection(): JSX.Element | null {
   // domain's nights out (forgejo#274 review I2); the legend and the help line
   // must not name it either.
   const railVisible = useRailVisible();
-  const buckets = railVisible ? BUCKETS : BUCKETS.filter((b) => b.key !== "railNights");
+  // Bus likewise (forgejo#263): its own beta switch, its own bucket.
+  const busVisible = useBusVisible();
+  const buckets = BUCKETS.filter(
+    (b) => (b.key !== "railNights" || railVisible) && (b.key !== "busNights" || busVisible)
+  );
+  const helpKey =
+    railVisible && busVisible
+      ? "stats:travelAccount.helpWithRailAndBus"
+      : busVisible
+        ? "stats:travelAccount.helpWithBus"
+        : railVisible
+          ? "stats:travelAccount.helpWithRail"
+          : "stats:travelAccount.help";
   const [data, setData] = useState<TravelAccountResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -92,7 +107,7 @@ export default function TravelAccountSection(): JSX.Element | null {
           ` · ${t("stats:travelAccount.undatedNightTrains", { count: account.undatedNightTrains })}`}
       </p>
       <p className="-mt-4 mb-6 text-xs" style={{ color: "var(--text-muted)" }}>
-        {t(railVisible ? "stats:travelAccount.helpWithRail" : "stats:travelAccount.help")}
+        {t(helpKey)}
       </p>
 
       <div className="flex flex-col gap-3">
@@ -204,7 +219,8 @@ function YearBar({
   buckets: readonly (typeof BUCKETS)[number][];
   label: (key: BucketKey) => string;
 }): JSX.Element {
-  const awayNights = year.hotelNights + year.seaNights + year.railNights + year.airNights;
+  const awayNights =
+    year.hotelNights + year.seaNights + year.railNights + (year.busNights ?? 0) + year.airNights;
   return (
     <div className="flex items-center gap-3">
       <span
@@ -218,7 +234,8 @@ function YearBar({
         style={{ background: "var(--color-border)" }}
       >
         {buckets.map((bucket) => {
-          const nights = year[bucket.key];
+          // A server older than the bus bucket sends no `busNights`.
+          const nights = year[bucket.key] ?? 0;
           if (nights === 0) return null;
           return (
             <div

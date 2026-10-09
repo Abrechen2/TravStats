@@ -23,6 +23,8 @@ import { resolveStayTiming } from "../../shared/lodgingTiming";
 import { isCountableFlight } from "../../shared/flightCounting";
 import { isCountableRail } from "../../shared/railCounting";
 import { nightTrainNights, type NightTrainFacts } from "../../shared/railRideKinds";
+import { isCountableBus } from "../../shared/busCounting";
+import { nightBusNights, type BusNightFacts } from "../../shared/busRideKinds";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -76,6 +78,17 @@ export interface AccountFlight {
  * night train claims one (`railCounting` + `railRideKinds.nightTrainNights`).
  */
 export interface AccountRail extends NightTrainFacts {
+  id: string;
+  status: string;
+}
+
+/**
+ * A bus ride, for the nights slept on a night bus (forgejo#263). Only a
+ * completed ride whose clocks say it ran overnight claims one
+ * (`busCounting` + `busRideKinds.nightBusNights`) — the rail night rule's
+ * overnight branch; a date-only ride claims none.
+ */
+export interface AccountBus extends BusNightFacts {
   id: string;
   status: string;
 }
@@ -142,11 +155,13 @@ export interface TravelAccountInput {
   freeNights?: AccountFreeNight[];
   /** Optional for the same reason; the night trains among them claim nights. */
   rail?: AccountRail[];
+  /** Optional likewise; the night buses among them claim nights (forgejo#263). */
+  bus?: AccountBus[];
   now: Date;
 }
 
 /** Which bucket the precedence rule awarded a night to. */
-export type NightSource = "hotel" | "sea" | "rail" | "air";
+export type NightSource = "hotel" | "sea" | "rail" | "bus" | "air";
 
 /**
  * THE precedence, in one place: a night more than one record claims goes to
@@ -157,9 +172,11 @@ export type NightSource = "hotel" | "sea" | "rail" | "air";
  * beats a sleeper berth for the same reason — the night train ran, the bed is
  * the more specific record of where the night ended. Any bed beats a seat. It
  * is a convention, which is why `contestedNights` says how often it was used.
- * EXTENSION POINT — a night bus (dev/bus-domain) belongs beside `rail`.
+ * A night bus (forgejo#263) sits beside `rail`, after it: a berth beats a
+ * coach seat, and both beat an aircraft seat only because a night flight
+ * claiming the same night is the rarer record.
  */
-export const NIGHT_PRECEDENCE: readonly NightSource[] = ["sea", "hotel", "rail", "air"];
+export const NIGHT_PRECEDENCE: readonly NightSource[] = ["sea", "hotel", "rail", "bus", "air"];
 
 export interface AttributedNight {
   /** UTC midnight of the night, in milliseconds. */
@@ -193,12 +210,13 @@ export interface TravelNightAttribution {
  * impossible.
  */
 export function attributeTravelNights(input: TravelAccountInput): TravelNightAttribution {
-  const { stays, cruises, flights, freeNights = [], rail = [], now } = input;
+  const { stays, cruises, flights, freeNights = [], rail = [], bus = [], now } = input;
   const today = dayKey(now);
 
   const hotel = new Map<number, string[]>();
   const sea = new Map<number, string[]>();
   const train = new Map<number, string[]>();
+  const coach = new Map<number, string[]>();
   const air = new Map<number, string[]>();
   let undatedStays = 0;
   let undatedNightTrains = 0;
@@ -277,10 +295,23 @@ export function attributeTravelNights(input: TravelAccountInput): TravelNightAtt
     }
   }
 
+  for (const ride of bus) {
+    if (!isCountableBus(ride)) continue;
+    for (const key of nightBusNights(ride)) {
+      const day = Date.parse(`${key}T00:00:00Z`);
+      // A night that is not over yet is not a night spent.
+      if (day >= today) continue;
+      const claimants = coach.get(day);
+      if (claimants) claimants.push(ride.id);
+      else coach.set(day, [ride.id]);
+    }
+  }
+
   const bySource: Record<NightSource, Map<number, string[]>> = {
     sea,
     hotel,
     rail: train,
+    bus: coach,
     air,
   };
   const claimedDays = [
@@ -316,11 +347,12 @@ export function buildTravelAccount(input: TravelAccountInput): TravelAccount {
     hotelNights: 0,
     seaNights: 0,
     railNights: 0,
+    busNights: 0,
     airNights: 0,
     unassignedNights: 0,
   });
 
-  type Bucket = "hotelNights" | "seaNights" | "railNights" | "airNights";
+  type Bucket = "hotelNights" | "seaNights" | "railNights" | "busNights" | "airNights";
   const bump = (ms: number, field: Bucket): void => {
     const year = String(new Date(ms).getUTCFullYear());
     const row = byYear.get(year) ?? emptyYear(year);
@@ -332,6 +364,7 @@ export function buildTravelAccount(input: TravelAccountInput): TravelAccount {
     hotel: "hotelNights",
     sea: "seaNights",
     rail: "railNights",
+    bus: "busNights",
     air: "airNights",
   };
   for (const night of nights) {
@@ -357,7 +390,7 @@ export function buildTravelAccount(input: TravelAccountInput): TravelAccount {
       row.days = y === nowYear ? Math.floor((today - Date.UTC(y, 0, 1)) / DAY_MS) : daysInYear(y);
       row.unassignedNights = Math.max(
         0,
-        row.days - row.hotelNights - row.seaNights - row.railNights - row.airNights
+        row.days - row.hotelNights - row.seaNights - row.railNights - row.busNights - row.airNights
       );
       byYear.set(year, row);
     }

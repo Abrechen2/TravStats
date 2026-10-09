@@ -34,6 +34,7 @@ import statsFlightInsightsRoutes from "./stats/flightInsights";
 import statsCruiseInsightsRoutes from "./stats/cruiseInsights";
 import statsNetworkRouteRoutes from "./stats/networkRoute";
 import statsInsightRoutes from "./stats/insights";
+import statsDomainRecordsRoutes from "./stats/domainRecords";
 import airportRoutes from "./airports";
 import airlineLogoRoutes from "./airlineLogos";
 import countryFlagRoutes from "./countryFlags";
@@ -94,6 +95,7 @@ import railConnectionsRouter from "./rail/connections";
 import railRoadtripConversionRouter from "./rail/roadtripConversion";
 import busRouter from "./bus";
 import busEntrySuggestionsRouter from "./bus/entrySuggestions";
+import busStatsRouter from "./bus/stats";
 import rentalRouter from "./rental";
 import rentalStationsRouter from "./rental/stations";
 import rentalImportRouter from "./rental/import";
@@ -226,6 +228,12 @@ export const apiMounts: ApiMount[] = [
   // The statistics expansion (forgejo#258/#259/#260/#264), likewise beside
   // the frozen stats router rather than in it.
   { id: "stats.insights", base: "/api/v1/stats/insights", router: statsInsightRoutes },
+  // forgejo#265 — records beyond flights; the same reason as the route above.
+  {
+    id: "stats.domainRecords",
+    base: "/api/v1/stats/domain-records",
+    router: statsDomainRecordsRoutes,
+  },
   { id: "stats", base: "/api/v1/stats", router: statsRoutes },
   { id: "airports", base: "/api/v1/airports", router: airportRoutes },
   { id: "airlineLogos", base: "/api/v1/airline-logos", router: airlineLogoRoutes },
@@ -353,6 +361,7 @@ export const apiMounts: ApiMount[] = [
     base: "/api/v1/bus/entry-suggestions",
     router: busEntrySuggestionsRouter,
   },
+  { id: "bus.stats", base: "/api/v1/bus/stats", router: busStatsRouter },
   { id: "bus", base: "/api/v1/bus", router: busRouter },
   // Car rentals (spec 2026-10-01-rental-domain-design). Behind the beta switch in
   // the UI only. Sub-routers mount FIRST: '/:id' would answer them as a 404.

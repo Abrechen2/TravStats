@@ -2,6 +2,8 @@ import { prisma } from "../../db";
 import type { EvidenceEntry } from "../../schemas/evidence";
 import type { DomainKey } from "../../shared/domains";
 import { countableFlightWhere } from "../../shared/flightCounting";
+import { busCountries, busDayKeys, busYear, countableBusWhere } from "../../shared/busCounting";
+import { busEvidenceEntry } from "./entryMappersRentalBus";
 import { isCountableCruiseStatus } from "../../shared/cruiseCounting";
 import { classifyLodging, classifyStay } from "../../shared/lodgingCounting";
 import { classifyPlace, classifyVisit } from "../../shared/placeCounting";
@@ -547,13 +549,40 @@ async function loadRental(_userId: string): Promise<CrossDomainPopulation> {
 }
 
 /**
- * Bus rides join the cross-domain figures in B2 (spec 2026-10-07 §6, D4), the
- * way rail's loader does. Until then an empty population, not an omitted key,
- * so a domain filter that names bus is answered rather than refused.
+ * Bus rides (forgejo#265, spec 2026-10-07 §6 D4), the way `loadRail` reads
+ * trains: a completed ride is one event, filed under the year it left on its
+ * departure terminal's calendar, active on the day it left and — overnight —
+ * the day it arrived, each on its own terminal's clock; it proves both
+ * terminals' countries (a coach across a border is the same evidence a train
+ * is). The fold unions countries and days across domains, so a ride on the
+ * day of a flight in the same country adds no second day or country. Every
+ * rule is `shared/busCounting.ts`, mirrored by the overview's `busStatsAdapter`.
  */
-// B2 (spec 2026-10-07 §6): replace with the rail-shaped loader.
-async function loadBus(_userId: string): Promise<CrossDomainPopulation> {
-  return { events: [], countryRows: [] };
+async function loadBus(userId: string): Promise<CrossDomainPopulation> {
+  const rows = await prisma.busJourney.findMany({
+    where: { userId, ...countableBusWhere() },
+    select: {
+      id: true,
+      operator: true,
+      depStationName: true,
+      arrStationName: true,
+      depCountry: true,
+      arrCountry: true,
+      depTimezone: true,
+      arrTimezone: true,
+      departureTime: true,
+      arrivalTime: true,
+    },
+  });
+  const events: CrossDomainEventRow[] = [];
+  const countryRows: CrossDomainCountryRow[] = [];
+  for (const row of rows) {
+    const entry = busEvidenceEntry(row, {});
+    const year = busYear(row);
+    events.push({ domain: "bus", entry, year, dayKeys: busDayKeys(row) });
+    countryRows.push({ domain: "bus", entry, countries: busCountries(row), years: [year] });
+  }
+  return { events, countryRows };
 }
 
 const LOADERS: Record<DomainKey, (userId: string) => Promise<CrossDomainPopulation>> = {

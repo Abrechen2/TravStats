@@ -58,4 +58,21 @@ export interface Wrapped {
   topAirline: WrappedAirline | null;
   /** The year's most-flown PAIR, codes sorted — not a direction. */
   topRoute: WrappedRoute | null;
+  /**
+   * forgejo#265 — one chapter per further domain the user sees; null for a
+   * hidden one. Optional only because a server older than the field answers
+   * without it; the page then draws no chapter.
+   */
+  chapters?: WrappedChapters;
+}
+
+/** Each chapter is its own figure — never summed across domains. */
+export interface WrappedChapters {
+  lodging: { stays: number; nights: number; nightsUnknown: number } | null;
+  places: { visits: number; places: number } | null;
+  roadtrips: { roadtrips: number } | null;
+  tours: { tours: number } | null;
+  rentals: { rentals: number; days: number } | null;
+  /** `km` null when no ride has a distance — unknown, never 0. */
+  bus: { rides: number; km: number | null; unmeasured?: number; nights: number } | null;
 }

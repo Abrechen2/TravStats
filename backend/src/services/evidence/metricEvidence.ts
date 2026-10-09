@@ -56,10 +56,24 @@ import {
   resolveRoundTripFlightCount,
 } from "./metricEvidenceFlightUnique";
 import {
+  resolveRentalCount,
+  resolveRentalDaysTotal,
+  resolveRentalOneWayCount,
+  resolveRentalOdometerDocumentedCount,
+} from "./metricEvidenceRental";
+import {
+  resolveBusRideCount,
+  resolveBusDistanceKmTotal,
+  resolveBusCountriesCount,
+  resolveBusNightRideCount,
+  resolveBusTerminalsCount,
+} from "./metricEvidenceBus";
+import {
   resolveTravelAccountHotelNights,
   resolveTravelAccountSeaNights,
   resolveTravelAccountAirNights,
   resolveTravelAccountRailNights,
+  resolveTravelAccountBusNights,
   resolveTravelAccountUnassignedNights,
   resolveTravelAccountContestedNights,
   resolveTravelAccountFullyCoveredTripCount,
@@ -112,6 +126,10 @@ import {
   resolveRailNightTrainCount,
   resolveRailHighSpeedRideCount,
   resolveRailCrossBorderRideCount,
+  resolveRailJourneyCount,
+  resolveRailDocumentedTransferJourneyCount,
+  resolveRailNightTrainNights,
+  resolveRailNewConnectionsCount,
 } from "./metricEvidenceRail";
 import {
   resolvePassportCountryCount,
@@ -211,6 +229,7 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   travelAccountSeaNights: resolveTravelAccountSeaNights,
   travelAccountAirNights: resolveTravelAccountAirNights,
   travelAccountRailNights: resolveTravelAccountRailNights,
+  travelAccountBusNights: resolveTravelAccountBusNights,
   travelAccountUnassignedNights: resolveTravelAccountUnassignedNights,
   travelAccountContestedNights: resolveTravelAccountContestedNights,
   travelAccountFullyCoveredTripCount: resolveTravelAccountFullyCoveredTripCount,
@@ -227,6 +246,19 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   railNightTrainCount: resolveRailNightTrainCount,
   railHighSpeedRideCount: resolveRailHighSpeedRideCount,
   railCrossBorderRideCount: resolveRailCrossBorderRideCount,
+  railJourneyCount: resolveRailJourneyCount,
+  railDocumentedTransferJourneyCount: resolveRailDocumentedTransferJourneyCount,
+  railNightTrainNights: resolveRailNightTrainNights,
+  railNewConnectionsCount: resolveRailNewConnectionsCount,
+  rentalCount: resolveRentalCount,
+  rentalDaysTotal: resolveRentalDaysTotal,
+  rentalOneWayCount: resolveRentalOneWayCount,
+  rentalOdometerDocumentedCount: resolveRentalOdometerDocumentedCount,
+  busRideCount: resolveBusRideCount,
+  busDistanceKmTotal: resolveBusDistanceKmTotal,
+  busCountriesCount: resolveBusCountriesCount,
+  busNightRideCount: resolveBusNightRideCount,
+  busTerminalsCount: resolveBusTerminalsCount,
   passportCountryCount: resolvePassportCountryCount,
   passportContinentCount: resolvePassportContinentCount,
   passportAirportCount: resolvePassportAirportCount,

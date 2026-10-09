@@ -11,6 +11,7 @@ import {
   stayEvidenceEntry,
   tripEvidenceEntry,
 } from "./entryMappersDomains";
+import { busEvidenceEntry } from "./entryMappersRentalBus";
 // The endpoint's own loader behind the endpoint's own gate: evidence names
 // exactly the rows the tile counted, hidden domains out of both (review I1).
 import { loadVisibleTravelAccountData, type TravelAccountData } from "../stats/travelAccountData";
@@ -141,6 +142,14 @@ function nightEntriesFor(
         })
       );
   }
+  if (source === "bus") {
+    return data.bus
+      .filter((ride) => contributionById.has(ride.id))
+      .map((ride) => ({
+        ...busEvidenceEntry(ride, { contribution: contributionById.get(ride.id)! }),
+        subtitle: subtitleOf(ride.id),
+      }));
+  }
   if (source === "sea") {
     return data.cruises
       .filter((cruise) => contributionById.has(cruise.id))
@@ -209,6 +218,15 @@ export function resolveTravelAccountRailNights(
   return resolveNightBucket(userId, "travelAccountRailNights", "rail", scope, page);
 }
 
+/** forgejo#263 — nights on a night bus, by the account's own precedence. */
+export function resolveTravelAccountBusNights(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  return resolveNightBucket(userId, "travelAccountBusNights", "bus", scope, page);
+}
+
 export function resolveTravelAccountAirNights(
   userId: string,
   scope: EvidenceScope,
@@ -275,6 +293,7 @@ const CONTESTED_WITH_KEY: Record<string, string> = {
   "air,sea": "evidence.travelAccount.contestedWith.seaAir",
   "hotel,sea": "evidence.travelAccount.contestedWith.seaHotel",
   rail: "evidence.travelAccount.contestedWith.rail",
+  bus: "evidence.travelAccount.contestedWith.bus",
 };
 const CONTESTED_WITH_SEVERAL = "evidence.travelAccount.contestedWith.several";
 

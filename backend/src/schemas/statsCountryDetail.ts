@@ -26,6 +26,7 @@ export const passportEvidenceSchema = z.enum([
   "port",
   "place",
   "rail",
+  "bus",
   "roadtrip",
   "track",
 ]);
@@ -100,6 +101,20 @@ const timelineRailSchema = z
       "linked to the ride.",
   });
 
+const timelineBusSchema = z
+  .object({
+    kind: z.literal("bus"),
+    date: z.string().nullable(),
+    rideId: z.string(),
+    rideLabel: z.string(),
+    stationName: z.string().openapi({ description: "The ride's terminal in this country." }),
+  })
+  .openapi({
+    description:
+      "A completed bus ride with a terminal in this country — one entry per ride, " +
+      "linked to the ride (forgejo#265). Read only while the bus domain is visible.",
+  });
+
 const timelineTrackSchema = z
   .object({
     kind: z.literal("track"),
@@ -127,6 +142,7 @@ export const countryTimelineEntrySchema = z.discriminatedUnion("kind", [
   timelineLodgingSchema,
   timelineRoadtripSchema,
   timelineRailSchema,
+  timelineBusSchema,
   timelineTrackSchema,
 ]);
 
@@ -155,6 +171,9 @@ export const countryDetailSchema = z.object({
   }),
   railRides: z.number().int().openapi({
     description: "Completed train rides with a station in this country.",
+  }),
+  busRides: z.number().int().openapi({
+    description: "Completed bus rides with a terminal in this country (0 while bus is hidden).",
   }),
   trackDays: z
     .number()

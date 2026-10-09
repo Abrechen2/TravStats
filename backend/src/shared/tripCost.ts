@@ -13,7 +13,7 @@
  * lost "most expensive" to a 120 EUR one. Both now read the items below.
  *
  * THE RULE, per entry on the trip:
- *  - A segment (flight, cruise, stay, train ride) sold on a booking with a
+ *  - A segment (flight, cruise, stay, train or bus ride) sold on a booking with a
  *    RECORDED price contributes that booking price — once per trip, however
  *    many segments share it, and all-in: the segments' own columns are not
  *    added on top. A booking recorded at 0 is free and does NOT fall back to
@@ -123,6 +123,11 @@ export interface TripCostInput {
   })[];
   /** Train rides (forgejo#275): their own price, or their shared booking's — a connection is one booking. */
   rail: (BookedSegment & StoredPrice)[];
+  /**
+   * Bus rides (forgejo#263), by the same rule as train rides. Optional so a
+   * caller written before bus keeps its exact answer.
+   */
+  bus?: (BookedSegment & StoredPrice)[];
   /** Rentals on the trip, and those driven on its roadtrips with no trip of their own. */
   rentals: (StoredPrice & {
     status: string;
@@ -132,14 +137,10 @@ export interface TripCostInput {
     finalFxBaseCurrency: string | null;
   })[];
   expenses: { amount: number; currency: string }[];
-  // EXTENSION POINT — bus (dev/bus-domain, not on main): a bus ride is a
-  // `BookedSegment & StoredPrice` like a train ride. Add `bus` here, walk it
-  // through `segmentCostShare` with the same `counted` set below, and select
-  // it in `services/trip/tripCostLoad.ts`. Nothing else needs to change.
 }
 
 export type TripCostSource =
-  "booking" | "flight" | "cruise" | "stay" | "rail" | "rental" | "expense";
+  "booking" | "flight" | "cruise" | "stay" | "rail" | "bus" | "rental" | "expense";
 
 /** One recorded amount on a trip. `amount` is never null; 0 is a recorded free price. */
 export interface TripCostItem {
@@ -209,6 +210,10 @@ export function tripCostItems(trip: TripCostInput): TripCostItems {
   }
   for (const ride of live(trip.rail)) {
     take("rail", segmentCostShare({ ...ride, own: ownPrice(ride) }, counted));
+  }
+  // The same `counted` set: one booking may sell a train and a coach.
+  for (const ride of live(trip.bus ?? [])) {
+    take("bus", segmentCostShare({ ...ride, own: ownPrice(ride) }, counted));
   }
   for (const rental of trip.rentals) {
     const cost = rentalCost(rental);

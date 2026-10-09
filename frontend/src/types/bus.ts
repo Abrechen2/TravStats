@@ -115,3 +115,47 @@ export const NO_BUS_SUGGESTIONS: BusEntrySuggestions = {
   fareClasses: [],
   terminals: [],
 };
+
+export interface BusRanked {
+  label: string;
+  count: number;
+}
+
+/** `GET /bus/stats` — mirrors `BusStats` in `backend/src/services/bus/busStats.ts` (forgejo#263). */
+export interface BusStats {
+  rides: number;
+  distance: {
+    totalKm: number;
+    straightLineKm: number;
+    routeKm: number;
+    ticketKm: number;
+    unmeasuredRides: number;
+  };
+  hoursOnBoard: { hours: number; measuredRides: number };
+  countries: string[];
+  operators: BusRanked[];
+  /** intercity | shuttle | other | unknown. */
+  rideKinds: BusRanked[];
+  terminals: BusRanked[];
+  terminalsVisited: number;
+  longest: {
+    id: string;
+    depStationName: string;
+    arrStationName: string;
+    distanceKm: number;
+    distanceSource: string | null;
+  } | null;
+  delays: {
+    recordedRides: number;
+    buckets: Array<{ upToMinutes: number | null; count: number }>;
+    averageMinutes: number | null;
+  };
+  /** `km` null when no ride of the year has a distance — unknown, never 0. */
+  byYear: Array<{ year: number; rides: number; km: number | null; unmeasured?: number }>;
+  journeys: { total: number; withTransfer: number };
+  transfers: { count: number; averageMinutes: number | null };
+  favouriteConnections: Array<{ from: string; to: string; rides: number; latestRideId: string }>;
+  newDestinations: { inScope: number; byYear: Array<{ year: number; count: number }> };
+  longestReturn: { days: number; terminal: string } | null;
+  night: { rides: number; nights: number };
+}

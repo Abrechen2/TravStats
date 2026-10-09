@@ -12,6 +12,55 @@ import { z } from "./zod";
  * a ranking out of a tie.
  */
 
+/** A chapter of a domain the user does not see is null — never a chapter of zeros. */
+const wrappedChaptersSchema = z
+  .object({
+    lodging: z
+      .object({
+        stays: z.number().int().describe("Stays that are over, filed under the check-in's year"),
+        nights: z.number().int().describe("Their known nights"),
+        nightsUnknown: z.number().int().describe("Stays whose record does not say how many nights"),
+      })
+      .nullable(),
+    places: z
+      .object({
+        visits: z.number().int().describe("Visits that happened, on the place's calendar"),
+        places: z.number().int().describe("Distinct places among them"),
+      })
+      .nullable(),
+    roadtrips: z
+      .object({ roadtrips: z.number().int().describe("Roadtrips that started in the year") })
+      .nullable(),
+    tours: z
+      .object({ tours: z.number().int().describe("Day tours dated in the year and past") })
+      .nullable(),
+    rentals: z
+      .object({
+        rentals: z.number().int().describe("Completed rentals, by the pickup's year"),
+        days: z
+          .number()
+          .int()
+          .describe("Their rental days — a rental figure, never added to travel days"),
+      })
+      .nullable(),
+    bus: z
+      .object({
+        rides: z.number().int(),
+        km: z
+          .number()
+          .nullable()
+          .describe("Every distance source together; null when no ride has one — never 0"),
+        unmeasured: z.number().int().describe("Rides without a distance, outside `km`"),
+        nights: z.number().int().describe("Nights on a night bus, by its clocks"),
+      })
+      .nullable(),
+  })
+  .openapi({
+    description:
+      "forgejo#265 — one chapter per further domain the user sees, each its own figure " +
+      "and never summed across domains. Null for a hidden domain.",
+  });
+
 export const wrappedRankSchema = z.enum(["top", "second", "other"]);
 
 export const wrappedSchema = z.object({
@@ -77,6 +126,7 @@ export const wrappedSchema = z.object({
     .openapi({
       description: "The year's most-flown pair, codes sorted. Null when none is derivable.",
     }),
+  chapters: wrappedChaptersSchema,
 });
 
 export type WrappedRank = z.infer<typeof wrappedRankSchema>;

@@ -9,6 +9,7 @@ import type { DomainKey } from "../../../shared/domains";
 import type { DomainStatsMap } from "../../../lib/stats/domain-stats";
 import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import { usePlacesAccess } from "../../../hooks/usePlacesVisible";
+import { useBusOffered } from "../../../hooks/useBusVisible";
 import { useRailOffered } from "../../../hooks/useRailVisible";
 import { visibleStatsTabs } from "../../../pages/statsTabAccess";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -22,6 +23,7 @@ import CrossDomainHeatmap from "./CrossDomainHeatmap";
 import DomainToggleChips from "./DomainToggleChips";
 import DomainSummaryCard from "./DomainSummaryCard";
 import TravelAccountSection from "./TravelAccountSection";
+import DomainRecordsSection from "./DomainRecordsSection";
 import { todayZoneNow } from "../../../hooks/useTodayZone";
 import { todayIn } from "../../../shared/time";
 
@@ -54,9 +56,12 @@ export default function OverviewTab({
   const { enabled: enabledDomains } = useEnabledDomains();
   const placesAccess = usePlacesAccess();
   const railOffered = useRailOffered();
+  // Bus behind its own switch (forgejo#265). Rental has a tab but no place in
+  // the cross-domain folds (rental spec §11 D3), so it is dropped here.
+  const busOffered = useBusOffered();
   const enabled = useMemo(
-    () => visibleStatsTabs(enabledDomains, placesAccess, railOffered),
-    [enabledDomains, placesAccess, railOffered]
+    () => visibleStatsTabs(enabledDomains, placesAccess, railOffered, false, busOffered),
+    [enabledDomains, placesAccess, railOffered, busOffered]
   );
   const { selectedYear, compareYear, compareEnabled } = period;
   const show = visibility.isVisible;
@@ -184,6 +189,9 @@ export default function OverviewTab({
           of the per-domain adapters can, and a failure in it must not take
           the rest of the overview down. */}
       {show("travelAccount") && <TravelAccountSection />}
+
+      {/* Records beyond flights (forgejo#265), one per visible domain. */}
+      {show("domainRecords") && <DomainRecordsSection />}
     </div>
   );
 }

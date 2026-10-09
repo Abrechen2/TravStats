@@ -206,4 +206,46 @@ export const seedsPartJ: AchievementDefinition[] = [
     requirementType: "rail_operators",
     points: 50,
   },
+  // forgejo#261 — three badges about HOW the user rides, not how much. Each
+  // stands on a figure the rail tab shows (`services/rail/railJourneyStats.ts`,
+  // `shared/railConnections.ts`), so a badge and the tab cannot disagree.
+  {
+    code: "RAIL_STATION_REUNION",
+    name: "Bahnhofs-Wiedersehen",
+    description: "Nach mindestens fünf Jahren an einen Bahnhof zurückgekehrt",
+    category: "special",
+    domain: "rail",
+    icon: "🕰️",
+    tier: "silver",
+    // threshold: proposal forgejo#261, owner to confirm
+    requirement: 5,
+    requirementType: "rail_station_return_years",
+    points: 40,
+  },
+  {
+    code: "RAIL_TRANSFERS_5",
+    name: "Gut umgestiegen",
+    description: "Fünf vollständig dokumentierte Bahnreisen mit verknüpftem Umstieg",
+    category: "explorer",
+    domain: "rail",
+    icon: "🔀",
+    tier: "silver",
+    // threshold: proposal forgejo#261, owner to confirm
+    requirement: 5,
+    requirementType: "rail_documented_transfer_journeys",
+    points: 40,
+  },
+  {
+    code: "RAIL_NEW_CONNECTIONS_10",
+    name: "Neue Schienen",
+    description: "Zehn erstmals gefahrene Verbindungen in einem Jahr",
+    category: "collector",
+    domain: "rail",
+    icon: "🗺️",
+    tier: "silver",
+    // threshold: proposal forgejo#261, owner to confirm
+    requirement: 10,
+    requirementType: "rail_new_connections_year",
+    points: 50,
+  },
 ];

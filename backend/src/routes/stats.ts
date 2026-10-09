@@ -37,7 +37,7 @@ import { fetchFlightDatedRows, fetchCruiseDatedRows } from "../services/stats/ti
 import { buildTravelRecords } from "../services/stats/records";
 import { enrichFlightsWithAirportFacts } from "../services/flightAirportFacts";
 import { countableFlightWhere } from "../shared/flightCounting";
-import { loadWrappedDomains } from "../services/stats/wrappedDomains";
+import { loadWrappedDomains, loadWrappedPassport } from "../services/stats/wrappedDomains";
 import {
   resolveWindow,
   bucketSeries,
@@ -950,7 +950,7 @@ router.get(
 
       // For `newCountries` only — the passport already decides what counts as
       // a country and when it was first reached.
-      const passport = await loadPassport(userId, flights);
+      const passport = await loadWrappedPassport(userId, flights);
 
       // Which YEAR a flight belongs to is read on the departure airport's
       // clock, not on the stored instant — the rule `departureClock.ts` states
@@ -960,9 +960,8 @@ router.get(
       const flightsWithClock = await withDepartureClock(flights);
 
       const wrapped = buildWrapped(
-        // Great-circle from the coordinates, the same measure
-        // `/stats/timeseries` buckets — so the year's distance agrees with the
-        // year's bar on the trend chart.
+        // Great-circle from the coordinates, the measure `/stats/timeseries`
+        // buckets — so the year's distance agrees with its bar on the chart.
         flightsWithClock.map((f) => ({
           ...f,
           departureYear:
@@ -974,7 +973,8 @@ router.get(
         domains.cruises,
         passport.countries,
         parsed.data.year ?? null,
-        domains.rail
+        domains.rail,
+        domains.chapters
       );
 
       if (!wrapped) {

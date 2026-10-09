@@ -53,6 +53,8 @@ import LodgingStatsSection from "../components/Stats/LodgingStatsSection";
 import PoiStatsSection from "../components/Stats/PoiStatsSection";
 import RailStatsSection from "../components/Stats/rail/RailStatsSection";
 import RentalStatsSection from "../components/Stats/rental/RentalStatsSection";
+import BusStatsSection from "../components/Stats/bus/BusStatsSection";
+import { mergeYears, useBetaDomainYears } from "../lib/stats/useBetaDomainYears";
 import RoadtripStatsSection from "../components/Stats/RoadtripStatsSection";
 import OverviewTab from "../components/Stats/Overview/OverviewTab";
 import FlightScorecardBlock from "../components/Stats/scorecard/FlightScorecardBlock";
@@ -71,6 +73,7 @@ import { useStatsPageSections } from "../lib/stats/useStatsPageSections";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { useRailOffered } from "../hooks/useRailVisible";
 import { useRentalOffered } from "../hooks/useRentalVisible";
+import { useBusOffered } from "../hooks/useBusVisible";
 import { parseStatsTab, resolveStatsTab, visibleStatsTabs } from "./statsTabAccess";
 import type { DomainKey } from "../shared/domains";
 import { flightDeparture } from "../lib/entityTimes";
@@ -151,14 +154,8 @@ export default function AdvancedStatsPage(): JSX.Element {
    * to the overview, which is a page rather than a blank.
    */
   const placesAccess = usePlacesAccess();
-  const [railOffered, rentalOffered] = [useRailOffered(), useRentalOffered()]; // beta gates
-  const effectiveFilter = resolveStatsTab(
-    filter,
-    enabled,
-    placesAccess,
-    railOffered,
-    rentalOffered
-  );
+  const gates = [useRailOffered(), useRentalOffered(), useBusOffered()] as const; // beta gates
+  const effectiveFilter = resolveStatsTab(filter, enabled, placesAccess, ...gates);
 
   // Which blocks this tab draws. Per tab, because hiding costs on flights says
   // nothing about cruises — and everything is visible until someone says
@@ -175,7 +172,11 @@ export default function AdvancedStatsPage(): JSX.Element {
     flights,
     ready: !loading,
   });
-  const periodYears = useMemo(() => collectYears(domainStats, {}), [domainStats]);
+  const betaYears = useBetaDomainYears(); // rental and bus years (forgejo#265)
+  const periodYears = useMemo(
+    () => mergeYears(collectYears(domainStats, {}), betaYears),
+    [domainStats, betaYears]
+  );
   const period = useUrlStatsPeriod(periodYears, domainStatsLoading);
   const { selectedYear, compareYear, compareEnabled, scope } = period;
   const [yearSummary, setYearSummary] = useState<SummaryStats | null>(null);
@@ -550,7 +551,7 @@ export default function AdvancedStatsPage(): JSX.Element {
             second instance. */}
         <EvidencePanel />
         <StatsTabStrip
-          tabs={visibleStatsTabs(enabled, placesAccess, railOffered, rentalOffered)}
+          tabs={visibleStatsTabs(enabled, placesAccess, ...gates)}
           active={filter}
           onSelect={setFilter}
         />
@@ -593,7 +594,10 @@ export default function AdvancedStatsPage(): JSX.Element {
             <RoadtripStatsSection scope={scope} visibility={sections} />
           )}
           {effectiveFilter === "rail" && <RailStatsSection scope={scope} visibility={sections} />}
-          {effectiveFilter === "rental" && <RentalStatsSection year={selectedYear} />}
+          {effectiveFilter === "rental" && (
+            <RentalStatsSection scope={scope} visibility={sections} />
+          )}
+          {effectiveFilter === "bus" && <BusStatsSection scope={scope} visibility={sections} />}
 
           {/* Generate Certificate + Year Report Buttons — flight-only now. */}
           {effectiveFilter === "flight" && flights.length > 0 && (

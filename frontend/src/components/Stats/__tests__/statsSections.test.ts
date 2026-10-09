@@ -8,13 +8,36 @@ import enStats from "../../../i18n/resources/en/stats.json";
 import enCruise from "../../../i18n/resources/en/cruise.json";
 import enLodging from "../../../i18n/resources/en/lodging.json";
 import enPlaces from "../../../i18n/resources/en/places.json";
+import deRail from "../../../i18n/resources/de/rail.json";
+import enRail from "../../../i18n/resources/en/rail.json";
+import deRental from "../../../i18n/resources/de/rental.json";
+import enRental from "../../../i18n/resources/en/rental.json";
+import deBus from "../../../i18n/resources/de/bus.json";
+import enBus from "../../../i18n/resources/en/bus.json";
 
-const TABS = ["all", "flight", "cruise", "lodging", "poi"] as const;
+// Rail and rental since forgejo#261/#262 — their blocks have switches too.
+const TABS = ["all", "flight", "cruise", "lodging", "poi", "rail", "rental", "bus"] as const;
 
 type Tree = { [key: string]: unknown };
 const LOCALES: Record<string, Record<string, Tree>> = {
-  de: { stats: deStats, cruise: deCruise, lodging: deLodging, places: dePlaces },
-  en: { stats: enStats, cruise: enCruise, lodging: enLodging, places: enPlaces },
+  de: {
+    stats: deStats,
+    cruise: deCruise,
+    lodging: deLodging,
+    places: dePlaces,
+    rail: deRail,
+    rental: deRental,
+    bus: deBus,
+  },
+  en: {
+    stats: enStats,
+    cruise: enCruise,
+    lodging: enLodging,
+    places: enPlaces,
+    rail: enRail,
+    rental: enRental,
+    bus: enBus,
+  },
 };
 
 /** The real copy, looked up the way i18next would — or undefined. */

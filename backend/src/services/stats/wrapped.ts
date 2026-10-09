@@ -107,6 +107,12 @@ export interface WrappedCountry {
 export type { WrappedRank, Wrapped } from "../../schemas/statsWrapped";
 import type { Wrapped } from "../../schemas/statsWrapped";
 import { routePairKey } from "../../shared/routePair";
+import {
+  buildWrappedChapters,
+  chapterYears,
+  NO_CHAPTERS,
+  type WrappedChapterRows,
+} from "./wrappedChapters";
 
 /** Cruises are stored as a calendar start date, so UTC IS their local day. */
 const cruiseYearOf = (at: Date | null): number | null => (at ? at.getUTCFullYear() : null);
@@ -131,9 +137,16 @@ export function buildWrapped(
   cruises: readonly WrappedCruise[],
   countries: readonly WrappedCountry[],
   requestedYear: number | null = null,
-  rail: readonly WrappedRail[] = []
+  rail: readonly WrappedRail[] = [],
+  /** forgejo#265 — stays, places, roadtrips, tours, rentals, bus; `null` per hidden domain. */
+  chapterRows: WrappedChapterRows = NO_CHAPTERS
 ): Wrapped | null {
-  const flown = flights.filter((f) => FLOWN.has(f.status) && f.departureTime !== null);
+  // A user who switched flights off gets no flight story and no flight year
+  // in the picker (forgejo#265) — the cut every other domain gets in its loader.
+  const flightsVisible = chapterRows.flightsVisible ?? true;
+  const flown = flightsVisible
+    ? flights.filter((f) => FLOWN.has(f.status) && f.departureTime !== null)
+    : [];
   const sailed = cruises.filter((c) => FLOWN.has(c.status) && c.startDate !== null);
 
   const flightsPerYear = new Map<number, number>();
@@ -149,9 +162,15 @@ export function buildWrapped(
     cruisesPerYear.set(year, (cruisesPerYear.get(year) ?? 0) + 1);
   }
 
-  // A year with only train rides has a story too.
+  // A year with only train rides has a story too — and since forgejo#265 one
+  // with only stays, places, roadtrips, tours, rentals or bus rides.
   const availableYears = [
-    ...new Set([...flightsPerYear.keys(), ...cruisesPerYear.keys(), ...rail.map((r) => r.year)]),
+    ...new Set([
+      ...flightsPerYear.keys(),
+      ...cruisesPerYear.keys(),
+      ...rail.map((r) => r.year),
+      ...chapterYears(chapterRows),
+    ]),
   ].sort((a, b) => a - b);
   if (availableYears.length === 0) return null;
 
@@ -240,5 +259,6 @@ export function buildWrapped(
         ? null
         : { name: topAirline[0], code: topAirline[1].code, flights: topAirline[1].flights },
     topRoute: topRoute === undefined ? null : topRoute[1],
+    chapters: buildWrappedChapters(chapterRows, year),
   };
 }

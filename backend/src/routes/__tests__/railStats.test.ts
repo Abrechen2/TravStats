@@ -223,7 +223,12 @@ describe("rail statistics", () => {
     expect(s.delays).toMatchObject({ recordedJourneys: 0, averageMinutes: null });
 
     // A recorded 0 IS on time, and averages to 0 — kept apart from the above.
-    const onTime = computeRailStats([{ ...ride("route", 100), delayMinutes: 0 }]);
+    // It needs an arrival to be on time AGAINST (forgejo#265 review M3): the
+    // same 0 on a ride with no arrival stays out of the sample.
+    const arrived = { arrivalTime: new Date("2025-07-05T12:00:00Z") };
+    const onTime = computeRailStats([{ ...ride("route", 100), ...arrived, delayMinutes: 0 }]);
     expect(onTime.delays).toMatchObject({ recordedJourneys: 1, averageMinutes: 0 });
+    const noArrival = computeRailStats([{ ...ride("route", 100), delayMinutes: 0 }]);
+    expect(noArrival.delays).toMatchObject({ recordedJourneys: 0, averageMinutes: null });
   });
 });

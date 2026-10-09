@@ -14,6 +14,9 @@ import { formatDistance, localeForLanguage } from "../lib/units";
 import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
 import type { Wrapped } from "../types/wrapped";
+import WrappedChapterCards, {
+  chaptersHoldAnything,
+} from "../components/Stats/wrapped/WrappedChapterCards";
 
 /**
  * Dein Jahr — the year in review (forgejo#42, shown since forgejo#53).
@@ -39,6 +42,12 @@ import type { Wrapped } from "../types/wrapped";
  * counts both ways together, the same rule `/stats/routes` follows. So it is
  * written "FRA – JFK" with a dash. An arrow would claim a direction the number
  * does not describe.
+ *
+ * NOT FLIGHTS ONLY (forgejo#265). The story used to need the flight domain and
+ * said so instead of loading. Stays, places, roadtrips, tours, rentals and bus
+ * rides have chapters now (`WrappedChapterCards`), the server offers a year
+ * that holds only those, and the flight cards are drawn only where flights
+ * are switched on.
  */
 
 export default function WrappedPage(): JSX.Element {
@@ -71,48 +80,33 @@ export default function WrappedPage(): JSX.Element {
    */
   const latestRequest = useRef(0);
 
-  const load = useCallback(
-    (requested: number | null): void => {
-      if (!flightsOn) return;
-      const ticket = latestRequest.current + 1;
-      latestRequest.current = ticket;
-      setLoading(true);
-      setFailure(null);
-      statsApi
-        .getWrapped(requested ?? undefined)
-        .then((next) => {
-          if (ticket !== latestRequest.current) return;
-          setWrapped(next);
-        })
-        .catch((err) => {
-          if (ticket !== latestRequest.current) return;
-          // A 404 is the server saying there is no story at all, which is a
-          // different sentence from "I could not ask".
-          setFailure(classifyLoadFailure(err));
-          logger.error("Failed to load the year in review:", err);
-        })
-        .finally(() => {
-          if (ticket !== latestRequest.current) return;
-          setLoading(false);
-        });
-    },
-    [flightsOn]
-  );
+  const load = useCallback((requested: number | null): void => {
+    const ticket = latestRequest.current + 1;
+    latestRequest.current = ticket;
+    setLoading(true);
+    setFailure(null);
+    statsApi
+      .getWrapped(requested ?? undefined)
+      .then((next) => {
+        if (ticket !== latestRequest.current) return;
+        setWrapped(next);
+      })
+      .catch((err) => {
+        if (ticket !== latestRequest.current) return;
+        // A 404 is the server saying there is no story at all, which is a
+        // different sentence from "I could not ask".
+        setFailure(classifyLoadFailure(err));
+        logger.error("Failed to load the year in review:", err);
+      })
+      .finally(() => {
+        if (ticket !== latestRequest.current) return;
+        setLoading(false);
+      });
+  }, []);
 
   useEffect(() => {
     load(year);
   }, [load, year]);
-
-  if (!flightsOn) {
-    return (
-      <AppShell width="reading">
-        <PageHeader title={t("stats:wrapped.title")} />
-        <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-          {t("stats:wrapped.needsFlights")}
-        </p>
-      </AppShell>
-    );
-  }
 
   /**
    * The year the page is TALKING about, which is the reader's choice as soon
@@ -144,8 +138,9 @@ export default function WrappedPage(): JSX.Element {
       </label>
     ) : null;
 
+  // The rank is about flying; with flights switched off it has nothing to say.
   const rankLine =
-    wrapped === null
+    wrapped === null || !flightsOn
       ? null
       : wrapped.rank === "top"
         ? t("stats:wrapped.rankTop")
@@ -209,34 +204,39 @@ export default function WrappedPage(): JSX.Element {
               no flights used to fail this test and draw a grid reading
               "Flüge 0 / Strecke 0 km" — every figure on screen a zero, and the
               one number that was not zero hidden. */}
-          {wrapped.flights === 0 &&
+          {(!flightsOn || wrapped.flights === 0) &&
           (!cruisesOn || wrapped.cruises === 0) &&
-          (!railOn || (wrapped.railRides ?? 0) === 0) ? (
+          (!railOn || (wrapped.railRides ?? 0) === 0) &&
+          !chaptersHoldAnything(wrapped.chapters) ? (
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
               {t("stats:wrapped.emptyYear", { year: wrapped.year })}
             </p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-              <StatCard
-                title={t("stats:wrapped.flights")}
-                value={count(wrapped.flights)}
-                description={t("stats:wrapped.flightsDesc", { year: wrapped.year })}
-              />
-              <StatCard
-                title={t("stats:wrapped.distance")}
-                value={formatDistance(wrapped.distanceKm, distanceUnit, t, i18n.language)}
-                description={
-                  // Below a tenth of a lap the figure rounds to 0.0, and "0×
-                  // around the Earth" is a sentence about nothing.
-                  wrapped.earthFactor >= 0.1
-                    ? t("stats:wrapped.distanceDesc", {
-                        factor: wrapped.earthFactor.toLocaleString(locale, {
-                          maximumFractionDigits: 1,
-                        }),
-                      })
-                    : t("stats:wrapped.distanceDescShort")
-                }
-              />
+              {flightsOn && (
+                <StatCard
+                  title={t("stats:wrapped.flights")}
+                  value={count(wrapped.flights)}
+                  description={t("stats:wrapped.flightsDesc", { year: wrapped.year })}
+                />
+              )}
+              {flightsOn && (
+                <StatCard
+                  title={t("stats:wrapped.distance")}
+                  value={formatDistance(wrapped.distanceKm, distanceUnit, t, i18n.language)}
+                  description={
+                    // Below a tenth of a lap the figure rounds to 0.0, and "0×
+                    // around the Earth" is a sentence about nothing.
+                    wrapped.earthFactor >= 0.1
+                      ? t("stats:wrapped.distanceDesc", {
+                          factor: wrapped.earthFactor.toLocaleString(locale, {
+                            maximumFractionDigits: 1,
+                          }),
+                        })
+                      : t("stats:wrapped.distanceDescShort")
+                  }
+                />
+              )}
               <StatCard
                 title={t("stats:wrapped.newCountries")}
                 value={count(wrapped.newCountries)}
@@ -266,7 +266,10 @@ export default function WrappedPage(): JSX.Element {
                   }
                 />
               )}
-              {wrapped.topAirline !== null && (
+              {wrapped.chapters && (
+                <WrappedChapterCards chapters={wrapped.chapters} count={count} />
+              )}
+              {flightsOn && wrapped.topAirline !== null && (
                 <StatCard
                   valueSize="md"
                   title={t("stats:wrapped.topAirline")}
@@ -277,7 +280,7 @@ export default function WrappedPage(): JSX.Element {
                   footnote={wrapped.topAirline.code}
                 />
               )}
-              {wrapped.topRoute !== null && (
+              {flightsOn && wrapped.topRoute !== null && (
                 <StatCard
                   valueSize="md"
                   title={t("stats:wrapped.topRoute")}

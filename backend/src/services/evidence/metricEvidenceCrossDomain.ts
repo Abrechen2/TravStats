@@ -2,6 +2,7 @@ import { AppError } from "../../middleware/errorHandler";
 import type { EvidenceDomain, EvidenceScope } from "../../shared/evidence";
 import type { EvidenceEntry, EvidenceResponse } from "../../schemas/evidence";
 import { DOMAIN_KEYS, type DomainKey } from "../../shared/domains";
+import { BETA_GATED_DOMAINS, loadVisibleDomains } from "../domainVisibility";
 import {
   dayKeyInYear,
   foldCrossDomain,
@@ -42,6 +43,8 @@ const DOMAIN_OF_EVIDENCE: Partial<Record<EvidenceDomain, DomainKey>> = {
   place: "poi",
   roadtrip: "roadtrip",
   rail: "rail",
+  rental: "rental",
+  bus: "bus",
 };
 
 /**
@@ -71,6 +74,27 @@ function readScope(
   return { year, domains };
 }
 
+/**
+ * The scope's domains, without a beta domain this user does not see
+ * (forgejo#265: bus, rail, roadtrips, rentals behind the instance's beta
+ * switch or the user's own toggle). The overview never fetches such a domain,
+ * so a panel opened by a link without chips — which means "every domain" —
+ * must not name its rows either. The other domains follow the chips, as
+ * before.
+ */
+async function readVisibleScope(
+  userId: string,
+  scope: EvidenceScope,
+  key: string
+): Promise<{ year: number | null; domains: DomainKey[] }> {
+  const { year, domains } = readScope(scope, key);
+  const visible = new Set(await loadVisibleDomains(userId));
+  return {
+    year,
+    domains: domains.filter((d) => BETA_GATED_DOMAINS[d] === undefined || visible.has(d)),
+  };
+}
+
 /** Groups rows by domain so each one's contribution reaches the fold whole. */
 function byDomain<T extends { domain: DomainKey }>(rows: T[]): Map<DomainKey, T[]> {
   const grouped = new Map<DomainKey, T[]>();
@@ -93,7 +117,7 @@ export async function resolveCrossDomainEventCount(
   scope: EvidenceScope,
   page: PagingParams
 ): Promise<EvidenceResponse> {
-  const { year, domains } = readScope(scope, "crossDomainEventCount");
+  const { year, domains } = await readVisibleScope(userId, scope, "crossDomainEventCount");
   const { events } = await loadCrossDomainPopulation(userId, domains);
   const matched = events.filter((row) => year === null || row.year === year);
 
@@ -135,7 +159,7 @@ export async function resolveCrossDomainCountryCount(
   scope: EvidenceScope,
   page: PagingParams
 ): Promise<EvidenceResponse> {
-  const { year, domains } = readScope(scope, "crossDomainCountryCount");
+  const { year, domains } = await readVisibleScope(userId, scope, "crossDomainCountryCount");
   const { countryRows } = await loadCrossDomainPopulation(userId, domains);
   const matched: CrossDomainCountryRow[] = countryRows.filter(
     (row) => year === null || row.years.includes(year)
@@ -187,7 +211,7 @@ export async function resolveCrossDomainActiveDayCount(
   scope: EvidenceScope,
   page: PagingParams
 ): Promise<EvidenceResponse> {
-  const { year, domains } = readScope(scope, "crossDomainActiveDayCount");
+  const { year, domains } = await readVisibleScope(userId, scope, "crossDomainActiveDayCount");
   const { events } = await loadCrossDomainPopulation(userId, domains);
   const matched: Array<CrossDomainEventRow & { credits: string[] }> = events
     .map((row) => ({ ...row, credits: row.dayKeys.filter((day) => dayKeyInYear(day, year)) }))

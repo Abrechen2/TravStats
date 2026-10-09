@@ -13,13 +13,27 @@ import { rentalStatsFor } from "../../services/rental/rentalStats";
 const router = Router();
 router.use(authenticate);
 
-const query = z.object({ year: z.coerce.number().int().min(1900).max(2200).optional() });
+export const rentalStatsQuerySchema = z.object({
+  year: z.coerce.number().int().min(1900).max(2200).optional(),
+  /** "MM-DD": the last day of that year to count — the same span of a running year. */
+  until: z
+    .string()
+    .regex(/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/)
+    .optional(),
+});
 
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const parsed = query.safeParse(req.query);
+    const parsed = rentalStatsQuerySchema.safeParse(req.query);
     if (!parsed.success) throw new AppError(parsed.error.message, 400, "RENTAL_INVALID_QUERY");
-    const data = await rentalStatsFor(req.userId as string, parsed.data.year ?? null);
+    if (parsed.data.until !== undefined && parsed.data.year === undefined) {
+      throw new AppError("until needs a year", 400, "RENTAL_INVALID_QUERY");
+    }
+    const data = await rentalStatsFor(
+      req.userId as string,
+      parsed.data.year ?? null,
+      parsed.data.until ?? null
+    );
     res.json({ success: true, data });
   } catch (err) {
     next(err);

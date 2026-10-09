@@ -32,7 +32,9 @@
       "rail_one": "{{count}} Zugfahrt",
       "rail_other": "{{count}} Zugfahrten",
       "rental_one": "{{count}} Mietwagen",
-      "rental_other": "{{count}} Mietwagen"
+      "rental_other": "{{count}} Mietwagen",
+      "bus_one": "{{count}} Busfahrt",
+      "bus_other": "{{count}} Busfahrten"
     }
   },
   "overviewToggle": {
@@ -115,7 +117,10 @@
       "roadtripNights": "Nächte unterwegs",
       "railJourneys": "Fahrten",
       "railKmMeasured": "Strecke",
-      "railKmStraight": "Luftlinie"
+      "railKmStraight": "Luftlinie",
+      "busRides": "Busfahrten",
+      "busKmMeasured": "Strecke",
+      "busKmStraight": "Luftlinie"
     },
     "topItems": {
       "airlines": "Top-Airlines",
@@ -123,7 +128,8 @@
       "chains": "Top-Ketten",
       "categories": "Top-Kategorien",
       "vehicles": "Fahrzeuge",
-      "railOperators": "Top-Bahngesellschaften"
+      "railOperators": "Top-Bahngesellschaften",
+      "busOperators": "Top-Busunternehmen"
     },
     "badge": {
       "balconyCabin": "Balkon-Kabine",
@@ -670,7 +676,10 @@
     "avgTripDaysDesc_one": "Längste Reise: {{count}} Tag",
     "avgTripDaysDesc_other": "Längste Reise: {{count}} Tage",
     "journalEntries": "Tagebucheinträge",
-    "noMoods": "Noch keine Stimmung erfasst"
+    "noMoods": "Noch keine Stimmung erfasst",
+    "helpWithBus": "Der graue Rest ist nicht zugeordnet: Nächte, für die kein Eintrag sagt, wo du warst. Das heißt nicht zuhause — ein fehlender Eintrag beweist nichts, und je vollständiger dein Logbuch, desto kleiner der Rest. Belegen zwei Einträge dieselbe Nacht, zählt sie einmal: Schiff vor Unterkunft vor Nachtbus vor Flugzeug. Das laufende Jahr zählt bis zur letzten Nacht.",
+    "helpWithRailAndBus": "Der graue Rest ist nicht zugeordnet: Nächte, für die kein Eintrag sagt, wo du warst. Das heißt nicht zuhause — ein fehlender Eintrag beweist nichts, und je vollständiger dein Logbuch, desto kleiner der Rest. Belegen zwei Einträge dieselbe Nacht, zählt sie einmal: Schiff vor Unterkunft vor Nachtzug vor Nachtbus vor Flugzeug. Das laufende Jahr zählt bis zur letzten Nacht.",
+    "busNights": "Nachtbus"
   },
   "sections": {
     "button": "Abschnitte",
@@ -730,9 +739,8 @@
     "yearLabel": "Jahr",
     "loadError": "Dein Jahr konnte nicht geladen werden.",
     "loadErrorYear": "{{year}} konnte nicht geladen werden.",
-    "nothingYet": "Noch nichts zum Zurückblicken. Sobald ein Flug oder eine Kreuzfahrt erfasst ist, entsteht hier ein Rückblick.",
-    "emptyYear": "In {{year}} ist kein Flug erfasst.",
-    "needsFlights": "Dieser Rückblick wird aus Flügen gebaut. Schalte den Bereich Flüge ein, um ihn zu sehen.",
+    "nothingYet": "Noch nichts zum Zurückblicken. Sobald ein Flug, eine Fahrt, ein Aufenthalt, ein Ortsbesuch oder eine Miete erfasst ist, entsteht hier ein Rückblick.",
+    "emptyYear": "In {{year}} ist nichts erfasst.",
     "rankTop": "Dein flugreichstes Jahr bisher.",
     "rankSecond": "Nur {{year}} hatte mehr Flüge.",
     "flights": "Flüge",
@@ -755,7 +763,31 @@
     "none": "—",
     "rail": "Bahnfahrten",
     "railDesc": "{{km}} km mit der Bahn",
-    "railDescStraight": "{{km}} km mit der Bahn, davon {{straight}} km Luftlinie"
+    "railDescStraight": "{{km}} km mit der Bahn, davon {{straight}} km Luftlinie",
+    "chapters": {
+      "stays": "Aufenthalte",
+      "staysDesc_one": "{{count}} Nacht in Unterkünften",
+      "staysDesc_other": "{{count}} Nächte in Unterkünften",
+      "staysDescUnknown_one": "{{nights}} bekannte Nächte; bei {{count}} Aufenthalt ist die Zahl der Nächte nicht erfasst",
+      "staysDescUnknown_other": "{{nights}} bekannte Nächte; bei {{count}} Aufenthalten ist die Zahl der Nächte nicht erfasst",
+      "places": "Ortsbesuche",
+      "placesDesc_one": "an {{count}} Ort",
+      "placesDesc_other": "an {{count}} verschiedenen Orten",
+      "roadtrips": "Roadtrips",
+      "roadtripsDesc": "in diesem Jahr begonnen",
+      "tours": "Touren",
+      "toursDesc": "Tagestouren mit Datum in diesem Jahr",
+      "rentals": "Mietwagen",
+      "rentalsDesc_one": "{{count}} Miettag — zählt nicht zusätzlich als Reisetag",
+      "rentalsDesc_other": "{{count}} Miettage — zählen nicht zusätzlich als Reisetage",
+      "bus": "Busfahrten",
+      "busDesc": "{{km}} km mit dem Bus",
+      "busNoKm": "Strecke nicht erfasst",
+      "busUnmeasured_one": "{{count}} Fahrt ohne Strecke",
+      "busUnmeasured_other": "{{count}} Fahrten ohne Strecke",
+      "busNights_one": "{{count}} Nacht an Bord",
+      "busNights_other": "{{count}} Nächte an Bord"
+    }
   },
   "period": {
     "emptyYear": "Für {{year}} ist hier nichts erfasst."
@@ -993,5 +1025,32 @@
       "hours": "{{h}} Std.",
       "hoursMinutes": "{{h}} Std. {{m}} Min."
     }
+  },
+  "metricHelp": {
+    "summary": "So wird gezählt"
+  },
+  "domainRecords": {
+    "title": "Rekorde über alle Reisearten",
+    "ids": {
+      "longest-cruise": "Längste Kreuzfahrt",
+      "longest-stay": "Längster Aufenthalt",
+      "most-visited-place": "Meistbesuchter Ort",
+      "longest-roadtrip": "Längster Roadtrip",
+      "longest-rail-ride": "Längste Bahnfahrt",
+      "longest-rental": "Längste Miete",
+      "longest-bus-ride": "Längste Busfahrt"
+    },
+    "units": {
+      "days_one": "{{value}} Tag",
+      "days_other": "{{value}} Tage",
+      "nights_one": "{{value}} Nacht",
+      "nights_other": "{{value}} Nächte",
+      "visits_one": "{{value}} Besuch",
+      "visits_other": "{{value}} Besuche",
+      "km_one": "{{value}} km",
+      "km_other": "{{value}} km"
+    },
+    "straightLine": "Luftlinie (die echte Strecke ist länger)",
+    "help": "Ein Rekord je Reiseart, die du siehst, über alle Jahre — jeder in seiner eigenen Einheit, nie gegeneinander gewertet. Gezählt wird nach der Regel der jeweiligen Reiseart: nur abgeschlossene Fahrten und Mieten, nur Aufenthalte und Roadtrips, die schon stattgefunden haben, nur Ortsbesuche, die passiert sind (ein Ort braucht mindestens zwei). Kreuzfahrten, Roadtrips und Mieten in Kalendertagen nach dem Kalender der Station; ein Aufenthalt in Nächten, nur wenn sie bekannt sind; Bahn und Bus in Kilometern, die Luftlinie als solche benannt. Eine Reiseart ohne messbaren Eintrag hat keinen Rekord. Die Flugrekorde stehen im Reiter Flüge."
   }
 }
