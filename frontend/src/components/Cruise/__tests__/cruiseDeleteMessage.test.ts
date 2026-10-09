@@ -55,4 +55,22 @@ describe("cruiseDeleteMessage", () => {
       "common:delete.survivors(names=cruise:deleteSurvivors.tripUnnamed)"
     );
   });
+
+  // Review I1: recordings and redrawn routes cascade with the cruise too.
+  it("names the recorded tracks and redrawn routes that go with it", () => {
+    const message = cruiseDeleteMessage(t, cruise({ _count: { tracks: 2, legRoutes: 1 } }), 0);
+    expect(message.split("\n")[1]).toBe(
+      "cruise:deleteParts.alsoGoes(list=cruise:deleteParts.tracks(count=2)cruise:deleteParts.andcruise:deleteParts.legRoutes(count=1))"
+    );
+  });
+
+  it("names only what there is, and claims nothing without counts", () => {
+    expect(cruiseDeleteMessage(t, cruise({ _count: { tracks: 1, legRoutes: 0 } }), 0)).toContain(
+      "cruise:deleteParts.alsoGoes(list=cruise:deleteParts.tracks(count=1))"
+    );
+    expect(
+      cruiseDeleteMessage(t, cruise({ _count: { tracks: 0, legRoutes: 0 } }), 0)
+    ).not.toContain("alsoGoes");
+    expect(cruiseDeleteMessage(t, cruise({}), 0)).not.toContain("alsoGoes");
+  });
 });

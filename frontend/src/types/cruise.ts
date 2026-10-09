@@ -90,6 +90,10 @@ export interface Cruise {
   trip?: { id: string; name: string; color: string } | null;
   bookingId: string | null;
   stops: CruiseStop[];
+  /** What a delete takes with it besides stops and documents (forgejo#250):
+   *  GPS recordings and route corrections drawn on the map. Absent from
+   *  older servers and fixtures — then nothing is claimed. */
+  _count?: { tracks: number; legRoutes: number };
   times?: CruiseTimes;
   createdAt: string;
   updatedAt: string;

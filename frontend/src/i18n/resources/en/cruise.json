@@ -470,5 +470,13 @@
     "saveError": "The new itinerary could not be applied.",
     "appliedToast_one": "The new itinerary was applied to one cruise.",
     "appliedToast_other": "The new itinerary was applied to {{count}} cruises."
+  },
+  "deleteParts": {
+    "alsoGoes": "Also deleted: {{list}}.",
+    "and": " and ",
+    "tracks_one": "one recorded track",
+    "tracks_other": "{{count}} recorded tracks",
+    "legRoutes_one": "one route redrawn on the map",
+    "legRoutes_other": "{{count}} routes redrawn on the map"
   }
 }

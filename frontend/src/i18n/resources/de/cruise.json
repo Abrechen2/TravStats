@@ -470,5 +470,13 @@
     "saveError": "Der neue Reiseplan konnte nicht übernommen werden.",
     "appliedToast_one": "Der neue Reiseplan wurde für eine Kreuzfahrt übernommen.",
     "appliedToast_other": "Der neue Reiseplan wurde für {{count}} Kreuzfahrten übernommen."
+  },
+  "deleteParts": {
+    "alsoGoes": "Ebenfalls gelöscht: {{list}}.",
+    "and": " und ",
+    "tracks_one": "ein aufgezeichneter Track",
+    "tracks_other": "{{count}} aufgezeichnete Tracks",
+    "legRoutes_one": "eine auf der Karte nachgezeichnete Route",
+    "legRoutes_other": "{{count}} auf der Karte nachgezeichnete Routen"
   }
 }

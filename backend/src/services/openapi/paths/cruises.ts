@@ -101,6 +101,12 @@ const cruise = registry.register(
       arrivalPort: includedRow("port").nullable().optional(),
       trip: includedRow("trip (id, name, color)").nullable().optional(),
       legs: z.array(includedRow("leg")).optional(),
+      _count: z
+        .object({ tracks: z.number().int(), legRoutes: z.number().int() })
+        .optional()
+        .describe(
+          "Recorded GPS tracks and hand-drawn route corrections that a delete takes with it"
+        ),
       createdAt: z.string().datetime(),
       times: cruiseTimesSchema,
     })
