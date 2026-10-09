@@ -191,5 +191,55 @@
       "noTemplate": "Für dieses Dokument gibt es noch keine Veranstalter-Vorlage. Es wurde nichts ausgelesen.",
       "invalidReading": "Die Vorlage für {{issuer}} erkennt das Dokument, liest aber unvollständig. Es wurde nichts ausgelesen."
     }
+  },
+  "tripFile": {
+    "routeTitle": "Reise importieren",
+    "routeDescription": "Eine .travstats-Datei einlesen, die du oder jemand anderes aus TravStats exportiert hat.",
+    "action": "Datei wählen",
+    "title": "Reise importieren",
+    "intro": "Exportiert am {{date}} mit TravStats {{version}}. Nichts wird gespeichert, bevor du übernimmst.",
+    "loading": "Abgleich mit deinem Reisetagebuch …",
+    "included": "In der Datei: {{list}}",
+    "includedNone": "Nur die Fakten der Reise — keine Dokumente, Fotos oder persönlichen Angaben.",
+    "includes": {
+      "documents": "Dokumente",
+      "photos": "Fotos",
+      "private": "persönliche Angaben"
+    },
+    "sections": {
+      "trip": "Reise",
+      "bookings": "Buchungen",
+      "entries": "Einträge",
+      "files": "Dateien"
+    },
+    "kind": {
+      "flight": "Flug",
+      "stay": "Unterkunft",
+      "cruise": "Kreuzfahrt",
+      "rail": "Bahn",
+      "rental": "Mietwagen",
+      "visit": "Ort",
+      "stop": "Station"
+    },
+    "files": {
+      "documents": "Dokumente: {{create}} neu, {{skip}} schon vorhanden",
+      "photos": "Fotos: {{create}} neu, {{skip}} schon vorhanden",
+      "journal": "Tagebuch: {{create}} neu, {{skip}} schon vorhanden"
+    },
+    "nothingNew": "Alles aus dieser Datei ist schon vorhanden.",
+    "commit": "Reise übernehmen",
+    "committing": "Wird gespeichert …",
+    "saved": "Reise übernommen: {{created}} neu, {{attached}} zugeordnet, {{skipped}} übersprungen.",
+    "documentsRefused_one": "{{count}} Dokument wurde nicht übernommen, weil das Format nicht unterstützt wird.",
+    "documentsRefused_other": "{{count}} Dokumente wurden nicht übernommen, weil das Format nicht unterstützt wird.",
+    "errors": {
+      "invalid": "Das ist keine gültige .travstats-Datei.",
+      "version": "Diese Datei stammt aus einer neueren TravStats-Version und kann hier noch nicht gelesen werden.",
+      "tooLarge": "Die Datei ist zu groß für einen Import.",
+      "unsafe": "Die Datei enthält unzulässige Pfade und wurde abgelehnt.",
+      "rateLimited": "Zu viele Importe in kurzer Zeit. Bitte warte ein paar Minuten.",
+      "preview": "Die Datei konnte nicht gelesen werden. Bitte versuche es erneut.",
+      "commit": "Die Reise konnte nicht gespeichert werden. Es wurde nichts übernommen."
+    }
   }
 }

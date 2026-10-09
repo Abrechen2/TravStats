@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
@@ -6,6 +6,8 @@ import { tripsApi } from "../../../lib/api";
 import type { ProposedTrip } from "../../../lib/api/trips";
 import DetectReviewModal from "../../Trips/DetectReviewModal";
 import TripModal from "../../Trips/TripModal";
+import { TripFileImportModal } from "../../Trips/TripFileImportModal";
+import type { TripFileCommitResult } from "../../../lib/api/tripExchange";
 import type { DomainImportAdapter } from "../types";
 import { usePackageReviewRenderer } from "./packageAdapter";
 
@@ -32,6 +34,30 @@ export function useTripImportAdapter(onTripsChanged: () => void): DomainImportAd
   const [proposals, setProposals] = useState<ProposedTrip[] | null>(null);
   const [detecting, setDetecting] = useState(false);
   const renderPackageReview = usePackageReviewRenderer();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [tripFile, setTripFile] = useState<File | null>(null);
+
+  const handleTripFileSaved = useCallback(
+    (result: TripFileCommitResult): void => {
+      setTripFile(null);
+      addToast(
+        "success",
+        t("import:tripFile.saved", {
+          created: result.created,
+          attached: result.attached,
+          skipped: result.skipped,
+        })
+      );
+      if (result.documents.refused > 0) {
+        addToast(
+          "warning",
+          t("import:tripFile.documentsRefused", { count: result.documents.refused })
+        );
+      }
+      onTripsChanged();
+    },
+    [addToast, onTripsChanged, t]
+  );
 
   const handleDetect = useCallback((): void => {
     setDetecting(true);
@@ -83,6 +109,38 @@ export function useTripImportAdapter(onTripsChanged: () => void): DomainImportAd
               }}
             />
           ) : null,
+      },
+      {
+        id: "from-file",
+        icon: "📦",
+        title: t("import:tripFile.routeTitle"),
+        description: t("import:tripFile.routeDescription"),
+        actionLabel: t("import:tripFile.action"),
+        onSelect: () => fileInput.current?.click(),
+        render: () => (
+          <>
+            <input
+              ref={fileInput}
+              type="file"
+              accept=".travstats,application/zip"
+              className="hidden"
+              data-testid="trip-file-input"
+              onChange={(e) => {
+                const chosen = e.target.files?.[0] ?? null;
+                // Cleared, so choosing the same file again fires a change.
+                e.target.value = "";
+                if (chosen) setTripFile(chosen);
+              }}
+            />
+            {tripFile && (
+              <TripFileImportModal
+                file={tripFile}
+                onCancel={() => setTripFile(null)}
+                onSaved={handleTripFileSaved}
+              />
+            )}
+          </>
+        ),
       },
     ],
     manualLabel: t("import:trip.manual"),
