@@ -5,6 +5,8 @@ import type { EvidenceEntry, EvidenceResponse } from "../../schemas/evidence";
 import { classifyPlace, classifyVisit, visitCountsForYear } from "../../shared/placeCounting";
 import type { PagingParams } from "./paging";
 import { placeEvidenceEntry } from "./entryMappersDomains";
+import { profileZoneOf } from "../../shared/time/profileZone";
+import { localDay } from "../../shared/time/instant";
 import { domainDistinctEvidence, domainSumEvidence, readYearScope } from "./domainMeasureResponse";
 
 /**
@@ -224,10 +226,13 @@ export async function resolvePlaceListCount(
 ): Promise<EvidenceResponse> {
   const key = "placeListCount";
   requireAllTime(scope, key);
-  const lists = await prisma.placeList.findMany({
-    where: { userId },
-    select: { id: true, name: true, curatedKey: true, createdAt: true },
-  });
+  const [lists, { zone }] = await Promise.all([
+    prisma.placeList.findMany({
+      where: { userId },
+      select: { id: true, name: true, curatedKey: true, createdAt: true },
+    }),
+    profileZoneOf(userId),
+  ]);
   const entries: EvidenceEntry[] = lists.map((list) => ({
     domain: "place",
     id: list.id,
@@ -236,7 +241,10 @@ export async function resolvePlaceListCount(
     href: list.curatedKey ? `/places/checklists/${list.curatedKey}` : `/places/lists/${list.id}`,
     title: { text: list.name },
     subtitle: null,
-    date: { value: list.createdAt.toISOString().slice(0, 10), precision: "day" },
+    // A list is made somewhere nobody recorded, so its day is the user's own
+    // (the profile zone, UTC when unset) — not the UTC day, which put a list
+    // made in Tokyo before 09:00 on the day before (forgejo#273).
+    date: { value: localDay(list.createdAt, zone), precision: "day" },
     contribution: 1,
   }));
   return domainSumEvidence({ key, unit: "lists", scope, page, entries, value: entries.length });

@@ -6,6 +6,7 @@ import {
   flightDateOf,
   hydrateFlightSumEntries,
   hydrateFlightDistinctEntries,
+  type FlightDayRow,
 } from "./entryMappers";
 
 /**
@@ -40,9 +41,9 @@ export function requireAllTime(scope: EvidenceScope, label: string): void {
   }
 }
 
-export interface FlightRowIdentity {
+/** A row's identity plus the departure clock its evidence date is read on. */
+export interface FlightRowIdentity extends FlightDayRow {
   id: string;
-  departureTime: Date | null;
 }
 
 interface FlightSumArgs<T extends FlightRowIdentity> {
@@ -76,7 +77,7 @@ export async function flightSumEvidence<T extends FlightRowIdentity>({
 }: FlightSumArgs<T>): Promise<EvidenceResponse> {
   const matched = rows.map((row) => ({
     id: row.id,
-    date: flightDateOf(row.departureTime),
+    date: flightDateOf(row),
     contribution: contributionOf ? contributionOf(row) : 1,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
@@ -125,7 +126,7 @@ export async function flightDistinctEvidence<T extends FlightRowIdentity>({
 }: FlightDistinctArgs<T>): Promise<EvidenceResponse> {
   const matched = rows.map((row) => ({
     id: row.id,
-    date: flightDateOf(row.departureTime),
+    date: flightDateOf(row),
     credits: creditsOf(row),
   }));
   const { entries, omittedRowCount, omittedCredits } = await hydrateFlightDistinctEntries(

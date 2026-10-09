@@ -1,13 +1,16 @@
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { EvidenceScope } from "../../shared/evidence";
-import type { EvidenceResponse } from "../../schemas/evidence";
+import type { EvidenceEntry, EvidenceResponse } from "../../schemas/evidence";
 import type { PagingParams } from "./paging";
 import {
+  FLIGHT_DAY_SELECT,
   flightDateOf,
   hydrateFlightSumEntries,
   hydrateFlightDistinctEntries,
+  type FlightDayRow,
 } from "./entryMappers";
+import { withDepartureClock } from "../stats/departureClock";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { calculateDistance } from "../../utils/geo";
 import { measureFlightMinutes, resolveFlightDuration } from "../../shared/flightDuration";
@@ -36,22 +39,28 @@ import { getBaseCurrency } from "../fx/snapshot";
  * choice in the first place.
  */
 
+type FlightDate = EvidenceEntry["date"];
+
 /** The shared population: one predicate, four projections over it. */
 function countableFlightsOf(userId: string) {
   return { userId, ...countableFlightWhere() };
 }
 
-/** `flightCount`: what it takes to count a row and sort it by date. */
-interface FlightIdentityRow {
+/**
+ * `flightCount`: what it takes to count a row and date it — on the departure
+ * airport's day (`flightDateOf`, forgejo#273), so every projection below
+ * carries the departure clock through `withDepartureClock`.
+ */
+interface FlightIdentityRow extends FlightDayRow {
   id: string;
-  departureTime: Date | null;
 }
 
 async function loadFlightIdentityRows(userId: string): Promise<FlightIdentityRow[]> {
-  return prisma.flight.findMany({
+  const rows = await prisma.flight.findMany({
     where: countableFlightsOf(userId),
-    select: { id: true, departureTime: true },
+    select: { id: true, ...FLIGHT_DAY_SELECT },
   });
+  return withDepartureClock(rows);
 }
 
 /** `flightTimeMinutes` and `distanceKmTotal`: clocks and coordinates, no money. */
@@ -62,24 +71,23 @@ interface FlightMeasurementRow extends FlightIdentityRow {
   arrLat: number;
   arrLon: number;
   durationMinutes: number | null;
-  depTimeSemantics: string | null;
 }
 
 async function loadFlightMeasurementRows(userId: string): Promise<FlightMeasurementRow[]> {
-  return prisma.flight.findMany({
+  const rows = await prisma.flight.findMany({
     where: countableFlightsOf(userId),
     select: {
       id: true,
-      departureTime: true,
+      ...FLIGHT_DAY_SELECT,
       arrivalTime: true,
       depLat: true,
       depLon: true,
       arrLat: true,
       arrLon: true,
       durationMinutes: true,
-      depTimeSemantics: true,
     },
   });
+  return withDepartureClock(rows);
 }
 
 /** `airlineCount` and `flightsWithoutAirlineCount`: the three columns `airlineGroupKey` reads. */
@@ -90,16 +98,17 @@ interface FlightAirlineRow extends FlightIdentityRow {
 }
 
 async function loadFlightAirlineRows(userId: string): Promise<FlightAirlineRow[]> {
-  return prisma.flight.findMany({
+  const rows = await prisma.flight.findMany({
     where: countableFlightsOf(userId),
     select: {
       id: true,
-      departureTime: true,
+      ...FLIGHT_DAY_SELECT,
       airline: true,
       airlineIata: true,
       airlineIcao: true,
     },
   });
+  return withDepartureClock(rows);
 }
 
 /**
@@ -125,11 +134,11 @@ interface FlightCostRow extends FlightIdentityRow {
 }
 
 async function loadFlightCostRows(userId: string): Promise<FlightCostRow[]> {
-  return prisma.flight.findMany({
+  const rows = await prisma.flight.findMany({
     where: countableFlightsOf(userId),
     select: {
       id: true,
-      departureTime: true,
+      ...FLIGHT_DAY_SELECT,
       price: true,
       taxes: true,
       fees: true,
@@ -142,6 +151,7 @@ async function loadFlightCostRows(userId: string): Promise<FlightCostRow[]> {
       },
     },
   });
+  return withDepartureClock(rows);
 }
 
 /**
@@ -170,7 +180,7 @@ export async function resolveFlightCount(
   const rows = await loadFlightIdentityRows(userId);
   const matched = rows.map((r) => ({
     id: r.id,
-    date: flightDateOf(r.departureTime),
+    date: flightDateOf(r),
     contribution: 1,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
@@ -224,7 +234,7 @@ export async function resolveFlightTimeMinutes(
         arrLat: r.arrLat,
         arrLon: r.arrLon,
       })?.minutes ?? 0;
-    return { id: r.id, date: flightDateOf(r.departureTime), contribution: minutes };
+    return { id: r.id, date: flightDateOf(r), contribution: minutes };
   });
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
     userId,
@@ -259,7 +269,7 @@ export async function resolveDistanceKmTotal(
   const rows = await loadFlightMeasurementRows(userId);
   const matched = rows.map((r) => ({
     id: r.id,
-    date: flightDateOf(r.departureTime),
+    date: flightDateOf(r),
     contribution: calculateDistance(r.depLat, r.depLon, r.arrLat, r.arrLon),
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
@@ -295,12 +305,12 @@ export async function resolveDistanceKmTotal(
  */
 function flightAirlineGroupKeys(
   rows: FlightAirlineRow[]
-): Array<{ id: string; departureTime: Date | null; groupKey: string | null; airline: string }> {
+): Array<{ id: string; date: FlightDate; groupKey: string | null; airline: string }> {
   return rows.map((r) => {
     const groupKey = airlineGroupKey(r, airlineResolvers);
     return {
       id: r.id,
-      departureTime: r.departureTime,
+      date: flightDateOf(r),
       groupKey,
       airline: airlineDisplayName(groupKey, r.airline),
     };
@@ -334,7 +344,7 @@ export async function resolveAirlineCount(
   const withKeys = flightAirlineGroupKeys(rows);
   const matched = withKeys.map((row) => ({
     id: row.id,
-    date: flightDateOf(row.departureTime),
+    date: row.date,
     credits: row.groupKey ? [row.groupKey] : [],
     ...(row.groupKey ? { creditLabels: { [row.groupKey]: row.airline } } : {}),
   }));
@@ -372,7 +382,7 @@ export async function resolveFlightsWithoutAirlineCount(
   const withoutAirline = flightAirlineGroupKeys(rows).filter((row) => row.groupKey === null);
   const matched = withoutAirline.map((row) => ({
     id: row.id,
-    date: flightDateOf(row.departureTime),
+    date: row.date,
     contribution: 1,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
@@ -424,7 +434,7 @@ export async function resolveBusinessTotalCost(
   const cost = computeDedupedTotalCost(rows, baseCurrency);
   const matched = rows.map((r, index) => ({
     id: r.id,
-    date: flightDateOf(r.departureTime),
+    date: flightDateOf(r),
     contribution: cost.perFlightBaseContribution[index],
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
@@ -472,13 +482,15 @@ export async function resolvePunctualitySampleSize(
   page: PagingParams
 ): Promise<EvidenceResponse> {
   requireAllTime(scope, "punctualitySampleSize");
-  const rows = await prisma.flight.findMany({
-    where: { userId, ...countableFlightWhere(), delayMinutes: { not: null } },
-    select: { id: true, departureTime: true },
-  });
+  const rows = await withDepartureClock(
+    await prisma.flight.findMany({
+      where: { userId, ...countableFlightWhere(), delayMinutes: { not: null } },
+      select: { id: true, ...FLIGHT_DAY_SELECT },
+    })
+  );
   const matched = rows.map((r) => ({
     id: r.id,
-    date: flightDateOf(r.departureTime),
+    date: flightDateOf(r),
     contribution: 1,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(

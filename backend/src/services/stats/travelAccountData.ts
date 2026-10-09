@@ -43,6 +43,9 @@ export interface TravelAccountFlightRow extends AccountFlight {
   flightNumber: string | null;
   depIata: string | null;
   arrIata: string | null;
+  /** The zone `depLocalDay` was read in — the evidence entry dates the flight on it too (forgejo#273). */
+  depTimezone: string | null;
+  depTimeSemantics: FlightTimeSemantics;
 }
 
 /** A free-pitch station, plus the roadtrip it belongs to — where it is edited. */
@@ -254,6 +257,8 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
         flightNumber: f.flightNumber,
         depIata: f.depIata,
         arrIata: f.arrIata,
+        depTimezone: depTz,
+        depTimeSemantics: f.depTimeSemantics as FlightTimeSemantics,
         depLocalDay:
           f.departureTime && depTz
             ? airportCalendarDay(f.departureTime, depTz, f.depTimeSemantics as FlightTimeSemantics)

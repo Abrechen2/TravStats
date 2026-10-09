@@ -186,6 +186,10 @@ async function loadFlights(userId: string): Promise<CrossDomainPopulation> {
           depIata: row.depIata,
           arrIata: row.arrIata,
           departureTime: row.departureTime,
+          // The clock `year` and `dayKeys` were just read on, so the entry's
+          // label names the same day it is counted under (forgejo#273).
+          depTimezone: depAirport?.timezone ?? null,
+          depTimeSemantics: row.depTimeSemantics as FlightTimeSemantics,
         },
         1
       )
@@ -513,6 +517,7 @@ async function loadRail(userId: string): Promise<CrossDomainPopulation> {
         id: row.id,
         label: `${row.depStationName} → ${row.arrStationName}`,
         departureTime: row.departureTime,
+        depTimezone: row.depTimezone,
       },
       { subtitle: null }
     );

@@ -2,6 +2,9 @@ import { prisma } from "../../db";
 import type { EvidenceEntry } from "../../schemas/evidence";
 import type { PagingParams } from "./paging";
 import { sortEntries, sliceEntries } from "./paging";
+import { FLIGHT_CLOCK_SELECT } from "../stats/departureClock";
+import { departureDayOf } from "../../utils/stats/departureClock";
+import type { FlightTimeSemantics } from "../../utils/timezone";
 
 /**
  * Row → `EvidenceEntry`, one function per domain. Split out of
@@ -21,9 +24,41 @@ import { sortEntries, sliceEntries } from "./paging";
 
 type FlightDate = EvidenceEntry["date"];
 
-/** `Date | null` → the contract's day-precision shape, in one place. */
-export function flightDateOf(date: Date | null): FlightDate {
-  return date ? { value: date.toISOString().slice(0, 10), precision: "day" } : null;
+/**
+ * The columns a flight's evidence day is read from — `withDepartureClock`'s
+ * output. Required rather than optional on purpose: a loader that forgets the
+ * clock then fails to compile instead of quietly labelling every flight with
+ * its UTC day, which is how the panel came to show a Tokyo 07:30 departure on
+ * the day before (forgejo#273).
+ */
+export interface FlightDayRow {
+  departureTime: Date | null;
+  /** Stored zone, else the catalogue's (`flightEndZone`); null when neither knows. */
+  depTimezone: string | null;
+  depTimeSemantics: FlightTimeSemantics;
+}
+
+/** What a loader selects so `withDepartureClock` can produce a `FlightDayRow`. */
+export const FLIGHT_DAY_SELECT = { departureTime: true, ...FLIGHT_CLOCK_SELECT } as const;
+
+/**
+ * A flight's evidence date: the day it left on at its DEPARTURE airport, the
+ * day every flight statistic files it under (`departureDayOf`). A date-only
+ * row keeps its recorded day; a row whose zone nobody knows is read on its
+ * stored components, the fallback `localWallClockOf` makes for every figure.
+ */
+export function flightDateOf(row: FlightDayRow): FlightDate {
+  const day = departureDayOf(row);
+  return day ? { value: day, precision: "day" } : null;
+}
+
+/**
+ * A day that is ALREADY a local calendar day carried as UTC midnight
+ * (`airportCalendarDay`, the timeseries rows) → the contract's shape. Never
+ * for a raw departure instant — that is `flightDateOf`.
+ */
+export function calendarDayDateOf(day: Date | null): FlightDate {
+  return day ? { value: day.toISOString().slice(0, 10), precision: "day" } : null;
 }
 
 /**
@@ -51,14 +86,16 @@ async function hydrateFlightPage(
   return new Map(details.map((d) => [d.id, d]));
 }
 
-/** The subset of `Flight` a flight entry needs to render itself. */
-export interface FlightEvidenceRow {
+/** What a flight entry shows besides its date. */
+interface FlightEntryIdentity {
   id: string;
   flightNumber: string | null;
   depIata: string | null;
   arrIata: string | null;
-  departureTime: Date | null;
 }
+
+/** The subset of `Flight` a flight entry needs to render itself. */
+export interface FlightEvidenceRow extends FlightEntryIdentity, FlightDayRow {}
 
 /**
  * A flight as evidence. Unlike a lodging stay (`docs/.../evidence-panel-design.md`,
@@ -69,19 +106,26 @@ export interface FlightEvidenceRow {
  * already made").
  */
 export function flightEvidenceEntry(row: FlightEvidenceRow, contribution: number): EvidenceEntry {
+  // Day precision: a flight always has an actual calendar day even where
+  // `historical`'s time-of-day is a placeholder (see
+  // `shared/flightCounting.ts`'s split of "happened" from "clock is
+  // trustworthy") — never flattened further than the contract allows.
+  return datedFlightEntry(row, flightDateOf(row), contribution);
+}
+
+/** A flight entry around a date resolved before paging (the skeleton's). */
+function datedFlightEntry(
+  row: FlightEntryIdentity,
+  date: FlightDate,
+  contribution: number
+): EvidenceEntry {
   return {
     domain: "flight",
     id: row.id,
     href: `/flights/${row.id}`,
     title: { text: row.flightNumber ?? "—" },
     subtitle: { text: `${row.depIata ?? "?"} → ${row.arrIata ?? "?"}` },
-    // Day precision: a flight always has an actual calendar day even where
-    // `historical`'s time-of-day is a placeholder (see
-    // `shared/flightCounting.ts`'s split of "happened" from "clock is
-    // trustworthy") — never flattened further than the contract allows.
-    date: row.departureTime
-      ? { value: row.departureTime.toISOString().slice(0, 10), precision: "day" }
-      : null,
+    date,
     contribution,
   };
 }
@@ -119,17 +163,16 @@ export async function hydrateFlightSumEntries(
 
   const entries: EvidenceEntry[] = paged.map((skeleton) => {
     const detail = detailById.get(skeleton.id);
-    const hydrated = flightEvidenceEntry(
+    return datedFlightEntry(
       {
         id: skeleton.id,
         flightNumber: detail?.flightNumber ?? null,
         depIata: detail?.depIata ?? null,
         arrIata: detail?.arrIata ?? null,
-        departureTime: null,
       },
+      skeleton.date,
       contributionById.get(skeleton.id) ?? 0
     );
-    return { ...hydrated, date: skeleton.date };
   });
 
   const totalContribution = matched.reduce((total, m) => total + m.contribution, 0);
@@ -175,19 +218,18 @@ export async function hydrateFlightDistinctEntries(
 
   const entries: EvidenceEntry[] = paged.map((skeleton) => {
     const detail = detailById.get(skeleton.id);
-    const hydrated = flightEvidenceEntry(
+    const hydrated = datedFlightEntry(
       {
         id: skeleton.id,
         flightNumber: detail?.flightNumber ?? null,
         depIata: detail?.depIata ?? null,
         arrIata: detail?.arrIata ?? null,
-        departureTime: null,
       },
+      skeleton.date,
       1
     );
     return {
       ...hydrated,
-      date: skeleton.date,
       contribution: undefined,
       credits: skeleton.credits,
       ...(skeleton.creditLabels === undefined ? {} : { creditLabels: skeleton.creditLabels }),
