@@ -15,12 +15,18 @@ import { Table, type TableColumn } from "../components/ui/Table";
 import { SortableHeader } from "../components/table/SortableHeader";
 import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
 import ListEmptyState from "../components/table/ListEmptyState";
+import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import { STATUS_PILL_CLASS, statusPillStyle } from "../components/table/statusPillStyle";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import ConfirmModal from "../components/Training/ConfirmModal";
-import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { placeDeleteMessage } from "../lib/placeDeleteMessage";
+import { usePlaceRelations } from "../hooks/usePlaceRelations";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
+import { VisitDialog } from "../components/places/VisitDialog";
+import { FormErrorBanner, navigateAfterSave } from "../components/form";
+import { isTransientSaveError, saveErrorKey } from "../lib/saveErrorMessage";
 import { useTranslation } from "../hooks/useTranslation";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { FlagImg } from "../lib/countryFlag";
@@ -145,8 +151,16 @@ export default function PlacesListPage(): JSX.Element {
   const [rows, setRows] = useState<Place[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<Place | null>(null);
   const [creating, setCreating] = useState(false);
+  /** The place a visit is being recorded for, from its row (forgejo#231). */
+  const [recordingFor, setRecordingFor] = useState<Place | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteFailure, setDeleteFailure] = useState<{ key: string; place: Place } | null>(null);
+  // Counted only while the question is open; the dialog opens at once and
+  // names photos, documents, lists and trips as soon as they are known.
+  const deleteRelations = usePlaceRelations(pendingDelete?.id ?? null);
 
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<CategoryFilter>("all");
@@ -181,6 +195,7 @@ export default function PlacesListPage(): JSX.Element {
     } catch (err: unknown) {
       logger.error({ err }, "PlacesListPage: failed to load places");
       setLoadError(true);
+      setLoadFailure(loadFailureLog(err));
     } finally {
       setLoading(false);
     }
@@ -344,18 +359,32 @@ export default function PlacesListPage(): JSX.Element {
     setVisited("all");
   }, []);
 
-  const confirmDelete = useCallback(async (): Promise<void> => {
-    if (!pendingDelete) return;
-    try {
-      await deletePlace(pendingDelete.id);
-      addToast("success", t("places:list.deleted", { name: pendingDelete.name }));
+  /**
+   * Delete, once. A refusal closes the question and stays on the page, naming
+   * the place and why (forgejo#246) — it was a toast — with a retry when
+   * asking again can help. The reload after a delete has its own failure
+   * state (`ListLoadFailed`), so a stored delete never reads as a refused one.
+   */
+  const runDelete = useCallback(
+    async (target: Place): Promise<void> => {
+      setDeleting(true);
+      setDeleteFailure(null);
+      try {
+        await deletePlace(target.id);
+      } catch (err: unknown) {
+        logger.error({ err }, "PlacesListPage: delete failed");
+        setDeleteFailure({ key: saveErrorKey(err, "places:list.deleteFailed"), place: target });
+        setPendingDelete(null);
+        setDeleting(false);
+        return;
+      }
+      setDeleting(false);
       setPendingDelete(null);
+      addToast("success", t("places:list.deleted", { name: target.name }));
       await load();
-    } catch (err: unknown) {
-      logger.error({ err }, "PlacesListPage: delete failed");
-      addToast("error", t("places:list.deleteFailed"));
-    }
-  }, [pendingDelete, addToast, t, load]);
+    },
+    [addToast, t, load]
+  );
 
   const formatDate = useCallback(
     // ISO in the table (E7). A visit is a calendar date, stored as UTC midnight.
@@ -399,6 +428,14 @@ export default function PlacesListPage(): JSX.Element {
             {/* The only entry point to lists and checklists. Deliberately here
                 rather than in the nav: a list is a view OF the logbook, so it
                 hangs off the logbook rather than competing with it. */}
+            {/* The logbook seen from where one stands (forgejo#233). */}
+            <Link
+              to="/places/nearby"
+              className="rounded-lg px-4 py-2 text-sm pointer-coarse:min-h-(--ts-size-touch-min)"
+              style={{ border: "1px solid var(--color-border)", color: "var(--text-secondary)" }}
+            >
+              {t("places:nearby.title")}
+            </Link>
             <Link
               to="/places/lists"
               className="rounded-lg px-4 py-2 text-sm"
@@ -416,6 +453,23 @@ export default function PlacesListPage(): JSX.Element {
             </button>
           </div>
         </div>
+
+        {deleteFailure !== null && (
+          <div className="mb-3">
+            <FormErrorBanner
+              message={t("places:list.deleteFailedFor", {
+                name: deleteFailure.place.name,
+                reason: t(deleteFailure.key),
+              })}
+              onRetry={
+                isTransientSaveError(deleteFailure.key)
+                  ? () => void runDelete(deleteFailure.place)
+                  : undefined
+              }
+              retryDisabled={deleting}
+            />
+          </div>
+        )}
 
         <ListSummaryStrip
           figures={summaryFigures}
@@ -508,20 +562,13 @@ export default function PlacesListPage(): JSX.Element {
           {loading ? (
             <SkeletonTable rows={10} />
           ) : loadError ? (
-            <div
-              className="overflow-hidden rounded-lg bg-[var(--bg-surface)] px-4 py-8 text-center"
-              style={{ border: "1px solid var(--color-border)" }}
-            >
-              <p className="text-[var(--danger)]">{t("places:list.loadError")}</p>
-              <button
-                type="button"
-                onClick={() => void load()}
-                className="mt-2 text-sm underline"
-                style={{ color: "var(--accent)" }}
-              >
-                {t("places:list.retry")}
-              </button>
-            </div>
+            // Distinct from "no places yet" (forgejo#247/#250): the shared
+            // degraded state with a retry, never a red paragraph.
+            <ListLoadFailed
+              title={t("places:list.loadError")}
+              onRetry={() => void load()}
+              log={loadFailure}
+            />
           ) : filtered.length === 0 ? (
             /* Was its own inline ternary saying the same thing the other
                  three lists say — the shared component so the wording and the
@@ -535,6 +582,9 @@ export default function PlacesListPage(): JSX.Element {
                 emptyTitle={t("places:list.empty")}
                 emptyHint={t("places:list.emptyHint")}
                 onReset={resetFilters}
+                // Nothing filtered and nothing there: the next step is the
+                // first place, offered right here (forgejo#250).
+                action={{ label: t("places:list.addFirst"), onClick: () => setCreating(true) }}
               />
             </div>
           ) : (
@@ -548,6 +598,8 @@ export default function PlacesListPage(): JSX.Element {
                     onOpen={() => navigate(`/places/${p.id}`)}
                     onEdit={() => navigate(`/places/${p.id}`)}
                     onDelete={() => setPendingDelete(p)}
+                    onRecordVisit={() => setRecordingFor(p)}
+                    recordVisitLabel={t("places:visit.action")}
                     editLabel={t("common:buttons.edit")}
                     deleteLabel={t("common:buttons.delete")}
                     cells={{
@@ -617,9 +669,28 @@ export default function PlacesListPage(): JSX.Element {
         <PlaceFormModal
           place={null}
           onClose={() => setCreating(false)}
-          onSaved={(saved) => {
+          onReload={() => void load()}
+          onSaved={async (saved) => {
             setCreating(false);
-            navigate(`/places/${saved.id}`);
+            // The form's guard may still hold a history entry; this replaces
+            // it instead of stacking the new page on top (rollout rule).
+            await navigateAfterSave(navigate, `/places/${saved.id}`);
+          }}
+        />
+      )}
+
+      {recordingFor && (
+        <VisitDialog
+          place={recordingFor}
+          onClose={() => setRecordingFor(null)}
+          onReload={() => void load()}
+          onSaved={async () => {
+            // Re-read the rows without the page's loading state, so the
+            // dialog stays mounted; a failure is said there as "gespeichert,
+            // Liste nicht aktualisiert", never as a failed save.
+            setRows(await listPlaces({}));
+            addToast("success", t("places:visit.recorded", { name: recordingFor.name }));
+            setRecordingFor(null);
           }}
         />
       )}
@@ -628,22 +699,21 @@ export default function PlacesListPage(): JSX.Element {
         <ConfirmModal
           isOpen
           title={t("places:list.deleteTitle")}
-          // Same shape as the other five delete dialogs: what · how much goes
-          // with it · what stays. It already named the place and the visits;
-          // it lacked the COUNT and the reassurance that trips survive.
-          message={countedDeleteMessage(
+          // What goes (visits, proof photos, kept documents, list
+          // memberships) and what stays (trips, the lists themselves), from
+          // the same function the detail page asks with (forgejo#250). The
+          // row's own figure leaves planned visits out; every visit goes.
+          message={placeDeleteMessage(
             t,
-            {
-              counted: "places:list.deleteMessage",
-              empty: "places:list.deleteMessageNoVisits",
-            },
             pendingDelete.name,
-            pendingDelete.visitCount
+            pendingDelete.visitCount + pendingDelete.plannedVisitCount,
+            deleteRelations
           )}
           confirmText={t("common:buttons.delete")}
           cancelText={t("common:buttons.cancel")}
           confirmButtonClass={DELETE_BUTTON_CLASS}
-          onConfirm={() => void confirmDelete()}
+          onConfirm={() => void runDelete(pendingDelete)}
+          isLoading={deleting}
           onClose={() => setPendingDelete(null)}
         />
       )}

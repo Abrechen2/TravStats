@@ -3,6 +3,16 @@ import type { JSX } from "react";
 const STAR_COUNT = 5;
 const STAR_VALUES = Array.from({ length: STAR_COUNT }, (_, i) => i + 1);
 
+/**
+ * One star. 20 px for a mouse; on a coarse pointer (forgejo#249) 44 px square
+ * with the glyph scaled to match, because measured on an iPad each of the two
+ * half-star targets was 10 x 20 px. The two buttons still split the star in
+ * halves - now 22 x 44 each - and keyboard behaviour is untouched (they are
+ * ordinary buttons in tab order).
+ */
+const STAR_BOX_CLASS =
+  "relative inline-block h-5 w-5 text-lg leading-none pointer-coarse:h-(--ts-size-touch-min) pointer-coarse:w-(--ts-size-touch-min) pointer-coarse:text-[2.75rem]";
+
 interface StarRatingInputProps {
   /** Stable key for this rating field (e.g. "room", "breakfast") — used in data-testid, not shown. */
   fieldKey: string;
@@ -36,12 +46,12 @@ export function StarRatingInput({
   return (
     <div className="flex flex-col gap-1">
       <span className="text-xs text-[var(--text-muted)]">{label}</span>
-      <div className="flex items-center gap-1" role="group" aria-label={label}>
+      <div className="flex items-center gap-1 pointer-coarse:gap-2" role="group" aria-label={label}>
         {STAR_VALUES.map((starIndex) => {
           const fillRatio = Math.max(0, Math.min(1, current - (starIndex - 1)));
           const halfValue = starIndex - 0.5;
           return (
-            <span key={starIndex} className="relative inline-block h-5 w-5 text-lg leading-none">
+            <span key={starIndex} className={STAR_BOX_CLASS}>
               <span aria-hidden className="absolute inset-0 text-[var(--color-border)]">
                 ★
               </span>
@@ -77,7 +87,7 @@ export function StarRatingInput({
             disabled={disabled}
             data-testid={`star-${fieldKey}-clear`}
             onClick={() => onChange(null)}
-            className="ml-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            className="ml-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:min-w-(--ts-size-touch-min)"
           >
             ×
           </button>

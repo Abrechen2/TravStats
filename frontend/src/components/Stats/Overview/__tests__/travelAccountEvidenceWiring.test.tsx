@@ -38,7 +38,15 @@ import { expectNoNestedTriggers } from "../../__tests__/noNestedTriggers";
 const response = (): TravelAccountResponse => ({
   account: {
     years: [
-      { year: "2025", days: 365, hotelNights: 30, seaNights: 7, airNights: 3, homeNights: 325 },
+      {
+        year: "2025",
+        days: 365,
+        hotelNights: 30,
+        seaNights: 7,
+        airNights: 3,
+        railNights: 0,
+        unassignedNights: 325,
+      },
     ],
     contestedNights: 2,
   },
@@ -109,13 +117,14 @@ describe("the travel-account tiles open the measures they render", () => {
     );
   });
 
-  it("leaves the five night measures unwired — this section has no all-time night figure", async () => {
+  it("leaves the six night measures unwired — this section has no all-time night figure", async () => {
     const keys = await keysOpened();
     for (const key of [
       "travelAccountHotelNights",
       "travelAccountSeaNights",
+      "travelAccountRailNights",
       "travelAccountAirNights",
-      "travelAccountHomeNights",
+      "travelAccountUnassignedNights",
       "travelAccountContestedNights",
     ]) {
       expect([key, keys]).toEqual([key, expect.not.arrayContaining([key])]);

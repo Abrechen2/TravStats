@@ -31,6 +31,8 @@ vi.mock("../../../lib/api/lodging", () => ({
   updateStay: vi.fn(),
   listMemberships: vi.fn(),
   getFxPreview: vi.fn(),
+  // The overlap notice asks which stays touch the saved dates (forgejo#229).
+  listStayPage: vi.fn(async () => ({ rows: [], total: 0 })),
 }));
 
 vi.mock("../../../lib/api", () => ({
@@ -125,7 +127,7 @@ describe("StayEditor", () => {
 
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2026-07-11" },
     });
     fireEvent.change(screen.getByLabelText("lodging:field.totalPrice"), {
@@ -152,7 +154,7 @@ describe("StayEditor", () => {
 
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2026-07-11" },
     });
     fireEvent.change(screen.getByLabelText("lodging:field.totalPrice"), {
@@ -167,7 +169,7 @@ describe("StayEditor", () => {
   it("does not query the FX preview when the currency already equals the base currency", async () => {
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2026-07-11" },
     });
     fireEvent.change(screen.getByLabelText("lodging:field.totalPrice"), {
@@ -188,10 +190,10 @@ describe("StayEditor", () => {
 
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={onSaved} />);
 
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2026-07-11" },
     });
-    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOut\b/), {
       target: { value: "2026-07-12" },
     });
 
@@ -215,10 +217,10 @@ describe("StayEditor", () => {
 
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2026-07-11" },
     });
-    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOut\b/), {
       target: { value: "2026-07-12" },
     });
     fireEvent.change(screen.getByLabelText("lodging:field.checkInTime"), {
@@ -241,10 +243,10 @@ describe("StayEditor", () => {
 
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2026-07-11" },
     });
-    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOut\b/), {
       target: { value: "2026-07-12" },
     });
 
@@ -413,19 +415,61 @@ describe("StayEditor", () => {
 
     await userEvent.click(screen.getByTestId("stay-editor-save"));
 
-    expect(await screen.findByTestId("stay-editor-error")).toBeInTheDocument();
+    // The refusal names the field it is about (forgejo#246), not a banner at
+    // the foot of a long form.
+    const checkIn = screen.getByLabelText(/^lodging:field\.checkIn\b/);
+    expect(checkIn).toHaveAttribute("aria-invalid", "true");
+    expect(checkIn).toHaveAccessibleDescription("lodging:stayEditor.errors.checkIn");
+    expect(screen.getByLabelText(/^lodging:field\.checkOut\b/)).toHaveAttribute(
+      "aria-invalid",
+      "true"
+    );
     expect(createStay).not.toHaveBeenCalled();
   });
 
-  it("shows a save error and does not call onSaved when checkIn/checkOut are missing", async () => {
+  it("marks the required dates, and sends focus to the first gap when save is refused", async () => {
     const onSaved = vi.fn();
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={onSaved} />);
 
+    // Before any click: the mark and its legend, but no scolding.
+    expect(screen.getByLabelText(/^lodging:field\.checkIn\b/)).toHaveAttribute(
+      "aria-required",
+      "true"
+    );
+    expect(screen.getByText("common:form.requiredLegend")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+
     await userEvent.click(screen.getByTestId("stay-editor-save"));
 
-    expect(await screen.findByTestId("stay-editor-error")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByLabelText(/^lodging:field\.checkIn\b/)).toHaveFocus());
     expect(createStay).not.toHaveBeenCalled();
     expect(onSaved).not.toHaveBeenCalled();
+
+    // The complaint clears as soon as the field is right.
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
+      target: { value: "2026-07-11" },
+    });
+    expect(screen.getByLabelText(/^lodging:field\.checkIn\b/)).not.toHaveAttribute("aria-invalid");
+    expect(screen.getByLabelText(/^lodging:field\.checkOut\b/)).toHaveAttribute(
+      "aria-invalid",
+      "true"
+    );
+  });
+
+  it("refuses a check-out before the check-in at the check-out field", async () => {
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
+      target: { value: "2026-07-12" },
+    });
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOut\b/), {
+      target: { value: "2026-07-11" },
+    });
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+
+    expect(screen.getByLabelText(/^lodging:field\.checkOut\b/)).toHaveAccessibleDescription(
+      "lodging:stayEditor.errors.checkOutBeforeCheckIn"
+    );
+    expect(createStay).not.toHaveBeenCalled();
   });
 
   // Guards against a caller bug (edit mode without the entity to edit) —
@@ -449,16 +493,16 @@ describe("StayEditor", () => {
       />
     );
 
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2026-07-11" },
     });
-    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOut\b/), {
       target: { value: "2026-07-12" },
     });
 
     await userEvent.click(screen.getByTestId("stay-editor-save"));
 
-    expect(await screen.findByTestId("stay-editor-error")).toBeInTheDocument();
+    expect(await screen.findByText("lodging:stayEditor.saveError")).toBeInTheDocument();
     expect(updateStay).not.toHaveBeenCalled();
     expect(onSaved).not.toHaveBeenCalled();
     // The explicit guard returns before the try/catch — no crash is ever
@@ -475,10 +519,10 @@ describe("StayEditor", () => {
 
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2026-07-11" },
     });
-    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOut\b/), {
       target: { value: "2026-07-12" },
     });
 
@@ -561,10 +605,10 @@ describe("StayEditor", () => {
 
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2026-07-11" },
     });
-    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOut\b/), {
       target: { value: "2026-07-14" },
     });
     fireEvent.change(screen.getByLabelText("lodging:field.totalPrice"), {
@@ -595,10 +639,10 @@ describe("StayEditor", () => {
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
 
     // A stay that ended in the past.
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2020-05-01" },
     });
-    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOut\b/), {
       target: { value: "2020-05-04" },
     });
     expect(screen.getByTestId("stay-derived-status").textContent).toContain(
@@ -606,10 +650,10 @@ describe("StayEditor", () => {
     );
 
     // Move it into the future and the derived value follows.
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2099-05-01" },
     });
-    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOut\b/), {
       target: { value: "2099-05-04" },
     });
     expect(screen.getByTestId("stay-derived-status").textContent).toContain(
@@ -627,10 +671,10 @@ describe("StayEditor", () => {
 
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2020-05-01" },
     });
-    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOut\b/), {
       target: { value: "2020-05-04" },
     });
 
@@ -648,10 +692,10 @@ describe("StayEditor", () => {
 
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2020-05-01" },
     });
-    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOut\b/), {
       target: { value: "2020-05-04" },
     });
 
@@ -670,10 +714,10 @@ describe("StayEditor", () => {
 
     render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
 
-    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
       target: { value: "2026-07-11" },
     });
-    fireEvent.change(screen.getByLabelText("lodging:field.checkOut"), {
+    fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOut\b/), {
       target: { value: "2026-07-11" },
     });
     fireEvent.change(screen.getByLabelText("lodging:field.totalPrice"), {
@@ -891,8 +935,8 @@ describe("StayEditor — companion hint for a multi-person booking", () => {
 
     for (const key of [
       "lodging:period.precision.label",
-      "lodging:field.checkIn",
-      "lodging:field.checkOut",
+      /^lodging:field\.checkIn\b/,
+      /^lodging:field\.checkOut\b/,
       "lodging:field.checkInTime",
       "lodging:field.checkOutTime",
       "lodging:field.room",
@@ -902,10 +946,11 @@ describe("StayEditor — companion hint for a multi-person booking", () => {
       "lodging:field.notes",
     ]) {
       const control = screen.getByLabelText(key);
-      expect(control, key).not.toHaveAttribute("aria-label");
+      const name = String(key);
+      expect(control, name).not.toHaveAttribute("aria-label");
       const labels = (control as HTMLInputElement).labels;
-      expect(labels?.length, key).toBe(1);
-      expect(labels?.[0], key).toHaveTextContent(key);
+      expect(labels?.length, name).toBe(1);
+      expect(labels?.[0], name).toHaveTextContent(key);
     }
   });
 });

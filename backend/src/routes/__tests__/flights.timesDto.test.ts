@@ -3,6 +3,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
+import { toUtcDate } from "../../services/flights/mergedChronology";
 
 /**
  * ADR 0002 phase 4 for flights: every read path hands out `times`, each end a
@@ -123,18 +124,47 @@ describe("Flights — times (phase 4)", () => {
     });
   });
 
-  it("gives a date-only flight its day at the airport, precision day", async () => {
+  // forgejo#273: a date-only flight is WRITTEN as a local wall clock through
+  // the airport's zone (`toUtcDate`) — the form's noon, the cruise import's
+  // midnight. Its day is the local day of that instant; the UTC date is the
+  // day before in every case below.
+  it.each([
+    ["Kiritimati, form noon", "2015-05-02T12:00", "Pacific/Kiritimati", "2015-05-02"],
+    ["Auckland in summer, form noon", "2026-01-15T12:00", "Pacific/Auckland", "2026-01-15"],
+    ["Frankfurt, cruise import midnight", "2026-05-10T00:00", "Europe/Berlin", "2026-05-10"],
+  ])(
+    "gives a date-only flight (%s) its day at the airport, precision day",
+    async (_n, local, zone, day) => {
+      const departureTime = toUtcDate(local, zone) as Date;
+      expect(departureTime.toISOString().slice(0, 10)).not.toBe(day);
+      const f = await seed({
+        departureTime,
+        depTimeSemantics: "DATE_ONLY",
+        depTimezone: zone,
+        depPrecision: "day",
+      });
+      const times = await read(f.id);
+      expect(times.departure).toMatchObject({
+        local: `${day}T00:00:00`,
+        precision: "day",
+        zone,
+      });
+    }
+  );
+
+  it("reads a date-only flight with no stored zone in the catalogue's", async () => {
+    // FRA is in the seeded catalogue (Europe/Berlin).
     const f = await seed({
-      departureTime: new Date("2015-05-02T12:00:00Z"),
+      departureTime: toUtcDate("2026-05-10T00:00", "Europe/Berlin") as Date,
       depTimeSemantics: "DATE_ONLY",
-      depTimezone: "Pacific/Kiritimati",
+      depTimezone: null,
       depPrecision: "day",
     });
     const times = await read(f.id);
     expect(times.departure).toMatchObject({
-      local: "2015-05-02T00:00:00",
-      precision: "day",
-      zone: "Pacific/Kiritimati",
+      local: "2026-05-10T00:00:00",
+      zone: "Europe/Berlin",
+      zoneSource: "catalogue",
     });
   });
 

@@ -4,6 +4,7 @@ import {
   DOCUMENT_FORMATS,
   DOCUMENT_KINDS,
   ENTRY_TYPES,
+  RENTAL_DOCUMENT_CATEGORIES,
 } from "../services/documents/documentFormats";
 
 /**
@@ -63,6 +64,7 @@ export const documentUploadFieldsObject = z.object({
   source: optionalField(z.enum(["upload", "companion"])),
   kind: optionalField(z.enum(DOCUMENT_KINDS)),
   issuedOn: optionalField(documentDateSchema),
+  rentalCategory: optionalField(z.enum(RENTAL_DOCUMENT_CATEGORIES)),
 });
 
 export const documentUploadFieldsSchema = documentUploadFieldsObject.refine(
@@ -77,6 +79,7 @@ export const updateDocumentSchema = z
     kind: z.enum(DOCUMENT_KINDS).nullable().optional(),
     issuedOn: documentDateSchema.nullable().optional(),
     entry: entryRefSchema.nullable().optional(),
+    rentalCategory: z.enum(RENTAL_DOCUMENT_CATEGORIES).nullable().optional(),
   })
   .strict();
 
@@ -119,6 +122,13 @@ export const documentDtoSchema = z.object({
   originalName: z.string().nullable(),
   displayName: z.string(),
   issuedOn: z.string().nullable(),
+  rentalCategory: z
+    .enum(RENTAL_DOCUMENT_CATEGORIES)
+    .nullable()
+    .describe(
+      "What a rental's evidence shows — pickup, return, damage, fuel, odometer (forgejo#239). " +
+        "Null = uncategorised, and always null off a rental"
+    ),
   source: z.string(),
   parsedDomain: z.string().nullable(),
   entry: entryRefSchema.nullable(),

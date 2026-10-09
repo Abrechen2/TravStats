@@ -176,7 +176,8 @@ describe("FlightCompleteStep — required marks and folded sections (forgejo#88)
 
   it("explains the asterisk rather than leaving it to be guessed", async () => {
     const { container } = await renderStep(baseProps());
-    expect(container.textContent).toContain("flights:form.requiredLegend");
+    // The shared sentence every domain uses (forgejo#245) — flights had its own.
+    expect(container.textContent).toContain("common:form.requiredLegend");
   });
 
   it("does not mark the ACTUAL times — they are optional by design", async () => {

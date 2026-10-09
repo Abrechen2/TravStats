@@ -26,6 +26,12 @@ import {
   EMPTY_RAIL_STATS,
   type RailAchievementStats,
 } from "./railAchievements";
+import {
+  checkInsightAchievement,
+  EMPTY_INSIGHT_STATS,
+  type InsightAchievementStats,
+} from "./insightAchievements";
+import { SKIP, type BadgeVerdict } from "./badgeSource";
 import type { Achievement, UserAchievement } from "../prisma";
 import logger from "./logger";
 import { checkAchievement } from "./achievementChecks";
@@ -33,6 +39,28 @@ import { isAchievementHeld } from "./achievementHeld";
 import type { FlightData, UserStats } from "./achievementStats";
 
 export type UserAchievementWithRelation = UserAchievement & { achievement: Achievement };
+
+/**
+ * One domain module's check: the badge's verdict when the rule is that
+ * module's (`SKIP` when its source failed this run — `badgeSource.ts`), else
+ * `null` so the next module is asked. The rental, bus and cross-domain badges
+ * (forgejo#262, #263, #265) arrive this way, so a new domain adds a list
+ * entry rather than another positional parameter.
+ */
+export type DomainAchievementCheck = (
+  achievement: Pick<Achievement, "requirementType" | "requirement">
+) => BadgeVerdict | null;
+
+function firstDomainCheck(
+  checks: readonly DomainAchievementCheck[],
+  achievement: Achievement
+): BadgeVerdict | null {
+  for (const check of checks) {
+    const result = check(achievement);
+    if (result) return result;
+  }
+  return null;
+}
 
 /**
  * What a run will actually write, decided before a transaction is opened.
@@ -97,10 +125,21 @@ export function planAchievementWrites(
   existingAchievementMap: Map<string, UserAchievement>,
   stats: UserStats,
   flights: FlightData[],
-  /** Roadtrip measures (2.7) — their badges are checked by their own module. */
-  roadtripStats: RoadtripAchievementStats = EMPTY_ROADTRIP_STATS,
+  /**
+   * Roadtrip measures (2.7) — their badges are checked by their own module.
+   * `null` when they could not be computed this run: those badges are then
+   * skipped, never written down to zero.
+   */
+  roadtripStats: RoadtripAchievementStats | null = EMPTY_ROADTRIP_STATS,
   /** Rail measures (2.7) — likewise checked by their own module. */
-  railStats: RailAchievementStats = EMPTY_RAIL_STATS
+  railStats: RailAchievementStats = EMPTY_RAIL_STATS,
+  /**
+   * The statistics-expansion measures (forgejo#256/#257 flights and cruises,
+   * #258/#259/#260/#264 lodging, places, roadtrips, tours) — likewise.
+   */
+  insightStats: InsightAchievementStats = EMPTY_INSIGHT_STATS,
+  /** Every further domain module's check, asked in order (forgejo#262/#263/#265). */
+  domainChecks: readonly DomainAchievementCheck[] = []
 ): AchievementWritePlan {
   const writes: PlannedWrite[] = [];
   const belowRequirement: string[] = [];
@@ -128,10 +167,17 @@ export function planAchievementWrites(
     // requirement was first met — `unlockedAt` is a historical fact and is
     // never cleared or overwritten, which is how the page can explain the drop
     // instead of letting a total fall in silence.
-    const { isUnlocked, progress } =
+    const verdict =
       checkRoadtripAchievement(achievement, roadtripStats) ??
       checkRailAchievement(achievement, railStats) ??
+      checkInsightAchievement(achievement, insightStats) ??
+      firstDomainCheck(domainChecks, achievement) ??
       checkAchievement(achievement, stats, flights);
+    // A source that failed this run says nothing about the measure: the row
+    // keeps its progress and its badge until a run that CAN read it
+    // (`badgeSource.ts`, the one failure rule of the check).
+    if (verdict === SKIP) continue;
+    const { isUnlocked, progress } = verdict;
 
     if (isUnlocked) {
       // Steady state: the user already holds it, the stored progress is already

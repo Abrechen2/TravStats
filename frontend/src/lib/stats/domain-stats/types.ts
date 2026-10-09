@@ -11,6 +11,7 @@ export type StatsDomain = Exclude<DomainKey, "rental">;
 // Rental sits out the cross-domain overview on purpose, not for want of
 // figures: rental days count in the rental statistics only (rental spec §11
 // D3 a, owner 2026-10-01) — days travelling come from the trip.
+// Bus joined with its statistics (forgejo#263/#265, spec 2026-10-07 §6 D4).
 
 /**
  * One headline figure on a per-domain card.

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import AppShell from "../components/ui/AppShell";
 import type { JSX } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { SkeletonTable } from "../components/SkeletonLoader";
 import type { StayStatus } from "../types/lodging";
 import {
@@ -22,9 +22,16 @@ import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
-import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { lodgingDeleteMessage } from "../lib/lodgingDeleteMessage";
+import { useLodgingDeleteFacts } from "../hooks/useLodgingDeleteFacts";
 import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
 import { LodgingFormModal } from "../components/lodging/LodgingFormModal";
+import { StayEditor } from "../components/lodging/StayEditor";
+import { LodgingLocationRepair } from "../components/lodging/LodgingLocationRepair";
+import { LodgingStaysView } from "../components/lodging/LodgingStaysView";
+import { LodgingViewToggle, type LodgingView } from "../components/lodging/LodgingViewToggle";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import DomainImportPanel from "../components/import/DomainImportPanel";
@@ -92,6 +99,21 @@ export default function LodgingListPage(): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "common", "settings", "import"]);
   const tableHints = useTableHints();
   const navigate = useNavigate();
+  // Houses or the chronological stay list (forgejo#226). In the URL, so a
+  // bookmark, a reload and the browser's Back all keep the reader's view; the
+  // other query parameters (a loyalty link) are carried through untouched.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view: LodgingView = searchParams.get("view") === "stays" ? "stays" : "houses";
+  const setView = (next: LodgingView): void =>
+    setSearchParams(
+      (current) => {
+        const params = new URLSearchParams(current);
+        if (next === "stays") params.set("view", "stays");
+        else params.delete("view");
+        return params;
+      },
+      { replace: true }
+    );
   // `totalSpendBase` is computed by the backend in the user's actual base
   // currency (`UserSettings.baseCurrency`) — NOT `units.currency`, which is an
   // independent display preference used elsewhere for flight-cost figures.
@@ -109,10 +131,19 @@ export default function LodgingListPage(): JSX.Element {
   const [facets, setFacets] = useState<LodgingFacets | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<boolean>(false);
+  const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState<boolean>(false);
   const [editing, setEditing] = useState<Lodging | null>(null);
+  // The house a new stay is being started at, from the row's "Wieder hier
+  // übernachten" (forgejo#227).
+  const [restayAt, setRestayAt] = useState<Lodging | null>(null);
+  // The house whose missing pin is being put right, in place (forgejo#228).
+  const [repairing, setRepairing] = useState<Lodging | null>(null);
   const [toDelete, setToDelete] = useState<Lodging | null>(null);
   const [deleting, setDeleting] = useState<boolean>(false);
+  // The photographs and kept originals that go with the house, and the trips
+  // that stay - read while its confirmation is open (forgejo#250).
+  const deleteFacts = useLodgingDeleteFacts(toDelete);
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebouncedValue(search);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
@@ -236,6 +267,7 @@ export default function LodgingListPage(): JSX.Element {
         if (cancelled) return;
         logger.error("LodgingListPage: failed to load lodgings", err);
         setLoadError(true);
+        setLoadFailure(loadFailureLog(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -423,17 +455,19 @@ export default function LodgingListPage(): JSX.Element {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h1 className="t-screen-title">{t("lodging:list.title")}</h1>
           <div className="flex flex-wrap items-center gap-2">
-            <ColumnPicker
-              columns={COLUMN_IDS.map((id) => ({
-                id,
-                label:
-                  id === "status"
-                    ? t("lodging:list.status.label")
-                    : t(`lodging:list.columns.${id}`),
-                always: (ALWAYS_VISIBLE as readonly string[]).includes(id),
-              }))}
-              prefs={columnPrefs}
-            />
+            {view === "houses" && (
+              <ColumnPicker
+                columns={COLUMN_IDS.map((id) => ({
+                  id,
+                  label:
+                    id === "status"
+                      ? t("lodging:list.status.label")
+                      : t(`lodging:list.columns.${id}`),
+                  always: (ALWAYS_VISIBLE as readonly string[]).includes(id),
+                }))}
+                prefs={columnPrefs}
+              />
+            )}
             {/* One way in, not three. "Buchung einlesen" used to sit here as
                 its own button beside "Importieren" and "Hotel hinzufügen" —
                 three controls for two ideas, and two of them saying "import".
@@ -451,159 +485,177 @@ export default function LodgingListPage(): JSX.Element {
           </div>
         </div>
 
-        {/* Was `LodgingStatStrip`, which renders the backend rollup over the
+        <div className="mb-4">
+          <LodgingViewToggle value={view} onChange={setView} />
+        </div>
+
+        {view === "stays" ? (
+          <LodgingStaysView
+            onAddHouse={() => setShowAdd(true)}
+            onChanged={() => void reloadAll()}
+          />
+        ) : (
+          <>
+            {/* Was `LodgingStatStrip`, which renders the backend rollup over the
             WHOLE library — correct on the dashboard, contradictory here: it
             showed the spend of 60 hotels above a table filtered down to seven,
             next to a filter-aware "7 angezeigt" in the bar. The strip keeps its
             home on the dashboard tab; this list summarises the rows it shows. */}
-        <ListSummaryStrip
-          figures={summaryFigures}
-          filtered={hasActiveFilter}
-          filteredLabel={t("common:filters.filtered")}
-          unknown={loading || loadError}
-        />
-
-        <p className="mb-4 text-xs text-(--text-muted)">
-          {t("lodging:list.wholeListHint")}{" "}
-          <Link
-            to="/settings/data?section=import"
-            className="underline underline-offset-4 hover:text-(--text-primary)"
-          >
-            {t("settings:import.openHub")}
-          </Link>
-        </p>
-
-        {loyaltyFilter.membershipId !== null && (
-          <div className="mb-3">
-            <LoyaltyFilterNotice
-              membershipId={loyaltyFilter.membershipId}
-              onClear={loyaltyFilter.clear}
+            <ListSummaryStrip
+              figures={summaryFigures}
+              filtered={hasActiveFilter}
+              filteredLabel={t("common:filters.filtered")}
+              unknown={loading || loadError}
             />
-          </div>
-        )}
 
-        <ListFilterBar
-          search={{
-            value: search,
-            onChange: setSearch,
-            placeholder: t("lodging:filter.searchPlaceholder"),
-          }}
-          status={{
-            label: t("lodging:list.status.label"),
-            value: statusFilter,
-            onChange: (v): void => setStatusFilter(v as StatusFilter),
-            allLabel: t("lodging:filter.allStatuses"),
-            options: STATUSES.map((st) => ({
-              value: st,
-              label: countedLabel(
-                t(`lodging:stayStatus.${st}`),
-                statusCounts === null ? undefined : (statusCounts.get(st) ?? 0)
-              ),
-            })),
-          }}
-          year={{
-            label: t("lodging:filter.year"),
-            value: yearFilter === "all" ? "all" : String(yearFilter),
-            onChange: (v): void => setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
-            allLabel: t("lodging:filter.allYears"),
-            options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
-          }}
-          extraActiveCount={extraActiveCount}
-          extra={
-            <>
-              <FilterField label={t("lodging:filter.type")}>
-                <select
-                  value={typeFilter}
-                  onChange={(e): void => setTypeFilter(e.target.value as TypeFilter)}
-                  className={PANEL_SELECT_CLASS}
-                >
-                  <option value="all">{t("lodging:filter.allTypes")}</option>
-                  {TYPES.map((ty) => (
-                    <option key={ty} value={ty}>
-                      {countedLabel(
-                        t(`lodging:type.${ty}`),
-                        typeCounts === null ? undefined : (typeCounts.get(ty) ?? 0)
-                      )}
-                    </option>
-                  ))}
-                </select>
-              </FilterField>
-              <FilterField label={t("lodging:filter.country")}>
-                <select
-                  value={countryFilter}
-                  onChange={(e): void => setCountryFilter(e.target.value)}
-                  className={PANEL_SELECT_CLASS}
-                >
-                  <option value="all">{t("lodging:filter.allCountries")}</option>
-                  {availableCountries.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-              </FilterField>
-            </>
-          }
-          hasActiveFilter={hasActiveFilter}
-          onReset={resetFilters}
-          resultLabel={loading || loadError ? "" : t("common:filters.matching", { count: total })}
-        />
-
-        {loadError ? (
-          <div
-            role="alert"
-            className="rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-4 py-4 text-sm text-[var(--danger)]"
-          >
-            {t("lodging:list.loadError")}
-          </div>
-        ) : (
-          <>
-            {loading ? (
-              <SkeletonTable rows={10} />
-            ) : rows.length === 0 ? (
-              <div
-                className="overflow-hidden rounded-lg"
-                style={{ border: "1px solid var(--color-border)" }}
+            <p className="mb-4 text-xs text-(--text-muted)">
+              {t("lodging:list.wholeListHint")}{" "}
+              <Link
+                to="/settings/data?section=import"
+                className="underline underline-offset-4 hover:text-(--text-primary)"
               >
-                <ListEmptyState
-                  filtered={hasActiveFilter}
-                  emptyTitle={t("lodging:list.empty")}
-                  emptyHint={t("lodging:list.emptyHint")}
-                  onReset={resetFilters}
+                {t("settings:import.openHub")}
+              </Link>
+            </p>
+
+            {loyaltyFilter.membershipId !== null && (
+              <div className="mb-3">
+                <LoyaltyFilterNotice
+                  membershipId={loyaltyFilter.membershipId}
+                  onClear={loyaltyFilter.clear}
                 />
               </div>
+            )}
+
+            <ListFilterBar
+              search={{
+                value: search,
+                onChange: setSearch,
+                placeholder: t("lodging:filter.searchPlaceholder"),
+              }}
+              status={{
+                label: t("lodging:list.status.label"),
+                value: statusFilter,
+                onChange: (v): void => setStatusFilter(v as StatusFilter),
+                allLabel: t("lodging:filter.allStatuses"),
+                options: STATUSES.map((st) => ({
+                  value: st,
+                  label: countedLabel(
+                    t(`lodging:stayStatus.${st}`),
+                    statusCounts === null ? undefined : (statusCounts.get(st) ?? 0)
+                  ),
+                })),
+              }}
+              year={{
+                label: t("lodging:filter.year"),
+                value: yearFilter === "all" ? "all" : String(yearFilter),
+                onChange: (v): void => setYearFilter(v === "all" ? "all" : Number.parseInt(v, 10)),
+                allLabel: t("lodging:filter.allYears"),
+                options: availableYears.map((y) => ({ value: String(y), label: String(y) })),
+              }}
+              extraActiveCount={extraActiveCount}
+              extra={
+                <>
+                  <FilterField label={t("lodging:filter.type")}>
+                    <select
+                      value={typeFilter}
+                      onChange={(e): void => setTypeFilter(e.target.value as TypeFilter)}
+                      className={PANEL_SELECT_CLASS}
+                    >
+                      <option value="all">{t("lodging:filter.allTypes")}</option>
+                      {TYPES.map((ty) => (
+                        <option key={ty} value={ty}>
+                          {countedLabel(
+                            t(`lodging:type.${ty}`),
+                            typeCounts === null ? undefined : (typeCounts.get(ty) ?? 0)
+                          )}
+                        </option>
+                      ))}
+                    </select>
+                  </FilterField>
+                  <FilterField label={t("lodging:filter.country")}>
+                    <select
+                      value={countryFilter}
+                      onChange={(e): void => setCountryFilter(e.target.value)}
+                      className={PANEL_SELECT_CLASS}
+                    >
+                      <option value="all">{t("lodging:filter.allCountries")}</option>
+                      {availableCountries.map((c) => (
+                        <option key={c.value} value={c.value}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  </FilterField>
+                </>
+              }
+              hasActiveFilter={hasActiveFilter}
+              onReset={resetFilters}
+              resultLabel={
+                loading || loadError ? "" : t("common:filters.matching", { count: total })
+              }
+            />
+
+            {loadError ? (
+              // A failed read with a way forward (forgejo#247), not a dead end.
+              <ListLoadFailed
+                title={t("lodging:list.loadError")}
+                onRetry={(): void => void reloadAll()}
+                log={loadFailure}
+              />
             ) : (
               <>
-                <TablePagination {...pagination} allowAll={false} placement="top" />
-                <Table columns={visibleColumns} label={t("lodging:list.title")} {...tableHints}>
-                  {rows.map((l: Lodging) => (
-                    <LodgingRow
-                      key={l.id}
-                      lodging={l}
-                      baseCurrency={baseCurrency}
-                      columns={visibleColumns}
-                      onOpen={() => navigate(`/lodging/${l.id}`)}
-                      onEdit={() => setEditing(l)}
-                      onDelete={() => setToDelete(l)}
+                {loading ? (
+                  <SkeletonTable rows={10} />
+                ) : rows.length === 0 ? (
+                  <div
+                    className="overflow-hidden rounded-lg"
+                    style={{ border: "1px solid var(--color-border)" }}
+                  >
+                    <ListEmptyState
+                      filtered={hasActiveFilter}
+                      emptyTitle={t("lodging:list.empty")}
+                      emptyHint={t("lodging:list.emptyHint")}
+                      onReset={resetFilters}
+                      action={{ label: t("lodging:add.title"), onClick: () => setShowAdd(true) }}
                     />
-                  ))}
-                </Table>
-                {/* `allowAll` is off, as on the flights logbook: over a
+                  </div>
+                ) : (
+                  <>
+                    <TablePagination {...pagination} allowAll={false} placement="top" />
+                    <Table columns={visibleColumns} label={t("lodging:list.title")} {...tableHints}>
+                      {rows.map((l: Lodging) => (
+                        <LodgingRow
+                          key={l.id}
+                          lodging={l}
+                          baseCurrency={baseCurrency}
+                          columns={visibleColumns}
+                          onOpen={() => navigate(`/lodging/${l.id}`)}
+                          onEdit={() => setEditing(l)}
+                          onDelete={() => setToDelete(l)}
+                          onRestay={() => setRestayAt(l)}
+                          onRepair={() => setRepairing(l)}
+                        />
+                      ))}
+                    </Table>
+                    {/* `allowAll` is off, as on the flights logbook: over a
                     network "Alle" would promise a row count nobody checked,
                     and the API caps a page at 500 — so it would quietly mean
                     "the first 500 of however many". `meta.total` is shown in
                     the range text instead, which is the honest version of the
                     same reassurance. */}
-                <TablePagination {...pagination} allowAll={false} />
-                <p className="mt-2 px-1 text-xs text-[var(--text-muted)]">
-                  {t("lodging:list.footer.sortedBy", {
-                    label: columnLabel(t, sortBy),
-                    direction:
-                      sortOrder === "asc"
-                        ? t("common:sort.ascending")
-                        : t("common:sort.descending"),
-                  })}
-                </p>
+                    <TablePagination {...pagination} allowAll={false} />
+                    <p className="mt-2 px-1 text-xs text-[var(--text-muted)]">
+                      {t("lodging:list.footer.sortedBy", {
+                        label: columnLabel(t, sortBy),
+                        direction:
+                          sortOrder === "asc"
+                            ? t("common:sort.ascending")
+                            : t("common:sort.descending"),
+                      })}
+                    </p>
+                  </>
+                )}
               </>
             )}
           </>
@@ -640,6 +692,40 @@ export default function LodgingListPage(): JSX.Element {
           />
         )}
 
+        {repairing && (
+          <LodgingLocationRepair
+            lodging={repairing}
+            afterSaveFailedKey="common:form.savedButRefreshFailed"
+            onClose={() => setRepairing(null)}
+            onSaved={async () => {
+              setRepairing(null);
+              addToast("success", t("lodging:repair.saved"));
+              await reloadAll();
+            }}
+          />
+        )}
+
+        {restayAt && (
+          // Nothing is carried over but the house: dates, room, booking
+          // reference and price are the new visit's own, and the overlap
+          // notice (forgejo#229) catches a booking that is already there.
+          <StayEditor
+            mode="create"
+            lodgingId={restayAt.id}
+            lodgingName={restayAt.name}
+            lodgingChainId={restayAt.chainId}
+            lodgingCountryCode={restayAt.isoCountryCode}
+            introText={t("lodging:restay.intro", { name: restayAt.name })}
+            afterSaveFailedKey="common:form.savedButRefreshFailed"
+            onClose={() => setRestayAt(null)}
+            onReload={() => void reloadAll()}
+            onSaved={async () => {
+              setRestayAt(null);
+              await reloadAll();
+            }}
+          />
+        )}
+
         <ConfirmModal
           isOpen={toDelete !== null}
           onClose={() => setToDelete(null)}
@@ -650,19 +736,7 @@ export default function LodgingListPage(): JSX.Element {
           // was left behind when the six sentences were unified, so the list
           // rendered a literal "{{name}}" and said "mit 0 Aufenthalten" for a
           // house that has none. Exactly the drift the helper exists to stop.
-          message={
-            toDelete
-              ? countedDeleteMessage(
-                  t,
-                  {
-                    counted: "lodging:detail.deleteConfirmMessage",
-                    empty: "lodging:detail.deleteConfirmMessageNoStays",
-                  },
-                  toDelete.name,
-                  toDelete.stayCount
-                )
-              : ""
-          }
+          message={toDelete ? lodgingDeleteMessage(t, toDelete, deleteFacts) : ""}
           confirmText={t("common:buttons.delete")}
           confirmButtonClass={DELETE_BUTTON_CLASS}
         />

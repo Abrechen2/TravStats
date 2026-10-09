@@ -141,6 +141,24 @@ describe("sharing — undo, consent, move, booking total", () => {
     expect(await latest(ben)).toMatchObject({ kind: "created" });
   });
 
+  it("bulk-editing a flight out of and back into the shared trip propagates like a move", async () => {
+    const bulk = (trip: object) =>
+      request(app)
+        .post("/api/v1/flights/bulk-edit")
+        .set("Cookie", anna.cookie)
+        .send({ flightIds: [pair.full.flight.id], trip })
+        .expect(200);
+    await bulk({ mode: "clear" });
+    expect((await annasFlight()).shareKey).toBeNull();
+    expect((await latest(ben)).after).toMatchObject({ reason: "movedOut" });
+
+    await bulk({ mode: "set", tripId: pair.full.trip.id });
+    const key = (await annasFlight()).shareKey;
+    expect(key).not.toBeNull();
+    expect(await prisma.flight.count({ where: { userId: ben.id, shareKey: key } })).toBe(1);
+    expect(await latest(ben)).toMatchObject({ kind: "created" });
+  });
+
   it("a write inside a propagation does not propagate again", async () => {
     await prisma.flight.update({ where: { id: pair.full.flight.id }, data: { gate: "G9" } });
     const before = await prisma.shareNotice.count();

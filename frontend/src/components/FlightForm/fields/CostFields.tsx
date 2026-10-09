@@ -1,3 +1,5 @@
+import { useId } from "react";
+import { FieldError, fieldErrorProps } from "../../form";
 import { useTranslation } from "../../../hooks/useTranslation";
 import CurrencySelect from "../../common/CurrencySelect";
 import { useRecentCurrencies } from "../../../hooks/useRecentCurrencies";
@@ -35,6 +37,11 @@ interface CostFieldsProps {
   inputClassName?: string;
   /** Where "take the values from this receipt" writes — the whole form, not only this block. */
   receiptExtract?: ExtractTarget;
+  /**
+   * Prefix of the three amount inputs' ids (`-price`, `-taxes`, `-fees`), so a
+   * form's "Zum Speichern fehlt noch" can point at them. Defaults to a useId.
+   */
+  idPrefix?: string;
 }
 
 function parseAmount(raw: string): number | undefined {
@@ -42,6 +49,7 @@ function parseAmount(raw: string): number | undefined {
 }
 
 export default function CostFields({
+  idPrefix,
   value,
   onChange,
   showBreakdown,
@@ -53,6 +61,15 @@ export default function CostFields({
   const { t } = useTranslation(["flights", "common"]);
   const recentCurrencies = useRecentCurrencies();
 
+  // Every visible label names its control (forgejo#249).
+  const generated = useId();
+  const uid = idPrefix ?? generated;
+  // A negative amount is refused here, at its field and as it is typed: the
+  // flight forms validate with their own rules (noValidate), so the browser's
+  // `min="0"` bubble no longer does it — and it spoke the browser's language.
+  const negative = t("flights:form.errors.negativeAmount");
+  const errorOf = (n: number | undefined): string | null =>
+    n !== undefined && Number.isFinite(n) && n < 0 ? negative : null;
   const labelClass = `label ${labelClassName}`.trim();
   const inputClass = `input ${inputClassName}`.trim();
 
@@ -63,7 +80,7 @@ export default function CostFields({
     <>
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-2">
-          <label className={`${labelClass} flex items-center gap-2`}>
+          <label className={`${labelClass} flex items-center gap-2`} htmlFor={`${uid}-price`}>
             {t("flights:form.price")}
             {priceHelp && (
               <HelpIcon
@@ -74,6 +91,8 @@ export default function CostFields({
             )}
           </label>
           <input
+            id={`${uid}-price`}
+            {...fieldErrorProps(`${uid}-price`, errorOf(value.price))}
             type="number"
             step="0.01"
             min="0"
@@ -82,10 +101,14 @@ export default function CostFields({
             className={inputClass}
             placeholder={t("flights:form.placeholders.price")}
           />
+          <FieldError id={`${uid}-price`} error={errorOf(value.price)} />
         </div>
         <div>
-          <label className={labelClass}>{t("flights:form.currency")}</label>
+          <label className={labelClass} htmlFor={`${uid}-currency`}>
+            {t("flights:form.currency")}
+          </label>
           <CurrencySelect
+            id={`${uid}-currency`}
             value={value.currency || "EUR"}
             onChange={(v) => set("currency", v)}
             recent={recentCurrencies}
@@ -96,8 +119,12 @@ export default function CostFields({
       {showBreakdown && (
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>{t("common:labels.taxes")}</label>
+            <label className={labelClass} htmlFor={`${uid}-taxes`}>
+              {t("common:labels.taxes")}
+            </label>
             <input
+              id={`${uid}-taxes`}
+              {...fieldErrorProps(`${uid}-taxes`, errorOf(value.taxes))}
               type="number"
               step="0.01"
               min="0"
@@ -106,10 +133,15 @@ export default function CostFields({
               className={inputClass}
               placeholder={t("flights:form.placeholders.taxes")}
             />
+            <FieldError id={`${uid}-taxes`} error={errorOf(value.taxes)} />
           </div>
           <div>
-            <label className={labelClass}>{t("common:labels.fees")}</label>
+            <label className={labelClass} htmlFor={`${uid}-fees`}>
+              {t("common:labels.fees")}
+            </label>
             <input
+              id={`${uid}-fees`}
+              {...fieldErrorProps(`${uid}-fees`, errorOf(value.fees))}
               type="number"
               step="0.01"
               min="0"
@@ -118,6 +150,7 @@ export default function CostFields({
               className={inputClass}
               placeholder={t("flights:form.placeholders.fees")}
             />
+            <FieldError id={`${uid}-fees`} error={errorOf(value.fees)} />
           </div>
         </div>
       )}

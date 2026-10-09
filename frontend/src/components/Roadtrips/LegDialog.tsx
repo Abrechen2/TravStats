@@ -4,13 +4,33 @@ import { useNavigate } from "react-router-dom";
 
 import Button from "../ui/Button";
 import Dialog from "../ui/Dialog";
+import { FormErrorBanner, navigateAfterSave, useDirtyGuard, useFormFailure } from "../form";
 import { useTranslation } from "../../hooks/useTranslation";
 import { toursApi } from "../../lib/api/tours";
 import { logger } from "../../lib/logger";
+import { isTransientSaveError, saveErrorKey } from "../../lib/saveErrorMessage";
 import type { RouteFallbackReason, TourLeg } from "../../types/tour";
 
 type Mode = "road" | "ferry";
-type Line = "routed" | "straight" | "drawn";
+type Line = "routed" | "straight" | "drawn" | "track";
+
+/** What the dialog opens on — the state's start AND the dirty baseline. */
+function legChoice(leg: TourLeg): { mode: Mode; line: Line } {
+  return {
+    mode: leg.mode === "ferry" ? "ferry" : "road",
+    // A recorded leg opens on its recording: before, it opened on "Gerade
+    // Linie", and "Übernehmen" without a second look replaced the recorded
+    // line with a straight one (forgejo#242).
+    line:
+      leg.source === "routed"
+        ? "routed"
+        : leg.source === "drawn"
+          ? "drawn"
+          : leg.source === "track"
+            ? "track"
+            : "straight",
+  };
+}
 
 /**
  * One leg's two questions (board 5): travelled by what, and drawn how.
@@ -24,6 +44,11 @@ type Line = "routed" | "straight" | "drawn";
  * it wrote a straight line, ignored the answer and closed). The leg is not
  * set to straight first either: a drawn line survives a failed attempt, and
  * a straight line is saved only when the reader picks "Gerade Linie".
+ *
+ * forgejo#246–#248: a refused save is a banner inside the dialog that stays
+ * until the next choice (with "Erneut versuchen" where trying again can help),
+ * the dialog cannot be dismissed while it saves, and a changed choice asks
+ * before Escape, the scrim, the × or "Abbrechen" throw it away.
  */
 export default function LegDialog({
   routeId,
@@ -48,28 +73,42 @@ export default function LegDialog({
   const { t, i18n } = useTranslation(["roadtrips", "trips", "common"]);
   const navigate = useNavigate();
   const nf = new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 0 });
-  const [mode, setMode] = useState<Mode>(leg.mode === "ferry" ? "ferry" : "road");
-  const [line, setLine] = useState<Line>(
-    leg.source === "routed" ? "routed" : leg.source === "drawn" ? "drawn" : "straight"
-  );
+  const initial = legChoice(leg);
+  const [mode, setMode] = useState<Mode>(initial.mode);
+  const [line, setLine] = useState<Line>(initial.line);
   const [saving, setSaving] = useState(false);
-  const [failed, setFailed] = useState(false);
   const [fallback, setFallback] = useState<RouteFallbackReason | null>(null);
+  const { dirty, markSaved } = useDirtyGuard(initial, { mode, line });
+  const failure = useFormFailure(`${mode}|${line}`);
 
   const routedOff = mode === "ferry" || !routingAvailable;
   const effectiveLine: Line = routedOff && line === "routed" ? "straight" : line;
+  const keepsRecording = effectiveLine === "track";
+  // A line someone recorded or drew is replaced only on a press that says so.
+  const replacing =
+    (leg.source === "track" || leg.source === "drawn") &&
+    (effectiveLine === "straight" || effectiveLine === "routed");
 
   const apply = async (): Promise<void> => {
+    if (keepsRecording) {
+      // The recording stays and so does its mode: nothing to send.
+      markSaved();
+      onClose();
+      return;
+    }
     if (effectiveLine === "drawn") {
-      navigate(`/tours/${routeId}`);
+      // Leaving with a changed choice: the guard's history entry is replaced,
+      // never raced by a plain `navigate` (see `navigateAfterSave`).
+      void navigateAfterSave(navigate, `/tours/${routeId}`);
       return;
     }
     setSaving(true);
-    setFailed(false);
+    failure.clear();
     setFallback(null);
     try {
       if (effectiveLine === "straight") {
         await toursApi.setLeg(undefined, routeId, from.id, to.id, { source: "straight", mode });
+        markSaved();
         onSaved();
         return;
       }
@@ -80,6 +119,7 @@ export default function LegDialog({
       }
       const { fallbackReason } = await toursApi.routeLeg(undefined, routeId, from.id, to.id);
       if (fallbackReason === null) {
+        markSaved();
         onSaved();
         return;
       }
@@ -87,7 +127,7 @@ export default function LegDialog({
       if (modeChanged) onChanged?.();
     } catch (err) {
       logger.warn("Saving a roadtrip leg failed", err);
-      setFailed(true);
+      failure.fail(saveErrorKey(err, "roadtrips:legDialog.error"));
     } finally {
       setSaving(false);
     }
@@ -107,6 +147,16 @@ export default function LegDialog({
   });
 
   const lines: Array<{ id: Line; label: string; hint: string; off: boolean }> = [
+    ...(leg.source === "track"
+      ? [
+          {
+            id: "track" as const,
+            label: t("roadtrips:legDialog.track"),
+            hint: t("roadtrips:legDialog.trackHint"),
+            off: false,
+          },
+        ]
+      : []),
     {
       id: "routed",
       label: t("roadtrips:legDialog.routed"),
@@ -136,6 +186,8 @@ export default function LegDialog({
     <Dialog
       open
       onClose={onClose}
+      busy={saving}
+      dirty={dirty}
       maxWidth={540}
       title={
         <span className="flex flex-col" style={{ gap: 4 }}>
@@ -149,11 +201,11 @@ export default function LegDialog({
       dismissLabel={t("common:buttons.cancel")}
       action={
         <Button variant="primary" disabled={saving} onClick={() => void apply()}>
-          {t("roadtrips:legDialog.apply")}
+          {replacing ? t("roadtrips:legDialog.applyReplace") : t("roadtrips:legDialog.apply")}
         </Button>
       }
     >
-      <div className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
+      <div ref={failure.rootRef} className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
         <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
           <legend className="t-caption" style={{ marginBottom: 8 }}>
             {t("roadtrips:legDialog.mode")}
@@ -162,6 +214,7 @@ export default function LegDialog({
             <button
               type="button"
               aria-pressed={mode === "road"}
+              disabled={keepsRecording}
               onClick={() => setMode("road")}
               style={tile(mode === "road", "var(--domain-roadtrip)")}
             >
@@ -178,6 +231,7 @@ export default function LegDialog({
             <button
               type="button"
               aria-pressed={mode === "ferry"}
+              disabled={keepsRecording}
               onClick={() => setMode("ferry")}
               style={tile(mode === "ferry", "var(--domain-cruise)")}
             >
@@ -232,14 +286,28 @@ export default function LegDialog({
           })}
         </fieldset>
 
+        {keepsRecording && <p className="t-caption">{t("roadtrips:legDialog.trackModeHint")}</p>}
+        {replacing && (
+          <p role="status" style={{ fontSize: 13, color: "var(--ts-warn)" }}>
+            {t(
+              leg.source === "track"
+                ? "roadtrips:legDialog.replacesTrack"
+                : "roadtrips:legDialog.replacesDrawn"
+            )}
+          </p>
+        )}
         <p className="t-caption">
           {t("roadtrips:legDialog.distance", { km: nf.format(leg.distanceKm) })}
         </p>
-        {failed && (
-          <p role="alert" style={{ color: "var(--ts-bad)", fontSize: 13 }}>
-            {t("roadtrips:legDialog.error")}
-          </p>
-        )}
+        <FormErrorBanner
+          message={failure.failureKey ? t(failure.failureKey) : null}
+          onRetry={
+            failure.failureKey && isTransientSaveError(failure.failureKey)
+              ? () => void apply()
+              : undefined
+          }
+          retryDisabled={saving}
+        />
         {fallback !== null && (
           <div role="alert" className="flex flex-col" style={{ gap: 4, fontSize: 13 }}>
             <span style={{ color: "var(--ts-warn)", fontWeight: 700 }}>

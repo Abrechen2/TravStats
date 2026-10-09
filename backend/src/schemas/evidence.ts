@@ -48,6 +48,8 @@ const EVIDENCE_DOMAINS = [
   "rail",
   "trip",
   "roadtrip",
+  "rental",
+  "bus",
 ] as const satisfies readonly EvidenceDomain[];
 
 const AGGREGATIONS = [

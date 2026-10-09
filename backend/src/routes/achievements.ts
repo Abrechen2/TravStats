@@ -9,6 +9,7 @@ import { achievements as catalogueDefinitions } from "../data/achievements";
 import {
   achievementVisibility,
   loadAchievementVisibility,
+  type AchievementVisibility,
 } from "../services/achievementVisibility";
 import { visibleDomainKeys } from "../services/domainVisibility";
 import { getInstanceSettings } from "../services/instanceSettingsService";
@@ -48,7 +49,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
         },
         orderBy: [{ category: "asc" }, { tier: "asc" }, { requirement: "asc" }],
       })
-    ).filter((a) => visible(a.domain));
+    ).filter((a) => visible(a.domain, a.code));
 
     // Get user's unlocked achievements
     const userAchievements = (
@@ -56,7 +57,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
         where: { userId },
         include: { achievement: true },
       })
-    ).filter((ua) => visible(ua.achievement.domain));
+    ).filter((ua) => visible(ua.achievement.domain, ua.achievement.code));
 
     // Create a map for quick lookup
     const userAchievementMap = new Map(userAchievements.map((ua) => [ua.achievementId, ua]));
@@ -167,7 +168,7 @@ router.get("/recent", async (req: AuthRequest, res: Response, next: NextFunction
     // back here at that original date if the measure recovers.
     const visible = await loadAchievementVisibility(userId);
     const recentAchievements = allRecent
-      .filter((ua) => visible(ua.achievement.domain))
+      .filter((ua) => visible(ua.achievement.domain, ua.achievement.code))
       .filter((ua) => isAchievementHeld(ua, ua.achievement.requirement))
       .slice(0, limit);
 
@@ -191,7 +192,7 @@ router.post("/check", statsLimiter, async (req: AuthRequest, res: Response, next
     // Unlocked all the same — a hidden domain's badge is kept for the day it
     // shows — but not announced while its domain is out of sight.
     const newlyUnlocked = (await checkAndUpdateAchievements(userId)).filter((ua) =>
-      visible(ua.achievement.domain)
+      visible(ua.achievement.domain, ua.achievement.code)
     );
 
     res.json({
@@ -239,6 +240,8 @@ router.get(
               points: true,
               requirement: true,
               domain: true,
+              // A shared badge only beta domains can earn is hidden with them (forgejo#265).
+              code: true,
             },
           },
           user: {
@@ -269,7 +272,7 @@ router.get(
         ...new Set(userAchievements.map((ua) => ua.userId)),
       ]);
       for (const ua of userAchievements) {
-        if (!visibleFor(ua.userId)(ua.achievement.domain)) continue;
+        if (!visibleFor(ua.userId)(ua.achievement.domain, ua.achievement.code)) continue;
         if (!isAchievementHeld(ua, ua.achievement.requirement)) continue;
 
         const userId = ua.userId;
@@ -306,7 +309,7 @@ router.get(
 /** One visibility rule per user on the board, read in two queries, not one per user. */
 async function leaderboardVisibility(
   userIds: readonly string[]
-): Promise<(userId: string) => (domain: string) => boolean> {
+): Promise<(userId: string) => AchievementVisibility> {
   const [settings, instance] = await Promise.all([
     prisma.userSettings.findMany({
       where: { userId: { in: [...userIds] } },
@@ -315,12 +318,13 @@ async function leaderboardVisibility(
     getInstanceSettings(),
   ]);
   const byUser = new Map(settings.map((s) => [s.userId, s.enabledDomains]));
-  const cache = new Map<string, (domain: string) => boolean>();
+  const cache = new Map<string, AchievementVisibility>();
   return (userId) => {
     let rule = cache.get(userId);
     if (!rule) {
       rule = achievementVisibility(
-        visibleDomainKeys(byUser.get(userId), instance.betaFeaturesEnabled)
+        visibleDomainKeys(byUser.get(userId), instance.betaFeaturesEnabled),
+        instance.betaFeaturesEnabled
       );
       cache.set(userId, rule);
     }

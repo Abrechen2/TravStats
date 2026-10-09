@@ -136,11 +136,31 @@ describe("RoadtripsPage", () => {
     expect(screen.getByText("Toskana")).toBeInTheDocument();
   });
 
-  it("tells a failed load apart from an empty list", async () => {
-    vi.mocked(roadtripsApi.list).mockRejectedValueOnce(new Error("down"));
+  it("tells a failed load apart from an empty list, and retries it", async () => {
+    vi.mocked(roadtripsApi.list)
+      .mockRejectedValueOnce(new Error("down"))
+      .mockResolvedValueOnce([summary({ id: "a", name: "Bretagne", startDate: at("2023-06-02") })]);
     renderPage();
     expect(await screen.findByText("roadtrips:loadError")).toBeInTheDocument();
     expect(screen.queryByText("roadtrips:list.emptyTitle")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    expect(await screen.findByText("Bretagne")).toBeInTheDocument();
+  });
+
+  // forgejo#250: filtered to nothing is not "no roadtrips"; the way out is offered.
+  it("offers the reset when a search finds nothing, not the first-roadtrip invitation", async () => {
+    vi.mocked(roadtripsApi.list).mockResolvedValue([
+      summary({ id: "a", name: "Bretagne", startDate: at("2023-06-02") }),
+    ]);
+    renderPage();
+    await screen.findByText("Bretagne");
+    fireEvent.change(screen.getByLabelText("roadtrips:list.search"), { target: { value: "zzz" } });
+    expect(screen.getByText("common:filters.noMatch")).toBeInTheDocument();
+    expect(screen.queryByText("roadtrips:list.emptyCta")).not.toBeInTheDocument();
+    // The filter bar has its own reset too; this one sits in the empty state.
+    const resets = screen.getAllByRole("button", { name: "common:filters.reset" });
+    fireEvent.click(resets[resets.length - 1]);
+    expect(screen.getByText("Bretagne")).toBeInTheDocument();
   });
 
   it("offers the first roadtrip when there is none", async () => {

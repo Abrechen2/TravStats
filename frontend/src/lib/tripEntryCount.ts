@@ -21,6 +21,8 @@ const COUNT_OF: Record<DomainKey, ((trip: Trip) => number) | null> = {
   roadtrip: (t) => t._count?.roadtrips ?? 0,
   rail: (t) => t._count?.railJourneys ?? t.railJourneys?.length ?? 0,
   rental: (t) => t._count?.rentalBookings ?? t.rentalBookings?.length ?? 0,
+  // B2 (spec 2026-10-07 §8): the trip list's `_count` carries bus rides once TripCard counts them.
+  bus: () => 0,
 };
 
 /** Each area's count, zero for an area the reader cannot see. */

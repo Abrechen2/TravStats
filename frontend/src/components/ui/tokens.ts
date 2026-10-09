@@ -53,6 +53,7 @@ export const DOMAIN_TOKEN: Record<DomainKey | "tour", string> = {
   poi: "domain-poi",
   rail: "domain-rail",
   rental: "domain-rental",
+  bus: "domain-bus",
   tour: "domain-tour",
   roadtrip: "domain-roadtrip",
 };

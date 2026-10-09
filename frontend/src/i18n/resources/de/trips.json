@@ -24,6 +24,8 @@
   "cruiseCount_other": "{{count}} Kreuzfahrten",
   "pnrLabel": "Buchungsref.",
   "totalCost": "Gesamtkosten",
+  "costUnpriced_one": "{{count}} Eintrag ohne Preis",
+  "costUnpriced_other": "{{count}} Einträge ohne Preis",
   "costPerKm": "Kosten/km",
   "distance": "Strecke",
   "status": {
@@ -142,7 +144,8 @@
       "companions": "Reisende",
       "tags": "Tags",
       "rail": "Bahn",
-      "rental": "Mietwagen"
+      "rental": "Mietwagen",
+      "bus": "Bus"
     },
     "tabs": {
       "overview": "Übersicht",
@@ -166,8 +169,7 @@
     "logistics": {
       "flights": "Flüge",
       "cruises": "Kreuzfahrten",
-      "bookings": "Buchungen",
-      "totalBooked": "Gesamt"
+      "bookings": "Buchungen"
     },
     "timeline": {
       "addEntry": "+ Eintrag hinzufügen",
@@ -462,7 +464,9 @@
         "noDatedStops": "Die Stationen dieses Abschnitts haben kein Datum – daraus lässt sich kein Zeitraum für Dawarich ableiten.",
         "windowInvalid": "Der Zeitraum endet vor seinem Beginn.",
         "windowEmpty": "Dawarich hat für diesen Zeitraum keine Standortdaten.",
-        "tooFewPoints": "Dawarich hat für diesen Zeitraum nur einen Standortpunkt – zu wenig für einen Track."
+        "tooFewPoints": "Dawarich hat für diesen Zeitraum nur einen Standortpunkt – zu wenig für einen Track.",
+        "doesNotCoverLeg": "Diese Aufzeichnung kommt nicht in die Nähe beider Stationen dieser Etappe – vermutlich ein anderer Tag oder Ort. Die Etappe bleibt, wie sie war.",
+        "gapInLeg": "Die Aufzeichnung setzt zwischen den beiden Stationen aus; ein Teil des Wegs wurde nie aufgezeichnet. Die Etappe bleibt, wie sie war."
       },
       "pointCount_one": "{{count}} Punkt",
       "pointCount_other": "{{count}} Punkte",
@@ -561,6 +565,12 @@
       "message_one": "„{{name}}“ hat {{count}} erfasste Ausgabe und gehört zu keiner Reise, die sie übernehmen könnte. Beim Löschen geht sie mit.",
       "message_other": "„{{name}}“ hat {{count}} erfasste Ausgaben und gehört zu keiner Reise, die sie übernehmen könnte. Beim Löschen gehen sie mit.",
       "confirm": "Mit Kosten löschen"
+    },
+    "assignErrors": {
+      "notOwned": "Ein gewählter Halt gehört nicht zu dieser Reise oder Tour. Lade die Seite neu und wähle noch einmal.",
+      "noCoordinate": "Ein gewählter Halt hat keinen Ort. Gib ihm im Reiseverlauf erst einen Ort, dann lässt er sich zuordnen.",
+      "inOtherSection": "Ein gewählter Halt gehört schon zu einem anderen Streckenabschnitt. Nimm ihn dort zuerst heraus.",
+      "claimedMeanwhile": "Ein Halt wurde gerade von einer anderen Änderung einem Abschnitt zugeordnet. Nichts wurde gespeichert – versuche es noch einmal."
     }
   },
   "head": {

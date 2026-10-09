@@ -225,6 +225,7 @@ const evidenceKindSchema = z.enum([
   "port",
   "place",
   "rail",
+  "bus",
   "roadtrip",
   "track",
 ]);
@@ -514,7 +515,11 @@ registry.registerPath({
     "and places in one answer. Amounts are grouped by their original currency " +
     "and never summed across them. `expenses` (forgejo#140) holds every ferry " +
     "ticket, toll, pitch fee and fuel stop per year and in total; they also " +
-    "enter each trip's `spendByCurrency`.",
+    "enter each trip's `spendByCurrency`. Only domains the user sees count — " +
+    "switched on, and not hidden behind the instance's beta switch: a hidden " +
+    "domain's nights, coverage and money are left out of every figure here, the " +
+    "same gate `GET /trips` prices `cost` and `mostExpensiveTrip` with " +
+    "(forgejo#274), so one trip never has two totals.",
   tags: statsTag,
   responses: {
     200: {

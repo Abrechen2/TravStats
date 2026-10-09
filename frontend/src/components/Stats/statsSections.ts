@@ -25,6 +25,7 @@ export const FLIGHT_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "distance", label: t("stats:sections.distance") },
   { key: "breakdown", label: t("stats:sections.breakdown") },
   { key: "records", label: t("stats:sections.records") },
+  { key: "insights", label: t("stats:sections.flightInsights") },
   { key: "punctuality", label: t("stats:sections.punctuality") },
   { key: "fun", label: t("stats:sections.fun") },
   { key: "business", label: t("stats:sections.business") },
@@ -43,6 +44,7 @@ export const OVERVIEW_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "heatmap", label: t("stats:sections.heatmap") },
   { key: "perDomain", label: t("stats:overview.perDomainLabel") },
   { key: "travelAccount", label: t("stats:travelAccount.title") },
+  { key: "domainRecords", label: t("stats:domainRecords.title") },
 ];
 
 export const CRUISE_SECTIONS = (t: Translate): SectionOption[] => [
@@ -54,6 +56,7 @@ export const CRUISE_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "rhythm", label: t("cruise:stats.rhythm.title") },
   { key: "money", label: t("cruise:stats.money.title") },
   { key: "fun", label: t("cruise:stats.fun.title") },
+  { key: "insights", label: t("stats:insights.cruise.title") },
 ];
 
 export const LODGING_SECTIONS = (t: Translate): SectionOption[] => [
@@ -66,6 +69,7 @@ export const LODGING_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "rhythm", label: t("lodging:stats.rhythm.title") },
   { key: "loyalty", label: t("lodging:stats.loyalty.title") },
   { key: "records", label: t("lodging:stats.records.title") },
+  { key: "insights", label: t("stats:sections.insights") },
 ];
 
 export const POI_SECTIONS = (t: Translate): SectionOption[] => [
@@ -75,20 +79,48 @@ export const POI_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "rhythm", label: t("places:stats.rhythm.title") },
   { key: "quality", label: t("places:stats.quality.title") },
   { key: "fun", label: t("places:stats.fun.title") },
+  { key: "insights", label: t("stats:sections.insights") },
 ];
 
 export const ROADTRIP_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "kpis", label: t("stats:sections.keyFigures") },
   { key: "records", label: t("roadtrips:stats.recordsLabel") },
   { key: "vehicles", label: t("roadtrips:stats.vehicles") },
+  { key: "insights", label: t("stats:sections.insights") },
+  { key: "tours", label: t("roadtrips:stats.tours.title") },
 ];
 
 export const RAIL_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "kpis", label: t("rail:stats.sections.kpis") },
   { key: "rankings", label: t("rail:stats.sections.rankings") },
   { key: "delays", label: t("rail:stats.sections.delays") },
+  // forgejo#261 — journeys and changes, connections, punctuality per operator.
+  { key: "journeys", label: t("rail:stats.sections.journeys") },
+  { key: "connections", label: t("rail:stats.sections.connections") },
+  { key: "punctuality", label: t("rail:stats.sections.punctuality") },
   { key: "records", label: t("rail:stats.sections.records") },
   { key: "years", label: t("rail:stats.sections.years") },
+];
+
+export const RENTAL_SECTIONS = (t: Translate): SectionOption[] => [
+  { key: "kpis", label: t("rental:stats.sections.kpis") },
+  { key: "providers", label: t("rental:stats.sections.providers") },
+  // forgejo#262 — one-way and brokers, efficiency, billing, vehicles, records.
+  { key: "brokers", label: t("rental:stats.sections.brokers") },
+  { key: "efficiency", label: t("rental:stats.sections.efficiency") },
+  { key: "billing", label: t("rental:stats.sections.billing") },
+  { key: "vehicles", label: t("rental:stats.sections.vehicles") },
+  { key: "records", label: t("rental:stats.sections.records") },
+  { key: "years", label: t("rental:stats.sections.years") },
+];
+
+export const BUS_SECTIONS = (t: Translate): SectionOption[] => [
+  { key: "kpis", label: t("bus:stats.sections.kpis") },
+  { key: "rankings", label: t("bus:stats.sections.rankings") },
+  { key: "connections", label: t("bus:stats.sections.connections") },
+  { key: "delays", label: t("bus:stats.sections.delays") },
+  { key: "records", label: t("bus:stats.sections.records") },
+  { key: "years", label: t("bus:stats.sections.years") },
 ];
 
 const BY_TAB: Record<DomainKey | "all", (t: Translate) => SectionOption[]> = {
@@ -99,8 +131,8 @@ const BY_TAB: Record<DomainKey | "all", (t: Translate) => SectionOption[]> = {
   poi: POI_SECTIONS,
   roadtrip: ROADTRIP_SECTIONS,
   rail: RAIL_SECTIONS,
-  // Rental figures are not on the statistics page yet (package R4).
-  rental: () => [],
+  rental: RENTAL_SECTIONS,
+  bus: BUS_SECTIONS,
 };
 
 /** The menu's options for a tab. */

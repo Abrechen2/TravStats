@@ -1,6 +1,7 @@
 import type { EvidenceEntry } from "../../schemas/evidence";
 import type { PagingParams } from "./paging";
 import { sortEntries, sliceEntries } from "./paging";
+import { stationDayKey } from "../../shared/railCounting";
 
 /**
  * Row → `EvidenceEntry` for the four NON-flight domains, plus the sort →
@@ -24,7 +25,14 @@ import { sortEntries, sliceEntries } from "./paging";
 
 export type EvidenceDate = EvidenceEntry["date"];
 
-/** `Date | null` → the contract's day-precision shape. Undated rows sort last. */
+/**
+ * `Date | null` → the contract's day-precision shape. Undated rows sort last.
+ *
+ * Only for values whose stored components ARE the day: a cruise's or a
+ * trip's day column, a stay's hotel-local check-in, a place visit's local
+ * wall clock, a roadtrip stop's day. A real instant (a train's departure) is
+ * read on its station's clock instead — see `railEvidenceEntry`.
+ */
 export function dayPrecisionDate(date: Date | null): EvidenceDate {
   return date ? { value: date.toISOString().slice(0, 10), precision: "day" } : null;
 }
@@ -60,7 +68,9 @@ export function cruiseEvidenceEntry(
 export interface RailEvidenceRow {
   id: string;
   label: string;
+  /** A real instant (ADR 0002) — unlike a stay's or a cruise's day, it needs its zone. */
   departureTime: Date;
+  depTimezone: string | null;
 }
 
 /** A train ride as evidence: it links to its own page (spec 2026-09-25-rail-domain). */
@@ -74,7 +84,10 @@ export function railEvidenceEntry(
     href: `/rail/${row.id}`,
     title: { text: row.label },
     subtitle: fields.subtitle ?? null,
-    date: dayPrecisionDate(row.departureTime),
+    // The day the ride left on its departure station's calendar — the day
+    // `railYear` and `railDayKeys` count it under. A UTC cut dated a night
+    // train leaving Vienna at 00:20 on the 1st on the 31st (forgejo#273).
+    date: { value: stationDayKey(row.departureTime, row.depTimezone), precision: "day" },
     ...(fields.contribution === undefined ? {} : { contribution: fields.contribution }),
     ...(fields.credits === undefined ? {} : { credits: fields.credits }),
     ...(fields.creditLabels === undefined ? {} : { creditLabels: fields.creditLabels }),

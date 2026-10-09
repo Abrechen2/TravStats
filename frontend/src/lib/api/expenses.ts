@@ -15,11 +15,15 @@ export const expensesApi = {
     return data.expense;
   },
 
-  /** Partial: an omitted field is left alone, `null` clears it. */
+  /**
+   * Partial: an omitted field is left alone, `null` clears it. `baseVersion`
+   * (the expense's `updatedAt` as read) makes the server answer 409
+   * `VERSION_CONFLICT` instead of overwriting a newer record (forgejo#141).
+   */
   updateForRoadtrip: async (
     roadtripId: string,
     expenseId: string,
-    input: Partial<ExpenseInput>
+    input: Partial<ExpenseInput> & { baseVersion?: string }
   ): Promise<TripExpense> => {
     const { data } = await api.patch<{ expense: TripExpense }>(
       `/roadtrips/${roadtripId}/expenses/${expenseId}`,
@@ -28,7 +32,18 @@ export const expensesApi = {
     return data.expense;
   },
 
-  removeForRoadtrip: async (roadtripId: string, expenseId: string): Promise<void> => {
-    await api.delete(`/roadtrips/${roadtripId}/expenses/${expenseId}`);
+  /**
+   * `version` (the expense's `updatedAt` as read) goes as `If-Match`: a cost
+   * the phone changed meanwhile is answered 409 `VERSION_CONFLICT` instead of
+   * being deleted unseen (review M8).
+   */
+  removeForRoadtrip: async (
+    roadtripId: string,
+    expenseId: string,
+    version?: string
+  ): Promise<void> => {
+    await api.delete(`/roadtrips/${roadtripId}/expenses/${expenseId}`, {
+      headers: version ? { "If-Match": `"${version}"` } : undefined,
+    });
   },
 };

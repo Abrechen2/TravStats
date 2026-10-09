@@ -41,10 +41,14 @@ function storedText(value: string, zone: string | null, format: DisplayFormatter
 
 /**
  * Reasons whose kept value is a calendar day stored as a placeholder instant
- * (a date-only flight): the record shows the placeholder's own UTC date, so
- * the question shows that day too. Read in the airport's zone it became
- * "31.03.2009 22:00 (America/New_York)" beside a flight showing 01.04.2009,
- * under a sentence saying the stored day was kept (Beta data, 2.7.0-beta.16).
+ * (a date-only flight): shown as a DAY, never with the placeholder's clock —
+ * "31.03.2009 22:00 (America/New_York)" under a sentence saying the stored day
+ * was kept was the Beta finding (2.7.0-beta.16). The day is the one the flight
+ * page shows: the local day of the instant in the row's zone, because a
+ * date-only flight is written as a local wall clock through that zone
+ * (forgejo#273, `shared/time/dateOnlyFlights.json`); the stored UTC date only
+ * without a zone. Its UTC date was the day before for a cruise-import flight
+ * east of UTC, beside a flight page showing the right one.
  */
 const KEPT_AS_DAY: ReadonlySet<string> = new Set(["date_only_day_differs"]);
 
@@ -66,7 +70,7 @@ function keptText(
   format: DisplayFormatter
 ): string {
   if (!DAY_ONLY.test(value) && !Number.isNaN(Date.parse(value))) {
-    if (KEPT_AS_DAY.has(reason)) return format.date(value, { timeZone: "UTC" });
+    if (KEPT_AS_DAY.has(reason)) return format.date(value, { timeZone: zone ?? "UTC" });
     if (KEPT_WITHOUT_TIME.has(reason) && zone) {
       return `${format.date(value, { timeZone: zone })} (${zone})`;
     }

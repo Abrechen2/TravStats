@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { Lodging, LodgingMembership, LodgingStay } from "../../types/lodging";
@@ -9,6 +9,9 @@ const deleteLodgingMock = vi.fn();
 const deleteStayMock = vi.fn();
 const listMembershipsMock = vi.fn();
 const tripsGetAllMock = vi.fn();
+const createStayMock = vi.fn();
+const deleteFactsMock = vi.fn();
+const listStayPageMock = vi.fn();
 
 // The documents section fetches its entry's kept originals on mount. It has
 // its own suite, and `__tests__/documentsMountPoints.test.tsx` checks that
@@ -44,12 +47,14 @@ vi.mock("../../lib/api/lodging", () => ({
   // this the mock module has no such export, vitest prints an error per
   // render and the section is never exercised (forgejo#110).
   listLodgingPhotos: () => Promise.resolve([]),
+  getLodgingDeleteFacts: (...args: unknown[]) => deleteFactsMock(...args),
   // The stay editor is opened by one test below (the second entry point into
   // the deletion). It imports these three from the same module; a missing
   // export is `undefined is not a function` the moment the FX preview runs.
-  createStay: () => Promise.resolve(null),
+  createStay: (...args: unknown[]) => createStayMock(...args),
   updateStay: () => Promise.resolve(null),
   getFxPreview: () => Promise.resolve(null),
+  listStayPage: (...args: unknown[]) => listStayPageMock(...args),
 }));
 
 // Same reason as in StayEditor's own suite: the currency picker asks the server
@@ -72,7 +77,37 @@ vi.mock("../../components/NavigationBar", () => ({
 }));
 
 vi.mock("../../components/lodging/LodgingMiniMap", () => ({
-  LodgingMiniMap: () => <div data-testid="map-stub" />,
+  LodgingMiniMap: ({
+    lodging,
+    onSetLocation,
+  }: {
+    lodging: { lat: number | null };
+    onSetLocation?: () => void;
+  }) => (
+    <div data-testid="map-stub">
+      pin:{String(lodging.lat)}
+      {onSetLocation && (
+        <button type="button" onClick={onSetLocation}>
+          stub-set-location
+        </button>
+      )}
+    </div>
+  ),
+}));
+
+// The repair dialog has its own suite (it needs MapLibre for its preview).
+vi.mock("../../components/lodging/LodgingLocationRepair", () => ({
+  LodgingLocationRepair: ({
+    lodging,
+    onSaved,
+  }: {
+    lodging: Record<string, unknown>;
+    onSaved: (l: Record<string, unknown>) => void;
+  }) => (
+    <button type="button" onClick={() => onSaved({ ...lodging, lat: 52.5, lon: 13.4 })}>
+      stub-repair-save
+    </button>
+  ),
 }));
 
 // Use the real settingsStore for the baseCurrency-labeling test below, so we
@@ -180,6 +215,12 @@ describe("LodgingDetailPage", () => {
     tripsGetAllMock.mockReset();
     listForEntryMock.mockReset();
     listForEntryMock.mockResolvedValue([]);
+    deleteFactsMock.mockReset();
+    deleteFactsMock.mockResolvedValue({ photoCount: 0, documentCount: 0 });
+    createStayMock.mockReset();
+    createStayMock.mockResolvedValue(null);
+    listStayPageMock.mockReset();
+    listStayPageMock.mockResolvedValue({ rows: [], total: 0 });
     listMembershipsMock.mockResolvedValue([]);
     tripsGetAllMock.mockResolvedValue([]);
     useToastStore.setState({ toasts: [] });
@@ -237,6 +278,22 @@ describe("LodgingDetailPage", () => {
     expect(screen.queryByTestId("stay-fx-readout-stay-2")).not.toBeInTheDocument();
   });
 
+  // forgejo#250: the house delete on the detail page says what the list says -
+  // the kept originals of its stays go with it.
+  it("names the kept originals of the stays in the house delete confirmation", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging({}, [baseStay]));
+    deleteFactsMock.mockResolvedValue({ photoCount: 0, documentCount: 2 });
+    const user = userEvent.setup();
+    renderDetailPage();
+    await screen.findByText("Engimatt City & Garden");
+
+    await user.click(screen.getByTestId("lodging-delete-button"));
+    const dialog = await screen.findByRole("dialog");
+
+    await waitFor(() => expect(dialog).toHaveTextContent("documents:deleteCascadeNote"));
+    expect(deleteFactsMock).toHaveBeenCalledWith("lodging-1");
+  });
+
   it("shows a delete confirmation naming the stay count and does NOT call deleteLodging until confirmed", async () => {
     const secondStay: LodgingStay = { ...baseStay, id: "stay-2" };
     getLodgingMock.mockResolvedValue(makeLodging({}, [baseStay, secondStay]));
@@ -257,7 +314,7 @@ describe("LodgingDetailPage", () => {
     // assertion is WHICH key was chosen: `deleteConfirmMessage` is the
     // count-carrying form, `…NoStays` the one for a house with no stays. The
     // choice itself is unit-tested in lib/__tests__/deleteConfirm.test.ts.
-    const message = within(dialog).getByText("lodging:detail.deleteConfirmMessage");
+    const message = within(dialog).getByText(/lodging:detail\.deleteConfirmMessage/);
     expect(message).toBeInTheDocument();
     expect(deleteLodgingMock).not.toHaveBeenCalled();
 
@@ -777,6 +834,99 @@ describe("LodgingDetailPage", () => {
     await waitFor(() => {
       expect(screen.queryByTestId("stay-editor-delete")).not.toBeInTheDocument();
     });
+  });
+
+  // forgejo#227: the next visit to a known house, started where the house is.
+  describe("stay here again", () => {
+    const enterDates = async (from: string, to: string): Promise<void> => {
+      fireEvent.change(screen.getByLabelText(/^lodging:field\.checkIn\b/), {
+        target: { value: from },
+      });
+      fireEvent.change(screen.getByLabelText(/^lodging:field\.checkOut\b/), {
+        target: { value: to },
+      });
+    };
+
+    it("opens a NEW stay at this house with nothing carried over but the house", async () => {
+      getLodgingMock.mockResolvedValue(makeLodging({}, [baseStay]));
+      const user = userEvent.setup();
+      renderDetailPage();
+      await screen.findByTestId("stay-card-stay-1");
+
+      await user.click(screen.getByTestId("lodging-restay-button"));
+
+      // The new visit: the house is named, the line says what is left to enter,
+      // and the dates, room, booking reference and price are empty - the earlier
+      // stay's values (12 May, room 21, ENG-55021, 840 CHF) are NOT prefilled.
+      expect(await screen.findByTestId("stay-editor-house")).toHaveTextContent(
+        "Engimatt City & Garden"
+      );
+      expect(screen.getByTestId("stay-editor-intro")).toHaveTextContent("lodging:restay.intro");
+      expect(screen.getByLabelText(/^lodging:field\.checkIn\b/)).toHaveValue("");
+      expect(screen.getByLabelText(/^lodging:field\.checkOut\b/)).toHaveValue("");
+      expect(screen.getByLabelText("lodging:field.room")).toHaveValue("");
+      expect(screen.getByLabelText("lodging:field.bookingReference")).toHaveValue("");
+      expect(screen.getByLabelText("lodging:field.totalPrice")).toHaveValue(null);
+      // A create form has nothing to delete, and the earlier stay is untouched.
+      expect(screen.queryByTestId("stay-editor-delete")).not.toBeInTheDocument();
+      expect(screen.getByTestId("stay-card-stay-1")).toBeInTheDocument();
+    });
+
+    it("warns when the new booking repeats a stay this house already has, and lets the user go on", async () => {
+      getLodgingMock.mockResolvedValue(makeLodging({}, [baseStay]));
+      listStayPageMock.mockResolvedValue({
+        rows: [
+          {
+            ...baseStay,
+            lodging: {
+              id: "lodging-1",
+              name: "Engimatt City & Garden",
+              type: "hotel",
+              city: "Zürich",
+              country: "CH",
+              chainId: null,
+              isoCountryCode: null,
+            },
+            trip: null,
+          },
+        ],
+        total: 1,
+      });
+      createStayMock.mockResolvedValue({ ...baseStay, id: "stay-2" });
+      const user = userEvent.setup();
+      renderDetailPage();
+      await screen.findByTestId("stay-card-stay-1");
+
+      await user.click(screen.getByTestId("lodging-restay-button"));
+      await screen.findByTestId("stay-editor-save");
+      await enterDates("2024-05-12", "2024-05-14");
+      await user.click(screen.getByTestId("stay-editor-save"));
+
+      const notice = await screen.findByTestId("stay-conflict-notice");
+      expect(notice).toHaveTextContent("lodging:conflict.titleDuplicate");
+      expect(createStayMock).not.toHaveBeenCalled();
+
+      await user.click(screen.getByTestId("stay-conflict-proceed"));
+      await waitFor(() => expect(createStayMock).toHaveBeenCalledTimes(1));
+      expect(createStayMock.mock.calls[0][0]).toBe("lodging-1");
+    });
+  });
+
+  // forgejo#228: "no location" opens the small repair, not the whole house form,
+  // and the page shows the pin the repair wrote.
+  it("repairs a missing location in place, without opening the house form", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging({ lat: null, lon: null }));
+    const user = userEvent.setup();
+    renderDetailPage();
+    await screen.findByTestId("map-stub");
+    expect(screen.getByTestId("map-stub")).toHaveTextContent("pin:null");
+
+    await user.click(screen.getByRole("button", { name: "stub-set-location" }));
+    expect(screen.queryByText("lodging:form.editTitle")).not.toBeInTheDocument();
+
+    await user.click(await screen.findByRole("button", { name: "stub-repair-save" }));
+    await waitFor(() => expect(screen.getByTestId("map-stub")).toHaveTextContent("pin:52.5"));
+    expect(screen.queryByRole("button", { name: "stub-repair-save" })).not.toBeInTheDocument();
   });
 
   it("offers no delete in the editor while a stay is being created", async () => {

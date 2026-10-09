@@ -365,6 +365,41 @@ export interface LodgingListQuery {
   order?: "asc" | "desc";
 }
 
+/**
+ * A stay as `GET /lodging/stays` serves it: the stay itself plus the house it
+ * belongs to and the trip it is linked to (forgejo#226) - what a list across
+ * houses needs to tell two stays apart without a request per row.
+ */
+export interface LodgingStayListItem extends LodgingStay {
+  lodging: {
+    id: string;
+    name: string;
+    type: LodgingType;
+    city: string | null;
+    country: string | null;
+    chainId: number | null;
+    isoCountryCode: string | null;
+  };
+  trip: { id: string; name: string } | null;
+}
+
+/** The query of `GET /lodging/stays`. `from` / `to` are calendar days (`YYYY-MM-DD`). */
+export interface StayListQuery {
+  from?: string;
+  to?: string;
+  tripId?: string;
+  limit?: number;
+  offset?: number;
+  order?: "asc" | "desc";
+}
+
+/** One page of `GET /lodging/stays`: the rows, and the size of the set they came from. */
+export interface StayPage {
+  rows: LodgingStayListItem[];
+  /** Stays matching the filters, BEFORE the page slice. */
+  total: number;
+}
+
 /** One page of `GET /lodging`: the rows, and the size of the set they came from. */
 export interface LodgingPage {
   rows: Lodging[];

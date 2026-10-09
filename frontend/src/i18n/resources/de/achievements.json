@@ -42,6 +42,7 @@
     "domainPoi": "Orte",
     "domainRail": "Bahn",
     "domainRental": "Mietwagen",
+    "domainBus": "Bus",
     "domainShared": "Übergreifend",
     "showUnlockedOnly": "Nur freigeschaltete anzeigen",
     "state": "Status",
@@ -60,7 +61,9 @@
       "km": "km",
       "hours": "Std.",
       "days": "Tage",
-      "nights": "Nächte"
+      "nights": "Nächte",
+      "years": "Jahre",
+      "metres": "Hm"
     },
     "evidence": {
       "trigger": "Die Einträge dahinter",
@@ -325,15 +328,15 @@
     },
     "FAVORITE_ROUTE": {
       "name": "Lieblingsroute",
-      "description": "Fliege dieselbe Route 5 Mal"
+      "description": "Fliege dieselbe Verbindung 5 Mal (in beliebiger Richtung)"
     },
     "ROUTE_MASTER": {
       "name": "Routen-Meister",
-      "description": "Fliege dieselbe Route 10 Mal"
+      "description": "Fliege dieselbe Verbindung 10 Mal (in beliebiger Richtung)"
     },
     "COMMUTER": {
       "name": "Pendler",
-      "description": "Fliege dieselbe Route 25 Mal"
+      "description": "Fliege dieselbe Verbindung 25 Mal (in beliebiger Richtung)"
     },
     "BUSY_MONTH": {
       "name": "Stressiger Monat",
@@ -477,7 +480,7 @@
     },
     "GROUNDHOG_DAY": {
       "name": "Murmeltier-Tag",
-      "description": "Gleiche Route an drei aufeinanderfolgenden Tagen"
+      "description": "Dieselbe Route in derselben Richtung an drei aufeinanderfolgenden Tagen"
     },
     "SCHEDULE_KEEPER": {
       "name": "Plan-Bewahrer",
@@ -1290,11 +1293,131 @@
     "RAIL_OPERATORS_5": {
       "name": "Bahngesellschaften-Sammler",
       "description": "Mit fünf verschiedenen Bahngesellschaften gefahren"
+    },
+    "NEW_GROUND_YEAR": {
+      "name": "Neulandjahr",
+      "description": "Mindestens fünf Flughäfen in einem Jahr zum ersten Mal erfasst (ohne das erste erfasste Jahr)"
+    },
+    "LONG_TIME_NO_SEE": {
+      "name": "Lange nicht gesehen",
+      "description": "Zu einem Flughafen zurückgekehrt, nach mindestens zehn erfassten Jahren"
+    },
+    "FOUR_QUARTERS_AIRPORT": {
+      "name": "Jahreszeiten-Wiedersehen",
+      "description": "Denselben Flughafen in allen vier Kalenderquartalen eines Jahres genutzt"
+    },
+    "PORT_REUNION_3": {
+      "name": "Hafen-Wiedersehen",
+      "description": "Denselben Hafen auf drei verschiedenen Kreuzfahrten als Hafenstopp angelaufen"
+    },
+    "SHORE_EXCURSIONS_5": {
+      "name": "Land und Leute",
+      "description": "An fünf verschiedenen Häfen einen Landausflug dokumentiert"
+    },
+    "SAME_ITINERARY_2": {
+      "name": "Eine Runde mehr",
+      "description": "Zwei Kreuzfahrten mit genau derselben Hafenfolge"
+    },
+    "LODGING_FOUR_WORLDS": {
+      "name": "Vier Schlafwelten",
+      "description": "Vier verschiedene Unterkunftsarten auf einer abgeschlossenen Reise"
+    },
+    "LODGING_WELCOME_YEARS_5": {
+      "name": "Jahrelang willkommen",
+      "description": "Dasselbe Haus in fünf verschiedenen Kalenderjahren besucht"
+    },
+    "LODGING_FULL_CALENDAR": {
+      "name": "Einmal durch den Kalender",
+      "description": "In jedem Monat eines Kalenderjahres mindestens eine Nacht auswärts geschlafen"
+    },
+    "PLACE_REUNION_5Y": {
+      "name": "Wiedersehen nach Jahren",
+      "description": "Denselben Ort nach mindestens fünf Jahren erneut besucht"
+    },
+    "PLACE_COLOURFUL_TRIP": {
+      "name": "Bunte Reise",
+      "description": "Orte aus fünf verschiedenen Kategorien auf einer Reise besucht"
+    },
+    "PLACE_WELL_REMEMBERED_10": {
+      "name": "Gut erinnert",
+      "description": "Zehn Besuche mit eigener Notiz und eigenem Foto dokumentiert"
+    },
+    "ROADTRIP_BASE_CAMP": {
+      "name": "Basislager",
+      "description": "Drei Nächte an einer Station und von dort zwei Tagestouren unternommen"
+    },
+    "ROADTRIP_LAND_AND_WATER": {
+      "name": "Land und Wasser",
+      "description": "Auf einem Roadtrip sowohl Straßen- als auch Fährstrecken zurückgelegt"
+    },
+    "ROADTRIP_MUSCLE_POWER_3": {
+      "name": "Mit Muskelkraft weiter",
+      "description": "Von drei verschiedenen Roadtrip-Stationen aus Tagestouren unternommen"
+    },
+    "TOUR_FIRST_STEPS": {
+      "name": "Erste Schritte",
+      "description": "Die erste Tagestour abgeschlossen"
+    },
+    "TOUR_THREE_KINDS": {
+      "name": "Drei Arten unterwegs",
+      "description": "Tagestouren mit drei verschiedenen Aktivitäten abgeschlossen"
+    },
+    "TOUR_ASCENT_1000": {
+      "name": "Höhen gesammelt",
+      "description": "1.000 aufgezeichnete Höhenmeter im Aufstieg auf abgeschlossenen Touren"
+    },
+    "RAIL_STATION_REUNION": {
+      "name": "Bahnhofs-Wiedersehen",
+      "description": "Nach mindestens fünf Jahren an einen Bahnhof zurückgekehrt"
+    },
+    "RAIL_TRANSFERS_5": {
+      "name": "Gut umgestiegen",
+      "description": "Fünf vollständig dokumentierte Bahnreisen mit verknüpftem Umstieg"
+    },
+    "RAIL_NEW_CONNECTIONS_10": {
+      "name": "Neue Schienen",
+      "description": "Zehn erstmals gefahrene Verbindungen in einem Jahr"
+    },
+    "RENTAL_FIRST": {
+      "name": "Erste Schlüssel",
+      "description": "Die erste Miete abgeschlossen"
+    },
+    "RENTAL_ONE_WAY": {
+      "name": "Anderswo abgegeben",
+      "description": "Einen Mietwagen an einer anderen Station zurückgegeben als abgeholt"
+    },
+    "RENTAL_ODOMETER_5": {
+      "name": "Kilometerbuch",
+      "description": "Fünf abgeschlossene Mieten mit Anfangs- und Endkilometerstand"
+    },
+    "BUS_FIRST": {
+      "name": "Erste Reihe im Logbuch",
+      "description": "Die erste Busfahrt abgeschlossen"
+    },
+    "BUS_NIGHT": {
+      "name": "Über Nacht unterwegs",
+      "description": "Eine Busfahrt über Nacht, belegt durch Abfahrts- und Ankunftszeit"
+    },
+    "BUS_TERMINALS_10": {
+      "name": "Neue Haltestellen",
+      "description": "Zehn verschiedene Bus-Terminals besucht"
+    },
+    "TRIP_THREE_MODES": {
+      "name": "Drei Verkehrsmittel",
+      "description": "Eine abgeschlossene Reise mit drei verschiedenen Verkehrsmitteln"
+    },
+    "TRIP_ARRIVE_DISCOVER": {
+      "name": "Ankommen und entdecken",
+      "description": "Mit Bahn oder Bus angereist, übernachtet und einen Ort besucht – auf derselben Reise"
     }
   },
   "header": {
     "meta": "{{unlocked}} von {{total}} freigeschaltet · {{points}} Punkte",
     "retired_one": "{{count}} eingestellter Erfolg zählt nur zu den Punkten",
     "retired_other": "{{count}} eingestellte Erfolge zählen nur zu den Punkten"
+  },
+  "planning": {
+    "badge": "Planung",
+    "note": "Zählt gebuchte, noch nicht angetretene Reisen — keine, die schon stattgefunden haben."
   }
 }

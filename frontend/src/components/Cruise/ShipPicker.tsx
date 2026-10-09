@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { shipsApi } from "../../lib/api";
 import type { Ship } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -6,6 +6,10 @@ import { useTranslation } from "../../hooks/useTranslation";
 interface Props {
   value: Ship | null;
   onChange: (ship: Ship) => void;
+  /** Visible name of the search field (forgejo#249: the placeholder was its only name). */
+  label?: string;
+  /** Id of the search field, so a "still needed" hint can take focus to it. */
+  id?: string;
 }
 
 /**
@@ -20,8 +24,10 @@ interface Props {
  *   duplicate into the catalogue all accounts share. The server now also
  *   answers a duplicate create with the existing ship; that is said too.
  */
-export function ShipPicker({ value, onChange }: Props): JSX.Element {
+export function ShipPicker({ value, onChange, label, id }: Props): JSX.Element {
   const { t } = useTranslation("cruise");
+  const generatedId = useId();
+  const inputId = id ?? `ship-picker-${generatedId}`;
   const [query, setQuery] = useState<string>(value?.name ?? "");
   const [results, setResults] = useState<Ship[]>([]);
   const [showAdd, setShowAdd] = useState<boolean>(false);
@@ -90,11 +96,17 @@ export function ShipPicker({ value, onChange }: Props): JSX.Element {
 
   return (
     <div className="relative">
+      {label !== undefined && (
+        <label htmlFor={inputId} className="mb-1 block text-xs text-(--text-muted)">
+          {label}
+        </label>
+      )}
       <input
+        id={inputId}
         role="combobox"
         aria-expanded={results.length > 0}
         aria-autocomplete="list"
-        className="w-full rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden"
+        className="w-full rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden pointer-coarse:min-h-(--ts-size-touch-min)"
         placeholder={t("picker.ship_placeholder")}
         value={query}
         onChange={(e): void => setQuery(e.target.value)}
@@ -105,7 +117,7 @@ export function ShipPicker({ value, onChange }: Props): JSX.Element {
             <li key={r.id}>
               <button
                 type="button"
-                className="w-full px-3 py-2 text-left text-sm text-(--text-primary) hover:bg-(--bg-elevated)"
+                className="w-full px-3 py-2 text-left text-sm text-(--text-primary) hover:bg-(--bg-elevated) pointer-coarse:min-h-(--ts-size-touch-min)"
                 onClick={(): void => handleSelect(r)}
               >
                 {r.name} <span className="text-(--text-muted)">— {r.cruiseLine}</span>

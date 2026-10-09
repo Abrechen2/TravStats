@@ -26,6 +26,9 @@ import type { PlaceSearchResult } from "../../lib/api/geo";
 import { useLocationSearch } from "./useLocationSearch";
 import { LocationSuggestions } from "./LocationSuggestions";
 import { LocationMapModal } from "./LocationMapModal";
+// The module, not the `form` index: that one pulls in `Modal`, which this
+// field is rendered inside of.
+import { RequiredMark } from "../form/requiredFields";
 
 export interface LocationCoordinates {
   lat: number;
@@ -77,7 +80,18 @@ export interface LocationInputProps {
    * form can refuse to save. Optional: a caller that does not pass it keeps
    * today's behaviour and still gets the inline message.
    */
-  onValidityChange?: (valid: boolean) => void;
+  /**
+   * Whether the typed coordinates are acceptable. On a refusal `field` names
+   * the value at fault ("lat" when both are), so a form can take the user to
+   * it instead of to the first of the two.
+   */
+  onValidityChange?: (valid: boolean, field?: "lat" | "lon") => void;
+  /**
+   * The form cannot be saved without a position (forgejo#245): the label
+   * carries the required mark and the search field `aria-required`. A string
+   * `label` cannot carry the mark itself, which is why this is a prop.
+   */
+  required?: boolean;
 }
 
 function isValidLat(n: number): boolean {
@@ -117,6 +131,7 @@ export function LocationInput({
   label,
   idPrefix = "location-input",
   onValidityChange,
+  required = false,
 }: LocationInputProps): JSX.Element {
   const { t, i18n } = useTranslation(["location"]);
 
@@ -226,7 +241,7 @@ export function LocationInput({
               ? "location:latOutOfRange"
               : "location:lonOutOfRange"
         );
-        onValidityChange?.(false);
+        onValidityChange?.(false, latOk ? "lon" : "lat");
         return;
       }
       applySelection({ lat, lon });
@@ -287,15 +302,34 @@ export function LocationInput({
   );
 
   const listboxId = `${idPrefix}-listbox`;
+  // The refusal names its value (forgejo#246): the field at fault is marked
+  // invalid and reads the message as its description, so a screen reader that
+  // lands on it — and `focusFirstError` looking for it — find the complaint.
+  const rangeErrorId = `${idPrefix}-range-error`;
+  const latRefused =
+    rangeError === "location:outOfRange" || rangeError === "location:latOutOfRange";
+  const lonRefused =
+    rangeError === "location:outOfRange" || rangeError === "location:lonOutOfRange";
+  const refusedProps = (
+    refused: boolean
+  ): { "aria-invalid"?: true; "aria-describedby"?: string } =>
+    refused ? { "aria-invalid": true, "aria-describedby": rangeErrorId } : {};
 
   return (
     <div className="space-y-2">
       <div className="relative">
         <label className="label" htmlFor={`${idPrefix}-search`}>
           {label ?? t("location:searchLabel")}
+          {required && (
+            <>
+              {" "}
+              <RequiredMark />
+            </>
+          )}
         </label>
         <input
           id={`${idPrefix}-search`}
+          {...(required ? { "aria-required": true } : {})}
           role="combobox"
           aria-expanded={isDropdownOpen}
           aria-autocomplete="list"
@@ -354,7 +388,7 @@ export function LocationInput({
       <button
         type="button"
         onClick={() => setModalOpen(true)}
-        className="text-xs hover:underline"
+        className="text-xs hover:underline pointer-coarse:min-h-(--ts-size-touch-min)"
         style={{ color: "var(--accent, #ffc107)" }}
       >
         {t("location:mapPick")}
@@ -391,6 +425,7 @@ export function LocationInput({
               min={-90}
               max={90}
               className="input"
+              {...refusedProps(latRefused)}
               value={latInput}
               onChange={(e) => handleAdvancedLatChange(e.target.value)}
             />
@@ -406,6 +441,7 @@ export function LocationInput({
               min={-180}
               max={180}
               className="input"
+              {...refusedProps(lonRefused)}
               value={lonInput}
               onChange={(e) => handleAdvancedLonChange(e.target.value)}
             />
@@ -413,6 +449,7 @@ export function LocationInput({
         </div>
         {rangeError && (
           <p
+            id={rangeErrorId}
             className="mt-2 text-sm"
             role="alert"
             data-testid="location-range-error"

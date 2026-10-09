@@ -68,6 +68,7 @@ import {
 } from "../../utils/continents";
 import { lodgingEvidence, type CountableStay } from "../../shared/countryEvidence";
 import { lodgingCountry, placeVisitCountry, portCallCountry } from "./evidenceCountry";
+import { flightDay } from "./flightEvidence";
 import type { PassportEvidence } from "./passport";
 import type { LoadedRoadtripStation } from "./roadtripEvidenceLoader";
 import type { RailEnd } from "./railEvidence";
@@ -91,6 +92,13 @@ export interface CountryDetailFlight {
   arrLon: number;
   departureTime: Date | null;
   status: string;
+  /**
+   * The day the flight left on at its DEPARTURE airport — the passport's
+   * `PassportFlight.localDay`, resolved by the loader the same way, so a row
+   * and its page file the flight under the same day and year (forgejo#273).
+   * Absent: the stored instant's UTC day, the passport's fallback too.
+   */
+  localDay?: string | null;
 }
 
 /** A port a SAILED cruise called at. Same cut rule 1 makes for flights. */
@@ -185,6 +193,7 @@ const KIND_RANK: Record<CountryTimelineEntry["kind"], number> = {
   place: 2,
   lodging: 3,
   rail: 4,
+  bus: 4.5,
   roadtrip: 5,
   track: 6,
 };
@@ -216,7 +225,9 @@ export function buildCountryDetail(
   trackDays: readonly CountryDetailTrackDay[] = [],
   timelineLimit: number = COUNTRY_TIMELINE_LIMIT,
   roadtripStations: readonly CountryDetailRoadtripStation[] = [],
-  railEnds: readonly RailEnd[] = []
+  railEnds: readonly RailEnd[] = [],
+  /** Bus terminal ends (`./busEvidence.ts`), while the bus domain is visible (forgejo#265). */
+  busEnds: readonly RailEnd[] = []
 ): CountryDetail | null {
   const wanted = isoCountryCode(code);
   if (!wanted) return null;
@@ -247,11 +258,11 @@ export function buildCountryDetail(
     const arrHere = arr !== null && isoCountryCode(airportCountries.get(arr) ?? null) === wanted;
     if (!depHere && !arrHere) continue;
 
-    const date = isoDay(flight.departureTime);
+    const date = flightDay(flight);
 
     // Rule 3: one entry per flight, so a domestic leg does not count twice.
     entries += 1;
-    stretchYears(flight.departureTime);
+    stretchYears(date === null ? null : new Date(`${date}T00:00:00Z`));
 
     const touch = (iata: string, lat: number, lon: number): void => {
       const acc = airports.get(iata) ?? {
@@ -392,6 +403,22 @@ export function buildCountryDetail(
   }
   const railRideCount = railRideIds.size;
 
+  /** A bus ride with a terminal here (forgejo#265) — the rail rule, one entry per ride. */
+  const busRideIds = new Set<string>();
+  for (const e of busEnds) {
+    if (e.country !== wanted || busRideIds.has(e.rideId)) continue;
+    busRideIds.add(e.rideId);
+    stretchYears(e.at);
+    timeline.push({
+      kind: "bus",
+      date: e.days[0] ?? null,
+      rideId: e.rideId,
+      rideLabel: e.rideLabel,
+      stationName: e.stationName,
+    });
+  }
+  const busRideCount = busRideIds.size;
+
   /**
    * Measured presence, folded into ONE entry rather than one per day.
    *
@@ -425,6 +452,7 @@ export function buildCountryDetail(
     lodgingCount === 0 &&
     roadtripStationCount === 0 &&
     railRideCount === 0 &&
+    busRideCount === 0 &&
     trackDayCount === 0
   ) {
     return null;
@@ -461,9 +489,11 @@ export function buildCountryDetail(
             ? "lodging"
             : railRideCount > 0
               ? "rail"
-              : roadtripStationCount > 0
-                ? "roadtrip"
-                : "track";
+              : busRideCount > 0
+                ? "bus"
+                : roadtripStationCount > 0
+                  ? "roadtrip"
+                  : "track";
 
   return {
     code: wanted,
@@ -483,6 +513,7 @@ export function buildCountryDetail(
     lodgings: lodgingCount,
     roadtripStations: roadtripStationCount,
     railRides: railRideCount,
+    busRides: busRideCount,
     trackDays: trackDayCount,
     anchor: anchored ? { iata: anchored[0], lat: anchored[1].lat, lon: anchored[1].lon } : null,
     timeline: ordered.slice(0, timelineLimit),

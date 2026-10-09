@@ -25,6 +25,41 @@ export interface RentalStats {
   km: { total: number | null; covered: number; of: number };
   /** Fees billed for cancelled rentals, per currency — never a rental-day cost. */
   cancellationFees: Array<{ currency: string; amount: number; rentals: number }>;
+  /**
+   * forgejo#262 — efficiency, booked vs billed, vehicles, records. Optional
+   * only because a server older than the field answers without it; the
+   * section then draws none of these blocks.
+   */
+  extra?: RentalExtraStats;
+}
+
+/** Mirrors `RentalExtraStats` in `backend/src/services/rental/rentalStatsExtra.ts`. */
+export interface RentalExtraStats {
+  brokered: { viaBroker: number; direct: number };
+  kmPerDay: { value: number | null; rentals: number; km: number; days: number };
+  costPerKm: Array<{ currency: string; perKm: number; rentals: number; km: number }>;
+  bookedVsFinal: {
+    byCurrency: Array<{
+      currency: string;
+      rentals: number;
+      booked: number;
+      final: number;
+      difference: number;
+    }>;
+    otherCurrency: number;
+  };
+  vehicles: {
+    distinctDriven: number;
+    withDriven: number;
+    classes: Array<{ label: string; rentals: number }>;
+    promisedVsDriven: { compared: number; sameModel: number; otherModel: number };
+  };
+  records: {
+    longest: { id: string; days: number; provider: string } | null;
+    farthest: { id: string; km: number; source: string | null } | null;
+    newProviders: string[];
+  };
+  odometerDocumented: number;
 }
 
 export interface RentalSuggestions {
@@ -53,9 +88,10 @@ export interface InvoiceReminder {
 }
 
 export const rentalLinksApi = {
-  async stats(year?: number): Promise<RentalStats> {
+  /** `until` ("MM-DD") cuts the year at that day — a running year against the same span. */
+  async stats(year?: number, until?: string | null): Promise<RentalStats> {
     const res = await api.get<Envelope<RentalStats>>("/rentals/stats", {
-      params: year ? { year } : {},
+      params: year ? { year, ...(until ? { until } : {}) } : {},
     });
     return res.data.data;
   },

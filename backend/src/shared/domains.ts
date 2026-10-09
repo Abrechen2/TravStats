@@ -11,6 +11,7 @@ export const DOMAIN_KEYS = [
   "roadtrip",
   "rail",
   "rental",
+  "bus",
 ] as const;
 export type DomainKey = (typeof DOMAIN_KEYS)[number];
 
@@ -106,6 +107,19 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     icon: "🚗",
     color: "#d98cb3",
     routePrefix: "/rentals",
+  },
+  // Long-distance coach rides (spec 2026-10-07-bus-domain-design). Available,
+  // so shared code iterating AVAILABLE_DOMAINS sees it; the UI hides it behind
+  // the `busDomain` beta gate. Not city transit (owner, 2026-10-07): a ticketed
+  // ride between two terminals. The colour is PROVISIONAL (spec D7) — the
+  // domain colour table belongs to the Companion / Claude Design.
+  bus: {
+    key: "bus",
+    available: true,
+    i18nKey: "domain.bus",
+    icon: "🚌",
+    color: "#c49a6c",
+    routePrefix: "/bus",
   },
 };
 

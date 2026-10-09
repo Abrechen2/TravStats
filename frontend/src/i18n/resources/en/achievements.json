@@ -42,6 +42,7 @@
     "domainPoi": "Places",
     "domainRail": "Rail",
     "domainRental": "Rental cars",
+    "domainBus": "Bus",
     "domainShared": "Shared",
     "showUnlockedOnly": "Show unlocked only",
     "state": "Status",
@@ -60,7 +61,9 @@
       "km": "km",
       "hours": "h",
       "days": "days",
-      "nights": "nights"
+      "nights": "nights",
+      "years": "years",
+      "metres": "m"
     },
     "evidence": {
       "trigger": "The entries behind it",
@@ -325,15 +328,15 @@
     },
     "FAVORITE_ROUTE": {
       "name": "Favorite Route",
-      "description": "Fly the same route 5 times"
+      "description": "Fly the same route 5 times (either direction)"
     },
     "ROUTE_MASTER": {
       "name": "Route Master",
-      "description": "Fly the same route 10 times"
+      "description": "Fly the same route 10 times (either direction)"
     },
     "COMMUTER": {
       "name": "Commuter",
-      "description": "Fly the same route 25 times"
+      "description": "Fly the same route 25 times (either direction)"
     },
     "BUSY_MONTH": {
       "name": "Busy Month",
@@ -477,7 +480,7 @@
     },
     "GROUNDHOG_DAY": {
       "name": "Groundhog Day",
-      "description": "Same route on three consecutive days"
+      "description": "The same route, in the same direction, on three consecutive days"
     },
     "SCHEDULE_KEEPER": {
       "name": "Schedule Keeper",
@@ -1290,11 +1293,131 @@
     "RAIL_OPERATORS_5": {
       "name": "Operator collector",
       "description": "Travelled with five different rail operators"
+    },
+    "NEW_GROUND_YEAR": {
+      "name": "New ground",
+      "description": "At least five airports recorded for the first time in one year (the first recorded year excluded)"
+    },
+    "LONG_TIME_NO_SEE": {
+      "name": "Long time no see",
+      "description": "Returned to an airport after at least ten recorded years"
+    },
+    "FOUR_QUARTERS_AIRPORT": {
+      "name": "All-season regular",
+      "description": "Used the same airport in all four calendar quarters of one year"
+    },
+    "PORT_REUNION_3": {
+      "name": "Port regular",
+      "description": "Called at the same port on three different cruises (port calls, not embarkation)"
+    },
+    "SHORE_EXCURSIONS_5": {
+      "name": "Going ashore",
+      "description": "Documented a shore excursion at five different ports"
+    },
+    "SAME_ITINERARY_2": {
+      "name": "One more lap",
+      "description": "Two cruises with exactly the same sequence of ports"
+    },
+    "LODGING_FOUR_WORLDS": {
+      "name": "Four ways to sleep",
+      "description": "Four different kinds of accommodation on one completed trip"
+    },
+    "LODGING_WELCOME_YEARS_5": {
+      "name": "Welcome back, year after year",
+      "description": "The same house in five different calendar years"
+    },
+    "LODGING_FULL_CALENDAR": {
+      "name": "All around the calendar",
+      "description": "At least one night away in every month of one calendar year"
+    },
+    "PLACE_REUNION_5Y": {
+      "name": "Reunion after years",
+      "description": "Returned to the same place after five years or more"
+    },
+    "PLACE_COLOURFUL_TRIP": {
+      "name": "A colourful trip",
+      "description": "Visited places of five different categories on one trip"
+    },
+    "PLACE_WELL_REMEMBERED_10": {
+      "name": "Well remembered",
+      "description": "Ten visits documented with their own note and their own photo"
+    },
+    "ROADTRIP_BASE_CAMP": {
+      "name": "Base camp",
+      "description": "Three nights at one station and two day tours from there"
+    },
+    "ROADTRIP_LAND_AND_WATER": {
+      "name": "Land and water",
+      "description": "Covered both road and ferry stretches on one roadtrip"
+    },
+    "ROADTRIP_MUSCLE_POWER_3": {
+      "name": "Under your own steam",
+      "description": "Day tours from three different roadtrip stations"
+    },
+    "TOUR_FIRST_STEPS": {
+      "name": "First steps",
+      "description": "Completed your first day tour"
+    },
+    "TOUR_THREE_KINDS": {
+      "name": "Three ways out",
+      "description": "Completed day tours of three different activities"
+    },
+    "TOUR_ASCENT_1000": {
+      "name": "Height collected",
+      "description": "1,000 recorded metres of climb on completed tours"
+    },
+    "RAIL_STATION_REUNION": {
+      "name": "Station reunion",
+      "description": "Returned to a station after at least five years"
+    },
+    "RAIL_TRANSFERS_5": {
+      "name": "Smooth connections",
+      "description": "Five fully documented rail journeys with a linked change of trains"
+    },
+    "RAIL_NEW_CONNECTIONS_10": {
+      "name": "New rails",
+      "description": "Ten connections ridden for the first time in one year"
+    },
+    "RENTAL_FIRST": {
+      "name": "First keys",
+      "description": "Completed your first rental"
+    },
+    "RENTAL_ONE_WAY": {
+      "name": "Dropped off elsewhere",
+      "description": "Returned a rental car at a different station than you picked it up"
+    },
+    "RENTAL_ODOMETER_5": {
+      "name": "Logbook",
+      "description": "Five completed rentals with both the start and end odometer reading"
+    },
+    "BUS_FIRST": {
+      "name": "Front row in the logbook",
+      "description": "Completed your first bus ride"
+    },
+    "BUS_NIGHT": {
+      "name": "On the road overnight",
+      "description": "A bus ride through the night, shown by its departure and arrival times"
+    },
+    "BUS_TERMINALS_10": {
+      "name": "New stops",
+      "description": "Visited ten different bus terminals"
+    },
+    "TRIP_THREE_MODES": {
+      "name": "Three ways to travel",
+      "description": "A completed trip with three different modes of transport"
+    },
+    "TRIP_ARRIVE_DISCOVER": {
+      "name": "Arrive and discover",
+      "description": "Arrived by train or bus, stayed the night and visited a place – on the same trip"
     }
   },
   "header": {
     "meta": "{{unlocked}} of {{total}} unlocked · {{points}} points",
     "retired_one": "{{count}} retired achievement counts toward points only",
     "retired_other": "{{count}} retired achievements count toward points only"
+  },
+  "planning": {
+    "badge": "Planning",
+    "note": "Counts booked trips not yet taken — not trips that already happened."
   }
 }

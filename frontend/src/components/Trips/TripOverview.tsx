@@ -7,7 +7,7 @@ import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useRailVisible } from "../../hooks/useRailVisible";
 import { useRentalVisible } from "../../hooks/useRentalVisible";
 import type { Trip } from "../../types";
-import { sumByCurrency, tripCostSources } from "../../lib/bookingCost";
+import { tripCostTotals } from "../../lib/tripCost";
 import { formatDate } from "../../lib/displayFormat";
 import { railDeparture } from "../../lib/entityTimes";
 import { formatCurrency } from "../../lib/units";
@@ -183,7 +183,10 @@ export default function TripOverview({
       : null;
   // Through `formatCurrency`, like the trip card: the tile wrote "EUR 40206"
   // while the card beside it wrote "40.206 €" (forgejo#86).
-  const costTotals = sumByCurrency(tripCostSources(trip.bookings ?? [], flights, cruises, stays));
+  // The server's figure (forgejo#274) — trains, rentals and expenses included,
+  // a hidden domain left out — never a sum of the rows this page happens to hold.
+  const costTotals = tripCostTotals(trip.cost);
+  const unpriced = trip.cost?.unpricedEntries ?? 0;
 
   const kpis: { key: string; value: ReactNode; label: string }[] = [
     ...(days !== null && days > 0
@@ -205,7 +208,11 @@ export default function TripOverview({
             value: costTotals
               .map((c) => formatCurrency(c.total, c.currency, { compact: true, language }))
               .join(" + "),
-            label: t("trips:totalCost"),
+            // A missing price is said, not read as free: the figure is a floor.
+            label:
+              unpriced > 0
+                ? `${t("trips:totalCost")} · ${t("trips:costUnpriced", { count: unpriced })}`
+                : t("trips:totalCost"),
           },
         ]
       : []),

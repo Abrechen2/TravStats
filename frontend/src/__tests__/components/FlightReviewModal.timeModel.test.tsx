@@ -24,7 +24,11 @@ vi.mock("../../lib/api", () => ({
   parseApi: { submitParserCorrection: vi.fn() },
 }));
 // Its seeding poll is a timer this test is not about.
-vi.mock("../../components/AirportAutocomplete", () => ({ default: () => null }));
+// It still shows its own field's error: an airport without a zone is refused
+// AT that airport since forgejo#246.
+vi.mock("../../components/AirportAutocomplete", () => ({
+  default: ({ error }: { error?: string | null }) => (error ? <p>{error}</p> : null),
+}));
 vi.mock("../../store/authStore", () => ({
   useAuthStore: () => ({ user: { id: "u1" } }),
 }));
@@ -81,8 +85,9 @@ describe("FlightReviewModal — time model", () => {
       />
     );
     await waitFor(() => expect(document.querySelector("form")).toBeTruthy());
-    // Let both airport codes resolve before submitting.
-    await new Promise((r) => setTimeout(r, 50));
+    // Let both airport codes resolve before submitting: the confirm stays
+    // disabled until they have (forgejo#245), whatever the host's load.
+    await waitFor(() => expect(document.querySelector('button[type="submit"]')).not.toBeDisabled());
     fireEvent.submit(document.querySelector("form")!);
     expect(await screen.findByText(/keine Zeitzone bekannt/)).toBeInTheDocument();
     expect(onConfirm).not.toHaveBeenCalled();

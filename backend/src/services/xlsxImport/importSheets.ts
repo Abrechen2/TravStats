@@ -34,6 +34,7 @@ import { importFlights } from "./flights";
 import { importLodging, importLodgingStays } from "./lodging";
 import { importPlaceVisits, importPlaces } from "./places";
 import { importRail } from "./rail";
+import { importRentals } from "./rentals";
 import { importRoadtripStations } from "./roadtripStations";
 import { importRoadtripExpenses } from "./roadtripExpenses";
 import { importRoadtrips } from "./roadtrips";
@@ -76,6 +77,8 @@ const HANDLERS: Record<string, Handler> = {
   // Rail rides (rail spec) point at trips only, so their place in the order
   // is free; last, as the export writes the sheet last.
   rail: importRail,
+  // Rentals (forgejo#267) point at trips and roadtrips — after both sheets.
+  rental: importRentals,
 };
 
 export function isImportable(key: string): boolean {

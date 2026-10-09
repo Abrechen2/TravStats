@@ -37,7 +37,7 @@ import { fetchFlightDatedRows, fetchCruiseDatedRows } from "../services/stats/ti
 import { buildTravelRecords } from "../services/stats/records";
 import { enrichFlightsWithAirportFacts } from "../services/flightAirportFacts";
 import { countableFlightWhere } from "../shared/flightCounting";
-import { loadWrappedDomains } from "../services/stats/wrappedDomains";
+import { loadWrappedDomains, loadWrappedPassport } from "../services/stats/wrappedDomains";
 import {
   resolveWindow,
   bucketSeries,
@@ -48,7 +48,7 @@ import {
 } from "../utils/stats/timeseries";
 import { readYearQuery } from "../utils/stats/domainYear";
 import { buildTravelAccount } from "../services/stats/travelAccount";
-import { loadTravelAccountData } from "../services/stats/travelAccountData";
+import { loadVisibleTravelAccountData } from "../services/stats/travelAccountData";
 import { loadCruiseStatsData } from "../services/stats/cruiseStatsData";
 import { buildCruiseTabResponse } from "../services/stats/cruiseTabResponse";
 import { loadLodgingStatsData } from "../services/stats/lodgingStatsData";
@@ -62,6 +62,7 @@ import { computeSeatStats } from "../services/stats/seatStats";
 import { computeCountryStats } from "../services/stats/countryStats";
 import { computeAirlineRanking } from "../services/stats/airlineRanking";
 import { loadHomePeriods } from "../services/home/homeStore";
+import { routePairKey } from "../shared/routePair";
 
 const router = Router();
 
@@ -309,12 +310,11 @@ router.get(
        * sorted: FRA-WAW and WAW-FRA both become "FRA-WAW".
        *
        * This CHANGES the top-routes list for existing accounts — two entries of
-       * one collapse into one of two, which reorders the ranking. That is a
-       * visible change and belongs in the changelog, not a silent fix.
+       * one collapse into one of two, which reorders the ranking: a changelog
+       * item, not a silent fix.
        *
-       * `departure`/`arrival` name the first flight of the pair that was seen.
-       * With direction no longer meaningful they are simply the two ends; the
-       * distance is the same either way.
+       * `departure`/`arrival` name the first flight of the pair seen: with
+       * direction no longer meaningful they are simply the two ends.
        */
       const routeMap = new Map<
         string,
@@ -327,11 +327,11 @@ router.get(
       >();
 
       flights.forEach((flight) => {
+        // Unordered pair (`shared/routePair`, forgejo#254); no airport, no route.
         const depCode = flight.depIata || flight.depIcao;
         const arrCode = flight.arrIata || flight.arrIcao;
-        // Sorted, so both directions land on one key. `String()` guards the
-        // null-code case, which would otherwise sort inconsistently.
-        const routeKey = [String(depCode), String(arrCode)].sort().join("-");
+        const routeKey = routePairKey(depCode, arrCode);
+        if (routeKey === null) return;
 
         if (routeMap.has(routeKey)) {
           routeMap.get(routeKey)!.count++;
@@ -950,7 +950,7 @@ router.get(
 
       // For `newCountries` only — the passport already decides what counts as
       // a country and when it was first reached.
-      const passport = await loadPassport(userId, flights);
+      const passport = await loadWrappedPassport(userId, flights);
 
       // Which YEAR a flight belongs to is read on the departure airport's
       // clock, not on the stored instant — the rule `departureClock.ts` states
@@ -960,9 +960,8 @@ router.get(
       const flightsWithClock = await withDepartureClock(flights);
 
       const wrapped = buildWrapped(
-        // Great-circle from the coordinates, the same measure
-        // `/stats/timeseries` buckets — so the year's distance agrees with the
-        // year's bar on the trend chart.
+        // Great-circle from the coordinates, the measure `/stats/timeseries`
+        // buckets — so the year's distance agrees with its bar on the chart.
         flightsWithClock.map((f) => ({
           ...f,
           departureYear:
@@ -974,7 +973,8 @@ router.get(
         domains.cruises,
         passport.countries,
         parsed.data.year ?? null,
-        domains.rail
+        domains.rail,
+        domains.chapters
       );
 
       if (!wrapped) {
@@ -1280,7 +1280,7 @@ router.get(
         return;
       }
 
-      const data = await loadTravelAccountData(userId);
+      const data = await loadVisibleTravelAccountData(userId);
       const account = buildTravelAccount(data);
       const tripAccount = buildTripAccount(data.trips);
       res.json({ account, trips: tripAccount, expenses: buildExpenseAccount(data.expenses) });

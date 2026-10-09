@@ -40,4 +40,32 @@ describe("ListEmptyState", () => {
     render(<ListEmptyState {...props} filtered={false} onReset={vi.fn()} />);
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
+
+  // forgejo#250: "add your first one" with no button to do it.
+  it("offers the next step when the library is genuinely empty", async () => {
+    const onClick = vi.fn();
+    render(
+      <ListEmptyState
+        {...props}
+        filtered={false}
+        onReset={vi.fn()}
+        action={{ label: "Kreuzfahrt hinzufügen", onClick }}
+      />
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Kreuzfahrt hinzufügen" }));
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps only the reset while filtered — the entries are hidden, not missing", () => {
+    render(
+      <ListEmptyState
+        {...props}
+        filtered
+        onReset={vi.fn()}
+        action={{ label: "Kreuzfahrt hinzufügen", onClick: vi.fn() }}
+      />
+    );
+    expect(screen.queryByRole("button", { name: "Kreuzfahrt hinzufügen" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "common:filters.reset" })).toBeInTheDocument();
+  });
 });

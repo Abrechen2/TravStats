@@ -119,6 +119,9 @@ describe("Roadtrips", () => {
       nights: 3,
       nightsKnown: true,
       placesSlept: 2,
+      // forgejo#260: the stay at the campsite and the free night.
+      nightsByStyle: { pitch: 1, campsite: 2, lodging: 0 },
+      unknownLengthStations: 0,
     });
     expect(res.body.legs).toHaveLength(2);
     // ADR 0002 dual-write: a station's days, read at the station.

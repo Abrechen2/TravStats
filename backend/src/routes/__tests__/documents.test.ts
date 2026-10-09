@@ -162,6 +162,8 @@ describe("documents routes", () => {
       .field("entryId", strangerFlightId)
       .attach("file", PDF("foreign-entry"), { filename: "a.pdf", contentType: "application/pdf" });
     expect(res.status).toBe(404);
+    // The Companion drops a queued original only on this code (forgejo#272).
+    expect(res.body.code).toBe("DOCUMENT_ENTRY_NOT_FOUND");
   });
 
   it("lists an entry's documents under the entry's own path, lodging stays included", async () => {
@@ -184,6 +186,7 @@ describe("documents routes", () => {
       .get(`/api/v1/flights/${strangerFlightId}/documents`)
       .set("Cookie", ownerCookie);
     expect(foreign.status).toBe(404);
+    expect(foreign.body.code).toBe("DOCUMENT_ENTRY_NOT_FOUND");
   });
 
   it("serves the bytes privately to the owner and 404s for anyone else", async () => {
@@ -266,5 +269,8 @@ describe("documents routes", () => {
 
     const again = await request(app).delete(`/api/v1/documents/${id}`).set("Cookie", ownerCookie);
     expect(again.status).toBe(404);
+    // A missing DOCUMENT is not a missing entry: no entry code, so a client
+    // never drops a queued original over it.
+    expect(again.body.code).toBeUndefined();
   });
 });

@@ -1,15 +1,19 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
+import type { JSX } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import NewRoadtripDialog from "../NewRoadtripDialog";
 import { roadtripsApi } from "../../../lib/api/roadtrips";
+import { tripsApi } from "../../../lib/api/trips";
 
 vi.mock("../../../lib/api/roadtrips", () => ({ roadtripsApi: { create: vi.fn() } }));
 vi.mock("../../../lib/api/trips", () => ({
   tripsApi: { getAll: vi.fn(async () => [{ id: "t1", name: "Herbst in Norwegen" }]) },
 }));
 vi.mock("../../../hooks/useTranslation", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
+  useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
 }));
 
 function renderDialog(onCreated = vi.fn()): ReturnType<typeof vi.fn> {
@@ -17,8 +21,21 @@ function renderDialog(onCreated = vi.fn()): ReturnType<typeof vi.fn> {
   return onCreated;
 }
 
+const networkError = (): Error =>
+  Object.assign(new Error("Network Error"), { isAxiosError: true, response: undefined });
+// A refusal the server answered (nothing stored), so a create may retry.
+const dbDown = (): Error =>
+  Object.assign(new Error("503"), {
+    isAxiosError: true,
+    response: { status: 503, data: { code: "DB_UNAVAILABLE" } },
+  });
+
+const submitButton = (): HTMLElement =>
+  screen.getByText("roadtrips:newDialog.submit").closest("button") as HTMLElement;
+
 describe("NewRoadtripDialog", () => {
   beforeEach(() => vi.clearAllMocks());
+  afterEach(cleanup);
 
   it("offers no rail — train journeys are a domain of their own (owner, 2026-09-25)", async () => {
     renderDialog();
@@ -30,10 +47,9 @@ describe("NewRoadtripDialog", () => {
   it("needs only a name, and sends what was filled in", async () => {
     vi.mocked(roadtripsApi.create).mockResolvedValue({ id: "new" } as never);
     const onCreated = renderDialog();
-    const submit = screen.getByText("roadtrips:newDialog.submit").closest("button")!;
-    expect(submit).toBeDisabled();
+    expect(submitButton()).toBeDisabled();
 
-    fireEvent.change(screen.getByLabelText("roadtrips:newDialog.name"), {
+    fireEvent.change(screen.getByLabelText(/roadtrips:newDialog.name/), {
       target: { value: "Fjorde 2026" },
     });
     fireEvent.click(screen.getByText("roadtrips:vehicle.campervan"));
@@ -44,7 +60,7 @@ describe("NewRoadtripDialog", () => {
     fireEvent.change(screen.getByLabelText(/roadtrips:newDialog.trip/), {
       target: { value: "t1" },
     });
-    fireEvent.click(submit);
+    fireEvent.click(submitButton());
 
     await waitFor(() => expect(onCreated).toHaveBeenCalled());
     expect(roadtripsApi.create).toHaveBeenCalledWith({
@@ -56,13 +72,134 @@ describe("NewRoadtripDialog", () => {
     });
   });
 
-  it("holds back an odometer that is not a whole number of kilometres", async () => {
+  // forgejo#245: the one required field is marked, the optional ones are not
+  // marked "optional" any more, and the greyed-out button says what it waits for.
+  it("marks the name as required and says beside the button that it is missing", async () => {
     renderDialog();
     await screen.findByText("Herbst in Norwegen");
-    fireEvent.change(screen.getByLabelText("roadtrips:newDialog.name"), { target: { value: "X" } });
-    fireEvent.change(screen.getByLabelText(/roadtrips:newDialog.odometer/), {
-      target: { value: "12,5" },
+    const name = screen.getByLabelText(/roadtrips:newDialog.name/);
+    expect(name).toHaveAttribute("aria-required", "true");
+    expect(screen.getByText("common:form.requiredLegend")).toBeInTheDocument();
+    expect(screen.queryByText(/newDialog.optional/)).not.toBeInTheDocument();
+
+    expect(screen.getByTestId("save-blocked-hint")).toHaveTextContent("roadtrips:newDialog.name");
+    expect(submitButton()).toHaveAttribute("aria-describedby", "roadtrip-new-save-blocked");
+    fireEvent.click(screen.getByRole("button", { name: "roadtrips:newDialog.name" }));
+    expect(name).toHaveFocus();
+
+    fireEvent.change(name, { target: { value: "Fjorde" } });
+    expect(screen.queryByTestId("save-blocked-hint")).not.toBeInTheDocument();
+    expect(submitButton()).toBeEnabled();
+  });
+
+  it("says at the odometer why it cannot be a reading, and holds the save back", async () => {
+    renderDialog();
+    await screen.findByText("Herbst in Norwegen");
+    fireEvent.change(screen.getByLabelText(/roadtrips:newDialog.name/), { target: { value: "X" } });
+    const odometer = screen.getByLabelText(/roadtrips:newDialog.odometer/);
+    fireEvent.change(odometer, { target: { value: "12,5" } });
+
+    expect(submitButton()).toBeDisabled();
+    expect(odometer).toHaveAttribute("aria-invalid", "true");
+    expect(odometer).toHaveAccessibleDescription("roadtrips:newDialog.odometerInvalid");
+    expect(screen.getByTestId("save-blocked-hint")).toHaveTextContent(
+      "roadtrips:newDialog.odometerMissing"
+    );
+  });
+
+  // forgejo#246/#247: a failed create is said in the dialog and stays; the
+  // draft is kept; a database restart offers a retry that sends once more.
+  it("keeps the draft on a failed create, says why in a banner and retries once", async () => {
+    vi.mocked(roadtripsApi.create)
+      .mockRejectedValueOnce(dbDown())
+      .mockResolvedValueOnce({ id: "new" } as never);
+    const onCreated = renderDialog();
+    fireEvent.change(screen.getByLabelText(/roadtrips:newDialog.name/), {
+      target: { value: "Fjorde" },
     });
-    expect(screen.getByText("roadtrips:newDialog.submit").closest("button")).toBeDisabled();
+    fireEvent.click(submitButton());
+
+    const banner = await screen.findByRole("alert");
+    expect(banner).toHaveTextContent("common:saveErrors.dbUnavailable");
+    expect(screen.getByLabelText(/roadtrips:newDialog.name/)).toHaveValue("Fjorde");
+    expect(onCreated).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    await waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1));
+    expect(roadtripsApi.create).toHaveBeenCalledTimes(2);
+  });
+
+  // Bus review, Minor 2 (integration wiring): the roadtrip may be stored.
+  it("offers no retry after a create whose answer was lost, and offers a reload instead", async () => {
+    vi.mocked(roadtripsApi.create).mockRejectedValueOnce(networkError());
+    const onReload = vi.fn();
+    render(<NewRoadtripDialog open onClose={vi.fn()} onCreated={vi.fn()} onReload={onReload} />);
+    fireEvent.change(screen.getByLabelText(/roadtrips:newDialog.name/), {
+      target: { value: "Fjorde" },
+    });
+    fireEvent.click(submitButton());
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("common:saveErrors.outcomeUnknown");
+    expect(screen.queryByRole("button", { name: "common:buttons.retry" })).toBeNull();
+    expect(screen.getByLabelText(/roadtrips:newDialog.name/)).toHaveValue("Fjorde");
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.reloadList" }));
+    expect(onReload).toHaveBeenCalledTimes(1);
+    expect(roadtripsApi.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("creates once however fast the button is pressed twice", async () => {
+    let resolve: (value: never) => void = () => {};
+    vi.mocked(roadtripsApi.create).mockImplementation(
+      () => new Promise((r) => (resolve = r as (value: never) => void))
+    );
+    renderDialog();
+    await screen.findByText("Herbst in Norwegen");
+    fireEvent.change(screen.getByLabelText(/roadtrips:newDialog.name/), {
+      target: { value: "Fjorde" },
+    });
+    const button = submitButton();
+    fireEvent.click(button);
+    fireEvent.click(button);
+    await act(async () => resolve({ id: "new" } as never));
+    expect(roadtripsApi.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("says so when the trips cannot be loaded, instead of offering only “no trip”", async () => {
+    vi.mocked(tripsApi.getAll).mockRejectedValueOnce(networkError());
+    renderDialog();
+    expect(await screen.findByText("roadtrips:newDialog.tripsFailed")).toBeInTheDocument();
+  });
+
+  // forgejo#248 + rollout rule: the dialog stays mounted, so it must start over
+  // on every opening, and ask before a typed name is thrown away.
+  it("asks before discarding a typed name, and opens empty the next time", async () => {
+    function Harness(): JSX.Element {
+      const [open, setOpen] = useState(true);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            reopen
+          </button>
+          <NewRoadtripDialog open={open} onClose={() => setOpen(false)} onCreated={vi.fn()} />
+        </>
+      );
+    }
+    render(<Harness />);
+    await userEvent.type(screen.getByLabelText(/roadtrips:newDialog.name/), "Fjorde");
+    await userEvent.keyboard("{Escape}");
+    expect(await screen.findByText("common:discard.title")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "common:discard.confirm" }));
+    await waitFor(() =>
+      expect(screen.queryByLabelText(/roadtrips:newDialog.name/)).not.toBeInTheDocument()
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "reopen" }));
+    expect(screen.getByLabelText(/roadtrips:newDialog.name/)).toHaveValue("");
+    // Untouched: Escape closes without a question.
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() =>
+      expect(screen.queryByLabelText(/roadtrips:newDialog.name/)).not.toBeInTheDocument()
+    );
+    expect(screen.queryByText("common:discard.title")).not.toBeInTheDocument();
   });
 });

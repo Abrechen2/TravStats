@@ -1,7 +1,12 @@
 import HelpIcon from "../Help/HelpIcon";
 import AirportAutocomplete from "../AirportAutocomplete";
 import HistoricalDateFields from "./fields/HistoricalDateFields";
-import TimesFields, { type ActualTimesFieldsValue } from "./fields/TimesFields";
+import TimesFields, {
+  type ActualTimesFieldsValue,
+  type TimesFieldErrors,
+} from "./fields/TimesFields";
+import { RequiredLegend } from "../form";
+import { FLIGHT_FORM_IDS } from "./createFormState";
 import CatalogueCombobox, { searchAirlineOptions } from "./fields/CatalogueCombobox";
 import { useTranslation } from "../../hooks/useTranslation";
 import { calculateDistance } from "../../lib/geo";
@@ -146,6 +151,8 @@ export interface FlightCompleteStepProps {
   sizedInputClass: string;
   // Warning dismiss
   setTimeEstimationWarning: (v: TimeEstimationWarning | null) => void;
+  /** Errors at the time inputs (forgejo#246) — a refused save's, already translated. */
+  timeErrors?: TimesFieldErrors;
 }
 
 export default function FlightCompleteStep({
@@ -220,6 +227,7 @@ export default function FlightCompleteStep({
   mutedTextClass,
   sizedInputClass,
   setTimeEstimationWarning,
+  timeErrors,
 }: FlightCompleteStepProps): JSX.Element {
   const { t } = useTranslation(["flights", "common"]);
   const addToast = useToastStore((s) => s.addToast);
@@ -409,12 +417,13 @@ export default function FlightCompleteStep({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <label className={`label ${textClass}`}>
+                <label className={`label ${textClass}`} htmlFor={FLIGHT_FORM_IDS.departureAirport}>
                   {t("flights:form.from")} <RequiredMark />
                 </label>
                 <HelpIcon content={t("flights:form.help.departureAirport")} position="top" />
               </div>
               <AirportAutocomplete
+                id={FLIGHT_FORM_IDS.departureAirport}
                 value={departure}
                 onChange={setDeparture}
                 label=""
@@ -424,12 +433,13 @@ export default function FlightCompleteStep({
             </div>
             <div>
               <div className="flex items-center gap-2 mb-1">
-                <label className={`label ${textClass}`}>
+                <label className={`label ${textClass}`} htmlFor={FLIGHT_FORM_IDS.arrivalAirport}>
                   {t("flights:form.to")} <RequiredMark />
                 </label>
                 <HelpIcon content={t("flights:form.help.arrivalAirport")} position="top" />
               </div>
               <AirportAutocomplete
+                id={FLIGHT_FORM_IDS.arrivalAirport}
                 value={arrival}
                 onChange={setArrival}
                 label=""
@@ -441,7 +451,7 @@ export default function FlightCompleteStep({
 
           {/* Historical flight checkbox */}
           <div>
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex items-center gap-2 cursor-pointer pointer-coarse:min-h-(--ts-size-touch-min)">
               <input
                 type="checkbox"
                 checked={status === "historical"}
@@ -454,7 +464,7 @@ export default function FlightCompleteStep({
                     else setStatus("scheduled");
                   }
                 }}
-                className="rounded-sm"
+                className="rounded-sm h-4 w-4"
               />
               <span className={`text-sm ${textClass}`}>{t("flights:historicalCheckbox")}</span>
             </label>
@@ -528,6 +538,7 @@ export default function FlightCompleteStep({
               actualValue={actualTimesValue}
               onActualChange={handleActualTimesChange}
               markRequired
+              errors={timeErrors}
               clockChange={
                 setFolds
                   ? {
@@ -544,8 +555,11 @@ export default function FlightCompleteStep({
           {/* Additional Fields */}
           <div className="grid grid-cols-4 gap-4">
             <div>
-              <label className={`label ${textClass}`}>{t("flights:form.airline")}</label>
+              <label className={`label ${textClass}`} htmlFor="flight-form-airline">
+                {t("flights:form.airline")}
+              </label>
               <CatalogueCombobox
+                id="flight-form-airline"
                 value={airline}
                 onChange={setAirline}
                 search={searchAirlineOptions}
@@ -554,8 +568,11 @@ export default function FlightCompleteStep({
               />
             </div>
             <div>
-              <label className={`label ${textClass}`}>{t("flights:form.operatingAirline")}</label>
+              <label className={`label ${textClass}`} htmlFor="flight-form-operating-airline">
+                {t("flights:form.operatingAirline")}
+              </label>
               <CatalogueCombobox
+                id="flight-form-operating-airline"
                 value={operatingAirline}
                 onChange={setOperatingAirline}
                 search={searchAirlineOptions}
@@ -564,8 +581,11 @@ export default function FlightCompleteStep({
               />
             </div>
             <div>
-              <label className={`label ${textClass}`}>{t("flights:form.flightNumber")}</label>
+              <label className={`label ${textClass}`} htmlFor="flight-form-flight-number">
+                {t("flights:form.flightNumber")}
+              </label>
               <input
+                id="flight-form-flight-number"
                 type="text"
                 value={flightNumber}
                 onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
@@ -687,7 +707,7 @@ export default function FlightCompleteStep({
 
       {/* The legend the asterisks refer to. Below the fields rather than above
           them: it explains a mark the reader has already met. */}
-      <p className={`text-xs ${mutedTextClass}`}>{t("flights:form.requiredLegend")}</p>
+      <RequiredLegend />
     </div>
   );
 }

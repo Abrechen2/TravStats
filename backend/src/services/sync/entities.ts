@@ -17,7 +17,8 @@ import type { SyncScope } from "./scope";
  * by the server from the records that ARE carried), the companion join rows
  * (an entry carries its companions as its own `companions` name array, which
  * every write path rewrites together with the join rows), loyalty cards,
- * place lists, bookings, settings (`/app-settings` has
+ * place lists, place reference aliases (`place_external_refs` — a server-side
+ * dedup key a merge leaves, forgejo#232), bookings, settings (`/app-settings` has
  * its own `updatedAt` protocol) and everything derived (country days,
  * achievements, suggestions).
  */

@@ -67,7 +67,13 @@ const isCancelled = (row: RoadtripStationRow): boolean => row.lodgingStay?.statu
  * roadtrip the overview calls planned must not raise a country here, and one
  * it counts must not be missing.
  */
-export function roadtripHasStarted(stations: readonly RoadtripStationRow[], now: Date): boolean {
+export function roadtripHasStarted(
+  stations: readonly {
+    startDate: Date | null;
+    lodgingStay: { checkIn: Date | null } | null;
+  }[],
+  now: Date
+): boolean {
   let start: Date | null = null;
   for (const s of stations) {
     const from = s.startDate ?? s.lodgingStay?.checkIn ?? null;
@@ -119,6 +125,22 @@ export function attestStation(row: RoadtripStationRow, now: Date): AttestedStati
     days = daysBetween(first, last);
   }
   return { night, at: first ? new Date(`${first}T00:00:00Z`) : null, days };
+}
+
+/**
+ * The first and last day a roadtrip ATTESTS — every station read by
+ * `attestStation`, so no planned station, no day after today, no cancelled
+ * stay and no MONTH placeholder (`stationSpan`) widens it. Null when no
+ * station attests a day: an empty or undated roadtrip has moved nobody
+ * (forgejo#265 review I1/I2 — the cross-domain badges and the longest-roadtrip
+ * record both ask this, not a raw min/max of the stored dates).
+ */
+export function roadtripAttestedSpan(
+  stations: readonly RoadtripStationRow[],
+  now: Date
+): { first: string; last: string } | null {
+  const days = stations.flatMap((row) => attestStation(row, now)?.days ?? []).sort();
+  return days.length === 0 ? null : { first: days[0], last: days[days.length - 1] };
 }
 
 /** A station as the passport reads it — its country already resolved by the loader. */

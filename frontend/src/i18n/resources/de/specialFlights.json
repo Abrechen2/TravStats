@@ -103,5 +103,9 @@
     "clear": "✕ Position zurücksetzen",
     "attribution": "© OpenStreetMap Mitwirkende",
     "mapAriaLabel": "Karte zur Auswahl der Ereignis-Position"
+  },
+  "missing": {
+    "airport": "Flughafen",
+    "coordinates": "gültige Koordinaten"
   }
 }

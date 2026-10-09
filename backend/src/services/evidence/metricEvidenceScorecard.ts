@@ -1,7 +1,7 @@
 import type { EvidenceScope } from "../../shared/evidence";
 import type { EvidenceResponse } from "../../schemas/evidence";
 import type { PagingParams } from "./paging";
-import { flightDateOf, hydrateFlightSumEntries } from "./entryMappers";
+import { calendarDayDateOf, hydrateFlightSumEntries } from "./entryMappers";
 import { fetchFlightDatedRows } from "../stats/timeseriesRows";
 import { resolveWindow, withinWindow, type DatedRow } from "../../utils/stats/timeseries";
 
@@ -53,7 +53,7 @@ export async function resolveScorecardFlightCount(
   page: PagingParams
 ): Promise<EvidenceResponse> {
   const rows = withId(await loadScorecardRows(userId, scope));
-  const matched = rows.map((r) => ({ id: r.id, date: flightDateOf(r.date), contribution: 1 }));
+  const matched = rows.map((r) => ({ id: r.id, date: calendarDayDateOf(r.date), contribution: 1 }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
     userId,
     matched,
@@ -85,7 +85,7 @@ export async function resolveScorecardDistanceKm(
   const rows = withId(await loadScorecardRows(userId, scope));
   const matched = rows.map((r) => ({
     id: r.id,
-    date: flightDateOf(r.date),
+    date: calendarDayDateOf(r.date),
     contribution: r.distanceKm,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(
@@ -120,7 +120,7 @@ export async function resolveScorecardFlightTimeMinutes(
   const rows = withId(await loadScorecardRows(userId, scope));
   const matched = rows.map((r) => ({
     id: r.id,
-    date: flightDateOf(r.date),
+    date: calendarDayDateOf(r.date),
     contribution: r.durationMin,
   }));
   const { entries, omittedCount, omittedContribution } = await hydrateFlightSumEntries(

@@ -26,6 +26,10 @@ import { countableCruiseWhere } from "../../shared/cruiseCounting";
 import { classifyVisit } from "../../shared/placeCounting";
 import { loadRoadtripStations } from "./roadtripEvidenceLoader";
 import { loadRailEnds } from "./railEvidenceLoader";
+import { loadBusEnds } from "./busEvidence";
+import { loadVisibleDomains } from "../domainVisibility";
+import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "./departureClock";
+import { departureDayOf } from "../../utils/stats/departureClock";
 
 /** Every argument `buildCountryDetail` takes after the country code, in its order. */
 export type CountryDetailInputs =
@@ -58,89 +62,108 @@ export async function loadCountryDetailInputs(userId: string): Promise<CountryDe
   // about whether a visit has happened yet.
   const now = new Date();
 
-  const flights = await prisma.flight.findMany({
+  const flightRows = await prisma.flight.findMany({
     where: { userId, ...countableFlightWhere() },
     select: {
       id: true,
       flightNumber: true,
-      depIata: true,
+      ...FLIGHT_CLOCK_SELECT,
       depLat: true,
       depLon: true,
-      arrIata: true,
       arrLat: true,
       arrLon: true,
       departureTime: true,
       status: true,
     },
   });
+  // Each flight's day at its departure airport — what the passport row files it
+  // under (`passportLoader`), so the page behind the row agrees (forgejo#273).
+  const flights = (await withDepartureClock(flightRows)).map((f) => ({
+    ...f,
+    localDay: departureDayOf(f),
+  }));
 
   // The same sources the passport counts, so the row and the page can only ever
   // agree.
-  const [airportCountries, portCalls, places, lodgings, countryDays, homeIatas, stations, rail] =
-    await Promise.all([
-      loadAirportCountries(passportAirportCodes(flights)),
-      prisma.cruiseStop.findMany({
-        where: {
-          cruise: { userId, ...countableCruiseWhere() },
-          port: { isNot: null },
-        },
-        select: {
-          cruiseId: true,
-          arrivalTime: true,
-          date: true,
-          port: { select: { name: true, country: true } },
-        },
-      }),
-      prisma.place.findMany({
-        where: { userId, visited: true, isoCountryCode: { not: null } },
-        select: {
-          id: true,
-          name: true,
-          isoCountryCode: true,
-          visits: { select: { visitedAt: true, visitedAtUtc: true, visitedZone: true } },
-        },
-      }),
-      // The fourth source, and the one the owner's instruction is about: a house
-      // proves a country, so the page behind that row must be able to open it.
-      // `visited: false` is excluded — a bookmarked house is not a visit — and
-      // the stays travel UNFILTERED with their status, because `lodgingEvidence`
-      // owns which of them count and a house whose only stay was filtered away
-      // would arrive as a house with no stay, which counts as a night.
-      prisma.lodging.findMany({
-        where: { userId, visited: true, isoCountryCode: { not: null } },
-        select: {
-          id: true,
-          name: true,
-          isoCountryCode: true,
-          // datePrecision + nights: a MONTH placeholder spans a whole month while
-          // attesting a few nights, and must not be walked into exact days.
-          stays: {
-            select: {
-              status: true,
-              checkIn: true,
-              checkOut: true,
-              datePrecision: true,
-              nights: true,
-            },
+  const [
+    airportCountries,
+    portCalls,
+    places,
+    lodgings,
+    countryDays,
+    homeIatas,
+    stations,
+    rail,
+    bus,
+  ] = await Promise.all([
+    loadAirportCountries(passportAirportCodes(flights)),
+    prisma.cruiseStop.findMany({
+      where: {
+        cruise: { userId, ...countableCruiseWhere() },
+        port: { isNot: null },
+      },
+      select: {
+        cruiseId: true,
+        arrivalTime: true,
+        date: true,
+        port: { select: { name: true, country: true } },
+      },
+    }),
+    prisma.place.findMany({
+      where: { userId, visited: true, isoCountryCode: { not: null } },
+      select: {
+        id: true,
+        name: true,
+        isoCountryCode: true,
+        visits: { select: { visitedAt: true, visitedAtUtc: true, visitedZone: true } },
+      },
+    }),
+    // The fourth source, and the one the owner's instruction is about: a house
+    // proves a country, so the page behind that row must be able to open it.
+    // `visited: false` is excluded — a bookmarked house is not a visit — and
+    // the stays travel UNFILTERED with their status, because `lodgingEvidence`
+    // owns which of them count and a house whose only stay was filtered away
+    // would arrive as a house with no stay, which counts as a night.
+    prisma.lodging.findMany({
+      where: { userId, visited: true, isoCountryCode: { not: null } },
+      select: {
+        id: true,
+        name: true,
+        isoCountryCode: true,
+        // datePrecision + nights: a MONTH placeholder spans a whole month while
+        // attesting a few nights, and must not be walked into exact days.
+        stays: {
+          select: {
+            status: true,
+            checkIn: true,
+            checkOut: true,
+            datePrecision: true,
+            nights: true,
           },
         },
-      }),
-      // The fifth: measured presence (spec §8). Handed over unfiltered like
-      // every source above it, so the one place that decides which rows belong
-      // to a country is `buildCountryDetail` — narrowing it here would put a
-      // second copy of that join in the loader, which is the drift the shared
-      // module exists to end. One row per country per day, so the whole set is
-      // a few thousand rows even for a decade of history.
-      prisma.countryDay.findMany({
-        where: { userId },
-        select: { date: true, countryCode: true, pointCount: true },
-      }),
-      loadHomeIatas(userId),
-      // The sixth: roadtrip stations, from the loader the passport reads too.
-      loadRoadtripStations(userId, now),
-      // The seventh: train station ends, from the loader the passport reads too.
-      loadRailEnds(userId),
-    ]);
+      },
+    }),
+    // The fifth: measured presence (spec §8). Handed over unfiltered like
+    // every source above it, so the one place that decides which rows belong
+    // to a country is `buildCountryDetail` — narrowing it here would put a
+    // second copy of that join in the loader, which is the drift the shared
+    // module exists to end. One row per country per day, so the whole set is
+    // a few thousand rows even for a decade of history.
+    prisma.countryDay.findMany({
+      where: { userId },
+      select: { date: true, countryCode: true, pointCount: true },
+    }),
+    loadHomeIatas(userId),
+    // The sixth: roadtrip stations, from the loader the passport reads too.
+    loadRoadtripStations(userId, now),
+    // The seventh: train station ends, from the loader the passport reads too.
+    loadRailEnds(userId),
+    // The eighth: bus terminal ends, only while bus is visible — the
+    // passport's own cut (forgejo#265).
+    loadVisibleDomains(userId).then((visible) =>
+      visible.includes("bus") ? loadBusEnds(userId) : []
+    ),
+  ]);
 
   return [
     flights,
@@ -189,5 +212,6 @@ export async function loadCountryDetailInputs(userId: string): Promise<CountryDe
     undefined,
     stations,
     rail,
+    bus,
   ];
 }

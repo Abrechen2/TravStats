@@ -69,3 +69,29 @@ describe("RoadtripCard figures in the singular (forgejo#160)", () => {
     expect(screen.getByText("Touren")).toBeInTheDocument();
   });
 });
+
+/** forgejo#249: a dash or "≈" says why on the card, not only on hover. */
+describe("RoadtripCard — reasons without hover (forgejo#249)", () => {
+  it("says why the distance is a dash and the nights a lower bound", () => {
+    render(
+      <MemoryRouter>
+        <RoadtripCard
+          roadtrip={summary({ stationCount: 1, nightsKnown: false })}
+          phase="underway"
+        />
+      </MemoryRouter>
+    );
+    const reasons = screen.getByTestId("roadtrip-card-reasons");
+    expect(reasons).toHaveTextContent("Noch keine Etappe");
+    expect(reasons).toHaveTextContent("Mindestens eine Station hat kein Abfahrtsdatum.");
+  });
+
+  it("says nothing extra when every figure is known", () => {
+    render(
+      <MemoryRouter>
+        <RoadtripCard roadtrip={summary({ stationCount: 3 })} phase="past" />
+      </MemoryRouter>
+    );
+    expect(screen.queryByTestId("roadtrip-card-reasons")).not.toBeInTheDocument();
+  });
+});

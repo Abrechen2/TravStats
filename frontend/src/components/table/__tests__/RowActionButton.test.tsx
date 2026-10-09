@@ -5,7 +5,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { RowActionButton, RowActions } from "../RowActionButton";
+import { RowActionButton, RowActions, TOUCH_HIT_AREA } from "../RowActionButton";
 
 describe("RowActionButton", () => {
   it("calls its handler", async () => {
@@ -48,5 +48,23 @@ describe("RowActionButton", () => {
       </RowActions>
     );
     expect(container.firstElementChild?.className).toContain("justify-end");
+  });
+
+  // forgejo#249: the touch target must not change the layout. The action columns
+  // are fixed-width, so a 44 px button overflowed them; the hit area is a
+  // pseudo-element instead. jsdom cannot measure, so the classes are the contract.
+  it("keeps its 28 px box on touch and extends only the hit area to 44 px", () => {
+    render(<RowActionButton icon="edit" label="Bearbeiten" onClick={vi.fn()} />);
+    const classes = screen.getByRole("button", { name: "Bearbeiten" }).className.split(/\s+/);
+
+    // The drawn box: 28 px, with no pointer-dependent size.
+    expect(classes).toEqual(expect.arrayContaining(["h-7", "w-7", "relative"]));
+    expect(classes.filter((c) => /^pointer-coarse:(h|w|min-h|min-w|size)-/.test(c))).toEqual([]);
+
+    // The hit area: 28 + 2 x 8 = 44 px, from an ::after on a coarse pointer only.
+    expect(classes).toEqual(
+      expect.arrayContaining(["pointer-coarse:after:absolute", "pointer-coarse:after:-inset-2"])
+    );
+    expect(TOUCH_HIT_AREA).toContain("-inset-2");
   });
 });

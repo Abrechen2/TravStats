@@ -4,13 +4,18 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { assertSumInvariant } from "../../services/evidence/__tests__/invariants";
+import {
+  getInstanceSettings,
+  updateInstanceSettings,
+} from "../../services/instanceSettingsService";
 
 /**
- * `metric` evidence for the nine served `TravelAccountSection` measures
- * (task-7b-2-brief.md).
+ * `metric` evidence for the ten served `TravelAccountSection` measures
+ * (task-7b-2-brief.md; the night train and the unassigned remainder since
+ * forgejo#266).
  *
  * The population guard is the LAST test: `/stats/travel-account` is asked in
- * the same run and every one of the nine has to equal the figure that
+ * the same run and every one of the ten has to equal the figure that
  * endpoint renders. That is a genuine guard here and not a formality — the
  * night resolvers read `attributeTravelNights` while the endpoint reads
  * `buildTravelAccount`'s YEAR ROWS, so the two arrive at each number by
@@ -29,6 +34,7 @@ import { assertSumInvariant } from "../../services/evidence/__tests__/invariants
  *     awarded to the cabin)
  *   - a hotel stay 01–04 March (3 uncontested hotel nights)
  *   - a red-eye 20 September (1 night in the air)
+ *   - a Nightjet Wien → Hamburg 15–16 November (1 night on a night train)
  *   - a trip covering 01–04 March, fully covered by the March stay
  *   - a trip covering 01–05 October with nothing in it (4 uncovered days)
  */
@@ -41,14 +47,17 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
   let marchStayId: string;
   let juneStayId: string;
   let cruiseId: string;
+  let railId: string;
+  let betaBefore: boolean;
   let coveredTripId: string;
   let gappedTripId: string;
 
   const KEYS = [
     "travelAccountHotelNights",
     "travelAccountSeaNights",
+    "travelAccountRailNights",
     "travelAccountAirNights",
-    "travelAccountHomeNights",
+    "travelAccountUnassignedNights",
     "travelAccountContestedNights",
     "travelAccountFullyCoveredTripCount",
     "travelAccountTripsWithDatesCount",
@@ -87,6 +96,16 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
     ]);
     userAId = userA.id;
     userBId = userB.id;
+    // The account reads the user's domain gate (forgejo#274 review I1/I2):
+    // user A sees every domain the fixture uses, rail behind the beta switch.
+    betaBefore = (await getInstanceSettings()).betaFeaturesEnabled;
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    await prisma.userSettings.createMany({
+      data: [
+        { userId: userAId, enabledDomains: ["flight", "cruise", "lodging", "rail"], data: {} },
+        { userId: userBId, enabledDomains: ["flight", "lodging"], data: {} },
+      ],
+    });
     userACookie = `auth_token=${generateToken(userA.id)}`;
     userBCookie = `auth_token=${generateToken(userB.id)}`;
 
@@ -150,6 +169,29 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
       },
     });
 
+    // A sleeper on the Nightjet: 22:58 in Vienna on the 15th, 09:00 in Hamburg
+    // on the 16th — the night of the 15th, on the stations' calendars.
+    const ride = await prisma.railJourney.create({
+      data: {
+        userId: userAId,
+        status: "completed",
+        trainCategory: "NJ",
+        trainNumber: "490",
+        travelClass: "sleeper",
+        depStationName: "Wien Hbf",
+        depLat: 48.185,
+        depLon: 16.376,
+        depTimezone: "Europe/Vienna",
+        arrStationName: "Hamburg Hbf",
+        arrLat: 53.553,
+        arrLon: 10.007,
+        arrTimezone: "Europe/Berlin",
+        departureTime: new Date("2024-11-15T21:58:00Z"),
+        arrivalTime: new Date("2024-11-16T08:00:00Z"),
+      },
+    });
+    railId = ride.id;
+
     const [covered, gapped] = await Promise.all([
       prisma.trip.create({
         data: {
@@ -207,10 +249,13 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
   });
 
   afterAll(async () => {
+    await updateInstanceSettings({ betaFeaturesEnabled: betaBefore });
+    await prisma.userSettings.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
     await prisma.lodgingStay.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
     await prisma.lodging.deleteMany({ where: { userId: { in: [userAId, userBId] } } });
     await prisma.cruise.deleteMany({ where: { userId: userAId } });
     await prisma.flight.deleteMany({ where: { userId: userAId } });
+    await prisma.railJourney.deleteMany({ where: { userId: userAId } });
     await prisma.trip.deleteMany({ where: { userId: userAId } });
     await prisma.user.deleteMany({ where: { id: { in: [userAId, userBId] } } });
   });
@@ -253,6 +298,16 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
     assertSumInvariant(res, Math.round);
   });
 
+  it("travelAccountRailNights: the Nightjet's night, credited to the ride", () => {
+    const res = answer("travelAccountRailNights");
+    expect(res.measure.value).toBe(1);
+    expect(res.entries.map((e) => e.id)).toEqual([railId]);
+    expect(res.entries[0].domain).toBe("rail");
+    expect(res.entries[0].href).toBe(`/rail/${railId}`);
+    expect(res.entries[0].title.text).toBe("NJ 490 · Wien Hbf → Hamburg Hbf");
+    assertSumInvariant(res, Math.round);
+  });
+
   /**
    * Both sides of the disagreement are listed, not just the winner, and each
    * contested night hands out ONE unit split between them — two claimants,
@@ -273,17 +328,19 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
   });
 
   /**
-   * The one measure with no row to name, ever: a home night is what is LEFT
-   * once every stay, cruise and flight has been subtracted from the year.
+   * The one measure with no row to name, ever: an unassigned night is what is
+   * LEFT once every stay, cruise, night train and flight has been subtracted
+   * from the year — and, since forgejo#266, it is not called a night at home.
    * The figure is still derived — an abstention would claim otherwise — and
    * it is carried in `unattributed` so the panel says why the list is empty.
    */
-  it("travelAccountHomeNights: a real number with every night unattributed", () => {
-    const res = answer("travelAccountHomeNights");
-    // 2024 is a leap year: 366 days less 7 at sea, 3 in a hotel, 1 in the air.
-    expect(res.measure.value).toBe(355);
+  it("travelAccountUnassignedNights: a real number with every night unattributed", () => {
+    const res = answer("travelAccountUnassignedNights");
+    // 2024 is a leap year: 366 nights less 7 at sea, 3 in a hotel, 1 on the
+    // night train, 1 in the air.
+    expect(res.measure.value).toBe(354);
     expect(res.entries).toEqual([]);
-    expect(res.unattributed).toEqual([{ count: 355, reason: "notPerEntry" }]);
+    expect(res.unattributed).toEqual([{ count: 354, reason: "notPerEntry" }]);
     assertSumInvariant(res, Math.round);
   });
 
@@ -326,7 +383,7 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
     assertSumInvariant(res, Math.round);
   });
 
-  it("all nine measures equal the numbers /stats/travel-account renders", async () => {
+  it("all ten measures equal the numbers /stats/travel-account renders", async () => {
     const account = await request(app)
       .get("/api/v1/stats/travel-account")
       .set("Cookie", userACookie);
@@ -334,8 +391,9 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
     const years = account.body.account.years as Array<{
       hotelNights: number;
       seaNights: number;
+      railNights: number;
       airNights: number;
-      homeNights: number;
+      unassignedNights: number;
     }>;
     const across = (field: keyof (typeof years)[number]): number =>
       years.reduce((total, year) => total + year[field], 0);
@@ -344,8 +402,9 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
     const pairs: Array<[(typeof KEYS)[number], number]> = [
       ["travelAccountHotelNights", across("hotelNights")],
       ["travelAccountSeaNights", across("seaNights")],
+      ["travelAccountRailNights", across("railNights")],
       ["travelAccountAirNights", across("airNights")],
-      ["travelAccountHomeNights", across("homeNights")],
+      ["travelAccountUnassignedNights", across("unassignedNights")],
       ["travelAccountContestedNights", account.body.account.contestedNights],
       ["travelAccountFullyCoveredTripCount", trips.fullyCoveredTrips],
       ["travelAccountTripsWithDatesCount", trips.tripsWithDates],

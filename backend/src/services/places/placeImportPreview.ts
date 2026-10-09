@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { placeRefIndex } from "./placeRefs";
 import type {
   PlaceDedupeHint,
   PlaceImportAction,
@@ -58,13 +59,13 @@ export async function previewPlaceImport(
   // it can see someone else's rows.
   const existing = await prisma.place.findMany({
     where: { userId },
-    select: { id: true, name: true, lat: true, lon: true, externalRef: true },
+    select: { id: true, name: true, lat: true, lon: true },
   });
 
-  const byRef = new Map<string, string>();
-  for (const p of existing) {
-    if (p.externalRef) byRef.set(p.externalRef, p.id);
-  }
+  // Every reference the user's places answer to — their own and the aliases a
+  // merge left on them (forgejo#232), or a re-import brings back the
+  // duplicate the merge removed.
+  const byRef = await placeRefIndex(prisma, userId);
 
   const rows: PlaceImportPreviewRow[] = candidates.map((c) => {
     const flags: PlaceImportFlag[] = [];

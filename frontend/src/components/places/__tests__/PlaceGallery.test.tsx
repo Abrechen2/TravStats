@@ -70,6 +70,17 @@ describe("PlaceGallery", () => {
 
     await userEvent.click(screen.getAllByRole("button")[0]);
     await waitFor(() => expect(leadSrc()).toBe("/p/b"));
-    expect(addToast).toHaveBeenCalledWith("error", "places:gallery.coverFailed");
+    // Said under the gallery and kept there (forgejo#246) — it was a toast.
+    expect(screen.getByRole("alert")).toHaveTextContent("places:gallery.coverFailed");
+    expect(addToast).not.toHaveBeenCalled();
+  });
+
+  it("says what a tap on a thumbnail does without a hover", () => {
+    render(<PlaceGallery place={place([visit("2024-05-01", ["a", "b"])], "b")} />);
+    expect(screen.getByText("places:gallery.makeCoverHint")).toBeInTheDocument();
+    for (const button of screen.getAllByRole("button")) {
+      expect(button).not.toHaveAttribute("title");
+      expect(button.getAttribute("aria-label")).toContain("places:gallery.makeCover");
+    }
   });
 });

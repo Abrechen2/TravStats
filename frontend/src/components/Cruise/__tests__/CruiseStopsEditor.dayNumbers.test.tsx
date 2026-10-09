@@ -23,11 +23,14 @@ const kiel = (dayNumber: number): CruiseStopInput => ({
 });
 
 describe("CruiseStopsEditor — day of the cruise", () => {
-  it("keeps day 8 when only a stop is removed", () => {
+  it("keeps day 8 when only a stop is removed", async () => {
     const onChange = vi.fn();
     render(<CruiseStopsEditor stops={[kiel(1), kiel(4), kiel(8)]} onChange={onChange} />);
 
-    fireEvent.click(screen.getAllByRole("button", { name: "stops.remove" })[1]);
+    // Open the middle day, ask to remove it, confirm (forgejo#221, #224).
+    fireEvent.click(document.querySelectorAll("summary")[1]);
+    fireEvent.click(await screen.findByRole("button", { name: "stops.remove" }));
+    fireEvent.click(screen.getByRole("button", { name: "stops.removeConfirm.confirm" }));
 
     expect(onChange.mock.calls[0][0].map((s: CruiseStopInput) => s.dayNumber)).toEqual([1, 8]);
   });

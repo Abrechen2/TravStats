@@ -4,14 +4,27 @@
  * This is the question the lodging domain made answerable. With flights alone
  * you can say how far someone went; with cruises you can add how long they were
  * at sea; only once hotel nights are recorded can the year be closed out —
- * so many nights in a bed away from home, so many at sea, so many in a seat,
- * and the rest at home.
+ * so many nights in a bed away from home, so many at sea, so many on a night
+ * train, so many in a seat.
+ *
+ * THE REST IS NOT "AT HOME" (forgejo#266). It was, until 2026-10: every night
+ * no record claimed was billed as a night at home, so a logbook missing one
+ * hotel, or a ride on a Nightjet the account could not see, reported nights
+ * at home that were spent somewhere else. A missing record proves nothing.
+ * The remainder is `unassignedNights` — nights no record accounts for — and
+ * stays that until the data model holds a POSITIVE sign of a night at home.
+ * None exists today: the residence and home airports (`utils/homeAirport.ts`)
+ * say where home is, never that a given night was spent there.
  *
  * Pure — no I/O, no Prisma. The caller loads the rows.
  */
 import { classifyStay } from "../../shared/lodgingCounting";
 import { resolveStayTiming } from "../../shared/lodgingTiming";
 import { isCountableFlight } from "../../shared/flightCounting";
+import { isCountableRail } from "../../shared/railCounting";
+import { nightTrainNights, type NightTrainFacts } from "../../shared/railRideKinds";
+import { isCountableBus } from "../../shared/busCounting";
+import { nightBusNights, type BusNightFacts } from "../../shared/busRideKinds";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -61,9 +74,29 @@ export interface AccountFlight {
 }
 
 /**
- * One year's nights, split by where they were spent. The four buckets are
- * mutually exclusive and add up to the length of the year (or to the days
- * elapsed so far, for the current one).
+ * A train ride, for the nights slept on it (forgejo#266). Only a completed
+ * night train claims one (`railCounting` + `railRideKinds.nightTrainNights`).
+ */
+export interface AccountRail extends NightTrainFacts {
+  id: string;
+  status: string;
+}
+
+/**
+ * A bus ride, for the nights slept on a night bus (forgejo#263). Only a
+ * completed ride whose clocks say it ran overnight claims one
+ * (`busCounting` + `busRideKinds.nightBusNights`) — the rail night rule's
+ * overnight branch; a date-only ride claims none.
+ */
+export interface AccountBus extends BusNightFacts {
+  id: string;
+  status: string;
+}
+
+/**
+ * One year's nights, split by where they were spent. The buckets are mutually
+ * exclusive and add up to the year's nights that are over: its length, or for
+ * the current one the nights up to last night.
  */
 // Published by /stats/travel-account (forgejo#52).
 export type { TravelAccountYear, TravelAccount } from "../../schemas/statsDomains";
@@ -120,11 +153,30 @@ export interface TravelAccountInput {
   flights: AccountFlight[];
   /** Optional so every caller that predates roadtrips keeps its exact answer. */
   freeNights?: AccountFreeNight[];
+  /** Optional for the same reason; the night trains among them claim nights. */
+  rail?: AccountRail[];
+  /** Optional likewise; the night buses among them claim nights (forgejo#263). */
+  bus?: AccountBus[];
   now: Date;
 }
 
 /** Which bucket the precedence rule awarded a night to. */
-export type NightSource = "hotel" | "sea" | "air";
+export type NightSource = "hotel" | "sea" | "rail" | "bus" | "air";
+
+/**
+ * THE precedence, in one place: a night more than one record claims goes to
+ * the first bucket here that claimed it, and is counted once.
+ *
+ * A cabin is where the night was slept when a cruise and a hotel both claim it
+ * (the hotel was booked for an arrival day, a no-show, a mistake). A hotel bed
+ * beats a sleeper berth for the same reason — the night train ran, the bed is
+ * the more specific record of where the night ended. Any bed beats a seat. It
+ * is a convention, which is why `contestedNights` says how often it was used.
+ * A night bus (forgejo#263) sits beside `rail`, after it: a berth beats a
+ * coach seat, and both beat an aircraft seat only because a night flight
+ * claiming the same night is the rarer record.
+ */
+export const NIGHT_PRECEDENCE: readonly NightSource[] = ["sea", "hotel", "rail", "bus", "air"];
 
 export interface AttributedNight {
   /** UTC midnight of the night, in milliseconds. */
@@ -141,6 +193,8 @@ export interface TravelNightAttribution {
   /** Ascending by day, so a caller may page it without sorting again. */
   nights: AttributedNight[];
   undatedStays: number;
+  /** Night trains with no known arrival day: a night on board no calendar can hold. */
+  undatedNightTrains: number;
 }
 
 /**
@@ -156,13 +210,16 @@ export interface TravelNightAttribution {
  * impossible.
  */
 export function attributeTravelNights(input: TravelAccountInput): TravelNightAttribution {
-  const { stays, cruises, flights, freeNights = [], now } = input;
+  const { stays, cruises, flights, freeNights = [], rail = [], bus = [], now } = input;
   const today = dayKey(now);
 
   const hotel = new Map<number, string[]>();
   const sea = new Map<number, string[]>();
+  const train = new Map<number, string[]>();
+  const coach = new Map<number, string[]>();
   const air = new Map<number, string[]>();
   let undatedStays = 0;
+  let undatedNightTrains = 0;
 
   for (const stay of stays) {
     // The same rule every lodging figure uses: only a stay that is over counts.
@@ -221,29 +278,56 @@ export function attributeTravelNights(input: TravelAccountInput): TravelNightAtt
     }
   }
 
-  // Precedence: at sea beats a hotel beats the air. A cabin is where the night
-  // was actually slept when both are recorded, and a hotel bed beats a seat.
-  // This is a convention — `contestedNights` says how often it had to be used.
-  const claimedDays = [...new Set([...sea.keys(), ...hotel.keys(), ...air.keys()])].sort(
-    (a, b) => a - b
-  );
+  for (const ride of rail) {
+    if (!isCountableRail(ride)) continue;
+    const keys = nightTrainNights(ride);
+    if (keys === null) {
+      undatedNightTrains += 1;
+      continue;
+    }
+    for (const key of keys) {
+      const day = Date.parse(`${key}T00:00:00Z`);
+      // A night that is not over yet is not a night spent.
+      if (day >= today) continue;
+      const claimants = train.get(day);
+      if (claimants) claimants.push(ride.id);
+      else train.set(day, [ride.id]);
+    }
+  }
+
+  for (const ride of bus) {
+    if (!isCountableBus(ride)) continue;
+    for (const key of nightBusNights(ride)) {
+      const day = Date.parse(`${key}T00:00:00Z`);
+      // A night that is not over yet is not a night spent.
+      if (day >= today) continue;
+      const claimants = coach.get(day);
+      if (claimants) claimants.push(ride.id);
+      else coach.set(day, [ride.id]);
+    }
+  }
+
+  const bySource: Record<NightSource, Map<number, string[]>> = {
+    sea,
+    hotel,
+    rail: train,
+    bus: coach,
+    air,
+  };
+  const claimedDays = [
+    ...new Set(NIGHT_PRECEDENCE.flatMap((source) => [...bySource[source].keys()])),
+  ].sort((a, b) => a - b);
   const nights: AttributedNight[] = claimedDays.map((day) => {
-    const inSea = sea.get(day);
-    const inHotel = hotel.get(day);
-    const inAir = air.get(day);
     const claims: Partial<Record<NightSource, string[]>> = {};
-    if (inSea) claims.sea = inSea;
-    if (inHotel) claims.hotel = inHotel;
-    if (inAir) claims.air = inAir;
-    return {
-      day,
-      claims,
-      awardedTo: inSea ? "sea" : inHotel ? "hotel" : "air",
-      contested: [inSea, inHotel, inAir].filter(Boolean).length > 1,
-    };
+    for (const source of NIGHT_PRECEDENCE) {
+      const claimants = bySource[source].get(day);
+      if (claimants) claims[source] = claimants;
+    }
+    const claimedBy = NIGHT_PRECEDENCE.filter((source) => claims[source]);
+    return { day, claims, awardedTo: claimedBy[0], contested: claimedBy.length > 1 };
   });
 
-  return { nights, undatedStays };
+  return { nights, undatedStays, undatedNightTrains };
 }
 
 /**
@@ -253,28 +337,34 @@ export function attributeTravelNights(input: TravelAccountInput): TravelNightAtt
 export function buildTravelAccount(input: TravelAccountInput): TravelAccount {
   const { now } = input;
   const today = dayKey(now);
-  const { nights, undatedStays } = attributeTravelNights(input);
+  const { nights, undatedStays, undatedNightTrains } = attributeTravelNights(input);
 
   let contestedNights = 0;
   const byYear = new Map<string, TravelAccountYear>();
+  const emptyYear = (year: string): TravelAccountYear => ({
+    year,
+    days: 0,
+    hotelNights: 0,
+    seaNights: 0,
+    railNights: 0,
+    busNights: 0,
+    airNights: 0,
+    unassignedNights: 0,
+  });
 
-  const bump = (ms: number, field: "hotelNights" | "seaNights" | "airNights"): void => {
+  type Bucket = "hotelNights" | "seaNights" | "railNights" | "busNights" | "airNights";
+  const bump = (ms: number, field: Bucket): void => {
     const year = String(new Date(ms).getUTCFullYear());
-    const row = byYear.get(year) ?? {
-      year,
-      days: 0,
-      hotelNights: 0,
-      seaNights: 0,
-      airNights: 0,
-      homeNights: 0,
-    };
+    const row = byYear.get(year) ?? emptyYear(year);
     row[field] += 1;
     byYear.set(year, row);
   };
 
-  const BUCKET_OF: Record<NightSource, "hotelNights" | "seaNights" | "airNights"> = {
+  const BUCKET_OF: Record<NightSource, Bucket> = {
     hotel: "hotelNights",
     sea: "seaNights",
+    rail: "railNights",
+    bus: "busNights",
     air: "airNights",
   };
   for (const night of nights) {
@@ -282,28 +372,26 @@ export function buildTravelAccount(input: TravelAccountInput): TravelAccount {
     bump(night.day, BUCKET_OF[night.awardedTo]);
   }
 
-  // Home nights are the remainder, which means every year between the first
-  // and the last one with data must exist as a row — a year spent entirely at
-  // home is a real answer, and leaving it out would draw a gap in the chart
-  // where the truthful reading is "none".
+  // The unassigned nights are the remainder, so every year between the first
+  // and the last one with data must exist as a row — a year no record touches
+  // is a real answer ("none accounted for"), and leaving it out would draw a
+  // gap in the chart where that is the truthful reading.
   const years = [...byYear.keys()].map(Number);
   if (years.length > 0) {
     const first = Math.min(...years);
     const last = Math.max(...years);
     for (let y = first; y <= last; y += 1) {
       const year = String(y);
-      const row = byYear.get(year) ?? {
-        year,
-        days: 0,
-        hotelNights: 0,
-        seaNights: 0,
-        airNights: 0,
-        homeNights: 0,
-      };
+      const row = byYear.get(year) ?? emptyYear(year);
+      // The current year holds the nights that are OVER: up to last night.
+      // Tonight is not yet spent anywhere, and counting it made every running
+      // year carry one remainder night no record could ever claim.
       const nowYear = now.getUTCFullYear();
-      row.days =
-        y === nowYear ? Math.floor((today - Date.UTC(y, 0, 1)) / DAY_MS) + 1 : daysInYear(y);
-      row.homeNights = Math.max(0, row.days - row.hotelNights - row.seaNights - row.airNights);
+      row.days = y === nowYear ? Math.floor((today - Date.UTC(y, 0, 1)) / DAY_MS) : daysInYear(y);
+      row.unassignedNights = Math.max(
+        0,
+        row.days - row.hotelNights - row.seaNights - row.railNights - row.busNights - row.airNights
+      );
       byYear.set(year, row);
     }
   }
@@ -311,6 +399,7 @@ export function buildTravelAccount(input: TravelAccountInput): TravelAccount {
   return {
     years: [...byYear.values()].sort((a, b) => a.year.localeCompare(b.year)),
     undatedStays,
+    undatedNightTrains,
     contestedNights,
   };
 }

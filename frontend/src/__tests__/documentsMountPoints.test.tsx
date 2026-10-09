@@ -51,6 +51,13 @@ vi.mock("../components/documents/DocumentsSection", () => ({
   },
 }));
 
+// The flight page's day card (forgejo#220) lists the flight's documents for
+// its boarding pass — its own request beside the stubbed section above.
+vi.mock("../lib/api/documents", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/api/documents")>();
+  return { ...actual, documentsApi: { listForEntry: vi.fn().mockResolvedValue([]) } };
+});
+
 // ── the five surfaces' own dependencies ────────────────────────────────────
 const flightsApi = vi.hoisted(() => ({
   getById: vi.fn(),

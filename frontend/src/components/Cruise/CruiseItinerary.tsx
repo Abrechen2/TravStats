@@ -31,7 +31,17 @@ function dayMonth(iso: string | null): string | null {
  * a card per port inside a card, where the times a reader looks for were not
  * shown at all.
  */
-export default function CruiseItinerary({ cruise }: { cruise: Cruise }): JSX.Element {
+export default function CruiseItinerary({
+  cruise,
+  selectedKey,
+  onSelect,
+}: {
+  cruise: Cruise;
+  /** The day whose card is open (forgejo#223). */
+  selectedKey?: string | null;
+  /** Given: each day of the cruise is a button that opens its day card. */
+  onSelect?: (key: string) => void;
+}): JSX.Element {
   const { t } = useTranslation("cruise");
   const entries = buildEffectiveTimeline(cruise);
 
@@ -51,68 +61,87 @@ export default function CruiseItinerary({ cruise }: { cruise: Cruise }): JSX.Ele
                 .join(", ")
             : t("stops.unresolved");
         const last = index === entries.length - 1;
+        // A day of the cruise opens its card; the departure/arrival rows
+        // borrowed from the cruise have no stop to show one for.
+        const selectable = onSelect !== undefined && entry.stop !== null;
+        const selected = selectable && entry.key === selectedKey;
+        const Row = selectable ? "button" : "div";
         return (
-          <li
-            key={entry.key}
-            className="grid items-start"
-            style={{
-              gridTemplateColumns: "56px 16px minmax(0,1fr) auto",
-              columnGap: "var(--ts-space-md)",
-            }}
-          >
-            <span
-              className="t-caption"
-              style={{ fontFamily: "var(--ts-font-mono)", lineHeight: 1.3, paddingTop: 2 }}
+          <li key={entry.key}>
+            <Row
+              {...(selectable
+                ? {
+                    type: "button" as const,
+                    onClick: (): void => onSelect(entry.key),
+                    "aria-pressed": selected,
+                  }
+                : {})}
+              className={`grid w-full items-start text-left ${
+                selectable
+                  ? "rounded-md hover:bg-(--bg-elevated) pointer-coarse:min-h-(--ts-size-touch-min)"
+                  : ""
+              } ${selected ? "bg-(--bg-elevated)" : ""}`}
+              style={{
+                gridTemplateColumns: "56px 16px minmax(0,1fr) auto",
+                columnGap: "var(--ts-space-md)",
+              }}
             >
-              {entry.stop ? `${t("detail.day")} ${entry.stop.dayNumber}` : null}
-              <br />
-              <span style={{ color: "var(--ts-text)" }}>{dayMonth(entry.date)}</span>
-            </span>
-            <span className="flex h-full flex-col items-center" aria-hidden="true">
+              {/* Out of the grid flow (absolute), read first: what the row does. */}
+              {selectable && <span className="sr-only">{t("dayCard.openDay")} </span>}
               <span
-                style={{
-                  width: 10,
-                  height: 10,
-                  marginTop: 5,
-                  borderRadius: 999,
-                  flexShrink: 0,
-                  background: entry.isAtSea ? "transparent" : "var(--ts-domain-cruise)",
-                  border: "2px solid var(--ts-domain-cruise)",
-                  opacity: entry.isAtSea ? 0.6 : 1,
-                }}
-              />
-              {!last && (
+                className="t-caption"
+                style={{ fontFamily: "var(--ts-font-mono)", lineHeight: 1.3, paddingTop: 2 }}
+              >
+                {entry.stop ? `${t("detail.day")} ${entry.stop.dayNumber}` : null}
+                <br />
+                <span style={{ color: "var(--ts-text)" }}>{dayMonth(entry.date)}</span>
+              </span>
+              <span className="flex h-full flex-col items-center" aria-hidden="true">
                 <span
                   style={{
-                    flex: 1,
-                    width: 2,
-                    minHeight: 24,
-                    background: "var(--ts-domain-cruise)",
-                    opacity: 0.35,
+                    width: 10,
+                    height: 10,
+                    marginTop: 5,
+                    borderRadius: 999,
+                    flexShrink: 0,
+                    background: entry.isAtSea ? "transparent" : "var(--ts-domain-cruise)",
+                    border: "2px solid var(--ts-domain-cruise)",
+                    opacity: entry.isAtSea ? 0.6 : 1,
                   }}
                 />
-              )}
-            </span>
-            <span className="flex min-w-0 flex-col" style={{ paddingBottom: last ? 0 : 14 }}>
-              <span
-                className="truncate"
-                style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text-bright)" }}
-              >
-                {title}
+                {!last && (
+                  <span
+                    style={{
+                      flex: 1,
+                      width: 2,
+                      minHeight: 24,
+                      background: "var(--ts-domain-cruise)",
+                      opacity: 0.35,
+                    }}
+                  />
+                )}
               </span>
-              {sub ? <span className="t-caption truncate">{sub}</span> : null}
-              {entry.excursionNote ? (
-                <span className="t-caption" style={{ color: "var(--ts-text)" }}>
-                  {entry.excursionNote}
+              <span className="flex min-w-0 flex-col" style={{ paddingBottom: last ? 0 : 14 }}>
+                <span
+                  className="truncate"
+                  style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text-bright)" }}
+                >
+                  {title}
                 </span>
-              ) : null}
-            </span>
-            <span
-              className="t-caption whitespace-nowrap"
-              style={{ fontFamily: "var(--ts-font-mono)", paddingTop: 2 }}
-            >
-              {arrive || depart ? `${arrive ?? "—"} · ${depart ?? "—"}` : null}
-            </span>
+                {sub ? <span className="t-caption truncate">{sub}</span> : null}
+                {entry.excursionNote ? (
+                  <span className="t-caption" style={{ color: "var(--ts-text)" }}>
+                    {entry.excursionNote}
+                  </span>
+                ) : null}
+              </span>
+              <span
+                className="t-caption whitespace-nowrap"
+                style={{ fontFamily: "var(--ts-font-mono)", paddingTop: 2 }}
+              >
+                {arrive || depart ? `${arrive ?? "—"} · ${depart ?? "—"}` : null}
+              </span>
+            </Row>
           </li>
         );
       })}

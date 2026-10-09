@@ -10,6 +10,7 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 import type { Flight } from "../../types";
 
 const getByIdMock = vi.fn();
+const getTrackMock = vi.fn();
 
 // The documents section fetches its entry's kept originals on mount. It has
 // its own suite, and `__tests__/documentsMountPoints.test.tsx` checks that
@@ -27,14 +28,23 @@ vi.mock("../../lib/api/documents", () => ({
 vi.mock("../../lib/api", () => ({
   flightsApi: {
     getById: (...args: unknown[]) => getByIdMock(...args),
-    getTrack: vi.fn().mockResolvedValue(null),
+    getTrack: (...args: unknown[]) => getTrackMock(...args),
     update: vi.fn(),
     delete: vi.fn(),
   },
   tripsApi: { getAll: vi.fn().mockResolvedValue([]) },
 }));
 
+// The booking and its segments (forgejo#218) — its own API module.
+const getBookingMock = vi.fn();
+vi.mock("../../lib/api/flightBooking", () => ({
+  flightBookingApi: { get: (...args: unknown[]) => getBookingMock(...args) },
+}));
+
 vi.mock("../../components/NavigationBar", () => ({ default: () => <div /> }));
+// The recording's own section has its suite; here only the delete question
+// reads the recording's point count (review M8).
+vi.mock("../../components/flightTrack/FlightTrackSection", () => ({ default: () => null }));
 vi.mock("../../components/FlightEditModal", () => ({ default: () => null }));
 vi.mock("../../components/SpecialFlightModal", () => ({ default: () => null }));
 
@@ -72,6 +82,8 @@ function renderPage() {
 describe("FlightDetailPage", () => {
   beforeEach(() => {
     getByIdMock.mockReset();
+    getTrackMock.mockReset().mockResolvedValue(null);
+    getBookingMock.mockReset();
     listForEntryMock.mockReset();
     listForEntryMock.mockResolvedValue([]);
   });
@@ -92,6 +104,121 @@ describe("FlightDetailPage", () => {
     expect(screen.getByText("B24")).toBeInTheDocument();
     expect(screen.getByText("XY7Z9Q")).toBeInTheDocument();
     expect(screen.getByText("1 x 23 kg")).toBeInTheDocument();
+  });
+
+  it("compares plan and record per end, and says an unrecorded time is unknown (forgejo#216)", async () => {
+    getByIdMock.mockResolvedValue(
+      makeFlight({
+        times: {
+          departure: {
+            utc: "2026-12-21T18:06:00.000Z",
+            local: "2026-12-21T19:06:00",
+            zone: "Europe/Berlin",
+            offset: "+01:00",
+            precision: "minute",
+          },
+          arrival: {
+            utc: "2026-12-21T19:36:00.000Z",
+            local: "2026-12-21T20:36:00",
+            zone: "Europe/Copenhagen",
+            offset: "+01:00",
+            precision: "minute",
+          },
+          actualDeparture: {
+            utc: "2026-12-21T18:31:00.000Z",
+            local: "2026-12-21T19:31:00",
+            zone: "Europe/Berlin",
+            offset: "+01:00",
+            precision: "minute",
+          },
+          actualArrival: null,
+        },
+      })
+    );
+    renderPage();
+
+    const departure = await screen.findByTestId("plan-actual-departure");
+    expect(departure).toHaveTextContent("19:06");
+    expect(departure).toHaveTextContent("19:31");
+    expect(departure).toHaveTextContent("flights:planActual.later");
+    expect(screen.getByTestId("plan-actual-arrival-actual")).toHaveTextContent(
+      "flights:planActual.unknown"
+    );
+  });
+
+  it("puts the day-of-travel card at the top of an upcoming flight (forgejo#220)", async () => {
+    getByIdMock.mockResolvedValue(makeFlight({ bookingReference: "XY7Z9Q" }));
+    renderPage();
+
+    const card = await screen.findByRole("region", { name: "flights:dayCard.title" });
+    expect(card).toHaveTextContent("XY7Z9Q");
+    expect(card).toHaveTextContent("flights:dayCard.missing");
+    await waitFor(() =>
+      expect(listForEntryMock).toHaveBeenCalledWith({ type: "flight", id: "f1" })
+    );
+  });
+
+  it("shows the booking's other flights as one journey, each linked (forgejo#218)", async () => {
+    const own = makeFlight({ bookingId: "b1" });
+    const onward = makeFlight({
+      id: "f2",
+      flightNumber: "LH400",
+      depIata: "CPH",
+      arrIata: "JFK",
+      bookingId: "b1",
+      departureTime: "2026-12-21T21:00:00.000Z",
+    });
+    getByIdMock.mockResolvedValue(own);
+    getBookingMock.mockResolvedValue({
+      booking: {
+        id: "b1",
+        pnr: "ABC123",
+        price: null,
+        currency: null,
+        tripId: null,
+        tripName: null,
+        otherEntries: 0,
+      },
+      segments: [own, onward],
+    });
+    renderPage();
+
+    const list = await screen.findByTestId("booking-itinerary");
+    expect(getBookingMock).toHaveBeenCalledWith("f1");
+    expect(list).toHaveTextContent("MUC → CPH");
+    expect(screen.getByRole("link", { name: /CPH → JFK/ })).toHaveAttribute("href", "/flights/f2");
+  });
+
+  it("explains under the costs where the booking total lives and how it counts (forgejo#219)", async () => {
+    const own = makeFlight({ bookingId: "b1" });
+    getByIdMock.mockResolvedValue(own);
+    getBookingMock.mockResolvedValue({
+      booking: {
+        id: "b1",
+        pnr: null,
+        price: 480,
+        currency: "EUR",
+        tripId: null,
+        tripName: null,
+        otherEntries: 0,
+        split: null,
+      },
+      segments: [own, makeFlight({ id: "f2", bookingId: "b1" })],
+    });
+    renderPage();
+
+    const box = await screen.findByTestId("booking-price");
+    expect(box).toHaveTextContent("flights:bookingPrice.countedOnce");
+    expect(
+      screen.getByRole("button", { name: "flights:bookingPrice.splitEqual" })
+    ).toBeInTheDocument();
+  });
+
+  it("asks for no booking when the flight is linked to none", async () => {
+    getByIdMock.mockResolvedValue(makeFlight());
+    renderPage();
+    await waitFor(() => expect(screen.getByText(/LH2462/)).toBeInTheDocument());
+    expect(getBookingMock).not.toHaveBeenCalled();
   });
 
   it("gives a baggage allowance typed as a bare number its unit (forgejo#186)", async () => {
@@ -160,8 +287,49 @@ describe("FlightDetailPage", () => {
     expect(listForEntryMock).toHaveBeenCalledWith({ type: "flight", id: "f1" });
   });
 
+  it("says what stays — the booking and its other flight — when deleting (forgejo#250)", async () => {
+    const own = makeFlight({ bookingId: "b1" });
+    getByIdMock.mockResolvedValue(own);
+    getBookingMock.mockResolvedValue({
+      booking: {
+        id: "b1",
+        pnr: "ABC123",
+        price: null,
+        currency: null,
+        tripId: null,
+        tripName: null,
+        otherEntries: 0,
+        split: null,
+      },
+      segments: [own, makeFlight({ id: "f2", bookingId: "b1" })],
+    });
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByTestId("booking-itinerary");
+    await user.click(screen.getByRole("button", { name: "common:buttons.delete" }));
+    const dialog = await screen.findByTestId("confirm-modal");
+    // The suite's translation mock drops interpolation, so the names inside
+    // the line are pinned in lib/flights/__tests__/flightDeleteMessage.test.ts;
+    // here: the page says what stays at all.
+    expect(dialog.textContent).toContain("common:delete.survivors");
+  });
+
+  it("names the phone's recording that goes with the flight (review M8)", async () => {
+    getByIdMock.mockResolvedValue(makeFlight({ status: "flown" }));
+    getTrackMock.mockResolvedValue({ id: "tr1", pointCount: 1234 });
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => expect(screen.getByText(/LH2462/)).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "common:buttons.delete" }));
+    const dialog = await screen.findByTestId("confirm-modal");
+    await waitFor(() => expect(dialog.textContent).toContain("flights:deleteParts.recording"));
+  });
+
   it("counts nothing until the dialog is opening", async () => {
-    getByIdMock.mockResolvedValue(makeFlight());
+    // A past flight with no day-of-travel values, so the day card (forgejo#220),
+    // which lists the flight's documents for its boarding pass, is not drawn.
+    getByIdMock.mockResolvedValue(makeFlight({ status: "flown" }));
     renderPage();
 
     await waitFor(() => expect(screen.getByText(/LH2462/)).toBeInTheDocument());

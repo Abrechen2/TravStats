@@ -103,6 +103,7 @@ model User {
   bookings               Booking[]
   cruises                Cruise[]
   railJourneys           RailJourney[]
+  busJourneys            BusJourney[]
   rentalBookings         RentalBooking[]
   apiTokens              ApiToken[]
   pairingCodes           PairingCode[]
@@ -111,6 +112,7 @@ model User {
   loyaltyMemberships     LoyaltyMembership[]
   lodgingChains          LodgingChain[]
   places                 Place[]
+  placeExternalRefs      PlaceExternalRef[]
   placeVisits            PlaceVisit[]
   visitPhotoRefusals     VisitPhotoRefusal[]
   placeLists             PlaceList[]
@@ -1633,6 +1635,7 @@ model Trip {
   bookings       Booking[]
   cruises        Cruise[]
   railJourneys   RailJourney[]
+  busJourneys    BusJourney[]
   rentalBookings RentalBooking[]
   stops          TripStop[]
   routes         TripRoute[]
@@ -2141,6 +2144,15 @@ model Booking {
   fxBaseCurrency String?   @map("fx_base_currency")
   fxSource       String?   @map("fx_source")
 
+  /// An optional split of `price` across the booking's flight segments
+  /// (forgejo#219): `{ method, price, currency, shares: [{ flightId, amount }] }`,
+  /// the shares summing to `price` to the minor unit. DISPLAY ONLY — no cost
+  /// total reads it; totals keep counting `price` once
+  /// (`utils/stats/dedupedCost.ts`). It records the price, currency and
+  /// segments it was computed from, so a later change shows it as stale
+  /// instead of silently disagreeing with the total.
+  priceSplit Json? @map("price_split")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -2149,6 +2161,7 @@ model Booking {
   flights      Flight[]
   cruises      Cruise[]
   railJourneys RailJourney[]
+  busJourneys  BusJourney[]
   lodgingStays LodgingStay[]
 
   @@index([userId])
@@ -2431,6 +2444,12 @@ model CruiseStop {
   timePrecision      String?   @map("time_precision")
   updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at")
   excursionNote      String?   @map("excursion_note")
+  /// "All aboard" (forgejo#223): the latest time to be back on the ship at
+  /// this port, `HH:mm` on the PORT's clock, on the stop's own day. Only ever
+  /// what the user typed from the ship's daily programme — it is never derived
+  /// from the departure, because the gap between the two differs by line and
+  /// port, and a guessed time to be back on board is worse than none.
+  allAboardTime      String?   @map("all_aboard_time")
   // Third stop state: a port whose name could not be matched to the catalog on
   // import. portId=null AND isAtSea=false AND this set => unresolved port.
   unresolvedPortName String?   @map("unresolved_port_name")
@@ -2861,14 +2880,17 @@ model Place {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  batch            ImportBatch?     @relation(fields: [batchId], references: [id], onDelete: SetNull)
-  coverPhoto       PlaceVisitPhoto? @relation("PlaceCover", fields: [coverPhotoId], references: [id], onDelete: SetNull)
-  visits           PlaceVisit[]
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  batch              ImportBatch?       @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  coverPhoto         PlaceVisitPhoto?   @relation("PlaceCover", fields: [coverPhotoId], references: [id], onDelete: SetNull)
+  visits             PlaceVisit[]
   /// Roadtrip pass-throughs that name this place. The place does not own them.
-  roadtripStations TripStop[]
-  listEntries      PlaceListEntry[]
-  photoJourneys    PhotoJourney[]
+  roadtripStations   TripStop[]
+  listEntries        PlaceListEntry[]
+  photoJourneys      PhotoJourney[]
+  /// References this place answers to besides `externalRef` — what a merge
+  /// left of the place folded into it (forgejo#232).
+  externalRefAliases PlaceExternalRef[]
 
   @@unique([userId, externalRef])
   @@unique([userId, curatedItemId])
@@ -2876,6 +2898,37 @@ model Place {
   @@index([userId, category])
   @@index([userId, visited])
   @@map("places")
+}
+
+/// A second geocoder reference of a place — the identity of a duplicate that
+/// was merged into it (forgejo#232).
+///
+/// `Place.externalRef` is one column, so a merge of two places that both came
+/// from a source (an OSM pick and a Google Takeout row) could keep only one of
+/// the two references. Dropping the other made every dedup path miss it: the
+/// next search pick or Takeout re-import of that object created the very
+/// duplicate the merge had removed. The losing reference lives on here, and
+/// every "does this user already have a place for ref X?" question asks the
+/// column AND this table (`services/places/placeRefs.ts`).
+///
+/// Unique per user like the column, and never the same value as any of the
+/// user's `Place.externalRef` — the write paths go through `placeRefs.ts`,
+/// which refuses that (there is no cross-table constraint to do it). Cascade:
+/// a deleted place takes its aliases; a place merged away hands them on first.
+/// Not in the sync feed (no trigger) — a server-side dedup key.
+model PlaceExternalRef {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  placeId   String   @map("place_id")
+  ref       String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ref])
+  @@index([placeId])
+  @@map("place_external_refs")
 }
 
 /// One visit to a Place. Replaces `TripStop` rows with `domain = 'poi'`.
@@ -3207,6 +3260,7 @@ model ImportBatch {
   flights  Flight[]
   cruises  Cruise[]
   rail     RailJourney[]
+  bus      BusJourney[]
   rentals  RentalBooking[]
   places   Place[]
 
@@ -3259,6 +3313,7 @@ model Companion {
   trips      TripCompanion[]
   cruises    CruiseCompanion[]
   rail       RailJourneyCompanion[]
+  bus        BusJourneyCompanion[]
   rentals    RentalBookingCompanion[]
 
   @@unique([userId, canonicalName])
@@ -3523,6 +3578,11 @@ model Document {
   placeVisitId    String? @map("place_visit_id")
   railJourneyId   String? @map("rail_journey_id")
   rentalBookingId String? @map("rental_booking_id")
+  busJourneyId    String? @map("bus_journey_id")
+  /// What a rental's evidence shows (forgejo#239): pickup | return | damage |
+  /// fuel | odometer. Only while filed with a rental; null = uncategorised —
+  /// every attachment from before the column, and any the user leaves so.
+  rentalCategory  String? @map("rental_category")
 
   createdAt  DateTime  @default(now()) @map("created_at")
   /// When it was filed with an entry; null while unlinked.
@@ -3547,6 +3607,7 @@ model Document {
   placeVisit    PlaceVisit?    @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
   railJourney   RailJourney?   @relation(fields: [railJourneyId], references: [id], onDelete: Cascade)
   rentalBooking RentalBooking? @relation(fields: [rentalBookingId], references: [id], onDelete: Cascade)
+  busJourney    BusJourney?    @relation(fields: [busJourneyId], references: [id], onDelete: Cascade)
 
   @@index([userId, sha256])
   @@index([flightId])
@@ -3556,6 +3617,7 @@ model Document {
   @@index([placeVisitId])
   @@index([railJourneyId])
   @@index([rentalBookingId])
+  @@index([busJourneyId])
   @@index([userId, linkedAt])
   /// The sweep asks exactly this: unfiled rows past their stamp.
   @@index([unlinkedAt])
@@ -3650,12 +3712,19 @@ model RailJourney {
 
   /// scheduled | in_progress | completed | cancelled — lodging's vocabulary.
   /// A cache of `deriveRailStatus`; only `cancelled` is set by a client.
-  status       String   @default("scheduled")
+  status       String @default("scheduled")
   /// Arrival delay as experienced. Null = not recorded, 0 = on time.
-  delayMinutes Int?     @map("delay_minutes")
-  notes        String?
-  tags         String[] @default([])
-  companions   String[] @default([])
+  delayMinutes Int?   @map("delay_minutes")
+
+  /// The user's own "this change is tight" (forgejo#234), stored on the leg
+  /// that ARRIVES at the change: the transfer is the gap after this train.
+  /// A judgement, never derived — the automatic "under ten minutes" hint is
+  /// computed on read and is not written here.
+  tightConnection Boolean @default(false) @map("tight_connection")
+
+  notes      String?
+  tags       String[] @default([])
+  companions String[] @default([])
 
   tripId    String? @map("trip_id")
   bookingId String? @map("booking_id")
@@ -3738,6 +3807,120 @@ model RailJourneyCompanion {
   @@map("rail_journey_companions")
 }
 
+/// A long-distance coach ride — one row per vehicle boarded at one terminal
+/// and left at another (spec docs/superpowers/specs/2026-10-07-bus-domain-design.md
+/// §3.1). The two ends carry RAIL's column names on purpose: `shared/railClock.ts`,
+/// `services/rail/timesDto.ts` and the trip bounds are structurally typed on
+/// them, so a bus row reads through the same functions without a copy.
+model BusJourney {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+
+  /// "FlixBus", "Kobus", "Lux Express" — free text with entry suggestions.
+  operator String?
+  /// What the ticket calls the service ("N17", "Premium"); apart from the
+  /// operator because statistics rank operators, not lines.
+  lineName String? @map("line_name")
+  /// intercity | shuttle | other; null when unstated (spec D1). No `charter`: a chartered coach is a tour's vehicle (spec §11b).
+  rideKind String? @map("ride_kind")
+
+  depStationName String  @map("dep_station_name")
+  /// As printed — a coach stop is often an address, not a named building.
+  depAddress     String? @map("dep_address")
+  depLat         Float   @map("dep_lat")
+  depLon         Float   @map("dep_lon")
+  /// ISO 3166-1 alpha-2 from the geocoder; null when unknown, never guessed.
+  depCountry     String? @map("dep_country")
+  /// IANA zone, derived by the server from the coordinates — never user input.
+  depTimezone    String? @map("dep_timezone")
+  arrStationName String  @map("arr_station_name")
+  arrAddress     String? @map("arr_address")
+  arrLat         Float   @map("arr_lat")
+  arrLon         Float   @map("arr_lon")
+  arrCountry     String? @map("arr_country")
+  arrTimezone    String? @map("arr_timezone")
+
+  /// Real UTC instants: the client sends the terminal's wall clock, the
+  /// server converts it with the terminal's zone.
+  departureTime DateTime  @map("departure_time")
+  arrivalTime   DateTime? @map("arrival_time")
+  /// ADR 0002: minute | day | unknown. Written from the first row on.
+  depPrecision  String?   @map("dep_precision")
+  arrPrecision  String?   @map("arr_precision")
+
+  /// great_circle | user | route. Great-circle understates a road by 10–40 %;
+  /// the source is kept so a statistic can say which it is showing.
+  distanceKm     Float?  @map("distance_km")
+  distanceSource String? @map("distance_source")
+  /// `[[lon, lat], ...]`, fetched once (B3, road routing) and frozen. Null =
+  /// draw the chord between the terminals.
+  geometry       Json?
+  /// straight | road | manual. B1 writes only `straight`.
+  geometrySource String  @default("straight") @map("geometry_source")
+
+  actualDepartureTime DateTime? @map("actual_departure_time")
+  actualArrivalTime   DateTime? @map("actual_arrival_time")
+
+  /// The operator's own vocabulary ("Udeung", "Lounge"); not an enum.
+  fareClass        String? @map("fare_class")
+  seat             String?
+  bookingReference String? @map("booking_reference")
+
+  price          Float?
+  currency       String?   @default("EUR")
+  priceBase      Float?    @map("price_base")
+  fxRate         Float?    @map("fx_rate")
+  fxRateDate     DateTime? @map("fx_rate_date")
+  fxBaseCurrency String?   @map("fx_base_currency")
+  fxSource       String?   @map("fx_source")
+
+  /// scheduled | in_progress | completed | cancelled — rail's vocabulary.
+  /// A cache of `deriveBusStatus`; only `cancelled` is set by a client.
+  status       String   @default("scheduled")
+  /// Arrival delay as experienced. Null = not recorded, 0 = on time.
+  delayMinutes Int?     @map("delay_minutes")
+  notes        String?
+  tags         String[] @default([])
+  companions   String[] @default([])
+
+  tripId    String? @map("trip_id")
+  bookingId String? @map("booking_id")
+
+  externalRef   String? @map("external_ref")
+  importBatchId String? @map("import_batch_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip           Trip?                 @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking        Booking?              @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  importBatch    ImportBatch?          @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  companionLinks BusJourneyCompanion[]
+  documents      Document[]
+
+  @@unique([userId, externalRef])
+  @@index([userId, departureTime])
+  @@index([status])
+  @@index([tripId])
+  @@index([bookingId])
+  @@index([importBatchId])
+  @@map("bus_journeys")
+}
+
+model BusJourneyCompanion {
+  busJourneyId String @map("bus_journey_id")
+  companionId  String @map("companion_id")
+  position     Int
+
+  busJourney BusJourney @relation(fields: [busJourneyId], references: [id], onDelete: Cascade)
+  companion  Companion  @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  @@id([busJourneyId, companionId])
+  @@index([companionId])
+  @@map("bus_journey_companions")
+}
+
 /// A car rental — one row per rental contract (spec
 /// docs/superpowers/specs/2026-10-01-rental-domain-design.md §3.1). A rental is
 /// a contract, not a route: it has no geometry of its own; a roadtrip may name
@@ -3788,8 +3971,12 @@ model RentalBooking {
   returnPrecision String   @default("minute") @map("return_precision")
 
   /// What happened at the counter, from an agreement/invoice or typed; null = nobody recorded it.
-  actualPickupTime DateTime? @map("actual_pickup_time")
-  actualReturnTime DateTime? @map("actual_return_time")
+  actualPickupTime      DateTime? @map("actual_pickup_time")
+  actualReturnTime      DateTime? @map("actual_return_time")
+  /// minute | day — how much of the actual hand-over is known; null with no
+  /// actual time. A row written before this column existed reads as minute.
+  actualPickupPrecision String?   @map("actual_pickup_precision")
+  actualReturnPrecision String?   @map("actual_return_precision")
 
   /// The class as printed ("Compact", "Gruppe C").
   vehicleClass   String? @map("vehicle_class")
@@ -3825,6 +4012,17 @@ model RentalBooking {
   /// mail arriving later only fills what is still empty — it never overwrites
   /// what a newer one set. Null = no dated mail yet (pasted text carries none).
   lastMailSentAt      DateTime? @map("last_mail_sent_at")
+
+  /// The deposit held at the counter (forgejo#238) — money held, never a cost:
+  /// no total, statistic or travel account reads these. In its OWN currency,
+  /// which may differ from the price's; nothing is converted. A returned
+  /// amount below the held one is a partial refund. Days are ADR 0002 D1
+  /// floating dates — the statement's booking day, no zone. All null = none.
+  depositAmount         Float?    @map("deposit_amount")
+  depositCurrency       String?   @map("deposit_currency")
+  depositPaidOn         DateTime? @map("deposit_paid_on") @db.Date
+  depositReturnedOn     DateTime? @map("deposit_returned_on") @db.Date
+  depositReturnedAmount Float?    @map("deposit_returned_amount")
 
   /// unlimited | capped | null; the cap beside it.
   mileagePolicy String? @map("mileage_policy")

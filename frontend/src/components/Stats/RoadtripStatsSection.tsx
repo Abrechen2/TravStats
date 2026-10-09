@@ -11,6 +11,10 @@ import RankedBarList, { type RankedRow } from "./lodging/RankedBarList";
 import type { PeriodScope } from "./useStatsPeriod";
 import PeriodComparisonStrip from "./PeriodComparisonStrip";
 import type { SectionVisibility } from "../../hooks/useSectionVisibility";
+import { statsInsightsApi } from "../../lib/api/statsInsights";
+import type { RoadtripInsights } from "../../types/statsInsights";
+import RoadtripInsightsSection from "./roadtrip/RoadtripInsightsSection";
+import TourStatsSection from "./roadtrip/TourStatsSection";
 
 /**
  * The roadtrip tab of the statistics page (2.7).
@@ -32,6 +36,10 @@ export default function RoadtripStatsSection({
   const accent = useDomainColors().colorOf("roadtrip");
   const [rows, setRows] = useState<RoadtripSummary[] | null>(null);
   const [failed, setFailed] = useState(false);
+  // forgejo#260 — the insights load beside the list and never hold it up: a
+  // failure there costs the insight blocks, not the tab.
+  const [insights, setInsights] = useState<RoadtripInsights | null>(null);
+  const [insightsFailed, setInsightsFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,6 +49,13 @@ export default function RoadtripStatsSection({
       .catch((err: unknown) => {
         logger.warn("Failed to load roadtrips for statistics", err);
         if (!cancelled) setFailed(true);
+      });
+    statsInsightsApi
+      .roadtrips()
+      .then((r) => !cancelled && setInsights(r))
+      .catch((err: unknown) => {
+        logger.warn("Failed to load roadtrip insights", err);
+        if (!cancelled) setInsightsFailed(true);
       });
     return () => {
       cancelled = true;
@@ -102,6 +117,8 @@ export default function RoadtripStatsSection({
             ? t("roadtrips:stats.empty")
             : t("stats:period.emptyYear", { year: scope.year })}
         </p>
+        {/* forgejo#264 — tours stand on their own: no roadtrip is needed for one. */}
+        {visibility.isVisible("tours") && <TourStatsSection year={scope.year} accent={accent} />}
       </section>
     );
   }
@@ -136,6 +153,16 @@ export default function RoadtripStatsSection({
       value: nf.format(count),
     }));
 
+  const aheadKm = insights
+    ? insights.roadtrips
+        .filter((r) => scoped.some((s) => s.id === r.id))
+        .reduce((sum, r) => sum + r.km.current + r.km.planned + r.km.unplaced, 0)
+    : 0;
+  const aheadFootnote =
+    aheadKm > 0
+      ? t("roadtrips:stats.insights.aheadFootnote", { km: nf.format(Math.round(aheadKm)) })
+      : undefined;
+
   const show = visibility.isVisible;
   return (
     <section className="space-y-8">
@@ -155,6 +182,10 @@ export default function RoadtripStatsSection({
             title={t("roadtrips:stats.distance")}
             value={`${nf.format(Math.round(km))} km`}
             description={t("roadtrips:stats.drivenHint", { km: nf.format(Math.round(driven)) })}
+            // The list's distance is the whole route of every roadtrip that has
+            // started — including the stretches still ahead of one under way.
+            // Said here, so the tile is not read as kilometres already driven.
+            footnote={aheadFootnote}
           />
           <StatCard
             accent={accent}
@@ -204,6 +235,13 @@ export default function RoadtripStatsSection({
           rows={vehicleRows}
         />
       )}
+      {show("insights") &&
+        (insights ? (
+          <RoadtripInsightsSection data={insights} year={scope.year} accent={accent} />
+        ) : insightsFailed ? (
+          <p className="text-sm text-(--text-muted)">{t("roadtrips:stats.insights.loadFailed")}</p>
+        ) : null)}
+      {show("tours") && <TourStatsSection year={scope.year} accent={accent} />}
     </section>
   );
 }

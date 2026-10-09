@@ -36,6 +36,7 @@
     "details": "Details",
     "dismiss": "Dismiss",
     "retry": "Try again",
+    "reloadList": "Reload list",
     "showLess": "Show less",
     "moreActions": "More actions"
   },
@@ -143,6 +144,7 @@
     "rateLimited": "Too many requests in a short time. Please wait a moment.",
     "demo": "This cannot be saved in the demo account.",
     "network": "The server cannot be reached. Please check the connection.",
+    "outcomeUnknown": "It is unclear whether this was saved. Please check the list before trying again.",
     "timezoneUnavailable": "The server cannot determine the place's time zone right now. The time was not saved, so it is not stored wrongly as UTC — please tell your administrator.",
     "timezoneUnresolved": "No time zone is known for this place, because it has no coordinates or catalogue entry. The time was not saved, so it is not stored wrongly as UTC — please complete the place or choose another one.",
     "localTimeNonexistent": "This time does not exist on that day at this place (clock change). Please choose a time before or after it.",
@@ -195,7 +197,9 @@
     "rail": "Rail",
     "rail_desc": "Train journeys like flights: stations, train number, class, seat, kilometres. (Beta)",
     "rental": "Rental cars",
-    "rental_desc": "Rental cars with station, period, car and the kilometres from the invoice. (Beta)"
+    "rental_desc": "Rental cars with station, period, car and the kilometres from the invoice. (Beta)",
+    "bus": "Bus",
+    "bus_desc": "Coach, intercity and shuttle rides: terminals, line, seat, kilometres. Not city transit. (Beta)"
   },
   "settings": {
     "modules": {
@@ -209,7 +213,8 @@
         "poi": "Places, visits and place lists",
         "roadtrip": "Stations, nights, map",
         "rail": "Beta: a logbook for train journeys",
-        "rental": "Beta: a logbook for rental cars"
+        "rental": "Beta: a logbook for rental cars",
+        "bus": "Beta: logbook for bus rides"
       }
     }
   },
@@ -354,5 +359,20 @@
   },
   "list": {
     "loadFailedHint": "Your data is not affected — it is still there. Try again in a moment."
+  },
+  "discard": {
+    "title": "Discard changes?",
+    "message": "What you entered in this form will be lost.",
+    "confirm": "Discard",
+    "keepEditing": "Keep editing"
+  },
+  "form": {
+    "requiredLegend": "Fields marked * are required.",
+    "saveBlocked": "Still needed to save:",
+    "savedButRefreshFailed": "Saved. The list could not be refreshed.",
+    "savedButViewRefreshFailed": "Saved. This view could not be refreshed."
+  },
+  "delete": {
+    "survivors": "Kept: {{names}}"
   }
 }

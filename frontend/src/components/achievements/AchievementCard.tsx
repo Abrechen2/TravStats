@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import type { Achievement } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
+import { isPlanningRule } from "./achievementPlanning";
 
 /**
  * Tier colours, from the token layer.
@@ -102,6 +103,13 @@ export default function AchievementCard({
                 : t(`achievements:tiers.${achievement.tier}`)}
             </span>
             <span className="t-caption"> · {achievement.points} P</span>
+            {!isMystery && isPlanningRule(achievement.requirementType) && (
+              // forgejo#265: a badge for PLANNED travel says so on its face.
+              <span className="t-caption" data-testid="achievement-planning">
+                {" · "}
+                {t("achievements:planning.badge")}
+              </span>
+            )}
           </span>
           <span style={{ color: "var(--ts-text)" }}>
             {achievement.isUnlocked

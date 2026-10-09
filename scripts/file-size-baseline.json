@@ -5,7 +5,7 @@
     "frontend/src/components/GlobeView.tsx": 1427,
     "backend/src/routes/stats.ts": 1293,
     "backend/src/routes/flights.ts": 1281,
-    "frontend/src/pages/TripDetailPage.tsx": 1152,
+    "frontend/src/pages/TripDetailPage.tsx": 1143,
     "backend/src/services/schematicRouter.ts": 1112,
     "frontend/src/components/Cruise/CruiseRouteMap.tsx": 1032,
     "backend/src/services/flightLookup.ts": 1020,
@@ -13,7 +13,6 @@
     "frontend/src/components/Training/BoardingPassAnnotation.tsx": 963,
     "backend/src/services/flightEnrichmentService.ts": 919,
     "frontend/src/components/FlightCertificate.tsx": 883,
-    "backend/src/utils/achievementChecks.ts": 861,
-    "frontend/src/components/FlightForm/useFlightForm.ts": 814
+    "backend/src/utils/achievementChecks.ts": 861
   }
 }

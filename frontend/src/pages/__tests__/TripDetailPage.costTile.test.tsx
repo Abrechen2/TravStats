@@ -120,6 +120,8 @@ const priced = makeTrip({
   bookings: [
     { id: "b1", pnr: "AB12CD", price: 40206, currency: "EUR" },
   ] as unknown as Trip["bookings"],
+  // The tile shows the server's figure (forgejo#274), never its own sum.
+  cost: { spendByCurrency: { EUR: 40206 }, unpricedEntries: 0 },
 });
 
 describe("TripDetailPage cost tile", () => {

@@ -36,6 +36,7 @@
     "details": "Details",
     "dismiss": "Verwerfen",
     "retry": "Erneut versuchen",
+    "reloadList": "Liste neu laden",
     "showLess": "Weniger anzeigen",
     "moreActions": "Weitere Aktionen"
   },
@@ -143,6 +144,7 @@
     "rateLimited": "Zu viele Anfragen in kurzer Zeit. Bitte warte einen Moment.",
     "demo": "Im Demo-Konto lässt sich das nicht speichern.",
     "network": "Der Server ist nicht erreichbar. Bitte prüfe die Verbindung.",
+    "outcomeUnknown": "Ob gespeichert wurde, ist unklar. Bitte prüfe die Liste, bevor du es erneut versuchst.",
     "timezoneUnavailable": "Die Zeitzone des Ortes lässt sich auf dem Server gerade nicht bestimmen. Die Zeit wurde nicht gespeichert, damit sie nicht falsch als UTC abgelegt wird — bitte den Administrator informieren.",
     "timezoneUnresolved": "Für diesen Ort ist keine Zeitzone bekannt, weil ihm Koordinaten oder ein Katalogeintrag fehlen. Die Zeit wurde nicht gespeichert, damit sie nicht falsch als UTC abgelegt wird — bitte den Ort vervollständigen oder einen anderen wählen.",
     "localTimeNonexistent": "Diese Uhrzeit gibt es an dem Tag dort nicht (Zeitumstellung). Bitte wähle eine Uhrzeit davor oder danach.",
@@ -195,7 +197,9 @@
     "rail": "Bahn",
     "rail_desc": "Zugfahrten wie Flüge: Bahnhöfe, Zugnummer, Klasse, Sitzplatz, Kilometer. (Beta)",
     "rental": "Mietwagen",
-    "rental_desc": "Mietwagen mit Station, Zeitraum, Fahrzeug und Kilometern aus der Rechnung. (Beta)"
+    "rental_desc": "Mietwagen mit Station, Zeitraum, Fahrzeug und Kilometern aus der Rechnung. (Beta)",
+    "bus": "Bus",
+    "bus_desc": "Fernbus-, Intercity- und Shuttlefahrten: Terminals, Linie, Sitzplatz, Kilometer. Kein Stadtverkehr. (Beta)"
   },
   "settings": {
     "modules": {
@@ -209,7 +213,8 @@
         "poi": "Orte, Besuche und Ortslisten",
         "roadtrip": "Stationen, Übernachtungen, Karte",
         "rail": "Beta: Fahrtenbuch für Zugfahrten",
-        "rental": "Beta: Fahrtenbuch für Mietwagen"
+        "rental": "Beta: Fahrtenbuch für Mietwagen",
+        "bus": "Beta: Fahrtenbuch für Busfahrten"
       }
     }
   },
@@ -354,5 +359,20 @@
   },
   "list": {
     "loadFailedHint": "Das liegt nicht an deinen Daten — sie sind noch da. Versuch es gleich noch einmal."
+  },
+  "discard": {
+    "title": "Änderungen verwerfen?",
+    "message": "Deine Eingaben in diesem Formular gehen verloren.",
+    "confirm": "Verwerfen",
+    "keepEditing": "Weiter bearbeiten"
+  },
+  "form": {
+    "requiredLegend": "Mit * markierte Felder sind Pflicht.",
+    "saveBlocked": "Zum Speichern fehlt noch:",
+    "savedButRefreshFailed": "Gespeichert. Die Liste konnte nicht aktualisiert werden.",
+    "savedButViewRefreshFailed": "Gespeichert. Die Ansicht konnte nicht aktualisiert werden."
+  },
+  "delete": {
+    "survivors": "Erhalten bleiben: {{names}}"
   }
 }

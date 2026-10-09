@@ -40,6 +40,13 @@ const cruiseStop = registry.register(
       arrivalTime: z.string().datetime().nullable(),
       departureTime: z.string().datetime().nullable(),
       excursionNote: z.string().nullable(),
+      allAboardTime: z
+        .string()
+        .nullable()
+        .describe(
+          "Latest time to be back on board, HH:mm on the port's clock, on the stop's day. " +
+            "Only ever entered by the user, never derived from the departure."
+        ),
       port: includedRow("port").nullable().optional(),
       times: cruiseStopTimesSchema,
     })
@@ -94,6 +101,12 @@ const cruise = registry.register(
       arrivalPort: includedRow("port").nullable().optional(),
       trip: includedRow("trip (id, name, color)").nullable().optional(),
       legs: z.array(includedRow("leg")).optional(),
+      _count: z
+        .object({ tracks: z.number().int(), legRoutes: z.number().int() })
+        .optional()
+        .describe(
+          "Recorded GPS tracks and hand-drawn route corrections that a delete takes with it"
+        ),
       createdAt: z.string().datetime(),
       times: cruiseTimesSchema,
     })

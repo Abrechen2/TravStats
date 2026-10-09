@@ -71,6 +71,11 @@ export interface RailJourney {
   currency: string | null;
   status: RailStatus;
   delayMinutes: number | null;
+  /**
+   * The user's own mark that the change AFTER this train is tight
+   * (forgejo#234); set on the leg arriving at the change, never derived.
+   */
+  tightConnection: boolean;
   notes: string | null;
   tags: string[];
   companions: string[];
@@ -117,6 +122,14 @@ export interface RailBookingLeg {
   id: string;
   depStationName: string;
   arrStationName: string;
+  /** Catalogue rows — how a change of stations is told (forgejo#234). */
+  depStationId: number | null;
+  arrStationId: number | null;
+  /** Positions, for the server's "within 1 km is the same station". */
+  depLat: number;
+  depLon: number;
+  arrLat: number;
+  arrLon: number;
   departureTime: string;
   arrivalTime: string | null;
   depTimezone: string | null;
@@ -124,6 +137,11 @@ export interface RailBookingLeg {
   trainCategory: string | null;
   trainNumber: string | null;
   status: RailStatus;
+  travelClass: RailTravelClass | null;
+  coach: string | null;
+  seat: string | null;
+  bookingReference: string | null;
+  tightConnection: boolean;
   times?: RailTimes;
 }
 
@@ -167,6 +185,12 @@ export interface RailJourneyInput {
   arrivalStation: RailStationInput;
   departureLocal: string;
   arrivalLocal?: string | null;
+  /**
+   * Which occurrence of a repeated autumn hour the wall clock means; null or
+   * absent is the earlier one, the server's default (ADR 0002, D3 / Q5).
+   */
+  departureFold?: "earlier" | "later" | null;
+  arrivalFold?: "earlier" | "later" | null;
   /** Only a distance typed from the ticket; null = measure it. */
   distanceKm?: number | null;
   travelClass?: RailTravelClass | null;
@@ -177,6 +201,8 @@ export interface RailJourneyInput {
   currency?: string;
   status?: "scheduled" | "cancelled";
   delayMinutes?: number | null;
+  /** The "tight change" mark; the form never sends it, a PATCH of its own does. */
+  tightConnection?: boolean;
   notes?: string | null;
   tags?: string[];
   companions?: string[];
@@ -316,6 +342,36 @@ export interface RailStats {
   byYear: Array<{ year: number; journeys: number; km: number }>;
   /** Rides of a kind, counted by the rule the rail badges use. */
   rideKinds: { nightTrains: number; highSpeed: number; crossBorder: number; operators: number };
+  /**
+   * Journeys, changes, connections, punctuality and nights on board
+   * (forgejo#261). Optional only because a server older than this field
+   * answers without it; the section then draws none of these blocks.
+   */
+  connected?: RailJourneyFigures;
+}
+
+export interface RailPunctualityRow {
+  label: string;
+  /** Rides with a recorded delay and both clocks. */
+  measured: number;
+  /** Of those, arrived no later than scheduled. */
+  onTime: number;
+  averageMinutes: number;
+}
+
+/** Mirrors `RailJourneyFigures` in `backend/src/services/rail/railJourneyStats.ts`. */
+export interface RailJourneyFigures {
+  journeys: { total: number; withTransfer: number };
+  transfers: {
+    count: number;
+    averageMinutes: number | null;
+    shortestMinutes: number | null;
+    longestMinutes: number | null;
+  };
+  favouriteConnections: Array<{ from: string; to: string; rides: number; latestRideId: string }>;
+  newConnections: { inScope: number; byYear: Array<{ year: number; count: number }> };
+  punctuality: { byOperator: RailPunctualityRow[]; byConnection: RailPunctualityRow[] };
+  nightTrainNights: { nights: number; undated: number };
 }
 
 /** A train the user has ridden, as a ticket prints it ("ICE 578"). */

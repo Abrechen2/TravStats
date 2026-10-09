@@ -5,4 +5,5 @@ export { adaptCruise, type CruiseAdapterInput } from "./cruiseStatsAdapter";
 export { adaptLodging, type LodgingAdapterInput } from "./lodgingStatsAdapter";
 export { adaptPoi } from "./poiStatsAdapter";
 export { adaptRoadtrip, type RoadtripAdapterInput } from "./roadtripStatsAdapter";
+export { adaptBus, type BusAdapterInput } from "./busStatsAdapter";
 export { useDomainStats, type UseDomainStatsResult } from "./useDomainStats";

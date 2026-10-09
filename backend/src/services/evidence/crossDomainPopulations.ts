@@ -2,6 +2,8 @@ import { prisma } from "../../db";
 import type { EvidenceEntry } from "../../schemas/evidence";
 import type { DomainKey } from "../../shared/domains";
 import { countableFlightWhere } from "../../shared/flightCounting";
+import { busCountries, busDayKeys, busYear, countableBusWhere } from "../../shared/busCounting";
+import { busEvidenceEntry } from "./entryMappersRentalBus";
 import { isCountableCruiseStatus } from "../../shared/cruiseCounting";
 import { classifyLodging, classifyStay } from "../../shared/lodgingCounting";
 import { classifyPlace, classifyVisit } from "../../shared/placeCounting";
@@ -11,6 +13,7 @@ import { lodgingCountryKey } from "../../utils/stats/lodgingCountryKey";
 import { localWallClockOf, type FlightTimeSemantics } from "../../utils/timezone";
 import { getCachedAirports } from "../airportCache";
 import { flightEvidenceEntry } from "./entryMappers";
+import { flightEndZone, tzMapFromAirports } from "../stats/departureClock";
 import {
   cruiseEvidenceEntry,
   placeEvidenceEntry,
@@ -144,6 +147,7 @@ async function loadFlights(userId: string): Promise<CrossDomainPopulation> {
       arrIcao: true,
       departureTime: true,
       depTimeSemantics: true,
+      depTimezone: true,
     },
   });
 
@@ -155,10 +159,15 @@ async function loadFlights(userId: string): Promise<CrossDomainPopulation> {
     if (arr) codes.add(arr);
   }
   const airports = await getCachedAirports([...codes]);
+  const tzMap = tzMapFromAirports(airports);
 
   const events: CrossDomainEventRow[] = [];
   const countryRows: CrossDomainCountryRow[] = [];
   for (const row of rows) {
+    // Stored zone first, then the catalogue's — the chain every flight figure
+    // reads (`flightEndZone`), so a corrected catalogue zone cannot move a
+    // past flight's year or day here alone (forgejo#273).
+    const depZone = flightEndZone(row.depTimezone, tzMap, row.depIata, row.depIcao);
     const depCode = row.depIata ?? row.depIcao;
     const arrCode = row.arrIata ?? row.arrIcao;
     const depAirport = depCode ? airports.get(depCode) : undefined;
@@ -169,7 +178,7 @@ async function loadFlights(userId: string): Promise<CrossDomainPopulation> {
     if (row.departureTime) {
       const clock = localWallClockOf(
         row.departureTime,
-        depAirport?.timezone ?? null,
+        depZone,
         row.depTimeSemantics as FlightTimeSemantics
       );
       if (Number.isFinite(clock.year)) {
@@ -186,6 +195,10 @@ async function loadFlights(userId: string): Promise<CrossDomainPopulation> {
           depIata: row.depIata,
           arrIata: row.arrIata,
           departureTime: row.departureTime,
+          // The clock `year` and `dayKeys` were just read on, so the entry's
+          // label names the same day it is counted under (forgejo#273).
+          depTimezone: depZone,
+          depTimeSemantics: row.depTimeSemantics as FlightTimeSemantics,
         },
         1
       )
@@ -513,6 +526,7 @@ async function loadRail(userId: string): Promise<CrossDomainPopulation> {
         id: row.id,
         label: `${row.depStationName} → ${row.arrStationName}`,
         departureTime: row.departureTime,
+        depTimezone: row.depTimezone,
       },
       { subtitle: null }
     );
@@ -534,6 +548,43 @@ async function loadRental(_userId: string): Promise<CrossDomainPopulation> {
   return { events: [], countryRows: [] };
 }
 
+/**
+ * Bus rides (forgejo#265, spec 2026-10-07 §6 D4), the way `loadRail` reads
+ * trains: a completed ride is one event, filed under the year it left on its
+ * departure terminal's calendar, active on the day it left and — overnight —
+ * the day it arrived, each on its own terminal's clock; it proves both
+ * terminals' countries (a coach across a border is the same evidence a train
+ * is). The fold unions countries and days across domains, so a ride on the
+ * day of a flight in the same country adds no second day or country. Every
+ * rule is `shared/busCounting.ts`, mirrored by the overview's `busStatsAdapter`.
+ */
+async function loadBus(userId: string): Promise<CrossDomainPopulation> {
+  const rows = await prisma.busJourney.findMany({
+    where: { userId, ...countableBusWhere() },
+    select: {
+      id: true,
+      operator: true,
+      depStationName: true,
+      arrStationName: true,
+      depCountry: true,
+      arrCountry: true,
+      depTimezone: true,
+      arrTimezone: true,
+      departureTime: true,
+      arrivalTime: true,
+    },
+  });
+  const events: CrossDomainEventRow[] = [];
+  const countryRows: CrossDomainCountryRow[] = [];
+  for (const row of rows) {
+    const entry = busEvidenceEntry(row, {});
+    const year = busYear(row);
+    events.push({ domain: "bus", entry, year, dayKeys: busDayKeys(row) });
+    countryRows.push({ domain: "bus", entry, countries: busCountries(row), years: [year] });
+  }
+  return { events, countryRows };
+}
+
 const LOADERS: Record<DomainKey, (userId: string) => Promise<CrossDomainPopulation>> = {
   flight: loadFlights,
   cruise: loadCruises,
@@ -542,6 +593,7 @@ const LOADERS: Record<DomainKey, (userId: string) => Promise<CrossDomainPopulati
   roadtrip: loadRoadtrips,
   rail: loadRail,
   rental: loadRental,
+  bus: loadBus,
 };
 
 /** Loads only the domains asked for — a chip that is off is never queried. */

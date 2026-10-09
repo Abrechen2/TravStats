@@ -92,8 +92,11 @@ describe("SimplifiedFlightFormV2 — the footer's actions", () => {
   it("puts 'Flug speichern' last and makes it the only primary action", async () => {
     await openManualEntry();
 
+    // The "Zum Speichern fehlt noch" items are buttons too (they focus their
+    // field); they are not footer actions.
     const labels = screen
       .getAllByRole("button")
+      .filter((button) => !button.hasAttribute("data-inline-action"))
       .map((button) => button.textContent ?? "")
       .filter((label) => label.startsWith("flights:form."));
 

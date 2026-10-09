@@ -1,30 +1,52 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, JSX } from "react";
 
-import Button from "../ui/Button";
 import IconButton from "../ui/IconButton";
 import { Icon } from "../ui/Icon";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
+import { roadtripsApi } from "../../lib/api/roadtrips";
+import { logger } from "../../lib/logger";
 import { stationAfter, stationWarnings } from "../../lib/roadtrip/roadtripView";
+import {
+  clearStationDraft,
+  writeStationDraft,
+  type StoredStationDraft,
+} from "../../lib/roadtrip/stationDraftStore";
+import { mergeStations, type StationMerge } from "../../lib/roadtrip/stationMerge";
 import type { RoadtripStation } from "../../types/roadtrip";
 import type { TourLeg } from "../../types/tour";
+import {
+  isProtectedSource,
+  moveStation,
+  reorderImpact,
+  type ReorderImpact,
+} from "../../lib/roadtrip/reorderImpact";
+import type { ShiftRow } from "../../lib/roadtrip/shiftDays";
+import ReorderPreviewDialog from "./ReorderPreviewDialog";
+import ShiftDaysDialog from "./ShiftDaysDialog";
+import StationConflictDialog from "./StationConflictDialog";
+import { FormErrorBanner } from "../form";
+import { isTransientSaveError } from "../../lib/saveErrorMessage";
+import UndoBar from "./UndoBar";
 import StationEditCard from "./StationEditCard";
 import StationMarker from "./StationMarker";
 import { useLodgingLibrary } from "./StayPicker";
 import {
+  HOLD_MS,
   newStationKey,
   toEditorStation,
   useStationAutosave,
   type EditorStation,
+  type LocalDraftState,
   type SaveStatus,
   type SavedStations,
+  type StationDraftSink,
 } from "./useStationAutosave";
 
-const UNDO_MS = 8000;
-
 const DASHED: CSSProperties = {
-  minHeight: 40,
+  // 44 px: these are tapped on an iPad more than anywhere (forgejo#249).
+  minHeight: "var(--ts-size-touch-min)",
   borderRadius: "var(--ts-radius-button)",
   background: "none",
   border: "1px dashed color-mix(in srgb, var(--domain-roadtrip) 50%, transparent)",
@@ -36,6 +58,22 @@ const DASHED: CSSProperties = {
 /** How the editor opens: plainly, with a new station, or with tonight's. */
 export type EditorStart = "plain" | "new" | "today";
 
+/** What the page's header shows about the editor, and the actions it offers. */
+export interface EditorSaveState {
+  status: SaveStatus;
+  local: LocalDraftState;
+  flush: () => Promise<SaveStatus>;
+  discard: () => void;
+  merge: () => void;
+}
+
+/** A merge waiting for the reader: from a restored draft, or a refused save. */
+interface PendingMerge {
+  origin: "restore" | "live";
+  merge: StationMerge;
+  server: EditorStation[];
+}
+
 /**
  * The stations of a roadtrip, edited in place (design 2026-09-25, board 3).
  * One station is open at a time; the rest are one line each with move and
@@ -43,6 +81,12 @@ export type EditorStart = "plain" | "new" | "today";
  * (`useStationAutosave`), and a removal can be taken back for a few seconds.
  * A new station goes in where it belongs — between two, or at the end — and
  * starts where the one before it left off.
+ *
+ * forgejo#244: unsent edits are kept in this browser too (`stationDraftStore`,
+ * keyed by user and roadtrip), so a dropped connection or a closed tab does not
+ * lose them; `restore` continues from such a draft. Before a draft goes over a
+ * server state that moved on — or when a save meets a list the phone changed —
+ * `StationConflictDialog` asks per field.
  */
 export default function StationEditor({
   routeId,
@@ -54,6 +98,9 @@ export default function StationEditor({
   onSaved,
   onStatus,
   onEditLeg,
+  userId = null,
+  restore = null,
+  onRestoreCancelled,
 }: {
   routeId: string;
   stations: RoadtripStation[];
@@ -62,7 +109,13 @@ export default function StationEditor({
   start: EditorStart;
   today: string;
   onSaved: (saved: SavedStations) => void;
-  onStatus: (status: SaveStatus, flush: () => Promise<void>) => void;
+  onStatus: (state: EditorSaveState) => void;
+  /** Whose local draft this is; without one, nothing is kept locally. */
+  userId?: string | null;
+  /** A local draft from an earlier visit the reader chose to restore. */
+  restore?: StoredStationDraft | null;
+  /** The restore's merge was cancelled: the page puts the draft back (review I1). */
+  onRestoreCancelled?: () => void;
   onEditLeg: (
     leg: TourLeg,
     from: { id: string; title: string },
@@ -71,23 +124,117 @@ export default function StationEditor({
 }): JSX.Element {
   const { t } = useTranslation(["roadtrips"]);
   const display = useDisplayFormat();
-  const { drafts, status, change, flush } = useStationAutosave({
-    routeId,
-    initial: stations.map(toEditorStation),
-    onSaved,
+  const sink = useMemo<StationDraftSink | null>(
+    () =>
+      userId
+        ? {
+            write: (draft) => writeStationDraft(userId, routeId, draft),
+            clear: () => clearStationDraft(userId, routeId),
+          }
+        : null,
+    [userId, routeId]
+  );
+  // A restored draft whose server side did not move on goes straight back
+  // into the editor; otherwise the reader decides per field first.
+  const [opening] = useState(() => {
+    const initial = stations.map(toEditorStation);
+    if (!restore) return { initial, restored: null, merge: null };
+    const merge = mergeStations(restore.base, restore.drafts, initial);
+    const quiet =
+      merge.conflicts.length === 0 &&
+      merge.addedThere.length === 0 &&
+      merge.removedThere.length === 0;
+    return {
+      initial,
+      restored: quiet ? merge.resolve() : null,
+      merge: quiet ? null : merge,
+    };
   });
+  const {
+    drafts,
+    status,
+    local,
+    errorKey,
+    serverStations,
+    change,
+    releaseHold,
+    flush,
+    rebase,
+    discard,
+  } = useStationAutosave({
+    routeId,
+    initial: opening.initial,
+    restored: opening.restored,
+    onSaved,
+    sink,
+  });
+  const [pendingMerge, setPendingMerge] = useState<PendingMerge | null>(() =>
+    opening.merge ? { origin: "restore", merge: opening.merge, server: opening.initial } : null
+  );
+  const [mergeFailed, setMergeFailed] = useState(false);
   const [openKey, setOpenKey] = useState<string | null>(null);
-  const [removed, setRemoved] = useState<{ station: EditorStation; index: number } | null>(null);
+  /** The one step "Rückgängig" takes back — a removal or a reorder (forgejo#242). */
+  const [undoable, setUndoable] = useState<{
+    label: string;
+    restores?: string;
+    restore: () => void;
+  } | null>(null);
+  const [reorder, setReorder] = useState<{
+    from: number;
+    to: number;
+    impact: ReorderImpact;
+  } | null>(null);
+  const [shiftFrom, setShiftFrom] = useState<number | null>(null);
   const lodgings = useLodgingLibrary(true);
   const started = useRef(false);
 
-  useEffect(() => onStatus(status, flush), [status, onStatus, flush]);
+  /**
+   * A save the server refused because the phone changed the list: read what
+   * the server holds now and ask how to merge. A failed read says so and
+   * leaves the edits where they are (kept locally).
+   */
+  const openMerge = useCallback(async (): Promise<void> => {
+    setMergeFailed(false);
+    try {
+      const fresh = await roadtripsApi.get(routeId);
+      // The same stations the editor was given: one without a coordinate is in
+      // no editor's list (and the server leaves it out of its check too) —
+      // merging it in would hold every save on "Ort fehlt" (review M2).
+      const server = fresh.stations.filter((s) => s.lat !== null).map(toEditorStation);
+      setPendingMerge({
+        origin: "live",
+        merge: mergeStations(serverStations(), drafts, server),
+        server,
+      });
+    } catch (err) {
+      logger.warn("Reading the roadtrip for a merge failed", err);
+      setMergeFailed(true);
+    }
+  }, [routeId, serverStations, drafts]);
+
+  const conflictSeen = useRef(false);
+  useEffect(() => {
+    if (status !== "conflict") {
+      conflictSeen.current = false;
+      return;
+    }
+    if (conflictSeen.current) return;
+    conflictSeen.current = true;
+    void openMerge();
+  }, [status, openMerge]);
+
+  useEffect(
+    () => onStatus({ status, local, flush, discard, merge: () => void openMerge() }),
+    [status, local, onStatus, flush, discard, openMerge]
+  );
 
   const insertAt = (index: number, seed?: Partial<EditorStation>): void => {
     const station: EditorStation = {
       ...stationAfter(drafts[index - 1] ?? null),
       ...seed,
       key: newStationKey(),
+      // Not the reader's work until they touch it (review C1).
+      seed: true,
     };
     change((prev) => [...prev.slice(0, index), station, ...prev.slice(index)]);
     setOpenKey(station.key);
@@ -101,40 +248,130 @@ export default function StationEditor({
     insertAt(drafts.length, start === "today" ? { startDate: today } : undefined);
   }, []);
 
+  // The undo window is the hold's: when it closes, the held change goes out.
   useEffect(() => {
-    if (!removed) return;
-    const timer = setTimeout(() => setRemoved(null), UNDO_MS);
+    if (!undoable) return;
+    const timer = setTimeout(() => setUndoable(null), HOLD_MS);
     return () => clearTimeout(timer);
-  }, [removed]);
+  }, [undoable]);
 
   const update = (key: string, patch: Partial<EditorStation>): void =>
-    change((prev) => prev.map((s) => (s.key === key ? { ...s, ...patch } : s)));
+    change((prev) => prev.map((s) => (s.key === key ? { ...s, ...patch, seed: false } : s)));
 
-  const move = (index: number, delta: number): void =>
-    change((prev) => {
-      const target = index + delta;
-      if (target < 0 || target >= prev.length) return prev;
-      const next = [...prev];
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
+  /**
+   * forgejo#242: a move is asked first — new neighbours, the legs that go and
+   * come, the dates that would read backwards — and then held for the undo
+   * window, so "Rückgängig" restores the legs as well as the order.
+   */
+  const askMove = (index: number, delta: number): void => {
+    const target = index + delta;
+    if (target < 0 || target >= drafts.length) return;
+    setReorder({ from: index, to: target, impact: reorderImpact(drafts, legs, index, target) });
+  };
+
+  const confirmMove = (): void => {
+    if (!reorder) return;
+    const { from, to, impact } = reorder;
+    const key = impact.moved.key;
+    setReorder(null);
+    change((prev) => moveStation(prev, from, to), { hold: true });
+    setUndoable({
+      label: t("roadtrips:editor.moved", { name: name(impact.moved) }),
+      restores: t("roadtrips:editor.movedRestores"),
+      restore: () =>
+        change((prev) => {
+          const at = prev.findIndex((s) => s.key === key);
+          return at < 0 ? prev : moveStation(prev, at, Math.min(from, prev.length - 1));
+        }),
     });
+  };
 
   const remove = (index: number): void => {
-    setRemoved({ station: drafts[index], index });
-    if (drafts[index].key === openKey) setOpenKey(null);
-    change((prev) => prev.filter((_, i) => i !== index));
+    const station = drafts[index];
+    if (station.key === openKey) setOpenKey(null);
+    // Held like a move: the server drops the legs on both sides of it — a
+    // recorded or hand-drawn one included, which the bar then says (review M3).
+    const losesLine = legs.some(
+      (l) =>
+        station.id !== undefined &&
+        (l.fromStopId === station.id || l.toStopId === station.id) &&
+        isProtectedSource(l.source)
+    );
+    change((prev) => prev.filter((_, i) => i !== index), { hold: true });
+    setUndoable({
+      label: t("roadtrips:editor.removed", { name: name(station) }),
+      restores: t(
+        losesLine ? "roadtrips:editor.removedRestoresLine" : "roadtrips:editor.removedRestores"
+      ),
+      // A station the server no longer holds comes back as a new one: its old
+      // id would be refused ("does not belong to this roadtrip") on every
+      // later save. Only reachable if the hold was ever bypassed (review C2).
+      restore: () =>
+        change((prev) => {
+          const known = serverStations().some((s) => s.id === station.id);
+          const back = known ? station : { ...station, id: undefined };
+          return [...prev.slice(0, index), back, ...prev.slice(index)];
+        }),
+    });
+  };
+
+  /**
+   * forgejo#241: the dates of every station from `fromIndex` on, moved after
+   * the preview. The undo takes back exactly those dates — not the whole list,
+   * so an edit made since stays — and says which ones it restores.
+   */
+  const applyShift = (
+    fromIndex: number,
+    shifted: EditorStation[],
+    rows: ShiftRow[],
+    days: number
+  ): void => {
+    const previous = new Map(
+      drafts.slice(fromIndex).map((s) => [s.key, { startDate: s.startDate, endDate: s.endDate }])
+    );
+    const moved = new Set(rows.map((r) => r.station.key));
+    const byKey = new Map(shifted.map((s) => [s.key, s]));
+    setShiftFrom(null);
+    change((prev) =>
+      prev.map((s) => {
+        const next = moved.has(s.key) ? byKey.get(s.key) : undefined;
+        return next ? { ...s, startDate: next.startDate, endDate: next.endDate } : s;
+      })
+    );
+    const first = rows[0];
+    const last = rows[rows.length - 1];
+    setUndoable({
+      label: t("roadtrips:shift.done", {
+        count: rows.length,
+        days: days > 0 ? `+${days}` : String(days),
+      }),
+      restores: t("roadtrips:shift.undoRestores", {
+        count: rows.length,
+        from: dayLabel(first?.before.start ?? null),
+        to: dayLabel(last?.before.end ?? last?.before.start ?? null),
+      }),
+      restore: () =>
+        change((prev) =>
+          prev.map((s) => {
+            const old = moved.has(s.key) ? previous.get(s.key) : undefined;
+            return old ? { ...s, ...old } : s;
+          })
+        ),
+    });
   };
 
   const undo = (): void => {
-    if (!removed) return;
-    const { station, index } = removed;
-    change((prev) => [...prev.slice(0, index), station, ...prev.slice(index)]);
-    setRemoved(null);
+    if (!undoable) return;
+    undoable.restore();
+    releaseHold();
+    setUndoable(null);
   };
 
   const legBetween = (a: EditorStation, b: EditorStation): TourLeg | undefined =>
     a.id && b.id ? legs.find((l) => l.fromStopId === a.id && l.toStopId === b.id) : undefined;
 
+  const dayLabel = (day: string | null): string =>
+    day ? display.date(`${day}T00:00:00Z`, { timeZone: "UTC", omitYear: true }) : "—";
   const name = (s: EditorStation): string =>
     s.title.trim() ||
     (s.night.kind === "via" ? t("roadtrips:night.via") : t("roadtrips:editor.unnamed"));
@@ -153,6 +390,16 @@ export default function StationEditor({
         {t("roadtrips:editor.hint")}
       </p>
 
+      {/* Why the last save failed, said where the editing happens and kept
+          until the next save (forgejo#246/#247) — not only as two words in the
+          page header. The edits stay; a retry is offered where it can help. */}
+      {status === "error" && (
+        <FormErrorBanner
+          message={t(errorKey ?? "roadtrips:editor.saveFailed")}
+          onRetry={!errorKey || isTransientSaveError(errorKey) ? () => void flush() : undefined}
+        />
+      )}
+
       {drafts.map((s, index) => {
         const next = drafts[index + 1];
         const leg = next ? legBetween(s, next) : undefined;
@@ -167,6 +414,7 @@ export default function StationEditor({
                 lodgings={lodgings}
                 onChange={(patch) => update(s.key, patch)}
                 onClose={() => setOpenKey(null)}
+                onShift={() => setShiftFrom(index)}
               />
             ) : (
               <div
@@ -209,14 +457,14 @@ export default function StationEditor({
                 </button>
                 <IconButton
                   label={t("roadtrips:stations.moveUp")}
-                  onClick={() => move(index, -1)}
+                  onClick={() => askMove(index, -1)}
                   disabled={index === 0}
                 >
                   <Icon name="chevron-up" size={16} />
                 </IconButton>
                 <IconButton
                   label={t("roadtrips:stations.moveDown")}
-                  onClick={() => move(index, 1)}
+                  onClick={() => askMove(index, 1)}
                   disabled={index === drafts.length - 1}
                 >
                   <Icon name="chevron-down" size={16} />
@@ -245,8 +493,17 @@ export default function StationEditor({
                   color: "var(--ts-muted)",
                 }}
               >
-                {t(`roadtrips:timeline.leg.${leg.mode}`)} · {Math.round(leg.distanceKm)} km —{" "}
-                {t("roadtrips:timeline.legEdit")}
+                {t(`roadtrips:timeline.leg.${leg.mode}`)} · {Math.round(leg.distanceKm)} km ·{" "}
+                {/* What the line is made of, said in the editor too (forgejo#242):
+                    a recorded or hand-drawn leg is one a reorder can cost. */}
+                <span
+                  style={{
+                    color: isProtectedSource(leg.source) ? "var(--ts-warn)" : undefined,
+                  }}
+                >
+                  {t(`roadtrips:timeline.source.${leg.source}`)}
+                </span>{" "}
+                — {t("roadtrips:timeline.legEdit")}
               </button>
             )}
             {next && (
@@ -280,7 +537,7 @@ export default function StationEditor({
               key={`${w.kind}-${w.index}`}
               type="button"
               onClick={() => setOpenKey(drafts[w.index].key)}
-              className="flex items-center text-left"
+              className="flex items-center text-left pointer-coarse:min-h-(--ts-size-touch-min)"
               style={{
                 gap: 8,
                 fontSize: 13,
@@ -299,30 +556,48 @@ export default function StationEditor({
         </div>
       )}
 
-      {removed && (
-        <div
-          role="status"
-          className="fixed flex items-center"
-          style={{
-            left: "50%",
-            bottom: 28,
-            transform: "translateX(-50%)",
-            zIndex: 60,
-            gap: 14,
-            padding: "12px 16px",
-            borderRadius: 14,
-            background: "var(--ts-surface2)",
-            border: "1px solid var(--ts-border-input)",
-            boxShadow: "var(--ts-shadow-dialog)",
-            fontSize: 14,
-          }}
-        >
-          {t("roadtrips:editor.removed", { name: name(removed.station) })}
-          <Button variant="secondary" icon={<Icon name="undo-2" size={16} />} onClick={undo}>
-            {t("roadtrips:editor.undo")}
-          </Button>
-        </div>
+      {mergeFailed && (
+        <p role="alert" style={{ fontSize: 13, color: "var(--ts-bad)" }}>
+          {t("roadtrips:conflict.readFailed")}
+        </p>
       )}
+
+      {pendingMerge && (
+        <StationConflictDialog
+          merge={pendingMerge.merge}
+          origin={pendingMerge.origin}
+          onClose={() => {
+            setPendingMerge(null);
+            if (pendingMerge.origin === "restore") onRestoreCancelled?.();
+          }}
+          onApply={(merged) => {
+            rebase(pendingMerge.server, merged);
+            setPendingMerge(null);
+          }}
+        />
+      )}
+
+      {reorder && (
+        <ReorderPreviewDialog
+          impact={reorder.impact}
+          onConfirm={confirmMove}
+          onClose={() => setReorder(null)}
+        />
+      )}
+
+      {shiftFrom !== null && drafts[shiftFrom] && (
+        <ShiftDaysDialog
+          routeId={routeId}
+          tripId={tripId}
+          drafts={drafts}
+          fromIndex={shiftFrom}
+          lodgings={lodgings}
+          onClose={() => setShiftFrom(null)}
+          onApply={(shifted, rows, days) => applyShift(shiftFrom, shifted, rows, days)}
+        />
+      )}
+
+      {undoable && <UndoBar label={undoable.label} restores={undoable.restores} onUndo={undo} />}
     </div>
   );
 }

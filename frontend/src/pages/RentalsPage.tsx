@@ -38,6 +38,9 @@ import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import type { RentalBooking, RentalStatus } from "../types/rental";
 import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
+import { useDocumentCount } from "../hooks/useDocumentCount";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { rentalDeleteMessage } from "../lib/rental/rentalDeleteMessage";
 
 const RENTAL_STATUSES: readonly RentalStatus[] = [
   "scheduled",
@@ -97,6 +100,10 @@ export default function RentalsPage(): JSX.Element {
   const [editing, setEditing] = useState<Editing>(null);
   const [toDelete, setToDelete] = useState<RentalBooking | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Asked only while the question is open; unknown (null) says nothing.
+  const documentCount = useDocumentCount(
+    toDelete ? { type: "rentalBooking", id: toDelete.id } : null
+  );
   const [adding, setAdding] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
   const reload = useCallback(async (): Promise<void> => setReloadToken((n) => n + 1), []);
@@ -320,6 +327,7 @@ export default function RentalsPage(): JSX.Element {
               emptyTitle={t("rental:empty")}
               emptyHint={t("rental:list.emptyHint")}
               onReset={resetFilters}
+              action={{ label: t("rental:list.emptyAction"), onClick: (): void => setAdding(true) }}
             />
           </div>
         ) : (
@@ -371,6 +379,7 @@ export default function RentalsPage(): JSX.Element {
         <RentalFormModal
           rental={editing.rental}
           onClose={(): void => setEditing(null)}
+          onReload={editing.rental ? undefined : () => void reload()}
           onSaved={handleSaved}
         />
       )}
@@ -380,8 +389,9 @@ export default function RentalsPage(): JSX.Element {
         onConfirm={(): void => void confirmDelete()}
         isLoading={deleting}
         title={t("rental:delete")}
-        message={t("rental:deleteConfirm")}
+        message={toDelete ? rentalDeleteMessage(t, toDelete, documentCount) : ""}
         confirmText={t("common:buttons.delete")}
+        confirmButtonClass={DELETE_BUTTON_CLASS}
       />
     </AppShell>
   );

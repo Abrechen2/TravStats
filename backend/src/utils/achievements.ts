@@ -1,8 +1,9 @@
 import { birthdayOf } from "../services/timeModel/readDay";
 import { departureClockOf } from "./timezone";
 import { prisma } from "../db";
-import { calculateRoadtripAchievementStats } from "./roadtripAchievements";
 import { calculateRailAchievementStats } from "./railAchievements";
+import { calculateInsightBadgeStats } from "./insightAchievements";
+import { loadDomainAchievementChecks } from "./domainAchievementChecks";
 import logger from "./logger";
 import {
   applyAchievementWrites,
@@ -231,16 +232,14 @@ async function runAchievementCheck(
       // DB `where` can express "flown or historical" for flights/cruises, but
       // it cannot express `classifyStay`'s date-derived "visited" for lodging
       // stays, so all three counts get computed in JS below (see
-      // `tripDomainCounts` / `tripsFullyDocumented`). journalEntries/photos
-      // stay `_count`s — a written entry or an uploaded photo IS done, no
-      // status to filter on.
+      // `tripDomainCounts`). The fully documented trip is measured with the
+      // other cross-domain trip badges (`crossDomainAchievements.ts`).
       prisma.trip.findMany({
         where: { userId },
         select: {
           flights: { select: { status: true } },
           cruises: { select: { status: true } },
           lodgingStays: { select: { status: true, checkIn: true, checkOut: true } },
-          _count: { select: { journalEntries: true, photos: true } },
         },
       }),
       prisma.userSettings.findUnique({ where: { userId }, select: { baseCurrency: true } }),
@@ -465,8 +464,6 @@ async function runAchievementCheck(
       flightCount: t.flights.filter((f) => isDoneStatus(f.status)).length,
       cruiseCount: t.cruises.filter((c) => isDoneStatus(c.status)).length,
       lodgingStayCount: t.lodgingStays.filter((s) => classifyStay(s) === "visited").length,
-      journalEntries: t._count.journalEntries,
-      photos: t._count.photos,
     }));
 
     // Fly & Stay / Grand Tour — derived per-trip so a flight in one trip and
@@ -534,6 +531,9 @@ async function runAchievementCheck(
     // The badge set counts like the passport — `achievementCountries` holds
     // the rule and says why; the union above is its floor.
     const finalCountries = await achievementCountries(userId, unionedCountries);
+
+    // Rental, bus and the cross-domain trip badges (forgejo#262/#263/#265).
+    const domainBadges = await loadDomainAchievementChecks(userId);
 
     const augmentedStats = {
       ...stats,
@@ -622,15 +622,10 @@ async function runAchievementCheck(
       hasLodgingBirthdayStay,
       hasLodgingXmasStay,
       // A trip is "fully documented" when it records the journey, the bed, the
-      // words and the pictures. A cruise counts as the journey too — a
-      // flightless cruise trip is not an undocumented one.
-      tripsFullyDocumented: doneTrips.filter(
-        (t) =>
-          t.flightCount + t.cruiseCount > 0 &&
-          t.lodgingStayCount > 0 &&
-          t.journalEntries > 0 &&
-          t.photos > 0
-      ).length,
+      // words and the pictures — the journey by ANY mode since forgejo#265
+      // (`crossDomainAchievements.ts`, the one home of the rule).
+      // Null when that loader failed: the badge then answers "skip" first.
+      tripsFullyDocumented: domainBadges.crossDomain?.tripsFullyDocumented ?? 0,
       // Cross-domain (lodging)
       flyAndStay,
       grandTour,
@@ -658,13 +653,24 @@ async function runAchievementCheck(
     // Decide first, write second — the plan is a value that exists before any
     // transaction opens. See `./achievementWrites` for why that ordering is the
     // fix for forgejo#39 and not merely tidier.
+    // Roadtrip and statistics-expansion measures: each source read once, a
+    // failing one skipped rather than aborting the whole check
+    // (`insightAchievements.ts`, `badgeSource.ts`). The flight and cruise rows
+    // loaded above are handed over, not read again.
+    const { roadtripStats, insightStats } = await calculateInsightBadgeStats(userId, {
+      flights,
+      cruises: cruises.map((c, i) => ({ id: c.id, input: cruiseStatsInput[i], stops: c.stops })),
+      userBirthday,
+    });
     const plan = planAchievementWrites(
       allAchievements,
       existingAchievementMap,
       augmentedStats,
       flights as FlightData[],
-      await calculateRoadtripAchievementStats(userId),
-      await calculateRailAchievementStats(userId)
+      roadtripStats,
+      await calculateRailAchievementStats(userId),
+      insightStats,
+      domainBadges.checks
     );
 
     // `return await`, not `return`: a bare return would hand the promise out

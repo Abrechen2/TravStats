@@ -125,3 +125,33 @@ export const linkPicksSchema = z
 
 /** The place page's lead photograph; null returns it to "the first one". */
 export const placeCoverSchema = z.object({ photoId: z.string().uuid().nullable() }).strict();
+
+/** Which of the two places a merged value comes from (forgejo#232). */
+const mergePick = z.enum(["target", "source"]);
+
+/**
+ * `POST /places/:id/merge` — `:id` is the place that stays (the target), and
+ * `sourceId` the duplicate that is folded into it and then deleted.
+ *
+ * Every master-data group is picked EXPLICITLY; nothing is chosen for the user
+ * on the server. The address travels as one group (street, city, country) so
+ * a merge cannot assemble an address neither place had. Notes may keep both.
+ * Not a choice: `visited` — a place one of the two had been to stays visited.
+ */
+export const mergePlaceSchema = z
+  .object({
+    sourceId: z.string().uuid(),
+    fields: z
+      .object({
+        name: mergePick,
+        localName: mergePick,
+        category: mergePick,
+        position: mergePick,
+        address: mergePick,
+        notes: z.enum(["target", "source", "both"]),
+      })
+      .strict(),
+  })
+  .strict();
+
+export type MergePlaceInput = z.infer<typeof mergePlaceSchema>;

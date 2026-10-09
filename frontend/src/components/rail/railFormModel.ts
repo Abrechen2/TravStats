@@ -1,4 +1,4 @@
-import { saveErrorKey } from "../../lib/saveErrorMessage";
+import { saveErrorKey, type SaveErrorOptions } from "../../lib/saveErrorMessage";
 import type {
   RailGeometryReport,
   RailJourney,
@@ -7,6 +7,7 @@ import type {
   RailLookupStop,
   RailTravelClass,
 } from "../../types/rail";
+import { classifyWallClock, storedFold, type TimeValue } from "../../shared/time";
 import { toStationWallClock } from "../../lib/railTime";
 import { railArrival, railDeparture } from "../../lib/entityTimes";
 import { EMPTY_STATION, type RailStationDraft } from "./RailStationField";
@@ -16,14 +17,32 @@ import { EMPTY_STATION, type RailStationDraft } from "./RailStationField";
  * rules (what clears a field, when a distance counts as typed) are testable
  * without rendering a modal.
  */
+export type RailFold = "earlier" | "later";
+
 export interface RailFormDraft {
   operator: string;
   trainCategory: string;
   trainNumber: string;
   departure: RailStationDraft;
   arrival: RailStationDraft;
+  /** `YYYY-MM-DDTHH:mm` on the station's own clock, or `YYYY-MM-DD` while its end is day-only. */
   departureLocal: string;
   arrivalLocal: string;
+  /**
+   * "Only the date is known", per end: the server takes a day or a clock for
+   * each time on its own, so a ride can have a day for one end and a clock
+   * for the other.
+   */
+  departureDayOnly: boolean;
+  arrivalDayOnly: boolean;
+  /**
+   * Which of two occurrences of a repeated autumn hour each time is; null
+   * where the time is not repeated. Read back from the stored instant so an
+   * edit that does not touch a time resends it (forgejo#251), and reset when
+   * the user types that time anew.
+   */
+  departureFold: RailFold | null;
+  arrivalFold: RailFold | null;
   /** Only what the user typed. A measured distance is not shown here. */
   distanceKm: string;
   travelClass: RailTravelClass | "";
@@ -42,6 +61,30 @@ export interface RailFormDraft {
   lookup: RailJourneyInput["lookup"];
 }
 
+/** `YYYY-MM-DD` of a typed time, the part a "date only" ride keeps. */
+export const dayPart = (local: string): string => local.slice(0, 10);
+
+/** A day given a clock, so a `datetime-local` input can show it; a clock stays as it is. */
+export const withClock = (local: string): string =>
+  local.length === 10 ? `${local}T00:00` : local;
+
+/** The station's own wall clock, or only its day for a ride stored without a time. */
+function wallClockFor(value: TimeValue | null, dayOnly: boolean): string {
+  return dayOnly ? dayPart(toStationWallClock(value)) : toStationWallClock(value);
+}
+
+/**
+ * Which occurrence of a repeated hour a stored end is. The wall clock alone
+ * cannot say: 02:30 on a clock-change night is two instants an hour apart, and
+ * the server reads an unqualified one as the earlier.
+ */
+function foldOf(value: TimeValue | null, dayOnly: boolean): RailFold | null {
+  if (!value?.zone || dayOnly) return null;
+  const local = value.local.slice(0, 16);
+  if (classifyWallClock(local, value.zone) !== "repeated") return null;
+  return storedFold(local, value.zone, value.utc) === "later" ? "later" : "earlier";
+}
+
 export function draftFrom(journey: RailJourney | null): RailFormDraft {
   if (!journey) {
     return {
@@ -52,6 +95,10 @@ export function draftFrom(journey: RailJourney | null): RailFormDraft {
       arrival: EMPTY_STATION,
       departureLocal: "",
       arrivalLocal: "",
+      departureDayOnly: false,
+      arrivalDayOnly: false,
+      departureFold: null,
+      arrivalFold: null,
       distanceKm: "",
       travelClass: "",
       coach: "",
@@ -68,6 +115,8 @@ export function draftFrom(journey: RailJourney | null): RailFormDraft {
       lookup: null,
     };
   }
+  const departureDayOnly = railDeparture(journey)?.precision === "day";
+  const arrivalDayOnly = railArrival(journey)?.precision === "day";
   return {
     operator: journey.operator ?? "",
     trainCategory: journey.trainCategory ?? "",
@@ -88,9 +137,15 @@ export function draftFrom(journey: RailJourney | null): RailFormDraft {
       code: journey.arrStationCode,
       stationId: journey.arrStationId,
     },
-    // Read back on each station's own clock — the time the ticket printed.
-    departureLocal: toStationWallClock(railDeparture(journey)),
-    arrivalLocal: toStationWallClock(railArrival(journey)),
+    // Read back on each station's own clock — the time the ticket printed. A
+    // ride stored by its day alone is edited as one: shown as 00:00 it would
+    // be saved back as a midnight departure nobody stated (forgejo#212).
+    departureLocal: wallClockFor(railDeparture(journey), departureDayOnly),
+    arrivalLocal: wallClockFor(railArrival(journey), arrivalDayOnly),
+    departureDayOnly,
+    arrivalDayOnly,
+    departureFold: foldOf(railDeparture(journey), departureDayOnly),
+    arrivalFold: foldOf(railArrival(journey), arrivalDayOnly),
     distanceKm:
       journey.distanceSource === "user" && journey.distanceKm !== null
         ? String(journey.distanceKm)
@@ -127,6 +182,12 @@ export function connectionDraftFrom(previous: RailJourney): RailFormDraft {
     ...draftFrom(null),
     departure: before.arrival,
     departureLocal: before.arrivalLocal || before.departureLocal,
+    // The leg starts where the one before ended, with that end's precision:
+    // a day has no clock to start from, and inventing a 00:00 for it would
+    // repeat forgejo#212 one leg later.
+    departureDayOnly: before.arrivalLocal ? before.arrivalDayOnly : before.departureDayOnly,
+    // The copied clock means the same occurrence it did on the leg before.
+    departureFold: before.arrivalLocal ? before.arrivalFold : before.departureFold,
     travelClass: before.travelClass,
     bookingReference: before.bookingReference,
     currency: before.currency,
@@ -139,6 +200,13 @@ export function connectionDraftFrom(previous: RailJourney): RailFormDraft {
 export function isStationComplete(station: RailStationDraft): boolean {
   return station.name.trim() !== "" && station.lat !== null && station.lon !== null;
 }
+
+/**
+ * Does a day-only end rule out a delay? An absent arrival constrains nothing
+ * on the server, so a day-only box beside one counts for nothing.
+ */
+export const hasDayOnlyEnd = (draft: RailFormDraft): boolean =>
+  draft.departureDayOnly || (draft.arrivalDayOnly && draft.arrivalLocal !== "");
 
 export function canSubmit(draft: RailFormDraft): boolean {
   return (
@@ -153,6 +221,13 @@ const numberOrNull = (value: string): number | null => {
   if (value.trim() === "") return null;
   const n = Number(value.replace(",", "."));
   return Number.isFinite(n) ? n : null;
+};
+
+const timeOf = (local: string, dayOnly: boolean): string => (dayOnly ? dayPart(local) : local);
+
+const roundedOrNull = (value: string): number | null => {
+  const n = numberOrNull(value);
+  return n === null ? null : Math.round(n);
 };
 
 function stationInput(station: RailStationDraft): RailJourneyInput["departureStation"] {
@@ -181,16 +256,18 @@ export function toRailInput(draft: RailFormDraft): RailJourneyInput {
     trainNumber: orNull(draft.trainNumber),
     departureStation: stationInput(draft.departure),
     arrivalStation: stationInput(draft.arrival),
-    departureLocal: draft.departureLocal,
-    arrivalLocal: draft.arrivalLocal === "" ? null : draft.arrivalLocal,
+    departureLocal: timeOf(draft.departureLocal, draft.departureDayOnly),
+    arrivalLocal:
+      draft.arrivalLocal === "" ? null : timeOf(draft.arrivalLocal, draft.arrivalDayOnly),
+    departureFold: draft.departureFold,
+    arrivalFold: draft.arrivalFold,
     distanceKm: numberOrNull(draft.distanceKm),
     travelClass: draft.travelClass === "" ? null : draft.travelClass,
     coach: orNull(draft.coach),
     seat: orNull(draft.seat),
-    delayMinutes: (() => {
-      const n = numberOrNull(draft.delayMinutes);
-      return n === null ? null : Math.round(n);
-    })(),
+    // A delay is measured between clocks; the server refuses one on a ride
+    // with a day-only end (RAIL_INVALID_INPUT).
+    delayMinutes: hasDayOnlyEnd(draft) ? null : roundedOrNull(draft.delayMinutes),
     bookingReference: orNull(draft.bookingReference),
     price: numberOrNull(draft.price),
     currency: draft.currency || "EUR",
@@ -245,6 +322,21 @@ export function lookupKeptFields(
 }
 
 /**
+ * An end's fold after a lookup: it belongs to a clock at a place, so it goes
+ * when the timetable gives the end a new time or puts the end at another
+ * station — the same rule as moving the station by hand.
+ */
+function keptFold(
+  fold: RailFold | null,
+  plannedLocal: string | null,
+  before: RailStationDraft,
+  after: RailLookupStop
+): RailFold | null {
+  const moved = before.lat !== after.lat || before.lon !== after.lon;
+  return plannedLocal === null && !moved ? fold : null;
+}
+
+/**
  * Take a lookup's answer over into the form: the train, the boarding stop
  * and the chosen alighting stop with their planned times, and the match
  * itself so the server can fetch the traced line when the journey is saved.
@@ -277,8 +369,14 @@ export function applyLookup(
     trainNumber: match.trainNumber ?? draft.trainNumber,
     departure: stationFromStop(from),
     arrival: stationFromStop(to),
+    // A planned time is a clock, so it ends "date only" for ITS end; an end
+    // the timetable gives nothing for keeps the user's entry, day or clock.
     departureLocal: from.departureLocal ?? draft.departureLocal,
+    departureDayOnly: from.departureLocal === null ? draft.departureDayOnly : false,
+    departureFold: keptFold(draft.departureFold, from.departureLocal, draft.departure, from),
     arrivalLocal: to.arrivalLocal ?? draft.arrivalLocal,
+    arrivalDayOnly: to.arrivalLocal === null ? draft.arrivalDayOnly : false,
+    arrivalFold: keptFold(draft.arrivalFold, to.arrivalLocal, draft.arrival, to),
     lookup: { provider: match.provider, ref: match.ref },
   };
 }
@@ -337,8 +435,32 @@ export function geometryNotice(
   return null;
 }
 
-/** The form fields a refusal can be shown beside. */
-export type RailFormErrorField = "departureLocal" | "arrivalLocal";
+/**
+ * The form fields a refusal can be shown beside — every plain input the
+ * server names (forgejo#246). The stations, the currency, tags and companions
+ * are composite controls; a refusal naming one of them stays in the banner,
+ * which names the field.
+ */
+export const RAIL_FIELD_ERROR_FIELDS = [
+  "departureLocal",
+  "arrivalLocal",
+  "operator",
+  "trainCategory",
+  "trainNumber",
+  "distanceKm",
+  "delayMinutes",
+  "travelClass",
+  "coach",
+  "seat",
+  "bookingReference",
+  "price",
+  "tripId",
+  "notes",
+] as const;
+export type RailFormErrorField = (typeof RAIL_FIELD_ERROR_FIELDS)[number];
+
+/** The DOM id of the input a refusal names. */
+export const railFieldId = (field: RailFormErrorField): string => `rail-${field}`;
 
 /** A refused save as the form shows it: a message key, maybe beside one field. */
 export interface RailSaveError {
@@ -377,13 +499,20 @@ const TIME_FIELDS: readonly string[] = ["departureLocal", "arrivalLocal"];
  * A failed save, read by its stable `code` and `field` (review 2026-09-26,
  * finding 5). The server's `error` prose is English and written for a log —
  * it is never shown; an unknown refusal gets the generic sentence.
+ *
+ * `options.create`: the save CREATES a ride — a lost answer then reads
+ * "outcome unknown" and offers no blind retry (`saveErrorKey`).
  */
-export function saveErrorFrom(err: unknown): RailSaveError {
+export function saveErrorFrom(err: unknown, options: SaveErrorOptions = {}): RailSaveError {
   const data = (err as { response?: { data?: { code?: unknown; field?: unknown } } })?.response
     ?.data;
   const code = typeof data?.code === "string" ? data.code : null;
   const field = typeof data?.field === "string" ? data.field : null;
   const timeField = field && TIME_FIELDS.includes(field) ? (field as RailFormErrorField) : null;
+  const inputField =
+    field && (RAIL_FIELD_ERROR_FIELDS as readonly string[]).includes(field)
+      ? (field as RailFormErrorField)
+      : null;
   switch (code) {
     case "RAIL_ARRIVAL_BEFORE_DEPARTURE":
       return { key: "rail:form.errors.arrivalBeforeDeparture", field: "arrivalLocal" };
@@ -394,14 +523,14 @@ export function saveErrorFrom(err: unknown): RailSaveError {
     case "RAIL_INVALID_INPUT": {
       const fieldLabelKey = field ? FIELD_LABEL_KEYS[field] : undefined;
       return fieldLabelKey
-        ? { key: "rail:form.errors.invalidField", field: timeField, fieldLabelKey }
+        ? { key: "rail:form.errors.invalidField", field: inputField, fieldLabelKey }
         : { key: "rail:form.errors.invalid", field: null };
     }
     default:
       // Everything that is not a rail field code reads through the shared
       // save rule (validation, duplicate, database down, demo, rate limit,
       // no network), so the rail dialog says what every other form says.
-      return { key: saveErrorKey(err, "rail:form.saveError"), field: null };
+      return { key: saveErrorKey(err, "rail:form.saveError", {}, options), field: null };
   }
 }
 

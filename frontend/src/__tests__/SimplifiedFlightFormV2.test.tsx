@@ -137,18 +137,20 @@ describe("SimplifiedFlightFormV2", () => {
     expect(screen.getByRole("button", { name: /flights:form\.submitAndReturn/i })).toBeEnabled();
   });
 
-  it("says in the button's title what is still missing", async () => {
+  // forgejo#245: the missing steps are said BESIDE the buttons, visibly and
+  // live — the `title` that used to carry them reached no finger.
+  it("says beside the buttons what is still missing, without a hover", async () => {
     render(<SimplifiedFlightFormV2 onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
-    const skipButton = screen.getByText(/flights:form\.manualEntryAction/i);
-    fireEvent.click(skipButton);
+    fireEvent.click(screen.getByText(/flights:form\.manualEntryAction/i));
 
-    await waitFor(() => {
-      const submitButton = screen.getByRole("button", { name: /flights:form\.submit$/i });
-      expect(submitButton.getAttribute("title")).toBe(
-        "flights:form.validation.selectAirportsAndDates"
-      );
-    });
+    const submitButton = await screen.findByRole("button", { name: /flights:form\.submit$/i });
+    expect(submitButton.getAttribute("title")).toBeNull();
+    const hint = document.getElementById(submitButton.getAttribute("aria-describedby") ?? "");
+    expect(hint).not.toBeNull();
+    expect(hint).toHaveTextContent("common:form.saveBlocked");
+    expect(hint).toHaveTextContent("flights:form.missing.departureAirport");
+    expect(hint).toHaveTextContent("flights:form.missing.arrivalAirport");
   });
 
   it("refuses the save from the BUTTON, names the reason, and calls nothing", async () => {

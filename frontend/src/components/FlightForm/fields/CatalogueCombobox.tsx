@@ -21,6 +21,8 @@ interface CatalogueComboboxProps {
   inputClassName?: string;
   /** Accessible name, for a form that labels its inputs without a <label>. */
   ariaLabel?: string;
+  /** For a `<label htmlFor>` outside — a visible name rather than `ariaLabel`. */
+  id?: string;
   /**
    * On focus, while the value is not the user's own typing (empty, seeded by
    * an edit dialog, or a previous pick), list the whole catalogue (`search("")`)
@@ -81,6 +83,7 @@ export default function CatalogueCombobox({
   placeholder,
   inputClassName = "",
   ariaLabel,
+  id,
   browseOnFocus = false,
 }: CatalogueComboboxProps): JSX.Element {
   const [results, setResults] = useState<CatalogueOption[]>([]);
@@ -104,6 +107,11 @@ export default function CatalogueCombobox({
       setResults([]);
       return;
     }
+    // A browsing field searches its SEEDED value for nothing: focus lists the
+    // whole catalogue anyway, and this search, landing 300 ms after the
+    // dialog opened, replaced that list with the one seeded entry under the
+    // user's finger (measured as a flaky "offers the other lines on focus").
+    if (browseOnFocus && !typedRef.current) return;
 
     const timer = setTimeout(async () => {
       try {
@@ -125,7 +133,7 @@ export default function CatalogueCombobox({
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [value, search]);
+  }, [value, search, browseOnFocus]);
 
   const handleSelect = (option: CatalogueOption): void => {
     pickedRef.current = option.name;
@@ -158,6 +166,7 @@ export default function CatalogueCombobox({
   return (
     <div ref={wrapperRef} className="relative">
       <input
+        id={id}
         type="text"
         value={value}
         onChange={handleInputChange}

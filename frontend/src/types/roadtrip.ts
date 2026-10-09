@@ -85,6 +85,8 @@ export interface RoadtripStation {
   placeId?: string | null;
   place?: { id: string; name: string; localName?: string | null; category: string } | null;
   stay: StationStay | null;
+  /** Trip photos filed at this station (0 on a roadtrip filed on no trip). */
+  photoCount?: number;
 }
 
 export interface RoadtripDayTour {

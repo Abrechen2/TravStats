@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { saveErrorMessage } from "../lib/saveErrorMessage";
 import { TRACK_ERROR_KEYS } from "../lib/trackErrorKeys";
+import { ROUTE_STOP_ERROR_KEYS as STOP_KEYS } from "../lib/routeStopErrorKeys";
 
 import AppShell from "../components/ui/AppShell";
 import TripMap, { type TripMapContent } from "../components/Trips/TripMap";
@@ -23,14 +23,15 @@ import { useTourTracks } from "../hooks/useTourTracks";
 import { useTourTrackCoverage } from "../hooks/useTourTrackCoverage";
 import { tripsApi } from "../lib/api";
 import { toursApi, type TourPointInput } from "../lib/api/tours";
-import { trackArchiveApi } from "../lib/api/trackArchive";
-import { downloadBlob } from "../lib/export";
-import { dawarichFailureKey, dawarichFailureKind } from "../lib/api/dawarich";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { logger } from "../lib/logger";
-import { useToastStore } from "../store/toastStore";
+import {
+  RouteEditorReportLine,
+  useRouteEditorReports,
+} from "../components/Trips/routeEditorReports";
+import { useRouteTrackActions } from "../components/Trips/useRouteTrackActions";
 import type { Trip, TripStop } from "../types";
-import type { TourGeometry, TourLeg, TourRoute, TourStop, TourTrackMeta } from "../types/tour";
+import type { TourGeometry, TourLeg, TourRoute, TourStop } from "../types/tour";
 
 /**
  * `TripStop` (`types/index.ts`) does not declare `routeId`/`routeOrderIdx` —
@@ -48,14 +49,6 @@ interface StopWithRoute extends TripStop {
 
 function formatKm(value: number): string {
   return value.toLocaleString("de-DE", { maximumFractionDigits: 0 });
-}
-
-/** Pull the backend's plain-text `{ error: "..." }` body out of a failed request. */
-function apiErrorMessage(error: unknown): string | null {
-  if (typeof error !== "object" || error === null) return null;
-  const response = (error as { response?: { data?: { error?: unknown } } }).response;
-  const message = response?.data?.error;
-  return typeof message === "string" ? message : null;
 }
 
 /**
@@ -92,7 +85,7 @@ function apiErrorStatus(error: unknown): number | null {
 export default function TripRouteEditorPage(): JSX.Element {
   const { id, routeId } = useParams<{ id: string; routeId: string }>();
   const { t } = useTranslation(["trips", "roadtrips", "common"]);
-  const addToast = useToastStore((s) => s.addToast);
+  const { reports, report, clear, fail } = useRouteEditorReports(t);
   const { colorOf } = useDomainColors();
   const stravaConnected = useStravaConnected();
   const [stravaOpen, setStravaOpen] = useState(false);
@@ -298,14 +291,20 @@ export default function TripRouteEditorPage(): JSX.Element {
   const handleActivityChange = useCallback(
     async (activity: TourActivity | null): Promise<void> => {
       if (!route) return;
+      clear("header");
       try {
         const updated = await toursApi.update(id, route.id, { activity });
         setRoute(updated);
-      } catch {
-        addToast("error", t("roadtrips:activitySaveError"));
+      } catch (err) {
+        fail(
+          "header",
+          err,
+          "roadtrips:activitySaveError",
+          () => void handleActivityChange(activity)
+        );
       }
     },
-    [route, id, addToast, t]
+    [route, id, clear, fail]
   );
 
   /**
@@ -331,19 +330,19 @@ export default function TripRouteEditorPage(): JSX.Element {
       } catch (err) {
         logger.warn("TripRouteEditorPage: saving the points failed", err);
         if (!mountedRef.current) return;
-        const message = t(tourPointsSaveErrorKey(err));
-        setPointsError(message);
-        addToast("error", message);
+        // Said in the point editor itself, beside the list it is about.
+        setPointsError(t(tourPointsSaveErrorKey(err)));
       } finally {
         if (mountedRef.current) setSavingPoints(false);
       }
     },
-    [id, routeId, addToast, t]
+    [id, routeId, t]
   );
 
   const handleAssignChange = useCallback(
     (orderedIds: string[]): void => {
       if (!id || !routeId) return;
+      clear("stops");
       void (async (): Promise<void> => {
         try {
           await toursApi.assignStops(id, routeId, orderedIds);
@@ -354,26 +353,33 @@ export default function TripRouteEditorPage(): JSX.Element {
           // concurrent claim (409) can only be found out by asking — both
           // must read as an actual message, never a switch that silently
           // flips back with no explanation.
-          addToast("error", apiErrorMessage(err) ?? t("trips:tours.assignError"));
+          fail(
+            "stops",
+            err,
+            "trips:tours.assignError",
+            () => handleAssignChange(orderedIds),
+            STOP_KEYS
+          );
         }
       })();
     },
-    [id, routeId, load, addToast, t]
+    [id, routeId, load, clear, fail]
   );
 
   const handleSetLegSource = useCallback(
     (leg: TourLeg, source: "straight" | "drawn"): void => {
       if (!routeId) return;
+      clear("legs");
       void (async (): Promise<void> => {
         try {
           await toursApi.setLeg(id, routeId, leg.fromStopId, leg.toStopId, { source });
           await load();
         } catch (err) {
-          addToast("error", apiErrorMessage(err) ?? t("trips:tours.legError"));
+          fail("legs", err, "trips:tours.legError", () => handleSetLegSource(leg, source));
         }
       })();
     },
-    [id, routeId, load, addToast, t]
+    [id, routeId, load, clear, fail]
   );
 
   /**
@@ -395,6 +401,7 @@ export default function TripRouteEditorPage(): JSX.Element {
   const handleRouteLeg = useCallback(
     (leg: TourLeg): void => {
       if (!routeId) return;
+      clear("legs");
       void (async (): Promise<void> => {
         try {
           const { fallbackReason } = await toursApi.routeLeg(
@@ -405,21 +412,22 @@ export default function TripRouteEditorPage(): JSX.Element {
           );
           await load();
           if (fallbackReason !== null) {
-            addToast(
-              "info",
-              `${t("trips:tours.routing.fallback")} ${t(`trips:tours.routing.reason.${fallbackReason}`)}`
-            );
+            // Not routed is a result to keep on screen, not a passing toast.
+            report("legs", {
+              kind: "notice",
+              message: `${t("trips:tours.routing.fallback")} ${t(`trips:tours.routing.reason.${fallbackReason}`)}`,
+            });
           }
         } catch (err) {
           if (apiErrorStatus(err) === 409) {
-            addToast("error", t("trips:tours.routing.notConfigured"));
+            report("legs", { kind: "error", message: t("trips:tours.routing.notConfigured") });
           } else {
-            addToast("error", apiErrorMessage(err) ?? t("trips:tours.routing.error"));
+            fail("legs", err, "trips:tours.routing.error", () => handleRouteLeg(leg));
           }
         }
       })();
     },
-    [id, routeId, load, addToast, t]
+    [id, routeId, load, clear, report, fail, t]
   );
 
   /**
@@ -435,49 +443,53 @@ export default function TripRouteEditorPage(): JSX.Element {
    */
   const handleRouteAll = useCallback((): void => {
     if (!routeId) return;
+    clear("legs");
     setRoutingAllInProgress(true);
     void (async (): Promise<void> => {
       try {
         const result = await toursApi.routeAll(id, routeId);
         await load();
         if (!mountedRef.current) return;
-        addToast(
-          "info",
-          result.fallbackCount > 0
-            ? t("trips:tours.routing.resultFallback", {
-                routed: result.routedCount,
-                fallback: result.fallbackCount,
-                skipped: result.skippedCount,
-                reason: result.fallbackReason
-                  ? t(`trips:tours.routing.reason.${result.fallbackReason}`)
-                  : "",
-              })
-            : t("trips:tours.routing.result", {
-                routed: result.routedCount,
-                skipped: result.skippedCount,
-              })
-        );
+        // A partly routed section says so, and keeps saying it (forgejo#247).
+        report("legs", {
+          kind: "notice",
+          message:
+            result.fallbackCount > 0
+              ? t("trips:tours.routing.resultFallback", {
+                  routed: result.routedCount,
+                  fallback: result.fallbackCount,
+                  skipped: result.skippedCount,
+                  reason: result.fallbackReason
+                    ? t(`trips:tours.routing.reason.${result.fallbackReason}`)
+                    : "",
+                })
+              : t("trips:tours.routing.result", {
+                  routed: result.routedCount,
+                  skipped: result.skippedCount,
+                }),
+        });
       } catch (err) {
-        addToast("error", apiErrorMessage(err) ?? t("trips:tours.routing.allError"));
+        fail("legs", err, "trips:tours.routing.allError", () => handleRouteAll());
       } finally {
         if (mountedRef.current) setRoutingAllInProgress(false);
       }
     })();
-  }, [id, routeId, load, addToast, t]);
+  }, [id, routeId, load, clear, report, fail, t]);
 
   const handleClearLeg = useCallback(
     (leg: TourLeg): void => {
       if (!routeId) return;
+      clear("legs");
       void (async (): Promise<void> => {
         try {
           await toursApi.clearLeg(id, routeId, leg.fromStopId, leg.toStopId);
           await load();
         } catch (err) {
-          addToast("error", apiErrorMessage(err) ?? t("trips:tours.legError"));
+          fail("legs", err, "trips:tours.legError", () => handleClearLeg(leg));
         }
       })();
     },
-    [id, routeId, load, addToast, t]
+    [id, routeId, load, clear, fail]
   );
 
   /**
@@ -486,12 +498,14 @@ export default function TripRouteEditorPage(): JSX.Element {
    * gated client-side by `trackCoverageByLegId` — but the server re-checks
    * coverage itself and answers 409 with an exact reason if it disagrees
    * (a race: the track could have been deleted between render and click).
-   * `apiErrorMessage` already surfaces that 409's own prose, so no special
-   * status handling is needed here, unlike `handleRouteLeg`'s 409 case.
+   * Its two refusals carry codes (`TRACK_DOES_NOT_COVER_LEG`,
+   * `TRACK_GAP_IN_LEG`) that `TRACK_ERROR_KEYS` turns into DE/EN copy — the
+   * server's English prose is never shown.
    */
   const handleAdoptTrack = useCallback(
     (leg: TourLeg, trackId: string): void => {
       if (!routeId) return;
+      clear("legs");
       void (async (): Promise<void> => {
         try {
           await toursApi.setLeg(id, routeId, leg.fromStopId, leg.toStopId, {
@@ -500,83 +514,29 @@ export default function TripRouteEditorPage(): JSX.Element {
           });
           await load();
         } catch (err) {
-          addToast("error", apiErrorMessage(err) ?? t("trips:tours.legError"));
-        }
-      })();
-    },
-    [id, routeId, load, addToast, t]
-  );
-
-  const handleUploadTrack = useCallback(
-    (file: File): void => {
-      void (async (): Promise<void> => {
-        try {
-          await uploadTrack(file);
-        } catch (err) {
-          // A malformed file, one without timestamps, an oversized one and a
-          // duplicate each carry their own server CODE — mapped to DE/EN copy,
-          // never the server's English prose.
-          addToast(
-            "error",
-            saveErrorMessage(err, t, "trips:tours.tracks.uploadError", TRACK_ERROR_KEYS)
+          fail(
+            "legs",
+            err,
+            "trips:tours.legError",
+            () => handleAdoptTrack(leg, trackId),
+            TRACK_ERROR_KEYS
           );
         }
       })();
     },
-    [uploadTrack, addToast, t]
+    [id, routeId, load, clear, fail]
   );
 
-  const handleDeleteTrack = useCallback(
-    (track: TourTrackMeta): void => {
-      void (async (): Promise<void> => {
-        try {
-          await deleteTrack(track.id);
-        } catch (err) {
-          addToast("error", apiErrorMessage(err) ?? t("trips:tours.tracks.deleteError"));
-        }
-      })();
-    },
-    [deleteTrack, addToast, t]
-  );
-
-  const handleDownloadTrack = useCallback(
-    (track: TourTrackMeta): void => {
-      if (!routeId) return;
-      void (async (): Promise<void> => {
-        try {
-          const file = await trackArchiveApi.downloadTrack(id, routeId, track.id);
-          downloadBlob(file.blob, file.filename);
-        } catch (err) {
-          addToast("error", apiErrorMessage(err) ?? t("roadtrips:trackArchive.downloadFailed"));
-        }
-      })();
-    },
-    [id, routeId, addToast, t]
-  );
-
-  /**
-   * Pulls the section's own date span from Dawarich (an empty body — the
-   * server derives the window from the section's stops). Three failure
-   * shapes, per `toursApi.tracks.pullDawarich`'s doc comment: a fixed-kind
-   * 409 (`dawarichFailureKind` parses it, `notConfigured` included), or a
-   * `code` (an empty window, too few points, no dated stops to derive one
-   * from) that `TRACK_ERROR_KEYS` turns into its own DE/EN sentence.
-   */
-  const handlePullDawarich = useCallback((): void => {
-    void (async (): Promise<void> => {
-      try {
-        await pullDawarichTrack();
-      } catch (err) {
-        const kind = dawarichFailureKind(err);
-        addToast(
-          "error",
-          kind
-            ? t(dawarichFailureKey(kind))
-            : saveErrorMessage(err, t, "trips:tours.tracks.dawarich.error", TRACK_ERROR_KEYS)
-        );
-      }
-    })();
-  }, [pullDawarichTrack, addToast, t]);
+  const { handleUploadTrack, handleDeleteTrack, handleDownloadTrack, handlePullDawarich } =
+    useRouteTrackActions({
+      tripId: id,
+      routeId,
+      uploadTrack,
+      deleteTrack,
+      pullDawarichTrack,
+      reports: { clear, report, fail },
+      t,
+    });
 
   if (loading) {
     return (
@@ -596,7 +556,7 @@ export default function TripRouteEditorPage(): JSX.Element {
     return (
       <AppShell width="reading">
         <div className="py-16 text-center">
-          <p className="text-sm text-rose-400">
+          <p role="alert" className="text-sm" style={{ color: "var(--ts-bad)" }}>
             {failure === "notFound" ? t("trips:tours.notFound") : t("trips:tours.loadError")}
           </p>
           {failure === "loadError" && (
@@ -668,6 +628,7 @@ export default function TripRouteEditorPage(): JSX.Element {
               km
             </span>
           </p>
+          <RouteEditorReportLine entry={reports.header} />
         </header>
 
         {route.kind === "tour" && (
@@ -712,6 +673,7 @@ export default function TripRouteEditorPage(): JSX.Element {
           ) : (
             <TourStopAssigner stops={assignerStops} onChange={handleAssignChange} />
           )}
+          <RouteEditorReportLine entry={reports.stops} />
         </section>
 
         <section>
@@ -729,6 +691,7 @@ export default function TripRouteEditorPage(): JSX.Element {
             onRouteAll={handleRouteAll}
             routingAllInProgress={routingAllInProgress}
           />
+          <RouteEditorReportLine entry={reports.legs} />
         </section>
 
         <section>
@@ -747,6 +710,7 @@ export default function TripRouteEditorPage(): JSX.Element {
             onPullDawarich={handlePullDawarich}
             onImportStrava={stravaConnected ? () => setStravaOpen(true) : undefined}
           />
+          <RouteEditorReportLine entry={reports.tracks} />
           {stravaOpen && route && (
             <StravaImportDialog
               target={{ kind: "route", routeId: route.id }}

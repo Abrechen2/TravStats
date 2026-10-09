@@ -33,7 +33,13 @@
   "onTime": "on time",
   "edit": "Edit",
   "delete": "Delete",
-  "deleteConfirm": "Really delete this journey?",
+  "deleteConfirmNamed": "Really delete the journey {{route}}?",
+  "deleteSurvivors": {
+    "trip": "trip “{{name}}”",
+    "otherLegs_one": "{{count}} other journey of the same booking",
+    "otherLegs_other": "{{count}} other journeys of the same booking",
+    "bookingLegs": "any other journeys of the same booking"
+  },
   "deleted": "Journey deleted",
   "deleteError": "The journey could not be deleted.",
   "saved": "Journey saved",
@@ -68,6 +74,8 @@
     "departureTime": "Departure (local time at the station)",
     "arrivalTime": "Arrival (local time at the station)",
     "timeHint": "The time printed on the ticket. The time zone follows from the station.",
+    "dayOnly": "Only the date is known",
+    "delayNeedsClock": "A delay needs the ride's times.",
     "distance": "Distance in km",
     "distanceHint": "Leave empty: TravStats measures along the line taken from Transitous, otherwise the straight line. Fill it in when the ticket names the distance.",
     "seat": "Seat",
@@ -95,7 +103,14 @@
       "invalidField": "“{{field}}” was not accepted. Please check it.",
       "invalid": "An entry was not accepted. Please check the fields."
     },
-    "suggestionsFailed": "Suggestions from your earlier rides could not be loaded — the form works all the same."
+    "suggestionsFailed": "Suggestions from your earlier rides could not be loaded — the form works all the same.",
+    "missing": {
+      "depCoordinates": "valid coordinates of the departure station",
+      "arrCoordinates": "valid coordinates of the arrival station",
+      "departureTime": "departure time",
+      "depName": "name of the departure station",
+      "arrName": "name of the arrival station"
+    }
   },
   "tracedLine": "along the line, Transitous",
   "roadtripLine": "along the roadtrip route",
@@ -194,8 +209,6 @@
     "trainsLabel_other": "Trains",
     "totalDuration": "Total time",
     "legs": "Trains of this journey",
-    "transfer": "Change at {{station}} · {{wait}} wait",
-    "transferUnknown": "Change at {{station}}",
     "whole": "View the whole journey: {{route}}",
     "loadError": "The journey could not be loaded.",
     "notFound": "This journey does not exist (any more)."
@@ -243,7 +256,10 @@
       "rankings": "Rankings",
       "delays": "Delays",
       "records": "Records",
-      "years": "Rides per year"
+      "years": "Rides per year",
+      "journeys": "Journeys and changes",
+      "connections": "Connections",
+      "punctuality": "Punctuality"
     },
     "nightTrains": "Night trains",
     "nightTrainsDesc": "sleeper or couchette, a night-train category, or overnight on board",
@@ -252,7 +268,38 @@
     "crossBorder": "Across a border",
     "crossBorderDesc": "departure and arrival in different countries",
     "operatorsCount": "Operators",
-    "operatorsCountDesc": "distinct, spellings merged"
+    "operatorsCountDesc": "distinct, spellings merged",
+    "journeysLinked": "Rail journeys",
+    "journeysLinkedDesc_one": "{{count}} of them with a change",
+    "journeysLinkedDesc_other": "{{count}} of them with a change",
+    "transfers": "Average change time",
+    "transfersDesc_one": "{{count}} measured change · shortest {{shortest}}, longest {{longest}}",
+    "transfersDesc_other": "{{count}} measured changes · shortest {{shortest}}, longest {{longest}}",
+    "transfersNone": "No linked change recorded — changes count only between rides of the same booking.",
+    "minutesValue": "{{minutes}} min",
+    "nightNights": "Nights on a night train",
+    "nightNightsDesc": "slept on board, on the stations' calendars",
+    "nightNightsUndated_one": "plus {{count}} night train with no known arrival day",
+    "nightNightsUndated_other": "plus {{count}} night trains with no known arrival day",
+    "newConnections": "New connections",
+    "newConnectionsDesc": "ridden for the first time, both directions together",
+    "favouriteConnections": "Favourite connections",
+    "noFavouriteConnections": "No connection ridden more than once yet.",
+    "newConnectionsByYear": "New connections per year",
+    "noNewConnections": "No connection with two known stations.",
+    "punctualityByOperator": "Punctuality by operator",
+    "punctualityByConnection": "Punctuality by connection",
+    "punctualityHint_one": "{{count}} measured ride · avg {{average}} min",
+    "punctualityHint_other": "{{count}} measured rides · avg {{average}} min",
+    "noPunctuality": "No ride with times carries a recorded delay.",
+    "help": {
+      "journeys": "The unit is the journey, not the train: rides of the same booking that continue at the same station within four hours are one journey. A ride back to a station the journey already visited starts a new one (a return). Rides without a shared booking are never joined. Only completed rides count, in the year they left on the departure station's calendar.",
+      "transfers": "The wait between an arrival and the next departure within one journey, from both rides' times to the minute. Date-only or unlinked rides have no measurable change and stay out.",
+      "nights": "One night per calendar night on board a night train (sleeper or couchette, a night-train category, or at least six hours overnight), on the stations' calendars. In the overview's night account a night that also has a stay goes to the stay — here it is still shown.",
+      "newConnections": "A connection is the pair of stations, both directions together. It is new in the year its first completed ride left; a station is the same by its code, else by its name.",
+      "favourites": "Connections ridden at least twice, both directions together. The name opens the most recent ride.",
+      "punctuality": "The share of rides that arrived without delay, among the rides with a recorded delay and times to the minute. A ride with no recorded delay never counts as on time; it stays out of the sample. The line under each bar gives the sample and the mean delay; early arrivals count negative."
+    }
   },
   "roadtripConversion": {
     "title": "Take over as train rides",
@@ -363,5 +410,31 @@
     "stations_other": "Stations",
     "withoutOperator_one": "{{count}} without an operator",
     "withoutOperator_other": "{{count}} without an operator"
+  },
+  "transfer": {
+    "wait": "Change at {{station}} · {{wait}} to change",
+    "unknown": "Change at {{station}} · transfer time unknown",
+    "unknownWhy": "One of the two times is missing or known only by its date.",
+    "conflict": "Time conflict: the next train leaves {{wait}} before this one arrives.",
+    "stationChange": "Change of station: {{from}} → {{to}} · approx. {{distance}} as the crow flies",
+    "shortHint": "Hint: less than {{minutes}} min to change. Whether the connection works out, TravStats cannot know.",
+    "separate": "A separate ride – not a change",
+    "markTight": "Marked as tight",
+    "markFailed": "The mark could not be saved. Please try again.",
+    "orderUnknown": "Change unknown: a ride on this day is recorded by its date only, so the order of the trains is not known.",
+    "stationUnconfirmed": "Change of station? {{from}} → {{to}}: different station name – location unknown",
+    "distanceM": "{{value}} m",
+    "distanceKm": "{{value}} km"
+  },
+  "connectionView": {
+    "coach": "Coach {{coach}}",
+    "seat": "Seat {{seat}}",
+    "noReservation": "no reservation recorded",
+    "reference": "Booking reference {{reference}}",
+    "documents": "Documents:",
+    "noDocuments": "No documents filed",
+    "documentsLoading": "Loading documents …",
+    "documentsFailed": "The documents of this ride could not be loaded.",
+    "documentsBelow": "Documents of this ride: in the “Documents” section below."
   }
 }

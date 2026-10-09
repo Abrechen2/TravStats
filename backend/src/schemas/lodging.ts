@@ -97,12 +97,17 @@ const baseLodgingSchema = z.object({
 });
 
 export const createLodgingSchema = baseLodgingSchema;
-export const updateLodgingSchema = partialForUpdate(baseLodgingSchema).refine(
-  (d) => Object.keys(d).length > 0,
-  {
+export const updateLodgingSchema = partialForUpdate(baseLodgingSchema)
+  .refine((d) => Object.keys(d).length > 0, {
     message: "At least one field must be provided for update",
-  }
-);
+  })
+  // A position is a pair. One coordinate on its own would store half a pin (the
+  // in-place location repair writes exactly `{ lat, lon }`), and an explicit
+  // null for the pair is how the pin is removed.
+  .refine((d) => (d.lat === undefined) === (d.lon === undefined), {
+    message: "lat and lon must be sent together",
+    path: ["lon"],
+  });
 
 // "HH:mm", 24h. Deliberately NOT a datetime: the day lives in
 // checkIn/checkOut, and re-encoding it here would create two sources of
@@ -340,6 +345,34 @@ export const lodgingQuerySchema = z.object({
   /** Omitted means the direction that key reads first in the table. */
   order: z.enum(["asc", "desc"]).optional(),
 });
+
+/**
+ * `GET /lodging/stays` - the chronological view across houses (forgejo#226),
+ * and the candidate lookup behind the overlap notice (forgejo#229).
+ *
+ * `from` / `to` are calendar days (`YYYY-MM-DD`) and select the stays whose
+ * span TOUCHES that window - a coarse superset on purpose, the exact overlap
+ * rule lives in `shared/lodgingOverlap.ts` and runs on the rows this returns.
+ * An undated stay touches no window, so it appears only when neither bound is
+ * given.
+ */
+const stayListDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "must be YYYY-MM-DD");
+
+export const stayListQuerySchema = z
+  .object({
+    from: stayListDay.optional(),
+    to: stayListDay.optional(),
+    tripId: z.string().uuid().optional(),
+    limit: z.coerce.number().int().min(1).max(500).optional(),
+    offset: z.coerce.number().int().min(0).optional(),
+    /** Newest first unless asked otherwise - what a logbook reads first. */
+    order: z.enum(["asc", "desc"]).optional(),
+  })
+  .refine((q) => q.from === undefined || q.to === undefined || q.from <= q.to, {
+    message: "from must not be after to",
+    path: ["to"],
+  });
+export type StayListQuery = z.infer<typeof stayListQuerySchema>;
 
 // A membership is still PROGRAM-shaped — one card, one programme name, several
 // chains (Sheraton/Westin/Ritz-Carlton -> Marriott Bonvoy). What changed is how

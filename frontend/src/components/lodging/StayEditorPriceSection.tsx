@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { minorUnits } from "../../shared/currencies";
 import type { JSX } from "react";
 import CurrencySelect from "../common/CurrencySelect";
@@ -5,6 +6,7 @@ import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useLodgingFxPreview } from "../../hooks/useLodgingFxPreview";
 import { formatDayForLocale, formatStayPriceDisplay } from "../../lib/lodgingFormat";
 import { formatCurrency } from "../../lib/units";
+import { HelpIcon } from "../form";
 import type { LodgingCurrency } from "../../types/lodging";
 
 interface StayEditorPriceSectionProps {
@@ -57,6 +59,7 @@ export function StayEditorPriceSection({
   t,
   inputClassName,
 }: StayEditorPriceSectionProps): JSX.Element {
+  const idPrefix = useId();
   const recentCurrencies = useRecentCurrencies();
   const parsedTotalPrice = totalPrice.trim().length > 0 ? Number.parseFloat(totalPrice) : null;
   const preview = useLodgingFxPreview({
@@ -110,17 +113,24 @@ export function StayEditorPriceSection({
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-3">
-        <input
-          type="number"
-          min={0}
-          step={10 ** -minorUnits(currency)}
-          aria-label={t("lodging:field.totalPrice")}
-          className={inputClassName}
-          value={totalPrice}
-          onChange={(e): void => onTotalPriceChange(e.target.value)}
-          placeholder={t("lodging:field.totalPrice")}
-        />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {/* A visible label for every control: the price used to carry only an
+            aria-label and a placeholder, so the word vanished the moment a
+            number was typed (forgejo#249). */}
+        <div className="flex flex-col gap-1">
+          <label htmlFor={`${idPrefix}-total`} className="text-xs text-[var(--text-muted)]">
+            {t("lodging:field.totalPrice")}
+          </label>
+          <input
+            id={`${idPrefix}-total`}
+            type="number"
+            min={0}
+            step={10 ** -minorUnits(currency)}
+            className={inputClassName}
+            value={totalPrice}
+            onChange={(e): void => onTotalPriceChange(e.target.value)}
+          />
+        </div>
         {/* Derived, not typed (Alex, 2026-07-12): a hand-entered per-night
             price is a second number that can silently contradict the total.
             Rendered as a read-only figure so the user sees the arithmetic
@@ -134,17 +144,23 @@ export function StayEditorPriceSection({
             {pricePerNight !== null ? formatCurrency(pricePerNight, currency) : "—"}
           </span>
         </div>
-        <CurrencySelect
-          aria-label={t("lodging:field.currency")}
-          value={currency}
-          recent={recentCurrencies}
-          onChange={(code): void => onCurrencyChange(code as LodgingCurrency)}
-        />
+        <div className="flex flex-col gap-1">
+          <label htmlFor={`${idPrefix}-currency`} className="text-xs text-[var(--text-muted)]">
+            {t("lodging:field.currency")}
+          </label>
+          <CurrencySelect
+            id={`${idPrefix}-currency`}
+            value={currency}
+            recent={recentCurrencies}
+            onChange={(code): void => onCurrencyChange(code as LodgingCurrency)}
+          />
+        </div>
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-[var(--text-primary)]">
+      <label className="flex items-center gap-2 text-sm text-[var(--text-primary)] pointer-coarse:min-h-(--ts-size-touch-min)">
         <input
           type="checkbox"
+          className="pointer-coarse:h-5 pointer-coarse:w-5"
           data-testid="award-stay-toggle"
           checked={isAwardStay}
           onChange={(e): void => onAwardStayChange(e.target.checked)}
@@ -155,11 +171,13 @@ export function StayEditorPriceSection({
       {fxReadout !== null && (
         <p
           data-testid="stay-editor-fx-readout"
-          className="text-xs"
+          className="flex items-center gap-1 text-xs"
           style={{ color: "var(--fx,#6ab7d8)" }}
-          title={t("lodging:fx.tooltip")}
         >
           {fxReadout}
+          {/* The explanation was a `title` - reachable by hovering only
+              (forgejo#249). A button opens it on a tap and from the keyboard. */}
+          <HelpIcon content={t("lodging:fx.tooltip")} position="bottom" />
         </p>
       )}
 

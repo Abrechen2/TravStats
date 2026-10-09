@@ -7,29 +7,45 @@
  */
 
 /**
- * One year's nights, split by where they were spent. The four buckets are
- * mutually exclusive and add up to `days` (the year's length, or the days
- * elapsed so far for the current one).
+ * One year's nights, split by where they were spent. The buckets are mutually
+ * exclusive and add up to `days` (the year's length, or for the current one
+ * the nights up to last night).
  */
 export interface TravelAccountYear {
   year: string;
   days: number;
   hotelNights: number;
   seaNights: number;
+  /** Nights on a completed night train (forgejo#266). */
+  railNights: number;
+  /**
+   * Nights on a completed night bus, by its clocks (forgejo#263). Optional:
+   * a server older than the bus bucket does not send it.
+   */
+  busNights?: number;
   /** A flight whose departure and arrival fall on different dates. */
   airNights: number;
-  homeNights: number;
+  /**
+   * The remainder: nights no record accounts for. NOT nights at home — a
+   * missing record proves nothing, and nothing in the data says a night was
+   * spent at home (forgejo#266).
+   */
+  unassignedNights: number;
 }
 
 export interface TravelAccount {
   years: TravelAccountYear[];
   /**
    * Nights two domains both claimed — a hotel booked over a night spent at
-   * sea, say. The server resolves them (sea beats hotel beats air) but reports
-   * the count, because that resolution is a convention and a large number here
-   * means the log is wrong somewhere.
+   * sea, say. The server resolves them (sea, then hotel, then night train,
+   * then air) but reports the count, because that resolution is a convention
+   * and a large number here means the log is wrong somewhere.
    */
   contestedNights: number;
+  /** Stays (and free pitches) with no usable date: in no year. Optional for older fixtures. */
+  undatedStays?: number;
+  /** Night trains with no known arrival day: a night on board in no year. */
+  undatedNightTrains?: number;
 }
 
 export interface TripAccountRow {
@@ -43,13 +59,15 @@ export interface TripAccountRow {
   /** Days inside the trip with no record of where the night was spent. */
   uncoveredDays: number | null;
   /**
-   * Amounts by ORIGINAL currency, never summed across them: only lodging
-   * carries an FX snapshot, so one combined figure would mean inventing a rate
-   * for flights and cruises at a date nobody recorded.
+   * Amounts by ORIGINAL currency, never summed across them — the server's one
+   * trip-cost rule (`backend/src/shared/tripCost.ts`, forgejo#274). Read it;
+   * never re-derive it here.
    */
   spendByCurrency: Record<string, number>;
-  /** The lodging slice that has a snapshot, by the base currency it was taken in. */
+  /** The slice that has an FX snapshot, by the base currency it was taken in. */
   spendBaseByCurrency: Record<string, number>;
+  /** Entries with no usable price; above 0 the spend is a lower bound. */
+  unpricedEntries: number;
   journalEntries: number;
   photoCount: number;
 }

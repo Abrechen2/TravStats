@@ -43,6 +43,12 @@ export const railTimesSchema = z
   .openapi("RailTimes", { description: "Planned and actual times at their stations." });
 export type RailTimes = z.infer<typeof railTimesSchema>;
 
+/** A bus ride's times — rail's shape under the bus name (the two ends carry rail's columns). */
+export const busTimesSchema = z
+  .object({ departure: time, arrival: time, actualDeparture: time, actualArrival: time })
+  .openapi("BusTimes", { description: "Planned and actual times at their terminals." });
+export type BusTimes = z.infer<typeof busTimesSchema>;
+
 export const rentalTimesSchema = z
   .object({
     pickup: time.describe(
@@ -51,6 +57,10 @@ export const rentalTimesSchema = z
     return: time.describe("Booked return at the return station's clock."),
     actualPickup: time.describe("Pickup as an agreement, an invoice or the user recorded it."),
     actualReturn: time,
+    depositPaid: day.describe(
+      "The day the deposit was held, as the statement shows it — no zone (forgejo#238)."
+    ),
+    depositReturned: day.describe("The day the deposit came back; null while it is held."),
   })
   .openapi("RentalTimes", { description: "Booked and actual times at their stations." });
 export type RentalTimes = z.infer<typeof rentalTimesSchema>;
@@ -124,6 +134,7 @@ export type RoadtripStationTimes = z.infer<typeof roadtripStationTimesSchema>;
 export const TIMES_SCHEMAS = {
   FlightTimes: flightTimesSchema,
   RailTimes: railTimesSchema,
+  BusTimes: busTimesSchema,
   RentalTimes: rentalTimesSchema,
   StayTimes: stayTimesSchema,
   VisitTimes: visitTimesSchema,

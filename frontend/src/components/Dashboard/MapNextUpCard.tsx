@@ -28,6 +28,8 @@ const DOMAIN_ICON: Record<UpcomingEntry["domain"], string> = {
   roadtrip: "🚐",
   rail: "🚆",
   rental: "🚗",
+  // B2 (spec 2026-10-07 §8): /upcoming names a bus ride only once B2 lands.
+  bus: "🚌",
   trip: "🧳",
 };
 
@@ -40,6 +42,8 @@ const DOMAIN_DETAIL_ROUTE: Record<UpcomingEntry["domain"], string> = {
   roadtrip: "/roadtrips",
   rail: "/rail",
   rental: "/rentals",
+  // B2 (spec 2026-10-07 §8): the bus logbook route, once /upcoming carries rides.
+  bus: "/bus",
   trip: "/trips",
 };
 

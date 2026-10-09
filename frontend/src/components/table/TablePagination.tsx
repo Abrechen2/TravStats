@@ -33,8 +33,13 @@ export interface TablePaginationProps {
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
 
-const BUTTON_CLASS =
-  "rounded-md border border-[var(--color-border)] px-2 py-1 text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-40";
+// Touch sizing follows the POINTER (forgejo#249): measured on an iPad the four
+// buttons were 21-24 x 26 px. The row wraps, so growing the buttons themselves
+// to the 44 px target moves nothing that cannot wrap.
+const TOUCH_SIZE =
+  "pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:min-w-(--ts-size-touch-min)";
+
+const BUTTON_CLASS = `rounded-md border border-[var(--color-border)] px-2 py-1 text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-40 ${TOUCH_SIZE}`;
 
 /** The "x–y von z" numbers, worked out once so the component and its tests
  *  agree on the same arithmetic. `total === 0` reads as 0-0, never 1-0 —
@@ -124,7 +129,7 @@ export default function TablePagination({
             onChange={(e): void =>
               setPageSize(e.target.value === "all" ? "all" : Number(e.target.value))
             }
-            className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-2 py-1 text-[var(--text-primary)]"
+            className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-2 py-1 text-[var(--text-primary)] pointer-coarse:min-h-(--ts-size-touch-min)"
           >
             {PAGE_SIZE_OPTIONS.map((size) => (
               <option key={size} value={size}>

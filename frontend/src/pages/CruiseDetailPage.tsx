@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { cruiseApi } from "../lib/api";
 import type { Cruise } from "../types";
@@ -6,12 +6,17 @@ import { CruiseEditModal } from "../components/Cruise/CruiseEditModal";
 import { CruiseRouteMap } from "../components/Cruise/CruiseRouteMap";
 import {
   buildEffectiveTimeline,
-  countPortCalls,
   countUniquePorts,
   countUnresolvedPorts,
 } from "../components/Cruise/cruisePorts";
 import { cruiseStatusPillStyle } from "../components/Cruise/cruiseStatusStyle";
 import CruiseItinerary from "../components/Cruise/CruiseItinerary";
+import { CruiseDayCard } from "../components/Cruise/CruiseDayCard";
+import { entryAtSlot, slotOfEntry, todayEntryKey } from "../components/Cruise/cruiseDayCardModel";
+import type { DaySlot } from "../components/Cruise/cruiseDayCardModel";
+import { useCruiseDocuments } from "../components/Cruise/useCruiseDocuments";
+import { useTodayZone } from "../hooks/useTodayZone";
+import { CruiseUnresolvedPorts } from "../components/Cruise/CruiseUnresolvedPorts";
 import TripPill from "../components/Trips/TripPill";
 import AppShell from "../components/ui/AppShell";
 import DetailHeader from "../components/ui/DetailHeader";
@@ -30,7 +35,8 @@ import { useToastStore } from "../store/toastStore";
 import { cruiseExtractTarget } from "../lib/extractTargets";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
-import { countedDeleteMessage, DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { cruiseDeleteMessage } from "../components/Cruise/cruiseDeleteMessage";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { logger } from "../lib/logger";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
@@ -65,6 +71,30 @@ export default function CruiseDetailPage(): JSX.Element {
   const [deleting, setDeleting] = useState<boolean>(false);
   const addToast = useToastStore((s) => s.addToast);
   const { isFeatureVisible } = useBetaFeatures();
+  const todayZone = useTodayZone();
+  /**
+   * The day whose card the reader opened; undefined = today's, if any
+   * (forgejo#223). Kept as a SLOT — the day of the cruise and the stop's
+   * place among that day's stops — not the stop id: every save recreates the
+   * stops with new ids, and the open card closed after resolving a port
+   * (review M3). The place among the day's stops keeps two calls on one day
+   * apart (re-review: tapping the second opened the first).
+   */
+  const [pickedSlot, setPickedSlot] = useState<DaySlot | null | undefined>(undefined);
+  const [cardFocus, setCardFocus] = useState(0);
+  const timeline = useMemo(() => (cruise ? buildEffectiveTimeline(cruise) : []), [cruise]);
+  const todayKey = useMemo(() => todayEntryKey(timeline, todayZone), [timeline, todayZone]);
+  const slot = pickedSlot === undefined ? slotOfEntry(timeline, todayKey) : pickedSlot;
+  const dayEntry = entryAtSlot(timeline, slot);
+  const pickDay = (key: string): void => {
+    if (dayEntry?.key === key) {
+      setPickedSlot(null);
+      return;
+    }
+    setPickedSlot(slotOfEntry(timeline, key));
+    setCardFocus((n) => n + 1);
+  };
+  const dayDocuments = useCruiseDocuments(dayEntry && cruise ? cruise.id : null);
   /** Bumped when a recording changes the legs: the map reads its lines again. */
   const [geometryVersion, setGeometryVersion] = useState<number>(0);
 
@@ -198,7 +228,13 @@ export default function CruiseDetailPage(): JSX.Element {
           )}
         </>
       ),
-      label: `${t("field.ports", { count: portsCount })} · ${seaDays} ${t("field.sea_days", { count: seaDays })}`,
+      // The "+N" beside the number was explained only by a hover title; the
+      // label now says it in words (forgejo#222, forgejo#176).
+      label: [
+        t("field.ports", { count: portsCount }),
+        `${seaDays} ${t("field.sea_days", { count: seaDays })}`,
+        ...(unresolvedCount > 0 ? [t("detail.unresolvedKpi", { count: unresolvedCount })] : []),
+      ].join(" · "),
     },
     ...(countries > 0
       ? [{ key: "countries", value: countries, label: t("detail.countries", { count: countries }) }]
@@ -243,11 +279,39 @@ export default function CruiseDetailPage(): JSX.Element {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
         <div className="flex flex-col gap-6 md:col-span-3">
           <DetailSection title={t("detail.itinerary")}>
+            {dayEntry !== null && (
+              <CruiseDayCard
+                entry={dayEntry}
+                isToday={dayEntry.key === todayKey}
+                documents={dayDocuments.state}
+                onRetryDocuments={dayDocuments.retry}
+                focusRequest={cardFocus}
+              />
+            )}
+            {dayEntry === null && cruise.stops.length > 0 && (
+              <p className="t-caption mb-2">{t("dayCard.pickHint")}</p>
+            )}
             {cruise.stops.length > 0 || cruise.departurePort ? (
-              <CruiseItinerary cruise={cruise} />
+              <CruiseItinerary
+                cruise={cruise}
+                selectedKey={dayEntry?.key ?? null}
+                onSelect={pickDay}
+              />
             ) : (
               <p className="t-caption">{t("detail.stopsEmpty")}</p>
             )}
+            {/* The ports an import could not match, to settle in one place
+                (forgejo#222) — beside the itinerary they belong to. */}
+            <div className="mt-4">
+              <CruiseUnresolvedPorts
+                cruise={cruise}
+                onUpdated={(updated) => {
+                  setCruise(updated);
+                  // A resolved port gains coordinates: the map draws new legs.
+                  setGeometryVersion((v) => v + 1);
+                }}
+              />
+            </div>
           </DetailSection>
 
           {isFeatureVisible("cruiseTracks") && (
@@ -278,6 +342,7 @@ export default function CruiseDetailPage(): JSX.Element {
 
           <DocumentsSection
             entry={{ type: "cruise", id: cruise.id }}
+            onChanged={dayDocuments.retry}
             extract={cruiseExtractTarget(cruise, async (updates) => {
               await cruiseApi.update(cruise.id, updates);
               addToast("success", t("documents:extract.applied"));
@@ -357,19 +422,7 @@ export default function CruiseDetailPage(): JSX.Element {
         // confirmation filed with a cruise cascades with it (`onDelete:
         // Cascade`, proven live by
         // `backend/src/__tests__/integrity/cascades.integrity.test.ts`).
-        message={withDocumentNote(
-          countedDeleteMessage(
-            t,
-            {
-              counted: "cruise:detail.deleteConfirmMessage",
-              empty: "cruise:detail.deleteConfirmMessageNoStops",
-            },
-            cruise.ship?.name ?? cruise.shipNameOverride ?? t("list.unnamedShip"),
-            countPortCalls(cruise)
-          ),
-          t,
-          documentCount
-        )}
+        message={cruiseDeleteMessage(t, cruise, documentCount)}
         confirmText={t("detail.deleteConfirm")}
         cancelText={t("detail.deleteCancel")}
         confirmButtonClass={DELETE_BUTTON_CLASS}

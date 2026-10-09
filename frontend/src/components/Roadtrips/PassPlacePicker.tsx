@@ -8,7 +8,8 @@ import { greatCircleKm } from "../../shared/flightDuration";
 import type { Place } from "../../types/place";
 
 const SHOWN = 8;
-const ROW = "w-full rounded-sm px-2 py-1 text-left text-sm hover:bg-(--bg-surface)";
+const ROW =
+  "w-full rounded-sm px-2 py-1 text-left text-sm hover:bg-(--bg-surface) pointer-coarse:min-h-(--ts-size-touch-min)";
 
 /**
  * Picks the place a pass-through passed (tester 2026-09-26) — the POI
@@ -74,14 +75,17 @@ export default function PassPlacePicker({
 
   return (
     <div className="flex flex-col" style={{ gap: 6 }}>
-      <input
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={t("roadtrips:place.search")}
-        aria-label={t("roadtrips:place.search")}
-        className="rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
-      />
+      {/* A visible label, not only a placeholder that vanishes on typing (#249). */}
+      <label className="flex flex-col gap-1 text-xs text-(--text-muted)">
+        {t("roadtrips:place.search")}
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t("roadtrips:place.search")}
+          className="rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm pointer-coarse:min-h-(--ts-size-touch-min)"
+        />
+      </label>
       {shown.length === 0 ? (
         <p className="t-caption">{t("roadtrips:place.noMatch")}</p>
       ) : (

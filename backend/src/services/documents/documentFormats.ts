@@ -20,6 +20,20 @@ export type DocumentFormat = (typeof DOCUMENT_FORMATS)[number];
 export const DOCUMENT_KINDS = ["invoice", "booking", "boardingPass", "ticket", "other"] as const;
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
+/**
+ * What a rental's hand-over evidence shows (forgejo#239) — a filing label on
+ * the EXISTING document, not a copy: the file is stored once whatever its
+ * category. Meaningful only on a document filed with a rental.
+ */
+export const RENTAL_DOCUMENT_CATEGORIES = [
+  "pickup",
+  "return",
+  "damage",
+  "fuel",
+  "odometer",
+] as const;
+export type RentalDocumentCategory = (typeof RENTAL_DOCUMENT_CATEGORIES)[number];
+
 /** The entries a document can be filed with — at most one of them. */
 export const ENTRY_TYPES = [
   "flight",
@@ -29,6 +43,7 @@ export const ENTRY_TYPES = [
   "placeVisit",
   "railJourney",
   "rentalBooking",
+  "busJourney",
 ] as const;
 export type EntryType = (typeof ENTRY_TYPES)[number];
 

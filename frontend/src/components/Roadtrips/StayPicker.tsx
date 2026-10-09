@@ -18,8 +18,15 @@ export type { PickableStay } from "./stayPickerModel";
 
 const NEW_STAY_TYPES: LodgingType[] = ["campsite", "hotel", "guesthouse", "apartment", "hostel"];
 
-const ROW = "w-full rounded-sm px-2 py-1 text-left text-sm hover:bg-(--bg-surface)";
-const ACTION = "rounded-sm bg-(--accent) px-2 py-1 text-xs text-(--bg-base) disabled:opacity-40";
+// Touch sizing follows the pointer (forgejo#249): a row and an action reach
+// 44 px under a finger and keep their dense desktop size under a mouse.
+const ROW =
+  "w-full rounded-sm px-2 py-1 text-left text-sm hover:bg-(--bg-surface) pointer-coarse:min-h-(--ts-size-touch-min)";
+const ACTION =
+  "rounded-sm bg-(--accent) px-2 py-1 text-xs text-(--bg-base) disabled:opacity-40 pointer-coarse:min-h-(--ts-size-touch-min)";
+const FIELD =
+  "rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm pointer-coarse:min-h-(--ts-size-touch-min)";
+const LABEL = "flex flex-col gap-1 text-xs text-(--text-muted)";
 
 /**
  * Picks the stay a roadtrip station slept at, or makes one.
@@ -163,7 +170,11 @@ export default function StayPicker({
     return (
       <div className="space-y-2 rounded-md border border-(--color-border) p-2">
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" className="text-xs underline" onClick={() => setChosen(null)}>
+          <button
+            type="button"
+            className="text-xs underline pointer-coarse:min-h-(--ts-size-touch-min)"
+            onClick={() => setChosen(null)}
+          >
             {t("roadtrips:stay.back")}
           </button>
           <span className="text-sm font-semibold">{chosen.name}</span>
@@ -210,14 +221,17 @@ export default function StayPicker({
 
   return (
     <div className="space-y-2 rounded-md border border-(--color-border) p-2">
-      <input
-        type="search"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={t("roadtrips:stay.search")}
-        aria-label={t("roadtrips:stay.search")}
-        className="w-full rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
-      />
+      {/* A visible label, not only a placeholder that vanishes on typing (#249). */}
+      <label className={LABEL}>
+        {t("roadtrips:stay.search")}
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t("roadtrips:stay.search")}
+          className={`w-full ${FIELD}`}
+        />
+      </label>
       {lodgings === null && <p className="text-xs text-(--text-muted)">…</p>}
       {nearby.length > 0 && (
         <>
@@ -253,31 +267,39 @@ export default function StayPicker({
         </>
       )}
       {!creating ? (
-        <button type="button" className="text-xs underline" onClick={() => setCreating(true)}>
+        <button
+          type="button"
+          className="text-xs underline pointer-coarse:min-h-(--ts-size-touch-min)"
+          onClick={() => setCreating(true)}
+        >
           {t("roadtrips:stay.createNew")}
         </button>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            aria-label={t("roadtrips:stay.newName")}
-            placeholder={t("roadtrips:stay.newName")}
-            className="min-w-40 flex-1 rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
-          />
-          <select
-            value={newType}
-            onChange={(e) => setNewType(e.target.value as LodgingType)}
-            aria-label={t("roadtrips:stay.newType")}
-            className="rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
-          >
-            {NEW_STAY_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {t(`lodging:type.${type}`)}
-              </option>
-            ))}
-          </select>
+          <label className={`min-w-40 flex-1 ${LABEL}`}>
+            {t("roadtrips:stay.newName")}
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder={t("roadtrips:stay.newName")}
+              className={FIELD}
+            />
+          </label>
+          <label className={LABEL}>
+            {t("roadtrips:stay.newType")}
+            <select
+              value={newType}
+              onChange={(e) => setNewType(e.target.value as LodgingType)}
+              className={FIELD}
+            >
+              {NEW_STAY_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {t(`lodging:type.${type}`)}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             type="button"
             disabled={busy || !newName.trim()}

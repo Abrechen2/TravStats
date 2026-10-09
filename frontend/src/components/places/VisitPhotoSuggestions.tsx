@@ -115,7 +115,7 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
                 key={keyOf(s)}
                 url={s.url}
                 alt={t(`places:photos.suggest.alt.${s.kind}`)}
-                title={t("places:photos.suggest.distance", { metres: s.distanceM })}
+                distance={t("places:photos.suggest.distanceShort", { metres: s.distanceM })}
                 picked={picked.has(keyOf(s))}
                 onToggle={() => toggle(keyOf(s))}
               />
@@ -139,18 +139,21 @@ export function VisitPhotoSuggestions({ visitId, onLinked }: Props): JSX.Element
 interface TileProps {
   url: string;
   alt: string;
-  title: string;
+  /** How far from the place it was taken — shown under the picture, not in a tooltip. */
+  distance: string;
   picked: boolean;
   onToggle: () => void;
 }
 
-function SuggestionTile({ url, alt, title, picked, onToggle }: TileProps): JSX.Element {
+function SuggestionTile({ url, alt, distance, picked, onToggle }: TileProps): JSX.Element {
+  // The distance used to be a `title` — hover only, so an iPad never showed
+  // it (forgejo#249). It is visible text now, and part of the button's name.
   return (
     <button
       type="button"
       aria-pressed={picked}
       onClick={onToggle}
-      title={title}
+      className="flex flex-col items-center"
       style={{
         padding: 0,
         borderRadius: 6,
@@ -167,6 +170,9 @@ function SuggestionTile({ url, alt, title, picked, onToggle }: TileProps): JSX.E
         loading="lazy"
         style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 5, display: "block" }}
       />
+      <span className="text-[10px] leading-4" style={{ color: "var(--text-muted)" }}>
+        {distance}
+      </span>
     </button>
   );
 }

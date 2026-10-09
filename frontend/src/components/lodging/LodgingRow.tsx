@@ -56,7 +56,7 @@ export const LODGING_COLUMN_LAYOUT: Record<
   nights: { min: 80, align: "end", mono: true, priority: 2 },
   rating: { min: 96, priority: 3 },
   spend: { min: 96, align: "end", mono: true, priority: 2 },
-  actions: { min: 80, align: "end" },
+  actions: { min: 112, align: "end" },
 };
 
 interface Props {
@@ -65,6 +65,10 @@ interface Props {
   onOpen: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  /** Opens the in-place location repair for a house without a pin (forgejo#228). */
+  onRepair?: () => void;
+  /** "Wieder hier übernachten" - a new stay at this house (forgejo#227). */
+  onRestay?: () => void;
   /** The visible columns, in order — the row renders exactly one cell each. */
   columns: readonly TableColumn[];
 }
@@ -75,6 +79,8 @@ export function LodgingRow({
   onOpen,
   onEdit,
   onDelete,
+  onRestay,
+  onRepair,
   columns,
 }: Props): JSX.Element {
   const { t } = useTranslation(["lodging", "common"]);
@@ -130,7 +136,7 @@ export function LodgingRow({
         {lifecycle ? (
           <StayStatusPill status={lifecycle} testId={`lodging-lifecycle-${l.id}`} />
         ) : null}
-        <LodgingStatusTag lodging={l} />
+        <LodgingStatusTag lodging={l} onRepair={onRepair} />
       </span>
     ),
     lastStay: day ? display.date(day, { timeZone: "UTC" }) : "—",
@@ -158,6 +164,14 @@ export function LodgingRow({
           testId={`lodging-edit-${l.id}`}
           onClick={onEdit}
         />
+        {onRestay && (
+          <RowActionButton
+            icon="duplicate"
+            label={t("lodging:restay.action")}
+            testId={`lodging-restay-${l.id}`}
+            onClick={onRestay}
+          />
+        )}
         <RowActionButton
           icon="delete"
           label={t("common:buttons.delete")}

@@ -40,6 +40,22 @@ const roadtripNights = registry.register(
         .boolean()
         .describe("False once any overnight station's length is not actually known"),
       placesSlept: z.number().int().describe("Distinct stays plus free stations"),
+      nightsByStyle: z
+        .object({
+          pitch: z.number().int().describe("Free stations — no accommodation record"),
+          campsite: z.number().int().describe("Linked stays at a house of type campsite"),
+          lodging: z.number().int().describe("Linked stays at any other house"),
+        })
+        .describe(
+          "The same nights by where they were slept (forgejo#260); the three add up to `nights`."
+        ),
+      unknownLengthStations: z
+        .number()
+        .int()
+        .describe(
+          "Overnight stations whose length is not known — the reason `nightsKnown` is false. " +
+            "Counted, never turned into a guessed number of nights."
+        ),
     })
     .openapi("RoadtripNights")
 );
@@ -254,7 +270,9 @@ registry.registerPath({
     "caller's own `placeId`; 404 for another account's place) or `via` (a route " +
     "correction with no date and possibly no name; 400 `VIA_POINT_ON_TIMELINE` for a " +
     "trip's timeline stop). A timeline stop " +
-    "dropped from the list goes back to its trip rather than being deleted.",
+    "dropped from the list goes back to its trip rather than being deleted. With " +
+    "`expectedStationIds` the write is refused with 409 `ROADTRIP_STATIONS_CHANGED` when " +
+    "the stored station set differs from the one the writer read.",
   tags: ["Roadtrips"],
   request: {
     params: idParams,
@@ -277,6 +295,12 @@ registry.registerPath({
     },
     400: { description: "Validation failed", content: errorContent },
     404: { description: "Roadtrip or stay not found", content: errorContent },
+    409: {
+      description:
+        "`ROADTRIP_STATIONS_CHANGED`: stations were added or removed since `expectedStationIds` " +
+        "was read; nothing was written",
+      content: errorContent,
+    },
   },
 });
 

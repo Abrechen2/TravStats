@@ -8,3 +8,6 @@ coverage
 .vscode
 .idea
 data/.cache/
+
+# Template engine v2 test cache (written by the template tests)
+.template-cache/

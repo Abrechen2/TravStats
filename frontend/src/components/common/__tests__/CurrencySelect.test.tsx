@@ -9,6 +9,13 @@ import { getCurrencyDisplayName } from "../../../lib/units";
 const FREQUENT = /currencySelect.frequent/i;
 
 describe("CurrencySelect", () => {
+  it("reaches the touch minimum on a coarse pointer, search box and list alike (forgejo#249)", () => {
+    render(<CurrencySelect value="EUR" onChange={vi.fn()} />);
+    const touch = "pointer-coarse:min-h-(--ts-size-touch-min)";
+    expect(screen.getByRole("searchbox").className).toContain(touch);
+    expect(screen.getByRole("combobox").className).toContain(touch);
+  });
+
   it("puts the user's own currencies first and finds the rest by search", async () => {
     render(<CurrencySelect value="EUR" onChange={vi.fn()} recent={["NOK", "EGP"]} />);
     const group = screen.getByRole("group", { name: FREQUENT });

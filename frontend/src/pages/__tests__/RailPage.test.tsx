@@ -39,12 +39,30 @@ vi.mock("../../components/import/adapters/railAdapter", () => ({
   useRailImportAdapter: () => ({ domain: "rail" }),
 }));
 vi.mock("../../components/Training/ConfirmModal", () => ({
-  default: ({ isOpen, onConfirm }: { isOpen: boolean; onConfirm: () => void }) =>
+  default: ({
+    isOpen,
+    onConfirm,
+    message,
+    confirmButtonClass,
+  }: {
+    isOpen: boolean;
+    onConfirm: () => void;
+    message: string;
+    confirmButtonClass?: string;
+  }) =>
     isOpen ? (
-      <button type="button" onClick={onConfirm}>
-        confirm-delete
-      </button>
+      <div>
+        <p data-testid="delete-message">{message}</p>
+        <button type="button" onClick={onConfirm} className={confirmButtonClass}>
+          confirm-delete
+        </button>
+      </div>
     ) : null,
+}));
+// The delete question counts the ride's originals (forgejo#250).
+const listForEntry = vi.fn();
+vi.mock("../../lib/api/documents", () => ({
+  documentsApi: { listForEntry: (...a: unknown[]) => listForEntry(...a) },
 }));
 
 const list = vi.fn();
@@ -101,6 +119,7 @@ const page = (
 
 function journey(over: Partial<RailJourney> = {}): RailJourney {
   return {
+    tightConnection: false,
     id: "j1",
     userId: "u1",
     operator: "DB Fernverkehr",
@@ -156,6 +175,7 @@ describe("RailPage", () => {
     remove.mockReset();
     addToast.mockReset();
     navigate.mockReset();
+    listForEntry.mockReset().mockResolvedValue([]);
     stats.mockReset().mockResolvedValue({ byYear: [{ year: 2025 }, { year: 2026 }] });
     localStorage.clear();
   });
@@ -240,6 +260,37 @@ describe("RailPage", () => {
     fireEvent.click(screen.getByText("rail:add"));
     expect(screen.getByTestId("rail-import-panel")).toHaveTextContent("rail");
     expect(screen.queryByTestId("rail-form")).toBeNull();
+  });
+
+  // forgejo#250: the question names the ride, the originals that go with it
+  // and what stays, behind the red button every delete uses.
+  it("names what goes and what stays, behind the red delete button", async () => {
+    listConnections.mockResolvedValue(
+      page([journey({ bookingId: "b1", trip: { id: "t1", name: "Paris", color: "#fff" } })])
+    );
+    listForEntry.mockResolvedValue([{ id: "d1" }, { id: "d2" }]);
+    renderPage();
+    await screen.findByTestId("rail-row-j1");
+    fireEvent.click(screen.getByRole("button", { name: "rail:delete" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("delete-message").textContent).toContain(
+        "documents:deleteCascadeNote/2"
+      )
+    );
+    const message = screen.getByTestId("delete-message").textContent ?? "";
+    expect(message).toContain("rail:deleteConfirmNamed");
+    expect(message).toContain("common:delete.survivors");
+    expect(listForEntry).toHaveBeenCalledWith({ type: "railJourney", id: "j1" });
+    expect(screen.getByText("confirm-delete")).toHaveClass("bg-[var(--danger)]");
+  });
+
+  it("offers the add chooser as the next step of an empty logbook", async () => {
+    listConnections.mockResolvedValue(page());
+    renderPage();
+    await screen.findByText("rail:empty");
+    // The header's button reads "+ rail:add"; this one is the empty state's.
+    fireEvent.click(screen.getByRole("button", { name: "rail:add" }));
+    expect(screen.getByTestId("rail-import-panel")).toHaveTextContent("rail");
   });
 
   it("deletes after confirmation and reloads the list", async () => {

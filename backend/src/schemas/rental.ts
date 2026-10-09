@@ -1,6 +1,7 @@
 import { z } from "./zod";
 import { currencyField } from "./lodging";
 import { partialForUpdate } from "./partialUpdate";
+import { isLocalDate } from "../shared/time/localDate";
 
 /**
  * Car rentals — spec docs/superpowers/specs/2026-10-01-rental-domain-design.md.
@@ -137,8 +138,18 @@ export const rentalStationSchema = z
 
 const foldField = z.enum(["earlier", "later"]).nullable().optional();
 
-/** The fold keys a rental write understands — see `strayFoldKey`. */
-export const RENTAL_FOLD_KEYS = ["pickupFold", "returnFold"] as const;
+/**
+ * The fold keys a rental write understands — see `strayFoldKey`. One per
+ * wall clock: the booked ends AND the actual hand-overs, because an actual
+ * return at 02:30 on the autumn night is two instants an hour apart just like
+ * a booked one. Each is read only beside its own clock; absent = the earlier.
+ */
+export const RENTAL_FOLD_KEYS = [
+  "pickupFold",
+  "returnFold",
+  "actualPickupFold",
+  "actualReturnFold",
+] as const;
 
 /**
  * A `…Fold` key the schema does not know. zod strips unknown keys, so a
@@ -152,6 +163,12 @@ export function strayFoldKey(body: unknown): string | null {
 }
 
 const money = z.number().min(0).max(10_000_000);
+
+/** A calendar day, `YYYY-MM-DD`, as a statement prints it — no clock, no zone. */
+const calendarDay = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "must be a day YYYY-MM-DD")
+  .refine((v) => isLocalDate(v), "is not a real day");
 
 const baseRentalSchema = z.object({
   provider: z.string().trim().min(1).max(100),
@@ -171,9 +188,14 @@ const baseRentalSchema = z.object({
   returnLocal: wallClock,
   pickupFold: foldField,
   returnFold: foldField,
-  /** What happened at the counter, when recorded; null clears it. */
+  /**
+   * What happened at the counter, when recorded; null clears it. A wall clock
+   * or a bare day (precision `day`), each on its own station's clock.
+   */
   actualPickupLocal: wallClock.nullable().optional(),
   actualReturnLocal: wallClock.nullable().optional(),
+  actualPickupFold: foldField,
+  actualReturnFold: foldField,
   vehicleClass: optionalText(80),
   acrissCode: z
     .string()
@@ -216,6 +238,16 @@ const baseRentalSchema = z.object({
    */
   finalAmount: money.nullable().optional(),
   finalCurrency: currencyField.nullable().optional(),
+  /**
+   * The deposit (forgejo#238): held amount and ITS currency, the day it was
+   * held and the day and amount it came back — less than held is a partial
+   * refund. Never a cost. Null clears one; absent leaves it.
+   */
+  depositAmount: money.nullable().optional(),
+  depositCurrency: currencyField.nullable().optional(),
+  depositPaidOn: calendarDay.nullable().optional(),
+  depositReturnedOn: calendarDay.nullable().optional(),
+  depositReturnedAmount: money.nullable().optional(),
   inclusions: z.array(z.enum(RENTAL_INCLUSIONS)).max(RENTAL_INCLUSIONS.length).optional(),
   arrivalFlightNumber: optionalText(12),
   status: z.enum(RENTAL_WRITE_STATUSES).default("scheduled"),

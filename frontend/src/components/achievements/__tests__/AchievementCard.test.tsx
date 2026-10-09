@@ -108,4 +108,34 @@ describe("AchievementCard", () => {
     expect(screen.getByText("???")).toBeInTheDocument();
     expect(screen.queryByTestId("achievement-last-held")).not.toBeInTheDocument();
   });
+
+  // forgejo#265: a badge for PLANNED travel says "Planung" on its face; a
+  // badge for travel that happened does not, and a mystery card gives nothing away.
+  it("marks a planning badge as planning, and only that", () => {
+    const planned = { ...base, code: "WANDERLUST", requirementType: "scheduled_count" };
+    const { unmount } = render(
+      <AchievementCard achievement={{ ...planned, isUnlocked: false, progress: 1 }} />
+    );
+    expect(screen.getByTestId("achievement-planning")).toHaveTextContent(
+      "achievements:planning.badge"
+    );
+    unmount();
+    render(<AchievementCard achievement={{ ...base, isUnlocked: false, progress: 1 }} />);
+    expect(screen.queryByTestId("achievement-planning")).toBeNull();
+  });
+
+  it("keeps a hidden planning badge's secret", () => {
+    render(
+      <AchievementCard
+        achievement={{
+          ...base,
+          requirementType: "scheduled_count",
+          isHidden: true,
+          isUnlocked: false,
+          progress: 0,
+        }}
+      />
+    );
+    expect(screen.queryByTestId("achievement-planning")).toBeNull();
+  });
 });

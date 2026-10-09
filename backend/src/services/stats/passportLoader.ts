@@ -20,11 +20,9 @@ import { getCachedAirports } from "../airportCache";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { allHomeAirports } from "../../utils/homeAirport";
 import { loadHomePeriods } from "../home/homeStore";
-import {
-  localWallClockOf,
-  normalizeFlightTimeUtc,
-  type FlightTimeSemantics,
-} from "../../utils/timezone";
+import { normalizeFlightTimeUtc, type FlightTimeSemantics } from "../../utils/timezone";
+import { departureDayOf } from "../../utils/stats/departureClock";
+import { profileZoneOf } from "../../shared/time/profileZone";
 import { countryThresholdFor } from "../countryThresholdResolver";
 import {
   FLIGHT_CLOCK_SELECT,
@@ -37,6 +35,8 @@ import { countableCruiseWhere } from "../../shared/cruiseCounting";
 import { classifyVisit } from "../../shared/placeCounting";
 import { loadRoadtripStations } from "./roadtripEvidenceLoader";
 import { loadRailEnds } from "./railEvidenceLoader";
+import { loadBusEnds } from "./busEvidence";
+import { loadVisibleDomains } from "../domainVisibility";
 
 /**
  * The airport codes a passport-shaped flight row touches, deduplicated.
@@ -143,6 +143,8 @@ export type PassportLoaderFlight = Prisma.FlightGetPayload<{
  */
 export interface PassportSources {
   rail?: boolean;
+  /** Omitted: read while the user sees the bus domain (its beta switch included). */
+  bus?: boolean;
   roadtrip?: boolean;
   place?: boolean;
   track?: boolean;
@@ -157,6 +159,9 @@ export async function loadPassport(
   const readRoadtrip = sources.roadtrip ?? true;
   const readPlace = sources.place ?? true;
   const readTrack = sources.track ?? true;
+  // Bus is the one source the page itself gates (forgejo#265): a ride proves a
+  // country only while the bus domain is visible to this user.
+  const readBus = sources.bus ?? (await loadVisibleDomains(userId)).includes("bus");
   // One clock for the whole load, so two evidence sources cannot disagree
   // about whether a visit has happened yet.
   const now = new Date();
@@ -189,13 +194,17 @@ export async function loadPassport(
    * both read the same `getCachedAirports` cache, and widening that helper would
    * touch every "when did I fly" figure on the server for one new column here.
    */
-  const [dated, tzMap] = await Promise.all([withDepartureClock(flights), buildTzMap(flights)]);
+  const [dated, tzMap, profile] = await Promise.all([
+    withDepartureClock(flights),
+    buildTzMap(flights),
+    // "This year" for `isNew` is the user's own year (ADR 0002 D4), now that
+    // every stamp is dated on a local day rather than a UTC one (forgejo#273).
+    profileZoneOf(userId),
+  ]);
 
   const passportFlights = dated.map((f) => ({
     ...f,
-    localDay: f.departureTime
-      ? localWallClockOf(f.departureTime, f.depTimezone, f.depTimeSemantics).date
-      : null,
+    localDay: departureDayOf(f),
     departureInstant: realInstant(f.departureTime, f.depTimeSemantics, f.depTimezone),
     arrivalInstant: realInstant(
       f.arrivalTime,
@@ -213,7 +222,7 @@ export async function loadPassport(
    * "Deutschland" and "Germany" are one country and only the code knows that.
    */
   // prettier-ignore
-  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, countryDays, threshold, roadtripStations, railEnds] = await Promise.all([
+  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, countryDays, threshold, roadtripStations, railEnds, busEnds] = await Promise.all([
     loadAirportCountries(passportAirportCodes(flights)),
     prisma.cruiseStop.findMany({
       where: {
@@ -307,6 +316,7 @@ export async function loadPassport(
     // Station ends of completed train rides — counted by the overview, and
     // until 2.7 by nothing here.
     readRail ? loadRailEnds(userId) : [],
+    readBus ? loadBusEnds(userId) : [],
   ]);
 
   return buildPassport(
@@ -351,6 +361,8 @@ export async function loadPassport(
       partialWindow: row.partialWindow,
     })),
     roadtripStations,
-    railEnds
+    railEnds,
+    profile.zone,
+    busEnds
   );
 }

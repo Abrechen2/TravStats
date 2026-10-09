@@ -88,9 +88,9 @@
     "noLocation": "No location on file",
     "setLocationNow": "Find location now",
     "deleteConfirmTitle": "Delete lodging?",
-    "deleteConfirmMessage": "“{{name}}” will be permanently deleted, along with its {{count}} stays. Trips it belongs to are kept.",
-    "deleteConfirmMessage_one": "“{{name}}” will be permanently deleted, along with its one stay. Trips it belongs to are kept.",
-    "deleteConfirmMessage_other": "“{{name}}” will be permanently deleted, along with its {{count}} stays. Trips it belongs to are kept.",
+    "deleteConfirmMessage": "“{{name}}” will be permanently deleted, along with its {{count}} stays.",
+    "deleteConfirmMessage_one": "“{{name}}” will be permanently deleted, along with its one stay.",
+    "deleteConfirmMessage_other": "“{{name}}” will be permanently deleted, along with its {{count}} stays.",
     "deleteSuccess": "Lodging deleted",
     "deleteError": "Could not delete lodging",
     "loadError": "The stay could not be loaded.",
@@ -98,7 +98,11 @@
     "backToLogbook": "Logbook · Stays",
     "location": "Location",
     "nights": "Nights",
-    "stayNotFound": "This stay no longer exists at this lodging."
+    "stayNotFound": "This stay no longer exists at this lodging.",
+    "survivorChain": "chain “{{name}}”",
+    "deletePhotosNote_one": "Plus 1 photo of the house, deleted with it.",
+    "deletePhotosNote_other": "Plus {{count}} photos of the house, deleted with it.",
+    "survivorTripsUnnamed": "linked trips"
   },
   "field": {
     "name": "Name",
@@ -185,7 +189,14 @@
     "createTitle": "New lodging",
     "editTitle": "Edit lodging",
     "saveError": "Could not save lodging",
-    "searchLabel": "Search accommodation"
+    "searchLabel": "Search accommodation",
+    "missing": {
+      "coordinates": "valid coordinates"
+    },
+    "errors": {
+      "stars": "Stars: a whole number from 1 to 5.",
+      "website": "A web address starts with http:// or https://."
+    }
   },
   "fx": {
     "source": "ECB",
@@ -227,7 +238,6 @@
     "createTitle": "New stay",
     "editTitle": "Edit stay",
     "datesSection": "Dates",
-    "datesRequired": "Please provide check-in and check-out dates",
     "ratingsSection": "Ratings",
     "priceSection": "Price",
     "amenitiesSection": "Amenities & notes",
@@ -243,6 +253,11 @@
       "both": "Use the trip's dates: {{from}} – {{to}}",
       "checkIn": "Trip start as check-in: {{date}}",
       "checkOut": "Trip end as check-out: {{date}}"
+    },
+    "errors": {
+      "checkIn": "Please enter the check-in date.",
+      "checkOut": "Please enter the check-out date.",
+      "checkOutBeforeCheckIn": "The check-out is before the check-in."
     }
   },
   "membership": {
@@ -513,8 +528,8 @@
       "undated_other": "{{count}} stays without a date are not included here",
       "longestStreak": "Longest run away",
       "longestStreakDesc": "{{start}} to {{end}}",
-      "longestGap": "Longest run at home",
-      "longestGapDesc": "Between your first and your last recorded night",
+      "longestGap": "Longest run without a stay",
+      "longestGapDesc": "Nights with no recorded stay between your first and your last – not necessarily at home",
       "busiestMonth": "Busiest month",
       "busiestMonthDesc": "Across all years combined",
       "byWeekday": "Nights by weekday",
@@ -592,6 +607,120 @@
       "staysCount_one": "{{count}} stay",
       "noHotels": "No completed stay yet.",
       "more": "+ {{count}} more"
+    },
+    "insights": {
+      "title": "Insights",
+      "loadFailed": "The insights could not be loaded.",
+      "lifetime": "across all years",
+      "nights_one": "{{count}} night",
+      "nights_other": "{{count}} nights",
+      "sleepStyle": {
+        "title": "How you sleep",
+        "byType": "Share of nights by kind of accommodation",
+        "empty": "Appears once a stay with dates or a number of nights is over.",
+        "help": {
+          "unit": "One night. A kind's share is its nights divided by all known nights of the period.",
+          "time": "A night counts in the year its evening falls in, on the accommodation's local date.",
+          "source": "Your stays and the kind of each accommodation (hotel, apartment, campsite …).",
+          "coverage": "{{unknown}} stays with no known number of nights and {{unplaced}} nights without a year are in no share.",
+          "exclusions": "Stays whose check-out is still ahead, and cancelled ones, do not count."
+        }
+      },
+      "week": {
+        "title": "Weekends and weekdays",
+        "weekend": "Weekend nights",
+        "weekday": "Weekday nights",
+        "description": "Fri–Sat and Sat–Sun nights against all others",
+        "empty": "Appears with the first past stay that has exact arrival and departure days.",
+        "help": {
+          "unit": "One night. A weekend night is Friday to Saturday or Saturday to Sunday; every other one is a weekday night.",
+          "time": "The weekday is the accommodation's own (its local date of the evening), not your device's. Seasons follow the northern meteorological calendar.",
+          "source": "Stays with exact arrival and departure days.",
+          "coverage": "{{notWalkable}} nights recorded only to the month or year, or undated, have no weekday and are missing here.",
+          "exclusions": "Stays whose check-out is still ahead, and cancelled ones, do not count. Nothing is estimated."
+        }
+      },
+      "business": {
+        "title": "Nights on business trips",
+        "description": "Only trips in the “Business” category",
+        "empty": "Appears once stays belong to a trip whose category is “Business”.",
+        "help": {
+          "unit": "One night.",
+          "time": "Year of the night, on the accommodation's local date.",
+          "source": "Stays whose trip is explicitly categorised as “Business”.",
+          "coverage": "{{unlabelled}} nights are on stays with no trip or no trip category — nothing is claimed about them.",
+          "exclusions": "Nothing is inferred from the weekday, the chain or the price: a Tuesday night is a holiday just as often."
+        }
+      },
+      "revisits": {
+        "title": "Coming back to houses",
+        "description": "Houses you stayed at in two or more calendar years",
+        "empty": "Appears once you come back to a house in a second calendar year.",
+        "longestGap": "Longest break: {{days}} days ({{from}} → {{to}}) —",
+        "help": {
+          "unit": "One house (one accommodation), not one stay.",
+          "time": "Year of the check-in on the local date. The break runs from a check-out to the next check-in at the same house.",
+          "source": "Your stays, per accommodation.",
+          "coverage": "You visited {{returned}} houses more than once. Only stays with exact arrival and departure days measure a break.",
+          "exclusions": "A stay recorded only to the month or year proves the year but no break in days; an undated one proves nothing. Planned stays do not count."
+        }
+      },
+      "tripBases": {
+        "title": "Changes of accommodation per trip",
+        "value_one": "{{count}} change",
+        "value_other": "{{count}} changes",
+        "description_one": "Median over {{count}} completed trip",
+        "description_other": "Median over {{count}} completed trips",
+        "houses_one": "{{count}} house",
+        "houses_other": "{{count}} houses",
+        "changes_one": "{{count}} change",
+        "changes_other": "{{count}} changes",
+        "overlap_one": "{{count}} night booked twice",
+        "overlap_other": "{{count}} nights booked twice",
+        "longestBase_one": "Longest base without a change: {{count}} night on “{{trip}}” —",
+        "longestBase_other": "Longest base without a change: {{count}} nights on “{{trip}}” —",
+        "empty": "Appears once stays with exact arrival and departure days belong to a trip.",
+        "help": {
+          "unit": "A change is a move to another house within the same trip. The first arrival is not a change.",
+          "time": "Order by the local check-in date. Touching stays at the same house are one base.",
+          "source": "Stays that belong to a trip.",
+          "coverage": "{{withoutTrip}} stays with no trip and {{undated}} trip stays without exact dates are missing here.",
+          "exclusions": "Two bookings holding the same night at different houses are not read as a move there and back; that night is shown as “booked twice”."
+        }
+      },
+      "prices": {
+        "title": "Price changes at the same house",
+        "value_one": "{{count}} comparison",
+        "value_other": "{{count}} comparisons",
+        "row_one": "{{first}} ({{firstDate}}) → {{last}} ({{lastDate}}), {{change}} % · {{count}} stay",
+        "row_other": "{{first}} ({{firstDate}}) → {{last}} ({{lastDate}}), {{change}} % · {{count}} stays",
+        "thin": "thin sample",
+        "empty": "Appears once you have recorded the same house with the same room and board twice, with price and number of nights.",
+        "help": {
+          "unit": "Price per night: the total price divided by the stay's nights.",
+          "time": "First against last stay, dated as precisely as recorded.",
+          "source": "Total price, currency, room category and board of your stays.",
+          "coverage": "{{single}} stays with nothing to compare against, {{unpriced}} without a price or number of nights and {{undated}} undated ones are missing here.",
+          "exclusions": "Currencies are never converted or mixed — each comparison has exactly one. Award nights ({{award}}) are not a price of 0 and are left out. Below three stays a comparison is marked as a thin sample."
+        }
+      },
+      "calendar": {
+        "title": "Months with a night away",
+        "value_one": "{{count}} of 12 months",
+        "value_other": "{{count}} of 12 months",
+        "bestYear": "Best year: {{year}}",
+        "fullYears": "Every month covered: {{years}}",
+        "filled": "with a night away",
+        "open": "no night recorded",
+        "empty": "Appears with the first past stay recorded to the day or the month.",
+        "help": {
+          "unit": "A calendar month with at least one recorded night.",
+          "time": "The night's local date. A stay recorded only to the month covers that month.",
+          "source": "Your stays.",
+          "coverage": "Stays recorded only to the year, or undated, cover no month.",
+          "exclusions": "Missing months are never filled in or estimated. Planned stays do not count."
+        }
+      }
     }
   },
   "period": {
@@ -617,5 +746,70 @@
   },
   "photos": {
     "title": "Photos"
+  },
+  "stayView": {
+    "toggle": {
+      "label": "View",
+      "houses": "Lodgings",
+      "stays": "Stays"
+    },
+    "title": "Stays",
+    "columns": {
+      "period": "Period",
+      "house": "Lodging",
+      "trip": "Trip",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "filter": {
+      "from": "From",
+      "to": "To",
+      "trip": "Trip",
+      "allTrips": "All trips",
+      "invalidWindow": "The period ends before it begins.",
+      "tripsFailed": "The trips could not be loaded – the trip filter is empty because of that."
+    },
+    "room": "Room {{room}}",
+    "reference": "Booking {{reference}}",
+    "openHouse": "Open the lodging {{name}}",
+    "loadError": "Stays could not be loaded",
+    "empty": "No stays recorded yet",
+    "emptyHint": "A stay belongs to a lodging: add a lodging first or read in a booking.",
+    "footer": "Latest check-in first; stays without a date come last."
+  },
+  "conflict": {
+    "title": "These days overlap other stays",
+    "titleDuplicate": "This lodging already has a stay for these days – this may be a duplicate.",
+    "sameHouse": "this lodging",
+    "rule": "A check-out and a check-in on the same day do not count as an overlap. Two rooms or two lodgings on the same night are allowed – you only confirm it.",
+    "proceed": "Save as it is, on purpose",
+    "changeDates": "Change the dates",
+    "unchecked": "Overlaps could not be checked.",
+    "saveAnyway": "Save anyway",
+    "retry": "Check again",
+    "incomplete": "Not every stay in this period could be compared – check the dates yourself.",
+    "incompleteMore": "This list may not be complete."
+  },
+  "restay": {
+    "action": "Stay here again",
+    "intro": "A new stay at “{{name}}”. Enter check-in, check-out, room, booking reference and price afresh; the earlier stay stays as it is."
+  },
+  "repair": {
+    "title": "Add the location",
+    "intro": "“{{name}}” has no point on the map. Search the address again or set the point yourself – you see the result before you take it. Taking it fills empty address fields from the new position, and a country field that names no country is replaced by the position's country. The name and everything else stay.",
+    "queryLabel": "Search text",
+    "search": "Search the address again",
+    "searching": "Searching …",
+    "searchFailed": "The place search is not reachable right now.",
+    "noResults": "Nothing was found. Adjust the search text or set the point on the map.",
+    "resultsLabel": "Places found – pick the right one",
+    "setOnMap": "Set the point on the map",
+    "pointOnMap": "Point on the map",
+    "previewTitle": "Preview of the new location",
+    "missing": "pick a place found or set a point",
+    "take": "Take this location",
+    "saveError": "The location could not be saved.",
+    "saved": "Location saved",
+    "openFor": "Add the location: {{issue}}"
   }
 }

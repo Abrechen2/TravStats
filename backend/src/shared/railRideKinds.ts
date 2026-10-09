@@ -13,6 +13,7 @@
  */
 
 import { rideHasClocks } from "./railClock";
+import { localDay } from "./time/instant";
 
 /**
  * Categories whose trains run at 200 km/h or more on their main lines. Matched
@@ -82,7 +83,9 @@ export function isHighSpeedRide(ride: Pick<RailRideKindInput, "trainCategory">):
   return key !== null && HIGH_SPEED_CATEGORIES.has(key);
 }
 
-export function isNightTrainRide(ride: RailRideKindInput): boolean {
+export function isNightTrainRide(
+  ride: Omit<RailRideKindInput, "depCountry" | "arrCountry">
+): boolean {
   if (ride.travelClass && NIGHT_CLASSES.has(ride.travelClass)) return true;
   const key = categoryKey(ride.trainCategory);
   if (key !== null && NIGHT_TRAIN_CATEGORIES.has(key)) return true;
@@ -93,6 +96,51 @@ export function isNightTrainRide(ride: RailRideKindInput): boolean {
   if (!rideHasClocks(ride)) return false;
   const hours = (ride.arrivalTime.getTime() - ride.departureTime.getTime()) / 3_600_000;
   return ride.arrDayKey > ride.depDayKey && hours >= OVERNIGHT_MIN_HOURS;
+}
+
+/** What `nightTrainNights` reads: the ride's kind, its two instants and their stations' zones. */
+export interface NightTrainFacts {
+  trainCategory: string | null;
+  travelClass: string | null;
+  departureTime: Date;
+  arrivalTime: Date | null;
+  depTimezone: string | null;
+  arrTimezone: string | null;
+  depPrecision: string | null;
+  arrPrecision: string | null;
+}
+
+/**
+ * The nights slept on a night train, as `YYYY-MM-DD` night-starting days on
+ * the STATIONS' calendars: from the departure day (inclusive) to the arrival
+ * day (exclusive) — Wien 22:58 on the 31st to Hamburg 09:00 on the 1st is the
+ * night of the 31st, a night of the old year (forgejo#266).
+ *
+ * `[]` for a ride that is not a night train (`isNightTrainRide`), or one that
+ * arrives on its departure day. `null` for a night train whose arrival day is
+ * unknown: a night was slept on board, and no calendar can hold it. A
+ * clockless ride counts by its days — a sleeper booked for the 5th to the 6th
+ * is the night of the 5th — but only when its class or category says it is a
+ * night train; by the clock alone it never is (`isNightTrainRide`).
+ *
+ * Which rides count at all stays `railCounting`'s question (completed only).
+ */
+export function nightTrainNights(ride: NightTrainFacts): string[] | null {
+  // A station with no zone stored its wall clock as UTC (rail's abstention),
+  // so UTC is the honest way back — `railCounting.stationDayKey`'s rule.
+  const depDayKey = localDay(ride.departureTime, ride.depTimezone ?? "UTC");
+  const arrDayKey = ride.arrivalTime ? localDay(ride.arrivalTime, ride.arrTimezone ?? "UTC") : null;
+  if (!isNightTrainRide({ ...ride, depDayKey, arrDayKey })) return [];
+  if (arrDayKey === null) return null;
+  const nights: string[] = [];
+  for (
+    let cursor = Date.parse(`${depDayKey}T00:00:00Z`);
+    cursor < Date.parse(`${arrDayKey}T00:00:00Z`);
+    cursor += 86_400_000
+  ) {
+    nights.push(new Date(cursor).toISOString().slice(0, 10));
+  }
+  return nights;
 }
 
 /**

@@ -33,7 +33,13 @@
   "onTime": "pünktlich",
   "edit": "Bearbeiten",
   "delete": "Löschen",
-  "deleteConfirm": "Diese Fahrt wirklich löschen?",
+  "deleteConfirmNamed": "Die Fahrt {{route}} wirklich löschen?",
+  "deleteSurvivors": {
+    "trip": "Reise „{{name}}“",
+    "otherLegs_one": "{{count}} weitere Fahrt derselben Buchung",
+    "otherLegs_other": "{{count}} weitere Fahrten derselben Buchung",
+    "bookingLegs": "ggf. andere Fahrten derselben Buchung"
+  },
   "deleted": "Fahrt gelöscht",
   "deleteError": "Die Fahrt konnte nicht gelöscht werden.",
   "saved": "Fahrt gespeichert",
@@ -68,6 +74,8 @@
     "departureTime": "Abfahrt (Ortszeit am Bahnhof)",
     "arrivalTime": "Ankunft (Ortszeit am Bahnhof)",
     "timeHint": "Die Uhrzeit, die auf dem Ticket steht. Die Zeitzone ergibt sich aus dem Bahnhof.",
+    "dayOnly": "Nur das Datum ist bekannt",
+    "delayNeedsClock": "Eine Verspätung braucht die Uhrzeiten der Fahrt.",
     "distance": "Entfernung in km",
     "distanceHint": "Leer lassen: TravStats misst entlang der von Transitous übernommenen Strecke, sonst die Luftlinie. Eintragen, wenn das Ticket die Strecke nennt.",
     "seat": "Platz",
@@ -95,7 +103,14 @@
       "invalidField": "Die Angabe „{{field}}“ wurde nicht angenommen. Bitte prüf sie.",
       "invalid": "Eine Angabe wurde nicht angenommen. Bitte prüf die Felder."
     },
-    "suggestionsFailed": "Vorschläge aus deinen bisherigen Fahrten konnten nicht geladen werden — das Formular funktioniert trotzdem."
+    "suggestionsFailed": "Vorschläge aus deinen bisherigen Fahrten konnten nicht geladen werden — das Formular funktioniert trotzdem.",
+    "missing": {
+      "depCoordinates": "gültige Koordinaten des Abfahrtsbahnhofs",
+      "arrCoordinates": "gültige Koordinaten des Ankunftsbahnhofs",
+      "departureTime": "Abfahrtszeit",
+      "depName": "Name des Abfahrtsbahnhofs",
+      "arrName": "Name des Ankunftsbahnhofs"
+    }
   },
   "tracedLine": "entlang der Strecke, Transitous",
   "roadtripLine": "entlang der Roadtrip-Route",
@@ -194,8 +209,6 @@
     "trainsLabel_other": "Züge",
     "totalDuration": "Gesamtdauer",
     "legs": "Züge dieser Verbindung",
-    "transfer": "Umstieg in {{station}} · {{wait}} Aufenthalt",
-    "transferUnknown": "Umstieg in {{station}}",
     "whole": "Ganze Verbindung ansehen: {{route}}",
     "loadError": "Die Verbindung konnte nicht geladen werden.",
     "notFound": "Diese Verbindung gibt es nicht (mehr)."
@@ -243,7 +256,10 @@
       "rankings": "Ranglisten",
       "delays": "Verspätungen",
       "records": "Rekorde",
-      "years": "Fahrten pro Jahr"
+      "years": "Fahrten pro Jahr",
+      "journeys": "Bahnreisen und Umstiege",
+      "connections": "Verbindungen",
+      "punctuality": "Pünktlichkeit"
     },
     "nightTrains": "Nachtzüge",
     "nightTrainsDesc": "Schlaf- oder Liegewagen, Nachtzug-Gattung oder über Nacht unterwegs",
@@ -252,7 +268,38 @@
     "crossBorder": "Grenzüberschreitend",
     "crossBorderDesc": "Abfahrt und Ankunft in verschiedenen Ländern",
     "operatorsCount": "Bahngesellschaften",
-    "operatorsCountDesc": "verschiedene, Schreibweisen zusammengefasst"
+    "operatorsCountDesc": "verschiedene, Schreibweisen zusammengefasst",
+    "journeysLinked": "Bahnreisen",
+    "journeysLinkedDesc_one": "davon {{count}} mit Umstieg",
+    "journeysLinkedDesc_other": "davon {{count}} mit Umstieg",
+    "transfers": "Umstiegszeit im Schnitt",
+    "transfersDesc_one": "{{count}} gemessener Umstieg · kürzester {{shortest}}, längster {{longest}}",
+    "transfersDesc_other": "{{count}} gemessene Umstiege · kürzester {{shortest}}, längster {{longest}}",
+    "transfersNone": "Kein verknüpfter Umstieg erfasst — Umstiege zählen nur zwischen Fahrten derselben Buchung.",
+    "minutesValue": "{{minutes}} min",
+    "nightNights": "Nächte im Nachtzug",
+    "nightNightsDesc": "an Bord geschlafen, nach dem Kalender der Bahnhöfe",
+    "nightNightsUndated_one": "dazu {{count}} Nachtzug ohne bekannten Ankunftstag",
+    "nightNightsUndated_other": "dazu {{count}} Nachtzüge ohne bekannten Ankunftstag",
+    "newConnections": "Neue Verbindungen",
+    "newConnectionsDesc": "zum ersten Mal gefahren, Hin- und Rückrichtung zusammen",
+    "favouriteConnections": "Lieblingsverbindungen",
+    "noFavouriteConnections": "Noch keine Verbindung mehr als einmal gefahren.",
+    "newConnectionsByYear": "Neue Verbindungen pro Jahr",
+    "noNewConnections": "Keine Verbindung mit zwei bekannten Bahnhöfen.",
+    "punctualityByOperator": "Pünktlichkeit nach Bahngesellschaft",
+    "punctualityByConnection": "Pünktlichkeit nach Verbindung",
+    "punctualityHint_one": "{{count}} gemessene Fahrt · Ø {{average}} min",
+    "punctualityHint_other": "{{count}} gemessene Fahrten · Ø {{average}} min",
+    "noPunctuality": "Bei keiner Fahrt mit Uhrzeit ist eine Verspätung erfasst.",
+    "help": {
+      "journeys": "Zähleinheit ist die Reise, nicht der Zug: Fahrten derselben Buchung, die am selben Bahnhof innerhalb von vier Stunden aneinander anschließen, sind eine Reise. Eine Fahrt zurück zu einem Bahnhof, an dem die Reise schon war, beginnt eine neue (Rückfahrt). Fahrten ohne gemeinsame Buchung werden nie verbunden. Gezählt werden nur abgeschlossene Fahrten, im Jahr der Abfahrt nach dem Kalender des Abfahrtsbahnhofs.",
+      "transfers": "Die Wartezeit zwischen Ankunft und nächster Abfahrt innerhalb einer Reise, aus den minutengenauen Zeiten beider Fahrten. Fahrten mit reinem Datum oder ohne Verknüpfung haben keinen messbaren Umstieg und bleiben draußen.",
+      "nights": "Eine Nacht je Kalendernacht an Bord eines Nachtzugs (Schlaf- oder Liegewagen, Nachtzug-Gattung, oder über Nacht mindestens sechs Stunden unterwegs), nach dem Kalender der Bahnhöfe. In der Nachtbilanz der Übersicht zählt eine Nacht, für die auch eine Unterkunft erfasst ist, bei der Unterkunft — hier steht sie trotzdem.",
+      "newConnections": "Eine Verbindung ist das Bahnhofspaar, beide Richtungen zusammen. Als neu zählt sie in dem Jahr, in dem die erste abgeschlossene Fahrt darauf abfuhr; ein Bahnhof gilt über seinen Code, sonst über seinen Namen als derselbe.",
+      "favourites": "Verbindungen, die mindestens zweimal gefahren wurden, beide Richtungen zusammen. Der Name führt zur jüngsten Fahrt.",
+      "punctuality": "Der Anteil der Fahrten, die ohne Verspätung ankamen, unter den Fahrten mit erfasster Verspätung und minutengenauen Zeiten. Eine Fahrt ohne erfasste Verspätung zählt nie als pünktlich, sie bleibt außerhalb der Stichprobe. Die Zahl unter jedem Balken nennt die Stichprobe und die mittlere Verspätung; frühe Ankünfte zählen negativ."
+    }
   },
   "roadtripConversion": {
     "title": "Als Bahnfahrten übernehmen",
@@ -363,5 +410,31 @@
     "stations_other": "Bahnhöfe",
     "withoutOperator_one": "{{count}} ohne Betreiber",
     "withoutOperator_other": "{{count}} ohne Betreiber"
+  },
+  "transfer": {
+    "wait": "Umstieg in {{station}} · {{wait}} Umstiegszeit",
+    "unknown": "Umstieg in {{station}} · Umstiegszeit unbekannt",
+    "unknownWhy": "Eine der beiden Zeiten fehlt oder ist nur als Datum bekannt.",
+    "conflict": "Zeitkonflikt: Der nächste Zug fährt {{wait}} vor der Ankunft dieses Zugs ab.",
+    "stationChange": "Bahnhofswechsel: {{from}} → {{to}} · ca. {{distance}} Luftlinie",
+    "shortHint": "Hinweis: weniger als {{minutes}} Min. zum Umsteigen. Ob der Anschluss klappt, kann TravStats nicht wissen.",
+    "separate": "Eigene Fahrt – kein Umstieg",
+    "markTight": "Als knapp markiert",
+    "markFailed": "Die Markierung konnte nicht gespeichert werden. Bitte versuch es erneut.",
+    "orderUnknown": "Umstieg unbekannt: Eine Fahrt dieses Tages ist nur mit Datum erfasst, daher ist die Reihenfolge der Züge nicht bekannt.",
+    "stationUnconfirmed": "Bahnhofswechsel? {{from}} → {{to}}: anderer Bahnhofsname – Lage unbekannt",
+    "distanceM": "{{value}} m",
+    "distanceKm": "{{value}} km"
+  },
+  "connectionView": {
+    "coach": "Wagen {{coach}}",
+    "seat": "Platz {{seat}}",
+    "noReservation": "keine Reservierung erfasst",
+    "reference": "Auftragsnummer {{reference}}",
+    "documents": "Dokumente:",
+    "noDocuments": "Keine Dokumente abgelegt",
+    "documentsLoading": "Dokumente werden geladen …",
+    "documentsFailed": "Die Dokumente dieser Fahrt konnten nicht geladen werden.",
+    "documentsBelow": "Dokumente dieser Fahrt: im Abschnitt „Dokumente“ weiter unten."
   }
 }

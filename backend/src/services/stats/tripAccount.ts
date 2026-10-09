@@ -3,21 +3,29 @@
  *
  * Pure — no I/O, no Prisma. The caller loads the rows.
  *
- * ON MONEY: amounts are reported PER CURRENCY and never summed across
- * currencies. Only lodging stays carry an FX snapshot (`totalPriceBase` +
- * `fxRate` + `fxSource`, taken at the check-in day's rate); `Flight.price` and
- * `Cruise.price` carry an amount and a currency code and nothing else. A single
- * "this trip cost X" figure would therefore have to invent a rate for two of
- * the three domains, at some date nobody recorded. Until flights and cruises
- * get the same snapshot treatment, "1.240 EUR + 320 CHF" is the honest answer
- * and one number would be a fabricated one. Expenses (forgejo#140) carry no
- * snapshot either and join the per-currency spend the same way.
+ * ON MONEY: what an entry costs is `shared/tripCost.ts`'s rule, the same one
+ * the "most expensive trip" superlative ranks on (forgejo#274) — this file
+ * only lays the result out. Amounts are reported PER CURRENCY and never
+ * summed across currencies: a single "this trip cost X" would need a rate for
+ * every amount without a snapshot, at a date nobody recorded, so
+ * "1.240 EUR + 320 CHF" is the honest answer. `unpricedEntries` says when the
+ * figure is a lower bound because an entry carries no price at all.
  */
-import { flightCostShare, type CostFlight } from "../../utils/stats/dedupedCost";
+import { tripCostItems, tripSpend, type TripCostInput } from "../../shared/tripCost";
 import { resolveStayTiming } from "../../shared/lodgingTiming";
+import { nightTrainNights, type NightTrainFacts } from "../../shared/railRideKinds";
+import { nightBusNights, type BusNightFacts } from "../../shared/busRideKinds";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * A trip: its cost inputs (`cost`, the rule's own shape, already through the
+ * user's domain gate) and, apart, the dated rows coverage reads — loaded in
+ * one pass through the same gate, so the money and the days cannot describe
+ * different entries. They are kept apart because the coverage rows are a
+ * superset in shape only: pricing them instead of `cost` once let ungated
+ * rows back into a total (review of forgejo#274, I1).
+ */
 export interface TripAccountInput {
   id: string;
   name: string;
@@ -28,41 +36,27 @@ export interface TripAccountInput {
   tags: string[];
   journalEntries: { mood: string | null; weather: string | null }[];
   photoCount: number;
+  cost: TripCostInput;
   stays: {
     status: string;
     checkIn: Date | null;
     checkOut: Date | null;
     datePrecision: string;
     nights: number | null;
-    totalPrice: number | null;
-    currency: string | null;
-    totalPriceBase: number | null;
-    fxBaseCurrency: string | null;
   }[];
-  cruises: {
-    status: string;
-    startDate: Date | null;
-    endDate: Date | null;
-    price: number | null;
-    currency: string | null;
-  }[];
+  cruises: { status: string; startDate: Date | null; endDate: Date | null }[];
+  flights: { status: string; departureTime: Date | null; arrivalTime: Date | null }[];
   /**
-   * Costs follow `flightCostShare`: price PLUS taxes and fees, and a booking
-   * shared by several segments counted once. This used to read `price` alone,
-   * so two segments on one 300 EUR booking contributed nothing at all and a
-   * 100 + 20 + 10 flight was reported as 100 (AUD-080).
+   * A night train covers the nights it ran through (forgejo#266). Like every
+   * coverage row here it counts unless cancelled — a planned trip's booked
+   * sleeper covers its night as a booked stay does — while the night account
+   * counts completed rides only (`railCounting`), as it counts only stays
+   * that are over. Coverage asks "is this night planned for", the account
+   * "where was it spent".
    */
-  flights: (CostFlight & {
-    status: string;
-    departureTime: Date | null;
-    arrivalTime: Date | null;
-  })[];
-  /**
-   * Ferry, toll, pitch, fuel (forgejo#140): the trip's trip-wide expenses and
-   * those of its sections. Money only — an expense covers no night — and with
-   * no FX snapshot, so it reaches `spendByCurrency` alone.
-   */
-  expenses: { amount: number; currency: string }[];
+  rail: ({ status: string } & NightTrainFacts)[];
+  /** A night bus covers its night likewise (forgejo#263). Optional for callers before bus. */
+  bus?: ({ status: string } & BusNightFacts)[];
 }
 
 // Published by /stats/travel-account (forgejo#52).
@@ -71,18 +65,6 @@ import type { TripAccountRow, TripAccount } from "../../schemas/statsDomains";
 
 function dayKey(d: Date): number {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
-}
-
-function addAmount(
-  into: Record<string, number>,
-  currency: string | null | undefined,
-  amount: number | null | undefined
-): void {
-  // Nullish, not just null: a row that simply does not carry the field yields
-  // `undefined`, which slipped past a `=== null` check and produced a bucket
-  // literally keyed "undefined" holding NaN.
-  if (currency == null || amount == null) return;
-  into[currency] = Math.round(((into[currency] ?? 0) + amount) * 100) / 100;
 }
 
 function rank(counts: Map<string, number>): { key: string; count: number }[] {
@@ -100,16 +82,13 @@ export function buildTripAccount(trips: TripAccountInput[]): TripAccount {
   let journalEntries = 0;
 
   for (const trip of trips) {
-    const spendByCurrency: Record<string, number> = {};
-    const spendBaseByCurrency: Record<string, number> = {};
+    const { spendByCurrency, spendBaseByCurrency, unpricedEntries } = tripSpend(
+      tripCostItems(trip.cost)
+    );
     const covered = new Set<number>();
 
     for (const stay of trip.stays) {
       if (stay.status === "cancelled") continue;
-      addAmount(spendByCurrency, stay.currency, stay.totalPrice);
-      if (stay.totalPriceBase !== null && stay.fxBaseCurrency !== null) {
-        addAmount(spendBaseByCurrency, stay.fxBaseCurrency, stay.totalPriceBase);
-      }
       // Coverage is about WHICH days are accounted for, so an undated stay
       // cannot cover one — it is not known which. Its money still counts:
       // that question needs no calendar (owner rule, 2026-08-16).
@@ -118,27 +97,24 @@ export function buildTripAccount(trips: TripAccountInput[]): TripAccount {
     }
     for (const cruise of trip.cruises) {
       if (cruise.status === "cancelled") continue;
-      addAmount(spendByCurrency, cruise.currency, cruise.price);
       if (cruise.startDate === null || cruise.endDate === null) continue;
       for (let c = dayKey(cruise.startDate); c < dayKey(cruise.endDate); c += DAY_MS)
         covered.add(c);
     }
-    // Per trip, not per run: a booking shared across two trips is a real
-    // shared cost for both, and hiding it from the second would understate it.
-    const countedBookingIds = new Set<string>();
     for (const flight of trip.flights) {
       if (flight.status === "cancelled") continue;
-      const share = flightCostShare(flight, countedBookingIds);
-      addAmount(spendByCurrency, share.currency, share.amount);
-      addAmount(spendBaseByCurrency, share.snapshotCurrency, share.amountBase);
       if (flight.departureTime === null || flight.arrivalTime === null) continue;
       const dep = dayKey(flight.departureTime);
       const arr = dayKey(flight.arrivalTime);
       for (let c = dep; c < arr; c += DAY_MS) covered.add(c);
     }
-
-    for (const expense of trip.expenses) {
-      addAmount(spendByCurrency, expense.currency, expense.amount);
+    for (const ride of trip.rail) {
+      if (ride.status === "cancelled") continue;
+      for (const key of nightTrainNights(ride) ?? []) covered.add(Date.parse(`${key}T00:00:00Z`));
+    }
+    for (const ride of trip.bus ?? []) {
+      if (ride.status === "cancelled") continue;
+      for (const key of nightBusNights(ride)) covered.add(Date.parse(`${key}T00:00:00Z`));
     }
 
     // Two counts over the same dates, kept apart on purpose (forgejo#170).
@@ -172,6 +148,7 @@ export function buildTripAccount(trips: TripAccountInput[]): TripAccount {
       uncoveredDays,
       spendByCurrency,
       spendBaseByCurrency,
+      unpricedEntries,
       journalEntries: trip.journalEntries.length,
       photoCount: trip.photoCount,
     });

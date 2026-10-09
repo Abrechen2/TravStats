@@ -6,14 +6,19 @@ import { flightEvidenceEntry } from "./entryMappers";
 import {
   cruiseEvidenceEntry,
   pageSumEntries,
+  railEvidenceEntry,
   roadtripEvidenceEntry,
   stayEvidenceEntry,
   tripEvidenceEntry,
 } from "./entryMappersDomains";
-import { loadTravelAccountData, type TravelAccountData } from "../stats/travelAccountData";
+import { busEvidenceEntry } from "./entryMappersRentalBus";
+// The endpoint's own loader behind the endpoint's own gate: evidence names
+// exactly the rows the tile counted, hidden domains out of both (review I1).
+import { loadVisibleTravelAccountData, type TravelAccountData } from "../stats/travelAccountData";
 import {
   attributeTravelNights,
   buildTravelAccount,
+  NIGHT_PRECEDENCE,
   type AttributedNight,
   type NightSource,
 } from "../stats/travelAccount";
@@ -69,14 +74,14 @@ function sumResponse(args: {
   };
 }
 
-/** Row lookups for the three night buckets, built once per request. */
+/** Row lookups for the night buckets, built once per request. */
 interface AccountIndex {
   data: TravelAccountData;
   nights: AttributedNight[];
 }
 
 async function loadAccountIndex(userId: string): Promise<AccountIndex> {
-  const data = await loadTravelAccountData(userId);
+  const data = await loadVisibleTravelAccountData(userId);
   return { data, nights: attributeTravelNights(data).nights };
 }
 
@@ -126,6 +131,24 @@ function nightEntriesFor(
         id: night.id,
       }));
     return [...stayEntries, ...freeEntries];
+  }
+  if (source === "rail") {
+    return data.rail
+      .filter((ride) => contributionById.has(ride.id))
+      .map((ride) =>
+        railEvidenceEntry(ride, {
+          contribution: contributionById.get(ride.id)!,
+          subtitle: subtitleOf(ride.id),
+        })
+      );
+  }
+  if (source === "bus") {
+    return data.bus
+      .filter((ride) => contributionById.has(ride.id))
+      .map((ride) => ({
+        ...busEvidenceEntry(ride, { contribution: contributionById.get(ride.id)! }),
+        subtitle: subtitleOf(ride.id),
+      }));
   }
   if (source === "sea") {
     return data.cruises
@@ -187,6 +210,23 @@ export function resolveTravelAccountSeaNights(
   return resolveNightBucket(userId, "travelAccountSeaNights", "sea", scope, page);
 }
 
+export function resolveTravelAccountRailNights(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  return resolveNightBucket(userId, "travelAccountRailNights", "rail", scope, page);
+}
+
+/** forgejo#263 — nights on a night bus, by the account's own precedence. */
+export function resolveTravelAccountBusNights(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  return resolveNightBucket(userId, "travelAccountBusNights", "bus", scope, page);
+}
+
 export function resolveTravelAccountAirNights(
   userId: string,
   scope: EvidenceScope,
@@ -196,44 +236,49 @@ export function resolveTravelAccountAirNights(
 }
 
 /**
- * Home nights are the REMAINDER — the days of a year that no stay, cruise or
- * flight claimed — so there is no row to name and never will be. The value
- * is nonetheless derived, and it is carried in `unattributed` with
- * `notPerEntry`: the panel then prints "N nights cannot be split across
- * individual entries" instead of an empty list under a bare number.
+ * Unassigned nights are the REMAINDER — the nights of a year that no stay,
+ * cruise, night train or flight claimed — so there is no row to name and
+ * never will be. (They were "home nights" until forgejo#266: a missing record
+ * proves no night at home.) The value is nonetheless derived, and it is
+ * carried in `unattributed` with `notPerEntry`: the panel then prints "N
+ * nights cannot be split across individual entries" instead of an empty list
+ * under a bare number.
  */
-export async function resolveTravelAccountHomeNights(
+export async function resolveTravelAccountUnassignedNights(
   userId: string,
   scope: EvidenceScope,
   page: PagingParams
 ): Promise<EvidenceResponse> {
-  requireAllTime(scope, "travelAccountHomeNights");
-  const data = await loadTravelAccountData(userId);
+  requireAllTime(scope, "travelAccountUnassignedNights");
+  const data = await loadVisibleTravelAccountData(userId);
   const account = buildTravelAccount(data);
-  const homeNights = account.years.reduce((total, year) => total + year.homeNights, 0);
+  const unassigned = account.years.reduce((total, year) => total + year.unassignedNights, 0);
   return {
     measure: {
       kind: "metric",
-      key: "travelAccountHomeNights",
+      key: "travelAccountUnassignedNights",
       aggregation: "sum",
-      label: { key: "evidence.metric.travelAccountHomeNights" },
+      label: { key: "evidence.metric.travelAccountUnassignedNights" },
       unit: NIGHT_UNIT,
-      value: homeNights,
+      value: unassigned,
       scope,
     },
     entries: [],
     returned: 0,
     omitted: { count: 0, contribution: 0 },
-    unattributed: homeNights > 0 ? [{ count: homeNights, reason: "notPerEntry" }] : [],
+    unattributed: unassigned > 0 ? [{ count: unassigned, reason: "notPerEntry" }] : [],
     page,
   };
 }
 
 /**
- * The six combinations of "what else claimed these nights". The entry's own
+ * The combinations of "what else claimed these nights". The entry's own
  * bucket is implied by its domain, so the key names only the OTHERS — a
  * sentence the reader can act on ("also booked as a stay") rather than a
- * bare "contested". Sorted so `sea+hotel` and `hotel+sea` are one key.
+ * bare "contested". Sorted so `sea+hotel` and `hotel+sea` are one key. Since
+ * night trains joined (forgejo#266) a combination with a train in it and
+ * another bucket reads as "several" — eleven sentences for rare overlaps of
+ * three records would be copy nobody reads.
  *
  * Each takes a `count`, because a row is credited once for ALL its contested
  * nights and a stay overlapping a cruise for a week is not "this night". The
@@ -247,9 +292,12 @@ const CONTESTED_WITH_KEY: Record<string, string> = {
   "air,hotel": "evidence.travelAccount.contestedWith.hotelAir",
   "air,sea": "evidence.travelAccount.contestedWith.seaAir",
   "hotel,sea": "evidence.travelAccount.contestedWith.seaHotel",
+  rail: "evidence.travelAccount.contestedWith.rail",
+  bus: "evidence.travelAccount.contestedWith.bus",
 };
+const CONTESTED_WITH_SEVERAL = "evidence.travelAccount.contestedWith.several";
 
-const SOURCES: NightSource[] = ["hotel", "sea", "air"];
+const SOURCES: readonly NightSource[] = NIGHT_PRECEDENCE;
 
 function claimantsOfAnyBucket(night: AttributedNight): string[] {
   return SOURCES.flatMap((source) => night.claims[source] ?? []);
@@ -290,8 +338,9 @@ export async function resolveTravelAccountContestedNights(
   }
   const subtitleOf = (id: string): EvidenceEntry["subtitle"] => {
     const others = [...(othersById.get(id) ?? [])].sort().join(",");
-    const key = CONTESTED_WITH_KEY[others];
-    return key ? { key, values: { count: contestedNightsById.get(id) ?? 0 } } : null;
+    if (others === "") return null;
+    const key = CONTESTED_WITH_KEY[others] ?? CONTESTED_WITH_SEVERAL;
+    return { key, values: { count: contestedNightsById.get(id) ?? 0 } };
   };
 
   // One pass per bucket, and no row can appear in two: `contributionById`
@@ -316,7 +365,7 @@ async function loadTripAccount(userId: string): Promise<{
   rows: ReturnType<typeof buildTripAccount>;
   startDateById: Map<string, Date | null>;
 }> {
-  const data = await loadTravelAccountData(userId);
+  const data = await loadVisibleTravelAccountData(userId);
   return {
     rows: buildTripAccount(data.trips),
     startDateById: new Map(data.trips.map((trip) => [trip.id, trip.startDate])),

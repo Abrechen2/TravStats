@@ -204,7 +204,8 @@ export type StationWarning =
   | { kind: "noPlace"; index: number }
   | { kind: "noStay"; index: number }
   | { kind: "beforePrevious"; index: number }
-  | { kind: "noDeparture"; index: number };
+  | { kind: "noDeparture"; index: number }
+  | { kind: "endBeforeStart"; index: number };
 
 /**
  * A station while it is edited: the point may still be missing, and a stay
@@ -237,6 +238,7 @@ export function stationWarnings(drafts: readonly StationDraft[]): StationWarning
     if (d.night.kind === "stay" && !d.night.lodgingStayId) {
       out.push({ kind: "noStay", index });
     }
+    if (endsBeforeStart(d)) out.push({ kind: "endBeforeStart", index });
     const day = dayKey(d.startDate ?? null);
     if (day !== null && lastDay !== null && day < lastDay) {
       out.push({ kind: "beforePrevious", index });
@@ -249,13 +251,25 @@ export function stationWarnings(drafts: readonly StationDraft[]): StationWarning
   return out;
 }
 
-/** A draft the server accepts: it has a place, and a stay night has its stay. */
+/**
+ * A departure before the arrival — the server refuses it ("A station cannot end
+ * before it starts"), so it holds the save like a missing place does. Before
+ * (forgejo#246), it was sent, refused, and the editor said only "Nicht
+ * gespeichert", naming no field.
+ */
+export function endsBeforeStart(d: Pick<StationDraft, "startDate" | "endDate">): boolean {
+  const start = dayKey(d.startDate ?? null);
+  const end = dayKey(d.endDate ?? null);
+  return start !== null && end !== null && end < start;
+}
+
+/** A draft the server accepts: it has a place, a stay night has its stay, its days run forward. */
 export function isSavable(
   d: StationDraft
 ): d is StationDraft & { lat: number; lon: number; night: StationNightInput } {
   const stayLinked = d.night.kind !== "stay" || Boolean(d.night.lodgingStayId);
   const named = d.night.kind === "via" || d.title.trim() !== "";
-  return named && d.lat !== null && d.lon !== null && stayLinked;
+  return named && d.lat !== null && d.lon !== null && stayLinked && !endsBeforeStart(d);
 }
 
 /** The morning after a day, for the "left next morning" shortcut. */

@@ -144,6 +144,8 @@ export async function createCruiseRecord(
           isAtSea: s.isAtSea,
           ...stopTimes[index],
           excursionNote: s.excursionNote ?? null,
+          // A sea day has no port to be back on board at (review M1).
+          allAboardTime: s.isAtSea ? null : (s.allAboardTime ?? null),
           unresolvedPortName: s.unresolvedPortName ?? null,
         })),
       });

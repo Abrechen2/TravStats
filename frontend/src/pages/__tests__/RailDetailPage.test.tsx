@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { makeRailJourney } from "../../components/rail/__tests__/railJourneyFixture";
+import {
+  makeRailBookingLeg,
+  FULDA_TO_BERLIN,
+  makeRailJourney,
+} from "../../components/rail/__tests__/railJourneyFixture";
 import type { RailJourneyDetail } from "../../types/rail";
 
 /**
@@ -27,15 +31,48 @@ vi.mock("../../components/documents/DocumentsSection", () => ({
 vi.mock("../../components/rail/RailRouteMap", () => ({
   RailRouteMap: () => <div data-testid="map-stub" />,
 }));
+// The editor stands in as buttons for what it reports back to the page.
 vi.mock("../../components/rail/RailFormModal", () => ({
-  RailFormModal: ({ journey }: { journey: { id: string } | null }) => (
-    <div data-testid="rail-editor">{journey?.id ?? "new"}</div>
+  RailFormModal: ({
+    journey,
+    onClose,
+    onSaved,
+    onProgress,
+  }: {
+    journey: { id: string } | null;
+    onClose: () => void;
+    onSaved: (saved: { id: string }) => void;
+    onProgress?: (saved: { id: string }) => void;
+  }) => (
+    <div data-testid="rail-editor">
+      {journey?.id ?? "new"}
+      <button type="button" onClick={() => onProgress?.({ id: "leg-2" })}>
+        editor-progress
+      </button>
+      <button type="button" onClick={onClose}>
+        editor-close
+      </button>
+      <button type="button" onClick={() => onSaved({ id: "leg-new" })}>
+        editor-save-new
+      </button>
+    </div>
   ),
+}));
+const navigateAfterSave = vi.fn();
+vi.mock("../../components/form", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../components/form")>()),
+  navigateAfterSave: (...a: unknown[]) => navigateAfterSave(...a),
 }));
 vi.mock("../../components/common/TripPhotoWindowStrip", () => ({
   default: ({ entry, id }: { entry: string; id: string }) => (
     <div data-testid="photo-window-stub">{`${entry}:${id}`}</div>
   ),
+}));
+// The connection view lists each leg's originals through the documents router.
+const listForEntry = vi.fn();
+vi.mock("../../lib/api/documents", () => ({
+  documentsApi: { listForEntry: (...a: unknown[]) => listForEntry(...a) },
+  documentFileUrl: (doc: { url: string }) => doc.url,
 }));
 vi.mock("../../lib/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
@@ -71,6 +108,8 @@ describe("RailDetailPage", () => {
   beforeEach(() => {
     getMock.mockReset();
     getConnectionMock.mockReset().mockRejectedValue(new Error("not asked in this test"));
+    listForEntry.mockReset().mockResolvedValue([]);
+    navigateAfterSave.mockReset();
   });
 
   it("shows each time on its station's clock, with the zone it was read in", async () => {
@@ -129,17 +168,8 @@ describe("RailDetailPage", () => {
   it("lists the booking's legs, linking the others", async () => {
     const legs = [
       { id: "j1", depStationName: "Frankfurt", arrStationName: "Fulda" },
-      { id: "j2", depStationName: "Fulda", arrStationName: "Berlin" },
-    ].map((l) => ({
-      ...l,
-      departureTime: "2026-09-26T04:15:00.000Z",
-      arrivalTime: null,
-      depTimezone: "Europe/Berlin",
-      arrTimezone: "Europe/Berlin",
-      trainCategory: "ICE",
-      trainNumber: "1",
-      status: "completed" as const,
-    }));
+      { id: "j2", depStationName: "Fulda", arrStationName: "Berlin", ...FULDA_TO_BERLIN },
+    ].map((l) => makeRailBookingLeg(l));
     await renderPage(detail({ booking: { id: "b1", pnr: "AB12CD", railJourneys: legs } }));
     expect(screen.getByRole("link", { name: "2. Fulda → Berlin" })).toHaveAttribute(
       "href",
@@ -150,26 +180,88 @@ describe("RailDetailPage", () => {
     expect(screen.queryByTestId("rail-connection-link")).toBeNull();
   });
 
+  // forgejo#234: the booking's legs show what lies between them — here a next
+  // train that leaves before this one arrives, at another station.
+  it("shows a conflict and a change of stations between the booking's legs", async () => {
+    const legs = [
+      makeRailBookingLeg({ id: "j1", arrivalTime: "2026-09-26T05:10:00.000Z" }),
+      makeRailBookingLeg({
+        id: "j2",
+        depStationName: "Fulda Süd",
+        arrStationName: "Berlin",
+        departureTime: "2026-09-26T05:00:00.000Z",
+        // 600 m north of the first leg's arrival (50.55, 9.68).
+        depLat: 50.5554,
+        depLon: 9.68,
+        arrLat: 52.525,
+        arrLon: 13.3694,
+      }),
+    ];
+    await renderPage(detail({ booking: { id: "b1", pnr: "AB12CD", railJourneys: legs } }));
+    const note = screen.getByTestId("rail-transfer-1");
+    expect(note).toHaveAttribute("data-kind", "conflict");
+    expect(note.textContent).toContain('rail:detail.durationM {\\"m\\":10}');
+    expect(screen.getByTestId("rail-transfer-1-station-change")).toHaveTextContent(
+      'rail:transfer.stationChange {"from":"Fulda","to":"Fulda Süd","distance":"rail:transfer.distanceM {\\"value\\":600}"}'
+    );
+  });
+
+  // forgejo#235: the whole connection is readable here — seats and originals
+  // of the other train too, without opening it.
+  it("bundles every leg's seat and its originals in the connection section", async () => {
+    listForEntry.mockImplementation(({ id }: { id: string }) =>
+      Promise.resolve(
+        id === "j2"
+          ? [
+              {
+                id: "d9",
+                displayName: "Reservierung.pdf",
+                kind: null,
+                url: "/api/v1/documents/d9/file",
+              },
+            ]
+          : []
+      )
+    );
+    const legs = [
+      makeRailBookingLeg({ id: "j1" }),
+      makeRailBookingLeg({
+        id: "j2",
+        depStationName: "Fulda",
+        arrStationName: "Berlin",
+        ...FULDA_TO_BERLIN,
+        coach: "12",
+        seat: "61",
+      }),
+    ];
+    await renderPage(detail({ booking: { id: "b1", pnr: "AB12CD", railJourneys: legs } }));
+    expect(screen.getByTestId("rail-connection-leg-j1-seat")).toHaveTextContent(
+      "rail:connectionView.noReservation"
+    );
+    expect(screen.getByTestId("rail-connection-leg-j2-seat")).toHaveTextContent(
+      'rail:connectionView.seat {"seat":"61"}'
+    );
+    expect(
+      await screen.findByRole("link", { name: 'documents:openLabel {"name":"Reservierung.pdf"}' })
+    ).toHaveAttribute("href", "/api/v1/documents/d9/file");
+  });
+
   it("links up to the whole ride when the server says this train has a change", async () => {
     const legs = [
       { id: "j1", depStationName: "Frankfurt", arrStationName: "Fulda" },
-      { id: "j2", depStationName: "Fulda", arrStationName: "Berlin" },
-    ].map((l) => ({
-      ...l,
-      departureTime: "2026-09-26T04:15:00.000Z",
-      arrivalTime: null,
-      depTimezone: "Europe/Berlin",
-      arrTimezone: "Europe/Berlin",
-      trainCategory: "ICE",
-      trainNumber: "1",
-      status: "completed" as const,
-    }));
+      { id: "j2", depStationName: "Fulda", arrStationName: "Berlin", ...FULDA_TO_BERLIN },
+    ].map((l) => makeRailBookingLeg(l));
     getConnectionMock.mockResolvedValue({
       id: "j1",
       booking: { id: "b1", pnr: "AB12CD" },
       legs: [
         makeRailJourney(),
-        makeRailJourney({ id: "j2", depStationName: "Fulda", arrStationName: "Berlin" }),
+        makeRailJourney({
+          id: "j2",
+          depStationName: "Fulda",
+          arrStationName: "Berlin",
+          ...FULDA_TO_BERLIN,
+        }),
       ],
     });
     await renderPage(detail({ booking: { id: "b1", pnr: "AB12CD", railJourneys: legs } }));
@@ -182,34 +274,76 @@ describe("RailDetailPage", () => {
   it("draws no link up for a train that is a ride of its own", async () => {
     getConnectionMock.mockResolvedValue({ id: "j1", booking: null, legs: [makeRailJourney()] });
     const legs = [
-      {
-        id: "j1",
-        depStationName: "Frankfurt",
-        arrStationName: "Fulda",
-        departureTime: "2026-09-26T04:15:00.000Z",
-        arrivalTime: null,
-        depTimezone: "Europe/Berlin",
-        arrTimezone: "Europe/Berlin",
-        trainCategory: "ICE",
-        trainNumber: "1",
-        status: "completed" as const,
-      },
-      {
+      makeRailBookingLeg({ id: "j1" }),
+      makeRailBookingLeg({
         id: "j9",
         depStationName: "Fulda",
         arrStationName: "Frankfurt",
         departureTime: "2026-09-28T04:15:00.000Z",
-        arrivalTime: null,
-        depTimezone: "Europe/Berlin",
-        arrTimezone: "Europe/Berlin",
-        trainCategory: "ICE",
         trainNumber: "2",
-        status: "completed" as const,
-      },
+      }),
     ];
     await renderPage(detail({ booking: { id: "b1", pnr: null, railJourneys: legs } }));
     await waitFor(() => expect(getConnectionMock).toHaveBeenCalled());
     expect(screen.queryByTestId("rail-connection-link")).toBeNull();
+  });
+
+  // forgejo#250: what goes (the ride, its originals) and what stays (the
+  // trip, the booking's other trains), on the detail page too.
+  it("names the ride, its originals and what stays in the delete question", async () => {
+    listForEntry.mockResolvedValue([{ id: "d1" }]);
+    const legs = [
+      makeRailBookingLeg({ id: "j1" }),
+      makeRailBookingLeg({
+        id: "j2",
+        depStationName: "Fulda",
+        arrStationName: "Berlin",
+        ...FULDA_TO_BERLIN,
+      }),
+    ];
+    await renderPage(
+      detail({
+        bookingId: "b1",
+        trip: { id: "t1", name: "Rhön", color: "#fff" },
+        booking: { id: "b1", pnr: null, railJourneys: legs },
+      })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "rail:delete" }));
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => expect(dialog.textContent).toContain("documents:deleteCascadeNote"));
+    expect(dialog.textContent).toContain('rail:deleteConfirmNamed {"route":"Frankfurt → Fulda"}');
+    expect(dialog.textContent).toContain('rail:deleteSurvivors.trip {\\"name\\":\\"Rhön\\"}');
+    expect(dialog.textContent).toContain('rail:deleteSurvivors.otherLegs {\\"count\\":1}');
+  });
+
+  // Review minor 9: a leg stored by "save and add a connection" shows once
+  // the dialog closes, even when the user cancels the next leg.
+  it("reads the booking again when the dialog closes after a leg was added", async () => {
+    await renderPage(detail());
+    fireEvent.click(screen.getByRole("button", { name: "rail:connection.add" }));
+    fireEvent.click(screen.getByText("editor-progress"));
+    expect(getMock).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByText("editor-close"));
+    await waitFor(() => expect(getMock).toHaveBeenCalledTimes(2));
+  });
+
+  it("closes without a reload when nothing was added", async () => {
+    await renderPage(detail());
+    fireEvent.click(screen.getByRole("button", { name: "rail:connection.add" }));
+    fireEvent.click(screen.getByText("editor-close"));
+    expect(screen.queryByTestId("rail-editor")).toBeNull();
+    expect(getMock).toHaveBeenCalledTimes(1);
+  });
+
+  // Review minor 7: the move to a newly saved connection goes through the
+  // Back guard's own navigation, never a plain navigate.
+  it("moves to a newly saved connection through navigateAfterSave", async () => {
+    await renderPage(detail());
+    fireEvent.click(screen.getByRole("button", { name: "rail:connection.add" }));
+    fireEvent.click(screen.getByText("editor-save-new"));
+    await waitFor(() =>
+      expect(navigateAfterSave).toHaveBeenCalledWith(expect.any(Function), "/rail/leg-new")
+    );
   });
 
   it("files documents with the journey", async () => {

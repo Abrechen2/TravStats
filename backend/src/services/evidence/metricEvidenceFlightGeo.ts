@@ -3,7 +3,13 @@ import { AppError } from "../../middleware/errorHandler";
 import type { EvidenceScope } from "../../shared/evidence";
 import type { EvidenceResponse } from "../../schemas/evidence";
 import type { PagingParams } from "./paging";
-import { flightDateOf, hydrateFlightDistinctEntries } from "./entryMappers";
+import {
+  FLIGHT_DAY_SELECT,
+  flightDateOf,
+  hydrateFlightDistinctEntries,
+  type FlightDayRow,
+} from "./entryMappers";
+import { withDepartureClock } from "../stats/departureClock";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { getCachedAirports } from "../airportCache";
 import { getContinent } from "../../utils/continents";
@@ -20,27 +26,21 @@ import { getContinent } from "../../utils/continents";
  * and hydration are shared via `entryMappers.ts`, not re-derived here.
  */
 
-interface GeoIdentityRow {
+interface GeoIdentityRow extends FlightDayRow {
   id: string;
-  departureTime: Date | null;
   depIata: string | null;
   depIcao: string | null;
   arrIata: string | null;
   arrIcao: string | null;
 }
 
+/** Dated on the departure airport's day, hence the clock (forgejo#273). */
 async function loadGeoIdentityRows(userId: string): Promise<GeoIdentityRow[]> {
-  return prisma.flight.findMany({
+  const rows = await prisma.flight.findMany({
     where: { userId, ...countableFlightWhere() },
-    select: {
-      id: true,
-      departureTime: true,
-      depIata: true,
-      depIcao: true,
-      arrIata: true,
-      arrIcao: true,
-    },
+    select: { id: true, ...FLIGHT_DAY_SELECT },
   });
+  return withDepartureClock(rows);
 }
 
 function requireAllTime(scope: EvidenceScope, label: string): void {
@@ -79,7 +79,7 @@ export async function resolveAirportsVisitedCount(
     const dep = r.depIata || r.depIcao;
     const arr = r.arrIata || r.arrIcao;
     const credits = [...new Set([dep, arr].filter((c): c is string => Boolean(c)))];
-    return { id: r.id, date: flightDateOf(r.departureTime), credits };
+    return { id: r.id, date: flightDateOf(r), credits };
   });
   const { entries, omittedRowCount, omittedCredits } = await hydrateFlightDistinctEntries(
     userId,
@@ -119,7 +119,7 @@ export async function resolveFlightCountriesVisitedCount(
     const depCountry = dep ? countryByCode.get(dep) : undefined;
     const arrCountry = arr ? countryByCode.get(arr) : undefined;
     const credits = [...new Set([depCountry, arrCountry].filter((c): c is string => Boolean(c)))];
-    return { id: r.id, date: flightDateOf(r.departureTime), credits };
+    return { id: r.id, date: flightDateOf(r), credits };
   });
   const { entries, omittedRowCount, omittedCredits } = await hydrateFlightDistinctEntries(
     userId,
@@ -180,7 +180,7 @@ export async function resolveContinentsVisitedCount(
     const credits = [
       ...new Set([continentOf(dep), continentOf(arr)].filter((c): c is string => Boolean(c))),
     ];
-    return { id: r.id, date: flightDateOf(r.departureTime), credits };
+    return { id: r.id, date: flightDateOf(r), credits };
   });
   const { entries, omittedRowCount, omittedCredits } = await hydrateFlightDistinctEntries(
     userId,

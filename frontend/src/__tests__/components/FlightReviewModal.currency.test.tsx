@@ -34,7 +34,9 @@ vi.mock("../../store/settingsStore", () => {
   };
 });
 vi.mock("../../hooks/useTranslation", () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
+  // `i18n` too: the "Zum Speichern fehlt noch" line joins its items in the
+  // reader's language (forgejo#245).
+  useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
 }));
 vi.mock("@/hooks/useRecentCurrencies", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/hooks/useRecentCurrencies")>();

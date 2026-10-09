@@ -13,4 +13,7 @@ export const TRACK_ERROR_KEYS: Readonly<Record<string, string>> = {
   DAWARICH_WINDOW_INVALID: "trips:tours.tracks.errors.windowInvalid",
   DAWARICH_WINDOW_EMPTY: "trips:tours.tracks.errors.windowEmpty",
   DAWARICH_TOO_FEW_POINTS: "trips:tours.tracks.errors.tooFewPoints",
+  // Adopting a recording onto a leg (forgejo#246: said in the reader's language).
+  TRACK_DOES_NOT_COVER_LEG: "trips:tours.tracks.errors.doesNotCoverLeg",
+  TRACK_GAP_IN_LEG: "trips:tours.tracks.errors.gapInLeg",
 };

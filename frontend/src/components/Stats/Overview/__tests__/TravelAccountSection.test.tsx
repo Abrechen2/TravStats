@@ -9,6 +9,10 @@ vi.mock("../../../../lib/api/stats", () => ({
   statsApi: { getTravelAccount: () => getTravelAccount() },
 }));
 
+// Rail sits behind the beta switch; each case says which side it is on.
+const rail = vi.hoisted(() => ({ visible: true }));
+vi.mock("../../../../hooks/useRailVisible", () => ({ useRailVisible: () => rail.visible }));
+
 import TravelAccountSection from "../TravelAccountSection";
 
 /**
@@ -25,7 +29,15 @@ const withRouter = (): JSX.Element => (
 const response = (over: Partial<TravelAccountResponse> = {}): TravelAccountResponse => ({
   account: {
     years: [
-      { year: "2025", days: 365, hotelNights: 30, seaNights: 7, airNights: 3, homeNights: 325 },
+      {
+        year: "2025",
+        days: 365,
+        hotelNights: 30,
+        seaNights: 7,
+        airNights: 3,
+        railNights: 0,
+        unassignedNights: 325,
+      },
     ],
     contestedNights: 0,
   },
@@ -48,6 +60,7 @@ const response = (over: Partial<TravelAccountResponse> = {}): TravelAccountRespo
 describe("TravelAccountSection", () => {
   beforeEach(() => {
     getTravelAccount.mockReset();
+    rail.visible = true;
   });
 
   it("shows the away share against the whole year", () => {
@@ -57,6 +70,59 @@ describe("TravelAccountSection", () => {
     return waitFor(() => {
       expect(screen.getByText("11 %")).toBeTruthy();
     });
+  });
+
+  // forgejo#266: the remainder was labelled "Zuhause" — a missing record was
+  // read as a night at home. It is "not accounted for", and the help says why.
+  it("names the remainder as not accounted for, never at home, and explains it", async () => {
+    getTravelAccount.mockResolvedValue(response());
+    render(withRouter());
+    expect(await screen.findByText("stats:travelAccount.unassignedNights")).toBeTruthy();
+    expect(screen.getByText("stats:travelAccount.helpWithRail")).toBeTruthy();
+    expect(screen.queryByText("stats:travelAccount.homeNights")).toBeNull();
+  });
+
+  it("counts night-train nights as nights away", async () => {
+    // 30 + 7 + 3 + 33 = 73 of 365 nights: 20 %, not the 11 % without the train.
+    getTravelAccount.mockResolvedValue(
+      response({
+        account: {
+          years: [
+            {
+              year: "2025",
+              days: 365,
+              hotelNights: 30,
+              seaNights: 7,
+              railNights: 33,
+              airNights: 3,
+              unassignedNights: 292,
+            },
+          ],
+          contestedNights: 0,
+        },
+      })
+    );
+    render(withRouter());
+    expect(await screen.findByText("20 %")).toBeTruthy();
+    expect(screen.getByText("stats:travelAccount.railNights")).toBeTruthy();
+  });
+
+  // Review I2: with rail hidden behind the beta switch the server sends no
+  // train nights, and the section must not name the domain either.
+  it("names no night train — legend or help — while rail is hidden", async () => {
+    rail.visible = false;
+    getTravelAccount.mockResolvedValue(response());
+    render(withRouter());
+    expect(await screen.findByText("stats:travelAccount.help")).toBeTruthy();
+    expect(screen.queryByText("stats:travelAccount.helpWithRail")).toBeNull();
+    expect(screen.queryByText("stats:travelAccount.railNights")).toBeNull();
+  });
+
+  it("names the night train in the legend and the help once rail is shown", async () => {
+    getTravelAccount.mockResolvedValue(response());
+    render(withRouter());
+    expect(await screen.findByText("stats:travelAccount.helpWithRail")).toBeTruthy();
+    expect(screen.getByText("stats:travelAccount.railNights")).toBeTruthy();
   });
 
   it("renders nothing at all when the request fails", async () => {
@@ -95,7 +161,8 @@ describe("TravelAccountSection", () => {
               hotelNights: 30,
               seaNights: 7,
               airNights: 3,
-              homeNights: 325,
+              railNights: 0,
+              unassignedNights: 325,
             },
           ],
           contestedNights: 2,

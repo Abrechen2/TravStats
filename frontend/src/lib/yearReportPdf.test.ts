@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock jspdf and jspdf-autotable
 const mockSave = vi.fn();
@@ -85,5 +85,72 @@ describe("generateYearReportPdf", () => {
         body: expect.arrayContaining([expect.arrayContaining(["Lufthansa", "LH123"])]),
       })
     );
+  });
+
+  describe("favourite route (forgejo#254)", () => {
+    beforeEach(() => {
+      mockText.mockClear();
+    });
+
+    const leg = (id: string, dep: string, arr: string): Flight => ({
+      ...mockFlight,
+      id,
+      depIata: dep,
+      arrIata: arr,
+    });
+
+    it("counts a connection in both directions as one pair", async () => {
+      // 4 x HNL->OGG and 4 x OGG->HNL beat 5 x FRA->JFK only if they are ONE
+      // connection of eight; keyed by direction the PDF named FRA -> JFK.
+      const flights = [
+        ...[1, 2, 3, 4].map((n) => leg(`a${n}`, "HNL", "OGG")),
+        ...[1, 2, 3, 4].map((n) => leg(`b${n}`, "OGG", "HNL")),
+        ...[1, 2, 3, 4, 5].map((n) => leg(`c${n}`, "FRA", "JFK")),
+      ];
+      await generateYearReportPdf({ year: 2026, flights, userName: "Dennis", units: "km" });
+      const drawn = mockText.mock.calls.map((call) => call[0]);
+      expect(drawn).toContain("HNL - OGG");
+      expect(drawn).not.toContain("FRA \u2192 JFK");
+    });
+
+    it("shows a dash when no flight names both airports", async () => {
+      await generateYearReportPdf({
+        year: 2026,
+        flights: [{ ...mockFlight, depIata: undefined, depIcao: undefined }],
+        userName: "Dennis",
+        units: "km",
+      });
+      const drawn = mockText.mock.calls.map((call) => call[0]);
+      expect(drawn).not.toContain("? \u2192 JFK");
+      expect(drawn.filter((d) => d === "-").length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("characters the PDF font has", () => {
+    // jsPDF's built-in Helvetica is WinAnsi: an arrow, a subscript two, a
+    // dingbat or a narrow no-break space is drawn as garbage in the real file.
+    const strings = (value: unknown): string[] =>
+      Array.isArray(value) ? value.flatMap(strings) : typeof value === "string" ? [value] : [];
+
+    it.each(["km", "mi"] as const)("draws only Latin-1 characters (%s)", async (units) => {
+      mockText.mockClear();
+      mockAutoTable.mockClear();
+      const flights: Flight[] = [
+        mockFlight,
+        { ...mockFlight, id: "2", depIata: undefined, co2Kg: undefined, departureTime: undefined },
+      ] as Flight[];
+      await generateYearReportPdf({ year: 2026, flights, userName: "Dennis", units });
+
+      const drawn = [
+        ...mockText.mock.calls.flatMap((call) => strings(call[0])),
+        ...mockAutoTable.mock.calls.flatMap((call) => [
+          ...strings(call[1].head),
+          ...strings(call[1].body),
+        ]),
+      ];
+      expect(drawn.length).toBeGreaterThan(10);
+      const offenders = drawn.filter((text) => [...text].some((c) => c.charCodeAt(0) > 0xff));
+      expect(offenders).toEqual([]);
+    });
   });
 });

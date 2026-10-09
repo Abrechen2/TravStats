@@ -1,14 +1,14 @@
 {
   "frontend": {
-    "lines": 56.21,
-    "statements": 55.66,
-    "functions": 52.19,
-    "branches": 51.19
+    "lines": 74.05,
+    "statements": 73,
+    "functions": 70.07,
+    "branches": 68.95
   },
   "backend": {
-    "lines": 76.35,
-    "statements": 75.14,
-    "functions": 76.63,
-    "branches": 61.82
+    "lines": 87.9,
+    "statements": 86.34,
+    "functions": 89.5,
+    "branches": 72.93
   }
 }

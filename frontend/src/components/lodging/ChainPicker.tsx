@@ -100,7 +100,7 @@ export function ChainPicker({ value, onChange }: ChainPickerProps): JSX.Element 
           aria-expanded={results.length > 0}
           aria-autocomplete="list"
           aria-label={t("lodging:field.chain")}
-          className="w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none"
+          className="w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none pointer-coarse:min-h-(--ts-size-touch-min)"
           placeholder={t("lodging:chainPicker.placeholder")}
           value={query}
           onChange={(e): void => {

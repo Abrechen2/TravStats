@@ -46,6 +46,9 @@ import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import type { RailConnection, RailJourney, RailStatus } from "../types/rail";
 import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
+import { useDocumentCount } from "../hooks/useDocumentCount";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { railDeleteMessage } from "../lib/rail/railDeleteMessage";
 
 const RAIL_STATUSES: readonly RailStatus[] = ["scheduled", "in_progress", "completed", "cancelled"];
 const RAIL_COLUMN_IDS: readonly RailColumnId[] = [
@@ -122,6 +125,11 @@ export default function RailPage(): JSX.Element {
   const [editing, setEditing] = useState<Editing>(null);
   const [toDelete, setToDelete] = useState<RailJourney | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Asked only while the question is open (forgejo#250): the originals go
+  // with the ride, and the question names them.
+  const documentCount = useDocumentCount(
+    toDelete ? { type: "railJourney", id: toDelete.id } : null
+  );
   const [adding, setAdding] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
   const reload = useCallback(async (): Promise<void> => setReloadToken((n) => n + 1), []);
@@ -335,6 +343,7 @@ export default function RailPage(): JSX.Element {
               emptyTitle={t("rail:empty")}
               emptyHint={t("rail:list.emptyHint")}
               onReset={resetFilters}
+              action={{ label: t("rail:add"), onClick: (): void => setAdding(true) }}
             />
           </div>
         ) : (
@@ -393,6 +402,7 @@ export default function RailPage(): JSX.Element {
         <RailFormModal
           journey={editing.journey}
           onClose={(): void => setEditing(null)}
+          onReload={editing.journey ? undefined : () => void reload()}
           onSaved={handleSaved}
           onProgress={reload}
         />
@@ -403,8 +413,9 @@ export default function RailPage(): JSX.Element {
         onConfirm={(): void => void confirmDelete()}
         isLoading={deleting}
         title={t("rail:delete")}
-        message={t("rail:deleteConfirm")}
+        message={toDelete ? railDeleteMessage(t, toDelete, { documentCount, otherLegs: null }) : ""}
         confirmText={t("common:buttons.delete")}
+        confirmButtonClass={DELETE_BUTTON_CLASS}
       />
     </AppShell>
   );

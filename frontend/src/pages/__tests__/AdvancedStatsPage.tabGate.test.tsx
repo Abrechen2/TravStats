@@ -105,6 +105,24 @@ describe("rail statistics tab", () => {
   });
 });
 
+// forgejo#263: bus gets its statistics tab, behind the `busDomain` gate like rail.
+describe("bus statistics tab", () => {
+  it("is drawn only when the bus gate is on, and hidden when a caller does not say", () => {
+    expect(visibleStatsTabs(["flight", "bus"], "denied", false, false, true)).toEqual([
+      "flight",
+      "bus",
+    ]);
+    expect(visibleStatsTabs(["flight", "bus"], "denied", true, true, false)).toEqual(["flight"]);
+    expect(visibleStatsTabs(["flight", "bus"], "denied")).toEqual(["flight"]);
+  });
+
+  it("opens a deep link to bus only with the gate on and the domain enabled", () => {
+    expect(resolveStatsTab("bus", ["flight", "bus"], "denied", false, false, true)).toBe("bus");
+    expect(resolveStatsTab("bus", ["flight", "bus"], "denied", true, true, false)).toBe("all");
+    expect(resolveStatsTab("bus", ["flight"], "denied", false, false, true)).toBe("all");
+  });
+});
+
 describe("parseStatsTab", () => {
   it("reads every registered domain, rail included", () => {
     for (const tab of ["flight", "cruise", "lodging", "poi", "rail"]) {

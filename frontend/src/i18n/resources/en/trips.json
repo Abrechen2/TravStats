@@ -24,6 +24,8 @@
   "cruiseCount_other": "{{count}} Cruises",
   "pnrLabel": "Booking ref.",
   "totalCost": "Total Cost",
+  "costUnpriced_one": "{{count}} entry without a price",
+  "costUnpriced_other": "{{count}} entries without a price",
   "costPerKm": "Cost/km",
   "distance": "Distance",
   "status": {
@@ -142,7 +144,8 @@
       "companions": "Companions",
       "tags": "Tags",
       "rail": "Rail",
-      "rental": "Rental cars"
+      "rental": "Rental cars",
+      "bus": "Bus"
     },
     "tabs": {
       "overview": "Overview",
@@ -166,8 +169,7 @@
     "logistics": {
       "flights": "Flights",
       "cruises": "Cruises",
-      "bookings": "Bookings",
-      "totalBooked": "Total"
+      "bookings": "Bookings"
     },
     "timeline": {
       "addEntry": "+ Add entry",
@@ -462,7 +464,9 @@
         "noDatedStops": "This section's stops have no dates, so no time window for Dawarich can be derived.",
         "windowInvalid": "The time window ends before it starts.",
         "windowEmpty": "Dawarich has no location data for this time window.",
-        "tooFewPoints": "Dawarich has only one location point for this time window – too few for a track."
+        "tooFewPoints": "Dawarich has only one location point for this time window – too few for a track.",
+        "doesNotCoverLeg": "This recording does not come near both stations of this leg — probably another day or place. The leg stays as it was.",
+        "gapInLeg": "The recording stops between the two stations; part of the way was never recorded. The leg stays as it was."
       },
       "pointCount_one": "{{count}} point",
       "pointCount_other": "{{count}} points",
@@ -561,6 +565,12 @@
       "message_one": "“{{name}}” has {{count}} recorded cost and belongs to no trip that could take it over. Deleting removes it too.",
       "message_other": "“{{name}}” has {{count}} recorded costs and belongs to no trip that could take them over. Deleting removes them too.",
       "confirm": "Delete with costs"
+    },
+    "assignErrors": {
+      "notOwned": "A chosen stop does not belong to this trip or tour. Reload the page and choose again.",
+      "noCoordinate": "A chosen stop has no place. Give it a place on the timeline first; then it can be assigned.",
+      "inOtherSection": "A chosen stop already belongs to another route section. Take it out there first.",
+      "claimedMeanwhile": "Another change just assigned a stop to a section. Nothing was saved — try again."
     }
   },
   "head": {

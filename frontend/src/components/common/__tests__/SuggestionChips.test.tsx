@@ -41,4 +41,14 @@ describe("SuggestionChips", () => {
     );
     expect(container).toBeEmptyDOMElement();
   });
+
+  // forgejo#249: ~20 px chips were the smallest targets in every form that
+  // offers them. jsdom cannot evaluate the variant, so the class is the proof;
+  // the iPad look is the other half.
+  it("grows each chip to the touch minimum on a coarse pointer", () => {
+    render(<SuggestionChips value="" suggestions={["12A"]} onPick={vi.fn()} fieldLabel="Seat" />);
+    expect(screen.getByRole("button", { name: /Seat:12A/ }).className).toContain(
+      "pointer-coarse:min-h-(--ts-size-touch-min)"
+    );
+  });
 });

@@ -1,0 +1,102 @@
+import type { AchievementDefinition } from "../achievements";
+
+/**
+ * Badges of the 2026-10 statistics expansion (forgejo#256 flights, #257
+ * cruises), measured by `utils/insightAchievements.ts` over the same folds the
+ * statistics page draws. Every threshold below is a PRODUCT PROPOSAL from the
+ * audit issues and is marked as such until the owner confirms it.
+ *
+ * Compared with the catalogue before adding (forgejo#256): no badge measures
+ * airports per year, the pause between two visits, or one airport across a
+ * year. `YEAR_ROUND` (partA, `all_seasons`) is the nearest and is NOT this —
+ * it counts northern-hemisphere seasons over any flights, while the quarter
+ * badge asks one airport in all four CALENDAR quarters of one year.
+ *
+ * Cruises (forgejo#257): the catalogue counts distinct ports
+ * (`cruise_ports_unique`), ports on ONE cruise (`MEGA_CRUISE_10`) and loyalty
+ * to a ship or a line — nothing measures one port across cruises, shore
+ * excursions, or a repeated itinerary, so the three below are new rather
+ * than extensions.
+ *
+ * Copy is German (the seed language); English lives in
+ * `frontend/src/i18n/resources/en/achievements.json` under `codes.<CODE>`.
+ */
+export const seedsInsights: AchievementDefinition[] = [
+  {
+    code: "NEW_GROUND_YEAR",
+    name: "Neulandjahr",
+    description:
+      "Mindestens fünf Flughäfen in einem Jahr zum ersten Mal erfasst (ohne das erste erfasste Jahr)",
+    category: "explorer",
+    domain: "flight",
+    icon: "🧭",
+    tier: "silver",
+    // The first recorded year does not count (owner ruling 2026-10-09).
+    requirement: 5, // threshold: proposal forgejo#256, owner to confirm
+    requirementType: "flight_new_airports_year",
+    points: 50,
+  },
+  {
+    code: "LONG_TIME_NO_SEE",
+    name: "Lange nicht gesehen",
+    description: "Zu einem Flughafen zurückgekehrt, nach mindestens zehn erfassten Jahren",
+    category: "special",
+    domain: "flight",
+    icon: "🕰️",
+    tier: "gold",
+    requirement: 10, // threshold: proposal forgejo#256, owner to confirm
+    requirementType: "flight_airport_reunion_years",
+    points: 80,
+  },
+  {
+    code: "FOUR_QUARTERS_AIRPORT",
+    name: "Jahreszeiten-Wiedersehen",
+    description: "Denselben Flughafen in allen vier Kalenderquartalen eines Jahres genutzt",
+    category: "special",
+    domain: "flight",
+    icon: "🗓️",
+    tier: "silver",
+    requirement: 4, // threshold: proposal forgejo#256, owner to confirm
+    requirementType: "flight_airport_all_quarters",
+    points: 50,
+  },
+
+  {
+    code: "PORT_REUNION_3",
+    name: "Hafen-Wiedersehen",
+    description: "Denselben Hafen auf drei verschiedenen Kreuzfahrten als Hafenstopp angelaufen",
+    category: "collector",
+    domain: "cruise",
+    icon: "⚓",
+    tier: "silver",
+    // Port calls only — embarkation and disembarkation ports do not count
+    // (owner ruling 2026-10-09), or a home port would earn it.
+    requirement: 3, // threshold: proposal forgejo#257, owner to confirm
+    requirementType: "cruise_port_cruises",
+    points: 40,
+  },
+  {
+    code: "SHORE_EXCURSIONS_5",
+    name: "Land und Leute",
+    description: "An fünf verschiedenen Häfen einen Landausflug dokumentiert",
+    category: "explorer",
+    domain: "cruise",
+    icon: "🥾",
+    tier: "silver",
+    requirement: 5, // threshold: proposal forgejo#257, owner to confirm
+    requirementType: "cruise_excursion_ports",
+    points: 50,
+  },
+  {
+    code: "SAME_ITINERARY_2",
+    name: "Eine Runde mehr",
+    description: "Zwei Kreuzfahrten mit genau derselben Hafenfolge",
+    category: "kurios",
+    domain: "cruise",
+    icon: "🔄",
+    tier: "silver",
+    requirement: 2, // threshold: proposal forgejo#257, owner to confirm
+    requirementType: "cruise_repeated_itinerary",
+    points: 40,
+  },
+];

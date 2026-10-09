@@ -14,7 +14,7 @@ import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
 import { calculateDistance } from "../../utils/geo";
 import { getCachedAirports } from "../airportCache";
-import { localWallClockOf } from "../../utils/timezone";
+import { localWallClockOf, type FlightTimeSemantics } from "../../utils/timezone";
 import { measuredDurationMinutes } from "../../utils/flightDurationColumn";
 import {
   addFlightDuration,
@@ -22,7 +22,7 @@ import {
   emptyDurationTotals,
   resolveFlightDuration,
 } from "../../shared/flightDuration";
-import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "./departureClock";
+import { FLIGHT_CLOCK_SELECT, flightEndZone, withDepartureClock } from "./departureClock";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { mergeAirlineCounts } from "../../utils/airlineNormalize";
 import { computeDedupedTotalCost } from "../../utils/stats/dedupedCost";
@@ -89,6 +89,9 @@ export interface SummaryStats {
 export interface SummaryFlightRow {
   id: string;
   departureTime: Date | null;
+  /** The departure's zone and semantics — what an evidence date is read on (forgejo#273). */
+  depTimezone: string | null;
+  depTimeSemantics: FlightTimeSemantics;
   /** Great-circle distance in km; 0 when a coordinate is missing (matches `calculateDistance`). */
   distanceKm: number;
   /** Measured or estimated minutes, per `shared/flightDuration.ts`; null when neither clocks nor coordinates answer. */
@@ -397,6 +400,8 @@ export async function computeSummary(
   const rows: SummaryFlightRow[] = identityRows.map((flight, index) => ({
     id: flight.id,
     departureTime: flight.departureTime,
+    depTimezone: flightEndZone(flight.depTimezone, tzMap, flight.depIata, flight.depIcao),
+    depTimeSemantics: flight.depTimeSemantics as FlightTimeSemantics,
     distanceKm: distanceByFlightId.get(flight.id) ?? 0,
     durationMinutes: durationByFlightId.get(flight.id) ?? null,
     costContributionBase: cost.perFlightBaseContribution[index],

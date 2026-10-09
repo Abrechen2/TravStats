@@ -13,8 +13,8 @@ import type { LodgingRhythmStats } from "./types";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Meteorological seasons, northern hemisphere — the convention the UI labels. */
-type Season = "winter" | "spring" | "summer" | "autumn";
-const SEASON_BY_MONTH: readonly Season[] = [
+export type Season = "winter" | "spring" | "summer" | "autumn";
+export const SEASON_BY_MONTH: readonly Season[] = [
   "winter", // Jan
   "winter",
   "spring",
@@ -95,10 +95,11 @@ export function computeRhythmStats(entries: StayWithNights[], now: Date): Lodgin
     nightsPerYear[year] = (nightsPerYear[year] ?? 0) + 1;
   }
 
-  // Longest unbroken run away, and the longest stretch at home between the
-  // first and the last night away. The gap is bounded by those two dates on
-  // purpose: before the first recorded night the user was not "at home for
-  // 30 years", they simply had no data.
+  // Longest unbroken run away, and the longest stretch WITHOUT a recorded stay
+  // between the first and the last night away. The gap is bounded by those two
+  // dates on purpose: before the first recorded night there is simply no data.
+  // It is not "at home" either (forgejo#266): the gap may hold a cruise, a
+  // night train or a hotel nobody logged, and a missing record proves nothing.
   let longestStreakNights = 0;
   let longestStreak: { start: string; end: string } | null = null;
   let longestGapDays = 0;
@@ -119,8 +120,8 @@ export function computeRhythmStats(entries: StayWithNights[], now: Date): Lodgin
       continue;
     }
     closeRun(sorted[i - 1]);
-    // `gap` counts the step between two nights away, so the nights AT HOME
-    // between them is one fewer.
+    // `gap` counts the step between two nights away, so the nights WITHOUT a
+    // stay between them is one fewer.
     if (gap - 1 > longestGapDays) longestGapDays = gap - 1;
     runStart = sorted[i];
     runLength = 1;

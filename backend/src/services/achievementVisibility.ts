@@ -1,5 +1,8 @@
 import type { DomainKey } from "../shared/domains";
 import { loadVisibleDomains } from "./domainVisibility";
+import { SHARED_BADGE_DOMAINS } from "../data/achievementSeeds/partL";
+import { TOUR_BADGE_CODES } from "../data/achievementSeeds/partK";
+import { getInstanceSettings } from "./instanceSettingsService";
 
 /**
  * Which achievements a user may see, count and score — the ONE rule, applied
@@ -11,16 +14,37 @@ import { loadVisibleDomains } from "./domainVisibility";
  * A badge of a domain the user does not see — switched off, or behind the
  * instance's beta switch — stays in the database (it was earned and is kept),
  * but it is neither listed nor counted nor scored until the domain is visible.
- * `shared` badges belong to no domain and are always visible.
+ * `shared` badges belong to no domain and are visible — unless they are the
+ * day-tour badges (`TOUR_BADGE_CODES`, shown by the tour rule alone), or only
+ * beta domains can earn them (`SHARED_BADGE_DOMAINS`, forgejo#265): such a badge
+ * shows while at least one of its domains does, so the trophy case never
+ * offers a badge nobody on the instance can reach.
  */
-export type AchievementVisibility = (domain: string) => boolean;
+export type AchievementVisibility = (domain: string, code?: string) => boolean;
 
-export function achievementVisibility(visible: readonly DomainKey[]): AchievementVisibility {
+export function achievementVisibility(
+  visible: readonly DomainKey[],
+  /**
+   * The tour rule (`services/tourVisibility.ts`): the day-tour badges show
+   * while the instance shows tours, whatever the roadtrip toggle says.
+   * Omitted reads as hidden, so a caller that forgets it hides a beta badge.
+   */
+  toursVisible = false
+): AchievementVisibility {
   const keys = new Set<string>(visible);
-  return (domain) => domain === "shared" || keys.has(domain);
+  return (domain, code) => {
+    if (domain !== "shared") return keys.has(domain);
+    if (code !== undefined && TOUR_BADGE_CODES.has(code)) return toursVisible;
+    const needs = code === undefined ? undefined : SHARED_BADGE_DOMAINS[code];
+    return needs === undefined || needs.some((d) => keys.has(d));
+  };
 }
 
 /** The rule for a stored user, from their domain toggles and the beta switch. */
 export async function loadAchievementVisibility(userId: string): Promise<AchievementVisibility> {
-  return achievementVisibility(await loadVisibleDomains(userId));
+  const [visible, instance] = await Promise.all([
+    loadVisibleDomains(userId),
+    getInstanceSettings(),
+  ]);
+  return achievementVisibility(visible, instance.betaFeaturesEnabled);
 }

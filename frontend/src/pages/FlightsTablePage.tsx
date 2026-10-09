@@ -13,7 +13,11 @@ import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
+import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { flightDeleteMessage } from "../lib/flights/flightDeleteMessage";
+import { useDocumentCount } from "../hooks/useDocumentCount";
+import { useFlightRecordingPoints } from "../hooks/useFlightRecordingPoints";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import type { Flight, FlightFacets, FlightInput, Trip } from "../types";
 import SimplifiedFlightFormV2 from "../components/SimplifiedFlightFormV2";
@@ -54,6 +58,9 @@ import {
 } from "../lib/flights/flightListQuery";
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
+import FlightBulkBar from "../components/flightsTable/bulk/FlightBulkBar";
+import SelectCheckbox from "../components/flightsTable/bulk/SelectCheckbox";
+import { useFlightSelection } from "../components/flightsTable/bulk/useFlightSelection";
 
 // Trips moved to their own /trips page; the trip badge is a Link to /trips/:id.
 
@@ -92,10 +99,20 @@ export default function FlightsTablePage(): JSX.Element {
   const [airlineFilter, setAirlineFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [editingFlight, setEditingFlight] = useState<Flight | null>(null);
   const [editingSpecialFlight, setEditingSpecialFlight] = useState<Flight | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [flightToDelete, setFlightToDelete] = useState<Flight | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  /** Its documents cascade with it — counted only while the question is open. */
+  const deleteDocumentCount = useDocumentCount(
+    deleteConfirmOpen && flightToDelete ? { type: "flight", id: flightToDelete.id } : null
+  );
+  /** The phone's recording goes with the flight too (review M8). */
+  const deleteRecordingPoints = useFlightRecordingPoints(
+    deleteConfirmOpen && flightToDelete ? flightToDelete.id : null
+  );
   const [duplicateMenuFor, setDuplicateMenuFor] = useState<string | null>(null);
   // Newest first everywhere, and the choice survives a reload — the
   // column choice already did (useColumnPrefs), the sort never had.
@@ -107,6 +124,9 @@ export default function FlightsTablePage(): JSX.Element {
   ] as const);
   const flightColumnPrefs = useColumnPrefs("flights-list", FLIGHT_ALWAYS_VISIBLE);
   const [showAddFlight, setShowAddFlight] = useState(false);
+  /** An explicit selection for the bulk edit of trip, tags and companions (forgejo#217). */
+  const selection = useFlightSelection();
+  const refreshSelection = selection.refresh;
   const [showSpecialModal, setShowSpecialModal] = useState(false);
   const addToast = useToastStore((state) => state.addToast);
 
@@ -166,8 +186,9 @@ export default function FlightsTablePage(): JSX.Element {
   };
 
   const handleDelete = async () => {
-    if (!flightToDelete) return;
+    if (!flightToDelete || deleting) return;
 
+    setDeleting(true);
     try {
       await flightsApi.delete(flightToDelete.id);
       addToast("success", t("flights:table.toast.deleted"));
@@ -179,6 +200,8 @@ export default function FlightsTablePage(): JSX.Element {
       addToast("error", t("dashboard:errors.deleteFlight"));
       setDeleteConfirmOpen(false);
       setFlightToDelete(null);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -209,12 +232,12 @@ export default function FlightsTablePage(): JSX.Element {
     }
   };
 
+  // Stores the update; the dialog closes itself once the trip assignment that
+  // follows has gone through (FlightEditModal), and `reload` runs after both.
   const handleUpdate = async (id: string, updates: Partial<FlightInput>) => {
     try {
       await flightsApi.update(id, updates);
       addToast("success", t("flights:table.toast.updated"));
-      setEditingFlight(null);
-      reload();
     } catch (error) {
       logger.error("Failed to update flight:", error);
       addToast("error", t("dashboard:errors.updateFlight"));
@@ -346,12 +369,15 @@ export default function FlightsTablePage(): JSX.Element {
         if (cancelled) return;
         setFlights(data.flights);
         setTotal(data.total);
+        // A reload after a bulk edit: the chosen rows read their new values.
+        refreshSelection(data.flights);
       } catch (error) {
         if (cancelled) return;
         // Logged only, until 2.7: a network failure left an empty table that
         // looked exactly like an account with no flights.
         logger.error("Failed to load flights:", error);
         setLoadError(true);
+        setLoadFailure(loadFailureLog(error));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -360,7 +386,7 @@ export default function FlightsTablePage(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [filterState, sortBy, sortOrder, limit, offset, reloadToken]);
+  }, [filterState, sortBy, sortOrder, limit, offset, reloadToken, refreshSelection]);
 
   // The option lists and the summary figures. Separate from the page fetch on
   // purpose: paging and re-sorting do not change a single one of these
@@ -447,6 +473,15 @@ export default function FlightsTablePage(): JSX.Element {
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h1 className="t-screen-title">{t("dashboard:flightsTitle")}</h1>
           <div className="flex items-center gap-2">
+            {!selection.selecting && (
+              <button
+                type="button"
+                className="btn-secondary whitespace-nowrap pointer-coarse:min-h-(--ts-size-touch-min)"
+                onClick={selection.start}
+              >
+                {t("flights:bulk.start")}
+              </button>
+            )}
             <ColumnPicker
               columns={FLIGHT_COLUMN_IDS.map((id) => ({
                 id,
@@ -499,6 +534,17 @@ export default function FlightsTablePage(): JSX.Element {
           </div>
         )}
 
+        <FlightBulkBar
+          selection={selection}
+          pageFlights={flights}
+          trips={trips}
+          labelOf={(id) => {
+            const f = selection.selected.get(id) ?? flights.find((x) => x.id === id);
+            return f ? flightLabel(f) : id;
+          }}
+          onApplied={reload}
+        />
+
         <FlightsFilterBar
           search={search}
           onSearchChange={setSearch}
@@ -526,12 +572,10 @@ export default function FlightsTablePage(): JSX.Element {
         />
 
         {loadError ? (
-          <div
-            role="alert"
-            className="rounded-md border border-[var(--danger)]/50 bg-[var(--danger)]/10 px-4 py-4 text-sm text-[var(--danger)]"
-          >
-            {t("flights:table.loadError")}
-          </div>
+          // A failed read with a way forward (forgejo#247) — it was a red
+          // sentence with nothing to press, so the only retry was a reload of
+          // the whole page.
+          <ListLoadFailed title={t("flights:table.loadError")} onRetry={reload} log={loadFailure} />
         ) : (
           <>
             {!loading && flights.length > 0 && (
@@ -549,6 +593,10 @@ export default function FlightsTablePage(): JSX.Element {
                   emptyTitle={t("flights:table.noFlights")}
                   emptyHint={t("flights:table.noFlightsHint")}
                   onReset={resetFilters}
+                  action={{
+                    label: t("dashboard:addFlight"),
+                    onClick: () => setShowAddFlight(true),
+                  }}
                 />
               </div>
             ) : (
@@ -580,24 +628,33 @@ export default function FlightsTablePage(): JSX.Element {
                         ),
                     }}
                     actions={
-                      <FlightRowActions
-                        flight={flight}
-                        openDuplicateMenuFor={duplicateMenuFor}
-                        onToggleDuplicateMenu={setDuplicateMenuFor}
-                        onEdit={(f) => {
-                          // Special flights → SpecialFlightModal so the user
-                          // edits eclipse coords / parabolas / etc. through the
-                          // same UI that created them, not the generic edit
-                          // modal (which hides those fields entirely).
-                          if (f.specialType) {
-                            setEditingSpecialFlight(f);
-                          } else {
-                            setEditingFlight(f);
-                          }
-                        }}
-                        onDuplicate={(f, mode) => void handleDuplicate(f, mode)}
-                        onDelete={handleDeleteClick}
-                      />
+                      <>
+                        {selection.selecting && (
+                          <SelectCheckbox
+                            checked={selection.isSelected(flight.id)}
+                            label={t("flights:bulk.selectOne", { name: flightLabel(flight) })}
+                            onToggle={() => selection.toggle(flight)}
+                          />
+                        )}
+                        <FlightRowActions
+                          flight={flight}
+                          openDuplicateMenuFor={duplicateMenuFor}
+                          onToggleDuplicateMenu={setDuplicateMenuFor}
+                          onEdit={(f) => {
+                            // Special flights → SpecialFlightModal so the user
+                            // edits eclipse coords / parabolas / etc. through the
+                            // same UI that created them, not the generic edit
+                            // modal (which hides those fields entirely).
+                            if (f.specialType) {
+                              setEditingSpecialFlight(f);
+                            } else {
+                              setEditingFlight(f);
+                            }
+                          }}
+                          onDuplicate={(f, mode) => void handleDuplicate(f, mode)}
+                          onDelete={handleDeleteClick}
+                        />
+                      </>
                     }
                   />
                 ))}
@@ -627,6 +684,7 @@ export default function FlightsTablePage(): JSX.Element {
           isOpen={!!editingFlight}
           onClose={() => setEditingFlight(null)}
           onSave={handleUpdate}
+          onAfterSave={reload}
         />
       )}
 
@@ -635,6 +693,7 @@ export default function FlightsTablePage(): JSX.Element {
         <SimplifiedFlightFormV2
           onSubmit={handleAddFlight}
           onCancel={closeAddFlight}
+          onReload={reload}
           onPickSpecialFlight={() => {
             closeAddFlight();
             setShowSpecialModal(true);
@@ -646,6 +705,7 @@ export default function FlightsTablePage(): JSX.Element {
       <SpecialFlightModal
         isOpen={showSpecialModal || !!editingSpecialFlight}
         flight={editingSpecialFlight}
+        onReload={editingSpecialFlight ? undefined : reload}
         onClose={() => {
           setShowSpecialModal(false);
           setEditingSpecialFlight(null);
@@ -673,13 +733,29 @@ export default function FlightsTablePage(): JSX.Element {
           setFlightToDelete(null);
         }}
         onConfirm={handleDelete}
+        isLoading={deleting}
         title={t("flights:table.deleteConfirm.title")}
-        // Names the flight, like the other five dialogs do now. "Diesen
-        // Flug" was fine on a detail page and wrong in a list, where the
-        // row you clicked may not be the row you meant.
-        message={t("flights:table.deleteConfirm.message", {
-          name: flightToDelete ? flightLabel(flightToDelete) : "",
-        })}
+        // Names the flight ("Diesen Flug" was wrong in a list, where the row
+        // you clicked may not be the row you meant), the documents that go
+        // with it and what stays, by name (forgejo#250).
+        message={
+          flightToDelete
+            ? flightDeleteMessage(
+                t,
+                {
+                  name: flightLabel(flightToDelete),
+                  tripName: flightToDelete.tripId
+                    ? (tripMap.get(flightToDelete.tripId)?.name ?? flightToDelete.trip?.name ?? "")
+                    : null,
+                  booking: flightToDelete.bookingId
+                    ? { pnr: flightToDelete.bookingReference ?? null, otherFlights: null }
+                    : null,
+                  recordingPoints: deleteRecordingPoints,
+                },
+                deleteDocumentCount
+              )
+            : ""
+        }
         confirmText={t("flights:table.deleteConfirm.confirm")}
         cancelText={t("flights:table.deleteConfirm.cancel")}
         confirmButtonClass={DELETE_BUTTON_CLASS}

@@ -82,7 +82,8 @@ export function RailImportPreviewModal({ booking, onCancel, onSaved }: Props): J
         previousId = result.journey.id;
       } catch (err: unknown) {
         logger.error("RailImportPreviewModal: a leg was refused", err);
-        next[index] = { kind: "failed", key: saveErrorFrom(err).key };
+        // Each leg is a create: a lost answer may have stored it.
+        next[index] = { kind: "failed", key: saveErrorFrom(err, { create: true }).key };
         failures += 1;
       }
     }

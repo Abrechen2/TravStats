@@ -12,6 +12,8 @@ import type {
   MembershipInput,
   LodgingListQuery,
   LodgingPage,
+  StayListQuery,
+  StayPage,
   LodgingFacets,
   LodgingStats,
   FxPreview,
@@ -122,8 +124,35 @@ export const updateLodging = async (id: string, input: LodgingInput): Promise<Lo
   return data.data;
 };
 
+/**
+ * What deleting a house takes with it besides its stays - its photographs and
+ * the kept originals of ALL its stays - in one request (forgejo#250). The
+ * confirmation used to ask the documents API once per stay.
+ */
+export interface LodgingDeleteFactsCounts {
+  photoCount: number;
+  documentCount: number;
+}
+
+export const getLodgingDeleteFacts = async (id: string): Promise<LodgingDeleteFactsCounts> => {
+  const { data } = await api.get<Envelope<LodgingDeleteFactsCounts>>(`/lodging/${id}/delete-facts`);
+  return data.data;
+};
+
 export const deleteLodging = async (id: string): Promise<void> => {
   await api.delete(`/lodging/${id}`);
+};
+
+/**
+ * ONE page of the account's stays across all its houses, in check-in order
+ * (forgejo#226), optionally narrowed to a window of calendar days or a trip.
+ * The same call answers "which stays touch these days?" for the overlap notice
+ * (forgejo#229) - the server's window is a coarse superset, the exact rule is
+ * `shared/lodgingOverlap.ts`.
+ */
+export const listStayPage = async (params: StayListQuery = {}): Promise<StayPage> => {
+  const { data } = await api.get<Envelope<StayPage["rows"]>>("/lodging/stays", { params });
+  return { rows: data.data, total: data.meta?.total ?? data.data.length };
 };
 
 // ---- Stay CRUD (nested under a lodging) ----

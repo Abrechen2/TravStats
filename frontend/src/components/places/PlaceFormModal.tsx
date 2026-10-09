@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import { LocationInput, type LocationSelection } from "../location/LocationInput";
 import type { LocationCoordinates } from "../location/LocationInput";
 import { useTranslation } from "../../hooks/useTranslation";
 import Modal from "../Modal";
 import { logger } from "../../lib/logger";
 import { createPlace, updatePlace } from "../../lib/api/places";
-import { addPlaceToList, listPlaceLists } from "../../lib/api/placeLists";
+import { listPlaceLists } from "../../lib/api/placeLists";
+import {
+  isOutcomeUnknownSaveError,
+  isTransientSaveError,
+  saveErrorKey,
+} from "../../lib/saveErrorMessage";
 import type { PlaceList } from "../../types/placeList";
 import { useToastStore } from "../../store/toastStore";
 import {
@@ -16,12 +21,48 @@ import {
   type PlaceCategory,
 } from "../../shared/placeCategories";
 import type { Place } from "../../types/place";
+import {
+  FormErrorBanner,
+  RequiredLegend,
+  RequiredMark,
+  SaveBlockedHint,
+  useDirtyGuard,
+  useFormFailure,
+  useSaveOnce,
+} from "../form";
+import type { MissingStep } from "../form";
+import { PLACE_FIELD_MAX, placeFormFields, placePayload } from "./placeFormDraft";
+import { assignPlaceToLists } from "./placeListAssign";
+import { PlaceListPartialNotice } from "./PlaceListPartialNotice";
+
+const NAME_ID = "place-form-name";
+const LOCATION_PREFIX = "place-location";
+const HINT_ID = "place-form-save-blocked";
+
+/** Touch sizing follows the pointer (forgejo#249): 44 px on an iPad, dense on a desk. */
+const COARSE = "pointer-coarse:min-h-(--ts-size-touch-min)";
 
 interface Props {
   /** Null when creating. */
   place: Place | null;
   onClose: () => void;
-  onSaved: (place: Place) => void;
+  onSaved: (place: Place) => void | Promise<void>;
+  /** What the "stored, but the follow-up failed" notice names (`useSaveOnce`). */
+  afterSaveFailedKey?: string;
+  /** A new place's starting name — the text a list search found nothing for. */
+  initialName?: string;
+  /**
+   * The list this place is created FOR (forgejo#230). The form says the place
+   * goes there next, and leaves out its own list picker: the list page files
+   * it, once, after the save.
+   */
+  forList?: string;
+  /**
+   * Re-reads the caller's list WITHOUT closing this form — offered when a
+   * create's answer was lost (`isOutcomeUnknownSaveError`), so the user can
+   * look before sending again. Omitted where the caller cannot do that.
+   */
+  onReload?: () => void;
 }
 
 /**
@@ -33,44 +74,53 @@ interface Props {
  * `useLocationSearch`, which says "search is unavailable" rather than the
  * misleading "no results", and the manual paths keep working while it is down.
  *
- * A place cannot be saved without a position (`lat`/`lon` are NOT NULL), so
- * the submit button stays disabled until one exists. That is enforced here
- * rather than only server-side so the user learns it before typing a name.
+ * Pattern (forgejo#245): **disabled save + `SaveBlockedHint`**. A place cannot
+ * be saved without a name and a position (`lat`/`lon` are NOT NULL), so the
+ * button stays greyed out and the hint beside it names what is missing and
+ * takes the cursor there. Before, a missing name greyed the button and said
+ * nothing at all, and every refusal was a toast that vanished (h-inventory §2).
  */
-export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element {
+export function PlaceFormModal({
+  place,
+  onClose,
+  onSaved,
+  afterSaveFailedKey,
+  initialName = "",
+  forList,
+  onReload,
+}: Props): JSX.Element {
   const { t } = useTranslation(["places", "common"]);
   const addToast = useToastStore((s) => s.addToast);
   const isEdit = place !== null;
 
-  const [name, setName] = useState(place?.name ?? "");
-  /** The name on the sign, in the place's own script (forgejo#199). */
-  const [localName, setLocalName] = useState(place?.localName ?? "");
-  const [category, setCategory] = useState<PlaceCategory>(place?.category ?? "other");
-  const [lat, setLat] = useState<number | null>(place?.lat ?? null);
-  const [lon, setLon] = useState<number | null>(place?.lon ?? null);
-  const [address, setAddress] = useState(place?.address ?? "");
-  const [city, setCity] = useState(place?.city ?? "");
-  const [country, setCountry] = useState(place?.country ?? "");
-  const [notes, setNotes] = useState(place?.notes ?? "");
-  const [visited, setVisited] = useState(place?.visited ?? false);
+  const initial = placeFormFields(place, initialName);
+  const [name, setName] = useState(initial.name);
+  const [localName, setLocalName] = useState(initial.localName);
+  const [category, setCategory] = useState<PlaceCategory>(initial.category);
+  const [lat, setLat] = useState<number | null>(initial.lat);
+  const [lon, setLon] = useState<number | null>(initial.lon);
+  const [address, setAddress] = useState(initial.address);
+  const [city, setCity] = useState(initial.city);
+  const [country, setCountry] = useState(initial.country);
+  const [notes, setNotes] = useState(initial.notes);
+  const [visited, setVisited] = useState(initial.visited);
   /**
    * Provenance, never user-editable: it is the dedup key the server matches on,
    * so letting it be typed would let a user collide with their own row. It is
-   * state rather than a constant because the picker now MINTS it — see
+   * state rather than a constant because the picker MINTS it — see
    * `handleLocationChange`.
    *
-   * Until then nothing wrote it on create, so every hand-added place was stored
-   * with `externalRef: null` and the `@@unique([userId, externalRef])` index on
-   * `Place` could never fire. Add the Colosseum by hand, import it later from
-   * Google Takeout, and you own two Colosseums — the precondition named in
-   * `docs/superpowers/specs/2026-08-25-poi-phase-d-import-design.md` §3.1.
+   * Before that nothing wrote it on create, so every hand-added place was
+   * stored with `externalRef: null` and the `@@unique([userId, externalRef])`
+   * index on `Place` could never fire. Add the Colosseum by hand, import it
+   * later from Google Takeout, and you own two Colosseums — the precondition
+   * named in `docs/superpowers/specs/2026-08-25-poi-phase-d-import-design.md` §3.1.
    */
-  const [externalRef, setExternalRef] = useState(place?.externalRef ?? "");
-  const [saving, setSaving] = useState(false);
+  const [externalRef, setExternalRef] = useState(initial.externalRef);
   // Forgejo #9: out-of-range coordinates used to vanish silently and the
-  // record saved without them. LocationInput now says so; this stops the
-  // form writing while the user is looking at that message.
-  const [coordsValid, setCoordsValid] = useState(true);
+  // record saved without them. LocationInput says so; this names the value at
+  // fault beside the save button, so the hint can take the user to it.
+  const [badCoordinate, setBadCoordinate] = useState<"lat" | "lon" | null>(null);
 
   /**
    * Lists to drop the new place into, offered on CREATE only.
@@ -87,8 +137,14 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
   const [lists, setLists] = useState<PlaceList[]>([]);
   const [selectedLists, setSelectedLists] = useState<string[]>([]);
 
+  /** The stored place while the lists that refused it are on screen. */
+  const [stored, setStored] = useState<Place | null>(null);
+  const [rejectedLists, setRejectedLists] = useState<string[]>([]);
+  const [reassigning, setReassigning] = useState(false);
+  const [finishFailed, setFinishFailed] = useState(false);
+
   useEffect(() => {
-    if (isEdit) return;
+    if (isEdit || forList !== undefined) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -102,9 +158,48 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
     return (): void => {
       cancelled = true;
     };
-  }, [isEdit]);
+  }, [isEdit, forList]);
+
+  const fields = {
+    name,
+    localName,
+    category,
+    lat,
+    lon,
+    address,
+    city,
+    country,
+    notes,
+    visited,
+    externalRef,
+  };
+  // The list picks are input the user would lose too; a refused coordinate as
+  // well — Escape must not drop it just because it never became a position.
+  const snapshot = { ...fields, selectedLists, badCoordinate };
+  const { dirty, markSaved } = useDirtyGuard(
+    { ...initial, selectedLists: [], badCoordinate: null },
+    snapshot
+  );
+  const saving = useSaveOnce<Place>({ afterSaveFailedKey });
+  const failure = useFormFailure(JSON.stringify(snapshot));
 
   const position: LocationCoordinates | null = lat !== null && lon !== null ? { lat, lon } : null;
+
+  // What keeps "Speichern" greyed out, said beside it (forgejo#245).
+  const missing: MissingStep[] = [
+    ...(name.trim() === "" ? [{ field: NAME_ID, label: t("places:form.name") }] : []),
+    ...(position === null
+      ? [{ field: `${LOCATION_PREFIX}-search`, label: t("places:form.missing.position") }]
+      : []),
+    ...(badCoordinate !== null
+      ? [
+          {
+            field: `${LOCATION_PREFIX}-${badCoordinate}`,
+            label: t("places:form.missing.coordinates"),
+          },
+        ]
+      : []),
+  ];
 
   /**
    * A search hit fills everything it knows, but NEVER overwrites something the
@@ -133,115 +228,132 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
     setCategory((prev) => (prev === "other" ? categoryFromOsmValue(sel.osmValue) : prev));
   }, []);
 
-  const canSave = name.trim() !== "" && position !== null && !saving;
-
-  const submit = useCallback(async (): Promise<void> => {
-    if (!canSave || position === null) return;
-    setSaving(true);
+  /** Tell the caller — the one step left once the place and its lists are settled. */
+  const finish = async (saved: Place): Promise<void> => {
+    addToast("success", isEdit ? t("places:form.updated") : t("places:form.created"));
     try {
-      const payload = {
-        name: name.trim(),
-        // Null on an empty field: on edit that clears the second name, on
-        // create it lets the server split a name typed with both scripts.
-        localName: localName.trim() || null,
-        category,
-        lat: position.lat,
-        lon: position.lon,
-        address: address.trim() || null,
-        city: city.trim() || null,
-        country: country.trim() || null,
-        notes: notes.trim() || null,
-        visited,
-        externalRef: externalRef.trim() || null,
-      };
-      const saved = isEdit ? await updatePlace(place.id, payload) : await createPlace(payload);
+      await onSaved(saved);
+    } catch (err: unknown) {
+      logger.error({ err }, "PlaceFormModal: the follow-up after saving failed");
+      setFinishFailed(true);
+    }
+  };
 
-      // The place exists at this point. A list that refuses the membership is
-      // reported and does not undo the creation — losing a place because one
-      // list said no would be a far worse trade than an unfiled place.
-      const rejected: string[] = [];
-      if (!isEdit && selectedLists.length > 0) {
-        for (const listId of selectedLists) {
-          try {
-            await addPlaceToList(listId, saved.id);
-          } catch (err) {
-            logger.error({ err, listId }, "PlaceFormModal: could not add to list");
-            rejected.push(lists.find((l) => l.id === listId)?.name ?? listId);
+  const handleSave = async (): Promise<void> => {
+    const payload = placePayload(fields);
+    if (missing.length > 0 || payload === null) return;
+    failure.clear();
+    // The request and what follows it are two steps (forgejo#247): a list that
+    // refuses the place, or a page that fails to reload, must not turn a stored
+    // place into "konnte nicht gespeichert werden" — the next click would have
+    // created it twice.
+    const outcome = await saving.save(
+      () => (isEdit ? updatePlace(place.id, payload) : createPlace(payload)),
+      async (saved) => {
+        markSaved();
+        if (!isEdit && selectedLists.length > 0) {
+          const { rejected } = await assignPlaceToLists(saved.id, selectedLists);
+          if (rejected.length > 0) {
+            // Partly done: the place stands, some filing did not. Said in the
+            // form, with a retry for exactly those lists (forgejo#247).
+            setStored(saved);
+            setRejectedLists(rejected);
+            return;
           }
         }
+        addToast("success", isEdit ? t("places:form.updated") : t("places:form.created"));
+        await onSaved(saved);
       }
-
-      addToast("success", isEdit ? t("places:form.updated") : t("places:form.created"));
-      if (rejected.length > 0) {
-        addToast("error", t("places:form.listAddFailed", { lists: rejected.join(", ") }));
-      }
-      onSaved(saved);
-    } catch (err: unknown) {
-      logger.error({ err }, "PlaceFormModal: save failed");
-      addToast("error", t("places:form.saveFailed"));
-    } finally {
-      setSaving(false);
+    );
+    if (outcome.status === "failed") {
+      logger.error({ err: outcome.error }, "PlaceFormModal: save failed");
+      failure.fail(saveErrorKey(outcome.error, "places:form.saveFailed", {}, { create: !isEdit }));
     }
-  }, [
-    canSave,
-    position,
-    name,
-    localName,
-    category,
-    address,
-    city,
-    country,
-    notes,
-    visited,
-    externalRef,
-    isEdit,
-    place,
-    addToast,
-    t,
-    onSaved,
-    selectedLists,
-    lists,
-  ]);
+  };
 
-  // The shared frame the three other domain edit dialogs use. This one already
-  // brought its own Escape handler and its own backdrop — which is exactly the
-  // duplication the frame exists to end. It also gains the scroll lock and the
-  // focus return to whatever opened it.
+  const retryLists = async (): Promise<void> => {
+    if (stored === null || reassigning) return;
+    setReassigning(true);
+    try {
+      const { rejected } = await assignPlaceToLists(stored.id, rejectedLists);
+      setRejectedLists(rejected);
+      if (rejected.length === 0) await finish(stored);
+    } finally {
+      setReassigning(false);
+    }
+  };
+
+  const partial = stored !== null && rejectedLists.length > 0;
+  const listName = (id: string): string => lists.find((l) => l.id === id)?.name ?? id;
+
   return (
     <Modal
       open
-      onClose={onClose}
-      busy={saving}
+      // Once the place is stored, every way out is "continue": the caller must
+      // learn of it, or the list behind the dialog would not show the place.
+      onClose={partial && stored !== null ? () => void finish(stored) : onClose}
+      busy={saving.saving || reassigning}
+      dirty={dirty}
       maxWidth={672}
       closeLabel={t("common:buttons.close")}
       title={isEdit ? t("places:form.editTitle") : t("places:form.createTitle")}
-      footer={
-        <>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg px-4 py-2 text-sm"
-            style={{ border: "1px solid var(--color-border)", color: "var(--text-secondary)" }}
-          >
-            {t("common:buttons.cancel")}
-          </button>
-          <button
-            type="button"
-            onClick={() => void submit()}
-            disabled={!canSave || !coordsValid}
-            className="rounded-lg px-4 py-2 text-sm font-semibold"
-            style={{
-              background: canSave ? "var(--domain-poi)" : "var(--bg-muted)",
-              color: canSave ? "#08221e" : "var(--text-muted)",
-              cursor: canSave ? "pointer" : "not-allowed",
-            }}
-          >
-            {saving ? t("common:buttons.saving") : t("common:buttons.save")}
-          </button>
-        </>
+      footer={(requestClose) =>
+        saving.afterSaveFailed || finishFailed ? (
+          // Stored, but the follow-up failed: the only honest action left is to
+          // close. Another "Speichern" would send nothing (`useSaveOnce`).
+          <>
+            <p role="status" className="mr-auto self-center text-sm text-[var(--text-muted)]">
+              {t(saving.afterSaveFailedKey)}
+            </p>
+            <button type="button" onClick={onClose} className={`btn-primary ${COARSE}`}>
+              {t("common:buttons.close")}
+            </button>
+          </>
+        ) : partial && stored !== null ? (
+          <PlaceListPartialNotice
+            names={rejectedLists.map(listName)}
+            busy={reassigning}
+            onRetry={() => void retryLists()}
+            onContinue={() => void finish(stored)}
+          />
+        ) : (
+          <>
+            <div className="mr-auto self-center">
+              <SaveBlockedHint id={HINT_ID} missing={missing} />
+            </div>
+            <button
+              type="button"
+              onClick={requestClose}
+              disabled={saving.saving}
+              className={`rounded-lg px-4 py-2 text-sm disabled:opacity-50 ${COARSE}`}
+              style={{ border: "1px solid var(--color-border)", color: "var(--text-secondary)" }}
+            >
+              {t("common:buttons.cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={saving.saving || saving.saved !== null || missing.length > 0}
+              aria-describedby={HINT_ID}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed ${COARSE}`}
+              style={
+                missing.length === 0
+                  ? { background: "var(--domain-poi)", color: "#08221e" }
+                  : { background: "var(--bg-muted)", color: "var(--text-muted)" }
+              }
+            >
+              {saving.saving ? t("common:buttons.saving") : t("common:buttons.save")}
+            </button>
+          </>
+        )
       }
     >
-      <>
+      <div ref={failure.rootRef}>
+        {forList !== undefined && (
+          <p className="mb-3 text-sm" style={{ color: "var(--text-secondary)" }}>
+            {t("places:form.forList", { list: forList })}
+          </p>
+        )}
         <div className="space-y-4">
           {/* FIRST field, as the lodging form already does — it was moved
               there in July for this exact reason and places were never
@@ -252,32 +364,45 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
           <LocationInput
             value={position}
             onChange={handleLocationChange}
-            onValidityChange={setCoordsValid}
-            idPrefix="place-location"
+            onValidityChange={(valid, field) => setBadCoordinate(valid ? null : (field ?? "lat"))}
+            idPrefix={LOCATION_PREFIX}
             label={t("places:form.searchLabel")}
+            required
           />
 
-          <Field label={t("places:form.name")}>
+          <Field
+            id={NAME_ID}
+            label={
+              <>
+                {t("places:form.name")} <RequiredMark />
+              </>
+            }
+          >
             <input
+              id={NAME_ID}
+              aria-required="true"
               className={INPUT_CLASS}
               value={name}
+              maxLength={PLACE_FIELD_MAX.name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t("places:form.namePlaceholder")}
             />
           </Field>
 
-          <Field label={t("places:form.localName")}>
+          <Field id="place-form-local-name" label={t("places:form.localName")}>
             <input
+              id="place-form-local-name"
               className={INPUT_CLASS}
               value={localName}
               onChange={(e) => setLocalName(e.target.value)}
               placeholder={t("places:form.localNamePlaceholder")}
-              maxLength={200}
+              maxLength={PLACE_FIELD_MAX.localName}
             />
           </Field>
 
-          <Field label={t("places:form.category")}>
+          <Field id="place-form-category" label={t("places:form.category")}>
             <select
+              id="place-form-category"
               className={INPUT_CLASS}
               value={category}
               onChange={(e) => setCategory(e.target.value as PlaceCategory)}
@@ -291,121 +416,168 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
           </Field>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <Field label={t("places:form.address")}>
+            <Field id="place-form-address" label={t("places:form.address")}>
               <input
+                id="place-form-address"
                 className={INPUT_CLASS}
                 value={address}
+                maxLength={PLACE_FIELD_MAX.address}
                 onChange={(e) => setAddress(e.target.value)}
               />
             </Field>
-            <Field label={t("places:form.city")}>
+            <Field id="place-form-city" label={t("places:form.city")}>
               <input
+                id="place-form-city"
                 className={INPUT_CLASS}
                 value={city}
+                maxLength={PLACE_FIELD_MAX.city}
                 onChange={(e) => setCity(e.target.value)}
               />
             </Field>
-            <Field label={t("places:form.country")}>
+            <Field id="place-form-country" label={t("places:form.country")}>
               <input
+                id="place-form-country"
                 className={INPUT_CLASS}
                 value={country}
+                maxLength={PLACE_FIELD_MAX.country}
                 onChange={(e) => setCountry(e.target.value)}
               />
             </Field>
           </div>
 
           {!isEdit && lists.length > 0 && (
-            <Field label={t("places:form.addToLists")}>
-              <div className="flex flex-wrap gap-2">
-                {lists.map((list) => {
-                  const on = selectedLists.includes(list.id);
-                  return (
-                    <button
-                      key={list.id}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() =>
-                        setSelectedLists((prev) =>
-                          prev.includes(list.id)
-                            ? prev.filter((id) => id !== list.id)
-                            : [...prev, list.id]
-                        )
-                      }
-                      className="rounded-full border px-3 py-1 text-xs"
-                      style={{
-                        borderColor: on ? list.color : "var(--color-border)",
-                        background: on ? `${list.color}22` : "transparent",
-                        color: on ? list.color : "var(--text-secondary)",
-                      }}
-                    >
-                      {list.icon ? `${list.icon} ` : ""}
-                      {list.name}
-                    </button>
-                  );
-                })}
-              </div>
-            </Field>
+            <ChipGroup label={t("places:form.addToLists")}>
+              {lists.map((list) => {
+                const on = selectedLists.includes(list.id);
+                return (
+                  <button
+                    key={list.id}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() =>
+                      setSelectedLists((prev) =>
+                        prev.includes(list.id)
+                          ? prev.filter((id) => id !== list.id)
+                          : [...prev, list.id]
+                      )
+                    }
+                    className={`rounded-full border px-3 py-1 text-xs ${COARSE}`}
+                    style={{
+                      borderColor: on ? list.color : "var(--color-border)",
+                      background: on ? `${list.color}22` : "transparent",
+                      color: on ? list.color : "var(--text-secondary)",
+                    }}
+                  >
+                    {list.icon ? `${list.icon} ` : ""}
+                    {list.name}
+                  </button>
+                );
+              })}
+            </ChipGroup>
           )}
 
-          <Field label={t("places:form.status")}>
-            <div className="flex gap-2">
-              {([true, false] as const).map((v) => (
-                <button
-                  key={String(v)}
-                  type="button"
-                  onClick={() => setVisited(v)}
-                  className="rounded-full px-4 py-2 text-sm"
-                  style={
-                    visited === v
-                      ? {
-                          border: "1px solid var(--domain-poi)",
-                          color: "var(--domain-poi)",
-                          background: "rgba(94,194,178,0.1)",
-                        }
-                      : { border: "1px solid var(--color-border)", color: "var(--text-muted)" }
-                  }
-                >
-                  {v ? t("places:form.wasHere") : t("places:form.onWishlist")}
-                </button>
-              ))}
-            </div>
-            {/* The default is the wishlist, and saying so beats letting the
-                user discover it from a count that did not move. */}
-            <p className="mt-1.5 text-xs" style={{ color: "var(--text-muted)" }}>
-              {t("places:form.statusHint")}
-            </p>
-          </Field>
+          <ChipGroup label={t("places:form.status")} hintId="place-form-status-hint">
+            {([true, false] as const).map((v) => (
+              <button
+                key={String(v)}
+                type="button"
+                aria-pressed={visited === v}
+                onClick={() => setVisited(v)}
+                className={`rounded-full px-4 py-2 text-sm ${COARSE}`}
+                style={
+                  visited === v
+                    ? {
+                        border: "1px solid var(--domain-poi)",
+                        color: "var(--domain-poi)",
+                        background: "rgba(94,194,178,0.1)",
+                      }
+                    : { border: "1px solid var(--color-border)", color: "var(--text-muted)" }
+                }
+              >
+                {v ? t("places:form.wasHere") : t("places:form.onWishlist")}
+              </button>
+            ))}
+          </ChipGroup>
+          {/* The default is the wishlist, and saying so beats letting the user
+              discover it from a count that did not move. */}
+          <p
+            id="place-form-status-hint"
+            className="-mt-2 text-xs"
+            style={{ color: "var(--text-muted)" }}
+          >
+            {t("places:form.statusHint")}
+          </p>
 
-          <Field label={t("places:form.notes")}>
+          <Field id="place-form-notes" label={t("places:form.notes")}>
             <textarea
+              id="place-form-notes"
               className={INPUT_CLASS}
               rows={3}
               value={notes}
+              maxLength={PLACE_FIELD_MAX.notes}
               onChange={(e) => setNotes(e.target.value)}
             />
           </Field>
         </div>
 
-        {position === null && (
-          <p className="mt-2 text-right text-xs" style={{ color: "var(--text-muted)" }}>
-            {t("places:form.positionRequired")}
-          </p>
-        )}
-      </>
+        <FormErrorBanner
+          message={failure.failureKey !== null ? t(failure.failureKey) : null}
+          onRetry={
+            failure.failureKey !== null && isTransientSaveError(failure.failureKey)
+              ? () => void handleSave()
+              : undefined
+          }
+          retryDisabled={saving.saving}
+          onReload={
+            failure.failureKey !== null && isOutcomeUnknownSaveError(failure.failureKey)
+              ? onReload
+              : undefined
+          }
+        />
+        <RequiredLegend className="mt-3" />
+      </div>
     </Modal>
   );
 }
 
-const INPUT_CLASS =
-  "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-base)] px-3 py-2 text-sm text-[var(--text-primary)]";
+const INPUT_CLASS = `w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-base)] px-3 py-2 text-sm text-[var(--text-primary)] ${COARSE}`;
 
-function Field({ label, children }: { label: string; children: React.ReactNode }): JSX.Element {
+/** A labelled control; `htmlFor` equals the control's id (rollout rule). */
+function Field({
+  id,
+  label,
+  children,
+}: {
+  id: string;
+  label: ReactNode;
+  children: ReactNode;
+}): JSX.Element {
   return (
-    <label className="flex flex-col gap-1">
-      <span className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
+    <div className="flex flex-col gap-1">
+      <label htmlFor={id} className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
         {label}
-      </span>
+      </label>
       {children}
-    </label>
+    </div>
+  );
+}
+
+/** A row of toggle buttons under one visible caption, grouped for a screen reader. */
+function ChipGroup({
+  label,
+  hintId,
+  children,
+}: {
+  label: string;
+  hintId?: string;
+  children: ReactNode;
+}): JSX.Element {
+  return (
+    <fieldset className="flex flex-col gap-1" aria-describedby={hintId}>
+      <legend className="mb-1 text-xs font-medium" style={{ color: "var(--text-muted)" }}>
+        {label}
+      </legend>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </fieldset>
   );
 }

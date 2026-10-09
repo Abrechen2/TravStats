@@ -46,6 +46,7 @@ const EVIDENCE_DOMAIN_OF: Record<StatsDomain, EvidenceDomain> = {
   poi: "place",
   roadtrip: "roadtrip",
   rail: "rail",
+  bus: "bus",
 };
 
 export default function CrossDomainKpis({

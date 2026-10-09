@@ -49,21 +49,23 @@
     "edit": "Bearbeiten",
     "delete": "Löschen",
     "deleteConfirmTitle": "Kreuzfahrt löschen?",
-    "deleteConfirmMessage": "„{{name}}“ wird mit {{count}} Hafenanläufen dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
+    "deleteConfirmMessage": "„{{name}}“ wird mit {{count}} Hafenanläufen dauerhaft gelöscht.",
     "deleteConfirm": "Endgültig löschen",
     "deleteCancel": "Abbrechen",
     "deleteSuccess": "Kreuzfahrt gelöscht",
     "deleteError": "Kreuzfahrt konnte nicht gelöscht werden",
     "loadError": "Die Kreuzfahrt konnte nicht geladen werden.",
-    "deleteConfirmMessage_one": "„{{name}}“ wird mit einem Hafenanlauf dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
-    "deleteConfirmMessage_other": "„{{name}}“ wird mit {{count}} Hafenanläufen dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
-    "deleteConfirmMessageNoStops": "„{{name}}“ wird dauerhaft gelöscht. Zugehörige Reisen bleiben erhalten.",
+    "deleteConfirmMessage_one": "„{{name}}“ wird mit einem Hafenanlauf dauerhaft gelöscht.",
+    "deleteConfirmMessage_other": "„{{name}}“ wird mit {{count}} Hafenanläufen dauerhaft gelöscht.",
+    "deleteConfirmMessageNoStops": "„{{name}}“ wird dauerhaft gelöscht.",
     "backToLogbook": "Logbuch · Kreuzfahrten",
     "itinerary": "Hafenfolge",
     "nights": "Nächte",
     "countries": "Länder",
     "priceKpi": "Preis",
-    "day": "Tag"
+    "day": "Tag",
+    "unresolvedKpi_one": "{{count}} ungeklärt",
+    "unresolvedKpi_other": "{{count}} ungeklärt"
   },
   "field": {
     "ship": "Schiff",
@@ -107,7 +109,9 @@
     "departPortAirport": "Abflughafen",
     "arrivePortAirport": "Zielflughafen",
     "color": "Farbe",
-    "colorAuto": "Automatisch (aus Kreuzfahrt-ID abgeleitet)"
+    "colorAuto": "Automatisch (aus Kreuzfahrt-ID abgeleitet)",
+    "startDate": "Abfahrtsdatum",
+    "endDate": "Ankunftsdatum"
   },
   "seatClass": {
     "economy": "Economy",
@@ -140,7 +144,43 @@
     "moveDown": "Nach unten verschieben",
     "remove": "Stopp entfernen",
     "unresolved": "Nicht aufgelöster Hafen",
-    "unresolvedHint": "Wähle einen Hafen aus dem Katalog, um diesen Stopp aufzulösen."
+    "unresolvedHint": "Wähle einen Hafen aus dem Katalog, um diesen Stopp aufzulösen.",
+    "port": "Hafen",
+    "arrival": "Ankunft (Ortszeit des Hafens)",
+    "departure": "Abfahrt (Ortszeit des Hafens)",
+    "noPort": "Hafen fehlt",
+    "hasExcursion": "Ausflug",
+    "actionsLabel": "Tag {{day}} verschieben oder entfernen",
+    "preview": {
+      "up": "Nach oben: {{effect}}",
+      "down": "Nach unten: {{effect}}",
+      "orderOnly": "nur die Reihenfolge ändert sich",
+      "shift": "{{title}} Tag {{from}} → {{to}}",
+      "shiftDate": "{{from}} → {{to}}",
+      "noteTravels": "Die Ausflugsnotiz bleibt bei diesem Hafen."
+    },
+    "removeConfirm": {
+      "title": "„{{title}}“ (Tag {{day}}) entfernen?",
+      "date": "Datum: {{date}}",
+      "times": "Ankunft {{arrive}}, Abfahrt {{depart}}",
+      "noteLost": "Die Ausflugsnotiz geht mit: „{{note}}“",
+      "othersKeep": "Die übrigen Tage behalten ihre Nummern und Daten.",
+      "othersShift": "Danach ändern sich: {{list}}",
+      "undoHint": "Lässt sich danach mit „Hafenfolge rückgängig“ zurücknehmen.",
+      "keep": "Behalten",
+      "confirm": "Entfernen"
+    },
+    "undo": {
+      "button": "Hafenfolge rückgängig",
+      "scope": "Betrifft nur die Reihenfolge der Tage, nicht die auf der Karte gezeichnete Route.",
+      "last": "Zuletzt: {{action}}.",
+      "done": "Zurückgenommen: {{action}}.",
+      "removed": "„{{title}}“ (Tag {{day}}) entfernt",
+      "moved": "„{{title}}“ verschoben",
+      "added": "Tag {{day}} hinzugefügt"
+    },
+    "allAboard": "Alle an Bord (Ortszeit)",
+    "allAboardHint": "Steht im Tagesprogramm des Schiffs. TravStats leitet sie nicht aus der Abfahrt ab."
   },
   "picker": {
     "ship_placeholder": "Schiff suchen …",
@@ -217,8 +257,18 @@
     "editTitle": "Kreuzfahrt bearbeiten",
     "saveError": "Kreuzfahrt konnte nicht gespeichert werden",
     "routeNameSuggestion": "Vorschlag übernehmen: {{name}}",
-    "identityRequired": "Gib ein Schiff, einen Routennamen, eine Reederei oder den Abfahrtshafen an – sonst lässt sich die Kreuzfahrt nicht wiedererkennen.",
-    "startDateRequired": "Gib das Abfahrtsdatum an."
+    "missing": {
+      "identity": "Schiff, Reederei, Routenname oder Abfahrtshafen (eins davon)",
+      "startDate": "Abfahrtsdatum",
+      "stopPort": "Hafen für Tag {{day}} (oder „Auf See“)"
+    },
+    "identityHint": "Pflicht ist eins davon: Schiff, Reederei, Routenname oder Abfahrtshafen – sonst lässt sich die Kreuzfahrt nicht wiedererkennen.",
+    "errors": {
+      "endBeforeStart": "Das Ankunftsdatum liegt vor dem Abfahrtsdatum.",
+      "deck": "Das Deck ist eine ganze Zahl von 1 bis 30.",
+      "price": "Der Preis darf nicht negativ sein."
+    },
+    "colorPicked": "Gewählte Farbe: {{color}}"
   },
   "add": {
     "title": "Kreuzfahrt hinzufügen"
@@ -351,5 +401,116 @@
     "saveError": "Die Spur konnte nicht gespeichert werden.",
     "alreadyImported": "Diese Aufzeichnung ist bereits bei der Kreuzfahrt.",
     "removeError": "Die Spur konnte nicht entfernt werden."
+  },
+  "deleteSurvivors": {
+    "trip": "die Reise „{{name}}“",
+    "tripUnnamed": "die verknüpfte Reise"
+  },
+  "dayCard": {
+    "today": "Heute",
+    "port": "Hafen",
+    "inPort": "Liegezeit",
+    "inPortTimes": "{{arrive}} – {{depart}} Ortszeit",
+    "open": "offen",
+    "hours_one": "{{count}} Std.",
+    "hours_other": "{{count}} Std.",
+    "minutes_one": "{{count}} Min.",
+    "minutes_other": "{{count}} Min.",
+    "hoursMinutes": "{{hours}} Std. {{minutes}} Min.",
+    "allAboard": "Alle an Bord",
+    "localTime": "{{time}} Ortszeit",
+    "allAboardOpen": "nicht erfasst – steht im Tagesprogramm des Schiffs und lässt sich unter „Bearbeiten“ beim Tag eintragen",
+    "excursion": "Ausflug",
+    "noExcursion": "keiner eingetragen",
+    "documents": "Dokumente",
+    "documentsLoading": "Dokumente werden geladen …",
+    "documentsFailed": "Die Dokumente konnten nicht geladen werden.",
+    "noDocuments_zero": "Für diese Kreuzfahrt ist kein Dokument abgelegt.",
+    "noDocuments_one": "Keins mit diesem Datum – das Dokument der Kreuzfahrt steht unten unter „Dokumente“.",
+    "noDocuments_other": "Keins mit diesem Datum – die {{count}} Dokumente der Kreuzfahrt stehen unten unter „Dokumente“.",
+    "localNote": "Datum und Zeiten gelten am Hafen (Ortszeit). Fehlende Zeiten bleiben offen; die Alle-an-Bord-Zeit wird nie aus der Abfahrt abgeleitet.",
+    "pickHint": "Tippe auf einen Tag der Hafenfolge, um seine Tageskarte zu öffnen.",
+    "openDay": "Tageskarte öffnen:",
+    "documentsDated": "Mit diesem Datum:"
+  },
+  "unresolved": {
+    "title_one": "Ein ungeklärter Hafen",
+    "title_other": "{{count}} ungeklärte Häfen",
+    "incomplete_one": "Bis er einem Katalogeintrag zugeordnet ist, zählt er als Hafenanlauf, aber nicht als Hafen – die Hafenzahl steht bei {{matched}} (+{{count}} ungeklärt). Die Länderzählung und die Karte lassen ihn aus, und die Seemeilen der Abschnitte zu ihm und von ihm fehlen.",
+    "incomplete_other": "Bis sie Katalogeinträgen zugeordnet sind, zählen sie als Hafenanläufe, aber nicht als Häfen – die Hafenzahl steht bei {{matched}} (+{{count}} ungeklärt). Die Länderzählung und die Karte lassen sie aus, und die Seemeilen der Abschnitte zu ihnen und von ihnen fehlen.",
+    "days_one": "Tag {{days}}",
+    "days_other": "Tage {{days}}",
+    "candidates": "Treffer im Hafenkatalog",
+    "searching": "Suche im Katalog …",
+    "searchFailed": "Der Katalog konnte nicht durchsucht werden.",
+    "noCandidates": "Kein Treffer im Katalog – unten nach einem anderen Namen suchen oder den Hafen dort neu anlegen.",
+    "searchOther": "Anderen Hafen suchen",
+    "confirm": "„{{port}}“ zuordnen",
+    "confirmNone": "Zuerst einen Hafen wählen",
+    "saving": "Ordne zu …",
+    "saveError": "Die Zuordnung konnte nicht gespeichert werden.",
+    "done": "„{{name}}“ ist jetzt „{{port}}“ zugeordnet."
+  },
+  "reimport": {
+    "title": "„{{name}}“ ist schon gespeichert – der neue Reiseplan weicht ab",
+    "titleLoading": "Gespeicherten Reiseplan vergleichen",
+    "loading": "Der gespeicherte Reiseplan wird geladen …",
+    "loadFailed": "Der gespeicherte Reiseplan konnte nicht geladen werden.",
+    "intro": "Kreuze an, was aus dem neuen Plan übernommen wird. Deine Ausflugsnotizen, Alle-an-Bord-Zeiten und eingetragenen Daten bleiben erhalten – nur wenn ein Tag einen anderen Hafen bekommt, entfallen die Zeiten des alten Hafens. Ein Tag, der im neuen Plan fehlt, wird nur entfernt, wenn du es ankreuzt.",
+    "added": "Neu im Plan: Tag {{day}} · {{title}}",
+    "removed": "Nicht mehr im Plan: Tag {{day}} · {{title}}",
+    "port": "Tag {{day}}: {{from}} → {{to}}",
+    "times": "Tag {{day}} · {{title}}: {{from}} → {{to}} (Ortszeit)",
+    "noteStays": "Deine Notiz bleibt: „{{note}}“",
+    "noteGoes": "Die Ausflugsnotiz „{{note}}“ ginge mit.",
+    "keepStored": "Gespeicherten Plan behalten",
+    "apply_zero": "Nichts ausgewählt",
+    "apply_one": "{{count}} Änderung übernehmen",
+    "apply_other": "{{count}} Änderungen übernehmen",
+    "progress": "Buchung {{current}} von {{total}}",
+    "saveError": "Der neue Reiseplan konnte nicht übernommen werden.",
+    "appliedToast_one": "Der neue Reiseplan wurde für eine Kreuzfahrt übernommen.",
+    "appliedToast_other": "Der neue Reiseplan wurde für {{count}} Kreuzfahrten übernommen.",
+    "allAboardGoes": "Die Alle-an-Bord-Zeit {{time}} gehörte zu {{port}} und entfällt."
+  },
+  "deleteParts": {
+    "alsoGoes": "Ebenfalls gelöscht: {{list}}.",
+    "and": " und ",
+    "tracks_one": "ein aufgezeichneter Track",
+    "tracks_other": "{{count}} aufgezeichnete Tracks",
+    "legRoutes_one": "eine auf der Karte nachgezeichnete Route",
+    "legRoutes_other": "{{count}} auf der Karte nachgezeichnete Routen"
+  },
+  "colorName": {
+    "coral": "Koralle",
+    "gold": "Gold",
+    "green": "Grün",
+    "teal": "Türkis",
+    "blue": "Blau",
+    "violet": "Violett",
+    "pink": "Rosa",
+    "ochre": "Ocker",
+    "cyan": "Cyan",
+    "olive": "Oliv"
+  },
+  "flightGap": {
+    "title": "Nicht alle Flüge sind im Logbuch",
+    "introSaved_one": "Die Kreuzfahrt ist gespeichert, ein Flug nicht:",
+    "introSaved_other": "Die Kreuzfahrt ist gespeichert, {{count}} Flüge nicht:",
+    "introKnown_one": "Diese Buchung war schon gespeichert; ein Flug davon fehlt im Logbuch:",
+    "introKnown_other": "Diese Buchung war schon gespeichert; {{count}} Flüge davon fehlen im Logbuch:",
+    "item": "{{flight}} – {{reason}}",
+    "reason": {
+      "failed": "konnte nicht gespeichert werden",
+      "missing": "fehlt im Logbuch",
+      "unchecked": "konnte nicht geprüft werden"
+    },
+    "hint": "„Fehlende Flüge anlegen“ sieht zuerst im Logbuch nach (Flugnummer und Abflugtag) und legt nur an, was dort nicht steht – ein Flug entsteht nie doppelt.",
+    "retry_one": "Fehlenden Flug anlegen",
+    "retry_other": "{{count}} fehlende Flüge anlegen",
+    "retryFailed": "Nicht alle Flüge konnten angelegt werden. Du kannst es noch einmal versuchen.",
+    "skip": "Ohne diese Flüge abschließen",
+    "leftOut_one": "Ein Flug der Buchung ist nicht im Logbuch.",
+    "leftOut_other": "{{count}} Flüge der Buchung sind nicht im Logbuch."
   }
 }

@@ -56,10 +56,25 @@ import {
   resolveRoundTripFlightCount,
 } from "./metricEvidenceFlightUnique";
 import {
+  resolveRentalCount,
+  resolveRentalDaysTotal,
+  resolveRentalOneWayCount,
+  resolveRentalOdometerDocumentedCount,
+} from "./metricEvidenceRental";
+import {
+  resolveBusRideCount,
+  resolveBusDistanceKmTotal,
+  resolveBusCountriesCount,
+  resolveBusNightRideCount,
+  resolveBusTerminalsCount,
+} from "./metricEvidenceBus";
+import {
   resolveTravelAccountHotelNights,
   resolveTravelAccountSeaNights,
   resolveTravelAccountAirNights,
-  resolveTravelAccountHomeNights,
+  resolveTravelAccountRailNights,
+  resolveTravelAccountBusNights,
+  resolveTravelAccountUnassignedNights,
   resolveTravelAccountContestedNights,
   resolveTravelAccountFullyCoveredTripCount,
   resolveTravelAccountTripsWithDatesCount,
@@ -111,6 +126,10 @@ import {
   resolveRailNightTrainCount,
   resolveRailHighSpeedRideCount,
   resolveRailCrossBorderRideCount,
+  resolveRailJourneyCount,
+  resolveRailDocumentedTransferJourneyCount,
+  resolveRailNightTrainNights,
+  resolveRailNewConnectionsCount,
 } from "./metricEvidenceRail";
 import {
   resolvePassportCountryCount,
@@ -118,6 +137,26 @@ import {
   resolvePassportAirportCount,
   resolvePassportEntryCount,
 } from "./metricEvidencePassport";
+import {
+  resolveFlightNewAirportsCount,
+  resolveFlightNewConnectionsCount,
+  resolveFlightRepeatedConnectionsCount,
+  resolveFlightTransferCount,
+} from "./metricEvidenceFlightInsights";
+import {
+  resolveCruiseNewPortsCount,
+  resolveCruisePortRevisitCount,
+  resolveCruiseMeasuredPortStayCount,
+  resolveCruiseDocumentedExcursionCount,
+  resolveCruisePortDaysTotal,
+  resolveCruiseEquatorCruiseCount,
+  resolveCruiseDatelineCruiseCount,
+  resolveCruiseBirthdayAtSeaCruiseCount,
+  resolveCruiseNewYearAtSeaCruiseCount,
+  resolveCruiseCanalCruiseCount,
+  resolveCruisePolarCruiseCount,
+} from "./metricEvidenceCruiseInsights";
+import { INSIGHT_RESOLVERS } from "./metricEvidenceInsights";
 
 /**
  * `EvidenceResolver` for `kind: "metric"` (Task 7,
@@ -189,7 +228,9 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   travelAccountHotelNights: resolveTravelAccountHotelNights,
   travelAccountSeaNights: resolveTravelAccountSeaNights,
   travelAccountAirNights: resolveTravelAccountAirNights,
-  travelAccountHomeNights: resolveTravelAccountHomeNights,
+  travelAccountRailNights: resolveTravelAccountRailNights,
+  travelAccountBusNights: resolveTravelAccountBusNights,
+  travelAccountUnassignedNights: resolveTravelAccountUnassignedNights,
   travelAccountContestedNights: resolveTravelAccountContestedNights,
   travelAccountFullyCoveredTripCount: resolveTravelAccountFullyCoveredTripCount,
   travelAccountTripsWithDatesCount: resolveTravelAccountTripsWithDatesCount,
@@ -205,6 +246,19 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   railNightTrainCount: resolveRailNightTrainCount,
   railHighSpeedRideCount: resolveRailHighSpeedRideCount,
   railCrossBorderRideCount: resolveRailCrossBorderRideCount,
+  railJourneyCount: resolveRailJourneyCount,
+  railDocumentedTransferJourneyCount: resolveRailDocumentedTransferJourneyCount,
+  railNightTrainNights: resolveRailNightTrainNights,
+  railNewConnectionsCount: resolveRailNewConnectionsCount,
+  rentalCount: resolveRentalCount,
+  rentalDaysTotal: resolveRentalDaysTotal,
+  rentalOneWayCount: resolveRentalOneWayCount,
+  rentalOdometerDocumentedCount: resolveRentalOdometerDocumentedCount,
+  busRideCount: resolveBusRideCount,
+  busDistanceKmTotal: resolveBusDistanceKmTotal,
+  busCountriesCount: resolveBusCountriesCount,
+  busNightRideCount: resolveBusNightRideCount,
+  busTerminalsCount: resolveBusTerminalsCount,
   passportCountryCount: resolvePassportCountryCount,
   passportContinentCount: resolvePassportContinentCount,
   passportAirportCount: resolvePassportAirportCount,
@@ -235,6 +289,23 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   placeCitiesCount: resolvePlaceCitiesCount,
   placeListCount: resolvePlaceListCount,
   placeWishlistCount: resolvePlaceWishlistCount,
+  flightNewAirportsCount: resolveFlightNewAirportsCount,
+  flightNewConnectionsCount: resolveFlightNewConnectionsCount,
+  flightRepeatedConnectionsCount: resolveFlightRepeatedConnectionsCount,
+  flightTransferCount: resolveFlightTransferCount,
+  cruiseNewPortsCount: resolveCruiseNewPortsCount,
+  cruisePortRevisitCount: resolveCruisePortRevisitCount,
+  cruiseMeasuredPortStayCount: resolveCruiseMeasuredPortStayCount,
+  cruiseDocumentedExcursionCount: resolveCruiseDocumentedExcursionCount,
+  cruisePortDaysTotal: resolveCruisePortDaysTotal,
+  cruiseEquatorCruiseCount: resolveCruiseEquatorCruiseCount,
+  cruiseDatelineCruiseCount: resolveCruiseDatelineCruiseCount,
+  cruiseBirthdayAtSeaCruiseCount: resolveCruiseBirthdayAtSeaCruiseCount,
+  cruiseNewYearAtSeaCruiseCount: resolveCruiseNewYearAtSeaCruiseCount,
+  cruiseCanalCruiseCount: resolveCruiseCanalCruiseCount,
+  cruisePolarCruiseCount: resolveCruisePolarCruiseCount,
+  // The statistics expansion (forgejo#258/#259/#260/#264), one shape for all.
+  ...INSIGHT_RESOLVERS,
 };
 
 /**

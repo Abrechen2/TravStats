@@ -6,6 +6,7 @@ import { logger } from "../../lib/logger";
 import type { RentalStationHit } from "../../types/rental";
 import { countryName } from "../../shared/geo/countryCode";
 import { LocationInput, type LocationSelection } from "../location/LocationInput";
+import { FieldError, RequiredMark, fieldErrorProps } from "../form";
 import { EMPTY_RENTAL_STATION, stationFromHit, type RentalStationDraft } from "./rentalFormModel";
 
 interface Props {
@@ -14,7 +15,9 @@ interface Props {
   value: RentalStationDraft;
   onChange: (next: RentalStationDraft) => void;
   inputClassName: string;
+  /** Already translated; shown beside — and tied to — the control in use. */
   error?: string | null;
+  required?: boolean;
 }
 
 const MIN_QUERY = 2;
@@ -43,6 +46,7 @@ export function RentalStationPicker({
   onChange,
   inputClassName,
   error,
+  required = false,
 }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["rental"]);
   const [mode, setMode] = useState<"search" | "address">(
@@ -92,16 +96,16 @@ export function RentalStationPicker({
         lat: selection.lat,
         lon: selection.lon,
         country: selection.countryCode ? selection.countryCode.toUpperCase() : null,
+        // A geocoder hit carries no zone; the server derives it on save.
+        timezone: null,
       });
     },
     [onChange, value.name]
   );
 
-  const errorLine = error ? (
-    <p role="alert" className="text-xs text-(--danger)">
-      {t(error)}
-    </p>
-  ) : null;
+  const searchId = `${idPrefix}-search`;
+  const nameId = `${idPrefix}-name`;
+  const requiredProps = required ? { "aria-required": true as const } : {};
 
   if (mode === "address") {
     const position =
@@ -115,17 +119,22 @@ export function RentalStationPicker({
           onChange={handleAddress}
           compact
         />
+        {/* A visible label: a placeholder alone is gone once typed into (forgejo#249). */}
+        <label htmlFor={nameId} className="block text-sm">
+          {`${label}: ${t("rental:form.stationName")}`} {required ? <RequiredMark /> : null}
+        </label>
         <input
+          id={nameId}
           className={inputClassName}
-          aria-label={`${label}: ${t("rental:form.stationName")}`}
-          placeholder={t("rental:form.stationName")}
           value={value.name}
           onChange={(e): void => onChange({ ...value, name: e.target.value })}
+          {...requiredProps}
+          {...fieldErrorProps(nameId, error)}
         />
-        {errorLine}
+        <FieldError id={nameId} error={error} />
         <button
           type="button"
-          className="text-xs text-(--accent) underline"
+          className="text-xs text-(--accent) underline pointer-coarse:min-h-(--ts-size-touch-min)"
           onClick={(): void => setMode("search")}
         >
           {t("rental:station.backToSearch")}
@@ -138,11 +147,13 @@ export function RentalStationPicker({
   const hits = search.kind === "done" ? search.hits : [];
   return (
     <div className="space-y-1">
-      <label className="text-sm" htmlFor={`${idPrefix}-search`}>
-        {label}
+      <label className="block text-sm" htmlFor={searchId}>
+        {label} {required ? <RequiredMark /> : null}
       </label>
       <input
-        id={`${idPrefix}-search`}
+        id={searchId}
+        {...requiredProps}
+        {...fieldErrorProps(searchId, error)}
         className={inputClassName}
         role="combobox"
         aria-expanded={hits.length > 0}
@@ -184,7 +195,7 @@ export function RentalStationPicker({
             >
               <button
                 type="button"
-                className="flex w-full justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-base)"
+                className="flex w-full justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-base) pointer-coarse:min-h-(--ts-size-touch-min)"
                 onClick={(): void => pick(hit)}
               >
                 <span>
@@ -204,10 +215,10 @@ export function RentalStationPicker({
           ))}
         </ul>
       ) : null}
-      {errorLine}
+      <FieldError id={searchId} error={error} />
       <button
         type="button"
-        className="text-xs text-(--accent) underline"
+        className="text-xs text-(--accent) underline pointer-coarse:min-h-(--ts-size-touch-min)"
         onClick={(): void => setMode("address")}
       >
         {t("rental:station.useAddress")}

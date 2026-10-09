@@ -15,11 +15,12 @@ import {
 } from "../../lib/flightColor";
 import { DEFAULT_FLIGHT_ROUTE_SHAPE, type FlightRouteShape } from "../../lib/flightRouteShape";
 import { isCountableFlight } from "../../shared/flightCounting";
+import { canonicalRoutePair } from "../../shared/routePair";
 import { buildFlatRoutes, createFlatRoutesLayer } from "./flatRoutesLayer";
 import { markerDotRadiusProps, resolveAirportDotColor } from "./markerDotStyle";
 
 function routeKey(a: string, b: string): string {
-  return [a, b].sort().join("-");
+  return canonicalRoutePair(a, b).join("-");
 }
 
 function getCoordsFromFeature(

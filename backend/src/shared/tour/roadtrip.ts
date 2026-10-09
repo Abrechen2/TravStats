@@ -20,6 +20,10 @@ export const TOUR_ACTIVITIES = [
   "ski",
   "paddle",
   "climb",
+  // A guided excursion — a coach day tour with a guide (owner, 2026-10-07,
+  // bus spec D10): a tour, never a bus ride, because it has no ticket
+  // between two terminals; the coach is how the tour moves.
+  "excursion",
   "other",
 ] as const;
 export type TourActivity = (typeof TOUR_ACTIVITIES)[number];
@@ -105,8 +109,16 @@ export interface CountableStation {
    * loaded. `status` is read for one value only: a cancelled stay is a night
    * that did not happen.
    */
-  stay: (TimedStay & { status?: string }) | null;
+  stay: (TimedStay & { status?: string; lodgingType?: string }) | null;
 }
+
+/**
+ * Where a roadtrip night was slept (forgejo#260): a free station is a `pitch`
+ * (no accommodation record — a Stellplatz, a lay-by), a linked stay at a
+ * campsite is `campsite`, any other linked stay is `lodging`. A stay whose
+ * house type was not loaded counts as `lodging`, the generic case.
+ */
+export type NightStyle = "pitch" | "campsite" | "lodging";
 
 export interface RoadtripNights {
   /** Nights at recorded accommodation — the SAME figure the lodging statistics hold. */
@@ -118,6 +130,10 @@ export interface RoadtripNights {
   nightsKnown: boolean;
   /** Distinct places slept: linked stays (once each) plus free stations. */
   placesSlept: number;
+  /** The same nights split by where they were slept — they add up to `nights`. */
+  nightsByStyle: Record<NightStyle, number>;
+  /** Overnight stations whose length nobody knows — in `nightsKnown`, here counted. */
+  unknownLengthStations: number;
 }
 
 /**
@@ -133,6 +149,8 @@ export function countRoadtripNights(stations: readonly CountableStation[]): Road
   let freeNights = 0;
   let nightsKnown = true;
   let placesSlept = 0;
+  let unknownLengthStations = 0;
+  const nightsByStyle: Record<NightStyle, number> = { pitch: 0, campsite: 0, lodging: 0 };
 
   for (const station of stations) {
     const state = stationState(station);
@@ -149,22 +167,40 @@ export function countRoadtripNights(stations: readonly CountableStation[]): Road
       placesSlept++;
       if (station.stay === null) {
         nightsKnown = false;
+        unknownLengthStations++;
         continue;
       }
       const timing = resolveStayTiming(station.stay);
       stayNights += timing.nights;
-      if (!timing.nightsKnown) nightsKnown = false;
+      nightsByStyle[station.stay.lodgingType === "campsite" ? "campsite" : "lodging"] +=
+        timing.nights;
+      if (!timing.nightsKnown) {
+        nightsKnown = false;
+        unknownLengthStations++;
+      }
       continue;
     }
 
     placesSlept++;
-    if (station.startDate && station.endDate) {
-      freeNights += Math.max(1, daySpan(station.startDate, station.endDate));
-    } else {
-      freeNights += 1;
-      if (!station.startDate) nightsKnown = false;
+    const free =
+      station.startDate && station.endDate
+        ? Math.max(1, daySpan(station.startDate, station.endDate))
+        : 1;
+    freeNights += free;
+    nightsByStyle.pitch += free;
+    if (!station.startDate) {
+      nightsKnown = false;
+      unknownLengthStations++;
     }
   }
 
-  return { stayNights, freeNights, nights: stayNights + freeNights, nightsKnown, placesSlept };
+  return {
+    stayNights,
+    freeNights,
+    nights: stayNights + freeNights,
+    nightsKnown,
+    placesSlept,
+    nightsByStyle,
+    unknownLengthStations,
+  };
 }

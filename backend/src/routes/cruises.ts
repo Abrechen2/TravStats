@@ -31,6 +31,7 @@ import { dayAnchorNow } from "../shared/time/clock";
 import { profileZoneOf } from "../shared/time/profileZone";
 import { withCruiseTimes } from "../services/cruise/timesDto";
 import { propagateDelete, propagateWrite, shareSnapshot } from "../services/sharing/propagate";
+import { carryOverAllAboard } from "../services/cruise/stopCarryOver";
 
 const router = Router();
 router.use(authenticate);
@@ -456,6 +457,23 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       });
 
       if (stops !== undefined) {
+        // Read BEFORE the delete: a client that does not know the all-aboard
+        // field must not erase it (review C1, `stopCarryOver.ts`).
+        const allAboard = carryOverAllAboard(
+          stops,
+          await tx.cruiseStop.findMany({
+            where: { cruiseId: existing.id },
+            select: {
+              id: true,
+              dayNumber: true,
+              isAtSea: true,
+              portId: true,
+              unresolvedPortName: true,
+              date: true,
+              allAboardTime: true,
+            },
+          })
+        );
         await tx.cruiseStop.deleteMany({ where: { cruiseId: existing.id } });
         if (stops.length > 0) {
           await tx.cruiseStop.createMany({
@@ -466,6 +484,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
               isAtSea: s.isAtSea,
               ...stopTimes[index],
               excursionNote: s.excursionNote ?? null,
+              allAboardTime: allAboard[index],
               unresolvedPortName: s.unresolvedPortName ?? null,
             })),
           });

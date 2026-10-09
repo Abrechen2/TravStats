@@ -88,12 +88,20 @@ export type ApiErrorCode =
   /** A rail arrival instant before its departure — usually a night train
    *  whose arrival kept the departure's date. `field` is `arrivalLocal`. */
   | "RAIL_ARRIVAL_BEFORE_DEPARTURE"
+  /** A bus write body failed validation; `field` names the first field. */
+  | "BUS_INVALID_INPUT"
+  /** A bus arrival instant before its departure (spec 2026-10-07-bus-domain-design §3.2).
+   *  `field` is `arrivalLocal`. */
+  | "BUS_ARRIVAL_BEFORE_DEPARTURE"
   // Car rentals (spec 2026-10-01-rental-domain-design).
   | "RENTAL_INVALID_INPUT"
   | "RENTAL_INVALID_QUERY"
   | "RENTAL_NOT_FOUND"
   | "RENTAL_ROADTRIP_NOT_FOUND"
   | "RENTAL_RETURN_BEFORE_PICKUP"
+  | "RENTAL_ACTUAL_RETURN_BEFORE_PICKUP"
+  | "RENTAL_DEPOSIT_RETURN_EXCEEDS"
+  | "RENTAL_DEPOSIT_RETURNED_BEFORE_PAID"
   /** The return odometer below the pick-up one, on the merged row. `field` is `odometerInKm`. */
   | "RENTAL_ODOMETER_REVERSED"
   | "RENTAL_STATION_UNRESOLVED"
@@ -175,6 +183,26 @@ export type ApiErrorCode =
    *  flight is gone — stop retrying" from "this server has no route yet"
    *  (forgejo#201). */
   | "FLIGHT_NOT_FOUND"
+  /** Kept originals (forgejo#272): the entry a document is filed under or
+   *  listed for does not exist for this user. Distinct from a code-less 404,
+   *  which an older server — or one without the documents routes at all —
+   *  also answers; the Companion deletes a queued original only on this code,
+   *  so "the entry is gone" is never confused with "this server has no route"
+   *  (the prose "Entry not found" stays for clients that matched on it). */
+  | "DOCUMENT_ENTRY_NOT_FOUND"
+  /** A flight's booking split (forgejo#219): the flight is linked to no booking. */
+  | "BOOKING_NOT_FOUND"
+  /** Booking split: the booking has no total recorded, so there is nothing to split (409). */
+  | "BOOKING_PRICE_MISSING"
+  /** Booking split: the booking has one flight — its total is that flight's (409). */
+  | "BOOKING_SPLIT_SINGLE_SEGMENT"
+  /** Booking split: cruises, journeys or stays share the booking, so its total
+   *  is not the flights' alone and a flights-only split would misstate it (409). */
+  | "BOOKING_SPLIT_MIXED"
+  /** Booking split by distance: a segment has no known route distance (422). */
+  | "BOOKING_SPLIT_DISTANCE_UNKNOWN"
+  /** Bulk flight edit (forgejo#217): the trip named is not this account's — refused before any write. */
+  | "TRIP_NOT_FOUND"
   /** Flight recording (forgejo#193): the flight already has a recording under
    *  another upload id; resend with `replace: true` to swap it. */
   | "TRACK_ALREADY_RECORDED"
@@ -221,6 +249,21 @@ export type ApiErrorCode =
   | "TOUR_POINTS_FROM_TRIP"
   /** A trip's timeline stop was sent as a route correction (via point). */
   | "VIA_POINT_ON_TIMELINE"
+  /** A full station list was written against a station set that has changed
+   *  since the writer read it (a station added or removed elsewhere — the
+   *  phone). Nothing was written; read the roadtrip again and merge. */
+  | "ROADTRIP_STATIONS_CHANGED"
+  /** A recording offered for a leg does not come near both of its stops (409). */
+  | "TRACK_DOES_NOT_COVER_LEG"
+  /** The recording stops and restarts between a leg's two stops (409). */
+  | "TRACK_GAP_IN_LEG"
+  /** Assigning stops to a route section (review M4): a stop that is not on
+   *  this trip/tour, one without a coordinate, one already in another
+   *  section, and one another request claimed meanwhile (409). */
+  | "ROUTE_STOP_NOT_OWNED"
+  | "ROUTE_STOP_NO_COORDINATE"
+  | "ROUTE_STOP_IN_OTHER_SECTION"
+  | "ROUTE_STOP_CLAIMED_MEANWHILE"
   /** A trip photo was linked to a stop that is not on its trip — neither on
    *  the trip's timeline nor a station of a roadtrip filed on it (forgejo#139).
    *  Also answered for a stop that does not exist, so a probe learns nothing
@@ -310,7 +353,15 @@ export type ApiErrorCode =
    *  already undone) (409). */
   | "SHARE_UNDO_UNAVAILABLE"
   /** The caller's own copy of the entry is gone (deleted or moved away) (409). */
-  | "SHARE_COPY_NOT_FOUND";
+  | "SHARE_COPY_NOT_FOUND"
+  /** A rental evidence category on a document not filed with a rental (forgejo#239). */
+  | "DOCUMENT_CATEGORY_NOT_RENTAL"
+  /** Merging two places (forgejo#232, `services/places/placeMerge.ts`): a
+   *  place cannot be merged into itself (400), and two places that each
+   *  stand for a DIFFERENT checklist item cannot become one (409) — one
+   *  checklist's tick would be lost. */
+  | "PLACE_MERGE_SAME"
+  | "PLACE_MERGE_BOTH_CURATED";
 
 interface AuthRequest extends Request {
   user?: {

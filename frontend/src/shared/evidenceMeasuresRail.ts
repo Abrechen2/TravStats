@@ -31,4 +31,9 @@ export const RAIL_MEASURES: Record<string, MeasureSpec> = {
   railNightTrainCount: railMeasure("sum", "rides"),
   railHighSpeedRideCount: railMeasure("sum", "rides"),
   railCrossBorderRideCount: railMeasure("sum", "rides"),
+  // forgejo#261 — the journey figures, over the same counted rides.
+  railJourneyCount: railMeasure("sum", "journeys"),
+  railDocumentedTransferJourneyCount: railMeasure("sum", "journeys"),
+  railNightTrainNights: railMeasure("sum", "nights"),
+  railNewConnectionsCount: railMeasure("sum", "connections"),
 };

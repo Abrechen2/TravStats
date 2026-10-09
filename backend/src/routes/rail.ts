@@ -90,6 +90,22 @@ export const RAIL_DETAIL_INCLUDE = {
           trainCategory: true,
           trainNumber: true,
           status: true,
+          // The connection view (forgejo#234, #235): which station each end
+          // is, to tell a change of stations; the seat a leg holds; and the
+          // user's "tight" mark on the leg arriving at a change.
+          depStationId: true,
+          arrStationId: true,
+          // With the ids and names, the three things the server's
+          // `sameStation` reads — the web mirrors that rule exactly.
+          depLat: true,
+          depLon: true,
+          arrLat: true,
+          arrLon: true,
+          travelClass: true,
+          coach: true,
+          seat: true,
+          bookingReference: true,
+          tightConnection: true,
         },
         orderBy: [{ departureTime: "asc" }, { id: "asc" }],
       },

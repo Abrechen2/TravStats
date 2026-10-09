@@ -28,8 +28,21 @@
   "deleteError": "The roadtrip could not be deleted.",
   "deleteConfirm": {
     "title": "Delete roadtrip?",
-    "message": "“{{name}}” is deleted with its stations, legs and recordings. Linked accommodation and stays are kept, and its day tours stay as tours without a station.",
-    "confirm": "Delete"
+    "confirm": "Delete",
+    "goes": "“{{name}}” will be deleted — with {{list}}. This cannot be undone.",
+    "goesEmpty": "“{{name}}” will be deleted. This cannot be undone.",
+    "stations_one": "{{count}} station",
+    "stations_other": "{{count}} stations",
+    "legs_one": "{{count}} leg",
+    "legs_other": "{{count}} legs",
+    "tracks": "every recording of the route",
+    "costsToTrip_one": "The recorded cost goes to the trip “{{trip}}”.",
+    "costsToTrip_other": "The {{count}} recorded costs go to the trip “{{trip}}”.",
+    "survivorTrip": "the trip “{{name}}”",
+    "survivorLodging": "the lodging “{{name}}” with its stays",
+    "survivorTour": "the day tour “{{name}}” (without a station)",
+    "survivorPhotos_one": "{{count}} photo on its trip",
+    "survivorPhotos_other": "{{count}} photos on their trip"
   },
   "kind": {
     "roadtrip": "Roadtrip",
@@ -58,6 +71,7 @@
     "ski": "Ski tour",
     "paddle": "Paddling",
     "climb": "Climbing",
+    "excursion": "Guided tour",
     "other": "Other"
   },
   "figures": {
@@ -160,7 +174,211 @@
     "longestByNights": "Most nights",
     "vehicles": "Vehicles",
     "empty": "No roadtrip in this period.",
-    "loadFailed": "The roadtrips could not be loaded."
+    "loadFailed": "The roadtrips could not be loaded.",
+    "insights": {
+      "title": "Insights",
+      "loadFailed": "The roadtrip insights could not be loaded.",
+      "aheadFootnote": "{{km}} km of this are still ahead of you — they count towards badges once driven.",
+      "source": {
+        "track": "recording",
+        "routed": "route",
+        "drawn": "drawn",
+        "straight": "straight line"
+      },
+      "mode": {
+        "rail": "rail",
+        "foot": "on foot",
+        "bike": "bike",
+        "ferry": "ferry"
+      },
+      "progress": {
+        "title": "Driven, today, planned",
+        "recorded": "Kilometres driven (road)",
+        "recordedNights": "Recorded nights",
+        "description": "today {{current}} · still planned {{planned}}",
+        "nights": "Nights (still planned: {{planned}}) — recorded:",
+        "countries": "Countries reached: {{recorded}} · still ahead: {{planned}}",
+        "sources": "Distance source: {{sources}}",
+        "empty": "Appears with the first roadtrip.",
+        "help": {
+          "unit": "Kilometres driven are road stages; ferry, rail, on foot and bike are shown apart. Plus nights and countries per roadtrip.",
+          "time": "Each stage counts by the local date of the station it arrives at: before today it is driven, today it is the current one, after that planned. A roadtrip belongs to the year of its first station.",
+          "source": "The stages and stations of your roadtrips; distances come from a recording, a computed route, a drawn line or a straight line — the “distance source” line gives the shares.",
+          "coverage": "Undated stages count when the roadtrip is over or has no dates at all; on a roadtrip under way they stay open ({{unplaced}}).",
+          "exclusions": "Planned stages, nights and countries count towards no badge until they are reached."
+        },
+        "otherModes": "Plus, not driven yourself: {{modes}}"
+      },
+      "pace": {
+        "title": "Day stages and pace",
+        "value": "{{km}} a day",
+        "description_one": "Median over {{count}} driving day",
+        "description_other": "Median over {{count}} driving days",
+        "longestDay": "Longest driving day: {{km}} on {{day}} —",
+        "restDays_one": "{{count}} day without a change of place on {{trips}} fully dated roadtrips",
+        "restDays_other": "{{count}} days without a change of place on {{trips}} fully dated roadtrips",
+        "empty": "Appears once a driven stage carries the same day at its departure and arrival station.",
+        "help": {
+          "unit": "A driving day: all road kilometres between two stations with the same departure and arrival day. Route corrections belong to the stage; a day only on board a ferry is no driving day.",
+          "time": "The stations' local dates.",
+          "source": "Dated stations and stages of your roadtrips.",
+          "coverage": "{{unstaged}} driven stages have no shared known day and are in no driving day. Days without a change of place count only on {{dated}} finished roadtrips whose stations are all dated.",
+          "exclusions": "Planned stages and anything whose day is not known — nothing is spread out or estimated."
+        }
+      },
+      "modes": {
+        "title": "Road and ferry",
+        "road": "Road kilometres",
+        "ferry": "Ferry kilometres",
+        "description": "road / ferry — counted apart",
+        "empty": "Appears with the first driven stage.",
+        "help": {
+          "unit": "A stage's kilometres by its mode of transport.",
+          "time": "Driven stages only (see “Driven, today, planned”).",
+          "source": "The mode of each stage (road, ferry, rail, on foot, bike).",
+          "coverage": "Every stage has exactly one mode.",
+          "exclusions": "Ferry kilometres are never kilometres you drove; only the road counts as driven."
+        }
+      },
+      "nightStyle": {
+        "title": "Where the nights were slept",
+        "value_one": "{{count}} night",
+        "value_other": "{{count}} nights",
+        "byStyle": "Nights by kind",
+        "pitch": "Pitch / free",
+        "campsite": "Campsite",
+        "lodging": "Accommodation",
+        "unknown_one": "{{count}} overnight station of unknown length",
+        "unknown_other": "{{count}} overnight stations of unknown length",
+        "empty": "Appears with the first past overnight station.",
+        "help": {
+          "unit": "One night. A pitch is an overnight station without a linked stay; campsite and accommodation are linked stays, by the house's kind.",
+          "time": "Nights of stations before today.",
+          "source": "Overnight stations and the stays linked to them.",
+          "coverage": "{{unknown}} stations have no known length and are not counted as nights here.",
+          "exclusions": "A stay linked from two stations counts once — and the same night is in the lodging statistics, never twice in one sum."
+        }
+      },
+      "toursAlong": {
+        "title": "Day tours along the way",
+        "value_one": "{{count}} tour",
+        "value_other": "{{count}} tours",
+        "description": "{{km}} on your own steam or guided — beside the driving, not in it",
+        "row_one": "{{count}} tour · {{km}} beside {{driven}} driving",
+        "row_other": "{{count}} tours · {{km}} beside {{driven}} driving",
+        "ascent": "{{m}} m climbed",
+        "empty": "Appears once a completed day tour starts from a roadtrip station.",
+        "help": {
+          "unit": "A completed day tour, its distance and its climb.",
+          "time": "A tour is completed when it has a recording or a day before today.",
+          "source": "Tours that start from one of the roadtrip's stations; distance from the recording, else from the route.",
+          "coverage": "Climb only from recordings that carry it.",
+          "exclusions": "Tour kilometres are never added to the driving, and a guided excursion is never a bus ride."
+        }
+      },
+      "lifetime": "across all years"
+    },
+    "tours": {
+      "title": "Day tours",
+      "loadFailed": "The tour insights could not be loaded.",
+      "lifetime": "across all years",
+      "noActivity": "no activity",
+      "activities": {
+        "title": "Completed tours",
+        "km": "Tour kilometres",
+        "ascent": "Climb from recordings",
+        "ascentValue": "{{m}} m climbed",
+        "row_one": "{{count}} tour · {{km}} km ({{kmTours}} with a distance) · {{ascent}} m climbed ({{ascentTours}} measured) · {{duration}} moving ({{movingTours}} recorded)",
+        "row_other": "{{count}} tours · {{km}} km ({{kmTours}} with a distance) · {{ascent}} m climbed ({{ascentTours}} measured) · {{duration}} moving ({{movingTours}} recorded)",
+        "empty": "Appears once a day tour is recorded or its day has passed.",
+        "help": {
+          "unit": "One completed day tour — hike, bike ride, guided excursion and any other activity.",
+          "time": "A tour is completed when it has a recording or a day before today at its start. It belongs to the year of its day, or without one to the year of its first recording.",
+          "source": "Your tours. Distance from the recording where there is one, else from the route; climb and time only from recordings.",
+          "coverage": "{{planned}} tours are still ahead, {{undated}} have neither a day nor a recording and do not count. {{partial}} recordings stopped at the import limit — their distance is a lower bound.",
+          "exclusions": "An unknown climb stays unknown and is never estimated from the route. Every figure says how many tours it rests on. Guided excursions count into the tour kilometres with their route — shown per activity, never as bus or driven kilometres."
+        }
+      },
+      "moving": {
+        "title": "Moving and pauses",
+        "moving": "Moving time from recordings",
+        "pause_one": "{{duration}} of pauses — from {{count}} of {{of}} tours, {{scope}}",
+        "pause_other": "{{duration}} of pauses — from {{count}} of {{of}} tours, {{scope}}",
+        "empty": "Appears once a recording with timestamps exists.",
+        "help": {
+          "unit": "Hours. Moving time is measured by the recording itself; a pause is the recorded duration minus the moving time.",
+          "time": "The recording's timestamps.",
+          "source": "Recordings of your tours (GPX, Dawarich, Strava).",
+          "coverage": "Only tours whose every recording carries times.",
+          "exclusions": "A planned start time or a bare total duration is not moving time and never counts here."
+        },
+        "value": "{{duration}} moving"
+      },
+      "records": {
+        "title": "Personal records per activity",
+        "value_one": "{{count}} activity",
+        "value_other": "{{count}} activities",
+        "longest": "{{activity}}: longest tour, {{km}} km ({{source}})",
+        "ascent": "{{activity}}: most climb, {{m}} m",
+        "highest": "{{activity}}: highest point, {{m}} m",
+        "source": {
+          "track": "recorded",
+          "route": "route"
+        },
+        "empty": "Appears with the first completed tour of known distance.",
+        "help": {
+          "unit": "Per activity the longest tour, the largest climb and the highest known position.",
+          "time": "Over all completed tours.",
+          "source": "Distance from a recording or the route (the source is named); climb and height only from recordings with an elevation profile.",
+          "coverage": "A tour without an elevation profile cannot hold a height record.",
+          "exclusions": "Planned tours and tours with neither a day nor a recording."
+        }
+      },
+      "rhythm": {
+        "title": "Rhythm and areas",
+        "value_one": "{{count}} country",
+        "value_other": "{{count}} countries",
+        "repeated": "Returned to: {{areas}}",
+        "month": {
+          "0": "January",
+          "1": "February",
+          "2": "March",
+          "3": "April",
+          "4": "May",
+          "5": "June",
+          "6": "July",
+          "7": "August",
+          "8": "September",
+          "9": "October",
+          "10": "November",
+          "11": "December"
+        },
+        "empty": "Appears with the first dated completed tour.",
+        "help": {
+          "unit": "Tours per year and month; an area is the country at the tour's starting point.",
+          "time": "The tour's day at its start.",
+          "source": "The coordinates of the starting point, read against country borders — never guessed from the tour's name.",
+          "coverage": "{{withoutArea}} tours have no starting point with coordinates and are in no area.",
+          "exclusions": "Planned tours. The list names, per country, the tour that first reached it."
+        }
+      },
+      "links": {
+        "title": "Links",
+        "value": "{{trip}} on a trip · {{roadtrip}} from a roadtrip · {{cruise}} on a cruise",
+        "description_one": "{{standalone}} tour stands on its own",
+        "description_other": "{{standalone}} tours stand on their own",
+        "excursions_one": "Guided excursions: {{count}} completed, {{km}} km, {{planned}} planned — as tours, never as bus rides or driven kilometres.",
+        "excursions_other": "Guided excursions: {{count}} completed, {{km}} km, {{planned}} planned — as tours, never as bus rides or driven kilometres.",
+        "empty": "Appears with the first completed tour.",
+        "help": {
+          "unit": "One completed tour; a tour can belong to a trip and a roadtrip at once.",
+          "time": "A tour is a cruise excursion when its trip holds a cruise and its day falls within it.",
+          "source": "A tour's trip, the roadtrip station it starts from, and the trip's cruises.",
+          "coverage": "Tours with neither a trip nor a station stand on their own. A tour can be on a trip and start from a roadtrip station at once — the figures overlap and do not add up.",
+          "exclusions": "Tour kilometres go into no driving or bus statistic; a guided excursion is not a bus ride."
+        }
+      }
+    }
   },
   "strava": {
     "title": "Strava",
@@ -210,7 +428,6 @@
     "sectionUnderway": "On the road now",
     "sectionPlanned": "Planned",
     "sectionUndated": "Undated",
-    "noMatch": "No roadtrip matches this search.",
     "today": "Today: {{station}}",
     "todayStay": "Today: {{station}}, {{stay}}",
     "next": "Next up: {{station}}",
@@ -238,11 +455,14 @@
     "railHint": "Going by train? Train journeys get a section of their own.",
     "vehicleName": "Vehicle's own name",
     "odometer": "Odometer at the start",
-    "optional": "optional",
     "trip": "Part of a trip?",
     "tripHint": "It then shows on that trip too.",
     "noTrip": "No trip",
-    "submit": "Create and add the first station"
+    "submit": "Create and add the first station",
+    "odometerHint": "In whole kilometres, e.g. 84,210.",
+    "odometerInvalid": "Please enter whole kilometres, from 0 to 10,000,000.",
+    "odometerMissing": "a valid odometer reading",
+    "tripsFailed": "Your trips could not be loaded — you can link one later."
   },
   "detail": {
     "edit": "Edit",
@@ -306,12 +526,15 @@
   "editor": {
     "hint": "Tap a station to edit it. Tap a leg for ferry or line. Every change is saved at once and can be undone.",
     "status": {
-      "pending": "Changes will be saved shortly",
-      "saving": "Saving …",
-      "saved": "All saved",
-      "error": "Not saved",
+      "pending": "About to be saved on the server",
+      "saving": "Saving on the server …",
+      "saved": "Saved on the server",
+      "error": "Not saved on the server",
       "waiting": "Waiting — a station is not complete yet",
-      "retry": "Try again"
+      "retry": "Try again",
+      "conflict": "Not saved — the station list changed on the server",
+      "merge": "Merge",
+      "discard": "Discard changes"
     },
     "whatHere": "What was here?",
     "choice": {
@@ -352,10 +575,31 @@
       "noPlace": "{{name}}: place missing",
       "beforePrevious": "{{name}} is before the previous station — check the date",
       "noDeparture": "{{name}}: departure missing",
-      "noStay": "{{name}}: stay not linked yet"
+      "noStay": "{{name}}: stay not linked yet",
+      "endBeforeStart": "{{name}}: departure before arrival"
     },
-    "warningsNote": "Hints only — everything is saved anyway. Only a station without a place or without its linked stay waits.",
-    "viaNote": "Only shapes the route: not shown as a station on maps or in lists, and counted nowhere."
+    "warningsNote": "Hints only — saving goes ahead. Only a station without a place, without its linked stay, or with a departure before its arrival waits.",
+    "viaNote": "Only shapes the route: not shown as a station on maps or in lists, and counted nowhere.",
+    "local": {
+      "kept": "kept locally on this device",
+      "failed": "not kept on this device either — do not close the page"
+    },
+    "discardConfirm": {
+      "title": "Discard changes?",
+      "message": "The station changes the server does not have yet are lost — the copy on this device too. You then see what the server holds again.",
+      "confirm": "Discard"
+    },
+    "moved": "“{{name}}” moved",
+    "movedRestores": "Undo restores the previous order with its legs — nothing is saved until then.",
+    "placeRequired": "Place of the station",
+    "viaNameHint": "A route correction may stay without a name.",
+    "saveFailed": "The stations could not be saved. Your changes are kept.",
+    "errors": {
+      "endBeforeStart": "The departure is before the arrival. Nothing is saved like this — please correct a date.",
+      "viaOnTimeline": "A stop from the trip's timeline cannot become a route correction. Choose another kind for it."
+    },
+    "removedRestores": "Undo restores the station with its legs — nothing is saved until then.",
+    "removedRestoresLine": "A recorded or hand-drawn line runs next to it: it is lost unless you undo. Nothing is saved until then."
   },
   "legDialog": {
     "title": "Leg",
@@ -373,7 +617,13 @@
     "apply": "Apply",
     "error": "The leg could not be saved.",
     "fallback": "No route calculated. {{reason}}",
-    "fallbackKept": "The leg stays as it was. Choose “Straight line” to save it as a straight line."
+    "fallbackKept": "The leg stays as it was. Choose “Straight line” to save it as a straight line.",
+    "track": "From the recording (keep it)",
+    "trackHint": "The line follows the recorded route.",
+    "trackModeHint": "While the leg follows its recording, its mode stays too. Choose another line to change it.",
+    "replacesTrack": "The line from the recording is replaced. The recording itself stays under “Route & recordings”.",
+    "replacesDrawn": "The line drawn by hand is replaced.",
+    "applyReplace": "Replace the line"
   },
   "trackArchive": {
     "downloadOne": "As GPX",
@@ -456,8 +706,15 @@
       "error": {
         "invalid": "The entry was refused — please check amount, currency, date and station.",
         "gone": "The roadtrip, the station or the entry no longer exists. Please reload the page.",
-        "unreachable": "The server cannot be reached right now. Nothing was saved — please try again."
-      }
+        "unreachable": "The server cannot be reached right now. Nothing was saved — please try again.",
+        "conflict": "This cost was changed elsewhere in the meantime, for example in the app. Nothing was overwritten — please reload the page and make the change again."
+      },
+      "amountMissingValid": "a valid amount"
+    },
+    "deleteConfirm": {
+      "title": "Delete this cost?",
+      "message": "“{{name}}” ({{place}}) will be deleted. This cannot be undone.\nKept: the roadtrip, its stations and every other cost.",
+      "confirm": "Delete cost"
     }
   },
   "deleteWithCosts": {
@@ -465,5 +722,136 @@
     "message_one": "“{{name}}” has {{count}} recorded cost and belongs to no trip that could take it over. Deleting removes it too.",
     "message_other": "“{{name}}” has {{count}} recorded costs and belongs to no trip that could take them over. Deleting removes them too.",
     "confirm": "Delete with costs"
+  },
+  "draft": {
+    "title": "Unsaved station changes",
+    "body_one": "This device holds a version with {{count}} station that never reached the server (last kept {{when}}).",
+    "body_other": "This device holds a version with {{count}} stations that never reached the server (last kept {{when}}).",
+    "restore": "Restore",
+    "discard": "Discard",
+    "discardTitle": "Discard the local changes?",
+    "discardMessage": "The version of the stations kept on this device is deleted. It is not stored anywhere else.",
+    "discardConfirm": "Discard",
+    "firstTitle": "The kept changes first?",
+    "firstMessage": "This device holds station changes that never reached the server. Restore them, or discard them on purpose before editing afresh — otherwise the first keystroke would overwrite them.",
+    "discardAndEdit": "Discard and edit"
+  },
+  "conflict": {
+    "title": "Merge changes",
+    "intro": {
+      "restore": "Something changed on the server since these changes were kept. Where both sides changed the same detail, you choose which applies. The server's version is preselected.",
+      "live": "While you were editing, the station list changed on the server — through the app, for example. Nothing was overwritten. Where both sides changed the same detail, you choose which applies."
+    },
+    "addedThere_one": "New on the server, kept: {{names}}",
+    "addedThere_other": "New on the server, kept: {{names}}",
+    "removedThereKept_one": "Removed on the server and not changed here, stays removed: {{names}}",
+    "removedThereKept_other": "Removed on the server and not changed here, stay removed: {{names}}",
+    "none": "No detail was changed on both sides — everything merges without a question.",
+    "fieldLegend": "“{{name}}” — {{field}}",
+    "field": {
+      "title": "Name",
+      "place": "Place",
+      "startDate": "Arrival",
+      "endDate": "Departure",
+      "notes": "Note",
+      "night": "Night"
+    },
+    "mine": "On this device: {{value}}",
+    "theirs": "On the server: {{value}}",
+    "empty": "empty",
+    "removedThere": "“{{name}}” was removed on the server but changed here",
+    "restoreMine": "Restore it with the changes from this device",
+    "leaveRemoved": "Leave it removed",
+    "removedHere": "You removed “{{name}}”, but it was changed on the server",
+    "removeAnyway": "Remove it anyway",
+    "keepServers": "Keep it as the server has it",
+    "orderLegend": "Order of the stations",
+    "orderMine": "Order from this device",
+    "orderTheirs": "Order from the server",
+    "apply": "Apply",
+    "readFailed": "The current state could not be read from the server. Your changes stay kept on this device — try “Merge” again in a moment."
+  },
+  "reorder": {
+    "title": "Move “{{name}}”?",
+    "between": "New neighbours: after “{{before}}” and before “{{after}}”.",
+    "first": "New neighbours: at the very start, before “{{after}}”.",
+    "last": "New neighbours: at the very end, after “{{before}}”.",
+    "droppedTitle": "These legs are dropped",
+    "noLegs": "No saved leg is dropped.",
+    "createdTitle": "These legs are added — as a straight line at first",
+    "source": {
+      "track": "from the recording",
+      "drawn": "corrected by hand",
+      "routed": "along the road",
+      "straight": "straight line"
+    },
+    "lossTrack": "This leg loses the line from the recording. The recording itself stays under “Route & recordings”.",
+    "lossDrawn": "The line drawn by hand for this leg is lost.",
+    "dateConflictsTitle": "Possible date conflicts",
+    "dateConflict": "“{{name}}” ({{date}}) then comes after “{{previous}}” ({{previousDate}}) although it is earlier.",
+    "undoNote": "You can undo this for a few seconds afterwards — nothing is saved until that time is up.",
+    "confirm": "Move",
+    "confirmLoss": "Move and drop the line"
+  },
+  "shift": {
+    "open": "Shift from here …",
+    "openHint": "Move this and every following station by days — with a preview.",
+    "title": "Shift from “{{name}}”",
+    "intro": "This station and every one after it move by the same number of days. Linked stays keep their booking dates — they are listed below to check.",
+    "days": "By how many days?",
+    "daysHint": "A positive number moves later, a negative one earlier.",
+    "daysInvalid": "Please enter a whole number, e.g. 2 or -1.",
+    "earlier": "One day earlier",
+    "later": "One day later",
+    "missingDays": "a number of days other than 0",
+    "missingDated": "a dated station from here on",
+    "colStation": "Station",
+    "colBefore": "Before",
+    "colAfter": "New",
+    "noticesTitle": "Please check",
+    "notice": {
+      "beforePrevious": "“{{name}}” then begins before “{{previous}}” ends.",
+      "gap_one": "There is then {{count}} day without a station between “{{previous}}” and “{{name}}”.",
+      "gap_other": "There are then {{count}} days without a station between “{{previous}}” and “{{name}}”.",
+      "linkedStay": "The stay “{{name}}” ({{dates}}) keeps its booking dates.",
+      "otherStay": "“{{name}}” then falls into the stay “{{stay}}” ({{dates}}).",
+      "outsideTrip": "The roadtrip then runs partly outside its trip “{{trip}}” ({{dates}}).",
+      "overlapsTrip": "The roadtrip then overlaps the trip “{{trip}}” ({{dates}}).",
+      "overlapsRoadtrip": "The roadtrip then overlaps the roadtrip “{{roadtrip}}” ({{dates}})."
+    },
+    "check": "check",
+    "contextFailed": "Your trips and other roadtrips could not be loaded — overlaps with them are not checked.",
+    "apply": "Shift",
+    "done_one": "{{count}} station shifted ({{days}} days)",
+    "done_other": "{{count}} stations shifted ({{days}} days)",
+    "undoRestores_one": "Undo restores this station's previous dates ({{from}} – {{to}}).",
+    "undoRestores_other": "Undo restores the previous dates of these {{count}} stations ({{from}} – {{to}})."
+  },
+  "days": {
+    "title": "Day by day",
+    "viewLabel": "View",
+    "view": {
+      "stations": "Stations",
+      "days": "Days"
+    },
+    "undated": "Undated",
+    "via": "On the way: {{places}}",
+    "night": "Night:",
+    "noNight": "No night recorded",
+    "nightsUnknown": "Departure not recorded — number of nights open",
+    "km": "{{km}} km",
+    "kmBy": {
+      "track": "{{km}} km from the recording",
+      "routed": "{{km}} km along the road",
+      "drawn": "{{km}} km drawn by hand",
+      "straight": "{{km}} km as the crow flies"
+    },
+    "ferry": "of which {{km}} km by ferry",
+    "driving": "Driving time {{h}} h {{m}} (calculated)",
+    "drivingUnknown": "Driving time unknown — not every leg is calculated along the road",
+    "missingLeg": "One stretch has no saved leg yet — the distance is incomplete.",
+    "stayOn_one": "Then {{count}} more day in {{place}}",
+    "stayOn_other": "Then {{count}} more days in {{place}}",
+    "drivingEntered": "Driving time {{h}} h {{m}} (entered)"
   }
 }

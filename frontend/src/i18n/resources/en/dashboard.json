@@ -199,7 +199,8 @@
       "tour": "Tours",
       "roadtrip": "Roadtrips",
       "rail": "Rail",
-      "rental": "Rental cars"
+      "rental": "Rental cars",
+      "bus": "Bus"
     },
     "disabledHint": "Area disabled — Settings → Areas"
   },
@@ -212,7 +213,8 @@
     "tour": "Tour",
     "roadtrip": "Roadtrip",
     "rail": "Train journey",
-    "rental": "Rental car"
+    "rental": "Rental car",
+    "bus": "Bus ride"
   },
   "controls": {
     "mode": "Mode",

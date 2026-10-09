@@ -45,7 +45,11 @@ import { CROSS_DOMAIN_MEASURES } from "./evidenceMeasuresCrossDomain";
 import { DOMAIN_MEASURES } from "./evidenceMeasuresDomains";
 import { ACHIEVEMENT_MEASURES } from "./evidenceMeasuresAchievements";
 import { RAIL_MEASURES } from "./evidenceMeasuresRail";
+import { RENTAL_BUS_MEASURES } from "./evidenceMeasuresRentalBus";
 import { PASSPORT_MEASURES } from "./evidenceMeasuresPassport";
+import { FLIGHT_INSIGHT_MEASURES } from "./evidenceMeasuresFlightInsights";
+import { CRUISE_INSIGHT_MEASURES } from "./evidenceMeasuresCruiseInsights";
+import { INSIGHT_MEASURES } from "./evidenceMeasuresInsights";
 /**
  * `Aggregation` is owned by `./evidence` — the contract the payload is
  * described in — not redeclared here. Two structurally identical unions of
@@ -88,6 +92,10 @@ export const EVIDENCE_MEASURES: Record<string, MeasureSpec> = {
   ...CROSS_DOMAIN_MEASURES,
   ...DOMAIN_MEASURES,
   ...RAIL_MEASURES,
+  ...RENTAL_BUS_MEASURES,
   ...PASSPORT_MEASURES,
+  ...FLIGHT_INSIGHT_MEASURES,
+  ...CRUISE_INSIGHT_MEASURES,
+  ...INSIGHT_MEASURES,
   ...ACHIEVEMENT_MEASURES,
 };

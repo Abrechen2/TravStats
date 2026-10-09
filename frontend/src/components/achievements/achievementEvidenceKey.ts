@@ -79,6 +79,12 @@ export const ACHIEVEMENT_EVIDENCE_KEY: Record<string, string> = {
   place_countries: "placeCountriesCount",
   place_cities: "placeCitiesCount",
 
+  // Day tours (forgejo#264) — the badge reads the same completed-tour count
+  // the tour tab folds (`services/stats/insights`). The climb is absent: the
+  // badge floors metres, the panel rounds them, and a one-metre difference
+  // would read as "recomputed".
+  tour_count: "tourCompletedCount",
+
   // Rail (2.7) — the badges and these measures fold the same rides through
   // `utils/railAchievements.ts`, so progress and panel are one number.
   // `rail_longest_km` is absent: the longest ride is an extremum, which
@@ -90,6 +96,20 @@ export const ACHIEVEMENT_EVIDENCE_KEY: Record<string, string> = {
   rail_night_trains: "railNightTrainCount",
   rail_high_speed: "railHighSpeedRideCount",
   rail_cross_border: "railCrossBorderRideCount",
+  // forgejo#261: the journeys behind "Gut umgestiegen", counted by the same
+  // fold. The station return and the year with the most new connections are
+  // extrema — release 1 serves neither, so their dialogs say so.
+  rail_documented_transfer_journeys: "railDocumentedTransferJourneyCount",
+
+  // Rental and bus (forgejo#262, #263) — the badge folds and these measures
+  // read the same rows (`utils/rentalAchievements.ts`, `services/bus/busStats.ts`),
+  // so a badge's progress and its list are one number (forgejo#265).
+  rental_count: "rentalCount",
+  rental_one_way: "rentalOneWayCount",
+  rental_odometer_documented: "rentalOdometerDocumentedCount",
+  bus_count: "busRideCount",
+  bus_night_rides: "busNightRideCount",
+  bus_terminals: "busTerminalsCount",
 };
 
 /** The served measure behind this rule, or null when nobody can list it yet. */

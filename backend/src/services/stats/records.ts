@@ -1,4 +1,6 @@
 import { haversineKm } from "../../shared/geo/haversine";
+import { departureDayOf } from "../../utils/stats/departureClock";
+import type { FlightTimeSemantics } from "../../utils/timezone";
 
 /**
  * Travel records, derived once here — Forgejo #41, and the principle behind
@@ -41,6 +43,14 @@ export interface RecordFlightInput {
   arrLat: number | null;
   arrLon: number | null;
   departureTime: Date | null;
+  /**
+   * The departure airport's zone (stored zone first, then the catalogue — what
+   * `enrichFlightsWithAirportFacts` attaches) and the row's storage semantics.
+   * They decide which calendar day a departure belongs to (forgejo#255); absent,
+   * the stored components are read as they are, exactly as every other stat does.
+   */
+  depTimezone?: string | null;
+  depTimeSemantics?: string;
   durationMinutes: number | null;
   delayMinutes: number | null;
   routeDistance: number | null;
@@ -75,9 +85,24 @@ function distanceKm(flight: RecordFlightInput): number | null {
   return null;
 }
 
-/** Calendar day of the stored departure instant, as stored — no zone math. */
+/**
+ * The calendar day a flight left on, on the DEPARTURE AIRPORT'S clock
+ * (forgejo#255) - `departureDayOf`, the clock contract every "which day was
+ * that" figure on this server reads. It used to cut the stored instant at UTC
+ * midnight, so two Tokyo departures on 2 September, at 23:30Z on the 1st and
+ * 01:30Z on the 2nd, were two days of one flight each.
+ *
+ * A DATE_ONLY row is read through its zone like any other: it is written as a
+ * local wall clock through that zone, so the local day IS its recorded day
+ * (forgejo#273, `shared/time/dateOnlyFlights.json`). A row with no usable zone
+ * is read on its stored components.
+ */
 function dayOf(flight: RecordFlightInput): string | null {
-  return flight.departureTime ? flight.departureTime.toISOString().slice(0, 10) : null;
+  return departureDayOf({
+    departureTime: flight.departureTime,
+    depTimezone: flight.depTimezone,
+    depTimeSemantics: flight.depTimeSemantics as FlightTimeSemantics | undefined,
+  });
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;

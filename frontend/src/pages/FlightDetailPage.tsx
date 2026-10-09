@@ -8,14 +8,7 @@ import PeopleList from "../components/ui/PeopleList";
 import FlightRouteHero from "../components/flightsTable/FlightRouteHero";
 import { resolveAirlineIata } from "../lib/airlineUtils";
 import { formatTimeValueShown } from "../lib/displayFormat";
-import {
-  flightActualArrival,
-  flightActualDeparture,
-  flightArrival,
-  flightDeparture,
-} from "../lib/entityTimes";
-import { yourTimeText } from "../lib/yourTime";
-import { readsAsUtc, type TimeValue } from "../shared/time";
+import { flightDeparture } from "../lib/entityTimes";
 import Button from "../components/ui/Button";
 import SpecialTypeBadge from "../components/specialFlights/SpecialTypeBadge";
 import type { SpecialType } from "../components/specialFlights/specialTypeMeta";
@@ -25,10 +18,12 @@ import ConfirmModal from "../components/Training/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import FlightStatusCell from "../components/flightsTable/FlightStatusCell";
 import { useDocumentCount } from "../hooks/useDocumentCount";
+import { useFlightRecordingPoints } from "../hooks/useFlightRecordingPoints";
 import { useTranslation } from "../hooks/useTranslation";
 import { flightsApi, tripsApi } from "../lib/api";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
-import { DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { flightDeleteMessage } from "../lib/flights/flightDeleteMessage";
 import { getFlightDuration } from "../lib/flightDuration";
 import { flightExtractTarget } from "../lib/extractTargets";
 import { convertDistance, formatAmount, getDistanceLabel } from "../lib/units";
@@ -41,6 +36,11 @@ import { useToastStore } from "../store/toastStore";
 import type { Flight, FlightInput, Trip } from "../types";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import FlightTrackSection from "../components/flightTrack/FlightTrackSection";
+import FlightPlanActual from "../components/flightDetail/FlightPlanActual";
+import FlightDayCard, { dayCardShown } from "../components/flightDetail/FlightDayCard";
+import BookingItinerary from "../components/flightDetail/BookingItinerary";
+import BookingPrice from "../components/flightDetail/BookingPrice";
+import { useFlightBooking } from "../components/flightDetail/useFlightBooking";
 
 /**
  * Reading a flight without editing it.
@@ -66,7 +66,6 @@ export default function FlightDetailPage(): JSX.Element {
   const { t, i18n } = useTranslation(["flights", "common", "trips", "specialFlights"]);
   const addToast = useToastStore((s) => s.addToast);
   const distanceUnit = useSettingsStore((state) => state.units.distanceUnit);
-  const viewerZone = useSettingsStore((state) => state.display?.timezone);
   const weightUnit = useSettingsStore((state) => state.units?.weightUnit);
 
   const [flight, setFlight] = useState<Flight | null>(null);
@@ -84,7 +83,11 @@ export default function FlightDetailPage(): JSX.Element {
   const documentCount = useDocumentCount(
     confirmingDelete && flight ? { type: "flight", id: flight.id } : null
   );
+  /** The phone's recording goes with the flight too (review M8). */
+  const recordingPoints = useFlightRecordingPoints(confirmingDelete && flight ? flight.id : null);
   const [deleting, setDeleting] = useState<boolean>(false);
+  /** Moves when the documents section changed a file, so the day card re-reads. */
+  const [documentsVersion, setDocumentsVersion] = useState<number>(0);
 
   useEffect(() => {
     if (!id) return;
@@ -127,6 +130,9 @@ export default function FlightDetailPage(): JSX.Element {
     };
   }, [flight?.tripId]);
 
+  /** The booking's segments (forgejo#218); re-read with the flight after an edit. */
+  const booking = useFlightBooking(flight?.id ?? null, flight?.bookingId, reloadKey);
+
   // `?edit=1` — the inbox sending the user here to fill in a time or an
   // airport the time-model migration could not resolve (timeFlagLinks.ts).
   useEditDeepLink(EDIT_PARAM.edit, flight !== null, () =>
@@ -148,7 +154,10 @@ export default function FlightDetailPage(): JSX.Element {
     }
   }, [flight, addToast, navigate, t]);
 
-  if (loading) {
+  // Only before THIS flight is there: a reload of the flight on screen must
+  // not unmount an open dialog (review I1); moving to another segment still
+  // shows the loading view instead of the previous flight.
+  if (loading && flight?.id !== id) {
     return (
       <AppShell width="list">
         <p className="text-[var(--text-muted)]">{t("flights:table.loading")}</p>
@@ -194,19 +203,8 @@ export default function FlightDetailPage(): JSX.Element {
           i18n.language
         )} ${getDistanceLabel(distanceUnit, t)}`
       : null;
-  /**
-   * A time in the detail grid: the airport's day and clock as the server read
-   * it (`times.*.local`, ADR 0002), cut to its precision, "UTC" where the
-   * airport has no known zone, and the user's own clock as a hint (Q2).
-   */
-  const when = (value: TimeValue | null): string | null => {
-    if (!value) return null;
-    const shown = `${formatTimeValueShown(value)}${readsAsUtc(value) ? " UTC" : ""}`;
-    const hint = yourTimeText(value, viewerZone, t);
-    return hint ? `${shown} · ${hint}` : shown;
-  };
   const departure = flightDeparture(flight);
-  const arrival = flightArrival(flight);
+  const withDayCard = dayCardShown(flight);
 
   return (
     <AppShell width="list">
@@ -251,31 +249,17 @@ export default function FlightDetailPage(): JSX.Element {
         }
       />
 
+      {/* What the day of travel needs, first (forgejo#220). */}
+      <FlightDayCard flight={flight} documentsVersion={documentsVersion} />
+
       <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
         <div className="flex flex-col gap-6 md:col-span-3">
+          {/* Plan against record per end, with the local day, the airport's
+              zone and the deviation in words (forgejo#216). */}
           <DetailSection
             title={t("flights:detail.times")}
+            lead={<FlightPlanActual flight={flight} />}
             facts={[
-              {
-                label: t("flights:detail.departurePlanned"),
-                value: when(departure),
-                mono: true,
-              },
-              {
-                label: t("flights:detail.departureActual"),
-                value: when(flightActualDeparture(flight)),
-                mono: true,
-              },
-              {
-                label: t("flights:detail.arrivalPlanned"),
-                value: when(arrival),
-                mono: true,
-              },
-              {
-                label: t("flights:detail.arrivalActual"),
-                value: when(flightActualArrival(flight)),
-                mono: true,
-              },
               {
                 label: t("flights:detail.flightTime"),
                 value: duration
@@ -283,13 +267,10 @@ export default function FlightDetailPage(): JSX.Element {
                   : null,
                 mono: true,
               },
-              {
-                label: t("flights:detail.timezones"),
-                value:
-                  departure?.zone && arrival?.zone ? `${departure.zone} → ${arrival.zone}` : null,
-              },
             ]}
           />
+
+          <BookingItinerary flightId={flight.id} state={booking.state} onRetry={booking.retry} />
 
           <DetailSection
             title={t("flights:detail.route")}
@@ -311,16 +292,26 @@ export default function FlightDetailPage(): JSX.Element {
             ]}
           />
 
+          {/* Reference, ticket, seat and baggage sit in the day card above
+              when it is drawn — once on a page, not twice. */}
           <DetailSection
             title={t("flights:detail.booking")}
             facts={[
               {
                 label: t("flights:form.bookingReference"),
-                value: flight.bookingReference,
+                value: withDayCard ? null : flight.bookingReference,
                 mono: true,
               },
-              { label: t("flights:form.ticketNumber"), value: flight.ticketNumber, mono: true },
-              { label: t("flights:form.seat"), value: flight.seatNumber, mono: true },
+              {
+                label: t("flights:form.ticketNumber"),
+                value: withDayCard ? null : flight.ticketNumber,
+                mono: true,
+              },
+              {
+                label: t("flights:form.seat"),
+                value: withDayCard ? null : flight.seatNumber,
+                mono: true,
+              },
               {
                 label: t("flights:form.seatClass"),
                 value: flight.seatClass
@@ -337,7 +328,9 @@ export default function FlightDetailPage(): JSX.Element {
               { label: t("flights:form.gate"), value: flight.gate, mono: true },
               {
                 label: t("flights:form.baggageAllowance"),
-                value: formatBaggageAllowance(flight.baggageAllowance, weightUnit),
+                value: withDayCard
+                  ? null
+                  : formatBaggageAllowance(flight.baggageAllowance, weightUnit),
               },
               {
                 label: t("flights:form.frequentFlyerNumber"),
@@ -354,12 +347,22 @@ export default function FlightDetailPage(): JSX.Element {
               { label: t("flights:form.taxes"), value: money(flight.taxes), mono: true },
               { label: t("flights:form.fees"), value: money(flight.fees), mono: true },
             ]}
-          />
+          >
+            {/* Where the booking total lives and how it is counted (forgejo#219). */}
+            {booking.state.kind === "loaded" && booking.state.answer.booking ? (
+              <BookingPrice
+                flight={flight}
+                answer={booking.state.answer}
+                onAnswer={booking.replace}
+              />
+            ) : null}
+          </DetailSection>
 
           {/* Beside the costs, not instead of the receipt above them: the
               "Beleg" is the one file the price links to, this is the folder. */}
           <DocumentsSection
             entry={{ type: "flight", id: flight.id }}
+            onChanged={() => setDocumentsVersion((v) => v + 1)}
             extract={flightExtractTarget(flight, async (updates) => {
               await flightsApi.update(flight.id, updates);
               addToast("success", t("documents:extract.applied"));
@@ -426,9 +429,9 @@ export default function FlightDetailPage(): JSX.Element {
           onSave={async (flightId: string, updates: Partial<FlightInput>) => {
             await flightsApi.update(flightId, updates);
             addToast("success", t("flights:table.toast.updated"));
-            setEditing(false);
-            setReloadKey((k) => k + 1);
           }}
+          // The dialog closes itself after the trip assignment that follows.
+          onAfterSave={() => setReloadKey((k) => k + 1)}
         />
       )}
 
@@ -452,14 +455,25 @@ export default function FlightDetailPage(): JSX.Element {
         // documents cascade with it (`onDelete: Cascade`, proven live by
         // `backend/src/__tests__/integrity/cascades.integrity.test.ts`) and
         // the dialog named only the flight.
-        message={withDocumentNote(
-          t("flights:table.deleteConfirm.message", {
+        message={flightDeleteMessage(
+          t,
+          {
             name:
               [flight.flightNumber, [flight.depIata, flight.arrIata].filter(Boolean).join(" → ")]
                 .filter(Boolean)
                 .join(" ") || t("common:labels.unknown"),
-          }),
-          t,
+            tripName: flight.tripId ? (trip?.name ?? flight.trip?.name ?? "") : null,
+            // The booking read for the itinerary counts its other flights.
+            booking: flight.bookingId
+              ? booking.state.kind === "loaded" && booking.state.answer.booking
+                ? {
+                    pnr: booking.state.answer.booking.pnr,
+                    otherFlights: Math.max(0, booking.state.answer.segments.length - 1),
+                  }
+                : { pnr: flight.bookingReference ?? null, otherFlights: null }
+              : null,
+            recordingPoints,
+          },
           documentCount
         )}
         confirmText={t("flights:table.deleteConfirm.confirm")}

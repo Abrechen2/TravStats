@@ -42,6 +42,7 @@ describe("the passport counts evidence", () => {
       place: 0,
       lodging: 0,
       rail: 0,
+      bus: 0,
       roadtrip: 0,
       track: 0,
     });
@@ -63,6 +64,7 @@ describe("the passport counts evidence", () => {
       place: 0,
       lodging: 0,
       rail: 0,
+      bus: 0,
       roadtrip: 0,
       track: 0,
     });
@@ -91,6 +93,7 @@ describe("the passport counts evidence", () => {
       place: 1,
       lodging: 0,
       rail: 0,
+      bus: 0,
       roadtrip: 0,
       track: 0,
     });

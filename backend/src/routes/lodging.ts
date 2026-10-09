@@ -11,6 +11,8 @@ import * as fx from "../services/fx/resolver";
 import { resolveLocation } from "./lodgingGeocode";
 import proposeRouter from "./lodging/propose";
 import entrySuggestionsRouter from "./lodging/entrySuggestions";
+import stayListRouter from "./lodging/stayList";
+import deleteFactsRouter from "./lodging/deleteFacts";
 import { computeAggregates, type LodgingListItem } from "../services/lodging/listView";
 import {
   queryLodgingPage,
@@ -221,6 +223,8 @@ router.get(
 router.use(proposeRouter);
 // Same reason: "entry-suggestions" is a literal path, not a lodging id.
 router.use(entrySuggestionsRouter);
+// And "stays": the chronological view across houses.
+router.use(stayListRouter);
 
 router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -359,5 +363,6 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
 // Stay CRUD lives in `lodging/stays` — the same paths, mounted here so the
 // order Express matches in is unchanged.
 router.use(staysRouter);
+router.use(deleteFactsRouter);
 
 export default router;

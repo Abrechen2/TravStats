@@ -157,6 +157,25 @@ describe("CatalogueCombobox", () => {
     expect(screen.queryByText("Lufthansa CityLine")).not.toBeInTheDocument();
   });
 
+  // A browsing field opened on a seeded value: the browse list must not be
+  // replaced, 300 ms later, by a search for the seeded value alone.
+  it("keeps the browsed list when a seeded value's search would land after the focus", async () => {
+    const search = vi.fn(async (q: string) =>
+      q === "" ? OPTIONS : OPTIONS.filter((o) => o.name === q)
+    );
+    const Harness = (): JSX.Element => {
+      const [value, setValue] = useState("Lufthansa");
+      return <CatalogueCombobox value={value} onChange={setValue} search={search} browseOnFocus />;
+    };
+    render(<Harness />);
+    fireEvent.focus(screen.getByRole("textbox"));
+    expect(await screen.findByText("Lufthansa CityLine")).toBeInTheDocument();
+
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(screen.getByText("Lufthansa CityLine")).toBeInTheDocument();
+    expect(search).not.toHaveBeenCalledWith("Lufthansa");
+  });
+
   it("prevents the default mousedown on options so a pick never blurs the input", async () => {
     const search = vi.fn().mockResolvedValue(OPTIONS);
     const { input } = renderControlled({ search });

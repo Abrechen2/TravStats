@@ -1,10 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { Place } from "../../types/place";
 import { countRenderedRows, paginationControlsRendered } from "./tablePaginationTestSupport";
 
 const listPlacesMock = vi.fn();
+const getPlaceRelationsMock = vi.fn();
+const createVisitMock = vi.fn();
+const deletePlaceMock = vi.fn();
 
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-stub" />,
@@ -12,7 +15,10 @@ vi.mock("../../components/NavigationBar", () => ({
 
 vi.mock("../../lib/api/places", () => ({
   listPlaces: (...args: unknown[]) => listPlacesMock(...args),
-  deletePlace: vi.fn(),
+  deletePlace: (...args: unknown[]) => deletePlaceMock(...args),
+  getPlaceRelations: (...args: unknown[]) => getPlaceRelationsMock(...args),
+  createVisit: (...args: unknown[]) => createVisitMock(...args),
+  getVisitDateSuggestions: vi.fn(async () => []),
 }));
 
 // The lists dropdown is a separate concern — an empty list keeps the panel's
@@ -31,6 +37,8 @@ vi.mock("../../store/toastStore", () => ({
 // unmocked here the same way LodgingListPage.test.tsx unmocks it for
 // baseCurrency — real store, `poi` turned on for this file only.
 vi.unmock("../../store/settingsStore");
+
+vi.mock("../../lib/api/trips", () => ({ tripsApi: { getAll: vi.fn(async () => []) } }));
 
 // Imported after the mocks above so the module graph picks them up.
 import PlacesListPage from "../PlacesListPage";
@@ -87,6 +95,102 @@ describe("PlacesListPage", () => {
     renderListPage();
 
     expect(await screen.findByText("places:list.empty")).toBeInTheDocument();
+  });
+
+  // forgejo#250: the genuinely empty list names its next step, right there.
+  it("offers the first place from the empty, unfiltered list", async () => {
+    listPlacesMock.mockResolvedValue([]);
+    renderListPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "places:list.addFirst" }));
+    expect(await screen.findByText("places:form.createTitle")).toBeInTheDocument();
+  });
+
+  // forgejo#247: a list that could not be read is not an empty one, and the
+  // way forward is a retry that reads it again.
+  it("tells a failed load from an empty list and retries it", async () => {
+    listPlacesMock
+      .mockRejectedValueOnce({ isAxiosError: true, response: { status: 503 } })
+      .mockResolvedValueOnce([makePlace({ id: "p1", name: "Wartburg" })]);
+    renderListPage();
+
+    expect(await screen.findByText("places:list.loadError")).toBeInTheDocument();
+    expect(screen.queryByText("places:list.empty")).not.toBeInTheDocument();
+    expect(screen.getByText("HTTP 503")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    expect(await screen.findByText("Wartburg")).toBeInTheDocument();
+    expect(listPlacesMock).toHaveBeenCalledTimes(2);
+  });
+
+  // forgejo#250: the list asks the same question as the detail page — what
+  // goes with the place and what stays — counted only once it is asked.
+  it("names what goes and what stays before deleting from the list", async () => {
+    listPlacesMock.mockResolvedValue([
+      makePlace({ id: "p1", name: "Wartburg", visitCount: 1, plannedVisitCount: 1 }),
+    ]);
+    getPlaceRelationsMock.mockResolvedValue({
+      visitCount: 2,
+      plannedVisitCount: 1,
+      photoCount: 2,
+      documentCount: 0,
+      lists: [],
+      trips: [{ id: "t1", name: "Thüringen" }],
+      roadtripStationCount: 0,
+    });
+    renderListPage();
+    await screen.findByText("Wartburg");
+    expect(getPlaceRelationsMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getAllByRole("button", { name: "common:buttons.delete" })[0]);
+    const dialog = await screen.findByTestId("confirm-modal");
+    await waitFor(() => expect(dialog.textContent).toContain("places:delete.photos"));
+    expect(getPlaceRelationsMock).toHaveBeenCalledWith("p1");
+    expect(dialog.textContent).toContain("common:delete.survivors");
+  });
+
+  // forgejo#231: a visit straight from the row, without opening the place.
+  it("records a visit from the row and re-reads the rows afterwards", async () => {
+    listPlacesMock.mockResolvedValue([makePlace({ id: "p1", name: "Wartburg", visited: false })]);
+    createVisitMock.mockResolvedValue({ id: "v1" });
+    renderListPage();
+    await screen.findByText("Wartburg");
+
+    fireEvent.click(screen.getByRole("button", { name: "places:visit.action" }));
+    const save = await screen.findByRole("button", { name: "common:buttons.save" });
+    fireEvent.click(save);
+
+    await waitFor(() => expect(createVisitMock).toHaveBeenCalledTimes(1));
+    expect(createVisitMock.mock.calls[0][0]).toBe("p1");
+    await waitFor(() => expect(listPlacesMock).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "common:buttons.save" })).not.toBeInTheDocument()
+    );
+  });
+
+  // forgejo#246: a refused delete stays on the page, named, with a retry.
+  it("keeps a refused delete on the page and sends it again on retry", async () => {
+    listPlacesMock.mockResolvedValue([makePlace({ id: "p1", name: "Wartburg" })]);
+    getPlaceRelationsMock.mockRejectedValue(new Error("not counted"));
+    deletePlaceMock
+      .mockRejectedValueOnce({ isAxiosError: true, message: "Network Error" })
+      .mockResolvedValueOnce(undefined);
+    renderListPage();
+    await screen.findByText("Wartburg");
+
+    fireEvent.click(screen.getAllByRole("button", { name: "common:buttons.delete" })[0]);
+    const dialog = await screen.findByTestId("confirm-modal");
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole("button", { name: "common:buttons.delete" }));
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("places:list.deleteFailedFor");
+    expect(screen.queryByTestId("confirm-modal")).not.toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    });
+    expect(deletePlaceMock).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   });
 
   // The add button was filled with the place domain colour, which is an

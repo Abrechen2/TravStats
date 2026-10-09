@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useRailOffered } from "../../hooks/useRailVisible";
 import { useRentalOffered } from "../../hooks/useRentalVisible";
+import { useBusOffered } from "../../hooks/useBusVisible";
 
 export interface DomainPickerStepProps {
   value: DomainKey[];
@@ -43,10 +44,14 @@ export default function DomainPickerStep({ value, onChange }: DomainPickerStepPr
   // Rental: the same rule on its own gate (hooks/useRentalVisible.ts).
   const rentalOffered = useRentalOffered();
   const enabledRental = value.includes("rental");
+  // Bus: the same rule on its own gate (hooks/useBusVisible.ts).
+  const busOffered = useBusOffered();
+  const enabledBus = value.includes("bus");
   const visibleKeys = DOMAIN_KEYS.filter((key) => {
     if (key === "roadtrip") return isFeatureVisible("roadtrips");
     if (key === "rail") return railOffered || enabledRail;
     if (key === "rental") return rentalOffered || enabledRental;
+    if (key === "bus") return busOffered || enabledBus;
     return true;
   });
 

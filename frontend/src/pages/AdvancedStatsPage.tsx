@@ -40,6 +40,7 @@ import StatsDistanceSection from "../components/Stats/StatsDistanceSection";
 import StatsFlightBreakdown from "../components/Stats/StatsFlightBreakdown";
 import StatsFunSection from "../components/Stats/StatsFunSection";
 import RecordsSection from "../components/Stats/RecordsSection";
+import FlightInsightsSection from "../components/Stats/insights/FlightInsightsSection";
 import StatsBusinessSection from "../components/Stats/StatsBusinessSection";
 import { useSectionVisibility } from "../hooks/useSectionVisibility";
 import PunctualitySection from "../components/Stats/PunctualitySection";
@@ -52,6 +53,8 @@ import LodgingStatsSection from "../components/Stats/LodgingStatsSection";
 import PoiStatsSection from "../components/Stats/PoiStatsSection";
 import RailStatsSection from "../components/Stats/rail/RailStatsSection";
 import RentalStatsSection from "../components/Stats/rental/RentalStatsSection";
+import BusStatsSection from "../components/Stats/bus/BusStatsSection";
+import { mergeYears, useBetaDomainYears } from "../lib/stats/useBetaDomainYears";
 import RoadtripStatsSection from "../components/Stats/RoadtripStatsSection";
 import OverviewTab from "../components/Stats/Overview/OverviewTab";
 import FlightScorecardBlock from "../components/Stats/scorecard/FlightScorecardBlock";
@@ -60,6 +63,7 @@ import type { TimeseriesResponse } from "../lib/api/types";
 import { achievementsApi } from "../lib/api/achievements";
 import type { AchievementSummary } from "../types";
 import { generateYearReportPdf } from "../lib/yearReportPdf";
+import { favoriteConnection } from "../lib/stats/favoriteConnection";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
 import { GlobeLoader } from "../components/GlobeLoader";
@@ -69,6 +73,7 @@ import { useStatsPageSections } from "../lib/stats/useStatsPageSections";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { useRailOffered } from "../hooks/useRailVisible";
 import { useRentalOffered } from "../hooks/useRentalVisible";
+import { useBusOffered } from "../hooks/useBusVisible";
 import { parseStatsTab, resolveStatsTab, visibleStatsTabs } from "./statsTabAccess";
 import type { DomainKey } from "../shared/domains";
 import { flightDeparture } from "../lib/entityTimes";
@@ -149,14 +154,8 @@ export default function AdvancedStatsPage(): JSX.Element {
    * to the overview, which is a page rather than a blank.
    */
   const placesAccess = usePlacesAccess();
-  const [railOffered, rentalOffered] = [useRailOffered(), useRentalOffered()]; // beta gates
-  const effectiveFilter = resolveStatsTab(
-    filter,
-    enabled,
-    placesAccess,
-    railOffered,
-    rentalOffered
-  );
+  const gates = [useRailOffered(), useRentalOffered(), useBusOffered()] as const; // beta gates
+  const effectiveFilter = resolveStatsTab(filter, enabled, placesAccess, ...gates);
 
   // Which blocks this tab draws. Per tab, because hiding costs on flights says
   // nothing about cruises — and everything is visible until someone says
@@ -173,7 +172,11 @@ export default function AdvancedStatsPage(): JSX.Element {
     flights,
     ready: !loading,
   });
-  const periodYears = useMemo(() => collectYears(domainStats, {}), [domainStats]);
+  const betaYears = useBetaDomainYears(); // rental and bus years (forgejo#265)
+  const periodYears = useMemo(
+    () => mergeYears(collectYears(domainStats, {}), betaYears),
+    [domainStats, betaYears]
+  );
   const period = useUrlStatsPeriod(periodYears, domainStatsLoading);
   const { selectedYear, compareYear, compareEnabled, scope } = period;
   const [yearSummary, setYearSummary] = useState<SummaryStats | null>(null);
@@ -486,22 +489,8 @@ export default function AdvancedStatsPage(): JSX.Element {
   // naming "iata:LH" would be a leak of the identity into the copy.
   const topAirline: string | null = sortedAirlines.length > 0 ? sortedAirlines[0][1].label : null;
 
-  const routeCounts = flights.reduce(
-    (acc, flight) => {
-      const dep = flight.depIata || flight.depIcao || null;
-      const arr = flight.arrIata || flight.arrIcao || null;
-      if (dep && arr) {
-        const key = `${dep} → ${arr}`;
-        acc[key] = (acc[key] || 0) + 1;
-      }
-      return acc;
-    },
-    {} as Record<string, number>
-  );
-  const favoriteRoute: string | null =
-    Object.keys(routeCounts).length > 0
-      ? Object.entries(routeCounts).sort(([, a], [, b]) => b - a)[0][0]
-      : null;
+  // The most flown CONNECTION, both directions as one (forgejo#254).
+  const favoriteRoute: string | null = favoriteConnection(flights);
 
   const yearsActive: number[] = [
     ...new Set(
@@ -562,7 +551,7 @@ export default function AdvancedStatsPage(): JSX.Element {
             second instance. */}
         <EvidencePanel />
         <StatsTabStrip
-          tabs={visibleStatsTabs(enabled, placesAccess, railOffered, rentalOffered)}
+          tabs={visibleStatsTabs(enabled, placesAccess, ...gates)}
           active={filter}
           onSelect={setFilter}
         />
@@ -605,7 +594,10 @@ export default function AdvancedStatsPage(): JSX.Element {
             <RoadtripStatsSection scope={scope} visibility={sections} />
           )}
           {effectiveFilter === "rail" && <RailStatsSection scope={scope} visibility={sections} />}
-          {effectiveFilter === "rental" && <RentalStatsSection year={selectedYear} />}
+          {effectiveFilter === "rental" && (
+            <RentalStatsSection scope={scope} visibility={sections} />
+          )}
+          {effectiveFilter === "bus" && <BusStatsSection scope={scope} visibility={sections} />}
 
           {/* Generate Certificate + Year Report Buttons — flight-only now. */}
           {effectiveFilter === "flight" && flights.length > 0 && (
@@ -729,6 +721,9 @@ export default function AdvancedStatsPage(): JSX.Element {
                   are handed over for NAMES and DATES only; every number in
                   there is the server's. */}
               {sections.isVisible("records") && <RecordsSection flights={flights} />}
+              {sections.isVisible("insights") && (
+                <FlightInsightsSection flights={flights} year={selectedYear} />
+              )}
 
               {/* The ONE composed request failed (forgejo#49) — said once, here,
                   rather than nine times or not at all. The sections below then

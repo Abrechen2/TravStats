@@ -2,17 +2,27 @@ import type { JSX } from "react";
 import { useEffect, useState } from "react";
 import { statsApi } from "../../../lib/api/stats";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { useRailVisible } from "../../../hooks/useRailVisible";
+import { useBusVisible } from "../../../hooks/useBusVisible";
 import { logger } from "../../../lib/logger";
 import type { TravelAccountResponse, TravelAccountYear } from "../../../types/travelAccount";
 import StatCard from "../StatCard";
 import DualFigureCard from "../DualFigureCard";
 
-/** One colour per bucket — the domain tokens, plus a muted one for home. */
+/**
+ * One colour per bucket — the domain tokens, plus the bar's own muted ground
+ * for the remainder. The remainder is "not accounted for", never "at home"
+ * (forgejo#266): it is drawn as the empty part of the year because that is
+ * what it is.
+ */
 const BUCKETS = [
   { key: "hotelNights", colour: "var(--domain-lodging, #d4778f)" },
   { key: "seaNights", colour: "var(--domain-cruise, #6fa0d6)" },
+  { key: "railNights", colour: "var(--domain-rail, #5fb39b)" },
+  // forgejo#263 — a night bus, after the night train in the server's precedence.
+  { key: "busNights", colour: "var(--ts-domain-bus)" },
   { key: "airNights", colour: "var(--domain-flight, #f0a947)" },
-  { key: "homeNights", colour: "var(--color-border)" },
+  { key: "unassignedNights", colour: "var(--color-border)" },
 ] as const;
 
 type BucketKey = (typeof BUCKETS)[number]["key"];
@@ -23,11 +33,30 @@ type BucketKey = (typeof BUCKETS)[number]["key"];
  * With flights alone you can say how far someone went; with cruises you can add
  * how long they were at sea. Only once hotel nights are recorded can a year be
  * closed out: so many nights in a bed away from home, so many at sea, so many
- * in a seat, and the rest at home. The bar is a full year every time, which is
- * what makes "you were away 14 % of 2025" legible without a second figure.
+ * on a night train, so many in a seat. The rest is what no record accounts for
+ * — the server's `unassignedNights`, never "at home" (forgejo#266) — and the
+ * help line under the title says so. The bar is a full year every time, which
+ * is what makes "you were away 14 % of 2025" legible without a second figure.
  */
 export default function TravelAccountSection(): JSX.Element | null {
   const { t } = useTranslation(["stats", "common"]);
+  // Rail sits behind the beta switch. The server already leaves a hidden
+  // domain's nights out (forgejo#274 review I2); the legend and the help line
+  // must not name it either.
+  const railVisible = useRailVisible();
+  // Bus likewise (forgejo#263): its own beta switch, its own bucket.
+  const busVisible = useBusVisible();
+  const buckets = BUCKETS.filter(
+    (b) => (b.key !== "railNights" || railVisible) && (b.key !== "busNights" || busVisible)
+  );
+  const helpKey =
+    railVisible && busVisible
+      ? "stats:travelAccount.helpWithRailAndBus"
+      : busVisible
+        ? "stats:travelAccount.helpWithBus"
+        : railVisible
+          ? "stats:travelAccount.helpWithRail"
+          : "stats:travelAccount.help";
   const [data, setData] = useState<TravelAccountResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -73,16 +102,27 @@ export default function TravelAccountSection(): JSX.Element | null {
         {t("stats:travelAccount.subtitle")}
         {account.contestedNights > 0 &&
           ` · ${t("stats:travelAccount.contested", { count: account.contestedNights })}`}
+        {railVisible &&
+          (account.undatedNightTrains ?? 0) > 0 &&
+          ` · ${t("stats:travelAccount.undatedNightTrains", { count: account.undatedNightTrains })}`}
+      </p>
+      <p className="-mt-4 mb-6 text-xs" style={{ color: "var(--text-muted)" }}>
+        {t(helpKey)}
       </p>
 
       <div className="flex flex-col gap-3">
         {account.years.map((year) => (
-          <YearBar key={year.year} year={year} label={(key) => t(`stats:travelAccount.${key}`)} />
+          <YearBar
+            key={year.year}
+            year={year}
+            buckets={buckets}
+            label={(key) => t(`stats:travelAccount.${key}`)}
+          />
         ))}
       </div>
 
       <div className="mt-6 flex flex-wrap gap-4">
-        {BUCKETS.map((bucket) => (
+        {buckets.map((bucket) => (
           <span key={bucket.key} className="flex items-center gap-2 text-xs">
             <span
               className="inline-block h-3 w-3 rounded-sm"
@@ -102,7 +142,7 @@ export default function TravelAccountSection(): JSX.Element | null {
         the card should be split — it is a `DualFigureCard` now, one card with
         a trigger per figure. `avgTripDays` is a `ratio`, which release 1 does
         not serve at all.
-        The five NIGHT measures are served too and still have no tile here to
+        The six NIGHT measures are served too and still have no tile here to
         open them: this section draws its nights as per-year bars, and a bar is
         not a number. There is no all-time night figure on screen to attach a
         trigger to, so all five stay reachable by `?evidence=metric:<key>` only.
@@ -172,12 +212,15 @@ export default function TravelAccountSection(): JSX.Element | null {
 /** A single year as one full-width bar. The width IS the year, so the buckets are read as shares. */
 function YearBar({
   year,
+  buckets,
   label,
 }: {
   year: TravelAccountYear;
+  buckets: readonly (typeof BUCKETS)[number][];
   label: (key: BucketKey) => string;
 }): JSX.Element {
-  const awayNights = year.hotelNights + year.seaNights + year.airNights;
+  const awayNights =
+    year.hotelNights + year.seaNights + year.railNights + (year.busNights ?? 0) + year.airNights;
   return (
     <div className="flex items-center gap-3">
       <span
@@ -190,8 +233,9 @@ function YearBar({
         className="flex h-5 flex-1 overflow-hidden rounded"
         style={{ background: "var(--color-border)" }}
       >
-        {BUCKETS.map((bucket) => {
-          const nights = year[bucket.key];
+        {buckets.map((bucket) => {
+          // A server older than the bus bucket sends no `busNights`.
+          const nights = year[bucket.key] ?? 0;
           if (nights === 0) return null;
           return (
             <div

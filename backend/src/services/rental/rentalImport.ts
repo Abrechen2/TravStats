@@ -2,7 +2,11 @@ import { prisma } from "../../db";
 import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import type { CreateRentalInput, UpdateRentalInput } from "../../schemas/rental";
-import type { RentalCancellationFee, RentalInvoiceInput } from "../../schemas/rentalImport";
+import type {
+  RentalCancellationFee,
+  RentalInvoiceInput,
+  RentalInvoicePart,
+} from "../../schemas/rentalImport";
 import { toLocal } from "../../shared/time/instant";
 import { rentalExternalRef } from "./parser/rentalCandidates";
 import {
@@ -263,8 +267,11 @@ export async function applyInvoice(
   userId: string,
   invoice: RentalInvoiceInput,
   replaceUserDistance = false,
-  sentAt: Date | null = null
+  sentAt: Date | null = null,
+  adopt: Partial<Record<RentalInvoicePart, boolean>> = {}
 ): Promise<{ outcome: ImportOutcome; row: RentalRow }> {
+  // A part the review did not untick is taken (absent = taken, as before).
+  const takes = (part: RentalInvoicePart): boolean => adopt[part] !== false;
   const existing = await findBooking(userId, invoice.provider, {
     confirmation: invoice.confirmationNumber,
     agreement: invoice.agreementNumber,
@@ -273,6 +280,7 @@ export async function applyInvoice(
   if (!existing) throw new RentalUnknownBookingError();
 
   const conflict =
+    takes("distance") &&
     existing.distanceSource === "user" &&
     invoice.distanceKm !== null &&
     existing.distanceKm !== invoice.distanceKm &&
@@ -286,12 +294,14 @@ export async function applyInvoice(
     );
   }
 
-  const times: UpdateRentalInput = {
-    ...(invoice.actualPickupLocal ? { actualPickupLocal: invoice.actualPickupLocal } : {}),
-    ...(invoice.actualReturnLocal ? { actualReturnLocal: invoice.actualReturnLocal } : {}),
-  };
+  const times: UpdateRentalInput = takes("actualTimes")
+    ? {
+        ...(invoice.actualPickupLocal ? { actualPickupLocal: invoice.actualPickupLocal } : {}),
+        ...(invoice.actualReturnLocal ? { actualReturnLocal: invoice.actualReturnLocal } : {}),
+      }
+    : {};
   const finalFx =
-    invoice.finalAmount !== null
+    takes("finalAmount") && invoice.finalAmount !== null
       ? await finalFxColumns(
           userId,
           invoice.finalAmount,
@@ -303,22 +313,29 @@ export async function applyInvoice(
   // arrives; its send time only moves the newest-mail mark forward.
   const extra: Prisma.RentalBookingUncheckedUpdateInput = {
     lastMailSentAt: newestMail(existing, sentAt),
-    ...(invoice.distanceKm !== null && {
-      distanceKm: invoice.distanceKm,
-      distanceSource: "invoice",
-    }),
-    ...(invoice.odometerOutKm !== null && { odometerOutKm: invoice.odometerOutKm }),
-    ...(invoice.odometerInKm !== null && { odometerInKm: invoice.odometerInKm }),
-    ...(invoice.vehicleDriven && { vehicleDriven: invoice.vehicleDriven }),
+    ...(takes("distance") &&
+      invoice.distanceKm !== null && {
+        distanceKm: invoice.distanceKm,
+        distanceSource: "invoice",
+      }),
+    ...(takes("odometer") &&
+      invoice.odometerOutKm !== null && { odometerOutKm: invoice.odometerOutKm }),
+    ...(takes("odometer") &&
+      invoice.odometerInKm !== null && { odometerInKm: invoice.odometerInKm }),
+    ...(takes("vehicleDriven") &&
+      invoice.vehicleDriven && { vehicleDriven: invoice.vehicleDriven }),
     ...(invoice.invoiceNumber && { invoiceNumber: invoice.invoiceNumber }),
     ...(invoice.agreementNumber &&
       !existing.agreementNumber && { agreementNumber: invoice.agreementNumber }),
-    ...(invoice.finalAmount !== null && {
-      finalAmount: invoice.finalAmount,
-      finalCurrency: invoice.finalCurrency,
-      finalAmountSource: "invoice",
-      ...finalFx,
-    }),
+    // The booked price is never touched: the booking's amount and where it
+    // came from stay beside the invoice's (forgejo#237).
+    ...(takes("finalAmount") &&
+      invoice.finalAmount !== null && {
+        finalAmount: invoice.finalAmount,
+        finalCurrency: invoice.finalCurrency,
+        finalAmountSource: "invoice",
+        ...finalFx,
+      }),
   };
   const row = await updateRentalRow(userId, existing, times, { manual: false, extra });
   return { outcome: "invoiced", row };

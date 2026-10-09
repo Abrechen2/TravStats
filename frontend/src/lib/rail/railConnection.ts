@@ -63,13 +63,6 @@ export function connectionDurationMinutes(legs: readonly Leg[]): number | null {
   return departure ? railDurationMinutes(departure, railArrival(span)) : null;
 }
 
-/** Minutes between one leg's arrival and the next one's departure; null when unknown. */
-export function transferMinutes(previous: Leg, next: Leg): number | null {
-  const arrival = railArrival(previous);
-  const departure = railDeparture(next);
-  return arrival && departure ? railDurationMinutes(arrival, departure) : null;
-}
-
 /**
  * The status all legs share. Null when they disagree (one train cancelled,
  * the next still to come): the entry then states none rather than picking one.

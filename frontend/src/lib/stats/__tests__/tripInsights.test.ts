@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeTripInsights, tripDistanceKm, tripDominantCost } from "../tripInsights";
+import { computeTripInsights, tripDistanceKm } from "../tripInsights";
 import type { Trip } from "../../../types";
 import type { TripCostSuperlative } from "../../api/trips";
 
@@ -29,18 +29,6 @@ describe("tripInsights", () => {
     );
     expect(km).toBeGreaterThan(7000);
     expect(km).toBeLessThan(7500);
-  });
-
-  it("takes the biggest per-currency bucket, never summing across currencies", () => {
-    const c = tripDominantCost(
-      trip({
-        bookings: [
-          { price: 300, currency: "EUR" },
-          { price: 480, currency: "USD" },
-        ] as never,
-      })
-    );
-    expect(c).toEqual({ currency: "USD", amount: 480 });
   });
 
   it("picks the winning trip per metric", () => {

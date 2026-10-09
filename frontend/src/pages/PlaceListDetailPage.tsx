@@ -1,7 +1,7 @@
 import { LIST_PALETTE_HEX } from "../lib/listPalette";
 import { PlaceListLabelFields, hasSymbol } from "../components/places/PlaceListLabelFields";
 import type { PlaceLabelMode } from "../lib/placeLabel";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
@@ -21,7 +21,11 @@ import {
   updatePlaceList,
 } from "../lib/api/placeLists";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { isTransientSaveError, saveErrorKey } from "../lib/saveErrorMessage";
+import { FieldError, FormErrorBanner, fieldErrorProps } from "../components/form";
 import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
+import { PlaceFormModal } from "../components/places/PlaceFormModal";
+import { PlaceListAddPanel, type UnassignedPlace } from "../components/places/PlaceListAddPanel";
 import { useToastStore } from "../store/toastStore";
 import type { Place } from "../types/place";
 import type { PlaceList } from "../types/placeList";
@@ -31,6 +35,11 @@ import type { PlaceList } from "../types/placeList";
 // map reads colour as meaning — a list painted in "planned blue" breaks the
 // legend for whoever picked it.
 const LIST_COLOR_PRESETS = LIST_PALETTE_HEX;
+
+/** Touch sizing follows the pointer (forgejo#249): 44 px targets on an iPad only. */
+const COARSE_BOX =
+  "pointer-coarse:min-h-(--ts-size-touch-min) pointer-coarse:min-w-(--ts-size-touch-min)";
+const RENAME_ID = "place-list-rename";
 
 /**
  * One list: what is in it, and the two things a user does to it.
@@ -55,7 +64,26 @@ export default function PlaceListDetailPage(): JSX.Element {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [draftName, setDraftName] = useState("");
+  /** Why the rename was refused — said at the field, not in a toast (forgejo#246). */
+  const [renameError, setRenameError] = useState<string | null>(null);
+  /**
+   * The last change to the list the server refused, kept on the page until the
+   * next change succeeds — a toast that vanished was the only trace before —
+   * with a way to ask again when asking again can help (forgejo#246/#247).
+   */
+  const [actionFailure, setActionFailure] = useState<{
+    key: string;
+    /** The refused change itself, sent again by "Erneut versuchen". */
+    change?: () => Promise<PlaceList>;
+    fallbackKey?: string;
+  } | null>(null);
   const [addQuery, setAddQuery] = useState("");
+  /** The name a new place starts with while the form is open over the list. */
+  const [creatingName, setCreatingName] = useState<string | null>(null);
+  /** Places created from here that the list did not take (yet). */
+  const [unassigned, setUnassigned] = useState<UnassignedPlace[]>([]);
+  /** Filings on their way, by place — a second tap must not send a second one. */
+  const assigning = useRef(new Set<string>());
 
   const load = useCallback(async (): Promise<void> => {
     if (!id) return;
@@ -87,27 +115,84 @@ export default function PlaceListDetailPage(): JSX.Element {
   const entries = useMemo(() => list?.entries ?? [], [list]);
   const memberIds = useMemo(() => new Set(entries.map((e) => e.placeId)), [entries]);
 
-  const candidates = useMemo(() => {
+  /**
+   * What the add search finds — over ALL the user's places, by name, the name
+   * on the sign and city (review I3). Places already in the list are said as
+   * such instead of vanishing: before, typing a member's name read as "not in
+   * your logbook" and offered to create it a second time.
+   */
+  const { candidates, members } = useMemo(() => {
     const q = addQuery.trim().toLowerCase();
-    if (q.length === 0) return [];
-    return allPlaces
-      .filter((p) => !memberIds.has(p.id))
-      .filter((p) => p.name.toLowerCase().includes(q) || (p.city ?? "").toLowerCase().includes(q))
-      .slice(0, 8);
+    if (q.length === 0) return { candidates: [], members: [] };
+    const hits = allPlaces.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        (p.localName ?? "").toLowerCase().includes(q) ||
+        (p.city ?? "").toLowerCase().includes(q)
+    );
+    return {
+      candidates: hits.filter((p) => !memberIds.has(p.id)).slice(0, 8),
+      members: hits.filter((p) => memberIds.has(p.id)).slice(0, 8),
+    };
   }, [allPlaces, memberIds, addQuery]);
+
+  /** Send one change; a refusal stays on the page with a way to send it again. */
+  const runChange = useCallback(
+    async (change: () => Promise<PlaceList>, fallbackKey: string): Promise<boolean> => {
+      try {
+        setList(await change());
+        setActionFailure(null);
+        return true;
+      } catch (err: unknown) {
+        logger.error({ err }, "PlaceListDetailPage: a list change was refused");
+        setActionFailure({ key: saveErrorKey(err, fallbackKey), change, fallbackKey });
+        return false;
+      }
+    },
+    []
+  );
 
   const handleAdd = useCallback(
     async (placeId: string): Promise<void> => {
       if (!list) return;
+      const done = await runChange(
+        () => addPlaceToList(list.id, placeId),
+        "places:lists.addFailed"
+      );
+      if (done) setAddQuery("");
+    },
+    [list, runChange]
+  );
+
+  /**
+   * File a place created from this list into it — once. The place exists
+   * already, so a refusal leaves it in the logbook and puts a row in the add
+   * panel that says so and offers "Erneut zuordnen" for this place alone.
+   */
+  const assignCreated = useCallback(
+    async (placeId: string, created?: Place): Promise<void> => {
+      if (!list || assigning.current.has(placeId)) return;
+      assigning.current.add(placeId);
+      setUnassigned((rows) =>
+        rows.map((row) => (row.place.id === placeId ? { ...row, retrying: true } : row))
+      );
       try {
         setList(await addPlaceToList(list.id, placeId));
-        setAddQuery("");
+        setUnassigned((rows) => rows.filter((row) => row.place.id !== placeId));
       } catch (err: unknown) {
-        logger.error({ err }, "PlaceListDetailPage: failed to add place");
-        addToast("error", t("places:lists.addFailed"));
+        logger.error({ err, placeId }, "PlaceListDetailPage: the list did not take a new place");
+        const reasonKey = saveErrorKey(err, "places:lists.addFailed");
+        setUnassigned((rows) => {
+          const known = rows.find((row) => row.place.id === placeId)?.place ?? created;
+          if (!known) return rows;
+          const rest = rows.filter((row) => row.place.id !== placeId);
+          return [...rest, { place: known, reasonKey, retrying: false }];
+        });
+      } finally {
+        assigning.current.delete(placeId);
       }
     },
-    [list, addToast, t]
+    [list]
   );
 
   /**
@@ -121,7 +206,7 @@ export default function PlaceListDetailPage(): JSX.Element {
    *
    * The whole order is sent, not a pair of indices: the route takes the list of
    * place ids and rewrites the positions from it, so a half-applied swap cannot
-   * happen.
+   * happen — and a retry sends the very order that was refused.
    */
   const handleMove = useCallback(
     async (index: number, delta: number): Promise<void> => {
@@ -131,44 +216,41 @@ export default function PlaceListDetailPage(): JSX.Element {
 
       const ids = entries.map((e) => e.placeId);
       [ids[index], ids[target]] = [ids[target], ids[index]];
-      try {
-        setList(await reorderPlaceList(list.id, ids));
-      } catch (err: unknown) {
-        logger.error({ err }, "PlaceListDetailPage: failed to reorder");
-        addToast("error", t("places:lists.reorderFailed"));
-      }
+      await runChange(() => reorderPlaceList(list.id, ids), "places:lists.reorderFailed");
     },
-    [list, entries, addToast, t]
+    [list, entries, runChange]
   );
 
   const handleRemove = useCallback(
     async (placeId: string): Promise<void> => {
       if (!list) return;
-      try {
-        setList(await removePlaceFromList(list.id, placeId));
-      } catch (err: unknown) {
-        logger.error({ err }, "PlaceListDetailPage: failed to remove place");
-        addToast("error", t("places:lists.removeFailed"));
-      }
+      await runChange(() => removePlaceFromList(list.id, placeId), "places:lists.removeFailed");
     },
-    [list, addToast, t]
+    [list, runChange]
   );
 
   const handleRename = useCallback(async (): Promise<void> => {
     if (!list) return;
     const name = draftName.trim();
-    if (!name || name === list.name) {
+    // An empty name is refused at the field instead of being dropped without a
+    // word — the old handler simply closed the editor and kept the old name.
+    if (!name) {
+      setRenameError("places:lists.nameRequired");
+      return;
+    }
+    if (name === list.name) {
       setRenaming(false);
       return;
     }
     try {
       setList(await updatePlaceList(list.id, { name }));
       setRenaming(false);
+      setRenameError(null);
     } catch (err: unknown) {
       logger.error({ err }, "PlaceListDetailPage: failed to rename list");
-      addToast("error", t("places:lists.saveFailed"));
+      setRenameError(saveErrorKey(err, "places:lists.saveFailed"));
     }
-  }, [list, draftName, addToast, t]);
+  }, [list, draftName]);
 
   /**
    * Symbol and label mode save together.
@@ -188,32 +270,24 @@ export default function PlaceListDetailPage(): JSX.Element {
   const handleLabel = useCallback(
     async (icon: string, labelMode: PlaceLabelMode): Promise<void> => {
       if (!list) return;
-      try {
-        setList(
-          await updatePlaceList(list.id, {
+      await runChange(
+        () =>
+          updatePlaceList(list.id, {
             icon: hasSymbol(icon) ? icon.trim() : null,
             labelMode,
-          })
-        );
-      } catch (err: unknown) {
-        logger.error({ err }, "PlaceListDetailPage: failed to save list label settings");
-        addToast("error", t("places:lists.saveFailed"));
-      }
+          }),
+        "places:lists.saveFailed"
+      );
     },
-    [list, addToast, t]
+    [list, runChange]
   );
 
   const handleColor = useCallback(
     async (color: string): Promise<void> => {
       if (!list) return;
-      try {
-        setList(await updatePlaceList(list.id, { color }));
-      } catch (err: unknown) {
-        logger.error({ err }, "PlaceListDetailPage: failed to recolour list");
-        addToast("error", t("places:lists.saveFailed"));
-      }
+      await runChange(() => updatePlaceList(list.id, { color }), "places:lists.saveFailed");
     },
-    [list, addToast, t]
+    [list, runChange]
   );
 
   const handleDelete = useCallback(async (): Promise<void> => {
@@ -224,7 +298,10 @@ export default function PlaceListDetailPage(): JSX.Element {
       navigate("/places/lists");
     } catch (err: unknown) {
       logger.error({ err }, "PlaceListDetailPage: failed to delete list");
-      addToast("error", t("places:lists.deleteFailed"));
+      setConfirmDelete(false);
+      // No retry from the banner: deleting is asked for again through the
+      // same confirmation, which still names what goes.
+      setActionFailure({ key: saveErrorKey(err, "places:lists.deleteFailed") });
     }
   }, [list, navigate, addToast, t]);
 
@@ -276,30 +353,54 @@ export default function PlaceListDetailPage(): JSX.Element {
         <div className="mt-3 mb-6 flex items-start justify-between gap-4">
           <div className="min-w-0">
             {renaming ? (
-              <div className="flex items-center gap-2">
-                <input
-                  value={draftName}
-                  autoFocus
-                  onChange={(e) => setDraftName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") void handleRename();
-                    if (e.key === "Escape") setRenaming(false);
-                  }}
-                  className="rounded-lg px-3 py-1.5 text-lg"
-                  style={{
-                    background: "var(--bg-elevated)",
-                    border: "1px solid var(--color-border)",
-                    color: "var(--text-primary)",
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => void handleRename()}
-                  className="text-sm underline"
-                  style={{ color: "var(--accent)" }}
-                >
-                  {t("common:buttons.save")}
-                </button>
+              <div className="flex flex-col gap-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Named for a screen reader; the heading it replaces is the
+                      visible context. Cancel is a button, not only Escape —
+                      an iPad has no Escape key. */}
+                  <input
+                    id={RENAME_ID}
+                    aria-label={t("places:lists.nameLabel")}
+                    value={draftName}
+                    autoFocus
+                    maxLength={120}
+                    onChange={(e) => {
+                      setDraftName(e.target.value);
+                      setRenameError(null);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void handleRename();
+                      if (e.key === "Escape") setRenaming(false);
+                    }}
+                    {...fieldErrorProps(RENAME_ID, renameError ? t(renameError) : null)}
+                    className={`rounded-lg px-3 py-1.5 text-lg ${COARSE_BOX}`}
+                    style={{
+                      background: "var(--bg-elevated)",
+                      border: "1px solid var(--color-border)",
+                      color: "var(--text-primary)",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleRename()}
+                    className={`text-sm underline ${COARSE_BOX}`}
+                    style={{ color: "var(--accent)" }}
+                  >
+                    {t("common:buttons.save")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRenaming(false);
+                      setRenameError(null);
+                    }}
+                    className={`text-sm ${COARSE_BOX}`}
+                    style={{ color: "var(--text-muted)" }}
+                  >
+                    {t("common:buttons.cancel")}
+                  </button>
+                </div>
+                <FieldError id={RENAME_ID} error={renameError ? t(renameError) : null} />
               </div>
             ) : (
               <h1 className="t-screen-title flex items-center gap-3">
@@ -319,9 +420,10 @@ export default function PlaceListDetailPage(): JSX.Element {
                   type="button"
                   onClick={() => {
                     setDraftName(list.name);
+                    setRenameError(null);
                     setRenaming(true);
                   }}
-                  className="text-sm font-normal underline"
+                  className={`text-sm font-normal underline ${COARSE_BOX}`}
                   style={{ color: "var(--text-muted)" }}
                 >
                   {t("common:buttons.edit")}
@@ -340,35 +442,61 @@ export default function PlaceListDetailPage(): JSX.Element {
           <button
             type="button"
             onClick={() => setConfirmDelete(true)}
-            className="shrink-0 rounded-lg px-4 py-2 text-sm"
+            className={`shrink-0 rounded-lg px-4 py-2 text-sm ${COARSE_BOX}`}
             style={{ border: "1px solid var(--color-border)", color: "var(--danger)" }}
           >
             {t("places:lists.deleteList")}
           </button>
         </div>
 
-        <div className="mb-6 flex items-center gap-2">
+        {/* A refused change, kept until the next one succeeds (forgejo#246). */}
+        <div className="mb-4">
+          <FormErrorBanner
+            message={actionFailure !== null ? t(actionFailure.key) : null}
+            onRetry={
+              actionFailure?.change !== undefined &&
+              actionFailure.fallbackKey !== undefined &&
+              isTransientSaveError(actionFailure.key)
+                ? () => {
+                    const { change, fallbackKey } = actionFailure;
+                    if (change && fallbackKey) void runChange(change, fallbackKey);
+                  }
+                : undefined
+            }
+          />
+        </div>
+
+        <div className="mb-6 flex flex-wrap items-center gap-2">
           <span className="text-sm" style={{ color: "var(--text-muted)" }}>
             {t("places:lists.colorLabel")}
           </span>
           {LIST_COLOR_PRESETS.map((c) => (
+            // The swatch stays 22 px; on a coarse pointer the button around it
+            // grows to the touch minimum (forgejo#249). `aria-pressed` says
+            // which colour is the list's — the ring alone was visual only.
             <button
               key={c}
               type="button"
               aria-label={c}
+              aria-pressed={list.color.toLowerCase() === c.toLowerCase()}
               onClick={() => void handleColor(c)}
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: "50%",
-                background: c,
-                border:
-                  list.color.toLowerCase() === c.toLowerCase()
-                    ? "2px solid var(--text-primary)"
-                    : "1px solid var(--color-border)",
-                cursor: "pointer",
-              }}
-            />
+              className={`inline-flex items-center justify-center ${COARSE_BOX}`}
+            >
+              <span
+                aria-hidden
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: "50%",
+                  background: c,
+                  border:
+                    list.color.toLowerCase() === c.toLowerCase()
+                      ? "2px solid var(--text-primary)"
+                      : "1px solid var(--color-border)",
+                  cursor: "pointer",
+                }}
+              />
+            </button>
           ))}
         </div>
 
@@ -382,53 +510,21 @@ export default function PlaceListDetailPage(): JSX.Element {
           />
         </div>
 
-        {/* Add a place. Search-as-you-type over the places the user already has
-            — a list groups the logbook, it does not create entries in it. */}
-        <div
-          className="mb-6 rounded-xl p-4"
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-        >
-          <label className="mb-2 block text-sm" style={{ color: "var(--text-muted)" }}>
-            {t("places:lists.addPlace")}
-          </label>
-          <input
-            value={addQuery}
-            onChange={(e) => setAddQuery(e.target.value)}
-            placeholder={t("places:lists.addPlacePlaceholder")}
-            className="w-full rounded-lg px-3 py-2 text-sm"
-            style={{
-              background: "var(--bg-elevated)",
-              border: "1px solid var(--color-border)",
-              color: "var(--text-primary)",
-            }}
-          />
-          {addQuery.trim().length > 0 && (
-            <ul className="mt-2" style={{ listStyle: "none", padding: 0 }}>
-              {candidates.length === 0 ? (
-                <li className="py-2 text-sm" style={{ color: "var(--text-muted)" }}>
-                  {t("places:lists.addNoMatches")}
-                </li>
-              ) : (
-                candidates.map((p) => (
-                  <li key={p.id}>
-                    <button
-                      type="button"
-                      onClick={() => void handleAdd(p.id)}
-                      className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm"
-                      style={{ color: "var(--text-secondary)" }}
-                    >
-                      <span aria-hidden>{PLACE_CATEGORY_ICONS[p.category]}</span>
-                      <span className="truncate">{p.name}</span>
-                      <span className="ml-auto text-xs" style={{ color: "var(--text-muted)" }}>
-                        {p.city ?? ""}
-                      </span>
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
-          )}
-        </div>
+        {/* Add a place: search the logbook, or create the place right here
+            when the search finds nothing (forgejo#230). */}
+        <PlaceListAddPanel
+          query={addQuery}
+          onQueryChange={setAddQuery}
+          candidates={candidates}
+          members={members}
+          onAdd={(placeId) => void handleAdd(placeId)}
+          onCreate={() => setCreatingName(addQuery.trim())}
+          unassigned={unassigned}
+          onRetry={(placeId) => void assignCreated(placeId)}
+          onDismiss={(placeId) =>
+            setUnassigned((rows) => rows.filter((row) => row.place.id !== placeId))
+          }
+        />
 
         {entries.length === 0 ? (
           <p className="py-10 text-center text-sm" style={{ color: "var(--text-muted)" }}>
@@ -482,7 +578,7 @@ export default function PlaceListDetailPage(): JSX.Element {
                     disabled={index === 0}
                     aria-label={t("places:lists.moveUp", { name: p.name })}
                     title={t("places:lists.moveUp", { name: p.name })}
-                    className="px-1 text-sm disabled:opacity-30"
+                    className={`px-1 text-sm disabled:opacity-30 ${COARSE_BOX}`}
                     style={{ color: "var(--text-muted)" }}
                   >
                     ↑
@@ -493,7 +589,7 @@ export default function PlaceListDetailPage(): JSX.Element {
                     disabled={index === entries.length - 1}
                     aria-label={t("places:lists.moveDown", { name: p.name })}
                     title={t("places:lists.moveDown", { name: p.name })}
-                    className="px-1 text-sm disabled:opacity-30"
+                    className={`px-1 text-sm disabled:opacity-30 ${COARSE_BOX}`}
                     style={{ color: "var(--text-muted)" }}
                   >
                     ↓
@@ -502,7 +598,7 @@ export default function PlaceListDetailPage(): JSX.Element {
                     type="button"
                     onClick={() => void handleRemove(p.id)}
                     aria-label={t("places:lists.removeFromList", { name: p.name })}
-                    className="text-sm"
+                    className={`text-sm ${COARSE_BOX}`}
                     style={{ color: "var(--text-muted)" }}
                   >
                     ✕
@@ -511,6 +607,25 @@ export default function PlaceListDetailPage(): JSX.Element {
               );
             })}
           </ul>
+        )}
+
+        {creatingName !== null && (
+          <PlaceFormModal
+            place={null}
+            initialName={creatingName}
+            forList={list.name}
+            onClose={() => setCreatingName(null)}
+            onSaved={(created) => {
+              // Back on the list at once; the filing follows, and only it can
+              // fail from here on — the place itself is stored.
+              setCreatingName(null);
+              setAddQuery("");
+              // A deduped create answers a place already here (same reference):
+              // replace by id, never list it twice (review M2).
+              setAllPlaces((rows) => [...rows.filter((p) => p.id !== created.id), created]);
+              void assignCreated(created.id, created);
+            }}
+          />
         )}
 
         {/* Removing a list removes the GROUPING, never the places. Said out loud

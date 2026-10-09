@@ -1,5 +1,5 @@
 import type { DuplicateFlight } from "./flightFormModel";
-import { saveErrorMessage } from "../../lib/saveErrorMessage";
+import { saveErrorMessage, type SaveErrorOptions } from "../../lib/saveErrorMessage";
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -17,12 +17,18 @@ export type FlightSaveFailure =
  * clock change skips, an airport without a zone, a stale bundle). The form
  * used to print `response.data.error`, English prose written for a log.
  */
-export function flightSaveFailure(err: unknown, t: Translate): FlightSaveFailure {
+export function flightSaveFailure(
+  err: unknown,
+  t: Translate,
+  options: SaveErrorOptions = { create: true }
+): FlightSaveFailure {
   const response = (
     err as { response?: { status?: number; data?: { existingFlight?: DuplicateFlight } } } | null
   )?.response;
   if (response?.status === 409 && response.data?.existingFlight) {
     return { kind: "duplicate", existing: response.data.existingFlight };
   }
-  return { kind: "message", message: saveErrorMessage(err, t, "errors:saveFailed") };
+  // A path that CREATES a flight (the default) must not invite a blind second
+  // send when its answer was lost (`OUTCOME_UNKNOWN_KEY`).
+  return { kind: "message", message: saveErrorMessage(err, t, "errors:saveFailed", {}, options) };
 }

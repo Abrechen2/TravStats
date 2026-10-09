@@ -27,6 +27,8 @@ const EXEMPT: Record<string, string> = {
   "services/sharing/adapters/cruise.ts": "propagation writes (the copies)",
   "services/sharing/adapters/stop.ts": "propagation writes (the copies)",
   "services/sharing/copyEntries.ts": "S1 share copy; keys and copies, no member change",
+  "services/places/placeMerge.ts":
+    "re-points the owner's own stations from a duplicate place to the kept one; the copies point at their own places, whose facts do not change",
   // Private columns only.
   "routes/uploads.ts": "clears a receipt URL — private",
   "services/documents/documentService.ts": "clears a receipt URL — private",

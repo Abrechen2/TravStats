@@ -1,7 +1,7 @@
 import { prisma } from "../../db";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "../stats/departureClock";
-import type { FlightTimeSemantics } from "../../utils/timezone";
+import { FLIGHT_DAY_SELECT, type FlightDayRow } from "./entryMappers";
 
 /**
  * The flight populations the fun and unique measures answer over, and the
@@ -14,6 +14,10 @@ import type { FlightTimeSemantics } from "../../utils/timezone";
  * clock narrows to `flown` rows carrying BOTH times — a historical row's
  * time is often a 12:00 placeholder, and a time-of-day figure built on a
  * placeholder is a figure about the importer, not the traveller.
+ *
+ * Every projection carries the departure clock (`FLIGHT_DAY_SELECT` through
+ * `withDepartureClock`): an evidence row is dated on the departure airport's
+ * day, never the UTC one (forgejo#273).
  *
  * Four projections rather than one wide select, for the reason Task 13
  * measured on `metricEvidenceFlightCore.ts`: `flightCount` was loading
@@ -39,9 +43,8 @@ function clockedFlightsOf(userId: string) {
   };
 }
 
-export interface FlightCoordinateRow {
+export interface FlightCoordinateRow extends FlightDayRow {
   id: string;
-  departureTime: Date | null;
   depLat: number;
   depLon: number;
   arrLat: number;
@@ -50,17 +53,18 @@ export interface FlightCoordinateRow {
 
 /** Coordinates only: the distance bands, the latitude bands, the longitude rules. */
 export async function loadCountableCoordinateRows(userId: string): Promise<FlightCoordinateRow[]> {
-  return prisma.flight.findMany({
+  const rows = await prisma.flight.findMany({
     where: countableFlightsOf(userId),
     select: {
       id: true,
-      departureTime: true,
+      ...FLIGHT_DAY_SELECT,
       depLat: true,
       depLon: true,
       arrLat: true,
       arrLon: true,
     },
   });
+  return withDepartureClock(rows);
 }
 
 export interface FlightCo2Row extends FlightCoordinateRow {
@@ -69,11 +73,11 @@ export interface FlightCo2Row extends FlightCoordinateRow {
 
 /** `co2FootprintKg` alone — the one measure whose per-flight figure needs the cabin. */
 export async function loadCountableCo2Rows(userId: string): Promise<FlightCo2Row[]> {
-  return prisma.flight.findMany({
+  const rows = await prisma.flight.findMany({
     where: countableFlightsOf(userId),
     select: {
       id: true,
-      departureTime: true,
+      ...FLIGHT_DAY_SELECT,
       depLat: true,
       depLon: true,
       arrLat: true,
@@ -81,11 +85,11 @@ export async function loadCountableCo2Rows(userId: string): Promise<FlightCo2Row
       seatClass: true,
     },
   });
+  return withDepartureClock(rows);
 }
 
-export interface FlightCodeRow {
+export interface FlightCodeRow extends FlightDayRow {
   id: string;
-  departureTime: Date | null;
   depIata: string | null;
   depIcao: string | null;
   arrIata: string | null;
@@ -94,24 +98,16 @@ export interface FlightCodeRow {
 
 /** Airport codes only: the timezone, continent, country and round-trip rules. */
 export async function loadCountableCodeRows(userId: string): Promise<FlightCodeRow[]> {
-  return prisma.flight.findMany({
+  const rows = await prisma.flight.findMany({
     where: countableFlightsOf(userId),
-    select: {
-      id: true,
-      departureTime: true,
-      depIata: true,
-      depIcao: true,
-      arrIata: true,
-      arrIcao: true,
-    },
+    select: { id: true, ...FLIGHT_DAY_SELECT },
   });
+  return withDepartureClock(rows);
 }
 
 export interface FlightClockRow extends FlightCodeRow {
   departureTime: Date;
   arrivalTime: Date;
-  depTimezone: string | null;
-  depTimeSemantics: FlightTimeSemantics;
 }
 
 /**

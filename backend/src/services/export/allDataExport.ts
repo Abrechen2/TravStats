@@ -74,6 +74,10 @@ export const USER_EXPORT_SELECT = {
   // Catalogue chains (no owner) are re-seeded and stay out.
   lodgingChains: true,
   places: true,
+  // The other OSM/Google references a place answers to after a merge
+  // (forgejo#232): without them a re-import of the export's source would
+  // bring the merged duplicate back.
+  placeExternalRefs: true,
   placeVisits: { include: { photos: true } },
   placeLists: { include: { entries: true } },
   // Rail (spec 2026-09-25-rail-domain): the rides with their companion links,
@@ -83,6 +87,9 @@ export const USER_EXPORT_SELECT = {
   // their companion links — km and final amount included, which only an
   // invoice could supply again.
   rentalBookings: { include: { companionLinks: true } },
+  // Bus rides (spec 2026-10-07-bus-domain-design): the rides with their
+  // companion links — the terminals' frozen names and zones included.
+  busJourneys: { include: { companionLinks: true } },
   companions: true,
   // Trip sharing (design 2026-10-09): the consents this account asked for and
   // gave, the groups it started and the notices addressed to it.

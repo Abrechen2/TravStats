@@ -239,12 +239,32 @@ describe("WrappedPage", () => {
     expect(screen.getByText("stats:wrapped.loadError")).toBeTruthy();
   });
 
-  it("explains itself rather than asking for a number that cannot exist", async () => {
+  // forgejo#265: the story is no longer flights only. With flights switched
+  // off it still loads, draws no flight card, and tells the other chapters.
+  it("tells a year without flight cards when flights are switched off", async () => {
     domains.flight = false;
+    getWrappedMock.mockResolvedValue(
+      wrapped({
+        flights: 0,
+        topAirline: null,
+        topRoute: null,
+        chapters: {
+          lodging: { stays: 2, nights: 5, nightsUnknown: 0 },
+          places: null,
+          roadtrips: null,
+          tours: null,
+          rentals: { rentals: 1, days: 4 },
+          bus: null,
+        },
+      })
+    );
     renderAtRoute();
 
-    await waitFor(() => expect(screen.getByText("stats:wrapped.needsFlights")).toBeTruthy());
-    expect(getWrappedMock).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByText("stats:wrapped.chapters.stays")).toBeTruthy());
+    expect(screen.getByText("stats:wrapped.chapters.rentals")).toBeTruthy();
+    expect(screen.queryByText("stats:wrapped.flights")).toBeNull();
+    expect(screen.queryByText("stats:wrapped.chapters.bus")).toBeNull();
+    expect(getWrappedMock).toHaveBeenCalledWith(undefined);
   });
 
   it("shows no percentage and no flag — forgejo#53's two standing rules", async () => {

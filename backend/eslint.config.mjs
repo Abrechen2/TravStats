@@ -22,6 +22,8 @@ const STATUS_FILES = [
   "src/shared/railCounting.ts",
   "src/shared/flightCounting.ts",
   "src/shared/flightChronology.ts",
+  "src/shared/tour/roadtripTimeline.ts",
+  "src/shared/tour/tourCounting.ts",
   "src/services/statusSweep.ts",
   "src/jobs/statusSweepScheduler.ts",
 ];

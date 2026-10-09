@@ -44,10 +44,41 @@ describe("rentalFormModel", () => {
     expect(body.returnStation).toBeNull();
   });
 
-  it("sends an empty price as null, never 0, and no currency without a price", () => {
-    const body = rentalInputFromDraft({ ...placed, price: "" });
+  it("sends an emptied price as null, never 0, and no currency without a price", () => {
+    const body = rentalInputFromDraft({
+      ...placed,
+      storedPrice: 120,
+      storedCurrency: "EUR",
+      price: "",
+    });
     expect(body.price).toBeNull();
     expect(body.currency).toBeNull();
+    // A price nobody ever knew stays unknown: not sent, never 0.
+    expect("price" in rentalInputFromDraft({ ...placed, price: "" })).toBe(false);
+  });
+
+  // Review minor 6: on a new rental an untouched deposit currency is the booking's, not EUR.
+  it("holds a new rental's deposit in the booking's currency unless another is picked", () => {
+    const draft = { ...placed, price: "400", currency: "USD", depositAmount: "300" };
+    expect(rentalInputFromDraft(draft).depositCurrency).toBe("USD");
+    expect(rentalInputFromDraft({ ...draft, depositCurrency: "EUR" }).depositCurrency).toBe("EUR");
+  });
+
+  // Review I4: an unchanged booked price is not sent, so it is not recorded as
+  // typed by hand and keeps "aus der Buchungsbestätigung".
+  it("sends the booked price only when it changed", () => {
+    const draft = draftFromRental(makeRental({ price: 123.45, currency: "EUR" }));
+    const unchanged = rentalInputFromDraft({ ...draft, odometerInKm: "12634" });
+    expect("price" in unchanged).toBe(false);
+    expect("currency" in unchanged).toBe(false);
+    expect(rentalInputFromDraft({ ...draft, price: "130" })).toMatchObject({
+      price: 130,
+      currency: "EUR",
+    });
+    expect(rentalInputFromDraft({ ...draft, currency: "USD" })).toMatchObject({
+      price: 123.45,
+      currency: "USD",
+    });
   });
 
   it("reads the stored times on the station's clock, not the reader's", () => {
@@ -81,6 +112,30 @@ describe("rentalFormModel", () => {
       key: "rental:form.errors.returnBeforePickup",
       field: "returnLocal",
     });
+  });
+
+  // Bus review, Minor 2 (integration wiring): a create whose answer was lost
+  // may have stored the rental — no retryable "network" for it. An update may
+  // be sent again, so it keeps "network".
+  it("reads a lost answer to a create as outcome unknown, and to an update as network", () => {
+    const dropped = { isAxiosError: true, code: "ERR_NETWORK", message: "Network Error" };
+    expect(rentalSaveError(dropped, { create: true })).toEqual({
+      key: "common:saveErrors.outcomeUnknown",
+      field: null,
+    });
+    expect(rentalSaveError(dropped)).toEqual({ key: "common:saveErrors.network", field: null });
+    const gateway = { isAxiosError: true, response: { status: 504, data: {} } };
+    expect(rentalSaveError(gateway, { create: true }).key).toBe("common:saveErrors.outcomeUnknown");
+    // A server code still wins: the server answered, nothing is in doubt.
+    const refused = {
+      response: {
+        status: 400,
+        data: { code: "RENTAL_RETURN_BEFORE_PICKUP", field: "returnLocal" },
+      },
+    };
+    expect(rentalSaveError(refused, { create: true }).key).toBe(
+      "rental:form.errors.returnBeforePickup"
+    );
   });
 });
 

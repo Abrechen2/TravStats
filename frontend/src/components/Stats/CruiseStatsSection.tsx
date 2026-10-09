@@ -18,6 +18,7 @@ import { cruisesStartedIn } from "../../lib/stats/periodScope";
 import PeriodComparisonStrip from "./PeriodComparisonStrip";
 import { dimWhile, sameScope, type PeriodScope } from "./useStatsPeriod";
 import EvidenceTrigger from "./EvidenceTrigger";
+import CruiseInsightsSection from "./insights/CruiseInsightsSection";
 import type { EvidenceScopeParams } from "../evidence/useEvidence";
 import type { SectionVisibility } from "../../hooks/useSectionVisibility";
 
@@ -405,6 +406,8 @@ export default function CruiseStatsSection({
           evidenceScope={evidenceScope}
         />
       )}
+      {/* forgejo#257 — its own request; it counts sailed cruises, like the KPIs. */}
+      {show("insights") && <CruiseInsightsSection year={shown.year} />}
     </div>
   );
 }

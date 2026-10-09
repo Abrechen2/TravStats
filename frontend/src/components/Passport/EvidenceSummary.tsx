@@ -62,6 +62,10 @@ export default function EvidenceSummary({
     ...((summary.byEvidence.rail ?? 0) > 0
       ? [{ kind: "rail" as const, count: summary.byEvidence.rail }]
       : []),
+    // Bus likewise, and only once bus has proved a country (forgejo#265).
+    ...((summary.byEvidence.bus ?? 0) > 0
+      ? [{ kind: "bus" as const, count: summary.byEvidence.bus ?? 0 }]
+      : []),
     ...(summary.byEvidence.roadtrip > 0
       ? [{ kind: "roadtrip" as const, count: summary.byEvidence.roadtrip }]
       : []),

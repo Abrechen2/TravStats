@@ -684,7 +684,12 @@ describe("FlightEditModal", () => {
       fireEvent.change(timeInput, { target: { value: "" } });
       fireEvent.click(getByText("flights:edit.saveChanges"));
 
-      expect(await screen.findByText("errors:missingTimes")).toBeInTheDocument();
+      // Since forgejo#245 the edit form answers like the create form: the
+      // missing step is named beside the save, and the cursor goes to it.
+      expect(
+        screen.getByRole("button", { name: "flights:form.missing.departureTime" })
+      ).toBeInTheDocument();
+      await waitFor(() => expect(document.activeElement).toBe(timeInput));
       expect(onSave).not.toHaveBeenCalled();
     });
 
@@ -849,7 +854,10 @@ describe("FlightEditModal", () => {
       fireEvent.click(screen.getByLabelText("flights:historicalCheckbox"));
       fireEvent.click(getByText("flights:edit.saveChanges"));
 
-      expect(await screen.findByText("errors:missingTimes")).toBeInTheDocument();
+      // Named beside the save (forgejo#245), not invented.
+      expect(
+        await screen.findByRole("button", { name: "flights:form.missing.departureTime" })
+      ).toBeInTheDocument();
       expect(onSave).not.toHaveBeenCalled();
     });
 

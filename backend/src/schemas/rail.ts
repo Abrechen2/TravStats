@@ -173,6 +173,12 @@ const baseRailSchema = z.object({
   status: z.enum(RAIL_WRITE_STATUSES).default("scheduled"),
   /** Arrival delay in minutes; null = not recorded, 0 = on time. */
   delayMinutes: z.number().int().min(-60).max(10000).nullable().optional(),
+  /**
+   * "The change after this train is tight" — the user's own mark (forgejo#234),
+   * on the leg that arrives at the change. Absent leaves it as stored; the
+   * form never sends it, so a ride edited there keeps its mark.
+   */
+  tightConnection: z.boolean().optional(),
   notes: z.string().max(5000).nullable().optional(),
   tags: z.array(z.string().trim().max(40)).max(30).optional(),
   companions: z.array(z.string().max(100)).max(50).optional(),

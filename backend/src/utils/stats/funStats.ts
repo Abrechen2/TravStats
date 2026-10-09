@@ -10,6 +10,7 @@ import {
 } from "./flightPredicates";
 import type { FlightData, FunStats } from "./types";
 import { isCountableFlight } from "../../shared/flightCounting";
+import { routePairKey } from "../../shared/routePair";
 
 /**
  * Calculate fun/entertaining statistics.
@@ -120,10 +121,14 @@ export async function calculateFunStats(flights: FlightData[]): Promise<FunStats
 
   const topYear = Object.entries(flightsByYear).sort(([, a], [, b]) => b - a)[0];
 
-  // Route master — most frequent route. Airport-pair, time-insensitive.
+  // Route master — most frequent CONNECTION: the unordered airport pair, so an
+  // out-and-back is one connection flown twice (forgejo#254; `shared/routePair`
+  // is the one home, shared with /stats/routes, Wrapped and the route badges).
+  // A flight with an unknown end is on no connection. Time-insensitive.
   const routeCounts: Record<string, number> = {};
   countableFlights.forEach((f) => {
-    const route = `${f.depIata || f.depIcao || "?"}-${f.arrIata || f.arrIcao || "?"}`;
+    const route = routePairKey(f.depIata || f.depIcao, f.arrIata || f.arrIcao);
+    if (route === null) return;
     routeCounts[route] = (routeCounts[route] || 0) + 1;
   });
 

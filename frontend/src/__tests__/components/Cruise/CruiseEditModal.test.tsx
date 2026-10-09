@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CruiseEditModal } from "../../../components/Cruise/CruiseEditModal";
 import { cruiseApi, companionsApi, tripsApi } from "../../../lib/api";
@@ -34,11 +34,21 @@ vi.mock("@/hooks/useRecentCurrencies", async (importOriginal) => {
   return { ...actual, useRecentCurrencies: () => [] };
 });
 
+/**
+ * Cheap queries (review M7): the form keeps every day's fields in the DOM, so a
+ * role query over the whole screen walks a large accessibility tree on every
+ * `waitFor` retry. The save button is found by its text, the trip options
+ * within their select.
+ */
+const saveButton = (): HTMLElement => screen.getByText("form.save", { selector: "button" });
+const tripSelect = (): HTMLElement => document.getElementById("cruise-edit-trip") as HTMLElement;
+
 /** A new cruise needs something that sailed and a start date; fills what is empty. */
 function fillRequired(): void {
   const routeName = screen.getByLabelText("field.routeName") as HTMLInputElement;
   if (!routeName.value) fireEvent.change(routeName, { target: { value: "Nordland" } });
-  const depart = screen.getAllByLabelText("field.depart")[0] as HTMLInputElement;
+  // The start date's label now ends in the shared required asterisk (forgejo#245).
+  const depart = screen.getByLabelText(/^field\.startDate/) as HTMLInputElement;
   if (!depart.value) fireEvent.change(depart, { target: { value: "2026-07-01" } });
 }
 
@@ -66,7 +76,7 @@ describe("CruiseEditModal", () => {
     await userEvent.type(lineInput, "AIDA");
     fillRequired();
 
-    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+    await userEvent.click(saveButton());
 
     await waitFor(() => expect(cruiseApi.create).toHaveBeenCalled());
     const payload = vi.mocked(cruiseApi.create).mock.calls[0][0];
@@ -75,28 +85,24 @@ describe("CruiseEditModal", () => {
   });
 
   // Acceptance 2026-09-26: "Speichern" with nothing entered saved a row that
-  // read "— | — – — | 0". The form now names what is missing, at the field,
-  // and sends nothing.
+  // read "— | — – — | 0". Since forgejo#245 the save stays greyed out and the
+  // line beside it names what is missing — live, without a click first.
   it("refuses to save an empty cruise and names both missing fields", async () => {
     vi.mocked(cruiseApi.create).mockReset();
     render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
-    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
 
-    const alerts = await screen.findAllByRole("alert");
-    expect(alerts.map((a) => a.textContent)).toEqual([
-      "form.identityRequired",
-      "form.startDateRequired",
-    ]);
-    expect(screen.getByLabelText("field.routeName")).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByLabelText("field.depart")).toHaveAttribute("aria-invalid", "true");
+    const save = saveButton();
+    expect(save).toBeDisabled();
+    const hint = screen.getByTestId("save-blocked-hint");
+    expect(hint.textContent).toContain("cruise:form.missing.identity");
+    expect(hint.textContent).toContain("cruise:form.missing.startDate");
     expect(cruiseApi.create).not.toHaveBeenCalled();
 
     // A cruise line alone says what sailed; the start date is still missing.
     await userEvent.type(screen.getByLabelText("field.line"), "AIDA");
-    expect(screen.queryByText("form.identityRequired")).not.toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
-    expect(screen.getByText("form.startDateRequired")).toBeInTheDocument();
-    expect(cruiseApi.create).not.toHaveBeenCalled();
+    expect(hint.textContent).not.toContain("cruise:form.missing.identity");
+    expect(hint.textContent).toContain("cruise:form.missing.startDate");
+    expect(save).toBeDisabled();
   });
 
   // The server's `error` is English prose or zod's JSON issue dump; the form
@@ -114,7 +120,7 @@ describe("CruiseEditModal", () => {
 
     render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
     fillRequired();
-    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+    await userEvent.click(saveButton());
 
     expect(await screen.findByText("common:saveErrors.validation")).toBeInTheDocument();
     expect(screen.queryByText(/invalid_type/)).not.toBeInTheDocument();
@@ -127,7 +133,7 @@ describe("CruiseEditModal", () => {
 
     render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
     fillRequired();
-    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+    await userEvent.click(saveButton());
 
     expect(await screen.findByText("cruise:form.saveError")).toBeInTheDocument();
     expect(screen.queryByText(/trip not found/i)).not.toBeInTheDocument();
@@ -186,7 +192,7 @@ describe("CruiseEditModal", () => {
     await userEvent.click(checkbox);
     expect(checkbox.checked).toBe(true);
 
-    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+    await userEvent.click(saveButton());
 
     await waitFor(() => expect(cruiseApi.update).toHaveBeenCalled());
     const calls = vi.mocked(cruiseApi.update).mock.calls;
@@ -206,7 +212,7 @@ describe("CruiseEditModal", () => {
     await userEvent.click(checkbox);
     expect(checkbox.checked).toBe(false);
 
-    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+    await userEvent.click(saveButton());
 
     await waitFor(() => expect(cruiseApi.update).toHaveBeenCalled());
     const calls = vi.mocked(cruiseApi.update).mock.calls;
@@ -242,7 +248,7 @@ describe("CruiseEditModal", () => {
 
     await userEvent.type(screen.getByRole("combobox", { name: "picker.label" }), "Marie{Enter}");
     fillRequired();
-    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+    await userEvent.click(saveButton());
 
     await waitFor(() => expect(cruiseApi.create).toHaveBeenCalled());
     const calls = vi.mocked(cruiseApi.create).mock.calls;
@@ -283,7 +289,7 @@ describe("CruiseEditModal", () => {
     }
     await userEvent.selectOptions(screen.getByLabelText("field.cabinType"), "");
 
-    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+    await userEvent.click(saveButton());
 
     await waitFor(() => expect(cruiseApi.update).toHaveBeenCalled());
     const clearCalls = vi.mocked(cruiseApi.update).mock.calls;
@@ -320,8 +326,11 @@ describe("CruiseEditModal", () => {
     vi.mocked(cruiseApi.update).mockResolvedValue(baseCruise);
     render(<CruiseEditModal mode="edit" cruise={withStop} onClose={vi.fn()} onSaved={vi.fn()} />);
 
+    // Open the day, ask to remove it, confirm (forgejo#221, #224).
+    await userEvent.click(document.querySelectorAll("summary[id$='-summary']")[0] as HTMLElement);
     await userEvent.click(screen.getByRole("button", { name: "stops.remove" }));
-    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+    await userEvent.click(screen.getByRole("button", { name: "stops.removeConfirm.confirm" }));
+    await userEvent.click(saveButton());
 
     await waitFor(() => expect(cruiseApi.update).toHaveBeenCalled());
     const stopCalls = vi.mocked(cruiseApi.update).mock.calls;
@@ -357,9 +366,13 @@ describe("CruiseEditModal", () => {
 
       const select = await screen.findByLabelText("field.trip");
       await waitFor(() =>
-        expect(screen.getByRole("option", { name: "Karibik 2027" })).toBeInTheDocument()
+        expect(
+          within(tripSelect()).getByRole("option", { name: "Karibik 2027" })
+        ).toBeInTheDocument()
       );
-      expect(screen.getByRole("option", { name: "Mittelmeer 2026" })).toBeInTheDocument();
+      expect(
+        within(tripSelect()).getByRole("option", { name: "Mittelmeer 2026" })
+      ).toBeInTheDocument();
       expect((select as HTMLSelectElement).value).toBe("trip-2");
     });
 
@@ -373,11 +386,13 @@ describe("CruiseEditModal", () => {
 
       const select = await screen.findByLabelText("field.trip");
       await waitFor(() =>
-        expect(screen.getByRole("option", { name: "Mittelmeer 2026" })).toBeInTheDocument()
+        expect(
+          within(tripSelect()).getByRole("option", { name: "Mittelmeer 2026" })
+        ).toBeInTheDocument()
       );
       await userEvent.selectOptions(select, "trip-1");
 
-      await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+      await userEvent.click(saveButton());
 
       await waitFor(() => expect(cruiseApi.update).toHaveBeenCalled());
       const calls = vi.mocked(cruiseApi.update).mock.calls;
@@ -396,11 +411,13 @@ describe("CruiseEditModal", () => {
 
       const select = await screen.findByLabelText("field.trip");
       await waitFor(() =>
-        expect(screen.getByRole("option", { name: "Mittelmeer 2026" })).toBeInTheDocument()
+        expect(
+          within(tripSelect()).getByRole("option", { name: "Mittelmeer 2026" })
+        ).toBeInTheDocument()
       );
       await userEvent.selectOptions(select, "");
 
-      await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+      await userEvent.click(saveButton());
 
       await waitFor(() => expect(cruiseApi.update).toHaveBeenCalled());
       const calls = vi.mocked(cruiseApi.update).mock.calls;
@@ -419,16 +436,18 @@ describe("CruiseEditModal", () => {
       render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
       const select = (await screen.findByLabelText("field.trip")) as HTMLSelectElement;
       await waitFor(() =>
-        expect(screen.getByRole("option", { name: "Mittelmeer 2026" })).toBeInTheDocument()
+        expect(
+          within(tripSelect()).getByRole("option", { name: "Mittelmeer 2026" })
+        ).toBeInTheDocument()
       );
       expect(select.value).toBe("");
 
-      await userEvent.type(screen.getByLabelText("field.depart"), "2026-05-20");
+      await userEvent.type(screen.getByLabelText(/^field\.startDate/), "2026-05-20");
       await waitFor(() => expect(select.value).toBe("trip-1"));
 
       fillRequired();
 
-      await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+      await userEvent.click(saveButton());
       await waitFor(() => expect(cruiseApi.create).toHaveBeenCalled());
       const calls = vi.mocked(cruiseApi.create).mock.calls;
       expect(calls[calls.length - 1][0].tripId).toBe("trip-1");
@@ -444,7 +463,9 @@ describe("CruiseEditModal", () => {
       );
       const select = (await screen.findByLabelText("field.trip")) as HTMLSelectElement;
       await waitFor(() =>
-        expect(screen.getByRole("option", { name: "Mittelmeer 2026" })).toBeInTheDocument()
+        expect(
+          within(tripSelect()).getByRole("option", { name: "Mittelmeer 2026" })
+        ).toBeInTheDocument()
       );
       expect(select.value).toBe("");
     });
@@ -487,7 +508,7 @@ describe("CruiseEditModal", () => {
         vi.mocked(cruiseApi.create).mockResolvedValue({ id: "c1" } as unknown as Cruise);
         render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
         fillRequired();
-        await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+        await userEvent.click(saveButton());
         await waitFor(() => expect(cruiseApi.create).toHaveBeenCalled());
         const calls = vi.mocked(cruiseApi.create).mock.calls;
         expect(calls[calls.length - 1][0].currency).toBe("CHF");
@@ -503,7 +524,7 @@ describe("CruiseEditModal", () => {
         render(
           <CruiseEditModal mode="edit" cruise={baseCruise} onClose={vi.fn()} onSaved={vi.fn()} />
         );
-        await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+        await userEvent.click(saveButton());
         await waitFor(() => expect(cruiseApi.update).toHaveBeenCalled());
         const calls = vi.mocked(cruiseApi.update).mock.calls;
         expect(calls[calls.length - 1][1].currency).toBe("EUR");

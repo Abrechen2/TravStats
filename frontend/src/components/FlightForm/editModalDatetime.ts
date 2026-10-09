@@ -81,7 +81,7 @@ export interface EditTimeInputs {
   actualArrivalTime: string;
 }
 
-const TIME_INPUT_KEYS: readonly (keyof EditTimeInputs)[] = [
+export const TIME_INPUT_KEYS: readonly (keyof EditTimeInputs)[] = [
   "departureDate",
   "departureTime",
   "arrivalDate",

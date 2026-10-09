@@ -14,19 +14,23 @@
  * loading the account in one pass.
  */
 import { prisma } from "../../db";
-import { buildTzMap, airportCalendarDay } from "./departureClock";
+import { buildTzMap, airportCalendarDay, flightEndZone } from "./departureClock";
 import type { FlightTimeSemantics } from "../../utils/timezone";
 import type {
   AccountCruise,
   AccountFlight,
   AccountFreeNight,
+  AccountBus,
+  AccountRail,
   AccountStay,
   TravelAccountInput,
 } from "./travelAccount";
 import { freeStationNights, roadtripHasStarted } from "./roadtripEvidence";
 import type { TripAccountInput } from "./tripAccount";
 import type { ExpenseAccountRow } from "./expenseAccount";
-import type { Prisma } from "../../prisma";
+import { TRIP_COST_SELECT, expenseMoney, toTripCostInput } from "../trip/tripCostLoad";
+import { loadVisibleDomainSet, rowsIfVisible, type VisibleDomains } from "../domainVisibility";
+import type { DomainKey } from "../../shared/domains";
 
 /** A stay, plus what an evidence entry needs to name it and to link to it. */
 export interface TravelAccountStayRow extends AccountStay {
@@ -43,6 +47,21 @@ export interface TravelAccountFlightRow extends AccountFlight {
   flightNumber: string | null;
   depIata: string | null;
   arrIata: string | null;
+  /** The zone `depLocalDay` was read in — the evidence entry dates the flight on it too (forgejo#273). */
+  depTimezone: string | null;
+  depTimeSemantics: FlightTimeSemantics;
+}
+
+/** A train ride, plus the name its evidence entry renders (forgejo#266). */
+export interface TravelAccountRailRow extends AccountRail {
+  label: string;
+}
+
+/** A bus ride, plus what its evidence entry renders (forgejo#263). */
+export interface TravelAccountBusRow extends AccountBus {
+  operator: string | null;
+  depStationName: string;
+  arrStationName: string;
 }
 
 /** A free-pitch station, plus the roadtrip it belongs to — where it is edited. */
@@ -57,20 +76,56 @@ export interface TravelAccountData extends TravelAccountInput {
   cruises: TravelAccountCruiseRow[];
   flights: TravelAccountFlightRow[];
   freeNights: TravelAccountFreeNightRow[];
+  rail: TravelAccountRailRow[];
+  bus: TravelAccountBusRow[];
   trips: TripAccountInput[];
   /** Every expense of the caller's, trip-wide or on a section (forgejo#140). */
   expenses: ExpenseAccountRow[];
 }
 
-/** An expense amount as the account sums it; the column is an exact decimal. */
-const money = (e: { amount: Prisma.Decimal; currency: string }) => ({
-  amount: e.amount.toNumber(),
-  currency: e.currency,
-});
+/**
+ * What a night train's nights are read from (`railRideKinds.nightTrainNights`):
+ * its kind, both instants with their precision, and the stations' zones.
+ */
+const RAIL_NIGHT_SELECT = {
+  id: true,
+  status: true,
+  trainCategory: true,
+  travelClass: true,
+  departureTime: true,
+  arrivalTime: true,
+  depTimezone: true,
+  arrTimezone: true,
+  depPrecision: true,
+  arrPrecision: true,
+} as const;
 
-export async function loadTravelAccountData(userId: string): Promise<TravelAccountData> {
+/** What a night bus's nights are read from (`busRideKinds.nightBusNights`): both clocks and zones. */
+const BUS_NIGHT_SELECT = {
+  id: true,
+  status: true,
+  departureTime: true,
+  arrivalTime: true,
+  depTimezone: true,
+  arrTimezone: true,
+  depPrecision: true,
+  arrPrecision: true,
+} as const;
+
+/**
+ * `visible` is the user's domain gate (`domainVisibility.loadVisibleDomainSet`),
+ * the same set the trips page prices with: every row of a domain the user does
+ * not see is dropped here, from the nights, the coverage and the money alike,
+ * so a trip has one total on both surfaces and a beta-gated domain shows on
+ * neither (forgejo#274/#275/#266, controller ruling 2026-10-09).
+ */
+export async function loadTravelAccountData(
+  userId: string,
+  visible: VisibleDomains
+): Promise<TravelAccountData> {
+  const when = <T>(domain: DomainKey, rows: T[]): T[] => rowsIfVisible(visible, domain, rows);
   const now = new Date();
-  const [stays, cruises, flights, trips, roadtrips, expenses] = await Promise.all([
+  const [stays, cruises, flights, trips, roadtrips, expenses, rail, bus] = await Promise.all([
     prisma.lodgingStay.findMany({
       where: { userId },
       select: {
@@ -112,6 +167,8 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
         arrIcao: true,
         depTimeSemantics: true,
         arrTimeSemantics: true,
+        depTimezone: true,
+        arrTimezone: true,
       },
     }),
     prisma.trip.findMany({
@@ -126,56 +183,32 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
         tags: true,
         journalEntries: { select: { mood: true, weather: true } },
         _count: { select: { photos: true } },
+        // The cost rule's own columns (`TRIP_COST_SELECT`, shared with the
+        // "most expensive trip" superlative — forgejo#274), plus the dates
+        // coverage needs on the same rows.
+        ...TRIP_COST_SELECT,
         lodgingStays: {
           select: {
-            status: true,
+            ...TRIP_COST_SELECT.lodgingStays.select,
             checkIn: true,
             checkOut: true,
             datePrecision: true,
             nights: true,
-            totalPrice: true,
-            currency: true,
-            totalPriceBase: true,
-            fxBaseCurrency: true,
           },
         },
         cruises: {
-          select: {
-            status: true,
-            startDate: true,
-            endDate: true,
-            price: true,
-            currency: true,
-          },
+          select: { ...TRIP_COST_SELECT.cruises.select, startDate: true, endDate: true },
         },
-        // Trip-wide expenses, and those of its sections — a section's is
-        // stored on the section, so it follows a roadtrip that changes trip.
-        expenses: { select: { amount: true, currency: true } },
-        routes: { select: { expenses: { select: { amount: true, currency: true } } } },
         flights: {
-          select: {
-            status: true,
-            departureTime: true,
-            arrivalTime: true,
-            // The full cost shape `flightCostShare` needs: a flight's own
-            // cost is price PLUS taxes and fees, and a booking shared by
-            // several segments is counted once (AUD-080).
-            price: true,
-            taxes: true,
-            fees: true,
-            currency: true,
-            priceBase: true,
-            fxBaseCurrency: true,
-            bookingId: true,
-            booking: {
-              select: {
-                price: true,
-                currency: true,
-                priceBase: true,
-                fxBaseCurrency: true,
-              },
-            },
-          },
+          select: { ...TRIP_COST_SELECT.flights.select, departureTime: true, arrivalTime: true },
+        },
+        // A night train covers its nights on the trip, as on the account.
+        railJourneys: {
+          select: { ...TRIP_COST_SELECT.railJourneys.select, ...RAIL_NIGHT_SELECT },
+        },
+        // A night bus covers its night as a night train does (forgejo#263).
+        busJourneys: {
+          select: { ...TRIP_COST_SELECT.busJourneys.select, ...BUS_NIGHT_SELECT },
         },
       },
     }),
@@ -211,7 +244,20 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
     }),
     prisma.tripExpense.findMany({
       where: { userId },
-      select: { amount: true, currency: true, date: true },
+      select: { amount: true, currency: true, date: true, routeId: true },
+    }),
+    prisma.railJourney.findMany({
+      where: { userId },
+      select: {
+        ...RAIL_NIGHT_SELECT,
+        trainNumber: true,
+        depStationName: true,
+        arrStationName: true,
+      },
+    }),
+    prisma.busJourney.findMany({
+      where: { userId },
+      select: { ...BUS_NIGHT_SELECT, operator: true, depStationName: true, arrStationName: true },
     }),
   ]);
 
@@ -220,7 +266,7 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
   const tzMap = await buildTzMap(flights);
 
   return {
-    stays: stays.map((s) => ({
+    stays: when("lodging", stays).map((s) => ({
       id: s.id,
       lodgingId: s.lodgingId,
       lodgingName: s.lodging.name,
@@ -230,22 +276,18 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
       datePrecision: s.datePrecision,
       nights: s.nights,
     })),
-    cruises: cruises.map((c) => ({
+    cruises: when("cruise", cruises).map((c) => ({
       id: c.id,
       status: c.status,
       startDate: c.startDate,
       endDate: c.endDate,
       label: c.routeName ?? c.shipNameOverride ?? c.ship?.name ?? "—",
     })),
-    flights: flights.map((f) => {
-      const depTz =
-        (f.depIata ? tzMap.get(f.depIata) : undefined) ??
-        (f.depIcao ? tzMap.get(f.depIcao) : undefined) ??
-        null;
-      const arrTz =
-        (f.arrIata ? tzMap.get(f.arrIata) : undefined) ??
-        (f.arrIcao ? tzMap.get(f.arrIcao) : undefined) ??
-        null;
+    flights: when("flight", flights).map((f) => {
+      // Each end in the zone it was written with, else today's catalogue
+      // zone — `flightEndZone`, as every other flight figure (forgejo#273).
+      const depTz = flightEndZone(f.depTimezone, tzMap, f.depIata, f.depIcao);
+      const arrTz = flightEndZone(f.arrTimezone, tzMap, f.arrIata, f.arrIcao);
       return {
         id: f.id,
         status: f.status,
@@ -254,6 +296,8 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
         flightNumber: f.flightNumber,
         depIata: f.depIata,
         arrIata: f.arrIata,
+        depTimezone: depTz,
+        depTimeSemantics: f.depTimeSemantics as FlightTimeSemantics,
         depLocalDay:
           f.departureTime && depTz
             ? airportCalendarDay(f.departureTime, depTz, f.depTimeSemantics as FlightTimeSemantics)
@@ -264,7 +308,7 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
             : null,
       };
     }),
-    freeNights: roadtrips
+    freeNights: when("roadtrip", roadtrips)
       // A planned roadtrip counts nowhere, the cut the Stats overview makes.
       .filter((route) => roadtripHasStarted(route.stops, now))
       .flatMap((route) =>
@@ -283,6 +327,12 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
             : [];
         })
       ),
+    rail: when("rail", rail).map(({ trainNumber, depStationName, arrStationName, ...ride }) => {
+      const train = [ride.trainCategory, trainNumber].filter(Boolean).join(" ");
+      const route = `${depStationName} → ${arrStationName}`;
+      return { ...ride, label: train ? `${train} · ${route}` : route };
+    }),
+    bus: when("bus", bus),
     trips: trips.map((t) => ({
       id: t.id,
       name: t.name,
@@ -293,12 +343,31 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
       tags: t.tags,
       journalEntries: t.journalEntries,
       photoCount: t._count.photos,
-      stays: t.lodgingStays,
-      cruises: t.cruises,
-      flights: t.flights,
-      expenses: [...t.expenses, ...t.routes.flatMap((r) => r.expenses)].map(money),
+      // The money from the gated rows, priced by the rule; the dated rows
+      // below only say which nights the trip covers — through the same gate.
+      cost: toTripCostInput(t, visible),
+      stays: when("lodging", t.lodgingStays),
+      cruises: when("cruise", t.cruises),
+      flights: when("flight", t.flights),
+      rail: when("rail", t.railJourneys),
+      bus: when("bus", t.busJourneys),
     })),
-    expenses: expenses.map((e) => ({ ...money(e), date: e.date })),
+    // A section's expense lives on its roadtrip page, behind that gate.
+    expenses: [
+      ...expenses.filter((e) => e.routeId === null),
+      ...when(
+        "roadtrip",
+        expenses.filter((e) => e.routeId !== null)
+      ),
+    ].map((e) => ({ ...expenseMoney(e), date: e.date })),
     now,
   };
+}
+
+/**
+ * `loadTravelAccountData` behind the user's OWN gate — what `/stats/travel-account`
+ * and its evidence read, the set the trips page prices with (review I1).
+ */
+export async function loadVisibleTravelAccountData(userId: string): Promise<TravelAccountData> {
+  return loadTravelAccountData(userId, await loadVisibleDomainSet(userId));
 }

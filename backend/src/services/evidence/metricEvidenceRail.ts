@@ -12,6 +12,9 @@ import {
 import type { PagingParams } from "./paging";
 import { railEvidenceEntry } from "./entryMappersDomains";
 import { domainDistinctEvidence, domainSumEvidence, readYearScope } from "./domainMeasureResponse";
+import { isDocumentedTransferJourney, railJourneysOf } from "../rail/railJourneyStats";
+import { nightTrainNights } from "../../shared/railRideKinds";
+import { firstRidesPerConnection } from "../../shared/railConnections";
 
 /**
  * The seven served rail measures (2.7): the rail tab's figures and the rail
@@ -52,7 +55,12 @@ function entryOf(
   fields: Pick<EvidenceEntry, "contribution" | "credits" | "creditLabels">
 ): EvidenceEntry {
   return railEvidenceEntry(
-    { id: row.id, label: label(row), departureTime: row.departureTime },
+    {
+      id: row.id,
+      label: label(row),
+      departureTime: row.departureTime,
+      depTimezone: row.depTimezone,
+    },
     { ...fields, subtitle: null }
   );
 }
@@ -155,3 +163,101 @@ export const resolveRailCrossBorderRideCount = rideKindSum(
   (f) => f.isCrossBorder,
   (s) => s.railCrossBorderRides
 );
+
+/**
+ * forgejo#261 — the journey figures of the rail tab, over the same rides and
+ * by the same rules (`services/rail/railJourneyStats.ts`). A journey is
+ * listed under its FIRST train and named from its first departure to its
+ * last arrival; the station names are data, not copy.
+ */
+function journeyEntry(journey: readonly RailBadgeRow[]): EvidenceEntry {
+  const first = journey[0];
+  const last = journey[journey.length - 1];
+  return railEvidenceEntry(
+    {
+      id: first.id,
+      label: `${first.depStationName} → ${last.arrStationName}`,
+      departureTime: first.departureTime,
+      depTimezone: first.depTimezone,
+    },
+    { contribution: 1, subtitle: null }
+  );
+}
+
+/** Journeys: legs of one booking that meet at a station are one (`railJourneysOf`). */
+export async function resolveRailJourneyCount(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  const key = "railJourneyCount";
+  const { rows } = await loadScoped(userId, scope, key);
+  const journeys = railJourneysOf(rows);
+  return domainSumEvidence({
+    key,
+    unit: "journeys",
+    scope,
+    page,
+    entries: journeys.map(journeyEntry),
+    value: journeys.length,
+  });
+}
+
+/** The badge "Gut umgestiegen": journeys with a change, every train with both clocks. */
+export async function resolveRailDocumentedTransferJourneyCount(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  const key = "railDocumentedTransferJourneyCount";
+  const { rows, total } = await loadScoped(userId, scope, key);
+  const entries = railJourneysOf(rows).filter(isDocumentedTransferJourney).map(journeyEntry);
+  return domainSumEvidence({
+    key,
+    unit: "journeys",
+    scope,
+    page,
+    entries,
+    value: total.railDocumentedTransferJourneys,
+  });
+}
+
+/** Nights on board: each night train contributes the nights it ran through. */
+export async function resolveRailNightTrainNights(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  const key = "railNightTrainNights";
+  const { rows } = await loadScoped(userId, scope, key);
+  const entries = rows
+    .map((row) => ({ row, nights: nightTrainNights(row) }))
+    .filter(({ nights }) => nights !== null && nights.length > 0)
+    .map(({ row, nights }) => entryOf(row, { contribution: (nights as string[]).length }));
+  const value = entries.reduce((sum, e) => sum + (e.contribution ?? 0), 0);
+  return domainSumEvidence({ key, unit: "nights", scope, page, entries, value });
+}
+
+/**
+ * New connections: the first counted ride on each connection, over EVERY
+ * ride — then kept when that first ride is in the period on screen.
+ */
+export async function resolveRailNewConnectionsCount(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  const key = "railNewConnectionsCount";
+  const year = readYearScope(scope, key);
+  const firsts = [...firstRidesPerConnection(await loadRailBadgeRows(userId)).values()].filter(
+    (r) => year === undefined || railYear(r) === year
+  );
+  return domainSumEvidence({
+    key,
+    unit: "connections",
+    scope,
+    page,
+    entries: firsts.map((r) => entryOf(r, { contribution: 1 })),
+    value: firsts.length,
+  });
+}
