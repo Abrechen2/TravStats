@@ -102,6 +102,12 @@
       "domain": "rental",
       "version": "2026.10.9",
       "path": "rental/sixt-invoice.json"
+    },
+    {
+      "id": "cruise:tui-cruises-confirmation",
+      "domain": "cruise",
+      "version": "2026.10.9",
+      "path": "cruise/tui-cruises-confirmation.json"
     }
   ]
 }

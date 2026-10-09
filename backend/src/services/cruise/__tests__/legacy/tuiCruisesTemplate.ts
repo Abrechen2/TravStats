@@ -1,3 +1,6 @@
+// PARITY REFERENCE ONLY (plan 2026-10-09 P4b): the compiled-in reader the v2 template
+// cruise/tui-cruises-confirmation.json replaced. Production reads the template.
+
 /**
  * A deterministic reader for TUI Cruises ("Mein Schiff") booking
  * confirmations.
@@ -37,8 +40,8 @@
  * codebase follows for derived values.
  */
 
-import type { ParsedCruise, ParsedCruiseStop } from "../cruiseBookingParser";
-import { cabinTypeFromCategory } from "./cabinType";
+import type { ParsedCruise, ParsedCruiseStop } from "../../../cruiseBookingParser";
+import { cabinTypeFromCategory } from "../../cabinType";
 
 /** What `parserTemplate` says on a cruise this module produced. */
 export const TUI_TEMPLATE_ID = "tui-cruises-confirmation";
