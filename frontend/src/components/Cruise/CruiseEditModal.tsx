@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 import Modal from "../Modal";
 import { isTransientSaveError, saveErrorKey } from "../../lib/saveErrorMessage";
@@ -159,16 +159,22 @@ export function CruiseEditModal({
 
   // The baseline is the form as it settles after opening (its own date
   // suggestions applied); a trip it preselected is no reason to ask either.
-  const { dirty, markSaved } = useDirtyGuard(
-    cruiseFormSnapshot(cruiseFormOpening(initial)),
-    cruiseFormSnapshot(
-      autoTripId !== null && draft.tripId === autoTripId
-        ? { ...draft, tripId: initial.tripId }
-        : draft
-    )
+  // Computed once per opening and once per draft change, not on every render:
+  // the snapshot walks every stop (review M7).
+  const baseline = useMemo(() => cruiseFormSnapshot(cruiseFormOpening(initial)), [initial]);
+  const draftKey = useMemo(() => JSON.stringify(cruiseFormSnapshot(draft)), [draft]);
+  const guarded = useMemo(
+    () =>
+      cruiseFormSnapshot(
+        autoTripId !== null && draft.tripId === autoTripId
+          ? { ...draft, tripId: initial.tripId }
+          : draft
+      ),
+    [autoTripId, draft, initial.tripId]
   );
+  const { dirty, markSaved } = useDirtyGuard(baseline, guarded);
   const saving = useSaveOnce<Cruise>({ afterSaveFailedKey });
-  const failure = useFormFailure(JSON.stringify(cruiseFormSnapshot(draft)));
+  const failure = useFormFailure(draftKey);
 
   const fieldErrors = failure.attempted ? cruiseFieldErrors(draft) : {};
   const endError = fieldErrors.endDate ? t(fieldErrors.endDate) : null;

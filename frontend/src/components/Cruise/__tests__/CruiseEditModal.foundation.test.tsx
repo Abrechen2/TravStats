@@ -60,7 +60,8 @@ const existing = {
   stops: [seaDay("s1", 1), seaDay("s2", 3)],
 } as unknown as Cruise;
 
-const save = (): HTMLElement => screen.getByRole("button", { name: "form.save" });
+// By its text, not its role: a role query over this form is slow (review M7).
+const save = (): HTMLElement => screen.getByText("form.save", { selector: "button" });
 const hint = (): HTMLElement | null => screen.queryByTestId("save-blocked-hint");
 const startField = (): HTMLElement => screen.getByLabelText(/^field\.startDate/);
 

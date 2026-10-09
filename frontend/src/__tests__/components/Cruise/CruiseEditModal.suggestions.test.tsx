@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CruiseEditModal } from "../../../components/Cruise/CruiseEditModal";
 import { cruiseApi, companionsApi, shipsApi, tripsApi } from "../../../lib/api";
@@ -52,7 +52,10 @@ const stopDates = (): string[] =>
  * do not depend on what the day is.
  */
 function markAddedStopsAtSea(): void {
-  for (const box of screen.queryAllByRole("checkbox", { name: "stops.at_sea" })) {
+  // The days' own checkboxes, found in the DOM rather than by role (M7).
+  for (const box of document.querySelectorAll<HTMLInputElement>(
+    "li details input[type='checkbox']"
+  )) {
     if (!(box as HTMLInputElement).checked) fireEvent.click(box);
   }
 }
@@ -64,7 +67,7 @@ async function savedPayload(): Promise<Parameters<typeof cruiseApi.create>[0]> {
   if (!routeName.value) fireEvent.change(routeName, { target: { value: "Nordland" } });
   const depart = screen.getByLabelText(/^field\.startDate/) as HTMLInputElement;
   if (!depart.value) fireEvent.change(depart, { target: { value: "2026-07-01" } });
-  await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+  await userEvent.click(screen.getByText("form.save", { selector: "button" }));
   await waitFor(() => expect(cruiseApi.create).toHaveBeenCalled());
   const calls = vi.mocked(cruiseApi.create).mock.calls;
   return calls[calls.length - 1][0];
@@ -85,7 +88,7 @@ describe("CruiseEditModal — entry suggestions", () => {
       fireEvent.change(screen.getByLabelText(/^field\.startDate/), {
         target: { value: "2026-07-01" },
       });
-      const add = screen.getByRole("button", { name: /stops.add/ });
+      const add = screen.getByText(/stops\.add/, { selector: "button" });
       await userEvent.click(add);
       await userEvent.click(add);
 
@@ -101,7 +104,7 @@ describe("CruiseEditModal — entry suggestions", () => {
       render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
       const start = screen.getByLabelText(/^field\.startDate/);
       fireEvent.change(start, { target: { value: "2026-07-01" } });
-      const add = screen.getByRole("button", { name: /stops.add/ });
+      const add = screen.getByText(/stops\.add/, { selector: "button" });
       await userEvent.click(add);
       await userEvent.click(add);
       fireEvent.change(screen.getAllByLabelText("stops.date")[1], {
@@ -148,7 +151,7 @@ describe("CruiseEditModal — entry suggestions", () => {
       fireEvent.change(screen.getByLabelText(/^field\.startDate/), {
         target: { value: "2026-07-01" },
       });
-      const add = screen.getByRole("button", { name: /stops.add/ });
+      const add = screen.getByText(/stops\.add/, { selector: "button" });
       await userEvent.click(add);
       expect(endInput().value).toBe("");
       await userEvent.click(add);
@@ -162,7 +165,7 @@ describe("CruiseEditModal — entry suggestions", () => {
       fireEvent.change(screen.getByLabelText(/^field\.startDate/), {
         target: { value: "2026-07-01" },
       });
-      const add = screen.getByRole("button", { name: /stops.add/ });
+      const add = screen.getByText(/stops\.add/, { selector: "button" });
       await userEvent.click(add);
       await userEvent.click(add);
       await waitFor(() => expect(endInput().value).toBe("2026-07-02"));
@@ -268,11 +271,14 @@ describe("CruiseEditModal — entry suggestions", () => {
   describe("tags", () => {
     it("offers the user's own tags and saves the chips as a list", async () => {
       render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
-      await userEvent.type(screen.getByLabelText("field.line"), "AIDA");
-      const tags = screen.getByRole("combobox", { name: "field.tags" });
+      fireEvent.change(screen.getByLabelText("field.line"), { target: { value: "AIDA" } });
+      // By id and within its list: role queries over this form are slow (review M7).
+      const tags = document.getElementById("cruise-form-tags") as HTMLElement;
 
       await userEvent.type(tags, "fj");
-      await userEvent.click(screen.getByRole("option", { name: /Fjords/ }));
+      await userEvent.click(
+        within(screen.getByRole("listbox")).getByRole("option", { name: /Fjords/ })
+      );
       await userEvent.type(tags, "Sea days{Enter}");
 
       expect((await savedPayload()).tags).toEqual(["Fjords", "Sea days"]);
