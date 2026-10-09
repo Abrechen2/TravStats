@@ -90,3 +90,56 @@ export interface LodgingInsights {
   plannedStays: number;
   totals: MeasureTotals;
 }
+
+export interface PlaceInsights {
+  discoveries: {
+    byYear: Array<{ year: number; discoveries: number; revisits: number; unordered: number }>;
+    placesWithoutDatedVisit: number;
+    undatedVisits: number;
+  };
+  revisits: {
+    longestGap: {
+      placeId: string;
+      name: string;
+      days: number;
+      fromVisitId: string;
+      toVisitId: string;
+      from: string;
+      to: string;
+    } | null;
+    longestGapYears: number;
+    returning: Array<{ placeId: string; name: string; years: number[]; visits: number }>;
+  };
+  diversity: {
+    trips: Array<{ tripId: string; tripName: string; year: number | null; categories: string[] }>;
+    cities: Array<{ city: string; country: string | null; categories: string[] }>;
+    byYear: Array<{ year: number; categories: string[] }>;
+    tripCategoriesMax: number;
+    visitsWithoutTrip: number;
+  };
+  documentation: {
+    visits: number;
+    withPhoto: number;
+    withNote: number;
+    withRating: number;
+    withNoteAndPhoto: number;
+    byYear: Array<{
+      year: number;
+      visits: number;
+      withPhoto: number;
+      withNote: number;
+      withRating: number;
+    }>;
+  };
+  jump: {
+    longest: {
+      km: number;
+      from: { visitId: string; placeId: string; name: string; day: string };
+      to: { visitId: string; placeId: string; name: string; day: string };
+    } | null;
+    uncertainPairs: number;
+    undatedVisits: number;
+  };
+  plannedVisits: number;
+  totals: MeasureTotals;
+}

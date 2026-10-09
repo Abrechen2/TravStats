@@ -17,6 +17,7 @@ import RankedBarList, { type RankedRow } from "./lodging/RankedBarList";
 import PoiRhythmSection from "./poi/PoiRhythmSection";
 import PoiFunSection from "./poi/PoiFunSection";
 import PoiQualitySection from "./poi/PoiQualitySection";
+import PoiInsightsSection from "./poi/PoiInsightsSection";
 import PeriodComparisonStrip from "./PeriodComparisonStrip";
 import type { PeriodScope } from "./useStatsPeriod";
 import type { SectionVisibility } from "../../hooks/useSectionVisibility";
@@ -385,6 +386,8 @@ export default function PoiStatsSection({
       {show("rhythm") && <PoiRhythmSection detail={detail} accent={accent} locale={locale} />}
       {show("quality") && <PoiQualitySection detail={detail} accent={accent} />}
       {show("fun") && <PoiFunSection detail={detail} accent={accent} locale={locale} />}
+      {/* forgejo#259 — lifetime readings with per-year slices, from their own endpoint. */}
+      {show("insights") && <PoiInsightsSection year={year} accent={accent} />}
     </section>
   );
 }

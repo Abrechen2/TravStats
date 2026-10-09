@@ -6,6 +6,7 @@
 import { registry } from "../registry";
 import { errorContent } from "./shared";
 import { lodgingInsightsResponseSchema } from "../../../schemas/statsInsights/lodging";
+import { placeInsightsResponseSchema } from "../../../schemas/statsInsights/places";
 
 const STANDARD_ERRORS = {
   304: { description: "Not modified since the ETag in If-None-Match" },
@@ -31,6 +32,30 @@ registry.registerPath({
     200: {
       description: "The insights",
       content: { "application/json": { schema: lodgingInsights } },
+    },
+    ...STANDARD_ERRORS,
+  },
+});
+
+const placeInsights = registry.register(
+  "PlaceInsights",
+  placeInsightsResponseSchema.openapi("PlaceInsights")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/insights/places",
+  summary: "Places insights: discoveries, returns, variety, documentation, largest jump",
+  description:
+    "Lifetime, with per-year series on the place's own calendar. A first visit is a " +
+    "discovery only when no undated visit of the same place could be earlier; the largest " +
+    "jump is a straight line between two visits whose order is certain, never a distance " +
+    "travelled. Photo, note and rating are counted independently.",
+  tags: ["Stats"],
+  responses: {
+    200: {
+      description: "The insights",
+      content: { "application/json": { schema: placeInsights } },
     },
     ...STANDARD_ERRORS,
   },

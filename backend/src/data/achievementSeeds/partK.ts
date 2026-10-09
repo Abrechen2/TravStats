@@ -58,4 +58,43 @@ export const seedsPartK: AchievementDefinition[] = [
     requirementType: "lodging_months_in_year",
     points: 120,
   },
+  {
+    code: "PLACE_REUNION_5Y",
+    name: "Wiedersehen nach Jahren",
+    description: "Denselben Ort nach mindestens fünf Jahren erneut besucht",
+    category: "special",
+    domain: "poi",
+    icon: "🔁",
+    tier: "silver",
+    // threshold: proposal forgejo#259, owner to confirm
+    requirement: 5,
+    requirementType: "place_revisit_gap_years",
+    points: 60,
+  },
+  {
+    code: "PLACE_COLOURFUL_TRIP",
+    name: "Bunte Reise",
+    description: "Orte aus fünf verschiedenen Kategorien auf einer Reise besucht",
+    category: "explorer",
+    domain: "poi",
+    icon: "🎨",
+    tier: "silver",
+    // threshold: proposal forgejo#259, owner to confirm
+    requirement: 5,
+    requirementType: "place_trip_categories_max",
+    points: 60,
+  },
+  {
+    code: "PLACE_WELL_REMEMBERED_10",
+    name: "Gut erinnert",
+    description: "Zehn Besuche mit eigener Notiz und eigenem Foto dokumentiert",
+    category: "collector",
+    domain: "poi",
+    icon: "📓",
+    tier: "bronze",
+    // threshold: proposal forgejo#259, owner to confirm
+    requirement: 10,
+    requirementType: "place_documented_visits",
+    points: 30,
+  },
 ];

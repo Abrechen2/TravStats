@@ -25,4 +25,12 @@ export const INSIGHT_MEASURES: Record<string, MeasureSpec> = {
   lodgingBusinessNights: insight("sum", "nights", "LodgingInsightsSection"),
   /** Houses with stays in two or more calendar years; a lifetime question. */
   lodgingReturnHouseCount: insight("distinct", "lodgings", "LodgingInsightsSection", ["allTime"]),
+
+  /** A place's first dated visit, when no undated visit of it could be earlier. */
+  placeDiscoveryVisits: insight("sum", "visits", "PoiInsightsSection"),
+  placeRevisitVisits: insight("sum", "visits", "PoiInsightsSection"),
+  /** Photo, note and rating are three independent questions, never one score. */
+  placeVisitsWithPhoto: insight("sum", "visits", "PoiInsightsSection"),
+  placeVisitsWithNote: insight("sum", "visits", "PoiInsightsSection"),
+  placeVisitsWithRating: insight("sum", "visits", "PoiInsightsSection"),
 };

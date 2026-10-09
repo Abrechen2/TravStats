@@ -215,5 +215,10 @@
   "evidence.metric.lodgingWeekendNights": "Wochenendnächte",
   "evidence.metric.lodgingWeekdayNights": "Werktagsnächte",
   "evidence.metric.lodgingBusinessNights": "Nächte auf Geschäftsreisen",
-  "evidence.metric.lodgingReturnHouseCount": "Häuser, besucht in mehreren Jahren"
+  "evidence.metric.lodgingReturnHouseCount": "Häuser, besucht in mehreren Jahren",
+  "evidence.metric.placeDiscoveryVisits": "Erstbesuche",
+  "evidence.metric.placeRevisitVisits": "Wiederbesuche",
+  "evidence.metric.placeVisitsWithPhoto": "Besuche mit Foto",
+  "evidence.metric.placeVisitsWithNote": "Besuche mit Notiz",
+  "evidence.metric.placeVisitsWithRating": "Besuche mit Bewertung"
 }

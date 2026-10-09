@@ -2,7 +2,7 @@ import { AppError } from "../../middleware/errorHandler";
 import type { EvidenceScope } from "../../shared/evidence";
 import type { EvidenceEntry, EvidenceResponse } from "../../schemas/evidence";
 import { INSIGHT_MEASURES } from "../../shared/evidenceMeasuresInsights";
-import { lodgingInsights } from "../stats/insights";
+import { lodgingInsights, placeInsights } from "../stats/insights";
 import { itemsFor, type MeasureItem, type MeasureItems } from "../stats/insights/measureItems";
 import type { PagingParams } from "./paging";
 import { domainDistinctEvidence, domainSumEvidence, readYearScope } from "./domainMeasureResponse";
@@ -20,6 +20,7 @@ type ItemLoader = (userId: string) => Promise<MeasureItems>;
 
 const LOADERS: Record<string, ItemLoader> = {
   lodging: async (userId) => (await lodgingInsights(userId)).items,
+  places: async (userId) => (await placeInsights(userId)).items,
 };
 
 /** Which loader owns a key: the measure's domain prefix in the registry. */
@@ -28,6 +29,11 @@ const OWNER: Record<string, keyof typeof LOADERS> = {
   lodgingWeekdayNights: "lodging",
   lodgingBusinessNights: "lodging",
   lodgingReturnHouseCount: "lodging",
+  placeDiscoveryVisits: "places",
+  placeRevisitVisits: "places",
+  placeVisitsWithPhoto: "places",
+  placeVisitsWithNote: "places",
+  placeVisitsWithRating: "places",
 };
 
 function toEntry(item: MeasureItem, distinct: boolean): EvidenceEntry {

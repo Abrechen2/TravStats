@@ -76,6 +76,7 @@ export const POI_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "rhythm", label: t("places:stats.rhythm.title") },
   { key: "quality", label: t("places:stats.quality.title") },
   { key: "fun", label: t("places:stats.fun.title") },
+  { key: "insights", label: t("stats:sections.insights") },
 ];
 
 export const ROADTRIP_SECTIONS = (t: Translate): SectionOption[] => [

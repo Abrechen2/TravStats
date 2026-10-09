@@ -1,5 +1,8 @@
 import { now } from "../../../shared/time/clock";
 import { computeLodgingInsights } from "../../../utils/lodgingInsights";
+import { computePlaceInsights } from "../../../utils/placeInsights";
+import type { PlaceInsightsResponse } from "../../../schemas/statsInsights/places";
+import { loadPlaceInsightPlaces } from "./placeInsightData";
 import type { LodgingInsightsResponse } from "../../../schemas/statsInsights/lodging";
 import { loadLodgingInsightStays } from "./lodgingInsightData";
 import { totalsOf, type MeasureItems } from "./measureItems";
@@ -18,4 +21,12 @@ export async function lodgingInsights(
     at
   );
   return { response: { ...insights, plannedStays, totals: totalsOf(items) }, items };
+}
+
+export async function placeInsights(
+  userId: string,
+  at: Date = now()
+): Promise<{ response: PlaceInsightsResponse; items: MeasureItems }> {
+  const { insights, items } = computePlaceInsights(await loadPlaceInsightPlaces(userId), at);
+  return { response: { ...insights, totals: totalsOf(items) }, items };
 }

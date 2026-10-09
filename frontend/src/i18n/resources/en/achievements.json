@@ -1303,6 +1303,18 @@
     "LODGING_FULL_CALENDAR": {
       "name": "All around the calendar",
       "description": "At least one night away in every month of one calendar year"
+    },
+    "PLACE_REUNION_5Y": {
+      "name": "Reunion after years",
+      "description": "Returned to the same place after five years or more"
+    },
+    "PLACE_COLOURFUL_TRIP": {
+      "name": "A colourful trip",
+      "description": "Visited places of five different categories on one trip"
+    },
+    "PLACE_WELL_REMEMBERED_10": {
+      "name": "Well remembered",
+      "description": "Ten visits documented with their own note and their own photo"
     }
   },
   "header": {

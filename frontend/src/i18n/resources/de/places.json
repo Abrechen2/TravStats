@@ -329,6 +329,86 @@
       "southernmost": "Südlichster Ort",
       "onTrips": "Besuche in einer Reise",
       "onTripsDesc": "von {{total}} insgesamt"
+    },
+    "insights": {
+      "title": "Auswertungen",
+      "loadFailed": "Die Auswertungen konnten nicht geladen werden.",
+      "lifetime": "über alle Jahre",
+      "discoveries": {
+        "title": "Entdeckungen und Wiederbesuche",
+        "new": "Erstbesuche",
+        "again": "Wiederbesuche",
+        "description": "Erstbesuche / Wiederbesuche",
+        "yearRow": "{{year}}: {{discoveries}} neu · {{revisits}} wieder",
+        "empty": "Erscheint, sobald ein Besuch mit Datum vorbei ist.",
+        "help": {
+          "unit": "Ein Besuch. Erstbesuch ist der früheste datierte Besuch eines Ortes, jeder spätere ein Wiederbesuch.",
+          "time": "Jahr nach dem Kalender des Ortes (seine Zeitzone), nicht nach deinem Gerät.",
+          "source": "Deine Besuche an Orten im Logbuch.",
+          "coverage": "{{unordered}} datierte Besuche gehören zu Orten mit einem undatierten Besuch – ob sie der erste waren, weiß niemand, sie stehen in keiner Spalte. {{withoutDate}} Orte haben gar keinen datierten Besuch, {{undated}} Besuche sind ohne Datum.",
+          "exclusions": "Orte auf der Wunschliste und Besuche mit Datum in der Zukunft zählen nicht."
+        }
+      },
+      "returning": {
+        "title": "Rückkehr nach langer Pause",
+        "years_one": "{{count}} Jahr",
+        "years_other": "{{count}} Jahre",
+        "days_one": "{{count}} Tag",
+        "days_other": "{{count}} Tage",
+        "gap": "Längste Pause ({{from}} → {{to}}):",
+        "empty": "Erscheint, sobald du einen Ort an einem zweiten Tag wieder besuchst.",
+        "help": {
+          "unit": "Die Pause zwischen zwei aufeinanderfolgenden Besuchen desselben Ortes; volle Jahre zählen von Jahrestag zu Jahrestag.",
+          "time": "Tage nach dem Kalender des Ortes.",
+          "source": "Deine datierten Besuche je Ort. Die Liste nennt Orte, die du in mehreren Kalenderjahren besucht hast.",
+          "coverage": "Nur Besuche mit bekanntem Tag messen eine Pause.",
+          "exclusions": "Undatierte Besuche, Wunschliste und geplante Besuche."
+        }
+      },
+      "variety": {
+        "title": "Vielfalt je Reise",
+        "value_one": "{{count}} Kategorie",
+        "value_other": "{{count}} Kategorien",
+        "description": "Höchste Zahl verschiedener Ortskategorien auf einer Reise",
+        "year_one": "{{year}}: {{count}} Kategorie insgesamt",
+        "year_other": "{{year}}: {{count}} Kategorien insgesamt",
+        "cities": "Vielseitigste Städte: {{cities}}",
+        "empty": "Erscheint, sobald Besuche einer Reise zugeordnet sind.",
+        "help": {
+          "unit": "Eine Ortskategorie (Restaurant, Sehenswürdigkeit, Natur …), je Reise, Stadt oder Jahr einmal gezählt.",
+          "time": "Eine Reise zählt im Jahr ihres ersten datierten Besuchs; Jahre nach dem Kalender des Ortes.",
+          "source": "Kategorie des Ortes, Reise des Besuchs, Stadt des Ortes.",
+          "coverage": "{{withoutTrip}} Besuche gehören zu keiner Reise und fehlen in der Reise-Ansicht.",
+          "exclusions": "Wunschliste und geplante Besuche. Städte werden nach Name und Land getrennt."
+        }
+      },
+      "documentation": {
+        "title": "Dokumentiert",
+        "photo": "Besuche mit Foto",
+        "note": "Besuche mit Notiz",
+        "rating": "Besuche mit Bewertung",
+        "description": "Foto {{photo}} · Notiz {{note}} · Bewertung {{rating}} – von {{count}} Besuchen",
+        "empty": "Erscheint mit dem ersten vergangenen Besuch.",
+        "help": {
+          "unit": "Ein Besuch. Foto, Notiz und Bewertung werden jeweils für sich gezählt, nie zu einer Note verrechnet.",
+          "time": "Jahr nach dem Kalender des Ortes; undatierte Besuche zählen nur im Gesamtwert.",
+          "source": "Fotos, die am Besuch selbst hängen, die Notiz des Besuchs und seine Bewertung.",
+          "coverage": "Ein Foto der Reise, das keinem Besuch zugeordnet ist, zählt hier nicht.",
+          "exclusions": "Eine fehlende Bewertung ist keine schlechte – es wird nie eine verlangt oder ergänzt."
+        }
+      },
+      "jump": {
+        "title": "Größter Sprung",
+        "value": "{{km}} km Luftlinie",
+        "empty": "Erscheint, sobald zwei Besuche an verschiedenen Orten in sicherer Reihenfolge erfasst sind.",
+        "help": {
+          "unit": "Kilometer Luftlinie zwischen zwei Orten – ausdrücklich nicht die zurückgelegte Strecke.",
+          "time": "Zwei Besuche, die zeitlich direkt aufeinander folgen, nach Tag und – am selben Tag – nach Uhrzeit.",
+          "source": "Koordinaten deiner besuchten Orte.",
+          "coverage": "{{uncertain}} Besuchspaare am selben Tag ohne Uhrzeit sind in unklarer Reihenfolge und werden nicht gemessen; {{undated}} Besuche ohne Tag stehen in keiner Folge.",
+          "exclusions": "Wunschliste und geplante Besuche."
+        }
+      }
     }
   },
   "import": {

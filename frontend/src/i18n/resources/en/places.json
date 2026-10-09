@@ -329,6 +329,86 @@
       "southernmost": "Southernmost place",
       "onTrips": "Visits on a trip",
       "onTripsDesc": "of {{total}} in total"
+    },
+    "insights": {
+      "title": "Insights",
+      "loadFailed": "The insights could not be loaded.",
+      "lifetime": "across all years",
+      "discoveries": {
+        "title": "Discoveries and returns",
+        "new": "First visits",
+        "again": "Return visits",
+        "description": "first visits / return visits",
+        "yearRow": "{{year}}: {{discoveries}} new · {{revisits}} again",
+        "empty": "Appears once a dated visit is over.",
+        "help": {
+          "unit": "One visit. A first visit is a place's earliest dated visit; every later one is a return.",
+          "time": "Year on the place's own calendar (its time zone), not your device's.",
+          "source": "Your visits to places in your logbook.",
+          "coverage": "{{unordered}} dated visits belong to places with an undated visit — whether they were the first, nobody knows, so they are in neither column. {{withoutDate}} places have no dated visit at all, {{undated}} visits are undated.",
+          "exclusions": "Wishlist places and visits dated in the future do not count."
+        }
+      },
+      "returning": {
+        "title": "Returning after a long break",
+        "years_one": "{{count}} year",
+        "years_other": "{{count}} years",
+        "days_one": "{{count}} day",
+        "days_other": "{{count}} days",
+        "gap": "Longest break ({{from}} → {{to}}):",
+        "empty": "Appears once you return to a place on a second day.",
+        "help": {
+          "unit": "The break between two consecutive visits to the same place; whole years count from anniversary to anniversary.",
+          "time": "Days on the place's own calendar.",
+          "source": "Your dated visits per place. The list names places you visited in several calendar years.",
+          "coverage": "Only visits with a known day measure a break.",
+          "exclusions": "Undated visits, the wishlist and planned visits."
+        }
+      },
+      "variety": {
+        "title": "Variety per trip",
+        "value_one": "{{count}} category",
+        "value_other": "{{count}} categories",
+        "description": "Most different place categories on one trip",
+        "year_one": "{{year}}: {{count}} category in total",
+        "year_other": "{{year}}: {{count}} categories in total",
+        "cities": "Most varied cities: {{cities}}",
+        "empty": "Appears once visits belong to a trip.",
+        "help": {
+          "unit": "One place category (restaurant, landmark, nature …), counted once per trip, city or year.",
+          "time": "A trip counts in the year of its first dated visit; years on the place's own calendar.",
+          "source": "The place's category, the visit's trip, the place's city.",
+          "coverage": "{{withoutTrip}} visits belong to no trip and are missing from the per-trip view.",
+          "exclusions": "The wishlist and planned visits. Cities are told apart by name and country."
+        }
+      },
+      "documentation": {
+        "title": "Documented",
+        "photo": "Visits with a photo",
+        "note": "Visits with a note",
+        "rating": "Visits with a rating",
+        "description": "Photo {{photo}} · note {{note}} · rating {{rating}} — of {{count}} visits",
+        "empty": "Appears with the first past visit.",
+        "help": {
+          "unit": "One visit. Photo, note and rating are each counted on their own, never folded into one score.",
+          "time": "Year on the place's own calendar; undated visits count only in the lifetime figure.",
+          "source": "Photos attached to the visit itself, the visit's note and its rating.",
+          "coverage": "A trip photo not attached to any visit does not count here.",
+          "exclusions": "A missing rating is not a bad one — none is ever asked for or filled in."
+        }
+      },
+      "jump": {
+        "title": "Largest jump",
+        "value": "{{km}} km as the crow flies",
+        "empty": "Appears once two visits to different places are recorded in a certain order.",
+        "help": {
+          "unit": "Kilometres in a straight line between two places — explicitly not the distance travelled.",
+          "time": "Two visits that directly follow each other, by day and — on the same day — by time.",
+          "source": "The coordinates of the places you visited.",
+          "coverage": "{{uncertain}} pairs of visits on the same day without a time are in an unknown order and are not measured; {{undated}} visits without a day are in no sequence.",
+          "exclusions": "The wishlist and planned visits."
+        }
+      }
     }
   },
   "import": {

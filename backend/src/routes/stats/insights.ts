@@ -17,7 +17,7 @@ import { Router, Response, NextFunction } from "express";
 
 import { authenticate, AuthRequest } from "../../middleware/auth";
 import { statsEtag } from "../../middleware/statsEtag";
-import { lodgingInsights } from "../../services/stats/insights";
+import { lodgingInsights, placeInsights } from "../../services/stats/insights";
 
 const router = Router();
 router.use(authenticate);
@@ -26,6 +26,14 @@ router.use(statsEtag);
 router.get("/lodging", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     res.json((await lodgingInsights(req.userId!)).response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/places", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    res.json((await placeInsights(req.userId!)).response);
   } catch (error) {
     next(error);
   }

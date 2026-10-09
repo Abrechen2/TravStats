@@ -10,9 +10,8 @@ import type { LodgingInsights } from "../../../types/statsInsights";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import EvidenceNumber from "../EvidenceNumber";
 import InsightTile from "../insight/InsightTile";
-import type { InsightHelpText } from "../insight/InsightHelp";
 import RankedBarList, { type RankedRow } from "./RankedBarList";
-import { foldSleepStyle, median, totalFor } from "./lodgingInsightFold";
+import { foldSleepStyle, helpText, median, totalFor } from "../insight/insightFold";
 
 const SEASONS = ["spring", "summer", "autumn", "winter"] as const;
 
@@ -62,13 +61,8 @@ export default function LodgingInsightsSection({
   const scope: EvidenceScopeParams =
     year === null ? { period: "allTime" } : { period: "year", year };
   const lifetime = t("lodging:stats.insights.lifetime");
-  const help = (block: string, values: Record<string, unknown> = {}): InsightHelpText => ({
-    unit: t(`lodging:stats.insights.${block}.help.unit`, values),
-    time: t(`lodging:stats.insights.${block}.help.time`, values),
-    source: t(`lodging:stats.insights.${block}.help.source`, values),
-    coverage: t(`lodging:stats.insights.${block}.help.coverage`, values),
-    exclusions: t(`lodging:stats.insights.${block}.help.exclusions`, values),
-  });
+  const help = (block: string, values: Record<string, unknown> = {}) =>
+    helpText(t, `lodging:stats.insights.${block}`, values);
 
   // ── Sleeping style ────────────────────────────────────────────────────
   const sleepRows: RankedRow[] = sleep.rows.map(([type, nights]) => ({

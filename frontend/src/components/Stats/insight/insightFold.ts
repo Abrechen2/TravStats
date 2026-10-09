@@ -1,4 +1,5 @@
 import type { LodgingInsights, MeasureTotals } from "../../../types/statsInsights";
+import type { InsightHelpText } from "./InsightHelp";
 
 /**
  * The year slice of a server total: lifetime when no year is chosen, that
@@ -34,4 +35,24 @@ export function foldSleepStyle(
   }
   const rows = [...byType.entries()].sort(([, a], [, b]) => b - a);
   return { rows, total: rows.reduce((s, [, n]) => s + n, 0) };
+}
+
+type Translate = (key: string, values?: Record<string, unknown>) => string;
+
+/**
+ * The five help answers of one figure, read from `<base>.help.*`. One helper
+ * so every insight block asks the same five questions in the same order.
+ */
+export function helpText(
+  t: Translate,
+  base: string,
+  values: Record<string, unknown> = {}
+): InsightHelpText {
+  return {
+    unit: t(`${base}.help.unit`, values),
+    time: t(`${base}.help.time`, values),
+    source: t(`${base}.help.source`, values),
+    coverage: t(`${base}.help.coverage`, values),
+    exclusions: t(`${base}.help.exclusions`, values),
+  };
 }

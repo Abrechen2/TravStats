@@ -1303,6 +1303,18 @@
     "LODGING_FULL_CALENDAR": {
       "name": "Einmal durch den Kalender",
       "description": "In jedem Monat eines Kalenderjahres mindestens eine Nacht auswärts geschlafen"
+    },
+    "PLACE_REUNION_5Y": {
+      "name": "Wiedersehen nach Jahren",
+      "description": "Denselben Ort nach mindestens fünf Jahren erneut besucht"
+    },
+    "PLACE_COLOURFUL_TRIP": {
+      "name": "Bunte Reise",
+      "description": "Orte aus fünf verschiedenen Kategorien auf einer Reise besucht"
+    },
+    "PLACE_WELL_REMEMBERED_10": {
+      "name": "Gut erinnert",
+      "description": "Zehn Besuche mit eigener Notiz und eigenem Foto dokumentiert"
     }
   },
   "header": {
