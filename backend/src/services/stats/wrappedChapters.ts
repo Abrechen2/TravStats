@@ -42,6 +42,12 @@ export interface WrappedBusRow {
 
 /** `null` = the domain is hidden for this user (switched off, or behind the beta switch). */
 export interface WrappedChapterRows {
+  /**
+   * Whether the user sees flights. Off, the flights neither tell the story nor
+   * put a year in the picker — the rule every other domain follows (forgejo#265).
+   * Optional: a caller that predates it keeps flights, as before.
+   */
+  flightsVisible?: boolean;
   lodging: WrappedStayRow[] | null;
   places: WrappedVisitRow[] | null;
   roadtrips: WrappedYearRow[] | null;
@@ -70,8 +76,9 @@ export interface WrappedChapters {
 
 /** Every year any visible chapter has a row in. */
 export function chapterYears(rows: WrappedChapterRows): number[] {
-  return Object.values(rows).flatMap((list: Array<{ year: number }> | null) =>
-    (list ?? []).map((r) => r.year)
+  const { lodging, places, roadtrips, tours, rentals, bus } = rows;
+  return [lodging, places, roadtrips, tours, rentals, bus].flatMap(
+    (list: Array<{ year: number }> | null) => (list ?? []).map((r) => r.year)
   );
 }
 

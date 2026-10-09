@@ -105,6 +105,7 @@ import { trackEvidence, type CountryDayRow } from "./trackEvidence";
 import { localDay } from "../../shared/time/instant";
 import { roadtripEvidence, type PassportRoadtripStation } from "./roadtripEvidence";
 import { railEvidence, type RailEnd } from "./railEvidence";
+import { busEvidence, type BusEnd } from "./busEvidence";
 import { countEvidencePerCountry } from "./evidenceCountry";
 import { lodgingStampsPerCountry, type LodgingStamp, type StampLodging } from "./lodgingStamp";
 
@@ -192,6 +193,8 @@ const EVIDENCE_RANK: Record<PassportEvidence, number> = {
   // without rail already shows changes its label; above a roadtrip station,
   // because a ride is a dated ticket rather than a pin on a route.
   rail: 3,
+  // A coach terminal (forgejo#265): beside the station, a step below it.
+  bus: 2.5,
   // Below the house, so a country already labelled by its stay keeps that
   // label; above the track, because a station is a record somebody typed and
   // can open, which a country-day is not.
@@ -434,7 +437,9 @@ export function buildPassport(
    * dated on local days, so a UTC year disagreed for the hours between the two
    * New Years — a Tokyo user at 08:00 on 1 January still in the old one.
    */
-  profileZone: string = "UTC"
+  profileZone: string = "UTC",
+  /** Terminal ends of completed bus rides (`./busEvidence.ts`), while bus is visible. */
+  busEnds: readonly BusEnd[] = []
 ): Passport {
   const thisYear = Number(localDay(now, profileZone).slice(0, 4));
   const home = new Set(homeIatas.map((c) => c.toUpperCase()));
@@ -644,6 +649,7 @@ export function buildPassport(
     // reached only by campervan has no other record to be found under.
     ...roadtripEvidence(roadtripStations),
     ...railEvidence(railEnds),
+    ...busEvidence(busEnds),
   ]);
 
   for (const row of evidence) {
@@ -764,6 +770,7 @@ export function buildPassport(
         place: countries.filter((c) => c.evidence === "place").length,
         lodging: countries.filter((c) => c.evidence === "lodging").length,
         rail: countries.filter((c) => c.evidence === "rail").length,
+        bus: countries.filter((c) => c.evidence === "bus").length,
         roadtrip: countries.filter((c) => c.evidence === "roadtrip").length,
         track: countries.filter((c) => c.evidence === "track").length,
       },

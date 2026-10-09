@@ -84,7 +84,7 @@ export function countryTierChoicesFor(
  * inventing a word for it.
  */
 export type PassportEvidenceKind =
-  "flight" | "lodging" | "port" | "place" | "rail" | "roadtrip" | "track";
+  "flight" | "lodging" | "port" | "place" | "rail" | "bus" | "roadtrip" | "track";
 
 /**
  * How long the traveller was on the ground in a country — spec §3.4b, mirrored
@@ -221,7 +221,8 @@ export interface Passport {
     firstStampYear: number | null;
     newThisYear: number;
     /** Countries per strongest evidence KIND. Sums to `countriesTotal`. */
-    byEvidence: Record<PassportEvidenceKind, number>;
+    /** `bus` is absent from a server older than forgejo#265. */
+    byEvidence: Record<Exclude<PassportEvidenceKind, "bus">, number> & { bus?: number };
     /** Countries per evidence STRENGTH. Also sums to `countriesTotal`. */
     byTier: Record<CountryTier, number>;
   };
@@ -284,6 +285,14 @@ export type CountryTimelineEntry =
       rideLabel: string;
       stationName: string;
     }
+  /** A completed bus ride with a terminal in this country (forgejo#265); opens the ride. */
+  | {
+      kind: "bus";
+      date: string | null;
+      rideId: string;
+      rideLabel: string;
+      stationName: string;
+    }
   /**
    * Measured presence — ONE entry for the whole country, not one per day, and
    * the only entry with no record behind it to open. What can be opened is the
@@ -319,6 +328,8 @@ export interface CountryDetail {
   roadtripStations: number;
   /** Completed train rides with a station in this country. */
   railRides: number;
+  /** Bus rides with a terminal here; absent from a server older than forgejo#265. */
+  busRides?: number;
   /** Distinct days a location history placed the traveller here. Zero on an
    *  account with none, which is most of them. */
   trackDays: number;

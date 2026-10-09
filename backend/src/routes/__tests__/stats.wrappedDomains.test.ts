@@ -93,4 +93,31 @@ describe("wrapped and badges across domains", () => {
     // Bus is not one of this user's domains: its badges stay out.
     expect(on).not.toContain("BUS_FIRST");
   });
+
+  // forgejo#265: with flights switched off, a flight's year leaves the picker.
+  it("offers no flight year once flights are switched off", async () => {
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    await prisma.flight.create({
+      data: {
+        userId,
+        depIata: "FRA",
+        arrIata: "LIS",
+        depLat: 50.0379,
+        depLon: 8.5622,
+        arrLat: 38.7742,
+        arrLon: -9.1342,
+        departureTime: new Date("2022-06-01T08:00:00Z"),
+        arrivalTime: new Date("2022-06-01T11:00:00Z"),
+        status: "flown",
+      },
+    });
+    expect((await wrapped()).body.availableYears).toEqual([2022, 2024]);
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { enabledDomains: ["rental", "rail"] },
+    });
+    const off = await wrapped();
+    expect(off.body.availableYears).toEqual([2024]);
+    expect(off.body.flights).toBe(0);
+  });
 });

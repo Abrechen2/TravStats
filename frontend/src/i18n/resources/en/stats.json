@@ -32,7 +32,9 @@
       "rail_one": "{{count}} train journey",
       "rail_other": "{{count}} train journeys",
       "rental_one": "{{count}} rental car",
-      "rental_other": "{{count}} rental cars"
+      "rental_other": "{{count}} rental cars",
+      "bus_one": "{{count}} bus ride",
+      "bus_other": "{{count}} bus rides"
     }
   },
   "overviewToggle": {
@@ -115,7 +117,10 @@
       "roadtripNights": "Nights on the road",
       "railJourneys": "Rides",
       "railKmMeasured": "Track",
-      "railKmStraight": "Straight line"
+      "railKmStraight": "Straight line",
+      "busRides": "Bus rides",
+      "busKmMeasured": "Distance",
+      "busKmStraight": "Straight line"
     },
     "topItems": {
       "airlines": "Top airlines",
@@ -123,7 +128,8 @@
       "chains": "Top chains",
       "categories": "Top categories",
       "vehicles": "Vehicles",
-      "railOperators": "Top operators"
+      "railOperators": "Top operators",
+      "busOperators": "Top bus operators"
     },
     "badge": {
       "balconyCabin": "Balcony cabin",

@@ -225,6 +225,7 @@ const evidenceKindSchema = z.enum([
   "port",
   "place",
   "rail",
+  "bus",
   "roadtrip",
   "track",
 ]);

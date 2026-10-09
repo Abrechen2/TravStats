@@ -139,6 +139,19 @@ function recordOf(
           date: dayOf(row.date),
         },
       };
+    // forgejo#265 — a bus ride with a terminal in the country, linked to the ride.
+    case "bus":
+      return {
+        key: `bus:${row.rideId}`,
+        entry: {
+          domain: "bus",
+          id: row.rideId,
+          href: `/bus/${row.rideId}`,
+          title: { text: row.rideLabel },
+          subtitle: { text: row.stationName },
+          date: dayOf(row.date),
+        },
+      };
     case "roadtrip":
       return {
         key: `roadtrip:${row.roadtripId}`,

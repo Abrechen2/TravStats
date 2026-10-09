@@ -32,7 +32,9 @@
       "rail_one": "{{count}} Zugfahrt",
       "rail_other": "{{count}} Zugfahrten",
       "rental_one": "{{count}} Mietwagen",
-      "rental_other": "{{count}} Mietwagen"
+      "rental_other": "{{count}} Mietwagen",
+      "bus_one": "{{count}} Busfahrt",
+      "bus_other": "{{count}} Busfahrten"
     }
   },
   "overviewToggle": {
@@ -115,7 +117,10 @@
       "roadtripNights": "Nächte unterwegs",
       "railJourneys": "Fahrten",
       "railKmMeasured": "Strecke",
-      "railKmStraight": "Luftlinie"
+      "railKmStraight": "Luftlinie",
+      "busRides": "Busfahrten",
+      "busKmMeasured": "Strecke",
+      "busKmStraight": "Luftlinie"
     },
     "topItems": {
       "airlines": "Top-Airlines",
@@ -123,7 +128,8 @@
       "chains": "Top-Ketten",
       "categories": "Top-Kategorien",
       "vehicles": "Fahrzeuge",
-      "railOperators": "Top-Bahngesellschaften"
+      "railOperators": "Top-Bahngesellschaften",
+      "busOperators": "Top-Busunternehmen"
     },
     "badge": {
       "balconyCabin": "Balkon-Kabine",

@@ -37,7 +37,8 @@
     "place": "Place",
     "roadtrip": "Road trip",
     "track": "Location history",
-    "rail": "Train"
+    "rail": "Train",
+    "bus": "Bus"
   },
   "value": {
     "dash": "—",

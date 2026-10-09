@@ -22,8 +22,8 @@ import type { WrappedChapterRows } from "./wrappedChapters";
  *
  * Every domain passes the user's own gate (`domainVisibility`) first: a domain
  * switched off, or behind the beta switch, contributes no chapter and no year
- * to the picker (forgejo#265). Flights pass whatever the setting says, as
- * everywhere a trip's entries are counted.
+ * to the picker (forgejo#265). Flights too: `flightsVisible` tells
+ * `buildWrapped` to leave them out of the story and the picker.
  *
  * Each row is counted and filed by its domain's own rule:
  *  - rail: completed rides, the year they LEFT on the departure station's
@@ -142,6 +142,7 @@ async function loadChapterRows(
 
   const today = localDay(now, "UTC");
   return {
+    flightsVisible: visible.has("flight"),
     lodging:
       stays === null
         ? null

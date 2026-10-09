@@ -141,7 +141,12 @@ export function buildWrapped(
   /** forgejo#265 — stays, places, roadtrips, tours, rentals, bus; `null` per hidden domain. */
   chapterRows: WrappedChapterRows = NO_CHAPTERS
 ): Wrapped | null {
-  const flown = flights.filter((f) => FLOWN.has(f.status) && f.departureTime !== null);
+  // A user who switched flights off gets no flight story and no flight year
+  // in the picker (forgejo#265) — the cut every other domain gets in its loader.
+  const flightsVisible = chapterRows.flightsVisible ?? true;
+  const flown = flightsVisible
+    ? flights.filter((f) => FLOWN.has(f.status) && f.departureTime !== null)
+    : [];
   const sailed = cruises.filter((c) => FLOWN.has(c.status) && c.startDate !== null);
 
   const flightsPerYear = new Map<number, number>();

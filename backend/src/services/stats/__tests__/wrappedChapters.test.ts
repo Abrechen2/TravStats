@@ -64,4 +64,29 @@ describe("buildWrapped — chapters beyond flights", () => {
   it("gives a hidden domain no chapter and no year", () => {
     expect(buildWrapped([], [], [], null, [], NO_CHAPTERS)).toBeNull();
   });
+
+  // forgejo#265: a domain switched off contributes no year — flights included.
+  it("leaves flight years out of the picker, and flights out of the story, with flights off", () => {
+    const flight = {
+      depIata: "FRA",
+      arrIata: "LHR",
+      departureTime: new Date("2022-03-01T08:00:00Z"),
+      departureYear: 2022,
+      airline: "Lufthansa",
+      flightNumber: "LH900",
+      status: "flown",
+      distanceKm: 650,
+    };
+    const stays = { ...NO_CHAPTERS, lodging: [{ year: 2024, nights: 2 }] };
+    const on = buildWrapped([flight], [], [], null, [], stays);
+    expect(on?.availableYears).toEqual([2022, 2024]);
+    const off = buildWrapped([flight], [], [], null, [], { ...stays, flightsVisible: false });
+    expect(off?.availableYears).toEqual([2024]);
+    expect(
+      buildWrapped([flight], [], [], 2022, [], { ...stays, flightsVisible: false })
+    ).toMatchObject({ year: 2022, flights: 0, distanceKm: 0, topAirline: null, topRoute: null });
+    expect(
+      buildWrapped([flight], [], [], null, [], { ...NO_CHAPTERS, flightsVisible: false })
+    ).toBeNull();
+  });
 });

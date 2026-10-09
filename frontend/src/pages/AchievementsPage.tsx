@@ -358,12 +358,9 @@ export default function AchievementsPage(): JSX.Element {
           <Pill active={selectedDomain === "all"} onClick={() => setSelectedDomain("all")}>
             {t("achievements:filters.allDomains")}
           </Pill>
-          {/* Rail has no achievements yet (its spec, phase 2) — a chip for it
-              would open an empty list. */}
-          {/* Rental and bus have no achievements yet (rental spec D3/D8; bus spec §12 B4). */}
-          {AVAILABLE_DOMAINS.filter(
-            (d) => d !== "rental" && d !== "bus" && enabled.includes(d)
-          ).map((d) => (
+          {/* Every domain has badges since forgejo#262/#263; `enabled` already
+              drops a domain the reader does not see. */}
+          {AVAILABLE_DOMAINS.filter((d) => enabled.includes(d)).map((d) => (
             <Pill key={d} active={selectedDomain === d} onClick={() => setSelectedDomain(d)}>
               {t(DOMAIN_LABEL[d])}
             </Pill>
