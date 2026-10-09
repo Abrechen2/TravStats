@@ -546,6 +546,16 @@ async function loadRental(_userId: string): Promise<CrossDomainPopulation> {
   return { events: [], countryRows: [] };
 }
 
+/**
+ * Bus rides join the cross-domain figures in B2 (spec 2026-10-07 §6, D4), the
+ * way rail's loader does. Until then an empty population, not an omitted key,
+ * so a domain filter that names bus is answered rather than refused.
+ */
+// B2 (spec 2026-10-07 §6): replace with the rail-shaped loader.
+async function loadBus(_userId: string): Promise<CrossDomainPopulation> {
+  return { events: [], countryRows: [] };
+}
+
 const LOADERS: Record<DomainKey, (userId: string) => Promise<CrossDomainPopulation>> = {
   flight: loadFlights,
   cruise: loadCruises,
@@ -554,6 +564,7 @@ const LOADERS: Record<DomainKey, (userId: string) => Promise<CrossDomainPopulati
   roadtrip: loadRoadtrips,
   rail: loadRail,
   rental: loadRental,
+  bus: loadBus,
 };
 
 /** Loads only the domains asked for — a chip that is off is never queried. */

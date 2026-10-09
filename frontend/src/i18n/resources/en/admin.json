@@ -162,6 +162,10 @@
             "name": "Rental cars",
             "what": "The Rental cars area: a logbook for car rentals with pickup and return in station local time, car group, price and the kilometres from the final invoice."
           },
+          "busDomain": {
+            "name": "Bus",
+            "what": "The Bus area: a logbook for coach, intercity and shuttle rides with departure and arrival in the terminal's local time, line, seat and price. Not city transit."
+          },
           "railDomain": {
             "name": "Rail",
             "what": "The Rail area: a logbook for train journeys with a station catalogue, train lookup, map, statistics and Excel import and export. A roadtrip with “Rail” as its vehicle can be taken over as train rides."

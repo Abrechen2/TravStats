@@ -1,5 +1,6 @@
 import {
   deriveRailStatus,
+  deriveBusStatus,
   deriveFlightStatus,
   deriveCruiseStatus,
   deriveLodgingStatus,
@@ -314,5 +315,55 @@ describe("tripStatusBounds — rail (owner decision 6, 2026-09-25)", () => {
       railJourneys: [ride(future(1), future(2))],
     });
     expect(deriveTripStatus({ ...bounds, now })).toBe("planned");
+  });
+});
+
+describe("deriveBusStatus", () => {
+  const dep = new Date("2026-09-20T00:00:00Z");
+  const arr = new Date("2026-09-20T02:20:00Z");
+  it("is rail's rule under the bus name", () => {
+    expect(
+      deriveBusStatus({
+        departureTime: dep,
+        arrivalTime: arr,
+        current: "scheduled",
+        now: new Date("2026-09-19T00:00:00Z"),
+      })
+    ).toBe("scheduled");
+    expect(
+      deriveBusStatus({
+        departureTime: dep,
+        arrivalTime: arr,
+        current: "scheduled",
+        now: new Date("2026-09-20T01:00:00Z"),
+      })
+    ).toBe("in_progress");
+    expect(
+      deriveBusStatus({
+        departureTime: dep,
+        arrivalTime: arr,
+        current: "scheduled",
+        now: new Date("2026-09-21T00:00:00Z"),
+      })
+    ).toBe("completed");
+    expect(
+      deriveBusStatus({
+        departureTime: dep,
+        arrivalTime: arr,
+        current: "cancelled",
+        now: new Date("2026-09-21T00:00:00Z"),
+      })
+    ).toBe("cancelled");
+  });
+  it("a clockless ride is over when its DAY is (endsAt), not at the stored midnight", () => {
+    expect(
+      deriveBusStatus({
+        departureTime: dep,
+        arrivalTime: null,
+        current: "scheduled",
+        now: new Date("2026-09-20T10:00:00Z"),
+        endsAt: new Date("2026-09-20T15:00:00Z"),
+      })
+    ).toBe("in_progress");
   });
 });

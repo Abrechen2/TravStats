@@ -65,6 +65,7 @@ export const LUCIDE = {
       },
     ],
   ],
+  // Lucide "bus" — the bus domain (2.7).
   bus: [
     ["path", { d: "M8 6v6" }],
     ["path", { d: "M15 6v6" }],

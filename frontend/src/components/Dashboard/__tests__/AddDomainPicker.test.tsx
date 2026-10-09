@@ -29,6 +29,7 @@ describe("AddDomainPicker", () => {
           roadtrip: false,
           rail: false,
           rental: false,
+          bus: false,
           tour: false,
         }}
         onPick={() => {}}
@@ -48,6 +49,7 @@ describe("AddDomainPicker", () => {
           roadtrip: false,
           rail: false,
           rental: false,
+          bus: false,
           tour: false,
         }}
         onPick={() => {}}
@@ -73,6 +75,7 @@ describe("AddDomainPicker", () => {
           roadtrip: false,
           rail: false,
           rental: false,
+          bus: false,
           tour: false,
         }}
         onPick={() => {}}
@@ -94,6 +97,7 @@ describe("AddDomainPicker", () => {
           roadtrip: false,
           rail: false,
           rental: false,
+          bus: false,
           tour: false,
         }}
         onPick={onPick}
@@ -118,6 +122,7 @@ describe("AddDomainPicker", () => {
             roadtrip: false,
             rail: false,
             rental: false,
+            bus: false,
             tour: false,
           }}
           onPick={onPick}
@@ -130,5 +135,30 @@ describe("AddDomainPicker", () => {
     fireEvent.mouseDown(screen.getByRole("button", { name: /outside/i }));
     expect(screen.queryByRole("menuitem", { name: /flug/i })).toBeNull();
     expect(onPick).not.toHaveBeenCalled();
+  });
+
+  it("lists bus rides only where the combined gate says so, and passes the pick on", () => {
+    const onPick = vi.fn();
+    const enabled = {
+      flight: true,
+      cruise: false,
+      lodging: false,
+      poi: false,
+      roadtrip: false,
+      rail: false,
+      rental: false,
+      tour: false,
+    };
+    const { unmount } = render(
+      <AddDomainPicker enabled={{ ...enabled, bus: false }} onPick={onPick} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /hinzufügen/i }));
+    expect(screen.queryByRole("menuitem", { name: /addPicker\.bus/ })).toBeNull();
+    unmount();
+
+    render(<AddDomainPicker enabled={{ ...enabled, bus: true }} onPick={onPick} />);
+    fireEvent.click(screen.getByRole("button", { name: /hinzufügen/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /addPicker\.bus/ }));
+    expect(onPick).toHaveBeenCalledWith("bus");
   });
 });

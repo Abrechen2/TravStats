@@ -144,7 +144,8 @@
       "companions": "Reisende",
       "tags": "Tags",
       "rail": "Bahn",
-      "rental": "Mietwagen"
+      "rental": "Mietwagen",
+      "bus": "Bus"
     },
     "tabs": {
       "overview": "Übersicht",

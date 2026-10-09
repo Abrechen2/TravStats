@@ -37,6 +37,8 @@ const RailDetailPage = lazy(() => import("./pages/RailDetailPage"));
 const RailConnectionPage = lazy(() => import("./pages/RailConnectionPage"));
 const RentalsPage = lazy(() => import("./pages/RentalsPage"));
 const RentalDetailPage = lazy(() => import("./pages/RentalDetailPage"));
+const BusPage = lazy(() => import("./pages/BusPage"));
+const BusDetailPage = lazy(() => import("./pages/BusDetailPage"));
 const CruiseDetailPage = lazy(() => import("./pages/CruiseDetailPage"));
 const LodgingListPage = lazy(() => import("./pages/LodgingListPage"));
 const PlacesListPage = lazy(() => import("./pages/PlacesListPage"));
@@ -365,6 +367,36 @@ function AppContent() {
                     <BetaFeatureRouteGuard feature="rentalDomain" redirectTo="/dashboard">
                       <DomainRouteGuard domain="rental">
                         <RentalDetailPage />
+                      </DomainRouteGuard>
+                    </BetaFeatureRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
+              <Route
+                path="/bus"
+                element={
+                  isAuthenticated ? (
+                    // Two gates, outer first: the instance beta switch (busDomain), then the user's own domain choice.
+                    <BetaFeatureRouteGuard feature="busDomain" redirectTo="/dashboard">
+                      <DomainRouteGuard domain="bus">
+                        <BusPage />
+                      </DomainRouteGuard>
+                    </BetaFeatureRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
+              <Route
+                path="/bus/:id"
+                element={
+                  isAuthenticated ? (
+                    // The same two gates as the logbook, in the same order.
+                    <BetaFeatureRouteGuard feature="busDomain" redirectTo="/dashboard">
+                      <DomainRouteGuard domain="bus">
+                        <BusDetailPage />
                       </DomainRouteGuard>
                     </BetaFeatureRouteGuard>
                   ) : (

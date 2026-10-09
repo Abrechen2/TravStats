@@ -61,7 +61,9 @@ export function visibleStatsTabs(
     (key) =>
       (key !== "poi" || placesAccess !== "denied") &&
       (key !== "rail" || railOffered) &&
-      (key !== "rental" || rentalOffered)
+      (key !== "rental" || rentalOffered) &&
+      // B2 (spec 2026-10-07 §6): bus is no statistics tab until its endpoint lands.
+      key !== "bus"
   );
 }
 
@@ -77,6 +79,8 @@ export function resolveStatsTab(
   // Rail behind a closed beta gate has no tab to land on, however it was asked.
   if (requested === "rail" && !railOffered) return "all";
   if (requested === "rental" && !rentalOffered) return "all";
+  // B2 (spec 2026-10-07 §6): bus has no statistics tab yet.
+  if (requested === "bus") return "all";
   // Falling back to the overview rather than showing nothing: the reader asked
   // for statistics, and a page they can use beats an empty panel.
   return enabledDomains.includes(requested) ? requested : "all";

@@ -88,6 +88,10 @@ export const RATE_LIMITS = {
   // out for the rest of the hour — twice, restarting the container each time.
   RAIL_CREATION_MAX: 300, // journeys per hour
 
+  // Bus rides take rail's budget, for rail's reason: a later import saves one
+  // ride per request, and a first sitting is years of tickets.
+  BUS_CREATION_MAX: 300, // rides per hour
+
   // Flight lookup rate limits
   FLIGHT_LOOKUP_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
   FLIGHT_LOOKUP_MAX: 30, // lookups per window

@@ -32,6 +32,7 @@ export const DOCUMENT_ENTRY_TYPES = [
   "trip",
   "railJourney",
   "rentalBooking",
+  "busJourney",
 ] as const;
 export type DocumentEntryType = (typeof DOCUMENT_ENTRY_TYPES)[number];
 
@@ -113,7 +114,7 @@ interface Envelope<T> {
 }
 
 /**
- * Where each entry type lists its documents. The five prefixes are the
+ * Where each entry type lists its documents. The prefixes are the
  * router's `ENTRY_LIST_PATHS`, spelled out here rather than derived, because a
  * derivation would have to invent the plural and the `lodging/stays` nesting.
  */
@@ -125,6 +126,7 @@ const ENTRY_LIST_PATH: Record<DocumentEntryType, (id: string) => string> = {
   trip: (id) => `/trips/${id}/documents`,
   railJourney: (id) => `/rail/${id}/documents`,
   rentalBooking: (id) => `/rentals/${id}/documents`,
+  busJourney: (id) => `/bus/${id}/documents`,
 };
 
 export function documentListPath(entry: DocumentEntryRef): string {

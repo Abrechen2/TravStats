@@ -37,6 +37,8 @@ import "./railLookup";
 import "./railStats";
 import "./railEntrySuggestions";
 import "./railRoadtripConversion";
+import "./bus";
+import "./busEntrySuggestions";
 import "./rental";
 import "./cruiseTracks";
 import "./flightDevice";

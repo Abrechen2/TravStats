@@ -5,6 +5,7 @@ import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { useRailVisible } from "../../hooks/useRailVisible";
 import { useRentalVisible } from "../../hooks/useRentalVisible";
+import { useBusVisible } from "../../hooks/useBusVisible";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
 import { Icon } from "../ui/Icon";
 import { DOMAIN_ICON } from "../ui/domainIcons";
@@ -25,6 +26,7 @@ export default function LogbookTabs(): JSX.Element | null {
   const placesVisible = usePlacesVisible();
   const railVisible = useRailVisible();
   const rentalVisible = useRentalVisible();
+  const busVisible = useBusVisible();
   const { pathname } = useLocation();
 
   const areas = AVAILABLE_DOMAINS.filter((key) =>
@@ -34,7 +36,9 @@ export default function LogbookTabs(): JSX.Element | null {
         ? railVisible
         : key === "rental"
           ? rentalVisible
-          : isEnabled(key)
+          : key === "bus"
+            ? busVisible
+            : isEnabled(key)
   );
   if (areas.length < 2) return null;
 

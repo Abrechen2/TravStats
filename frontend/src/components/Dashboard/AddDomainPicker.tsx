@@ -18,7 +18,7 @@ import { ACCENT, BORDER, PANEL_BG, TEXT } from "../map/controlPanelKit";
  * a modal.
  */
 export type AddableDomain =
-  "flight" | "cruise" | "lodging" | "poi" | "roadtrip" | "rail" | "rental" | "tour";
+  "flight" | "cruise" | "lodging" | "poi" | "roadtrip" | "rail" | "rental" | "bus" | "tour";
 
 interface AddDomainPickerProps {
   enabled: Record<AddableDomain, boolean>;
@@ -51,6 +51,8 @@ export function AddDomainPicker({ enabled, onPick }: AddDomainPickerProps): JSX.
   if (enabled.rail) options.push({ key: "rail", label: t("dashboard:addPicker.rail") });
   // The same combined rule for rentals (beta switch AND domain).
   if (enabled.rental) options.push({ key: "rental", label: t("dashboard:addPicker.rental") });
+  // And for bus rides: no import behind it, the pick opens the ride form.
+  if (enabled.bus) options.push({ key: "bus", label: t("dashboard:addPicker.bus") });
 
   return (
     <div ref={containerRef} style={{ position: "relative" }}>

@@ -197,7 +197,9 @@
     "rail": "Bahn",
     "rail_desc": "Zugfahrten wie Flüge: Bahnhöfe, Zugnummer, Klasse, Sitzplatz, Kilometer. (Beta)",
     "rental": "Mietwagen",
-    "rental_desc": "Mietwagen mit Station, Zeitraum, Fahrzeug und Kilometern aus der Rechnung. (Beta)"
+    "rental_desc": "Mietwagen mit Station, Zeitraum, Fahrzeug und Kilometern aus der Rechnung. (Beta)",
+    "bus": "Bus",
+    "bus_desc": "Fernbus-, Intercity- und Shuttlefahrten: Terminals, Linie, Sitzplatz, Kilometer. Kein Stadtverkehr. (Beta)"
   },
   "settings": {
     "modules": {
@@ -211,7 +213,8 @@
         "poi": "Orte, Besuche und Ortslisten",
         "roadtrip": "Stationen, Übernachtungen, Karte",
         "rail": "Beta: Fahrtenbuch für Zugfahrten",
-        "rental": "Beta: Fahrtenbuch für Mietwagen"
+        "rental": "Beta: Fahrtenbuch für Mietwagen",
+        "bus": "Beta: Fahrtenbuch für Busfahrten"
       }
     }
   },

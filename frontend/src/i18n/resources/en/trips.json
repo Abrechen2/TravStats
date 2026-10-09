@@ -144,7 +144,8 @@
       "companions": "Companions",
       "tags": "Tags",
       "rail": "Rail",
-      "rental": "Rental cars"
+      "rental": "Rental cars",
+      "bus": "Bus"
     },
     "tabs": {
       "overview": "Overview",

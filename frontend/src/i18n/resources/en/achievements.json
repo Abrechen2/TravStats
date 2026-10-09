@@ -42,6 +42,7 @@
     "domainPoi": "Places",
     "domainRail": "Rail",
     "domainRental": "Rental cars",
+    "domainBus": "Bus",
     "domainShared": "Shared",
     "showUnlockedOnly": "Show unlocked only",
     "state": "Status",

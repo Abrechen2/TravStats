@@ -56,19 +56,34 @@ export async function fillTripDatesFromSegments(tripId: string): Promise<void> {
           arrLon: true,
         },
       },
+      busJourneys: {
+        select: {
+          departureTime: true,
+          arrivalTime: true,
+          depTimezone: true,
+          arrTimezone: true,
+          depLat: true,
+          depLon: true,
+          arrLat: true,
+          arrLon: true,
+        },
+      },
     },
   });
   if (!trip) return;
   if (trip.startDate != null || trip.endDate != null) return;
 
   // A ride has the flight's shape (departure, arrival), so it joins them.
-  const bounds = tripDateBounds([...trip.flights, ...trip.railJourneys], trip.cruises);
+  const bounds = tripDateBounds(
+    [...trip.flights, ...trip.railJourneys, ...trip.busJourneys],
+    trip.cruises
+  );
   if (bounds.earliestStart == null && bounds.latestEnd == null) return;
 
   // The local days of the first departure and the last arrival (ADR 0002,
   // owner decision on open point 1). A cruise's ends are days already, so a
   // span that includes one keeps its UTC days without a zone.
-  const { starts, ends } = flightEnds([...trip.flights, ...trip.railJourneys]);
+  const { starts, ends } = flightEnds([...trip.flights, ...trip.railJourneys, ...trip.busJourneys]);
   const days =
     trip.cruises.length > 0
       ? typedTripDays({ startDate: bounds.earliestStart, endDate: bounds.latestEnd })
@@ -95,6 +110,7 @@ export async function recomputeTripStatus(tripId: string): Promise<void> {
         select: { stops: { select: { startDate: true, endDate: true } } },
       },
       railJourneys: { select: RAIL_CLOCK_SELECT },
+      busJourneys: { select: RAIL_CLOCK_SELECT },
       rentalBookings: {
         where: { status: { not: "cancelled" } },
         select: { pickupTime: true, returnTime: true },
@@ -111,7 +127,8 @@ export async function recomputeTripStatus(tripId: string): Promise<void> {
     cruises: trip.cruises,
     lodgingStays: trip.lodgingStays,
     roadtrips: trip.routes,
-    railJourneys: trip.railJourneys.map(rideStatusSpan),
+    // Bus rides carry rail's clock columns and join its bounds (spec 2026-10-07 §8).
+    railJourneys: [...trip.railJourneys, ...trip.busJourneys].map(rideStatusSpan),
     rentals: trip.rentalBookings,
     ownStartDate: trip.startDate,
     ownEndDate: trip.endDate,
