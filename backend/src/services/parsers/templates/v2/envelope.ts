@@ -107,7 +107,10 @@ export const templateEnvelopeSchema = z
        * the template answer "not a booking" (`nonBooking`), which a consumer
        * may treat as the end of the search.
        */
-      notBookingIf: z.array(z.string().min(1).refine(isUsableRegex, REGEX_MESSAGE)).optional(),
+      notBookingIf: z
+        .array(z.string().min(1).refine(isUsableRegex, REGEX_MESSAGE))
+        .max(10)
+        .optional(),
     }),
     extraction: extractionSchema,
     testCases: z.array(testCaseSchema),

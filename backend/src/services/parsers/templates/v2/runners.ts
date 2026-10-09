@@ -22,7 +22,8 @@ import type {
   TemplateTestInput,
 } from "./envelope";
 import { TEMPLATE_DOMAINS } from "./envelope";
-import { boundedTest, extract } from "./extract";
+import { boundedAny, extract } from "./extract";
+import logger from "../../../../utils/logger";
 
 export type TestDecision = "match" | "decline";
 
@@ -68,9 +69,37 @@ export interface TemplateApplication {
   nonBooking?: boolean;
 }
 
+/**
+ * Templates that hit the time bound while reading a real document. Each run
+ * is bounded, but a template that is slow once is slow on every document, so
+ * it is set aside until its next version arrives (a new object, so the
+ * WeakSet lets it go). Without this the bound would cap one call, not the
+ * cost: N slow templates x every parse.
+ */
+const quarantined = new WeakSet<TemplateEnvelope>();
+
+function quarantine(template: TemplateEnvelope, where: string): void {
+  quarantined.add(template);
+  logger.warn(
+    {
+      operation: "template_quarantined",
+      templateId: template.id,
+      version: template.version,
+      where,
+    },
+    "v2 template hit the regex time bound and is set aside until its next version"
+  );
+}
+
+export function isQuarantined(template: TemplateEnvelope): boolean {
+  return quarantined.has(template);
+}
+
 /** Whether a document the matcher accepted is one of the issuer's non-bookings. */
 export function isNonBooking(template: TemplateEnvelope, haystack: string): boolean {
-  return (template.match.notBookingIf ?? []).some((p) => boundedTest(p, "im", haystack));
+  const run = boundedAny(template.match.notBookingIf ?? [], "im", haystack);
+  if (run.timedOut) quarantine(template, "notBookingIf");
+  return run.matched;
 }
 
 /**
@@ -85,12 +114,15 @@ export function applyTemplate(
   template: TemplateEnvelope,
   text: TemplateTestInput
 ): TemplateApplication {
+  if (quarantined.has(template)) return { matched: false, values: {}, missing: [] };
   const haystack = testInputHaystack(text);
   if (!envelopeMatches(template, haystack)) return { matched: false, values: {}, missing: [] };
   if (isNonBooking(template, haystack)) {
     return { matched: false, values: {}, missing: [], nonBooking: true };
   }
-  const { values, missing } = extract(template.extraction, haystack);
+  if (quarantined.has(template)) return { matched: false, values: {}, missing: [] };
+  const { values, missing, timedOut } = extract(template.extraction, haystack);
+  if (timedOut) quarantine(template, "extraction");
   return { matched: missing.length === 0, values, missing };
 }
 
