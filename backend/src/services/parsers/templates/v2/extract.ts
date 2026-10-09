@@ -233,13 +233,17 @@ export const EXTRACT_TIMEOUT_MS = 1000;
  * extracts nothing and reports every required name as missing, so the
  * template declines the document (and fails its own test cases at load).
  */
-export function extract(extraction: Extraction, text: string): ExtractionResult {
+export function extract(
+  extraction: Extraction,
+  text: string,
+  timeoutMs = EXTRACT_TIMEOUT_MS
+): ExtractionResult {
   try {
     return vm.runInNewContext(
       "run()",
       { run: () => extractUnbounded(extraction, text) },
       {
-        timeout: EXTRACT_TIMEOUT_MS,
+        timeout: Math.max(1, timeoutMs),
       }
     ) as ExtractionResult;
   } catch (err) {
@@ -258,7 +262,8 @@ export function extract(extraction: Extraction, text: string): ExtractionResult 
 export function boundedAny(
   sources: readonly string[],
   flags: string,
-  text: string
+  text: string,
+  timeoutMs = EXTRACT_TIMEOUT_MS
 ): { matched: boolean; timedOut: boolean } {
   if (sources.length === 0) return { matched: false, timedOut: false };
   const input = text.length > MAX_INPUT_CHARS ? text.slice(0, MAX_INPUT_CHARS) : text;
@@ -266,7 +271,7 @@ export function boundedAny(
     const matched = vm.runInNewContext(
       "run()",
       { run: () => sources.some((source) => new RegExp(source, flags).test(input)) },
-      { timeout: EXTRACT_TIMEOUT_MS }
+      { timeout: Math.max(1, timeoutMs) }
     ) as boolean;
     return { matched, timedOut: false };
   } catch (err) {

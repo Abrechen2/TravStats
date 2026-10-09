@@ -1,6 +1,7 @@
 import { describe, it, expect } from "@jest/globals";
 import { extractionSchema, type Extraction } from "../extraction";
-import { applyTemplate, isQuarantined } from "../runners";
+import { applyTemplate } from "../runners";
+import { withParseBudget } from "../budget";
 import type { TemplateEnvelope } from "../envelope";
 import { boundedAny, extract, MAX_REPEAT_ITEMS, EXTRACT_TIMEOUT_MS } from "../extract";
 
@@ -310,20 +311,30 @@ describe("v2 extraction — every template regex is bounded", () => {
   });
 });
 
-describe("v2 runner — a template that hits the bound is set aside", () => {
-  it("costs the bound once, then declines at once until its next version", () => {
-    const template = {
-      id: "lodging:slow",
-      version: "1.0.0",
-      domain: "lodging",
-      match: { markers: ["slowhotel"], anchors: ["buchung"], notBookingIf: ["^(a+)+$"] },
-      extraction: { fields: { name: { patterns: ["Hotel (\\w+)"] } }, required: ["name"] },
-    } as unknown as TemplateEnvelope;
-    const doc = `slowhotel buchung\n${"a".repeat(40)}!`;
-    applyTemplate(template, doc);
-    expect(isQuarantined(template)).toBe(true);
-    const started = Date.now();
-    expect(applyTemplate(template, doc)).toEqual({ matched: false, values: {}, missing: [] });
-    expect(Date.now() - started).toBeLessThan(200);
+describe("v2 runner — one time budget per document, no shared state", () => {
+  const slowTemplate = {
+    id: "lodging:slow",
+    version: "1.0.0",
+    domain: "lodging",
+    match: { markers: ["slowhotel"], anchors: ["buchung"], notBookingIf: ["^(a+)+$"] },
+    extraction: { fields: { name: { patterns: ["^Hotel (\\w+)"] } }, required: ["name"] },
+  } as unknown as TemplateEnvelope;
+  const crafted = `slowhotel buchung\n${"a".repeat(40)}!`;
+
+  it("skips the remaining templates for a document whose budget is spent", async () => {
+    await withParseBudget(async () => {
+      applyTemplate(slowTemplate, crafted);
+      const started = Date.now();
+      expect(applyTemplate(slowTemplate, crafted)).toMatchObject({ budgetExhausted: true });
+      expect(Date.now() - started).toBeLessThan(200);
+    }, 900);
+  });
+
+  it("a crafted document does not switch the template off for the next one", async () => {
+    await withParseBudget(async () => applyTemplate(slowTemplate, crafted), 900);
+    const next = await withParseBudget(async () =>
+      applyTemplate(slowTemplate, "slowhotel buchung\nHotel Adler")
+    );
+    expect(next).toMatchObject({ matched: true, values: { name: "Adler" } });
   });
 });

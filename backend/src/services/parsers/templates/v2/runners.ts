@@ -22,7 +22,8 @@ import type {
   TemplateTestInput,
 } from "./envelope";
 import { TEMPLATE_DOMAINS } from "./envelope";
-import { boundedAny, extract } from "./extract";
+import { boundedAny, extract, EXTRACT_TIMEOUT_MS } from "./extract";
+import { remainingBudgetMs } from "./budget";
 import logger from "../../../../utils/logger";
 
 export type TestDecision = "match" | "decline";
@@ -67,39 +68,31 @@ export interface TemplateApplication {
   missing: string[];
   /** The matcher recognised the issuer AND a `notBookingIf` pattern: a cancellation or the like. */
   nonBooking?: boolean;
-}
-
-/**
- * Templates that hit the time bound while reading a real document. Each run
- * is bounded, but a template that is slow once is slow on every document, so
- * it is set aside until its next version arrives (a new object, so the
- * WeakSet lets it go). Without this the bound would cap one call, not the
- * cost: N slow templates x every parse.
- */
-const quarantined = new WeakSet<TemplateEnvelope>();
-
-function quarantine(template: TemplateEnvelope, where: string): void {
-  quarantined.add(template);
-  logger.warn(
-    {
-      operation: "template_quarantined",
-      templateId: template.id,
-      version: template.version,
-      where,
-    },
-    "v2 template hit the regex time bound and is set aside until its next version"
-  );
-}
-
-export function isQuarantined(template: TemplateEnvelope): boolean {
-  return quarantined.has(template);
+  /** The document's time budget ran out before this template could run. */
+  budgetExhausted?: boolean;
 }
 
 /** Whether a document the matcher accepted is one of the issuer's non-bookings. */
-export function isNonBooking(template: TemplateEnvelope, haystack: string): boolean {
-  const run = boundedAny(template.match.notBookingIf ?? [], "im", haystack);
-  if (run.timedOut) quarantine(template, "notBookingIf");
-  return run.matched;
+export function isNonBooking(
+  template: TemplateEnvelope,
+  haystack: string,
+  timeoutMs = EXTRACT_TIMEOUT_MS
+): boolean {
+  return boundedAny(template.match.notBookingIf ?? [], "im", haystack, timeoutMs).matched;
+}
+
+/** This run's bound: the per-run cap, or less when the document's budget is nearly spent. */
+function runTimeout(): number {
+  const left = remainingBudgetMs();
+  return left === null ? EXTRACT_TIMEOUT_MS : Math.min(EXTRACT_TIMEOUT_MS, left);
+}
+
+function budgetSpent(template: TemplateEnvelope): TemplateApplication {
+  logger.warn(
+    { operation: "template_budget_spent", templateId: template.id },
+    "document's template time budget is spent; remaining templates are skipped for it"
+  );
+  return { matched: false, values: {}, missing: [], budgetExhausted: true };
 }
 
 /**
@@ -114,15 +107,14 @@ export function applyTemplate(
   template: TemplateEnvelope,
   text: TemplateTestInput
 ): TemplateApplication {
-  if (quarantined.has(template)) return { matched: false, values: {}, missing: [] };
   const haystack = testInputHaystack(text);
   if (!envelopeMatches(template, haystack)) return { matched: false, values: {}, missing: [] };
-  if (isNonBooking(template, haystack)) {
+  if (runTimeout() <= 0) return budgetSpent(template);
+  if (isNonBooking(template, haystack, runTimeout())) {
     return { matched: false, values: {}, missing: [], nonBooking: true };
   }
-  if (quarantined.has(template)) return { matched: false, values: {}, missing: [] };
-  const { values, missing, timedOut } = extract(template.extraction, haystack);
-  if (timedOut) quarantine(template, "extraction");
+  if (runTimeout() <= 0) return budgetSpent(template);
+  const { values, missing } = extract(template.extraction, haystack, runTimeout());
   return { matched: missing.length === 0, values, missing };
 }
 
