@@ -238,4 +238,62 @@ describe("BusPage", () => {
     );
     expect(screen.getByTestId("bus-row-r1")).toBeInTheDocument();
   });
+
+  describe("delete consequences and next steps (forgejo#250)", () => {
+    it("names the ride, what goes with it and what stays in the delete question", async () => {
+      const filed: BusJourney = {
+        ...rideFixture(),
+        trip: { id: "t1", name: "Korea 2026", color: "#123456" },
+        tripId: "t1",
+        companions: ["Mina", "Jae"],
+      };
+      list.mockResolvedValue(page(filed));
+      documentCount.value = 1;
+      renderPage();
+      const row = await screen.findByTestId("bus-row-r1");
+      fireEvent.click(within(row).getByRole("button", { name: "Löschen" }));
+      const message = screen.getByTestId("confirm-message").textContent ?? "";
+      expect(message).toContain(
+        "Die Busfahrt Seoul Express Bus Terminal → Sokcho Express Bus Terminal wirklich löschen?"
+      );
+      expect(message).toContain("Dazu 1 Dokument, das mit gelöscht wird.");
+      expect(message).toContain("Erhalten bleiben: Reise „Korea 2026“, 2 Mitreisende");
+    });
+
+    it("offers the add dialog right in an empty logbook", async () => {
+      list.mockResolvedValue(page());
+      renderPage();
+      await screen.findByText(/Die erste Fahrt kommt über/);
+      const adds = screen.getAllByRole("button", { name: /Fahrt hinzufügen/ });
+      // The header's button and the empty state's own.
+      expect(adds).toHaveLength(2);
+      fireEvent.click(adds[adds.length - 1]);
+      expect(screen.getByTestId("bus-form")).toHaveTextContent("new");
+    });
+
+    it("offers the reset, not the add, when a filter hides every ride", async () => {
+      list.mockResolvedValue(page());
+      renderPage();
+      await screen.findByText(/Die erste Fahrt kommt über/);
+      fireEvent.change(screen.getByPlaceholderText("Betreiber, Linie, Terminal, Buchung …"), {
+        target: { value: "nirgendwo" },
+      });
+      // The filter bar has a reset too; the empty state's is the last one.
+      await screen.findByText("Nichts passt zu deinen Filtern");
+      const resets = screen.getAllByRole("button", { name: "Filter zurücksetzen" });
+      // Only the header's add button is left.
+      expect(screen.getAllByRole("button", { name: /Fahrt hinzufügen/ })).toHaveLength(1);
+      fireEvent.click(resets[resets.length - 1]);
+      expect(await screen.findByText(/Die erste Fahrt kommt über/)).toBeInTheDocument();
+    });
+
+    it("offers a retry for a failed load, and the retry reloads", async () => {
+      list.mockRejectedValueOnce(new Error("down"));
+      list.mockResolvedValue(page(rideFixture()));
+      renderPage();
+      const alert = await screen.findByRole("alert");
+      fireEvent.click(within(alert).getByRole("button", { name: "Erneut versuchen" }));
+      expect(await screen.findByTestId("bus-row-r1")).toBeInTheDocument();
+    });
+  });
 });

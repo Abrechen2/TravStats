@@ -25,19 +25,41 @@ vi.mock("../../components/documents/DocumentsSection", () => ({
   ),
 }));
 vi.mock("../../components/bus/BusFormModal", () => ({
-  BusFormModal: ({ journey }: { journey: { id: string } | null }) => (
-    <div data-testid="bus-editor">{journey?.id ?? "new"}</div>
+  BusFormModal: ({
+    journey,
+    afterSaveFailedKey,
+  }: {
+    journey: { id: string } | null;
+    afterSaveFailedKey?: string;
+  }) => (
+    <div data-testid="bus-editor" data-after-save-failed-key={afterSaveFailedKey}>
+      {journey?.id ?? "new"}
+    </div>
   ),
 }));
 vi.mock("../../components/Training/ConfirmModal", () => ({
-  default: ({ isOpen, onConfirm }: { isOpen: boolean; onConfirm: () => void }) =>
+  default: ({
+    isOpen,
+    message,
+    confirmButtonClass,
+    onConfirm,
+  }: {
+    isOpen: boolean;
+    message: string;
+    confirmButtonClass?: string;
+    onConfirm: () => void;
+  }) =>
     isOpen ? (
-      <button type="button" onClick={onConfirm}>
-        confirm-delete
-      </button>
+      <div>
+        <p data-testid="confirm-message">{message}</p>
+        <button type="button" onClick={onConfirm} className={confirmButtonClass}>
+          confirm-delete
+        </button>
+      </div>
     ) : null,
 }));
-vi.mock("../../hooks/useDocumentCount", () => ({ useDocumentCount: () => 0 }));
+const documentCount = vi.hoisted(() => ({ value: 0 as number | null }));
+vi.mock("../../hooks/useDocumentCount", () => ({ useDocumentCount: () => documentCount.value }));
 const addToast = vi.fn();
 vi.mock("../../store/toastStore", () => ({
   useToastStore: (selector: (s: Record<string, unknown>) => unknown) => selector({ addToast }),
@@ -77,6 +99,7 @@ describe("BusDetailPage", () => {
     removeMock.mockReset();
     addToast.mockReset();
     navigate.mockReset();
+    documentCount.value = 0;
   });
 
   it("shows the terminals, each time on its terminal's clock, the duration and the distance", async () => {
@@ -166,5 +189,34 @@ describe("BusDetailPage", () => {
       expect(addToast).toHaveBeenCalledWith("error", "Die Busfahrt konnte nicht gelöscht werden.")
     );
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  // forgejo#250: the same question the list asks, from the same function.
+  it("names the ride, its documents, and the trip and companions that stay, with a red confirm", async () => {
+    documentCount.value = 3;
+    await renderPage({
+      ...rideFixture(),
+      trip: { id: "t1", name: "Korea 2026", color: "#123456" },
+      tripId: "t1",
+      companions: ["Mina"],
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "Löschen" }));
+    const message = screen.getByTestId("confirm-message").textContent ?? "";
+    expect(message).toContain(
+      "Die Busfahrt Seoul Express Bus Terminal → Sokcho Express Bus Terminal wirklich löschen?"
+    );
+    expect(message).toContain("Dazu 3 Dokumente, die mit gelöscht werden.");
+    expect(message).toContain("Erhalten bleiben: Reise „Korea 2026“, 1 mitreisende Person");
+    expect(screen.getByText("confirm-delete").className).toContain("var(--danger)");
+  });
+
+  // forgejo#247: a stored edit whose page reload fails names the VIEW, not a list.
+  it("tells the form that a failed refresh here is the view's", async () => {
+    await renderPage(rideFixture());
+    fireEvent.click(await screen.findByRole("button", { name: "Bearbeiten" }));
+    expect(screen.getByTestId("bus-editor")).toHaveAttribute(
+      "data-after-save-failed-key",
+      "common:form.savedButViewRefreshFailed"
+    );
   });
 });

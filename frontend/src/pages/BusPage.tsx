@@ -26,7 +26,8 @@ import { busYear } from "../shared/busCounting";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
-import { DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { busDeleteMessage } from "../lib/bus/busDeleteMessage";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import type { BusJourney, BusStatus } from "../types/bus";
@@ -287,6 +288,9 @@ export default function BusPage(): JSX.Element {
               emptyTitle={t("bus:empty", { add })}
               emptyHint={t("bus:list.emptyHint")}
               onReset={resetFilters}
+              // A genuinely empty logbook offers its next step right here
+              // (forgejo#250); a filtered one offers only the reset.
+              action={{ label: add, onClick: (): void => setEditing({ journey: null }) }}
             />
           </div>
         ) : (
@@ -340,7 +344,7 @@ export default function BusPage(): JSX.Element {
         onConfirm={(): void => void confirmDelete()}
         isLoading={deleting}
         title={t("bus:delete")}
-        message={withDocumentNote(t("bus:deleteConfirm"), t, documentCount)}
+        message={toDelete ? busDeleteMessage(t, toDelete, documentCount) : ""}
         confirmText={t("common:buttons.delete")}
         confirmButtonClass={DELETE_BUTTON_CLASS}
       />

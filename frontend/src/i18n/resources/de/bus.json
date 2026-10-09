@@ -9,7 +9,12 @@
   "saved": "Busfahrt gespeichert",
   "deleted": "Busfahrt gelöscht",
   "deleteError": "Die Busfahrt konnte nicht gelöscht werden.",
-  "deleteConfirm": "Diese Busfahrt löschen? Das lässt sich nicht rückgängig machen.",
+  "deleteConfirm": "Die Busfahrt {{route}} wirklich löschen? Das lässt sich nicht rückgängig machen.",
+  "deleteSurvivors": {
+    "trip": "Reise „{{name}}“",
+    "companions_one": "{{count}} mitreisende Person",
+    "companions_other": "{{count}} Mitreisende"
+  },
   "edit": "Bearbeiten",
   "delete": "Löschen",
   "straightLine": "Luftlinie",

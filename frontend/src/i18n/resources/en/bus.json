@@ -9,7 +9,12 @@
   "saved": "Bus ride saved",
   "deleted": "Bus ride deleted",
   "deleteError": "The bus ride could not be deleted.",
-  "deleteConfirm": "Delete this bus ride? This cannot be undone.",
+  "deleteConfirm": "Really delete the bus ride {{route}}? This cannot be undone.",
+  "deleteSurvivors": {
+    "trip": "trip “{{name}}”",
+    "companions_one": "{{count}} travel companion",
+    "companions_other": "{{count}} travel companions"
+  },
   "edit": "Edit",
   "delete": "Delete",
   "straightLine": "straight line",

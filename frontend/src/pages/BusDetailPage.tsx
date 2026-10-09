@@ -16,7 +16,8 @@ import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
 import { busApi } from "../lib/api/bus";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
-import { DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
+import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { busDeleteMessage } from "../lib/bus/busDeleteMessage";
 import { formatAmount } from "../lib/units";
 import { formatStationTime, railDurationMinutes } from "../lib/railTime";
 import { railArrival, railDeparture } from "../lib/entityTimes";
@@ -271,7 +272,12 @@ export default function BusDetailPage(): JSX.Element {
       </div>
 
       {editing && (
-        <BusFormModal journey={ride} onClose={() => setEditing(false)} onSaved={handleSaved} />
+        <BusFormModal
+          journey={ride}
+          onClose={() => setEditing(false)}
+          onSaved={handleSaved}
+          afterSaveFailedKey="common:form.savedButViewRefreshFailed"
+        />
       )}
 
       <ConfirmModal
@@ -280,7 +286,7 @@ export default function BusDetailPage(): JSX.Element {
         onConfirm={() => void handleDelete()}
         isLoading={deleting}
         title={t("bus:delete")}
-        message={withDocumentNote(t("bus:deleteConfirm"), t, documentCount)}
+        message={busDeleteMessage(t, ride, documentCount)}
         confirmText={t("common:buttons.delete")}
         confirmButtonClass={DELETE_BUTTON_CLASS}
       />
