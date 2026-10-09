@@ -8,6 +8,7 @@ import { errorContent } from "./shared";
 import { lodgingInsightsResponseSchema } from "../../../schemas/statsInsights/lodging";
 import { placeInsightsResponseSchema } from "../../../schemas/statsInsights/places";
 import { roadtripInsightsResponseSchema } from "../../../schemas/statsInsights/roadtrips";
+import { tourInsightsResponseSchema } from "../../../schemas/statsInsights/tours";
 
 const STANDARD_ERRORS = {
   304: { description: "Not modified since the ETag in If-None-Match" },
@@ -81,6 +82,29 @@ registry.registerPath({
     200: {
       description: "The insights",
       content: { "application/json": { schema: roadtripInsights } },
+    },
+    ...STANDARD_ERRORS,
+  },
+});
+
+const tourInsights = registry.register(
+  "TourInsights",
+  tourInsightsResponseSchema.openapi("TourInsights")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/stats/insights/tours",
+  summary: "Day-tour insights: per activity, moving and pause time, records, rhythm, links",
+  description:
+    "Per activity (hike, bike, guided excursion …): completed tours with distance, climb " +
+    "and time, each with how many tours it rests on. Moving time and pauses come only from " +
+    "recordings. A guided excursion is a tour, never a bus ride or driven kilometres.",
+  tags: ["Stats"],
+  responses: {
+    200: {
+      description: "The insights",
+      content: { "application/json": { schema: tourInsights } },
     },
     ...STANDARD_ERRORS,
   },

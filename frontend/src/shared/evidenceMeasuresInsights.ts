@@ -41,4 +41,12 @@ export const INSIGHT_MEASURES: Record<string, MeasureSpec> = {
   /** Ferry legs — carried, never driven. */
   roadtripFerryKm: insight("sum", "km", "RoadtripInsightsSection"),
   roadtripRecordedNights: insight("sum", "nights", "RoadtripInsightsSection"),
+
+  /** Recorded, or dated before today (shared/tour/tourCounting.ts). */
+  tourCompletedCount: insight("sum", "tours", "TourStatsSection"),
+  /** The recording where there is one, else the route — the panel says which per tour. */
+  tourDistanceKm: insight("sum", "km", "TourStatsSection"),
+  /** Recordings only; a tour without a measured climb is not in the sum. */
+  tourAscentM: insight("sum", "metres", "TourStatsSection"),
+  tourMovingMinutes: insight("sum", "minutes", "TourStatsSection"),
 };

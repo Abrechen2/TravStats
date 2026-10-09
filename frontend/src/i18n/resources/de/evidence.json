@@ -95,7 +95,11 @@
     "cities_one": "Stadt",
     "lists_one": "Liste",
     "rides_one": "Fahrt",
-    "operators_one": "Bahngesellschaft"
+    "operators_one": "Bahngesellschaft",
+    "tours": "Touren",
+    "tours_one": "Tour",
+    "metres": "Höhenmeter",
+    "metres_one": "Höhenmeter"
   },
   "evidence.metric.flightCount": "Anzahl Flüge",
   "evidence.metric.flightTimeMinutes": "Flugzeit gesamt",
@@ -224,5 +228,9 @@
   "evidence.metric.roadtripRecordedKm": "Gefahrene Roadtrip-Kilometer (erfasst)",
   "evidence.metric.roadtripDrivenKm": "Straßenkilometer auf Roadtrips",
   "evidence.metric.roadtripFerryKm": "Fährkilometer auf Roadtrips",
-  "evidence.metric.roadtripRecordedNights": "Roadtrip-Nächte (erfasst)"
+  "evidence.metric.roadtripRecordedNights": "Roadtrip-Nächte (erfasst)",
+  "evidence.metric.tourCompletedCount": "Abgeschlossene Tagestouren",
+  "evidence.metric.tourDistanceKm": "Tourkilometer",
+  "evidence.metric.tourAscentM": "Aufstieg aus Aufzeichnungen",
+  "evidence.metric.tourMovingMinutes": "Bewegungszeit aus Aufzeichnungen"
 }

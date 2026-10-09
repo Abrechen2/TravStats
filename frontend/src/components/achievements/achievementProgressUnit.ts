@@ -35,6 +35,8 @@ export const ACHIEVEMENT_PROGRESS_UNIT: Record<string, string> = {
   roadtrip_free_nights: "nights",
   rail_km: "km",
   rail_longest_km: "km",
+  // forgejo#264 — climbed metres, which a bare "640 / 1.000" would not say.
+  tour_ascent_m: "metres",
 };
 
 /** The unit i18n suffix for a rule, or null when the number counts itself. */

@@ -38,7 +38,10 @@ vi.mock("../../../lib/api/roadtrips", () => ({
 }));
 const roadtripInsights = vi.fn();
 vi.mock("../../../lib/api/statsInsights", () => ({
-  statsInsightsApi: { roadtrips: () => roadtripInsights() },
+  statsInsightsApi: {
+    roadtrips: () => roadtripInsights(),
+    tours: () => new Promise(() => {}),
+  },
 }));
 
 import RoadtripStatsSection from "../RoadtripStatsSection";

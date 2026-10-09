@@ -17,7 +17,12 @@ import { Router, Response, NextFunction } from "express";
 
 import { authenticate, AuthRequest } from "../../middleware/auth";
 import { statsEtag } from "../../middleware/statsEtag";
-import { lodgingInsights, placeInsights, roadtripInsights } from "../../services/stats/insights";
+import {
+  lodgingInsights,
+  placeInsights,
+  roadtripInsights,
+  tourInsights,
+} from "../../services/stats/insights";
 
 const router = Router();
 router.use(authenticate);
@@ -45,6 +50,15 @@ router.get("/places", async (req: AuthRequest, res: Response, next: NextFunction
 router.get("/roadtrips", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     res.json((await roadtripInsights(req.userId!)).response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Day tours ride on the same beta switch as roadtrips (`useToursVisible`).
+router.get("/tours", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    res.json((await tourInsights(req.userId!)).response);
   } catch (error) {
     next(error);
   }

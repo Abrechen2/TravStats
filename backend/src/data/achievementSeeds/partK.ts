@@ -137,4 +137,43 @@ export const seedsPartK: AchievementDefinition[] = [
     requirementType: "roadtrip_tour_stations",
     points: 60,
   },
+  {
+    code: "TOUR_FIRST_STEPS",
+    name: "Erste Schritte",
+    description: "Die erste Tagestour abgeschlossen",
+    category: "explorer",
+    domain: "roadtrip",
+    icon: "👣",
+    tier: "bronze",
+    // threshold: proposal forgejo#264, owner to confirm
+    requirement: 1,
+    requirementType: "tour_count",
+    points: 10,
+  },
+  {
+    code: "TOUR_THREE_KINDS",
+    name: "Drei Arten unterwegs",
+    description: "Tagestouren mit drei verschiedenen Aktivitäten abgeschlossen",
+    category: "explorer",
+    domain: "roadtrip",
+    icon: "🚵",
+    tier: "silver",
+    // threshold: proposal forgejo#264, owner to confirm
+    requirement: 3,
+    requirementType: "tour_activities_unique",
+    points: 40,
+  },
+  {
+    code: "TOUR_ASCENT_1000",
+    name: "Höhen gesammelt",
+    description: "1.000 aufgezeichnete Höhenmeter im Aufstieg auf abgeschlossenen Touren",
+    category: "distance",
+    domain: "roadtrip",
+    icon: "⛰️",
+    tier: "silver",
+    // threshold: proposal forgejo#264, owner to confirm
+    requirement: 1000,
+    requirementType: "tour_ascent_m",
+    points: 50,
+  },
 ];

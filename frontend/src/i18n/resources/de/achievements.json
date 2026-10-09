@@ -61,7 +61,8 @@
       "km": "km",
       "hours": "Std.",
       "days": "Tage",
-      "nights": "Nächte"
+      "nights": "Nächte",
+      "metres": "Hm"
     },
     "evidence": {
       "trigger": "Die Einträge dahinter",
@@ -1327,6 +1328,18 @@
     "ROADTRIP_MUSCLE_POWER_3": {
       "name": "Mit Muskelkraft weiter",
       "description": "Von drei verschiedenen Roadtrip-Stationen aus Tagestouren unternommen"
+    },
+    "TOUR_FIRST_STEPS": {
+      "name": "Erste Schritte",
+      "description": "Die erste Tagestour abgeschlossen"
+    },
+    "TOUR_THREE_KINDS": {
+      "name": "Drei Arten unterwegs",
+      "description": "Tagestouren mit drei verschiedenen Aktivitäten abgeschlossen"
+    },
+    "TOUR_ASCENT_1000": {
+      "name": "Höhen gesammelt",
+      "description": "1.000 aufgezeichnete Höhenmeter im Aufstieg auf abgeschlossenen Touren"
     }
   },
   "header": {

@@ -274,6 +274,107 @@
           "exclusions": "Tour kilometres are never added to the driving, and a guided excursion is never a bus ride."
         }
       }
+    },
+    "tours": {
+      "title": "Day tours",
+      "loadFailed": "The tour insights could not be loaded.",
+      "lifetime": "across all years",
+      "noActivity": "no activity",
+      "activities": {
+        "title": "Completed tours",
+        "km": "Tour kilometres",
+        "ascent": "Climb from recordings",
+        "ascentValue": "{{m}} m climbed",
+        "row_one": "{{count}} tour · {{km}} km ({{kmTours}} with a distance) · {{ascent}} m climbed ({{ascentTours}} measured) · {{hours}} h moving ({{movingTours}} recorded)",
+        "row_other": "{{count}} tours · {{km}} km ({{kmTours}} with a distance) · {{ascent}} m climbed ({{ascentTours}} measured) · {{hours}} h moving ({{movingTours}} recorded)",
+        "empty": "Appears once a day tour is recorded or its day has passed.",
+        "help": {
+          "unit": "One completed day tour — hike, bike ride, guided excursion and any other activity.",
+          "time": "A tour is completed when it has a recording or a day before today at its start. It belongs to the year of its day, or without one to the year of its first recording.",
+          "source": "Your tours. Distance from the recording where there is one, else from the route; climb and time only from recordings.",
+          "coverage": "{{planned}} tours are still ahead, {{undated}} have neither a day nor a recording and do not count. {{partial}} recordings stopped at the import limit — their distance is a lower bound.",
+          "exclusions": "An unknown climb stays unknown and is never estimated from the route. Every figure says how many tours it rests on."
+        }
+      },
+      "moving": {
+        "title": "Moving and pauses",
+        "moving": "Moving time from recordings",
+        "hours": "{{h}} h moving",
+        "pause_one": "{{h}} h of pauses — from {{count}} of {{of}} tours",
+        "pause_other": "{{h}} h of pauses — from {{count}} of {{of}} tours",
+        "empty": "Appears once a recording with timestamps exists.",
+        "help": {
+          "unit": "Hours. Moving time is measured by the recording itself; a pause is the recorded duration minus the moving time.",
+          "time": "The recording's timestamps.",
+          "source": "Recordings of your tours (GPX, Dawarich, Strava).",
+          "coverage": "Only tours whose every recording carries times.",
+          "exclusions": "A planned start time or a bare total duration is not moving time and never counts here."
+        }
+      },
+      "records": {
+        "title": "Personal records per activity",
+        "value_one": "{{count}} activity",
+        "value_other": "{{count}} activities",
+        "longest": "{{activity}}: longest tour, {{km}} km ({{source}})",
+        "ascent": "{{activity}}: most climb, {{m}} m",
+        "highest": "{{activity}}: highest point, {{m}} m",
+        "source": {
+          "track": "recorded",
+          "route": "route"
+        },
+        "empty": "Appears with the first completed tour of known distance.",
+        "help": {
+          "unit": "Per activity the longest tour, the largest climb and the highest known position.",
+          "time": "Over all completed tours.",
+          "source": "Distance from a recording or the route (the source is named); climb and height only from recordings with an elevation profile.",
+          "coverage": "A tour without an elevation profile cannot hold a height record.",
+          "exclusions": "Planned tours and tours with neither a day nor a recording."
+        }
+      },
+      "rhythm": {
+        "title": "Rhythm and areas",
+        "value_one": "{{count}} country",
+        "value_other": "{{count}} countries",
+        "repeated": "Returned to: {{areas}}",
+        "month": {
+          "0": "January",
+          "1": "February",
+          "2": "March",
+          "3": "April",
+          "4": "May",
+          "5": "June",
+          "6": "July",
+          "7": "August",
+          "8": "September",
+          "9": "October",
+          "10": "November",
+          "11": "December"
+        },
+        "empty": "Appears with the first dated completed tour.",
+        "help": {
+          "unit": "Tours per year and month; an area is the country at the tour's starting point.",
+          "time": "The tour's day at its start.",
+          "source": "The coordinates of the starting point, read against country borders — never guessed from the tour's name.",
+          "coverage": "{{withoutArea}} tours have no starting point with coordinates and are in no area.",
+          "exclusions": "Planned tours. The list names, per country, the tour that first reached it."
+        }
+      },
+      "links": {
+        "title": "Links",
+        "value": "{{trip}} on a trip · {{roadtrip}} from a roadtrip · {{cruise}} on a cruise",
+        "description_one": "{{standalone}} tour stands on its own",
+        "description_other": "{{standalone}} tours stand on their own",
+        "excursions_one": "Guided excursions: {{count}} completed, {{km}} km, {{planned}} planned — as tours, never as bus rides or driven kilometres.",
+        "excursions_other": "Guided excursions: {{count}} completed, {{km}} km, {{planned}} planned — as tours, never as bus rides or driven kilometres.",
+        "empty": "Appears with the first completed tour.",
+        "help": {
+          "unit": "One completed tour; a tour can belong to a trip and a roadtrip at once.",
+          "time": "A tour is a cruise excursion when its trip holds a cruise and its day falls within it.",
+          "source": "A tour's trip, the roadtrip station it starts from, and the trip's cruises.",
+          "coverage": "Tours with neither a trip nor a station stand on their own.",
+          "exclusions": "Tour kilometres go into no driving or bus statistic; a guided excursion is not a bus ride."
+        }
+      }
     }
   },
   "strava": {

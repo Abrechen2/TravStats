@@ -61,7 +61,8 @@
       "km": "km",
       "hours": "h",
       "days": "days",
-      "nights": "nights"
+      "nights": "nights",
+      "metres": "m"
     },
     "evidence": {
       "trigger": "The entries behind it",
@@ -1327,6 +1328,18 @@
     "ROADTRIP_MUSCLE_POWER_3": {
       "name": "Under your own steam",
       "description": "Day tours from three different roadtrip stations"
+    },
+    "TOUR_FIRST_STEPS": {
+      "name": "First steps",
+      "description": "Completed your first day tour"
+    },
+    "TOUR_THREE_KINDS": {
+      "name": "Three ways out",
+      "description": "Completed day tours of three different activities"
+    },
+    "TOUR_ASCENT_1000": {
+      "name": "Height collected",
+      "description": "1,000 recorded metres of climb on completed tours"
     }
   },
   "header": {

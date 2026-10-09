@@ -84,6 +84,7 @@ export const ROADTRIP_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "records", label: t("roadtrips:stats.recordsLabel") },
   { key: "vehicles", label: t("roadtrips:stats.vehicles") },
   { key: "insights", label: t("stats:sections.insights") },
+  { key: "tours", label: t("roadtrips:stats.tours.title") },
 ];
 
 export const RAIL_SECTIONS = (t: Translate): SectionOption[] => [

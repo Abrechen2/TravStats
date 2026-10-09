@@ -2,7 +2,7 @@ import { AppError } from "../../middleware/errorHandler";
 import type { EvidenceScope } from "../../shared/evidence";
 import type { EvidenceEntry, EvidenceResponse } from "../../schemas/evidence";
 import { INSIGHT_MEASURES } from "../../shared/evidenceMeasuresInsights";
-import { lodgingInsights, placeInsights, roadtripInsights } from "../stats/insights";
+import { lodgingInsights, placeInsights, roadtripInsights, tourInsights } from "../stats/insights";
 import { itemsFor, type MeasureItem, type MeasureItems } from "../stats/insights/measureItems";
 import type { PagingParams } from "./paging";
 import { domainDistinctEvidence, domainSumEvidence, readYearScope } from "./domainMeasureResponse";
@@ -22,6 +22,7 @@ const LOADERS: Record<string, ItemLoader> = {
   lodging: async (userId) => (await lodgingInsights(userId)).items,
   places: async (userId) => (await placeInsights(userId)).items,
   roadtrips: async (userId) => (await roadtripInsights(userId)).items,
+  tours: async (userId) => (await tourInsights(userId)).items,
 };
 
 /** Which loader owns a key: the measure's domain prefix in the registry. */
@@ -39,6 +40,10 @@ const OWNER: Record<string, keyof typeof LOADERS> = {
   roadtripDrivenKm: "roadtrips",
   roadtripFerryKm: "roadtrips",
   roadtripRecordedNights: "roadtrips",
+  tourCompletedCount: "tours",
+  tourDistanceKm: "tours",
+  tourAscentM: "tours",
+  tourMovingMinutes: "tours",
 };
 
 function toEntry(item: MeasureItem, distinct: boolean): EvidenceEntry {

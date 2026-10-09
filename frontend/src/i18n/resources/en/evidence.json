@@ -95,7 +95,11 @@
     "cities_one": "city",
     "lists_one": "list",
     "rides_one": "ride",
-    "operators_one": "operator"
+    "operators_one": "operator",
+    "tours": "tours",
+    "tours_one": "tour",
+    "metres": "metres climbed",
+    "metres_one": "metre climbed"
   },
   "evidence.metric.flightCount": "Number of flights",
   "evidence.metric.flightTimeMinutes": "Total flight time",
@@ -224,5 +228,9 @@
   "evidence.metric.roadtripRecordedKm": "Roadtrip kilometres (recorded)",
   "evidence.metric.roadtripDrivenKm": "Road kilometres on roadtrips",
   "evidence.metric.roadtripFerryKm": "Ferry kilometres on roadtrips",
-  "evidence.metric.roadtripRecordedNights": "Roadtrip nights (recorded)"
+  "evidence.metric.roadtripRecordedNights": "Roadtrip nights (recorded)",
+  "evidence.metric.tourCompletedCount": "Completed day tours",
+  "evidence.metric.tourDistanceKm": "Tour kilometres",
+  "evidence.metric.tourAscentM": "Climb from recordings",
+  "evidence.metric.tourMovingMinutes": "Moving time from recordings"
 }

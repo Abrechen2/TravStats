@@ -174,3 +174,54 @@ export interface RoadtripInsights {
   };
   totals: MeasureTotals;
 }
+
+export interface Covered {
+  total: number;
+  /** How many tours the sum rests on — its coverage. */
+  tours: number;
+}
+
+export interface TourActivityFigures {
+  activity: string;
+  completed: number;
+  km: Covered;
+  ascentM: Covered;
+  movingSeconds: Covered;
+  pauseSeconds: Covered;
+}
+
+export interface TourRecord {
+  tourId: string;
+  name: string;
+  value: number;
+  source?: "track" | "route";
+}
+
+export interface TourInsights {
+  byActivity: TourActivityFigures[];
+  all: TourActivityFigures;
+  records: Array<{
+    activity: string;
+    longest: TourRecord | null;
+    mostAscent: TourRecord | null;
+    highest: TourRecord | null;
+  }>;
+  rhythm: {
+    byYear: Array<{ year: number; tours: number }>;
+    byMonth: number[];
+    firstAreas: Array<{ country: string; day: string | null; tourId: string; name: string }>;
+    repeatedAreas: Array<{ country: string; tours: number }>;
+    withoutArea: number;
+  };
+  links: {
+    onTrip: number;
+    fromRoadtrip: number;
+    duringCruise: number;
+    standalone: number;
+    excursions: { completed: number; km: number; planned: number };
+  };
+  planned: number;
+  undated: number;
+  partial: number;
+  totals: MeasureTotals;
+}

@@ -5,6 +5,8 @@ import type { PlaceInsightsResponse } from "../../../schemas/statsInsights/place
 import { loadPlaceInsightPlaces } from "./placeInsightData";
 import { computeRoadtripInsights, type RoadtripInsights } from "../../../utils/roadtripInsights";
 import { tourFacts, type TourFacts } from "../../../utils/tourInsights/tourFacts";
+import { computeTourInsights } from "../../../utils/tourInsights";
+import type { TourInsightsResponse } from "../../../schemas/statsInsights/tours";
 import type { RoadtripInsightsResponse } from "../../../schemas/statsInsights/roadtrips";
 import { getCountryResolver } from "../../geo/countryFromCoordinates";
 import { loadInsightRoadtrips } from "./roadtripInsightData";
@@ -59,4 +61,12 @@ export async function roadtripInsights(
   const { insights, items } = computeRoadtripInsights(roadtrips, tours, resolver, at);
   const { awards, ...view } = insights;
   return { response: { ...view, totals: totalsOf(items) }, items, awards };
+}
+
+export async function tourInsights(
+  userId: string,
+  at: Date = now()
+): Promise<{ response: TourInsightsResponse; items: MeasureItems }> {
+  const { insights, items } = computeTourInsights(await loadTourFacts(userId, at));
+  return { response: { ...insights, totals: totalsOf(items) }, items };
 }

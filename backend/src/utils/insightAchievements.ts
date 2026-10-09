@@ -1,6 +1,6 @@
 import type { Achievement } from "../prisma";
 import { now as clockNow } from "../shared/time/clock";
-import { lodgingInsights, placeInsights } from "../services/stats/insights";
+import { lodgingInsights, placeInsights, tourInsights } from "../services/stats/insights";
 
 /**
  * The Part K badges (forgejo#258/#259/#260/#264) — their measures and their
@@ -16,6 +16,9 @@ export interface InsightAchievementStats {
   placeRevisitGapYears: number;
   placeTripCategoriesMax: number;
   placeDocumentedVisits: number;
+  tourCount: number;
+  tourActivitiesUnique: number;
+  tourAscentM: number;
 }
 
 export const EMPTY_INSIGHT_STATS: InsightAchievementStats = {
@@ -25,15 +28,19 @@ export const EMPTY_INSIGHT_STATS: InsightAchievementStats = {
   placeRevisitGapYears: 0,
   placeTripCategoriesMax: 0,
   placeDocumentedVisits: 0,
+  tourCount: 0,
+  tourActivitiesUnique: 0,
+  tourAscentM: 0,
 };
 
 export async function calculateInsightAchievementStats(
   userId: string,
   at: Date = clockNow()
 ): Promise<InsightAchievementStats> {
-  const [lodging, places] = await Promise.all([
+  const [lodging, places, tours] = await Promise.all([
     lodgingInsights(userId, at).then((r) => r.response),
     placeInsights(userId, at).then((r) => r.response),
+    tourInsights(userId, at).then((r) => r.response),
   ]);
   return {
     lodgingTripTypesMax: lodging.tripBases.typesPerCompletedTripMax,
@@ -45,6 +52,12 @@ export async function calculateInsightAchievementStats(
     // photo — both are attached to the visit row itself, so the attribution
     // is explicit, never inferred from a trip's album.
     placeDocumentedVisits: places.documentation.withNoteAndPhoto,
+    tourCount: tours.all.completed,
+    // A tour with no activity recorded is not a kind of its own.
+    tourActivitiesUnique: tours.byActivity.filter((a) => a.activity !== "unknown").length,
+    // Only climbs a recording measured; an unknown climb stays unknown, never 0
+    // padded into the sum and never estimated from the route.
+    tourAscentM: tours.all.ascentM.total,
   };
 }
 
@@ -55,6 +68,9 @@ const MEASURE: Record<string, keyof InsightAchievementStats> = {
   place_revisit_gap_years: "placeRevisitGapYears",
   place_trip_categories_max: "placeTripCategoriesMax",
   place_documented_visits: "placeDocumentedVisits",
+  tour_count: "tourCount",
+  tour_activities_unique: "tourActivitiesUnique",
+  tour_ascent_m: "tourAscentM",
 };
 
 /** The badge's progress, or `null` when it is not a Part K badge. */
