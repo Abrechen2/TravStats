@@ -1,4 +1,4 @@
-import { toInstant } from "../../shared/time/instant";
+import { localDay, toInstant } from "../../shared/time/instant";
 import { fakeUtcToInstant, startOfDayAt } from "../../shared/time/legacyValues";
 import {
   TIME_PRECISIONS,
@@ -28,7 +28,7 @@ import type { FlightTimes } from "../../schemas/times";
  * |---|---|---|
  * | `UTC` | a real instant | that instant, precision as stored (minute) |
  * | `LEGACY_FAKE_UTC` | the airport's wall clock as if it were UTC | the wall clock read at the airport; a clock the zone skipped keeps its date only (`unknown`) |
- * | `DATE_ONLY` | a noon placeholder for a day | the day's start at the airport, precision `day` |
+ * | `DATE_ONLY` | a local wall clock for a day (noon from the form, midnight from the cruise import), written through the airport's zone | the start of that local day at the airport, precision `day` |
  * | `UNKNOWN` | never classified | the stored value, precision `unknown` (date only) |
  */
 
@@ -78,7 +78,12 @@ function endTime(
     return serializeTime(placed, zone, "unknown", source);
   }
   if (semantics === "DATE_ONLY") {
-    const day = time.toISOString().slice(0, 10);
+    // The local day of the stored instant in its zone: a date-only flight is
+    // WRITTEN as a local wall clock through that zone (the form's noon, the
+    // cruise import's midnight), so its UTC date is the day before east of UTC
+    // for a midnight write and at UTC+13/+14 for a noon one (forgejo#273,
+    // `shared/time/dateOnlyFlights.json`). No zone: the stored date, labelled.
+    const day = zone ? localDay(time, zone) : time.toISOString().slice(0, 10);
     return zone
       ? serializeTime(startOfDayAt(day, zone), zone, "day", source)
       : serializeTime(new Date(`${day}T00:00:00.000Z`), null, "day");
