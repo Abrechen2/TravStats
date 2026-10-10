@@ -1,4 +1,5 @@
 import { EVIDENCE_MEASURES } from "../../shared/evidenceMeasures";
+import { badgeEvidenceKey } from "../../shared/badgeEvidence";
 
 /**
  * Which achievement rules stand on a statistic the evidence panel can list.
@@ -33,88 +34,17 @@ import { EVIDENCE_MEASURES } from "../../shared/evidenceMeasures";
  *    (`ocean_crossing`, which is 0 or 1) are absent although the matching
  *    counters are served.
  *
- * A rule that is not here renders an honest sentence in the dialog instead of
- * a trigger. Adding one is a two-line change once its measure is served.
+ * Every other rule opens its OWN proof since forgejo#265
+ * (`shared/badgeEvidence.ts`): the entries the badge's progress stands on,
+ * measured by the badge's own fold. A rule with neither renders an honest
+ * sentence in the dialog — and the backend's coverage guard fails for a seed
+ * rule that has neither unless it is listed with its reason.
  */
-export const ACHIEVEMENT_EVIDENCE_KEY: Record<string, string> = {
-  // Flights — `utils/achievementChecks.ts` reads the same counters the
-  // corresponding resolvers do.
-  flights_count: "flightCount",
-  distance_km: "distanceKmTotal",
-  airlines: "airlineCount",
-  airports: "airportsVisitedCount",
-  continents: "continentsVisitedCount",
-  // `countries` is ABSENT, and that is the second condition above doing its
-  // job. The rule folds each airport's country through `toCountryCode` and
-  // drops the catalogue's placeholder codes ("ZZ", "XZ" -- they name no
-  // country); `resolveFlightCountriesVisitedCount` counts the catalogue's raw
-  // `country` strings. The two therefore disagree on any account whose
-  // catalogue carries a placeholder or two spellings of one country, and the
-  // panel would report that disagreement as "the figure has since been
-  // recomputed" -- an alarm about nothing, on the reader's own screen
-  // (review, 2026-09-19). Mapping it needs the two to be reconciled first,
-  // which is a change to the RESOLVER and not a line in this table.
-
-  // Cruises
-  cruises_count: "cruiseCount",
-  cruise_distance_km: "cruiseDistanceKmTotal",
-  cruise_ports_unique: "cruisePortsUniqueCount",
-  cruise_ships_unique: "cruiseShipsUniqueCount",
-  cruise_lines_unique: "cruiseLinesUniqueCount",
-  sea_days: "cruiseSeaDaysTotal",
-
-  // Lodging
-  lodgings_count: "lodgingsUniqueCount",
-  lodging_stays_count: "lodgingStaysCount",
-  lodging_nights: "lodgingNightsTotal",
-  lodging_countries: "lodgingCountriesCount",
-  lodging_continents: "lodgingContinentsCount",
-  lodging_award_nights: "lodgingAwardNightsCount",
-  lodging_one_night_stays: "lodgingOneNightStayCount",
-  lodging_perfect_stays: "lodgingPerfectStayCount",
-
-  // Places
-  places_count: "placesVisitedCount",
-  place_visits_count: "placeVisitCount",
-  place_countries: "placeCountriesCount",
-  place_cities: "placeCitiesCount",
-
-  // Day tours (forgejo#264) — the badge reads the same completed-tour count
-  // the tour tab folds (`services/stats/insights`). The climb is absent: the
-  // badge floors metres, the panel rounds them, and a one-metre difference
-  // would read as "recomputed".
-  tour_count: "tourCompletedCount",
-
-  // Rail (2.7) — the badges and these measures fold the same rides through
-  // `utils/railAchievements.ts`, so progress and panel are one number.
-  // `rail_longest_km` is absent: the longest ride is an extremum, which
-  // release 1 does not serve; the rail tab names that ride as its record.
-  rail_count: "railRideCount",
-  rail_km: "railDistanceKmTotal",
-  rail_countries: "railCountriesCount",
-  rail_operators: "railOperatorsCount",
-  rail_night_trains: "railNightTrainCount",
-  rail_high_speed: "railHighSpeedRideCount",
-  rail_cross_border: "railCrossBorderRideCount",
-  // forgejo#261: the journeys behind "Gut umgestiegen", counted by the same
-  // fold. The station return and the year with the most new connections are
-  // extrema — release 1 serves neither, so their dialogs say so.
-  rail_documented_transfer_journeys: "railDocumentedTransferJourneyCount",
-
-  // Rental and bus (forgejo#262, #263) — the badge folds and these measures
-  // read the same rows (`utils/rentalAchievements.ts`, `services/bus/busStats.ts`),
-  // so a badge's progress and its list are one number (forgejo#265).
-  rental_count: "rentalCount",
-  rental_one_way: "rentalOneWayCount",
-  rental_odometer_documented: "rentalOdometerDocumentedCount",
-  bus_count: "busRideCount",
-  bus_night_rides: "busNightRideCount",
-  bus_terminals: "busTerminalsCount",
-};
+export { BADGE_MEASURE_KEYS as ACHIEVEMENT_EVIDENCE_KEY } from "../../shared/badgeEvidence";
 
 /** The served measure behind this rule, or null when nobody can list it yet. */
 export function evidenceKeyForRule(requirementType: string): string | null {
-  const key = ACHIEVEMENT_EVIDENCE_KEY[requirementType];
+  const key = badgeEvidenceKey(requirementType);
   if (!key) return null;
   // Belt and braces for a measure that is later demoted to release 2: the
   // dialog then falls back to the honest sentence rather than a dead trigger.

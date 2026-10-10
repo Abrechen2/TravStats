@@ -26,6 +26,9 @@ import {
   tourInsights,
 } from "../services/stats/insights";
 import type { TourFacts } from "./tourInsights/tourFacts";
+import type { LodgingInsightsResponse } from "../schemas/statsInsights/lodging";
+import type { PlaceInsightsResponse } from "../schemas/statsInsights/places";
+import type { TourInsightsResponse } from "../schemas/statsInsights/tours";
 import type { CruiseData } from "./cruiseStats";
 import { SKIP, settleBadgeSource, type BadgeVerdict } from "./badgeSource";
 import {
@@ -243,24 +246,63 @@ export async function calculateInsightBadgeStats(
     insightStats: {
       ...flights,
       ...cruises,
-      lodgingTripTypesMax: lodging?.tripBases.typesPerCompletedTripMax ?? null,
-      lodgingSameHouseYears: lodging?.revisits.sameHouseYearsMax ?? null,
-      lodgingMonthsInYear: lodging?.calendar.monthsInYearMax ?? null,
-      placeRevisitGapYears: places?.revisits.longestGapYears ?? null,
-      placeTripCategoriesMax: places?.diversity.tripCategoriesMax ?? null,
-      // A visit "documented" for the badge carries its OWN note and its OWN
-      // photo — both are attached to the visit row itself, so the attribution
-      // is explicit, never inferred from a trip's album.
-      placeDocumentedVisits: places?.documentation.withNoteAndPhoto ?? null,
-      tourCount: tourView?.all.completed ?? null,
-      // A tour with no activity recorded is not a kind of its own.
-      tourActivitiesUnique: tourView
-        ? tourView.byActivity.filter((a) => a.activity !== "unknown").length
-        : null,
-      // Only climbs a recording measured; an unknown climb stays unknown, never
-      // estimated from the route.
-      tourAscentM: tourView?.all.ascentM.total ?? null,
+      ...lodgingBadgeFields(lodging),
+      ...placeBadgeFields(places),
+      ...tourBadgeFields(tourView),
     },
+  };
+}
+
+type LodgingView = Pick<LodgingInsightsResponse, "tripBases" | "revisits" | "calendar">;
+type PlaceView = Pick<PlaceInsightsResponse, "revisits" | "diversity" | "documentation">;
+type TourView = Pick<TourInsightsResponse, "all" | "byActivity">;
+
+/**
+ * The badge measures read off each statistics view — one home for the
+ * badge check and for the badge evidence (`services/evidence/badges/`),
+ * which folds subsets of the same rows. A null view = the source failed.
+ */
+export function lodgingBadgeFields(
+  lodging: LodgingView | null
+): Pick<
+  InsightAchievementStats,
+  "lodgingTripTypesMax" | "lodgingSameHouseYears" | "lodgingMonthsInYear"
+> {
+  return {
+    lodgingTripTypesMax: lodging?.tripBases.typesPerCompletedTripMax ?? null,
+    lodgingSameHouseYears: lodging?.revisits.sameHouseYearsMax ?? null,
+    lodgingMonthsInYear: lodging?.calendar.monthsInYearMax ?? null,
+  };
+}
+
+export function placeBadgeFields(
+  places: PlaceView | null
+): Pick<
+  InsightAchievementStats,
+  "placeRevisitGapYears" | "placeTripCategoriesMax" | "placeDocumentedVisits"
+> {
+  return {
+    placeRevisitGapYears: places?.revisits.longestGapYears ?? null,
+    placeTripCategoriesMax: places?.diversity.tripCategoriesMax ?? null,
+    // A visit "documented" for the badge carries its OWN note and its OWN
+    // photo — both are attached to the visit row itself, so the attribution
+    // is explicit, never inferred from a trip's album.
+    placeDocumentedVisits: places?.documentation.withNoteAndPhoto ?? null,
+  };
+}
+
+export function tourBadgeFields(
+  tourView: TourView | null
+): Pick<InsightAchievementStats, "tourCount" | "tourActivitiesUnique" | "tourAscentM"> {
+  return {
+    tourCount: tourView?.all.completed ?? null,
+    // A tour with no activity recorded is not a kind of its own.
+    tourActivitiesUnique: tourView
+      ? tourView.byActivity.filter((a) => a.activity !== "unknown").length
+      : null,
+    // Only climbs a recording measured; an unknown climb stays unknown, never
+    // estimated from the route.
+    tourAscentM: tourView?.all.ascentM.total ?? null,
   };
 }
 

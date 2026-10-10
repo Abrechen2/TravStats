@@ -151,6 +151,7 @@ import {
 } from "./metricEvidenceRail";
 import { WRAPPED_RESOLVERS } from "./metricEvidenceWrapped";
 import { DOMAIN_RECORD_RESOLVERS } from "./metricEvidenceDomainRecords";
+import { BADGE_RESOLVERS } from "./badges/badgeEvidence";
 import {
   resolvePassportCountryCount,
   resolvePassportContinentCount,
@@ -347,6 +348,8 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   // The year in review's chapters and the overview's records (forgejo#265).
   ...WRAPPED_RESOLVERS,
   ...DOMAIN_RECORD_RESOLVERS,
+  // Every badge that opens its own proof (forgejo#265).
+  ...BADGE_RESOLVERS,
 };
 
 /**

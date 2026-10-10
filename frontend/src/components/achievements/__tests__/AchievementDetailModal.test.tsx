@@ -7,6 +7,7 @@ import type { ReactElement } from "react";
 import AchievementDetailModal from "../AchievementDetailModal";
 import { ACHIEVEMENT_EVIDENCE_KEY } from "../achievementEvidenceKey";
 import { EVIDENCE_MEASURES } from "../../../shared/evidenceMeasures";
+import { useEvidenceOpenStore } from "../../evidence/evidenceOpenStore";
 import type { Achievement } from "../../../types";
 
 /**
@@ -202,10 +203,43 @@ describe("AchievementDetailModal", () => {
       expect(screen.queryByTestId("achievement-detail-no-evidence")).not.toBeInTheDocument();
     });
 
-    it("says there is no list yet for a rule with no served statistic", () => {
+    // forgejo#265: a rule no statistic lists opens the badge's own proof.
+    it("opens the badge's own proof for a rule no statistic lists", async () => {
       renderModal(
         <AchievementDetailModal
-          achievement={{ ...base, requirementType: "pi_day_flights", isUnlocked: false }}
+          achievement={{
+            ...base,
+            requirementType: "pi_day_flights",
+            isUnlocked: false,
+            progress: 1,
+          }}
+          onClose={() => {}}
+        />
+      );
+      await userEvent.click(
+        screen.getByRole("button", { name: "achievements:progress.evidence.trigger" })
+      );
+      expect(useEvidenceOpenStore.getState().renderedValue).toBe(1);
+      expect(screen.queryByTestId("achievement-detail-no-evidence")).not.toBeInTheDocument();
+    });
+
+    it("compares nothing for a held badge — it stores its requirement, not the live figure", async () => {
+      renderModal(
+        <AchievementDetailModal
+          achievement={{ ...base, isUnlocked: true, progress: base.requirement }}
+          onClose={() => {}}
+        />
+      );
+      await userEvent.click(
+        screen.getByRole("button", { name: "achievements:progress.evidence.trigger" })
+      );
+      expect(useEvidenceOpenStore.getState().renderedValue).toBeNull();
+    });
+
+    it("says there is no list for a rule nothing answers", () => {
+      renderModal(
+        <AchievementDetailModal
+          achievement={{ ...base, requirementType: "not_a_rule", isUnlocked: false }}
           onClose={() => {}}
         />
       );
@@ -267,7 +301,8 @@ describe("the rules this table deliberately leaves out", () => {
     expect(ACHIEVEMENT_EVIDENCE_KEY).not.toHaveProperty("countries");
   });
 
-  it("renders the honest sentence for a countries achievement", () => {
+  // forgejo#265: it opens its own proof instead — the passport's records.
+  it("opens the country badge's own proof", () => {
     renderModal(
       <AchievementDetailModal
         achievement={{
@@ -280,9 +315,9 @@ describe("the rules this table deliberately leaves out", () => {
       />
     );
 
-    expect(screen.getByTestId("achievement-detail-no-evidence")).toBeInTheDocument();
+    expect(screen.queryByTestId("achievement-detail-no-evidence")).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "achievements:progress.evidence.trigger" })
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: "achievements:progress.evidence.trigger" })
+    ).toBeInTheDocument();
   });
 });

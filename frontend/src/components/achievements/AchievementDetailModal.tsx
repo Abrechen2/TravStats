@@ -188,7 +188,10 @@ export default function AchievementDetailModal({
             <EvidenceTrigger
               kind="metric"
               evidenceKey={evidenceKey}
-              renderedValue={achievement.progress ?? null}
+              // A held badge stores its requirement, not the live figure, so
+              // there is nothing to compare the panel's number with: the panel
+              // would call the difference "recomputed" (forgejo#265).
+              renderedValue={achievement.isUnlocked ? null : (achievement.progress ?? null)}
               label={t("achievements:progress.evidence.trigger")}
               className="text-sm underline"
               style={{ color: "var(--accent)" }}

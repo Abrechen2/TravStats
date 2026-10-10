@@ -189,7 +189,7 @@ interface PassportEvidenceIndex {
   trackCountries: Set<string>;
 }
 
-async function loadPassportEvidenceIndex(userId: string): Promise<PassportEvidenceIndex> {
+export async function loadPassportEvidenceIndex(userId: string): Promise<PassportEvidenceIndex> {
   const [passport, inputs] = await Promise.all([
     loadPassport(userId),
     loadCountryDetailInputs(userId),
@@ -253,7 +253,7 @@ function requireAllTime(scope: EvidenceScope, key: string): void {
  * disagreement between the passport and its drill-down, and is reported as
  * `notPerEntry` rather than hidden inside a row that does not prove it.
  */
-function residual(
+export function residual(
   expected: ReadonlySet<string>,
   credited: ReadonlySet<string>,
   isLocationHistory: (unit: string) => boolean
@@ -267,7 +267,7 @@ function residual(
   ];
 }
 
-function distinctResponse(
+export function distinctResponse(
   key: string,
   unit: string,
   value: number,

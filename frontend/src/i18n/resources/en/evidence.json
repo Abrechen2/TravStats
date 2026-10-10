@@ -311,5 +311,6 @@
   "evidence.metric.recordLongestRailRide": "Longest train ride (record)",
   "evidence.metric.recordLongestRental": "Longest rental (record)",
   "evidence.metric.recordLongestBusRide": "Longest bus ride (record)",
-  "evidence.metric.travelAccountTripDaysTotal": "Days of the dated trips"
+  "evidence.metric.travelAccountTripDaysTotal": "Days of the dated trips",
+  "evidence.badge.proof": "Evidence for this badge"
 }

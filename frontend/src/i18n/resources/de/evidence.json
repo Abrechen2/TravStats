@@ -311,5 +311,6 @@
   "evidence.metric.recordLongestRailRide": "Längste Bahnfahrt (Rekord)",
   "evidence.metric.recordLongestRental": "Längste Miete (Rekord)",
   "evidence.metric.recordLongestBusRide": "Längste Busfahrt (Rekord)",
-  "evidence.metric.travelAccountTripDaysTotal": "Reisetage der Reisen mit Datum"
+  "evidence.metric.travelAccountTripDaysTotal": "Reisetage der Reisen mit Datum",
+  "evidence.badge.proof": "Belege für diese Auszeichnung"
 }

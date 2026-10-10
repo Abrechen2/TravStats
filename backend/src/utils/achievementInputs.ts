@@ -117,6 +117,10 @@ export async function loadCoreInputs(userId: string) {
     prisma.trip.findMany({
       where: { userId },
       select: {
+        // Identity for the badge evidence; the measures read the rest.
+        id: true,
+        name: true,
+        startDate: true,
         flights: { select: { status: true } },
         cruises: { select: { status: true } },
         lodgingStays: { select: { status: true, checkIn: true, checkOut: true } },
@@ -129,6 +133,9 @@ export async function loadCoreInputs(userId: string) {
     prisma.place.findMany({
       where: { userId },
       select: {
+        // Identity for the badge evidence; the measures read the rest.
+        id: true,
+        name: true,
         visited: true,
         category: true,
         isoCountryCode: true,
