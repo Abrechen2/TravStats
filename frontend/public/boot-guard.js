@@ -53,7 +53,7 @@
         var lang = parsed && parsed.state && parsed.state.display && parsed.state.display.language;
         if (lang === "de" || lang === "en") return lang;
       }
-    } catch (e) {
+    } catch (_e) {
       // Unreadable storage: fall through to the browser's language.
     }
     var nav = (win.navigator && win.navigator.language) || "";
@@ -77,7 +77,7 @@
       storage.setItem(STALE_RELOAD_KEY, String(now));
       win.location.replace(cacheBustedUrl(now));
       return true;
-    } catch (e) {
+    } catch (_e) {
       // Without storage nothing could stop a loop: never reload automatically.
       return false;
     }
@@ -114,7 +114,7 @@
       var now = Date.now();
       try {
         win.sessionStorage.setItem(STALE_RELOAD_KEY, String(now));
-      } catch (e) {
+      } catch (_e) {
         // The reload still happens.
       }
       win.location.replace(cacheBustedUrl(now));
@@ -130,7 +130,7 @@
   function isOwnBundleFailure(target) {
     if (!target || !target.tagName) return false;
     var tag = String(target.tagName).toUpperCase();
-    var url = "";
+    var url;
     if (tag === "SCRIPT") url = target.src;
     else if (tag === "LINK") {
       var rel = String(target.rel || "").toLowerCase();
@@ -140,7 +140,7 @@
     if (!url) return false;
     try {
       return new win.URL(url, win.location.href).origin === win.location.origin;
-    } catch (e) {
+    } catch (_e) {
       return false;
     }
   }

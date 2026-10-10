@@ -15,7 +15,12 @@ import { join } from "path";
  * generator, or disappears, fails the test too — a source-scanning guard
  * with a stale allow-list is a guard that has stopped biting.
  */
-const PRE_AUTH_LIMITERS = ["authLimiter", "passwordResetLimiter", "pairingClaimLimiter"];
+const PRE_AUTH_LIMITERS = [
+  "authLimiter",
+  "passwordResetLimiter",
+  "passwordResetCheckLimiter",
+  "pairingClaimLimiter",
+];
 
 const source = readFileSync(join(__dirname, "..", "rateLimit.ts"), "utf8");
 

@@ -147,11 +147,15 @@ function scanSource(source: string, fileName = "x.tsx"): Finding {
 
 const frozen = baseline.titleOnly as Record<string, { count: number; why: string }>;
 
+// Parsing every component once is the expensive part — under coverage
+// instrumentation one pass took longer than vitest's 5 s default, so the tree is
+// scanned once at collection time and every check below reads the same result.
+const scanned = sourceFiles().map((file) => ({
+  name: rel(file),
+  ...scanSource(readFileSync(file, "utf8"), file),
+}));
+
 describe("warden: help is not hidden in a hover title", () => {
-  const scanned = sourceFiles().map((file) => ({
-    name: rel(file),
-    ...scanSource(readFileSync(file, "utf8"), file),
-  }));
   const titled = Object.fromEntries(
     scanned.filter((f) => f.titles > 0).map((f) => [f.name, f.titles])
   );
@@ -195,16 +199,14 @@ describe("warden: a help button is not part of a field's name", () => {
   // announced as "Preis Hilfe anzeigen", and with a named help "Preis Hilfe
   // zu Preis". The help goes beside the label, never in it.
   it("puts no HelpIcon or Toggletip inside a <label>", () => {
-    const nested = sourceFiles()
-      .map((file) => ({ name: rel(file), ...scanSource(readFileSync(file, "utf8"), file) }))
+    const nested = scanned
       .filter((f) => f.helpInLabel > 0)
       .map((f) => `${f.name}: ${f.helpInLabel}`);
     expect(nested).toEqual([]);
   });
 
   it("puts no HelpIcon or Toggletip inside a link or a button", () => {
-    const nested = sourceFiles()
-      .map((file) => ({ name: rel(file), ...scanSource(readFileSync(file, "utf8"), file) }))
+    const nested = scanned
       .filter((f) => f.helpInControl > 0)
       .map((f) => `${f.name}: ${f.helpInControl}`);
     expect(nested, "a button inside a link or a button - say it as text instead").toEqual([]);
