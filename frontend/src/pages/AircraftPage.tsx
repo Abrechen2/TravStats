@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatNumber } from "../lib/units";
 import { Link, useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import { statsApi } from "../lib/api";
@@ -64,7 +65,7 @@ export default function AircraftPage(): JSX.Element {
                 <Stat label={t("aircraft:stats.flights")} value={profile.flightCount.toString()} />
                 <Stat
                   label={t("aircraft:stats.distance")}
-                  value={`${Math.round(profile.totalDistanceKm).toLocaleString()} km`}
+                  value={`${formatNumber(Math.round(profile.totalDistanceKm), undefined, i18n.language)} km`}
                 />
                 <Stat
                   label={t("aircraft:stats.airports")}
@@ -100,7 +101,7 @@ export default function AircraftPage(): JSX.Element {
                           {flight.depIata || "?"} → {flight.arrIata || "?"}
                         </td>
                         <td className="py-2 pr-4 text-right">
-                          {Math.round(flight.distanceKm).toLocaleString()} km
+                          {formatNumber(Math.round(flight.distanceKm), undefined, i18n.language)} km
                         </td>
                       </tr>
                     ))}

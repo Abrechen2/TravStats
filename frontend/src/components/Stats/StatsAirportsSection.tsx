@@ -1,4 +1,5 @@
 import type { AirportStats } from "../../types";
+import { formatNumber } from "../../lib/units";
 import { useTranslation } from "../../hooks/useTranslation";
 import { continentI18nKey } from "../../lib/continentLabel";
 import StatCard from "./StatCard";
@@ -225,7 +226,7 @@ export default function StatsAirportsSection({
             valueSize="md"
             value={farthestFromHome.code}
             description={t("stats:airportStats.farthestFromHomeDesc", {
-              distance: farthestFromHome.distanceKm.toLocaleString(),
+              distance: formatNumber(farthestFromHome.distanceKm, undefined, i18n.language),
               home: farthestFromHome.homeCode,
             })}
             footnote={farthestFromHome.name || undefined}

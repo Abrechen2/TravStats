@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { appLocale } from "../../lib/units";
 import type { JSX } from "react";
 import { pushRelayApi, type PushRelayState } from "../../lib/api";
 import { logger } from "../../lib/logger";
@@ -9,7 +10,7 @@ import { todayZoneNow } from "../../hooks/useTodayZone";
 const PRIVACY_URL = "https://travstats.de/datenschutz";
 
 function formatTime(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, { timeZone: todayZoneNow() });
+  return new Date(iso).toLocaleString(appLocale(), { timeZone: todayZoneNow() });
 }
 
 export default function PushSettings(): JSX.Element {

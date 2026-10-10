@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { formatNumber } from "../../../lib/units";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Layer } from "@deck.gl/core";
@@ -264,7 +265,7 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
                   >
                     <span style={{ flex: 1 }}>{tour.tripName}</span>
                     <span>{t("trips:tours.stopCount", { count: tour.stopCount })}</span>
-                    <span>{Math.round(tour.distanceKm).toLocaleString()} km</span>
+                    <span>{formatNumber(Math.round(tour.distanceKm))} km</span>
                   </div>
                 </div>
               ))
