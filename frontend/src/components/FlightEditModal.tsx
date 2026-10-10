@@ -228,7 +228,13 @@ export default function FlightEditModal({
     folds
   );
   const [initialSnapshot] = useState(snapshot);
-  const { dirty, markSaved } = useDirtyGuard(initialSnapshot, snapshot, { open: isOpen });
+  // The check-in opening (forgejo#285) lives beside the snapshot, not in it,
+  // but a changed one is still a change worth asking about.
+  const { dirty, markSaved } = useDirtyGuard(
+    { form: initialSnapshot, checkIn: openedCheckIn },
+    { form: snapshot, checkIn },
+    { open: isOpen }
+  );
 
   /**
    * Pattern: "enabled save, a refused click focuses the first gap" — the
