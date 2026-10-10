@@ -954,7 +954,7 @@
         "time": "Jahr: Startjahr. Ein Tag ist ein Reisetag im Reiseverlauf, kein Kalenderdatum. Die Jahrestabelle zeigt immer alle Jahre; ein gewähltes Jahr schränkt die Liste je Kreuzfahrt ein.",
         "source": "Die Einträge im Reiseverlauf gefahrener Kreuzfahrten (abgeschlossen oder nachgetragen) – Seetage und Hafenstopps, auch an nicht erkannten Häfen; für die Tage ohne Eintrag zusätzlich Start- und Enddatum.",
         "coverage": "Tage ohne Eintrag werden genannt, nicht geraten: die Tage zwischen Start- und Enddatum, die der Reiseverlauf nicht nennt – ohne beide Daten bleibt das offen. Kreuzfahrten ohne Startdatum fehlen in der Jahrestabelle. Tippe auf die Hafentage eines Jahres für die Liste.",
-        "exclusions": "Gebuchte und stornierte Kreuzfahrten zählen nicht. Ein- und Ausschiffungshafen zählen nur, wenn sie als Hafenstopp im Reiseverlauf stehen."
+        "exclusions": "Gebuchte und stornierte Kreuzfahrten zählen nicht. Ein- und Ausschiffungshafen zählen nur, wenn sie als Hafenstopp im Reiseverlauf stehen. Auf einer Flusskreuzfahrt ist ein Tag ohne Hafen kein Seetag, sondern ein Flusstag: er steht im Reiseverlauf (zählt also nicht als Tag ohne Eintrag), ist aber weder See- noch Hafentag und bleibt außerhalb des Reisetyps – dieselbe Regel wie bei den Seetagen oben und den Auszeichnungen."
       },
       "cruiseExcursions": {
         "unit": "Dokumentierte Landausflüge je Kreuzfahrt. Ein Ausflug ist ein Hafenstopp mit Ausflugsnotiz oder mit einer Tour, die du am selben Ortstag erfasst hast und die höchstens 100 km vom Hafen beginnt (erster Punkt der Tour, sonst Beginn der Aufzeichnung) – eine feste Verknüpfung gibt es nicht, deshalb diese Regel. Gezählt werden Hafenstopps; eine Tour gehört höchstens zu einem, dem nächstgelegenen des Tages.",
@@ -1020,7 +1020,7 @@
         "longest": "Längster Aufenthalt",
         "shortest": "Kürzester Aufenthalt",
         "empty": "Noch keine Liegezeit messbar. Messbar wird eine, sobald bei einem Hafenstopp Ankunft und Abfahrt minutengenau eingetragen sind.",
-        "coverage": "{{measured}} von {{calls}} Hafenstopps gemessen; {{missing}} ohne minutengenaue Ankunft und Abfahrt, {{inconsistent}} mit Abfahrt vor der Ankunft – sie zählen nicht im Schnitt."
+        "coverage": "{{measured}} von {{calls}} Hafenstopps gemessen; {{missing}} ohne minutengenaue Ankunft und Abfahrt, {{inconsistent}} mit Abfahrt zur oder vor der Ankunft – sie zählen nicht im Schnitt."
       },
       "days": {
         "title": "Seetage und Hafentage",

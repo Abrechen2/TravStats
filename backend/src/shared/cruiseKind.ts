@@ -35,3 +35,15 @@ export function resolveCruiseKind(
 export function isRiverCruise(cruise: { kind?: string | null }): boolean {
   return cruise.kind === "river";
 }
+
+/**
+ * Whether a stop is a SEA DAY — the one rule every cruise figure asks (the
+ * rollup's sea days and streak, the badges, the day pattern of the insights).
+ * A stop marked at sea is one only on an ocean cruise: a river cruise's day
+ * between ports is spent on the river, and calling it a sea day would say
+ * something that never happened (#359). It is not a port day either — it is
+ * neither, and each caller says so in its own terms.
+ */
+export function isSeaDay(cruise: { kind?: string | null }, stop: { isAtSea: boolean }): boolean {
+  return stop.isAtSea && !isRiverCruise(cruise);
+}

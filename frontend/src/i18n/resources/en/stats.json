@@ -954,7 +954,7 @@
         "time": "Year: the start year. A day is a day of the itinerary, not a calendar date. The year table always shows every year; a selected year narrows the per-cruise list.",
         "source": "The itinerary entries of sailed cruises (completed or recorded afterwards) – sea days and calls, at unrecognised ports too; for the days without an entry, also the start and end date.",
         "coverage": "Days without an entry are named, not guessed: the days between start and end date the itinerary does not name – without both dates that stays open. Cruises without a start date are missing from the year table. Tap a year's port days for the list.",
-        "exclusions": "Booked and cancelled cruises do not count. The embarkation and disembarkation ports count only when they are listed as a call in the itinerary."
+        "exclusions": "Booked and cancelled cruises do not count. The embarkation and disembarkation ports count only when they are listed as a call in the itinerary. On a river cruise a day without a port is no sea day but a river day: it is in the itinerary (so not a day without an entry), yet neither a sea nor a port day, and outside the cruise type – the same rule as the sea days above and the badges."
       },
       "cruiseExcursions": {
         "unit": "Documented shore excursions per cruise. An excursion is a call with an excursion note, or with a tour you recorded on the same local day that starts at most 100 km from the port (the tour's first point, else the start of its recording) – there is no stored link, hence this rule. Calls are counted; a tour belongs to at most one, the nearest that day.",
@@ -1020,7 +1020,7 @@
         "longest": "Longest call",
         "shortest": "Shortest call",
         "empty": "No time in port can be measured yet. It appears once a call has its arrival and departure recorded to the minute.",
-        "coverage": "{{measured}} of {{calls}} calls measured; {{missing}} without a minute-precise arrival and departure, {{inconsistent}} leaving before arriving – they are not in the average."
+        "coverage": "{{measured}} of {{calls}} calls measured; {{missing}} without a minute-precise arrival and departure, {{inconsistent}} departing at or before the arrival – they are not in the average."
       },
       "days": {
         "title": "Sea days and port days",
