@@ -230,6 +230,13 @@ const importEnvelope = z.object({
       .describe(
         "What the document did; `stale`: an older mail than the newest applied, nothing overwritten"
       ),
+    filledDeadlines: z
+      .array(z.enum(["freeCancellationUntil", "paymentDueOn"]))
+      .optional()
+      .describe(
+        "Deadlines this mail filled on a stored booking that held none (forgejo#285). A " +
+          "deadline already on the row is never overwritten by a mail."
+      ),
   }),
 });
 
