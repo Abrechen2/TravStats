@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import type { ReactNode } from "react";
 import { useDashboardDomainFilter } from "../useDashboardDomainFilter";
@@ -121,5 +121,38 @@ describe("useDashboardDomainFilter", () => {
     });
     expect(result.current.isEmpty).toBe(true);
     expect(result.current.visibleCount).toBe(0);
+  });
+
+  // forgejo#180: bus beside rail, behind its own beta gate and the user's domain.
+  it("bus sits beside rail once its gate and the domain are on, with an unknown count", () => {
+    useSettingsStore.setState({
+      enabledDomains: ["flight", "rail", "bus"],
+      betaFeaturesEnabled: true,
+    });
+    const { result } = renderHook(() => useDashboardDomainFilter(0), {
+      wrapper: wrapper(["/dashboard"]),
+    });
+    expect(result.current.rows.map((r) => r.key)).toEqual(["flight", "tour", "rail", "bus"]);
+    const bus = result.current.rows.find((r) => r.key === "bus");
+    expect(bus?.count).toBeNull();
+    expect(bus?.beta).toBe(true);
+  });
+
+  it("bus stays out while its beta gate is closed", () => {
+    useSettingsStore.setState({ enabledDomains: ["flight", "bus"], betaFeaturesEnabled: false });
+    const { result } = renderHook(() => useDashboardDomainFilter(0), {
+      wrapper: wrapper(["/dashboard"]),
+    });
+    expect(result.current.rows.map((r) => r.key)).not.toContain("bus");
+  });
+
+  it("isolating bus keeps the reader on 'Alle' with only bus visible — it has no view of its own", () => {
+    useSettingsStore.setState({ enabledDomains: ["flight", "bus"], betaFeaturesEnabled: true });
+    const { result } = renderHook(() => useDashboardDomainFilter(0), {
+      wrapper: wrapper(["/dashboard"]),
+    });
+    act(() => result.current.isolate("bus"));
+    expect(result.current.isVisible("bus")).toBe(true);
+    expect(result.current.isVisible("flight")).toBe(false);
   });
 });

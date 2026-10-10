@@ -46,7 +46,7 @@ describe("dashboardDomainFilterStore", () => {
 
   it("showNone hides every domain, showAll clears it", () => {
     useDashboardDomainFilterStore.getState().showNone();
-    expect(useDashboardDomainFilterStore.getState().hidden.size).toBe(8);
+    expect(useDashboardDomainFilterStore.getState().hidden.size).toBe(9);
     useDashboardDomainFilterStore.getState().showAll();
     expect(useDashboardDomainFilterStore.getState().hidden.size).toBe(0);
   });
@@ -59,7 +59,8 @@ describe("dashboardDomainFilterStore", () => {
     expect(hidden.has("roadtrip")).toBe(true);
     expect(hidden.has("rail")).toBe(true);
     expect(hidden.has("rental")).toBe(true);
-    expect(hidden.size).toBe(7);
+    expect(hidden.has("bus")).toBe(true);
+    expect(hidden.size).toBe(8);
   });
 
   it("a shared link's selection does not touch storage until adopted", () => {

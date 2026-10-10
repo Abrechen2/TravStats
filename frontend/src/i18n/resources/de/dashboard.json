@@ -328,7 +328,9 @@
     "tour": "Tour",
     "rentalSame": "Mietwagen · Rückgabe am selben Ort (ein Punkt)",
     "rentalEnds": "Mietwagen · Abholung hohl, Rückgabe gefüllt",
-    "rentalOneWay": "Mietwagen · Einweg, keine Fahrstrecke"
+    "rentalOneWay": "Mietwagen · Einweg, keine Fahrstrecke",
+    "busRoad": "Bus · Straßenverlauf",
+    "busStraight": "Bus · Luftlinie"
   },
   "userMenu": {
     "label": "Konto-Menü"

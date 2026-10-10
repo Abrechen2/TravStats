@@ -27,6 +27,7 @@ import {
 } from "./allTabLegendRows";
 import { useRailOverlay } from "./railMapOverlay";
 import { useRentalOverlay } from "./rentalMapOverlay";
+import { useBusOverlay } from "./busMapOverlay";
 import { useRailVisible } from "../../../hooks/useRailVisible";
 import { useRentalVisible } from "../../../hooks/useRentalVisible";
 import { MAP_LAYER_COLORS } from "../../../types/mapTheme";
@@ -505,10 +506,11 @@ export function AllTab(): JSX.Element {
   const rail = useRailOverlay(railOn, visMode === "globe", t);
   const rentalOn = useRentalVisible() && showTours && domainFilter.isVisible("rental");
   const rental = useRentalOverlay(rentalOn, visMode === "globe", t);
+  const bus = useBusOverlay(showTours && domainFilter.isVisible("bus"), visMode === "globe", t);
   const tourDeck = useTourDeckLayers(tourPathData, visMode === "globe");
   const tourLayers = useMemo<Layer[]>(
-    () => [...tourDeck, ...rail.layers, ...rental.layers],
-    [tourDeck, rail.layers, rental.layers]
+    () => [...tourDeck, ...rail.layers, ...bus.layers, ...rental.layers],
+    [tourDeck, rail.layers, bus.layers, rental.layers]
   );
 
   // The activity toggle stays top-left (it opens the activity sidebar).
@@ -572,6 +574,7 @@ export function AllTab(): JSX.Element {
     // the key is shut — and be missing from the count on the button.
     ...(tourHasData ? tourLegend.rows : []),
     ...rail.legendRows,
+    ...bus.legendRows,
     ...rental.legendRows,
   ];
 
