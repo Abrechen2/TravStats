@@ -168,6 +168,52 @@ export function computeRentalStats(
   };
 }
 
+/** The columns the rental statistics read — the tab and its evidence panels alike. */
+const RENTAL_STATS_SELECT = {
+  id: true,
+  status: true,
+  pickupTime: true,
+  pickupTimezone: true,
+  returnTime: true,
+  returnTimezone: true,
+  // The evidence panels name a rental by its stations.
+  pickupStationName: true,
+  returnStationName: true,
+  pickupCountry: true,
+  returnCountry: true,
+  pickupAirportId: true,
+  returnAirportId: true,
+  pickupLat: true,
+  pickupLon: true,
+  returnLat: true,
+  returnLon: true,
+  provider: true,
+  broker: true,
+  price: true,
+  currency: true,
+  finalAmount: true,
+  finalCurrency: true,
+  distanceKm: true,
+  distanceSource: true,
+  odometerOutKm: true,
+  odometerInKm: true,
+  // forgejo#262 — a secured final amount, and what car was promised and driven.
+  finalAmountSource: true,
+  vehicleClass: true,
+  acrissCode: true,
+  vehicleExample: true,
+  vehicleDriven: true,
+} as const;
+
+/** The counted rentals with every column the statistics read, oldest first. */
+export async function loadRentalStatsRows(userId: string) {
+  return prisma.rentalBooking.findMany({
+    where: { userId, ...countableRentalWhere() },
+    select: RENTAL_STATS_SELECT,
+    orderBy: [{ pickupTime: "asc" }, { id: "asc" }],
+  });
+}
+
 /** The figures plus forgejo#262's: efficiency, booked vs billed, vehicles, records. */
 export type RentalStatsResponse = RentalStats & { extra: RentalExtraStats };
 
@@ -198,41 +244,7 @@ export async function rentalStatsFor(
       finalCurrency: true,
     },
   });
-  const rows = await prisma.rentalBooking.findMany({
-    where: { userId, ...countableRentalWhere() },
-    select: {
-      id: true,
-      status: true,
-      pickupTime: true,
-      pickupTimezone: true,
-      returnTime: true,
-      returnTimezone: true,
-      pickupCountry: true,
-      returnCountry: true,
-      pickupAirportId: true,
-      returnAirportId: true,
-      pickupLat: true,
-      pickupLon: true,
-      returnLat: true,
-      returnLon: true,
-      provider: true,
-      broker: true,
-      price: true,
-      currency: true,
-      finalAmount: true,
-      finalCurrency: true,
-      distanceKm: true,
-      distanceSource: true,
-      odometerOutKm: true,
-      odometerInKm: true,
-      // forgejo#262 — a secured final amount, and what car was promised and driven.
-      finalAmountSource: true,
-      vehicleClass: true,
-      acrissCode: true,
-      vehicleExample: true,
-      vehicleDriven: true,
-    },
-  });
+  const rows = await loadRentalStatsRows(userId);
   const counted = cut(rows);
   return {
     ...computeRentalStats(counted, year, cut(cancelled)),

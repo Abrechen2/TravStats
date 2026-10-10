@@ -8,6 +8,7 @@ import {
   getInstanceSettings,
   updateInstanceSettings,
 } from "../../services/instanceSettingsService";
+import { resolveMetricEvidence } from "../../services/evidence/metricEvidence";
 
 /**
  * forgejo#265 — the year in review and the trophy case follow the beta
@@ -69,6 +70,31 @@ describe("wrapped and badges across domains", () => {
       flights: 0,
       chapters: { rentals: { rentals: 1, days: 4 }, bus: null, lodging: null },
     });
+  });
+
+  // forgejo#265 — a chapter card opens the rows it counted, for its one year.
+  it("opens the rentals behind the rental chapter, and only for a year", async () => {
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    const page = { offset: 0, limit: 50 };
+    const res = await resolveMetricEvidence(
+      userId,
+      "wrappedRentalCount",
+      { period: { kind: "year", year: 2024 } },
+      page
+    );
+    expect(res?.measure.value).toBe(1);
+    expect(res?.entries.map((e) => e.href)).toEqual([expect.stringMatching(/^\/rentals\//)]);
+    // A domain the user does not see has no chapter, and its card answers nothing.
+    const bus = await resolveMetricEvidence(
+      userId,
+      "wrappedBusRideCount",
+      { period: { kind: "year", year: 2024 } },
+      page
+    );
+    expect(bus?.measure.value).toBeNull();
+    await expect(
+      resolveMetricEvidence(userId, "wrappedRentalCount", { period: { kind: "allTime" } }, page)
+    ).rejects.toThrow(/period=year only/);
   });
 
   it("has no story at all while the rental domain is behind the switch", async () => {

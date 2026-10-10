@@ -34,6 +34,15 @@ describe("buildWrapped — chapters beyond flights", () => {
     expect(parsed.success ? null : parsed.error.issues).toBeNull();
   });
 
+  // forgejo#265 acceptance: a year is offered with ONLY places, or ONLY day tours.
+  it.each([
+    ["places", { places: [{ year: 2022, placeId: "p1" }] }],
+    ["day tours", { tours: [{ year: 2022 }] }],
+  ])("offers a year that holds only %s", (_label, rows) => {
+    const wrapped = buildWrapped([], [], [], null, [], { ...NO_CHAPTERS, ...rows });
+    expect(wrapped).toMatchObject({ year: 2022, availableYears: [2022], flights: 0 });
+  });
+
   it("counts distinct places, roadtrips, tours and bus rides of the asked year only", () => {
     const wrapped = buildWrapped([], [], [], 2024, [], {
       lodging: [],

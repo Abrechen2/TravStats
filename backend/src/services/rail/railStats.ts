@@ -7,7 +7,7 @@ import {
   type DatedRail,
 } from "../../shared/railCounting";
 import { railRideFacts } from "../../utils/railAchievements";
-import { rideHasClocks } from "../../shared/railClock";
+import { rideHasClocks, rideHoursOnBoard } from "../../shared/railClock";
 import { railStationKey } from "../../shared/railConnections";
 import { computeRailJourneyFigures, type RailJourneyFigures } from "./railJourneyStats";
 
@@ -196,6 +196,36 @@ function rideKinds(rows: readonly RailStatsRow[]): RailStats["rideKinds"] {
   };
 }
 
+/** A ride's hours on board — the tab's sum and the evidence panel's rows (`rideHoursOnBoard`). */
+export function railRideHours(
+  r: Pick<RailStatsRow, "departureTime" | "arrivalTime"> & {
+    depPrecision?: string | null;
+    arrPrecision?: string | null;
+  }
+): number | null {
+  return rideHoursOnBoard({
+    departureTime: r.departureTime,
+    arrivalTime: r.arrivalTime,
+    depPrecision: r.depPrecision ?? null,
+    arrPrecision: r.arrPrecision ?? null,
+  });
+}
+
+/**
+ * The longest ride by distance — the tab's record and the panel's one row.
+ * Ties go to the earlier ride (rows arrive oldest first); a ride with no
+ * distance cannot hold a distance record.
+ */
+export function longestRide<T extends { distanceKm: number | null }>(rows: readonly T[]): T | null {
+  return rows.reduce<T | null>(
+    (best, r) =>
+      r.distanceKm === null || (best !== null && r.distanceKm <= (best.distanceKm as number))
+        ? best
+        : r,
+    null
+  );
+}
+
 /**
  * @param all every counted ride, for the one figure a period cut cannot answer
  *            alone: whether a connection was NEW in that period.
@@ -209,15 +239,8 @@ export function computeRailStats(
       .filter((r) => r.distanceSource === source && r.distanceKm !== null)
       .reduce((sum, r) => sum + (r.distanceKm as number), 0);
   const measured = rows.filter((r) => r.distanceKm !== null);
-  const timed = rows.filter(
-    (r) =>
-      r.arrivalTime !== null && clocked(r) && r.arrivalTime.getTime() >= r.departureTime.getTime()
-  );
-  const longest = measured.reduce<RailStatsRow | null>(
-    (best, r) =>
-      best === null || (r.distanceKm as number) > (best.distanceKm as number) ? r : best,
-    null
-  );
+  const hours = rows.map(railRideHours).filter((h): h is number => h !== null);
+  const longest = longestRide(rows);
   const years = new Map<number, { journeys: number; km: number }>();
   for (const r of rows) {
     const year = railYear(r);
@@ -236,12 +259,8 @@ export function computeRailStats(
       unmeasuredJourneys: rows.length - measured.length,
     },
     hoursOnBoard: {
-      hours:
-        timed.reduce(
-          (sum, r) => sum + ((r.arrivalTime as Date).getTime() - r.departureTime.getTime()),
-          0
-        ) / 3_600_000,
-      measuredJourneys: timed.length,
+      hours: hours.reduce((sum, h) => sum + h, 0),
+      measuredJourneys: hours.length,
     },
     countries: [...new Set(rows.flatMap(railCountries))].sort(),
     operators: rank(rows.map((r) => r.operator)),

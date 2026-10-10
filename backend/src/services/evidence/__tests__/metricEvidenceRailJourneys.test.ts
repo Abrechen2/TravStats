@@ -69,12 +69,15 @@ describe("rail journey evidence", () => {
     userId = (await prisma.user.create({ data: { username: USER, passwordHash: "x" } })).id;
     const booking = await prisma.booking.create({ data: { userId } });
     // 2024: Köln → Basel, the first ride on that connection.
-    await add(KOELN, BASEL, "2024-05-01T07:00Z", "2024-05-01T11:00Z");
+    await add(KOELN, BASEL, "2024-05-01T07:00Z", "2024-05-01T11:00Z", { distanceKm: 430 });
     // 2025: Köln → Frankfurt → Basel on one booking — one journey, one change.
     await add(KOELN, FRA, "2025-03-01T07:00Z", "2025-03-01T08:05Z", { bookingId: booking.id });
     await add(FRA, BASEL, "2025-03-01T08:20Z", "2025-03-01T11:10Z", { bookingId: booking.id });
     // 2025: a Nightjet Basel → Wien, one night on board.
-    await add(BASEL, WIEN, "2025-06-01T19:00Z", "2025-06-02T07:00Z", { trainCategory: "NJ" });
+    await add(BASEL, WIEN, "2025-06-01T19:00Z", "2025-06-02T07:00Z", {
+      trainCategory: "NJ",
+      distanceKm: 820,
+    });
     // A cancelled ride is never anywhere.
     await add(WIEN, KOELN, "2025-07-01T07:00Z", "2025-07-01T17:00Z", { status: "cancelled" });
   });
@@ -120,5 +123,31 @@ describe("rail journey evidence", () => {
     expect(fresh2025.measure.value).toBe(3);
     const lifetime = await resolve("railNewConnectionsCount", ALL);
     expect(lifetime.measure.value).toBe(4);
+  });
+
+  it("lists the rides behind the hours on board, each with its own hours (forgejo#261)", async () => {
+    const tab = await loadRailStats(userId, null);
+    const hours = await resolve("railHoursOnBoard", ALL);
+    expect(hours.measure.value).toBe(Math.round(tab.hoursOnBoard.hours * 10) / 10);
+    expect(hours.measure.value).toBe(19.9);
+    expect(hours.entries).toHaveLength(tab.hoursOnBoard.measuredJourneys);
+    expect(hours.measure.unit).toBe("hours");
+  });
+
+  it("lists the journeys whose changes the average change time is taken over", async () => {
+    const tab = await loadRailStats(userId, 2025);
+    const changes = await resolve("railTransferCount", Y2025);
+    expect(changes.measure.value).toBe(tab.connected.transfers.count);
+    expect(changes.measure.value).toBe(1);
+    expect(changes.entries.map((e) => e.title.text)).toEqual(["Köln Hbf → Basel SBB"]);
+  });
+
+  it("names the ride that holds the longest-ride record, per period", async () => {
+    const lifetime = await resolve("railLongestRide", ALL);
+    expect(lifetime.measure.value).toBe((await loadRailStats(userId, null)).longest?.distanceKm);
+    expect(lifetime.measure.value).toBe(820);
+    expect(lifetime.entries).toHaveLength(1);
+    const y2024 = await resolve("railLongestRide", { period: { kind: "year", year: 2024 } });
+    expect(y2024.measure.value).toBe(430);
   });
 });

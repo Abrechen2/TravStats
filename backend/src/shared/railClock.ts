@@ -52,6 +52,21 @@ export function rideHasClocks(
 }
 
 /**
+ * Hours on board of ONE ride, or null when the ride cannot answer: both ends
+ * must carry a clock, there must be an arrival, and it must not lie before the
+ * departure. The rail and bus tabs sum this over their rides, and their
+ * evidence panels list it ride by ride — one rule, so a ride the tile left
+ * out is never listed and one it counted is never missing.
+ */
+export function rideHoursOnBoard(
+  ride: Pick<RailClockFacts, "departureTime" | "arrivalTime" | "depPrecision" | "arrPrecision">
+): number | null {
+  if (ride.arrivalTime === null || !rideHasClocks(ride)) return null;
+  const ms = ride.arrivalTime.getTime() - ride.departureTime.getTime();
+  return ms < 0 ? null : ms / 3_600_000;
+}
+
+/**
  * The Prisma `where` fragment for rides whose DEPARTURE carries a clock. The
  * `null` branch is explicit: SQL `NOT IN` drops a NULL row, and every ride
  * written before the column existed is one. A fresh object per call.

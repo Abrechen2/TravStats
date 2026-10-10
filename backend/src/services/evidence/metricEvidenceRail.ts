@@ -12,7 +12,12 @@ import {
 import type { PagingParams } from "./paging";
 import { railEvidenceEntry } from "./entryMappersDomains";
 import { domainDistinctEvidence, domainSumEvidence, readYearScope } from "./domainMeasureResponse";
-import { isDocumentedTransferJourney, railJourneysOf } from "../rail/railJourneyStats";
+import {
+  isDocumentedTransferJourney,
+  journeyTransferWaits,
+  railJourneysOf,
+} from "../rail/railJourneyStats";
+import { longestRide, railRideHours } from "../rail/railStats";
 import { nightTrainNights } from "../../shared/railRideKinds";
 import { firstRidesPerConnection } from "../../shared/railConnections";
 
@@ -259,5 +264,72 @@ export async function resolveRailNewConnectionsCount(
     page,
     entries: firsts.map((r) => entryOf(r, { contribution: 1 })),
     value: firsts.length,
+  });
+}
+
+const round1 = (n: number): number => Math.round(n * 10) / 10;
+
+/**
+ * Hours on board (forgejo#261): each ride with both clocks contributes its
+ * own hours (`railRideHours`, the tab's rule); a date-only ride or one with
+ * no arrival measured nothing and is not listed.
+ */
+export async function resolveRailHoursOnBoard(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  const key = "railHoursOnBoard";
+  const { rows } = await loadScoped(userId, scope, key);
+  const entries = rows
+    .map((row) => ({ row, hours: railRideHours(row) }))
+    .filter(({ hours }) => hours !== null)
+    .map(({ row, hours }) => entryOf(row, { contribution: hours as number }));
+  const value = entries.reduce((sum, e) => sum + (e.contribution ?? 0), 0);
+  return domainSumEvidence({ key, unit: "hours", scope, page, entries, value, round: round1 });
+}
+
+/**
+ * The changes the average change time is taken over: each journey lists the
+ * changes whose two clocks are known (`journeyTransferWaits`), so the panel's
+ * total is the sample the tile's average names.
+ */
+export async function resolveRailTransferCount(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  const key = "railTransferCount";
+  const { rows } = await loadScoped(userId, scope, key);
+  const entries = railJourneysOf(rows)
+    .map((journey) => ({ journey, waits: journeyTransferWaits(journey).length }))
+    .filter(({ waits }) => waits > 0)
+    .map(({ journey, waits }) => ({ ...journeyEntry(journey), contribution: waits }));
+  const value = entries.reduce((sum, e) => sum + (e.contribution ?? 0), 0);
+  return domainSumEvidence({ key, unit: "transfers", scope, page, entries, value });
+}
+
+/**
+ * The longest ride (a record) as its one witness: the ride and its distance.
+ * Release 1 serves `sum` and `distinct` only, and a one-row sum is exactly
+ * the record's evidence — the ride that holds it, contributing its km.
+ */
+export async function resolveRailLongestRide(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  const key = "railLongestRide";
+  const { rows } = await loadScoped(userId, scope, key);
+  const best = longestRide(rows);
+  const entries = best ? [entryOf(best, { contribution: best.distanceKm as number })] : [];
+  return domainSumEvidence({
+    key,
+    unit: "km",
+    scope,
+    page,
+    entries,
+    value: best ? (best.distanceKm as number) : null,
+    abstained: rows.length,
   });
 }

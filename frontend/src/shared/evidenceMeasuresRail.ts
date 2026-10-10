@@ -36,4 +36,11 @@ export const RAIL_MEASURES: Record<string, MeasureSpec> = {
   railDocumentedTransferJourneyCount: railMeasure("sum", "journeys"),
   railNightTrainNights: railMeasure("sum", "nights"),
   railNewConnectionsCount: railMeasure("sum", "connections"),
+  // forgejo#261 — the remaining tiles. Hours on board are summed over the rides
+  // with both clocks; the change time is averaged over the changes with both
+  // clocks, so its panel lists those changes; the longest ride is a record,
+  // served as its one witness (a one-row sum).
+  railHoursOnBoard: railMeasure("sum", "hours"),
+  railTransferCount: railMeasure("sum", "transfers"),
+  railLongestRide: railMeasure("sum", "km"),
 };

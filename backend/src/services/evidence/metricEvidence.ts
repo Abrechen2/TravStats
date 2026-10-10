@@ -60,6 +60,16 @@ import {
   resolveRentalDaysTotal,
   resolveRentalOneWayCount,
   resolveRentalOdometerDocumentedCount,
+  resolveRentalKmTotal,
+  resolveRentalCostedCount,
+  resolveRentalBrokeredCount,
+  resolveRentalKmPerDaySampleCount,
+  resolveRentalCostPerKmSampleCount,
+  resolveRentalVehicleComparedCount,
+  resolveRentalDrivenModelsCount,
+  resolveRentalLongest,
+  resolveRentalFarthest,
+  resolveRentalNewProvidersCount,
 } from "./metricEvidenceRental";
 import {
   resolveBusRideCount,
@@ -67,6 +77,10 @@ import {
   resolveBusCountriesCount,
   resolveBusNightRideCount,
   resolveBusTerminalsCount,
+  resolveBusHoursOnBoard,
+  resolveBusTransferCount,
+  resolveBusLongestRide,
+  resolveBusLongestReturn,
 } from "./metricEvidenceBus";
 import {
   resolveTravelAccountHotelNights,
@@ -78,6 +92,7 @@ import {
   resolveTravelAccountContestedNights,
   resolveTravelAccountFullyCoveredTripCount,
   resolveTravelAccountTripsWithDatesCount,
+  resolveTravelAccountTripDaysTotal,
   resolveTravelAccountUncoveredDayCount,
   resolveTravelAccountJournalEntryCount,
 } from "./metricEvidenceTravelAccount";
@@ -130,7 +145,12 @@ import {
   resolveRailDocumentedTransferJourneyCount,
   resolveRailNightTrainNights,
   resolveRailNewConnectionsCount,
+  resolveRailHoursOnBoard,
+  resolveRailTransferCount,
+  resolveRailLongestRide,
 } from "./metricEvidenceRail";
+import { WRAPPED_RESOLVERS } from "./metricEvidenceWrapped";
+import { DOMAIN_RECORD_RESOLVERS } from "./metricEvidenceDomainRecords";
 import {
   resolvePassportCountryCount,
   resolvePassportContinentCount,
@@ -234,6 +254,7 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   travelAccountContestedNights: resolveTravelAccountContestedNights,
   travelAccountFullyCoveredTripCount: resolveTravelAccountFullyCoveredTripCount,
   travelAccountTripsWithDatesCount: resolveTravelAccountTripsWithDatesCount,
+  travelAccountTripDaysTotal: resolveTravelAccountTripDaysTotal,
   travelAccountUncoveredDayCount: resolveTravelAccountUncoveredDayCount,
   travelAccountJournalEntryCount: resolveTravelAccountJournalEntryCount,
   crossDomainEventCount: resolveCrossDomainEventCount,
@@ -250,15 +271,32 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   railDocumentedTransferJourneyCount: resolveRailDocumentedTransferJourneyCount,
   railNightTrainNights: resolveRailNightTrainNights,
   railNewConnectionsCount: resolveRailNewConnectionsCount,
+  railHoursOnBoard: resolveRailHoursOnBoard,
+  railTransferCount: resolveRailTransferCount,
+  railLongestRide: resolveRailLongestRide,
   rentalCount: resolveRentalCount,
   rentalDaysTotal: resolveRentalDaysTotal,
   rentalOneWayCount: resolveRentalOneWayCount,
   rentalOdometerDocumentedCount: resolveRentalOdometerDocumentedCount,
+  rentalKmTotal: resolveRentalKmTotal,
+  rentalCostedCount: resolveRentalCostedCount,
+  rentalBrokeredCount: resolveRentalBrokeredCount,
+  rentalKmPerDaySampleCount: resolveRentalKmPerDaySampleCount,
+  rentalCostPerKmSampleCount: resolveRentalCostPerKmSampleCount,
+  rentalVehicleComparedCount: resolveRentalVehicleComparedCount,
+  rentalDrivenModelsCount: resolveRentalDrivenModelsCount,
+  rentalLongest: resolveRentalLongest,
+  rentalFarthest: resolveRentalFarthest,
+  rentalNewProvidersCount: resolveRentalNewProvidersCount,
   busRideCount: resolveBusRideCount,
   busDistanceKmTotal: resolveBusDistanceKmTotal,
   busCountriesCount: resolveBusCountriesCount,
   busNightRideCount: resolveBusNightRideCount,
   busTerminalsCount: resolveBusTerminalsCount,
+  busHoursOnBoard: resolveBusHoursOnBoard,
+  busTransferCount: resolveBusTransferCount,
+  busLongestRide: resolveBusLongestRide,
+  busLongestReturn: resolveBusLongestReturn,
   passportCountryCount: resolvePassportCountryCount,
   passportContinentCount: resolvePassportContinentCount,
   passportAirportCount: resolvePassportAirportCount,
@@ -306,6 +344,9 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   cruisePolarCruiseCount: resolveCruisePolarCruiseCount,
   // The statistics expansion (forgejo#258/#259/#260/#264), one shape for all.
   ...INSIGHT_RESOLVERS,
+  // The year in review's chapters and the overview's records (forgejo#265).
+  ...WRAPPED_RESOLVERS,
+  ...DOMAIN_RECORD_RESOLVERS,
 };
 
 /**

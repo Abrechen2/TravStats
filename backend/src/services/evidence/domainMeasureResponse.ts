@@ -45,6 +45,13 @@ export function readYearScope(scope: EvidenceScope, key: string): number | undef
   return scope.period.kind === "year" ? scope.period.year : undefined;
 }
 
+/** A figure the surface shows for the whole logbook whatever year is picked: lifetime only. */
+export function requireLifetime(scope: EvidenceScope, key: string): void {
+  if (scope.period.kind !== "allTime") {
+    throw new AppError(`${key} evidence supports period=allTime only.`, 400);
+  }
+}
+
 interface DomainSumArgs {
   key: string;
   unit: string;
@@ -64,6 +71,13 @@ interface DomainSumArgs {
   /** The surface's own rounding step, applied ONCE to the total. */
   round?: (total: number) => number;
   unattributed?: EvidenceResponse["unattributed"];
+  /**
+   * The records in scope that could not answer when `value` is null (no km on
+   * any rental, no ride to hold a record). A null value always carries its
+   * reason; with no `unattributed` of its own, the response says these many
+   * records hold no per-entry share (`notPerEntry`) rather than a bare null.
+   */
+  abstained?: number;
 }
 
 export function domainSumEvidence({
@@ -75,6 +89,7 @@ export function domainSumEvidence({
   value,
   round = Math.round,
   unattributed = [],
+  abstained = 0,
 }: DomainSumArgs): EvidenceResponse {
   const paged = pageSumEntries(entries, page);
   return {
@@ -90,7 +105,10 @@ export function domainSumEvidence({
     entries: paged.entries,
     returned: paged.entries.length,
     omitted: { count: paged.omittedCount, contribution: paged.omittedContribution },
-    unattributed,
+    unattributed:
+      value === null && unattributed.length === 0
+        ? [{ count: abstained, reason: "notPerEntry" }]
+        : unattributed,
     page,
   };
 }

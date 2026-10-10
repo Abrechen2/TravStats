@@ -44,9 +44,29 @@ export const RENTAL_BUS_MEASURES: Record<string, MeasureSpec> = {
   rentalDaysTotal: RENTAL("sum", "days"),
   rentalOneWayCount: RENTAL("sum", "rentals"),
   rentalOdometerDocumentedCount: RENTAL("sum", "rentals"),
+  // forgejo#262 — the tab's further tiles. A ratio (km per day, cost per day,
+  // cost per km) opens the rentals it stands on; a record opens its one
+  // witness; the rest are counts.
+  rentalKmTotal: RENTAL("sum", "km"),
+  rentalCostedCount: RENTAL("sum", "rentals"),
+  rentalBrokeredCount: RENTAL("sum", "rentals"),
+  rentalKmPerDaySampleCount: RENTAL("sum", "rentals"),
+  rentalCostPerKmSampleCount: RENTAL("sum", "rentals"),
+  rentalVehicleComparedCount: RENTAL("sum", "rentals"),
+  rentalDrivenModelsCount: RENTAL("distinct", "models"),
+  rentalLongest: RENTAL("sum", "days"),
+  rentalFarthest: RENTAL("sum", "km"),
+  rentalNewProvidersCount: RENTAL("distinct", "providers"),
   busRideCount: BUS("sum", "rides"),
   busDistanceKmTotal: BUS("sum", "km"),
   busCountriesCount: BUS("distinct", "countries"),
   busNightRideCount: BUS("sum", "rides"),
   busTerminalsCount: BUS("distinct", "terminals"),
+  // forgejo#263 — hours over the rides with both clocks, the changes the
+  // average change time is taken over, and two records as their witnesses.
+  busHoursOnBoard: BUS("sum", "hours"),
+  busTransferCount: BUS("sum", "transfers"),
+  busLongestRide: BUS("sum", "km"),
+  /** A lifetime figure on the tab whatever year is picked. */
+  busLongestReturn: { ...BUS("sum", "days"), scopes: ["allTime"] },
 };

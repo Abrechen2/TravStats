@@ -1,8 +1,7 @@
 import { prisma } from "../../db";
 import { busCountries, busYear, countableBusWhere } from "../../shared/busCounting";
-import { rideHasClocks } from "../../shared/railClock";
+import { rideHasClocks, rideHoursOnBoard } from "../../shared/railClock";
 import { operatorKey } from "../../shared/railRideKinds";
-import { transferMinutes } from "../../shared/railJourneyGrouping";
 import { localDay } from "../../shared/time/instant";
 import {
   busConnectionKey,
@@ -10,10 +9,11 @@ import {
   isNightBusRide,
   nightBusNights,
   terminalsOf,
-  longestReturnDays,
+  longestReturn,
   type TerminalEvent,
 } from "../../shared/busRideKinds";
-import { railJourneysOf } from "../rail/railJourneyStats";
+import { journeyTransferWaits, railJourneysOf } from "../rail/railJourneyStats";
+import { longestRide } from "../rail/railStats";
 
 /**
  * The bus statistics (spec 2026-10-07-bus-domain-design §6, package B2;
@@ -182,30 +182,11 @@ function terminalFigures(
   // ride touched. The home terminal a logbook starts from is never one.
   const seen = new Set<number>();
   const firstArrivals: BusStatsRow[] = [];
-  const visitEvents = new Map<number, TerminalEvent[]>();
   for (const ride of inTravelOrder(all)) {
     const e = ends.get(ride.id)!;
     if (!seen.has(e.arr) && e.arr !== e.dep) firstArrivals.push(ride);
     seen.add(e.dep);
     seen.add(e.arr);
-    visitEvents.set(e.dep, [
-      ...(visitEvents.get(e.dep) ?? []),
-      {
-        kind: "dep",
-        at: ride.departureTime,
-        day: localDay(ride.departureTime, ride.depTimezone ?? "UTC"),
-      },
-    ]);
-    if (ride.arrivalTime) {
-      visitEvents.set(e.arr, [
-        ...(visitEvents.get(e.arr) ?? []),
-        {
-          kind: "arr",
-          at: ride.arrivalTime,
-          day: localDay(ride.arrivalTime, ride.arrTimezone ?? "UTC"),
-        },
-      ]);
-    }
   }
   const destinationsByYear = new Map<number, number>();
   for (const ride of firstArrivals) {
@@ -213,15 +194,7 @@ function terminalFigures(
     destinationsByYear.set(year, (destinationsByYear.get(year) ?? 0) + 1);
   }
 
-  // Between two SEPARATE visits — an arrival and the ride out of the same stay
-  // are one visit, never a return (`longestReturnDays`, review I3).
-  let longestReturn: BusStats["longestReturn"] = null;
-  for (const [terminal, events] of visitEvents) {
-    const days = longestReturnDays(events);
-    if (days !== null && (longestReturn === null || days > longestReturn.days)) {
-      longestReturn = { days, terminal: registry.nameOf(terminal) };
-    }
-  }
+  const returned = busLongestReturn(all);
 
   const label = (key: string): { from: string; to: string } => {
     const [a, b] = key.split("|").map((id) => registry.nameOf(Number(id)));
@@ -244,19 +217,59 @@ function terminalFigures(
         .map(([year, count]) => ({ year, count }))
         .sort((a, b) => a.year - b.year),
     },
-    longestReturn,
+    longestReturn: returned ? { days: returned.days, terminal: returned.terminal } : null,
   };
+}
+
+/**
+ * The longest pause before coming back to a terminal, over EVERY counted ride
+ * (a lifetime question), with the ride that came back — the tab's figure and
+ * the evidence panel's one row. Between two SEPARATE visits: an arrival and
+ * the ride out of the same stay are one visit, never a return
+ * (`longestReturn`, review I3).
+ */
+export function busLongestReturn(
+  all: readonly BusStatsRow[]
+): { days: number; terminal: string; rideId: string } | null {
+  const { registry, ends } = terminalsOf(all);
+  const visitEvents = new Map<number, TerminalEvent[]>();
+  const push = (terminal: number, event: TerminalEvent): void => {
+    visitEvents.set(terminal, [...(visitEvents.get(terminal) ?? []), event]);
+  };
+  for (const ride of inTravelOrder(all)) {
+    const e = ends.get(ride.id)!;
+    push(e.dep, {
+      kind: "dep",
+      at: ride.departureTime,
+      day: localDay(ride.departureTime, ride.depTimezone ?? "UTC"),
+      rideId: ride.id,
+    });
+    if (ride.arrivalTime) {
+      push(e.arr, {
+        kind: "arr",
+        at: ride.arrivalTime,
+        day: localDay(ride.arrivalTime, ride.arrTimezone ?? "UTC"),
+        rideId: ride.id,
+      });
+    }
+  }
+  let best: { days: number; terminal: string; rideId: string } | null = null;
+  for (const [terminal, events] of visitEvents) {
+    const found = longestReturn(events);
+    if (found !== null && (best === null || found.days > best.days)) {
+      best = {
+        days: found.days,
+        terminal: registry.nameOf(terminal),
+        rideId: found.returning.rideId as string,
+      };
+    }
+  }
+  return best;
 }
 
 function journeyFigures(rows: readonly BusStatsRow[]): Pick<BusStats, "journeys" | "transfers"> {
   const journeys = railJourneysOf(rows);
-  const waits: number[] = [];
-  for (const journey of journeys) {
-    for (let i = 1; i < journey.length; i += 1) {
-      const wait = transferMinutes(journey[i - 1], journey[i]);
-      if (wait !== null) waits.push(wait);
-    }
-  }
+  const waits = journeys.flatMap(journeyTransferWaits);
   return {
     journeys: { total: journeys.length, withTransfer: journeys.filter((j) => j.length > 1).length },
     transfers: {
@@ -280,17 +293,8 @@ export function computeBusStats(
     measured
       .filter((r) => r.distanceSource === source)
       .reduce((s, r) => s + (r.distanceKm as number), 0);
-  const timed = rows.filter(
-    (r) =>
-      r.arrivalTime !== null &&
-      rideHasClocks(r) &&
-      r.arrivalTime.getTime() >= r.departureTime.getTime()
-  );
-  const longest = measured.reduce<BusStatsRow | null>(
-    (best, r) =>
-      best === null || (r.distanceKm as number) > (best.distanceKm as number) ? r : best,
-    null
-  );
+  const hours = rows.map(rideHoursOnBoard).filter((h): h is number => h !== null);
+  const longest = longestRide(rows);
   const years = new Map<number, { rides: number; km: number | null; unmeasured: number }>();
   const kinds = new Map<string, number>();
   for (const r of rows) {
@@ -316,12 +320,8 @@ export function computeBusStats(
       unmeasuredRides: rows.length - measured.length,
     },
     hoursOnBoard: {
-      hours:
-        timed.reduce(
-          (s, r) => s + ((r.arrivalTime as Date).getTime() - r.departureTime.getTime()),
-          0
-        ) / 3_600_000,
-      measuredRides: timed.length,
+      hours: hours.reduce((s, h) => s + h, 0),
+      measuredRides: hours.length,
     },
     countries: [...new Set(rows.flatMap(busCountries))].sort(),
     operators: operators(rows),

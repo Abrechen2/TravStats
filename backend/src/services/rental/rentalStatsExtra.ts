@@ -133,8 +133,23 @@ function bookedVsFinal(rows: readonly RentalExtraRow[]): RentalExtraStats["booke
   };
 }
 
+/** Booked through a broker — a broker named on the rental. */
+export const isBrokered = (r: Pick<RentalExtraRow, "broker">): boolean => Boolean(r.broker?.trim());
+
+/** The driven model, spelling folded — what "distinct models" counts; null when none is named. */
+export const drivenModelKey = (r: Pick<RentalExtraRow, "vehicleDriven">): string | null =>
+  r.vehicleDriven?.trim() ? fold(r.vehicleDriven) : null;
+
+/** Both the promised example and the driven car are named — the neutral comparison's sample. */
+export const comparesVehicle = (
+  r: Pick<RentalExtraRow, "vehicleExample" | "vehicleDriven">
+): boolean => Boolean(r.vehicleExample?.trim() && r.vehicleDriven?.trim());
+
 function vehicles(rows: readonly RentalExtraRow[]): RentalExtraStats["vehicles"] {
-  const driven = rows.flatMap((r) => (r.vehicleDriven?.trim() ? [fold(r.vehicleDriven)] : []));
+  const driven = rows.flatMap((r) => {
+    const key = drivenModelKey(r);
+    return key === null ? [] : [key];
+  });
   const classes = new Map<string, { label: string; rentals: number }>();
   for (const r of rows) {
     const label = r.vehicleClass?.trim() || r.acrissCode?.trim().toUpperCase() || null;
@@ -143,7 +158,7 @@ function vehicles(rows: readonly RentalExtraRow[]): RentalExtraStats["vehicles"]
     const cur = classes.get(key) ?? { label, rentals: 0 };
     classes.set(key, { ...cur, rentals: cur.rentals + 1 });
   }
-  const compared = rows.filter((r) => r.vehicleExample?.trim() && r.vehicleDriven?.trim());
+  const compared = rows.filter(comparesVehicle);
   // "VW Golf or similar" promises a Golf; the "or similar" is not part of the model.
   const model = (s: string): string =>
     fold(s).replace(/\s+(or similar|oder ähnlich|o\.\s?ä\.)\s*$/u, "");
@@ -167,36 +182,94 @@ function vehicles(rows: readonly RentalExtraRow[]): RentalExtraStats["vehicles"]
 const pickupDay = (r: Pick<RentalExtraRow, "pickupTime" | "pickupTimezone">): string =>
   localDay(r.pickupTime, r.pickupTimezone);
 
-function records(
-  scoped: readonly RentalExtraRow[],
-  all: readonly RentalExtraRow[]
-): RentalExtraStats["records"] {
-  let longest: RentalExtraStats["records"]["longest"] = null;
-  let farthest: RentalExtraStats["records"]["farthest"] = null;
+type RecordRow = Pick<
+  RentalExtraRow,
+  | "id"
+  | "provider"
+  | "pickupTime"
+  | "pickupTimezone"
+  | "returnTime"
+  | "returnTimezone"
+  | "distanceKm"
+  | "distanceSource"
+  | "odometerOutKm"
+  | "odometerInKm"
+>;
+
+/** The longest rental by rental days — the tab's record and its panel's one row. */
+export function longestRental<T extends RecordRow>(
+  scoped: readonly T[]
+): { row: T; days: number } | null {
+  let best: { row: T; days: number } | null = null;
   for (const r of scoped) {
     const days = rentalDays(r);
-    if (longest === null || days > longest.days) longest = { id: r.id, days, provider: r.provider };
+    if (best === null || days > best.days) best = { row: r, days };
+  }
+  return best;
+}
+
+/** The rental with the most known driven km. A stored 0 km is no distance record (review M2). */
+export function farthestRental<T extends RecordRow>(
+  scoped: readonly T[]
+): { row: T; km: number; source: RentalDrivenKmSource | null } | null {
+  let best: { row: T; km: number; source: RentalDrivenKmSource | null } | null = null;
+  for (const r of scoped) {
     const driven = rentalDrivenKm(r);
-    // A stored 0 km is no distance record (review M2).
-    if (driven !== null && driven.km > 0 && (farthest === null || driven.km > farthest.km)) {
-      farthest = { id: r.id, km: driven.km, source: driven.source };
+    if (driven !== null && driven.km > 0 && (best === null || driven.km > best.km)) {
+      best = { row: r, km: driven.km, source: driven.source };
     }
   }
-  const firstOf = new Map<string, RentalExtraRow>();
+  return best;
+}
+
+/**
+ * Each provider's FIRST counted rental, over every rental, kept when it falls
+ * in the period on screen — a provider is new in the period its first rental
+ * is in, which the period alone cannot see.
+ */
+export function newProviderFirsts<T extends RecordRow>(
+  scoped: readonly T[],
+  all: readonly T[]
+): T[] {
+  const firstOf = new Map<string, T>();
   for (const r of [...all].sort(
     (a, b) => pickupDay(a).localeCompare(pickupDay(b)) || a.id.localeCompare(b.id)
   )) {
     if (!firstOf.has(providerKey(r.provider))) firstOf.set(providerKey(r.provider), r);
   }
   const scopedIds = new Set(scoped.map((r) => r.id));
+  return [...firstOf.values()].filter((r) => scopedIds.has(r.id));
+}
+
+/** The provider key `newProviderFirsts` folds by, for a distinct credit. */
+export const rentalProviderKey = (provider: string): string => providerKey(provider);
+
+function records(
+  scoped: readonly RentalExtraRow[],
+  all: readonly RentalExtraRow[]
+): RentalExtraStats["records"] {
+  const longest = longestRental(scoped);
+  const farthest = farthestRental(scoped);
   return {
-    longest,
-    farthest,
-    newProviders: [...firstOf.values()]
-      .filter((r) => scopedIds.has(r.id))
-      .map((r) => r.provider.trim()),
+    longest: longest
+      ? { id: longest.row.id, days: longest.days, provider: longest.row.provider }
+      : null,
+    farthest: farthest ? { id: farthest.row.id, km: farthest.km, source: farthest.source } : null,
+    newProviders: newProviderFirsts(scoped, all).map((r) => r.provider.trim()),
   };
 }
+
+/** Km per rental day stands on the rentals with known driven km (`rentalDrivenKm`). */
+export const kmPerDayStandsOn = (r: RecordRow): boolean => rentalDrivenKm(r) !== null;
+
+/**
+ * Cost per km stands on the rentals carrying BOTH a known cost and known km —
+ * and more than 0 km, since a driven 0 km cannot carry a price per km.
+ */
+export const costPerKmStandsOn = (r: RentalExtraRow): boolean => {
+  const driven = rentalDrivenKm(r);
+  return driven !== null && driven.km > 0 && rentalCost(r) !== null;
+};
 
 /**
  * @param scoped the counted rentals of the period on screen
@@ -217,9 +290,8 @@ export function computeRentalExtraStats(
     kmSum += driven.km;
     kmDays += rentalDays(r);
     kmRentals += 1;
-    const cost = rentalCost(r);
-    // A driven 0 km cannot carry a price per km.
-    if (cost === null || driven.km <= 0) continue;
+    if (!costPerKmStandsOn(r)) continue;
+    const cost = rentalCost(r)!;
     const cur = perKm.get(cost.currency) ?? { amount: 0, km: 0, rentals: 0 };
     perKm.set(cost.currency, {
       amount: cur.amount + cost.amount,
@@ -227,7 +299,7 @@ export function computeRentalExtraStats(
       rentals: cur.rentals + 1,
     });
   }
-  const viaBroker = scoped.filter((r) => r.broker?.trim()).length;
+  const viaBroker = scoped.filter(isBrokered).length;
   return {
     brokered: { viaBroker, direct: scoped.length - viaBroker },
     kmPerDay: {
