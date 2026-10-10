@@ -33,6 +33,11 @@ export const RENTAL_FACT_FIELDS = [
   "returnPrecision",
   "actualPickupTime",
   "actualReturnTime",
+  // An actual time travels with how much of it is known: without these, a
+  // hand-over known only to the DAY reached the copy as a claimed 00:00
+  // (`rentalTimes` reads a missing precision as minute) — forgejo#278.
+  "actualPickupPrecision",
+  "actualReturnPrecision",
   "vehicleClass",
   "acrissCode",
   "vehicleExample",

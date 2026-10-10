@@ -17,6 +17,7 @@ import {
 } from "../../../lib/api/lodging";
 import { tripsApi } from "../../../lib/api";
 import type { LodgingStay, LodgingStayListItem } from "../../../types/lodging";
+import { getNamed } from "../../../__tests__/helpers/namedElement";
 
 vi.mock("../../../hooks/useLodgingEntrySuggestions", () => ({
   useLodgingEntrySuggestions: () => ({
@@ -361,7 +362,7 @@ describe("StayEditor - the overlap notice", () => {
     expect(box).toHaveTextContent("lodging:conflict.unchecked");
     expect(createStay).not.toHaveBeenCalled();
 
-    await userEvent.click(screen.getByRole("button", { name: "lodging:conflict.retry" }));
+    await userEvent.click(getNamed("button", "lodging:conflict.retry"));
     await waitFor(() => expect(createStay).toHaveBeenCalledTimes(1));
     expect(listStayPage).toHaveBeenCalledTimes(2);
   });
@@ -464,9 +465,7 @@ describe("StayEditor - the overlap notice", () => {
 
       await screen.findByTestId("stay-conflict-hit");
       expect(screen.getByTestId("stay-conflict-retry")).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: "lodging:conflict.changeDates" })
-      ).toBeInTheDocument();
+      expect(getNamed("button", "lodging:conflict.changeDates")).toBeInTheDocument();
     });
   });
 });

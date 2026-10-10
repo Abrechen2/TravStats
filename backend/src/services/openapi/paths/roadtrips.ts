@@ -203,6 +203,29 @@ const roadtripDetail = z.object({
     })
   ),
   routingAvailable: z.boolean(),
+  progress: z
+    .object({
+      phase: z.enum(["past", "current", "planned", "undated"]),
+      roadKm: z
+        .object({
+          recorded: z.number(),
+          current: z.number(),
+          planned: z.number(),
+          unplaced: z.number(),
+        })
+        .describe(
+          "Road km by the timeline rule of GET /stats/insights/roadtrips: recorded = driven " +
+            "(its arrival station's day is past), current = today's stage, planned = ahead, " +
+            "unplaced = undated on a roadtrip still under way"
+        ),
+      roadKmBySource: z
+        .record(z.string(), z.number())
+        .describe("Every road km by what it was measured on: straight | drawn | routed | track"),
+      recordedRoadKmBySource: z
+        .record(z.string(), z.number())
+        .describe("The recorded road km only, by the same sources"),
+    })
+    .describe("Driven against planned (forgejo#179)"),
   expenses: z.array(expenseSchema).openapi({
     description:
       "This roadtrip's own expenses (forgejo#140); the trip's trip-wide ones are not here.",

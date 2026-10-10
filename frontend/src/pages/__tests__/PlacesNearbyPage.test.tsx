@@ -52,6 +52,7 @@ vi.mock("../../components/location/LocationInput", () => ({
 }));
 
 import PlacesNearbyPage from "../PlacesNearbyPage";
+import { getNamed, queryNamed } from "../../__tests__/helpers/namedElement";
 
 const place = (id: string, name: string, lat: number, over: Record<string, unknown> = {}) => ({
   id,
@@ -186,8 +187,8 @@ describe("PlacesNearbyPage", () => {
 
   it("starts from a point on the map without any permission", async () => {
     await renderAt();
-    fireEvent.click(screen.getByRole("button", { name: "Ort oder Punkt" }));
-    fireEvent.click(screen.getByRole("button", { name: "Ort suchen oder Punkt setzen" }));
+    fireEvent.click(getNamed("button", "Ort oder Punkt"));
+    fireEvent.click(getNamed("button", "Ort suchen oder Punkt setzen"));
     expect(screen.getByText("3 Orte bis 5 km um Eisenach")).toBeInTheDocument();
     expect(screen.getByTestId("search").textContent).toContain("lat=50.96610");
   });
@@ -199,17 +200,14 @@ describe("PlacesNearbyPage", () => {
 
     fireEvent.change(screen.getByLabelText("Kategorie"), { target: { value: "museum" } });
     expect(screen.getByText("Keine Orte passen zu den Filtern.")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Umkreis auf 1 km erweitern" }));
-    fireEvent.click(screen.getByRole("button", { name: "Umkreis auf 2 km erweitern" }));
-    fireEvent.click(screen.getByRole("button", { name: "Umkreis auf 5 km erweitern" }));
+    fireEvent.click(getNamed("button", "Umkreis auf 1 km erweitern"));
+    fireEvent.click(getNamed("button", "Umkreis auf 2 km erweitern"));
+    fireEvent.click(getNamed("button", "Umkreis auf 5 km erweitern"));
     expect(within(results()).getByRole("link", { name: "Bachhaus" })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Geplant/ }));
-    expect(screen.getByRole("button", { name: /Geplant/ })).toHaveAttribute(
-      "aria-pressed",
-      "false"
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Filter zurücksetzen" }));
+    fireEvent.click(getNamed("button", /Geplant/));
+    expect(getNamed("button", /Geplant/)).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(getNamed("button", "Filter zurücksetzen"));
     expect(within(results()).getAllByRole("listitem")).toHaveLength(3);
   });
 
@@ -223,8 +221,8 @@ describe("PlacesNearbyPage", () => {
     });
     await renderAt();
     expect(getCurrentPosition).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Mein Standort" }));
-    fireEvent.click(screen.getByRole("button", { name: "Standort einmal verwenden" }));
+    fireEvent.click(getNamed("button", "Mein Standort"));
+    fireEvent.click(getNamed("button", "Standort einmal verwenden"));
     expect(getCurrentPosition).toHaveBeenCalledTimes(1);
     expect(screen.getByText("3 Orte bis 5 km um dein Standort")).toBeInTheDocument();
     expect(screen.getByTestId("search").textContent).toBe("");
@@ -239,8 +237,8 @@ describe("PlacesNearbyPage", () => {
       configurable: true,
     });
     await renderAt();
-    fireEvent.click(screen.getByRole("button", { name: "Mein Standort" }));
-    fireEvent.click(screen.getByRole("button", { name: "Standort einmal verwenden" }));
+    fireEvent.click(getNamed("button", "Mein Standort"));
+    fireEvent.click(getNamed("button", "Standort einmal verwenden"));
     expect(screen.getByRole("alert")).toHaveTextContent("Standort nicht freigegeben");
   });
 
@@ -250,14 +248,14 @@ describe("PlacesNearbyPage", () => {
       .mockResolvedValueOnce(PLACES);
     await renderAt("/places/nearby?lat=50.9661&lon=10.3064");
     expect(screen.getByText("Orte konnten nicht geladen werden.")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Erneut versuchen" }));
+    fireEvent.click(getNamed("button", "Erneut versuchen"));
     await waitFor(() => expect(within(results()).getAllByRole("listitem")).toHaveLength(3));
   });
 
   it("offers no lodging start while the lodging domain is off", async () => {
     domains.lodging = false;
     await renderAt();
-    expect(screen.queryByRole("button", { name: "Unterkunft" })).not.toBeInTheDocument();
+    expect(queryNamed("button", "Unterkunft")).not.toBeInTheDocument();
     expect(listLodgings).not.toHaveBeenCalled();
   });
 
@@ -266,7 +264,7 @@ describe("PlacesNearbyPage", () => {
     const row = within(results()).getAllByRole("listitem")[1];
     fireEvent.click(within(row).getByRole("button", { name: "Besuch erfassen" }));
     await act(async () => {});
-    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    fireEvent.click(getNamed("button", "Speichern"));
     await waitFor(() => expect(createVisit).toHaveBeenCalledWith("p2", expect.anything()));
     await waitFor(() => expect(listPlaces).toHaveBeenCalledTimes(2));
   });

@@ -26,6 +26,7 @@ vi.mock("../../components/Cruise/CruiseEditModal", () => ({ CruiseEditModal: () 
 vi.mock("../../hooks/useTodayZone", () => ({ useTodayZone: () => "UTC" }));
 
 import CruiseDetailPage from "../CruiseDetailPage";
+import { findNamed, queryNamed } from "../../__tests__/helpers/namedElement";
 
 const port = (id: number, name: string): Port =>
   ({ id, name, country: "Norway", timezone: "Europe/Oslo" }) as Port;
@@ -98,7 +99,7 @@ describe("CruiseDetailPage — day card", () => {
     listForEntry.mockResolvedValue([]);
     renderPage();
 
-    const card = await screen.findByRole("region", { name: /detail\.day 3/ });
+    const card = await findNamed("region", /detail\.day 3/);
     expect(card.textContent).toContain("dayCard.today");
     // Opened by itself on "today": nothing scrolls, the focus stays put.
     expect(scrollIntoView).not.toHaveBeenCalled();
@@ -113,13 +114,13 @@ describe("CruiseDetailPage — day card", () => {
     renderPage();
 
     expect(await screen.findByText("dayCard.pickHint")).toBeInTheDocument();
-    expect(screen.queryByRole("region", { name: /detail\.day/ })).toBeNull();
+    expect(queryNamed("region", /detail\.day/)).toBeNull();
     expect(listForEntry).not.toHaveBeenCalled();
 
     const rows = screen.getAllByRole("button", { pressed: false });
     const kiel = rows.find((r) => r.textContent?.includes("Kiel"));
     await userEvent.click(kiel!);
-    const card = await screen.findByRole("region", { name: /detail\.day 1/ });
+    const card = await findNamed("region", /detail\.day 1/);
     expect(within(card).queryByText("dayCard.today")).toBeNull();
     expect(kiel).toHaveAttribute("aria-pressed", "true");
     // Review I5: on a long itinerary the card sits above the row that was
@@ -148,7 +149,7 @@ describe("CruiseDetailPage — day card", () => {
     const drobak = rows.find((r) => r.textContent?.includes("Drøbak"));
     await userEvent.click(drobak!);
 
-    const card = await screen.findByRole("region", { name: /detail\.day 3/ });
+    const card = await findNamed("region", /detail\.day 3/);
     expect(card.textContent).toContain("Festung");
     expect(card.textContent).not.toContain("Holmenkollen");
     expect(drobak).toHaveAttribute("aria-pressed", "true");

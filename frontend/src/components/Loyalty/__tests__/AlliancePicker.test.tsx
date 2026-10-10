@@ -13,6 +13,7 @@ const loyalty = vi.hoisted(() => ({
 vi.mock("../../../lib/api/loyalty", () => loyalty);
 
 import LoyaltyCardForm from "../LoyaltyCardForm";
+import { findNamed, queryNamed } from "../../../__tests__/helpers/namedElement";
 
 const MEMBERS = {
   star: ["LH", "LX", "OS", "UA"],
@@ -46,7 +47,7 @@ describe("LoyaltyCardForm — alliance picker", () => {
     loyalty.createLoyaltyMembership.mockResolvedValue({});
     const { onSaved } = renderForm(["LH", "EW"]);
 
-    fireEvent.click(await screen.findByRole("button", { name: "loyalty:alliances.star" }));
+    fireEvent.click(await findNamed("button", "loyalty:alliances.star"));
     for (const code of ["LX", "OS", "UA", "EW"]) expect(screen.getByText(code)).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("loyalty-save-flight"));
@@ -59,7 +60,7 @@ describe("LoyaltyCardForm — alliance picker", () => {
     catalogue.airlinesApi.alliances.mockRejectedValue(new Error("Network Error"));
     renderForm();
     expect(await screen.findByText("loyalty:alliances.loadError")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "loyalty:alliances.star" })).toBeNull();
+    expect(queryNamed("button", "loyalty:alliances.star")).toBeNull();
     // The typed-code path still works — the picker is an addition, not a gate.
     expect(screen.getByLabelText("loyalty:field.airlineCodes")).toBeInTheDocument();
   });
@@ -72,7 +73,7 @@ describe("LoyaltyCardForm — alliance picker", () => {
     );
     catalogue.airlinesApi.alliances.mockResolvedValue(MEMBERS);
     renderForm(many);
-    fireEvent.click(await screen.findByRole("button", { name: "loyalty:alliances.star" }));
+    fireEvent.click(await findNamed("button", "loyalty:alliances.star"));
     expect(screen.getByText("loyalty:alliances.tooMany")).toBeInTheDocument();
     expect(screen.queryByText("UA")).toBeNull();
   });
@@ -81,6 +82,6 @@ describe("LoyaltyCardForm — alliance picker", () => {
     catalogue.airlinesApi.alliances.mockResolvedValue(MEMBERS);
     render(<LoyaltyCardForm domain="cruise" onSaved={vi.fn()} onCancel={vi.fn()} />);
     expect(catalogue.airlinesApi.alliances).not.toHaveBeenCalled();
-    expect(screen.queryByRole("button", { name: "loyalty:alliances.star" })).toBeNull();
+    expect(queryNamed("button", "loyalty:alliances.star")).toBeNull();
   });
 });

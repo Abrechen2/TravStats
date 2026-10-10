@@ -260,6 +260,8 @@
     "returnPrecision": "Genauigkeit Rückgabe",
     "actualPickupTime": "Tatsächliche Abholung",
     "actualReturnTime": "Tatsächliche Rückgabe",
+    "actualPickupPrecision": "Genauigkeit tatsächliche Abholung",
+    "actualReturnPrecision": "Genauigkeit tatsächliche Rückgabe",
     "vehicleClass": "Fahrzeugklasse",
     "acrissCode": "ACRISS-Code",
     "vehicleExample": "Beispielfahrzeug",

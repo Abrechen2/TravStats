@@ -80,6 +80,7 @@ vi.mock("../../store/settingsStore", async (importOriginal) => {
 vi.mock("@/hooks/useRecentCurrencies", () => ({ useRecentCurrencies: () => [] }));
 
 import FlightDetailPage from "../FlightDetailPage";
+import { findNamed, getNamed } from "../../__tests__/helpers/namedElement";
 
 const flight = {
   id: "f1",
@@ -115,11 +116,11 @@ describe("FlightDetailPage — a failed trip move after a stored edit", () => {
         </Routes>
       </MemoryRouter>
     );
-    fireEvent.click(await screen.findByRole("button", { name: "common:buttons.edit" }));
+    fireEvent.click(await findNamed("button", "common:buttons.edit"));
     await waitFor(() => expect(document.querySelector('option[value="t2"]')).not.toBeNull());
     const tripSelect = document.querySelector('option[value="t2"]')!.closest("select")!;
     fireEvent.change(tripSelect, { target: { value: "t2" } });
-    fireEvent.click(screen.getByRole("button", { name: "flights:edit.saveChanges" }));
+    fireEvent.click(getNamed("button", "flights:edit.saveChanges"));
 
     expect(await screen.findByText("flights:edit.savedTripAssignFailed")).toBeInTheDocument();
     // Nothing reloads under the open dialog.
@@ -130,7 +131,7 @@ describe("FlightDetailPage — a failed trip move after a stored edit", () => {
     expect(getById).toHaveBeenCalledTimes(1);
     expect(update).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    fireEvent.click(getNamed("button", "common:buttons.retry"));
     await waitFor(() =>
       expect(screen.queryByText("flights:edit.savedTripAssignFailed")).toBeNull()
     );

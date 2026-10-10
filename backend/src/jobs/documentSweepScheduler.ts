@@ -17,6 +17,7 @@
  */
 
 import cron from "node-cron";
+import type { ScheduledTask } from "node-cron";
 
 import { sweepDocuments } from "../services/documents/documentService";
 import { migrateLegacyReceipts, reconcileReceiptDocuments } from "../services/documents/receipts";
@@ -25,7 +26,7 @@ import { schedulerZone } from "../shared/time/schedulerZone";
 
 const CRON_EXPRESSION = "25 * * * *";
 
-let schedulerTask: cron.ScheduledTask | null = null;
+let schedulerTask: ScheduledTask | null = null;
 
 export async function runDocumentSweep(): Promise<void> {
   try {

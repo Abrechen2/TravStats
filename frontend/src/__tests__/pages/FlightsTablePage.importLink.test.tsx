@@ -8,6 +8,7 @@ import {
   countRenderedRows,
   paginationControlsRendered,
 } from "../../pages/__tests__/tablePaginationTestSupport";
+import { findNamed } from "../helpers/namedElement";
 
 // Measured 2026-09-19: these renders take ~1 s each on a developer machine
 // and 6–8 s on the CI runner under coverage instrumentation, past Vitest's
@@ -96,7 +97,7 @@ describe("FlightsTablePage", () => {
       </MemoryRouter>
     );
 
-    const link = await screen.findByRole("link", { name: /settings:import.openHub/ });
+    const link = await findNamed("link", /settings:import.openHub/);
     expect(link.getAttribute("href")).toBe("/settings/data?section=import");
   });
 

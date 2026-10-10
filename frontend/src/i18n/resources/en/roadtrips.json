@@ -471,6 +471,15 @@
     "figDrivenSub": "without ferries · {{km}} km in total",
     "figRoute": "Distance",
     "figRoutePlanned": "planned",
+    "figSoFar": "{{driven}} km driven so far · {{ahead}} km planned",
+    "distanceSourceKm": "{{km}} km {{source}}",
+    "distanceSource": {
+      "track": "GPS track",
+      "routed": "route",
+      "drawn": "drawn",
+      "straight": "straight line"
+    },
+    "distanceRule": "Distance measured: {{parts}}. A straight line joins the stations directly, a route follows the roads of the routing provider, a GPS track is a recorded drive. A leg counts as driven once its destination was reached before today; “Driven” appears only when a GPS track covers every kilometre.",
     "figDays": "Days",
     "figDaysAhead_one": "one still ahead",
     "figDaysAhead_other": "{{count}} still ahead",

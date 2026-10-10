@@ -43,6 +43,7 @@ vi.mock("../../lib/api/trips", () => ({ tripsApi: { getAll: vi.fn(async () => []
 // Imported after the mocks above so the module graph picks them up.
 import PlacesListPage from "../PlacesListPage";
 import { useSettingsStore } from "../../store/settingsStore";
+import { allNamed, findNamed, getNamed, queryNamed } from "../../__tests__/helpers/namedElement";
 
 // Measured 2026-09-19: this page's paged-rows case renders in about a second
 // on a developer machine and past Vitest's 5 s default on the CI runner under
@@ -102,7 +103,7 @@ describe("PlacesListPage", () => {
     listPlacesMock.mockResolvedValue([]);
     renderListPage();
 
-    fireEvent.click(await screen.findByRole("button", { name: "places:list.addFirst" }));
+    fireEvent.click(await findNamed("button", "places:list.addFirst"));
     expect(await screen.findByText("places:form.createTitle")).toBeInTheDocument();
   });
 
@@ -118,7 +119,7 @@ describe("PlacesListPage", () => {
     expect(screen.queryByText("places:list.empty")).not.toBeInTheDocument();
     expect(screen.getByText("HTTP 503")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    fireEvent.click(getNamed("button", "common:buttons.retry"));
     expect(await screen.findByText("Wartburg")).toBeInTheDocument();
     expect(listPlacesMock).toHaveBeenCalledTimes(2);
   });
@@ -142,7 +143,7 @@ describe("PlacesListPage", () => {
     await screen.findByText("Wartburg");
     expect(getPlaceRelationsMock).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getAllByRole("button", { name: "common:buttons.delete" })[0]);
+    fireEvent.click(allNamed("button", "common:buttons.delete")[0]);
     const dialog = await screen.findByTestId("confirm-modal");
     await waitFor(() => expect(dialog.textContent).toContain("places:delete.photos"));
     expect(getPlaceRelationsMock).toHaveBeenCalledWith("p1");
@@ -156,15 +157,15 @@ describe("PlacesListPage", () => {
     renderListPage();
     await screen.findByText("Wartburg");
 
-    fireEvent.click(screen.getByRole("button", { name: "places:visit.action" }));
-    const save = await screen.findByRole("button", { name: "common:buttons.save" });
+    fireEvent.click(getNamed("button", "places:visit.action"));
+    const save = await findNamed("button", "common:buttons.save");
     fireEvent.click(save);
 
     await waitFor(() => expect(createVisitMock).toHaveBeenCalledTimes(1));
     expect(createVisitMock.mock.calls[0][0]).toBe("p1");
     await waitFor(() => expect(listPlacesMock).toHaveBeenCalledTimes(2));
     await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "common:buttons.save" })).not.toBeInTheDocument()
+      expect(queryNamed("button", "common:buttons.save")).not.toBeInTheDocument()
     );
   });
 
@@ -178,7 +179,7 @@ describe("PlacesListPage", () => {
     renderListPage();
     await screen.findByText("Wartburg");
 
-    fireEvent.click(screen.getAllByRole("button", { name: "common:buttons.delete" })[0]);
+    fireEvent.click(allNamed("button", "common:buttons.delete")[0]);
     const dialog = await screen.findByTestId("confirm-modal");
     await act(async () => {
       fireEvent.click(within(dialog).getByRole("button", { name: "common:buttons.delete" }));
@@ -187,7 +188,7 @@ describe("PlacesListPage", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("places:list.deleteFailedFor");
     expect(screen.queryByTestId("confirm-modal")).not.toBeInTheDocument();
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+      fireEvent.click(getNamed("button", "common:buttons.retry"));
     });
     expect(deletePlaceMock).toHaveBeenCalledTimes(2);
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
@@ -201,7 +202,7 @@ describe("PlacesListPage", () => {
 
     renderListPage();
 
-    const add = await screen.findByRole("button", { name: /places:list\.addPlace/ });
+    const add = await findNamed("button", /places:list\.addPlace/);
     expect(add).toHaveClass("btn-primary");
     expect(add.style.background).toBe("");
   });

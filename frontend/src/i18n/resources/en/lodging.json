@@ -85,6 +85,8 @@
     "spendOriginal": "Original",
     "spendBase": "In base currency",
     "spendPerNight": "Avg. total per night",
+    "spendPerNightCalc_one": "{{total}} ÷ {{count}} night = {{result}} — every cost of the counted stays (room, extras, fees, taxes) per night, as booked, not per person.",
+    "spendPerNightCalc_other": "{{total}} ÷ {{count}} nights = {{result}} — every cost of the counted stays (room, extras, fees, taxes) per night, as booked, not per person.",
     "noLocation": "No location on file",
     "setLocationNow": "Find location now",
     "deleteConfirmTitle": "Delete lodging?",
@@ -103,6 +105,14 @@
     "deletePhotosNote_one": "Plus 1 photo of the house, deleted with it.",
     "deletePhotosNote_other": "Plus {{count}} photos of the house, deleted with it.",
     "survivorTripsUnnamed": "linked trips"
+  },
+  "nightPrice": {
+    "roomRate": "Room per night",
+    "average": "Avg. per night, total",
+    "calculation_one": "({{total}} ÷ {{count}} night = {{result}})",
+    "calculation_other": "({{total}} ÷ {{count}} nights = {{result}})",
+    "extras": "{{amount}} of it beyond the room rate (extras, fees, taxes)",
+    "scope": "Total price of the stay as booked, not per person."
   },
   "field": {
     "name": "Name",

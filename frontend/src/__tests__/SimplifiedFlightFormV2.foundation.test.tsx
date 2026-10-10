@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import SimplifiedFlightFormV2 from "../components/SimplifiedFlightFormV2";
 import { companionsApi } from "../lib/api";
+import { findNamed, getNamed, queryNamed } from "./helpers/namedElement";
 
 // The flight forms ask the user's logbook for suggestions over the network;
 // these tests pin other wiring and must reach none.
@@ -114,7 +115,7 @@ const mockOnCancel = vi.fn();
 async function openManual(onSubmit: (...a: unknown[]) => unknown) {
   render(<SimplifiedFlightFormV2 onSubmit={onSubmit as never} onCancel={mockOnCancel} />);
   fireEvent.click(screen.getByText(/flights:form\.manualEntryAction/i));
-  await screen.findByRole("button", { name: /flights:form\.submit$/i });
+  await findNamed("button", /flights:form\.submit$/i);
 }
 
 function pickBothAirports(): void {
@@ -147,7 +148,7 @@ describe("SimplifiedFlightFormV2 — the shared form blocks", () => {
   it("asks before a changed form is discarded", async () => {
     await openManual(vi.fn());
     fireEvent.click(screen.getByText("pick-flight-form-departure-airport"));
-    fireEvent.click(screen.getByRole("button", { name: "flights:form.cancel" }));
+    fireEvent.click(getNamed("button", "flights:form.cancel"));
     expect(await screen.findByText("common:discard.title")).toBeInTheDocument();
     expect(mockOnCancel).not.toHaveBeenCalled();
   });
@@ -166,7 +167,7 @@ describe("SimplifiedFlightFormV2 — the shared form blocks", () => {
       (document.getElementById("flight-form-departure-airport") as HTMLInputElement).value
     ).toBe("MUC");
 
-    fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    fireEvent.click(getNamed("button", "common:buttons.retry"));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(2));
   });
 
@@ -182,13 +183,13 @@ describe("SimplifiedFlightFormV2 — the shared form blocks", () => {
       />
     );
     fireEvent.click(screen.getByText(/flights:form\.manualEntryAction/i));
-    await screen.findByRole("button", { name: /flights:form\.submit$/i });
+    await findNamed("button", /flights:form\.submit$/i);
     pickBothAirports();
     fireEvent.submit(form());
 
     expect(await screen.findByText("common:saveErrors.outcomeUnknown")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "common:buttons.retry" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "common:buttons.reloadList" }));
+    expect(queryNamed("button", "common:buttons.retry")).toBeNull();
+    fireEvent.click(getNamed("button", "common:buttons.reloadList"));
     expect(onReload).toHaveBeenCalledTimes(1);
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });
@@ -242,7 +243,7 @@ describe("SimplifiedFlightFormV2 — the shared form blocks", () => {
     fireEvent.change(document.getElementById("timesFieldsActualDepDate")!, {
       target: { value: "2026-10-09" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /flights:form\.submitAndReturn/i }));
+    fireEvent.click(getNamed("button", /flights:form\.submitAndReturn/i));
 
     const actualTime = document.getElementById("timesFieldsActualDepTime") as HTMLInputElement;
     await waitFor(() => expect(actualTime).toHaveAttribute("aria-invalid", "true"));
@@ -260,7 +261,7 @@ describe("SimplifiedFlightFormV2 — the shared form blocks", () => {
     const price = document.getElementById("flight-form-cost-price") as HTMLInputElement;
     fireEvent.change(price, { target: { value: "-5" } });
     expect(price).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByRole("button", { name: "flights:form.missing.price" })).toBeInTheDocument();
+    expect(getNamed("button", "flights:form.missing.price")).toBeInTheDocument();
     fireEvent.submit(form());
     await waitFor(() => expect(document.activeElement).toBe(price));
     expect(onSubmit).not.toHaveBeenCalled();
@@ -270,14 +271,14 @@ describe("SimplifiedFlightFormV2 — the shared form blocks", () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     await openManual(onSubmit);
     pickBothAirports();
-    fireEvent.click(screen.getByRole("button", { name: /flights:form\.submitAndReturn/i }));
+    fireEvent.click(getNamed("button", /flights:form\.submitAndReturn/i));
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
     await waitFor(() =>
       expect(
         (document.getElementById("flight-form-departure-airport") as HTMLInputElement).value
       ).toBe("CPH")
     );
-    fireEvent.click(screen.getByRole("button", { name: "flights:form.cancel" }));
+    fireEvent.click(getNamed("button", "flights:form.cancel"));
     expect(screen.queryByText("common:discard.title")).toBeNull();
     await waitFor(() => expect(mockOnCancel).toHaveBeenCalledTimes(1));
   });

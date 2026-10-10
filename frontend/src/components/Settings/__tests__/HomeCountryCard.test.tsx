@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -42,8 +42,10 @@ describe("HomeCountryCard", () => {
     render(<HomeCountryCard />);
     await waitFor(() => expect(select().value).toBe("ES"));
     expect(screen.getByText("settings:homeCountry.description")).toBeTruthy();
-    // Every country is offered, by its localised name.
-    expect(screen.getByRole("option", { name: "Deutschland" })).toBeTruthy();
+    // Every country is offered, by its localised name. By text, not by role:
+    // a role query computes the accessible name and visibility of all ~250
+    // options, which alone took this test past 5 s on a loaded CI runner.
+    expect(within(select()).getByText("Deutschland").tagName).toBe("OPTION");
   });
 
   it("saves the chosen country as its ISO code", async () => {

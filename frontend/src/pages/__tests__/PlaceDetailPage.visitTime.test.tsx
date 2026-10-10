@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import PlaceDetailPage from "../PlaceDetailPage";
+import { findNamed, getNamed } from "../../__tests__/helpers/namedElement";
 
 const createVisit = vi.fn();
 
@@ -66,12 +67,12 @@ function renderPage() {
 async function typeVisit(date: string, time: string): Promise<void> {
   const user = userEvent.setup();
   renderPage();
-  await user.click(await screen.findByRole("button", { name: /Besuch/ }));
+  await user.click(await findNamed("button", /Besuch/));
   // The dialog opens on "Heute"; a typed day is "Anderes Datum" (forgejo#231).
-  await user.click(screen.getByRole("button", { name: "Anderes Datum" }));
+  await user.click(getNamed("button", "Anderes Datum"));
   fireEvent.change(document.querySelector('input[type="date"]')!, { target: { value: date } });
   fireEvent.change(document.querySelector('input[type="time"]')!, { target: { value: time } });
-  await user.click(screen.getByRole("button", { name: "Speichern" }));
+  await user.click(getNamed("button", "Speichern"));
 }
 
 const refused = (code: string) => ({

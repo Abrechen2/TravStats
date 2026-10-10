@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
 import type { Achievement } from "../../types";
+import { allNamed } from "../helpers/namedElement";
 
 /**
  * #330, the other half.
@@ -85,7 +86,7 @@ describe("AchievementsPage — a card that looks clickable is clickable (#330)",
     );
 
     await screen.findByText("achievements:codes.FIRST_FLIGHT.name");
-    const cards = screen.getAllByRole("button", { name: /FIRST_FLIGHT/ });
+    const cards = allNamed("button", /FIRST_FLIGHT/);
     expect(cards.length).toBeGreaterThan(0);
 
     expect(screen.queryByTestId("achievement-detail-modal")).not.toBeInTheDocument();
@@ -104,7 +105,7 @@ describe("AchievementsPage — a card that looks clickable is clickable (#330)",
     );
 
     await screen.findByText("achievements:codes.FIRST_FLIGHT.name");
-    const card = screen.getAllByRole("button", { name: /FIRST_FLIGHT/ })[0];
+    const card = allNamed("button", /FIRST_FLIGHT/)[0];
     card.focus();
     await userEvent.keyboard("{Enter}");
     expect(screen.getByTestId("achievement-detail-modal")).toBeInTheDocument();

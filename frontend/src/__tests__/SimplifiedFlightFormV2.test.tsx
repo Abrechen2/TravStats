@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import SimplifiedFlightFormV2 from "../components/SimplifiedFlightFormV2";
 import { companionsApi } from "../lib/api";
+import { findNamed, getNamed } from "./helpers/namedElement";
 
 // The flight forms ask the user's logbook for suggestions over the network;
 // these tests pin other wiring and must reach none.
@@ -104,7 +105,7 @@ describe("SimplifiedFlightFormV2", () => {
 
   it("offers a close control in the header, not only below the fold (R01)", () => {
     render(<SimplifiedFlightFormV2 onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
-    fireEvent.click(screen.getByRole("button", { name: /common:buttons\.close/i }));
+    fireEvent.click(getNamed("button", /common:buttons\.close/i));
     expect(mockOnCancel).toHaveBeenCalledTimes(1);
   });
 
@@ -131,10 +132,10 @@ describe("SimplifiedFlightFormV2", () => {
     await waitFor(() => {
       // Anchor on $ to match flights:form.submit and exclude submitAndReturn,
       // which was added when "Save + add return flight" got its own button.
-      const submitButton = screen.getByRole("button", { name: /flights:form\.submit$/i });
+      const submitButton = getNamed("button", /flights:form\.submit$/i);
       expect(submitButton).toBeEnabled();
     });
-    expect(screen.getByRole("button", { name: /flights:form\.submitAndReturn/i })).toBeEnabled();
+    expect(getNamed("button", /flights:form\.submitAndReturn/i)).toBeEnabled();
   });
 
   // forgejo#245: the missing steps are said BESIDE the buttons, visibly and
@@ -144,7 +145,7 @@ describe("SimplifiedFlightFormV2", () => {
 
     fireEvent.click(screen.getByText(/flights:form\.manualEntryAction/i));
 
-    const submitButton = await screen.findByRole("button", { name: /flights:form\.submit$/i });
+    const submitButton = await findNamed("button", /flights:form\.submit$/i);
     expect(submitButton.getAttribute("title")).toBeNull();
     const hint = document.getElementById(submitButton.getAttribute("aria-describedby") ?? "");
     expect(hint).not.toBeNull();
@@ -158,12 +159,10 @@ describe("SimplifiedFlightFormV2", () => {
 
     fireEvent.click(screen.getByText(/flights:form\.manualEntryAction/i));
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: /flights:form\.submitAndReturn/i })
-      ).toBeInTheDocument();
+      expect(getNamed("button", /flights:form\.submitAndReturn/i)).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: /flights:form\.submitAndReturn/i }));
+    fireEvent.click(getNamed("button", /flights:form\.submitAndReturn/i));
 
     await waitFor(() => {
       expect(screen.getByText(/errors:missingAirports/i)).toBeInTheDocument();
@@ -189,7 +188,7 @@ describe("SimplifiedFlightFormV2", () => {
 
     fireEvent.click(screen.getByText(/flights:form\.manualEntryAction/i));
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /flights:form\.submit$/i })).toBeInTheDocument();
+      expect(getNamed("button", /flights:form\.submit$/i)).toBeInTheDocument();
     });
 
     expect(screen.queryByText(/errors:missingAirports/i)).not.toBeInTheDocument();
@@ -213,7 +212,7 @@ describe("SimplifiedFlightFormV2", () => {
 
     fireEvent.click(screen.getByText(/flights:form\.manualEntryAction/i));
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /flights:form\.submit$/i })).toBeInTheDocument();
+      expect(getNamed("button", /flights:form\.submit$/i)).toBeInTheDocument();
     });
 
     const form = document.querySelector("form");

@@ -260,6 +260,8 @@
     "returnPrecision": "Return precision",
     "actualPickupTime": "Actual pick-up",
     "actualReturnTime": "Actual return",
+    "actualPickupPrecision": "Actual pick-up precision",
+    "actualReturnPrecision": "Actual return precision",
     "vehicleClass": "Vehicle class",
     "acrissCode": "ACRISS code",
     "vehicleExample": "Example vehicle",

@@ -46,6 +46,7 @@
  */
 
 import cron from "node-cron";
+import type { ScheduledTask } from "node-cron";
 
 import { prisma } from "../db";
 import { buildKnownAirportTest } from "../services/countryDays/knownAirports";
@@ -60,7 +61,7 @@ import { schedulerZone } from "../shared/time/schedulerZone";
 /** 04:40 UTC — see the table above. */
 const CRON_EXPRESSION = "40 4 * * *";
 
-let schedulerTask: cron.ScheduledTask | null = null;
+let schedulerTask: ScheduledTask | null = null;
 
 export interface CountryDaySweepOptions {
   /** Sweep one account instead of every eligible one. */

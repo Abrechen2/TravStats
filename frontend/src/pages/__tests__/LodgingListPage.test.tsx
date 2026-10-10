@@ -128,6 +128,7 @@ vi.unmock("../../store/settingsStore");
 import LodgingListPage from "../LodgingListPage";
 import { useSettingsStore } from "../../store/settingsStore";
 import { EMPTY_LODGING_STATS_BLOCKS } from "../../types/lodgingStatsFixture";
+import { findNamed, queryNamed } from "../../__tests__/helpers/namedElement";
 
 // Measured 2026-09-19: this page's paged-rows case renders in about a second
 // on a developer machine and past Vitest's 5 s default on the CI runner under
@@ -418,7 +419,7 @@ describe("LodgingListPage", () => {
     const user = userEvent.setup();
     renderListPage();
 
-    await screen.findByRole("option", { name: "2024" });
+    await findNamed("option", "2024");
     listLodgingPageMock.mockClear();
 
     await openFilterPanel();
@@ -808,13 +809,13 @@ describe("LodgingListPage", () => {
 
     renderListPage();
 
-    const retry = await screen.findByRole("button", { name: "common:buttons.retry" });
+    const retry = await findNamed("button", "common:buttons.retry");
     const callsBefore = listLodgingPageMock.mock.calls.length;
     await userEvent.click(retry);
 
     await waitFor(() => expect(listLodgingPageMock.mock.calls.length).toBeGreaterThan(callsBefore));
     await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "common:buttons.retry" })).not.toBeInTheDocument()
+      expect(queryNamed("button", "common:buttons.retry")).not.toBeInTheDocument()
     );
     expect(screen.queryByText("lodging:list.loadError")).not.toBeInTheDocument();
   });
@@ -824,7 +825,7 @@ describe("LodgingListPage", () => {
     mockRows([]);
     renderListPage();
 
-    await userEvent.click(await screen.findByRole("button", { name: "lodging:add.title" }));
+    await userEvent.click(await findNamed("button", "lodging:add.title"));
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
   });
 
@@ -835,7 +836,7 @@ describe("LodgingListPage", () => {
     mockRows([]);
     renderListPage();
 
-    const hubLink = await screen.findByRole("link", { name: /settings:import\.openHub/ });
+    const hubLink = await findNamed("link", /settings:import\.openHub/);
     expect(hubLink).toHaveAttribute("href", "/settings/data?section=import");
     expect(screen.queryByText("lodging:import.csv.title")).not.toBeInTheDocument();
   });
@@ -850,14 +851,10 @@ describe("LodgingListPage", () => {
     mockRows([]);
     renderListPage();
 
-    expect(await screen.findByRole("button", { name: /lodging:add\.title/ })).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /import:lodging\.triggerLabel/ })
-    ).not.toBeInTheDocument();
+    expect(await findNamed("button", /lodging:add\.title/)).toBeInTheDocument();
+    expect(queryNamed("button", /import:lodging\.triggerLabel/)).not.toBeInTheDocument();
     // The hub stays reachable, but as a quiet link — never a competing button.
-    expect(
-      screen.queryByRole("button", { name: /settings:import\.openHub/ })
-    ).not.toBeInTheDocument();
+    expect(queryNamed("button", /settings:import\.openHub/)).not.toBeInTheDocument();
   });
   // The list had no actions at all: editing meant opening the house first,
   // and deleting was only possible from the detail page. Flights and cruises
@@ -1074,7 +1071,7 @@ describe("LodgingListPage", () => {
       await waitFor(() => expect(listLodgingPageMock).toHaveBeenCalled());
       const before = listLodgingPageMock.mock.calls.length;
 
-      await userEvent.click(await screen.findByRole("button", { name: "stub-save-stay" }));
+      await userEvent.click(await findNamed("button", "stub-save-stay"));
       await waitFor(() => expect(listLodgingPageMock.mock.calls.length).toBeGreaterThan(before));
     });
 
