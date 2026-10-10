@@ -4,10 +4,17 @@ import { useTranslation } from "../../hooks/useTranslation";
 import type { Aggregation, EvidenceEntry } from "../../shared/evidence";
 import { composeI18nText, formatEvidenceDate } from "./evidenceText";
 import { countryName } from "../Passport/countryName";
+import { PLACE_CATEGORIES } from "../../shared/placeCategories";
 
 /** The `measure.unit` whose credits are ISO 3166-1 alpha-2 country codes. */
 const COUNTRY_UNIT = "countries";
 const ISO_COUNTRY_CODE = /^[A-Z]{2}$/;
+/** The `measure.unit` whose credits are place-category codes (`shared/placeCategories`). */
+const CATEGORY_UNIT = "categories";
+const CATEGORY_CODES: ReadonlySet<string> = new Set(PLACE_CATEGORIES);
+/** The `measure.unit` whose credits are calendar days, `YYYY-MM-DD`. */
+const DAY_UNIT = "days";
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 interface EvidenceEntryRowProps {
   entry: EvidenceEntry;
@@ -42,7 +49,7 @@ export default function EvidenceEntryRow({
   aggregation,
   unit,
 }: EvidenceEntryRowProps): JSX.Element {
-  const { t, i18n } = useTranslation(["evidence"]);
+  const { t, i18n } = useTranslation(["evidence", "places"]);
 
   const title = composeI18nText(entry.title, t);
   const subtitle = entry.subtitle ? composeI18nText(entry.subtitle, t) : null;
@@ -62,9 +69,19 @@ export default function EvidenceEntryRow({
   // that are already words ("MUC", "Europe"): the server never names a country
   // (the name belongs to the reader's language), so "DE" printed raw beside
   // "Hotel Sport" — the client names it, through the passport's own helper.
-  const creditName = (key: string): string =>
-    entry.creditLabels?.[key] ??
-    (unit === COUNTRY_UNIT && ISO_COUNTRY_CODE.test(key) ? countryName(key, i18n.language) : key);
+  // Likewise a place category ("restaurant") is a code the server sends, never
+  // a word: it is named through the places UI's own labels, and a calendar
+  // day is written the way the row's own date is.
+  const creditName = (key: string): string => {
+    const label = entry.creditLabels?.[key];
+    if (label !== undefined) return label;
+    if (unit === COUNTRY_UNIT && ISO_COUNTRY_CODE.test(key)) return countryName(key, i18n.language);
+    if (unit === CATEGORY_UNIT && CATEGORY_CODES.has(key)) return t(`places:categories.${key}`);
+    if (unit === DAY_UNIT && ISO_DAY.test(key)) {
+      return formatEvidenceDate({ value: key, precision: "day" }, i18n.language) ?? key;
+    }
+    return key;
+  };
   const creditsText =
     aggregation === "distinct" && entry.credits
       ? t("evidence:entry.credits", { list: entry.credits.map(creditName).join(", ") })
