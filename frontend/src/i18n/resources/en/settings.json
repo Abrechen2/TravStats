@@ -581,7 +581,9 @@
       "summaryNoData": "No provider data: {{count}}",
       "summaryAlreadyComplete": "Already complete: {{count}}",
       "summaryFailed": "Failed: {{count}}",
-      "summaryRetryHint": "{{count}} more flights remain — click \"Refresh\" again to process the next batch."
+      "summaryRetryHint": "{{count}} more flights remain — click \"Refresh\" again to process the next batch.",
+      "previewFailed": "The preview could not be loaded. Please try again later.",
+      "runFailed": "The refresh failed. Please try again later."
     },
     "opensky": {
       "label": "OpenSky Network",

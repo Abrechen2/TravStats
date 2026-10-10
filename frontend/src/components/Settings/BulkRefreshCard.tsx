@@ -45,6 +45,22 @@ function summaryProviderFailures(
   return providerFailureLines([...seen.values()], t);
 }
 
+/**
+ * The reader-facing sentence for a failed preview or run. Never the server's
+ * `message` or axios' own ("Request failed with status code 429"): both are
+ * English prose, and the second one reached the German settings page
+ * verbatim (forgejo#88 acceptance, 2026-10-10).
+ */
+function failureText(
+  error: { response?: { status?: number } },
+  fallbackKey: string,
+  t: (key: string) => string
+): string {
+  if (error.response?.status === 429) return t("common:saveErrors.rateLimited");
+  if (!error.response) return t("common:saveErrors.network");
+  return t(fallbackKey);
+}
+
 export default function BulkRefreshCard(): JSX.Element | null {
   const { t } = useTranslation(["settings", "common"]);
   // Which account is asking. The remembered refusal is the SERVER's answer
@@ -86,9 +102,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
         setRemaining(null);
         setPreviewError(null);
       } else {
-        setPreviewError(
-          errObj.response?.data?.message || errObj.message || "Vorschau fehlgeschlagen"
-        );
+        setPreviewError(failureText(errObj, "settings:apiKeys.bulkRefresh.previewFailed", t));
       }
     }
   };
@@ -145,9 +159,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
       ) {
         setDemoBlocked(true);
       } else {
-        setPreviewError(
-          errObj.response?.data?.message || errObj.message || "Aktualisierung fehlgeschlagen"
-        );
+        setPreviewError(failureText(errObj, "settings:apiKeys.bulkRefresh.runFailed", t));
       }
     } finally {
       setRunning(false);
