@@ -165,6 +165,12 @@ import {
   resolveCruiseOnTripCount,
 } from "./metricEvidenceCruiseDetail";
 import {
+  resolveCruisePortCallsTotal,
+  resolveCruiseCataloguePortCallsTotal,
+  resolveCruiseRiverCount,
+  resolveCruiseSailedDeckCount,
+} from "./metricEvidenceCruiseDepth";
+import {
   resolveLodgingPricedNightsTotal,
   resolveLodgingPaidNightsTotal,
   resolveLodgingChainNightsTotal,
@@ -326,6 +332,10 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   cruiseListedPortCallsTotal: resolveCruiseListedPortCallsTotal,
   cruiseDeckRecordedCount: resolveCruiseDeckRecordedCount,
   cruiseOnTripCount: resolveCruiseOnTripCount,
+  cruisePortCallsTotal: resolveCruisePortCallsTotal,
+  cruiseCataloguePortCallsTotal: resolveCruiseCataloguePortCallsTotal,
+  cruiseRiverCount: resolveCruiseRiverCount,
+  cruiseSailedDeckCount: resolveCruiseSailedDeckCount,
   lodgingPricedNightsTotal: resolveLodgingPricedNightsTotal,
   lodgingPaidNightsTotal: resolveLodgingPaidNightsTotal,
   lodgingChainNightsTotal: resolveLodgingChainNightsTotal,

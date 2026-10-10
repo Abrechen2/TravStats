@@ -23,6 +23,11 @@ import { COUNTING_FIELDS } from "../components/Stats/counting/countingEntry";
  * - A **figure without an evidence jump** is a `StatCard` or `InsightTile`
  *   that carries no `evidence` prop. A tile fed through a spread (`{...vm}`)
  *   cannot be judged statically and is not counted.
+ * - A data-driven grid counts too: every object of an array declared with one
+ *   of `FIGURE_ARRAY_TYPES` (the cruise tab's `Kpi[]`, drawn by its
+ *   `KpiGrid`) is a figure, and one without an `evidence` property is a
+ *   figure without a jump. Only types whose every array can be held at zero
+ *   are listed — a new type joins with its sections fixed, not frozen.
  *
  * `statsCountingHelp.baseline.json` freezes today's gaps, one entry per
  * section, holding ONLY its gaps: `"missingCountingHelp": true` and/or
@@ -48,6 +53,8 @@ const FIGURE_TAGS = new Set([
 ]);
 /** Tiles whose `evidence` prop is the jump to the entries; without it the number opens nothing. */
 const EVIDENCE_TILES = new Set(["StatCard", "InsightTile"]);
+/** Array element types of data-driven figure grids: each object literal is one figure. */
+const FIGURE_ARRAY_TYPES = new Set(["Kpi"]);
 /** Elements that render the counting help (the last two draw `CountingHelp` themselves). */
 const HELP_TAGS = new Set(["CountingHelp", "InsightTile", "InsightHeading"]);
 /** The figure primitives — they are what sections are built from, not sections. */
@@ -73,6 +80,23 @@ export function scanSection(source: string, fileName = "x.tsx"): Scan {
   const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   const scan: Scan = { figures: 0, hasCountingHelp: false, figuresWithoutEvidence: 0 };
   const visit = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      node.type &&
+      ts.isArrayTypeNode(node.type) &&
+      FIGURE_ARRAY_TYPES.has(node.type.elementType.getText(sf)) &&
+      node.initializer &&
+      ts.isArrayLiteralExpression(node.initializer)
+    ) {
+      for (const element of node.initializer.elements) {
+        if (!ts.isObjectLiteralExpression(element)) continue;
+        scan.figures += 1;
+        const evidence = element.properties.some(
+          (p) => p.name !== undefined && p.name.getText(sf) === "evidence"
+        );
+        if (!evidence) scan.figuresWithoutEvidence += 1;
+      }
+    }
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tag = node.tagName.getText(sf);
       if (FIGURE_TAGS.has(tag)) scan.figures += 1;
@@ -240,6 +264,17 @@ describe("the scan itself", () => {
       const c = <InsightTile {...vm} />;
     `);
     expect(scan).toEqual({ figures: 3, hasCountingHelp: true, figuresWithoutEvidence: 1 });
+  });
+
+  it("counts each object of a figure grid, and the ones without evidence", () => {
+    const scan = scanSection(`
+      const kpis: Kpi[] = [
+        { label: "a", value: 1, evidence: { key: "k", renderedValue: 1 } },
+        { label: "b", value: 2 },
+      ];
+      const other: Row[] = [{ label: "c" }];
+    `);
+    expect(scan).toEqual({ figures: 2, hasCountingHelp: false, figuresWithoutEvidence: 1 });
   });
 
   it("sees counting help drawn directly or through a primitive", () => {

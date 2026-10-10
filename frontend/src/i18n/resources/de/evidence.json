@@ -296,5 +296,9 @@
   "evidence.subtitle.pricePerNightAward": "Prämienaufenthalt: {{amount}} {{currency}} pro Nacht",
   "evidence.subtitle.ratings": "Gesamt {{overall}} · Zimmer {{room}} · Frühstück {{breakfast}} · Service {{service}}",
   "evidence.subtitle.position": "Breite {{lat}}°, Länge {{lon}}° · zählt {{weight}}-fach",
-  "evidence.subtitle.tripBase": "Unterkünfte: {{houses}} · Wechsel: {{changes}}"
+  "evidence.subtitle.tripBase": "Unterkünfte: {{houses}} · Wechsel: {{changes}}",
+  "evidence.metric.cruisePortCallsTotal": "Hafenstopps gefahrener Kreuzfahrten",
+  "evidence.metric.cruiseCataloguePortCallsTotal": "Stopps an bekannten Häfen",
+  "evidence.metric.cruiseRiverCount": "Flusskreuzfahrten",
+  "evidence.metric.cruiseSailedDeckCount": "Gefahrene Kreuzfahrten mit eingetragenem Deck"
 }

@@ -169,7 +169,7 @@
     "longestLeg": "Longest leg",
     "totalDays": "Travel days total",
     "avgPortsPerCruise": "Avg ports / cruise",
-    "maxPortsSingle": "Most ports in one cruise",
+    "maxPortsSingle": "Most catalogued ports in one cruise",
     "lineLoyaltyMax": "Top loyalty (same line)",
     "seaDaysStreak": "Longest sea-day streak",
     "maxDeck": "Highest deck",
@@ -295,49 +295,49 @@
         "unit": "Port calls divided by cruises.",
         "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
         "source": "Your sailed cruises (completed or recorded afterwards); Itinerary: embarkation port, port calls, disembarkation port – embarkation and disembarkation only when they are not already the first or last call.",
-        "coverage": "Unrecognised ports count as a call. Without a cruise, 0.",
+        "coverage": "Unrecognised ports count as a call. Without a cruise, 0. Tap the value for the cruises with their port calls.",
         "exclusions": "Booked, running and cancelled cruises do not count."
       },
       "longestLeg": {
         "unit": "The longest single leg between two consecutive ports, in your distance unit.",
         "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
         "source": "Your sailed cruises (completed or recorded afterwards); Itinerary: embarkation port, port calls, disembarkation port – embarkation and disembarkation only when they are not already the first or last call. Per leg the sea route or straight line, as for the distance.",
-        "coverage": "Without a leg between two known ports, “—”.",
+        "coverage": "Without a leg between two known ports, “—”. Tap the value for the cruises with their distance.",
         "exclusions": "Booked, running and cancelled cruises do not count."
       },
       "maxPortsSingle": {
         "unit": "The most catalogue ports on a single cruise, embarkation and disembarkation included.",
         "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
         "source": "Your sailed cruises (completed or recorded afterwards); Itinerary: embarkation port, port calls, disembarkation port – embarkation and disembarkation only when they are not already the first or last call.",
-        "coverage": "Unrecognised ports do not count here – unlike “Most ports” under Curiosities, which counts every call in the itinerary.",
+        "coverage": "Unrecognised ports do not count here – unlike “Most stops in one itinerary” under Curiosities, which counts every stop entered, at unrecognised ports too, on every cruise of the list. Tap the value for the cruises with their calls at catalogued ports.",
         "exclusions": "Booked, running and cancelled cruises do not count."
       },
       "lineLoyaltyMax": {
         "unit": "The most cruises with one and the same line.",
         "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
         "source": "Your sailed cruises (completed or recorded afterwards), the line recorded.",
-        "coverage": "A cruise without a line does not count here.",
+        "coverage": "A cruise without a line does not count here. Tap the value for the cruises with their line.",
         "exclusions": "Booked, running and cancelled cruises do not count."
       },
       "seaDaysStreak": {
         "unit": "The most sea-day entries in a row within one cruise.",
         "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
         "source": "Your sailed cruises (completed or recorded afterwards), itinerary by day.",
-        "coverage": "A port call ends the run; it does not continue across two cruises.",
+        "coverage": "A port call ends the run; it does not continue across two cruises. Tap the value for the cruises with their sea days.",
         "exclusions": "River cruises have no sea days. Booked, running and cancelled cruises do not count."
       },
       "riverCruises": {
         "unit": "Cruises recorded as river cruises, and their distance.",
         "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
         "source": "Your sailed cruises (completed or recorded afterwards); the kind (ocean or river) of the cruise, else of its ship.",
-        "coverage": "“—” when the server does not report it.",
+        "coverage": "“—” when the server does not report it. Tap the value for the river cruises.",
         "exclusions": "Booked, running and cancelled cruises do not count."
       },
       "maxDeck": {
         "unit": "The highest deck number of your cabin.",
         "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
         "source": "Your sailed cruises (completed or recorded afterwards), the deck recorded.",
-        "coverage": "Without a deck recorded, “—”.",
+        "coverage": "Without a deck recorded, “—”. Tap the value for the cruises with their deck.",
         "exclusions": "Booked, running and cancelled cruises do not count."
       },
       "totalDays": {
@@ -351,7 +351,7 @@
         "unit": "Share of port calls at ports already visited: calls at catalogue ports minus distinct ports, divided by those calls.",
         "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
         "source": "Your sailed cruises (completed or recorded afterwards); Itinerary: embarkation port, port calls, disembarkation port – embarkation and disembarkation only when they are not already the first or last call.",
-        "coverage": "Only calls at recognised ports – an unrecognised call is never a revisit. Without such calls, 0 %.",
+        "coverage": "Only calls at recognised ports – an unrecognised call is never a revisit. Without such calls, 0 %. Tap the value for the cruises with their calls at catalogued ports.",
         "exclusions": "Booked, running and cancelled cruises do not count."
       },
       "countries": {

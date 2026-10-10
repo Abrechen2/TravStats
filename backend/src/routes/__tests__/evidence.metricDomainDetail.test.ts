@@ -247,6 +247,22 @@ describe("GET /api/v1/evidence/metric/... — the populations behind averages an
     });
   });
 
+  describe("cruise key figures that are a ratio, an extreme or a streak (sailed cruises)", () => {
+    it("port calls: every effective call; catalogue calls: unrecognised ones out", async () => {
+      // Nordland: Hamburg, Oslo, Geirangerfjord (unrecognised) — the
+      // departure port is the first stop, so it adds nothing.
+      const all = await get("cruisePortCallsTotal");
+      expect(split(all)).toEqual({ [ids.nordland]: 3, [ids.ostsee]: 2 });
+      const catalogue = await get("cruiseCataloguePortCallsTotal");
+      expect(split(catalogue)).toEqual({ [ids.nordland]: 2, [ids.ostsee]: 2 });
+    });
+
+    it("the deck tile reads sailed cruises only — the booked one with deck 12 is out", async () => {
+      expect(split(await get("cruiseSailedDeckCount"))).toEqual({ [ids.nordland]: 1 });
+      expect((await get("cruiseRiverCount")).measure.value).toBe(0);
+    });
+  });
+
   describe("lodging populations", () => {
     it("priced nights: a comparable price per night, award stays in, unconvertible out", async () => {
       const body = await get("lodgingPricedNightsTotal");

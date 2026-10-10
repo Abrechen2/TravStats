@@ -28,6 +28,16 @@ const cruiseList = (unit: string, surface: string): MeasureSpec => ({
   servedIn: 1,
 });
 
+const cruiseRollup = (unit: string): MeasureSpec => ({
+  aggregation: "sum",
+  unit,
+  scopes: ["allTime", "year"],
+  surface: "CruiseStatsSection",
+  calculator:
+    "GET /stats/cruise (utils/cruiseStats.ts calculateCruiseStats, per cruise); services/evidence/metricEvidenceCruiseDepth.ts",
+  servedIn: 1,
+});
+
 const lodgingDetail = (unit: string, surface: string): MeasureSpec => ({
   aggregation: "sum",
   unit,
@@ -50,6 +60,15 @@ export const DOMAIN_DETAIL_MEASURES: Record<string, MeasureSpec> = {
   cruiseListedPortCallsTotal: cruiseList("ports", "CruiseStatsSection (CruiseFunSection)"),
   cruiseDeckRecordedCount: cruiseList("cruises", "CruiseStatsSection (CruiseFunSection)"),
   cruiseOnTripCount: cruiseList("cruises", "CruiseStatsSection (CruiseFunSection)"),
+
+  // ── Cruise tab, key figures that are a ratio, an extreme or a streak (CruiseStatsSection) ──
+  /** Ports per cruise: every call of the effective itinerary, unrecognised ones included. */
+  cruisePortCallsTotal: cruiseRollup("ports"),
+  /** Most catalogued ports on one cruise, and the revisit rate's calls. */
+  cruiseCataloguePortCallsTotal: cruiseRollup("ports"),
+  cruiseRiverCount: cruiseRollup("cruises"),
+  /** The deepest deck: sailed cruises with a deck recorded. */
+  cruiseSailedDeckCount: cruiseRollup("cruises"),
 
   // ── Lodging tab (LodgingMoneySection, LodgingLoyaltySection, LodgingQualitySection, LodgingGeoSection) ──
   /** Average, median, cheapest and dearest night: stays with a comparable price, by nights. */

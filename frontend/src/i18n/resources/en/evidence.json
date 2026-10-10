@@ -296,5 +296,9 @@
   "evidence.subtitle.pricePerNightAward": "Award stay: {{amount}} {{currency}} per night",
   "evidence.subtitle.ratings": "Overall {{overall}} · room {{room}} · breakfast {{breakfast}} · service {{service}}",
   "evidence.subtitle.position": "Latitude {{lat}}°, longitude {{lon}}° · weighs {{weight}}×",
-  "evidence.subtitle.tripBase": "Houses: {{houses}} · moves: {{changes}}"
+  "evidence.subtitle.tripBase": "Houses: {{houses}} · moves: {{changes}}",
+  "evidence.metric.cruisePortCallsTotal": "Port calls of sailed cruises",
+  "evidence.metric.cruiseCataloguePortCallsTotal": "Calls at catalogued ports",
+  "evidence.metric.cruiseRiverCount": "River cruises",
+  "evidence.metric.cruiseSailedDeckCount": "Sailed cruises with a deck recorded"
 }

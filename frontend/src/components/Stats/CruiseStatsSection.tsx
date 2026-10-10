@@ -255,20 +255,40 @@ export default function CruiseStatsSection({
       value: stats.cruiseLinesUnique,
       evidence: { key: "cruiseLinesUniqueCount", renderedValue: stats.cruiseLinesUnique },
     },
-    { label: t("stats:cruiseSection.avgPortsPerCruise"), value: avgPortsPerCruise.toFixed(1) },
+    // A ratio, an extreme or a streak opens the cruises it is read from, each
+    // with its share; its own figure is not that list's total, so none is
+    // compared (`renderedValue: null`).
+    {
+      label: t("stats:cruiseSection.avgPortsPerCruise"),
+      value: avgPortsPerCruise.toFixed(1),
+      evidence: { key: "cruisePortCallsTotal", renderedValue: null },
+    },
     {
       label: t("stats:cruiseSection.longestLeg"),
       value:
         stats.longestLegKm > 0
           ? `${formatNumber(convertDistance(stats.longestLegKm, distanceUnit))} ${distanceLabel}`
           : "—",
+      evidence: { key: "cruiseDistanceKmTotal", renderedValue: null },
     },
   ];
 
   const depthKpis: Kpi[] = [
-    { label: t("stats:cruiseSection.maxPortsSingle"), value: stats.cruisePortsSingleMax },
-    { label: t("stats:cruiseSection.lineLoyaltyMax"), value: stats.cruiseLineLoyaltyMax },
-    { label: t("stats:cruiseSection.seaDaysStreak"), value: stats.seaDaysStreak },
+    {
+      label: t("stats:cruiseSection.maxPortsSingle"),
+      value: stats.cruisePortsSingleMax,
+      evidence: { key: "cruiseCataloguePortCallsTotal", renderedValue: null },
+    },
+    {
+      label: t("stats:cruiseSection.lineLoyaltyMax"),
+      value: stats.cruiseLineLoyaltyMax,
+      evidence: { key: "cruiseLinesUniqueCount", renderedValue: null },
+    },
+    {
+      label: t("stats:cruiseSection.seaDaysStreak"),
+      value: stats.seaDaysStreak,
+      evidence: { key: "cruiseSeaDaysTotal", renderedValue: null },
+    },
     // River vs ocean (#359): how many of the cruises were on a river, and how
     // far. Abstains ("—") when the server did not say.
     {
@@ -279,14 +299,23 @@ export default function CruiseStatsSection({
           : stats.riverCruisesCount > 0 && stats.riverDistanceKm
             ? `${stats.riverCruisesCount} · ${formatNumber(convertDistance(stats.riverDistanceKm, distanceUnit))} ${distanceLabel}`
             : stats.riverCruisesCount,
+      evidence: { key: "cruiseRiverCount", renderedValue: stats.riverCruisesCount ?? null },
     },
-    { label: t("stats:cruiseSection.maxDeck"), value: stats.maxDeck > 0 ? stats.maxDeck : "—" },
+    {
+      label: t("stats:cruiseSection.maxDeck"),
+      value: stats.maxDeck > 0 ? stats.maxDeck : "—",
+      evidence: { key: "cruiseSailedDeckCount", renderedValue: null },
+    },
     {
       label: t("stats:cruiseSection.totalDays"),
       value: stats.totalCruiseDays,
       evidence: { key: "cruiseTotalDays", renderedValue: stats.totalCruiseDays },
     },
-    { label: t("stats:cruiseSection.revisitRate"), value: `${revisitRatePct}%` },
+    {
+      label: t("stats:cruiseSection.revisitRate"),
+      value: `${revisitRatePct}%`,
+      evidence: { key: "cruiseCataloguePortCallsTotal", renderedValue: null },
+    },
     // Count the ISO-folded set, not the raw names: the port catalogue carries
     // both "United States" and "United States of America", so counting names
     // reported one country too many — and disagreed with the cross-domain tile
@@ -535,21 +564,21 @@ export default function CruiseStatsSection({
 }
 
 /**
- * One tile. `evidence` is present only where a RESOLVER answers for the
- * figure, never on the strength of the registry alone — that field records
- * what release 1 INTENDS to serve, and a tile wired to an unserved key ships
- * a pointer cursor over a 404.
+ * One tile, and every tile opens its entries (forgejo#257) — `evidence` is
+ * required, and `statsCountingHelp.test.ts` checks the two arrays below too.
+ * A key must have a RESOLVER, never only a registry entry: a tile wired to an
+ * unserved key ships a pointer cursor over a 404.
  *
- * Seven tiles here carry none on purpose: the average ports per cruise, the
- * longest leg, the most ports on one trip, the line-loyalty maximum, the
- * sea-day streak, the deepest deck and the revisit rate are `ratio`,
- * `extremum` or `sequence` measures, and release 1 serves no kind but `sum`
- * and `distinct`.
+ * Release 1 serves only `sum` and `distinct`, so the ratio, extreme and
+ * streak tiles (ports per cruise, longest leg, most catalogued ports, line
+ * loyalty, sea-day streak, deepest deck, revisit rate) open the cruises their
+ * figure is read from, with `renderedValue: null` — the figure is not that
+ * list's total, so no "recomputed" warning can apply.
  */
 interface Kpi {
   label: string;
   value: string | number;
-  evidence?: { key: string; renderedValue: number | null };
+  evidence: { key: string; renderedValue: number | null };
 }
 
 function KpiGrid({
@@ -585,13 +614,6 @@ function KpiGrid({
             </p>
           </>
         );
-        if (!kpi.evidence) {
-          return (
-            <div key={kpi.label} className={className} style={style}>
-              {body}
-            </div>
-          );
-        }
         return (
           <EvidenceTrigger
             key={kpi.label}

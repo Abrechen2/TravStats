@@ -103,7 +103,7 @@ describe("CruiseStatsSection evidence wiring", () => {
     api.getCruiseStats.mockReset();
   });
 
-  it("wires the eight tiles whose measures release 1 serves", async () => {
+  it("wires all sixteen key figures, each to a measure release 1 serves", async () => {
     api.getCruiseStats.mockResolvedValue(base);
     let search = "";
     render(
@@ -126,21 +126,29 @@ describe("CruiseStatsSection evidence wiring", () => {
       const raw = new URLSearchParams(search).get("evidence") ?? "";
       keys.push(raw.slice(raw.indexOf(":") + 1));
     }
+    // forgejo#257: the ratio, extreme and streak tiles open the cruises they
+    // are read from — a sum release 1 serves — never a ratio key of their own.
     expect(keys.sort()).toEqual(
       [
         "cruiseCount",
         "cruiseCountriesCount",
         "cruiseDistanceKmTotal",
+        "cruiseDistanceKmTotal",
+        "cruiseLinesUniqueCount",
         "cruiseLinesUniqueCount",
         "cruisePortsUniqueCount",
         "cruiseSeaDaysTotal",
+        "cruiseSeaDaysTotal",
         "cruiseShipsUniqueCount",
         "cruiseTotalDays",
+        "cruisePortCallsTotal",
+        "cruiseCataloguePortCallsTotal",
+        "cruiseCataloguePortCallsTotal",
+        "cruiseRiverCount",
+        "cruiseSailedDeckCount",
       ].sort()
     );
     expect(keys.every((key) => EVIDENCE_MEASURES[key]?.servedIn === 1)).toBe(true);
-    // The ratio, extremum and sequence tiles beside them stay plain: release 1
-    // serves neither kind, and a trigger there is a pointer cursor on a 404.
     expect(keys).not.toContain("cruiseAvgPortsPerCruise");
     expect(keys).not.toContain("cruiseLongestLegKm");
   });

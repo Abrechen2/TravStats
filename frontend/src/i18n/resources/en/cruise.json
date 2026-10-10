@@ -345,7 +345,7 @@
     "fun": {
       "title": "Curiosities",
       "first": "First cruise",
-      "mostPorts": "Most ports",
+      "mostPorts": "Most stops in one itinerary",
       "highestDeck": "Highest deck",
       "onTrips": "On a trip",
       "onTripsDesc": "cruises that belong to a trip",
@@ -406,7 +406,7 @@
         "unit": "The most port calls in the itinerary of a single cruise – every stop that is not a sea day, at unrecognised ports too.",
         "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
         "source": "Every cruise on your list, booked and cancelled ones included – in this period {{booked}} booked or running and {{cancelled}} cancelled.",
-        "coverage": "Embarkation and disembarkation count only when entered as a stop – unlike “Most ports in one cruise” above, which counts catalogue ports with embarkation and disembarkation. Tap the value for the cruises with their calls.",
+        "coverage": "Embarkation and disembarkation count only when entered as a stop – unlike “Most catalogued ports in one cruise” above, which counts only ports from the port catalogue, embarkation and disembarkation included, and only sailed cruises. Tap the value for the cruises with their calls.",
         "exclusions": "Nothing is left out by status; what is only booked or cancelled is named under source."
       },
       "highestDeck": {

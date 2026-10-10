@@ -169,7 +169,7 @@
     "longestLeg": "Längste Etappe",
     "totalDays": "Reisetage gesamt",
     "avgPortsPerCruise": "Ø Häfen / Kreuzfahrt",
-    "maxPortsSingle": "Meiste Häfen einer Kreuzfahrt",
+    "maxPortsSingle": "Meiste bekannte Häfen einer Kreuzfahrt",
     "lineLoyaltyMax": "Top-Loyalität (selbe Reederei)",
     "seaDaysStreak": "Längster Seetag-Streak",
     "maxDeck": "Höchstes Deck",
@@ -295,49 +295,49 @@
         "unit": "Hafenstopps geteilt durch Kreuzfahrten.",
         "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
         "source": "Deine gefahrenen Kreuzfahrten (abgeschlossen oder nachgetragen); Reiseverlauf: Einschiffungshafen, Hafenstopps, Ausschiffungshafen – Ein- und Ausschiffung nur, wenn sie nicht schon der erste bzw. letzte Stopp sind.",
-        "coverage": "Nicht erkannte Häfen zählen als Stopp mit. Ohne Kreuzfahrt 0.",
+        "coverage": "Nicht erkannte Häfen zählen als Stopp mit. Ohne Kreuzfahrt 0. Tippe auf den Wert für die Kreuzfahrten mit ihren Hafenstopps.",
         "exclusions": "Gebuchte, laufende und stornierte Kreuzfahrten zählen nicht."
       },
       "longestLeg": {
         "unit": "Die längste einzelne Etappe zwischen zwei aufeinanderfolgenden Häfen, in deiner Entfernungseinheit.",
         "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
         "source": "Deine gefahrenen Kreuzfahrten (abgeschlossen oder nachgetragen); Reiseverlauf: Einschiffungshafen, Hafenstopps, Ausschiffungshafen – Ein- und Ausschiffung nur, wenn sie nicht schon der erste bzw. letzte Stopp sind. Je Etappe die Seeroute oder die Luftlinie wie bei der Strecke.",
-        "coverage": "Ohne Etappe mit zwei bekannten Häfen „—“.",
+        "coverage": "Ohne Etappe mit zwei bekannten Häfen „—“. Tippe auf den Wert für die Kreuzfahrten mit ihrer Strecke.",
         "exclusions": "Gebuchte, laufende und stornierte Kreuzfahrten zählen nicht."
       },
       "maxPortsSingle": {
         "unit": "Die meisten Katalog-Häfen auf einer einzigen Kreuzfahrt, Ein- und Ausschiffung eingeschlossen.",
         "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
         "source": "Deine gefahrenen Kreuzfahrten (abgeschlossen oder nachgetragen); Reiseverlauf: Einschiffungshafen, Hafenstopps, Ausschiffungshafen – Ein- und Ausschiffung nur, wenn sie nicht schon der erste bzw. letzte Stopp sind.",
-        "coverage": "Nicht erkannte Häfen zählen hier nicht – anders als „Meiste Häfen“ unter Kurioses, das jeden Stopp im Reiseverlauf zählt.",
+        "coverage": "Nicht erkannte Häfen zählen hier nicht – anders als „Meiste Stopps im Reiseverlauf“ unter Kurioses, das jeden eingetragenen Stopp zählt, auch an nicht erkannten Häfen, und jede Kreuzfahrt der Liste. Tippe auf den Wert für die Kreuzfahrten mit ihren Stopps an bekannten Häfen.",
         "exclusions": "Gebuchte, laufende und stornierte Kreuzfahrten zählen nicht."
       },
       "lineLoyaltyMax": {
         "unit": "Die meisten Kreuzfahrten mit ein und derselben Reederei.",
         "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
         "source": "Deine gefahrenen Kreuzfahrten (abgeschlossen oder nachgetragen), die eingetragene Reederei.",
-        "coverage": "Ohne Reederei zählt eine Kreuzfahrt hier nicht.",
+        "coverage": "Ohne Reederei zählt eine Kreuzfahrt hier nicht. Tippe auf den Wert für die Kreuzfahrten mit ihrer Reederei.",
         "exclusions": "Gebuchte, laufende und stornierte Kreuzfahrten zählen nicht."
       },
       "seaDaysStreak": {
         "unit": "Die meisten Seetag-Einträge hintereinander innerhalb einer Kreuzfahrt.",
         "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
         "source": "Deine gefahrenen Kreuzfahrten (abgeschlossen oder nachgetragen), Reiseverlauf nach Reisetag.",
-        "coverage": "Ein Hafenstopp beendet die Folge; über zwei Kreuzfahrten hinweg wird nicht gezählt.",
+        "coverage": "Ein Hafenstopp beendet die Folge; über zwei Kreuzfahrten hinweg wird nicht gezählt. Tippe auf den Wert für die Kreuzfahrten mit ihren Seetagen.",
         "exclusions": "Flusskreuzfahrten haben keine Seetage. Gebuchte, laufende und stornierte Kreuzfahrten zählen nicht."
       },
       "riverCruises": {
         "unit": "Kreuzfahrten, die als Flusskreuzfahrt eingetragen sind, und ihre Strecke.",
         "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
         "source": "Deine gefahrenen Kreuzfahrten (abgeschlossen oder nachgetragen); die Art (Hochsee oder Fluss) der Kreuzfahrt, sonst die ihres Schiffs.",
-        "coverage": "„—“, wenn der Server die Zahl nicht liefert.",
+        "coverage": "„—“, wenn der Server die Zahl nicht liefert. Tippe auf den Wert für die Flusskreuzfahrten.",
         "exclusions": "Gebuchte, laufende und stornierte Kreuzfahrten zählen nicht."
       },
       "maxDeck": {
         "unit": "Die höchste Decknummer deiner Kabine.",
         "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
         "source": "Deine gefahrenen Kreuzfahrten (abgeschlossen oder nachgetragen), das eingetragene Deck.",
-        "coverage": "Ohne eingetragenes Deck „—“.",
+        "coverage": "Ohne eingetragenes Deck „—“. Tippe auf den Wert für die Kreuzfahrten mit ihrem Deck.",
         "exclusions": "Gebuchte, laufende und stornierte Kreuzfahrten zählen nicht."
       },
       "totalDays": {
@@ -351,7 +351,7 @@
         "unit": "Anteil der Hafenstopps an schon besuchten Häfen: Stopps an Katalog-Häfen minus verschiedene Häfen, geteilt durch diese Stopps.",
         "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
         "source": "Deine gefahrenen Kreuzfahrten (abgeschlossen oder nachgetragen); Reiseverlauf: Einschiffungshafen, Hafenstopps, Ausschiffungshafen – Ein- und Ausschiffung nur, wenn sie nicht schon der erste bzw. letzte Stopp sind.",
-        "coverage": "Nur Stopps an erkannten Häfen – ein nicht erkannter Stopp ist nie ein Wiederbesuch. Ohne solche Stopps 0 %.",
+        "coverage": "Nur Stopps an erkannten Häfen – ein nicht erkannter Stopp ist nie ein Wiederbesuch. Ohne solche Stopps 0 %. Tippe auf den Wert für die Kreuzfahrten mit ihren Stopps an bekannten Häfen.",
         "exclusions": "Gebuchte, laufende und stornierte Kreuzfahrten zählen nicht."
       },
       "countries": {

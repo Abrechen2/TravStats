@@ -345,7 +345,7 @@
     "fun": {
       "title": "Kurioses",
       "first": "Erste Kreuzfahrt",
-      "mostPorts": "Meiste Häfen",
+      "mostPorts": "Meiste Stopps im Reiseverlauf",
       "highestDeck": "Höchstes Deck",
       "onTrips": "In einer Reise",
       "onTripsDesc": "Kreuzfahrten, die zu einer Reise gehören",
@@ -406,7 +406,7 @@
         "unit": "Die meisten Hafenstopps im Reiseverlauf einer einzigen Kreuzfahrt – jeder Stopp, der kein Seetag ist, auch an nicht erkannten Häfen.",
         "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
         "source": "Alle Kreuzfahrten deiner Liste, auch gebuchte und stornierte – in diesem Zeitraum {{booked}} gebuchte oder laufende und {{cancelled}} stornierte.",
-        "coverage": "Ein- und Ausschiffungshafen zählen nur, wenn sie als Stopp eingetragen sind – anders als „Meiste Häfen einer Kreuzfahrt“ oben, das Katalog-Häfen samt Ein- und Ausschiffung zählt. Tippe auf den Wert für die Kreuzfahrten mit ihren Stopps.",
+        "coverage": "Ein- und Ausschiffungshafen zählen nur, wenn sie als Stopp eingetragen sind – anders als „Meiste bekannte Häfen einer Kreuzfahrt“ oben, das nur Häfen aus dem Hafenkatalog zählt, Ein- und Ausschiffung eingeschlossen, und nur gefahrene Kreuzfahrten. Tippe auf den Wert für die Kreuzfahrten mit ihren Stopps.",
         "exclusions": "Nichts wird nach Status ausgeschlossen; was nur gebucht oder storniert ist, nennt die Quelle."
       },
       "highestDeck": {
