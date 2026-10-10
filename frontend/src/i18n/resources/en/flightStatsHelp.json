@@ -672,7 +672,7 @@
       "unit": "The ten individual aircraft you flew on most often, recognised by their registration (such as D-AIXA), with the number of flights per aircraft.",
       "time": "No time element: all-time; the page's year filter does not apply.",
       "source": "Flown and logged (historical) flights, the registration field, mostly filled in by the flight number lookup.",
-      "coverage": "Only flights with a registration entered, so usually just the part of the logbook completed by a lookup. The registration is compared exactly as stored; on equal flights, the reading order decides.",
+      "coverage": "Only flights with a registration entered, so usually just the part of the logbook completed by a lookup. Case and spaces do not matter – \"d-aixa\" and \"D-AIXA\" are one aircraft; hyphens are compared as entered. On equal flights, the reading order decides.",
       "exclusions": "Not included: flights without a registration, scheduled and cancelled flights, and drafts (duplicates)."
     },
     "countries": {

@@ -672,7 +672,7 @@
       "unit": "Die zehn einzelnen Flugzeuge, mit denen du am häufigsten geflogen bist, erkannt an ihrer Kennung (etwa D-AIXA), mit der Zahl der Flüge je Flugzeug.",
       "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
       "source": "Geflogene und nachgetragene Flüge, das Feld Kennung (Registrierung), meist aus der Flugnummern-Suche.",
-      "coverage": "Nur Flüge mit eingetragener Kennung, also meist nur der Teil des Logbuchs, der per Suche ergänzt wurde. Die Kennung wird genau so verglichen, wie sie gespeichert ist; bei gleicher Flugzahl entscheidet die Lesereihenfolge.",
+      "coverage": "Nur Flüge mit eingetragener Kennung, also meist nur der Teil des Logbuchs, der per Suche ergänzt wurde. Groß- und Kleinschreibung sowie Leerzeichen spielen keine Rolle – „d-aixa“ und „D-AIXA“ sind ein Flugzeug; Bindestriche werden verglichen, wie sie eingetragen sind. Bei gleicher Flugzahl entscheidet die Lesereihenfolge.",
       "exclusions": "Nicht enthalten: Flüge ohne Kennung, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
     },
     "countries": {
