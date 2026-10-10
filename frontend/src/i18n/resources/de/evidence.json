@@ -312,5 +312,19 @@
   "evidence.ranking.departureWeekday.3": "Abflüge an einem Mittwoch",
   "evidence.ranking.departureWeekday.4": "Abflüge an einem Donnerstag",
   "evidence.ranking.departureWeekday.5": "Abflüge an einem Freitag",
-  "evidence.ranking.departureWeekday.6": "Abflüge an einem Samstag"
+  "evidence.ranking.departureWeekday.6": "Abflüge an einem Samstag",
+  "evidence.ranking.seat.position.window": "Flüge am Fensterplatz",
+  "evidence.ranking.seat.position.middle": "Flüge auf dem Mittelplatz",
+  "evidence.ranking.seat.position.aisle": "Flüge am Gangplatz",
+  "evidence.ranking.seat.position.unknown": "Flüge mit nicht zuordenbarem Sitz",
+  "evidence.ranking.seat.zone.front": "Flüge vorne (Reihe 1–10)",
+  "evidence.ranking.seat.zone.middle": "Flüge in der Mitte (Reihe 11–25)",
+  "evidence.ranking.seat.zone.back": "Flüge hinten (ab Reihe 26)",
+  "evidence.ranking.seat.class.economy": "Flüge in Economy",
+  "evidence.ranking.seat.class.premium_economy": "Flüge in Premium Economy",
+  "evidence.ranking.seat.class.business": "Flüge in Business",
+  "evidence.ranking.seat.class.first": "Flüge in First",
+  "evidence.ranking.seat.class": "Flüge in der Klasse {{value}}",
+  "evidence.ranking.seat.number": "Flüge auf Sitz {{value}}",
+  "evidence.ranking.seat.row.numbered": "Flüge mit Reihennummer"
 }

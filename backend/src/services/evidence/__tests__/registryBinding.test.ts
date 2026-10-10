@@ -160,6 +160,7 @@ describe("the evidence registry binds the resolvers that exist", () => {
     passportCountry: { unit: "flights", sample: "DE" },
     departureMonth: { unit: "flights", sample: "1" },
     departureWeekday: { unit: "flights", sample: "5" },
+    seat: { unit: "flights", sample: "class:economy" },
     continent: null,
   };
 

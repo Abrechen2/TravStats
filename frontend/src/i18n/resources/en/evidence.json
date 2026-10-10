@@ -312,5 +312,19 @@
   "evidence.ranking.departureWeekday.3": "Departures on a Wednesday",
   "evidence.ranking.departureWeekday.4": "Departures on a Thursday",
   "evidence.ranking.departureWeekday.5": "Departures on a Friday",
-  "evidence.ranking.departureWeekday.6": "Departures on a Saturday"
+  "evidence.ranking.departureWeekday.6": "Departures on a Saturday",
+  "evidence.ranking.seat.position.window": "Flights in a window seat",
+  "evidence.ranking.seat.position.middle": "Flights in a middle seat",
+  "evidence.ranking.seat.position.aisle": "Flights in an aisle seat",
+  "evidence.ranking.seat.position.unknown": "Flights with a seat that cannot be placed",
+  "evidence.ranking.seat.zone.front": "Flights at the front (rows 1–10)",
+  "evidence.ranking.seat.zone.middle": "Flights in the middle (rows 11–25)",
+  "evidence.ranking.seat.zone.back": "Flights at the back (row 26 on)",
+  "evidence.ranking.seat.class.economy": "Flights in economy",
+  "evidence.ranking.seat.class.premium_economy": "Flights in premium economy",
+  "evidence.ranking.seat.class.business": "Flights in business",
+  "evidence.ranking.seat.class.first": "Flights in first",
+  "evidence.ranking.seat.class": "Flights in class {{value}}",
+  "evidence.ranking.seat.number": "Flights in seat {{value}}",
+  "evidence.ranking.seat.row.numbered": "Flights with a row number"
 }

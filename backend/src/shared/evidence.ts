@@ -167,6 +167,15 @@ export const RANKING_DIMENSIONS = [
    */
   "departureMonth",
   "departureWeekday",
+  /**
+   * The flights behind one figure of the flight tab's seat section
+   * (forgejo#256): `position:window|middle|aisle|unknown`,
+   * `zone:front|middle|back`, `class:<stored seat class>`, `number:<seat>`
+   * (the most common seat) or `row:numbered` (every seat with a row number —
+   * the average row's sample), read by `services/stats/seatStats.ts`'s
+   * `seatFactsOf`.
+   */
+  "seat",
 ] as const;
 export type RankingDimension = (typeof RANKING_DIMENSIONS)[number];
 

@@ -55,6 +55,8 @@ describe("witness evidence behind the flight tab's extremes (forgejo#256)", () =
       arrLat: LHR.lat,
       arrLon: LHR.lon,
       flightNumber: "LH900",
+      seatNumber: "3a",
+      seatClass: "economy",
       airline: "Lufthansa",
       departureTime: new Date("2024-05-10T06:00:00Z"),
       arrivalTime: new Date("2024-05-10T07:30:00Z"),
@@ -67,6 +69,8 @@ describe("witness evidence behind the flight tab's extremes (forgejo#256)", () =
       arrLat: JFK.lat,
       arrLon: JFK.lon,
       flightNumber: "BA117",
+      seatNumber: "30C",
+      seatClass: "business",
       airline: "British Airways",
       departureTime: new Date("2024-05-10T10:30:00Z"),
       arrivalTime: new Date("2024-05-10T18:30:00Z"),
@@ -162,5 +166,16 @@ describe("witness evidence behind the flight tab's extremes (forgejo#256)", () =
     expect(saturday?.entries.map((e) => e.id)).toEqual([ids.fraSin]);
     expect(await resolveRankingEvidence(userId, "departureMonth:13", allTime, page)).toBeNull();
     expect(await resolveRankingEvidence(userId, "departureWeekday:x", allTime, page)).toBeNull();
+  });
+
+  it("a seat figure lists the flights its seats were read from", async () => {
+    const ids_ = async (key: string) =>
+      ((await resolveRankingEvidence(userId, key, allTime, page))?.entries ?? []).map((e) => e.id);
+    expect(await ids_("seat:position:window")).toEqual([ids.fraLhr]);
+    expect(await ids_("seat:zone:back")).toEqual([ids.lhrJfk]);
+    expect(await ids_("seat:class:business")).toEqual([ids.lhrJfk]);
+    expect(await ids_("seat:number:3A")).toEqual([ids.fraLhr]);
+    expect((await ids_("seat:row:numbered")).sort()).toEqual([ids.fraLhr, ids.lhrJfk].sort());
+    expect(await resolveRankingEvidence(userId, "seat:colour:red", allTime, page)).toBeNull();
   });
 });

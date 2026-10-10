@@ -17,80 +17,71 @@ export interface SeatRow {
 
 const SEAT_PATTERN = /^(\d+)([A-Z]+)$/i;
 
+export type SeatPosition = "window" | "middle" | "aisle" | "unknown";
+export type SeatZone = "front" | "middle" | "back";
+
+/** What one flight's seat says — the ONE reading every seat figure counts. */
+export interface SeatFacts {
+  /** The seat upper-cased; null without a seat number. */
+  seat: string | null;
+  /** Null without a seat; `unknown` for a seat the pattern or letter table cannot place. */
+  position: SeatPosition | null;
+  /** Rows 1–10 front, 11–25 middle, anything else back; null without a row. */
+  zone: SeatZone | null;
+  row: number | null;
+}
+
+export function seatFactsOf(flight: SeatRow): SeatFacts {
+  if (!flight.seatNumber) return { seat: null, position: null, zone: null, row: null };
+  const seat = flight.seatNumber.toUpperCase();
+  const match = SEAT_PATTERN.exec(flight.seatNumber);
+  if (!match) return { seat, position: "unknown", zone: null, row: null };
+  const row = parseInt(match[1], 10);
+  const letters = match[2].toUpperCase();
+  const lastLetter = letters[letters.length - 1];
+  const zone: SeatZone =
+    row >= 1 && row <= 10 ? "front" : row >= 11 && row <= 25 ? "middle" : "back";
+  // Position by last letter. Covers narrow-body (A-F: 3+3) and wide-body
+  // (A-K: 3+4+3) layouts: window A, F, K; middle B, E, H, J (wide-body
+  // centre section); aisle C, D, G.
+  const position: SeatPosition = "AFK".includes(lastLetter)
+    ? "window"
+    : "BEHJ".includes(lastLetter)
+      ? "middle"
+      : "CDG".includes(lastLetter)
+        ? "aisle"
+        : "unknown";
+  return { seat, position, zone, row };
+}
+
 export function computeSeatStats(flights: ReadonlyArray<SeatRow>): SeatStats {
   const seatCounts: Record<string, number> = {};
-
-  let windowCount = 0;
-  let middleCount = 0;
-  let aisleCount = 0;
-  let unknownCount = 0;
+  const positions: Record<SeatPosition, number> = { window: 0, middle: 0, aisle: 0, unknown: 0 };
+  const zones: Record<SeatZone, number> = { front: 0, middle: 0, back: 0 };
   let noSeatCount = 0;
-  let frontCount = 0;
-  let middleZoneCount = 0;
-  let backCount = 0;
   let rowTotal = 0;
   let rowCountWithNumber = 0;
   const seatClassDistribution: Record<string, number> = {};
 
   for (const flight of flights) {
-    // Count seat class distribution
     if (flight.seatClass) {
       seatClassDistribution[flight.seatClass] = (seatClassDistribution[flight.seatClass] ?? 0) + 1;
     }
-
-    if (!flight.seatNumber) {
+    const facts = seatFactsOf(flight);
+    if (facts.seat === null || facts.position === null) {
       noSeatCount++;
       continue;
     }
-
-    // Count seat occurrences for mostCommonSeat
-    const normalizedSeat = flight.seatNumber.toUpperCase();
-    seatCounts[normalizedSeat] = (seatCounts[normalizedSeat] ?? 0) + 1;
-
-    const match = SEAT_PATTERN.exec(flight.seatNumber);
-    if (!match) {
-      unknownCount++;
-      continue;
-    }
-
-    const rowNumber = parseInt(match[1], 10);
-    const letters = match[2].toUpperCase();
-    const lastLetter = letters[letters.length - 1];
-
-    // Row zone classification
-    rowTotal += rowNumber;
-    rowCountWithNumber++;
-
-    if (rowNumber >= 1 && rowNumber <= 10) {
-      frontCount++;
-    } else if (rowNumber >= 11 && rowNumber <= 25) {
-      middleZoneCount++;
-    } else {
-      backCount++;
-    }
-
-    // Position classification by last letter
-    // Covers narrow-body (A-F: 3+3) and wide-body (A-K: 3+4+3) layouts:
-    //   Window: A, F, K
-    //   Middle: B, E, H, J (wide-body center section)
-    //   Aisle:  C, D, G (narrow/wide-body aisle seats)
-    if (lastLetter === "A" || lastLetter === "F" || lastLetter === "K") {
-      windowCount++;
-    } else if (
-      lastLetter === "B" ||
-      lastLetter === "E" ||
-      lastLetter === "H" ||
-      lastLetter === "J"
-    ) {
-      middleCount++;
-    } else if (lastLetter === "C" || lastLetter === "D" || lastLetter === "G") {
-      aisleCount++;
-    } else {
-      unknownCount++;
+    seatCounts[facts.seat] = (seatCounts[facts.seat] ?? 0) + 1;
+    positions[facts.position]++;
+    if (facts.row !== null && facts.zone !== null) {
+      rowTotal += facts.row;
+      rowCountWithNumber++;
+      zones[facts.zone]++;
     }
   }
 
-  // Most common seat
+  // Most common seat — the first to reach the highest count.
   let mostCommonSeat: string | null = null;
   let maxSeatCount = 0;
   for (const [seat, count] of Object.entries(seatCounts)) {
@@ -101,14 +92,14 @@ export function computeSeatStats(flights: ReadonlyArray<SeatRow>): SeatStats {
   }
 
   return {
-    windowCount,
-    middleCount,
-    aisleCount,
-    unknownCount,
+    windowCount: positions.window,
+    middleCount: positions.middle,
+    aisleCount: positions.aisle,
+    unknownCount: positions.unknown,
     noSeatCount,
-    frontCount,
-    middleZoneCount,
-    backCount,
+    frontCount: zones.front,
+    middleZoneCount: zones.middle,
+    backCount: zones.back,
     mostCommonSeat,
     seatClassDistribution,
     avgRowNumber:
