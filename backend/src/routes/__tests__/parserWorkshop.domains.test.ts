@@ -18,8 +18,9 @@ import { parseLodgingBookingText } from "../../services/lodging/lodgingBookingPa
  *  - once active, the LODGING parser uses it and the FLIGHT parser cannot
  *    see it — phase 1's guarantee, now that there is finally a template of
  *    another domain to test it with;
- *  - cruise abstains with a reason instead of writing a template no reader
- *    in this tree could run.
+ *  - a cruise annotation that marks no itinerary row abstains with a reason
+ *    instead of writing a template that would read no voyage (the cruise and
+ *    place end-to-end path is `parserWorkshop.cruisePlace.test.ts`).
  */
 
 const hotelMail = (name: string, checkIn: string, checkOut: string, ref: string): string =>
@@ -284,7 +285,7 @@ describe("the template workshop, for every domain", () => {
     expect(parsed.bookings[0]?.hotelName).toBe("Pension Abend Bremen");
   });
 
-  it("abstains for cruise, and says why, instead of writing a template", async () => {
+  it("abstains for a cruise with no marked itinerary row, and says why", async () => {
     const cruiseText = [
       "From: service@reederei.test",
       "Subject: Ihre Kreuzfahrt",
@@ -305,7 +306,7 @@ describe("the template workshop, for every domain", () => {
     expect(outcome).toEqual({
       status: "abstained",
       domain: "cruise",
-      reason: "cruiseNeedsRepeatingBlocks",
+      reason: "cruiseNeedsStopRow",
     });
     expect(await prisma.parserTemplate.count({ where: { userId, domain: "cruise" } })).toBe(0);
   });

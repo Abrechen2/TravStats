@@ -145,10 +145,21 @@ describe("the annotation label set", () => {
 });
 
 describe("the domain picker", () => {
-  it("says a cruise cannot be derived, before the annotating rather than after", () => {
+  it("says what to mark on a cruise, before the annotating rather than after", () => {
+    // forgejo#124: a cruise derives now — from one marked itinerary row, which
+    // is what the user has to be told before marking, not after a refusal.
     render(<DomainPicker value="cruise" detected="cruise" onChange={vi.fn()} />);
+    expect(screen.getByText("parser:workshop.domainHints.cruise")).toBeInTheDocument();
+    expect(screen.queryByText(/derivation\.cannot/)).toBeNull();
+  });
+
+  it("offers the itinerary labels for a cruise", () => {
+    render(<AnnotationLabelSelect domain="cruise" value="" onChange={vi.fn()} />);
     expect(
-      screen.getByText("parser:derivation.cannot.cruiseNeedsRepeatingBlocks")
+      screen.getByRole("option", { name: "parser:labels.cruise.stopDate" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "parser:labels.cruise.stopPort" })
     ).toBeInTheDocument();
   });
 

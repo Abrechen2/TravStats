@@ -64,7 +64,8 @@
     "money": "Price",
     "ship": "Ship",
     "voyage": "Voyage",
-    "cabin": "Cabin"
+    "cabin": "Cabin",
+    "itinerary": "Itinerary"
   },
   "labels": {
     "flight": {
@@ -113,7 +114,10 @@
       "deck": "Deck",
       "price": "Price",
       "currency": "Currency",
-      "bookingReference": "Booking reference"
+      "bookingReference": "Booking reference",
+      "stopDate": "Date (itinerary)",
+      "stopPort": "Port (itinerary)",
+      "seaDay": "Sea-day word"
     },
     "place": {
       "name": "Name",
@@ -133,16 +137,24 @@
     "markedFields": "Marked fields",
     "markedNothing": "Nothing marked yet.",
     "derivedBanner": "Template derived. Check it under “My Templates” with the preview before activating it.",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "domainHints": {
+      "cruise": "Mark the header details (ship, booking reference, price …) and ONE row of the itinerary: its date and its port. The template reads the whole port list from that row.",
+      "place": "Mark at least the place’s name, and address, category and visit date if you like. Places read this way land in the import preview under Settings → Import."
+    }
   },
   "derivation": {
     "cannot": {
-      "cruiseNeedsRepeatingBlocks": "No template can be derived for a cruise yet: a port list is a repeating block, and the reader for that does not exist. Your marks are saved all the same.",
-      "noPlaceDocumentReader": "There is no document reader for places yet, so no template comes out of this. Your marks are saved all the same.",
       "lodgingNeedsNameAndDates": "Too little marked: without a property name, a check-in and a check-out this is not a stay, and a template missing those three would propose things nobody can check.",
       "lodgingDateNotUnderstood": "The date format in this mail is not read yet (month names are, purely numeric like 10.03.2026 is not). A template built on it would decline every mail this sender writes.",
       "noDistinguishingMarker": "Nothing in this mail names the sender — only this one booking. A template with no sender marker would match every stay confirmation you ever parse.",
-      "notDerivable": "The workshop derives no template for this kind of document."
+      "notDerivable": "The workshop derives no template for this kind of document.",
+      "cruiseNeedsStopRow": "A cruise needs one marked row of its itinerary: in ONE row, mark the date as “Date (itinerary)” and the port as “Port (itinerary)”. Without ports the template reads no voyage.",
+      "cruiseStopRowNotOneLine": "The itinerary date and port must be on the same line. Mark both in one row of the port list.",
+      "cruiseStopRowNotUnderstood": "No port list can be read from the marked itinerary row — there is no heading above the list, or the mark does not cover the whole port name.",
+      "dateNotUnderstood": "A marked date is not read. A date with a year is expected, e.g. 02.06.2027 or 2 June 2027.",
+      "placeNeedsName": "A place needs its name: mark what the place is called. A place without a name is not a row the import can offer.",
+      "templateReadsNothing": "The derived template reads nothing from this very document, so none was saved. Check the marks."
     }
   },
   "preview": {

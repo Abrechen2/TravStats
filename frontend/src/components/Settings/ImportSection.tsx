@@ -10,6 +10,7 @@ import { GenericCsvImportTile } from "../import/GenericCsvImportTile";
 import { LodgingCsvImportTile } from "../import/LodgingCsvImportTile";
 import { MapsExportImportTile } from "../import/MapsExportImportTile";
 import { PlaceCsvImportTile } from "../import/PlaceCsvImportTile";
+import { PlaceDocumentImportTile } from "../import/PlaceDocumentImportTile";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { ImportLogSection } from "../import/ImportLogSection";
 import { useDomainColors } from "../../hooks/useDomainColors";
@@ -57,7 +58,12 @@ export default function ImportSection(): JSX.Element {
       // POI Phase D §5: the CSV path with coordinates. Until 2026-09-05 this
       // group rendered empty although both backend routes existed — the
       // `poiDomain` gate named exactly this missing tile as its condition.
-      poi: [<PlaceCsvImportTile key="poi-csv" onImported={handleImported} />],
+      // forgejo#124: a ticket or tour booking, read by the user's own place
+      // templates from the parser workshop, into the same preview.
+      poi: [
+        <PlaceCsvImportTile key="poi-csv" onImported={handleImported} />,
+        <PlaceDocumentImportTile key="poi-document" onImported={handleImported} />,
+      ],
     }),
     [handleImported]
   );

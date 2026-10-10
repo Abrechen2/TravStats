@@ -21,19 +21,23 @@
  *              `services/lodging/templates/types.ts` (plan phase 4). A derived
  *              lodging template IS one of those specs, so its labels are that
  *              spec's field names.
- *  - cruise  — `ParsedCruise` in `services/cruiseBookingParser.ts`.
+ *  - cruise  — `ParsedCruise` in `services/cruiseBookingParser.ts`, plus the
+ *              three ITINERARY labels (`stopDate`, `stopPort`, `seaDay`): one
+ *              marked row of the port list, which the deriver generalises into
+ *              the per-line pattern of a v2 `stops` repeat.
  *  - place   — `PlaceImportCandidate` in `schemas/placeImport.ts`.
  *
- * ## Why two of the four cannot derive anything
+ * ## All four derive (forgejo#124)
  *
- * A label set is not a reader. Annotating a cruise confirmation records
- * ground truth, but nothing in this tree can RUN a derived cruise template: a
- * sailing is a repeating stop list, and the `RepeatingBlockSpec` that would
- * read one is phase 5 of the plan and is not built. There is no document
- * parser for places at all. So those two domains say so — `derivable: false`
- * with a reason — instead of writing a template that would match a document
- * and extract nothing. The plan's own trap list: "a matching template is not
- * an extracting template", and a plausible wrong value gets accepted by habit.
+ * A label set is not a reader, and until 2026-10-10 two of the four had none:
+ * a sailing is a repeating stop list nothing could read, and there was no
+ * document parser for places at all. The v2 template engine reads repeating
+ * blocks now, so a cruise annotation becomes a v2 envelope with a `stops`
+ * repeat, and a place annotation one that `services/places/v2Place.ts` turns
+ * into a place import candidate. `derivable` and `reason` stay, because the
+ * next domain may again have labels before it has a reader — and then it says
+ * so instead of writing a template that would match a document and extract
+ * nothing ("a matching template is not an extracting template").
  */
 
 export const WORKSHOP_DOMAINS = ["flight", "lodging", "cruise", "place"] as const;
@@ -59,7 +63,7 @@ export interface WorkshopDomainSpec {
    * `parser:derivation.cannot.<reason>`.
    */
   derivable: boolean;
-  reason?: "cruiseNeedsRepeatingBlocks" | "noPlaceDocumentReader";
+  reason?: "notDerivable";
 }
 
 const flightLabels: readonly AnnotationLabel[] = [
@@ -112,6 +116,11 @@ const cruiseLabels: readonly AnnotationLabel[] = [
   { id: "price", group: "money", kind: "money" },
   { id: "currency", group: "money", kind: "currency" },
   { id: "bookingReference", group: "booking", kind: "reference" },
+  // One row of the port list, marked once: the date and the port on the same
+  // line. `seaDay` is optional — the word this line prints on a day at sea.
+  { id: "stopDate", group: "itinerary", kind: "date" },
+  { id: "stopPort", group: "itinerary", kind: "text" },
+  { id: "seaDay", group: "itinerary", kind: "text" },
 ];
 
 const placeLabels: readonly AnnotationLabel[] = [
@@ -128,18 +137,8 @@ export const WORKSHOP_DOMAIN_SPECS: Readonly<Record<WorkshopDomain, WorkshopDoma
   Object.freeze({
     flight: { domain: "flight", labels: flightLabels, derivable: true },
     lodging: { domain: "lodging", labels: lodgingLabels, derivable: true },
-    cruise: {
-      domain: "cruise",
-      labels: cruiseLabels,
-      derivable: false,
-      reason: "cruiseNeedsRepeatingBlocks",
-    },
-    place: {
-      domain: "place",
-      labels: placeLabels,
-      derivable: false,
-      reason: "noPlaceDocumentReader",
-    },
+    cruise: { domain: "cruise", labels: cruiseLabels, derivable: true },
+    place: { domain: "place", labels: placeLabels, derivable: true },
   });
 
 export function isWorkshopDomain(value: string): value is WorkshopDomain {
@@ -161,4 +160,9 @@ export function labelGroupsForDomain(domain: WorkshopDomain): string[] {
     if (!seen.includes(label.group)) seen.push(label.group);
   }
   return seen;
+}
+
+/** The label `id` of this domain, or undefined when the domain has none by that name. */
+export function labelOfDomain(domain: WorkshopDomain, id: string): AnnotationLabel | undefined {
+  return WORKSHOP_DOMAIN_SPECS[domain].labels.find((entry) => entry.id === id);
 }

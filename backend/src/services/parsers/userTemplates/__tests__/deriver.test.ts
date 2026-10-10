@@ -14,6 +14,14 @@ jest.mock("../../../../db", () => ({
 import { derivePatternFromSelection, extractFingerprint } from "../deriver";
 import { prisma } from "../../../../db";
 import { deriveTemplateFromAnnotation } from "../deriver";
+import { parseWorkshopEnvelope } from "../v2UserTemplates";
+import {
+  CRUISE_SELECTIONS,
+  CRUISE_SOURCE,
+  CRUISE_SUBJECT,
+  PLACE_SELECTIONS,
+  PLACE_SOURCE,
+} from "./workshopSamples";
 
 describe("derivePatternFromSelection", () => {
   it("extracts context-anchored regex for a PNR field", () => {
@@ -86,18 +94,38 @@ describe("deriveTemplateFromAnnotation", () => {
     expect(result).toEqual({ status: "failed", reason: "noAnnotations" });
   });
 
-  it("abstains for a domain no reader can run, and writes nothing", async () => {
+  it("abstains for a place annotation without a name, and writes nothing", async () => {
     (prisma.trainingData.findUnique as jest.Mock).mockResolvedValueOnce({
       id: "td2",
       domain: "place",
-      annotations: { fullText: "Trattoria da Enzo", textSelections: [] },
+      annotations: {
+        fullText: PLACE_SOURCE,
+        textSelections: PLACE_SELECTIONS.filter((s) => s.label !== "name"),
+      },
     });
     const result = await deriveTemplateFromAnnotation("td2", "user1");
-    expect(result).toEqual({
-      status: "abstained",
-      domain: "place",
-      reason: "noPlaceDocumentReader",
-    });
+    expect(result).toEqual({ status: "abstained", domain: "place", reason: "placeNeedsName" });
     expect(prisma.parserTemplate.create).not.toHaveBeenCalled();
+  });
+
+  it("writes a cruise annotation as a PENDING cruise template holding a v2 envelope", async () => {
+    (prisma.trainingData.findUnique as jest.Mock).mockResolvedValueOnce({
+      id: "td3",
+      domain: "cruise",
+      subject: CRUISE_SUBJECT,
+      senderAddress: null,
+      annotations: { fullText: CRUISE_SOURCE, textSelections: CRUISE_SELECTIONS },
+    });
+    (prisma.parserTemplate.findFirst as jest.Mock).mockResolvedValueOnce(null);
+    (prisma.parserTemplate.create as jest.Mock).mockResolvedValueOnce({ id: "tpl-cruise" });
+
+    const result = await deriveTemplateFromAnnotation("td3", "user1");
+
+    expect(result).toEqual({ status: "derived", templateId: "tpl-cruise", domain: "cruise" });
+    const data = (prisma.parserTemplate.create as jest.Mock).mock.calls[0][0].data;
+    expect(data).toMatchObject({ domain: "cruise", status: "pending", sourceId: "td3" });
+    expect(parseWorkshopEnvelope(data.patterns, "cruise")?.id).toBe("cruise:user-td3");
+    // The same row can never pass for a place template.
+    expect(parseWorkshopEnvelope(data.patterns, "place")).toBeNull();
   });
 });

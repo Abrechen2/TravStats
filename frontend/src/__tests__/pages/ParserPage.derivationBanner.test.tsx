@@ -97,16 +97,14 @@ describe("the parser page, after an annotation", () => {
       derivation: {
         status: "abstained",
         domain: "cruise",
-        reason: "cruiseNeedsRepeatingBlocks",
+        reason: "cruiseNeedsStopRow",
       },
     });
 
     await uploadAndSave();
 
     await waitFor(() =>
-      expect(
-        screen.getByText("parser:derivation.cannot.cruiseNeedsRepeatingBlocks")
-      ).toBeInTheDocument()
+      expect(screen.getByText("parser:derivation.cannot.cruiseNeedsStopRow")).toBeInTheDocument()
     );
     // The annotation view really is gone — the reason is not simply still
     // mounted inside it.
@@ -131,14 +129,14 @@ describe("the parser page, after an annotation", () => {
   it("can be dismissed", async () => {
     annotate.mockResolvedValue({
       success: true,
-      derivation: { status: "abstained", domain: "cruise", reason: "noPlaceDocumentReader" },
+      derivation: { status: "abstained", domain: "place", reason: "placeNeedsName" },
     });
 
     await uploadAndSave();
 
-    const note = await screen.findByText("parser:derivation.cannot.noPlaceDocumentReader");
+    const note = await screen.findByText("parser:derivation.cannot.placeNeedsName");
     expect(note).toBeInTheDocument();
     await userEvent.click(screen.getByText("parser:workshop.dismiss"));
-    expect(screen.queryByText("parser:derivation.cannot.noPlaceDocumentReader")).toBeNull();
+    expect(screen.queryByText("parser:derivation.cannot.placeNeedsName")).toBeNull();
   });
 });

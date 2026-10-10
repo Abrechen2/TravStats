@@ -4,6 +4,7 @@ import {
   WORKSHOP_DOMAIN_SPECS,
   isLabelOfDomain,
   isWorkshopDomain,
+  labelOfDomain,
   labelGroupsForDomain,
   labelsForDomain,
 } from "../annotationLabels";
@@ -38,17 +39,25 @@ describe("the workshop's per-domain label sets (frontend mirror)", () => {
     expect(ids).toContain("checkOut");
   });
 
-  it("says which domains can be derived, and why the others cannot", () => {
-    expect(WORKSHOP_DOMAIN_SPECS.flight.derivable).toBe(true);
-    expect(WORKSHOP_DOMAIN_SPECS.lodging.derivable).toBe(true);
-    expect(WORKSHOP_DOMAIN_SPECS.cruise).toMatchObject({
-      derivable: false,
-      reason: "cruiseNeedsRepeatingBlocks",
+  it("derives every workshop domain since the v2 engine reads repeating blocks", () => {
+    // forgejo#124: cruise and place were `derivable: false` until a reader
+    // existed. A domain added later without one sets it back, with a reason.
+    for (const domain of WORKSHOP_DOMAINS) {
+      expect(WORKSHOP_DOMAIN_SPECS[domain].derivable).toBe(true);
+      expect(WORKSHOP_DOMAIN_SPECS[domain].reason).toBeUndefined();
+    }
+  });
+
+  it("offers the cruise itinerary labels one marked row is read from", () => {
+    expect(labelOfDomain("cruise", "stopDate")).toEqual({
+      id: "stopDate",
+      group: "itinerary",
+      kind: "date",
     });
-    expect(WORKSHOP_DOMAIN_SPECS.place).toMatchObject({
-      derivable: false,
-      reason: "noPlaceDocumentReader",
-    });
+    expect(isLabelOfDomain("cruise", "stopPort")).toBe(true);
+    expect(isLabelOfDomain("cruise", "seaDay")).toBe(true);
+    expect(isLabelOfDomain("lodging", "stopPort")).toBe(false);
+    expect(labelOfDomain("place", "stopDate")).toBeUndefined();
   });
 
   it("keeps a label inside its own domain", () => {
