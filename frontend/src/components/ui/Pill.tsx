@@ -20,7 +20,7 @@ interface PillProps {
  */
 export default function Pill({ children, color, dashed = false }: PillProps): JSX.Element {
   // No `title`: an explanation of a pill goes through `Toggletip` with the
-  // pill as its trigger, so a finger and a keyboard reach it too (forgejo#249).
+  // pill as its trigger, so a finger and a keyboard reach it too (forgejo issue 249).
   return (
     <span
       style={{

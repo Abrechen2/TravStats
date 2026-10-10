@@ -50,7 +50,7 @@ export interface ToggletipProps {
 const FINE_HIT = "24px";
 
 /**
- * The one accessible help affordance (forgejo#249): a toggletip.
+ * The one accessible help affordance (forgejo issue 249): a toggletip.
  *
  * Measured before it existed: essential explanations lived in 60-odd hover
  * `title`s across all eight domains — invisible on the iPads the web build is
