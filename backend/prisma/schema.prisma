@@ -279,7 +279,7 @@ model ClientWriteRef {
   userId      String   @map("user_id")
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   clientRef   String   @map("client_ref") @db.VarChar(64)
-  /// Which create the key was spent on: "rail" | "bus" | "expense".
+  /// Which create the key was spent on: "rail" | "bus" | "expense" | "tour".
   kind        String
   /// The created row. No foreign key: the kinds live in different tables, and
   /// a row deleted since is answered 410, not resurrected (clientRef.ts).

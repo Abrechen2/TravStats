@@ -5,6 +5,7 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { busCreationLimiter, railCreationLimiter } from "../../middleware/rateLimit";
+import { dbLogger } from "../../utils/logger";
 import {
   CLIENT_REF_RETENTION_DAYS,
   payloadHash,
@@ -73,6 +74,7 @@ describe("clientRef — create at most once", () => {
     await prisma.railJourney.deleteMany({ where: { userId: users } });
     await prisma.busJourney.deleteMany({ where: { userId: users } });
     await prisma.tripExpense.deleteMany({ where: { userId: users } });
+    await prisma.tripRoute.deleteMany({ where: { userId: users, kind: "tour" } });
     for (const id of [userId, otherId]) {
       await railCreationLimiter.resetKey(`user:${id}`);
       await busCreationLimiter.resetKey(`user:${id}`);
@@ -126,6 +128,29 @@ describe("clientRef — create at most once", () => {
     expect(a.body.data.id).toBe(b.body.data.id);
     expect(await prisma.busJourney.count({ where: { userId } })).toBe(1);
     expect(await prisma.clientWriteRef.count({ where: { userId } })).toBe(1);
+  });
+
+  it("answers a repeated tour POST with the first tour, also when both arrive at once", async () => {
+    const tour = { name: "Lauf 07:12", mode: "foot", activity: "run", clientRef: ref(12) };
+    const error = jest.spyOn(dbLogger, "error");
+    try {
+      const [a, b] = await Promise.all([post("/tours", tour), post("/tours", tour)]);
+      expect([a.status, b.status].sort()).toEqual([200, 201]);
+      expect(a.body).toEqual(b.body);
+      // The lost race is handled, so it is no database error in the log.
+      const logged = error.mock.calls.filter(
+        ([entry]) => (entry as { operation?: string }).operation === "database_query_error"
+      );
+      expect(logged).toHaveLength(0);
+    } finally {
+      error.mockRestore();
+    }
+    const again = await post("/tours", tour);
+    expect(again.status).toBe(200);
+    expect(await prisma.tripRoute.count({ where: { userId, kind: "tour" } })).toBe(1);
+    // A second workout with the same name is a second tour under its own key.
+    await post("/tours", { ...tour, clientRef: ref(13) }).expect(201);
+    expect(await prisma.tripRoute.count({ where: { userId, kind: "tour" } })).toBe(2);
   });
 
   it("dedupes expenses on a trip and on a roadtrip", async () => {

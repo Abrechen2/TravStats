@@ -1,4 +1,5 @@
 import { z } from "./zod";
+import { clientRefSchema } from "./clientRef";
 import { isCurrencyCode } from "../shared/currencies";
 import { instantFieldSchema } from "../shared/time/timeInput";
 
@@ -277,6 +278,8 @@ export const createTourSchema = createRouteSchema.extend({
    */
   anchorStopId: z.string().uuid().nullish(),
   ...tourDayFields,
+  /** forgejo#283 — split off by the route before parsing; listed to publish it. */
+  clientRef: clientRefSchema.optional(),
 });
 
 /**

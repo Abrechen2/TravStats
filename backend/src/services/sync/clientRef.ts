@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { prisma, type DbTransaction } from "../../db";
+import { expectingUniqueConflict, prisma, type DbTransaction } from "../../db";
 import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import { clientRefSchema } from "../../schemas/clientRef";
@@ -45,7 +45,7 @@ import { SYNC_RETENTION_DAYS } from "./state";
  * bytes. Pruned by the sync retention job.
  */
 
-export type ClientRefKind = "rail" | "bus" | "expense";
+export type ClientRefKind = "rail" | "bus" | "expense" | "tour";
 
 export const CLIENT_REF_RETENTION_DAYS = SYNC_RETENTION_DAYS;
 
@@ -168,9 +168,11 @@ export async function createOnce<R>(
   try {
     const result = await create(async (tx, entityId) => {
       try {
-        await tx.clientWriteRef.create({
-          data: { userId, clientRef, kind, entityId, payloadHash: hash },
-        });
+        await expectingUniqueConflict("ClientWriteRef", () =>
+          tx.clientWriteRef.create({
+            data: { userId, clientRef, kind, entityId, payloadHash: hash },
+          })
+        );
       } catch (err) {
         // Another request with this key committed first. Throwing rolls this
         // transaction — and the row it just created — back.
