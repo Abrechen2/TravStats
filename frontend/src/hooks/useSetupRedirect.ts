@@ -69,7 +69,13 @@ export function useSetupRedirect({
     return () => {
       cancelled = true;
     };
-  }, []);
+    // Re-asked whenever the session flips. The answer is not fixed for the
+    // lifetime of the tab: finishing `/setup` signs the new admin in WITHOUT
+    // a reload, and a status read once on mount then kept saying "setup
+    // required" — the brand-new admin landed on a dashboard whose banner
+    // said "This instance has not been set up yet" (forgejo#88 acceptance,
+    // 2026-10-10).
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!sessionChecked) return;

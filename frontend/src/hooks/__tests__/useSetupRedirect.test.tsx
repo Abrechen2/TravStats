@@ -88,4 +88,31 @@ describe("useSetupRedirect", () => {
     expect(result.current.requiresSetup).toBeNull();
     expect(mocks.navigate).not.toHaveBeenCalled();
   });
+
+  // forgejo#88 acceptance, 2026-10-10: completing /setup signs the admin in
+  // without a reload. The status read on mount said "setup required", and
+  // nothing asked again — the new admin's dashboard announced that the
+  // instance was not set up.
+  it("asks again once the session becomes authenticated", async () => {
+    mocks.getStatus.mockResolvedValueOnce({
+      requiresSetup: true,
+      setupComplete: false,
+      message: "",
+    });
+    const { result, rerender } = renderHook(
+      (props: { sessionChecked: boolean; isAuthenticated: boolean }) => useSetupRedirect(props),
+      { wrapper, initialProps: { sessionChecked: true, isAuthenticated: false } }
+    );
+    await waitFor(() => expect(result.current.requiresSetup).toBe(true));
+
+    mocks.getStatus.mockResolvedValueOnce({
+      requiresSetup: false,
+      setupComplete: true,
+      message: "",
+    });
+    rerender({ sessionChecked: true, isAuthenticated: true });
+
+    await waitFor(() => expect(result.current.requiresSetup).toBe(false));
+    expect(mocks.getStatus).toHaveBeenCalledTimes(2);
+  });
 });
