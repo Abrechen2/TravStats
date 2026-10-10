@@ -58,6 +58,13 @@ const BOOKKEEPING_INSTANTS = new Set([
   // account and when it runs next (forgejo#94) — a server slot, no place's.
   "ranAt",
   "nextRunAt",
+  // Public share links (forgejo#281): when a link stops answering and when it
+  // was last opened — the server's own clock, no place's; and when the phone
+  // recorded the flight's last position, an instant shown on the visitor's
+  // clock because a position in the air belongs to no ground zone.
+  "effectiveExpiresAt",
+  "lastViewedAt",
+  "recordedAt",
 ]);
 
 const doc = buildOpenApiDocument() as unknown as { paths: Json; components: { schemas: Json } };

@@ -823,7 +823,7 @@
       "invalid": "Bitte einen Kurs größer als 0 eingeben.",
       "rowConverted": "≈ {{amount}} · {{source}}",
       "outcome": {
-        "lookupFailed": "Gespeichert — aber für diese Kosten war kein Wechselkurs zu finden. Sie zählen nur in {{currency}}; einen Kurs kannst du von Hand nachtragen.",
+        "lookupFailed": "Gespeichert — aber für diese Kosten war kein Wechselkurs zu finden. Der Betrag zählt nur in {{currency}}; einen Kurs kannst du von Hand nachtragen.",
         "keptStoredRate": "Gespeichert — ein neuer Tageskurs war nicht zu finden, der bisher gespeicherte Kurs wurde auf den neuen Betrag angewandt."
       }
     },

@@ -167,10 +167,12 @@ export default function RoadtripCostsSection({
                         <span
                           className="flex items-center"
                           data-testid="expense-receipt"
-                          title={t("roadtrips:costs.receipt.count", { count: e.documentCount })}
-                          style={{ color: "var(--ts-muted)" }}
+                          style={{ color: "var(--ts-muted)", gap: 2, fontWeight: 400 }}
                         >
                           <Icon name="file-text" size={14} />
+                          {/* The count is visible, not a hover title: a title
+                              never reaches touch or keyboard (helpReachability). */}
+                          <span aria-hidden="true">{e.documentCount}</span>
                           <span className="sr-only">
                             {t("roadtrips:costs.receipt.count", { count: e.documentCount })}
                           </span>

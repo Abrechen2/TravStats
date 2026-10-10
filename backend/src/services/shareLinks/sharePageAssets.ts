@@ -184,7 +184,7 @@ ${SHARE_PAGE_FORMAT_JS}
       var lp = el("div", "card");
       lp.appendChild(el("p", "big", T.position));
       if (f.lastPosition) {
-        row(lp, f.lastPosition.lat.toFixed(3) + ", " + f.lastPosition.lon.toFixed(3), fmt.instant(f.lastPosition.at));
+        row(lp, f.lastPosition.lat.toFixed(3) + ", " + f.lastPosition.lon.toFixed(3), fmt.instant(f.lastPosition.recordedAt));
         var a = el("a", null, T.map);
         a.href = "https://www.openstreetmap.org/?mlat=" + f.lastPosition.lat + "&mlon=" + f.lastPosition.lon + "#map=6/" + f.lastPosition.lat + "/" + f.lastPosition.lon;
         a.rel = "noreferrer noopener"; a.target = "_blank";

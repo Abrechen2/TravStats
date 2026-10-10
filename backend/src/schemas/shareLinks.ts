@@ -139,7 +139,7 @@ const flightView = z.strictObject({
     .optional(),
   aircraft: z.string().nullable().optional(),
   lastPosition: z
-    .strictObject({ lat: z.number(), lon: z.number(), at: z.string().datetime() })
+    .strictObject({ lat: z.number(), lon: z.number(), recordedAt: z.string().datetime() })
     .nullable()
     .optional()
     .describe("The last point the phone sent; null when it has sent none"),

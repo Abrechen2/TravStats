@@ -43,6 +43,11 @@ export const FLIGHT_VIEW_SELECT = {
   actualArrival: true,
   runwayDepartureTime: true,
   runwayArrivalTime: true,
+  // Read only because the shared time builder (`enrichFlightsForClients`)
+  // expects every time column; the public view is built from the allow-list
+  // and never carries the check-in opening (forgejo#285).
+  onlineCheckInOpensAt: true,
+  onlineCheckInZone: true,
 } as const;
 
 export async function loadOwnedFlightTimes(
@@ -130,7 +135,7 @@ async function lastPosition(flightId: string): Promise<FlightView["lastPosition"
   if (!track || !Array.isArray(last) || last.length < 2) return null;
   const [lon, lat] = last as [unknown, unknown];
   if (typeof lat !== "number" || typeof lon !== "number") return null;
-  return { lat, lon, at: track.endedAt.toISOString() };
+  return { lat, lon, recordedAt: track.endedAt.toISOString() };
 }
 
 export async function buildFlightView(

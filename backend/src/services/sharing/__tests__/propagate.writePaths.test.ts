@@ -42,6 +42,8 @@ const EXEMPT: Record<string, string> = {
   "index.ts": "boot-time aircraft-name normalisation, applied to every account",
   "services/statusSweep.ts": "status sweep, runs over every account's rows",
   "services/flightAutoUpdate.ts": "provider tracking job, per account",
+  "services/flights/flightReimport.ts":
+    "fills only onlineCheckInOpensAt/Zone — booking terms, not a shared fact (sharing/facts/flight.ts)",
   "services/flightLandedStatus.ts": "provider tracking job, per account",
   "services/finalArrivalLookup.ts": "provider lookup job, per account",
   "services/bulkFlightRefresh.ts": "provider refresh, per account",

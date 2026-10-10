@@ -66,7 +66,7 @@ export interface FlightShareView {
     basis: "schedule" | "reported";
   };
   aircraft?: string | null;
-  lastPosition?: { lat: number; lon: number; at: string } | null;
+  lastPosition?: { lat: number; lon: number; recordedAt: string } | null;
 }
 
 export interface TripShareView {

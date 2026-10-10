@@ -1,3 +1,4 @@
+import { propagateWrite } from "../sharing/propagate";
 import { parsedDeadlineColumns, type DeadlineField } from "../deadlines/parsedDeadlines";
 import { Prisma } from "../../prisma";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
@@ -301,7 +302,7 @@ async function createStay(
 
   const checkOut = toDate(fields.checkOut);
   const zone = await zoneOfLodging(lodgingId);
-  await prisma.lodgingStay.create({
+  const created = await prisma.lodgingStay.create({
     data: {
       userId,
       batchId,
@@ -349,6 +350,11 @@ async function createStay(
       dataSource: "import",
     },
   });
+  // Same contract as a stay added by hand (stayWrites.ts): a write that may
+  // touch a shared trip propagates. An imported stay carries no trip today, so
+  // this is a no-op until the import learns to file into one — written now so
+  // that change cannot forget it (the write-path guard reads the whole file).
+  await propagateWrite(prisma, userId, "lodgingStay", created.id);
 }
 
 /**

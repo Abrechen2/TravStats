@@ -424,7 +424,7 @@ describe("flight links", () => {
     expect((await view(withPosition.token)).body.data.view.flight.lastPosition).toEqual({
       lat: 55.25,
       lon: -20.5,
-      at: "2030-06-01T13:30:00.000Z",
+      recordedAt: "2030-06-01T13:30:00.000Z",
     });
     const plain = (await view(without.token)).body.data.view.flight;
     expect(plain).not.toHaveProperty("lastPosition");

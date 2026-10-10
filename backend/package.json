@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "npm run prisma:generate && npm run init && tsx watch src/index.ts",
     "postinstall": "prisma generate",
-    "build": "tsc",
+    "build": "node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc",
     "start": "node dist/index.js",
     "lint": "eslint src",
     "test": "jest",
