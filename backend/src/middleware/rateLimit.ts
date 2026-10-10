@@ -305,6 +305,16 @@ export const busCreationLimiter = rateLimit({
   keyGenerator: userOrIpKey,
 });
 
+/** Note creation (forgejo#137): rail's budget, its own bucket and message (rail's reasons). */
+export const noteCreationLimiter = rateLimit({
+  windowMs: RATE_LIMITS.FLIGHT_CREATION_WINDOW_MS,
+  max: patAwareMax(RATE_LIMITS.NOTE_CREATION_MAX),
+  message: "Too many notes saved, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
 /** Rental creation: rail's budget, its own bucket and message (rail's reasons). */
 export const rentalCreationLimiter = rateLimit({
   windowMs: RATE_LIMITS.FLIGHT_CREATION_WINDOW_MS,

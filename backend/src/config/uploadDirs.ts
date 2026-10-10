@@ -41,4 +41,6 @@ export const BACKED_UP_UPLOAD_DIRS: readonly string[] = [
   // data, and archived all the same: restoring an instance that comes back
   // looking like a different one is a restore nobody trusts.
   "login-backgrounds",
+  // The photo of a standalone note (forgejo#137).
+  "note-photos",
 ] as const;

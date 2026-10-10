@@ -133,6 +133,7 @@ model User {
   dawarichSweepState     DawarichSweepState?
 
   documents Document[]
+  notes     Note[]
 
   passwordResetRequest PasswordResetRequest?
 
@@ -4292,4 +4293,58 @@ model ShareNotice {
   @@index([groupId])
   @@index([actorId])
   @@map("share_notices")
+}
+
+/// A standalone note (forgejo#137): a moment worth keeping that belongs to no
+/// trip — a sunset, a flight that never became a trip, an everyday line.
+///
+/// Its own lightweight model by owner decision (27.09. and D4 of 01.10.), NOT
+/// a `TripJournalEntry` with a nullable `tripId`: a journal entry is trip
+/// machinery (mood, weather, the trip's gallery), a note is a date, a body,
+/// optionally a photo and optionally where it was written — nothing else is
+/// assumed. Which trip a note belongs to follows from its DAY, never from a
+/// stored link, so a trip created next week picks up last week's notes by
+/// itself (companion#28, `lib/moments.ts`).
+///
+/// Where it was written is a SNAPSHOT (`placeName`, `lat`, `lon`), not a
+/// foreign key to `Place`: a note keeps reading the way it was written when
+/// the place is renamed, merged or deleted.
+model Note {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+
+  /// The writing client's own id for the note (the Companion's outbox id).
+  /// A resend with the same id answers the stored note instead of a second
+  /// copy. Null for notes written on the web.
+  clientId String? @map("client_id")
+
+  body String
+
+  /// ADR 0002 D1 instant: the real UTC moment the note is filed under ...
+  occurredAt        DateTime @map("occurred_at")
+  /// ... plus the IANA zone it was written in, frozen at write time. The zone
+  /// decides the DAY a note belongs to (00:30 in Berlin is still yesterday in
+  /// London).
+  occurredZone      String   @map("occurred_zone")
+  /// `minute`, or `day` for a note dated to the day only.
+  occurredPrecision String   @default("minute") @map("occurred_precision")
+
+  placeName String? @map("place_name")
+  lat       Float?
+  lon       Float?
+
+  /// The photo, stored under uploads/note-photos under a generated name.
+  /// All three photo columns are set together or not at all.
+  photoFilename  String? @map("photo_filename")
+  photoMimetype  String? @map("photo_mimetype")
+  photoSizeBytes Int?    @map("photo_size_bytes")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clientId])
+  @@index([userId, occurredAt])
+  @@map("notes")
 }

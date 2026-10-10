@@ -30,6 +30,7 @@ const MODEL_OF_TABLE: Record<string, Prisma.ModelName> = {
   rental_bookings: "RentalBooking",
   trip_expenses: "TripExpense",
   companions: "Companion",
+  notes: "Note",
 };
 
 async function tombstonesFor(entity: string, ids: string[]) {

@@ -70,6 +70,7 @@ import "./loginBackgrounds";
 import "./xlsxImport";
 import "./settingsRouting";
 import "./documents";
+import "./notes";
 import "./jobs";
 import "./placeImportResolve";
 import "./timeMigration";

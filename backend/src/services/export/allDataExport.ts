@@ -100,6 +100,9 @@ export const USER_EXPORT_SELECT = {
   // Kept originals (forgejo#116): the rows — what each is, where it is filed,
   // what its parse read. The bytes stay out, as a photo's do.
   documents: true,
+  // Standalone notes (forgejo#137): the text, the moment and its zone, where it
+  // was written. The photo's bytes stay out, as every photo's do.
+  notes: true,
   // The receipt files' rows (the files are in the pg_dump backup's archive).
   receiptUploads: true,
   // Which import each record came from — the provenance an undo reads.

@@ -8,7 +8,8 @@ import type { SyncScope } from "./scope";
  * `20261001193030_sync_change_feed`, plus rental bookings, trip expenses and
  * the companion catalogue from `20261002172714_sync_feed_rentals_expenses_companions`
  * (domains that landed beside the first one), and bus rides from
- * `20261010040000_sync_feed_bus` (forgejo#180). The list is what the Companion reads and
+ * `20261010040000_sync_feed_bus` (forgejo#180), and standalone notes from
+ * `20261010175834_standalone_notes` (forgejo#137). The list is what the Companion reads and
  * edits today; `syncTriggers.test.ts` holds it against the triggers that
  * actually exist, so a table cannot be added on one side only.
  *
@@ -312,6 +313,21 @@ const ENTITIES: readonly SyncEntity[] = [
     tombstoneVisible: always,
     omit: ["storedName", "parsedPayload"],
     versioned: false,
+    reachable: always,
+  },
+  {
+    // A standalone note (forgejo#137) belongs to no domain and to no trip, so
+    // every account sees its own. The photo's stored name is a server
+    // internal; the bytes are fetched from `/notes/:id/photo`.
+    name: "note",
+    table: "notes",
+    ownerSql: DIRECT_OWNER,
+    ownerWhere: (userId) => ({ userId }),
+    find: (args) => prisma.note.findMany(args),
+    visible: always,
+    tombstoneVisible: always,
+    omit: ["photoFilename"],
+    versioned: true,
     reachable: always,
   },
 ];

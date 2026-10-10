@@ -92,6 +92,10 @@ export const RATE_LIMITS = {
   // ride per request, and a first sitting is years of tickets.
   BUS_CREATION_MAX: 300, // rides per hour
 
+  // Standalone notes (forgejo#137): rail's budget. The Companion keeps notes
+  // offline and sends its outbox in one burst after a trip without signal.
+  NOTE_CREATION_MAX: 300, // notes per hour
+
   // Flight lookup rate limits
   FLIGHT_LOOKUP_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
   FLIGHT_LOOKUP_MAX: 30, // lookups per window

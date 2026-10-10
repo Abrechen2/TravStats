@@ -317,7 +317,7 @@ const PHOTO_MIME_TYPES = [
   ...HEIF_MIME_TYPES,
 ];
 
-const tripPhotoFilter = (
+export const tripPhotoFilter = (
   _req: Express.Request,
   file: Express.Multer.File,
   cb: multer.FileFilterCallback
