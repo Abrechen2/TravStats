@@ -57,6 +57,14 @@ export const FLIGHT_WITNESS_MEASURES: Record<string, MeasureSpec> = {
   mostCountriesDayFlights: witnesses("StatsUniqueSection", UNIQUE),
   longestLayoverFlights: witnesses("StatsUniqueSection", UNIQUE),
   shortestLayoverFlights: witnesses("StatsUniqueSection", UNIQUE),
+  longestDurationFlights: witnesses(
+    "StatsFlightBreakdown",
+    "durationMinutes, else flightDurationOf, over the countable flights (the page's flightDurations fold)"
+  ),
+  shortestDurationFlights: witnesses(
+    "StatsFlightBreakdown",
+    "durationMinutes, else flightDurationOf, over the countable flights (the page's flightDurations fold)"
+  ),
   farthestFromHomeFlights: witnesses(
     "StatsAirportsSection",
     "GET /stats/airports (utils/stats/airportStats.ts farthestFromHomeOf)"

@@ -176,6 +176,13 @@ export const RANKING_DIMENSIONS = [
    * `seatFactsOf`.
    */
   "seat",
+  /**
+   * The flights of one row of the flight tab's breakdown (forgejo#256): one
+   * stored `status` (`flightStatus:flown`) or one `boardingGroup`
+   * (`boardingGroup:3`), over the countable flights the page loads.
+   */
+  "flightStatus",
+  "boardingGroup",
 ] as const;
 export type RankingDimension = (typeof RANKING_DIMENSIONS)[number];
 

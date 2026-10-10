@@ -326,5 +326,10 @@
   "evidence.ranking.seat.class.first": "Flüge in First",
   "evidence.ranking.seat.class": "Flüge in der Klasse {{value}}",
   "evidence.ranking.seat.number": "Flüge auf Sitz {{value}}",
-  "evidence.ranking.seat.row.numbered": "Flüge mit Reihennummer"
+  "evidence.ranking.seat.row.numbered": "Flüge mit Reihennummer",
+  "evidence.metric.longestDurationFlights": "Längster Flug nach Dauer",
+  "evidence.metric.shortestDurationFlights": "Kürzester Flug nach Dauer",
+  "evidence.ranking.boardingGroup": "Flüge in Boarding-Gruppe {{value}}",
+  "evidence.ranking.flightStatus.flown": "Geflogene Flüge",
+  "evidence.ranking.flightStatus.historical": "Historische (nachgetragene) Flüge"
 }

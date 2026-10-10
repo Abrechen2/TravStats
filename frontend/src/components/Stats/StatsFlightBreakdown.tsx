@@ -249,7 +249,15 @@ export default function StatsFlightBreakdown({
           </h2>
           <div className="space-y-3">
             {Object.entries(statusStats).map(([status, count]) => (
-              <div key={status} className="flex items-center justify-between">
+              <EvidenceTrigger
+                key={status}
+                kind="ranking"
+                evidenceKey={rankingKey("flightStatus", status)}
+                scope={ALL_TIME}
+                renderedValue={count}
+                label={t(`flights:status.${status}`, { defaultValue: status })}
+                className="flex items-center justify-between"
+              >
                 <div className="flex items-center gap-2">
                   <div
                     className="w-3 h-3 rounded-full"
@@ -276,7 +284,7 @@ export default function StatsFlightBreakdown({
                     {count}
                   </div>
                 </div>
-              </div>
+              </EvidenceTrigger>
             ))}
           </div>
         </div>
@@ -294,14 +302,22 @@ export default function StatsFlightBreakdown({
               {Object.entries(boardingGroupStats)
                 .sort(([, a], [, b]) => b - a)
                 .map(([group, count]) => (
-                  <div key={group} className="flex items-center justify-between">
+                  <EvidenceTrigger
+                    key={group}
+                    kind="ranking"
+                    evidenceKey={rankingKey("boardingGroup", group)}
+                    scope={ALL_TIME}
+                    renderedValue={count}
+                    label={t("stats:boardingGroups.group", { group })}
+                    className="flex items-center justify-between"
+                  >
                     <div className="font-medium" style={{ color: "var(--text-primary)" }}>
                       {t("stats:boardingGroups.group", { group })}
                     </div>
                     <div className="text-2xl font-bold" style={{ color: "var(--accent)" }}>
                       {count}
                     </div>
-                  </div>
+                  </EvidenceTrigger>
                 ))}
             </div>
           </div>
@@ -311,8 +327,13 @@ export default function StatsFlightBreakdown({
       {/* Longest/Shortest Flights */}
       {longestFlight && shortestFlight && longestFlight.flight && shortestFlight.flight && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          <div
-            className="rounded-lg shadow-sm p-6"
+          <EvidenceTrigger
+            kind="metric"
+            evidenceKey="longestDurationFlights"
+            scope={ALL_TIME}
+            renderedValue={null}
+            label={t("stats:flights.longest")}
+            className="block rounded-lg shadow-sm p-6"
             style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
           >
             <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
@@ -333,10 +354,15 @@ export default function StatsFlightBreakdown({
                 {formatHours(longestFlight.duration ?? 0, i18n.language)}
               </p>
             </div>
-          </div>
+          </EvidenceTrigger>
 
-          <div
-            className="rounded-lg shadow-sm p-6"
+          <EvidenceTrigger
+            kind="metric"
+            evidenceKey="shortestDurationFlights"
+            scope={ALL_TIME}
+            renderedValue={null}
+            label={t("stats:flights.shortest")}
+            className="block rounded-lg shadow-sm p-6"
             style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
           >
             <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
@@ -357,7 +383,7 @@ export default function StatsFlightBreakdown({
                 {formatHours(shortestFlight.duration ?? 0, i18n.language)}
               </p>
             </div>
-          </div>
+          </EvidenceTrigger>
         </div>
       )}
       <CountingHelp entries={help} testId="breakdown-counting-help" />

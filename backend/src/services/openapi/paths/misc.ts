@@ -279,7 +279,8 @@ registry.registerPath({
             "`departureMonth:1`–`12` and `departureWeekday:0`–`6` (0 = Sunday; the flight " +
             "tab's seasonal and weekday charts, on the departure airport's clock), " +
             "`seat:position:window`, `seat:zone:front`, `seat:class:<seat class>`, " +
-            "`seat:number:<seat>` and `seat:row:numbered` (the seat section's figures)."
+            "`seat:number:<seat>` and `seat:row:numbered` (the seat section's figures), " +
+            "`flightStatus:<status>` and `boardingGroup:<group>` (the breakdown's rows)."
         ),
     }),
     query: z.object({

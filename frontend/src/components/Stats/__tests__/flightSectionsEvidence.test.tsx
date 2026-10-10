@@ -19,6 +19,7 @@ import StatsSeatSection from "../StatsSeatSection";
 import StatsBusinessSection from "../StatsBusinessSection";
 import StatsOverviewCards from "../StatsOverviewCards";
 import PunctualitySection from "../PunctualitySection";
+import StatsFlightBreakdown from "../StatsFlightBreakdown";
 
 /**
  * forgejo#256: every figure of the flight tab explains how it is counted and
@@ -217,5 +218,32 @@ describe("flight-tab figures open their entries (forgejo#256)", () => {
     expect(new Set(keys)).toEqual(new Set(["metric:punctualitySampleSize"]));
     expect(keys).toHaveLength(6);
     expect(screen.getByTestId("punctuality-counting-help")).toBeTruthy();
+  });
+
+  it("breakdown: status and boarding rows and the duration extremes open their flights", async () => {
+    const f = { airline: "LH", flightNumber: "LH1", depIata: "FRA", arrIata: "SIN" } as never;
+    const keys = await keysOpenedBy(
+      <StatsFlightBreakdown
+        sortedAirlines={[]}
+        sortedAirports={[]}
+        seatClassStats={{}}
+        sortedAircraft={[]}
+        statusStats={{ flown: 3, historical: 1 }}
+        boardingGroupStats={{ "2": 1 }}
+        longestFlight={{ flight: f, duration: 12 }}
+        shortestFlight={{ flight: f, duration: 1 }}
+        totalFlights={4}
+      />
+    );
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        "ranking:flightStatus:flown",
+        "ranking:flightStatus:historical",
+        "ranking:boardingGroup:2",
+        "metric:longestDurationFlights",
+        "metric:shortestDurationFlights",
+      ])
+    );
+    expectServed(keys);
   });
 });

@@ -57,6 +57,7 @@ describe("witness evidence behind the flight tab's extremes (forgejo#256)", () =
       flightNumber: "LH900",
       seatNumber: "3a",
       seatClass: "economy",
+      boardingGroup: "2",
       airline: "Lufthansa",
       departureTime: new Date("2024-05-10T06:00:00Z"),
       arrivalTime: new Date("2024-05-10T07:30:00Z"),
@@ -177,5 +178,18 @@ describe("witness evidence behind the flight tab's extremes (forgejo#256)", () =
     expect(await ids_("seat:number:3A")).toEqual([ids.fraLhr]);
     expect((await ids_("seat:row:numbered")).sort()).toEqual([ids.fraLhr, ids.lhrJfk].sort());
     expect(await resolveRankingEvidence(userId, "seat:colour:red", allTime, page)).toBeNull();
+  });
+
+  it("the breakdown's duration extremes and its status and boarding rows open their flights", async () => {
+    expect(await listedIds("longestDurationFlights")).toEqual([ids.fraSin]);
+    expect(await listedIds("shortestDurationFlights")).toEqual([ids.fraLhr]);
+    const rows = async (key: string) =>
+      ((await resolveRankingEvidence(userId, key, allTime, page))?.entries ?? []).map((e) => e.id);
+    expect((await rows("flightStatus:flown")).sort()).toEqual(
+      [ids.fraLhr, ids.lhrJfk, ids.fraSin].sort()
+    );
+    // The planned flight is not countable, whatever its status.
+    expect(await rows("flightStatus:scheduled")).toEqual([]);
+    expect(await rows("boardingGroup:2")).toEqual([ids.fraLhr]);
   });
 });

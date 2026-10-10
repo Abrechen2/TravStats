@@ -11,6 +11,7 @@ import { analyseUniqueStats, type UniqueWitnesses } from "../../utils/stats/uniq
 import { farthestFromHomeOf } from "../../utils/stats/airportStats";
 import { isCountableFlight } from "../../shared/flightCounting";
 import { haversineKm } from "../../shared/geo/haversine";
+import { flightDurationOf, type TimedFlightRow } from "../../shared/flightDuration";
 import type { TravelRecord } from "../../schemas/statsDomains";
 import type { FlightTimeSemantics } from "../../utils/timezone";
 
@@ -116,6 +117,32 @@ const distanceResolver = (key: string, direction: "longest" | "shortest"): Resol
     };
   });
 
+/**
+ * Longest / shortest flight by DURATION — the breakdown's own rule: the
+ * enriched `durationMinutes` (the record loader's, clocks through their zones)
+ * where it is positive, else `flightDurationOf` (measured, else estimated from
+ * the coordinates), the same order the page applies. Every flight at the
+ * extreme is listed.
+ */
+const durationResolver = (key: string, direction: "longest" | "shortest"): Resolver =>
+  listed(key, async (userId) => {
+    const rows = await loadRecordFlights(userId);
+    const timed = rows
+      .map((row) => {
+        const own = row.durationMinutes;
+        const minutes =
+          typeof own === "number" && own > 0
+            ? own
+            : (flightDurationOf(row as unknown as TimedFlightRow)?.minutes ?? null);
+        return { row, minutes };
+      })
+      .filter((r): r is { row: (typeof rows)[number]; minutes: number } => (r.minutes ?? 0) > 0);
+    if (timed.length === 0) return { rows: [], ids: [] };
+    const all = timed.map((r) => r.minutes);
+    const extreme = direction === "longest" ? Math.max(...all) : Math.min(...all);
+    return { rows, ids: timed.filter((r) => r.minutes === extreme).map((r) => r.row.id) };
+  });
+
 const farthestFromHome: Resolver = listed("farthestFromHomeFlights", async (userId) => {
   const [rows, homePeriods] = await Promise.all([
     loadStatsPageRows(userId),
@@ -146,4 +173,6 @@ export const FLIGHT_WITNESS_RESOLVERS: Record<string, Resolver> = {
   longestLayoverFlights: uniqueResolver("longestLayoverFlights", "longestLayover"),
   shortestLayoverFlights: uniqueResolver("shortestLayoverFlights", "shortestLayover"),
   farthestFromHomeFlights: farthestFromHome,
+  longestDurationFlights: durationResolver("longestDurationFlights", "longest"),
+  shortestDurationFlights: durationResolver("shortestDurationFlights", "shortest"),
 };
