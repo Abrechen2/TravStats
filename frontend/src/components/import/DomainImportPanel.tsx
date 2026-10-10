@@ -1,5 +1,5 @@
 import Modal from "../Modal";
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
@@ -9,7 +9,7 @@ import { WrongDialogNotice } from "./WrongDialogNotice";
 import { ImportManualFooter, ImportRouteList, ImportRouteRow } from "./ImportRouteList";
 import { isParseableDomain } from "./types";
 import { llmProviderOfResult, readByMessage } from "../../lib/llmProviderCopy";
-import type { DomainImportAdapter } from "./types";
+import type { DomainImportAdapter, ImportRouteContext } from "./types";
 
 const EmailImportTab = lazy(() => import("./EmailImportTab"));
 
@@ -36,8 +36,10 @@ interface Mismatch {
 }
 
 interface ParseState {
-  kind: "email" | "pdf";
-  result: ParseEmailResult | ParsePdfResult;
+  /** `link`: a route read it (a share link) and hands it to the same review. */
+  kind: "email" | "pdf" | "link";
+  /** The parse response the adapter narrows. */
+  result: unknown;
   emailMeta?: { subject?: string; text?: string; html?: string };
   /** What the file was called, so the import log can name it (Forgejo #19). */
   sourceFileName?: string | null;
@@ -69,13 +71,16 @@ export default function DomainImportPanel({
   const addToast = useToastStore((s) => s.addToast);
   const [parseState, setParseState] = useState<ParseState | null>(null);
   const [showManual, setShowManual] = useState(false);
+  const [manualPrefill, setManualPrefill] = useState<unknown>(undefined);
   const [mismatch, setMismatch] = useState<Mismatch | null>(null);
+  const documentRouteRef = useRef<HTMLDivElement>(null);
 
   // Reset internal state every time the panel opens so successive opens start fresh.
   useEffect(() => {
     if (open) {
       setParseState(null);
       setShowManual(false);
+      setManualPrefill(undefined);
       setMismatch(null);
     }
   }, [open]);
@@ -161,8 +166,6 @@ export default function DomainImportPanel({
     [adapter.acceptedEmailExtensions]
   );
 
-  if (!open) return null;
-
   // Two conditions, and both are real: the adapter may switch the route off
   // while its parser is being built, and a domain the backend cannot parse at
   // all must never show a drop zone — the type guard is what stops that from
@@ -170,6 +173,29 @@ export default function DomainImportPanel({
   const parseDomain =
     adapter.parseAs ?? (isParseableDomain(adapter.domain) ? adapter.domain : null);
   const showDocumentRoute = adapter.supportsDocumentImport !== false && parseDomain !== null;
+
+  // What a route's inline body may do with what it read (forgejo#204): hand
+  // it to the same review a document goes to, or to the manual form, or point
+  // the user at the drop zone when the route itself could not read anything.
+  const routeContext = useMemo<ImportRouteContext>(
+    () => ({
+      openReview: (result) => setParseState({ kind: "link", result }),
+      openManual: (prefill) => {
+        setManualPrefill(prefill);
+        setShowManual(true);
+      },
+      ...(showDocumentRoute && {
+        focusDocumentRoute: () => {
+          const row = documentRouteRef.current;
+          row?.scrollIntoView({ behavior: "smooth", block: "center" });
+          row?.querySelector<HTMLElement>("textarea, input, button")?.focus();
+        },
+      }),
+    }),
+    [showDocumentRoute]
+  );
+
+  if (!open) return null;
 
   return (
     <>
@@ -188,34 +214,39 @@ export default function DomainImportPanel({
         <p className="mb-4 text-sm text-(--text-muted)">{adapter.panelHint}</p>
         <div className="flex flex-col gap-2">
           {showDocumentRoute && parseDomain && (
-            <ImportRouteRow
-              primary
-              icon="✉️"
-              title={adapter.documentRoute?.title ?? t("import:route.document.title")}
-              description={
-                adapter.documentRoute?.description ?? t("import:route.document.description")
-              }
-            >
-              <div className="mt-3">
-                <Suspense fallback={<RouteFallback label={t("common:loading.default")} />}>
-                  <EmailImportTab
-                    domain={parseDomain}
-                    acceptedExtensions={acceptedExtensions}
-                    onEmailResult={handleEmailResult}
-                    onPdfResult={handlePdfResult}
-                    onError={handleError}
-                    initialDocument={initialDocument}
-                  />
-                </Suspense>
-              </div>
-            </ImportRouteRow>
+            <div ref={documentRouteRef}>
+              <ImportRouteRow
+                primary
+                icon="✉️"
+                title={adapter.documentRoute?.title ?? t("import:route.document.title")}
+                description={
+                  adapter.documentRoute?.description ?? t("import:route.document.description")
+                }
+              >
+                <div className="mt-3">
+                  <Suspense fallback={<RouteFallback label={t("common:loading.default")} />}>
+                    <EmailImportTab
+                      domain={parseDomain}
+                      acceptedExtensions={acceptedExtensions}
+                      onEmailResult={handleEmailResult}
+                      onPdfResult={handlePdfResult}
+                      onError={handleError}
+                      initialDocument={initialDocument}
+                    />
+                  </Suspense>
+                </div>
+              </ImportRouteRow>
+            </div>
           )}
 
-          <ImportRouteList routes={adapter.routes ?? []} />
+          <ImportRouteList routes={adapter.routes ?? []} context={routeContext} />
 
           <ImportManualFooter
             label={adapter.manualLabel ?? t("import:route.manual")}
-            onSelect={() => setShowManual(true)}
+            onSelect={() => {
+              setManualPrefill(undefined);
+              setShowManual(true);
+            }}
           />
         </div>
       </Modal>
@@ -255,6 +286,7 @@ export default function DomainImportPanel({
           onClose,
           onSaved: handleManualSaved,
           onProgress: onItemsCreated,
+          prefill: manualPrefill,
         })}
     </>
   );

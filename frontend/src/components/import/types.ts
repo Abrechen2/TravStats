@@ -46,14 +46,29 @@ export interface ImportRoute {
   /** Trailing button label. Omit when `render` supplies its own control. */
   actionLabel?: string;
   onSelect?: () => void;
-  /** Inline body under the description, e.g. a search field. */
-  render?: () => ReactNode;
+  /**
+   * Inline body under the description, e.g. a search field. The context lets
+   * a route hand its result on the way a dropped document is handed on — to
+   * the review, or to the manual form with what it already knows. Absent where
+   * the list is shown outside `<DomainImportPanel>`.
+   */
+  render?: (context?: ImportRouteContext) => ReactNode;
   /**
    * Built but not offered yet. The route stays in the code — and in the
    * tests — instead of being commented out, so switching a domain on is one
    * flag rather than an archaeology exercise.
    */
   hidden?: boolean;
+}
+
+/** What `<DomainImportPanel>` offers a route's inline body. */
+export interface ImportRouteContext {
+  /** Opens the adapter's review with a parse-shaped result, as a dropped document would. */
+  openReview: (parseResult: unknown) => void;
+  /** Opens the manual form, prefilled with what the route already read. */
+  openManual: (prefill?: unknown) => void;
+  /** Brings the document drop zone into view — "upload the PDF instead". Absent without one. */
+  focusDocumentRoute?: () => void;
 }
 
 /**
@@ -103,6 +118,11 @@ export interface DomainImportAdapter {
      * without the leg that was stored.
      */
     onProgress?: () => void | Promise<void>;
+    /**
+     * What a route already read before the user chose to type the rest
+     * (`ImportRouteContext.openManual`) — the adapter narrows it.
+     */
+    prefill?: unknown;
   }) => ReactNode;
   /**
    * Render the post-parse review/preview UI (e.g. FlightReviewModal,

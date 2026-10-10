@@ -136,4 +136,57 @@ describe("DomainImportPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /close/i }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  // forgejo#204: a route that read something (a share link) hands it to the
+  // same review a document goes to, or to the manual form with what it knows.
+  it("lets a route open the review or the prefilled manual form", () => {
+    renderReviewSpy.mockClear();
+    renderManualSpy.mockClear();
+    renderPanel({
+      routes: [
+        {
+          id: "link",
+          icon: "🔗",
+          title: "A link",
+          description: "Paste it.",
+          render: (context) => (
+            <>
+              <button type="button" onClick={() => context?.openReview({ read: 1 })}>
+                review it
+              </button>
+              <button type="button" onClick={() => context?.openManual({ from: "link" })}>
+                type it
+              </button>
+              {context?.focusDocumentRoute && <span>drop zone reachable</span>}
+            </>
+          ),
+        },
+      ],
+    });
+    expect(screen.getByText("drop zone reachable")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "review it" }));
+    expect(screen.getByTestId("review-modal")).toBeTruthy();
+    expect(renderReviewSpy.mock.lastCall?.[0]).toMatchObject({ parseResult: { read: 1 } });
+  });
+
+  it("hands a route's prefill to the manual form, and none to the footer link", () => {
+    renderManualSpy.mockClear();
+    renderPanel({
+      routes: [
+        {
+          id: "link",
+          icon: "🔗",
+          title: "A link",
+          description: "Paste it.",
+          render: (context) => (
+            <button type="button" onClick={() => context?.openManual({ from: "link" })}>
+              type it
+            </button>
+          ),
+        },
+      ],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "type it" }));
+    expect(renderManualSpy.mock.lastCall?.[0]).toMatchObject({ prefill: { from: "link" } });
+  });
 });

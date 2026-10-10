@@ -447,5 +447,33 @@
     "documentsLoading": "Dokumente werden geladen …",
     "documentsFailed": "Die Dokumente dieser Fahrt konnten nicht geladen werden.",
     "documentsBelow": "Dokumente dieser Fahrt: im Abschnitt „Dokumente“ weiter unten."
+  },
+  "shareLink": {
+    "title": "DB-Teilen-Link",
+    "description": "Du hast eine Verbindung aus bahn.de oder dem DB Navigator geteilt? Füg den Link ein — die Fahrten werden gelesen und du bestätigst jede einzeln.",
+    "caveat": "Die Bahn lässt das Auslesen geteilter Links von außen meist nicht zu. Klappt es nicht, nimm das Ticket-PDF oder die Buchungsmail.",
+    "label": "Teilen-Link der Bahn",
+    "read": "Link lesen",
+    "reading": "Lese …",
+    "factsKept": "Aus dem Link selbst gelesen und übernommen: {{route}}, {{when}}, {{travelClass}}.",
+    "fallbackIntro": "So geht es weiter:",
+    "useDocument": "Ticket-PDF oder Buchungsmail hochladen",
+    "typeIt": "Von Hand eintragen",
+    "typeWithFacts": "Von Hand eintragen, mit den gelesenen Angaben",
+    "reason": {
+      "invalidLink": "Das ist kein lesbarer Bahn-Link. Ein Teilen-Link sieht so aus: https://www.bahn.de/buchung/start?vbid=…",
+      "unsupportedLink": "Links dieser Seite kann TravStats nicht lesen — bisher nur Teilen-Links von bahn.de.",
+      "blocked": "bahn.de hat die Anfrage abgewiesen (Schutz gegen automatische Zugriffe). Am Link liegt es vermutlich nicht — die Verbindung lässt sich auf diesem Weg gerade nicht abrufen.",
+      "expired": "bahn.de kennt diese Verbindung nicht (mehr). Geteilte Links laufen nach einiger Zeit ab.",
+      "rateLimited": "bahn.de hat gerade zu viele Anfragen gezählt. Versuch es später noch einmal.",
+      "providerError": "bahn.de hat mit einem Fehler geantwortet.",
+      "timeout": "bahn.de hat nicht rechtzeitig geantwortet.",
+      "unreachable": "bahn.de war vom Server aus nicht erreichbar.",
+      "unreadable": "bahn.de hat geantwortet, aber nicht mit einer Verbindung, die TravStats lesen kann.",
+      "noTrain": "Die geteilte Verbindung enthält keine Zugfahrt.",
+      "noConnectionInLink": "Das ist ein Suchlink, keine geteilte Verbindung: Er nennt Bahnhöfe und Zeit, aber keinen Zug.",
+      "requestRateLimited": "Zu viele Abfragen in kurzer Zeit — warte eine Minute.",
+      "requestFailed": "Der Link konnte nicht an den Server geschickt werden."
+    }
   }
 }

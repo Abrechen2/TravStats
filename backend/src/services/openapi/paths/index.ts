@@ -37,6 +37,7 @@ import "./tokens";
 import "./cruises";
 import "./rail";
 import "./railLookup";
+import "./railShareLink";
 import "./railStats";
 import "./busStats";
 import "./statsDomainRecords";

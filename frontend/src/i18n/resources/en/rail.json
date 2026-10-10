@@ -447,5 +447,33 @@
     "documentsLoading": "Loading documents …",
     "documentsFailed": "The documents of this ride could not be loaded.",
     "documentsBelow": "Documents of this ride: in the “Documents” section below."
+  },
+  "shareLink": {
+    "title": "DB share link",
+    "description": "Shared a connection from bahn.de or the DB Navigator? Paste the link — the rides are read and you confirm each one.",
+    "caveat": "Deutsche Bahn usually does not let shared links be read from outside. If it fails, use the ticket PDF or the booking mail.",
+    "label": "Deutsche Bahn share link",
+    "read": "Read link",
+    "reading": "Reading …",
+    "factsKept": "Read from the link itself and carried over: {{route}}, {{when}}, {{travelClass}}.",
+    "fallbackIntro": "Ways to go on:",
+    "useDocument": "Upload the ticket PDF or booking mail",
+    "typeIt": "Enter by hand",
+    "typeWithFacts": "Enter by hand, with what was read",
+    "reason": {
+      "invalidLink": "This is not a readable Deutsche Bahn link. A share link looks like this: https://www.bahn.de/buchung/start?vbid=…",
+      "unsupportedLink": "TravStats cannot read links from this site — only bahn.de share links so far.",
+      "blocked": "bahn.de refused the request (protection against automated access). The link itself is probably fine — the connection just cannot be fetched this way right now.",
+      "expired": "bahn.de does not know this connection (any more). Shared links expire after a while.",
+      "rateLimited": "bahn.de counted too many requests just now. Try again later.",
+      "providerError": "bahn.de answered with an error.",
+      "timeout": "bahn.de did not answer in time.",
+      "unreachable": "bahn.de could not be reached from the server.",
+      "unreadable": "bahn.de answered, but not with a connection TravStats can read.",
+      "noTrain": "The shared connection contains no train ride.",
+      "noConnectionInLink": "This is a search link, not a shared connection: it names stations and a time, but no train.",
+      "requestRateLimited": "Too many lookups in a short time — wait a minute.",
+      "requestFailed": "The link could not be sent to the server."
+    }
   }
 }
