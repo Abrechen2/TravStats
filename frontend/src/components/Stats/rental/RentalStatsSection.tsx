@@ -188,6 +188,14 @@ export default function RentalStatsSection({
             </p>
             <p className="t-caption">{t("rental:stats.countriesNote")}</p>
           </div>
+          <div className="sm:col-span-2">
+            <CountingHelp
+              entries={[
+                { term: t("rental:stats.providers"), helpKey: "rental:stats.help.providers" },
+                { term: t("rental:stats.countries"), helpKey: "rental:stats.help.countries" },
+              ]}
+            />
+          </div>
         </div>
       )}
 
@@ -223,6 +231,9 @@ export default function RentalStatsSection({
               </li>
             ))}
           </ul>
+          <CountingHelp
+            entries={[{ term: t("rental:stats.byYear"), helpKey: "rental:stats.help.byYear" }]}
+          />
         </div>
       ) : null}
     </section>
@@ -264,6 +275,7 @@ function KpiTiles({
           title={t("rental:stats.km")}
           value={stats.km.total === null ? "–" : stats.km.total.toLocaleString(locale)}
           description={t("rental:stats.kmCoverage", { covered: stats.km.covered, of: stats.km.of })}
+          evidence={stats.rentals > 0 ? evidence("rentalKmTotal", stats.km.total) : undefined}
         />
       </div>
       <div data-testid="rental-stat-cost">
@@ -285,6 +297,16 @@ function KpiTiles({
               : firstCost
                 ? t("rental:stats.costSample", { count: firstCost.rentals })
                 : t("rental:stats.costNone")
+          }
+          // The amount is a ratio per currency; its entries are the costed
+          // rentals it is taken over, in every currency shown.
+          evidence={
+            stats.rentals > 0
+              ? evidence(
+                  "rentalCostedCount",
+                  stats.costPerDay.reduce((n, c) => n + c.rentals, 0)
+                )
+              : undefined
           }
         />
       </div>

@@ -16,6 +16,8 @@ vi.mock("../../../../lib/api/rentalLinks", () => ({
 }));
 
 import RentalStatsSection from "../RentalStatsSection";
+import { EVIDENCE_MEASURES } from "../../../../shared/evidenceMeasures";
+import { evidenceOpenedBy } from "../../__tests__/evidenceKeysOpened";
 
 const STATS = {
   rentals: 2,
@@ -102,5 +104,19 @@ describe("RentalStatsSection", () => {
       </MemoryRouter>
     );
     expect(await screen.findByTestId("rental-stats-empty")).toHaveTextContent("rental:stats.empty");
+  });
+
+  // forgejo#262 — the km and cost-per-day tiles opened nothing.
+  it("opens the rentals behind days, km and cost per day", async () => {
+    stats.mockResolvedValue(STATS);
+    const { opened } = await evidenceOpenedBy(
+      <RentalStatsSection scope={{ year: null, compareYear: null }} />,
+      () => screen.findByTestId("rental-stat-km")
+    );
+    const keys = opened.map((o) => o.key);
+    expect(keys).toEqual(
+      expect.arrayContaining(["rentalDaysTotal", "rentalKmTotal", "rentalCostedCount"])
+    );
+    expect(keys.filter((key) => EVIDENCE_MEASURES[key]?.servedIn !== 1)).toEqual([]);
   });
 });

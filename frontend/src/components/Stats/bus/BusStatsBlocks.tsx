@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { BusRanked, BusStats } from "../../../types/bus";
 import type { SectionVisibility } from "../../../hooks/useSectionVisibility";
+import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import StatCard from "../StatCard";
 import RankedBarList, { type RankedRow } from "../lodging/RankedBarList";
 import CountingHelp from "../counting/CountingHelp";
@@ -28,6 +29,8 @@ export default function BusStatsBlocks({
   const locale = i18n.language.startsWith("de") ? "de-DE" : "en-GB";
   const num = (n: number): string => n.toLocaleString(locale, { maximumFractionDigits: 0 });
   const show = visibility.isVisible;
+  const scope: EvidenceScopeParams =
+    year === null ? { period: "allTime" } : { period: "year", year };
 
   const toRows = (ranked: BusRanked[], label = (l: string): string => l): RankedRow[] => {
     const max = Math.max(...ranked.map((r) => r.count), 1);
@@ -108,6 +111,20 @@ export default function BusStatsBlocks({
             accent={accent}
             emptyLabel={t("bus:stats.noTerminals")}
           />
+          <div className="lg:col-span-3">
+            <CountingHelp
+              entries={[
+                {
+                  term: [
+                    t("bus:stats.operators"),
+                    t("bus:stats.rideKinds"),
+                    t("bus:stats.terminals"),
+                  ].join(" · "),
+                  helpKey: "bus:stats.help.rankings",
+                },
+              ]}
+            />
+          </div>
         </div>
       )}
       {show("connections") && (
@@ -160,18 +177,30 @@ export default function BusStatsBlocks({
             accent={accent}
             valueSize="sm"
             title={t("bus:stats.longest")}
-            value={
+            value={`${longest.depStationName} → ${longest.arrStationName}`}
+            // The figure opens the record's witness; the line under it stays a
+            // link to the ride, outside the trigger (no link inside a button).
+            evidence={{
+              kind: "metric",
+              key: "busLongestRide",
+              scope,
+              renderedValue: longest.distanceKm,
+            }}
+            descriptionHasOwnTrigger
+            description={
               <Link to={`/bus/${longest.id}`} className="hover:underline">
-                {longest.depStationName} → {longest.arrStationName}
+                {`${num(longest.distanceKm)} km · ${t(
+                  longest.distanceSource === "route"
+                    ? "bus:stats.sourceRoute"
+                    : longest.distanceSource === "user"
+                      ? "bus:stats.sourceTicket"
+                      : "bus:stats.sourceStraight"
+                )}`}
               </Link>
             }
-            description={`${num(longest.distanceKm)} km · ${t(
-              longest.distanceSource === "route"
-                ? "bus:stats.sourceRoute"
-                : longest.distanceSource === "user"
-                  ? "bus:stats.sourceTicket"
-                  : "bus:stats.sourceStraight"
-            )}`}
+          />
+          <CountingHelp
+            entries={[{ term: t("bus:stats.longest"), helpKey: "bus:stats.help.longest" }]}
           />
         </div>
       )}
@@ -182,6 +211,9 @@ export default function BusStatsBlocks({
             rows={yearRows}
             accent={accent}
             emptyLabel={t("bus:stats.empty")}
+          />
+          <CountingHelp
+            entries={[{ term: t("bus:stats.byYear"), helpKey: "bus:stats.help.byYear" }]}
           />
         </div>
       )}

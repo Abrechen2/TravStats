@@ -15,6 +15,7 @@ import { comparisonWindow, sameSpanUntil } from "../../../lib/stats/comparisonWi
 import type { PeriodScope } from "../useStatsPeriod";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import RailJourneySections from "./RailJourneySections";
+import CountingHelp from "../counting/CountingHelp";
 
 /**
  * The rail numbers on the statistics page (spec 2026-09-25-rail-domain, 2b).
@@ -223,11 +224,13 @@ export default function RailStatsSection({
             accent={accent}
             valueSize="md"
             title={t("rail:stats.hours")}
-            value={`${num(hoursOnBoard.hours, 1)} h`}
+            // No timed ride: unknown, never "0 h" (abstention is a result).
+            value={hoursOnBoard.measuredJourneys === 0 ? "–" : `${num(hoursOnBoard.hours, 1)} h`}
             description={t("rail:stats.sample", {
               count: hoursOnBoard.measuredJourneys,
               total: stats.journeys,
             })}
+            evidence={railEvidence("railHoursOnBoard", hoursOnBoard.hours)}
           />
           <StatCard
             accent={accent}
@@ -264,6 +267,21 @@ export default function RailStatsSection({
           ))}
         </div>
       )}
+      {show("kpis") && (
+        <CountingHelp
+          testId="rail-kpis-help"
+          entries={[
+            { term: t("rail:stats.journeys"), helpKey: "rail:stats.help.rides" },
+            { term: t("rail:stats.kmAll"), helpKey: "rail:stats.help.km" },
+            { term: t("rail:stats.hours"), helpKey: "rail:stats.help.hours" },
+            { term: t("rail:stats.countries"), helpKey: "rail:stats.help.countries" },
+            { term: t("rail:stats.nightTrains"), helpKey: "rail:stats.help.nightTrains" },
+            { term: t("rail:stats.highSpeed"), helpKey: "rail:stats.help.highSpeed" },
+            { term: t("rail:stats.crossBorder"), helpKey: "rail:stats.help.crossBorder" },
+            { term: t("rail:stats.operatorsCount"), helpKey: "rail:stats.help.operatorsCount" },
+          ]}
+        />
+      )}
       {show("rankings") && (
         <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
           <RankedBarList
@@ -284,6 +302,20 @@ export default function RailStatsSection({
             accent={accent}
             emptyLabel={t("rail:stats.noStations")}
           />
+          <div className="lg:col-span-3">
+            <CountingHelp
+              entries={[
+                {
+                  term: [
+                    t("rail:stats.operators"),
+                    t("rail:stats.categories"),
+                    t("rail:stats.stations"),
+                  ].join(" · "),
+                  helpKey: "rail:stats.help.rankings",
+                },
+              ]}
+            />
+          </div>
         </div>
       )}
       {show("delays") && (
@@ -297,6 +329,9 @@ export default function RailStatsSection({
             rows={delays.recordedJourneys > 0 ? delayRows : []}
             accent={accent}
             emptyLabel={t("rail:stats.noDelays")}
+          />
+          <CountingHelp
+            entries={[{ term: t("rail:stats.delays"), helpKey: "rail:stats.help.delays" }]}
           />
         </div>
       )}
@@ -316,12 +351,19 @@ export default function RailStatsSection({
             accent={accent}
             valueSize="sm"
             title={t("rail:stats.longest")}
-            value={
+            value={`${longest.depStationName} → ${longest.arrStationName}`}
+            // The figure opens the record's witness; the line under it stays a
+            // link to the ride, outside the trigger (no link inside a button).
+            evidence={railEvidence("railLongestRide", longest.distanceKm)}
+            descriptionHasOwnTrigger
+            description={
               <Link to={`/rail/${longest.id}`} className="hover:underline">
-                {longest.depStationName} → {longest.arrStationName}
+                {`${num(longest.distanceKm)} km · ${distanceSourceLabel(t, longest.distanceSource)}`}
               </Link>
             }
-            description={`${num(longest.distanceKm)} km · ${distanceSourceLabel(t, longest.distanceSource)}`}
+          />
+          <CountingHelp
+            entries={[{ term: t("rail:stats.longest"), helpKey: "rail:stats.help.longest" }]}
           />
         </div>
       )}
@@ -332,6 +374,9 @@ export default function RailStatsSection({
             rows={yearRows}
             accent={accent}
             emptyLabel={t("rail:stats.empty")}
+          />
+          <CountingHelp
+            entries={[{ term: t("rail:stats.byYear"), helpKey: "rail:stats.help.byYear" }]}
           />
         </div>
       )}

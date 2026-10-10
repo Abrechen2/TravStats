@@ -5,6 +5,7 @@ import PageHeader from "../components/ui/PageHeader";
 import { Select } from "../components/ui/Field";
 import StatCard from "../components/Stats/StatCard";
 import StatsSectionsLoadError from "../components/Stats/StatsSectionsLoadError";
+import EvidencePanel from "../components/evidence/EvidencePanel";
 import { useTranslation } from "../hooks/useTranslation";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useRailVisible } from "../hooks/useRailVisible";
@@ -267,7 +268,11 @@ export default function WrappedPage(): JSX.Element {
                 />
               )}
               {wrapped.chapters && (
-                <WrappedChapterCards chapters={wrapped.chapters} count={count} />
+                <WrappedChapterCards
+                  chapters={wrapped.chapters}
+                  count={count}
+                  year={wrapped.year}
+                />
               )}
               {flightsOn && wrapped.topAirline !== null && (
                 <StatCard
@@ -294,6 +299,8 @@ export default function WrappedPage(): JSX.Element {
           )}
         </>
       )}
+      {/* The chapter cards open the rows they counted (forgejo#265). */}
+      <EvidencePanel />
     </AppShell>
   );
 }

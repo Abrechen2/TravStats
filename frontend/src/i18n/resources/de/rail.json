@@ -304,7 +304,7 @@
         "unit": "Die Wartezeit zwischen Ankunft und nächster Abfahrt innerhalb einer Reise, in Minuten. Groß steht der Durchschnitt aller Umstiege, darunter ihre Zahl, der kürzeste und der längste.",
         "time": "Gemessen wird aus den minutengenauen Zeiten beider Fahrten, als echte vergangene Zeit – Zeitzonen verschieben nichts. Im Jahr der Abfahrt der Fahrten nach dem Kalender des Abfahrtsbahnhofs.",
         "source": "Die Reisen aus abgeschlossenen Fahrten, wie sie die Reise-Regel bildet: ein Umstieg ist dieselbe Buchung, derselbe Bahnhof und höchstens vier Stunden Wartezeit.",
-        "coverage": "Fahrten mit reinem Datum oder ohne Verknüpfung haben keinen messbaren Umstieg und bleiben draußen. Gibt es keinen, sagt die Karte das, statt eine Null zu zeigen.",
+        "coverage": "Fahrten mit reinem Datum oder ohne Verknüpfung haben keinen messbaren Umstieg und bleiben draußen. Gibt es keinen, sagt die Karte das, statt eine Null zu zeigen. Ein Tipp auf die Zahl zeigt die Reisen mit der Zahl ihrer gemessenen Umstiege.",
         "exclusions": "Geplante, laufende und stornierte Fahrten zählen nicht. Längere Pausen als vier Stunden sind kein Umstieg, sondern trennen zwei Reisen."
       },
       "nights": {
@@ -334,6 +334,90 @@
         "source": "Abgeschlossene Fahrten mit erfasster Ankunftsverspätung. Ein Betreiber gilt unabhängig von Groß- und Kleinschreibung und Leerzeichen als derselbe; eine Verbindung umfasst beide Richtungen.",
         "coverage": "Gezählt wird unter den Fahrten mit erfasster Verspätung und minutengenauen Zeiten samt Ankunft. Eine Fahrt ohne erfasste Verspätung zählt nie als pünktlich, sie bleibt außerhalb der Stichprobe; die Zeile über der Betreiberliste nennt, aus wie vielen aller Fahrten die Stichprobe stammt.",
         "exclusions": "Fahrten ohne Betreiber fehlen in der Betreiberliste, Fahrten mit gleichem Start- und Zielbahnhof in der Verbindungsliste. Je Liste stehen höchstens zehn Einträge, die mit der größten Stichprobe zuerst. Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "rides": {
+        "unit": "Eine Fahrt: ein Zug von der Abfahrt bis zur Ankunft. Jede Fahrt zählt einmal, auch wenn sie Teil einer Reise mit Umstieg ist – die Reisen stehen weiter unten.",
+        "time": "Gezählt im Jahr der Abfahrt nach dem Kalender des Abfahrtsbahnhofs; ohne Zeitzone am Bahnhof nach UTC. Im Jahresvergleich zählt bei einem laufenden Jahr in beiden Jahren dieselbe Spanne bis zum selben Tag.",
+        "source": "Deine Bahnfahrten mit Status „Gefahren“.",
+        "coverage": "Jede gezählte Fahrt hat ein Abfahrtsdatum und zählt daher immer mit. Ein Tipp auf die Zahl zeigt die Fahrten.",
+        "exclusions": "Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "km": {
+        "unit": "Ein Kilometer, summiert über die Fahrten mit bekannter Strecke. Die Zeile darunter teilt die Summe nach Herkunft: nachgezeichnete Gleislinie, Linie aus einem Roadtrip, Angabe vom Ticket, Luftlinie.",
+        "time": "Gezählt im Jahr der Abfahrt nach dem Kalender des Abfahrtsbahnhofs; ohne Zeitzone am Bahnhof nach UTC. Im Jahresvergleich zählt bei einem laufenden Jahr in beiden Jahren dieselbe Spanne bis zum selben Tag.",
+        "source": "Je Fahrt genau eine gespeicherte Strecke: die nachgezeichnete Gleislinie, die Linie eines umgewandelten Roadtrips, die Zahl vom Ticket oder die Luftlinie zwischen den Bahnhöfen.",
+        "coverage": "Fahrten ohne Strecke bleiben draußen und stehen als „ohne Strecke“ in der Zeile darunter. Die Luftlinie ist eine Untergrenze – die Gleise sind meist 10 bis 30 % länger.",
+        "exclusions": "Nichts wird geschätzt; eine Fahrt ohne Strecke zählt nicht als 0 km. Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "hours": {
+        "unit": "Eine Stunde an Bord: die Zeit von Abfahrt bis Ankunft einer Fahrt, summiert über alle gemessenen Fahrten.",
+        "time": "Die Dauer läuft zwischen den echten Zeitpunkten an beiden Bahnhöfen, eine Zeitzonengrenze verfälscht sie also nicht. Gezählt im Jahr der Abfahrt nach dem Kalender des Abfahrtsbahnhofs; ohne Zeitzone am Bahnhof nach UTC. Im Jahresvergleich zählt bei einem laufenden Jahr in beiden Jahren dieselbe Spanne bis zum selben Tag.",
+        "source": "Abgeschlossene Bahnfahrten mit Abfahrts- und Ankunftszeit.",
+        "coverage": "Nur Fahrten mit Uhrzeit an Abfahrt und Ankunft; eine Fahrt mit reinem Datum oder ohne Ankunft hat keine Dauer. Die Zeile darunter nennt die Stichprobe – gemessene Fahrten von allen. Ein Tipp auf die Zahl zeigt die gemessenen Fahrten mit ihren Stunden.",
+        "exclusions": "Eine Fahrt, deren Ankunft vor ihrer Abfahrt liegt, zählt nicht mit. Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "countries": {
+        "unit": "Ein Land, in dem eine Fahrt abfuhr oder ankam; jedes Land zählt einmal.",
+        "time": "Gezählt im Jahr der Abfahrt nach dem Kalender des Abfahrtsbahnhofs; ohne Zeitzone am Bahnhof nach UTC. Im Jahresvergleich zählt bei einem laufenden Jahr in beiden Jahren dieselbe Spanne bis zum selben Tag.",
+        "source": "Der Ländercode von Abfahrts- und Ankunftsbahnhof deiner gezählten Fahrten.",
+        "coverage": "Ein Bahnhof ohne bekannten Ländercode trägt kein Land bei.",
+        "exclusions": "Länder, die ein Zug nur durchfährt, zählen nicht – bekannt sind nur die beiden Bahnhöfe. Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "nightTrains": {
+        "unit": "Eine Fahrt, die ein Nachtzug war: im Schlaf- oder Liegewagen, mit der Zuggattung NJ, EN oder NZ, oder eine Fahrt, die nach mindestens sechs Stunden an Bord an einem späteren Kalendertag ankommt, als sie abfuhr.",
+        "time": "Abfahrts- und Ankunftstag nach dem Kalender des jeweiligen Bahnhofs. Gezählt im Jahr der Abfahrt nach dem Kalender des Abfahrtsbahnhofs; ohne Zeitzone am Bahnhof nach UTC. Im Jahresvergleich zählt bei einem laufenden Jahr in beiden Jahren dieselbe Spanne bis zum selben Tag.",
+        "source": "Wagenklasse, Zuggattung und Uhrzeiten deiner gezählten Fahrten.",
+        "coverage": "Ohne Uhrzeit an beiden Enden kann nur Klasse oder Zuggattung einen Nachtzug belegen.",
+        "exclusions": "Eine Fahrt, die unter sechs Stunden über Mitternacht fährt, ist kein Nachtzug. Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "highSpeed": {
+        "unit": "Eine Fahrt mit einer Zuggattung, die auf ihren Hauptstrecken 200 km/h oder mehr fährt – etwa ICE, TGV, Eurostar, Frecciarossa, Italo, AVE, Railjet oder Shinkansen.",
+        "time": "Gezählt im Jahr der Abfahrt nach dem Kalender des Abfahrtsbahnhofs; ohne Zeitzone am Bahnhof nach UTC. Im Jahresvergleich zählt bei einem laufenden Jahr in beiden Jahren dieselbe Spanne bis zum selben Tag.",
+        "source": "Das erste Wort der Zuggattung deiner gezählten Fahrten, ohne Rücksicht auf Groß- und Kleinschreibung.",
+        "coverage": "Eine Fahrt ohne Zuggattung gilt nicht als Hochgeschwindigkeit – nicht als langsam, sondern als nicht belegt.",
+        "exclusions": "Gattungen außerhalb der festen Liste zählen nicht, auch wenn der Zug schnell fuhr. Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "crossBorder": {
+        "unit": "Eine Fahrt, deren Abfahrts- und Ankunftsbahnhof in verschiedenen Ländern liegen.",
+        "time": "Gezählt im Jahr der Abfahrt nach dem Kalender des Abfahrtsbahnhofs; ohne Zeitzone am Bahnhof nach UTC. Im Jahresvergleich zählt bei einem laufenden Jahr in beiden Jahren dieselbe Spanne bis zum selben Tag.",
+        "source": "Der Ländercode von Abfahrts- und Ankunftsbahnhof.",
+        "coverage": "Beide Länder müssen bekannt sein; ein Bahnhof ohne Ländercode belegt keine Grenze.",
+        "exclusions": "Eine Fahrt, die ein anderes Land nur durchquert und im Abfahrtsland endet, zählt nicht. Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "operatorsCount": {
+        "unit": "Eine Bahngesellschaft; jede zählt einmal. Schreibweisen werden zusammengefasst – Groß- und Kleinschreibung und Leerzeichen spielen keine Rolle.",
+        "time": "Gezählt im Jahr der Abfahrt nach dem Kalender des Abfahrtsbahnhofs; ohne Zeitzone am Bahnhof nach UTC. Im Jahresvergleich zählt bei einem laufenden Jahr in beiden Jahren dieselbe Spanne bis zum selben Tag.",
+        "source": "Der Betreiber, der an deinen gezählten Fahrten steht.",
+        "coverage": "Fahrten ohne Betreiber tragen keine Gesellschaft bei.",
+        "exclusions": "Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "rankings": {
+        "unit": "Fahrten je Betreiber und je Zuggattung; je Bahnhof zählen Abfahrten und Ankünfte, eine Fahrt also zweimal. Gezeigt werden jeweils die zehn häufigsten.",
+        "time": "Gezählt im Jahr der Abfahrt nach dem Kalender des Abfahrtsbahnhofs; ohne Zeitzone am Bahnhof nach UTC. Im Jahresvergleich zählt bei einem laufenden Jahr in beiden Jahren dieselbe Spanne bis zum selben Tag.",
+        "source": "Betreiber, Zuggattung und Bahnhöfe deiner gezählten Fahrten. Betreiber und Gattung stehen so in der Liste, wie sie geschrieben sind (ohne Leerzeichen am Rand); ein Bahnhof wird über seinen Code erkannt, sonst über seinen Namen.",
+        "coverage": "Fahrten ohne Betreiber oder ohne Gattung fehlen in der jeweiligen Liste.",
+        "exclusions": "Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "delays": {
+        "unit": "Eine Fahrt mit erfasster Ankunftsverspätung, eingeordnet in Stufen: pünktlich (0 Minuten oder früher), bis 5, bis 15, bis 30, bis 60 und über 60 Minuten.",
+        "time": "Verspätung in Minuten an der Ankunft. Gezählt im Jahr der Abfahrt nach dem Kalender des Abfahrtsbahnhofs; ohne Zeitzone am Bahnhof nach UTC. Im Jahresvergleich zählt bei einem laufenden Jahr in beiden Jahren dieselbe Spanne bis zum selben Tag.",
+        "source": "Die je Fahrt gespeicherte Ankunftsverspätung.",
+        "coverage": "Nur Fahrten mit erfasster Verspätung, Ankunftszeit und Uhrzeit an beiden Enden; die Zeile oben nennt die Stichprobe. Eine Fahrt ohne Verspätungsangabe gilt nie als pünktlich.",
+        "exclusions": "Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "longest": {
+        "unit": "Die Fahrt mit der größten bekannten Strecke im Zeitraum, in Kilometern; die Zeile nennt, woher die Strecke stammt.",
+        "time": "Gezählt im Jahr der Abfahrt nach dem Kalender des Abfahrtsbahnhofs; ohne Zeitzone am Bahnhof nach UTC. Im Jahresvergleich zählt bei einem laufenden Jahr in beiden Jahren dieselbe Spanne bis zum selben Tag.",
+        "source": "Die gespeicherte Strecke deiner gezählten Fahrten (Gleislinie, Roadtrip-Linie, Ticket oder Luftlinie).",
+        "coverage": "Nur Fahrten mit Strecke können den Rekord halten; bei gleicher Länge gilt die frühere Fahrt. Ein Tipp auf den Rekord zeigt die Fahrt.",
+        "exclusions": "Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "byYear": {
+        "unit": "Fahrten je Jahr; daneben die Kilometer der Fahrten dieses Jahres mit bekannter Strecke.",
+        "time": "Jahr der Abfahrt nach dem Kalender des Abfahrtsbahnhofs. Die Liste erscheint unter „Alle Jahre“, sobald es mindestens zwei Jahre gibt.",
+        "source": "Deine Bahnfahrten mit Status „Gefahren“.",
+        "coverage": "Eine Fahrt ohne Strecke zählt als Fahrt, trägt aber keine Kilometer bei.",
+        "exclusions": "Geplante, laufende und stornierte Fahrten zählen nicht."
       }
     }
   },

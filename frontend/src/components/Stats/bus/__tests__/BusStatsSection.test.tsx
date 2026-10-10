@@ -51,6 +51,9 @@ vi.mock("../../../../lib/api/bus", () => ({
 
 import BusStatsSection from "../BusStatsSection";
 import { busApi } from "../../../../lib/api/bus";
+import { EVIDENCE_MEASURES } from "../../../../shared/evidenceMeasures";
+import { evidenceOpenedBy } from "../../__tests__/evidenceKeysOpened";
+import { expectNoNestedTriggers } from "../../__tests__/noNestedTriggers";
 
 const visibility = { isVisible: () => true, toggle: vi.fn(), reset: vi.fn(), hiddenCount: 0 };
 const draw = (scope = { year: null as number | null, compareYear: null as number | null }) =>
@@ -90,5 +93,34 @@ describe("BusStatsSection", () => {
     vi.mocked(busApi.stats).mockResolvedValueOnce({ ...STATS, rides: 0 });
     draw();
     expect(await screen.findByTestId("bus-stats-empty")).toHaveTextContent("bus:stats.empty");
+  });
+
+  // forgejo#263 — hours, change time, longest pause and longest ride opened nothing.
+  it("opens served measures from every figure; the longest pause is lifetime", async () => {
+    vi.mocked(busApi.stats).mockResolvedValue({
+      ...STATS,
+      longestReturn: { days: 40, terminal: "Berlin ZOB" },
+    });
+    const { opened, container } = await evidenceOpenedBy(
+      <BusStatsSection scope={{ year: 2025, compareYear: null }} visibility={visibility} />,
+      () => screen.findByTestId("bus-km-split")
+    );
+    const keys = opened.map((o) => o.key);
+    expect(keys).toEqual(
+      expect.arrayContaining([
+        "busHoursOnBoard",
+        "busTransferCount",
+        "busLongestReturn",
+        "busLongestRide",
+      ])
+    );
+    expect(keys.filter((key) => EVIDENCE_MEASURES[key]?.servedIn !== 1)).toEqual([]);
+    expect(opened.find((o) => o.key === "busLongestReturn")?.scope).toEqual({ period: "allTime" });
+    expect(opened.find((o) => o.key === "busLongestRide")?.scope).toEqual({
+      period: "year",
+      year: 2025,
+    });
+    expectNoNestedTriggers(container);
+    vi.mocked(busApi.stats).mockImplementation(async () => STATS);
   });
 });

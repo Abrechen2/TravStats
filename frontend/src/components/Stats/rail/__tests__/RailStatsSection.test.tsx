@@ -47,6 +47,9 @@ vi.mock("../../../../lib/api/rail", () => ({
 }));
 
 import RailStatsSection from "../RailStatsSection";
+import { EVIDENCE_MEASURES } from "../../../../shared/evidenceMeasures";
+import { evidenceOpenedBy } from "../../__tests__/evidenceKeysOpened";
+import { expectNoNestedTriggers } from "../../__tests__/noNestedTriggers";
 import { railApi } from "../../../../lib/api/rail";
 
 const visibility = { isVisible: () => true, toggle: vi.fn(), reset: vi.fn(), hiddenCount: 0 };
@@ -152,8 +155,10 @@ describe("RailStatsSection", () => {
         />
       </MemoryRouter>
     );
-    const link = await screen.findByRole("link", { name: /Wien Hbf/ });
+    // The figure opens the record's evidence; the line under it links the ride.
+    const link = await screen.findByRole("link", { name: /550 km/ });
     expect(link.getAttribute("href")).toBe(`/rail/${STATS.longest!.id}`);
+    expect(screen.getByRole("button", { name: "rail:stats.longest" })).toBeInTheDocument();
   });
 
   it("shows the kinds of ride the rail badges count, each opening the rides behind it", async () => {
@@ -169,8 +174,42 @@ describe("RailStatsSection", () => {
     for (const label of ["nightTrains", "highSpeed", "crossBorder", "operatorsCount"]) {
       expect(kinds.textContent).toContain(`rail:stats.${label}`);
     }
-    // Every figure there — and the three headline ones — is an evidence trigger.
+    // Every figure there — the four headline ones and the longest ride too —
+    // is an evidence trigger (forgejo#261: hours and the record were not).
     const triggers = screen.getAllByRole("button").filter((b) => b.getAttribute("aria-haspopup"));
-    expect(triggers.length).toBe(7);
+    expect(triggers.length).toBe(9);
+  });
+
+  it("opens served measures from every figure, the hours and the record included", async () => {
+    const { opened, container } = await evidenceOpenedBy(
+      <RailStatsSection
+        scope={{ year: null, compareYear: null } as never}
+        visibility={visibility}
+      />,
+      () => screen.findByTestId("rail-ride-kinds")
+    );
+    const keys = opened.map((o) => o.key);
+    expect(keys).toEqual(expect.arrayContaining(["railHoursOnBoard", "railLongestRide"]));
+    expect(keys.filter((key) => EVIDENCE_MEASURES[key]?.servedIn !== 1)).toEqual([]);
+    expectNoNestedTriggers(container);
+    expect(screen.getByTestId("rail-kpis-help")).toBeInTheDocument();
+  });
+
+  it("shows no hours when no ride was timed — unknown, never 0 h", async () => {
+    vi.mocked(railApi.stats).mockResolvedValueOnce({
+      ...STATS,
+      hoursOnBoard: { hours: 0, measuredJourneys: 0 },
+    });
+    render(
+      <MemoryRouter>
+        <RailStatsSection
+          scope={{ year: null, compareYear: null } as never}
+          visibility={visibility}
+        />
+      </MemoryRouter>
+    );
+    const tile = await screen.findByRole("button", { name: "rail:stats.hours" });
+    expect(tile.textContent).toContain("–");
+    expect(tile.textContent).not.toContain("0 h");
   });
 });

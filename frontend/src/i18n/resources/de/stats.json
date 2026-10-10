@@ -35,6 +35,36 @@
       "rental_other": "{{count}} Mietwagen",
       "bus_one": "{{count}} Busfahrt",
       "bus_other": "{{count}} Busfahrten"
+    },
+    "help": {
+      "experiences": {
+        "unit": "Ein Erlebnis: ein Flug, eine Kreuzfahrt, ein Aufenthalt, ein Ortsbesuch, ein Roadtrip, eine Bahn- oder Busfahrt – je Eintrag eins, über die eingeschalteten Bereiche addiert. Die Zeile darunter teilt nach Bereich.",
+        "time": "Im gewählten Jahr nach der Zeitregel jedes Bereichs, wie auf seinem eigenen Tab (eine Kreuzfahrt im Jahr ihres Starts); sonst über alle Jahre.",
+        "source": "Die Einträge der Bereiche, die in der Leiste eingeschaltet sind und die du siehst.",
+        "coverage": "Gezählt wird, was jeder Bereich zählt. Ein Tipp auf die Zahl zeigt die Einträge.",
+        "exclusions": "Geplantes und Storniertes zählt nicht. Mietwagen und Tagestouren zählen hier nicht. Ein Roadtrip und die mit ihm verknüpften Aufenthalte sind verschiedene Einträge und zählen je einmal; ihre Nächte und Tage werden hier nicht addiert."
+      },
+      "countries": {
+        "unit": "Ein Land, belegt durch irgendeinen Eintrag; ein Land, das mehrere Bereiche belegen, zählt einmal.",
+        "time": "Im gewählten Jahr nach der Zeitregel jedes Bereichs, sonst über alle Jahre.",
+        "source": "Die Länder der Einträge in den eingeschalteten Bereichen.",
+        "coverage": "Ein Eintrag ohne bekanntes Land trägt nichts bei. Im laufenden Jahr gibt es keinen Vergleich gleicher Zeiträume, weil Länder je Jahr und nicht je Tag vorliegen. Ein Tipp auf die Zahl zeigt, welcher Eintrag welches Land belegt.",
+        "exclusions": "Geplantes und Storniertes zählt nicht. Mietwagen und Tagestouren tragen kein Land bei."
+      },
+      "activeDays": {
+        "unit": "Ein Kalendertag, an dem mindestens ein Eintrag stattfand; ein Tag mit Flug und Hotelnacht zählt einmal.",
+        "time": "Der Ortstag jedes Eintrags nach der Zeitregel seines Bereichs; im gewählten Jahr, sonst über alle Jahre.",
+        "source": "Die Einträge der eingeschalteten Bereiche.",
+        "coverage": "Kann ein Bereich seine Tage nicht einzeln benennen, gibt er seine eigene Zahl dazu – dort kann ein gemeinsamer Tag doppelt zählen. Ein Tipp auf die Zahl zeigt die Einträge mit den Tagen, die sie belegen.",
+        "exclusions": "Geplantes und Storniertes zählt nicht. Miettage und Tagestouren zählen nicht zusätzlich als Reisetage."
+      },
+      "achievements": {
+        "unit": "Ein freigeschalteter Erfolg; daneben die Punkte.",
+        "time": "Über alle Jahre – ein Erfolg trägt hier kein Jahr, auch wenn oben eines gewählt ist.",
+        "source": "Deine freigeschalteten Erfolge.",
+        "coverage": "Die Zahl öffnet keine Belege; jeden Erfolg mit Bedingung, Fortschritt und Belegen zeigt die Seite Erfolge.",
+        "exclusions": "Noch nicht erreichte Erfolge zählen nicht."
+      }
     }
   },
   "overviewToggle": {
@@ -53,7 +83,30 @@
     "takeawayRolling": "letzte 12 Monate",
     "takeawayYear": "im Jahr {{year}}",
     "takeawayAll": "insgesamt",
-    "comparePrev": "ggü. Vorzeitraum"
+    "comparePrev": "ggü. Vorzeitraum",
+    "help": {
+      "flights": {
+        "unit": "Ein Flug; der Pfeil vergleicht mit dem Zeitraum davor, die Linie zeigt den Verlauf.",
+        "time": "Der Flugtag nach dem Kalender des Abflughafens. „Letzte 12 Monate“: die zwölf ganzen Monate bis einschließlich des laufenden, gegen die zwölf davor; „Jahr“: das Kalenderjahr gegen das ganze Vorjahr; „Insgesamt“: ohne Vergleich.",
+        "source": "Deine geflogenen und nachgetragenen Flüge.",
+        "coverage": "Jeder gezählte Flug hat ein Abflugdatum und zählt mit. Ein Tipp auf die Zahl zeigt die Flüge.",
+        "exclusions": "Geplante und stornierte Flüge zählen nicht."
+      },
+      "distance": {
+        "unit": "Die Luftlinie zwischen Abflug- und Zielflughafen, summiert über die Flüge – in Kilometern oder Meilen, wie eingestellt.",
+        "time": "Der Flugtag nach dem Kalender des Abflughafens. „Letzte 12 Monate“: die zwölf ganzen Monate bis einschließlich des laufenden, gegen die zwölf davor; „Jahr“: das Kalenderjahr gegen das ganze Vorjahr; „Insgesamt“: ohne Vergleich.",
+        "source": "Deine geflogenen und nachgetragenen Flüge. Die Koordinaten der beiden Flughäfen.",
+        "coverage": "Jeder gezählte Flug trägt die Koordinaten seiner Flughäfen. Ein Tipp auf die Zahl zeigt die Flüge mit ihrer Strecke.",
+        "exclusions": "Umwege und Warteschleifen sind nicht enthalten – die Luftlinie ist eine Untergrenze. Geplante und stornierte Flüge zählen nicht."
+      },
+      "flightTime": {
+        "unit": "Stunden in der Luft, summiert über die Flüge.",
+        "time": "Der Flugtag nach dem Kalender des Abflughafens. „Letzte 12 Monate“: die zwölf ganzen Monate bis einschließlich des laufenden, gegen die zwölf davor; „Jahr“: das Kalenderjahr gegen das ganze Vorjahr; „Insgesamt“: ohne Vergleich.",
+        "source": "Gemessen aus Abflug- und Ankunftszeit, wo ein geflogener Flug beide trägt; sonst aus der Entfernung geschätzt – dieselbe Regel wie die Übersicht.",
+        "coverage": "Ein Flug ohne Uhrzeiten zählt mit einer Schätzung, nicht mit 0. Ein Tipp auf die Zahl zeigt die Flüge mit ihrer Dauer.",
+        "exclusions": "Geplante und stornierte Flüge zählen nicht."
+      }
+    }
   },
   "canonicalChart": {
     "flightsTitle": "Flüge pro Zeitraum"
@@ -292,7 +345,14 @@
     "scopeLabel": "── Jahr {{year}} ──",
     "vsSamePeriod": "ggü. gleichem Zeitraum {{year}}",
     "vsFullYear": "ggü. ganzem Jahr {{year}}",
-    "partialYearNote": "{{year}} läuft noch — hier steht ein angefangenes Jahr gegen ein ganzes"
+    "partialYearNote": "{{year}} läuft noch — hier steht ein angefangenes Jahr gegen ein ganzes",
+    "help": {
+      "unit": "Dieselbe Einheit wie die gleichnamige Zahl des Bereichs: oben das gewählte Jahr, darunter das Vergleichsjahr, der Pfeil die Veränderung in Prozent.",
+      "time": "Die Jahreszuordnung folgt der Zeitregel des Bereichs. Ist eines der beiden Jahre noch nicht vorbei, vergleicht der Bereich dieselbe Spanne beider Jahre bis zum selben Tag („ggü. gleichem Zeitraum“), wo er seine Zahlen so kürzen kann; sonst steht das angefangene gegen das ganze andere Jahr („ggü. ganzem Jahr“, mit Hinweis).",
+      "source": "Die Zahlen, die der Server für beide Jahre berechnet – hier wird nichts nachgezählt.",
+      "coverage": "Ein Tipp auf die obere Zahl zeigt die Einträge des ganzen gewählten Jahres, bei gleichem Zeitraum also auch die nach dem Stichtag; die Zahl des Vergleichsjahres öffnet nichts.",
+      "exclusions": "Nur Anzahlen – keine Geldbeträge, weil ein Betrag seine Währung braucht und Währungen nicht verrechnet werden."
+    }
   },
   "byStatus": {
     "title": "Nach Status"
@@ -680,7 +740,44 @@
     "noMoods": "Noch keine Stimmung erfasst",
     "helpWithBus": "Der graue Rest ist nicht zugeordnet: Nächte, für die kein Eintrag sagt, wo du warst. Das heißt nicht zuhause — ein fehlender Eintrag beweist nichts, und je vollständiger dein Logbuch, desto kleiner der Rest. Belegen zwei Einträge dieselbe Nacht, zählt sie einmal: Schiff vor Unterkunft vor Nachtbus vor Flugzeug. Das laufende Jahr zählt bis zur letzten Nacht.",
     "helpWithRailAndBus": "Der graue Rest ist nicht zugeordnet: Nächte, für die kein Eintrag sagt, wo du warst. Das heißt nicht zuhause — ein fehlender Eintrag beweist nichts, und je vollständiger dein Logbuch, desto kleiner der Rest. Belegen zwei Einträge dieselbe Nacht, zählt sie einmal: Schiff vor Unterkunft vor Nachtzug vor Nachtbus vor Flugzeug. Das laufende Jahr zählt bis zur letzten Nacht.",
-    "busNights": "Nachtbus"
+    "busNights": "Nachtbus",
+    "counting": {
+      "nights": {
+        "unit": "Eine Nacht. Jeder Balken ist ein ganzes Jahr, aufgeteilt nach {{kinds}} und „Nicht zugeordnet“; die Prozentzahl ist der Anteil der zugeordneten Nächte am Jahr.",
+        "time": "Eine Nacht gehört zu dem Kalendertag, an dem sie beginnt – bei Unterkünften und Kreuzfahrten nach den eingetragenen Daten, bei Flügen nach dem Ortstag an den Flughäfen, bei Nachtfahrten nach dem Tag am Bahnhof oder Terminal. Das laufende Jahr zählt bis zur letzten vergangenen Nacht.",
+        "source": "Abgeschlossene Aufenthalte (dazu freie Stellplätze von Roadtrips), Kreuzfahrten, Flüge und Nachtfahrten – nur aus Bereichen, die du siehst.",
+        "coverage": "Ein Eintrag mit Nächten, aber ohne Platz im Kalender – ein Aufenthalt nur mit Monat oder ohne Datum, eine Nachtfahrt ohne Ankunftstag – fehlt hier; die Zeile oben nennt solche Fälle. Beanspruchen mehrere Einträge dieselbe Nacht, zählt sie einmal, in dieser Reihenfolge: {{order}}.",
+        "exclusions": "Der graue Rest heißt nicht „zuhause“, sondern: kein Eintrag sagt, wo du warst. Mietwagen, Orte und Tagestouren tragen keine Nächte bei."
+      },
+      "tripsCovered": {
+        "unit": "Eine Reise mit Start- und Enddatum. „Lückenlos“ heißt: Für jede Nacht vom Start bis zum Tag vor dem Ende sagt ein Eintrag, wo du warst. Links die lückenlosen, rechts alle Reisen mit Datum.",
+        "time": "Nach den eingetragenen Kalenderdaten der Reise und ihrer Einträge; Flüge nach dem Ortstag an den Flughäfen.",
+        "source": "Deine Reisen – gleich welcher Status – und die ihnen zugeordneten Aufenthalte, Kreuzfahrten, Flüge und Nachtfahrten aus Bereichen, die du siehst. Auch ein gebuchter, noch nicht angetretener Eintrag deckt seine Nacht.",
+        "coverage": "Reisen ohne Start- oder Enddatum fehlen; ein Aufenthalt ohne genaue Daten deckt keine Nacht. Ein Tipp auf eine der beiden Zahlen zeigt die Reisen.",
+        "exclusions": "Stornierte Einträge decken nichts. Mietwagen, Orte und Tagestouren decken keine Nacht."
+      },
+      "uncoveredDays": {
+        "unit": "Eine Nacht einer Reise mit Datum, für die kein Eintrag sagt, wo du übernachtet hast – summiert über alle Reisen mit Datum.",
+        "time": "Je Nacht vom Starttag bis zum Tag vor dem Enddatum der Reise, nach den eingetragenen Kalenderdaten.",
+        "source": "Deine Reisen mit Start- und Enddatum und ihre Einträge, wie bei den lückenlosen Reisen.",
+        "coverage": "Nur Reisen mit beiden Daten. Ein Tipp auf die Zahl zeigt die Reisen mit ihren offenen Nächten.",
+        "exclusions": "Stornierte Einträge decken nichts; Mietwagen, Orte und Tagestouren decken keine Nacht."
+      },
+      "avgTripDays": {
+        "unit": "Tage je Reise im Durchschnitt, Start- und Endtag mitgezählt (der 15. bis 18. sind vier Tage), auf eine Nachkommastelle; daneben die längste Reise.",
+        "time": "Nach den eingetragenen Start- und Enddaten der Reise.",
+        "source": "Deine Reisen mit Start- und Enddatum, gleich welcher Status.",
+        "coverage": "Reisen ohne beide Daten fehlen. Ein Tipp auf die Zahl zeigt die Reisen, über die gemittelt wird, mit ihrer Dauer.",
+        "exclusions": "Nichts darüber hinaus; die Dauer wird nicht aus den Einträgen der Reise abgeleitet."
+      },
+      "journalEntries": {
+        "unit": "Ein Tagebucheintrag; darunter die drei häufigsten Stimmungen.",
+        "time": "Über alle Jahre.",
+        "source": "Die Tagebucheinträge deiner Reisen.",
+        "coverage": "Ein Eintrag ohne Stimmung zählt mit, erscheint aber nicht bei den Stimmungen. Ein Tipp auf die Zahl zeigt die Reisen mit ihren Einträgen.",
+        "exclusions": "Nichts darüber hinaus."
+      }
+    }
   },
   "sections": {
     "button": "Abschnitte",
@@ -788,6 +885,50 @@
       "busUnmeasured_other": "{{count}} Fahrten ohne Strecke",
       "busNights_one": "{{count}} Nacht an Bord",
       "busNights_other": "{{count}} Nächte an Bord"
+    },
+    "help": {
+      "stays": {
+        "unit": "Ein Aufenthalt in einer Unterkunft; im Satz darunter die Nächte, wo ihre Zahl bekannt ist.",
+        "time": "Im Jahr des Check-in-Datums, wie es eingetragen ist. Ein Aufenthalt zählt erst, wenn sein Check-out vorbei ist.",
+        "source": "Deine Aufenthalte.",
+        "coverage": "Ein Aufenthalt ohne Datum, das ein Jahr festlegt, fehlt hier. Ist die Zahl der Nächte nicht erfasst, zählt der Aufenthalt mit und der Satz sagt es. Ein Tipp auf die Zahl zeigt die Einträge.",
+        "exclusions": "Vorgemerkte, laufende und stornierte Aufenthalte zählen nicht. Ein ausgeblendeter Bereich hat kein Kapitel. Das Kapitel wird mit keinem anderen zusammengezählt."
+      },
+      "places": {
+        "unit": "Ein Ortsbesuch; im Satz darunter, an wie vielen verschiedenen Orten.",
+        "time": "Im Jahr des Besuchs nach dem Kalender des Ortes. Ein Besuch zählt, wenn er stattgefunden hat.",
+        "source": "Die Besuche deiner Orte.",
+        "coverage": "Ein Besuch ohne Datum hat kein Jahr und fehlt hier. Ein Tipp auf die Zahl zeigt die Einträge.",
+        "exclusions": "Orte auf der Wunschliste ohne Besuch zählen nicht. Ein ausgeblendeter Bereich hat kein Kapitel. Das Kapitel wird mit keinem anderen zusammengezählt."
+      },
+      "roadtrips": {
+        "unit": "Ein Roadtrip, der in diesem Jahr begonnen hat.",
+        "time": "Im Jahr der ersten datierten Station (ihr Datum oder der Check-in ihres Aufenthalts). Ein Roadtrip zählt, sobald er begonnen hat.",
+        "source": "Deine Roadtrips mit ihren Stationen.",
+        "coverage": "Ein Roadtrip ohne datierte Station hat kein Jahr und fehlt hier. Ein Tipp auf die Zahl zeigt die Einträge.",
+        "exclusions": "Nächte und Tage des Roadtrips werden nicht zu Aufenthalten addiert. Ein ausgeblendeter Bereich hat kein Kapitel. Das Kapitel wird mit keinem anderen zusammengezählt."
+      },
+      "tours": {
+        "unit": "Eine Tagestour mit Datum in diesem Jahr.",
+        "time": "Das Datum der Tour, ein Kalendertag ohne Zeitzone; eine Tour zählt, sobald ihr Tag erreicht ist.",
+        "source": "Deine Tagestouren.",
+        "coverage": "Eine Tour ohne Datum fehlt hier. Ein Tipp auf die Zahl zeigt die Einträge.",
+        "exclusions": "Touren mit einem Datum in der Zukunft zählen nicht. Touren erscheinen nur, solange die Instanz sie zeigt. Das Kapitel wird mit keinem anderen zusammengezählt."
+      },
+      "rentals": {
+        "unit": "Eine Miete; im Satz darunter ihre Miettage.",
+        "time": "Im Jahr der Abholung nach dem Kalender der Abholstation; Miettage nach dem Kalender der Stationen.",
+        "source": "Deine abgeschlossenen Mieten.",
+        "coverage": "Jede abgeschlossene Miete trägt Abhol- und Rückgabezeit und zählt daher mit. Ein Tipp auf die Zahl zeigt die Einträge.",
+        "exclusions": "Geplante, laufende und stornierte Mieten zählen nicht. Miettage zählen nicht zusätzlich als Reisetage. Ein ausgeblendeter Bereich hat kein Kapitel. Das Kapitel wird mit keinem anderen zusammengezählt."
+      },
+      "bus": {
+        "unit": "Eine Busfahrt; im Satz darunter die Kilometer der Fahrten mit bekannter Strecke und die Nächte im Nachtbus.",
+        "time": "Im Jahr der Abfahrt nach dem Kalender des Abfahrtsterminals.",
+        "source": "Deine abgeschlossenen Busfahrten.",
+        "coverage": "Fahrten ohne Strecke tragen keine Kilometer bei und werden genannt; hat keine eine Strecke, steht keine Kilometerzahl. Ein Tipp auf die Zahl zeigt die Einträge.",
+        "exclusions": "Geplante, laufende und stornierte Fahrten zählen nicht. Ein ausgeblendeter Bereich hat kein Kapitel. Das Kapitel wird mit keinem anderen zusammengezählt."
+      }
     }
   },
   "period": {

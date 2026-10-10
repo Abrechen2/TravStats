@@ -49,6 +49,11 @@ describe("CrossDomainKpis", () => {
     expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByText("18")).toBeInTheDocument();
     expect(screen.getByText("95")).toBeInTheDocument();
+    // forgejo#265: all four figures say how they are counted.
+    const help = screen.getByTestId("overview-kpis-help").textContent ?? "";
+    for (const figure of ["experiences", "countries", "activeDays", "achievements"]) {
+      expect(help).toContain(`stats:overviewKpis.help.${figure}.exclusions`);
+    }
   });
 
   it("formats the per-domain breakdown into the experiences hint", () => {

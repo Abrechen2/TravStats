@@ -13,19 +13,6 @@
     "components/Stats/FlightYearSummaryCards.tsx": {
       "missingCountingHelp": true
     },
-    "components/Stats/Overview/CrossDomainKpis.tsx": {
-      "missingCountingHelp": true
-    },
-    "components/Stats/Overview/DomainRecordsSection.tsx": {
-      "figuresWithoutEvidence": 1
-    },
-    "components/Stats/Overview/TravelAccountSection.tsx": {
-      "missingCountingHelp": true,
-      "figuresWithoutEvidence": 1
-    },
-    "components/Stats/PeriodComparisonStrip.tsx": {
-      "missingCountingHelp": true
-    },
     "components/Stats/PoiStatsSection.tsx": {
       "missingCountingHelp": true
     },
@@ -64,12 +51,6 @@
     "components/Stats/StatsUniqueSection.tsx": {
       "missingCountingHelp": true,
       "figuresWithoutEvidence": 9
-    },
-    "components/Stats/bus/BusStatsBlocks.tsx": {
-      "figuresWithoutEvidence": 1
-    },
-    "components/Stats/bus/BusStatsSection.tsx": {
-      "figuresWithoutEvidence": 3
     },
     "components/Stats/cruise/CruiseDetailSections.tsx": {
       "missingCountingHelp": true,
@@ -117,31 +98,11 @@
       "missingCountingHelp": true,
       "figuresWithoutEvidence": 4
     },
-    "components/Stats/rail/RailJourneySections.tsx": {
-      "figuresWithoutEvidence": 1
-    },
-    "components/Stats/rail/RailStatsSection.tsx": {
-      "missingCountingHelp": true,
-      "figuresWithoutEvidence": 2
-    },
-    "components/Stats/rental/RentalStatsDetails.tsx": {
-      "figuresWithoutEvidence": 8
-    },
-    "components/Stats/rental/RentalStatsSection.tsx": {
-      "figuresWithoutEvidence": 2
-    },
     "components/Stats/roadtrip/RoadtripInsightsSection.tsx": {
       "figuresWithoutEvidence": 5
     },
     "components/Stats/roadtrip/TourStatsSection.tsx": {
       "figuresWithoutEvidence": 4
-    },
-    "components/Stats/scorecard/KpiScorecard.tsx": {
-      "missingCountingHelp": true
-    },
-    "components/Stats/wrapped/WrappedChapterCards.tsx": {
-      "missingCountingHelp": true,
-      "figuresWithoutEvidence": 6
     }
   }
 }

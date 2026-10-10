@@ -260,8 +260,10 @@ describe("WrappedPage", () => {
     );
     renderAtRoute();
 
-    await waitFor(() => expect(screen.getByText("stats:wrapped.chapters.stays")).toBeTruthy());
-    expect(screen.getByText("stats:wrapped.chapters.rentals")).toBeTruthy();
+    // Headings, not text: the chapters' "So wird gezählt" names them too.
+    const heading = (name: string) => screen.queryByRole("heading", { name });
+    await waitFor(() => expect(heading("stats:wrapped.chapters.stays")).toBeTruthy());
+    expect(heading("stats:wrapped.chapters.rentals")).toBeTruthy();
     expect(screen.queryByText("stats:wrapped.flights")).toBeNull();
     expect(screen.queryByText("stats:wrapped.chapters.bus")).toBeNull();
     expect(getWrappedMock).toHaveBeenCalledWith(undefined);

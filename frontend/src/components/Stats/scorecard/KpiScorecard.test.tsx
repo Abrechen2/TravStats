@@ -39,4 +39,23 @@ describe("KpiScorecard", () => {
     expect(screen.getByText(/↑/)).toBeInTheDocument();
     expect(screen.getByText(/↓/)).toBeInTheDocument();
   });
+
+  it("lists each tile's counting answers once, under the row", () => {
+    render(
+      <KpiScorecard
+        tiles={tiles.map((tile) => ({
+          ...tile,
+          help: { helpKey: `stats:scorecard.help.${tile.key}` },
+        }))}
+      />
+    );
+    const help = screen.getByTestId("kpi-scorecard-help");
+    expect(help.textContent).toContain("stats:scorecard.help.flights.unit");
+    expect(help.textContent).toContain("stats:scorecard.help.distance.unit");
+  });
+
+  it("draws no help when no tile names one", () => {
+    render(<KpiScorecard tiles={tiles} />);
+    expect(screen.queryByTestId("kpi-scorecard-help")).toBeNull();
+  });
 });

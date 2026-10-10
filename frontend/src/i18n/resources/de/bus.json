@@ -220,7 +220,7 @@
         "unit": "Eine Stunde an Bord: die Zeit von Abfahrt bis Ankunft einer Fahrt, summiert über alle gemessenen Fahrten.",
         "time": "Die Dauer läuft zwischen den echten Zeitpunkten an beiden Terminals, eine Zeitzonengrenze verfälscht sie also nicht. Eine Fahrt zählt im Jahr ihrer Abfahrt nach dem Kalender des Abfahrtsterminals.",
         "source": "Abgeschlossene Busfahrten mit Abfahrts- und Ankunftszeit.",
-        "coverage": "Nur Fahrten mit Uhrzeit an Abfahrt und Ankunft; eine Fahrt mit reinem Datum oder ohne Ankunft hat keine Dauer. Die Zeile darunter nennt die Stichprobe – gemessene Fahrten von allen.",
+        "coverage": "Nur Fahrten mit Uhrzeit an Abfahrt und Ankunft; eine Fahrt mit reinem Datum oder ohne Ankunft hat keine Dauer. Die Zeile darunter nennt die Stichprobe – gemessene Fahrten von allen. Ein Tipp auf die Zahl zeigt die gemessenen Fahrten mit ihren Stunden.",
         "exclusions": "Eine Fahrt, deren Ankunft vor ihrer Abfahrt liegt, zählt nicht mit. Geplante, laufende und stornierte Fahrten zählen nicht."
       },
       "night": {
@@ -241,14 +241,14 @@
         "unit": "Ein Umstieg: Fahrten derselben Buchung, die am selben Terminal innerhalb von vier Stunden aneinander anschließen, sind eine Reise; die Wartezeit dazwischen ist der Umstieg. Die Kachel zeigt die mittlere Wartezeit (Durchschnitt) über alle Umstiege.",
         "time": "Die Wartezeit läuft von der Ankunft der einen bis zur Abfahrt der nächsten Fahrt, auf die Minute. Verbunden werden nur Fahrten innerhalb des gewählten Zeitraums.",
         "source": "Abgeschlossene Busfahrten mit ihrer Buchung, ihren Terminals und ihren Uhrzeiten.",
-        "coverage": "Beide Zeitpunkte müssen auf die Minute bekannt sein; eine Fahrt mit reinem Datum steht allein. Gleiches Terminal heißt hier: derselbe Name oder höchstens einen Kilometer entfernt.",
+        "coverage": "Beide Zeitpunkte müssen auf die Minute bekannt sein; eine Fahrt mit reinem Datum steht allein. Gleiches Terminal heißt hier: derselbe Name oder höchstens einen Kilometer entfernt. Ein Tipp auf die Zahl zeigt die Reisen mit der Zahl ihrer gemessenen Umstiege.",
         "exclusions": "Fahrten ohne gemeinsame Buchung werden nie verbunden. Eine Fahrt, die vor der Ankunft der vorigen abfährt oder später als vier Stunden danach, beginnt eine neue Reise, ebenso eine, die an einen Ort der Reise zurückführt – das ist die Rückfahrt, kein Umstieg."
       },
       "longestReturn": {
         "unit": "Tage: die meisten Tage zwischen zwei Besuchen desselben Terminals, über alle Fahrten. Ein Besuch reicht von der Ankunft bis zur nächsten Abfahrt; Ankunft und Weiterfahrt desselben Aufenthalts sind ein Besuch, keine Rückkehr.",
         "time": "Gemessen in Kalendertagen am Terminal, vom letzten Tag eines Besuchs bis zum ersten des nächsten. Die Zahl gilt über dein ganzes Logbuch, nicht nur über den gewählten Zeitraum.",
         "source": "Abfahrten und Ankünfte deiner abgeschlossenen Busfahrten je Terminal. Angezeigt wird der Name, unter dem das Terminal zuerst erfasst wurde.",
-        "coverage": "Eine Fahrt ohne Ankunftszeit liefert nur ihre Abfahrt. Eine Abfahrt ohne erfasste Ankunft davor zählt als eigener Besuch, etwa am Heimatterminal. Wurde noch kein Terminal ein zweites Mal besucht, bleibt die Kachel leer.",
+        "coverage": "Eine Fahrt ohne Ankunftszeit liefert nur ihre Abfahrt. Eine Abfahrt ohne erfasste Ankunft davor zählt als eigener Besuch, etwa am Heimatterminal. Wurde noch kein Terminal ein zweites Mal besucht, bleibt die Kachel leer. Ein Tipp auf die Zahl zeigt die Fahrt, mit der du zurückgekommen bist.",
         "exclusions": "Eine Rückkehr am selben Kalendertag zählt nicht. Geplante, laufende und stornierte Fahrten zählen nicht."
       },
       "favourites": {
@@ -271,6 +271,34 @@
         "source": "Die bei deinen abgeschlossenen Busfahrten erfasste Verspätung.",
         "coverage": "Nur Fahrten mit erfasster Verspätung und Uhrzeit an Abfahrt und Ankunft. Die Zeile oben nennt die Stichprobe – Fahrten mit Verspätung von allen.",
         "exclusions": "Eine Fahrt ohne erfasste Verspätung zählt nie als pünktlich. Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "countries": {
+        "unit": "Ein Land, in dem eine Fahrt abfuhr oder ankam; jedes Land zählt einmal.",
+        "time": "Gezählt im Jahr der Abfahrt nach dem Kalender des Abfahrtsterminals; ohne Zeitzone nach UTC.",
+        "source": "Der Ländercode von Abfahrts- und Ankunftsort deiner abgeschlossenen Busfahrten.",
+        "coverage": "Ein Ort ohne bekannten Ländercode trägt kein Land bei. Ein Tipp auf die Zahl zeigt, welche Fahrt welches Land belegt.",
+        "exclusions": "Länder, die ein Bus nur durchfährt, zählen nicht. Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "rankings": {
+        "unit": "Fahrten je Betreiber und je Fahrtart; je Terminal zählen Abfahrten und Ankünfte, eine Fahrt also zweimal. Gezeigt werden jeweils die zehn häufigsten.",
+        "time": "Gezählt im Jahr der Abfahrt nach dem Kalender des Abfahrtsterminals; ohne Zeitzone nach UTC.",
+        "source": "Betreiber, Fahrtart und Terminals deiner abgeschlossenen Busfahrten. Betreiber werden ohne Rücksicht auf Groß- und Kleinschreibung und Leerzeichen zusammengefasst und unter der zuerst erfassten Schreibweise gezeigt. Ein Terminal ist ein Ort im Umkreis von einem Kilometer, oder mit demselben Namen im Umkreis von zehn Kilometern.",
+        "coverage": "Fahrten ohne Betreiber fehlen in der Betreiberliste; Fahrten ohne Fahrtart stehen unter „nicht angegeben“.",
+        "exclusions": "Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "longest": {
+        "unit": "Die Fahrt mit der größten bekannten Strecke im Zeitraum, in Kilometern; die Zeile nennt, woher die Strecke stammt.",
+        "time": "Gezählt im Jahr der Abfahrt nach dem Kalender des Abfahrtsterminals; ohne Zeitzone nach UTC.",
+        "source": "Die gespeicherte Strecke deiner abgeschlossenen Busfahrten: Straßenlinie, Angabe vom Ticket oder Luftlinie.",
+        "coverage": "Nur Fahrten mit Strecke können den Rekord halten; bei gleicher Länge gilt die frühere Fahrt. Ein Tipp auf den Rekord zeigt die Fahrt.",
+        "exclusions": "Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "byYear": {
+        "unit": "Fahrten je Jahr; daneben die Kilometer der Fahrten dieses Jahres mit bekannter Strecke und die Zahl der Fahrten ohne Strecke.",
+        "time": "Jahr der Abfahrt nach dem Kalender des Abfahrtsterminals. Die Liste erscheint unter „Alle Jahre“, sobald es mindestens zwei Jahre gibt.",
+        "source": "Deine abgeschlossenen Busfahrten.",
+        "coverage": "Hat kein Bus eines Jahres eine Strecke, steht dort keine Kilometerzahl statt „0 km“.",
+        "exclusions": "Geplante, laufende und stornierte Fahrten zählen nicht."
       }
     }
   },

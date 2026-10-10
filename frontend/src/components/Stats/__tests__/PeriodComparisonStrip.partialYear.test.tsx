@@ -28,4 +28,12 @@ describe("PeriodComparisonStrip under a year that is still running", () => {
     expect(screen.getByText("stats:yearFilter.vs")).toBeInTheDocument();
     expect(screen.queryByText("stats:yearFilter.partialYearNote")).not.toBeInTheDocument();
   });
+
+  // forgejo#265: the comparison says how it compares — reachable, not a tooltip.
+  it("explains the comparison in a focusable 'So wird gezählt'", () => {
+    render(<PeriodComparisonStrip year={2025} compareYear={2024} rows={rows} />);
+    const help = screen.getByTestId("period-comparison-help");
+    expect(help.textContent).toContain("stats:yearFilter.help.time");
+    expect(help.querySelector("summary")).not.toBeNull();
+  });
 });

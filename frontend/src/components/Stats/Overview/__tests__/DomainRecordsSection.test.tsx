@@ -29,6 +29,9 @@ const { getDomainRecords } = vi.hoisted(() => ({ getDomainRecords: vi.fn() }));
 vi.mock("../../../../lib/api/stats", () => ({ statsApi: { getDomainRecords } }));
 
 import DomainRecordsSection from "../DomainRecordsSection";
+import { EVIDENCE_MEASURES } from "../../../../shared/evidenceMeasures";
+import { evidenceOpenedBy } from "../../__tests__/evidenceKeysOpened";
+import { expectNoNestedTriggers } from "../../__tests__/noNestedTriggers";
 
 /**
  * forgejo#265 — records beyond flights: one card per record the server
@@ -62,5 +65,18 @@ describe("DomainRecordsSection", () => {
     });
     expect(getDomainRecords).toHaveBeenCalled();
     expect(container?.textContent).toBe("");
+  });
+
+  it("opens each record's witness, lifetime-scoped, without nesting the entry link", async () => {
+    getDomainRecords.mockResolvedValueOnce(records);
+    const { opened, container } = await evidenceOpenedBy(<DomainRecordsSection />, () =>
+      screen.findAllByRole("link")
+    );
+    expect(opened.map((o) => o.key)).toEqual(["recordLongestStay", "recordLongestRailRide"]);
+    for (const o of opened) {
+      expect(o.scope).toEqual({ period: "allTime" });
+      expect([o.key, EVIDENCE_MEASURES[o.key]?.servedIn]).toEqual([o.key, 1]);
+    }
+    expectNoNestedTriggers(container);
   });
 });

@@ -102,6 +102,7 @@ export default function FlightScorecardBlock({
       previous: prev.count,
       compareLabel,
       evidence: { kind: "metric", key: "scorecardFlightCount", scope },
+      help: { helpKey: "stats:scorecard.help.flights" },
     },
     {
       key: "distance",
@@ -113,6 +114,7 @@ export default function FlightScorecardBlock({
       previous: prev.distanceKm,
       compareLabel,
       evidence: { kind: "metric", key: "scorecardDistanceKm", scope },
+      help: { helpKey: "stats:scorecard.help.distance" },
     },
     {
       key: "flightTime",
@@ -124,6 +126,7 @@ export default function FlightScorecardBlock({
       previous: prev.durationMin,
       compareLabel,
       evidence: { kind: "metric", key: "scorecardFlightTimeMinutes", scope },
+      help: { helpKey: "stats:scorecard.help.flightTime" },
     },
   ];
   return (

@@ -186,6 +186,7 @@ export default function BusStatsSection({
                 count: hoursOnBoard.measuredRides,
                 total: stats.rides,
               })}
+              evidence={evidence("busHoursOnBoard", hoursOnBoard.hours)}
             />
             <StatCard
               accent={accent}
@@ -227,6 +228,7 @@ export default function BusStatsSection({
                   ? t("bus:stats.transfersNone")
                   : t("bus:stats.transfersDesc", { count: stats.transfers.count })
               }
+              evidence={evidence("busTransferCount", stats.transfers.count)}
             />
             <StatCard
               accent={accent}
@@ -238,6 +240,13 @@ export default function BusStatsSection({
                   : t("bus:stats.daysValue", { count: stats.longestReturn.days })
               }
               description={stats.longestReturn?.terminal ?? t("bus:stats.longestReturnNone")}
+              // A lifetime figure whatever year is picked, so its entries are too.
+              evidence={{
+                kind: "metric",
+                key: "busLongestReturn",
+                scope: { period: "allTime" },
+                renderedValue: stats.longestReturn?.days ?? null,
+              }}
             />
           </div>
           <CountingHelp
@@ -246,6 +255,7 @@ export default function BusStatsSection({
               { term: t("bus:stats.rides"), helpKey: "bus:stats.help.rides" },
               { term: t("bus:stats.km"), helpKey: "bus:stats.help.km" },
               { term: t("bus:stats.hours"), helpKey: "bus:stats.help.hours" },
+              { term: t("bus:stats.countries"), helpKey: "bus:stats.help.countries" },
               { term: t("bus:stats.nightRides"), helpKey: "bus:stats.help.night" },
               { term: t("bus:stats.terminalsVisited"), helpKey: "bus:stats.help.terminals" },
               { term: t("bus:stats.transfers"), helpKey: "bus:stats.help.transfers" },
