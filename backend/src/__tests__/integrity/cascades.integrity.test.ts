@@ -252,12 +252,21 @@ describe("DELETE /admin/users/:id", () => {
       },
     });
     await prisma.passwordResetRequest.create({ data: { userId: victim.id } });
+    await prisma.note.create({
+      data: {
+        userId: victim.id,
+        body: "A moment",
+        occurredAt: new Date("2026-05-01T10:00:00Z"),
+        occurredZone: "Europe/Berlin",
+      },
+    });
 
     await prisma.user.delete({ where: { id: victim.id } });
 
     expect(await prisma.flight.count({ where: { userId: victim.id } })).toBe(0);
     expect(await prisma.document.count({ where: { userId: victim.id } })).toBe(0);
     expect(await prisma.passwordResetRequest.count({ where: { userId: victim.id } })).toBe(0);
+    expect(await prisma.note.count({ where: { userId: victim.id } })).toBe(0);
     expect(await prisma.flight.count({ where: { userId } })).toBe(bystanderFlights);
   });
 });

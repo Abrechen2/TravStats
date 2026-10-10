@@ -62,7 +62,7 @@ export const userOrIpKey = (req: Request): string => {
  * concurrent agent users on the same PAT pool.
  */
 const PAT_MULTIPLIER = 10;
-const patAwareMax =
+export const patAwareMax =
   (baseMax: number) =>
   (req: Request): number => {
     const r = req as { apiToken?: { id: string } };

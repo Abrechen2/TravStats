@@ -427,6 +427,15 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
         format: "image",
       },
     });
+    // A standalone note (forgejo#137) hangs off the user and nothing else.
+    await prisma.note.create({
+      data: {
+        userId: id,
+        body: "A visitor's sunset",
+        occurredAt: new Date("2026-03-01T18:00:00.000Z"),
+        occurredZone: "Europe/Rome",
+      },
+    });
 
     await ensureUser();
 
@@ -435,6 +444,7 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
       dataQualityFlag: await prisma.dataQualityFlag.count({ where: { userId: id } }),
       dawarichSweepState: await prisma.dawarichSweepState.count({ where: { userId: id } }),
       document: await prisma.document.count({ where: { userId: id } }),
+      note: await prisma.note.count({ where: { userId: id } }),
       importBatch: await prisma.importBatch.count({ where: { userId: id } }),
       loyaltyMembership: await prisma.loyaltyMembership.count({ where: { userId: id } }),
       pairingCode: await prisma.pairingCode.count({ where: { userId: id } }),
@@ -455,6 +465,7 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
       dataQualityFlag: 0,
       dawarichSweepState: 0,
       document: 0,
+      note: 0,
       importBatch: 0,
       loyaltyMembership: 0,
       pairingCode: 0,

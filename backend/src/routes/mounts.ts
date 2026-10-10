@@ -129,6 +129,7 @@ import lodgingImportRoutes from "./lodgingImport";
 import placeImportRoutes from "./placeImport";
 import importBatchRoutes from "./importBatches";
 import companionRoutes from "./companions";
+import noteRoutes from "./notes";
 import sharingRoutes from "./sharing";
 import tagRoutes from "./tags";
 import openapiRoutes from "./openapi";
@@ -442,6 +443,8 @@ export const apiMounts: ApiMount[] = [
   { id: "placeImport", base: "/api/v1/place-import", router: placeImportRoutes },
   { id: "importBatches", base: "/api/v1/import-batches", router: importBatchRoutes },
   { id: "companions", base: "/api/v1/companions", router: companionRoutes },
+  // Standalone notes (forgejo#137).
+  { id: "notes", base: "/api/v1/notes", router: noteRoutes },
   // Shared trips (design 2026-10-09): consent, companion link, share, leave.
   { id: "sharing", base: "/api/v1/sharing", router: sharingRoutes },
   { id: "tags", base: "/api/v1/tags", router: tagRoutes },

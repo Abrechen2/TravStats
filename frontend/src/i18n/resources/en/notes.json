@@ -1,0 +1,73 @@
+{
+  "title": "Notes",
+  "subtitle": "Moments without a trip – a sunset, a thought, a flight that never became a trip.",
+  "count_one": "{{count}} note",
+  "count_other": "{{count}} notes",
+  "new": "New note",
+  "loading": "Loading notes …",
+  "loadError": "The notes could not be loaded.",
+  "empty": {
+    "title": "No notes yet",
+    "description": "Keep a moment that belongs to no trip. Which trip a note fits is worked out later from its date, by itself.",
+    "action": "Write the first note"
+  },
+  "card": {
+    "edit": "Edit note",
+    "delete": "Delete note",
+    "photoAlt": "Photo of the note from {{date}}",
+    "writtenIn": "Written in {{zone}}"
+  },
+  "editor": {
+    "createTitle": "New note",
+    "editTitle": "Edit note",
+    "body": "Note",
+    "bodyPlaceholder": "What was the moment?",
+    "bodyRequired": "Please write something in the note.",
+    "date": "Date",
+    "time": "Time",
+    "timeHint": "Leave empty when only the day matters.",
+    "zone": "Time zone",
+    "zoneHint": "The time zone you are writing the note in. It decides which day the note belongs to – just after midnight in Berlin is still yesterday in London.",
+    "zoneHelpLabel": "Why a time zone?",
+    "place": "Place",
+    "placePlaceholder": "e.g. Bayrischzell",
+    "placeHint": "Optional. Stored as text only – if the place changes later, the note stays as it was.",
+    "photo": "Photo",
+    "photoChoose": "Choose photo",
+    "photoReplace": "Replace photo",
+    "photoRemove": "Remove photo",
+    "photoSelected": "Selected: {{name}}",
+    "photoWillBeRemoved": "The photo will be removed when you save.",
+    "save": "Save",
+    "create": "Save note",
+    "cancel": "Cancel",
+    "close": "Close",
+    "dateRequired": "Please choose a date."
+  },
+  "delete": {
+    "title": "Delete note?",
+    "body": "The note from {{date}} will be deleted, along with its photo. This cannot be undone.",
+    "confirm": "Delete",
+    "cancel": "Cancel"
+  },
+  "errors": {
+    "saveFailed": "The note could not be saved.",
+    "deleteFailed": "The note could not be deleted.",
+    "zoneMissing": "Without a time zone there is no telling which day the note belongs to. Please choose a time zone.",
+    "photoFailed": "The note is saved, but the photo is not.",
+    "photoTooLarge": "The photo is too large (15 MB at most). The note is saved, the photo is not.",
+    "photoUnreadable": "The photo could not be read. The note is saved, the photo is not.",
+    "photoType": "Only images (JPEG, PNG, WebP, GIF, HEIC) can go with a note. The note is saved, the photo is not.",
+    "photoRemoveFailed": "The note is saved, but the photo could not be removed.",
+    "photoTooLargeLocal": "The photo is too large (15 MB at most).",
+    "photoTypeLocal": "Only images (JPEG, PNG, WebP, GIF, HEIC) can go with a note."
+  },
+  "paging": {
+    "older": "Load older",
+    "loading": "Loading …",
+    "shown": "{{shown}} of {{total}} notes",
+    "end_one": "That's all – {{count}} note.",
+    "end_other": "That's all – all {{count}} notes are loaded.",
+    "failed": "Older notes could not be loaded."
+  }
+}

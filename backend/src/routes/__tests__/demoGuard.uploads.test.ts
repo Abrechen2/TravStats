@@ -12,6 +12,7 @@ import {
 } from "../../middleware/upload";
 import { getTrainingUploadDir } from "../../routes/training";
 import { DOCUMENT_DIR, ensureDocumentDir } from "../../services/documents/documentStore";
+import { getNotePhotoDir } from "../../middleware/notePhotoUpload";
 
 /**
  * Finding I2: every upload route was open to the shared demo account. A
@@ -87,6 +88,8 @@ const cruiseTrackTableUntouched = async (): Promise<() => Promise<void>> => {
 
 interface UploadCase {
   name: string;
+  /** POST unless the route replaces a single file in place. */
+  method?: "post" | "put";
   path: string;
   field: string;
   filename: string;
@@ -183,6 +186,16 @@ const uploads: UploadCase[] = [
     buffer: GPX,
     snapshotStorage: cruiseTrackTableUntouched,
   },
+  {
+    // A standalone note's photo (forgejo#137) — a PUT, because a note has one.
+    name: "note photo",
+    method: "put",
+    path: `/api/v1/notes/${NIL}/photo`,
+    field: "photo",
+    filename: "photo.png",
+    buffer: PNG,
+    snapshotStorage: diskUntouched(getNotePhotoDir),
+  },
 ];
 
 describe("upload routes and the shared demo account", () => {
@@ -209,11 +222,11 @@ describe("upload routes and the shared demo account", () => {
 
   it.each(uploads)(
     "refuses the $name upload for the shared demo account before it touches storage",
-    async ({ path, field, filename, buffer, snapshotStorage }) => {
+    async ({ method, path, field, filename, buffer, snapshotStorage }) => {
       const assertUntouched = await snapshotStorage();
 
       const res = await request(app)
-        .post(path)
+        [method ?? "post"](path)
         .set("Cookie", demoCookie)
         .attach(field, buffer, filename);
 
@@ -223,13 +236,16 @@ describe("upload routes and the shared demo account", () => {
     }
   );
 
-  it.each(uploads.map(({ name, path }): [string, string] => [name, path]))(
-    "does not refuse the %s upload for a normal account",
-    async (_name, path) => {
-      const res = await request(app).post(path).set("Cookie", userCookie);
-      expect(res.body.error).not.toBe("DEMO_ACCOUNT_FORBIDDEN");
-    }
-  );
+  it.each(
+    uploads.map(({ name, method, path }): [string, "post" | "put", string] => [
+      name,
+      method ?? "post",
+      path,
+    ])
+  )("does not refuse the %s upload for a normal account", async (_name, method, path) => {
+    const res = await request(app)[method](path).set("Cookie", userCookie);
+    expect(res.body.error).not.toBe("DEMO_ACCOUNT_FORBIDDEN");
+  });
 
   it("still lets the shared demo account read what is already there", async () => {
     // A trip of its own, so the read path is exercised rather than a 404 that

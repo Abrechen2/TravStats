@@ -123,6 +123,19 @@ export const journalEntryTimesSchema = z
   .openapi("JournalEntryTimes", { description: "The day a journal entry is written about." });
 export type JournalEntryTimes = z.infer<typeof journalEntryTimesSchema>;
 
+export const noteTimesSchema = z
+  .object({
+    occurredAt: timeValueSchema.describe(
+      "When the note is filed, on the clock of the zone it was written in; precision `day` " +
+        "for a note dated to the day only."
+    ),
+    day: localDateValueSchema.describe(
+      "The day the note belongs to — read in the zone it was written in, not the reader's."
+    ),
+  })
+  .openapi("NoteTimes", { description: "A standalone note's moment and its day." });
+export type NoteTimes = z.infer<typeof noteTimesSchema>;
+
 export const roadtripStationTimesSchema = z
   .object({ start: day, end: day })
   .openapi("RoadtripStationTimes", {
@@ -145,4 +158,5 @@ export const TIMES_SCHEMAS = {
   TripStopTimes: tripStopTimesSchema,
   JournalEntryTimes: journalEntryTimesSchema,
   RoadtripStationTimes: roadtripStationTimesSchema,
+  NoteTimes: noteTimesSchema,
 } as const;

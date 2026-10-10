@@ -61,6 +61,7 @@ const RoadtripsPage = lazy(() => import("./pages/RoadtripsPage"));
 const RoadtripDetailPage = lazy(() => import("./pages/RoadtripDetailPage"));
 const StravaCallbackPage = lazy(() => import("./pages/StravaCallbackPage"));
 const AchievementsPage = lazy(() => import("./pages/AchievementsPage"));
+const NotesPage = lazy(() => import("./pages/NotesPage"));
 const AdvancedStatsPage = lazy(() => import("./pages/AdvancedStatsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const DesignPage = lazy(() => import("./pages/DesignPage"));
@@ -633,6 +634,11 @@ function AppContent() {
               <Route
                 path="/achievements"
                 element={isAuthenticated ? <AchievementsPage /> : <Navigate to="/login" />}
+              />
+              {/* Standalone notes (forgejo#137): no domain gate — a note needs none. */}
+              <Route
+                path="/notes"
+                element={isAuthenticated ? <NotesPage /> : <Navigate to="/login" />}
               />
               {/* The loyalty page of the 2.7 betas. Its programmes are managed
                   in Einstellungen → Bonusprogramme since 2026-09-26; links to

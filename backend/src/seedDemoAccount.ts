@@ -122,6 +122,9 @@ async function wipeDemoUser(userId: string): Promise<void> {
   // `uploads/documents/` are the orphan sweep's business, which is the second
   // reason the upload route now refuses the shared account outright.
   await prisma.document.deleteMany({ where: { userId } });
+  // Standalone notes (forgejo#137) belong to the user alone, so nothing else
+  // takes them with it. Rows only: the demo account can upload no note photo.
+  await prisma.note.deleteMany({ where: { userId } });
   await prisma.placeVisit.deleteMany({ where: { userId } });
   await prisma.placeList.deleteMany({ where: { userId } }); // entries cascade
   await prisma.place.deleteMany({ where: { userId } });
