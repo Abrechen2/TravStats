@@ -8,9 +8,12 @@ import { api } from "./client";
  * scope opinion (the panel, until Task 9 wires a tile) simply sends none.
  */
 export interface EvidenceQueryParams {
-  period?: "allTime" | "year" | "rolling12m";
+  period?: "allTime" | "year" | "rolling12m" | "range";
   /** Required by the server when `period === "year"`, and only then. */
   year?: number;
+  /** `YYYY-MM-DD`, both included — required when `period === "range"`, and only then. */
+  from?: string;
+  to?: string;
   /** Comma-joined on the wire — the same convention `routes/countryFlags.ts` uses for `codes`. */
   domains?: EvidenceDomain[];
   offset?: number;

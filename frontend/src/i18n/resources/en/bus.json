@@ -220,7 +220,7 @@
         "unit": "An hour on board: the time from a ride's departure to its arrival, summed over every measured ride.",
         "time": "The duration runs between the real instants at both terminals, so a time-zone border does not distort it. A ride counts in the year it left on the departure terminal's calendar.",
         "source": "Completed bus rides with a departure and an arrival time.",
-        "coverage": "Only rides with a time at departure and arrival; a date-only ride or one without an arrival has no duration. The line below names the sample – measured rides out of all.",
+        "coverage": "Only rides with a time at departure and arrival; a date-only ride or one without an arrival has no duration. The line below names the sample – measured rides out of all. Tap the number to see the measured rides with their hours.",
         "exclusions": "A ride whose arrival lies before its departure does not count. Planned, running and cancelled rides do not count."
       },
       "night": {
@@ -241,14 +241,14 @@
         "unit": "A change: rides of the same booking that continue at the same terminal within four hours are one journey; the wait between them is the change. The card shows the mean wait (average) across all changes.",
         "time": "The wait runs from one ride's arrival to the next ride's departure, to the minute. Only rides inside the selected period are joined.",
         "source": "Completed bus rides with their booking, their terminals and their times.",
-        "coverage": "Both instants must be known to the minute; a date-only ride stands alone. Same terminal here means: the same name, or at most one kilometre apart.",
+        "coverage": "Both instants must be known to the minute; a date-only ride stands alone. Same terminal here means: the same name, or at most one kilometre apart. Tap the number to see the journeys with the number of their measured changes.",
         "exclusions": "Rides without a shared booking are never joined. A ride that leaves before the previous one arrived, or more than four hours after, starts a new journey, as does one that leads back to a place the journey has been – that is the way back, not a change."
       },
       "longestReturn": {
         "unit": "Days: the most days between two visits of the same terminal, across all rides. A visit runs from an arrival to the next departure; arriving and leaving on the same stay is one visit, not a return.",
         "time": "Measured in calendar days at the terminal, from the last day of one visit to the first of the next. The figure covers your whole logbook, not just the selected period.",
         "source": "Departures and arrivals of your completed bus rides per terminal. The name shown is the one the terminal was first recorded under.",
-        "coverage": "A ride without an arrival time contributes only its departure. A departure with no recorded arrival before it counts as a visit of its own, such as at your home terminal. If no terminal has been visited twice yet, the card stays empty.",
+        "coverage": "A ride without an arrival time contributes only its departure. A departure with no recorded arrival before it counts as a visit of its own, such as at your home terminal. If no terminal has been visited twice yet, the card stays empty. Tap the number to see the ride you came back with.",
         "exclusions": "A return on the same calendar day does not count. Planned, running and cancelled rides do not count."
       },
       "favourites": {
@@ -271,6 +271,34 @@
         "source": "The delay recorded on your completed bus rides.",
         "coverage": "Only rides with a recorded delay and times at departure and arrival. The line above names the sample – rides with a delay out of all.",
         "exclusions": "A ride with no recorded delay never counts as on time. Planned, running and cancelled rides do not count."
+      },
+      "countries": {
+        "unit": "A country a ride departed from or arrived in; each country counts once.",
+        "time": "Counted in the year of departure on the departure terminal's calendar; without a time zone in UTC.",
+        "source": "The country code of the departure and arrival point of your completed bus rides.",
+        "coverage": "A point without a known country code adds no country. Tap the number to see which ride proves which country.",
+        "exclusions": "Countries a bus only passes through do not count. Scheduled, ongoing and cancelled rides do not count."
+      },
+      "rankings": {
+        "unit": "Rides per operator and per ride type; per terminal, departures and arrivals count, so one ride counts twice. Each list shows the ten most frequent.",
+        "time": "Counted in the year of departure on the departure terminal's calendar; without a time zone in UTC.",
+        "source": "Operator, ride type and terminals of your completed bus rides. Operators are merged regardless of case and spaces and shown under the spelling recorded first. A terminal is a point within one kilometre, or with the same name within ten kilometres.",
+        "coverage": "Rides without an operator are missing from the operator list; rides without a ride type appear under “not stated”.",
+        "exclusions": "Scheduled, ongoing and cancelled rides do not count."
+      },
+      "longest": {
+        "unit": "The ride with the longest known distance in the period, in kilometres; the line names where the distance comes from.",
+        "time": "Counted in the year of departure on the departure terminal's calendar; without a time zone in UTC.",
+        "source": "The stored distance of your completed bus rides: road line, ticket figure or straight line.",
+        "coverage": "Only rides with a distance can hold the record; on a tie the earlier ride wins. Tap the record to see the ride.",
+        "exclusions": "Scheduled, ongoing and cancelled rides do not count."
+      },
+      "byYear": {
+        "unit": "Rides per year; beside them the kilometres of that year's rides with a known distance and the number of rides without one.",
+        "time": "Year of departure on the departure terminal's calendar. The list appears under “All years” once there are at least two years.",
+        "source": "Your completed bus rides.",
+        "coverage": "When no ride of a year has a distance, no kilometre figure is shown instead of “0 km”.",
+        "exclusions": "Scheduled, ongoing and cancelled rides do not count."
       }
     }
   },

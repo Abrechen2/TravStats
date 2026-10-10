@@ -5,6 +5,8 @@ import { MemoryRouter } from "react-router-dom";
 
 import RailJourneySections from "../RailJourneySections";
 import type { RailJourneyFigures } from "../../../../types/rail";
+import { EVIDENCE_MEASURES } from "../../../../shared/evidenceMeasures";
+import { evidenceOpenedBy } from "../../__tests__/evidenceKeysOpened";
 
 /**
  * forgejo#261 — the rail tab's journey blocks draw the server's figures, say
@@ -109,5 +111,21 @@ describe("RailJourneySections", () => {
     );
     expect(screen.queryByTestId("rail-punctuality")).not.toBeInTheDocument();
     expect(screen.getByTestId("rail-connections")).toBeInTheDocument();
+  });
+
+  it("opens the journeys behind the average change time (forgejo#261)", async () => {
+    const { opened } = await evidenceOpenedBy(
+      <RailJourneySections
+        figures={FIGURES}
+        rides={6}
+        delaysRecorded={4}
+        year={2025}
+        accent="red"
+        visibility={visibility}
+      />
+    );
+    const change = opened.find((o) => o.key === "railTransferCount");
+    expect(change?.scope).toEqual({ period: "year", year: 2025 });
+    expect(opened.filter((o) => EVIDENCE_MEASURES[o.key]?.servedIn !== 1)).toEqual([]);
   });
 });

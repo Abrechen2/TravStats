@@ -60,6 +60,16 @@ import {
   resolveRentalDaysTotal,
   resolveRentalOneWayCount,
   resolveRentalOdometerDocumentedCount,
+  resolveRentalKmTotal,
+  resolveRentalCostedCount,
+  resolveRentalBrokeredCount,
+  resolveRentalKmPerDaySampleCount,
+  resolveRentalCostPerKmSampleCount,
+  resolveRentalVehicleComparedCount,
+  resolveRentalDrivenModelsCount,
+  resolveRentalLongest,
+  resolveRentalFarthest,
+  resolveRentalNewProvidersCount,
 } from "./metricEvidenceRental";
 import {
   resolveBusRideCount,
@@ -67,6 +77,10 @@ import {
   resolveBusCountriesCount,
   resolveBusNightRideCount,
   resolveBusTerminalsCount,
+  resolveBusHoursOnBoard,
+  resolveBusTransferCount,
+  resolveBusLongestRide,
+  resolveBusLongestReturn,
 } from "./metricEvidenceBus";
 import {
   resolveTravelAccountHotelNights,
@@ -78,6 +92,7 @@ import {
   resolveTravelAccountContestedNights,
   resolveTravelAccountFullyCoveredTripCount,
   resolveTravelAccountTripsWithDatesCount,
+  resolveTravelAccountTripDaysTotal,
   resolveTravelAccountUncoveredDayCount,
   resolveTravelAccountJournalEntryCount,
 } from "./metricEvidenceTravelAccount";
@@ -130,7 +145,13 @@ import {
   resolveRailDocumentedTransferJourneyCount,
   resolveRailNightTrainNights,
   resolveRailNewConnectionsCount,
+  resolveRailHoursOnBoard,
+  resolveRailTransferCount,
+  resolveRailLongestRide,
 } from "./metricEvidenceRail";
+import { WRAPPED_RESOLVERS } from "./metricEvidenceWrapped";
+import { DOMAIN_RECORD_RESOLVERS } from "./metricEvidenceDomainRecords";
+import { BADGE_RESOLVERS } from "./badges/badgeEvidence";
 import {
   resolvePassportCountryCount,
   resolvePassportContinentCount,
@@ -258,6 +279,7 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   travelAccountContestedNights: resolveTravelAccountContestedNights,
   travelAccountFullyCoveredTripCount: resolveTravelAccountFullyCoveredTripCount,
   travelAccountTripsWithDatesCount: resolveTravelAccountTripsWithDatesCount,
+  travelAccountTripDaysTotal: resolveTravelAccountTripDaysTotal,
   travelAccountUncoveredDayCount: resolveTravelAccountUncoveredDayCount,
   travelAccountJournalEntryCount: resolveTravelAccountJournalEntryCount,
   crossDomainEventCount: resolveCrossDomainEventCount,
@@ -274,15 +296,32 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   railDocumentedTransferJourneyCount: resolveRailDocumentedTransferJourneyCount,
   railNightTrainNights: resolveRailNightTrainNights,
   railNewConnectionsCount: resolveRailNewConnectionsCount,
+  railHoursOnBoard: resolveRailHoursOnBoard,
+  railTransferCount: resolveRailTransferCount,
+  railLongestRide: resolveRailLongestRide,
   rentalCount: resolveRentalCount,
   rentalDaysTotal: resolveRentalDaysTotal,
   rentalOneWayCount: resolveRentalOneWayCount,
   rentalOdometerDocumentedCount: resolveRentalOdometerDocumentedCount,
+  rentalKmTotal: resolveRentalKmTotal,
+  rentalCostedCount: resolveRentalCostedCount,
+  rentalBrokeredCount: resolveRentalBrokeredCount,
+  rentalKmPerDaySampleCount: resolveRentalKmPerDaySampleCount,
+  rentalCostPerKmSampleCount: resolveRentalCostPerKmSampleCount,
+  rentalVehicleComparedCount: resolveRentalVehicleComparedCount,
+  rentalDrivenModelsCount: resolveRentalDrivenModelsCount,
+  rentalLongest: resolveRentalLongest,
+  rentalFarthest: resolveRentalFarthest,
+  rentalNewProvidersCount: resolveRentalNewProvidersCount,
   busRideCount: resolveBusRideCount,
   busDistanceKmTotal: resolveBusDistanceKmTotal,
   busCountriesCount: resolveBusCountriesCount,
   busNightRideCount: resolveBusNightRideCount,
   busTerminalsCount: resolveBusTerminalsCount,
+  busHoursOnBoard: resolveBusHoursOnBoard,
+  busTransferCount: resolveBusTransferCount,
+  busLongestRide: resolveBusLongestRide,
+  busLongestReturn: resolveBusLongestReturn,
   passportCountryCount: resolvePassportCountryCount,
   passportContinentCount: resolvePassportContinentCount,
   passportAirportCount: resolvePassportAirportCount,
@@ -353,6 +392,11 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   ...ROADTRIP_LIST_RESOLVERS,
   // The flights behind the flight tab's "most" figures (forgejo#256).
   ...FLIGHT_WITNESS_RESOLVERS,
+  // The year in review's chapters and the overview's records (forgejo#265).
+  ...WRAPPED_RESOLVERS,
+  ...DOMAIN_RECORD_RESOLVERS,
+  // Every badge that opens its own proof (forgejo#265).
+  ...BADGE_RESOLVERS,
 };
 
 /**
@@ -404,5 +448,11 @@ export async function resolveMetricEvidence(
   // 400 here would tell a caller that an unserved key exists.
   if (!resolve) return null;
   rejectUnhonouredDomains(key, scope);
+  // A date range is honoured only where the registry says so (forgejo#265):
+  // every other resolver reads the period as a year or lifetime, and must not
+  // quietly answer a narrower question as a wider one.
+  if (scope.period.kind === "range" && !EVIDENCE_MEASURES[key]?.scopes.includes("range")) {
+    throw new AppError(`${key} evidence does not support period=range.`, 400);
+  }
   return resolve(userId, scope, page);
 }

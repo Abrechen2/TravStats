@@ -12,8 +12,8 @@ import CountingHelp from "../counting/CountingHelp";
 
 export type RentalEvidence = (
   key: string,
-  renderedValue: number
-) => { kind: "metric"; key: string; scope: EvidenceScopeParams; renderedValue: number };
+  renderedValue: number | null
+) => { kind: "metric"; key: string; scope: EvidenceScopeParams; renderedValue: number | null };
 
 /**
  * The rental blocks forgejo#262 adds: one-way rentals and brokers, efficiency
@@ -78,6 +78,7 @@ export default function RentalStatsDetails({
               title={t("rental:stats.viaBroker")}
               value={num(extra.brokered.viaBroker)}
               description={t("rental:stats.directDesc", { count: extra.brokered.direct })}
+              evidence={evidence("rentalBrokeredCount", extra.brokered.viaBroker)}
             />
             <RankedBarList
               title={t("rental:stats.brokers")}
@@ -112,6 +113,8 @@ export default function RentalStatsDetails({
                       days: kmPerDay.days,
                     })
               }
+              // A ratio: its entries are the rentals it stands on.
+              evidence={evidence("rentalKmPerDaySampleCount", kmPerDay.rentals)}
             />
             <StatCard
               accent={accent}
@@ -129,6 +132,10 @@ export default function RentalStatsDetails({
                       count: costPerKm.reduce((n, c) => n + c.rentals, 0),
                     })
               }
+              evidence={evidence(
+                "rentalCostPerKmSampleCount",
+                costPerKm.reduce((n, c) => n + c.rentals, 0)
+              )}
             />
           </div>
           <CountingHelp
@@ -191,6 +198,7 @@ export default function RentalStatsDetails({
                 covered: vehicles.withDriven,
                 of: stats.rentals,
               })}
+              evidence={evidence("rentalDrivenModelsCount", vehicles.distinctDriven)}
             />
             <StatCard
               accent={accent}
@@ -210,6 +218,7 @@ export default function RentalStatsDetails({
                       other: vehicles.promisedVsDriven.otherModel,
                     })
               }
+              evidence={evidence("rentalVehicleComparedCount", vehicles.promisedVsDriven.compared)}
             />
             <RankedBarList
               title={t("rental:stats.classes")}
@@ -220,6 +229,7 @@ export default function RentalStatsDetails({
           </div>
           <CountingHelp
             entries={[
+              { term: t("rental:stats.vehiclesDriven"), helpKey: "rental:stats.help.vehicles" },
               {
                 term: t("rental:stats.promisedVsDriven"),
                 helpKey: "rental:stats.help.promisedVsDriven",
@@ -232,35 +242,41 @@ export default function RentalStatsDetails({
       {show("records") && (
         <div data-testid="rental-records">
           <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+            {/* A record's figure opens its witness; the line under it stays a
+                link to the rental, outside the trigger (no link in a button). */}
             <StatCard
               accent={accent}
               valueSize="sm"
               title={t("rental:stats.longest")}
-              value={
+              value={records.longest ? t("rental:list.days", { count: records.longest.days }) : "–"}
+              evidence={evidence("rentalLongest", records.longest?.days ?? null)}
+              descriptionHasOwnTrigger
+              description={
                 records.longest ? (
                   <Link to={`/rentals/${records.longest.id}`} className="hover:underline">
-                    {t("rental:list.days", { count: records.longest.days })}
+                    {records.longest.provider}
                   </Link>
                 ) : (
-                  "–"
+                  ""
                 )
               }
-              description={records.longest?.provider ?? ""}
             />
             <StatCard
               accent={accent}
               valueSize="sm"
               title={t("rental:stats.farthest")}
-              value={
+              value={records.farthest ? `${num(records.farthest.km)} km` : "–"}
+              evidence={evidence("rentalFarthest", records.farthest?.km ?? null)}
+              descriptionHasOwnTrigger
+              description={
                 records.farthest ? (
                   <Link to={`/rentals/${records.farthest.id}`} className="hover:underline">
-                    {num(records.farthest.km)} km
+                    {t(`rental:distance.${records.farthest.source ?? "unknown"}`)}
                   </Link>
                 ) : (
-                  "–"
+                  t("rental:stats.farthestNone")
                 )
               }
-              description={records.farthest ? "" : t("rental:stats.farthestNone")}
             />
             <StatCard
               accent={accent}
@@ -268,6 +284,7 @@ export default function RentalStatsDetails({
               title={t("rental:stats.newProviders")}
               value={num(records.newProviders.length)}
               description={records.newProviders.join(", ") || t("rental:stats.newProvidersNone")}
+              evidence={evidence("rentalNewProvidersCount", records.newProviders.length)}
             />
           </div>
           <CountingHelp

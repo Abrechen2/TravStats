@@ -154,14 +154,22 @@ export function isDocumentedTransferJourney(journey: readonly RailJourneyLegInpu
   return journey.length >= 2 && journey.every((r) => rideHasClocks(r) && r.arrivalTime !== null);
 }
 
-function transferFigures(journeys: readonly RailJourneyRow[][]): RailJourneyFigures["transfers"] {
+/**
+ * The measured changes of ONE journey, in minutes — a change whose two clocks
+ * are not both known is left out, never read as 0. The rail and bus tabs
+ * average these, and their evidence panels list the journeys they came from.
+ */
+export function journeyTransferWaits(journey: readonly RailJourneyLegInput[]): number[] {
   const waits: number[] = [];
-  for (const journey of journeys) {
-    for (let i = 1; i < journey.length; i += 1) {
-      const wait = transferMinutes(journey[i - 1], journey[i]);
-      if (wait !== null) waits.push(wait);
-    }
+  for (let i = 1; i < journey.length; i += 1) {
+    const wait = transferMinutes(journey[i - 1], journey[i]);
+    if (wait !== null) waits.push(wait);
   }
+  return waits;
+}
+
+function transferFigures(journeys: readonly RailJourneyRow[][]): RailJourneyFigures["transfers"] {
+  const waits = journeys.flatMap(journeyTransferWaits);
   if (waits.length === 0) {
     return { count: 0, averageMinutes: null, shortestMinutes: null, longestMinutes: null };
   }

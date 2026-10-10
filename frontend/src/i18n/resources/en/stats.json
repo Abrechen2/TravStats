@@ -35,6 +35,36 @@
       "rental_other": "{{count}} rental cars",
       "bus_one": "{{count}} bus ride",
       "bus_other": "{{count}} bus rides"
+    },
+    "help": {
+      "experiences": {
+        "unit": "An experience: a flight, a cruise, a stay, a place visit, a roadtrip, a train or bus ride – one per entry, added up over the domains switched on. The line below splits by domain.",
+        "time": "In the selected year by each domain's time rule, as on its own tab (a cruise in the year it started); otherwise across all years.",
+        "source": "The entries of the domains switched on in the bar that you see.",
+        "coverage": "What each domain counts is counted. Tap the number to see the entries.",
+        "exclusions": "Scheduled and cancelled entries do not count. Rentals and day tours do not count here. A roadtrip and the stays linked to it are different entries and count once each; their nights and days are not added here."
+      },
+      "countries": {
+        "unit": "A country proven by any entry; a country several domains prove counts once.",
+        "time": "In the selected year by each domain's time rule, otherwise across all years.",
+        "source": "The countries of the entries in the domains switched on.",
+        "coverage": "An entry without a known country adds nothing. In a running year there is no same-span comparison, because countries are known per year, not per day. Tap the number to see which entry proves which country.",
+        "exclusions": "Scheduled and cancelled entries do not count. Rentals and day tours add no country."
+      },
+      "activeDays": {
+        "unit": "A calendar day on which at least one entry took place; a day with a flight and a hotel night counts once.",
+        "time": "The local day of each entry by its domain's time rule; in the selected year, otherwise across all years.",
+        "source": "The entries of the domains switched on.",
+        "coverage": "Where a domain cannot name its days one by one, it adds its own count – there a shared day can count twice. Tap the number to see the entries with the days they prove.",
+        "exclusions": "Scheduled and cancelled entries do not count. Rental days and day tours do not count again as travel days."
+      },
+      "achievements": {
+        "unit": "An unlocked achievement; beside it the points.",
+        "time": "Across all years – an achievement carries no year here, even when one is selected above.",
+        "source": "Your unlocked achievements.",
+        "coverage": "The number opens no evidence; the Achievements page shows each achievement with its condition, progress and evidence.",
+        "exclusions": "Achievements not reached yet do not count."
+      }
     }
   },
   "overviewToggle": {
@@ -53,7 +83,30 @@
     "takeawayRolling": "last 12 months",
     "takeawayYear": "in {{year}}",
     "takeawayAll": "all-time",
-    "comparePrev": "vs. previous period"
+    "comparePrev": "vs. previous period",
+    "help": {
+      "flights": {
+        "unit": "A flight; the arrow compares with the period before, the line shows the course.",
+        "time": "The flight's day on the departure airport's calendar. “Last 12 months”: the twelve whole months up to and including the current one, against the twelve before; “Year”: the calendar year against the whole previous year; “All”: no comparison.",
+        "source": "Your flown and historical flights.",
+        "coverage": "Every counted flight has a departure date and counts. Tap the number to see the flights.",
+        "exclusions": "Scheduled and cancelled flights do not count."
+      },
+      "distance": {
+        "unit": "The straight line between departure and destination airport, summed over the flights – in kilometres or miles, as set.",
+        "time": "The flight's day on the departure airport's calendar. “Last 12 months”: the twelve whole months up to and including the current one, against the twelve before; “Year”: the calendar year against the whole previous year; “All”: no comparison.",
+        "source": "Your flown and historical flights. The coordinates of both airports.",
+        "coverage": "Every counted flight carries its airports' coordinates. Tap the number to see the flights with their distance.",
+        "exclusions": "Detours and holding patterns are not included – the straight line is a lower bound. Scheduled and cancelled flights do not count."
+      },
+      "flightTime": {
+        "unit": "Hours in the air, summed over the flights.",
+        "time": "The flight's day on the departure airport's calendar. “Last 12 months”: the twelve whole months up to and including the current one, against the twelve before; “Year”: the calendar year against the whole previous year; “All”: no comparison.",
+        "source": "Measured from departure and arrival time where a flown flight carries both; otherwise estimated from the distance – the same rule as the overview.",
+        "coverage": "A flight without clock times counts with an estimate, not with 0. Tap the number to see the flights with their duration.",
+        "exclusions": "Scheduled and cancelled flights do not count."
+      }
+    }
   },
   "canonicalChart": {
     "flightsTitle": "Flights per period"
@@ -435,7 +488,14 @@
     "scopeLabel": "── Year {{year}} ──",
     "vsSamePeriod": "vs. same period in {{year}}",
     "vsFullYear": "vs. the whole of {{year}}",
-    "partialYearNote": "{{year}} is still running — a part year is set against a whole one here"
+    "partialYearNote": "{{year}} is still running — a part year is set against a whole one here",
+    "help": {
+      "unit": "The same unit as the figure of the same name in the domain: above the selected year, below the comparison year, the arrow the change in per cent.",
+      "time": "The year follows the domain's time rule. When one of the two years is not over, the domain compares the same span of both years up to the same day (“vs. same period”) where it can cut its figures that way; otherwise the running year stands against the whole other year (“vs. whole year”, with a note).",
+      "source": "The figures the server computes for both years – nothing is recounted here.",
+      "coverage": "Tapping the upper number shows exactly the entries it counts: for a same-span comparison those from 1 January up to the cut-off day, otherwise the whole selected year. The comparison year's figure opens nothing.",
+      "exclusions": "Counts only – no amounts of money, because an amount needs its currency and currencies are not converted."
+    }
   },
   "byStatus": {
     "title": "By Status"
@@ -830,7 +890,44 @@
     "noMoods": "No mood recorded yet",
     "helpWithBus": "The grey remainder is not accounted for: nights no entry says where you were. That does not mean at home — a missing entry proves nothing, and the more complete your logbook, the smaller the remainder. A night two entries claim counts once: ship before lodging before night bus before plane. The current year counts up to last night.",
     "helpWithRailAndBus": "The grey remainder is not accounted for: nights no entry says where you were. That does not mean at home — a missing entry proves nothing, and the more complete your logbook, the smaller the remainder. A night two entries claim counts once: ship before lodging before night train before night bus before plane. The current year counts up to last night.",
-    "busNights": "Night bus"
+    "busNights": "Night bus",
+    "counting": {
+      "nights": {
+        "unit": "A night. Each bar is a whole year, split into {{kinds}} and “Unassigned”; the percentage is the share of assigned nights in the year.",
+        "time": "A night belongs to the calendar day it begins on – for stays and cruises by the dates entered, for flights by the local day at the airports, for night rides by the day at the station or terminal. The running year counts up to the last night that has passed.",
+        "source": "Completed stays (plus free pitches of roadtrips), cruises, flights and night rides – only from domains you see.",
+        "coverage": "An entry with nights but no place in the calendar – a stay known only to the month or undated, a night ride without an arrival day – is missing here; the line above names such cases. When several entries claim the same night it counts once, in this order: {{order}}.",
+        "exclusions": "The grey remainder does not mean “at home” but: no entry says where you were. Rentals, places and day tours add no nights."
+      },
+      "tripsCovered": {
+        "unit": "A trip with a start and an end date. “Gap-free” means: for every night from the start to the day before the end, an entry says where you were. Left the gap-free trips, right all trips with dates.",
+        "time": "By the calendar dates entered for the trip and its entries; flights by the local day at the airports.",
+        "source": "Your trips – whatever their status – and the stays, cruises, flights and night rides assigned to them from domains you see. A booked entry not yet taken also covers its night.",
+        "coverage": "Trips without a start or end date are missing; a stay without exact dates covers no night. Tap either number to see the trips.",
+        "exclusions": "Cancelled entries cover nothing. Rentals, places and day tours cover no night."
+      },
+      "uncoveredDays": {
+        "unit": "A night of a dated trip for which no entry says where you slept – summed over every dated trip.",
+        "time": "Per night from the start day to the day before the trip's end date, by the calendar dates entered.",
+        "source": "Your trips with a start and end date and their entries, as for the gap-free trips.",
+        "coverage": "Only trips with both dates. Tap the number to see the trips with their open nights.",
+        "exclusions": "Cancelled entries cover nothing; rentals, places and day tours cover no night."
+      },
+      "avgTripDays": {
+        "unit": "Days per trip on average, counting the start and end day (the 15th to the 18th are four days), to one decimal; beside it the longest trip.",
+        "time": "By the trip's start and end dates as entered.",
+        "source": "Your trips with a start and end date, whatever their status.",
+        "coverage": "Trips without both dates are missing. Tap the number to see the trips averaged over, with their duration.",
+        "exclusions": "Nothing beyond that; the duration is not derived from the trip's entries."
+      },
+      "journalEntries": {
+        "unit": "A journal entry; below it the three most frequent moods.",
+        "time": "Across all years.",
+        "source": "The journal entries of your trips.",
+        "coverage": "An entry without a mood counts but does not appear among the moods. Tap the number to see the trips with their entries.",
+        "exclusions": "Nothing beyond that."
+      }
+    }
   },
   "sections": {
     "button": "Sections",
@@ -938,6 +1035,50 @@
       "busUnmeasured_other": "{{count}} rides without a distance",
       "busNights_one": "{{count}} night on board",
       "busNights_other": "{{count}} nights on board"
+    },
+    "help": {
+      "stays": {
+        "unit": "A stay at a lodging; in the sentence below the nights, where their number is known.",
+        "time": "In the year of the check-in date as entered. A stay counts only once its check-out is past.",
+        "source": "Your stays.",
+        "coverage": "A stay without a date that fixes a year is missing here. Where the number of nights is not recorded, the stay counts and the sentence says so. Tap the number to see the entries.",
+        "exclusions": "Scheduled, ongoing and cancelled stays do not count. A hidden domain has no chapter. The chapter is never added to another one."
+      },
+      "places": {
+        "unit": "A place visit; in the sentence below, at how many distinct places.",
+        "time": "In the year of the visit on the place's calendar. A visit counts once it has happened.",
+        "source": "The visits of your places.",
+        "coverage": "A visit without a date has no year and is missing here. Tap the number to see the entries.",
+        "exclusions": "Places on the wish list without a visit do not count. A hidden domain has no chapter. The chapter is never added to another one."
+      },
+      "roadtrips": {
+        "unit": "A roadtrip that began this year.",
+        "time": "In the year of its first dated station (its date or the check-in of its stay). A roadtrip counts once it has begun.",
+        "source": "Your roadtrips with their stations.",
+        "coverage": "A roadtrip without a dated station has no year and is missing here. Tap the number to see the entries.",
+        "exclusions": "The roadtrip's nights and days are not added to stays. A hidden domain has no chapter. The chapter is never added to another one."
+      },
+      "tours": {
+        "unit": "A day tour dated this year.",
+        "time": "The tour's date, a calendar day without a time zone; a tour counts once its day has come.",
+        "source": "Your day tours.",
+        "coverage": "A tour without a date is missing here. Tap the number to see the entries.",
+        "exclusions": "Tours dated in the future do not count. Tours appear only while the instance shows them. The chapter is never added to another one."
+      },
+      "rentals": {
+        "unit": "A rental; in the sentence below its rental days.",
+        "time": "In the year of pick-up on the pick-up station's calendar; rental days on the stations' calendars.",
+        "source": "Your completed rentals.",
+        "coverage": "Every completed rental carries its pick-up and return time and therefore counts. Tap the number to see the entries.",
+        "exclusions": "Scheduled, ongoing and cancelled rentals do not count. Rental days do not count again as travel days. A hidden domain has no chapter. The chapter is never added to another one."
+      },
+      "bus": {
+        "unit": "A bus ride; in the sentence below the kilometres of the rides with a known distance and the nights on a night bus.",
+        "time": "In the year of departure on the departure terminal's calendar.",
+        "source": "Your completed bus rides.",
+        "coverage": "Rides without a distance add no kilometres and are named; when none has one, no kilometre figure is shown. Tap the number to see the entries.",
+        "exclusions": "Scheduled, ongoing and cancelled rides do not count. A hidden domain has no chapter. The chapter is never added to another one."
+      }
     }
   },
   "period": {

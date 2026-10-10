@@ -19,17 +19,18 @@ describe("rail badges in the achievement dialog", () => {
     expect(evidenceKeyForRule("rail_cross_border")).toBe("railCrossBorderRideCount");
   });
 
-  it("offers no list for the longest ride, an extremum release 1 does not serve", () => {
-    expect(evidenceKeyForRule("rail_longest_km")).toBeNull();
+  // forgejo#265: an extremum opens its own proof — the ride that holds it.
+  it("opens the longest ride's own proof", () => {
+    expect(evidenceKeyForRule("rail_longest_km")).toBe("badgeRailLongestKm");
   });
 
   // forgejo#261
-  it("lists the journeys behind 'Gut umgestiegen' and says the two extrema have no list", () => {
+  it("lists the journeys behind 'Gut umgestiegen' and opens the two extrema's proofs", () => {
     expect(evidenceKeyForRule("rail_documented_transfer_journeys")).toBe(
       "railDocumentedTransferJourneyCount"
     );
-    expect(evidenceKeyForRule("rail_station_return_years")).toBeNull();
-    expect(evidenceKeyForRule("rail_new_connections_year")).toBeNull();
+    expect(evidenceKeyForRule("rail_station_return_years")).toBe("badgeRailStationReturnYears");
+    expect(evidenceKeyForRule("rail_new_connections_year")).toBe("badgeRailNewConnectionsYear");
     expect(progressUnitForRule("rail_station_return_years")).toBe("years");
   });
 

@@ -61,6 +61,7 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
     "travelAccountContestedNights",
     "travelAccountFullyCoveredTripCount",
     "travelAccountTripsWithDatesCount",
+    "travelAccountTripDaysTotal",
     "travelAccountUncoveredDayCount",
     "travelAccountJournalEntryCount",
   ] as const;
@@ -353,6 +354,18 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
     assertSumInvariant(res, Math.round);
   });
 
+  // forgejo#265 — the average trip length opens the trips it averages, each
+  // with its days; the average is this total over the dated-trip count.
+  it("travelAccountTripDaysTotal: both dated trips, each contributing its days", () => {
+    const res = answer("travelAccountTripDaysTotal");
+    const count = answer("travelAccountTripsWithDatesCount");
+    expect(res.measure.unit).toBe("days");
+    expect([...res.entries.map((e) => e.id)].sort()).toEqual([coveredTripId, gappedTripId].sort());
+    expect(res.entries.every((e) => (e.contribution ?? 0) > 0)).toBe(true);
+    expect(count.measure.value).toBe(2);
+    assertSumInvariant(res, Math.round);
+  });
+
   it("travelAccountFullyCoveredTripCount: the March trip, not the empty October one", () => {
     const res = answer("travelAccountFullyCoveredTripCount");
     expect(res.measure.value).toBe(1);
@@ -408,6 +421,11 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
       ["travelAccountContestedNights", account.body.account.contestedNights],
       ["travelAccountFullyCoveredTripCount", trips.fullyCoveredTrips],
       ["travelAccountTripsWithDatesCount", trips.tripsWithDates],
+      // The average is this total over the count above, to one decimal.
+      [
+        "travelAccountTripDaysTotal",
+        trips.avgTripDays === null ? 0 : Math.round(trips.avgTripDays * trips.tripsWithDates),
+      ],
       ["travelAccountUncoveredDayCount", trips.totalUncoveredDays],
       ["travelAccountJournalEntryCount", trips.journalEntries],
     ];

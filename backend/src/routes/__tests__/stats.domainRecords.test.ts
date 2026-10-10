@@ -8,6 +8,7 @@ import {
   getInstanceSettings,
   updateInstanceSettings,
 } from "../../services/instanceSettingsService";
+import { resolveMetricEvidence } from "../../services/evidence/metricEvidence";
 
 /**
  * GET /stats/domain-records (forgejo#265): one record per domain the user
@@ -99,6 +100,42 @@ describe("travel records beyond flights", () => {
       }),
     ]);
     expect(list[1].href).toMatch(/^\/rail\//);
+  });
+
+  // forgejo#265 — a record opens the entry that holds it.
+  it("opens the stay that holds the longest-stay record", async () => {
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    const res = await resolveMetricEvidence(
+      userId,
+      "recordLongestStay",
+      { period: { kind: "allTime" } },
+      { offset: 0, limit: 50 }
+    );
+    expect(res?.measure.value).toBe(7);
+    expect(res?.entries).toEqual([
+      expect.objectContaining({ contribution: 7, title: { text: "Hotel Alpenblick" } }),
+    ]);
+  });
+
+  // forgejo#265 — a domain the USER switched off is as hidden as one behind the switch.
+  it("drops the train ride when the user switched the rail domain off", async () => {
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { enabledDomains: ["flight", "lodging", "poi"] },
+    });
+    expect((await records()).map((r: { domain: string }) => r.domain)).toEqual(["lodging"]);
+    const rail = await resolveMetricEvidence(
+      userId,
+      "recordLongestRailRide",
+      { period: { kind: "allTime" } },
+      { offset: 0, limit: 50 }
+    );
+    expect(rail?.measure.value).toBeNull();
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { enabledDomains: ["flight", "lodging", "rail", "poi"] },
+    });
   });
 
   it("drops the train ride with the rail domain behind the beta switch", async () => {

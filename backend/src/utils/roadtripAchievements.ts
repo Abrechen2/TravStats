@@ -3,6 +3,7 @@ import { now as clockNow } from "../shared/time/clock";
 import { SKIP, type BadgeVerdict } from "./badgeSource";
 import { roadtripInsights } from "../services/stats/insights";
 import type { TourFacts } from "./tourInsights/tourFacts";
+import type { RoadtripInsights } from "./roadtripInsights";
 
 /**
  * The roadtrip badges (2.7, Part I; and the three of the statistics expansion,
@@ -48,6 +49,11 @@ export async function calculateRoadtripAchievementStats(
   tours?: TourFacts[]
 ): Promise<RoadtripAchievementStats> {
   const { awards } = await roadtripInsights(userId, now, { tours });
+  return roadtripBadgeStats(awards);
+}
+
+/** The badge measures off the roadtrip view's awards — the check's and the evidence's one home. */
+export function roadtripBadgeStats(awards: RoadtripInsights["awards"]): RoadtripAchievementStats {
   return {
     roadtripsCount: awards.roadtripsCount,
     roadtripKm: awards.recordedKm,
@@ -70,6 +76,9 @@ const MEASURE: Record<string, keyof RoadtripAchievementStats> = {
   roadtrip_land_and_water: "roadtripLandAndWater",
   roadtrip_tour_stations: "roadtripTourStations",
 };
+
+/** The requirement types this module answers — the seeds and the badge evidence read it. */
+export const ROADTRIP_REQUIREMENT_TYPES: readonly string[] = Object.keys(MEASURE);
 
 /**
  * The badge's progress, `null` when it is not a roadtrip badge, or `"skip"`

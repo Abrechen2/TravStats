@@ -304,7 +304,7 @@
         "unit": "The wait between an arrival and the next departure within one journey, in minutes. The large figure is the average of all changes; below it their number, the shortest and the longest.",
         "time": "Measured from both rides' times to the minute, as real elapsed time – time zones shift nothing. In the year the rides left on the departure station's calendar.",
         "source": "The journeys made of completed rides, as the journey rule forms them: a change is the same booking, the same station and a wait of at most four hours.",
-        "coverage": "Date-only or unlinked rides have no measurable change and stay out. When there is none, the card says so rather than showing a zero.",
+        "coverage": "Date-only or unlinked rides have no measurable change and stay out. When there is none, the card says so rather than showing a zero. Tap the number to see the journeys with the number of their measured changes.",
         "exclusions": "Scheduled, ongoing and cancelled rides do not count. A pause longer than four hours is not a change; it separates two journeys."
       },
       "nights": {
@@ -334,6 +334,90 @@
         "source": "Completed rides with a recorded arrival delay. An operator is the same regardless of case and spacing; a connection covers both directions.",
         "coverage": "Counted among the rides with a recorded delay and times to the minute, arrival included. A ride with no recorded delay never counts as on time; it stays out of the sample. The line above the operator list says out of how many rides the sample comes.",
         "exclusions": "Rides without an operator are missing from the operator list, rides that start and end at the same station from the connection list. Each list shows at most ten entries, largest sample first. Scheduled, ongoing and cancelled rides do not count."
+      },
+      "rides": {
+        "unit": "A ride: one train from departure to arrival. Each ride counts once, even when it is part of a journey with a change – journeys are shown further down.",
+        "time": "Counted in the year of departure on the departure station's calendar; a station without a time zone is read in UTC. In the year comparison, a running year is set against the same span of the other year, up to the same day.",
+        "source": "Your train rides with the status “completed”.",
+        "coverage": "Every counted ride has a departure date and therefore always counts. Tap the number to see the rides.",
+        "exclusions": "Scheduled, ongoing and cancelled rides do not count."
+      },
+      "km": {
+        "unit": "A kilometre, summed over the rides with a known distance. The line below splits the sum by origin: traced track, line from a roadtrip, figure from the ticket, straight line.",
+        "time": "Counted in the year of departure on the departure station's calendar; a station without a time zone is read in UTC. In the year comparison, a running year is set against the same span of the other year, up to the same day.",
+        "source": "Exactly one stored distance per ride: the traced track, the line of a converted roadtrip, the ticket's figure or the straight line between the stations.",
+        "coverage": "Rides without a distance stay out and are listed as “without distance” in the line below. The straight line is a lower bound – the track is usually 10 to 30 % longer.",
+        "exclusions": "Nothing is estimated; a ride without a distance does not count as 0 km. Scheduled, ongoing and cancelled rides do not count."
+      },
+      "hours": {
+        "unit": "An hour on board: the time from departure to arrival of a ride, summed over every measured ride.",
+        "time": "The duration runs between the real instants at both stations, so a time-zone border does not distort it. Counted in the year of departure on the departure station's calendar; a station without a time zone is read in UTC. In the year comparison, a running year is set against the same span of the other year, up to the same day.",
+        "source": "Completed train rides with a departure and an arrival time.",
+        "coverage": "Only rides with a clock time at departure and arrival; a date-only ride or one without an arrival has no duration. The line below names the sample – measured rides out of all. Tap the number to see the measured rides with their hours.",
+        "exclusions": "A ride whose arrival lies before its departure does not count. Scheduled, ongoing and cancelled rides do not count."
+      },
+      "countries": {
+        "unit": "A country a ride departed from or arrived in; each country counts once.",
+        "time": "Counted in the year of departure on the departure station's calendar; a station without a time zone is read in UTC. In the year comparison, a running year is set against the same span of the other year, up to the same day.",
+        "source": "The country code of the departure and arrival station of your counted rides.",
+        "coverage": "A station without a known country code adds no country.",
+        "exclusions": "Countries a train only passes through do not count – only the two stations are known. Scheduled, ongoing and cancelled rides do not count."
+      },
+      "nightTrains": {
+        "unit": "A ride that was a night train: in a sleeper or couchette, with the train category NJ, EN or NZ, or a ride that arrives on a later calendar day than it left after at least six hours on board.",
+        "time": "Departure and arrival day on each station's calendar. Counted in the year of departure on the departure station's calendar; a station without a time zone is read in UTC. In the year comparison, a running year is set against the same span of the other year, up to the same day.",
+        "source": "Travel class, train category and times of your counted rides.",
+        "coverage": "Without a clock time at both ends only the class or the train category can prove a night train.",
+        "exclusions": "A ride that crosses midnight in under six hours is not a night train. Scheduled, ongoing and cancelled rides do not count."
+      },
+      "highSpeed": {
+        "unit": "A ride with a train category that runs at 200 km/h or more on its main lines – such as ICE, TGV, Eurostar, Frecciarossa, Italo, AVE, Railjet or Shinkansen.",
+        "time": "Counted in the year of departure on the departure station's calendar; a station without a time zone is read in UTC. In the year comparison, a running year is set against the same span of the other year, up to the same day.",
+        "source": "The first word of the train category of your counted rides, regardless of case.",
+        "coverage": "A ride without a train category is not counted as high-speed – not as slow, but as unproven.",
+        "exclusions": "Categories outside the fixed list do not count, even if the train was fast. Scheduled, ongoing and cancelled rides do not count."
+      },
+      "crossBorder": {
+        "unit": "A ride whose departure and arrival stations lie in different countries.",
+        "time": "Counted in the year of departure on the departure station's calendar; a station without a time zone is read in UTC. In the year comparison, a running year is set against the same span of the other year, up to the same day.",
+        "source": "The country code of the departure and arrival station.",
+        "coverage": "Both countries must be known; a station without a country code proves no border.",
+        "exclusions": "A ride that only passes through another country and ends in the country it left from does not count. Scheduled, ongoing and cancelled rides do not count."
+      },
+      "operatorsCount": {
+        "unit": "A rail operator; each counts once. Spellings are merged – case and spaces do not matter.",
+        "time": "Counted in the year of departure on the departure station's calendar; a station without a time zone is read in UTC. In the year comparison, a running year is set against the same span of the other year, up to the same day.",
+        "source": "The operator recorded on your counted rides.",
+        "coverage": "Rides without an operator add no operator.",
+        "exclusions": "Scheduled, ongoing and cancelled rides do not count."
+      },
+      "rankings": {
+        "unit": "Rides per operator and per train category; per station, departures and arrivals count, so one ride counts twice. Each list shows the ten most frequent.",
+        "time": "Counted in the year of departure on the departure station's calendar; a station without a time zone is read in UTC. In the year comparison, a running year is set against the same span of the other year, up to the same day.",
+        "source": "Operator, train category and stations of your counted rides. Operator and category are listed as written (without surrounding spaces); a station is recognised by its code, otherwise by its name.",
+        "coverage": "Rides without an operator or a category are missing from that list.",
+        "exclusions": "Scheduled, ongoing and cancelled rides do not count."
+      },
+      "delays": {
+        "unit": "A ride with a recorded arrival delay, sorted into bands: on time (0 minutes or early), up to 5, up to 15, up to 30, up to 60 and over 60 minutes.",
+        "time": "Delay in minutes at arrival. Counted in the year of departure on the departure station's calendar; a station without a time zone is read in UTC. In the year comparison, a running year is set against the same span of the other year, up to the same day.",
+        "source": "The arrival delay stored for each ride.",
+        "coverage": "Only rides with a recorded delay, an arrival time and a clock time at both ends; the line above names the sample. A ride without a delay is never counted as on time.",
+        "exclusions": "Scheduled, ongoing and cancelled rides do not count."
+      },
+      "longest": {
+        "unit": "The ride with the longest known distance in the period, in kilometres; the line names where the distance comes from.",
+        "time": "Counted in the year of departure on the departure station's calendar; a station without a time zone is read in UTC. In the year comparison, a running year is set against the same span of the other year, up to the same day.",
+        "source": "The stored distance of your counted rides (traced track, roadtrip line, ticket or straight line).",
+        "coverage": "Only rides with a distance can hold the record; on a tie the earlier ride wins. Tap the record to see the ride.",
+        "exclusions": "Scheduled, ongoing and cancelled rides do not count."
+      },
+      "byYear": {
+        "unit": "Rides per year; beside them the kilometres of that year's rides with a known distance.",
+        "time": "Year of departure on the departure station's calendar. The list appears under “All years” once there are at least two years.",
+        "source": "Your train rides with the status “completed”.",
+        "coverage": "A ride without a distance counts as a ride but adds no kilometres.",
+        "exclusions": "Scheduled, ongoing and cancelled rides do not count."
       }
     }
   },

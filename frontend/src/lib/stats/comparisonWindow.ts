@@ -115,6 +115,21 @@ export function sameSpanUntil(window: ComparisonWindow, year: number): string | 
 }
 
 /**
+ * The evidence scope of a comparison strip's CURRENT figure (forgejo#265):
+ * the days the server cut it to — 1 January up to `until` — when the pair was
+ * cut, else the whole year. A same-span figure that opened the whole year
+ * listed entries the number never counted.
+ */
+export function comparisonEvidenceScope(
+  year: number,
+  until: string | null
+): { period: "year"; year: number } | { period: "range"; from: string; to: string } {
+  return until === null
+    ? { period: "year", year }
+    : { period: "range", from: `${year}-01-01`, to: `${year}-${until}` };
+}
+
+/**
  * A predicate over `YYYY-MM-DD` keys: inside `year`, and on or before where
  * this window ends there. The end key is resolved ONCE — a per-day
  * `windowEndInYear` would build a Date for every day of every domain.

@@ -11,6 +11,7 @@ import type { ComparisonKind } from "../../../lib/stats/comparisonWindow";
 import { useTranslation } from "../../../hooks/useTranslation";
 import DeltaBadge from "./DeltaBadge";
 import EvidenceTrigger from "../EvidenceTrigger";
+import CountingHelp from "../counting/CountingHelp";
 import { delta } from "./aggregate";
 
 interface Props {
@@ -158,62 +159,84 @@ export default function CrossDomainKpis({
   return (
     // Round 4: the figure first and large, then what it counts — the label
     // used to stand above in the same weight as the hint below.
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {cards.map((c) => {
-        const body = (
-          <>
-            <p
-              style={{
-                fontSize: 30,
-                fontWeight: 700,
-                lineHeight: 1.1,
-                color: "var(--ts-text-bright)",
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
-              {typeof c.value === "number" ? c.value.toLocaleString(locale) : c.value}
-            </p>
-            <h3 className="t-caption">{c.label}</h3>
-            {c.delta && <DeltaBadge d={c.delta} compareYear={compareYear} kind={comparisonKind} />}
-            {c.hint && <p className="t-caption">{c.hint}</p>}
-          </>
-        );
-        // Tailwind's preflight zeroes a button's border and background, so
-        // the same className renders identically as a `<button>` — the card
-        // keeps its layout and gains a keyboard-operable trigger.
-        const className = "flex min-w-0 flex-col";
-        const style = {
-          gap: 4,
-          padding: "var(--ts-space-lg) var(--ts-space-xl)",
-          background: "var(--ts-surface)",
-          border: "1px solid var(--ts-border)",
-          borderRadius: "var(--ts-radius-card)",
-        };
-        // The achievements tile is release 2 (`crossDomainUnlockedAchievementCount`
-        // is `servedIn: 2`), so it stays a plain card: a pointer cursor over a
-        // 404 is #330 with an extra round trip.
-        if (!c.evidenceKey) {
-          return (
-            <div key={c.label} className={className} style={style}>
-              {body}
-            </div>
+    <div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {cards.map((c) => {
+          const body = (
+            <>
+              <p
+                style={{
+                  fontSize: 30,
+                  fontWeight: 700,
+                  lineHeight: 1.1,
+                  color: "var(--ts-text-bright)",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {typeof c.value === "number" ? c.value.toLocaleString(locale) : c.value}
+              </p>
+              <h3 className="t-caption">{c.label}</h3>
+              {c.delta && (
+                <DeltaBadge d={c.delta} compareYear={compareYear} kind={comparisonKind} />
+              )}
+              {c.hint && <p className="t-caption">{c.hint}</p>}
+            </>
           );
-        }
-        return (
-          <EvidenceTrigger
-            key={c.label}
-            kind="metric"
-            evidenceKey={c.evidenceKey}
-            scope={scope}
-            renderedValue={typeof c.value === "number" ? c.value : null}
-            label={c.label}
-            className={className}
-            style={style}
-          >
-            {body}
-          </EvidenceTrigger>
-        );
-      })}
+          // Tailwind's preflight zeroes a button's border and background, so
+          // the same className renders identically as a `<button>` — the card
+          // keeps its layout and gains a keyboard-operable trigger.
+          const className = "flex min-w-0 flex-col";
+          const style = {
+            gap: 4,
+            padding: "var(--ts-space-lg) var(--ts-space-xl)",
+            background: "var(--ts-surface)",
+            border: "1px solid var(--ts-border)",
+            borderRadius: "var(--ts-radius-card)",
+          };
+          // The achievements tile is release 2 (`crossDomainUnlockedAchievementCount`
+          // is `servedIn: 2`), so it stays a plain card: a pointer cursor over a
+          // 404 is #330 with an extra round trip.
+          if (!c.evidenceKey) {
+            return (
+              <div key={c.label} className={className} style={style}>
+                {body}
+              </div>
+            );
+          }
+          return (
+            <EvidenceTrigger
+              key={c.label}
+              kind="metric"
+              evidenceKey={c.evidenceKey}
+              scope={scope}
+              renderedValue={typeof c.value === "number" ? c.value : null}
+              label={c.label}
+              className={className}
+              style={style}
+            >
+              {body}
+            </EvidenceTrigger>
+          );
+        })}
+      </div>
+      <CountingHelp
+        testId="overview-kpis-help"
+        entries={[
+          {
+            term: t("stats:overviewKpis.experiences"),
+            helpKey: "stats:overviewKpis.help.experiences",
+          },
+          { term: t("stats:overviewKpis.countries"), helpKey: "stats:overviewKpis.help.countries" },
+          {
+            term: t("stats:overviewKpis.activeDays"),
+            helpKey: "stats:overviewKpis.help.activeDays",
+          },
+          {
+            term: t("stats:overviewKpis.achievements"),
+            helpKey: "stats:overviewKpis.help.achievements",
+          },
+        ]}
+      />
     </div>
   );
 }

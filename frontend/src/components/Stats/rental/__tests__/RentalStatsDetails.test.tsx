@@ -11,6 +11,9 @@ vi.mock("../../../../hooks/useTranslation", () => ({
 }));
 
 import RentalStatsDetails from "../RentalStatsDetails";
+import { EVIDENCE_MEASURES } from "../../../../shared/evidenceMeasures";
+import { evidenceOpenedBy } from "../../__tests__/evidenceKeysOpened";
+import { expectNoNestedTriggers } from "../../__tests__/noNestedTriggers";
 import type { RentalExtraStats, RentalStats } from "../../../../lib/api/rentalLinks";
 
 /**
@@ -50,7 +53,7 @@ const EXTRA: RentalExtraStats = {
 };
 
 const visibility = { isVisible: () => true, toggle: vi.fn(), reset: vi.fn(), hiddenCount: 0 };
-const evidence = (key: string, renderedValue: number) => ({
+const evidence = (key: string, renderedValue: number | null) => ({
   kind: "metric" as const,
   key,
   scope: { period: "allTime" as const },
@@ -112,5 +115,34 @@ describe("RentalStatsDetails", () => {
       "/rentals/4b0c5c7e-7e53-4d8c-8d67-0b2b9e1e1a11"
     );
     expect(within(block).getByText("rental:stats.farthestNone")).toBeInTheDocument();
+  });
+
+  // forgejo#262 — eight figures here opened nothing; a record's number now
+  // opens its witness while the rental link under it stays outside the button.
+  it("opens a served measure from every figure, without nesting a link in a trigger", async () => {
+    const { opened, container } = await evidenceOpenedBy(
+      <RentalStatsDetails
+        stats={STATS}
+        extra={EXTRA}
+        accent="green"
+        visibility={visibility}
+        evidence={evidence}
+      />
+    );
+    expect(opened.map((o) => o.key).sort()).toEqual(
+      [
+        "rentalOneWayCount",
+        "rentalBrokeredCount",
+        "rentalKmPerDaySampleCount",
+        "rentalCostPerKmSampleCount",
+        "rentalDrivenModelsCount",
+        "rentalVehicleComparedCount",
+        "rentalLongest",
+        "rentalFarthest",
+        "rentalNewProvidersCount",
+      ].sort()
+    );
+    expect(opened.filter((o) => EVIDENCE_MEASURES[o.key]?.servedIn !== 1)).toEqual([]);
+    expectNoNestedTriggers(container);
   });
 });

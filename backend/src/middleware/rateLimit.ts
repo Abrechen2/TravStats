@@ -28,7 +28,7 @@ export { skipGlobalRateLimit } from "./globalRateLimitSkip";
  * express-rate-limit 8 refuses a keyGenerator that reads `req.ip` without
  * it (ERR_ERL_KEY_GEN_IPV6, logged on every limiter's first request).
  */
-const userOrIpKey = (req: Request): string => {
+export const userOrIpKey = (req: Request): string => {
   const r = req as { userId?: string; apiToken?: { id: string }; isSharedDemo?: boolean };
   if (r.apiToken) return `pat:${r.apiToken.id}`;
   // The shared demo account is not A user, it is EVERY visitor of a public

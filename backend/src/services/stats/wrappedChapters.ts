@@ -17,24 +17,34 @@
  *
  * Pure — no I/O.
  */
+import type { EntryRef } from "./insights/measureItems";
 
-export interface WrappedStayRow {
+/**
+ * Each row may carry the entry it stands for — what the chapter's evidence
+ * panel lists (`services/evidence/metricEvidenceWrapped.ts`), so the panel
+ * names exactly the rows the chapter counted. The fold here never reads it.
+ */
+interface WithEntry {
+  entry?: EntryRef;
+}
+
+export interface WrappedStayRow extends WithEntry {
   year: number;
   /** Null when the record does not say how many nights. */
   nights: number | null;
 }
-export interface WrappedVisitRow {
+export interface WrappedVisitRow extends WithEntry {
   year: number;
   placeId: string;
 }
-export interface WrappedYearRow {
+export interface WrappedYearRow extends WithEntry {
   year: number;
 }
-export interface WrappedRentalRow {
+export interface WrappedRentalRow extends WithEntry {
   year: number;
   days: number;
 }
-export interface WrappedBusRow {
+export interface WrappedBusRow extends WithEntry {
   year: number;
   distanceKm: number | null;
   nights: number;

@@ -106,13 +106,15 @@ describe("the travel-account tiles open the measures they render", () => {
     getTravelAccount.mockResolvedValue(response());
   });
 
-  it("wires the two single-number trip cards and both figures of the coverage card", async () => {
+  it("wires the trip cards and both figures of the coverage card", async () => {
     expect(await keysOpened()).toEqual(
       [
         "travelAccountJournalEntryCount",
         "travelAccountUncoveredDayCount",
         "travelAccountFullyCoveredTripCount",
         "travelAccountTripsWithDatesCount",
+        // forgejo#265: the average trip length opens the trips it averages.
+        "travelAccountTripDaysTotal",
       ].sort()
     );
   });

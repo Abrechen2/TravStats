@@ -1,11 +1,20 @@
 import type { EvidenceScope } from "../../shared/evidence";
 import type { EvidenceResponse } from "../../schemas/evidence";
-import { busCountries, busYear } from "../../shared/busCounting";
+import { busCountries } from "../../shared/busCounting";
 import { isNightBusRide, terminalsOf } from "../../shared/busRideKinds";
-import { computeBusStats, loadBusRows, type BusStatsRow } from "../bus/busStats";
+import { busLongestReturn, computeBusStats, loadBusRows, type BusStatsRow } from "../bus/busStats";
+import { journeyTransferWaits, railJourneysOf } from "../rail/railJourneyStats";
+import { longestRide } from "../rail/railStats";
+import { rideHoursOnBoard } from "../../shared/railClock";
 import type { PagingParams } from "./paging";
 import { busEvidenceEntry } from "./entryMappersRentalBus";
-import { domainDistinctEvidence, domainSumEvidence, readYearScope } from "./domainMeasureResponse";
+import {
+  domainDistinctEvidence,
+  domainSumEvidence,
+  readDayScope,
+  requireLifetime,
+} from "./domainMeasureResponse";
+import { localDay } from "../../shared/time/instant";
 
 /**
  * The served bus measures (forgejo#263): the bus tab's figures and the bus
@@ -19,9 +28,16 @@ async function loadScoped(
   scope: EvidenceScope,
   key: string
 ): Promise<{ all: BusStatsRow[]; rows: BusStatsRow[] }> {
-  const year = readYearScope(scope, key);
+  // The day a ride left on its departure terminal's calendar (`busYear`'s day).
+  const inPeriod = readDayScope(scope, key);
   const all = await loadBusRows(userId);
-  return { all, rows: year === undefined ? all : all.filter((r) => busYear(r) === year) };
+  return {
+    all,
+    rows:
+      inPeriod === undefined
+        ? all
+        : all.filter((r) => inPeriod(localDay(r.departureTime, r.depTimezone ?? "UTC"))),
+  };
 }
 
 function busSum(
@@ -101,4 +117,97 @@ export async function resolveBusTerminalsCount(
     });
   });
   return domainDistinctEvidence({ key, unit: "terminals", scope, page, entries });
+}
+
+const round1 = (n: number): number => Math.round(n * 10) / 10;
+
+/** Hours on board: each ride with both clocks contributes its own (`rideHoursOnBoard`). */
+export async function resolveBusHoursOnBoard(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  const key = "busHoursOnBoard";
+  const { all, rows } = await loadScoped(userId, scope, key);
+  const entries = rows
+    .map((row) => ({ row, hours: rideHoursOnBoard(row) }))
+    .filter(({ hours }) => hours !== null)
+    .map(({ row, hours }) => busEvidenceEntry(row, { contribution: hours as number }));
+  const value = computeBusStats(rows, all).hoursOnBoard.hours;
+  return domainSumEvidence({ key, unit: "hours", scope, page, entries, value, round: round1 });
+}
+
+/**
+ * The changes the average change time is taken over, journey by journey —
+ * rail's grouping rule, listed under each journey's first ride.
+ */
+export async function resolveBusTransferCount(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  const key = "busTransferCount";
+  const { all, rows } = await loadScoped(userId, scope, key);
+  const entries = railJourneysOf(rows)
+    .map((journey) => ({ journey, waits: journeyTransferWaits(journey).length }))
+    .filter(({ waits }) => waits > 0)
+    .map(({ journey, waits }) => {
+      const first = journey[0];
+      const last = journey[journey.length - 1];
+      return busEvidenceEntry(
+        { ...first, arrStationName: last.arrStationName },
+        { contribution: waits }
+      );
+    });
+  const value = computeBusStats(rows, all).transfers.count;
+  return domainSumEvidence({ key, unit: "transfers", scope, page, entries, value });
+}
+
+/** The longest ride (a record) as its one witness — a one-row sum, as rail's. */
+export async function resolveBusLongestRide(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  const key = "busLongestRide";
+  const { rows } = await loadScoped(userId, scope, key);
+  const best = longestRide(rows);
+  const km = best ? (best.distanceKm as number) : null;
+  const entries = best ? [busEvidenceEntry(best, { contribution: km as number })] : [];
+  return domainSumEvidence({
+    key,
+    unit: "km",
+    scope,
+    page,
+    entries,
+    value: km,
+    abstained: rows.length,
+  });
+}
+
+/**
+ * The longest pause before coming back to a terminal — a LIFETIME figure on
+ * the tab whatever year is picked, so it is served for `allTime` only. Its
+ * witness is the ride that came back, contributing the days of the pause.
+ */
+export async function resolveBusLongestReturn(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  const key = "busLongestReturn";
+  requireLifetime(scope, key);
+  const all = await loadBusRows(userId);
+  const best = busLongestReturn(all);
+  const ride = best ? all.find((r) => r.id === best.rideId) : undefined;
+  const entries = best && ride ? [busEvidenceEntry(ride, { contribution: best.days })] : [];
+  return domainSumEvidence({
+    key,
+    unit: "days",
+    scope,
+    page,
+    entries,
+    value: best?.days ?? null,
+    abstained: all.length,
+  });
 }

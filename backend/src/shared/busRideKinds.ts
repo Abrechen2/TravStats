@@ -166,6 +166,8 @@ export interface TerminalEvent {
   at: Date;
   /** `YYYY-MM-DD` on the terminal's calendar — what a gap is measured in. */
   day: string;
+  /** The ride this end belongs to, when the caller wants the return named (evidence). */
+  rideId?: string;
 }
 
 /**
@@ -181,15 +183,22 @@ export interface TerminalEvent {
  * to nothing; leaving A and arriving back at A three weeks later does.
  */
 export function longestReturnDays(events: readonly TerminalEvent[]): number | null {
+  return longestReturn(events)?.days ?? null;
+}
+
+/** `longestReturnDays` with its witness: the event that started the return visit. */
+export function longestReturn(
+  events: readonly TerminalEvent[]
+): { days: number; returning: TerminalEvent } | null {
   const ordered = [...events].sort((a, b) => a.at.getTime() - b.at.getTime());
-  let best: number | null = null;
+  let best: { days: number; returning: TerminalEvent } | null = null;
   let open = false;
   let lastDay: string | null = null;
   for (const event of ordered) {
     const startsVisit = event.kind === "arr" || !open;
     if (startsVisit && lastDay !== null) {
       const gap = Math.round((Date.parse(event.day) - Date.parse(lastDay)) / 86_400_000);
-      if (gap > 0 && (best === null || gap > best)) best = gap;
+      if (gap > 0 && (best === null || gap > best.days)) best = { days: gap, returning: event };
     }
     open = event.kind === "arr";
     lastDay = event.day;

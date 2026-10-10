@@ -3,6 +3,8 @@ import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { WrappedChapters } from "../../../types/wrapped";
 import StatCard from "../StatCard";
+import CountingHelp from "../counting/CountingHelp";
+import type { CountingEntry } from "../counting/countingEntry";
 
 /**
  * The year in review's chapters beyond flights, cruises and rail
@@ -11,22 +13,60 @@ import StatCard from "../StatCard";
  * reader does not see, and a null draws nothing rather than a card of zeros.
  * Each card is its own figure: rental days are not travel days, a stay's
  * nights are not a roadtrip's, and nothing here adds them up.
+ *
+ * Every number opens the rows its chapter counted (`wrapped*` measures,
+ * `services/evidence/metricEvidenceWrapped.ts`), scoped to the one year on
+ * screen, and the cards close with one "So wird gezählt" for the chapters
+ * drawn, spanning the grid they sit in.
  */
 export default function WrappedChapterCards({
   chapters,
   count,
+  year,
 }: {
   chapters: WrappedChapters;
   count: (value: number) => string;
+  /** The year in review's one year — the population every chapter counted. */
+  year: number;
 }): JSX.Element {
   const { t } = useTranslation(["stats"]);
   const { lodging, places, roadtrips, tours, rentals, bus } = chapters;
+  const evidence = (key: string, renderedValue: number) => ({
+    kind: "metric" as const,
+    key,
+    scope: { period: "year" as const, year },
+    renderedValue,
+  });
+  const help: CountingEntry[] = [
+    lodging !== null && {
+      term: t("stats:wrapped.chapters.stays"),
+      helpKey: "stats:wrapped.help.stays",
+    },
+    places !== null && {
+      term: t("stats:wrapped.chapters.places"),
+      helpKey: "stats:wrapped.help.places",
+    },
+    roadtrips !== null && {
+      term: t("stats:wrapped.chapters.roadtrips"),
+      helpKey: "stats:wrapped.help.roadtrips",
+    },
+    tours !== null && {
+      term: t("stats:wrapped.chapters.tours"),
+      helpKey: "stats:wrapped.help.tours",
+    },
+    rentals !== null && {
+      term: t("stats:wrapped.chapters.rentals"),
+      helpKey: "stats:wrapped.help.rentals",
+    },
+    bus !== null && { term: t("stats:wrapped.chapters.bus"), helpKey: "stats:wrapped.help.bus" },
+  ].filter((entry): entry is CountingEntry => entry !== false);
   return (
     <>
       {lodging !== null && (
         <StatCard
           title={t("stats:wrapped.chapters.stays")}
           value={count(lodging.stays)}
+          evidence={evidence("wrappedStayCount", lodging.stays)}
           description={
             lodging.nightsUnknown > 0
               ? t("stats:wrapped.chapters.staysDescUnknown", {
@@ -41,6 +81,7 @@ export default function WrappedChapterCards({
         <StatCard
           title={t("stats:wrapped.chapters.places")}
           value={count(places.visits)}
+          evidence={evidence("wrappedPlaceVisitCount", places.visits)}
           description={t("stats:wrapped.chapters.placesDesc", { count: places.places })}
         />
       )}
@@ -48,6 +89,7 @@ export default function WrappedChapterCards({
         <StatCard
           title={t("stats:wrapped.chapters.roadtrips")}
           value={count(roadtrips.roadtrips)}
+          evidence={evidence("wrappedRoadtripCount", roadtrips.roadtrips)}
           description={t("stats:wrapped.chapters.roadtripsDesc")}
         />
       )}
@@ -55,6 +97,7 @@ export default function WrappedChapterCards({
         <StatCard
           title={t("stats:wrapped.chapters.tours")}
           value={count(tours.tours)}
+          evidence={evidence("wrappedTourCount", tours.tours)}
           description={t("stats:wrapped.chapters.toursDesc")}
         />
       )}
@@ -62,6 +105,7 @@ export default function WrappedChapterCards({
         <StatCard
           title={t("stats:wrapped.chapters.rentals")}
           value={count(rentals.rentals)}
+          evidence={evidence("wrappedRentalCount", rentals.rentals)}
           description={t("stats:wrapped.chapters.rentalsDesc", { count: rentals.days })}
         />
       )}
@@ -69,6 +113,7 @@ export default function WrappedChapterCards({
         <StatCard
           title={t("stats:wrapped.chapters.bus")}
           value={count(bus.rides)}
+          evidence={evidence("wrappedBusRideCount", bus.rides)}
           description={[
             // Unknown stays unknown (review I4): no "0 km" for unmeasured rides.
             bus.km === null
@@ -82,6 +127,11 @@ export default function WrappedChapterCards({
             .filter(Boolean)
             .join(" · ")}
         />
+      )}
+      {help.length > 0 && (
+        <div className="col-span-full">
+          <CountingHelp testId="wrapped-chapters-help" entries={help} />
+        </div>
       )}
     </>
   );

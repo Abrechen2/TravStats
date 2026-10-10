@@ -7,7 +7,11 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import type { BusStats } from "../../../types/bus";
 import type { SectionVisibility } from "../../../hooks/useSectionVisibility";
-import { comparisonWindow, sameSpanUntil } from "../../../lib/stats/comparisonWindow";
+import {
+  comparisonEvidenceScope,
+  comparisonWindow,
+  sameSpanUntil,
+} from "../../../lib/stats/comparisonWindow";
 import type { PeriodScope } from "../useStatsPeriod";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import StatCard from "../StatCard";
@@ -42,6 +46,8 @@ export default function BusStatsSection({
     current: BusStats;
     previous: BusStats;
     samePeriod: boolean;
+    /** "MM-DD" the pair was cut at, or null for whole years. */
+    until: string | null;
   } | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -67,7 +73,7 @@ export default function BusStatsSection({
         setPair(
           prior === null
             ? null
-            : { current: cut ?? whole, previous: prior, samePeriod: cut !== null }
+            : { current: cut ?? whole, previous: prior, samePeriod: cut !== null, until }
         );
       } catch (err) {
         logger.error("BusStatsSection: fetch failed", err);
@@ -119,7 +125,8 @@ export default function BusStatsSection({
               evidenceKey: "busDistanceKmTotal",
             },
           ]}
-          evidence={{ scope: { period: "year", year } }}
+          // The figure on the strip is the cut one: its entries are the same span.
+          evidence={{ scope: comparisonEvidenceScope(year, pair.until) }}
         />
       </div>
     ) : null;
@@ -186,6 +193,7 @@ export default function BusStatsSection({
                 count: hoursOnBoard.measuredRides,
                 total: stats.rides,
               })}
+              evidence={evidence("busHoursOnBoard", hoursOnBoard.hours)}
             />
             <StatCard
               accent={accent}
@@ -227,6 +235,7 @@ export default function BusStatsSection({
                   ? t("bus:stats.transfersNone")
                   : t("bus:stats.transfersDesc", { count: stats.transfers.count })
               }
+              evidence={evidence("busTransferCount", stats.transfers.count)}
             />
             <StatCard
               accent={accent}
@@ -238,6 +247,13 @@ export default function BusStatsSection({
                   : t("bus:stats.daysValue", { count: stats.longestReturn.days })
               }
               description={stats.longestReturn?.terminal ?? t("bus:stats.longestReturnNone")}
+              // A lifetime figure whatever year is picked, so its entries are too.
+              evidence={{
+                kind: "metric",
+                key: "busLongestReturn",
+                scope: { period: "allTime" },
+                renderedValue: stats.longestReturn?.days ?? null,
+              }}
             />
           </div>
           <CountingHelp
@@ -246,6 +262,7 @@ export default function BusStatsSection({
               { term: t("bus:stats.rides"), helpKey: "bus:stats.help.rides" },
               { term: t("bus:stats.km"), helpKey: "bus:stats.help.km" },
               { term: t("bus:stats.hours"), helpKey: "bus:stats.help.hours" },
+              { term: t("bus:stats.countries"), helpKey: "bus:stats.help.countries" },
               { term: t("bus:stats.nightRides"), helpKey: "bus:stats.help.night" },
               { term: t("bus:stats.terminalsVisited"), helpKey: "bus:stats.help.terminals" },
               { term: t("bus:stats.transfers"), helpKey: "bus:stats.help.transfers" },

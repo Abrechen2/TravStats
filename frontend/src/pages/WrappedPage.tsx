@@ -5,9 +5,9 @@ import PageHeader from "../components/ui/PageHeader";
 import { Select } from "../components/ui/Field";
 import StatCard from "../components/Stats/StatCard";
 import StatsSectionsLoadError from "../components/Stats/StatsSectionsLoadError";
+import EvidencePanel from "../components/evidence/EvidencePanel";
 import { useTranslation } from "../hooks/useTranslation";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
-import { useRailVisible } from "../hooks/useRailVisible";
 import { statsApi } from "../lib/api";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { formatDistance, localeForLanguage } from "../lib/units";
@@ -63,9 +63,8 @@ export default function WrappedPage(): JSX.Element {
   const [failure, setFailure] = useState<LoadFailure | null>(null);
 
   const flightsOn = isEnabled("flight");
-  const cruisesOn = isEnabled("cruise");
-  // Rail sits behind its beta gate as well as the user's own switch.
-  const railOn = useRailVisible();
+  // The server says which domains this reader sees: a hidden one answers null
+  // (forgejo#265), so the cards follow the payload, not a second client rule.
   const locale = localeForLanguage(i18n.language);
   const count = (value: number): string => value.toLocaleString(locale);
 
@@ -205,8 +204,8 @@ export default function WrappedPage(): JSX.Element {
               "Flüge 0 / Strecke 0 km" — every figure on screen a zero, and the
               one number that was not zero hidden. */}
           {(!flightsOn || wrapped.flights === 0) &&
-          (!cruisesOn || wrapped.cruises === 0) &&
-          (!railOn || (wrapped.railRides ?? 0) === 0) &&
+          (wrapped.cruises ?? 0) === 0 &&
+          (wrapped.railRides ?? 0) === 0 &&
           !chaptersHoldAnything(wrapped.chapters) ? (
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
               {t("stats:wrapped.emptyYear", { year: wrapped.year })}
@@ -244,7 +243,7 @@ export default function WrappedPage(): JSX.Element {
               />
               {/* Only where the reader has cruises at all: a zero on an
                   account that does not sail is noise, not a figure. */}
-              {cruisesOn && (
+              {wrapped.cruises !== null && (
                 <StatCard
                   title={t("stats:wrapped.cruises")}
                   value={count(wrapped.cruises)}
@@ -252,22 +251,26 @@ export default function WrappedPage(): JSX.Element {
                 />
               )}
               {/* Train rides, where rail is visible — the same rule as cruises. */}
-              {railOn && (
+              {wrapped.railRides !== null && (
                 <StatCard
                   title={t("stats:wrapped.rail")}
-                  value={count(wrapped.railRides ?? 0)}
+                  value={count(wrapped.railRides)}
                   description={
                     (wrapped.railStraightLineKm ?? 0) > 0
                       ? t("stats:wrapped.railDescStraight", {
-                          km: count(wrapped.railKm),
-                          straight: count(wrapped.railStraightLineKm),
+                          km: count(wrapped.railKm ?? 0),
+                          straight: count(wrapped.railStraightLineKm ?? 0),
                         })
                       : t("stats:wrapped.railDesc", { km: count(wrapped.railKm ?? 0) })
                   }
                 />
               )}
               {wrapped.chapters && (
-                <WrappedChapterCards chapters={wrapped.chapters} count={count} />
+                <WrappedChapterCards
+                  chapters={wrapped.chapters}
+                  count={count}
+                  year={wrapped.year}
+                />
               )}
               {flightsOn && wrapped.topAirline !== null && (
                 <StatCard
@@ -294,6 +297,8 @@ export default function WrappedPage(): JSX.Element {
           )}
         </>
       )}
+      {/* The chapter cards open the rows they counted (forgejo#265). */}
+      <EvidencePanel />
     </AppShell>
   );
 }

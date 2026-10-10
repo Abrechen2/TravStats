@@ -284,8 +284,21 @@ registry.registerPath({
         ),
     }),
     query: z.object({
-      period: z.enum(["allTime", "year", "rolling12m"]).optional(),
+      period: z
+        .enum(["allTime", "year", "rolling12m", "range"])
+        .optional()
+        .describe(
+          "`range` is the days `from`..`to`, both included, each record on its own " +
+            "calendar — what a same-span year comparison counted. Only measures whose " +
+            "registry scopes list `range` accept it (rail rides, km and countries; rentals " +
+            "and rental days; bus rides and km); every other answers 400."
+        ),
       year: z.coerce.number().int().optional().describe("Required when period=year"),
+      from: z.string().optional().describe("`YYYY-MM-DD`; required when period=range"),
+      to: z
+        .string()
+        .optional()
+        .describe("`YYYY-MM-DD`, not before `from`; required when period=range"),
       domains: z.string().optional().describe("Comma-separated domains, e.g. `flight,cruise`"),
       offset: z.coerce.number().int().min(0).optional(),
       limit: z.coerce

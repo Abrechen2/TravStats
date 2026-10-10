@@ -134,7 +134,7 @@
     "distanceKm": "Gefahrene Kilometer (Korrektur)",
     "odometerOutKm": "Kilometerstand bei Abholung",
     "odometerInKm": "Kilometerstand bei Rückgabe",
-    "distanceHint": "Die gefahrenen Kilometer kommen aus der Schlussrechnung, sonst aus den beiden Kilometerständen (Rückgabe minus Abholung). Ein Wert unter „Korrektur“ geht beidem vor und wird als Korrektur von Hand angezeigt.",
+    "distanceHint": "Die gefahrenen Kilometer kommen aus der Schlussrechnung oder dem Mietvertrag, sonst aus den beiden Kilometerständen (Rückgabe minus Abholung). Ein Wert unter „Korrektur“ geht allem vor und wird als Korrektur von Hand angezeigt.",
     "driven": "Gefahren: {{km}} km ({{source}})",
     "drivenUnknown": "Gefahrene Kilometer: noch nicht bekannt",
     "notes": "Notizen",
@@ -328,7 +328,7 @@
     "brokers": "Vermittler",
     "noBrokers": "Keine Miete über einen Vermittler gebucht.",
     "kmPerDay": "Kilometer pro Miettag",
-    "kmPerDayNone": "Bei keiner Miete sind Kilometer bekannt — eine Rechnung oder beide Kilometerstände liefern sie.",
+    "kmPerDayNone": "Bei keiner Miete sind Kilometer bekannt — die Rechnung, der Mietvertrag, eine Korrektur von Hand oder beide Kilometerstände liefern sie.",
     "kmPerDaySample_one": "{{km}} km in {{days}} Tagen, aus {{count}} Miete",
     "kmPerDaySample_other": "{{km}} km in {{days}} Tagen, aus {{count}} Mieten",
     "costPerKm": "Kosten pro Kilometer",
@@ -371,20 +371,20 @@
         "time": "Es gilt der Kalender der Stationen: der Abholtag am Ort der Abholstation, der Rückgabetag am Ort der Rückgabestation – nicht dein Gerät, nicht UTC. Eine Miete zählt im Jahr der Abholung.",
         "source": "Mietwagen-Buchungen mit Abhol- und Rückgabezeit.",
         "coverage": "Jede abgeschlossene Miete trägt beide Zeiten und zählt deshalb vollständig; die Zeile unter der Zahl nennt, wie viele Mieten es sind.",
-        "exclusions": "Gezählt werden nur abgeschlossene Mieten – solche, deren Rückgabe vorbei ist; geplante, laufende und stornierte zählen nicht. Miettage werden nicht zusätzlich zu Reisetagen addiert."
+        "exclusions": "Gezählt werden nur abgeschlossene Mieten – solche, deren Rückgabe vorbei ist; geplante, laufende und stornierte zählen nicht. Miettage werden nicht zusätzlich zu Reisetagen addiert: Die Übersicht (Erlebnisse, aktive Reisetage, Länder) und das Reisekonto lesen keine Mieten, und der Jahresrückblick zeigt Miettage nur in ihrem eigenen Kapitel."
       },
       "km": {
         "unit": "Ein gefahrener Kilometer. Die Kachel zeigt die Summe über die Mieten mit bekannten Kilometern.",
         "time": "Eine Miete zählt im Jahr ihrer Abholung, nach dem Kalender der Abholstation.",
         "source": "Abgeschlossene Mieten. Gefahrene Kilometer stammen aus der Rechnung oder dem Mietvertrag, einer gekennzeichneten Korrektur oder – wenn keine dieser Zahlen eingetragen ist – aus beiden Kilometerständen (Rückgabe minus Abholung). Eine eingetragene Zahl hat Vorrang vor den Kilometerständen.",
-        "coverage": "Eine Miete ohne Kilometer bleibt draußen; die Zeile darunter sagt, wie viele Mieten die Summe tragen. Ein einzelner Kilometerstand reicht nicht, und ein Rückgabestand unter dem Abholstand zählt nicht.",
+        "coverage": "Eine Miete ohne Kilometer bleibt draußen; die Zeile darunter sagt, wie viele Mieten die Summe tragen. Ein einzelner Kilometerstand reicht nicht, und ein Rückgabestand unter dem Abholstand zählt nicht. Ein Tipp auf die Zahl zeigt die Mieten mit ihren Kilometern.",
         "exclusions": "Nie geschätzt. Geplante, laufende und stornierte Mieten zählen nicht."
       },
       "costPerDay": {
         "unit": "Ein Betrag pro Miettag, je Währung: die Kosten der Mieten mit Preis geteilt durch die Miettage derselben Mieten.",
         "time": "Eine Miete zählt im Jahr ihrer Abholung, nach dem Kalender der Abholstation; die Miettage nach dem Kalender der Stationen.",
         "source": "Abgeschlossene Mieten: der Endbetrag der Rechnung, sonst der gebuchte Preis.",
-        "coverage": "Eine Miete ohne Preis und ohne Endbetrag bleibt draußen, nie als Null; die Zeile darunter nennt, aus wie vielen Mieten mit bekanntem Preis die Zahl stammt. Weitere Währungen stehen getrennt darunter.",
+        "coverage": "Eine Miete ohne Preis und ohne Endbetrag bleibt draußen, nie als Null; die Zeile darunter nennt, aus wie vielen Mieten mit bekanntem Preis die Zahl stammt. Weitere Währungen stehen getrennt darunter. Ein Tipp auf die Zahl zeigt die Mieten mit bekanntem Preis, aus denen sie stammt.",
         "exclusions": "Währungen werden nie zusammengerechnet; eine Kaution ist kein Kostenbetrag. Stornogebühren stehen getrennt, in einer eigenen Zeile unter dem Jahr der Abholung, und nie in den Kosten pro Tag."
       },
       "oneWay": {
@@ -398,21 +398,21 @@
         "unit": "Eine Miete. Der Vermieter ist die Firma am Schalter (Sixt, Alamo). Ein Vermittler ist das Portal oder der Reiseveranstalter, über den gebucht wurde (Check24, billiger-mietwagen). Vermieter werden nach Miettagen gereiht, Vermittler nach Mieten.",
         "time": "Eine Miete zählt im Jahr ihrer Abholung, nach dem Kalender der Abholstation.",
         "source": "Abgeschlossene Mieten mit ihrem Vermieter und, wo eingetragen, ihrem Vermittler.",
-        "coverage": "Eine Miete ohne Vermittler zählt als direkt beim Vermieter gebucht; die Zeile unter „Über Vermittler gebucht“ nennt, wie viele das sind.",
+        "coverage": "Eine Miete ohne Vermittler zählt als direkt beim Vermieter gebucht; die Zeile unter „Über Vermittler gebucht“ nennt, wie viele das sind. Ein Tipp auf „Über Vermittler gebucht“ zeigt diese Mieten.",
         "exclusions": "Vermittler zählen nicht als Vermieter. Geplante, laufende und stornierte Mieten zählen nicht."
       },
       "kmPerDay": {
         "unit": "Kilometer pro Miettag: die Kilometer der Mieten mit bekannten Kilometern, geteilt durch die Miettage genau dieser Mieten – nie Kilometer der einen durch Tage der anderen. Gerundet auf eine Nachkommastelle.",
         "time": "Eine Miete zählt im Jahr ihrer Abholung, nach dem Kalender der Abholstation; die Miettage nach dem Kalender der Stationen.",
         "source": "Abgeschlossene Mieten; Kilometer aus Rechnung oder Mietvertrag, einer gekennzeichneten Korrektur oder beiden Kilometerständen.",
-        "coverage": "Mieten ohne bekannte Kilometer bleiben draußen; die Zeile darunter nennt Kilometer, Tage und die Zahl der Mieten, auf denen der Wert steht.",
+        "coverage": "Mieten ohne bekannte Kilometer bleiben draußen; die Zeile darunter nennt Kilometer, Tage und die Zahl der Mieten, auf denen der Wert steht. Ein Tipp auf die Zahl zeigt die Mieten, auf denen der Wert steht.",
         "exclusions": "Nie geschätzt. Geplante, laufende und stornierte Mieten zählen nicht."
       },
       "costPerKm": {
         "unit": "Ein Betrag pro Kilometer, je Währung: die Kosten der Mieten, die zugleich einen Preis und bekannte Kilometer haben, geteilt durch deren Kilometer.",
         "time": "Eine Miete zählt im Jahr ihrer Abholung, nach dem Kalender der Abholstation.",
         "source": "Abgeschlossene Mieten: der Endbetrag der Rechnung, wo es einen gibt, sonst der gebuchte Preis; Kilometer aus Rechnung oder Mietvertrag, einer gekennzeichneten Korrektur oder beiden Kilometerständen.",
-        "coverage": "Nur Mieten mit beidem zählen; die Zeile darunter nennt, aus wie vielen Mieten der Wert stammt.",
+        "coverage": "Nur Mieten mit beidem zählen; die Zeile darunter nennt, aus wie vielen Mieten der Wert stammt. Ein Tipp auf die Zahl zeigt die Mieten, auf denen der Wert steht.",
         "exclusions": "Eine Miete mit 0 gefahrenen Kilometern trägt keinen Preis pro Kilometer. Währungen werden nie zusammengerechnet. Geplante, laufende und stornierte Mieten zählen nicht."
       },
       "bookedVsFinal": {
@@ -426,15 +426,43 @@
         "unit": "Eine Miete, bei der Beispielmodell und gefahrenes Auto beide bekannt sind. Die Kachel zeigt, wie oft du das gebuchte Beispielmodell („VW Golf oder ähnlich“) bekommen hast, von wie vielen verglichenen Mieten.",
         "time": "Eine Miete zählt im Jahr ihrer Abholung, nach dem Kalender der Abholstation.",
         "source": "Abgeschlossene Mieten mit Beispielmodell und gefahrenem Auto. Verglichen wird ohne Rücksicht auf Groß- und Kleinschreibung und Leerzeichen; ein angehängtes „oder ähnlich“ gehört nicht zum Modell.",
-        "coverage": "Mieten, denen eines der beiden fehlt, bleiben draußen; die Zeile darunter nennt, wie oft es ein anderes Modell war.",
+        "coverage": "Mieten, denen eines der beiden fehlt, bleiben draußen; die Zeile darunter nennt, wie oft es ein anderes Modell war. Ein Tipp auf die Zahl zeigt die verglichenen Mieten.",
         "exclusions": "Ohne Wertung: Eine feste Rangfolge der Fahrzeugklassen gibt es nicht, deshalb ist hier nie von einem Upgrade die Rede."
       },
       "records": {
         "unit": "Drei Rekorde: längste Miete nach Miettagen; weiteste Strecke nach gefahrenen Kilometern einer Miete; neue Vermieter als Liste.",
         "time": "Eine Miete zählt im Jahr ihrer Abholung, nach dem Kalender der Abholstation. Ein Vermieter gilt als neu in dem Zeitraum, in dem seine erste abgeschlossene Miete liegt – gemessen am Abholtag über alle Jahre.",
         "source": "Abgeschlossene Mieten. Vermieternamen werden ohne Rücksicht auf Groß- und Kleinschreibung und Leerzeichen verglichen.",
-        "coverage": "Weiteste Strecke nur aus bekannten Kilometern; ohne sie bleibt der Rekord leer.",
+        "coverage": "Weiteste Strecke nur aus bekannten Kilometern; ohne sie bleibt der Rekord leer. Ein Tipp auf einen Rekord zeigt die Miete, die ihn hält; bei den neuen Vermietern die jeweils erste Miete.",
         "exclusions": "Eine Miete mit 0 Kilometern ist kein Streckenrekord. Geplante, laufende und stornierte Mieten zählen nicht."
+      },
+      "providers": {
+        "unit": "Miettage je Vermieter – der Firma am Schalter –, gereiht nach Miettagen, bei Gleichstand nach Mieten.",
+        "time": "Eine Miete zählt im Jahr ihrer Abholung, nach dem Kalender der Abholstation. Die Miettage nach dem Kalender der Stationen.",
+        "source": "Abgeschlossene Mieten mit ihrem Vermieter, so geschrieben, wie er eingetragen ist.",
+        "coverage": "Jede Miete nennt einen Vermieter und zählt daher mit.",
+        "exclusions": "Vermittler zählen nicht als Vermieter; sie stehen unter „Vermittler“. Geplante, laufende und stornierte Mieten zählen nicht."
+      },
+      "countries": {
+        "unit": "Ein Land, in dem eine Abhol- oder Rückgabestation liegt; jedes Land zählt einmal.",
+        "time": "Eine Miete zählt im Jahr ihrer Abholung, nach dem Kalender der Abholstation.",
+        "source": "Der Ländercode von Abhol- und Rückgabestation deiner abgeschlossenen Mieten.",
+        "coverage": "Eine Station ohne bekannten Ländercode trägt kein Land bei.",
+        "exclusions": "Länder, durch die du nur gefahren bist, zählen nicht – bekannt sind nur die Stationen. Geplante, laufende und stornierte Mieten zählen nicht."
+      },
+      "byYear": {
+        "unit": "Miettage je Jahr.",
+        "time": "Eine Miete zählt im Jahr ihrer Abholung, nach dem Kalender der Abholstation. Die Liste zeigt alle Jahre, sobald es mindestens zwei gibt – auch wenn oben ein Jahr gewählt ist.",
+        "source": "Deine abgeschlossenen Mieten.",
+        "coverage": "Jede abgeschlossene Miete trägt Abhol- und Rückgabezeit und zählt mit ihren Miettagen.",
+        "exclusions": "Geplante, laufende und stornierte Mieten zählen nicht. Miettage werden nicht zu Reisetagen addiert."
+      },
+      "vehicles": {
+        "unit": "Verschiedene gefahrene Modelle: jedes Modell zählt einmal, ohne Rücksicht auf Groß- und Kleinschreibung und Leerzeichen. Gebuchte Fahrzeugklassen: Mieten je Klasse, wie sie gedruckt ist (sonst der ACRISS-Code), die zehn häufigsten.",
+        "time": "Eine Miete zählt im Jahr ihrer Abholung, nach dem Kalender der Abholstation.",
+        "source": "Abgeschlossene Mieten mit dem gefahrenen Auto beziehungsweise der gebuchten Klasse.",
+        "coverage": "Mieten ohne gefahrenes Auto fehlen bei den Modellen – die Zeile darunter nennt, wie viele eines nennen; Mieten ohne Klasse fehlen in der Klassenliste. Ein Tipp auf die Zahl zeigt die Mieten mit ihrem Modell.",
+        "exclusions": "Klassen werden nicht in eine Rangfolge gebracht, es gibt also kein „Upgrade“. Geplante, laufende und stornierte Mieten zählen nicht."
       }
     }
   },

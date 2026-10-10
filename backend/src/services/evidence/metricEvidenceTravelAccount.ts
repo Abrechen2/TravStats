@@ -401,6 +401,36 @@ export async function resolveTravelAccountTripsWithDatesCount(
   });
 }
 
+/**
+ * The days the average trip length is taken over (forgejo#265): each dated
+ * trip contributes its own days, start and end day included — the numerator
+ * of "Ø Reisedauer", over the very trips `travelAccountTripsWithDatesCount`
+ * lists as its denominator. The ratio itself is release 2; this sum lets the
+ * card open the trips behind it today.
+ */
+export async function resolveTravelAccountTripDaysTotal(
+  userId: string,
+  scope: EvidenceScope,
+  page: PagingParams
+): Promise<EvidenceResponse> {
+  requireAllTime(scope, "travelAccountTripDaysTotal");
+  const { rows, startDateById } = await loadTripAccount(userId);
+  const dated = rows.trips.filter((trip) => trip.days !== null);
+  return sumResponse({
+    key: "travelAccountTripDaysTotal",
+    unit: "days",
+    scope,
+    page,
+    value: dated.reduce((sum, trip) => sum + (trip.days ?? 0), 0),
+    entries: dated.map((trip) =>
+      tripEvidenceEntry(
+        { id: trip.id, name: trip.name, startDate: startDateById.get(trip.id) ?? null },
+        { contribution: trip.days ?? 0, subtitle: null }
+      )
+    ),
+  });
+}
+
 export async function resolveTravelAccountFullyCoveredTripCount(
   userId: string,
   scope: EvidenceScope,

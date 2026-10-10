@@ -42,7 +42,33 @@ export function readYearScope(scope: EvidenceScope, key: string): number | undef
       400
     );
   }
+  if (scope.period.kind === "range") {
+    throw new AppError(`${key} evidence does not support period=range.`, 400);
+  }
   return scope.period.kind === "year" ? scope.period.year : undefined;
+}
+
+/** A figure the surface shows for the whole logbook whatever year is picked: lifetime only. */
+export function requireLifetime(scope: EvidenceScope, key: string): void {
+  if (scope.period.kind !== "allTime") {
+    throw new AppError(`${key} evidence supports period=allTime only.`, 400);
+  }
+}
+
+/**
+ * The period as a test on a record's own day (`YYYY-MM-DD` on its calendar):
+ * `undefined` for lifetime, the year's days for `year`, the span both ends
+ * included for `range` (forgejo#265). A rolling window is refused, as in
+ * `readYearScope`.
+ */
+export function readDayScope(
+  scope: EvidenceScope,
+  key: string
+): ((day: string) => boolean) | undefined {
+  const { period } = scope;
+  if (period.kind === "range") return (day) => day >= period.from && day <= period.to;
+  const year = readYearScope(scope, key);
+  return year === undefined ? undefined : (day) => day.startsWith(`${year}-`);
 }
 
 interface DomainSumArgs {
@@ -64,6 +90,13 @@ interface DomainSumArgs {
   /** The surface's own rounding step, applied ONCE to the total. */
   round?: (total: number) => number;
   unattributed?: EvidenceResponse["unattributed"];
+  /**
+   * The records in scope that could not answer when `value` is null (no km on
+   * any rental, no ride to hold a record). A null value always carries its
+   * reason; with no `unattributed` of its own, the response says these many
+   * records hold no per-entry share (`notPerEntry`) rather than a bare null.
+   */
+  abstained?: number;
 }
 
 export function domainSumEvidence({
@@ -75,6 +108,7 @@ export function domainSumEvidence({
   value,
   round = Math.round,
   unattributed = [],
+  abstained = 0,
 }: DomainSumArgs): EvidenceResponse {
   const paged = pageSumEntries(entries, page);
   return {
@@ -90,7 +124,10 @@ export function domainSumEvidence({
     entries: paged.entries,
     returned: paged.entries.length,
     omitted: { count: paged.omittedCount, contribution: paged.omittedContribution },
-    unattributed,
+    unattributed:
+      value === null && unattributed.length === 0
+        ? [{ count: abstained, reason: "notPerEntry" }]
+        : unattributed,
     page,
   };
 }

@@ -4,6 +4,7 @@ import TrendDelta from "../TrendDelta";
 import EvidenceTrigger from "../EvidenceTrigger";
 import type { EvidenceKind } from "../../../shared/evidence";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
+import type { CountingSource } from "../counting/countingEntry";
 
 export interface ScorecardTileVM {
   key: string;
@@ -22,12 +23,15 @@ export interface ScorecardTileVM {
   compareLabel?: string;
   /** Present when this tile's number is a served evidence measure — every scorecard tile currently is (Task 9). */
   evidence?: { kind: EvidenceKind; key: string; scope: EvidenceScopeParams };
+  /** Where this tile's "So wird gezählt" answers live; `KpiScorecard` lists them under the row. */
+  help?: CountingSource;
 }
 
 // Hero KPI tile: big value + one-line takeaway (HIG), label-free sparkline
 // (HIG sneak-peek), and a delta vs. the previous window (Few: current values
 // need history).
 export default function ScorecardTile({
+  help: _help,
   label,
   value,
   takeaway,

@@ -3,6 +3,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { comparisonWindow } from "../../lib/stats/comparisonWindow";
 import TrendDelta from "./TrendDelta";
 import EvidenceTrigger from "./EvidenceTrigger";
+import CountingHelp from "./counting/CountingHelp";
 import type { EvidenceScopeParams } from "../evidence/useEvidence";
 
 export interface ComparisonRow {
@@ -154,6 +155,19 @@ export default function PeriodComparisonStrip({
           );
         })}
       </div>
+      {/* One answer for the comparison itself; each figure's own counting
+          rule is the help of the tab it sits on. */}
+      <CountingHelp
+        testId="period-comparison-help"
+        entries={[
+          {
+            // The comparison as a whole ("Jahr 2026 · ggü. 2025") — a name of
+            // its own, not the strip's region label a second time.
+            term: `${t("stats:yearFilter.scopeLabel", { year })} · ${t(vsKey, { year: compareYear })}`,
+            helpKey: "stats:yearFilter.help",
+          },
+        ]}
+      />
     </section>
   );
 }

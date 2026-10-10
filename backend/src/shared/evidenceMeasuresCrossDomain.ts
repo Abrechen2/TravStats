@@ -145,6 +145,15 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
     calculator: TRAVEL_ACCOUNT_TRIPS_CALCULATOR,
     servedIn: 1,
   },
+  /** The numerator of the average trip length — the card opens the trips it is taken over. */
+  travelAccountTripDaysTotal: {
+    aggregation: "sum",
+    unit: "days",
+    scopes: ["allTime"],
+    surface: "TravelAccountSection",
+    calculator: TRAVEL_ACCOUNT_TRIPS_CALCULATOR,
+    servedIn: 1,
+  },
   travelAccountAvgTripDays: {
     aggregation: "ratio",
     unit: "days",

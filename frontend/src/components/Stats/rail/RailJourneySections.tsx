@@ -111,6 +111,7 @@ export default function RailJourneySections({
                       longest: minutes(transfers.longestMinutes),
                     })
               }
+              evidence={evidence("railTransferCount", transfers.count)}
             />
             <StatCard
               accent={accent}

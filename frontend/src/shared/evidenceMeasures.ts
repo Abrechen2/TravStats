@@ -53,6 +53,8 @@ import { CRUISE_INSIGHT_MEASURES } from "./evidenceMeasuresCruiseInsights";
 import { INSIGHT_MEASURES } from "./evidenceMeasuresInsights";
 import { PLACE_ROADTRIP_DETAIL_MEASURES } from "./evidenceMeasuresPlaceRoadtripDetail";
 import { DOMAIN_DETAIL_MEASURES } from "./evidenceMeasuresDomainDetail";
+import { OVERVIEW_MEASURES } from "./evidenceMeasuresOverview";
+import { BADGE_MEASURES } from "./evidenceMeasuresBadges";
 /**
  * `Aggregation` is owned by `./evidence` — the contract the payload is
  * described in — not redeclared here. Two structurally identical unions of
@@ -64,7 +66,7 @@ import { DOMAIN_DETAIL_MEASURES } from "./evidenceMeasuresDomainDetail";
 import type { Aggregation } from "./evidence";
 
 /** What population the number was measured over. Mirrors the surface. */
-export type MeasureScope = "allTime" | "year" | "rolling12m" | "domainFiltered";
+export type MeasureScope = "allTime" | "year" | "rolling12m" | "range" | "domainFiltered";
 
 export interface MeasureSpec {
   aggregation: Aggregation;
@@ -103,5 +105,7 @@ export const EVIDENCE_MEASURES: Record<string, MeasureSpec> = {
   ...INSIGHT_MEASURES,
   ...PLACE_ROADTRIP_DETAIL_MEASURES,
   ...DOMAIN_DETAIL_MEASURES,
+  ...OVERVIEW_MEASURES,
+  ...BADGE_MEASURES,
   ...ACHIEVEMENT_MEASURES,
 };

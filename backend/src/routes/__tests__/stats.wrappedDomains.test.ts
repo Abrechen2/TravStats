@@ -8,6 +8,7 @@ import {
   getInstanceSettings,
   updateInstanceSettings,
 } from "../../services/instanceSettingsService";
+import { resolveMetricEvidence } from "../../services/evidence/metricEvidence";
 
 /**
  * forgejo#265 — the year in review and the trophy case follow the beta
@@ -68,6 +69,68 @@ describe("wrapped and badges across domains", () => {
       availableYears: [2024],
       flights: 0,
       chapters: { rentals: { rentals: 1, days: 4 }, bus: null, lodging: null },
+    });
+  });
+
+  // forgejo#265 — a chapter card opens the rows it counted, for its one year.
+  it("opens the rentals behind the rental chapter, and only for a year", async () => {
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    const page = { offset: 0, limit: 50 };
+    const res = await resolveMetricEvidence(
+      userId,
+      "wrappedRentalCount",
+      { period: { kind: "year", year: 2024 } },
+      page
+    );
+    expect(res?.measure.value).toBe(1);
+    expect(res?.entries.map((e) => e.href)).toEqual([expect.stringMatching(/^\/rentals\//)]);
+    // A domain the user does not see has no chapter, and its card answers nothing.
+    const bus = await resolveMetricEvidence(
+      userId,
+      "wrappedBusRideCount",
+      { period: { kind: "year", year: 2024 } },
+      page
+    );
+    expect(bus?.measure.value).toBeNull();
+    await expect(
+      resolveMetricEvidence(userId, "wrappedRentalCount", { period: { kind: "allTime" } }, page)
+    ).rejects.toThrow(/period=year only/);
+  });
+
+  // forgejo#265: a hidden cruise or rail domain abstains — null, as a chapter
+  // does — instead of a zero the client must know to hide.
+  it("answers null for cruises the user switched off and rail behind the switch", async () => {
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    const on = (await wrapped()).body;
+    expect(on.cruises).toBeNull();
+    expect(on.railRides).toBe(0);
+    await updateInstanceSettings({ betaFeaturesEnabled: false });
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { enabledDomains: ["flight", "rental", "rail", "cruise"] },
+    });
+    // Rentals hidden too, so give the story a flight to stand on.
+    await prisma.flight.create({
+      data: {
+        userId,
+        depIata: "FRA",
+        arrIata: "LIS",
+        depLat: 50.0379,
+        depLon: 8.5622,
+        arrLat: 38.7742,
+        arrLon: -9.1342,
+        departureTime: new Date("2023-06-01T08:00:00Z"),
+        arrivalTime: new Date("2023-06-01T11:00:00Z"),
+        status: "flown",
+      },
+    });
+    const off = (await wrapped()).body;
+    expect(off.cruises).toBe(0);
+    expect(off).toMatchObject({ railRides: null, railKm: null, railStraightLineKm: null });
+    await prisma.flight.deleteMany({ where: { userId } });
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { enabledDomains: ["flight", "rental", "rail"] },
     });
   });
 

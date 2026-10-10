@@ -6,7 +6,7 @@ import { statsApi } from "../../../lib/api/stats";
 import { logger } from "../../../lib/logger";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useDomainColors } from "../../../hooks/useDomainColors";
-import type { DomainRecord } from "../../../types/domainRecords";
+import type { DomainRecord, DomainRecordId } from "../../../types/domainRecords";
 import StatCard from "../StatCard";
 import CountingHelp from "../counting/CountingHelp";
 
@@ -21,6 +21,20 @@ import CountingHelp from "../counting/CountingHelp";
  * is omitted rather than shown as a zero. A failed load draws nothing, like
  * the travel account beside it: the rest of the overview is still correct.
  */
+/**
+ * The evidence measure of each record — its one witness, the entry that holds
+ * it (`services/evidence/metricEvidenceDomainRecords.ts`, lifetime only).
+ */
+const DOMAIN_RECORD_EVIDENCE_KEYS: Record<DomainRecordId, string> = {
+  "longest-cruise": "recordLongestCruise",
+  "longest-stay": "recordLongestStay",
+  "most-visited-place": "recordMostVisitedPlace",
+  "longest-roadtrip": "recordLongestRoadtrip",
+  "longest-rail-ride": "recordLongestRailRide",
+  "longest-rental": "recordLongestRental",
+  "longest-bus-ride": "recordLongestBusRide",
+};
+
 export default function DomainRecordsSection(): JSX.Element | null {
   const { t, i18n } = useTranslation(["stats"]);
   const { colorOf } = useDomainColors();
@@ -61,17 +75,26 @@ export default function DomainRecordsSection(): JSX.Element | null {
             accent={colorOf(r.domain)}
             valueSize="md"
             title={t(`stats:domainRecords.ids.${r.id}`)}
-            value={
-              <Link to={r.href} className="hover:underline">
-                {value(r)}
-              </Link>
+            value={value(r)}
+            // The figure opens the record's witness; the entry's name under
+            // it stays a link to the entry, outside the trigger.
+            evidence={{
+              kind: "metric",
+              key: DOMAIN_RECORD_EVIDENCE_KEYS[r.id],
+              scope: { period: "allTime" },
+              renderedValue: r.value,
+            }}
+            descriptionHasOwnTrigger
+            description={
+              <>
+                <Link to={r.href} className="hover:underline">
+                  {r.label ?? t(`stats:domainRecords.ids.${r.id}`)}
+                </Link>
+                {r.distanceSource === "great_circle"
+                  ? ` · ${t("stats:domainRecords.straightLine")}`
+                  : null}
+              </>
             }
-            description={[
-              r.label,
-              r.distanceSource === "great_circle" ? t("stats:domainRecords.straightLine") : null,
-            ]
-              .filter(Boolean)
-              .join(" · ")}
           />
         ))}
       </div>

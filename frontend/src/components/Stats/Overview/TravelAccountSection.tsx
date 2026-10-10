@@ -8,6 +8,7 @@ import { logger } from "../../../lib/logger";
 import type { TravelAccountResponse, TravelAccountYear } from "../../../types/travelAccount";
 import StatCard from "../StatCard";
 import DualFigureCard from "../DualFigureCard";
+import CountingHelp from "../counting/CountingHelp";
 
 /**
  * One colour per bucket — the domain tokens, plus the bar's own muted ground
@@ -92,6 +93,16 @@ export default function TravelAccountSection(): JSX.Element | null {
   if (failed || data === null || data.account.years.length === 0) return null;
 
   const { account, trips } = data;
+  // The night help names only the buckets this reader sees, in the server's
+  // precedence order (`NIGHT_PRECEDENCE`: sea, hotel, rail, bus, air).
+  const label = (key: BucketKey): string => t(`stats:travelAccount.${key}`);
+  const precedence = (
+    ["seaNights", "hotelNights", "railNights", "busNights", "airNights"] as const
+  ).filter((key) => buckets.some((b) => b.key === key));
+  const nightValues = {
+    kinds: precedence.map(label).join(", "),
+    order: precedence.map(label).join(" › "),
+  };
 
   return (
     <section className="mt-8">
@@ -185,6 +196,14 @@ export default function TravelAccountSection(): JSX.Element | null {
           description={t("stats:travelAccount.avgTripDaysDesc", {
             count: trips.longestTripDays ?? 0,
           })}
+          // An average (release 2 serves no ratio): the card opens its
+          // numerator, the dated trips with their days. Nothing on the card
+          // is that sum, so there is no rendered value to compare.
+          evidence={{
+            kind: "metric",
+            key: "travelAccountTripDaysTotal",
+            renderedValue: null,
+          }}
         />
         <StatCard
           valueSize="md"
@@ -205,6 +224,32 @@ export default function TravelAccountSection(): JSX.Element | null {
           }}
         />
       </div>
+      <CountingHelp
+        testId="travel-account-help"
+        entries={[
+          {
+            term: t("stats:travelAccount.title"),
+            helpKey: "stats:travelAccount.counting.nights",
+            values: nightValues,
+          },
+          {
+            term: t("stats:travelAccount.tripsCovered"),
+            helpKey: "stats:travelAccount.counting.tripsCovered",
+          },
+          {
+            term: t("stats:travelAccount.uncoveredDays"),
+            helpKey: "stats:travelAccount.counting.uncoveredDays",
+          },
+          {
+            term: t("stats:travelAccount.avgTripDays"),
+            helpKey: "stats:travelAccount.counting.avgTripDays",
+          },
+          {
+            term: t("stats:travelAccount.journalEntries"),
+            helpKey: "stats:travelAccount.counting.journalEntries",
+          },
+        ]}
+      />
     </section>
   );
 }

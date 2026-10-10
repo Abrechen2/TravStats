@@ -16,6 +16,12 @@ import { roadtripHasStarted } from "./roadtripEvidence";
 import type { WrappedCruise, WrappedRail } from "./wrapped";
 import type { WrappedChapterRows } from "./wrappedChapters";
 import { loadPassport, type PassportLoaderFlight } from "./passportLoader";
+import {
+  placeEvidenceEntry,
+  roadtripEvidenceEntry,
+  stayEvidenceEntry,
+} from "../evidence/entryMappersDomains";
+import { busEvidenceEntry, rentalEvidenceEntry } from "../evidence/entryMappersRentalBus";
 
 /**
  * The non-flight rows the year in review reads — loaded here so the stats
@@ -42,8 +48,9 @@ import { loadPassport, type PassportLoaderFlight } from "./passportLoader";
  *    a night bus ran through (`busRideKinds`).
  */
 export async function loadWrappedDomains(userId: string): Promise<{
-  cruises: WrappedCruise[];
-  rail: WrappedRail[];
+  /** `null` = hidden for this user (switched off, or behind the beta switch). */
+  cruises: WrappedCruise[] | null;
+  rail: WrappedRail[] | null;
   chapters: WrappedChapterRows;
 }> {
   const visible = await loadVisibleDomainSet(userId);
@@ -71,14 +78,22 @@ export async function loadWrappedDomains(userId: string): Promise<{
     loadChapterRows(userId, visible, now),
   ]);
   return {
-    cruises: cruises ?? [],
-    rail: (rides ?? []).map((r) => ({
-      year: railYear(r),
-      distanceKm: r.distanceKm,
-      distanceSource: r.distanceSource,
-    })),
+    cruises,
+    rail:
+      rides === null
+        ? null
+        : rides.map((r) => ({
+            year: railYear(r),
+            distanceKm: r.distanceKm,
+            distanceSource: r.distanceSource,
+          })),
     chapters,
   };
+}
+
+/** The chapter rows alone, with the entry each stands for — the chapters' evidence. */
+export async function loadWrappedChapterRows(userId: string): Promise<WrappedChapterRows> {
+  return loadChapterRows(userId, await loadVisibleDomainSet(userId), clockNow());
 }
 
 /** The rows of a domain the user sees, else null — "no chapter", not "a chapter of zeros". */
@@ -99,13 +114,28 @@ async function loadChapterRows(
     whenVisible(visible, "lodging", () =>
       prisma.lodgingStay.findMany({
         where: { userId },
-        select: { status: true, checkIn: true, checkOut: true, datePrecision: true, nights: true },
+        select: {
+          id: true,
+          status: true,
+          checkIn: true,
+          checkOut: true,
+          datePrecision: true,
+          nights: true,
+          lodging: { select: { id: true, name: true } },
+        },
       })
     ),
     whenVisible(visible, "poi", () =>
       prisma.placeVisit.findMany({
         where: { place: { userId } },
-        select: { placeId: true, visitedAt: true, visitedAtUtc: true, visitedZone: true },
+        select: {
+          id: true,
+          placeId: true,
+          visitedAt: true,
+          visitedAtUtc: true,
+          visitedZone: true,
+          place: { select: { name: true } },
+        },
       })
     ),
     // Roadtrips follow the user's domain gate; day tours are not a domain and
@@ -114,6 +144,8 @@ async function loadChapterRows(
       prisma.tripRoute.findMany({
         where: { userId, kind: "roadtrip" },
         select: {
+          id: true,
+          name: true,
           stops: {
             where: { viaPoint: false },
             select: { startDate: true, lodgingStay: { select: { checkIn: true } } },
@@ -125,20 +157,33 @@ async function loadChapterRows(
       shown
         ? prisma.tripRoute.findMany({
             where: { userId, kind: "tour" },
-            select: { tourDate: true },
+            select: { id: true, name: true, tourDate: true },
           })
         : null
     ),
     whenVisible(visible, "rental", () =>
       prisma.rentalBooking.findMany({
         where: { userId, ...countableRentalWhere() },
-        select: { pickupTime: true, pickupTimezone: true, returnTime: true, returnTimezone: true },
+        select: {
+          id: true,
+          provider: true,
+          pickupStationName: true,
+          returnStationName: true,
+          pickupTime: true,
+          pickupTimezone: true,
+          returnTime: true,
+          returnTimezone: true,
+        },
       })
     ),
     whenVisible(visible, "bus", () =>
       prisma.busJourney.findMany({
         where: { userId, ...countableBusWhere() },
         select: {
+          id: true,
+          operator: true,
+          depStationName: true,
+          arrStationName: true,
           departureTime: true,
           arrivalTime: true,
           depTimezone: true,
@@ -165,6 +210,15 @@ async function loadChapterRows(
               {
                 year: timing.anchor.getUTCFullYear(),
                 nights: timing.nightsKnown ? timing.nights : null,
+                entry: stayEvidenceEntry(
+                  {
+                    id: s.id,
+                    lodgingId: s.lodging.id,
+                    lodgingName: s.lodging.name,
+                    checkIn: s.checkIn,
+                  },
+                  { subtitle: null }
+                ),
               },
             ];
           }),
@@ -173,7 +227,12 @@ async function loadChapterRows(
         ? null
         : visits.flatMap((v) => {
             const year = classifyVisit(v, now) === "visited" ? visitYear(v) : null;
-            return year === null ? [] : [{ year, placeId: v.placeId }];
+            if (year === null) return [];
+            const entry = placeEvidenceEntry(
+              { id: v.id, placeId: v.placeId, placeName: v.place.name, visitedAt: v.visitedAt },
+              { subtitle: null }
+            );
+            return [{ year, placeId: v.placeId, entry }];
           }),
     roadtrips:
       roadtripRoutes === null
@@ -185,7 +244,12 @@ async function loadChapterRows(
               .filter((d): d is Date => d !== null)
               .sort((a, b) => a.getTime() - b.getTime());
             // A roadtrip with no dated station has started in no particular year.
-            return starts.length === 0 ? [] : [{ year: starts[0].getUTCFullYear() }];
+            if (starts.length === 0) return [];
+            const entry = roadtripEvidenceEntry(
+              { id: route.id, name: route.name, startDate: starts[0] },
+              { subtitle: null }
+            );
+            return [{ year: starts[0].getUTCFullYear(), entry }];
           }),
     tours:
       tourRoutes === null
@@ -194,10 +258,26 @@ async function loadChapterRows(
             if (route.tourDate === null) return [];
             // A floating date: its stored components ARE the day (ADR 0002 D1).
             const day = route.tourDate.toISOString().slice(0, 10);
-            return day > today ? [] : [{ year: Number(day.slice(0, 4)) }];
+            if (day > today) return [];
+            // A day tour has no evidence domain of its own; it is a route like
+            // a roadtrip and opens its own page.
+            const entry = {
+              ...roadtripEvidenceEntry(
+                { id: route.id, name: route.name, startDate: route.tourDate },
+                { subtitle: null }
+              ),
+              href: `/tours/${route.id}`,
+            };
+            return [{ year: Number(day.slice(0, 4)), entry }];
           }),
     rentals:
-      rentals === null ? null : rentals.map((r) => ({ year: rentalYear(r), days: rentalDays(r) })),
+      rentals === null
+        ? null
+        : rentals.map((r) => ({
+            year: rentalYear(r),
+            days: rentalDays(r),
+            entry: rentalEvidenceEntry(r, {}),
+          })),
     bus:
       bus === null
         ? null
@@ -205,6 +285,7 @@ async function loadChapterRows(
             year: busYear(r),
             distanceKm: r.distanceKm,
             nights: nightBusNights(r).length,
+            entry: busEvidenceEntry(r, {}),
           })),
   };
 }

@@ -3,6 +3,7 @@ import { Router, Response, NextFunction } from "express";
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import { statsLimiter } from "../middleware/rateLimit";
+import { badgeEvidenceLimiter } from "../middleware/badgeEvidenceLimiter";
 import {
   evidenceParamsSchema,
   evidenceQuerySchema,
@@ -50,6 +51,15 @@ router.use(authenticate);
  * cannot lock the panel for the next.
  */
 router.use(statsLimiter);
+
+/** A badge proof costs many folds of the badge's rows: its own, tighter bucket. */
+router.use("/metric/:key", (req, res, next) => {
+  if (req.params.key.startsWith("badge")) {
+    badgeEvidenceLimiter(req, res, next);
+    return;
+  }
+  next();
+});
 
 router.get("/:kind/:key", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

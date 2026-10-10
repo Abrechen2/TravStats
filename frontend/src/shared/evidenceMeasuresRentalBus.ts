@@ -39,14 +39,40 @@ const BUS = (aggregation: "sum" | "distinct", unit: string): MeasureSpec =>
     "services/evidence/metricEvidenceBus.ts over services/bus/busStats.ts"
   );
 
+/** Opened by the year comparison's same-span figure (forgejo#265): accepts `range` too. */
+const withRange = (spec: MeasureSpec): MeasureSpec => ({
+  ...spec,
+  scopes: ["allTime", "year", "range"],
+});
+
 export const RENTAL_BUS_MEASURES: Record<string, MeasureSpec> = {
-  rentalCount: RENTAL("sum", "rentals"),
-  rentalDaysTotal: RENTAL("sum", "days"),
+  rentalCount: withRange(RENTAL("sum", "rentals")),
+  rentalDaysTotal: withRange(RENTAL("sum", "days")),
   rentalOneWayCount: RENTAL("sum", "rentals"),
   rentalOdometerDocumentedCount: RENTAL("sum", "rentals"),
-  busRideCount: BUS("sum", "rides"),
-  busDistanceKmTotal: BUS("sum", "km"),
+  // forgejo#262 — the tab's further tiles. A ratio (km per day, cost per day,
+  // cost per km) opens the rentals it stands on; a record opens its one
+  // witness; the rest are counts.
+  rentalKmTotal: RENTAL("sum", "km"),
+  rentalCostedCount: RENTAL("sum", "rentals"),
+  rentalBrokeredCount: RENTAL("sum", "rentals"),
+  rentalKmPerDaySampleCount: RENTAL("sum", "rentals"),
+  rentalCostPerKmSampleCount: RENTAL("sum", "rentals"),
+  rentalVehicleComparedCount: RENTAL("sum", "rentals"),
+  rentalDrivenModelsCount: RENTAL("distinct", "models"),
+  rentalLongest: RENTAL("sum", "days"),
+  rentalFarthest: RENTAL("sum", "km"),
+  rentalNewProvidersCount: RENTAL("distinct", "providers"),
+  busRideCount: withRange(BUS("sum", "rides")),
+  busDistanceKmTotal: withRange(BUS("sum", "km")),
   busCountriesCount: BUS("distinct", "countries"),
   busNightRideCount: BUS("sum", "rides"),
   busTerminalsCount: BUS("distinct", "terminals"),
+  // forgejo#263 — hours over the rides with both clocks, the changes the
+  // average change time is taken over, and two records as their witnesses.
+  busHoursOnBoard: BUS("sum", "hours"),
+  busTransferCount: BUS("sum", "transfers"),
+  busLongestRide: BUS("sum", "km"),
+  /** A lifetime figure on the tab whatever year is picked. */
+  busLongestReturn: { ...BUS("sum", "days"), scopes: ["allTime"] },
 };
