@@ -206,6 +206,37 @@ schedule and WebDAV sync.
 
 See [`.env.prod.example`](.env.prod.example) for the annotated list.
 
+### Behind a reverse proxy or CDN
+
+**Never let a cache rule apply to `/api/`.** Every API response — receipts,
+avatars, photos, documents, exports — belongs to one signed-in user. The app
+marks all of them `Cache-Control: no-store` (or `private` where a browser may
+keep them), but several common proxy settings ignore that header:
+
+- **Nginx Proxy Manager → "Cache Assets"** caches every URL ending in `.png`,
+  `.jpg`, `.svg`, `.js`, `.css` … for 30 minutes, keyed on host and path only,
+  ignores the app's `Cache-Control` and `Set-Cookie`, and strips
+  `Cache-Control` from the response. Whatever it caches is handed to the next
+  visitor, signed in or not.
+- **Cloudflare** caches a fixed list of extensions by default (`.pdf`, `.png`,
+  `.jpg`, `.zip`, `.gz`, `.csv`, `.xlsx` …). It honours `no-store` — unless a
+  proxy in front of the app removed it, which is exactly what the NPM switch
+  above does. "Cache Everything" page/cache rules and "Edge Cache TTL"
+  overrides ignore the header outright.
+
+The API itself serves no private data at a URL that ends in a file
+extension: files live at extension-less URLs (`…/content`, `…/file`),
+older URLs answer only with a redirect, and any other `/api/` path ending in a
+cacheable extension is refused with a 404. That closes the gap for
+extension-based rules, but not for a rule that caches everything. So:
+
+- In Nginx Proxy Manager, leave **Cache Assets** off for the TravStats proxy
+  host.
+- In Cloudflare, scope any cache rule to exclude `/api/*` — or add a rule that
+  bypasses the cache for `/api/*`.
+- In any other proxy (Traefik, Caddy, plain nginx), do not put `proxy_cache`
+  or an equivalent on `/api/`.
+
 ### Runtime-configurable from the admin UI
 
 - Instance name, public URL, user cap, registration mode
