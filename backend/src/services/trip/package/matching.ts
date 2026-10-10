@@ -23,7 +23,8 @@ import {
   type HouseIdentity,
 } from "../../sharing/facts/lodgingStay";
 import { soleOverlappingTrip } from "../../rental/rentalLinks";
-import { localDay } from "../../../shared/time/instant";
+import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "../../stats/departureClock";
+import { flightDepartureDay } from "./flightClock";
 import { addDays, type PackageContract, type PackageFlight } from "./contract";
 import { airportByIata, resolveCities, type CityResolution } from "./airportByCity";
 import type { PackageChoices, ProposalEndpoint } from "./types";
@@ -151,7 +152,7 @@ export async function existingFlight(
     if (byRef) return byRef;
   }
   // The same number on the same LOCAL day of departure. The window is wide in
-  // UTC (a day either side) and narrowed on each row's own zone.
+  // UTC (a day either side) and narrowed on each row's own clock.
   const from = new Date(`${addDays(flight.date, -1)}T00:00:00Z`);
   const to = new Date(`${addDays(flight.date, 2)}T00:00:00Z`);
   const rows = await prisma.flight.findMany({
@@ -162,11 +163,15 @@ export async function existingFlight(
       })),
       departureTime: { gte: from, lt: to },
     },
-    select: { ...select, departureTime: true, depTimezone: true },
+    select: { ...select, departureTime: true, ...FLIGHT_CLOCK_SELECT },
     take: 10,
   });
-  const sameDay = rows.find(
-    (r) => r.departureTime && localDay(r.departureTime, r.depTimezone ?? "UTC") === flight.date
+  // Each row on its own clock (`flightDepartureDay`) — the semantics too, not
+  // only the zone: a LEGACY_FAKE_UTC row read as an instant fell on the wrong
+  // day and the flight was created twice (forgejo#279). A row that stored no
+  // zone is read in its airport's catalogue zone, like every statistic.
+  const sameDay = (await withDepartureClock(rows)).find(
+    (r) => r.departureTime && flightDepartureDay(r.departureTime, r) === flight.date
   );
   return sameDay ? { id: sameDay.id, tripId: sameDay.tripId, bookingId: sameDay.bookingId } : null;
 }

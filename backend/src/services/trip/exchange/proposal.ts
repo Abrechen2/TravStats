@@ -9,7 +9,7 @@
  * proposal from the file; it never takes ids from the client.
  */
 import { prisma } from "../../../db";
-import { toLocal } from "../../../shared/time/instant";
+import { fileFlightDay, flightDepartureTime } from "../package/flightClock";
 import { sha256Hex } from "../../documents/documentStore";
 import { knownPhotoHashes, photoHash } from "./photoIdentity";
 import {
@@ -51,7 +51,7 @@ export function fileSpan(file: TripFile): { first: string; last: string } | null
   const last = file.trip.endDay ?? slice(file.trip.endDate);
   if (first && last) return { first, last: last < first ? first : last };
   const days = [
-    ...file.flights.map((f) => dayAt(f.departureTime, f.depTimezone)),
+    ...file.flights.map(fileFlightDay),
     ...file.stays.flatMap((s) => [
       s.checkInDate ?? slice(s.checkIn),
       s.checkOutDate ?? slice(s.checkOut),
@@ -139,10 +139,6 @@ function decide(existing: ExistingEntry | null, tripId: string | null, booked: b
 const flightLabel = (f: TripFileFlight): string =>
   `${f.flightNumber ?? "?"} ${f.depIata ?? f.depName ?? "?"}–${f.arrIata ?? f.arrName ?? "?"}`;
 
-/** The `HH:MM` of an instant at a zone, for the package flight matcher. */
-const wallTime = (iso: string, zone: string | null): string =>
-  toLocal(iso, zone ?? "UTC").local.slice(11, 16);
-
 async function matchFlight(userId: string, f: TripFileFlight): Promise<ExistingEntry | null> {
   if (f.externalRef) {
     const byRef = await prisma.flight.findFirst({
@@ -151,11 +147,11 @@ async function matchFlight(userId: string, f: TripFileFlight): Promise<ExistingE
     });
     if (byRef) return byRef;
   }
-  const day = dayAt(f.departureTime, f.depTimezone);
+  const day = fileFlightDay(f);
   if (!f.flightNumber || !day || !f.departureTime) return null;
   return existingFlight(
     userId,
-    { flightNumber: f.flightNumber, date: day, depTime: wallTime(f.departureTime, f.depTimezone) },
+    { flightNumber: f.flightNumber, date: day, depTime: flightDepartureTime(f.departureTime, f) },
     f.depIata,
     f.arrIata
   );
@@ -174,7 +170,7 @@ async function proposeEntries(
       kind: "flight",
       ...decide(await matchFlight(userId, f), tripId, f.bookingKey !== null),
       label: flightLabel(f),
-      day: dayAt(f.departureTime, f.depTimezone),
+      day: fileFlightDay(f),
     });
   }
   const index = await lodgingIndex(
