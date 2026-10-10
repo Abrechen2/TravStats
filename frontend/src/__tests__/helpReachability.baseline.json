@@ -1,0 +1,22 @@
+{
+  "titleOnly": {
+    "components/Globe/GlobeTimeHistogram.tsx": { "count": 1, "why": "control-name" },
+    "components/Stats/AircraftRankingCard.tsx": { "count": 1, "why": "expansion" },
+    "components/Stats/AirlineRankingCard.tsx": { "count": 1, "why": "truncation" },
+    "components/Stats/CountryDistributionCard.tsx": { "count": 1, "why": "truncation" },
+    "components/Stats/CruiseStatsSection.tsx": { "count": 1, "why": "truncation" },
+    "components/Stats/Overview/CrossDomainActivityChart.tsx": { "count": 1, "why": "chart-value" },
+    "components/Stats/Overview/TravelAccountSection.tsx": { "count": 1, "why": "chart-value" },
+    "components/Stats/RecordsSection.tsx": { "count": 1, "why": "expansion" },
+    "components/Stats/cruise/CruiseDetailSections.tsx": { "count": 2, "why": "chart-value" },
+    "components/Stats/poi/PoiRhythmSection.tsx": { "count": 3, "why": "chart-value" },
+    "components/Training/EmailAnnotation.tsx": { "count": 1, "why": "expansion" },
+    "components/YearHeatmap.tsx": { "count": 1, "why": "chart-value" },
+    "components/flightsTable/AirlineWordmarkCell.tsx": { "count": 1, "why": "expansion" },
+    "components/flightsTable/RouteCell.tsx": { "count": 1, "why": "truncation" },
+    "components/rail/StationShortCode.tsx": { "count": 1, "why": "expansion" },
+    "components/table/OperatorTile.tsx": { "count": 1, "why": "expansion" },
+    "lib/countryFlag.tsx": { "count": 1, "why": "expansion" },
+    "pages/PassportPage.tsx": { "count": 1, "why": "expansion" }
+  }
+}
