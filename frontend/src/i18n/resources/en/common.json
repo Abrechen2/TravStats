@@ -381,5 +381,25 @@
   },
   "delete": {
     "survivors": "Kept: {{names}}"
+  },
+  "deadlines": {
+    "title": "Deadlines",
+    "freeCancellation": "Free cancellation",
+    "untilMoment": "until {{moment}}",
+    "untilEndOfDay": "until the end of {{day}}",
+    "paymentDue": "Payment due",
+    "onlineCheckIn": "Online check-in opens",
+    "form": {
+      "freeCancellationDate": "Free cancellation until (day)",
+      "freeCancellationTime": "Time (optional)",
+      "freeCancellationTimeHint": "Without a time, the deadline runs to the end of the day.",
+      "zone": "Time zone",
+      "paymentDueOn": "Payment due on",
+      "onlineCheckInDate": "Online check-in opens (day)",
+      "onlineCheckInTime": "Time",
+      "timeWithoutDay": "A time needs a day.",
+      "zoneRequired": "With a time, please name the time zone.",
+      "checkInNeedsBoth": "Day and time go together."
+    }
   }
 }

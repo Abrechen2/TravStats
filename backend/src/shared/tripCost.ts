@@ -136,7 +136,16 @@ export interface TripCostInput {
     finalAmountBase: number | null;
     finalFxBaseCurrency: string | null;
   })[];
-  expenses: { amount: number; currency: string }[];
+  /**
+   * With the exchange rate recorded on it (forgejo#150), when there is one —
+   * optional so a caller written before expenses carried rates keeps its answer.
+   */
+  expenses: {
+    amount: number;
+    currency: string;
+    amountBase?: number | null;
+    fxBaseCurrency?: string | null;
+  }[];
 }
 
 export type TripCostSource =
@@ -235,13 +244,14 @@ export function tripCostItems(trip: TripCostInput): TripCostItems {
     });
   }
   for (const expense of trip.expenses) {
-    // No FX columns on an expense (forgejo#140): a raw amount only.
+    // An expense's rate is recorded on write like every other source's
+    // (forgejo#150); one without a rate is a raw amount only.
     items.push({
       source: "expense",
       amount: expense.amount,
       currency: expense.currency,
-      amountBase: null,
-      snapshotCurrency: null,
+      amountBase: expense.amountBase ?? null,
+      snapshotCurrency: expense.amountBase == null ? null : (expense.fxBaseCurrency ?? null),
     });
   }
   return { items, unpricedEntries };

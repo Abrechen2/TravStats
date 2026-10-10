@@ -1,6 +1,7 @@
 import type { BoardType, LodgingCurrency, LodgingStay } from "../../types/lodging";
 import type { LodgingDatePrecision } from "../../shared/lodgingTiming";
 import { stayCheckIn, stayCheckOut } from "../../lib/entityTimes";
+import { deadlineDraftFrom, type DeadlineDraft } from "../deadlines/deadlineDraft";
 
 /**
  * The stay editor's draft as plain data - what the dirty guard compares and
@@ -38,6 +39,8 @@ export interface StayDraftFields {
   receiptUrl: string | null;
   companionsInput: string;
   notes: string;
+  /** Cancellation and payment deadlines (forgejo#285). */
+  deadlines: DeadlineDraft;
 }
 
 /** "2026-07-11T00:00:00.000Z" -> "2026-07-11"; null -> "". */
@@ -85,6 +88,7 @@ export function stayDraftFields(
     receiptUrl: stay?.receiptUrl ?? null,
     companionsInput: (stay?.companions ?? []).join(", "),
     notes: stay?.notes ?? "",
+    deadlines: deadlineDraftFrom(stay?.times),
   };
 }
 

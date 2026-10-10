@@ -24,6 +24,12 @@ import logger from "../../utils/logger";
  * Mounted ahead of the rental router, whose `/:id` would otherwise take
  * "import" for a rental id.
  */
+/** The deadlines a confirmation filled, when there are any (forgejo#285). */
+function filledDeadlinesMeta(result: object): { filledDeadlines?: string[] } {
+  const filled = (result as { filledDeadlines?: string[] }).filledDeadlines;
+  return filled && filled.length > 0 ? { filledDeadlines: filled } : {};
+}
+
 const router = Router();
 router.use(authenticate);
 router.use(requireWriteScope);
@@ -72,7 +78,11 @@ router.post(
       res.status(result.outcome === "created" ? 201 : 200).json({
         success: true,
         data: withRentalReadFields(result.row),
-        meta: { outcome: result.outcome },
+        meta: {
+          outcome: result.outcome,
+          // Deadlines a later mail filled on a stored booking (forgejo#285).
+          ...filledDeadlinesMeta(result),
+        },
       });
     } catch (err) {
       next(err);

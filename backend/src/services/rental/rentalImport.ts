@@ -11,6 +11,7 @@ import type {
 } from "../../schemas/rentalImport";
 import { toLocal } from "../../shared/time/instant";
 import { rentalExternalRef } from "./parser/rentalCandidates";
+import { filledDeadlineFields, type DeadlineField } from "../deadlines/parsedDeadlines";
 import {
   RENTAL_INCLUDE,
   createRentalRow,
@@ -134,6 +135,8 @@ export function mailUpdate(existing: Stored, input: CreateRentalInput): UpdateRe
     if (edited.has(key) || isEmpty(value)) continue;
     // A mail never revives a cancelled booking or re-opens a finished one.
     if (key === "status") continue;
+    // A deadline only FILLS (forgejo#285): one already on the row stands.
+    if (deadlineHeld(existing, key)) continue;
     // A bare day is poorer than a time (§4.4).
     if (
       key === "pickupLocal" &&
@@ -170,11 +173,19 @@ function onlyGaps(existing: Stored, update: UpdateRentalInput): UpdateRentalInpu
   ) as UpdateRentalInput;
 }
 
+/** Whether the stored row already holds the deadline `key` names. */
+function deadlineHeld(existing: Stored, key: string): boolean {
+  if (key === "freeCancellationUntil") {
+    return existing.freeCancellationUntil !== null || existing.freeCancellationOn !== null;
+  }
+  return key === "paymentDueOn" && existing.paymentDueOn !== null;
+}
+
 export async function applyConfirmation(
   userId: string,
   input: CreateRentalInput,
   sentAt: Date | null = null
-): Promise<{ outcome: ImportOutcome; row: RentalRow }> {
+): Promise<{ outcome: ImportOutcome; row: RentalRow; filledDeadlines?: DeadlineField[] }> {
   const existing = input.confirmationNumber
     ? await findBooking(userId, input.provider, { confirmation: input.confirmationNumber })
     : null;
@@ -210,13 +221,13 @@ export async function applyConfirmation(
         });
     return { outcome: older && Object.keys(full).length > 0 ? "stale" : "unchanged", row };
   }
-  return {
-    outcome: "updated",
-    row: await updateRentalRow(userId, existing, update, {
-      manual: false,
-      extra: { lastMailSentAt },
-    }),
-  };
+  const row = await updateRentalRow(userId, existing, update, {
+    manual: false,
+    extra: { lastMailSentAt },
+  });
+  // What this mail filled: the deadline keys it wrote that the row now holds.
+  const filledDeadlines = filledDeadlineFields(row).filter((field) => field in update);
+  return { outcome: "updated", row, filledDeadlines };
 }
 
 export async function applyCancellation(

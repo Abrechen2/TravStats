@@ -119,6 +119,8 @@ const FLIGHT_INSIGHT_SELECT = {
   actualArrival: true,
   runwayDepartureTime: true,
   runwayArrivalTime: true,
+  onlineCheckInOpensAt: true,
+  onlineCheckInZone: true,
 } as const;
 
 export type FlightInsightSource = FlightTimeColumns & {

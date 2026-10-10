@@ -1,5 +1,5 @@
 import type { RoadtripCosts } from "../../schemas/expense";
-import { sumByCurrency } from "../../shared/expenses";
+import { baseTotal, sumByCurrency } from "../../shared/expenses";
 
 /**
  * A roadtrip's money per station, per leg and in total (forgejo#140) — what
@@ -17,6 +17,9 @@ import { sumByCurrency } from "../../shared/expenses";
  * a leg whose ends no longer face each other — is `unpinned`, and still in
  * `total`: an expense that drops out of the sum because its station moved is
  * the silent loss this endpoint must not have.
+ *
+ * `totalBase` is the one figure across currencies, through each expense's own
+ * recorded rate only (`shared/expenses.ts` `baseTotal`, forgejo#150).
  */
 
 export interface CostStop {
@@ -30,6 +33,8 @@ export interface CostExpense {
   legToStopId: string | null;
   amount: number;
   currency: string;
+  /** The recorded exchange rate's result, when there is one. */
+  fx?: { amountBase: number; baseCurrency: string } | null;
 }
 
 type Money = { amount: number; currency: string };
@@ -47,7 +52,8 @@ function stationAround(
 
 export function roadtripCosts(
   orderedStops: readonly CostStop[],
-  expenses: readonly CostExpense[]
+  expenses: readonly CostExpense[],
+  baseCurrency: string
 ): RoadtripCosts {
   const indexOf = new Map(orderedStops.map((s, i) => [s.id, i]));
   const byStation = new Map<string, Money[]>();
@@ -78,6 +84,15 @@ export function roadtripCosts(
   const order = (id: string) => indexOf.get(id) ?? Number.MAX_SAFE_INTEGER;
   return {
     total: sumByCurrency(expenses),
+    totalBase: baseTotal(
+      expenses.map((e) => ({
+        amount: e.amount,
+        currency: e.currency,
+        amountBase: e.fx?.amountBase ?? null,
+        fxBaseCurrency: e.fx?.baseCurrency ?? null,
+      })),
+      baseCurrency
+    ),
     byStation: [...byStation.entries()]
       .sort(([a], [b]) => order(a) - order(b))
       .map(([stopId, items]) => ({ stopId, byCurrency: sumByCurrency(items) })),

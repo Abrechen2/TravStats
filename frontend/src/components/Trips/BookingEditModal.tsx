@@ -9,6 +9,8 @@ import { useSettingsStore } from "../../store/settingsStore";
 import type { Booking } from "../../types";
 import { logger } from "../../lib/logger";
 import SuggestionChips from "../common/SuggestionChips";
+import { DeadlineFields, deadlineDraftValid } from "../deadlines/DeadlineFields";
+import { deadlineDraftFrom, deadlineWire } from "../deadlines/deadlineDraft";
 import {
   BookingEntriesPicker,
   initialSelection,
@@ -106,10 +108,14 @@ export default function BookingEditModal({
   const [opened] = useState(() => initialSelection(entries, booking?.id ?? null));
   const [selection, setSelection] = useState(opened);
   const [saving, setSaving] = useState(false);
+  const [openedDeadlines] = useState(() => deadlineDraftFrom(booking?.times));
+  const [deadlines, setDeadlines] = useState(openedDeadlines);
+  // A booking names no place, so a deadline with a time must name its zone.
+  const deadlinesInvalid = !deadlineDraftValid(deadlines, true);
   const travellersInvalid = travellers.trim() !== "" && parseTravellers(travellers) === null;
 
   const handleSave = async (): Promise<void> => {
-    if (travellersInvalid) return;
+    if (travellersInvalid || deadlinesInvalid) return;
     setSaving(true);
     const parsedPrice = price.trim() === "" ? null : Number(price);
     const fields = {
@@ -120,10 +126,11 @@ export default function BookingEditModal({
       travellers: parseTravellers(travellers),
       bookedOn: bookedOn || null,
     };
+    const deadlineChanges = deadlineWire(deadlines, openedDeadlines);
     let stored: Booking;
     try {
       if (booking) {
-        stored = await tripsApi.updateBooking(booking.id, fields);
+        stored = await tripsApi.updateBooking(booking.id, { ...fields, ...deadlineChanges });
       } else {
         stored = await tripsApi.createBooking({
           tripId,
@@ -133,6 +140,8 @@ export default function BookingEditModal({
           currency,
           travellers: fields.travellers ?? undefined,
           bookedOn: fields.bookedOn ?? undefined,
+          freeCancellationUntil: deadlineChanges.freeCancellationUntil ?? undefined,
+          paymentDueOn: deadlineChanges.paymentDueOn ?? undefined,
           ...selection,
         });
       }
@@ -193,7 +202,7 @@ export default function BookingEditModal({
             type="button"
             className="btn-primary text-sm"
             onClick={() => void handleSave()}
-            disabled={saving || travellersInvalid}
+            disabled={saving || travellersInvalid || deadlinesInvalid}
           >
             {t("trips:bookingEdit.save")}
           </button>
@@ -270,6 +279,7 @@ export default function BookingEditModal({
             </span>
           ) : undefined
         )}
+        <DeadlineFields draft={deadlines} onChange={setDeadlines} requireZone />
         <BookingEntriesPicker
           options={entries}
           value={selection}

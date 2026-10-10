@@ -1,4 +1,5 @@
 import { prisma } from "../../../db";
+import * as fx from "../../fx/resolver";
 import { importSheets } from "../importSheets";
 
 /**
@@ -280,5 +281,50 @@ describe("spreadsheet import — roadtrip costs", () => {
     expect(untouched.amount.toNumber()).toBe(50);
     const mine = await prisma.tripExpense.findFirstOrThrow({ where: { userId } });
     expect(mine).toMatchObject({ routeId: id, stopId: null });
+  });
+
+  it("re-prices a recorded rate when a sheet edits the amount and no new rate can be had (forgejo#150)", async () => {
+    jest.spyOn(fx, "convertToBase").mockResolvedValue(null);
+    try {
+      const { id } = await roadtripWith(["Oslo"]);
+      const charging = await prisma.tripExpense.create({
+        data: {
+          userId,
+          routeId: id,
+          kind: "charging",
+          amount: 100,
+          currency: "NOK",
+          date: new Date("2026-07-15T00:00:00Z"),
+          amountBase: 8.65,
+          fxRate: 0.0865,
+          fxRateDate: new Date("2026-07-14T00:00:00Z"),
+          fxBaseCurrency: "EUR",
+          fxSource: "manual",
+        },
+      });
+      const [outcome] = await importSheets(
+        [
+          {
+            key: "roadtripExpenses",
+            rows: [
+              {
+                id: charging.id,
+                roadtripId: `Norwegen [${id}]`,
+                kind: "charging",
+                amount: "200",
+                currency: "NOK",
+              },
+            ],
+          },
+        ],
+        ctx()
+      );
+      expect(outcome.rows[0]).toMatchObject({ action: "update", notes: ["fx_kept_stored_rate"] });
+      const after = await prisma.tripExpense.findUniqueOrThrow({ where: { id: charging.id } });
+      expect(after.amountBase?.toNumber()).toBe(17.3);
+      expect(after).toMatchObject({ fxRate: 0.0865, fxSource: "manual", kind: "charging" });
+    } finally {
+      jest.restoreAllMocks();
+    }
   });
 });

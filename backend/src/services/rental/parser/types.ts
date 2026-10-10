@@ -41,6 +41,12 @@ export interface ParsedRentalConfirmation {
    * Read by station resolution only — never stored.
    */
   placeHints: { country: string | null; airportWords: string[] };
+  /**
+   * Deadlines a template read (forgejo#285): a cancellation as the pickup
+   * station's wall clock (`YYYY-MM-DDTHH:mm`) or a bare day, payment as a day.
+   */
+  freeCancellationUntil?: string | null;
+  paymentDueOn?: string | null;
 }
 
 /** A change or a cancellation names a booking by its number — and never creates one. */

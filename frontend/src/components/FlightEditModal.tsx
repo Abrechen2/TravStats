@@ -1,4 +1,10 @@
 import { useState, useEffect, useId, useRef } from "react";
+import {
+  OnlineCheckInFields,
+  onlineCheckInDraftFrom,
+  onlineCheckInDraftValid,
+  onlineCheckInWire,
+} from "./deadlines/OnlineCheckInFields";
 import type { Flight } from "../types";
 import TimesFields from "./FlightForm/fields/TimesFields";
 import HistoricalToggleField from "./FlightForm/fields/HistoricalToggleField";
@@ -83,6 +89,8 @@ export default function FlightEditModal({
     storedFlightFolds(flightDeparture(flight), flightArrival(flight))
   );
   const [loading, setLoading] = useState(false);
+  const [openedCheckIn] = useState(() => onlineCheckInDraftFrom(flight.times?.onlineCheckInOpens));
+  const [checkIn, setCheckIn] = useState(openedCheckIn);
   const addToast = useToastStore((s) => s.addToast);
 
   // Editable departure/arrival airports — changing either feeds a new code
@@ -220,7 +228,13 @@ export default function FlightEditModal({
     folds
   );
   const [initialSnapshot] = useState(snapshot);
-  const { dirty, markSaved } = useDirtyGuard(initialSnapshot, snapshot, { open: isOpen });
+  // The check-in opening (forgejo#285) lives beside the snapshot, not in it,
+  // but a changed one is still a change worth asking about.
+  const { dirty, markSaved } = useDirtyGuard(
+    { form: initialSnapshot, checkIn: openedCheckIn },
+    { form: snapshot, checkIn },
+    { open: isOpen }
+  );
 
   /**
    * Pattern: "enabled save, a refused click focuses the first gap" — the
@@ -288,7 +302,7 @@ export default function FlightEditModal({
   const handleSubmit = async (e?: React.FormEvent): Promise<void> => {
     e?.preventDefault();
     failure.markAttempted();
-    if (missing.length > 0) {
+    if (missing.length > 0 || !onlineCheckInDraftValid(checkIn)) {
       // A required field first; otherwise the half-filled actual pair, whose
       // error renders with this click.
       if (!focusFirstMissingRequired(failure.rootRef.current)) failure.focusFirstProblem();
@@ -307,10 +321,10 @@ export default function FlightEditModal({
           buildEditFormData(flight),
           ...(last ? [airportLocalInputs(flight, last.dep, last.arr)] : []),
         ]);
-        await onSave(
-          flight.id,
-          buildEditUpdates({ formData, flight, zones, folds, departureAirport, arrivalAirport })
-        );
+        await onSave(flight.id, {
+          ...buildEditUpdates({ formData, flight, zones, folds, departureAirport, arrivalAirport }),
+          ...onlineCheckInWire(checkIn, openedCheckIn),
+        });
         markSaved();
       } catch (err: unknown) {
         // Not `err.message`: for a refused save that is axios's own
@@ -689,6 +703,8 @@ export default function FlightEditModal({
               />
             </div>
           </div>
+
+          <OnlineCheckInFields draft={checkIn} onChange={setCheckIn} />
 
           {/* Booking (#197, #199) — shared with the create form */}
           <BookingFields

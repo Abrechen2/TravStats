@@ -15,6 +15,12 @@
  * has one; an attached flight or stay keeps its booking when it has one; a
  * row on another trip stays where it is (the proposal skipped it already).
  */
+import {
+  STORED_DEADLINE_SELECT,
+  fillEmptyDeadlines,
+  parsedDeadlineColumns,
+  type DeadlineField,
+} from "../../deadlines/parsedDeadlines";
 import { propagateWrites } from "../../sharing/propagate";
 import { prisma, type DbTransaction } from "../../../db";
 import { AppError } from "../../../middleware/errorHandler";
@@ -66,7 +72,12 @@ export interface CommittedEntity {
 
 export interface PackageCommitResult {
   trip: { action: "create" | "attach"; id: string };
-  booking: { action: "create" | "attach"; id: string };
+  booking: {
+    action: "create" | "attach";
+    id: string;
+    /** On an attached booking: the EMPTY deadlines this document filled (forgejo#285). */
+    filledDeadlines?: DeadlineField[];
+  };
   flights: Array<CommittedEntity & { index: number }>;
   stays: Array<CommittedEntity & { index: number; lodgingId: string | null }>;
   cruise: CommittedEntity | null;
@@ -263,6 +274,9 @@ export async function commitPackageProposal(
   );
   const cruise = proposal.cruise?.action === "create" ? await cruiseRow(userId, contract) : null;
   const fx = await bookingFx(userId, contract);
+  // The document's deadlines (forgejo#285). A package names no place, so a
+  // cancellation TIME needs the zone the template states; a day stands alone.
+  const deadlines = await parsedDeadlineColumns(contract, contract.deadlineZone ?? null, userId);
   const document = proposal.document;
   if (document?.action === "file") {
     await assertLinkable(userId, [document.id]);
@@ -296,7 +310,25 @@ export async function commitPackageProposal(
 
       // Booking — reuse by reference, never overwrite a stored price.
       let bookingId = proposal.booking.id;
+      let filledDeadlines: DeadlineField[] = [];
       if (bookingId) {
+        // Deadlines only fill what the stored booking does not hold.
+        const stored = await tx.booking.findFirst({
+          where: { id: bookingId, userId },
+          select: STORED_DEADLINE_SELECT,
+        });
+        if (stored) {
+          const fill = await fillEmptyDeadlines(
+            contract,
+            stored,
+            contract.deadlineZone ?? null,
+            userId
+          );
+          if (fill.filled.length > 0) {
+            await tx.booking.update({ where: { id: bookingId }, data: fill.columns });
+            filledDeadlines = fill.filled;
+          }
+        }
         await tx.booking.updateMany({
           where: { id: bookingId, userId, tripId: null },
           data: { tripId },
@@ -322,6 +354,7 @@ export async function commitPackageProposal(
               price: contract.totalPrice ?? null,
               currency: contract.currency ?? (contract.totalPrice == null ? null : "EUR"),
               ...fx,
+              ...deadlines,
             },
             select: { id: true },
           })
@@ -410,7 +443,7 @@ export async function commitPackageProposal(
       await propagateWrites(tx, userId, "lodgingStay", idsOf(stays));
       await propagateWrites(tx, userId, "cruise", idsOf(cruiseResult ? [cruiseResult] : []));
 
-      return { tripId, bookingId, flights, stays, cruise: cruiseResult };
+      return { tripId, bookingId, filledDeadlines, flights, stays, cruise: cruiseResult };
     },
     { timeout: 30_000 }
   );
@@ -425,7 +458,11 @@ export async function commitPackageProposal(
 
   return {
     trip: { action: proposal.trip.action, id: written.tripId },
-    booking: { action: proposal.booking.action, id: written.bookingId },
+    booking: {
+      action: proposal.booking.action,
+      id: written.bookingId,
+      ...(written.filledDeadlines.length > 0 ? { filledDeadlines: written.filledDeadlines } : {}),
+    },
     flights: written.flights,
     stays: written.stays,
     cruise: written.cruise,

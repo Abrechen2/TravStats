@@ -115,7 +115,20 @@ describe("sync feed: rentals, trip expenses and the companion catalogue", () => 
       data: { userId: user.id, name: "Alpen", mode: "car", kind: "roadtrip" },
     });
     const onTrip = await prisma.tripExpense.create({
-      data: { userId: user.id, tripId: trip.id, kind: "parking", amount: "12.40", currency: "EUR" },
+      data: {
+        userId: user.id,
+        tripId: trip.id,
+        kind: "parking",
+        amount: "12.40",
+        currency: "EUR",
+        // forgejo#150: the payer and the exchange-rate record travel too.
+        payerName: "Anna",
+        amountBase: "12.40",
+        fxRate: 1,
+        fxRateDate: new Date("2026-07-15T00:00:00Z"),
+        fxBaseCurrency: "EUR",
+        fxSource: "ecb",
+      },
     });
     const onRoute = await prisma.tripExpense.create({
       data: { userId: user.id, routeId: route.id, kind: "toll", amount: "8.00", currency: "EUR" },
@@ -132,6 +145,14 @@ describe("sync feed: rentals, trip expenses and the companion catalogue", () => 
     const record = delta.items.find((item) => item.id === onTrip.id)?.record;
     expect(record?.amount).toBe("12.4");
     expect(record).not.toHaveProperty("route");
+    expect(record).toMatchObject({
+      payerName: "Anna",
+      payerCompanionId: null,
+      amountBase: "12.4",
+      fxRate: 1,
+      fxBaseCurrency: "EUR",
+      fxSource: "ecb",
+    });
   });
 
   it("keeps a roadtrip's expense from an account that hides roadtrips, not a trip's", async () => {

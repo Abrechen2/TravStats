@@ -27,6 +27,7 @@ import { rentalDeleteMessage } from "../lib/rental/rentalDeleteMessage";
 import { depositSummary } from "../lib/rental/rentalDeposit";
 import { formatDayLong } from "../shared/time";
 import { formatAmount } from "../lib/units";
+import { deadlineFacts, hasDeadlines } from "../lib/deadlines";
 import { formatStationMoment } from "../lib/rentalTime";
 import type { TimeValue } from "../shared/time";
 import { rentalDrivenKm } from "../shared/rentalCounting";
@@ -316,6 +317,13 @@ export default function RentalDetailPage(): JSX.Element {
               },
             ]}
           />
+
+          {hasDeadlines(rental.times) ? (
+            <DetailSection
+              title={t("common:deadlines.title")}
+              facts={deadlineFacts(rental.times, t, locale)}
+            />
+          ) : null}
 
           <DetailSection
             title={t("rental:detail.price")}

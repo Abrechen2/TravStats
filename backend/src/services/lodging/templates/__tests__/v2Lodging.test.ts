@@ -71,6 +71,29 @@ describe("applyV2LodgingTemplate", () => {
     expect(applyV2LodgingTemplate(t, "", MAIL.replace("Anreise: 01.10.2026", ""))).toBeNull();
   });
 
+  it("carries the deadlines a template reads, as the document states them (forgejo#285)", () => {
+    const t = template({
+      freeCancellationUntil: { patterns: ["Stornierbar bis: (\\S+)"] },
+      paymentDueOn: { patterns: ["Zahlbar bis: (\\S+)"], transform: "numericDate" },
+    });
+    const mail = `${MAIL}\nStornierbar bis: 2026-09-28T18:00\nZahlbar bis: 15.09.2026`;
+    expect(applyV2LodgingTemplate(t, "", mail)).toMatchObject({
+      freeCancellationUntil: "2026-09-28T18:00",
+      paymentDueOn: "2026-09-15",
+    });
+    // A day alone stays a day; nothing read leaves the keys out.
+    const dayOnly = mail.replace("2026-09-28T18:00", "2026-09-28");
+    expect(applyV2LodgingTemplate(t, "", dayOnly)?.freeCancellationUntil).toBe("2026-09-28");
+    expect(applyV2LodgingTemplate(template({}), "", MAIL)).not.toHaveProperty(
+      "freeCancellationUntil"
+    );
+  });
+
+  it("declines a deadline that is no day or wall clock instead of guessing one", () => {
+    const t = template({ freeCancellationUntil: { patterns: ["Stornierbar bis: ([^\\n]+)"] } });
+    expect(applyV2LodgingTemplate(t, "", `${MAIL}\nStornierbar bis: morgen`)).toBeNull();
+  });
+
   it("ignores a template of another domain", () => {
     const flight = { ...template({}), domain: "flight" } as TemplateEnvelope;
     expect(applyV2LodgingTemplate(flight, "", MAIL)).toBeNull();

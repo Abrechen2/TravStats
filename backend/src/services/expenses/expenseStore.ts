@@ -2,6 +2,7 @@ import { prisma } from "../../db";
 import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import type { ClaimClientRef } from "../sync/clientRef";
+import { linkDocumentsInTx } from "../documents/documentService";
 import {
   STATION_OR_LEG_MESSAGE,
   type CreateExpenseInput,
@@ -14,6 +15,8 @@ import {
   dateColumn,
   type ExpenseRow,
 } from "./expenseDto";
+import { expenseFxOnCreate, expenseFxOnUpdate, type ExpenseFxWrite } from "./expenseFx";
+import { payerColumns } from "./expensePayer";
 
 /**
  * Reading and writing expenses (forgejo#140) for the two path families: a
@@ -107,40 +110,84 @@ export async function listExpenses(userId: string, scope: ExpenseScope): Promise
   });
 }
 
+/** One expense as every response carries it — after a write that touched its documents. */
+export async function readExpense(expenseId: string): Promise<ExpenseRow> {
+  return prisma.tripExpense.findUniqueOrThrow({ where: { id: expenseId }, select: EXPENSE_SELECT });
+}
+
+/** A write's row, and what became of its exchange rate. */
+export interface ExpenseWrite {
+  row: ExpenseRow;
+  fx: ExpenseFxWrite;
+}
+
+export interface CreateExpenseOptions {
+  /**
+   * Receipts to file with the new expense (forgejo#150), already checked as
+   * the caller's and unfiled (`takeDocumentIds`).
+   */
+  documentIds?: readonly string[];
+  /**
+   * The idempotency key's hook (forgejo#283, `services/sync/clientRef.ts`),
+   * run inside the creating transaction with the new row's id.
+   */
+  claim?: ClaimClientRef;
+}
+
 /**
- * `claim` runs inside the creating transaction with the new row's id — the
- * idempotency key's hook (forgejo#283, `services/sync/clientRef.ts`).
+ * Everything that can take time or reach the network — the payer's companion
+ * and the exchange-rate lookup — runs BEFORE the transaction. The transaction
+ * then holds only the row, its receipts and the client key: a key never
+ * exists for a half-done write, and a receipt that could not be filed leaves
+ * no expense behind.
  */
 export async function createExpense(
   userId: string,
   scope: ExpenseScope,
   input: CreateExpenseInput,
-  claim?: ClaimClientRef
-): Promise<ExpenseRow> {
+  options: CreateExpenseOptions = {}
+): Promise<ExpenseWrite> {
   const target = await resolveTarget(userId, scope, input.routeId);
   await assertStops(userId, target, {
     pinned: input.stopId,
     legEnds: [input.legFromStopId, input.legToStopId],
   });
-  return prisma.$transaction(async (tx) => {
-    const row = await tx.tripExpense.create({
+  const payer = await payerColumns(userId, input.payer);
+  const amount = amountColumn(input.amount);
+  const date = dateColumn(input.date ?? null);
+  const fx = await expenseFxOnCreate(
+    userId,
+    { amount: amount.toNumber(), currency: input.currency, date },
+    input.fx
+  );
+  const documentIds = [...new Set(options.documentIds ?? [])];
+  const row = await prisma.$transaction(async (tx) => {
+    const created = await tx.tripExpense.create({
       data: {
         userId,
         ...target,
         kind: input.kind,
-        amount: amountColumn(input.amount),
+        amount,
         currency: input.currency,
-        date: dateColumn(input.date ?? null),
+        date,
         note: input.note ?? null,
         stopId: input.stopId ?? null,
         legFromStopId: input.legFromStopId ?? null,
         legToStopId: input.legToStopId ?? null,
+        ...payer,
+        ...fx.columns,
       },
-      select: EXPENSE_SELECT,
+      select: { id: true },
     });
-    await claim?.(tx, row.id);
-    return row;
+    const entry = { type: "tripExpense" as const, id: created.id };
+    if ((await linkDocumentsInTx(tx, userId, documentIds, entry)) !== documentIds.length) {
+      // Filed elsewhere since the check: throwing rolls the expense (and the key) back.
+      throw new AppError("A receipt is already filed with another entry", 409);
+    }
+    await options.claim?.(tx, created.id);
+    return tx.tripExpense.findUniqueOrThrow({ where: { id: created.id }, select: EXPENSE_SELECT });
   });
+  return { row, fx };
 }
 
 /** One expense of the scope, or null — a repeat create's answer (forgejo#283). */
@@ -165,6 +212,14 @@ async function findOwned(userId: string, scope: ExpenseScope, expenseId: string)
       stopId: true,
       legFromStopId: true,
       legToStopId: true,
+      amount: true,
+      currency: true,
+      date: true,
+      amountBase: true,
+      fxRate: true,
+      fxRateDate: true,
+      fxBaseCurrency: true,
+      fxSource: true,
     },
   });
   if (!row) throw new AppError("Expense not found", 404);
@@ -181,7 +236,7 @@ export async function updateExpense(
   scope: ExpenseScope,
   expenseId: string,
   input: UpdateExpenseInput
-): Promise<ExpenseRow> {
+): Promise<ExpenseWrite> {
   const row = await findOwned(userId, scope, expenseId);
   const after = {
     stopId: "stopId" in input ? (input.stopId ?? null) : row.stopId,
@@ -195,16 +250,34 @@ export async function updateExpense(
     { tripId: row.tripId, routeId: row.routeId },
     { pinned: input.stopId, legEnds: [input.legFromStopId, input.legToStopId] }
   );
-  const data: Prisma.TripExpenseUncheckedUpdateInput = {};
+  const payer = await payerColumns(userId, input.payer);
+  const next = {
+    amount: input.amount !== undefined ? amountColumn(input.amount) : row.amount,
+    currency: input.currency ?? row.currency,
+    date: "date" in input ? dateColumn(input.date ?? null) : row.date,
+  };
+  const fx = await expenseFxOnUpdate(
+    userId,
+    { ...row, amount: row.amount.toNumber(), amountBase: row.amountBase?.toNumber() ?? null },
+    { ...next, amount: next.amount.toNumber() },
+    input.fx,
+    { expenseId: row.id, userId }
+  );
+  const data: Prisma.TripExpenseUncheckedUpdateInput = { ...payer, ...fx.columns };
   if (input.kind !== undefined) data.kind = input.kind;
-  if (input.amount !== undefined) data.amount = amountColumn(input.amount);
+  if (input.amount !== undefined) data.amount = next.amount;
   if (input.currency !== undefined) data.currency = input.currency;
-  if ("date" in input) data.date = dateColumn(input.date ?? null);
+  if ("date" in input) data.date = next.date;
   if ("note" in input) data.note = input.note ?? null;
   if ("stopId" in input) data.stopId = input.stopId ?? null;
   if ("legFromStopId" in input) data.legFromStopId = input.legFromStopId ?? null;
   if ("legToStopId" in input) data.legToStopId = input.legToStopId ?? null;
-  return prisma.tripExpense.update({ where: { id: row.id }, data, select: EXPENSE_SELECT });
+  const updated = await prisma.tripExpense.update({
+    where: { id: row.id },
+    data,
+    select: EXPENSE_SELECT,
+  });
+  return { row: updated, fx };
 }
 
 export async function deleteExpense(

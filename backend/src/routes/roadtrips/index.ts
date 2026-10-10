@@ -21,6 +21,7 @@ import companionRoutes from "./companion";
 import { resolveRoadtrip } from "../../services/roadtrip/resolveRoadtrip";
 import { EXPENSE_ORDER, EXPENSE_SELECT, toExpenseDto } from "../../services/expenses/expenseDto";
 import { roadtripCosts } from "../../services/expenses/roadtripCosts";
+import { getBaseCurrency } from "../../services/fx/snapshot";
 import { roadtripProgress } from "../../utils/roadtripInsights/progress";
 import { loadRoadtripSummaries } from "../../services/roadtrip/roadtripList";
 
@@ -116,7 +117,7 @@ router.get(
       const userId = req.userId!;
       const id = await resolveRoadtrip(userId, req.params.id);
 
-      const [route, stations, legs, tours, routing, expenseRows] = await Promise.all([
+      const [route, stations, legs, tours, routing, expenseRows, base] = await Promise.all([
         prisma.tripRoute.findUniqueOrThrow({
           where: { id },
           include: { ...ROUTE_SELECT, trip: { select: { id: true, name: true } } },
@@ -156,6 +157,7 @@ router.get(
           select: EXPENSE_SELECT,
           orderBy: EXPENSE_ORDER,
         }),
+        getBaseCurrency(userId),
       ]);
       const expenses = expenseRows.map(toExpenseDto);
 
@@ -191,7 +193,7 @@ router.get(
         // Money spent on the way (forgejo#140): the list, and its sums per
         // station, per station-to-station leg and in total — per currency.
         expenses,
-        costs: roadtripCosts(stations, expenses),
+        costs: roadtripCosts(stations, expenses, base),
       });
     } catch (error) {
       next(error);

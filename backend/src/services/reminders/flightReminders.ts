@@ -132,6 +132,8 @@ export async function checkFlightReminders(now: Date): Promise<void> {
           actualArrival: true,
           runwayDepartureTime: true,
           runwayArrivalTime: true,
+          onlineCheckInOpensAt: true,
+          onlineCheckInZone: true,
           userId: true,
           user: {
             select: {

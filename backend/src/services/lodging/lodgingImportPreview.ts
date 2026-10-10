@@ -1,3 +1,8 @@
+import {
+  DEADLINE_FIELDS,
+  STORED_DEADLINE_SELECT,
+  emptyDeadlineFills,
+} from "../deadlines/parsedDeadlines";
 import { visibleChainsWhere } from "./chainScope";
 import { namesCouldBeOneHouse } from "./nameSimilarity";
 import { prisma } from "../../db";
@@ -77,6 +82,9 @@ export interface ComparableStay {
   pricePerNight: number | null;
   currency: string;
   bookingReference: string | null;
+  freeCancellationUntil: Date | null;
+  freeCancellationOn: Date | null;
+  paymentDueOn: Date | null;
 }
 
 interface ExistingStay extends ComparableStay {
@@ -188,6 +196,12 @@ export function stayChanges(
     }
   }
   text("bookingReference", incoming.bookingReference, stored.bookingReference);
+  // Deadlines only fill what the stay does not hold yet (forgejo#285).
+  const fills = emptyDeadlineFills(incoming, stored);
+  for (const field of DEADLINE_FIELDS) {
+    const to = fills[field];
+    if (to) changes.push({ field, from: null, to });
+  }
   return changes;
 }
 
@@ -475,6 +489,7 @@ export async function buildLodgingPreviewRows(
         pricePerNight: true,
         currency: true,
         bookingReference: true,
+        ...STORED_DEADLINE_SELECT,
       },
     }),
     // The chains THIS user can link to — catalogue and own. Another

@@ -4,6 +4,7 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import DetailHeader from "../components/ui/DetailHeader";
 import DetailSection from "../components/ui/DetailSection";
+import { onlineCheckInFact } from "../lib/deadlines";
 import PeopleList from "../components/ui/PeopleList";
 import FlightRouteHero from "../components/flightsTable/FlightRouteHero";
 import { resolveAirlineIata } from "../lib/airlineUtils";
@@ -270,6 +271,11 @@ export default function FlightDetailPage(): JSX.Element {
                   : null,
                 mono: true,
               },
+              onlineCheckInFact(
+                flight.times?.onlineCheckInOpens,
+                t,
+                i18n.language.startsWith("en") ? "en-GB" : "de-DE"
+              ),
             ]}
           />
 

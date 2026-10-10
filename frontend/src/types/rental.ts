@@ -35,6 +35,10 @@ export interface RentalTimes {
   /** Deposit days as the statement shows them — no zone (forgejo#238). */
   depositPaid?: LocalDateValue | null;
   depositReturned?: LocalDateValue | null;
+  /** Deadlines (forgejo#285): an instant OR a day, never both. */
+  freeCancellationUntil?: TimeValue | null;
+  freeCancellationOn?: LocalDateValue | null;
+  paymentDue?: LocalDateValue | null;
 }
 
 export interface RentalBooking {
@@ -174,6 +178,9 @@ export interface RentalInput {
   depositPaidOn?: string | null;
   depositReturnedOn?: string | null;
   depositReturnedAmount?: number | null;
+  /** A bare day (until its end) or `{local, zone?}` on the pickup clock; null clears (forgejo#285). */
+  freeCancellationUntil?: string | { local: string; zone?: string } | null;
+  paymentDueOn?: string | null;
   inclusions?: RentalInclusion[];
   arrivalFlightNumber?: string | null;
   status?: "scheduled" | "cancelled";
@@ -271,4 +278,6 @@ export interface TripRental {
   pickupPrecision: string;
   returnPrecision: string;
   status: RentalStatus;
+  /** Deadlines among them (forgejo#285); optional — an older server sends none. */
+  times?: Partial<RentalTimes>;
 }

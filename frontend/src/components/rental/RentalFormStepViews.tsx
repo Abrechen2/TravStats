@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import CurrencySelect from "../common/CurrencySelect";
+import { DeadlineFields } from "../deadlines/DeadlineFields";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
@@ -297,6 +298,7 @@ export function RentalBookingStep(props: RentalStepProps): JSX.Element {
         />
         {t("rental:form.cancelled")}
       </label>
+      <DeadlineFields draft={draft.deadlines} onChange={(v): void => set("deadlines", v)} />
     </div>
   );
 }

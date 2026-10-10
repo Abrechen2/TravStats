@@ -13,6 +13,7 @@ import {
   type ZoneSource,
 } from "../../shared/time/wire";
 import type { FlightTimes } from "../../schemas/times";
+import { onlineCheckInTime, type OnlineCheckInColumns } from "../deadlines/bookingDeadlines";
 
 /**
  * A flight's `times` (ADR 0002 phase 4): departure and arrival as TimeValues
@@ -37,7 +38,7 @@ import type { FlightTimes } from "../../schemas/times";
  * | `UNKNOWN` | never classified; a year-/month-only entry holds midnight UTC on the 1st | the stored value, precision `unknown` (date only); the placeholder at the start of its own day (`placeholderDayOf`) |
  */
 
-export interface FlightTimeColumns {
+export interface FlightTimeColumns extends OnlineCheckInColumns {
   departureTime: Date | null;
   arrivalTime: Date | null;
   depTimeSemantics: string;
@@ -143,5 +144,6 @@ export function flightTimes(flight: FlightTimeColumns, catalogue: CatalogueZones
     actualArrival: arr(flight.actualArrival),
     runwayDeparture: dep(flight.runwayDepartureTime),
     runwayArrival: arr(flight.runwayArrivalTime),
+    onlineCheckInOpens: onlineCheckInTime(flight),
   };
 }

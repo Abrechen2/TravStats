@@ -1,5 +1,18 @@
 import request from "supertest";
 
+// The expense cases snapshot an exchange rate on create; the rate source is
+// stubbed so this suite never reaches the network (a real lookup made the
+// "dedupes expenses" case depend on an outside service being up).
+jest.mock("../../services/fx/resolver", () => ({
+  ...jest.requireActual("../../services/fx/resolver"),
+  convertToBase: jest.fn(async (amount: number) => ({
+    baseAmount: amount,
+    rate: 1,
+    rateDate: "2026-01-01",
+    source: "ecb",
+  })),
+}));
+
 import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
@@ -160,9 +173,85 @@ describe("clientRef — create at most once", () => {
       expect(first.status).toBe(201);
       const again = await post(path, { ...expense, clientRef: key });
       expect(again.status).toBe(200);
-      expect(again.body).toEqual(first.body);
+      expect(again.body.expense).toEqual(first.body.expense);
+      // A repeat looks no rate up: the stored one stands (forgejo#150).
+      expect(again.body.fxSnapshot).toBe("unchanged");
     }
     expect(await prisma.tripExpense.count({ where: { userId } })).toBe(2);
+  });
+
+  describe("an expense's receipts and its key (forgejo#150 + #283)", () => {
+    const receipt = () =>
+      prisma.document.create({
+        data: {
+          userId,
+          storedName: `${Math.random()}.pdf`,
+          mimetype: "application/pdf",
+          sizeBytes: 1,
+          sha256: "0".repeat(64),
+          format: "pdf",
+        },
+      });
+
+    afterEach(async () => {
+      await prisma.document.deleteMany({ where: { userId } });
+    });
+
+    it("files the receipts once: a repeat answers the expense and links nothing again", async () => {
+      const doc = await receipt();
+      const body = { ...expense, date: null, documentIds: [doc.id], clientRef: ref(20) };
+      const first = await post(`/trips/${tripId}/expenses`, body);
+      expect(first.status).toBe(201);
+      expect(first.body.expense.documentCount).toBe(1);
+      const linkedAt = (await prisma.document.findUniqueOrThrow({ where: { id: doc.id } }))
+        .linkedAt;
+
+      const again = await post(`/trips/${tripId}/expenses`, body);
+      expect(again.status).toBe(200);
+      expect(again.body.expense).toEqual(first.body.expense);
+      expect(again.body.fxSnapshot).toBe("unchanged");
+      const after = await prisma.document.findUniqueOrThrow({ where: { id: doc.id } });
+      expect(after.tripExpenseId).toBe(first.body.expense.id);
+      expect(after.linkedAt).toEqual(linkedAt);
+      expect(await prisma.tripExpense.count({ where: { userId } })).toBe(1);
+    });
+
+    it("refuses a repeat that names other receipts: 409, nothing created or filed", async () => {
+      const [a, b] = [await receipt(), await receipt()];
+      const base = { ...expense, date: null, clientRef: ref(21) };
+      expect(
+        (await post(`/trips/${tripId}/expenses`, { ...base, documentIds: [a.id] })).status
+      ).toBe(201);
+      const other = await post(`/trips/${tripId}/expenses`, { ...base, documentIds: [b.id] });
+      expect(other.status).toBe(409);
+      expect(other.body.code).toBe("CLIENT_REF_REUSED");
+      expect(
+        (await prisma.document.findUniqueOrThrow({ where: { id: b.id } })).tripExpenseId
+      ).toBeNull();
+      expect(await prisma.tripExpense.count({ where: { userId } })).toBe(1);
+    });
+
+    it("leaves no expense and no key when the receipt cannot be filed inside the write", async () => {
+      const doc = await receipt();
+      // Filed elsewhere between the check and the write: the count no longer matches.
+      const original = prisma.$transaction.bind(prisma) as (fn: unknown) => Promise<unknown>;
+      const spy = jest.spyOn(prisma, "$transaction").mockImplementationOnce((async (
+        fn: unknown
+      ) => {
+        await prisma.document.update({ where: { id: doc.id }, data: { tripId } });
+        return original(fn);
+      }) as never);
+      const res = await post(`/trips/${tripId}/expenses`, {
+        ...expense,
+        date: null,
+        documentIds: [doc.id],
+        clientRef: ref(22),
+      });
+      spy.mockRestore();
+      expect(res.status).toBe(409);
+      expect(await prisma.tripExpense.count({ where: { userId } })).toBe(0);
+      expect(await prisma.clientWriteRef.count({ where: { userId } })).toBe(0);
+    });
   });
 
   it("refuses the key with a different body — 409 naming the row it made — and creates nothing", async () => {

@@ -1,3 +1,4 @@
+import { deadlineSummary } from "../lib/deadlines";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { tripsApi } from "../lib/api";
@@ -893,9 +894,7 @@ function LodgingCheckCard({
     isCheckIn ? "trips:detail.timeline.lodgingCheckIn" : "trips:detail.timeline.lodgingCheckOut",
     { name: stay.lodging.name }
   );
-  // A stay is a DAY at the hotel; read in the viewer's zone it printed a
-  // meaningless "02:00" and, west of UTC, the day before.
-  const subtitle = formatTimelineDate(ev.when);
+  const subtitle = formatTimelineDate(ev.when); // a stay is a DAY at the hotel, not the viewer's
   // Only on the check-in entry, so the hint appears once per stay, not twice.
   const showHint = implausible && isCheckIn;
   return (
@@ -910,6 +909,7 @@ function LodgingCheckCard({
         }
         date={ev.date}
         dateLabel={formatTimelineDate(ev.when)}
+        meta={isCheckIn ? (deadlineSummary(stay.times, t) ?? undefined) : undefined}
       />
     </Link>
   );

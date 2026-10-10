@@ -1,5 +1,6 @@
 import { z } from "./zod";
 import { legacyDayFieldSchema, timeFieldSchema } from "../shared/time/timeInput";
+import { deadlineInputShape } from "./deadlines";
 
 export const TRIP_COLORS = [
   "#818cf8",
@@ -161,6 +162,9 @@ export const createBookingSchema = z.object({
    * not of the day it happened to be typed in.
    */
   bookedOn: ISO_DATE.optional(),
+  // Deadlines (forgejo#285). A booking names no place, so a `{local}` must
+  // carry its `zone` or `placeRef`; a bare day keeps a floating day.
+  ...deadlineInputShape({ impliedPlace: false }),
   flightIds: ENTRY_IDS.optional(),
   /** Stays and cruises the package covers, filed on it at creation (#356). */
   stayIds: ENTRY_IDS.optional(),
@@ -180,6 +184,7 @@ export const updateBookingSchema = z.object({
   operator: BOOKING_OPERATOR.nullable().optional(),
   travellers: BOOKING_TRAVELLERS.nullable().optional(),
   bookedOn: ISO_DATE.nullable().optional(),
+  ...deadlineInputShape({ impliedPlace: false }),
 });
 
 /** `POST /trips/bookings/:id/flights` — file existing flights on a booking (#356). */

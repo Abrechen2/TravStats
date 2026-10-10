@@ -1,5 +1,5 @@
 import { api } from "./client";
-import type { ExpenseInput, TripExpense } from "../../types/expense";
+import type { ExpenseInput, ExpenseWriteResult } from "../../types/expense";
 
 /**
  * A roadtrip's expenses (forgejo#140). The trip-wide family
@@ -7,12 +7,17 @@ import type { ExpenseInput, TripExpense } from "../../types/expense";
  * roadtrip page only, so this client covers that one.
  */
 export const expensesApi = {
-  createForRoadtrip: async (roadtripId: string, input: ExpenseInput): Promise<TripExpense> => {
-    const { data } = await api.post<{ expense: TripExpense }>(
-      `/roadtrips/${roadtripId}/expenses`,
-      input
-    );
-    return data.expense;
+  /**
+   * The stored expense AND `fxSnapshot` — what became of its exchange rate.
+   * A `lookupFailed` is a saved expense that counts in its own currency only,
+   * which the caller must say (forgejo#150).
+   */
+  createForRoadtrip: async (
+    roadtripId: string,
+    input: ExpenseInput
+  ): Promise<ExpenseWriteResult> => {
+    const { data } = await api.post<ExpenseWriteResult>(`/roadtrips/${roadtripId}/expenses`, input);
+    return data;
   },
 
   /**
@@ -24,12 +29,12 @@ export const expensesApi = {
     roadtripId: string,
     expenseId: string,
     input: Partial<ExpenseInput> & { baseVersion?: string }
-  ): Promise<TripExpense> => {
-    const { data } = await api.patch<{ expense: TripExpense }>(
+  ): Promise<ExpenseWriteResult> => {
+    const { data } = await api.patch<ExpenseWriteResult>(
       `/roadtrips/${roadtripId}/expenses/${expenseId}`,
       input
     );
-    return data.expense;
+    return data;
   },
 
   /**

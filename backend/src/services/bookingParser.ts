@@ -28,6 +28,9 @@ export interface ParsedBooking {
   baggageAllowance?: string; // e.g. "1x23kg", "20kg included"
   frequentFlyerNumber?: string; // e.g. "LH-123456789"
   bookingClassLetter?: string; // IATA booking class, e.g. "Y", "M", "C", "J", "F"
+  // When online check-in opens, "YYYY-MM-DDTHH:mm" on the departure airport's clock (forgejo#285).
+  // Sent on as `onlineCheckInOpensAt: { local }` — the server reads the departure zone.
+  onlineCheckInOpensAt?: string;
   coPassengers?: string[]; // e.g. ["Max Mustermann", "Erika Musterfrau"]
   parserTemplate?: string; // Which template was used, e.g. "LH"
   parserConfidence?: number; // 0–100

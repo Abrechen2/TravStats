@@ -5,6 +5,25 @@
  * itself, so there is one rule for a total and it lives there.
  */
 
-/** What an expense is for. The database CHECKs the same list. */
-export const EXPENSE_KINDS = ["ferry", "toll", "pitch", "fuel", "parking", "other"] as const;
+/**
+ * What an expense is for. The database CHECKs the same list. `charging` is EV
+ * charging; `transport` getting about on the spot (taxi, local transit);
+ * `activity` tickets, admission and tours; `fees` visa, bank and service fees
+ * (forgejo#150). The server's mirror documents each.
+ */
+export const EXPENSE_KINDS = [
+  "ferry",
+  "toll",
+  "pitch",
+  "fuel",
+  "charging",
+  "parking",
+  "transport",
+  "food",
+  "groceries",
+  "activity",
+  "shopping",
+  "fees",
+  "other",
+] as const;
 export type ExpenseKind = (typeof EXPENSE_KINDS)[number];

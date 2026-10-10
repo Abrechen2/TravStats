@@ -1,3 +1,5 @@
+import { DeadlineFields } from "../deadlines/DeadlineFields";
+import { deadlineWire, type DeadlineDraft } from "../deadlines/deadlineDraft";
 import { useEffect, useId, useState } from "react";
 import type { JSX } from "react";
 import { dayInput } from "../../lib/api/timeInput";
@@ -208,6 +210,7 @@ export function StayEditor({
   const [receiptUrl, setReceiptUrl] = useState<string | null>(initial.receiptUrl);
   const [companionsInput, setCompanionsInput] = useState<string>(initial.companionsInput);
   const [notes, setNotes] = useState<string>(initial.notes);
+  const [deadlines, setDeadlines] = useState<DeadlineDraft>(initial.deadlines);
 
   const entrySuggestions = useLodgingEntrySuggestions(lodgingId);
   const [memberships, setMemberships] = useState<LodgingMembership[]>([]);
@@ -251,6 +254,7 @@ export function StayEditor({
     receiptUrl,
     companionsInput,
     notes,
+    deadlines,
   };
   const { dirty, markSaved } = useDirtyGuard(initial, draft);
   const saving = useSaveOnce<LodgingStay>({ afterSaveFailedKey });
@@ -437,6 +441,8 @@ export function StayEditor({
       tripId: tripId || null,
       companions: splitCsv(companionsInput),
       notes: notes.trim() || null,
+      // Only what changed: an untouched deadline is never rewritten.
+      ...deadlineWire(deadlines, initial.deadlines),
     };
     failure.clear();
     // The request and what follows it are two steps (forgejo#247): a list or
@@ -660,6 +666,10 @@ export function StayEditor({
               />
             </Field>
           </div>
+        </StayEditorSection>
+
+        <StayEditorSection title={t("common:deadlines.title")}>
+          <DeadlineFields draft={deadlines} onChange={setDeadlines} />
         </StayEditorSection>
 
         <StayEditorSection title={t("lodging:stayEditor.loyaltySection")}>

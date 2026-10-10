@@ -21,6 +21,7 @@ import { stayTimesSchema } from "../../../schemas/times";
 import { z } from "zod";
 
 import { registry } from "../registry";
+import { deadlineDayColumns } from "./deadlineColumns";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import { captureFieldsSchema } from "../../photos/captureFields";
@@ -96,6 +97,7 @@ const stay = registry.register(
         .nullable()
         .describe("ISO 4217. The currency the stay was actually paid in."),
       tripId: z.string().uuid().nullable(),
+      ...deadlineDayColumns,
       bookingId: z.string().uuid().nullable(),
       createdAt: z.string().datetime(),
       updatedAt: z.string().datetime(),

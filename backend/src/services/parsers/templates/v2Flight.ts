@@ -13,7 +13,8 @@
  * field: flightNumber, pnr, departureTime, arrivalTime, departureCode,
  * arrivalCode, seat, seatClass, price, currency, taxes, fees, baggage,
  * frequentFlyer, ticketNumber, bookingClassLetter, terminal, gate — plus
- * `arrivalDayOffset`, the "+1" some airlines print after a red-eye's arrival.
+ * `arrivalDayOffset`, the "+1" some airlines print after a red-eye's arrival,
+ * and `onlineCheckInOpensAt` (forgejo#285), a wall clock at the departure airport.
  */
 import { z } from "zod";
 import logger from "../../../utils/logger";
@@ -40,6 +41,7 @@ const LEG_TO_BOOKING = {
   bookingClassLetter: "bookingClassLetter",
   terminal: "terminal",
   gate: "gate",
+  onlineCheckInOpensAt: "onlineCheckInOpensAt",
 } as const satisfies Record<string, keyof ParsedBooking>;
 
 type LegKey = keyof typeof LEG_TO_BOOKING;
@@ -75,6 +77,7 @@ const legValuesSchema = z.object({
   bookingClassLetter: scalar,
   terminal: scalar,
   gate: scalar,
+  onlineCheckInOpensAt: localDateTime,
   arrivalDayOffset: z.number().int().min(-1).max(3).nullish(),
 });
 type LegValues = z.infer<typeof legValuesSchema>;

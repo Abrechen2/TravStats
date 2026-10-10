@@ -337,6 +337,13 @@ describe("GET /api/v1/admin/export/all-data", () => {
         kind: "ferry",
         amount: 1290,
         currency: "NOK",
+        // forgejo#150: who paid, and the rate it was converted at.
+        payerName: "Anna",
+        amountBase: 111.59,
+        fxRate: 0.0865,
+        fxRateDate: new Date("2026-07-15T00:00:00Z"),
+        fxBaseCurrency: "EUR",
+        fxSource: "cached",
       },
     });
 
@@ -355,8 +362,17 @@ describe("GET /api/v1/admin/export/all-data", () => {
       }),
     ]);
     expect(me.tripExpenses).toEqual([
-      expect.objectContaining({ routeId: route.id, kind: "ferry", currency: "NOK" }),
+      expect.objectContaining({
+        routeId: route.id,
+        kind: "ferry",
+        currency: "NOK",
+        payerName: "Anna",
+        fxRate: 0.0865,
+        fxBaseCurrency: "EUR",
+        fxSource: "cached",
+      }),
     ]);
+    expect(Number(me.tripExpenses[0].amountBase)).toBe(111.59);
     expect(Number(me.tripExpenses[0].amount)).toBe(1290);
   });
 

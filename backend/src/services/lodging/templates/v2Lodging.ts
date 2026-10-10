@@ -21,6 +21,8 @@ import { applyTemplate } from "../../parsers/templates/v2/runners";
 import type { TemplateEnvelope } from "../../parsers/templates/v2/envelope";
 import { finishLodgingRead, type LodgingRead } from "./finishRead";
 import { lodgingOutputSchema } from "../../parsers/templates/v2/outputSchemas";
+import { parsedDeadlineValuesShape } from "../../../schemas/deadlines";
+import { pickParsedDeadlines } from "../../deadlines/parsedDeadlines";
 
 const text = z.string().min(1).nullish();
 const isoDay = z
@@ -50,6 +52,8 @@ export const lodgingValuesSchema = z.object({
   chainName: text,
   /** The night count the document prints — authoritative over the date span. */
   nights: z.number().int().nonnegative().max(366).nullish(),
+  /** Booking deadlines as the confirmation states them (forgejo#285). */
+  ...parsedDeadlineValuesShape,
 });
 
 export type LodgingValues = z.infer<typeof lodgingValuesSchema>;
@@ -116,7 +120,7 @@ export function applyV2LodgingTemplate(
     const value = values[key];
     if (value !== null && value !== undefined) read[key] = value;
   }
-  return finishLodgingRead(read, {
+  const booking = finishLodgingRead(read, {
     parserTemplate: lodgingTemplateName(template),
     checkOutYearBorrowed: template.extraction.fields?.checkOut?.yearFrom !== undefined,
     type: values.type ?? null,
@@ -125,6 +129,7 @@ export function applyV2LodgingTemplate(
     ...(output.data.report ? { report: output.data.report } : {}),
     ...(output.data.confidence ? { confidence: output.data.confidence } : {}),
   });
+  return booking ? { ...booking, ...pickParsedDeadlines(values) } : null;
 }
 
 /** The first of `templates` that reads the document, in the order given. */

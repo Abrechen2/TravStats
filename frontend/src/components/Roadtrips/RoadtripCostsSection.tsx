@@ -8,8 +8,14 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { formatCurrency } from "../../lib/units";
 import { useSettingsStore } from "../../store/settingsStore";
-import type { AmountsByCurrency, RoadtripCosts, TripExpense } from "../../types/expense";
+import type {
+  AmountsByCurrency,
+  ExpenseBaseTotal,
+  RoadtripCosts,
+  TripExpense,
+} from "../../types/expense";
 import type { RoadtripStation } from "../../types/roadtrip";
+import { fxSourceKey } from "./expenseFx";
 
 /** "1.290 kr + 17,50 €" — per currency, never converted, never added together. */
 export function formatAmounts(amounts: AmountsByCurrency, language: string): string {
@@ -20,11 +26,35 @@ export function formatAmounts(amounts: AmountsByCurrency, language: string): str
 }
 
 /**
+ * Whether the base-currency line says anything the per-currency line does
+ * not: not when everything was paid in the base currency already, and not as
+ * a number when NOTHING could be converted — "≈ 0 €" for a trip that cost
+ * 1.290 kr would be a figure nobody recorded.
+ */
+export function baseTotalState(
+  total: AmountsByCurrency,
+  base: ExpenseBaseTotal | undefined
+): "hidden" | "noneConverted" | "shown" {
+  const codes = Object.keys(total);
+  if (!base || codes.length === 0) return "hidden";
+  const unconverted = Object.keys(base.unconverted);
+  if (unconverted.length === 0 && codes.length === 1 && codes[0] === base.currency) {
+    return "hidden";
+  }
+  const allUnconverted = codes.every((code) => base.unconverted[code] === total[code]);
+  return allUnconverted ? "noneConverted" : "shown";
+}
+
+/**
  * The roadtrip's costs (forgejo#140): ferry tickets, tolls, pitch fees, fuel —
  * the total per currency, then each expense with where it was paid. The sums
  * are the server's (`costs`), so this page and the statistics cannot disagree
  * about what the roadtrip cost. A row opens it for editing; deleting is in
  * there too, one deliberate step away from an accidental tap.
+ *
+ * The base-currency total (forgejo#150) is `totalBase.amount` as the server
+ * computed it from each expense's recorded rate — never a sum made here — and
+ * whatever had no rate is named beside it rather than quietly left out.
  */
 export default function RoadtripCostsSection({
   roadtripId,
@@ -56,6 +86,9 @@ export default function RoadtripCostsSection({
     }
     return t("roadtrips:costs.wholeTrip");
   };
+  const baseState = baseTotalState(costs.total, costs.totalBase);
+  const money = (value: number, code: string): string =>
+    formatCurrency(value, code, { language: i18n.language });
   // A new expense starts in the currency last used here, else the account's own.
   const defaultCurrency = expenses[expenses.length - 1]?.currency ?? baseCurrency;
 
@@ -85,6 +118,13 @@ export default function RoadtripCostsSection({
               <span className="t-caption">{t("roadtrips:costs.perCurrencyHint")}</span>
             )}
           </p>
+          {baseState !== "hidden" && (
+            <BaseTotalLine
+              base={costs.totalBase}
+              noneConverted={baseState === "noneConverted"}
+              language={i18n.language}
+            />
+          )}
           <ul className="flex flex-col" style={{ gap: 6, listStyle: "none", padding: 0 }}>
             {expenses.map((e) => (
               <li key={e.id}>
@@ -112,13 +152,40 @@ export default function RoadtripCostsSection({
                       {[
                         placeOf(e),
                         e.date ? display.date(`${e.date}T00:00:00Z`, { timeZone: "UTC" }) : null,
+                        e.payer ? t("roadtrips:costs.paidBy", { name: e.payer.name }) : null,
                       ]
                         .filter(Boolean)
                         .join(" · ")}
                     </span>
                   </span>
-                  <span style={{ fontWeight: 700, whiteSpace: "nowrap" }}>
-                    {formatCurrency(e.amount, e.currency, { language: i18n.language })}
+                  <span className="flex shrink-0 flex-col items-end" style={{ gap: 2 }}>
+                    <span
+                      className="flex items-center"
+                      style={{ gap: 6, fontWeight: 700, whiteSpace: "nowrap" }}
+                    >
+                      {e.documentCount > 0 && (
+                        <span
+                          className="flex items-center"
+                          data-testid="expense-receipt"
+                          title={t("roadtrips:costs.receipt.count", { count: e.documentCount })}
+                          style={{ color: "var(--ts-muted)" }}
+                        >
+                          <Icon name="file-text" size={14} />
+                          <span className="sr-only">
+                            {t("roadtrips:costs.receipt.count", { count: e.documentCount })}
+                          </span>
+                        </span>
+                      )}
+                      {money(e.amount, e.currency)}
+                    </span>
+                    {e.fx && e.fx.baseCurrency !== e.currency && (
+                      <span className="t-caption" style={{ whiteSpace: "nowrap" }}>
+                        {t("roadtrips:costs.fx.rowConverted", {
+                          amount: money(e.fx.amountBase, e.fx.baseCurrency),
+                          source: t(fxSourceKey(e.fx.source)),
+                        })}
+                      </span>
+                    )}
                   </span>
                 </button>
               </li>
@@ -141,5 +208,44 @@ export default function RoadtripCostsSection({
         />
       )}
     </section>
+  );
+}
+
+/** "≈ 1.234,56 € in Hauswährung", and what it does not contain. */
+function BaseTotalLine({
+  base,
+  noneConverted,
+  language,
+}: {
+  base: ExpenseBaseTotal;
+  noneConverted: boolean;
+  language: string;
+}): JSX.Element {
+  const { t } = useTranslation(["roadtrips"]);
+  const missing = Object.keys(base.unconverted).length > 0;
+  return (
+    <div className="flex flex-col" style={{ gap: 2 }}>
+      {noneConverted ? (
+        <p className="t-caption" data-testid="roadtrip-costs-base-none">
+          {t("roadtrips:costs.base.noneConverted")}
+        </p>
+      ) : (
+        <p className="flex flex-wrap items-baseline" style={{ gap: 8 }}>
+          <span data-testid="roadtrip-costs-base" style={{ fontWeight: 700 }}>
+            {t("roadtrips:costs.base.total", {
+              amount: formatCurrency(base.amount, base.currency, { language }),
+            })}
+          </span>
+          <span className="t-caption">{t("roadtrips:costs.base.hint")}</span>
+        </p>
+      )}
+      {missing && !noneConverted && (
+        <p className="t-caption" data-testid="roadtrip-costs-base-unconverted">
+          {t("roadtrips:costs.base.unconverted", {
+            amounts: formatAmounts(base.unconverted, language),
+          })}
+        </p>
+      )}
+    </div>
   );
 }

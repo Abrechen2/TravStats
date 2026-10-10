@@ -14,14 +14,26 @@ import {
   createExpenseSchema,
   expenseListSchema,
   expenseSchema,
+  expenseWriteResultSchema,
   updateExpenseSchema,
 } from "../../../schemas/expense";
 
-const expense = registry.register("TripExpense", expenseSchema);
+registry.register("TripExpense", expenseSchema);
+const writeResult = registry.register(
+  "TripExpenseWriteResult",
+  expenseWriteResultSchema.openapi("TripExpenseWriteResult")
+);
 const createInput = registry.register(
   "TripExpenseInput",
   createExpenseSchema.openapi("TripExpenseInput", {
-    example: { kind: "ferry", amount: 1290, currency: "NOK", date: "2026-07-16" },
+    example: {
+      kind: "ferry",
+      amount: 1290,
+      currency: "NOK",
+      date: "2026-07-16",
+      payer: { name: "Anna" },
+      fx: { rate: 0.0865, rateDate: "2026-07-15", baseCurrency: "EUR", source: "cached" },
+    },
   })
 );
 const updateInput = registry.register(
@@ -66,7 +78,9 @@ for (const family of FAMILIES) {
   const params = z.object(family.params);
   const itemParams = z.object({ ...family.params, ...expenseIdParam });
   const notFound = {
-    description: `The ${family.owner}, the expense or a named stop is not the caller's`,
+    description:
+      `The ${family.owner}, the expense, a named stop, the payer companion ` +
+      "(`COMPANION_NOT_FOUND`) or a named document is not the caller's",
     content: errorContent,
   };
 
@@ -76,8 +90,10 @@ for (const family of FAMILIES) {
     summary: `List the expenses of a ${family.owner}`,
     description:
       family.listDescription +
-      " Totals are per ISO 4217 code and NEVER summed across currencies — an expense " +
-      "carries no FX snapshot. Dated ones by day, undated ones last.",
+      " `totals` are per ISO 4217 code and NEVER summed across currencies. `baseTotal` is " +
+      "the one figure in the caller's base currency, through each expense's recorded " +
+      "rate only; what has none is listed in `baseTotal.unconverted`. Dated ones by day, " +
+      "undated ones last.",
     tags: ["Expenses"],
     request: { params },
     responses: {
@@ -96,19 +112,21 @@ for (const family of FAMILIES) {
     description:
       family.createDescription +
       " Optionally pinned to ONE station (`stopId`, not a route correction) OR to the way " +
-      "between two (`legFromStopId` + `legToStopId`), never both.",
+      "between two (`legFromStopId` + `legToStopId`), never both. A dated expense without " +
+      "`fx` gets a rate looked up for its day; `fxSnapshot` says whether that worked.",
     tags: ["Expenses"],
     request: { params, body: { content: { "application/json": { schema: createInput } } } },
     responses: {
       201: {
         description: "Recorded",
-        content: { "application/json": { schema: z.object({ expense }) } },
+        content: { "application/json": { schema: writeResult } },
       },
-      ...clientRefResponses({ "application/json": { schema: z.object({ expense }) } }),
+      ...clientRefResponses({ "application/json": { schema: writeResult } }),
       400: {
         description:
           "Validation failed — an unknown kind or currency, a negative amount, half a leg, " +
-          "a station and a leg together, or a stop outside the trip or section",
+          "a station and a leg together, a stop outside the trip or section, a rate from " +
+          "a currency into itself other than 1, or an unusable `documentIds` list",
         content: errorContent,
       },
       404: notFound,
@@ -121,7 +139,8 @@ for (const family of FAMILIES) {
     summary: `Change an expense of a ${family.owner}`,
     description:
       "Partial. The expense stays where it is (trip or section); move it by deleting and " +
-      "recording it again.",
+      "recording it again. The exchange rate moves only when amount, currency or day did, " +
+      "or when `fx` is sent: a note, kind or payer change keeps a stored rate as it is.",
     tags: ["Expenses"],
     request: {
       params: itemParams,
@@ -130,9 +149,12 @@ for (const family of FAMILIES) {
     responses: {
       200: {
         description: "Changed",
-        content: { "application/json": { schema: z.object({ expense }) } },
+        content: { "application/json": { schema: writeResult } },
       },
-      400: { description: "Validation failed", content: errorContent },
+      400: {
+        description: "Validation failed, or a rate from a currency into itself other than 1",
+        content: errorContent,
+      },
       404: notFound,
     },
   });
@@ -141,6 +163,7 @@ for (const family of FAMILIES) {
     method: "delete",
     path: `${family.path}/{expenseId}`,
     summary: `Delete an expense of a ${family.owner}`,
+    description: "Its documents (receipts) go with it.",
     tags: ["Expenses"],
     request: { params: itemParams },
     responses: {

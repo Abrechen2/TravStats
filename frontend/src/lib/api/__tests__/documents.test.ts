@@ -42,6 +42,7 @@ describe("documentListPath", () => {
     expect(documentListPath({ type: "lodgingStay", id: "s1" })).toBe("/lodging/stays/s1/documents");
     expect(documentListPath({ type: "placeVisit", id: "v1" })).toBe("/places/visits/v1/documents");
     expect(documentListPath({ type: "trip", id: "t1" })).toBe("/trips/t1/documents");
+    expect(documentListPath({ type: "tripExpense", id: "x1" })).toBe("/expenses/x1/documents");
   });
 });
 

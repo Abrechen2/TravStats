@@ -13,6 +13,8 @@ import type { LocalDateValue, TimeValue } from "../shared/time";
 
 export interface FlightTimes {
   departure?: TimeValue | null;
+  /** When online check-in opens, on the clock it was stated on (forgejo#285). */
+  onlineCheckInOpens?: TimeValue | null;
   arrival?: TimeValue | null;
   actualDeparture?: TimeValue | null;
   actualArrival?: TimeValue | null;
@@ -30,6 +32,9 @@ export interface StayTimes {
   checkOut?: LocalDateValue | null;
   checkInAt?: TimeValue | null;
   checkOutAt?: TimeValue | null;
+  freeCancellationUntil?: TimeValue | null;
+  freeCancellationOn?: LocalDateValue | null;
+  paymentDue?: LocalDateValue | null;
 }
 
 export interface VisitTimes {
@@ -59,4 +64,11 @@ export interface TripStopTimes {
 
 export interface JournalTimes {
   day?: LocalDateValue | null;
+}
+
+/** A booking's deadlines (forgejo#285) — see `lib/deadlines.ts`. */
+export interface BookingTimes {
+  freeCancellationUntil?: TimeValue | null;
+  freeCancellationOn?: LocalDateValue | null;
+  paymentDue?: LocalDateValue | null;
 }

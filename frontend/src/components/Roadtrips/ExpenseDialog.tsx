@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { JSX } from "react";
 
 import Button from "../ui/Button";
@@ -6,6 +6,7 @@ import Dialog from "../ui/Dialog";
 import { Field, Input, Select, TextArea } from "../ui/Field";
 import CurrencySelect from "../common/CurrencySelect";
 import ConfirmModal from "../Training/ConfirmModal";
+import DocumentsSection from "../documents/DocumentsSection";
 import {
   FormErrorBanner,
   RequiredLegend,
@@ -18,13 +19,17 @@ import {
 import type { MissingStep } from "../form";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
+import { useTodayZone } from "../../hooks/useTodayZone";
 import { expensesApi } from "../../lib/api/expenses";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { logger } from "../../lib/logger";
 import { formatCurrency } from "../../lib/units";
 import { EXPENSE_KINDS, type ExpenseKind } from "../../shared/expenses";
-import type { TripExpense } from "../../types/expense";
+import { todayIn } from "../../shared/time";
+import { useSettingsStore } from "../../store/settingsStore";
+import { useToastStore } from "../../store/toastStore";
+import type { ExpenseWriteResult, TripExpense } from "../../types/expense";
 import type { RoadtripStation } from "../../types/roadtrip";
 import {
   createBody,
@@ -33,8 +38,14 @@ import {
   expenseFailureKey,
   isTransientExpenseFailure,
   parseAmount,
+  payerBody,
+  rateInvalid,
   type ExpenseDraft,
 } from "./expenseDraft";
+import { fxOutcomeNotice } from "./expenseFx";
+import ExpensePayerField, { PAYER_NAME_ID } from "./ExpensePayerField";
+import ExpenseRateField, { RATE_ID } from "./ExpenseRateField";
+import { PendingReceiptPicker, ReceiptAttachFailed, attachPendingReceipt } from "./PendingReceipt";
 
 const AMOUNT_ID = "expense-amount";
 const HINT_ID = "expense-save-blocked";
@@ -55,6 +66,11 @@ const HINT_ID = "expense-save-blocked";
  *
  * Deleting asks first and names the cost that goes (forgejo#250): it was one
  * unconfirmed tap away before.
+ *
+ * forgejo#150 adds who paid, the exchange rate and the receipt. A rate the
+ * server could not find is said after the save (a toast — the dialog closes),
+ * because a cost that silently counts in its own currency only reads as a
+ * converted one. Receipts hang off a SAVED expense; a new one says so.
  */
 export default function ExpenseDialog({
   roadtripId,
@@ -76,6 +92,11 @@ export default function ExpenseDialog({
   const { t, i18n } = useTranslation(["roadtrips", "common"]);
   const display = useDisplayFormat();
   const recent = useRecentCurrencies();
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+  const todayZone = useTodayZone();
+  const addToast = useToastStore((s) => s.addToast);
+  // A receipt added or removed changes the list's indicator: reload on close.
+  const documentsChanged = useRef(false);
   const pinnable = stations.filter((s) => s.state !== "via");
   const titleOf = (id: string | null) => stations.find((s) => s.id === id)?.title ?? "?";
 
@@ -84,11 +105,20 @@ export default function ExpenseDialog({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [removing, setRemoving] = useState(false);
   const { dirty, markSaved } = useDirtyGuard(initial, draft);
-  const saving = useSaveOnce<unknown>();
+  const saving = useSaveOnce<ExpenseWriteResult>();
   const failure = useFormFailure(JSON.stringify(draft));
+  // A receipt picked while CREATING goes up once the cost exists; if that
+  // second request fails, the cost stays and the dialog says so (forgejo#150).
+  const [pendingReceipt, setPendingReceipt] = useState<File | null>(null);
+  const [receiptFailedFor, setReceiptFailedFor] = useState<string | null>(null);
+  const [receiptRetrying, setReceiptRetrying] = useState(false);
 
   const set = <K extends keyof ExpenseDraft>(key: K, value: ExpenseDraft[K]): void =>
     setDraft((prev) => ({ ...prev, [key]: value }));
+  const merge = (patch: Partial<ExpenseDraft>): void => setDraft((prev) => ({ ...prev, ...patch }));
+  const context = { baseCurrency, today: todayIn(todayZone) };
+  // Closing after a receipt changed reloads the list, so its indicator is true.
+  const close = (): void => (documentsChanged.current ? onSaved() : onClose());
 
   const onLeg = expense !== null && expense.legFromStopId !== null && draft.stopId === "";
   const amount = parseAmount(draft.amount);
@@ -104,14 +134,20 @@ export default function ExpenseDialog({
           },
         ]
       : [];
+  const payerNameMissing = draft.payerMode === "name" && payerBody(draft) === null;
+  if (payerNameMissing) {
+    missing.push({ field: PAYER_NAME_ID, label: t("roadtrips:costs.payer.missing") });
+  }
+  const rateBad = rateInvalid(draft, baseCurrency);
+  if (rateBad) missing.push({ field: RATE_ID, label: t("roadtrips:costs.fx.missing") });
   const busy = saving.saving || removing;
 
   const save = async (): Promise<void> => {
     if (missing.length > 0) return;
-    const patch = expense ? editPatch(initial, draft, expense.updatedAt) : null;
+    const patch = expense ? editPatch(initial, draft, expense.updatedAt, context) : null;
     // Nothing changed: there is nothing to send, and nothing to lose by closing.
     if (expense && patch === null) {
-      onClose();
+      close();
       return;
     }
     failure.clear();
@@ -119,9 +155,20 @@ export default function ExpenseDialog({
       () =>
         expense && patch
           ? expensesApi.updateForRoadtrip(roadtripId, expense.id, patch)
-          : expensesApi.createForRoadtrip(roadtripId, createBody(draft)),
-      () => {
+          : expensesApi.createForRoadtrip(roadtripId, createBody(draft, context)),
+      async (result) => {
         markSaved();
+        if (!expense && pendingReceipt) {
+          // The cost exists now: closing must reload the list either way.
+          documentsChanged.current = true;
+          if (!(await attachPendingReceipt(result.expense.id, pendingReceipt))) {
+            setReceiptFailedFor(result.expense.id);
+            return;
+          }
+        }
+        const notice = fxOutcomeNotice(result.fxSnapshot);
+        if (notice)
+          addToast(notice.type, t(notice.key, { currency: result.expense.currency }), 10000);
         onSaved();
       }
     );
@@ -129,6 +176,14 @@ export default function ExpenseDialog({
       logger.warn("Saving a roadtrip expense failed", outcome.error);
       failure.fail(expenseFailureKey(outcome.error, { create: !expense }));
     }
+  };
+
+  const retryReceipt = async (): Promise<void> => {
+    if (!receiptFailedFor || !pendingReceipt) return;
+    setReceiptRetrying(true);
+    const attached = await attachPendingReceipt(receiptFailedFor, pendingReceipt);
+    setReceiptRetrying(false);
+    if (attached) onSaved();
   };
 
   const remove = async (): Promise<void> => {
@@ -165,7 +220,7 @@ export default function ExpenseDialog({
   return (
     <Dialog
       open
-      onClose={onClose}
+      onClose={close}
       busy={busy}
       dirty={dirty}
       maxWidth={480}
@@ -276,6 +331,24 @@ export default function ExpenseDialog({
             ))}
           </Select>
         </Field>
+        <ExpensePayerField
+          draft={draft}
+          onChange={merge}
+          nameError={
+            payerNameMissing && draft.payerName !== ""
+              ? t("roadtrips:costs.payer.missing")
+              : undefined
+          }
+        />
+        <ExpenseRateField
+          stored={expense?.fx ? { ...expense.fx, currency: expense.currency } : null}
+          draft={draft}
+          baseCurrency={baseCurrency}
+          onChange={merge}
+          rateError={
+            rateBad && draft.fxRate.trim() !== "" ? t("roadtrips:costs.fx.invalid") : undefined
+          }
+        />
         <Field label={t("roadtrips:costs.dialog.note")} htmlFor="expense-note">
           <TextArea
             id="expense-note"
@@ -284,6 +357,32 @@ export default function ExpenseDialog({
             onChange={(e) => set("note", e.target.value)}
           />
         </Field>
+        <div className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
+          <span className="t-caption" style={{ color: "var(--ts-muted)" }}>
+            {t("roadtrips:costs.receipt.title")}
+          </span>
+          {expense ? (
+            <DocumentsSection
+              entry={{ type: "tripExpense", id: expense.id }}
+              layout="inline"
+              onChanged={() => {
+                documentsChanged.current = true;
+              }}
+            />
+          ) : receiptFailedFor ? (
+            <ReceiptAttachFailed
+              retrying={receiptRetrying}
+              onRetry={() => void retryReceipt()}
+              onSkip={onSaved}
+            />
+          ) : (
+            <PendingReceiptPicker
+              file={pendingReceipt}
+              onChange={setPendingReceipt}
+              disabled={busy || saving.saved !== null}
+            />
+          )}
+        </div>
         <RequiredLegend />
         <FormErrorBanner
           message={failureKey ? t(failureKey) : null}
