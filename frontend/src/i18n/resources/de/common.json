@@ -398,7 +398,8 @@
       "onlineCheckInDate": "Online-Check-in ab (Tag)",
       "onlineCheckInTime": "Uhrzeit",
       "timeWithoutDay": "Eine Uhrzeit braucht einen Tag.",
-      "zoneRequired": "Mit Uhrzeit bitte die Zeitzone angeben."
+      "zoneRequired": "Mit Uhrzeit bitte die Zeitzone angeben.",
+      "checkInNeedsBoth": "Tag und Uhrzeit gehören zusammen."
     }
   }
 }

@@ -8,6 +8,7 @@ import type { LodgingStay } from "../../types/lodging";
 import { StayStatusPill } from "./StayStatusPill";
 import { StayNightPriceLine } from "./StayNightPriceLine";
 import Toggletip from "../ui/Toggletip";
+import { deadlineFacts } from "../../lib/deadlines";
 
 interface LodgingStayCardProps {
   stay: LodgingStay;
@@ -55,6 +56,7 @@ export function LodgingStayCard({
   const { t, i18n } = useTranslation(["lodging", "common"]);
   const baseCurrency = useSettingsStore((st) => st.baseCurrency);
   const nights = stayNights(stay);
+  const deadlineLocale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
   const period = formatStayPeriod(stay, i18n.language, t);
   const { original, fxReadout, marker } = formatStayPriceDisplay(
     {
@@ -227,6 +229,13 @@ export function LodgingStayCard({
           {t("lodging:field.bookingReference")}: {stay.bookingReference}
         </p>
       )}
+      {deadlineFacts(stay.times, t, deadlineLocale)
+        .filter((fact) => fact.value !== null)
+        .map((fact) => (
+          <p key={fact.label} className="mt-2 text-xs text-[var(--text-muted)]">
+            {fact.label}: {fact.value}
+          </p>
+        ))}
       {stay.notes && (
         <p className="mt-2 whitespace-pre-wrap text-xs text-[var(--text-muted)]">{stay.notes}</p>
       )}

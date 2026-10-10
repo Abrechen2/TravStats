@@ -1,4 +1,3 @@
-import type { TFunction } from "i18next";
 import {
   formatDayLong,
   formatTimeValue,
@@ -14,6 +13,9 @@ import {
  * ("until 1 May") — never both. The day is shown as "until the end of" that
  * day in words only; no time of day is ever made up for it.
  */
+/** The translate function, as loose as the project wrapper hands it out. */
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
 export interface DeadlineTimes {
   freeCancellationUntil?: TimeValue | null;
   freeCancellationOn?: LocalDateValue | null;
@@ -31,7 +33,7 @@ const moment = (value: TimeValue, locale: string): string =>
 /** The cancellation deadline in words, or null when none is recorded. */
 export function cancellationText(
   times: DeadlineTimes | null | undefined,
-  t: TFunction,
+  t: Translate,
   locale: string
 ): string | null {
   if (times?.freeCancellationUntil) {
@@ -50,7 +52,7 @@ export function cancellationText(
 /** The facts a detail section lists; a null value hides the line, like every other unknown. */
 export function deadlineFacts(
   times: DeadlineTimes | null | undefined,
-  t: TFunction,
+  t: Translate,
   locale: string
 ): DeadlineFact[] {
   return [
@@ -64,7 +66,7 @@ export function deadlineFacts(
 
 export function onlineCheckInFact(
   value: TimeValue | null | undefined,
-  t: TFunction,
+  t: Translate,
   locale: string
 ): DeadlineFact {
   return {

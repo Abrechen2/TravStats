@@ -293,6 +293,8 @@ export interface TripPhoto {
 }
 
 export interface FlightInput {
+  /** When online check-in opens, on the departure airport's clock (forgejo#285); null clears. */
+  onlineCheckInOpensAt?: { local: string; zone?: string } | string | null;
   /**
    * Set when the flight arrives from an import — a booking mail, a boarding
    * pass, a file. The server derives the provenance key from it; what counts

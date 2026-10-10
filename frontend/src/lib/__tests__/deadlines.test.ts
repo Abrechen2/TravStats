@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
-import type { TFunction } from "i18next";
 import { cancellationText, deadlineFacts, hasDeadlines } from "../deadlines";
 
-const t = ((key: string, vars?: Record<string, string>) =>
-  vars ? `${key}:${Object.values(vars).join("|")}` : key) as unknown as TFunction;
+const t = (key: string, vars?: Record<string, unknown>): string =>
+  vars ? `${key}:${Object.values(vars).join("|")}` : key;
 
 describe("deadline display (forgejo#285)", () => {
   it("a day-only deadline reads 'until the end of' the day, with no time made up", () => {

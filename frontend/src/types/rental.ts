@@ -178,6 +178,9 @@ export interface RentalInput {
   depositPaidOn?: string | null;
   depositReturnedOn?: string | null;
   depositReturnedAmount?: number | null;
+  /** A bare day (until its end) or `{local, zone?}` on the pickup clock; null clears (forgejo#285). */
+  freeCancellationUntil?: string | { local: string; zone?: string } | null;
+  paymentDueOn?: string | null;
   inclusions?: RentalInclusion[];
   arrivalFlightNumber?: string | null;
   status?: "scheduled" | "cancelled";

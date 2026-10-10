@@ -1,3 +1,9 @@
+import {
+  EMPTY_DEADLINE_DRAFT,
+  deadlineDraftFrom,
+  deadlineWire,
+  type DeadlineDraft,
+} from "../deadlines/deadlineDraft";
 import { saveErrorKey, type SaveErrorOptions } from "../../lib/saveErrorMessage";
 import { parseDecimalInput } from "../../lib/decimalInput";
 import { rentalDrivenKm, type RentalDrivenKm } from "../../shared/rentalCounting";
@@ -120,6 +126,9 @@ export interface RentalDraft {
   depositPaidOn: string;
   depositReturnedOn: string;
   depositReturnedAmount: string;
+  /** Cancellation and payment deadlines (forgejo#285), and what was stored. */
+  deadlines: DeadlineDraft;
+  storedDeadlines: DeadlineDraft;
   /**
    * A typed km figure is a labelled correction; empty = leave it to the
    * invoice or the odometer. Filled from a stored figure only when that figure
@@ -170,6 +179,8 @@ export const EMPTY_RENTAL_DRAFT: RentalDraft = {
   depositAmount: "",
   depositCurrency: "",
   depositPaidOn: "",
+  deadlines: EMPTY_DEADLINE_DRAFT,
+  storedDeadlines: EMPTY_DEADLINE_DRAFT,
   depositReturnedOn: "",
   depositReturnedAmount: "",
   distanceKm: "",
@@ -278,6 +289,8 @@ export function draftFromRental(r: RentalBooking): RentalDraft {
     depositPaidOn: r.depositPaidOn ?? "",
     depositReturnedOn: r.depositReturnedOn ?? "",
     depositReturnedAmount: r.depositReturnedAmount === null ? "" : String(r.depositReturnedAmount),
+    deadlines: deadlineDraftFrom(r.times),
+    storedDeadlines: deadlineDraftFrom(r.times),
     distanceKm: r.distanceKm !== null && r.distanceSource === "user" ? String(r.distanceKm) : "",
     odometerOutKm: r.odometerOutKm === null ? "" : String(r.odometerOutKm),
     odometerInKm: r.odometerInKm === null ? "" : String(r.odometerInKm),
@@ -523,6 +536,8 @@ export function rentalInputFromDraft(d: RentalDraft): RentalInput {
     fuelPolicy: d.fuelPolicy === "" ? null : d.fuelPolicy,
     invoiceNumber: text(d.invoiceNumber),
     ...depositInput(d),
+    // Only what changed: the pickup station's zone reads a bare `{local}`.
+    ...deadlineWire(d.deadlines, d.storedDeadlines),
     ...finalAmountInput(d),
     ...correctionInput(d),
     odometerOutKm: parseKmReading(d.odometerOutKm),
