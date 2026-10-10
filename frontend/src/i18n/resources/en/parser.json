@@ -150,9 +150,9 @@
       "noDistinguishingMarker": "Nothing in this mail names the sender — only this one booking. A template with no sender marker would match every stay confirmation you ever parse.",
       "notDerivable": "The workshop derives no template for this kind of document.",
       "cruiseNeedsStopRow": "A cruise needs one marked row of its itinerary: in ONE row, mark the date as “Date (itinerary)” and the port as “Port (itinerary)”. Without ports the template reads no voyage.",
-      "cruiseStopRowNotOneLine": "The itinerary date and port must be on the same line. Mark both in one row of the port list.",
+      "cruiseStopRowTooFarApart": "The date and port of an itinerary day must be on the same line or on two consecutive lines (blank lines between are fine). Mark both in one entry of the port list.",
       "cruiseStopRowNotUnderstood": "No port list can be read from the marked itinerary row — there is no heading above the list, or the mark does not cover the whole port name.",
-      "dateNotUnderstood": "A marked date is not read. A date with a year is expected, e.g. 02.06.2027 or 2 June 2027.",
+      "dateNotUnderstood": "A marked date is not read. A date like 02.06.2027 or 2 June 2027 is expected — in the itinerary also without a year, e.g. 02.06.",
       "placeNeedsName": "A place needs its name: mark what the place is called. A place without a name is not a row the import can offer.",
       "templateReadsNothing": "The derived template reads nothing from this very document, so none was saved. Check the marks."
     }

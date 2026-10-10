@@ -8,6 +8,9 @@ import {
   CRUISE_SELECTIONS,
   CRUISE_SOURCE,
   CRUISE_SUBJECT,
+  CRUISE_TWO_LINE_HELD_OUT,
+  CRUISE_TWO_LINE_SELECTIONS,
+  CRUISE_TWO_LINE_SOURCE,
   select,
 } from "./workshopSamples";
 
@@ -94,7 +97,7 @@ describe("deriveCruiseTemplate", () => {
     expect(result).toEqual({ ok: false, refusal: "cruiseNeedsStopRow" });
   });
 
-  it("abstains when the date and the port of the row are on different lines", () => {
+  it("abstains when the date and the port of the row are lines apart, with rows between", () => {
     const result = deriveCruiseTemplate({
       ...input,
       selections: [
@@ -102,7 +105,55 @@ describe("deriveCruiseTemplate", () => {
         select(CRUISE_SOURCE, "Oslo", "stopPort"),
       ],
     });
-    expect(result).toEqual({ ok: false, refusal: "cruiseStopRowNotOneLine" });
+    expect(result).toEqual({ ok: false, refusal: "cruiseStopRowTooFarApart" });
+  });
+
+  // A PDF layout: the day above, the port below, and no year on the day.
+  describe("a row over two lines, its days without a year", () => {
+    const twoLine = {
+      trainingDataId: "td-cruise-2",
+      subject: CRUISE_SUBJECT,
+      fullText: CRUISE_TWO_LINE_SOURCE,
+      selections: CRUISE_TWO_LINE_SELECTIONS,
+    };
+    const template = () => {
+      const result = deriveCruiseTemplate(twoLine);
+      if (!result.ok) throw new Error(`derivation refused: ${result.refusal}`);
+      return result.template;
+    };
+
+    it("derives a `lines` stop list and reads its own sample over New Year", () => {
+      const t = template();
+      expect(workshopEnvelopeSchema.safeParse(t).success).toBe(true);
+      const [cruise] = applyV2CruiseTemplate(t, `${CRUISE_SUBJECT}\n${CRUISE_TWO_LINE_SOURCE}`);
+      expect(cruise).toMatchObject({ startDate: "2026-12-30", endDate: "2027-01-02" });
+      expect(cruise.stops).toEqual([
+        { dayNumber: 1, date: "2026-12-30", isAtSea: false, portName: "Kiel" },
+        { dayNumber: 2, date: "2026-12-31", isAtSea: true },
+        { dayNumber: 3, date: "2027-01-01", isAtSea: false, portName: "Oslo" },
+        { dayNumber: 4, date: "2027-01-02", isAtSea: false, portName: "Kiel" },
+      ]);
+    });
+
+    it("reads a held-out document of the same layout, multi-word port included", () => {
+      const [cruise] = applyV2CruiseTemplate(
+        template(),
+        `${CRUISE_SUBJECT}\n${CRUISE_TWO_LINE_HELD_OUT}`
+      );
+      expect(cruise.stops.map((s) => [s.date, s.portName])).toEqual([
+        ["2027-08-14", "Warnemünde"],
+        ["2027-08-15", "Las Palmas de Probe"],
+        ["2027-08-16", "Warnemünde"],
+      ]);
+    });
+
+    it("dates no stop when the document carries no start date — no year is guessed", () => {
+      const withoutStart = CRUISE_TWO_LINE_HELD_OUT.replace(/^Reisebeginn: .*$/m, "");
+      const cruises = applyV2CruiseTemplate(template(), `${CRUISE_SUBJECT}\n${withoutStart}`);
+      expect(cruises).toHaveLength(1);
+      expect(cruises[0].stops.every((s) => s.date === undefined)).toBe(true);
+      expect(cruises[0].startDate).toBeUndefined();
+    });
   });
 
   it("abstains when the row's date is not a date it can read", () => {

@@ -96,6 +96,68 @@ export const CRUISE_HELD_OUT = cruiseMail({
   ],
 });
 
+/**
+ * The same line's PDF layout: each itinerary day over two lines — the day
+ * and its date WITHOUT a year above, the port below — and the start date in
+ * the header. A voyage over New Year, so the year must roll over.
+ */
+const cruiseMailTwoLine = (opts: {
+  ref: string;
+  ship: string;
+  start: string;
+  stops: Array<{ day: number; weekday: string; date: string; port: string; times?: string }>;
+}): string =>
+  [
+    "Nordlicht Seereisen GmbH · Musterkai 1 · 24100 Kiel",
+    "Buchungsbestätigung",
+    "",
+    `Buchungsnummer: ${opts.ref}`,
+    `Schiff: ${opts.ship}`,
+    `Reisebeginn: ${opts.start}`,
+    "",
+    "Ihr Reiseverlauf",
+    ...opts.stops.flatMap((s) => [
+      `Tag ${s.day}  ${s.weekday} ${s.date}`,
+      `${s.port}${s.times ? `  ${s.times}` : ""}`,
+    ]),
+    "",
+    "Zahlungsplan",
+    "Anzahlung bis 12.03.2026",
+  ].join("\n");
+
+export const CRUISE_TWO_LINE_SOURCE = cruiseMailTwoLine({
+  ref: "NL-61002",
+  ship: "MS Probestern",
+  start: "30.12.2026",
+  stops: [
+    { day: 1, weekday: "Mi", date: "30.12.", port: "Kiel", times: "ab 18:00" },
+    { day: 2, weekday: "Do", date: "31.12.", port: "Seetag" },
+    { day: 3, weekday: "Fr", date: "01.01.", port: "Oslo", times: "08:00 - 17:00" },
+    { day: 4, weekday: "Sa", date: "02.01.", port: "Kiel", times: "an 09:00" },
+  ],
+});
+
+export const CRUISE_TWO_LINE_HELD_OUT = cruiseMailTwoLine({
+  ref: "NL-61377",
+  ship: "MS Morgenwind",
+  start: "14.08.2027",
+  stops: [
+    { day: 1, weekday: "Sa", date: "14.08.", port: "Warnemünde", times: "ab 17:00" },
+    { day: 2, weekday: "So", date: "15.08.", port: "Las Palmas de Probe", times: "09:00 - 18:00" },
+    { day: 3, weekday: "Mo", date: "16.08.", port: "Warnemünde", times: "an 08:00" },
+  ],
+});
+
+export const CRUISE_TWO_LINE_SELECTIONS: AnnotationSelection[] = [
+  select(CRUISE_TWO_LINE_SOURCE, "Nordlicht Seereisen", "cruiseLine"),
+  select(CRUISE_TWO_LINE_SOURCE, "NL-61002", "bookingReference"),
+  select(CRUISE_TWO_LINE_SOURCE, "MS Probestern", "shipName"),
+  select(CRUISE_TWO_LINE_SOURCE, "30.12.2026", "startDate"),
+  // "30.12." also stands inside the start date above; the row's is the second.
+  select(CRUISE_TWO_LINE_SOURCE, "30.12.", "stopDate", 2),
+  select(CRUISE_TWO_LINE_SOURCE, "Kiel", "stopPort", 2),
+];
+
 /** Another cruise line, same domain: the derived template must not claim it. */
 export const CRUISE_FOREIGN = [
   "Südwind Kreuzfahrten AG",

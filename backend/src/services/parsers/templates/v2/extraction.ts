@@ -38,6 +38,7 @@ export type {
   FieldRule,
   InnerRepeatRule,
   ItemFieldRule,
+  LinesRepeatRule,
   MatchAllRepeatRule,
   PairsRepeatRule,
   RepeatRule,
@@ -258,6 +259,27 @@ function checkModeSpecific(
       });
       for (const [name, field] of Object.entries(rule.fields)) {
         issues.push(...checkItemField(field, re, [...path, "fields", name], true));
+      }
+      return issues;
+    }
+    case "lines": {
+      // Each row line on its own, and none may match an empty line. A line
+      // pattern cannot reach across lines: the reader hands it one line.
+      const lineFlags = flags.replace("g", "");
+      const issues = rule.rowLines.flatMap(
+        (p, i) => checkRegex(p, lineFlags, [...path, "rowLines", i], { nonEmpty: true }).issues
+      );
+      // The row's named groups together: a name twice is refused by the
+      // compiler, and every field must name a group of SOME line.
+      const joined = rule.rowLines.map((p) => `(?:${p})`).join("\\n");
+      const { re, issues: rowIssues } = checkRegex(joined, lineFlags, [...path, "rowLines"]);
+      issues.push(...rowIssues);
+      for (const [name, field] of Object.entries(rule.fields)) {
+        const at = [...path, "fields", name];
+        if (typeof field.group === "number") {
+          issues.push({ path: [...at, "group"], message: "a row names its groups" });
+        }
+        if (re) issues.push(...checkItemField(field, re, at, true));
       }
       return issues;
     }

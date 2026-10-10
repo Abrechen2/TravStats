@@ -145,6 +145,45 @@ function date(input: TransformValue): string | null {
   return null;
 }
 
+/** A day a document prints without its year: "14.05.", "14. Mai", "May 14". */
+const MONTH_DAY_READERS: ReadonlyArray<(text: string) => [number, number] | null> = [
+  (text) => {
+    const m = /^\s*(\d{1,2})[./](\d{1,2})\.?\s*$/.exec(text);
+    return m ? [Number(m[2]), Number(m[1])] : null;
+  },
+  (text) => {
+    const m = new RegExp(`^\\s*(\\d{1,2})\\.?\\s*([${LETTERS}]+)\\.?\\s*$`).exec(text);
+    const month = m ? monthNumber(m[2]) : undefined;
+    return m && month ? [month, Number(m[1])] : null;
+  },
+  (text) => {
+    const m = new RegExp(`^\\s*([${LETTERS}]+)\\.?\\s+(\\d{1,2})\\.?\\s*$`).exec(text);
+    const month = m ? monthNumber(m[1]) : undefined;
+    return m && month ? [month, Number(m[2])] : null;
+  },
+];
+
+/**
+ * A full date as `YYYY-MM-DD`, or — when the text is a day and month and
+ * nothing else — the ISO 8601 year-less form `--MM-DD`. The year is never
+ * guessed here: the domain consumer resolves it from a dated anchor (a
+ * cruise's start date) or abstains. A day no year has (31 April) is null;
+ * 29 February passes and is checked again once a year is known.
+ */
+function dateOrMonthDay(input: TransformValue): string | null {
+  const full = date(input);
+  if (full) return full;
+  const text = asText(input);
+  if (text === null) return null;
+  for (const read of MONTH_DAY_READERS) {
+    const md = read(text);
+    if (md && isoDate(2000, md[0], md[1])) {
+      return `--${String(md[0]).padStart(2, "0")}-${String(md[1]).padStart(2, "0")}`;
+    }
+  }
+  return null;
+}
+
 // ------------------------------------------------------------------ time
 
 function time(input: TransformValue): string | null {
@@ -207,6 +246,7 @@ export const TRANSFORMS = {
   money,
   currency,
   date,
+  dateOrMonthDay,
   time,
   dayOffset,
   flightNumber,
