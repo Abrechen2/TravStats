@@ -26,18 +26,16 @@ import {
 import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from "../utils/cruiseStats";
 import { calculateLodgingStats } from "../utils/lodgingStats";
 import logger from "../utils/logger";
-import { localWallClockOf } from "../utils/timezone";
 import { userToday } from "../services/stats/userToday";
 import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "../services/stats/departureClock";
 import { loadPassport } from "../services/stats/passportLoader";
 import { buildWhere, computeSummary } from "../services/stats/summary";
 import { loadDaysAway } from "../services/stats/daysAwayLoader";
 import { loadCountryDetail } from "../services/stats/countryDetailLoader";
-import { buildWrapped } from "../services/stats/wrapped";
+import { loadWrapped } from "../services/stats/wrappedLoad";
 import { fetchFlightDatedRows, fetchCruiseDatedRows } from "../services/stats/timeseriesRows";
 import { buildTravelRecords, loadRecordFlights } from "../services/stats/records";
 import { countableFlightWhere } from "../shared/flightCounting";
-import { loadWrappedDomains, loadWrappedPassport } from "../services/stats/wrappedDomains";
 import {
   resolveWindow,
   bucketSeries,
@@ -897,57 +895,7 @@ router.get(
         return;
       }
 
-      // One scan, not two: `loadPassport` reads the same countable flights of
-      // the same user and is handed these rows (forgejo#49). `arrivalTime` and
-      // `arrTimeSemantics` are here only because it needs them.
-      const [flights, domains] = await Promise.all([
-        prisma.flight.findMany({
-          where: { userId, ...countableFlightWhere() },
-          select: {
-            ...FLIGHT_CLOCK_SELECT,
-            depLat: true,
-            depLon: true,
-            arrLat: true,
-            arrLon: true,
-            departureTime: true,
-            arrivalTime: true,
-            arrTimeSemantics: true,
-            airline: true,
-            flightNumber: true,
-            status: true,
-          },
-        }),
-        loadWrappedDomains(userId),
-      ]);
-
-      // For `newCountries` only — the passport already decides what counts as
-      // a country and when it was first reached.
-      const passport = await loadWrappedPassport(userId, flights);
-
-      // Which YEAR a flight belongs to is read on the departure airport's
-      // clock, not on the stored instant — the rule `departureClock.ts` states
-      // and `/stats/timeseries` already follows. Resolved here, at the load,
-      // so `buildWrapped` stays a pure function over rows that carry their own
-      // answer rather than resolving timezones itself (AUD-077).
-      const flightsWithClock = await withDepartureClock(flights);
-
-      const wrapped = buildWrapped(
-        // Great-circle from the coordinates, the measure `/stats/timeseries`
-        // buckets — so the year's distance agrees with its bar on the chart.
-        flightsWithClock.map((f) => ({
-          ...f,
-          departureYear:
-            f.departureTime === null
-              ? null
-              : localWallClockOf(f.departureTime, f.depTimezone, f.depTimeSemantics).year,
-          distanceKm: calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon),
-        })),
-        domains.cruises,
-        passport.countries,
-        parsed.data.year ?? null,
-        domains.rail,
-        domains.chapters
-      );
+      const wrapped = await loadWrapped(userId, parsed.data.year ?? null);
 
       if (!wrapped) {
         // No countable activity in any year. There is no story, and a grid of

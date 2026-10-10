@@ -26,6 +26,7 @@ import AboutSection from "../../components/Settings/AboutSection";
 import ImportSection from "../../components/Settings/ImportSection";
 import TripsSection from "../../components/Settings/TripsSection";
 import SharingSection from "../../components/Settings/SharingSection";
+import ShareLinksSection from "../../components/Settings/ShareLinksSection";
 import FeaturesSection from "../../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../../components/Settings/CruisePreferencesSection";
 import LoyaltySection from "../../components/Settings/LoyaltySection";
@@ -121,6 +122,8 @@ export default function SettingsSectionSwitch({
           <TripsSection />
           {/* Shared trips (design 2026-10-09): consent and companion links. */}
           <SharingSection />
+          {/* Public share links (forgejo#281): the instance switch and own links. */}
+          <ShareLinksSection isAdmin={isAdmin} />
         </div>
       );
     case "notifications":

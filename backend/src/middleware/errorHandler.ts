@@ -354,6 +354,19 @@ export type ApiErrorCode =
   | "SHARE_TRIP_NOT_SHARED"
   /** No share notice of this caller under that id (404). */
   | "SHARE_NOTICE_NOT_FOUND"
+  /** Public share links (forgejo#281). Every public failure — unknown,
+   *  malformed, expired, revoked, switch off, target gone — is this one 404,
+   *  so a guesser cannot tell a dead link from one that never existed. Also
+   *  the owner's answer for a link id or a target that is not theirs. */
+  | "SHARE_LINK_NOT_FOUND"
+  /** The instance switch for public links is off (409). */
+  | "SHARE_LINKS_DISABLED"
+  /** A flight link for a flight that has already landed (409). */
+  | "SHARE_LINK_FLIGHT_LANDED"
+  /** The account already holds the maximum of active links (409). */
+  | "SHARE_LINK_LIMIT"
+  /** An expiry in the past or beyond the maximum (400). */
+  | "SHARE_LINK_EXPIRY_INVALID"
   /** Undo refused: the copy changed since the notice; `extra.fields` names
    *  the facts that differ (409). */
   | "SHARE_UNDO_STALE"

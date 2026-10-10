@@ -131,6 +131,8 @@ import importBatchRoutes from "./importBatches";
 import companionRoutes from "./companions";
 import noteRoutes from "./notes";
 import sharingRoutes from "./sharing";
+import shareLinkRoutes from "./shareLinks";
+import publicShareLinkRoutes from "./publicShareLinks";
 import tagRoutes from "./tags";
 import openapiRoutes from "./openapi";
 import importRoutes from "./import";
@@ -447,6 +449,10 @@ export const apiMounts: ApiMount[] = [
   { id: "notes", base: "/api/v1/notes", router: noteRoutes },
   // Shared trips (design 2026-10-09): consent, companion link, share, leave.
   { id: "sharing", base: "/api/v1/sharing", router: sharingRoutes },
+  // Public share links (forgejo#281): the owner's list/preview/create/revoke,
+  // and the unauthenticated side a link's page asks with its token.
+  { id: "shareLinks", base: "/api/v1/share-links", router: shareLinkRoutes },
+  { id: "publicShareLinks", base: "/api/v1/public/share-links", router: publicShareLinkRoutes },
   { id: "tags", base: "/api/v1/tags", router: tagRoutes },
   { id: "import", base: "/api/v1/import", router: importRoutes },
   { id: "pairing", base: "/api/v1/pairing", router: pairingRoutes },

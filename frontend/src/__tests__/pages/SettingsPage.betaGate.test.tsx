@@ -111,6 +111,10 @@ vi.mock("../../components/Settings/ImmichConnectionCard", () => ({
 vi.mock("../../components/Settings/PhotoJourneyNightlyScanCard", () => ({
   default: () => <div data-testid="photo-journey-nightly-scan-card" />,
 }));
+// Public share links (forgejo#281) load their list on mount — not the subject here.
+vi.mock("../../components/Settings/ShareLinksSection", () => ({
+  default: () => <div data-testid="share-links-section" />,
+}));
 vi.mock("../../components/Settings/RoutingProviderSection", () => ({
   default: () => <div data-testid="routing-provider-section" />,
 }));

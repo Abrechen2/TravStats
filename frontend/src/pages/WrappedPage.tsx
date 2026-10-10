@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import AppShell from "../components/ui/AppShell";
 import PageHeader from "../components/ui/PageHeader";
+import ShareLinkButton from "../components/shareLinks/ShareLinkButton";
 import { Select } from "../components/ui/Field";
 import StatCard from "../components/Stats/StatCard";
 import StatsSectionsLoadError from "../components/Stats/StatsSectionsLoadError";
@@ -152,7 +153,13 @@ export default function WrappedPage(): JSX.Element {
       <PageHeader
         title={t("stats:wrapped.title")}
         meta={shownYear !== null ? t("stats:wrapped.intro", { year: shownYear }) : undefined}
-        actions={yearPicker}
+        actions={
+          <>
+            {yearPicker}
+            {/* A public, expiring link to this year's story (forgejo#281). */}
+            {wrapped && <ShareLinkButton kind="wrapped" targetId={String(wrapped.year)} />}
+          </>
+        }
       />
 
       {loading && (

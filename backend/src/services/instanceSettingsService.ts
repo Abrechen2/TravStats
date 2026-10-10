@@ -18,6 +18,7 @@ import {
 import { encryptApiKey, decryptApiKey } from "../utils/encryption";
 import logger from "../utils/logger";
 import { ensureAdminSettingsRow } from "./adminSettingsRow";
+import { deleteAllShareLinks } from "./shareLinks/deleteAll";
 
 // Public geocoder instances used when neither the DB column nor the
 // matching ENV var is set. See `resolveGeocoderUrls()`.
@@ -89,6 +90,12 @@ export interface InstanceSettings {
    * every call sends a place and a date to a third party. Admin-settable only.
    */
   openDataEnabled: boolean;
+  /**
+   * Whether users may create public share links (forgejo#281). OFF by default:
+   * a link hands travel data to anyone holding the URL. Switching it off
+   * deletes every link (`updateInstanceSettings`). Admin-settable only.
+   */
+  shareLinksEnabled: boolean;
 }
 
 export interface WebDAVSettings {
@@ -142,6 +149,7 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
     // headline filtering against a rank that does not exist.
     countryThreshold: parseCountryTier(row.countryThreshold) ?? DEFAULT_COUNTRY_TIER,
     openDataEnabled: row.openDataEnabled,
+    shareLinksEnabled: row.shareLinksEnabled,
     railTransitousEnabled: row.railTransitousEnabled,
     railDbRestEnabled: row.railDbRestEnabled,
     railRoutingUrl: row.railRoutingUrl ?? null,
@@ -204,6 +212,9 @@ export async function updateInstanceSettings(
       ...(patch.openDataEnabled !== undefined && {
         openDataEnabled: patch.openDataEnabled,
       }),
+      ...(patch.shareLinksEnabled !== undefined && {
+        shareLinksEnabled: patch.shareLinksEnabled,
+      }),
       ...(patch.railTransitousEnabled !== undefined && {
         railTransitousEnabled: patch.railTransitousEnabled,
       }),
@@ -215,6 +226,12 @@ export async function updateInstanceSettings(
       }),
     },
   });
+  // Off means gone: an admin who switches public links off — perhaps because
+  // one leaked — must not get the old links back by switching on again
+  // (design 2026-10-10-share-links §2, T7).
+  if (patch.shareLinksEnabled === false) {
+    await deleteAllShareLinks("instance switch turned off");
+  }
   logger.info({
     operation: "instance_settings_updated",
     fields: Object.keys(patch),

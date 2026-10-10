@@ -63,6 +63,7 @@ import "./integrations";
 import "./photoJourneys";
 import "./tripSuggestions";
 import "./sharing";
+import "./shareLinks";
 import "./catalog";
 import "./misc";
 import "./countryFlags";

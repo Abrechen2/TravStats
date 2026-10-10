@@ -8,6 +8,7 @@ import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 import { recheckAchievementsAfterWrite } from "./middleware/recheckAchievementsAfterWrite";
 import { apiMounts } from "./routes/mounts";
+import sharePageRouter, { isPublicShareLinkPath } from "./routes/sharePage";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { requestLoggerMiddleware } from "./middleware/requestLogger";
 import { assetPathGuard } from "./middleware/assetPathGuard";
@@ -99,7 +100,16 @@ const corsOrigin =
   (process.env.NODE_ENV !== "production" ? "http://localhost:3000" : undefined);
 
 if (corsOrigin) {
-  app.use(cors({ origin: corsOriginCheck(corsOrigin), credentials: true }));
+  const corsMiddleware = cors({ origin: corsOriginCheck(corsOrigin), credentials: true });
+  // The public share-link endpoints (forgejo#281) are asked by the /share page
+  // this server itself serves, with no credentials. A browser sends an Origin
+  // on that same-origin POST, and an instance whose CORS_ORIGIN does not name
+  // the address the link was opened on (a LAN name, the dev backend port)
+  // refused it with 403 — a link that never loaded. They get no CORS headers
+  // either way, so a foreign page still cannot read them.
+  app.use((req, res, next) =>
+    isPublicShareLinkPath(req.path) ? next() : corsMiddleware(req, res, next)
+  );
 } else {
   logger.info({
     operation: "cors_disabled",
@@ -193,6 +203,10 @@ app.use(
 for (const { base, router } of apiMounts) {
   app.use(base, router);
 }
+
+// The page a public share link opens (forgejo#281) — outside /api, its own
+// headers; see routes/sharePage.ts.
+app.use("/share", sharePageRouter);
 
 // 404 handler for unmatched routes (must be before errorHandler)
 app.use(notFoundHandler);

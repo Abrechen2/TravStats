@@ -298,5 +298,125 @@
       "wikidataId": "House: Wikidata",
       "amenities": "House: Amenities"
     }
+  },
+  "links": {
+    "button": "Share as link",
+    "dialog": {
+      "title": "Create a public link",
+      "warning": "Anyone with the link sees the chosen details – without signing in, until the link expires or you revoke it. Nothing else is reachable through it.",
+      "fieldsTitle": "What the page shows",
+      "expiry": "Valid",
+      "expiryOptions": {
+        "untilLanding": "Until landing (+2 hours)",
+        "day": "1 day",
+        "week": "7 days",
+        "month": "30 days",
+        "quarter": "90 days"
+      },
+      "preview": "Preview – exactly what anyone opening the link sees",
+      "previewEmpty": "Choose at least one detail.",
+      "previewLoading": "Loading preview …",
+      "previewFailed": "The preview could not be loaded.",
+      "create": "Create link",
+      "created": "The link is shown only now – copy it now. Later you can only revoke it and create a new one.",
+      "linkLabel": "Your link",
+      "copy": "Copy",
+      "copied": "Link copied.",
+      "copyFailed": "Copying failed – select the link and copy it by hand.",
+      "endsAt": "Ends on {{date}}",
+      "disabled": "Public links are switched off on this instance. An administrator can switch them on under Settings → Trips.",
+      "statusFailed": "Could not check whether public links are allowed.",
+      "photosOmitted": {
+        "lead": "Not in the link:",
+        "unsupportedType_one": "{{count}} photo in a format that cannot be cleaned of location data (e.g. WebP)",
+        "unsupportedType_other": "{{count}} photos in a format that cannot be cleaned of location data (e.g. WebP)",
+        "unreadable_one": "{{count}} photo that is missing or cannot be read",
+        "unreadable_other": "{{count}} photos that are missing or cannot be read",
+        "overLimit_one": "{{count}} photo beyond the limit of 12",
+        "overLimit_other": "{{count}} photos beyond the limit of 12"
+      }
+    },
+    "fields": {
+      "flight": {
+        "owner": "Your first name",
+        "flightNumber": "Airline and flight number",
+        "route": "Departure and arrival airport",
+        "schedule": "Departure and arrival times",
+        "progress": "Status and expected arrival",
+        "aircraft": "Aircraft type",
+        "lastPosition": "Last position (only if your phone sends flight paths to the server)"
+      },
+      "trip": {
+        "owner": "Your first name",
+        "name": "Trip name",
+        "dates": "Dates",
+        "totals": "Totals (flights, km, countries, days)",
+        "countries": "Countries",
+        "route": "Exact route",
+        "costs": "Costs",
+        "companions": "Companions",
+        "photos": "Photos (up to 12, without location data)"
+      },
+      "wrapped": {
+        "owner": "Your first name",
+        "totals": "The year's totals",
+        "topAirline": "Most-flown airline",
+        "topRoute": "Most-flown route"
+      }
+    },
+    "view": {
+      "phase": {
+        "scheduled": "Scheduled",
+        "inFlight": "In the air",
+        "landed": "Landed",
+        "cancelled": "Cancelled",
+        "unknown": "Status unknown"
+      },
+      "eta": "Arrival (expected)",
+      "departure": "Departure",
+      "arrival": "Arrival",
+      "noPosition": "No position sent yet",
+      "flights": "Flights",
+      "km": "km",
+      "cruises": "Cruises",
+      "railRides": "Train rides",
+      "countries": "Countries",
+      "days": "Days",
+      "photos": "{{count}} photos",
+      "incomplete": "not every entry has a price",
+      "none": "—",
+      "year": "Year {{year}}"
+    },
+    "section": {
+      "title": "Public links",
+      "description": "Links you created for a flight, a trip or a year in review. Anyone with a link sees the chosen details until it expires or you revoke it.",
+      "switch": "Allow public links",
+      "switchSub": "Default: off. Switching off revokes every existing link of every user at once.",
+      "stateOn": "Public links are allowed",
+      "stateOff": "Public links are switched off",
+      "adminOnly": "Only an administrator can change this.",
+      "empty": "No active links.",
+      "kind": {
+        "flight": "Flight",
+        "trip": "Trip",
+        "wrapped": "Year in review {{year}}"
+      },
+      "endsAt": "ends {{date}}",
+      "views_one": "{{count}} view",
+      "views_other": "{{count}} views",
+      "revoke": "Revoke",
+      "revoked": "Link revoked – it no longer works.",
+      "loadFailed": "The links could not be loaded.",
+      "saveFailed": "The switch could not be saved."
+    },
+    "errors": {
+      "disabled": "Public links are switched off on this instance.",
+      "landed": "This flight has already landed – there is no link for it any more.",
+      "limit": "You already have 50 active links. Revoke one first.",
+      "expiry": "The expiry does not lie between now and 90 days ahead.",
+      "notFound": "This does not exist (any more).",
+      "createFailed": "The link could not be created.",
+      "revokeFailed": "The link could not be revoked."
+    }
   }
 }

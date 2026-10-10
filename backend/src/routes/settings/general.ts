@@ -233,6 +233,7 @@ function buildSettingsResponse(
   extra: {
     betaFeaturesEnabled: boolean;
     openDataEnabled: boolean;
+    shareLinksEnabled: boolean;
     countryThreshold: CountryTier;
     /**
      * Whether THIS account has any track evidence. Per-user, unlike the two
@@ -310,6 +311,7 @@ function buildSettingsResponse(
     // it into the settings JSON can never shadow the authoritative value.
     betaFeaturesEnabled: extra.betaFeaturesEnabled,
     openDataEnabled: extra.openDataEnabled,
+    shareLinksEnabled: extra.shareLinksEnabled,
     instanceCountryThreshold: extra.countryThreshold,
     hasCountryTracks: extra.hasCountryTracks,
     profileZone: profileZoneView(baseData),
@@ -342,11 +344,13 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     const {
       betaFeaturesEnabled,
       openDataEnabled,
+      shareLinksEnabled,
       countryThreshold: instanceCountryThreshold,
     } = await getInstanceSettings();
     const extra = {
       betaFeaturesEnabled,
       openDataEnabled,
+      shareLinksEnabled,
       countryThreshold: instanceCountryThreshold,
       hasCountryTracks: await hasCountryTracks(userId),
     };
@@ -468,11 +472,13 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     const {
       betaFeaturesEnabled,
       openDataEnabled,
+      shareLinksEnabled,
       countryThreshold: instanceCountryThreshold,
     } = await getInstanceSettings();
     const extra = {
       betaFeaturesEnabled,
       openDataEnabled,
+      shareLinksEnabled,
       countryThreshold: instanceCountryThreshold,
       hasCountryTracks: await hasCountryTracks(userId),
     };

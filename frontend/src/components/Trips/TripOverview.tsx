@@ -19,6 +19,7 @@ import TripSummaryPanel from "./TripSummaryPanel";
 import { useTripRoadtrips } from "../Roadtrips/useTripRoadtrips";
 import DocumentsSection from "../documents/DocumentsSection";
 import TripSharingPanel from "../sharing/TripSharingPanel";
+import ShareLinkButton from "../shareLinks/ShareLinkButton";
 
 type T = ReturnType<typeof useTranslation>["t"];
 
@@ -427,6 +428,12 @@ export default function TripOverview({
             {/* Shared trips (design 2026-10-09). Not for the shared demo
                 account, which is every visitor at once. */}
             {!isSharedDemo && <TripSharingPanel tripId={trip.id} onChanged={onChanged} />}
+            {/* A public, expiring link — the share card (forgejo#281). */}
+            {!isSharedDemo && (
+              <div>
+                <ShareLinkButton kind="trip" targetId={trip.id} />
+              </div>
+            )}
             <TripSummaryPanel trip={trip} t={t} language={language} onChanged={onChanged} />
             {trip.tags.length > 0 && (
               <DetailSection title={t("trips:detail.tags")}>

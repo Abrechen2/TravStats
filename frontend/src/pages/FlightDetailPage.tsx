@@ -10,6 +10,7 @@ import { resolveAirlineIata } from "../lib/airlineUtils";
 import { formatTimeValueShown } from "../lib/displayFormat";
 import { flightDeparture } from "../lib/entityTimes";
 import Button from "../components/ui/Button";
+import ShareLinkButton from "../components/shareLinks/ShareLinkButton";
 import SpecialTypeBadge from "../components/specialFlights/SpecialTypeBadge";
 import type { SpecialType } from "../components/specialFlights/specialTypeMeta";
 import FlightEditModal from "../components/FlightEditModal";
@@ -242,6 +243,8 @@ export default function FlightDetailPage(): JSX.Element {
             >
               {t("common:buttons.edit")}
             </Button>
+            {/* A public, expiring link for the family (forgejo#281). */}
+            <ShareLinkButton kind="flight" targetId={flight.id} />
             <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
               {t("common:buttons.delete")}
             </Button>

@@ -32,6 +32,7 @@ const SETTINGS_FIXTURE = {
   webauthnOrigins: [],
   betaFeaturesEnabled: false,
   openDataEnabled: false,
+  shareLinksEnabled: false,
   photonUrl: "https://photon.komoot.io",
   nominatimUrl: "https://nominatim.openstreetmap.org",
   countryThreshold: "visited" as const,
