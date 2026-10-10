@@ -25,6 +25,16 @@ jest.mock("../utils/logger", () => ({
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 
+// The account-file step (forgejo#287) is exercised against real rows and files
+// in services/files/__tests__/accountFiles.test.ts; here only its wiring.
+const mockDeleteAccountWithFiles = jest.fn(
+  async (_userId: string, deleteRows: () => Promise<unknown>) => deleteRows()
+);
+jest.mock("../services/files/accountFiles", () => ({
+  deleteAccountWithFiles: (userId: string, deleteRows: () => Promise<unknown>) =>
+    mockDeleteAccountWithFiles(userId, deleteRows),
+}));
+
 jest.mock("../services/emailService", () => ({
   sendAdminPasswordResetEmail: jest.fn(),
 }));
@@ -147,6 +157,26 @@ describe("DELETE /admin/users/:id — guards", () => {
     expect(res.status).toBe(200);
     expect(mockUserDelete).toHaveBeenCalledWith({ where: { id: "target-user" } });
     expect(res.body).toEqual({ message: "User deleted", userId: "target-user" });
+  });
+
+  it("deletes the account through the step that also removes its uploaded files", async () => {
+    mockUserFindUnique.mockResolvedValue({ id: "target-user", username: "bob", isAdmin: false });
+    mockUserDelete.mockResolvedValue({ id: "target-user" });
+
+    const res = await callDeleteRoute({
+      userId: "admin-1",
+      params: { id: "target-user" },
+    } as MinimalAuthRequest);
+
+    expect(res.status).toBe(200);
+    expect(mockDeleteAccountWithFiles).toHaveBeenCalledWith("target-user", expect.any(Function));
+    expect(mockUserDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it("guards refuse before any file is touched", async () => {
+    mockUserFindUnique.mockResolvedValue(null);
+    await callDeleteRoute({ userId: "admin-1", params: { id: "ghost" } } as MinimalAuthRequest);
+    expect(mockDeleteAccountWithFiles).not.toHaveBeenCalled();
   });
 
   it("deletes an admin when other admins remain", async () => {

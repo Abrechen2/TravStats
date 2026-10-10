@@ -18,6 +18,7 @@ import { reconcileInterruptedBackups } from "./reconcileBackups";
 import { resetSyncHistory } from "../sync/state";
 import { runSyncSchemaCheck } from "../sync/schemaCheck";
 import { CLEAN_SCHEMA_PREAMBLE, PsqlRestoreError, feedPsql } from "./restorePsql";
+import { sweepAfterFilesRestore } from "../files/restoreSweep";
 import {
   listLocalMigrations,
   migrationEpilogue,
@@ -626,6 +627,10 @@ export async function restoreBackup(
       logger.info({ operation: "restore_files", message: "Restoring files" });
       const uploadsDir = path.join(__dirname, "../../../uploads");
       await extractUploadsArchive(filesBackupPath, uploadsDir);
+      // tar merges: nothing it unpacked was judged against the rows now in
+      // the database. The files of accounts that no longer exist go here,
+      // not an hour from now (forgejo#287).
+      await sweepAfterFilesRestore(filesBackupPath);
       logger.info({ operation: "restore_files_complete", message: "Files restored" });
     }
 

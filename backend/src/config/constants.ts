@@ -254,11 +254,6 @@ export const PARSER_SETTINGS = {
   LLM_REPEAT_PENALTY: 1.1,
 } as const;
 
-// ========== FILE CLEANUP ==========
-export const CLEANUP = {
-  RECEIPT_RETENTION_DAYS: 90, // days before cleaning up orphaned receipts
-} as const;
-
 // ========== AIRPORT CATALOGUE ==========
 export const AIRPORT_CATALOGUE = {
   /**

@@ -2,12 +2,10 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
-import type { Db } from "../db";
 import logger from "../utils/logger";
 import { AppError } from "./errorHandler";
-import { FILE_LIMITS, CLEANUP } from "../config/constants";
+import { FILE_LIMITS } from "../config/constants";
 import { HEIF_MIME_TYPES, removeDisplayRendition } from "../services/photos/displayRendition";
-import { receiptUrlForms } from "../services/files/privateFileUrls";
 
 /**
  * A file this endpoint does not accept — the CLIENT's mistake, answered 400.
@@ -157,59 +155,6 @@ export function deleteReceiptFile(filename: string): void {
       });
     }
   }
-}
-
-/**
- * Clean up old receipt files (older than retention period with no database reference)
- * This should be run periodically (e.g., daily cron job)
- */
-export async function cleanupOldReceipts(prisma: Db): Promise<number> {
-  const files = fs.readdirSync(UPLOAD_DIR);
-  const retentionMs = CLEANUP.RECEIPT_RETENTION_DAYS * 24 * 60 * 60 * 1000;
-  const cutoffTime = Date.now() - retentionMs;
-  let deletedCount = 0;
-
-  for (const file of files) {
-    const filePath = path.join(UPLOAD_DIR, file);
-    const stats = fs.statSync(filePath);
-
-    // Skip if file is newer than retention period
-    if (stats.mtimeMs > cutoffTime) {
-      continue;
-    }
-
-    // Check if file is referenced in the database — via a flight OR a
-    // lodging stay (a lodging-only receipt must not be treated as orphaned
-    // just because no flight references it; same gap fixed in routes/uploads.ts).
-    const receiptUrl = { in: receiptUrlForms(file) };
-    const [referencedFlight, referencedStay] = await Promise.all([
-      prisma.flight.findFirst({ where: { receiptUrl } }),
-      prisma.lodgingStay.findFirst({ where: { receiptUrl } }),
-    ]);
-
-    // Delete if not referenced
-    if (!referencedFlight && !referencedStay) {
-      try {
-        fs.unlinkSync(filePath);
-        deletedCount++;
-        logger.debug({
-          operation: "upload_receipt_cleanup",
-          message: `Cleaned up orphaned receipt: ${file}`,
-          context: { filename: file },
-        });
-      } catch (error) {
-        // Log warning but don't fail cleanup process
-        logger.warn({
-          operation: "upload_receipt_cleanup_error",
-          message: `Failed to delete receipt file: ${file}`,
-          error: error instanceof Error ? error.message : "Unknown error",
-          context: { filename: file },
-        });
-      }
-    }
-  }
-
-  return deletedCount;
 }
 
 /**

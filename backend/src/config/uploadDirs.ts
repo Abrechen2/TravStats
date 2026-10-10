@@ -13,6 +13,8 @@
  * A new upload directory must be added here. `__tests__/uploadDirs.test.ts`
  * scans the source for `uploads/<name>` constants and fails when one is
  * missing, so the next directory cannot be forgotten the way these three were.
+ * The same scan holds the account-deletion step and the orphan sweep to the
+ * directory list (`services/files/__tests__/uploadDirPolicies.test.ts`).
  */
 
 import * as path from "path";
@@ -27,7 +29,7 @@ export const UPLOADS_ROOT = path.join(__dirname, "../../uploads");
  * "regenerable, skip it" category: the airline-logo disk cache lives outside
  * `uploads/`, and anything a user put there is theirs.
  */
-export const BACKED_UP_UPLOAD_DIRS: readonly string[] = [
+export const BACKED_UP_UPLOAD_DIRS = [
   "receipts",
   "emails",
   "training",
@@ -44,3 +46,11 @@ export const BACKED_UP_UPLOAD_DIRS: readonly string[] = [
   // The photo of a standalone note (forgejo#137).
   "note-photos",
 ] as const;
+
+/**
+ * One upload directory's name. A directory added above must also be given a
+ * policy in `services/files/uploadDirPolicies.ts` — what deleting an account
+ * removes from it and what the orphan sweep keeps — and the compiler holds
+ * that: the policy table is keyed by this type (forgejo#287).
+ */
+export type UploadDirName = (typeof BACKED_UP_UPLOAD_DIRS)[number];
