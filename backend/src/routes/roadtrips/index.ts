@@ -7,11 +7,9 @@ import { travelledKm } from "../../services/tour/tourDistance";
 import { describeRoutingAvailability } from "../../services/tour/routing/resolveProvider";
 import {
   STATION_DTO_SELECT,
-  STATION_SELECT,
   nightsOf,
   spanOf,
   stationCountries,
-  toRoadtripSummary,
   toStationDto,
 } from "../../services/roadtrip/roadtripSummary";
 import { resolveTrip } from "../trips/resolveTrip";
@@ -24,6 +22,7 @@ import { resolveRoadtrip } from "../../services/roadtrip/resolveRoadtrip";
 import { EXPENSE_ORDER, EXPENSE_SELECT, toExpenseDto } from "../../services/expenses/expenseDto";
 import { roadtripCosts } from "../../services/expenses/roadtripCosts";
 import { roadtripProgress } from "../../utils/roadtripInsights/progress";
+import { loadRoadtripSummaries } from "../../services/roadtrip/roadtripList";
 
 /**
  * Roadtrips (design 2026-09-24). A roadtrip is a `TripRoute` with
@@ -41,23 +40,6 @@ const router = Router();
 // The phone's routes first: `/roadtrips/active` must not reach `/roadtrips/:id`.
 router.use(companionRoutes);
 
-const LIST_SELECT = {
-  id: true,
-  tripId: true,
-  name: true,
-  mode: true,
-  color: true,
-  vehicle: true,
-  vehicleName: true,
-  kindAssignedAutomatically: true,
-  startOdometerKm: true,
-  endOdometerKm: true,
-  trip: { select: { name: true } },
-  legs: { select: { mode: true, distanceKm: true } },
-  stops: { select: STATION_SELECT, orderBy: { routeOrderIdx: "asc" } },
-  _count: { select: { tracks: true } },
-} as const;
-
 /**
  * A figure summed over a tour's recordings, or null unless EVERY recording
  * carries it: two watches on one hike, one without a barometer, climbed more
@@ -68,21 +50,6 @@ function sumOverEvery(values: ReadonlyArray<number | null>): number | null {
   return (values as number[]).reduce((sum, v) => sum + v, 0);
 }
 
-/** How many day tours set out from each roadtrip's stations. */
-async function tourCountsByRoadtrip(userId: string, ids: string[]): Promise<Map<string, number>> {
-  if (ids.length === 0) return new Map();
-  const tours = await prisma.tripRoute.findMany({
-    where: { userId, kind: "tour", anchorStop: { routeId: { in: ids } } },
-    select: { anchorStop: { select: { routeId: true } } },
-  });
-  const counts = new Map<string, number>();
-  for (const t of tours) {
-    const id = t.anchorStop?.routeId;
-    if (id) counts.set(id, (counts.get(id) ?? 0) + 1);
-  }
-  return counts;
-}
-
 /** GET /roadtrips — newest first by the span the stations cover. */
 router.get(
   "/roadtrips",
@@ -90,27 +57,7 @@ router.get(
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const userId = req.userId!;
-      const rows = await prisma.tripRoute.findMany({
-        where: { userId, kind: "roadtrip" },
-        select: LIST_SELECT,
-      });
-      const tourCounts = await tourCountsByRoadtrip(
-        userId,
-        rows.map((r) => r.id)
-      );
-      const resolver = rows.length > 0 ? await getCountryResolver() : null;
-      const roadtrips = rows
-        .map((r) =>
-          toRoadtripSummary(
-            r,
-            tourCounts.get(r.id) ?? 0,
-            resolver ? stationCountries(r.stops, resolver) : []
-          )
-        )
-        // Sort-then-return: the order key is derived from the stations and
-        // cannot be pushed into the query. Undated ones go last.
-        .sort((a, b) => String(b.startDate ?? "").localeCompare(String(a.startDate ?? "")));
+      const roadtrips = await loadRoadtripSummaries(req.userId!);
       res.json({ roadtrips });
     } catch (error) {
       next(error);

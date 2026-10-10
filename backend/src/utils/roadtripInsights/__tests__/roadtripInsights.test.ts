@@ -166,6 +166,27 @@ describe("roadtrip insights", () => {
     expect(insights.pace.dayStages).toBe(2);
     expect(insights.pace.longestDay).toMatchObject({ day: "2026-06-01", km: 250 });
     expect(insights.pace.medianDayKm).toBe(165);
+    // The evidence behind the median: one row per driving day, with its km.
+    const stages = computeRoadtripInsights(
+      [
+        trip(
+          [
+            station("a", { startDate: d("2026-06-01"), endDate: d("2026-06-01") }),
+            station("via", { viaPoint: true }),
+            station("b", { startDate: d("2026-06-01"), endDate: d("2026-06-04"), overnight: true }),
+            station("c", { startDate: d("2026-06-04") }),
+          ],
+          [leg("a", "via", 100), leg("via", "b", 150), leg("b", "c", 80)]
+        ),
+      ],
+      [],
+      resolver,
+      NOW
+    ).items.roadtripDayStages;
+    expect(stages.map((i) => [i.entry.id, i.entry.subtitle])).toEqual([
+      ["r1:2026-06-01", { key: "evidence.subtitle.dayStageKm", values: { km: 250 } }],
+      ["r1:2026-06-04", { key: "evidence.subtitle.dayStageKm", values: { km: 80 } }],
+    ]);
     // 1 June and 4 June have stages; 2 and 3 June are rest days.
     expect(insights.roadtrips[0].restDays).toBe(2);
   });
@@ -214,10 +235,11 @@ describe("roadtrip insights", () => {
       ({
         tour: { id, anchorStopId: "b", anchorRoadtripId: "r1" },
         state: "completed",
+        day: "2026-06-02",
         km,
         ascentM,
       }) as unknown as TourFacts;
-    const { insights } = computeRoadtripInsights(
+    const { insights, items } = computeRoadtripInsights(
       [
         trip(
           [
@@ -234,5 +256,11 @@ describe("roadtrip insights", () => {
     const r = insights.roadtrips[0];
     expect(r.km.recorded).toBe(100);
     expect(r.tours).toEqual({ completed: 2, km: 20, ascentM: 800 });
+    // The tile's count opens these two tours, filed under the roadtrip's year.
+    expect(totalsOf(items).roadtripToursAlongCount).toEqual({ allTime: 2, byYear: { "2026": 2 } });
+    expect(items.roadtripToursAlongCount.map((i) => i.entry.href)).toEqual([
+      "/tours/t1",
+      "/tours/t2",
+    ]);
   });
 });

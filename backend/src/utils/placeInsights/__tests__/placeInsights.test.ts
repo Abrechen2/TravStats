@@ -103,6 +103,18 @@ describe("places insights — returning after years (item 2)", () => {
     expect(insights.revisits.returning[0]).toMatchObject({ placeId: "a", years: [2018, 2024] });
   });
 
+  it("opens the places returned to over the years, each once, over all years", () => {
+    const { items } = computePlaceInsights(
+      [
+        place("a", [visit("2018-06-10T10:00:00Z"), visit("2024-06-09T10:00:00Z")]),
+        place("b", [visit("2024-01-10T10:00:00Z"), visit("2024-02-10T10:00:00Z")]),
+      ],
+      NOW
+    );
+    expect(totalsOf(items).placeReturningPlaceCount.allTime).toBe(1);
+    expect(items.placeReturningPlaceCount[0]).toMatchObject({ credits: ["a"], year: null });
+  });
+
   it("counts whole years by anniversary, not by subtracting years", () => {
     expect(wholeYears("2019-06-10", "2024-06-09")).toBe(4);
     expect(wholeYears("2019-06-10", "2024-06-10")).toBe(5);
@@ -175,6 +187,20 @@ describe("places insights — the largest jump (item 5)", () => {
     expect(insights.jump.longest?.to.placeId).toBe("muc");
     expect(insights.jump.longest?.km).toBeGreaterThan(500);
     expect(insights.jump.longest?.km).toBeLessThan(510);
+  });
+
+  it("opens the two visits the jump runs between, and nothing without a jump", () => {
+    const from = visit("2024-05-01T10:00:00Z");
+    const to = visit("2024-05-03T10:00:00Z");
+    const { items } = computePlaceInsights(
+      [place("ber", [from]), place("muc", [to], { lat: 48.137, lon: 11.575 })],
+      NOW
+    );
+    expect(items.placeLongestJumpVisits.map((i) => i.entry.id)).toEqual([from.id, to.id]);
+    expect(
+      computePlaceInsights([place("ber", [visit("2024-05-01T10:00:00Z")])], NOW).items
+        .placeLongestJumpVisits
+    ).toEqual([]);
   });
 
   it("skips two visits on one day that carry no time — their order is unknown", () => {

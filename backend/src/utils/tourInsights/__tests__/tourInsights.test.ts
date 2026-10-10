@@ -144,3 +144,36 @@ describe("tour insights", () => {
     expect(totalsOf(items).tourDistanceKm.allTime).toBe(80);
   });
 });
+
+describe("tour links, areas and record holders as evidence (forgejo#264)", () => {
+  const set = facts([
+    tour({ tripId: "trip", duringCruise: true, tourDate: d("2024-06-01") }),
+    tour({ anchorStopId: "s1", anchorRoadtripId: "rt", tourDate: d("2025-06-01") }),
+    tour({ tripId: "trip", anchorStopId: "s2", anchorRoadtripId: "rt", country: "IT" }),
+    tour({ country: null }),
+    // Planned: counts in no link.
+    tour({ tripId: "trip", tourDate: d("2027-01-01") }),
+  ]);
+  const { items } = computeTourInsights(set);
+  const totals = totalsOf(items);
+
+  it("lists each link's tours per year — overlapping, so never added up", () => {
+    expect(totals.tourOnTripCount).toEqual({ allTime: 2, byYear: { "2024": 1, "2025": 1 } });
+    expect(totals.tourFromRoadtripCount.allTime).toBe(2);
+    expect(totals.tourDuringCruiseCount).toEqual({ allTime: 1, byYear: { "2024": 1 } });
+    expect(totals.tourLinkedCount.allTime).toBe(3);
+    expect(totals.tourStandaloneCount.allTime).toBe(1);
+    // Every completed tour is either linked or standalone, exactly once.
+    expect(totals.tourLinkedCount.allTime + totals.tourStandaloneCount.allTime).toBe(4);
+  });
+
+  it("counts the areas toured by the country at the start, and abstains without one", () => {
+    expect(totals.tourCountriesCount.allTime).toBe(2);
+    expect(items.tourCountriesCount.map((i) => i.credits)).not.toContainEqual([]);
+  });
+
+  it("lists the record-holding tours over all years", () => {
+    expect(items.tourRecordTours.length).toBeGreaterThan(0);
+    expect(items.tourRecordTours.every((i) => i.year === null)).toBe(true);
+  });
+});
