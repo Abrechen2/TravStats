@@ -540,6 +540,21 @@
         "no_photos": "no day: no photos there",
         "ambiguous": "no day: photos on several days equally often"
       }
+    },
+    "document": {
+      "title": "A place from a document",
+      "description": "A museum ticket or a tour booking: paste its text or choose a .txt/.eml file. It is read with your place templates from the parser workshop; the place lands in the preview, and only you create it.",
+      "textLabel": "Document text",
+      "placeholder": "Paste the text of the ticket or booking here …",
+      "read": "Read document",
+      "reading": "Reading …",
+      "uploadLabel": "Choose file",
+      "readFailed": "The document could not be read. Please try again.",
+      "fallback": {
+        "noTemplate": "No place template is active yet. In the parser workshop (document type: place), derive one from a ticket of this provider, check it with the preview and activate it.",
+        "notRecognised": "None of your place templates recognises this document. For a new provider, derive one of its own in the parser workshop.",
+        "timedOut": "Reading took too long and was stopped. Please try again."
+      }
     }
   },
   "gallery": {

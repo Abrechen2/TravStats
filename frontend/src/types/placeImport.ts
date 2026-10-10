@@ -8,7 +8,7 @@
  * and it is offered back to them rather than dropped.
  */
 
-export type PlaceImportSource = "csv";
+export type PlaceImportSource = "csv" | "document";
 
 export interface PlaceImportCandidate {
   sourceRowIndex: number;
@@ -133,4 +133,14 @@ export interface PlaceImportResolution {
   tripReason: TripReason | null;
   googleConfigured: boolean;
   rows: ResolvedRow[];
+}
+
+/** Why a place document produced no candidate (forgejo#124). */
+export type PlaceDocumentFallback = "noTemplate" | "notRecognised" | "timedOut";
+
+/** `POST /place-import/document` — at most one candidate, nothing written. */
+export interface PlaceDocumentReading {
+  candidates: PlaceImportCandidate[];
+  templateId: string | null;
+  fallbackCode?: PlaceDocumentFallback;
 }

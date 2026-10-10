@@ -540,6 +540,21 @@
         "no_photos": "kein Tag: keine Fotos dort",
         "ambiguous": "kein Tag: Fotos an mehreren Tagen gleich oft"
       }
+    },
+    "document": {
+      "title": "Ort aus einem Dokument",
+      "description": "Ein Museumsticket oder eine Führungsbuchung: Text einfügen oder als .txt/.eml wählen. Gelesen wird mit deinen Orts-Templates aus der Parser-Werkstatt; der Ort landet in der Vorschau, und erst du legst ihn an.",
+      "textLabel": "Text des Dokuments",
+      "placeholder": "Text des Tickets oder der Buchung hier einfügen …",
+      "read": "Dokument lesen",
+      "reading": "Wird gelesen …",
+      "uploadLabel": "Datei wählen",
+      "readFailed": "Das Dokument konnte nicht gelesen werden. Bitte noch einmal versuchen.",
+      "fallback": {
+        "noTemplate": "Noch kein Orts-Template aktiv. Leite in der Parser-Werkstatt (Art des Dokuments: Ort) aus einem Ticket dieses Anbieters eines ab, prüfe es mit der Vorschau und aktiviere es.",
+        "notRecognised": "Keines deiner Orts-Templates erkennt dieses Dokument. Für einen neuen Anbieter leitest du in der Parser-Werkstatt ein eigenes ab.",
+        "timedOut": "Das Lesen hat zu lange gedauert und wurde abgebrochen. Bitte noch einmal versuchen."
+      }
     }
   },
   "gallery": {

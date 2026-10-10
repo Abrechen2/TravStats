@@ -64,7 +64,8 @@
     "money": "Preis",
     "ship": "Schiff",
     "voyage": "Reise",
-    "cabin": "Kabine"
+    "cabin": "Kabine",
+    "itinerary": "Reiseverlauf"
   },
   "labels": {
     "flight": {
@@ -113,7 +114,10 @@
       "deck": "Deck",
       "price": "Preis",
       "currency": "Währung",
-      "bookingReference": "Buchungsnummer"
+      "bookingReference": "Buchungsnummer",
+      "stopDate": "Datum (Reiseverlauf)",
+      "stopPort": "Hafen (Reiseverlauf)",
+      "seaDay": "Seetag-Wort"
     },
     "place": {
       "name": "Name",
@@ -133,16 +137,24 @@
     "markedFields": "Markierte Felder",
     "markedNothing": "Noch nichts markiert.",
     "derivedBanner": "Template abgeleitet. Prüfe es unter „Meine Templates“ mit der Vorschau, bevor du es aktivierst.",
-    "dismiss": "Ausblenden"
+    "dismiss": "Ausblenden",
+    "domainHints": {
+      "cruise": "Markiere die Kopfdaten (Schiff, Buchungsnummer, Preis …) und dazu EINE Zeile des Reiseverlaufs: ihr Datum und ihren Hafen. Aus dieser Zeile liest das Template die ganze Hafenliste.",
+      "place": "Markiere mindestens den Namen des Ortes, dazu nach Wunsch Adresse, Kategorie und Besuchsdatum. Gelesene Orte landen in der Import-Vorschau unter Einstellungen → Import."
+    }
   },
   "derivation": {
     "cannot": {
-      "cruiseNeedsRepeatingBlocks": "Für Kreuzfahrten kann noch kein Template abgeleitet werden: eine Hafenliste ist eine wiederkehrende Reihe, und der Lesekopf dafür fehlt noch. Deine Markierungen werden trotzdem gespeichert.",
-      "noPlaceDocumentReader": "Für Orte gibt es noch keinen Dokument-Leser, also entsteht hier kein Template. Deine Markierungen werden trotzdem gespeichert.",
       "lodgingNeedsNameAndDates": "Zu wenig markiert: ohne Name der Unterkunft, Anreise und Abreise ist es kein Aufenthalt, und ein Template ohne diese drei würde Vorschläge machen, die niemand prüfen kann.",
       "lodgingDateNotUnderstood": "Das Datumsformat in dieser Mail wird noch nicht gelesen (Monatsnamen ja, rein numerisch wie 10.03.2026 nein). Ein Template darauf würde jede Mail dieses Absenders ablehnen.",
       "noDistinguishingMarker": "Nichts in dieser Mail benennt den Absender — nur diese eine Buchung. Ein Template ohne Absender-Merkmal würde auf jede Unterkunfts-Mail passen.",
-      "notDerivable": "Für diese Art von Dokument leitet die Werkstatt kein Template ab."
+      "notDerivable": "Für diese Art von Dokument leitet die Werkstatt kein Template ab.",
+      "cruiseNeedsStopRow": "Für eine Kreuzfahrt fehlt eine markierte Zeile des Reiseverlaufs: markiere in EINER Zeile das Datum als „Datum (Reiseverlauf)“ und den Hafen als „Hafen (Reiseverlauf)“. Ohne Häfen liest das Template keine Reise.",
+      "cruiseStopRowNotOneLine": "Datum und Hafen des Reiseverlaufs müssen in derselben Zeile stehen. Markiere beide in einer Zeile der Hafenliste.",
+      "cruiseStopRowNotUnderstood": "Aus der markierten Zeile des Reiseverlaufs lässt sich keine Hafenliste lesen — es fehlt eine Überschrift über der Liste, oder die Markierung deckt nicht den ganzen Hafennamen ab.",
+      "dateNotUnderstood": "Ein markiertes Datum wird nicht gelesen. Erwartet wird ein Datum mit Jahr, z. B. 02.06.2027 oder 2. Juni 2027.",
+      "placeNeedsName": "Für einen Ort fehlt der Name: markiere, wie der Ort heißt. Ein Ort ohne Namen ist keine Zeile, die der Import anbieten kann.",
+      "templateReadsNothing": "Das abgeleitete Template liest aus diesem Dokument selbst nichts heraus, also wurde keines gespeichert. Prüfe die Markierungen."
     }
   },
   "preview": {

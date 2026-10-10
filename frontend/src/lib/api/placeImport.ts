@@ -1,6 +1,7 @@
 import { api } from "./client";
 import { waitForJob } from "./jobs";
 import type {
+  PlaceDocumentReading,
   PlaceImportCandidate,
   PlaceImportCommitResult,
   PlaceImportPreview,
@@ -26,6 +27,23 @@ export const previewPlaceImport = async (
 ): Promise<PlaceImportPreview> => {
   const { data } = await api.post<Envelope<PlaceImportPreview>>("/place-import/preview", {
     candidates,
+  });
+  return data.data;
+};
+
+/**
+ * Reads one place document — a museum ticket, a tour booking — with the
+ * user's place templates (forgejo#124). Writes nothing: a candidate goes
+ * through `previewPlaceImport` like a CSV row, and an empty answer carries the
+ * reason as a code.
+ */
+export const readPlaceDocument = async (
+  text: string,
+  subject?: string
+): Promise<PlaceDocumentReading> => {
+  const { data } = await api.post<Envelope<PlaceDocumentReading>>("/place-import/document", {
+    text,
+    ...(subject ? { subject } : {}),
   });
   return data.data;
 };

@@ -3,6 +3,10 @@ import { applyUserTemplate } from "./engine";
 import { matchesFingerprint } from "./matcher";
 import { parseLodgingSpec } from "./lodgingTemplates";
 import type { TemplateDomain, UserTemplate } from "./types";
+import { applyV2CruiseTemplate } from "../../cruise/v2Cruise";
+import type { ParsedCruiseStop } from "../../cruiseBookingParser";
+import { applyV2PlaceTemplate } from "../../places/v2Place";
+import { parseWorkshopEnvelope } from "./v2UserTemplates";
 
 /**
  * Run a derived template against one document and say what it would read.
@@ -94,8 +98,41 @@ export function previewTemplate(
     };
   }
 
-  // cruise and place never reach here: nothing derives a template for them,
-  // so there is none to preview. Returning the empty result rather than
-  // throwing keeps the route's error vocabulary about the REQUEST.
-  return EMPTY;
+  // Cruise and place templates are v2 envelopes, run by the same consumer the
+  // parse uses, on the text the parse builds (subject line first).
+  const documentText = subject ? `${subject}\n${body}` : body;
+  if (domain === "cruise") {
+    const envelope = parseWorkshopEnvelope(template.patterns, "cruise");
+    const cruise = envelope ? applyV2CruiseTemplate(envelope, documentText)[0] : undefined;
+    if (!cruise) return EMPTY;
+    return {
+      matched: true,
+      fields: [
+        ...fieldsOf(cruise as unknown as Record<string, unknown>, CRUISE_SKIP),
+        { name: "stops", value: describeStops(cruise.stops) },
+      ],
+      confidence: cruise.parserConfidence,
+    };
+  }
+
+  const envelope = parseWorkshopEnvelope(template.patterns, "place");
+  const candidate = envelope ? applyV2PlaceTemplate(envelope, documentText) : null;
+  if (!candidate) return EMPTY;
+  return {
+    matched: true,
+    fields: fieldsOf(candidate as unknown as Record<string, unknown>, ["sourceRowIndex"]),
+    confidence: null,
+  };
+}
+
+const CRUISE_SKIP = [...FLIGHT_SKIP, "flights", "stops"];
+
+/**
+ * The stop list as one line: each day's date and port, a dash for a day at
+ * sea. Values only — the preview shows what the template read, not copy.
+ */
+function describeStops(stops: readonly ParsedCruiseStop[]): string {
+  return stops
+    .map((stop) => [stop.date, stop.isAtSea ? "—" : (stop.portName ?? "?")].join(" "))
+    .join(" · ");
 }

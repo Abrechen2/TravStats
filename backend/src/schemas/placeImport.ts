@@ -11,7 +11,7 @@ import { z } from "./zod";
  * deserves one decision, not an entry."
  */
 
-export const PLACE_IMPORT_SOURCES = ["csv"] as const;
+export const PLACE_IMPORT_SOURCES = ["csv", "document"] as const;
 export type PlaceImportSource = (typeof PLACE_IMPORT_SOURCES)[number];
 
 /** Matches `MAX_LODGING_IMPORT_ROWS`. One cap, one number to remember. */
@@ -114,3 +114,23 @@ export const PLACE_IMPORT_FAILURE_MESSAGES: Record<PlaceImportFailureCode, strin
   write_failed: "The place could not be saved.",
   invalid_target: "The trip or stay the row names was not found.",
 };
+
+/**
+ * A place DOCUMENT — a museum ticket, a tour booking, pasted or uploaded as
+ * text — to be read by the place templates (forgejo#124). The answer is at
+ * most one candidate, which the client sends through `/preview` like any CSV
+ * row: nothing is written from a document without the user's confirmation.
+ */
+export const placeDocumentReadSchema = z.object({
+  text: z.string().trim().min(1).max(200_000),
+  subject: z.string().trim().max(500).optional(),
+});
+
+/** Why a document produced no candidate — see `services/places/placeDocumentImport.ts`. */
+export const PLACE_DOCUMENT_FALLBACKS = ["noTemplate", "notRecognised", "timedOut"] as const;
+
+export const placeDocumentReadingSchema = z.object({
+  candidates: z.array(placeImportCandidateSchema).max(1),
+  templateId: z.string().nullable(),
+  fallbackCode: z.enum(PLACE_DOCUMENT_FALLBACKS).optional(),
+});
