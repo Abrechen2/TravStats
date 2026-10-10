@@ -74,9 +74,9 @@ export const NOTES_PAGE = 100;
 
 export const notesApi = {
   /** One page, newest first, from `offset` in the server's order (occurredAt desc, id desc). */
-  list: async (offset = 0): Promise<{ notes: Note[]; total: number }> => {
+  list: async (offset = 0, limit = NOTES_PAGE): Promise<{ notes: Note[]; total: number }> => {
     const { data } = await api.get<ListEnvelope<Note[]>>("/notes", {
-      params: { limit: NOTES_PAGE, offset },
+      params: { limit, offset },
     });
     return { notes: data.data, total: data.meta.total };
   },

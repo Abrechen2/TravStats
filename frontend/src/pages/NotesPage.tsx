@@ -8,7 +8,7 @@ import { FormErrorBanner } from "../components/form";
 import { AppShell, Button, Dialog, EmptyState, PageHeader } from "../components/ui";
 import { useTranslation } from "../hooks/useTranslation";
 import { useTodayZone } from "../hooks/useTodayZone";
-import { notesApi, type Note } from "../lib/api/notes";
+import { NOTES_PAGE, notesApi, type Note } from "../lib/api/notes";
 import { logger } from "../lib/logger";
 import { saveErrorKey } from "../lib/saveErrorMessage";
 import { formatDayLong } from "../shared/time";
@@ -24,7 +24,12 @@ type Open = { kind: "edit"; note: Note | null } | { kind: "delete"; note: Note }
  * Reached from "Mehr › Sammlungen": a note is something the user keeps, like
  * achievements or place lists, and needs no domain switched on.
  */
-export default function NotesPage(): JSX.Element {
+interface NotesPageProps {
+  /** Notes per page; tests pass a small one so paging is exercised cheaply. */
+  pageSize?: number;
+}
+
+export default function NotesPage({ pageSize = NOTES_PAGE }: NotesPageProps = {}): JSX.Element {
   const { t, i18n } = useTranslation(["notes", "common"]);
   const readerZone = useTodayZone();
 
@@ -53,7 +58,7 @@ export default function NotesPage(): JSX.Element {
     setLoading(true);
     setLoadFailure(undefined);
     try {
-      const page = await notesApi.list();
+      const page = await notesApi.list(0, pageSize);
       counted.current = new Set(page.notes.map((n) => n.id));
       setTimeline({ notes: page.notes, total: page.total });
     } catch (err: unknown) {
@@ -62,7 +67,7 @@ export default function NotesPage(): JSX.Element {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [pageSize]);
 
   useEffect(() => {
     void load();
@@ -73,7 +78,7 @@ export default function NotesPage(): JSX.Element {
     setLoadingMore(true);
     setMoreFailure(null);
     try {
-      const page = await notesApi.list(notes.length);
+      const page = await notesApi.list(notes.length, pageSize);
       page.notes.forEach((n) => counted.current.add(n.id));
       setTimeline((current) => ({
         notes: appendPage(current.notes, page.notes),
