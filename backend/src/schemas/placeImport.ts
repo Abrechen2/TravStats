@@ -47,6 +47,16 @@ export const placeImportCandidateSchema = z.object({
    * no-op, so it travels from the reader rather than being invented here.
    */
   externalRef: z.string().trim().max(200).nullable().optional(),
+  /**
+   * What the commit makes of the row (#358). Absent means a place, which is
+   * what every import before the Takeout resolution sent. `trip_stop` writes a
+   * stop on `tripId`; `stay` writes nothing — the row is the user's own stay
+   * (`lodgingStayId`) already, and the commit only confirms that it is theirs.
+   */
+  treatment: z.enum(["place", "trip_stop", "stay"]).optional(),
+  /** The trip a place's dated visit, or a trip stop, belongs to. */
+  tripId: z.string().uuid().nullable().optional(),
+  lodgingStayId: z.string().uuid().nullable().optional(),
 });
 export type PlaceImportCandidate = z.infer<typeof placeImportCandidateSchema>;
 
@@ -91,10 +101,16 @@ export const placeImportCommitSchema = z.object({
  * raw Prisma message in a 201 body — and a success response never passes
  * through the error handler's leak protections.
  */
-export type PlaceImportFailureCode = "invalid_row" | "no_position" | "write_failed";
+export type PlaceImportFailureCode =
+  | "invalid_row"
+  | "no_position"
+  | "write_failed"
+  /** The trip or stay the row names is not the caller's (or no longer exists). */
+  | "invalid_target";
 
 export const PLACE_IMPORT_FAILURE_MESSAGES: Record<PlaceImportFailureCode, string> = {
   invalid_row: "The row could not be read.",
   no_position: "The row has no coordinates, so it was not imported.",
   write_failed: "The place could not be saved.",
+  invalid_target: "The trip or stay the row names was not found.",
 };

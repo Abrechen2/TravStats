@@ -11,6 +11,7 @@
 // preview offers it back to the user, who knows where the place is.
 
 import { refCellName } from "../xlsx/sheetSpec";
+import { cidFromMapsUrl, mapsExternalRef } from "../mapsExport";
 import type { MappingFieldSpec } from "../../components/import/ColumnMappingWizard";
 import type { PlaceImportCandidate } from "../../types/placeImport";
 
@@ -94,6 +95,20 @@ const readText = (raw: string | undefined): string | null => {
   return text ? text : null;
 };
 
+/**
+ * The reference a row carries. A Google Takeout export maps its Maps LINK
+ * here, and the link's CID is the place's identity (#358): it becomes
+ * `gmaps:<cid>`, the same key the Maps tile mints, so a list imported through
+ * either path is recognised by the other — and a link longer than the
+ * reference column no longer fails the row.
+ */
+function readExternalRef(raw: string | undefined): string | null {
+  const text = readText(raw);
+  if (!text) return null;
+  const cid = /^https?:\/\//i.test(text) ? cidFromMapsUrl(text) : null;
+  return cid ? mapsExternalRef(cid) : text;
+}
+
 export interface PlaceCsvRowError {
   sourceRowIndex: number;
   code: "missing_name";
@@ -152,7 +167,7 @@ export function buildPlaceCandidates(
       country: readText(cell("country")),
       notes: readText(cell("notes")),
       visitedAt: readText(cell("visitedAt")),
-      externalRef: readText(cell("externalRef")),
+      externalRef: readExternalRef(cell("externalRef")),
     });
   });
 

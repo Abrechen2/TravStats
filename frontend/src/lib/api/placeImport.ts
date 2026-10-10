@@ -1,8 +1,10 @@
 import { api } from "./client";
+import { waitForJob } from "./jobs";
 import type {
   PlaceImportCandidate,
   PlaceImportCommitResult,
   PlaceImportPreview,
+  PlaceImportResolution,
   PlaceImportSource,
 } from "../../types/placeImport";
 
@@ -36,6 +38,29 @@ export const previewPlaceImport = async (
  * back as `no_position`, never written: `Place` is a point, and the preview is
  * where that row was offered for one.
  */
+/**
+ * Resolve a Google Takeout list for the preview (#358): positions from the
+ * CID in each link, the trip a country-named list belongs to, the visit day
+ * from photographs. A background job on the server — a few hundred lookups
+ * outlast the request timeout — so this starts it and waits for the outcome.
+ * A failed job throws `JobFailedError`, a lost one `JobLostError`.
+ */
+export const resolvePlaceImport = async (
+  listName: string | null,
+  rows: Array<
+    Pick<PlaceImportCandidate, "sourceRowIndex" | "name" | "externalRef" | "lat" | "lon">
+  >,
+  onProgress?: (progress: { done: number; total: number } | null) => void
+): Promise<PlaceImportResolution> => {
+  const { data } = await api.post<Envelope<{ jobId: string }>>("/place-import/resolve", {
+    listName,
+    rows,
+  });
+  return waitForJob<PlaceImportResolution>(data.data.jobId, {
+    onPoll: (job) => onProgress?.(job.progress),
+  });
+};
+
 export const commitPlaceImport = async (
   source: PlaceImportSource,
   fileName: string | null,
