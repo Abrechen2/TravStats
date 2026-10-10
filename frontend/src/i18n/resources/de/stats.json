@@ -245,7 +245,8 @@
       "south_pacific": "Südpazifik",
       "southeast_asia": "Südostasien",
       "west_africa": "Westafrika"
-    }
+    },
+    "riverCruises": "Flusskreuzfahrten"
   },
   "page": {
     "loadError": "Diese Statistiken konnten nicht geladen werden.",

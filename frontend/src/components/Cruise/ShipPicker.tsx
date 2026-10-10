@@ -33,6 +33,7 @@ export function ShipPicker({ value, onChange, label, id }: Props): JSX.Element {
   const [showAdd, setShowAdd] = useState<boolean>(false);
   const [newName, setNewName] = useState<string>("");
   const [newLine, setNewLine] = useState<string>("");
+  const [newRiver, setNewRiver] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [searchError, setSearchError] = useState<boolean>(false);
@@ -79,7 +80,11 @@ export function ShipPicker({ value, onChange, label, id }: Props): JSX.Element {
     setSaving(true);
     setError(null);
     try {
-      const { ship, existing } = await shipsApi.create({ name: newName, cruiseLine: newLine });
+      const { ship, existing } = await shipsApi.create({
+        name: newName,
+        cruiseLine: newLine,
+        kind: newRiver ? "river" : "ocean",
+      });
       onChange(ship);
       setNotice(existing ? t("picker.shipAlreadyExists", { name: ship.name }) : null);
       setQuery(ship.name);
@@ -87,6 +92,7 @@ export function ShipPicker({ value, onChange, label, id }: Props): JSX.Element {
       setShowAdd(false);
       setNewName("");
       setNewLine("");
+      setNewRiver(false);
     } catch {
       setError(t("picker.createShipError"));
     } finally {
@@ -121,6 +127,9 @@ export function ShipPicker({ value, onChange, label, id }: Props): JSX.Element {
                 onClick={(): void => handleSelect(r)}
               >
                 {r.name} <span className="text-(--text-muted)">— {r.cruiseLine}</span>
+                {r.kind === "river" && (
+                  <span className="ml-2 text-xs text-(--text-muted)">· {t("picker.riverTag")}</span>
+                )}
               </button>
             </li>
           ))}
@@ -162,6 +171,14 @@ export function ShipPicker({ value, onChange, label, id }: Props): JSX.Element {
             onChange={(e): void => setNewLine(e.target.value)}
             placeholder={t("field.line")}
           />
+          <label className="flex items-center gap-2 text-xs text-(--text-primary)">
+            <input
+              type="checkbox"
+              checked={newRiver}
+              onChange={(e): void => setNewRiver(e.target.checked)}
+            />
+            {t("picker.riverShip")}
+          </label>
           {error !== null && <p className="text-xs text-(--danger)">{error}</p>}
           <div className="flex justify-end gap-2">
             <button

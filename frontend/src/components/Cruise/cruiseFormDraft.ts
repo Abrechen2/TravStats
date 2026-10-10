@@ -2,6 +2,7 @@ import type {
   CabinType,
   Cruise,
   CruiseInput,
+  CruiseKind,
   CruiseStatus,
   CruiseStop,
   CruiseStopInput,
@@ -21,6 +22,8 @@ export interface CruiseFormFields {
   startDate: string;
   endDate: string;
   status: CruiseStatus;
+  /** Ocean or river (#359). Follows a picked ship; the user can override it. */
+  kind: CruiseKind;
   color: string | null;
   departurePort: Port | null;
   arrivalPort: Port | null;
@@ -82,6 +85,7 @@ export function cruiseFormFields(
     startDate: toDateInput(cruise?.startDate),
     endDate: toDateInput(cruise?.endDate),
     status: cruise?.status ?? "scheduled",
+    kind: cruise?.kind ?? "ocean",
     color: cruise?.color ?? null,
     departurePort: cruise?.departurePort ?? null,
     arrivalPort: cruise?.arrivalPort ?? null,
@@ -206,6 +210,7 @@ export function cruiseWriteBody(fields: CruiseFormFields): CruiseWriteBody {
     startDate: dayInput(fields.startDate),
     endDate: dayInput(fields.endDate),
     status: fields.status,
+    kind: fields.kind,
     color: fields.color,
     cabinNumber: fields.cabinNumber || null,
     cabinType: (fields.cabinType || null) as CabinType | null,

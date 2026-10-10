@@ -195,7 +195,9 @@
     "geocodeRateLimited": "The online port search (OpenStreetMap) is busy and did not answer. Search again in a minute, or add the port by hand.",
     "geocodeUnavailable": "The online port search (OpenStreetMap) cannot be reached right now. Search again later, or add the port by hand.",
     "shipSearchError": "Ship search failed – please try again. While the search is not answering, better not add a new ship: it may already be in the catalogue.",
-    "shipAlreadyExists": "\"{{name}}\" is already in the catalogue and was selected – no second ship was created."
+    "shipAlreadyExists": "\"{{name}}\" is already in the catalogue and was selected – no second ship was created.",
+    "riverShip": "River ship",
+    "riverTag": "river ship"
   },
   "map": {
     "layer": "Cruises",
@@ -512,5 +514,10 @@
     "skip": "Finish without these flights",
     "leftOut_one": "One flight of the booking is not in the logbook.",
     "leftOut_other": "{{count}} flights of the booking are not in the logbook."
+  },
+  "kind": {
+    "label": "Kind of cruise",
+    "ocean": "Ocean",
+    "river": "River"
   }
 }

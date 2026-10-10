@@ -67,6 +67,7 @@
     "departurePort": "Departure port",
     "arrivalPort": "Arrival port",
     "cabinNumber": "Cabin",
+    "cruiseKind": "Kind (ocean/river)",
     "cabinType": "Cabin type",
     "deck": "Deck",
     "cruise": "Cruise",

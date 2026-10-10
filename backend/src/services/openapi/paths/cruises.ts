@@ -86,6 +86,12 @@ const cruise = registry.register(
             "`completed`; the retired `flown` is still accepted on input and read as " +
             "`completed`, but never returned (#357)."
         ),
+      kind: z
+        .enum(["ocean", "river"])
+        .describe(
+          "Ocean or river (#359). Set from the ship on create unless given; a river " +
+            "cruise's portless days are not counted as sea days."
+        ),
       cabinNumber: z.string().nullable(),
       cabinType: z.enum(["inside", "oceanview", "balcony", "suite"]).nullable(),
       deck: z.number().int().nullable(),

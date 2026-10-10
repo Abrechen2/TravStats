@@ -1,6 +1,6 @@
 import { api } from "./client";
 import { logger } from "../logger";
-import type { Cruise, CruiseWriteBody, Port, Ship } from "../../types";
+import type { Cruise, CruiseKind, CruiseWriteBody, Port, Ship } from "../../types";
 import type { CruiseSortField } from "../../shared/cruiseListOrder";
 
 /** The server's own maximum per request (`cruiseQuerySchema`). */
@@ -313,6 +313,7 @@ export const shipsApi = {
     yearBuilt?: number;
     grossTonnage?: number;
     capacity?: number;
+    kind?: CruiseKind;
   }): Promise<ShipCreateResult> => {
     const { data } = await api.post<Envelope<Ship> & { existing?: boolean }>("/ships", input);
     return { ship: data.data, existing: data.existing === true };

@@ -12,6 +12,7 @@ import { cruiseApi, tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ShipPicker } from "./ShipPicker";
+import { CruiseKindToggle } from "./CruiseKindToggle";
 import { PortPicker } from "./PortPicker";
 import { CruiseStopsEditor } from "./CruiseStopsEditor";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
@@ -219,6 +220,8 @@ export function CruiseEditModal({
       ...prev,
       ship,
       cruiseLine: prev.cruiseLine || ship.cruiseLine,
+      // A picked ship brings its kind (#359); the toggle below can still say otherwise.
+      kind: ship.kind ?? prev.kind,
     }));
   };
 
@@ -336,6 +339,7 @@ export function CruiseEditModal({
             value={draft.ship}
             onChange={onShipPicked}
           />
+          <CruiseKindToggle value={draft.kind} onChange={(v): void => set("kind", v)} />
           <div className={`mt-3 ${CRUISE_LABEL_CLASS}`}>
             <label htmlFor={LINE_ID}>{t("field.line")}</label>
             <CatalogueCombobox

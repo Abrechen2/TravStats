@@ -3,6 +3,7 @@ import { currencyField } from "./lodging";
 import { partialForUpdate } from "./partialUpdate";
 import { CRUISE_SORT_FIELDS } from "../shared/cruiseListOrder";
 import { normalizeCruiseStatus } from "../shared/statusDerivation";
+import { CRUISE_KINDS } from "../shared/cruiseKind";
 import {
   instantFieldSchema,
   legacyDayFieldSchema,
@@ -159,6 +160,11 @@ const baseCruiseSchema = z.object({
   startDate: cruiseDay,
   endDate: cruiseDay,
   status: cruiseStatusInput(STATUSES).default("scheduled"),
+  /**
+   * Ocean or river (#359). Absent on create means "from the ship, else
+   * ocean" (`shared/cruiseKind.ts`); absent on update leaves it alone.
+   */
+  kind: z.enum(CRUISE_KINDS).optional(),
   cabinNumber: z.string().max(20).nullable().optional(),
   cabinType: z.enum(CABIN_TYPES).nullable().optional(),
   deck: z.number().int().min(1).max(30).nullable().optional(),

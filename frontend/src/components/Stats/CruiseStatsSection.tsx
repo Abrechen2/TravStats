@@ -269,6 +269,17 @@ export default function CruiseStatsSection({
     { label: t("stats:cruiseSection.maxPortsSingle"), value: stats.cruisePortsSingleMax },
     { label: t("stats:cruiseSection.lineLoyaltyMax"), value: stats.cruiseLineLoyaltyMax },
     { label: t("stats:cruiseSection.seaDaysStreak"), value: stats.seaDaysStreak },
+    // River vs ocean (#359): how many of the cruises were on a river, and how
+    // far. Abstains ("—") when the server did not say.
+    {
+      label: t("stats:cruiseSection.riverCruises"),
+      value:
+        stats.riverCruisesCount == null
+          ? "—"
+          : stats.riverCruisesCount > 0 && stats.riverDistanceKm
+            ? `${stats.riverCruisesCount} · ${formatNumber(convertDistance(stats.riverDistanceKm, distanceUnit))} ${distanceLabel}`
+            : stats.riverCruisesCount,
+    },
     { label: t("stats:cruiseSection.maxDeck"), value: stats.maxDeck > 0 ? stats.maxDeck : "—" },
     {
       label: t("stats:cruiseSection.totalDays"),

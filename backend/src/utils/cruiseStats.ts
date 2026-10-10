@@ -1,4 +1,5 @@
 import { haversineKm } from "../shared/geo/haversine";
+import { isRiverCruise } from "../shared/cruiseKind";
 
 export interface CruisePortData {
   id: number;
@@ -27,6 +28,8 @@ export interface CruiseStopData {
 export interface CruiseData {
   id: string;
   shipId: number | null;
+  /** "ocean" | "river" (#359). Absent reads as ocean — see `shared/cruiseKind`. */
+  kind?: string | null;
   cruiseLine: string | null;
   cabinType: string | null;
   deck: number | null;
@@ -76,8 +79,14 @@ export interface CruiseStats {
   cruiseLineCounts: Record<string, number>;
   cruiseLinesUnique: number;
   cruiseLineLoyaltyMax: number;
+  /** Days at SEA — ocean cruises only (#359): a river cruise's portless day
+   *  is spent on the river, and calling it a sea day would invent one. */
   seaDays: number;
   seaDaysStreak: number;
+  /** How many of `cruisesCount` were river cruises (#359). */
+  riverCruisesCount: number;
+  /** The part of `totalDistanceKm` sailed on rivers (#359). */
+  riverDistanceKm: number;
   regions: Set<string>;
   countries: Set<string>;
   /**
@@ -180,9 +189,13 @@ export function calculateCruiseStats(
   let totalPortCalls = 0;
   let resolvedPortCalls = 0;
   let totalCruiseDays = 0;
+  let riverCruisesCount = 0;
+  let riverDistanceKm = 0;
   const regionVisitCounts: Record<string, number> = {};
 
   for (const cruise of cruises) {
+    const river = isRiverCruise(cruise);
+    if (river) riverCruisesCount += 1;
     if (cruise.shipId !== null) {
       shipIds.add(cruise.shipId);
       shipCounts.set(cruise.shipId, (shipCounts.get(cruise.shipId) ?? 0) + 1);
@@ -244,6 +257,8 @@ export function calculateCruiseStats(
 
     for (const stop of effectiveStops) {
       if (stop.isAtSea) {
+        // A river cruise's day between ports is not a sea day (#359).
+        if (river) continue;
         seaDays += 1;
         currentSeaStreak += 1;
         if (currentSeaStreak > seaDaysStreak) seaDaysStreak = currentSeaStreak;
@@ -283,6 +298,7 @@ export function calculateCruiseStats(
                 ? persistedLegs[legIdx]
                 : haversineKm(prevPortPoint, here);
             totalDistanceKm += legKm;
+            if (river) riverDistanceKm += legKm;
             if (legKm > longestLegKm) longestLegKm = legKm;
             // Antimeridian crossing: large absolute longitude span
             // (>180°) collapses to a shorter great-circle path that
@@ -311,13 +327,17 @@ export function calculateCruiseStats(
     }
     if (cruisePortCount > cruisePortsSingleMax) cruisePortsSingleMax = cruisePortCount;
 
-    if (userBirthday && cruise.startDate && cruise.endDate) {
+    // "At sea" means at sea: a birthday on the Rhine is not one (#359).
+    if (!river && userBirthday && cruise.startDate && cruise.endDate) {
       if (rangeContainsMonthDay(cruise.startDate, cruise.endDate, userBirthday)) {
         hasBirthdayAtSea = true;
       }
     }
     if (cruise.startDate && cruise.endDate) {
-      if (rangeContainsMonthDay(cruise.startDate, cruise.endDate, { month: 12, day: 31 })) {
+      if (
+        !river &&
+        rangeContainsMonthDay(cruise.startDate, cruise.endDate, { month: 12, day: 31 })
+      ) {
         hasNewYearsAtSea = true;
       }
       // Inclusive day count: a Sat–Sun trip counts as 2 days. Cruises
@@ -349,6 +369,8 @@ export function calculateCruiseStats(
     cruiseLineLoyaltyMax,
     seaDays,
     seaDaysStreak,
+    riverCruisesCount,
+    riverDistanceKm,
     regions,
     countries,
     countriesByYear,

@@ -2188,6 +2188,11 @@ model Cruise {
   startZone        String?   @map("start_zone")
   endZone          String?   @map("end_zone")
   status           String    @default("scheduled")
+  /// "ocean" | "river" (#359): what kind of voyage this was, so the
+  /// statistics can keep a Rhine week apart from an Atlantic crossing — a
+  /// river day without a port is not a sea day. Defaults from the ship when
+  /// one is picked; the user can set it either way.
+  kind             String    @default("ocean")
   cabinNumber      String?   @map("cabin_number")
   cabinType        String?   @map("cabin_type")
   deck             Int?
@@ -2472,11 +2477,17 @@ model Ship {
   capacity     Int?
   status       String  @default("active")
   isUserAdded  Boolean @default(false) @map("is_user_added")
+  /// "ocean" | "river" (#359). A river ship (a Nile dahabeya, a Rhine hotel
+  /// ship) used to have no place in the catalogue, so a river cruise could
+  /// only carry its ship as free text and lost its identity across cruises.
+  /// Zod holds the vocabulary (`schemas/cruise.ts` CRUISE_KINDS).
+  kind         String  @default("ocean")
 
   cruises Cruise[]
 
   @@index([name])
   @@index([cruiseLine])
+  @@index([kind])
   @@map("ships")
 }
 

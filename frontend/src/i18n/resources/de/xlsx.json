@@ -67,6 +67,7 @@
     "departurePort": "Abfahrtshafen",
     "arrivalPort": "Ankunftshafen",
     "cabinNumber": "Kabine",
+    "cruiseKind": "Art (ocean/river)",
     "cabinType": "Kabinentyp",
     "deck": "Deck",
     "cruise": "Kreuzfahrt",
