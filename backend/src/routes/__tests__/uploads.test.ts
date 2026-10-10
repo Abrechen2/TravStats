@@ -92,20 +92,20 @@ describe("Uploads receipt authorization — cross-domain ownership", () => {
 
     it("can be fetched by its owner", async () => {
       const res = await request(app)
-        .get(`/api/v1/uploads/receipts/${filename}`)
+        .get(`/api/v1/uploads/receipts/${filename}/content`)
         .set("Cookie", authCookie);
       expect(res.status).toBe(200);
     });
 
     it("cannot be fetched by a different user (404)", async () => {
       const res = await request(app)
-        .get(`/api/v1/uploads/receipts/${filename}`)
+        .get(`/api/v1/uploads/receipts/${filename}/content`)
         .set("Cookie", otherAuthCookie);
       expect(res.status).toBe(404);
     });
 
     it("cannot be fetched unauthenticated", async () => {
-      const res = await request(app).get(`/api/v1/uploads/receipts/${filename}`);
+      const res = await request(app).get(`/api/v1/uploads/receipts/${filename}/content`);
       expect(res.status).toBe(401);
     });
 
@@ -156,7 +156,7 @@ describe("Uploads receipt authorization — cross-domain ownership", () => {
 
     it("can still be fetched and deleted by its owner", async () => {
       const getRes = await request(app)
-        .get(`/api/v1/uploads/receipts/${filename}`)
+        .get(`/api/v1/uploads/receipts/${filename}/content`)
         .set("Cookie", authCookie);
       expect(getRes.status).toBe(200);
 
@@ -171,7 +171,7 @@ describe("Uploads receipt authorization — cross-domain ownership", () => {
 
     it("cannot be fetched or deleted by a different user", async () => {
       const getRes = await request(app)
-        .get(`/api/v1/uploads/receipts/${filename}`)
+        .get(`/api/v1/uploads/receipts/${filename}/content`)
         .set("Cookie", otherAuthCookie);
       expect(getRes.status).toBe(404);
 
@@ -196,10 +196,66 @@ describe("Uploads receipt authorization — cross-domain ownership", () => {
     const filename = await writeTestReceiptFile();
 
     const res = await request(app)
-      .get(`/api/v1/uploads/receipts/${filename}`)
+      .get(`/api/v1/uploads/receipts/${filename}/content`)
       .set("Cookie", authCookie);
 
     expect(res.status).toBe(200);
+  });
+
+  /**
+   * forgejo#284: the file name ends in `.png`/`.jpg`/`.pdf`, and a proxy that
+   * caches by extension (Nginx Proxy Manager "Cache Assets", Cloudflare's
+   * default list once that proxy strips Cache-Control) serves such a URL to
+   * anyone. The file lives at `/content`; the old URL only redirects.
+   */
+  describe("URL shape (forgejo#284)", () => {
+    it("redirects the old URL to /content before asking for a session", async () => {
+      const filename = await writeTestReceiptFile();
+
+      // No cookie: the redirect must not depend on one, or a cached 401 would
+      // lock the owner out for as long as the proxy keeps it.
+      const res = await request(app).get(`/api/v1/uploads/receipts/${filename}`);
+
+      expect(res.status).toBe(308);
+      expect(res.headers.location).toBe(`/api/v1/uploads/receipts/${filename}/content`);
+      expect(res.body).toEqual({});
+    });
+
+    it("serves the file with private, no-store", async () => {
+      const filename = await writeTestReceiptFile();
+
+      const res = await request(app)
+        .get(`/api/v1/uploads/receipts/${filename}/content`)
+        .set("Cookie", authCookie);
+
+      expect(res.status).toBe(200);
+      expect(res.headers["cache-control"]).toBe("private, no-store");
+    });
+
+    it("clears a reference saved in the new URL form when the file is deleted", async () => {
+      const filename = await writeTestReceiptFile();
+      const flight = await prisma.flight.create({
+        data: {
+          userId,
+          depLat: 50.0379,
+          depLon: 8.5622,
+          arrLat: 41.2974,
+          arrLon: 2.0833,
+          status: "flown",
+          departureTime: new Date("2024-07-01T10:00:00.000Z"),
+          arrivalTime: new Date("2024-07-01T12:00:00.000Z"),
+          receiptUrl: `/api/v1/uploads/receipts/${filename}/content`,
+        },
+      });
+
+      await request(app)
+        .delete(`/api/v1/uploads/receipts/${filename}`)
+        .set("Cookie", authCookie)
+        .expect(200);
+
+      const after = await prisma.flight.findUnique({ where: { id: flight.id } });
+      expect(after?.receiptUrl).toBeNull();
+    });
   });
 
   it("returns 404 for a filename nobody uploaded", async () => {
@@ -209,7 +265,7 @@ describe("Uploads receipt authorization — cross-domain ownership", () => {
     fs.writeFileSync(path.join(getUploadDir(), filename), "orphaned");
 
     const res = await request(app)
-      .get(`/api/v1/uploads/receipts/${filename}`)
+      .get(`/api/v1/uploads/receipts/${filename}/content`)
       .set("Cookie", authCookie);
 
     expect(res.status).toBe(404);

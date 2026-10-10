@@ -490,8 +490,14 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/uploads/receipts/{filename}",
+  path: "/uploads/receipts/{filename}/content",
   summary: "Fetch a receipt",
+  description:
+    "A receipt uploaded before receipts became documents (newer ones are " +
+    "`/documents/{id}/file`). Answered with `Cache-Control: private, no-store`. " +
+    "The former URL `/uploads/receipts/{filename}` — which ends in the file's " +
+    "extension, so extension-based proxy caches would store it — answers a 308 " +
+    "redirect to this one.",
   tags: miscTag,
   request: { params: z.object({ filename: z.string() }) },
   responses: {

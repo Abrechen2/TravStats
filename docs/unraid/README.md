@@ -80,6 +80,11 @@ persisted inside the `/mnt/user/appdata/travstats/secrets/` subdirectory
 of the main data volume — one mount, no separate secrets share to worry
 about.
 
+**Publishing it through Nginx Proxy Manager?** Leave **Cache Assets** off on
+that proxy host. It caches any URL ending in `.png`, `.jpg`, `.js` … for
+everyone, ignoring the app's `no-store`, and strips that header before
+Cloudflare sees it. See [Behind a reverse proxy or CDN](../../README.md#behind-a-reverse-proxy-or-cdn).
+
 ## Upgrading
 
 Pulling a newer TravStats image takes a database snapshot into

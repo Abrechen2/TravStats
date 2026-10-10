@@ -5,6 +5,7 @@ import { apiErrorCode, apiErrorMessage, DEMO_FORBIDDEN_CODE } from "../lib/apiEr
 import { documentIdFromUrl, type ExtractTarget } from "../lib/extractValues";
 import { ExtractValuesAction } from "./documents/ExtractValuesAction";
 import { useConfirmDialog } from "../hooks/useConfirmDialog";
+import { canonicalPrivateFileUrl } from "../lib/privateFileUrl";
 
 interface ReceiptUploadProps {
   currentReceiptUrl?: string | null;
@@ -105,7 +106,7 @@ export default function ReceiptUpload({
               href={
                 currentReceiptUrl.startsWith("http")
                   ? currentReceiptUrl
-                  : `${API_URL || window.location.origin}${currentReceiptUrl}`
+                  : `${API_URL || window.location.origin}${canonicalPrivateFileUrl(currentReceiptUrl)}`
               }
               target="_blank"
               rel="noopener noreferrer"

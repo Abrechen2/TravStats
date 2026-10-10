@@ -11,6 +11,7 @@ import logger from "../utils/logger";
 import { createDocument } from "../services/documents/documentService";
 import { RECEIPT_SOURCE, receiptUrlFor } from "../services/documents/receipts";
 import { rejectDemo } from "../middleware/demoGuard";
+import { receiptUrlForms } from "../services/files/privateFileUrls";
 
 const router = Router();
 
@@ -45,8 +46,11 @@ async function ownsUpload(userId: string, filename: string): Promise<boolean> {
  */
 async function findReceiptReferences(
   userId: string,
-  receiptUrl: string
+  filename: string
 ): Promise<{ flightId: string | null; lodgingStayId: string | null }> {
+  // Either URL form names the file — the legacy one stored until 2026-09, or
+  // the extension-less one (forgejo#284) a client may have saved since.
+  const receiptUrl = { in: receiptUrlForms(filename) };
   const [flight, stay] = await Promise.all([
     prisma.flight.findFirst({ where: { userId, receiptUrl }, select: { id: true } }),
     prisma.lodgingStay.findFirst({ where: { userId, receiptUrl }, select: { id: true } }),
@@ -136,11 +140,16 @@ router.post(
 );
 
 /**
- * GET /api/v1/uploads/receipts/:filename
- * Serve uploaded receipt files
+ * GET /api/v1/uploads/receipts/:filename/content
+ * Serve an uploaded (pre-document) receipt file.
+ *
+ * Extension-less on purpose (forgejo#284): the file name ends in `.png`,
+ * `.jpg` or `.pdf`, and a proxy that caches by extension would serve
+ * `/receipts/<name>.png` to anyone, session or not. The old URL is answered
+ * with a redirect to this one by `middleware/assetPathGuard.ts`.
  */
 router.get(
-  "/receipts/:filename",
+  "/receipts/:filename/content",
   authenticate,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
@@ -161,7 +170,10 @@ router.get(
         throw new AppError("File not found or access denied", 404);
       }
 
-      // Send file (only after ownership check)
+      // Send file (only after ownership check). The header repeats the API
+      // default on purpose: it must hold even if this router is ever mounted
+      // outside the `/api` middleware that sets it.
+      res.setHeader("Cache-Control", "private, no-store");
       res.sendFile(filePath);
     } catch (error) {
       next(error);
@@ -185,17 +197,12 @@ router.delete(
       // Sanitize filename
       const sanitized = path.basename(filename);
 
-      // Verify that the file belongs to the user through a flight OR a
-      // lodging stay (finding: lodging receipts could never be deleted
-      // because only flights were ever checked).
-      const receiptUrl = `/api/v1/uploads/receipts/${sanitized}`;
-
       if (!(await ownsUpload(userId, sanitized))) {
         throw new AppError("File not found or access denied", 404);
       }
 
       // References are cleared below; they never granted the right to be here.
-      const owner = await findReceiptReferences(userId, receiptUrl);
+      const owner = await findReceiptReferences(userId, sanitized);
 
       // Delete file
       deleteReceiptFile(sanitized);

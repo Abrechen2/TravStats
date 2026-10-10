@@ -5,6 +5,7 @@ import HelpIcon from "../Help/HelpIcon";
 import { Icon } from "../ui/Icon";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
+import { canonicalPrivateFileUrl } from "../../lib/privateFileUrl";
 
 interface ProfileSectionProps {
   profile: {
@@ -67,7 +68,7 @@ export default function ProfileSection({
         >
           {profile.profilePicture ? (
             <img
-              src={profile.profilePicture}
+              src={canonicalPrivateFileUrl(profile.profilePicture)}
               alt={t("settings:profile.title")}
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />

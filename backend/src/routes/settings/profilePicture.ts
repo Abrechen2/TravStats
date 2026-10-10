@@ -15,8 +15,25 @@ import { validateProfilePictureFile } from "../../utils/fileValidation";
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import { SettingsDataJson, defaultSettings } from "./types";
+import {
+  profilePictureContentUrl,
+  profilePictureFileNameFromUrl,
+} from "../../services/files/privateFileUrls";
 
 const router = Router();
+
+/**
+ * The avatar file a stored URL names, if it is one of the caller's own.
+ *
+ * Accepts both URL forms (legacy `<name>` and `<name>/content`, forgejo#284).
+ * The owner check matters because `PUT /settings` accepts any same-origin path
+ * as `profilePicture`: without it, storing another account's avatar URL and
+ * then replacing or removing one's own picture deleted THEIR file.
+ */
+function ownAvatarFileName(userId: string, url: unknown): string | null {
+  const filename = typeof url === "string" ? profilePictureFileNameFromUrl(url) : null;
+  return filename && filename.startsWith(`${userId}_`) ? filename : null;
+}
 
 /**
  * POST /api/v1/settings/profile-picture
@@ -76,7 +93,7 @@ router.post(
         throw new AppError(`File validation failed: ${validation.reason}`, 400);
       }
 
-      const profilePictureUrl = `/api/v1/settings/profile-picture/${req.file.filename}`;
+      const profilePictureUrl = profilePictureContentUrl(req.file.filename);
 
       // Look up any previous avatar so it can be deleted after the new one
       // is safely persisted — otherwise every replacement leaks a file.
@@ -118,15 +135,10 @@ router.post(
 
       // Delete the old file only after the new one is committed, and only
       // if it's actually a locally-served avatar (not a legacy external URL).
-      if (
-        previousUrl &&
-        typeof previousUrl === "string" &&
-        previousUrl.startsWith("/api/v1/settings/profile-picture/")
-      ) {
-        const previousFilename = previousUrl.split("/").pop();
-        if (previousFilename && previousFilename !== req.file.filename) {
-          deleteProfilePictureFile(previousFilename);
-        }
+      // Either URL form (legacy `<name>` or `<name>/content`, forgejo#284).
+      const previousFilename = ownAvatarFileName(userId, previousUrl);
+      if (previousFilename && previousFilename !== req.file.filename) {
+        deleteProfilePictureFile(previousFilename);
       }
 
       res.status(201).json({ profilePictureUrl });
@@ -178,15 +190,9 @@ router.delete("/", async (req: AuthRequest, res: Response, next: NextFunction): 
       });
     }
 
-    if (
-      previousUrl &&
-      typeof previousUrl === "string" &&
-      previousUrl.startsWith("/api/v1/settings/profile-picture/")
-    ) {
-      const previousFilename = previousUrl.split("/").pop();
-      if (previousFilename) {
-        deleteProfilePictureFile(previousFilename);
-      }
+    const previousFilename = ownAvatarFileName(userId, previousUrl);
+    if (previousFilename) {
+      deleteProfilePictureFile(previousFilename);
     }
 
     res.json({ success: true });
@@ -196,14 +202,19 @@ router.delete("/", async (req: AuthRequest, res: Response, next: NextFunction): 
 });
 
 /**
- * GET /api/v1/settings/profile-picture/:filename
+ * GET /api/v1/settings/profile-picture/:filename/content
  * Serve an uploaded avatar. Ownership is enforced from the filename itself
  * — the requesting user's id is baked in as the prefix at upload time
  * (see middleware/upload.ts), so a user cannot fetch another user's avatar
  * by guessing a filename.
+ *
+ * Extension-less on purpose (forgejo#284): the file name ends in `.jpg` or
+ * `.png`, and a proxy that caches by extension would hand
+ * `/profile-picture/<name>.jpg` to anyone. The old URL redirects here
+ * (`middleware/assetPathGuard.ts`).
  */
 router.get(
-  "/:filename",
+  "/:filename/content",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
@@ -222,6 +233,9 @@ router.get(
         throw new AppError("File not found", 404);
       }
 
+      // Repeats the API default on purpose — this must hold wherever the
+      // router is mounted.
+      res.setHeader("Cache-Control", "private, no-store");
       res.sendFile(filePath);
     } catch (error) {
       next(error);

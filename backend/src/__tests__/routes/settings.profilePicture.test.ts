@@ -6,6 +6,14 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { getProfilePictureDir } from "../../middleware/upload";
+import { profilePictureFileNameFromUrl } from "../../services/files/privateFileUrls";
+
+/** The file an avatar URL names, in either URL form. */
+const fileOf = (url: string): string => {
+  const filename = profilePictureFileNameFromUrl(url);
+  if (!filename) throw new Error(`not an avatar URL: ${url}`);
+  return filename;
+};
 
 // Minimal valid PNG signature (8 bytes) followed by padding — the route only
 // inspects the magic number, it never decodes a real image.
@@ -75,7 +83,7 @@ describe("settings profile picture (#186)", () => {
     expect(typeof res.body.profilePictureUrl).toBe("string");
     expect(res.body.profilePictureUrl).toMatch(/^\/api\/v1\/settings\/profile-picture\//);
 
-    const filename = res.body.profilePictureUrl.split("/").pop() as string;
+    const filename = fileOf(res.body.profilePictureUrl);
     uploadedFilenames.push(filename);
 
     const settingsRes = await request(app)
@@ -92,7 +100,7 @@ describe("settings profile picture (#186)", () => {
       .attach("profilePicture", validJpegBuffer, "avatar.jpg");
 
     expect(res.status).toBe(201);
-    const filename = res.body.profilePictureUrl.split("/").pop() as string;
+    const filename = fileOf(res.body.profilePictureUrl);
     uploadedFilenames.push(filename);
   });
 
@@ -101,7 +109,7 @@ describe("settings profile picture (#186)", () => {
       .post("/api/v1/settings/profile-picture")
       .set("Cookie", [`auth_token=${token}`])
       .attach("profilePicture", validPngBuffer, "first.png");
-    const firstFilename = first.body.profilePictureUrl.split("/").pop() as string;
+    const firstFilename = fileOf(first.body.profilePictureUrl);
     const firstPath = path.join(getProfilePictureDir(), firstFilename);
     expect(fs.existsSync(firstPath)).toBe(true);
 
@@ -109,7 +117,7 @@ describe("settings profile picture (#186)", () => {
       .post("/api/v1/settings/profile-picture")
       .set("Cookie", [`auth_token=${token}`])
       .attach("profilePicture", validJpegBuffer, "second.jpg");
-    const secondFilename = second.body.profilePictureUrl.split("/").pop() as string;
+    const secondFilename = fileOf(second.body.profilePictureUrl);
     uploadedFilenames.push(secondFilename);
 
     expect(fs.existsSync(firstPath)).toBe(false);
@@ -139,18 +147,79 @@ describe("settings profile picture (#186)", () => {
       .post("/api/v1/settings/profile-picture")
       .set("Cookie", [`auth_token=${token}`])
       .attach("profilePicture", validPngBuffer, "owned-by-a.png");
-    const filename = upload.body.profilePictureUrl.split("/").pop() as string;
+    const filename = fileOf(upload.body.profilePictureUrl);
     uploadedFilenames.push(filename);
 
     const res = await request(app)
-      .get(`/api/v1/settings/profile-picture/${filename}`)
+      .get(`/api/v1/settings/profile-picture/${filename}/content`)
       .set("Cookie", [`auth_token=${otherToken}`]);
     expect(res.status).toBe(404);
 
     const ownRes = await request(app)
-      .get(`/api/v1/settings/profile-picture/${filename}`)
+      .get(`/api/v1/settings/profile-picture/${filename}/content`)
       .set("Cookie", [`auth_token=${token}`]);
     expect(ownRes.status).toBe(200);
+    expect(ownRes.headers["cache-control"]).toBe("private, no-store");
+  });
+
+  /**
+   * forgejo#284: an avatar URL that ends in `.png` is cached by extension-based
+   * proxies (Nginx Proxy Manager "Cache Assets", Cloudflare once the header is
+   * stripped) and handed to the next visitor without a session.
+   */
+  describe("URL shape (forgejo#284)", () => {
+    it("hands out an extension-less URL", async () => {
+      const upload = await request(app)
+        .post("/api/v1/settings/profile-picture")
+        .set("Cookie", [`auth_token=${token}`])
+        .attach("profilePicture", validPngBuffer, "shape.png");
+      uploadedFilenames.push(fileOf(upload.body.profilePictureUrl));
+      expect(upload.body.profilePictureUrl).toMatch(/\/content$/);
+    });
+
+    it("redirects the old URL to the new one, without asking for a session", async () => {
+      // Before authentication on purpose: a proxy caching the answer to the
+      // old URL may cache a redirect (which carries nothing), never a 401 that
+      // would lock the owner out of their own picture.
+      const res = await request(app).get("/api/v1/settings/profile-picture/abc_1-ff.jpg");
+      expect(res.status).toBe(308);
+      expect(res.headers.location).toBe("/api/v1/settings/profile-picture/abc_1-ff.jpg/content");
+    });
+
+    it("answers a stored old-form URL in the new form", async () => {
+      const legacy = `/api/v1/settings/profile-picture/${userId}_1-aa.png`;
+      await request(app)
+        .put("/api/v1/settings")
+        .set("Cookie", [`auth_token=${token}`])
+        .send({ profile: { profilePicture: legacy } })
+        .expect(200);
+
+      const res = await request(app)
+        .get("/api/v1/settings")
+        .set("Cookie", [`auth_token=${token}`]);
+      expect(res.body.profile.profilePicture).toBe(`${legacy}/content`);
+    });
+
+    it("never deletes another account's avatar named in one's own settings", async () => {
+      const theirs = await request(app)
+        .post("/api/v1/settings/profile-picture")
+        .set("Cookie", [`auth_token=${otherToken}`])
+        .attach("profilePicture", validPngBuffer, "theirs.png");
+      const theirFile = fileOf(theirs.body.profilePictureUrl);
+      uploadedFilenames.push(theirFile);
+
+      await request(app)
+        .put("/api/v1/settings")
+        .set("Cookie", [`auth_token=${token}`])
+        .send({ profile: { profilePicture: theirs.body.profilePictureUrl } })
+        .expect(200);
+      await request(app)
+        .delete("/api/v1/settings/profile-picture")
+        .set("Cookie", [`auth_token=${token}`])
+        .expect(200);
+
+      expect(fs.existsSync(path.join(getProfilePictureDir(), theirFile))).toBe(true);
+    });
   });
 
   describe("PUT /settings profilePicture value validation", () => {
@@ -194,7 +263,7 @@ describe("settings profile picture (#186)", () => {
         .set("Cookie", [`auth_token=${token}`])
         .attach("profilePicture", validPngBuffer, "avatar.png");
       expect(upload.status).toBe(201);
-      const filename = upload.body.profilePictureUrl.split("/").pop() as string;
+      const filename = fileOf(upload.body.profilePictureUrl);
       uploadedFilenames.push(filename);
       const filePath = path.join(getProfilePictureDir(), filename);
       expect(fs.existsSync(filePath)).toBe(true);
