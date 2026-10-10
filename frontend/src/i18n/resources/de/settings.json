@@ -759,9 +759,6 @@
       },
       "unresolvable": "{{count}} nicht auflösbar"
     },
-    "toast": {
-      "movedFromDashboard": "Der Flug-Import ist jetzt hier — unter Einstellungen → Import."
-    },
     "noRoutes": "Für diesen Bereich gibt es noch kein Listenformat. Einzelne Einträge legst du direkt dort an.",
     "parserErrors": {
       "row": "Zeile {{line}}: {{reason}}",

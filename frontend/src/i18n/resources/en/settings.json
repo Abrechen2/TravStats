@@ -759,9 +759,6 @@
       },
       "unresolvable": "{{count}} unresolvable"
     },
-    "toast": {
-      "movedFromDashboard": "The flight import has moved here — under Settings → Import."
-    },
     "noRoutes": "No list format for this area yet. Add single entries in the area itself.",
     "parserErrors": {
       "row": "Line {{line}}: {{reason}}",

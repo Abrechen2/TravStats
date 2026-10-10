@@ -12,8 +12,6 @@ import { cruiseApi } from "../lib/api/cruise";
 import { getLodgingStats } from "../lib/api/lodging";
 import { placesApi } from "../lib/api/places";
 import { logger } from "../lib/logger";
-import { useTranslation } from "../hooks/useTranslation";
-import { useToastStore } from "../store/toastStore";
 import { useDashboardCountsStore } from "../store/dashboardCountsStore";
 import { AllTab } from "../components/Dashboard/tabs/AllTab";
 import { FlightsTab } from "../components/Dashboard/tabs/FlightsTab";
@@ -26,34 +24,6 @@ import { railApi } from "../lib/api/rail";
 import { useRailVisible } from "../hooks/useRailVisible";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { roadtripsApi } from "../lib/api/roadtrips";
-
-const IMPORT_MOVED_FLAG = "tsv1_5_import_moved_seen";
-
-/**
- * One-time info toast telling EXISTING users that the import feature has moved
- * to Settings → Import. Suppressed via a localStorage flag after first display.
- *
- * `enabled` gates it on the account actually having flights: the copy says
- * import is "jetzt hier", which only makes sense to someone who knew where it
- * used to be. On a fresh install nobody does (#237) — there the empty-state
- * card points at import directly instead.
- */
-function useImportMigrationToast(enabled: boolean): void {
-  const { t } = useTranslation(["settings"]);
-  const addToast = useToastStore((s) => s.addToast);
-  useEffect(() => {
-    if (!enabled) return;
-    if (typeof window === "undefined") return;
-    if (window.localStorage.getItem(IMPORT_MOVED_FLAG)) return;
-    addToast(
-      "info",
-      t("settings:import.toast.movedFromDashboard") ||
-        "The flight import has moved to Settings → Import.",
-      8000
-    );
-    window.localStorage.setItem(IMPORT_MOVED_FLAG, "1");
-  }, [enabled, addToast, t]);
-}
 
 export default function DashboardPage(): JSX.Element {
   const { tab } = useDashboardRoute();
@@ -83,7 +53,6 @@ export default function DashboardPage(): JSX.Element {
   // showing the last loaded number while that refetch is in flight.
   const { counts, scheduledCounts, countsLoaded, setCounts } = useDashboardCountsStore();
   // Only nag about the moved import once the account is known to have flights.
-  useImportMigrationToast(countsLoaded && counts.flight > 0);
   // Bumping this token re-runs the counts effect AND remounts the
   // active tab (via key prop) so per-tab data picks up the new entry
   // without needing a separate refetch wiring per tab.
