@@ -3,6 +3,7 @@ import { resolveCountryCode } from "../../shared/geo/countryCode";
 import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
 import { findPlaceIdByRef } from "./placeRefs";
+import { confirmOwnStay, visitTripId, writeTripStop } from "./takeout/takeoutCommit";
 import logger from "../../utils/logger";
 import {
   PLACE_IMPORT_FAILURE_MESSAGES,
@@ -24,6 +25,10 @@ export interface PlaceCommitResult {
   created: number;
   /** Already here. Not an error — this is what makes a re-import a no-op. */
   skipped: number;
+  /** Rows written as trip stops instead of places (#358). */
+  stops: number;
+  /** Rows confirmed as one of the user's stays — nothing written for them. */
+  matchedStays: number;
   failed: PlaceImportFailure[];
 }
 
@@ -56,7 +61,12 @@ export async function commitPlaceImport(
 
   let created = 0;
   let skipped = 0;
+  let stops = 0;
+  let matchedStays = 0;
   const failed: PlaceImportFailure[] = [];
+  const fail = (sourceRowIndex: number, code: PlaceImportFailureCode): void => {
+    failed.push({ sourceRowIndex, code, error: PLACE_IMPORT_FAILURE_MESSAGES[code] });
+  };
 
   for (const row of rows) {
     try {
@@ -66,15 +76,31 @@ export async function commitPlaceImport(
         Number.isFinite(row.lat) &&
         Number.isFinite(row.lon);
 
+      // "This is my stay" needs no position: it writes nothing, it only
+      // confirms the stay the preview matched is the caller's.
+      if (row.treatment === "stay") {
+        const outcome = await confirmOwnStay(userId, row);
+        if (outcome === "ok") matchedStays += 1;
+        else fail(row.sourceRowIndex, outcome);
+        continue;
+      }
+
       if (!hasPosition) {
         // Reported rather than silently dropped: the user is told which of
         // their rows did not make it, by name, so they can judge whether
         // anything they cared about is missing.
-        failed.push({
-          sourceRowIndex: row.sourceRowIndex,
-          code: "no_position",
-          error: PLACE_IMPORT_FAILURE_MESSAGES.no_position,
+        fail(row.sourceRowIndex, "no_position");
+        continue;
+      }
+
+      if (row.treatment === "trip_stop") {
+        const outcome = await writeTripStop(userId, {
+          ...row,
+          lat: row.lat as number,
+          lon: row.lon as number,
         });
+        if (outcome === "ok") stops += 1;
+        else fail(row.sourceRowIndex, outcome);
         continue;
       }
 
@@ -99,6 +125,13 @@ export async function commitPlaceImport(
       // without a date is not a visit row at all.
       const happened =
         usableVisitedAt !== null && classifyVisit({ visitedAt: usableVisitedAt }) === "visited";
+      // A trip the row names but the caller does not own is refused, not
+      // dropped: a visit silently losing its trip is a quiet downgrade.
+      const tripId = row.tripId ? await visitTripId(userId, row.tripId) : null;
+      if (row.tripId && !tripId) {
+        fail(row.sourceRowIndex, "invalid_target");
+        continue;
+      }
       const country = row.country?.trim() || null;
 
       await prisma.place.create({
@@ -130,7 +163,7 @@ export async function commitPlaceImport(
           // `visited: true` and no `PlaceVisit` at all, which left the place
           // counted as visited while every visit figure read zero (AUD-074).
           ...(usableVisitedAt !== null
-            ? { visits: { create: [{ userId, visitedAt: usableVisitedAt, orderIdx: 0 }] } }
+            ? { visits: { create: [{ userId, tripId, visitedAt: usableVisitedAt, orderIdx: 0 }] } }
             : {}),
           dataSource: "import",
         },
@@ -142,21 +175,25 @@ export async function commitPlaceImport(
         continue;
       }
       logger.warn({ err, userId, sourceRowIndex: row.sourceRowIndex }, "[Place Import] Row failed");
-      failed.push({
-        sourceRowIndex: row.sourceRowIndex,
-        code: "write_failed",
-        error: PLACE_IMPORT_FAILURE_MESSAGES.write_failed,
-      });
+      fail(row.sourceRowIndex, "write_failed");
     }
   }
 
   logger.info(
     {
       operation: "place_import_commit",
-      context: { userId, batchId: batch.id, created, skipped, failed: failed.length },
+      context: {
+        userId,
+        batchId: batch.id,
+        created,
+        skipped,
+        stops,
+        matchedStays,
+        failed: failed.length,
+      },
     },
     "[Place Import] Commit complete"
   );
 
-  return { batchId: batch.id, created, skipped, failed };
+  return { batchId: batch.id, created, skipped, stops, matchedStays, failed };
 }

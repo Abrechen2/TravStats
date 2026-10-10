@@ -445,7 +445,9 @@
     "actions": {
       "choose": "Bitte wählen",
       "create": "Anlegen",
-      "skip": "Überspringen"
+      "skip": "Überspringen",
+      "trip_stop": "Als Reisestopp",
+      "stay": "Ist meine Unterkunft"
     },
     "flags": {
       "missing_name": "Kein Name",
@@ -472,7 +474,71 @@
       "failureCodes": {
         "invalid_row": "Zeile nicht lesbar",
         "no_position": "keine Position",
-        "write_failed": "nicht gespeichert"
+        "write_failed": "nicht gespeichert",
+        "invalid_target": "Reise oder Unterkunft nicht gefunden"
+      },
+      "takeoutExtra": "{{stops}} als Reisestopp angelegt · {{stays}} als deine Unterkunft erkannt"
+    },
+    "takeout": {
+      "intro_one": "{{count}} Zeile stammt aus einer Google-Maps-Liste. Position, Reise und Besuchstag lassen sich vorschlagen — du entscheidest danach pro Zeile.",
+      "intro_other": "{{count}} Zeilen stammen aus einer Google-Maps-Liste. Position, Reise und Besuchstag lassen sich vorschlagen — du entscheidest danach pro Zeile.",
+      "resolve": "Vorschläge holen",
+      "running": "Suche läuft … {{done}} von {{total}}",
+      "errors": {
+        "failed": "Die Vorschläge konnten nicht geholt werden. Die Zeilen bleiben, wie sie waren — du kannst ihre Position weiter selbst setzen.",
+        "lost": "Der Server hat die Suche verloren (Neustart?). Bitte noch einmal versuchen.",
+        "rateLimited": "Zu viele Importe in kurzer Zeit. Bitte in ein paar Minuten noch einmal versuchen."
+      },
+      "summary": {
+        "google": "per Google-Link verortet",
+        "byName": "per Namenssuche",
+        "unplaced": "ohne Position",
+        "dated": "mit Besuchstag aus Fotos"
+      },
+      "trip": {
+        "found": "Reise: „{{name}}“ — Besuche und Reisestopps werden ihr zugeordnet.",
+        "no_country": "Der Listenname nennt kein Land, deshalb wird keine Reise zugeordnet und nicht nach Namen gesucht.",
+        "no_trip": "Du hast keine Reise in dieses Land — es wird keine Reise zugeordnet.",
+        "several_trips": "Du hast mehrere Reisen in dieses Land — welche es war, entscheidest du; es wird keine zugeordnet."
+      },
+      "noKey": "Für diese Instanz ist kein Google-Places-Schlüssel eingerichtet (Einstellungen → Integrationen). Positionen kommen deshalb nur aus der Namenssuche im Land der Liste.",
+      "googleFailed": "Google-Abfrage fehlgeschlagen:",
+      "unplacedBecause": "Ohne Position, weil:",
+      "positionReasons": {
+        "no_cid": "Link ohne Google-ID",
+        "no_key": "kein Google-Schlüssel",
+        "auth": "Google lehnt den Schlüssel ab",
+        "quota": "Google-Kontingent erschöpft",
+        "timeout": "Google antwortet nicht rechtzeitig",
+        "network": "Google nicht erreichbar",
+        "not_found": "Google kennt den Ort nicht",
+        "provider_error": "unlesbare Antwort",
+        "not_in_country": "im Land der Liste nicht gefunden",
+        "no_country": "Liste nennt kein Land",
+        "geocoder_unavailable": "Ortssuche nicht erreichbar",
+        "limit_reached": "Suchlimit für einen Lauf erreicht"
+      },
+      "sources": {
+        "google_cid": "Position aus Google-Link",
+        "name_search": "Position per Namenssuche — bitte prüfen"
+      },
+      "kinds": {
+        "sight": "Sehenswürdigkeit",
+        "station": "Bahnhof/Haltestelle",
+        "fuel": "Tankstelle",
+        "shop": "Geschäft",
+        "airport": "Flughafen",
+        "lodging": "Unterkunft",
+        "city": "ganze Stadt — eher überspringen"
+      },
+      "matchedStay": "deine Unterkunft „{{name}}“",
+      "dayFromPhotos_one": "aus {{count}} Foto",
+      "dayFromPhotos_other": "aus {{count}} Fotos",
+      "dayReasons": {
+        "no_trip": "kein Tag: keine Reise zugeordnet",
+        "no_position": "kein Tag: keine Position",
+        "no_photos": "kein Tag: keine Fotos dort",
+        "ambiguous": "kein Tag: Fotos an mehreren Tagen gleich oft"
       }
     }
   },

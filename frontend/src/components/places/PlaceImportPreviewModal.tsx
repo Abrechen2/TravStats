@@ -1,65 +1,50 @@
 import { useCallback, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useCoarsePointer } from "../../hooks/useCoarsePointer";
 import { logger } from "../../lib/logger";
-import { LocationInput, type LocationSelection } from "../location/LocationInput";
+import type { LocationSelection } from "../location/LocationInput";
+import { applyResolution, rowsToResolve } from "../../lib/placeImportTakeout";
+import { PlaceImportPreviewRow, rowHasPosition, type EditableRow } from "./PlaceImportPreviewRow";
+import { TakeoutResolvePanel } from "./TakeoutResolvePanel";
 import type {
   PlaceImportCandidate,
-  PlaceImportPreviewRow,
+  PlaceImportPreviewRow as PreviewRow,
+  PlaceImportResolution,
   PlaceImportSummary,
 } from "../../types/placeImport";
 
 export interface PlaceImportPreviewModalProps {
-  rows: PlaceImportPreviewRow[];
+  rows: PreviewRow[];
   summary: PlaceImportSummary;
   /**
-   * Called with the rows the user decided to CREATE, as plain candidates —
-   * the commit schema has no action field, so a skipped row is simply not
-   * sent. This modal never sees the commit result; the caller presents it
-   * (`describePlaceCommitResult`). If `onCommit` rejects, the error is shown
+   * The list's name, for a Google Takeout export (#358): Takeout names each
+   * list's file after the list, and a list named after a country maps to the
+   * user's trip there. Null when unknown.
+   */
+  listName?: string | null;
+  /**
+   * Called with the rows the user decided to WRITE, as plain candidates —
+   * a skipped row is simply not sent; a trip stop or "my stay" row carries its
+   * `treatment`. This modal never sees the commit result; the caller presents
+   * it (`describePlaceCommitResult`). If `onCommit` rejects, the error is shown
    * inline and the modal stays open so the user can retry.
    */
   onCommit: (rows: PlaceImportCandidate[]) => Promise<void>;
   onCancel: () => void;
 }
 
-/**
- * The row plus the user's in-modal decisions. Immutable updates only.
- * `decision` excludes "needs_input": the select offers "" / "create" / "skip",
- * so a resolved row can never regress to `needs_input` through the UI.
- */
-interface EditableRow extends PlaceImportPreviewRow {
-  /** "" while a needs_input row is still undecided. */
-  decision: "" | "create" | "skip";
-  /** The position picker is open under this row. */
-  picking: boolean;
-}
-
-const INPUT =
-  "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-2 py-1.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent)] focus:outline-none";
-
-function toEditableRow(row: PlaceImportPreviewRow): EditableRow {
+function toEditableRow(row: PreviewRow): EditableRow {
   return {
     ...row,
     decision: row.action === "needs_input" ? "" : row.action,
     picking: false,
+    takeout: null,
   };
 }
 
-function hasPosition(row: PlaceImportCandidate): row is PlaceImportCandidate & {
-  lat: number;
-  lon: number;
-} {
-  return (
-    typeof row.lat === "number" &&
-    typeof row.lon === "number" &&
-    Number.isFinite(row.lat) &&
-    Number.isFinite(row.lon)
-  );
-}
-
 /** The candidate part of a row — what the commit endpoint accepts. */
-export function toCandidate(row: PlaceImportPreviewRow): PlaceImportCandidate {
+export function toCandidate(row: PreviewRow): PlaceImportCandidate {
   return {
     sourceRowIndex: row.sourceRowIndex,
     name: row.name,
@@ -72,8 +57,25 @@ export function toCandidate(row: PlaceImportPreviewRow): PlaceImportCandidate {
     notes: row.notes ?? null,
     visitedAt: row.visitedAt ?? null,
     externalRef: row.externalRef ?? null,
+    ...(row.tripId ? { tripId: row.tripId } : {}),
   };
 }
+
+/** What the commit writes for a decided row; null for a row it must not see. */
+function toCommitRow(row: EditableRow): PlaceImportCandidate | null {
+  if (row.decision === "stay" && row.lodgingStayId) {
+    return { ...toCandidate(row), treatment: "stay", lodgingStayId: row.lodgingStayId };
+  }
+  // A Place and a stop are points: a row without one cannot be chosen through
+  // the UI (the select withholds the option), so this is a belt for that brace.
+  if (!rowHasPosition(row)) return null;
+  if (row.decision === "trip_stop" && row.tripId) {
+    return { ...toCandidate(row), treatment: "trip_stop" };
+  }
+  return row.decision === "create" ? toCandidate(row) : null;
+}
+
+const WRITES = new Set<EditableRow["decision"]>(["create", "trip_stop", "stay"]);
 
 /**
  * Post-import review for places — POI Phase D §5: "an unplaceable row is an
@@ -82,28 +84,41 @@ export function toCandidate(row: PlaceImportPreviewRow): PlaceImportCandidate {
  *
  * Two kinds of row wait for the user (`needs_input`):
  *   - no coordinates (every row of a Google Takeout export) — the row opens a
- *     position picker; once a position is set the row may be created;
+ *     position picker, or the Takeout panel resolves it (#358);
  *   - a same-name place within a few hundred metres that shares no identity —
  *     only the user can say whether it is the same place, so they choose.
  *
- * The backend already ordered nothing and this component does not re-sort as
- * the user edits: a row jumping away mid-decision is worse than a stale place.
+ * The Takeout panel's suggestions — position, trip, day from photographs, and
+ * a treatment by kind (place, trip stop, the user's stay, skip a city) — are
+ * pre-selected only on undecided rows and stay visible on every row they
+ * touched. The backend already ordered nothing and this component does not
+ * re-sort as the user edits: a row jumping away mid-decision is worse than a
+ * stale place.
  */
 export function PlaceImportPreviewModal({
   rows,
   summary,
+  listName = null,
   onCommit,
   onCancel,
 }: PlaceImportPreviewModalProps): JSX.Element {
   const { t } = useTranslation(["places", "common"]);
+  const coarse = useCoarsePointer();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [edited, setEdited] = useState<EditableRow[]>(() => rows.map(toEditableRow));
+  // Computed once from what the file brought, so the panel's request does not
+  // change under it as the user decides rows.
+  const [resolvable] = useState(() => rowsToResolve(rows).map(toCandidate));
 
   const updateRow = useCallback((sourceRowIndex: number, patch: Partial<EditableRow>): void => {
     setEdited((prev) =>
       prev.map((r) => (r.sourceRowIndex === sourceRowIndex ? { ...r, ...patch } : r))
     );
+  }, []);
+
+  const onResolved = useCallback((resolution: PlaceImportResolution): void => {
+    setEdited((prev) => applyResolution(prev, resolution));
   }, []);
 
   /**
@@ -134,7 +149,7 @@ export function PlaceImportPreviewModal({
   // Live counts — they must follow the user's decisions, not restate the
   // server's first impression (`summary` is kept for the static hint only).
   const counts = useMemo(() => {
-    const newRows = edited.filter((r) => r.decision === "create").length;
+    const newRows = edited.filter((r) => WRITES.has(r.decision)).length;
     const alreadyPresent = edited.filter((r) => r.decision === "skip").length;
     const needsInput = edited.filter((r) => r.decision === "").length;
     return { newRows, alreadyPresent, needsInput };
@@ -152,13 +167,7 @@ export function PlaceImportPreviewModal({
     setSaving(true);
     setError(null);
     try {
-      const payload = edited
-        .filter((r) => r.decision === "create")
-        // A "create" without a position cannot be chosen through the UI (the
-        // select withholds the option), so this filter is a belt for that
-        // brace: the backend would report it as `no_position` anyway.
-        .filter(hasPosition)
-        .map(toCandidate);
+      const payload = edited.map(toCommitRow).filter((r): r is PlaceImportCandidate => r !== null);
       await onCommit(payload);
     } catch (err) {
       // Log the real error for diagnostics; never surface the raw message —
@@ -193,6 +202,8 @@ export function PlaceImportPreviewModal({
           </p>
         )}
 
+        <TakeoutResolvePanel rows={resolvable} listName={listName} onResolved={onResolved} t={t} />
+
         {error !== null && (
           <p
             role="alert"
@@ -216,12 +227,13 @@ export function PlaceImportPreviewModal({
             </thead>
             <tbody>
               {edited.map((row) => (
-                <PreviewRowLine
+                <PlaceImportPreviewRow
                   key={row.sourceRowIndex}
                   row={row}
                   onChange={updateRow}
                   onPlace={placeRow}
                   t={t}
+                  coarse={coarse}
                 />
               ))}
             </tbody>
@@ -249,111 +261,5 @@ export function PlaceImportPreviewModal({
         </div>
       </div>
     </div>
-  );
-}
-
-interface PreviewRowLineProps {
-  row: EditableRow;
-  onChange: (sourceRowIndex: number, patch: Partial<EditableRow>) => void;
-  onPlace: (row: EditableRow, sel: LocationSelection) => void;
-  t: (key: string, options?: Record<string, unknown>) => string;
-}
-
-function PreviewRowLine({ row, onChange, onPlace, t }: PreviewRowLineProps): JSX.Element {
-  const { sourceRowIndex } = row;
-  const positioned = hasPosition(row);
-  const undecided = row.decision === "";
-  const rowClass = undecided
-    ? "border-t border-[var(--color-border)] bg-amber-500/5"
-    : "border-t border-[var(--color-border)]";
-
-  return (
-    <>
-      <tr className={rowClass}>
-        <td className="p-2">
-          <input
-            data-testid={`place-import-name-${sourceRowIndex}`}
-            value={row.name}
-            onChange={(e): void => onChange(sourceRowIndex, { name: e.target.value })}
-            aria-label={t("places:import.fields.name")}
-            className={INPUT}
-          />
-        </td>
-        <td className="p-2 whitespace-nowrap">
-          {positioned ? (
-            <span
-              data-testid={`place-import-position-${sourceRowIndex}`}
-              className="font-mono text-xs text-[var(--text-primary)]"
-            >
-              {row.lat.toFixed(4)} · {row.lon.toFixed(4)}
-            </span>
-          ) : (
-            <button
-              type="button"
-              data-testid={`place-import-pick-${sourceRowIndex}`}
-              onClick={(): void => onChange(sourceRowIndex, { picking: !row.picking })}
-              className="rounded-md border border-amber-400/40 px-2 py-1 text-xs text-amber-300 hover:bg-amber-500/10"
-            >
-              {t("places:import.pickPosition")}
-            </button>
-          )}
-        </td>
-        <td className="p-2 text-[var(--text-muted)]">
-          {[row.city, row.country].filter(Boolean).join(" · ") || "—"}
-        </td>
-        <td className="p-2 font-mono text-xs text-[var(--text-muted)]">{row.visitedAt ?? "—"}</td>
-        <td className="p-2">
-          <div className="flex flex-wrap gap-1">
-            {row.flags.map((flag) => (
-              <span
-                key={flag}
-                title={t(`places:import.flags.${flag}`)}
-                className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-300"
-              >
-                {t(`places:import.flags.${flag}`)}
-              </span>
-            ))}
-            {row.dedupeHint !== "none" && (
-              <span
-                title={t(`places:import.dedupeHints.${row.dedupeHint}`)}
-                className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-300"
-              >
-                {t(`places:import.dedupeHints.${row.dedupeHint}`)}
-              </span>
-            )}
-          </div>
-        </td>
-        <td className="p-2">
-          <select
-            data-testid={`place-import-action-${sourceRowIndex}`}
-            value={row.decision}
-            onChange={(e): void =>
-              onChange(sourceRowIndex, { decision: e.target.value as EditableRow["decision"] })
-            }
-            aria-label={t("places:import.fields.action")}
-            className={INPUT}
-          >
-            <option value="">{t("places:import.actions.choose")}</option>
-            {/* "Create" only once the row can be created: a Place is a point,
-                and the backend would refuse the row as `no_position`. */}
-            {positioned && <option value="create">{t("places:import.actions.create")}</option>}
-            <option value="skip">{t("places:import.actions.skip")}</option>
-          </select>
-        </td>
-      </tr>
-      {row.picking && !positioned && (
-        <tr className="border-t border-[var(--color-border)] bg-amber-500/5">
-          <td colSpan={6} className="p-3">
-            <LocationInput
-              value={null}
-              onChange={(sel): void => onPlace(row, sel)}
-              compact
-              idPrefix={`place-import-${sourceRowIndex}`}
-              label={t("places:import.pickPositionFor", { name: row.name })}
-            />
-          </td>
-        </tr>
-      )}
-    </>
   );
 }

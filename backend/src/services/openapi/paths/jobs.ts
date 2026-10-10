@@ -23,6 +23,7 @@ export const jobSchema = z.object({
     "timeModel.backfill",
     "timeZones.reResolveDryRun",
     "timeZones.reResolveApply",
+    "placeImport.resolve",
   ]),
   status: z.enum(["running", "succeeded", "failed"]),
   startedAt: z.string().datetime(),

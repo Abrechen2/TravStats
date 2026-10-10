@@ -70,5 +70,6 @@ import "./xlsxImport";
 import "./settingsRouting";
 import "./documents";
 import "./jobs";
+import "./placeImportResolve";
 import "./timeMigration";
 import "./sync";
