@@ -35,6 +35,10 @@ export interface RentalTimes {
   /** Deposit days as the statement shows them — no zone (forgejo#238). */
   depositPaid?: LocalDateValue | null;
   depositReturned?: LocalDateValue | null;
+  /** Deadlines (forgejo#285): an instant OR a day, never both. */
+  freeCancellationUntil?: TimeValue | null;
+  freeCancellationOn?: LocalDateValue | null;
+  paymentDue?: LocalDateValue | null;
 }
 
 export interface RentalBooking {

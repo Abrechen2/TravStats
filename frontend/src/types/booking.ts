@@ -1,3 +1,4 @@
+import type { BookingTimes } from "./times";
 /**
  * A booking — one payment covering several entries (flight + hotel on one
  * reference, a package tour). Mirrors `model Booking` and the booking
@@ -18,6 +19,8 @@ export interface Booking {
   travellers?: number | null;
   /** The day it was booked, which dates the FX snapshot (#356). */
   bookedOn?: string | null;
+  /** Deadlines (forgejo#285). Optional: an older server does not send them. */
+  times?: BookingTimes;
 }
 
 export interface UpdateBookingInput {
@@ -28,4 +31,8 @@ export interface UpdateBookingInput {
   travellers?: number | null;
   /** `YYYY-MM-DD`. */
   bookedOn?: string | null;
+  /** A bare `YYYY-MM-DD` (until the end of that day) or `{local, zone?}`; null clears. */
+  freeCancellationUntil?: string | { local: string; zone?: string } | null;
+  /** `YYYY-MM-DD`; null clears. */
+  paymentDueOn?: string | null;
 }
