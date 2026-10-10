@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { setClockForTests } from "../../shared/time";
@@ -104,7 +104,11 @@ describe("CruiseDetailPage — day card", () => {
     // Opened by itself on "today": nothing scrolls, the focus stays put.
     expect(scrollIntoView).not.toHaveBeenCalled();
     expect(card.textContent).toContain("Holmenkollen");
-    expect(listForEntry).toHaveBeenCalledWith({ type: "cruise", id: "cruise-1" });
+    // The card renders before the effect that asks for its documents runs, so
+    // a synchronous check here raced it on a busy CI worker.
+    await waitFor(() =>
+      expect(listForEntry).toHaveBeenCalledWith({ type: "cruise", id: "cruise-1" })
+    );
   });
 
   it("opens any day from the itinerary, and asks nothing while no card is open", async () => {
