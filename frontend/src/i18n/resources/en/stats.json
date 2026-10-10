@@ -245,7 +245,8 @@
       "south_pacific": "South Pacific",
       "southeast_asia": "Southeast Asia",
       "west_africa": "West Africa"
-    }
+    },
+    "riverCruises": "River cruises"
   },
   "page": {
     "loadError": "These statistics could not be loaded.",

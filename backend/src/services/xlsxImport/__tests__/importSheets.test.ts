@@ -230,6 +230,20 @@ describe("spreadsheet import", () => {
     expect(results).toHaveLength(0);
   });
 
+  // #357: a workbook exported before the cruise vocabulary changed says
+  // `flown`. It is the same voyage — read as `completed`, never dropped.
+  it("reads a cruise sheet's legacy 'flown' status as 'completed'", async () => {
+    const [result] = await run(
+      [{ id: "", cruiseLine: "Legacy Status", startDate: "2020-05-01", status: "flown" }],
+      false,
+      "cruises"
+    );
+    expect(result.created).toBe(1);
+    expect(result.rows[0].dropped ?? []).toEqual([]);
+    const row = await prisma.cruise.findFirst({ where: { userId, cruiseLine: "Legacy Status" } });
+    expect(row?.status).toBe("completed");
+  });
+
   it("reads a German decimal comma the way a German Excel writes it", async () => {
     const own = await prisma.cruise.create({
       data: { userId, cruiseLine: "AIDA", status: "flown" },

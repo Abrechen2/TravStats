@@ -11,7 +11,7 @@ import {
  * convention that keeps them honest.
  */
 describe("cruise counting rule", () => {
-  it.each(["flown", "historical"])("counts %s — the voyage happened", (status) => {
+  it.each(["completed", "historical", "flown"])("counts %s — the voyage happened", (status) => {
     expect(isCountableCruiseStatus(status)).toBe(true);
   });
 
@@ -20,13 +20,12 @@ describe("cruise counting rule", () => {
   });
 
   it("reads the status off a row", () => {
-    expect(isCountableCruise({ status: "flown" })).toBe(true);
+    expect(isCountableCruise({ status: "completed" })).toBe(true);
     expect(isCountableCruise({ status: "cancelled" })).toBe(false);
   });
 
-  // The order is load-bearing: every call site this replaced spelled it
-  // flown-then-historical, and the backend mirror turns it into a query.
-  it("keeps the flown-then-historical order the call sites had", () => {
-    expect([...COUNTABLE_CRUISE_STATUSES]).toEqual(["flown", "historical"]);
+  // `flown` is the retired spelling of `completed` (#357), kept last.
+  it("lists today's word first and the legacy spelling last", () => {
+    expect([...COUNTABLE_CRUISE_STATUSES]).toEqual(["completed", "historical", "flown"]);
   });
 });

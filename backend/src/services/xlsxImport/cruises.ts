@@ -45,6 +45,8 @@ import {
   registerParent,
 } from "./context";
 import { pruneMissing } from "./prune";
+import { CRUISE_COMPLETED, normalizeCruiseStatus } from "../../shared/statusDerivation";
+import { CRUISE_KINDS } from "../../shared/cruiseKind";
 import { cruiseLabelBase, findPortId, findShipId, resolveParent, resolveTrip } from "./references";
 import {
   sheetRowNumber,
@@ -59,7 +61,12 @@ import { companionsDiffer, resolveCompanionCell, updateWithCompanions } from "./
 
 /** Statuses the write schema accepts. `in_progress` is derived and stored,
  *  never written — an exported one is dropped and re-derived from the dates. */
-const WRITABLE_STATUSES = ["scheduled", "flown", "cancelled", "historical"] as const;
+const WRITABLE_STATUSES = ["scheduled", "completed", "cancelled", "historical"] as const;
+/** A sheet exported before #357 says `flown`; it is the same voyage, `completed`. */
+const legacyStatus = (value: string): (typeof WRITABLE_STATUSES)[number] | undefined =>
+  normalizeCruiseStatus(value.trim().toLowerCase()) === CRUISE_COMPLETED
+    ? CRUISE_COMPLETED
+    : undefined;
 /** Stored but derived — our own export writes it, so it is not "unknown". */
 const DERIVED_STATUS = "in_progress";
 
@@ -93,6 +100,7 @@ async function createCruiseFromRow(
     currency?: string;
     status?: string;
     cabinType?: string;
+    kind?: string;
   },
   tripId: string | undefined,
   notes: string[]
@@ -118,6 +126,7 @@ async function createCruiseFromRow(
     arrivalPortId,
     cabinNumber: cell.text(raw.cabinNumber) ?? null,
     cabinType: base.cabinType ?? null,
+    ...(base.kind ? { kind: base.kind } : {}),
     deck: cell.int(raw.deck) ?? null,
     bookingReference: cell.text(raw.bookingReference) ?? null,
     price: base.price ?? null,
@@ -170,7 +179,10 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
     const status =
       cell.text(raw.status) === DERIVED_STATUS
         ? undefined
-        : enumCell(raw.status, WRITABLE_STATUSES, "status", dropped);
+        : enumCell(raw.status, WRITABLE_STATUSES, "status", dropped, legacyStatus);
+    // Ocean or river (#359). A sheet without the column leaves the kind to
+    // the ship on a create and untouched on an update.
+    const kind = enumCell(raw.cruiseKind, CRUISE_KINDS, "cruiseKind", dropped);
     const trip = await resolveTrip(raw.tripId, ctx.userId);
     const notes: string[] = trip.note ? [trip.note] : [];
     const labels = labelForms(
@@ -210,6 +222,7 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
         endDate: endDate ? new Date(endDate) : undefined,
         cabinNumber: cell.text(raw.cabinNumber),
         cabinType,
+        kind,
         deck,
         bookingReference: cell.text(raw.bookingReference),
         price,
@@ -275,7 +288,7 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
     const created = await createCruiseFromRow(
       raw,
       ctx,
-      { startDate, endDate, price, currency, status, cabinType },
+      { startDate, endDate, price, currency, status, cabinType, kind },
       trip.tripId,
       notes
     );

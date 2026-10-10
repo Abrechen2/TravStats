@@ -31,6 +31,7 @@ import {
 import { dayAnchorNow } from "../../shared/time/clock";
 import { profileZoneOf } from "../../shared/time/profileZone";
 import { propagateWrite } from "../sharing/propagate";
+import { resolveCruiseKind } from "../../shared/cruiseKind";
 
 export type CreateCruiseData = Omit<z.infer<typeof createCruiseSchema>, "importBatchId">;
 
@@ -51,7 +52,16 @@ export async function createCruiseRecord(
   data: CreateCruiseData,
   provenance: CruiseProvenance = {}
 ) {
-  const { stops, startDate, endDate, tripId, bookingId, status, companions, ...rest } = data;
+  const { stops, startDate, endDate, tripId, bookingId, status, companions, kind, ...rest } = data;
+
+  // Ocean or river (#359): what the client said, else what its catalogue
+  // ship is — a river ship picked without touching the toggle is a river
+  // cruise — else ocean.
+  const ship =
+    kind === undefined && rest.shipId != null
+      ? await prisma.ship.findUnique({ where: { id: rest.shipId }, select: { kind: true } })
+      : null;
+  const effectiveKind = resolveCruiseKind(kind, ship?.kind);
 
   const startDateUtc = startDate ? new Date(startDate) : null;
   const endDateUtc = endDate ? new Date(endDate) : null;
@@ -113,6 +123,7 @@ export async function createCruiseRecord(
         externalRef: provenance.externalRef ?? null,
         ...(provenance.dataSource ? { dataSource: provenance.dataSource } : {}),
         status: effectiveStatus,
+        kind: effectiveKind,
         startDate: startDateUtc,
         endDate: endDateUtc,
         ...dayColumns,

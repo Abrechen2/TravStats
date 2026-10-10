@@ -105,7 +105,7 @@ describe("CruiseImportPreviewModal — status (#status-from-dates)", () => {
   afterEach(() => setClockForTests(null));
 
   // forgejo#168: the preview showed the parser's "scheduled" (Geplant) beside
-  // a cruise that ended months ago; the saved row said "flown" (Abgeschlossen)
+  // a cruise that ended months ago; the saved row said "completed" (Abgeschlossen)
   // at once, because the server derives the status from the dates.
   it("shows the status the saved cruise will have, derived from its dates", () => {
     setClockForTests("2026-10-02T12:00:00Z");
@@ -120,7 +120,7 @@ describe("CruiseImportPreviewModal — status (#status-from-dates)", () => {
     const { baseElement } = render(
       <CruiseImportPreviewModal entries={[past]} onCancel={vi.fn()} onSaved={vi.fn()} />
     );
-    expect(baseElement.textContent).toContain("status.flown");
+    expect(baseElement.textContent).toContain("status.completed");
     expect(baseElement.textContent).not.toContain("status.scheduled");
   });
 

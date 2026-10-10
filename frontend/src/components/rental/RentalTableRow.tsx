@@ -3,7 +3,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { formatRentalPeriod } from "../../lib/rentalTime";
 import { rentalDrivenKm } from "../../shared/rentalCounting";
 import type { RentalBooking } from "../../types/rental";
-import { OperatorTile } from "../table/OperatorTile";
+import { OperatorTile, rentalProviderLogoUrl } from "../table/OperatorTile";
 import { statusPillProps } from "../table/statusPillStyle";
 import { rentalDeposit } from "../../lib/rental/rentalDeposit";
 import TripPill from "../Trips/TripPill";
@@ -93,7 +93,13 @@ export function RentalTableRow({ rental, columns, onOpen, actions }: Props): JSX
   const depositState = rentalDeposit(rental).state;
   const depositOutstanding = depositState === "open" || depositState === "partial";
   const cell: Record<RentalColumnId, ReactNode> = {
-    provider: <OperatorTile name={rental.provider} domain="rental" />,
+    provider: (
+      <OperatorTile
+        name={rental.provider}
+        domain="rental"
+        logoUrl={rentalProviderLogoUrl(rental.provider)}
+      />
+    ),
     route: (
       <span className="flex min-w-0 flex-col">
         <span className="truncate">{`${rental.provider} · ${route}`}</span>

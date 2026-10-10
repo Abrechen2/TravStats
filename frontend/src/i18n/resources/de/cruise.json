@@ -128,7 +128,7 @@
   "status": {
     "scheduled": "Geplant",
     "in_progress": "Unterwegs",
-    "flown": "Abgeschlossen",
+    "completed": "Abgeschlossen",
     "cancelled": "Storniert",
     "historical": "Historisch",
     "cancelledCheckbox": "Storniert"
@@ -195,7 +195,9 @@
     "geocodeRateLimited": "Die Online-Hafensuche (OpenStreetMap) ist gerade ausgelastet und hat nicht geantwortet. Bitte in einer Minute erneut suchen oder den Hafen manuell anlegen.",
     "geocodeUnavailable": "Die Online-Hafensuche (OpenStreetMap) ist gerade nicht erreichbar. Bitte später erneut suchen oder den Hafen manuell anlegen.",
     "shipSearchError": "Schiffssuche fehlgeschlagen – bitte erneut versuchen. Solange die Suche nicht antwortet, lieber kein neues Schiff anlegen: es könnte schon im Katalog stehen.",
-    "shipAlreadyExists": "„{{name}}“ steht bereits im Katalog und wurde ausgewählt – es wurde kein zweites Schiff angelegt."
+    "shipAlreadyExists": "„{{name}}“ steht bereits im Katalog und wurde ausgewählt – es wurde kein zweites Schiff angelegt.",
+    "riverShip": "Flussschiff",
+    "riverTag": "Flussschiff"
   },
   "map": {
     "layer": "Kreuzfahrten",
@@ -512,5 +514,10 @@
     "skip": "Ohne diese Flüge abschließen",
     "leftOut_one": "Ein Flug der Buchung ist nicht im Logbuch.",
     "leftOut_other": "{{count}} Flüge der Buchung sind nicht im Logbuch."
+  },
+  "kind": {
+    "label": "Art der Kreuzfahrt",
+    "ocean": "Hochsee",
+    "river": "Fluss"
   }
 }

@@ -150,21 +150,8 @@ export interface Flight {
   times?: FlightTimes; // ADR 0002 phase 4 — read through lib/entityTimes.ts
 }
 
-export interface Booking {
-  id: string;
-  userId: string;
-  tripId: string | null;
-  pnr: string | null;
-  price: number | null;
-  /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …) or null. */
-  currency: string | null;
-}
-
-export interface UpdateBookingInput {
-  pnr?: string | null;
-  price?: number | null;
-  currency?: string | null;
-}
+import type { Booking } from "./booking";
+export type { Booking, UpdateBookingInput } from "./booking";
 
 export type TripStatus = "planned" | "in_progress" | "completed";
 export type TripCategory = "vacation" | "business" | "weekend" | "family" | "other";
@@ -288,6 +275,8 @@ export interface Trip {
   lodgingStays?: (LodgingStay & { lodging: Lodging })[];
   /** Train rides (departure order) and car rentals (pickup order) linked to this trip. */
   railJourneys?: TripRailJourney[];
+  /** Bus rides linked to this trip, in departure order (forgejo#180). */
+  busJourneys?: import("./bus").TripBusJourney[];
   rentalBookings?: import("./rental").TripRental[];
   immichAlbums?: LinkedAlbum[];
 }

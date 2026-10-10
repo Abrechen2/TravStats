@@ -94,7 +94,7 @@ describe("sweepStatuses", () => {
     expect(row?.nextApiCheckAt).toBeNull();
   });
 
-  it("moves cruises through scheduled -> in_progress -> flown and leaves passthroughs", async () => {
+  it("moves cruises through scheduled -> in_progress -> completed and leaves passthroughs", async () => {
     const running = await prisma.cruise.create({
       data: { userId, status: "scheduled", startDate: past(24), endDate: future(72) },
     });
@@ -108,8 +108,19 @@ describe("sweepStatuses", () => {
     expect((await prisma.cruise.findUnique({ where: { id: running.id } }))?.status).toBe(
       "in_progress"
     );
-    expect((await prisma.cruise.findUnique({ where: { id: done.id } }))?.status).toBe("flown");
+    expect((await prisma.cruise.findUnique({ where: { id: done.id } }))?.status).toBe("completed");
     expect((await prisma.cruise.findUnique({ where: { id: hist.id } }))?.status).toBe("historical");
+  });
+
+  // #357: a row a stale writer stored with the retired flight word converges.
+  it("rewrites a cruise stored as legacy 'flown' to 'completed'", async () => {
+    const legacy = await prisma.cruise.create({
+      data: { userId, status: "flown", startDate: past(300), endDate: past(60) },
+    });
+    await sweepStatuses();
+    expect((await prisma.cruise.findUnique({ where: { id: legacy.id } }))?.status).toBe(
+      "completed"
+    );
   });
 
   // Lodging joined the sweep when its status became derived (Alex, 2026-07-12).

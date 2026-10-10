@@ -243,6 +243,14 @@ export function cruiseSheet(t: T): SheetSpec<Cruise> {
         value: (c) => c.status,
       },
       {
+        // "ocean" | "river" (#359).
+        key: "cruiseKind",
+        header: t("xlsx:columns.cruiseKind"),
+        kind: "text",
+        width: 10,
+        value: (c) => c.kind ?? null,
+      },
+      {
         key: "departurePort",
         header: t("xlsx:columns.departurePort"),
         kind: "text",

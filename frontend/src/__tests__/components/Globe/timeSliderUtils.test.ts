@@ -54,7 +54,7 @@ const baseCruise = (overrides: Partial<Cruise>): Cruise => ({
   arrivalPort: null,
   startDate: null,
   endDate: null,
-  status: "flown",
+  status: "completed",
   cabinNumber: null,
   cabinType: null,
   deck: null,

@@ -71,7 +71,7 @@ export type CruiseStatusScope = "sailed" | "every";
  * `sailed` spells the predicate with `countableCruiseWhere()` — this router
  * spelled the same two statuses with the FLIGHT helper, which is the drift
  * `shared/cruiseCounting.ts` exists to end. Both lists are
- * `["flown", "historical"]`, so the extraction changed no row.
+ * the same list, so the extraction changed no row.
  */
 export async function loadCruiseStatsData(
   userId: string,
@@ -109,6 +109,7 @@ export async function loadCruiseStatsData(
     input: {
       id: c.id,
       shipId: c.shipId,
+      kind: c.kind,
       cruiseLine: c.cruiseLine,
       cabinType: c.cabinType,
       deck: c.deck,

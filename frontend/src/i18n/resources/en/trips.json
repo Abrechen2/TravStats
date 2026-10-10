@@ -260,7 +260,29 @@
     "currency": "Currency",
     "save": "Save",
     "cancel": "Cancel",
-    "saved": "Booking updated"
+    "saved": "Booking updated",
+    "createTitle": "Add package booking",
+    "add": "+ Package booking",
+    "operator": "Operator",
+    "bookedOn": "Booked on",
+    "bookedOnHint": "The price is converted at this day's rate.",
+    "travellers": "Number of travellers",
+    "travellersInvalid": "Please enter a whole number from 1 to 50.",
+    "forPersons_one": "for {{count}} person",
+    "forPersons_other": "for {{count}} people",
+    "created": "Booking added",
+    "delete": "Delete booking",
+    "deleteConfirm": "Delete this booking? Its flights, stays and cruises are kept and simply no longer belong to a booking.",
+    "deleted": "Booking deleted",
+    "entriesFailed": "Booking saved, but the selected entries could not be filed on it. Please try again.",
+    "entries": {
+      "hint": "What does this booking cover?",
+      "flights": "Flights",
+      "stays": "Stays",
+      "cruises": "Cruises",
+      "none": "This trip has no flights, stays or cruises yet that the booking could cover.",
+      "otherBooking": "(on another booking)"
+    }
   },
   "addExisting": {
     "title": "Add an existing entry",

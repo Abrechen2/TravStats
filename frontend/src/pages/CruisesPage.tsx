@@ -45,8 +45,14 @@ type StatusFilter = CruiseStatus | "all";
 type YearFilter = number | "all";
 
 // #status-from-dates: in_progress included so the filter dropdown can
-// discover cruises currently under way, not just scheduled/flown/cancelled.
-const STATUSES: CruiseStatus[] = ["scheduled", "in_progress", "flown", "cancelled", "historical"];
+// discover cruises currently under way, not just scheduled/completed/cancelled.
+const STATUSES: CruiseStatus[] = [
+  "scheduled",
+  "in_progress",
+  "completed",
+  "cancelled",
+  "historical",
+];
 
 // Column-visibility ids (ColumnPicker) — header and CruiseRow must agree.
 const CRUISE_COLUMN_IDS: readonly CruiseColumnId[] = [
@@ -166,7 +172,7 @@ export default function CruisesPage(): JSX.Element {
 
   const startDuplicate = (c: Cruise): void => {
     // Copy everything but identity + dates + booking ref, so the user sets new
-    // dates. Also reset status so the copy isn't pre-marked flown/cancelled.
+    // dates. Also reset status so the copy isn't pre-marked completed/cancelled.
     // CruiseEditModal(create) seeds its form from this and calls create().
     setDuplicateSource({
       ...c,

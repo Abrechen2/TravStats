@@ -17,7 +17,7 @@ describe("cruiseStatusPillStyle", () => {
     for (const status of [
       "scheduled",
       "in_progress",
-      "flown",
+      "completed",
       "historical",
       "cancelled",
     ] as const) {
@@ -28,7 +28,7 @@ describe("cruiseStatusPillStyle", () => {
   it("separates a cancelled voyage from every other state", () => {
     const cancelled = cruiseStatusPillStyle("cancelled");
     expect(cancelled).not.toEqual(cruiseStatusPillStyle("scheduled"));
-    expect(cancelled).not.toEqual(cruiseStatusPillStyle("flown"));
+    expect(cancelled).not.toEqual(cruiseStatusPillStyle("completed"));
     expect(cancelled).not.toEqual(cruiseStatusPillStyle("in_progress"));
   });
 });

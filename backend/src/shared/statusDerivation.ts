@@ -71,20 +71,39 @@ export function deriveFlightStatus(input: {
   return current;
 }
 
+/**
+ * A cruise that has sailed is `completed` (#357). It used to be `flown` — the
+ * flight vocabulary, reused because the column started life shared — and that
+ * word reached the API, the Excel sheet and every client that showed the raw
+ * value. Migration `20261010010000_cruise_status_completed` rewrote the stored
+ * rows; `flown` is still ACCEPTED wherever a cruise status comes in (an old
+ * Companion's outbox, an older Excel export, a filter link) and is read as
+ * `completed`, but it is never written again.
+ */
+export const CRUISE_COMPLETED = "completed" as const;
+/** The retired spelling of {@link CRUISE_COMPLETED}. Accepted on input only. */
+export const CRUISE_LEGACY_COMPLETED = "flown" as const;
+
+/** Reads a cruise status in today's vocabulary: `flown` becomes `completed`. */
+export function normalizeCruiseStatus(status: string): string {
+  return status === CRUISE_LEGACY_COMPLETED ? CRUISE_COMPLETED : status;
+}
+
 export function deriveCruiseStatus(input: {
   startDate: Date | null;
   endDate: Date | null;
   current: string;
   now?: Date;
 }): string {
-  const { startDate, endDate, current } = input;
+  const { startDate, endDate } = input;
+  const current = normalizeCruiseStatus(input.current);
   if ((CRUISE_PASSTHROUGH as readonly string[]).includes(current)) return current;
   const nowMs = (input.now ?? clockNow()).getTime();
   const slack = CRUISE_SLACK_HOURS * H;
   if (startDate == null && endDate == null) return current;
   if (startDate != null && nowMs < startDate.getTime()) return "scheduled";
   if (endDate != null) {
-    if (nowMs - endDate.getTime() > slack) return "flown";
+    if (nowMs - endDate.getTime() > slack) return CRUISE_COMPLETED;
     // A known end date within slack only means "in_progress" if the start
     // date is also known (and, per the branch above, already past/now) —
     // a null start with a future/near end is a not-yet-started cruise, not
@@ -92,8 +111,8 @@ export function deriveCruiseStatus(input: {
     // cruiseToInProgress, which requires startDate != null too.
     return startDate != null ? "in_progress" : "scheduled";
   }
-  // start only: no in_progress without an end — flown once start+slack is past
-  return startDate != null && nowMs - startDate.getTime() > slack ? "flown" : "scheduled";
+  // start only: no in_progress without an end — completed once start+slack is past
+  return startDate != null && nowMs - startDate.getTime() > slack ? CRUISE_COMPLETED : "scheduled";
 }
 
 /**

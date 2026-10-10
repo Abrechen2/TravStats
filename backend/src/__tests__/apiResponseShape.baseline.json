@@ -175,6 +175,7 @@
     "rental.ts",
     "rental/import.ts",
     "rental/links.ts",
+    "rental/providers.ts",
     "rental/reminders.ts",
     "rental/stations.ts",
     "rental/stats.ts",

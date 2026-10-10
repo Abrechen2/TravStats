@@ -5,6 +5,7 @@ import {
 } from "../cruise/timesDto";
 import { withStayTimes, type StayTimeColumns } from "../lodging/timesDto";
 import { withRailTimes, type RailTimeColumns } from "../rail/timesDto";
+import { withBusTimes } from "../bus/timesDto";
 import {
   withJournalEntryTimes,
   withTripStopTimes,
@@ -17,7 +18,7 @@ import {
 /**
  * GET /trips/:id with `times` on the trip and on everything it lists
  * (ADR 0002 phase 4) — stops, journal entries, cruises and their port calls,
- * stays, rail rides. Flights are enriched by the route (`enrichFlightsForClients`),
+ * stays, rail and bus rides. Flights are enriched by the route (`enrichFlightsForClients`),
  * because that needs the airport catalogue. Kept out of `routes/trips.ts`,
  * which is at the 800-line limit.
  */
@@ -28,6 +29,7 @@ export function withTripDetailTimes<
     cruises: Array<CruiseTimeColumns & { stops?: CruiseStopTimeColumns[] }>;
     lodgingStays: StayTimeColumns[];
     railJourneys: RailTimeColumns[];
+    busJourneys: RailTimeColumns[];
   },
 >(trip: T): T {
   return {
@@ -37,5 +39,7 @@ export function withTripDetailTimes<
     cruises: trip.cruises.map(withCruiseTimes),
     lodgingStays: trip.lodgingStays.map(withStayTimes),
     railJourneys: trip.railJourneys.map(withRailTimes),
+    // A bus ride's ends carry rail's columns, so rail's reader serves (forgejo#180).
+    busJourneys: trip.busJourneys.map(withBusTimes),
   };
 }

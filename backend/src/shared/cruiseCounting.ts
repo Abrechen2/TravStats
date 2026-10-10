@@ -10,24 +10,25 @@
  *
  * Two statuses mean the voyage happened:
  *
- *   - `flown`      — it sailed, with dates the app trusts. The name is the
- *                    flight vocabulary reused; a cruise does not fly, but the
- *                    status column is shared and renaming it is a migration,
- *                    not a refactor.
+ *   - `completed`  — it sailed, with dates the app trusts.
  *   - `historical` — it sailed, recorded after the fact, dates often coarse.
+ *
+ * `flown` is the retired spelling of `completed` (#357) — the flight word,
+ * reused while the column was shared. Migration
+ * `20261010010000_cruise_status_completed` rewrote the stored rows and every
+ * write path normalises it away (`normalizeCruiseStatus`), but it stays on
+ * this list so a row a stale writer slipped in before the hourly sweep
+ * converges it still counts as the voyage it is.
  *
  * The others do not: `scheduled` has not happened yet and `cancelled` never
  * will. Unlike flights there is no `duplicated` here — `CRUISE_PASSTHROUGH`
  * does not carry it, so the open question that file documents has no twin.
  *
- * This module preserves today's behaviour exactly, including the flown-then-
- * historical ORDER, so no query plan and no snapshot test sees a change.
- *
  * MIRRORED in `frontend/src/shared/cruiseCounting.ts`. Change both together.
  */
 
 /** The statuses that mean "this cruise actually sailed". */
-export const COUNTABLE_CRUISE_STATUSES = ["flown", "historical"] as const;
+export const COUNTABLE_CRUISE_STATUSES = ["completed", "historical", "flown"] as const;
 
 export type CountableCruiseStatus = (typeof COUNTABLE_CRUISE_STATUSES)[number];
 

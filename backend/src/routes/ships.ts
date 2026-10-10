@@ -7,6 +7,7 @@ import { rejectDemoWrites } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";
 import { invalidateCruiseEntityCache } from "../services/cruiseEntityResolver";
 import logger from "../utils/logger";
+import { CRUISE_KINDS } from "../shared/cruiseKind";
 
 // No rate limiter: a capped catalog search plus a one-row insert, both behind
 // `authenticate`. Its public sibling `/airports/search` IS limited — but for
@@ -28,6 +29,8 @@ router.use(rejectDemoWrites);
 const listQuerySchema = z.object({
   q: z.string().max(100).optional(),
   cruiseLine: z.string().max(120).optional(),
+  /** Only ocean or only river ships (#359); absent lists both. */
+  kind: z.enum(CRUISE_KINDS).optional(),
   limit: z.coerce.number().int().min(1).max(500).default(100),
 });
 
@@ -38,6 +41,8 @@ export const createShipSchema = z.object({
   yearBuilt: z.number().int().min(1800).max(2100).optional(),
   grossTonnage: z.number().int().min(0).optional(),
   capacity: z.number().int().min(0).optional(),
+  /** A river ship (#359). Absent means ocean, the catalogue's default. */
+  kind: z.enum(CRUISE_KINDS).optional(),
 });
 
 const cruiseLinesQuerySchema = z.object({
@@ -96,10 +101,11 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const parsed = listQuerySchema.safeParse(req.query);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
-    const { q, cruiseLine, limit } = parsed.data;
+    const { q, cruiseLine, kind, limit } = parsed.data;
 
     const where: Prisma.ShipWhereInput = {};
     if (cruiseLine) where.cruiseLine = cruiseLine;
+    if (kind) where.kind = kind;
     if (q && q.length > 0) {
       where.OR = [
         { name: { contains: q, mode: "insensitive" } },

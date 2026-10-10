@@ -314,6 +314,11 @@ export async function commitPackageProposal(
               userId,
               tripId,
               pnr: contract.bookingReference,
+              // The document's issue day dates the FX snapshot above; the
+              // booking keeps it, with the traveller count (#356).
+              bookedOn: utcDay(contract.issuedOn),
+              travellers: contract.travellers ?? null,
+              operator: contract.operator ?? null,
               price: contract.totalPrice ?? null,
               currency: contract.currency ?? (contract.totalPrice == null ? null : "EUR"),
               ...fx,

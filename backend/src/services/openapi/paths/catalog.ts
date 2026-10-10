@@ -55,6 +55,7 @@ const ship = registry.register(
       grossTonnage: z.number().int().nullable(),
       capacity: z.number().int().nullable(),
       isUserAdded: z.boolean(),
+      kind: z.enum(["ocean", "river"]).describe("Ocean or river ship (#359)"),
     })
     .openapi("Ship")
 );
@@ -181,6 +182,7 @@ registry.registerPath({
     query: z.object({
       q: z.string().max(100).optional(),
       cruiseLine: z.string().max(120).optional(),
+      kind: z.enum(["ocean", "river"]).optional().describe("Only ocean or only river ships"),
       limit: z.coerce.number().int().min(1).max(500).optional().describe("Default 100"),
     }),
   },
@@ -234,6 +236,10 @@ registry.registerPath({
             yearBuilt: z.number().int().min(1800).max(2100).optional(),
             grossTonnage: z.number().int().min(0).optional(),
             capacity: z.number().int().min(0).optional(),
+            kind: z
+              .enum(["ocean", "river"])
+              .optional()
+              .describe("A river ship (#359); absent means ocean"),
           }),
         },
       },

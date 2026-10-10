@@ -328,7 +328,9 @@
     "tour": "Tour",
     "rentalSame": "Rental car · returned where picked up (one point)",
     "rentalEnds": "Rental car · pickup hollow, return filled",
-    "rentalOneWay": "Rental car · one-way, not the route driven"
+    "rentalOneWay": "Rental car · one-way, not the route driven",
+    "busRoad": "Bus · road route",
+    "busStraight": "Bus · straight line"
   },
   "userMenu": {
     "label": "Account menu"

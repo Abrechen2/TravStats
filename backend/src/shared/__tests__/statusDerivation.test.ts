@@ -3,6 +3,7 @@ import {
   deriveBusStatus,
   deriveFlightStatus,
   deriveCruiseStatus,
+  normalizeCruiseStatus,
   deriveLodgingStatus,
   deriveTripStatus,
   tripStatusBounds,
@@ -114,7 +115,7 @@ describe("deriveCruiseStatus", () => {
     }
   });
 
-  it("future start -> scheduled; between start and end -> in_progress; past end+48h -> flown", () => {
+  it("future start -> scheduled; between start and end -> in_progress; past end+48h -> completed (#357)", () => {
     expect(
       deriveCruiseStatus({ startDate: future(24), endDate: future(120), current: "scheduled", now })
     ).toBe("scheduled");
@@ -123,7 +124,7 @@ describe("deriveCruiseStatus", () => {
     ).toBe("in_progress");
     expect(
       deriveCruiseStatus({ startDate: past(200), endDate: past(49), current: "scheduled", now })
-    ).toBe("flown");
+    ).toBe("completed");
   });
 
   it("end within the 48h slack stays in_progress", () => {
@@ -138,19 +139,29 @@ describe("deriveCruiseStatus", () => {
     ).toBe("scheduled");
   });
 
-  it("missing end: no in_progress — scheduled until start+48h past, then flown", () => {
+  it("missing end: no in_progress — scheduled until start+48h past, then completed", () => {
     expect(
       deriveCruiseStatus({ startDate: past(47), endDate: null, current: "scheduled", now })
     ).toBe("scheduled");
     expect(
       deriveCruiseStatus({ startDate: past(49), endDate: null, current: "scheduled", now })
-    ).toBe("flown");
+    ).toBe("completed");
   });
 
   it("no dates keeps current", () => {
-    expect(deriveCruiseStatus({ startDate: null, endDate: null, current: "flown", now })).toBe(
-      "flown"
+    expect(deriveCruiseStatus({ startDate: null, endDate: null, current: "completed", now })).toBe(
+      "completed"
     );
+  });
+
+  // #357: the retired flight word is read in today's vocabulary and never
+  // handed back — not even when the dates leave the stored value standing.
+  it("reads a legacy 'flown' as 'completed', never returns it", () => {
+    expect(deriveCruiseStatus({ startDate: null, endDate: null, current: "flown", now })).toBe(
+      "completed"
+    );
+    expect(normalizeCruiseStatus("flown")).toBe("completed");
+    expect(normalizeCruiseStatus("cancelled")).toBe("cancelled");
   });
 });
 

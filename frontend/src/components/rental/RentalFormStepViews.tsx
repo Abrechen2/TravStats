@@ -8,7 +8,7 @@ import {
   type RentalPaymentTiming,
 } from "../../types/rental";
 import { RentalStationPicker } from "./RentalStationPicker";
-import { RENTAL_PROVIDER_SUGGESTIONS } from "./rentalProviders";
+import { useRentalProviderSuggestions } from "./rentalProviders";
 import {
   RENTAL_LICENSE_PLATE_MAX,
   depositCurrencyOf,
@@ -87,6 +87,7 @@ export function RentalBookingStep(props: RentalStepProps): JSX.Element {
   const { draft, update, errorOf } = props;
   const { t } = useTranslation(["rental"]);
   const recentCurrencies = useRecentCurrencies();
+  const providerSuggestions = useRentalProviderSuggestions();
   const set = useSetter(update);
   const toggleInclusion = (code: (typeof RENTAL_INCLUSIONS)[number]): void =>
     set(
@@ -110,7 +111,7 @@ export function RentalBookingStep(props: RentalStepProps): JSX.Element {
           autoComplete="off"
         />
         <datalist id={PROVIDER_LIST_ID} data-testid="rental-provider-suggestions">
-          {RENTAL_PROVIDER_SUGGESTIONS.map((name) => (
+          {providerSuggestions.map((name) => (
             <option key={name} value={name} />
           ))}
         </datalist>

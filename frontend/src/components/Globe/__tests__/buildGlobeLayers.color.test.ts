@@ -54,7 +54,7 @@ describe("resolveCruisePathColor", () => {
   const CRUISE_PLANNED = rgb(tokens.color.info);
 
   it("renders a past cruise at full alpha", () => {
-    expect(resolveCruisePathColor({ status: "flown", color: CRUISE_PAST })).toEqual([
+    expect(resolveCruisePathColor({ status: "completed", color: CRUISE_PAST })).toEqual([
       ...CRUISE_PAST,
       230,
     ]);

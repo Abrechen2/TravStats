@@ -12,6 +12,10 @@
  * removed the same day, so without this row the Bahn layer had no switch at
  * all. It goes last because that is where its tab sits.
  *
+ * `bus` joined beside rail on 2026-10-10 (forgejo#180): the coach line on the
+ * "Alle" map needs its switch next to the train's. Like `rental` it has no
+ * dashboard view of its own, so "Nur" keeps it on "Alle".
+ *
  * `tour` has no `DomainKey` of its own (`shared/domains.ts`) — a day tour is
  * not a domain in the gating sense, it is a colour the map needs. This type
  * is therefore its own union, not `DomainKey`.
@@ -24,6 +28,7 @@ export const FILTER_DOMAIN_ORDER = [
   "tour",
   "roadtrip",
   "rail",
+  "bus",
   "rental",
 ] as const;
 

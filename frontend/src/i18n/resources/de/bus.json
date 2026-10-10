@@ -213,5 +213,8 @@
       "newDestinations": "Ein neues Ziel ist ein Terminal, das du mit einer Fahrt zum ersten Mal erreichst und an dem keine frühere Fahrt war — der Ort, an dem dein Logbuch beginnt, ist also kein neues Ziel. Gezählt im Jahr dieser Fahrt.",
       "delays": "Nur Fahrten mit erfasster Verspätung und Uhrzeit. Eine Fahrt ohne erfasste Verspätung zählt nie als pünktlich."
     }
+  },
+  "tripCard": {
+    "open": "Busfahrt öffnen"
   }
 }

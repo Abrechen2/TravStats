@@ -213,5 +213,8 @@
       "newDestinations": "A new destination is a terminal a ride reaches for the first time, where no earlier ride had been — the place your logbook starts from is no new destination. Counted in the year of that ride.",
       "delays": "Only rides with a recorded delay and times. A ride with no recorded delay never counts as on time."
     }
+  },
+  "tripCard": {
+    "open": "Open bus ride"
   }
 }

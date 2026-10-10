@@ -260,7 +260,29 @@
     "currency": "Währung",
     "save": "Speichern",
     "cancel": "Abbrechen",
-    "saved": "Buchung aktualisiert"
+    "saved": "Buchung aktualisiert",
+    "createTitle": "Pauschalbuchung anlegen",
+    "add": "+ Pauschalbuchung",
+    "operator": "Veranstalter",
+    "bookedOn": "Gebucht am",
+    "bookedOnHint": "Der Preis wird zum Kurs dieses Tages umgerechnet.",
+    "travellers": "Anzahl Personen",
+    "travellersInvalid": "Bitte eine ganze Zahl von 1 bis 50 eingeben.",
+    "forPersons_one": "für {{count}} Person",
+    "forPersons_other": "für {{count}} Personen",
+    "created": "Buchung angelegt",
+    "delete": "Buchung löschen",
+    "deleteConfirm": "Buchung löschen? Flüge, Aufenthalte und Kreuzfahrten bleiben erhalten und gehören dann zu keiner Buchung mehr.",
+    "deleted": "Buchung gelöscht",
+    "entriesFailed": "Buchung gespeichert, aber die gewählten Einträge konnten nicht zugeordnet werden. Bitte erneut versuchen.",
+    "entries": {
+      "hint": "Was deckt diese Buchung ab?",
+      "flights": "Flüge",
+      "stays": "Aufenthalte",
+      "cruises": "Kreuzfahrten",
+      "none": "Diese Reise hat noch keine Flüge, Aufenthalte oder Kreuzfahrten, die der Buchung zugeordnet werden könnten.",
+      "otherBooking": "(gehört zu einer anderen Buchung)"
+    }
   },
   "addExisting": {
     "title": "Vorhandenen Eintrag hinzufügen",

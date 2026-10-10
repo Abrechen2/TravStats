@@ -12,6 +12,8 @@ interface CSVShip {
   gross_tonnage: string;
   capacity: string;
   status: string;
+  /** "ocean" | "river" (#359); an absent column means ocean. */
+  kind?: string;
 }
 
 const CSV_PATH = path.resolve(__dirname, "seedData", "ships.csv");
@@ -39,7 +41,21 @@ export async function seedShipsFromCSV(): Promise<number> {
     if (imo) {
       const existing = await prisma.ship.findUnique({ where: { imo } });
       if (existing) continue;
+    } else {
+      // River ships rarely carry an IMO number (they are registered by ENI),
+      // so a row without one is matched by name + line instead — otherwise
+      // every boot would seed it again.
+      const existing = await prisma.ship.findFirst({
+        where: {
+          imo: null,
+          name: { equals: row.name.trim(), mode: "insensitive" },
+          cruiseLine: { equals: row.cruise_line.trim(), mode: "insensitive" },
+        },
+        select: { id: true },
+      });
+      if (existing) continue;
     }
+    const kind = row.kind?.trim() === "river" ? "river" : "ocean";
 
     await prisma.ship.create({
       data: {
@@ -50,6 +66,7 @@ export async function seedShipsFromCSV(): Promise<number> {
         grossTonnage: toIntOrNull(row.gross_tonnage),
         capacity: toIntOrNull(row.capacity),
         status: row.status?.trim() || "active",
+        kind,
         isUserAdded: false,
       },
     });

@@ -177,6 +177,11 @@ COPY backend/data/openflights/planes.dat ./data/openflights/planes.dat
 # scripts/build-rail-station-codes.mjs); without it every station answers
 # shortCode null and the boot log warns `seed_rail_station_codes_missing`.
 COPY backend/data/rail ./data/rail
+# Rental-provider catalogue (forgejo#196): suggestions for the provider field
+# and the website each provider's logo is looked up on. Read via __dirname from
+# dist/services/rentalProviders; without it there are no suggestions and every
+# rental row shows its monogram.
+COPY backend/data/rental ./data/rental
 # Developer scripts, copied as-is. NOTE: these are .ts files and the image
 # has neither tsx nor the src/ tree they import from, so they do NOT run
 # here — that was forgejo#108, where the documented backfill could not

@@ -18,6 +18,7 @@ import {
 } from "../../fx/snapshot";
 import { fileFlightDay } from "../package/flightClock";
 import { dayAt } from "../package/matchingEntries";
+import { normalizeCruiseStatus } from "../../../shared/statusDerivation";
 import type {
   TripFile,
   TripFileCruise,
@@ -364,7 +365,8 @@ export function cruiseRow(
     endDay: calendar(c.endDay),
     startZone: c.startZone,
     endZone: c.endZone,
-    status: c.status,
+    // An archive written before #357 says `flown`; this instance says `completed`.
+    status: normalizeCruiseStatus(c.status),
     dataSource: IMPORT_SOURCE,
     stops: {
       create: c.stops.map((s) => {

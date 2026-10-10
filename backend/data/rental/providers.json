@@ -1,0 +1,20 @@
+{
+  "_comment": "Common rental and car-sharing companies (forgejo#196). Offered as suggestions for the free-text provider field and used to find a provider's logo. `domain` is the company's own website; a logo is only ever taken from it or from an icon service asked about it, so a company not on this list gets no logo (a monogram), never someone else's. Order: what a reader in the DACH region most likely rented from first.",
+  "providers": [
+    { "id": "sixt", "name": "Sixt", "aliases": ["sixt rent a car", "sixt autovermietung"], "domain": "sixt.com" },
+    { "id": "avis", "name": "Avis", "aliases": ["avis budget"], "domain": "avis.com" },
+    { "id": "europcar", "name": "Europcar", "aliases": [], "domain": "europcar.com" },
+    { "id": "hertz", "name": "Hertz", "aliases": [], "domain": "hertz.com" },
+    { "id": "enterprise", "name": "Enterprise", "aliases": ["enterprise rent-a-car", "enterprise rent a car"], "domain": "enterprise.com" },
+    { "id": "budget", "name": "Budget", "aliases": ["budget rent a car"], "domain": "budget.com" },
+    { "id": "alamo", "name": "Alamo", "aliases": ["alamo rent a car"], "domain": "alamo.com" },
+    { "id": "national", "name": "National", "aliases": ["national car rental"], "domain": "nationalcar.com" },
+    { "id": "thrifty", "name": "Thrifty", "aliases": ["thrifty car rental"], "domain": "thrifty.com" },
+    { "id": "dollar", "name": "Dollar", "aliases": ["dollar rent a car"], "domain": "dollar.com" },
+    { "id": "miles", "name": "Miles", "aliases": ["miles mobility"], "domain": "miles-mobility.com" },
+    { "id": "share-now", "name": "Share Now", "aliases": ["sharenow", "share now", "car2go", "drivenow"], "domain": "share-now.com" },
+    { "id": "free2move", "name": "Free2Move", "aliases": ["free 2 move"], "domain": "free2move.com" },
+    { "id": "buchbinder", "name": "Buchbinder", "aliases": ["buchbinder rent-a-car"], "domain": "buchbinder.de" },
+    { "id": "starcar", "name": "Starcar", "aliases": ["star car"], "domain": "starcar.de" }
+  ]
+}

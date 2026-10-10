@@ -63,7 +63,20 @@ export interface CreateBookingInput {
   price?: number;
   /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
   currency?: string;
+  operator?: string;
+  travellers?: number;
+  /** `YYYY-MM-DD` — dates the FX snapshot (#356). */
+  bookedOn?: string;
   flightIds?: string[];
+  stayIds?: string[];
+  cruiseIds?: string[];
+}
+
+/** The full set of entries a booking covers, per kind (#356). */
+export interface BookingEntriesInput {
+  flightIds?: string[];
+  stayIds?: string[];
+  cruiseIds?: string[];
 }
 
 /** A trip that qualifies for dissolution (≤2 flights, no other content). */
@@ -167,6 +180,14 @@ export const tripsApi = {
   updateBooking: async (id: string, input: UpdateBookingInput): Promise<Booking> => {
     const { data } = await api.patch<{ booking: Booking }>(`/trips/bookings/${id}`, input);
     return data.booking;
+  },
+
+  setBookingEntries: async (id: string, input: BookingEntriesInput): Promise<void> => {
+    await api.put(`/trips/bookings/${id}/entries`, input);
+  },
+
+  deleteBooking: async (id: string): Promise<void> => {
+    await api.delete(`/trips/bookings/${id}`);
   },
 
   /* ─────────── Cleanup (micro-trip dissolve + merge) ─────────── */

@@ -26,8 +26,16 @@ export const cruiseStatsResponseSchema = z.object({
       "been sailed.",
   }),
   resolvedPortCalls: z.number().int(),
-  seaDays: z.number().int(),
+  seaDays: z.number().int().openapi({
+    description: "Days at sea on OCEAN cruises. A river cruise's day between ports is not one.",
+  }),
   seaDaysStreak: z.number().int(),
+  riverCruisesCount: z.number().int().openapi({
+    description: "How many of `cruisesCount` were river cruises (#359).",
+  }),
+  riverDistanceKm: z.number().int().openapi({
+    description: "The part of `totalDistanceKm` sailed on rivers, in km (#359).",
+  }),
 
   regions: z.array(z.string()),
   regionVisitCounts: z.record(z.string(), z.number().int()),

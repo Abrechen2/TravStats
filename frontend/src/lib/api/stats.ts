@@ -231,8 +231,12 @@ export interface CruiseStatsResponse {
   cruiseLinesUnique: number;
   cruiseLineLoyaltyMax: number;
   cruiseLines: string[];
+  /** Ocean cruises only — a river day between ports is not a sea day (#359). */
   seaDays: number;
   seaDaysStreak: number;
+  /** River vs ocean (#359). Optional: an older server does not send them. */
+  riverCruisesCount?: number;
+  riverDistanceKm?: number;
   // Regions + countries
   regions: string[];
   regionVisitCounts: Record<string, number>;

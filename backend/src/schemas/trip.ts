@@ -138,6 +138,12 @@ export const assignFlightsSchema = z.object({
   action: z.enum(["add", "remove"]),
 });
 
+/** Who sold the package — a tour operator, an agency, an airline's holidays arm (#356). */
+const BOOKING_OPERATOR = z.string().trim().min(1).max(120);
+/** "für N Personen": how many travellers the price covers (#356). */
+const BOOKING_TRAVELLERS = z.number().int().min(1).max(50);
+const ENTRY_IDS = z.array(z.string().uuid()).max(100);
+
 export const createBookingSchema = z.object({
   tripId: z.string().uuid().optional(),
   pnr: z.string().max(20).optional(),
@@ -147,7 +153,18 @@ export const createBookingSchema = z.object({
     .string()
     .regex(/^[A-Z]{3}$/, "Must be a 3-letter ISO 4217 code (e.g. EUR, USD, INR)")
     .optional(),
-  flightIds: z.array(z.string().uuid()).optional(),
+  operator: BOOKING_OPERATOR.optional(),
+  travellers: BOOKING_TRAVELLERS.optional(),
+  /**
+   * The day the booking was made or its confirmation issued (#356). Dates the
+   * FX snapshot: a price is converted at the rate of the day it was agreed,
+   * not of the day it happened to be typed in.
+   */
+  bookedOn: ISO_DATE.optional(),
+  flightIds: ENTRY_IDS.optional(),
+  /** Stays and cruises the package covers, filed on it at creation (#356). */
+  stayIds: ENTRY_IDS.optional(),
+  cruiseIds: ENTRY_IDS.optional(),
 });
 
 export const updateBookingSchema = z.object({
@@ -160,12 +177,30 @@ export const updateBookingSchema = z.object({
     .regex(/^[A-Z]{3}$/, "Must be a 3-letter ISO 4217 code (e.g. EUR, USD, INR)")
     .nullable()
     .optional(),
+  operator: BOOKING_OPERATOR.nullable().optional(),
+  travellers: BOOKING_TRAVELLERS.nullable().optional(),
+  bookedOn: ISO_DATE.nullable().optional(),
 });
 
 /** `POST /trips/bookings/:id/flights` — file existing flights on a booking (#356). */
 export const bookingFlightsSchema = z.object({
   flightIds: z.array(z.string().uuid()).min(1).max(100),
 });
+
+/**
+ * `PUT /trips/bookings/:id/entries` — the full set of flights, stays and
+ * cruises a booking covers (#356). Replace semantics per list: an entry left
+ * out is taken off the booking; an absent list leaves that kind untouched.
+ */
+export const bookingEntriesSchema = z
+  .object({
+    flightIds: ENTRY_IDS.optional(),
+    stayIds: ENTRY_IDS.optional(),
+    cruiseIds: ENTRY_IDS.optional(),
+  })
+  .refine((d) => d.flightIds || d.stayIds || d.cruiseIds, {
+    message: "At least one of flightIds, stayIds, cruiseIds is required",
+  });
 
 export type CreateTripInput = z.infer<typeof createTripSchema>;
 export type UpdateTripInput = z.infer<typeof updateTripSchema>;

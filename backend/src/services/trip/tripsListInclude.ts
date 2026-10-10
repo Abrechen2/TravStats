@@ -43,6 +43,42 @@ export const TRIP_RAIL_SELECT = {
 } satisfies Prisma.RailJourneySelect;
 
 /**
+ * A trip's bus rides as `GET /trips/:id` sends them (forgejo#180): what the
+ * timeline card shows, the two terminals' coordinates and the frozen road
+ * line (null = the chord between the terminals) for the trip map, and what
+ * the ride's `times` are built from (ADR 0002).
+ */
+export const TRIP_BUS_SELECT = {
+  id: true,
+  operator: true,
+  lineName: true,
+  rideKind: true,
+  depStationName: true,
+  arrStationName: true,
+  depLat: true,
+  depLon: true,
+  arrLat: true,
+  arrLon: true,
+  depTimezone: true,
+  arrTimezone: true,
+  departureTime: true,
+  arrivalTime: true,
+  depPrecision: true,
+  arrPrecision: true,
+  actualDepartureTime: true,
+  actualArrivalTime: true,
+  distanceKm: true,
+  distanceSource: true,
+  geometry: true,
+  geometrySource: true,
+  status: true,
+  delayMinutes: true,
+  price: true,
+  currency: true,
+  bookingId: true,
+} satisfies Prisma.BusJourneySelect;
+
+/**
  * A trip's rentals as `GET /trips/:id` sends them: what the timeline's two
  * ends of a rental show (rental spec §6).
  */

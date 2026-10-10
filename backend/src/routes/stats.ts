@@ -1102,8 +1102,8 @@ router.get(
 /**
  * Cruise-domain stats endpoint for the StatsPage cruise tab.
  *
- * Loads only the user's SAILED cruises (`status: { in: ['flown',
- * 'historical'] }` — the same done-predicate `/stats/countries` uses)
+ * Loads only the user's SAILED cruises (`countableCruiseWhere()` — the
+ * same done-predicate `/stats/countries` uses)
  * and pipes them through the shared `calculateCruiseStats` util. A
  * merely-booked 'scheduled' (or still-`in_progress`) cruise must not
  * inflate "gefahren" figures like cruisesCount or the visited-countries

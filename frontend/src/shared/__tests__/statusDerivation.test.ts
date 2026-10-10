@@ -152,27 +152,32 @@ describe("deriveCruiseStatus (frontend mirror)", () => {
     for (const s of ["cancelled", "historical"]) expect(derive(past(100), past(50), s)).toBe(s);
   });
 
-  it("future start -> scheduled; between start and end -> in_progress; past end+48h -> flown", () => {
+  it("future start -> scheduled; between start and end -> in_progress; past end+48h -> completed", () => {
     expect(derive(future(24), future(120))).toBe("scheduled");
     expect(derive(past(24), future(72))).toBe("in_progress");
-    expect(derive(past(200), past(49))).toBe("flown");
+    expect(derive(past(200), past(49))).toBe("completed");
   });
 
   it("end within the 48h slack stays in_progress", () => {
-    expect(derive(past(200), past(47), "flown")).toBe("in_progress");
+    expect(derive(past(200), past(47), "completed")).toBe("in_progress");
   });
 
   it("null start + future end is not in_progress", () => {
     expect(derive(null, future(72))).toBe("scheduled");
   });
 
-  it("missing end: scheduled until start+48h past, then flown", () => {
+  it("missing end: scheduled until start+48h past, then completed", () => {
     expect(derive(past(47), null)).toBe("scheduled");
-    expect(derive(past(49), null)).toBe("flown");
+    expect(derive(past(49), null)).toBe("completed");
   });
 
   it("no dates keeps current", () => {
-    expect(derive(null, null, "flown")).toBe("flown");
+    expect(derive(null, null, "completed")).toBe("completed");
+  });
+
+  // #357: the retired flight word is read in today's vocabulary.
+  it("reads a legacy 'flown' as 'completed', never returns it", () => {
+    expect(derive(null, null, "flown")).toBe("completed");
   });
 });
 

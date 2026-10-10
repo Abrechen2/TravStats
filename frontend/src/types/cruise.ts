@@ -11,7 +11,13 @@ export interface Ship {
   capacity: number | null;
   status: string;
   isUserAdded: boolean;
+  /** "ocean" | "river" (#359). */
+  kind?: CruiseKind;
 }
+
+/** Ocean or river (#359) — mirrors `backend/src/shared/cruiseKind.ts`. */
+export type CruiseKind = "ocean" | "river";
+export const CRUISE_KINDS: readonly CruiseKind[] = ["ocean", "river"];
 
 export interface Port {
   id: number;
@@ -51,7 +57,8 @@ export interface CruiseStop {
   times?: CruiseStopTimes;
 }
 
-export type CruiseStatus = "scheduled" | "in_progress" | "flown" | "cancelled" | "historical";
+/** A sailed cruise is `completed` (#357); the server never returns the retired `flown`. */
+export type CruiseStatus = "scheduled" | "in_progress" | "completed" | "cancelled" | "historical";
 export type CabinType = "inside" | "oceanview" | "balcony" | "suite";
 
 export interface Cruise {
@@ -69,6 +76,8 @@ export interface Cruise {
   startDate: string | null;
   endDate: string | null;
   status: CruiseStatus;
+  /** Ocean or river (#359); absent on an older server, which means ocean. */
+  kind?: CruiseKind;
   /** Optional user-selectable map color (hex). Null = auto-derived from id. */
   color?: string | null;
   cabinNumber: string | null;
@@ -160,6 +169,8 @@ export interface CruiseInput {
   startDate?: string | null;
   endDate?: string | null;
   status?: CruiseStatus;
+  /** Ocean or river (#359). Absent on create: the ship decides, else ocean. */
+  kind?: CruiseKind;
   /** Optional user-selectable map color (hex). Null = auto-derived from id. */
   color?: string | null;
   cabinNumber?: string | null;

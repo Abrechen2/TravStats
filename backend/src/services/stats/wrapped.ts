@@ -106,6 +106,7 @@ export interface WrappedCountry {
 // `schemas/statsWrapped.ts` and read here (forgejo#52).
 export type { WrappedRank, Wrapped } from "../../schemas/statsWrapped";
 import type { Wrapped } from "../../schemas/statsWrapped";
+import { isCountableCruise } from "../../shared/cruiseCounting";
 import { routePairKey } from "../../shared/routePair";
 import {
   buildWrappedChapters,
@@ -147,7 +148,7 @@ export function buildWrapped(
   const flown = flightsVisible
     ? flights.filter((f) => FLOWN.has(f.status) && f.departureTime !== null)
     : [];
-  const sailed = cruises.filter((c) => FLOWN.has(c.status) && c.startDate !== null);
+  const sailed = cruises.filter((c) => isCountableCruise(c) && c.startDate !== null);
 
   const flightsPerYear = new Map<number, number>();
   for (const flight of flown) {

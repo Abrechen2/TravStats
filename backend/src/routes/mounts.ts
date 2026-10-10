@@ -105,6 +105,7 @@ import rentalImportRouter from "./rental/import";
 import rentalStatsRouter from "./rental/stats";
 import rentalRemindersRouter from "./rental/reminders";
 import rentalLinksRouter from "./rental/links";
+import rentalProvidersRouter from "./rental/providers";
 import cruiseTrackRoutes from "./cruises/tracks";
 import currenciesRouter from "./currencies";
 import lodgingRouter from "./lodging";
@@ -377,6 +378,7 @@ export const apiMounts: ApiMount[] = [
   // Car rentals (spec 2026-10-01-rental-domain-design). Behind the beta switch in
   // the UI only. Sub-routers mount FIRST: '/:id' would answer them as a 404.
   { id: "rental.stations", base: "/api/v1/rentals/stations", router: rentalStationsRouter },
+  { id: "rental.providers", base: "/api/v1/rentals/providers", router: rentalProvidersRouter },
   { id: "rental.import", base: "/api/v1/rentals/import", router: rentalImportRouter },
   { id: "rental.stats", base: "/api/v1/rentals/stats", router: rentalStatsRouter },
   {

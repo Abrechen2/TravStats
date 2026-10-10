@@ -32,7 +32,11 @@ import {
 import { emailParseLimiter } from "../middleware/rateLimit";
 import { assertLlmCloudConsent, assertLlmEnabled } from "../services/llm/llmGate";
 import { tripPageCost, tripsPageCosts } from "../services/trip/tripCostSuperlative";
-import { TRIPS_LIST_INCLUDE, TRIP_RAIL_SELECT } from "../services/trip/tripsListInclude";
+import {
+  TRIPS_LIST_INCLUDE,
+  TRIP_BUS_SELECT,
+  TRIP_RAIL_SELECT,
+} from "../services/trip/tripsListInclude";
 import { withRoadtripCounts } from "../services/trip/tripRoadtripCounts";
 import { TRIP_DETAIL_RENTALS } from "../services/trip/tripsListInclude";
 import {
@@ -292,6 +296,8 @@ router.get(
           lodgingStays: { include: { lodging: true }, orderBy: { checkIn: "asc" } },
           // Train rides for the timeline and logistics — without the frozen line.
           railJourneys: { select: TRIP_RAIL_SELECT, orderBy: { departureTime: "asc" } },
+          // Bus rides for the timeline and the map, between the hotels (forgejo#180).
+          busJourneys: { select: TRIP_BUS_SELECT, orderBy: { departureTime: "asc" } },
           rentalBookings: TRIP_DETAIL_RENTALS,
         },
       });

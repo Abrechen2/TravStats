@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -128,10 +128,16 @@ describe("RentalTableRow — the car driven", () => {
 // forgejo#207: a status pill on every row — a completed rental used to leave
 // the column empty, which read as "unknown".
 describe("RentalTableRow — tile and status", () => {
-  it("draws the provider's monogram", () => {
+  // forgejo#196: the provider's logo where the server has one; a 404 or a
+  // broken image falls back to the monogram — never a stand-in logo.
+  it("asks for the provider's logo and falls back to its monogram when there is none", () => {
     const row = renderRow(makeRental({ provider: "Share Now" }));
     const tile = within(cellOf(row, "provider")).getByTestId("operator-tile");
     expect(tile).toHaveAttribute("title", "Share Now");
+    const logo = within(tile).getByTestId("operator-logo");
+    expect(logo).toHaveAttribute("src", "/api/v1/rentals/providers/logo?name=Share%20Now");
+    fireEvent.error(logo);
+    expect(within(tile).queryByTestId("operator-logo")).toBeNull();
     expect(tile.textContent).toContain("SN");
   });
 

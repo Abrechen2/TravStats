@@ -42,6 +42,10 @@ export function buildCruiseTabResponse(
     resolvedPortCalls: stats.resolvedPortCalls,
     seaDays: stats.seaDays,
     seaDaysStreak: stats.seaDaysStreak,
+    // River vs ocean (#359): the share of the count and of the distance that
+    // was sailed on rivers. Sea days above already leave river cruises out.
+    riverCruisesCount: stats.riverCruisesCount,
+    riverDistanceKm: Math.round(stats.riverDistanceKm),
     // Regions + countries (lists already in API; counts derived
     // client-side)
     regions: Array.from(stats.regions).sort(),
