@@ -22,17 +22,9 @@ export function useRoadtripSpan(): (r: Pick<RoadtripSummary, "startDate" | "endD
   };
 }
 
-function Figure({
-  value,
-  label,
-  title,
-}: {
-  value: ReactNode;
-  label: string;
-  title?: string;
-}): JSX.Element {
+function Figure({ value, label }: { value: ReactNode; label: string }): JSX.Element {
   return (
-    <div className="flex min-w-0 flex-col" title={title}>
+    <div className="flex min-w-0 flex-col">
       <span
         className="t-meta-mono"
         style={{ fontSize: 15, fontWeight: 600, color: "var(--ts-text-bright)" }}
@@ -111,15 +103,10 @@ export default function RoadtripCard({
             borderTop: "1px solid var(--ts-border)",
           }}
         >
-          <Figure
-            value={kmKnown ? nf.format(r.drivenKm) : "—"}
-            label={t("roadtrips:list.figKm")}
-            title={kmKnown ? undefined : t("roadtrips:list.kmUnknown")}
-          />
+          <Figure value={kmKnown ? nf.format(r.drivenKm) : "—"} label={t("roadtrips:list.figKm")} />
           <Figure
             value={`${r.nightsKnown ? "" : "≈ "}${nf.format(r.nights)}`}
             label={t("roadtrips:list.figNights", { count: r.nights })}
-            title={r.nightsKnown ? undefined : t("roadtrips:list.nightsApprox")}
           />
           <Figure
             value={nf.format(r.stationCount)}

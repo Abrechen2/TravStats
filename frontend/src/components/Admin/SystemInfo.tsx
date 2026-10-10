@@ -1,6 +1,7 @@
 import { useTranslation } from "../../hooks/useTranslation";
 import AirlineLogoRefreshButton from "./AirlineLogoRefreshButton";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import HelpIcon from "../Help/HelpIcon";
 
 // ==================== SystemInfo Interfaces ====================
 
@@ -142,17 +143,14 @@ export default function SystemInfo({
                 On a promoted `:latest` the image is a byte-identical retag of
                 the RC, so buildVersion still carries the `-rc.N` suffix. Show
                 only the clean release version; expose the build provenance in a
-                hover tooltip (still in the diagnostic bundle for debugging). (#156)
+                help a tap or a key opens (forgejo#249) (still in the diagnostic bundle for debugging). (#156)
               */}
               {systemInfo.buildVersion && systemInfo.buildVersion !== systemInfo.version && (
-                <span
-                  className="ml-1.5 align-middle text-xs font-normal cursor-help"
-                  style={{ color: "var(--text-muted)" }}
-                  title={`${t("admin:systemInfo.buildLabel")}: ${systemInfo.buildVersion} — ${t("admin:systemInfo.buildVersionHint")}`}
-                  aria-label={`${t("admin:systemInfo.buildLabel")}: ${systemInfo.buildVersion}`}
-                >
-                  ⓘ
-                </span>
+                <HelpIcon
+                  className="ml-1.5 align-middle"
+                  content={`${t("admin:systemInfo.buildLabel")}: ${systemInfo.buildVersion} — ${t("admin:systemInfo.buildVersionHint")}`}
+                  subject={t("admin:systemInfo.buildLabel")}
+                />
               )}
             </dd>
           </div>

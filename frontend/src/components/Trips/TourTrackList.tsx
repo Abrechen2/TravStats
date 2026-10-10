@@ -4,6 +4,7 @@ import ConfirmModal from "../Training/ConfirmModal";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { formatInProfileZone } from "../../lib/profileInstant";
 import type { TourTrackMeta } from "../../types/tour";
+import Toggletip from "../ui/Toggletip";
 
 interface Props {
   tracks: TourTrackMeta[];
@@ -169,12 +170,12 @@ export default function TourTrackList({
                 {t(`trips:tours.tracks.source.${track.source}`)}
               </span>
               {track.truncated && (
-                <span
-                  className="rounded-sm bg-amber-900/40 px-1.5 py-0.5 text-xs text-amber-400"
-                  title={t("trips:tours.tracks.truncatedReason")}
+                <Toggletip
+                  content={t("trips:tours.tracks.truncatedReason")}
+                  triggerClassName="rounded-sm bg-amber-900/40 px-1.5 py-0.5 text-xs text-amber-400"
                 >
                   {t("trips:tours.tracks.truncated")}
-                </span>
+                </Toggletip>
               )}
               <span className="text-(--text-muted)">
                 {t("trips:tours.tracks.pointCount", { count: track.pointCount })}

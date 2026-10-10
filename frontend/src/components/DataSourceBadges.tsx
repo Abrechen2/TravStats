@@ -1,5 +1,6 @@
 import { useTranslation } from "../hooks/useTranslation";
 import { Flight } from "../types";
+import Toggletip from "./ui/Toggletip";
 
 interface DataSourceBadgesProps {
   flight: Flight;
@@ -84,13 +85,13 @@ export default function DataSourceBadges({ flight }: DataSourceBadgesProps): JSX
   return (
     <div className="flex flex-wrap gap-2">
       {badges.map((badge, index) => (
-        <span
+        <Toggletip
           key={index}
-          className={`px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}
-          title={badge.tooltip}
+          content={badge.tooltip}
+          triggerClassName={`px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}
         >
           {badge.icon} {badge.label}
-        </span>
+        </Toggletip>
       ))}
     </div>
   );

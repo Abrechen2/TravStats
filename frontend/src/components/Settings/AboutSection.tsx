@@ -4,6 +4,7 @@ import { version as pkgVersion } from "../../../package.json";
 import { useTranslation } from "../../hooks/useTranslation";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
+import Toggletip from "../ui/Toggletip";
 
 const REPO_URL = "https://github.com/Abrechen2/TravStats";
 const DONATE_URL = "https://www.paypal.com/donate?hosted_button_id=GLXYTD3FV9Y78";
@@ -53,19 +54,19 @@ export default function AboutSection(): JSX.Element {
               v{appVersion}
             </span>
             {showBuild && (
-              <span
-                className="font-mono"
-                style={{
+              <Toggletip
+                content={t("settings:about.buildVersionHint")}
+                triggerClassName="font-mono"
+                triggerStyle={{
                   fontSize: 11,
                   padding: "2px 8px",
                   borderRadius: 6,
                   background: "var(--ts-tile)",
                   color: "var(--ts-muted)",
                 }}
-                title={t("settings:about.buildVersionHint")}
               >
                 {t("settings:about.buildLabel")}: {buildVersion}
-              </span>
+              </Toggletip>
             )}
           </>
         }

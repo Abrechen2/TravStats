@@ -11,7 +11,6 @@ interface Figure {
   label: string;
   value: string;
   sub?: string;
-  title?: string;
   hue?: string;
 }
 
@@ -93,7 +92,6 @@ export default function RoadtripFigures({
         stay: nf.format(n.stayNights),
         free: nf.format(n.freeNights),
       }),
-      title: n.nightsKnown ? undefined : t("roadtrips:detail.approxHint"),
     },
     {
       key: "places",
@@ -130,7 +128,6 @@ export default function RoadtripFigures({
             key={f.key}
             className="flex min-w-0 flex-col"
             style={{ background: "var(--ts-surface)", padding: "var(--ts-space-lg)", gap: 4 }}
-            title={f.title}
           >
             <dt className="t-label-mono">{f.label}</dt>
             <dd

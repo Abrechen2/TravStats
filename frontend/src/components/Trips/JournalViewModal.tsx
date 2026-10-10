@@ -6,6 +6,7 @@ import JournalPhotoRow from "./JournalPhotoRow";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatObservedWeather } from "../../lib/observedWeather";
 import { useLocale } from "../../hooks/useLocale";
+import HelpIcon from "../Help/HelpIcon";
 
 interface JournalViewModalProps {
   entry: TripJournalEntry;
@@ -68,13 +69,15 @@ export default function JournalViewModal({
               <span
                 className="mt-0.5 block text-xs font-normal"
                 style={{ color: "var(--text-muted)" }}
-                title={
-                  entry.observedWeather
-                    ? `${t("openData:weather.measuredAt", { place: entry.observedWeather.place })} · ${t("openData:weather.source")}`
-                    : undefined
-                }
               >
                 {meta}
+                {/* Where the measured weather comes from (forgejo#249). */}
+                {entry.observedWeather && (
+                  <HelpIcon
+                    className="ml-1 align-middle"
+                    content={`${t("openData:weather.measuredAt", { place: entry.observedWeather.place })} · ${t("openData:weather.source")}`}
+                  />
+                )}
               </span>
             )}
           </span>

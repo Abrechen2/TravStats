@@ -296,7 +296,6 @@ function RowsView({ rows, checked, toggle, isSubmitting, t }: RowsViewProps): JS
                   {errors.map((f) => (
                     <span
                       key={f}
-                      title={t(`settings:import.preview.errorBadge.${f}`)}
                       className="inline-flex items-center rounded-sm px-2 py-0.5 text-xs"
                       style={{
                         background: "rgba(239, 68, 68, 0.18)",
@@ -309,7 +308,6 @@ function RowsView({ rows, checked, toggle, isSubmitting, t }: RowsViewProps): JS
                   {warnings.map((f) => (
                     <span
                       key={f}
-                      title={t(`settings:import.preview.warningBadge.${f}`)}
                       className="inline-flex items-center rounded-sm px-2 py-0.5 text-xs"
                       style={{
                         background: "rgba(245, 158, 11, 0.18)",

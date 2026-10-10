@@ -202,12 +202,11 @@ export default function TripCard({ trip, onOpen }: TripCardProps): JSX.Element {
           <span>
             <span style={figure}>{distanceKm > 0 ? formatDistance(distanceKm) : "—"}</span> km
           </span>
-          <span
-            style={figure}
-            title={unpriced > 0 ? t("trips:costUnpriced", { count: unpriced }) : undefined}
-          >
+          <span style={figure}>
             {/* A visible floor, not only a tooltip: the web is drawn for iPads,
-                and a touch screen never shows a `title` (review M2). */}
+                and a touch screen never shows a `title` (review M2). The card
+                is one link, so the reason travels as its text for a screen
+                reader instead of a nested help button (forgejo#249). */}
             {costTotals.length > 0 && unpriced > 0 && "≥ "}
             {costTotals.length > 0
               ? costTotals
@@ -216,6 +215,9 @@ export default function TripCard({ trip, onOpen }: TripCardProps): JSX.Element {
                   )
                   .join(" + ")
               : "—"}
+            {unpriced > 0 && (
+              <span className="sr-only"> ({t("trips:costUnpriced", { count: unpriced })})</span>
+            )}
           </span>
         </p>
       </div>

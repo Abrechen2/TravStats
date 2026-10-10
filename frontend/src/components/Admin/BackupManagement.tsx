@@ -14,6 +14,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 // and a panel that scrolls instead of running off a 320px screen (AUD-037).
 import Modal from "../Modal";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import Toggletip from "../ui/Toggletip";
 
 interface Backup {
   id: string;
@@ -696,20 +697,26 @@ export default function BackupManagement(): JSX.Element {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-muted)">
                     {backup.syncedToCloud ? (
-                      <span
-                        style={{ color: "var(--success)" }}
-                        title={t("admin:backup.cloud.syncedAt", {
+                      <Toggletip
+                        content={t("admin:backup.cloud.syncedAt", {
                           date: formatDate(backup.cloudSyncAt),
                         })}
+                        label={t("admin:backup.cloud.syncedAt", {
+                          date: formatDate(backup.cloudSyncAt),
+                        })}
+                        triggerStyle={{ color: "var(--success)" }}
                       >
                         ✓
-                      </span>
+                      </Toggletip>
                     ) : backup.cloudSyncError ? (
                       // A failed upload says why. The plain "-" next to a green
                       // connection test is what made this bug unfindable.
-                      <span style={{ color: "var(--danger)" }} title={backup.cloudSyncError}>
+                      <Toggletip
+                        content={backup.cloudSyncError}
+                        triggerStyle={{ color: "var(--danger)" }}
+                      >
                         ⚠ {t("admin:backup.cloud.failed")}
-                      </span>
+                      </Toggletip>
                     ) : (
                       <span className="text-(--text-muted)">-</span>
                     )}

@@ -90,14 +90,8 @@ export default function RoadtripTourCards({
             </div>
             <div className="grid grid-cols-3 t-meta-mono" style={{ fontSize: 14 }}>
               <span>{nf1.format(tour.distanceKm)} km</span>
-              <span title={tour.ascentM === null ? t("roadtrips:detail.noElevation") : undefined}>
-                ↑ {tour.ascentM === null ? "—" : `${nf0.format(tour.ascentM)} m`}
-              </span>
-              <span
-                title={tour.movingSeconds === null ? t("roadtrips:detail.noMoving") : undefined}
-              >
-                {tour.movingSeconds === null ? "—" : hoursMinutes(tour.movingSeconds)}
-              </span>
+              <span>↑ {tour.ascentM === null ? "—" : `${nf0.format(tour.ascentM)} m`}</span>
+              <span>{tour.movingSeconds === null ? "—" : hoursMinutes(tour.movingSeconds)}</span>
             </div>
             {(tour.ascentM === null || tour.movingSeconds === null) && (
               // The dash's reason, visible (forgejo#249) — not only a hover title.

@@ -4,6 +4,7 @@ import type { JSX } from "react";
 import { LocationInput } from "../location/LocationInput";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { TourPointInput } from "../../lib/api/tours";
+import HelpIcon from "../Help/HelpIcon";
 
 interface TourPointEditorProps {
   points: TourPointInput[];
@@ -106,10 +107,7 @@ export default function TourPointEditor({
             >
               {t("trips:tours.points.remove")}
             </button>
-            <label
-              className="flex basis-full items-center gap-2 text-xs text-(--text-muted)"
-              title={t("trips:tours.points.viaHint")}
-            >
+            <label className="flex basis-full items-center gap-2 text-xs text-(--text-muted)">
               <input
                 type="checkbox"
                 role="switch"
@@ -119,7 +117,16 @@ export default function TourPointEditor({
                 onChange={(e) => update(index, { via: e.target.checked })}
               />
               <span>{t("trips:tours.points.via")}</span>
-              {point.via === true && <span>— {t("trips:tours.points.viaHint")}</span>}
+              {point.via === true ? (
+                <span>— {t("trips:tours.points.viaHint")}</span>
+              ) : (
+                // What "via" means before it is switched on — by tap and key,
+                // not only by hover (forgejo#249).
+                <HelpIcon
+                  content={t("trips:tours.points.viaHint")}
+                  subject={t("trips:tours.points.via")}
+                />
+              )}
             </label>
             <div className="basis-full">
               <LocationInput

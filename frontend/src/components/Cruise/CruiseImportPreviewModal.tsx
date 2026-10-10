@@ -38,6 +38,7 @@ import type { CruiseImportOutcome } from "./cruiseImportSave";
 import { CruiseImportFlightGap } from "./CruiseImportFlightGap";
 import { CruiseReimportCompare } from "./CruiseReimportCompare";
 import type { ReimportConflict, ReimportSummary } from "./CruiseReimportCompare";
+import Toggletip from "../ui/Toggletip";
 
 export { deriveTripMeta } from "./cruiseImportEntry";
 
@@ -455,12 +456,12 @@ function CruiseImportEntryEditor({
               ✓ {t("import.shipMatched")}
             </span>
           ) : overrideName ? (
-            <span
-              className="rounded-sm bg-amber-500/15 px-1.5 py-0.5 text-[10px] normal-case text-amber-300"
-              title={t("import.shipUnmatchedHint")}
+            <Toggletip
+              content={t("import.shipUnmatchedHint")}
+              triggerClassName="rounded-sm bg-amber-500/15 px-1.5 py-0.5 text-[10px] normal-case text-amber-300"
             >
               ⚠ {t("import.shipUnmatched")}
-            </span>
+            </Toggletip>
           ) : (
             <span className="rounded-sm bg-red-500/15 px-1.5 py-0.5 text-[10px] normal-case text-red-300">
               {t("import.missing")}

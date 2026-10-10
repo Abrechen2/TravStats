@@ -133,10 +133,10 @@ describe("CruiseRow", () => {
     });
     renderRow(cruise);
 
-    const badge = screen.getByText("(+1)");
-    const ariaLabel = badge.getAttribute("aria-label");
-    expect(ariaLabel).toBeTruthy();
-    expect(ariaLabel).toBe(badge.getAttribute("title"));
+    // A button a finger and a keyboard can open, named with its count and
+    // what it counts — not a hover title (forgejo#249).
+    const badge = screen.getByRole("button", { name: /\(\+1\) list\.unresolvedPorts/ });
+    expect(badge).toHaveTextContent("(+1)");
   });
 
   it("renders no (+n) badge when there are no unresolved stops", () => {

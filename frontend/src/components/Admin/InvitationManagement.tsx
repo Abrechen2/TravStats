@@ -1,6 +1,7 @@
 import { formatInProfileZone } from "../../lib/profileInstant";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import Toggletip from "../ui/Toggletip";
 
 export interface Invitation {
   id: string;
@@ -163,13 +164,13 @@ export default function InvitationManagement({
                         {t("admin:invitations.status.expired")}
                       </span>
                     ) : invitation.emailStatus === "failed" ? (
-                      <span
-                        className="px-2 py-1 text-xs font-semibold rounded-full"
-                        style={{ background: "rgba(245,158,11,0.2)", color: "#d97706" }}
-                        title={invitation.emailError ?? ""}
+                      <Toggletip
+                        content={invitation.emailError ?? t("admin:invitations.status.emailFailed")}
+                        triggerClassName="px-2 py-1 text-xs font-semibold rounded-full"
+                        triggerStyle={{ background: "rgba(245,158,11,0.2)", color: "#d97706" }}
                       >
                         {t("admin:invitations.status.emailFailed")}
-                      </span>
+                      </Toggletip>
                     ) : (
                       <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
                         {t("admin:invitations.status.active")}
