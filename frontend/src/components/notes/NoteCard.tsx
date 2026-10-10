@@ -50,6 +50,12 @@ export default function NoteCard({
             {note.occurredZone !== readerZone && (
               <span>{t("notes:card.writtenIn", { zone: note.occurredZone })}</span>
             )}
+            {note.visibility === "shareable" && (
+              <span className="inline-flex items-center" style={{ gap: "var(--ts-space-xs)" }}>
+                <Icon name="link-2" size={14} />
+                {t("notes:card.shareable")}
+              </span>
+            )}
           </div>
           <div className="flex shrink-0">
             <IconButton label={t("notes:card.edit")} onClick={() => onEdit(note)}>

@@ -23,6 +23,7 @@ import type { Place, PlaceVisit } from "../types/place";
 import type { TripRailJourney } from "../types/rail";
 import type { TripBusJourney } from "../types/bus";
 import type { TripRental } from "../types/rental";
+import type { MemberNote, Note, TripNotes } from "./api/notes";
 
 /**
  * The trip timeline's entries — every dated thing a trip holds, in one
@@ -104,6 +105,25 @@ export type TimelineEvent =
       date: string;
       when: TimeValue;
       rental: TripRental;
+    }
+  | {
+      id: string;
+      kind: "note";
+      /** `when.utc` — kept for callers that only need an instant to compare. */
+      date: string;
+      /** On the clock of the zone the note was written in (forgejo#146). */
+      when: TimeValue;
+      /** The reader's own note — editable — or another member's shareable one. */
+      mine: true;
+      note: Note;
+    }
+  | {
+      id: string;
+      kind: "note";
+      date: string;
+      when: TimeValue;
+      mine: false;
+      note: MemberNote;
     }
   | {
       id: string;
@@ -247,11 +267,39 @@ function lodgingEvents(trip: Trip): TimelineEvent[] {
   return out;
 }
 
+/**
+ * Standalone notes on the trip's days (forgejo#146) — the server already
+ * matched them by their own day; each sits at its moment on its own clock.
+ */
+function noteEvents(notes: TripNotes | null): TimelineEvent[] {
+  if (!notes) return [];
+  return [
+    ...notes.notes.map((note): TimelineEvent => ({
+      id: `note-${note.id}`,
+      kind: "note",
+      date: note.times.occurredAt.utc,
+      when: note.times.occurredAt,
+      mine: true,
+      note,
+    })),
+    ...notes.memberNotes.map((note): TimelineEvent => ({
+      id: `member-note-${note.id}`,
+      kind: "note",
+      date: note.times.occurredAt.utc,
+      when: note.times.occurredAt,
+      mine: false,
+      note,
+    })),
+  ];
+}
+
 export function buildTimelineEvents(
   trip: Trip,
-  placeVisits: ReadonlyArray<{ place: Place; visit: PlaceVisit }>
+  placeVisits: ReadonlyArray<{ place: Place; visit: PlaceVisit }>,
+  notes: TripNotes | null = null
 ): TimelineEvent[] {
   const out: TimelineEvent[] = [
+    ...noteEvents(notes),
     ...railEvents(trip),
     ...busEvents(trip),
     ...rentalEvents(trip),

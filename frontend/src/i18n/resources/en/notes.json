@@ -15,7 +15,8 @@
     "edit": "Edit note",
     "delete": "Delete note",
     "photoAlt": "Photo of the note from {{date}}",
-    "writtenIn": "Written in {{zone}}"
+    "writtenIn": "Written in {{zone}}",
+    "shareable": "Shareable"
   },
   "editor": {
     "createTitle": "New note",
@@ -42,7 +43,9 @@
     "create": "Save note",
     "cancel": "Cancel",
     "close": "Close",
-    "dateRequired": "Please choose a date."
+    "dateRequired": "Please choose a date.",
+    "shareable": "Shareable",
+    "shareableHint": "Unticked, the note stays private. Ticked, the companions of a shared trip on that day see it too, and a public trip link can show it when you choose “Notes” there."
   },
   "delete": {
     "title": "Delete note?",

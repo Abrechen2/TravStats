@@ -47,10 +47,13 @@ import { useRailVisible } from "../hooks/useRailVisible";
 import { useRentalVisible } from "../hooks/useRentalVisible";
 import { useBusVisible } from "../hooks/useBusVisible";
 import { RentalBand, TransitCard, useRentalBands } from "../components/Trips/timelineTransit";
-import { listPlaces } from "../lib/api/places";
+import { useTripPlaceVisits } from "../hooks/useTripPlaceVisits";
+import { useTripNotes } from "../hooks/useTripNotes";
+import { TimelineNoteCard, TripNotesNotice } from "../components/Trips/TimelineNoteCard";
+import NoteEditorDialog from "../components/notes/NoteEditorDialog";
+import type { Note } from "../lib/api/notes";
 import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
 import { placeSubtitle } from "../lib/placeNames";
-import type { Place, PlaceVisit } from "../types/place";
 
 type TabKey = "overview" | "timeline" | "map" | "gallery" | "logistics" | "tours";
 const TABS: TabKey[] = ["overview", "timeline", "map", "gallery", "logistics", "tours"];
@@ -351,39 +354,9 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
   // Both the user's domain choice and the instance beta flag, via the one
   // hook that combines them — see hooks/usePlacesVisible.ts.
   const poiEnabled = usePlacesVisible();
-  const id = trip.id;
-  /** Places visited on THIS trip, with the visit that ties them to it. A place
-   *  is a first-class row of its own now, so the trip READS it rather than
-   *  owning it — which is what #177 asked for. */
-  const [placeVisits, setPlaceVisits] = useState<{ place: Place; visit: PlaceVisit }[]>([]);
-
-  // Places are their own domain, so they are fetched separately rather than
-  // embedded in the trip payload. A failure here must not blank the trip: the
-  // timeline simply shows no places, which is what it did before they existed.
-  useEffect(() => {
-    if (!id || !poiEnabled) {
-      setPlaceVisits([]);
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      try {
-        const places = await listPlaces({ tripId: id });
-        if (cancelled) return;
-        setPlaceVisits(
-          places.flatMap((place) =>
-            place.visits.filter((v) => v.tripId === id).map((visit) => ({ place, visit }))
-          )
-        );
-      } catch (err: unknown) {
-        logger.error({ err }, "TripDetailPage: failed to load place visits");
-        if (!cancelled) setPlaceVisits([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [id, poiEnabled]);
+  const placeVisits = useTripPlaceVisits(trip.id, poiEnabled);
+  const tripNotes = useTripNotes(trip.id);
+  const [editingNote, setEditingNote] = useState<Note | null>(null);
 
   const [adding, setAdding] = useState<null | "journal" | "stop">(null);
   const [editingJournal, setEditingJournal] = useState<TripJournalEntry | null>(null);
@@ -402,8 +375,8 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
     else addToast("error", t("trips:detail.journalEntryNotFound"));
   });
   const events = useMemo<TimelineEvent[]>(
-    () => buildTimelineEvents(trip, placeVisits),
-    [trip, placeVisits]
+    () => buildTimelineEvents(trip, placeVisits, tripNotes.notes),
+    [trip, placeVisits, tripNotes.notes]
   );
 
   // Cross-domain geo sanity (#6): a stay whose hotel sits far from every trip
@@ -467,6 +440,11 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
         entries={trip.journalEntries ?? []}
         onAddJournal={() => setAdding("journal")}
         onChanged={onChanged}
+      />
+      <TripNotesNotice
+        failed={tripNotes.failed}
+        truncated={tripNotes.notes?.truncated ?? false}
+        onRetry={tripNotes.reload}
       />
 
       {empty ? (
@@ -556,6 +534,9 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
                   />
                 )}
                 {ev.kind === "place-visit" && <PlaceVisitCard ev={ev} />}
+                {ev.kind === "note" && (
+                  <TimelineNoteCard ev={ev} onEdit={() => ev.mine && setEditingNote(ev.note)} />
+                )}
                 {ev.kind === "journal" && (
                   <JournalCard
                     ev={ev}
@@ -613,6 +594,13 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
           }}
         />
       )}
+      {editingNote && (
+        <NoteEditorDialog
+          note={editingNote}
+          onClose={() => setEditingNote(null)}
+          onSaved={tripNotes.reload}
+        />
+      )}
       {confirmDialog}
     </>
   );
@@ -636,6 +624,8 @@ function dotColor(ev: TimelineEvent): string {
       return "var(--domain-poi, #5ec2b2)";
     case "journal":
       return "#60a5fa";
+    case "note":
+      return "var(--text-muted)";
     case "lodging-checkin":
     case "lodging-checkout":
       return "var(--domain-lodging, #d4778f)";

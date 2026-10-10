@@ -355,7 +355,8 @@
         "route": "Genaue Route",
         "costs": "Kosten",
         "companions": "Mitreisende",
-        "photos": "Fotos (bis zu 12, ohne Ortsdaten)"
+        "photos": "Fotos (bis zu 12, ohne Ortsdaten)",
+        "notes": "Notizen (nur die als teilbar markierten, ohne Fotos und Koordinaten)"
       },
       "wrapped": {
         "owner": "Dein Vorname",
@@ -385,7 +386,11 @@
       "photos": "{{count}} Fotos",
       "incomplete": "nicht alle Einträge mit Preis",
       "none": "—",
-      "year": "Jahr {{year}}"
+      "year": "Jahr {{year}}",
+      "noNotes": "Keine teilbare Notiz an diesen Tagen",
+      "moreNotes": "weitere nicht gezeigt",
+      "notes_one": "{{count}} teilbare Notiz",
+      "notes_other": "{{count}} teilbare Notizen"
     },
     "section": {
       "title": "Öffentliche Links",

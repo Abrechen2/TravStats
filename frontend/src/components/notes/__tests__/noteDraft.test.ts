@@ -8,6 +8,7 @@ import {
   mergeSaved,
   newNoteDraft,
   notesByDay,
+  sameDraft,
 } from "../noteDraft";
 import { noteFixture } from "./noteFixture";
 
@@ -30,6 +31,17 @@ describe("draftOfNote — the server's own reading, never re-derived", () => {
       time: "00:30",
       zone: "Europe/Berlin",
     });
+  });
+
+  it("starts a new note private and reads a stored note's flag (forgejo#146)", () => {
+    expect(newNoteDraft("Europe/Berlin").shareable).toBe(false);
+    expect(draftOfNote(noteFixture()).shareable).toBe(false);
+    expect(draftOfNote(noteFixture({ visibility: "shareable" })).shareable).toBe(true);
+  });
+
+  it("counts a changed flag as an unsaved change", () => {
+    const draft = draftOfNote(noteFixture());
+    expect(sameDraft(draft, { ...draft, shareable: true })).toBe(false);
   });
 
   it("leaves the time empty for a note dated to the day", () => {
@@ -56,7 +68,14 @@ describe("draftMoment", () => {
 });
 
 describe("draftProblems", () => {
-  const base = { body: "x", date: "2026-09-28", time: "", zone: "Europe/Berlin", placeName: "" };
+  const base = {
+    body: "x",
+    date: "2026-09-28",
+    time: "",
+    zone: "Europe/Berlin",
+    placeName: "",
+    shareable: false,
+  };
 
   it("passes a complete draft", () => {
     expect(draftProblems(base)).toEqual({});

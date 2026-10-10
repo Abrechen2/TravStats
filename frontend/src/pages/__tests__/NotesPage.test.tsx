@@ -114,9 +114,29 @@ describe("NotesPage", () => {
       body: "Abendrot",
       moment: { local: "2026-09-28T00:30", zone: "Europe/Berlin" },
       placeName: null,
+      visibility: "private",
     });
     expect(await screen.findByText("Abendrot")).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("writes a note shareable only when the box is ticked, and says so on the card (forgejo#146)", async () => {
+    api.list.mockResolvedValue(page([]));
+    api.create.mockImplementation(async () =>
+      noteFixture({ id: "new", body: "Abendrot", visibility: "shareable" })
+    );
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Neue Notiz" }));
+    fireEvent.change(screen.getByLabelText("Notiz"), { target: { value: "Abendrot" } });
+    const box = screen.getByRole("checkbox", { name: "Teilbar" }) as HTMLInputElement;
+    expect(box.checked).toBe(false);
+    fireEvent.click(box);
+    fireEvent.click(screen.getByRole("button", { name: "Notiz speichern" }));
+
+    await waitFor(() => expect(api.create).toHaveBeenCalled());
+    expect(api.create.mock.calls[0][0]).toMatchObject({ visibility: "shareable" });
+    const card = await screen.findByTestId("note-card");
+    expect(card.textContent).toContain("Teilbar");
   });
 
   it("refuses an empty note in the form, before any request", async () => {

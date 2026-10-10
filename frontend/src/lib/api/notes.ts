@@ -13,6 +13,13 @@ export interface NotePhoto {
   sizeBytes: number;
 }
 
+/**
+ * Who may read a note besides its owner (forgejo#146): `private` — nobody;
+ * `shareable` — the other members of a shared trip on its days, and a public
+ * trip link that offers notes.
+ */
+export type NoteVisibility = "private" | "shareable";
+
 export interface Note {
   id: string;
   body: string;
@@ -23,6 +30,7 @@ export interface Note {
   lat: number | null;
   lon: number | null;
   photo: NotePhoto | null;
+  visibility: NoteVisibility;
   createdAt: string;
   updatedAt: string;
   times: { occurredAt: TimeValue; day: LocalDateValue };
@@ -38,6 +46,26 @@ export interface NoteWrite {
   body: string;
   moment: NoteMoment;
   placeName: string | null;
+  visibility: NoteVisibility;
+}
+
+/** Another member's shareable note on a shared trip — read-only, no photo, no position. */
+export interface MemberNote {
+  id: string;
+  author: { id: string; username: string; displayName: string };
+  body: string;
+  placeName: string | null;
+  times: Note["times"];
+}
+
+/** The notes on a trip's days (`GET /notes/trip/:tripId`). */
+export interface TripNotes {
+  /** Null when the trip has no first or last day — no note can be placed then. */
+  span: { start: LocalDateValue; end: LocalDateValue } | null;
+  notes: Note[];
+  memberNotes: MemberNote[];
+  /** True when a list was cut at the server's bound. */
+  truncated: boolean;
 }
 
 interface Envelope<T> {
@@ -60,7 +88,12 @@ export function momentBody(moment: NoteMoment): {
 }
 
 function writeBody(input: NoteWrite): Record<string, unknown> {
-  return { body: input.body, placeName: input.placeName, ...momentBody(input.moment) };
+  return {
+    body: input.body,
+    placeName: input.placeName,
+    visibility: input.visibility,
+    ...momentBody(input.moment),
+  };
 }
 
 /** Where the browser loads the photo from (cross-origin in dev, same-origin in production). */
@@ -78,6 +111,12 @@ export const notesApi = {
       params: { limit, offset },
     });
     return { notes: data.data, total: data.meta.total };
+  },
+
+  /** The caller's notes on a trip's days, and the other members' shareable ones. */
+  forTrip: async (tripId: string): Promise<TripNotes> => {
+    const { data } = await api.get<Envelope<TripNotes>>(`/notes/trip/${tripId}`);
+    return data.data;
   },
 
   create: async (input: NoteWrite): Promise<Note> => {

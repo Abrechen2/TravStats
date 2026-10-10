@@ -11,7 +11,18 @@ export type ShareLinkKind = "flight" | "trip" | "wrapped";
 /** The allow-list per kind — the only things an owner can choose to show. */
 export const SHARE_LINK_FIELDS = {
   flight: ["owner", "flightNumber", "route", "schedule", "progress", "aircraft", "lastPosition"],
-  trip: ["owner", "name", "dates", "totals", "countries", "route", "costs", "companions", "photos"],
+  trip: [
+    "owner",
+    "name",
+    "dates",
+    "totals",
+    "countries",
+    "route",
+    "costs",
+    "companions",
+    "photos",
+    "notes",
+  ],
   wrapped: ["owner", "totals", "topAirline", "topRoute"],
 } as const satisfies Record<ShareLinkKind, readonly string[]>;
 
@@ -86,6 +97,11 @@ export interface TripShareView {
   costs?: { byCurrency: Array<{ currency: string; amount: number }>; complete: boolean } | null;
   companions?: string[];
   photos?: { count: number };
+  /** The owner's notes marked shareable on the trip's days (forgejo#146) — never a private one. */
+  notes?: {
+    items: Array<{ body: string; placeName: string | null; at: TimeValue; day: LocalDateValue }>;
+    truncated: boolean;
+  };
 }
 
 export interface WrappedShareView {

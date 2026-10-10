@@ -13,6 +13,8 @@ export interface NoteDraft {
   time: string;
   zone: string;
   placeName: string;
+  /** Private unless ticked (forgejo#146). */
+  shareable: boolean;
 }
 
 /**
@@ -29,6 +31,7 @@ export function newNoteDraft(zone: string, at: Date = now()): NoteDraft {
     time: local.slice(11, 16),
     zone,
     placeName: "",
+    shareable: false,
   };
 }
 
@@ -41,6 +44,7 @@ export function draftOfNote(note: Note): NoteDraft {
     time: note.occurredPrecision === "day" ? "" : local.slice(11, 16),
     zone: note.occurredZone,
     placeName: note.placeName ?? "",
+    shareable: note.visibility === "shareable",
   };
 }
 
@@ -75,7 +79,8 @@ export function sameDraft(a: NoteDraft, b: NoteDraft): boolean {
     a.date === b.date &&
     a.time === b.time &&
     a.zone === b.zone &&
-    a.placeName === b.placeName
+    a.placeName === b.placeName &&
+    a.shareable === b.shareable
   );
 }
 

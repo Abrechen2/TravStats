@@ -355,7 +355,8 @@
         "route": "Exact route",
         "costs": "Costs",
         "companions": "Companions",
-        "photos": "Photos (up to 12, without location data)"
+        "photos": "Photos (up to 12, without location data)",
+        "notes": "Notes (only those marked shareable, without photos or coordinates)"
       },
       "wrapped": {
         "owner": "Your first name",
@@ -385,7 +386,11 @@
       "photos": "{{count}} photos",
       "incomplete": "not every entry has a price",
       "none": "—",
-      "year": "Year {{year}}"
+      "year": "Year {{year}}",
+      "noNotes": "No shareable note on these days",
+      "moreNotes": "more not shown",
+      "notes_one": "{{count}} shareable note",
+      "notes_other": "{{count}} shareable notes"
     },
     "section": {
       "title": "Public links",

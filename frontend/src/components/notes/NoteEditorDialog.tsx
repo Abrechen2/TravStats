@@ -107,6 +107,7 @@ export default function NoteEditorDialog({
         body: draft.body.trim(),
         moment: draftMoment(draft),
         placeName: draft.placeName.trim() === "" ? null : draft.placeName.trim(),
+        visibility: draft.shareable ? ("shareable" as const) : ("private" as const),
       };
       saved = current ? await notesApi.update(current.id, input) : await notesApi.create(input);
     } catch (err: unknown) {
@@ -239,6 +240,22 @@ export default function NoteEditorDialog({
             onChange={(e) => set({ placeName: e.target.value })}
           />
         </Field>
+
+        {/* A checkbox, not a switch: nothing happens until the note is saved. */}
+        <div className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
+          <label className="inline-flex items-center" style={{ gap: "var(--ts-space-sm)" }}>
+            <input
+              type="checkbox"
+              checked={draft.shareable}
+              aria-describedby={`${id}-shareable-hint`}
+              onChange={(e) => set({ shareable: e.target.checked })}
+            />
+            {t("notes:editor.shareable")}
+          </label>
+          <span id={`${id}-shareable-hint`} className="t-caption">
+            {t("notes:editor.shareableHint")}
+          </span>
+        </div>
 
         {/* No `htmlFor`: the visible control is the button below, and the file
             input it opens stays out of the tab order so it is not a second,

@@ -196,7 +196,15 @@
       "seat": "Sitzplatz",
       "itinerary": "Etappen",
       "atSea": "Seetag",
-      "openJournal": "Ganz öffnen"
+      "openJournal": "Ganz öffnen",
+      "note": {
+        "by": "von {{name}}",
+        "allNotes": "Alle Notizen",
+        "memberHint": "Eine als teilbar markierte Notiz aus dieser geteilten Reise. Ändern kann sie nur, wer sie geschrieben hat.",
+        "loadFailed": "Die Notizen zu dieser Reise konnten nicht geladen werden.",
+        "retry": "Erneut versuchen",
+        "truncated": "Nicht alle Notizen dieser Reise werden gezeigt – es sind mehr als 200."
+      }
     },
     "stopNotFound": "Diesen Halt gibt es in dieser Reise nicht mehr.",
     "journalEntryNotFound": "Diesen Tagebucheintrag gibt es in dieser Reise nicht mehr.",

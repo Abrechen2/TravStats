@@ -97,6 +97,15 @@ export default function ShareLinkPreview({ view }: { view: ShareView }): JSX.Ele
     if (trip.photos) {
       rows.push([label("trip", "photos"), t(`${NS}.view.photos`, { count: trip.photos.count })]);
     }
+    if (trip.notes) {
+      rows.push([
+        label("trip", "notes"),
+        trip.notes.items.length === 0
+          ? t(`${NS}.view.noNotes`)
+          : t(`${NS}.view.notes`, { count: trip.notes.items.length }) +
+            (trip.notes.truncated ? ` (${t(`${NS}.view.moreNotes`)})` : ""),
+      ]);
+    }
   } else {
     const w = view.wrapped;
     rows.push([t(`${NS}.view.year`, { year: w.year }), ""]);

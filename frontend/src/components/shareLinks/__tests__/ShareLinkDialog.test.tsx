@@ -107,6 +107,46 @@ describe("ShareLinkDialog", () => {
     expect(await screen.findByText("sharing:links.errors.landed")).toBeTruthy();
   });
 
+  it("offers a trip's shareable notes as a field and previews how many travel (forgejo#146)", async () => {
+    api.preview.mockResolvedValue({
+      view: {
+        kind: "trip",
+        trip: {
+          notes: {
+            items: [
+              {
+                body: "Sunset",
+                placeName: null,
+                at: {
+                  utc: "2030-06-04T23:30:00.000Z",
+                  zone: "America/New_York",
+                  offset: "-04:00",
+                  local: "2030-06-04T19:30:00",
+                  precision: "minute",
+                },
+                day: { date: "2030-06-04", zone: "America/New_York", precision: "day" },
+              },
+            ],
+            truncated: true,
+          },
+        },
+      },
+      photosOmitted: null,
+    });
+    renderDialog("trip");
+    const box = await screen.findByRole("checkbox", { name: "sharing:links.fields.trip.notes" });
+    expect((box as HTMLInputElement).checked).toBe(false);
+    await userEvent.click(box);
+    await waitFor(() =>
+      expect(api.preview).toHaveBeenLastCalledWith(
+        expect.objectContaining({ fields: expect.arrayContaining(["notes"]) })
+      )
+    );
+    const preview = await screen.findByTestId("share-preview");
+    expect(preview.textContent).toContain("sharing:links.view.notes");
+    expect(preview.textContent).toContain("sharing:links.view.moreNotes");
+  });
+
   it("tells the owner which photos stay out of a trip link, and why", async () => {
     api.preview.mockResolvedValue({
       view: { kind: "trip", trip: { photos: { count: 12 } } },

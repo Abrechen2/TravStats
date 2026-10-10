@@ -40,6 +40,12 @@ vi.mock("../../components/documents/DocumentsSection", () => ({ default: () => n
 vi.mock("../../lib/api", () => ({
   tripsApi: { getById: (...args: unknown[]) => getByIdMock(...args) },
 }));
+// Notes on the trip's days (forgejo#146) have their own suite
+// (`tripNotesTimeline.test.tsx`); answered empty so no request escapes.
+vi.mock("../../hooks/useTripNotes", () => ({
+  useTripNotes: () => ({ notes: null, failed: false, reload: () => {} }),
+}));
+
 vi.mock("../../lib/api/places", () => ({ listPlaces: vi.fn().mockResolvedValue([]) }));
 vi.mock("../../lib/api/tours", () => ({
   toursApi: { list: vi.fn().mockResolvedValue([]), create: vi.fn(), remove: vi.fn() },

@@ -78,6 +78,8 @@ export interface SortableEvent {
 function dayRank(ev: SortableEvent): number {
   if (ev.kind === "journal") return 3; // always the day's last word — #175
   if (hasExplicitTime(ev.when)) return 1;
+  // A note dated to the day only is written about the day, like a diary entry.
+  if (ev.kind === "note") return 3;
   if (ev.kind === "lodging-checkout") return 0; // you leave before you travel
   if (ev.kind === "lodging-checkin") return 2; // you arrive before you settle
   return 1;

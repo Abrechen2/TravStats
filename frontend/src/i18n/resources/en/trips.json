@@ -196,7 +196,15 @@
       "seat": "Seat",
       "itinerary": "Itinerary",
       "atSea": "Day at sea",
-      "openJournal": "Open in full"
+      "openJournal": "Open in full",
+      "note": {
+        "by": "by {{name}}",
+        "allNotes": "All notes",
+        "memberHint": "A note marked shareable on this shared trip. Only the person who wrote it can change it.",
+        "loadFailed": "The notes for this trip could not be loaded.",
+        "retry": "Try again",
+        "truncated": "Not every note of this trip is shown – there are more than 200."
+      }
     },
     "stopNotFound": "This stop no longer exists on this trip.",
     "journalEntryNotFound": "This journal entry no longer exists on this trip.",

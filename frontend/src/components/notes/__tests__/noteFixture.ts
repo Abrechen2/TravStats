@@ -12,6 +12,7 @@ export function noteFixture(over: Partial<Note> = {}): Note {
     lat: null,
     lon: null,
     photo: null,
+    visibility: "private",
     createdAt: "2026-09-27T22:31:00.000Z",
     updatedAt: "2026-09-27T22:31:00.000Z",
     times: {

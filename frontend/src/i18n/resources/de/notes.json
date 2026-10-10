@@ -15,7 +15,8 @@
     "edit": "Notiz bearbeiten",
     "delete": "Notiz löschen",
     "photoAlt": "Foto zur Notiz vom {{date}}",
-    "writtenIn": "Geschrieben in {{zone}}"
+    "writtenIn": "Geschrieben in {{zone}}",
+    "shareable": "Teilbar"
   },
   "editor": {
     "createTitle": "Neue Notiz",
@@ -42,7 +43,9 @@
     "create": "Notiz speichern",
     "cancel": "Abbrechen",
     "close": "Schließen",
-    "dateRequired": "Bitte wähle ein Datum."
+    "dateRequired": "Bitte wähle ein Datum.",
+    "shareable": "Teilbar",
+    "shareableHint": "Ohne Haken bleibt die Notiz privat. Mit Haken sehen sie auch die Mitreisenden einer geteilten Reise an diesem Tag, und ein öffentlicher Reise-Link kann sie zeigen, wenn du dort „Notizen“ auswählst."
   },
   "delete": {
     "title": "Notiz löschen?",
