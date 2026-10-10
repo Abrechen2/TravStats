@@ -34,12 +34,14 @@ async function resolveProof(
   const rule = { requirementType, requirement: 1 };
   const family = await loadBadgeFamily(userId, rule, coreArraysFor(requirementType));
   const witness = family
-    ? await findWitness(family.rows, family.progress)
-    : { rows: [], contributions: [], progress: 0 };
-  const entries = witness.rows.map((row, i) => ({
-    ...family!.entryOf(row),
-    contribution: witness.contributions[i],
-  }));
+    ? await findWitness(family.rows, family.progress, { shares: family.shares })
+    : ({ exhausted: false, rows: [], contributions: [], progress: 0 } as const);
+  const entries = witness.exhausted
+    ? []
+    : witness.rows.map((row, i) => ({
+        ...family!.entryOf(row),
+        contribution: witness.contributions[i],
+      }));
   const response = domainSumEvidence({
     key,
     unit: "progress",
@@ -47,6 +49,9 @@ async function resolveProof(
     page,
     entries,
     value: witness.progress,
+    // Too many entries to split within the request's budget: the figure is
+    // the badge's own, and it says that no entry is named for it.
+    unattributed: witness.exhausted ? [{ count: witness.progress, reason: "notPerEntry" }] : [],
   });
   return { ...response, measure: { ...response.measure, label: LABEL } };
 }

@@ -11,7 +11,7 @@ import {
 } from "../entryMappersDomains";
 import type { FlightTimeSemantics } from "../../../utils/timezone";
 import type { EvidenceEntry } from "../../../schemas/evidence";
-import type { BadgeFamily, BadgeRule } from "./badgeFamily";
+import { sharesByFold, type BadgeFamily, type BadgeRule } from "./badgeFamily";
 
 /**
  * The badges `checkAchievement` answers (flights, the planner badges, cruises,
@@ -177,6 +177,55 @@ const PLACE_RULES = [
   "place_southern_lat",
 ];
 
+/**
+ * Badges whose progress is a plain count over their rows — each row adds what
+ * it adds alone, so the witness reads per-row shares instead of searching
+ * (`witness.ts`). A wrong entry here costs nothing but speed: the witness
+ * checks that the shares add up to the progress before trusting them.
+ */
+const ADDITIVE_RULES = new Set([
+  "night_flights",
+  "weekend_flights",
+  "island_flights",
+  "high_altitude_airports",
+  "pilgrim_airports",
+  "wide_body_count",
+  "turbo_prop_count",
+  "jumbo_count",
+  "lowcost_count",
+  "first_class_flights",
+  "red_eye_flights",
+  "early_morning_flights",
+  "notes_count",
+  "delayed_flights",
+  "birthday_flights",
+  "nye_airborne",
+  "leap_day_flights",
+  "icao_day_flights",
+  "wright_day_flights",
+  "may_fourth_flights",
+  "pi_day_flights",
+  "pi_precision_flights",
+  "halloween_flights",
+  "friday13_flights",
+  "xmas_flights",
+  "palindrome_day_flights",
+  "flight_number_666",
+  "flight_number_777_on_777",
+  "special_sightseeing_count",
+  "special_zerog_count",
+  "special_eclipse_count",
+  "special_rocket_count",
+  "scheduled_count",
+  "cancelled_count",
+  "duplicated_count",
+  "cruise_cabin_inside_count",
+  "lodging_rated_stays",
+  "lodging_endured_stays",
+  "place_rated_visits",
+  "place_trip_visits",
+]);
+
 /** Which rows each core badge is measured over. */
 export function coreArraysFor(requirementType: string): CoreArray[] | null {
   if (requirementType.startsWith("curated_list_ticked:")) return ["places"];
@@ -299,5 +348,11 @@ export async function coreFamily(
   const lean = await measure(rows, EMPTY);
   const full = await measure(rows, {});
   const context = lean === full ? EMPTY : {};
-  return { rows, entryOf, progress: (subset) => measure(subset, context) };
+  const progress = (subset: readonly Row[]) => measure(subset, context);
+  return {
+    rows,
+    entryOf,
+    progress,
+    shares: ADDITIVE_RULES.has(rule.requirementType) ? sharesByFold(progress) : null,
+  };
 }
