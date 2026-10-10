@@ -331,6 +331,31 @@ describe("Rail journeys API", () => {
   });
 
   describe("single journey", () => {
+    // forgejo#161: the four booking facts the import review confirms are all
+    // still there when the saved ride is read back — none is dropped on write.
+    it("keeps operator, booking reference, class and total of an imported ride", async () => {
+      const created = await create({
+        ...base,
+        operator: "Deutsche Bahn",
+        bookingReference: "QARAIL20261002",
+        travelClass: "second",
+        price: 59.9,
+        currency: "EUR",
+      });
+      expect(created.status).toBe(201);
+      const res = await request(app)
+        .get(`/api/v1/rail/${created.body.data.id}`)
+        .set("Cookie", cookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data).toMatchObject({
+        operator: "Deutsche Bahn",
+        bookingReference: "QARAIL20261002",
+        travelClass: "second",
+        price: 59.9,
+        currency: "EUR",
+      });
+    });
+
     it("answers 404 for a stranger's journey on read, update and delete", async () => {
       const foreign = await create(base, otherCookie);
       const id = foreign.body.data.id;

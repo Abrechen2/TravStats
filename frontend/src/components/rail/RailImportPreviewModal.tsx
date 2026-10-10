@@ -16,6 +16,13 @@ import {
   type RailImportRow,
 } from "./railImportModel";
 import type { RailStationDraft } from "./RailStationField";
+import { RailImportBookingFields } from "./RailImportBookingFields";
+import {
+  applyBookingDraft,
+  bookingDraftFrom,
+  draftProblems,
+  type RailBookingDraft,
+} from "./railImportBookingDraft";
 
 interface Props {
   booking: RailImportBooking;
@@ -45,6 +52,7 @@ export function RailImportPreviewModal({ booking, onCancel, onSaved }: Props): J
     booking.legs.map(() => ({ kind: "pending" }))
   );
   const [saving, setSaving] = useState(false);
+  const [draft, setDraft] = useState<RailBookingDraft>(() => bookingDraftFrom(booking));
 
   const update = (index: number, patch: Partial<RailImportRow>): void =>
     setRows((prev) => prev.map((r, i) => (i === index ? { ...r, ...patch } : r)));
@@ -53,10 +61,13 @@ export function RailImportPreviewModal({ booking, onCancel, onSaved }: Props): J
     .map((row, index) => ({ row, index }))
     .filter(({ row, index }) => row.selected && states[index].kind !== "saved");
   const blocked = toSave.some(({ row }) => !isRowReady(row));
+  const draftBlocked = draftProblems(draft).length > 0;
   const totalIndex = totalGoesTo(rows);
 
   const save = async (): Promise<void> => {
     setSaving(true);
+    // The booking-wide facts as the user confirmed them, not as they were read.
+    const confirmed = applyBookingDraft(booking, draft);
     const next = [...states];
     // The legs bind into one booking in travel order: each continues the one
     // before it — a leg saved now, or one already in the logbook.
@@ -74,7 +85,7 @@ export function RailImportPreviewModal({ booking, onCancel, onSaved }: Props): J
         continue;
       }
       try {
-        const input = toImportInput(booking, row, index === totalIndex);
+        const input = toImportInput(confirmed, row, index === totalIndex);
         const result = await railApi.create(
           previousId ? { ...input, connectsFrom: previousId } : input
         );
@@ -113,7 +124,7 @@ export function RailImportPreviewModal({ booking, onCancel, onSaved }: Props): J
           <button
             type="button"
             onClick={(): void => void save()}
-            disabled={saving || toSave.length === 0 || blocked}
+            disabled={saving || toSave.length === 0 || blocked || draftBlocked}
             className="rounded-md bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base) disabled:opacity-50"
           >
             {saving ? t("rail:form.saving") : t("rail:import.save", { count: toSave.length })}
@@ -121,7 +132,13 @@ export function RailImportPreviewModal({ booking, onCancel, onSaved }: Props): J
         </>
       }
     >
-      <BookingSummary booking={booking} totalIndex={totalIndex} t={t} />
+      <RailImportBookingFields
+        booking={booking}
+        draft={draft}
+        onChange={(patch): void => setDraft((prev) => ({ ...prev, ...patch }))}
+        totalNotWritten={totalIndex < 0}
+        disabled={saving}
+      />
       <ol className="flex flex-col gap-3">
         {rows.map((row, index) => (
           <LegRow
@@ -145,42 +162,6 @@ export function RailImportPreviewModal({ booking, onCancel, onSaved }: Props): J
 }
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
-
-function BookingSummary({
-  booking,
-  totalIndex,
-  t,
-}: {
-  booking: RailImportBooking;
-  totalIndex: number;
-  t: Translate;
-}): JSX.Element {
-  return (
-    <dl className="mb-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm" data-testid="rail-import-booking">
-      <dt className="text-(--text-muted)">{t("rail:form.operator")}</dt>
-      <dd>{booking.operator ?? "—"}</dd>
-      <dt className="text-(--text-muted)">{t("rail:form.bookingReference")}</dt>
-      <dd>{booking.bookingReference ?? "—"}</dd>
-      <dt className="text-(--text-muted)">{t("rail:form.class")}</dt>
-      <dd>{booking.travelClass ? t(`rail:class.${booking.travelClass}`) : "—"}</dd>
-      {booking.tariff && (
-        <>
-          <dt className="text-(--text-muted)">{t("rail:import.tariff")}</dt>
-          <dd>{booking.tariff}</dd>
-        </>
-      )}
-      <dt className="text-(--text-muted)">{t("rail:import.total")}</dt>
-      <dd>
-        {booking.price !== null
-          ? `${booking.price.toFixed(2).replace(".", ",")} ${booking.currency ?? ""}`
-          : "—"}
-        {booking.price !== null && totalIndex < 0 && (
-          <span className="t-caption block">{t("rail:import.totalNotWritten")}</span>
-        )}
-      </dd>
-    </dl>
-  );
-}
 
 function LegRow({
   row,

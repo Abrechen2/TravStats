@@ -399,6 +399,17 @@
           "noSeat": "The reservation names neither coach nor seat — nothing to record."
         }
       }
+    },
+    "booking": {
+      "appliesToAll": "These booking details apply to every ride below. The total is recorded on the first ride saved only, so it is not counted twice.",
+      "incomplete": "Not every booking detail was recognised in the document. Fill it in here or leave it empty — nothing is made up.",
+      "notRecognised": "Not recognised in the document",
+      "edited": "Changed by you",
+      "noClass": "Not stated",
+      "problem": {
+        "price": "The total is not an amount. Write it as e.g. 59.90, or leave the field empty.",
+        "currency": "The total needs a currency (three letters, e.g. EUR)."
+      }
     }
   },
   "summary": {

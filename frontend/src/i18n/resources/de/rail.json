@@ -399,6 +399,17 @@
           "noSeat": "Die Reservierung nennt weder Wagen noch Platz — nichts einzutragen."
         }
       }
+    },
+    "booking": {
+      "appliesToAll": "Diese Buchungsangaben gelten für alle Fahrten unten. Der Gesamtpreis wird nur bei der ersten gespeicherten Fahrt eingetragen, damit er nicht mehrfach zählt.",
+      "incomplete": "Nicht alle Buchungsangaben wurden im Dokument erkannt. Ergänze sie hier oder lass sie leer — es wird nichts erfunden.",
+      "notRecognised": "Nicht im Dokument erkannt",
+      "edited": "Von dir geändert",
+      "noClass": "Keine Angabe",
+      "problem": {
+        "price": "Der Gesamtpreis ist kein Betrag. Schreib ihn z. B. als 59,90 oder lass das Feld leer.",
+        "currency": "Zum Gesamtpreis fehlt die Währung (drei Buchstaben, z. B. EUR)."
+      }
     }
   },
   "summary": {

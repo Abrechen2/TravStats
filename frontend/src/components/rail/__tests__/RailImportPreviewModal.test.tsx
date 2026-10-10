@@ -60,7 +60,7 @@ describe("RailImportPreviewModal", () => {
     const onSaved = vi.fn();
     render(<RailImportPreviewModal booking={booking()} onCancel={vi.fn()} onSaved={onSaved} />);
 
-    expect(screen.getByTestId("rail-import-booking")).toHaveTextContent("210987654321");
+    expect(screen.getByLabelText("rail:form.bookingReference")).toHaveValue("210987654321");
     fireEvent.click(saveButton());
 
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(2));
@@ -86,7 +86,7 @@ describe("RailImportPreviewModal", () => {
       />
     );
 
-    expect(screen.getByTestId("rail-import-booking")).toHaveTextContent("Deutsche Bahn");
+    expect(screen.getByLabelText("rail:form.operator")).toHaveValue("Deutsche Bahn");
     fireEvent.click(saveButton());
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(create.mock.calls[0][0]).toMatchObject({ operator: "Deutsche Bahn" });
@@ -136,6 +136,80 @@ describe("RailImportPreviewModal", () => {
     expect(create).toHaveBeenCalledTimes(1);
     // The total was probably recorded with the logged leg; it is not written twice.
     expect(create.mock.calls[0][0]).toMatchObject({ connectsFrom: "old-1", price: null });
+  });
+
+  // forgejo#161: a fact the document did not carry is marked as such, can be
+  // filled in before saving, and is never made up.
+  it("marks unread booking facts, lets them be filled in, and writes what was confirmed", async () => {
+    create.mockResolvedValue({ journey: { id: "new-1" }, geometry: null });
+    const onSaved = vi.fn();
+    render(
+      <RailImportPreviewModal
+        booking={booking({
+          operator: null,
+          bookingReference: null,
+          travelClass: null,
+          price: null,
+          currency: null,
+          legs: [leg()],
+        })}
+        onCancel={vi.fn()}
+        onSaved={onSaved}
+      />
+    );
+
+    expect(screen.getByTestId("rail-import-incomplete")).toBeInTheDocument();
+    for (const f of ["operator", "bookingReference", "travelClass", "price"]) {
+      expect(screen.getByTestId(`rail-import-unread-${f}`)).toBeInTheDocument();
+    }
+
+    fireEvent.change(screen.getByLabelText("rail:form.operator"), {
+      target: { value: "Deutsche Bahn" },
+    });
+    fireEvent.change(screen.getByLabelText("rail:form.bookingReference"), {
+      target: { value: "QARAIL20261002" },
+    });
+    fireEvent.change(screen.getByLabelText("rail:form.class"), { target: { value: "second" } });
+    fireEvent.change(screen.getByLabelText("rail:import.total"), { target: { value: "59,90" } });
+    // A total without its currency is not saved as some currency.
+    expect(screen.getByTestId("rail-import-problem-currency")).toBeInTheDocument();
+    expect(saveButton()).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("rail:form.currency"), { target: { value: "eur" } });
+    expect(screen.getByTestId("rail-import-edited-operator")).toBeInTheDocument();
+
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(1));
+    expect(create.mock.calls[0][0]).toMatchObject({
+      operator: "Deutsche Bahn",
+      bookingReference: "QARAIL20261002",
+      travelClass: "second",
+      price: 59.9,
+      currency: "EUR",
+    });
+  });
+
+  it("corrects a misread total and leaves an emptied field empty", async () => {
+    create.mockResolvedValue({ journey: { id: "new-1" }, geometry: null });
+    const onSaved = vi.fn();
+    render(
+      <RailImportPreviewModal
+        booking={booking({ operator: "Deutsche Bahn", legs: [leg()] })}
+        onCancel={vi.fn()}
+        onSaved={onSaved}
+      />
+    );
+
+    expect(screen.queryByTestId("rail-import-incomplete")).not.toBeInTheDocument();
+    const total = screen.getByLabelText("rail:import.total");
+    fireEvent.change(total, { target: { value: "12 Euro" } });
+    expect(screen.getByTestId("rail-import-problem-price")).toBeInTheDocument();
+    expect(saveButton()).toBeDisabled();
+    fireEvent.change(total, { target: { value: "108,45" } });
+    fireEvent.change(screen.getByLabelText("rail:form.class"), { target: { value: "" } });
+
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(create.mock.calls[0][0]).toMatchObject({ price: 108.45, travelClass: null });
   });
 
   it("says why a refused leg was refused, stays open, and retries only that leg", async () => {
