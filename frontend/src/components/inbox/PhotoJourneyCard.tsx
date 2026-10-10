@@ -2,13 +2,14 @@ import { useState } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
-import { photoJourneyPreviewUrl } from "../../lib/api/photoJourneys";
 import type { PhotoJourney } from "../../types/photoJourney";
 import Button from "../ui/Button";
 import { Field, Input } from "../ui/Field";
 
 import type { AcceptInput } from "./acceptPhotoJourney";
+import PhotoJourneyPreviewStrip from "./PhotoJourneyPreviewStrip";
 import { photoJourneyPlan } from "./photoJourneyPlan";
+import { photoJourneySpan } from "./photoJourneySpan";
 
 /**
  * One suggested journey: when, where, how many photographs — and the two
@@ -39,15 +40,6 @@ import { photoJourneyPlan } from "./photoJourneyPlan";
  * one, and accept waits until it is given.
  */
 
-/**
- * How many thumbnails a row may draw.
- *
- * The scan stores three (`PREVIEW_ASSETS` in `services/photoJourneys/scan.ts`)
- * and the proxy accepts an index up to 63. This cap is what keeps a future
- * bump on the server from silently turning one row into a contact sheet.
- */
-const MAX_PREVIEW_THUMBS = 4;
-
 interface PhotoJourneyCardProps {
   journey: PhotoJourney;
   /** Localized place line, built by the tab so both card and message agree. */
@@ -72,10 +64,6 @@ export default function PhotoJourneyCard({
   // The lookup named nothing and no own place takes the visit: the reader names it.
   const needsName = plan === "visitInTrip" && !journey.suggestedName;
   const nameMissing = needsName && name.trim().length === 0;
-
-  const thumbIndexes = journey.previewAssetIds
-    .slice(0, MAX_PREVIEW_THUMBS)
-    .map((_, index) => index);
 
   const facts = [
     t("dataQuality:inbox.photoJourneys.facts.photos", { photos: journey.photoCount }),
@@ -106,7 +94,7 @@ export default function PhotoJourneyCard({
           {t(`dataQuality:inbox.photoJourneys.kind.${journey.kind}`)}
         </span>
         <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
-          {spanOf(journey, format)}
+          {photoJourneySpan(journey, format)}
         </span>
       </div>
 
@@ -117,22 +105,7 @@ export default function PhotoJourneyCard({
         ))}
       </p>
 
-      {thumbIndexes.length > 0 && (
-        <div className="mt-3 flex gap-2">
-          {thumbIndexes.map((index) => (
-            <img
-              key={index}
-              src={photoJourneyPreviewUrl(journey.id, index)}
-              alt={t("dataQuality:inbox.photoJourneys.thumbAlt", { position: index + 1 })}
-              loading="lazy"
-              width={72}
-              height={72}
-              className="rounded-[var(--ts-radius-tile)] object-cover"
-              style={{ width: 72, height: 72, background: "var(--ts-surface2)" }}
-            />
-          ))}
-        </div>
-      )}
+      <PhotoJourneyPreviewStrip journey={journey} />
 
       {needsName && (
         <div className="mt-3">
@@ -173,22 +146,4 @@ export default function PhotoJourneyCard({
       </div>
     </div>
   );
-}
-
-/**
- * When, on the clock of the place where the photos were taken (ADR 0002 D4).
- * A visit finding is an afternoon, so it shows the day and the two clocks;
- * the other kinds show their days. The instants are used only against a
- * server that does not send the local readings yet.
- */
-function spanOf(journey: PhotoJourney, format: ReturnType<typeof useDisplayFormat>): string {
-  if (journey.kind === "visit" && journey.startLocal && journey.endLocal) {
-    const clocks = `${format.localClock(journey.startLocal)} – ${format.localClock(journey.endLocal)}`;
-    return `${format.localDate(journey.startLocal)} · ${clocks}`;
-  }
-  const first = journey.startDay ?? journey.startDate;
-  const last = journey.endDay ?? journey.endDate;
-  return first.slice(0, 10) === last.slice(0, 10)
-    ? format.date(first)
-    : `${format.date(first)} – ${format.date(last)}`;
 }

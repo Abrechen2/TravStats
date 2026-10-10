@@ -38,6 +38,7 @@ vi.mock("../../../lib/api/photoJourneys", async (importOriginal) => {
       scan: vi.fn(),
       accept: vi.fn(),
       dismiss: vi.fn(),
+      review: vi.fn(),
     },
   };
 });
@@ -259,11 +260,23 @@ describe("PhotoJourneysTab", () => {
     );
   });
 
-  // forgejo#211: the server creates the place and the visit inside the PATCH,
-  // so the web sends one request and makes nothing through the normal
-  // endpoints — a half-made place with no visit on it cannot happen here.
-  it("accepting a visit finding sends ONE accept and creates nothing on the client", async () => {
-    vi.mocked(photoJourneysApi.accept).mockResolvedValue(null);
+  // forgejo#211: the server creates the place and the visit itself, so the
+  // web sends one request and makes nothing through the normal endpoints — a
+  // half-made place with no visit on it cannot happen here. Since O5 a visit
+  // finding is answered through the batch review, even alone.
+  it("accepting a visit finding sends ONE batch item and creates nothing on the client", async () => {
+    vi.mocked(photoJourneysApi.review).mockResolvedValue({
+      results: [
+        {
+          id: "journey-1",
+          action: "accept",
+          outcome: "accepted",
+          created: { placeId: "p", placeVisitId: "v", placeCreated: true, visitCreated: true },
+          photos: null,
+        },
+      ],
+      summary: { accepted: 1, dismissed: 0, failed: 0 },
+    });
     await renderTab([
       makeJourney({
         kind: "visit",
@@ -275,37 +288,27 @@ describe("PhotoJourneysTab", () => {
         suggestedLocalName: "경복궁",
       }),
     ]);
-    expect(screen.getByRole("heading")).toHaveTextContent("Gyeongbokgung · 경복궁");
+    expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent("Gyeongbokgung · 경복궁");
 
     vi.mocked(photoJourneysApi.list).mockResolvedValue([]);
     await userEvent.click(screen.getByRole("button", { name: ACCEPT }));
 
-    await waitFor(() => expect(photoJourneysApi.accept).toHaveBeenCalledWith("journey-1", {}));
+    await waitFor(() =>
+      expect(photoJourneysApi.review).toHaveBeenCalledWith([{ id: "journey-1", action: "accept" }])
+    );
+    expect(photoJourneysApi.accept).not.toHaveBeenCalled();
     expect(tripsApi.create).not.toHaveBeenCalled();
     expect(createVisit).not.toHaveBeenCalled();
-    await waitFor(() =>
-      expect(addToast).toHaveBeenCalledWith(
-        "success",
-        "dataQuality:inbox.photoJourneys.messages.accepted.serverVisit"
-      )
-    );
   });
 
-  it("accepting a nameless visit finding carries the typed name to the server", async () => {
-    vi.mocked(photoJourneysApi.accept).mockResolvedValue(null);
+  it("does not offer accept for a nameless visit finding until it has a name", async () => {
     await renderTab([
       makeJourney({ kind: "visit", airportIata: null, nights: null, suggestedName: null }),
     ]);
-
-    vi.mocked(photoJourneysApi.list).mockResolvedValue([]);
-    await userEvent.type(screen.getByRole("textbox"), "Palace Grounds");
-    await userEvent.click(screen.getByRole("button", { name: ACCEPT }));
-
-    await waitFor(() =>
-      expect(photoJourneysApi.accept).toHaveBeenCalledWith("journey-1", {
-        name: "Palace Grounds",
-      })
-    );
+    expect(screen.getByRole("button", { name: ACCEPT })).toBeDisabled();
+    expect(
+      screen.getByText("dataQuality:inbox.photoJourneys.review.nameNeeded")
+    ).toBeInTheDocument();
   });
 
   it("accepting a stay finding creates nothing — a stay needs a lodging the row does not name", async () => {

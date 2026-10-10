@@ -19,6 +19,7 @@ import {
 } from "./acceptPhotoJourney";
 import PhotoJourneyCard from "./PhotoJourneyCard";
 import { photoJourneyLabel } from "./photoJourneyLabel";
+import VisitSuggestionsReview from "./visitReview/VisitSuggestionsReview";
 
 /**
  * The "Foto-Reisen" half of the Posteingang — what the photo library knows that
@@ -241,6 +242,9 @@ export default function PhotoJourneysTab({
     }
   };
 
+  const visits = journeys.filter((journey) => journey.kind === "visit");
+  const others = journeys.filter((journey) => journey.kind !== "visit");
+
   const scanButton = (
     <Button variant="primary" onClick={() => void handleScan()} disabled={scanning}>
       {scanning
@@ -251,7 +255,16 @@ export default function PhotoJourneysTab({
 
   return (
     <section>
-      <p className="t-caption mb-4">{t("dataQuality:inbox.photoJourneys.description")}</p>
+      <p className="t-caption mb-4">
+        {t("dataQuality:inbox.photoJourneys.description")}{" "}
+        {/* The nightly opt-in lives with the Immich connection it needs. */}
+        <Link
+          to="/settings/services?section=externalServices"
+          style={{ color: "var(--ts-accent)", fontWeight: 600 }}
+        >
+          {t("dataQuality:inbox.photoJourneys.nightlyLink")}
+        </Link>
+      </p>
 
       {/* The scan sits above the list only when there IS a list — with none, it
           is the empty state's one way out, and two of the same button on one
@@ -310,18 +323,25 @@ export default function PhotoJourneysTab({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {journeys.map((journey) => (
-            <PhotoJourneyCard
-              key={journey.id}
-              journey={journey}
-              label={photoJourneyLabel(journey)}
-              busy={busyIds.has(journey.id)}
-              onAccept={(input) => void handleAccept(journey, input)}
-              onDismiss={() => void handleDismiss(journey)}
-            />
-          ))}
-        </div>
+        <>
+          {/* Stops inside a recorded trip are reviewed together (forgejo#211,
+              O5): select several, correct, accept or reject in one answer. */}
+          {visits.length > 0 && <VisitSuggestionsReview journeys={visits} onAnswered={load} />}
+          {others.length > 0 && (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {others.map((journey) => (
+                <PhotoJourneyCard
+                  key={journey.id}
+                  journey={journey}
+                  label={photoJourneyLabel(journey)}
+                  busy={busyIds.has(journey.id)}
+                  onAccept={(input) => void handleAccept(journey, input)}
+                  onDismiss={() => void handleDismiss(journey)}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </section>
   );

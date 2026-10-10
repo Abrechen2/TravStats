@@ -83,5 +83,28 @@
     "cleared": "Instanzweite Immich-Verbindung entfernt.",
     "saveFailed": "Speichern fehlgeschlagen.",
     "loadFailed": "Die Immich-Einstellungen konnten nicht geladen werden. Sie lassen sich erst bearbeiten, wenn sie geladen sind."
+  },
+  "nightlyScan": {
+    "title": "Nächtliche Foto-Suche",
+    "subtitle": "Findet in deiner Immich-Bibliothek Reisen, Übernachtungen und Besuche, die noch nicht im Logbuch stehen.",
+    "switch": "Jede Nacht nach Foto-Reisen suchen",
+    "what": "Liest jede Nacht die Fotos der letzten {{days}} Tage, nächster Lauf: {{next}}. Funde erscheinen als Vorschläge im Posteingang unter „Foto-Reisen“ — eingetragen wird erst, was du übernimmst.",
+    "privacy": "Bilder verlassen Immich nicht; nur die Positionen der Funde gehen an den Ortsdienst.",
+    "privacyHelp": "Um einen Fund zu benennen, fragt der Server den Ortsdienst (Nominatim, Photon) nach dem Namen an dieser Position — höchstens 40 bzw. 20 Anfragen pro Lauf.",
+    "privacyHelpMore": "Die Suche läuft auf deinem Server mit deiner eigenen Immich-Verbindung. Eine Suche über die ganze Bibliothek startest du jederzeit im Posteingang mit „Fotos durchsuchen“.",
+    "notConnected": "Keine Immich-Verbindung — die nächtliche Suche überspringt dieses Konto, bis oben eine eingerichtet ist. Im Demo-Zugang gibt es keine.",
+    "loading": "Wird geladen …",
+    "loadFailed": "Die Einstellung konnte nicht geladen werden.",
+    "retry": "Erneut laden",
+    "saveFailedOn": "Konnte nicht gespeichert werden — die nächtliche Suche bleibt eingeschaltet.",
+    "saveFailedOff": "Konnte nicht gespeichert werden — die nächtliche Suche bleibt ausgeschaltet.",
+    "lastRun": {
+      "never": "Für dieses Konto ist noch keine nächtliche Suche gelaufen.",
+      "scanned": "Letzter Lauf {{when}}: {{count}} neuer Vorschlag.",
+      "scanned_other": "Letzter Lauf {{when}}: {{count}} neue Vorschläge.",
+      "noImmich": "Letzter Lauf {{when}}: übersprungen — keine Immich-Verbindung.",
+      "failed": "Letzter Lauf {{when}} fehlgeschlagen: {{reason}} Die nächste Nacht versucht es erneut.",
+      "internal": "Interner Fehler auf dem Server (siehe Server-Log)."
+    }
   }
 }

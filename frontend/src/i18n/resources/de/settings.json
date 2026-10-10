@@ -1005,6 +1005,7 @@
     "immich": "Ist Immich nicht erreichbar, zeigen verknüpfte Alben keine Bilder, und ein Import bricht mit einer Meldung ab. In TravStats kopierte Fotos bleiben sichtbar.",
     "dawarich": "Ist Dawarich nicht erreichbar, bricht ein Track-Import mit einer Meldung ab, und der nächtliche Abgleich der Ländertage macht in der nächsten Nacht dort weiter, wo er stehen blieb. Vorhandene Tracks bleiben.",
     "strava": "Antwortet Strava nicht, bricht der Import von Aktivitäten mit einer Meldung ab. Bereits übernommene Touren bleiben.",
-    "openData": "Antwortet einer dieser Dienste nicht, sagt die betroffene Ansicht das; schon gespeichertes Wetter bleibt stehen, und beim nächsten Öffnen wird erneut gefragt."
+    "openData": "Antwortet einer dieser Dienste nicht, sagt die betroffene Ansicht das; schon gespeichertes Wetter bleibt stehen, und beim nächsten Öffnen wird erneut gefragt.",
+    "photoJourneyScan": "Ist Immich nachts nicht erreichbar, überspringt die Suche dieses Konto bis zur nächsten Nacht und nennt hier den Grund; vorhandene Vorschläge bleiben. Antwortet der Ortsdienst nicht, bleiben Funde unbenannt, statt verworfen zu werden."
   }
 }

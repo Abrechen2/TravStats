@@ -104,6 +104,54 @@
           "placeVisit": "Der Besuch wurde eingetragen, aber der Vorschlag konnte nicht als übernommen markiert werden — noch einmal versuchen verknüpft nur."
         },
         "dismissFailed": "Der Vorschlag konnte nicht verworfen werden."
+      },
+      "nightlyLink": "Nächtliche Suche einstellen",
+      "review": {
+        "title": "Besuchsvorschläge aus deinen Reisen",
+        "description": "Fotos, die während einer erfassten Reise an einer Stelle ohne Besuch entstanden sind. Wähle mehrere aus und übernimm oder lehne sie gemeinsam ab; vorher lassen sich Ort, Name und Zeit korrigieren. Abgelehnte Vorschläge kommen nicht wieder.",
+        "selectAll": "Alle auswählen",
+        "selectOne": "{{label}} auswählen",
+        "selected": "{{count}} ausgewählt",
+        "working": "Wird gespeichert …",
+        "acceptSelected": "Ausgewählte übernehmen ({{count}})",
+        "dismissSelected": "Ausgewählte ablehnen ({{count}})",
+        "acceptCorrected": "Korrigiert übernehmen",
+        "unnamedSelected": "{{count}} ausgewählter Vorschlag hat noch keinen Namen — unter „Korrigieren“ eintragen oder einen eigenen Ort wählen.",
+        "unnamedSelected_other": "{{count}} ausgewählte Vorschläge haben noch keinen Namen — unter „Korrigieren“ eintragen oder einen eigenen Ort wählen.",
+        "nameNeeded": "Die Suche hat hier nichts Benanntes gefunden — unter „Korrigieren“ einen Namen eintragen oder einen eigenen Ort wählen.",
+        "correct": "Korrigieren",
+        "correctClose": "Korrektur schließen",
+        "reasonLabel": "Begründung",
+        "reason": {
+          "dwell": "über {{minutes}} Min.",
+          "nearest": "nächster erfasster Besuch: {{name}}, {{distance}}",
+          "noNearest": "kein erfasster Besuch in dieser Reise"
+        },
+        "alreadyVisited": "Seit der Suche wurde am selben Tag „{{name}}“ ganz in der Nähe eingetragen. Übernehmen würde den Halt doppelt erfassen — ablehnen, oder unter „Korrigieren“ diesen Ort wählen.",
+        "correction": {
+          "place": "Ort",
+          "placeNew": "Vorgeschlagen ist ein neuer Ort an dieser Stelle. Oder wähle einen deiner Orte:",
+          "placeOwnSuggested": "Vorgeschlagen ist dein eigener Ort ganz in der Nähe. Oder wähle einen anderen:",
+          "placeChosen": "Eigener Ort: {{name}}",
+          "resetPlace": "Zurück zum Vorschlag",
+          "name": "Name des Ortes",
+          "localName": "Name in Landesschrift (optional)",
+          "time": "Zeitpunkt des Besuchs (Ortszeit)",
+          "timeHint": "Vorgabe ist das erste Foto.",
+          "timeUnavailable": "Für diese Stelle ist keine Zeitzone bekannt — der Besuch wird zur Zeit des ersten Fotos eingetragen."
+        },
+        "summary": "{{accepted}} übernommen, {{dismissed}} abgelehnt, {{failed}} nicht ausgeführt.",
+        "failedHeading": "Nicht ausgeführt ({{count}}):",
+        "requestFailed": "Die Antwort des Servers kam nicht an — unklar, welche Vorschläge gespeichert wurden. Die Liste wurde neu geladen; was noch da ist, ist offen.",
+        "failure": {
+          "NOT_FOUND": "diesen Vorschlag gibt es nicht mehr.",
+          "ALREADY_ANSWERED": "dieser Vorschlag war schon beantwortet.",
+          "NOT_A_VISIT": "nur Besuchsvorschläge lassen sich hier übernehmen.",
+          "VISIT_NAME_REQUIRED": "der Ort braucht einen Namen — unter „Korrigieren“ eintragen.",
+          "VISIT_PLACE_NOT_FOUND": "der gewählte Ort existiert nicht mehr — unter „Korrigieren“ einen anderen wählen.",
+          "TIME_INVALID": "die Zeit ließ sich an diesem Ort nicht lesen (etwa eine Uhrzeit, die es wegen der Zeitumstellung nicht gibt).",
+          "INTERNAL": "unerwarteter Fehler auf dem Server — bitte noch einmal versuchen."
+        }
       }
     },
     "messages": {

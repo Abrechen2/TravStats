@@ -32,6 +32,7 @@ import LoyaltySection from "../../components/Settings/LoyaltySection";
 import GeocoderSettingsCard from "../../components/Settings/GeocoderSettingsCard";
 import PersonalRoutingKeysSection from "../../components/Settings/PersonalRoutingKeysSection";
 import ImmichConnectionCard from "../../components/Settings/ImmichConnectionCard";
+import PhotoJourneyNightlyScanCard from "../../components/Settings/PhotoJourneyNightlyScanCard";
 import DawarichConnectionCard from "../../components/Settings/DawarichConnectionCard";
 import RailProvidersCard from "../../components/Settings/RailProvidersCard";
 import StravaConnectionCard from "../../components/Settings/StravaConnectionCard";
@@ -149,6 +150,8 @@ export default function SettingsSectionSwitch({
           {/* Admin-only, and only where the rail domain is offered (beta). */}
           <RailProvidersCard isAdmin={isAdmin} />
           <ImmichConnectionCard />
+          {/* The nightly photo scan reads that library (forgejo#94). */}
+          <PhotoJourneyNightlyScanCard />
           {/* It had a key of its OWN rather than riding on `tourRoutes`, because
               tours stopped being the only consumer the moment cruise legs were
               scoped onto the same connection. Both keys left the registry on

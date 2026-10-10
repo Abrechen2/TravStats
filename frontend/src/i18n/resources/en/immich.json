@@ -83,5 +83,28 @@
     "cleared": "Instance-wide Immich connection removed.",
     "saveFailed": "Could not save.",
     "loadFailed": "Could not load the Immich settings. They can only be edited once they have loaded."
+  },
+  "nightlyScan": {
+    "title": "Nightly photo scan",
+    "subtitle": "Finds trips, stays and visits in your Immich library that are not in the logbook yet.",
+    "switch": "Scan for photo journeys every night",
+    "what": "Reads the photos of the last {{days}} days every night, next run: {{next}}. Findings appear as suggestions in the inbox under “Photo journeys” — nothing is recorded until you accept it.",
+    "privacy": "Pictures never leave Immich; only the positions of findings go to the place-name service.",
+    "privacyHelp": "To name a finding, the server asks the place-name service (Nominatim, Photon) what is at that position — at most 40 or 20 requests per run.",
+    "privacyHelpMore": "The scan runs on your server with your own Immich connection. A scan of the whole library can be started any time in the inbox with “Scan photos”.",
+    "notConnected": "No Immich connection — the nightly scan skips this account until one is set up above. The demo account has none.",
+    "loading": "Loading …",
+    "loadFailed": "The setting could not be loaded.",
+    "retry": "Load again",
+    "saveFailedOn": "Could not be saved — the nightly scan stays on.",
+    "saveFailedOff": "Could not be saved — the nightly scan stays off.",
+    "lastRun": {
+      "never": "No nightly scan has run for this account yet.",
+      "scanned": "Last run {{when}}: {{count}} new suggestion.",
+      "scanned_other": "Last run {{when}}: {{count}} new suggestions.",
+      "noImmich": "Last run {{when}}: skipped — no Immich connection.",
+      "failed": "Last run {{when}} failed: {{reason}} The next night tries again.",
+      "internal": "Internal error on the server (see the server log)."
+    }
   }
 }

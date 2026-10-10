@@ -90,6 +90,19 @@ export interface PhotoJourney {
   nights: number | null;
   airportIata: string | null;
   spreadKm: number | null;
+  /**
+   * `visit` findings: the nearest logged visit in the finding's trip or on its
+   * days — part of the suggestion's reasoning. `withinReach` (same day, within
+   * 200 m) means a visit logged since the scan already explains the stop.
+   * Null for the other kinds and absent from an older server.
+   */
+  nearestVisit?: {
+    placeId: string;
+    placeName: string;
+    distanceKm: number;
+    sameDay: boolean;
+    withinReach: boolean;
+  } | null;
   createdTripId: string | null;
   createdPlaceVisitId: string | null;
   createdLodgingStayId: string | null;

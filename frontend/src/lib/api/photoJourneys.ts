@@ -82,6 +82,72 @@ export type PhotoJourneyPhotoOutcome =
   | { kind: "failed"; reason: string }
   | { kind: "linked"; linked: number; skipped: number };
 
+/** Why one item of a batch answer failed (`POST /photo-journeys/batch`). */
+export type PhotoJourneyBatchFailureCode =
+  | "NOT_FOUND"
+  | "ALREADY_ANSWERED"
+  | "NOT_A_VISIT"
+  | "VISIT_NAME_REQUIRED"
+  | "VISIT_PLACE_NOT_FOUND"
+  | "TIME_INVALID"
+  | "INTERNAL";
+
+/**
+ * One item of a batch answer (forgejo#211, O5). Accept is for `visit` findings
+ * and carries the reader's corrections; `visitedAt` is the place's wall clock
+ * (`{local: "YYYY-MM-DDTHH:mm"}`), never an instant the browser computed.
+ */
+export interface PhotoJourneyBatchItem {
+  id: string;
+  action: "accept" | "dismiss";
+  name?: string;
+  localName?: string;
+  placeId?: string;
+  visitedAt?: { local: string };
+}
+
+export type PhotoJourneyBatchResult =
+  | {
+      id: string;
+      action: "accept";
+      outcome: "accepted";
+      created: {
+        placeId: string;
+        placeVisitId: string;
+        placeCreated: boolean;
+        visitCreated: boolean;
+      };
+      photos: PhotoJourneyPhotoOutcome | null;
+    }
+  | { id: string; action: "dismiss"; outcome: "dismissed" }
+  | {
+      id: string;
+      action: "accept" | "dismiss";
+      outcome: "failed";
+      code: PhotoJourneyBatchFailureCode;
+    };
+
+export interface PhotoJourneyBatchResponse {
+  results: PhotoJourneyBatchResult[];
+  summary: { accepted: number; dismissed: number; failed: number };
+}
+
+/** The account's nightly-scan opt-in and what the card says about it (forgejo#94). */
+export interface PhotoJourneyNightlySettings {
+  nightlyScan: boolean;
+  /** The scan's own first question; false for the shared demo account. */
+  immichConnected: boolean;
+  windowDays: number;
+  nextRunAt: string;
+  lastRun: {
+    ranAt: string;
+    result: "scanned" | "noImmich" | "failed";
+    created: number | null;
+    /** `failed`: an Immich failure kind (`unreachable`, `auth`, …) or `internal`. */
+    failure: string | null;
+  } | null;
+}
+
 export function photoJourneyPreviewUrl(journeyId: string, index: number): string {
   return `${API_URL}/api/v1/photo-journeys/${journeyId}/preview/${index}/file?size=thumbnail`;
 }
@@ -136,5 +202,32 @@ export const photoJourneysApi = {
 
   dismiss: async (id: string): Promise<void> => {
     await api.patch(`/photo-journeys/${id}`, { status: "dismissed" });
+  },
+
+  /**
+   * Answer several findings in one request. The server answers each item on
+   * its own and reports every outcome, so a 200 may still carry failures —
+   * the caller reads `results`, never just the status.
+   */
+  review: async (items: PhotoJourneyBatchItem[]): Promise<PhotoJourneyBatchResponse> => {
+    const { data } = await api.post<Envelope<PhotoJourneyBatchResponse>>("/photo-journeys/batch", {
+      items,
+    });
+    return data.data;
+  },
+
+  getNightlySettings: async (): Promise<PhotoJourneyNightlySettings> => {
+    const { data } = await api.get<Envelope<PhotoJourneyNightlySettings>>(
+      "/photo-journeys/settings"
+    );
+    return data.data;
+  },
+
+  setNightlyScan: async (nightlyScan: boolean): Promise<PhotoJourneyNightlySettings> => {
+    const { data } = await api.put<Envelope<PhotoJourneyNightlySettings>>(
+      "/photo-journeys/settings",
+      { nightlyScan }
+    );
+    return data.data;
   },
 };
