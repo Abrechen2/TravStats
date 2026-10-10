@@ -6,7 +6,11 @@ import { rentalLinksApi, type RentalStats } from "../../../lib/api/rentalLinks";
 import { formatAmount } from "../../../lib/units";
 import { countryName } from "../../../shared/geo/countryCode";
 import { logger } from "../../../lib/logger";
-import { comparisonWindow, sameSpanUntil } from "../../../lib/stats/comparisonWindow";
+import {
+  comparisonEvidenceScope,
+  comparisonWindow,
+  sameSpanUntil,
+} from "../../../lib/stats/comparisonWindow";
 import type { SectionVisibility } from "../../../hooks/useSectionVisibility";
 import type { PeriodScope } from "../useStatsPeriod";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
@@ -55,6 +59,8 @@ export default function RentalStatsSection({
     current: RentalStats;
     previous: RentalStats;
     samePeriod: boolean;
+    /** "MM-DD" the pair was cut at, or null for whole years. */
+    until: string | null;
   } | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -80,7 +86,7 @@ export default function RentalStatsSection({
         setPair(
           prior === null
             ? null
-            : { current: cut ?? whole, previous: prior, samePeriod: cut !== null }
+            : { current: cut ?? whole, previous: prior, samePeriod: cut !== null, until }
         );
       } catch (err: unknown) {
         logger.error("RentalStatsSection: load failed", err);
@@ -133,7 +139,8 @@ export default function RentalStatsSection({
             evidenceKey: "rentalDaysTotal",
           },
         ]}
-        evidence={{ scope: { period: "year", year } }}
+        // The figure on the strip is the cut one: its entries are the same span.
+        evidence={{ scope: comparisonEvidenceScope(year, pair.until) }}
       />
     ) : null;
 

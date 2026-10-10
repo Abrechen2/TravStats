@@ -28,7 +28,7 @@ export { skipGlobalRateLimit } from "./globalRateLimitSkip";
  * express-rate-limit 8 refuses a keyGenerator that reads `req.ip` without
  * it (ERR_ERL_KEY_GEN_IPV6, logged on every limiter's first request).
  */
-const userOrIpKey = (req: Request): string => {
+export const userOrIpKey = (req: Request): string => {
   const r = req as { userId?: string; apiToken?: { id: string }; isSharedDemo?: boolean };
   if (r.apiToken) return `pat:${r.apiToken.id}`;
   // The shared demo account is not A user, it is EVERY visitor of a public
@@ -529,23 +529,6 @@ export const statsLimiter = rateLimit({
   max: RATE_LIMITS.STATS_MAX_REQUESTS,
   skip: skipInDevelopment,
   message: "Too many stats requests, please try again later",
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: userOrIpKey,
-});
-
-/**
- * Badge proofs (`/evidence/metric/badge…`, forgejo#265) fold a badge's rows
- * over and over to find the entries its progress stands on. Each request is
- * bounded by the witness budget (`services/evidence/badges/witness.ts`); this
- * bounds how often one user may ask, per user (`userOrIpKey`), on top of
- * `statsLimiter`.
- */
-export const badgeEvidenceLimiter = rateLimit({
-  windowMs: RATE_LIMITS.BADGE_EVIDENCE_WINDOW_MS,
-  max: RATE_LIMITS.BADGE_EVIDENCE_MAX_REQUESTS,
-  skip: skipInDevelopment,
-  message: "Too many badge evidence requests, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,

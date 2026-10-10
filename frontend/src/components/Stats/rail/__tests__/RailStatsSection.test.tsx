@@ -212,4 +212,27 @@ describe("RailStatsSection", () => {
     expect(tile.textContent).toContain("–");
     expect(tile.textContent).not.toContain("0 h");
   });
+
+  // forgejo#265: the strip's same-span figure opened the whole year's rides.
+  it("opens exactly the span a same-span comparison figure counted", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(Date.UTC(2026, 8, 26, 12)));
+    try {
+      const { opened } = await evidenceOpenedBy(
+        <RailStatsSection
+          scope={{ year: 2026, compareYear: 2025 } as never}
+          visibility={visibility}
+        />,
+        () => screen.findByText("stats:yearFilter.vsSamePeriod")
+      );
+      const strip = opened.filter((o) => o.scope?.period === "range");
+      expect(strip.map((o) => o.key).sort()).toEqual(
+        ["railCountriesCount", "railDistanceKmTotal", "railRideCount"].sort()
+      );
+      expect(strip[0].scope).toEqual({ period: "range", from: "2026-01-01", to: "2026-09-26" });
+      for (const o of strip) expect(EVIDENCE_MEASURES[o.key].scopes).toContain("range");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

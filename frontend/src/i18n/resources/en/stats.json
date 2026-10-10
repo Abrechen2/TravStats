@@ -350,7 +350,7 @@
       "unit": "The same unit as the figure of the same name in the domain: above the selected year, below the comparison year, the arrow the change in per cent.",
       "time": "The year follows the domain's time rule. When one of the two years is not over, the domain compares the same span of both years up to the same day (“vs. same period”) where it can cut its figures that way; otherwise the running year stands against the whole other year (“vs. whole year”, with a note).",
       "source": "The figures the server computes for both years – nothing is recounted here.",
-      "coverage": "Tapping the upper number shows the entries of the whole selected year, so for a same-span comparison also those after the cut-off day; the comparison year's figure opens nothing.",
+      "coverage": "Tapping the upper number shows exactly the entries it counts: for a same-span comparison those from 1 January up to the cut-off day, otherwise the whole selected year. The comparison year's figure opens nothing.",
       "exclusions": "Counts only – no amounts of money, because an amount needs its currency and currencies are not converted."
     }
   },

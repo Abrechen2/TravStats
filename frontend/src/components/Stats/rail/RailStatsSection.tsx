@@ -11,7 +11,11 @@ import type { SectionVisibility } from "../../../hooks/useSectionVisibility";
 import StatCard from "../StatCard";
 import RankedBarList, { type RankedRow } from "../lodging/RankedBarList";
 import PeriodComparisonStrip from "../PeriodComparisonStrip";
-import { comparisonWindow, sameSpanUntil } from "../../../lib/stats/comparisonWindow";
+import {
+  comparisonEvidenceScope,
+  comparisonWindow,
+  sameSpanUntil,
+} from "../../../lib/stats/comparisonWindow";
 import type { PeriodScope } from "../useStatsPeriod";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import RailJourneySections from "./RailJourneySections";
@@ -50,6 +54,8 @@ export default function RailStatsSection({
     current: RailStats;
     previous: RailStats;
     samePeriod: boolean;
+    /** "MM-DD" the pair was cut at, or null for whole years. */
+    until: string | null;
   } | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -76,7 +82,7 @@ export default function RailStatsSection({
         setPair(
           prior === null
             ? null
-            : { current: cut ?? whole, previous: prior, samePeriod: cut !== null }
+            : { current: cut ?? whole, previous: prior, samePeriod: cut !== null, until }
         );
       } catch (err) {
         logger.error("RailStatsSection: fetch failed", err);
@@ -138,7 +144,8 @@ export default function RailStatsSection({
             },
           ]}
           // Drawn only with a year chosen, so the scope is never `allTime`.
-          evidence={{ scope: { period: "year", year } }}
+          // The figure on the strip is the cut one: its entries are the same span.
+          evidence={{ scope: comparisonEvidenceScope(year, pair.until) }}
         />
       </div>
     ) : null;

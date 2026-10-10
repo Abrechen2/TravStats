@@ -39,9 +39,15 @@ const BUS = (aggregation: "sum" | "distinct", unit: string): MeasureSpec =>
     "services/evidence/metricEvidenceBus.ts over services/bus/busStats.ts"
   );
 
+/** Opened by the year comparison's same-span figure (forgejo#265): accepts `range` too. */
+const withRange = (spec: MeasureSpec): MeasureSpec => ({
+  ...spec,
+  scopes: ["allTime", "year", "range"],
+});
+
 export const RENTAL_BUS_MEASURES: Record<string, MeasureSpec> = {
-  rentalCount: RENTAL("sum", "rentals"),
-  rentalDaysTotal: RENTAL("sum", "days"),
+  rentalCount: withRange(RENTAL("sum", "rentals")),
+  rentalDaysTotal: withRange(RENTAL("sum", "days")),
   rentalOneWayCount: RENTAL("sum", "rentals"),
   rentalOdometerDocumentedCount: RENTAL("sum", "rentals"),
   // forgejo#262 — the tab's further tiles. A ratio (km per day, cost per day,
@@ -57,8 +63,8 @@ export const RENTAL_BUS_MEASURES: Record<string, MeasureSpec> = {
   rentalLongest: RENTAL("sum", "days"),
   rentalFarthest: RENTAL("sum", "km"),
   rentalNewProvidersCount: RENTAL("distinct", "providers"),
-  busRideCount: BUS("sum", "rides"),
-  busDistanceKmTotal: BUS("sum", "km"),
+  busRideCount: withRange(BUS("sum", "rides")),
+  busDistanceKmTotal: withRange(BUS("sum", "km")),
   busCountriesCount: BUS("distinct", "countries"),
   busNightRideCount: BUS("sum", "rides"),
   busTerminalsCount: BUS("distinct", "terminals"),

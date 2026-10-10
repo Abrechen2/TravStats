@@ -1,6 +1,6 @@
 import type { EvidenceScope } from "../../shared/evidence";
 import type { EvidenceResponse } from "../../schemas/evidence";
-import { busCountries, busYear } from "../../shared/busCounting";
+import { busCountries } from "../../shared/busCounting";
 import { isNightBusRide, terminalsOf } from "../../shared/busRideKinds";
 import { busLongestReturn, computeBusStats, loadBusRows, type BusStatsRow } from "../bus/busStats";
 import { journeyTransferWaits, railJourneysOf } from "../rail/railJourneyStats";
@@ -11,9 +11,10 @@ import { busEvidenceEntry } from "./entryMappersRentalBus";
 import {
   domainDistinctEvidence,
   domainSumEvidence,
-  readYearScope,
+  readDayScope,
   requireLifetime,
 } from "./domainMeasureResponse";
+import { localDay } from "../../shared/time/instant";
 
 /**
  * The served bus measures (forgejo#263): the bus tab's figures and the bus
@@ -27,9 +28,16 @@ async function loadScoped(
   scope: EvidenceScope,
   key: string
 ): Promise<{ all: BusStatsRow[]; rows: BusStatsRow[] }> {
-  const year = readYearScope(scope, key);
+  // The day a ride left on its departure terminal's calendar (`busYear`'s day).
+  const inPeriod = readDayScope(scope, key);
   const all = await loadBusRows(userId);
-  return { all, rows: year === undefined ? all : all.filter((r) => busYear(r) === year) };
+  return {
+    all,
+    rows:
+      inPeriod === undefined
+        ? all
+        : all.filter((r) => inPeriod(localDay(r.departureTime, r.depTimezone ?? "UTC"))),
+  };
 }
 
 function busSum(

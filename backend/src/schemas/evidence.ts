@@ -86,6 +86,7 @@ export const evidenceScopeSchema = z.object({
     z.object({ kind: z.literal("allTime") }),
     z.object({ kind: z.literal("year"), year: z.number().int() }),
     z.object({ kind: z.literal("rolling12m") }),
+    z.object({ kind: z.literal("range"), from: z.string(), to: z.string() }),
   ]),
   domains: z.array(evidenceDomainSchema).optional(),
 }) satisfies z.ZodType<EvidenceScope>;
@@ -219,7 +220,19 @@ const FIRST_PLAUSIBLE_TRAVEL_YEAR = 1900;
  */
 export const evidenceQuerySchema = z
   .object({
-    period: z.enum(["allTime", "year", "rolling12m"]).default("allTime"),
+    period: z.enum(["allTime", "year", "rolling12m", "range"]).default("allTime"),
+    /**
+     * `period=range` (forgejo#265): the first and last day of the span, both
+     * included, as `YYYY-MM-DD` — what a same-span comparison figure counted.
+     */
+    from: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+    to: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
     year: z.coerce
       .number()
       .int()
@@ -252,12 +265,26 @@ export const evidenceQuerySchema = z
   .refine((query) => query.period === "year" || query.year === undefined, {
     message: "year is only valid when period=year",
     path: ["year"],
-  });
+  })
+  .refine(
+    (query) =>
+      query.period !== "range" ||
+      (query.from !== undefined && query.to !== undefined && query.from <= query.to),
+    { message: "from and to (from <= to) are required when period=range", path: ["from"] }
+  )
+  .refine(
+    (query) => query.period === "range" || (query.from === undefined && query.to === undefined),
+    { message: "from and to are only valid when period=range", path: ["from"] }
+  );
 export type EvidenceQuery = z.infer<typeof evidenceQuerySchema>;
 
 /** Builds the `EvidenceScope` a resolver receives out of a validated query. */
 export function evidenceScopeFromQuery(query: EvidenceQuery): EvidenceScope {
-  const period =
-    query.period === "year" ? { kind: "year" as const, year: query.year! } : { kind: query.period };
+  const period: EvidenceScope["period"] =
+    query.period === "year"
+      ? { kind: "year", year: query.year! }
+      : query.period === "range"
+        ? { kind: "range", from: query.from!, to: query.to! }
+        : { kind: query.period };
   return query.domains ? { period, domains: query.domains } : { period };
 }

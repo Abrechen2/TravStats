@@ -63,7 +63,7 @@ import { BADGE_MEASURES } from "./evidenceMeasuresBadges";
 import type { Aggregation } from "./evidence";
 
 /** What population the number was measured over. Mirrors the surface. */
-export type MeasureScope = "allTime" | "year" | "rolling12m" | "domainFiltered";
+export type MeasureScope = "allTime" | "year" | "rolling12m" | "range" | "domainFiltered";
 
 export interface MeasureSpec {
   aggregation: Aggregation;

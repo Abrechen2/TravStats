@@ -42,6 +42,9 @@ export function readYearScope(scope: EvidenceScope, key: string): number | undef
       400
     );
   }
+  if (scope.period.kind === "range") {
+    throw new AppError(`${key} evidence does not support period=range.`, 400);
+  }
   return scope.period.kind === "year" ? scope.period.year : undefined;
 }
 
@@ -50,6 +53,22 @@ export function requireLifetime(scope: EvidenceScope, key: string): void {
   if (scope.period.kind !== "allTime") {
     throw new AppError(`${key} evidence supports period=allTime only.`, 400);
   }
+}
+
+/**
+ * The period as a test on a record's own day (`YYYY-MM-DD` on its calendar):
+ * `undefined` for lifetime, the year's days for `year`, the span both ends
+ * included for `range` (forgejo#265). A rolling window is refused, as in
+ * `readYearScope`.
+ */
+export function readDayScope(
+  scope: EvidenceScope,
+  key: string
+): ((day: string) => boolean) | undefined {
+  const { period } = scope;
+  if (period.kind === "range") return (day) => day >= period.from && day <= period.to;
+  const year = readYearScope(scope, key);
+  return year === undefined ? undefined : (day) => day.startsWith(`${year}-`);
 }
 
 interface DomainSumArgs {

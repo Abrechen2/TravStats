@@ -13,20 +13,25 @@ import type { MeasureSpec } from "./evidenceMeasures";
 const RAIL_CALCULATOR =
   "services/evidence/metricEvidenceRail.ts over utils/railAchievements.ts railRideFacts";
 
-const railMeasure = (aggregation: "sum" | "distinct", unit: string): MeasureSpec => ({
+const railMeasure = (
+  aggregation: "sum" | "distinct",
+  unit: string,
+  /** Opened by the year comparison's same-span figure (forgejo#265). */
+  range = false
+): MeasureSpec => ({
   aggregation,
   unit,
-  scopes: ["allTime", "year"],
+  scopes: range ? ["allTime", "year", "range"] : ["allTime", "year"],
   surface: "RailStatsSection",
   calculator: RAIL_CALCULATOR,
   servedIn: 1,
 });
 
 export const RAIL_MEASURES: Record<string, MeasureSpec> = {
-  railRideCount: railMeasure("sum", "rides"),
+  railRideCount: railMeasure("sum", "rides", true),
   /** Every distance source together — the straight line is a lower bound of the track. */
-  railDistanceKmTotal: railMeasure("sum", "km"),
-  railCountriesCount: railMeasure("distinct", "countries"),
+  railDistanceKmTotal: railMeasure("sum", "km", true),
+  railCountriesCount: railMeasure("distinct", "countries", true),
   railOperatorsCount: railMeasure("distinct", "operators"),
   railNightTrainCount: railMeasure("sum", "rides"),
   railHighSpeedRideCount: railMeasure("sum", "rides"),

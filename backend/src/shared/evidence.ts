@@ -63,7 +63,16 @@ export type UnattributedReason =
 
 export interface EvidenceScope {
   /** What population the number was measured over. Mirrors the surface. */
-  period: { kind: "allTime" } | { kind: "year"; year: number } | { kind: "rolling12m" };
+  period:
+    | { kind: "allTime" }
+    | { kind: "year"; year: number }
+    | { kind: "rolling12m" }
+    /**
+     * The days `from`..`to`, both included (`YYYY-MM-DD`), each record on the
+     * surface's own calendar — the span a comparison strip cut its figure to
+     * (forgejo#265). Only measures whose registry scopes list `range` accept it.
+     */
+    | { kind: "range"; from: string; to: string };
   /** Only where the surface is domain-filtered (the overview is). */
   domains?: EvidenceDomain[];
 }

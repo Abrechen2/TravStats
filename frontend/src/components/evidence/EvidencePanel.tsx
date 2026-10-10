@@ -1,6 +1,7 @@
 import { useEffect, useState, type JSX } from "react";
 import Modal from "../Modal";
 import { copyToClipboard } from "../../lib/clipboard";
+import { formatLocalDate } from "../../lib/displayFormat";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useSettingsStore } from "../../store/settingsStore";
 import type { EvidenceScope, UnattributedReason } from "../../shared/evidence";
@@ -26,7 +27,12 @@ function scopeText(
       ? t("evidence:panel.scope.year", { year: scope.period.year })
       : scope.period.kind === "rolling12m"
         ? t("evidence:panel.scope.rolling12m")
-        : t("evidence:panel.scope.allTime");
+        : scope.period.kind === "range"
+          ? t("evidence:panel.scope.range", {
+              from: formatLocalDate(scope.period.from),
+              to: formatLocalDate(scope.period.to),
+            })
+          : t("evidence:panel.scope.allTime");
   const domains = scope.domains ?? [];
   if (domains.length === 0) return period;
   const domainNames = domains.map((d) => t(`evidence:panel.scope.domain.${d}`)).join(", ");

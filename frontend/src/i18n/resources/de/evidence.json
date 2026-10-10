@@ -12,6 +12,7 @@
       "allTime": "Gesamter Zeitraum",
       "year": "Jahr {{year}}",
       "rolling12m": "Letzte 12 Monate",
+      "range": "{{from}} bis {{to}}",
       "domain": {
         "flight": "Flüge",
         "cruise": "Kreuzfahrten",

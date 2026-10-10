@@ -1,6 +1,6 @@
 import type { EvidenceScope } from "../../shared/evidence";
 import type { EvidenceEntry, EvidenceResponse } from "../../schemas/evidence";
-import { railYear } from "../../shared/railCounting";
+import { railYear, stationDayKey } from "../../shared/railCounting";
 import {
   foldRailAchievementStats,
   loadRailBadgeRows,
@@ -11,7 +11,12 @@ import {
 } from "../../utils/railAchievements";
 import type { PagingParams } from "./paging";
 import { railEvidenceEntry } from "./entryMappersDomains";
-import { domainDistinctEvidence, domainSumEvidence, readYearScope } from "./domainMeasureResponse";
+import {
+  domainDistinctEvidence,
+  domainSumEvidence,
+  readDayScope,
+  readYearScope,
+} from "./domainMeasureResponse";
 import {
   isDocumentedTransferJourney,
   journeyTransferWaits,
@@ -39,9 +44,14 @@ interface ScopedRides {
 }
 
 async function loadScoped(userId: string, scope: EvidenceScope, key: string): Promise<ScopedRides> {
-  const year = readYearScope(scope, key);
+  // The day a ride left on its departure station's calendar — the day
+  // `railYear` files it under, and the day a same-span comparison cuts at.
+  const inPeriod = readDayScope(scope, key);
   const all = await loadRailBadgeRows(userId);
-  const rows = year === undefined ? all : all.filter((r) => railYear(r) === year);
+  const rows =
+    inPeriod === undefined
+      ? all
+      : all.filter((r) => inPeriod(stationDayKey(r.departureTime, r.depTimezone)));
   return {
     rows,
     total: foldRailAchievementStats(rows),

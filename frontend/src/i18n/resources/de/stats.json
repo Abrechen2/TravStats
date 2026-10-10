@@ -350,7 +350,7 @@
       "unit": "Dieselbe Einheit wie die gleichnamige Zahl des Bereichs: oben das gewählte Jahr, darunter das Vergleichsjahr, der Pfeil die Veränderung in Prozent.",
       "time": "Die Jahreszuordnung folgt der Zeitregel des Bereichs. Ist eines der beiden Jahre noch nicht vorbei, vergleicht der Bereich dieselbe Spanne beider Jahre bis zum selben Tag („ggü. gleichem Zeitraum“), wo er seine Zahlen so kürzen kann; sonst steht das angefangene gegen das ganze andere Jahr („ggü. ganzem Jahr“, mit Hinweis).",
       "source": "Die Zahlen, die der Server für beide Jahre berechnet – hier wird nichts nachgezählt.",
-      "coverage": "Ein Tipp auf die obere Zahl zeigt die Einträge des ganzen gewählten Jahres, bei gleichem Zeitraum also auch die nach dem Stichtag; die Zahl des Vergleichsjahres öffnet nichts.",
+      "coverage": "Ein Tipp auf die obere Zahl zeigt genau die Einträge, die sie zählt: bei gleichem Zeitraum die vom 1. Januar bis zum Stichtag, sonst das ganze gewählte Jahr. Die Zahl des Vergleichsjahres öffnet nichts.",
       "exclusions": "Nur Anzahlen – keine Geldbeträge, weil ein Betrag seine Währung braucht und Währungen nicht verrechnet werden."
     }
   },

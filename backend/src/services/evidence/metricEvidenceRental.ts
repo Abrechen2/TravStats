@@ -23,7 +23,13 @@ import {
 } from "../../utils/rentalAchievements";
 import type { PagingParams } from "./paging";
 import { rentalEvidenceEntry } from "./entryMappersRentalBus";
-import { domainDistinctEvidence, domainSumEvidence, readYearScope } from "./domainMeasureResponse";
+import {
+  domainDistinctEvidence,
+  domainSumEvidence,
+  readDayScope,
+  readYearScope,
+} from "./domainMeasureResponse";
+import { localDay } from "../../shared/time/instant";
 
 /**
  * The served rental measures (forgejo#262): the rental tab's figures and the
@@ -37,9 +43,12 @@ async function loadScoped(
   scope: EvidenceScope,
   key: string
 ): Promise<RentalBadgeRow[]> {
-  const year = readYearScope(scope, key);
+  // The pickup's day on its station's calendar (`rentalYear`'s day).
+  const inPeriod = readDayScope(scope, key);
   const rows = await loadRentalBadgeRows(userId);
-  return year === undefined ? rows : rows.filter((r) => rentalYear(r) === year);
+  return inPeriod === undefined
+    ? rows
+    : rows.filter((r) => inPeriod(localDay(r.pickupTime, r.pickupTimezone)));
 }
 
 function rentalSum(

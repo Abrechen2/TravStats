@@ -42,8 +42,11 @@ function decodeEvidenceParam(raw: string | null): { kind: EvidenceKind; key: str
 
 /** What surface the caller measured over. Optional: an unscoped request gets the server's `allTime` default. */
 export interface EvidenceScopeParams {
-  period?: "allTime" | "year" | "rolling12m";
+  period?: "allTime" | "year" | "rolling12m" | "range";
   year?: number;
+  /** The span of `period: "range"` — `YYYY-MM-DD`, both included (forgejo#265). */
+  from?: string;
+  to?: string;
   domains?: EvidenceDomain[];
 }
 
@@ -163,6 +166,8 @@ export function useEvidence(scope?: EvidenceScopeParams): UseEvidenceResult {
       const page = await evidenceApi.get(k, kk, {
         period: s?.period,
         year: s?.year,
+        from: s?.from,
+        to: s?.to,
         domains: s?.domains,
         offset,
         limit: EVIDENCE_PAGE_SIZE,

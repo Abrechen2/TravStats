@@ -2,7 +2,8 @@ import { Router, Response, NextFunction } from "express";
 
 import { authenticate, AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
-import { badgeEvidenceLimiter, statsLimiter } from "../middleware/rateLimit";
+import { statsLimiter } from "../middleware/rateLimit";
+import { badgeEvidenceLimiter } from "../middleware/badgeEvidenceLimiter";
 import {
   evidenceParamsSchema,
   evidenceQuerySchema,

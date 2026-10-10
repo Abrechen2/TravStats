@@ -7,7 +7,11 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import type { BusStats } from "../../../types/bus";
 import type { SectionVisibility } from "../../../hooks/useSectionVisibility";
-import { comparisonWindow, sameSpanUntil } from "../../../lib/stats/comparisonWindow";
+import {
+  comparisonEvidenceScope,
+  comparisonWindow,
+  sameSpanUntil,
+} from "../../../lib/stats/comparisonWindow";
 import type { PeriodScope } from "../useStatsPeriod";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import StatCard from "../StatCard";
@@ -42,6 +46,8 @@ export default function BusStatsSection({
     current: BusStats;
     previous: BusStats;
     samePeriod: boolean;
+    /** "MM-DD" the pair was cut at, or null for whole years. */
+    until: string | null;
   } | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -67,7 +73,7 @@ export default function BusStatsSection({
         setPair(
           prior === null
             ? null
-            : { current: cut ?? whole, previous: prior, samePeriod: cut !== null }
+            : { current: cut ?? whole, previous: prior, samePeriod: cut !== null, until }
         );
       } catch (err) {
         logger.error("BusStatsSection: fetch failed", err);
@@ -119,7 +125,8 @@ export default function BusStatsSection({
               evidenceKey: "busDistanceKmTotal",
             },
           ]}
-          evidence={{ scope: { period: "year", year } }}
+          // The figure on the strip is the cut one: its entries are the same span.
+          evidence={{ scope: comparisonEvidenceScope(year, pair.until) }}
         />
       </div>
     ) : null;

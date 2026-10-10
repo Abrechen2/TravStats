@@ -401,5 +401,11 @@ export async function resolveMetricEvidence(
   // 400 here would tell a caller that an unserved key exists.
   if (!resolve) return null;
   rejectUnhonouredDomains(key, scope);
+  // A date range is honoured only where the registry says so (forgejo#265):
+  // every other resolver reads the period as a year or lifetime, and must not
+  // quietly answer a narrower question as a wider one.
+  if (scope.period.kind === "range" && !EVIDENCE_MEASURES[key]?.scopes.includes("range")) {
+    throw new AppError(`${key} evidence does not support period=range.`, 400);
+  }
   return resolve(userId, scope, page);
 }
