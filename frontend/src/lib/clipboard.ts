@@ -37,7 +37,7 @@ export async function copyToClipboard(text: string): Promise<void> {
   document.body.appendChild(textarea);
   textarea.focus();
   textarea.select();
-  let ok = false;
+  let ok: boolean;
   try {
     ok = document.execCommand("copy");
   } catch {
