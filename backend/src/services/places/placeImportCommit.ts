@@ -2,7 +2,7 @@ import { classifyVisit } from "../../shared/placeCounting";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
 import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
-import { findPlaceIdByRef } from "./placeRefs";
+import { canonicalPlaceRef, findPlaceIdByRef } from "./placeRefs";
 import { confirmOwnStay, visitTripId, writeTripStop } from "./takeout/takeoutCommit";
 import logger from "../../utils/logger";
 import {
@@ -27,6 +27,8 @@ export interface PlaceCommitResult {
   skipped: number;
   /** Rows written as trip stops instead of places (#358). */
   stops: number;
+  /** Trip-stop rows skipped because the trip already has that stop on that day. */
+  stopsSkipped: number;
   /** Rows confirmed as one of the user's stays — nothing written for them. */
   matchedStays: number;
   failed: PlaceImportFailure[];
@@ -63,6 +65,7 @@ export async function commitPlaceImport(
   let skipped = 0;
   let stops = 0;
   let matchedStays = 0;
+  let stopsSkipped = 0;
   const failed: PlaceImportFailure[] = [];
   const fail = (sourceRowIndex: number, code: PlaceImportFailureCode): void => {
     failed.push({ sourceRowIndex, code, error: PLACE_IMPORT_FAILURE_MESSAGES[code] });
@@ -100,13 +103,17 @@ export async function commitPlaceImport(
           lon: row.lon as number,
         });
         if (outcome === "ok") stops += 1;
+        else if (outcome === "exists") stopsSkipped += 1;
         else fail(row.sourceRowIndex, outcome);
         continue;
       }
 
       // Already here — as a place's own reference or as an alias a merge left
       // (forgejo#232). The unique index below cannot see the alias table.
-      const ref = row.externalRef?.trim() || null;
+      // A Google CID is stored as `gmaps-cid:<decimal>` whatever spelling the
+      // row arrived in, so production's existing references and new ones agree.
+      const rawRef = row.externalRef?.trim() || null;
+      const ref = rawRef === null ? null : canonicalPlaceRef(rawRef);
       if (ref !== null && (await findPlaceIdByRef(prisma, userId, ref)) !== null) {
         skipped += 1;
         continue;
@@ -154,7 +161,7 @@ export async function commitPlaceImport(
           // that plainly named one (AUD-075).
           isoCountryCode: resolveCountryCode(country),
           notes: row.notes?.trim() || null,
-          externalRef: row.externalRef?.trim() || null,
+          externalRef: ref,
           // A place imported with a date that has PASSED is one the user has
           // been to; anything else is a place they saved.
           visited: happened,
@@ -189,11 +196,12 @@ export async function commitPlaceImport(
         skipped,
         stops,
         matchedStays,
+        stopsSkipped,
         failed: failed.length,
       },
     },
     "[Place Import] Commit complete"
   );
 
-  return { batchId: batch.id, created, skipped, stops, matchedStays, failed };
+  return { batchId: batch.id, created, skipped, stops, stopsSkipped, matchedStays, failed };
 }

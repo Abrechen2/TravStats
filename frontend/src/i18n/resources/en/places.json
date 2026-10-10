@@ -477,7 +477,9 @@
         "write_failed": "not saved",
         "invalid_target": "trip or stay not found"
       },
-      "takeoutExtra": "{{stops}} added as trip stops · {{stays}} recognised as your stays"
+      "takeoutExtra": "{{stops}} added as trip stops · {{stays}} recognised as your stays",
+      "stopsSkipped_one": "{{count}} trip stop skipped — the trip already has it on that day",
+      "stopsSkipped_other": "{{count}} trip stops skipped — the trip already has them on that day"
     },
     "takeout": {
       "intro_one": "{{count}} row comes from a Google Maps list. Position, trip and visit day can be suggested — you then decide row by row.",

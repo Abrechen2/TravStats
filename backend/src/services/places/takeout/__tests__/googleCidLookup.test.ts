@@ -32,6 +32,7 @@ describe("cidFromRef", () => {
 
   it("accepts the gmaps: reference the importers mint, and a ?cid= link", () => {
     expect(cidFromRef("gmaps:8870189712345678")).toBe("8870189712345678");
+    expect(cidFromRef("gmaps-cid:8870189712345678")).toBe("8870189712345678");
     expect(cidFromRef("https://maps.google.com/?cid=1234567890")).toBe("1234567890");
   });
 

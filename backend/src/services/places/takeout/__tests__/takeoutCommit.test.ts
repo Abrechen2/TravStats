@@ -59,6 +59,31 @@ describe("place import commit: Takeout treatments", () => {
     expect(await prisma.place.count({ where: { userId } })).toBe(0);
   });
 
+  it("does not write a re-imported stop twice: same spot within 100 m, same day", async () => {
+    const stopRow = (i: number, lat: number, visitedAt: string) => ({
+      sourceRowIndex: i,
+      name: "Invented Station",
+      lat,
+      lon: 10.466,
+      visitedAt,
+      treatment: "trip_stop" as const,
+      tripId,
+    });
+    const first = await commitPlaceImport(userId, "csv", "Norwegen.csv", [
+      stopRow(0, 61.115, "2024-07-12"),
+    ]);
+    expect(first).toMatchObject({ stops: 1, stopsSkipped: 0 });
+
+    // ~50 m north, same day: the same stop. Another day, or ~1 km away: a new one.
+    const again = await commitPlaceImport(userId, "csv", "Norwegen.csv", [
+      stopRow(0, 61.11545, "2024-07-12"),
+      stopRow(1, 61.115, "2024-07-13"),
+      stopRow(2, 61.124, "2024-07-12"),
+    ]);
+    expect(again).toMatchObject({ stops: 2, stopsSkipped: 1, failed: [] });
+    expect(await prisma.tripStop.count({ where: { tripId } })).toBe(3);
+  });
+
   it("confirms a stay as the user's without writing anything", async () => {
     const lodging = await prisma.lodging.create({ data: { userId, name: "Invented Hotel" } });
     const stay = await prisma.lodgingStay.create({

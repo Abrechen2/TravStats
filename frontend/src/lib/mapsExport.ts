@@ -41,7 +41,7 @@ export function cidFromMapsUrl(url: string): string | null {
 
 /** The provenance key a Maps row carries into the app. */
 export function mapsExternalRef(cid: string): string {
-  return `gmaps:${cid}`;
+  return `gmaps-cid:${cid}`;
 }
 
 const NAME_HEADERS = ["titel", "title", "name"];

@@ -21,7 +21,7 @@ export interface PlaceImportCandidate {
   country?: string | null;
   notes?: string | null;
   visitedAt?: string | null;
-  /** `gmaps:<cid>`, `osm:<type>/<id>`, `csv:<user key>` — what makes a re-import a no-op. */
+  /** `gmaps-cid:<cid>`, `osm:<type>/<id>`, `csv:<user key>` — what makes a re-import a no-op. */
   externalRef?: string | null;
   /** What the commit makes of the row (#358). Absent = a place. */
   treatment?: "place" | "trip_stop" | "stay";
@@ -71,6 +71,8 @@ export interface PlaceImportCommitResult {
   skipped: number;
   /** Rows written as trip stops (#358). */
   stops: number;
+  /** Trip-stop rows skipped: the trip already has that stop on that day. */
+  stopsSkipped?: number;
   /** Rows confirmed as one of the user's stays — nothing written for them. */
   matchedStays: number;
   failed: PlaceImportFailure[];

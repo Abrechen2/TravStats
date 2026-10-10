@@ -16,6 +16,7 @@
 import { z } from "zod";
 import logger from "../../../utils/logger";
 import type { PositionReason } from "../../../schemas/placeImportResolve";
+import { cidOfRef } from "../placeRefs";
 
 const ENDPOINT = "https://maps.googleapis.com/maps/api/place/details/json";
 
@@ -58,24 +59,10 @@ export interface CidPlace {
 export type CidLookup = { ok: true; place: CidPlace } | { ok: false; reason: PositionReason };
 
 /**
- * The decimal CID inside a Maps link (`!1s0x…:0x<cid>`), or behind the
- * `gmaps:` prefix the Maps tile mints. Null when the row carries neither.
+ * The decimal CID a row's reference names — `gmaps-cid:`, `gmaps:`, a Maps
+ * link or a `?cid=` link. One parser for lookup and dedupe (`placeRefs.ts`).
  */
-export function cidFromRef(ref: string | null | undefined): string | null {
-  if (!ref) return null;
-  const prefixed = ref.trim().match(/^gmaps:(\d{1,20})$/);
-  if (prefixed) return prefixed[1];
-  const fromLink = ref.match(/!1s0x[0-9a-fA-F]+:(0x[0-9a-fA-F]{1,16})/);
-  if (fromLink) {
-    try {
-      return BigInt(fromLink[1]).toString();
-    } catch {
-      return null;
-    }
-  }
-  const cidParam = ref.match(/[?&]cid=(\d{1,20})/);
-  return cidParam ? cidParam[1] : null;
-}
+export const cidFromRef = cidOfRef;
 
 /** Google's `status` field → our reason vocabulary. */
 function reasonOfStatus(status: string): PositionReason {

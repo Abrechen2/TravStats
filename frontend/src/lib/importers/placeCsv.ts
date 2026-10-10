@@ -98,7 +98,7 @@ const readText = (raw: string | undefined): string | null => {
 /**
  * The reference a row carries. A Google Takeout export maps its Maps LINK
  * here, and the link's CID is the place's identity (#358): it becomes
- * `gmaps:<cid>`, the same key the Maps tile mints, so a list imported through
+ * `gmaps-cid:<cid>`, the same key the Maps tile mints, so a list imported through
  * either path is recognised by the other — and a link longer than the
  * reference column no longer fails the row.
  */

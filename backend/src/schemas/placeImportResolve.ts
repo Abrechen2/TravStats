@@ -23,7 +23,7 @@ import { MAX_PLACE_IMPORT_ROWS } from "./placeImport";
 export const resolveRowSchema = z.object({
   sourceRowIndex: z.number().int().nonnegative(),
   name: z.string().trim().min(1).max(200),
-  /** `gmaps:<cid>` or the Maps link itself — the CID is read from either. */
+  /** `gmaps-cid:<cid>`, `gmaps:<cid>` or the Maps link itself — the CID is read from any. */
   externalRef: z.string().trim().max(2000).nullable().optional(),
   lat: z.number().min(-90).max(90).nullable().optional(),
   lon: z.number().min(-180).max(180).nullable().optional(),

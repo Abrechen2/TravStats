@@ -50,10 +50,10 @@ const hasPosition = (r: { lat?: number | null; lon?: number | null }): boolean =
   Number.isFinite(r.lat) &&
   Number.isFinite(r.lon);
 
-/** The CID behind a row's reference — `gmaps:<cid>` or a Maps link. */
+/** The CID behind a row's reference — `gmaps-cid:` / `gmaps:` or a Maps link. */
 export function rowCid(externalRef: string | null | undefined): string | null {
   if (!externalRef) return null;
-  const prefixed = externalRef.match(/^gmaps:(\d+)$/);
+  const prefixed = externalRef.match(/^gmaps(?:-cid)?:(\d+)$/);
   return prefixed ? prefixed[1] : cidFromMapsUrl(externalRef);
 }
 

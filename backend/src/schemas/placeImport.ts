@@ -42,7 +42,7 @@ export const placeImportCandidateSchema = z.object({
   notes: z.string().trim().max(2000).nullable().optional(),
   visitedAt: z.string().trim().max(40).nullable().optional(),
   /**
-   * A namespaced identity from the source: `gmaps:<cid>`, `osm:<type>/<id>`,
+   * A namespaced identity from the source: `gmaps-cid:<cid>`, `osm:<type>/<id>`,
    * `csv:<user key>`. It is what makes a second import of the same file a
    * no-op, so it travels from the reader rather than being invented here.
    */

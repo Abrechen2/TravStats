@@ -477,7 +477,9 @@
         "write_failed": "nicht gespeichert",
         "invalid_target": "Reise oder Unterkunft nicht gefunden"
       },
-      "takeoutExtra": "{{stops}} als Reisestopp angelegt · {{stays}} als deine Unterkunft erkannt"
+      "takeoutExtra": "{{stops}} als Reisestopp angelegt · {{stays}} als deine Unterkunft erkannt",
+      "stopsSkipped_one": "{{count}} Reisestopp übersprungen — die Reise hat ihn an diesem Tag schon",
+      "stopsSkipped_other": "{{count}} Reisestopps übersprungen — die Reise hat sie an diesem Tag schon"
     },
     "takeout": {
       "intro_one": "{{count}} Zeile stammt aus einer Google-Maps-Liste. Position, Reise und Besuchstag lassen sich vorschlagen — du entscheidest danach pro Zeile.",

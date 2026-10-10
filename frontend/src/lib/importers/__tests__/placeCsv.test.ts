@@ -88,7 +88,7 @@ describe("reading a places CSV", () => {
     expect(candidates[0].externalRef).toBe("gmaps:12345");
   });
 
-  it("turns a Takeout Maps link into the place's gmaps:<cid> identity (#358)", () => {
+  it("turns a Takeout Maps link into the place's gmaps-cid:<cid> identity (#358)", () => {
     const link =
       "https://www.google.com/maps/place/Invented+Shrine/data=!4m2!3m1!1s0x60010f153d2e6d21:0x7b1aca1c753ae2e9";
     const { candidates } = buildPlaceCandidates(
@@ -99,7 +99,7 @@ describe("reading a places CSV", () => {
       mapping
     );
 
-    expect(candidates[0].externalRef).toBe(`gmaps:${BigInt("0x7b1aca1c753ae2e9").toString()}`);
+    expect(candidates[0].externalRef).toBe(`gmaps-cid:${BigInt("0x7b1aca1c753ae2e9").toString()}`);
     // A link with no Maps identity is kept as the file wrote it.
     expect(candidates[1].externalRef).toBe("https://example.com/somewhere");
   });

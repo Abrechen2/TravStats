@@ -33,7 +33,13 @@ export function describePlaceCommitResult(
   const stops = result.stops ?? 0;
   const stays = result.matchedStays ?? 0;
   const extra =
-    stops + stays > 0 ? ` · ${t("places:import.commitResult.takeoutExtra", { stops, stays })}` : "";
+    (stops + stays > 0
+      ? ` · ${t("places:import.commitResult.takeoutExtra", { stops, stays })}`
+      : "") +
+    // A re-imported list: its stops are already on the trip, so none was added twice.
+    ((result.stopsSkipped ?? 0) > 0
+      ? ` · ${t("places:import.commitResult.stopsSkipped", { count: result.stopsSkipped })}`
+      : "");
 
   if (result.failed.length === 0) {
     return {
