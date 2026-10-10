@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { CruiseEditModal } from "../../../components/Cruise/CruiseEditModal";
 import { cruiseApi, companionsApi, shipsApi, tripsApi } from "../../../lib/api";
 import type { Cruise } from "../../../types";
+import { findNamed, getNamed, queryNamed } from "../../helpers/namedElement";
 
 /**
  * Entry suggestions in the cruise form: values the form can derive from data
@@ -226,10 +227,10 @@ describe("CruiseEditModal — entry suggestions", () => {
       const route = screen.getByLabelText("field.routeName") as HTMLInputElement;
       expect(route.value).toBe("");
 
-      await userEvent.click(screen.getByRole("button", { name: "form.routeNameSuggestion" }));
+      await userEvent.click(getNamed("button", "form.routeNameSuggestion"));
 
       expect(route.value).toBe("Kiel → Oslo → Kiel");
-      expect(screen.queryByRole("button", { name: "form.routeNameSuggestion" })).toBeNull();
+      expect(queryNamed("button", "form.routeNameSuggestion")).toBeNull();
     });
 
     it("offers nothing over a name the cruise already has", async () => {
@@ -244,7 +245,7 @@ describe("CruiseEditModal — entry suggestions", () => {
       // Let the trip list settle, so the assertion below is not made mid-load.
       await act(async () => {});
       expect(screen.getByLabelText("field.routeName")).toHaveValue("Norwegen");
-      expect(screen.queryByRole("button", { name: "form.routeNameSuggestion" })).toBeNull();
+      expect(queryNamed("button", "form.routeNameSuggestion")).toBeNull();
     });
   });
 
@@ -325,8 +326,8 @@ describe("CruiseEditModal — entry suggestions", () => {
         await act(async () => {
           fireEvent.focus(screen.getByLabelText("field.line"));
         });
-        expect(await screen.findByRole("button", { name: "TUI Cruises" })).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "Hurtigruten" })).toBeInTheDocument();
+        expect(await findNamed("button", "TUI Cruises")).toBeInTheDocument();
+        expect(getNamed("button", "Hurtigruten")).toBeInTheDocument();
       }
     );
   });

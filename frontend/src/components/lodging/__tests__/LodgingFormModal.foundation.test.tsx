@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { LodgingFormModal } from "../LodgingFormModal";
 import { createLodging, updateLodging } from "../../../lib/api/lodging";
 import type { Lodging } from "../../../types/lodging";
+import { getNamed, queryNamed } from "../../../__tests__/helpers/namedElement";
 
 vi.mock("../../../hooks/useLodgingEntrySuggestions", () => ({
   useLodgingEntrySuggestions: () => ({
@@ -90,7 +91,7 @@ const stored: Lodging = {
 };
 
 const nameField = (): HTMLElement => screen.getByRole("textbox", { name: /lodging:field\.name/ });
-const saveButton = (): HTMLElement => screen.getByRole("button", { name: "common:buttons.save" });
+const saveButton = (): HTMLElement => getNamed("button", "common:buttons.save");
 const hint = (): HTMLElement | null => screen.queryByTestId("save-blocked-hint");
 
 describe("LodgingFormModal — the shared form blocks", () => {
@@ -123,7 +124,7 @@ describe("LodgingFormModal — the shared form blocks", () => {
     expect(saveButton()).toBeDisabled();
 
     // …and the hint takes the user there, unfolding the section.
-    await userEvent.click(screen.getByRole("button", { name: "lodging:form.missing.coordinates" }));
+    await userEvent.click(getNamed("button", "lodging:form.missing.coordinates"));
     expect(document.activeElement).toBe(screen.getByLabelText("location:field.lat"));
     expect(screen.getByText("location:advanced").closest("details")?.open).toBe(true);
 
@@ -149,10 +150,10 @@ describe("LodgingFormModal — the shared form blocks", () => {
     expect(screen.getByText("common:discard.title")).toBeInTheDocument();
 
     // The form's own Cancel goes through the same question.
-    await userEvent.click(screen.getByRole("button", { name: "common:discard.keepEditing" }));
-    await userEvent.click(screen.getByRole("button", { name: "common:buttons.cancel" }));
+    await userEvent.click(getNamed("button", "common:discard.keepEditing"));
+    await userEvent.click(getNamed("button", "common:buttons.cancel"));
     expect(onCloseChanged).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole("button", { name: "common:discard.confirm" }));
+    await userEvent.click(getNamed("button", "common:discard.confirm"));
     expect(onCloseChanged).toHaveBeenCalledTimes(1);
   });
 
@@ -175,7 +176,7 @@ describe("LodgingFormModal — the shared form blocks", () => {
     expect(onSaved).not.toHaveBeenCalled();
     await waitFor(() => expect(document.activeElement).toBe(banner));
 
-    await userEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    await userEvent.click(getNamed("button", "common:buttons.retry"));
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(stored));
     expect(createLodging).toHaveBeenCalledTimes(2);
   });
@@ -196,9 +197,9 @@ describe("LodgingFormModal — the shared form blocks", () => {
     await userEvent.click(saveButton());
 
     expect(await screen.findByRole("alert")).toHaveTextContent("common:saveErrors.outcomeUnknown");
-    expect(screen.queryByRole("button", { name: "common:buttons.retry" })).not.toBeInTheDocument();
+    expect(queryNamed("button", "common:buttons.retry")).not.toBeInTheDocument();
     expect(nameField()).toHaveValue("Hotel Adlon");
-    await userEvent.click(screen.getByRole("button", { name: "common:buttons.reloadList" }));
+    await userEvent.click(getNamed("button", "common:buttons.reloadList"));
     expect(onReload).toHaveBeenCalledTimes(1);
     expect(createLodging).toHaveBeenCalledTimes(1);
   });
@@ -212,10 +213,8 @@ describe("LodgingFormModal — the shared form blocks", () => {
     await userEvent.click(saveButton());
 
     expect(await screen.findByRole("alert")).toHaveTextContent("common:saveErrors.network");
-    expect(screen.getByRole("button", { name: "common:buttons.retry" })).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "common:buttons.reloadList" })
-    ).not.toBeInTheDocument();
+    expect(getNamed("button", "common:buttons.retry")).toBeInTheDocument();
+    expect(queryNamed("button", "common:buttons.reloadList")).not.toBeInTheDocument();
   });
 
   it("drops the banner at the next edit", async () => {
@@ -251,7 +250,7 @@ describe("LodgingFormModal — the shared form blocks", () => {
     await userEvent.click(saveButton());
 
     expect(await screen.findByText("common:form.savedButRefreshFailed")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "common:buttons.save" })).not.toBeInTheDocument();
+    expect(queryNamed("button", "common:buttons.save")).not.toBeInTheDocument();
     expect(screen.queryByText("lodging:form.saveError")).not.toBeInTheDocument();
     expect(createLodging).toHaveBeenCalledTimes(1);
   });
@@ -260,7 +259,7 @@ describe("LodgingFormModal — the shared form blocks", () => {
   it("takes the user to the longitude when the longitude is the wrong one", async () => {
     render(<LodgingFormModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
     await userEvent.click(screen.getByText("mock-type-bad-longitude"));
-    await userEvent.click(screen.getByRole("button", { name: "lodging:form.missing.coordinates" }));
+    await userEvent.click(getNamed("button", "lodging:form.missing.coordinates"));
     expect(document.activeElement).toBe(screen.getByLabelText("location:field.lon"));
   });
 

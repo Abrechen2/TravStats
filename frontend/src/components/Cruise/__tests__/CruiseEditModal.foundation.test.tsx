@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { CruiseEditModal } from "../CruiseEditModal";
 import { cruiseApi, tripsApi, companionsApi } from "../../../lib/api";
 import type { Cruise, CruiseStop } from "../../../types";
+import { getNamed, queryNamed } from "../../../__tests__/helpers/namedElement";
 
 vi.mock("../../../lib/api", () => ({
   cruiseApi: { create: vi.fn(), update: vi.fn() },
@@ -113,7 +114,7 @@ describe("CruiseEditModal — the shared form blocks", () => {
     expect(hint()).toHaveTextContent("cruise:form.missing.identity");
     expect(hint()).toHaveTextContent("cruise:form.missing.startDate");
 
-    await userEvent.click(screen.getByRole("button", { name: "cruise:form.missing.startDate" }));
+    await userEvent.click(getNamed("button", "cruise:form.missing.startDate"));
     expect(document.activeElement).toBe(startField());
 
     fillIdentityAndStart();
@@ -124,7 +125,7 @@ describe("CruiseEditModal — the shared form blocks", () => {
   it("names a day without a port, opens it from the hint, and lets a sea day settle it", async () => {
     render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
     fillIdentityAndStart();
-    await userEvent.click(screen.getByRole("button", { name: /stops\.add/ }));
+    await userEvent.click(getNamed("button", /stops\.add/));
     // Close the new day again, as a user scrolling on would.
     const summary = document.querySelector<HTMLElement>("summary[id$='-summary']");
     if (summary) fireEvent.click(summary);
@@ -132,7 +133,7 @@ describe("CruiseEditModal — the shared form blocks", () => {
     expect(save()).toBeDisabled();
     expect(hint()).toHaveTextContent("cruise:form.missing.stopPort");
 
-    await userEvent.click(screen.getByRole("button", { name: "cruise:form.missing.stopPort" }));
+    await userEvent.click(getNamed("button", "cruise:form.missing.stopPort"));
     const port = screen.getByLabelText("stops.port");
     expect(document.activeElement).toBe(port);
     expect(port.closest("details")?.open).toBe(true);
@@ -162,11 +163,11 @@ describe("CruiseEditModal — the shared form blocks", () => {
     await userEvent.keyboard("{Escape}");
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByText("common:discard.title")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "common:discard.keepEditing" }));
+    await userEvent.click(getNamed("button", "common:discard.keepEditing"));
 
-    await userEvent.click(screen.getByRole("button", { name: "form.cancel" }));
+    await userEvent.click(getNamed("button", "form.cancel"));
     expect(onClose).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole("button", { name: "common:discard.confirm" }));
+    await userEvent.click(getNamed("button", "common:discard.confirm"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -188,7 +189,7 @@ describe("CruiseEditModal — the shared form blocks", () => {
     expect(screen.getByLabelText("field.routeName")).toHaveValue("Nordland");
     await waitFor(() => expect(document.activeElement).toBe(banner));
 
-    await userEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    await userEvent.click(getNamed("button", "common:buttons.retry"));
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(stored));
     expect(cruiseApi.create).toHaveBeenCalledTimes(2);
   });
@@ -207,9 +208,9 @@ describe("CruiseEditModal — the shared form blocks", () => {
     await userEvent.click(save());
 
     expect(await screen.findByRole("alert")).toHaveTextContent("common:saveErrors.outcomeUnknown");
-    expect(screen.queryByRole("button", { name: "common:buttons.retry" })).toBeNull();
+    expect(queryNamed("button", "common:buttons.retry")).toBeNull();
     expect(screen.getByLabelText("field.routeName")).toHaveValue("Nordland");
-    await userEvent.click(screen.getByRole("button", { name: "common:buttons.reloadList" }));
+    await userEvent.click(getNamed("button", "common:buttons.reloadList"));
     expect(onReload).toHaveBeenCalledTimes(1);
     expect(cruiseApi.create).toHaveBeenCalledTimes(1);
   });
@@ -238,7 +239,7 @@ describe("CruiseEditModal — the shared form blocks", () => {
     await userEvent.click(save());
 
     expect(await screen.findByText("common:form.savedButRefreshFailed")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "form.save" })).toBeNull();
+    expect(queryNamed("button", "form.save")).toBeNull();
     expect(cruiseApi.create).toHaveBeenCalledTimes(1);
     // The editor's bookkeeping never reaches the server.
     const body = vi.mocked(cruiseApi.create).mock.calls[0][0];
@@ -249,7 +250,7 @@ describe("CruiseEditModal — the shared form blocks", () => {
   it("names the map colours by their hue", async () => {
     render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
     await act(async () => {});
-    fireEvent.click(screen.getByRole("button", { name: "colorName.coral" }));
+    fireEvent.click(getNamed("button", "colorName.coral"));
     expect(screen.getByText("form.colorPicked")).toBeInTheDocument();
   });
 });

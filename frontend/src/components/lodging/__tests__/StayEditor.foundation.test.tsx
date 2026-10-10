@@ -12,6 +12,7 @@ import { StayEditor } from "../StayEditor";
 import { createStay, updateStay, listMemberships, getFxPreview } from "../../../lib/api/lodging";
 import { tripsApi } from "../../../lib/api";
 import type { LodgingStay } from "../../../types/lodging";
+import { getNamed, queryNamed } from "../../../__tests__/helpers/namedElement";
 
 vi.mock("../../../hooks/useLodgingEntrySuggestions", () => ({
   useLodgingEntrySuggestions: () => ({
@@ -148,17 +149,17 @@ describe("StayEditor - the shared form blocks", () => {
     expect(screen.getByTestId("discard-question")).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
 
-    await userEvent.click(screen.getByRole("button", { name: "common:discard.keepEditing" }));
-    await userEvent.click(screen.getByRole("button", { name: "common:buttons.cancel" }));
+    await userEvent.click(getNamed("button", "common:discard.keepEditing"));
+    await userEvent.click(getNamed("button", "common:buttons.cancel"));
     expect(screen.getByTestId("discard-question")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "common:discard.confirm" }));
+    await userEvent.click(getNamed("button", "common:discard.confirm"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("an edit that opens and closes untouched does not ask", async () => {
     const onClose = vi.fn();
     await renderEditor({ mode: "edit", stay: existing, onClose });
-    await userEvent.click(screen.getByRole("button", { name: "common:buttons.cancel" }));
+    await userEvent.click(getNamed("button", "common:buttons.cancel"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -175,7 +176,7 @@ describe("StayEditor - the shared form blocks", () => {
     expect(screen.getByLabelText("lodging:field.bookingReference")).toHaveValue("AB12");
     expect(onSaved).not.toHaveBeenCalled();
 
-    await userEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    await userEvent.click(getNamed("button", "common:buttons.retry"));
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(stored));
     expect(createStay).toHaveBeenCalledTimes(2);
   });
@@ -202,9 +203,9 @@ describe("StayEditor - the shared form blocks", () => {
     await userEvent.click(screen.getByTestId("stay-editor-save"));
 
     expect(await screen.findByText("common:saveErrors.outcomeUnknown")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "common:buttons.retry" })).toBeNull();
+    expect(queryNamed("button", "common:buttons.retry")).toBeNull();
     expect(screen.getByLabelText("lodging:field.bookingReference")).toHaveValue("AB12");
-    await userEvent.click(screen.getByRole("button", { name: "common:buttons.reloadList" }));
+    await userEvent.click(getNamed("button", "common:buttons.reloadList"));
     expect(onReload).toHaveBeenCalledTimes(1);
     expect(createStay).toHaveBeenCalledTimes(1);
   });
@@ -216,8 +217,8 @@ describe("StayEditor - the shared form blocks", () => {
     await userEvent.click(screen.getByTestId("stay-editor-save"));
 
     expect(await screen.findByText("common:saveErrors.network")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "common:buttons.retry" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "common:buttons.reloadList" })).toBeNull();
+    expect(getNamed("button", "common:buttons.retry")).toBeInTheDocument();
+    expect(queryNamed("button", "common:buttons.reloadList")).toBeNull();
   });
 
   it("a stored stay whose follow-up fails says so and cannot be created twice", async () => {

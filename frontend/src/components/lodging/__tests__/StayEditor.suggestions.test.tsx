@@ -6,6 +6,7 @@ import { StayEditor } from "../StayEditor";
 import { createStay, listMemberships, getFxPreview } from "../../../lib/api/lodging";
 import { tripsApi } from "../../../lib/api";
 import type { LodgingStay } from "../../../types/lodging";
+import { queryNamed } from "../../../__tests__/helpers/namedElement";
 
 // Same module boundary as StayEditor.test.tsx; see there for why each mock exists.
 const suggestions = vi.hoisted(() => ({
@@ -143,8 +144,6 @@ describe("StayEditor — suggestions from the user's own stays", () => {
       />
     );
     await act(async () => {});
-    expect(
-      screen.queryByRole("button", { name: /lodging:stayEditor.boardSuggestion/ })
-    ).not.toBeInTheDocument();
+    expect(queryNamed("button", /lodging:stayEditor.boardSuggestion/)).not.toBeInTheDocument();
   });
 });

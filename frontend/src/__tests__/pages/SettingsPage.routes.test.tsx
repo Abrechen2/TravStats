@@ -5,6 +5,7 @@ import SettingsPage, { SettingsLegacyRedirect } from "../../pages/SettingsPage";
 import { useSettingsStore } from "../../store/settingsStore";
 import { SETTINGS_GROUPS, groupOfSection } from "../../pages/Settings/settingsModel";
 import { SECTION_LABEL_KEY } from "../../pages/Settings/sectionLabels";
+import { findNamed, queryNamed } from "../helpers/namedElement";
 
 // A settings route renders its whole group at once on this branch (one route
 // per group), so every section in the group loads its data on mount. Each of
@@ -187,7 +188,7 @@ const renderAt = (entry: string): void => {
 
 /** Sections are landmarks named after their own title (`t` echoes the key). */
 const sectionShown = (id: keyof typeof SECTION_LABEL_KEY): boolean =>
-  screen.queryByRole("region", { name: SECTION_LABEL_KEY[id] }) !== null;
+  queryNamed("region", SECTION_LABEL_KEY[id]) !== null;
 
 /**
  * Settings became one route per group in 2.7.0 (owner decision 11 of
@@ -209,7 +210,7 @@ describe("SettingsPage — one route per group", () => {
   // one page: the settings routes are account, flight, cruise and lodging.
   it("draws every general group on the account route, with the domain ones kept apart", async () => {
     renderAt("/settings/account");
-    await screen.findByRole("region", { name: SECTION_LABEL_KEY.profile });
+    await findNamed("region", SECTION_LABEL_KEY.profile);
 
     // Konto, Darstellung, Daten and Dienste share one page now.
     expect(sectionShown("profile")).toBe(true);
@@ -223,72 +224,66 @@ describe("SettingsPage — one route per group", () => {
   it("lands a pre-round-4 group route on its anchor on the account page", async () => {
     // /settings/data was a page of its own; a bookmark to it still arrives.
     renderAt("/settings/data");
-    expect(await screen.findByRole("region", { name: SECTION_LABEL_KEY.backup })).toBeTruthy();
+    expect(await findNamed("region", SECTION_LABEL_KEY.backup)).toBeTruthy();
     expect(sectionShown("profile")).toBe(true);
   });
 
   it("keeps a domain group's own sections on its own route", async () => {
     renderAt("/settings/cruise");
-    await screen.findByRole("region", { name: SECTION_LABEL_KEY.cruisePreferences });
+    await findNamed("region", SECTION_LABEL_KEY.cruisePreferences);
     expect(sectionShown("profile")).toBe(false);
   });
 
   it("sends a bare /settings to the account group", async () => {
     renderAt("/settings");
-    expect(await screen.findByRole("region", { name: SECTION_LABEL_KEY.profile })).toBeTruthy();
+    expect(await findNamed("region", SECTION_LABEL_KEY.profile)).toBeTruthy();
   });
 
   it("lands a pre-2.7 ?section= link on the group that holds it", async () => {
     renderAt("/settings?section=notifications");
-    expect(
-      await screen.findByRole("region", { name: SECTION_LABEL_KEY.notifications })
-    ).toBeTruthy();
+    expect(await findNamed("region", SECTION_LABEL_KEY.notifications)).toBeTruthy();
   });
 
   it("lands the renamed ?section=apiKeys link on the services group", async () => {
     // Renamed to `externalServices` when the Immich connection moved in (#182);
     // the old id outlives the rename in bookmarks.
     renderAt("/settings?section=apiKeys");
-    expect(
-      await screen.findByRole("region", { name: SECTION_LABEL_KEY.externalServices })
-    ).toBeTruthy();
+    expect(await findNamed("region", SECTION_LABEL_KEY.externalServices)).toBeTruthy();
   });
 
   // The three per-domain "Bonusprogramme" sections became ONE general section
   // (owner, 2026-09-26). Their ids live on in links and in the 2.6 chain page.
   it("lands an old per-domain loyalty section on Einstellungen → Bonusprogramme", async () => {
     renderAt("/settings/lodging?section=lodgingMemberships");
-    expect(await screen.findByRole("region", { name: SECTION_LABEL_KEY.loyalty })).toBeTruthy();
+    expect(await findNamed("region", SECTION_LABEL_KEY.loyalty)).toBeTruthy();
     expect(screen.getByTestId("loyalty-section-stub")).toBeTruthy();
   });
 
   it("lands a pre-2.7 ?section=flightMemberships link there too", async () => {
     renderAt("/settings?section=flightMemberships");
-    expect(await screen.findByRole("region", { name: SECTION_LABEL_KEY.loyalty })).toBeTruthy();
+    expect(await findNamed("region", SECTION_LABEL_KEY.loyalty)).toBeTruthy();
   });
 
   it("keeps no loyalty section on a domain route", async () => {
     renderAt("/settings/cruise");
-    await screen.findByRole("region", { name: SECTION_LABEL_KEY.cruisePreferences });
+    await findNamed("region", SECTION_LABEL_KEY.cruisePreferences);
     expect(screen.queryByTestId("loyalty-section-stub")).toBeNull();
   });
 
   it("lands a pre-2.7 ?tab= link on that domain's group", async () => {
     renderAt("/settings?tab=cruise");
-    expect(
-      await screen.findByRole("region", { name: SECTION_LABEL_KEY.cruisePreferences })
-    ).toBeTruthy();
+    expect(await findNamed("region", SECTION_LABEL_KEY.cruisePreferences)).toBeTruthy();
   });
 
   it("sends a domain group whose domain is switched off back to the default", async () => {
     useSettingsStore.setState({ enabledDomains: ["flight"] });
     renderAt("/settings/cruise");
-    expect(await screen.findByRole("region", { name: SECTION_LABEL_KEY.profile })).toBeTruthy();
+    expect(await findNamed("region", SECTION_LABEL_KEY.profile)).toBeTruthy();
   });
 
   it("sends an unknown group back to the default rather than rendering an empty frame", async () => {
     renderAt("/settings/does-not-exist");
-    expect(await screen.findByRole("region", { name: SECTION_LABEL_KEY.profile })).toBeTruthy();
+    expect(await findNamed("region", SECTION_LABEL_KEY.profile)).toBeTruthy();
   });
 
   // The page used to end in a spacer roughly one viewport tall, so the last
@@ -299,7 +294,7 @@ describe("SettingsPage — one route per group", () => {
   // the last section is the active one — so the spacer has no job left.
   it("ends with the last section, with no empty scroll tail under it", async () => {
     renderAt("/settings/account");
-    await screen.findByRole("region", { name: SECTION_LABEL_KEY.profile });
+    await findNamed("region", SECTION_LABEL_KEY.profile);
     expect(document.querySelector('[data-testid="settings-scroll-tail"]')).toBeNull();
   });
 });

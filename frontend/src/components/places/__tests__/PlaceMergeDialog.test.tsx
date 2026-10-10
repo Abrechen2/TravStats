@@ -31,6 +31,7 @@ vi.mock("../../../hooks/useTranslation", async () => {
 
 import { PlaceMergeDialog } from "../PlaceMergeDialog";
 import { mergeFields, openGroups } from "../placeMergeModel";
+import { getNamed } from "../../../__tests__/helpers/namedElement";
 
 const base = {
   localName: null,
@@ -108,10 +109,10 @@ async function openDialog(): Promise<{
   return { onMerged, onClose };
 }
 
-const confirmButton = (): HTMLElement => screen.getByRole("button", { name: "Zusammenführen" });
+const confirmButton = (): HTMLElement => getNamed("button", "Zusammenführen");
 
 async function pickColosseum(): Promise<void> {
-  fireEvent.click(screen.getByRole("button", { name: /Colosseum/ }));
+  fireEvent.click(getNamed("button", /Colosseum/));
   await act(async () => {}); // the counts arrive
 }
 
@@ -278,7 +279,7 @@ describe("PlaceMergeDialog", () => {
     expect(
       within(screen.getByRole("group", { name: "Name" })).getAllByRole("button")[0]
     ).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(screen.getByRole("button", { name: "Erneut versuchen" }));
+    fireEvent.click(getNamed("button", "Erneut versuchen"));
     await waitFor(() => expect(onMerged).toHaveBeenCalled());
     expect(mergePlace).toHaveBeenCalledTimes(2);
   });
@@ -306,7 +307,7 @@ describe("PlaceMergeDialog", () => {
     listPlaces.mockResolvedValue([petra7]);
     render(<PlaceMergeDialog place={petra} onClose={vi.fn()} onMerged={vi.fn()} />);
     await act(async () => {});
-    fireEvent.click(screen.getByRole("button", { name: /Petra \(Neue 7\)/ }));
+    fireEvent.click(getNamed("button", /Petra \(Neue 7\)/));
     await act(async () => {});
 
     const notice = screen.getByRole("alert");

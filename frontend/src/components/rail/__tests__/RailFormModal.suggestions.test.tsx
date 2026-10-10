@@ -39,6 +39,7 @@ vi.mock("../../../lib/api/rail", () => ({
 
 import { RailFormModal } from "../RailFormModal";
 import { makeRailJourney } from "./railJourneyFixture";
+import { getNamed, queryNamed } from "../../../__tests__/helpers/namedElement";
 
 const SUGGESTIONS = {
   trains: [
@@ -85,9 +86,7 @@ describe("RailFormModal — chips from the user's own rides", () => {
 
     fireEvent.click(screen.getByText("DB Fernverkehr"));
     expect(screen.getByLabelText("rail:form.operator")).toHaveValue("DB Fernverkehr");
-    fireEvent.click(
-      screen.getByRole("button", { name: "common:suggestionChip:rail:class.second" })
-    );
+    fireEvent.click(getNamed("button", "common:suggestionChip:rail:class.second"));
     expect(screen.getByLabelText("rail:form.class")).toHaveValue("second");
     fireEvent.click(screen.getByText("12"));
     expect(screen.getByLabelText("rail:form.coach")).toHaveValue("12");
@@ -108,9 +107,7 @@ describe("RailFormModal — chips from the user's own rides", () => {
     await screen.findByText("ICE 578");
 
     fireEvent.change(screen.getByLabelText("rail:form.class"), { target: { value: "first" } });
-    expect(
-      screen.queryByRole("button", { name: "common:suggestionChip:rail:class.second" })
-    ).toBeNull();
+    expect(queryNamed("button", "common:suggestionChip:rail:class.second")).toBeNull();
     expect(screen.getByLabelText("rail:form.class")).toHaveValue("first");
 
     // A typed seat narrows the chips to those that continue it; none replaces it.
@@ -232,15 +229,13 @@ describe("RailFormModal — chips from the user's own rides", () => {
     fireEvent.change(await screen.findByLabelText("rail:lookup.date"), {
       target: { value: "2026-09-26" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "rail:lookup.run" }));
+    fireEvent.click(getNamed("button", "rail:lookup.run"));
     expect(await screen.findByTestId("rail-lookup-change")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "rail:lookup.applyWithChange" }));
+    fireEvent.click(getNamed("button", "rail:lookup.applyWithChange"));
 
     // The first leg ends at the change; the banner names where the ride goes on.
     expect(screen.getByTestId("rail-onward-banner")).toHaveTextContent("Hamburg Hbf");
-    fireEvent.click(
-      screen.getByRole("button", { name: "rail:connection.saveAndContinue:Hamburg Hbf" })
-    );
+    fireEvent.click(getNamed("button", "rail:connection.saveAndContinue:Hamburg Hbf"));
 
     await waitFor(() => expect(onProgress).toHaveBeenCalledWith(saved));
     expect(create.mock.calls[0][0]).toMatchObject({

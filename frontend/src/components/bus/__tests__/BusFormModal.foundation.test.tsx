@@ -81,6 +81,7 @@ vi.mock("../../../lib/api/bus", () => ({
 import { BusFormModal } from "../BusFormModal";
 import type { BusJourney } from "../../../types/bus";
 import { rideFixture } from "./busFixture";
+import { allNamed, getNamed } from "../../../__tests__/helpers/namedElement";
 
 const DEPARTURE_TIME = /^bus:form\.departureTime\s*\*?$/;
 const NETWORK = { isAxiosError: true, message: "Network Error" };
@@ -156,7 +157,7 @@ describe("BusFormModal — shared form blocks", () => {
     expect(saveButton()).toHaveAccessibleDescription(/common:form\.saveBlocked/);
 
     // The item takes the user to the field.
-    fireEvent.click(screen.getByRole("button", { name: "bus:form.departureStation" }));
+    fireEvent.click(getNamed("button", "bus:form.departureStation"));
     expect(document.getElementById("bus-dep-search")).toHaveFocus();
 
     pickBoth();
@@ -164,7 +165,7 @@ describe("BusFormModal — shared form blocks", () => {
     expect(screen.getByTestId("save-blocked-hint")).not.toHaveTextContent(
       "bus:form.departureStation"
     );
-    fireEvent.click(screen.getByRole("button", { name: "bus:form.missing.departureTime" }));
+    fireEvent.click(getNamed("button", "bus:form.missing.departureTime"));
     expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveFocus();
 
     fireEvent.change(screen.getByLabelText(DEPARTURE_TIME), {
@@ -192,7 +193,7 @@ describe("BusFormModal — shared form blocks", () => {
     expect(saveButton()).toBeDisabled();
     const hint = screen.getByTestId("save-blocked-hint");
     expect(hint).not.toHaveTextContent("bus:form.arrivalStation");
-    fireEvent.click(screen.getByRole("button", { name: "bus:form.missing.arrName" }));
+    fireEvent.click(getNamed("button", "bus:form.missing.arrName"));
     expect(document.getElementById("bus-arr-name")).toHaveFocus();
     await settle();
   });
@@ -202,7 +203,7 @@ describe("BusFormModal — shared form blocks", () => {
     await renderForm({ journey: rideFixture(), onClose });
     fireEvent.click(screen.getByText("bad lon bus:form.departureStation"));
     expect(saveButton()).toBeDisabled();
-    fireEvent.click(screen.getByRole("button", { name: "bus:form.missing.depCoordinates" }));
+    fireEvent.click(getNamed("button", "bus:form.missing.depCoordinates"));
     expect(document.getElementById("bus-dep-lon")).toHaveFocus();
     fireEvent.keyDown(document, { key: "Escape" });
     expect(await screen.findByText("common:discard.title")).toBeInTheDocument();
@@ -308,7 +309,7 @@ describe("BusFormModal — shared form blocks", () => {
     expect(create).toHaveBeenCalledTimes(1);
     // Saved is not "changed": Close leaves without asking.
     // The footer's Close — the last of the two (the × carries the same name).
-    const closes = screen.getAllByRole("button", { name: "common:buttons.close" });
+    const closes = allNamed("button", "common:buttons.close");
     fireEvent.click(closes[closes.length - 1]);
     expect(screen.queryByText("common:discard.title")).toBeNull();
     expect(onClose).toHaveBeenCalled();
@@ -341,13 +342,13 @@ describe("BusFormModal — shared form blocks", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(await screen.findByText("common:discard.title")).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "common:discard.keepEditing" }));
+    fireEvent.click(getNamed("button", "common:discard.keepEditing"));
     expect(screen.getByLabelText("bus:form.seatNumber")).toHaveValue("42");
 
-    fireEvent.click(screen.getByRole("button", { name: "bus:form.cancel" }));
+    fireEvent.click(getNamed("button", "bus:form.cancel"));
     expect(await screen.findByText("common:discard.title")).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "common:discard.confirm" }));
+    fireEvent.click(getNamed("button", "common:discard.confirm"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

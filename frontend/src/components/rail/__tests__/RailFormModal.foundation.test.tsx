@@ -86,16 +86,17 @@ vi.mock("../../../lib/api/rail", () => ({
 import { RailFormModal } from "../RailFormModal";
 import { connectionDraftFrom } from "../railFormModel";
 import { makeRailJourney } from "./railJourneyFixture";
+import { allNamed, getNamed, queryNamed } from "../../../__tests__/helpers/namedElement";
 
 const DEPARTURE_TIME = /^rail:form\.departureTime\s*\*?$/;
 const NETWORK = { isAxiosError: true, message: "Network Error" };
 // A refusal the server answered (nothing stored), so a create may retry.
 const DB_DOWN = { isAxiosError: true, response: { status: 503, data: { code: "DB_UNAVAILABLE" } } };
 
-const saveButton = (): HTMLElement => screen.getByRole("button", { name: "rail:form.save" });
+const saveButton = (): HTMLElement => getNamed("button", "rail:form.save");
 
 function pickBothViaGeocoder(): void {
-  for (const b of screen.getAllByRole("button", { name: "rail:station.useGeocoder" })) {
+  for (const b of allNamed("button", "rail:station.useGeocoder")) {
     fireEvent.click(b);
   }
   fireEvent.click(screen.getByText("pick rail:form.departureStation"));
@@ -147,7 +148,7 @@ describe("RailFormModal — shared form blocks", () => {
       "rail:form.departureStation"
     );
     // The item takes the user to the field.
-    fireEvent.click(screen.getByRole("button", { name: "rail:form.missing.departureTime" }));
+    fireEvent.click(getNamed("button", "rail:form.missing.departureTime"));
     expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveFocus();
 
     fireEvent.change(screen.getByLabelText(DEPARTURE_TIME), {
@@ -238,7 +239,7 @@ describe("RailFormModal — shared form blocks", () => {
     await readyForm(onSaved);
     fireEvent.click(saveButton());
     expect(await screen.findByText("common:form.savedButRefreshFailed")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "rail:form.save" })).toBeNull();
+    expect(queryNamed("button", "rail:form.save")).toBeNull();
     expect(create).toHaveBeenCalledTimes(1);
   });
 
@@ -258,7 +259,7 @@ describe("RailFormModal — shared form blocks", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(await screen.findByText("common:discard.title")).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "common:discard.confirm" }));
+    fireEvent.click(getNamed("button", "common:discard.confirm"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -266,7 +267,7 @@ describe("RailFormModal — shared form blocks", () => {
     const onClose = vi.fn();
     render(<RailFormModal journey={makeRailJourney()} onClose={onClose} onSaved={vi.fn()} />);
     fireEvent.change(screen.getByLabelText("rail:form.operator"), { target: { value: "ÖBB" } });
-    fireEvent.click(screen.getByRole("button", { name: "rail:form.cancel" }));
+    fireEvent.click(getNamed("button", "rail:form.cancel"));
     expect(await screen.findByText("common:discard.title")).toBeInTheDocument();
     expect(onClose).not.toHaveBeenCalled();
   });
@@ -333,7 +334,7 @@ describe("RailFormModal — shared form blocks", () => {
     await readyForm();
     const name = document.getElementById("rail-dep-name") as HTMLInputElement;
     fireEvent.change(name, { target: { value: "" } });
-    const item = screen.getByRole("button", { name: "rail:form.missing.depName" });
+    const item = getNamed("button", "rail:form.missing.depName");
     fireEvent.click(item);
     expect(name).toHaveFocus();
     expect(screen.getByTestId("save-blocked-hint")).not.toHaveTextContent(
@@ -344,7 +345,7 @@ describe("RailFormModal — shared form blocks", () => {
   it("takes the user to the coordinate that was refused", async () => {
     await readyForm();
     fireEvent.click(screen.getByText("bad lon rail:form.departureStation"));
-    fireEvent.click(screen.getByRole("button", { name: "rail:form.missing.depCoordinates" }));
+    fireEvent.click(getNamed("button", "rail:form.missing.depCoordinates"));
     expect(document.getElementById("rail-dep-lon")).toHaveFocus();
   });
 

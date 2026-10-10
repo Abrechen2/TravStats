@@ -133,7 +133,13 @@ describe("StayEditor", () => {
     fireEvent.change(screen.getByLabelText("lodging:field.totalPrice"), {
       target: { value: "420" },
     });
-    await userEvent.selectOptions(screen.getByLabelText("lodging:field.currency"), "CHF");
+    // A change event, not userEvent.selectOptions: that one checks pointer-events
+    // on each of the ~160 currency options through getComputedStyle — ~1 s
+    // measured, enough to time this test out on a loaded runner. The choice
+    // of currency, not the act of picking it, is what is under test.
+    fireEvent.change(screen.getByLabelText("lodging:field.currency"), {
+      target: { value: "CHF" },
+    });
 
     const readout = await screen.findByTestId("stay-editor-fx-readout", undefined, {
       timeout: 2000,
@@ -160,7 +166,9 @@ describe("StayEditor", () => {
     fireEvent.change(screen.getByLabelText("lodging:field.totalPrice"), {
       target: { value: "420" },
     });
-    await userEvent.selectOptions(screen.getByLabelText("lodging:field.currency"), "CHF");
+    fireEvent.change(screen.getByLabelText("lodging:field.currency"), {
+      target: { value: "CHF" },
+    });
 
     await waitFor(() => expect(getFxPreview).toHaveBeenCalled());
     expect(screen.queryByTestId("stay-editor-fx-readout")).not.toBeInTheDocument();

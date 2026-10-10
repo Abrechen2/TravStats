@@ -60,17 +60,18 @@ vi.mock("../../../lib/api/rail", () => ({
 import { RailFormModal } from "../RailFormModal";
 import { useToastStore } from "../../../store/toastStore";
 import { makeRailJourney } from "./railJourneyFixture";
+import { allNamed, findNamed, getNamed } from "../../../__tests__/helpers/namedElement";
 
 /** The departure time's label ends in the required mark (forgejo#245). */
 const DEPARTURE_TIME = /^rail:form\.departureTime\s*\*?$/;
 
 function saveButton(): HTMLElement {
-  return screen.getByRole("button", { name: "rail:form.save" });
+  return getNamed("button", "rail:form.save");
 }
 
 /** Both station fields switched from the catalogue to the geocoder, then picked. */
 function pickBothViaGeocoder(): void {
-  for (const b of screen.getAllByRole("button", { name: "rail:station.useGeocoder" })) {
+  for (const b of allNamed("button", "rail:station.useGeocoder")) {
     fireEvent.click(b);
   }
   fireEvent.click(screen.getByText("pick rail:form.departureStation"));
@@ -299,7 +300,7 @@ describe("RailFormModal", () => {
     fireEvent.change(screen.getByLabelText("rail:lookup.date"), {
       target: { value: "2026-09-26" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "rail:lookup.run" }));
+    fireEvent.click(getNamed("button", "rail:lookup.run"));
     await waitFor(() =>
       expect(lookup).toHaveBeenCalledWith({
         trainNumber: "ICE 696",
@@ -307,7 +308,7 @@ describe("RailFormModal", () => {
         fromStationId: 7604,
       })
     );
-    fireEvent.click(await screen.findByRole("button", { name: "rail:lookup.apply" }));
+    fireEvent.click(await findNamed("button", "rail:lookup.apply"));
     fireEvent.click(saveButton());
 
     await waitFor(() => expect(create).toHaveBeenCalled());
@@ -372,8 +373,8 @@ describe("RailFormModal", () => {
     fireEvent.change(dateField, {
       target: { value: "2026-09-26" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "rail:lookup.run" }));
-    fireEvent.click(await screen.findByRole("button", { name: "rail:lookup.apply" }));
+    fireEvent.click(getNamed("button", "rail:lookup.run"));
+    fireEvent.click(await findNamed("button", "rail:lookup.apply"));
 
     expect(screen.getByLabelText("rail:form.operator")).toHaveValue("ÖBB");
     expect(screen.getByLabelText("rail:form.category")).toHaveValue("RJX");
@@ -409,7 +410,7 @@ describe("RailFormModal", () => {
     expect(await screen.findByTestId("rail-connection-banner")).toBeInTheDocument();
     expect(screen.getByLabelText(DEPARTURE_TIME)).toHaveValue("2026-09-26T07:10");
 
-    for (const b of screen.getAllByRole("button", { name: "rail:station.useGeocoder" })) {
+    for (const b of allNamed("button", "rail:station.useGeocoder")) {
       fireEvent.click(b);
     }
     fireEvent.click(screen.getByText("pick rail:form.arrivalStation"));
