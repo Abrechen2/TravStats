@@ -157,6 +157,8 @@ import {
   resolveCruisePolarCruiseCount,
 } from "./metricEvidenceCruiseInsights";
 import { INSIGHT_RESOLVERS } from "./metricEvidenceInsights";
+import { PLACE_DETAIL_RESOLVERS } from "./metricEvidencePlaceDetail";
+import { ROADTRIP_LIST_RESOLVERS } from "./metricEvidenceRoadtrip";
 
 /**
  * `EvidenceResolver` for `kind: "metric"` (Task 7,
@@ -306,6 +308,10 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   cruisePolarCruiseCount: resolveCruisePolarCruiseCount,
   // The statistics expansion (forgejo#258/#259/#260/#264), one shape for all.
   ...INSIGHT_RESOLVERS,
+  // The places tab's rhythm/quality/fun cards and the roadtrip list tiles
+  // (forgejo#259, #260) — client folds whose rows the server reads the same way.
+  ...PLACE_DETAIL_RESOLVERS,
+  ...ROADTRIP_LIST_RESOLVERS,
 };
 
 /**

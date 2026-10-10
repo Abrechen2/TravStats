@@ -230,7 +230,6 @@
         "title": "Straße und Fähre",
         "road": "Straßenkilometer",
         "ferry": "Fährkilometer",
-        "description": "Straße / Fähre – getrennt gezählt",
         "empty": "Erscheint mit der ersten gefahrenen Etappe.",
         "help": {
           "unit": "Kilometer einer Etappe nach ihrem Verkehrsmittel.",
@@ -238,7 +237,9 @@
           "source": "Das Verkehrsmittel jeder Etappe (Straße, Fähre, Bahn, zu Fuß, Rad).",
           "coverage": "Jede Etappe hat genau ein Verkehrsmittel.",
           "exclusions": "Fährkilometer sind nie selbst gefahrene Kilometer; nur die Straße zählt als gefahren."
-        }
+        },
+        "ferryBefore": "auf der Straße · mit der Fähre ",
+        "ferryAfter": " – getrennt gezählt, nie als gefahren"
       },
       "nightStyle": {
         "title": "Übernachtungsstil",
@@ -364,21 +365,77 @@
       },
       "links": {
         "title": "Verknüpfungen",
-        "value": "{{trip}} Reise · {{roadtrip}} Roadtrip · {{cruise}} Kreuzfahrt",
-        "description_one": "{{standalone}} Tour steht für sich",
-        "description_other": "{{standalone}} Touren stehen für sich",
         "excursions_one": "Geführte Ausflüge: {{count}} abgeschlossen, {{km}} km, {{planned}} geplant – als Touren, nie als Busfahrt oder gefahrene Kilometer.",
         "excursions_other": "Geführte Ausflüge: {{count}} abgeschlossen, {{km}} km, {{planned}} geplant – als Touren, nie als Busfahrt oder gefahrene Kilometer.",
         "empty": "Erscheint mit der ersten abgeschlossenen Tour.",
         "help": {
-          "unit": "Eine abgeschlossene Tour; eine Tour kann zugleich zu einer Reise und zu einem Roadtrip gehören.",
-          "time": "Eine Tour gilt als Kreuzfahrt-Ausflug, wenn ihre Reise eine Kreuzfahrt enthält und ihr Tag in deren Zeitraum liegt.",
+          "unit": "Eine abgeschlossene Tour. „Verknüpft“ ist eine Tour auf einer Reise oder von einer Roadtrip-Station.",
+          "time": "Gezählt im Jahr der Tour (ihr Tag, ohne Tag der ihrer ersten Aufzeichnung). Eine Tour gilt als Kreuzfahrt-Ausflug, wenn ihre Reise eine Kreuzfahrt enthält und ihr Tag in deren Zeitraum liegt.",
           "source": "Die Reise einer Tour, die Roadtrip-Station, von der sie startet, und die Kreuzfahrten der Reise.",
           "coverage": "Touren ohne Reise und ohne Station stehen für sich. Eine Tour kann zugleich auf einer Reise und von einer Roadtrip-Station aus stattfinden – die Zahlen überschneiden sich und ergeben zusammen keine Summe.",
           "exclusions": "Tourkilometer fließen in keine Fahrt- oder Busstatistik; ein geführter Ausflug ist keine Busfahrt."
-        }
+        },
+        "value_one": "{{count}} Tour verknüpft",
+        "value_other": "{{count}} Touren verknüpft",
+        "onTrip": "auf einer Reise",
+        "fromRoadtrip": "von einer Roadtrip-Station",
+        "duringCruise": "während einer Kreuzfahrt",
+        "standalone": "für sich, ohne Reise und Station"
       }
-    }
+    },
+    "help": {
+      "count": {
+        "unit": "Ein Roadtrip.",
+        "time": "Ein Roadtrip zählt, sobald er begonnen hat (früheste Station, sonst Check-in eines verknüpften Aufenthalts), im Jahr seines Beginns – das eingetragene Datum, keine Zeitzone.",
+        "source": "Deine Roadtrips (Roadtrip-Liste).",
+        "coverage": "Ein Roadtrip ohne datierte Station zählt im Gesamtwert, aber in keinem Jahr.",
+        "exclusions": "Roadtrips, die noch nicht begonnen haben."
+      },
+      "distance": {
+        "unit": "Kilometer der ganzen Route jedes gezählten Roadtrips, über alle Verkehrsmittel – Straße, Fähre, Bahn, zu Fuß, Rad.",
+        "time": "Wie bei „Roadtrips“: ein Roadtrip zählt mit seiner ganzen Strecke im Jahr seines Beginns.",
+        "source": "Die Etappen deiner Roadtrips; die Distanz stammt aus Aufzeichnung, berechneter Route, gezeichneter Linie oder Luftlinie.",
+        "coverage": "Auf einem laufenden Roadtrip ist die noch vor dir liegende Strecke enthalten – die Fußnote nennt sie, „Gefahren, heute, geplant“ trennt sie.",
+        "exclusions": "Selbst gefahren ist nur die Straße (die Zeile darunter); Fährkilometer sind nie gefahrene Kilometer. Tagestouren zählen hier nicht."
+      },
+      "nights": {
+        "unit": "Eine Nacht: die Nächte eines verknüpften Aufenthalts einmal, die einer Übernachtungsstation ohne Aufenthalt nach ihren Daten (ohne Daten: eine).",
+        "time": "Wie bei „Roadtrips“: alle Nächte eines gezählten Roadtrips im Jahr seines Beginns.",
+        "source": "Übernachtungsstationen deiner Roadtrips und die mit ihnen verknüpften Aufenthalte.",
+        "coverage": "Hat eine Übernachtung keine bekannte Länge, sagt die Kachel es – die Zahl ist dann eine Untergrenze.",
+        "exclusions": "Ein Aufenthalt, der an zwei Stationen hängt, zählt einmal; ein stornierter gar nicht. Dieselbe Nacht steht auch in den Unterkunfts-Statistiken – nie doppelt in einer gemeinsamen Summe."
+      },
+      "countries": {
+        "unit": "Ein Land, in dem eine Station eines gezählten Roadtrips steht.",
+        "time": "Wie bei „Roadtrips“.",
+        "source": "Die Koordinaten der Stationen über die Ländergrenzen; an der Küste das Land eines verknüpften Aufenthalts.",
+        "coverage": "Eine Station, die weder Punkt noch Aufenthalt einem Land zuordnen, zählt in keinem Land. Streckenkorrekturen zählen nicht.",
+        "exclusions": "Roadtrips, die noch nicht begonnen haben. Auf einem laufenden Roadtrip zählen hier auch Länder noch vor dir – „Gefahren, heute, geplant“ trennt sie."
+      },
+      "longestByKm": {
+        "unit": "Die fünf Roadtrips mit der längsten Gesamtroute; der Name führt zum Roadtrip.",
+        "time": "Wie bei „Roadtrips“.",
+        "source": "Die Etappen jedes Roadtrips, über alle Verkehrsmittel.",
+        "coverage": "Wie bei „Strecke“: ein laufender Roadtrip steht mit seiner ganzen geplanten Route hier.",
+        "exclusions": "Roadtrips, die noch nicht begonnen haben."
+      },
+      "longestByNights": {
+        "unit": "Die fünf Roadtrips mit den meisten Nächten; der Name führt zum Roadtrip.",
+        "time": "Wie bei „Roadtrips“.",
+        "source": "Übernachtungsstationen und verknüpfte Aufenthalte, nach der Nachtregel von „Nächte“.",
+        "coverage": "Nächte ohne bekannte Länge zählen mit ihrem Mindestwert.",
+        "exclusions": "Roadtrips, die noch nicht begonnen haben."
+      },
+      "vehicles": {
+        "unit": "Gezählte Roadtrips je Fahrzeugart.",
+        "time": "Wie bei „Roadtrips“.",
+        "source": "Die Fahrzeugart, die am Roadtrip eingetragen ist; der Beleg nennt sie je Roadtrip.",
+        "coverage": "Ohne eingetragenes Fahrzeug steht ein Roadtrip unter „Ohne Angabe“.",
+        "exclusions": "Roadtrips, die noch nicht begonnen haben."
+      }
+    },
+    "vehiclesTotalAfter_one": " Roadtrip – der Beleg nennt das Fahrzeug",
+    "vehiclesTotalAfter_other": " Roadtrips – der Beleg nennt das Fahrzeug je Roadtrip"
   },
   "strava": {
     "title": "Strava",

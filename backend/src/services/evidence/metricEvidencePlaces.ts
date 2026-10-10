@@ -27,26 +27,48 @@ import { domainDistinctEvidence, domainSumEvidence, readYearScope } from "./doma
  * holds it and no year may claim it.
  */
 
-/** Only the columns these six measures read; visits come with their place. */
+/**
+ * Only the columns the places measures read; visits come with their place.
+ * Category, position, rating and trip serve the detail measures of
+ * `metricEvidencePlaceDetail.ts` (rhythm, quality, fun facts).
+ */
 const PLACE_SELECT = {
   id: true,
   name: true,
   city: true,
   isoCountryCode: true,
+  category: true,
+  lat: true,
   visited: true,
-  visits: { select: { id: true, visitedAt: true, visitedAtUtc: true, visitedZone: true } },
+  visits: {
+    select: {
+      id: true,
+      visitedAt: true,
+      visitedAtUtc: true,
+      visitedZone: true,
+      rating: true,
+      tripId: true,
+    },
+  },
 } as const;
 
-type PlaceRow = {
+export type PlaceRow = {
   id: string;
   name: string;
   city: string | null;
   isoCountryCode: string | null;
+  category: string;
+  lat: number;
   visited: boolean;
-  visits: Array<{ id: string; visitedAt: Date | null }>;
+  visits: Array<{
+    id: string;
+    visitedAt: Date | null;
+    rating: number | null;
+    tripId: string | null;
+  }>;
 };
 
-interface ScopedPlaces {
+export interface ScopedPlaces {
   /** Every place the user has, with the visits that count in this scope. */
   all: PlaceRow[];
   /** The places that count as visited, already cut to the scope. */
@@ -61,7 +83,7 @@ interface ScopedPlaces {
  * no dated visit, which happened but which nobody can place; and a visit dated
  * later this year, which has not happened yet.
  */
-async function loadScoped(
+export async function loadScoped(
   userId: string,
   scope: EvidenceScope,
   key: string

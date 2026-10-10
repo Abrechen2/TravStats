@@ -107,8 +107,23 @@ function best(
   return top;
 }
 
-function itemsOf(done: readonly TourFacts[]): MeasureItems {
-  const item = (t: TourFacts, contribution: number): MeasureItem => ({
+/**
+ * What a tour hangs on, as one rule (the "Verknüpfungen" tile, forgejo#264):
+ * a trip it is filed on, the roadtrip station it set out from, a cruise of its
+ * trip whose days include its day. The three overlap — a shore excursion is on
+ * its trip AND during the cruise — so they are never added up; "linked" is a
+ * tour with a trip or a roadtrip station, "standalone" one with neither.
+ */
+const LINKS: Record<string, (t: TourFacts) => boolean> = {
+  tourOnTripCount: (t) => t.tour.tripId !== null,
+  tourFromRoadtripCount: (t) => t.tour.anchorRoadtripId !== null,
+  tourDuringCruiseCount: (t) => t.tour.duringCruise,
+  tourLinkedCount: (t) => t.tour.tripId !== null || t.tour.anchorRoadtripId !== null,
+  tourStandaloneCount: (t) => t.tour.tripId === null && t.tour.anchorRoadtripId === null,
+};
+
+function itemsOf(done: readonly TourFacts[], records: readonly ActivityRecords[]): MeasureItems {
+  const item = (t: TourFacts, contribution?: number): MeasureItem => ({
     entry: {
       domain: "roadtrip",
       id: t.tour.id,
@@ -127,7 +142,31 @@ function itemsOf(done: readonly TourFacts[]): MeasureItems {
     tourMovingMinutes: done
       .filter((t) => t.movingSeconds !== null)
       .map((t) => item(t, (t.movingSeconds as number) / 60)),
+    ...Object.fromEntries(
+      Object.entries(LINKS).map(([key, linked]) => [
+        key,
+        done.filter(linked).map((t) => item(t, 1)),
+      ])
+    ),
+    // The country at the tour's first point (the boundary set); the union is
+    // the areas toured. A tour without a positioned start credits nothing.
+    tourCountriesCount: done
+      .filter((t) => t.tour.country !== null)
+      .map((t) => ({ ...item(t), credits: [t.tour.country as string] })),
+    // The tours holding a personal record — lifetime, like the records.
+    tourRecordTours: [...recordHolders(records)].flatMap((id) => {
+      const t = done.find((d) => d.tour.id === id);
+      return t ? [{ ...item(t, 1), year: null }] : [];
+    }),
   };
+}
+
+function recordHolders(records: readonly ActivityRecords[]): Set<string> {
+  return new Set(
+    records.flatMap((r) =>
+      [r.longest, r.mostAscent, r.highest].flatMap((rec) => (rec ? [rec.tourId] : []))
+    )
+  );
 }
 
 export function computeTourInsights(facts: readonly TourFacts[]): {
@@ -164,16 +203,17 @@ export function computeTourInsights(facts: readonly TourFacts[]): {
   }
 
   const excursions = facts.filter((f) => f.tour.activity === "excursion");
+  const records: ActivityRecords[] = activities.map(([activity, tours]) => ({
+    activity,
+    longest: best(tours, (t) => t.km, true),
+    mostAscent: best(tours, (t) => t.ascentM),
+    highest: best(tours, (t) => t.maxElevationM),
+  }));
   return {
     insights: {
       byActivity: activities.map(([activity, tours]) => figures(activity, tours)),
       all: figures("all", done),
-      records: activities.map(([activity, tours]) => ({
-        activity,
-        longest: best(tours, (t) => t.km, true),
-        mostAscent: best(tours, (t) => t.ascentM),
-        highest: best(tours, (t) => t.maxElevationM),
-      })),
+      records,
       rhythm: {
         byYear: [...years.entries()]
           .sort(([a], [b]) => a - b)
@@ -204,6 +244,6 @@ export function computeTourInsights(facts: readonly TourFacts[]): {
       undated: facts.filter((f) => f.state === "undated").length,
       partial: done.filter((t) => t.partial).length,
     },
-    items: itemsOf(done),
+    items: itemsOf(done, records),
   };
 }

@@ -33,6 +33,10 @@ export const INSIGHT_MEASURES: Record<string, MeasureSpec> = {
   placeVisitsWithPhoto: insight("sum", "visits", "PoiInsightsSection"),
   placeVisitsWithNote: insight("sum", "visits", "PoiInsightsSection"),
   placeVisitsWithRating: insight("sum", "visits", "PoiInsightsSection"),
+  /** Places visited in two or more calendar years — the list under the longest pause. */
+  placeReturningPlaceCount: insight("distinct", "places", "PoiInsightsSection", ["allTime"]),
+  /** The two visits the longest straight-line jump runs between. */
+  placeLongestJumpVisits: insight("sum", "visits", "PoiInsightsSection", ["allTime"]),
 
   /**
    * Road legs that have HAPPENED (shared/tour/roadtripTimeline.ts): what the
@@ -42,6 +46,10 @@ export const INSIGHT_MEASURES: Record<string, MeasureSpec> = {
   /** Ferry legs — carried, never driven. */
   roadtripFerryKm: insight("sum", "km", "RoadtripInsightsSection"),
   roadtripRecordedNights: insight("sum", "nights", "RoadtripInsightsSection"),
+  /** Driving days the pace median is taken over; a day belongs to the year of its date. */
+  roadtripDayStages: insight("sum", "stages", "RoadtripInsightsSection"),
+  /** Completed day tours from a roadtrip's stations, in the roadtrip's year. */
+  roadtripToursAlongCount: insight("sum", "tours", "RoadtripInsightsSection"),
 
   /** Recorded, or dated before today (shared/tour/tourCounting.ts). */
   tourCompletedCount: insight("sum", "tours", "TourStatsSection"),
@@ -50,4 +58,14 @@ export const INSIGHT_MEASURES: Record<string, MeasureSpec> = {
   /** Recordings only; a tour without a measured climb is not in the sum. */
   tourAscentM: insight("sum", "metres", "TourStatsSection"),
   tourMovingMinutes: insight("sum", "minutes", "TourStatsSection"),
+  /** What a tour hangs on (forgejo#264) — overlapping, never added up. */
+  tourLinkedCount: insight("sum", "tours", "TourStatsSection"),
+  tourOnTripCount: insight("sum", "tours", "TourStatsSection"),
+  tourFromRoadtripCount: insight("sum", "tours", "TourStatsSection"),
+  tourDuringCruiseCount: insight("sum", "tours", "TourStatsSection"),
+  tourStandaloneCount: insight("sum", "tours", "TourStatsSection"),
+  /** Countries at the tours' starting points, from the boundary set. */
+  tourCountriesCount: insight("distinct", "countries", "TourStatsSection"),
+  /** Tours holding a personal record, over all years like the records. */
+  tourRecordTours: insight("sum", "tours", "TourStatsSection", ["allTime"]),
 };

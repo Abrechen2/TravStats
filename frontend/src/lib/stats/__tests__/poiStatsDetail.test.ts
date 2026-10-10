@@ -42,6 +42,23 @@ const place = (over: Partial<Place> & { id: string; name: string }): Place =>
   }) as unknown as Place;
 
 describe("derivePoiStats", () => {
+  it("breaks a busiest-day tie by the earlier day, not by the order places arrive in", () => {
+    // The evidence panel picks the same day on the server (shared/placeRhythm);
+    // an order-dependent pick named a day the panel did not list.
+    const later = place({
+      id: "p1",
+      name: "A",
+      visits: [visit({ visitedAt: "2024-06-02" })],
+    });
+    const earlier = place({
+      id: "p2",
+      name: "B",
+      visits: [visit({ visitedAt: "2024-06-01" })],
+    });
+    const d = derivePoiStats([later, earlier], PLACE_CATEGORIES.length, NOW);
+    expect(d.busiestDay).toEqual({ date: "2024-06-01", places: 1 });
+  });
+
   it("counts an undated visit in the total and on no day", () => {
     // The rule the whole page rests on. Dropping it would make the total
     // disagree with the places list; dating it would invent a fact.

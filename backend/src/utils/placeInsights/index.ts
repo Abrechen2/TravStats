@@ -39,6 +39,43 @@ function one(v: PreparedVisit): MeasureItem {
   return { entry: visitRef(v), year: v.year, contribution: 1 };
 }
 
+/**
+ * Lifetime-only items carry `year: null`: the returning places and the
+ * longest jump are readings over the whole logbook, and the registry refuses
+ * a year for them.
+ */
+function lifetimeItems(
+  counted: readonly PreparedVisit[],
+  revisits: PlaceInsights["revisits"],
+  jump: PlaceInsights["jump"]
+): MeasureItems {
+  const byId = new Map(counted.map((v) => [v.visit.id, v]));
+  const jumpVisits = jump.longest
+    ? [jump.longest.from.visitId, jump.longest.to.visitId].flatMap((id) => {
+        const v = byId.get(id);
+        return v ? [{ entry: visitRef(v), year: null, contribution: 1 }] : [];
+      })
+    : [];
+  return {
+    // A place returned to in two or more calendar years; the union counts places.
+    placeReturningPlaceCount: revisits.returning.map((r) => ({
+      entry: {
+        domain: "place",
+        id: r.placeId,
+        href: `/places/${r.placeId}`,
+        title: { text: r.name },
+        subtitle: { text: r.years.join(" · ") },
+        date: null,
+      },
+      year: null,
+      credits: [r.placeId],
+      creditLabels: { [r.placeId]: r.name },
+    })),
+    // The two visits the longest straight-line jump runs between.
+    placeLongestJumpVisits: jumpVisits,
+  };
+}
+
 function measureItems(counted: readonly PreparedVisit[]): MeasureItems {
   // Discoveries and returns use the SAME ordering `computeDiscoveries` does,
   // so the panel and the year chart cannot disagree on which visit was first.
@@ -65,15 +102,17 @@ export function computePlaceInsights(
   now: Date
 ): { insights: PlaceInsights; items: MeasureItems } {
   const { counted, countedPlaces, planned } = prepareVisits(places, now);
+  const revisits = computeRevisits(counted);
+  const jump = computeJump(counted);
   return {
     insights: {
       discoveries: computeDiscoveries(counted, countedPlaces),
-      revisits: computeRevisits(counted),
+      revisits,
       diversity: computeDiversity(counted, countedPlaces),
       documentation: computeDocumentation(counted),
-      jump: computeJump(counted),
+      jump,
       plannedVisits: planned,
     },
-    items: measureItems(counted),
+    items: { ...measureItems(counted), ...lifetimeItems(counted, revisits, jump) },
   };
 }

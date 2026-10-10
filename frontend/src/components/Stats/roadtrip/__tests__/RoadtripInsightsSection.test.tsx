@@ -79,7 +79,7 @@ describe("RoadtripInsightsSection (forgejo#260)", () => {
     expect(within(tile).getByTestId("insight-progress-other-modes").textContent).toContain(
       "Fähre 140 km"
     );
-    fireEvent.click(within(tile).getByRole("button", { name: "Gefahrene Kilometer (Straße)" }));
+    fireEvent.click(within(tile).getByRole("button", { name: "Gefahren, heute, geplant" }));
     expect(screen.getByTestId("url").textContent).toContain("evidence=metric%3AroadtripDrivenKm");
     expect(within(tile).getByTestId("insight-progress-sources").textContent).toContain(
       "Route 400 km"
@@ -89,7 +89,10 @@ describe("RoadtripInsightsSection (forgejo#260)", () => {
   it("never reports ferry kilometres as driven, and opens each on its own", () => {
     renderAt(2026);
     const modes = screen.getByTestId("insight-modes");
-    expect(modes.textContent).toContain("400 km / 140 km");
+    expect(modes.textContent).toContain("400 km");
+    expect(modes.textContent).toContain(
+      "mit der Fähre 140 km – getrennt gezählt, nie als gefahren"
+    );
     fireEvent.click(within(modes).getByRole("button", { name: "Fährkilometer" }));
     expect(screen.getByTestId("url").textContent).toContain("evidence=metric%3AroadtripFerryKm");
     expect(within(modes).getByTestId("insight-modes-help").textContent).toContain(
@@ -110,6 +113,19 @@ describe("RoadtripInsightsSection (forgejo#260)", () => {
     expect(tours.textContent).toContain("2 Touren");
     const link = within(tours).getByRole("link", { name: "Skandinavien" });
     expect(link.getAttribute("href")).toBe("/roadtrips/r1");
+  });
+
+  it("lets every figure open the entries behind it (forgejo#260)", () => {
+    renderAt(null);
+    const opened = (testId: string, name: string): string => {
+      fireEvent.click(within(screen.getByTestId(testId)).getByRole("button", { name }));
+      return screen.getByTestId("url").textContent ?? "";
+    };
+    expect(opened("insight-pace", "Tagesetappen und Tempo")).toContain("roadtripDayStages");
+    expect(opened("insight-night-style", "Übernachtungsstil")).toContain("roadtripRecordedNights");
+    expect(opened("insight-tours-along", "Tagestouren unterwegs")).toContain(
+      "roadtripToursAlongCount"
+    );
   });
 
   it("names what would fill an empty figure", () => {

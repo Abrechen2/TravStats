@@ -2,7 +2,10 @@ import type { JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { PoiStatsDetail } from "../../../lib/stats/poiStatsDetail";
+import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import StatCard from "../StatCard";
+import CountingHelp from "../counting/CountingHelp";
+import type { CountingEntry } from "../counting/countingEntry";
 import { formatDate as formatUserDate } from "../../../lib/displayFormat";
 import { formatLatitude } from "../../../lib/hemisphere";
 
@@ -10,6 +13,8 @@ interface Props {
   detail: PoiStatsDetail;
   accent: string;
   locale: string;
+  /** The period the tab shows — the population each card's evidence lists. */
+  scope: EvidenceScopeParams;
 }
 
 const formatDate = (iso: string | Date, _locale: string): string => formatUserDate(iso);
@@ -24,13 +29,20 @@ const formatDate = (iso: string | Date, _locale: string): string => formatUserDa
  * computed is not rendered, rather than rendered with an em dash — an absent
  * card reads as "not yet", a dashed one reads as "broken".
  */
-export default function PoiFunSection({ detail, accent, locale }: Props): JSX.Element | null {
+export default function PoiFunSection({
+  detail,
+  accent,
+  locale,
+  scope,
+}: Props): JSX.Element | null {
   const { t } = useTranslation(["places", "common"]);
 
   const favourite = detail.mostVisited[0];
   const repeatWorthy = favourite && favourite.visits > 1 ? favourite : null;
 
   const cards: JSX.Element[] = [];
+  // One answer set per card actually drawn, in the order they stand.
+  const help: CountingEntry[] = [];
 
   if (detail.firstVisit) {
     cards.push(
@@ -41,8 +53,11 @@ export default function PoiFunSection({ detail, accent, locale }: Props): JSX.El
         title={t("places:stats.fun.firstVisit")}
         value={detail.firstVisit.name}
         description={formatDate(detail.firstVisit.at, locale)}
+        // A name is on the card, not a number: nothing to recompute against.
+        evidence={{ kind: "metric", key: "placeFirstVisit", scope, renderedValue: null }}
       />
     );
+    help.push({ term: t("places:stats.fun.firstVisit"), helpKey: "places:stats.help.firstVisit" });
   }
 
   if (repeatWorthy) {
@@ -54,8 +69,15 @@ export default function PoiFunSection({ detail, accent, locale }: Props): JSX.El
         title={t("places:stats.fun.favourite")}
         value={repeatWorthy.place.name}
         description={t("places:stats.fun.favouriteDesc", { count: repeatWorthy.visits })}
+        evidence={{
+          kind: "metric",
+          key: "placeFavouriteVisits",
+          scope,
+          renderedValue: repeatWorthy.visits,
+        }}
       />
     );
+    help.push({ term: t("places:stats.fun.favourite"), helpKey: "places:stats.help.favourite" });
   }
 
   cards.push(
@@ -65,6 +87,12 @@ export default function PoiFunSection({ detail, accent, locale }: Props): JSX.El
       valueSize="md"
       title={t("places:stats.fun.categoryCoverage")}
       value={`${detail.categoryCoverage.used} / ${detail.categoryCoverage.total}`}
+      evidence={{
+        kind: "metric",
+        key: "placeCategoriesUsedCount",
+        scope,
+        renderedValue: detail.categoryCoverage.used,
+      }}
       description={
         detail.categoryCoverage.used === detail.categoryCoverage.total
           ? t("places:stats.fun.categoryCoverageComplete")
@@ -74,6 +102,10 @@ export default function PoiFunSection({ detail, accent, locale }: Props): JSX.El
       }
     />
   );
+  help.push({
+    term: t("places:stats.fun.categoryCoverage"),
+    helpKey: "places:stats.help.categoryCoverage",
+  });
 
   if (detail.northernmost) {
     cards.push(
@@ -84,8 +116,10 @@ export default function PoiFunSection({ detail, accent, locale }: Props): JSX.El
         title={t("places:stats.fun.northernmost")}
         value={detail.northernmost.name}
         description={formatLatitude(detail.northernmost.lat)}
+        evidence={{ kind: "metric", key: "placeNorthernmost", scope, renderedValue: null }}
       />
     );
+    help.push({ term: t("places:stats.fun.northernmost"), helpKey: "places:stats.help.extremes" });
   }
 
   if (detail.southernmost && detail.southernmost.id !== detail.northernmost?.id) {
@@ -97,6 +131,7 @@ export default function PoiFunSection({ detail, accent, locale }: Props): JSX.El
         title={t("places:stats.fun.southernmost")}
         value={detail.southernmost.name}
         description={formatLatitude(detail.southernmost.lat)}
+        evidence={{ kind: "metric", key: "placeSouthernmost", scope, renderedValue: null }}
       />
     );
   }
@@ -114,8 +149,19 @@ export default function PoiFunSection({ detail, accent, locale }: Props): JSX.El
           // the thing that can belong to a trip.
           total: detail.visitsTotal,
         })}
+        evidence={{
+          kind: "metric",
+          key: "placeVisitsOnTripsCount",
+          scope,
+          renderedValue: detail.visitsOnTrips,
+        }}
       />
     );
+    help.push({
+      term: t("places:stats.fun.onTrips"),
+      helpKey: "places:stats.help.onTrips",
+      values: { total: detail.visitsTotal },
+    });
   }
 
   if (cards.length === 0) return null;
@@ -126,6 +172,7 @@ export default function PoiFunSection({ detail, accent, locale }: Props): JSX.El
         {t("places:stats.fun.title")}
       </h2>
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">{cards}</div>
+      <CountingHelp testId="poi-fun-help" entries={help} />
     </section>
   );
 }

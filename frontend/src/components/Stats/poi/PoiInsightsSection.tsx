@@ -90,31 +90,25 @@ export default function PoiInsightsSection({
           testId="insight-discoveries"
           title={t("places:stats.insights.discoveries.title")}
           accent={accent}
-          value={
-            discoveries + revisits > 0 ? (
-              <>
-                <EvidenceNumber
-                  evidenceKey="placeDiscoveryVisits"
-                  scope={scope}
-                  renderedValue={discoveries}
-                  label={t("places:stats.insights.discoveries.new")}
-                >
-                  {nf.format(discoveries)}
-                </EvidenceNumber>
-                {" / "}
-                <EvidenceNumber
-                  evidenceKey="placeRevisitVisits"
-                  scope={scope}
-                  renderedValue={revisits}
-                  label={t("places:stats.insights.discoveries.again")}
-                >
-                  {nf.format(revisits)}
-                </EvidenceNumber>
-              </>
-            ) : null
-          }
+          value={discoveries + revisits > 0 ? nf.format(discoveries) : null}
+          evidence={{ key: "placeDiscoveryVisits", scope, renderedValue: discoveries }}
           empty={t("places:stats.insights.discoveries.empty")}
-          description={t("places:stats.insights.discoveries.description")}
+          // The first visits are the tile's number; the returns stand beside
+          // them and open on their own, so each count answers for itself.
+          description={
+            <>
+              {t("places:stats.insights.discoveries.before")}
+              <EvidenceNumber
+                evidenceKey="placeRevisitVisits"
+                scope={scope}
+                renderedValue={revisits}
+                label={t("places:stats.insights.discoveries.again")}
+              >
+                {nf.format(revisits)}
+              </EvidenceNumber>
+              {t("places:stats.insights.discoveries.after", { count: revisits })}
+            </>
+          }
           help={help("discoveries", {
             unordered,
             withoutDate: data.discoveries.placesWithoutDatedVisit,
@@ -152,6 +146,13 @@ export default function PoiInsightsSection({
                 : t("places:stats.insights.returning.days", { count: gap.days })
               : null
           }
+          // The pause is a reading over all years; its evidence is the places
+          // returned to across years — the list the tile names below.
+          evidence={{
+            key: "placeReturningPlaceCount",
+            scope: { period: "allTime" },
+            renderedValue: null,
+          }}
           empty={t("places:stats.insights.returning.empty")}
           description={lifetime}
           help={help("returning")}
@@ -179,6 +180,7 @@ export default function PoiInsightsSection({
           value={
             trips.length > 0 ? t("places:stats.insights.variety.value", { count: tripMax }) : null
           }
+          evidence={{ key: "placeVarietyTripCategories", scope, renderedValue: tripMax }}
           empty={t("places:stats.insights.variety.empty")}
           description={t("places:stats.insights.variety.description")}
           help={help("variety", { withoutTrip: data.diversity.visitsWithoutTrip })}
@@ -219,24 +221,28 @@ export default function PoiInsightsSection({
           title={t("places:stats.insights.documentation.title")}
           accent={accent}
           value={
-            doc && doc.visits > 0 ? (
-              <span className="text-2xl">
-                <EvidenceNumber
-                  evidenceKey="placeVisitsWithPhoto"
-                  scope={scope}
-                  renderedValue={doc.withPhoto}
-                  label={t("places:stats.insights.documentation.photo")}
-                >
-                  {pct(doc.withPhoto, doc.visits)}
-                </EvidenceNumber>
-                {" · "}
+            doc && doc.visits > 0
+              ? t("places:stats.insights.documentation.photoValue", {
+                  pct: pct(doc.withPhoto, doc.visits),
+                })
+              : null
+          }
+          evidence={{ key: "placeVisitsWithPhoto", scope, renderedValue: doc?.withPhoto ?? null }}
+          empty={t("places:stats.insights.documentation.empty")}
+          // Photo, note and rating are three questions, never one score: the
+          // photo share is the number, the other two open their own visits.
+          description={
+            doc ? (
+              <>
                 <EvidenceNumber
                   evidenceKey="placeVisitsWithNote"
                   scope={scope}
                   renderedValue={doc.withNote}
                   label={t("places:stats.insights.documentation.note")}
                 >
-                  {pct(doc.withNote, doc.visits)}
+                  {t("places:stats.insights.documentation.noteValue", {
+                    pct: pct(doc.withNote, doc.visits),
+                  })}
                 </EvidenceNumber>
                 {" · "}
                 <EvidenceNumber
@@ -245,21 +251,19 @@ export default function PoiInsightsSection({
                   renderedValue={doc.withRating}
                   label={t("places:stats.insights.documentation.rating")}
                 >
-                  {pct(doc.withRating, doc.visits)}
+                  {t("places:stats.insights.documentation.ratingValue", {
+                    pct: pct(doc.withRating, doc.visits),
+                  })}
                 </EvidenceNumber>
-              </span>
-            ) : null
-          }
-          empty={t("places:stats.insights.documentation.empty")}
-          description={
-            doc
-              ? t("places:stats.insights.documentation.description", {
+                {" – "}
+                {t("places:stats.insights.documentation.description", {
                   photo: doc.withPhoto,
                   note: doc.withNote,
                   rating: doc.withRating,
                   count: doc.visits,
-                })
-              : undefined
+                })}
+              </>
+            ) : undefined
           }
           help={help("documentation")}
         />
@@ -273,6 +277,11 @@ export default function PoiInsightsSection({
               ? t("places:stats.insights.jump.value", { km: nf.format(Math.round(jump.km)) })
               : null
           }
+          evidence={{
+            key: "placeLongestJumpVisits",
+            scope: { period: "allTime" },
+            renderedValue: null,
+          }}
           empty={t("places:stats.insights.jump.empty")}
           description={lifetime}
           help={help("jump", {

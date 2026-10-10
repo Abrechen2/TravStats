@@ -108,9 +108,14 @@ describe("PoiInsightsSection (forgejo#259)", () => {
     places.mockResolvedValueOnce(FULL);
     renderAt(2024);
     const tile = await screen.findByTestId("insight-discoveries");
-    expect(tile.textContent).toContain("1 / 2");
+    expect(tile.textContent).toContain("Erstbesuche · 2 Wiederbesuche");
     fireEvent.click(within(tile).getByRole("button", { name: "Wiederbesuche" }));
     expect(screen.getByTestId("url").textContent).toContain("evidence=metric%3AplaceRevisitVisits");
+    // The first visits are the tile's own number, and open their own list.
+    fireEvent.click(within(tile).getByRole("button", { name: /Entdeckungen/ }));
+    expect(screen.getByTestId("url").textContent).toContain(
+      "evidence=metric%3AplaceDiscoveryVisits"
+    );
   });
 
   it("says why some visits are in neither column", async () => {
@@ -138,10 +143,25 @@ describe("PoiInsightsSection (forgejo#259)", () => {
     places.mockResolvedValueOnce(FULL);
     renderAt(null);
     const doc = await screen.findByTestId("insight-documentation");
-    expect(doc.textContent).toContain("50 % · 25 % · 0 %");
+    expect(doc.textContent).toContain("50 % mit Foto");
+    expect(doc.textContent).toContain("25 % mit Notiz · 0 % mit Bewertung");
     expect(within(doc).getByTestId("insight-documentation-help").textContent).toContain(
       "nie eine verlangt"
     );
+  });
+
+  it("lets every figure open the entries behind it (forgejo#259)", async () => {
+    places.mockResolvedValueOnce(FULL);
+    renderAt(null);
+    await screen.findByTestId("insight-jump");
+    const opened = (testId: string): string => {
+      fireEvent.click(within(screen.getByTestId(testId)).getAllByRole("button", { name: /./ })[0]);
+      return screen.getByTestId("url").textContent ?? "";
+    };
+    expect(opened("insight-returning")).toContain("placeReturningPlaceCount");
+    expect(opened("insight-variety")).toContain("placeVarietyTripCategories");
+    expect(opened("insight-documentation")).toContain("placeVisitsWithPhoto");
+    expect(opened("insight-jump")).toContain("placeLongestJumpVisits");
   });
 
   it("names the existing data that would fill an empty figure", async () => {

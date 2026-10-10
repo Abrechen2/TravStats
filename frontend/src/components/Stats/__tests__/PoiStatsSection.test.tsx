@@ -27,6 +27,23 @@ vi.mock("../../../lib/api/placeLists", () => ({
 import PoiStatsSection from "../PoiStatsSection";
 import { ALL_VISIBLE, hiding } from "./sectionVisibilityStub";
 
+/**
+ * A figure's title, never its name inside the closed "So wird gezählt" list,
+ * which repeats the same words (forgejo#259): the card's `<h3>`.
+ */
+function queryTitle(text: string): HTMLElement | null {
+  return screen.queryAllByText(text).find((el) => el.tagName === "H3") ?? null;
+}
+function getTitle(text: string): HTMLElement {
+  const el = queryTitle(text);
+  if (!el) throw new Error(`no title "${text}"`);
+  return el;
+}
+async function findTitle(text: string): Promise<HTMLElement> {
+  await waitFor(() => getTitle(text));
+  return getTitle(text);
+}
+
 const LIFETIME = { year: null, compareYear: null };
 
 /**
@@ -94,7 +111,7 @@ describe("PoiStatsSection evidence wiring", () => {
         />
       </MemoryRouter>
     );
-    await screen.findByText("places:stats.visitedPlaces");
+    await findTitle("places:stats.visitedPlaces");
 
     const keys: string[] = [];
     for (const trigger of screen.getAllByRole("button")) {
@@ -113,6 +130,16 @@ describe("PoiStatsSection evidence wiring", () => {
         // The two figures that live inside another card's sentence.
         "placeCitiesCount",
         "placeWishlistCount",
+        // The rhythm and fun-fact cards (forgejo#259). One dated visit to one
+        // place: no rating, no favourite, no trip, and the southernmost place
+        // is the northernmost, so those cards are not drawn.
+        "placeBusiestMonthVisits",
+        "placeBusiestWeekdayVisits",
+        "placeBusiestDayPlaces",
+        "placeLongestStreakDays",
+        "placeFirstVisit",
+        "placeCategoriesUsedCount",
+        "placeNorthernmost",
       ].sort()
     );
     expect(keys.every((key) => EVIDENCE_MEASURES[key]?.servedIn === 1)).toBe(true);
@@ -133,7 +160,7 @@ describe("PoiStatsSection evidence wiring", () => {
         <PoiStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />
       </MemoryRouter>
     );
-    await screen.findByText("places:stats.visitedPlaces");
+    await findTitle("places:stats.visitedPlaces");
     expectNoNestedTriggers(lifetime.container);
     cleanup();
     const year = render(
@@ -141,7 +168,7 @@ describe("PoiStatsSection evidence wiring", () => {
         <PoiStatsSection scope={{ year: 2023, compareYear: null }} visibility={ALL_VISIBLE} />
       </MemoryRouter>
     );
-    await screen.findByText("places:stats.visitedPlaces");
+    await findTitle("places:stats.visitedPlaces");
     expectNoNestedTriggers(year.container);
   });
 });
@@ -166,9 +193,9 @@ describe("PoiStatsSection", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("places:stats.visitedPlaces")).toBeInTheDocument();
+      expect(getTitle("places:stats.visitedPlaces")).toBeInTheDocument();
     });
-    const card = screen.getByText("places:stats.visitedPlaces").closest("div")?.parentElement;
+    const card = getTitle("places:stats.visitedPlaces").closest("div")?.parentElement;
     expect(card?.textContent).toContain("1");
     // And the wishlist entry is reported as such rather than vanishing. The
     // sentence is three nodes since 2026-09-19 — text, the number as a
@@ -195,11 +222,11 @@ describe("PoiStatsSection", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("places:stats.visits")).toBeInTheDocument();
+      expect(getTitle("places:stats.visits")).toBeInTheDocument();
     });
     // Two visits, one of which cannot be placed on a day. Dropping it would be
     // a quieter wrong answer than counting it without saying so.
-    const card = screen.getByText("places:stats.visits").closest("div")?.parentElement;
+    const card = getTitle("places:stats.visits").closest("div")?.parentElement;
     expect(card?.textContent).toContain("2");
     expect(screen.getByText(/places:stats.visitsDesc/)).toBeInTheDocument();
   });
@@ -216,7 +243,7 @@ describe("PoiStatsSection", () => {
     await waitFor(() => {
       expect(screen.getByText("places:list.loadError")).toBeInTheDocument();
     });
-    expect(screen.queryByText("places:stats.visitedPlaces")).not.toBeInTheDocument();
+    expect(queryTitle("places:stats.visitedPlaces")).not.toBeInTheDocument();
   });
 
   it("invites a first visit when there is nothing yet", async () => {
@@ -254,7 +281,7 @@ describe("PoiStatsSection under the page's period", () => {
         <PoiStatsSection scope={{ year: 2023, compareYear: null }} visibility={ALL_VISIBLE} />
       </MemoryRouter>
     );
-    const title = await screen.findByText("places:stats.visitedPlaces");
+    const title = await findTitle("places:stats.visitedPlaces");
     // The value itself, not the card's container: that is the whole grid, and
     // "1" is also the country count — this assertion passed with no scoping.
     expect(title.nextElementSibling?.textContent).toBe("1");
@@ -267,8 +294,8 @@ describe("PoiStatsSection under the page's period", () => {
         <PoiStatsSection scope={{ year: 2024, compareYear: null }} visibility={ALL_VISIBLE} />
       </MemoryRouter>
     );
-    await screen.findByText("places:stats.visitedPlaces");
-    expect(screen.queryByText("places:stats.lists")).not.toBeInTheDocument();
+    await findTitle("places:stats.visitedPlaces");
+    expect(queryTitle("places:stats.lists")).not.toBeInTheDocument();
     // `visitedPlacesDesc` used to name this line and no longer exists, which
     // made the assertion pass without measuring anything. The line is now a
     // tail plus a trigger, and both have to be gone.
@@ -316,8 +343,8 @@ describe("PoiStatsSection hides the blocks the reader switched off", () => {
         <PoiStatsSection scope={LIFETIME} visibility={hiding("rankings")} />
       </MemoryRouter>
     );
-    expect(await screen.findByText("places:stats.visitedPlaces")).toBeInTheDocument();
-    expect(screen.queryByText("places:stats.byCategory")).not.toBeInTheDocument();
+    expect(await findTitle("places:stats.visitedPlaces")).toBeInTheDocument();
+    expect(queryTitle("places:stats.byCategory")).not.toBeInTheDocument();
   });
 
   it("drops the key figures and keeps the rankings", async () => {
@@ -329,7 +356,7 @@ describe("PoiStatsSection hides the blocks the reader switched off", () => {
         <PoiStatsSection scope={LIFETIME} visibility={hiding("kpis")} />
       </MemoryRouter>
     );
-    expect(await screen.findByText("places:stats.byCategory")).toBeInTheDocument();
-    expect(screen.queryByText("places:stats.visitedPlaces")).not.toBeInTheDocument();
+    expect(await findTitle("places:stats.byCategory")).toBeInTheDocument();
+    expect(queryTitle("places:stats.visitedPlaces")).not.toBeInTheDocument();
   });
 });

@@ -206,7 +206,11 @@ function rowOf(
   };
 }
 
-function itemsOf(rows: readonly RoadtripRow[]): MeasureItems {
+function itemsOf(
+  rows: readonly RoadtripRow[],
+  stages: readonly DayStage[],
+  toursByRoadtrip: ReadonlyMap<string, TourFacts[]>
+): MeasureItems {
   const item = (r: RoadtripRow, contribution: number): MeasureItem => ({
     entry: {
       domain: "roadtrip",
@@ -227,6 +231,37 @@ function itemsOf(rows: readonly RoadtripRow[]): MeasureItems {
     roadtripDrivenKm: nonZero((r) => r.kmByMode.road ?? 0),
     roadtripFerryKm: nonZero((r) => r.kmByMode.ferry ?? 0),
     roadtripRecordedNights: nonZero((r) => r.nights.recorded),
+    // The completed day tours along each roadtrip, in the roadtrip's year —
+    // the year the tile files them under, never the tour's own.
+    roadtripToursAlongCount: rows.flatMap((r) =>
+      (toursByRoadtrip.get(r.id) ?? [])
+        .filter((t) => t.state === "completed")
+        .map((t) => ({
+          entry: {
+            domain: "roadtrip" as const,
+            id: t.tour.id,
+            href: `/tours/${t.tour.id}`,
+            title: { text: t.tour.name },
+            subtitle: { text: r.name },
+            date: dayPrecisionDate(t.day === null ? null : new Date(`${t.day}T00:00:00Z`)),
+          },
+          year: r.year,
+          contribution: 1,
+        }))
+    ),
+    // The driving days the median is taken over, each with its road kilometres.
+    roadtripDayStages: stages.map((d) => ({
+      entry: {
+        domain: "roadtrip" as const,
+        id: `${d.roadtripId}:${d.day}`,
+        href: `/roadtrips/${d.roadtripId}`,
+        title: { text: d.name },
+        subtitle: { key: "evidence.subtitle.dayStageKm", values: { km: Math.round(d.km) } },
+        date: dayPrecisionDate(new Date(`${d.day}T00:00:00Z`)),
+      },
+      year: Number(d.day.slice(0, 4)),
+      contribution: 1,
+    })),
   };
 }
 
@@ -292,6 +327,6 @@ export function computeRoadtripInsights(
         tourStations: tourStations.size,
       },
     },
-    items: itemsOf(rows),
+    items: itemsOf(rows, stages, toursByRoadtrip),
   };
 }

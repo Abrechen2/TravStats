@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 
 import type { RoadtripSummary } from "../../../types/roadtrip";
 
@@ -50,11 +51,14 @@ const visibility = { isVisible: () => true, toggle: vi.fn(), reset: vi.fn(), hid
 
 describe("RoadtripStatsSection — year against compare year", () => {
   it("draws the comparison strip with both years' counts", async () => {
+    // A router: every tile opens its roadtrips in the evidence panel (forgejo#260).
     render(
-      <RoadtripStatsSection
-        scope={{ year: 2025, compareYear: 2024 } as never}
-        visibility={visibility}
-      />
+      <MemoryRouter>
+        <RoadtripStatsSection
+          scope={{ year: 2025, compareYear: 2024 } as never}
+          visibility={visibility}
+        />
+      </MemoryRouter>
     );
     const strip = await screen.findByRole("region", { name: "stats:yearFilter.scopeLabel" });
     // 2 roadtrips, 1 500 km, 3 countries in 2025.
