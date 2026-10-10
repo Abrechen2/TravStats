@@ -54,7 +54,15 @@ describe("bus rides on the trip (forgejo#180)", () => {
 
   it("leaves out a ride without coordinates and draws nothing for none", () => {
     expect(busPaths([ride({ depLat: Number.NaN })])).toEqual([]);
-    expect(buildBusLayers([])).toEqual([]);
+    expect(buildBusLayers([], "#123456")).toEqual([]);
+  });
+
+  it("draws in the colour it is handed — the domain colour store's, not a constant", () => {
+    const [layer] = buildBusLayers([ride()], "#102030");
+    const getColor = (layer.props as unknown as { getColor: (d: { routed: boolean }) => number[] })
+      .getColor;
+    expect(getColor({ routed: true })).toEqual([16, 32, 48, 230]);
+    expect(getColor({ routed: false })).toEqual([16, 32, 48, 150]);
   });
 
   it("places a ride on the timeline at its departure, on the terminal's clock", () => {

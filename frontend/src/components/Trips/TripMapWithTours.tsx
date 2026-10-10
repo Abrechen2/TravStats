@@ -1,5 +1,6 @@
 import { useMemo, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useDomainColors } from "../../hooks/useDomainColors";
 import { useToursVisible } from "../../hooks/useToursVisible";
 import { useTripTourGeometries } from "../../hooks/useTripTourGeometries";
 import TripMap from "./TripMap";
@@ -21,7 +22,11 @@ export default function TripMapWithTours({
   const { t } = useTranslation(["trips"]);
   const toursVisible = useToursVisible();
   const { geometries, failed } = useTripTourGeometries(trip.id, toursVisible);
-  const busLayers = useMemo(() => buildBusLayers(trip.busJourneys ?? []), [trip.busJourneys]);
+  const busColor = useDomainColors().colorOf("bus");
+  const busLayers = useMemo(
+    () => buildBusLayers(trip.busJourneys ?? [], busColor),
+    [trip.busJourneys, busColor]
+  );
   return (
     <>
       {failed && (
