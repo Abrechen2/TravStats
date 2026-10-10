@@ -16,7 +16,7 @@ export type SetCruiseField = <K extends keyof CruiseFormFields>(
 ) => void;
 
 export const CRUISE_INPUT_CLASS =
-  "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden";
+  "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent)";
 /** A visible name above its field (forgejo#249) — the placeholder was the only one. */
 export const CRUISE_LABEL_CLASS = "flex flex-col gap-1 text-xs text-(--text-muted)";
 

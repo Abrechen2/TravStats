@@ -217,7 +217,7 @@ export default function DetectReviewModal({
                     <input
                       value={s.name}
                       onChange={(e) => renamePart(i, e.target.value)}
-                      className="w-full bg-transparent border-0 text-sm font-semibold outline-hidden focus:bg-(--bg-base) focus:px-2 focus:py-1 focus:rounded-sm"
+                      className="w-full bg-transparent border-0 text-sm font-semibold focus:bg-(--bg-base) focus:px-2 focus:py-1 focus:rounded-sm"
                       style={{ color: "var(--text-primary)" }}
                     />
                     <div

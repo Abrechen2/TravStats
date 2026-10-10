@@ -102,7 +102,7 @@ export default function CompanionPicker({ value, onChange }: Props): JSX.Element
         aria-expanded={filtered.length > 0}
         aria-autocomplete="list"
         aria-label={t("picker.label")}
-        className="w-full rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden"
+        className="w-full rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent)"
         placeholder={t("picker.placeholder")}
         value={query}
         onChange={(e): void => setQuery(e.target.value)}

@@ -79,7 +79,7 @@ export function DomainFilterRow({
       data-domain-filter-row={row.key}
       onClick={() => onToggle(row.key)}
       onKeyDown={onKeyDown}
-      // No `outline-none`: the row is focused by the arrow keys, and the
+      // No outline removal here: the row is focused by the arrow keys, and the
       // system focus outline is the only thing that shows which (forgejo#249).
       className="flex cursor-pointer items-center"
       style={{

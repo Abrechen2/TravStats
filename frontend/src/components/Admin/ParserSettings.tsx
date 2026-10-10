@@ -304,7 +304,7 @@ export default function ParserSettings({
                 onParserSettingsChange({ ...parserSettings, ollamaUrl: e.target.value || null })
               }
               placeholder={t("admin:parserSettings.ollama.urlPlaceholder")}
-              className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:ring-1 focus:ring-blue-500"
             />
           </div>
 
@@ -337,7 +337,7 @@ export default function ParserSettings({
                     ollamaModel: e.target.value || null,
                   })
                 }
-                className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:ring-1 focus:ring-blue-500"
               >
                 <option value="">-- Select model --</option>
                 {models.map((m) => (
@@ -363,7 +363,7 @@ export default function ParserSettings({
                       ? "No models found — enter name or pull below"
                       : t("admin:parserSettings.ollama.modelPlaceholder")
                 }
-                className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:ring-1 focus:ring-blue-500"
               />
             )}
             {modelsLoading && (
@@ -383,7 +383,7 @@ export default function ParserSettings({
                   value={pullModel}
                   onChange={(e) => setPullModel(e.target.value)}
                   placeholder="e.g. gemma3:12b, llama3.1:8b"
-                  className="flex-1 px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                  className="flex-1 px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:ring-1 focus:ring-blue-500"
                   disabled={pulling}
                 />
                 <button

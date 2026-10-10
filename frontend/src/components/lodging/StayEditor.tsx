@@ -98,7 +98,7 @@ interface StayEditorProps {
 // (forgejo#249): an iPad is wide and finger-operated, and a `py-2 text-sm`
 // input is ~38 px tall under a 44 px target.
 const INPUT_CLASS =
-  "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none pointer-coarse:min-h-(--ts-size-touch-min)";
+  "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] pointer-coarse:min-h-(--ts-size-touch-min)";
 
 // A stay's dates are calendar days, sent as the bare `YYYY-MM-DD` the
 // picker gives (ADR 0002): the server stores a DATE, so there is no instant

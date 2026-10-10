@@ -34,7 +34,7 @@ export interface EditableRow extends LodgingImportPreviewRow {
 }
 
 export const INPUT =
-  "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-2 py-1.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent)] focus:outline-none";
+  "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-2 py-1.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent)]";
 
 /**
  * Matches that are GUESSES. A proven identity (an external reference, or a

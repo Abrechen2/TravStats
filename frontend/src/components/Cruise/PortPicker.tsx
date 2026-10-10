@@ -222,7 +222,7 @@ export function PortPicker({
         aria-label={label === undefined ? t("picker.port_placeholder") : undefined}
         aria-describedby={describedBy}
         aria-invalid={invalid || undefined}
-        className="w-full rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden pointer-coarse:min-h-(--ts-size-touch-min)"
+        className="w-full rounded-md border border-border bg-(--bg-surface) px-3 py-2 text-sm text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) pointer-coarse:min-h-(--ts-size-touch-min)"
         placeholder={t("picker.port_placeholder")}
         value={query}
         onChange={(e): void => setQuery(e.target.value)}

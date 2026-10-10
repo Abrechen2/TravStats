@@ -4,7 +4,7 @@ import { railFieldId, type RailFormErrorField } from "./railFormModel";
 
 /** The rail form's field chrome, shared by the dialog and its detail sections. */
 export const INPUT_CLASS =
-  "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden";
+  "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent)";
 
 /** What a refusal says about one field, or null — read by every field that can be named. */
 export type RailFieldErrorFor = (field: RailFormErrorField) => string | null;

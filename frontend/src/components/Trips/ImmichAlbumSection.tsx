@@ -260,7 +260,7 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
                 role="switch"
                 aria-checked={showGroups}
                 aria-label={t("albums.groupByDay")}
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-hidden shrink-0 ${
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${
                   showGroups ? "bg-(--accent)" : "bg-gray-600"
                 }`}
                 onClick={() => {

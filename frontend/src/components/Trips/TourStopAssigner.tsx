@@ -80,7 +80,7 @@ export default function TourStopAssigner({ stops, onChange }: Props): JSX.Elemen
               aria-label={stop.title}
               disabled={disabled}
               onClick={() => handleToggle(stop)}
-              className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors focus:outline-hidden disabled:opacity-40 ${
+              className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors disabled:opacity-40 ${
                 checked ? "bg-(--accent)" : "bg-gray-600"
               }`}
             >

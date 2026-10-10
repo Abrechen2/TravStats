@@ -14,7 +14,7 @@ export interface EditableRow extends ResolvableRow {
 }
 
 const INPUT =
-  "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-2 py-1.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent)] focus:outline-none";
+  "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-2 py-1.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent)]";
 
 const BADGE = "rounded px-1.5 py-0.5 text-[10px]";
 const WARN = `${BADGE} bg-(--warning)/15 text-(--warning)`;

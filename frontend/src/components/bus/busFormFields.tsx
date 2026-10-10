@@ -4,7 +4,7 @@ import { busFieldId, type BusFormErrorField } from "./busFormModel";
 
 /** The bus form's field chrome, shared by the dialog, its sections and its terminal fields. */
 export const INPUT_CLASS =
-  "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden";
+  "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent)";
 
 /**
  * A checkbox row a finger can hit (forgejo#249): on a coarse pointer the row,

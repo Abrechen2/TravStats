@@ -56,7 +56,7 @@ const SEAT_CLASSES = ["economy", "premium_economy", "business", "first"] as cons
 type SeatClass = (typeof SEAT_CLASSES)[number];
 
 const INPUT =
-  "w-full rounded-md border border-border bg-(--bg-surface) px-2 py-1.5 text-sm text-(--text-primary) focus:border-(--accent) focus:outline-hidden";
+  "w-full rounded-md border border-border bg-(--bg-surface) px-2 py-1.5 text-sm text-(--text-primary) focus:border-(--accent)";
 
 const dateOnly = (iso: string | null | undefined): string => (iso ? iso.slice(0, 10) : "");
 // A cruise's first/last day travels as a bare `YYYY-MM-DD` (ADR 0002).

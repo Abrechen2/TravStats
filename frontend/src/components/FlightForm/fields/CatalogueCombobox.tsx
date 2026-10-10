@@ -191,7 +191,7 @@ export default function CatalogueCombobox({
               // input a beat before the click lands.
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => handleSelect(option)}
-              className="w-full px-4 py-2 text-left focus:outline-hidden border-b last:border-0"
+              className="w-full px-4 py-2 text-left border-b last:border-0"
               style={{ borderColor: "var(--color-border)" }}
             >
               {option.codes.length > 0 && (
