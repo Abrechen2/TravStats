@@ -298,5 +298,116 @@
       "wikidataId": "Haus: Wikidata",
       "amenities": "Haus: Ausstattung"
     }
+  },
+  "links": {
+    "button": "Als Link teilen",
+    "dialog": {
+      "title": "Öffentlichen Link erstellen",
+      "warning": "Wer den Link hat, sieht die gewählten Angaben – ohne Anmeldung, bis der Link abläuft oder du ihn widerrufst. Nichts anderes ist darüber erreichbar.",
+      "fieldsTitle": "Was die Seite zeigt",
+      "expiry": "Gültig",
+      "expiryOptions": {
+        "untilLanding": "Bis zur Landung (+2 Stunden)",
+        "day": "1 Tag",
+        "week": "7 Tage",
+        "month": "30 Tage",
+        "quarter": "90 Tage"
+      },
+      "preview": "Vorschau – genau das sieht, wer den Link öffnet",
+      "previewEmpty": "Wähle mindestens eine Angabe.",
+      "previewLoading": "Vorschau wird geladen …",
+      "previewFailed": "Die Vorschau konnte nicht geladen werden.",
+      "create": "Link erstellen",
+      "created": "Der Link wird nur jetzt angezeigt – kopiere ihn jetzt. Später kannst du ihn nur widerrufen und einen neuen erstellen.",
+      "linkLabel": "Dein Link",
+      "copy": "Kopieren",
+      "copied": "Link kopiert.",
+      "copyFailed": "Kopieren ging nicht – markiere den Link und kopiere ihn von Hand.",
+      "endsAt": "Endet am {{date}}",
+      "disabled": "Öffentliche Links sind auf dieser Instanz ausgeschaltet. Ein Administrator kann sie unter Einstellungen → Reisen einschalten.",
+      "statusFailed": "Konnte nicht prüfen, ob öffentliche Links erlaubt sind."
+    },
+    "fields": {
+      "flight": {
+        "owner": "Dein Vorname",
+        "flightNumber": "Airline und Flugnummer",
+        "route": "Abflug- und Zielflughafen",
+        "schedule": "Abflug- und Ankunftszeiten",
+        "progress": "Status und voraussichtliche Ankunft",
+        "aircraft": "Flugzeugtyp",
+        "lastPosition": "Letzte Position (nur wenn dein Telefon Flugwege an den Server sendet)"
+      },
+      "trip": {
+        "owner": "Dein Vorname",
+        "name": "Name der Reise",
+        "dates": "Daten",
+        "totals": "Summen (Flüge, km, Länder, Tage)",
+        "countries": "Länder",
+        "route": "Genaue Route",
+        "costs": "Kosten",
+        "companions": "Mitreisende",
+        "photos": "Fotos (bis zu 12, ohne Ortsdaten)"
+      },
+      "wrapped": {
+        "owner": "Dein Vorname",
+        "totals": "Summen des Jahres",
+        "topAirline": "Meistgeflogene Airline",
+        "topRoute": "Häufigste Strecke"
+      }
+    },
+    "view": {
+      "phase": {
+        "scheduled": "Geplant",
+        "inFlight": "In der Luft",
+        "landed": "Gelandet",
+        "cancelled": "Annulliert",
+        "unknown": "Status unbekannt"
+      },
+      "eta": "Ankunft (voraussichtlich)",
+      "departure": "Abflug",
+      "arrival": "Ankunft",
+      "noPosition": "Noch keine Position gesendet",
+      "flights": "Flüge",
+      "km": "km",
+      "cruises": "Kreuzfahrten",
+      "railRides": "Zugfahrten",
+      "countries": "Länder",
+      "days": "Tage",
+      "photos": "{{count}} Fotos",
+      "incomplete": "nicht alle Einträge mit Preis",
+      "none": "—",
+      "year": "Jahr {{year}}"
+    },
+    "section": {
+      "title": "Öffentliche Links",
+      "description": "Links, die du für einen Flug, eine Reise oder einen Jahresrückblick erstellt hast. Wer einen Link hat, sieht die gewählten Angaben, bis er abläuft oder du ihn widerrufst.",
+      "switch": "Öffentliche Links erlauben",
+      "switchSub": "Standard: aus. Ausschalten widerruft sofort alle bestehenden Links aller Nutzer.",
+      "stateOn": "Öffentliche Links sind erlaubt",
+      "stateOff": "Öffentliche Links sind ausgeschaltet",
+      "adminOnly": "Nur ein Administrator kann das ändern.",
+      "empty": "Keine aktiven Links.",
+      "kind": {
+        "flight": "Flug",
+        "trip": "Reise",
+        "wrapped": "Jahresrückblick {{year}}"
+      },
+      "endsAt": "endet {{date}}",
+      "views_one": "{{count}} Aufruf",
+      "views_other": "{{count}} Aufrufe",
+      "revoke": "Widerrufen",
+      "revoked": "Link widerrufen – er funktioniert nicht mehr.",
+      "loadFailed": "Die Links konnten nicht geladen werden.",
+      "saveFailed": "Der Schalter konnte nicht gespeichert werden."
+    },
+    "errors": {
+      "disabled": "Öffentliche Links sind auf dieser Instanz ausgeschaltet.",
+      "landed": "Dieser Flug ist schon gelandet – dafür gibt es keinen Link mehr.",
+      "limit": "Du hast schon 50 aktive Links. Widerrufe zuerst einen.",
+      "expiry": "Das Ablaufdatum liegt nicht zwischen jetzt und 90 Tagen.",
+      "notFound": "Das gibt es nicht (mehr).",
+      "createFailed": "Der Link konnte nicht erstellt werden.",
+      "revokeFailed": "Der Link konnte nicht widerrufen werden."
+    }
   }
 }
