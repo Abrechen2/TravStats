@@ -139,7 +139,9 @@ describe("GET /api/v1/stats/countries", () => {
           depIcao: null,
           departureTime: new Date("2026-02-01T08:00:00.000Z"),
         },
-        { depIata: null, depIcao: null, departureTime: new Date("2026-03-01T08:00:00.000Z") },
+        // An airport code the catalogue cannot place. (An end with NO code is
+        // no evidence of anywhere and counts nowhere — forgejo#256.)
+        { depIata: "XXX", depIcao: null, departureTime: new Date("2026-03-01T08:00:00.000Z") },
       ]);
       mockGetCachedAirports.mockResolvedValue(
         new Map([["FRA", { country: "Germany", timezone: "Europe/Berlin" }]])

@@ -2,9 +2,10 @@ import { countriesTouchedBy, UNKNOWN_COUNTRY } from "../countryStats";
 
 /**
  * forgejo#256 — both ends of a flight count the same way in the country
- * distribution: a known country, else Unknown. A departure without a code
- * used to count as Unknown while an arrival without one was dropped, and an
- * empty IATA code did not fall back to the ICAO code.
+ * distribution: an end with a code is its catalogue country, else Unknown; an
+ * end with no code counts nowhere. A departure without a code used to count
+ * as Unknown while an arrival without one was dropped, and an empty IATA code
+ * did not fall back to the ICAO code.
  */
 const catalogue = new Map([
   ["FRA", { country: "DE" }],
@@ -18,11 +19,16 @@ const row = (depIata: string | null, arrIata: string | null, arrIcao: string | n
 });
 
 describe("countriesTouchedBy", () => {
-  it("counts an arrival without a code as Unknown, exactly like a departure without one", () => {
-    expect([...countriesTouchedBy(row("FRA", null), catalogue)].sort()).toEqual(
+  it("treats a missing code the same at either end: no evidence, no country", () => {
+    expect([...countriesTouchedBy(row("FRA", null), catalogue)]).toEqual(["DE"]);
+    expect([...countriesTouchedBy(row(null, "FRA"), catalogue)]).toEqual(["DE"]);
+  });
+
+  it("counts a code the catalogue cannot place as Unknown, at either end", () => {
+    expect([...countriesTouchedBy(row("XXX", "FRA"), catalogue)].sort()).toEqual(
       ["DE", UNKNOWN_COUNTRY].sort()
     );
-    expect([...countriesTouchedBy(row(null, "FRA"), catalogue)].sort()).toEqual(
+    expect([...countriesTouchedBy(row("FRA", "XXX"), catalogue)].sort()).toEqual(
       ["DE", UNKNOWN_COUNTRY].sort()
     );
   });
@@ -32,6 +38,6 @@ describe("countriesTouchedBy", () => {
   });
 
   it("counts a flight with two unknown ends as ONE Unknown visit", () => {
-    expect([...countriesTouchedBy(row(null, "XXX"), catalogue)]).toEqual([UNKNOWN_COUNTRY]);
+    expect([...countriesTouchedBy(row("YYY", "XXX"), catalogue)]).toEqual([UNKNOWN_COUNTRY]);
   });
 });

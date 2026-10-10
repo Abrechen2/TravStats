@@ -679,8 +679,8 @@
       "unit": "The 15 countries with the most flights. A flight counts once for each country its departure or arrival touches: a domestic flight once, an international flight for both countries.",
       "time": "No time element: all-time; the page's year filter does not apply.",
       "source": "Flown and logged (historical) flights, the country of the departure and arrival airport from the airport catalogue (looked up by IATA code, else ICAO).",
-      "coverage": "Every end is treated the same: if it names no airport code, or the catalogue does not know the airport or its country, it counts under \"Unknown\" – departure or destination alike. A flight with two unknown ends counts there once. A code or a catalogue entry for the airport moves it into the right country.",
-      "exclusions": "Not included: scheduled and cancelled flights, and drafts (duplicates)."
+      "coverage": "Every end is treated the same, departure or destination: if it names an airport code, the catalogue's country of that airport counts – under \"Unknown\" when the catalogue does not know the airport or its country. A flight with two unknown ends counts there once. A catalogue entry for the airport moves it into the right country.",
+      "exclusions": "Not included: ends without an airport code (they prove no country, not even \"Unknown\"), scheduled and cancelled flights, and drafts (duplicates)."
     }
   }
 }

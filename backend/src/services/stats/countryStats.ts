@@ -62,22 +62,23 @@ export const UNKNOWN_COUNTRY = "Unknown";
  * home of that rule, read by `computeCountryStats` and by the country
  * ranking's evidence (forgejo#256).
  *
- * BOTH ends count, and both the same way: the catalogue's country of the
- * end's airport, else `Unknown` — whether the end names no code or a code the
- * catalogue cannot place. It used to differ by end: a departure without a code
- * counted as Unknown while an arrival without one was dropped. A Set, so a
- * domestic leg (or a leg with two unknown ends) is ONE visit.
+ * BOTH ends count, and both the same way: an end that names an airport code
+ * counts as the catalogue's country of that airport, else `Unknown` (a code
+ * the catalogue cannot place is still a place); an end that names no code at
+ * all is no evidence of anywhere and counts nowhere. It used to differ by end:
+ * a departure without a code counted as Unknown while an arrival without one
+ * was dropped. A Set, so a domestic leg (or a leg with two unknown ends) is
+ * ONE visit.
  */
 export function countriesTouchedBy(
   f: Pick<CountryRow, "depIata" | "depIcao" | "arrIata" | "arrIcao">,
   airportMap: ReadonlyMap<string, { country?: string | null } | null | undefined>
 ): Set<string> {
-  const countryOf = (code: string | null): string =>
-    (code ? airportMap.get(code)?.country : null) || UNKNOWN_COUNTRY;
-  return new Set([
-    countryOf(endCode(f.depIata, f.depIcao)),
-    countryOf(endCode(f.arrIata, f.arrIcao)),
-  ]);
+  const touched = new Set<string>();
+  for (const code of [endCode(f.depIata, f.depIcao), endCode(f.arrIata, f.arrIcao)]) {
+    if (code) touched.add(airportMap.get(code)?.country || UNKNOWN_COUNTRY);
+  }
+  return touched;
 }
 
 export async function computeCountryStats(
