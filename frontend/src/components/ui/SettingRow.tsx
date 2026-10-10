@@ -34,7 +34,13 @@ export function SettingRow({ title, sub, control, htmlFor }: SettingRowProps): J
         {sub ? <span className="t-caption">{sub}</span> : null}
       </span>
       {control ? (
-        <span className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
+        // min-w-0/max-w-full, and a select capped at the row: a native select is as
+        // wide as its longest option, and the home-country list ("Nicht festgelegt",
+        // then every country) pushed a 360px phone's settings page 21px sideways.
+        <span
+          className="flex min-w-0 max-w-full flex-wrap items-center [&>select]:max-w-full"
+          style={{ gap: "var(--ts-space-sm)" }}
+        >
           {control}
         </span>
       ) : null}
