@@ -31,7 +31,7 @@ const EDITS_IN_FORM = new Set<RecordCheckKind>([
 ]);
 
 type Linkable = Pick<RelatedRecord, "entityId" | "parentId"> & {
-  entityType: RelatedRecord["entityType"] | "trip";
+  entityType: RelatedRecord["entityType"] | "trip" | "place_visit";
 };
 
 export function recordPath(record: Linkable, edit = false): string | null {
@@ -50,6 +50,11 @@ export function recordPath(record: Linkable, edit = false): string | null {
     case "lodging_stay":
       return record.parentId
         ? `/lodging/${record.parentId}?${EDIT_PARAM.editStay}=${record.entityId}`
+        : null;
+    case "place_visit":
+      // A visit is edited on its place — the visit's own editor there.
+      return record.parentId
+        ? `/places/${record.parentId}?${EDIT_PARAM.editVisit}=${record.entityId}`
         : null;
   }
 }

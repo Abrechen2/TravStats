@@ -112,7 +112,32 @@ async function seed(userId: string) {
       checkOutDate: day("2026-06-14"),
     },
   });
-  return { trip, typed, mail, mystery, busCopy, naples, naplesStay };
+  // A dated trip with two visits to the Colosseum: one on its days, one a
+  // month later. Only the second is asked about. The day comes from the
+  // visit's own zone (`visitLocalDay`): 23:30 UTC is already the next day in Rome.
+  const tour = await prisma.trip.create({
+    data: {
+      userId,
+      name: "Rom",
+      status: "completed",
+      startDay: day("2026-07-01"),
+      endDay: day("2026-07-05"),
+    },
+  });
+  const colosseum = await prisma.place.create({
+    data: { userId, name: "Kolosseum", lat: 41.89, lon: 12.49 },
+  });
+  const visitAt = (utc: string) => ({
+    userId,
+    placeId: colosseum.id,
+    tripId: tour.id,
+    visitedAtUtc: new Date(utc),
+    visitedZone: "Europe/Rome",
+    visitedPrecision: "minute",
+  });
+  await prisma.placeVisit.create({ data: visitAt("2026-07-06T09:00:00Z") });
+  const lateVisit = await prisma.placeVisit.create({ data: visitAt("2026-08-01T23:30:00Z") });
+  return { trip, typed, mail, mystery, busCopy, naples, naplesStay, tour, colosseum, lateVisit };
 }
 
 describe("record checks against real Postgres", () => {
@@ -151,9 +176,21 @@ describe("record checks against real Postgres", () => {
         `duplicate_candidate flight ${rows.mail.id}`,
         `flight_number_missing flight ${rows.mystery.id}`,
         `trip_end_missing trip ${rows.trip.id}`,
+        `trip_entries_outside trip ${rows.tour.id}`,
       ].sort()
     );
-    expect(first.opened).toBe(6);
+    expect(first.opened).toBe(7);
+    const outside = flags.find((f) => f.kind === "trip_entries_outside");
+    expect(outside?.details).toMatchObject({
+      entries: [
+        {
+          entityType: "place_visit",
+          entityId: rows.lateVisit.id,
+          parentId: rows.colosseum.id,
+          firstDay: "2026-08-02",
+        },
+      ],
+    });
 
     const bus = flags.find((f) => f.entityType === "bus_journey");
     expect(bus?.subject).toMatchObject({ label: "ZOB Berlin → Hamburg ZOB", parentId: null });
@@ -166,7 +203,7 @@ describe("record checks against real Postgres", () => {
     });
 
     const second = await runDataQualityChecks(userId, NOW);
-    expect(second).toMatchObject({ opened: 0, reopened: 0, updated: 0, autoResolved: 0, open: 6 });
+    expect(second).toMatchObject({ opened: 0, reopened: 0, updated: 0, autoResolved: 0, open: 7 });
   });
 
   it("keeps a dismissed duplicate dismissed, and resolves it when the copy is deleted", async () => {

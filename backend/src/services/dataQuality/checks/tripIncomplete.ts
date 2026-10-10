@@ -1,4 +1,4 @@
-import type { RecordCheckDomain } from "../../../schemas/dataQualityRecordChecks";
+import type { TripEntryType } from "../../../schemas/dataQualityRecordChecks";
 import { daysBetween } from "../../../shared/time/localDate";
 import type { RecordSnapshot } from "../recordGather";
 import type { DataQualityFinding } from "../types";
@@ -15,8 +15,9 @@ import type { DataQualityFinding } from "../types";
  *
  * **`trip_entries_outside`** — a trip with both days set, and linked entries
  * (flights, trains, buses, cruises, stays) whose days fall outside them.
- * Each entry's days are read on its own clock (ADR 0002: a flight on its
- * airports' calendars, a stay on its own calendar dates). **Tolerance: one
+ * Place visits count too, on the visit's own day at the place. Each entry's
+ * days are read on its own clock (ADR 0002: a flight on its airports'
+ * calendars, a stay on its own calendar dates, a visit on its place's). **Tolerance: one
  * day at each edge** — an overnight leg home that lands the morning after the
  * last day, a departure the evening before the first, or a day read off a
  * legacy value with no zone are all within it. Undated and cancelled entries
@@ -29,7 +30,7 @@ export const OPEN_TRIP_GRACE_DAYS = 30;
 export const TRIP_EDGE_TOLERANCE_DAYS = 1;
 
 interface TripEntry {
-  entityType: RecordCheckDomain;
+  entityType: TripEntryType;
   entityId: string;
   label: string;
   parentId: string | null;
@@ -39,14 +40,14 @@ interface TripEntry {
 
 type Snapshot = Pick<
   RecordSnapshot,
-  "trips" | "flights" | "railJourneys" | "busJourneys" | "cruises" | "stays"
+  "trips" | "flights" | "railJourneys" | "busJourneys" | "cruises" | "stays" | "placeVisits"
 >;
 
 /** Every dated, live entry that names a trip, indexed by that trip — one pass. */
 function entriesByTrip(snapshot: Snapshot): Map<string, TripEntry[]> {
   const byTrip = new Map<string, TripEntry[]>();
   const add = (
-    entityType: RecordCheckDomain,
+    entityType: TripEntryType,
     rows: ReadonlyArray<{
       id: string;
       label: string;
@@ -55,6 +56,7 @@ function entriesByTrip(snapshot: Snapshot): Map<string, TripEntry[]> {
       firstDay: string | null;
       lastDay: string | null;
       lodgingId?: string;
+      placeId?: string;
     }>
   ): void => {
     for (const row of rows) {
@@ -63,7 +65,7 @@ function entriesByTrip(snapshot: Snapshot): Map<string, TripEntry[]> {
         entityType,
         entityId: row.id,
         label: row.label,
-        parentId: row.lodgingId ?? null,
+        parentId: row.lodgingId ?? row.placeId ?? null,
         firstDay: row.firstDay,
         lastDay: row.lastDay ?? row.firstDay,
       };
@@ -75,6 +77,20 @@ function entriesByTrip(snapshot: Snapshot): Map<string, TripEntry[]> {
   add("bus_journey", snapshot.busJourneys);
   add("cruise", snapshot.cruises);
   add("lodging_stay", snapshot.stays);
+  // A visit has one day; a visit with none (no zone, a coarse precision) is
+  // undated and, like every undated entry, not judged.
+  add(
+    "place_visit",
+    snapshot.placeVisits.map((v) => ({
+      id: v.id,
+      label: v.label,
+      status: "visited",
+      tripId: v.tripId,
+      firstDay: v.day,
+      lastDay: v.day,
+      placeId: v.placeId,
+    }))
+  );
   return byTrip;
 }
 

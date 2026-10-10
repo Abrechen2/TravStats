@@ -113,4 +113,45 @@ describe("findIncompleteTrips — trip_entries_outside", () => {
     );
     expect(findings).toEqual([]);
   });
+
+  it("asks about a place visit outside the trip's days and links it through its place", () => {
+    const visit = (id: string, day: string | null) => ({
+      id,
+      placeId: "colosseum",
+      label: "Kolosseum",
+      tripId: "t1",
+      day,
+    });
+    const findings = findIncompleteTrips(
+      snapshot({
+        trips: [trip({ id: "t1" })],
+        placeVisits: [
+          visit("inside", "2026-03-12"),
+          // One day past the end: within the tolerance, not asked about.
+          visit("edge", "2026-03-16"),
+          // No zone or a coarse precision: undated, not judged.
+          visit("undated", null),
+          visit("outside", "2026-04-02"),
+        ],
+      }),
+      NOW
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      kind: "trip_entries_outside",
+      details: {
+        entries: [
+          {
+            entityType: "place_visit",
+            entityId: "outside",
+            label: "Kolosseum",
+            parentId: "colosseum",
+            firstDay: "2026-04-02",
+            lastDay: "2026-04-02",
+          },
+        ],
+      },
+    });
+    expect(dataQualityFlagPayloadSchema.safeParse(findings[0]).success).toBe(true);
+  });
 });

@@ -10,6 +10,7 @@ import {
   type FlightTimeSemantics,
 } from "../../utils/timezone";
 import { getCachedAirports } from "../airportCache";
+import { visitLocalDay } from "../places/visitTrip";
 import { flightEndZone, tzMapFromAirports } from "../stats/departureClock";
 
 /**
@@ -78,6 +79,17 @@ export interface StayRecord extends RecordBase {
   lodgingId: string;
 }
 
+/** A place visit linked to a trip; `placeId` is the page it is edited on. */
+export interface VisitRecord {
+  id: string;
+  placeId: string;
+  /** The place's name. */
+  label: string;
+  tripId: string;
+  /** The visit's calendar day at the place; null when it cannot be known. */
+  day: string | null;
+}
+
 export interface TripRecord {
   id: string;
   status: string;
@@ -92,6 +104,8 @@ export interface RecordSnapshot {
   cruises: CruiseRecord[];
   stays: StayRecord[];
   trips: TripRecord[];
+  /** Place visits that name a trip — only the trip-days check reads them. */
+  placeVisits: VisitRecord[];
   /** Every airport code this account uses that the catalogue knows, upper-case. */
   knownAirportCodes: ReadonlySet<string>;
   /**
@@ -286,7 +300,7 @@ const GROUND_SELECT = {
 } as const;
 
 export async function loadRecordSnapshot(userId: string): Promise<RecordSnapshot> {
-  const [flightRows, railRows, busRows, cruiseRows, stayRows, tripRows, anyAirport] =
+  const [flightRows, railRows, busRows, cruiseRows, stayRows, tripRows, anyAirport, visitRows] =
     await Promise.all([
       loadFlights(userId),
       prisma.railJourney.findMany({
@@ -358,6 +372,19 @@ export async function loadRecordSnapshot(userId: string): Promise<RecordSnapshot
         },
       }),
       prisma.airport.findFirst({ select: { id: true } }),
+      prisma.placeVisit.findMany({
+        where: { userId, tripId: { not: null } },
+        orderBy: { id: "asc" },
+        select: {
+          id: true,
+          placeId: true,
+          tripId: true,
+          visitedAtUtc: true,
+          visitedZone: true,
+          visitedPrecision: true,
+          place: { select: { name: true } },
+        },
+      }),
     ]);
 
   const codes = [
@@ -438,6 +465,15 @@ export async function loadRecordSnapshot(userId: string): Promise<RecordSnapshot
       status: row.status,
       startDay: dayOf(row.startDay, row.startDate),
       endDay: dayOf(row.endDay, row.endDate),
+    })),
+    // `visitLocalDay` is the one rule for a visit's day: it abstains on a
+    // visit with no zone or a precision coarser than a day.
+    placeVisits: visitRows.map((row) => ({
+      id: row.id,
+      placeId: row.placeId,
+      label: row.place.name,
+      tripId: row.tripId as string,
+      day: visitLocalDay(row),
     })),
     knownAirportCodes: new Set(airports.keys()),
     airportCatalogueEmpty: anyAirport === null,

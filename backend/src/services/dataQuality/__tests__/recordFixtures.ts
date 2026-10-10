@@ -86,6 +86,7 @@ export function snapshot(over: Partial<RecordSnapshot> = {}): RecordSnapshot {
     trips: [],
     knownAirportCodes: new Set(["FRA", "EDDF", "JFK", "KJFK"]),
     airportCatalogueEmpty: false,
+    placeVisits: [],
     ...over,
   };
 }

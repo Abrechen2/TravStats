@@ -18,7 +18,13 @@ import { recordPath } from "./recordFlagLinks";
  * is given on the record's own page, where the user sees what they change.
  */
 
-function RelatedLink({ record }: { record: RelatedRecord }): JSX.Element {
+function RelatedLink({
+  record,
+}: {
+  record: Omit<RelatedRecord, "entityType"> & {
+    entityType: RelatedRecord["entityType"] | "place_visit";
+  };
+}): JSX.Element {
   const { t } = useTranslation(["dataQuality"]);
   const path = recordPath(record);
   const label = record.label || t("dataQuality:flag.unnamedRecord");

@@ -117,12 +117,20 @@ export const tripEndMissingDetailsSchema = z.object({
   lastEntryDay: z.string().nullable(),
 });
 
+/**
+ * What a trip can hold that its days are checked against: the record-check
+ * rows plus a place visit (edited on its place, which is its `parentId`).
+ */
+export const TRIP_ENTRY_TYPES = [...RECORD_CHECK_DOMAINS, "place_visit"] as const;
+export type TripEntryType = (typeof TRIP_ENTRY_TYPES)[number];
+
 /** Entries linked to a trip whose days fall outside the trip's own days. */
 export const tripEntriesOutsideDetailsSchema = z.object({
   startDay: z.string(),
   endDay: z.string(),
   entries: z.array(
     relatedRecordSchema.extend({
+      entityType: z.enum(TRIP_ENTRY_TYPES),
       firstDay: z.string(),
       lastDay: z.string(),
     })

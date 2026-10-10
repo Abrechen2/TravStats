@@ -209,7 +209,12 @@ export interface TripEndMissingDetails {
 export interface TripEntriesOutsideDetails {
   startDay: string;
   endDay: string;
-  entries: (RelatedRecord & { firstDay: string; lastDay: string })[];
+  /** A place visit is edited on its place, which is its `parentId`. */
+  entries: (Omit<RelatedRecord, "entityType"> & {
+    entityType: RecordCheckDomain | "place_visit";
+    firstDay: string;
+    lastDay: string;
+  })[];
 }
 
 /** Every detail shape, as a union. Only useful where `kind` is already known. */

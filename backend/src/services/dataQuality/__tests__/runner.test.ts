@@ -114,6 +114,7 @@ const noCoordinates = () => ({
     trips: [],
     knownAirportCodes: new Set<string>(),
     airportCatalogueEmpty: false,
+    placeVisits: [],
   },
 });
 

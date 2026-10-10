@@ -198,12 +198,24 @@ describe("DataQualityFlagCard — record checks", () => {
             firstDay: "2026-03-01",
             lastDay: "2026-03-01",
           },
+          {
+            entityType: "place_visit",
+            entityId: "v1",
+            label: "Kolosseum",
+            parentId: "colosseum",
+            firstDay: "2026-04-02",
+            lastDay: "2026-04-02",
+          },
         ],
       },
     });
     expect(screen.getByRole("link", { name: "ZOB Berlin → Hamburg ZOB" })).toHaveAttribute(
       "href",
       "/bus/b1"
+    );
+    expect(screen.getByRole("link", { name: "Kolosseum" })).toHaveAttribute(
+      "href",
+      "/places/colosseum?editVisit=v1"
     );
     expect(screen.getByRole("link", { name: "Rundreise" })).toHaveAttribute("href", "/trips/t1");
   });
