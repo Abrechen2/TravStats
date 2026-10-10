@@ -1,5 +1,6 @@
 import type { LodgingImportCandidate } from "../../schemas/lodgingImport";
 import type { ParsedLodgingBooking } from "./parsedLodgingBooking";
+import { pickParsedDeadlines } from "../deadlines/parsedDeadlines";
 
 /** Join the street with the postcode so the geocoder has a full address line. */
 function composeAddress(booking: ParsedLodgingBooking): string | null {
@@ -52,6 +53,7 @@ export function bookingsToCandidates(bookings: ParsedLodgingBooking[]): LodgingI
       bookingReference: booking.confirmationNumber,
       externalRef: booking.confirmationNumber ? `booking:${booking.confirmationNumber}` : null,
       notes: null,
+      ...pickParsedDeadlines(booking),
     },
   }));
 }

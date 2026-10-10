@@ -37,10 +37,6 @@ import {
   createTripSchema,
   updateTripSchema,
   assignFlightsSchema,
-  createBookingSchema,
-  updateBookingSchema,
-  bookingFlightsSchema,
-  bookingEntriesSchema,
   createStopSchema,
   updateStopSchema,
   createJournalSchema,
@@ -70,14 +66,6 @@ const journalCreateInput = registry.register(
 const journalUpdateInput = registry.register(
   "TripJournalUpdateInput",
   updateJournalSchema.openapi("TripJournalUpdateInput")
-);
-const bookingCreateInput = registry.register(
-  "BookingCreateInput",
-  createBookingSchema.openapi("BookingCreateInput")
-);
-const bookingUpdateInput = registry.register(
-  "BookingUpdateInput",
-  updateBookingSchema.openapi("BookingUpdateInput")
 );
 
 const tripCostSuperlative = registry.register(
@@ -684,108 +672,4 @@ registry.registerPath({
     "DELETE /trips/{id} does.",
   tags: ["Trips"],
   responses: { 200: { description: "Dissolved" }, 400: badInput },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/trips/bookings",
-  summary: "Create a booking",
-  description:
-    "A booking is one payment covering several things — the flight and the hotel " +
-    "on one reference. Trip cost counts a booking once, and counts flights and " +
-    "cruises carrying a price but no booking separately, so neither is doubled.",
-  tags: ["Trips"],
-  request: {
-    body: { content: { "application/json": { schema: bookingCreateInput } }, required: true },
-  },
-  responses: { 201: { description: "Created" }, 400: badInput },
-});
-
-registry.registerPath({
-  method: "patch",
-  path: "/trips/bookings/{id}",
-  summary: "Update a booking",
-  description:
-    "Reference, price, currency, operator, travellers and booking day (which re-dates the " +
-    "FX snapshot), and the trip it belongs to (`tripId`; null takes it off its trip). A trip " +
-    "that is not the caller's answers 404 `TRIP_NOT_FOUND`. Its entries stay where they are.",
-  tags: ["Trips"],
-  request: {
-    params: tripId,
-    body: { content: { "application/json": { schema: bookingUpdateInput } }, required: true },
-  },
-  responses: { 200: { description: "Updated" }, 400: badInput, 404: notFound },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/trips/bookings/{id}/flights",
-  summary: "File existing flights on a booking",
-  description:
-    "Sets the booking on every named flight. A flight on no trip joins the booking's trip; " +
-    "one already on another trip keeps it. All or nothing: an id that is not the caller's " +
-    "answers 404 `FLIGHT_NOT_FOUND` and files none; another account's booking answers 404 " +
-    "`BOOKING_NOT_FOUND`.",
-  tags: ["Trips"],
-  request: {
-    params: tripId,
-    body: {
-      content: { "application/json": { schema: bookingFlightsSchema } },
-      required: true,
-    },
-  },
-  responses: {
-    200: {
-      description: "Filed",
-      content: {
-        "application/json": {
-          schema: z.object({ bookingId: z.string().uuid(), count: z.number().int() }),
-        },
-      },
-    },
-    400: badInput,
-    404: notFound,
-  },
-});
-
-registry.registerPath({
-  method: "put",
-  path: "/trips/bookings/{id}/entries",
-  summary: "Set the flights, stays and cruises a booking covers",
-  description:
-    "Each list given replaces that kind's set (an entry left out leaves the booking); an " +
-    "absent list is untouched. An entry on no trip joins the booking's trip. All or nothing: " +
-    "an id that is not the caller's answers 404 and changes nothing (#356).",
-  tags: ["Trips"],
-  request: {
-    params: tripId,
-    body: { content: { "application/json": { schema: bookingEntriesSchema } }, required: true },
-  },
-  responses: {
-    200: {
-      description: "Filed",
-      content: {
-        "application/json": {
-          schema: z.object({
-            bookingId: z.string().uuid(),
-            flights: z.number().int(),
-            stays: z.number().int(),
-            cruises: z.number().int(),
-          }),
-        },
-      },
-    },
-    400: badInput,
-    404: notFound,
-  },
-});
-
-registry.registerPath({
-  method: "delete",
-  path: "/trips/bookings/{id}",
-  summary: "Delete a booking",
-  description: "Its flights, stays and cruises are kept and belong to no booking any more.",
-  tags: ["Trips"],
-  request: { params: tripId },
-  responses: { 204: deleted, 404: notFound },
 });

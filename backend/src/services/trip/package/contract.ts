@@ -14,6 +14,8 @@
  *   bookingReference  required — the operator's booking number
  *   issuedOn          required — the day the document was issued (FX day)
  *   tripName, startDate, endDate, travellers (integer), totalPrice, currency
+ *   freeCancellationUntil (YYYY-MM-DD, or YYYY-MM-DDTHH:mm with deadlineZone),
+ *   paymentDueOn (YYYY-MM-DD), deadlineZone (IANA) — forgejo#285
  *   cruiseShip, cruiseFrom, cruiseTo, cruiseCabin, cruiseStart, cruiseEnd
  *
  * Repeats (arrays of objects):
@@ -29,6 +31,8 @@
  * what the engine's transforms emit; no `Date` here (ADR 0002).
  */
 import { z } from "zod";
+import { parsedDeadlineValuesShape } from "../../../schemas/deadlines";
+import { isValidZone } from "../../../shared/time/zonedParts";
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const HH_MM = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -122,6 +126,12 @@ export const packageContractSchema = z
     currency: z
       .string()
       .regex(/^[A-Z]{3}$/, "must be an ISO 4217 code")
+      .nullish(),
+    ...parsedDeadlineValuesShape,
+    /** The zone a cancellation TIME is stated in — a package names no place of its own. */
+    deadlineZone: z
+      .string()
+      .refine((zone) => isValidZone(zone), "must be an IANA time zone")
       .nullish(),
     flights: z.array(packageFlightSchema).max(40).default([]),
     stays: z.array(packageStaySchema).max(60).default([]),

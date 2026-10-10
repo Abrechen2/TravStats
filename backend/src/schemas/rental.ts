@@ -2,6 +2,7 @@ import { z } from "./zod";
 import { currencyField } from "./lodging";
 import { partialForUpdate } from "./partialUpdate";
 import { isLocalDate } from "../shared/time/localDate";
+import { deadlineInputShape } from "./deadlines";
 
 /**
  * Car rentals — spec docs/superpowers/specs/2026-10-01-rental-domain-design.md.
@@ -248,6 +249,11 @@ const baseRentalSchema = z.object({
   depositPaidOn: calendarDay.nullable().optional(),
   depositReturnedOn: calendarDay.nullable().optional(),
   depositReturnedAmount: money.nullable().optional(),
+  /**
+   * Deadlines (forgejo#285): free cancellation (an instant, a bare `{local}`
+   * on the pickup station's clock, or a day) and the day payment is due.
+   */
+  ...deadlineInputShape({ impliedPlace: true }),
   inclusions: z.array(z.enum(RENTAL_INCLUSIONS)).max(RENTAL_INCLUSIONS.length).optional(),
   arrivalFlightNumber: optionalText(12),
   status: z.enum(RENTAL_WRITE_STATUSES).default("scheduled"),

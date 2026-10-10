@@ -53,7 +53,6 @@
   "PATCH /parser-templates/{id}",
   "PATCH /places/visits/{visitId}/photos/{photoId}",
   "PATCH /places/{id}",
-  "PATCH /trips/bookings/{id}",
   "POST /airports/enrich",
   "POST /auth/2fa/activate",
   "POST /auth/2fa/disable",

@@ -6,6 +6,7 @@ import { tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { formatAmount } from "../../lib/units";
 import { formatLocalDate } from "../../lib/displayFormat";
+import { deadlineFacts } from "../../lib/deadlines";
 import type { Booking, Trip } from "../../types";
 import BookingEditModal from "./BookingEditModal";
 import type { BookingEntryKind, BookingEntryOption } from "./BookingEntriesPicker";
@@ -65,7 +66,8 @@ export function TripBookingsPanel({
   flightDay,
   cruiseDay,
 }: Props): JSX.Element {
-  const { t } = useTranslation(["trips", "errors"]);
+  const { t } = useTranslation(["trips", "errors", "common"]);
+  const deadlineLocale = (language ?? "de").startsWith("en") ? "en-GB" : "de-DE";
   const addToast = useToastStore((s) => s.addToast);
   const { confirm, confirmDialog } = useConfirmDialog();
   const bookings = trip.bookings ?? [];
@@ -107,7 +109,20 @@ export function TripBookingsPanel({
           <tbody>
             {bookings.map((b) => (
               <tr key={b.id} style={{ borderTop: "1px solid var(--color-border)" }}>
-                <td className="px-4 py-2.5">{b.operator ?? "—"}</td>
+                <td className="px-4 py-2.5">
+                  {b.operator ?? "—"}
+                  {deadlineFacts(b.times, t, deadlineLocale)
+                    .filter((fact) => fact.value !== null)
+                    .map((fact) => (
+                      <span
+                        key={fact.label}
+                        className="block text-xs"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {fact.label}: {fact.value}
+                      </span>
+                    ))}
+                </td>
                 <td className="px-4 py-2.5 font-mono">{b.pnr ?? "—"}</td>
                 <td className="px-4 py-2.5 text-right">
                   {b.price != null ? formatAmount(b.price, b.currency, { language }) : "—"}

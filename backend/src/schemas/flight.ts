@@ -4,6 +4,7 @@ import { receiptUrlValidator } from "./receiptUrl";
 import { chronologyProblem, departsInFuture } from "../shared/flightChronology";
 import { wallClockExists } from "../shared/wallClockExistence";
 import { partialForUpdate } from "./partialUpdate";
+import { onlineCheckInInputShape } from "./deadlines";
 
 export const airportSchema = z.object({
   icao: z.string().nullable().optional(),
@@ -314,6 +315,8 @@ const baseFlightSchema = z.object({
   aerodataboxQualityTags: z.array(z.string().max(64)).max(20).optional().default([]),
   baggageBelt: z.string().max(20).nullable().optional(),
   checkInDesk: z.string().max(40).nullable().optional(),
+  // When online check-in opens (forgejo#285); a bare `{local}` is read at the departure airport.
+  ...onlineCheckInInputShape,
   // Special flights (Sonder-Flüge) — flight subtype, see schema.prisma
   specialType: z.enum(SPECIAL_FLIGHT_TYPES).nullable().optional(),
   eventLat: z.number().min(-90).max(90).nullable().optional(),

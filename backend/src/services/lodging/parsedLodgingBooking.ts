@@ -43,6 +43,9 @@ export interface ParsedLodgingBooking {
   /** The group behind the brand — "Courtyard by Marriott" -> "Marriott". */
   chainName: string | null;
   confirmationNumber: string | null;
+  /** Deadlines a v2 template read (forgejo#285): see services/deadlines/parsedDeadlines.ts. */
+  freeCancellationUntil?: string | null;
+  paymentDueOn?: string | null;
   parserTemplate: string;
   parserConfidence: number;
   missing: string[];

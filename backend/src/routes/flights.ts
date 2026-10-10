@@ -1,3 +1,4 @@
+import { findReimportedFlight } from "../services/flights/flightReimport";
 import { Router, Response, NextFunction } from "express";
 import { Prisma } from "../prisma";
 import { prisma } from "../db";
@@ -176,17 +177,14 @@ router.post(
           })
         : null;
       if (externalRef) {
-        const existing = await prisma.flight.findFirst({
-          where: { userId, externalRef },
-          select: { id: true },
-        });
+        const existing = await findReimportedFlight(userId, externalRef, data, !!req.apiToken);
         if (existing) {
           // Re-reading a forwarded confirmation is ordinary. 409 says what
           // happened; a 500 from the unique index would say the import broke.
           res.status(409).json({
             success: false,
             error: "already_imported",
-            data: { id: existing.id },
+            data: existing,
           });
           return;
         }
@@ -292,7 +290,7 @@ router.post(
         },
         await getBaseCurrency(userId)
       );
-      const zoneColumns = await flightZoneColumns(data, enriched);
+      const zoneColumns = await flightZoneColumns(data, enriched, undefined, req);
 
       const flight = await prisma.$transaction(async (tx) => {
         const created = await tx.flight.create({
@@ -328,9 +326,8 @@ router.post(
             arrivalTime: arrivalUtc,
             actualDeparture: actualDepartureUtc,
             actualArrival: actualArrivalUtc,
-            // Default to 'UTC' (the canonical contract). Bulk-import callers can
-            // override with 'DATE_ONLY' or 'UNKNOWN' when the time component is
-            // a placeholder so downstream display/aggregation knows to estimate.
+            // 'UTC' by default; an importer may say 'DATE_ONLY'/'UNKNOWN' for a
+            // placeholder time, so display and aggregation know to estimate.
             depTimeSemantics: data.depTimeSemantics ?? "UTC",
             arrTimeSemantics: data.arrTimeSemantics ?? "UTC",
             delayMinutes:
@@ -972,7 +969,8 @@ router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
           departure: changed("departure") ? enrichedDeparture : null,
           arrival: changed("arrival") ? enrichedArrival : null,
         },
-        existingFlight
+        existingFlight,
+        req
       )
     );
     const incomingActualDepUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);

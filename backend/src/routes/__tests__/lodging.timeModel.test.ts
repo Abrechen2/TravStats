@@ -148,6 +148,10 @@ describe("Lodging stays — time model (phase 2)", () => {
         zoneSource: "stored",
       },
       checkOutAt: null,
+      // No deadline recorded (forgejo#285): null, never a guess.
+      freeCancellationUntil: null,
+      freeCancellationOn: null,
+      paymentDue: null,
     });
     const detail = await request(app).get(`/api/v1/lodging/${tokyoId}`).set("Cookie", cookie);
     const stay = detail.body.data.stays.find((s: { id: string }) => s.id === res.body.data.id);

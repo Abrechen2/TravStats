@@ -5,6 +5,7 @@ import { formatTimelineDate } from "../../lib/tripTimeline";
 import type { TimeValue } from "../../shared/time";
 import type { TripRental } from "../../types/rental";
 import { rentalDays } from "../../shared/rentalCounting";
+import { deadlineFacts } from "../../lib/deadlines";
 
 interface Props {
   rental: TripRental;
@@ -21,7 +22,13 @@ interface Props {
  * line with its station and time on that station's clock, not a second card.
  */
 export function RentalTripCard({ rental, end, when }: Props): JSX.Element {
-  const { t } = useTranslation(["rental"]);
+  const { t, i18n } = useTranslation(["rental", "common"]);
+  // Deadlines on the pickup card, as the detail page lists them (forgejo#285).
+  const deadlines = deadlineFacts(
+    rental.times,
+    t,
+    i18n.language.startsWith("en") ? "en-GB" : "de-DE"
+  ).filter((fact) => fact.value !== null);
   if (end === "return") {
     return (
       <div className="t-caption py-1" data-testid="rental-trip-card-return">
@@ -49,6 +56,11 @@ export function RentalTripCard({ rental, end, when }: Props): JSX.Element {
         })}
       </Link>
       <div className="t-caption">{t("rental:timeline.span", { count: rentalDays(rental) })}</div>
+      {deadlines.map((fact) => (
+        <div key={fact.label} className="t-caption" data-testid="rental-trip-card-deadline">
+          {fact.label}: {fact.value}
+        </div>
+      ))}
     </div>
   );
 }

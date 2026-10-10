@@ -67,6 +67,9 @@ export interface CreateBookingInput {
   travellers?: number;
   /** `YYYY-MM-DD` — dates the FX snapshot (#356). */
   bookedOn?: string;
+  /** Deadlines (forgejo#285): a bare day, or `{local, zone}` — a booking names no place. */
+  freeCancellationUntil?: string | { local: string; zone?: string };
+  paymentDueOn?: string;
   flightIds?: string[];
   stayIds?: string[];
   cruiseIds?: string[];

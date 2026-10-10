@@ -3,6 +3,7 @@ import { z } from "zod";
 import { registry } from "../registry";
 import { errorContent, flightResponse } from "./shared";
 import { BOOKING_SPLIT_METHODS, bookingSplitBodySchema } from "../../../schemas/flightBooking";
+import { bookingTimesSchema } from "../../../schemas/times";
 
 /**
  * A flight's booking and its segments (forgejo#218, #219):
@@ -56,6 +57,7 @@ export const flightBookingSummary = registry.register(
         .int()
         .describe("Cruises, train and bus journeys and stays filed on the same booking"),
       split: bookingSplit.nullable().describe("The optional split across the segments, or null"),
+      times: bookingTimesSchema,
     })
     .openapi("FlightBookingSummary")
 );

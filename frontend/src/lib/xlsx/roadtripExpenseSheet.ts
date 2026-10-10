@@ -59,7 +59,7 @@ export function roadtripExpenseSheet(t: T): SheetSpec<RoadtripExpenseRow> {
         reference: true,
         value: (e) => refCell(e.roadtripLabel, e.routeId),
       },
-      // ferry / toll / pitch / fuel / parking / other — listed in the hint.
+      // The thirteen `EXPENSE_KINDS` (ferry … fees, other) — listed in the hint.
       {
         key: "kind",
         header: t("xlsx:columns.expenseKind"),

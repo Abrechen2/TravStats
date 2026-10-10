@@ -7,13 +7,14 @@ import {
   type TimeValue,
 } from "../../shared/time/wire";
 import type { RentalTimes } from "../../schemas/times";
+import { deadlineTimes, type DeadlineColumns } from "../deadlines/bookingDeadlines";
 
 /**
  * A rental's `times` (ADR 0002 D3). A rental stores real instants and the
  * zone of each station from its first write — there is no legacy row without
  * a zone — so every value goes out on its station's clock.
  */
-export interface RentalTimeColumns {
+export interface RentalTimeColumns extends DeadlineColumns {
   pickupTime: Date;
   returnTime: Date;
   actualPickupTime: Date | null;
@@ -58,5 +59,6 @@ export function rentalTimes(r: RentalTimeColumns): RentalTimes {
       r.returnTimezone,
       precisionOf(r.actualReturnPrecision ?? "minute")
     ),
+    ...deadlineTimes(r),
   };
 }

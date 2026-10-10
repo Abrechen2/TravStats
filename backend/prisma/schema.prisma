@@ -534,6 +534,11 @@ model Flight {
   /// changes (`routes/flights/timeInput.ts`). Null = not yet backfilled (3b).
   depTimezone          String?   @map("dep_timezone")
   arrTimezone          String?   @map("arr_timezone")
+  /// When online check-in opens (forgejo#285), where the airline says so — an
+  /// INSTANT with the zone it was stated in (normally the departure
+  /// airport's). Null = not known; nothing derives it from the departure.
+  onlineCheckInOpensAt DateTime? @map("online_check_in_opens_at")
+  onlineCheckInZone    String?   @map("online_check_in_zone")
   /// minute | day | unknown (`shared/time/wire.ts` TIME_PRECISIONS).
   depPrecision         String?   @map("dep_precision")
   arrPrecision         String?   @map("arr_precision")
@@ -2022,32 +2027,51 @@ model TripRouteLeg {
 /// Totals are per currency and never summed across them: unlike a stay, an
 /// expense carries no FX snapshot.
 model TripExpense {
-  id            String    @id @default(uuid())
+  id               String    @id @default(uuid())
   /// The owner, held directly (see `TripRoute.userId`): a FK proves existence, not ownership.
-  userId        String    @map("user_id")
-  tripId        String?   @map("trip_id")
-  routeId       String?   @map("route_id")
-  stopId        String?   @map("stop_id")
-  legFromStopId String?   @map("leg_from_stop_id")
-  legToStopId   String?   @map("leg_to_stop_id")
+  userId           String    @map("user_id")
+  tripId           String?   @map("trip_id")
+  routeId          String?   @map("route_id")
+  stopId           String?   @map("stop_id")
+  legFromStopId    String?   @map("leg_from_stop_id")
+  legToStopId      String?   @map("leg_to_stop_id")
   /// ferry | toll | pitch | fuel | parking | other — `EXPENSE_KINDS`, CHECKed.
-  kind          String
-  amount        Decimal   @db.Decimal(16, 4)
+  kind             String
+  amount           Decimal   @db.Decimal(16, 4)
   /// ISO 4217, upper-case.
-  currency      String
+  currency         String
   /// The local calendar day it was paid (ADR 0002: a DATE, "YYYY-MM-DD"), or
   /// null when not known — then it counts in totals and in no year.
-  date          DateTime? @db.Date
-  note          String?
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  date             DateTime? @db.Date
+  note             String?
+  /// Who paid (forgejo#150, D6 — recorded, never split). A companion of the
+  /// owner's (`payerCompanionId`) and/or a name. Picking a companion also
+  /// stores its display name, so deleting the companion (SetNull) keeps the
+  /// name. Both null = not recorded.
+  payerCompanionId String?   @map("payer_companion_id")
+  payerName        String?   @map("payer_name")
+  /// Exchange-rate record (forgejo#150), the same five facts a flight or a
+  /// stay keeps (#267): `amount` in `currency` converted into
+  /// `fxBaseCurrency` at `fxRate` (base units per unit), the rate being for
+  /// `fxRateDate`. `fxSource`: ecb | cdn (looked up live by the server) |
+  /// cached (a client's offline rate, dated by its as-of day) | manual (typed).
+  /// All null = no rate; such an expense is totalled in its own currency only.
+  amountBase       Decimal?  @map("amount_base") @db.Decimal(16, 4)
+  fxRate           Float?    @map("fx_rate")
+  fxRateDate       DateTime? @map("fx_rate_date") @db.Date
+  fxBaseCurrency   String?   @map("fx_base_currency")
+  fxSource         String?   @map("fx_source")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
-  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trip        Trip?      @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  route       TripRoute? @relation(fields: [routeId], references: [id], onDelete: Cascade)
-  stop        TripStop?  @relation("ExpenseStop", fields: [stopId], references: [id], onDelete: SetNull)
-  legFromStop TripStop?  @relation("ExpenseLegFrom", fields: [legFromStopId], references: [id], onDelete: SetNull)
-  legToStop   TripStop?  @relation("ExpenseLegTo", fields: [legToStopId], references: [id], onDelete: SetNull)
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payerCompanion Companion? @relation(fields: [payerCompanionId], references: [id], onDelete: SetNull)
+  documents      Document[]
+  trip           Trip?      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  route          TripRoute? @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  stop           TripStop?  @relation("ExpenseStop", fields: [stopId], references: [id], onDelete: SetNull)
+  legFromStop    TripStop?  @relation("ExpenseLegFrom", fields: [legFromStopId], references: [id], onDelete: SetNull)
+  legToStop      TripStop?  @relation("ExpenseLegTo", fields: [legToStopId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([tripId])
@@ -2055,6 +2079,7 @@ model TripExpense {
   @@index([stopId])
   @@index([legFromStopId])
   @@index([legToStopId])
+  @@index([payerCompanionId])
   @@map("trip_expenses")
 }
 
@@ -2201,6 +2226,19 @@ model Booking {
   /// segments it was computed from, so a later change shows it as stale
   /// instead of silently disagreeing with the total.
   priceSplit Json? @map("price_split")
+
+  /// Booking deadlines (forgejo#285). `freeCancellationUntil` is an INSTANT
+  /// (real UTC) with the IANA zone the deadline was stated in beside it (ADR
+  /// 0002 D1) — "free cancellation until 18:00 hotel time". `paymentDueOn` is
+  /// a calendar day with no zone (`YYYY-MM-DD`). Null = not recorded, never
+  /// "none": the reminder side treats an absent deadline as unknown.
+  freeCancellationUntil DateTime? @map("free_cancellation_until")
+  freeCancellationZone  String?   @map("free_cancellation_zone")
+  /// A cancellation deadline known only to the DAY ("bis 1. Mai") — until the
+  /// end of that local day. Never turned into an invented instant; exactly one
+  /// of it and `freeCancellationUntil` is set (CHECK).
+  freeCancellationOn    DateTime? @map("free_cancellation_on") @db.Date
+  paymentDueOn          DateTime? @map("payment_due_on") @db.Date
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -2621,11 +2659,11 @@ model Lodging {
 }
 
 model LodgingStay {
-  id               String    @id @default(uuid())
-  lodgingId        String    @map("lodging_id")
-  userId           String    @map("user_id")
-  tripId           String?   @map("trip_id")
-  bookingId        String?   @map("booking_id")
+  id                    String    @id @default(uuid())
+  lodgingId             String    @map("lodging_id")
+  userId                String    @map("user_id")
+  tripId                String?   @map("trip_id")
+  bookingId             String?   @map("booking_id")
   /// Hotel-local, do not normalize to UTC.
   ///
   /// NULLABLE since 2.7: a hotel you remember but cannot date is still a place
@@ -2634,8 +2672,8 @@ model LodgingStay {
   /// (`departure_time`) and cruises (`start_date`) have always allowed this;
   /// lodging was the odd one out. What the dates mean is qualified by
   /// `date_precision`.
-  checkIn          DateTime? @map("check_in")
-  checkOut         DateTime? @map("check_out")
+  checkIn               DateTime? @map("check_in")
+  checkOut              DateTime? @map("check_out")
   /// Optional wall-clock times ("HH:mm", hotel-local like the dates) for the
   /// check-in/check-out DAY above. Stored separately so the UTC-midnight day
   /// anchors — which the FX snapshot, night counting and status derivation
@@ -2643,17 +2681,17 @@ model LodgingStay {
   /// day + time; everything else keeps reading the dates alone. Meaningful
   /// only at DAY precision (schema-enforced). Tester wish, #dev-talk
   /// 2026-08-18: a planned hotel should not "begin" at midnight.
-  checkInTime      String?   @map("check_in_time")
-  checkOutTime     String?   @map("check_out_time")
+  checkInTime           String?   @map("check_in_time")
+  checkOutTime          String?   @map("check_out_time")
   /// ADR 0002 phase 2 dual-write: the check-in/-out days as calendar days,
   /// the instants they begin/end (day + time in the hotel's zone; null
   /// without a time or without a zone) and the hotel's zone. The legacy
   /// columns above keep their meaning until phase 6.
-  checkInDate      DateTime? @map("check_in_date") @db.Date
-  checkOutDate     DateTime? @map("check_out_date") @db.Date
-  checkInAt        DateTime? @map("check_in_at")
-  checkOutAt       DateTime? @map("check_out_at")
-  stayZone         String?   @map("stay_zone")
+  checkInDate           DateTime? @map("check_in_date") @db.Date
+  checkOutDate          DateTime? @map("check_out_date") @db.Date
+  checkInAt             DateTime? @map("check_in_at")
+  checkOutAt            DateTime? @map("check_out_at")
+  stayZone              String?   @map("stay_zone")
   /// How much of the date is actually known: DAY (both dates real) | MONTH
   /// ("July 2011", stored as the 1st) | YEAR ("some time in 2011", stored as
   /// 1 January) | NONE (no idea, both dates null).
@@ -2663,55 +2701,67 @@ model LodgingStay {
   /// A MONTH-precision stay must never land in a weekday histogram, and a
   /// YEAR-precision one must never land in a month histogram — see
   /// shared/lodgingTiming.ts, which is the only place that decides this.
-  datePrecision    String    @default("DAY") @map("date_precision")
+  datePrecision         String    @default("DAY") @map("date_precision")
   /// Nights, when the dates cannot supply them. "Three nights, no idea when"
   /// is a different gap from "July 2011, no idea how long", and one field
   /// cannot express both. Null = unknown; the dates win wherever they can
   /// answer (DAY precision with both ends).
-  nights           Int?
-  status           String    @default("completed") // scheduled | in_progress | completed | cancelled
-  roomNumber       String?   @map("room_number")
-  roomCategory     String?   @map("room_category")
-  board            String? // none | breakfast | half | full | all_inclusive
+  nights                Int?
+  status                String    @default("completed") // scheduled | in_progress | completed | cancelled
+  roomNumber            String?   @map("room_number")
+  roomCategory          String?   @map("room_category")
+  board                 String? // none | breakfast | half | full | all_inclusive
   // How many people the booking covered, as the confirmation states it. A COUNT,
   // never a name: a confirmation names the booker, so who came along stays the
   // user's to enter in `companions`. Kept so the stay editor can point at that
   // field when a booking covered more than one person.
-  guests           Int?
-  pricePerNight    Float?    @map("price_per_night")
-  currency         String    @default("EUR")
-  totalPrice       Float?    @map("total_price")
-  totalPriceBase   Float?    @map("total_price_base") // FX snapshot (§7.1)
-  fxRate           Float?    @map("fx_rate")
-  fxRateDate       DateTime? @map("fx_rate_date")
-  fxBaseCurrency   String?   @map("fx_base_currency")
+  guests                Int?
+  pricePerNight         Float?    @map("price_per_night")
+  currency              String    @default("EUR")
+  totalPrice            Float?    @map("total_price")
+  totalPriceBase        Float?    @map("total_price_base") // FX snapshot (§7.1)
+  fxRate                Float?    @map("fx_rate")
+  fxRateDate            DateTime? @map("fx_rate_date")
+  fxBaseCurrency        String?   @map("fx_base_currency")
   // 'ecb' | 'cdn' | 'manual' — which provider produced the snapshot above.
   // A rate alone cannot say whether it is official or the user's own estimate.
-  fxSource         String?   @map("fx_source")
-  isAwardStay      Boolean   @default(false) @map("is_award_stay")
-  ratingRoom       Float?    @map("rating_room")
-  ratingBreakfast  Float?    @map("rating_breakfast")
-  ratingService    Float?    @map("rating_service")
-  ratingOverall    Float?    @map("rating_overall")
-  roomAmenities    String[]  @default([]) @map("room_amenities")
-  bookingReference String?   @map("booking_reference")
-  membershipId     String?   @map("membership_id")
+  fxSource              String?   @map("fx_source")
+  isAwardStay           Boolean   @default(false) @map("is_award_stay")
+  ratingRoom            Float?    @map("rating_room")
+  ratingBreakfast       Float?    @map("rating_breakfast")
+  ratingService         Float?    @map("rating_service")
+  ratingOverall         Float?    @map("rating_overall")
+  roomAmenities         String[]  @default([]) @map("room_amenities")
+  bookingReference      String?   @map("booking_reference")
+  membershipId          String?   @map("membership_id")
   /// true = the user explicitly used NO programme for this stay. Distinct from
   /// `membershipId = null`, which means "derive it from the hotel"
   /// (shared/membershipDerivation.ts).
-  membershipOptOut Boolean   @default(false) @map("membership_opt_out")
-  receiptUrl       String?   @map("receipt_url")
-  companions       String[]  @default([])
-  notes            String?
-  parserTemplate   String?   @map("parser_template")
-  parserConfidence Int?      @map("parser_confidence")
-  dataSource       String?   @map("data_source")
-  externalRef      String?   @map("external_ref") // e.g. "booking:5087376273"
-  batchId          String?   @map("batch_id")
+  membershipOptOut      Boolean   @default(false) @map("membership_opt_out")
+  receiptUrl            String?   @map("receipt_url")
+  /// Booking deadlines (forgejo#285). `freeCancellationUntil` is an INSTANT
+  /// (real UTC) with the IANA zone the deadline was stated in beside it (ADR
+  /// 0002 D1) — "free cancellation until 18:00 hotel time". `paymentDueOn` is
+  /// a calendar day with no zone (`YYYY-MM-DD`). Null = not recorded, never
+  /// "none": the reminder side treats an absent deadline as unknown.
+  freeCancellationUntil DateTime? @map("free_cancellation_until")
+  freeCancellationZone  String?   @map("free_cancellation_zone")
+  /// A cancellation deadline known only to the DAY ("bis 1. Mai") — until the
+  /// end of that local day. Never turned into an invented instant; exactly one
+  /// of it and `freeCancellationUntil` is set (CHECK).
+  freeCancellationOn    DateTime? @map("free_cancellation_on") @db.Date
+  paymentDueOn          DateTime? @map("payment_due_on") @db.Date
+  companions            String[]  @default([])
+  notes                 String?
+  parserTemplate        String?   @map("parser_template")
+  parserConfidence      Int?      @map("parser_confidence")
+  dataSource            String?   @map("data_source")
+  externalRef           String?   @map("external_ref") // e.g. "booking:5087376273"
+  batchId               String?   @map("batch_id")
   /// Trip sharing: the same key on every member's copy of this entry. Null = never shared.
-  shareKey         String?   @map("share_key")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  shareKey              String?   @map("share_key")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
   lodging    Lodging            @relation(fields: [lodgingId], references: [id], onDelete: Cascade)
   user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -3367,14 +3417,16 @@ model Companion {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  linkedUser User?                    @relation("CompanionLinkedUser", fields: [linkedUserId], references: [id], onDelete: SetNull)
-  flights    FlightCompanion[]
-  trips      TripCompanion[]
-  cruises    CruiseCompanion[]
-  rail       RailJourneyCompanion[]
-  bus        BusJourneyCompanion[]
-  rentals    RentalBookingCompanion[]
+  user         User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedUser   User?                    @relation("CompanionLinkedUser", fields: [linkedUserId], references: [id], onDelete: SetNull)
+  flights      FlightCompanion[]
+  trips        TripCompanion[]
+  cruises      CruiseCompanion[]
+  rail         RailJourneyCompanion[]
+  bus          BusJourneyCompanion[]
+  rentals      RentalBookingCompanion[]
+  /// Expenses this companion paid (forgejo#150).
+  expensesPaid TripExpense[]
 
   @@unique([userId, canonicalName])
   /// One companion per linked account and owner — two names for the same
@@ -3639,6 +3691,8 @@ model Document {
   railJourneyId   String? @map("rail_journey_id")
   rentalBookingId String? @map("rental_booking_id")
   busJourneyId    String? @map("bus_journey_id")
+  /// An expense's receipt (forgejo#150).
+  tripExpenseId   String? @map("trip_expense_id")
   /// What a rental's evidence shows (forgejo#239): pickup | return | damage |
   /// fuel | odometer. Only while filed with a rental; null = uncategorised —
   /// every attachment from before the column, and any the user leaves so.
@@ -3668,6 +3722,7 @@ model Document {
   railJourney   RailJourney?   @relation(fields: [railJourneyId], references: [id], onDelete: Cascade)
   rentalBooking RentalBooking? @relation(fields: [rentalBookingId], references: [id], onDelete: Cascade)
   busJourney    BusJourney?    @relation(fields: [busJourneyId], references: [id], onDelete: Cascade)
+  tripExpense   TripExpense?   @relation(fields: [tripExpenseId], references: [id], onDelete: Cascade)
 
   @@index([userId, sha256])
   @@index([flightId])
@@ -3678,6 +3733,7 @@ model Document {
   @@index([railJourneyId])
   @@index([rentalBookingId])
   @@index([busJourneyId])
+  @@index([tripExpenseId])
   @@index([userId, linkedAt])
   /// The sweep asks exactly this: unfiled rows past their stamp.
   @@index([unlinkedAt])
@@ -4090,12 +4146,24 @@ model RentalBooking {
   depositReturnedAmount Float?    @map("deposit_returned_amount")
 
   /// unlimited | capped | null; the cap beside it.
-  mileagePolicy String? @map("mileage_policy")
-  mileageCapKm  Int?    @map("mileage_cap_km")
+  mileagePolicy         String?   @map("mileage_policy")
+  mileageCapKm          Int?      @map("mileage_cap_km")
   /// full_to_full | prepaid_tank | full_to_empty | null.
-  fuelPolicy    String? @map("fuel_policy")
+  fuelPolicy            String?   @map("fuel_policy")
   /// prepaid | pay_at_counter | package | null. A null price with `package` is normal.
-  paymentTiming String? @map("payment_timing")
+  paymentTiming         String?   @map("payment_timing")
+  /// Booking deadlines (forgejo#285). `freeCancellationUntil` is an INSTANT
+  /// (real UTC) with the IANA zone the deadline was stated in beside it (ADR
+  /// 0002 D1) — "free cancellation until 18:00 hotel time". `paymentDueOn` is
+  /// a calendar day with no zone (`YYYY-MM-DD`). Null = not recorded, never
+  /// "none": the reminder side treats an absent deadline as unknown.
+  freeCancellationUntil DateTime? @map("free_cancellation_until")
+  freeCancellationZone  String?   @map("free_cancellation_zone")
+  /// A cancellation deadline known only to the DAY ("bis 1. Mai") — until the
+  /// end of that local day. Never turned into an invented instant; exactly one
+  /// of it and `freeCancellationUntil` is set (CHECK).
+  freeCancellationOn    DateTime? @map("free_cancellation_on") @db.Date
+  paymentDueOn          DateTime? @map("payment_due_on") @db.Date
 
   /// The booked price. Null = unknown (a tour-operator package prints 0.00 for a price that exists).
   price          Float?

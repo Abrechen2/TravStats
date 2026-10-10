@@ -2,6 +2,7 @@ import request from "supertest";
 
 import app from "../../index";
 import { prisma } from "../../db";
+import * as fx from "../../services/fx/resolver";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import {
@@ -37,6 +38,13 @@ describe("expenses", () => {
     cookie = `auth_token=${generateToken(userId)}`;
     otherCookie = `auth_token=${generateToken(otherId)}`;
   });
+
+  // No network: a dated expense looks a rate up on create (forgejo#150).
+  // Answered as unavailable here; `tripExpenses.details.test.ts` covers rates.
+  beforeEach(() => {
+    jest.spyOn(fx, "convertToBase").mockResolvedValue(null);
+  });
+  afterEach(() => jest.restoreAllMocks());
 
   beforeEach(async () => {
     await prisma.trip.deleteMany({ where: { userId: { in: [userId, otherId] } } });
@@ -211,6 +219,8 @@ describe("expenses", () => {
       expect(detail.body.expenses).toHaveLength(3);
       expect(detail.body.costs).toEqual({
         total: { NOK: 350, EUR: 17.5 },
+        // No rate recorded for the NOK: it stays beside the base figure.
+        totalBase: { currency: "EUR", amount: 17.5, unconverted: { NOK: 350 } },
         byStation: [{ stopId: stationIds[2], byCurrency: { NOK: 350 } }],
         byLeg: [{ fromStopId: stationIds[0], toStopId: stationIds[2], byCurrency: { EUR: 12.5 } }],
         unpinned: { EUR: 5 },

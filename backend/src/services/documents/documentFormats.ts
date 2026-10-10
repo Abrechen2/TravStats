@@ -44,6 +44,8 @@ export const ENTRY_TYPES = [
   "railJourney",
   "rentalBooking",
   "busJourney",
+  /** An expense's receipt (forgejo#150). */
+  "tripExpense",
 ] as const;
 export type EntryType = (typeof ENTRY_TYPES)[number];
 

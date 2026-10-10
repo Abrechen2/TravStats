@@ -22,6 +22,9 @@ const expense = (over: Partial<TripExpense>): TripExpense => ({
   currency: "EUR",
   date: null,
   note: null,
+  payer: null,
+  fx: null,
+  documentCount: 0,
   createdAt: "2026-07-01T00:00:00.000Z",
   updatedAt: "2026-07-01T00:00:00.000Z",
   ...over,
@@ -68,6 +71,8 @@ describe("roadtrip cost sheet (forgejo#140)", () => {
               legToStopId: "s2",
               note: "Brücke",
             }),
+            // forgejo#150: a kind added with the widened list travels too.
+            expense({ id: "ev", kind: "charging", amount: 18.9, currency: "NOK" }),
           ]),
         ],
       })
@@ -81,6 +86,7 @@ describe("roadtrip cost sheet (forgejo#140)", () => {
     expect(costs.rows.map((r) => [r.id, r.kind, r.amount, r.currency])).toEqual([
       ["pitch", "pitch", "35.5", "DKK"],
       ["toll", "toll", "12.5", "EUR"],
+      ["ev", "charging", "18.9", "NOK"],
     ]);
     expect(parseRefCell(costs.rows[0].roadtripId)).toBe("rt-1");
     expect(parseRefCell(costs.rows[0].stopId)).toBe("s1");

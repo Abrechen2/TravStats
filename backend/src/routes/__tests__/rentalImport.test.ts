@@ -117,6 +117,38 @@ describe("POST /api/v1/rentals/import", () => {
     expect(poorer.body.data.price).toBe(123.45);
   });
 
+  describe("deadlines from a later mail (forgejo#285)", () => {
+    it("fill a booking that holds none, and the answer says which", async () => {
+      await post(confirmation());
+      const again = await post(
+        confirmation({ freeCancellationUntil: "2026-07-05", paymentDueOn: "2026-06-20" })
+      );
+      expect(again.body.meta).toEqual({
+        outcome: "updated",
+        filledDeadlines: ["freeCancellationUntil", "paymentDueOn"],
+      });
+      expect(again.body.data.times.freeCancellationOn.date).toBe("2026-07-05");
+      expect(again.body.data.times.paymentDue.date).toBe("2026-06-20");
+    });
+
+    it("never overwrite a deadline already on the booking — typed by the user or not", async () => {
+      const created = (await post(confirmation({ paymentDueOn: "2026-06-20" }))).body.data;
+      await request(app)
+        .patch(`/api/v1/rentals/${created.id}`)
+        .set("Cookie", cookie)
+        .send({ freeCancellationUntil: { local: "2026-07-05T12:00" } })
+        .expect(200);
+      const again = await post(
+        confirmation({ freeCancellationUntil: "2026-07-01", paymentDueOn: "2026-06-25" })
+      );
+      expect(again.body.meta.outcome).toBe("unchanged");
+      expect(again.body.meta).not.toHaveProperty("filledDeadlines");
+      expect(again.body.data.times.freeCancellationUntil.local).toBe("2026-07-05T12:00:00");
+      expect(again.body.data.times.freeCancellationOn).toBeNull();
+      expect(again.body.data.times.paymentDue.date).toBe("2026-06-20");
+    });
+  });
+
   it("cancels the booking a cancellation names — and keeps the row", async () => {
     const created = (await post(confirmation())).body.data;
     const res = await post({

@@ -1,6 +1,7 @@
 import { z } from "./zod";
 import { BOARD_TYPES, currencyField, LODGING_TYPES, MAX_STAY_SPAN_NIGHTS } from "./lodging";
 import type { LodgingDatePrecision } from "../shared/lodgingTiming";
+import { parsedDeadlineValuesShape } from "./deadlines";
 
 /**
  * Shared import-candidate contract for the lodging import pipeline (see
@@ -112,6 +113,9 @@ export const stayCandidateFieldsSchema = z.object({
   // "booking:<confirmation number>" — see LodgingStay.externalRef (Task 1).
   externalRef: z.string().max(200).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
+  // Deadlines as the confirmation states them (forgejo#285): the hotel's
+  // wall clock or a bare day; placed on the hotel's zone at commit.
+  ...parsedDeadlineValuesShape,
 });
 export type StayCandidateFields = z.infer<typeof stayCandidateFieldsSchema>;
 
@@ -208,6 +212,10 @@ export const UPDATABLE_STAY_FIELDS = [
   "pricePerNight",
   "currency",
   "bookingReference",
+  // Deadlines (forgejo#285) — FILL-only: offered only while the stay holds
+  // none, never over one already there (`emptyDeadlineFills`).
+  "freeCancellationUntil",
+  "paymentDueOn",
 ] as const;
 export type UpdatableStayField = (typeof UPDATABLE_STAY_FIELDS)[number];
 

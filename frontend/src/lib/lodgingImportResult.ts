@@ -41,8 +41,10 @@ export function describeLodgingCommitResult(
   // Appended rather than folded into the sentence, so an older backend that
   // does not send the field reads exactly as it did before.
   const updated = result.updatedStays ?? 0;
+  const filled = result.filledDeadlines?.length ?? 0;
   const updatedSuffix =
-    updated > 0 ? t("lodging:import.commitResult.updatedSuffix", { count: updated }) : "";
+    (updated > 0 ? t("lodging:import.commitResult.updatedSuffix", { count: updated }) : "") +
+    (filled > 0 ? t("lodging:import.commitResult.deadlinesFilledSuffix", { count: filled }) : "");
 
   if (result.failed.length === 0) {
     return {

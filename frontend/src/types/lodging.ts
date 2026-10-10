@@ -252,6 +252,9 @@ export interface StayInput {
   guests?: number | null;
   companions?: string[];
   notes?: string | null;
+  /** A bare `YYYY-MM-DD` (until the end of that day) or `{local, zone?}`; null clears (forgejo#285). */
+  freeCancellationUntil?: string | { local: string; zone?: string } | null;
+  paymentDueOn?: string | null;
 }
 
 /** Chain creation only — there is no update-chain endpoint. `name` is the one required field. */

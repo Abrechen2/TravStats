@@ -16,6 +16,11 @@ import {
 } from "./rentalWrite";
 import { rentalDayRange, soleOverlappingTrip } from "./rentalLinks";
 import { changedInput } from "./rentalChanges";
+import {
+  deadlinesUnchanged,
+  resolveDeadlineColumns,
+  type DeadlineColumns,
+} from "../deadlines/bookingDeadlines";
 
 /**
  * The one write path of a rental row — the form (`routes/rental.ts`) and the
@@ -44,6 +49,26 @@ export interface WriteOptions {
   externalRef?: string | null;
   /** The send time of the mail a create came from (`lastMailSentAt`). */
   mailSentAt?: Date | null;
+  /** The write came with a personal access token (the Companion) — see `resolveInput.ts`. */
+  viaToken?: boolean;
+}
+
+/**
+ * The deadline columns a write leaves (forgejo#285). A bare `{local}` or a
+ * bare day is read on the PICKUP station's clock — where the rental, and so
+ * its cancellation, happens.
+ */
+function rentalDeadlines(
+  userId: string,
+  input: UpdateRentalInput,
+  pickupZone: string,
+  options: WriteOptions
+): Promise<Partial<DeadlineColumns>> {
+  return resolveDeadlineColumns(input, {
+    userId,
+    placeZone: () => pickupZone,
+    viaToken: options.viaToken ?? false,
+  });
 }
 
 /** Everything but the derived columns, companions and FX, which this file owns. */
@@ -62,6 +87,8 @@ function plainColumns(input: UpdateRentalInput) {
     distanceKm: _d,
     depositPaidOn: _dp,
     depositReturnedOn: _dr,
+    freeCancellationUntil: _fc,
+    paymentDueOn: _pd,
     status: _s,
     companions: _c,
     ...rest
@@ -81,6 +108,33 @@ export async function resolveStations(input: UpdateRentalInput): Promise<Resolve
           : await resolveRentalStation(input.returnStation, "returnStation"),
     }),
   };
+}
+
+/**
+ * A deadline re-sent as stored is no edit — it must not enter
+ * `userEditedFields` (the rule `rentalChanges.ts` holds for every other field).
+ */
+function withoutUnchangedDeadlines(
+  input: UpdateRentalInput,
+  deadlines: Partial<DeadlineColumns>,
+  stored: StoredRental
+): UpdateRentalInput {
+  const out = { ...input };
+  const sentCancellation: Partial<DeadlineColumns> = {
+    freeCancellationUntil: deadlines.freeCancellationUntil,
+    freeCancellationOn: deadlines.freeCancellationOn,
+    freeCancellationZone: deadlines.freeCancellationZone,
+  };
+  if ("freeCancellationUntil" in deadlines && deadlinesUnchanged(sentCancellation, stored)) {
+    delete out.freeCancellationUntil;
+  }
+  if (
+    "paymentDueOn" in deadlines &&
+    deadlinesUnchanged({ paymentDueOn: deadlines.paymentDueOn }, stored)
+  ) {
+    delete out.paymentDueOn;
+  }
+  return out;
 }
 
 /** The fields a person set by hand, added to the ones already recorded. */
@@ -122,6 +176,7 @@ export async function createRentalRow(
   const state = mergeRental(null, input, await resolveStations(input));
   assertOdometerOrder(null, input);
   assertDepositConsistent(null, input);
+  const deadlines = await rentalDeadlines(userId, input, state.pickupTimezone, options);
   // Linked by itself only when EXACTLY one trip overlaps; a trip the client
   // named (or an explicit null) is never second-guessed.
   const tripId =
@@ -150,6 +205,7 @@ export async function createRentalRow(
         ...state,
         ...distanceColumns(input),
         ...depositColumns(input),
+        ...deadlines,
         ...(input.finalAmount != null && { finalAmountSource: "user" }),
         ...(finalFx as Prisma.RentalBookingUncheckedCreateInput),
         ...fxColumns,
@@ -194,7 +250,12 @@ export async function updateRentalRow(
   const state = mergeRental(existing, sentInput, await resolveStations(sentInput));
   // From here on only what CHANGED: a value re-sent as stored is no edit, no
   // new source and no re-derivation (`rentalChanges.ts`, fix round 2).
-  const input = changedInput(existing, sentInput, state);
+  const deadlines = await rentalDeadlines(userId, sentInput, state.pickupTimezone, options);
+  const input = withoutUnchangedDeadlines(
+    changedInput(existing, sentInput, state),
+    deadlines,
+    existing
+  );
   assertOdometerOrder(existing, input);
   assertDepositConsistent(existing, input);
   const resolved =
@@ -260,6 +321,7 @@ export async function updateRentalRow(
         ...state,
         ...distanceColumns(input),
         ...depositColumns(input),
+        ...deadlines,
         ...(input.finalAmount !== undefined && {
           finalAmountSource: input.finalAmount === null ? null : "user",
         }),

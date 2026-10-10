@@ -72,7 +72,7 @@ export async function buildFlightCreateData(
     externalRef: ctx.externalRef,
     importBatchId: ctx.importBatchId,
     // The zone each end was written with (ADR 0002 phase 2).
-    ...(await flightZoneColumns(data, enriched)),
+    ...(await flightZoneColumns(data, enriched, undefined, { userId: ctx.userId })),
     airline: data.airline,
     airlineIata: data.airlineIata ?? resolvedAirline?.iata,
     airlineIcao: data.airlineIcao ?? resolvedAirline?.icao,

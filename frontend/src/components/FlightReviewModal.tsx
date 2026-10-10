@@ -36,6 +36,7 @@ import {
 } from "../lib/flightReviewFields";
 import ReviewCostSection from "./FlightForm/ReviewCostSection";
 import ReviewField, { REVIEW_INPUT } from "./FlightForm/ReviewField";
+import ReviewOnlineCheckIn, { onlineCheckInRequest } from "./FlightForm/ReviewOnlineCheckIn";
 
 interface FlightReviewModalProps {
   isOpen: boolean;
@@ -85,6 +86,7 @@ export default function FlightReviewModal({
   const [bookingReference, setBookingReference] = useState("");
   const [boardingGroup, setBoardingGroup] = useState("");
   const [ticketNumber, setTicketNumber] = useState("");
+  const [onlineCheckIn, setOnlineCheckIn] = useState(""); // forgejo#285
   const [price, setPrice] = useState<number | undefined>(undefined);
   const [currency, setCurrency] = useState<string>(baseCurrency || "EUR");
   const [taxes, setTaxes] = useState<number | undefined>(undefined);
@@ -129,6 +131,7 @@ export default function FlightReviewModal({
       setBookingReference(initialData.bookingReference || initialData.pnr || "");
       setBoardingGroup(initialData.boardingGroup || "");
       setTicketNumber(initialData.ticketNumber || "");
+      setOnlineCheckIn(initialData.onlineCheckInOpensAt || "");
 
       // Parse price fields
       if (initialData.price) {
@@ -244,6 +247,7 @@ export default function FlightReviewModal({
     bookingReference,
     boardingGroup,
     ticketNumber,
+    onlineCheckIn,
     price,
     currency,
     taxes,
@@ -328,6 +332,7 @@ export default function FlightReviewModal({
         terminal: terminal || undefined,
         bookingReference: bookingReference || undefined,
         ticketNumber: ticketNumber || undefined,
+        onlineCheckInOpensAt: onlineCheckInRequest(onlineCheckIn),
         price,
         currency,
         taxes,
@@ -763,6 +768,7 @@ export default function FlightReviewModal({
               maxLength={13}
             />
           </ReviewField>
+          <ReviewOnlineCheckIn id={fid(13)} value={onlineCheckIn} onChange={setOnlineCheckIn} />
 
           <ReviewCostSection
             price={price}

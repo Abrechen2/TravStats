@@ -146,6 +146,16 @@ export const UPLOAD_DIR_POLICIES: Readonly<Record<UploadDirName, UploadDirPolicy
       select: { filename: true },
     })
   ),
+  // A note's one photo (forgejo#137): the name lives on the note itself. Was
+  // missing when the notes branch and the account-files branch met.
+  "note-photos": filenameRows(async (userId) =>
+    (
+      await prisma.note.findMany({
+        where: userId ? { userId } : {},
+        select: { photoFilename: true },
+      })
+    ).map((n) => ({ filename: n.photoFilename }))
+  ),
   "profile-pictures": {
     // The owner is in the name (`<userId>_<ts>-<rand><ext>`), so every avatar
     // the account ever left behind goes, not only the one its settings name.

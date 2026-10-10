@@ -381,5 +381,25 @@
   },
   "delete": {
     "survivors": "Erhalten bleiben: {{names}}"
+  },
+  "deadlines": {
+    "title": "Fristen",
+    "freeCancellation": "Kostenlos stornierbar",
+    "untilMoment": "bis {{moment}}",
+    "untilEndOfDay": "bis Ende {{day}}",
+    "paymentDue": "Zahlung fällig",
+    "onlineCheckIn": "Online-Check-in ab",
+    "form": {
+      "freeCancellationDate": "Kostenlos stornierbar bis (Tag)",
+      "freeCancellationTime": "Uhrzeit (optional)",
+      "freeCancellationTimeHint": "Ohne Uhrzeit gilt die Frist bis Ende des Tages.",
+      "zone": "Zeitzone",
+      "paymentDueOn": "Zahlung fällig am",
+      "onlineCheckInDate": "Online-Check-in ab (Tag)",
+      "onlineCheckInTime": "Uhrzeit",
+      "timeWithoutDay": "Eine Uhrzeit braucht einen Tag.",
+      "zoneRequired": "Mit Uhrzeit bitte die Zeitzone angeben.",
+      "checkInNeedsBoth": "Tag und Uhrzeit gehören zusammen."
+    }
   }
 }

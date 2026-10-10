@@ -4,6 +4,7 @@ import { receiptUrlValidator } from "./receiptUrl";
 import { LODGING_DATE_PRECISIONS } from "../shared/lodgingTiming";
 import { partialForUpdate } from "./partialUpdate";
 import { legacyDayFieldSchema } from "../shared/time/timeInput";
+import { deadlineInputShape } from "./deadlines";
 
 export const LODGING_TYPES = ["hotel", "campsite", "guesthouse", "apartment", "hostel"] as const;
 /** An OpenStreetMap element reference, as the nearby search and the place picker write it. */
@@ -174,6 +175,8 @@ const baseStaySchema = z.object({
   ratingOverall: rating,
   roomAmenities: z.array(z.string().max(60)).max(50).optional(),
   bookingReference: z.string().max(40).nullable().optional(),
+  // Deadlines (forgejo#285); a bare `{local}` is read on the hotel's clock.
+  ...deadlineInputShape({ impliedPlace: true }),
   membershipId: z.string().uuid().nullable().optional(),
   // "I used no programme for this stay" — deliberately distinct from
   // membershipId = null, which means "derive it from the hotel's chain"

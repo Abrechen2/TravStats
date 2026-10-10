@@ -12,6 +12,7 @@ import { rentalExtraStatsSchema } from "./rentalStatsExtra";
 import { rentalStatsQuerySchema } from "../../../routes/rental/stats";
 
 import { registry } from "../registry";
+import { deadlineDayColumns } from "./deadlineColumns";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { errorContent, timeRefused } from "./shared";
 import { documentIdsBodySchema } from "../../../schemas/document";
@@ -212,6 +213,7 @@ export const rentalBookingSchema = registry.register(
         .nullable()
         .optional()
         .describe("The roadtrip this car was driven on"),
+      ...deadlineDayColumns,
       times: rentalTimesSchema,
     })
     .openapi("RentalBooking")
@@ -227,6 +229,13 @@ const importEnvelope = z.object({
       .enum(["created", "updated", "unchanged", "stale", "cancelled", "invoiced"])
       .describe(
         "What the document did; `stale`: an older mail than the newest applied, nothing overwritten"
+      ),
+    filledDeadlines: z
+      .array(z.enum(["freeCancellationUntil", "paymentDueOn"]))
+      .optional()
+      .describe(
+        "Deadlines this mail filled on a stored booking that held none (forgejo#285). A " +
+          "deadline already on the row is never overwritten by a mail."
       ),
   }),
 });

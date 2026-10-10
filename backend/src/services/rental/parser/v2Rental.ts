@@ -22,6 +22,8 @@ import { RENTAL_INCLUSIONS, RENTAL_PAYMENT_TIMINGS } from "../../../schemas/rent
 import type { TemplateEnvelope, TemplateTestInput } from "../../parsers/templates/v2/envelope";
 import { applyTemplate } from "../../parsers/templates/v2/runners";
 import type { ParsedRentalConfirmation, ParsedRentalInvoice } from "./types";
+import { parsedDeadlineValuesShape } from "../../../schemas/deadlines";
+import { pickParsedDeadlines } from "../../deadlines/parsedDeadlines";
 
 const text = z.string().min(1).nullish();
 const localTime = z
@@ -66,6 +68,8 @@ const confirmationSchema = z.object({
     .array(z.object({ word: text }))
     .max(50)
     .optional(),
+  /** Booking deadlines as the confirmation states them (forgejo#285). */
+  ...parsedDeadlineValuesShape,
 });
 
 const vehicleRow = z.object({
@@ -142,6 +146,7 @@ function toConfirmation(
     mileagePolicy: nn(v.mileagePolicy),
     inclusions: inclusionsOf(v.inclusions),
     placeHints: { country: nn(v.placeCountry), airportWords: [...new Set(words)] },
+    ...pickParsedDeadlines(v),
   };
 }
 

@@ -27,6 +27,10 @@ vi.mock("../../../store/settingsStore", () => ({
 
 import BookingEditModal, { pnrSuggestions } from "../BookingEditModal";
 
+/** The currency picker — the deadline zone field (forgejo#285) is a combobox too. */
+const currencySelect = (): HTMLElement =>
+  screen.getAllByRole("combobox").find((el) => el.tagName === "SELECT")!;
+
 const booking = { id: "b1", userId: "u1", tripId: "t1", pnr: "ABC", price: 250, currency: "EUR" };
 
 describe("BookingEditModal", () => {
@@ -49,6 +53,32 @@ describe("BookingEditModal", () => {
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
   });
 
+  it("sends a day-only cancellation as the day, and holds a time without a zone (forgejo#285)", async () => {
+    render(<BookingEditModal booking={booking} onClose={() => {}} onSaved={() => {}} />);
+    const save = screen.getByRole("button", { name: /save|Speichern|trips:bookingEdit\.save/i });
+    fireEvent.change(screen.getByLabelText(/deadlines.form.freeCancellationDate/), {
+      target: { value: "2027-04-30" },
+    });
+    fireEvent.change(screen.getByLabelText(/deadlines.form.freeCancellationTime/), {
+      target: { value: "18:00" },
+    });
+    // A booking names no place: a time without its zone cannot be placed.
+    expect(save).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/deadlines.form.freeCancellationTime/), {
+      target: { value: "" },
+    });
+    fireEvent.change(screen.getByLabelText(/deadlines.form.paymentDueOn/), {
+      target: { value: "2027-04-01" },
+    });
+    fireEvent.click(save);
+    await waitFor(() =>
+      expect(updateBooking).toHaveBeenCalledWith(
+        "b1",
+        expect.objectContaining({ freeCancellationUntil: "2027-04-30", paymentDueOn: "2027-04-01" })
+      )
+    );
+  });
+
   it("a booking without a currency starts in the base currency, not EUR", async () => {
     baseCurrency = "CHF";
     render(
@@ -58,7 +88,7 @@ describe("BookingEditModal", () => {
         onSaved={() => {}}
       />
     );
-    expect(screen.getByRole("combobox")).toHaveValue("CHF");
+    expect(currencySelect()).toHaveValue("CHF");
     fireEvent.click(
       screen.getByRole("button", { name: /save|Speichern|trips:bookingEdit\.save/i })
     );
@@ -70,7 +100,7 @@ describe("BookingEditModal", () => {
   it("a stored currency is kept, and the picker offers the user's own currencies", () => {
     baseCurrency = "CHF";
     render(<BookingEditModal booking={booking} onClose={() => {}} onSaved={() => {}} />);
-    expect(screen.getByRole("combobox")).toHaveValue("EUR");
+    expect(currencySelect()).toHaveValue("EUR");
     const frequent = screen.getByRole("group", { name: /currencySelect.frequent/i });
     expect(within(frequent).getByText(/NOK/)).toBeInTheDocument();
   });
