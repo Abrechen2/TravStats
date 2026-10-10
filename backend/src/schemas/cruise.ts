@@ -2,6 +2,7 @@ import { z } from "./zod";
 import { currencyField } from "./lodging";
 import { partialForUpdate } from "./partialUpdate";
 import { CRUISE_SORT_FIELDS } from "../shared/cruiseListOrder";
+import { normalizeCruiseStatus } from "../shared/statusDerivation";
 import {
   instantFieldSchema,
   legacyDayFieldSchema,
@@ -9,7 +10,16 @@ import {
 } from "../shared/time/timeInput";
 
 export const CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
-const STATUSES = ["scheduled", "flown", "cancelled", "historical"] as const;
+const STATUSES = ["scheduled", "completed", "cancelled", "historical"] as const;
+
+/**
+ * A cruise status as a client may send it: today's vocabulary, plus the
+ * retired `flown` (#357), which is read as `completed` so an older Companion
+ * outbox or a bookmarked filter keeps working. Only `completed` is ever
+ * written or returned.
+ */
+const cruiseStatusInput = <T extends readonly [string, ...string[]]>(values: T) =>
+  z.preprocess((v) => (typeof v === "string" ? normalizeCruiseStatus(v) : v), z.enum(values));
 
 /** A port's wall clock, 00:00–23:59 — the shape of an "all aboard" time. */
 export const ALL_ABOARD_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -148,7 +158,7 @@ const baseCruiseSchema = z.object({
   arrivalPortId: z.number().int().positive().nullable().optional(),
   startDate: cruiseDay,
   endDate: cruiseDay,
-  status: z.enum(STATUSES).default("scheduled"),
+  status: cruiseStatusInput(STATUSES).default("scheduled"),
   cabinNumber: z.string().max(20).nullable().optional(),
   cabinType: z.enum(CABIN_TYPES).nullable().optional(),
   deck: z.number().int().min(1).max(30).nullable().optional(),
@@ -236,7 +246,10 @@ export const updateCruiseSchema = partialForUpdate(baseCruiseSchema).refine(
 
 export const cruiseQuerySchema = z.object({
   status: z
-    .union([z.enum(CRUISE_QUERY_STATUSES), z.array(z.enum(CRUISE_QUERY_STATUSES))])
+    .union([
+      cruiseStatusInput(CRUISE_QUERY_STATUSES),
+      z.array(cruiseStatusInput(CRUISE_QUERY_STATUSES)),
+    ])
     .optional(),
   /** Exact match on the `cruise_line` COLUMN. For the dropdown, see `shipLine`. */
   cruiseLine: z.union([z.string(), z.array(z.string())]).optional(),

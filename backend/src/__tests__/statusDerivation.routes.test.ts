@@ -235,7 +235,7 @@ describe("Flight write paths derive temporal status from dates", () => {
 });
 
 // Task 5 (spec 2026-07-17-status-from-dates): cruise write paths (create,
-// update) derive the temporal status ('scheduled' | 'in_progress' | 'flown')
+// update) derive the temporal status ('scheduled' | 'in_progress' | 'completed')
 // from the FINAL startDate/endDate instead of storing the client-sent hint
 // verbatim. Passthrough statuses (CRUISE_PASSTHROUGH: cancelled, historical)
 // are always assigned verbatim. Unlike flights, the cruise Zod schema has no
@@ -282,7 +282,7 @@ describe("Cruise write paths derive temporal status from dates", () => {
     expect(stored?.status).toBe("in_progress");
   });
 
-  it("create: fully past dates (beyond the 48h slack) store 'flown' regardless of a 'scheduled' hint", async () => {
+  it("create: fully past dates (beyond the 48h slack) store 'completed' regardless of a 'scheduled' hint", async () => {
     const res = await request(app)
       .post("/api/v1/cruises")
       .set("Cookie", authCookie)
@@ -293,7 +293,7 @@ describe("Cruise write paths derive temporal status from dates", () => {
         status: "scheduled",
       });
     expect(res.status).toBe(201);
-    expect(res.body.data.status).toBe("flown");
+    expect(res.body.data.status).toBe("completed");
   });
 
   it("create: a future-dated cruise with a 'flown' hint is not schema-rejected and derives to 'scheduled'", async () => {
@@ -310,6 +310,31 @@ describe("Cruise write paths derive temporal status from dates", () => {
       });
     expect(res.status).toBe(201);
     expect(res.body.data.status).toBe("scheduled");
+  });
+
+  // #357: the retired flight word is still ACCEPTED from a client — an older
+  // Companion outbox sends it — but read as `completed` and never stored.
+  it("create: a legacy 'flown' hint on past dates is accepted and stored as 'completed'", async () => {
+    const res = await request(app)
+      .post("/api/v1/cruises")
+      .set("Cookie", authCookie)
+      .send({
+        cruiseLine: "Status Derive Line",
+        startDate: daysFromNowIso(-40),
+        endDate: daysFromNowIso(-35),
+        status: "flown",
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.data.status).toBe("completed");
+    const stored = await prisma.cruise.findUnique({ where: { id: res.body.data.id } });
+    expect(stored?.status).toBe("completed");
+  });
+
+  it("list: a legacy 'flown' filter finds the completed cruises", async () => {
+    const res = await request(app).get("/api/v1/cruises?status=flown").set("Cookie", authCookie);
+    expect(res.status).toBe(200);
+    expect(res.body.data.length).toBeGreaterThan(0);
+    expect(res.body.data.every((c: { status: string }) => c.status === "completed")).toBe(true);
   });
 
   it("create: historical is respected verbatim even with future dates", async () => {
@@ -338,7 +363,7 @@ describe("Cruise write paths derive temporal status from dates", () => {
         // non-passthrough hint and must still be overridden by derivation.
       });
     expect(res.status).toBe(201);
-    expect(res.body.data.status).toBe("flown");
+    expect(res.body.data.status).toBe("completed");
   });
 
   it("update: moving dates into the past re-derives status without a status field", async () => {
@@ -363,7 +388,7 @@ describe("Cruise write paths derive temporal status from dates", () => {
       })
       .expect(200);
 
-    expect(updated.body.data.status).toBe("flown");
+    expect(updated.body.data.status).toBe("completed");
   });
 
   it("update: a passthrough status (cancelled) is left untouched when dates move to the past without a status field", async () => {

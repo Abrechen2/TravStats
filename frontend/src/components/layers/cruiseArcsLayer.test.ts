@@ -565,7 +565,7 @@ describe("cruise arrows — screen-space decluttering on shared corridors", () =
   });
 
   it("prioritises the selected cruise over flown, and flown over planned", () => {
-    const flown = { ...cruise(), id: "c-flown", status: "flown" as const };
+    const flown = { ...cruise(), id: "c-flown", status: "completed" as const };
     const planned = { ...cruise(), id: "c-planned" };
     const layer = createCruiseArrowsLayer([flown, planned], new Map(), "c-flown") as unknown as {
       props: {

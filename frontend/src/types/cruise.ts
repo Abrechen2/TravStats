@@ -51,7 +51,8 @@ export interface CruiseStop {
   times?: CruiseStopTimes;
 }
 
-export type CruiseStatus = "scheduled" | "in_progress" | "flown" | "cancelled" | "historical";
+/** A sailed cruise is `completed` (#357); the server never returns the retired `flown`. */
+export type CruiseStatus = "scheduled" | "in_progress" | "completed" | "cancelled" | "historical";
 export type CabinType = "inside" | "oceanview" | "balcony" | "suite";
 
 export interface Cruise {

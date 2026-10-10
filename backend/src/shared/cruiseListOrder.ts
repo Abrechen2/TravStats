@@ -41,6 +41,8 @@ export type CruiseSortField = (typeof CRUISE_SORT_FIELDS)[number];
 const STATUS_RANK: Record<string, number> = {
   scheduled: 0,
   in_progress: 1,
+  completed: 2,
+  /** The retired spelling of `completed` (#357), ranked with it. */
   flown: 2,
   historical: 3,
   cancelled: 4,

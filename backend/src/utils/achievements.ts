@@ -29,19 +29,18 @@ import { normalizeCountrySet, unionCountries } from "../shared/countryEvidence";
 import { buildMembershipContext, resolveStayProgramme } from "../services/lodging/stayMembership";
 import { classifyStay } from "../shared/lodgingCounting";
 import { countableFlightWhere } from "../shared/flightCounting";
+import { countableCruiseWhere, isCountableCruiseStatus } from "../shared/cruiseCounting";
 import { calculatePlaceStats } from "./placeStats";
 import { achievementCountries } from "./achievementCountries";
 
-/** Shared "did this actually happen" check for flights and cruises alike —
- * both domains use the same status vocabulary (`flown` / `historical` are
- * done, everything else — scheduled, in_progress, cancelled — is not).
+/** "Did this flight actually happen" for the per-trip flags. Cruises answer
+ * the same question through `shared/cruiseCounting` — the two vocabularies
+ * parted in #357 (a sailed cruise is `completed`, not `flown`), which is the
+ * separate decision this line once warned would one day be needed.
  *
- * Deliberately NOT `isCountableFlightStatus` from shared/flightCounting: this
- * predicate is applied to cruise rows too, and the two domains agree today by
- * coincidence rather than by rule (`duplicated` exists only for flights). A
- * flight-named helper called on a cruise would hide that. If the flight rule
- * ever moves, the cruise half of this line has to be decided separately —
- * which is the whole reason it is written out here rather than imported. */
+ * Deliberately NOT `isCountableFlightStatus` from shared/flightCounting:
+ * `duplicated` exists only for flights, and this check keeps today's
+ * flown/historical reading of a trip's legs. */
 const isDoneStatus = (status: string): boolean => status === "flown" || status === "historical";
 
 // Re-export the shared types so existing callers that imported them from
@@ -200,7 +199,7 @@ async function runAchievementCheck(
         orderBy: { departureTime: "asc" },
       }),
       prisma.cruise.findMany({
-        where: { userId, status: { in: ["flown", "historical"] } },
+        where: { userId, ...countableCruiseWhere() },
         include: {
           stops: { include: { port: true } },
           trip: { include: { flights: true, cruises: true } },
@@ -462,7 +461,7 @@ async function runAchievementCheck(
     // hasn't happened yet must not count toward any cross-domain flag below.
     const doneTrips = trips.map((t) => ({
       flightCount: t.flights.filter((f) => isDoneStatus(f.status)).length,
-      cruiseCount: t.cruises.filter((c) => isDoneStatus(c.status)).length,
+      cruiseCount: t.cruises.filter((c) => isCountableCruiseStatus(c.status)).length,
       lodgingStayCount: t.lodgingStays.filter((s) => classifyStay(s) === "visited").length,
     }));
 
@@ -483,7 +482,7 @@ async function runAchievementCheck(
       (c) =>
         c.trip &&
         c.trip.flights.some((f) => isDoneStatus(f.status)) &&
-        c.trip.cruises.some((tc) => isDoneStatus(tc.status))
+        c.trip.cruises.some((tc) => isCountableCruiseStatus(tc.status))
     );
 
     // Amphibious Week — fires when any flight sits within ±7 days of a

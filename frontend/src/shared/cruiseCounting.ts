@@ -15,7 +15,7 @@
  */
 
 /** The statuses that mean "this cruise actually sailed". */
-export const COUNTABLE_CRUISE_STATUSES = ["flown", "historical"] as const;
+export const COUNTABLE_CRUISE_STATUSES = ["completed", "historical", "flown"] as const;
 
 export type CountableCruiseStatus = (typeof COUNTABLE_CRUISE_STATUSES)[number];
 

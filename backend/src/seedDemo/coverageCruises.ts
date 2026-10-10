@@ -577,8 +577,8 @@ export async function seedCruises(
     }
 
     // 15 completed, 3 scheduled, 2 cancelled, 2 historical
-    let status: "flown" | "scheduled" | "cancelled" | "historical";
-    if (idx < 15) status = "flown";
+    let status: "completed" | "scheduled" | "cancelled" | "historical";
+    if (idx < 15) status = "completed";
     else if (idx < 18) status = "scheduled";
     else if (idx < 20) status = "cancelled";
     else status = "historical";

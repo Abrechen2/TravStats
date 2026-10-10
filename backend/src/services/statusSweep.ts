@@ -5,6 +5,8 @@ import {
   FLIGHT_DEPARTURE_SLACK_HOURS,
   FLIGHT_TRACKED_ARRIVAL_WINDOW_HOURS,
   CRUISE_SLACK_HOURS,
+  CRUISE_COMPLETED,
+  CRUISE_LEGACY_COMPLETED,
   deriveBusStatus,
   deriveRailStatus,
   deriveRentalStatus,
@@ -87,17 +89,23 @@ async function sweepDayStatuses(
    * paths; the sweep deliberately does NOT narrow its window to match—only
    * corrects clearly contradictory (future-dated) rows.
    */
+  // Cruises: the retired `flown` spelling first (#357) — a row a stale writer
+  // slipped in converges to `completed` before the date rules below read it.
+  const cruiseLegacy = await prisma.cruise.updateMany({
+    where: { ...scope, status: CRUISE_LEGACY_COMPLETED },
+    data: { status: CRUISE_COMPLETED },
+  });
   // Cruises: three-way from start/end (+slack)
   const cruiseToInProgress = await prisma.cruise.updateMany({
     where: {
       ...scope,
-      status: { in: ["scheduled", "flown"] },
+      status: { in: ["scheduled", CRUISE_COMPLETED] },
       startDate: { not: null, lte: anchor },
       endDate: { not: null, gte: cruiseCutoff },
     },
     data: { status: "in_progress" },
   });
-  const cruiseToFlown = await prisma.cruise.updateMany({
+  const cruiseToCompleted = await prisma.cruise.updateMany({
     where: {
       ...scope,
       status: { in: ["scheduled", "in_progress"] },
@@ -106,12 +114,12 @@ async function sweepDayStatuses(
         { endDate: null, startDate: { not: null, lt: cruiseCutoff } },
       ],
     },
-    data: { status: "flown" },
+    data: { status: CRUISE_COMPLETED },
   });
   const cruiseToScheduled = await prisma.cruise.updateMany({
     where: {
       ...scope,
-      status: { in: ["flown", "in_progress"] },
+      status: { in: [CRUISE_COMPLETED, "in_progress"] },
       startDate: { gt: anchor },
     },
     data: { status: "scheduled" },
@@ -149,7 +157,11 @@ async function sweepDayStatuses(
   });
 
   return {
-    cruises: cruiseToInProgress.count + cruiseToFlown.count + cruiseToScheduled.count,
+    cruises:
+      cruiseLegacy.count +
+      cruiseToInProgress.count +
+      cruiseToCompleted.count +
+      cruiseToScheduled.count,
     lodging: lodgingToInProgress.count + lodgingToCompleted.count + lodgingToScheduled.count,
   };
 }

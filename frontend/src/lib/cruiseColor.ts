@@ -151,7 +151,7 @@ export const CRUISE_LEGEND_SAMPLE_COUNT = 5;
 
 // Synthetic probes: the legend asks the resolver "what colour would a sailed /
 // a planned cruise get?" rather than keeping its own table of colour literals.
-const PROBE_SAILED: CruiseColorInput = { id: "legend", status: "flown" };
+const PROBE_SAILED: CruiseColorInput = { id: "legend", status: "completed" };
 const PROBE_PLANNED: CruiseColorInput = { id: "legend", status: "scheduled" };
 
 /**

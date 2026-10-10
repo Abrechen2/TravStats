@@ -79,7 +79,13 @@ const cruise = registry.register(
       arrivalPortId: z.number().int().nullable(),
       startDate: z.string().datetime().nullable(),
       endDate: z.string().datetime().nullable(),
-      status: z.enum(["scheduled", "flown", "cancelled", "historical"]),
+      status: z
+        .enum(["scheduled", "in_progress", "completed", "cancelled", "historical"])
+        .describe(
+          "Derived from the dates except for cancelled/historical. A sailed cruise is " +
+            "`completed`; the retired `flown` is still accepted on input and read as " +
+            "`completed`, but never returned (#357)."
+        ),
       cabinNumber: z.string().nullable(),
       cabinType: z.enum(["inside", "oceanview", "balcony", "suite"]).nullable(),
       deck: z.number().int().nullable(),

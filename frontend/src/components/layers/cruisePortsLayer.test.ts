@@ -56,10 +56,10 @@ function makeCruise(
     arrivalPort: null,
     startDate: null,
     endDate: null,
-    // Default "flown" — most tests here aren't exercising status semantics
+    // Default "completed" — most tests here aren't exercising status semantics
     // and would otherwise silently produce zero visits under the new
     // sailed-only filter. Tests that DO care about status pass it explicitly.
-    status: overrides.status ?? "flown",
+    status: overrides.status ?? "completed",
     cabinNumber: null,
     cabinType: null,
     deck: null,
@@ -150,7 +150,10 @@ describe("createCruisePortsLayer", () => {
       country: "GR",
       city: "Athens",
     };
-    const flownCruise = makeCruise([makeStop(1, sharedPort)], { id: "flown", status: "flown" });
+    const flownCruise = makeCruise([makeStop(1, sharedPort)], {
+      id: "completed",
+      status: "completed",
+    });
     const scheduledCruise = makeCruise([makeStop(1, sharedPort), makeStop(2, scheduledOnlyPort)], {
       id: "scheduled",
       status: "scheduled",
@@ -231,7 +234,7 @@ describe("createCruisePortsLayer", () => {
           city: "Civitavecchia",
         }),
       ],
-      { status: "flown" }
+      { status: "completed" }
     );
 
     const layers = createCruisePortsLayer([cruise], undefined, { scope: "itinerary" });

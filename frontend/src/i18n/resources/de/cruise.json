@@ -128,7 +128,7 @@
   "status": {
     "scheduled": "Geplant",
     "in_progress": "Unterwegs",
-    "flown": "Abgeschlossen",
+    "completed": "Abgeschlossen",
     "cancelled": "Storniert",
     "historical": "Historisch",
     "cancelledCheckbox": "Storniert"

@@ -45,6 +45,7 @@ import {
   registerParent,
 } from "./context";
 import { pruneMissing } from "./prune";
+import { CRUISE_COMPLETED, normalizeCruiseStatus } from "../../shared/statusDerivation";
 import { cruiseLabelBase, findPortId, findShipId, resolveParent, resolveTrip } from "./references";
 import {
   sheetRowNumber,
@@ -59,7 +60,12 @@ import { companionsDiffer, resolveCompanionCell, updateWithCompanions } from "./
 
 /** Statuses the write schema accepts. `in_progress` is derived and stored,
  *  never written — an exported one is dropped and re-derived from the dates. */
-const WRITABLE_STATUSES = ["scheduled", "flown", "cancelled", "historical"] as const;
+const WRITABLE_STATUSES = ["scheduled", "completed", "cancelled", "historical"] as const;
+/** A sheet exported before #357 says `flown`; it is the same voyage, `completed`. */
+const legacyStatus = (value: string): (typeof WRITABLE_STATUSES)[number] | undefined =>
+  normalizeCruiseStatus(value.trim().toLowerCase()) === CRUISE_COMPLETED
+    ? CRUISE_COMPLETED
+    : undefined;
 /** Stored but derived — our own export writes it, so it is not "unknown". */
 const DERIVED_STATUS = "in_progress";
 
@@ -170,7 +176,7 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
     const status =
       cell.text(raw.status) === DERIVED_STATUS
         ? undefined
-        : enumCell(raw.status, WRITABLE_STATUSES, "status", dropped);
+        : enumCell(raw.status, WRITABLE_STATUSES, "status", dropped, legacyStatus);
     const trip = await resolveTrip(raw.tripId, ctx.userId);
     const notes: string[] = trip.note ? [trip.note] : [];
     const labels = labelForms(

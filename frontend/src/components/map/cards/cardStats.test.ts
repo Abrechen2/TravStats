@@ -111,7 +111,7 @@ function makeCruise(id: string, status: Cruise["status"], stops: Cruise["stops"]
 describe("getPortStats", () => {
   it("ignores scheduled cruises: totalVisits comes from flown only, lastCallDate is not in the future", () => {
     const flownArrival = "2024-05-10T09:00:00.000Z";
-    const flownCruise = makeCruise("flown", "flown", [
+    const flownCruise = makeCruise("flown", "completed", [
       makeStop(flownArrival, "2024-05-10T18:00:00.000Z"),
     ]);
     // A future, still-scheduled cruise calling at the same port — must not

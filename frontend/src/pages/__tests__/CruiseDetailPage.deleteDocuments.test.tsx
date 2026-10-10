@@ -66,7 +66,7 @@ function makeCruise(): Cruise {
     arrivalPort: null,
     startDate: "2024-05-13T00:00:00.000Z",
     endDate: "2024-05-20T00:00:00.000Z",
-    status: "flown",
+    status: "completed",
     cabinNumber: null,
     cabinType: null,
     deck: null,
