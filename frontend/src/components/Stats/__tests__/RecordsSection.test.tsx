@@ -117,12 +117,17 @@ describe("RecordsSection", () => {
     getRecordsMock.mockResolvedValue(ALL_SEVEN);
     renderSection();
 
+    // By heading: the counting help below names every record once more.
     await waitFor(() =>
-      expect(screen.getByText("stats:records.names.longest-flight")).toBeTruthy()
+      expect(
+        screen.getByRole("heading", { name: "stats:records.names.longest-flight" })
+      ).toBeTruthy()
     );
 
     for (const record of ALL_SEVEN) {
-      expect(screen.getByText(`stats:records.names.${record.id}`)).toBeTruthy();
+      expect(
+        screen.getByRole("heading", { name: `stats:records.names.${record.id}` })
+      ).toBeTruthy();
     }
 
     // Kilometres, grouped by the UI language rather than the host's locale.

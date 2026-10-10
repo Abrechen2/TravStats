@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import type { PunctualityStats } from "../../lib/api/stats";
 import { useTranslation } from "../../hooks/useTranslation";
 import EvidenceTrigger from "./EvidenceTrigger";
+import CountingHelp from "./counting/CountingHelp";
 
 export interface PunctualitySectionProps {
   /**
@@ -68,11 +69,19 @@ export default function PunctualitySection({ stats }: PunctualitySectionProps): 
       >
         {t("stats:punctuality.subtitle", { count: stats.sampleSize })}
       </EvidenceTrigger>
+      {/* Every tile is a figure over the delay sample, so each opens it — the
+          flights with a recorded delay; no value to recount, the panel counts
+          flights where a tile shows minutes or a share. */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {tiles.map((tile) => (
-          <div
+          <EvidenceTrigger
             key={tile.label}
-            className="rounded-xl p-4"
+            kind="metric"
+            evidenceKey="punctualitySampleSize"
+            scope={{ period: "allTime" }}
+            renderedValue={null}
+            label={tile.label}
+            className="block rounded-xl p-4"
             style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
           >
             <div
@@ -84,9 +93,31 @@ export default function PunctualitySection({ stats }: PunctualitySectionProps): 
             <div className="text-base font-semibold mt-1" style={{ color: "var(--text-primary)" }}>
               {tile.value}
             </div>
-          </div>
+          </EvidenceTrigger>
         ))}
       </div>
+      <CountingHelp
+        testId="punctuality-counting-help"
+        entries={[
+          { term: t("stats:punctuality.title"), helpKey: "flightStatsHelp:punctuality.sample" },
+          {
+            term: t("stats:punctuality.avgDelay"),
+            helpKey: "flightStatsHelp:punctuality.avgDelay",
+          },
+          {
+            term: t("stats:punctuality.onTimeRate"),
+            helpKey: "flightStatsHelp:punctuality.onTimeRate",
+          },
+          {
+            term: `${t("stats:punctuality.bestAirline")} · ${t("stats:punctuality.worstAirline")}`,
+            helpKey: "flightStatsHelp:punctuality.airlines",
+          },
+          {
+            term: t("stats:punctuality.worstRoute"),
+            helpKey: "flightStatsHelp:punctuality.worstRoute",
+          },
+        ]}
+      />
     </section>
   );
 }

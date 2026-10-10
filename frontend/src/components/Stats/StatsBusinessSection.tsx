@@ -3,6 +3,23 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useSettingsStore } from "../../store/settingsStore";
 import { formatCurrency, formatDistance, formatHours, formatHoursValue } from "../../lib/units";
 import EvidenceTrigger from "./EvidenceTrigger";
+import CountingHelp from "./counting/CountingHelp";
+import { rankingKey } from "../../shared/evidence";
+
+const MONTH_KEYS = [
+  "jan",
+  "feb",
+  "mar",
+  "apr",
+  "may",
+  "jun",
+  "jul",
+  "aug",
+  "sep",
+  "oct",
+  "nov",
+  "dec",
+] as const as readonly string[];
 
 interface StatsBusinessSectionProps {
   businessStats: BusinessStats;
@@ -14,6 +31,15 @@ export default function StatsBusinessSection({
   const { t, i18n } = useTranslation(["stats"]);
   const { units, baseCurrency } = useSettingsStore();
   const lang = i18n.language;
+  // No priced flight: a rate over nothing is not "0,00 €" (forgejo#83) — the
+  // server answers 0 for both rates then, so the total decides.
+  const unpriced = businessStats.totalCost === null;
+  // The server names the month in English ("Mar"); the reader's language does.
+  const monthIndex = businessStats.busiestMonth
+    ? MONTH_KEYS.indexOf(businessStats.busiestMonth.toLowerCase())
+    : -1;
+  const busiestMonth =
+    monthIndex >= 0 ? t(`stats:months.${MONTH_KEYS[monthIndex]}`) : businessStats.busiestMonth;
 
   return (
     <div className="mt-8">
@@ -21,7 +47,13 @@ export default function StatsBusinessSection({
         {t("stats:business.title")}
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div
+        {/* A rate opens the priced flights its cost is the sum of. */}
+        <EvidenceTrigger
+          kind="metric"
+          evidenceKey="businessTotalCost"
+          scope={{ period: "allTime" }}
+          renderedValue={null}
+          label={t("stats:business.costPerKm")}
           className="rounded-lg shadow-sm p-6"
           style={{
             background: "var(--bg-surface)",
@@ -32,16 +64,24 @@ export default function StatsBusinessSection({
             {t("stats:business.costPerKm")}
           </h3>
           <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-            {formatCurrency(businessStats.costPerKm, baseCurrency)}
+            {unpriced ? "—" : formatCurrency(businessStats.costPerKm, baseCurrency)}
           </p>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-            {t("stats:business.costPerKmDesc", {
-              cost: formatCurrency(businessStats.costPerKm, baseCurrency),
-            })}
+            {unpriced
+              ? t("stats:business.noPricesRecorded")
+              : t("stats:business.costPerKmDesc", {
+                  cost: formatCurrency(businessStats.costPerKm, baseCurrency),
+                })}
           </p>
-        </div>
+        </EvidenceTrigger>
 
-        <div
+        {/* Same priced flights as the rate per kilometre. */}
+        <EvidenceTrigger
+          kind="metric"
+          evidenceKey="businessTotalCost"
+          scope={{ period: "allTime" }}
+          renderedValue={null}
+          label={t("stats:business.costPerHour")}
           className="rounded-lg shadow-sm p-6"
           style={{
             background: "var(--bg-surface)",
@@ -52,14 +92,16 @@ export default function StatsBusinessSection({
             {t("stats:business.costPerHour")}
           </h3>
           <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-            {formatCurrency(businessStats.costPerHour, baseCurrency)}
+            {unpriced ? "—" : formatCurrency(businessStats.costPerHour, baseCurrency)}
           </p>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-            {t("stats:business.costPerHourDesc", {
-              cost: formatCurrency(businessStats.costPerHour, baseCurrency),
-            })}
+            {unpriced
+              ? t("stats:business.noPricesRecorded")
+              : t("stats:business.costPerHourDesc", {
+                  cost: formatCurrency(businessStats.costPerHour, baseCurrency),
+                })}
           </p>
-        </div>
+        </EvidenceTrigger>
 
         <EvidenceTrigger
           kind="metric"
@@ -142,8 +184,15 @@ export default function StatsBusinessSection({
           </p>
         </div>
 
-        {businessStats.busiestMonth && (
-          <div
+        {businessStats.busiestMonth && monthIndex >= 0 && (
+          // The month's bar of the seasonal chart: the same countable flights
+          // on the same departure clock (`departureMonth`).
+          <EvidenceTrigger
+            kind="ranking"
+            evidenceKey={rankingKey("departureMonth", String(monthIndex + 1))}
+            scope={{ period: "allTime" }}
+            renderedValue={businessStats.busiestMonthFlights}
+            label={t("stats:business.busiestMonth")}
             className="rounded-lg shadow-sm p-6"
             style={{
               background: "var(--bg-surface)",
@@ -154,15 +203,15 @@ export default function StatsBusinessSection({
               {t("stats:business.busiestMonth")}
             </h3>
             <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-              {businessStats.busiestMonth}
+              {busiestMonth}
             </p>
             <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
               {t("stats:business.busiestMonthDesc", {
-                month: businessStats.busiestMonth,
+                month: busiestMonth,
                 count: businessStats.busiestMonthFlights,
               })}
             </p>
-          </div>
+          </EvidenceTrigger>
         )}
 
         {businessStats.mostCommonCategory && (
@@ -224,6 +273,37 @@ export default function StatsBusinessSection({
           </div>
         )}
       </div>
+      <CountingHelp
+        testId="business-counting-help"
+        entries={[
+          { term: t("stats:business.costPerKm"), helpKey: "flightStatsHelp:business.costPerKm" },
+          {
+            term: t("stats:business.costPerHour"),
+            helpKey: "flightStatsHelp:business.costPerHour",
+          },
+          { term: t("stats:business.totalCost"), helpKey: "flightStatsHelp:business.totalCost" },
+          {
+            term: t("stats:business.airportDiversity"),
+            helpKey: "flightStatsHelp:business.airportDiversity",
+          },
+          {
+            term: t("stats:business.avgFlightDuration"),
+            helpKey: "flightStatsHelp:business.avgDuration",
+          },
+          {
+            term: t("stats:business.busiestMonth"),
+            helpKey: "flightStatsHelp:business.busiestMonth",
+          },
+          {
+            term: t("stats:business.mostCommonCategory"),
+            helpKey: "flightStatsHelp:business.category",
+          },
+          {
+            term: t("stats:business.seatClassDistribution"),
+            helpKey: "flightStatsHelp:business.seatClassShare",
+          },
+        ]}
+      />
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 
 import StatCard from "./StatCard";
+import CountingHelp from "./counting/CountingHelp";
 import StatsSectionsLoadError from "./StatsSectionsLoadError";
 import { airportLabel, formatRecordValue, routeLabel } from "./recordFormat";
 import { formatDuration } from "../../lib/formatters";
@@ -27,11 +28,11 @@ import type { TravelRecord } from "../../types/travelRecords";
  * apply the reader's distance unit, the reader's language and the reader's
  * date format.
  *
- * NO EVIDENCE TRIGGER, on purpose. Every record is an `extremum`
- * (`longestFlightDistanceKm` and friends are `servedIn: 2` in
- * `shared/evidenceMeasures.ts`) and `METRIC_RESOLVERS` serves only `sum` and
- * `distinct` keys today, so a trigger here would be a pointer cursor over a
- * 404 — GitHub #330 with an extra round trip.
+ * Each record opens the FLIGHTS it was taken from — the leg, the day's legs,
+ * the streak's flights (`evidenceMeasuresFlightWitnesses`, forgejo#256). The
+ * record itself is an `extremum`, which release 1 does not serve; the panel
+ * counts flights, so only the busiest day — a number of flights — passes its
+ * value for the recount.
  *
  * The airport names and the dates come from the flight rows the page has
  * ALREADY loaded, not from a second request and not from the payload: the
@@ -45,6 +46,17 @@ interface RecordsSectionProps {
   /** The page's countable flights — read for names and dates only. */
   flights: readonly Flight[];
 }
+
+/** The witness measure behind each record (`evidenceMeasuresFlightWitnesses`). */
+const EVIDENCE_KEYS: Record<TravelRecord["id"], string> = {
+  "longest-flight": "recordLongestFlight",
+  "shortest-flight": "recordShortestFlight",
+  "busiest-day": "recordBusiestDay",
+  "longest-aloft": "recordLongestAloft",
+  "biggest-delay": "recordBiggestDelay",
+  northernmost: "recordNorthernmost",
+  "longest-streak": "recordLongestStreak",
+};
 
 /** Which of the seven this build knows how to draw, in the server's order. */
 const KNOWN_IDS = new Set<TravelRecord["id"]>([
@@ -163,6 +175,35 @@ export default function RecordsSection({ flights }: RecordsSectionProps): JSX.El
     );
   };
 
+  /** "So wird gezählt" for every record (forgejo#256). */
+  const help = [
+    {
+      term: t("stats:records.names.longest-flight"),
+      helpKey: "flightStatsHelp:records.longestFlight",
+    },
+    {
+      term: t("stats:records.names.shortest-flight"),
+      helpKey: "flightStatsHelp:records.shortestFlight",
+    },
+    { term: t("stats:records.names.busiest-day"), helpKey: "flightStatsHelp:records.busiestDay" },
+    {
+      term: t("stats:records.names.longest-aloft"),
+      helpKey: "flightStatsHelp:records.longestAloft",
+    },
+    {
+      term: t("stats:records.names.biggest-delay"),
+      helpKey: "flightStatsHelp:records.biggestDelay",
+    },
+    {
+      term: t("stats:records.names.northernmost"),
+      helpKey: "flightStatsHelp:records.northernmost",
+    },
+    {
+      term: t("stats:records.names.longest-streak"),
+      helpKey: "flightStatsHelp:records.longestStreak",
+    },
+  ];
+
   return (
     <section className="mt-8" aria-labelledby="stats-records-heading">
       <h2
@@ -202,10 +243,19 @@ export default function RecordsSection({ flights }: RecordsSectionProps): JSX.El
               value={formatRecordValue(record, { distanceUnit, language: i18n.language, t })}
               description={detailOf(record) ?? t("stats:records.noDetail")}
               footnote={footnoteOf(record)}
+              evidence={{
+                kind: "metric",
+                key: EVIDENCE_KEYS[record.id],
+                scope: { period: "allTime" },
+                renderedValue: record.id === "busiest-day" ? record.value : null,
+              }}
+              // The footnote carries its own link to the flight page.
+              descriptionHasOwnTrigger
             />
           ))}
         </div>
       )}
+      <CountingHelp entries={help} testId="records-counting-help" />
     </section>
   );
 }

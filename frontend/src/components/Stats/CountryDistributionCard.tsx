@@ -1,4 +1,5 @@
 import { useTranslation } from "../../hooks/useTranslation";
+import CountingHelp from "./counting/CountingHelp";
 import type { CountryStatsResponse } from "../../types";
 import EvidenceTrigger from "./EvidenceTrigger";
 import { rankingKey } from "../../shared/evidence";
@@ -71,6 +72,12 @@ export default function CountryDistributionCard({
           );
         })}
       </div>
+      <CountingHelp
+        testId="countries-counting-help"
+        entries={[
+          { term: t("stats:countryDist.title"), helpKey: "flightStatsHelp:rankings.countries" },
+        ]}
+      />
     </div>
   );
 }

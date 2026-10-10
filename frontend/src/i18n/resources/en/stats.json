@@ -590,7 +590,10 @@
     "mostCommon": "Most common seat",
     "avgRow": "Avg. row",
     "noData": "No seat data recorded",
-    "seatClassTitle": "Seat Class"
+    "seatClassTitle": "Seat Class",
+    "positionTitle": "Window / Middle / Aisle",
+    "zoneTitle": "Front / Middle / Back",
+    "noDataHint": "Once your flights carry a seat number (such as 14C) or a seat class, window, aisle, rows and classes appear here."
   },
   "airlineRanking": {
     "title": "Airline Loyalty Ranking",

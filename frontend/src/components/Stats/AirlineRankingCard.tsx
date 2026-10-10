@@ -1,4 +1,5 @@
 import { useTranslation } from "../../hooks/useTranslation";
+import CountingHelp from "./counting/CountingHelp";
 import type { AirlineRankingResponse } from "../../types";
 import EvidenceTrigger from "./EvidenceTrigger";
 import { rankingKey } from "../../shared/evidence";
@@ -72,6 +73,12 @@ export default function AirlineRankingCard({
           </EvidenceTrigger>
         ))}
       </div>
+      <CountingHelp
+        testId="airlines-counting-help"
+        entries={[
+          { term: t("stats:airlineRanking.title"), helpKey: "flightStatsHelp:rankings.airlines" },
+        ]}
+      />
     </div>
   );
 }

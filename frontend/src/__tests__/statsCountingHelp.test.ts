@@ -17,7 +17,11 @@ import { COUNTING_FIELDS } from "../components/Stats/counting/countingEntry";
  * both, per section, as a RATCHET in the repo's usual shape:
  *
  * - A **section** is a component under `components/Stats/` that renders a
- *   figure (see `FIGURE_TAGS`), minus the figure primitives themselves.
+ *   figure (see `FIGURE_TAGS`), minus the figure primitives themselves. A
+ *   figure drawn WITHOUT a primitive — a ranking row that is a link to the
+ *   entity's own page, say — declares itself with a `data-stat-figure`
+ *   attribute, or the scan cannot see the section at all (forgejo#256: the
+ *   aircraft ranking was invisible to it).
  * - **Counting help** is rendered when the section draws `CountingHelp`, or a
  *   primitive that draws it for each figure (`HELP_TAGS`).
  * - A **figure without an evidence jump** is a `StatCard` or `InsightTile`
@@ -46,6 +50,8 @@ const FIGURE_TAGS = new Set([
   "EvidenceCount",
   "EvidenceTrigger",
 ]);
+/** Marks a figure drawn without a figure primitive (a link row to the entity's page). */
+const FIGURE_ATTRIBUTE = "data-stat-figure";
 /** Tiles whose `evidence` prop is the jump to the entries; without it the number opens nothing. */
 const EVIDENCE_TILES = new Set(["StatCard", "InsightTile"]);
 /** Elements that render the counting help (the last two draw `CountingHelp` themselves). */
@@ -75,7 +81,10 @@ export function scanSection(source: string, fileName = "x.tsx"): Scan {
   const visit = (node: ts.Node): void => {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tag = node.tagName.getText(sf);
-      if (FIGURE_TAGS.has(tag)) scan.figures += 1;
+      const declared = node.attributes.properties.some(
+        (p) => ts.isJsxAttribute(p) && p.name.getText(sf) === FIGURE_ATTRIBUTE
+      );
+      if (FIGURE_TAGS.has(tag) || declared) scan.figures += 1;
       if (HELP_TAGS.has(tag)) scan.hasCountingHelp = true;
       if (EVIDENCE_TILES.has(tag)) {
         const props = node.attributes.properties;
@@ -240,6 +249,11 @@ describe("the scan itself", () => {
       const c = <InsightTile {...vm} />;
     `);
     expect(scan).toEqual({ figures: 3, hasCountingHelp: true, figuresWithoutEvidence: 1 });
+  });
+
+  it("counts a figure that declares itself without a primitive", () => {
+    const scan = scanSection(`const a = <Link to="/x" data-stat-figure>{n}</Link>;`);
+    expect(scan).toEqual({ figures: 1, hasCountingHelp: false, figuresWithoutEvidence: 0 });
   });
 
   it("sees counting help drawn directly or through a primitive", () => {

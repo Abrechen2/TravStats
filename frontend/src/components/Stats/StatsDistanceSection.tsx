@@ -3,6 +3,10 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useSettingsStore } from "../../store/settingsStore";
 import { convertDistance, formatDistance, getDistanceLabel } from "../../lib/units";
 import StatCard from "./StatCard";
+import CountingHelp from "./counting/CountingHelp";
+
+/** Every figure here is built from the full countable set, never the page's year filter. */
+const ALL_TIME = { period: "allTime" as const };
 
 interface FlightWithDistance {
   flight: Flight;
@@ -35,6 +39,26 @@ export default function StatsDistanceSection({
   const voyagerDistance = 24000000000; // km (Voyager 1, ~24 billion km)
   const voyagerPercentage = (totalDistance / voyagerDistance) * 100;
 
+  /** "So wird gezählt" for every figure of the section (forgejo#256). */
+  const help = [
+    { term: t("stats:distance.totalDistance"), helpKey: "flightStatsHelp:distance.total" },
+    { term: t("stats:distance.avgPerFlight"), helpKey: "flightStatsHelp:distance.average" },
+    {
+      term: t("stats:distance.earthCircumnavigations"),
+      helpKey: "flightStatsHelp:distance.circumnavigations",
+    },
+    {
+      term: [
+        t("stats:distance.pathToMoon"),
+        t("stats:distance.pathToMars"),
+        t("stats:distance.pathToVoyager"),
+      ].join(" · "),
+      helpKey: "flightStatsHelp:distance.milestones",
+    },
+    { term: t("stats:distance.longestDistance"), helpKey: "flightStatsHelp:distance.longest" },
+    { term: t("stats:distance.shortestDistance"), helpKey: "flightStatsHelp:distance.shortest" },
+  ];
+
   return (
     <div
       className="rounded-lg shadow-lg p-8 mb-8"
@@ -54,7 +78,7 @@ export default function StatsDistanceSection({
           evidence={{
             kind: "metric",
             key: "distanceKmTotal",
-            scope: { period: "allTime" },
+            scope: ALL_TIME,
             renderedValue: totalDistance,
           }}
         />
@@ -62,11 +86,25 @@ export default function StatsDistanceSection({
           title={t("stats:distance.avgPerFlight")}
           value={convertDistance(avgDistance, units.distanceUnit).toFixed(0)}
           description={getDistanceLabel(units.distanceUnit, t)}
+          // An average opens the legs it is taken over; the panel sums them.
+          evidence={{
+            kind: "metric",
+            key: "distanceKmTotal",
+            scope: ALL_TIME,
+            renderedValue: null,
+          }}
         />
         <StatCard
           title={t("stats:distance.earthCircumnavigations")}
           value={earthCircumnavigations.toFixed(2)}
           description={t("stats:distance.timesAroundEarth")}
+          // The laps are the total over a constant: the total's legs, in km.
+          evidence={{
+            kind: "metric",
+            key: "distanceKmTotal",
+            scope: ALL_TIME,
+            renderedValue: totalDistance,
+          }}
         />
       </div>
 
@@ -172,6 +210,12 @@ export default function StatsDistanceSection({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
           <StatCard
             title={t("stats:distance.longestDistance")}
+            evidence={{
+              kind: "metric",
+              key: "longestDistanceFlights",
+              scope: ALL_TIME,
+              renderedValue: null,
+            }}
             valueSize="sm"
             value={formatDistance(longestDistance.distance, units.distanceUnit, t, lang)}
             description={`${longestDistance.flight.depIata || longestDistance.flight.depIcao} → ${
@@ -180,6 +224,12 @@ export default function StatsDistanceSection({
           />
           <StatCard
             title={t("stats:distance.shortestDistance")}
+            evidence={{
+              kind: "metric",
+              key: "shortestDistanceFlights",
+              scope: ALL_TIME,
+              renderedValue: null,
+            }}
             valueSize="sm"
             value={formatDistance(shortestDistance.distance, units.distanceUnit, t, lang)}
             description={`${shortestDistance.flight.depIata || shortestDistance.flight.depIcao} → ${
@@ -188,6 +238,7 @@ export default function StatsDistanceSection({
           />
         </div>
       )}
+      <CountingHelp entries={help} testId="distance-counting-help" />
     </div>
   );
 }

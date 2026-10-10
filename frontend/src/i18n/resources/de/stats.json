@@ -590,7 +590,10 @@
     "mostCommon": "Häufigster Sitzplatz",
     "avgRow": "Durchschn. Reihe",
     "noData": "Keine Sitzplatzdaten vorhanden",
-    "seatClassTitle": "Sitzklasse"
+    "seatClassTitle": "Sitzklasse",
+    "positionTitle": "Fenster / Mitte / Gang",
+    "zoneTitle": "Vorne / Mitte / Hinten",
+    "noDataHint": "Sobald deine Flüge eine Sitznummer (etwa 14C) oder eine Sitzklasse tragen, erscheinen hier Fenster, Gang, Reihen und Klassen."
   },
   "airlineRanking": {
     "title": "Airline-Treue Ranking",

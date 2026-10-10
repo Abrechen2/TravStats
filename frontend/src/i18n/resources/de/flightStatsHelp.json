@@ -1,0 +1,686 @@
+{
+  "overview": {
+    "totalFlights": {
+      "unit": "Zähleinheit: ein Flug. Die Zahl ist die Anzahl aller gezählten Flüge in deinem Logbuch.",
+      "time": "Immer alle Jahre zusammen – der Jahresfilter oben gilt für diese Kachel nicht. Ein Datum braucht der Flug dafür nicht.",
+      "source": "Alle deine Flüge mit Status geflogen oder nachgetragen (historisch).",
+      "coverage": "Jeder gezählte Flug geht ein, auch ohne Uhrzeit, Fluggesellschaft oder Sitzplatz.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "flightTime": {
+      "unit": "Zähleinheit: Minuten in der Luft, angezeigt in Stunden; die Summe über alle gezählten Flüge. Wo keine Uhrzeiten vorliegen, wird die Dauer aus der Großkreis-Entfernung geschätzt: Entfernung ÷ 800 km/h plus 15 Minuten für Rollen, Steig- und Sinkflug. Die Fußnote nennt, wie viele Stunden und Flüge geschätzt sind.",
+      "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter. Gemessen wird zwischen echten Abflug- und Ankunftszeitpunkten, die Zeitzonen beider Flughäfen sind dabei berücksichtigt.",
+      "source": "Geflogene und nachgetragene Flüge: die vom Server zeitzonenrichtig berechnete Flugdauer, sonst Abflug- und Ankunftszeit, sonst die Koordinaten beider Flughäfen.",
+      "coverage": "Gemessen wird nur bei Flügen mit echten Uhrzeiten an beiden Enden; ein Flug, der nur ein Datum trägt, liefert eine Schätzung. Trägst du die Uhrzeiten nach, wird aus der Schätzung eine Messung.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge, Entwürfe und Flüge ohne Uhrzeiten und ohne Koordinaten. Platzhalter-Uhrzeiten (z. B. 12:00 bei einem reinen Datum) werden nie als Messung gezählt."
+    },
+    "avgDuration": {
+      "unit": "Durchschnittliche Flugdauer in Stunden = gesamte Flugzeit ÷ Zahl der Flüge, die eine Dauer beigetragen haben (gemessen oder geschätzt).",
+      "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter.",
+      "source": "Dieselben Dauern wie bei der Gesamt-Flugzeit: gemessen aus den Uhrzeiten, sonst geschätzt aus der Großkreis-Entfernung mit 800 km/h plus 15 Minuten.",
+      "coverage": "Geschätzte Dauern gehen mit ein. Je mehr Flüge echte Uhrzeiten haben, desto mehr ist der Wert gemessen statt geschätzt.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge, Entwürfe und Flüge ohne jede Dauer – sie zählen auch nicht im Nenner, damit der Schnitt nicht künstlich sinkt."
+    },
+    "airlines": {
+      "unit": "Zähleinheit: eine Fluggesellschaft; die Zahl ist die Anzahl verschiedener Fluggesellschaften. Zusammengefasst wird über den IATA-Code: ist keiner hinterlegt, wird er aus dem ICAO-Code oder dem Namen über den Katalog ermittelt, sonst zählt der vereinheitlichte Name.",
+      "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter.",
+      "source": "Geflogene und nachgetragene Flüge mit den Feldern Fluggesellschaft (Name), IATA- und ICAO-Code, abgeglichen mit dem Fluggesellschafts-Katalog.",
+      "coverage": "Schreibweisen wie „SWISS“ und „Swiss“ sind eine Gesellschaft. Kennt der Katalog einen Namen nicht, kann dieselbe Gesellschaft unter zwei Schreibweisen zweimal zählen – ein Code am Flug behebt das.",
+      "exclusions": "Nicht enthalten: Flüge ohne Fluggesellschaft, geplante und stornierte Flüge sowie Entwürfe."
+    }
+  },
+  "yearSummary": {
+    "flights": {
+      "unit": "Zähleinheit: ein Flug. Die Zahl ist die Anzahl gezählter Flüge im gewählten Jahr.",
+      "time": "Das Jahr ist das des Abflugtags am Abflughafen. Ein Eintrag, von dem nur das Jahr bekannt ist, zählt in diesem Jahr. Im Vergleich gegen ein noch laufendes Jahr steht ein angefangenes Jahr gegen ein ganzes.",
+      "source": "Geflogene und nachgetragene Flüge mit Abflugdatum, vom Server für dieses Jahr gezählt.",
+      "coverage": "Nur Flüge mit Abflugdatum lassen sich einem Jahr zuordnen.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge, Entwürfe und Flüge ohne Abflugdatum."
+    },
+    "distance": {
+      "unit": "Zähleinheit: Kilometer Großkreis-Entfernung zwischen Abflug- und Zielflughafen (in deiner Distanz-Einheit angezeigt); die Summe über alle Flüge des Jahres.",
+      "time": "Das Jahr ist das des Abflugtags am Abflughafen; Einträge mit nur bekanntem Jahr zählen in diesem Jahr.",
+      "source": "Geflogene und nachgetragene Flüge, mit den Koordinaten beider Flughäfen.",
+      "coverage": "Die Luftlinie ist kürzer als die tatsächlich geflogene Route mit Umwegen und Warteschleifen.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge, Entwürfe und Flüge ohne Abflugdatum. Ein Flug mit gleichem Start- und Zielflughafen trägt 0 km bei."
+    },
+    "flightTime": {
+      "unit": "Zähleinheit: Minuten in der Luft, angezeigt in Stunden; die Summe über die Flüge des Jahres. Fehlen echte Uhrzeiten, wird aus der Großkreis-Entfernung geschätzt: Entfernung ÷ 800 km/h plus 15 Minuten.",
+      "time": "Das Jahr ist das des Abflugtags am Abflughafen. Gemessen wird zwischen den Zeitpunkten von Abflug und Ankunft, zeitzonenrichtig über beide Flughäfen.",
+      "source": "Geflogene und nachgetragene Flüge: gespeicherte oder aus den Uhrzeiten berechnete Dauer, sonst die Koordinaten beider Flughäfen.",
+      "coverage": "Gemessen wird nur bei geflogenen Flügen mit echten Uhrzeiten. Nachgetragene Flüge gehen hier immer als Schätzung ein, weil ihre Uhrzeiten oft Platzhalter sind.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge, Entwürfe, Flüge ohne Abflugdatum. Platzhalter-Uhrzeiten eines reinen Datums werden nie gemessen."
+    },
+    "cost": {
+      "unit": "Summe der Flugkosten in deiner Basiswährung. Ein Flug kostet seinen Preis plus Steuern und Gebühren; gehört er zu einer Buchung mit eigenem Preis, zählt der Buchungspreis einmal pro Buchung und ohne die Steuern und Gebühren der einzelnen Flüge.",
+      "time": "Das Jahr ist das des Abflugtags am Abflughafen. Umgerechnet wird mit dem Kurs, der beim Speichern des Flugs festgehalten wurde – nicht mit dem heutigen.",
+      "source": "Geflogene und nachgetragene Flüge mit Preis, Steuern, Gebühren und Währung sowie dem Preis der zugehörigen Buchung.",
+      "coverage": "Beträge in der Basiswährung gehen direkt ein, andere nur mit einem gespeicherten Kurs in genau dieser Basiswährung. Hat kein Flug des Jahres einen Preis, steht ein Strich statt 0 und daneben, wie viele Flüge ohne Preis sind; ein als kostenlos (0) erfasster Flug gilt als bepreist.",
+      "exclusions": "Nicht enthalten: Beträge, die sich nicht in die Basiswährung umrechnen lassen (sie werden hier nicht angezeigt), Flüge ohne Preis, geplante und stornierte Flüge sowie Entwürfe."
+    }
+  },
+  "charts": {
+    "seasonal": {
+      "unit": "Zähleinheit: ein Flug. Jeder Balken zählt die Flüge in diesem Kalendermonat, über alle Jahre zusammengelegt – der Januar enthält also jeden Januar.",
+      "time": "Der Monat ist der des Abflugtags am Abflughafen. Alle Jahre, unabhängig vom Jahresfilter. Ein Eintrag mit nur bekanntem Jahr steht im Januar, einer mit nur bekanntem Monat im richtigen Monat.",
+      "source": "Geflogene und nachgetragene Flüge mit ihrem Abflugdatum.",
+      "coverage": "Einträge mit nur bekanntem Jahr verzerren den Januar. Ein genaues Datum am Flug verschiebt ihn in den richtigen Monat.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge, Entwürfe und Flüge ohne Abflugdatum."
+    },
+    "weekday": {
+      "unit": "Zähleinheit: ein Flug. Jeder Balken zählt die Flüge, die an diesem Wochentag abgeflogen sind, über alle Jahre.",
+      "time": "Der Wochentag ist der des Abflugtags am Abflughafen. Alle Jahre, unabhängig vom Jahresfilter. Bei einem Eintrag mit nur bekanntem Jahr oder Monat ist der Wochentag der des Platzhalter-Datums (1. Januar bzw. Monatserster) und sagt nichts aus.",
+      "source": "Geflogene und nachgetragene Flüge mit ihrem Abflugdatum.",
+      "coverage": "Aussagekräftig ist der Wochentag nur bei Flügen mit genauem Tag. Ein vollständiges Datum am Flug macht ihn richtig.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge, Entwürfe und Flüge ohne Abflugdatum."
+    }
+  },
+  "distance": {
+    "total": {
+      "unit": "Zähleinheit: Kilometer Großkreis-Entfernung (Luftlinie) zwischen Abflug- und Zielflughafen, angezeigt in deiner Distanz-Einheit; die Summe über alle gezählten Flüge.",
+      "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter.",
+      "source": "Geflogene und nachgetragene Flüge, mit den Koordinaten beider Flughäfen.",
+      "coverage": "Die Luftlinie ist kürzer als die tatsächlich geflogene Route mit Umwegen und Warteschleifen.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge, Entwürfe. Flüge ohne Koordinaten und Flüge mit gleichem Start- und Zielflughafen tragen 0 km bei."
+    },
+    "average": {
+      "unit": "Durchschnittliche Strecke pro Flug = Gesamt-Distanz ÷ Zahl der Flüge mit einer Entfernung über 0 km.",
+      "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter.",
+      "source": "Geflogene und nachgetragene Flüge, mit den Koordinaten beider Flughäfen.",
+      "coverage": "Es zählen alle Flüge, für die sich eine Luftlinie berechnen lässt.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge, Entwürfe, Flüge ohne Koordinaten und Flüge mit 0 km – sie zählen auch nicht im Nenner."
+    },
+    "circumnavigations": {
+      "unit": "Erdumrundungen = Gesamt-Distanz ÷ 40.075 km Erdumfang am Äquator, auf zwei Nachkommastellen. Der Balken ist bei einer Umrundung voll.",
+      "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter.",
+      "source": "Die Gesamt-Distanz dieses Abschnitts.",
+      "coverage": "Wie die Gesamt-Distanz: Luftlinie zwischen den Flughäfen, nicht die geflogene Route.",
+      "exclusions": "Nicht enthalten: alles, was auch in der Gesamt-Distanz fehlt – geplante und stornierte Flüge, Entwürfe, Flüge ohne Koordinaten."
+    },
+    "milestones": {
+      "unit": "Anteil der Gesamt-Distanz an festen Entfernungen, in Prozent: Mond 384.400 km, Mars 225 Millionen km (mittlere Entfernung), Voyager 1 rund 24 Milliarden km. Ein Balken ist bei 100 % voll.",
+      "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter. Die Vergleichswerte sind feste Zahlen, keine tagesaktuellen Entfernungen.",
+      "source": "Die Gesamt-Distanz dieses Abschnitts.",
+      "coverage": "Wie die Gesamt-Distanz: Luftlinie zwischen den Flughäfen, nicht die geflogene Route.",
+      "exclusions": "Nicht enthalten: alles, was auch in der Gesamt-Distanz fehlt – geplante und stornierte Flüge, Entwürfe, Flüge ohne Koordinaten."
+    },
+    "longest": {
+      "unit": "Der eine Flug mit der größten Großkreis-Entfernung zwischen Abflug- und Zielflughafen (das Maximum), mit seiner Strecke.",
+      "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter.",
+      "source": "Geflogene und nachgetragene Flüge, mit den Koordinaten und Codes beider Flughäfen.",
+      "coverage": "Gewertet wird die Luftlinie, nicht die Flugdauer – der längste Flug nach Dauer steht weiter unten.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge, Entwürfe, Flüge ohne Koordinaten und Flüge mit 0 km."
+    },
+    "shortest": {
+      "unit": "Der eine Flug mit der kleinsten Großkreis-Entfernung über 0 km (das Minimum), mit seiner Strecke.",
+      "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter.",
+      "source": "Geflogene und nachgetragene Flüge, mit den Koordinaten und Codes beider Flughäfen.",
+      "coverage": "Gewertet wird die Luftlinie, nicht die Flugdauer – der kürzeste Flug nach Dauer steht weiter unten.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge, Entwürfe, Flüge ohne Koordinaten und Flüge mit gleichem Start- und Zielflughafen (0 km)."
+    }
+  },
+  "breakdown": {
+    "airlines": {
+      "unit": "Die zehn Fluggesellschaften mit den meisten Flügen. Je Zeile: Anzahl Flüge und ihre Flugzeit in Stunden (gemessen, sonst aus der Entfernung geschätzt). Zusammengefasst wird über den IATA-Code, notfalls über den vereinheitlichten Namen.",
+      "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter.",
+      "source": "Geflogene und nachgetragene Flüge mit Fluggesellschaft (Name, IATA- oder ICAO-Code), abgeglichen mit dem Fluggesellschafts-Katalog.",
+      "coverage": "Flüge ohne Fluggesellschaft stehen in einer eigenen Zeile über der Liste und werden nicht gerankt. Trägst du die Gesellschaft nach, wandern sie in die Liste.",
+      "exclusions": "Nicht enthalten: Flüge ohne Fluggesellschaft (nur als eigene Zeile), Gesellschaften jenseits der ersten zehn, geplante und stornierte Flüge sowie Entwürfe."
+    },
+    "airports": {
+      "unit": "Die zehn Flughäfen mit den meisten Besuchen. Zähleinheit: ein Abflug oder eine Ankunft – jeder Flug zählt an beiden Enden einmal, ein Umstieg also zweimal (Ankunft und Weiterflug).",
+      "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter.",
+      "source": "Geflogene und nachgetragene Flüge, mit dem Flughafen-Code beider Enden (IATA, sonst ICAO).",
+      "coverage": "Ist ein Flughafen einmal mit IATA- und einmal nur mit ICAO-Code erfasst, erscheint er unter beiden Codes getrennt. Enden ganz ohne Code werden unter „Unknown“ gesammelt.",
+      "exclusions": "Nicht enthalten: Flughäfen jenseits der ersten zehn, geplante und stornierte Flüge sowie Entwürfe."
+    },
+    "seatClasses": {
+      "unit": "Zähleinheit: ein Flug je Sitzklasse (Economy, Premium Economy, Business, First), mit Anteil in Prozent aller gezählten Flüge.",
+      "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter.",
+      "source": "Geflogene und nachgetragene Flüge, Feld Sitzklasse.",
+      "coverage": "Flüge ohne Sitzklasse stehen als „Nicht angegeben“ in der Liste und zählen im Prozentanteil mit. Eine nachgetragene Klasse verschiebt sie in die richtige Zeile.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge sowie Entwürfe."
+    },
+    "aircraftTypes": {
+      "unit": "Die zehn häufigsten Flugzeugtypen. Zähleinheit: ein Flug je Typ.",
+      "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter.",
+      "source": "Geflogene und nachgetragene Flüge, Feld Flugzeug.",
+      "coverage": "Gruppiert wird nach dem Eintrag, wie er geschrieben ist – „A320“ und „Airbus A320“ sind zwei Zeilen. Nur Flüge mit eingetragenem Flugzeug zählen.",
+      "exclusions": "Nicht enthalten: Flüge ohne Flugzeugtyp, Typen jenseits der ersten zehn, geplante und stornierte Flüge sowie Entwürfe."
+    },
+    "status": {
+      "unit": "Zähleinheit: ein Flug je Status, mit Anteil in Prozent aller gezählten Flüge.",
+      "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter.",
+      "source": "Geflogene und nachgetragene Flüge, Feld Status.",
+      "coverage": "Weil die Seite nur gezählte Flüge lädt, erscheinen hier nur „Geflogen“ und „Historisch“ (nachgetragen).",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge sowie Entwürfe – sie werden vor der Verteilung aussortiert, obwohl es sie als Status gibt."
+    },
+    "boardingGroups": {
+      "unit": "Zähleinheit: ein Flug je Boarding-Gruppe, sortiert nach Häufigkeit.",
+      "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter.",
+      "source": "Geflogene und nachgetragene Flüge, Feld Boarding-Gruppe.",
+      "coverage": "Gruppiert wird nach dem Eintrag, wie er geschrieben ist. Die Karte erscheint erst, wenn mindestens ein Flug eine Boarding-Gruppe trägt.",
+      "exclusions": "Nicht enthalten: Flüge ohne Boarding-Gruppe, geplante und stornierte Flüge sowie Entwürfe."
+    },
+    "longestFlight": {
+      "unit": "Der eine Flug mit der längsten Flugdauer (das Maximum), mit Fluggesellschaft, Flugnummer, Strecke und Dauer.",
+      "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter. Gemessen wird zeitzonenrichtig zwischen Abflug und Ankunft.",
+      "source": "Geflogene und nachgetragene Flüge: die vom Server berechnete Dauer, sonst die Uhrzeiten, sonst eine Schätzung aus der Großkreis-Entfernung (÷ 800 km/h plus 15 Minuten).",
+      "coverage": "Geschätzte Dauern konkurrieren gleichberechtigt mit gemessenen. Echte Uhrzeiten am Flug ersetzen die Schätzung.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge, Entwürfe und Flüge ohne jede Dauer."
+    },
+    "shortestFlight": {
+      "unit": "Der eine Flug mit der kürzesten Flugdauer über 0 (das Minimum), mit Fluggesellschaft, Flugnummer, Strecke und Dauer in Stunden.",
+      "time": "Alle Jahre zusammen, unabhängig vom Jahresfilter. Gemessen wird zeitzonenrichtig zwischen Abflug und Ankunft.",
+      "source": "Geflogene und nachgetragene Flüge: die vom Server berechnete Dauer, sonst die Uhrzeiten, sonst eine Schätzung aus der Großkreis-Entfernung (÷ 800 km/h plus 15 Minuten).",
+      "coverage": "Geschätzte Dauern konkurrieren gleichberechtigt mit gemessenen; eine Schätzung ist nie kürzer als 15 Minuten. Echte Uhrzeiten am Flug ersetzen die Schätzung.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge, Entwürfe und Flüge ohne jede Dauer."
+    }
+  },
+  "records": {
+    "longestFlight": {
+      "unit": "Ein Flug, die größte Entfernung in Kilometern. Gilt die gespeicherte Streckenlänge des Flugs, sonst die Großkreisdistanz zwischen den Koordinaten beider Flughäfen; daneben steht die Flugdauer, wenn sie bekannt ist.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht. Bei gleicher Länge gewinnt der Flug mit dem späteren Abflug.",
+      "source": "Geflogene und nachgetragene Flüge, gelesen über die Rekord-Abfrage des Servers: gespeicherte Streckenlänge, sonst die Koordinaten von Start und Ziel.",
+      "coverage": "Jeder Flug mit Streckenlänge oder Koordinaten an beiden Enden nimmt teil.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge ohne Streckenlänge und ohne Koordinaten."
+    },
+    "shortestFlight": {
+      "unit": "Ein Flug, die kleinste Entfernung über null Kilometern – gespeicherte Streckenlänge, sonst Großkreisdistanz zwischen den Flughafen-Koordinaten.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht. Bei gleicher Länge bleibt der zuerst gefundene Flug stehen.",
+      "source": "Geflogene und nachgetragene Flüge mit Streckenlänge oder Koordinaten beider Flughäfen.",
+      "coverage": "Jeder Flug mit einer Entfernung über 0 km nimmt teil.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge mit 0 km (zum Beispiel ein Rundflug zurück zum Startflughafen), denn ein Null-Flug würde diesen Rekord für immer halten."
+    },
+    "busiestDay": {
+      "unit": "Ein Kalendertag, gezählt werden die Flüge, die an diesem Tag abgeflogen sind. Darunter steht die Kette der Flughäfen: Start des ersten Flugs, dann jedes Ziel.",
+      "time": "Abflugtag am Abflughafen. Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht. Bei Gleichstand gewinnt der spätere Tag.",
+      "source": "Geflogene und nachgetragene Flüge mit Abflugdatum.",
+      "coverage": "Ein Eintrag, von dem nur das Jahr bekannt ist, steht auf dem 1. Januar (nur der Monat bekannt: auf dem Ersten des Monats). Mehrere solche Einträge eines Jahres landen deshalb auf demselben Tag und können ihn zum vollsten Tag machen.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge ohne Abflugdatum."
+    },
+    "longestAloft": {
+      "unit": "Ein Flug, die längste Dauer in Minuten: Ankunft minus Abflug, mit den Zeitzonen beider Flughäfen verrechnet.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge mit Abflug- und Ankunftszeit.",
+      "coverage": "Nur Flüge mit echten Uhrzeiten an beiden Enden. Nachgetragene Flüge ohne Uhrzeit haben keine Dauer und nehmen nicht teil.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge mit nur einem Datum statt einer Uhrzeit und Flüge, deren Dauer 0 oder negativ wäre."
+    },
+    "biggestDelay": {
+      "unit": "Ein Flug, die größte Verspätung in Minuten. Die Verspätung ist die tatsächliche minus die geplante Abflugzeit.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge mit erfasster Verspätung (aus tatsächlicher Abflugzeit oder von dir eingetragen).",
+      "coverage": "Nur Flüge, bei denen eine Verspätung erfasst ist. Ohne tatsächliche Abflugzeit gibt es keinen Wert.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge ohne Verspätungsangabe sowie pünktliche und verfrühte Abflüge (0 Minuten oder weniger)."
+    },
+    "northernmost": {
+      "unit": "Ein Flughafen: der höchste Breitengrad unter allen Start- und Zielflughäfen, in Grad Nord (südlich des Äquators in Grad Süd).",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, gelesen werden die am Flug gespeicherten Koordinaten beider Enden; angezeigt wird der Flughafen-Code (IATA).",
+      "coverage": "Jedes Flugende mit Koordinaten zählt. Der Rekord nennt einen Ort, keinen einzelnen Flug.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge."
+    },
+    "longestStreak": {
+      "unit": "Aufeinanderfolgende Kalendertage, an denen jeweils mindestens ein Flug abgeflogen ist; der Wert ist die Zahl der Tage, dazu Anfang und Ende.",
+      "time": "Abflugtag am Abflughafen. Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht. Bei gleich langen Serien gewinnt die jüngste.",
+      "source": "Geflogene und nachgetragene Flüge mit Abflugdatum.",
+      "coverage": "Ein Eintrag, von dem nur das Jahr bekannt ist, steht auf dem 1. Januar und kann so eine Serie um Neujahr verlängern oder einen einzelnen Tag bilden.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge ohne Abflugdatum."
+    }
+  },
+  "punctuality": {
+    "sample": {
+      "unit": "Die Zahl der Flüge, bei denen eine Verspätung erfasst ist – die Stichprobe, auf der alle Werte dieses Abschnitts beruhen.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge mit einem Verspätungswert; er entsteht aus tatsächlicher minus geplanter Abflugzeit.",
+      "coverage": "Nur Flüge mit erfasster Verspätung, auch 0 Minuten und verfrühte Abflüge zählen. Ohne Stichprobe bleibt der ganze Abschnitt verborgen.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge ohne Verspätungsangabe – „nicht erfasst“ ist nicht „pünktlich“."
+    },
+    "avgDelay": {
+      "unit": "Durchschnitt in Minuten = Summe der Verspätungen ÷ Flüge der Stichprobe, angezeigt auf ganze Minuten gerundet. Verfrühte Abflüge gehen mit negativen Minuten ein und senken den Wert.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Der Verspätungswert der Flüge: tatsächliche minus geplante Abflugzeit.",
+      "coverage": "Nur Flüge mit erfasster Verspätung.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge ohne Verspätungsangabe."
+    },
+    "onTimeRate": {
+      "unit": "Anteil in % = Flüge mit weniger als 15 Minuten Verspätung ÷ Flüge der Stichprobe. Genau 15 Minuten gelten schon als verspätet; verfrühte Abflüge zählen als pünktlich.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Der Verspätungswert der Flüge: tatsächliche minus geplante Abflugzeit.",
+      "coverage": "Nur Flüge mit erfasster Verspätung.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge ohne Verspätungsangabe."
+    },
+    "airlines": {
+      "unit": "Je Airline die durchschnittliche Verspätung in Minuten; pünktlichste = kleinster, unpünktlichste = größter Durchschnitt. In Klammern stehen Durchschnitt und Zahl der Flüge.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht. Bei gleichem Durchschnitt entscheidet die alphabetische Reihenfolge.",
+      "source": "Flüge der Stichprobe, gruppiert nach dem IATA-Code der Airline, sonst nach dem eingetragenen Airline-Namen.",
+      "coverage": "Eine Airline braucht mindestens 3 Flüge mit Verspätungsangabe. Erreicht nur eine Airline diese Schwelle, steht sie auf beiden Kacheln.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge ohne Verspätungsangabe oder ohne Airline; Airlines mit weniger als 3 solchen Flügen."
+    },
+    "worstRoute": {
+      "unit": "Die Strecke mit der größten durchschnittlichen Verspätung, je Richtung getrennt – MUC→JFK und JFK→MUC sind zwei Strecken.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht. Bei gleichem Durchschnitt entscheidet die alphabetische Reihenfolge.",
+      "source": "Flüge der Stichprobe mit IATA-Code an Start und Ziel.",
+      "coverage": "Eine Strecke braucht mindestens 3 Flüge mit Verspätungsangabe in derselben Richtung.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge ohne Verspätungsangabe; Flüge, bei denen an einem Ende der IATA-Code fehlt (ein ICAO-Code allein reicht hier nicht)."
+    }
+  },
+  "fun": {
+    "timezoneHopper": {
+      "unit": "Verschiedene Zeitzonen (IANA, etwa Europe/Berlin) der Flughäfen, an denen du gestartet oder gelandet bist. Gezählt werden die Zeitzonen der Flughäfen, nicht die überflogenen.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge; die Zeitzone kommt aus dem Flughafenkatalog, nachgeschlagen über IATA- und ICAO-Code beider Enden.",
+      "coverage": "Nur Flughäfen, die der Katalog kennt und für die er eine Zeitzone führt.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flughäfen ohne Code oder ohne Katalogeintrag."
+    },
+    "earlyBird": {
+      "unit": "Zahl der Flüge, die zwischen 6:00 und 11:59 Uhr abgeflogen sind.",
+      "time": "Die Uhrzeit am Abflughafen, in der Zeitzone, mit der der Flug gespeichert wurde (sonst die des Katalogs). Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene Flüge mit Abflug- und Ankunftszeit.",
+      "coverage": "Nur Flüge mit echter Uhrzeit; ein Eintrag mit nur einem Datum hat keine Stunde.",
+      "exclusions": "Nicht enthalten: nachgetragene Flüge (ihre Uhrzeiten sind meist Platzhalter), Flüge ohne Ankunftszeit, Flüge mit nur einem Datum, geplante, stornierte und als Entwurf duplizierte Flüge."
+    },
+    "nightOwl": {
+      "unit": "Zahl der Flüge, die am Abend oder in der Nacht abgeflogen sind: von 18:00 bis 5:59 Uhr.",
+      "time": "Die Uhrzeit am Abflughafen, in der Zeitzone, mit der der Flug gespeichert wurde (sonst die des Katalogs). Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene Flüge mit Abflug- und Ankunftszeit.",
+      "coverage": "Nur Flüge mit echter Uhrzeit; ein Eintrag mit nur einem Datum hat keine Stunde.",
+      "exclusions": "Nicht enthalten: nachgetragene Flüge (ihre Uhrzeiten sind meist Platzhalter), Flüge ohne Ankunftszeit, Flüge mit nur einem Datum, geplante, stornierte und als Entwurf duplizierte Flüge."
+    },
+    "weekend": {
+      "unit": "Zahl der Flüge mit Abflug an einem Samstag oder Sonntag. Prozent = Wochenendflüge ÷ alle geflogenen Flüge mit Abflug- und Ankunftszeit, gerundet.",
+      "time": "Wochentag des Abflugtags am Abflughafen. Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene Flüge mit Abflug- und Ankunftszeit.",
+      "coverage": "Hier zählt auch ein geflogener Flug, der nur ein Datum ohne echte Uhrzeit trägt – der Wochentag hängt nur am Datum.",
+      "exclusions": "Nicht enthalten: nachgetragene Flüge (ihr Datum ist oft ein Platzhalter, der Wochentag wäre dann bedeutungslos), Flüge ohne Ankunftszeit, geplante, stornierte und als Entwurf duplizierte Flüge."
+    },
+    "loyalty": {
+      "unit": "Anteil in % = Flüge mit deiner häufigsten Airline ÷ alle gezählten Flüge, gerundet. Daneben steht diese Airline.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht. Bei Gleichstand steht die zuerst gefundene Airline.",
+      "source": "Geflogene und nachgetragene Flüge, gruppiert nach dem eingetragenen Airline-Namen; bekannte Schreibvarianten (etwa „Lufthansa German Airlines“) werden zusammengeführt, der Airline-Code wird hier nicht gelesen.",
+      "coverage": "Flüge ohne Airline-Namen stehen trotzdem im Nenner und senken den Anteil – ein Name an diesen Flügen hebt ihn.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge."
+    },
+    "shortHaul": {
+      "unit": "Zahl der Flüge mit weniger als 500 km Großkreisdistanz zwischen den beiden Flughäfen.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, gelesen werden die am Flug gespeicherten Koordinaten von Start und Ziel.",
+      "coverage": "Jeder Flug mit Koordinaten an beiden Enden.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge ab 500 km."
+    },
+    "longHaul": {
+      "unit": "Zahl der Flüge mit mindestens 5000 km Großkreisdistanz – ein Flug von genau 5000 km zählt schon.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, gelesen werden die am Flug gespeicherten Koordinaten von Start und Ziel.",
+      "coverage": "Jeder Flug mit Koordinaten an beiden Enden.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge unter 5000 km."
+    },
+    "fastestDay": {
+      "unit": "Der Kalendertag mit den meisten Abflügen und die Zahl dieser Flüge.",
+      "time": "Abflugtag am Abflughafen. Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht. Bei Gleichstand steht der zuerst gefundene Tag, nicht unbedingt der früheste oder späteste.",
+      "source": "Geflogene und nachgetragene Flüge mit Abflugdatum.",
+      "coverage": "Ein Eintrag, von dem nur das Jahr bekannt ist, steht auf dem 1. Januar (nur der Monat bekannt: auf dem Ersten). Mehrere solche Einträge eines Jahres sammeln sich dort und können diesen Tag nach vorn bringen.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge ohne Abflugdatum."
+    },
+    "co2": {
+      "unit": "Summe in kg CO₂. Je Flug: Großkreisdistanz × 0,255 kg/km unter 1500 km, sonst × 0,195 kg/km, mal Kabinenfaktor (Economy 1,0, Premium Economy 1,6, Business 2,9, First 4,0), je Flug gerundet. Elefanten = kg ÷ 4000, auf eine Nachkommastelle.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge: Koordinaten von Start und Ziel und die Sitzklasse.",
+      "coverage": "Ein Flug ohne oder mit unbekannter Sitzklasse wird als Economy gerechnet – eine eingetragene Klasse macht den Wert genauer. Umwege, Flugzeugtyp und Auslastung fließen nicht ein.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge."
+    },
+    "milestoneYear": {
+      "unit": "Das Jahr mit den meisten Flügen und die Zahl dieser Flüge.",
+      "time": "Jahr des Abflugtags am Abflughafen. Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht. Bei Gleichstand gewinnt das frühere Jahr.",
+      "source": "Geflogene und nachgetragene Flüge mit Abflugdatum.",
+      "coverage": "Auch Einträge, von denen nur das Jahr bekannt ist, zählen in ihrem Jahr.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge ohne Abflugdatum."
+    },
+    "routeMaster": {
+      "unit": "Die am häufigsten geflogene Verbindung und wie oft. Eine Verbindung ist das Flughafenpaar ohne Richtung – Hin- und Rückflug zählen zusammen.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht. Bei Gleichstand steht die zuerst gefundene Verbindung.",
+      "source": "Geflogene und nachgetragene Flüge mit Flughafen-Code (IATA, sonst ICAO) an beiden Enden.",
+      "coverage": "Jeder Flug mit Code an Start und Ziel.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge, bei denen an einem Ende der Flughafen-Code fehlt."
+    }
+  },
+  "business": {
+    "costPerKm": {
+      "unit": "Kosten pro Kilometer = Gesamtkosten ÷ Großkreis-Kilometer der Flüge, die einen Preis tragen, auf Cent gerundet. Bei einer Buchung mit Preis zählen alle ihre Flüge mit ihren Kilometern.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht. Fremdwährungen werden mit dem beim Speichern festgehaltenen Kurs umgerechnet, nicht mit dem heutigen.",
+      "source": "Geflogene und nachgetragene Flüge: Buchungspreis (je Buchung einmal), sonst Preis + Steuern + Gebühren des Flugs, dazu die Koordinaten beider Flughäfen.",
+      "coverage": "Nur Flüge mit Preis. Ein Betrag in anderer Währung als deiner Basiswährung braucht einen gespeicherten Umrechnungskurs, sonst fällt er samt seinen Kilometern heraus. Ohne einen einzigen Preis steht hier ein Strich – eine Rate über nichts ist keine 0.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge ohne Preis und Beträge, die sich nicht in die Basiswährung umrechnen lassen."
+    },
+    "costPerHour": {
+      "unit": "Kosten pro Flugstunde = Kosten ÷ Flugstunden derselben Flüge, auf Cent gerundet. Bei einer Buchung mit Preis zählen die Stunden all ihrer geflogenen Flüge.",
+      "time": "Gemessene Stunden aus Abflug- und Ankunftszeit, wenn sie als echte Zeitpunkte gespeichert sind; sonst eine Schätzung aus der Entfernung (800 km/h plus 15 Minuten). Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene Flüge mit Abflug- und Ankunftszeit: Buchungspreis (je Buchung einmal), sonst Preis + Steuern + Gebühren, und die Flugdauer.",
+      "coverage": "Nur geflogene Flüge mit Preis und beiden Zeiten. Beträge in fremder Währung brauchen einen gespeicherten Kurs. Ohne einen einzigen Preis steht hier ein Strich; tragen nur nachgetragene Flüge einen Preis, steht hier 0.",
+      "exclusions": "Nicht enthalten: nachgetragene Flüge, Flüge ohne Ankunftszeit, Flüge ohne Preis, nicht umrechenbare Beträge, geplante, stornierte und als Entwurf duplizierte Flüge."
+    },
+    "totalCost": {
+      "unit": "Summe aller Flugkosten in deiner Basiswährung, auf Cent gerundet. Eine Buchung zählt einmal, egal wie viele Flüge sie hat. Die Entfernung daneben ist die Großkreissumme aller gezählten Flüge, auch der ohne Preis.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht. Fremdwährungen werden mit dem beim Speichern festgehaltenen Kurs umgerechnet.",
+      "source": "Geflogene und nachgetragene Flüge: Buchungspreis, sonst Preis + Steuern + Gebühren des Flugs, mit Währung und gespeichertem Umrechnungskurs.",
+      "coverage": "Nur Beträge in deiner Basiswährung oder mit gespeichertem Kurs in sie. Trägt kein Flug einen Preis, steht ein Strich statt 0.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Beträge ohne Kurs in deine Basiswährung."
+    },
+    "airportDiversity": {
+      "unit": "Zahl der verschiedenen Flughafen-Codes, an denen du gestartet oder gelandet bist; jeder Flughafen zählt einmal.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, beide Enden, mit IATA-Code, sonst ICAO-Code.",
+      "coverage": "Dein Heimatflughafen zählt mit. Steht derselbe Flughafen einmal mit IATA- und einmal nur mit ICAO-Code im Logbuch, zählt er zweimal.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flugenden ohne Flughafen-Code."
+    },
+    "avgDuration": {
+      "unit": "Durchschnitt in Stunden = Summe der Flugdauern ÷ Zahl der Flüge, die eine Dauer beitragen, auf eine Nachkommastelle.",
+      "time": "Gemessen aus Abflug- und Ankunftszeit bei geflogenen Flügen mit echten Zeitpunkten; sonst geschätzt aus der Entfernung (800 km/h plus 15 Minuten). Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge: Abflug- und Ankunftszeit, sonst die Koordinaten beider Flughäfen.",
+      "coverage": "Nachgetragene Flüge werden immer geschätzt, weil ihre Uhrzeiten meist Platzhalter sind. Ein Flug ohne Zeiten und ohne Entfernung trägt nichts bei.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge."
+    },
+    "busiestMonth": {
+      "unit": "Der Kalendermonat mit den meisten Abflügen, über alle Jahre zusammengezählt (alle März-Flüge aller Jahre bilden einen Wert), und die Zahl dieser Flüge.",
+      "time": "Monat des Abflugtags am Abflughafen. Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht. Bei Gleichstand gewinnt der frühere Monat im Jahr.",
+      "source": "Geflogene und nachgetragene Flüge mit Abflugdatum.",
+      "coverage": "Ein Eintrag, von dem nur das Jahr bekannt ist, zählt als Januar und schiebt den Januar nach vorn.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge ohne Abflugdatum."
+    },
+    "category": {
+      "unit": "Die Kategorie, die die meisten Flüge tragen.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht. Bei Gleichstand steht die zuerst gefundene Kategorie.",
+      "source": "Geflogene und nachgetragene Flüge mit ihrem Kategorie-Feld.",
+      "coverage": "Flüge ohne Kategorie werden als „unassigned“ gesammelt und können selbst die häufigste sein – eine Kategorie an diesen Flügen ändert das.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge."
+    },
+    "seatClassShare": {
+      "unit": "Je Sitzklasse der Anteil in % = Flüge dieser Klasse ÷ alle gezählten Flüge, je Klasse gerundet – die Summe kann deshalb leicht von 100 abweichen.",
+      "time": "Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge mit ihrem Sitzklassen-Feld.",
+      "coverage": "Flüge ohne Sitzklasse erscheinen als eigene Zeile „unknown“; eine eingetragene Klasse verschiebt sie in die richtige Zeile.",
+      "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge."
+    }
+  },
+  "unique": {
+    "timeTravel": {
+      "unit": "Anzahl Flüge, bei denen die Uhr am Ziel bei der Landung eine frühere Uhrzeit zeigt als die Uhr am Start beim Abflug – etwa ab New York um 23 Uhr, an London um 11 Uhr. Verglichen wird nur die Uhrzeit ohne Datum, darum zählt auch jeder Flug, der nach Mitternacht zu einer früheren Uhrzeit landet.",
+      "time": "Abflugzeit auf der Uhr des Abflughafens, Landezeit auf der Uhr des Zielflughafens, beide Zeitzonen aus dem Flughafenkatalog. Ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene Flüge mit Abflug- und Ankunftszeit, dazu die Zeitzonen beider Flughäfen aus dem Flughafenkatalog (über den IATA-, sonst den ICAO-Code).",
+      "coverage": "Nur Flüge mit beiden Zeiten, deren beide Flughäfen der Katalog samt Zeitzone kennt. Fehlt eine Zeitzone, wird der Flug übersprungen statt geraten.",
+      "exclusions": "Nicht enthalten: nachgetragene (historische) Flüge, weil ihre Uhrzeiten unzuverlässig sind, Flüge ohne Ankunftszeit, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "equator": {
+      "unit": "Anzahl Flüge, deren Start und Ziel auf verschiedenen Seiten des Äquators liegen – von Nord nach Süd oder umgekehrt. Jeder Flug zählt einmal.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, mit der geografischen Breite der beiden Flughafenkoordinaten am Flug.",
+      "coverage": "Jeder Flug trägt Koordinaten, darum zählen alle. Gemessen wird an den beiden Endpunkten, nicht an der Route; ein Ende genau auf 0° gehört keiner Halbkugel an und löst keine Kreuzung aus.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "arctic": {
+      "unit": "Anzahl Flüge, bei denen mindestens ein Ende auf oder nördlich von 66,5° Nord liegt. Der Flug muss den Polarkreis nicht überqueren, ein Start oder eine Landung dort genügt.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, mit der geografischen Breite der beiden Flughafenkoordinaten am Flug.",
+      "coverage": "Nur der nördliche Polarkreis zählt; ein Flug in die Antarktis südlich von 66,5° Süd erscheint hier nicht. Ein Flug, der die Arktis nur überfliegt, zählt ebenfalls nicht.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "ocean": {
+      "unit": "Anzahl Flüge mit mehr als 5000 km Großkreis-Entfernung zwischen den beiden Flughäfen. Das ist eine Faustregel, kein Nachweis, dass der Flug wirklich über einen Ozean ging.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, Entfernung aus den Koordinaten beider Flughäfen am Flug.",
+      "coverage": "Ein Flug von genau 5000 km zählt nicht – anders als bei der Langstrecke, die ab 5000 km gilt. Kürzere Flüge über ein Meer, etwa über das Mittelmeer, erscheinen nie.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "hemisphere": {
+      "unit": "Anzahl Flüge, deren Start und Ziel auf verschiedenen Seiten des Nullmeridians liegen, also zwischen Ost- und Westhalbkugel wechseln – egal ob der kürzere Weg über den Nullmeridian oder über die Datumsgrenze führt.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, mit der geografischen Länge der beiden Flughafenkoordinaten am Flug.",
+      "coverage": "Jeder Flug trägt Koordinaten, darum zählen alle. Ein Ende genau auf 0° Länge gehört keiner Halbkugel an und löst keinen Wechsel aus.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "dateLine": {
+      "unit": "Anzahl Flüge, deren Start- und Ziellänge mehr als 180° auseinanderliegen – dann führt der kürzere Weg über die Datumsgrenze.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, mit der geografischen Länge der beiden Flughafenkoordinaten am Flug.",
+      "coverage": "Eine Schätzung aus den beiden Endpunkten, nicht aus der geflogenen Route: ein Flug, der tatsächlich einen anderen Weg nahm, wird danach beurteilt, welcher Weg der kürzere wäre.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "continents": {
+      "unit": "Anzahl verschiedener Kontinente, auf denen ein Flug gestartet oder gelandet ist; darunter stehen ihre Namen. Möglich sind sieben, Antarktis eingeschlossen.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, beide Enden. Der Kontinent folgt aus dem Land des Flughafens im Flughafenkatalog, bei Ländern auf zwei Kontinenten aus seinen Koordinaten.",
+      "coverage": "Nur Flughäfen, die der Katalog kennt (gesucht über den IATA-, sonst den ICAO-Code). Ein Flughafen, den die Kontinenttabelle nicht zuordnen kann, zählt gar nicht statt als „Sonstige“.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge sowie Entwürfe (Duplikate), Enden ohne Flughafen-Code."
+    },
+    "tropics": {
+      "unit": "Anzahl Flüge, bei denen mindestens ein Ende zwischen 23,5° Süd und 23,5° Nord liegt, die Grenzen eingeschlossen.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, mit der geografischen Breite der beiden Flughafenkoordinaten am Flug.",
+      "coverage": "Jeder Flug trägt Koordinaten, darum zählen alle. Ein Flug, der die Tropen nur überfliegt, ohne dort zu starten oder zu landen, zählt nicht.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "eastWest": {
+      "unit": "Zwei Zählungen: Flüge nach Osten und Flüge nach Westen, bestimmt aus dem Längenunterschied zwischen Start und Ziel auf dem kürzeren Weg um die Erde. Verhältnis = Ostflüge ÷ Westflüge, auf zwei Stellen gerundet; gibt es keinen Westflug, steht dort einfach die Zahl der Ostflüge.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, mit der geografischen Länge der beiden Flughafenkoordinaten am Flug.",
+      "coverage": "Jeder Flug trägt Koordinaten, darum zählen alle. Die Richtung kommt aus den Endpunkten, nicht aus der geflogenen Route.",
+      "exclusions": "Nicht enthalten: Flüge ohne Längenunterschied (genau nach Norden oder Süden, oder Rückkehr zum Startflughafen) – sie zählen in keiner Richtung –, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "sameDay": {
+      "unit": "Anzahl Flüge, die am selben Kalendertag landen, an dem sie starten – jeweils nach dem Ortskalender.",
+      "time": "Abflugtag auf dem Kalender des Abflughafens, Landetag auf dem Kalender des Zielflughafens, Zeitzonen aus dem Flughafenkatalog. Kennt der Katalog die Zeitzone eines Endes nicht, gilt dort das UTC-Datum. Ganze Logbuch-Zeit, der Jahresfilter gilt nicht.",
+      "source": "Geflogene Flüge mit Abflug- und Ankunftszeit, dazu die Zeitzonen beider Flughäfen aus dem Flughafenkatalog.",
+      "coverage": "Nur Flüge mit beiden Zeiten. Tagesflüge und Mitternachts-Flüge ergänzen sich genau: jeder dieser Flüge steht in genau einer der beiden Zahlen.",
+      "exclusions": "Nicht enthalten: nachgetragene (historische) Flüge, weil ihre Uhrzeiten unzuverlässig sind, Flüge ohne Ankunftszeit, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "midnight": {
+      "unit": "Anzahl Flüge, deren Landetag ein anderer ist als ihr Abflugtag – jeweils nach dem Ortskalender. Dazu gehört auch ein Flug, der über die Datumsgrenze an einem früheren Datum landet.",
+      "time": "Abflugtag auf dem Kalender des Abflughafens, Landetag auf dem Kalender des Zielflughafens, Zeitzonen aus dem Flughafenkatalog. Kennt der Katalog die Zeitzone eines Endes nicht, gilt dort das UTC-Datum. Ganze Logbuch-Zeit, der Jahresfilter gilt nicht.",
+      "source": "Geflogene Flüge mit Abflug- und Ankunftszeit, dazu die Zeitzonen beider Flughäfen aus dem Flughafenkatalog.",
+      "coverage": "Nur Flüge mit beiden Zeiten. Mitternachts-Flüge und Tagesflüge ergänzen sich genau: jeder dieser Flüge steht in genau einer der beiden Zahlen.",
+      "exclusions": "Nicht enthalten: nachgetragene (historische) Flüge, weil ihre Uhrzeiten unzuverlässig sind, Flüge ohne Ankunftszeit, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "seasons": {
+      "unit": "Ob du in allen vier Jahreszeiten geflogen bist (Haken oder Kreuz); darunter die Zahl der Jahreszeiten mit mindestens einem Flug. Die Jahreszeiten folgen den Monaten der Nordhalbkugel: Frühling März–Mai, Sommer Juni–August, Herbst September–November, Winter Dezember–Februar.",
+      "time": "Monat des Abflugtags auf dem Kalender des Abflughafens, über die ganze Logbuch-Zeit. Ein Flug mit Platzhalterdatum (nur das Jahr bekannt) liest sich als Januar und zählt damit zum Winter.",
+      "source": "Geflogene und nachgetragene Flüge mit Abflugdatum.",
+      "coverage": "Die Monate der Nordhalbkugel gelten auch für Flüge auf der Südhalbkugel – ein Flug nach Sydney im Januar zählt als Winter.",
+      "exclusions": "Nicht enthalten: Flüge ohne Datum, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "internationalDomestic": {
+      "unit": "Zwei Zählungen: internationale Flüge (Start- und Zielland verschieden) und Inlandsflüge (gleiches Land). Verhältnis = international ÷ Inland, auf zwei Stellen gerundet; gibt es keinen Inlandsflug, steht dort einfach die Zahl der internationalen Flüge.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, das Land beider Flughäfen aus dem Flughafenkatalog (gesucht über den IATA-, sonst den ICAO-Code).",
+      "coverage": "Nur Flüge, bei denen der Katalog beide Flughäfen samt Land kennt. Ein Flug mit unbekanntem Land zählt in keiner der beiden Zahlen – er ist kein Beleg für einen Inlandsflug.",
+      "exclusions": "Nicht enthalten: Flüge ohne Flughafen-Code an einem Ende, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "roundTrips": {
+      "unit": "Anzahl vollständiger Hin- und Rückflüge A→B→A – keine Anzahl Flüge. Je Flughafenpaar zählen so viele, wie die seltenere Richtung Flüge hat: dreimal A→B und einmal B→A ergibt eine Rundreise.",
+      "time": "Ohne Zeitbezug: Hin- und Rückflug müssen weder direkt aufeinander folgen noch im selben Jahr liegen. Ganze Logbuch-Zeit, der Jahresfilter gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, mit dem Flughafen-Code beider Enden (IATA, sonst ICAO).",
+      "coverage": "Ein Flughafen, der einmal mit IATA- und einmal nur mit ICAO-Code erfasst ist, gilt als zwei verschiedene Flughäfen, und das Paar findet nicht zusammen.",
+      "exclusions": "Nicht enthalten: Flüge, die am Startflughafen wieder landen (Rundflüge), Flüge ohne Code an einem Ende, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "highestAirport": {
+      "unit": "Der Flughafen mit der größten Höhe über dem Meeresspiegel unter allen Flughäfen, an denen du gestartet oder gelandet bist, in Metern.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, beide Enden; Name und Höhe aus dem Flughafenkatalog.",
+      "coverage": "Nur Flughäfen, für die der Katalog eine Höhe kennt; ein Flughafen ohne Katalogeintrag oder ohne Höhe fehlt hier. Bei gleicher Höhe bleibt der zuerst gefundene stehen.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "northernmost": {
+      "unit": "Der nördlichste Punkt, an dem ein Flug gestartet oder gelandet ist, mit seiner Breite. Liegt dein ganzes Logbuch südlich des Äquators, steht hier eben eine südliche Breite.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, mit den Koordinaten, die am Flug gespeichert sind (nicht aus dem Katalog); der Code ist der IATA-, sonst der ICAO-Code.",
+      "coverage": "Jeder Flug trägt Koordinaten, darum zählen alle. Bei gleicher Breite bleibt der zuerst gefundene Flughafen stehen.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "southernmost": {
+      "unit": "Der südlichste Punkt, an dem ein Flug gestartet oder gelandet ist, mit seiner Breite. Liegt dein ganzes Logbuch nördlich des Äquators, steht hier eben eine nördliche Breite.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, mit den Koordinaten, die am Flug gespeichert sind (nicht aus dem Katalog); der Code ist der IATA-, sonst der ICAO-Code.",
+      "coverage": "Jeder Flug trägt Koordinaten, darum zählen alle. Bei gleicher Breite bleibt der zuerst gefundene Flughafen stehen.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "travelChain": {
+      "unit": "Die meisten Flüge in einer Kette: jeder nächste Flug startet an dem Flughafen, an dem der vorige gelandet ist, und höchstens 24 Stunden nach dessen Landung. Die Karte erscheint erst ab einer Kette aus zwei Flügen.",
+      "time": "Reihenfolge nach Abflugzeitpunkt; der Abstand von der Landung bis zum nächsten Abflug wird zwischen den gespeicherten Zeitpunkten gemessen, Zeitzonen spielen dafür keine Rolle. Ganze Logbuch-Zeit, der Jahresfilter gilt nicht.",
+      "source": "Geflogene Flüge mit Abflug- und Ankunftszeit und dem Flughafen-Code beider Enden (IATA, sonst ICAO).",
+      "coverage": "Nur Flüge mit beiden Zeiten. Die Kette läuft auch über deinen Heimatflughafen hinweg; ein nicht erfasster Zwischenflug oder ein Code-Wechsel (IATA hier, ICAO dort) unterbricht sie.",
+      "exclusions": "Nicht enthalten: nachgetragene (historische) Flüge, Flüge ohne Ankunftszeit, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "fastestRoute": {
+      "unit": "Die Strecke mit der höchsten Durchschnittsgeschwindigkeit über Grund: Großkreis-Entfernung ÷ Flugdauer, in km/h, gerundet. Der Höchstwert über alle Flüge.",
+      "time": "Dauer = Ankunft minus Abflug als gespeicherte Zeitpunkte; nur bei Altdaten, deren beide Zeiten als Ortszeit gespeichert sind, wird über die Zeitzonen des Katalogs umgerechnet. Ganze Logbuch-Zeit, der Jahresfilter gilt nicht.",
+      "source": "Geflogene Flüge mit Abflug- und Ankunftszeit und den Koordinaten beider Flughäfen am Flug.",
+      "coverage": "Nur Flüge mit beiden Zeiten und echter Abflug-Uhrzeit. Flüge bis 30 Minuten Dauer und Werte über 1200 km/h gelten als Datenfehler und fallen heraus.",
+      "exclusions": "Nicht enthalten: nachgetragene (historische) Flüge, Flüge, deren Abflug nur ein Datum ohne Uhrzeit hat, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "mostCountriesInDay": {
+      "unit": "Die meisten verschiedenen Länder an einem Tag: Start- und Zielländer aller Flüge, die an diesem Tag abgeflogen sind, je Land einmal; daneben das Datum.",
+      "time": "Tag = Abflugtag auf dem Kalender des Abflughafens; ein Flug, der nach Mitternacht landet, gehört ganz zum Abflugtag. Ganze Logbuch-Zeit, der Jahresfilter gilt nicht.",
+      "source": "Geflogene Flüge mit Abflug- und Ankunftszeit, das Land beider Flughäfen aus dem Flughafenkatalog (gesucht über den IATA-, sonst den ICAO-Code).",
+      "coverage": "Nur Flughäfen, die der Katalog samt Land kennt. Haben zwei Tage gleich viele Länder, bleibt der zuerst gefundene stehen – nicht zwingend der frühere.",
+      "exclusions": "Nicht enthalten: nachgetragene (historische) Flüge, Flüge ohne Ankunftszeit, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "longestLayover": {
+      "unit": "Die längste Wartezeit zwischen zwei direkt aufeinanderfolgenden Flügen am selben Flughafen, von der Landung des einen bis zum Abflug des nächsten, in Stunden auf eine Nachkommastelle; dazu der Flughafen.",
+      "time": "Reihenfolge nach Abflugzeitpunkt, Wartezeit als Abstand der gespeicherten Zeitpunkte. Ob der Flughafen dein Zuhause war, entscheidet der Landetag auf dessen Ortskalender. Ganze Logbuch-Zeit, der Jahresfilter gilt nicht.",
+      "source": "Geflogene Flüge mit Abflug- und Ankunftszeit und Flughafen-Codes (IATA, sonst ICAO), dazu deine Heimatflughafen-Historie aus den Einstellungen.",
+      "coverage": "Nur Flugpaare, bei denen der nächste Flug dort startet, wo der vorige gelandet ist, mit einer Wartezeit über null und höchstens 24 Stunden. Liegt ein nicht erfasster Flug dazwischen, gilt das Paar nicht als Umstieg.",
+      "exclusions": "Nicht enthalten: Wartezeiten über 24 Stunden (ein Aufenthalt, kein Umstieg), Landungen an einem Flughafen, der an diesem Tag als Heimatflughafen hinterlegt ist, nachgetragene (historische), geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "shortestLayover": {
+      "unit": "Die kürzeste Wartezeit zwischen zwei direkt aufeinanderfolgenden Flügen am selben Flughafen, von der Landung des einen bis zum Abflug des nächsten, in Stunden auf eine Nachkommastelle; dazu der Flughafen.",
+      "time": "Reihenfolge nach Abflugzeitpunkt, Wartezeit als Abstand der gespeicherten Zeitpunkte. Ob der Flughafen dein Zuhause war, entscheidet der Landetag auf dessen Ortskalender. Ganze Logbuch-Zeit, der Jahresfilter gilt nicht.",
+      "source": "Geflogene Flüge mit Abflug- und Ankunftszeit und Flughafen-Codes (IATA, sonst ICAO), dazu deine Heimatflughafen-Historie aus den Einstellungen.",
+      "coverage": "Nur Flugpaare, bei denen der nächste Flug dort startet, wo der vorige gelandet ist, mit einer Wartezeit über null und höchstens 24 Stunden. Eine Wartezeit von null oder darunter (überlappende Zeiten) gilt als Datenfehler.",
+      "exclusions": "Nicht enthalten: Wartezeiten über 24 Stunden, Landungen an einem Flughafen, der an diesem Tag als Heimatflughafen hinterlegt ist, nachgetragene (historische), geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    }
+  },
+  "airports": {
+    "airportCount": {
+      "unit": "Anzahl verschiedener Flughäfen, an denen ein Flug gestartet oder gelandet ist. Gezählt wird der Flughafen-Code (IATA, sonst ICAO), jeder einmal.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, mit dem Flughafen-Code beider Enden.",
+      "coverage": "Ein Flughafen, der einmal mit IATA- und einmal nur mit ICAO-Code erfasst ist, zählt doppelt.",
+      "exclusions": "Nicht enthalten: Enden ohne Flughafen-Code, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "countryCount": {
+      "unit": "Anzahl verschiedener Länder, in denen ein Flug gestartet oder gelandet ist, jedes Land einmal.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, beide Enden; das Land jedes Flughafens kommt aus dem Flughafenkatalog (gesucht über den IATA-, sonst den ICAO-Code).",
+      "coverage": "Nur Flughäfen, die der Katalog samt Land kennt; ein unbekannter Flughafen trägt kein Land bei.",
+      "exclusions": "Nicht enthalten: Enden ohne Flughafen-Code, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "continentCount": {
+      "unit": "Anzahl verschiedener Kontinente, auf denen ein Flug gestartet oder gelandet ist. Die Zahl hinter dem Schrägstrich sind alle sieben: Afrika, Antarktis, Asien, Europa, Nordamerika, Ozeanien, Südamerika.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, beide Enden. Der Kontinent folgt aus dem Land des Flughafens im Flughafenkatalog, bei Ländern auf zwei Kontinenten aus seinen Koordinaten.",
+      "coverage": "Nur Flughäfen, die der Katalog kennt und einem Kontinent zuordnen kann. „Sonstige“ ist kein Kontinent und zählt hier nicht mit.",
+      "exclusions": "Nicht enthalten: Enden ohne Flughafen-Code, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "topAirports": {
+      "unit": "Die fünf Flughäfen mit den meisten Besuchen. Ein Besuch ist ein Start oder eine Landung – Hin- und Rückflug ab demselben Flughafen sind dort zwei Besuche.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, mit dem Flughafen-Code beider Enden (IATA, sonst ICAO); der Name kommt aus dem Flughafenkatalog.",
+      "coverage": "Kennt der Katalog den Flughafen nicht, steht ein Strich statt des Namens. Bei gleicher Besuchszahl entscheidet die Reihenfolge, in der die Flughäfen gefunden wurden.",
+      "exclusions": "Nicht enthalten: Enden ohne Flughafen-Code, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "topCountries": {
+      "unit": "Die fünf Länder mit den meisten Flügen. Ein Flug zählt bei jedem Land, das er berührt, einmal: ein Inlandsflug einmal, ein internationaler Flug bei beiden Ländern.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, das Land von Start- und Zielflughafen aus dem Flughafenkatalog.",
+      "coverage": "Nur Flughäfen, die der Katalog samt Land kennt; ein Ende mit unbekanntem Land trägt nichts bei.",
+      "exclusions": "Nicht enthalten: Enden ohne Flughafen-Code, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "farthestFromHome": {
+      "unit": "Der Zielflughafen, der am weitesten von deinem damaligen Zuhause entfernt liegt: Großkreis-Entfernung in km vom Wohnort zum Ankunftsflughafen; daneben der damalige Heimatflughafen.",
+      "time": "Welches Zuhause gilt, entscheidet der Abflugtag am Abflughafen anhand deiner Heimat-Historie; ein Flug ohne Datum wird mit dem heutigen Zuhause gemessen. Ganze Logbuch-Zeit, der Jahresfilter gilt nicht.",
+      "source": "Geflogene und nachgetragene Flüge mit Ankunftsflughafen und dessen Koordinaten am Flug, dazu Wohnort und Heimatflughäfen aus deiner Heimat-Historie in den Einstellungen.",
+      "coverage": "Nur Flüge in Zeiträumen, für die ein Zuhause mit Wohnort hinterlegt ist; ohne Heimat-Historie bleibt die Karte leer. Bei einem übernommenen, noch nicht bestätigten Zeitraum ist der Wohnort der alte Heimatflughafen.",
+      "exclusions": "Nicht enthalten: Landungen an einem Flughafen, der an diesem Tag als Heimatflughafen hinterlegt ist, Startflughäfen (nur Ziele zählen), Ziele ohne Flughafen-Code, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "newThisYear": {
+      "unit": "Flughäfen, die in diesem Kalenderjahr zum ersten Mal in deinem ganzen Logbuch vorkommen, mit dem Datum des ersten Besuchs, früheste zuerst.",
+      "time": "Erster Besuch = frühester Abflugtag (am Abflughafen) eines Flugs, der dort startet oder landet – auch für das Ziel zählt der Abflugtag. Welches Jahr „dieses“ ist, bestimmt die Uhr des Servers in UTC; der Jahresfilter der Seite gilt nicht. Ein Flug mit Platzhalterdatum (nur das Jahr bekannt) gilt als am 1. Januar.",
+      "source": "Geflogene und nachgetragene Flüge mit Abflugdatum und Flughafen-Code beider Enden (IATA, sonst ICAO); Name und Land aus dem Flughafenkatalog.",
+      "coverage": "Referenz ist das ganze Logbuch: ein Flughafen, den du schon in einem früheren Jahr genutzt hast, ist nicht neu. Flüge ohne Datum können keinen ersten Besuch setzen.",
+      "exclusions": "Nicht enthalten: Flüge ohne Datum, Enden ohne Flughafen-Code, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "rarest": {
+      "unit": "Flughäfen mit genau einem Besuch – ein einziger Start oder eine einzige Landung dort, höchstens fünf.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, mit dem Flughafen-Code beider Enden (IATA, sonst ICAO); Name und Land aus dem Flughafenkatalog.",
+      "coverage": "Gezeigt werden die ersten fünf in der Reihenfolge, in der die Flüge gelesen werden – nicht nach Datum oder Name sortiert. Ein Flughafen, der mit IATA- und mit ICAO-Code erfasst ist, kann hier mit je einem Besuch stehen.",
+      "exclusions": "Nicht enthalten: Enden ohne Flughafen-Code, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "continentDistribution": {
+      "unit": "Je Kontinent die Zahl der Flüge, die dort starten oder landen: ein Flug innerhalb eines Kontinents zählt einmal, ein interkontinentaler bei beiden. Prozent = Anteil an der Summe aller Zeilen, die damit größer sein kann als die Zahl deiner Flüge.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, beide Enden. Der Kontinent folgt aus dem Land des Flughafens im Flughafenkatalog, bei Ländern auf zwei Kontinenten aus seinen Koordinaten.",
+      "coverage": "Flughäfen, die der Katalog nicht kennt oder keinem Kontinent zuordnen kann, und Enden ohne Code stehen unter „Sonstige“.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    }
+  },
+  "seats": {
+    "position": {
+      "unit": "Wie oft du am Fenster, in der Mitte und am Gang gesessen hast, je Flug einmal. Prozent = Anteil an diesen drei zusammen.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge mit Sitzplatz, etwa 23A: Reihennummer plus Buchstabe; entscheidend ist der letzte Buchstabe.",
+      "coverage": "Eine feste Buchstabentabelle für alle Flugzeugtypen: A, F, K Fenster; B, E, H, J Mitte; C, D, G Gang. Bei Großraumflugzeugen stimmt das nicht immer – in einer 3-4-3-Reihe ist F ein Mittelplatz und H ein Gangplatz.",
+      "exclusions": "Nicht enthalten: Flüge ohne Sitzplatz, Angaben, die nicht wie Zahl plus Buchstabe aussehen, andere Buchstaben (etwa L), geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "zone": {
+      "unit": "Wie oft du vorne, in der Mitte und hinten gesessen hast, nach Reihennummer: Reihen 1–10 vorne, 11–25 Mitte, alles andere hinten. Prozent = Anteil an diesen drei zusammen.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge mit Sitzplatz der Form Reihennummer plus Buchstabe.",
+      "coverage": "Feste Grenzen für alle Flugzeuge und Kabinen – in einem kleinen Jet ist Reihe 20 schon ganz hinten, in einem großen noch weit vorne. Ein Sitz mit unbekanntem Buchstaben zählt hier trotzdem mit.",
+      "exclusions": "Nicht enthalten: Flüge ohne Sitzplatz, Angaben, die nicht wie Zahl plus Buchstabe aussehen, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "mostCommon": {
+      "unit": "Die Sitzplatzangabe, die am häufigsten vorkommt; verglichen in Großbuchstaben, 23a und 23A sind also derselbe Platz.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, das Feld Sitzplatz.",
+      "coverage": "Jede eingetragene Angabe zählt, auch eine, die nicht wie Reihe plus Buchstabe aussieht. Bei Gleichstand gewinnt die zuerst gefundene.",
+      "exclusions": "Nicht enthalten: Flüge ohne Sitzplatz, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "avgRow": {
+      "unit": "Durchschnittliche Reihennummer = Summe der Reihennummern ÷ Anzahl Sitzplätze mit Reihennummer, auf eine Nachkommastelle.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, die Reihennummer aus dem Feld Sitzplatz.",
+      "coverage": "Nur Sitzplätze der Form Zahl plus Buchstabe(n). Die Reihennummer hängt von Flugzeug und Airline ab, der Durchschnitt mischt also verschiedene Kabinen.",
+      "exclusions": "Nicht enthalten: Flüge ohne Sitzplatz, Angaben, die nicht wie Zahl plus Buchstabe aussehen, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "seatClass": {
+      "unit": "Wie viele Flüge du in jeder Sitzklasse geflogen bist. Prozent = Anteil an allen Flügen mit eingetragener Klasse.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, das Feld Sitzklasse – unabhängig davon, ob ein Sitzplatz eingetragen ist.",
+      "coverage": "Nur Flüge mit eingetragener Sitzklasse. Der ganze Sitzplatz-Bereich erscheint aber erst, wenn mindestens ein Flug eine Sitzplatzangabe hat.",
+      "exclusions": "Nicht enthalten: Flüge ohne Sitzklasse, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    }
+  },
+  "rankings": {
+    "airlines": {
+      "unit": "Die zehn Airlines mit den meisten Flügen. Prozent = Flüge der Airline ÷ alle Flüge mit erkennbarer Airline, auf eine Nachkommastelle; der Balken zeigt die Flüge im Verhältnis zur ersten Zeile.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge. Die Airline ist der IATA-Code am Flug, sonst der ICAO-Code oder der Name, über den Airline-Katalog in einen IATA-Code übersetzt; als Bezeichnung steht der Katalogname, sonst die häufigste Schreibweise.",
+      "coverage": "Gleiche Airline heißt gleicher Code, nicht gleiche Schreibweise – „SWISS“ und „Swiss“ sind eine Airline, sobald der Code bekannt ist. Eine Airline, die kein Katalog kennt, wird nur über ihren vereinheitlichten Namen zusammengefasst.",
+      "exclusions": "Nicht enthalten: Flüge ohne erkennbare Airline (kein IATA-Code, kein übersetzbarer ICAO-Code, kein Name) – auch nicht im Nenner –, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "aircraft": {
+      "unit": "Die zehn einzelnen Flugzeuge, mit denen du am häufigsten geflogen bist, erkannt an ihrer Kennung (etwa D-AIXA), mit der Zahl der Flüge je Flugzeug.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, das Feld Kennung (Registrierung), meist aus der Flugnummern-Suche.",
+      "coverage": "Nur Flüge mit eingetragener Kennung, also meist nur der Teil des Logbuchs, der per Suche ergänzt wurde. Die Kennung wird genau so verglichen, wie sie gespeichert ist; bei gleicher Flugzahl entscheidet die Lesereihenfolge.",
+      "exclusions": "Nicht enthalten: Flüge ohne Kennung, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    },
+    "countries": {
+      "unit": "Die 15 Länder mit den meisten Flügen. Ein Flug zählt bei jedem Land, das Start oder Ziel berührt, einmal: ein Inlandsflug einmal, ein internationaler Flug bei beiden Ländern.",
+      "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
+      "source": "Geflogene und nachgetragene Flüge, das Land von Start- und Zielflughafen aus dem Flughafenkatalog (gesucht über den IATA-, sonst den ICAO-Code).",
+      "coverage": "Kennt der Katalog einen Flughafen oder sein Land nicht, zählt dieses Ende unter „Unknown“. Das gilt auch für einen Start ohne Code, während ein Ziel ohne Code einfach wegfällt.",
+      "exclusions": "Nicht enthalten: Ziele ohne Flughafen-Code, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+    }
+  }
+}

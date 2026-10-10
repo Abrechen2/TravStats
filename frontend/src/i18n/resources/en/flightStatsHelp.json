@@ -1,0 +1,686 @@
+{
+  "overview": {
+    "totalFlights": {
+      "unit": "Counting unit: one flight. The figure is the number of all counted flights in your logbook.",
+      "time": "Always all years together – the year filter above does not apply to this tile. A flight does not need a date to count here.",
+      "source": "All your flights with status flown or historical (added after the fact).",
+      "coverage": "Every counted flight is included, even without times, airline or seat.",
+      "exclusions": "Not included: planned and cancelled flights, and drafts (duplicates)."
+    },
+    "flightTime": {
+      "unit": "Counting unit: minutes in the air, shown in hours; the sum over all counted flights. Where no times exist, the duration is estimated from the great-circle distance: distance ÷ 800 km/h plus 15 minutes for taxi, climb and descent. The footnote says how many hours and flights are estimated.",
+      "time": "All years together, regardless of the year filter. Measured between the real departure and arrival instants, taking both airports' time zones into account.",
+      "source": "Flown and historical flights: the duration the server computed time-zone-aware, otherwise departure and arrival time, otherwise the coordinates of both airports.",
+      "coverage": "Only flights with real times at both ends are measured; a flight that carries only a date contributes an estimate. Adding the times turns the estimate into a measurement.",
+      "exclusions": "Not included: planned and cancelled flights, drafts, and flights with neither times nor coordinates. Placeholder times (e.g. 12:00 on a date-only entry) are never counted as a measurement."
+    },
+    "avgDuration": {
+      "unit": "Average flight duration in hours = total flight time ÷ number of flights that contributed a duration (measured or estimated).",
+      "time": "All years together, regardless of the year filter.",
+      "source": "The same durations as the total flight time: measured from the times, otherwise estimated from the great-circle distance at 800 km/h plus 15 minutes.",
+      "coverage": "Estimated durations are included. The more flights carry real times, the more of the value is measured rather than estimated.",
+      "exclusions": "Not included: planned and cancelled flights, drafts, and flights with no duration at all – they are left out of the denominator too, so the average is not dragged down."
+    },
+    "airlines": {
+      "unit": "Counting unit: one airline; the figure is the number of distinct airlines. Grouped by IATA code: where none is stored it is resolved from the ICAO code or the name via the catalogue, otherwise the normalised name counts.",
+      "time": "All years together, regardless of the year filter.",
+      "source": "Flown and historical flights with the airline name, IATA and ICAO code fields, matched against the airline catalogue.",
+      "coverage": "Spellings such as \"SWISS\" and \"Swiss\" are one airline. If the catalogue does not know a name, the same airline under two spellings can count twice – a code on the flight fixes that.",
+      "exclusions": "Not included: flights without an airline, planned and cancelled flights, and drafts."
+    }
+  },
+  "yearSummary": {
+    "flights": {
+      "unit": "Counting unit: one flight. The figure is the number of counted flights in the selected year.",
+      "time": "The year is that of the departure day at the departure airport. An entry of which only the year is known counts in that year. When compared against a year still running, a part year stands against a whole one.",
+      "source": "Flown and historical flights with a departure date, counted by the server for this year.",
+      "coverage": "Only flights with a departure date can be assigned to a year.",
+      "exclusions": "Not included: planned and cancelled flights, drafts, and flights without a departure date."
+    },
+    "distance": {
+      "unit": "Counting unit: kilometres of great-circle distance between departure and destination airport (shown in your distance unit); the sum over the year's flights.",
+      "time": "The year is that of the departure day at the departure airport; year-only entries count in that year.",
+      "source": "Flown and historical flights, with the coordinates of both airports.",
+      "coverage": "The straight line is shorter than the route actually flown, with its detours and holding patterns.",
+      "exclusions": "Not included: planned and cancelled flights, drafts, and flights without a departure date. A flight with the same departure and destination airport contributes 0 km."
+    },
+    "flightTime": {
+      "unit": "Counting unit: minutes in the air, shown in hours; the sum over the year's flights. Without real times, it is estimated from the great-circle distance: distance ÷ 800 km/h plus 15 minutes.",
+      "time": "The year is that of the departure day at the departure airport. Measured between the departure and arrival instants, time-zone-aware across both airports.",
+      "source": "Flown and historical flights: the stored duration or one computed from the times, otherwise the coordinates of both airports.",
+      "coverage": "Only flown flights with real times are measured. Historical flights always enter here as an estimate, because their times are often placeholders.",
+      "exclusions": "Not included: planned and cancelled flights, drafts, flights without a departure date. Placeholder times of a date-only entry are never measured."
+    },
+    "cost": {
+      "unit": "Sum of flight costs in your base currency. A flight costs its price plus taxes and fees; if it belongs to a booking with its own price, the booking price counts once per booking and without the individual flights' taxes and fees.",
+      "time": "The year is that of the departure day at the departure airport. Converted at the rate captured when the flight was saved – not today's rate.",
+      "source": "Flown and historical flights with price, taxes, fees and currency, plus the price of the booking they belong to.",
+      "coverage": "Amounts in the base currency count directly, others only with a stored rate in exactly that base currency. If no flight of the year has a price, a dash is shown instead of 0, with the number of flights without a price; a flight recorded as free (0) counts as priced.",
+      "exclusions": "Not included: amounts that cannot be converted into the base currency (they are not shown here), flights without a price, planned and cancelled flights, and drafts."
+    }
+  },
+  "charts": {
+    "seasonal": {
+      "unit": "Counting unit: one flight. Each bar counts the flights in that calendar month, with all years pooled – January holds every January.",
+      "time": "The month is that of the departure day at the departure airport. All years, regardless of the year filter. A year-only entry sits in January, a month-only entry in its correct month.",
+      "source": "Flown and historical flights with their departure date.",
+      "coverage": "Year-only entries inflate January. An exact date on the flight moves it to the right month.",
+      "exclusions": "Not included: planned and cancelled flights, drafts, and flights without a departure date."
+    },
+    "weekday": {
+      "unit": "Counting unit: one flight. Each bar counts the flights that departed on that weekday, across all years.",
+      "time": "The weekday is that of the departure day at the departure airport. All years, regardless of the year filter. For a year-only or month-only entry, the weekday is that of the placeholder date (1 January or the first of the month) and means nothing.",
+      "source": "Flown and historical flights with their departure date.",
+      "coverage": "The weekday is only meaningful for flights with an exact day. A complete date on the flight makes it correct.",
+      "exclusions": "Not included: planned and cancelled flights, drafts, and flights without a departure date."
+    }
+  },
+  "distance": {
+    "total": {
+      "unit": "Counting unit: kilometres of great-circle (straight-line) distance between departure and destination airport, shown in your distance unit; the sum over all counted flights.",
+      "time": "All years together, regardless of the year filter.",
+      "source": "Flown and historical flights, with the coordinates of both airports.",
+      "coverage": "The straight line is shorter than the route actually flown, with its detours and holding patterns.",
+      "exclusions": "Not included: planned and cancelled flights, drafts. Flights without coordinates and flights with the same departure and destination airport contribute 0 km."
+    },
+    "average": {
+      "unit": "Average distance per flight = total distance ÷ number of flights with a distance above 0 km.",
+      "time": "All years together, regardless of the year filter.",
+      "source": "Flown and historical flights, with the coordinates of both airports.",
+      "coverage": "Every flight for which a straight-line distance can be computed is included.",
+      "exclusions": "Not included: planned and cancelled flights, drafts, flights without coordinates and flights of 0 km – they are left out of the denominator too."
+    },
+    "circumnavigations": {
+      "unit": "Trips around the Earth = total distance ÷ 40,075 km equatorial circumference, to two decimals. The bar is full at one trip around.",
+      "time": "All years together, regardless of the year filter.",
+      "source": "The total distance of this section.",
+      "coverage": "Like the total distance: the straight line between the airports, not the route flown.",
+      "exclusions": "Not included: everything the total distance leaves out – planned and cancelled flights, drafts, flights without coordinates."
+    },
+    "milestones": {
+      "unit": "The total distance as a percentage of fixed distances: Moon 384,400 km, Mars 225 million km (average distance), Voyager 1 about 24 billion km. A bar is full at 100 %.",
+      "time": "All years together, regardless of the year filter. The reference values are fixed numbers, not today's actual distances.",
+      "source": "The total distance of this section.",
+      "coverage": "Like the total distance: the straight line between the airports, not the route flown.",
+      "exclusions": "Not included: everything the total distance leaves out – planned and cancelled flights, drafts, flights without coordinates."
+    },
+    "longest": {
+      "unit": "The one flight with the greatest great-circle distance between departure and destination airport (the maximum), with its route.",
+      "time": "All years together, regardless of the year filter.",
+      "source": "Flown and historical flights, with the coordinates and codes of both airports.",
+      "coverage": "It ranks by straight-line distance, not by duration – the longest flight by duration is shown further down.",
+      "exclusions": "Not included: planned and cancelled flights, drafts, flights without coordinates and flights of 0 km."
+    },
+    "shortest": {
+      "unit": "The one flight with the smallest great-circle distance above 0 km (the minimum), with its route.",
+      "time": "All years together, regardless of the year filter.",
+      "source": "Flown and historical flights, with the coordinates and codes of both airports.",
+      "coverage": "It ranks by straight-line distance, not by duration – the shortest flight by duration is shown further down.",
+      "exclusions": "Not included: planned and cancelled flights, drafts, flights without coordinates and flights with the same departure and destination airport (0 km)."
+    }
+  },
+  "breakdown": {
+    "airlines": {
+      "unit": "The ten airlines with the most flights. Per row: number of flights and their flight time in hours (measured, otherwise estimated from the distance). Grouped by IATA code, falling back to the normalised name.",
+      "time": "All years together, regardless of the year filter.",
+      "source": "Flown and historical flights with an airline (name, IATA or ICAO code), matched against the airline catalogue.",
+      "coverage": "Flights without an airline are given their own line above the list and are not ranked. Adding the airline moves them into the list.",
+      "exclusions": "Not included: flights without an airline (only as their own line), airlines beyond the top ten, planned and cancelled flights, and drafts."
+    },
+    "airports": {
+      "unit": "The ten airports with the most visits. Counting unit: one departure or one arrival – each flight counts once at each end, so a connection counts twice (arrival and onward departure).",
+      "time": "All years together, regardless of the year filter.",
+      "source": "Flown and historical flights, with the airport code at both ends (IATA, otherwise ICAO).",
+      "coverage": "If an airport is recorded once with its IATA code and once with only its ICAO code, it appears separately under both codes. Ends with no code at all are collected under \"Unknown\".",
+      "exclusions": "Not included: airports beyond the top ten, planned and cancelled flights, and drafts."
+    },
+    "seatClasses": {
+      "unit": "Counting unit: one flight per seat class (Economy, Premium Economy, Business, First), with its share in percent of all counted flights.",
+      "time": "All years together, regardless of the year filter.",
+      "source": "Flown and historical flights, seat class field.",
+      "coverage": "Flights without a seat class are listed as \"Not specified\" and count towards the percentages. Adding the class moves them to the right row.",
+      "exclusions": "Not included: planned and cancelled flights, and drafts."
+    },
+    "aircraftTypes": {
+      "unit": "The ten most frequent aircraft types. Counting unit: one flight per type.",
+      "time": "All years together, regardless of the year filter.",
+      "source": "Flown and historical flights, aircraft field.",
+      "coverage": "Grouped by the entry exactly as written – \"A320\" and \"Airbus A320\" are two rows. Only flights with an aircraft entered count.",
+      "exclusions": "Not included: flights without an aircraft type, types beyond the top ten, planned and cancelled flights, and drafts."
+    },
+    "status": {
+      "unit": "Counting unit: one flight per status, with its share in percent of all counted flights.",
+      "time": "All years together, regardless of the year filter.",
+      "source": "Flown and historical flights, status field.",
+      "coverage": "Because the page loads only counted flights, only \"Flown\" and \"Historical\" (added after the fact) can appear here.",
+      "exclusions": "Not included: planned and cancelled flights, and drafts – they are filtered out before the distribution, even though they exist as statuses."
+    },
+    "boardingGroups": {
+      "unit": "Counting unit: one flight per boarding group, sorted by frequency.",
+      "time": "All years together, regardless of the year filter.",
+      "source": "Flown and historical flights, boarding group field.",
+      "coverage": "Grouped by the entry exactly as written. The card only appears once at least one flight carries a boarding group.",
+      "exclusions": "Not included: flights without a boarding group, planned and cancelled flights, and drafts."
+    },
+    "longestFlight": {
+      "unit": "The one flight with the longest duration (the maximum), with airline, flight number, route and duration.",
+      "time": "All years together, regardless of the year filter. Measured time-zone-aware between departure and arrival.",
+      "source": "Flown and historical flights: the duration computed by the server, otherwise the times, otherwise an estimate from the great-circle distance (÷ 800 km/h plus 15 minutes).",
+      "coverage": "Estimated durations compete on equal terms with measured ones. Real times on the flight replace the estimate.",
+      "exclusions": "Not included: planned and cancelled flights, drafts, and flights with no duration at all."
+    },
+    "shortestFlight": {
+      "unit": "The one flight with the shortest duration above 0 (the minimum), with airline, flight number, route and duration in hours.",
+      "time": "All years together, regardless of the year filter. Measured time-zone-aware between departure and arrival.",
+      "source": "Flown and historical flights: the duration computed by the server, otherwise the times, otherwise an estimate from the great-circle distance (÷ 800 km/h plus 15 minutes).",
+      "coverage": "Estimated durations compete on equal terms with measured ones; an estimate is never shorter than 15 minutes. Real times on the flight replace the estimate.",
+      "exclusions": "Not included: planned and cancelled flights, drafts, and flights with no duration at all."
+    }
+  },
+  "records": {
+    "longestFlight": {
+      "unit": "One flight, the greatest distance in kilometres. The flight's stored route distance is used, otherwise the great-circle distance between the two airports' coordinates; the flight time is shown beside it when known.",
+      "time": "Your whole logbook – the page's year filter does not apply. On equal length the flight with the later departure wins.",
+      "source": "Flown and historical flights, read through the server's records query: stored route distance, otherwise the coordinates of origin and destination.",
+      "coverage": "Every flight with a route distance or coordinates at both ends takes part.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights with neither a route distance nor coordinates."
+    },
+    "shortestFlight": {
+      "unit": "One flight, the smallest distance above zero kilometres – stored route distance, otherwise great-circle distance between the airport coordinates.",
+      "time": "Your whole logbook – the page's year filter does not apply. On equal length the flight found first stays.",
+      "source": "Flown and historical flights with a route distance or coordinates for both airports.",
+      "coverage": "Every flight with a distance above 0 km takes part.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights of 0 km (for example a sightseeing flight back to its own airport), since a zero-length flight would hold this record forever."
+    },
+    "busiestDay": {
+      "unit": "One calendar day, counting the flights that departed on it. Below it is the chain of airports: the first flight's origin, then every destination.",
+      "time": "Departure day at the departure airport. Your whole logbook – the page's year filter does not apply. On a tie the later day wins.",
+      "source": "Flown and historical flights with a departure date.",
+      "coverage": "An entry with only the year known is stored on 1 January (only the month known: on the 1st of that month). Several such entries in one year therefore land on the same day and can make it the busiest one.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights without a departure date."
+    },
+    "longestAloft": {
+      "unit": "One flight, the longest duration in minutes: arrival minus departure, with both airports' time zones accounted for.",
+      "time": "Your whole logbook – the page's year filter does not apply.",
+      "source": "Flown and historical flights with departure and arrival times.",
+      "coverage": "Only flights with real clock times at both ends. Historical entries without times have no duration and do not take part.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights recorded with a date only instead of a time, and flights whose duration would be zero or negative."
+    },
+    "biggestDelay": {
+      "unit": "One flight, the largest delay in minutes. The delay is the actual minus the scheduled departure time.",
+      "time": "Your whole logbook – the page's year filter does not apply.",
+      "source": "Flown and historical flights with a recorded delay (from the actual departure time, or entered by you).",
+      "coverage": "Only flights that carry a delay. Without an actual departure time there is no value.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights without a delay value, and on-time or early departures (0 minutes or less)."
+    },
+    "northernmost": {
+      "unit": "One airport: the highest latitude among all origin and destination airports, in degrees north (south of the equator in degrees south).",
+      "time": "Your whole logbook – the page's year filter does not apply.",
+      "source": "Flown and historical flights, reading the coordinates stored on the flight for both ends; the airport code (IATA) is shown.",
+      "coverage": "Every flight end with coordinates counts. The record names a place, not a single flight.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights."
+    },
+    "longestStreak": {
+      "unit": "Consecutive calendar days on each of which at least one flight departed; the value is the number of days, with start and end.",
+      "time": "Departure day at the departure airport. Your whole logbook – the page's year filter does not apply. Between equally long streaks the most recent wins.",
+      "source": "Flown and historical flights with a departure date.",
+      "coverage": "An entry with only the year known is stored on 1 January and can therefore extend a streak around New Year or form a day of its own.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights without a departure date."
+    }
+  },
+  "punctuality": {
+    "sample": {
+      "unit": "The number of flights that carry a recorded delay – the sample every figure in this section rests on.",
+      "time": "Your whole logbook – the page's year filter does not apply.",
+      "source": "Flown and historical flights with a delay value; it is the actual minus the scheduled departure time.",
+      "coverage": "Only flights with a recorded delay; 0 minutes and early departures count too. Without a sample the whole section stays hidden.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights without a delay value – \"not recorded\" is not \"on time\"."
+    },
+    "avgDelay": {
+      "unit": "Average in minutes = sum of delays ÷ flights in the sample, shown rounded to whole minutes. Early departures enter as negative minutes and lower the value.",
+      "time": "Your whole logbook – the page's year filter does not apply.",
+      "source": "The flights' delay value: actual minus scheduled departure time.",
+      "coverage": "Only flights with a recorded delay.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights without a delay value."
+    },
+    "onTimeRate": {
+      "unit": "Share in % = flights less than 15 minutes late ÷ flights in the sample. Exactly 15 minutes already counts as late; early departures count as on time.",
+      "time": "Your whole logbook – the page's year filter does not apply.",
+      "source": "The flights' delay value: actual minus scheduled departure time.",
+      "coverage": "Only flights with a recorded delay.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights without a delay value."
+    },
+    "airlines": {
+      "unit": "The average delay in minutes per airline; most punctual = lowest, least punctual = highest average. In brackets: the average and the number of flights.",
+      "time": "Your whole logbook – the page's year filter does not apply. On equal averages alphabetical order decides.",
+      "source": "Flights in the sample, grouped by the airline's IATA code, otherwise by the airline name as entered.",
+      "coverage": "An airline needs at least 3 flights with a delay value. If only one airline reaches that, it appears on both tiles.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights without a delay value or without an airline; airlines with fewer than 3 such flights."
+    },
+    "worstRoute": {
+      "unit": "The route with the highest average delay, each direction separately – MUC→JFK and JFK→MUC are two routes.",
+      "time": "Your whole logbook – the page's year filter does not apply. On equal averages alphabetical order decides.",
+      "source": "Flights in the sample with an IATA code at origin and destination.",
+      "coverage": "A route needs at least 3 flights with a delay value in the same direction.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights without a delay value; flights missing the IATA code at either end (an ICAO code alone is not enough here)."
+    }
+  },
+  "fun": {
+    "timezoneHopper": {
+      "unit": "Distinct time zones (IANA, such as Europe/Berlin) of the airports you departed from or landed at. It counts the airports' zones, not the zones flown over.",
+      "time": "Your whole logbook – the page's year filter does not apply.",
+      "source": "Flown and historical flights; the zone comes from the airport catalogue, looked up by the IATA and ICAO codes of both ends.",
+      "coverage": "Only airports the catalogue knows and holds a time zone for.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; airports without a code or without a catalogue entry."
+    },
+    "earlyBird": {
+      "unit": "Number of flights that departed between 6:00 and 11:59.",
+      "time": "The clock at the departure airport, in the zone the flight was stored with (otherwise the catalogue's). Your whole logbook – the page's year filter does not apply.",
+      "source": "Flown flights with departure and arrival times.",
+      "coverage": "Only flights with a real clock time; an entry with only a date has no hour.",
+      "exclusions": "Not included: historical flights (their times are usually placeholders), flights without an arrival time, date-only flights, planned, cancelled and duplicated (draft) flights."
+    },
+    "nightOwl": {
+      "unit": "Number of flights that departed in the evening or at night: from 18:00 to 5:59.",
+      "time": "The clock at the departure airport, in the zone the flight was stored with (otherwise the catalogue's). Your whole logbook – the page's year filter does not apply.",
+      "source": "Flown flights with departure and arrival times.",
+      "coverage": "Only flights with a real clock time; an entry with only a date has no hour.",
+      "exclusions": "Not included: historical flights (their times are usually placeholders), flights without an arrival time, date-only flights, planned, cancelled and duplicated (draft) flights."
+    },
+    "weekend": {
+      "unit": "Number of flights departing on a Saturday or Sunday. Percentage = weekend flights ÷ all flown flights with departure and arrival times, rounded.",
+      "time": "Weekday of the departure day at the departure airport. Your whole logbook – the page's year filter does not apply.",
+      "source": "Flown flights with departure and arrival times.",
+      "coverage": "A flown flight that carries only a date without a real time counts here too – the weekday depends on the date alone.",
+      "exclusions": "Not included: historical flights (their date is often a placeholder, which would make the weekday meaningless), flights without an arrival time, planned, cancelled and duplicated (draft) flights."
+    },
+    "loyalty": {
+      "unit": "Share in % = flights with your most frequent airline ÷ all counted flights, rounded. That airline is named beside it.",
+      "time": "Your whole logbook – the page's year filter does not apply. On a tie the airline found first is shown.",
+      "source": "Flown and historical flights, grouped by the airline name as entered; known spelling variants (such as \"Lufthansa German Airlines\") are merged, the airline code is not read here.",
+      "coverage": "Flights without an airline name still sit in the denominator and lower the share – a name on those flights raises it.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights."
+    },
+    "shortHaul": {
+      "unit": "Number of flights with a great-circle distance under 500 km between the two airports.",
+      "time": "Your whole logbook – the page's year filter does not apply.",
+      "source": "Flown and historical flights, reading the coordinates stored on the flight for origin and destination.",
+      "coverage": "Every flight with coordinates at both ends.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights of 500 km or more."
+    },
+    "longHaul": {
+      "unit": "Number of flights with a great-circle distance of at least 5000 km – a flight of exactly 5000 km already counts.",
+      "time": "Your whole logbook – the page's year filter does not apply.",
+      "source": "Flown and historical flights, reading the coordinates stored on the flight for origin and destination.",
+      "coverage": "Every flight with coordinates at both ends.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights under 5000 km."
+    },
+    "fastestDay": {
+      "unit": "The calendar day with the most departures, and how many flights that was.",
+      "time": "Departure day at the departure airport. Your whole logbook – the page's year filter does not apply. On a tie the day found first is shown, not necessarily the earliest or latest.",
+      "source": "Flown and historical flights with a departure date.",
+      "coverage": "An entry with only the year known is stored on 1 January (only the month known: on the 1st). Several such entries in one year pile up there and can push that day to the top.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights without a departure date."
+    },
+    "co2": {
+      "unit": "Sum in kg of CO₂. Per flight: great-circle distance × 0.255 kg/km under 1500 km, otherwise × 0.195 kg/km, times a cabin factor (economy 1.0, premium economy 1.6, business 2.9, first 4.0), rounded per flight. Elephants = kg ÷ 4000, to one decimal.",
+      "time": "Your whole logbook – the page's year filter does not apply.",
+      "source": "Flown and historical flights: coordinates of origin and destination and the seat class.",
+      "coverage": "A flight with no or an unknown seat class is counted as economy – entering the class makes the figure more accurate. Detours, aircraft type and load factor are not taken into account.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights."
+    },
+    "milestoneYear": {
+      "unit": "The year with the most flights, and how many flights that was.",
+      "time": "Year of the departure day at the departure airport. Your whole logbook – the page's year filter does not apply. On a tie the earlier year wins.",
+      "source": "Flown and historical flights with a departure date.",
+      "coverage": "Entries with only the year known count in their year too.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights without a departure date."
+    },
+    "routeMaster": {
+      "unit": "The most frequently flown connection and how often. A connection is the airport pair without direction – outbound and return count together.",
+      "time": "Your whole logbook – the page's year filter does not apply. On a tie the connection found first is shown.",
+      "source": "Flown and historical flights with an airport code (IATA, otherwise ICAO) at both ends.",
+      "coverage": "Every flight with a code at origin and destination.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights missing the airport code at either end."
+    }
+  },
+  "business": {
+    "costPerKm": {
+      "unit": "Cost per kilometre = total cost ÷ great-circle kilometres of the flights that carry a price, rounded to the cent. For a booking with a price, all of its flights count with their kilometres.",
+      "time": "Your whole logbook – the page's year filter does not apply. Foreign currencies are converted at the rate captured when the price was saved, not today's.",
+      "source": "Flown and historical flights: booking price (once per booking), otherwise the flight's price + taxes + fees, plus both airports' coordinates.",
+      "coverage": "Only flights with a price. An amount in a currency other than your base currency needs a stored exchange rate, otherwise it drops out together with its kilometres. With no price at all this shows a dash – a rate over nothing is not 0.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights without a price and amounts that cannot be converted into the base currency."
+    },
+    "costPerHour": {
+      "unit": "Cost per flight hour = cost ÷ flight hours of the same flights, rounded to the cent. For a booking with a price, the hours of all its flown flights count.",
+      "time": "Measured hours from departure and arrival time when they are stored as real instants; otherwise an estimate from the distance (800 km/h plus 15 minutes). Your whole logbook – the page's year filter does not apply.",
+      "source": "Flown flights with departure and arrival times: booking price (once per booking), otherwise price + taxes + fees, and the flight duration.",
+      "coverage": "Only flown flights with a price and both times. Foreign-currency amounts need a stored exchange rate. With no price at all this shows a dash; if only historical flights carry a price, it shows 0.",
+      "exclusions": "Not included: historical flights, flights without an arrival time, flights without a price, amounts that cannot be converted, planned, cancelled and duplicated (draft) flights."
+    },
+    "totalCost": {
+      "unit": "Sum of all flight costs in your base currency, rounded to the cent. A booking counts once, however many flights it has. The distance beside it is the great-circle total of all counted flights, including those without a price.",
+      "time": "Your whole logbook – the page's year filter does not apply. Foreign currencies are converted at the rate captured when the price was saved.",
+      "source": "Flown and historical flights: booking price, otherwise the flight's price + taxes + fees, with currency and stored exchange rate.",
+      "coverage": "Only amounts in your base currency or with a stored rate into it. If no flight carries a price, a dash is shown instead of 0.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; amounts without a rate into your base currency."
+    },
+    "airportDiversity": {
+      "unit": "Number of distinct airport codes you departed from or landed at; each airport counts once.",
+      "time": "Your whole logbook – the page's year filter does not apply.",
+      "source": "Flown and historical flights, both ends, by IATA code, otherwise ICAO code.",
+      "coverage": "Your home airport counts too. If the same airport is in the logbook once with its IATA code and once with only its ICAO code, it counts twice.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flight ends without an airport code."
+    },
+    "avgDuration": {
+      "unit": "Average in hours = sum of flight durations ÷ number of flights that contribute a duration, to one decimal.",
+      "time": "Measured from departure and arrival time for flown flights with real instants; otherwise estimated from the distance (800 km/h plus 15 minutes). Your whole logbook – the page's year filter does not apply.",
+      "source": "Flown and historical flights: departure and arrival time, otherwise both airports' coordinates.",
+      "coverage": "Historical flights are always estimated, because their times are usually placeholders. A flight with neither times nor a distance contributes nothing.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights."
+    },
+    "busiestMonth": {
+      "unit": "The calendar month with the most departures, pooled across all years (every March flight of every year forms one value), and how many flights that was.",
+      "time": "Month of the departure day at the departure airport. Your whole logbook – the page's year filter does not apply. On a tie the earlier month of the year wins.",
+      "source": "Flown and historical flights with a departure date.",
+      "coverage": "An entry with only the year known counts as January and pushes January up.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights without a departure date."
+    },
+    "category": {
+      "unit": "The category carried by the most flights.",
+      "time": "Your whole logbook – the page's year filter does not apply. On a tie the category found first is shown.",
+      "source": "Flown and historical flights with their category field.",
+      "coverage": "Flights without a category are gathered as \"unassigned\" and can themselves be the most common – a category on those flights changes that.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights."
+    },
+    "seatClassShare": {
+      "unit": "Per seat class the share in % = flights in that class ÷ all counted flights, rounded per class – so the total can differ slightly from 100.",
+      "time": "Your whole logbook – the page's year filter does not apply.",
+      "source": "Flown and historical flights with their seat class field.",
+      "coverage": "Flights without a seat class appear as a row of their own, \"unknown\"; entering the class moves them into the right row.",
+      "exclusions": "Not included: planned, cancelled and duplicated (draft) flights."
+    }
+  },
+  "unique": {
+    "timeTravel": {
+      "unit": "Number of flights where the clock at the destination shows an earlier time on landing than the clock at the origin showed on departure – say, leaving New York at 23:00 and landing in London at 11:00. Only the time of day is compared, not the date, so any flight that lands after midnight at an earlier clock time counts too.",
+      "time": "Departure time on the departure airport's clock, landing time on the arrival airport's clock, both time zones from the airport catalogue. All-time; the page's year filter does not apply.",
+      "source": "Flown flights with a departure and an arrival time, plus the time zones of both airports from the airport catalogue (looked up by IATA code, else ICAO).",
+      "coverage": "Only flights with both times whose two airports the catalogue knows, time zone included. If a time zone is missing, the flight is skipped rather than guessed.",
+      "exclusions": "Not included: logged (historical) flights, because their times are unreliable, flights without an arrival time, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "equator": {
+      "unit": "Number of flights whose origin and destination lie on different sides of the equator – north to south or the other way round. Each flight counts once.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, using the latitude of the two airport coordinates stored on the flight.",
+      "coverage": "Every flight carries coordinates, so all of them count. Only the two endpoints are compared, not the route; an end exactly on 0° belongs to neither hemisphere and does not make a crossing.",
+      "exclusions": "Not included: scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "arctic": {
+      "unit": "Number of flights with at least one end at or north of 66.5° N. The flight does not have to cross the Arctic Circle; a departure or landing up there is enough.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, using the latitude of the two airport coordinates stored on the flight.",
+      "coverage": "Only the northern polar circle counts; a flight to Antarctica south of 66.5° S does not appear here. A flight that merely passes over the Arctic does not count either.",
+      "exclusions": "Not included: scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "ocean": {
+      "unit": "Number of flights with a great-circle distance of more than 5000 km between the two airports. This is a rule of thumb, not proof that the flight actually crossed an ocean.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, distance from the coordinates of both airports stored on the flight.",
+      "coverage": "A flight of exactly 5000 km does not count – unlike long haul, which starts at 5000 km. Shorter flights over a sea, such as across the Mediterranean, never appear.",
+      "exclusions": "Not included: scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "hemisphere": {
+      "unit": "Number of flights whose origin and destination lie on different sides of the prime meridian, i.e. that switch between the eastern and western hemisphere – whether the shorter way runs across the prime meridian or the date line.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, using the longitude of the two airport coordinates stored on the flight.",
+      "coverage": "Every flight carries coordinates, so all of them count. An end exactly on 0° longitude belongs to neither hemisphere and does not make a switch.",
+      "exclusions": "Not included: scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "dateLine": {
+      "unit": "Number of flights whose origin and destination longitudes are more than 180° apart – then the shorter way round crosses the date line.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, using the longitude of the two airport coordinates stored on the flight.",
+      "coverage": "An estimate from the two endpoints, not from the route flown: a flight that actually took another way is judged by which way would have been shorter.",
+      "exclusions": "Not included: scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "continents": {
+      "unit": "Number of different continents on which a flight departed or landed; their names are listed below. Seven are possible, Antarctica included.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, both ends. The continent follows from the airport's country in the airport catalogue, and for countries on two continents from the airport's coordinates.",
+      "coverage": "Only airports the catalogue knows (looked up by IATA code, else ICAO). An airport the continent table cannot place does not count at all, rather than as 'Other'.",
+      "exclusions": "Not included: scheduled and cancelled flights, drafts (duplicates), and ends without an airport code."
+    },
+    "tropics": {
+      "unit": "Number of flights with at least one end between 23.5° S and 23.5° N, boundaries included.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, using the latitude of the two airport coordinates stored on the flight.",
+      "coverage": "Every flight carries coordinates, so all of them count. A flight that only passes over the tropics without departing or landing there does not count.",
+      "exclusions": "Not included: scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "eastWest": {
+      "unit": "Two counts: eastbound and westbound flights, decided by the longitude difference between origin and destination along the shorter way round the globe. Ratio = eastbound ÷ westbound, rounded to two decimals; with no westbound flight at all, the ratio shown is simply the number of eastbound flights.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, using the longitude of the two airport coordinates stored on the flight.",
+      "coverage": "Every flight carries coordinates, so all of them count. The direction comes from the endpoints, not from the route flown.",
+      "exclusions": "Not included: flights with no longitude difference (due north or south, or returning to the departure airport) – they count in neither direction –, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "sameDay": {
+      "unit": "Number of flights that land on the same calendar day they depart, each by its local calendar.",
+      "time": "Departure day on the departure airport's calendar, landing day on the arrival airport's calendar, time zones from the airport catalogue. If the catalogue has no time zone for an end, that end uses the UTC date. All-time; the year filter does not apply.",
+      "source": "Flown flights with a departure and an arrival time, plus the time zones of both airports from the airport catalogue.",
+      "coverage": "Only flights with both times. Same-day and midnight flights complement each other exactly: every one of these flights is in exactly one of the two numbers.",
+      "exclusions": "Not included: logged (historical) flights, because their times are unreliable, flights without an arrival time, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "midnight": {
+      "unit": "Number of flights whose landing day differs from their departure day, each by its local calendar. This includes a flight that crosses the date line and lands on an earlier date.",
+      "time": "Departure day on the departure airport's calendar, landing day on the arrival airport's calendar, time zones from the airport catalogue. If the catalogue has no time zone for an end, that end uses the UTC date. All-time; the year filter does not apply.",
+      "source": "Flown flights with a departure and an arrival time, plus the time zones of both airports from the airport catalogue.",
+      "coverage": "Only flights with both times. Midnight and same-day flights complement each other exactly: every one of these flights is in exactly one of the two numbers.",
+      "exclusions": "Not included: logged (historical) flights, because their times are unreliable, flights without an arrival time, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "seasons": {
+      "unit": "Whether you have flown in all four seasons (tick or cross); below it, the number of seasons with at least one flight. Seasons follow northern-hemisphere months: spring March–May, summer June–August, autumn September–November, winter December–February.",
+      "time": "Month of the departure day on the departure airport's calendar, over all time. A flight with a placeholder date (only the year known) reads as January and so counts as winter.",
+      "source": "Flown and logged (historical) flights with a departure date.",
+      "coverage": "Northern-hemisphere months apply to southern-hemisphere flights too – a January flight to Sydney counts as winter.",
+      "exclusions": "Not included: flights without a date, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "internationalDomestic": {
+      "unit": "Two counts: international flights (origin and destination country differ) and domestic flights (same country). Ratio = international ÷ domestic, rounded to two decimals; with no domestic flight at all, the ratio shown is simply the number of international flights.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, the country of both airports from the airport catalogue (looked up by IATA code, else ICAO).",
+      "coverage": "Only flights whose two airports the catalogue knows, country included. A flight with an unknown country counts in neither number – it is no evidence of a domestic flight.",
+      "exclusions": "Not included: flights without an airport code at one end, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "roundTrips": {
+      "unit": "Number of complete A→B→A round trips – not a number of flights. Each airport pair yields as many as its rarer direction has flights: three A→B against one B→A make one round trip.",
+      "time": "No time element: outbound and return need neither follow each other directly nor fall in the same year. All-time; the year filter does not apply.",
+      "source": "Flown and logged (historical) flights, with the airport code of both ends (IATA, else ICAO).",
+      "coverage": "An airport recorded once with its IATA code and once only with its ICAO code counts as two different airports, and the pair does not match up.",
+      "exclusions": "Not included: flights that land back at their departure airport (sightseeing flights), flights without a code at one end, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "highestAirport": {
+      "unit": "The airport with the greatest elevation above sea level among all airports you departed from or landed at, in metres.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, both ends; name and elevation from the airport catalogue.",
+      "coverage": "Only airports for which the catalogue has an elevation; an airport without a catalogue entry or without an elevation is missing here. On equal elevation, the one found first stays.",
+      "exclusions": "Not included: scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "northernmost": {
+      "unit": "The northernmost point where a flight departed or landed, with its latitude. If your whole logbook lies south of the equator, this simply shows a southern latitude.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, using the coordinates stored on the flight (not the catalogue's); the code is the IATA code, else ICAO.",
+      "coverage": "Every flight carries coordinates, so all of them count. On equal latitude, the airport found first stays.",
+      "exclusions": "Not included: scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "southernmost": {
+      "unit": "The southernmost point where a flight departed or landed, with its latitude. If your whole logbook lies north of the equator, this simply shows a northern latitude.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, using the coordinates stored on the flight (not the catalogue's); the code is the IATA code, else ICAO.",
+      "coverage": "Every flight carries coordinates, so all of them count. On equal latitude, the airport found first stays.",
+      "exclusions": "Not included: scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "travelChain": {
+      "unit": "The most flights in one chain: each next flight departs from the airport where the previous one landed, no more than 24 hours after that landing. The card appears only from a chain of two flights.",
+      "time": "Ordered by departure instant; the gap from landing to the next departure is measured between the stored instants, so time zones play no part. All-time; the year filter does not apply.",
+      "source": "Flown flights with a departure and an arrival time and the airport code of both ends (IATA, else ICAO).",
+      "coverage": "Only flights with both times. The chain runs straight through your home airport; a flight missing from the logbook, or a code change (IATA here, ICAO there), breaks it.",
+      "exclusions": "Not included: logged (historical) flights, flights without an arrival time, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "fastestRoute": {
+      "unit": "The route with the highest average ground speed: great-circle distance ÷ flight duration, in km/h, rounded. The maximum over all flights.",
+      "time": "Duration = arrival minus departure as stored instants; only legacy records whose two times were stored as local clock time are converted through the catalogue's time zones. All-time; the year filter does not apply.",
+      "source": "Flown flights with a departure and an arrival time and the coordinates of both airports stored on the flight.",
+      "coverage": "Only flights with both times and a real departure clock time. Flights of 30 minutes or less and speeds above 1200 km/h are treated as data errors and dropped.",
+      "exclusions": "Not included: logged (historical) flights, flights whose departure has only a date without a time, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "mostCountriesInDay": {
+      "unit": "The most different countries on one day: the origin and destination countries of all flights that departed that day, each country once; the date is shown beside it.",
+      "time": "Day = departure day on the departure airport's calendar; a flight landing after midnight belongs wholly to its departure day. All-time; the year filter does not apply.",
+      "source": "Flown flights with a departure and an arrival time, the country of both airports from the airport catalogue (looked up by IATA code, else ICAO).",
+      "coverage": "Only airports the catalogue knows, country included. If two days have the same number of countries, the one found first stays – not necessarily the earlier one.",
+      "exclusions": "Not included: logged (historical) flights, flights without an arrival time, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "longestLayover": {
+      "unit": "The longest wait between two directly consecutive flights at the same airport, from the landing of one to the departure of the next, in hours to one decimal; plus the airport.",
+      "time": "Ordered by departure instant; the wait is the gap between the stored instants. Whether the airport was your home is decided by the landing day on that airport's local calendar. All-time; the year filter does not apply.",
+      "source": "Flown flights with a departure and an arrival time and airport codes (IATA, else ICAO), plus your home airport history from the settings.",
+      "coverage": "Only pairs where the next flight departs where the previous one landed, with a wait above zero and no more than 24 hours. If a flight missing from the logbook lies in between, the pair is not treated as a connection.",
+      "exclusions": "Not included: waits over 24 hours (a stay, not a connection), landings at an airport set as your home airport on that day, logged (historical), scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "shortestLayover": {
+      "unit": "The shortest wait between two directly consecutive flights at the same airport, from the landing of one to the departure of the next, in hours to one decimal; plus the airport.",
+      "time": "Ordered by departure instant; the wait is the gap between the stored instants. Whether the airport was your home is decided by the landing day on that airport's local calendar. All-time; the year filter does not apply.",
+      "source": "Flown flights with a departure and an arrival time and airport codes (IATA, else ICAO), plus your home airport history from the settings.",
+      "coverage": "Only pairs where the next flight departs where the previous one landed, with a wait above zero and no more than 24 hours. A wait of zero or less (overlapping times) is treated as a data error.",
+      "exclusions": "Not included: waits over 24 hours, landings at an airport set as your home airport on that day, logged (historical), scheduled and cancelled flights, and drafts (duplicates)."
+    }
+  },
+  "airports": {
+    "airportCount": {
+      "unit": "Number of different airports where a flight departed or landed. What counts is the airport code (IATA, else ICAO), each once.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, with the airport code of both ends.",
+      "coverage": "An airport recorded once with its IATA code and once only with its ICAO code counts twice.",
+      "exclusions": "Not included: ends without an airport code, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "countryCount": {
+      "unit": "Number of different countries where a flight departed or landed, each country once.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, both ends; each airport's country comes from the airport catalogue (looked up by IATA code, else ICAO).",
+      "coverage": "Only airports the catalogue knows, country included; an unknown airport adds no country.",
+      "exclusions": "Not included: ends without an airport code, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "continentCount": {
+      "unit": "Number of different continents on which a flight departed or landed. The number after the slash is all seven: Africa, Antarctica, Asia, Europe, North America, Oceania, South America.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, both ends. The continent follows from the airport's country in the airport catalogue, and for countries on two continents from the airport's coordinates.",
+      "coverage": "Only airports the catalogue knows and can place on a continent. 'Other' is not a continent and does not count here.",
+      "exclusions": "Not included: ends without an airport code, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "topAirports": {
+      "unit": "The five airports with the most visits. A visit is a departure or a landing – an outbound and return flight from the same airport are two visits there.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, with the airport code of both ends (IATA, else ICAO); the name comes from the airport catalogue.",
+      "coverage": "If the catalogue does not know the airport, a dash stands in for its name. On equal visits, the order in which the airports were found decides.",
+      "exclusions": "Not included: ends without an airport code, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "topCountries": {
+      "unit": "The five countries with the most flights. A flight counts once for each country it touches: a domestic flight once, an international flight for both countries.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, the country of the departure and arrival airport from the airport catalogue.",
+      "coverage": "Only airports the catalogue knows, country included; an end with an unknown country adds nothing.",
+      "exclusions": "Not included: ends without an airport code, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "farthestFromHome": {
+      "unit": "The destination airport farthest from where you lived at the time: great-circle distance in km from your residence to the arrival airport; the home airport of that time is shown beside it.",
+      "time": "Which home applies is decided by the departure day at the departure airport and your home history; a flight without a date is measured against today's home. All-time; the year filter does not apply.",
+      "source": "Flown and logged (historical) flights with the arrival airport and its coordinates stored on the flight, plus residence and home airports from your home history in the settings.",
+      "coverage": "Only flights in periods for which a home with a residence is set; without a home history the card stays empty. For a migrated period not yet confirmed, the residence is the old home airport.",
+      "exclusions": "Not included: landings at an airport set as your home airport on that day, departure airports (only destinations count), destinations without an airport code, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "newThisYear": {
+      "unit": "Airports that appear for the first time in your whole logbook in this calendar year, with the date of the first visit, earliest first.",
+      "time": "First visit = the earliest departure day (at the departure airport) of a flight that departs or lands there – the destination is dated by the departure day too. Which year is 'this' year is decided by the server's clock in UTC; the page's year filter does not apply. A flight with a placeholder date (only the year known) counts as 1 January.",
+      "source": "Flown and logged (historical) flights with a departure date and the airport code of both ends (IATA, else ICAO); name and country from the airport catalogue.",
+      "coverage": "The reference is the whole logbook: an airport you already used in an earlier year is not new. Flights without a date cannot set a first visit.",
+      "exclusions": "Not included: flights without a date, ends without an airport code, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "rarest": {
+      "unit": "Airports with exactly one visit – a single departure or a single landing there; at most five.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, with the airport code of both ends (IATA, else ICAO); name and country from the airport catalogue.",
+      "coverage": "The first five in the order the flights are read are shown – not sorted by date or name. An airport recorded with both its IATA and its ICAO code can appear here with one visit under each.",
+      "exclusions": "Not included: ends without an airport code, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "continentDistribution": {
+      "unit": "Per continent, the number of flights that depart or land there: a flight within one continent counts once, an intercontinental one for both. Percent = share of the sum of all rows, which can therefore exceed your number of flights.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, both ends. The continent follows from the airport's country in the airport catalogue, and for countries on two continents from the airport's coordinates.",
+      "coverage": "Airports the catalogue does not know or cannot place on a continent, and ends without a code, are listed under 'Other'.",
+      "exclusions": "Not included: scheduled and cancelled flights, and drafts (duplicates)."
+    }
+  },
+  "seats": {
+    "position": {
+      "unit": "How often you sat at the window, in the middle and on the aisle, once per flight. Percent = share of these three together.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights with a seat, such as 23A: row number plus letter; the last letter decides.",
+      "coverage": "One fixed letter table for every aircraft type: A, F, K window; B, E, H, J middle; C, D, G aisle. On wide-body aircraft this is not always right – in a 3-4-3 row F is a middle seat and H an aisle seat.",
+      "exclusions": "Not included: flights without a seat, entries that do not look like number plus letter, other letters (such as L), scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "zone": {
+      "unit": "How often you sat at the front, in the middle and at the back, by row number: rows 1–10 front, 11–25 middle, everything else back. Percent = share of these three together.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights with a seat in the form row number plus letter.",
+      "coverage": "Fixed boundaries for every aircraft and cabin – on a small jet row 20 is already at the very back, on a large one still well forward. A seat with an unrecognised letter still counts here.",
+      "exclusions": "Not included: flights without a seat, entries that do not look like number plus letter, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "mostCommon": {
+      "unit": "The seat entry that occurs most often; compared in capitals, so 23a and 23A are the same seat.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, the seat field.",
+      "coverage": "Every entry counts, even one that does not look like row plus letter. On a tie, the one found first wins.",
+      "exclusions": "Not included: flights without a seat, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "avgRow": {
+      "unit": "Average row number = sum of row numbers ÷ number of seats with a row number, to one decimal.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, the row number from the seat field.",
+      "coverage": "Only seats in the form number plus letter(s). Row numbers depend on aircraft and airline, so the average mixes different cabins.",
+      "exclusions": "Not included: flights without a seat, entries that do not look like number plus letter, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "seatClass": {
+      "unit": "How many flights you flew in each seat class. Percent = share of all flights with a class entered.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, the seat class field – regardless of whether a seat is entered.",
+      "coverage": "Only flights with a seat class entered. The whole seat section only appears once at least one flight has a seat entry, though.",
+      "exclusions": "Not included: flights without a seat class, scheduled and cancelled flights, and drafts (duplicates)."
+    }
+  },
+  "rankings": {
+    "airlines": {
+      "unit": "The ten airlines with the most flights. Percent = the airline's flights ÷ all flights with an identifiable airline, to one decimal; the bar shows flights relative to the top row.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights. The airline is the IATA code on the flight, else the ICAO code or the name, translated into an IATA code through the airline catalogue; the label is the catalogue name, else the most frequent spelling.",
+      "coverage": "Same airline means same code, not same spelling – 'SWISS' and 'Swiss' are one airline once the code is known. An airline no catalogue knows is grouped by its normalised name only.",
+      "exclusions": "Not included: flights without an identifiable airline (no IATA code, no translatable ICAO code, no name) – not in the denominator either –, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "aircraft": {
+      "unit": "The ten individual aircraft you flew on most often, recognised by their registration (such as D-AIXA), with the number of flights per aircraft.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, the registration field, mostly filled in by the flight number lookup.",
+      "coverage": "Only flights with a registration entered, so usually just the part of the logbook completed by a lookup. The registration is compared exactly as stored; on equal flights, the reading order decides.",
+      "exclusions": "Not included: flights without a registration, scheduled and cancelled flights, and drafts (duplicates)."
+    },
+    "countries": {
+      "unit": "The 15 countries with the most flights. A flight counts once for each country its departure or arrival touches: a domestic flight once, an international flight for both countries.",
+      "time": "No time element: all-time; the page's year filter does not apply.",
+      "source": "Flown and logged (historical) flights, the country of the departure and arrival airport from the airport catalogue (looked up by IATA code, else ICAO).",
+      "coverage": "If the catalogue does not know an airport or its country, that end counts under 'Unknown'. The same goes for a departure without a code, while a destination without a code simply drops out.",
+      "exclusions": "Not included: destinations without an airport code, scheduled and cancelled flights, and drafts (duplicates)."
+    }
+  }
+}
