@@ -38,6 +38,23 @@ function makeMockTranslate() {
 }
 
 describe("describeLodgingCommitResult", () => {
+  it("says when a re-import filled a stored stay's missing deadlines (forgejo#285)", () => {
+    const t = makeMockTranslate();
+    const toast = describeLodgingCommitResult(
+      {
+        batchId: "b1",
+        createdLodgings: 0,
+        createdStays: 0,
+        updatedStays: 1,
+        filledDeadlines: [{ sourceRowIndex: 0, fields: ["paymentDueOn"] }],
+        skipped: 0,
+        failed: [],
+      },
+      t
+    );
+    expect(toast.message).toContain("lodging:import.commitResult.deadlinesFilledSuffix");
+  });
+
   describe("clean success (no failures)", () => {
     it("returns success type and success message", () => {
       const t = makeMockTranslate();

@@ -62,6 +62,9 @@ export interface StayCandidateFields {
   /** "booking:<confirmation number>" — see LodgingStay.externalRef. */
   externalRef?: string | null;
   notes?: string | null;
+  /** As the confirmation states them (forgejo#285): passed back to the commit untouched. */
+  freeCancellationUntil?: string | null;
+  paymentDueOn?: string | null;
 }
 
 export interface LodgingImportCandidate {
@@ -103,7 +106,10 @@ export type UpdatableStayField =
   | "totalPrice"
   | "pricePerNight"
   | "currency"
-  | "bookingReference";
+  | "bookingReference"
+  // Fill-only: offered when the stored stay holds no deadline yet (forgejo#285).
+  | "freeCancellationUntil"
+  | "paymentDueOn";
 
 /** One field a changed booking would move: the stored value and the new one. */
 export interface LodgingStayChange {
@@ -196,6 +202,11 @@ export interface LodgingImportCommitResult {
   createdStays: number;
   /** Stored stays a changed booking moved. Absent on a backend older than 2.7. */
   updatedStays?: number;
+  /** Stored stays whose EMPTY deadlines the mail filled (forgejo#285); absent on older servers. */
+  filledDeadlines?: {
+    sourceRowIndex: number;
+    fields: Array<"freeCancellationUntil" | "paymentDueOn">;
+  }[];
   skipped: number;
   failed: {
     sourceRowIndex: number;

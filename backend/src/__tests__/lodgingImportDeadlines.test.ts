@@ -1,6 +1,7 @@
 import { prisma } from "../db";
 import { commitLodgingImport } from "../services/lodging/lodgingImportCommit";
 import { bookingsToCandidates } from "../services/lodging/lodgingCandidates";
+import { buildLodgingPreviewRows } from "../services/lodging/lodgingImportPreview";
 import type { ParsedLodgingBooking } from "../services/lodging/parsedLodgingBooking";
 import type { CommitRowInput } from "../schemas/lodgingImport";
 
@@ -126,5 +127,71 @@ describe("lodging import — deadlines from a template (forgejo#285)", () => {
     expect(stay.freeCancellationUntil).toBeNull();
     expect(stay.freeCancellationOn).toBeNull();
     expect(stay.paymentDueOn?.toISOString().slice(0, 10)).toBe("2027-04-01");
+  });
+
+  describe("re-import of a booking already stored", () => {
+    /** Imports the first mail, then previews and commits the second one as the UI would. */
+    async function reimport(
+      ref: string,
+      first: Partial<ParsedLodgingBooking>,
+      second: Partial<ParsedLodgingBooking>,
+      edit?: (stayId: string) => Promise<unknown>
+    ) {
+      const base = { confirmationNumber: ref, hotelName: `Pension Seeblick ${ref}` };
+      const firstRow = row(parsed({ ...base, ...first }), 10);
+      // The stored house keeps the mail's own name, so the re-import's row is unambiguous.
+      const created = await commitLodgingImport(userId, "email", null, [
+        { ...firstRow, lodging: { ...firstRow.lodging!, name: base.hotelName } },
+      ]);
+      const stay = await prisma.lodgingStay.findFirstOrThrow({
+        where: { batchId: created.batchId },
+      });
+      if (edit) await edit(stay.id);
+      const candidates = bookingsToCandidates([parsed({ ...base, ...second })]);
+      const { rows } = await buildLodgingPreviewRows(userId, candidates);
+      const result = await commitLodgingImport(userId, "email", null, rows as CommitRowInput[]);
+      const after = await prisma.lodgingStay.findUniqueOrThrow({ where: { id: stay.id } });
+      return { preview: rows[0], result, after };
+    }
+
+    it("fills deadlines the stored stay does not hold, and says so", async () => {
+      const { preview, result, after } = await reimport(
+        "RE-1",
+        {},
+        { freeCancellationUntil: "2027-04-30", paymentDueOn: "2027-04-01" }
+      );
+      expect(preview.action).toBe("update");
+      expect(preview.changes).toEqual([
+        { field: "freeCancellationUntil", from: null, to: "2027-04-30" },
+        { field: "paymentDueOn", from: null, to: "2027-04-01" },
+      ]);
+      expect(result.filledDeadlines).toEqual([
+        { sourceRowIndex: 0, fields: ["freeCancellationUntil", "paymentDueOn"] },
+      ]);
+      expect(after.freeCancellationOn?.toISOString().slice(0, 10)).toBe("2027-04-30");
+      expect(after.paymentDueOn?.toISOString().slice(0, 10)).toBe("2027-04-01");
+    });
+
+    it("never overwrites a deadline the user set", async () => {
+      const { preview, result, after } = await reimport(
+        "RE-2",
+        {},
+        { freeCancellationUntil: "2027-04-30T18:00", paymentDueOn: "2027-04-01" },
+        (id) =>
+          prisma.lodgingStay.update({
+            where: { id },
+            data: {
+              freeCancellationOn: new Date("2027-04-28T00:00:00Z"),
+              paymentDueOn: new Date("2027-03-20T00:00:00Z"),
+            },
+          })
+      );
+      expect(preview.action).toBe("skip");
+      expect(preview.changes).toEqual([]);
+      expect(result.filledDeadlines).toEqual([]);
+      expect(after.freeCancellationOn?.toISOString().slice(0, 10)).toBe("2027-04-28");
+      expect(after.freeCancellationUntil).toBeNull();
+      expect(after.paymentDueOn?.toISOString().slice(0, 10)).toBe("2027-03-20");
+    });
   });
 });

@@ -74,3 +74,69 @@ export async function parsedDeadlineColumns(
     return resolveDeadlineColumns({ paymentDueOn: input.paymentDueOn }, ctx);
   }
 }
+
+/** The stored deadline columns a re-import compares against. */
+export const STORED_DEADLINE_SELECT = {
+  freeCancellationUntil: true,
+  freeCancellationOn: true,
+  paymentDueOn: true,
+} as const;
+
+export interface StoredDeadlines {
+  freeCancellationUntil: Date | null;
+  freeCancellationOn: Date | null;
+  paymentDueOn: Date | null;
+}
+
+export const DEADLINE_FIELDS = ["freeCancellationUntil", "paymentDueOn"] as const;
+export type DeadlineField = (typeof DEADLINE_FIELDS)[number];
+
+/**
+ * What a RE-import may write: only the deadlines the stored row does not hold
+ * yet. A deadline already on the row — typed by the user, edited, or from an
+ * earlier mail — is never overwritten by a later document; the user changes it
+ * by hand if the booking's terms really moved.
+ */
+export function emptyDeadlineFills(
+  incoming: ParsedDeadlines,
+  stored: StoredDeadlines
+): ParsedDeadlines {
+  const cancellationEmpty = !stored.freeCancellationUntil && !stored.freeCancellationOn;
+  return {
+    ...(incoming.freeCancellationUntil && cancellationEmpty
+      ? { freeCancellationUntil: incoming.freeCancellationUntil }
+      : {}),
+    ...(incoming.paymentDueOn && !stored.paymentDueOn
+      ? { paymentDueOn: incoming.paymentDueOn }
+      : {}),
+  };
+}
+
+/**
+ * Which deadlines a write ACTUALLY filled, read off the resolved columns — a
+ * cancellation time no clock could place was dropped and is not reported.
+ */
+export function filledDeadlineFields(columns: Partial<DeadlineColumns>): DeadlineField[] {
+  return [
+    ...(columns.freeCancellationUntil || columns.freeCancellationOn
+      ? (["freeCancellationUntil"] as const)
+      : []),
+    ...(columns.paymentDueOn ? (["paymentDueOn"] as const) : []),
+  ];
+}
+
+/**
+ * Fill a stored row's EMPTY deadlines from a re-imported document: the
+ * columns to write (empty when there is nothing to fill) and what they fill.
+ */
+export async function fillEmptyDeadlines(
+  incoming: ParsedDeadlines,
+  stored: StoredDeadlines,
+  placeZone: string | null,
+  userId: string
+): Promise<{ columns: Partial<DeadlineColumns>; filled: DeadlineField[] }> {
+  const fills = emptyDeadlineFills(incoming, stored);
+  if (!fills.freeCancellationUntil && !fills.paymentDueOn) return { columns: {}, filled: [] };
+  const columns = await parsedDeadlineColumns(fills, placeZone, userId);
+  return { columns, filled: filledDeadlineFields(columns) };
+}

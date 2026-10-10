@@ -212,6 +212,10 @@ export const UPDATABLE_STAY_FIELDS = [
   "pricePerNight",
   "currency",
   "bookingReference",
+  // Deadlines (forgejo#285) — FILL-only: offered only while the stay holds
+  // none, never over one already there (`emptyDeadlineFills`).
+  "freeCancellationUntil",
+  "paymentDueOn",
 ] as const;
 export type UpdatableStayField = (typeof UPDATABLE_STAY_FIELDS)[number];
 
