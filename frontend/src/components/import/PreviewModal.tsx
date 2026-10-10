@@ -28,6 +28,12 @@ export interface PreviewModalProps {
   onClose: () => void;
   /** Optional link target shown in the success view (e.g. "/flights"). */
   flightsListHref?: string;
+  /**
+   * Said above the rows: which lines of the file never made it into the
+   * preview (an impossible date, a missing airport code), so a partial
+   * import is a choice the reader makes knowingly.
+   */
+  notice?: string | null;
 }
 
 type SubmitState =
@@ -59,6 +65,7 @@ export function PreviewModal({
   onCommit,
   onClose,
   flightsListHref,
+  notice,
 }: PreviewModalProps): JSX.Element {
   const { t } = useTranslation("settings");
 
@@ -154,7 +161,8 @@ export function PreviewModal({
                   duplicates: summary.duplicates,
                   problems: summary.problems,
                 })}
-                {summary.unresolvable > 0 && ` · ${summary.unresolvable} unresolvable`}
+                {summary.unresolvable > 0 &&
+                  ` · ${t("settings:import.preview.unresolvable", { count: summary.unresolvable })}`}
               </p>
             )}
           </div>
@@ -168,6 +176,20 @@ export function PreviewModal({
             ×
           </button>
         </header>
+
+        {notice && submitState.phase !== "success" && (
+          <p
+            role="status"
+            className="mx-6 mt-4 whitespace-pre-line rounded-md p-3 text-sm"
+            style={{
+              background: "color-mix(in srgb, var(--ts-warn) 12%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--ts-warn) 45%, transparent)",
+              color: "var(--ts-text-bright)",
+            }}
+          >
+            {notice}
+          </p>
+        )}
 
         {submitState.phase === "success" ? (
           <SuccessView
@@ -290,7 +312,7 @@ function RowsView({ rows, checked, toggle, isSubmitting, t }: RowsViewProps): JS
                   {r.flightNumberNormalised ?? r.flightNumber ?? "—"}
                 </td>
                 <td className="py-2 pr-3" style={{ color: "var(--text-primary)" }}>
-                  {hardError ? "—" : r.statusDefault}
+                  {hardError ? "—" : t(`flights:status.${r.statusDefault}`)}
                 </td>
                 <td className="flex flex-wrap gap-1 py-2">
                   {errors.map((f) => (

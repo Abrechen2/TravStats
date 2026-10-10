@@ -758,12 +758,30 @@
           "seatNumber": "Seat number",
           "notes": "Notes"
         }
-      }
+      },
+      "unresolvable": "{{count}} unresolvable"
     },
     "toast": {
       "movedFromDashboard": "The flight import has moved here — under Settings → Import."
     },
-    "noRoutes": "No list format for this area yet. Add single entries in the area itself."
+    "noRoutes": "No list format for this area yet. Add single entries in the area itself.",
+    "parserErrors": {
+      "row": "Line {{line}}: {{reason}}",
+      "invalidDate": "“{{value}}” is not a valid date",
+      "invalidTime": "time “{{value}}” is not valid (expected HH:MM:SS)",
+      "missingIata": "no airport code (IATA) in From/To",
+      "missingHeader": "The file has no “{{value}}” column. Is it a Flightradar24 export?",
+      "unmappedField": "The required field “{{value}}” is not mapped to a column.",
+      "missingColumn": "The mapped column “{{value}}” is not in the file.",
+      "unknown": "The line could not be read",
+      "more": "… and {{count}} more",
+      "noRows": "The file has no readable line. Nothing was imported.",
+      "emptyFile": "The file is empty.",
+      "skipped_one": "{{count}} line was skipped because it could not be read. You can review and import the rest.",
+      "skipped_other": "{{count}} lines were skipped because they could not be read. You can review and import the rest.",
+      "previewFailed": "The preview could not be created. Please try again.",
+      "commitPartial": "Imported {{committed}} of {{total}} flights. Part of the file could not be saved — import it again; what is already there will be recognised."
+    }
   },
   "trips": {
     "title": "Trips",

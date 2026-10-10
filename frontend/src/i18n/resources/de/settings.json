@@ -758,12 +758,30 @@
           "seatNumber": "Sitzplatznummer",
           "notes": "Notizen"
         }
-      }
+      },
+      "unresolvable": "{{count}} nicht auflösbar"
     },
     "toast": {
       "movedFromDashboard": "Der Flug-Import ist jetzt hier — unter Einstellungen → Import."
     },
-    "noRoutes": "Für diesen Bereich gibt es noch kein Listenformat. Einzelne Einträge legst du direkt dort an."
+    "noRoutes": "Für diesen Bereich gibt es noch kein Listenformat. Einzelne Einträge legst du direkt dort an.",
+    "parserErrors": {
+      "row": "Zeile {{line}}: {{reason}}",
+      "invalidDate": "Datum „{{value}}“ ist kein gültiges Datum",
+      "invalidTime": "Uhrzeit „{{value}}“ ist ungültig (erwartet: HH:MM:SS)",
+      "missingIata": "kein Flughafencode (IATA) bei Von/Nach",
+      "missingHeader": "Die Datei hat keine Spalte „{{value}}“. Ist es ein Flightradar24-Export?",
+      "unmappedField": "Das Pflichtfeld „{{value}}“ ist keiner Spalte zugeordnet.",
+      "missingColumn": "Die zugeordnete Spalte „{{value}}“ fehlt in der Datei.",
+      "unknown": "Die Zeile konnte nicht gelesen werden",
+      "more": "… und {{count}} weitere",
+      "noRows": "In der Datei ist keine lesbare Zeile. Nichts wurde importiert.",
+      "emptyFile": "Die Datei ist leer.",
+      "skipped_one": "{{count}} Zeile wurde übersprungen, weil sie nicht lesbar ist. Die übrigen kannst du prüfen und importieren.",
+      "skipped_other": "{{count}} Zeilen wurden übersprungen, weil sie nicht lesbar sind. Die übrigen kannst du prüfen und importieren.",
+      "previewFailed": "Die Vorschau konnte nicht erstellt werden. Bitte versuche es erneut.",
+      "commitPartial": "{{committed}} von {{total}} Flügen importiert. Ein Teil konnte nicht gespeichert werden — bitte die Datei noch einmal importieren; bereits Importiertes wird dabei erkannt."
+    }
   },
   "trips": {
     "title": "Reisen",

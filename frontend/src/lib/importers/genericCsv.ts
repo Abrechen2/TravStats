@@ -31,7 +31,12 @@ export function parseGenericCsv(raw: string, mapping: GenericMapping): ParseResu
 
   for (const f of REQUIRED_FIELDS) {
     if (!mapping[f]) {
-      errors.push({ rowIndex: -1, message: `Required field is unmapped: ${f}` });
+      errors.push({
+        rowIndex: -1,
+        message: `Required field is unmapped: ${f}`,
+        code: "unmappedField",
+        value: f,
+      });
     }
   }
   if (errors.length > 0) return { rows: [], parserErrors: errors };
@@ -41,7 +46,12 @@ export function parseGenericCsv(raw: string, mapping: GenericMapping): ParseResu
 
   for (const v of Object.values(mapping)) {
     if (v && !headers.includes(v)) {
-      errors.push({ rowIndex: -1, message: `Mapped column not found in CSV: ${v}` });
+      errors.push({
+        rowIndex: -1,
+        message: `Mapped column not found in CSV: ${v}`,
+        code: "missingColumn",
+        value: v,
+      });
     }
   }
   if (errors.length > 0) return { rows: [], parserErrors: errors };
@@ -50,17 +60,35 @@ export function parseGenericCsv(raw: string, mapping: GenericMapping): ParseResu
   records.forEach((rec, idx) => {
     const date = rec[mapping.date!];
     if (!isRealDate(date)) {
-      errors.push({ rowIndex: idx, field: "date", message: `Invalid Date: ${date}` });
+      errors.push({
+        rowIndex: idx,
+        field: "date",
+        message: `Invalid Date: ${date}`,
+        code: "invalidDate",
+        value: date,
+      });
       return;
     }
     const dep = mapping.depTimeLocal ? rec[mapping.depTimeLocal] : undefined;
     const arr = mapping.arrTimeLocal ? rec[mapping.arrTimeLocal] : undefined;
     if (dep && !HMS_RE.test(dep)) {
-      errors.push({ rowIndex: idx, field: "depTimeLocal", message: `Invalid time: ${dep}` });
+      errors.push({
+        rowIndex: idx,
+        field: "depTimeLocal",
+        message: `Invalid time: ${dep}`,
+        code: "invalidTime",
+        value: dep,
+      });
       return;
     }
     if (arr && !HMS_RE.test(arr)) {
-      errors.push({ rowIndex: idx, field: "arrTimeLocal", message: `Invalid time: ${arr}` });
+      errors.push({
+        rowIndex: idx,
+        field: "arrTimeLocal",
+        message: `Invalid time: ${arr}`,
+        code: "invalidTime",
+        value: arr,
+      });
       return;
     }
     rows.push({
