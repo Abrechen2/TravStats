@@ -24,10 +24,10 @@ import { checkAndUpdateAchievements } from "../../../utils/achievements";
 import { createDocument, type EntryRef } from "../../documents/documentService";
 import { sha256Hex } from "../../documents/documentStore";
 import { DOCUMENT_KINDS, type DocumentKind } from "../../documents/documentFormats";
-import { normalizeLodgingName } from "../../lodging/lodgingImportPreview";
 import { removeDisplayRendition, writeDisplayRendition } from "../../photos/displayRendition";
 import { recomputeTripStatus } from "../../tripStatusService";
-import { lodgingIndex } from "../package/matching";
+import { lodgingIndex, pickHouse, type LodgingIndex } from "../package/matching";
+import type { HouseIdentity } from "../../sharing/facts/lodgingStay";
 import {
   cruiseRow,
   flightRow,
@@ -133,6 +133,9 @@ function removePhotos(written: WrittenPhoto[]): void {
   }
 }
 
+/** A lodging this commit created, for the next stay of the file to find. */
+type CreatedHouse = HouseIdentity & { id: string };
+
 type IdMaps = Record<EntityKind | "booking" | "place" | "stop", Map<string, string>>;
 
 async function attach(
@@ -173,7 +176,7 @@ export async function commitTripFile(
   const ctx = await resolveContext(userId, file);
   const lodgings = await lodgingIndex(
     userId,
-    file.stays.map((s) => s.lodging.name)
+    file.stays.map((s) => s.lodging)
   );
   const color =
     proposal.trip.action === "create"
@@ -190,7 +193,7 @@ export async function commitTripFile(
   let ids: IdMaps;
   try {
     ids = await prisma.$transaction(
-      (tx) => writeAll(tx, userId, archive, proposal, ctx, lodgings.lodgings, color, photos),
+      (tx) => writeAll(tx, userId, archive, proposal, ctx, lodgings, color, photos),
       {
         timeout: 60_000,
       }
@@ -233,7 +236,7 @@ async function writeAll(
   archive: TripArchive,
   proposal: TripFileProposal,
   ctx: Awaited<ReturnType<typeof resolveContext>>,
-  lodgingByName: Map<string, string>,
+  lodgings: LodgingIndex,
   color: string,
   photos: WrittenPhoto[]
 ): Promise<IdMaps> {
@@ -289,7 +292,7 @@ async function writeAll(
   }
 
   const bookingOf = (key: string | null) => (key ? (ids.booking.get(key) ?? null) : null);
-  const lodgingCreated = new Map<string, string>();
+  const lodgingCreated: CreatedHouse[] = [];
   for (const entry of proposal.entries) {
     if (entry.kind === "stop") continue;
     const map = ids[entry.kind];
@@ -313,7 +316,7 @@ async function writeAll(
         ctx,
         { tripId, bookingId },
         ids,
-        lodgingByName,
+        lodgings,
         lodgingCreated
       )
     );
@@ -410,8 +413,8 @@ async function createEntry(
   ctx: Awaited<ReturnType<typeof resolveContext>>,
   link: { tripId: string; bookingId: string | null },
   ids: IdMaps,
-  lodgingByName: Map<string, string>,
-  lodgingCreated: Map<string, string>
+  lodgings: LodgingIndex,
+  lodgingCreated: CreatedHouse[]
 ): Promise<string> {
   const select = { id: true } as const;
   const byKey = <T extends { key: string }>(list: T[]) => list.find((e) => e.key === entry.key)!;
@@ -422,11 +425,24 @@ async function createEntry(
       ).id;
     case "stay": {
       const s = byKey(file.stays);
-      const name = normalizeLodgingName(s.lodging.name);
-      let lodgingId = lodgingByName.get(name) ?? lodgingCreated.get(name);
+      // The same house rule as the proposal (`pickHouse`): an account's
+      // "Hotel Central" in Paris is not the file's one in Lyon, and neither
+      // are two of the file's own (forgejo#277).
+      let lodgingId =
+        lodgings.resolve(s.lodging, s.checkInDate ?? s.checkIn?.slice(0, 10) ?? null).lodgingId ??
+        pickHouse(lodgingCreated, s.lodging)?.id;
       if (!lodgingId) {
         lodgingId = (await tx.lodging.create({ data: lodgingRow(userId, s), select })).id;
-        lodgingCreated.set(name, lodgingId);
+        const l = s.lodging;
+        lodgingCreated.push({
+          id: lodgingId,
+          name: l.name,
+          city: l.city,
+          country: l.country,
+          isoCountryCode: l.isoCountryCode,
+          lat: l.lat,
+          lon: l.lon,
+        });
       }
       return (
         await tx.lodgingStay.create({

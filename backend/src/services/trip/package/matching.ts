@@ -7,7 +7,8 @@
  *            and that sits on a trip; else the ONE trip overlapping the span
  *   flights  the provenance key (`flightExternalRef`), else the same flight
  *            number departing on the same local day
- *   stays    the same lodging (normalised name) with the same check-in day
+ *   stays    the same house (`pickHouse`: name AND place) with the same
+ *            check-in day
  *   cruise   the provenance key (`cruiseExternalRef`) or the booking reference
  *
  * A second document of the same booking (invoice, then travel documents)
@@ -16,7 +17,11 @@
 import { prisma } from "../../../db";
 import { getCachedAirports } from "../../airportCache";
 import { cruiseExternalRef, flightExternalRef } from "../../importProvenance";
-import { normalizeLodgingName } from "../../lodging/lodgingImportPreview";
+import {
+  houseVerdict,
+  normalisedLodgingName,
+  type HouseIdentity,
+} from "../../sharing/facts/lodgingStay";
 import { soleOverlappingTrip } from "../../rental/rentalLinks";
 import { localDay } from "../../../shared/time/instant";
 import { addDays, type PackageContract, type PackageFlight } from "./contract";
@@ -168,42 +173,104 @@ export async function existingFlight(
 
 // ------------------------------------------------------------------ stays
 
+/** A house as an import names it: a name, and whatever place it states. */
+export type IncomingHouse = Pick<HouseIdentity, "name"> & Partial<Omit<HouseIdentity, "name">>;
+
+const asHouse = (h: IncomingHouse): HouseIdentity => ({
+  name: h.name,
+  city: h.city ?? null,
+  country: h.country ?? null,
+  isoCountryCode: h.isoCountryCode ?? null,
+  lat: h.lat ?? null,
+  lon: h.lon ?? null,
+});
+
+/**
+ * Which of `candidates` (oldest first) an incoming house is — the sharing
+ * rule (`houseVerdict`, name AND place), so a package, a `.travstats` file and
+ * a shared trip agree on what "the same hotel" means (forgejo#277).
+ *
+ *   - candidates the place data proves to be the house: the one already
+ *     holding a stay on `preferStay`, else the oldest
+ *   - none proven, and exactly ONE same-named candidate whose place cannot be
+ *     compared (a side has no coordinates and no city): that one — nothing
+ *     contradicts it, nothing competes with it, and a re-import of a
+ *     place-less package stays idempotent
+ *   - otherwise none: a second "Hotel Central" in another city, or two
+ *     candidates nobody can tell apart, is never resolved by age
+ */
+export function pickHouse<T extends HouseIdentity & { id: string }>(
+  candidates: T[],
+  incoming: IncomingHouse,
+  preferStay: (candidate: T) => boolean = () => false
+): T | null {
+  const house = asHouse(incoming);
+  const same = candidates.filter((c) => houseVerdict(c, house) === "same");
+  if (same.length > 0) return same.find(preferStay) ?? same[0];
+  const named = candidates.filter(
+    (c) => normalisedLodgingName(c.name) === normalisedLodgingName(house.name)
+  );
+  return named.length === 1 && houseVerdict(named[0], house) === "unknown" ? named[0] : null;
+}
+
+export interface ResolvedHouse {
+  /** The user's lodging this house is, or null — a new one is created. */
+  lodgingId: string | null;
+  /** That lodging's stay checking in on the asked day, if any. */
+  stay: ExistingEntry | null;
+}
+
 export interface LodgingIndex {
-  /** normalised name → lodging id (the oldest, when the user has duplicates) */
-  lodgings: Map<string, string>;
-  /** `${lodgingId}|${checkInDay}` → stay */
-  stays: Map<string, ExistingEntry>;
+  resolve(house: IncomingHouse, checkInDay: string | null): ResolvedHouse;
 }
 
 const dayOfDate = (d: Date | null): string | null => (d ? d.toISOString().slice(0, 10) : null);
 
-export async function lodgingIndex(userId: string, names: string[]): Promise<LodgingIndex> {
-  const wanted = new Set(names.map(normalizeLodgingName));
-  const lodgings = new Map<string, string>();
-  const stays = new Map<string, ExistingEntry>();
-  if (wanted.size === 0) return { lodgings, stays };
-  const rows = await prisma.lodging.findMany({
-    where: { userId },
-    orderBy: { createdAt: "asc" },
-    select: {
-      id: true,
-      name: true,
-      stays: {
-        select: { id: true, tripId: true, bookingId: true, checkIn: true, checkInDate: true },
+type CandidateHouse = HouseIdentity & { id: string; stays: Map<string, ExistingEntry> };
+
+export async function lodgingIndex(userId: string, houses: IncomingHouse[]): Promise<LodgingIndex> {
+  const wanted = new Set(houses.map((h) => normalisedLodgingName(h.name)));
+  const byName = new Map<string, CandidateHouse[]>();
+  if (wanted.size > 0) {
+    const rows = await prisma.lodging.findMany({
+      where: { userId },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        name: true,
+        city: true,
+        country: true,
+        isoCountryCode: true,
+        lat: true,
+        lon: true,
+        stays: {
+          select: { id: true, tripId: true, bookingId: true, checkIn: true, checkInDate: true },
+        },
       },
-    },
-  });
-  for (const row of rows) {
-    const key = normalizeLodgingName(row.name);
-    if (!wanted.has(key)) continue;
-    if (!lodgings.has(key)) lodgings.set(key, row.id);
-    for (const s of row.stays) {
-      const day = dayOfDate(s.checkInDate) ?? dayOfDate(s.checkIn);
-      if (day)
-        stays.set(`${row.id}|${day}`, { id: s.id, tripId: s.tripId, bookingId: s.bookingId });
+    });
+    for (const { stays, ...row } of rows) {
+      const key = normalisedLodgingName(row.name);
+      if (!wanted.has(key)) continue;
+      const byDay = new Map<string, ExistingEntry>();
+      for (const s of stays) {
+        const day = dayOfDate(s.checkInDate) ?? dayOfDate(s.checkIn);
+        if (day) byDay.set(day, { id: s.id, tripId: s.tripId, bookingId: s.bookingId });
+      }
+      byName.set(key, [...(byName.get(key) ?? []), { ...row, stays: byDay }]);
     }
   }
-  return { lodgings, stays };
+  return {
+    resolve(house, checkInDay) {
+      const candidates = byName.get(normalisedLodgingName(house.name)) ?? [];
+      const hit = pickHouse(candidates, house, (c) =>
+        Boolean(checkInDay && c.stays.has(checkInDay))
+      );
+      return {
+        lodgingId: hit?.id ?? null,
+        stay: hit && checkInDay ? (hit.stays.get(checkInDay) ?? null) : null,
+      };
+    },
+  };
 }
 
 // ------------------------------------------------------------------ cruise

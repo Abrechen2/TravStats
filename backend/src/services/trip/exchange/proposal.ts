@@ -10,7 +10,6 @@
  */
 import { prisma } from "../../../db";
 import { toLocal } from "../../../shared/time/instant";
-import { normalizeLodgingName } from "../../lodging/lodgingImportPreview";
 import { sha256Hex } from "../../documents/documentStore";
 import { knownPhotoHashes, photoHash } from "./photoIdentity";
 import {
@@ -180,12 +179,11 @@ async function proposeEntries(
   }
   const index = await lodgingIndex(
     userId,
-    file.stays.map((s) => s.lodging.name)
+    file.stays.map((s) => s.lodging)
   );
   for (const s of file.stays) {
     const day = s.checkInDate ?? slice(s.checkIn);
-    const lodgingId = index.lodgings.get(normalizeLodgingName(s.lodging.name)) ?? null;
-    const existing = lodgingId && day ? (index.stays.get(`${lodgingId}|${day}`) ?? null) : null;
+    const existing = index.resolve(s.lodging, day).stay;
     entries.push({
       key: s.key,
       kind: "stay",
