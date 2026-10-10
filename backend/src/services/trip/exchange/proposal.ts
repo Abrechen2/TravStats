@@ -12,6 +12,7 @@ import { prisma } from "../../../db";
 import { toLocal } from "../../../shared/time/instant";
 import { normalizeLodgingName } from "../../lodging/lodgingImportPreview";
 import { sha256Hex } from "../../documents/documentStore";
+import { knownPhotoHashes, photoHash } from "./photoIdentity";
 import {
   bookingByReference,
   existingCruiseByRef,
@@ -291,19 +292,9 @@ async function proposeFiles(
     ).map((d) => d.sha256)
   );
   const newDocs = hashes.filter((h) => !known.has(h)).length;
-  const photoKeys = new Set(
-    tripId
-      ? (
-          await prisma.tripPhoto.findMany({
-            where: { tripId },
-            select: { sizeBytes: true, takenAt: true },
-          })
-        ).map((p) => photoIdentity(p.sizeBytes, p.takenAt?.toISOString() ?? null))
-      : []
-  );
-  const newPhotos = file.photos.filter(
-    (p) => !photoKeys.has(photoIdentity(blobs.get(p.file)!.length, p.takenAt))
-  ).length;
+  const incoming = file.photos.map((p) => blobs.get(p.file)!);
+  const knownPhotos = await knownPhotoHashes(tripId, incoming);
+  const newPhotos = incoming.filter((b) => !knownPhotos.has(photoHash(b))).length;
   const journal = file.journal ?? [];
   const journalKeys = new Set(
     tripId
@@ -325,9 +316,6 @@ async function proposeFiles(
   };
 }
 
-/** A photo already on the trip: the same bytes count and capture time. */
-export const photoIdentity = (size: number, takenAt: string | null): string =>
-  `${size}|${takenAt ? new Date(takenAt).toISOString() : ""}`;
 export const journalIdentity = (date: string, body: string): string =>
   `${new Date(date).toISOString()}|${body}`;
 

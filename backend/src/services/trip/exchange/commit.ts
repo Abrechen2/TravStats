@@ -40,7 +40,8 @@ import {
   IMPORT_SOURCE,
 } from "./commitRows";
 import type { EntityKind, TripFile } from "./format";
-import { buildTripFileProposal, journalIdentity, photoIdentity } from "./proposal";
+import { buildTripFileProposal, journalIdentity } from "./proposal";
+import { knownPhotoHashes, photoHash } from "./photoIdentity";
 import type { TripArchive } from "./readArchive";
 import type { TripFileChoices, TripFileEntryProposal, TripFileProposal } from "./types";
 
@@ -100,13 +101,13 @@ interface WrittenPhoto {
 }
 
 /** Writes the new photos' bytes before the transaction; their rows go in with it. */
-async function writePhotos(archive: TripArchive, skip: Set<string>): Promise<WrittenPhoto[]> {
+async function writePhotos(archive: TripArchive, known: Set<string>): Promise<WrittenPhoto[]> {
   const dir = getTripPhotoDir();
   const written: WrittenPhoto[] = [];
   try {
     for (const [index, p] of archive.file.photos.entries()) {
       const bytes = archive.blobs.get(p.file)!;
-      if (skip.has(photoIdentity(bytes.length, p.takenAt))) continue;
+      if (known.has(photoHash(bytes))) continue;
       const type = photoTypeOf(bytes);
       if (!type) {
         logger.warn({ operation: "trip_import_photo_refused", entry: p.file });
@@ -178,15 +179,12 @@ export async function commitTripFile(
     proposal.trip.action === "create"
       ? TRIP_COLORS[(await prisma.trip.count({ where: { userId } })) % TRIP_COLORS.length]
       : TRIP_COLORS[0];
-  const existingPhotos = proposal.trip.id
-    ? await prisma.tripPhoto.findMany({
-        where: { tripId: proposal.trip.id },
-        select: { sizeBytes: true, takenAt: true },
-      })
-    : [];
   const photos = await writePhotos(
     archive,
-    new Set(existingPhotos.map((p) => photoIdentity(p.sizeBytes, p.takenAt?.toISOString() ?? null)))
+    await knownPhotoHashes(
+      proposal.trip.id,
+      archive.file.photos.map((p) => archive.blobs.get(p.file)!)
+    )
   );
 
   let ids: IdMaps;
