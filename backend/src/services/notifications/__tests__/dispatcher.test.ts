@@ -1,4 +1,5 @@
 import { prisma } from "../../../db";
+import { dbLogger } from "../../../utils/logger";
 import { hashPassword } from "../../../utils/password";
 import { generateApiToken } from "../../../utils/apiTokens";
 import { ensureAdminSettingsRow } from "../../adminSettingsRow";
@@ -142,7 +143,18 @@ describe("notifyFlightChanged", () => {
     await phone();
     const r = recorder();
     await notifyFlightChanged(userId, flight, gate, { pending: false }, { send: r.send });
-    await notifyFlightChanged(userId, flight, gate, { pending: false }, { send: r.send });
+    const error = jest.spyOn(dbLogger, "error");
+    try {
+      await notifyFlightChanged(userId, flight, gate, { pending: false }, { send: r.send });
+      // The claim's unique violation IS the dedupe — handled, so not a logged error.
+      expect(
+        error.mock.calls.filter(
+          ([e]) => (e as { operation?: string }).operation === "database_query_error"
+        )
+      ).toHaveLength(0);
+    } finally {
+      error.mockRestore();
+    }
     expect(r.pushes).toHaveLength(1);
   });
 

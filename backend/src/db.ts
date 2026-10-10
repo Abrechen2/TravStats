@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+
 import { createPrismaClient } from "./prismaClient";
 import logger, { dbLogger } from "./utils/logger";
 import { toLoggable } from "./utils/logging/toLoggable";
@@ -61,6 +63,29 @@ export function observeQueries(observer: (query: ObservedQuery) => void): () => 
   return () => {
     queryObservers.delete(observer);
   };
+}
+
+/**
+ * A unique violation the caller is about to catch and handle is not a fault.
+ *
+ * Two paths rely on a unique index AS their dedupe: the idempotency key of a
+ * create (`services/sync/clientRef.ts`, the loser of two concurrent POSTs) and
+ * the push claim (`notifications/dispatcher.ts`, a phone already told). Both
+ * catch P2002 by design, yet every one was logged as `database_query_error` —
+ * an error log that cries wolf hides the unique violation that IS a bug.
+ *
+ * So the caller names the model whose P2002 it expects, around exactly the
+ * call it catches. Inside that scope a P2002 on THAT model is logged at debug;
+ * any other error, and a P2002 on any other model — or outside a scope — stays
+ * at error level. Async-local, so it holds across the awaits of an interactive
+ * transaction and never leaks into a concurrent request.
+ */
+const expectedUniqueConflict = new AsyncLocalStorage<string>();
+
+export function expectingUniqueConflict<T>(model: string, run: () => Promise<T>): Promise<T> {
+  // Awaited INSIDE the scope: a Prisma query is a lazy thenable that runs only
+  // when awaited, so returning it unawaited would run it outside the scope.
+  return expectedUniqueConflict.run(model, async () => await run());
 }
 
 /**
@@ -152,6 +177,16 @@ function logQueryFailure(
     },
     performance: { duration: Date.now() - startTime },
   };
+
+  if (code === "P2002" && model !== undefined && expectedUniqueConflict.getStore() === model) {
+    dbLogger.debug({
+      ...entry,
+      operation: "database_expected_conflict",
+      message: `${model}.${operation} - unique conflict, handled by the caller`,
+      error: { code },
+    });
+    return;
+  }
 
   // Connection errors are expected during startup and shutdown: a warning.
   if (CONNECTION_ERROR_MARKERS.some((marker) => errorMessage.includes(marker))) {

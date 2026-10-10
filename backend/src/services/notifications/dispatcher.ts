@@ -1,5 +1,5 @@
 import { Prisma } from "../../prisma";
-import { prisma } from "../../db";
+import { expectingUniqueConflict, prisma } from "../../db";
 import { systemLogger } from "../../utils/logger";
 import type { FlightChange } from "../flightAutoUpdate";
 import { serverPushEnabled } from "../push/devices";
@@ -96,7 +96,9 @@ async function deliver(
     let deliveryId: string;
     try {
       deliveryId = (
-        await prisma.pushDelivery.create({ data: { apiTokenId: device.apiTokenId, eventKey } })
+        await expectingUniqueConflict("PushDelivery", () =>
+          prisma.pushDelivery.create({ data: { apiTokenId: device.apiTokenId, eventKey } })
+        )
       ).id;
     } catch (err) {
       if (isUniqueViolation(err)) continue; // already told this phone
