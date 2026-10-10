@@ -350,10 +350,13 @@ describe("GET /api/v1/evidence/metric/... — the flight-tab unique family", () 
    * the clock. That is the calculator's own reading, and the panel mirrors
    * it rather than quietly correcting a figure the tile already shows.
    */
-  it("timeTravelFlightCount: both legs whose local arrival HOUR precedes their departure", () => {
+  it("timeTravelFlightCount: the leg that lands at an earlier local date and time than it left", () => {
     const res = answer("timeTravelFlightCount");
-    expect(titles(res)).toEqual(["UQ100", "UQ200"]);
-    expect(res.measure.value).toBe(2);
+    // UQ200 leaves New York at 18:00 and lands in Frankfurt at 08:00 the NEXT
+    // day — overnight, not time travel (forgejo#256); comparing the hour alone
+    // used to count it.
+    expect(titles(res)).toEqual(["UQ100"]);
+    expect(res.measure.value).toBe(1);
     assertSumInvariant(res, Math.round);
   });
 

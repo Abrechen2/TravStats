@@ -4,6 +4,8 @@ import logger from "../logger";
 import { departureClockOf } from "./departureClock";
 import { toLocalDateString, type FlightTimeSemantics } from "../timezone";
 import { getContinent, type Continent } from "../continents";
+import { toLocal } from "../../shared/time/instant";
+import { isValidZone } from "../../shared/time/zonedParts";
 import type { AirportData } from "../../services/airportLookup";
 
 /**
@@ -268,13 +270,16 @@ export interface FlightLocalTimes extends FlightEndpoints {
 }
 
 /**
- * The clock appeared to go backwards: local arrival earlier in the day than
- * local departure. A flight whose zones cannot BOTH be resolved is skipped
- * rather than guessed — unlike the same-day and midnight rules below, which
- * fall back to UTC through `toLocalDateString`. That difference is the
- * calculators' own and is preserved deliberately: a time-travel claim on a
- * guessed zone would be a fabricated curiosity, while a date comparison on
- * two UTC readings is at least self-consistent.
+ * Time travel: the flight LANDS, on the arrival airport's clock, at a local
+ * date and time EARLIER than it left on the departure airport's clock — a
+ * Tokyo → Honolulu flight leaving Tuesday 21:00 and landing Tuesday 09:00
+ * (forgejo#256). The full local wall clock is compared, date included: the
+ * rule used to compare the time of day alone, so every overnight flight
+ * (dep 22:00, arr 06:00 the next morning) counted as time travel.
+ *
+ * A flight whose zones cannot BOTH be resolved is skipped rather than
+ * guessed — unlike the same-day and midnight rules below, which fall back to
+ * UTC: a time-travel claim on a guessed zone would be a fabricated curiosity.
  */
 export function isTimeTravelFlight(
   flight: FlightLocalTimes,
@@ -282,8 +287,9 @@ export function isTimeTravelFlight(
 ): boolean {
   const depTz = departureTimezoneOf(flight, timezoneByCode);
   const arrTz = arrivalTimezoneOf(flight, timezoneByCode);
-  if (!depTz || !arrTz) return false;
-  return toLocalMinutes(flight.arrivalTime, arrTz) < toLocalMinutes(flight.departureTime, depTz);
+  if (!isValidZone(depTz) || !isValidZone(arrTz)) return false;
+  // `YYYY-MM-DDTHH:mm:ss` sorts as it reads.
+  return toLocal(flight.arrivalTime, arrTz).local < toLocal(flight.departureTime, depTz).local;
 }
 
 /** Departs and arrives on the same local calendar day. */
@@ -324,27 +330,6 @@ export function localArrivalDay(
   timezoneByCode: Map<string, string>
 ): string {
   return toLocalDateString(flight.arrivalTime, arrivalTimezoneOf(flight, timezoneByCode));
-}
-
-/**
- * Minutes since local midnight in the given IANA zone. Falls back to UTC on
- * an unrecognised zone string rather than throwing — the caller has already
- * decided the zone is worth reading.
- */
-function toLocalMinutes(date: Date, timezone: string): number {
-  try {
-    const parts = new Intl.DateTimeFormat("en", {
-      timeZone: timezone,
-      hour: "numeric",
-      minute: "numeric",
-      hour12: false,
-    }).formatToParts(date);
-    const h = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
-    const m = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
-    return h * 60 + m;
-  } catch {
-    return date.getUTCHours() * 60 + date.getUTCMinutes();
-  }
 }
 
 // ── Round trips ──────────────────────────────────────────────────────────

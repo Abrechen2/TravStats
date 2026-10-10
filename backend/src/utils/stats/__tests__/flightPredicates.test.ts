@@ -3,6 +3,7 @@ import {
   changesEastWestHemisphere,
   crossesEquator,
   departureDaypartOf,
+  isTimeTravelFlight,
   isWeekendDeparture,
   longitudeDirectionOf,
   touchesTropics,
@@ -183,6 +184,35 @@ describe("flightPredicates", () => {
         depTimezone: "Europe/Berlin",
         depTimeSemantics: "UTC",
       })
+    ).toBe(false);
+  });
+});
+
+describe("isTimeTravelFlight (forgejo#256)", () => {
+  const zones = new Map([
+    ["NRT", "Asia/Tokyo"],
+    ["HNL", "Pacific/Honolulu"],
+    ["JFK", "America/New_York"],
+    ["FRA", "Europe/Berlin"],
+  ]);
+  const leg = (dep: string, arr: string, departure: string, arrival: string) => ({
+    depIata: dep,
+    arrIata: arr,
+    departureTime: new Date(departure),
+    arrivalTime: new Date(arrival),
+  });
+
+  it("counts a flight that lands at an earlier local date and time than it left", () => {
+    // Tokyo Tuesday 21:00 → Honolulu Tuesday 09:00.
+    expect(
+      isTimeTravelFlight(leg("NRT", "HNL", "2025-06-10T12:00:00Z", "2025-06-10T19:00:00Z"), zones)
+    ).toBe(true);
+  });
+
+  it("does not count an overnight flight that lands the next morning", () => {
+    // New York 18:00 → Frankfurt 08:00 the next day: the hour is earlier, the day is not.
+    expect(
+      isTimeTravelFlight(leg("JFK", "FRA", "2025-06-15T22:00:00Z", "2025-06-16T06:00:00Z"), zones)
     ).toBe(false);
   });
 });

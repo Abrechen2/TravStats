@@ -404,7 +404,7 @@
   },
   "unique": {
     "timeTravel": {
-      "unit": "Anzahl Flüge, bei denen die Uhr am Ziel bei der Landung eine frühere Uhrzeit zeigt als die Uhr am Start beim Abflug – etwa ab New York um 23 Uhr, an London um 11 Uhr. Verglichen wird nur die Uhrzeit ohne Datum, darum zählt auch jeder Flug, der nach Mitternacht zu einer früheren Uhrzeit landet.",
+      "unit": "Anzahl Flüge, die nach Ortszeit am Ziel FRÜHER landen, als sie nach Ortszeit am Start abgeflogen sind – Datum und Uhrzeit zusammen verglichen, etwa ab Tokio Dienstag 21 Uhr, an Honolulu Dienstag 9 Uhr. Ein Nachtflug, der am nächsten Morgen landet, zählt nicht.",
       "time": "Abflugzeit auf der Uhr des Abflughafens, Landezeit auf der Uhr des Zielflughafens, beide Zeitzonen aus dem Flughafenkatalog. Ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
       "source": "Geflogene Flüge mit Abflug- und Ankunftszeit, dazu die Zeitzonen beider Flughäfen aus dem Flughafenkatalog (über den IATA-, sonst den ICAO-Code).",
       "coverage": "Nur Flüge mit beiden Zeiten, deren beide Flughäfen der Katalog samt Zeitzone kennt. Fehlt eine Zeitzone, wird der Flug übersprungen statt geraten.",

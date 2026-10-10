@@ -404,7 +404,7 @@
   },
   "unique": {
     "timeTravel": {
-      "unit": "Number of flights where the clock at the destination shows an earlier time on landing than the clock at the origin showed on departure – say, leaving New York at 23:00 and landing in London at 11:00. Only the time of day is compared, not the date, so any flight that lands after midnight at an earlier clock time counts too.",
+      "unit": "Number of flights that land, by local time at the destination, EARLIER than they left by local time at the origin – date and time compared together, say leaving Tokyo on Tuesday at 21:00 and landing in Honolulu on Tuesday at 09:00. An overnight flight that lands the next morning does not count.",
       "time": "Departure time on the departure airport's clock, landing time on the arrival airport's clock, both time zones from the airport catalogue. All-time; the page's year filter does not apply.",
       "source": "Flown flights with a departure and an arrival time, plus the time zones of both airports from the airport catalogue (looked up by IATA code, else ICAO).",
       "coverage": "Only flights with both times whose two airports the catalogue knows, time zone included. If a time zone is missing, the flight is skipped rather than guessed.",
