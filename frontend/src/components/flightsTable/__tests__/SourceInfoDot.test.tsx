@@ -1,5 +1,5 @@
 import { it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import SourceInfoDot from "../SourceInfoDot";
 import type { Flight } from "../../../types";
@@ -32,7 +32,7 @@ it("opens on a tap and on Enter, and closes on a second tap and on Escape", asyn
   await userEvent.click(dot);
   expect(screen.queryByRole("dialog")).toBeNull();
 
-  dot.focus();
+  act(() => dot.focus());
   await userEvent.keyboard("{Enter}");
   expect(screen.getByRole("dialog")).toBeInTheDocument();
   await userEvent.keyboard("{Escape}");

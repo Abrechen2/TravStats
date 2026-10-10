@@ -220,13 +220,9 @@ export default function ApiKeyCard({
       {capabilities && capabilities.length > 0 && (
         <span className="flex flex-wrap gap-1">
           {capabilities.map((cap) => (
-            <Pill
-              key={cap}
-              color={token("accent")}
-              title={t(`settings:apiKeys.capabilities.${cap}.tooltip`)}
-            >
-              {t(`settings:apiKeys.capabilities.${cap}.label`)}
-            </Pill>
+            <Toggletip key={cap} content={t(`settings:apiKeys.capabilities.${cap}.tooltip`)}>
+              <Pill color={token("accent")}>{t(`settings:apiKeys.capabilities.${cap}.label`)}</Pill>
+            </Toggletip>
           ))}
         </span>
       )}

@@ -5,7 +5,7 @@
  * on `touchstart` and shut again on the `click` that followed.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Toggletip from "../Toggletip";
 import HelpIcon from "../../Help/HelpIcon";
@@ -60,24 +60,39 @@ describe("Toggletip", () => {
 
   it("opens by keyboard with Enter and with Space", async () => {
     render(<HelpIcon content="Hilfe" />);
-    helpButton().focus();
+    act(() => helpButton().focus());
     await userEvent.keyboard("{Enter}");
     expect(screen.getByRole("dialog")).toBeInTheDocument();
 
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();
 
-    helpButton().focus();
+    act(() => helpButton().focus());
     await userEvent.keyboard(" ");
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
-  it("Escape closes it and gives focus back to the trigger", async () => {
+  it("Escape closes it and gives focus back to the trigger, without re-opening a preview", async () => {
     render(<HelpIcon content="Hilfe" />);
     await userEvent.click(helpButton());
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.queryByRole("tooltip")).toBeNull();
     expect(helpButton()).toHaveFocus();
+  });
+
+  it("Tab onto it previews the short help; Tab away hides it", async () => {
+    render(
+      <>
+        <HelpIcon content="Kurz" />
+        <button type="button">Weiter</button>
+      </>
+    );
+    await userEvent.tab();
+    expect(helpButton()).toHaveFocus();
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Kurz");
+    await userEvent.tab();
+    expect(screen.queryByRole("tooltip")).toBeNull();
   });
 
   it("the close button closes it and gives focus back to the trigger", async () => {
@@ -140,7 +155,7 @@ describe("Toggletip", () => {
     await userEvent.click(helpButton());
     expect(onRow).not.toHaveBeenCalled();
     await userEvent.keyboard("{Escape}");
-    helpButton().focus();
+    act(() => helpButton().focus());
     await userEvent.keyboard("{Enter}");
     expect(onRowKey).not.toHaveBeenCalled();
   });

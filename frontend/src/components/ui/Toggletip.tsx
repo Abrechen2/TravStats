@@ -73,9 +73,9 @@ const FINE_HIT = "24px";
  * - **Touch sizing follows the POINTER** (`useCoarsePointer`): an invisible
  *   hit area of at least 44 px on a coarse pointer, 24 px for a mouse, without
  *   changing the layout — the glyph stays 16 px.
- * - **Hover is a preview, never the only way.** A mouse hovering the trigger
- *   sees the short help; a finger never triggers a hover state, so a tap opens
- *   and pins it in one step.
+ * - **Hover and focus are a preview, never the only way.** A mouse hovering
+ *   the trigger, or Tab landing on it, shows the short help; a finger never
+ *   triggers a hover state, so a tap opens and pins it in one step.
  *
  * Not built on `Dialog`/`useDialogChrome`: those are MODAL (scroll lock, focus
  * trap, scrim), and help beside a field must leave the field usable. It shares
@@ -101,6 +101,8 @@ export default function Toggletip({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
+  /** Focus handed BACK to the trigger must not pop the preview open again. */
+  const returningFocus = useRef(false);
   const visible = pinned || peek;
 
   const helpName = subject ? t("help.about", { subject }) : t("accessibility.showHelp");
@@ -109,7 +111,11 @@ export default function Toggletip({
   const close = useCallback((returnFocus: boolean): void => {
     setPinned(false);
     setPeek(false);
-    if (returnFocus) triggerRef.current?.focus();
+    if (returnFocus) {
+      returningFocus.current = true;
+      triggerRef.current?.focus();
+      returningFocus.current = false;
+    }
   }, []);
 
   const reposition = useCallback((): void => {
@@ -282,7 +288,18 @@ export default function Toggletip({
             if (next instanceof Node && panelRef.current?.contains(next)) return;
             setPeek(false);
           }}
-          onBlur={onBlur}
+          // Tabbing onto the trigger previews the short help, as a hover does:
+          // a sighted keyboard user sees it, a screen reader hears it as the
+          // trigger's description. Enter/Space then opens the whole of it.
+          onFocus={() => {
+            if (!returningFocus.current && !pinned) setPeek(true);
+          }}
+          onBlur={(event) => {
+            const next = event.relatedTarget;
+            if (next instanceof Node && panelRef.current?.contains(next)) return;
+            if (pinned) onBlur(event);
+            else setPeek(false);
+          }}
           className={
             children
               ? `relative inline-flex cursor-help items-center touch-manipulation ${triggerClassName}`.trim()

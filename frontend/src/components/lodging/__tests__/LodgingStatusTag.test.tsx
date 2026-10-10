@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LodgingStatusTag } from "../LodgingStatusTag";
 import type { Lodging } from "../../../types/lodging";
@@ -46,7 +46,7 @@ describe("LodgingStatusTag", () => {
     expect(copies.some((el) => !el.classList.contains("sr-only"))).toBe(true);
     expect(onRow).not.toHaveBeenCalled();
 
-    help.focus();
+    act(() => help.focus());
     await userEvent.keyboard("{Enter}");
     expect(onRowKey).not.toHaveBeenCalled();
   });
