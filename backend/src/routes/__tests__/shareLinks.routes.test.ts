@@ -538,6 +538,54 @@ describe("trip photos", () => {
     expect((await photo(token, -1)).status).toBe(404);
   });
 
+  it("takes only photos the page will serve, and tells the owner what stayed out", async () => {
+    const trip = await makeTrip(anna.id);
+    const png = Buffer.concat([
+      Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+      Buffer.alloc(16),
+    ]);
+    await addTripPhoto(trip.id, 0, Buffer.from("RIFF\0\0\0\0WEBPVP8 "), "image/webp");
+    await addTripPhoto(trip.id, 1, png); // stored as JPEG, bytes say PNG
+    await addTripPhoto(trip.id, 2, null); // the file is gone
+    await addTripPhoto(trip.id, 3, Buffer.from("not an image at all"));
+    for (let i = 0; i < 13; i++) await addTripPhoto(trip.id, 10 + i);
+
+    const preview = await request(app)
+      .post("/api/v1/share-links/preview")
+      .set("Cookie", anna.cookie)
+      .send({ kind: "trip", targetId: trip.id, fields: ["photos"] })
+      .expect(200);
+    expect(preview.body.data.view.trip.photos).toEqual({ count: 12 });
+    expect(preview.body.data.photosOmitted).toEqual({
+      unsupportedType: 1,
+      unreadable: 3,
+      overLimit: 1,
+    });
+
+    const { token } = await tokenFor(anna, { kind: "trip", targetId: trip.id, fields: ["photos"] });
+    const row = await prisma.publicShareLink.findFirstOrThrow({ where: { userId: anna.id } });
+    const servable = await prisma.tripPhoto.findMany({
+      where: { tripId: trip.id, sortIdx: { gte: 10, lt: 22 } },
+      orderBy: { sortIdx: "asc" },
+    });
+    expect(row.photoIds).toEqual(servable.map((p) => p.id));
+    // Every index the page will ask for answers with bytes.
+    for (let i = 0; i < 12; i++) expect((await photo(token, i)).status).toBe(200);
+    // The public view never learns what was left out.
+    expect(JSON.stringify((await view(token)).body)).not.toContain("omitted");
+  });
+
+  it("does not read another account's trip for a preview", async () => {
+    const trip = await makeTrip(anna.id);
+    await addTripPhoto(trip.id, 0);
+    const res = await request(app)
+      .post("/api/v1/share-links/preview")
+      .set("Cookie", eve.cookie)
+      .send({ kind: "trip", targetId: trip.id, fields: ["photos"] });
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe("SHARE_LINK_NOT_FOUND");
+  });
+
   it("serves no photo when photos were not chosen, and none added after the link", async () => {
     const trip = await makeTrip(anna.id);
     await addTripPhoto(trip.id, 0);

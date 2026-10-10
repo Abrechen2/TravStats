@@ -14,7 +14,7 @@ import { now } from "../../shared/time/clock";
 import { getInstanceSettings } from "../instanceSettingsService";
 import logger from "../../utils/logger";
 import { buildFlightView, flightAutoExpiry, loadOwnedFlightTimes } from "./flightView";
-import { photoSnapshot, sharedPhotoBytes } from "./photoProxy";
+import { photoSnapshot, sharedPhotoBytes, type PhotoOmissions } from "./photoProxy";
 import {
   generateShareToken,
   looksLikeShareToken,
@@ -104,16 +104,31 @@ async function buildView(
 
 const earlier = (a: Date, b: Date | null): Date => (b && b < a ? b : a);
 
+/**
+ * The photos a new trip link would carry — only for a trip of the caller's
+ * own (the snapshot reads files) and only when photos were chosen. `omitted`
+ * tells the owner what was left out and why; the public never sees it.
+ */
+async function snapshotFor(
+  userId: string,
+  target: Target,
+  fields: readonly string[]
+): Promise<{ ids: string[]; omitted: PhotoOmissions | null }> {
+  if (!target.tripId || !fields.includes("photos")) return { ids: [], omitted: null };
+  if (!(await loadOwnedTrip(userId, target.tripId))) throw notFound();
+  return photoSnapshot(target.tripId);
+}
+
 /** What the public would see for this selection — the same builder the link uses. */
 export async function previewShareLink(
   userId: string,
   selection: ShareLinkSelection
-): Promise<PublicView> {
+): Promise<{ view: PublicView; photosOmitted: PhotoOmissions | null }> {
   const target = targetOf(selection);
-  const photos = target.tripId ? await photoSnapshot(target.tripId) : [];
-  const built = await buildView(userId, target, selection.fields, photos);
+  const photos = await snapshotFor(userId, target, selection.fields);
+  const built = await buildView(userId, target, selection.fields, photos.ids);
   if (!built) throw notFound();
-  return built.view;
+  return { view: built.view, photosOmitted: photos.omitted };
 }
 
 export async function createShareLink(
@@ -146,8 +161,7 @@ export async function createShareLink(
     );
   }
   const target = targetOf(selection);
-  const photoIds =
-    target.tripId && selection.fields.includes("photos") ? await photoSnapshot(target.tripId) : [];
+  const { ids: photoIds } = await snapshotFor(userId, target, selection.fields);
   const built = await buildView(userId, target, selection.fields, photoIds);
   if (!built) throw notFound();
   if (built.autoExpiry && built.autoExpiry <= at) {

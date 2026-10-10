@@ -9,8 +9,8 @@ import { stripImageMetadata } from "../stripImageMetadata";
  * between progressive scans, or appended after the image (motion photos, gain
  * maps, MPF secondary images). Every fixture is constructed; no real photo.
  *
- * The round trips decode with jpeg-js and pngjs, which are in the tree as
- * dependencies of heic-convert — test-only use, the stripper needs neither.
+ * The round trips decode with jpeg-js and pngjs (devDependencies, test-only
+ * use) — the stripper itself needs neither.
  */
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const jpeg = require("jpeg-js") as {

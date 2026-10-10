@@ -181,16 +181,21 @@ export function jpegWithExif(): Buffer {
 }
 
 /** A photo file on disk and its row, with a caption and coordinates that must stay private. */
-export async function addTripPhoto(tripId: string, sortIdx: number, bytes = jpegWithExif()) {
+export async function addTripPhoto(
+  tripId: string,
+  sortIdx: number,
+  bytes: Buffer | null = jpegWithExif(),
+  mimetype = "image/jpeg"
+) {
   const filename = `${SHARE_LINK_TEST_PREFIX}${tripId}-${sortIdx}.jpg`;
   fs.mkdirSync(getTripPhotoDir(), { recursive: true });
-  fs.writeFileSync(path.join(getTripPhotoDir(), filename), bytes);
+  if (bytes) fs.writeFileSync(path.join(getTripPhotoDir(), filename), bytes);
   return prisma.tripPhoto.create({
     data: {
       tripId,
       filename,
-      mimetype: "image/jpeg",
-      sizeBytes: bytes.length,
+      mimetype,
+      sizeBytes: bytes?.length ?? 0,
       sortIdx,
       caption: "PRIVATE caption",
       lat: 48.137,

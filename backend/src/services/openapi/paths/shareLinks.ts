@@ -74,7 +74,23 @@ registry.registerPath({
   tags,
   request: { body: json(shareLinkPreviewSchema) },
   responses: {
-    200: ok("The public view", z.object({ view: publicViewSchema })),
+    200: ok(
+      "The public view, and — for a trip with `photos` chosen — which photos stay out and why",
+      z.object({
+        view: publicViewSchema,
+        photosOmitted: z
+          .object({
+            unsupportedType: z.number().int().describe("Not JPEG, PNG or HEIC"),
+            unreadable: z
+              .number()
+              .int()
+              .describe("Missing, unconvertible, or not what its stored type claims"),
+            overLimit: z.number().int().describe(`Beyond the first ${SHARE_LINK_MAX_PHOTOS}`),
+          })
+          .nullable()
+          .describe("Owner-only; null unless `photos` is chosen on a trip"),
+      })
+    ),
     400: err("A field outside the kind's allow-list, or a `wrapped` target that is not a year"),
     404: notFound,
   },

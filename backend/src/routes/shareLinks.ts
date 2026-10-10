@@ -52,7 +52,7 @@ router.post(
   "/preview",
   handle(async (req, res) => {
     const selection = shareLinkPreviewSchema.parse(req.body ?? {});
-    res.json({ success: true, data: { view: await previewShareLink(req.userId!, selection) } });
+    res.json({ success: true, data: await previewShareLink(req.userId!, selection) });
   })
 );
 

@@ -325,7 +325,16 @@
       "copyFailed": "Copying failed – select the link and copy it by hand.",
       "endsAt": "Ends on {{date}}",
       "disabled": "Public links are switched off on this instance. An administrator can switch them on under Settings → Trips.",
-      "statusFailed": "Could not check whether public links are allowed."
+      "statusFailed": "Could not check whether public links are allowed.",
+      "photosOmitted": {
+        "lead": "Not in the link:",
+        "unsupportedType_one": "{{count}} photo in a format that cannot be cleaned of location data (e.g. WebP)",
+        "unsupportedType_other": "{{count}} photos in a format that cannot be cleaned of location data (e.g. WebP)",
+        "unreadable_one": "{{count}} photo that is missing or cannot be read",
+        "unreadable_other": "{{count}} photos that are missing or cannot be read",
+        "overLimit_one": "{{count}} photo beyond the limit of 12",
+        "overLimit_other": "{{count}} photos beyond the limit of 12"
+      }
     },
     "fields": {
       "flight": {

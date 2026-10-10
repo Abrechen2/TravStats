@@ -108,3 +108,15 @@ export type ShareView =
   | { kind: "flight"; flight: FlightShareView }
   | { kind: "trip"; trip: TripShareView }
   | { kind: "wrapped"; wrapped: WrappedShareView };
+
+/** Owner-only: which photos a trip link leaves out, and why (preview answer). */
+export interface PhotoOmissions {
+  unsupportedType: number;
+  unreadable: number;
+  overLimit: number;
+}
+
+export interface ShareLinkPreviewResult {
+  view: ShareView;
+  photosOmitted: PhotoOmissions | null;
+}

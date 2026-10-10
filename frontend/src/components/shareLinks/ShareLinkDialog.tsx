@@ -10,8 +10,9 @@ import {
   SHARE_LINK_DEFAULT_FIELDS,
   SHARE_LINK_FIELDS,
   type CreatedShareLink,
+  type PhotoOmissions,
   type ShareLinkKind,
-  type ShareView,
+  type ShareLinkPreviewResult,
 } from "../../types/shareLinks";
 import Modal from "../Modal";
 import Button from "../ui/Button";
@@ -48,7 +49,7 @@ export default function ShareLinkDialog({
   const [status, setStatus] = useState<Status>("loading");
   const [fields, setFields] = useState<string[]>([...SHARE_LINK_DEFAULT_FIELDS[kind]]);
   const [expiry, setExpiry] = useState<ExpiryChoice>(kind === "flight" ? "untilLanding" : "week");
-  const [preview, setPreview] = useState<ShareView | null>(null);
+  const [preview, setPreview] = useState<ShareLinkPreviewResult | null>(null);
   const [previewFailed, setPreviewFailed] = useState(false);
   const [created, setCreated] = useState<CreatedShareLink | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +83,7 @@ export default function ShareLinkDialog({
     setPreviewFailed(false);
     shareLinksApi
       .preview({ kind, targetId, fields })
-      .then((view) => alive && setPreview(view))
+      .then((result) => alive && setPreview(result))
       .catch((err: unknown) => {
         logger.error("Share-link preview failed:", err);
         if (alive) {
@@ -230,7 +231,10 @@ export default function ShareLinkDialog({
               {fields.length > 0 && !previewFailed && !preview && (
                 <p className="t-caption">{t(`${NS}.dialog.previewLoading`)}</p>
               )}
-              {fields.length > 0 && preview && <ShareLinkPreview view={preview} />}
+              {fields.length > 0 && preview && <ShareLinkPreview view={preview.view} />}
+              {fields.length > 0 && preview?.photosOmitted && (
+                <PhotoOmissionNote omitted={preview.photosOmitted} />
+              )}
             </section>
             {error && (
               <p role="alert" style={{ color: "var(--ts-bad)" }}>
@@ -241,5 +245,19 @@ export default function ShareLinkDialog({
         )}
       </div>
     </Modal>
+  );
+}
+
+/** Which photos stay out of the link and why — the owner's to know, never the page's. */
+function PhotoOmissionNote({ omitted }: { omitted: PhotoOmissions }): JSX.Element | null {
+  const { t } = useTranslation(["sharing"]);
+  const reasons = (["unsupportedType", "unreadable", "overLimit"] as const)
+    .filter((reason) => omitted[reason] > 0)
+    .map((reason) => t(`${NS}.dialog.photosOmitted.${reason}`, { count: omitted[reason] }));
+  if (reasons.length === 0) return null;
+  return (
+    <p className="t-caption" role="note">
+      {t(`${NS}.dialog.photosOmitted.lead`)} {reasons.join(" · ")}
+    </p>
   );
 }

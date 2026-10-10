@@ -3,7 +3,7 @@ import type {
   CreatedShareLink,
   ShareLinkKind,
   ShareLinkList,
-  ShareView,
+  ShareLinkPreviewResult,
 } from "../../types/shareLinks";
 
 /**
@@ -29,12 +29,12 @@ export const shareLinksApi = {
     return data.data;
   },
 
-  preview: async (selection: ShareLinkSelection): Promise<ShareView> => {
-    const { data } = await api.post<Envelope<{ view: ShareView }>>(
+  preview: async (selection: ShareLinkSelection): Promise<ShareLinkPreviewResult> => {
+    const { data } = await api.post<Envelope<ShareLinkPreviewResult>>(
       "/share-links/preview",
       selection
     );
-    return data.data.view;
+    return data.data;
   },
 
   create: async (

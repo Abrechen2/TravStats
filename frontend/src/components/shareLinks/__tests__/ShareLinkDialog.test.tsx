@@ -32,12 +32,15 @@ describe("ShareLinkDialog", () => {
     vi.clearAllMocks();
     api.list.mockResolvedValue({ enabled: true, links: [] });
     api.preview.mockResolvedValue({
-      kind: "flight",
-      flight: {
-        flightNumber: { airline: "Lufthansa", number: "LH400" },
-        route: { from: { code: "FRA", name: null }, to: { code: "JFK", name: null } },
-        progress: { phase: "inFlight", fraction: 0.5, eta: null, basis: "schedule" },
+      view: {
+        kind: "flight",
+        flight: {
+          flightNumber: { airline: "Lufthansa", number: "LH400" },
+          route: { from: { code: "FRA", name: null }, to: { code: "JFK", name: null } },
+          progress: { phase: "inFlight", fraction: 0.5, eta: null, basis: "schedule" },
+        },
       },
+      photosOmitted: null,
     });
   });
 
@@ -102,6 +105,19 @@ describe("ShareLinkDialog", () => {
     await screen.findByText("LH400", { exact: false });
     await userEvent.click(screen.getByRole("button", { name: "sharing:links.dialog.create" }));
     expect(await screen.findByText("sharing:links.errors.landed")).toBeTruthy();
+  });
+
+  it("tells the owner which photos stay out of a trip link, and why", async () => {
+    api.preview.mockResolvedValue({
+      view: { kind: "trip", trip: { photos: { count: 12 } } },
+      photosOmitted: { unsupportedType: 2, unreadable: 0, overLimit: 1 },
+    });
+    renderDialog("trip");
+    const note = await screen.findByRole("note");
+    expect(note.textContent).toContain("sharing:links.dialog.photosOmitted.lead");
+    expect(note.textContent).toContain("sharing:links.dialog.photosOmitted.unsupportedType");
+    expect(note.textContent).toContain("sharing:links.dialog.photosOmitted.overLimit");
+    expect(note.textContent).not.toContain("unreadable");
   });
 
   it("says so when the preview cannot be loaded, and when nothing is ticked", async () => {

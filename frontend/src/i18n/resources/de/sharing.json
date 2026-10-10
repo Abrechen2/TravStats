@@ -325,7 +325,16 @@
       "copyFailed": "Kopieren ging nicht – markiere den Link und kopiere ihn von Hand.",
       "endsAt": "Endet am {{date}}",
       "disabled": "Öffentliche Links sind auf dieser Instanz ausgeschaltet. Ein Administrator kann sie unter Einstellungen → Reisen einschalten.",
-      "statusFailed": "Konnte nicht prüfen, ob öffentliche Links erlaubt sind."
+      "statusFailed": "Konnte nicht prüfen, ob öffentliche Links erlaubt sind.",
+      "photosOmitted": {
+        "lead": "Nicht im Link:",
+        "unsupportedType_one": "{{count}} Foto in einem Format, das sich nicht von Ortsdaten befreien lässt (z. B. WebP)",
+        "unsupportedType_other": "{{count}} Fotos in einem Format, das sich nicht von Ortsdaten befreien lässt (z. B. WebP)",
+        "unreadable_one": "{{count}} Foto, das fehlt oder sich nicht lesen lässt",
+        "unreadable_other": "{{count}} Fotos, die fehlen oder sich nicht lesen lassen",
+        "overLimit_one": "{{count}} Foto über der Grenze von 12",
+        "overLimit_other": "{{count}} Fotos über der Grenze von 12"
+      }
     },
     "fields": {
       "flight": {
