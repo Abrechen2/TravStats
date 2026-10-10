@@ -42,6 +42,33 @@ describe("GET /api/v1/companions", () => {
     expect(response.body.companions[0].usageCount).toBe(0);
   });
 
+  it("counts an expense the companion paid as a use (forgejo#150)", async () => {
+    const registration = await request(app)
+      .post("/api/v1/auth/register")
+      .send({ username: "companion-payer", password: "password123" })
+      .expect(201);
+    const cookie = registration.headers["set-cookie"];
+    const me = await prisma.user.findUniqueOrThrow({ where: { username: "companion-payer" } });
+    const anna = await prisma.companion.create({
+      data: { userId: me.id, canonicalName: "anna", displayName: "Anna", searchName: "anna" },
+    });
+    const trip = await prisma.trip.create({ data: { userId: me.id, name: "Bezahlt" } });
+    await prisma.tripExpense.create({
+      data: {
+        userId: me.id,
+        tripId: trip.id,
+        kind: "food",
+        amount: "20",
+        currency: "EUR",
+        payerCompanionId: anna.id,
+        payerName: "Anna",
+      },
+    });
+
+    const response = await request(app).get("/api/v1/companions").set("Cookie", cookie).expect(200);
+    expect(response.body.companions[0]).toMatchObject({ name: "Anna", usageCount: 1 });
+  });
+
   // A row that exists is not a row you own. Without a second user holding a
   // real companion, dropping the userId filter would leave this suite green.
   it("never returns another user's companions", async () => {

@@ -29,6 +29,8 @@ router.get("/", authenticate, async (req: AuthRequest, res: Response, next: Next
             rail: true,
             rentals: true,
             bus: true,
+            // Who paid an expense (forgejo#150): a person the user travels with.
+            expensesPaid: true,
           },
         },
       },
@@ -44,7 +46,8 @@ router.get("/", authenticate, async (req: AuthRequest, res: Response, next: Next
           row._count.cruises +
           row._count.rail +
           row._count.rentals +
-          row._count.bus,
+          row._count.bus +
+          row._count.expensesPaid,
       }))
       .sort((a, b) => b.usageCount - a.usageCount || a.name.localeCompare(b.name));
 
