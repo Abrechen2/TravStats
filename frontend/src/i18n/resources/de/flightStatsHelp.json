@@ -603,7 +603,7 @@
     },
     "newThisYear": {
       "unit": "Flughäfen, die in diesem Kalenderjahr zum ersten Mal in deinem ganzen Logbuch vorkommen, mit dem Datum des ersten Besuchs, früheste zuerst.",
-      "time": "Erster Besuch = frühester Abflugtag (am Abflughafen) eines Flugs, der dort startet oder landet – auch für das Ziel zählt der Abflugtag. Welches Jahr „dieses“ ist, bestimmt die Uhr des Servers in UTC; der Jahresfilter der Seite gilt nicht. Ein Flug mit Platzhalterdatum (nur das Jahr bekannt) gilt als am 1. Januar.",
+      "time": "Erster Besuch = frühester Abflugtag (am Abflughafen) eines Flugs, der dort startet oder landet – auch für das Ziel zählt der Abflugtag. „Dieses“ Jahr ist das Jahr von heute in deiner Profil-Zeitzone; Überschrift und Liste nennen dasselbe Jahr. Der Jahresfilter der Seite gilt nicht. Ein Flug, von dem nur das Jahr bekannt ist, zählt in diesem Jahr.",
       "source": "Geflogene und nachgetragene Flüge mit Abflugdatum und Flughafen-Code beider Enden (IATA, sonst ICAO); Name und Land aus dem Flughafenkatalog.",
       "coverage": "Referenz ist das ganze Logbuch: ein Flughafen, den du schon in einem früheren Jahr genutzt hast, ist nicht neu. Flüge ohne Datum können keinen ersten Besuch setzen.",
       "exclusions": "Nicht enthalten: Flüge ohne Datum, Enden ohne Flughafen-Code, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."

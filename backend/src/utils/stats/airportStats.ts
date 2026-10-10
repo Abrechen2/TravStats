@@ -7,6 +7,7 @@ import { departureClockOf } from "./departureClock";
 import { type HomePeriod, isHomeAirportAt, primaryAirportAt, residenceAt } from "../homeAirport";
 import { isCountableFlight } from "../../shared/flightCounting";
 import { CONTINENTS, getContinent } from "../continents";
+import { todayIn } from "../../shared/time/clock";
 
 // Published by /stats/airports, so the shape is described once in
 // `schemas/statsFlights.ts` and read here (forgejo#52). The prose that used to
@@ -27,7 +28,7 @@ function continentOfAirport(info: AirportData | undefined): string {
   return getContinent(info.lat, info.lon, info.country) ?? "Other";
 }
 
-function emptyAirportStats(): AirportStats {
+function emptyAirportStats(newThisYearYear: number): AirportStats {
   return {
     airportCount: 0,
     countryCount: 0,
@@ -37,6 +38,7 @@ function emptyAirportStats(): AirportStats {
     rarestAirports: [],
     rarestAirportsTotal: 0,
     newThisYear: [],
+    newThisYearYear,
     farthestFromHome: null,
     topCountries: [],
     continentDistribution: {},
@@ -54,10 +56,17 @@ function emptyAirportStats(): AirportStats {
  */
 export async function calculateAirportStats(
   flights: FlightData[],
-  homePeriods: readonly HomePeriod[] = []
+  homePeriods: readonly HomePeriod[] = [],
+  /**
+   * Today in the user's profile zone (`profileZoneOf` → `todayIn`), the
+   * time model's "today" — it decides which year "new this year" means. UTC
+   * when the caller has no profile to ask.
+   */
+  today: string = todayIn("UTC")
 ): Promise<AirportStats> {
+  const currentYear = Number(today.slice(0, 4));
   const flownFlights = flights.filter(isCountableFlight);
-  if (flownFlights.length === 0) return emptyAirportStats();
+  if (flownFlights.length === 0) return emptyAirportStats(currentYear);
 
   // Collect airport codes to look up names and countries in one batched call.
   const codes = new Set<string>();
@@ -145,8 +154,9 @@ export async function calculateAirportStats(
     country: airportInfo.get(code)?.country ?? null,
   }));
 
-  // New this year — airports whose first visit falls in the current year.
-  const currentYear = new Date().getUTCFullYear();
+  // New this year — airports whose first visit (on the departure airport's
+  // calendar) falls in the year of the user's own today (forgejo#256). It was
+  // the SERVER's UTC year, while the heading named the browser's.
   const newThisYear = Array.from(firstVisit.entries())
     .filter(([, date]) => date.startsWith(`${currentYear}-`))
     .sort(([, a], [, b]) => (a < b ? -1 : 1))
@@ -186,6 +196,7 @@ export async function calculateAirportStats(
     rarestAirports,
     rarestAirportsTotal: once.length,
     newThisYear,
+    newThisYearYear: currentYear,
     farthestFromHome,
     topCountries,
     continentDistribution,

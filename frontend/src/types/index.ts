@@ -692,6 +692,8 @@ export interface AirportStats {
     country: string | null;
     firstVisitDate: string;
   }>;
+  /** The year `newThisYear` is about — today's year in the profile zone (forgejo#256). */
+  newThisYearYear: number;
   farthestFromHome: {
     code: string;
     name: string | null;

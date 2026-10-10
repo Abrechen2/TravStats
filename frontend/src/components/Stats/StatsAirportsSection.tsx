@@ -6,8 +6,6 @@ import StatCard from "./StatCard";
 import CountingHelp from "./counting/CountingHelp";
 import EvidenceTrigger from "./EvidenceTrigger";
 import { rankingKey } from "../../shared/evidence";
-import { todayZoneNow } from "../../hooks/useTodayZone";
-import { todayIn } from "../../shared/time";
 import { countryName } from "../../shared/geo/countryCode";
 
 /** Every ranking dimension this section resolves is `allTime`-only — see `rankingEvidence.ts` on the backend. */
@@ -60,7 +58,9 @@ export default function StatsAirportsSection({
     topCountries,
     continentDistribution,
   } = airportStats;
-  const currentYear = Number(todayIn(todayZoneNow()).slice(0, 4));
+  // The year the server filed "new this year" under — today in the profile
+  // zone — so the heading and the list cannot name two years (forgejo#256).
+  const currentYear = airportStats.newThisYearYear;
 
   /** "So wird gezählt" for every figure of the section (forgejo#256). */
   const help = [

@@ -5,8 +5,12 @@ import type { AirportStats } from "../../../types";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
-    t: (k: string, opts?: { total?: number }) =>
-      opts?.total !== undefined ? `${k}:${opts.total}` : k,
+    t: (k: string, opts?: { total?: number; year?: number }) =>
+      opts?.total !== undefined
+        ? `${k}:${opts.total}`
+        : opts?.year !== undefined
+          ? `${k}:${opts.year}`
+          : k,
     i18n: { language: "de" },
   }),
 }));
@@ -22,6 +26,7 @@ const stats: AirportStats = {
   rarestAirports: [],
   rarestAirportsTotal: 0,
   newThisYear: [],
+  newThisYearYear: 2026,
   farthestFromHome: null,
   topCountries: [],
   continentDistribution: { Europe: 30, "North America": 8, Antarctica: 1 },
@@ -115,5 +120,17 @@ describe("StatsAirportsSection — rarest airports", () => {
       </MemoryRouter>
     );
     expect(screen.getByText("stats:airportStats.rarestAirportsOf:12")).toBeInTheDocument();
+  });
+});
+
+describe("StatsAirportsSection — new this year", () => {
+  it("names the year the server filed the list under, not the browser's", () => {
+    render(
+      <MemoryRouter>
+        <StatsAirportsSection airportStats={{ ...stats, newThisYearYear: 2031 }} />
+      </MemoryRouter>
+    );
+    // The heading and the counting help both name it.
+    expect(screen.getAllByText("stats:airportStats.newThisYear:2031").length).toBeGreaterThan(0);
   });
 });

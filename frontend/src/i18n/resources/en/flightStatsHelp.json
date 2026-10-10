@@ -603,7 +603,7 @@
     },
     "newThisYear": {
       "unit": "Airports that appear for the first time in your whole logbook in this calendar year, with the date of the first visit, earliest first.",
-      "time": "First visit = the earliest departure day (at the departure airport) of a flight that departs or lands there – the destination is dated by the departure day too. Which year is 'this' year is decided by the server's clock in UTC; the page's year filter does not apply. A flight with a placeholder date (only the year known) counts as 1 January.",
+      "time": "First visit = the earliest departure day (at the departure airport) of a flight that departs or lands there – the destination is dated by the departure day too. 'This' year is the year of today in your profile time zone; the heading and the list name the same year. The page's year filter does not apply. A flight known only by its year counts in that year.",
       "source": "Flown and logged (historical) flights with a departure date and the airport code of both ends (IATA, else ICAO); name and country from the airport catalogue.",
       "coverage": "The reference is the whole logbook: an airport you already used in an earlier year is not new. Flights without a date cannot set a first visit.",
       "exclusions": "Not included: flights without a date, ends without an airport code, scheduled and cancelled flights, and drafts (duplicates)."

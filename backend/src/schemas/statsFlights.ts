@@ -260,6 +260,14 @@ export const airportStatsSchema = z.object({
     description: "How many airports were visited exactly once — the five above are a cut of these.",
   }),
   newThisYear: z.array(airportRefSchema.extend({ firstVisitDate: z.string() })),
+  newThisYearYear: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "The year `newThisYear` is about: the year of today in the user's profile zone " +
+        "(the time model's today). The client names THIS year in its heading.",
+    }),
   farthestFromHome: airportRefSchema
     .extend({ distanceKm: z.number(), homeCode: z.string() })
     .nullable()
