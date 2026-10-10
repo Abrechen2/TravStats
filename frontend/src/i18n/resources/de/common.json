@@ -117,6 +117,12 @@
     "fallbackMessage": "Ein unerwarteter Fehler ist aufgetreten",
     "tryAgain": "Erneut versuchen"
   },
+  "staleBundle": {
+    "title": "Eine neue Version ist da",
+    "message": "TravStats wurde aktualisiert, während diese Seite offen war. Teile der alten Version gibt es nicht mehr, deshalb konnte diese Ansicht nicht geladen werden. Ein Neuladen holt die aktuelle Version.",
+    "reload": "Neu laden",
+    "reloading": "Neue Version wird geladen…"
+  },
   "labels": {
     "username": "Benutzername",
     "password": "Passwort",
