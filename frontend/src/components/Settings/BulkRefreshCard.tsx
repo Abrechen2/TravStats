@@ -28,6 +28,8 @@ import { useAuthStore } from "../../store/authStore";
 import { rememberQuotaRefused, wasQuotaRefused } from "../../lib/bulkRefreshRefusal";
 import type { LookupProviderFailure } from "../../lib/api/flightLookup";
 import { providerFailureLines } from "../../lib/flightLookupFailure";
+import { bulkRefreshState, type BulkRefreshState } from "./bulkRefreshState";
+import { quotaLine } from "./quotaCopy";
 
 const MAX_PER_BATCH = 25;
 
@@ -168,8 +170,8 @@ export default function BulkRefreshCard(): JSX.Element | null {
 
   // Estimated calls for the upcoming batch — capped by MAX_PER_BATCH.
   const estimatedCalls = remaining !== null ? Math.min(remaining, MAX_PER_BATCH) : 0;
-  const buttonDisabled =
-    demoBlocked || running || !hasProvider || remaining === null || remaining === 0;
+  const state = bulkRefreshState({ demoBlocked, previewError, remaining, hasProvider });
+  const buttonDisabled = running || state.kind !== "ready";
 
   return (
     <div className="space-y-3">
@@ -180,65 +182,10 @@ export default function BulkRefreshCard(): JSX.Element | null {
         <span className="t-caption">{t("settings:apiKeys.bulkRefresh.description")}</span>
       </div>
 
-      {demoBlocked && (
-        <div className="text-sm p-2 rounded-md bg-(--bg-elevated) text-(--text-muted)">
-          {t("settings:apiKeys.bulkRefresh.demoBlocked")}
-        </div>
-      )}
+      <BulkRefreshStatus state={state} />
 
-      {!demoBlocked && !hasProvider && (
-        <div
-          className="rounded-md p-2 text-sm"
-          style={{
-            background: "color-mix(in srgb, var(--ts-warn) 12%, transparent)",
-            color: "var(--ts-warn)",
-          }}
-        >
-          {t("settings:apiKeys.bulkRefresh.noHistoricalProvider")}
-        </div>
-      )}
-
-      {previewError && !demoBlocked && (
-        <div
-          className="text-sm p-2 rounded-md"
-          style={{
-            background: "color-mix(in srgb, var(--ts-bad) 12%, transparent)",
-            color: "var(--ts-bad)",
-          }}
-        >
-          {previewError}
-        </div>
-      )}
-
-      {remaining !== null && remaining > 0 && (
-        <div className="text-sm text-(--text-primary)">
-          {t("settings:apiKeys.bulkRefresh.remainingPrefix")}{" "}
-          <span className="font-semibold">{remaining}</span>{" "}
-          {t("settings:apiKeys.bulkRefresh.remainingSuffix")}
-        </div>
-      )}
-
-      {quota && (quota.remaining !== null || quota.limit !== null) && (
-        <div className="text-xs text-(--text-muted)">
-          {t("settings:apiKeys.bulkRefresh.quotaLabelADB")}:{" "}
-          <span className="font-semibold text-(--text-primary)">{quota.remaining ?? "?"}</span>
-          {quota.limit !== null && (
-            <span className="text-(--text-muted)"> / {quota.limit}</span>
-          )}{" "}
-          {t("settings:apiKeys.bulkRefresh.quotaSuffixADB")}
-        </div>
-      )}
-
-      {remaining === 0 && !demoBlocked && (
-        <div
-          className="text-sm p-2 rounded-md"
-          style={{
-            background: "color-mix(in srgb, var(--ts-good) 12%, transparent)",
-            color: "var(--ts-good)",
-          }}
-        >
-          {t("settings:apiKeys.bulkRefresh.allUpToDate")}
-        </div>
+      {quota && state.kind !== "demo" && state.kind !== "upToDate" && (
+        <div className="t-caption">{`AeroDataBox: ${quotaLine(quota, t)}`}</div>
       )}
 
       <div className="flex items-center justify-end">
@@ -334,10 +281,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
         </p>
         {quota && quota.remaining !== null && (
           <p className="mb-3 text-sm text-(--text-primary)">
-            {t("settings:apiKeys.bulkRefresh.confirmQuotaCurrent", {
-              remaining: quota.remaining,
-              limit: quota.limit ?? "?",
-            })}
+            {`AeroDataBox: ${quotaLine(quota, t)}`}
             {quota.remaining < estimatedCalls && (
               <span className="mt-1 block" style={{ color: "var(--ts-warn)" }}>
                 ⚠ {t("settings:apiKeys.bulkRefresh.confirmQuotaWarn")}
@@ -351,4 +295,49 @@ export default function BulkRefreshCard(): JSX.Element | null {
       </Modal>
     </div>
   );
+}
+
+const NOTE_TONE: Record<"warn" | "bad" | "good" | "muted", { background: string; color: string }> =
+  {
+    warn: {
+      background: "color-mix(in srgb, var(--ts-warn) 12%, transparent)",
+      color: "var(--ts-warn)",
+    },
+    bad: {
+      background: "color-mix(in srgb, var(--ts-bad) 12%, transparent)",
+      color: "var(--ts-bad)",
+    },
+    good: {
+      background: "color-mix(in srgb, var(--ts-good) 12%, transparent)",
+      color: "var(--ts-good)",
+    },
+    muted: { background: "var(--ts-surface2)", color: "var(--ts-muted)" },
+  };
+
+/** The one sentence the card's current state calls for — never two that disagree. */
+function BulkRefreshStatus({ state }: { state: BulkRefreshState }): JSX.Element | null {
+  const { t } = useTranslation(["settings"]);
+  const note = (tone: keyof typeof NOTE_TONE, text: string): JSX.Element => (
+    <div role="status" className="rounded-md p-2 text-sm" style={NOTE_TONE[tone]}>
+      {text}
+    </div>
+  );
+  switch (state.kind) {
+    case "demo":
+      return note("muted", t("settings:apiKeys.bulkRefresh.demoBlocked"));
+    case "error":
+      return note("bad", state.message);
+    case "loading":
+      return null;
+    case "upToDate":
+      return note("good", t("settings:apiKeys.bulkRefresh.allUpToDate"));
+    case "needsKey":
+      return note("warn", t("settings:apiKeys.bulkRefresh.needsKey", { count: state.pending }));
+    case "ready":
+      return (
+        <div role="status" className="text-sm" style={{ color: "var(--ts-text)" }}>
+          {t("settings:apiKeys.bulkRefresh.pending", { count: state.pending })}
+        </div>
+      );
+  }
 }

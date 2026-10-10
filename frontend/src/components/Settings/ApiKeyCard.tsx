@@ -5,6 +5,7 @@
  */
 
 import { useState } from "react";
+import { quotaLine } from "./quotaCopy";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { settingsApi, adminApi } from "../../lib/api";
@@ -224,35 +225,7 @@ export default function ApiKeyCard({
           ))}
         </span>
       )}
-      {quota && (
-        <span className="t-caption block">
-          {quota.kind === "observed" && (
-            <>
-              {t("settings:apiKeys.quota.label")}:{" "}
-              <span style={{ fontWeight: 600, color: "var(--ts-text)" }}>
-                {quota.remaining ?? "?"}
-              </span>
-              {quota.limit !== null && <span> / {quota.limit}</span>}{" "}
-              {t("settings:apiKeys.quota.unitsSuffix")}
-              {quota.requestsLimit != null && quota.requestsRemaining != null && (
-                <>
-                  {" · "}
-                  {t("settings:apiKeys.quota.requestsLabel")}: {quota.requestsRemaining} /{" "}
-                  {quota.requestsLimit}
-                </>
-              )}
-            </>
-          )}
-          {quota.kind === "not_reported" && (
-            <>
-              {t("settings:apiKeys.quota.notReported")}
-              {quota.knownLimitHint &&
-                ` (${t("settings:apiKeys.quota.staticHint", { limit: quota.knownLimitHint })})`}
-            </>
-          )}
-          {quota.kind === "rate_limit_only" && t("settings:apiKeys.quota.rateLimitOnly")}
-        </span>
-      )}
+      {quota && <span className="t-caption block">{quotaLine(quota, t)}</span>}
     </>
   );
 

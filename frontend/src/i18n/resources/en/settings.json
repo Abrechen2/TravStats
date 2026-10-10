@@ -520,13 +520,13 @@
       }
     },
     "quota": {
-      "label": "Remaining",
-      "unitsSuffix": "API units (last observed)",
-      "requestsLabel": "Plus HTTP requests",
-      "observedSuffix": "calls (last observed)",
-      "notReported": "Provider does not return quota headers.",
-      "staticHint": "Free-tier cap: ~{{limit}}/month",
-      "rateLimitOnly": "No monthly limit — IP-based rate limiting."
+      "notReported": "The provider does not say how many lookups are left.",
+      "staticHint": "The free plan allows about {{limit}} a month.",
+      "rateLimitOnly": "No monthly allowance — only very many lookups in a short time are slowed down.",
+      "unknownYet": "How many lookups are left is not known yet — it shows after the first lookup with this key.",
+      "remainingOf": "{{remaining}} of {{limit}} lookups left (as of the last lookup).",
+      "remainingOnly": "{{remaining}} lookups left (as of the last lookup).",
+      "requestsLine": "Plus {{remaining}} of {{limit}} requests at the broker, RapidAPI."
     },
     "sharedNote": "This key is shared by the administrator and cannot be edited",
     "save": "Save API Keys",
@@ -560,20 +560,14 @@
     "bulkRefresh": {
       "title": "Refresh existing flights",
       "description": "Backfill missing fields (tail number, aircraft type, Mode-S, codeshare flag, airline ICAO/IATA and actual departure/arrival times) on your existing flights from the last 365 days. Existing values are never overwritten. Requires AeroDataBox — only this provider covers the 365-day window.",
-      "remainingPrefix": "There are",
-      "remainingSuffix": "flights queued for refresh.",
       "allUpToDate": "All flights in the 365-day window are up to date — nothing to do.",
       "demoBlocked": "Disabled on the demo account to avoid burning real API tokens. Available on your prod instance.",
-      "noHistoricalProvider": "You need an AeroDataBox key to refresh flights older than today — only AeroDataBox covers the 365-day window. Enter a key above and reload the page.",
       "button": "Refresh",
       "running": "Running...",
       "confirmTitle": "Confirm AeroDataBox calls",
       "confirmBody": "This will use up to {{count}} AeroDataBox calls in this run. A single click processes at most 25 flights — click again to drain the remainder.",
       "confirmHistoricalNote": "Only AeroDataBox can serve the 365-day window. Other configured APIs (AirLabs, Aviationstack, OpenSky) are not used for this operation.",
-      "confirmQuotaCurrent": "AeroDataBox quota: {{remaining}} of {{limit}} API units remaining.",
       "confirmQuotaWarn": "Remaining quota is below this batch — you will hit zero before completion.",
-      "quotaLabelADB": "AeroDataBox quota remaining",
-      "quotaSuffixADB": "API units (last observed)",
       "confirmRun": "Refresh now",
       "summaryTitle": "Last run",
       "summaryScanned": "Scanned: {{count}}",
@@ -583,7 +577,11 @@
       "summaryFailed": "Failed: {{count}}",
       "summaryRetryHint": "{{count}} more flights remain — click \"Refresh\" again to process the next batch.",
       "previewFailed": "The preview could not be loaded. Please try again later.",
-      "runFailed": "The refresh failed. Please try again later."
+      "runFailed": "The refresh failed. Please try again later.",
+      "needsKey_one": "{{count}} flight could be refreshed — an AeroDataBox key is missing for that. Only AeroDataBox reaches back 365 days. Add a key above.",
+      "needsKey_other": "{{count}} flights could be refreshed — an AeroDataBox key is missing for that. Only AeroDataBox reaches back 365 days. Add a key above.",
+      "pending_one": "{{count}} flight can be refreshed.",
+      "pending_other": "{{count}} flights can be refreshed."
     },
     "opensky": {
       "label": "OpenSky Network",

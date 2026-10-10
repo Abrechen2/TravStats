@@ -520,13 +520,13 @@
       }
     },
     "quota": {
-      "label": "Verbleibend",
-      "unitsSuffix": "API-Units (zuletzt beobachtet)",
-      "requestsLabel": "Plus HTTP-Requests",
-      "observedSuffix": "Aufrufe (zuletzt beobachtet)",
-      "notReported": "Provider liefert keine Quota-Header zurück.",
-      "staticHint": "Free-Tier-Cap: ~{{limit}}/Monat",
-      "rateLimitOnly": "Kein Monats-Limit — IP-basierte Rate-Limits."
+      "notReported": "Der Anbieter teilt nicht mit, wie viele Abfragen noch übrig sind.",
+      "staticHint": "Kostenlos sind etwa {{limit}} im Monat.",
+      "rateLimitOnly": "Kein Monatskontingent — gebremst wird nur, wer sehr viele Abfragen kurz hintereinander stellt.",
+      "unknownYet": "Wie viele Abfragen noch übrig sind, ist noch nicht bekannt — das zeigt sich nach der ersten Abfrage mit diesem Schlüssel.",
+      "remainingOf": "Noch {{remaining}} von {{limit}} Abfragen übrig (Stand der letzten Abfrage).",
+      "remainingOnly": "Noch {{remaining}} Abfragen übrig (Stand der letzten Abfrage).",
+      "requestsLine": "Dazu noch {{remaining}} von {{limit}} Anfragen beim Vermittler RapidAPI."
     },
     "sharedNote": "Dieser Schlüssel wird vom Administrator geteilt und kann nicht bearbeitet werden",
     "save": "API-Schlüssel speichern",
@@ -560,20 +560,14 @@
     "bulkRefresh": {
       "title": "Bestandsflüge auffrischen",
       "description": "Holt fehlende Felder (Kennzeichen, Flugzeugtyp, Mode-S, Codeshare, Airline-ICAO/IATA sowie tatsächliche Ab- und Ankunftszeiten) für deine bisherigen Flüge der letzten 365 Tage nach. Bestehende Werte werden nie überschrieben. Benötigt AeroDataBox — nur dieser Provider deckt das 365-Tage-Fenster ab.",
-      "remainingPrefix": "Es sind",
-      "remainingSuffix": "Flüge zum Auffrischen vorgemerkt.",
       "allUpToDate": "Alle Flüge im 365-Tage-Fenster sind aktuell — nichts zu tun.",
       "demoBlocked": "Im Demo-Account deaktiviert, um keine echten API-Tokens zu verbrauchen. In deiner Prod-Instanz verfügbar.",
-      "noHistoricalProvider": "Du benötigst einen AeroDataBox-Schlüssel, um Flüge älter als heute aufzufrischen — nur AeroDataBox deckt das 365-Tage-Fenster ab. Trage einen Schlüssel oben ein und lade die Seite neu.",
       "button": "Auffrischen",
       "running": "Läuft...",
       "confirmTitle": "AeroDataBox-Aufrufe bestätigen",
       "confirmBody": "Dies verbraucht bis zu {{count}} AeroDataBox-Aufrufe in diesem Durchlauf. Pro Klick werden maximal 25 Flüge bearbeitet, danach kannst du erneut klicken, um den Rest abzuarbeiten.",
       "confirmHistoricalNote": "Nur AeroDataBox kann das 365-Tage-Fenster bedienen. Andere konfigurierte APIs (AirLabs, Aviationstack, OpenSky) werden für diesen Vorgang nicht genutzt.",
-      "confirmQuotaCurrent": "AeroDataBox-Quota: {{remaining}} von {{limit}} API-Units verbleibend.",
       "confirmQuotaWarn": "Verbleibende Quota reicht nicht für diesen Durchlauf — wirst vorzeitig auf 0 fallen.",
-      "quotaLabelADB": "AeroDataBox-Quota verbleibend",
-      "quotaSuffixADB": "API-Units (zuletzt beobachtet)",
       "confirmRun": "Jetzt auffrischen",
       "summaryTitle": "Letzter Lauf",
       "summaryScanned": "Geprüft: {{count}}",
@@ -583,7 +577,11 @@
       "summaryFailed": "Fehlgeschlagen: {{count}}",
       "summaryRetryHint": "{{count}} weitere Flüge stehen noch aus — auf „Auffrischen\" klicken, um den nächsten Stapel zu verarbeiten.",
       "previewFailed": "Die Vorschau konnte nicht geladen werden. Bitte versuche es später erneut.",
-      "runFailed": "Die Auffrischung ist fehlgeschlagen. Bitte versuche es später erneut."
+      "runFailed": "Die Auffrischung ist fehlgeschlagen. Bitte versuche es später erneut.",
+      "needsKey_one": "{{count}} Flug könnte aufgefrischt werden — dafür fehlt ein AeroDataBox-Schlüssel. Nur AeroDataBox reicht 365 Tage zurück. Trag oben einen Schlüssel ein.",
+      "needsKey_other": "{{count}} Flüge könnten aufgefrischt werden — dafür fehlt ein AeroDataBox-Schlüssel. Nur AeroDataBox reicht 365 Tage zurück. Trag oben einen Schlüssel ein.",
+      "pending_one": "{{count}} Flug kann aufgefrischt werden.",
+      "pending_other": "{{count}} Flüge können aufgefrischt werden."
     },
     "opensky": {
       "label": "OpenSky Network",
