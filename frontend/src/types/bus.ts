@@ -63,6 +63,35 @@ export interface BusJourney {
   updatedAt: string;
 }
 
+/** A bus ride as `GET /trips/:id` lists it (forgejo#180): timeline card + map line. */
+export type TripBusJourney = Pick<
+  BusJourney,
+  | "id"
+  | "operator"
+  | "lineName"
+  | "rideKind"
+  | "depStationName"
+  | "arrStationName"
+  | "depLat"
+  | "depLon"
+  | "arrLat"
+  | "arrLon"
+  | "depTimezone"
+  | "arrTimezone"
+  | "departureTime"
+  | "arrivalTime"
+  | "times"
+  | "distanceKm"
+  | "distanceSource"
+  | "geometry"
+  | "geometrySource"
+  | "status"
+  | "delayMinutes"
+  | "price"
+  | "currency"
+  | "bookingId"
+>;
+
 export interface BusStationInput {
   name: string;
   address: string | null;

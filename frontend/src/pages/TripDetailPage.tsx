@@ -44,6 +44,7 @@ import { formatTimelineDate } from "../lib/tripTimeline";
 import { TripRailList } from "../components/rail/RailTripCard";
 import { useRailVisible } from "../hooks/useRailVisible";
 import { useRentalVisible } from "../hooks/useRentalVisible";
+import { useBusVisible } from "../hooks/useBusVisible";
 import { RentalBand, TransitCard, useRentalBands } from "../components/Trips/timelineTransit";
 import { listPlaces } from "../lib/api/places";
 import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
@@ -107,8 +108,9 @@ export default function TripDetailPage(): JSX.Element {
   // Rail and rentals ask their own hooks: the beta switch AND the domain.
   const railVisible = useRailVisible();
   const rentalVisible = useRentalVisible();
+  const busVisible = useBusVisible();
   const displayTrip = useMemo<Trip | null>(() => {
-    const allShown = cruiseEnabled && lodgingEnabled && railVisible && rentalVisible;
+    const allShown = cruiseEnabled && lodgingEnabled && railVisible && rentalVisible && busVisible;
     if (trip === null || allShown) return trip;
     return {
       ...trip,
@@ -116,6 +118,7 @@ export default function TripDetailPage(): JSX.Element {
       lodgingStays: lodgingEnabled ? trip.lodgingStays : [],
       railJourneys: railVisible ? trip.railJourneys : [],
       rentalBookings: rentalVisible ? trip.rentalBookings : [],
+      busJourneys: busVisible ? trip.busJourneys : [],
       _count: trip._count
         ? {
             ...trip._count,
@@ -124,7 +127,7 @@ export default function TripDetailPage(): JSX.Element {
           }
         : trip._count,
     };
-  }, [trip, cruiseEnabled, lodgingEnabled, railVisible, rentalVisible]);
+  }, [trip, cruiseEnabled, lodgingEnabled, railVisible, rentalVisible, busVisible]);
   const hiddenCruiseCount = cruiseEnabled
     ? 0
     : (trip?._count?.cruises ?? trip?.cruises?.length ?? 0);
@@ -622,6 +625,8 @@ function dotColor(ev: TimelineEvent): string {
       return "var(--domain-cruise, #6fa0d6)";
     case "rail":
       return "var(--domain-rail)";
+    case "bus":
+      return "var(--ts-domain-bus)";
     case "rental-pickup":
     case "rental-return":
       return "var(--ts-domain-rental)";

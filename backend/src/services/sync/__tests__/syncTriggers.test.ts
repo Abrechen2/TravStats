@@ -17,6 +17,7 @@ const MODEL_OF_TABLE: Record<string, Prisma.ModelName> = {
   trip_journal_entries: "TripJournalEntry",
   flights: "Flight",
   rail_journeys: "RailJourney",
+  bus_journeys: "BusJourney",
   cruises: "Cruise",
   cruise_stops: "CruiseStop",
   lodgings: "Lodging",

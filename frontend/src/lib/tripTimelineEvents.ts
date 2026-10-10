@@ -21,6 +21,7 @@ import { readsAsUtc, timeValueAtZone, type TimeValue } from "../shared/time";
 import type { Trip, TripJournalEntry, TripStop } from "../types";
 import type { Place, PlaceVisit } from "../types/place";
 import type { TripRailJourney } from "../types/rail";
+import type { TripBusJourney } from "../types/bus";
 import type { TripRental } from "../types/rental";
 
 /**
@@ -90,6 +91,14 @@ export type TimelineEvent =
     }
   | {
       id: string;
+      kind: "bus";
+      /** `when.utc` — kept for callers that only need an instant to compare. */
+      date: string;
+      when: TimeValue;
+      ride: TripBusJourney;
+    }
+  | {
+      id: string;
       kind: "rental-pickup" | "rental-return";
       /** `when.utc` — kept for callers that only need an instant to compare. */
       date: string;
@@ -130,6 +139,20 @@ function railEvents(trip: Trip): TimelineEvent[] {
     const when = railDeparture(journey);
     if (!when) continue;
     out.push({ id: `rail-${journey.id}`, kind: "rail", date: when.utc, when, journey });
+  }
+  return out;
+}
+
+/**
+ * Bus rides as entries (forgejo#180): one per ride, at its departure on the
+ * terminal's clock — a bus row carries rail's columns, so rail's reader serves.
+ */
+function busEvents(trip: Trip): TimelineEvent[] {
+  const out: TimelineEvent[] = [];
+  for (const ride of trip.busJourneys ?? []) {
+    const when = railDeparture(ride);
+    if (!when) continue;
+    out.push({ id: `bus-${ride.id}`, kind: "bus", date: when.utc, when, ride });
   }
   return out;
 }
@@ -230,6 +253,7 @@ export function buildTimelineEvents(
 ): TimelineEvent[] {
   const out: TimelineEvent[] = [
     ...railEvents(trip),
+    ...busEvents(trip),
     ...rentalEvents(trip),
     ...flightEvents(trip),
     ...cruiseEvents(trip),

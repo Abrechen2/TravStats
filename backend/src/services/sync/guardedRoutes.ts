@@ -26,6 +26,7 @@ export interface SyncGuardedRoute {
 export const SYNC_GUARDED_ROUTES: readonly SyncGuardedRoute[] = [
   { entity: "flight", idParam: "id", paths: ["/flights/:id"], edit: "put" },
   { entity: "rail_journey", idParam: "id", paths: ["/rail/:id"], edit: "patch" },
+  { entity: "bus_journey", idParam: "id", paths: ["/bus/:id"], edit: "patch" },
   { entity: "cruise", idParam: "id", paths: ["/cruises/:id"], edit: "patch" },
   { entity: "lodging", idParam: "id", paths: ["/lodging/:id"], edit: "patch" },
   {

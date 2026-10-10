@@ -298,6 +298,8 @@ export interface Trip {
   lodgingStays?: (LodgingStay & { lodging: Lodging })[];
   /** Train rides (departure order) and car rentals (pickup order) linked to this trip. */
   railJourneys?: TripRailJourney[];
+  /** Bus rides linked to this trip, in departure order (forgejo#180). */
+  busJourneys?: import("./bus").TripBusJourney[];
   rentalBookings?: import("./rental").TripRental[];
   immichAlbums?: LinkedAlbum[];
 }
