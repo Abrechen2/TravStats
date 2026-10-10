@@ -134,7 +134,7 @@
     "distanceKm": "Kilometres driven (correction)",
     "odometerOutKm": "Odometer at pick-up",
     "odometerInKm": "Odometer at return",
-    "distanceHint": "Kilometres driven come from the final invoice, else from the two odometer readings (return minus pick-up). A value under \"correction\" overrides both and is shown as a correction by hand.",
+    "distanceHint": "Kilometres driven come from the final invoice or the rental agreement, else from the two odometer readings (return minus pick-up). A value under \"correction\" overrides all of them and is shown as a correction by hand.",
     "driven": "Driven: {{km}} km ({{source}})",
     "drivenUnknown": "Kilometres driven: not known yet",
     "notes": "Notes",

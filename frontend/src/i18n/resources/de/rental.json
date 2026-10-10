@@ -134,7 +134,7 @@
     "distanceKm": "Gefahrene Kilometer (Korrektur)",
     "odometerOutKm": "Kilometerstand bei Abholung",
     "odometerInKm": "Kilometerstand bei Rückgabe",
-    "distanceHint": "Die gefahrenen Kilometer kommen aus der Schlussrechnung, sonst aus den beiden Kilometerständen (Rückgabe minus Abholung). Ein Wert unter „Korrektur“ geht beidem vor und wird als Korrektur von Hand angezeigt.",
+    "distanceHint": "Die gefahrenen Kilometer kommen aus der Schlussrechnung oder dem Mietvertrag, sonst aus den beiden Kilometerständen (Rückgabe minus Abholung). Ein Wert unter „Korrektur“ geht allem vor und wird als Korrektur von Hand angezeigt.",
     "driven": "Gefahren: {{km}} km ({{source}})",
     "drivenUnknown": "Gefahrene Kilometer: noch nicht bekannt",
     "notes": "Notizen",
