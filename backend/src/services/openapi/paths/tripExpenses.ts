@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { errorContent } from "./shared";
+import { clientRefResponses } from "./clientRef";
 import {
   createExpenseSchema,
   expenseListSchema,
@@ -103,6 +104,7 @@ for (const family of FAMILIES) {
         description: "Recorded",
         content: { "application/json": { schema: z.object({ expense }) } },
       },
+      ...clientRefResponses({ "application/json": { schema: z.object({ expense }) } }),
       400: {
         description:
           "Validation failed — an unknown kind or currency, a negative amount, half a leg, " +

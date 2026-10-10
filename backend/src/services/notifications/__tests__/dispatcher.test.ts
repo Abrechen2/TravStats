@@ -1,4 +1,5 @@
 import { prisma } from "../../../db";
+import { dbLogger } from "../../../utils/logger";
 import { hashPassword } from "../../../utils/password";
 import { generateApiToken } from "../../../utils/apiTokens";
 import { ensureAdminSettingsRow } from "../../adminSettingsRow";
@@ -34,6 +35,7 @@ async function phone(
     locale?: string;
     revoked?: boolean;
     expiresAt?: Date | null;
+    mutedTripIds?: string[];
   } = {}
 ) {
   const gen = await generateApiToken();
@@ -60,6 +62,7 @@ async function phone(
       flightChanges: opts.flightChanges ?? true,
       reminders: opts.reminders ?? true,
       locale: opts.locale ?? "de",
+      mutedTripIds: opts.mutedTripIds ?? [],
     },
   });
   return { tokenId: token.id, keys };
@@ -140,7 +143,18 @@ describe("notifyFlightChanged", () => {
     await phone();
     const r = recorder();
     await notifyFlightChanged(userId, flight, gate, { pending: false }, { send: r.send });
-    await notifyFlightChanged(userId, flight, gate, { pending: false }, { send: r.send });
+    const error = jest.spyOn(dbLogger, "error");
+    try {
+      await notifyFlightChanged(userId, flight, gate, { pending: false }, { send: r.send });
+      // The claim's unique violation IS the dedupe — handled, so not a logged error.
+      expect(
+        error.mock.calls.filter(
+          ([e]) => (e as { operation?: string }).operation === "database_query_error"
+        )
+      ).toHaveLength(0);
+    } finally {
+      error.mockRestore();
+    }
     expect(r.pushes).toHaveLength(1);
   });
 
@@ -245,5 +259,56 @@ describe("notifyReminder", () => {
       title: "LH712: Abflug in 24 Stunden",
       body: "FRA → HND · 13:25 Ortszeit",
     });
+  });
+
+  // forgejo#286: the trip page's "Erinnerungen für diese Reise" reaches the
+  // server push. A muted trip's reminder stays home; another trip's goes; a
+  // flight-change notice is not a reminder and ignores the mute.
+  it("skips a phone that muted the flight's trip, and only for reminders", async () => {
+    const muting = await phone({ mutedTripIds: ["trip-muted"] });
+    const r = recorder();
+    const departure = new Date("2026-10-14T11:25:00.000Z");
+
+    await notifyReminder(
+      userId,
+      { ...flight, departureTime: departure, tripId: "trip-muted" },
+      "24h",
+      { send: r.send }
+    );
+    expect(r.pushes).toHaveLength(0);
+    expect(await prisma.pushDelivery.count({ where: { apiTokenId: muting.tokenId } })).toBe(0);
+
+    await notifyReminder(
+      userId,
+      { ...flight, id: "flight-2", departureTime: departure, tripId: "trip-other" },
+      "24h",
+      { send: r.send }
+    );
+    expect(r.pushes).toHaveLength(1);
+    expect(r.pushes[0].collapseId).toBe("reminder:flight-2");
+
+    await notifyFlightChanged(
+      userId,
+      { ...flight, tripId: "trip-muted" } as FlightForMessage,
+      gate,
+      { pending: false },
+      { send: r.send }
+    );
+    expect(r.pushes).toHaveLength(2);
+    expect(r.pushes[1].collapseId).toBe("change:flight-1");
+  });
+
+  it("mutes one phone without muting the account's other phone", async () => {
+    await phone({ mutedTripIds: ["trip-muted"] });
+    const other = await phone();
+    const r = recorder();
+    await notifyReminder(
+      userId,
+      { ...flight, departureTime: new Date("2026-10-14T11:25:00.000Z"), tripId: "trip-muted" },
+      "2h",
+      { send: r.send }
+    );
+    expect(r.pushes).toHaveLength(1);
+    expect(r.pushes[0].token).toBe(`apns-${other.tokenId.replace(/-/g, "")}`);
   });
 });

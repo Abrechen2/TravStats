@@ -79,6 +79,7 @@ describe("Device push registration", () => {
       flightChanges: true,
       reminders: false,
       locale: "de",
+      mutedTripIds: [],
       serverPushEnabled: false,
     });
     expect(JSON.stringify(get.body)).not.toContain(body.token);
@@ -92,6 +93,36 @@ describe("Device push registration", () => {
     const rows = await prisma.devicePush.findMany({ where: { apiTokenId: pat.id } });
     expect(rows).toHaveLength(1);
     expect(rows[0].reminders).toBe(true);
+  });
+
+  // forgejo#286: the per-trip reminder mute travels with the registration.
+  it("stores the muted trips, returns them, and keeps them when a re-registration omits them", async () => {
+    const pat = await pairedToken(userId, "dev-mute");
+    const auth = { Authorization: `Bearer ${pat.plaintext}` };
+    await request(app)
+      .put("/api/v1/devices/me/push")
+      .set(auth)
+      .send({ ...body, mutedTripIds: ["trip-a", "trip-b", "trip-a"] })
+      .expect(200);
+    const get = await request(app).get("/api/v1/devices/me/push").set(auth).expect(200);
+    expect(get.body.mutedTripIds).toEqual(["trip-a", "trip-b"]);
+
+    // A token rotation that does not know the list must not wipe it.
+    await request(app)
+      .put("/api/v1/devices/me/push")
+      .set(auth)
+      .send({ ...body, token: "b".repeat(64) })
+      .expect(200);
+    const kept = await request(app).get("/api/v1/devices/me/push").set(auth).expect(200);
+    expect(kept.body.mutedTripIds).toEqual(["trip-a", "trip-b"]);
+
+    await request(app)
+      .put("/api/v1/devices/me/push")
+      .set(auth)
+      .send({ ...body, mutedTripIds: [] })
+      .expect(200);
+    const cleared = await request(app).get("/api/v1/devices/me/push").set(auth).expect(200);
+    expect(cleared.body.mutedTripIds).toEqual([]);
   });
 
   it("tells the phone when the admin has switched push on", async () => {
@@ -119,6 +150,8 @@ describe("Device push registration", () => {
     ["a key that is not 32 bytes", { publicKey: Buffer.alloc(31).toString("base64url") }],
     ["a token with spaces", { token: "not a token at all" }],
     ["an unknown field", { extra: 1 }],
+    ["muted trips that are not a list of ids", { mutedTripIds: "trip-a" }],
+    ["more than 500 muted trips", { mutedTripIds: Array.from({ length: 501 }, (_, i) => `t${i}`) }],
   ])("400s %s", async (_label, patch) => {
     const pat = await pairedToken(userId, `dev-bad-${Math.random()}`);
     const res = await request(app)

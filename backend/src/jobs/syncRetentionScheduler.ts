@@ -3,7 +3,8 @@
  *
  * Prunes `sync_changes` older than `SYNC_RETENTION_DAYS` daily and once at
  * start, and raises the feed's watermark so a cursor older than the horizon
- * is answered "resync required" instead of a feed with holes in it.
+ * is answered "resync required" instead of a feed with holes in it. Also
+ * drops create idempotency keys past the same horizon (`client_write_refs`).
  *
  * 03:50 UTC: beside the 03:45 log retention, in the quiet maintenance hour,
  * before the 04:10 data-quality sweep (slot table in
@@ -14,6 +15,7 @@ import cron from "node-cron";
 import type { ScheduledTask } from "node-cron";
 
 import { pruneSyncChanges } from "../services/sync/state";
+import { pruneClientRefs } from "../services/sync/clientRef";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
 
@@ -24,7 +26,9 @@ let schedulerTask: ScheduledTask | null = null;
 export async function runSyncRetention(): Promise<void> {
   try {
     const result = await pruneSyncChanges();
-    logger.info({ operation: "sync_retention_done", ...result });
+    // The outbox's idempotency keys share the feed's horizon (forgejo#283).
+    const clientRefs = await pruneClientRefs();
+    logger.info({ operation: "sync_retention_done", ...result, clientRefs });
   } catch (error) {
     // Retried by the next run. Until then the table only grows; nothing a
     // phone reads is wrong, because the watermark only moves after a prune.

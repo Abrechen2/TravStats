@@ -107,6 +107,15 @@ describe("checkFlightReminders - push", () => {
     expect(mockSendFlightReminder).not.toHaveBeenCalled();
   });
 
+  it("hands the dispatcher the flight's trip, so a phone's per-trip mute can apply (forgejo#286)", async () => {
+    stage([{ ...makeFlight({ notificationEmail: null }), tripId: "trip-9" }]);
+    await run();
+
+    expect((mockNotifyReminder.mock.calls[0][1] as { tripId: string | null }).tripId).toBe(
+      "trip-9"
+    );
+  });
+
   it("pushes the 2h reminder with key 2h", async () => {
     stage([], [makeFlight({ notificationEmail: null }, 2)]);
     await run();

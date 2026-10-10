@@ -11,6 +11,7 @@ import logger from "../../utils/logger";
 import { buildRouteGeometry, RouteGeometryFeatureCollection } from "./tourLegs";
 import { toDto, ROUTE_SELECT } from "./tourRoutes";
 import { resolveTrip } from "../trips";
+import { createOnce, takeClientRef, type ClaimClientRef } from "../../services/sync/clientRef";
 
 /**
  * Dashboard-wide tour endpoints — the two things the ALL-trips map needs
@@ -234,50 +235,73 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const { tripId, anchorStopId, date, startTime, ...body } = createTourSchema.parse(req.body);
-      const day = tourDayColumns({ date, startTime }, "tour", null);
-      if (tripId != null) await resolveTrip(userId, tripId);
-      // The anchor must be a station of one of the caller's roadtrips: a foreign
-      // key proves it exists, not whose it is.
-      if (anchorStopId != null) {
-        const station = await prisma.tripStop.findFirst({
-          where: { id: anchorStopId, route: { userId, kind: "roadtrip" } },
-          select: { id: true },
-        });
-        if (!station) throw new AppError("Station not found", 404);
+      // The workout queue repeats a create whose answer it lost (forgejo#283):
+      // a repeat with the same key answers the first tour, 200 instead of 201.
+      const { clientRef, rest } = takeClientRef(req.body);
+      const { created, result: route } = await createOnce({
+        userId,
+        clientRef,
+        kind: "tour",
+        payload: rest,
+        create: (claim) => createTour(userId, rest, claim),
+        replay: (id) =>
+          prisma.tripRoute.findFirst({ where: { id, userId }, include: ROUTE_SELECT }),
+      });
+      if (created) {
+        logger.info({ operation: "tour.create", routeId: route.id, tripId: route.tripId });
       }
-
-      const last = await prisma.tripRoute.findFirst({
-        where: { userId, tripId: tripId ?? null },
-        orderBy: { orderIdx: "desc" },
-        select: { orderIdx: true },
-      });
-
-      const route = await prisma.tripRoute.create({
-        data: {
-          userId,
-          tripId: tripId ?? null,
-          name: body.name,
-          mode: body.mode,
-          activity: body.activity ?? null,
-          anchorStopId: anchorStopId ?? null,
-          color: body.color,
-          notes: body.notes,
-          startOdometerKm: body.startOdometerKm,
-          endOdometerKm: body.endOdometerKm,
-          orderIdx: last ? last.orderIdx + 1 : 0,
-          ...day,
-        },
-        include: ROUTE_SELECT,
-      });
-
-      logger.info({ operation: "tour.create", routeId: route.id, tripId: tripId ?? null });
-      res.status(201).json({ route: toDto(route) });
+      res.status(created ? 201 : 200).json({ route: toDto(route) });
     } catch (error) {
       next(error);
     }
   }
 );
+
+/** The create half of POST /tours; `claim` records the idempotency key in its transaction. */
+async function createTour(userId: string, raw: unknown, claim: ClaimClientRef) {
+  const { tripId, anchorStopId, date, startTime, ...body } = createTourSchema.parse(raw);
+  const day = tourDayColumns({ date, startTime }, "tour", null);
+  if (tripId != null) await resolveTrip(userId, tripId);
+  // The anchor must be a station of one of the caller's roadtrips: a foreign
+  // key proves it exists, not whose it is.
+  if (anchorStopId != null) {
+    const station = await prisma.tripStop.findFirst({
+      where: { id: anchorStopId, route: { userId, kind: "roadtrip" } },
+      select: { id: true },
+    });
+    if (!station) throw new AppError("Station not found", 404);
+  }
+
+  const last = await prisma.tripRoute.findFirst({
+    where: { userId, tripId: tripId ?? null },
+    orderBy: { orderIdx: "desc" },
+    select: { orderIdx: true },
+  });
+
+  const route = await prisma.$transaction(async (tx) => {
+    const created = await tx.tripRoute.create({
+      data: {
+        userId,
+        tripId: tripId ?? null,
+        name: body.name,
+        mode: body.mode,
+        activity: body.activity ?? null,
+        anchorStopId: anchorStopId ?? null,
+        color: body.color,
+        notes: body.notes,
+        startOdometerKm: body.startOdometerKm,
+        endOdometerKm: body.endOdometerKm,
+        orderIdx: last ? last.orderIdx + 1 : 0,
+        ...day,
+      },
+      include: ROUTE_SELECT,
+    });
+    await claim(tx, created.id);
+    return created;
+  });
+
+  return route;
+}
 
 /**
  * POST /tours/geometry/batch

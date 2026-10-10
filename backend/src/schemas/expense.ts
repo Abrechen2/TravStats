@@ -1,4 +1,5 @@
 import { z } from "./zod";
+import { clientRefSchema } from "./clientRef";
 import { EXPENSE_KINDS } from "../shared/expenses";
 import { currencyField } from "./lodging";
 
@@ -74,6 +75,9 @@ export const createExpenseSchema = z
           "trip instead of on the trip, so it moves with the section. Its stops must then be " +
           "that section's. Refused on the route-scoped paths, which already name one.",
       }),
+    // forgejo#283 — split off by the route before this schema runs; listed so
+    // the strict object and the published input both name it.
+    clientRef: clientRefSchema.optional(),
   })
   .strict()
   .refine(legPairComplete, { message: LEG_PAIR_MESSAGE, path: ["legToStopId"] })

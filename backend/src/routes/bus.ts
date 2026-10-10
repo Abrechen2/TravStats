@@ -22,6 +22,7 @@ import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
+import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
 import logger from "../utils/logger";
 import { railListSummary } from "../shared/listSummary";
 
@@ -193,51 +194,73 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const userId = requireUser(req);
-      refuseStrayFold(req.body);
-      const parsed = createBusJourneySchema.safeParse(req.body);
-      if (!parsed.success) throw invalidInput(parsed.error);
-      const input = parsed.data;
-      await assertReferencesOwned(userId, { tripId: input.tripId, bookingId: input.bookingId });
-      const documentIds = await takeDocumentIds(userId, req.body);
-
-      const state = mergeBusJourney(null, input);
-      const companions = await resolveCompanions(userId, input.companions ?? []);
-      const fxColumns = await fxColumnsFor(
-        { amount: input.price, currency: input.currency, date: state.departureTime },
-        await getBaseCurrency(userId)
-      );
-
-      const ride = await prisma.$transaction(async (tx) => {
-        const created = await tx.busJourney.create({
-          data: {
-            ...plainColumns(input),
-            ...state,
-            ...fxColumns,
-            userId,
-            companions: companions.map((c) => c.displayName),
-          },
-        });
-        if (companions.length > 0) {
-          await tx.busJourneyCompanion.createMany({
-            data: linkRowsFor(companions.map((c) => c.id)).map((row) => ({
-              ...row,
-              busJourneyId: created.id,
-            })),
-            skipDuplicates: true,
+      // An outbox replay carries the key it minted (forgejo#283): a repeat
+      // answers the ride the first POST made, 200 instead of 201.
+      const { clientRef, rest: body } = takeClientRef(req.body);
+      const { created, result } = await createOnce({
+        userId,
+        clientRef,
+        kind: "bus",
+        payload: body,
+        create: (claim) => createBusRide(userId, body, claim),
+        replay: async (id) => {
+          const ride = await prisma.busJourney.findFirst({
+            where: { id, userId },
+            include: BUS_INCLUDE,
           });
-        }
-        return tx.busJourney.findUniqueOrThrow({ where: { id: created.id }, include: BUS_INCLUDE });
+          return ride && withBusTimes(ride);
+        },
       });
-
-      await linkDocuments(userId, documentIds, { type: "busJourney", id: ride.id });
-      await restatusTrips(ride.tripId);
-      logger.info({ operation: "bus_journey_create", busJourneyId: ride.id, userId });
-      res.status(201).json({ success: true, data: withBusTimes(ride) });
+      res.status(created ? 201 : 200).json({ success: true, data: result });
     } catch (err) {
       next(err);
     }
   }
 );
+
+async function createBusRide(userId: string, body: unknown, claim: ClaimClientRef) {
+  refuseStrayFold(body);
+  const parsed = createBusJourneySchema.safeParse(body);
+  if (!parsed.success) throw invalidInput(parsed.error);
+  const input = parsed.data;
+  await assertReferencesOwned(userId, { tripId: input.tripId, bookingId: input.bookingId });
+  const documentIds = await takeDocumentIds(userId, body);
+
+  const state = mergeBusJourney(null, input);
+  const companions = await resolveCompanions(userId, input.companions ?? []);
+  const fxColumns = await fxColumnsFor(
+    { amount: input.price, currency: input.currency, date: state.departureTime },
+    await getBaseCurrency(userId)
+  );
+
+  const ride = await prisma.$transaction(async (tx) => {
+    const created = await tx.busJourney.create({
+      data: {
+        ...plainColumns(input),
+        ...state,
+        ...fxColumns,
+        userId,
+        companions: companions.map((c) => c.displayName),
+      },
+    });
+    if (companions.length > 0) {
+      await tx.busJourneyCompanion.createMany({
+        data: linkRowsFor(companions.map((c) => c.id)).map((row) => ({
+          ...row,
+          busJourneyId: created.id,
+        })),
+        skipDuplicates: true,
+      });
+    }
+    await claim(tx, created.id);
+    return tx.busJourney.findUniqueOrThrow({ where: { id: created.id }, include: BUS_INCLUDE });
+  });
+
+  await linkDocuments(userId, documentIds, { type: "busJourney", id: ride.id });
+  await restatusTrips(ride.tripId);
+  logger.info({ operation: "bus_journey_create", busJourneyId: ride.id, userId });
+  return withBusTimes(ride);
+}
 
 router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

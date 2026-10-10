@@ -156,6 +156,8 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   trainingData: "parser training corpus of raw source text, operational",
   parseLogs: "parser training log, operational",
   pendingFlightUpdates: "transient queue of suggested flight changes",
+  clientWriteRefs:
+    "transport bookkeeping: the outbox's idempotency keys (forgejo#283), pruned after 90 days",
   dataQualityFlags: "derived by the data-quality sweep, recomputed from the rows",
   linkedAsCompanion:
     "other accounts' companion rows that name this user — their data, not this user's",
