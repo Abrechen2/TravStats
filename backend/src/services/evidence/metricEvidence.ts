@@ -157,6 +157,7 @@ import {
   resolveCruisePolarCruiseCount,
 } from "./metricEvidenceCruiseInsights";
 import { INSIGHT_RESOLVERS } from "./metricEvidenceInsights";
+import { FLIGHT_WITNESS_RESOLVERS } from "./metricEvidenceFlightWitnesses";
 
 /**
  * `EvidenceResolver` for `kind: "metric"` (Task 7,
@@ -306,6 +307,8 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   cruisePolarCruiseCount: resolveCruisePolarCruiseCount,
   // The statistics expansion (forgejo#258/#259/#260/#264), one shape for all.
   ...INSIGHT_RESOLVERS,
+  // The flights behind the flight tab's "most" figures (forgejo#256).
+  ...FLIGHT_WITNESS_RESOLVERS,
 };
 
 /**

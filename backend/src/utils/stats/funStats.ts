@@ -29,6 +29,25 @@ import { routePairKey } from "../../shared/routePair";
  *                          route master.
  */
 export async function calculateFunStats(flights: FlightData[]): Promise<FunStats> {
+  return (await analyseFunStats(flights)).stats;
+}
+
+/**
+ * The flights behind each "most" tile (forgejo#256) — read by
+ * `services/evidence/metricEvidenceFlightWitnesses.ts`, so the panel lists the
+ * flights the tile's winner was chosen from, by the same rule.
+ */
+export interface FunWitnesses {
+  /** Flights of the most used airline (the loyalty score's numerator). */
+  loyaltyAirline: string[];
+  busiestDay: string[];
+  milestoneYear: string[];
+  routeMaster: string[];
+}
+
+export async function analyseFunStats(
+  flights: FlightData[]
+): Promise<{ stats: FunStats; witnesses: FunWitnesses }> {
   // Time-sensitive subset — both times must be present. Historical entries
   // typically have placeholder times so we exclude them here.
   const flownFlights = flights.filter(
@@ -134,7 +153,26 @@ export async function calculateFunStats(flights: FlightData[]): Promise<FunStats
 
   const topRoute = Object.entries(routeCounts).sort(([, a], [, b]) => b - a)[0];
 
-  return {
+  const mostUsedAirline =
+    Object.entries(airlineCounts).sort(([, a], [, b]) => b - a)[0]?.[0] || null;
+  const witnessesOf = (match: (f: FlightData) => boolean): string[] =>
+    countableFlights.filter(match).map((f) => f.id);
+  const witnesses: FunWitnesses = {
+    loyaltyAirline: mostUsedAirline
+      ? witnessesOf((f) => Boolean(f.airline) && normalizeAirline(f.airline!) === mostUsedAirline)
+      : [],
+    busiestDay: fastestDay ? witnessesOf((f) => departureClockOf(f)?.date === fastestDay) : [],
+    milestoneYear: topYear
+      ? witnessesOf((f) => departureClockOf(f)?.year === parseInt(topYear[0]))
+      : [],
+    routeMaster: topRoute
+      ? witnessesOf(
+          (f) => routePairKey(f.depIata || f.depIcao, f.arrIata || f.arrIcao) === topRoute[0]
+        )
+      : [],
+  };
+
+  const stats: FunStats = {
     timezoneHopper: timezones.size,
     earlyBird: morningFlights,
     afternoon: afternoonFlights,
@@ -143,7 +181,7 @@ export async function calculateFunStats(flights: FlightData[]): Promise<FunStats
     weekendPercentage:
       flownFlights.length > 0 ? Math.round((weekendFlights / flownFlights.length) * 100) : 0,
     loyaltyScore,
-    mostUsedAirline: Object.entries(airlineCounts).sort(([, a], [, b]) => b - a)[0]?.[0] || null,
+    mostUsedAirline,
     shortHaulKing: shortHaulFlights,
     longHaulPilot: longHaulFlights,
     fastestDay: fastestDay || null,
@@ -155,4 +193,5 @@ export async function calculateFunStats(flights: FlightData[]): Promise<FunStats
     routeMaster: topRoute ? topRoute[0] : null,
     routeMasterCount: topRoute ? topRoute[1] : 0,
   };
+  return { stats, witnesses };
 }

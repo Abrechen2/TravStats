@@ -34,8 +34,7 @@ import { loadDaysAway } from "../services/stats/daysAwayLoader";
 import { loadCountryDetail } from "../services/stats/countryDetailLoader";
 import { buildWrapped } from "../services/stats/wrapped";
 import { fetchFlightDatedRows, fetchCruiseDatedRows } from "../services/stats/timeseriesRows";
-import { buildTravelRecords } from "../services/stats/records";
-import { enrichFlightsWithAirportFacts } from "../services/flightAirportFacts";
+import { buildTravelRecords, loadRecordFlights } from "../services/stats/records";
 import { countableFlightWhere } from "../shared/flightCounting";
 import { loadWrappedDomains, loadWrappedPassport } from "../services/stats/wrappedDomains";
 import {
@@ -820,34 +819,10 @@ router.get(
     try {
       const userId = req.userId!;
 
-      const flights = await prisma.flight.findMany({
-        where: { userId, ...countableFlightWhere() },
-        select: {
-          id: true,
-          flightNumber: true,
-          ...FLIGHT_CLOCK_SELECT,
-          depLat: true,
-          depLon: true,
-          arrLat: true,
-          arrLon: true,
-          departureTime: true,
-          arrivalTime: true,
-          arrTimeSemantics: true,
-          delayMinutes: true,
-          routeDistance: true,
-          status: true,
-        },
-      });
+      // The loader lives beside the records so their evidence reads the same rows.
+      const flights = await loadRecordFlights(userId);
 
-      // `durationMinutes` is not a column — it is derived from the two clocks,
-      // their timezones and their semantics. Deriving it a second time here
-      // would be the very drift #42 is about, so the record uses the SAME
-      // enrichment every other flight response goes through: a DATE_ONLY row
-      // comes back with a null duration and the aloft record abstains, exactly
-      // as it does in the app.
-      const enriched = await enrichFlightsWithAirportFacts(flights);
-
-      res.json({ success: true, data: { records: buildTravelRecords(enriched) } });
+      res.json({ success: true, data: { records: buildTravelRecords(flights) } });
     } catch (error) {
       next(error);
     }

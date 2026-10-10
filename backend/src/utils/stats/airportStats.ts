@@ -153,31 +153,14 @@ export async function calculateAirportStats(
       firstVisitDate: date,
     }));
 
-  // Farthest from home — consider every arrival that isn't a home airport and
-  // measure great-circle distance from where the user LIVED at that time (the
-  // residence; for an unconfirmed migrated period that is the old airport, so
-  // the number is the one it always was).
-  let farthestFromHome: AirportStats["farthestFromHome"] = null;
-  for (const f of flownFlights) {
-    const arrCode = f.arrIata || f.arrIcao;
-    if (!arrCode) continue;
-    const flightDay = departureClockOf(f)?.date ?? new Date().toISOString().slice(0, 10);
-    const homeCode = primaryAirportAt(homePeriods, flightDay);
-    const residence = residenceAt(homePeriods, flightDay);
-    if (!homeCode || !residence) continue;
-    if (isHomeAirportAt(homePeriods, flightDay, arrCode)) continue;
-
-    const distance = calculateDistance(residence.lat, residence.lon, f.arrLat, f.arrLon);
-    if (!farthestFromHome || distance > farthestFromHome.distanceKm) {
-      farthestFromHome = {
-        code: arrCode,
-        name: airportInfo.get(arrCode)?.name ?? null,
-        country: airportInfo.get(arrCode)?.country ?? null,
-        distanceKm: Math.round(distance),
-        homeCode,
-      };
-    }
-  }
+  const farthest = farthestFromHomeOf(flownFlights, homePeriods);
+  const farthestFromHome: AirportStats["farthestFromHome"] = farthest && {
+    code: farthest.code,
+    name: airportInfo.get(farthest.code)?.name ?? null,
+    country: airportInfo.get(farthest.code)?.country ?? null,
+    distanceKm: farthest.distanceKm,
+    homeCode: farthest.homeCode,
+  };
 
   const topCountries = Array.from(countryCount.entries())
     .sort(([, a], [, b]) => b - a)
@@ -202,4 +185,40 @@ export async function calculateAirportStats(
     topCountries,
     continentDistribution,
   };
+}
+
+/**
+ * Farthest from home — every arrival that isn't a home airport, measured
+ * great-circle from where the user LIVED at that time (the residence; for an
+ * unconfirmed migrated period that is the old airport, so the number is the
+ * one it always was). The first arrival to reach the maximum wins; its flight
+ * is the witness the evidence panel lists (forgejo#256).
+ */
+export function farthestFromHomeOf(
+  flights: readonly FlightData[],
+  homePeriods: readonly HomePeriod[]
+): { code: string; distanceKm: number; homeCode: string; flightId: string } | null {
+  let best: { code: string; distance: number; homeCode: string; flightId: string } | null = null;
+  for (const f of flights) {
+    const arrCode = f.arrIata || f.arrIcao;
+    if (!arrCode) continue;
+    const flightDay = departureClockOf(f)?.date ?? new Date().toISOString().slice(0, 10);
+    const homeCode = primaryAirportAt(homePeriods, flightDay);
+    const residence = residenceAt(homePeriods, flightDay);
+    if (!homeCode || !residence) continue;
+    if (isHomeAirportAt(homePeriods, flightDay, arrCode)) continue;
+    const distance = calculateDistance(residence.lat, residence.lon, f.arrLat, f.arrLon);
+    // Against the ROUNDED leader, as the tile always compared.
+    if (!best || distance > Math.round(best.distance)) {
+      best = { code: arrCode, distance, homeCode, flightId: f.id };
+    }
+  }
+  return (
+    best && {
+      code: best.code,
+      distanceKm: Math.round(best.distance),
+      homeCode: best.homeCode,
+      flightId: best.flightId,
+    }
+  );
 }
