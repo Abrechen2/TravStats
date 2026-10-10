@@ -45,6 +45,7 @@ import {
 import { fxOutcomeNotice } from "./expenseFx";
 import ExpensePayerField, { PAYER_NAME_ID } from "./ExpensePayerField";
 import ExpenseRateField, { RATE_ID } from "./ExpenseRateField";
+import { PendingReceiptPicker, ReceiptAttachFailed, attachPendingReceipt } from "./PendingReceipt";
 
 const AMOUNT_ID = "expense-amount";
 const HINT_ID = "expense-save-blocked";
@@ -106,6 +107,11 @@ export default function ExpenseDialog({
   const { dirty, markSaved } = useDirtyGuard(initial, draft);
   const saving = useSaveOnce<ExpenseWriteResult>();
   const failure = useFormFailure(JSON.stringify(draft));
+  // A receipt picked while CREATING goes up once the cost exists; if that
+  // second request fails, the cost stays and the dialog says so (forgejo#150).
+  const [pendingReceipt, setPendingReceipt] = useState<File | null>(null);
+  const [receiptFailedFor, setReceiptFailedFor] = useState<string | null>(null);
+  const [receiptRetrying, setReceiptRetrying] = useState(false);
 
   const set = <K extends keyof ExpenseDraft>(key: K, value: ExpenseDraft[K]): void =>
     setDraft((prev) => ({ ...prev, [key]: value }));
@@ -150,8 +156,16 @@ export default function ExpenseDialog({
         expense && patch
           ? expensesApi.updateForRoadtrip(roadtripId, expense.id, patch)
           : expensesApi.createForRoadtrip(roadtripId, createBody(draft, context)),
-      (result) => {
+      async (result) => {
         markSaved();
+        if (!expense && pendingReceipt) {
+          // The cost exists now: closing must reload the list either way.
+          documentsChanged.current = true;
+          if (!(await attachPendingReceipt(result.expense.id, pendingReceipt))) {
+            setReceiptFailedFor(result.expense.id);
+            return;
+          }
+        }
         const notice = fxOutcomeNotice(result.fxSnapshot);
         if (notice)
           addToast(notice.type, t(notice.key, { currency: result.expense.currency }), 10000);
@@ -162,6 +176,14 @@ export default function ExpenseDialog({
       logger.warn("Saving a roadtrip expense failed", outcome.error);
       failure.fail(expenseFailureKey(outcome.error, { create: !expense }));
     }
+  };
+
+  const retryReceipt = async (): Promise<void> => {
+    if (!receiptFailedFor || !pendingReceipt) return;
+    setReceiptRetrying(true);
+    const attached = await attachPendingReceipt(receiptFailedFor, pendingReceipt);
+    setReceiptRetrying(false);
+    if (attached) onSaved();
   };
 
   const remove = async (): Promise<void> => {
@@ -347,8 +369,18 @@ export default function ExpenseDialog({
                 documentsChanged.current = true;
               }}
             />
+          ) : receiptFailedFor ? (
+            <ReceiptAttachFailed
+              retrying={receiptRetrying}
+              onRetry={() => void retryReceipt()}
+              onSkip={onSaved}
+            />
           ) : (
-            <span className="t-caption">{t("roadtrips:costs.receipt.afterSave")}</span>
+            <PendingReceiptPicker
+              file={pendingReceipt}
+              onChange={setPendingReceipt}
+              disabled={busy || saving.saved !== null}
+            />
           )}
         </div>
         <RequiredLegend />

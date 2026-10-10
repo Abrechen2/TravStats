@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 
 import RoadtripCostsSection, { formatAmounts } from "../RoadtripCostsSection";
 import { expensesApi } from "../../../lib/api/expenses";
+import { documentsApi } from "../../../lib/api/documents";
 import { companionsApi } from "../../../lib/api/companions";
 import { useToastStore } from "../../../store/toastStore";
 import type { RoadtripCosts, TripExpense } from "../../../types/expense";
@@ -34,6 +35,9 @@ vi.mock("../../documents/DocumentsSection", () => ({
   default: ({ entry }: { entry: { type: string; id: string } }) => (
     <div data-testid="expense-documents">{`${entry.type}:${entry.id}`}</div>
   ),
+}));
+vi.mock("../../../lib/api/documents", () => ({
+  documentsApi: { upload: vi.fn(async () => ({ id: "d1" })) },
 }));
 vi.mock("../../../lib/api/expenses", () => ({
   expensesApi: {
@@ -601,10 +605,55 @@ describe("RoadtripCostsSection", () => {
     expect(screen.getByTestId("expense-documents")).toHaveTextContent("tripExpense:e");
   });
 
-  it("does not offer receipts before the cost exists", async () => {
-    renderSection();
+  const created = (id: string) => ({ expense: expense({ id }), fxSnapshot: "undated" as const });
+  const pickReceipt = (): File => {
+    const file = new File(["%PDF"], "beleg.pdf", { type: "application/pdf" });
+    fireEvent.change(screen.getByLabelText("roadtrips:costs.receipt.pick"), {
+      target: { files: [file] },
+    });
+    return file;
+  };
+
+  it("a new cost takes a receipt that goes up once the cost is saved", async () => {
+    vi.mocked(expensesApi.createForRoadtrip).mockResolvedValueOnce(created("new1"));
+    const onChanged = renderSection();
     await openDialog("roadtrips:costs.add");
     expect(screen.queryByTestId("expense-documents")).toBeNull();
-    expect(screen.getByText("roadtrips:costs.receipt.afterSave")).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/roadtrips:costs.dialog.amount/), {
+      target: { value: "12" },
+    });
+    const file = pickReceipt();
+    fireEvent.click(screen.getByText("roadtrips:costs.dialog.save"));
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+    expect(documentsApi.upload).toHaveBeenCalledWith({
+      entry: { type: "tripExpense", id: "new1" },
+      file,
+    });
+  });
+
+  it("a receipt that fails after the cost was saved is named, keeps the cost, and can be retried", async () => {
+    vi.mocked(expensesApi.createForRoadtrip).mockResolvedValueOnce(created("new2"));
+    vi.mocked(documentsApi.upload).mockRejectedValueOnce(new Error("offline"));
+    const onChanged = renderSection();
+    await openDialog("roadtrips:costs.add");
+    fireEvent.change(screen.getByLabelText(/roadtrips:costs.dialog.amount/), {
+      target: { value: "12" },
+    });
+    pickReceipt();
+    fireEvent.click(screen.getByText("roadtrips:costs.dialog.save"));
+
+    expect(await screen.findByTestId("expense-receipt-failed")).toHaveTextContent(
+      "roadtrips:costs.receipt.attachFailed"
+    );
+    // The cost is not sent again, and the save is not reported as failed.
+    expect(expensesApi.createForRoadtrip).toHaveBeenCalledTimes(1);
+    expect(onChanged).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText("roadtrips:costs.receipt.retry"));
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+    expect(documentsApi.upload).toHaveBeenLastCalledWith(
+      expect.objectContaining({ entry: { type: "tripExpense", id: "new2" } })
+    );
+    expect(expensesApi.createForRoadtrip).toHaveBeenCalledTimes(1);
   });
 });

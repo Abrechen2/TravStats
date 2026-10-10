@@ -829,9 +829,13 @@
     },
     "receipt": {
       "title": "Beleg",
-      "afterSave": "Einen Beleg kannst du anhängen, sobald die Kosten gespeichert sind.",
       "count_one": "{{count}} Beleg",
-      "count_other": "{{count}} Belege"
+      "count_other": "{{count}} Belege",
+      "pick": "Beleg (optional)",
+      "pickHint": "Wird nach dem Speichern an die Kosten angehängt.",
+      "attachFailed": "Die Kosten sind gespeichert, aber der Beleg wurde nicht angehängt.",
+      "retry": "Beleg erneut anhängen",
+      "closeWithout": "Ohne Beleg schließen"
     },
     "base": {
       "total": "≈ {{amount}} in Hauswährung",

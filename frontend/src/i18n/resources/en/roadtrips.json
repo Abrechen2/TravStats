@@ -829,9 +829,13 @@
     },
     "receipt": {
       "title": "Receipt",
-      "afterSave": "You can attach a receipt once the cost is saved.",
       "count_one": "{{count}} receipt",
-      "count_other": "{{count}} receipts"
+      "count_other": "{{count}} receipts",
+      "pick": "Receipt (optional)",
+      "pickHint": "Attached to the cost once it is saved.",
+      "attachFailed": "The cost is saved, but the receipt was not attached.",
+      "retry": "Attach the receipt again",
+      "closeWithout": "Close without receipt"
     },
     "base": {
       "total": "≈ {{amount}} in your base currency",
