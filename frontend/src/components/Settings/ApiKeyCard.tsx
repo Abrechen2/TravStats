@@ -5,6 +5,7 @@
  */
 
 import { useState } from "react";
+import { UnreachableNote } from "./SettingsShared";
 import { quotaLine } from "./quotaCopy";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
@@ -48,6 +49,8 @@ export interface ApiKeyCardProps {
   /** Per-provider quota observation. Different providers report this
    *  very differently — see `ProviderQuota` for the variants. */
   quota?: ProviderQuota;
+  /** One sentence: what happens when this provider does not answer. */
+  whenUnreachable?: string;
   /** Capability tags to render as small badges next to the label. */
   capabilities?: ApiCardCapability[];
   onChange?: (value: string) => void;
@@ -76,6 +79,7 @@ export default function ApiKeyCard({
   provider,
   label,
   description,
+  whenUnreachable,
   getKeyUrl,
   isShared,
   hasAccess,
@@ -360,6 +364,7 @@ export default function ApiKeyCard({
           sub={
             <span className="flex flex-col" style={{ gap: 4 }}>
               <span>{description}</span>
+              {whenUnreachable && <UnreachableNote>{whenUnreachable}</UnreachableNote>}
               {details}
             </span>
           }
@@ -395,6 +400,7 @@ export default function ApiKeyCard({
           {statusPill}
         </div>
         <p className="t-caption">{description}</p>
+        {whenUnreachable && <UnreachableNote>{whenUnreachable}</UnreachableNote>}
         {details}
       </div>
       {isDemo ? <DemoLockedNotice /> : editor}

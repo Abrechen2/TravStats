@@ -999,5 +999,15 @@
     "utcHint": "Solange du keine Zeitzone bestätigt hast, rechnet TravStats „heute“ in UTC.",
     "saveError": "Die Zeitzone konnte nicht gespeichert werden. Bitte versuche es noch einmal.",
     "followsDevice": "Auf meinem Handy (Companion-App) soll sich die Zeitzone automatisch dem Aufenthaltsort anpassen."
+  },
+  "unreachable": {
+    "flightProvider": "Antwortet {{name}} nicht, fragt die Flugsuche den nächsten eingerichteten Dienst; antwortet keiner, nennt sie den Grund, und du trägst den Flug von Hand ein. Gespeicherte Flüge bleiben unverändert, automatische Updates versuchen es beim nächsten Durchlauf erneut.",
+    "aerodatabox": "Antwortet AeroDataBox nicht, fragt die Flugsuche den nächsten eingerichteten Dienst — für Flüge, die länger zurückliegen, gibt es keinen anderen; „Bestandsflüge auffrischen“ zählt solche Flüge als fehlgeschlagen. Gespeicherte Flüge bleiben unverändert.",
+    "routing": "Antwortet der Routing-Dienst nicht, bleiben neue Etappen gerade Linien; in der Etappenliste lassen sie sich später erneut routen. Gezeichnete Strecken bleiben unberührt.",
+    "rail": "Antworten die Fahrplan-Dienste nicht, findet die Zugnummer-Suche nichts, und die Fahrt wird von Hand eingetragen. Gespeicherte Fahrten bleiben unverändert.",
+    "immich": "Ist Immich nicht erreichbar, zeigen verknüpfte Alben keine Bilder, und ein Import bricht mit einer Meldung ab. In TravStats kopierte Fotos bleiben sichtbar.",
+    "dawarich": "Ist Dawarich nicht erreichbar, bricht ein Track-Import mit einer Meldung ab, und der nächtliche Abgleich der Ländertage macht in der nächsten Nacht dort weiter, wo er stehen blieb. Vorhandene Tracks bleiben.",
+    "strava": "Antwortet Strava nicht, bricht der Import von Aktivitäten mit einer Meldung ab. Bereits übernommene Touren bleiben.",
+    "openData": "Antwortet einer dieser Dienste nicht, sagt die betroffene Ansicht das; schon gespeichertes Wetter bleibt stehen, und beim nächsten Öffnen wird erneut gefragt."
   }
 }

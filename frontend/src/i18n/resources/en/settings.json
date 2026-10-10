@@ -999,5 +999,15 @@
     "utcHint": "Until you confirm a time zone, TravStats counts “today” in UTC.",
     "saveError": "The time zone could not be saved. Please try again.",
     "followsDevice": "On my phone (Companion app), keep the time zone in step with where I am."
+  },
+  "unreachable": {
+    "flightProvider": "If {{name}} does not answer, the flight search asks the next service you have set up; if none answers, it names the reason and you enter the flight by hand. Saved flights stay as they are, and automatic updates try again on their next run.",
+    "aerodatabox": "If AeroDataBox does not answer, the flight search asks the next service you have set up — for flights further back there is no other; “Refresh existing flights” counts such flights as failed. Saved flights stay as they are.",
+    "routing": "If the routing service does not answer, new legs stay straight lines; they can be routed again later from the leg list. Hand-drawn legs are not touched.",
+    "rail": "If the timetable services do not answer, the train-number search finds nothing and the ride is entered by hand. Saved rides stay as they are.",
+    "immich": "If Immich cannot be reached, linked albums show no pictures and an import stops with a message. Photos copied into TravStats stay visible.",
+    "dawarich": "If Dawarich cannot be reached, a track import stops with a message, and the nightly country-day sync carries on the next night where it stopped. Existing tracks stay.",
+    "strava": "If Strava does not answer, importing activities stops with a message. Tours already taken over stay.",
+    "openData": "If one of these services does not answer, the view concerned says so; weather already saved stays, and the next time it is opened it is asked again."
   }
 }

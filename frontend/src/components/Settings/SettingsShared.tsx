@@ -60,6 +60,26 @@ interface SectionTitleProps {
   badge?: React.ReactNode;
   /** Right-aligned on the label's line: a pointer elsewhere, a link. */
   aside?: React.ReactNode;
+  /**
+   * For a card that talks to a service outside this server: one sentence on
+   * what happens when that service does not answer. See `UnreachableNote`.
+   */
+  whenUnreachable?: string;
+}
+
+/**
+ * What happens when an outside service does not answer — one factual sentence
+ * per card, read off the code path that calls it (forgejo#88, acceptance
+ * 2026-10-10: "every card that names an external service says what happens
+ * when it is unreachable"). The settings page used to describe what each
+ * service is FOR and leave the failure to be discovered.
+ */
+export function UnreachableNote({ children }: { children: string }): JSX.Element {
+  return (
+    <p className="t-caption" data-unreachable-note="">
+      {children}
+    </p>
+  );
 }
 
 /**
@@ -67,7 +87,13 @@ interface SectionTitleProps {
  * set in capitals by CSS, so a screen reader still hears the words, not the
  * letters.
  */
-export function SectionTitle({ title, description, badge, aside }: SectionTitleProps): JSX.Element {
+export function SectionTitle({
+  title,
+  description,
+  badge,
+  aside,
+  whenUnreachable,
+}: SectionTitleProps): JSX.Element {
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-xs)" }}>
       <div className="flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
@@ -80,6 +106,7 @@ export function SectionTitle({ title, description, badge, aside }: SectionTitleP
         ) : null}
       </div>
       {description && <p className="t-caption">{description}</p>}
+      {whenUnreachable && <UnreachableNote>{whenUnreachable}</UnreachableNote>}
     </div>
   );
 }

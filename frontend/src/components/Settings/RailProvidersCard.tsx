@@ -77,6 +77,7 @@ export default function RailProvidersCard({ isAdmin }: { isAdmin: boolean }): JS
       <SectionTitle
         title={t("settings:railProviders.title")}
         description={t("settings:railProviders.description")}
+        whenUnreachable={t("settings:unreachable.rail")}
       />
       <SettingRows>
         {loadFailed && (

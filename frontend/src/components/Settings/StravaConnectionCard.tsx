@@ -97,6 +97,7 @@ export default function StravaConnectionCard({ isAdmin }: { isAdmin: boolean }):
       <SectionTitle
         title={t("roadtrips:strava.title")}
         description={t("roadtrips:strava.subtitle")}
+        whenUnreachable={t("settings:unreachable.strava")}
       />
       {isDemo ? (
         <DemoLockedNotice />

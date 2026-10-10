@@ -113,6 +113,7 @@ export default function PersonalRoutingKeysSection(): JSX.Element {
                 key={provider}
                 layout="row"
                 provider={provider}
+                whenUnreachable={t("settings:unreachable.routing")}
                 label={t(`settings:routingPersonal.${provider}.label`)}
                 description={t(`settings:routingPersonal.${provider}.description`)}
                 getKeyUrl={KEY_URL[provider]}

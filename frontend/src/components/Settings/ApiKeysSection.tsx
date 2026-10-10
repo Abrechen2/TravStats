@@ -80,6 +80,7 @@ export default function ApiKeysSection({
         <ApiKeyCard
           layout="row"
           provider="airlabs"
+          whenUnreachable={t("settings:unreachable.flightProvider", { name: "AirLabs" })}
           label={t("settings:apiKeys.airlabs.label")}
           description={t("settings:apiKeys.airlabs.description")}
           getKeyUrl="https://airlabs.co/account"
@@ -94,6 +95,7 @@ export default function ApiKeysSection({
         <ApiKeyCard
           layout="row"
           provider="aviationstack"
+          whenUnreachable={t("settings:unreachable.flightProvider", { name: "Aviationstack" })}
           label={t("settings:apiKeys.aviationstack.label")}
           description={t("settings:apiKeys.aviationstack.description")}
           getKeyUrl="https://aviationstack.com/signup"
@@ -108,6 +110,7 @@ export default function ApiKeysSection({
         <ApiKeyCard
           layout="row"
           provider="aerodatabox"
+          whenUnreachable={t("settings:unreachable.aerodatabox")}
           label={t("settings:apiKeys.aerodatabox.label")}
           description={t("settings:apiKeys.aerodatabox.description")}
           getKeyUrl="https://rapidapi.com/aedbx-aedbx/api/aerodatabox/pricing"
@@ -123,6 +126,9 @@ export default function ApiKeysSection({
         <ApiKeyCard
           layout="row"
           provider="aeroapi"
+          whenUnreachable={t("settings:unreachable.flightProvider", {
+            name: "FlightAware AeroAPI",
+          })}
           label={t("settings:apiKeys.aeroapi.label")}
           description={t("settings:apiKeys.aeroapi.description")}
           getKeyUrl="https://www.flightaware.com/aeroapi/portal/"
@@ -137,6 +143,7 @@ export default function ApiKeysSection({
         <ApiKeyCard
           layout="row"
           provider="opensky"
+          whenUnreachable={t("settings:unreachable.flightProvider", { name: "OpenSky" })}
           label={t("settings:apiKeys.opensky.label")}
           description={t("settings:apiKeys.opensky.description")}
           getKeyUrl="https://opensky-network.org/accounts/register"
