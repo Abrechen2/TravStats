@@ -148,6 +148,31 @@ describe("GET /api/v1/admin/export/all-data", () => {
     ]);
   });
 
+  // Public share links (forgejo#281): listed with what they share and until
+  // when — the token hash stays out, and the token is stored nowhere.
+  it("lists the share links without their token hash", async () => {
+    await prisma.publicShareLink.create({
+      data: {
+        userId: createdUserIds[0],
+        kind: "wrapped",
+        year: 2025,
+        fields: ["totals"],
+        tokenHash: "export-test-hash-must-not-appear",
+        expiresAt: new Date("2099-01-01T00:00:00Z"),
+      },
+    });
+    const res = await request(app)
+      .get("/api/v1/admin/export/all-data")
+      .set("Cookie", adminCookie)
+      .expect(200);
+    const user = res.body.users.find((u: { id: string }) => u.id === createdUserIds[0]);
+    expect(user.publicShareLinks).toEqual([
+      expect.objectContaining({ kind: "wrapped", year: 2025, fields: ["totals"] }),
+    ]);
+    expect(JSON.stringify(res.body)).not.toContain("export-test-hash-must-not-appear");
+    expect(JSON.stringify(user.publicShareLinks)).not.toContain("tokenHash");
+  });
+
   // Rail (spec 2026-09-25-rail-domain, phase 2b): the rides, and the stations
   // users added — which live outside any user and are not re-seeded.
   it("carries the rail rides and the user-added rail stations", async () => {

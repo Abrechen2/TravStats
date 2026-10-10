@@ -8,6 +8,7 @@ import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 import { recheckAchievementsAfterWrite } from "./middleware/recheckAchievementsAfterWrite";
 import { apiMounts } from "./routes/mounts";
+import sharePageRouter from "./routes/sharePage";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { requestLoggerMiddleware } from "./middleware/requestLogger";
 import { assetPathGuard } from "./middleware/assetPathGuard";
@@ -193,6 +194,10 @@ app.use(
 for (const { base, router } of apiMounts) {
   app.use(base, router);
 }
+
+// The page a public share link opens (forgejo#281) — outside /api, its own
+// headers; see routes/sharePage.ts.
+app.use("/share", sharePageRouter);
 
 // 404 handler for unmatched routes (must be before errorHandler)
 app.use(notFoundHandler);

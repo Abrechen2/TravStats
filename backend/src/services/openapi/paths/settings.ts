@@ -54,6 +54,10 @@ registry.registerPath({
   method: "get",
   path: "/settings",
   summary: "Get the user's settings",
+  description:
+    "Carries read-only instance flags beside the user's own settings: `betaFeaturesEnabled`, " +
+    "`openDataEnabled` and `shareLinksEnabled` (public share links, forgejo#281 — offer " +
+    "'share as link' only while it is on).",
   tags: settingsTag,
   responses: { 200: { description: "Settings" } },
 });

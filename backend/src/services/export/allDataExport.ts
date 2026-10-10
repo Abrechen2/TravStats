@@ -97,6 +97,22 @@ export const USER_EXPORT_SELECT = {
   shareConsentsGiven: true,
   shareGroupsCreated: true,
   shareNotices: true,
+  // Public share links (forgejo#281): what is shared, with what, until when —
+  // never the token hash. The token itself is stored nowhere.
+  publicShareLinks: {
+    select: {
+      id: true,
+      kind: true,
+      flightId: true,
+      tripId: true,
+      year: true,
+      fields: true,
+      expiresAt: true,
+      viewCount: true,
+      lastViewedAt: true,
+      createdAt: true,
+    },
+  },
   // Kept originals (forgejo#116): the rows — what each is, where it is filed,
   // what its parse read. The bytes stay out, as a photo's do.
   documents: true,

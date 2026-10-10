@@ -16,6 +16,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { encryptionKeyFingerprint } from "../../utils/encryption";
 import { reconcileInterruptedBackups } from "./reconcileBackups";
 import { resetSyncHistory } from "../sync/state";
+import { deleteAllShareLinks } from "../shareLinks/deleteAll";
 import { runSyncSchemaCheck } from "../sync/schemaCheck";
 import { CLEAN_SCHEMA_PREAMBLE, PsqlRestoreError, feedPsql } from "./restorePsql";
 import {
@@ -90,6 +91,9 @@ export async function afterDatabaseRestore(
 ): Promise<void> {
   await restoreInstanceIdentity(identityBefore);
   await resetSyncHistory(`restore of backup ${backupId}`);
+  // A dump taken before a revoke would bring the revoked link back to life.
+  // A restored instance starts with no public links (forgejo#281, T14).
+  await deleteAllShareLinks(`restore of backup ${backupId}`);
 }
 
 /**

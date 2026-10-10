@@ -107,6 +107,7 @@ model User {
   rentalBookings         RentalBooking[]
   apiTokens              ApiToken[]
   pairingCodes           PairingCode[]
+  publicShareLinks       PublicShareLink[]
   lodgings               Lodging[]
   lodgingStays           LodgingStay[]
   loyaltyMemberships     LoyaltyMembership[]
@@ -283,6 +284,41 @@ model PairingCode {
 
   @@index([userId])
   @@map("pairing_codes")
+}
+
+/// A public, read-only share link (forgejo#281, owner decision D7; design
+/// `docs/superpowers/specs/2026-10-10-share-links-design.md`). Anyone holding
+/// the URL reads what the owner chose in `fields` — nothing else. Only the
+/// SHA-256 of the token is stored; the token itself is shown once.
+/// Exactly one target is set, matching `kind`: `flightId` (flight), `tripId`
+/// (trip) or `year` (wrapped). Deleted with the user, with the flight or trip,
+/// when the instance switch goes off, and on every backup restore.
+model PublicShareLink {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  /// flight | trip | wrapped
+  kind         String
+  flightId     String?   @map("flight_id")
+  tripId       String?   @map("trip_id")
+  year         Int?
+  /// The owner's selection from the kind's allow-list (`services/shareLinks/fields.ts`).
+  fields       String[]
+  /// The photos the owner saw in the preview, in order; the public proxy is keyed by index into this.
+  photoIds     String[]  @default([]) @map("photo_ids")
+  tokenHash    String    @unique @map("token_hash")
+  expiresAt    DateTime  @map("expires_at")
+  viewCount    Int       @default(0) @map("view_count")
+  lastViewedAt DateTime? @map("last_viewed_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flight Flight? @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  trip   Trip?   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([flightId])
+  @@index([tripId])
+  @@map("public_share_links")
 }
 
 /// Single-use recovery codes, the way back in when the phone is gone.
@@ -562,14 +598,15 @@ model Flight {
   /// Trip sharing: the same key on every member's copy of this entry. Null = never shared.
   shareKey      String? @map("share_key")
 
-  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  importBatch    ImportBatch?          @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
-  trip           Trip?                 @relation(fields: [tripId], references: [id], onDelete: SetNull)
-  booking        Booking?              @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  pendingUpdates PendingFlightUpdate[]
-  companionLinks FlightCompanion[]
+  user             User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  importBatch      ImportBatch?          @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  trip             Trip?                 @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking          Booking?              @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  pendingUpdates   PendingFlightUpdate[]
+  companionLinks   FlightCompanion[]
   /// The phone's own recording of this flight (forgejo#193) — see `FlightTrack`.
-  track          FlightTrack?
+  track            FlightTrack?
+  publicShareLinks PublicShareLink[]
 
   documents Document[]
 
@@ -1103,6 +1140,11 @@ model AdminSettings {
   /// sign-in page promises that nothing leaves the instance unless it is set
   /// up (2026-09-24).
   openDataEnabled Boolean @default(false) @map("open_data_enabled")
+
+  /// Whether users may create public share links (forgejo#281, D7). OFF by
+  /// default: a link hands a person's travel data to anyone holding the URL.
+  /// Switching it off deletes every existing link.
+  shareLinksEnabled Boolean @default(false) @map("share_links_enabled")
 
   /// The instance's STARTING POINT for "a country counts as visited from …" —
   /// one of `COUNTRY_TIERS` (shared/countryEvidence.ts). Spec §3.2: a fresh
@@ -1639,24 +1681,25 @@ model Trip {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  shareGroup     TripShareGroup?    @relation(fields: [shareGroupId], references: [id], onDelete: SetNull)
-  flights        Flight[]
-  bookings       Booking[]
-  cruises        Cruise[]
-  railJourneys   RailJourney[]
-  busJourneys    BusJourney[]
-  rentalBookings RentalBooking[]
-  stops          TripStop[]
-  routes         TripRoute[]
-  expenses       TripExpense[]
-  journalEntries TripJournalEntry[]
-  photos         TripPhoto[]
-  lodgingStays   LodgingStay[]
-  placeVisits    PlaceVisit[]
-  immichAlbums   TripImmichAlbum[]
-  companionLinks TripCompanion[]
-  photoJourneys  PhotoJourney[]
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shareGroup       TripShareGroup?    @relation(fields: [shareGroupId], references: [id], onDelete: SetNull)
+  flights          Flight[]
+  bookings         Booking[]
+  cruises          Cruise[]
+  railJourneys     RailJourney[]
+  busJourneys      BusJourney[]
+  rentalBookings   RentalBooking[]
+  stops            TripStop[]
+  routes           TripRoute[]
+  expenses         TripExpense[]
+  journalEntries   TripJournalEntry[]
+  photos           TripPhoto[]
+  lodgingStays     LodgingStay[]
+  placeVisits      PlaceVisit[]
+  immichAlbums     TripImmichAlbum[]
+  companionLinks   TripCompanion[]
+  photoJourneys    PhotoJourney[]
+  publicShareLinks PublicShareLink[]
 
   documents Document[]
 

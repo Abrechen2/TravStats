@@ -24,6 +24,11 @@ export default defineConfig({
         target: process.env.VITE_API_URL || "http://localhost:8000",
         changeOrigin: true,
       },
+      // The public share-link page is served by the backend (forgejo#281).
+      "^/share(/|$)": {
+        target: process.env.VITE_API_URL || "http://localhost:8000",
+        changeOrigin: true,
+      },
     },
   },
   build: {

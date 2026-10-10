@@ -109,6 +109,11 @@ export interface SettingsResponse extends SettingsDataJson {
    */
   openDataEnabled: boolean;
   /**
+   * READ-ONLY mirror of the instance's public share link switch (forgejo#281),
+   * like `openDataEnabled`: a client offers "share as link" only when it is on.
+   */
+  shareLinksEnabled: boolean;
+  /**
    * The user's OWN choice of which evidence tier the country headline counts
    * from, or null when they follow the instance (spec §3.2).
    *
