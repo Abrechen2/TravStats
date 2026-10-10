@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 
 import type { FlightInsights } from "../../../../types/flightInsights";
@@ -174,7 +174,7 @@ describe("FlightInsightsSection (forgejo#256)", () => {
   it("wires only keys a resolver serves", async () => {
     getFlightInsights.mockResolvedValue(INSIGHTS);
     renderSection();
-    await screen.findByText("stats:insights.discovery.title");
+    await screen.findByRole("heading", { name: "stats:insights.discovery.title" });
     const opened = new Set<string>();
     for (const button of screen.getAllByRole("button")) {
       if (button.getAttribute("aria-haspopup") !== "dialog") continue;
@@ -194,14 +194,16 @@ describe("FlightInsightsSection (forgejo#256)", () => {
   it("gives every block help a keyboard reaches", async () => {
     getFlightInsights.mockResolvedValue(INSIGHTS);
     renderSection();
-    await screen.findByText("stats:insights.discovery.title");
-    const helps = screen.getAllByRole("button", { name: "help.about" });
-    // story, transfers, discovery, routes, reunions, quarters
-    expect(helps).toHaveLength(6);
-    act(() => helps[0].focus());
-    expect(screen.getByText("stats:insights.help.story.short")).toBeTruthy();
-    fireEvent.click(helps[0]);
-    expect(screen.getByText("stats:insights.help.story.long")).toBeTruthy();
+    await screen.findByRole("heading", { name: "stats:insights.discovery.title" });
+    // story, transfers, discovery (+ routes), reunions, quarters
+    const summaries = screen.getAllByText("stats:counting.summary");
+    expect(summaries).toHaveLength(5);
+    const discovery = screen.getByTestId("insights-discovery-help");
+    for (const topic of ["discovery", "routes"]) {
+      expect(within(discovery).getByText(`stats:insights.help.${topic}.exclusions`)).toBeTruthy();
+    }
+    fireEvent.click(summaries[0]);
+    expect(summaries[0].closest("details")).toHaveAttribute("open");
   });
 
   it("links both flights of a long return", async () => {

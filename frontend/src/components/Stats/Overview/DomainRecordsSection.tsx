@@ -8,7 +8,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import type { DomainRecord } from "../../../types/domainRecords";
 import StatCard from "../StatCard";
-import MetricHelp from "../MetricHelp";
+import CountingHelp from "../counting/CountingHelp";
 
 /**
  * Travel records beyond flights (forgejo#265): the longest cruise, stay,
@@ -75,9 +75,9 @@ export default function DomainRecordsSection(): JSX.Element | null {
           />
         ))}
       </div>
-      <MetricHelp
+      <CountingHelp
         testId="domain-records-help"
-        items={[{ term: t("stats:domainRecords.title"), text: t("stats:domainRecords.help") }]}
+        entries={[{ term: t("stats:domainRecords.title"), helpKey: "stats:domainRecords.help" }]}
       />
     </section>
   );

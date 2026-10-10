@@ -82,7 +82,7 @@ interface Finding {
   helpInControl: number;
 }
 
-const HELP_TRIGGERS = new Set(["HelpIcon", "Toggletip", "InsightHelp"]);
+const HELP_TRIGGERS = new Set(["HelpIcon", "Toggletip", "CountingHelp"]);
 
 /** Whether a JSX node sits inside a `<label>` element. */
 function insideLabel(node: ts.Node, sf: ts.SourceFile): boolean {

@@ -293,12 +293,48 @@
     "punctualityHint_other": "{{count}} measured rides · avg {{average}} min",
     "noPunctuality": "No ride with times carries a recorded delay.",
     "help": {
-      "journeys": "The unit is the journey, not the train: rides of the same booking that continue at the same station within four hours are one journey. A ride back to a station the journey already visited starts a new one (a return). Rides without a shared booking are never joined. Only completed rides count, in the year they left on the departure station's calendar.",
-      "transfers": "The wait between an arrival and the next departure within one journey, from both rides' times to the minute. Date-only or unlinked rides have no measurable change and stay out.",
-      "nights": "One night per calendar night on board a night train (sleeper or couchette, a night-train category, or at least six hours overnight), on the stations' calendars. In the overview's night account a night that also has a stay goes to the stay — here it is still shown.",
-      "newConnections": "A connection is the pair of stations, both directions together. It is new in the year its first completed ride left; a station is the same by its code, else by its name.",
-      "favourites": "Connections ridden at least twice, both directions together. The name opens the most recent ride.",
-      "punctuality": "The share of rides that arrived without delay, among the rides with a recorded delay and times to the minute. A ride with no recorded delay never counts as on time; it stays out of the sample. The line under each bar gives the sample and the mean delay; early arrivals count negative."
+      "journeys": {
+        "unit": "The unit is the journey, not the train: rides of the same booking that continue at the same station within four hours are one journey. A ride back to a station the journey already visited starts a new one (a return). The line under the number says how many of them have a change.",
+        "time": "Counted in the year they left on the departure station's calendar – per ride, not per journey.",
+        "source": "Your train rides with status “Travelled”, linked through their shared booking. The same change station means the same catalogue entry, the same name, or a station within one kilometre.",
+        "coverage": "A connection is only recognised when the arrival and the next departure are known to the minute; otherwise each ride stands as a journey of its own. Tap the number to see the journeys.",
+        "exclusions": "Only completed rides count – not scheduled, ongoing or cancelled ones. Rides without a shared booking are never joined, however well their times line up."
+      },
+      "transfers": {
+        "unit": "The wait between an arrival and the next departure within one journey, in minutes. The large figure is the average of all changes; below it their number, the shortest and the longest.",
+        "time": "Measured from both rides' times to the minute, as real elapsed time – time zones shift nothing. In the year the rides left on the departure station's calendar.",
+        "source": "The journeys made of completed rides, as the journey rule forms them: a change is the same booking, the same station and a wait of at most four hours.",
+        "coverage": "Date-only or unlinked rides have no measurable change and stay out. When there is none, the card says so rather than showing a zero.",
+        "exclusions": "Scheduled, ongoing and cancelled rides do not count. A pause longer than four hours is not a change; it separates two journeys."
+      },
+      "nights": {
+        "unit": "One night per calendar night on board a night train, from the departure day up to the night before the arrival day. A night train is a ride in a sleeper or couchette, in a night-train category (NJ, EN, NZ), or one that ran at least six hours overnight.",
+        "time": "On the stations' calendars: the departure day at the departure station, the arrival day at the arrival station. The nights count in the year the ride left.",
+        "source": "Completed train rides with their class, train category and departure and arrival times.",
+        "coverage": "A night train with no known arrival day had a night no calendar can hold: it is missing from the number and named separately below it. A date-only ride is a night train only by its class or category, never by the clock. Tap the number to see the rides.",
+        "exclusions": "Scheduled, ongoing and cancelled rides do not count. In the overview's night account a night that also has a stay (or a cruise cabin) goes to the stay – here it is still shown."
+      },
+      "newConnections": {
+        "unit": "A connection is the pair of stations, both directions together. The number is how many connections were ridden for the first time in the period shown.",
+        "time": "It is new in the year its first completed ride left, on the departure station's calendar. The “New connections per year” list shows every year, whatever period is selected.",
+        "source": "Every completed ride across all years, since only they show whether a connection was ridden before. A station is the same by its code, else by its name.",
+        "coverage": "Every completed ride between two different stations is on a connection. Tap the number to see the first rides.",
+        "exclusions": "A connection ridden again later is not new again. A ride that ends at the station it started from is on no connection. Scheduled, ongoing and cancelled rides do not count."
+      },
+      "favourites": {
+        "unit": "Connections ridden at least twice, both directions together; rides are counted. The five most frequent are shown.",
+        "time": "The rides in the period shown, by the year they left on the departure station's calendar.",
+        "source": "Completed rides; a station is the same by its code, else by its name. The name opens the most recent ride, whose spelling of the stations is shown.",
+        "coverage": "Every completed ride between two different stations counts.",
+        "exclusions": "A connection ridden once is not a favourite. Rides that start and end at the same station, and scheduled, ongoing and cancelled rides, do not count."
+      },
+      "punctuality": {
+        "unit": "The share of rides that arrived without delay (a delay of zero or early), per operator and per connection. The line under each bar gives the sample and the mean delay; early arrivals count negative.",
+        "time": "The rides in the period shown, by the year they left on the departure station's calendar.",
+        "source": "Completed rides with a recorded arrival delay. An operator is the same regardless of case and spacing; a connection covers both directions.",
+        "coverage": "Counted among the rides with a recorded delay and times to the minute, arrival included. A ride with no recorded delay never counts as on time; it stays out of the sample. The line above the operator list says out of how many rides the sample comes.",
+        "exclusions": "Rides without an operator are missing from the operator list, rides that start and end at the same station from the connection list. Each list shows at most ten entries, largest sample first. Scheduled, ongoing and cancelled rides do not count."
+      }
     }
   },
   "roadtripConversion": {

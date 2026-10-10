@@ -84,14 +84,14 @@ describe("RailJourneySections", () => {
     draw();
     const help = screen.getByTestId("rail-journeys-help");
     expect(help).not.toHaveAttribute("open");
-    const summary = within(help).getByText("stats:metricHelp.summary");
+    const summary = within(help).getByText("stats:counting.summary");
     expect(summary.tagName).toBe("SUMMARY");
     const user = userEvent.setup();
     for (let i = 0; i < 40 && document.activeElement !== summary; i += 1) await user.tab();
     expect(document.activeElement).toBe(summary);
     await user.click(summary);
     expect(help).toHaveAttribute("open");
-    expect(within(help).getByText("rail:stats.help.journeys")).toBeVisible();
+    expect(within(help).getByText("rail:stats.help.journeys.unit")).toBeVisible();
   });
 
   it("hides a block the reader switched off", () => {

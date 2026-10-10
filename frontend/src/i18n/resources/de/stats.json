@@ -873,60 +873,102 @@
     },
     "help": {
       "discovery": {
-        "short": "Neue Flughäfen im Verhältnis zu allen in diesem Jahr genutzten Flughäfen.",
-        "long": "Zähleinheit: ein Flughafen, an dem ein Flug startet oder landet – jedes Ende an seinem eigenen Ortstag (Abflug am Abflugtag, Ankunft am Landetag). Neu ist ein Flughafen in dem Jahr, in dem er zum ersten Mal in deinem ganzen Logbuch auftaucht; im ersten erfassten Jahr ist deshalb alles neu. Quote = neue ÷ genutzte Flughäfen des Jahres. Quelle: geflogene und nachgetragene Flüge. Nicht enthalten: geplante und stornierte Flüge, Flüge ohne Datum, Enden ohne Flughafen-Code. Tippe auf eine Zahl, um die Flüge dahinter zu sehen."
+        "unit": "Neue Flughäfen im Verhältnis zu allen in diesem Jahr genutzten Flughäfen. Zähleinheit: ein Flughafen, an dem ein Flug startet oder landet; jeder Flughafen zählt pro Jahr einmal. Quote = neue ÷ genutzte Flughäfen des Jahres.",
+        "time": "Jedes Ende an seinem eigenen Ortstag – Abflug am Abflugtag, Ankunft am Landetag; ein Silvesterflug kann so im nächsten Jahr landen. Neu ist ein Flughafen in dem Jahr, in dem er zum ersten Mal in deinem ganzen Logbuch auftaucht – nicht nur im gewählten Zeitraum.",
+        "source": "Geflogene und nachgetragene Flüge, mit dem Flughafen-Code (IATA, sonst ICAO) beider Enden.",
+        "coverage": "Im ersten erfassten Jahr ist deshalb alles neu – Reisen davor kennt die App nicht. Flüge mit Platzhalterdatum (nur das Jahr bekannt) zählen in ihrem Jahr. Tippe auf eine Zahl, um die Flüge dahinter zu sehen.",
+        "exclusions": "Nicht enthalten: geplante und stornierte Flüge, Flüge ohne Datum, Enden ohne Flughafen-Code."
       },
       "routes": {
-        "short": "Erstmals geflogene gegenüber erneut geflogenen Verbindungen.",
-        "long": "Zähleinheit: eine Verbindung ist das Flughafenpaar ohne Richtung – MUC→JFK und JFK→MUC sind dieselbe Verbindung, ein Rückflug ist also eine Wiederholung. Neu ist eine Verbindung im Jahr ihres ersten Flugs im Logbuch, wiederholt in jedem späteren Jahr, in dem du sie wieder fliegst. Jahr: Abflugtag am Abflughafen. Nicht enthalten: Flüge mit unbekanntem Flughafen an einem Ende, geplante und stornierte Flüge."
+        "unit": "Erstmals geflogene gegenüber erneut geflogenen Verbindungen. Zähleinheit: eine Verbindung ist das Flughafenpaar ohne Richtung – MUC→JFK und JFK→MUC sind dieselbe Verbindung, ein Rückflug ist also eine Wiederholung. Jede Verbindung zählt pro Jahr einmal, als neu oder als wiederholt.",
+        "time": "Jahr: Abflugtag am Abflughafen. Neu ist eine Verbindung im Jahr ihres ersten Flugs im Logbuch, wiederholt in jedem späteren Jahr, in dem du sie wieder fliegst.",
+        "source": "Geflogene und nachgetragene Flüge mit Abflugdatum und Flughafen-Code an beiden Enden.",
+        "coverage": "Referenz ist das ganze Logbuch, darum ist im ersten erfassten Jahr jede Verbindung neu. Tippe auf eine Zahl, um die Flüge dahinter zu sehen.",
+        "exclusions": "Nicht enthalten: Flüge mit unbekanntem Flughafen an einem Ende, Flüge ohne Datum, geplante und stornierte Flüge."
       },
       "reunions": {
-        "short": "Die längste Pause zwischen zwei Besuchen desselben Flughafens.",
-        "long": "Zähleinheit: Tage zwischen zwei aufeinanderfolgenden Besuchstagen eines Flughafens, jeweils am Ortskalender des Flughafens. Ein Umstieg am selben Tag ist kein Wiedersehen. Jahre zählen nur volle Kalenderjahre. Je Flughafen steht seine längste Pause; die zehn längsten werden gezeigt, beide Flüge sind verlinkt. Quelle: geflogene und nachgetragene Flüge mit Datum. Flüge mit Platzhalterdatum (nur das Jahr bekannt) nehmen nicht teil."
+        "unit": "Die längste Pause zwischen zwei Besuchen desselben Flughafens. Zähleinheit: Tage zwischen zwei aufeinanderfolgenden Besuchstagen eines Flughafens; je Flughafen steht seine längste Pause. Jahre zählen nur volle Kalenderjahre – ab einem vollen Jahr steht die Pause in Jahren, sonst in Tagen.",
+        "time": "Jeder Besuchstag gilt am Ortskalender des Flughafens – Abflug am Abflugtag, Ankunft am Landetag. Ein Umstieg am selben Tag ist kein Wiedersehen.",
+        "source": "Geflogene und nachgetragene Flüge mit Datum, jeweils Start- und Landeflughafen.",
+        "coverage": "Die zehn längsten werden gezeigt, beide Flüge sind verlinkt – der letzte vor der Pause und der erste danach. Ein Flughafen, den du nur an einem Tag genutzt hast, hat keine Pause.",
+        "exclusions": "Flüge mit Platzhalterdatum (nur das Jahr bekannt) nehmen nicht teil. Geplante und stornierte Flüge sowie Enden ohne Flughafen-Code zählen nicht."
       },
       "quarters": {
-        "short": "Flughäfen, die du in einem Jahr in allen vier Kalenderquartalen genutzt hast.",
-        "long": "Kalenderquartale (Jan–Mär, Apr–Jun, Jul–Sep, Okt–Dez) nach dem Ortskalender des Flughafens – ausdrücklich keine Jahreszeiten, die auf der Südhalbkugel anders liegen. Zähleinheit: ein Abflug oder eine Ankunft an diesem Flughafen. Je Quartal ist der erste Flug verlinkt. Flüge mit Platzhalterdatum nehmen nicht teil."
+        "unit": "Flughäfen, die du in einem Jahr in allen vier Kalenderquartalen genutzt hast. Zähleinheit: ein Abflug oder eine Ankunft an diesem Flughafen; gezählt werden die Quartale mit mindestens einem davon.",
+        "time": "Kalenderquartale (Jan–Mär, Apr–Jun, Jul–Sep, Okt–Dez) nach dem Ortskalender des Flughafens – ausdrücklich keine Jahreszeiten, die auf der Südhalbkugel anders liegen. Das Jahr ist das Kalenderjahr am Flughafen.",
+        "source": "Geflogene und nachgetragene Flüge mit Datum, jeweils Start- und Landeflughafen.",
+        "coverage": "Je Quartal ist der erste Flug verlinkt. Gezeigt werden nur Flughafen-Jahre mit allen vier Quartalen.",
+        "exclusions": "Flüge mit Platzhalterdatum nehmen nicht teil. Geplante und stornierte Flüge, Flüge ohne Datum und Enden ohne Flughafen-Code zählen nicht."
       },
       "transfers": {
-        "short": "Wartezeit zwischen zwei Flügen derselben Buchung.",
-        "long": "Gemessen wird nur zwischen zwei Flügen, die in einer Buchung verknüpft sind – nie zwischen zufällig benachbarten Flügen. Beide müssen geflogen sein (nachgetragene Flüge haben oft Platzhalterzeiten), Landung und Abflug auf die Minute bekannt und ihre Reihenfolge sicher. Die Wartezeit ist der echte Abstand der beiden Zeitpunkte, auch über Zeitzonen hinweg. Mehr als 24 Stunden am Boden oder ein Rückflug zu einem schon besuchten Flughafen gelten als eigene Reise. Ob ein Anschluss machbar war, sagt die Zahl nicht. Jahr: Landetag am Umsteigeflughafen. Was nicht gemessen werden konnte, steht unten mit Grund."
+        "unit": "Wartezeit zwischen zwei Flügen derselben Buchung. Die Wartezeit ist der echte Abstand der beiden Zeitpunkte, auch über Zeitzonen hinweg; je Jahr stehen Anzahl, Median (bei gerader Anzahl der untere der beiden mittleren Werte), kürzester und längster Umstieg.",
+        "time": "Jahr: Landetag am Umsteigeflughafen.",
+        "source": "Gemessen wird nur zwischen zwei Flügen, die in einer Buchung verknüpft sind – nie zwischen zufällig benachbarten Flügen –, in der Reihenfolge ihrer gespeicherten Abflugzeit. Beide müssen geflogen sein (nachgetragene Flüge haben oft Platzhalterzeiten), Landung und Abflug auf die Minute bekannt und ihre Reihenfolge sicher.",
+        "coverage": "Was nicht gemessen werden konnte, steht unten mit Grund: ohne minutengenaue Zeiten, unklare Reihenfolge, nicht beide geflogen, Abflug vor der Landung oder eigene Reise. Nichts davon zählt als null Minuten.",
+        "exclusions": "Mehr als 24 Stunden am Boden oder ein Rückflug zu einem schon besuchten Flughafen gelten als eigene Reise. Ob ein Anschluss machbar war, sagt die Zahl nicht. Stornierte Flüge gehören zu keiner Buchungsreihe."
       },
       "story": {
-        "short": "Die Geschichte des Jahres aus belegten Extremen.",
-        "long": "Neue Ziele: Flughäfen, die das Jahr zum ersten Mal erfasst hat. Größte Veränderung: von Flügen, Kilometern (Luftlinie), genutzten Flughäfen und Verbindungen die Kennzahl, die sich gegenüber dem Kalenderjahr davor relativ am stärksten verändert hat – ohne Flüge im Vorjahr gibt es keinen Vergleich. Kurioseste Wiederholung: die längste Rückkehr zu einem Flughafen in diesem Jahr ab einem vollen Jahr Pause, sonst die in diesem Jahr am häufigsten geflogene Verbindung ab drei Flügen. Die Fun Facts rechnet derselbe Rechner wie im Fun-Facts-Block, nur über die Flüge dieses Jahres. Jahr: Abflugtag am Abflughafen."
+        "unit": "Die Geschichte des Jahres aus belegten Extremen. Neue Ziele: Flughäfen, die das Jahr zum ersten Mal erfasst hat. Größte Veränderung: von Flügen, Kilometern (Luftlinie), genutzten Flughäfen und Verbindungen die Kennzahl, die sich gegenüber dem Kalenderjahr davor relativ am stärksten verändert hat. Kurioseste Wiederholung: die längste Rückkehr zu einem Flughafen in diesem Jahr ab einem vollen Jahr Pause, sonst die in diesem Jahr am häufigsten geflogene Verbindung ab drei Flügen.",
+        "time": "Jahr: Abflugtag am Abflughafen – für Flüge, Kilometer, Verbindungen und die Fun Facts. Flughäfen (neue und genutzte) und Rückkehren zählen am Ortstag ihres Endes, Umstiege am Landetag am Umsteigeflughafen. Ohne gewähltes Jahr steht das letzte Jahr mit erfassten Flügen.",
+        "source": "Geflogene und nachgetragene Flüge mit Datum. Die Fun Facts rechnet derselbe Rechner wie im Fun-Facts-Block, nur über die Flüge dieses Jahres.",
+        "coverage": "Ohne Flüge im Vorjahr gibt es keinen Vergleich; eine Kennzahl, die im Vorjahr null war oder gleich geblieben ist, kommt als größte Veränderung nicht in Frage. Fehlt ein Extrem, steht nichts statt einer erfundenen Zahl; im ersten erfassten Jahr ist jeder Flughafen neu.",
+        "exclusions": "Geplante und stornierte Flüge sowie Flüge ohne Datum zählen nicht. Flüge mit Platzhalterdatum nehmen an keiner Rückkehr teil."
       },
       "cruiseEvents": {
-        "short": "Ereignisse, die die Auszeichnungen erkennen – mit den Kreuzfahrten, die sie belegen.",
-        "long": "Zähleinheit: eine gefahrene Kreuzfahrt, auf der das Ereignis eintrat. Es ist dieselbe Regel wie bei den Auszeichnungen: Äquator und Datumsgrenze werden zwischen zwei aufeinanderfolgenden Häfen mit bekannter Position erkannt (Hafen ohne erkannten Katalogeintrag: keine Position, kein Nachweis); Geburtstag und Silvester, wenn der Tag zwischen Start- und Enddatum liegt; Kanal und Polargewässer an den angelaufenen Häfen. Jahr: Startjahr der Kreuzfahrt. Tippe auf die Zahl für die Liste."
+        "unit": "Ereignisse, die die Auszeichnungen erkennen – mit den Kreuzfahrten, die sie belegen. Gezählt wird eine gefahrene Kreuzfahrt, auf der das Ereignis eintrat, jede einmal je Ereignis. Es ist dieselbe Regel wie bei den Auszeichnungen.",
+        "time": "Jahr: Startjahr der Kreuzfahrt – bei gewähltem Jahr zählen die Kreuzfahrten, die in diesem Jahr begonnen haben. Geburtstag und Silvester, wenn der Tag zwischen Start- und Enddatum liegt (beide Tage eingeschlossen).",
+        "source": "Der Reiseverlauf gefahrener Kreuzfahrten (abgeschlossen oder nachgetragen), samt Ein- und Ausschiffungshafen: Äquator und Datumsgrenze werden zwischen zwei aufeinanderfolgenden Häfen mit bekannter Position erkannt – der Äquator, wenn sie auf verschiedenen Seiten liegen, die Datumsgrenze, wenn der Längengrad um mehr als 180° springt. Kanal und Polargewässer an den angelaufenen Häfen (Colón in Panama oder Port Said; ein Hafen der Polarregion). Der Geburtstag kommt aus deinem Profil.",
+        "coverage": "Hafen ohne erkannten Katalogeintrag: keine Position, kein Nachweis. Geburtstag und Silvester brauchen Start- und Enddatum. Ist kein Geburtstag im Profil hinterlegt, steht das dort statt einer Null. Tippe auf die Zahl für die Liste.",
+        "exclusions": "Gebuchte und stornierte Kreuzfahrten zählen nicht. Auf einer Flusskreuzfahrt zählen Geburtstag und Silvester nicht – sie sind nicht auf See."
       },
       "cruisePorts": {
-        "short": "Neue Häfen gegenüber Häfen, die du schon von einer früheren Kreuzfahrt kennst.",
-        "long": "Zähleinheit: ein Katalog-Hafen einer Kreuzfahrt – Einschiffungshafen, Hafenstopps in Tagesreihenfolge, Ausschiffungshafen; zweimal derselbe Hafen auf einer Reise zählt einmal. Neu ist ein Hafen auf der ersten Kreuzfahrt (nach Startdatum), auf der er in deinem Logbuch vorkommt; alle gefahrenen Kreuzfahrten sind die Referenz, auch bei gewähltem Jahr. Nicht enthalten: gebuchte Kreuzfahrten; Kreuzfahrten ohne Startdatum und Hafenstopps ohne erkannten Hafen werden genannt, aber weder als neu noch als Wiedersehen gezählt."
+        "unit": "Neue Häfen gegenüber Häfen, die du schon von einer früheren Kreuzfahrt kennst. Gezählt wird ein Katalog-Hafen einer Kreuzfahrt – Einschiffungshafen, Hafenstopps in Tagesreihenfolge, Ausschiffungshafen; zweimal derselbe Hafen auf einer Reise zählt einmal. Neu ist ein Hafen auf der ersten Kreuzfahrt (nach Startdatum), auf der er in deinem Logbuch vorkommt; jede spätere Kreuzfahrt mit ihm zählt ihn einmal als Wiedersehen. „Häfen“ sind die verschiedenen Häfen der Kreuzfahrten eines Jahres.",
+        "time": "Jahr: Startjahr der Kreuzfahrt. Alle gefahrenen Kreuzfahrten sind die Referenz, auch bei gewähltem Jahr. Die Jahrestabelle zeigt immer alle Jahre; ein gewähltes Jahr schränkt die Liste je Kreuzfahrt ein.",
+        "source": "Gefahrene Kreuzfahrten (abgeschlossen oder nachgetragen): Ein- und Ausschiffungshafen und die Hafenstopps des Reiseverlaufs, die einem Katalog-Hafen zugeordnet sind.",
+        "coverage": "Kreuzfahrten ohne Startdatum und Hafenstopps ohne erkannten Hafen werden in der Fußzeile genannt, aber weder als neu noch als Wiedersehen gezählt. Tippe auf eine Zahl für die Liste.",
+        "exclusions": "Nicht enthalten: gebuchte und stornierte Kreuzfahrten. Seetage zählen nicht."
       },
       "cruiseReunion": {
-        "short": "Wie lange ein Hafen auf dich warten musste.",
-        "long": "Zähleinheit: Tage vom letzten Tag eines Hafens auf einer Kreuzfahrt bis zum ersten Tag auf der nächsten Kreuzfahrt, die ihn anläuft. Tag eines Stopps: sein eingetragener Ortstag, sonst Starttag plus Reisetag. Darunter: Häfen, die auf mindestens zwei gefahrenen Kreuzfahrten vorkommen, mit den Reisen verlinkt."
+        "unit": "Wie lange ein Hafen auf dich warten musste. Gezählt werden Tage vom letzten Tag eines Hafens auf einer Kreuzfahrt bis zum ersten Tag auf der nächsten Kreuzfahrt, die ihn anläuft; gezeigt wird die längste solche Pause. Darunter: Häfen, die auf mindestens zwei gefahrenen Kreuzfahrten vorkommen, mit den Reisen verlinkt.",
+        "time": "Tag eines Stopps: sein eingetragener Ortstag, sonst Starttag plus Reisetag (Reisetag 1 ist der Starttag); der Einschiffungshafen liegt auf dem Start-, der Ausschiffungshafen auf dem Endtag. Die längste Pause wird über alle Jahre gesucht, auch bei gewähltem Jahr; die Hafenliste zeigt dann Häfen, von deren Kreuzfahrten mindestens eine in diesem Jahr begonnen hat.",
+        "source": "Gefahrene Kreuzfahrten (abgeschlossen oder nachgetragen) nach Startdatum: Ein- und Ausschiffungshafen und die Hafenstopps mit Katalog-Hafen.",
+        "coverage": "Für die Pause zählen nur Kreuzfahrten mit Startdatum; die Hafenliste nimmt auch undatierte auf. Die Liste zeigt höchstens zehn Häfen, die mit den meisten Kreuzfahrten zuerst.",
+        "exclusions": "Gebuchte und stornierte Kreuzfahrten, Seetage und Hafenstopps ohne erkannten Hafen zählen nicht – ein nicht erkannter Name lässt sich keinem Hafen sicher zuordnen."
       },
       "cruiseItineraries": {
-        "short": "Kreuzfahrten mit genau derselben Hafenfolge.",
-        "long": "Verglichen wird die vollständige Folge: Einschiffungshafen, jeder Hafenstopp in Tagesreihenfolge, Ausschiffungshafen – Seetage zählen nicht mit, die Reihenfolge schon. Mindestens zwei Häfen. Eine Kreuzfahrt mit einem nicht erkannten Hafen nimmt nicht teil, weil sich nicht belegen lässt, dass es derselbe Hafen ist. Nur gefahrene Kreuzfahrten."
+        "unit": "Kreuzfahrten mit genau derselben Hafenfolge. Verglichen wird die vollständige Folge: Einschiffungshafen, jeder Hafenstopp in Tagesreihenfolge, Ausschiffungshafen – Seetage zählen nicht mit, die Reihenfolge schon. Eine Gruppe hat mindestens zwei Kreuzfahrten, die größten stehen zuerst.",
+        "time": "Die Folge selbst hat kein Datum. Bei gewähltem Jahr erscheint eine Gruppe, wenn mindestens eine ihrer Kreuzfahrten in diesem Jahr begonnen hat; verglichen wird über alle Jahre.",
+        "source": "Nur gefahrene Kreuzfahrten (abgeschlossen oder nachgetragen), auch ohne Startdatum: Ein- und Ausschiffungshafen und die Hafenstopps mit Katalog-Hafen.",
+        "coverage": "Mindestens zwei Häfen. Eine Kreuzfahrt mit einem nicht erkannten Hafen nimmt nicht teil, weil sich nicht belegen lässt, dass es derselbe Hafen ist.",
+        "exclusions": "Gebuchte und stornierte Kreuzfahrten zählen nicht. Nichts darüber hinaus."
       },
       "cruiseStays": {
-        "short": "Liegezeit von der Ankunft bis zur Abfahrt eines Hafenstopps.",
-        "long": "Gemessen nur, wo Ankunft und Abfahrt minutengenau eingetragen sind; die Liegezeit ist der echte Abstand der beiden Zeitpunkte, auch über eine Zeitumstellung. Stopps ohne diese Zeiten zählen nicht im Schnitt und stehen in der Fußzeile, nie als null Minuten. Ein- und Ausschiffungshafen haben keine eigenen Zeiten und bleiben außen vor. Zeitraum: Kreuzfahrten, die im gewählten Jahr begonnen haben."
+        "unit": "Liegezeit von der Ankunft bis zur Abfahrt eines Hafenstopps; die Liegezeit ist der echte Abstand der beiden Zeitpunkte, auch über eine Zeitumstellung. Gezeigt werden der Schnitt über die gemessenen Stopps und der längste und kürzeste Aufenthalt.",
+        "time": "Zeitraum: Kreuzfahrten, die im gewählten Jahr begonnen haben. Ankunft und Abfahrt sind Zeitpunkte in der Zeitzone des Hafens; beim längsten und kürzesten Aufenthalt steht der Ortstag des Stopps.",
+        "source": "Die Hafenstopps gefahrener Kreuzfahrten (abgeschlossen oder nachgetragen) – auch an einem nicht erkannten Hafen – mit ihrer eingetragenen Ankunft und Abfahrt.",
+        "coverage": "Gemessen nur, wo Ankunft und Abfahrt minutengenau eingetragen sind. Stopps ohne diese Zeiten zählen nicht im Schnitt und stehen in der Fußzeile, nie als null Minuten; ebenso Stopps, deren Abfahrt vor oder zur Ankunft liegt. Tippe auf die Zahl der gemessenen Hafenstopps für die Liste.",
+        "exclusions": "Ein- und Ausschiffungshafen haben keine eigenen Zeiten und bleiben außen vor. Seetage, gebuchte und stornierte Kreuzfahrten zählen nicht."
       },
       "cruiseDays": {
-        "short": "Seetage gegenüber Hafentagen und der Reisetyp, der sich daraus ergibt.",
-        "long": "Ein Tag ist ein Reisetag des Reiseverlaufs: Seetag, wenn er als Seetag eingetragen ist, Hafentag, wenn mindestens ein Hafenstopp an dem Tag liegt (zwei Häfen an einem Tag sind ein Hafentag). Tage ohne Eintrag werden genannt, nicht geraten. Reisetyp nach den eingetragenen Tagen: mindestens die Hälfte Seetage = Seetage-Reise, höchstens ein Fünftel = Hafen-Reise, sonst gemischt; unter zwei Tagen kein Typ. Jahr: Startjahr."
+        "unit": "Seetage gegenüber Hafentagen und der Reisetyp, der sich daraus ergibt. Ein Tag ist ein Reisetag des Reiseverlaufs: Seetag, wenn er als Seetag eingetragen ist, Hafentag, wenn mindestens ein Hafenstopp an dem Tag liegt (zwei Häfen an einem Tag sind ein Hafentag). Reisetyp nach den eingetragenen Tagen: mindestens die Hälfte Seetage = Seetage-Reise, höchstens ein Fünftel = Hafen-Reise, sonst gemischt; unter zwei Tagen kein Typ. Die Jahrestabelle summiert die Tage und zählt die Reisetypen.",
+        "time": "Jahr: Startjahr. Ein Tag ist ein Reisetag im Reiseverlauf, kein Kalenderdatum. Die Jahrestabelle zeigt immer alle Jahre; ein gewähltes Jahr schränkt die Liste je Kreuzfahrt ein.",
+        "source": "Die Einträge im Reiseverlauf gefahrener Kreuzfahrten (abgeschlossen oder nachgetragen) – Seetage und Hafenstopps, auch an nicht erkannten Häfen; für die Tage ohne Eintrag zusätzlich Start- und Enddatum.",
+        "coverage": "Tage ohne Eintrag werden genannt, nicht geraten: die Tage zwischen Start- und Enddatum, die der Reiseverlauf nicht nennt – ohne beide Daten bleibt das offen. Kreuzfahrten ohne Startdatum fehlen in der Jahrestabelle. Tippe auf die Hafentage eines Jahres für die Liste.",
+        "exclusions": "Gebuchte und stornierte Kreuzfahrten zählen nicht. Ein- und Ausschiffungshafen zählen nur, wenn sie als Hafenstopp im Reiseverlauf stehen."
       },
       "cruiseExcursions": {
-        "short": "Dokumentierte Landausflüge je Kreuzfahrt.",
-        "long": "Ein Ausflug ist ein Hafenstopp mit Ausflugsnotiz oder mit einer Tour, die du am selben Ortstag erfasst hast und die höchstens 100 km vom Hafen beginnt (erster Punkt der Tour, sonst Beginn der Aufzeichnung) – eine feste Verknüpfung gibt es nicht, deshalb diese Regel. Aktivität, Strecke und Höhenmeter kommen aus den Touren: aufgezeichnete Kilometer aus der Aufzeichnung, bei einer Tour ohne Aufzeichnung geplante Kilometer aus der Route – beide getrennt, nie in einer Summe. Zu Fuß zählen Wandern, Spaziergang, Lauf und Klettern. Touren werden gezeigt, wenn deine Instanz Touren zeigt (Beta-Schalter). Fehlt beides, steht „keine Ausflüge dokumentiert“ – das heißt nicht, dass es keine gab."
+        "unit": "Dokumentierte Landausflüge je Kreuzfahrt. Ein Ausflug ist ein Hafenstopp mit Ausflugsnotiz oder mit einer Tour, die du am selben Ortstag erfasst hast und die höchstens 100 km vom Hafen beginnt (erster Punkt der Tour, sonst Beginn der Aufzeichnung) – eine feste Verknüpfung gibt es nicht, deshalb diese Regel. Gezählt werden Hafenstopps; eine Tour gehört höchstens zu einem, dem nächstgelegenen des Tages.",
+        "time": "Der Tag der Tour wird mit dem Ortstag des Hafenstopps verglichen (sein eingetragener Tag, sonst Starttag plus Reisetag). Zeitraum: Kreuzfahrten, die im gewählten Jahr begonnen haben.",
+        "source": "Hafenstopps gefahrener Kreuzfahrten (abgeschlossen oder nachgetragen) mit ihrer Ausflugsnotiz, und deine Tagestouren. Aktivität, Strecke und Höhenmeter kommen aus den Touren: aufgezeichnete Kilometer aus der Aufzeichnung, bei einer Tour ohne Aufzeichnung geplante Kilometer aus der Route – beide getrennt, nie in einer Summe. Zu Fuß zählen Wandern, Spaziergang, Lauf und Klettern.",
+        "coverage": "Fehlt beides, steht „keine Ausflüge dokumentiert“ – das heißt nicht, dass es keine gab. Strecke und Höhenmeter erscheinen nur, wo eine Tour sie gemessen hat. Eine Tour ohne Tag oder ohne Startpunkt gehört zu keinem Stopp. Tippe auf die Zahl für die Liste.",
+        "exclusions": "Touren werden gezeigt, wenn deine Instanz Touren zeigt (Beta-Schalter); sonst zählt nur die Notiz. Ein Hafenstopp ohne erkannten Hafen hat keine Position und bekommt keine Tour. Seetage, gebuchte und stornierte Kreuzfahrten zählen nicht."
       },
       "cruiseExcursionsNotes": {
-        "short": "Dokumentierte Landausflüge je Kreuzfahrt.",
-        "long": "Ein Ausflug ist ein Hafenstopp mit Ausflugsnotiz. Fehlt sie, steht „keine Ausflüge dokumentiert“ – das heißt nicht, dass es keine gab."
+        "unit": "Dokumentierte Landausflüge je Kreuzfahrt. Ein Ausflug ist ein Hafenstopp mit Ausflugsnotiz; gezählt werden Hafenstopps.",
+        "time": "Zeitraum: Kreuzfahrten, die im gewählten Jahr begonnen haben.",
+        "source": "Hafenstopps gefahrener Kreuzfahrten (abgeschlossen oder nachgetragen) mit ihrer Ausflugsnotiz – auch an einem nicht erkannten Hafen.",
+        "coverage": "Fehlt sie, steht „keine Ausflüge dokumentiert“ – das heißt nicht, dass es keine gab. Tippe auf die Zahl für die Liste.",
+        "exclusions": "Seetage, gebuchte und stornierte Kreuzfahrten zählen nicht."
       }
     },
     "cruise": {
@@ -1011,14 +1053,6 @@
     }
   },
   "insight": {
-    "help": {
-      "summary": "Wie gezählt?",
-      "unit": "Zähleinheit",
-      "time": "Zeitregel",
-      "source": "Quelle",
-      "coverage": "Abdeckung",
-      "exclusions": "Nicht enthalten"
-    },
     "entries_one": "{{count}} Eintrag",
     "entries_other": "{{count}} Einträge",
     "duration": {
@@ -1026,9 +1060,6 @@
       "hours": "{{h}} Std.",
       "hoursMinutes": "{{h}} Std. {{m}} Min."
     }
-  },
-  "metricHelp": {
-    "summary": "So wird gezählt"
   },
   "domainRecords": {
     "title": "Rekorde über alle Reisearten",
@@ -1052,6 +1083,22 @@
       "km_other": "{{value}} km"
     },
     "straightLine": "Luftlinie (die echte Strecke ist länger)",
-    "help": "Ein Rekord je Reiseart, die du siehst, über alle Jahre — jeder in seiner eigenen Einheit, nie gegeneinander gewertet. Gezählt wird nach der Regel der jeweiligen Reiseart: nur abgeschlossene Fahrten und Mieten, nur Aufenthalte und Roadtrips, die schon stattgefunden haben, nur Ortsbesuche, die passiert sind (ein Ort braucht mindestens zwei). Kreuzfahrten, Roadtrips und Mieten in Kalendertagen nach dem Kalender der Station; ein Aufenthalt in Nächten, nur wenn sie bekannt sind; Bahn und Bus in Kilometern, die Luftlinie als solche benannt. Eine Reiseart ohne messbaren Eintrag hat keinen Rekord. Die Flugrekorde stehen im Reiter Flüge."
+    "help": {
+      "unit": "Ein Rekord je Reiseart, die du siehst – jeder in seiner eigenen Einheit, nie gegeneinander gewertet: Kreuzfahrten, Roadtrips und Mieten in Kalendertagen (erster und letzter Tag mitgezählt, eine Miete mindestens ein Tag), ein Aufenthalt in Nächten, Bahn und Bus in Kilometern, ein Ort in Besuchen. Die Zahl führt zum Eintrag, der den Rekord hält.",
+      "time": "Über alle Jahre, unabhängig vom gewählten Zeitraum. Kreuzfahrten zählen nach ihrem Start- und Enddatum, Roadtrips nach den Daten ihrer Stationen, Mieten nach dem Kalender der Abhol- und Rückgabestation.",
+      "source": "Gezählt wird nach der Regel der jeweiligen Reiseart: nur abgeschlossene Fahrten und Mieten, nur Aufenthalte und Roadtrips, die schon stattgefunden haben, nur Ortsbesuche, die passiert sind.",
+      "coverage": "Ein Aufenthalt zählt nur, wenn seine Nächte bekannt sind; eine Kreuzfahrt braucht Start- und Enddatum, eine Bahn- oder Busfahrt eine Strecke. Die Luftlinie ist als solche benannt (die echte Strecke ist länger). Eine Reiseart ohne messbaren Eintrag hat keinen Rekord – nie eine Null.",
+      "exclusions": "Ein Ort braucht mindestens zwei Besuche. Ein Roadtrip zählt keine geplante Station, keinen Tag nach heute, keinen stornierten Aufenthalt und kein bloßes Monatsdatum. Eine Reiseart, die du ausgeschaltet hast oder die hinter dem Beta-Schalter liegt, hat keinen Rekord. Die Flugrekorde stehen im Reiter Flüge."
+    }
+  },
+  "counting": {
+    "summary": "So wird gezählt",
+    "fields": {
+      "unit": "Zähleinheit",
+      "time": "Zeitregel",
+      "source": "Quelle",
+      "coverage": "Abdeckung",
+      "exclusions": "Nicht enthalten"
+    }
   }
 }

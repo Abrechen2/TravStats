@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 
 import type { CruiseInsights, CruiseRef } from "../../../../types/cruiseInsights";
@@ -238,17 +238,19 @@ describe("CruiseInsightsSection (forgejo#257)", () => {
     renderSection();
     expect(await screen.findByText("stats:insights.cruise.excursions.emptyNotesOnly")).toBeTruthy();
     expect(screen.queryByText(/roadtrips:activity/)).toBeNull();
-    const helps = screen.getAllByRole("button", { name: "help.about" });
-    act(() => helps[helps.length - 1].focus());
-    expect(screen.getByText("stats:insights.help.cruiseExcursionsNotes.short")).toBeTruthy();
+    const help = screen.getByTestId("cruise-insights-excursions-help");
+    expect(within(help).getByText("stats:insights.help.cruiseExcursionsNotes.unit")).toBeTruthy();
+    expect(within(help).queryByText(/help\.cruiseExcursions\./)).toBeNull();
   });
 
-  it("gives every block help a keyboard reaches", async () => {
+  it("gives every block its counting help, in the tab order", async () => {
     getCruiseInsights.mockResolvedValue(INSIGHTS);
     renderSection();
     await screen.findByText("stats:insights.cruise.ports.title");
     // events, ports, reunion, itineraries, stays, days, excursions
-    expect(screen.getAllByRole("button", { name: "help.about" })).toHaveLength(7);
+    const summaries = screen.getAllByText("stats:counting.summary");
+    expect(summaries).toHaveLength(7);
+    for (const summary of summaries) expect(summary.tagName).toBe("SUMMARY");
   });
 
   it("never lets a slow answer for the previous year overwrite the current one", async () => {

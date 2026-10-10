@@ -8,7 +8,8 @@ import type { PlaceInsights } from "../../../types/statsInsights";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import EvidenceNumber from "../EvidenceNumber";
 import InsightTile from "../insight/InsightTile";
-import { helpText, totalFor } from "../insight/insightFold";
+import { totalFor } from "../insight/insightFold";
+import { countingSource } from "../counting/countingEntry";
 
 /**
  * The places insights (forgejo#259): what was new and what was a return, how
@@ -57,7 +58,7 @@ export default function PoiInsightsSection({
     year === null ? { period: "allTime" } : { period: "year", year };
   const lifetime = t("places:stats.insights.lifetime");
   const help = (block: string, values: Record<string, unknown> = {}) =>
-    helpText(t, `places:stats.insights.${block}`, values);
+    countingSource(`places:stats.insights.${block}`, values);
   const category = (key: string): string => t(`places:categories.${key}`, { defaultValue: key });
 
   const discoveries = totalFor(data.totals, "placeDiscoveryVisits", year);

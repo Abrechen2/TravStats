@@ -8,7 +8,8 @@ import type { TourInsights } from "../../../types/statsInsights";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import EvidenceNumber from "../EvidenceNumber";
 import InsightTile from "../insight/InsightTile";
-import { formatDuration, helpText, totalFor } from "../insight/insightFold";
+import { formatDuration, totalFor } from "../insight/insightFold";
+import { countingSource } from "../counting/countingEntry";
 
 /**
  * Day tours and planned guided excursions (forgejo#264): what each activity
@@ -73,7 +74,7 @@ function TourStatsBody({ year, accent }: Props): JSX.Element | null {
   const scope: EvidenceScopeParams =
     year === null ? { period: "allTime" } : { period: "year", year };
   const help = (block: string, values: Record<string, unknown> = {}) =>
-    helpText(t, `roadtrips:stats.tours.${block}`, values);
+    countingSource(`roadtrips:stats.tours.${block}`, values);
   const activity = (key: string): string =>
     key === "unknown"
       ? t("roadtrips:stats.tours.noActivity")

@@ -2,7 +2,7 @@ import type { JSX } from "react";
 
 import { STAT_CARD_CLASS, STAT_CARD_STYLE } from "../StatCard";
 import EvidenceCount from "./EvidenceCount";
-import { InsightHeading } from "./InsightHelp";
+import { InsightHeading } from "./InsightHeading";
 import { CruiseLink, CruiseLinks } from "./cruiseLinks";
 import { useInsightFormat } from "./insightFormat";
 import { useTranslation } from "../../../hooks/useTranslation";

@@ -11,7 +11,8 @@ import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import EvidenceNumber from "../EvidenceNumber";
 import InsightTile from "../insight/InsightTile";
 import RankedBarList, { type RankedRow } from "./RankedBarList";
-import { foldSleepStyle, helpText, median, totalFor } from "../insight/insightFold";
+import { foldSleepStyle, median, totalFor } from "../insight/insightFold";
+import { countingSource } from "../counting/countingEntry";
 
 const SEASONS = ["spring", "summer", "autumn", "winter"] as const;
 
@@ -62,7 +63,7 @@ export default function LodgingInsightsSection({
     year === null ? { period: "allTime" } : { period: "year", year };
   const lifetime = t("lodging:stats.insights.lifetime");
   const help = (block: string, values: Record<string, unknown> = {}) =>
-    helpText(t, `lodging:stats.insights.${block}`, values);
+    countingSource(`lodging:stats.insights.${block}`, values);
 
   // ── Sleeping style ────────────────────────────────────────────────────
   const sleepRows: RankedRow[] = sleep.rows.map(([type, nights]) => ({

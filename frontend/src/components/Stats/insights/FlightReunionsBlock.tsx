@@ -2,7 +2,7 @@ import type { JSX } from "react";
 import { Link } from "react-router-dom";
 
 import { STAT_CARD_CLASS, STAT_CARD_STYLE } from "../StatCard";
-import { InsightHeading } from "./InsightHelp";
+import { InsightHeading } from "./InsightHeading";
 import { useInsightFormat } from "./insightFormat";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { FlightInsights, FlightReunion } from "../../../types/flightInsights";

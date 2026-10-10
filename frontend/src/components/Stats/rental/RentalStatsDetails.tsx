@@ -8,7 +8,7 @@ import type { SectionVisibility } from "../../../hooks/useSectionVisibility";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import StatCard from "../StatCard";
 import RankedBarList, { type RankedRow } from "../lodging/RankedBarList";
-import MetricHelp from "../MetricHelp";
+import CountingHelp from "../counting/CountingHelp";
 
 export type RentalEvidence = (
   key: string,
@@ -86,10 +86,10 @@ export default function RentalStatsDetails({
               emptyLabel={t("rental:stats.noBrokers")}
             />
           </div>
-          <MetricHelp
-            items={[
-              { term: t("rental:stats.oneWay"), text: t("rental:stats.help.oneWay") },
-              { term: t("rental:stats.brokers"), text: t("rental:stats.help.brokers") },
+          <CountingHelp
+            entries={[
+              { term: t("rental:stats.oneWay"), helpKey: "rental:stats.help.oneWay" },
+              { term: t("rental:stats.brokers"), helpKey: "rental:stats.help.brokers" },
             ]}
           />
         </div>
@@ -131,10 +131,10 @@ export default function RentalStatsDetails({
               }
             />
           </div>
-          <MetricHelp
-            items={[
-              { term: t("rental:stats.kmPerDay"), text: t("rental:stats.help.kmPerDay") },
-              { term: t("rental:stats.costPerKm"), text: t("rental:stats.help.costPerKm") },
+          <CountingHelp
+            entries={[
+              { term: t("rental:stats.kmPerDay"), helpKey: "rental:stats.help.kmPerDay" },
+              { term: t("rental:stats.costPerKm"), helpKey: "rental:stats.help.costPerKm" },
             ]}
           />
         </div>
@@ -171,9 +171,9 @@ export default function RentalStatsDetails({
               })}
             </p>
           )}
-          <MetricHelp
-            items={[
-              { term: t("rental:stats.bookedVsFinal"), text: t("rental:stats.help.bookedVsFinal") },
+          <CountingHelp
+            entries={[
+              { term: t("rental:stats.bookedVsFinal"), helpKey: "rental:stats.help.bookedVsFinal" },
             ]}
           />
         </div>
@@ -218,11 +218,11 @@ export default function RentalStatsDetails({
               emptyLabel={t("rental:stats.noClasses")}
             />
           </div>
-          <MetricHelp
-            items={[
+          <CountingHelp
+            entries={[
               {
                 term: t("rental:stats.promisedVsDriven"),
-                text: t("rental:stats.help.promisedVsDriven"),
+                helpKey: "rental:stats.help.promisedVsDriven",
               },
             ]}
           />
@@ -270,8 +270,10 @@ export default function RentalStatsDetails({
               description={records.newProviders.join(", ") || t("rental:stats.newProvidersNone")}
             />
           </div>
-          <MetricHelp
-            items={[{ term: t("rental:stats.recordsLabel"), text: t("rental:stats.help.records") }]}
+          <CountingHelp
+            entries={[
+              { term: t("rental:stats.recordsLabel"), helpKey: "rental:stats.help.records" },
+            ]}
           />
         </div>
       )}
