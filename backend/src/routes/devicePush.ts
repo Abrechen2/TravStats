@@ -15,6 +15,8 @@ import { serverPushEnabled } from "../services/push/devices";
  * answers with the switches only. Registering while the admin has not
  * switched push on is allowed — the phone is ready the moment they do — but
  * nothing is sent until then (`serverPushEnabled` tells the phone why).
+ * `mutedTripIds` is the phone's per-trip reminder switch (forgejo#286), applied
+ * by the dispatcher to reminders only.
  */
 export const devicePushBody = z
   .object({
@@ -28,6 +30,9 @@ export const devicePushBody = z
     flightChanges: z.boolean().default(true),
     reminders: z.boolean().default(true),
     locale: z.enum(["de", "en"]).default("de"),
+    // Per-trip reminder mute (forgejo#286). Optional on purpose: a phone that
+    // re-registers (token rotation) without it keeps its list.
+    mutedTripIds: z.array(z.string().min(1).max(64)).max(500).optional(),
   })
   .strict();
 
@@ -47,16 +52,18 @@ router.put("/me/push", async (req: AuthRequest, res: Response, next: NextFunctio
     const apiTokenId = deviceTokenId(req);
     const parsed = devicePushBody.safeParse(req.body);
     if (!parsed.success) throw new AppError("Invalid push registration", 400);
+    const { mutedTripIds, ...fields } = parsed.data;
+    const muted = mutedTripIds === undefined ? undefined : [...new Set(mutedTripIds)];
     const data = {
-      ...parsed.data,
+      ...fields,
       // An Android phone has no APNs environment; never store a stray one.
       apnsEnvironment:
         parsed.data.platform === "ios" ? (parsed.data.apnsEnvironment ?? "production") : null,
     };
     await prisma.devicePush.upsert({
       where: { apiTokenId },
-      create: { apiTokenId, userId: req.userId!, ...data },
-      update: data,
+      create: { apiTokenId, userId: req.userId!, ...data, mutedTripIds: muted ?? [] },
+      update: { ...data, ...(muted !== undefined && { mutedTripIds: muted }) },
     });
     res.json({ registered: true, serverPushEnabled: await serverPushEnabled() });
   } catch (err) {
@@ -70,7 +77,13 @@ router.get("/me/push", async (req: AuthRequest, res: Response, next: NextFunctio
     const [row, enabled] = await Promise.all([
       prisma.devicePush.findUnique({
         where: { apiTokenId },
-        select: { platform: true, flightChanges: true, reminders: true, locale: true },
+        select: {
+          platform: true,
+          flightChanges: true,
+          reminders: true,
+          locale: true,
+          mutedTripIds: true,
+        },
       }),
       serverPushEnabled(),
     ]);

@@ -68,7 +68,9 @@ async function deliver(
   eventKey: string,
   switchField: "flightChanges" | "reminders",
   render: (locale: Locale) => Message | null,
-  deps: Deps
+  deps: Deps,
+  /** A reminder's trip: a phone that muted it is skipped (forgejo#286). */
+  mutedBy: string | null = null
 ): Promise<void> {
   if (!(await serverPushEnabled())) return;
   const send = deps.send ?? sendToRelay;
@@ -80,6 +82,7 @@ async function deliver(
     where: {
       userId,
       [switchField]: true,
+      ...(mutedBy !== null && { NOT: { mutedTripIds: { has: mutedBy } } }),
       user: { isActive: true },
       apiToken: { revokedAt: null, OR: [{ expiresAt: null }, { expiresAt: { gt: at } }] },
     },
@@ -167,10 +170,14 @@ export async function notifyFlightChanged(
   );
 }
 
-/** The departure reminder (`key` 24h / 2h), once per flight and phone. */
+/**
+ * The departure reminder (`key` 24h / 2h), once per flight and phone — except
+ * to a phone that muted the flight's trip (forgejo#286). Flight-change notices
+ * ignore that mute: they are not reminders.
+ */
 export async function notifyReminder(
   userId: string,
-  flight: FlightForMessage & { departureTime: Date },
+  flight: FlightForMessage & { departureTime: Date; tripId?: string | null },
   key: "24h" | "2h",
   deps: Deps = {}
 ): Promise<void> {
@@ -182,7 +189,8 @@ export async function notifyReminder(
       `reminder:${flight.id}:${key}`,
       "reminders",
       (locale) => reminderMessage(flight, key === "24h" ? 24 : 2, locale),
-      deps
+      deps,
+      flight.tripId ?? null
     )
   );
 }

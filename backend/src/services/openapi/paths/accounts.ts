@@ -284,6 +284,16 @@ const devicePushInput = registry.register(
     flightChanges: z.boolean().optional(),
     reminders: z.boolean().optional(),
     locale: z.enum(["de", "en"]).optional(),
+    mutedTripIds: z
+      .array(z.string())
+      .max(500)
+      .optional()
+      .describe(
+        "Trips whose departure reminders this phone does not want (forgejo#286) — the " +
+          "trip page's per-trip reminder switch. Reminders only: flight-change notices " +
+          "still arrive. Replaces the stored list when sent; omitted keeps it (empty on " +
+          "first registration). Ids of trips that are not this account's simply never match."
+      ),
   })
 );
 
@@ -294,6 +304,9 @@ const devicePushState = registry.register(
     flightChanges: z.boolean(),
     reminders: z.boolean(),
     locale: z.enum(["de", "en"]),
+    mutedTripIds: z
+      .array(z.string())
+      .describe("Trips this phone gets no departure reminders for (forgejo#286)"),
     serverPushEnabled: z.boolean().describe("Whether this server's admin has switched push on"),
   })
 );
