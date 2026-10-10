@@ -15,9 +15,11 @@ import {
   isRailEmailResult,
   isRentalEmailResult,
   isPackageEmailResult,
+  isPlaceEmailResult,
   isRailPdfResult,
   isRentalPdfResult,
   isPackagePdfResult,
+  isPlacePdfResult,
 } from "../../lib/api/parse";
 
 import type { ImportDocument } from "../import/documentHandoff";
@@ -120,7 +122,8 @@ export default function FlightLookupStep({
       isLodgingEmailResult(result) ||
       isRailEmailResult(result) ||
       isRentalEmailResult(result) ||
-      isPackageEmailResult(result)
+      isPackageEmailResult(result) ||
+      isPlaceEmailResult(result)
     ) {
       setError(t("flights:form.noFlightsInEmail"));
       return;
@@ -148,7 +151,8 @@ export default function FlightLookupStep({
       isLodgingPdfResult(result) ||
       isRailPdfResult(result) ||
       isRentalPdfResult(result) ||
-      isPackagePdfResult(result)
+      isPackagePdfResult(result) ||
+      isPlacePdfResult(result)
     ) {
       setError(t("flights:form.noFlightsInEmail"));
       return;

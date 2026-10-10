@@ -17,6 +17,7 @@ export const PARSEABLE_IMPORT_DOMAINS = [
   "rail",
   "rental",
   "package",
+  "place",
 ] as const;
 export type ParseableImportDomain = (typeof PARSEABLE_IMPORT_DOMAINS)[number];
 

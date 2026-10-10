@@ -1,6 +1,6 @@
 import type { PLACE_DOCUMENT_FALLBACKS, PlaceImportCandidate } from "../../schemas/placeImport";
 import { templateRegistry } from "../parsers/templates/registry";
-import { remainingBudgetMs, withParseBudget } from "../parsers/templates/v2/budget";
+import { remainingBudgetMs } from "../parsers/templates/v2/budget";
 import { loadActiveWorkshopTemplates } from "../parsers/userTemplates/v2UserTemplates";
 import { readWithV2PlaceTemplates } from "./v2Place";
 
@@ -27,29 +27,27 @@ export interface PlaceDocumentReading {
  * user's own active workshop templates. Nothing is written; the candidate goes
  * to the place import preview the user confirms.
  *
- * The subject, where there is one, is the first line, exactly as the parse
- * pipeline joins it for every other domain.
+ * This is `parseDocument`'s `place` branch: a place document goes through the
+ * same dispatch, detection, PDF path and per-document budget as every other
+ * domain, and the caller holds that budget. Without a user only repository
+ * templates run.
  */
-export function readPlaceDocument(
-  userId: string,
-  text: string,
-  subject?: string
+export async function readPlaceText(
+  userId: string | undefined,
+  documentText: string
 ): Promise<PlaceDocumentReading> {
-  return withParseBudget(async () => {
-    const templates = [
-      ...templateRegistry.getActiveV2({ domain: "place" }),
-      ...(await loadActiveWorkshopTemplates(userId, "place")),
-    ];
-    if (templates.length === 0) {
-      return { candidates: [], templateId: null, fallbackCode: "noTemplate" };
-    }
-    const documentText = subject ? `${subject}\n\n${text}` : text;
-    const hit = readWithV2PlaceTemplates(templates, documentText);
-    if (hit) return { candidates: [hit.candidate], templateId: hit.templateId };
-    return {
-      candidates: [],
-      templateId: null,
-      fallbackCode: remainingBudgetMs() === 0 ? "timedOut" : "notRecognised",
-    };
-  });
+  const templates = [
+    ...templateRegistry.getActiveV2({ domain: "place" }),
+    ...(userId ? await loadActiveWorkshopTemplates(userId, "place") : []),
+  ];
+  if (templates.length === 0) {
+    return { candidates: [], templateId: null, fallbackCode: "noTemplate" };
+  }
+  const hit = readWithV2PlaceTemplates(templates, documentText);
+  if (hit) return { candidates: [hit.candidate], templateId: hit.templateId };
+  return {
+    candidates: [],
+    templateId: null,
+    fallbackCode: remainingBudgetMs() === 0 ? "timedOut" : "notRecognised",
+  };
 }

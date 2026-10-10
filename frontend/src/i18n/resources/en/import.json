@@ -103,10 +103,12 @@
       "cruise": "Import as a cruise",
       "lodging": "Import as accommodation",
       "rail": "Import as a rail journey",
-      "package": "Import as a trip"
+      "package": "Import as a trip",
+      "place": "Import as a place"
     },
     "dismiss": "Close",
-    "package": "These are a tour operator's travel documents — import them under Trips."
+    "package": "These are a tour operator's travel documents — import them under Trips.",
+    "place": "This is a document about a place — import it under Places."
   },
   "readBy": {
     "local": "Read by the AI model {{model}} on your network.",

@@ -545,7 +545,7 @@
     },
     "document": {
       "title": "A place from a document",
-      "description": "A museum ticket or a tour booking: paste its text or choose a .txt/.eml file. It is read with your place templates from the parser workshop; the place lands in the preview, and only you create it.",
+      "description": "A museum ticket or a tour booking: paste its text or choose a .txt, .eml or .msg file. It is read like any other document, with your place templates from the parser workshop; the place lands in the preview, and only you create it.",
       "textLabel": "Document text",
       "placeholder": "Paste the text of the ticket or booking here …",
       "read": "Read document",

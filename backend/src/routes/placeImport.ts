@@ -2,12 +2,7 @@ import { Router, Response, NextFunction } from "express";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { lodgingImportLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
-import {
-  placeDocumentReadSchema,
-  placeImportCommitSchema,
-  placeImportPreviewSchema,
-} from "../schemas/placeImport";
-import { readPlaceDocument } from "../services/places/placeDocumentImport";
+import { placeImportCommitSchema, placeImportPreviewSchema } from "../schemas/placeImport";
 import { previewPlaceImport } from "../services/places/placeImportPreview";
 import { commitPlaceImport } from "../services/places/placeImportCommit";
 import { triggerDataQualityChecks } from "../services/dataQualityTrigger";
@@ -70,26 +65,6 @@ router.post("/resolve", async (req: AuthRequest, res: Response, next: NextFuncti
       resolveTakeoutList(userId, listName ?? null, rows, reportProgress)
     );
     res.status(202).json({ success: true, data: { jobId: job.id } });
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * Read ONE place document with the place templates (forgejo#124) and answer
- * with what they read — at most one candidate, no write. The client sends it
- * through `/preview` and the user confirms it there, exactly as a CSV row.
- * An unread document is a 200 with a `fallbackCode`, never an empty success:
- * "no template yet" and "not recognised" are different things to tell a user.
- */
-router.post("/document", async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = requireUser(req);
-    const parsed = placeDocumentReadSchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
-
-    const reading = await readPlaceDocument(userId, parsed.data.text, parsed.data.subject);
-    res.json({ success: true, data: reading });
   } catch (error) {
     next(error);
   }

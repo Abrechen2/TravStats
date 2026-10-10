@@ -116,21 +116,9 @@ export const PLACE_IMPORT_FAILURE_MESSAGES: Record<PlaceImportFailureCode, strin
 };
 
 /**
- * A place DOCUMENT — a museum ticket, a tour booking, pasted or uploaded as
- * text — to be read by the place templates (forgejo#124). The answer is at
- * most one candidate, which the client sends through `/preview` like any CSV
- * row: nothing is written from a document without the user's confirmation.
+ * Why a place document produced no candidate — see
+ * `services/places/placeDocumentImport.ts`. A place document is parsed like
+ * every other through `/parse-email`, `/parse-email-file` and `/parse-pdf`
+ * with `domain: "place"` (or `auto`), forgejo#124.
  */
-export const placeDocumentReadSchema = z.object({
-  text: z.string().trim().min(1).max(200_000),
-  subject: z.string().trim().max(500).optional(),
-});
-
-/** Why a document produced no candidate — see `services/places/placeDocumentImport.ts`. */
 export const PLACE_DOCUMENT_FALLBACKS = ["noTemplate", "notRecognised", "timedOut"] as const;
-
-export const placeDocumentReadingSchema = z.object({
-  candidates: z.array(placeImportCandidateSchema).max(1),
-  templateId: z.string().nullable(),
-  fallbackCode: z.enum(PLACE_DOCUMENT_FALLBACKS).optional(),
-});

@@ -139,10 +139,3 @@ export interface PlaceImportResolution {
 
 /** Why a place document produced no candidate (forgejo#124). */
 export type PlaceDocumentFallback = "noTemplate" | "notRecognised" | "timedOut";
-
-/** `POST /place-import/document` — at most one candidate, nothing written. */
-export interface PlaceDocumentReading {
-  candidates: PlaceImportCandidate[];
-  templateId: string | null;
-  fallbackCode?: PlaceDocumentFallback;
-}

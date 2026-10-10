@@ -177,14 +177,20 @@ describe("the template workshop for cruise and place", () => {
     );
   });
 
+  // A place document goes through the same parse routes as every other domain.
+  const parsePlace = (as: string, text: string, domain = "place", subject?: string) =>
+    request(app)
+      .post("/api/v1/parse-email")
+      .set("Cookie", auth(as))
+      .send({ emailContent: text, domain, ...(subject ? { subject } : {}) });
+
   it("reads a place document into one import candidate, and writes nothing", async () => {
     const placesBefore = await prisma.place.count({ where: { userId } });
-    const res = await request(app)
-      .post("/api/v1/place-import/document")
-      .set("Cookie", auth(token))
-      .send({ text: PLACE_HELD_OUT });
+    const res = await parsePlace(token, PLACE_HELD_OUT);
     expect(res.status).toBe(200);
-    expect(res.body.data).toEqual({
+    expect(res.body).toMatchObject({
+      domain: "place",
+      parserUsed: "template",
       candidates: [
         {
           sourceRowIndex: 0,
@@ -199,38 +205,36 @@ describe("the template workshop for cruise and place", () => {
     expect(await prisma.place.count({ where: { userId } })).toBe(placesBefore);
   });
 
+  it("recognises a place document under auto-detection by the user's place template", async () => {
+    const res = await parsePlace(token, PLACE_HELD_OUT, "auto");
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ domain: "place", domainSource: "detected" });
+    expect(res.body.detection.candidates[0]).toMatchObject({ domain: "place" });
+    expect(res.body.candidates).toHaveLength(1);
+    // Another account has no such template, so its auto-detection does not say place.
+    const other = await parsePlace(otherToken, PLACE_HELD_OUT, "auto");
+    expect(other.body.domain).not.toBe("place");
+  });
+
   it("says why a document was not read — not recognised, or no template at all", async () => {
-    const foreign = await request(app)
-      .post("/api/v1/place-import/document")
-      .set("Cookie", auth(token))
-      .send({ text: PLACE_FOREIGN });
-    expect(foreign.body.data).toEqual({
+    const foreign = await parsePlace(token, PLACE_FOREIGN);
+    expect(foreign.body).toMatchObject({
+      domain: "place",
       candidates: [],
       templateId: null,
+      parserUsed: "none",
       fallbackCode: "notRecognised",
     });
 
-    const none = await request(app)
-      .post("/api/v1/place-import/document")
-      .set("Cookie", auth(otherToken))
-      .send({ text: PLACE_HELD_OUT });
-    expect(none.body.data.fallbackCode).toBe("noTemplate");
-
-    const empty = await request(app)
-      .post("/api/v1/place-import/document")
-      .set("Cookie", auth(token))
-      .send({ text: "   " });
-    expect(empty.status).toBe(400);
+    const none = await parsePlace(otherToken, PLACE_HELD_OUT);
+    expect(none.body.fallbackCode).toBe("noTemplate");
   });
 
   it("never offers a cruise or place template to another domain's document", async () => {
     // The cruise document goes to the place reader: the cruise template is not
     // among the place templates, so nothing reads it.
-    const cruiseAsPlace = await request(app)
-      .post("/api/v1/place-import/document")
-      .set("Cookie", auth(token))
-      .send({ text: CRUISE_HELD_OUT, subject: CRUISE_SUBJECT });
-    expect(cruiseAsPlace.body.data.candidates).toEqual([]);
+    const cruiseAsPlace = await parsePlace(token, CRUISE_HELD_OUT, "place", CRUISE_SUBJECT);
+    expect(cruiseAsPlace.body.candidates).toEqual([]);
 
     // The place ticket goes to the cruise parser: no voyage from the place template.
     const placeAsCruise = await parseCruiseBookingText(

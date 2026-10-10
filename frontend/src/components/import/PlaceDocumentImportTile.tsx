@@ -3,16 +3,14 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
-import {
-  commitPlaceImport,
-  previewPlaceImport,
-  readPlaceDocument,
-} from "../../lib/api/placeImport";
+import { commitPlaceImport, previewPlaceImport } from "../../lib/api/placeImport";
+import { parseApi, type ParseEmailPlaceResult } from "../../lib/api/parse";
 import { describePlaceCommitResult } from "../../lib/placeImportResult";
 import { PlaceImportPreviewModal } from "../places/PlaceImportPreviewModal";
 import { ImportTileShell, ImportFilePicker, ImportErrorBlock } from "./ImportTileShell";
 import type { PlaceImportPreview } from "../../types/placeImport";
 
+type PlaceReading = Pick<ParseEmailPlaceResult, "candidates" | "fallbackCode">;
 interface Props {
   /** The import hub's log reload — see `PlaceCsvImportTile`. */
   onImported?: () => void | Promise<void>;
@@ -36,36 +34,39 @@ export function PlaceDocumentImportTile({ onImported }: Props): JSX.Element {
   const [preview, setPreview] = useState<PlaceImportPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const read = useCallback(async (): Promise<void> => {
-    setError(null);
-    setBusy(true);
-    try {
-      const reading = await readPlaceDocument(text.trim());
-      if (reading.candidates.length === 0) {
-        setError(t(`places:import.document.fallback.${reading.fallbackCode ?? "notRecognised"}`));
-        return;
-      }
-      setPreview(await previewPlaceImport(reading.candidates));
-    } catch (err) {
-      // Never the raw error — it may be technical or untranslated.
-      logger.error("PlaceDocumentImportTile: reading the document failed", err);
-      setError(t("places:import.document.readFailed"));
-    } finally {
-      setBusy(false);
-    }
-  }, [text, t]);
-
-  const handleFile = useCallback(
-    async (file: File): Promise<void> => {
+  // Every way in goes through the same parse routes as any other domain's
+  // document (`domain: "place"`), so the server reads a pasted text, a mail
+  // file and its subject alike.
+  const readWith = useCallback(
+    async (parse: () => Promise<PlaceReading>): Promise<void> => {
       setError(null);
+      setBusy(true);
       try {
-        setText(await file.text());
+        const reading = await parse();
+        if (reading.candidates.length === 0) {
+          setError(t(`places:import.document.fallback.${reading.fallbackCode ?? "notRecognised"}`));
+          return;
+        }
+        setPreview(await previewPlaceImport(reading.candidates));
       } catch (err) {
-        logger.error("PlaceDocumentImportTile: file could not be read", err);
+        // Never the raw error — it may be technical or untranslated.
+        logger.error("PlaceDocumentImportTile: reading the document failed", err);
         setError(t("places:import.document.readFailed"));
+      } finally {
+        setBusy(false);
       }
     },
     [t]
+  );
+
+  const read = useCallback(
+    (): Promise<void> => readWith(() => parseApi.parseEmail(text.trim(), undefined, "place")),
+    [readWith, text]
+  );
+
+  const handleFile = useCallback(
+    (file: File): Promise<void> => readWith(() => parseApi.parseEmailFile(file, "place")),
+    [readWith]
   );
 
   const reset = useCallback((): void => {
@@ -99,7 +100,7 @@ export function PlaceDocumentImportTile({ onImported }: Props): JSX.Element {
             </button>
             <ImportFilePicker
               label={t("places:import.document.uploadLabel")}
-              accept=".txt,.eml"
+              accept=".txt,.eml,.msg"
               disabled={busy}
               onFile={(file) => void handleFile(file)}
             />

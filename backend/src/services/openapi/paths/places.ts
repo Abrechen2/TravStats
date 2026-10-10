@@ -19,12 +19,7 @@
 import { placeTimesSchema, visitTimesSchema } from "../../../schemas/times";
 import { z } from "zod";
 
-import {
-  placeDocumentReadingSchema,
-  placeDocumentReadSchema,
-  placeImportCommitSchema,
-  placeImportPreviewSchema,
-} from "../../../schemas/placeImport";
+import { placeImportCommitSchema, placeImportPreviewSchema } from "../../../schemas/placeImport";
 
 import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
@@ -660,36 +655,6 @@ registry.registerPath({
       content: {
         "application/json": {
           schema: z.object({ success: z.boolean(), data: z.unknown() }),
-        },
-      },
-    },
-    400: { description: "Validation failed", content: errorContent },
-    401: { description: "Not authenticated", content: errorContent },
-    429: { description: "Rate-limited", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/place-import/document",
-  summary: "Read a place document with the place templates",
-  description:
-    "Reads one document (a museum ticket, a tour booking) with the active " +
-    "place templates — repository templates first, then the caller's own " +
-    "workshop templates — and answers with at most one candidate. Nothing is " +
-    "written: the client sends the candidate through `/place-import/preview`. " +
-    "An unread document answers with a `fallbackCode`: `noTemplate` (no place " +
-    "template is active), `notRecognised` or `timedOut`.",
-  tags: placesTag,
-  request: {
-    body: { content: { "application/json": { schema: placeDocumentReadSchema } } },
-  },
-  responses: {
-    200: {
-      description: "What the templates read",
-      content: {
-        "application/json": {
-          schema: z.object({ success: z.boolean(), data: placeDocumentReadingSchema }),
         },
       },
     },

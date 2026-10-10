@@ -3,6 +3,7 @@ import type { RentalImportCandidate, RentalParseFallbackCode } from "../../types
 import type { CruiseInput, Port, Ship } from "../../types/cruise";
 import type { LodgingImportCandidate } from "../../types/lodgingImport";
 import type { RailImportBooking, RailParseFallbackCode } from "../../types/rail";
+import type { PlaceDocumentFallback, PlaceImportCandidate } from "../../types/placeImport";
 
 import { parserApi } from "./client";
 import type {
@@ -197,13 +198,40 @@ export interface ParseEmailPackageResult extends PackageParseFields {
   html?: string;
 }
 
+/**
+ * A place document (forgejo#124) — read by place templates only; at most one
+ * candidate, which goes through `/place-import/preview`.
+ */
+interface PlaceParseFields {
+  domain: "place";
+  candidates: PlaceImportCandidate[];
+  templateId: string | null;
+  parserUsed: "template" | "none";
+  ollamaAvailable: boolean;
+  fallbackCode?: PlaceDocumentFallback;
+  fallbackReason?: string;
+  documentId?: string;
+  domainMismatch?: { detected: ParseDomain; confidence: number };
+}
+
+export interface ParsePdfPlaceResult extends PlaceParseFields {
+  pdfTextLength: number;
+}
+
+export interface ParseEmailPlaceResult extends PlaceParseFields {
+  subject?: string;
+  text?: string;
+  html?: string;
+}
+
 export type ParsePdfResult =
   | ParsePdfFlightResult
   | ParsePdfCruiseResult
   | ParsePdfLodgingResult
   | ParsePdfRailResult
   | ParsePdfRentalResult
-  | ParsePdfPackageResult;
+  | ParsePdfPackageResult
+  | ParsePdfPlaceResult;
 
 export function isCruisePdfResult(r: ParsePdfResult): r is ParsePdfCruiseResult {
   return r.domain === "cruise";
@@ -223,6 +251,10 @@ export function isRentalPdfResult(r: ParsePdfResult): r is ParsePdfRentalResult 
 
 export function isPackagePdfResult(r: ParsePdfResult): r is ParsePdfPackageResult {
   return r.domain === "package";
+}
+
+export function isPlacePdfResult(r: ParsePdfResult): r is ParsePdfPlaceResult {
+  return r.domain === "place";
 }
 
 interface ParserCheckResult {
@@ -263,14 +295,16 @@ export type ParseEmailResult =
   | ParseEmailLodgingResult
   | ParseEmailRailResult
   | ParseEmailRentalResult
-  | ParseEmailPackageResult;
+  | ParseEmailPackageResult
+  | ParseEmailPlaceResult;
 
 /**
  * The domains a document can be parsed for — `components/import/types.ts`
- * mirrors it. `package` is a parse target, not a domain: its reading becomes
- * a trip proposal (`lib/api/tripPackage.ts`).
+ * mirrors it. `package` and `place` are parse targets, not domains: a
+ * package's reading becomes a trip proposal (`lib/api/tripPackage.ts`), a
+ * place document's a place import candidate (forgejo#124).
  */
-export type ParseDomain = "flight" | "cruise" | "lodging" | "rail" | "rental" | "package";
+export type ParseDomain = "flight" | "cruise" | "lodging" | "rail" | "rental" | "package" | "place";
 
 /** What every parse call may also ask for. */
 export interface ParseOptions {
@@ -296,6 +330,10 @@ export function isRentalEmailResult(r: ParseEmailResult): r is ParseEmailRentalR
 
 export function isPackageEmailResult(r: ParseEmailResult): r is ParseEmailPackageResult {
   return r.domain === "package";
+}
+
+export function isPlaceEmailResult(r: ParseEmailResult): r is ParseEmailPlaceResult {
+  return r.domain === "place";
 }
 
 // Parse API (Email & Boarding Pass) - Uses parserApi with 180s timeout
@@ -342,6 +380,11 @@ export const parseApi = {
     (
       emailContent: string,
       subject: string | undefined,
+      domain: "place"
+    ): Promise<ParseEmailPlaceResult>;
+    (
+      emailContent: string,
+      subject: string | undefined,
       domain: ParseDomain
     ): Promise<ParseEmailResult>;
   },
@@ -370,6 +413,7 @@ export const parseApi = {
     (file: File, domain: "rail"): Promise<ParseEmailRailResult>;
     (file: File, domain: "rental"): Promise<ParseEmailRentalResult>;
     (file: File, domain: "package", options?: ParseOptions): Promise<ParseEmailPackageResult>;
+    (file: File, domain: "place", options?: ParseOptions): Promise<ParseEmailPlaceResult>;
     (file: File, domain: ParseDomain, options?: ParseOptions): Promise<ParseEmailResult>;
   },
 
@@ -403,6 +447,7 @@ export const parseApi = {
     (pdfBase64: string, domain: "rail"): Promise<ParsePdfRailResult>;
     (pdfBase64: string, domain: "rental"): Promise<ParsePdfRentalResult>;
     (pdfBase64: string, domain: "package", options?: ParseOptions): Promise<ParsePdfPackageResult>;
+    (pdfBase64: string, domain: "place", options?: ParseOptions): Promise<ParsePdfPlaceResult>;
     (pdfBase64: string, domain: ParseDomain, options?: ParseOptions): Promise<ParsePdfResult>;
   },
 

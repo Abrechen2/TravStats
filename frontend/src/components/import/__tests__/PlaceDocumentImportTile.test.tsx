@@ -9,11 +9,18 @@ import { PlaceDocumentImportTile } from "../PlaceDocumentImportTile";
  * "a provider failure becomes silent success".
  */
 
-const readPlaceDocument = vi.fn();
+// The tile reads through the shared parse routes with `domain: "place"`.
+const parseEmail = vi.fn();
+const parseEmailFile = vi.fn();
 const previewPlaceImport = vi.fn();
 const commitPlaceImport = vi.fn();
+vi.mock("../../../lib/api/parse", () => ({
+  parseApi: {
+    parseEmail: (...args: unknown[]) => parseEmail(...args),
+    parseEmailFile: (...args: unknown[]) => parseEmailFile(...args),
+  },
+}));
 vi.mock("../../../lib/api/placeImport", () => ({
-  readPlaceDocument: (...args: unknown[]) => readPlaceDocument(...args),
   previewPlaceImport: (...args: unknown[]) => previewPlaceImport(...args),
   commitPlaceImport: (...args: unknown[]) => commitPlaceImport(...args),
 }));
@@ -34,7 +41,8 @@ function pasteAndRead(): void {
 
 describe("PlaceDocumentImportTile", () => {
   beforeEach(() => {
-    readPlaceDocument.mockReset();
+    parseEmail.mockReset();
+    parseEmailFile.mockReset();
     previewPlaceImport.mockReset();
     commitPlaceImport.mockReset();
   });
@@ -46,7 +54,7 @@ describe("PlaceDocumentImportTile", () => {
 
   it("sends what the templates read through the import preview", async () => {
     const candidate = { sourceRowIndex: 0, name: "Museum am Probeufer", visitedAt: "2027-09-14" };
-    readPlaceDocument.mockResolvedValue({ candidates: [candidate], templateId: "place:user-1" });
+    parseEmail.mockResolvedValue({ candidates: [candidate], templateId: "place:user-1" });
     previewPlaceImport.mockResolvedValue({
       rows: [
         {
@@ -65,7 +73,7 @@ describe("PlaceDocumentImportTile", () => {
     await waitFor(() =>
       expect(screen.getByTestId("preview")).toHaveTextContent("Museum am Probeufer")
     );
-    expect(readPlaceDocument).toHaveBeenCalledWith(TICKET);
+    expect(parseEmail).toHaveBeenCalledWith(TICKET, undefined, "place");
     expect(previewPlaceImport).toHaveBeenCalledWith([candidate]);
     // Nothing written before the user confirms in the preview.
     expect(commitPlaceImport).not.toHaveBeenCalled();
@@ -74,7 +82,7 @@ describe("PlaceDocumentImportTile", () => {
   it.each(["noTemplate", "notRecognised", "timedOut"])(
     "says why nothing was read (%s), and opens no preview",
     async (code) => {
-      readPlaceDocument.mockResolvedValue({ candidates: [], templateId: null, fallbackCode: code });
+      parseEmail.mockResolvedValue({ candidates: [], templateId: null, fallbackCode: code });
       render(<PlaceDocumentImportTile />);
       pasteAndRead();
 
@@ -85,8 +93,25 @@ describe("PlaceDocumentImportTile", () => {
     }
   );
 
+  it("reads a mail file through the shared file route, as a place document", async () => {
+    parseEmailFile.mockResolvedValueOnce({
+      candidates: [],
+      templateId: null,
+      fallbackCode: "notRecognised",
+    });
+    render(<PlaceDocumentImportTile />);
+    const file = new File([TICKET], "ticket.eml", { type: "message/rfc822" });
+    fireEvent.change(screen.getByLabelText("places:import.document.uploadLabel"), {
+      target: { files: [file] },
+    });
+    await waitFor(() => expect(parseEmailFile).toHaveBeenCalledWith(file, "place"));
+    expect(
+      await screen.findByText("places:import.document.fallback.notRecognised")
+    ).toBeInTheDocument();
+  });
+
   it("says the request failed, in its own words, when it did", async () => {
-    readPlaceDocument.mockRejectedValue(new Error("Network Error"));
+    parseEmail.mockRejectedValueOnce(new Error("Network Error"));
     render(<PlaceDocumentImportTile />);
     pasteAndRead();
 

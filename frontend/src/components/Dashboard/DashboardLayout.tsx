@@ -77,9 +77,10 @@ export function DashboardLayout({
     setAddingDomainState(domain);
   };
   const openOtherImport = (domain: ParseDomain, document: ImportDocument): void => {
-    // A package tour is imported on the trips page; it is never in
-    // `openableImports`, so no dialog here offers the jump.
-    if (domain === "package") return;
+    // A package tour is imported on the trips page and a place document in
+    // the place import; neither is in `openableImports`, so no dialog here
+    // offers the jump.
+    if (domain === "package" || domain === "place") return;
     setAddingDomainState(domain);
     setHandedOver(document);
   };
