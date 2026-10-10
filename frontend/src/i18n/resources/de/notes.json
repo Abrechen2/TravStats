@@ -61,5 +61,13 @@
     "photoRemoveFailed": "Die Notiz ist gespeichert, das Foto konnte aber nicht entfernt werden.",
     "photoTooLargeLocal": "Das Foto ist zu groß (höchstens 15 MB).",
     "photoTypeLocal": "Nur Bilder (JPEG, PNG, WebP, GIF, HEIC) können an eine Notiz."
+  },
+  "paging": {
+    "older": "Ältere laden",
+    "loading": "Wird geladen …",
+    "shown": "{{shown}} von {{total}} Notizen",
+    "end_one": "Das ist alles – {{count}} Notiz.",
+    "end_other": "Das ist alles – alle {{count}} Notizen sind geladen.",
+    "failed": "Ältere Notizen konnten nicht geladen werden."
   }
 }

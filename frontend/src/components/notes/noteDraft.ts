@@ -82,11 +82,7 @@ export function sameDraft(a: NoteDraft, b: NoteDraft): boolean {
 /** Notes grouped under the day each belongs to (its `times.day`), newest day first. */
 export function notesByDay(notes: readonly Note[]): Array<{ day: string; notes: Note[] }> {
   const groups = new Map<string, Note[]>();
-  const sorted = [...notes].sort((a, b) =>
-    a.occurredAt === b.occurredAt
-      ? b.id.localeCompare(a.id)
-      : b.occurredAt.localeCompare(a.occurredAt)
-  );
+  const sorted = [...notes].sort(serverOrder);
   for (const note of sorted) {
     const day = note.times.day.date;
     groups.set(day, [...(groups.get(day) ?? []), note]);
@@ -94,4 +90,37 @@ export function notesByDay(notes: readonly Note[]): Array<{ day: string; notes: 
   return [...groups.entries()]
     .sort(([a], [b]) => b.localeCompare(a))
     .map(([day, dayNotes]) => ({ day, notes: dayNotes }));
+}
+
+/** The server's order: newest first, `id` descending among equal instants. */
+function serverOrder(a: Note, b: Note): number {
+  return a.occurredAt === b.occurredAt
+    ? b.id.localeCompare(a.id)
+    : b.occurredAt.localeCompare(a.occurredAt);
+}
+
+/**
+ * The timeline keeps ONE invariant: the loaded notes are exactly the first
+ * `notes.length` notes of the server's order. The next page is then simply
+ * `offset = notes.length` — no note skipped, none twice — however many notes
+ * were written, edited or deleted in between.
+ */
+
+/** A fetched page joined to what is loaded; a note already there is not taken twice. */
+export function appendPage(loaded: readonly Note[], page: readonly Note[]): Note[] {
+  const known = new Set(loaded.map((n) => n.id));
+  return [...loaded, ...page.filter((n) => !known.has(n.id))].sort(serverOrder);
+}
+
+/**
+ * A saved note in the loaded list. While older notes are still on the server
+ * (`complete` false), a note that now sorts behind the oldest loaded one is
+ * left for the page that brings it — inserting it would break the prefix and
+ * make the next page skip a note.
+ */
+export function mergeSaved(loaded: readonly Note[], saved: Note, complete: boolean): Note[] {
+  const others = loaded.filter((n) => n.id !== saved.id);
+  const oldest = others[others.length - 1];
+  if (!complete && oldest && serverOrder(saved, oldest) > 0) return others;
+  return [...others, saved].sort(serverOrder);
 }

@@ -191,4 +191,55 @@ describe("NotesPage", () => {
     );
     expect(api.remove).toHaveBeenCalledWith("n1");
   });
+
+  it("reaches every note past the first page, keeps a day split by the page one day, and says when it is the end", async () => {
+    // 150 notes, one per hour, newest first: 2026-09-10 00:00 UTC backwards.
+    const all = Array.from({ length: 150 }, (_, i) => {
+      const utc = new Date(Date.UTC(2026, 8, 10) - i * 3_600_000).toISOString();
+      return noteFixture({
+        id: `n${String(i).padStart(3, "0")}`,
+        body: `Notiz ${i}`,
+        occurredAt: utc,
+        occurredZone: "UTC",
+        times: {
+          occurredAt: {
+            ...noteFixture().times.occurredAt,
+            utc,
+            zone: "UTC",
+            offset: "+00:00",
+            local: utc.slice(0, 19),
+          },
+          day: { date: utc.slice(0, 10), zone: "UTC", precision: "day" },
+        },
+      });
+    });
+    api.list.mockImplementation(async (offset = 0) => ({
+      notes: all.slice(offset, offset + 100),
+      total: all.length,
+    }));
+    renderPage();
+    expect(await screen.findByText("100 von 150 Notizen")).toBeTruthy();
+    expect(screen.queryByText("Notiz 120")).toBeNull();
+    // Note 99 and note 100 sit on the same day (2026-09-05) across the boundary.
+    expect(screen.getAllByText("Samstag, 5. September 2026")).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Ältere laden" }));
+    expect(await screen.findByText("Das ist alles – alle 150 Notizen sind geladen.")).toBeTruthy();
+    expect(api.list).toHaveBeenLastCalledWith(100);
+    expect(screen.getByText("Notiz 149")).toBeTruthy();
+    expect(screen.getAllByTestId("note-card")).toHaveLength(150);
+    expect(screen.getAllByText("Samstag, 5. September 2026")).toHaveLength(1);
+    expect(screen.queryByRole("button", { name: "Ältere laden" })).toBeNull();
+  }, 60_000);
+
+  it("says when older notes failed to load, and keeps what is shown", async () => {
+    api.list
+      .mockResolvedValueOnce({ notes: [noteFixture()], total: 2 })
+      .mockRejectedValueOnce(refused(503, { error: "x", code: "DB_UNAVAILABLE" }));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Ältere laden" }));
+    expect(await screen.findByText(/Die Datenbank ist gerade nicht erreichbar/)).toBeTruthy();
+    expect(screen.getByText("Erster Schnee auf dem Wendelstein.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Ältere laden" })).toBeTruthy();
+  });
 });

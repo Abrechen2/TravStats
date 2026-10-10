@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { draftMoment, draftOfNote, draftProblems, newNoteDraft, notesByDay } from "../noteDraft";
+import {
+  appendPage,
+  draftMoment,
+  draftOfNote,
+  draftProblems,
+  mergeSaved,
+  newNoteDraft,
+  notesByDay,
+} from "../noteDraft";
 import { noteFixture } from "./noteFixture";
 
 describe("newNoteDraft — now, on the clock of the zone the note is written in", () => {
@@ -86,5 +94,35 @@ describe("notesByDay", () => {
     expect(groups.map((g) => g.day)).toEqual(["2026-09-28", "2026-09-20"]);
     // 22:30 UTC on the 27th is filed under the 28th — the day where it was written.
     expect(groups[0].notes.map((n) => n.id)).toEqual(["b", "a"]);
+  });
+});
+
+describe("paging keeps the loaded notes a prefix of the server's order", () => {
+  const at = (id: string, utc: string) =>
+    noteFixture({
+      id,
+      occurredAt: utc,
+      times: {
+        ...noteFixture().times,
+        day: { date: utc.slice(0, 10), zone: "UTC", precision: "day" },
+      },
+    });
+  const a = at("a", "2026-09-03T10:00:00.000Z");
+  const b = at("b", "2026-09-02T10:00:00.000Z");
+  const c = at("c", "2026-09-01T10:00:00.000Z");
+
+  it("appends a page without taking a note twice", () => {
+    expect(appendPage([a, b], [b, c]).map((n) => n.id)).toEqual(["a", "b", "c"]);
+  });
+
+  it("leaves a note older than the loaded window to the page that brings it", () => {
+    const old = at("old", "2020-01-01T10:00:00.000Z");
+    expect(mergeSaved([a, b], old, false).map((n) => n.id)).toEqual(["a", "b"]);
+    expect(mergeSaved([a, b], old, true).map((n) => n.id)).toEqual(["a", "b", "old"]);
+  });
+
+  it("puts a new or edited note where the server would", () => {
+    const moved = { ...a, occurredAt: "2026-09-01T12:00:00.000Z" };
+    expect(mergeSaved([a, b, c], moved, false).map((n) => n.id)).toEqual(["b", "a", "c"]);
   });
 });

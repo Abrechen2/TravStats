@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState, type JSX } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
 
 import NoteCard from "../components/notes/NoteCard";
 import NoteEditorDialog from "../components/notes/NoteEditorDialog";
-import { notesByDay } from "../components/notes/noteDraft";
+import { appendPage, mergeSaved, notesByDay } from "../components/notes/noteDraft";
 import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
 import { FormErrorBanner } from "../components/form";
 import { AppShell, Button, Dialog, EmptyState, PageHeader } from "../components/ui";
@@ -28,9 +28,21 @@ export default function NotesPage(): JSX.Element {
   const { t, i18n } = useTranslation(["notes", "common"]);
   const readerZone = useTodayZone();
 
-  const [notes, setNotes] = useState<Note[]>([]);
-  /** Notes on the server beyond the loaded page, so the count stays right as notes come and go. */
-  const [unloaded, setUnloaded] = useState(0);
+  /**
+   * The loaded notes — always the first `notes.length` of the server's order
+   * (see `appendPage`/`mergeSaved`) — and how many the server holds in all,
+   * kept in step as notes are written and deleted here.
+   */
+  const [timeline, setTimeline] = useState<{ notes: Note[]; total: number }>({
+    notes: [],
+    total: 0,
+  });
+  const { notes, total } = timeline;
+  const complete = notes.length >= total;
+  /** Every note id already in `total` — loaded from the server or written here. */
+  const counted = useRef(new Set<string>());
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreFailure, setMoreFailure] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadFailure, setLoadFailure] = useState<string | null | undefined>(undefined);
   const [open, setOpen] = useState<Open>(null);
@@ -42,8 +54,8 @@ export default function NotesPage(): JSX.Element {
     setLoadFailure(undefined);
     try {
       const page = await notesApi.list();
-      setNotes(page.notes);
-      setUnloaded(Math.max(0, page.total - page.notes.length));
+      counted.current = new Set(page.notes.map((n) => n.id));
+      setTimeline({ notes: page.notes, total: page.total });
     } catch (err: unknown) {
       logger.error({ err }, "NotesPage: failed to load notes");
       setLoadFailure(loadFailureLog(err));
@@ -56,15 +68,37 @@ export default function NotesPage(): JSX.Element {
     void load();
   }, [load]);
 
+  /** The next page, from where the loaded prefix ends. */
+  const loadOlder = async (): Promise<void> => {
+    setLoadingMore(true);
+    setMoreFailure(null);
+    try {
+      const page = await notesApi.list(notes.length);
+      page.notes.forEach((n) => counted.current.add(n.id));
+      setTimeline((current) => ({
+        notes: appendPage(current.notes, page.notes),
+        total: page.total,
+      }));
+    } catch (err: unknown) {
+      logger.error({ err }, "NotesPage: failed to load older notes");
+      setMoreFailure(t(saveErrorKey(err, "notes:paging.failed")));
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
   const days = useMemo(() => notesByDay(notes), [notes]);
 
   /** A saved note replaces its old self, or joins the list — the timeline re-sorts. */
   const upsert = useCallback((saved: Note): void => {
-    setNotes((list) =>
-      list.some((n) => n.id === saved.id)
-        ? list.map((n) => (n.id === saved.id ? saved : n))
-        : [saved, ...list]
-    );
+    setTimeline((current) => {
+      // New to the server's count only once: the editor reports a note again
+      // after its photo, and an old-dated note may not be in the loaded list.
+      const isNew = !counted.current.has(saved.id);
+      counted.current.add(saved.id);
+      const total = current.total + (isNew ? 1 : 0);
+      return { notes: mergeSaved(current.notes, saved, current.notes.length >= total), total };
+    });
   }, []);
 
   const confirmDelete = async (note: Note): Promise<void> => {
@@ -72,7 +106,10 @@ export default function NotesPage(): JSX.Element {
     setDeleteFailure(null);
     try {
       await notesApi.remove(note.id);
-      setNotes((list) => list.filter((n) => n.id !== note.id));
+      setTimeline((current) => ({
+        notes: current.notes.filter((n) => n.id !== note.id),
+        total: current.total - 1,
+      }));
       setOpen(null);
     } catch (err: unknown) {
       logger.error({ err }, "NotesPage: failed to delete a note");
@@ -88,11 +125,7 @@ export default function NotesPage(): JSX.Element {
     <AppShell width="reading">
       <PageHeader
         title={t("notes:title")}
-        meta={
-          !loading && !failed
-            ? t("notes:count", { count: notes.length + unloaded })
-            : t("notes:subtitle")
-        }
+        meta={!loading && !failed ? t("notes:count", { count: total }) : t("notes:subtitle")}
         actions={
           <Button variant="primary" onClick={() => setOpen({ kind: "edit", note: null })}>
             {t("notes:new")}
@@ -157,6 +190,27 @@ export default function NotesPage(): JSX.Element {
             </li>
           ))}
         </ol>
+      )}
+
+      {!loading && !failed && notes.length > 0 && (
+        <div
+          className="flex flex-col items-center"
+          style={{ gap: "var(--ts-space-sm)", marginTop: "var(--ts-space-xl)" }}
+        >
+          <FormErrorBanner message={moreFailure} />
+          {complete ? (
+            <p className="t-caption" role="status">
+              {t("notes:paging.end", { count: total })}
+            </p>
+          ) : (
+            <>
+              <p className="t-caption">{t("notes:paging.shown", { shown: notes.length, total })}</p>
+              <Button onClick={() => void loadOlder()} disabled={loadingMore}>
+                {loadingMore ? t("notes:paging.loading") : t("notes:paging.older")}
+              </Button>
+            </>
+          )}
+        </div>
       )}
 
       {open?.kind === "edit" && (

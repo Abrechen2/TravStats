@@ -61,5 +61,13 @@
     "photoRemoveFailed": "The note is saved, but the photo could not be removed.",
     "photoTooLargeLocal": "The photo is too large (15 MB at most).",
     "photoTypeLocal": "Only images (JPEG, PNG, WebP, GIF, HEIC) can go with a note."
+  },
+  "paging": {
+    "older": "Load older",
+    "loading": "Loading …",
+    "shown": "{{shown}} of {{total}} notes",
+    "end_one": "That's all – {{count}} note.",
+    "end_other": "That's all – all {{count}} notes are loaded.",
+    "failed": "Older notes could not be loaded."
   }
 }

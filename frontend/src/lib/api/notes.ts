@@ -69,13 +69,14 @@ export function notePhotoSrc(photo: NotePhoto): string {
   return API_URL ? `${API_URL}${photo.url}` : photo.url;
 }
 
-/** The newest notes first; one generous page — a diary is read, not paged through. */
-export const NOTES_PAGE = 500;
+/** Notes per page of the timeline; older ones are loaded on request. */
+export const NOTES_PAGE = 100;
 
 export const notesApi = {
-  list: async (): Promise<{ notes: Note[]; total: number }> => {
+  /** One page, newest first, from `offset` in the server's order (occurredAt desc, id desc). */
+  list: async (offset = 0): Promise<{ notes: Note[]; total: number }> => {
     const { data } = await api.get<ListEnvelope<Note[]>>("/notes", {
-      params: { limit: NOTES_PAGE },
+      params: { limit: NOTES_PAGE, offset },
     });
     return { notes: data.data, total: data.meta.total };
   },
