@@ -193,7 +193,7 @@ export function anchorsFor(input: AnchorInput): string[] {
 }
 
 export interface EnvelopeInput {
-  domain: "cruise" | "place";
+  domain: "cruise" | "place" | "package";
   trainingDataId: string;
   issuerName: string;
   senderDomain?: string;
@@ -216,7 +216,12 @@ export function buildWorkshopEnvelope(input: EnvelopeInput): TemplateEnvelope | 
     version: "1.0.0",
     issuer: {
       name: input.issuerName,
-      kind: input.domain === "cruise" ? "cruise-line" : "other",
+      kind:
+        input.domain === "cruise"
+          ? "cruise-line"
+          : input.domain === "package"
+            ? "tour-operator"
+            : "other",
       ...(input.senderDomain ? { keys: { senderDomains: [input.senderDomain] } } : {}),
     },
     markets: [],

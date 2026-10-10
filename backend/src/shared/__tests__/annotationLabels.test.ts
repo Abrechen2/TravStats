@@ -80,8 +80,27 @@ describe("the workshop's per-domain label sets", () => {
     ]);
   });
 
-  it("recognises only the four workshop domains", () => {
+  it("recognises only the workshop domains", () => {
     expect(isWorkshopDomain("lodging")).toBe(true);
+    expect(isWorkshopDomain("package")).toBe(true);
     expect(isWorkshopDomain("tour")).toBe(false);
+  });
+
+  it("offers the package contract's booking fields and one flight and one hotel row", () => {
+    expect(labelOfDomain("package", "issuedOn")).toEqual({
+      id: "issuedOn",
+      group: "booking",
+      kind: "date",
+    });
+    expect(labelGroupsForDomain("package")).toEqual([
+      "booking",
+      "packageTrip",
+      "money",
+      "flightRow",
+      "stayRow",
+    ]);
+    expect(isLabelOfDomain("package", "flightDepIata")).toBe(true);
+    expect(isLabelOfDomain("package", "stayCheckOut")).toBe(true);
+    expect(isLabelOfDomain("flight", "stayCheckOut")).toBe(false);
   });
 });

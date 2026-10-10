@@ -304,7 +304,11 @@ async function resolveDomain(
 
 /** The user's own active workshop templates that detection may count. */
 async function activeWorkshopDetectionTemplates(userId: string): Promise<TemplateEnvelope[]> {
-  return loadActiveWorkshopTemplates(userId, "place");
+  const [places, packages] = await Promise.all([
+    loadActiveWorkshopTemplates(userId, "place"),
+    loadActiveWorkshopTemplates(userId, "package"),
+  ]);
+  return [...places, ...packages];
 }
 
 /**
@@ -427,9 +431,12 @@ async function readPackage(
 ): Promise<{ body: PackageBody; sourceAttachment?: MailAttachment }> {
   // First matching template wins, so the user's home market goes first
   // (owner, 2026-10-09: markets order candidates, they never filter them).
-  const templates = templateRegistry.getActiveV2({
-    homeCountry: await homeCountryOf(input.userId),
-  });
+  // The repository's templates keep the first look; a package template the
+  // user derived in the workshop (forgejo#124) reads what they decline.
+  const templates = [
+    ...templateRegistry.getActiveV2({ homeCountry: await homeCountryOf(input.userId) }),
+    ...(input.userId ? await loadActiveWorkshopTemplates(input.userId, "package") : []),
+  ];
   const fromBody = parsePackageText(combined, templates);
   // The body read nothing: the operator's invoice may be the attachment. Its
   // reading replaces the empty answer; its `invalidReading` replaces only a

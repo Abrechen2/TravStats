@@ -51,7 +51,8 @@
     "flight": "Flug",
     "lodging": "Unterkunft",
     "cruise": "Kreuzfahrt",
-    "place": "Ort"
+    "place": "Ort",
+    "package": "Pauschalreise"
   },
   "labelGroups": {
     "flight": "Flug",
@@ -65,7 +66,10 @@
     "ship": "Schiff",
     "voyage": "Reise",
     "cabin": "Kabine",
-    "itinerary": "Reiseverlauf"
+    "itinerary": "Reiseverlauf",
+    "packageTrip": "Reise",
+    "flightRow": "Flugzeile",
+    "stayRow": "Hotelzeile"
   },
   "labels": {
     "flight": {
@@ -127,6 +131,28 @@
       "country": "Land",
       "visitedAt": "Besuchsdatum",
       "notes": "Notiz"
+    },
+    "package": {
+      "bookingReference": "Buchungsnummer",
+      "issuedOn": "Ausstellungsdatum",
+      "tripName": "Reisename",
+      "startDate": "Reisebeginn",
+      "endDate": "Reiseende",
+      "travellers": "Anzahl Reisende",
+      "totalPrice": "Gesamtpreis",
+      "currency": "Währung",
+      "flightNumber": "Flugnummer",
+      "flightDate": "Flugdatum",
+      "flightDepIata": "Abflughafen (Code)",
+      "flightDepCity": "Abflugort",
+      "flightDepTime": "Abflugzeit",
+      "flightArrIata": "Zielflughafen (Code)",
+      "flightArrCity": "Zielort",
+      "flightArrTime": "Ankunftszeit",
+      "stayName": "Hotel",
+      "stayCity": "Hotelort",
+      "stayCheckIn": "Anreise",
+      "stayCheckOut": "Abreise"
     }
   },
   "workshop": {
@@ -140,7 +166,8 @@
     "dismiss": "Ausblenden",
     "domainHints": {
       "cruise": "Markiere die Kopfdaten (Schiff, Buchungsnummer, Preis …) und dazu EINE Zeile des Reiseverlaufs: ihr Datum und ihren Hafen. Aus dieser Zeile liest das Template die ganze Hafenliste.",
-      "place": "Markiere mindestens den Namen des Ortes, dazu nach Wunsch Adresse, Kategorie und Besuchsdatum. Gelesene Orte landen in der Import-Vorschau unter Einstellungen → Import."
+      "place": "Markiere mindestens den Namen des Ortes, dazu nach Wunsch Adresse, Kategorie und Besuchsdatum. Gelesene Orte landen in der Import-Vorschau unter Einstellungen → Import.",
+      "package": "Markiere Buchungsnummer und Ausstellungsdatum, nach Wunsch Reisename, Daten und Preis — dazu EINE Flugzeile (Flugnummer, Datum, Abflug und Ziel) und/oder EINE Hotelzeile (Hotel, An- und Abreise). Aus jeder markierten Zeile wird die Regel für alle Zeilen dieser Art."
     }
   },
   "derivation": {
@@ -154,7 +181,13 @@
       "cruiseStopRowNotUnderstood": "Aus der markierten Zeile des Reiseverlaufs lässt sich keine Hafenliste lesen — es fehlt eine Überschrift über der Liste, oder die Markierung deckt nicht den ganzen Hafennamen ab.",
       "dateNotUnderstood": "Ein markiertes Datum wird nicht gelesen. Erwartet wird ein Datum wie 02.06.2027 oder 2. Juni 2027 — im Reiseverlauf auch ohne Jahr, z. B. 02.06.",
       "placeNeedsName": "Für einen Ort fehlt der Name: markiere, wie der Ort heißt. Ein Ort ohne Namen ist keine Zeile, die der Import anbieten kann.",
-      "templateReadsNothing": "Das abgeleitete Template liest aus diesem Dokument selbst nichts heraus, also wurde keines gespeichert. Prüfe die Markierungen."
+      "templateReadsNothing": "Das abgeleitete Template liest aus diesem Dokument selbst nichts heraus, also wurde keines gespeichert. Prüfe die Markierungen.",
+      "packageNeedsBookingFields": "Für Reiseunterlagen fehlen Buchungsnummer oder Ausstellungsdatum: markiere beide — ohne sie ist das Dokument keine lesbare Buchung.",
+      "packageNeedsRow": "Markiere mindestens eine Flugzeile oder eine Hotelzeile — eine Reise ohne Flug und ohne Hotel ergibt keinen Vorschlag.",
+      "packageFlightRowIncomplete": "Die Flugzeile ist unvollständig: markiere Flugnummer, Flugdatum, Abflug (Code oder Ort) und Ziel (Code oder Ort).",
+      "packageStayRowIncomplete": "Die Hotelzeile ist unvollständig: markiere Hotel, Anreise und Abreise.",
+      "packageRowTooFarApart": "Die Werte einer Zeile müssen in derselben oder in zwei aufeinanderfolgenden Zeilen stehen (Leerzeilen dazwischen sind in Ordnung).",
+      "packageRowNotUnderstood": "Aus der markierten Zeile lässt sich keine Regel bilden, die ihre eigenen Werte wieder liest. Markiere die Werte genau."
     }
   },
   "preview": {

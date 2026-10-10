@@ -73,9 +73,10 @@ export default function DomainPicker({
           {t(`parser:derivation.cannot.${spec.reason}`)}
         </p>
       )}
-      {spec.derivable && (value === "cruise" || value === "place") && (
+      {spec.derivable && (value === "cruise" || value === "place" || value === "package") && (
         // What to mark, said before the marking: a cruise is read from one
-        // itinerary row, which no other domain asks for (forgejo#124).
+        // itinerary row, a package from one flight and one hotel row, which no
+        // other domain asks for (forgejo#124).
         <p className="t-caption mt-3">{t(`parser:workshop.domainHints.${value}`)}</p>
       )}
     </div>

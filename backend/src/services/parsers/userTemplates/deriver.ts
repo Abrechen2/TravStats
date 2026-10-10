@@ -8,6 +8,7 @@ import { escapeRegex } from "./annotations";
 import { deriveLodgingTemplate } from "./lodgingDeriver";
 import { deriveCruiseTemplate } from "./cruiseDeriver";
 import { derivePlaceTemplate } from "./placeDeriver";
+import { derivePackageTemplate } from "./packageDeriver";
 import { senderAddressIn, senderDomainOf, subjectIn } from "./sampleHeaders";
 
 // Character classes and length quantifiers per field
@@ -205,9 +206,9 @@ function derivedName(issuer: string): string {
  *    nothing about extraction. It is `pending` now until a preview has run it
  *    against its own sample and a held-out one (`routes/parserTemplates.ts`).
  *
- * Cruise and place (forgejo#124) are written as v2 template envelopes, the
+ * Cruise, place and package (forgejo#124) are written as v2 template envelopes, the
  * shape the bundled templates have, and run by the same consumers
- * (`cruiseDeriver.ts`, `placeDeriver.ts`). Each deriver abstains with a reason
+ * (`cruiseDeriver.ts`, `placeDeriver.ts`, `packageDeriver.ts`). Each abstains with a reason
  * the page shows when the marks are not enough — a template that matches a
  * document and extracts nothing is worse than none, because its result is a
  * proposal a human accepts by habit (plan §7). A domain whose spec says
@@ -241,7 +242,7 @@ export async function deriveTemplateFromAnnotation(
     let patterns: Prisma.InputJsonValue;
     let name: string;
 
-    if (domain === "cruise" || domain === "place") {
+    if (domain === "cruise" || domain === "place" || domain === "package") {
       const input = {
         trainingDataId,
         subject: sample.subject,
@@ -250,7 +251,11 @@ export async function deriveTemplateFromAnnotation(
         ...(fingerprint.senderDomains[0] ? { senderDomain: fingerprint.senderDomains[0] } : {}),
       };
       const derived =
-        domain === "cruise" ? deriveCruiseTemplate(input) : derivePlaceTemplate(input);
+        domain === "cruise"
+          ? deriveCruiseTemplate(input)
+          : domain === "package"
+            ? derivePackageTemplate(input)
+            : derivePlaceTemplate(input);
       if (!derived.ok) {
         logger.info(
           { trainingDataId, domain, refusal: derived.refusal },
