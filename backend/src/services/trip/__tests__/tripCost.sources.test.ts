@@ -223,4 +223,34 @@ describe("trip cost — train rides, rentals, roadtrips and expenses", () => {
       excluded: { count: 1, reason: "unconvertible" },
     });
   });
+
+  it("converts an expense through the rate recorded on it (forgejo#150)", async () => {
+    const plain = await tripNamed("Plain");
+    await ride({ tripId: plain.id, price: 100 });
+    const withFerry = await tripNamed("Recorded ferry");
+    await ride({ tripId: withFerry.id, price: 60 });
+    await prisma.tripExpense.create({
+      data: {
+        userId,
+        tripId: withFerry.id,
+        kind: "ferry",
+        amount: 1000,
+        currency: "NOK",
+        amountBase: 86.5,
+        fxRate: 0.0865,
+        fxRateDate: new Date("2025-06-02T00:00:00Z"),
+        fxBaseCurrency: "EUR",
+        fxSource: "cached",
+      },
+    });
+
+    const account = await row(withFerry.id);
+    expect(account.spendByCurrency).toEqual({ EUR: 60, NOK: 1000 });
+    expect(account.spendBaseByCurrency).toEqual({ EUR: 86.5 });
+    // 146.5 EUR beats 100 EUR, and nothing had to be left out of the ranking.
+    expect(await mostExpensiveTrip(userId, EVERY_DOMAIN)).toMatchObject({
+      tripId: withFerry.id,
+      excluded: { count: 0 },
+    });
+  });
 });

@@ -1,6 +1,6 @@
 import { Prisma } from "../../prisma";
-import type { ExpenseDto } from "../../schemas/expense";
-import type { ExpenseKind } from "../../shared/expenses";
+import type { ExpenseDto, ExpenseFxDto } from "../../schemas/expense";
+import type { BaseConvertible, ExpenseFxSource, ExpenseKind } from "../../shared/expenses";
 import { dayColumn, storedDay } from "../tripSuggestions/time";
 import { EXPENSE_AMOUNT_SCALE } from "../../shared/expenses";
 
@@ -17,6 +17,16 @@ export const EXPENSE_SELECT = {
   currency: true,
   date: true,
   note: true,
+  payerCompanionId: true,
+  payerName: true,
+  // Read live, so a renamed companion is shown by its current name.
+  payerCompanion: { select: { displayName: true } },
+  amountBase: true,
+  fxRate: true,
+  fxRateDate: true,
+  fxBaseCurrency: true,
+  fxSource: true,
+  _count: { select: { documents: true } },
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -29,6 +39,36 @@ export const EXPENSE_ORDER: Prisma.TripExpenseOrderByWithRelationInput[] = [
   { createdAt: "asc" },
   { id: "asc" },
 ];
+
+/** The five exchange-rate columns, or null — `trip_expenses_fx_complete` keeps them all-or-none. */
+function fxOf(row: ExpenseRow): ExpenseFxDto | null {
+  if (
+    row.amountBase === null ||
+    row.fxRate === null ||
+    row.fxRateDate === null ||
+    row.fxBaseCurrency === null ||
+    row.fxSource === null
+  ) {
+    return null;
+  }
+  return {
+    amountBase: row.amountBase.toNumber(),
+    rate: row.fxRate,
+    rateDate: storedDay(row.fxRateDate),
+    baseCurrency: row.fxBaseCurrency,
+    source: row.fxSource as ExpenseFxSource,
+  };
+}
+
+/**
+ * The companion's current name while it is linked; the name stored with the
+ * expense once it is gone (the FK sets the id null, the name stays).
+ */
+function payerOf(row: ExpenseRow): ExpenseDto["payer"] {
+  const name = row.payerCompanion?.displayName ?? row.payerName;
+  if (name === null) return null;
+  return { companionId: row.payerCompanionId, name };
+}
 
 export function toExpenseDto(row: ExpenseRow): ExpenseDto {
   return {
@@ -45,8 +85,21 @@ export function toExpenseDto(row: ExpenseRow): ExpenseDto {
     // date IS the local day (ADR 0002, D1).
     date: row.date ? storedDay(row.date) : null,
     note: row.note,
+    payer: payerOf(row),
+    fx: fxOf(row),
+    documentCount: row._count.documents,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+/** An expense DTO as `baseTotal` reads it. */
+export function baseConvertible(dto: ExpenseDto): BaseConvertible {
+  return {
+    amount: dto.amount,
+    currency: dto.currency,
+    amountBase: dto.fx?.amountBase ?? null,
+    fxBaseCurrency: dto.fx?.baseCurrency ?? null,
   };
 }
 

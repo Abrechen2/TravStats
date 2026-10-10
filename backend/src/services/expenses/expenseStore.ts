@@ -13,6 +13,8 @@ import {
   dateColumn,
   type ExpenseRow,
 } from "./expenseDto";
+import { expenseFxOnCreate, expenseFxOnUpdate, type ExpenseFxWrite } from "./expenseFx";
+import { payerColumns } from "./expensePayer";
 
 /**
  * Reading and writing expenses (forgejo#140) for the two path families: a
@@ -106,31 +108,53 @@ export async function listExpenses(userId: string, scope: ExpenseScope): Promise
   });
 }
 
+/** One expense as every response carries it — after a write that touched its documents. */
+export async function readExpense(expenseId: string): Promise<ExpenseRow> {
+  return prisma.tripExpense.findUniqueOrThrow({ where: { id: expenseId }, select: EXPENSE_SELECT });
+}
+
+/** A write's row, and what became of its exchange rate. */
+export interface ExpenseWrite {
+  row: ExpenseRow;
+  fx: ExpenseFxWrite;
+}
+
 export async function createExpense(
   userId: string,
   scope: ExpenseScope,
   input: CreateExpenseInput
-): Promise<ExpenseRow> {
+): Promise<ExpenseWrite> {
   const target = await resolveTarget(userId, scope, input.routeId);
   await assertStops(userId, target, {
     pinned: input.stopId,
     legEnds: [input.legFromStopId, input.legToStopId],
   });
-  return prisma.tripExpense.create({
+  const payer = await payerColumns(userId, input.payer);
+  const amount = amountColumn(input.amount);
+  const date = dateColumn(input.date ?? null);
+  const fx = await expenseFxOnCreate(
+    userId,
+    { amount: amount.toNumber(), currency: input.currency, date },
+    input.fx
+  );
+  const row = await prisma.tripExpense.create({
     data: {
       userId,
       ...target,
       kind: input.kind,
-      amount: amountColumn(input.amount),
+      amount,
       currency: input.currency,
-      date: dateColumn(input.date ?? null),
+      date,
       note: input.note ?? null,
       stopId: input.stopId ?? null,
       legFromStopId: input.legFromStopId ?? null,
       legToStopId: input.legToStopId ?? null,
+      ...payer,
+      ...fx.columns,
     },
     select: EXPENSE_SELECT,
   });
+  return { row, fx };
 }
 
 async function findOwned(userId: string, scope: ExpenseScope, expenseId: string) {
@@ -143,6 +167,14 @@ async function findOwned(userId: string, scope: ExpenseScope, expenseId: string)
       stopId: true,
       legFromStopId: true,
       legToStopId: true,
+      amount: true,
+      currency: true,
+      date: true,
+      amountBase: true,
+      fxRate: true,
+      fxRateDate: true,
+      fxBaseCurrency: true,
+      fxSource: true,
     },
   });
   if (!row) throw new AppError("Expense not found", 404);
@@ -159,7 +191,7 @@ export async function updateExpense(
   scope: ExpenseScope,
   expenseId: string,
   input: UpdateExpenseInput
-): Promise<ExpenseRow> {
+): Promise<ExpenseWrite> {
   const row = await findOwned(userId, scope, expenseId);
   const after = {
     stopId: "stopId" in input ? (input.stopId ?? null) : row.stopId,
@@ -173,16 +205,34 @@ export async function updateExpense(
     { tripId: row.tripId, routeId: row.routeId },
     { pinned: input.stopId, legEnds: [input.legFromStopId, input.legToStopId] }
   );
-  const data: Prisma.TripExpenseUncheckedUpdateInput = {};
+  const payer = await payerColumns(userId, input.payer);
+  const next = {
+    amount: input.amount !== undefined ? amountColumn(input.amount) : row.amount,
+    currency: input.currency ?? row.currency,
+    date: "date" in input ? dateColumn(input.date ?? null) : row.date,
+  };
+  const fx = await expenseFxOnUpdate(
+    userId,
+    { ...row, amount: row.amount.toNumber(), amountBase: row.amountBase?.toNumber() ?? null },
+    { ...next, amount: next.amount.toNumber() },
+    input.fx,
+    { expenseId: row.id, userId }
+  );
+  const data: Prisma.TripExpenseUncheckedUpdateInput = { ...payer, ...fx.columns };
   if (input.kind !== undefined) data.kind = input.kind;
-  if (input.amount !== undefined) data.amount = amountColumn(input.amount);
+  if (input.amount !== undefined) data.amount = next.amount;
   if (input.currency !== undefined) data.currency = input.currency;
-  if ("date" in input) data.date = dateColumn(input.date ?? null);
+  if ("date" in input) data.date = next.date;
   if ("note" in input) data.note = input.note ?? null;
   if ("stopId" in input) data.stopId = input.stopId ?? null;
   if ("legFromStopId" in input) data.legFromStopId = input.legFromStopId ?? null;
   if ("legToStopId" in input) data.legToStopId = input.legToStopId ?? null;
-  return prisma.tripExpense.update({ where: { id: row.id }, data, select: EXPENSE_SELECT });
+  const updated = await prisma.tripExpense.update({
+    where: { id: row.id },
+    data,
+    select: EXPENSE_SELECT,
+  });
+  return { row: updated, fx };
 }
 
 export async function deleteExpense(

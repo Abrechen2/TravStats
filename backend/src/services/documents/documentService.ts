@@ -69,6 +69,7 @@ const OWNER_COLUMN = {
   railJourney: "railJourneyId",
   rentalBooking: "rentalBookingId",
   busJourney: "busJourneyId",
+  tripExpense: "tripExpenseId",
 } as const satisfies Record<EntryType, keyof Document>;
 
 /**
@@ -166,6 +167,7 @@ const NO_OWNER: Prisma.DocumentWhereInput = {
   railJourneyId: null,
   rentalBookingId: null,
   busJourneyId: null,
+  tripExpenseId: null,
 };
 
 function ownerWhere(entry: EntryRef): Prisma.DocumentWhereInput {
@@ -181,6 +183,7 @@ interface OwnerColumns {
   railJourneyId: string | null;
   rentalBookingId: string | null;
   busJourneyId: string | null;
+  tripExpenseId: string | null;
   linkedAt: Date | null;
   unlinkedAt: Date | null;
   /** Cleared off a rental; kept (absent) while the document stays with one. */
@@ -197,6 +200,7 @@ function ownerData(entry: EntryRef | null): OwnerColumns {
     railJourneyId: entry?.type === "railJourney" ? entry.id : null,
     rentalBookingId: entry?.type === "rentalBooking" ? entry.id : null,
     busJourneyId: entry?.type === "busJourney" ? entry.id : null,
+    tripExpenseId: entry?.type === "tripExpense" ? entry.id : null,
     linkedAt: entry ? new Date() : null,
     // The other half of the same fact, and written here for the same reason
     // `linkedAt` is: this is the ONE place the owner columns are decided, so
@@ -235,7 +239,9 @@ export async function assertEntryOwned(userId: string, entry: EntryRef): Promise
                 ? await prisma.railJourney.findFirst({ where, select })
                 : entry.type === "rentalBooking"
                   ? await prisma.rentalBooking.findFirst({ where, select })
-                  : await prisma.busJourney.findFirst({ where, select });
+                  : entry.type === "busJourney"
+                    ? await prisma.busJourney.findFirst({ where, select })
+                    : await prisma.tripExpense.findFirst({ where, select });
   if (!found) throw new AppError("Entry not found", 404, "DOCUMENT_ENTRY_NOT_FOUND");
 }
 

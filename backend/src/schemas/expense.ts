@@ -1,5 +1,5 @@
 import { z } from "./zod";
-import { EXPENSE_KINDS } from "../shared/expenses";
+import { CLIENT_FX_SOURCES, EXPENSE_FX_SOURCES, EXPENSE_KINDS } from "../shared/expenses";
 import { currencyField } from "./lodging";
 
 /**
@@ -44,6 +44,42 @@ const expenseFields = {
     }),
   legFromStopId: z.string().uuid().nullable().optional(),
   legToStopId: z.string().uuid().nullable().optional(),
+  payer: z
+    .union([
+      z.object({ companionId: z.string().uuid() }).strict(),
+      z.object({ name: z.string().trim().min(1).max(100) }).strict(),
+    ])
+    .nullable()
+    .optional()
+    .openapi({
+      description:
+        "Who paid (forgejo#150) — recorded, never split. One of the caller's companions " +
+        "(`{ companionId }`, from `GET /companions`), or a plain name (`{ name }`) for a " +
+        "one-off payer or a capture made offline. Null clears it; absent leaves it alone.",
+    }),
+  fx: z
+    .object({
+      rate: z
+        .number()
+        .positive()
+        .max(MAX_AMOUNT)
+        .openapi({ description: "Units of `baseCurrency` per one unit of `currency`." }),
+      rateDate: calendarDay.openapi({ description: "The day the rate is for, `YYYY-MM-DD`." }),
+      baseCurrency: currencyField.openapi({ description: "ISO 4217, upper-case." }),
+      source: z.enum(CLIENT_FX_SOURCES).openapi({
+        description: "`cached`: the client's offline rate table; `manual`: typed by the user.",
+      }),
+    })
+    .strict()
+    .nullable()
+    .optional()
+    .openapi({
+      description:
+        "A rate the client already has (forgejo#150), stored as given; `amountBase` is " +
+        "`amount × rate`, rounded to the base currency's minor unit. Absent: the server " +
+        "looks a rate up itself for a dated expense (create), or when amount, currency or " +
+        "day changed (update). Null removes the stored rate.",
+    }),
 };
 
 /** Both ends of the way between two stations, or neither. */
@@ -74,6 +110,16 @@ export const createExpenseSchema = z
           "trip instead of on the trip, so it moves with the section. Its stops must then be " +
           "that section's. Refused on the route-scoped paths, which already name one.",
       }),
+    documentIds: z
+      .array(z.string().uuid())
+      .max(20)
+      .optional()
+      .openapi({
+        description:
+          "Kept documents (`POST /documents`) to file with the new expense — a receipt " +
+          "uploaded before its expense existed. An unknown, foreign or already-filed id " +
+          "fails the create.",
+      }),
   })
   .strict()
   .refine(legPairComplete, { message: LEG_PAIR_MESSAGE, path: ["legToStopId"] })
@@ -96,6 +142,8 @@ export const updateExpenseSchema = z
     stopId: expenseFields.stopId,
     legFromStopId: expenseFields.legFromStopId,
     legToStopId: expenseFields.legToStopId,
+    payer: expenseFields.payer,
+    fx: expenseFields.fx,
   })
   .strict()
   .refine((b) => "legFromStopId" in b === "legToStopId" in b, {
@@ -133,22 +181,104 @@ export const expenseSchema = z
     currency: z.string(),
     date: z.string().nullable().openapi({ description: "`YYYY-MM-DD`, the local day; or null." }),
     note: z.string().nullable(),
+    payer: z
+      .object({
+        companionId: z.string().uuid().nullable().openapi({
+          description: "The companion who paid; null for a plain name or a deleted companion.",
+        }),
+        name: z.string().openapi({
+          description:
+            "The companion's current name when linked, else the name recorded — which " +
+            "survives the companion's deletion.",
+        }),
+      })
+      .nullable()
+      .openapi({ description: "Who paid; null when not recorded." }),
+    fx: z
+      .object({
+        amountBase: z.number().openapi({ description: "`amount` in `baseCurrency`." }),
+        rate: z
+          .number()
+          .openapi({ description: "Units of `baseCurrency` per unit of `currency`." }),
+        rateDate: z.string().openapi({ description: "`YYYY-MM-DD`, the day the rate is for." }),
+        baseCurrency: z.string(),
+        source: z.enum(EXPENSE_FX_SOURCES).openapi({
+          description:
+            "`ecb` / `cdn`: looked up by the server; `cached`: a client's offline rate; " +
+            "`manual`: typed. Never present a `cached` or `manual` rate as an official one.",
+        }),
+      })
+      .nullable()
+      .openapi({
+        description:
+          "The recorded exchange rate, or null — undated, or no rate could be had. Such " +
+          "an expense is totalled in its own currency only.",
+      }),
+    documentCount: z.number().int().openapi({
+      description: "Documents (receipts) filed with it: `GET /expenses/{id}/documents`.",
+    }),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
   })
   .openapi("TripExpense");
+
+export const baseTotalSchema = z
+  .object({
+    currency: z.string().openapi({ description: "The caller's current base currency." }),
+    amount: z.number().openapi({
+      description:
+        "Every expense paid in `currency`, plus every one whose recorded rate converts " +
+        "into `currency`. Covers only those: see `unconverted`.",
+    }),
+    unconverted: byCurrency.openapi({
+      description:
+        "What could not honestly be added, per its own currency: no rate recorded, or one " +
+        "recorded into a base the caller has since left. Empty means `amount` is complete.",
+    }),
+  })
+  .openapi("ExpenseBaseTotal");
 
 export const expenseListSchema = z.object({
   expenses: z.array(expenseSchema).openapi({
     description: "Dated ones by day, undated ones last; ties by creation.",
   }),
   totals: byCurrency,
+  baseTotal: baseTotalSchema,
+});
+
+/**
+ * What became of the exchange rate on a create or an update (forgejo#150) —
+ * the `fxSnapshot` convention of flights and cruises, widened by what only an
+ * expense has: a client-supplied rate and an explicit removal.
+ */
+export const EXPENSE_FX_OUTCOMES = [
+  "supplied",
+  "snapshotted",
+  "unchanged",
+  "undated",
+  "removed",
+  "keptStoredRate",
+  "lookupFailed",
+] as const;
+export type ExpenseFxOutcome = (typeof EXPENSE_FX_OUTCOMES)[number];
+
+export const expenseWriteResultSchema = z.object({
+  expense: expenseSchema,
+  fxSnapshot: z.enum(EXPENSE_FX_OUTCOMES).openapi({
+    description:
+      "`supplied`: the body's `fx` was stored. `snapshotted`: the server looked a rate up. " +
+      "`unchanged`: amount, currency and day did not move, so the stored rate (if any) " +
+      "stands. `undated`: no day, so no rate. `removed`: `fx: null` cleared it. " +
+      "`keptStoredRate`: the lookup failed and the stored rate re-priced the new amount. " +
+      "`lookupFailed`: no rate could be had — the expense has none now; say so.",
+  }),
 });
 
 /** What `GET /roadtrips/{id}` adds: the money per station, per leg and in total. */
 export const roadtripCostsSchema = z
   .object({
     total: byCurrency,
+    totalBase: baseTotalSchema,
     byStation: z
       .array(z.object({ stopId: z.string().uuid(), byCurrency }))
       .openapi({ description: "Stations with at least one expense pinned to them." }),
@@ -169,3 +299,4 @@ export const roadtripCostsSchema = z
 
 export type ExpenseDto = z.infer<typeof expenseSchema>;
 export type RoadtripCosts = z.infer<typeof roadtripCostsSchema>;
+export type ExpenseFxDto = NonNullable<ExpenseDto["fx"]>;

@@ -15,6 +15,10 @@
  * unpinned. A refused row is one whose money cannot be read: no amount, or a
  * currency that is not one.
  *
+ * The exchange rate follows the web's rule (`expenses/expenseFx.ts`): a new
+ * row looks one up for its day, an edited one only when amount, currency or
+ * day moved — and a failed lookup is a note on the row, never silence.
+ *
  * Nothing is pruned in `replace` mode, for the reason stays and cruise stops
  * are not: costs go with their roadtrip, and a sheet merely filtered in Excel
  * must not cost the ones it hides.
@@ -24,6 +28,7 @@ import { prisma } from "../../db";
 import { isCurrencyCode } from "../../shared/currencies";
 import { EXPENSE_KINDS } from "../../shared/expenses";
 import { amountColumn, dateColumn } from "../expenses/expenseDto";
+import { expenseFxNote, expenseFxOnCreate, expenseFxOnUpdate } from "../expenses/expenseFx";
 import * as cell from "./cells";
 import { type Ctx, MATCHED, definedOnly, errorRow, isPending, norm } from "./context";
 import { refName, resolveParent } from "./references";
@@ -221,24 +226,47 @@ export async function importRoadtripExpenses(
           : "legFromStopId" in data
             ? { stopId: null }
             : {};
+      let fxNote: string | null = null;
       if (!ctx.dryRun) {
+        const next = {
+          amount: data.amount !== undefined ? amountColumn(data.amount) : stored.amount,
+          currency: data.currency ?? stored.currency,
+          date: "date" in data ? dateColumn(data.date ?? null) : stored.date,
+        };
+        const fx = await expenseFxOnUpdate(
+          ctx.userId,
+          {
+            ...stored,
+            amount: stored.amount.toNumber(),
+            amountBase: stored.amountBase?.toNumber() ?? null,
+          },
+          { ...next, amount: next.amount.toNumber() },
+          undefined,
+          { source: "xlsx_import", expenseId: targetId }
+        );
+        fxNote = expenseFxNote(fx.outcome);
         await prisma.tripExpense.update({
           where: { id: targetId },
-          data: {
-            ...data,
-            ...clears,
-            ...(data.amount !== undefined ? { amount: amountColumn(data.amount) } : {}),
-            ...("date" in data ? { date: dateColumn(data.date ?? null) } : {}),
-          },
+          data: { ...data, ...clears, ...next, ...fx.columns },
         });
         ctx.wrote = true;
       }
-      out.push({ row: rowNo, action: "update", id: targetId, label, message, dropped });
+      const notes = fxNote ? { notes: [fxNote] } : {};
+      out.push({ row: rowNo, action: "update", id: targetId, label, message, dropped, ...notes });
       continue;
     }
 
     let newId: string | null = null;
+    let createNote: string | null = null;
     if (!ctx.dryRun && !isPending(roadtripId)) {
+      const amount = amountColumn(money.amount);
+      const date = dateColumn(money.date ?? null);
+      const fx = await expenseFxOnCreate(
+        ctx.userId,
+        { amount: amount.toNumber(), currency: money.currency, date },
+        undefined
+      );
+      createNote = expenseFxNote(fx.outcome);
       const created = await prisma.tripExpense.create({
         data: {
           userId: ctx.userId,
@@ -252,6 +280,7 @@ export async function importRoadtripExpenses(
           stopId: pins.stopId ?? null,
           legFromStopId: pins.legFromStopId ?? null,
           legToStopId: pins.legToStopId ?? null,
+          ...fx.columns,
         },
         select: { id: true },
       });
@@ -259,7 +288,8 @@ export async function importRoadtripExpenses(
       ctx.claimed.add(newId);
       ctx.wrote = true;
     }
-    out.push({ row: rowNo, action: "create", id: newId, label, dropped });
+    const notes = createNote ? { notes: [createNote] } : {};
+    out.push({ row: rowNo, action: "create", id: newId, label, dropped, ...notes });
   }
 
   return summarise(sheet.key, out, 0);

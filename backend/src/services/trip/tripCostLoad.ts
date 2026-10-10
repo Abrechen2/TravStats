@@ -13,7 +13,10 @@ import { rowsIfVisible, type VisibleDomains } from "../domainVisibility";
 
 const PRICE = { price: true, currency: true, priceBase: true, fxBaseCurrency: true } as const;
 const BOOKING_PRICE = { select: PRICE } as const;
-const AMOUNT = { select: { amount: true, currency: true } } as const;
+/** An expense's amount and its recorded conversion (forgejo#150). */
+const AMOUNT = {
+  select: { amount: true, currency: true, amountBase: true, fxBaseCurrency: true },
+} as const;
 /**
  * The two amounts `rentalCounting.rentalCost` chooses between, each with its
  * own snapshot. Named columns only, never a spread of the model: a deposit
@@ -90,10 +93,17 @@ export const TRIP_COST_SELECT = {
 
 export type TripCostRow = Prisma.TripGetPayload<{ select: typeof TRIP_COST_SELECT }>;
 
-/** An expense amount as the rule sums it; the column is an exact decimal. */
-export const expenseMoney = (e: { amount: Prisma.Decimal; currency: string }) => ({
+/** An expense amount as the rule sums it; the columns are exact decimals. */
+export const expenseMoney = (e: {
+  amount: Prisma.Decimal;
+  currency: string;
+  amountBase?: Prisma.Decimal | null;
+  fxBaseCurrency?: string | null;
+}) => ({
   amount: e.amount.toNumber(),
   currency: e.currency,
+  amountBase: e.amountBase?.toNumber() ?? null,
+  fxBaseCurrency: e.fxBaseCurrency ?? null,
 });
 
 /**
