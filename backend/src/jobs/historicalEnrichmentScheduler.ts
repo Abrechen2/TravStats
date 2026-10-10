@@ -6,6 +6,7 @@
  */
 
 import cron from "node-cron";
+import type { ScheduledTask } from "node-cron";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { DEMO_USERNAME } from "../utils/sharedDemo";
@@ -19,7 +20,7 @@ import { applyPendingUpdate } from "../services/pendingUpdateService";
 import { schedulerZone } from "../shared/time/schedulerZone";
 
 let schedulerRunning = false;
-let schedulerTask: cron.ScheduledTask | null = null;
+let schedulerTask: ScheduledTask | null = null;
 
 /**
  * Process historical enrichment for a single user

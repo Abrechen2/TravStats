@@ -199,6 +199,13 @@ describe("Roadtrips", () => {
       ],
     });
     expect(detail.status).toBe(200);
+    // forgejo#179: the page reads driven against planned from the server.
+    // Every station of this roadtrip lies in July 2026 — nothing is ahead.
+    expect(detail.body.progress).toMatchObject({
+      roadKm: { current: 0, planned: 0 },
+      roadKmBySource: expect.any(Object),
+    });
+    expect(["past", "undated"]).toContain(detail.body.progress.phase);
     expect(seeded.status).toBe(200);
     const [a, b] = seeded.body.stations;
     const reordered = await stations().send({

@@ -9,9 +9,9 @@
  * proposal from the file; it never takes ids from the client.
  */
 import { prisma } from "../../../db";
-import { toLocal } from "../../../shared/time/instant";
-import { normalizeLodgingName } from "../../lodging/lodgingImportPreview";
+import { fileFlightDay, flightDepartureTime } from "../package/flightClock";
 import { sha256Hex } from "../../documents/documentStore";
+import { knownPhotoHashes, photoHash } from "./photoIdentity";
 import {
   bookingByReference,
   existingCruiseByRef,
@@ -51,7 +51,7 @@ export function fileSpan(file: TripFile): { first: string; last: string } | null
   const last = file.trip.endDay ?? slice(file.trip.endDate);
   if (first && last) return { first, last: last < first ? first : last };
   const days = [
-    ...file.flights.map((f) => dayAt(f.departureTime, f.depTimezone)),
+    ...file.flights.map(fileFlightDay),
     ...file.stays.flatMap((s) => [
       s.checkInDate ?? slice(s.checkIn),
       s.checkOutDate ?? slice(s.checkOut),
@@ -139,10 +139,6 @@ function decide(existing: ExistingEntry | null, tripId: string | null, booked: b
 const flightLabel = (f: TripFileFlight): string =>
   `${f.flightNumber ?? "?"} ${f.depIata ?? f.depName ?? "?"}–${f.arrIata ?? f.arrName ?? "?"}`;
 
-/** The `HH:MM` of an instant at a zone, for the package flight matcher. */
-const wallTime = (iso: string, zone: string | null): string =>
-  toLocal(iso, zone ?? "UTC").local.slice(11, 16);
-
 async function matchFlight(userId: string, f: TripFileFlight): Promise<ExistingEntry | null> {
   if (f.externalRef) {
     const byRef = await prisma.flight.findFirst({
@@ -151,11 +147,11 @@ async function matchFlight(userId: string, f: TripFileFlight): Promise<ExistingE
     });
     if (byRef) return byRef;
   }
-  const day = dayAt(f.departureTime, f.depTimezone);
+  const day = fileFlightDay(f);
   if (!f.flightNumber || !day || !f.departureTime) return null;
   return existingFlight(
     userId,
-    { flightNumber: f.flightNumber, date: day, depTime: wallTime(f.departureTime, f.depTimezone) },
+    { flightNumber: f.flightNumber, date: day, depTime: flightDepartureTime(f.departureTime, f) },
     f.depIata,
     f.arrIata
   );
@@ -174,17 +170,16 @@ async function proposeEntries(
       kind: "flight",
       ...decide(await matchFlight(userId, f), tripId, f.bookingKey !== null),
       label: flightLabel(f),
-      day: dayAt(f.departureTime, f.depTimezone),
+      day: fileFlightDay(f),
     });
   }
   const index = await lodgingIndex(
     userId,
-    file.stays.map((s) => s.lodging.name)
+    file.stays.map((s) => s.lodging)
   );
   for (const s of file.stays) {
     const day = s.checkInDate ?? slice(s.checkIn);
-    const lodgingId = index.lodgings.get(normalizeLodgingName(s.lodging.name)) ?? null;
-    const existing = lodgingId && day ? (index.stays.get(`${lodgingId}|${day}`) ?? null) : null;
+    const existing = index.resolve(s.lodging, day).stay;
     entries.push({
       key: s.key,
       kind: "stay",
@@ -291,19 +286,9 @@ async function proposeFiles(
     ).map((d) => d.sha256)
   );
   const newDocs = hashes.filter((h) => !known.has(h)).length;
-  const photoKeys = new Set(
-    tripId
-      ? (
-          await prisma.tripPhoto.findMany({
-            where: { tripId },
-            select: { sizeBytes: true, takenAt: true },
-          })
-        ).map((p) => photoIdentity(p.sizeBytes, p.takenAt?.toISOString() ?? null))
-      : []
-  );
-  const newPhotos = file.photos.filter(
-    (p) => !photoKeys.has(photoIdentity(blobs.get(p.file)!.length, p.takenAt))
-  ).length;
+  const incoming = file.photos.map((p) => blobs.get(p.file)!);
+  const knownPhotos = await knownPhotoHashes(tripId, incoming);
+  const newPhotos = incoming.filter((b) => !knownPhotos.has(photoHash(b))).length;
   const journal = file.journal ?? [];
   const journalKeys = new Set(
     tripId
@@ -325,9 +310,6 @@ async function proposeFiles(
   };
 }
 
-/** A photo already on the trip: the same bytes count and capture time. */
-export const photoIdentity = (size: number, takenAt: string | null): string =>
-  `${size}|${takenAt ? new Date(takenAt).toISOString() : ""}`;
 export const journalIdentity = (date: string, body: string): string =>
   `${new Date(date).toISOString()}|${body}`;
 

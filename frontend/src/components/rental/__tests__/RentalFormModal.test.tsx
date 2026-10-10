@@ -26,10 +26,11 @@ vi.mock("../../../lib/api/rental", () => ({
 import { RentalFormModal } from "../RentalFormModal";
 import { __resetRentalProviderSuggestions } from "../rentalProviders";
 import { makeRental } from "./rentalFixture";
+import { getLabelled, getNamed } from "../../../__tests__/helpers/namedElement";
 
 /** The form is three steps over one draft (forgejo#236); a field is reached by its step. */
 const toStep = (step: "booking" | "pickup" | "return"): void => {
-  fireEvent.click(screen.getByRole("tab", { name: new RegExp(`rental:form\\.steps\\.${step}`) }));
+  fireEvent.click(getNamed("tab", new RegExp(`rental:form\\.steps\\.${step}`)));
 };
 
 const HITS = [
@@ -90,7 +91,7 @@ describe("RentalFormModal", () => {
     const list = await screen.findByRole("listbox");
     expect(within(list).getAllByRole("option")).toHaveLength(2);
     fireEvent.click(screen.getByText("Frankfurt Airport"));
-    fireEvent.click(screen.getByRole("button", { name: "rental:form.save" }));
+    fireEvent.click(getNamed("button", "rental:form.save"));
     await waitFor(() => expect(update).toHaveBeenCalled());
     expect(update.mock.calls[0][1].pickupStation).toMatchObject({ airportId: 9, country: "DE" });
   });
@@ -104,14 +105,14 @@ describe("RentalFormModal", () => {
     });
     const onSaved = vi.fn();
     render(<RentalFormModal rental={makeRental()} onClose={vi.fn()} onSaved={onSaved} />);
-    fireEvent.click(screen.getByRole("button", { name: "rental:form.save" }));
+    fireEvent.click(getNamed("button", "rental:form.save"));
     expect(await screen.findByText("rental:form.errors.geocoderUnavailable")).toBeTruthy();
     expect(onSaved).not.toHaveBeenCalled();
   });
 
   it("does not send a draft whose station nothing places", async () => {
     render(<RentalFormModal rental={null} onClose={vi.fn()} onSaved={vi.fn()} />);
-    fireEvent.click(screen.getByRole("button", { name: "rental:form.save" }));
+    fireEvent.click(getNamed("button", "rental:form.save"));
     expect(
       (await screen.findAllByText("rental:form.errors.stationUnplaced")).length
     ).toBeGreaterThan(0);
@@ -138,7 +139,7 @@ describe("RentalFormModal", () => {
       );
     await waitFor(() => expect(offered()).toEqual(["Sixt", "Share Now"]));
     fireEvent.change(provider, { target: { value: "Autohaus Meier" } });
-    fireEvent.click(screen.getByRole("button", { name: "rental:form.save" }));
+    fireEvent.click(getNamed("button", "rental:form.save"));
     await waitFor(() => expect(update).toHaveBeenCalled());
     expect(update.mock.calls[0][1].provider).toBe("Autohaus Meier");
   });
@@ -160,10 +161,10 @@ describe("RentalFormModal", () => {
     update.mockResolvedValue(makeRental());
     render(<RentalFormModal rental={makeRental()} onClose={vi.fn()} onSaved={vi.fn()} />);
     toStep("pickup");
-    fireEvent.change(screen.getByLabelText("rental:form.licensePlate"), {
+    fireEvent.change(getLabelled("rental:form.licensePlate"), {
       target: { value: " F-TS 2026 " },
     });
-    fireEvent.click(screen.getByRole("button", { name: "rental:form.save" }));
+    fireEvent.click(getNamed("button", "rental:form.save"));
     await waitFor(() => expect(update).toHaveBeenCalled());
     expect(update.mock.calls[0][1].licensePlate).toBe("F-TS 2026");
   });
@@ -175,15 +176,15 @@ describe("RentalFormModal", () => {
     toStep("return");
     expect(screen.getByTestId("rental-form-driven").textContent).toBe("rental:form.drivenUnknown");
     toStep("pickup");
-    fireEvent.change(screen.getByLabelText("rental:form.odometerOutKm"), {
+    fireEvent.change(getLabelled("rental:form.odometerOutKm"), {
       target: { value: "12.000" },
     });
     toStep("return");
-    fireEvent.change(screen.getByLabelText("rental:form.odometerInKm"), {
+    fireEvent.change(getLabelled("rental:form.odometerInKm"), {
       target: { value: "12.634" },
     });
     expect(screen.getByTestId("rental-form-driven").textContent).toBe("rental:form.driven");
-    fireEvent.click(screen.getByRole("button", { name: "rental:form.save" }));
+    fireEvent.click(getNamed("button", "rental:form.save"));
     await waitFor(() => expect(update).toHaveBeenCalled());
     expect(update.mock.calls[0][1]).toMatchObject({ odometerOutKm: 12_000, odometerInKm: 12_634 });
     // No correction was typed: none is sent, so nothing is labelled "by hand".
@@ -193,16 +194,16 @@ describe("RentalFormModal", () => {
   it("refuses a return reading below the pick-up one beside that field, and does not save", async () => {
     render(<RentalFormModal rental={makeRental()} onClose={vi.fn()} onSaved={vi.fn()} />);
     toStep("pickup");
-    fireEvent.change(screen.getByLabelText("rental:form.odometerOutKm"), {
+    fireEvent.change(getLabelled("rental:form.odometerOutKm"), {
       target: { value: "12634" },
     });
     toStep("return");
-    fireEvent.change(screen.getByLabelText("rental:form.odometerInKm"), {
+    fireEvent.change(getLabelled("rental:form.odometerInKm"), {
       target: { value: "12000" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "rental:form.save" }));
+    fireEvent.click(getNamed("button", "rental:form.save"));
     // The error sits beside the field and is its description (forgejo#246).
-    const returnReading = screen.getByLabelText("rental:form.odometerInKm");
+    const returnReading = getLabelled("rental:form.odometerInKm");
     expect(returnReading.getAttribute("aria-invalid")).toBe("true");
     expect(
       document.getElementById(returnReading.getAttribute("aria-describedby") ?? "")?.textContent

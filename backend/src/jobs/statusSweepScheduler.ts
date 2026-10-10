@@ -7,13 +7,14 @@
  */
 
 import cron from "node-cron";
+import type { ScheduledTask } from "node-cron";
 import logger from "../utils/logger";
 import { sweepStatuses } from "../services/statusSweep";
 import { schedulerZone } from "../shared/time/schedulerZone";
 
 const CRON_EXPRESSION = "0 * * * *";
 
-let schedulerTask: cron.ScheduledTask | null = null;
+let schedulerTask: ScheduledTask | null = null;
 
 export function startStatusSweepScheduler(): void {
   if (schedulerTask) return;

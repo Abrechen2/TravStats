@@ -8,6 +8,7 @@
  */
 
 import cron from "node-cron";
+import type { ScheduledTask } from "node-cron";
 import logger from "../utils/logger";
 import { getCachedLogoEntry, isStale, listCachedLogoKeys } from "../services/airlineLogo/logoCache";
 import {
@@ -25,7 +26,7 @@ const CRON_EXPRESSION = "0 3 * * *";
 // hundred keys, and firing them all at once would look like an attack.
 const DELAY_BETWEEN_MS = 250;
 
-let schedulerTask: cron.ScheduledTask | null = null;
+let schedulerTask: ScheduledTask | null = null;
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 

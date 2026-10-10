@@ -85,6 +85,8 @@
     "spendOriginal": "Original",
     "spendBase": "In Basiswährung",
     "spendPerNight": "Ø Gesamtkosten pro Nacht",
+    "spendPerNightCalc_one": "{{total}} ÷ {{count}} Nacht = {{result}} – alle Kosten der gezählten Aufenthalte (Zimmer, Extras, Gebühren, Abgaben) je Nacht, wie gebucht, nicht pro Person.",
+    "spendPerNightCalc_other": "{{total}} ÷ {{count}} Nächte = {{result}} – alle Kosten der gezählten Aufenthalte (Zimmer, Extras, Gebühren, Abgaben) je Nacht, wie gebucht, nicht pro Person.",
     "noLocation": "Kein Standort hinterlegt",
     "setLocationNow": "Standort jetzt suchen",
     "deleteConfirmTitle": "Unterkunft löschen?",
@@ -103,6 +105,14 @@
     "deletePhotosNote_one": "Dazu 1 Foto der Unterkunft, das mit gelöscht wird.",
     "deletePhotosNote_other": "Dazu {{count}} Fotos der Unterkunft, die mit gelöscht werden.",
     "survivorTripsUnnamed": "verknüpfte Reisen"
+  },
+  "nightPrice": {
+    "roomRate": "Zimmer pro Nacht",
+    "average": "Ø pro Nacht gesamt",
+    "calculation_one": "({{total}} ÷ {{count}} Nacht = {{result}})",
+    "calculation_other": "({{total}} ÷ {{count}} Nächte = {{result}})",
+    "extras": "davon {{amount}} über den Zimmerpreis hinaus (Extras, Gebühren, Abgaben)",
+    "scope": "Gesamtpreis des Aufenthalts wie gebucht, nicht pro Person."
   },
   "field": {
     "name": "Name",

@@ -27,8 +27,9 @@ import { seedCuratedPlacesFromCSV } from "./seedCuratedPlacesFromCSV";
 import { seedAirlinesFromData } from "./seedAirlinesFromData";
 import { seedAircraftFromData } from "./seedAircraftFromData";
 
-// Load environment variables
-dotenv.config();
+// Load environment variables. `quiet` because dotenv >= 17 otherwise prints
+// an unstructured "injected env" banner to stdout beside the Pino JSON logs.
+dotenv.config({ quiet: true });
 
 // Validate environment variables
 import { validateEnv } from "./config/env";

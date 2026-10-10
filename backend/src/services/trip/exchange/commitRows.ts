@@ -16,6 +16,7 @@ import {
   getBaseCurrency,
   type FxColumns,
 } from "../../fx/snapshot";
+import { fileFlightDay } from "../package/flightClock";
 import { dayAt } from "../package/matchingEntries";
 import { normalizeCruiseStatus } from "../../../shared/statusDerivation";
 import type {
@@ -114,15 +115,7 @@ export async function resolveContext(userId: string, file: TripFile): Promise<Re
   for (const b of file.bookings)
     fx.set(`b:${b.key}`, await fxFor(b.price, b.currency, firstDay, base));
   for (const f of file.flights) {
-    fx.set(
-      f.key,
-      await fxFor(
-        f.private?.price,
-        f.private?.currency,
-        dayAt(f.departureTime, f.depTimezone),
-        base
-      )
-    );
+    fx.set(f.key, await fxFor(f.private?.price, f.private?.currency, fileFlightDay(f), base));
   }
   for (const s of file.stays) {
     fx.set(s.key, await fxFor(s.private?.totalPrice, s.private?.currency, s.checkInDate, base));

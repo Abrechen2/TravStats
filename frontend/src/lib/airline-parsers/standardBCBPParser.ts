@@ -98,10 +98,6 @@ export class StandardBCBPParser implements BoardingPassParser {
       pos += 1;
 
       // Parse conditional items if available
-      let gate: string | undefined;
-      let terminal: string | undefined;
-      let boardingTime: string | undefined;
-
       try {
         logger.debug(`[Standard BCBP Parser] Current position after mandatory: ${pos}`);
 
@@ -180,9 +176,11 @@ export class StandardBCBPParser implements BoardingPassParser {
         passengerStatus,
         seatClass,
         airlineName,
-        gate,
-        terminal,
-        boardingTime,
+        // Not in the mandatory BCBP fields; the conditional section is skipped
+        // above and these come from OCR instead.
+        gate: undefined,
+        terminal: undefined,
+        boardingTime: undefined,
         raw: barcodeData,
       };
     } catch (error) {
