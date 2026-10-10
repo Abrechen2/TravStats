@@ -104,6 +104,17 @@ const noCoordinates = () => ({
   // No time-model questions: the backfill check stays silent here.
   timeQuestions: [],
   homePeriods: [],
+  // No travel records: the record checks (forgejo#282) stay silent here.
+  records: {
+    flights: [],
+    railJourneys: [],
+    busJourneys: [],
+    cruises: [],
+    stays: [],
+    trips: [],
+    knownAirportCodes: new Set<string>(),
+    airportCatalogueEmpty: false,
+  },
 });
 
 /** One house whose stay runs backwards — the least arguable finding there is. */
