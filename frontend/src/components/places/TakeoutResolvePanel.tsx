@@ -97,7 +97,7 @@ export function TakeoutResolvePanel({ rows, listName, onResolved, t }: Props): J
         </div>
       )}
       {failure && (
-        <p role="alert" className="mt-2 text-red-300">
+        <p role="alert" className="mt-2 text-(--danger)">
           {t(`places:import.takeout.errors.${failure}`)}
         </p>
       )}
@@ -135,12 +135,12 @@ function ResolutionSummaryView({
           : t(`places:import.takeout.trip.${resolution.tripReason ?? "no_trip"}`)}
       </p>
       {!resolution.googleConfigured && (
-        <p data-testid="takeout-no-key" className="text-amber-300/90">
+        <p data-testid="takeout-no-key" className="text-(--warning)/90">
           {t("places:import.takeout.noKey")}
         </p>
       )}
       {summary.googleFailures.length > 0 && (
-        <p data-testid="takeout-google-failures" className="text-amber-300/90">
+        <p data-testid="takeout-google-failures" className="text-(--warning)/90">
           {t("places:import.takeout.googleFailed")}{" "}
           {summary.googleFailures.map((r) => listReason(r)).join(", ")}
         </p>

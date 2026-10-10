@@ -17,9 +17,9 @@ const INPUT =
   "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-2 py-1.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent)] focus:outline-none";
 
 const BADGE = "rounded px-1.5 py-0.5 text-[10px]";
-const WARN = `${BADGE} bg-amber-500/15 text-amber-300`;
-const GOOD = `${BADGE} bg-emerald-500/15 text-emerald-300`;
-const INFO = `${BADGE} bg-sky-500/15 text-sky-300`;
+const WARN = `${BADGE} bg-(--warning)/15 text-(--warning)`;
+const GOOD = `${BADGE} bg-(--success)/15 text-(--success)`;
+const INFO = `${BADGE} bg-(--accent-soft) text-(--accent)`;
 
 export function rowHasPosition<T extends { lat?: number | null; lon?: number | null }>(
   row: T
@@ -90,7 +90,7 @@ export function PlaceImportPreviewRow({ row, onChange, onPlace, t, coarse }: Pro
   const positioned = rowHasPosition(row);
   const undecided = row.decision === "";
   const rowClass = undecided
-    ? "border-t border-[var(--color-border)] bg-amber-500/5"
+    ? "border-t border-[var(--color-border)] bg-(--warning)/5"
     : "border-t border-[var(--color-border)]";
   const control = coarse ? `${INPUT} min-h-11` : INPUT;
 
@@ -119,7 +119,7 @@ export function PlaceImportPreviewRow({ row, onChange, onPlace, t, coarse }: Pro
               type="button"
               data-testid={`place-import-pick-${sourceRowIndex}`}
               onClick={(): void => onChange(sourceRowIndex, { picking: !row.picking })}
-              className={`rounded-md border border-amber-400/40 px-2 text-xs text-amber-300 hover:bg-amber-500/10 ${coarse ? "min-h-11" : "py-1"}`}
+              className={`rounded-md border border-(--warning)/40 px-2 text-xs text-(--warning) hover:bg-(--warning)/10 ${coarse ? "min-h-11" : "py-1"}`}
             >
               {t("places:import.pickPosition")}
             </button>
@@ -170,7 +170,7 @@ export function PlaceImportPreviewRow({ row, onChange, onPlace, t, coarse }: Pro
         </td>
       </tr>
       {row.picking && !positioned && (
-        <tr className="border-t border-[var(--color-border)] bg-amber-500/5">
+        <tr className="border-t border-[var(--color-border)] bg-(--warning)/5">
           <td colSpan={6} className="p-3">
             <LocationInput
               value={null}
