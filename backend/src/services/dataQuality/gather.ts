@@ -10,6 +10,7 @@ import type { LodgingWithStays } from "./checks/stayDatesReversed";
 import { loadOpenTimeQuestions, type TimeQuestion } from "../timeMigration/openQuestions";
 import { loadHomePeriods } from "../home/homeStore";
 import type { HomePeriod } from "../../utils/homeAirport";
+import { loadRecordSnapshot, type RecordSnapshot } from "./recordGather";
 
 /**
  * Everything the checks need from one account, read once.
@@ -53,6 +54,8 @@ export interface AccountSnapshot {
   timeQuestions: TimeQuestion[];
   /** Home by date, migrated from the old shape where needed — for the residence question. */
   homePeriods: HomePeriod[];
+  /** Flights, rides, cruises, stays and trips, for the record checks (forgejo#282). */
+  records: RecordSnapshot;
 }
 
 /**
@@ -257,5 +260,6 @@ export async function loadAccountSnapshot(
     countryLookup,
     timeQuestions: await loadOpenTimeQuestions(userId),
     homePeriods: await loadHomePeriods(userId),
+    records: await loadRecordSnapshot(userId),
   };
 }

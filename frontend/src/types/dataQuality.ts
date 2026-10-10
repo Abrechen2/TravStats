@@ -24,7 +24,26 @@ import type {
  * The time-model migration (ADR 0002, phase 3b) adds the rows a time value
  * lives on (`TimeFlagEntityType`): each open value is flagged on its own row.
  */
-export type DataQualityEntityType = "lodging" | "place" | "country" | "home" | TimeFlagEntityType;
+export type DataQualityEntityType =
+  "lodging" | "place" | "country" | "home" | TimeFlagEntityType | "bus_journey";
+
+/**
+ * The rows a record check (forgejo#282) sits on or names. Each is its own
+ * page, except a stay, which is edited on its lodging (`parentId`).
+ */
+export type RecordCheckDomain =
+  "flight" | "rail_journey" | "bus_journey" | "cruise" | "lodging_stay";
+
+/** The record-check kinds (forgejo#282) — duplicates, chronology, missing data. */
+export const RECORD_CHECK_KINDS = [
+  "duplicate_candidate",
+  "chronology_conflict",
+  "flight_number_missing",
+  "airport_unknown",
+  "trip_end_missing",
+  "trip_entries_outside",
+] as const;
+export type RecordCheckKind = (typeof RECORD_CHECK_KINDS)[number];
 
 /** Which check fired. */
 export type DataQualityFlagKind =
@@ -33,6 +52,7 @@ export type DataQualityFlagKind =
   | "stay_dates_reversed"
   | "coordinates_outside_country"
   | "home_residence_unconfirmed"
+  | RecordCheckKind
   | TimeFlagKind;
 
 /**
@@ -80,7 +100,8 @@ export type DataQualityFlagSubject =
  * backend's `TimeFlagSubject` (`types/timeMigration.ts`).
  */
 export interface TimeValueRecord {
-  entityType: TimeFlagEntityType;
+  /** A time row — or a bus ride, which only the record checks raise (same shape). */
+  entityType: TimeFlagEntityType | "bus_journey";
   entityId: string;
   /** What to call it on screen. The user's own text, never a code. */
   label: string;
@@ -137,6 +158,65 @@ export interface HomeResidenceUnconfirmedDetails {
   periods: number;
 }
 
+/** Another row a record check names, linkable without a second request. */
+export interface RelatedRecord {
+  entityType: RecordCheckDomain;
+  entityId: string;
+  label: string;
+  /** The lodging of a stay; null for a row that is its own page. */
+  parentId: string | null;
+}
+
+/** The earlier entries this row looks like a second copy of. */
+export interface DuplicateCandidateDetails {
+  matchedOn: string[];
+  copies: (RelatedRecord & { dataSource: string | null; createdAt: string })[];
+  dataSource: string | null;
+}
+
+/** Two entries one traveller cannot both have made. Instants for flights, days for stays. */
+export interface ChronologyConflictDetails {
+  domain: "flight" | "lodging_stay";
+  conflictWith: RelatedRecord;
+  thisStart: string;
+  thisEnd: string;
+  otherStart: string;
+  otherEnd: string;
+  overlapMinutes: number | null;
+  overlapNights: number | null;
+}
+
+export interface FlightNumberMissingDetails {
+  airline: string;
+  status: string;
+}
+
+export interface AirportUnknownDetails {
+  endpoints: {
+    side: "departure" | "arrival";
+    iata: string | null;
+    icao: string | null;
+    name: string | null;
+  }[];
+}
+
+export interface TripEndMissingDetails {
+  startDay: string;
+  /** The last day a linked entry reaches — shown as a suggestion, never written. */
+  lastEntryDay: string | null;
+}
+
+export interface TripEntriesOutsideDetails {
+  startDay: string;
+  endDay: string;
+  /** A place visit is edited on its place, which is its `parentId`. */
+  entries: (Omit<RelatedRecord, "entityType"> & {
+    entityType: RecordCheckDomain | "place_visit";
+    firstDay: string;
+    lastDay: string;
+  })[];
+}
+
 /** Every detail shape, as a union. Only useful where `kind` is already known. */
 export type DataQualityFlagDetails =
   | AddressCountryMismatchDetails
@@ -144,6 +224,12 @@ export type DataQualityFlagDetails =
   | StayDatesReversedDetails
   | CoordinatesOutsideCountryDetails
   | HomeResidenceUnconfirmedDetails
+  | DuplicateCandidateDetails
+  | ChronologyConflictDetails
+  | FlightNumberMissingDetails
+  | AirportUnknownDetails
+  | TripEndMissingDetails
+  | TripEntriesOutsideDetails
   | TimeQuestionDetails;
 
 /**
@@ -201,6 +287,12 @@ export type DataQualityFlag =
       kind: "home_residence_unconfirmed";
       details: HomeResidenceUnconfirmedDetails;
     })
+  | (DataQualityFlagBase & { kind: "duplicate_candidate"; details: DuplicateCandidateDetails })
+  | (DataQualityFlagBase & { kind: "chronology_conflict"; details: ChronologyConflictDetails })
+  | (DataQualityFlagBase & { kind: "flight_number_missing"; details: FlightNumberMissingDetails })
+  | (DataQualityFlagBase & { kind: "airport_unknown"; details: AirportUnknownDetails })
+  | (DataQualityFlagBase & { kind: "trip_end_missing"; details: TripEndMissingDetails })
+  | (DataQualityFlagBase & { kind: "trip_entries_outside"; details: TripEntriesOutsideDetails })
   | (DataQualityFlagBase & {
       kind: TimeFlagKind;
       details: TimeQuestionDetails;

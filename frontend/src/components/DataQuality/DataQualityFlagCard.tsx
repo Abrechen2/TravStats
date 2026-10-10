@@ -8,6 +8,7 @@ import FlagContradiction from "./FlagContradiction";
 import { flaggedRecordPath } from "./flagLinks";
 import { HOME_SETTINGS_PATH } from "./HomeResidenceFlag";
 import { isTimeFlagEntityType, isTimeFlagKind, timeFlagEditorPath } from "./timeFlagLinks";
+import { isRecordCheckKind, recordFlagSubjectPath } from "./recordFlagLinks";
 
 /**
  * One open question about one record.
@@ -55,7 +56,12 @@ import { isTimeFlagEntityType, isTimeFlagKind, timeFlagEditorPath } from "./time
 function subjectPathOf(flag: DataQualityFlag): string | null {
   if (flag.entityType === "country") return null;
   if (flag.entityType === "home") return HOME_SETTINGS_PATH;
+  // A record check (forgejo#282) links to the record — or its editor when the
+  // answer is a field to fill. Asked before the time branch: both sit on rows
+  // like `flight`, and only the kind says which link fits.
+  if (isRecordCheckKind(flag.kind)) return recordFlagSubjectPath(flag);
   if (isTimeFlagEntityType(flag.entityType)) return timeFlagEditorPath(flag);
+  if (flag.entityType === "bus_journey") return null;
   return flaggedRecordPath({ entityType: flag.entityType, entityId: flag.entityId, label: "" });
 }
 
@@ -156,7 +162,9 @@ export default function DataQualityFlagCard({
           ? t("dataQuality:flag.timeUnchanged")
           : flag.kind === "home_residence_unconfirmed"
             ? t("dataQuality:kinds.home_residence_unconfirmed.unchanged")
-            : t("dataQuality:flag.neitherIsCorrect")}
+            : isRecordCheckKind(flag.kind)
+              ? t("dataQuality:flag.recordUnchanged")
+              : t("dataQuality:flag.neitherIsCorrect")}
       </p>
 
       {flag.status === "open" && (

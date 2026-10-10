@@ -6,6 +6,9 @@ import type { DataQualityFlag, FlaggedRecord } from "../../types/dataQuality";
 
 import { flaggedRecordPath } from "./flagLinks";
 import TimeValueFlag from "./TimeValueFlag";
+import RecordCheckFlag from "./RecordCheckFlag";
+import Side from "./FlagSide";
+import { isRecordCheckKind } from "./recordFlagLinks";
 import HomeResidenceFlag from "./HomeResidenceFlag";
 import { formatDate as formatUserDate } from "../../lib/displayFormat";
 
@@ -29,36 +32,6 @@ import { formatDate as formatUserDate } from "../../lib/displayFormat";
  * one fallback left is for a `kind` this build does not know, which no type can
  * exclude: a server running a newer check is a real thing.
  */
-
-/** One side of a disagreement. Styling is identical for both sides, by design. */
-function Side({
-  label,
-  value,
-  note,
-}: {
-  label: string;
-  value: string;
-  note?: string;
-}): JSX.Element {
-  return (
-    <div
-      className="rounded-lg p-3 flex-1 min-w-[150px]"
-      style={{ background: "var(--bg-base)", border: "1px solid var(--color-border)" }}
-    >
-      <div className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>
-        {label}
-      </div>
-      <div className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>
-        {value}
-      </div>
-      {note && (
-        <div className="text-xs mt-1 break-words" style={{ color: "var(--text-muted)" }}>
-          {note}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /** A named record with a link to the page that can edit it (design §3.4). */
 export function RecordLink({ record }: { record: FlaggedRecord }): JSX.Element {
@@ -213,6 +186,10 @@ export default function FlagContradiction({ flag }: { flag: DataQualityFlag }): 
 
   if (flag.kind === "home_residence_unconfirmed") {
     return <HomeResidenceFlag details={flag.details} />;
+  }
+
+  if (isRecordCheckKind(flag.kind)) {
+    return <RecordCheckFlag flag={flag} />;
   }
 
   // A `kind` this build has no rendering for — a server running a check newer

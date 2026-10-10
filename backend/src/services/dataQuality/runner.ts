@@ -8,6 +8,11 @@ import { findReversedStayDates } from "./checks/stayDatesReversed";
 import { findOpenTimeQuestions } from "./checks/timeQuestions";
 import { findUnconfirmedResidence } from "./checks/homeResidence";
 import { findUndatedCountryEvidence } from "./checks/undatedCountryEvidence";
+import { duplicatePairs, findDuplicateCandidates } from "./checks/duplicateCandidates";
+import { findChronologyConflicts } from "./checks/chronologyConflicts";
+import { findMissingFlightNumbers } from "./checks/flightNumberMissing";
+import { findUnknownAirports } from "./checks/airportUnknown";
+import { findIncompleteTrips } from "./checks/tripIncomplete";
 import { loadAccountSnapshot } from "./gather";
 import { findingKey, type DataQualityFinding } from "./types";
 
@@ -90,8 +95,10 @@ export interface DataQualityRunSummary {
 
 /** Every check, in one place, so adding one is a single line. */
 export function collectFindings(
-  snapshot: Awaited<ReturnType<typeof loadAccountSnapshot>>
+  snapshot: Awaited<ReturnType<typeof loadAccountSnapshot>>,
+  now: Date
 ): DataQualityFinding[] {
+  const duplicates = findDuplicateCandidates(snapshot.records);
   return [
     ...findAddressCountryMismatches(snapshot.addressRecords),
     ...findUndatedCountryEvidence(snapshot.countryTouches),
@@ -99,6 +106,11 @@ export function collectFindings(
     ...findCoordinatesOutsideCountry(snapshot.locatedRecords, snapshot.countryLookup),
     ...findOpenTimeQuestions(snapshot.timeQuestions),
     ...findUnconfirmedResidence(snapshot.homePeriods),
+    ...duplicates,
+    ...findChronologyConflicts(snapshot.records, duplicatePairs(duplicates)),
+    ...findMissingFlightNumbers(snapshot.records.flights),
+    ...findUnknownAirports(snapshot.records),
+    ...findIncompleteTrips(snapshot.records, now),
   ];
 }
 
@@ -241,7 +253,7 @@ export async function runDataQualityChecks(
   now: Date = new Date()
 ): Promise<DataQualityRunSummary> {
   const snapshot = await loadAccountSnapshot(userId, now);
-  const findings = collectFindings(snapshot);
+  const findings = collectFindings(snapshot, now);
 
   const existing = await prisma.dataQualityFlag.findMany({ where: { userId } });
   const byKey = new Map(existing.map((flag) => [findingKey(flag), flag]));

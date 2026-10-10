@@ -8,6 +8,14 @@ import {
   timeParentTypeSchema,
   type TimeFlagEntityType,
 } from "./timeMigration";
+import {
+  airportUnknownDetailsSchema,
+  chronologyConflictDetailsSchema,
+  duplicateCandidateDetailsSchema,
+  flightNumberMissingDetailsSchema,
+  tripEndMissingDetailsSchema,
+  tripEntriesOutsideDetailsSchema,
+} from "./dataQualityRecordChecks";
 
 /**
  * The vocabulary of the data-quality inbox.
@@ -49,6 +57,11 @@ export const DATA_QUALITY_ENTITY_TYPES = [
    */
   "home",
   ...TIME_FLAG_ENTITY_TYPES,
+  /**
+   * A bus ride — raised by the record checks (forgejo#282) only. Not in the
+   * time list because the time-model backfill never looked at buses.
+   */
+  "bus_journey",
 ] as const;
 
 /** The one `entityId` a `home` flag carries — one question per account, not per period. */
@@ -89,6 +102,21 @@ export const DATA_QUALITY_FLAG_KINDS = [
    * wählen?"). Statistics measure from that airport until the user answers.
    */
   "home_residence_unconfirmed",
+  /**
+   * Records (forgejo#282): this row looks like a second copy of an earlier one
+   * — same flight, train, bus, cruise or stay. Asked, never merged.
+   */
+  "duplicate_candidate",
+  /** Records: this entry overlaps another that one traveller cannot also have taken. */
+  "chronology_conflict",
+  /** Records: a flight with a named carrier and no flight number. */
+  "flight_number_missing",
+  /** Records: a flight end whose airport code the catalogue does not know. */
+  "airport_unknown",
+  /** Records: a trip with a start, no end, and a start long past. */
+  "trip_end_missing",
+  /** Records: entries linked to a trip that fall outside the trip's days. */
+  "trip_entries_outside",
 ] as const;
 export const dataQualityFlagKindSchema = z.enum(DATA_QUALITY_FLAG_KINDS);
 export type DataQualityFlagKind = (typeof DATA_QUALITY_FLAG_KINDS)[number];
@@ -175,6 +203,15 @@ export const dataQualityFlagSubjectSchema = z.discriminatedUnion("entityType", [
     /** What `parentId` names (`place`, `cruise`, `trip`, `tour`, `lodging`). */
     parentType: timeParentTypeSchema.nullable(),
     /** The trip the row belongs to; for a tour's stop, the tour's trip. */
+    tripId: z.string().nullable(),
+  }),
+  /** A bus ride (record checks only) — the same row shape, its own page. */
+  z.object({
+    entityType: z.literal("bus_journey"),
+    entityId: z.string(),
+    label: z.string(),
+    parentId: z.string().nullable(),
+    parentType: timeParentTypeSchema.nullable(),
     tripId: z.string().nullable(),
   }),
 ]);
@@ -309,6 +346,30 @@ const homeResidenceUnconfirmedPayload = z.object({
   kind: z.literal("home_residence_unconfirmed"),
   details: homeResidenceUnconfirmedDetailsSchema,
 });
+const duplicateCandidatePayload = z.object({
+  kind: z.literal("duplicate_candidate"),
+  details: duplicateCandidateDetailsSchema,
+});
+const chronologyConflictPayload = z.object({
+  kind: z.literal("chronology_conflict"),
+  details: chronologyConflictDetailsSchema,
+});
+const flightNumberMissingPayload = z.object({
+  kind: z.literal("flight_number_missing"),
+  details: flightNumberMissingDetailsSchema,
+});
+const airportUnknownPayload = z.object({
+  kind: z.literal("airport_unknown"),
+  details: airportUnknownDetailsSchema,
+});
+const tripEndMissingPayload = z.object({
+  kind: z.literal("trip_end_missing"),
+  details: tripEndMissingDetailsSchema,
+});
+const tripEntriesOutsidePayload = z.object({
+  kind: z.literal("trip_entries_outside"),
+  details: tripEntriesOutsideDetailsSchema,
+});
 
 /**
  * A `kind` with the `details` that kind implies, and nothing else.
@@ -326,6 +387,12 @@ export const dataQualityFlagPayloadSchema = z.discriminatedUnion("kind", [
   timePrecisionUnknownPayload,
   timeDayAmbiguousPayload,
   homeResidenceUnconfirmedPayload,
+  duplicateCandidatePayload,
+  chronologyConflictPayload,
+  flightNumberMissingPayload,
+  airportUnknownPayload,
+  tripEndMissingPayload,
+  tripEntriesOutsidePayload,
 ]);
 export type DataQualityFlagPayload = z.infer<typeof dataQualityFlagPayloadSchema>;
 
@@ -384,6 +451,12 @@ export const dataQualityFlagSchema = z.discriminatedUnion("kind", [
   timePrecisionUnknownPayload.merge(dataQualityFlagBase),
   timeDayAmbiguousPayload.merge(dataQualityFlagBase),
   homeResidenceUnconfirmedPayload.merge(dataQualityFlagBase),
+  duplicateCandidatePayload.merge(dataQualityFlagBase),
+  chronologyConflictPayload.merge(dataQualityFlagBase),
+  flightNumberMissingPayload.merge(dataQualityFlagBase),
+  airportUnknownPayload.merge(dataQualityFlagBase),
+  tripEndMissingPayload.merge(dataQualityFlagBase),
+  tripEntriesOutsidePayload.merge(dataQualityFlagBase),
 ]);
 export type DataQualityFlagView = z.infer<typeof dataQualityFlagSchema>;
 

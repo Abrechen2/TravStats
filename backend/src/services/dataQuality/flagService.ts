@@ -86,6 +86,35 @@ async function resolveSubjects(
 }
 
 /**
+ * Names for bus rides a record check flagged (forgejo#282). A bus ride is its
+ * own page, so it carries no parent; `tripId` lets the inbox say which trip.
+ */
+async function resolveBusSubjects(
+  userId: string,
+  flags: readonly StoredFlag[]
+): Promise<Map<string, DataQualityFlagSubject>> {
+  const ids = flags.filter((f) => f.entityType === "bus_journey").map((f) => f.entityId);
+  if (ids.length === 0) return new Map();
+  const rides = await prisma.busJourney.findMany({
+    where: { userId, id: { in: ids } },
+    select: { id: true, tripId: true, depStationName: true, arrStationName: true },
+  });
+  return new Map(
+    rides.map((ride) => [
+      `bus_journey ${ride.id}`,
+      {
+        entityType: "bus_journey" as const,
+        entityId: ride.id,
+        label: `${ride.depStationName} → ${ride.arrStationName}`,
+        parentId: null,
+        parentType: null,
+        tripId: ride.tripId,
+      },
+    ])
+  );
+}
+
+/**
  * One stored row as the API returns it, or null when it cannot be shown.
  *
  * `kind` and `details` are two columns, and this is where they are checked
@@ -143,6 +172,7 @@ export async function listFlags(
 
   const subjects = await resolveSubjects(userId, flags);
   const timeSubjects = await resolveTimeSubjects(userId, flags);
+  const busSubjects = await resolveBusSubjects(userId, flags);
 
   const views: DataQualityFlagView[] = [];
   for (const flag of flags) {
@@ -156,7 +186,8 @@ export async function listFlags(
         : flag.entityType === "home"
           ? { entityType: "home", entityId: flag.entityId }
           : (subjects.get(`${flag.entityType} ${flag.entityId}`) ??
-            timeSubjects.get(`${flag.entityType} ${flag.entityId}`));
+            timeSubjects.get(`${flag.entityType} ${flag.entityId}`) ??
+            busSubjects.get(`${flag.entityType} ${flag.entityId}`));
     const view = toView(flag, subject);
     if (view) views.push(view);
   }
