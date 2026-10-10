@@ -2,23 +2,27 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { useTranslation } from "../../hooks/useTranslation";
-import { immichApi } from "../../lib/api/immich";
-import { JobLostError } from "../../lib/api/jobs";
+import { failureKey, immichApi, isImmichFailureKind } from "../../lib/api/immich";
+import { JobFailedError, JobLostError } from "../../lib/api/jobs";
 import { photoJourneysApi } from "../../lib/api/photoJourneys";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
-import type { PhotoJourney } from "../../types/photoJourney";
+import {
+  isCardPhotoJourney,
+  type CardPhotoJourney,
+  type PhotoJourney,
+} from "../../types/photoJourney";
 import Button from "../ui/Button";
 import EmptyState from "../ui/EmptyState";
 
 import {
   createFromPhotoJourney,
   linkPhotoJourney,
-  type AcceptInput,
   type PhotoJourneyCreated,
 } from "./acceptPhotoJourney";
 import PhotoJourneyCard from "./PhotoJourneyCard";
 import { photoJourneyLabel } from "./photoJourneyLabel";
+import VisitSuggestionsReview from "./visitReview/VisitSuggestionsReview";
 
 /**
  * The "Foto-Reisen" half of the Posteingang — what the photo library knows that
@@ -59,7 +63,7 @@ export default function PhotoJourneysTab({
    */
   active?: boolean;
 } = {}): JSX.Element {
-  const { t } = useTranslation(["dataQuality", "common"]);
+  const { t } = useTranslation(["dataQuality", "common", "immich"]);
   const addToast = useToastStore((state) => state.addToast);
 
   const [journeys, setJourneys] = useState<PhotoJourney[]>([]);
@@ -160,6 +164,17 @@ export default function PhotoJourneysTab({
         await load();
         return;
       }
+      if (error instanceof JobFailedError && isImmichFailureKind(error.code)) {
+        // The library refused or did not answer: say which, in the words the
+        // Immich settings card uses for the same failure.
+        addToast(
+          "error",
+          t("dataQuality:inbox.photoJourneys.errors.scanFailedImmich", {
+            reason: t(`immich:${failureKey(error.code)}`),
+          })
+        );
+        return;
+      }
       addToast("error", t("dataQuality:inbox.photoJourneys.errors.scanFailed"));
     } finally {
       setScanning(false);
@@ -174,12 +189,12 @@ export default function PhotoJourneysTab({
    * already said nothing was created: the row was still pending, because only
    * the PATCH had failed.
    */
-  const handleAccept = async (journey: PhotoJourney, input: AcceptInput): Promise<void> => {
+  const handleAccept = async (journey: CardPhotoJourney): Promise<void> => {
     markBusy(journey.id, true);
     let created = createdByRow[journey.id];
     try {
       if (created === undefined) {
-        const made = await createFromPhotoJourney(journey, photoJourneyLabel(journey), input);
+        const made = await createFromPhotoJourney(journey, photoJourneyLabel(journey));
         created = made;
         // Recorded BEFORE the link is attempted — that is the whole point.
         setCreatedByRow((current) => ({ ...current, [journey.id]: made }));
@@ -215,9 +230,7 @@ export default function PhotoJourneysTab({
       logger.error("Failed to mark a photo journey accepted:", error);
       addToast(
         "error",
-        // A server-made visit that failed made nothing: the PATCH is the
-        // whole act, so there is nothing a retry would merely link.
-        created.kind === "none" || created.kind === "serverVisit"
+        created.kind === "none"
           ? t("dataQuality:inbox.photoJourneys.errors.acceptFailed")
           : // Names what DOES exist now, and that a retry only links it.
             t(`dataQuality:inbox.photoJourneys.errors.acceptLinkFailed.${created.kind}`)
@@ -241,6 +254,9 @@ export default function PhotoJourneysTab({
     }
   };
 
+  const visits = journeys.filter((journey) => journey.kind === "visit");
+  const others = journeys.filter(isCardPhotoJourney);
+
   const scanButton = (
     <Button variant="primary" onClick={() => void handleScan()} disabled={scanning}>
       {scanning
@@ -251,7 +267,16 @@ export default function PhotoJourneysTab({
 
   return (
     <section>
-      <p className="t-caption mb-4">{t("dataQuality:inbox.photoJourneys.description")}</p>
+      <p className="t-caption mb-4">
+        {t("dataQuality:inbox.photoJourneys.description")}{" "}
+        {/* The nightly opt-in lives with the Immich connection it needs. */}
+        <Link
+          to="/settings/services?section=externalServices"
+          style={{ color: "var(--ts-accent)", fontWeight: 600 }}
+        >
+          {t("dataQuality:inbox.photoJourneys.nightlyLink")}
+        </Link>
+      </p>
 
       {/* The scan sits above the list only when there IS a list — with none, it
           is the empty state's one way out, and two of the same button on one
@@ -310,18 +335,25 @@ export default function PhotoJourneysTab({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {journeys.map((journey) => (
-            <PhotoJourneyCard
-              key={journey.id}
-              journey={journey}
-              label={photoJourneyLabel(journey)}
-              busy={busyIds.has(journey.id)}
-              onAccept={(input) => void handleAccept(journey, input)}
-              onDismiss={() => void handleDismiss(journey)}
-            />
-          ))}
-        </div>
+        <>
+          {/* Stops inside a recorded trip are reviewed together (forgejo#211,
+              O5): select several, correct, accept or reject in one answer. */}
+          {visits.length > 0 && <VisitSuggestionsReview journeys={visits} onAnswered={load} />}
+          {others.length > 0 && (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {others.map((journey) => (
+                <PhotoJourneyCard
+                  key={journey.id}
+                  journey={journey}
+                  label={photoJourneyLabel(journey)}
+                  busy={busyIds.has(journey.id)}
+                  onAccept={() => void handleAccept(journey)}
+                  onDismiss={() => void handleDismiss(journey)}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </section>
   );

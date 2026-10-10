@@ -11,7 +11,9 @@ import { MemoryRouter } from "react-router-dom";
  * poll run here; only the HTTP client is stubbed.
  */
 
-vi.mock("../../../lib/api/immich", () => ({
+vi.mock("../../../lib/api/immich", async (importOriginal) => ({
+  // The failure-kind helpers stay real: the tab maps a job's code with them.
+  ...(await importOriginal<typeof import("../../../lib/api/immich")>()),
   immichApi: {
     getSettings: vi.fn().mockResolvedValue({
       baseUrl: "https://immich.example",
@@ -83,6 +85,41 @@ describe("the photo scan reports the job's outcome", () => {
     );
     expect(addToast).not.toHaveBeenCalledWith("error", expect.anything());
     expect(post).toHaveBeenCalledWith("/photo-journeys/scan", { background: true });
+  });
+
+  it("a scan the library refused names Immich's reason, not a bare 'failed'", async () => {
+    stubServer([
+      () =>
+        Promise.resolve({
+          data: {
+            success: true,
+            data: {
+              id: "job-1",
+              status: "failed",
+              result: null,
+              error: { code: "unreachable", status: 502 },
+            },
+          },
+        }),
+    ]);
+    render(
+      <MemoryRouter>
+        <PhotoJourneysTab active />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: SCAN }));
+
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith(
+        "error",
+        "dataQuality:inbox.photoJourneys.errors.scanFailedImmich"
+      )
+    );
+    expect(addToast).not.toHaveBeenCalledWith(
+      "error",
+      "dataQuality:inbox.photoJourneys.errors.scanFailed"
+    );
   });
 
   it("an outcome the server forgot is 'unknown', and the list is read again", async () => {

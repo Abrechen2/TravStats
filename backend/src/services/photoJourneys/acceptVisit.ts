@@ -5,6 +5,7 @@ import { resolveCountryCode } from "../../shared/geo/countryCode";
 import { isPlaceCategory } from "../../shared/placeCategories";
 import { classifyVisit } from "../../shared/placeCounting";
 import { resolveTimeField } from "../../shared/time/resolveInput";
+import type { TimeFieldInput } from "../../shared/time/timeInput";
 import { zoneOf } from "../../shared/time/zoneOf";
 import { normaliseNamePair } from "../geo/gluedPlaceName";
 import { findPlaceIdByRef } from "../places/placeRefs";
@@ -34,6 +35,13 @@ export interface AcceptVisitInput {
   /** Overrides the suggested name; required when the scan named nothing. */
   name?: string;
   localName?: string;
+  /**
+   * The reader's correction (the batch review, forgejo#211 O5): an own place
+   * the visit goes on instead of the one the scan found or would create.
+   */
+  placeId?: string;
+  /** The reader's correction: when the visit was, instead of the first photo's instant. */
+  visitedAt?: TimeFieldInput;
 }
 
 export interface AcceptVisitOutcome {
@@ -41,6 +49,11 @@ export interface AcceptVisitOutcome {
   placeVisitId: string;
   /** False when an existing place took the visit. */
   placeCreated: boolean;
+  /**
+   * False when the place already had a visit that day and the finding was
+   * linked to it — accepting must not record the same stop twice.
+   */
+  visitCreated: boolean;
 }
 
 const DEFAULT_CATEGORY = "landmark";
@@ -64,12 +77,24 @@ const ROW = {
   createdPlaceVisitId: true,
 } as const satisfies Prisma.PhotoJourneySelect;
 
-/** The place the visit goes on: an own one within reach, the same ref, or none yet. */
+/**
+ * The place the visit goes on: the one the reader chose, an own one within
+ * reach, the same ref, or none yet. A chosen place that is not the caller's is
+ * a refusal, never a quiet fall-back to the scan's — the reader said which.
+ */
 async function existingPlace(
   userId: string,
-  row: Row
+  row: Row,
+  chosenId: string | undefined
 ): Promise<{ id: string; lat: number; lon: number; visited: boolean } | null> {
   const select = { id: true, lat: true, lon: true, visited: true } as const;
+  if (chosenId) {
+    const chosen = await prisma.place.findFirst({ where: { id: chosenId, userId }, select });
+    if (!chosen) {
+      throw new AppError("Place not found", 404, "VISIT_PLACE_NOT_FOUND", "placeId");
+    }
+    return chosen;
+  }
   if (row.placeId) {
     const own = await prisma.place.findFirst({ where: { id: row.placeId, userId }, select });
     if (own) return own;
@@ -124,27 +149,40 @@ export async function acceptVisitFinding(
       where: { id: row.createdPlaceVisitId, userId },
       select: { id: true, placeId: true },
     });
-    if (visit) return { placeId: visit.placeId, placeVisitId: visit.id, placeCreated: false };
+    if (visit) {
+      return {
+        placeId: visit.placeId,
+        placeVisitId: visit.id,
+        placeCreated: false,
+        visitCreated: false,
+      };
+    }
   }
 
-  const found = await existingPlace(userId, row);
+  const found = await existingPlace(userId, row, input.placeId);
   const toCreate = found ? null : placeData(userId, row, input);
   // Validated before the transaction opens, so a missing name costs nothing.
 
   const target = found ?? { lat: row.lat, lon: row.lon, visited: false };
   // The first photograph's instant, read at the place: a machine instant,
   // never a bare-Z refusal — the server holds the value, no bundle sent it.
+  // A corrected time is the reader's, typed on the place's clock — resolved
+  // like any browser write, so a bare ISO-Z from a stale bundle is refused.
   const resolved = await resolveTimeField(
-    { kind: "instant", utc: row.startDate, bareZ: false },
+    input.visitedAt ?? { kind: "instant", utc: row.startDate, bareZ: false },
     {
       field: "visitedAt",
       placeZone: () => zoneOf(target),
       userId,
       legacyFakeUtc: true,
-      viaToken: true,
+      viaToken: input.visitedAt === undefined,
     }
   );
   const time = visitColumnsFromResolved(resolved);
+  // An existing place may already carry a visit that day — logged by hand
+  // after the scan, or by an earlier answer. Linking to it records the answer
+  // without recording the stop twice.
+  const sameDay = found ? await visitOnSameDay(userId, found.id, time.visitedAt) : null;
   // A stop photographed in the past HAPPENED, so the place leaves the wishlist
   // — the rule `POST /places/:id/visits` applies, from the same predicate.
   const happened = classifyVisit({ visitedAt: time.visitedAt }) === "visited";
@@ -153,6 +191,13 @@ export async function acceptVisitFinding(
     const place = toCreate
       ? await tx.place.create({ data: { ...toCreate, visited: happened }, select: { id: true } })
       : found!;
+    if (sameDay) {
+      await tx.photoJourney.update({
+        where: { id: row.id },
+        data: { status: "accepted", createdPlaceVisitId: sameDay, resolvedAt: new Date() },
+      });
+      return { placeId: place.id, placeVisitId: sameDay, placeCreated: false, visitCreated: false };
+    }
     const visit = await tx.placeVisit.create({
       data: {
         placeId: place.id,
@@ -170,9 +215,40 @@ export async function acceptVisitFinding(
       where: { id: row.id },
       data: { status: "accepted", createdPlaceVisitId: visit.id, resolvedAt: new Date() },
     });
-    return { placeId: place.id, placeVisitId: visit.id, placeCreated: toCreate !== null };
+    return {
+      placeId: place.id,
+      placeVisitId: visit.id,
+      placeCreated: toCreate !== null,
+      visitCreated: true,
+    };
   });
 
   await recheckAchievements(userId, "photo visit accept");
   return outcome;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * A visit of the caller's at this place on the same calendar day, or null.
+ * `visitedAt` holds the place's wall clock as fake UTC, so its UTC date IS the
+ * local day — no zone arithmetic, and the same reading the visit list uses.
+ */
+async function visitOnSameDay(
+  userId: string,
+  placeId: string,
+  visitedAt: Date | null
+): Promise<string | null> {
+  if (!visitedAt) return null;
+  const dayStart = Date.parse(`${visitedAt.toISOString().slice(0, 10)}T00:00:00.000Z`);
+  const visit = await prisma.placeVisit.findFirst({
+    where: {
+      userId,
+      placeId,
+      visitedAt: { gte: new Date(dayStart), lt: new Date(dayStart + DAY_MS) },
+    },
+    select: { id: true },
+    orderBy: { visitedAt: "asc" },
+  });
+  return visit?.id ?? null;
 }

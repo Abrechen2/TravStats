@@ -51,6 +51,10 @@ export type ApiErrorCode =
    *  create (forgejo#211): the lookup named nothing and the body sent nothing.
    *  The card asks for one instead of minting "unknown". */
   | "VISIT_NAME_REQUIRED"
+  /** A `visit` finding was accepted onto a place that is not the caller's
+   *  (forgejo#211, the batch review's "correct the place"): gone since the
+   *  list was read, or never theirs. */
+  | "VISIT_PLACE_NOT_FOUND"
   /** A training annotation whose offsets do not cut their own value out of
    *  the text being saved. The two used to be allowed to disagree, which
    *  corrupted every derivation built on it in silence. */

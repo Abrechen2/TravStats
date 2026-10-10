@@ -35,6 +35,17 @@ export type PhotoJourneyStatus = "pending" | "accepted" | "dismissed";
  */
 export type PhotoJourneyKind = "place" | "trip" | "stay" | "visit";
 
+/**
+ * A finding answered card by card — every kind but `visit`. A `visit` finding
+ * is answered in the batch review (`components/inbox/visitReview`, forgejo#211
+ * O5), so the card and its two-step accept never see one.
+ */
+export type CardPhotoJourney = PhotoJourney & { kind: Exclude<PhotoJourneyKind, "visit"> };
+
+export function isCardPhotoJourney(journey: PhotoJourney): journey is CardPhotoJourney {
+  return journey.kind !== "visit";
+}
+
 export interface PhotoJourney {
   id: string;
   status: PhotoJourneyStatus;
@@ -90,6 +101,19 @@ export interface PhotoJourney {
   nights: number | null;
   airportIata: string | null;
   spreadKm: number | null;
+  /**
+   * `visit` findings: the nearest logged visit in the finding's trip or on its
+   * days — part of the suggestion's reasoning. `withinReach` (same day, within
+   * 200 m) means a visit logged since the scan already explains the stop.
+   * Null for the other kinds and absent from an older server.
+   */
+  nearestVisit?: {
+    placeId: string;
+    placeName: string;
+    distanceKm: number;
+    sameDay: boolean;
+    withinReach: boolean;
+  } | null;
   createdTripId: string | null;
   createdPlaceVisitId: string | null;
   createdLodgingStayId: string | null;

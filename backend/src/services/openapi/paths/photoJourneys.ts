@@ -91,6 +91,22 @@ registry.registerPath({
                   .describe(
                     "The last photo's calendar day where it was taken; null without a zone"
                   ),
+                nearestVisit: z
+                  .object({
+                    placeId: uuid,
+                    placeName: z.string(),
+                    distanceKm: z.number(),
+                    sameDay: z.boolean().describe("The visit falls on the finding's days"),
+                    withinReach: z
+                      .boolean()
+                      .describe(
+                        "Same day and within 200 m: a visit logged since the scan already explains the stop"
+                      ),
+                  })
+                  .nullable()
+                  .describe(
+                    "`visit` findings: the nearest logged visit in the finding's trip or on its days; null otherwise"
+                  ),
               })
             ),
           }),
@@ -107,6 +123,28 @@ const nightlyScanSettings = z.object({
     nightlyScan: z
       .boolean()
       .describe("Scan this account's Immich every night at 04:55 UTC, last 400 days"),
+    immichConnected: z
+      .boolean()
+      .describe(
+        "Whether the account resolves an Immich connection — the scan's own first question; " +
+          "false for the shared demo account"
+      ),
+    windowDays: z.number().int().describe("How many days back a nightly run reads"),
+    nextRunAt: z.string().datetime().describe("When the next nightly run starts"),
+    lastRun: z
+      .object({
+        ranAt: z.string().datetime(),
+        result: z.enum(["scanned", "noImmich", "failed"]),
+        created: z.number().int().nullable().describe("`scanned`: new findings written"),
+        failure: z
+          .string()
+          .nullable()
+          .describe(
+            "`failed`: the Immich error kind (unreachable, auth, notFound, protocol, invalidUrl) or internal"
+          ),
+      })
+      .nullable()
+      .describe("How this account's last nightly run ended; null before the first"),
   }),
 });
 
@@ -140,6 +178,10 @@ registry.registerPath({
   responses: {
     200: { description: "Saved", content: { "application/json": { schema: nightlyScanSettings } } },
     400: badInput,
+    403: {
+      description: "The shared demo account cannot change it (DEMO_ACCOUNT_FORBIDDEN)",
+      content: errorContent,
+    },
   },
 });
 
@@ -294,6 +336,11 @@ registry.registerPath({
                   placeCreated: z
                     .boolean()
                     .describe("False when an existing place of the caller's took the visit"),
+                  visitCreated: z
+                    .boolean()
+                    .describe(
+                      "False when the place already had a visit that day and the finding was linked to it"
+                    ),
                 })
                 .nullable()
                 .describe("What accepting a `visit` finding made; null for every other answer"),
@@ -304,5 +351,111 @@ registry.registerPath({
     },
     400: badInput,
     404: notFound,
+  },
+});
+
+const photoOutcome = z
+  .union([
+    z.object({ kind: z.literal("notConfigured") }),
+    z.object({
+      kind: z.literal("failed"),
+      reason: z.enum(["unreachable", "auth", "notFound", "protocol", "invalidUrl"]),
+    }),
+    z.object({ kind: z.literal("linked"), linked: z.number().int(), skipped: z.number().int() }),
+  ])
+  .nullable();
+
+registry.registerPath({
+  method: "post",
+  path: "/photo-journeys/batch",
+  summary: "Answer several photo findings at once",
+  description:
+    "Accept or dismiss up to 50 findings in one request (forgejo#211). Every item is answered on " +
+    "its own — each accept is its own transaction — so the response is 200 for a valid body and " +
+    "carries a per-item `outcome`. Accept is for `visit` findings only (`NOT_A_VISIT` otherwise) and " +
+    "takes the reader's corrections: `name`/`localName` for the place to create, `placeId` for an own " +
+    "place to record the visit on instead, `visitedAt` for the visit's time at the place (instead of " +
+    "the first photo's). A place that already has a visit that day gets the finding linked to that " +
+    "visit, not a second one. Dismiss works for every kind, on pending rows only; a dismissed finding " +
+    "is never asked again. Failure codes: NOT_FOUND, ALREADY_ANSWERED, NOT_A_VISIT, " +
+    "VISIT_NAME_REQUIRED, VISIT_PLACE_NOT_FOUND, TIME_INVALID, INTERNAL.",
+  tags: miscTag,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            items: z
+              .array(
+                z.object({
+                  id: uuid,
+                  action: z.enum(["accept", "dismiss"]),
+                  name: z.string().min(1).max(200).optional(),
+                  localName: z.string().max(200).optional(),
+                  placeId: uuid.optional(),
+                  visitedAt: z
+                    .union([
+                      z.object({ local: z.string() }),
+                      z.string().describe("YYYY-MM-DD, or an offset-bearing ISO instant"),
+                    ])
+                    .optional()
+                    .describe("The visit's wall clock at the place, `{local: 'YYYY-MM-DDTHH:mm'}`"),
+                })
+              )
+              .min(1)
+              .max(50),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Answered, item by item",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({
+              results: z.array(
+                z.object({
+                  id: uuid,
+                  action: z.enum(["accept", "dismiss"]),
+                  outcome: z.enum(["accepted", "dismissed", "failed"]),
+                  code: z
+                    .enum([
+                      "NOT_FOUND",
+                      "ALREADY_ANSWERED",
+                      "NOT_A_VISIT",
+                      "VISIT_NAME_REQUIRED",
+                      "VISIT_PLACE_NOT_FOUND",
+                      "TIME_INVALID",
+                      "INTERNAL",
+                    ])
+                    .optional()
+                    .describe("`failed` only"),
+                  created: z
+                    .object({
+                      placeId: uuid,
+                      placeVisitId: uuid,
+                      placeCreated: z.boolean(),
+                      visitCreated: z.boolean(),
+                    })
+                    .optional()
+                    .describe("`accepted` only"),
+                  photos: photoOutcome.optional().describe("`accepted` only"),
+                })
+              ),
+              summary: z.object({
+                accepted: z.number().int(),
+                dismissed: z.number().int(),
+                failed: z.number().int(),
+              }),
+            }),
+          }),
+        },
+      },
+    },
+    400: badInput,
   },
 });

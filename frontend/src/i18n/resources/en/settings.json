@@ -1005,6 +1005,7 @@
     "immich": "If Immich cannot be reached, linked albums show no pictures and an import stops with a message. Photos copied into TravStats stay visible.",
     "dawarich": "If Dawarich cannot be reached, a track import stops with a message, and the nightly country-day sync carries on the next night where it stopped. Existing tracks stay.",
     "strava": "If Strava does not answer, importing activities stops with a message. Tours already taken over stay.",
-    "openData": "If one of these services does not answer, the view concerned says so; weather already saved stays, and the next time it is opened it is asked again."
+    "openData": "If one of these services does not answer, the view concerned says so; weather already saved stays, and the next time it is opened it is asked again.",
+    "photoJourneyScan": "If Immich does not answer at night, the scan skips this account until the next night and says why here; existing suggestions stay. If the place-name service does not answer, findings stay unnamed instead of being dropped."
   }
 }
