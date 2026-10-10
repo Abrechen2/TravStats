@@ -114,6 +114,22 @@ describe("MembershipManager", () => {
     expect(await screen.findByText("Hilton Honors")).toBeInTheDocument();
   });
 
+  // forgejo#88 acceptance, 2026-10-10: the mount-time load also fired
+  // onChanged, and both callers answer onChanged by fetching again —
+  // Settings → Konto asked a statistics-limited route twice per visit.
+  it("tells its caller about a write, not about its own first load", async () => {
+    const onChanged = vi.fn();
+    vi.mocked(createMembership).mockResolvedValue({ ...existingMembership, id: "m2" });
+    render(<MembershipManager onChanged={onChanged} />);
+    await screen.findByText("Marriott Bonvoy");
+    expect(onChanged).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByText("lodging:membership.add"));
+    await userEvent.type(screen.getByLabelText("lodging:field.programName"), "Hilton Honors");
+    await userEvent.click(screen.getByText("common:buttons.save"));
+    await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
+  });
+
   it("deletes a membership via the delete button", async () => {
     vi.mocked(deleteMembership).mockResolvedValue(undefined);
     vi.mocked(listMemberships)

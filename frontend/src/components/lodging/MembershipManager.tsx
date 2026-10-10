@@ -20,7 +20,15 @@ import {
 } from "./membershipSuggestions";
 
 interface MembershipManagerProps {
-  /** Fired after every successful load/create/update/delete with the fresh list. */
+  /**
+   * Fired after a successful create/update/delete, with the fresh list.
+   *
+   * NOT after the mount-time load: both callers already load on their own
+   * when they mount, and answering that load with "changed" made each of
+   * them fetch again — Settings → Konto asked `/loyalty-memberships` twice
+   * per visit, a statistics-limited route (forgejo#88 acceptance,
+   * 2026-10-10). Nor after a `reloadSignal` bump, which the parent sent.
+   */
   onChanged?: (memberships: LodgingMembership[]) => void;
   /**
    * Scopes the manager to ONE chain — the chain detail page, which cares only
@@ -125,13 +133,13 @@ export function MembershipManager({
   // still exactly that, never once the user has ticked or unticked by hand.
   const autoTicked = useRef<number[] | null>(null);
 
-  const load = async (): Promise<void> => {
+  const load = async (afterWrite = false): Promise<void> => {
     setLoading(true);
     setLoadError(null);
     try {
       const rows = await listMemberships();
       setMemberships(rows);
-      onChanged?.(rows);
+      if (afterWrite) onChanged?.(rows);
     } catch (err: unknown) {
       logger.error("MembershipManager: load failed", err);
       setLoadError(t("lodging:membership.loadError"));
@@ -267,7 +275,7 @@ export function MembershipManager({
         await updateMembership(editingId, input);
       }
       setEditingId(null);
-      await load();
+      await load(true);
     } catch (err: unknown) {
       // Never let a duplicate-program 409 crash the form or bubble a raw
       // Axios error — always a clean, actionable sentence.
@@ -297,7 +305,7 @@ export function MembershipManager({
       setClash(null);
       setFormError(null);
       setEditingId(null);
-      await load();
+      await load(true);
     } catch (err: unknown) {
       logger.error("MembershipManager: extend-existing failed", err);
       setFormError(t("lodging:membership.saveError"));
@@ -307,7 +315,7 @@ export function MembershipManager({
   const remove = async (id: string): Promise<void> => {
     try {
       await deleteMembership(id);
-      await load();
+      await load(true);
     } catch (err: unknown) {
       logger.error("MembershipManager: delete failed", err);
       setLoadError(t("lodging:membership.deleteError"));

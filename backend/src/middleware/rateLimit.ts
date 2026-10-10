@@ -519,9 +519,15 @@ export const emailParseLimiter = rateLimit({
  * Rate limiter for stats calculation endpoints (expensive DB aggregations)
  * Allows 30 requests per minute per IP
  */
+// Sized from a measurement (forgejo#88 acceptance, 2026-10-10, production
+// build): Settings → Konto costs 2 per visit, achievements 1, dashboard,
+// logbooks, trips and stats 0 — so 30/min is ~15 settings visits a minute.
+// The 429s seen came from development (StrictMode doubles every effect), so
+// it steps aside there; not in test, where its suite must see it bite.
 export const statsLimiter = rateLimit({
   windowMs: RATE_LIMITS.STATS_WINDOW_MS,
   max: RATE_LIMITS.STATS_MAX_REQUESTS,
+  skip: skipInDevelopment,
   message: "Too many stats requests, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
@@ -681,12 +687,8 @@ export const passwordResetLimiter = rateLimit({
   skip: skipOutsideProduction,
 });
 
-/**
- * Asking whether a reset link is still good — once per opening of the reset
- * page. A bucket of its own, so reading the page does not spend the five
- * attempts `passwordResetLimiter` gives the actual reset. The token is 32
- * random bytes, so the cap is about abuse volume, not guessing.
- */
+/** Is a reset link still good — once per reset-page open. Own bucket, so reading the page does
+ *  not spend the five real attempts; a 32-byte token caps volume, not guessing. */
 export const passwordResetCheckLimiter = rateLimit({
   windowMs: RATE_LIMITS.PASSWORD_RESET_WINDOW_MS,
   max: 30,
