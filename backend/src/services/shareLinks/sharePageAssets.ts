@@ -57,7 +57,36 @@ ul{margin:0;padding-left:1.2rem}
 a{color:var(--accent)}
 `;
 
+/**
+ * Date formatting of the share page, in the visitor's language. Its own
+ * constant so a test can run it (`sharePage.test.ts`).
+ *
+ * A calendar day (`YYYY-MM-DD`) and a place's wall clock (`TimeValue.local`)
+ * are placed on a UTC instant and formatted with `timeZone: "UTC"`, so the
+ * VISITOR's zone can never move them — a trip that began on 1 September began
+ * on 1 September in Auckland too (ADR 0002: display `local` as it is). An
+ * instant that belongs to no place (the link's end, the time a position was
+ * sent) is shown on the visitor's own clock, which is what "until when" means
+ * to them.
+ */
+export const SHARE_PAGE_FORMAT_JS = `function shareFormat(locale) {
+  var dayFmt = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+  var clockFmt = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" });
+  var instantFmt = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  function utcOf(local) { return new Date(local.slice(0, 19) + (local.length > 10 ? "" : "T00:00:00") + "Z"); }
+  return {
+    day: function (ymd) { return dayFmt.format(utcOf(ymd.slice(0, 10))); },
+    clock: function (tv) {
+      if (!tv) return null;
+      return tv.precision === "minute" ? clockFmt.format(utcOf(tv.local)) : dayFmt.format(utcOf(tv.local.slice(0, 10)));
+    },
+    instant: function (iso) { return instantFmt.format(new Date(iso)); }
+  };
+}
+`;
+
 export const SHARE_PAGE_JS = `"use strict";
+${SHARE_PAGE_FORMAT_JS}
 (function () {
   var de = (navigator.language || "de").toLowerCase().indexOf("de") === 0;
   var T = de
@@ -106,11 +135,8 @@ export const SHARE_PAGE_JS = `"use strict";
     r.appendChild(el("span", null, value));
     card.appendChild(r);
   }
-  function clock(tv) {
-    if (!tv) return null;
-    var d = tv.local.slice(0, 10), t = tv.local.slice(11, 16);
-    return tv.precision === "minute" ? d + " " + t : d;
-  }
+  var fmt = shareFormat(de ? "de-DE" : "en-GB");
+  var clock = fmt.clock;
   function message(text) {
     clear();
     root.appendChild(el("p", "note", text));
@@ -158,7 +184,7 @@ export const SHARE_PAGE_JS = `"use strict";
       var lp = el("div", "card");
       lp.appendChild(el("p", "big", T.position));
       if (f.lastPosition) {
-        row(lp, f.lastPosition.lat.toFixed(3) + ", " + f.lastPosition.lon.toFixed(3), new Date(f.lastPosition.at).toLocaleString(de ? "de-DE" : "en-GB"));
+        row(lp, f.lastPosition.lat.toFixed(3) + ", " + f.lastPosition.lon.toFixed(3), fmt.instant(f.lastPosition.at));
         var a = el("a", null, T.map);
         a.href = "https://www.openstreetmap.org/?mlat=" + f.lastPosition.lat + "&mlon=" + f.lastPosition.lon + "#map=6/" + f.lastPosition.lat + "/" + f.lastPosition.lon;
         a.rel = "noreferrer noopener"; a.target = "_blank";
@@ -172,7 +198,7 @@ export const SHARE_PAGE_JS = `"use strict";
     var head = el("div", "card");
     head.appendChild(el("h1", null, t.name || T.trip));
     if (t.dates && (t.dates.start || t.dates.end)) {
-      head.appendChild(el("p", "sub", [t.dates.start && t.dates.start.date, t.dates.end && t.dates.end.date].filter(Boolean).join(" – ")));
+      head.appendChild(el("p", "sub", [t.dates.start && fmt.day(t.dates.start.date), t.dates.end && fmt.day(t.dates.end.date)].filter(Boolean).join(" – ")));
     }
     if (t.owner) row(head, T.sharedBy, t.owner);
     root.appendChild(head);
@@ -247,7 +273,7 @@ export const SHARE_PAGE_JS = `"use strict";
     if (v.kind === "flight") renderFlight(v.flight);
     else if (v.kind === "trip") renderTrip(v.trip);
     else if (v.kind === "wrapped") renderWrapped(v.wrapped);
-    root.appendChild(el("p", "note", T.validUntil + " " + new Date(data.expiresAt).toLocaleString(de ? "de-DE" : "en-GB")));
+    root.appendChild(el("p", "note", T.validUntil + " " + fmt.instant(data.expiresAt)));
     return v.kind;
   }
 
