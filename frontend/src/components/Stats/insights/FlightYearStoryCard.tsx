@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 import { STAT_CARD_CLASS, STAT_CARD_STYLE } from "../StatCard";
 import EvidenceCount from "./EvidenceCount";
-import { InsightHeading } from "./InsightHelp";
+import { InsightHeading } from "./InsightHeading";
 import { useInsightFormat } from "./insightFormat";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { FlightYearStory } from "../../../types/flightInsights";

@@ -12,7 +12,7 @@ import type { PeriodScope } from "../useStatsPeriod";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import StatCard from "../StatCard";
 import PeriodComparisonStrip from "../PeriodComparisonStrip";
-import MetricHelp from "../MetricHelp";
+import CountingHelp from "../counting/CountingHelp";
 import BusStatsBlocks from "./BusStatsBlocks";
 
 /**
@@ -240,16 +240,16 @@ export default function BusStatsSection({
               description={stats.longestReturn?.terminal ?? t("bus:stats.longestReturnNone")}
             />
           </div>
-          <MetricHelp
+          <CountingHelp
             testId="bus-kpis-help"
-            items={[
-              { term: t("bus:stats.rides"), text: t("bus:stats.help.rides") },
-              { term: t("bus:stats.km"), text: t("bus:stats.help.km") },
-              { term: t("bus:stats.hours"), text: t("bus:stats.help.hours") },
-              { term: t("bus:stats.nightRides"), text: t("bus:stats.help.night") },
-              { term: t("bus:stats.terminalsVisited"), text: t("bus:stats.help.terminals") },
-              { term: t("bus:stats.transfers"), text: t("bus:stats.help.transfers") },
-              { term: t("bus:stats.longestReturn"), text: t("bus:stats.help.longestReturn") },
+            entries={[
+              { term: t("bus:stats.rides"), helpKey: "bus:stats.help.rides" },
+              { term: t("bus:stats.km"), helpKey: "bus:stats.help.km" },
+              { term: t("bus:stats.hours"), helpKey: "bus:stats.help.hours" },
+              { term: t("bus:stats.nightRides"), helpKey: "bus:stats.help.night" },
+              { term: t("bus:stats.terminalsVisited"), helpKey: "bus:stats.help.terminals" },
+              { term: t("bus:stats.transfers"), helpKey: "bus:stats.help.transfers" },
+              { term: t("bus:stats.longestReturn"), helpKey: "bus:stats.help.longestReturn" },
             ]}
           />
         </div>

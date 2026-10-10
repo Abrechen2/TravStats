@@ -6,7 +6,7 @@ import type { BusRanked, BusStats } from "../../../types/bus";
 import type { SectionVisibility } from "../../../hooks/useSectionVisibility";
 import StatCard from "../StatCard";
 import RankedBarList, { type RankedRow } from "../lodging/RankedBarList";
-import MetricHelp from "../MetricHelp";
+import CountingHelp from "../counting/CountingHelp";
 
 /**
  * The bus tab below its key figures (forgejo#263): rankings, connections and
@@ -129,13 +129,13 @@ export default function BusStatsBlocks({
               emptyLabel={t("bus:stats.noNewDestinations")}
             />
           </div>
-          <MetricHelp
-            items={[
+          <CountingHelp
+            entries={[
               {
                 term: t("bus:stats.favouriteConnections"),
-                text: t("bus:stats.help.favourites"),
+                helpKey: "bus:stats.help.favourites",
               },
-              { term: t("bus:stats.newDestinations"), text: t("bus:stats.help.newDestinations") },
+              { term: t("bus:stats.newDestinations"), helpKey: "bus:stats.help.newDestinations" },
             ]}
           />
         </div>
@@ -149,7 +149,9 @@ export default function BusStatsBlocks({
             accent={accent}
             emptyLabel={t("bus:stats.noDelays")}
           />
-          <MetricHelp items={[{ term: t("bus:stats.delays"), text: t("bus:stats.help.delays") }]} />
+          <CountingHelp
+            entries={[{ term: t("bus:stats.delays"), helpKey: "bus:stats.help.delays" }]}
+          />
         </div>
       )}
       {show("records") && longest && (

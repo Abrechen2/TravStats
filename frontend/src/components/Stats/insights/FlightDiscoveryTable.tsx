@@ -2,7 +2,7 @@ import type { JSX } from "react";
 
 import { STAT_CARD_CLASS, STAT_CARD_STYLE } from "../StatCard";
 import EvidenceCount from "./EvidenceCount";
-import InsightHelp, { InsightHeading } from "./InsightHelp";
+import { InsightHeading, insightCounting } from "./InsightHeading";
 import { useInsightFormat } from "./insightFormat";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { FlightInsightYear } from "../../../types/flightInsights";
@@ -28,6 +28,10 @@ export default function FlightDiscoveryTable({
         id="insights-discovery"
         title={t("stats:insights.discovery.title")}
         topic="discovery"
+        counting={[
+          insightCounting("discovery", t("stats:insights.discovery.title")),
+          insightCounting("routes", t("stats:insights.discovery.newConnections")),
+        ]}
       />
       <div className="overflow-x-auto">
         <table className="w-full text-sm" aria-labelledby="insights-discovery">
@@ -40,15 +44,7 @@ export default function FlightDiscoveryTable({
               <th className={head}>{t("stats:insights.discovery.airportsUsed")}</th>
               <th className={head}>{t("stats:insights.discovery.newAirports")}</th>
               <th className={head}>{t("stats:insights.discovery.rate")}</th>
-              <th className={head}>
-                <span className="inline-flex items-center gap-1">
-                  {t("stats:insights.discovery.newConnections")}
-                  <InsightHelp
-                    topic="routes"
-                    subject={t("stats:insights.discovery.newConnections")}
-                  />
-                </span>
-              </th>
+              <th className={head}>{t("stats:insights.discovery.newConnections")}</th>
               <th className={head}>{t("stats:insights.discovery.repeatedConnections")}</th>
             </tr>
           </thead>

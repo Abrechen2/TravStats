@@ -1,0 +1,147 @@
+{
+  "_about": "Frozen gaps of statsCountingHelp.test.ts (forgejo#256-#265). One entry per statistics section, listing ONLY its gaps: missingCountingHelp (no CountingHelp rendered) and figuresWithoutEvidence (StatCard/InsightTile without an evidence prop). Only shrinks: fix a gap, then lower or delete the entry.",
+  "sections": {
+    "components/Stats/AirlineRankingCard.tsx": {
+      "missingCountingHelp": true
+    },
+    "components/Stats/CountryDistributionCard.tsx": {
+      "missingCountingHelp": true
+    },
+    "components/Stats/CruiseStatsSection.tsx": {
+      "missingCountingHelp": true
+    },
+    "components/Stats/FlightYearSummaryCards.tsx": {
+      "missingCountingHelp": true
+    },
+    "components/Stats/Overview/CrossDomainKpis.tsx": {
+      "missingCountingHelp": true
+    },
+    "components/Stats/Overview/DomainRecordsSection.tsx": {
+      "figuresWithoutEvidence": 1
+    },
+    "components/Stats/Overview/TravelAccountSection.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 1
+    },
+    "components/Stats/PeriodComparisonStrip.tsx": {
+      "missingCountingHelp": true
+    },
+    "components/Stats/PoiStatsSection.tsx": {
+      "missingCountingHelp": true
+    },
+    "components/Stats/PunctualitySection.tsx": {
+      "missingCountingHelp": true
+    },
+    "components/Stats/RecordsSection.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 1
+    },
+    "components/Stats/RoadtripStatsSection.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 4
+    },
+    "components/Stats/StatsAirportsSection.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 1
+    },
+    "components/Stats/StatsBusinessSection.tsx": {
+      "missingCountingHelp": true
+    },
+    "components/Stats/StatsDistanceSection.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 4
+    },
+    "components/Stats/StatsFlightBreakdown.tsx": {
+      "missingCountingHelp": true
+    },
+    "components/Stats/StatsFunSection.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 4
+    },
+    "components/Stats/StatsOverviewCards.tsx": {
+      "missingCountingHelp": true
+    },
+    "components/Stats/StatsUniqueSection.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 9
+    },
+    "components/Stats/bus/BusStatsBlocks.tsx": {
+      "figuresWithoutEvidence": 1
+    },
+    "components/Stats/bus/BusStatsSection.tsx": {
+      "figuresWithoutEvidence": 3
+    },
+    "components/Stats/cruise/CruiseDetailSections.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 8
+    },
+    "components/Stats/lodging/LodgingGeoSection.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 3
+    },
+    "components/Stats/lodging/LodgingInsightsSection.tsx": {
+      "figuresWithoutEvidence": 6
+    },
+    "components/Stats/lodging/LodgingLoyaltySection.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 4
+    },
+    "components/Stats/lodging/LodgingMoneySection.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 5
+    },
+    "components/Stats/lodging/LodgingQualitySection.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 4
+    },
+    "components/Stats/lodging/LodgingRecordsSection.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 2
+    },
+    "components/Stats/lodging/LodgingRhythmSection.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 3
+    },
+    "components/Stats/poi/PoiFunSection.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 6
+    },
+    "components/Stats/poi/PoiInsightsSection.tsx": {
+      "figuresWithoutEvidence": 5
+    },
+    "components/Stats/poi/PoiQualitySection.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 1
+    },
+    "components/Stats/poi/PoiRhythmSection.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 4
+    },
+    "components/Stats/rail/RailJourneySections.tsx": {
+      "figuresWithoutEvidence": 1
+    },
+    "components/Stats/rail/RailStatsSection.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 2
+    },
+    "components/Stats/rental/RentalStatsDetails.tsx": {
+      "figuresWithoutEvidence": 8
+    },
+    "components/Stats/rental/RentalStatsSection.tsx": {
+      "figuresWithoutEvidence": 2
+    },
+    "components/Stats/roadtrip/RoadtripInsightsSection.tsx": {
+      "figuresWithoutEvidence": 5
+    },
+    "components/Stats/roadtrip/TourStatsSection.tsx": {
+      "figuresWithoutEvidence": 4
+    },
+    "components/Stats/scorecard/KpiScorecard.tsx": {
+      "missingCountingHelp": true
+    },
+    "components/Stats/wrapped/WrappedChapterCards.tsx": {
+      "missingCountingHelp": true,
+      "figuresWithoutEvidence": 6
+    }
+  }
+}

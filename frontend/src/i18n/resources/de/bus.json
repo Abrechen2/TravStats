@@ -202,16 +202,76 @@
       "years": "Fahrten pro Jahr"
     },
     "help": {
-      "rides": "Jede abgeschlossene Fahrt zählt einmal, im Jahr der Abfahrt nach dem Kalender des Abfahrtsterminals. Geplante, laufende und stornierte Fahrten zählen nicht.",
-      "km": "Kilometer je Quelle: entlang der Straße, laut Ticket oder als Luftlinie, die eine Busstrecke um 10–40 % unterschätzt. Eine Fahrt ohne Entfernung bleibt draußen und wird als solche gezählt, nie als 0 km.",
-      "hours": "Nur Fahrten mit Uhrzeit an Abfahrt und Ankunft; eine Fahrt mit reinem Datum hat keine Dauer. Die Zeile darunter nennt die Stichprobe.",
-      "night": "Eine Fahrt, die laut ihren Uhrzeiten über Nacht lief: Ankunft an einem späteren Kalendertag als die Abfahrt, nach mindestens sechs Stunden — dieselbe Regel wie beim Nachtzug. Eine fehlende Uhrzeit wird nie ergänzt. In der Nachtbilanz der Übersicht zählt eine Nacht, für die auch eine Unterkunft oder ein Nachtzug erfasst ist, dort.",
-      "terminals": "Zwei Einträge sind dasselbe Terminal, wenn sie höchstens einen Kilometer auseinanderliegen oder denselben Namen tragen und höchstens zehn Kilometer auseinanderliegen. Ein „ZOB“ in zwei Städten bleibt also zwei Terminals.",
-      "transfers": "Fahrten derselben Buchung, die am selben Terminal innerhalb von vier Stunden aneinander anschließen, sind eine Reise; die Wartezeit dazwischen ist der Umstieg. Fahrten ohne gemeinsame Buchung werden nie verbunden.",
-      "longestReturn": "Die meisten Tage zwischen zwei Besuchen desselben Terminals, über alle Fahrten.",
-      "favourites": "Verbindungen, die mindestens zweimal gefahren wurden, beide Richtungen zusammen. Der Name führt zur jüngsten Fahrt.",
-      "newDestinations": "Ein neues Ziel ist ein Terminal, das du mit einer Fahrt zum ersten Mal erreichst und an dem keine frühere Fahrt war — der Ort, an dem dein Logbuch beginnt, ist also kein neues Ziel. Gezählt im Jahr dieser Fahrt.",
-      "delays": "Nur Fahrten mit erfasster Verspätung und Uhrzeit. Eine Fahrt ohne erfasste Verspätung zählt nie als pünktlich."
+      "rides": {
+        "unit": "Eine Fahrt, also ein Bus von der Abfahrt bis zur Ankunft. Jede abgeschlossene Fahrt zählt einmal; mehrere Fahrten einer Reise mit Umstieg zählen einzeln.",
+        "time": "Gezählt im Jahr der Abfahrt nach dem Kalender des Abfahrtsterminals – ein Nachtbus, der am 31. Dezember um 23:30 abfährt, gehört zum alten Jahr. Im Jahresvergleich zählt bei einem laufenden Jahr in beiden Jahren nur dieselbe Spanne bis zum selben Tag.",
+        "source": "Deine Busfahrten mit dem Status „abgeschlossen“. Eine Fahrt ist abgeschlossen, sobald ihre Ankunft vorbei ist (bei reinem Datum: sobald ihr Tag vorbei ist).",
+        "coverage": "Jede abgeschlossene Fahrt hat ein Abfahrtsdatum und zählt daher immer mit. Eine Fahrt ohne Zeitzone am Abfahrtsterminal wird nach UTC einem Tag und Jahr zugeordnet.",
+        "exclusions": "Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "km": {
+        "unit": "Ein Kilometer, summiert über alle gezählten Fahrten. Kilometer je Quelle: entlang der Straße, laut Ticket oder als Luftlinie zwischen den beiden Terminals, die eine Busstrecke um 10–40 % unterschätzt. Die Summe zählt alle drei zusammen; die Zeile darunter nennt jede Quelle einzeln.",
+        "time": "Die Kilometer einer Fahrt zählen im Jahr ihrer Abfahrt nach dem Kalender des Abfahrtsterminals, wie die Fahrt selbst.",
+        "source": "Abgeschlossene Busfahrten und ihre gespeicherte Entfernung samt Quelle. Gibst du keine Ticket-Entfernung an, wird beim Speichern die Luftlinie zwischen den Koordinaten der Terminals eingetragen.",
+        "coverage": "Eine Fahrt ohne Entfernung bleibt draußen und wird als solche gezählt, nie als 0 km – die Zeile darunter und die Jahresliste nennen, wie viele es sind. Ein Jahr, in dem keine Fahrt eine Entfernung hat, zeigt keine Kilometer statt 0 km.",
+        "exclusions": "Geplante, laufende und stornierte Fahrten zählen nicht. Nichts wird geschätzt oder hochgerechnet."
+      },
+      "hours": {
+        "unit": "Eine Stunde an Bord: die Zeit von Abfahrt bis Ankunft einer Fahrt, summiert über alle gemessenen Fahrten.",
+        "time": "Die Dauer läuft zwischen den echten Zeitpunkten an beiden Terminals, eine Zeitzonengrenze verfälscht sie also nicht. Eine Fahrt zählt im Jahr ihrer Abfahrt nach dem Kalender des Abfahrtsterminals.",
+        "source": "Abgeschlossene Busfahrten mit Abfahrts- und Ankunftszeit.",
+        "coverage": "Nur Fahrten mit Uhrzeit an Abfahrt und Ankunft; eine Fahrt mit reinem Datum oder ohne Ankunft hat keine Dauer. Die Zeile darunter nennt die Stichprobe – gemessene Fahrten von allen.",
+        "exclusions": "Eine Fahrt, deren Ankunft vor ihrer Abfahrt liegt, zählt nicht mit. Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "night": {
+        "unit": "Eine Fahrt, die laut ihren Uhrzeiten über Nacht lief: Ankunft an einem späteren Kalendertag als die Abfahrt, nach mindestens sechs Stunden – dieselbe Regel wie beim Nachtzug. Die Zeile darunter zählt die Nächte an Bord: jede Nacht vom Abfahrtstag bis zum Tag vor der Ankunft.",
+        "time": "Die Kalendertage gelten an den Terminals – der Abfahrtstag am Abfahrts-, der Ankunftstag am Ankunftsterminal. Die Fahrt zählt im Jahr ihrer Abfahrt.",
+        "source": "Abgeschlossene Busfahrten mit Abfahrts- und Ankunftszeit und den Zeitzonen beider Terminals.",
+        "coverage": "Eine fehlende Uhrzeit wird nie ergänzt: Eine Fahrt mit reinem Datum oder ohne Ankunft ist nie ein Nachtbus.",
+        "exclusions": "In der Nachtbilanz der Übersicht zählt eine Nacht, für die auch eine Kreuzfahrt, eine Unterkunft oder ein Nachtzug erfasst ist, dort; eine Nacht, die noch nicht vorbei ist, zählt dort noch nicht. Diese Kachel zählt jede Nacht an Bord. Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "terminals": {
+        "unit": "Ein Terminal, an dem eine Fahrt abfuhr oder ankam; jedes zählt einmal, egal wie oft du dort warst. Zwei Einträge sind dasselbe Terminal, wenn sie höchstens einen Kilometer auseinanderliegen oder denselben Namen tragen und höchstens zehn Kilometer auseinanderliegen. Ein „ZOB“ in zwei Städten bleibt also zwei Terminals.",
+        "time": "Gezählt werden die Terminals der Fahrten im gewählten Zeitraum (Jahr der Abfahrt). Welche Einträge ein Terminal bilden, wird über alle Fahrten in Reihenfolge der Abfahrt entschieden, damit es nicht vom Zeitraum abhängt.",
+        "source": "Name und Koordinaten von Abfahrts- und Ankunftsort deiner abgeschlossenen Busfahrten. Ein Terminal trägt den Namen, unter dem es zuerst erfasst wurde.",
+        "coverage": "Jede gezählte Fahrt hat beide Orte, also fehlt keine.",
+        "exclusions": "Geplante, laufende und stornierte Fahrten zählen nicht. Nichts darüber hinaus."
+      },
+      "transfers": {
+        "unit": "Ein Umstieg: Fahrten derselben Buchung, die am selben Terminal innerhalb von vier Stunden aneinander anschließen, sind eine Reise; die Wartezeit dazwischen ist der Umstieg. Die Kachel zeigt die mittlere Wartezeit (Durchschnitt) über alle Umstiege.",
+        "time": "Die Wartezeit läuft von der Ankunft der einen bis zur Abfahrt der nächsten Fahrt, auf die Minute. Verbunden werden nur Fahrten innerhalb des gewählten Zeitraums.",
+        "source": "Abgeschlossene Busfahrten mit ihrer Buchung, ihren Terminals und ihren Uhrzeiten.",
+        "coverage": "Beide Zeitpunkte müssen auf die Minute bekannt sein; eine Fahrt mit reinem Datum steht allein. Gleiches Terminal heißt hier: derselbe Name oder höchstens einen Kilometer entfernt.",
+        "exclusions": "Fahrten ohne gemeinsame Buchung werden nie verbunden. Eine Fahrt, die vor der Ankunft der vorigen abfährt oder später als vier Stunden danach, beginnt eine neue Reise, ebenso eine, die an einen Ort der Reise zurückführt – das ist die Rückfahrt, kein Umstieg."
+      },
+      "longestReturn": {
+        "unit": "Tage: die meisten Tage zwischen zwei Besuchen desselben Terminals, über alle Fahrten. Ein Besuch reicht von der Ankunft bis zur nächsten Abfahrt; Ankunft und Weiterfahrt desselben Aufenthalts sind ein Besuch, keine Rückkehr.",
+        "time": "Gemessen in Kalendertagen am Terminal, vom letzten Tag eines Besuchs bis zum ersten des nächsten. Die Zahl gilt über dein ganzes Logbuch, nicht nur über den gewählten Zeitraum.",
+        "source": "Abfahrten und Ankünfte deiner abgeschlossenen Busfahrten je Terminal. Angezeigt wird der Name, unter dem das Terminal zuerst erfasst wurde.",
+        "coverage": "Eine Fahrt ohne Ankunftszeit liefert nur ihre Abfahrt. Eine Abfahrt ohne erfasste Ankunft davor zählt als eigener Besuch, etwa am Heimatterminal. Wurde noch kein Terminal ein zweites Mal besucht, bleibt die Kachel leer.",
+        "exclusions": "Eine Rückkehr am selben Kalendertag zählt nicht. Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "favourites": {
+        "unit": "Eine Verbindung zwischen zwei Terminals, beide Richtungen zusammen, mit der Zahl ihrer Fahrten. Gezeigt werden Verbindungen, die mindestens zweimal gefahren wurden, höchstens die fünf häufigsten.",
+        "time": "Gezählt werden die Fahrten im gewählten Zeitraum (Jahr der Abfahrt nach dem Kalender des Abfahrtsterminals).",
+        "source": "Abfahrts- und Ankunftsterminal deiner abgeschlossenen Busfahrten, nach derselben Terminal-Regel wie bei den Terminals.",
+        "coverage": "Jede gezählte Fahrt hat beide Terminals, also fehlt keine. Der Name führt zur jüngsten Fahrt.",
+        "exclusions": "Eine Fahrt, deren Abfahrt und Ankunft dasselbe Terminal sind, ist keine Verbindung. Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "newDestinations": {
+        "unit": "Ein neues Ziel ist ein Terminal, das du mit einer Fahrt zum ersten Mal erreichst und an dem keine frühere Fahrt war – der Ort, an dem dein Logbuch beginnt, ist also kein neues Ziel. Jedes Terminal ist höchstens einmal neu.",
+        "time": "Gezählt im Jahr dieser Fahrt, nach dem Kalender ihres Abfahrtsterminals. Ob ein Ziel neu ist, entscheidet dein ganzes Logbuch in Reihenfolge der Abfahrt; die Summe oben nennt die im gewählten Zeitraum, die Balken alle Jahre.",
+        "source": "Abfahrts- und Ankunftsterminal deiner abgeschlossenen Busfahrten, nach derselben Terminal-Regel wie bei den Terminals.",
+        "coverage": "Jede gezählte Fahrt hat beide Terminals, also fehlt keine.",
+        "exclusions": "Eine Fahrt, die am selben Terminal ankommt, an dem sie abfuhr, bringt kein neues Ziel. Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "delays": {
+        "unit": "Eine Fahrt, einsortiert nach ihrer Ankunftsverspätung in Minuten: pünktlich (0 oder früher), bis 5, bis 15, bis 30, bis 60 und über 60 Minuten.",
+        "time": "Die Verspätung ist die erlebte an der Ankunft. Eine Fahrt zählt im Jahr ihrer Abfahrt nach dem Kalender des Abfahrtsterminals.",
+        "source": "Die bei deinen abgeschlossenen Busfahrten erfasste Verspätung.",
+        "coverage": "Nur Fahrten mit erfasster Verspätung und Uhrzeit an Abfahrt und Ankunft. Die Zeile oben nennt die Stichprobe – Fahrten mit Verspätung von allen.",
+        "exclusions": "Eine Fahrt ohne erfasste Verspätung zählt nie als pünktlich. Geplante, laufende und stornierte Fahrten zählen nicht."
+      }
     }
   },
   "tripCard": {

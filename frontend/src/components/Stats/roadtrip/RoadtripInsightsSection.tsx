@@ -6,7 +6,8 @@ import type { RoadtripInsights } from "../../../types/statsInsights";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import EvidenceNumber from "../EvidenceNumber";
 import InsightTile from "../insight/InsightTile";
-import { helpText, totalFor } from "../insight/insightFold";
+import { totalFor } from "../insight/insightFold";
+import { countingSource } from "../counting/countingEntry";
 import RankedBarList, { type RankedRow } from "../lodging/RankedBarList";
 
 const STYLES = ["pitch", "campsite", "lodging"] as const;
@@ -40,7 +41,7 @@ export default function RoadtripInsightsSection({
   const scope: EvidenceScopeParams =
     year === null ? { period: "allTime" } : { period: "year", year };
   const help = (block: string, values: Record<string, unknown> = {}) =>
-    helpText(t, `roadtrips:stats.insights.${block}`, values);
+    countingSource(`roadtrips:stats.insights.${block}`, values);
 
   const rows = data.roadtrips.filter((r) => year === null || r.year === year);
   const sum = (pick: (r: (typeof rows)[number]) => number): number =>

@@ -12,7 +12,7 @@ import type { PeriodScope } from "../useStatsPeriod";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import StatCard from "../StatCard";
 import PeriodComparisonStrip from "../PeriodComparisonStrip";
-import MetricHelp from "../MetricHelp";
+import CountingHelp from "../counting/CountingHelp";
 import RentalStatsDetails, { type RentalEvidence } from "./RentalStatsDetails";
 
 const ALL_VISIBLE: SectionVisibility = {
@@ -156,12 +156,12 @@ export default function RentalStatsSection({
       {show("kpis") && (
         <div>
           <KpiTiles stats={stats} locale={locale} accent={accent} evidence={evidence} />
-          <MetricHelp
+          <CountingHelp
             testId="rental-kpis-help"
-            items={[
-              { term: t("rental:stats.days"), text: t("rental:stats.help.days") },
-              { term: t("rental:stats.km"), text: t("rental:stats.help.km") },
-              { term: t("rental:stats.perDayNoCost"), text: t("rental:stats.help.costPerDay") },
+            entries={[
+              { term: t("rental:stats.days"), helpKey: "rental:stats.help.days" },
+              { term: t("rental:stats.km"), helpKey: "rental:stats.help.km" },
+              { term: t("rental:stats.perDayNoCost"), helpKey: "rental:stats.help.costPerDay" },
             ]}
           />
         </div>

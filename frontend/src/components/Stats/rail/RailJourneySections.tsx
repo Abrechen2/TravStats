@@ -7,7 +7,7 @@ import type { SectionVisibility } from "../../../hooks/useSectionVisibility";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import StatCard from "../StatCard";
 import RankedBarList, { type RankedRow } from "../lodging/RankedBarList";
-import MetricHelp from "../MetricHelp";
+import CountingHelp from "../counting/CountingHelp";
 
 /**
  * The rail tab's journey-level blocks (forgejo#261): journeys and changes,
@@ -15,7 +15,7 @@ import MetricHelp from "../MetricHelp";
  * connection. Every figure is the server's (`connected` in `GET /rail/stats`,
  * `services/rail/railJourneyStats.ts`); this file counts nothing.
  *
- * Each block carries its "So wird gezählt" (`MetricHelp`), because three of
+ * Each block carries its "So wird gezählt" (`CountingHelp`), because three of
  * these figures are easy to misread: a journey is NOT a ride, a connection is
  * BOTH directions, and an operator's share is over the rides that recorded a
  * delay — never over all of them.
@@ -133,13 +133,13 @@ export default function RailJourneySections({
               evidence={evidence("railNewConnectionsCount", newConnections.inScope)}
             />
           </div>
-          <MetricHelp
+          <CountingHelp
             testId="rail-journeys-help"
-            items={[
-              { term: t("rail:stats.journeysLinked"), text: t("rail:stats.help.journeys") },
-              { term: t("rail:stats.transfers"), text: t("rail:stats.help.transfers") },
-              { term: t("rail:stats.nightNights"), text: t("rail:stats.help.nights") },
-              { term: t("rail:stats.newConnections"), text: t("rail:stats.help.newConnections") },
+            entries={[
+              { term: t("rail:stats.journeysLinked"), helpKey: "rail:stats.help.journeys" },
+              { term: t("rail:stats.transfers"), helpKey: "rail:stats.help.transfers" },
+              { term: t("rail:stats.nightNights"), helpKey: "rail:stats.help.nights" },
+              { term: t("rail:stats.newConnections"), helpKey: "rail:stats.help.newConnections" },
             ]}
           />
         </div>
@@ -160,11 +160,11 @@ export default function RailJourneySections({
               emptyLabel={t("rail:stats.noNewConnections")}
             />
           </div>
-          <MetricHelp
-            items={[
+          <CountingHelp
+            entries={[
               {
                 term: t("rail:stats.favouriteConnections"),
-                text: t("rail:stats.help.favourites"),
+                helpKey: "rail:stats.help.favourites",
               },
             ]}
           />
@@ -190,11 +190,11 @@ export default function RailJourneySections({
               emptyLabel={t("rail:stats.noPunctuality")}
             />
           </div>
-          <MetricHelp
-            items={[
+          <CountingHelp
+            entries={[
               {
                 term: t("rail:stats.punctualityByOperator"),
-                text: t("rail:stats.help.punctuality"),
+                helpKey: "rail:stats.help.punctuality",
               },
             ]}
           />

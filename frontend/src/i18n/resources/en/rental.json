@@ -366,16 +366,76 @@
       "years": "Rental days per year"
     },
     "help": {
-      "days": "Calendar days from pickup to return on the stations' calendars; Monday to Wednesday is two days, a same-day rental is one. Only completed rentals count, in the year of the pickup. Rental days are not added to travel days on top.",
-      "km": "Driven km only from the invoice, a labelled correction or both odometer readings — never estimated. A rental without km stays out; the line below says how many rentals the total stands on.",
-      "costPerDay": "The invoice's final amount, else the booked price, per currency, divided by the rental days of the same rentals. Currencies are never added together; a deposit is not a cost; cancellation fees are shown apart.",
-      "oneWay": "A rental returned at a different station than it was picked up at: two different airports, else more than a kilometre apart.",
-      "brokers": "The provider is the company at the counter (Sixt, Alamo). A broker is the portal or tour operator the booking went through. Providers are ranked by rental days, brokers by rentals.",
-      "kmPerDay": "The km of the rentals with known km, divided by the rental days of exactly those rentals — never the km of some by the days of others.",
-      "costPerKm": "Per currency: the cost of the rentals that have both a price and known km — the invoice's final amount where there is one, else the booked price — divided by their km.",
-      "bookedVsFinal": "Only rentals whose final amount came from the invoice or a hand correction, and only in the same currency as the booked price. Extras are part of the final amount. Nothing is converted.",
-      "promisedVsDriven": "Compares the booked example model (\"VW Golf or similar\") with the car driven, without judgement: there is no fixed order of vehicle classes, so nothing here is called an upgrade.",
-      "records": "Longest rental by rental days; farthest distance from known km only; a provider is new in the period its first completed rental falls in."
+      "days": {
+        "unit": "One rental day. Counted are the calendar days from pickup to return; Monday to Wednesday is two days, a same-day rental is one. The tile shows the sum over all rentals.",
+        "time": "The stations' calendars decide: the pickup day at the pickup station, the return day at the return station – not your device, not UTC. A rental counts in the year of the pickup.",
+        "source": "Car rental bookings with their pickup and return times.",
+        "coverage": "Every completed rental carries both times and so counts in full; the line below the figure says how many rentals it is.",
+        "exclusions": "Only completed rentals count – those whose return is past; scheduled, in-progress and cancelled ones do not. Rental days are not added to travel days on top."
+      },
+      "km": {
+        "unit": "One driven kilometre. The tile shows the sum over the rentals with known km.",
+        "time": "A rental counts in the year of its pickup, on the pickup station's calendar.",
+        "source": "Completed rentals. Driven km come from the invoice or the rental agreement, a labelled correction or – where none of those is entered – both odometer readings (return minus pickup). An entered figure takes precedence over the readings.",
+        "coverage": "A rental without km stays out; the line below says how many rentals the total stands on. A single odometer reading is not enough, and a return reading below the pickup one does not count.",
+        "exclusions": "Never estimated. Scheduled, in-progress and cancelled rentals do not count."
+      },
+      "costPerDay": {
+        "unit": "An amount per rental day, per currency: the cost of the rentals with a price divided by the rental days of the same rentals.",
+        "time": "A rental counts in the year of its pickup, on the pickup station's calendar; the rental days on the stations' calendars.",
+        "source": "Completed rentals: the invoice's final amount, else the booked price.",
+        "coverage": "A rental with neither a price nor a final amount stays out, never as a zero; the line below names how many rentals with a known price the figure comes from. Other currencies are listed apart below.",
+        "exclusions": "Currencies are never added together; a deposit is not a cost. Cancellation fees are shown apart, on a line of their own under the pickup year, and never in the cost per day."
+      },
+      "oneWay": {
+        "unit": "A rental returned at a different station than it was picked up at. The tile counts these rentals.",
+        "time": "A rental counts in the year of its pickup, on the pickup station's calendar.",
+        "source": "Completed rentals with their two stations: if both are matched to an airport, it is whether they are two different airports; else, whether the stations are more than a kilometre apart.",
+        "coverage": "Every station carries coordinates, so every completed rental can answer.",
+        "exclusions": "Scheduled, in-progress and cancelled rentals do not count. Nothing beyond that."
+      },
+      "brokers": {
+        "unit": "One rental. The provider is the company at the counter (Sixt, Alamo). A broker is the portal or tour operator the booking went through. Providers are ranked by rental days, brokers by rentals.",
+        "time": "A rental counts in the year of its pickup, on the pickup station's calendar.",
+        "source": "Completed rentals with their provider and, where entered, their broker.",
+        "coverage": "A rental without a broker counts as booked directly with the provider; the line under \"Booked through a broker\" says how many those are.",
+        "exclusions": "Brokers do not count as providers. Scheduled, in-progress and cancelled rentals do not count."
+      },
+      "kmPerDay": {
+        "unit": "Km per rental day: the km of the rentals with known km, divided by the rental days of exactly those rentals – never the km of some by the days of others. Rounded to one decimal.",
+        "time": "A rental counts in the year of its pickup, on the pickup station's calendar; the rental days on the stations' calendars.",
+        "source": "Completed rentals; km from the invoice or rental agreement, a labelled correction or both odometer readings.",
+        "coverage": "Rentals without known km stay out; the line below names the km, the days and the number of rentals the figure stands on.",
+        "exclusions": "Never estimated. Scheduled, in-progress and cancelled rentals do not count."
+      },
+      "costPerKm": {
+        "unit": "An amount per km, per currency: the cost of the rentals that have both a price and known km, divided by their km.",
+        "time": "A rental counts in the year of its pickup, on the pickup station's calendar.",
+        "source": "Completed rentals: the invoice's final amount where there is one, else the booked price; km from the invoice or rental agreement, a labelled correction or both odometer readings.",
+        "coverage": "Only rentals with both count; the line below names how many rentals the figure comes from.",
+        "exclusions": "A rental with 0 km driven carries no price per km. Currencies are never added together. Scheduled, in-progress and cancelled rentals do not count."
+      },
+      "bookedVsFinal": {
+        "unit": "Per currency: the sum of the booked prices beside the sum of the final amounts of the same rentals, and the difference (billed minus booked). Extras are part of the final amount.",
+        "time": "A rental counts in the year of its pickup, on the pickup station's calendar.",
+        "source": "Only completed rentals whose final amount came from the invoice or a hand correction, and that carry a booked price.",
+        "coverage": "Only in the same currency as the booked price; a rental billed in another currency is named on the line below and stays out of the comparison.",
+        "exclusions": "Nothing is converted. A deposit is never read. Scheduled, in-progress and cancelled rentals do not count."
+      },
+      "promisedVsDriven": {
+        "unit": "A rental where both the example model and the car driven are known. The tile shows how often you got the booked example model (\"VW Golf or similar\"), out of how many compared rentals.",
+        "time": "A rental counts in the year of its pickup, on the pickup station's calendar.",
+        "source": "Completed rentals with an example model and a car driven. The comparison ignores case and spacing; a trailing \"or similar\" is not part of the model.",
+        "coverage": "Rentals missing either one stay out; the line below says how often it was another model.",
+        "exclusions": "Without judgement: there is no fixed order of vehicle classes, so nothing here is called an upgrade."
+      },
+      "records": {
+        "unit": "Three records: longest rental by rental days; farthest distance by the driven km of one rental; new providers as a list.",
+        "time": "A rental counts in the year of its pickup, on the pickup station's calendar. A provider is new in the period its first completed rental falls in – by pickup day, across all years.",
+        "source": "Completed rentals. Provider names are compared ignoring case and spacing.",
+        "coverage": "Farthest distance from known km only; without them the record stays empty.",
+        "exclusions": "A rental with 0 km is no distance record. Scheduled, in-progress and cancelled rentals do not count."
+      }
     }
   },
   "timeline": {

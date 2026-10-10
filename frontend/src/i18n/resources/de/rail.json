@@ -293,12 +293,48 @@
     "punctualityHint_other": "{{count}} gemessene Fahrten · Ø {{average}} min",
     "noPunctuality": "Bei keiner Fahrt mit Uhrzeit ist eine Verspätung erfasst.",
     "help": {
-      "journeys": "Zähleinheit ist die Reise, nicht der Zug: Fahrten derselben Buchung, die am selben Bahnhof innerhalb von vier Stunden aneinander anschließen, sind eine Reise. Eine Fahrt zurück zu einem Bahnhof, an dem die Reise schon war, beginnt eine neue (Rückfahrt). Fahrten ohne gemeinsame Buchung werden nie verbunden. Gezählt werden nur abgeschlossene Fahrten, im Jahr der Abfahrt nach dem Kalender des Abfahrtsbahnhofs.",
-      "transfers": "Die Wartezeit zwischen Ankunft und nächster Abfahrt innerhalb einer Reise, aus den minutengenauen Zeiten beider Fahrten. Fahrten mit reinem Datum oder ohne Verknüpfung haben keinen messbaren Umstieg und bleiben draußen.",
-      "nights": "Eine Nacht je Kalendernacht an Bord eines Nachtzugs (Schlaf- oder Liegewagen, Nachtzug-Gattung, oder über Nacht mindestens sechs Stunden unterwegs), nach dem Kalender der Bahnhöfe. In der Nachtbilanz der Übersicht zählt eine Nacht, für die auch eine Unterkunft erfasst ist, bei der Unterkunft — hier steht sie trotzdem.",
-      "newConnections": "Eine Verbindung ist das Bahnhofspaar, beide Richtungen zusammen. Als neu zählt sie in dem Jahr, in dem die erste abgeschlossene Fahrt darauf abfuhr; ein Bahnhof gilt über seinen Code, sonst über seinen Namen als derselbe.",
-      "favourites": "Verbindungen, die mindestens zweimal gefahren wurden, beide Richtungen zusammen. Der Name führt zur jüngsten Fahrt.",
-      "punctuality": "Der Anteil der Fahrten, die ohne Verspätung ankamen, unter den Fahrten mit erfasster Verspätung und minutengenauen Zeiten. Eine Fahrt ohne erfasste Verspätung zählt nie als pünktlich, sie bleibt außerhalb der Stichprobe. Die Zahl unter jedem Balken nennt die Stichprobe und die mittlere Verspätung; frühe Ankünfte zählen negativ."
+      "journeys": {
+        "unit": "Zähleinheit ist die Reise, nicht der Zug: Fahrten derselben Buchung, die am selben Bahnhof innerhalb von vier Stunden aneinander anschließen, sind eine Reise. Eine Fahrt zurück zu einem Bahnhof, an dem die Reise schon war, beginnt eine neue (Rückfahrt). Die Zeile unter der Zahl nennt, wie viele davon einen Umstieg haben.",
+        "time": "Gezählt wird im Jahr der Abfahrt nach dem Kalender des Abfahrtsbahnhofs – je Fahrt, nicht je Reise.",
+        "source": "Deine Bahnfahrten mit Status „Gefahren“, verbunden über die gemeinsame Buchung. Als derselbe Umstiegsbahnhof gilt derselbe Katalogeintrag, derselbe Name oder ein Bahnhof im Umkreis von einem Kilometer.",
+        "coverage": "Ein Anschluss wird nur erkannt, wenn Ankunft und nächste Abfahrt minutengenau bekannt sind; sonst steht jede Fahrt als eigene Reise. Ein Tipp auf die Zahl zeigt die Reisen.",
+        "exclusions": "Gezählt werden nur abgeschlossene Fahrten – geplante, laufende und stornierte nicht. Fahrten ohne gemeinsame Buchung werden nie verbunden, auch wenn sie zeitlich passen."
+      },
+      "transfers": {
+        "unit": "Die Wartezeit zwischen Ankunft und nächster Abfahrt innerhalb einer Reise, in Minuten. Groß steht der Durchschnitt aller Umstiege, darunter ihre Zahl, der kürzeste und der längste.",
+        "time": "Gemessen wird aus den minutengenauen Zeiten beider Fahrten, als echte vergangene Zeit – Zeitzonen verschieben nichts. Im Jahr der Abfahrt der Fahrten nach dem Kalender des Abfahrtsbahnhofs.",
+        "source": "Die Reisen aus abgeschlossenen Fahrten, wie sie die Reise-Regel bildet: ein Umstieg ist dieselbe Buchung, derselbe Bahnhof und höchstens vier Stunden Wartezeit.",
+        "coverage": "Fahrten mit reinem Datum oder ohne Verknüpfung haben keinen messbaren Umstieg und bleiben draußen. Gibt es keinen, sagt die Karte das, statt eine Null zu zeigen.",
+        "exclusions": "Geplante, laufende und stornierte Fahrten zählen nicht. Längere Pausen als vier Stunden sind kein Umstieg, sondern trennen zwei Reisen."
+      },
+      "nights": {
+        "unit": "Eine Nacht je Kalendernacht an Bord eines Nachtzugs, vom Abfahrtstag bis zur Nacht vor dem Ankunftstag. Nachtzug ist eine Fahrt im Schlaf- oder Liegewagen, in einer Nachtzug-Gattung (NJ, EN, NZ) oder eine, die über Nacht mindestens sechs Stunden unterwegs war.",
+        "time": "Nach dem Kalender der Bahnhöfe: Abfahrtstag am Abfahrtsbahnhof, Ankunftstag am Ankunftsbahnhof. Die Nächte zählen im Jahr, in dem die Fahrt abfuhr.",
+        "source": "Abgeschlossene Bahnfahrten mit Wagenklasse, Zuggattung sowie Ab- und Ankunftszeit.",
+        "coverage": "Ein Nachtzug ohne bekannten Ankunftstag hat eine Nacht, die kein Kalender fassen kann: er fehlt in der Zahl und wird darunter eigens genannt. Eine Fahrt mit reinem Datum gilt nur über Wagenklasse oder Gattung als Nachtzug, nie über die Uhrzeit. Ein Tipp auf die Zahl zeigt die Fahrten.",
+        "exclusions": "Geplante, laufende und stornierte Fahrten zählen nicht. In der Nachtbilanz der Übersicht zählt eine Nacht, für die auch eine Unterkunft (oder eine Kreuzfahrtkabine) erfasst ist, bei der Unterkunft – hier steht sie trotzdem."
+      },
+      "newConnections": {
+        "unit": "Eine Verbindung ist das Bahnhofspaar, beide Richtungen zusammen. Die Zahl ist die Menge der Verbindungen, die im gezeigten Zeitraum zum ersten Mal gefahren wurden.",
+        "time": "Als neu zählt sie in dem Jahr, in dem die erste abgeschlossene Fahrt darauf abfuhr, nach dem Kalender des Abfahrtsbahnhofs. Die Liste „Neue Verbindungen pro Jahr“ zeigt alle Jahre, unabhängig vom gewählten Zeitraum.",
+        "source": "Alle abgeschlossenen Fahrten über alle Jahre, denn nur sie zeigen, ob eine Verbindung schon früher gefahren wurde. Ein Bahnhof gilt über seinen Code, sonst über seinen Namen als derselbe.",
+        "coverage": "Jede abgeschlossene Fahrt mit zwei verschiedenen Bahnhöfen hat eine Verbindung. Ein Tipp auf die Zahl zeigt die ersten Fahrten.",
+        "exclusions": "Eine später wieder gefahrene Verbindung ist nicht noch einmal neu. Eine Fahrt, die am selben Bahnhof endet, an dem sie begann, liegt auf keiner Verbindung. Geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "favourites": {
+        "unit": "Verbindungen, die mindestens zweimal gefahren wurden, beide Richtungen zusammen; gezählt werden Fahrten. Gezeigt werden die fünf häufigsten.",
+        "time": "Die Fahrten im gezeigten Zeitraum, nach dem Jahr der Abfahrt am Abfahrtsbahnhof.",
+        "source": "Abgeschlossene Fahrten; ein Bahnhof gilt über seinen Code, sonst über seinen Namen als derselbe. Der Name führt zur jüngsten Fahrt, und deren Schreibweise der Bahnhöfe steht dort.",
+        "coverage": "Jede abgeschlossene Fahrt mit zwei verschiedenen Bahnhöfen zählt mit.",
+        "exclusions": "Eine einmal gefahrene Verbindung ist kein Favorit. Fahrten mit gleichem Start- und Zielbahnhof sowie geplante, laufende und stornierte Fahrten zählen nicht."
+      },
+      "punctuality": {
+        "unit": "Der Anteil der Fahrten, die ohne Verspätung ankamen (Verspätung null oder früher), je Betreiber und je Verbindung. Die Zahl unter jedem Balken nennt die Stichprobe und die mittlere Verspätung; frühe Ankünfte zählen negativ.",
+        "time": "Die Fahrten im gezeigten Zeitraum, nach dem Jahr der Abfahrt am Abfahrtsbahnhof.",
+        "source": "Abgeschlossene Fahrten mit erfasster Ankunftsverspätung. Ein Betreiber gilt unabhängig von Groß- und Kleinschreibung und Leerzeichen als derselbe; eine Verbindung umfasst beide Richtungen.",
+        "coverage": "Gezählt wird unter den Fahrten mit erfasster Verspätung und minutengenauen Zeiten samt Ankunft. Eine Fahrt ohne erfasste Verspätung zählt nie als pünktlich, sie bleibt außerhalb der Stichprobe; die Zeile über der Betreiberliste nennt, aus wie vielen aller Fahrten die Stichprobe stammt.",
+        "exclusions": "Fahrten ohne Betreiber fehlen in der Betreiberliste, Fahrten mit gleichem Start- und Zielbahnhof in der Verbindungsliste. Je Liste stehen höchstens zehn Einträge, die mit der größten Stichprobe zuerst. Geplante, laufende und stornierte Fahrten zählen nicht."
+      }
     }
   },
   "roadtripConversion": {

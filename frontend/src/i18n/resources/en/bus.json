@@ -202,16 +202,76 @@
       "years": "Rides per year"
     },
     "help": {
-      "rides": "Every completed ride counts once, in the year it left on the departure terminal's calendar. Planned, running and cancelled rides do not count.",
-      "km": "Kilometres per source: along the road, per ticket, or as the straight line, which understates a coach route by 10–40 %. A ride without a distance stays out and is counted as such, never as 0 km.",
-      "hours": "Only rides with a time at departure and arrival; a date-only ride has no duration. The line below names the sample.",
-      "night": "A ride whose times say it ran overnight: arriving on a later calendar day than it left, after at least six hours — the night-train rule. A missing time is never filled in. In the overview's night account a night that also has a stay or a night train goes there.",
-      "terminals": "Two entries are the same terminal when they lie at most one kilometre apart, or carry the same name and lie at most ten kilometres apart. A \"ZOB\" in two cities stays two terminals.",
-      "transfers": "Rides of the same booking that continue at the same terminal within four hours are one journey; the wait between them is the change. Rides without a shared booking are never joined.",
-      "longestReturn": "The most days between two visits of the same terminal, across all rides.",
-      "favourites": "Connections ridden at least twice, both directions together. The name opens the most recent ride.",
-      "newDestinations": "A new destination is a terminal a ride reaches for the first time, where no earlier ride had been — the place your logbook starts from is no new destination. Counted in the year of that ride.",
-      "delays": "Only rides with a recorded delay and times. A ride with no recorded delay never counts as on time."
+      "rides": {
+        "unit": "A ride: one bus from departure to arrival. Every completed ride counts once; the rides of a journey with a change count one by one.",
+        "time": "Counted in the year it left on the departure terminal's calendar – a night coach leaving at 23:30 on 31 December belongs to the old year. When a running year is compared, both years count only the same span up to the same day.",
+        "source": "Your bus rides with the status “completed”. A ride is completed once its arrival is past (date-only: once its day is past).",
+        "coverage": "Every completed ride has a departure date, so it always counts. A ride without a time zone at its departure terminal is filed under a day and year by UTC.",
+        "exclusions": "Planned, running and cancelled rides do not count."
+      },
+      "km": {
+        "unit": "A kilometre, summed over every counted ride. Kilometres per source: along the road, per ticket, or as the straight line between the two terminals, which understates a coach route by 10–40 %. The total adds all three; the line below names each source.",
+        "time": "A ride's kilometres count in the year it left on the departure terminal's calendar, like the ride itself.",
+        "source": "Completed bus rides and their stored distance with its source. Without a ticket distance, the straight line between the terminals' coordinates is stored on save.",
+        "coverage": "A ride without a distance stays out and is counted as such, never as 0 km – the line below and the list by year say how many. A year in which no ride has a distance shows no kilometres rather than 0 km.",
+        "exclusions": "Planned, running and cancelled rides do not count. Nothing is estimated or extrapolated."
+      },
+      "hours": {
+        "unit": "An hour on board: the time from a ride's departure to its arrival, summed over every measured ride.",
+        "time": "The duration runs between the real instants at both terminals, so a time-zone border does not distort it. A ride counts in the year it left on the departure terminal's calendar.",
+        "source": "Completed bus rides with a departure and an arrival time.",
+        "coverage": "Only rides with a time at departure and arrival; a date-only ride or one without an arrival has no duration. The line below names the sample – measured rides out of all.",
+        "exclusions": "A ride whose arrival lies before its departure does not count. Planned, running and cancelled rides do not count."
+      },
+      "night": {
+        "unit": "A ride whose times say it ran overnight: arriving on a later calendar day than it left, after at least six hours – the night-train rule. The line below counts the nights on board: every night from the departure day to the day before arrival.",
+        "time": "The calendar days are the terminals' – the departure day at the departure terminal, the arrival day at the arrival terminal. The ride counts in the year it left.",
+        "source": "Completed bus rides with a departure and an arrival time and both terminals' time zones.",
+        "coverage": "A missing time is never filled in: a date-only ride or one without an arrival is never a night bus.",
+        "exclusions": "In the overview's night account a night that also has a cruise, a stay or a night train goes there; a night that is not over yet does not count there yet. This card counts every night on board. Planned, running and cancelled rides do not count."
+      },
+      "terminals": {
+        "unit": "A terminal a ride left from or arrived at; each counts once, however often you were there. Two entries are the same terminal when they lie at most one kilometre apart, or carry the same name and lie at most ten kilometres apart. A “ZOB” in two cities stays two terminals.",
+        "time": "The terminals of the rides in the selected period (year of departure) are counted. Which entries form one terminal is decided over all rides in order of departure, so it does not depend on the period.",
+        "source": "Name and coordinates of the departure and arrival places of your completed bus rides. A terminal carries the name it was first recorded under.",
+        "coverage": "Every counted ride has both places, so none is missing.",
+        "exclusions": "Planned, running and cancelled rides do not count. Nothing beyond that."
+      },
+      "transfers": {
+        "unit": "A change: rides of the same booking that continue at the same terminal within four hours are one journey; the wait between them is the change. The card shows the mean wait (average) across all changes.",
+        "time": "The wait runs from one ride's arrival to the next ride's departure, to the minute. Only rides inside the selected period are joined.",
+        "source": "Completed bus rides with their booking, their terminals and their times.",
+        "coverage": "Both instants must be known to the minute; a date-only ride stands alone. Same terminal here means: the same name, or at most one kilometre apart.",
+        "exclusions": "Rides without a shared booking are never joined. A ride that leaves before the previous one arrived, or more than four hours after, starts a new journey, as does one that leads back to a place the journey has been – that is the way back, not a change."
+      },
+      "longestReturn": {
+        "unit": "Days: the most days between two visits of the same terminal, across all rides. A visit runs from an arrival to the next departure; arriving and leaving on the same stay is one visit, not a return.",
+        "time": "Measured in calendar days at the terminal, from the last day of one visit to the first of the next. The figure covers your whole logbook, not just the selected period.",
+        "source": "Departures and arrivals of your completed bus rides per terminal. The name shown is the one the terminal was first recorded under.",
+        "coverage": "A ride without an arrival time contributes only its departure. A departure with no recorded arrival before it counts as a visit of its own, such as at your home terminal. If no terminal has been visited twice yet, the card stays empty.",
+        "exclusions": "A return on the same calendar day does not count. Planned, running and cancelled rides do not count."
+      },
+      "favourites": {
+        "unit": "A connection between two terminals, both directions together, with the number of its rides. Shown are connections ridden at least twice, at most the five most frequent.",
+        "time": "The rides in the selected period are counted (year of departure on the departure terminal's calendar).",
+        "source": "Departure and arrival terminal of your completed bus rides, by the same terminal rule as for terminals.",
+        "coverage": "Every counted ride has both terminals, so none is missing. The name opens the most recent ride.",
+        "exclusions": "A ride whose departure and arrival are the same terminal is no connection. Planned, running and cancelled rides do not count."
+      },
+      "newDestinations": {
+        "unit": "A new destination is a terminal a ride reaches for the first time, where no earlier ride had been – the place your logbook starts from is no new destination. Each terminal is new at most once.",
+        "time": "Counted in the year of that ride, on its departure terminal's calendar. Whether a destination is new is decided by your whole logbook in order of departure; the total above names those in the selected period, the bars every year.",
+        "source": "Departure and arrival terminal of your completed bus rides, by the same terminal rule as for terminals.",
+        "coverage": "Every counted ride has both terminals, so none is missing.",
+        "exclusions": "A ride arriving at the terminal it left from brings no new destination. Planned, running and cancelled rides do not count."
+      },
+      "delays": {
+        "unit": "A ride, sorted by its arrival delay in minutes: on time (0 or early), up to 5, up to 15, up to 30, up to 60 and over 60 minutes.",
+        "time": "The delay is the one experienced at arrival. A ride counts in the year it left on the departure terminal's calendar.",
+        "source": "The delay recorded on your completed bus rides.",
+        "coverage": "Only rides with a recorded delay and times at departure and arrival. The line above names the sample – rides with a delay out of all.",
+        "exclusions": "A ride with no recorded delay never counts as on time. Planned, running and cancelled rides do not count."
+      }
     }
   },
   "tripCard": {

@@ -2,7 +2,8 @@ import type { JSX, ReactNode } from "react";
 import EvidenceTrigger from "../EvidenceTrigger";
 import { STAT_CARD_CLASS, STAT_CARD_STYLE } from "../StatCard";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
-import InsightHelp, { type InsightHelpText } from "./InsightHelp";
+import CountingHelp from "../counting/CountingHelp";
+import type { CountingSource } from "../counting/countingEntry";
 import EntryLinks, { type EntryLink } from "./EntryLinks";
 
 export interface InsightEvidence {
@@ -18,7 +19,8 @@ interface InsightTileProps {
   /** Says which data the user already HAS would answer it; never asks for new input. */
   empty: string;
   description?: ReactNode;
-  help: InsightHelpText;
+  /** The five counting answers of this figure; the tile's title names it. */
+  help: CountingSource;
   /** Only for a figure whose measure the evidence panel serves. */
   evidence?: InsightEvidence;
   entries?: readonly EntryLink[];
@@ -79,7 +81,7 @@ export default function InsightTile({
       {description && value !== null && <p className="text-sm opacity-75">{description}</p>}
       {children}
       {entries && <EntryLinks entries={entries} testId={testId && `${testId}-entries`} />}
-      <InsightHelp help={help} testId={testId && `${testId}-help`} />
+      <CountingHelp entries={[{ term: title, ...help }]} testId={testId && `${testId}-help`} />
     </div>
   );
 }
