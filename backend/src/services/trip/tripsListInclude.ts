@@ -94,6 +94,18 @@ export const TRIP_RENTAL_SELECT = {
   pickupPrecision: true,
   returnPrecision: true,
   status: true,
+  // What the rental's `times` needs, deadlines included (forgejo#285): the
+  // trip page shows them on the rental's card like the detail page does.
+  actualPickupTime: true,
+  actualReturnTime: true,
+  actualPickupPrecision: true,
+  actualReturnPrecision: true,
+  depositPaidOn: true,
+  depositReturnedOn: true,
+  freeCancellationUntil: true,
+  freeCancellationOn: true,
+  freeCancellationZone: true,
+  paymentDueOn: true,
 } satisfies Prisma.RentalBookingSelect;
 
 /** The trip page's rentals: pickup order, a cancelled one left out (it never happened). */

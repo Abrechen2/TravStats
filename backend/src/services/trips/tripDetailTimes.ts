@@ -6,8 +6,9 @@ import {
 import { withStayTimes, type StayTimeColumns } from "../lodging/timesDto";
 import { withRailTimes, type RailTimeColumns } from "../rail/timesDto";
 import { withBusTimes } from "../bus/timesDto";
+import { rentalTimes, type RentalTimeColumns } from "../rental/timesDto";
 import { withBookingTimes } from "../deadlines/bookingTimesDto";
-import type { DeadlineColumns } from "../deadlines/bookingDeadlines";
+import { deadlineDayFields, type DeadlineColumns } from "../deadlines/bookingDeadlines";
 import {
   withJournalEntryTimes,
   withTripStopTimes,
@@ -33,6 +34,7 @@ export function withTripDetailTimes<
     railJourneys: RailTimeColumns[];
     busJourneys: RailTimeColumns[];
     bookings: DeadlineColumns[];
+    rentalBookings: RentalTimeColumns[];
   },
 >(trip: T): T {
   return {
@@ -45,5 +47,11 @@ export function withTripDetailTimes<
     // A bus ride's ends carry rail's columns, so rail's reader serves (forgejo#180).
     busJourneys: trip.busJourneys.map(withBusTimes),
     bookings: trip.bookings.map(withBookingTimes),
+    // Rentals carry their `times` too, deadlines included (forgejo#285).
+    rentalBookings: trip.rentalBookings.map((r) => ({
+      ...r,
+      ...deadlineDayFields(r),
+      times: rentalTimes(r),
+    })),
   };
 }

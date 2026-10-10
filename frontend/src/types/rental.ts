@@ -278,4 +278,6 @@ export interface TripRental {
   pickupPrecision: string;
   returnPrecision: string;
   status: RentalStatus;
+  /** Deadlines among them (forgejo#285); optional — an older server sends none. */
+  times?: Partial<RentalTimes>;
 }

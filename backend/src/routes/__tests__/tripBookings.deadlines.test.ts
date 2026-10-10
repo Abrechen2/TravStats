@@ -18,6 +18,7 @@ describe("Bookings — deadlines (forgejo#285)", () => {
 
   const cleanup = async (): Promise<void> => {
     await prisma.booking.deleteMany({ where: { user: { username: USER } } });
+    await prisma.rentalBooking.deleteMany({ where: { user: { username: USER } } });
     await prisma.trip.deleteMany({ where: { user: { username: USER } } });
     await prisma.user.deleteMany({ where: { username: USER } });
   };
@@ -125,5 +126,38 @@ describe("Bookings — deadlines (forgejo#285)", () => {
       (b: { times: { paymentDue: { date: string } | null } }) => b.times.paymentDue?.date ?? null
     );
     expect(dues).toContain("2027-03-31");
+  });
+
+  it("hands the trip page each rental's deadlines in its times, days as YYYY-MM-DD", async () => {
+    await prisma.rentalBooking.create({
+      data: {
+        userId,
+        tripId,
+        provider: "Beispiel Autos",
+        pickupStationName: "Lisboa Aeroporto",
+        pickupLat: 38.77,
+        pickupLon: -9.13,
+        pickupTimezone: "Europe/Lisbon",
+        returnStationName: "Lisboa Aeroporto",
+        returnLat: 38.77,
+        returnLon: -9.13,
+        returnTimezone: "Europe/Lisbon",
+        pickupTime: new Date("2027-05-02T09:00:00Z"),
+        returnTime: new Date("2027-05-06T09:00:00Z"),
+        status: "scheduled",
+        freeCancellationOn: new Date("2027-04-30T00:00:00Z"),
+        freeCancellationZone: "Europe/Lisbon",
+        paymentDueOn: new Date("2027-04-20T00:00:00Z"),
+      },
+    });
+    const res = await request(app).get(`/api/v1/trips/${tripId}`).set("Cookie", cookie).expect(200);
+    const [rental] = res.body.trip.rentalBookings;
+    expect(rental.times.freeCancellationOn).toEqual({
+      date: "2027-04-30",
+      zone: "Europe/Lisbon",
+      precision: "day",
+    });
+    expect(rental.times.paymentDue).toMatchObject({ date: "2027-04-20", zone: null });
+    expect(rental.paymentDueOn).toBe("2027-04-20");
   });
 });

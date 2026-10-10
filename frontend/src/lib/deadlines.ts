@@ -1,3 +1,4 @@
+import i18next from "i18next";
 import {
   formatDayLong,
   formatTimeValue,
@@ -78,4 +79,18 @@ export function onlineCheckInFact(
 /** True when any deadline is recorded — a section with none is not drawn. */
 export function hasDeadlines(times: DeadlineTimes | null | undefined): boolean {
   return Boolean(times?.freeCancellationUntil || times?.freeCancellationOn || times?.paymentDue);
+}
+
+/**
+ * The deadlines as one line, for a card with room for a single caption (the
+ * trip timeline's stay entry); null when none is recorded. In the app's
+ * current language — the timeline card is handed `t` only.
+ */
+export function deadlineSummary(
+  times: DeadlineTimes | null | undefined,
+  t: Translate
+): string | null {
+  const locale = (i18next.language ?? "de").startsWith("en") ? "en-GB" : "de-DE";
+  const parts = deadlineFacts(times, t, locale).filter((fact) => fact.value !== null);
+  return parts.length > 0 ? parts.map((fact) => `${fact.label}: ${fact.value}`).join(" · ") : null;
 }
