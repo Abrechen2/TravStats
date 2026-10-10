@@ -30,6 +30,9 @@ import i18n from "./i18n/config";
 // frame and MapLibre 6 no longer has it.
 installMapLibreTransformBridge();
 
+// From here on a missing chunk is this bundle's to handle, not the static
+// boot guard's (public/boot-guard.js), which must not touch a live root.
+document.documentElement.setAttribute("data-ts-booted", "1");
 stripStaleReloadParam();
 installStaleBundleRecovery();
 
