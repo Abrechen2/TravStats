@@ -8,6 +8,7 @@ import { formatAmount } from "../../lib/units";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { cruiseEnd, cruiseStart } from "../../lib/entityTimes";
 import { TableRow, type TableColumn } from "../ui/Table";
+import Toggletip from "../ui/Toggletip";
 
 export type CruiseColumnId =
   "ship" | "line" | "dates" | "ports" | "status" | "cabin" | "price" | "trip" | "actions";
@@ -74,13 +75,14 @@ export function CruiseRow({ cruise, onOpen, actions, columns }: Props): JSX.Elem
       <>
         {portsCount}
         {unresolvedCount > 0 && (
-          <span
-            className="ml-1 text-xs"
-            title={t("list.unresolvedPorts", { count: unresolvedCount })}
-            aria-label={t("list.unresolvedPorts", { count: unresolvedCount })}
+          <Toggletip
+            className="ml-1"
+            triggerClassName="text-xs"
+            content={t("list.unresolvedPorts", { count: unresolvedCount })}
+            label={`(+${unresolvedCount}) ${t("list.unresolvedPorts", { count: unresolvedCount })}`}
           >
             (+{unresolvedCount})
-          </span>
+          </Toggletip>
         )}
       </>
     ),

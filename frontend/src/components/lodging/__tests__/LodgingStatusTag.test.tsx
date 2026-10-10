@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LodgingStatusTag } from "../LodgingStatusTag";
 import type { Lodging } from "../../../types/lodging";
@@ -38,7 +38,7 @@ describe("LodgingStatusTag", () => {
         <LodgingStatusTag lodging={{ ...unlocated, lat: 1, lon: 2, address: null }} />
       </div>
     );
-    const help = screen.getByRole("button", { name: "accessibility.showHelp" });
+    const help = screen.getByRole("button", { name: "help.about" });
     await userEvent.click(help);
 
     // Visible now: a second copy of the hint, in the opened help (the first is sr-only).
@@ -46,26 +46,21 @@ describe("LodgingStatusTag", () => {
     expect(copies.some((el) => !el.classList.contains("sr-only"))).toBe(true);
     expect(onRow).not.toHaveBeenCalled();
 
-    help.focus();
+    act(() => help.focus());
     await userEvent.keyboard("{Enter}");
     expect(onRowKey).not.toHaveBeenCalled();
   });
 
   it("the repair button needs no extra help button - its description is the hint", () => {
     render(<LodgingStatusTag lodging={unlocated} onRepair={vi.fn()} />);
-    expect(screen.queryByRole("button", { name: "accessibility.showHelp" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "help.about" })).toBeNull();
   });
 
   // forgejo#249: the help icon is 16 x 16 px. Its hit area grows to 44 px on a
-  // coarse pointer from the wrapper (HelpIcon is shared); jsdom cannot measure.
-  it("extends the help icon's hit area to 44 px on a coarse pointer", () => {
+  // coarse pointer inside the shared Toggletip; jsdom cannot measure.
+  it("gives the help icon a hit area sized by the pointer", () => {
     render(<LodgingStatusTag lodging={{ ...unlocated, lat: 1, lon: 2, address: null }} />);
-    const wrapper = screen
-      .getByRole("button", { name: "accessibility.showHelp" })
-      .closest("[class*='after:-inset-3.5']") as HTMLElement;
-    expect(wrapper).not.toBeNull();
-    expect(wrapper.className).toContain("[&_button]:pointer-coarse:after:absolute");
-    // 16 px icon + 2 x 14 px = 44 px.
-    expect(wrapper.className).toContain("[&_button]:pointer-coarse:after:-inset-3.5");
+    const help = screen.getByRole("button", { name: "help.about" });
+    expect(help.querySelector("[data-toggletip-hit]")).not.toBeNull();
   });
 });

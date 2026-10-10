@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import adminDe from "../../../i18n/resources/de/admin.json";
 
 /**
@@ -146,8 +147,10 @@ describe("uploading a backup by hand", () => {
 
     render(<BackupManagement />);
 
-    const cell = await screen.findByTitle(/401/);
-    expect(cell.textContent).toContain("Fehlgeschlagen");
+    // The reason opens on a tap or a key, not only on hover (forgejo#249).
+    const cell = await screen.findByRole("button", { name: /Fehlgeschlagen/ });
+    await userEvent.click(cell);
+    expect(screen.getByRole("dialog")).toHaveTextContent(/401/);
   });
 });
 

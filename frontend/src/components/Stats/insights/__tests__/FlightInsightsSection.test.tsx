@@ -195,7 +195,7 @@ describe("FlightInsightsSection (forgejo#256)", () => {
     getFlightInsights.mockResolvedValue(INSIGHTS);
     renderSection();
     await screen.findByText("stats:insights.discovery.title");
-    const helps = screen.getAllByRole("button", { name: "accessibility.showHelp" });
+    const helps = screen.getAllByRole("button", { name: "help.about" });
     // story, transfers, discovery, routes, reunions, quarters
     expect(helps).toHaveLength(6);
     act(() => helps[0].focus());

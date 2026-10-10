@@ -91,6 +91,7 @@
     "loading": "Lädt"
   },
   "help": {
+    "about": "Hilfe zu {{subject}}",
     "title": "Hilfe",
     "clickForMore": "Klick für mehr Infos"
   },

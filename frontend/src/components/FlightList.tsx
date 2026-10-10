@@ -163,7 +163,6 @@ export default function FlightList({
                         background: "rgba(63,185,80,0.15)",
                         color: "var(--success)",
                       }}
-                      title={t("flights:actualTimes.co2Label")}
                     >
                       {t("flights:actualTimes.co2Value", { kg: flight.co2Kg })}
                     </span>

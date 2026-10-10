@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useId } from "react";
 import HelpIcon from "../Help/HelpIcon";
 import { useTranslation } from "../../hooks/useTranslation";
 import { adminApi, type SmtpConfigInput } from "../../lib/api";
@@ -18,6 +18,9 @@ const DEFAULT_CONFIG: SmtpConfigInput = {
 
 export default function SmtpManager(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
+  // Every label names its field (forgejo#249): none of these were associated,
+  // so a screen reader heard "edit text" six times over.
+  const fid = useId();
   const addToast = useToastStore((state) => state.addToast);
 
   const [config, setConfig] = useState<SmtpConfigInput>(DEFAULT_CONFIG);
@@ -156,8 +159,11 @@ export default function SmtpManager(): JSX.Element {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {/* Host */}
         <div>
-          <label className="label">{t("settings:notifications.smtpHost")}</label>
+          <label className="label" htmlFor={`${fid}-Host`}>
+            {t("settings:notifications.smtpHost")}
+          </label>
           <input
+            id={`${fid}-Host`}
             type="text"
             className="input"
             value={config.host}
@@ -168,11 +174,18 @@ export default function SmtpManager(): JSX.Element {
 
         {/* Port */}
         <div>
-          <label className="label flex items-center gap-1.5">
-            {t("settings:notifications.smtpPort")}
-            <HelpIcon content={t("settings:notifications.smtpHelp.ports")} position="top" />
-          </label>
+          <div className="flex items-center gap-1.5">
+            <label className="label" htmlFor={`${fid}-Port`}>
+              {t("settings:notifications.smtpPort")}
+            </label>
+            <HelpIcon
+              content={t("settings:notifications.smtpHelp.ports")}
+              position="top"
+              subject={t("settings:notifications.smtpPort")}
+            />
+          </div>
           <input
+            id={`${fid}-Port`}
             type="number"
             className="input"
             value={config.port}
@@ -184,8 +197,11 @@ export default function SmtpManager(): JSX.Element {
 
         {/* Username */}
         <div>
-          <label className="label">{t("settings:notifications.smtpUsername")}</label>
+          <label className="label" htmlFor={`${fid}-Username`}>
+            {t("settings:notifications.smtpUsername")}
+          </label>
           <input
+            id={`${fid}-Username`}
             type="text"
             className="input"
             value={config.username}
@@ -196,11 +212,18 @@ export default function SmtpManager(): JSX.Element {
 
         {/* Password */}
         <div>
-          <label className="label flex items-center gap-1.5">
-            {t("settings:notifications.smtpPassword")}
-            <HelpIcon content={t("settings:notifications.smtpHelp.credentials")} position="top" />
-          </label>
+          <div className="flex items-center gap-1.5">
+            <label className="label" htmlFor={`${fid}-Password`}>
+              {t("settings:notifications.smtpPassword")}
+            </label>
+            <HelpIcon
+              content={t("settings:notifications.smtpHelp.credentials")}
+              position="top"
+              subject={t("settings:notifications.smtpPassword")}
+            />
+          </div>
           <input
+            id={`${fid}-Password`}
             type="password"
             className="input"
             value={config.password}
@@ -212,11 +235,18 @@ export default function SmtpManager(): JSX.Element {
 
         {/* From Email */}
         <div>
-          <label className="label flex items-center gap-1.5">
-            {t("settings:notifications.smtpFromEmail")}
-            <HelpIcon content={t("settings:notifications.smtpHelp.sender")} position="top" />
-          </label>
+          <div className="flex items-center gap-1.5">
+            <label className="label" htmlFor={`${fid}-FromEmail`}>
+              {t("settings:notifications.smtpFromEmail")}
+            </label>
+            <HelpIcon
+              content={t("settings:notifications.smtpHelp.sender")}
+              position="top"
+              subject={t("settings:notifications.smtpFromEmail")}
+            />
+          </div>
           <input
+            id={`${fid}-FromEmail`}
             type="email"
             className="input"
             value={config.fromEmail}
@@ -227,8 +257,11 @@ export default function SmtpManager(): JSX.Element {
 
         {/* From Name */}
         <div>
-          <label className="label">{t("settings:notifications.smtpFromName")}</label>
+          <label className="label" htmlFor={`${fid}-FromName`}>
+            {t("settings:notifications.smtpFromName")}
+          </label>
           <input
+            id={`${fid}-FromName`}
             type="text"
             className="input"
             value={config.fromName}

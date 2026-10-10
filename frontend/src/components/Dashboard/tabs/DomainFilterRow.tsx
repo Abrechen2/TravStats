@@ -1,4 +1,5 @@
 import type { JSX } from "react";
+import { useId } from "react";
 import { Icon, type IconName } from "../../ui/Icon";
 import type { DomainFilterRow as DomainFilterRowData } from "../../../hooks/useDashboardDomainFilter";
 import type { FilterDomainKey } from "../../../shared/dashboardDomainFilter";
@@ -65,6 +66,7 @@ export function DomainFilterRow({
   onKeyDown,
 }: DomainFilterRowProps): JSX.Element {
   const height = touch ? ROW_HEIGHT_TOUCH : ROW_HEIGHT_MOUSE;
+  const betaId = useId();
 
   return (
     <div
@@ -72,11 +74,14 @@ export function DomainFilterRow({
       role="checkbox"
       aria-checked={row.visible}
       aria-label={label}
+      aria-describedby={row.beta ? betaId : undefined}
       tabIndex={-1}
       data-domain-filter-row={row.key}
       onClick={() => onToggle(row.key)}
       onKeyDown={onKeyDown}
-      className="flex cursor-pointer items-center outline-none"
+      // No outline removal here: the row is focused by the arrow keys, and the
+      // system focus outline is the only thing that shows which (forgejo#249).
+      className="flex cursor-pointer items-center"
       style={{
         minHeight: height,
         padding: "0 10px",
@@ -117,9 +122,10 @@ export function DomainFilterRow({
         {label}
       </span>
       {row.beta && (
+        // Inside a checkbox row, so no button of its own: the row is
+        // DESCRIBED by the explanation instead of a hover title (forgejo#249).
         <span
-          title={betaTooltip}
-          aria-label={betaTooltip}
+          aria-hidden="true"
           style={{
             fontSize: 10,
             fontWeight: 700,
@@ -131,6 +137,11 @@ export function DomainFilterRow({
           }}
         >
           Beta
+        </span>
+      )}
+      {row.beta && (
+        <span id={betaId} className="sr-only">
+          {betaTooltip}
         </span>
       )}
       <span

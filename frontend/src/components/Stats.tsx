@@ -144,6 +144,7 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
             {t("stats:overview.totalDistance")}
             <HelpIcon
               content={t("stats:help.totalDistance")}
+              subject={t("stats:overview.totalDistance")}
               expandedContent={t("stats:help.totalDistanceExpanded")}
               position="top"
             />
@@ -165,6 +166,7 @@ export default function Stats({ filters = {} }: StatsProps): JSX.Element {
             {t("stats:overview.totalFlightTime")}
             <HelpIcon
               content={t("stats:help.totalFlightTime")}
+              subject={t("stats:overview.totalFlightTime")}
               expandedContent={t("stats:help.totalFlightTimeExpanded")}
               position="top"
             />

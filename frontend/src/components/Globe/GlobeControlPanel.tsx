@@ -40,6 +40,7 @@ import { OverlayAppearanceSections } from "../map/OverlayAppearanceSections";
 import { MapChromeSections } from "../map/MapChromeSections";
 import type { LabelsMode } from "../map/labelPriority";
 import { DEFAULT_AIRPORT_COLOR, DEFAULT_PORT_COLOR } from "./buildGlobeLayers";
+import HelpIcon from "../Help/HelpIcon";
 
 export type StyleId = "standard" | "light" | "dark" | "voyager" | "satellite" | "osm";
 export type LiteMode = "auto" | "on" | "off";
@@ -317,10 +318,7 @@ export function GlobeControlPanel({
                 </div>
               )}
               {hasWeakArcs && (
-                <div
-                  className="mt-1.5 flex items-center gap-2 text-[10px] opacity-70"
-                  title={t("map:globe.weakHint")}
-                >
+                <div className="mt-1.5 flex items-center gap-2 text-[10px] opacity-70">
                   <svg width="28" height="2" viewBox="0 0 28 2" aria-hidden>
                     <line
                       x1="0"
@@ -333,6 +331,7 @@ export function GlobeControlPanel({
                     />
                   </svg>
                   <span>{t("map:globe.weak")}</span>
+                  <HelpIcon content={t("map:globe.weakHint")} subject={t("map:globe.weak")} />
                 </div>
               )}
             </CollapsibleSection>

@@ -14,7 +14,7 @@ export interface EditableRow extends ResolvableRow {
 }
 
 const INPUT =
-  "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-2 py-1.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent)] focus:outline-none";
+  "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-2 py-1.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent)]";
 
 const BADGE = "rounded px-1.5 py-0.5 text-[10px]";
 const WARN = `${BADGE} bg-(--warning)/15 text-(--warning)`;
@@ -134,14 +134,12 @@ export function PlaceImportPreviewRow({ row, onChange, onPlace, t, coarse }: Pro
         <td className="p-2">
           <div className="flex flex-wrap gap-1">
             {row.flags.map((flag) => (
-              <span key={flag} title={t(`places:import.flags.${flag}`)} className={WARN}>
+              <span key={flag} className={WARN}>
                 {t(`places:import.flags.${flag}`)}
               </span>
             ))}
             {row.dedupeHint !== "none" && (
-              <span title={t(`places:import.dedupeHints.${row.dedupeHint}`)} className={GOOD}>
-                {t(`places:import.dedupeHints.${row.dedupeHint}`)}
-              </span>
+              <span className={GOOD}>{t(`places:import.dedupeHints.${row.dedupeHint}`)}</span>
             )}
             <TakeoutBadges row={row} t={t} />
           </div>

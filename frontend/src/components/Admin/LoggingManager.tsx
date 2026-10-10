@@ -170,13 +170,19 @@ export default function LoggingManager({
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <label
-              htmlFor="admin-log-level"
-              className="flex items-center gap-1.5 text-sm font-medium text-(--text-primary) mb-2"
-            >
-              {t("admin:logging.level.label")}
-              <HelpIcon content={t("admin:logging.help.levels")} position="top" />
-            </label>
+            <div className="mb-2 flex items-center gap-1.5">
+              <label
+                htmlFor="admin-log-level"
+                className="text-sm font-medium text-(--text-primary)"
+              >
+                {t("admin:logging.level.label")}
+              </label>
+              <HelpIcon
+                content={t("admin:logging.help.levels")}
+                position="top"
+                subject={t("admin:logging.level.label")}
+              />
+            </div>
             <select
               id="admin-log-level"
               value={loggingConfig.logLevel}

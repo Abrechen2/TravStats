@@ -3,6 +3,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { statusPillStyle, STATUS_PILL_CLASS } from "../table/statusPillStyle";
 import { deriveFlightStatus } from "../../shared/statusDerivation";
 import type { Flight } from "../../types";
+import Toggletip from "../ui/Toggletip";
 
 /**
  * A flight's status — and, separately, whether the row is a duplicate.
@@ -43,14 +44,14 @@ export default function FlightStatusCell({ flight }: { flight: Flight }): JSX.El
         {t(`flights:status.${shown}`, { defaultValue: shown })}
       </span>
       {isDuplicate && (
-        <span
+        <Toggletip
           data-testid={`flight-duplicate-${flight.id}`}
-          title={t("flights:status.duplicatedHint")}
-          className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-(--bg-elevated) px-2 py-0.5 text-xs text-(--text-muted)"
+          content={t("flights:status.duplicatedHint")}
+          triggerClassName="gap-1 whitespace-nowrap rounded-full bg-(--bg-elevated) px-2 py-0.5 text-xs text-(--text-muted)"
         >
           <span aria-hidden>⧉</span>
           {t("flights:status.duplicated")}
-        </span>
+        </Toggletip>
       )}
     </span>
   );

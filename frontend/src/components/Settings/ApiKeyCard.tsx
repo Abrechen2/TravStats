@@ -11,6 +11,8 @@ import { settingsApi, adminApi } from "../../lib/api";
 import type { ProviderQuota } from "../../lib/api/settings";
 import { Icon } from "../ui/Icon";
 import Pill from "../ui/Pill";
+import Toggletip from "../ui/Toggletip";
+import HelpIcon from "../Help/HelpIcon";
 import { token } from "../ui/tokens";
 import { SettingRow } from "../ui/SettingRow";
 import DemoLockedNotice from "./DemoLockedNotice";
@@ -194,19 +196,23 @@ export default function ApiKeyCard({
   const hasOwnKey =
     hasOwnKeyProp ?? (provider === "opensky" && openskyFields ? !!openskyFields.clientId : !!value);
 
+  // What each state means opens from the pill itself — by tap and keyboard,
+  // not only as a hover title (forgejo#249).
   const statusPill = hasOwnKey ? (
-    <Pill color={token("good")} title={t("settings:apiKeys.ownTooltip")}>
-      {t("settings:apiKeys.own")}
-    </Pill>
+    <Toggletip content={t("settings:apiKeys.ownTooltip")} data-testid="api-key-status">
+      <Pill color={token("good")}>{t("settings:apiKeys.own")}</Pill>
+    </Toggletip>
   ) : hasAccess ? (
     // Access via a shared key or the environment.
-    <Pill color={token("accent")} title={t("settings:apiKeys.sharedTooltip")}>
-      {t("settings:apiKeys.shared")}
-    </Pill>
+    <Toggletip content={t("settings:apiKeys.sharedTooltip")} data-testid="api-key-status">
+      <Pill color={token("accent")}>{t("settings:apiKeys.shared")}</Pill>
+    </Toggletip>
   ) : (
-    <Pill color={token("muted")} dashed title={t("settings:apiKeys.notConfiguredTooltip")}>
-      {t("settings:apiKeys.notConfigured")}
-    </Pill>
+    <Toggletip content={t("settings:apiKeys.notConfiguredTooltip")} data-testid="api-key-status">
+      <Pill color={token("muted")} dashed>
+        {t("settings:apiKeys.notConfigured")}
+      </Pill>
+    </Toggletip>
   );
 
   const details = (
@@ -214,13 +220,9 @@ export default function ApiKeyCard({
       {capabilities && capabilities.length > 0 && (
         <span className="flex flex-wrap gap-1">
           {capabilities.map((cap) => (
-            <Pill
-              key={cap}
-              color={token("accent")}
-              title={t(`settings:apiKeys.capabilities.${cap}.tooltip`)}
-            >
-              {t(`settings:apiKeys.capabilities.${cap}.label`)}
-            </Pill>
+            <Toggletip key={cap} content={t(`settings:apiKeys.capabilities.${cap}.tooltip`)}>
+              <Pill color={token("accent")}>{t(`settings:apiKeys.capabilities.${cap}.label`)}</Pill>
+            </Toggletip>
           ))}
         </span>
       )}
@@ -373,7 +375,12 @@ export default function ApiKeyCard({
           }}
         >
           <Icon name={testResult.success ? "check" : "x"} size={14} />
-          <span title={testResult.message || undefined}>{testResultText(testResult)}</span>
+          <span>{testResultText(testResult)}</span>
+          {/* The provider's own words, for whoever has to fix the key —
+              reachable by tap and keyboard, not only by hover (forgejo#249). */}
+          {testResult.message && (
+            <HelpIcon content={testResult.message} subject={testResultText(testResult)} />
+          )}
         </div>
       )}
     </div>

@@ -80,16 +80,21 @@ export default function CostFields({
     <>
       <div className="grid grid-cols-3 gap-4">
         <div className="col-span-2">
-          <label className={`${labelClass} flex items-center gap-2`} htmlFor={`${uid}-price`}>
-            {t("flights:form.price")}
+          {/* The help sits BESIDE the label: inside it, its button was read
+              into the field's name ("Preis Hilfe anzeigen", forgejo#249). */}
+          <div className="flex items-center gap-2">
+            <label className={labelClass} htmlFor={`${uid}-price`}>
+              {t("flights:form.price")}
+            </label>
             {priceHelp && (
               <HelpIcon
                 content={priceHelp.content}
                 expandedContent={priceHelp.expandedContent}
                 position="top"
+                subject={t("flights:form.price")}
               />
             )}
-          </label>
+          </div>
           <input
             id={`${uid}-price`}
             {...fieldErrorProps(`${uid}-price`, errorOf(value.price))}

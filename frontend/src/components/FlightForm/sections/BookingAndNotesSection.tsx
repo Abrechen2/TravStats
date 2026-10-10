@@ -94,14 +94,15 @@ export default function BookingAndNotesSection({
       />
 
       <div>
-        <label className={`label ${labelClassName} flex items-center gap-2`}>
-          {t("flights:form.tags")}
+        <div className="flex items-center gap-2">
+          <span className={`label ${labelClassName}`}>{t("flights:form.tags")}</span>
           <HelpIcon
             content={t("flights:form.help.tags")}
             expandedContent={t("flights:form.help.tagsExpanded")}
             position="top"
+            subject={t("flights:form.tags")}
           />
-        </label>
+        </div>
         <TagInput
           value={tags}
           onChange={setTags}

@@ -209,6 +209,7 @@
     }
   },
   "fx": {
+    "conversion": "Conversion",
     "source": "ECB",
     "sourceMarket": "market rate",
     "tooltip": "Converted at the ECB reference rate for the check-in day",

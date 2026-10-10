@@ -334,7 +334,10 @@ describe("LodgingListPage", () => {
       expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
     });
     const row = screen.getByText("Hotel Test Ludwigsburg").closest('[role="row"]');
-    expect(row?.querySelector('[title="lodging:list.otherCurrencyHint"]')).toBeInTheDocument();
+    // A button a finger can open, not only a hover title (forgejo#249).
+    expect(
+      within(row as HTMLElement).getByRole("button", { name: "lodging:list.otherCurrencyHint" })
+    ).toBeInTheDocument();
   });
 
   it("shows no hint when all of a lodging's spend is in the current base currency", async () => {
@@ -346,7 +349,9 @@ describe("LodgingListPage", () => {
       expect(screen.getByText("Hotel Test Ludwigsburg")).toBeInTheDocument();
     });
     const row = screen.getByText("Hotel Test Ludwigsburg").closest('[role="row"]');
-    expect(row?.querySelector('[title="lodging:list.otherCurrencyHint"]')).not.toBeInTheDocument();
+    expect(
+      within(row as HTMLElement).queryByRole("button", { name: "lodging:list.otherCurrencyHint" })
+    ).not.toBeInTheDocument();
   });
 
   it("puts the facet's count on every type and status option, zero included", async () => {

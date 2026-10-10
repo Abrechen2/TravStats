@@ -38,7 +38,7 @@ const renderCard = () =>
 describe("ApiKeyCard — a failed test speaks the reader's language", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("shows 'unreachable', with the raw text only as the tooltip", async () => {
+  it("shows 'unreachable', with the raw text only behind the help", async () => {
     settingsTestApiKey.mockResolvedValue({
       success: false,
       message: "getaddrinfo ENOTFOUND airlabs.co",
@@ -47,9 +47,11 @@ describe("ApiKeyCard — a failed test speaks the reader's language", () => {
     renderCard();
     await userEvent.click(await screen.findByRole("button", { name: "settings:apiKeys.test" }));
 
-    const line = await screen.findByText("settings:apiKeyTest.unreachable");
-    expect(line).toHaveAttribute("title", "getaddrinfo ENOTFOUND airlabs.co");
+    expect(await screen.findByText("settings:apiKeyTest.unreachable")).toBeInTheDocument();
     expect(screen.queryByText(/ENOTFOUND/)).toBeNull();
+    // The provider's words for whoever fixes the key — by tap or key (forgejo#249).
+    await userEvent.click(screen.getByRole("button", { name: "help.about" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("getaddrinfo ENOTFOUND airlabs.co");
   });
 
   it("never prints provider prose that carries no key", async () => {

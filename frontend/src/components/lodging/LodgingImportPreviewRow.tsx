@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import { Fragment } from "react";
+import HelpIcon from "../Help/HelpIcon";
 import type { LodgingCurrency } from "../../types/lodging";
 import {
   HEURISTIC_MATCH,
@@ -77,13 +78,20 @@ export function PreviewRowLine({ row, onChange, t, language }: PreviewRowLinePro
         <td className="p-2">
           {isMatched ? (
             <div>
-              <div
-                data-testid={`lodging-import-name-${sourceRowIndex}`}
-                aria-label={t("lodging:import.fields.name")}
-                title={t("lodging:import.matchedLodgingHint")}
-                className={`${INPUT} cursor-not-allowed truncate text-[var(--text-muted)]`}
-              >
-                {name}
+              {/* Why the field is locked, for a tap and a keyboard too
+                  (forgejo#249) — once per row; the city beside it shares it. */}
+              <div className="flex items-center gap-1">
+                <div
+                  data-testid={`lodging-import-name-${sourceRowIndex}`}
+                  aria-label={t("lodging:import.fields.name")}
+                  className={`${INPUT} min-w-0 flex-1 cursor-not-allowed truncate text-[var(--text-muted)]`}
+                >
+                  {name}
+                </div>
+                <HelpIcon
+                  content={t("lodging:import.matchedLodgingHint")}
+                  subject={t("lodging:import.fields.name")}
+                />
               </div>
               {/* The house the guess points at — plain JSX, not interpolated,
                 so the test mock (which drops t() options) still shows it. */}
@@ -155,7 +163,6 @@ export function PreviewRowLine({ row, onChange, t, language }: PreviewRowLinePro
             <div
               data-testid={`lodging-import-city-${sourceRowIndex}`}
               aria-label={t("lodging:import.fields.city")}
-              title={t("lodging:import.matchedLodgingHint")}
               className={`${INPUT} cursor-not-allowed truncate text-[var(--text-muted)]`}
             >
               {row.lodging?.city ?? ""}
@@ -308,7 +315,6 @@ export function PreviewRowLine({ row, onChange, t, language }: PreviewRowLinePro
               {row.flags.map((flag) => (
                 <span
                   key={flag}
-                  title={t(`lodging:import.flags.${flag}`)}
                   className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-300"
                 >
                   {t(`lodging:import.flags.${flag}`)}
@@ -334,10 +340,7 @@ export function PreviewRowLine({ row, onChange, t, language }: PreviewRowLinePro
                 </label>
               )}
               {showDedupeHint && (
-                <span
-                  title={t(`lodging:import.dedupeHints.${row.dedupeHint}`)}
-                  className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-300"
-                >
+                <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-300">
                   {t(`lodging:import.dedupeHints.${row.dedupeHint}`)}
                 </span>
               )}
@@ -367,7 +370,6 @@ export function PreviewRowLine({ row, onChange, t, language }: PreviewRowLinePro
               {row.action === "update" && (row.changes ?? []).length > 0 && (
                 <span
                   data-testid={`lodging-import-changes-${sourceRowIndex}`}
-                  title={changeSummary(row)}
                   className="rounded bg-sky-500/15 px-1.5 py-0.5 text-[10px] text-sky-300"
                 >
                   {t("lodging:import.changedHint")}: {changeSummary(row)}

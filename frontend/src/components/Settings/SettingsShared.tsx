@@ -119,10 +119,18 @@ export function FieldLabel({
   htmlFor?: string;
   className?: string;
 }): JSX.Element {
+  // The help sits BESIDE the <label>: inside it, the button's name was read
+  // into the field's own name (forgejo#249).
   return (
-    <label htmlFor={htmlFor} className={`label inline-flex items-center gap-1.5 ${className}`}>
-      {children}
-      {help && <HelpIcon content={help} position="top" />}
-    </label>
+    <span className={`label inline-flex items-center gap-1.5 ${className}`}>
+      <label htmlFor={htmlFor}>{children}</label>
+      {help && (
+        <HelpIcon
+          content={help}
+          position="top"
+          subject={typeof children === "string" ? children : undefined}
+        />
+      )}
+    </span>
   );
 }

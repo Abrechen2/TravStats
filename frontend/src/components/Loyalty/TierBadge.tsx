@@ -18,9 +18,7 @@ export default function TierBadge({ tier }: Props): JSX.Element | null {
   if (!value) return null;
   return (
     <span data-testid="tier-badge" aria-label={`${t("loyalty:field.tier")}: ${value}`}>
-      <Pill color="var(--ts-accent)" title={t("loyalty:field.tier")}>
-        {value}
-      </Pill>
+      <Pill color="var(--ts-accent)">{value}</Pill>
     </span>
   );
 }

@@ -1,6 +1,7 @@
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatDuration } from "../../lib/formatters";
 import type { CountryGroundTime } from "../../types/passport";
+import Toggletip from "../ui/Toggletip";
 
 /**
  * How long the traveller was on the ground in one country — spec §3.4b.
@@ -42,31 +43,32 @@ export default function GroundTimeCell({
 
   if (groundTime.state === "measured") {
     return (
-      <span data-testid="ground-measured" title={t("passport:ground.measuredExplained")}>
+      <Toggletip data-testid="ground-measured" content={t("passport:ground.measuredExplained")}>
         {formatDuration(groundTime.minutes)}
-      </span>
+      </Toggletip>
     );
   }
 
   if (groundTime.state === "unknown") {
     return (
-      <span
+      <Toggletip
         data-testid="ground-unknown"
-        style={{ color: "var(--text-muted)" }}
-        title={t("passport:ground.unknownExplained")}
+        triggerStyle={{ color: "var(--text-muted)" }}
+        content={t("passport:ground.unknownExplained")}
       >
         {t("passport:ground.unknown")}
-      </span>
+      </Toggletip>
     );
   }
 
   return (
-    <span
+    <Toggletip
       data-testid="ground-notApplicable"
-      style={{ color: "var(--text-muted)" }}
-      title={t("passport:ground.notApplicableExplained")}
+      triggerStyle={{ color: "var(--text-muted)" }}
+      content={t("passport:ground.notApplicableExplained")}
+      label={t("passport:ground.notApplicableExplained")}
     >
       {t("passport:value.dash")}
-    </span>
+    </Toggletip>
   );
 }

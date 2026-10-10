@@ -8,7 +8,6 @@ interface PillProps {
   color: string;
   /** Provisional. The only thing a dash ever means. */
   dashed?: boolean;
-  title?: string;
 }
 
 /**
@@ -19,10 +18,11 @@ interface PillProps {
  * 15 % with no border and no capitals, which is why a status read as a label
  * rather than a state.
  */
-export default function Pill({ children, color, dashed = false, title }: PillProps): JSX.Element {
+export default function Pill({ children, color, dashed = false }: PillProps): JSX.Element {
+  // No `title`: an explanation of a pill goes through `Toggletip` with the
+  // pill as its trigger, so a finger and a keyboard reach it too (forgejo issue 249).
   return (
     <span
-      title={title}
       style={{
         display: "inline-flex",
         alignItems: "center",

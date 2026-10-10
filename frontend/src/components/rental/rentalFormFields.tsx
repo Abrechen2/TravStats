@@ -12,7 +12,7 @@ import { dayPart, withClock, type RentalFold } from "./rentalFormTimes";
  */
 
 export const INPUT_CLASS =
-  "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden";
+  "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent)";
 export const DARK_PICKER_STYLE = { colorScheme: "dark" } as const;
 /** A checkbox row a finger can hit: the pointer decides, not the width. */
 export const CHECK_ROW =

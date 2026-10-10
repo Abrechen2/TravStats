@@ -19,7 +19,7 @@ type TestState =
   | { status: "failed" };
 
 const INPUT_CLASS =
-  "w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:outline-hidden focus:ring-1 focus:ring-(--color-accent)";
+  "w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:ring-1 focus:ring-(--color-accent)";
 
 /** The admin's saved priority, completed with any missing kind — mirrors the backend's `parseProviderOrder`. */
 function providerOrder(settings: ParserSettingsData): CloudProviderKind[] {

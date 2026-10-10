@@ -113,3 +113,22 @@ describe("the standalone tour's point editor", () => {
     expect(screen.queryByRole("spinbutton")).toBeNull();
   });
 });
+
+// forgejo#249: what "via" means was a hover title on the switch's label.
+describe("the via switch's explanation", () => {
+  it("opens by tap before the switch is on, and is said as text once it is", () => {
+    render(
+      <TourPointEditor points={[{ ...POINTS[0], via: false }]} saving={false} onSave={vi.fn()} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "help.about" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("trips:tours.points.viaHint");
+  });
+
+  it("does not repeat a help button once the hint is visible text", () => {
+    render(
+      <TourPointEditor points={[{ ...POINTS[0], via: true }]} saving={false} onSave={vi.fn()} />
+    );
+    expect(screen.queryByRole("button", { name: "help.about" })).toBeNull();
+    expect(screen.getByText(/trips:tours.points.viaHint/)).toBeInTheDocument();
+  });
+});

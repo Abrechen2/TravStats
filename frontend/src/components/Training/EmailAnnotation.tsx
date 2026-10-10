@@ -634,7 +634,6 @@ export default function EmailAnnotation({
               className={`flex items-center gap-2 ${
                 annotations.length > 0 ? "cursor-not-allowed" : "cursor-pointer"
               }`}
-              title={annotations.length > 0 ? t("training:annotation.filterLocked") : undefined}
             >
               <input
                 type="checkbox"

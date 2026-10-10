@@ -43,6 +43,7 @@ import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import CruiseTracksPanel from "../components/Cruise/CruiseTracksPanel";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
+import Toggletip from "../components/ui/Toggletip";
 
 /** A cruise day at its port, in the user's format — never moved by the reader's zone. */
 const fmtDate = (day: LocalDateValue | null): string => (day ? formatLocalDate(day.date) : "—");
@@ -217,14 +218,14 @@ export default function CruiseDetailPage(): JSX.Element {
         <>
           {portsCount}
           {unresolvedCount > 0 && (
-            <span
-              className="t-caption"
-              style={{ marginLeft: 4 }}
-              title={t("list.unresolvedPorts", { count: unresolvedCount })}
-              aria-label={t("list.unresolvedPorts", { count: unresolvedCount })}
+            <Toggletip
+              className="ml-1"
+              triggerClassName="t-caption"
+              content={t("list.unresolvedPorts", { count: unresolvedCount })}
+              label={`+${unresolvedCount} ${t("list.unresolvedPorts", { count: unresolvedCount })}`}
             >
               +{unresolvedCount}
-            </span>
+            </Toggletip>
           )}
         </>
       ),

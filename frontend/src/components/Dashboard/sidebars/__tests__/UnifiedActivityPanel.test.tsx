@@ -73,7 +73,10 @@ describe("UnifiedActivityPanel", () => {
     // Two places say it: the ⌀ badge, and — since 2026-09-20 — the row
     // itself, because selecting it is a deliberate no-op and a click that
     // does nothing without explaining itself reads as a bug.
-    expect(screen.getAllByTitle("dashboard:sidebar.notOnMap")).toHaveLength(2);
+    // The badge is a help a tap or a key opens (forgejo#249).
+    expect(screen.getByRole("button", { name: "dashboard:sidebar.notOnMap" })).toHaveTextContent(
+      "⌀"
+    );
     expect(screen.getByRole("button", { name: /Hilton Berlin/ })).toHaveAttribute(
       "title",
       "dashboard:sidebar.notOnMap"
@@ -83,6 +86,7 @@ describe("UnifiedActivityPanel", () => {
       <UnifiedActivityPanel lodgings={[lodging()]} lockedKind="lodging" isOpen onClose={vi.fn()} />
     );
     expect(screen.queryByTitle("dashboard:sidebar.notOnMap")).toBeNull();
+    expect(screen.queryByRole("button", { name: "dashboard:sidebar.notOnMap" })).toBeNull();
   });
 
   it("hides the domain chips when the tab already picked a domain", () => {

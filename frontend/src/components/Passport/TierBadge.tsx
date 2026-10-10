@@ -1,5 +1,6 @@
 import { useTranslation } from "../../hooks/useTranslation";
 import type { CountryTier } from "../../types/passport";
+import Toggletip from "../ui/Toggletip";
 
 /**
  * The evidence strength of one country, as a word rather than a colour alone.
@@ -30,13 +31,13 @@ const TINT: Record<CountryTier, string> = {
 export default function TierBadge({ tier }: { tier: CountryTier }): JSX.Element {
   const { t } = useTranslation(["passport"]);
   return (
-    <span
-      className="inline-block px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wide border whitespace-nowrap"
-      style={{ borderColor: TINT[tier], color: TINT[tier] }}
-      title={t(`passport:tiers.${tier}Explained`)}
+    <Toggletip
+      content={t(`passport:tiers.${tier}Explained`)}
+      triggerClassName="inline-block px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wide border whitespace-nowrap"
+      triggerStyle={{ borderColor: TINT[tier], color: TINT[tier] }}
       data-testid={`tier-${tier}`}
     >
       {t(`passport:tiers.${tier}`)}
-    </span>
+    </Toggletip>
   );
 }

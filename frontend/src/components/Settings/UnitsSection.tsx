@@ -98,6 +98,7 @@ export default function UnitsSection({
               <HelpIcon
                 content={`${t("settings:units.currencyHint")} ${t("lodging:fx.baseCurrencyExplainer")}`}
                 position="top"
+                subject={t("settings:units.currencySub")}
               />
             </span>
           }

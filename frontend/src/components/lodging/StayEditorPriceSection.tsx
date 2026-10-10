@@ -177,7 +177,11 @@ export function StayEditorPriceSection({
           {fxReadout}
           {/* The explanation was a `title` - reachable by hovering only
               (forgejo#249). A button opens it on a tap and from the keyboard. */}
-          <HelpIcon content={t("lodging:fx.tooltip")} position="bottom" />
+          <HelpIcon
+            content={t("lodging:fx.tooltip")}
+            position="bottom"
+            subject={t("lodging:fx.conversion")}
+          />
         </p>
       )}
 

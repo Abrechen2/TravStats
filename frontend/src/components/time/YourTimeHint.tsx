@@ -3,6 +3,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { yourTimeText } from "../../lib/yourTime";
 import type { TimeValue } from "../../shared/time";
 import { useSettingsStore } from "../../store/settingsStore";
+import Toggletip from "../ui/Toggletip";
 
 /**
  * "deine Zeit: 17:40" — the same instant on the user's own clock, small and
@@ -20,13 +21,13 @@ export default function YourTimeHint({
   const text = yourTimeText(value, zone, t);
   if (!text) return null;
   return (
-    <span
+    <Toggletip
       data-testid="your-time-hint"
-      className="text-[10px]"
-      style={{ color: "var(--text-muted)", opacity: 0.85 }}
-      title={t("common:time.yourTimeTitle", { zone })}
+      content={t("common:time.yourTimeTitle", { zone })}
+      triggerClassName="text-[10px]"
+      triggerStyle={{ color: "var(--text-muted)", opacity: 0.85 }}
     >
       {text}
-    </span>
+    </Toggletip>
   );
 }

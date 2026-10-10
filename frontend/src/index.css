@@ -396,10 +396,16 @@
   }
 
   /* Focus is a system state, not a per-component afterthought
-     (DESIGN_SYSTEM.md §5). The ring shows only under :focus-visible, so a
-     mouse click does not draw it but a Tab key always does. */
+     (DESIGN_SYSTEM.md §5). It shows only under :focus-visible, so a mouse
+     click does not draw it but a Tab key always does.
+     The `focusRing` halo alone is accent at 18 % — measured 1.42:1 against
+     `surface`, under the 3:1 a focus indicator needs, and invisible beside
+     the field borders on a tablet (forgejo#249). The accent outline carries
+     the contrast (8.9:1); the halo stays as the system's softer edge. An
+     outline also survives a `shadow-*` utility, which replaces box-shadow. */
   :focus-visible {
-    outline: none;
+    outline: 2px solid var(--ts-accent);
+    outline-offset: 2px;
     box-shadow: var(--ts-shadow-focus-ring);
   }
 

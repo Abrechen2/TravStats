@@ -82,7 +82,11 @@ export default function ProfileSection({
           <span className="t-caption inline-flex items-center gap-1.5">
             @{profile.username}
             {profile.email ? ` · ${profile.email}` : ""}
-            <HelpIcon content={t("settings:profile.help.avatar")} position="top" />
+            <HelpIcon
+              content={t("settings:profile.help.avatar")}
+              position="top"
+              subject={t("settings:profile.changePicture")}
+            />
           </span>
         </div>
         {isDemo ? (

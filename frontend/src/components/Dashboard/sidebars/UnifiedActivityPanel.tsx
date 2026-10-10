@@ -17,6 +17,7 @@ import {
 } from "./activityItems";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { Icon } from "../../ui/Icon";
+import Toggletip from "../../ui/Toggletip";
 
 interface UnifiedActivityPanelProps {
   flights?: GeoJSONFeature[];
@@ -292,7 +293,12 @@ export function UnifiedActivityPanel({
                 {!item.mappable && (
                   // The map cannot focus this row. Saying so beats a click that
                   // looks broken — the arrow still leads to where it gets fixed.
-                  <span title={t("dashboard:sidebar.notOnMap")}>⌀</span>
+                  <Toggletip
+                    content={t("dashboard:sidebar.notOnMap")}
+                    label={t("dashboard:sidebar.notOnMap")}
+                  >
+                    ⌀
+                  </Toggletip>
                 )}
               </div>
             )}

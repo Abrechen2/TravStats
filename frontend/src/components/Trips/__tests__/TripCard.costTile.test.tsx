@@ -130,7 +130,9 @@ describe("TripCard cost tile", () => {
       </MemoryRouter>
     );
     const figure = screen.getByText(/300/);
-    expect(figure).toHaveAttribute("title", "trips:costUnpriced");
+    // Said inside the card link for a screen reader, not as a hover title
+    // (forgejo#249); the card is one link, so no nested help button.
+    expect(figure).toHaveTextContent("trips:costUnpriced");
     // Visible on a touch screen too, where no tooltip ever shows.
     expect(figure.textContent).toMatch(/^≥ 300/);
   });
