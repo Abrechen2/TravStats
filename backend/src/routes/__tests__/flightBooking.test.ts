@@ -88,6 +88,8 @@ describe("GET /flights/:id/booking", () => {
       tripName: null,
       otherEntries: 0,
       split: null,
+      // The booking's deadlines (forgejo#285) — none recorded.
+      times: { freeCancellationUntil: null, freeCancellationOn: null, paymentDue: null },
     });
     expect(res.body.segments.map((s: { id: string }) => s.id)).toEqual([first.id, second.id]);
     expect(res.body.segments[0].times.departure.utc).toBe("2026-11-02T06:00:00.000Z");
