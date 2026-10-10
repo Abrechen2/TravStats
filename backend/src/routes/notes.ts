@@ -25,6 +25,7 @@ import {
 } from "../services/notes/noteService";
 import { ingestUploadedPhotos } from "../services/photos/ingestPhotos";
 import { parsePhotoVariant, photoFileToServe } from "../services/photos/displayRendition";
+import { createOnce, takeClientRef } from "../services/sync/clientRef";
 import logger from "../utils/logger";
 
 /**
@@ -82,10 +83,25 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const userId = requireUser(req);
-      const input = createNoteSchema.parse(req.body);
-      const { note, created } = await createNote(userId, input, Boolean(req.apiToken));
-      if (created) logger.info({ operation: "note_create", noteId: note.id, userId });
-      res.status(created ? 201 : 200).json({ success: true, data: toNoteDto(note) });
+      // An outbox replay carries the key it minted (forgejo#283): a repeat
+      // answers the note the first POST made, 200 instead of 201.
+      const { clientRef, rest: body } = takeClientRef(req.body);
+      const { created, result } = await createOnce({
+        userId,
+        clientRef,
+        kind: "note",
+        payload: body,
+        create: async (claim) => {
+          const input = createNoteSchema.parse(body);
+          return toNoteDto(await createNote(userId, input, Boolean(req.apiToken), claim));
+        },
+        replay: async (id) => {
+          const note = await prisma.note.findFirst({ where: { id, userId } });
+          return note && toNoteDto(note);
+        },
+      });
+      if (created) logger.info({ operation: "note_create", noteId: result.id, userId });
+      res.status(created ? 201 : 200).json({ success: true, data: result });
     } catch (error) {
       next(error);
     }

@@ -4,7 +4,6 @@ import type { Note } from "../../../lib/api/notes";
 export function noteFixture(over: Partial<Note> = {}): Note {
   return {
     id: "n1",
-    clientId: null,
     body: "Erster Schnee auf dem Wendelstein.",
     occurredAt: "2026-09-27T22:30:00.000Z",
     occurredZone: "Europe/Berlin",

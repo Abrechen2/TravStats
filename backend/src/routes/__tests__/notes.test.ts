@@ -57,6 +57,7 @@ describe("Notes API", () => {
       if (fs.existsSync(file)) fs.unlinkSync(file);
     }
     await prisma.note.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
+    await prisma.clientWriteRef.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await noteCreationLimiter.resetKey(`user:${userId}`);
   });
 
@@ -84,6 +85,7 @@ describe("Notes API", () => {
     expect(note.times.day).toEqual({ date: "2026-09-28", zone: "Europe/Berlin", precision: "day" });
     expect(note.photo).toBeNull();
     expect(note).not.toHaveProperty("photoFilename");
+    expect(note).not.toHaveProperty("clientId");
   });
 
   it("reads an instant in the zone the client says it was written in", async () => {
@@ -149,15 +151,43 @@ describe("Notes API", () => {
     expect(await prisma.note.count({ where: { userId } })).toBe(0);
   });
 
-  it("answers a resend under the same clientId with the note on file, not a second one", async () => {
-    const first = await create({ ...base, clientId: "m-1" });
-    const again = await create({ ...base, body: "changed in transit", clientId: "m-1" });
+  it("answers a repeat under the same clientRef with the note on file, not a second one", async () => {
+    const first = await create({ ...base, clientRef: "m-1" });
+    const again = await create({ ...base, clientRef: "m-1" });
     expect(first.status).toBe(201);
     expect(again.status).toBe(200);
-    expect(again.body.data.id).toBe(first.body.data.id);
+    expect(again.body.data).toEqual(first.body.data);
     expect(await prisma.note.count({ where: { userId } })).toBe(1);
-    // Another account's identical client id is its own note.
-    expect((await create({ ...base, clientId: "m-1" }, otherCookie)).status).toBe(201);
+    // Another account's identical key is its own note.
+    expect((await create({ ...base, clientRef: "m-1" }, otherCookie)).status).toBe(201);
+  });
+
+  it("refuses the same clientRef with a different body, naming the note it made", async () => {
+    const first = await create({ ...base, clientRef: "m-2" });
+    const changed = await create({ ...base, body: "changed offline", clientRef: "m-2" });
+    expect(changed.status).toBe(409);
+    expect(changed.body.code).toBe("CLIENT_REF_REUSED");
+    expect(changed.body.entityId).toBe(first.body.data.id);
+    expect(await prisma.note.count({ where: { userId } })).toBe(1);
+  });
+
+  it("writes one note when the same clientRef arrives twice at once", async () => {
+    const [a, b] = await Promise.all([
+      create({ ...base, clientRef: "m-3" }),
+      create({ ...base, clientRef: "m-3" }),
+    ]);
+    expect([a.status, b.status].sort()).toEqual([200, 201]);
+    expect(a.body.data.id).toBe(b.body.data.id);
+    expect(await prisma.note.count({ where: { userId } })).toBe(1);
+  });
+
+  it("does not bring back a note deleted since its clientRef was spent", async () => {
+    const first = await create({ ...base, clientRef: "m-4" });
+    await request(app).delete(`/api/v1/notes/${first.body.data.id}`).set("Cookie", cookie);
+    const again = await create({ ...base, clientRef: "m-4" });
+    expect(again.status).toBe(410);
+    expect(again.body.code).toBe("CLIENT_REF_TARGET_GONE");
+    expect(await prisma.note.count({ where: { userId } })).toBe(0);
   });
 
   it("lists the caller's notes newest first with a stable tie-break, and nobody else's", async () => {

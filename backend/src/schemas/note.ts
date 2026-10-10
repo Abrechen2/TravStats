@@ -10,7 +10,6 @@ import { isValidZone } from "../shared/time/zonedParts";
 /** Longer than a phone's sentence (the Companion caps a moment at 600), shorter than an essay. */
 export const NOTE_BODY_MAX = 4000;
 export const NOTE_PLACE_NAME_MAX = 200;
-export const NOTE_CLIENT_ID_MAX = 100;
 export const NOTE_PRECISIONS = ["minute", "day"] as const;
 
 const body = z
@@ -60,16 +59,6 @@ export const createNoteSchema = z
     placeName: placeName.optional(),
     lat: lat.optional(),
     lon: lon.optional(),
-    clientId: z
-      .string()
-      .trim()
-      .min(1)
-      .max(NOTE_CLIENT_ID_MAX)
-      .optional()
-      .describe(
-        "The writing client's own id (the Companion's outbox id). A resend with an id " +
-          "already on file answers 200 with the stored note instead of creating a second."
-      ),
   })
   .refine(positionIsPair, POSITION_PAIR);
 export type CreateNoteInput = z.infer<typeof createNoteSchema>;

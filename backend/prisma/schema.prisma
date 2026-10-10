@@ -280,7 +280,7 @@ model ClientWriteRef {
   userId      String   @map("user_id")
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   clientRef   String   @map("client_ref") @db.VarChar(64)
-  /// Which create the key was spent on: "rail" | "bus" | "expense" | "tour".
+  /// Which create the key was spent on: "rail" | "bus" | "expense" | "tour" | "note".
   kind        String
   /// The created row. No foreign key: the kinds live in different tables, and
   /// a row deleted since is answered 410, not resurrected (clientRef.ts).
@@ -4344,11 +4344,6 @@ model Note {
   id     String @id @default(uuid())
   userId String @map("user_id")
 
-  /// The writing client's own id for the note (the Companion's outbox id).
-  /// A resend with the same id answers the stored note instead of a second
-  /// copy. Null for notes written on the web.
-  clientId String? @map("client_id")
-
   body String
 
   /// ADR 0002 D1 instant: the real UTC moment the note is filed under ...
@@ -4375,7 +4370,6 @@ model Note {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, clientId])
   @@index([userId, occurredAt])
   @@map("notes")
 }

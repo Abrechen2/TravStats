@@ -15,7 +15,6 @@ export interface NotePhoto {
 
 export interface Note {
   id: string;
-  clientId: string | null;
   body: string;
   occurredAt: string;
   occurredZone: string;

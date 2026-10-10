@@ -1,5 +1,4 @@
 import { prisma } from "../../db";
-import { Prisma } from "../../prisma";
 import type { Note } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import type { CreateNoteInput, UpdateNoteInput } from "../../schemas/note";
@@ -10,6 +9,7 @@ import { resolveTimeField, zoneOfCoordinates } from "../../shared/time/resolveIn
 import type { TimeFieldInput } from "../../shared/time/timeInput";
 import { serializeDay, serializeTime } from "../../shared/time/wire";
 import { API_V1 } from "../files/privateFileUrls";
+import type { ClaimClientRef } from "../sync/clientRef";
 
 /**
  * Standalone notes (forgejo#137): the rules, apart from the HTTP translation in
@@ -109,43 +109,32 @@ export async function listNotes(
   return { notes, total };
 }
 
-/** A resend under a client id already on file is that note, not a second one. */
+/**
+ * Writes a note. The create claims the request's `clientRef` (forgejo#283,
+ * `services/sync/clientRef.ts`) in the same transaction, so a repeat of the
+ * same outbox write can never leave a second note behind.
+ */
 export async function createNote(
   userId: string,
   input: CreateNoteInput,
-  viaToken: boolean
-): Promise<{ note: Note; created: boolean }> {
-  if (input.clientId) {
-    const existing = await prisma.note.findFirst({ where: { userId, clientId: input.clientId } });
-    if (existing) return { note: existing, created: false };
-  }
+  viaToken: boolean,
+  claim: ClaimClientRef
+): Promise<Note> {
   const position = { lat: input.lat ?? null, lon: input.lon ?? null };
   const time = await timeColumns(input.occurredAt, input.zone, position, userId, viaToken);
-  try {
-    const note = await prisma.note.create({
+  return prisma.$transaction(async (tx) => {
+    const note = await tx.note.create({
       data: {
         userId,
-        clientId: input.clientId ?? null,
         body: input.body,
         placeName: input.placeName ?? null,
         ...position,
         ...time,
       },
     });
-    return { note, created: true };
-  } catch (error) {
-    // Two sends of the same outbox row racing each other: the loser answers
-    // the winner's note.
-    if (
-      input.clientId &&
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
-      const existing = await prisma.note.findFirst({ where: { userId, clientId: input.clientId } });
-      if (existing) return { note: existing, created: false };
-    }
-    throw error;
-  }
+    await claim(tx, note.id);
+    return note;
+  });
 }
 
 /**

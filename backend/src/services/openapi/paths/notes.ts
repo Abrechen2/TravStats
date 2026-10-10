@@ -14,6 +14,8 @@ import {
 } from "../../../schemas/note";
 import { noteTimesSchema } from "../../../schemas/times";
 import { photoFileQuerySchema } from "../../../schemas/photoVariant";
+import { clientRefBodySchema } from "../../../schemas/clientRef";
+import { clientRefResponses } from "./clientRef";
 
 const tags = ["Notes"];
 
@@ -23,10 +25,6 @@ const note = registry.register(
     .object({
       id: z.string().uuid(),
       userId: z.string().uuid(),
-      clientId: z
-        .string()
-        .nullable()
-        .describe("The writing client's own id; null for a note written on the web"),
       body: z.string(),
       occurredAt: z.string().datetime().describe("Real UTC instant the note is filed under"),
       occurredZone: z.string().describe("IANA zone it was written in, frozen at write time"),
@@ -102,13 +100,17 @@ registry.registerPath({
   description:
     "The zone of the moment is required in some form — inside `occurredAt`, as `zone`, or " +
     "through `lat`/`lon`; the server never falls back to its own, the profile's or UTC. " +
-    "Idempotent per `clientId`: a resend answers 200 with the note already on file. The " +
+    "Takes the shared `clientRef` idempotency key (forgejo#283). The " +
     "photo is set afterwards with `PUT /notes/{id}/photo`.",
   tags,
-  request: { body: { content: json(createNoteSchema.openapi("NoteCreateInput")) } },
+  request: {
+    body: {
+      content: json(createNoteSchema.openapi("NoteCreateInput").and(clientRefBodySchema)),
+    },
+  },
   responses: {
     201: { description: "Written", content: json(envelope(note)) },
-    200: { description: "Already on file under this clientId", content: json(envelope(note)) },
+    ...clientRefResponses(json(envelope(note))),
     400: { description: "Validation failed", content: errorContent },
     422: timeRefused,
     429: { description: "Too many notes written", content: errorContent },
