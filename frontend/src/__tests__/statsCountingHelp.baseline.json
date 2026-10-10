@@ -7,9 +7,6 @@
     "components/Stats/CountryDistributionCard.tsx": {
       "missingCountingHelp": true
     },
-    "components/Stats/CruiseStatsSection.tsx": {
-      "missingCountingHelp": true
-    },
     "components/Stats/FlightYearSummaryCards.tsx": {
       "missingCountingHelp": true
     },
@@ -69,37 +66,6 @@
       "figuresWithoutEvidence": 1
     },
     "components/Stats/bus/BusStatsSection.tsx": {
-      "figuresWithoutEvidence": 3
-    },
-    "components/Stats/cruise/CruiseDetailSections.tsx": {
-      "missingCountingHelp": true,
-      "figuresWithoutEvidence": 8
-    },
-    "components/Stats/lodging/LodgingGeoSection.tsx": {
-      "missingCountingHelp": true,
-      "figuresWithoutEvidence": 3
-    },
-    "components/Stats/lodging/LodgingInsightsSection.tsx": {
-      "figuresWithoutEvidence": 6
-    },
-    "components/Stats/lodging/LodgingLoyaltySection.tsx": {
-      "missingCountingHelp": true,
-      "figuresWithoutEvidence": 4
-    },
-    "components/Stats/lodging/LodgingMoneySection.tsx": {
-      "missingCountingHelp": true,
-      "figuresWithoutEvidence": 5
-    },
-    "components/Stats/lodging/LodgingQualitySection.tsx": {
-      "missingCountingHelp": true,
-      "figuresWithoutEvidence": 4
-    },
-    "components/Stats/lodging/LodgingRecordsSection.tsx": {
-      "missingCountingHelp": true,
-      "figuresWithoutEvidence": 2
-    },
-    "components/Stats/lodging/LodgingRhythmSection.tsx": {
-      "missingCountingHelp": true,
       "figuresWithoutEvidence": 3
     },
     "components/Stats/poi/PoiFunSection.tsx": {

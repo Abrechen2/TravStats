@@ -7,12 +7,45 @@ import type { CruiseTotalSpendBase } from "../../../lib/api/stats";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import StatCard from "../StatCard";
 import EvidenceNumber from "../EvidenceNumber";
+import CountingHelp from "../counting/CountingHelp";
+import type { CountingEntry } from "../counting/countingEntry";
 import RankedBarList, { type RankedRow } from "../lodging/RankedBarList";
 
 interface Props {
   detail: CruiseStatsDetail;
   accent: string;
   locale: string;
+}
+
+/**
+ * The rhythm and fun sections take a scope OPTIONALLY: they render wherever
+ * the fold does, and without a period their tiles stay plain rather than
+ * opening a panel scoped to a year the screen never showed.
+ */
+interface ScopedProps extends Props {
+  evidenceScope?: EvidenceScopeParams;
+}
+
+/**
+ * A tile here names one cruise or an average; it opens the cruises its figure
+ * is read from (`metricEvidenceCruiseDetail.ts`), so its own figure is never
+ * compared against that list's count — unless the two are the same number.
+ */
+function opens(
+  scope: EvidenceScopeParams | undefined,
+  key: string,
+  renderedValue: number | null = null
+) {
+  return scope ? { kind: "metric" as const, key, scope, renderedValue } : undefined;
+}
+
+/** What the counting help says about the cruise list the blocks are folded from. */
+function listValues(detail: CruiseStatsDetail): Record<string, number> {
+  return {
+    booked: detail.bookedCount,
+    cancelled: detail.cancelledCount,
+    undated: detail.undatedCount,
+  };
 }
 
 /**
@@ -30,17 +63,6 @@ interface MoneyProps extends Props {
    */
   bookedPricedCount: number;
   scope: EvidenceScopeParams;
-}
-
-/**
- * The fun section takes a scope too, and takes it OPTIONALLY — unlike the
- * money section above, which is only ever drawn from the statistics tab. This
- * one renders wherever the fold does, and without a period the companions
- * total stays plain text rather than opening a panel scoped to a year the
- * screen never showed.
- */
-interface FunProps extends Props {
-  evidenceScope?: EvidenceScopeParams;
 }
 
 const MONTH_KEYS = [
@@ -83,7 +105,11 @@ const shortDate = (iso: string | null, locale: string): string =>
  * counted in the totals and drawn on no chart, and the section says so rather
  * than letting the bars look short.
  */
-export function CruiseRhythmSection({ detail, accent }: Props): JSX.Element | null {
+export function CruiseRhythmSection({
+  detail,
+  accent,
+  evidenceScope,
+}: ScopedProps): JSX.Element | null {
   const { t } = useTranslation(["cruise", "stats", "common"]);
 
   if (detail.dated.length === 0) return null;
@@ -103,6 +129,7 @@ export function CruiseRhythmSection({ detail, accent }: Props): JSX.Element | nu
           accent={accent}
           valueSize="md"
           title={t("cruise:stats.rhythm.season")}
+          evidence={opens(evidenceScope, "cruiseDatedCount")}
           value={t(`stats:months.${MONTH_KEYS[busiestMonth]}`)}
           description={t("cruise:stats.rhythm.seasonDesc", {
             count: detail.byMonth[busiestMonth],
@@ -112,6 +139,7 @@ export function CruiseRhythmSection({ detail, accent }: Props): JSX.Element | nu
           accent={accent}
           valueSize="md"
           title={t("cruise:stats.rhythm.averageNights")}
+          evidence={opens(evidenceScope, "cruiseNightsTotal")}
           value={detail.averageNights !== null ? detail.averageNights.toFixed(1) : "—"}
           description={t("cruise:stats.rhythm.averageNightsDesc")}
         />
@@ -119,6 +147,7 @@ export function CruiseRhythmSection({ detail, accent }: Props): JSX.Element | nu
           accent={accent}
           valueSize="sm"
           title={t("cruise:stats.rhythm.longest")}
+          evidence={opens(evidenceScope, "cruiseNightsTotal")}
           value={detail.longest ? shipName(detail.longest.cruise) : "—"}
           description={
             detail.longest
@@ -130,6 +159,7 @@ export function CruiseRhythmSection({ detail, accent }: Props): JSX.Element | nu
           accent={accent}
           valueSize="sm"
           title={t("cruise:stats.rhythm.shortest")}
+          evidence={opens(evidenceScope, "cruiseNightsTotal")}
           value={detail.shortest ? shipName(detail.shortest.cruise) : "—"}
           description={
             detail.shortest
@@ -199,6 +229,31 @@ export function CruiseRhythmSection({ detail, accent }: Props): JSX.Element | nu
           {t("cruise:stats.rhythm.undatedNote", { count: detail.undatedCount })}
         </p>
       )}
+
+      <CountingHelp
+        testId="cruise-rhythm-help"
+        entries={[
+          {
+            term: [
+              t("cruise:stats.rhythm.season"),
+              t("cruise:stats.rhythm.byYear"),
+              t("cruise:stats.rhythm.byMonth"),
+            ].join(" · "),
+            helpKey: "cruise:stats.help.season",
+            values: listValues(detail),
+          },
+          {
+            term: t("cruise:stats.rhythm.averageNights"),
+            helpKey: "cruise:stats.help.averageNights",
+            values: listValues(detail),
+          },
+          {
+            term: `${t("cruise:stats.rhythm.longest")} · ${t("cruise:stats.rhythm.shortest")}`,
+            helpKey: "cruise:stats.help.longestShortest",
+            values: listValues(detail),
+          },
+        ]}
+      />
     </section>
   );
 }
@@ -311,6 +366,29 @@ export function CruiseMoneySection({
           {t("cruise:stats.money.noTotalNote")}
         </p>
       )}
+
+      <CountingHelp
+        testId="cruise-money-help"
+        entries={[
+          {
+            term: t("cruise:stats.money.byCurrency"),
+            helpKey: "cruise:stats.help.byCurrency",
+            values: {
+              priced: detail.pricedCruises,
+              total: detail.pricedCruises + detail.unpricedCruises,
+            },
+          },
+          ...(totalSpendBase
+            ? [
+                {
+                  term: t("cruise:stats.money.baseTotal"),
+                  helpKey: "cruise:stats.help.baseTotal",
+                  values: { currency: totalSpendBase.currency },
+                },
+              ]
+            : []),
+        ]}
+      />
     </section>
   );
 }
@@ -321,18 +399,26 @@ export function CruiseFunSection({
   accent,
   locale,
   evidenceScope,
-}: FunProps): JSX.Element | null {
+}: ScopedProps): JSX.Element | null {
   const { t } = useTranslation(["cruise", "common"]);
 
   const cards: JSX.Element[] = [];
+  // The counting help names the figures that are drawn, and only those.
+  const help: CountingEntry[] = [];
 
   if (detail.first) {
+    help.push({
+      term: t("cruise:stats.fun.first"),
+      helpKey: "cruise:stats.help.first",
+      values: listValues(detail),
+    });
     cards.push(
       <StatCard
         key="first"
         accent={accent}
         valueSize="sm"
         title={t("cruise:stats.fun.first")}
+        evidence={opens(evidenceScope, "cruiseDatedCount")}
         value={shipName(detail.first)}
         description={shortDate(detail.first.startDate, locale)}
       />
@@ -340,12 +426,18 @@ export function CruiseFunSection({
   }
 
   if (detail.mostPorts) {
+    help.push({
+      term: t("cruise:stats.fun.mostPorts"),
+      helpKey: "cruise:stats.help.mostPorts",
+      values: listValues(detail),
+    });
     cards.push(
       <StatCard
         key="ports"
         accent={accent}
         valueSize="md"
         title={t("cruise:stats.fun.mostPorts")}
+        evidence={opens(evidenceScope, "cruiseListedPortCallsTotal")}
         value={detail.mostPorts.ports}
         description={shipName(detail.mostPorts.cruise)}
       />
@@ -353,12 +445,18 @@ export function CruiseFunSection({
   }
 
   if (detail.highestDeck) {
+    help.push({
+      term: t("cruise:stats.fun.highestDeck"),
+      helpKey: "cruise:stats.help.highestDeck",
+      values: listValues(detail),
+    });
     cards.push(
       <StatCard
         key="deck"
         accent={accent}
         valueSize="md"
         title={t("cruise:stats.fun.highestDeck")}
+        evidence={opens(evidenceScope, "cruiseDeckRecordedCount")}
         value={detail.highestDeck.deck}
         description={shipName(detail.highestDeck.cruise)}
       />
@@ -366,12 +464,18 @@ export function CruiseFunSection({
   }
 
   if (detail.onTrips > 0) {
+    help.push({
+      term: t("cruise:stats.fun.onTrips"),
+      helpKey: "cruise:stats.help.onTrips",
+      values: listValues(detail),
+    });
     cards.push(
       <StatCard
         key="trips"
         accent={accent}
         valueSize="md"
         title={t("cruise:stats.fun.onTrips")}
+        evidence={opens(evidenceScope, "cruiseOnTripCount", detail.onTrips)}
         value={detail.onTrips}
         description={t("cruise:stats.fun.onTripsDesc")}
       />
@@ -455,6 +559,22 @@ export function CruiseFunSection({
           )}
         </div>
       )}
+
+      <CountingHelp
+        testId="cruise-fun-help"
+        entries={[
+          ...help,
+          ...(cabinRows.length > 0 || companionRows.length > 0
+            ? [
+                {
+                  term: `${t("cruise:stats.fun.cabinTypes")} · ${t("cruise:stats.fun.companions")}`,
+                  helpKey: "cruise:stats.help.cabinsCompanions",
+                  values: listValues(detail),
+                },
+              ]
+            : []),
+        ]}
+      />
     </section>
   );
 }

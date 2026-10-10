@@ -33,6 +33,8 @@ export interface CruiseStatsRow {
   startDate: Date | null;
   /** The names on the booking; `deriveCruiseStats` folds these into its tally. */
   companions: string[];
+  /** The trip the cruise is filed under, if any — the fun block's "on a trip". */
+  tripId: string | null;
   price: number | null;
   currency: string | null;
   /** FX snapshot (#267). `Cruise` was the last priced model to gain one. */
@@ -102,6 +104,7 @@ export async function loadCruiseStatsData(
     shipName: c.ship?.name ?? null,
     startDate: c.startDate,
     companions: c.companions,
+    tripId: c.tripId,
     price: c.price,
     currency: c.currency,
     priceBase: c.priceBase,

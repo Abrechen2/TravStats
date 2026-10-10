@@ -360,3 +360,79 @@ describe("lodging insights — evidence items", () => {
     expect(totalsOf(items).lodgingReturnHouseCount.allTime).toBe(1);
   });
 });
+
+describe("lodging insights — the populations behind the tiles (forgejo#258)", () => {
+  it("folds each tile's own figure from its items, so tile and panel are one count", () => {
+    const fixtures = [
+      // 2024: a dated stay over a weekend, Fri 1 – Mon 4 March: 3 nights.
+      stay({ checkIn: "2024-03-01", checkOut: "2024-03-04", totalPrice: 300 }),
+      // 2024: a month-precise stay, 2 nights in July, no weekdays.
+      stay({
+        lodgingId: "h2",
+        lodgingName: "Haus Zwei",
+        datePrecision: "MONTH",
+        checkIn: "2024-07-01",
+        checkOut: "2024-07-31",
+        nights: 2,
+      }),
+      // A length nobody recorded: in no sleeping-style share.
+      stay({
+        lodgingId: "h3",
+        datePrecision: "MONTH",
+        checkIn: "2024-09-01",
+        checkOut: "2024-09-30",
+        nights: null,
+      }),
+      // 2025: the same house again, a higher price — one price comparison.
+      stay({ checkIn: "2025-03-07", checkOut: "2025-03-10", totalPrice: 360 }),
+    ];
+    const { insights, items } = computeLodgingInsights(fixtures, NOW);
+    const totals = totalsOf(items);
+
+    const sleep2024 = insights.sleepStyle.byYear.find((y) => y.year === 2024)!.nights;
+    expect(totals.lodgingSleepStyleNights.byYear["2024"]).toBe(sleep2024);
+    expect(sleep2024).toBe(5);
+
+    const week2024 = insights.weekRhythm.byYear.find((y) => y.year === 2024)!;
+    expect(totals.lodgingCalendarWeekNights.byYear["2024"]).toBe(
+      week2024.weekendNights + week2024.weekdayNights
+    );
+
+    const months2024 = insights.calendar.byYear.find((y) => y.year === 2024)!.months.length;
+    expect(totals.lodgingCalendarMonthCount.byYear["2024"]).toBe(months2024);
+    expect(months2024).toBe(2);
+
+    expect(insights.priceTrends.groups).toHaveLength(1);
+    expect(totals.lodgingPriceComparisonCount.allTime).toBe(1);
+    expect(items.lodgingPriceComparisonCount[0].entry).toMatchObject({
+      href: "/lodging/h1",
+      title: { text: "Haus Eins" },
+      subtitle: { text: "EUR" },
+    });
+  });
+
+  it("lists the finished trips the median of moves is read over, and no trip under way", () => {
+    const done = trip("t1");
+    const running = trip("t2", { endDate: d("2027-01-01") });
+    const { insights, items } = computeLodgingInsights(
+      [
+        stay({ trip: done, checkIn: "2024-05-01", checkOut: "2024-05-03" }),
+        stay({ trip: done, lodgingId: "h2", checkIn: "2024-05-03", checkOut: "2024-05-05" }),
+        stay({ trip: running, checkIn: "2025-05-01", checkOut: "2025-05-02" }),
+      ],
+      NOW
+    );
+    expect(insights.tripBases.trips.filter((b) => b.completed)).toHaveLength(1);
+    expect(items.lodgingCompletedTripBaseCount).toEqual([
+      expect.objectContaining({
+        year: 2024,
+        contribution: 1,
+        entry: expect.objectContaining({
+          domain: "trip",
+          href: "/trips/t1",
+          subtitle: { key: "evidence.subtitle.tripBase", values: { houses: 2, changes: 1 } },
+        }),
+      }),
+    ]);
+  });
+});

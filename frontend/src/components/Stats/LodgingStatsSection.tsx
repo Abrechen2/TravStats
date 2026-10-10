@@ -187,10 +187,10 @@ export default function LodgingStatsSection({
           <LodgingCurrencyBreakdown stats={stats} variant="inline" />
         )}
       {show("money") && <LodgingMoneySection stats={stats} evidenceScope={evidenceScope} />}
-      {show("quality") && <LodgingQualitySection stats={stats} />}
+      {show("quality") && <LodgingQualitySection stats={stats} evidenceScope={evidenceScope} />}
       {show("geo") && <LodgingGeoSection stats={stats} evidenceScope={evidenceScope} />}
       {show("rhythm") && <LodgingRhythmSection stats={stats} evidenceScope={evidenceScope} />}
-      {show("loyalty") && <LodgingLoyaltySection stats={stats} />}
+      {show("loyalty") && <LodgingLoyaltySection stats={stats} evidenceScope={evidenceScope} />}
       {show("records") && <LodgingRecordsSection stats={stats} evidenceScope={evidenceScope} />}
       {/* forgejo#258 — lifetime readings with per-year slices, from their own endpoint. */}
       {show("insights") && <LodgingInsightsSection year={shown.year} />}

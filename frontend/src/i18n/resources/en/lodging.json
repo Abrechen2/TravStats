@@ -733,6 +733,218 @@
           "exclusions": "Missing months are never filled in or estimated. Planned stays do not count."
         }
       }
+    },
+    "help": {
+      "avgPerNight": {
+        "unit": "Price per night in {{currency}}, averaged over nights: the sum of the prices divided by their nights. A three-week stay weighs as much as three weeks of single nights.",
+        "time": "Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "Each stay's total price, where it is recorded in {{currency}} or was converted into {{currency}} at a rate when saved, divided by its nights. Your stays that count: those whose check-out is past. An award stay counts when a price is entered (0 included).",
+        "coverage": "{{stays}} stays with {{nights}} nights have a comparable price; {{omitted}} priced stays could not be converted into {{currency}}. Tap the figure for the stays with their price per night.",
+        "exclusions": "Stays without a price, without a night (in and out on one day) and prices not converted into {{currency}} – a conversion into an earlier base currency does not count either; currencies are never added without a rate. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "medianPerNight": {
+        "unit": "The median price per night in {{currency}} across all nights: half the nights were cheaper, half dearer; with an even count, the mean of the two middle nights.",
+        "time": "Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "Each stay's total price, where it is recorded in {{currency}} or was converted into {{currency}} at a rate when saved, divided by its nights. Your stays that count: those whose check-out is past.",
+        "coverage": "{{stays}} stays with {{nights}} nights have a comparable price; {{omitted}} priced stays could not be converted into {{currency}}. Tap the figure for the stays with their price per night.",
+        "exclusions": "Stays without a price, without a night (in and out on one day) and prices not converted into {{currency}} – a conversion into an earlier base currency does not count either; currencies are never added without a rate. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "cheapestDearest": {
+        "unit": "The lowest and the highest price per night in {{currency}} of a single stay (its total divided by its nights), with the house it was at. On a tie, the first one found.",
+        "time": "Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "Each stay's total price, where it is recorded in {{currency}} or was converted into {{currency}} at a rate when saved, divided by its nights. Your stays that count: those whose check-out is past.",
+        "coverage": "{{stays}} stays with {{nights}} nights have a comparable price; {{omitted}} priced stays could not be converted into {{currency}}. Tap the figure for the stays with their price per night.",
+        "exclusions": "Stays without a price, without a night (in and out on one day) and prices not converted into {{currency}} – a conversion into an earlier base currency does not count either; currencies are never added without a rate. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "awardValue": {
+        "unit": "An estimated amount in {{currency}}: your award nights, valued at the average price of your paid nights – an estimate, not money paid.",
+        "time": "A night belongs to the day it starts on, by the house's own calendar (the check-out day is no night). Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "The nights of your stays marked as award stays; the average from the stays with a comparable price, without the award stays. Your stays that count: those whose check-out is past.",
+        "coverage": "Without a paid night with a comparable price there is no average, and the value stays open (“—”) rather than 0. Tap the value for the paid nights, the number in the sentence for the award nights.",
+        "exclusions": "Award nights are not in the average they are valued at – a free night would otherwise lower the price the others are valued at. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "priceRankings": {
+        "unit": "Price per night in {{currency}} per group – year, country, chain, board: the sum of the prices divided by the group's nights, with nights and total. Never added across currencies.",
+        "time": "By year: the year of the check-in; a stay without a date is missing from that list only. Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "Each stay's total price, where it is recorded in {{currency}} or was converted into {{currency}} at a rate when saved, divided by its nights. Your stays that count: those whose check-out is past. Country, chain and board as recorded on the house and the stay.",
+        "coverage": "{{stays}} stays with {{nights}} nights have a comparable price; {{omitted}} priced stays could not be converted into {{currency}}. A stay without a chain or board is missing from that list only.",
+        "exclusions": "Stays without a price, without a night (in and out on one day) and prices not converted into {{currency}} – a conversion into an earlier base currency does not count either; currencies are never added without a rate. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "chainShare": {
+        "unit": "Share of nights in chain hotels among all nights: {{chain}} with chains, {{independent}} independent.",
+        "time": "A night belongs to the day it starts on, by the house's own calendar (the check-out day is no night). Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "The chain recorded on the house. Your stays that count: those whose check-out is past.",
+        "coverage": "A stay of unknown length brings 0 nights. Tap the value for the nights in chain hotels.",
+        "exclusions": "Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "topChain": {
+        "unit": "The chain with the most nights, and its nights; on a tie, the alphabetically first.",
+        "time": "A night belongs to the day it starts on, by the house's own calendar (the check-out day is no night). Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "The chain recorded on the house. Your stays that count: those whose check-out is past.",
+        "coverage": "Only houses with a chain recorded. Tap the value for that chain's nights.",
+        "exclusions": "Independent houses. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "topChainShare": {
+        "unit": "The most frequent chain's share of the nights in chain hotels – not of all nights; the tile beside it says that.",
+        "time": "A night belongs to the day it starts on, by the house's own calendar (the check-out day is no night). Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "The chain recorded on the house. Your stays that count: those whose check-out is past.",
+        "coverage": "Without a night in a chain hotel the share stays open (“—”). Tap the value for the nights in chain hotels.",
+        "exclusions": "Independent houses. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "concentration": {
+        "unit": "Herfindahl index of the chain nights: the sum of each chain's squared share. 1 = every chain night with one chain, near 0 = spread across many.",
+        "time": "A night belongs to the day it starts on, by the house's own calendar (the check-out day is no night). Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "The chain recorded on the house. Your stays that count: those whose check-out is past.",
+        "coverage": "Without a night in a chain hotel the index stays open (“—”). Tap the value for the nights in chain hotels with their chain.",
+        "exclusions": "Independent houses – how often you choose a chain at all is the chain share. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "chainRanking": {
+        "unit": "Nights and stays per chain, ordered by nights.",
+        "time": "A night belongs to the day it starts on, by the house's own calendar (the check-out day is no night). Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "The chain recorded on the house. Your stays that count: those whose check-out is past.",
+        "coverage": "Only houses with a chain recorded; a stay of unknown length counts as a stay with 0 nights.",
+        "exclusions": "Independent houses. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "programmeYears": {
+        "unit": "Nights and stays per loyalty programme and calendar year – the way hotel programmes count status. The tier above is the card's current one, not a year's.",
+        "time": "A stay counts entirely in the year of its check-in (the day as it reads at the house). Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "The programme of the membership card that covers the stay – through the chain or the house the card is linked to. Your stays that count: those whose check-out is past.",
+        "coverage": "Only stays matched to a card. Tap a programme for its stays in that year.",
+        "exclusions": "Stays without a date: the status year is the figure here and is not guessed. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "ratingOverall": {
+        "unit": "Average of your overall rating (1–5 stars) over the stays that have one, to one decimal.",
+        "time": "Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "Your own rating on the stay. Your stays that count: those whose check-out is past.",
+        "coverage": "{{rated}} stays with an overall rating, {{unrated}} without. Tap the value for the rated stays with all four ratings.",
+        "exclusions": "Stays without an overall rating – they never count as 0 stars. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "ratingParts": {
+        "unit": "One average each of your room, breakfast and service rating (1–5 stars), each over the stays that have exactly that rating.",
+        "time": "Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "Your own rating on the stay. Your stays that count: those whose check-out is past.",
+        "coverage": "Each average has its own number of stays – a stay without an overall rating counts here too. Tap a value for the stays with all four ratings.",
+        "exclusions": "Stays without that rating – never as 0 stars. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "ratingRankings": {
+        "unit": "Average overall rating per chain, country, hotel stars and type of stay, with the number of stays. The stars list is in star order, not by score.",
+        "time": "Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "Your overall rating; chain, country, stars and type as recorded on the house. Your stays that count: those whose check-out is past.",
+        "coverage": "Only stays with an overall rating; without a chain, country or official stars a stay is missing from that list only – a house without stars is no 0-star house.",
+        "exclusions": "Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "bestValue": {
+        "unit": "The five stays with the highest overall rating per {{currency}} a night (rating divided by the price per night).",
+        "time": "Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "Your overall rating and the price per night in {{currency}}, as in the costs. Your stays that count: those whose check-out is past.",
+        "coverage": "Only stays with an overall rating and a comparable price above 0.",
+        "exclusions": "Stays without a price, priced at 0 or not converted into {{currency}}. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "continents": {
+        "unit": "Continents you spent a night on – each once.",
+        "time": "Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "The country of the house; without one, its coordinates. Your stays that count: those whose check-out is past.",
+        "coverage": "A stay without a country and without coordinates counts toward no continent. Tap the value for the stays with their continent.",
+        "exclusions": "Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "northSouth": {
+        "unit": "The northernmost and southernmost latitude you spent a night at, with the house.",
+        "time": "Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "The coordinates of the house. Your stays that count: those whose check-out is past.",
+        "coverage": "{{unlocated}} stays without coordinates are not included. Tap a value for the stays with coordinates.",
+        "exclusions": "Stays whose house has no coordinates. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "centre": {
+        "unit": "The centre of gravity of where you slept: the midpoint on the globe, each stay weighted by its nights (at least 1). Computed on the sphere, so nights either side of the date line do not land in Africa.",
+        "time": "Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "The coordinates of the house and the nights of the stay. Your stays that count: those whose check-out is past.",
+        "coverage": "{{unlocated}} stays without coordinates are not included; if the places cancel out exactly, the value stays open (“—”). Tap the value for the stays with coordinates and weight.",
+        "exclusions": "Stays whose house has no coordinates. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "topPlaces": {
+        "unit": "Nights and stays per city and per country, ordered by nights.",
+        "time": "A night belongs to the day it starts on, by the house's own calendar (the check-out day is no night). Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "City and country as recorded on the house. Your stays that count: those whose check-out is past.",
+        "coverage": "Without a city or country a stay is missing from that list only; a stay of unknown length counts with 0 nights.",
+        "exclusions": "Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "nightsAway": {
+        "unit": "Calendar days on which you slept away – each day once, even when two bookings hold it.",
+        "time": "A night belongs to the day it starts on, by the house's own calendar (the check-out day is no night). Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "Stays with a check-in and check-out to the day. Your stays that count: those whose check-out is past.",
+        "coverage": "Double-booked nights ({{overlap}}) count once; {{undated}} stays without a date have no place on the calendar. Tap the value for the stays with their days.",
+        "exclusions": "Stays dated only to the month or year – their nights count among the nights, not here. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "longestStreak": {
+        "unit": "The longest run of consecutive nights away, also across several stays that follow on seamlessly.",
+        "time": "A night belongs to the day it starts on, by the house's own calendar (the check-out day is no night). Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "The calendar days of the nights away. Your stays that count: those whose check-out is past.",
+        "coverage": "Only stays dated to the day. Tap the value for the stays with their days.",
+        "exclusions": "Nights without a place on the calendar (month, year or no date). Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "longestGap": {
+        "unit": "The most nights without a recorded stay between your first and last night away. That does not mean “at home” – a cruise, a night train or an unrecorded hotel may lie in between.",
+        "time": "A night belongs to the day it starts on, by the house's own calendar (the check-out day is no night). Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "The calendar days of the nights away. Your stays that count: those whose check-out is past.",
+        "coverage": "Before the first and after the last recorded night there is no data, so no gap. Tap the value for the stays with their days.",
+        "exclusions": "Nights without a place on the calendar and nights of other domains. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "busiestMonth": {
+        "unit": "The calendar month with the most nights away, across all years together; on a tie, the earlier month.",
+        "time": "A night belongs to the day it starts on, by the house's own calendar (the check-out day is no night). Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "The calendar days of the nights away. Your stays that count: those whose check-out is past.",
+        "coverage": "Only stays dated to the day. Tap the value for the stays with their days.",
+        "exclusions": "Nights without a place on the calendar. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "weekdaySeason": {
+        "unit": "Nights away per weekday (the night of the day it starts on) and per season (meteorological, northern hemisphere: winter = Dec–Feb).",
+        "time": "A night belongs to the day it starts on, by the house's own calendar (the check-out day is no night). Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "The calendar days of the nights away. Your stays that count: those whose check-out is past.",
+        "coverage": "Each calendar day once; only stays dated to the day.",
+        "exclusions": "Nights without a place on the calendar. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "awayShare": {
+        "unit": "Share of a year's days on which you slept away. The running year is measured against the days elapsed so far, not 365 – so the share falls with every night at home.",
+        "time": "A night belongs to the day it starts on, by the house's own calendar (the check-out day is no night). Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "The calendar days of the nights away. Your stays that count: those whose check-out is past.",
+        "coverage": "Only stays dated to the day; a year without such a night is missing.",
+        "exclusions": "Nights without a place on the calendar and nights of other domains (ship, train, bus). Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "longestStay": {
+        "unit": "The most nights of a single stay.",
+        "time": "A night belongs to the day it starts on, by the house's own calendar (the check-out day is no night). Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "Each stay's nights: counted between check-in and check-out, otherwise the number entered. Your stays that count: those whose check-out is past.",
+        "coverage": "{{unknown}} stays without a known length count with 0 nights. Tap the value for every stay with its nights.",
+        "exclusions": "Two bookings that follow on are two stays – the longest run is under rhythm. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "mostReturns": {
+        "unit": "The most stays at one and the same house.",
+        "time": "Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "Your stays, counted per house – two houses with the same name are two houses. Stays count: those whose check-out is past.",
+        "coverage": "Every stay counts, also without a date. Tap the value for the stays.",
+        "exclusions": "Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "perfectStays": {
+        "unit": "Stays with four times 5 stars – overall, room, breakfast and service; beside them the endured ones, rated 2 or less overall.",
+        "time": "Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "Your own ratings on the stay. Your stays that count: those whose check-out is past.",
+        "coverage": "If one of the four ratings is missing, the stay is not perfect. Tap the value for the perfect stays.",
+        "exclusions": "Stays without an overall rating. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "oneNighters": {
+        "unit": "Stays of exactly one night.",
+        "time": "A night belongs to the day it starts on, by the house's own calendar (the check-out day is no night). Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "Each stay's nights. Your stays that count: those whose check-out is past.",
+        "coverage": "A stay without a known length is no one-night stay. Tap the value for the list.",
+        "exclusions": "Stays of 0 nights. Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      },
+      "byHotel": {
+        "unit": "Nights and stays per house, ordered by nights – from the same pass as the chain list, so both count every night alike.",
+        "time": "A night belongs to the day it starts on, by the house's own calendar (the check-out day is no night). Period: stays whose check-in falls in the selected year – the day as it reads at the house; without a year, all of them.",
+        "source": "Your stays, counted per house. Your stays that count: those whose check-out is past.",
+        "coverage": "Every stay counts; one without a known length with 0 nights.",
+        "exclusions": "Planned stays (check-out still ahead) and cancelled ones do not count; a house you only bookmarked is no stay."
+      }
     }
   },
   "period": {

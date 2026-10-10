@@ -180,6 +180,7 @@
     "linesLabel": "Cruise lines",
     "countriesLabel": "Countries visited",
     "regionsLabel": "Regions sailed",
+    "flagsLabel": "Highlights",
     "flags": {
       "balcony": "Balcony cabin",
       "suite": "Suite",
@@ -246,7 +247,149 @@
       "southeast_asia": "Southeast Asia",
       "west_africa": "West Africa"
     },
-    "riverCruises": "River cruises"
+    "riverCruises": "River cruises",
+    "help": {
+      "count": {
+        "unit": "One cruise, counted once.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards).",
+        "coverage": "Every sailed cruise counts, also without a date – then only without a year. Tap the figure for the cruises behind it.",
+        "exclusions": "Booked, running and cancelled cruises do not count."
+      },
+      "totalDistance": {
+        "unit": "Distance between consecutive ports, in your distance unit. Per leg the computed sea route when it matches the itinerary, otherwise the straight line between the ports.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards); Itinerary: embarkation port, port calls, disembarkation port – embarkation and disembarkation only when they are not already the first or last call.",
+        "coverage": "Sea days lie inside the leg between two ports and add nothing; an unrecognised port has no coordinates and breaks no leg. River legs count too. Tap the figure for the cruises behind it.",
+        "exclusions": "Booked, running and cancelled cruises do not count."
+      },
+      "seaDays": {
+        "unit": "A “sea day” entry in the itinerary – entries, not calendar days.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards), itinerary.",
+        "coverage": "A cruise without dates still brings its sea days. Tap the figure for the cruises behind it.",
+        "exclusions": "On a river cruise a day without a port is no sea day. Booked, running and cancelled cruises do not count."
+      },
+      "ports": {
+        "unit": "A port from the port catalogue, counted once however often you called there.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards); Itinerary: embarkation port, port calls, disembarkation port – embarkation and disembarkation only when they are not already the first or last call.",
+        "coverage": "An unrecognised port (a name without a catalogue entry) is a real call but has no identity and is missing here. Tap the figure for the cruises behind it.",
+        "exclusions": "Booked, running and cancelled cruises do not count."
+      },
+      "ships": {
+        "unit": "A ship from the ship catalogue, counted once.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards), the catalogue ship chosen.",
+        "coverage": "A ship entered only as text has no identity and does not count. Tap the figure for the cruises behind it.",
+        "exclusions": "Booked, running and cancelled cruises do not count."
+      },
+      "lines": {
+        "unit": "A cruise line, counted once – spelled as it is on the cruise.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards).",
+        "coverage": "A cruise without a line recorded does not count here. Tap the figure for the cruises behind it.",
+        "exclusions": "Booked, running and cancelled cruises do not count."
+      },
+      "avgPortsPerCruise": {
+        "unit": "Port calls divided by cruises.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards); Itinerary: embarkation port, port calls, disembarkation port – embarkation and disembarkation only when they are not already the first or last call.",
+        "coverage": "Unrecognised ports count as a call. Without a cruise, 0.",
+        "exclusions": "Booked, running and cancelled cruises do not count."
+      },
+      "longestLeg": {
+        "unit": "The longest single leg between two consecutive ports, in your distance unit.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards); Itinerary: embarkation port, port calls, disembarkation port – embarkation and disembarkation only when they are not already the first or last call. Per leg the sea route or straight line, as for the distance.",
+        "coverage": "Without a leg between two known ports, “—”.",
+        "exclusions": "Booked, running and cancelled cruises do not count."
+      },
+      "maxPortsSingle": {
+        "unit": "The most catalogue ports on a single cruise, embarkation and disembarkation included.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards); Itinerary: embarkation port, port calls, disembarkation port – embarkation and disembarkation only when they are not already the first or last call.",
+        "coverage": "Unrecognised ports do not count here – unlike “Most ports” under Curiosities, which counts every call in the itinerary.",
+        "exclusions": "Booked, running and cancelled cruises do not count."
+      },
+      "lineLoyaltyMax": {
+        "unit": "The most cruises with one and the same line.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards), the line recorded.",
+        "coverage": "A cruise without a line does not count here.",
+        "exclusions": "Booked, running and cancelled cruises do not count."
+      },
+      "seaDaysStreak": {
+        "unit": "The most sea-day entries in a row within one cruise.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards), itinerary by day.",
+        "coverage": "A port call ends the run; it does not continue across two cruises.",
+        "exclusions": "River cruises have no sea days. Booked, running and cancelled cruises do not count."
+      },
+      "riverCruises": {
+        "unit": "Cruises recorded as river cruises, and their distance.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards); the kind (ocean or river) of the cruise, else of its ship.",
+        "coverage": "“—” when the server does not report it.",
+        "exclusions": "Booked, running and cancelled cruises do not count."
+      },
+      "maxDeck": {
+        "unit": "The highest deck number of your cabin.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards), the deck recorded.",
+        "coverage": "Without a deck recorded, “—”.",
+        "exclusions": "Booked, running and cancelled cruises do not count."
+      },
+      "totalDays": {
+        "unit": "Days aboard: from start to end day, both counted.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards), start and end date.",
+        "coverage": "A cruise without both dates brings 0 days. Tap the figure for the cruises behind it.",
+        "exclusions": "Booked, running and cancelled cruises do not count."
+      },
+      "revisitRate": {
+        "unit": "Share of port calls at ports already visited: calls at catalogue ports minus distinct ports, divided by those calls.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards); Itinerary: embarkation port, port calls, disembarkation port – embarkation and disembarkation only when they are not already the first or last call.",
+        "coverage": "Only calls at recognised ports – an unrecognised call is never a revisit. Without such calls, 0 %.",
+        "exclusions": "Booked, running and cancelled cruises do not count."
+      },
+      "countries": {
+        "unit": "A country, counted once – by ISO country code, so two spellings of one country stay one.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards); the country of the catalogue ports in the itinerary.",
+        "coverage": "A port country no code can be found for does not count (the list below still names it). Tap the figure for the cruises behind it.",
+        "exclusions": "Unrecognised ports. Booked, running and cancelled cruises do not count."
+      },
+      "regions": {
+        "unit": "Port calls per cruising region (Mediterranean, Baltic …), the eight most frequent.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards); the region of the catalogue ports in the itinerary.",
+        "coverage": "A port without a region and an unrecognised port are missing.",
+        "exclusions": "Booked, running and cancelled cruises do not count."
+      },
+      "seaDayShare": {
+        "unit": "Sea days divided by days aboard, at most 100 %.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards); sea-day entries and start/end date.",
+        "coverage": "A cruise without dates brings sea days but no days – hence the cap. Without days aboard, 0 %.",
+        "exclusions": "River cruises have no sea days. Booked, running and cancelled cruises do not count."
+      },
+      "tags": {
+        "unit": "The names behind the counts: lines (by frequency), regions and countries, as the catalogue spells them.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards); Itinerary: embarkation port, port calls, disembarkation port – embarkation and disembarkation only when they are not already the first or last call.",
+        "coverage": "The country list shows names, including ones without an ISO code; the figure above counts codes.",
+        "exclusions": "Booked, running and cancelled cruises do not count."
+      },
+      "flags": {
+        "unit": "What happened at least once: a balcony or suite cabin; polar and cold waters (ports in Antarctic, polar or Alaska regions, Iceland, Greenland); a canal transit (Panama Colón or Port Said in the itinerary); the date line (a leg jumps across 180° longitude); a birthday and New Year's Eve aboard (the day lies between start and end date).",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards); cabin, itinerary, dates and your birthday from your profile.",
+        "coverage": "Birthday and New Year need both dates; without a birthday in your profile, no birthday aboard.",
+        "exclusions": "On a river cruise you are not “at sea”: birthdays and New Year do not count there. Booked, running and cancelled cruises do not count."
+      }
+    }
   },
   "page": {
     "loadError": "These statistics could not be loaded.",

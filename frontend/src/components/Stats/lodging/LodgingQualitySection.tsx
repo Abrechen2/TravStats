@@ -5,6 +5,8 @@ import { formatCurrency } from "../../../lib/units";
 import { countryName } from "../../../lib/countryFlag";
 import type { LodgingRatingGroup, LodgingStats } from "../../../types/lodging";
 import StatCard from "../StatCard";
+import CountingHelp from "../counting/CountingHelp";
+import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import RankedBarList, { type RankedRow } from "./RankedBarList";
 
 const LODGING_ACCENT = "var(--domain-lodging, #d4778f)";
@@ -12,6 +14,12 @@ const LIST_LIMIT = 6;
 
 interface Props {
   stats: LodgingStats;
+  /**
+   * The population these figures were measured over, present only where a
+   * tile may open the evidence panel — the statistics page passes it, a
+   * screen without a chosen period does not, and its tiles stay plain.
+   */
+  evidenceScope?: EvidenceScopeParams;
 }
 
 /**
@@ -26,7 +34,7 @@ interface Props {
  * delivered. It is rendered in scale order (1..5), never ranked, because it is
  * read along an axis.
  */
-export default function LodgingQualitySection({ stats }: Props): JSX.Element {
+export default function LodgingQualitySection({ stats, evidenceScope }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "stats"]);
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const { ratings } = stats;
@@ -43,6 +51,16 @@ export default function LodgingQualitySection({ stats }: Props): JSX.Element {
     }));
 
   const nothingRated = ratings.ratedStays === 0;
+  // The four averages open ONE list: the stays with any rating, each naming
+  // all four, because each average reads its own subset of them.
+  const ratedStays = evidenceScope
+    ? {
+        kind: "metric" as const,
+        key: "lodgingRatedStaysCount",
+        scope: evidenceScope,
+        renderedValue: null,
+      }
+    : undefined;
 
   // The same rule as the money section: no rating at all is one sentence, not
   // four "—" tiles and their empty rankings (B12).
@@ -78,6 +96,7 @@ export default function LodgingQualitySection({ stats }: Props): JSX.Element {
           accent={LODGING_ACCENT}
           valueSize="md"
           title={t("lodging:stats.quality.overall")}
+          evidence={ratedStays}
           value={score(ratings.avgOverall)}
           description={t("lodging:stats.quality.overallDesc", { count: ratings.ratedStays })}
         />
@@ -85,6 +104,7 @@ export default function LodgingQualitySection({ stats }: Props): JSX.Element {
           accent={LODGING_ACCENT}
           valueSize="md"
           title={t("lodging:stats.quality.room")}
+          evidence={ratedStays}
           value={score(ratings.avgRoom)}
           description={t("lodging:stats.quality.roomDesc")}
         />
@@ -92,6 +112,7 @@ export default function LodgingQualitySection({ stats }: Props): JSX.Element {
           accent={LODGING_ACCENT}
           valueSize="md"
           title={t("lodging:stats.quality.breakfast")}
+          evidence={ratedStays}
           value={score(ratings.avgBreakfast)}
           description={t("lodging:stats.quality.breakfastDesc")}
         />
@@ -99,6 +120,7 @@ export default function LodgingQualitySection({ stats }: Props): JSX.Element {
           accent={LODGING_ACCENT}
           valueSize="md"
           title={t("lodging:stats.quality.service")}
+          evidence={ratedStays}
           value={score(ratings.avgService)}
           description={t("lodging:stats.quality.serviceDesc")}
         />
@@ -156,6 +178,43 @@ export default function LodgingQualitySection({ stats }: Props): JSX.Element {
           />
         </div>
       )}
+
+      <CountingHelp
+        testId="lodging-quality-help"
+        entries={[
+          {
+            term: t("lodging:stats.quality.overall"),
+            helpKey: "lodging:stats.help.ratingOverall",
+            values: { rated: ratings.ratedStays, unrated: ratings.unratedStays },
+          },
+          {
+            term: [
+              t("lodging:stats.quality.room"),
+              t("lodging:stats.quality.breakfast"),
+              t("lodging:stats.quality.service"),
+            ].join(" · "),
+            helpKey: "lodging:stats.help.ratingParts",
+          },
+          {
+            term: [
+              t("lodging:stats.quality.byChain"),
+              t("lodging:stats.quality.byCountry"),
+              t("lodging:stats.quality.byStars"),
+              t("lodging:stats.quality.byType"),
+            ].join(" · "),
+            helpKey: "lodging:stats.help.ratingRankings",
+          },
+          ...(ratings.bestValue.length > 0
+            ? [
+                {
+                  term: t("lodging:stats.quality.bestValue"),
+                  helpKey: "lodging:stats.help.bestValue",
+                  values: { currency: baseCurrency },
+                },
+              ]
+            : []),
+        ]}
+      />
     </section>
   );
 }

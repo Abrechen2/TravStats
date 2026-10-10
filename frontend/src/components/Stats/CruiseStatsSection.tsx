@@ -21,8 +21,8 @@ import EvidenceTrigger from "./EvidenceTrigger";
 import CruiseInsightsSection from "./insights/CruiseInsightsSection";
 import type { EvidenceScopeParams } from "../evidence/useEvidence";
 import type { SectionVisibility } from "../../hooks/useSectionVisibility";
-
-type TFunction = (key: string, options?: Record<string, unknown>) => string;
+import CountingHelp from "./counting/CountingHelp";
+import { Flag, RegionBars, SeaDayDonut, TagCloud, prettyRegion } from "./cruise/CruiseSectionParts";
 
 /**
  * Cruise-domain stats section shown under the StatsPage cruise tab.
@@ -326,7 +326,36 @@ export default function CruiseStatsSection({
       {comparison}
 
       {/* 1) Hero KPI grid */}
-      {show("kpis") && <KpiGrid kpis={heroKpis} scope={evidenceScope} />}
+      {show("kpis") && (
+        <div>
+          <KpiGrid kpis={heroKpis} scope={evidenceScope} />
+          <CountingHelp
+            testId="cruise-kpis-help"
+            entries={[
+              { term: t("stats:cruiseSection.count"), helpKey: "stats:cruiseSection.help.count" },
+              {
+                term: t("stats:cruiseSection.totalDistance"),
+                helpKey: "stats:cruiseSection.help.totalDistance",
+              },
+              {
+                term: t("stats:cruiseSection.seaDays"),
+                helpKey: "stats:cruiseSection.help.seaDays",
+              },
+              { term: t("stats:cruiseSection.ports"), helpKey: "stats:cruiseSection.help.ports" },
+              { term: t("stats:cruiseSection.ships"), helpKey: "stats:cruiseSection.help.ships" },
+              { term: t("stats:cruiseSection.lines"), helpKey: "stats:cruiseSection.help.lines" },
+              {
+                term: t("stats:cruiseSection.avgPortsPerCruise"),
+                helpKey: "stats:cruiseSection.help.avgPortsPerCruise",
+              },
+              {
+                term: t("stats:cruiseSection.longestLeg"),
+                helpKey: "stats:cruiseSection.help.longestLeg",
+              },
+            ]}
+          />
+        </div>
+      )}
 
       {/* 2) Region bar chart + sea/port donut */}
       {show("regions") && (
@@ -345,11 +374,67 @@ export default function CruiseStatsSection({
             pct={seaDayRatioPct}
             label={t("stats:cruiseSection.seaDayShare")}
           />
+          <div className="lg:col-span-3">
+            <CountingHelp
+              testId="cruise-regions-help"
+              entries={[
+                {
+                  term: t("stats:cruiseSection.regionsHeading"),
+                  helpKey: "stats:cruiseSection.help.regions",
+                },
+                {
+                  term: t("stats:cruiseSection.seaDayShare"),
+                  helpKey: "stats:cruiseSection.help.seaDayShare",
+                },
+              ]}
+            />
+          </div>
         </div>
       )}
 
       {/* 3) Depth & loyalty */}
-      {show("depth") && <KpiGrid kpis={depthKpis} scope={evidenceScope} compact />}
+      {show("depth") && (
+        <div>
+          <KpiGrid kpis={depthKpis} scope={evidenceScope} compact />
+          <CountingHelp
+            testId="cruise-depth-help"
+            entries={[
+              {
+                term: t("stats:cruiseSection.maxPortsSingle"),
+                helpKey: "stats:cruiseSection.help.maxPortsSingle",
+              },
+              {
+                term: t("stats:cruiseSection.lineLoyaltyMax"),
+                helpKey: "stats:cruiseSection.help.lineLoyaltyMax",
+              },
+              {
+                term: t("stats:cruiseSection.seaDaysStreak"),
+                helpKey: "stats:cruiseSection.help.seaDaysStreak",
+              },
+              {
+                term: t("stats:cruiseSection.riverCruises"),
+                helpKey: "stats:cruiseSection.help.riverCruises",
+              },
+              {
+                term: t("stats:cruiseSection.maxDeck"),
+                helpKey: "stats:cruiseSection.help.maxDeck",
+              },
+              {
+                term: t("stats:cruiseSection.totalDays"),
+                helpKey: "stats:cruiseSection.help.totalDays",
+              },
+              {
+                term: t("stats:cruiseSection.revisitRate"),
+                helpKey: "stats:cruiseSection.help.revisitRate",
+              },
+              {
+                term: t("stats:cruiseSection.countries"),
+                helpKey: "stats:cruiseSection.help.countries",
+              },
+            ]}
+          />
+        </div>
+      )}
 
       {/* 4) Tag clouds */}
       {show("tags") && stats.cruiseLines.length > 0 && (
@@ -390,8 +475,34 @@ export default function CruiseStatsSection({
           )}
         </div>
       )}
+      {(show("tags") || show("flags")) && (
+        <CountingHelp
+          testId="cruise-tags-help"
+          entries={[
+            {
+              term: [
+                t("stats:cruiseSection.linesLabel"),
+                t("stats:cruiseSection.regionsLabel"),
+                t("stats:cruiseSection.countriesLabel"),
+              ].join(" · "),
+              helpKey: "stats:cruiseSection.help.tags",
+            },
+            {
+              term: t("stats:cruiseSection.flagsLabel"),
+              helpKey: "stats:cruiseSection.help.flags",
+            },
+          ]}
+        />
+      )}
 
-      {show("rhythm") && <CruiseRhythmSection detail={detail} accent={accent} locale={locale} />}
+      {show("rhythm") && (
+        <CruiseRhythmSection
+          detail={detail}
+          accent={accent}
+          locale={locale}
+          evidenceScope={evidenceScope}
+        />
+      )}
       {show("money") && (
         <CruiseMoneySection
           detail={moneyDetail}
@@ -498,179 +609,6 @@ function KpiGrid({
       })}
     </div>
   );
-}
-
-function RegionBars({
-  regionVisitCounts,
-  title,
-  emptyHint,
-  t,
-}: {
-  regionVisitCounts: Record<string, number>;
-  title: string;
-  emptyHint: string;
-  t: TFunction;
-}): JSX.Element {
-  const sorted = Object.entries(regionVisitCounts).sort((a, b) => b[1] - a[1]);
-  const max = sorted[0]?.[1] ?? 0;
-
-  return (
-    <div
-      className="rounded-lg p-4 h-full"
-      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <h3 className="text-sm font-medium mb-3" style={{ color: "var(--text-muted)" }}>
-        {title}
-      </h3>
-      {sorted.length === 0 ? (
-        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-          {emptyHint}
-        </p>
-      ) : (
-        <ul className="space-y-2">
-          {sorted.slice(0, 8).map(([region, count]) => (
-            <li key={region} className="flex items-center gap-3 text-xs">
-              <span
-                className="w-32 shrink-0 truncate"
-                style={{ color: "var(--text-primary)" }}
-                title={prettyRegion(region, t)}
-              >
-                {prettyRegion(region, t)}
-              </span>
-              <div
-                className="flex-1 h-3 rounded-full overflow-hidden"
-                style={{ background: "var(--bg-elevated)" }}
-              >
-                <div
-                  className="h-full"
-                  style={{
-                    width: `${max > 0 ? (count / max) * 100 : 0}%`,
-                    background: "var(--accent)",
-                  }}
-                />
-              </div>
-              <span className="w-8 text-right font-mono" style={{ color: "var(--text-primary)" }}>
-                {count}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-function SeaDayDonut({
-  seaDays,
-  totalDays,
-  pct,
-  label,
-}: {
-  seaDays: number;
-  totalDays: number;
-  pct: number;
-  label: string;
-}): JSX.Element {
-  // Conic-gradient donut — no chart lib needed. Inner label shows the
-  // percentage; subtitle explains the ratio.
-  const trackColor = "var(--bg-elevated)";
-  const fillColor = "var(--accent)";
-  const gradient = `conic-gradient(${fillColor} 0deg ${pct * 3.6}deg, ${trackColor} ${pct * 3.6}deg 360deg)`;
-
-  return (
-    <div
-      className="rounded-lg p-4 h-full flex flex-col items-center justify-center"
-      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <h3 className="text-sm font-medium mb-3 self-start" style={{ color: "var(--text-muted)" }}>
-        {label}
-      </h3>
-      <div
-        className="relative w-32 h-32 rounded-full"
-        style={{ background: gradient }}
-        aria-label={`${pct}%`}
-      >
-        <div
-          className="absolute inset-3 rounded-full flex items-center justify-center"
-          style={{ background: "var(--bg-surface)" }}
-        >
-          <span className="text-2xl font-bold font-mono" style={{ color: "var(--text-primary)" }}>
-            {pct}%
-          </span>
-        </div>
-      </div>
-      <p className="mt-3 text-xs font-mono" style={{ color: "var(--text-muted)" }}>
-        {seaDays} / {totalDays} d
-      </p>
-    </div>
-  );
-}
-
-function TagCloud({ title, items }: { title: string; items: string[] }): JSX.Element {
-  return (
-    <div
-      className="rounded-lg p-4"
-      style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-    >
-      <h3 className="text-sm font-medium mb-2" style={{ color: "var(--text-muted)" }}>
-        {title}
-      </h3>
-      <div className="flex flex-wrap gap-2">
-        {items.map((label) => (
-          <span
-            key={label}
-            className="px-2 py-0.5 rounded-full text-xs"
-            style={{
-              background: "var(--bg-elevated)",
-              color: "var(--text-primary)",
-              border: "1px solid var(--color-border)",
-            }}
-          >
-            {label}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Flag({ label, emoji }: { label: string; emoji: string }): JSX.Element {
-  return (
-    <span
-      className="inline-flex items-center gap-1 px-2 py-1 rounded-md"
-      style={{
-        background: "var(--bg-elevated)",
-        color: "var(--text-primary)",
-        border: "1px solid var(--color-border)",
-      }}
-    >
-      <span aria-hidden>{emoji}</span>
-      {label}
-    </span>
-  );
-}
-
-/**
- * Region slug -> display label, via i18n.
- *
- * This used to read from a hardcoded German map of TEN slugs while the port
- * catalogue uses FIFTY-FOUR. Everything unmapped fell through to the
- * title-case fallback, so a German UI showed "Mittelmeer" and "Ostsee" next to
- * "North Sea", "Aegean" and "Iberian Atlantic" — which read like mixed data but
- * was simply an incomplete map. The German labels were also hardcoded, so an
- * English UI got German names for the ten that WERE mapped.
- *
- * The fallback stays: a slug the catalogue gains before the translations do
- * renders readably instead of blank.
- */
-function prettyRegion(slug: string, t: TFunction): string {
-  const translated = t(`stats:cruiseSection.regions.${slug}`);
-  // i18next echoes the key back when it has no entry.
-  if (translated && !translated.endsWith(`.${slug}`)) return translated;
-  return slug
-    .split(/[_\s]+/)
-    .map((word) => (word.length > 0 ? word[0].toUpperCase() + word.slice(1) : ""))
-    .join(" ");
 }
 
 function formatNumber(n: number): string {

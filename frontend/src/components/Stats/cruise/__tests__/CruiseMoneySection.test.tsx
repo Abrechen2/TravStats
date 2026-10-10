@@ -100,6 +100,16 @@ function LocationProbe({ onChange }: { onChange: (search: string) => void }): nu
   return null;
 }
 
+/**
+ * The tile's own heading. Its title also names an entry of the section's
+ * "So wird gezählt", so the text alone matches twice.
+ */
+function heading(text: string): HTMLElement {
+  const found = screen.getAllByText(text).find((el) => el.tagName === "H3");
+  if (!found) throw new Error(`no heading "${text}"`);
+  return found;
+}
+
 describe("CruiseMoneySection base-currency total", () => {
   beforeEach(() => {
     cleanup();
@@ -107,7 +117,7 @@ describe("CruiseMoneySection base-currency total", () => {
 
   it("shows the converted sum in the currency the server named", () => {
     renderSection({ value: 2030.55, excludedCount: 0, currency: "EUR" });
-    const tile = screen.getByText("cruise:stats.money.baseTotal").parentElement;
+    const tile = heading("cruise:stats.money.baseTotal").parentElement;
     // `formatCurrency` keeps `minimumFractionDigits: 0`, so the separator is
     // all this can pin — the grouping one differs by locale and the language
     // is not mocked here.
@@ -129,7 +139,7 @@ describe("CruiseMoneySection base-currency total", () => {
   /** A zero would claim the sailing was free. The dash says nothing converted. */
   it("abstains with a dash and says why, rather than printing a zero", () => {
     renderSection({ value: null, excludedCount: 2, currency: "EUR" });
-    const tile = screen.getByText("cruise:stats.money.baseTotal").parentElement;
+    const tile = heading("cruise:stats.money.baseTotal").parentElement;
     expect(tile?.textContent).toContain("—");
     expect(tile?.textContent).not.toMatch(/0[,.]00/);
     expect(screen.getByText(/cruise:stats\.money\.baseTotalNone.*EUR/)).toBeInTheDocument();
