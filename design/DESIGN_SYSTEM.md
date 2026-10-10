@@ -224,8 +224,11 @@ part of the system, not left to each component:
 
 - **Hover**: buttons go to `accentHover` (primary) or a 4 % lift on `surface`;
   table rows to the row-hover value; links underline. Never a shadow on hover.
-- **Focus**: the `focusRing` shadow on every focusable element, visible only
-  under `:focus-visible`. No outline removal without the ring.
+- **Focus**: a 2 px `accent` outline (offset 2) plus the `focusRing` shadow on
+  every focusable element, visible only under `:focus-visible`. The ring alone
+  (accent at 18 %) measured 1.42:1 against `surface` — under the 3:1 a focus
+  indicator needs — so the outline carries the contrast (web, forgejo#249).
+  No outline removal without a visible replacement.
 - **Pressed**: `accentPressed`.
 - **Disabled**: opacity 0.5; a disabled create button 0.3 (`formError`).
 - **Reduced motion**: `MotionConfig reducedMotion="user"` covers framer; every
