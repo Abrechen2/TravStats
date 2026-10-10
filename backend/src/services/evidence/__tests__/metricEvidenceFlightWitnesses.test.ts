@@ -1,5 +1,6 @@
 import { prisma } from "../../../db";
 import { resolveMetricEvidence } from "../metricEvidence";
+import { resolveRankingEvidence } from "../rankingEvidence";
 import { buildStatsPage } from "../../stats/statsPage";
 import { buildTravelRecords, loadRecordFlights } from "../../stats/records";
 
@@ -151,5 +152,15 @@ describe("witness evidence behind the flight tab's extremes (forgejo#256)", () =
         page
       )
     ).rejects.toMatchObject({ statusCode: 400 });
+  });
+
+  it("a chart bar lists the flights of its month or weekday, on the departure clock", async () => {
+    const may = await resolveRankingEvidence(userId, "departureMonth:5", allTime, page);
+    expect(may?.entries.map((e) => e.id).sort()).toEqual([ids.fraLhr, ids.lhrJfk].sort());
+    // 1 March 2025 was a Saturday.
+    const saturday = await resolveRankingEvidence(userId, "departureWeekday:6", allTime, page);
+    expect(saturday?.entries.map((e) => e.id)).toEqual([ids.fraSin]);
+    expect(await resolveRankingEvidence(userId, "departureMonth:13", allTime, page)).toBeNull();
+    expect(await resolveRankingEvidence(userId, "departureWeekday:x", allTime, page)).toBeNull();
   });
 });

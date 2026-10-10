@@ -275,7 +275,9 @@ registry.registerPath({
             "`passportContinentCount` (all-time only). ranking: `<dimension>:<value>` — " +
             "`airline:iata:LH`, `airport:FRA`, `aircraftType:A320`, `country:<catalogue " +
             "country name>` (the flight distribution tile), `passportCountry:<ISO alpha-2>` " +
-            "(one passport country's entries, counted as /stats/countries/{code} counts them)."
+            "(one passport country's entries, counted as /stats/countries/{code} counts them), " +
+            "`departureMonth:1`–`12` and `departureWeekday:0`–`6` (0 = Sunday; the flight " +
+            "tab's seasonal and weekday charts, on the departure airport's clock)."
         ),
     }),
     query: z.object({

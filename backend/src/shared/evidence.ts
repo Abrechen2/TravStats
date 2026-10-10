@@ -160,6 +160,13 @@ export const RANKING_DIMENSIONS = [
    * distribution tile — two rules for two tiles, each kept.
    */
   "passportCountry",
+  /**
+   * The flights departing in one calendar month (`1`–`12`) or on one weekday
+   * (`0` = Sunday … `6`), on the departure airport's clock — the bars of the
+   * flight tab's seasonal and weekday charts (forgejo#256).
+   */
+  "departureMonth",
+  "departureWeekday",
 ] as const;
 export type RankingDimension = (typeof RANKING_DIMENSIONS)[number];
 

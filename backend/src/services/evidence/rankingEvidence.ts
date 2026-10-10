@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { resolveCalendarRankingEvidence } from "./rankingEvidenceCalendar";
 import { AppError } from "../../middleware/errorHandler";
 import { parseRankingKey, rankingKey } from "../../shared/evidence";
 import type { EvidenceScope } from "../../shared/evidence";
@@ -57,6 +58,9 @@ export async function resolveRankingEvidence(
       // The passport's country page, by ISO code (forgejo#132 item 6) — see
       // `metricEvidencePassport.ts` for why this is not the `country` case.
       return resolvePassportCountryEntries(userId, parsed.value, scope, page);
+    case "departureMonth":
+    case "departureWeekday":
+      return resolveCalendarRankingEvidence(userId, parsed.dimension, parsed.value, scope, page);
     case "continent":
       // Deliberate abstention, not a gap (task-6-brief.md, "STOP AND
       // REPORT"; task-6-report.md has the finding in full). No
