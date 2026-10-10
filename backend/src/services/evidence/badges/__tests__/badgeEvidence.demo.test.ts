@@ -5,6 +5,9 @@ import { runDemoSeed } from "../../../../seedDemoAccount";
 import { checkAndUpdateAchievements } from "../../../../utils/achievements";
 import { resolveMetricEvidence } from "../../metricEvidence";
 import { assertDistinctInvariant, assertSumInvariant } from "../../__tests__/invariants";
+import { observeQueries } from "../../../../db";
+import { coreArraysFor } from "../badgeFamiliesCore";
+import { loadBadgeFamily } from "../badgeFamiliesDomains";
 
 /**
  * forgejo#265 — every badge that opens its own proof answers with the badge's
@@ -66,5 +69,30 @@ describe("badge proofs on the demo account", () => {
     expect(disagree).toEqual([]);
     // The demo fills every domain: a good share of the badges have entries to show.
     expect(opened).toBeGreaterThan(80);
+  }, 600_000);
+
+  // Security review: `progress` is evaluated many times per request, so it
+  // must fold the rows the family loaded and nothing else — no query. And a
+  // family that declares per-row shares must have them add up.
+  it("folds without a single query, and declared shares add up to the progress", async () => {
+    const queries: string[] = [];
+    for (const type of BADGE_PROOF_TYPES.filter((t) => t !== "countries")) {
+      const rule = { requirementType: type, requirement: 1 };
+      const family = await loadBadgeFamily(userId, rule, coreArraysFor(type));
+      if (!family) throw new Error(`${type} has no family`);
+      const stop = observeQueries((q) => queries.push(`${type}: ${q.model}.${q.operation}`));
+      try {
+        await family.progress(family.rows);
+        await family.progress(family.rows.slice(0, Math.ceil(family.rows.length / 2)));
+        await family.progress(family.rows.slice(0, 1));
+      } finally {
+        stop();
+      }
+      if (family.share) {
+        const total = family.rows.map(family.share).reduce((a, b) => a + b, 0);
+        expect([type, total]).toEqual([type, await family.progress(family.rows)]);
+      }
+    }
+    expect(queries).toEqual([]);
   }, 600_000);
 });

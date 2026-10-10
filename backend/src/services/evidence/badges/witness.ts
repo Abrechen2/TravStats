@@ -13,12 +13,15 @@
  * contract's sum rule holds by construction.
  *
  * THE WORK IS BOUNDED (security review of forgejo#265). Every evaluation of
- * `progress` is charged to one budget — the number of evaluations AND the
- * rows they fold, summed — evaluations run one at a time, never as an
- * unbounded `Promise.all`, and a family that knows its per-row shares
- * (`shares`) skips the subset search entirely. When the budget runs out the
+ * `progress` — the figure itself, the alone pass, the shrink and the
+ * contributions — is charged to ONE budget, by count and by rows folded, and
+ * evaluations run one at a time, never as an unbounded `Promise.all`. There
+ * is no evaluation path outside it. A family whose measure is a plain sum may
+ * give each row's share from its own data (`share`, a pure function, no
+ * `progress` call), which skips the search. When the budget runs out the
  * witness ABSTAINS (`exhausted`): the caller reports the figure with no
- * per-entry split, never a half-shrunk set presented as the answer.
+ * per-entry split, never a half-shrunk set presented as the answer — and when
+ * even the figure cannot be folded within it, the figure abstains too.
  */
 
 export interface WitnessBudget {
@@ -28,13 +31,17 @@ export interface WitnessBudget {
   rows: number;
 }
 
-/** Sized for a few thousand entries per badge on a single request. */
-export const DEFAULT_WITNESS_BUDGET: WitnessBudget = { evaluations: 2_000, rows: 400_000 };
+/**
+ * Sized so an account of a few thousand entries per badge gets its list; the
+ * evaluations of the alone pass are one-row folds, which the row bound keeps
+ * cheap.
+ */
+export const DEFAULT_WITNESS_BUDGET: WitnessBudget = { evaluations: 5_000, rows: 400_000 };
 
 export type Witness<R> =
   | { exhausted: false; rows: R[]; contributions: number[]; progress: number }
-  /** The budget ran out: the progress is known, the split is not given. */
-  | { exhausted: true; progress: number };
+  /** The budget ran out: the split is not given; the figure is, if it was folded. */
+  | { exhausted: true; progress: number | null };
 
 class BudgetExhausted extends Error {}
 
@@ -56,11 +63,12 @@ function metered<R>(
 export interface WitnessOptions<R> {
   budget?: WitnessBudget;
   /**
-   * Each row's own share, for a family whose measure is a plain sum of
-   * per-row shares — the witness is then the rows with a share, with no
-   * subset evaluated. Null when the family cannot say for this badge.
+   * Each row's own share, read from the row's own data in one pure pass, for
+   * a family whose measure is a plain sum of them. The shares are trusted
+   * only when they add up to the figure; each family that declares one has a
+   * test that they do.
    */
-  shares?: ((rows: readonly R[]) => Promise<number[] | null>) | null;
+  share?: ((row: R) => number) | null;
 }
 
 export async function findWitness<R>(
@@ -68,24 +76,25 @@ export async function findWitness<R>(
   progress: (subset: readonly R[]) => Promise<number>,
   options: WitnessOptions<R> = {}
 ): Promise<Witness<R>> {
-  // The figure itself is one fold of every row, outside the budget: it is the
-  // badge's own number and must be answered even when its split is not.
-  const target = await progress(rows);
-  if (target <= 0 || rows.length === 0) {
-    return { exhausted: false, rows: [], contributions: [], progress: target };
-  }
-  const direct = options.shares ? await options.shares(rows) : null;
-  if (direct !== null && direct.reduce((sum, s) => sum + s, 0) === target) {
-    const kept = rows.flatMap((row, i) => (direct[i] > 0 ? [{ row, share: direct[i] }] : []));
-    return {
-      exhausted: false,
-      rows: kept.map((k) => k.row),
-      contributions: kept.map((k) => k.share),
-      progress: target,
-    };
-  }
   const evaluate = metered(progress, options.budget ?? DEFAULT_WITNESS_BUDGET);
+  let target: number | null = null;
   try {
+    target = await evaluate(rows);
+    if (target <= 0 || rows.length === 0) {
+      return { exhausted: false, rows: [], contributions: [], progress: target };
+    }
+    if (options.share) {
+      const shares = rows.map(options.share);
+      if (shares.reduce((sum, s) => sum + s, 0) === target) {
+        const kept = rows.flatMap((row, i) => (shares[i] > 0 ? [{ row, share: shares[i] }] : []));
+        return {
+          exhausted: false,
+          rows: kept.map((k) => k.row),
+          contributions: kept.map((k) => k.share),
+          progress: target,
+        };
+      }
+    }
     return { exhausted: false, ...(await search(rows, target, evaluate)), progress: target };
   } catch (error) {
     if (error instanceof BudgetExhausted) return { exhausted: true, progress: target };

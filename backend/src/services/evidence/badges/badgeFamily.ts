@@ -3,14 +3,25 @@ import type { EvidenceEntry } from "../../../schemas/evidence";
 /**
  * One family of badges: the rows a badge of that family is measured over, how
  * each row is shown in the evidence panel, and the badge's OWN progress over
- * any subset of those rows (`witness.ts` asks it repeatedly).
+ * any subset of those rows (`witness.ts` asks it repeatedly, under one budget).
+ *
+ * `progress` MUST BE PURE over the rows the family loaded: no database query,
+ * no network, nothing but folding the subset it is handed (it is async only
+ * because the core fold reads the in-memory airport cache, warmed by the
+ * family's own first fold). The family loads everything once, up front.
+ * `badgeFamilies.purity.test.ts` watches every query while each family's
+ * `progress` runs and fails on one.
  */
 export interface BadgeFamily<R> {
   rows: readonly R[];
   entryOf: (row: R) => Omit<EvidenceEntry, "contribution">;
   progress: (subset: readonly R[]) => Promise<number>;
-  /** Per-row shares where the badge's measure is a plain sum of them (`witness.ts`). */
-  shares?: ((rows: readonly R[]) => Promise<number[] | null>) | null;
+  /**
+   * A row's own share, from its own data, where the badge's measure is a
+   * plain sum of them — pure, no `progress` call (`witness.ts`). Every family
+   * that declares one is tested to sum to `progress(rows)`.
+   */
+  share?: ((row: R) => number) | null;
 }
 
 /** The two fields of an achievement every badge check reads. */
@@ -29,23 +40,4 @@ export type ErasedFamily = BadgeFamily<unknown>;
 
 export function erase<R>(family: BadgeFamily<R>): ErasedFamily {
   return family as unknown as ErasedFamily;
-}
-
-/**
- * Most rows whose per-row shares a family folds one by one. Each fold is of
- * ONE row, so the work is linear in the account; past this the witness
- * search takes over, under its own budget.
- */
-export const MAX_SHARE_ROWS = 20_000;
-
-/** Per-row shares by folding each row alone, in turn — for a declared plain sum. */
-export function sharesByFold<R>(
-  progress: (subset: readonly R[]) => Promise<number>
-): (rows: readonly R[]) => Promise<number[] | null> {
-  return async (rows) => {
-    if (rows.length > MAX_SHARE_ROWS) return null;
-    const shares: number[] = [];
-    for (const row of rows) shares.push(await progress([row]));
-    return shares;
-  };
 }

@@ -68,8 +68,8 @@ describe("findWitness", () => {
 
 /**
  * Security review of forgejo#265: one request must not fold an account's rows
- * without bound. Every evaluation is charged — the alone pass, the shrink and
- * the contributions alike — and an exhausted budget abstains.
+ * without bound. Every evaluation is charged — the figure, the alone pass, the
+ * shrink and the contributions alike — and an exhausted budget abstains.
  */
 describe("findWitness — bounded work", () => {
   const meter = <R>(progress: (rows: readonly R[]) => Promise<number>) => {
@@ -81,44 +81,56 @@ describe("findWitness — bounded work", () => {
     };
     return { used, measured };
   };
-  const big = Array.from({ length: 5000 }, (_, i) => ({
-    id: `${i}`,
-    country: `C${i % 40}`,
-    day: i,
-  }));
+  const family = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      id: `${i}`,
+      country: `C${i % 40}`,
+      day: i,
+      route: "A",
+    }));
+  const within = (used: { evaluations: number; rows: number }) => {
+    expect(used.evaluations).toBeLessThanOrEqual(DEFAULT_WITNESS_BUDGET.evaluations);
+    expect(used.rows).toBeLessThanOrEqual(DEFAULT_WITNESS_BUDGET.rows);
+  };
 
-  it("stays within the default budget on 5000 rows, in bounded time", async () => {
-    const { used, measured } = meter(distinctCountries);
+  it.each([
+    ["a count", count],
+    ["a set", distinctCountries],
+    ["a maximum", busiestRoute],
+    ["a pair", pair],
+  ])("keeps every path within the budget on 20 000 rows — %s", async (_kind, measure) => {
+    const { used, measured } = meter(measure);
     const started = Date.now();
-    const w = await findWitness(big, measured);
-    // One fold of every row for the figure itself, then the metered search.
-    expect(used.evaluations).toBeLessThanOrEqual(DEFAULT_WITNESS_BUDGET.evaluations + 1);
-    expect(used.rows).toBeLessThanOrEqual(DEFAULT_WITNESS_BUDGET.rows + big.length);
+    const w = await findWitness(family(20_000), measured);
+    within(used);
     expect(Date.now() - started).toBeLessThan(10_000);
-    expect(w.progress).toBe(40);
+    if (w.exhausted) expect(w.progress === null || w.progress >= 0).toBe(true);
   });
 
   it("abstains when the budget runs out — never a half-shrunk set", async () => {
     const { used, measured } = meter(distinctCountries);
-    const w = await findWitness(big, measured, { budget: { evaluations: 50, rows: 10_000 } });
+    const w = await findWitness(family(5000), measured, {
+      budget: { evaluations: 50, rows: 20_000 },
+    });
     expect(w).toEqual({ exhausted: true, progress: 40 });
-    expect(used.evaluations).toBeLessThanOrEqual(51);
+    expect(used.evaluations).toBeLessThanOrEqual(50);
   });
 
-  it("takes declared per-row shares without folding any subset", async () => {
+  it("abstains on the figure too when even one fold of every row is over budget", async () => {
+    const w = await findWitness(family(5000), count, { budget: { evaluations: 10, rows: 100 } });
+    expect(w).toEqual({ exhausted: true, progress: null });
+  });
+
+  it("reads declared shares in one pass, folding only the figure", async () => {
     const { used, measured } = meter(count);
-    const w = found(
-      await findWitness(big, measured, { shares: async (rows) => rows.map(() => 1) })
-    );
-    expect(w.rows).toHaveLength(5000);
+    const w = found(await findWitness(family(20_000), measured, { share: () => 1 }));
+    expect(w.rows).toHaveLength(20_000);
     expect(used.evaluations).toBe(1);
   });
 
   it("does not trust shares that do not add up to the figure", async () => {
     const rows = ["DE", "DE", "FR"].map((country, i) => ({ id: `${i}`, country }));
-    const w = found(
-      await findWitness(rows, distinctCountries, { shares: async (r) => r.map(() => 1) })
-    );
+    const w = found(await findWitness(rows, distinctCountries, { share: () => 1 }));
     expect(w.rows).toHaveLength(2);
   });
 });

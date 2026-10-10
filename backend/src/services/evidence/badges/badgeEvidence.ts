@@ -34,7 +34,7 @@ async function resolveProof(
   const rule = { requirementType, requirement: 1 };
   const family = await loadBadgeFamily(userId, rule, coreArraysFor(requirementType));
   const witness = family
-    ? await findWitness(family.rows, family.progress, { shares: family.shares })
+    ? await findWitness(family.rows, family.progress, { share: family.share })
     : ({ exhausted: false, rows: [], contributions: [], progress: 0 } as const);
   const entries = witness.exhausted
     ? []
@@ -49,9 +49,11 @@ async function resolveProof(
     page,
     entries,
     value: witness.progress,
-    // Too many entries to split within the request's budget: the figure is
-    // the badge's own, and it says that no entry is named for it.
-    unattributed: witness.exhausted ? [{ count: witness.progress, reason: "notPerEntry" }] : [],
+    // Too many entries to split within the request's budget: no entry is
+    // named, and the response says so instead of listing a partial set.
+    unattributed: witness.exhausted
+      ? [{ count: witness.progress ?? 0, reason: "notPerEntry" }]
+      : [],
   });
   return { ...response, measure: { ...response.measure, label: LABEL } };
 }
