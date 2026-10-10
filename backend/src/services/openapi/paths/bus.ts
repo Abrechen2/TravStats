@@ -10,6 +10,8 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
+import { clientRefBodySchema } from "../../../schemas/clientRef";
+import { clientRefResponses } from "./clientRef";
 import { errorContent, timeRefused } from "./shared";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import {
@@ -174,7 +176,8 @@ registry.registerPath({
         "application/json": {
           schema: createBusJourneySchema
             .openapi("BusJourneyCreateInput")
-            .and(documentIdsBodySchema),
+            .and(documentIdsBodySchema)
+            .and(clientRefBodySchema),
         },
       },
     },
@@ -185,6 +188,7 @@ registry.registerPath({
       description: "Created",
       content: { "application/json": { schema: envelope(busJourney) } },
     },
+    ...clientRefResponses({ "application/json": { schema: envelope(busJourney) } }),
     400: { description: "Validation failed", content: errorContent },
     404: { description: "Trip or booking not found", content: errorContent },
     429: { description: "Too many rides created", content: errorContent },

@@ -38,6 +38,7 @@ import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
+import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
 import logger from "../utils/logger";
 import { railIdsCoveredBy } from "../services/loyalty/listFilters";
 import { withRailDetailTimes, withRailTimes } from "../services/rail/timesDto";
@@ -395,85 +396,117 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const userId = requireUser(req);
-      refuseStrayFold(req.body);
-      const parsed = createRailJourneySchema.safeParse(req.body);
-      if (!parsed.success) throw invalidInput(parsed.error);
-      const { connectsFrom, ...input } = parsed.data;
-      // Prisma proves a trip or booking EXISTS, never whose it is (AUD-038).
-      await assertReferencesOwned(userId, { tripId: input.tripId, bookingId: input.bookingId });
-      const documentIds = await takeDocumentIds(userId, req.body);
-
-      const merged = mergeRailJourney(null, await withResolvedStations(input));
-      const lookup = { provider: input.lookup?.provider ?? null, ref: input.lookup?.ref ?? null };
-      const geo = await resolveJourneyGeometry({
-        lookupProvider: lookup.provider,
-        lookupRef: lookup.ref,
-        dep: { lat: merged.depLat, lon: merged.depLon },
-        arr: { lat: merged.arrLat, lon: merged.arrLon },
+      // An outbox replay carries the key it minted (forgejo#283): a repeat
+      // answers the journey the first POST made, 200 instead of 201.
+      const { clientRef, rest: body } = takeClientRef(req.body);
+      const { created, result } = await createOnce({
+        userId,
+        clientRef,
+        kind: "rail",
+        payload: body,
+        create: (claim) => createRailRide(userId, body, claim),
+        replay: (id) => replayRailRide(userId, id),
       });
-      const state = withTracedDistance(merged, geo.geometry && tracedLengthKm(geo.geometry));
-      const companions = await resolveCompanions(userId, input.companions ?? []);
-      const fxColumns = await fxColumnsFor(
-        { amount: input.price, currency: input.currency, date: state.departureTime },
-        await getBaseCurrency(userId)
-      );
-
-      const journey = await prisma.$transaction(async (tx) => {
-        // Bound inside the transaction, so a failed create leaves the previous
-        // leg without the booking it was given for this one.
-        const link = connectsFrom ? await bindConnection(tx, userId, connectsFrom) : null;
-        const created = await tx.railJourney.create({
-          data: {
-            ...plainColumns(input),
-            ...state,
-            ...fxColumns,
-            ...(geometryColumns(lookup, geo) as Prisma.RailJourneyUncheckedCreateInput),
-            ...(link && {
-              bookingId: link.bookingId,
-              tripId: input.tripId !== undefined ? input.tripId : link.tripId,
-            }),
-            userId,
-            companions: companions.map((c) => c.displayName),
-          },
-        });
-        if (companions.length > 0) {
-          await tx.railJourneyCompanion.createMany({
-            data: linkRowsFor(companions.map((c) => c.id)).map((row) => ({
-              ...row,
-              railJourneyId: created.id,
-            })),
-            skipDuplicates: true,
-          });
-        }
-        await propagateWrite(tx, userId, "rail", created.id);
-        return tx.railJourney.findUniqueOrThrow({
-          where: { id: created.id },
-          include: RAIL_INCLUDE,
-        });
-      });
-
-      await linkDocuments(userId, documentIds, { type: "railJourney", id: journey.id });
-      await restatusTrips(journey.tripId);
-      // Read again once originals were filed, so the answer names its source.
-      const filed =
-        documentIds.length > 0
-          ? await prisma.railJourney.findUniqueOrThrow({
-              where: { id: journey.id },
-              include: RAIL_INCLUDE,
-            })
-          : journey;
-
-      logger.info({ operation: "rail_journey_create", railJourneyId: journey.id, userId });
-      res.status(201).json({
-        success: true,
-        data: withRailSource(withStationShortCodes(withRailTimes(filed))),
-        meta: { geometry: reportOf(geo) },
-      });
+      res.status(created ? 201 : 200).json({ success: true, ...result });
     } catch (err) {
       next(err);
     }
   }
 );
+
+async function createRailRide(userId: string, body: unknown, claim: ClaimClientRef) {
+  refuseStrayFold(body);
+  const parsed = createRailJourneySchema.safeParse(body);
+  if (!parsed.success) throw invalidInput(parsed.error);
+  const { connectsFrom, ...input } = parsed.data;
+  // Prisma proves a trip or booking EXISTS, never whose it is (AUD-038).
+  await assertReferencesOwned(userId, { tripId: input.tripId, bookingId: input.bookingId });
+  const documentIds = await takeDocumentIds(userId, body);
+
+  const merged = mergeRailJourney(null, await withResolvedStations(input));
+  const lookup = { provider: input.lookup?.provider ?? null, ref: input.lookup?.ref ?? null };
+  const geo = await resolveJourneyGeometry({
+    lookupProvider: lookup.provider,
+    lookupRef: lookup.ref,
+    dep: { lat: merged.depLat, lon: merged.depLon },
+    arr: { lat: merged.arrLat, lon: merged.arrLon },
+  });
+  const state = withTracedDistance(merged, geo.geometry && tracedLengthKm(geo.geometry));
+  const companions = await resolveCompanions(userId, input.companions ?? []);
+  const fxColumns = await fxColumnsFor(
+    { amount: input.price, currency: input.currency, date: state.departureTime },
+    await getBaseCurrency(userId)
+  );
+
+  const journey = await prisma.$transaction(async (tx) => {
+    // Bound inside the transaction, so a failed create leaves the previous
+    // leg without the booking it was given for this one.
+    const link = connectsFrom ? await bindConnection(tx, userId, connectsFrom) : null;
+    const created = await tx.railJourney.create({
+      data: {
+        ...plainColumns(input),
+        ...state,
+        ...fxColumns,
+        ...(geometryColumns(lookup, geo) as Prisma.RailJourneyUncheckedCreateInput),
+        ...(link && {
+          bookingId: link.bookingId,
+          tripId: input.tripId !== undefined ? input.tripId : link.tripId,
+        }),
+        userId,
+        companions: companions.map((c) => c.displayName),
+      },
+    });
+    if (companions.length > 0) {
+      await tx.railJourneyCompanion.createMany({
+        data: linkRowsFor(companions.map((c) => c.id)).map((row) => ({
+          ...row,
+          railJourneyId: created.id,
+        })),
+        skipDuplicates: true,
+      });
+    }
+    await propagateWrite(tx, userId, "rail", created.id);
+    await claim(tx, created.id);
+    return tx.railJourney.findUniqueOrThrow({
+      where: { id: created.id },
+      include: RAIL_INCLUDE,
+    });
+  });
+
+  await linkDocuments(userId, documentIds, { type: "railJourney", id: journey.id });
+  await restatusTrips(journey.tripId);
+  // Read again once originals were filed, so the answer names its source.
+  const filed =
+    documentIds.length > 0
+      ? await prisma.railJourney.findUniqueOrThrow({
+          where: { id: journey.id },
+          include: RAIL_INCLUDE,
+        })
+      : journey;
+
+  logger.info({ operation: "rail_journey_create", railJourneyId: journey.id, userId });
+  return {
+    data: withRailSource(withStationShortCodes(withRailTimes(filed))),
+    meta: { geometry: reportOf(geo) },
+  };
+}
+
+/**
+ * A repeat create's answer: the journey as the create answered it. The line
+ * was resolved by the first request, so the report says `unchanged` with the
+ * stored source — nothing was looked up this time.
+ */
+async function replayRailRide(userId: string, id: string) {
+  const journey = await prisma.railJourney.findFirst({
+    where: { id, userId },
+    include: RAIL_INCLUDE,
+  });
+  if (!journey) return null;
+  return {
+    data: withRailSource(withStationShortCodes(withRailTimes(journey))),
+    meta: { geometry: editReport({ kind: "unchanged" }, journey.geometrySource) },
+  };
+}
 
 router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

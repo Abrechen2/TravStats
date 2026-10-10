@@ -369,7 +369,14 @@ export type ApiErrorCode =
    *  stand for a DIFFERENT checklist item cannot become one (409) — one
    *  checklist's tick would be lost. */
   | "PLACE_MERGE_SAME"
-  | "PLACE_MERGE_BOTH_CURATED";
+  | "PLACE_MERGE_BOTH_CURATED"
+  /** A create's idempotency key (forgejo#283, `services/sync/clientRef.ts`)
+   *  was already spent on a different body or another route (409).
+   *  `extra.kind` and `extra.entityId` name the row it made. */
+  | "CLIENT_REF_REUSED"
+  /** A repeat create whose key made a row that has been deleted since (410):
+   *  nothing is re-created. `extra.kind`, `extra.entityId` name it. */
+  | "CLIENT_REF_TARGET_GONE";
 
 interface AuthRequest extends Request {
   user?: {

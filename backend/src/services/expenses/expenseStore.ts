@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
+import type { ClaimClientRef } from "../sync/clientRef";
 import {
   STATION_OR_LEG_MESSAGE,
   type CreateExpenseInput,
@@ -106,29 +107,50 @@ export async function listExpenses(userId: string, scope: ExpenseScope): Promise
   });
 }
 
+/**
+ * `claim` runs inside the creating transaction with the new row's id — the
+ * idempotency key's hook (forgejo#283, `services/sync/clientRef.ts`).
+ */
 export async function createExpense(
   userId: string,
   scope: ExpenseScope,
-  input: CreateExpenseInput
+  input: CreateExpenseInput,
+  claim?: ClaimClientRef
 ): Promise<ExpenseRow> {
   const target = await resolveTarget(userId, scope, input.routeId);
   await assertStops(userId, target, {
     pinned: input.stopId,
     legEnds: [input.legFromStopId, input.legToStopId],
   });
-  return prisma.tripExpense.create({
-    data: {
-      userId,
-      ...target,
-      kind: input.kind,
-      amount: amountColumn(input.amount),
-      currency: input.currency,
-      date: dateColumn(input.date ?? null),
-      note: input.note ?? null,
-      stopId: input.stopId ?? null,
-      legFromStopId: input.legFromStopId ?? null,
-      legToStopId: input.legToStopId ?? null,
-    },
+  return prisma.$transaction(async (tx) => {
+    const row = await tx.tripExpense.create({
+      data: {
+        userId,
+        ...target,
+        kind: input.kind,
+        amount: amountColumn(input.amount),
+        currency: input.currency,
+        date: dateColumn(input.date ?? null),
+        note: input.note ?? null,
+        stopId: input.stopId ?? null,
+        legFromStopId: input.legFromStopId ?? null,
+        legToStopId: input.legToStopId ?? null,
+      },
+      select: EXPENSE_SELECT,
+    });
+    await claim?.(tx, row.id);
+    return row;
+  });
+}
+
+/** One expense of the scope, or null — a repeat create's answer (forgejo#283). */
+export async function findExpense(
+  userId: string,
+  scope: ExpenseScope,
+  expenseId: string
+): Promise<ExpenseRow | null> {
+  return prisma.tripExpense.findFirst({
+    where: { AND: [{ id: expenseId }, scopeWhere(userId, scope)] },
     select: EXPENSE_SELECT,
   });
 }

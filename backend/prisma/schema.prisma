@@ -30,6 +30,7 @@ datasource db {
 model User {
   id                     String                   @id @default(uuid())
   devicePushes           DevicePush[]
+  clientWriteRefs        ClientWriteRef[]
   username               String                   @unique
   passwordHash           String                   @map("password_hash")
   // Real name, shown wherever the person is addressed rather than identified
@@ -237,6 +238,10 @@ model DevicePush {
   publicKey       String   @map("public_key")
   flightChanges   Boolean  @default(true) @map("flight_changes")
   reminders       Boolean  @default(true)
+  /// Trips whose departure reminders this phone does not want (forgejo#286):
+  /// the Companion's per-trip "Erinnerungen für diese Reise" switch. Applies
+  /// to reminders only — a flight-change notice is not a reminder.
+  mutedTripIds    String[] @default([]) @map("muted_trip_ids")
   /// "de" | "en" — the language the server writes this phone's texts in.
   locale          String   @default("de")
   createdAt       DateTime @default(now()) @map("created_at")
@@ -261,6 +266,32 @@ model PushDelivery {
   @@unique([apiTokenId, eventKey])
   @@index([sentAt])
   @@map("push_deliveries")
+}
+
+/// A client's idempotency key for one create (forgejo#283): the Companion's
+/// offline outbox sends a UUID with a POST it may have to repeat, and a repeat
+/// answers the row the first one made instead of making a second. One row per
+/// (user, key), whatever route it came through — `services/sync/clientRef.ts`.
+/// Transport bookkeeping, not travel data: pruned after
+/// `CLIENT_REF_RETENTION_DAYS` by the sync retention job, never exported.
+model ClientWriteRef {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientRef   String   @map("client_ref") @db.VarChar(64)
+  /// Which create the key was spent on: "rail" | "bus" | "expense".
+  kind        String
+  /// The created row. No foreign key: the kinds live in different tables, and
+  /// a row deleted since is answered 410, not resurrected (clientRef.ts).
+  entityId    String   @map("entity_id")
+  /// sha256 of the request body (minus `clientRef`), canonical key order —
+  /// a repeat with a different body is refused, never silently answered.
+  payloadHash String   @map("payload_hash") @db.Char(64)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, clientRef])
+  @@index([createdAt])
+  @@map("client_write_refs")
 }
 
 /// One-time pairing codes for the mobile device-pairing flow.

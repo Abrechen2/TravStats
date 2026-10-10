@@ -6,11 +6,13 @@ import { toExpenseDto } from "../../services/expenses/expenseDto";
 import {
   createExpense,
   deleteExpense,
+  findExpense,
   listExpenses,
   updateExpense,
   type ExpenseScope,
 } from "../../services/expenses/expenseStore";
 import { resolveRoadtrip } from "../../services/roadtrip/resolveRoadtrip";
+import { createOnce, takeClientRef } from "../../services/sync/clientRef";
 import { sumByCurrency } from "../../shared/expenses";
 import logger from "../../utils/logger";
 import { resolveTrip } from "./resolveTrip";
@@ -84,9 +86,22 @@ for (const { base, resolve } of FAMILIES) {
       try {
         const userId = req.userId!;
         const scope = await resolve(userId, req);
-        const row = await createExpense(userId, scope, createExpenseSchema.parse(req.body));
-        logger.info({ operation: "expense.create", expenseId: row.id, kind: row.kind });
-        res.status(201).json({ expense: toExpenseDto(row) });
+        // An outbox replay carries the key it minted (forgejo#283): a repeat
+        // answers the expense the first POST made, 200 instead of 201. The
+        // scope is part of "the same write" — one body on two trips is two.
+        const { clientRef, rest: body } = takeClientRef(req.body);
+        const { created, result: row } = await createOnce({
+          userId,
+          clientRef,
+          kind: "expense",
+          payload: { scope, body },
+          create: (claim) => createExpense(userId, scope, createExpenseSchema.parse(body), claim),
+          replay: (id) => findExpense(userId, scope, id),
+        });
+        if (created) {
+          logger.info({ operation: "expense.create", expenseId: row.id, kind: row.kind });
+        }
+        res.status(created ? 201 : 200).json({ expense: toExpenseDto(row) });
       } catch (error) {
         next(error);
       }
