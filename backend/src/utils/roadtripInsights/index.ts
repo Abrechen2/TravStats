@@ -18,13 +18,13 @@ import type { CountryResolver } from "../../services/geo/countryFromCoordinates"
 import { countRoadtripNights, isStation, type CountableStation } from "../../shared/tour/roadtrip";
 import {
   isRecorded,
-  legPhase,
   roadtripPhase,
   stationDays,
   stationPhase,
 } from "../../shared/tour/roadtripTimeline";
 import type { TourFacts } from "../tourInsights/tourFacts";
 import { segmentsOf } from "./segments";
+import { stretchBucket } from "./progress";
 import type {
   DayStage,
   InsightRoadtrip,
@@ -116,9 +116,9 @@ function rowOf(
   const stageDays = new Set<string>();
   let unstaged = 0;
   for (const seg of segmentsOf(r.stations, r.legs)) {
-    const phase = legPhase(seg.from, seg.to, ctx.now);
+    const bucket = stretchBucket(seg.from, seg.to, tripPhase, ctx.now);
     const segRoad = seg.legs.reduce((s, l) => (l.mode === "road" ? s + l.distanceKm : s), 0);
-    if (isRecorded(phase, tripPhase)) {
+    if (bucket === "recorded") {
       km.recorded += seg.km;
       roadKm.recorded += segRoad;
       for (const leg of seg.legs) {
@@ -153,7 +153,6 @@ function rowOf(
         }
       }
     } else {
-      const bucket = phase === "current" ? "current" : phase === "planned" ? "planned" : "unplaced";
       km[bucket] += seg.km;
       roadKm[bucket] += segRoad;
     }

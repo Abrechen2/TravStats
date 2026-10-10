@@ -103,6 +103,22 @@ export interface RoadtripDayTour {
   source: TrackSource | null;
 }
 
+/** What a leg's kilometres were measured on. */
+export type RoadtripDistanceSource = "straight" | "drawn" | "routed" | "track";
+
+/**
+ * Road kilometres by where each stretch stands — `recorded` = driven (its
+ * arrival station's day is past), `current` = today's stage, `planned` =
+ * ahead, `unplaced` = undated on a roadtrip under way — and what they were
+ * measured on. Mirrors `utils/roadtripInsights/progress.ts` on the server.
+ */
+export interface RoadtripProgress {
+  phase: "past" | "current" | "planned" | "undated";
+  roadKm: { recorded: number; current: number; planned: number; unplaced: number };
+  roadKmBySource: Partial<Record<RoadtripDistanceSource | string, number>>;
+  recordedRoadKmBySource: Partial<Record<RoadtripDistanceSource | string, number>>;
+}
+
 export interface RoadtripDetail {
   roadtrip: TourRoute;
   countries: string[];
@@ -114,6 +130,11 @@ export interface RoadtripDetail {
   legs: TourLeg[];
   tours: RoadtripDayTour[];
   routingAvailable: boolean;
+  /**
+   * Driven against planned, by the server's timeline rule (forgejo#179).
+   * Optional only for an older server; the page then claims nothing driven.
+   */
+  progress?: RoadtripProgress;
   /** Ferry tickets, tolls, pitch fees, fuel (forgejo#140). */
   expenses: TripExpense[];
   /** Their sums per station, per leg and in total — per currency. */
