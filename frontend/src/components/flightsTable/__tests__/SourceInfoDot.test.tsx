@@ -1,5 +1,6 @@
 import { it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import SourceInfoDot from "../SourceInfoDot";
 import type { Flight } from "../../../types";
 
@@ -16,20 +17,25 @@ it("renders nothing for a plain manual flight", () => {
   expect(container.firstChild).toBeNull();
 });
 
-it("keeps the hover path: tooltip is present with group-hover visibility when closed", () => {
+it("keeps the hover path for a mouse", async () => {
   render(<SourceInfoDot flight={{ ...base, dataSource: "email_import" } as unknown as Flight} />);
-  const tooltip = screen.getByRole("tooltip", { hidden: true });
-  expect(tooltip.className).toContain("group-hover:block");
-  expect(tooltip.className).toContain("hidden");
+  await userEvent.hover(screen.getByRole("button", { name: "flights:table.sourceInfo" }));
+  expect(screen.getByRole("tooltip")).toHaveTextContent(/flights:dataSource.email_import/);
 });
 
-it("shows the tooltip on click (touch fallback) and hides on second click", () => {
+// forgejo#249: the provenance opens by tap and by keyboard, and closes again.
+it("opens on a tap and on Enter, and closes on a second tap and on Escape", async () => {
   render(<SourceInfoDot flight={{ ...base, dataSource: "email_import" } as unknown as Flight} />);
-  const dot = screen.getByRole("button");
-  fireEvent.click(dot);
-  expect(screen.getByText(/flights:dataSource.email_import/)).toBeInTheDocument();
-  fireEvent.click(dot);
-  // When hidden, verify by class instead of DOM absence
-  const tooltip = screen.getByRole("tooltip", { hidden: true });
-  expect(tooltip.className).toContain("hidden");
+  const dot = screen.getByRole("button", { name: "flights:table.sourceInfo" });
+  await userEvent.click(dot);
+  expect(screen.getByRole("dialog")).toHaveTextContent(/flights:dataSource.email_import/);
+  await userEvent.click(dot);
+  expect(screen.queryByRole("dialog")).toBeNull();
+
+  dot.focus();
+  await userEvent.keyboard("{Enter}");
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+  await userEvent.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(dot).toHaveFocus();
 });

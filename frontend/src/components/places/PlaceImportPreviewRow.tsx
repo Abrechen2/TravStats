@@ -134,14 +134,12 @@ export function PlaceImportPreviewRow({ row, onChange, onPlace, t, coarse }: Pro
         <td className="p-2">
           <div className="flex flex-wrap gap-1">
             {row.flags.map((flag) => (
-              <span key={flag} title={t(`places:import.flags.${flag}`)} className={WARN}>
+              <span key={flag} className={WARN}>
                 {t(`places:import.flags.${flag}`)}
               </span>
             ))}
             {row.dedupeHint !== "none" && (
-              <span title={t(`places:import.dedupeHints.${row.dedupeHint}`)} className={GOOD}>
-                {t(`places:import.dedupeHints.${row.dedupeHint}`)}
-              </span>
+              <span className={GOOD}>{t(`places:import.dedupeHints.${row.dedupeHint}`)}</span>
             )}
             <TakeoutBadges row={row} t={t} />
           </div>

@@ -22,7 +22,6 @@ export default function SpecialTypeBadge({ type }: Props): JSX.Element {
         borderColor: rgbToCss(meta.rgb, 0.45),
         color: rgbToCss(meta.rgb, 1),
       }}
-      title={t(`specialFlights:specialType.${type}`)}
     >
       <span aria-hidden>{meta.icon}</span>
       <span>{t(`specialFlights:specialType.${type}`)}</span>

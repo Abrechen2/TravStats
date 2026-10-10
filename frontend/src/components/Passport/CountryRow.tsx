@@ -5,6 +5,7 @@ import type { PassportCountry } from "../../types/passport";
 import CountryProvenance from "./CountryProvenance";
 import GroundTimeCell from "./GroundTimeCell";
 import TierBadge from "./TierBadge";
+import Toggletip from "../ui/Toggletip";
 
 /**
  * One country in the passport table.
@@ -93,24 +94,24 @@ export default function CountryRow({
           <div className="flex flex-wrap items-center gap-1.5">
             <TierBadge tier={row.tier} />
             {!row.counted && (
-              <span
-                className="text-[10px] uppercase tracking-wide"
-                style={{ color: "var(--text-muted)" }}
-                title={t("passport:countries.notCountedExplained")}
+              <Toggletip
+                content={t("passport:countries.notCountedExplained")}
+                triggerClassName="text-[10px] uppercase tracking-wide"
+                triggerStyle={{ color: "var(--text-muted)" }}
               >
                 {t("passport:countries.notCounted")}
-              </span>
+              </Toggletip>
             )}
             {/* A country that can never appear in any year's figures is a fact
                 about the data, not a hole in it. Saying so beats a blank. */}
             {row.hasUndatedEvidence && (
-              <span
-                className="text-[10px] uppercase tracking-wide"
-                style={{ color: "var(--text-muted)" }}
-                title={t("passport:countries.undatedExplained")}
+              <Toggletip
+                content={t("passport:countries.undatedExplained")}
+                triggerClassName="text-[10px] uppercase tracking-wide"
+                triggerStyle={{ color: "var(--text-muted)" }}
               >
                 {t("passport:countries.undated")}
-              </span>
+              </Toggletip>
             )}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -139,7 +140,12 @@ export default function CountryRow({
           {flown ? (
             row.entries
           ) : (
-            <span title={t("passport:value.notApplicableEntries")}>{t("passport:value.dash")}</span>
+            <Toggletip
+              content={t("passport:value.notApplicableEntries")}
+              label={t("passport:value.notApplicableEntries")}
+            >
+              {t("passport:value.dash")}
+            </Toggletip>
           )}
         </td>
 
@@ -149,16 +155,16 @@ export default function CountryRow({
           style={{ fontVariantNumeric: "tabular-nums" }}
           data-label={t("passport:countries.daysPresent")}
         >
-          <span
+          <Toggletip
             data-testid="days-present"
-            title={
+            content={
               row.daysPresent === 0
                 ? t("passport:value.noDatedDays")
                 : t("passport:value.daysPresentExplained")
             }
           >
             {row.daysPresent}
-          </span>
+          </Toggletip>
         </td>
 
         {/* Ground time — three states, and never a dash for the actionable one. */}
@@ -176,7 +182,12 @@ export default function CountryRow({
           data-label={t("passport:countries.period")}
         >
           {years ?? (
-            <span title={t("passport:value.unknownPeriod")}>{t("passport:value.dash")}</span>
+            <Toggletip
+              content={t("passport:value.unknownPeriod")}
+              label={t("passport:value.unknownPeriod")}
+            >
+              {t("passport:value.dash")}
+            </Toggletip>
           )}
         </td>
 
@@ -188,9 +199,12 @@ export default function CountryRow({
           {row.airports.length > 0 ? (
             row.airports.join(" · ")
           ) : (
-            <span title={t("passport:value.notApplicableAirports")}>
+            <Toggletip
+              content={t("passport:value.notApplicableAirports")}
+              label={t("passport:value.notApplicableAirports")}
+            >
               {t("passport:value.dash")}
-            </span>
+            </Toggletip>
           )}
         </td>
       </tr>

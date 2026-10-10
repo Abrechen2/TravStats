@@ -9,6 +9,7 @@ import {
 } from "../../lib/entityTimes";
 import { clockOf, readsAsUtc, type TimeValue } from "../../shared/time";
 import { useDisplayFormat } from "../../lib/displayFormat";
+import Toggletip from "../ui/Toggletip";
 
 type DelayState = "late" | "early" | "onTime";
 
@@ -79,25 +80,26 @@ export default function TimeCell({ flight }: { flight: Flight }): JSX.Element {
                 it — the point is the difference between the two, both on the
                 same airport's clock. */}
             {clock && actual && actualClock && (
-              <span
-                data-delay={delayState(value, actual)}
-                className="font-semibold"
-                style={{ color: DELAY_COLOR[delayState(value, actual)] }}
-                title={t("flights:actualTimes.label")}
-              >
-                {format.localClock(actualClock)}
-              </span>
+              <Toggletip content={t("flights:actualTimes.label")}>
+                <span
+                  data-delay={delayState(value, actual)}
+                  className="font-semibold"
+                  style={{ color: DELAY_COLOR[delayState(value, actual)] }}
+                >
+                  {format.localClock(actualClock)}
+                </span>
+              </Toggletip>
             )}
             {/* Without an airport zone the clock above is UTC. Rendered bare it
                 read as a confident local time. */}
             {clock && readsAsUtc(value) && (
-              <span
-                className="text-[9px] font-semibold tracking-wide"
-                style={{ color: "var(--text-muted)", opacity: 0.8 }}
-                title={t("flights:table.timeUtcFallback")}
+              <Toggletip
+                content={t("flights:table.timeUtcFallback")}
+                triggerClassName="text-[9px] font-semibold tracking-wide"
+                triggerStyle={{ color: "var(--text-muted)", opacity: 0.8 }}
               >
                 UTC
-              </span>
+              </Toggletip>
             )}
             {marker !== undefined && marker >= 1 && (
               <span className="text-[10px] font-semibold" style={{ color: "var(--accent)" }}>

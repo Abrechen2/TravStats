@@ -123,7 +123,6 @@ export default function BookingFields({
               <span
                 id="baggage-allowance-unit"
                 data-testid="baggage-allowance-unit"
-                title={t("flights:form.baggageAllowanceUnitHint", { unit: weightUnit })}
                 aria-label={t("flights:form.baggageAllowanceUnitHint", { unit: weightUnit })}
                 className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-(--text-muted)"
               >

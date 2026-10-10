@@ -10,6 +10,7 @@ import {
 } from "../../lib/lodgingFormat";
 import type { Lodging } from "../../types/lodging";
 import { PlannedSpendNote } from "./PlannedSpendNote";
+import Toggletip from "../ui/Toggletip";
 
 /**
  * True when this lodging has spend snapshotted under a base currency OTHER
@@ -67,8 +68,10 @@ export function LodgingSpendCell({
   // saying so is the same rule the detail page and the stat strip follow.
   const omitted =
     !nothingConverted && unconverted > 0 ? (
-      <div className="text-[10px] text-(--text-muted)" title={t("lodging:fx.tooltipNone")}>
-        {t("lodging:fx.omittedFromTotal", { count: unconverted })}
+      <div className="text-[10px] text-(--text-muted)">
+        <Toggletip content={t("lodging:fx.tooltipNone")}>
+          {t("lodging:fx.omittedFromTotal", { count: unconverted })}
+        </Toggletip>
       </div>
     ) : null;
   if (nothingConverted) {
@@ -79,8 +82,8 @@ export function LodgingSpendCell({
     return (
       <>
         {amount && <div>{formatCurrency(amount.amount, amount.currency)}</div>}
-        <div className="text-[10px] text-(--text-muted)" title={t("lodging:fx.tooltipNone")}>
-          {t("lodging:fx.markerNone")}
+        <div className="text-[10px] text-(--text-muted)">
+          <Toggletip content={t("lodging:fx.tooltipNone")}>{t("lodging:fx.markerNone")}</Toggletip>
         </div>
         {planned}
       </>

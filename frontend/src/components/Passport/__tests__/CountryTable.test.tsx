@@ -137,11 +137,14 @@ describe("CountryTable — a country that does not count is greyed, not hidden",
     // would read as a measured nothing.
     expect(within(row as HTMLElement).queryByText("0")).not.toBeInTheDocument();
     expect(within(row as HTMLElement).getAllByText("passport:value.dash")).toHaveLength(4);
+    // Each dash says why — to a tap and a keyboard, not only a hover (forgejo#249).
     expect(
-      within(row as HTMLElement).getByTitle("passport:value.notApplicableEntries")
+      within(row as HTMLElement).getByRole("button", {
+        name: "passport:value.notApplicableEntries",
+      })
     ).toBeInTheDocument();
     expect(
-      within(row as HTMLElement).getByTitle("passport:value.unknownPeriod")
+      within(row as HTMLElement).getByRole("button", { name: "passport:value.unknownPeriod" })
     ).toBeInTheDocument();
   });
 
@@ -149,7 +152,9 @@ describe("CountryTable — a country that does not count is greyed, not hidden",
     renderTable([country({ code: "DE", entries: 7, airports: ["MUC"] })]);
     expect(screen.getByText("7")).toBeInTheDocument();
     expect(screen.getByText("MUC")).toBeInTheDocument();
-    expect(screen.queryByTitle("passport:value.notApplicableEntries")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "passport:value.notApplicableEntries" })
+    ).not.toBeInTheDocument();
   });
 
   it("offers no filter for a tier no record can carry", () => {
@@ -184,7 +189,7 @@ describe("CountryTable — ground time has three states, and they read different
     expect(screen.queryByTestId("ground-notApplicable")).not.toBeInTheDocument();
   });
 
-  it("keeps unknown and not-applicable visibly apart, because only one is actionable", () => {
+  it("keeps unknown and not-applicable visibly apart, because only one is actionable", async () => {
     renderTable([
       // A flight touched Ethiopia but no second one bounds the stay: the reader
       // can record the return leg.
@@ -212,8 +217,11 @@ describe("CountryTable — ground time has three states, and they read different
     expect(unknown.textContent).not.toEqual(notApplicable.textContent);
 
     // And each names its own reason, one of which is an instruction.
-    expect(unknown).toHaveAttribute("title", "passport:ground.unknownExplained");
-    expect(notApplicable).toHaveAttribute("title", "passport:ground.notApplicableExplained");
+    // Opened by a tap, not only shown on hover (forgejo#249).
+    await userEvent.click(unknown);
+    expect(screen.getByRole("dialog")).toHaveTextContent("passport:ground.unknownExplained");
+    await userEvent.click(notApplicable);
+    expect(screen.getByRole("dialog")).toHaveTextContent("passport:ground.notApplicableExplained");
   });
 
   it("renders a measured zero AS a measured zero, never as a dash", () => {
@@ -227,7 +235,7 @@ describe("CountryTable — ground time has three states, and they read different
     expect(screen.queryByTestId("ground-unknown")).not.toBeInTheDocument();
   });
 
-  it("renders zero days present as a counted zero, never as an abstention", () => {
+  it("renders zero days present as a counted zero, never as an abstention", async () => {
     // `daysPresent` is DERIVED: 0 means the count ran and no record named a
     // day. A dash would claim an abstention the server did not make, and the
     // undated badge beside it already says why the count is zero.
@@ -250,7 +258,8 @@ describe("CountryTable — ground time has three states, and they read different
     const days = screen.getByTestId("days-present");
     expect(days).toHaveTextContent("0");
     expect(days).not.toHaveTextContent("passport:value.dash");
-    expect(days).toHaveAttribute("title", "passport:value.noDatedDays");
+    await userEvent.click(days);
+    expect(screen.getByRole("dialog")).toHaveTextContent("passport:value.noDatedDays");
     expect(screen.getByText("passport:countries.undated")).toBeInTheDocument();
   });
 });

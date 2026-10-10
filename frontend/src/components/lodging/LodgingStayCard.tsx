@@ -7,6 +7,7 @@ import type { StayMembershipSource } from "../../shared/membershipDerivation";
 import type { LodgingStay } from "../../types/lodging";
 import { StayStatusPill } from "./StayStatusPill";
 import { StayNightPriceLine } from "./StayNightPriceLine";
+import Toggletip from "../ui/Toggletip";
 
 interface LodgingStayCardProps {
   stay: LodgingStay;
@@ -196,26 +197,26 @@ export function LodgingStayCard({
           {original}
         </span>
         {fxReadout !== null && (
-          <span
+          <Toggletip
             data-testid={`stay-fx-readout-${stay.id}`}
-            className="text-[var(--fx,#6ab7d8)]"
-            title={readoutTitle}
+            triggerClassName="text-[var(--fx,#6ab7d8)]"
+            content={readoutTitle}
           >
             {fxReadout}
-          </span>
+          </Toggletip>
         )}
         {marker !== null && (
-          <span
+          <Toggletip
             data-testid={`stay-fx-marker-${stay.id}`}
-            className="rounded border border-[var(--border)] px-1 py-px text-[10px] text-[var(--text-muted)]"
-            title={
+            triggerClassName="rounded border border-[var(--border)] px-1 py-px text-[10px] text-[var(--text-muted)]"
+            content={
               stay.fxSource === "manual"
                 ? t("lodging:fx.tooltipManual", { rate: stay.fxRate ?? "" })
                 : t("lodging:fx.tooltipNone")
             }
           >
             {marker}
-          </span>
+          </Toggletip>
         )}
       </div>
 

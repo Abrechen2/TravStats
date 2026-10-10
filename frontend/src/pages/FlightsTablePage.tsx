@@ -61,6 +61,7 @@ import LogbookTabs from "../components/table/LogbookTabs";
 import FlightBulkBar from "../components/flightsTable/bulk/FlightBulkBar";
 import SelectCheckbox from "../components/flightsTable/bulk/SelectCheckbox";
 import { useFlightSelection } from "../components/flightsTable/bulk/useFlightSelection";
+import Toggletip from "../components/ui/Toggletip";
 
 // Trips moved to their own /trips page; the trip badge is a Link to /trips/:id.
 
@@ -620,9 +621,9 @@ export default function FlightsTablePage(): JSX.Element {
                             language: i18n.language,
                           })
                         ) : priceCellState(flight) === "package" ? (
-                          <span title={t("flights:price.packageHint")}>
+                          <Toggletip content={t("flights:price.packageHint")}>
                             {t("flights:price.package")}
-                          </span>
+                          </Toggletip>
                         ) : (
                           t("common:labels.notAvailable")
                         ),

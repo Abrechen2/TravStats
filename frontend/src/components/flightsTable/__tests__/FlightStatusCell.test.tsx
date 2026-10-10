@@ -6,6 +6,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import FlightStatusCell from "../FlightStatusCell";
 import type { Flight } from "../../../types";
 
@@ -54,12 +55,14 @@ describe("FlightStatusCell", () => {
     expect(screen.getByText("flights:status.scheduled")).toBeInTheDocument();
   });
 
-  it("carries the duplicate as a separate, explained tag", () => {
+  it("carries the duplicate as a separate, explained tag", async () => {
     render(<FlightStatusCell flight={makeFlight({ status: "duplicated" })} />);
     const tag = screen.getByTestId("flight-duplicate-f1");
     expect(tag.textContent).toContain("flights:status.duplicated");
-    // A tag nobody can interpret is worse than none — it says why it is there.
-    expect(tag).toHaveAttribute("title", "flights:status.duplicatedHint");
+    // A tag nobody can interpret is worse than none — it says why it is there,
+    // to a tap and a keyboard, not only on hover (forgejo#249).
+    await userEvent.click(tag);
+    expect(screen.getByRole("dialog")).toHaveTextContent("flights:status.duplicatedHint");
   });
 
   it("keeps the tag neutral — a duplicate is not an alarm", () => {
