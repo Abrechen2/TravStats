@@ -1,3 +1,4 @@
+import { createRequire } from "node:module";
 import js from "@eslint/js";
 import globals from "globals";
 import tseslint from "typescript-eslint";
@@ -8,6 +9,8 @@ import {
   timeRulesEverywhere,
   timeRulesStatusFiles,
 } from "../scripts/eslint/timeRules.mjs";
+
+const reactVersion = createRequire(import.meta.url)("react/package.json").version;
 
 const reactRecommended = pluginReact.configs.flat?.recommended ?? pluginReact.configs.recommended;
 
@@ -61,7 +64,11 @@ export default [
       "react-hooks": pluginReactHooks,
     },
     settings: {
-      react: { version: "detect" },
+      // Not "detect": eslint-plugin-react 7.37 detects through
+      // context.getFilename(), which ESLint 10 removed — every react/* rule
+      // then crashes on load. Reading the installed version here is the same
+      // answer without the removed API.
+      react: { version: reactVersion },
     },
     rules: {
       "react/react-in-jsx-scope": "off",

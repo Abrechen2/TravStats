@@ -19,6 +19,7 @@
  */
 
 import cron from "node-cron";
+import type { ScheduledTask } from "node-cron";
 import logger from "../utils/logger";
 import { prisma } from "../db";
 import { completeMissingPlaceAddresses } from "../services/places/addressBackfill";
@@ -35,7 +36,7 @@ const CRON_EXPRESSION = "20 3 * * *";
  */
 const BOOT_DELAY_MS = 2 * 60 * 1000;
 
-let schedulerTask: cron.ScheduledTask | null = null;
+let schedulerTask: ScheduledTask | null = null;
 let bootTimer: NodeJS.Timeout | null = null;
 
 /**

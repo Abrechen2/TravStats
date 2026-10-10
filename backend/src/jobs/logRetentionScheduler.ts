@@ -13,6 +13,7 @@
  */
 
 import cron from "node-cron";
+import type { ScheduledTask } from "node-cron";
 
 import { enforceLogRetention } from "../services/logRetention";
 import logger from "../utils/logger";
@@ -20,7 +21,7 @@ import { schedulerZone } from "../shared/time/schedulerZone";
 
 const CRON_EXPRESSION = "45 3 * * *";
 
-let schedulerTask: cron.ScheduledTask | null = null;
+let schedulerTask: ScheduledTask | null = null;
 
 export async function runLogRetention(): Promise<void> {
   try {

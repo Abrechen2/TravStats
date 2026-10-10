@@ -232,7 +232,7 @@ export function normalizeAppearance(raw: Record<string, unknown>): MapAppearance
 
 export function loadMapAppearance(): MapAppearance {
   if (typeof window === "undefined") return {};
-  let raw: string | null = null;
+  let raw: string | null;
   try {
     raw = window.localStorage.getItem(KEY);
   } catch {

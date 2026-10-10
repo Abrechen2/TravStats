@@ -29,6 +29,7 @@
  */
 
 import cron from "node-cron";
+import type { ScheduledTask } from "node-cron";
 
 import { prisma } from "../db";
 import { scanPhotoJourneys } from "../services/photoJourneys/scan";
@@ -38,7 +39,7 @@ import { schedulerZone } from "../shared/time/schedulerZone";
 const CRON_EXPRESSION = "55 4 * * *";
 export const NIGHTLY_WINDOW_DAYS = 400;
 
-let schedulerTask: cron.ScheduledTask | null = null;
+let schedulerTask: ScheduledTask | null = null;
 
 export interface PhotoJourneyNightlyResult {
   users: number;

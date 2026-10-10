@@ -48,6 +48,7 @@
  */
 
 import cron from "node-cron";
+import type { ScheduledTask } from "node-cron";
 
 import { prisma } from "../db";
 import { runDataQualityChecks } from "../services/dataQuality";
@@ -56,7 +57,7 @@ import { schedulerZone } from "../shared/time/schedulerZone";
 
 const CRON_EXPRESSION = "10 4 * * *";
 
-let schedulerTask: cron.ScheduledTask | null = null;
+let schedulerTask: ScheduledTask | null = null;
 
 export interface DataQualitySweepResult {
   /** Accounts looked at. */
