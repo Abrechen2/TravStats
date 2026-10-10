@@ -81,7 +81,11 @@ export default function CountryCountingCard(): JSX.Element {
           style={{ fontSize: 14, fontWeight: 600, color: "var(--ts-text-bright)" }}
         >
           {t("settings:countryCounting.label")}
-          <HelpIcon content={t("settings:countryCounting.help")} position="top" />
+          <HelpIcon
+            content={t("settings:countryCounting.help")}
+            position="top"
+            subject={t("settings:countryCounting.label")}
+          />
         </span>
         <Segmented
           label={t("settings:countryCounting.label")}

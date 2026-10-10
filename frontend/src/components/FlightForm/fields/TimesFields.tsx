@@ -256,6 +256,7 @@ export default function TimesFields({
                 content={help.depDate.content}
                 expandedContent={help.depDate.expandedContent}
                 position="top"
+                subject={t("flights:form.departureDate")}
               />
             )}
           </div>
@@ -280,6 +281,7 @@ export default function TimesFields({
                 content={help.depTime.content}
                 expandedContent={help.depTime.expandedContent}
                 position="top"
+                subject={t("flights:form.departureTime")}
               />
             )}
           </div>
@@ -320,6 +322,7 @@ export default function TimesFields({
                 content={help.arrDate.content}
                 expandedContent={help.arrDate.expandedContent}
                 position="top"
+                subject={t("flights:form.arrivalDate")}
               />
             )}
             <CopyActionButton
@@ -357,6 +360,7 @@ export default function TimesFields({
                 content={help.arrTime.content}
                 expandedContent={help.arrTime.expandedContent}
                 position="top"
+                subject={t("flights:form.arrivalTime")}
               />
             )}
             {onEstimateArrival && (

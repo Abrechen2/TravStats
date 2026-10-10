@@ -209,6 +209,7 @@
     }
   },
   "fx": {
+    "conversion": "Umrechnung",
     "source": "EZB",
     "sourceMarket": "Marktkurs",
     "tooltip": "Umgerechnet zum EZB-Referenzkurs des Check-in-Tages",

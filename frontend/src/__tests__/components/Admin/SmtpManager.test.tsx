@@ -109,3 +109,29 @@ describe("SmtpManager — deleting the credentials (#255)", () => {
     expect(screen.getByRole("button", { name: DELETE_BUTTON })).toBeInTheDocument();
   });
 });
+
+// forgejo#249: no label named its field, and the help sat inside the label,
+// where its button would have been read into the field's name.
+describe("SmtpManager — every field is named by its label", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("names each field by its label alone, with the help beside it", async () => {
+    getSmtpConfig.mockResolvedValue(CONFIGURED);
+    render(<SmtpManager />);
+    for (const key of ["Host", "Username", "FromEmail", "FromName"]) {
+      expect(
+        await screen.findByRole("textbox", { name: `settings:notifications.smtp${key}` })
+      ).toBeInTheDocument();
+    }
+    expect(
+      screen.getByRole("spinbutton", { name: "settings:notifications.smtpPort" })
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("settings:notifications.smtpPassword")).toHaveAttribute(
+      "type",
+      "password"
+    );
+
+    await userEvent.click(screen.getAllByRole("button", { name: "help.about" })[0]);
+    expect(screen.getByRole("dialog")).toHaveTextContent("settings:notifications.smtpHelp.ports");
+  });
+});

@@ -76,6 +76,18 @@ function sourceFiles(dir = SRC, acc: string[] = []): string[] {
 interface Finding {
   titles: number;
   tooltips: number;
+  /** A help trigger nested in a `<label>`. */
+  helpInLabel: number;
+}
+
+const HELP_TRIGGERS = new Set(["HelpIcon", "Toggletip", "InsightHelp"]);
+
+/** Whether a JSX node sits inside a `<label>` element. */
+function insideLabel(node: ts.Node, sf: ts.SourceFile): boolean {
+  for (let p = node.parent; p; p = p.parent) {
+    if (ts.isJsxElement(p) && p.openingElement.tagName.getText(sf) === "label") return true;
+  }
+  return false;
 }
 
 function attrValue(attr: ts.JsxAttribute, sf: ts.SourceFile): string | null {
@@ -91,10 +103,11 @@ function attrValue(attr: ts.JsxAttribute, sf: ts.SourceFile): string | null {
 /** Scans one file's JSX. */
 function scanSource(source: string, fileName = "x.tsx"): Finding {
   const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  const finding: Finding = { titles: 0, tooltips: 0 };
+  const finding: Finding = { titles: 0, tooltips: 0, helpInLabel: 0 };
   const visit = (node: ts.Node): void => {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tag = node.tagName.getText(sf);
+      if (HELP_TRIGGERS.has(tag) && insideLabel(node, sf)) finding.helpInLabel += 1;
       const attrs = node.attributes.properties.filter(ts.isJsxAttribute);
       const byName = new Map(attrs.map((a) => [a.name.getText(sf), a]));
       const role = byName.get("role");
@@ -165,6 +178,19 @@ describe("warden: help is not hidden in a hover title", () => {
   });
 });
 
+describe("warden: a help button is not part of a field's name", () => {
+  // A button inside a <label> is read INTO the label: the price field was
+  // announced as "Preis Hilfe anzeigen", and with a named help "Preis Hilfe
+  // zu Preis". The help goes beside the label, never in it.
+  it("puts no HelpIcon or Toggletip inside a <label>", () => {
+    const nested = sourceFiles()
+      .map((file) => ({ name: rel(file), ...scanSource(readFileSync(file, "utf8"), file) }))
+      .filter((f) => f.helpInLabel > 0)
+      .map((f) => `${f.name}: ${f.helpInLabel}`);
+    expect(nested).toEqual([]);
+  });
+});
+
 describe("the scan itself", () => {
   it("counts a title on a span and ignores one on a button or a component prop", () => {
     const found = scanSource(`
@@ -175,6 +201,15 @@ describe("the scan itself", () => {
       const e = <span title={undefined} />;
     `);
     expect(found.titles).toBe(1);
+  });
+
+  it("finds a help nested in a label, and not one beside it", () => {
+    expect(scanSource(`const a = <label>Preis <HelpIcon content="x" /></label>;`).helpInLabel).toBe(
+      1
+    );
+    expect(
+      scanSource(`const a = <div><label>Preis</label><HelpIcon content="x" /></div>;`).helpInLabel
+    ).toBe(0);
   });
 
   it("counts a hand-rolled tooltip", () => {

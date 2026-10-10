@@ -238,7 +238,7 @@ describe("CruiseInsightsSection (forgejo#257)", () => {
     renderSection();
     expect(await screen.findByText("stats:insights.cruise.excursions.emptyNotesOnly")).toBeTruthy();
     expect(screen.queryByText(/roadtrips:activity/)).toBeNull();
-    const helps = screen.getAllByRole("button", { name: "accessibility.showHelp" });
+    const helps = screen.getAllByRole("button", { name: "help.about" });
     act(() => helps[helps.length - 1].focus());
     expect(screen.getByText("stats:insights.help.cruiseExcursionsNotes.short")).toBeTruthy();
   });
@@ -248,7 +248,7 @@ describe("CruiseInsightsSection (forgejo#257)", () => {
     renderSection();
     await screen.findByText("stats:insights.cruise.ports.title");
     // events, ports, reunion, itineraries, stays, days, excursions
-    expect(screen.getAllByRole("button", { name: "accessibility.showHelp" })).toHaveLength(7);
+    expect(screen.getAllByRole("button", { name: "help.about" })).toHaveLength(7);
   });
 
   it("never lets a slow answer for the previous year overwrite the current one", async () => {

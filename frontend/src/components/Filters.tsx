@@ -294,6 +294,7 @@ export default function Filters({
                 📅 {t("map:filters.timePeriod")}
                 <HelpIcon
                   content={t("map:filters.help.timePeriod")}
+                  subject={t("map:filters.timePeriod")}
                   expandedContent={t("map:filters.help.timePeriodExpanded")}
                   position="right"
                 />
@@ -374,6 +375,7 @@ export default function Filters({
                     🏢 {t("map:filters.airlines")}
                     <HelpIcon
                       content={t("map:filters.help.airlines")}
+                      subject={t("map:filters.airlines")}
                       expandedContent={t("map:filters.help.airlinesExpanded")}
                       position="right"
                     />

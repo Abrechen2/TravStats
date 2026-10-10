@@ -12,13 +12,21 @@ import { useTranslation } from "../../../hooks/useTranslation";
  * `topic` names `stats:insights.help.<topic>.short` / `.long`; both languages
  * carry both, which `localeKeyParity` holds.
  */
-export default function InsightHelp({ topic }: { topic: string }): JSX.Element {
+export default function InsightHelp({
+  topic,
+  subject,
+}: {
+  topic: string;
+  /** The figure the help is about; names the button (forgejo#249). */
+  subject?: string;
+}): JSX.Element {
   const { t } = useTranslation(["stats"]);
   return (
     <HelpIcon
       content={t(`stats:insights.help.${topic}.short`)}
       expandedContent={t(`stats:insights.help.${topic}.long`)}
       position="top"
+      subject={subject}
     />
   );
 }
@@ -38,7 +46,7 @@ export function InsightHeading({
       <h3 id={id} className="text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
         {title}
       </h3>
-      <InsightHelp topic={topic} />
+      <InsightHelp topic={topic} subject={title} />
     </div>
   );
 }

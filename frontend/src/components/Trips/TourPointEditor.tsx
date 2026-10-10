@@ -107,27 +107,28 @@ export default function TourPointEditor({
             >
               {t("trips:tours.points.remove")}
             </button>
-            <label className="flex basis-full items-center gap-2 text-xs text-(--text-muted)">
-              <input
-                type="checkbox"
-                role="switch"
-                aria-checked={point.via === true}
-                aria-label={t("trips:tours.points.via")}
-                checked={point.via === true}
-                onChange={(e) => update(index, { via: e.target.checked })}
-              />
-              <span>{t("trips:tours.points.via")}</span>
-              {point.via === true ? (
-                <span>— {t("trips:tours.points.viaHint")}</span>
-              ) : (
+            <div className="flex basis-full items-center gap-2 text-xs text-(--text-muted)">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  role="switch"
+                  aria-checked={point.via === true}
+                  aria-label={t("trips:tours.points.via")}
+                  checked={point.via === true}
+                  onChange={(e) => update(index, { via: e.target.checked })}
+                />
+                <span>{t("trips:tours.points.via")}</span>
+                {point.via === true && <span>— {t("trips:tours.points.viaHint")}</span>}
+              </label>
+              {point.via !== true && (
                 // What "via" means before it is switched on — by tap and key,
-                // not only by hover (forgejo#249).
+                // not only by hover (forgejo#249); beside the label, not in it.
                 <HelpIcon
                   content={t("trips:tours.points.viaHint")}
                   subject={t("trips:tours.points.via")}
                 />
               )}
-            </label>
+            </div>
             <div className="basis-full">
               <LocationInput
                 compact

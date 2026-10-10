@@ -76,6 +76,7 @@ export default function JournalViewModal({
                   <HelpIcon
                     className="ml-1 align-middle"
                     content={`${t("openData:weather.measuredAt", { place: entry.observedWeather.place })} · ${t("openData:weather.source")}`}
+                    subject={t("openData:weather.source")}
                   />
                 )}
               </span>

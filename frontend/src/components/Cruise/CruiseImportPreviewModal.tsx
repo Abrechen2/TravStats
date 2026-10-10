@@ -1,6 +1,6 @@
 import CurrencySelect from "../common/CurrencySelect";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useId, useRef, useState, useCallback } from "react";
 import type { JSX, ReactNode } from "react";
 import type { ParsedCruiseEntry, ParsedFlightSuggestion } from "../../lib/api/parse";
 import type {
@@ -300,6 +300,7 @@ function CruiseImportEntryEditor({
   onChange: (index: number, data: EntryData) => void;
 }): JSX.Element {
   const { t } = useTranslation("cruise");
+  const shipInputId = useId();
   const { input } = entry;
   const overrideName = input.shipNameOverride ?? null;
 
@@ -449,8 +450,10 @@ function CruiseImportEntryEditor({
     <div className="space-y-3 rounded-lg border border-border bg-(--bg-base) p-4">
       {/* Ship */}
       <div>
-        <label className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-(--text-muted)">
-          {t("field.ship")}
+        {/* The label names the ship search only; the match badge is beside it,
+            so its help button is not read into the field's name (forgejo#249). */}
+        <div className="mb-1 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-(--text-muted)">
+          <label htmlFor={shipInputId}>{t("field.ship")}</label>
           {ship ? (
             <span className="rounded-sm bg-emerald-500/15 px-1.5 py-0.5 text-[10px] normal-case text-emerald-300">
               ✓ {t("import.shipMatched")}
@@ -467,8 +470,8 @@ function CruiseImportEntryEditor({
               {t("import.missing")}
             </span>
           )}
-        </label>
-        <ShipPicker value={ship} onChange={setShip} />
+        </div>
+        <ShipPicker id={shipInputId} value={ship} onChange={setShip} />
         {!ship && overrideName && (
           <p className="mt-1 text-[11px] text-amber-300/80">
             {t("import.shipUnmatched")}: {overrideName}

@@ -420,7 +420,11 @@ export default function FlightCompleteStep({
                 <label className={`label ${textClass}`} htmlFor={FLIGHT_FORM_IDS.departureAirport}>
                   {t("flights:form.from")} <RequiredMark />
                 </label>
-                <HelpIcon content={t("flights:form.help.departureAirport")} position="top" />
+                <HelpIcon
+                  content={t("flights:form.help.departureAirport")}
+                  position="top"
+                  subject={t("flights:form.from")}
+                />
               </div>
               <AirportAutocomplete
                 id={FLIGHT_FORM_IDS.departureAirport}
@@ -436,7 +440,11 @@ export default function FlightCompleteStep({
                 <label className={`label ${textClass}`} htmlFor={FLIGHT_FORM_IDS.arrivalAirport}>
                   {t("flights:form.to")} <RequiredMark />
                 </label>
-                <HelpIcon content={t("flights:form.help.arrivalAirport")} position="top" />
+                <HelpIcon
+                  content={t("flights:form.help.arrivalAirport")}
+                  position="top"
+                  subject={t("flights:form.to")}
+                />
               </div>
               <AirportAutocomplete
                 id={FLIGHT_FORM_IDS.arrivalAirport}

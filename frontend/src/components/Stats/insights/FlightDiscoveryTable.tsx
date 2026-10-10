@@ -43,7 +43,10 @@ export default function FlightDiscoveryTable({
               <th className={head}>
                 <span className="inline-flex items-center gap-1">
                   {t("stats:insights.discovery.newConnections")}
-                  <InsightHelp topic="routes" />
+                  <InsightHelp
+                    topic="routes"
+                    subject={t("stats:insights.discovery.newConnections")}
+                  />
                 </span>
               </th>
               <th className={head}>{t("stats:insights.discovery.repeatedConnections")}</th>
