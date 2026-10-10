@@ -1,5 +1,5 @@
 import { localDay, toInstant } from "../../shared/time/instant";
-import { fakeUtcToInstant, startOfDayAt } from "../../shared/time/legacyValues";
+import { fakeUtcToInstant, placeholderDayOf, startOfDayAt } from "../../shared/time/legacyValues";
 import {
   TIME_PRECISIONS,
   serializeTime,
@@ -29,7 +29,7 @@ import type { FlightTimes } from "../../schemas/times";
  * | `UTC` | a real instant | that instant, precision as stored (minute) |
  * | `LEGACY_FAKE_UTC` | the airport's wall clock as if it were UTC | the wall clock read at the airport; a clock the zone skipped keeps its date only (`unknown`) |
  * | `DATE_ONLY` | a local wall clock for a day (noon from the form, midnight from the cruise import), written through the airport's zone | the start of that local day at the airport, precision `day` |
- * | `UNKNOWN` | never classified | the stored value, precision `unknown` (date only) |
+ * | `UNKNOWN` | never classified; a year-/month-only entry holds midnight UTC on the 1st | the stored value, precision `unknown` (date only); the placeholder at the start of its own day (`placeholderDayOf`) |
  */
 
 export interface FlightTimeColumns {
@@ -87,6 +87,15 @@ function endTime(
     return zone
       ? serializeTime(startOfDayAt(day, zone), zone, "day", source)
       : serializeTime(new Date(`${day}T00:00:00.000Z`), null, "day");
+  }
+  // A year-/month-only placeholder (midnight UTC on the 1st, `UNKNOWN`) names
+  // a day no zone may move: shown as the start of that day at the airport, so
+  // "2015" does not read as 31 December 2014 west of UTC (forgejo#256).
+  const placeholder = placeholderDayOf(time, semantics);
+  if (placeholder !== null) {
+    return zone
+      ? serializeTime(startOfDayAt(placeholder, zone), zone, "unknown", source)
+      : serializeTime(time, null, "unknown");
   }
   const precision: TimePrecision =
     semantics === "UTC" ? (isPrecision(stored.precision) ? stored.precision : "minute") : "unknown";

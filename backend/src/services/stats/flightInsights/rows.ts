@@ -69,9 +69,10 @@ export interface FlightInsightRow {
   arrivalDay: string | null;
   /**
    * Is the day of that end a real calendar day (precision `minute` or `day`)?
-   * A year-only or unclassified entry (`unknown`) carries a placeholder date —
-   * often 1 January read through a western zone into 31 December of the year
-   * before — which says the year at best, never the day.
+   * A year-only or unclassified entry (`unknown`) carries a placeholder date,
+   * which says the year (or month) at best, never the day. Its 1 January is
+   * read as 1 January in every zone (`placeholderDayOf`), so it stays in the
+   * year it names.
    */
   departureDayExact: boolean;
   arrivalDayExact: boolean;

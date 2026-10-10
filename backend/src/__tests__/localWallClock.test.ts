@@ -76,4 +76,31 @@ describe("localWallClockOf", () => {
     expect(clock.hour).toBe(0);
     expect(clock.date).toBe("2026-07-02");
   });
+
+  // A year-only (or month-only) historical entry has no clock at all: the
+  // schema stores its placeholder as midnight UTC on the 1st. Read through a
+  // zone west of UTC that midnight is the evening before — 1 January 2015
+  // became 31 December 2014, and the flight was filed under the wrong YEAR in
+  // every year-based statistic (forgejo#256).
+  it("keeps a year-only placeholder in the year it names, west of UTC", () => {
+    const clock = localWallClockOf(new Date("2015-01-01T00:00:00Z"), "America/New_York", "UNKNOWN");
+    expect(clock.year).toBe(2015);
+    expect(clock.month).toBe(0);
+    expect(clock.date).toBe("2015-01-01");
+  });
+
+  it("keeps a month-only placeholder in its month, west of UTC", () => {
+    const clock = localWallClockOf(
+      new Date("2015-03-01T00:00:00Z"),
+      "America/Los_Angeles",
+      "UNKNOWN"
+    );
+    expect(clock.date).toBe("2015-03-01");
+  });
+
+  it("still reads an unclassified real time on the airport's clock", () => {
+    // Not a placeholder shape (03:30 UTC), so the zone decides as before.
+    const clock = localWallClockOf(new Date("2026-01-01T03:30:00Z"), "America/New_York", "UNKNOWN");
+    expect(clock.date).toBe("2025-12-31");
+  });
 });

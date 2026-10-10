@@ -89,3 +89,30 @@ export function fakeUtcToInstant(fake: Date, zone: string): FakeUtcReading {
 export function startOfDayAt(day: string, zone: string): Date {
   return toInstant(`${day}T00:00`, zone, { origin: "machine" }).utc;
 }
+
+/**
+ * The day a year-only or month-only placeholder names, or null when `stored`
+ * is not one.
+ *
+ * A historical flight known only by its year (or year and month) has no
+ * clock: its semantics stay `UNKNOWN` and the schema stores the placeholder
+ * as midnight UTC on the 1st — 1 January for a bare year. That instant is no
+ * moment anyone flew at, so no zone may move it: read at a western airport
+ * it is the evening before, and 1 January 2015 was filed under 2014 by every
+ * year-based flight statistic (forgejo#256).
+ *
+ * Only that exact shape is recognised — `UNKNOWN`, 00:00:00.000 UTC, on the
+ * 1st of a month. A placeholder written through its airport's zone (the form
+ * sends local midnight with the zone) already reads back on its own day
+ * through that zone and is not touched; an unclassified real time keeps its
+ * zone reading unless it falls on exactly that instant.
+ */
+export function placeholderDayOf(
+  stored: Date,
+  semantics: string | null | undefined
+): string | null {
+  if (semantics !== "UNKNOWN") return null;
+  const ms = stored.getTime();
+  if (ms % DAY_MS !== 0 || stored.getUTCDate() !== 1) return null;
+  return utcDate(ms);
+}

@@ -14,6 +14,7 @@ import { getCachedAirport } from "../services/airportCache";
 import { TzUnresolvedError } from "../shared/time/errors";
 import { localDay, toInstant, toLocal } from "../shared/time/instant";
 import { isValidZone, wallClockParts } from "../shared/time/zonedParts";
+import { placeholderDayOf } from "../shared/time/legacyValues";
 import logger from "./logger";
 
 export type FlightTimeSemantics = "UTC" | "DATE_ONLY" | "LEGACY_FAKE_UTC" | "UNKNOWN";
@@ -100,7 +101,10 @@ export function localWallClockOf(
   timezone: string | null | undefined,
   semantics: FlightTimeSemantics = "UNKNOWN"
 ): LocalWallClock {
-  const useStored = semantics === "LEGACY_FAKE_UTC" || !timezone;
+  // A year-/month-only placeholder names a day, not an instant: its stored
+  // components ARE that day, and a zone would move it (`placeholderDayOf`).
+  const placeholder = placeholderDayOf(stored, semantics) !== null;
+  const useStored = semantics === "LEGACY_FAKE_UTC" || !timezone || placeholder;
   const { year, month, day, hour } =
     (useStored ? null : zonedComponents(stored, timezone as string)) ?? storedComponents(stored);
 
@@ -113,7 +117,7 @@ export function localWallClockOf(
     // Derived from the local calendar date rather than parsed from a locale
     // weekday name, which would depend on the formatter's language.
     weekday: new Date(Date.UTC(year, month - 1, day)).getUTCDay(),
-    hour: semantics === "DATE_ONLY" ? null : hour,
+    hour: semantics === "DATE_ONLY" || placeholder ? null : hour,
   };
 }
 
