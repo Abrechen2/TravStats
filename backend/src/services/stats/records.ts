@@ -1,5 +1,6 @@
 import { prisma } from "../../db";
 import { haversineKm } from "../../shared/geo/haversine";
+import { busiestDayOf } from "../../shared/busiestDay";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { enrichFlightsWithAirportFacts } from "../flightAirportFacts";
 import { FLIGHT_CLOCK_SELECT } from "./departureClock";
@@ -158,17 +159,9 @@ function shortestFlight(flights: readonly RecordFlightInput[]): TravelRecord | n
 }
 
 function busiestDay(byDay: ReadonlyMap<string, RecordFlightInput[]>): TravelRecord | null {
-  let bestDay: string | null = null;
-  for (const [day, legs] of byDay) {
-    const bestLegs = bestDay === null ? null : (byDay.get(bestDay) as RecordFlightInput[]);
-    if (
-      bestLegs === null ||
-      legs.length > bestLegs.length ||
-      (legs.length === bestLegs.length && day >= (bestDay as string))
-    ) {
-      bestDay = day;
-    }
-  }
+  // The one busiest-day rule (`shared/busiestDay`): most flights, latest day on a tie.
+  const bestDay =
+    busiestDayOf([...byDay].map(([day, legs]) => [day, legs.length] as const))?.day ?? null;
   if (bestDay === null) return null;
   const legs = [...(byDay.get(bestDay) as RecordFlightInput[])].sort((a, b) =>
     (a.departureTime?.toISOString() ?? "").localeCompare(b.departureTime?.toISOString() ?? "")

@@ -317,7 +317,7 @@
     },
     "fastestDay": {
       "unit": "Der Kalendertag mit den meisten Abflügen und die Zahl dieser Flüge.",
-      "time": "Abflugtag am Abflughafen. Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht. Bei Gleichstand steht der zuerst gefundene Tag, nicht unbedingt der früheste oder späteste.",
+      "time": "Abflugtag am Abflughafen. Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht. Bei Gleichstand gewinnt der spätere Tag – dieselbe Regel wie beim Rekord „Vollster Tag“.",
       "source": "Geflogene und nachgetragene Flüge mit Abflugdatum.",
       "coverage": "Ein Eintrag, von dem nur das Jahr bekannt ist, steht auf dem 1. Januar (nur der Monat bekannt: auf dem Ersten). Mehrere solche Einträge eines Jahres sammeln sich dort und können diesen Tag nach vorn bringen.",
       "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge; Flüge ohne Abflugdatum."

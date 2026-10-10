@@ -11,6 +11,7 @@ import {
 import type { FlightData, FunStats } from "./types";
 import { isCountableFlight } from "../../shared/flightCounting";
 import { routePairKey } from "../../shared/routePair";
+import { busiestDayOf } from "../../shared/busiestDay";
 
 /**
  * Calculate fun/entertaining statistics.
@@ -105,10 +106,10 @@ export async function analyseFunStats(
     flightsByDate[clock.date] = (flightsByDate[clock.date] || 0) + 1;
   });
 
-  const maxFlightsOnDay = Math.max(0, ...Object.values(flightsByDate));
-  const fastestDay = Object.entries(flightsByDate).find(
-    ([, count]) => count === maxFlightsOnDay
-  )?.[0];
+  // The one busiest-day rule, shared with the records (`shared/busiestDay`).
+  const busiest = busiestDayOf(Object.entries(flightsByDate));
+  const maxFlightsOnDay = busiest?.flights ?? 0;
+  const fastestDay = busiest?.day;
 
   // CO2 footprint in elephants (elephant = 4000kg). Single source of truth
   // is calculateCo2Kg (distance band + cabin-class multiplier) — the same

@@ -317,7 +317,7 @@
     },
     "fastestDay": {
       "unit": "The calendar day with the most departures, and how many flights that was.",
-      "time": "Departure day at the departure airport. Your whole logbook – the page's year filter does not apply. On a tie the day found first is shown, not necessarily the earliest or latest.",
+      "time": "Departure day at the departure airport. Your whole logbook – the page's year filter does not apply. On a tie the later day wins – the same rule as the \"busiest day\" record.",
       "source": "Flown and historical flights with a departure date.",
       "coverage": "An entry with only the year known is stored on 1 January (only the month known: on the 1st). Several such entries in one year pile up there and can push that day to the top.",
       "exclusions": "Not included: planned, cancelled and duplicated (draft) flights; flights without a departure date."
