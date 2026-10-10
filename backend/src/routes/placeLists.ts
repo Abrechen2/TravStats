@@ -271,10 +271,11 @@ router.post("/:id/entries", async (req: AuthRequest, res: Response, next: NextFu
     if (!place) throw new AppError("Place not found", 404);
 
     const sortIdx = parsed.data.sortIdx ?? list.entries.length;
-    await prisma.placeListEntry.upsert({
-      where: { listId_placeId: { listId: list.id, placeId: place.id } },
-      create: { listId: list.id, placeId: place.id, sortIdx },
-      update: {},
+    // One `INSERT … ON CONFLICT DO NOTHING`: a double tap on "add to list"
+    // must not race into a unique violation (a read-then-insert upsert does).
+    await prisma.placeListEntry.createMany({
+      data: [{ listId: list.id, placeId: place.id, sortIdx }],
+      skipDuplicates: true,
     });
 
     await recheckAchievements(userId, "list entry add");

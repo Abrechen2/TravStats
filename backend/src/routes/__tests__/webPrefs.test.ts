@@ -202,6 +202,26 @@ describe("Web preferences API", () => {
     expect(Object.keys(get.body.sections).sort()).toEqual(["statsCompare", "tablePrefs"]);
   });
 
+  it("lets concurrent FIRST writes all land, when the account has no settings row yet", async () => {
+    // The race lives in creating the row, not in the locked merge after it, so
+    // it is only reachable while no row exists — repeated to make it likely.
+    const sections = ["statsCompare", "tablePrefs", "theme", "mapAppearance"] as const;
+    for (let round = 0; round < 8; round++) {
+      await prisma.userSettings.deleteMany({ where: { userId: userAId } });
+      const results = await Promise.all(
+        sections.map((name) =>
+          request(app)
+            .put(PATH)
+            .set("Cookie", cookieA)
+            .send({ sections: { [name]: { value: {} } } })
+        )
+      );
+      expect(results.map((r) => r.status)).toEqual(sections.map(() => 200));
+      const get = await request(app).get(PATH).set("Cookie", cookieA);
+      expect(Object.keys(get.body.sections).sort()).toEqual([...sections].sort());
+    }
+  });
+
   describe("personal access tokens", () => {
     it("a read-scoped token may GET but not PUT", async () => {
       const pat = await createPat(userAId, "read");
