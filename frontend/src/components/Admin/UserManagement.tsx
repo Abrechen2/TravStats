@@ -72,9 +72,14 @@ export default function UserManagement({
           mono, and the row's actions behind "…" — four text links in a row
           pushed the table past its card at every width. */}
       {/* Scrolls sideways only on a phone: a scroll box would clip the row
-          menu of the last rows, and from md up the table fits. */}
+          menu of the last rows, and from md up the table fits.
+          `relative` is load-bearing (forgejo#182): it makes the scroller the
+          containing block of the absolutely positioned `sr-only` header
+          below. Without it that span's box hung off the table's right edge,
+          outside the scroller's clip, and widened the WHOLE document to
+          621px on a 360px phone. */}
       <div
-        className="overflow-x-auto md:overflow-visible"
+        className="relative overflow-x-auto md:overflow-visible"
         style={{
           background: "var(--ts-surface)",
           border: "1px solid var(--ts-border)",

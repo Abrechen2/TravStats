@@ -100,7 +100,10 @@ export default function InvitationManagement({
         ))}
       </div>
 
-      <div className="bg-(--bg-surface) rounded-lg shadow-sm overflow-x-auto">
+      {/* `relative`: the scroller must be the containing block of anything
+          absolutely positioned in the table, or it escapes the clip and
+          widens the page on a phone (forgejo#182, the users table). */}
+      <div className="bg-(--bg-surface) relative overflow-x-auto rounded-lg shadow-sm">
         <table className="w-full min-w-[720px]">
           <thead className="bg-(--bg-base)">
             <tr>
