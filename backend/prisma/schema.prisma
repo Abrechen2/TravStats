@@ -4026,6 +4026,11 @@ model RentalBooking {
   /// invoice | user (a labelled correction) | cancellationFee (a cancelled
   /// rental's fee — never a rental-day cost) | null — the row says which it shows.
   finalAmountSource   String?   @map("final_amount_source")
+  /// The single fee lines of the invoice the user took over in the review
+  /// (forgejo#237): `[{ label, amount, currency }]`. Already contained in
+  /// `finalAmount` — they explain the difference to the booked price and are
+  /// never added to any cost. Null = none taken over.
+  invoiceFees         Json?     @map("invoice_fees")
   /// The send time of the newest provider mail applied to this row. An older
   /// mail arriving later only fills what is still empty — it never overwrites
   /// what a newer one set. Null = no dated mail yet (pasted text carries none).

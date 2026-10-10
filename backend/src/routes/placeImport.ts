@@ -6,6 +6,9 @@ import { placeImportCommitSchema, placeImportPreviewSchema } from "../schemas/pl
 import { previewPlaceImport } from "../services/places/placeImportPreview";
 import { commitPlaceImport } from "../services/places/placeImportCommit";
 import { triggerDataQualityChecks } from "../services/dataQualityTrigger";
+import { placeImportResolveSchema } from "../schemas/placeImportResolve";
+import { resolveTakeoutList } from "../services/places/takeout/resolveTakeout";
+import { startJob } from "../services/jobs/jobRegistry";
 
 /**
  * Mounted at /api/v1/place-import — deliberately NOT under /api/v1/places/import.
@@ -40,6 +43,28 @@ router.post("/preview", async (req: AuthRequest, res: Response, next: NextFuncti
 
     const preview = await previewPlaceImport(userId, parsed.data.candidates);
     res.json({ success: true, data: preview });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Resolve a Google Takeout list (#358): positions from the CID in each link,
+ * the trip a country-named list belongs to, the visit day from photographs,
+ * and a suggested treatment per row. Read-only, and a background job — a few
+ * hundred lookups outlast the browser's request timeout.
+ */
+router.post("/resolve", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const parsed = placeImportResolveSchema.safeParse(req.body);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+
+    const { listName, rows } = parsed.data;
+    const job = startJob("placeImport.resolve", userId, (reportProgress) =>
+      resolveTakeoutList(userId, listName ?? null, rows, reportProgress)
+    );
+    res.status(202).json({ success: true, data: { jobId: job.id } });
   } catch (error) {
     next(error);
   }

@@ -23,6 +23,9 @@ vi.mock("../../import/LodgingCsvImportTile", () => ({
 vi.mock("../../import/PlaceCsvImportTile", () => ({
   PlaceCsvImportTile: () => <div data-testid="tile-poi-csv" />,
 }));
+vi.mock("../../import/PlaceDocumentImportTile", () => ({
+  PlaceDocumentImportTile: () => <div data-testid="tile-poi-document" />,
+}));
 // The log fetches on mount — render a marker that reports the reload key it
 // was handed, so a missed refresh signal is visible instead of silent.
 vi.mock("../../import/ImportLogSection", () => ({
@@ -114,6 +117,7 @@ describe("ImportSection — central import hub", () => {
       render(<ImportSection />);
       expect(screen.getByText("common:domain.poi")).toBeTruthy();
       expect(screen.getByTestId("tile-poi-csv")).toBeTruthy();
+      expect(screen.getByTestId("tile-poi-document")).toBeTruthy();
     }
   );
 

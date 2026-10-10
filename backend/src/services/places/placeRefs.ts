@@ -4,8 +4,47 @@ import type { Db as Client, DbTransaction } from "../../db";
 type Db = Client | DbTransaction;
 
 /**
+ * The decimal Google CID a reference names, in every spelling a place may
+ * carry: `gmaps-cid:<decimal>` (the format production already holds, from
+ * the owner's Takeout lists), `gmaps:<decimal>` (what the Maps tile minted
+ * before #358), a raw Maps link stored by the older CSV path
+ * (`!1s0x…:0x<cid>`, hex), or a `?cid=` link. Null for anything else.
+ */
+export function cidOfRef(ref: string | null | undefined): string | null {
+  if (!ref) return null;
+  const text = ref.trim();
+  const prefixed = text.match(/^gmaps(?:-cid)?:(\d{1,20})$/);
+  if (prefixed) return prefixed[1];
+  const fromLink = text.match(/!1s0x[0-9a-fA-F]+:(0x[0-9a-fA-F]{1,16})/);
+  if (fromLink) {
+    try {
+      return BigInt(fromLink[1]).toString();
+    } catch {
+      return null;
+    }
+  }
+  return text.match(/^https?:\/\/[^\s]*[?&]cid=(\d{1,20})/)?.[1] ?? null;
+}
+
+/** The reference a new Google place is stored under — production's format. */
+export const gmapsCidRef = (cid: string): string => `gmaps-cid:${cid}`;
+
+/**
+ * One key per identity: every spelling of a Google CID becomes
+ * `gmaps-cid:<decimal>`; any other reference stays as it is.
+ */
+export function canonicalPlaceRef(ref: string): string {
+  const cid = cidOfRef(ref);
+  return cid ? gmapsCidRef(cid) : ref;
+}
+
+/** Stored values that may spell a CID — the only ones worth reading for one. */
+const MAYBE_CID = [{ startsWith: "gmaps" }, { startsWith: "http" }];
+
+/**
  * The ONE answer to "does this user already have a place for source reference
- * X?" (forgejo#232, review I1).
+ * X?" (forgejo#232, review I1). A Google reference matches the same CID in
+ * any of its spellings (`cidOfRef`).
  *
  * A place answers to its own `externalRef` AND to the aliases a merge left on
  * it (`PlaceExternalRef`). Asking only the column was right until merges
@@ -27,7 +66,26 @@ export async function findPlaceIdByRef(
       select: { placeId: true },
     }),
   ]);
-  return primary?.id ?? alias?.placeId ?? null;
+  if (primary || alias) return primary?.id ?? alias?.placeId ?? null;
+  const cid = cidOfRef(ref);
+  return cid ? findPlaceIdByCid(db, userId, cid) : null;
+}
+
+async function findPlaceIdByCid(db: Db, userId: string, cid: string): Promise<string | null> {
+  const [primaries, aliases] = await Promise.all([
+    db.place.findMany({
+      where: { userId, OR: MAYBE_CID.map((m) => ({ externalRef: m })) },
+      select: { id: true, externalRef: true },
+    }),
+    db.placeExternalRef.findMany({
+      where: { userId, OR: MAYBE_CID.map((m) => ({ ref: m })) },
+      select: { ref: true, placeId: true },
+    }),
+  ]);
+  const hit =
+    primaries.find((p) => cidOfRef(p.externalRef) === cid)?.id ??
+    aliases.find((a) => cidOfRef(a.ref) === cid)?.placeId;
+  return hit ?? null;
 }
 
 /** Whether a place OTHER than `placeId` already answers to `ref`. */
@@ -41,7 +99,11 @@ export async function refHeldElsewhere(
   return holder !== null && holder !== placeId;
 }
 
-/** Every reference the user's places answer to → the place — for a batch of lookups. */
+/**
+ * Every reference the user's places answer to → the place — for a batch of
+ * lookups. Each is ALSO indexed under its canonical key, so a caller looking
+ * up `canonicalPlaceRef(x)` finds a CID stored in any spelling.
+ */
 export async function placeRefIndex(db: Db, userId: string): Promise<Map<string, string>> {
   const [primaries, aliases] = await Promise.all([
     db.place.findMany({
@@ -51,8 +113,12 @@ export async function placeRefIndex(db: Db, userId: string): Promise<Map<string,
     db.placeExternalRef.findMany({ where: { userId }, select: { ref: true, placeId: true } }),
   ]);
   const index = new Map<string, string>();
-  for (const a of aliases) index.set(a.ref, a.placeId);
-  for (const p of primaries) if (p.externalRef) index.set(p.externalRef, p.id);
+  const put = (ref: string, id: string): void => {
+    index.set(ref, id);
+    index.set(canonicalPlaceRef(ref), id);
+  };
+  for (const a of aliases) put(a.ref, a.placeId);
+  for (const p of primaries) if (p.externalRef) put(p.externalRef, p.id);
   return index;
 }
 

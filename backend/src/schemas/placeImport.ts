@@ -11,7 +11,7 @@ import { z } from "./zod";
  * deserves one decision, not an entry."
  */
 
-export const PLACE_IMPORT_SOURCES = ["csv"] as const;
+export const PLACE_IMPORT_SOURCES = ["csv", "document"] as const;
 export type PlaceImportSource = (typeof PLACE_IMPORT_SOURCES)[number];
 
 /** Matches `MAX_LODGING_IMPORT_ROWS`. One cap, one number to remember. */
@@ -42,11 +42,21 @@ export const placeImportCandidateSchema = z.object({
   notes: z.string().trim().max(2000).nullable().optional(),
   visitedAt: z.string().trim().max(40).nullable().optional(),
   /**
-   * A namespaced identity from the source: `gmaps:<cid>`, `osm:<type>/<id>`,
+   * A namespaced identity from the source: `gmaps-cid:<cid>`, `osm:<type>/<id>`,
    * `csv:<user key>`. It is what makes a second import of the same file a
    * no-op, so it travels from the reader rather than being invented here.
    */
   externalRef: z.string().trim().max(200).nullable().optional(),
+  /**
+   * What the commit makes of the row (#358). Absent means a place, which is
+   * what every import before the Takeout resolution sent. `trip_stop` writes a
+   * stop on `tripId`; `stay` writes nothing — the row is the user's own stay
+   * (`lodgingStayId`) already, and the commit only confirms that it is theirs.
+   */
+  treatment: z.enum(["place", "trip_stop", "stay"]).optional(),
+  /** The trip a place's dated visit, or a trip stop, belongs to. */
+  tripId: z.string().uuid().nullable().optional(),
+  lodgingStayId: z.string().uuid().nullable().optional(),
 });
 export type PlaceImportCandidate = z.infer<typeof placeImportCandidateSchema>;
 
@@ -91,10 +101,24 @@ export const placeImportCommitSchema = z.object({
  * raw Prisma message in a 201 body — and a success response never passes
  * through the error handler's leak protections.
  */
-export type PlaceImportFailureCode = "invalid_row" | "no_position" | "write_failed";
+export type PlaceImportFailureCode =
+  | "invalid_row"
+  | "no_position"
+  | "write_failed"
+  /** The trip or stay the row names is not the caller's (or no longer exists). */
+  | "invalid_target";
 
 export const PLACE_IMPORT_FAILURE_MESSAGES: Record<PlaceImportFailureCode, string> = {
   invalid_row: "The row could not be read.",
   no_position: "The row has no coordinates, so it was not imported.",
   write_failed: "The place could not be saved.",
+  invalid_target: "The trip or stay the row names was not found.",
 };
+
+/**
+ * Why a place document produced no candidate — see
+ * `services/places/placeDocumentImport.ts`. A place document is parsed like
+ * every other through `/parse-email`, `/parse-email-file` and `/parse-pdf`
+ * with `domain: "place"` (or `auto`), forgejo#124.
+ */
+export const PLACE_DOCUMENT_FALLBACKS = ["noTemplate", "notRecognised", "timedOut"] as const;

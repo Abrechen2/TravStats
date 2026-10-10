@@ -18,6 +18,7 @@ import {
   type ComputeRule,
   type InnerRepeatRule,
   type ItemFieldRule,
+  type LinesRepeatRule,
   type MatchAllRepeatRule,
   type PairsRepeatRule,
   type RepeatRule,
@@ -26,6 +27,7 @@ import {
 import { compileFields, makeScope, readFields, type CompiledField } from "./fieldReader";
 import { compileSpec } from "./regexSpec";
 import { applyValueSteps, findIn, type StepValue } from "./valueSteps";
+import { MAX_ROW_LINE_CHARS } from "./extractionRules";
 
 export const MAX_REPEAT_ITEMS = 200;
 
@@ -169,6 +171,69 @@ function matchAllItems(rule: MatchAllRepeatRule, scope: string): Item[] {
     // An item the text contributed nothing to is noise and is dropped.
     if (readAnything) items.push(item);
     if (items.length >= MAX_REPEAT_ITEMS) break;
+  }
+  return items;
+}
+
+// ------------------------------------------------------------------ lines
+
+const rowLinesCache = new WeakMap<object, RegExp[]>();
+
+function rowLinePatterns(rule: LinesRepeatRule): RegExp[] {
+  let hit = rowLinesCache.get(rule);
+  if (!hit) {
+    // Each line is matched once, on its own: no `g`, so `exec` stays stateless.
+    const flags = repeatFlags(rule.flags).replace("g", "");
+    hit = rule.rowLines.map((p) => new RegExp(p, flags));
+    rowLinesCache.set(rule, hit);
+  }
+  return hit;
+}
+
+/**
+ * A row printed over consecutive lines (`mode: "lines"`). Line i opens an
+ * item when it matches the first row line; the following lines (blank ones
+ * stepped over with `skipBlankLines`) must match the rest, in order. A row
+ * that breaks off is no item, and its first line is not consumed. The values
+ * are the row's named groups — one synthetic match over the whole row, so the
+ * item fields read it exactly as they read a `matchAll` match.
+ */
+function lineItems(rule: LinesRepeatRule, scope: string): Item[] {
+  const res = rowLinePatterns(rule);
+  const lines = scope.split("\n");
+  const offsets: number[] = [];
+  lines.reduce((at, line) => (offsets.push(at), at + line.length + 1), 0);
+  const usable = (i: number): boolean => i < lines.length && lines[i].length <= MAX_ROW_LINE_CHARS;
+  const items: Item[] = [];
+  for (let i = 0; i < lines.length && items.length < MAX_REPEAT_ITEMS; i++) {
+    if (!usable(i)) continue;
+    const first = res[0].exec(lines[i]);
+    if (!first) continue;
+    const parts: RegExpExecArray[] = [first];
+    let j = i;
+    for (let k = 1; k < res.length; k++) {
+      j++;
+      while (rule.skipBlankLines && j < lines.length && lines[j].trim() === "") j++;
+      const m = usable(j) ? res[k].exec(lines[j]) : null;
+      if (!m) break;
+      parts.push(m);
+    }
+    if (parts.length !== res.length) continue;
+    const row = lines.slice(i, j + 1).join("\n");
+    const match = Object.assign([row], {
+      index: offsets[i],
+      input: scope,
+      groups: Object.assign({}, ...parts.map((p) => p.groups ?? {})) as Record<string, string>,
+    }) as RegExpMatchArray;
+    let readAnything = false;
+    const item: Item = {};
+    for (const [name, field] of Object.entries(rule.fields)) {
+      const { value, read } = itemFieldValue(field, match, scope);
+      readAnything ||= read;
+      item[name] = value;
+    }
+    if (readAnything) items.push(item);
+    i = j;
   }
   return items;
 }
@@ -339,6 +404,7 @@ function baseItems(
   if (!bounds) return [];
   const scope = text.slice(bounds.start, bounds.end);
   if (scope === "") return [];
+  if (rule.mode === "lines") return lineItems(rule, scope);
   return rule.mode === "matchAll" ? matchAllItems(rule, scope) : columnItems(rule, scope);
 }
 

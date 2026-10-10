@@ -185,6 +185,18 @@ export const rentalBookingSchema = registry.register(
           "Where the booked `price` came from: the booking mail it was imported from, or typed " +
             "by hand. An invoice never writes it, so it stays beside `finalAmount`; null without a price"
         ),
+      invoiceFees: z
+        .array(
+          z.object({
+            label: z.string().describe("As the invoice prints it"),
+            amount: z.number(),
+            currency: z.string().describe("ISO 4217"),
+          })
+        )
+        .describe(
+          "Single fee lines of the invoice the user took over (forgejo#237). Already part of " +
+            "`finalAmount` — they explain the difference to `price` and are never added to `cost`"
+        ),
       invoiceMissing: z
         .boolean()
         .describe(
@@ -445,7 +457,10 @@ registry.registerPath({
     "fills empty fields and an older cancellation does not cancel (`stale`). An invoice's " +
     "`adopt` names the parts the review took over (`finalAmount`, `vehicleDriven`, " +
     "`odometer`, `distance`, `actualTimes`); `false` leaves that part as it is, absent takes " +
-    "it. The booked `price` is never written by an invoice.",
+    "it. `adopt.fees` lists the indexes of `invoice.fees` taken over (absent = all, `[]` = " +
+    "none; an index with no line is `RENTAL_INVOICE_FEE_UNKNOWN`); they are stored as " +
+    "`invoiceFees`, replacing an earlier invoice's, and are never added to the cost. The " +
+    "booked `price` is never written by an invoice.",
   tags: ["Rentals"],
   request: {
     body: {

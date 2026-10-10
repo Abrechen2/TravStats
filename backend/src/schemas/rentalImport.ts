@@ -16,6 +16,17 @@ const LOCAL = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/;
 const km = z.number().int().min(0).max(1_000_000).nullable();
 const number = z.string().trim().min(1).max(60);
 
+/** At most this many fee lines are read from, and kept for, one invoice. */
+export const MAX_INVOICE_FEES = 30;
+
+/** One fee line of an invoice — part of its final amount, never a cost of its own. */
+export const rentalInvoiceFeeSchema = z.object({
+  label: z.string().trim().min(1).max(120),
+  amount: z.number().min(0).max(10_000_000),
+  currency: z.string().regex(/^[A-Z]{3}$/),
+});
+export type RentalInvoiceFee = z.infer<typeof rentalInvoiceFeeSchema>;
+
 export const rentalInvoiceSchema = z.object({
   provider: z.string().trim().min(1).max(100),
   confirmationNumber: number.nullable(),
@@ -32,6 +43,8 @@ export const rentalInvoiceSchema = z.object({
     .string()
     .regex(/^[A-Z]{3}$/)
     .nullable(),
+  /** The invoice's single fee lines as read (forgejo#237); absent = none read. */
+  fees: z.array(rentalInvoiceFeeSchema).max(MAX_INVOICE_FEES).optional(),
 });
 
 /**
@@ -62,8 +75,23 @@ export const rentalInvoiceAdoptSchema = z
     odometer: z.boolean().optional(),
     distance: z.boolean().optional(),
     actualTimes: z.boolean().optional(),
+    /**
+     * Which of the invoice's fee lines the user took over, by their index in
+     * `invoice.fees`. Absent = every line, as for the parts above; `[]` = none.
+     */
+    fees: z
+      .array(
+        z
+          .number()
+          .int()
+          .min(0)
+          .max(MAX_INVOICE_FEES - 1)
+      )
+      .max(MAX_INVOICE_FEES)
+      .optional(),
   })
   .strict();
+export type RentalInvoiceAdopt = z.infer<typeof rentalInvoiceAdoptSchema>;
 
 export const rentalCancellationFeeSchema = z.object({
   amount: z.number().positive().max(10_000_000),

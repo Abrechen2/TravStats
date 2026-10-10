@@ -6,6 +6,9 @@ import { WORKSHOP_DOMAIN_SPECS, isWorkshopDomain } from "../../../shared/annotat
 import type { AnnotationSelection } from "./annotations";
 import { escapeRegex } from "./annotations";
 import { deriveLodgingTemplate } from "./lodgingDeriver";
+import { deriveCruiseTemplate } from "./cruiseDeriver";
+import { derivePlaceTemplate } from "./placeDeriver";
+import { derivePackageTemplate } from "./packageDeriver";
 import { senderAddressIn, senderDomainOf, subjectIn } from "./sampleHeaders";
 
 // Character classes and length quantifiers per field
@@ -203,10 +206,13 @@ function derivedName(issuer: string): string {
  *    nothing about extraction. It is `pending` now until a preview has run it
  *    against its own sample and a held-out one (`routes/parserTemplates.ts`).
  *
- * Cruise and place abstain and say why: no reader in this tree can run a
- * template for them (`shared/annotationLabels.ts` carries the reason). A
- * template that matches a document and extracts nothing is worse than none,
- * because its result is a proposal a human accepts by habit (plan §7).
+ * Cruise, place and package (forgejo#124) are written as v2 template envelopes, the
+ * shape the bundled templates have, and run by the same consumers
+ * (`cruiseDeriver.ts`, `placeDeriver.ts`, `packageDeriver.ts`). Each abstains with a reason
+ * the page shows when the marks are not enough — a template that matches a
+ * document and extracts nothing is worse than none, because its result is a
+ * proposal a human accepts by habit (plan §7). A domain whose spec says
+ * `derivable: false` abstains before any of that.
  */
 export async function deriveTemplateFromAnnotation(
   trainingDataId: string,
@@ -236,7 +242,30 @@ export async function deriveTemplateFromAnnotation(
     let patterns: Prisma.InputJsonValue;
     let name: string;
 
-    if (domain === "lodging") {
+    if (domain === "cruise" || domain === "place" || domain === "package") {
+      const input = {
+        trainingDataId,
+        subject: sample.subject,
+        fullText: sample.fullText,
+        selections: sample.selections,
+        ...(fingerprint.senderDomains[0] ? { senderDomain: fingerprint.senderDomains[0] } : {}),
+      };
+      const derived =
+        domain === "cruise"
+          ? deriveCruiseTemplate(input)
+          : domain === "package"
+            ? derivePackageTemplate(input)
+            : derivePlaceTemplate(input);
+      if (!derived.ok) {
+        logger.info(
+          { trainingDataId, domain, refusal: derived.refusal },
+          "TemplateDeriver: the annotation was not enough"
+        );
+        return { status: "abstained", domain, reason: derived.refusal };
+      }
+      patterns = derived.template as unknown as Prisma.InputJsonValue;
+      name = derivedName(derived.template.issuer.name);
+    } else if (domain === "lodging") {
       const derived = deriveLodgingTemplate({
         id: `lodging:user:${trainingDataId}`,
         name: fingerprint.senderDomains[0] ?? sample.subject.slice(0, 40) ?? "",

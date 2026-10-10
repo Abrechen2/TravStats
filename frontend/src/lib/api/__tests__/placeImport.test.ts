@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { commitPlaceImport, previewPlaceImport } from "../placeImport";
+import { commitPlaceImport, previewPlaceImport, resolvePlaceImport } from "../placeImport";
 import { api } from "../client";
 
 vi.mock("../client", () => ({
@@ -57,5 +57,46 @@ describe("placeImport api client", () => {
     expect(result.created).toBe(1);
     expect(result.skipped).toBe(1);
     expect(result.failed[0].code).toBe("no_position");
+  });
+
+  it("starts the Takeout resolution as a job and resolves with its result (#358)", async () => {
+    const resolution = {
+      listCountry: "JP",
+      trip: null,
+      tripReason: "no_trip",
+      googleConfigured: false,
+      rows: [],
+    };
+    mockedApi.post.mockResolvedValue({ data: { success: true, data: { jobId: "job-1" } } });
+    mockedApi.get.mockResolvedValue({
+      data: {
+        success: true,
+        data: {
+          id: "job-1",
+          kind: "placeImport.resolve",
+          status: "succeeded",
+          startedAt: "2026-10-10T00:00:00Z",
+          finishedAt: "2026-10-10T00:00:01Z",
+          result: resolution,
+          error: null,
+          progress: { done: 1, total: 1 },
+        },
+      },
+    });
+    const onProgress = vi.fn();
+
+    const result = await resolvePlaceImport(
+      "Japan.csv",
+      [{ sourceRowIndex: 0, name: "Invented", externalRef: "gmaps:1" }],
+      onProgress
+    );
+
+    expect(mockedApi.post).toHaveBeenCalledWith("/place-import/resolve", {
+      listName: "Japan.csv",
+      rows: [{ sourceRowIndex: 0, name: "Invented", externalRef: "gmaps:1" }],
+    });
+    expect(mockedApi.get).toHaveBeenCalledWith("/jobs/job-1");
+    expect(onProgress).toHaveBeenCalledWith({ done: 1, total: 1 });
+    expect(result).toEqual(resolution);
   });
 });

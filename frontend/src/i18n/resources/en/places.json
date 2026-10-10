@@ -445,7 +445,9 @@
     "actions": {
       "choose": "Choose",
       "create": "Create",
-      "skip": "Skip"
+      "skip": "Skip",
+      "trip_stop": "As trip stop",
+      "stay": "Is my stay"
     },
     "flags": {
       "missing_name": "No name",
@@ -472,7 +474,88 @@
       "failureCodes": {
         "invalid_row": "row unreadable",
         "no_position": "no position",
-        "write_failed": "not saved"
+        "write_failed": "not saved",
+        "invalid_target": "trip or stay not found"
+      },
+      "takeoutExtra": "{{stops}} added as trip stops · {{stays}} recognised as your stays",
+      "stopsSkipped_one": "{{count}} trip stop skipped — the trip already has it on that day",
+      "stopsSkipped_other": "{{count}} trip stops skipped — the trip already has them on that day"
+    },
+    "takeout": {
+      "intro_one": "{{count}} row comes from a Google Maps list. Position, trip and visit day can be suggested — you then decide row by row.",
+      "intro_other": "{{count}} rows come from a Google Maps list. Position, trip and visit day can be suggested — you then decide row by row.",
+      "resolve": "Get suggestions",
+      "running": "Searching … {{done}} of {{total}}",
+      "errors": {
+        "failed": "The suggestions could not be fetched. The rows stay as they were — you can still set their positions yourself.",
+        "lost": "The server lost the search (restart?). Please try again.",
+        "rateLimited": "Too many imports in a short time. Please try again in a few minutes."
+      },
+      "summary": {
+        "google": "placed via Google link",
+        "byName": "via name search",
+        "unplaced": "without position",
+        "dated": "with a visit day from photos"
+      },
+      "trip": {
+        "found": "Trip: “{{name}}” — visits and trip stops are assigned to it.",
+        "no_country": "The list's name names no country, so no trip is assigned and no name search is run.",
+        "no_trip": "You have no trip to this country — no trip is assigned.",
+        "several_trips": "You have several trips to this country — which one it was is your call; none is assigned."
+      },
+      "noKey": "This instance has no Google Places key configured (Settings → Integrations). Positions therefore come only from the name search inside the list's country.",
+      "googleFailed": "Google lookup failed:",
+      "unplacedBecause": "Without position because:",
+      "positionReasons": {
+        "no_cid": "link without a Google id",
+        "no_key": "no Google key",
+        "auth": "Google refuses the key",
+        "quota": "Google quota exhausted",
+        "timeout": "Google did not answer in time",
+        "network": "Google unreachable",
+        "not_found": "Google does not know the place",
+        "provider_error": "unreadable answer",
+        "not_in_country": "not found in the list's country",
+        "no_country": "list names no country",
+        "geocoder_unavailable": "place search unreachable",
+        "limit_reached": "search limit for one run reached"
+      },
+      "sources": {
+        "google_cid": "Position from Google link",
+        "name_search": "Position via name search — please check"
+      },
+      "kinds": {
+        "sight": "Sight",
+        "station": "Station/stop",
+        "fuel": "Fuel station",
+        "shop": "Shop",
+        "airport": "Airport",
+        "lodging": "Accommodation",
+        "city": "whole city — better skipped"
+      },
+      "matchedStay": "your stay “{{name}}”",
+      "dayFromPhotos_one": "from {{count}} photo",
+      "dayFromPhotos_other": "from {{count}} photos",
+      "dayReasons": {
+        "no_trip": "no day: no trip assigned",
+        "no_position": "no day: no position",
+        "no_photos": "no day: no photos there",
+        "ambiguous": "no day: photos on several days equally often"
+      }
+    },
+    "document": {
+      "title": "A place from a document",
+      "description": "A museum ticket or a tour booking: paste its text or choose a PDF, .eml, .msg or .txt file. It is read like any other document, with your place templates from the parser workshop; the place lands in the preview, and only you create it.",
+      "textLabel": "Document text",
+      "placeholder": "Paste the text of the ticket or booking here …",
+      "read": "Read document",
+      "reading": "Reading …",
+      "uploadLabel": "Choose file",
+      "readFailed": "The document could not be read. Please try again.",
+      "fallback": {
+        "noTemplate": "No place template is active yet. In the parser workshop (document type: place), derive one from a ticket of this provider, check it with the preview and activate it.",
+        "notRecognised": "None of your place templates recognises this document. For a new provider, derive one of its own in the parser workshop.",
+        "timedOut": "Reading took too long and was stopped. Please try again."
       }
     }
   },

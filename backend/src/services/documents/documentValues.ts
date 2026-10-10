@@ -190,6 +190,9 @@ export function valuesOf(body: ParsedDocumentBody, input: LegHints): ExtractedVa
       bookingReference: text(body.package.bookingReference),
     };
   }
+  // A place document (forgejo#124) carries no booking values an entry's cost
+  // block could take: a ticket's price is not a place's.
+  if (body.domain === "place") return EMPTY;
   if (body.candidates.length !== 1) return EMPTY;
   const stay = body.candidates[0].stay;
   if (!stay) return EMPTY;

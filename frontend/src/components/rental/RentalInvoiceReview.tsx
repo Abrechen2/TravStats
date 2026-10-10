@@ -11,6 +11,8 @@ import {
 } from "../../lib/rental/rentalInvoiceDiff";
 import type { RentalBooking, RentalInvoiceReading } from "../../types/rental";
 import { CHECK_ROW } from "./rentalFormFields";
+import { invoiceFeeRows } from "../../lib/rental/rentalInvoiceFees";
+import { RentalInvoiceFeeReview } from "./RentalInvoiceFeeLines";
 
 export type InvoiceAdoption = Record<RentalInvoicePart, boolean>;
 
@@ -28,6 +30,9 @@ interface Props {
   rentalId: string;
   adopt: InvoiceAdoption;
   onAdoptChange: (next: InvoiceAdoption) => void;
+  /** One tick per `invoice.fees` line (forgejo#237). */
+  feePicks: boolean[];
+  onFeePicksChange: (next: boolean[]) => void;
 }
 
 /**
@@ -36,16 +41,18 @@ interface Props {
  * invoice against what the rental holds, every changed one taken over on its
  * own. The booked price is never replaced — it stays to compare against.
  *
- * Fee lines are NOT read out of any invoice yet, and the review says so: the
- * difference is their sum. A rental that cannot be loaded is said, with a
- * retry, and the readings are still listed — never a comparison against
- * nothing dressed up as "unchanged".
+ * The fee lines a template reads come next, each taken over on its own; where
+ * none was read, the review says the difference is all there is. A rental that
+ * cannot be loaded is said, with a retry, and the readings are still listed —
+ * never a comparison against nothing dressed up as "unchanged".
  */
 export function RentalInvoiceReview({
   invoice,
   rentalId,
   adopt,
   onAdoptChange,
+  feePicks,
+  onFeePicksChange,
 }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["rental", "common"]);
   const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
@@ -121,7 +128,12 @@ export function RentalInvoiceReview({
           </div>
         </dl>
       ) : null}
-      <p className="t-caption">{t("rental:invoiceReview.feesNote")}</p>
+      <RentalInvoiceFeeReview
+        rows={invoiceFeeRows(rental, invoice)}
+        picks={feePicks}
+        onPicksChange={onFeePicksChange}
+        difference={difference}
+      />
       <ul className="space-y-2">
         {rows.map((row) => (
           <li key={row.part} data-testid={`rental-invoice-row-${row.part}`}>

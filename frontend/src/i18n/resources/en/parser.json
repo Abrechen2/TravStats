@@ -51,7 +51,8 @@
     "flight": "Flight",
     "lodging": "Stay",
     "cruise": "Cruise",
-    "place": "Place"
+    "place": "Place",
+    "package": "Package tour"
   },
   "labelGroups": {
     "flight": "Flight",
@@ -64,7 +65,11 @@
     "money": "Price",
     "ship": "Ship",
     "voyage": "Voyage",
-    "cabin": "Cabin"
+    "cabin": "Cabin",
+    "itinerary": "Itinerary",
+    "packageTrip": "Trip",
+    "flightRow": "Flight row",
+    "stayRow": "Hotel row"
   },
   "labels": {
     "flight": {
@@ -113,7 +118,10 @@
       "deck": "Deck",
       "price": "Price",
       "currency": "Currency",
-      "bookingReference": "Booking reference"
+      "bookingReference": "Booking reference",
+      "stopDate": "Date (itinerary)",
+      "stopPort": "Port (itinerary)",
+      "seaDay": "Sea-day word"
     },
     "place": {
       "name": "Name",
@@ -123,6 +131,28 @@
       "country": "Country",
       "visitedAt": "Visit date",
       "notes": "Note"
+    },
+    "package": {
+      "bookingReference": "Booking reference",
+      "issuedOn": "Issue date",
+      "tripName": "Trip name",
+      "startDate": "Trip start",
+      "endDate": "Trip end",
+      "travellers": "Number of travellers",
+      "totalPrice": "Total price",
+      "currency": "Currency",
+      "flightNumber": "Flight number",
+      "flightDate": "Flight date",
+      "flightDepIata": "Departure airport (code)",
+      "flightDepCity": "Departure city",
+      "flightDepTime": "Departure time",
+      "flightArrIata": "Arrival airport (code)",
+      "flightArrCity": "Arrival city",
+      "flightArrTime": "Arrival time",
+      "stayName": "Hotel",
+      "stayCity": "Hotel city",
+      "stayCheckIn": "Check-in",
+      "stayCheckOut": "Check-out"
     }
   },
   "workshop": {
@@ -133,16 +163,31 @@
     "markedFields": "Marked fields",
     "markedNothing": "Nothing marked yet.",
     "derivedBanner": "Template derived. Check it under “My Templates” with the preview before activating it.",
-    "dismiss": "Dismiss"
+    "dismiss": "Dismiss",
+    "domainHints": {
+      "cruise": "Mark the header details (ship, booking reference, price …) and ONE row of the itinerary: its date and its port. The template reads the whole port list from that row.",
+      "place": "Mark at least the place’s name, and address, category and visit date if you like. Places read this way land in the import preview under Settings → Import.",
+      "package": "Mark the booking reference and issue date, optionally trip name, dates and price — plus ONE flight row (flight number, date, departure and arrival) and/or ONE hotel row (hotel, check-in and check-out). Each marked row becomes the rule for every row like it."
+    }
   },
   "derivation": {
     "cannot": {
-      "cruiseNeedsRepeatingBlocks": "No template can be derived for a cruise yet: a port list is a repeating block, and the reader for that does not exist. Your marks are saved all the same.",
-      "noPlaceDocumentReader": "There is no document reader for places yet, so no template comes out of this. Your marks are saved all the same.",
       "lodgingNeedsNameAndDates": "Too little marked: without a property name, a check-in and a check-out this is not a stay, and a template missing those three would propose things nobody can check.",
       "lodgingDateNotUnderstood": "The date format in this mail is not read yet (month names are, purely numeric like 10.03.2026 is not). A template built on it would decline every mail this sender writes.",
       "noDistinguishingMarker": "Nothing in this mail names the sender — only this one booking. A template with no sender marker would match every stay confirmation you ever parse.",
-      "notDerivable": "The workshop derives no template for this kind of document."
+      "notDerivable": "The workshop derives no template for this kind of document.",
+      "cruiseNeedsStopRow": "A cruise needs one marked row of its itinerary: in ONE row, mark the date as “Date (itinerary)” and the port as “Port (itinerary)”. Without ports the template reads no voyage.",
+      "cruiseStopRowTooFarApart": "The date and port of an itinerary day must be on the same line or on two consecutive lines (blank lines between are fine). Mark both in one entry of the port list.",
+      "cruiseStopRowNotUnderstood": "No port list can be read from the marked itinerary row — there is no heading above the list, or the mark does not cover the whole port name.",
+      "dateNotUnderstood": "A marked date is not read. A date like 02.06.2027 or 2 June 2027 is expected — in the itinerary also without a year, e.g. 02.06.",
+      "placeNeedsName": "A place needs its name: mark what the place is called. A place without a name is not a row the import can offer.",
+      "templateReadsNothing": "The derived template reads nothing from this very document, so none was saved. Check the marks.",
+      "packageNeedsBookingFields": "Tour documents need a booking reference and an issue date: mark both — without them the document is no readable booking.",
+      "packageNeedsRow": "Mark at least one flight row or one hotel row — a trip without a flight and without a hotel yields no proposal.",
+      "packageFlightRowIncomplete": "The flight row is incomplete: mark flight number, flight date, departure (code or city) and arrival (code or city).",
+      "packageStayRowIncomplete": "The hotel row is incomplete: mark hotel, check-in and check-out.",
+      "packageRowTooFarApart": "The values of a row must be on the same line or on two consecutive lines (blank lines between are fine).",
+      "packageRowNotUnderstood": "No rule can be built from the marked row that reads its own values back. Mark the values precisely."
     }
   },
   "preview": {

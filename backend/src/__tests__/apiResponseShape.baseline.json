@@ -170,6 +170,7 @@
     "rail/entrySuggestions.ts",
     "rail/lookup.ts",
     "rail/roadtripConversion.ts",
+    "rail/shareLink.ts",
     "rail/stations.ts",
     "rail/stats.ts",
     "rental.ts",

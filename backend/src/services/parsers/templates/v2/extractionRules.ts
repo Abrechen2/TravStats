@@ -184,6 +184,31 @@ const matchAllRepeatSchema = z
   })
   .strict();
 
+/** A row of a `lines` repeat spans at most this many lines. */
+export const MAX_ROW_LINES = 4;
+/** A line longer than this is no row line and is not matched at all. */
+export const MAX_ROW_LINE_CHARS = 500;
+
+/**
+ * Lines: one item whose values are printed on consecutive LINES — an
+ * itinerary row with the date on one line and the port on the next. Each
+ * entry of `rowLines` is matched against exactly ONE line (never across
+ * lines, never on a line longer than {@link MAX_ROW_LINE_CHARS}); an item is
+ * a run of lines matching them in order. Fields name the lines' NAMED groups,
+ * which must be unique across the row. `skipBlankLines` steps over empty
+ * lines between a row's lines (a PDF's spacing). Bounded like every template
+ * regex: the whole extraction runs under the template's time limit.
+ */
+const linesRepeatSchema = z
+  .object({
+    ...repeatCommon,
+    mode: z.literal("lines"),
+    rowLines: z.array(z.string().min(1)).min(2).max(MAX_ROW_LINES),
+    skipBlankLines: z.boolean().optional(),
+    fields: z.record(z.string().min(1), itemFieldSchema),
+  })
+  .strict();
+
 /**
  * Columns: a table a PDF extracts column by column — every station, then
  * every date, then every time. Each column's pattern is matched throughout the
@@ -253,6 +278,7 @@ const innerSplitSchema = z.object(splitCommon).strict();
 export const innerRepeatSchema = z.discriminatedUnion("mode", [
   matchAllRepeatSchema,
   innerSplitSchema,
+  linesRepeatSchema,
   columnsRepeatSchema,
   pairsRepeatSchema,
 ]);
@@ -278,6 +304,7 @@ const splitRepeatSchema = z
 export const repeatRuleSchema = z.discriminatedUnion("mode", [
   matchAllRepeatSchema,
   splitRepeatSchema,
+  linesRepeatSchema,
   columnsRepeatSchema,
   pairsRepeatSchema,
 ]);
@@ -287,6 +314,7 @@ export type MatchAllRepeatRule = z.infer<typeof matchAllRepeatSchema>;
 export type SplitRepeatRule = z.infer<typeof splitRepeatSchema>;
 export type ColumnsRepeatRule = z.infer<typeof columnsRepeatSchema>;
 export type PairsRepeatRule = z.infer<typeof pairsRepeatSchema>;
+export type LinesRepeatRule = z.infer<typeof linesRepeatSchema>;
 
 /**
  * Text clean-ups applied to the document before extraction (never before

@@ -12,6 +12,9 @@
  * What a voyage MEANS is decided here, the same for every cruise line:
  * - stops are numbered from one in the order printed; a sea day carries no
  *   port name at all (the three-state invariant, CLAUDE.md);
+ * - a stop day printed without a year (`--MM-DD`) is dated from the voyage's
+ *   start date, rolling over New Year; without one it stays undated
+ *   (`resolveStopYears`);
  * - a voyage without a single stop is no voyage and is dropped;
  * - start and end date, departure and arrival port come from the first and
  *   last stop unless the template reads them;
@@ -28,6 +31,7 @@ import type { CruiseCurrency, ParsedCruise, ParsedCruiseStop } from "../cruiseBo
 import type { TemplateEnvelope } from "../parsers/templates/v2/envelope";
 import { applyTemplate } from "../parsers/templates/v2/runners";
 import { toCabinType } from "./cabinType";
+import { isoDate } from "../parsers/templates/v2/calendar";
 
 /** Every field here was read from a fixed position, not inferred — above the model's 80. */
 export const CRUISE_TEMPLATE_CONFIDENCE = 95;
@@ -38,8 +42,14 @@ const isoDay = z
   .regex(/^\d{4}-\d{2}-\d{2}$/)
   .nullish();
 
+/** A stop's day: a full date, or `--MM-DD` when the document printed no year. */
+const stopDay = z
+  .string()
+  .regex(/^(?:\d{4}|-)-\d{2}-\d{2}$/)
+  .nullish();
+
 const stopSchema = z.object({
-  date: isoDay,
+  date: stopDay,
   portName: text,
   isAtSea: z.boolean().nullish(),
 });
@@ -77,12 +87,52 @@ export function cruiseTemplateName(template: TemplateEnvelope): string {
   return template.id.slice(template.id.indexOf(":") + 1);
 }
 
-function toStops(items: Voyage["stops"]): ParsedCruiseStop[] {
+/**
+ * The year of every stop printed without one (`--MM-DD`), from the voyage's
+ * start date: stops run forward in time, so a day earlier in the calendar
+ * than the stop before it is in the next year (a voyage over New Year). A
+ * day that year does not have (29 February) is no date. Without a start date
+ * nothing is inferred — the stop keeps no date rather than a guessed year.
+ */
+export function resolveStopYears(
+  dates: ReadonlyArray<string | null | undefined>,
+  startDate: string | null | undefined
+): Array<string | null> {
+  const start = startDate && /^\d{4}-\d{2}-\d{2}$/.test(startDate) ? startDate : null;
+  let year = start ? Number(start.slice(0, 4)) : null;
+  let previous = start;
+  return dates.map((d) => {
+    if (!d) return null;
+    if (/^\d{4}-/.test(d)) {
+      previous = d;
+      year = Number(d.slice(0, 4));
+      return d;
+    }
+    if (year === null || previous === null) return null;
+    const monthDay = d.slice(1); // "-MM-DD"
+    let candidate = `${year}${monthDay}`;
+    if (candidate < previous) {
+      year += 1;
+      candidate = `${year}${monthDay}`;
+    }
+    const [y, m, day] = candidate.split("-").map(Number);
+    if (isoDate(y, m, day) === null) return null;
+    previous = candidate;
+    return candidate;
+  });
+}
+
+function toStops(items: Voyage["stops"], startDate: string | null | undefined): ParsedCruiseStop[] {
+  const dates = resolveStopYears(
+    (items ?? []).map((item) => item.date),
+    startDate
+  );
   return (items ?? []).map((item, i) => {
     const atSea = item.isAtSea === true;
+    const date = dates[i];
     return {
       dayNumber: i + 1,
-      ...(item.date ? { date: item.date } : {}),
+      ...(date ? { date } : {}),
       isAtSea: atSea,
       ...(atSea || !item.portName ? {} : { portName: item.portName }),
     };
@@ -100,7 +150,7 @@ const EXPECTED = [
 ] as const;
 
 function toCruise(voyage: Voyage, doc: CruiseValues, name: string): ParsedCruise | null {
-  const stops = toStops(voyage.stops);
+  const stops = toStops(voyage.stops, voyage.startDate ?? doc.startDate);
   if (stops.length === 0) return null;
   const first = stops[0];
   const last = stops[stops.length - 1];

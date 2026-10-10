@@ -103,10 +103,12 @@
       "cruise": "Als Kreuzfahrt importieren",
       "lodging": "Als Unterkunft importieren",
       "rail": "Als Bahnfahrt importieren",
-      "package": "Als Reise importieren"
+      "package": "Als Reise importieren",
+      "place": "Als Ort importieren"
     },
     "dismiss": "Schließen",
-    "package": "Das sind Reiseunterlagen eines Veranstalters — importiere sie unter Reisen."
+    "package": "Das sind Reiseunterlagen eines Veranstalters — importiere sie unter Reisen.",
+    "place": "Das ist ein Dokument zu einem Ort — importiere es unter Orte."
   },
   "readBy": {
     "local": "Gelesen vom KI-Modell {{model}} in deinem Netzwerk.",

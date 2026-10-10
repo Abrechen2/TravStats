@@ -139,6 +139,8 @@ export function PlaceCsvImportTile({ onImported }: Props): JSX.Element {
         <PlaceImportPreviewModal
           rows={preview.rows}
           summary={preview.summary}
+          // Takeout names each list's file after the list (#358).
+          listName={fileName}
           onCancel={reset}
           onCommit={async (rows) => {
             const result = await commitPlaceImport("csv", fileName, rows);

@@ -5,6 +5,8 @@ import type { CreateRentalInput, UpdateRentalInput } from "../../schemas/rental"
 import type {
   RentalCancellationFee,
   RentalInvoiceInput,
+  RentalInvoiceAdopt,
+  RentalInvoiceFee,
   RentalInvoicePart,
 } from "../../schemas/rentalImport";
 import { toLocal } from "../../shared/time/instant";
@@ -258,6 +260,27 @@ export async function applyCancellation(
 }
 
 /**
+ * The invoice's fee lines the review took over (forgejo#237): by index, or all
+ * of them when the client did not say. An index the invoice has no line for
+ * is refused rather than skipped — the client and the server would otherwise
+ * disagree on what was taken over.
+ */
+function adoptedFees(invoice: RentalInvoiceInput, picked?: number[]): RentalInvoiceFee[] {
+  const lines = invoice.fees ?? [];
+  if (picked === undefined) return lines;
+  const unknown = picked.find((i) => i >= lines.length);
+  if (unknown !== undefined) {
+    throw new AppError(
+      `The invoice has no fee line ${unknown}`,
+      400,
+      "RENTAL_INVOICE_FEE_UNKNOWN",
+      "adopt.fees"
+    );
+  }
+  return [...new Set(picked)].sort((a, b) => a - b).map((i) => lines[i]);
+}
+
+/**
  * The invoice fills the booking it names (§4.5): driven km (source `invoice`),
  * the car actually driven, the actual times and the amount charged. A km
  * figure the user typed is replaced only when the review showed both and the
@@ -268,10 +291,11 @@ export async function applyInvoice(
   invoice: RentalInvoiceInput,
   replaceUserDistance = false,
   sentAt: Date | null = null,
-  adopt: Partial<Record<RentalInvoicePart, boolean>> = {}
+  adopt: RentalInvoiceAdopt = {}
 ): Promise<{ outcome: ImportOutcome; row: RentalRow }> {
   // A part the review did not untick is taken (absent = taken, as before).
   const takes = (part: RentalInvoicePart): boolean => adopt[part] !== false;
+  const fees = adoptedFees(invoice, adopt.fees);
   const existing = await findBooking(userId, invoice.provider, {
     confirmation: invoice.confirmationNumber,
     agreement: invoice.agreementNumber,
@@ -336,6 +360,9 @@ export async function applyInvoice(
         finalAmountSource: "invoice",
         ...finalFx,
       }),
+    // The fee lines the review took over replace the ones an earlier import
+    // of an invoice stored; none taken leaves the stored list as it is.
+    ...(fees.length > 0 && { invoiceFees: fees as unknown as Prisma.InputJsonValue }),
   };
   const row = await updateRentalRow(userId, existing, times, { manual: false, extra });
   return { outcome: "invoiced", row };

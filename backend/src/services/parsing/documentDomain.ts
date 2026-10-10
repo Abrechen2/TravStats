@@ -245,7 +245,18 @@ const SIGNALS: Record<ParserSupportedDomain, readonly Signal[]> = {
   // flights and hotels, which the other domains' signals already score. See
   // `packageTemplateSignals` below.
   package: [],
+  // The same for a place document (forgejo#124): a museum ticket or tour
+  // booking has no vocabulary of its own that a flight or hotel mail lacks,
+  // so only an active `place` template — the repository's or one the user
+  // derived in the workshop — recognises it.
+  place: [],
 };
+
+/** The parse targets recognised by their templates alone, and nothing else. */
+const TEMPLATE_ONLY_TARGETS = ["package", "place"] as const;
+type TemplateOnlyTarget = (typeof TEMPLATE_ONLY_TARGETS)[number];
+const isTemplateOnly = (d: ParserSupportedDomain): d is TemplateOnlyTarget =>
+  (TEMPLATE_ONLY_TARGETS as readonly string[]).includes(d);
 
 /**
  * What an active package template's matcher is worth. A matcher is every
@@ -256,14 +267,27 @@ const SIGNALS: Record<ParserSupportedDomain, readonly Signal[]> = {
  */
 export const PACKAGE_TEMPLATE_WEIGHT = 25;
 
-/** The active package templates whose matcher accepts the text, as signals. */
-function packageTemplateSignals(
+/**
+ * A place template's matcher is worth the same, for the same reason: a ticket
+ * that names its venue and a date also trips a flight or hotel signal or two,
+ * and a recognised place document must not be read as one of those.
+ */
+export const PLACE_TEMPLATE_WEIGHT = 25;
+
+const TEMPLATE_WEIGHT: Record<TemplateOnlyTarget, number> = {
+  package: PACKAGE_TEMPLATE_WEIGHT,
+  place: PLACE_TEMPLATE_WEIGHT,
+};
+
+/** The active templates of `domain` whose matcher accepts the text, as signals. */
+function templateSignals(
+  domain: TemplateOnlyTarget,
   haystack: string,
   templates: readonly TemplateEnvelope[]
 ): string[] {
   return templates
-    .filter((t) => t.domain === "package" && envelopeMatches(t, haystack))
-    .map((t) => `package-template:${t.id}`);
+    .filter((t) => t.domain === domain && envelopeMatches(t, haystack))
+    .map((t) => `${domain}-template:${t.id}`);
 }
 
 /**
@@ -318,12 +342,12 @@ export function scoreDocument(
         score += signal.weight;
       }
     }
-    if (domain === "package") {
-      // Rule 1 again: several templates of one operator are one piece of evidence.
-      const hits = packageTemplateSignals(haystack, templates);
+    if (isTemplateOnly(domain)) {
+      // Rule 1 again: several templates of one issuer are one piece of evidence.
+      const hits = templateSignals(domain, haystack, templates);
       if (hits.length > 0) {
         matched.push(...hits);
-        score += PACKAGE_TEMPLATE_WEIGHT;
+        score += TEMPLATE_WEIGHT[domain];
       }
     }
     return { domain, score, matched, confidence: 0 };

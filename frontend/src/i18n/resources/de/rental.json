@@ -249,7 +249,8 @@
       "booked": "Als Kosten zählt der gebuchte Preis, bis eine Rechnung vorliegt.",
       "cancellationFee": "Als Kosten zählt nur die Stornogebühr.",
       "none": "Noch kein Betrag bekannt – die Miete zählt in keiner Kostensumme."
-    }
+    },
+    "feesFromInvoice": "Einzelposten aus der Rechnung — im Endbetrag enthalten, nicht zusätzlich gezählt:"
   },
   "import": {
     "panelTitle": "Mietwagen hinzufügen",
@@ -406,7 +407,6 @@
   "invoiceReview": {
     "loadFailed": "Die Miete zu dieser Rechnung konnte nicht geladen werden – der Vergleich fehlt.",
     "noDifference": "nicht berechenbar",
-    "feesNote": "Einzelne Posten liest TravStats aus Rechnungen noch nicht aus; die Differenz kann Gebühren, Zusatztage oder Preisänderungen enthalten. Der gebuchte Preis bleibt in jedem Fall erhalten.",
     "part": {
       "finalAmount": "Endbetrag",
       "vehicleDriven": "Gefahrenes Fahrzeug",
@@ -418,7 +418,16 @@
     "invoice": "Rechnung: {{value}}",
     "nothingYet": "nichts",
     "same": "Stimmt mit der Miete überein.",
-    "adopt": "Übernehmen"
+    "adopt": "Übernehmen",
+    "fees": {
+      "title": "Einzelposten der Rechnung",
+      "none": "Die Rechnung nennt keine Einzelposten, die TravStats lesen kann; die Differenz kann Gebühren, Zusatztage oder Preisänderungen enthalten. Der gebuchte Preis bleibt in jedem Fall erhalten.",
+      "total": "Gelesene Posten zusammen: {{total}}. Die Posten sind im Endbetrag enthalten und werden nicht noch einmal gezählt.",
+      "totalBesideDifference": "Gelesene Posten zusammen: {{total}}, bei einer Differenz zur Buchung von {{difference}}. Die Posten sind im Endbetrag enthalten und werden nicht noch einmal gezählt.",
+      "mixedCurrencies": "Die Posten stehen in mehreren Währungen; eine Summe wird nicht gebildet und nichts umgerechnet.",
+      "recorded": "Schon bei der Miete vermerkt.",
+      "adoptLine": "Posten „{{label}}“ übernehmen"
+    }
   },
   "deposit": {
     "title": "Kaution",

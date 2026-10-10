@@ -151,6 +151,15 @@ export const AVAILABLE_DOMAINS: DomainKey[] = DOMAIN_KEYS.filter((k) => DOMAINS[
 export const PACKAGE_PARSE_TARGET = "package";
 
 /**
+ * A place document — a museum ticket, a tour booking (forgejo#124). The
+ * domain is `poi`; the parse target carries the template domain's name,
+ * `place`. It is read only by `place` templates (repository first, then the
+ * user's own workshop templates), and its answer is place import candidates
+ * the user confirms in the place import preview.
+ */
+export const PLACE_PARSE_TARGET = "place";
+
+/**
  * Subset of domains that have a working parser (email + PDF + boarding
  * pass extraction). Strictly narrower than `AVAILABLE_DOMAINS` because
  * a domain can be live in the UI before a parser exists for it. Used
@@ -164,7 +173,10 @@ export const PARSER_SUPPORTED_DOMAINS = [
   "rail",
   "rental",
   "package",
-] as const satisfies readonly (DomainKey | typeof PACKAGE_PARSE_TARGET)[];
+  "place",
+] as const satisfies readonly (
+  DomainKey | typeof PACKAGE_PARSE_TARGET | typeof PLACE_PARSE_TARGET
+)[];
 export type ParserSupportedDomain = (typeof PARSER_SUPPORTED_DOMAINS)[number];
 
 export function isValidDomain(value: string): value is DomainKey {

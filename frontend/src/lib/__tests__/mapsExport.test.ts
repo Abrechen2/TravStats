@@ -73,6 +73,6 @@ describe("readMapsExport", () => {
   });
 
   it("builds the provenance key the app stores", () => {
-    expect(mapsExternalRef("1376265659751346014")).toBe("gmaps:1376265659751346014");
+    expect(mapsExternalRef("1376265659751346014")).toBe("gmaps-cid:1376265659751346014");
   });
 });

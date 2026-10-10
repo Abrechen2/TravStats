@@ -36,6 +36,48 @@ describe("POI import: preview decides, commit writes", () => {
     await prisma.user.deleteMany({ where: { id: userId } });
   });
 
+  // #358: production holds Takeout places as `gmaps-cid:<decimal>`, and the
+  // older CSV path stored the raw Maps link. A re-import of the same list must
+  // find both, whatever spelling the new row arrives in, and store new rows in
+  // the production format. Invented CIDs.
+  describe("Google CID in any spelling", () => {
+    const HEX = "0x7b1aca1c753ae2e9";
+    const DEC = BigInt(HEX).toString();
+    const RAW = `https://www.google.com/maps/place/X/data=!4m2!3m1!1s0x47e66e1f06e2b70f:${HEX}`;
+    const OTHER_HEX = "0x1a2b3c4d5e6f7081";
+    const OTHER_RAW = `https://www.google.com/maps/place/Y/data=!4m2!3m1!1s0x47e66e1f06e2b70f:${OTHER_HEX}`;
+
+    it("finds a place stored as gmaps-cid:<decimal> and one stored as the raw link", async () => {
+      await prisma.place.createMany({
+        data: [
+          { userId, name: "A", lat: 1, lon: 1, externalRef: `gmaps-cid:${DEC}` },
+          { userId, name: "B", lat: 2, lon: 2, externalRef: OTHER_RAW },
+        ],
+      });
+      const { rows } = await previewPlaceImport(userId, [
+        row(0, { name: "A", externalRef: RAW }),
+        row(1, { name: "B", externalRef: `gmaps-cid:${BigInt(OTHER_HEX).toString()}` }),
+        row(2, { name: "A again", externalRef: `gmaps:${DEC}` }),
+      ]);
+      expect(rows.map((r) => r.action)).toEqual(["skip", "skip", "skip"]);
+
+      const result = await commitPlaceImport(userId, "csv", null, [
+        row(0, { name: "A", externalRef: RAW }),
+        row(1, { name: "B", externalRef: `gmaps-cid:${BigInt(OTHER_HEX).toString()}` }),
+      ]);
+      expect(result).toMatchObject({ created: 0, skipped: 2 });
+    });
+
+    it("stores a new Google place as gmaps-cid:<decimal>, whatever spelling it came in", async () => {
+      const result = await commitPlaceImport(userId, "csv", null, [
+        row(0, { name: "New", externalRef: RAW }),
+      ]);
+      expect(result.created).toBe(1);
+      const stored = await prisma.place.findFirstOrThrow({ where: { userId } });
+      expect(stored.externalRef).toBe(`gmaps-cid:${DEC}`);
+    });
+  });
+
   describe("preview", () => {
     it("offers a row with no coordinates instead of discarding it", async () => {
       const { rows, summary } = await previewPlaceImport(userId, [

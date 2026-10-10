@@ -17,6 +17,8 @@ export type RailParseSource =
   | "db-postal-order"
   | "db-connection-info"
   | "db-reservation"
+  /** A bahn.de share link (forgejo#204) — a timetable connection, not a purchase. */
+  | "db-share-link"
   | "ics"
   | "ollama";
 

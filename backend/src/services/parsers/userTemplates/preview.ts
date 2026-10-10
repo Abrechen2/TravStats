@@ -3,6 +3,12 @@ import { applyUserTemplate } from "./engine";
 import { matchesFingerprint } from "./matcher";
 import { parseLodgingSpec } from "./lodgingTemplates";
 import type { TemplateDomain, UserTemplate } from "./types";
+import { applyV2CruiseTemplate } from "../../cruise/v2Cruise";
+import type { ParsedCruiseStop } from "../../cruiseBookingParser";
+import { applyV2PlaceTemplate } from "../../places/v2Place";
+import { parsePackageText } from "../../trip/package/parsePackage";
+import type { PackageFlight, PackageStay } from "../../trip/package/contract";
+import { parseWorkshopEnvelope } from "./v2UserTemplates";
 
 /**
  * Run a derived template against one document and say what it would read.
@@ -94,8 +100,72 @@ export function previewTemplate(
     };
   }
 
-  // cruise and place never reach here: nothing derives a template for them,
-  // so there is none to preview. Returning the empty result rather than
-  // throwing keeps the route's error vocabulary about the REQUEST.
-  return EMPTY;
+  // Cruise and place templates are v2 envelopes, run by the same consumer the
+  // parse uses, on the text the parse builds (subject line first).
+  const documentText = subject ? `${subject}\n${body}` : body;
+  if (domain === "cruise") {
+    const envelope = parseWorkshopEnvelope(template.patterns, "cruise");
+    const cruise = envelope ? applyV2CruiseTemplate(envelope, documentText)[0] : undefined;
+    if (!cruise) return EMPTY;
+    return {
+      matched: true,
+      fields: [
+        ...fieldsOf(cruise as unknown as Record<string, unknown>, CRUISE_SKIP),
+        { name: "stops", value: describeStops(cruise.stops) },
+      ],
+      confidence: cruise.parserConfidence,
+    };
+  }
+
+  if (domain === "package") {
+    // The package reader and its contract, exactly as a parse runs them.
+    const envelope = parseWorkshopEnvelope(template.patterns, "package");
+    const reading = envelope ? parsePackageText(documentText, [envelope]).reading : null;
+    if (!reading) return EMPTY;
+    return {
+      matched: true,
+      fields: [
+        ...fieldsOf(reading as unknown as Record<string, unknown>, ["flights", "stays"]),
+        { name: "flights", value: describeFlights(reading.flights) },
+        { name: "stays", value: describeStays(reading.stays) },
+      ],
+      confidence: null,
+    };
+  }
+
+  const envelope = parseWorkshopEnvelope(template.patterns, "place");
+  const candidate = envelope ? applyV2PlaceTemplate(envelope, documentText) : null;
+  if (!candidate) return EMPTY;
+  return {
+    matched: true,
+    fields: fieldsOf(candidate as unknown as Record<string, unknown>, ["sourceRowIndex"]),
+    confidence: null,
+  };
+}
+
+const CRUISE_SKIP = [...FLIGHT_SKIP, "flights", "stops"];
+
+/** A package's flights as one line: date, number, route. Values only. */
+function describeFlights(flights: readonly PackageFlight[]): string {
+  return flights
+    .map(
+      (f) =>
+        `${f.date} ${f.flightNumber} ${f.depIata ?? f.depCity ?? "?"}→${f.arrIata ?? f.arrCity ?? "?"}`
+    )
+    .join(" · ");
+}
+
+/** A package's stays as one line: name and nights' span. */
+function describeStays(stays: readonly PackageStay[]): string {
+  return stays.map((s) => `${s.name} ${s.checkIn}–${s.checkOut}`).join(" · ");
+}
+
+/**
+ * The stop list as one line: each day's date and port, a dash for a day at
+ * sea. Values only — the preview shows what the template read, not copy.
+ */
+function describeStops(stops: readonly ParsedCruiseStop[]): string {
+  return stops
+    .map((stop) => [stop.date, stop.isAtSea ? "—" : (stop.portName ?? "?")].join(" "))
+    .join(" · ");
 }

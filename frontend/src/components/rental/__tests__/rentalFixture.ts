@@ -63,6 +63,7 @@ export function makeRental(over: Partial<RentalBooking> = {}): RentalBooking {
     rentalDays: 4,
     cost: null,
     priceSource: null,
+    invoiceFees: [],
     depositAmount: null,
     depositCurrency: null,
     depositPaidOn: null,

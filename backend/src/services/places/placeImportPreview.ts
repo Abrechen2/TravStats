@@ -1,5 +1,5 @@
 import { prisma } from "../../db";
-import { placeRefIndex } from "./placeRefs";
+import { canonicalPlaceRef, placeRefIndex } from "./placeRefs";
 import type {
   PlaceDedupeHint,
   PlaceImportAction,
@@ -87,9 +87,14 @@ export async function previewPlaceImport(
     // user somewhere they were not.
     if (!visited.ok) flags.push("malformed_date");
 
-    if (c.externalRef && byRef.has(c.externalRef)) {
+    // A Google CID matches in any spelling (`canonicalPlaceRef`): production
+    // holds `gmaps-cid:<decimal>`, older imports `gmaps:` or the raw link.
+    const refHit = c.externalRef
+      ? (byRef.get(c.externalRef) ?? byRef.get(canonicalPlaceRef(c.externalRef)))
+      : undefined;
+    if (refHit) {
       dedupeHint = "place_exact_ref";
-      matchedPlaceId = byRef.get(c.externalRef) ?? null;
+      matchedPlaceId = refHit;
       action = "skip";
     } else if (hasPosition) {
       // Same name, same spot, no shared identity — the likeliest cause is the

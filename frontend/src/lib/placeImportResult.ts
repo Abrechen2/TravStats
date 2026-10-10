@@ -28,13 +28,27 @@ export function describePlaceCommitResult(
   result: PlaceImportCommitResult,
   t: Translate
 ): PlaceCommitToast {
+  // Rows written as trip stops or recognised as the user's stays (#358) are
+  // not places, so "0 places created" alone would read as nothing happened.
+  const stops = result.stops ?? 0;
+  const stays = result.matchedStays ?? 0;
+  const extra =
+    (stops + stays > 0
+      ? ` · ${t("places:import.commitResult.takeoutExtra", { stops, stays })}`
+      : "") +
+    // A re-imported list: its stops are already on the trip, so none was added twice.
+    ((result.stopsSkipped ?? 0) > 0
+      ? ` · ${t("places:import.commitResult.stopsSkipped", { count: result.stopsSkipped })}`
+      : "");
+
   if (result.failed.length === 0) {
     return {
       type: "success",
-      message: t("places:import.commitResult.success", {
-        created: result.created,
-        skipped: result.skipped,
-      }),
+      message:
+        t("places:import.commitResult.success", {
+          created: result.created,
+          skipped: result.skipped,
+        }) + extra,
     };
   }
 
@@ -48,12 +62,13 @@ export function describePlaceCommitResult(
 
   return {
     type: "warning",
-    message: t("places:import.commitResult.partial", {
-      created: result.created,
-      skipped: result.skipped,
-      failed: result.failed.length,
-      reasons,
-    }),
+    message:
+      t("places:import.commitResult.partial", {
+        created: result.created,
+        skipped: result.skipped,
+        failed: result.failed.length,
+        reasons,
+      }) + extra,
   };
 }
 

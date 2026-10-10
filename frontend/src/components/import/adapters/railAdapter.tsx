@@ -8,6 +8,8 @@ import { RailFormModal } from "../../rail/RailFormModal";
 import { RailImportPreviewModal } from "../../rail/RailImportPreviewModal";
 import { RailReservationReviewModal } from "../../rail/RailReservationReviewModal";
 import { emptyParseMessageKey } from "../../rail/railImportModel";
+import { RailShareLinkRoute } from "../../rail/RailShareLinkRoute";
+import { isRailShareLinkPrefill } from "../../rail/railShareLinkModel";
 import type { DomainImportAdapter, ReviewModalProps } from "../types";
 
 type RailParse = ParseEmailRailResult | ParsePdfRailResult;
@@ -41,9 +43,20 @@ export function useRailImportAdapter(): DomainImportAdapter {
     panelTitle: t("rail:import.panelTitle"),
     panelHint: t("rail:import.panelHint"),
     acceptedEmailExtensions: [...RAIL_ACCEPTED_EMAIL_EXTENSIONS],
-    renderManual: ({ onClose, onSaved, onProgress }) => (
+    routes: [
+      {
+        id: "railShareLink",
+        icon: "🔗",
+        title: t("rail:shareLink.title"),
+        description: t("rail:shareLink.description"),
+        render: (context) => <RailShareLinkRoute context={context} />,
+      },
+    ],
+    renderManual: ({ onClose, onSaved, onProgress, prefill }) => (
       <RailFormModal
         journey={null}
+        // A share link that could not be read still hands on what it said.
+        initialDraft={isRailShareLinkPrefill(prefill) ? prefill.draft : undefined}
         onClose={onClose}
         onSaved={async () => {
           await onSaved();

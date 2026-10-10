@@ -1,4 +1,6 @@
+import { z } from "zod";
 import { acrissTraits } from "../../schemas/rental";
+import { rentalInvoiceFeeSchema, type RentalInvoiceFee } from "../../schemas/rentalImport";
 import { rentalCost, rentalDays, rentalDrivenKm } from "../../shared/rentalCounting";
 import { isOneWay } from "./rentalWrite";
 import { rentalTimes, type RentalTimeColumns } from "./timesDto";
@@ -49,6 +51,18 @@ export function rentalPriceSource(row: {
   return row.externalRef ? "booking" : "user";
 }
 
+const storedFeesSchema = z.array(rentalInvoiceFeeSchema);
+
+/**
+ * The fee lines taken over from an invoice (forgejo#237), as a list. The
+ * column is JSON and outlives any release: a value of another shape is read
+ * as no lines rather than handed on as if it were some.
+ */
+export function rentalInvoiceFees(value: unknown): RentalInvoiceFee[] {
+  const parsed = storedFeesSchema.safeParse(value);
+  return parsed.success ? parsed.data : [];
+}
+
 /** A `@db.Date` column as the day it holds, `YYYY-MM-DD`. */
 const dayOf = (value: Date | null | undefined): string | null => (value ? fromDbDate(value) : null);
 
@@ -66,6 +80,7 @@ export function withRentalReadFields<T extends RentalReadColumns>(row: T) {
     vehicleTraits: acrissTraits(row.acrissCode),
     cost: rentalCost(row),
     priceSource: rentalPriceSource(row),
+    invoiceFees: rentalInvoiceFees((row as { invoiceFees?: unknown }).invoiceFees),
     // Returned, and no driven km yet — not from an invoice, a correction or
     // both odometer readings (`rentalDrivenKm`, forgejo#206). The reminder the
     // Companion shows after a return (D11 b).

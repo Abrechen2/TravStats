@@ -414,7 +414,8 @@
       "source": {
         "csv": "CSV",
         "email": "E-Mail",
-        "pdf": "PDF"
+        "pdf": "PDF",
+        "document": "Dokument"
       },
       "created": "{{hotels}} und {{stays}} angelegt",
       "revert": "Import rückgängig machen",

@@ -6,7 +6,7 @@
  * Mirrors `ParserTemplate.domain` (default `"flight"`), and the parsers that
  * ask for one must name it — see `findMatchingTemplate`.
  */
-export type TemplateDomain = "flight" | "lodging" | "cruise" | "place";
+export type TemplateDomain = "flight" | "lodging" | "cruise" | "place" | "package";
 
 export interface TemplateFingerprint {
   senderDomains: string[]; // e.g. ["noti.swiss.com", "lufthansa.com"]

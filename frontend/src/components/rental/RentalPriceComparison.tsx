@@ -3,6 +3,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { formatAmount } from "../../lib/units";
 import { rentalPriceComparison } from "../../lib/rental/rentalPriceComparison";
 import type { RentalBooking } from "../../types/rental";
+import { RentalInvoiceFeeList } from "./RentalInvoiceFeeLines";
 
 /**
  * Gebucht · Endbetrag · Differenz in one row (forgejo#237), each naming where
@@ -62,6 +63,8 @@ export function RentalPriceComparison({ rental }: { rental: RentalBooking }): JS
               : null
         )}
       </div>
+      {/* The invoice's single lines the user took over — inside the final amount. */}
+      <RentalInvoiceFeeList fees={rental.invoiceFees ?? []} />
       <p className="t-caption" data-testid="rental-price-counts">
         {c.counts ? t(`rental:detail.costCounts.${c.counts}`) : t("rental:detail.costCounts.none")}
       </p>

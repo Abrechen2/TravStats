@@ -112,7 +112,10 @@ export const rentalApi = {
           replaceUserDistance?: boolean;
           mailSentAt?: string | null;
           /** The invoice's parts the review took over; `false` leaves one as it is (forgejo#237). */
-          adopt?: Partial<Record<RentalInvoicePart, boolean>>;
+          adopt?: Partial<Record<RentalInvoicePart, boolean>> & {
+            /** Indexes of `invoice.fees` taken over; absent = all, `[]` = none. */
+            fees?: number[];
+          };
         }
   ): Promise<{ rental: RentalBooking; outcome: string }> {
     const res = await api.post<Envelope<RentalBooking> & { meta: { outcome: string } }>(

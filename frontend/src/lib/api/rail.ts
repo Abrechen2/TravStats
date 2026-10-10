@@ -14,6 +14,7 @@ import type {
   RailStationHit,
   RailStats,
 } from "../../types/rail";
+import type { RailShareLinkOutcome } from "../../types/railShareLink";
 
 /**
  * `/api/v1/rail` — the rail logbook (spec 2026-09-25-rail-domain). Enveloped,
@@ -160,6 +161,20 @@ export const railApi = {
   /** Which lookup providers the admin allows on this instance. */
   async lookupProviders(): Promise<RailLookupProviders> {
     const res = await api.get<Envelope<RailLookupProviders>>("/rail/lookup/providers");
+    return res.data.data;
+  },
+
+  /**
+   * A journey from a pasted bahn.de link (forgejo#204). A failure is an
+   * outcome with its reason, not a thrown error; one request to bahn.de, so it
+   * waits as long as a lookup.
+   */
+  async readShareLink(url: string): Promise<RailShareLinkOutcome> {
+    const res = await api.post<Envelope<RailShareLinkOutcome>>(
+      "/rail/share-link",
+      { url },
+      { timeout: API_TIMEOUTS.RAIL_LOOKUP }
+    );
     return res.data.data;
   },
 
