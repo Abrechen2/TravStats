@@ -1,6 +1,7 @@
 import type { UniqueStats } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import StatCard from "./StatCard";
+import CountingHelp from "./counting/CountingHelp";
 import DualFigureCard from "./DualFigureCard";
 import { formatDate } from "../../lib/displayFormat";
 import { formatLatitude } from "../../lib/hemisphere";
@@ -16,15 +17,46 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
    * built from the full countable set and carries no year filter of its own.
    *
    * The east/west balance and the international/domestic split each render
-   * TWO served numbers in one card ("12E / 8W"), and a `StatCard` opens ONE
-   * panel — so both stayed unwired until the owner ruled on 2026-09-19 that
-   * the cards should be split. They are `DualFigureCard`s now: one card, two
-   * triggers, the slash between them plain text. The RATIO beside each pair
-   * stays untouched — it is in the description, and `ratio` is not a kind
-   * release 1 serves. Every other unwired tile here is an `extremum`,
-   * `ratio`, `boolean` or `sequence` measure for the same reason.
+   * TWO served numbers in one card ("12E / 8W") — `DualFigureCard`s, one
+   * trigger per number (owner, 2026-09-19); the ratio beside each pair stays
+   * plain text. The record-like tiles (highest airport, chain, layovers, …)
+   * open the FLIGHTS they were taken from (`evidenceMeasuresFlightWitnesses`,
+   * forgejo#256) with no rendered value to compare — the panel counts
+   * flights, the tile shows a height, a date or a speed — except the chain,
+   * whose length IS its number of flights.
    */
   const allTime = { period: "allTime" as const };
+  /** "So wird gezählt" for every tile of the section (forgejo#256). */
+  const help = [
+    { term: t("stats:unique.timeTravelIndex"), helpKey: "flightStatsHelp:unique.timeTravel" },
+    { term: t("stats:unique.equatorCrossings"), helpKey: "flightStatsHelp:unique.equator" },
+    { term: t("stats:unique.arcticFlights"), helpKey: "flightStatsHelp:unique.arctic" },
+    { term: t("stats:unique.oceanCrossings"), helpKey: "flightStatsHelp:unique.ocean" },
+    { term: t("stats:unique.hemisphereHops"), helpKey: "flightStatsHelp:unique.hemisphere" },
+    { term: t("stats:unique.dateLineCrossings"), helpKey: "flightStatsHelp:unique.dateLine" },
+    { term: t("stats:unique.continentalExplorer"), helpKey: "flightStatsHelp:unique.continents" },
+    { term: t("stats:unique.tropicsTraveler"), helpKey: "flightStatsHelp:unique.tropics" },
+    { term: t("stats:unique.eastWestBalance"), helpKey: "flightStatsHelp:unique.eastWest" },
+    { term: t("stats:unique.sameDayFlights"), helpKey: "flightStatsHelp:unique.sameDay" },
+    { term: t("stats:unique.midnightFlights"), helpKey: "flightStatsHelp:unique.midnight" },
+    { term: t("stats:unique.seasonalExplorer"), helpKey: "flightStatsHelp:unique.seasons" },
+    {
+      term: t("stats:unique.internationalVsDomestic"),
+      helpKey: "flightStatsHelp:unique.internationalDomestic",
+    },
+    { term: t("stats:unique.roundTripMaster"), helpKey: "flightStatsHelp:unique.roundTrips" },
+    { term: t("stats:unique.highestAirport"), helpKey: "flightStatsHelp:unique.highestAirport" },
+    { term: t("stats:unique.northernmost"), helpKey: "flightStatsHelp:unique.northernmost" },
+    { term: t("stats:unique.southernmost"), helpKey: "flightStatsHelp:unique.southernmost" },
+    { term: t("stats:unique.longestTravelChain"), helpKey: "flightStatsHelp:unique.travelChain" },
+    { term: t("stats:unique.fastestRoute"), helpKey: "flightStatsHelp:unique.fastestRoute" },
+    {
+      term: t("stats:unique.mostCountriesInDay"),
+      helpKey: "flightStatsHelp:unique.mostCountriesInDay",
+    },
+    { term: t("stats:unique.longestLayover"), helpKey: "flightStatsHelp:unique.longestLayover" },
+    { term: t("stats:unique.shortestLayover"), helpKey: "flightStatsHelp:unique.shortestLayover" },
+  ];
 
   return (
     <div className="mt-8">
@@ -207,6 +239,12 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
           )}
           {uniqueStats.seasonalExplorer !== undefined && (
             <StatCard
+              evidence={{
+                kind: "metric",
+                key: "seasonFlights",
+                scope: allTime,
+                renderedValue: null,
+              }}
               title={t("stats:unique.seasonalExplorer")}
               value={uniqueStats.seasonalExplorer ? "✓" : "✗"}
               description={t("stats:unique.seasonalExplorerDesc", {
@@ -257,6 +295,12 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
           )}
           {uniqueStats.highestAirport && (
             <StatCard
+              evidence={{
+                kind: "metric",
+                key: "highestAirportFlights",
+                scope: allTime,
+                renderedValue: null,
+              }}
               title={t("stats:unique.highestAirport")}
               valueSize="sm"
               value={uniqueStats.highestAirport.name}
@@ -269,6 +313,12 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
           )}
           {uniqueStats.northernmost && (
             <StatCard
+              evidence={{
+                kind: "metric",
+                key: "northernmostFlights",
+                scope: allTime,
+                renderedValue: null,
+              }}
               title={t("stats:unique.northernmost")}
               valueSize="sm"
               value={uniqueStats.northernmost.code}
@@ -284,6 +334,12 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
           )}
           {uniqueStats.southernmost && (
             <StatCard
+              evidence={{
+                kind: "metric",
+                key: "southernmostFlights",
+                scope: allTime,
+                renderedValue: null,
+              }}
               title={t("stats:unique.southernmost")}
               valueSize="sm"
               value={uniqueStats.southernmost.code}
@@ -295,6 +351,12 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
           )}
           {uniqueStats.longestTravelChain > 1 && (
             <StatCard
+              evidence={{
+                kind: "metric",
+                key: "travelChainFlights",
+                scope: allTime,
+                renderedValue: uniqueStats.longestTravelChain,
+              }}
               title={t("stats:unique.longestTravelChain")}
               value={uniqueStats.longestTravelChain}
               description={t("stats:unique.longestTravelChainDesc", {
@@ -304,6 +366,12 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
           )}
           {uniqueStats.fastestRoute && (
             <StatCard
+              evidence={{
+                kind: "metric",
+                key: "fastestRouteFlights",
+                scope: allTime,
+                renderedValue: null,
+              }}
               title={t("stats:unique.fastestRoute")}
               valueSize="sm"
               value={uniqueStats.fastestRoute.route}
@@ -315,6 +383,12 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
           )}
           {uniqueStats.mostCountriesInDay > 0 && uniqueStats.mostCountriesDate && (
             <StatCard
+              evidence={{
+                kind: "metric",
+                key: "mostCountriesDayFlights",
+                scope: allTime,
+                renderedValue: null,
+              }}
               title={t("stats:unique.mostCountriesInDay")}
               value={uniqueStats.mostCountriesInDay}
               description={t("stats:unique.mostCountriesInDayDesc", {
@@ -325,6 +399,12 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
           )}
           {uniqueStats.longestLayover && (
             <StatCard
+              evidence={{
+                kind: "metric",
+                key: "longestLayoverFlights",
+                scope: allTime,
+                renderedValue: null,
+              }}
               title={t("stats:unique.longestLayover")}
               valueSize="md"
               value={`${uniqueStats.longestLayover.hours}h`}
@@ -336,6 +416,12 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
           )}
           {uniqueStats.shortestLayover && (
             <StatCard
+              evidence={{
+                kind: "metric",
+                key: "shortestLayoverFlights",
+                scope: allTime,
+                renderedValue: null,
+              }}
               title={t("stats:unique.shortestLayover")}
               valueSize="md"
               value={`${uniqueStats.shortestLayover.hours}h`}
@@ -345,6 +431,9 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
               })}
             />
           )}
+          <div className="md:col-span-2 lg:col-span-3">
+            <CountingHelp entries={help} testId="unique-counting-help" />
+          </div>
         </div>
       ) : (
         <div

@@ -180,6 +180,7 @@ import {
   resolveLodgingRatedStaysCount,
   resolveLodgingLocatedStaysCount,
 } from "./metricEvidenceLodgingDetail";
+import { FLIGHT_WITNESS_RESOLVERS } from "./metricEvidenceFlightWitnesses";
 
 /**
  * `EvidenceResolver` for `kind: "metric"` (Task 7,
@@ -350,6 +351,8 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   // (forgejo#259, #260) — client folds whose rows the server reads the same way.
   ...PLACE_DETAIL_RESOLVERS,
   ...ROADTRIP_LIST_RESOLVERS,
+  // The flights behind the flight tab's "most" figures (forgejo#256).
+  ...FLIGHT_WITNESS_RESOLVERS,
 };
 
 /**

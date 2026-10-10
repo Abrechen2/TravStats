@@ -161,8 +161,12 @@ export const routeRankingResponseSchema = z.object({
 // ─── /stats/business ─────────────────────────────────────────────────────────
 
 export const businessStatsSchema = z.object({
-  costPerKm: z.number(),
-  costPerHour: z.number(),
+  costPerKm: z.number().nullable().openapi({
+    description: "Null when no counted kilometre carries a converted price — unknown, not 0.",
+  }),
+  costPerHour: z.number().nullable().openapi({
+    description: "Null when no flown, priced flight has a duration — unknown, not 0.",
+  }),
   totalCost: z.number().nullable().openapi({
     description: "Null when nothing carries a price — not 0, which would read as free.",
   }),
@@ -170,7 +174,9 @@ export const businessStatsSchema = z.object({
   seatClassDistribution: z.record(z.string(), z.number().int()),
   mostCommonCategory: z.string().nullable(),
   airportDiversity: z.number(),
-  avgFlightDuration: z.number(),
+  avgFlightDuration: z.number().nullable().openapi({
+    description: "Hours; null when no counted flight has a duration or coordinates.",
+  }),
   busiestMonth: z.string().nullable(),
   busiestMonthFlights: z.number().int(),
   categoryDistribution: z.record(z.string(), z.number().int()),
@@ -246,9 +252,22 @@ export const airportStatsSchema = z.object({
     }),
   topAirports: z.array(airportRefSchema.extend({ visits: z.number().int() })),
   rarestAirports: z.array(airportRefSchema).openapi({
-    description: "Airports visited exactly once. Capped, to keep the payload small.",
+    description:
+      "Airports visited exactly once, at most five: the most recently first visited " +
+      "first, then by code — a stated tie rule, since every one of them ties at one visit.",
+  }),
+  rarestAirportsTotal: z.number().int().openapi({
+    description: "How many airports were visited exactly once — the five above are a cut of these.",
   }),
   newThisYear: z.array(airportRefSchema.extend({ firstVisitDate: z.string() })),
+  newThisYearYear: z
+    .number()
+    .int()
+    .openapi({
+      description:
+        "The year `newThisYear` is about: the year of today in the user's profile zone " +
+        "(the time model's today). The client names THIS year in its heading.",
+    }),
   farthestFromHome: airportRefSchema
     .extend({ distanceKm: z.number(), homeCode: z.string() })
     .nullable()

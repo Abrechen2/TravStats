@@ -12,6 +12,7 @@
  */
 
 import { calculateDistance } from "../../utils/geo";
+import { normalizeRegistration } from "../../shared/aircraftRegistration";
 import type { AircraftRankingItem, AircraftRankingResponse } from "../../schemas/statsAircraft";
 
 /** Everything a hull figure is derived from. */
@@ -35,8 +36,9 @@ export function computeAircraftRanking(
   for (const f of flights) {
     // Only flights carrying a registration appear, so this reflects the
     // AeroDataBox-enriched rows rather than the whole logbook.
-    if (!f.aircraftRegistration) continue;
-    const reg = f.aircraftRegistration;
+    // One airframe, one key (`shared/aircraftRegistration`).
+    const reg = normalizeRegistration(f.aircraftRegistration);
+    if (!reg) continue;
     const dist = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
     const isoDate = f.departureTime ? f.departureTime.toISOString() : null;
     const existing = buckets.get(reg);

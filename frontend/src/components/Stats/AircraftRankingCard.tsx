@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
+import CountingHelp from "./counting/CountingHelp";
 import type { AircraftRankingResponse } from "../../types/aircraft";
 
 const MAX_ROWS = 10;
@@ -46,6 +47,8 @@ export default function AircraftRankingCard({
           <Link
             key={row.registration}
             to={`/aircraft/${encodeURIComponent(row.registration)}`}
+            // The hull's own page lists its flights — this row's evidence.
+            data-stat-figure
             className="flex items-center gap-3 group"
           >
             <div
@@ -67,6 +70,12 @@ export default function AircraftRankingCard({
           </Link>
         ))}
       </div>
+      <CountingHelp
+        testId="aircraft-counting-help"
+        entries={[
+          { term: t("stats:aircraftRanking.title"), helpKey: "flightStatsHelp:rankings.aircraft" },
+        ]}
+      />
     </div>
   );
 }

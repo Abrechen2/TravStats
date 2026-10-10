@@ -2,6 +2,7 @@ import type { Flight } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatHours, formatHoursValue } from "../../lib/units";
 import EvidenceTrigger from "./EvidenceTrigger";
+import CountingHelp from "./counting/CountingHelp";
 import { rankingKey } from "../../shared/evidence";
 import type { AirlineBreakdownRow } from "./airlineBreakdown";
 
@@ -44,7 +45,7 @@ export default function StatsFlightBreakdown({
   shortestFlight,
   totalFlights,
 }: StatsFlightBreakdownProps): JSX.Element {
-  const { t, i18n } = useTranslation(["stats"]);
+  const { t, i18n } = useTranslation(["stats", "flights"]);
 
   const seatClassLabel = (key: string): string => {
     const labels: Record<string, string> = {
@@ -56,6 +57,34 @@ export default function StatsFlightBreakdown({
     };
     return labels[key] || key;
   };
+
+  const seatClassRow = (seatClass: string, count: number): JSX.Element => (
+    <>
+      <div className="font-medium" style={{ color: "var(--text-primary)" }}>
+        {seatClassLabel(seatClass)}
+      </div>
+      <div className="flex items-center gap-4">
+        <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+          {((count / totalFlights) * 100).toFixed(1)}%
+        </div>
+        <div className="text-2xl font-bold" style={{ color: "var(--accent)" }}>
+          {count}
+        </div>
+      </div>
+    </>
+  );
+
+  /** "So wird gezählt" for every block of the breakdown (forgejo#256). */
+  const help = [
+    { term: t("stats:airlines.title"), helpKey: "flightStatsHelp:breakdown.airlines" },
+    { term: t("stats:airports.title"), helpKey: "flightStatsHelp:breakdown.airports" },
+    { term: t("stats:seatClasses.title"), helpKey: "flightStatsHelp:breakdown.seatClasses" },
+    { term: t("stats:aircraft.title"), helpKey: "flightStatsHelp:breakdown.aircraftTypes" },
+    { term: t("stats:flightStatus.title"), helpKey: "flightStatsHelp:breakdown.status" },
+    { term: t("stats:boardingGroups.title"), helpKey: "flightStatsHelp:breakdown.boardingGroups" },
+    { term: t("stats:flights.longest"), helpKey: "flightStatsHelp:breakdown.longestFlight" },
+    { term: t("stats:flights.shortest"), helpKey: "flightStatsHelp:breakdown.shortestFlight" },
+  ];
 
   return (
     <>
@@ -89,7 +118,17 @@ export default function StatsFlightBreakdown({
           )}
           <div className="space-y-3">
             {sortedAirlines.map(([groupKey, data]) => (
-              <div key={groupKey} className="flex items-center justify-between">
+              // The group key IS the airline ranking's row key (one fold,
+              // `shared/airlineNormalize`), so the row opens that row's flights.
+              <EvidenceTrigger
+                key={groupKey}
+                kind="ranking"
+                evidenceKey={rankingKey("airline", groupKey)}
+                scope={ALL_TIME}
+                renderedValue={data.count}
+                label={data.label}
+                className="flex items-center justify-between"
+              >
                 <div className="flex-1">
                   <div className="font-medium" style={{ color: "var(--text-primary)" }}>
                     {data.label}
@@ -104,7 +143,7 @@ export default function StatsFlightBreakdown({
                 <div className="text-2xl font-bold" style={{ color: "var(--accent)" }}>
                   {data.count}
                 </div>
-              </div>
+              </EvidenceTrigger>
             ))}
           </div>
         </div>
@@ -148,21 +187,25 @@ export default function StatsFlightBreakdown({
             {t("stats:seatClasses.title")}
           </h2>
           <div className="space-y-3">
-            {Object.entries(seatClassStats).map(([seatClass, count]) => (
-              <div key={seatClass} className="flex items-center justify-between">
-                <div className="font-medium" style={{ color: "var(--text-primary)" }}>
-                  {seatClassLabel(seatClass)}
+            {Object.entries(seatClassStats).map(([seatClass, count]) =>
+              seatClass === "unknown" ? (
+                <div key={seatClass} className="flex items-center justify-between">
+                  {seatClassRow(seatClass, count)}
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-                    {((count / totalFlights) * 100).toFixed(1)}%
-                  </div>
-                  <div className="text-2xl font-bold" style={{ color: "var(--accent)" }}>
-                    {count}
-                  </div>
-                </div>
-              </div>
-            ))}
+              ) : (
+                <EvidenceTrigger
+                  key={seatClass}
+                  kind="ranking"
+                  evidenceKey={rankingKey("seat", `class:${seatClass}`)}
+                  scope={ALL_TIME}
+                  renderedValue={count}
+                  label={seatClassLabel(seatClass)}
+                  className="flex items-center justify-between"
+                >
+                  {seatClassRow(seatClass, count)}
+                </EvidenceTrigger>
+              )
+            )}
           </div>
         </div>
 
@@ -206,21 +249,31 @@ export default function StatsFlightBreakdown({
           </h2>
           <div className="space-y-3">
             {Object.entries(statusStats).map(([status, count]) => (
-              <div key={status} className="flex items-center justify-between">
+              <EvidenceTrigger
+                key={status}
+                kind="ranking"
+                evidenceKey={rankingKey("flightStatus", status)}
+                scope={ALL_TIME}
+                renderedValue={count}
+                label={t(`flights:status.${status}`, { defaultValue: status })}
+                className="flex items-center justify-between"
+              >
                 <div className="flex items-center gap-2">
                   <div
                     className="w-3 h-3 rounded-full"
                     style={{
                       background:
-                        status === "flown"
+                        // A recorded-after-the-fact flight happened too: not
+                        // the danger colour, which belongs to a cancellation.
+                        status === "flown" || status === "historical"
                           ? "var(--success)"
                           : status === "scheduled"
                             ? "var(--accent)"
                             : "var(--danger)",
                     }}
                   />
-                  <span className="font-medium capitalize" style={{ color: "var(--text-primary)" }}>
-                    {status}
+                  <span className="font-medium" style={{ color: "var(--text-primary)" }}>
+                    {t(`flights:status.${status}`, { defaultValue: status })}
                   </span>
                 </div>
                 <div className="flex items-center gap-4">
@@ -231,7 +284,7 @@ export default function StatsFlightBreakdown({
                     {count}
                   </div>
                 </div>
-              </div>
+              </EvidenceTrigger>
             ))}
           </div>
         </div>
@@ -249,14 +302,22 @@ export default function StatsFlightBreakdown({
               {Object.entries(boardingGroupStats)
                 .sort(([, a], [, b]) => b - a)
                 .map(([group, count]) => (
-                  <div key={group} className="flex items-center justify-between">
+                  <EvidenceTrigger
+                    key={group}
+                    kind="ranking"
+                    evidenceKey={rankingKey("boardingGroup", group)}
+                    scope={ALL_TIME}
+                    renderedValue={count}
+                    label={t("stats:boardingGroups.group", { group })}
+                    className="flex items-center justify-between"
+                  >
                     <div className="font-medium" style={{ color: "var(--text-primary)" }}>
                       {t("stats:boardingGroups.group", { group })}
                     </div>
                     <div className="text-2xl font-bold" style={{ color: "var(--accent)" }}>
                       {count}
                     </div>
-                  </div>
+                  </EvidenceTrigger>
                 ))}
             </div>
           </div>
@@ -266,8 +327,13 @@ export default function StatsFlightBreakdown({
       {/* Longest/Shortest Flights */}
       {longestFlight && shortestFlight && longestFlight.flight && shortestFlight.flight && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          <div
-            className="rounded-lg shadow-sm p-6"
+          <EvidenceTrigger
+            kind="metric"
+            evidenceKey="longestDurationFlights"
+            scope={ALL_TIME}
+            renderedValue={null}
+            label={t("stats:flights.longest")}
+            className="block rounded-lg shadow-sm p-6"
             style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
           >
             <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
@@ -288,10 +354,15 @@ export default function StatsFlightBreakdown({
                 {formatHours(longestFlight.duration ?? 0, i18n.language)}
               </p>
             </div>
-          </div>
+          </EvidenceTrigger>
 
-          <div
-            className="rounded-lg shadow-sm p-6"
+          <EvidenceTrigger
+            kind="metric"
+            evidenceKey="shortestDurationFlights"
+            scope={ALL_TIME}
+            renderedValue={null}
+            label={t("stats:flights.shortest")}
+            className="block rounded-lg shadow-sm p-6"
             style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
           >
             <h2 className="text-xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
@@ -309,12 +380,13 @@ export default function StatsFlightBreakdown({
                 {shortestFlight.flight.arrIata || shortestFlight.flight.arrIcao || "N/A"}
               </p>
               <p className="text-2xl font-bold" style={{ color: "var(--success)" }}>
-                {shortestFlight.duration?.toFixed(1) || "0.0"}h
+                {formatHours(shortestFlight.duration ?? 0, i18n.language)}
               </p>
             </div>
-          </div>
+          </EvidenceTrigger>
         </div>
       )}
+      <CountingHelp entries={help} testId="breakdown-counting-help" />
     </>
   );
 }

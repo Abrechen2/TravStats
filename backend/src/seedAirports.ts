@@ -1,7 +1,10 @@
 import { createPrismaClient } from "./prismaClient";
+import { altitudeMetresFromFeet } from "./shared/airportAltitude";
 const prisma = createPrismaClient();
 
-// Extensive list of major airports worldwide
+// Extensive list of major airports worldwide. `altitude` here is in FEET, as
+// published; it is converted to the column's metres on write
+// (`shared/airportAltitude`, forgejo#256).
 const airports = [
   // Germany
   {
@@ -641,7 +644,8 @@ const airports = [
 async function seedAirports() {
   console.log("🛫 Seeding airports...");
 
-  for (const airport of airports) {
+  for (const listed of airports) {
+    const airport = { ...listed, altitude: altitudeMetresFromFeet(listed.altitude) };
     await prisma.airport.upsert({
       where: { airports_iata_is_closed_key: { iata: airport.iata, isClosed: false } },
       update: airport,

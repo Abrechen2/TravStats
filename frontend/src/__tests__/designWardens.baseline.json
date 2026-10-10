@@ -91,7 +91,6 @@
     "components/Stats/AircraftRankingCard.tsx",
     "components/Stats/AirlineRankingCard.tsx",
     "components/Stats/CountryDistributionCard.tsx",
-    "components/Stats/StatsSeatSection.tsx",
     "components/TemplateStatusView.tsx",
     "components/Training/EmailAnnotation.tsx",
     "components/Training/ParseLogStats.tsx",

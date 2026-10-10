@@ -51,6 +51,8 @@ import { computeCountryStats } from "./countryStats";
 import { computeAirlineRanking } from "./airlineRanking";
 import { computeAircraftRanking } from "./aircraftRanking";
 import { loadHomePeriods } from "../home/homeStore";
+import { profileZoneOf } from "../../shared/time/profileZone";
+import { todayIn } from "../../shared/time/clock";
 
 /** The per-flight airline identity `/stats/airlines` groups on. */
 function airlineIdentities(rows: ReadonlyArray<StatsPageRowWithClock>) {
@@ -73,9 +75,10 @@ export async function buildStatsPage(
   // many sections want it — `/stats/unique` and `/stats/airports` each fetched
   // the same `user_settings` row on their own.
   const needsHome = sections.has("unique") || sections.has("airports");
-  const [homePeriods, baseCurrency] = await Promise.all([
+  const [homePeriods, baseCurrency, profile] = await Promise.all([
     needsHome ? loadHomePeriods(userId) : Promise.resolve([]),
     sections.has("business") ? getBaseCurrency(userId) : Promise.resolve(""),
+    sections.has("airports") ? profileZoneOf(userId) : Promise.resolve(null),
   ]);
 
   const out: StatsPageResponse = {};
@@ -87,7 +90,11 @@ export async function buildStatsPage(
   if (sections.has("fun")) out.fun = await calculateFunStats(rows);
   if (sections.has("business")) out.business = calculateBusinessStats(rows, baseCurrency);
   if (sections.has("unique")) out.unique = await calculateUniqueStats(rows, homePeriods);
-  if (sections.has("airports")) out.airports = await calculateAirportStats(rows, homePeriods);
+  if (sections.has("airports")) {
+    // "New this year" means the user's own year (forgejo#256).
+    const today = todayIn(profile?.zone ?? "UTC");
+    out.airports = await calculateAirportStats(rows, homePeriods, today);
+  }
   if (sections.has("seats")) out.seats = computeSeatStats(rows);
   if (sections.has("countries")) out.countries = await computeCountryStats(rows);
   if (sections.has("airlines")) {

@@ -89,3 +89,40 @@ export function fakeUtcToInstant(fake: Date, zone: string): FakeUtcReading {
 export function startOfDayAt(day: string, zone: string): Date {
   return toInstant(`${day}T00:00`, zone, { origin: "machine" }).utc;
 }
+
+/**
+ * The day a year-only or month-only placeholder names, or null when `stored`
+ * is not one that a zone could move.
+ *
+ * A historical flight known only by its year (or year and month) has no
+ * clock: its semantics stay `UNKNOWN`. Since forgejo#256 the write stores the
+ * precision it was given (`dep_precision` = `year` / `month`) and the
+ * placeholder as local midnight on the 1st through the airport's zone, which
+ * reads back on its own day through that zone. Rows written before that — and
+ * every legacy year-only entry — hold midnight UTC on the 1st, and carry no
+ * marker (`unknown`): read at a western airport that instant is the evening
+ * before, and 1 January 2015 was filed under 2014 by every year-based flight
+ * statistic.
+ *
+ * So the stored precision decides first: `minute` or `day` is a real time and
+ * never a placeholder. Without that, only the exact legacy shape is
+ * recognised — `UNKNOWN`, 00:00:00.000 UTC, on the 1st of a month. A flight
+ * whose time is known is stored with `UTC` semantics and can never match, so
+ * a real departure at 00:00 UTC is never misread; the only rows this can
+ * touch are unclassified legacy ones at exactly that instant.
+ */
+export function placeholderDayOf(
+  stored: Date,
+  semantics: string | null | undefined,
+  precision?: string | null
+): string | null {
+  if (semantics !== "UNKNOWN" || precision === "minute" || precision === "day") return null;
+  const ms = stored.getTime();
+  if (ms % DAY_MS !== 0 || stored.getUTCDate() !== 1) return null;
+  return utcDate(ms);
+}
+
+/** A stored precision that says the date is a year or month, not a day (forgejo#256). */
+export function isPlaceholderPrecision(precision: string | null | undefined): boolean {
+  return precision === "year" || precision === "month";
+}

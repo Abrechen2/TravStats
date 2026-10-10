@@ -334,6 +334,8 @@ export interface FlightInput {
   // intentional (it's a backend-only marker that should never be re-sent).
   depTimeSemantics?: "UTC" | "DATE_ONLY" | "UNKNOWN" | "LEGACY_FAKE_UTC";
   arrTimeSemantics?: "UTC" | "DATE_ONLY" | "UNKNOWN" | "LEGACY_FAKE_UTC";
+  /** A historical date known only to the year or month (forgejo#256). */
+  datePrecision?: "year" | "month";
   status?: "scheduled" | "flown" | "cancelled" | "historical" | "duplicated";
   dataSource?:
     | "manual"
@@ -593,15 +595,16 @@ export interface FunStats {
 }
 
 export interface BusinessStats {
-  costPerKm: number;
-  costPerHour: number;
+  /** Null when nothing priced can be divided (forgejo#256) — unknown, never 0. */
+  costPerKm: number | null;
+  costPerHour: number | null;
   /** Null when no counted flight carries a price (forgejo#83). */
   totalCost: number | null;
   totalDistance: number;
   seatClassDistribution: Record<string, number>;
   mostCommonCategory: string | null;
   airportDiversity: number;
-  avgFlightDuration: number;
+  avgFlightDuration: number | null;
   busiestMonth: string | null;
   busiestMonthFlights: number;
   categoryDistribution: Record<string, number>;
@@ -681,12 +684,16 @@ export interface AirportStats {
     name: string | null;
     country: string | null;
   }>;
+  /** How many airports were visited exactly once (forgejo#256); the list is five of them. */
+  rarestAirportsTotal: number;
   newThisYear: Array<{
     code: string;
     name: string | null;
     country: string | null;
     firstVisitDate: string;
   }>;
+  /** The year `newThisYear` is about — today's year in the profile zone (forgejo#256). */
+  newThisYearYear: number;
   farthestFromHome: {
     code: string;
     name: string | null;

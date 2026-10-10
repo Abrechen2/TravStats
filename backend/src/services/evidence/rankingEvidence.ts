@@ -1,4 +1,8 @@
 import { prisma } from "../../db";
+import { countriesTouchedBy } from "../stats/countryStats";
+import { resolveCalendarRankingEvidence } from "./rankingEvidenceCalendar";
+import { resolveSeatRankingEvidence } from "./rankingEvidenceSeats";
+import { resolveFlightFieldRankingEvidence } from "./rankingEvidenceFlightFields";
 import { AppError } from "../../middleware/errorHandler";
 import { parseRankingKey, rankingKey } from "../../shared/evidence";
 import type { EvidenceScope } from "../../shared/evidence";
@@ -57,6 +61,14 @@ export async function resolveRankingEvidence(
       // The passport's country page, by ISO code (forgejo#132 item 6) — see
       // `metricEvidencePassport.ts` for why this is not the `country` case.
       return resolvePassportCountryEntries(userId, parsed.value, scope, page);
+    case "departureMonth":
+    case "departureWeekday":
+      return resolveCalendarRankingEvidence(userId, parsed.dimension, parsed.value, scope, page);
+    case "seat":
+      return resolveSeatRankingEvidence(userId, parsed.value, scope, page);
+    case "flightStatus":
+    case "boardingGroup":
+      return resolveFlightFieldRankingEvidence(userId, parsed.dimension, parsed.value, scope, page);
     case "continent":
       // Deliberate abstention, not a gap (task-6-brief.md, "STOP AND
       // REPORT"; task-6-report.md has the finding in full). No
@@ -410,8 +422,8 @@ interface CountryIdentityRow extends FlightDayRow {
  * invent a second 'Unknown' visit"). This is why country evidence, unlike
  * airport evidence above, never needs a `role` or a `contribution` above 1:
  * the ranking's own de-duplication already collapses one flight to at most
- * one credit per country. This mirrors the route's INLINE computation
- * exactly — it is not exported as a shared helper anywhere in the codebase.
+ * one credit per country. The rule itself is `countriesTouchedBy`
+ * (`services/stats/countryStats.ts`), which the distribution calls too.
  *
  * Deliberately NOT routed through the passport engine (`loadPassport` /
  * `trackEvidence.ts`): `/stats/countries` and the passport are two
@@ -426,21 +438,8 @@ function flightTouchesCountry(
   airportMap: Map<string, { country?: string | null }>,
   targetCountry: string
 ): boolean {
-  // `??` here, `||` in `matchAirportCredit` above — deliberately, and each
-  // copies its OWN calculator: `/stats/countries` resolves the pair with
-  // `f.depIata ?? f.depIcao`, `calculateAirportStats` with `||`. An
-  // empty-string `depIata` therefore lands in "Unknown" for the country
-  // distribution and under the ICAO code for the airport ranking, and
-  // evidence has to say what the tile above it says, not what either of us
-  // would prefer. Unifying the two operators is a change to the RANKINGS,
-  // not to their evidence.
-  const depCode = row.depIata ?? row.depIcao;
-  const arrCode = row.arrIata ?? row.arrIcao;
-  const touched = new Set<string>();
-  touched.add((depCode ? airportMap.get(depCode)?.country : null) ?? "Unknown");
-  if (arrCode) {
-    touched.add(airportMap.get(arrCode)?.country ?? "Unknown");
-  }
+  // The distribution's own rule, one home (`countriesTouchedBy`, forgejo#256).
+  const touched = countriesTouchedBy(row, airportMap);
   return touched.has(targetCountry);
 }
 
@@ -469,10 +468,9 @@ async function resolveCountryRankingEvidence(
 
   const airportCodes = new Set<string>();
   for (const row of identityRows) {
-    const depCode = row.depIata ?? row.depIcao;
-    const arrCode = row.arrIata ?? row.arrIcao;
-    if (depCode) airportCodes.add(depCode);
-    if (arrCode) airportCodes.add(arrCode);
+    for (const code of [row.depIata || row.depIcao, row.arrIata || row.arrIcao]) {
+      if (code) airportCodes.add(code);
+    }
   }
   const airportMap = await getCachedAirports([...airportCodes]);
 

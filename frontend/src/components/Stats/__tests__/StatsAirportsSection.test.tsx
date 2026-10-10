@@ -5,8 +5,12 @@ import type { AirportStats } from "../../../types";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
-    t: (k: string, opts?: { total?: number }) =>
-      opts?.total !== undefined ? `${k}:${opts.total}` : k,
+    t: (k: string, opts?: { total?: number; year?: number }) =>
+      opts?.total !== undefined
+        ? `${k}:${opts.total}`
+        : opts?.year !== undefined
+          ? `${k}:${opts.year}`
+          : k,
     i18n: { language: "de" },
   }),
 }));
@@ -20,7 +24,9 @@ const stats: AirportStats = {
   continentTotal: 7,
   topAirports: [],
   rarestAirports: [],
+  rarestAirportsTotal: 0,
   newThisYear: [],
+  newThisYearYear: 2026,
   farthestFromHome: null,
   topCountries: [],
   continentDistribution: { Europe: 30, "North America": 8, Antarctica: 1 },
@@ -96,5 +102,35 @@ describe("StatsAirportsSection — country names", () => {
     // which used to print the bare code as the airport's own label.
     expect(screen.getAllByText("Deutschland").length).toBeGreaterThan(1);
     expect(screen.getAllByText("Vereinigtes Königreich").length).toBeGreaterThan(1);
+  });
+});
+
+// forgejo#256 — five airports of many that tie at one visit: the cut is said.
+describe("StatsAirportsSection — rarest airports", () => {
+  it("says how many tie when the list shows only some of them", () => {
+    render(
+      <MemoryRouter>
+        <StatsAirportsSection
+          airportStats={{
+            ...stats,
+            rarestAirports: [{ code: "LHR", name: null, country: "GB" }],
+            rarestAirportsTotal: 12,
+          }}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText("stats:airportStats.rarestAirportsOf:12")).toBeInTheDocument();
+  });
+});
+
+describe("StatsAirportsSection — new this year", () => {
+  it("names the year the server filed the list under, not the browser's", () => {
+    render(
+      <MemoryRouter>
+        <StatsAirportsSection airportStats={{ ...stats, newThisYearYear: 2031 }} />
+      </MemoryRouter>
+    );
+    // The heading and the counting help both name it.
+    expect(screen.getAllByText("stats:airportStats.newThisYear:2031").length).toBeGreaterThan(0);
   });
 });

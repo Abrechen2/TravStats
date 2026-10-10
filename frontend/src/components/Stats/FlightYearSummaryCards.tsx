@@ -10,6 +10,7 @@ import {
 } from "../../lib/units";
 import TrendDelta from "./TrendDelta";
 import EvidenceTrigger from "./EvidenceTrigger";
+import CountingHelp from "./counting/CountingHelp";
 import type { EvidenceScopeParams } from "../evidence/useEvidence";
 
 interface FlightYearSummaryCardsProps {
@@ -250,6 +251,29 @@ export default function FlightYearSummaryCards({
                 </p>
               )}
             </EvidenceTrigger>
+          </div>
+          <div className="-mt-6 mb-8">
+            <CountingHelp
+              testId="year-summary-counting-help"
+              entries={[
+                {
+                  term: t("stats:overview.totalFlights"),
+                  helpKey: "flightStatsHelp:yearSummary.flights",
+                },
+                {
+                  term: t("stats:overview.totalDistance"),
+                  helpKey: "flightStatsHelp:yearSummary.distance",
+                },
+                {
+                  term: t("stats:overview.totalFlightTime"),
+                  helpKey: "flightStatsHelp:yearSummary.flightTime",
+                },
+                {
+                  term: t("stats:overview.totalCost"),
+                  helpKey: "flightStatsHelp:yearSummary.cost",
+                },
+              ]}
+            />
           </div>
         </>
       )}

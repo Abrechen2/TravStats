@@ -160,6 +160,29 @@ export const RANKING_DIMENSIONS = [
    * distribution tile — two rules for two tiles, each kept.
    */
   "passportCountry",
+  /**
+   * The flights departing in one calendar month (`1`–`12`) or on one weekday
+   * (`0` = Sunday … `6`), on the departure airport's clock — the bars of the
+   * flight tab's seasonal and weekday charts (forgejo#256).
+   */
+  "departureMonth",
+  "departureWeekday",
+  /**
+   * The flights behind one figure of the flight tab's seat section
+   * (forgejo#256): `position:window|middle|aisle|unknown`,
+   * `zone:front|middle|back`, `class:<stored seat class>`, `number:<seat>`
+   * (the most common seat) or `row:numbered` (every seat with a row number —
+   * the average row's sample), read by `services/stats/seatStats.ts`'s
+   * `seatFactsOf`.
+   */
+  "seat",
+  /**
+   * The flights of one row of the flight tab's breakdown (forgejo#256): one
+   * stored `status` (`flightStatus:flown`) or one `boardingGroup`
+   * (`boardingGroup:3`), over the countable flights the page loads.
+   */
+  "flightStatus",
+  "boardingGroup",
 ] as const;
 export type RankingDimension = (typeof RANKING_DIMENSIONS)[number];
 

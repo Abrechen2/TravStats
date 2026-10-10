@@ -112,7 +112,7 @@ async function keysOpenedBy(section: JSX.Element): Promise<string[]> {
 }
 
 describe("the fun and unique tiles open the measures they render", () => {
-  it("StatsFunSection wires its seven served tiles and leaves the ratio and extremum ones alone", async () => {
+  it("StatsFunSection wires every tile — the four extremes to the flights they were chosen from", async () => {
     const keys = await keysOpenedBy(<StatsFunSection funStats={funStats} />);
     expect(keys).toEqual(
       [
@@ -123,11 +123,16 @@ describe("the fun and unique tiles open the measures they render", () => {
         "shortHaulFlightCount",
         "timezoneHopperFlightCount",
         "weekendFlightCount",
+        // forgejo#256: the "most" tiles open their witnesses.
+        "busiestDayFlights",
+        "loyaltyAirlineFlights",
+        "milestoneYearFlights",
+        "routeMasterFlights",
       ].sort()
     );
   });
 
-  it("StatsUniqueSection wires its eleven single-number tiles and both split cards", async () => {
+  it("StatsUniqueSection wires every tile, both split cards and the record-like extremes", async () => {
     const keys = await keysOpenedBy(<StatsUniqueSection uniqueStats={uniqueStats} />);
     expect(keys).toEqual(
       [
@@ -150,6 +155,16 @@ describe("the fun and unique tiles open the measures they render", () => {
         "westwardFlightCount",
         "internationalFlightCount",
         "domesticFlightCount",
+        // forgejo#256: the record-like tiles open the flights they were taken from.
+        "fastestRouteFlights",
+        "highestAirportFlights",
+        "longestLayoverFlights",
+        "mostCountriesDayFlights",
+        "northernmostFlights",
+        "seasonFlights",
+        "shortestLayoverFlights",
+        "southernmostFlights",
+        "travelChainFlights",
       ].sort()
     );
   });

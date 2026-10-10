@@ -9,6 +9,50 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useTranslation } from "../../hooks/useTranslation";
+import EvidenceTrigger from "./EvidenceTrigger";
+import CountingHelp from "./counting/CountingHelp";
+import { rankingKey, type RankingDimension } from "../../shared/evidence";
+
+const ALL_TIME = { period: "allTime" as const };
+
+/**
+ * The bars again, as buttons: a bar is not focusable, so this row is how a
+ * keyboard or a finger opens the flights behind one month or weekday
+ * (`departureMonth` / `departureWeekday`, forgejo#256). `toKey` turns the
+ * bar's position into the dimension's value — month 1–12, weekday 0–6 from
+ * Sunday, the order the page builds the data in.
+ */
+function BarEntries({
+  bars,
+  dimension,
+  toKey,
+}: {
+  bars: ReadonlyArray<{ label: string; flights: number }>;
+  dimension: RankingDimension;
+  toKey: (index: number) => number;
+}): JSX.Element {
+  return (
+    <ul className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs">
+      {bars.map((bar, index) =>
+        bar.flights > 0 ? (
+          <li key={bar.label}>
+            <EvidenceTrigger
+              kind="ranking"
+              evidenceKey={rankingKey(dimension, String(toKey(index)))}
+              scope={ALL_TIME}
+              renderedValue={bar.flights}
+              label={`${bar.label}: ${bar.flights}`}
+              className="underline decoration-dotted underline-offset-2 hover:decoration-solid"
+              style={{ width: "auto", color: "var(--text-muted)" }}
+            >
+              {bar.label} {bar.flights}
+            </EvidenceTrigger>
+          </li>
+        ) : null
+      )}
+    </ul>
+  );
+}
 
 interface SeasonalDataPoint {
   month: string;
@@ -83,6 +127,13 @@ export default function StatsChartsSection({
                   />
                 </BarChart>
               </ResponsiveContainer>
+            ) : null}
+            {seasonalData.some((d) => d.flights > 0) ? (
+              <BarEntries
+                bars={seasonalData.map((d) => ({ label: d.month, flights: d.flights }))}
+                dimension="departureMonth"
+                toKey={(index) => index + 1}
+              />
             ) : (
               <div
                 className="flex items-center justify-center h-[300px]"
@@ -134,6 +185,13 @@ export default function StatsChartsSection({
                   />
                 </BarChart>
               </ResponsiveContainer>
+            ) : null}
+            {weekdayData.some((d) => d.flights > 0) ? (
+              <BarEntries
+                bars={weekdayData.map((d) => ({ label: d.day, flights: d.flights }))}
+                dimension="departureWeekday"
+                toKey={(index) => index}
+              />
             ) : (
               <div
                 className="flex items-center justify-center h-[300px]"
@@ -145,6 +203,19 @@ export default function StatsChartsSection({
           </div>
         </div>
       )}
+      <CountingHelp
+        testId="charts-counting-help"
+        entries={[
+          {
+            term: t("stats:timeBasedAnalytics.seasonalPatterns"),
+            helpKey: "flightStatsHelp:charts.seasonal",
+          },
+          {
+            term: t("stats:timeBasedAnalytics.weekdayAnalysis"),
+            helpKey: "flightStatsHelp:charts.weekday",
+          },
+        ]}
+      />
     </div>
   );
 }

@@ -51,3 +51,16 @@ describe("calculateFunStats — route master", () => {
     expect(stats.routeMasterCount).toBe(0);
   });
 });
+
+describe("calculateFunStats — busiest day (forgejo#256)", () => {
+  it("names the LATEST of equally busy days, as the records do", async () => {
+    const stats = await calculateFunStats([
+      flight("FRA", "LHR", 3),
+      flight("LHR", "FRA", 3),
+      flight("FRA", "CDG", 9),
+      flight("CDG", "FRA", 9),
+    ]);
+    expect(stats.fastestDay).toBe("2026-01-09");
+    expect(stats.fastestDayFlights).toBe(2);
+  });
+});

@@ -1,4 +1,5 @@
 import { createPrismaClient } from "./prismaClient";
+import { altitudeMetresFromFeet } from "./shared/airportAltitude";
 import logger from "./utils/logger";
 import fs from "fs";
 import path from "path";
@@ -220,9 +221,7 @@ export async function seedAirportsFromCSV(options: SeedAirportsOptions = {}) {
         continue;
       }
 
-      const altitude = airport.elevation_ft
-        ? Math.round(parseFloat(airport.elevation_ft) * 0.3048)
-        : null;
+      const altitude = altitudeMetresFromFeet(airport.elevation_ft);
 
       const isClosed = airport.type === "closed";
 

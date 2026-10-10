@@ -3,10 +3,9 @@ import { formatNumber } from "../../lib/units";
 import { useTranslation } from "../../hooks/useTranslation";
 import { continentI18nKey } from "../../lib/continentLabel";
 import StatCard from "./StatCard";
+import CountingHelp from "./counting/CountingHelp";
 import EvidenceTrigger from "./EvidenceTrigger";
 import { rankingKey } from "../../shared/evidence";
-import { todayZoneNow } from "../../hooks/useTodayZone";
-import { todayIn } from "../../shared/time";
 import { countryName } from "../../shared/geo/countryCode";
 
 /** Every ranking dimension this section resolves is `allTime`-only — see `rankingEvidence.ts` on the backend. */
@@ -59,6 +58,43 @@ export default function StatsAirportsSection({
     topCountries,
     continentDistribution,
   } = airportStats;
+  // The year the server filed "new this year" under — today in the profile
+  // zone — so the heading and the list cannot name two years (forgejo#256).
+  const currentYear = airportStats.newThisYearYear;
+
+  /** "So wird gezählt" for every figure of the section (forgejo#256). */
+  const help = [
+    {
+      term: t("stats:airportStats.airportCount"),
+      helpKey: "flightStatsHelp:airports.airportCount",
+    },
+    {
+      term: t("stats:airportStats.countryCount"),
+      helpKey: "flightStatsHelp:airports.countryCount",
+    },
+    {
+      term: t("stats:airportStats.continentCount"),
+      helpKey: "flightStatsHelp:airports.continentCount",
+    },
+    { term: t("stats:airportStats.topAirports"), helpKey: "flightStatsHelp:airports.topAirports" },
+    {
+      term: t("stats:airportStats.topCountries"),
+      helpKey: "flightStatsHelp:airports.topCountries",
+    },
+    {
+      term: t("stats:airportStats.farthestFromHome"),
+      helpKey: "flightStatsHelp:airports.farthestFromHome",
+    },
+    {
+      term: t("stats:airportStats.newThisYear", { year: currentYear }),
+      helpKey: "flightStatsHelp:airports.newThisYear",
+    },
+    { term: t("stats:airportStats.rarestAirports"), helpKey: "flightStatsHelp:airports.rarest" },
+    {
+      term: t("stats:airportStats.continentDistribution"),
+      helpKey: "flightStatsHelp:airports.continentDistribution",
+    },
+  ];
 
   const distributionTotal = Object.values(continentDistribution).reduce((s, v) => s + v, 0);
   const sortedContinents = Object.entries(continentDistribution).sort(([, a], [, b]) => b - a);
@@ -230,6 +266,12 @@ export default function StatsAirportsSection({
               home: farthestFromHome.homeCode,
             })}
             footnote={farthestFromHome.name || undefined}
+            evidence={{
+              kind: "metric",
+              key: "farthestFromHomeFlights",
+              scope: ALL_TIME,
+              renderedValue: null,
+            }}
           />
         ) : (
           <div
@@ -257,9 +299,7 @@ export default function StatsAirportsSection({
             className="text-sm font-semibold mb-3 uppercase tracking-wide"
             style={{ color: "var(--text-muted)" }}
           >
-            {t("stats:airportStats.newThisYear", {
-              year: Number(todayIn(todayZoneNow()).slice(0, 4)),
-            })}
+            {t("stats:airportStats.newThisYear", { year: currentYear })}
           </h3>
           {newThisYear.length === 0 ? (
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
@@ -268,18 +308,24 @@ export default function StatsAirportsSection({
           ) : (
             <ul className="space-y-1 max-h-48 overflow-y-auto">
               {newThisYear.map((a) => (
-                <li
-                  key={a.code}
-                  className="flex items-center gap-2 text-sm"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  <span className="font-semibold">{a.code}</span>
-                  <span className="truncate" style={{ color: "var(--text-muted)" }}>
-                    {a.name || countryName(a.country, i18n.language) || a.country || "—"}
-                  </span>
-                  <span className="ml-auto text-xs" style={{ color: "var(--text-muted)" }}>
-                    {a.firstVisitDate}
-                  </span>
+                <li key={a.code}>
+                  <EvidenceTrigger
+                    kind="ranking"
+                    evidenceKey={rankingKey("airport", a.code)}
+                    scope={ALL_TIME}
+                    renderedValue={null}
+                    label={`${a.code} ${a.name ?? ""}`.trim()}
+                    className="flex items-center gap-2 text-sm"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    <span className="font-semibold">{a.code}</span>
+                    <span className="truncate" style={{ color: "var(--text-muted)" }}>
+                      {a.name || countryName(a.country, i18n.language) || a.country || "—"}
+                    </span>
+                    <span className="ml-auto text-xs" style={{ color: "var(--text-muted)" }}>
+                      {a.firstVisitDate}
+                    </span>
+                  </EvidenceTrigger>
                 </li>
               ))}
             </ul>
@@ -297,6 +343,15 @@ export default function StatsAirportsSection({
           >
             {t("stats:airportStats.rarestAirports")}
           </h3>
+          {/* Many airports tie at one visit; the list is a stated cut of them. */}
+          {airportStats.rarestAirportsTotal > rarestAirports.length && (
+            <p className="mb-2 text-xs" style={{ color: "var(--text-muted)" }}>
+              {t("stats:airportStats.rarestAirportsOf", {
+                shown: rarestAirports.length,
+                total: airportStats.rarestAirportsTotal,
+              })}
+            </p>
+          )}
           {rarestAirports.length === 0 ? (
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
               {t("stats:airportStats.rarestAirportsEmpty")}
@@ -304,15 +359,21 @@ export default function StatsAirportsSection({
           ) : (
             <ul className="space-y-1">
               {rarestAirports.map((a) => (
-                <li
-                  key={a.code}
-                  className="flex items-center gap-2 text-sm"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  <span className="font-semibold">{a.code}</span>
-                  <span className="truncate" style={{ color: "var(--text-muted)" }}>
-                    {a.name || countryName(a.country, i18n.language) || a.country || "—"}
-                  </span>
+                <li key={a.code}>
+                  <EvidenceTrigger
+                    kind="ranking"
+                    evidenceKey={rankingKey("airport", a.code)}
+                    scope={ALL_TIME}
+                    renderedValue={null}
+                    label={`${a.code} ${a.name ?? ""}`.trim()}
+                    className="flex items-center gap-2 text-sm"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    <span className="font-semibold">{a.code}</span>
+                    <span className="truncate" style={{ color: "var(--text-muted)" }}>
+                      {a.name || countryName(a.country, i18n.language) || a.country || "—"}
+                    </span>
+                  </EvidenceTrigger>
                 </li>
               ))}
             </ul>
@@ -360,6 +421,7 @@ export default function StatsAirportsSection({
           )}
         </div>
       </div>
+      <CountingHelp entries={help} testId="airports-counting-help" />
     </div>
   );
 }

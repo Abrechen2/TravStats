@@ -126,6 +126,8 @@ interface ZoneInput {
   arrTimezone?: string | null;
   depTimeSemantics?: string | null;
   arrTimeSemantics?: string | null;
+  /** A year-/month-only historical entry (forgejo#256) — see `schemas/flight.ts`. */
+  datePrecision?: "year" | "month";
 }
 
 interface Endpoints {
@@ -171,7 +173,10 @@ export async function flightZoneColumns(
   for (const [end, local, zone, semantics, zoneKey, precisionKey] of ends) {
     if (local !== undefined) {
       out[zoneKey] = local ? (zone ?? null) : null;
-      out[precisionKey] = precisionOf(semantics ?? "UTC", Boolean(local));
+      out[precisionKey] =
+        local && semantics === "UNKNOWN" && data.datePrecision
+          ? data.datePrecision
+          : precisionOf(semantics ?? "UTC", Boolean(local));
     } else if (endpoints[end]) {
       out[zoneKey] = await zoneOfEndpoint(endpoints[end]!);
     }

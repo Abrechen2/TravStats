@@ -14,6 +14,7 @@ import { getCachedAirport } from "../services/airportCache";
 import { TzUnresolvedError } from "../shared/time/errors";
 import { localDay, toInstant, toLocal } from "../shared/time/instant";
 import { isValidZone, wallClockParts } from "../shared/time/zonedParts";
+import { isPlaceholderPrecision, placeholderDayOf } from "../shared/time/legacyValues";
 import logger from "./logger";
 
 export type FlightTimeSemantics = "UTC" | "DATE_ONLY" | "LEGACY_FAKE_UTC" | "UNKNOWN";
@@ -98,9 +99,16 @@ function zonedComponents(stored: Date, timezone: string): Components | null {
 export function localWallClockOf(
   stored: Date,
   timezone: string | null | undefined,
-  semantics: FlightTimeSemantics = "UNKNOWN"
+  semantics: FlightTimeSemantics = "UNKNOWN",
+  /** The stored `dep_precision`, when the caller selected it (forgejo#256). */
+  precision?: string | null
 ): LocalWallClock {
-  const useStored = semantics === "LEGACY_FAKE_UTC" || !timezone;
+  // A legacy year-/month-only placeholder (midnight UTC on the 1st) names a
+  // day, not an instant: its stored components ARE that day, and a zone would
+  // move it. A marked one was written through its zone and reads there.
+  const legacyPlaceholder = placeholderDayOf(stored, semantics, precision) !== null;
+  const placeholder = legacyPlaceholder || isPlaceholderPrecision(precision);
+  const useStored = semantics === "LEGACY_FAKE_UTC" || !timezone || legacyPlaceholder;
   const { year, month, day, hour } =
     (useStored ? null : zonedComponents(stored, timezone as string)) ?? storedComponents(stored);
 
@@ -113,7 +121,7 @@ export function localWallClockOf(
     // Derived from the local calendar date rather than parsed from a locale
     // weekday name, which would depend on the formatter's language.
     weekday: new Date(Date.UTC(year, month - 1, day)).getUTCDay(),
-    hour: semantics === "DATE_ONLY" ? null : hour,
+    hour: semantics === "DATE_ONLY" || placeholder ? null : hour,
   };
 }
 

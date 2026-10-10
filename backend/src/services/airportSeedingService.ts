@@ -1,4 +1,5 @@
 import { prisma } from "../db";
+import { altitudeMetresFromFeet } from "../shared/airportAltitude";
 import logger from "../utils/logger";
 import fs from "fs";
 import path from "path";
@@ -268,9 +269,7 @@ async function seedAirportsFromCSVAsync(statusId: string): Promise<void> {
           continue;
         }
 
-        const altitude = airport.elevation_ft
-          ? Math.round(parseFloat(airport.elevation_ft) * 0.3048)
-          : null;
+        const altitude = altitudeMetresFromFeet(airport.elevation_ft);
 
         const isClosed = airport.type === "closed";
 

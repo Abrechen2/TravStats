@@ -13,6 +13,7 @@ import enTraining from "./resources/en/training.json";
 import enErrors from "./resources/en/errors.json";
 import enAchievements from "./resources/en/achievements.json";
 import enStats from "./resources/en/stats.json";
+import enFlightStatsHelp from "./resources/en/flightStatsHelp.json";
 import enSetup from "./resources/en/setup.json";
 import enMap from "./resources/en/map.json";
 import enPendingUpdates from "./resources/en/pendingUpdates.json";
@@ -53,6 +54,7 @@ import deTraining from "./resources/de/training.json";
 import deErrors from "./resources/de/errors.json";
 import deAchievements from "./resources/de/achievements.json";
 import deStats from "./resources/de/stats.json";
+import deFlightStatsHelp from "./resources/de/flightStatsHelp.json";
 import deSetup from "./resources/de/setup.json";
 import deMap from "./resources/de/map.json";
 import dePendingUpdates from "./resources/de/pendingUpdates.json";
@@ -116,6 +118,7 @@ const resources = {
     errors: enErrors,
     achievements: enAchievements,
     stats: enStats,
+    flightStatsHelp: enFlightStatsHelp,
     setup: enSetup,
     map: enMap,
     pendingUpdates: enPendingUpdates,
@@ -157,6 +160,7 @@ const resources = {
     errors: deErrors,
     achievements: deAchievements,
     stats: deStats,
+    flightStatsHelp: deFlightStatsHelp,
     setup: deSetup,
     map: deMap,
     pendingUpdates: dePendingUpdates,
@@ -208,6 +212,7 @@ i18n.use(initReactI18next).init({
     "errors",
     "achievements",
     "stats",
+    "flightStatsHelp",
     "setup",
     "map",
     "pendingUpdates",

@@ -1,4 +1,9 @@
+import { prisma } from "../../db";
 import { haversineKm } from "../../shared/geo/haversine";
+import { busiestDayOf } from "../../shared/busiestDay";
+import { countableFlightWhere } from "../../shared/flightCounting";
+import { enrichFlightsWithAirportFacts } from "../flightAirportFacts";
+import { FLIGHT_CLOCK_SELECT } from "./departureClock";
 import { departureDayOf } from "../../utils/stats/departureClock";
 import type { FlightTimeSemantics } from "../../utils/timezone";
 
@@ -154,17 +159,9 @@ function shortestFlight(flights: readonly RecordFlightInput[]): TravelRecord | n
 }
 
 function busiestDay(byDay: ReadonlyMap<string, RecordFlightInput[]>): TravelRecord | null {
-  let bestDay: string | null = null;
-  for (const [day, legs] of byDay) {
-    const bestLegs = bestDay === null ? null : (byDay.get(bestDay) as RecordFlightInput[]);
-    if (
-      bestLegs === null ||
-      legs.length > bestLegs.length ||
-      (legs.length === bestLegs.length && day >= (bestDay as string))
-    ) {
-      bestDay = day;
-    }
-  }
+  // The one busiest-day rule (`shared/busiestDay`): most flights, latest day on a tie.
+  const bestDay =
+    busiestDayOf([...byDay].map(([day, legs]) => [day, legs.length] as const))?.day ?? null;
   if (bestDay === null) return null;
   const legs = [...(byDay.get(bestDay) as RecordFlightInput[])].sort((a, b) =>
     (a.departureTime?.toISOString() ?? "").localeCompare(b.departureTime?.toISOString() ?? "")
@@ -298,4 +295,71 @@ export function buildTravelRecords(flights: readonly RecordFlightInput[]): Trave
     northernmost(counted),
     longestStreak(days),
   ].filter((r): r is TravelRecord => r !== null);
+}
+
+/**
+ * The flights behind each record (forgejo#256), by the record's own answer:
+ * the flight it names, the legs of its day, every flight with an end at the
+ * northernmost point, and every flight of the streak's days. Read by
+ * `services/evidence/metricEvidenceFlightWitnesses.ts`, over the same rows and
+ * the same `buildTravelRecords`, so a record and its panel cannot disagree.
+ */
+export function travelRecordWitnesses(
+  flights: readonly RecordFlightInput[]
+): Partial<Record<TravelRecord["id"], string[]>> {
+  const counted = flights.filter((f) => FLOWN.has(f.status));
+  const out: Partial<Record<TravelRecord["id"], string[]>> = {};
+  const idsWhere = (match: (f: RecordFlightInput) => boolean): string[] =>
+    counted.filter(match).map((f) => f.id);
+  for (const record of buildTravelRecords(flights)) {
+    if (record.flightId) {
+      out[record.id] = [record.flightId];
+    } else if (record.id === "busiest-day") {
+      out[record.id] = idsWhere((f) => dayOf(f) === record.date);
+    } else if (record.id === "northernmost") {
+      out[record.id] = idsWhere(
+        (f) =>
+          (f.depLat === record.value && f.depIata === (record.airportIata ?? f.depIata)) ||
+          (f.arrLat === record.value && f.arrIata === (record.airportIata ?? f.arrIata))
+      );
+    } else if (record.id === "longest-streak" && record.startDate && record.endDate) {
+      const { startDate, endDate } = record;
+      out[record.id] = idsWhere((f) => {
+        const day = dayOf(f);
+        return day !== null && day >= startDate && day <= endDate;
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * The rows `GET /stats/records` derives from — and the records' evidence: one
+ * loader, so the panel names the flights of the very set the tiles read.
+ *
+ * `durationMinutes` is not a column — it is derived from the two clocks, their
+ * timezones and their semantics, through the SAME enrichment every other flight
+ * response goes through: a DATE_ONLY row comes back with a null duration and
+ * the aloft record abstains, exactly as it does in the app.
+ */
+export async function loadRecordFlights(userId: string): Promise<RecordFlightInput[]> {
+  const flights = await prisma.flight.findMany({
+    where: { userId, ...countableFlightWhere() },
+    select: {
+      id: true,
+      flightNumber: true,
+      ...FLIGHT_CLOCK_SELECT,
+      depLat: true,
+      depLon: true,
+      arrLat: true,
+      arrLon: true,
+      departureTime: true,
+      arrivalTime: true,
+      arrTimeSemantics: true,
+      delayMinutes: true,
+      routeDistance: true,
+      status: true,
+    },
+  });
+  return enrichFlightsWithAirportFacts(flights);
 }

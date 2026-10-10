@@ -7,6 +7,7 @@
 
 import axios from "axios";
 import { createPrismaClient } from "../prismaClient";
+import { altitudeMetresFromFeet } from "../shared/airportAltitude";
 const prisma = createPrismaClient();
 
 interface OpenFlightsAirport {
@@ -18,7 +19,8 @@ interface OpenFlightsAirport {
   icao: string;
   latitude: number;
   longitude: number;
-  altitude: number;
+  /** Metres above sea level, converted from the source's feet; null when unknown. */
+  altitude: number | null;
   timezone: string;
   dst: string;
   tzDatabaseTimezone: string;
@@ -34,7 +36,7 @@ const OPENFLIGHTS_URL =
  * Parse OpenFlights CSV line
  * Format: AirportID,Name,City,Country,IATA,ICAO,Latitude,Longitude,Altitude,Timezone,DST,Tz database time zone,Type,Source
  */
-function parseAirportLine(line: string): OpenFlightsAirport | null {
+export function parseAirportLine(line: string): OpenFlightsAirport | null {
   try {
     // Split CSV (handling quoted fields with commas)
     const regex = /("(?:[^"\\]|\\.)*"|[^,]+|(?<=,)(?=,)|^(?=,)|(?<=,)$)/g;
@@ -69,7 +71,8 @@ function parseAirportLine(line: string): OpenFlightsAirport | null {
       icao: icao === "\\N" ? "" : icao,
       latitude: parseFloat(latitude),
       longitude: parseFloat(longitude),
-      altitude: altitude === "\\N" ? 0 : parseInt(altitude),
+      // OpenFlights publishes FEET; the column is metres (`shared/airportAltitude`).
+      altitude: altitudeMetresFromFeet(altitude),
       timezone,
       dst,
       tzDatabaseTimezone,

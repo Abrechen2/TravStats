@@ -695,7 +695,8 @@
     "empty": "No data yet.",
     "continent": {
       "other": "Other"
-    }
+    },
+    "rarestAirportsOf": "{{shown}} of {{total}} – the most recently first visited first"
   },
   "certificate": {
     "title": "Flight Certificate",
@@ -733,7 +734,12 @@
     "mostCommon": "Most common seat",
     "avgRow": "Avg. row",
     "noData": "No seat data recorded",
-    "seatClassTitle": "Seat Class"
+    "seatClassTitle": "Seat Class",
+    "positionTitle": "Window / Middle / Aisle",
+    "zoneTitle": "Front / Middle / Back",
+    "noDataHint": "Once your flights carry a seat number (such as 14C) or a seat class, window, aisle, rows and classes appear here.",
+    "unplaced_one": "{{count}} seat cannot be placed without its cabin layout",
+    "unplaced_other": "{{count}} seats cannot be placed without their cabin layout"
   },
   "airlineRanking": {
     "title": "Airline Loyalty Ranking",
@@ -756,7 +762,8 @@
     "country": "Country",
     "flights": "Flights",
     "noData": "No flights yet",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "unknown": "Unknown"
   },
   "reportActions": {
     "label": "Reports"

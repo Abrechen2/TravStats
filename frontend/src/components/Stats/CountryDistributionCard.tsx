@@ -1,4 +1,5 @@
 import { useTranslation } from "../../hooks/useTranslation";
+import CountingHelp from "./counting/CountingHelp";
 import type { CountryStatsResponse } from "../../types";
 import EvidenceTrigger from "./EvidenceTrigger";
 import { rankingKey } from "../../shared/evidence";
@@ -43,7 +44,12 @@ export default function CountryDistributionCard({
           // country name belongs to the reader's language. Fall back to the
           // code itself only when the browser has no region name for it
           // (better than an empty row).
-          const name = countryName(row.country, i18n.language) || row.country;
+          // "Unknown" is the server's bucket for an end no catalogue can place
+          // (forgejo#256) — a word for the reader's language, not a country.
+          const name =
+            row.country === "Unknown"
+              ? t("stats:countryDist.unknown")
+              : countryName(row.country, i18n.language) || row.country;
           return (
             <EvidenceTrigger
               key={row.country}
@@ -71,6 +77,12 @@ export default function CountryDistributionCard({
           );
         })}
       </div>
+      <CountingHelp
+        testId="countries-counting-help"
+        entries={[
+          { term: t("stats:countryDist.title"), helpKey: "flightStatsHelp:rankings.countries" },
+        ]}
+      />
     </div>
   );
 }

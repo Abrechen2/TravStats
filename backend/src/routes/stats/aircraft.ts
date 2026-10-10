@@ -12,6 +12,7 @@
  */
 
 import { Router, Response, NextFunction } from "express";
+import { normalizeRegistration } from "../../shared/aircraftRegistration";
 import { Prisma } from "../../prisma";
 
 import { prisma } from "../../db";
@@ -131,10 +132,19 @@ router.get(
       // figures, and the page has no status column to reveal it (AUD-078).
       // Parity with the ranking is the whole point: same population, same
       // numbers.
-      const flights = await prisma.flight.findMany({
-        where: { userId, ...countableFlightWhere(), aircraftRegistration: registration },
-        orderBy: { departureTime: "desc" },
-      });
+      // The ranking keys a hull by its normalised mark, so the page matches
+      // every spelling of it (`shared/aircraftRegistration`, forgejo#256).
+      const wanted = normalizeRegistration(registration);
+      const flights = (
+        await prisma.flight.findMany({
+          where: {
+            userId,
+            ...countableFlightWhere(),
+            aircraftRegistration: { not: null },
+          },
+          orderBy: { departureTime: "desc" },
+        })
+      ).filter((f) => wanted !== null && normalizeRegistration(f.aircraftRegistration) === wanted);
 
       if (flights.length === 0) {
         res.status(404).json({ error: "NO_FLIGHTS_FOR_AIRCRAFT" });

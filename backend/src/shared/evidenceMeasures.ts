@@ -48,6 +48,7 @@ import { RAIL_MEASURES } from "./evidenceMeasuresRail";
 import { RENTAL_BUS_MEASURES } from "./evidenceMeasuresRentalBus";
 import { PASSPORT_MEASURES } from "./evidenceMeasuresPassport";
 import { FLIGHT_INSIGHT_MEASURES } from "./evidenceMeasuresFlightInsights";
+import { FLIGHT_WITNESS_MEASURES } from "./evidenceMeasuresFlightWitnesses";
 import { CRUISE_INSIGHT_MEASURES } from "./evidenceMeasuresCruiseInsights";
 import { INSIGHT_MEASURES } from "./evidenceMeasuresInsights";
 import { PLACE_ROADTRIP_DETAIL_MEASURES } from "./evidenceMeasuresPlaceRoadtripDetail";
@@ -97,6 +98,7 @@ export const EVIDENCE_MEASURES: Record<string, MeasureSpec> = {
   ...RENTAL_BUS_MEASURES,
   ...PASSPORT_MEASURES,
   ...FLIGHT_INSIGHT_MEASURES,
+  ...FLIGHT_WITNESS_MEASURES,
   ...CRUISE_INSIGHT_MEASURES,
   ...INSIGHT_MEASURES,
   ...PLACE_ROADTRIP_DETAIL_MEASURES,

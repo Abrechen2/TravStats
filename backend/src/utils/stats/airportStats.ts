@@ -7,6 +7,7 @@ import { departureClockOf } from "./departureClock";
 import { type HomePeriod, isHomeAirportAt, primaryAirportAt, residenceAt } from "../homeAirport";
 import { isCountableFlight } from "../../shared/flightCounting";
 import { CONTINENTS, getContinent } from "../continents";
+import { todayIn } from "../../shared/time/clock";
 
 // Published by /stats/airports, so the shape is described once in
 // `schemas/statsFlights.ts` and read here (forgejo#52). The prose that used to
@@ -27,7 +28,7 @@ function continentOfAirport(info: AirportData | undefined): string {
   return getContinent(info.lat, info.lon, info.country) ?? "Other";
 }
 
-function emptyAirportStats(): AirportStats {
+function emptyAirportStats(newThisYearYear: number): AirportStats {
   return {
     airportCount: 0,
     countryCount: 0,
@@ -35,7 +36,9 @@ function emptyAirportStats(): AirportStats {
     continentTotal: CONTINENTS.length,
     topAirports: [],
     rarestAirports: [],
+    rarestAirportsTotal: 0,
     newThisYear: [],
+    newThisYearYear,
     farthestFromHome: null,
     topCountries: [],
     continentDistribution: {},
@@ -53,10 +56,17 @@ function emptyAirportStats(): AirportStats {
  */
 export async function calculateAirportStats(
   flights: FlightData[],
-  homePeriods: readonly HomePeriod[] = []
+  homePeriods: readonly HomePeriod[] = [],
+  /**
+   * Today in the user's profile zone (`profileZoneOf` → `todayIn`), the
+   * time model's "today" — it decides which year "new this year" means. UTC
+   * when the caller has no profile to ask.
+   */
+  today: string = todayIn("UTC")
 ): Promise<AirportStats> {
+  const currentYear = Number(today.slice(0, 4));
   const flownFlights = flights.filter(isCountableFlight);
-  if (flownFlights.length === 0) return emptyAirportStats();
+  if (flownFlights.length === 0) return emptyAirportStats(currentYear);
 
   // Collect airport codes to look up names and countries in one batched call.
   const codes = new Set<string>();
@@ -131,18 +141,22 @@ export async function calculateAirportStats(
       visits: count,
     }));
 
-  // Rarest airports — visited exactly once. Cap at 5 to keep payload small.
-  const rarestAirports = Array.from(visits.entries())
+  // Rarest airports — visited exactly once. Many tie at one visit, so the
+  // five shown are chosen by a stated rule (forgejo#256): the most recently
+  // first visited first, then by code; `rarestAirportsTotal` says how many tie.
+  const once = Array.from(visits.entries())
     .filter(([, count]) => count === 1)
-    .slice(0, 5)
-    .map(([code]) => ({
-      code,
-      name: airportInfo.get(code)?.name ?? null,
-      country: airportInfo.get(code)?.country ?? null,
-    }));
+    .map(([code]) => ({ code, day: firstVisit.get(code) ?? "" }))
+    .sort((a, b) => (a.day === b.day ? a.code.localeCompare(b.code) : a.day < b.day ? 1 : -1));
+  const rarestAirports = once.slice(0, 5).map(({ code }) => ({
+    code,
+    name: airportInfo.get(code)?.name ?? null,
+    country: airportInfo.get(code)?.country ?? null,
+  }));
 
-  // New this year — airports whose first visit falls in the current year.
-  const currentYear = new Date().getUTCFullYear();
+  // New this year — airports whose first visit (on the departure airport's
+  // calendar) falls in the year of the user's own today (forgejo#256). It was
+  // the SERVER's UTC year, while the heading named the browser's.
   const newThisYear = Array.from(firstVisit.entries())
     .filter(([, date]) => date.startsWith(`${currentYear}-`))
     .sort(([, a], [, b]) => (a < b ? -1 : 1))
@@ -153,31 +167,14 @@ export async function calculateAirportStats(
       firstVisitDate: date,
     }));
 
-  // Farthest from home — consider every arrival that isn't a home airport and
-  // measure great-circle distance from where the user LIVED at that time (the
-  // residence; for an unconfirmed migrated period that is the old airport, so
-  // the number is the one it always was).
-  let farthestFromHome: AirportStats["farthestFromHome"] = null;
-  for (const f of flownFlights) {
-    const arrCode = f.arrIata || f.arrIcao;
-    if (!arrCode) continue;
-    const flightDay = departureClockOf(f)?.date ?? new Date().toISOString().slice(0, 10);
-    const homeCode = primaryAirportAt(homePeriods, flightDay);
-    const residence = residenceAt(homePeriods, flightDay);
-    if (!homeCode || !residence) continue;
-    if (isHomeAirportAt(homePeriods, flightDay, arrCode)) continue;
-
-    const distance = calculateDistance(residence.lat, residence.lon, f.arrLat, f.arrLon);
-    if (!farthestFromHome || distance > farthestFromHome.distanceKm) {
-      farthestFromHome = {
-        code: arrCode,
-        name: airportInfo.get(arrCode)?.name ?? null,
-        country: airportInfo.get(arrCode)?.country ?? null,
-        distanceKm: Math.round(distance),
-        homeCode,
-      };
-    }
-  }
+  const farthest = farthestFromHomeOf(flownFlights, homePeriods);
+  const farthestFromHome: AirportStats["farthestFromHome"] = farthest && {
+    code: farthest.code,
+    name: airportInfo.get(farthest.code)?.name ?? null,
+    country: airportInfo.get(farthest.code)?.country ?? null,
+    distanceKm: farthest.distanceKm,
+    homeCode: farthest.homeCode,
+  };
 
   const topCountries = Array.from(countryCount.entries())
     .sort(([, a], [, b]) => b - a)
@@ -197,9 +194,47 @@ export async function calculateAirportStats(
     continentTotal: CONTINENTS.length,
     topAirports,
     rarestAirports,
+    rarestAirportsTotal: once.length,
     newThisYear,
+    newThisYearYear: currentYear,
     farthestFromHome,
     topCountries,
     continentDistribution,
   };
+}
+
+/**
+ * Farthest from home — every arrival that isn't a home airport, measured
+ * great-circle from where the user LIVED at that time (the residence; for an
+ * unconfirmed migrated period that is the old airport, so the number is the
+ * one it always was). The first arrival to reach the maximum wins; its flight
+ * is the witness the evidence panel lists (forgejo#256).
+ */
+export function farthestFromHomeOf(
+  flights: readonly FlightData[],
+  homePeriods: readonly HomePeriod[]
+): { code: string; distanceKm: number; homeCode: string; flightId: string } | null {
+  let best: { code: string; distance: number; homeCode: string; flightId: string } | null = null;
+  for (const f of flights) {
+    const arrCode = f.arrIata || f.arrIcao;
+    if (!arrCode) continue;
+    const flightDay = departureClockOf(f)?.date ?? new Date().toISOString().slice(0, 10);
+    const homeCode = primaryAirportAt(homePeriods, flightDay);
+    const residence = residenceAt(homePeriods, flightDay);
+    if (!homeCode || !residence) continue;
+    if (isHomeAirportAt(homePeriods, flightDay, arrCode)) continue;
+    const distance = calculateDistance(residence.lat, residence.lon, f.arrLat, f.arrLon);
+    // Against the ROUNDED leader, as the tile always compared.
+    if (!best || distance > Math.round(best.distance)) {
+      best = { code: arrCode, distance, homeCode, flightId: f.id };
+    }
+  }
+  return (
+    best && {
+      code: best.code,
+      distanceKm: Math.round(best.distance),
+      homeCode: best.homeCode,
+      flightId: best.flightId,
+    }
+  );
 }

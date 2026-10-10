@@ -11,6 +11,7 @@ import {
 import type { FlightData, FunStats } from "./types";
 import { isCountableFlight } from "../../shared/flightCounting";
 import { routePairKey } from "../../shared/routePair";
+import { busiestDayOf } from "../../shared/busiestDay";
 
 /**
  * Calculate fun/entertaining statistics.
@@ -29,6 +30,25 @@ import { routePairKey } from "../../shared/routePair";
  *                          route master.
  */
 export async function calculateFunStats(flights: FlightData[]): Promise<FunStats> {
+  return (await analyseFunStats(flights)).stats;
+}
+
+/**
+ * The flights behind each "most" tile (forgejo#256) — read by
+ * `services/evidence/metricEvidenceFlightWitnesses.ts`, so the panel lists the
+ * flights the tile's winner was chosen from, by the same rule.
+ */
+export interface FunWitnesses {
+  /** Flights of the most used airline (the loyalty score's numerator). */
+  loyaltyAirline: string[];
+  busiestDay: string[];
+  milestoneYear: string[];
+  routeMaster: string[];
+}
+
+export async function analyseFunStats(
+  flights: FlightData[]
+): Promise<{ stats: FunStats; witnesses: FunWitnesses }> {
   // Time-sensitive subset — both times must be present. Historical entries
   // typically have placeholder times so we exclude them here.
   const flownFlights = flights.filter(
@@ -86,10 +106,10 @@ export async function calculateFunStats(flights: FlightData[]): Promise<FunStats
     flightsByDate[clock.date] = (flightsByDate[clock.date] || 0) + 1;
   });
 
-  const maxFlightsOnDay = Math.max(0, ...Object.values(flightsByDate));
-  const fastestDay = Object.entries(flightsByDate).find(
-    ([, count]) => count === maxFlightsOnDay
-  )?.[0];
+  // The one busiest-day rule, shared with the records (`shared/busiestDay`).
+  const busiest = busiestDayOf(Object.entries(flightsByDate));
+  const maxFlightsOnDay = busiest?.flights ?? 0;
+  const fastestDay = busiest?.day;
 
   // CO2 footprint in elephants (elephant = 4000kg). Single source of truth
   // is calculateCo2Kg (distance band + cabin-class multiplier) — the same
@@ -134,7 +154,26 @@ export async function calculateFunStats(flights: FlightData[]): Promise<FunStats
 
   const topRoute = Object.entries(routeCounts).sort(([, a], [, b]) => b - a)[0];
 
-  return {
+  const mostUsedAirline =
+    Object.entries(airlineCounts).sort(([, a], [, b]) => b - a)[0]?.[0] || null;
+  const witnessesOf = (match: (f: FlightData) => boolean): string[] =>
+    countableFlights.filter(match).map((f) => f.id);
+  const witnesses: FunWitnesses = {
+    loyaltyAirline: mostUsedAirline
+      ? witnessesOf((f) => Boolean(f.airline) && normalizeAirline(f.airline!) === mostUsedAirline)
+      : [],
+    busiestDay: fastestDay ? witnessesOf((f) => departureClockOf(f)?.date === fastestDay) : [],
+    milestoneYear: topYear
+      ? witnessesOf((f) => departureClockOf(f)?.year === parseInt(topYear[0]))
+      : [],
+    routeMaster: topRoute
+      ? witnessesOf(
+          (f) => routePairKey(f.depIata || f.depIcao, f.arrIata || f.arrIcao) === topRoute[0]
+        )
+      : [],
+  };
+
+  const stats: FunStats = {
     timezoneHopper: timezones.size,
     earlyBird: morningFlights,
     afternoon: afternoonFlights,
@@ -143,7 +182,7 @@ export async function calculateFunStats(flights: FlightData[]): Promise<FunStats
     weekendPercentage:
       flownFlights.length > 0 ? Math.round((weekendFlights / flownFlights.length) * 100) : 0,
     loyaltyScore,
-    mostUsedAirline: Object.entries(airlineCounts).sort(([, a], [, b]) => b - a)[0]?.[0] || null,
+    mostUsedAirline,
     shortHaulKing: shortHaulFlights,
     longHaulPilot: longHaulFlights,
     fastestDay: fastestDay || null,
@@ -155,4 +194,5 @@ export async function calculateFunStats(flights: FlightData[]): Promise<FunStats
     routeMaster: topRoute ? topRoute[0] : null,
     routeMasterCount: topRoute ? topRoute[1] : 0,
   };
+  return { stats, witnesses };
 }

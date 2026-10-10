@@ -52,6 +52,8 @@ describe("punctuality tile - per direction (forgejo#254)", () => {
         />
       </MemoryRouter>
     );
-    expect(screen.getByText(/per direction/)).toBeTruthy();
+    // On the tile itself — the counting help below may say it too.
+    const tiles = screen.getAllByRole("button").map((b) => b.textContent ?? "");
+    expect(tiles.some((text) => /per direction/.test(text))).toBe(true);
   });
 });

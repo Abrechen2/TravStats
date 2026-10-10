@@ -27,6 +27,7 @@ import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from "../ut
 import { calculateLodgingStats } from "../utils/lodgingStats";
 import logger from "../utils/logger";
 import { localWallClockOf } from "../utils/timezone";
+import { userToday } from "../services/stats/userToday";
 import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "../services/stats/departureClock";
 import { loadPassport } from "../services/stats/passportLoader";
 import { buildWhere, computeSummary } from "../services/stats/summary";
@@ -34,8 +35,7 @@ import { loadDaysAway } from "../services/stats/daysAwayLoader";
 import { loadCountryDetail } from "../services/stats/countryDetailLoader";
 import { buildWrapped } from "../services/stats/wrapped";
 import { fetchFlightDatedRows, fetchCruiseDatedRows } from "../services/stats/timeseriesRows";
-import { buildTravelRecords } from "../services/stats/records";
-import { enrichFlightsWithAirportFacts } from "../services/flightAirportFacts";
+import { buildTravelRecords, loadRecordFlights } from "../services/stats/records";
 import { countableFlightWhere } from "../shared/flightCounting";
 import { loadWrappedDomains, loadWrappedPassport } from "../services/stats/wrappedDomains";
 import {
@@ -611,14 +611,14 @@ router.get(
         });
         // Return minimal response
         businessStats = {
-          costPerKm: 0,
-          costPerHour: 0,
+          costPerKm: null,
+          costPerHour: null,
           totalCost: null,
           totalDistance: 0,
           seatClassDistribution: {},
           mostCommonCategory: null,
           airportDiversity: 0,
-          avgFlightDuration: 0,
+          avgFlightDuration: null,
           busiestMonth: null,
           busiestMonthFlights: 0,
           categoryDistribution: {},
@@ -767,23 +767,19 @@ router.get(
           arrLat: true,
           arrLon: true,
           ...FLIGHT_CLOCK_SELECT,
-          airline: true,
-          aircraft: true,
           departureTime: true,
           arrivalTime: true,
           status: true,
-          price: true,
-          taxes: true,
-          fees: true,
-          category: true,
-          seatClass: true,
           createdAt: true,
         },
       });
 
-      const homePeriods = await loadHomePeriods(userId);
-
-      const stats = await calculateAirportStats(await withDepartureClock(flights), homePeriods);
+      const [homePeriods, today] = await Promise.all([loadHomePeriods(userId), userToday(userId)]);
+      const stats = await calculateAirportStats(
+        await withDepartureClock(flights),
+        homePeriods,
+        today
+      );
       res.json(stats);
     } catch (error) {
       next(error);
@@ -820,34 +816,10 @@ router.get(
     try {
       const userId = req.userId!;
 
-      const flights = await prisma.flight.findMany({
-        where: { userId, ...countableFlightWhere() },
-        select: {
-          id: true,
-          flightNumber: true,
-          ...FLIGHT_CLOCK_SELECT,
-          depLat: true,
-          depLon: true,
-          arrLat: true,
-          arrLon: true,
-          departureTime: true,
-          arrivalTime: true,
-          arrTimeSemantics: true,
-          delayMinutes: true,
-          routeDistance: true,
-          status: true,
-        },
-      });
+      // The loader lives beside the records so their evidence reads the same rows.
+      const flights = await loadRecordFlights(userId);
 
-      // `durationMinutes` is not a column — it is derived from the two clocks,
-      // their timezones and their semantics. Deriving it a second time here
-      // would be the very drift #42 is about, so the record uses the SAME
-      // enrichment every other flight response goes through: a DATE_ONLY row
-      // comes back with a null duration and the aloft record abstains, exactly
-      // as it does in the app.
-      const enriched = await enrichFlightsWithAirportFacts(flights);
-
-      res.json({ success: true, data: { records: buildTravelRecords(enriched) } });
+      res.json({ success: true, data: { records: buildTravelRecords(flights) } });
     } catch (error) {
       next(error);
     }
@@ -1022,6 +994,7 @@ router.get("/seats", async (req: AuthRequest, res: Response, next: NextFunction)
       select: {
         seatNumber: true,
         seatClass: true,
+        aircraft: true,
       },
     });
 

@@ -76,4 +76,61 @@ describe("localWallClockOf", () => {
     expect(clock.hour).toBe(0);
     expect(clock.date).toBe("2026-07-02");
   });
+
+  // A year-only (or month-only) historical entry has no clock at all: the
+  // schema stores its placeholder as midnight UTC on the 1st. Read through a
+  // zone west of UTC that midnight is the evening before — 1 January 2015
+  // became 31 December 2014, and the flight was filed under the wrong YEAR in
+  // every year-based statistic (forgejo#256).
+  it("keeps a year-only placeholder in the year it names, west of UTC", () => {
+    const clock = localWallClockOf(new Date("2015-01-01T00:00:00Z"), "America/New_York", "UNKNOWN");
+    expect(clock.year).toBe(2015);
+    expect(clock.month).toBe(0);
+    expect(clock.date).toBe("2015-01-01");
+  });
+
+  it("keeps a month-only placeholder in its month, west of UTC", () => {
+    const clock = localWallClockOf(
+      new Date("2015-03-01T00:00:00Z"),
+      "America/Los_Angeles",
+      "UNKNOWN"
+    );
+    expect(clock.date).toBe("2015-03-01");
+  });
+
+  it("still reads an unclassified real time on the airport's clock", () => {
+    // Not a placeholder shape (03:30 UTC), so the zone decides as before.
+    const clock = localWallClockOf(new Date("2026-01-01T03:30:00Z"), "America/New_York", "UNKNOWN");
+    expect(clock.date).toBe("2025-12-31");
+  });
+
+  it("never reads a real 00:00 UTC departure as a placeholder", () => {
+    // A known time is stored with UTC semantics: 1 March 00:00 UTC is still
+    // 28 February in New York.
+    const clock = localWallClockOf(new Date("2015-03-01T00:00:00Z"), "America/New_York", "UTC");
+    expect(clock.date).toBe("2015-02-28");
+    expect(clock.hour).toBe(19);
+  });
+
+  it("trusts a stored minute precision over the placeholder shape", () => {
+    const clock = localWallClockOf(
+      new Date("2015-03-01T00:00:00Z"),
+      "America/New_York",
+      "UNKNOWN",
+      "minute"
+    );
+    expect(clock.date).toBe("2015-02-28");
+  });
+
+  it("reads a marked year-only entry written through its zone on its own day, with no hour", () => {
+    // The form writes 2015-01-01T00:00 in New York → 05:00 UTC, precision year.
+    const clock = localWallClockOf(
+      new Date("2015-01-01T05:00:00Z"),
+      "America/New_York",
+      "UNKNOWN",
+      "year"
+    );
+    expect(clock.date).toBe("2015-01-01");
+    expect(clock.hour).toBeNull();
+  });
 });
