@@ -135,10 +135,12 @@ const airlineCodeOf = (flightNumber: string | null): string | null => {
  */
 export function buildWrapped(
   flights: readonly WrappedFlight[],
-  cruises: readonly WrappedCruise[],
+  /** `null` = the user does not see cruises: no figure, no year (forgejo#265). */
+  cruises: readonly WrappedCruise[] | null,
   countries: readonly WrappedCountry[],
   requestedYear: number | null = null,
-  rail: readonly WrappedRail[] = [],
+  /** `null` = the user does not see rail, as for every chapter. */
+  rail: readonly WrappedRail[] | null = [],
   /** forgejo#265 — stays, places, roadtrips, tours, rentals, bus; `null` per hidden domain. */
   chapterRows: WrappedChapterRows = NO_CHAPTERS
 ): Wrapped | null {
@@ -148,7 +150,7 @@ export function buildWrapped(
   const flown = flightsVisible
     ? flights.filter((f) => FLOWN.has(f.status) && f.departureTime !== null)
     : [];
-  const sailed = cruises.filter((c) => isCountableCruise(c) && c.startDate !== null);
+  const sailed = (cruises ?? []).filter((c) => isCountableCruise(c) && c.startDate !== null);
 
   const flightsPerYear = new Map<number, number>();
   for (const flight of flown) {
@@ -169,7 +171,7 @@ export function buildWrapped(
     ...new Set([
       ...flightsPerYear.keys(),
       ...cruisesPerYear.keys(),
-      ...rail.map((r) => r.year),
+      ...(rail ?? []).map((r) => r.year),
       ...chapterYears(chapterRows),
     ]),
   ].sort((a, b) => a - b);
@@ -221,7 +223,7 @@ export function buildWrapped(
     (a, b) => b[1].flights - a[1].flights || a[0].localeCompare(b[0])
   )[0];
 
-  const railInYear = rail.filter((r) => r.year === year);
+  const railInYear = (rail ?? []).filter((r) => r.year === year);
   const railKmOf = (rides: readonly WrappedRail[]): number =>
     Math.round(rides.reduce((sum, r) => sum + (r.distanceKm ?? 0), 0));
 
@@ -250,11 +252,16 @@ export function buildWrapped(
     // spent changing planes in Doha would open the wrapped with a new country
     // the passport does not count, and neither number would explain the other.
     newCountries: countries.filter((c) => c.counted && c.firstYear === year).length,
-    cruises: cruisesPerYear.get(year) ?? 0,
-    railRides: railInYear.length,
-    railKm: railKmOf(railInYear),
+    // A hidden domain abstains — null, never a zero the client must know to
+    // hide (forgejo#265), the rule every chapter follows.
+    cruises: cruises === null ? null : (cruisesPerYear.get(year) ?? 0),
+    railRides: rail === null ? null : railInYear.length,
+    railKm: rail === null ? null : railKmOf(railInYear),
     // Owner decision 7 (rail spec): straight-line km are shown as such.
-    railStraightLineKm: railKmOf(railInYear.filter((r) => r.distanceSource === "great_circle")),
+    railStraightLineKm:
+      rail === null
+        ? null
+        : railKmOf(railInYear.filter((r) => r.distanceSource === "great_circle")),
     topAirline:
       topAirline === undefined
         ? null

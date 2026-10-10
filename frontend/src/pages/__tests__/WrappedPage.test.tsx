@@ -127,13 +127,25 @@ describe("WrappedPage", () => {
     expect(screen.queryByText("stats:wrapped.topRoute")).toBeNull();
   });
 
-  it("hides the cruise figure for a reader who does not sail", async () => {
-    domains.cruise = false;
-    getWrappedMock.mockResolvedValue(wrapped());
+  // forgejo#265: the server answers null for a domain the reader does not see,
+  // as for every chapter, and the page follows the payload.
+  it("hides the cruise and rail figures the server abstains on", async () => {
+    getWrappedMock.mockResolvedValue(
+      wrapped({ cruises: null, railRides: null, railKm: null, railStraightLineKm: null })
+    );
     renderAtRoute();
 
     await waitFor(() => expect(screen.getByText("42")).toBeTruthy());
     expect(screen.queryByText("stats:wrapped.cruises")).toBeNull();
+    expect(screen.queryByText("stats:wrapped.rail")).toBeNull();
+  });
+
+  it("shows a cruise count of zero for a reader who sees cruises", async () => {
+    getWrappedMock.mockResolvedValue(wrapped({ cruises: 0 }));
+    renderAtRoute();
+
+    await waitFor(() => expect(screen.getByText("42")).toBeTruthy());
+    expect(screen.getByText("stats:wrapped.cruises")).toBeTruthy();
   });
 
   it("calls a cruise-only year empty for a reader who cannot see cruises", async () => {
@@ -141,9 +153,10 @@ describe("WrappedPage", () => {
     // not, so a year with three cruises and no flights drew a grid reading
     // "Flüge 0 / Strecke 0 km / Neue Länder 0" — every figure on screen a
     // zero, and the one number that was not zero hidden by the domain switch.
-    domains.cruise = false;
+    // Since forgejo#265 the hidden domain arrives as null, so the empty test
+    // and the card read the same field.
     getWrappedMock.mockResolvedValue(
-      wrapped({ year: 2021, flights: 0, cruises: 3, distanceKm: 0, earthFactor: 0 })
+      wrapped({ year: 2021, flights: 0, cruises: null, distanceKm: 0, earthFactor: 0 })
     );
     renderAtRoute();
 

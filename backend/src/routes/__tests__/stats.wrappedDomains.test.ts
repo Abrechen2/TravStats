@@ -97,6 +97,43 @@ describe("wrapped and badges across domains", () => {
     ).rejects.toThrow(/period=year only/);
   });
 
+  // forgejo#265: a hidden cruise or rail domain abstains — null, as a chapter
+  // does — instead of a zero the client must know to hide.
+  it("answers null for cruises the user switched off and rail behind the switch", async () => {
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
+    const on = (await wrapped()).body;
+    expect(on.cruises).toBeNull();
+    expect(on.railRides).toBe(0);
+    await updateInstanceSettings({ betaFeaturesEnabled: false });
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { enabledDomains: ["flight", "rental", "rail", "cruise"] },
+    });
+    // Rentals hidden too, so give the story a flight to stand on.
+    await prisma.flight.create({
+      data: {
+        userId,
+        depIata: "FRA",
+        arrIata: "LIS",
+        depLat: 50.0379,
+        depLon: 8.5622,
+        arrLat: 38.7742,
+        arrLon: -9.1342,
+        departureTime: new Date("2023-06-01T08:00:00Z"),
+        arrivalTime: new Date("2023-06-01T11:00:00Z"),
+        status: "flown",
+      },
+    });
+    const off = (await wrapped()).body;
+    expect(off.cruises).toBe(0);
+    expect(off).toMatchObject({ railRides: null, railKm: null, railStraightLineKm: null });
+    await prisma.flight.deleteMany({ where: { userId } });
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { enabledDomains: ["flight", "rental", "rail"] },
+    });
+  });
+
   it("has no story at all while the rental domain is behind the switch", async () => {
     await updateInstanceSettings({ betaFeaturesEnabled: false });
     expect((await wrapped()).status).toBe(404);

@@ -90,18 +90,40 @@ export const wrappedSchema = z.object({
         "here, so the story cannot count from a different tier than the headline it " +
         "sits next to.",
     }),
-  cruises: z.number().int(),
-  railRides: z.number().int().openapi({
-    description: "Completed train rides that left in this year, on their station's calendar.",
-  }),
-  railKm: z.number().openapi({
-    description: "Their kilometres, every distance source together; a ride without one adds none.",
-  }),
-  railStraightLineKm: z.number().openapi({
-    description:
-      "The part of `railKm` measured as the straight line between the stations, which " +
-      "understates the track — shown as such, never folded in silently.",
-  }),
+  cruises: z
+    .number()
+    .int()
+    .nullable()
+    .openapi({
+      description:
+        "Sailed cruises that started in this year. Null when the user does not see cruises " +
+        "(switched off) — no figure rather than a zero, as for every chapter.",
+    }),
+  railRides: z
+    .number()
+    .int()
+    .nullable()
+    .openapi({
+      description:
+        "Completed train rides that left in this year, on their station's calendar. Null " +
+        "when the user does not see rail (switched off, or behind the beta switch).",
+    }),
+  railKm: z
+    .number()
+    .nullable()
+    .openapi({
+      description:
+        "Their kilometres, every distance source together; a ride without one adds none. " +
+        "Null with `railRides`.",
+    }),
+  railStraightLineKm: z
+    .number()
+    .nullable()
+    .openapi({
+      description:
+        "The part of `railKm` measured as the straight line between the stations, which " +
+        "understates the track — shown as such, never folded in silently. Null with `railRides`.",
+    }),
   topAirline: z
     .object({
       name: z.string(),

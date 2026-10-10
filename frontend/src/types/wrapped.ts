@@ -47,13 +47,14 @@ export interface Wrapped {
    * cannot count from a different tier than the passport it sits beside.
    */
   newCountries: number;
-  cruises: number;
-  /** Completed train rides that left in this year, on their station's calendar. */
-  railRides: number;
-  /** Their kilometres, every distance source together. */
-  railKm: number;
-  /** The part of `railKm` measured as the straight line — shown as such. */
-  railStraightLineKm: number;
+  /** Null when the reader does not see cruises — no figure, not a zero (forgejo#265). */
+  cruises: number | null;
+  /** Completed train rides that left in this year; null when the reader does not see rail. */
+  railRides: number | null;
+  /** Their kilometres, every distance source together; null with `railRides`. */
+  railKm: number | null;
+  /** The part of `railKm` measured as the straight line — shown as such; null with `railRides`. */
+  railStraightLineKm: number | null;
   /** Null when no flight of the year named a carrier. */
   topAirline: WrappedAirline | null;
   /** The year's most-flown PAIR, codes sorted — not a direction. */

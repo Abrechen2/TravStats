@@ -48,8 +48,9 @@ import { busEvidenceEntry, rentalEvidenceEntry } from "../evidence/entryMappersR
  *    a night bus ran through (`busRideKinds`).
  */
 export async function loadWrappedDomains(userId: string): Promise<{
-  cruises: WrappedCruise[];
-  rail: WrappedRail[];
+  /** `null` = hidden for this user (switched off, or behind the beta switch). */
+  cruises: WrappedCruise[] | null;
+  rail: WrappedRail[] | null;
   chapters: WrappedChapterRows;
 }> {
   const visible = await loadVisibleDomainSet(userId);
@@ -77,12 +78,15 @@ export async function loadWrappedDomains(userId: string): Promise<{
     loadChapterRows(userId, visible, now),
   ]);
   return {
-    cruises: cruises ?? [],
-    rail: (rides ?? []).map((r) => ({
-      year: railYear(r),
-      distanceKm: r.distanceKm,
-      distanceSource: r.distanceSource,
-    })),
+    cruises,
+    rail:
+      rides === null
+        ? null
+        : rides.map((r) => ({
+            year: railYear(r),
+            distanceKm: r.distanceKm,
+            distanceSource: r.distanceSource,
+          })),
     chapters,
   };
 }
