@@ -78,14 +78,23 @@ interface Finding {
   tooltips: number;
   /** A help trigger nested in a `<label>`. */
   helpInLabel: number;
+  /** A help trigger nested in a link or a button. */
+  helpInControl: number;
 }
 
 const HELP_TRIGGERS = new Set(["HelpIcon", "Toggletip", "InsightHelp"]);
 
 /** Whether a JSX node sits inside a `<label>` element. */
 function insideLabel(node: ts.Node, sf: ts.SourceFile): boolean {
+  return insideTag(node, sf, new Set(["label"]));
+}
+
+/** A button inside a link or a button is invalid HTML and unreliable to tap. */
+const INTERACTIVE_PARENTS = new Set(["a", "button", "Link", "NavLink", "summary"]);
+
+function insideTag(node: ts.Node, sf: ts.SourceFile, tags: Set<string>): boolean {
   for (let p = node.parent; p; p = p.parent) {
-    if (ts.isJsxElement(p) && p.openingElement.tagName.getText(sf) === "label") return true;
+    if (ts.isJsxElement(p) && tags.has(p.openingElement.tagName.getText(sf))) return true;
   }
   return false;
 }
@@ -103,11 +112,14 @@ function attrValue(attr: ts.JsxAttribute, sf: ts.SourceFile): string | null {
 /** Scans one file's JSX. */
 function scanSource(source: string, fileName = "x.tsx"): Finding {
   const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-  const finding: Finding = { titles: 0, tooltips: 0, helpInLabel: 0 };
+  const finding: Finding = { titles: 0, tooltips: 0, helpInLabel: 0, helpInControl: 0 };
   const visit = (node: ts.Node): void => {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
       const tag = node.tagName.getText(sf);
       if (HELP_TRIGGERS.has(tag) && insideLabel(node, sf)) finding.helpInLabel += 1;
+      if (HELP_TRIGGERS.has(tag) && insideTag(node, sf, INTERACTIVE_PARENTS)) {
+        finding.helpInControl += 1;
+      }
       const attrs = node.attributes.properties.filter(ts.isJsxAttribute);
       const byName = new Map(attrs.map((a) => [a.name.getText(sf), a]));
       const role = byName.get("role");
@@ -188,6 +200,14 @@ describe("warden: a help button is not part of a field's name", () => {
       .filter((f) => f.helpInLabel > 0)
       .map((f) => `${f.name}: ${f.helpInLabel}`);
     expect(nested).toEqual([]);
+  });
+
+  it("puts no HelpIcon or Toggletip inside a link or a button", () => {
+    const nested = sourceFiles()
+      .map((file) => ({ name: rel(file), ...scanSource(readFileSync(file, "utf8"), file) }))
+      .filter((f) => f.helpInControl > 0)
+      .map((f) => `${f.name}: ${f.helpInControl}`);
+    expect(nested, "a button inside a link or a button - say it as text instead").toEqual([]);
   });
 });
 
