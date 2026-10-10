@@ -1,4 +1,5 @@
 import type { FunStats } from "../../types";
+import { formatNumber } from "../../lib/units";
 import { useTranslation } from "../../hooks/useTranslation";
 import StatCard from "./StatCard";
 import { formatDate } from "../../lib/displayFormat";
@@ -124,10 +125,10 @@ export default function StatsFunSection({ funStats }: StatsFunSectionProps): JSX
             renderedValue: funStats.co2FootprintKg,
           }}
           title={t("stats:fun.co2Footprint")}
-          value={`${funStats.co2FootprintKg.toLocaleString()} kg`}
+          value={`${formatNumber(funStats.co2FootprintKg)} kg`}
           valueSize="md"
           description={t("stats:fun.co2FootprintDesc", {
-            kg: funStats.co2FootprintKg.toLocaleString(),
+            kg: formatNumber(funStats.co2FootprintKg),
             elephants: funStats.co2InElephants.toFixed(1),
           })}
         />

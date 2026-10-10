@@ -234,3 +234,26 @@ describe("the primitives introduce no colour of their own", () => {
     });
   }
 });
+
+describe("SettingRow on a phone (forgejo#88 acceptance)", () => {
+  // A native select is as wide as its longest option; the home-country list
+  // pushed a 360px settings page 21px sideways. jsdom cannot lay out, so the
+  // classes that cap it are pinned.
+  it("caps its control, and a select inside it, at the row's width", async () => {
+    const { SettingRow } = await import("../SettingRow");
+    const { container } = render(
+      <SettingRow
+        title="Heimatland"
+        control={
+          <select aria-label="country">
+            <option>Nicht festgelegt</option>
+          </select>
+        }
+      />
+    );
+    const wrapper = container.querySelector("select")!.parentElement!;
+    expect(wrapper.className.split(/\s+/)).toEqual(
+      expect.arrayContaining(["min-w-0", "max-w-full", "[&>select]:max-w-full"])
+    );
+  });
+});

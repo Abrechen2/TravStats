@@ -5,6 +5,8 @@
  */
 
 import { useState } from "react";
+import { UnreachableNote } from "./SettingsShared";
+import { quotaLine } from "./quotaCopy";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { settingsApi, adminApi } from "../../lib/api";
@@ -49,6 +51,8 @@ export interface ApiKeyCardProps {
   /** Per-provider quota observation. Different providers report this
    *  very differently — see `ProviderQuota` for the variants. */
   quota?: ProviderQuota;
+  /** One sentence: what happens when this provider does not answer. */
+  whenUnreachable?: string;
   /** Capability tags to render as small badges next to the label. */
   capabilities?: ApiCardCapability[];
   onChange?: (value: string) => void;
@@ -77,6 +81,7 @@ export default function ApiKeyCard({
   provider,
   label,
   description,
+  whenUnreachable,
   getKeyUrl,
   isShared,
   hasAccess,
@@ -226,35 +231,7 @@ export default function ApiKeyCard({
           ))}
         </span>
       )}
-      {quota && (
-        <span className="t-caption block">
-          {quota.kind === "observed" && (
-            <>
-              {t("settings:apiKeys.quota.label")}:{" "}
-              <span style={{ fontWeight: 600, color: "var(--ts-text)" }}>
-                {quota.remaining ?? "?"}
-              </span>
-              {quota.limit !== null && <span> / {quota.limit}</span>}{" "}
-              {t("settings:apiKeys.quota.unitsSuffix")}
-              {quota.requestsLimit != null && quota.requestsRemaining != null && (
-                <>
-                  {" · "}
-                  {t("settings:apiKeys.quota.requestsLabel")}: {quota.requestsRemaining} /{" "}
-                  {quota.requestsLimit}
-                </>
-              )}
-            </>
-          )}
-          {quota.kind === "not_reported" && (
-            <>
-              {t("settings:apiKeys.quota.notReported")}
-              {quota.knownLimitHint &&
-                ` (${t("settings:apiKeys.quota.staticHint", { limit: quota.knownLimitHint })})`}
-            </>
-          )}
-          {quota.kind === "rate_limit_only" && t("settings:apiKeys.quota.rateLimitOnly")}
-        </span>
-      )}
+      {quota && <span className="t-caption block">{quotaLine(quota, t)}</span>}
     </>
   );
 
@@ -394,6 +371,7 @@ export default function ApiKeyCard({
           sub={
             <span className="flex flex-col" style={{ gap: 4 }}>
               <span>{description}</span>
+              {whenUnreachable && <UnreachableNote>{whenUnreachable}</UnreachableNote>}
               {details}
             </span>
           }
@@ -429,6 +407,7 @@ export default function ApiKeyCard({
           {statusPill}
         </div>
         <p className="t-caption">{description}</p>
+        {whenUnreachable && <UnreachableNote>{whenUnreachable}</UnreachableNote>}
         {details}
       </div>
       {isDemo ? <DemoLockedNotice /> : editor}

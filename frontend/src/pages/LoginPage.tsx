@@ -38,7 +38,12 @@ export default function LoginPage(): JSX.Element {
   const { setAuth } = useAuthStore();
 
   // Forgot password modal state
-  const [showForgotModal, setShowForgotModal] = useState(false);
+  // `?forgot=1` opens it straight away: the expired-link page sends the reader
+  // here to ask for a new one, and making them find the link again is a step
+  // too many.
+  const [showForgotModal, setShowForgotModal] = useState(
+    () => new URLSearchParams(location.search).get("forgot") === "1"
+  );
   const [smtpEnabled, setSmtpEnabled] = useState<boolean | null>(null);
   const [registrationEnabled, setRegistrationEnabled] = useState<boolean | null>(null);
   const [adminContactEmail, setAdminContactEmail] = useState<string | null>(null);

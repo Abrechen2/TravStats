@@ -1,9 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { authApi } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
 import { LogoLockup } from "../components/Brand/Logo";
+
+/**
+ * Where the link stands. `unknown` is a check that could not be made (offline,
+ * rate-limited): the form is shown then, and the reset itself still answers —
+ * a failed check must not lock out a link that may well be good.
+ */
+type TokenState = "checking" | "valid" | "invalid" | "unknown";
 
 export default function ResetPasswordPage(): JSX.Element {
   const { t } = useTranslation(["auth"]);
@@ -16,6 +23,25 @@ export default function ResetPasswordPage(): JSX.Element {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  // Asked as the page opens (forgejo#88 acceptance, 2026-10-10): an expired
+  // link used to say so only after the new password had been typed twice.
+  const [tokenState, setTokenState] = useState<TokenState>(token ? "checking" : "invalid");
+
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    authApi
+      .checkResetToken(token)
+      .then((valid) => {
+        if (!cancelled) setTokenState(valid ? "valid" : "invalid");
+      })
+      .catch(() => {
+        if (!cancelled) setTokenState("unknown");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
@@ -48,19 +74,39 @@ export default function ResetPasswordPage(): JSX.Element {
     }
   };
 
-  if (!token) {
+  if (tokenState === "invalid") {
     return (
       <div className="min-h-screen flex items-center justify-center relative">
         <div className="auth-bg" />
-        <div className="relative z-10 w-full max-w-sm px-4 text-center">
-          <p style={{ color: "var(--text-muted)" }}>{t("auth:resetPassword.invalidToken")}</p>
-          <Link
-            to="/login"
-            className="hover:underline mt-4 inline-block"
-            style={{ color: "var(--accent)" }}
+        <div
+          role="alert"
+          className="relative z-10 w-full max-w-sm"
+          style={{
+            margin: "0 var(--ts-space-screen-padding)",
+            padding: "var(--ts-space-xxl)",
+            background: "var(--ts-surface)",
+            border: "1px solid var(--ts-border)",
+            borderRadius: "var(--ts-radius-card)",
+          }}
+        >
+          <h1 className="t-screen-title" style={{ marginBottom: "var(--ts-space-md)" }}>
+            {t("auth:resetPassword.expiredTitle")}
+          </h1>
+          <p className="t-body" style={{ marginBottom: "var(--ts-space-xl)" }}>
+            {t("auth:resetPassword.expiredMessage")}
+          </p>
+          <button
+            type="button"
+            className="btn-primary w-full py-2.5"
+            onClick={() => navigate("/login?forgot=1")}
           >
-            {t("auth:resetPassword.backToLogin")}
-          </Link>
+            {t("auth:resetPassword.backToForgot")}
+          </button>
+          <div className="mt-6 text-center text-sm">
+            <Link to="/login" className="hover:underline" style={{ color: "var(--accent)" }}>
+              {t("auth:resetPassword.backToLogin")}
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -94,7 +140,11 @@ export default function ResetPasswordPage(): JSX.Element {
             borderTop: "2px solid var(--accent)",
           }}
         >
-          {success ? (
+          {tokenState === "checking" ? (
+            <p className="t-body text-center" role="status">
+              {t("auth:resetPassword.checking")}
+            </p>
+          ) : success ? (
             <div className="text-center">
               <p className="text-green-400 mb-4">{t("auth:resetPassword.success")}</p>
             </div>

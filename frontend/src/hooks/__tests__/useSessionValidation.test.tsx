@@ -25,11 +25,32 @@ beforeEach(() => {
 });
 
 describe("useSessionValidation", () => {
-  it("skips the network call when no user is persisted", async () => {
+  // forgejo#88 acceptance, 2026-10-10: a browser with the session cookie but
+  // no localStorage (cleared site data) was shown the login page. The session
+  // is the cookie, so the server decides.
+  it("restores a session the cookie still holds when nothing is persisted", async () => {
     const { result } = renderHook(() => useSessionValidation());
 
     await waitFor(() => expect(result.current.sessionChecked).toBe(true));
-    expect(mocks.me).not.toHaveBeenCalled();
+    expect(mocks.me).toHaveBeenCalledTimes(1);
+    expect(useAuthStore.getState().user).toEqual(USER);
+  });
+
+  it("stays anonymous when nothing is persisted and the server says 401", async () => {
+    mocks.me.mockRejectedValue(httpError(401));
+    const { result } = renderHook(() => useSessionValidation());
+
+    await waitFor(() => expect(result.current.sessionChecked).toBe(true));
+    expect(useAuthStore.getState().user).toBeNull();
+    expect(mocks.logout).not.toHaveBeenCalled();
+  });
+
+  it("stays anonymous, and opens the gate, when the server is unreachable", async () => {
+    mocks.me.mockRejectedValue(new Error("Network Error"));
+    const { result } = renderHook(() => useSessionValidation());
+
+    await waitFor(() => expect(result.current.sessionChecked).toBe(true));
+    expect(useAuthStore.getState().user).toBeNull();
   });
 
   it("keeps the user signed in when the server confirms the session", async () => {

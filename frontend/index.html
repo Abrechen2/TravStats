@@ -2,6 +2,13 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      A plain, unhashed, same-origin script, first in <head> so it is listening
+      before the module entry (which the build moves into <head>) can fail: if the
+      entry (or anything it imports) is gone after an update, it reloads once
+      and otherwise says why the page is empty. See public/boot-guard.js.
+    -->
+    <script src="/boot-guard.js"></script>
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <!-- iOS never reads the manifest, so its icon is linked separately — and it
          must be SQUARE: /logo.png is 512x597, which the home screen squashed. -->

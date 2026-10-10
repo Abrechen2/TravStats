@@ -17,7 +17,8 @@ function httpStatusOf(error: unknown): number | undefined {
 }
 
 /**
- * Verifies a persisted login against the server once per app start.
+ * Derives the session from the SERVER once per app start: verifies a
+ * persisted login, and restores one that only the cookie still knows about.
  *
  * The persisted user in localStorage has no expiry; the auth cookie expires
  * after 7 days. Without this check the app boots as "logged in" with a dead
@@ -41,7 +42,25 @@ export function useSessionValidation(): { sessionChecked: boolean } {
     // 401 being handled here — re-run the effect, cancel the in-flight check
     // and leave the app on the loading screen forever.
     if (!useAuthStore.getState().user) {
-      setSessionChecked(true);
+      // No persisted user is NOT "signed out": the session is the HttpOnly
+      // cookie, and localStorage can be gone while it is not — cleared site
+      // data, a storage-partitioned browser, a second profile sharing
+      // cookies. Deciding off localStorage alone sent such a browser to the
+      // login page with a perfectly good session (forgejo#88 acceptance,
+      // 2026-10-10). So the server is asked; a 401 is the ordinary anonymous
+      // answer and changes nothing (the persisted user is already null, so
+      // the interceptor's logout path has nothing to clear or redirect).
+      const restore = async () => {
+        try {
+          const { user } = await authApi.me();
+          useAuthStore.getState().setAuth(user);
+        } catch {
+          // Anonymous (401), or the server is unreachable: stay signed out.
+        } finally {
+          setSessionChecked(true);
+        }
+      };
+      void restore();
       return;
     }
 

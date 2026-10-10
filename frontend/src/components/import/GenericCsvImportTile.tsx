@@ -7,6 +7,7 @@ import { ColumnMappingWizard, type MappingFieldSpec } from "./ColumnMappingWizar
 import { PreviewModal } from "./PreviewModal";
 import { commitPreviewRows } from "./commitPreview";
 import { ImportTileShell, ImportFilePicker, ImportErrorBlock } from "./ImportTileShell";
+import { describeParseResult } from "./parserErrorCopy";
 
 type FlightField = keyof GenericMapping;
 
@@ -109,44 +110,45 @@ export function GenericCsvImportTile(): JSX.Element {
   const [csvSamples, setCsvSamples] = useState<Record<string, string>>({});
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [skippedNotice, setSkippedNotice] = useState<string | null>(null);
 
-  const handleFile = useCallback(async (file: File): Promise<void> => {
-    try {
-      const text = await file.text();
-      const records = parseCsv(text);
-      if (records.length === 0) {
-        setError("Empty CSV.");
-        return;
+  const handleFile = useCallback(
+    async (file: File): Promise<void> => {
+      try {
+        const text = await file.text();
+        const records = parseCsv(text);
+        if (records.length === 0) {
+          setError(t("settings:import.parserErrors.emptyFile"));
+          return;
+        }
+        setCsvText(text);
+        setCsvHeaders(Object.keys(records[0]));
+        setCsvSamples(records[0]);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
       }
-      setCsvText(text);
-      setCsvHeaders(Object.keys(records[0]));
-      setCsvSamples(records[0]);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }, []);
+    },
+    [t]
+  );
 
   const handleMappingSubmit = useCallback(
     async (mapping: GenericMapping): Promise<void> => {
       if (!csvText) return;
       const parsed = parseGenericCsv(csvText, mapping);
-      if (parsed.parserErrors.length > 0) {
-        const total = parsed.parserErrors.length;
-        const lines = parsed.parserErrors
-          .slice(0, 5)
-          .map((e) => `${e.field ?? "spec"} (row ${e.rowIndex}): ${e.message}`);
-        if (total > 5) lines.push(`… and ${total - 5} more`);
-        setError(lines.join("\n"));
+      const outcome = describeParseResult(parsed, t);
+      if (outcome.fatal) {
+        setError(outcome.fatal);
         return;
       }
       try {
         const result = await postImportPreview(parsed.rows);
+        setSkippedNotice(outcome.skippedNotice);
         setPreview(result);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
+      } catch {
+        setError(t("settings:import.parserErrors.previewFailed"));
       }
     },
-    [csvText]
+    [csvText, t]
   );
 
   return (
@@ -180,11 +182,15 @@ export function GenericCsvImportTile(): JSX.Element {
           rows={preview.rows}
           summary={preview.summary}
           flightsListHref="/flights"
+          notice={skippedNotice}
           onCommit={async (rows) => {
             const result = await commitPreviewRows(rows, "imported_generic_csv");
             if (result.failures.length > 0) {
               setError(
-                `Imported ${result.committed} of ${rows.length}. ${result.failures.length} chunk(s) failed: ${result.failures.map((f) => `chunk ${f.chunkIndex}: ${f.error}`).join("; ")}`
+                t("settings:import.parserErrors.commitPartial", {
+                  committed: result.committed,
+                  total: rows.length,
+                })
               );
             }
             return {

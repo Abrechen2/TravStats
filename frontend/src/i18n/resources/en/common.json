@@ -118,6 +118,12 @@
     "fallbackMessage": "An unexpected error occurred",
     "tryAgain": "Try Again"
   },
+  "staleBundle": {
+    "title": "A new version is available",
+    "message": "TravStats was updated while this page was open. Parts of the old version no longer exist, so this view could not be loaded. Reloading fetches the current version.",
+    "reload": "Reload",
+    "reloading": "Loading the new version…"
+  },
   "labels": {
     "username": "Username",
     "password": "Password",

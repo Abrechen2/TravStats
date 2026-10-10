@@ -82,7 +82,7 @@ describe("PreviewModal", () => {
     expect(cb).toBeChecked();
     expect(cb).not.toBeDisabled();
     expect(screen.getByText("2024-09-12")).toBeInTheDocument();
-    expect(screen.getByText("flown")).toBeInTheDocument();
+    expect(screen.getByText("flights:status.flown")).toBeInTheDocument();
   });
 
   it("leaves a row the server already holds unticked, but still tickable", () => {
@@ -187,5 +187,33 @@ describe("PreviewModal", () => {
     });
     // Form is still rendered (commit button visible) so the user can retry
     expect(screen.getByText("settings:import.preview.commit")).toBeInTheDocument();
+  });
+
+  // forgejo#88 acceptance, 2026-10-10: the status column printed the raw
+  // value ("flown") on the German page.
+  it("names a row's status in words, not as its stored value", () => {
+    render(
+      <PreviewModal
+        rows={[row()]}
+        summary={{ ok: 1, problems: 0, duplicates: 0, unresolvable: 0 }}
+        onCommit={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.queryByText("flown")).toBeNull();
+    expect(screen.getByText("flights:status.flown")).toBeInTheDocument();
+  });
+
+  it("shows the skipped-lines notice above the rows", () => {
+    render(
+      <PreviewModal
+        rows={[row()]}
+        summary={{ ok: 1, problems: 0, duplicates: 0, unresolvable: 0 }}
+        notice="1 line was skipped"
+        onCommit={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("1 line was skipped");
   });
 });

@@ -395,7 +395,9 @@
     "deleteError": "Failed to delete photo",
     "empty": "No photos yet — upload the first memories of this journey.",
     "fromLibrary": "From the photo library",
-    "fromLibraryAlt": "Photo from the photo library"
+    "fromLibraryAlt": "Photo from the photo library",
+    "tooLarge": "“{{name}}” is too large — a photo may be at most {{maxMb}} MB. It was not uploaded.",
+    "tooLargeServer": "A photo is too large — at most {{maxMb}} MB per photo is allowed. Nothing was uploaded."
   },
   "insights": {
     "longest": "Longest trip",

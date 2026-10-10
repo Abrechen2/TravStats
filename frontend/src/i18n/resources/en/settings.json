@@ -520,13 +520,13 @@
       }
     },
     "quota": {
-      "label": "Remaining",
-      "unitsSuffix": "API units (last observed)",
-      "requestsLabel": "Plus HTTP requests",
-      "observedSuffix": "calls (last observed)",
-      "notReported": "Provider does not return quota headers.",
-      "staticHint": "Free-tier cap: ~{{limit}}/month",
-      "rateLimitOnly": "No monthly limit — IP-based rate limiting."
+      "notReported": "The provider does not say how many lookups are left.",
+      "staticHint": "The free plan allows about {{limit}} a month.",
+      "rateLimitOnly": "No monthly allowance — only very many lookups in a short time are slowed down.",
+      "unknownYet": "How many lookups are left is not known yet — it shows after the first lookup with this key.",
+      "remainingOf": "{{remaining}} of {{limit}} lookups left (as of the last lookup).",
+      "remainingOnly": "{{remaining}} lookups left (as of the last lookup).",
+      "requestsLine": "Plus {{remaining}} of {{limit}} requests at the broker, RapidAPI."
     },
     "sharedNote": "This key is shared by the administrator and cannot be edited",
     "save": "Save API Keys",
@@ -560,20 +560,14 @@
     "bulkRefresh": {
       "title": "Refresh existing flights",
       "description": "Backfill missing fields (tail number, aircraft type, Mode-S, codeshare flag, airline ICAO/IATA and actual departure/arrival times) on your existing flights from the last 365 days. Existing values are never overwritten. Requires AeroDataBox — only this provider covers the 365-day window.",
-      "remainingPrefix": "There are",
-      "remainingSuffix": "flights queued for refresh.",
       "allUpToDate": "All flights in the 365-day window are up to date — nothing to do.",
       "demoBlocked": "Disabled on the demo account to avoid burning real API tokens. Available on your prod instance.",
-      "noHistoricalProvider": "You need an AeroDataBox key to refresh flights older than today — only AeroDataBox covers the 365-day window. Enter a key above and reload the page.",
       "button": "Refresh",
       "running": "Running...",
       "confirmTitle": "Confirm AeroDataBox calls",
       "confirmBody": "This will use up to {{count}} AeroDataBox calls in this run. A single click processes at most 25 flights — click again to drain the remainder.",
       "confirmHistoricalNote": "Only AeroDataBox can serve the 365-day window. Other configured APIs (AirLabs, Aviationstack, OpenSky) are not used for this operation.",
-      "confirmQuotaCurrent": "AeroDataBox quota: {{remaining}} of {{limit}} API units remaining.",
       "confirmQuotaWarn": "Remaining quota is below this batch — you will hit zero before completion.",
-      "quotaLabelADB": "AeroDataBox quota remaining",
-      "quotaSuffixADB": "API units (last observed)",
       "confirmRun": "Refresh now",
       "summaryTitle": "Last run",
       "summaryScanned": "Scanned: {{count}}",
@@ -581,7 +575,13 @@
       "summaryNoData": "No provider data: {{count}}",
       "summaryAlreadyComplete": "Already complete: {{count}}",
       "summaryFailed": "Failed: {{count}}",
-      "summaryRetryHint": "{{count}} more flights remain — click \"Refresh\" again to process the next batch."
+      "summaryRetryHint": "{{count}} more flights remain — click \"Refresh\" again to process the next batch.",
+      "previewFailed": "The preview could not be loaded. Please try again later.",
+      "runFailed": "The refresh failed. Please try again later.",
+      "needsKey_one": "{{count}} flight could be refreshed — an AeroDataBox key is missing for that. Only AeroDataBox reaches back 365 days. Add a key above.",
+      "needsKey_other": "{{count}} flights could be refreshed — an AeroDataBox key is missing for that. Only AeroDataBox reaches back 365 days. Add a key above.",
+      "pending_one": "{{count}} flight can be refreshed.",
+      "pending_other": "{{count}} flights can be refreshed."
     },
     "opensky": {
       "label": "OpenSky Network",
@@ -756,12 +756,27 @@
           "seatNumber": "Seat number",
           "notes": "Notes"
         }
-      }
+      },
+      "unresolvable": "{{count}} unresolvable"
     },
-    "toast": {
-      "movedFromDashboard": "The flight import has moved here — under Settings → Import."
-    },
-    "noRoutes": "No list format for this area yet. Add single entries in the area itself."
+    "noRoutes": "No list format for this area yet. Add single entries in the area itself.",
+    "parserErrors": {
+      "row": "Line {{line}}: {{reason}}",
+      "invalidDate": "“{{value}}” is not a valid date",
+      "invalidTime": "time “{{value}}” is not valid (expected HH:MM:SS)",
+      "missingIata": "no airport code (IATA) in From/To",
+      "missingHeader": "The file has no “{{value}}” column. Is it a Flightradar24 export?",
+      "unmappedField": "The required field “{{value}}” is not mapped to a column.",
+      "missingColumn": "The mapped column “{{value}}” is not in the file.",
+      "unknown": "The line could not be read",
+      "more": "… and {{count}} more",
+      "noRows": "The file has no readable line. Nothing was imported.",
+      "emptyFile": "The file is empty.",
+      "skipped_one": "{{count}} line was skipped because it could not be read. You can review and import the rest.",
+      "skipped_other": "{{count}} lines were skipped because they could not be read. You can review and import the rest.",
+      "previewFailed": "The preview could not be created. Please try again.",
+      "commitPartial": "Imported {{committed}} of {{total}} flights. Part of the file could not be saved — import it again; what is already there will be recognised."
+    }
   },
   "trips": {
     "title": "Trips",
@@ -981,5 +996,15 @@
     "utcHint": "Until you confirm a time zone, TravStats counts “today” in UTC.",
     "saveError": "The time zone could not be saved. Please try again.",
     "followsDevice": "On my phone (Companion app), keep the time zone in step with where I am."
+  },
+  "unreachable": {
+    "flightProvider": "If {{name}} does not answer, the flight search asks the next service you have set up; if none answers, it names the reason and you enter the flight by hand. Saved flights stay as they are, and automatic updates try again on their next run.",
+    "aerodatabox": "If AeroDataBox does not answer, the flight search asks the next service you have set up — for flights further back there is no other; “Refresh existing flights” counts such flights as failed. Saved flights stay as they are.",
+    "routing": "If the routing service does not answer, new legs stay straight lines; they can be routed again later from the leg list. Hand-drawn legs are not touched.",
+    "rail": "If the timetable services do not answer, the train-number search finds nothing and the ride is entered by hand. Saved rides stay as they are.",
+    "immich": "If Immich cannot be reached, linked albums show no pictures and an import stops with a message. Photos copied into TravStats stay visible.",
+    "dawarich": "If Dawarich cannot be reached, a track import stops with a message, and the nightly country-day sync carries on the next night where it stopped. Existing tracks stay.",
+    "strava": "If Strava does not answer, importing activities stops with a message. Tours already taken over stay.",
+    "openData": "If one of these services does not answer, the view concerned says so; weather already saved stays, and the next time it is opened it is asked again."
   }
 }

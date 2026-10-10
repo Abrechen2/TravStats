@@ -48,7 +48,12 @@ export function parseFr24(raw: string): ParseResult {
 
   for (const h of REQUIRED_HEADERS) {
     if (!headers.includes(h)) {
-      errors.push({ rowIndex: -1, message: `Missing required header column: ${h}` });
+      errors.push({
+        rowIndex: -1,
+        message: `Missing required header column: ${h}`,
+        code: "missingHeader",
+        value: h,
+      });
     }
   }
   if (errors.length > 0) return { rows: [], parserErrors: errors };
@@ -57,23 +62,46 @@ export function parseFr24(raw: string): ParseResult {
   records.forEach((rec, idx) => {
     const date = rec["Date"];
     if (!isRealDate(date)) {
-      errors.push({ rowIndex: idx, field: "Date", message: `Invalid Date: ${date}` });
+      errors.push({
+        rowIndex: idx,
+        field: "Date",
+        message: `Invalid Date: ${date}`,
+        code: "invalidDate",
+        value: date,
+      });
       return;
     }
     const dep = rec["Dep time"];
     const arr = rec["Arr time"];
     if (dep && !HMS_RE.test(dep)) {
-      errors.push({ rowIndex: idx, field: "Dep time", message: `Invalid Dep time: ${dep}` });
+      errors.push({
+        rowIndex: idx,
+        field: "Dep time",
+        message: `Invalid Dep time: ${dep}`,
+        code: "invalidTime",
+        value: dep,
+      });
       return;
     }
     if (arr && !HMS_RE.test(arr)) {
-      errors.push({ rowIndex: idx, field: "Arr time", message: `Invalid Arr time: ${arr}` });
+      errors.push({
+        rowIndex: idx,
+        field: "Arr time",
+        message: `Invalid Arr time: ${arr}`,
+        code: "invalidTime",
+        value: arr,
+      });
       return;
     }
     const fromMatch = rec["From"]?.match(IATA_RE);
     const toMatch = rec["To"]?.match(IATA_RE);
     if (!fromMatch || !toMatch) {
-      errors.push({ rowIndex: idx, field: "From/To", message: "Missing IATA in From/To" });
+      errors.push({
+        rowIndex: idx,
+        field: "From/To",
+        message: "Missing IATA in From/To",
+        code: "missingIata",
+      });
       return;
     }
     rows.push({

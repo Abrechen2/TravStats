@@ -64,6 +64,11 @@ export const resetPasswordSchema = z.object({
   newPassword: z.string().min(8).max(100),
 });
 
+/** A reset link's token, asked about before the reader types a new password. */
+export const resetTokenCheckSchema = z.object({
+  token: z.string().min(1).max(256),
+});
+
 export const forceChangePasswordSchema = z.object({
   changeToken: z.string().min(1).optional(), // now delivered via HttpOnly cookie; body is fallback
   newPassword: z.string().min(8).max(100),

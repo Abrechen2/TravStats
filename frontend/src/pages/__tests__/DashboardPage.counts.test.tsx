@@ -1,3 +1,4 @@
+import { useToastStore } from "../../store/toastStore";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
@@ -161,5 +162,17 @@ describe("DashboardPage: domain counts survive a tab change", () => {
     // Drain the refetch that the remounted DashboardPage kicked off, so no
     // state update lands after this test has already returned.
     await waitFor(() => expect(flightCount()).toBe(flightsTotal));
+  });
+
+  // forgejo#88 acceptance, 2026-10-10: a 1.5-era migration notice ("Der
+  // Flug-Import ist jetzt hier — unter Einstellungen → Import") still fired
+  // the first time any account had flights — on the dashboard, which is not
+  // where the import is, and for accounts that never knew the old place.
+  it("raises no 'import has moved' toast once the account has flights", async () => {
+    window.localStorage.clear();
+    useToastStore.setState({ toasts: [] });
+    renderDashboard();
+    await waitFor(() => expect(flightCount()).toBe(flightsTotal));
+    expect(useToastStore.getState().toasts).toEqual([]);
   });
 });

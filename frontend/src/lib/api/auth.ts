@@ -102,6 +102,12 @@ export const authApi = {
     return data;
   },
 
+  /** Whether a reset link's token is still good. Names no account. */
+  checkResetToken: async (token: string): Promise<boolean> => {
+    const { data } = await api.post<{ valid: boolean }>("/auth/reset-password/check", { token });
+    return data.valid === true;
+  },
+
   resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> => {
     const { data } = await api.post<{ message: string }>("/auth/reset-password", {
       token,

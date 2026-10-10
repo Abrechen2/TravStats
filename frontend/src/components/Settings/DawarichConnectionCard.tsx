@@ -128,6 +128,7 @@ export default function DawarichConnectionCard(): JSX.Element {
       <SectionTitle
         title={t("trips:tours.dawarichSettings.title")}
         description={t("trips:tours.dawarichSettings.subtitle")}
+        whenUnreachable={t("settings:unreachable.dawarich")}
         badge={
           status?.isShared ? (
             <Pill color={token("accent")}>{t("trips:tours.dawarichSettings.shared")}</Pill>

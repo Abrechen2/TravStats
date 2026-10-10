@@ -37,7 +37,7 @@
  *   habit and too heavy for a phone.
  * - Map camera (`mapCameraStore`) — where this screen was looking.
  * - One-time notices: `globeCoachmarkSeen`, `airport-seeding-modal-seen`,
- *   `tsv1_5_import_moved_seen`, dismissed notices, the update badge's
+ *   dismissed notices, the update badge's
  *   dismissed version. A hint shown once more on a new device costs a click;
  *   a hint suppressed because it was dismissed elsewhere may be the one this
  *   device's touch interaction needed.

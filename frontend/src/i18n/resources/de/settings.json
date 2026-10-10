@@ -520,13 +520,13 @@
       }
     },
     "quota": {
-      "label": "Verbleibend",
-      "unitsSuffix": "API-Units (zuletzt beobachtet)",
-      "requestsLabel": "Plus HTTP-Requests",
-      "observedSuffix": "Aufrufe (zuletzt beobachtet)",
-      "notReported": "Provider liefert keine Quota-Header zurück.",
-      "staticHint": "Free-Tier-Cap: ~{{limit}}/Monat",
-      "rateLimitOnly": "Kein Monats-Limit — IP-basierte Rate-Limits."
+      "notReported": "Der Anbieter teilt nicht mit, wie viele Abfragen noch übrig sind.",
+      "staticHint": "Kostenlos sind etwa {{limit}} im Monat.",
+      "rateLimitOnly": "Kein Monatskontingent — gebremst wird nur, wer sehr viele Abfragen kurz hintereinander stellt.",
+      "unknownYet": "Wie viele Abfragen noch übrig sind, ist noch nicht bekannt — das zeigt sich nach der ersten Abfrage mit diesem Schlüssel.",
+      "remainingOf": "Noch {{remaining}} von {{limit}} Abfragen übrig (Stand der letzten Abfrage).",
+      "remainingOnly": "Noch {{remaining}} Abfragen übrig (Stand der letzten Abfrage).",
+      "requestsLine": "Dazu noch {{remaining}} von {{limit}} Anfragen beim Vermittler RapidAPI."
     },
     "sharedNote": "Dieser Schlüssel wird vom Administrator geteilt und kann nicht bearbeitet werden",
     "save": "API-Schlüssel speichern",
@@ -560,20 +560,14 @@
     "bulkRefresh": {
       "title": "Bestandsflüge auffrischen",
       "description": "Holt fehlende Felder (Kennzeichen, Flugzeugtyp, Mode-S, Codeshare, Airline-ICAO/IATA sowie tatsächliche Ab- und Ankunftszeiten) für deine bisherigen Flüge der letzten 365 Tage nach. Bestehende Werte werden nie überschrieben. Benötigt AeroDataBox — nur dieser Provider deckt das 365-Tage-Fenster ab.",
-      "remainingPrefix": "Es sind",
-      "remainingSuffix": "Flüge zum Auffrischen vorgemerkt.",
       "allUpToDate": "Alle Flüge im 365-Tage-Fenster sind aktuell — nichts zu tun.",
       "demoBlocked": "Im Demo-Account deaktiviert, um keine echten API-Tokens zu verbrauchen. In deiner Prod-Instanz verfügbar.",
-      "noHistoricalProvider": "Du benötigst einen AeroDataBox-Schlüssel, um Flüge älter als heute aufzufrischen — nur AeroDataBox deckt das 365-Tage-Fenster ab. Trage einen Schlüssel oben ein und lade die Seite neu.",
       "button": "Auffrischen",
       "running": "Läuft...",
       "confirmTitle": "AeroDataBox-Aufrufe bestätigen",
       "confirmBody": "Dies verbraucht bis zu {{count}} AeroDataBox-Aufrufe in diesem Durchlauf. Pro Klick werden maximal 25 Flüge bearbeitet, danach kannst du erneut klicken, um den Rest abzuarbeiten.",
       "confirmHistoricalNote": "Nur AeroDataBox kann das 365-Tage-Fenster bedienen. Andere konfigurierte APIs (AirLabs, Aviationstack, OpenSky) werden für diesen Vorgang nicht genutzt.",
-      "confirmQuotaCurrent": "AeroDataBox-Quota: {{remaining}} von {{limit}} API-Units verbleibend.",
       "confirmQuotaWarn": "Verbleibende Quota reicht nicht für diesen Durchlauf — wirst vorzeitig auf 0 fallen.",
-      "quotaLabelADB": "AeroDataBox-Quota verbleibend",
-      "quotaSuffixADB": "API-Units (zuletzt beobachtet)",
       "confirmRun": "Jetzt auffrischen",
       "summaryTitle": "Letzter Lauf",
       "summaryScanned": "Geprüft: {{count}}",
@@ -581,7 +575,13 @@
       "summaryNoData": "Keine Provider-Daten: {{count}}",
       "summaryAlreadyComplete": "Bereits vollständig: {{count}}",
       "summaryFailed": "Fehlgeschlagen: {{count}}",
-      "summaryRetryHint": "{{count}} weitere Flüge stehen noch aus — auf „Auffrischen\" klicken, um den nächsten Stapel zu verarbeiten."
+      "summaryRetryHint": "{{count}} weitere Flüge stehen noch aus — auf „Auffrischen\" klicken, um den nächsten Stapel zu verarbeiten.",
+      "previewFailed": "Die Vorschau konnte nicht geladen werden. Bitte versuche es später erneut.",
+      "runFailed": "Die Auffrischung ist fehlgeschlagen. Bitte versuche es später erneut.",
+      "needsKey_one": "{{count}} Flug könnte aufgefrischt werden — dafür fehlt ein AeroDataBox-Schlüssel. Nur AeroDataBox reicht 365 Tage zurück. Trag oben einen Schlüssel ein.",
+      "needsKey_other": "{{count}} Flüge könnten aufgefrischt werden — dafür fehlt ein AeroDataBox-Schlüssel. Nur AeroDataBox reicht 365 Tage zurück. Trag oben einen Schlüssel ein.",
+      "pending_one": "{{count}} Flug kann aufgefrischt werden.",
+      "pending_other": "{{count}} Flüge können aufgefrischt werden."
     },
     "opensky": {
       "label": "OpenSky Network",
@@ -756,12 +756,27 @@
           "seatNumber": "Sitzplatznummer",
           "notes": "Notizen"
         }
-      }
+      },
+      "unresolvable": "{{count}} nicht auflösbar"
     },
-    "toast": {
-      "movedFromDashboard": "Der Flug-Import ist jetzt hier — unter Einstellungen → Import."
-    },
-    "noRoutes": "Für diesen Bereich gibt es noch kein Listenformat. Einzelne Einträge legst du direkt dort an."
+    "noRoutes": "Für diesen Bereich gibt es noch kein Listenformat. Einzelne Einträge legst du direkt dort an.",
+    "parserErrors": {
+      "row": "Zeile {{line}}: {{reason}}",
+      "invalidDate": "Datum „{{value}}“ ist kein gültiges Datum",
+      "invalidTime": "Uhrzeit „{{value}}“ ist ungültig (erwartet: HH:MM:SS)",
+      "missingIata": "kein Flughafencode (IATA) bei Von/Nach",
+      "missingHeader": "Die Datei hat keine Spalte „{{value}}“. Ist es ein Flightradar24-Export?",
+      "unmappedField": "Das Pflichtfeld „{{value}}“ ist keiner Spalte zugeordnet.",
+      "missingColumn": "Die zugeordnete Spalte „{{value}}“ fehlt in der Datei.",
+      "unknown": "Die Zeile konnte nicht gelesen werden",
+      "more": "… und {{count}} weitere",
+      "noRows": "In der Datei ist keine lesbare Zeile. Nichts wurde importiert.",
+      "emptyFile": "Die Datei ist leer.",
+      "skipped_one": "{{count}} Zeile wurde übersprungen, weil sie nicht lesbar ist. Die übrigen kannst du prüfen und importieren.",
+      "skipped_other": "{{count}} Zeilen wurden übersprungen, weil sie nicht lesbar sind. Die übrigen kannst du prüfen und importieren.",
+      "previewFailed": "Die Vorschau konnte nicht erstellt werden. Bitte versuche es erneut.",
+      "commitPartial": "{{committed}} von {{total}} Flügen importiert. Ein Teil konnte nicht gespeichert werden — bitte die Datei noch einmal importieren; bereits Importiertes wird dabei erkannt."
+    }
   },
   "trips": {
     "title": "Reisen",
@@ -981,5 +996,15 @@
     "utcHint": "Solange du keine Zeitzone bestätigt hast, rechnet TravStats „heute“ in UTC.",
     "saveError": "Die Zeitzone konnte nicht gespeichert werden. Bitte versuche es noch einmal.",
     "followsDevice": "Auf meinem Handy (Companion-App) soll sich die Zeitzone automatisch dem Aufenthaltsort anpassen."
+  },
+  "unreachable": {
+    "flightProvider": "Antwortet {{name}} nicht, fragt die Flugsuche den nächsten eingerichteten Dienst; antwortet keiner, nennt sie den Grund, und du trägst den Flug von Hand ein. Gespeicherte Flüge bleiben unverändert, automatische Updates versuchen es beim nächsten Durchlauf erneut.",
+    "aerodatabox": "Antwortet AeroDataBox nicht, fragt die Flugsuche den nächsten eingerichteten Dienst — für Flüge, die länger zurückliegen, gibt es keinen anderen; „Bestandsflüge auffrischen“ zählt solche Flüge als fehlgeschlagen. Gespeicherte Flüge bleiben unverändert.",
+    "routing": "Antwortet der Routing-Dienst nicht, bleiben neue Etappen gerade Linien; in der Etappenliste lassen sie sich später erneut routen. Gezeichnete Strecken bleiben unberührt.",
+    "rail": "Antworten die Fahrplan-Dienste nicht, findet die Zugnummer-Suche nichts, und die Fahrt wird von Hand eingetragen. Gespeicherte Fahrten bleiben unverändert.",
+    "immich": "Ist Immich nicht erreichbar, zeigen verknüpfte Alben keine Bilder, und ein Import bricht mit einer Meldung ab. In TravStats kopierte Fotos bleiben sichtbar.",
+    "dawarich": "Ist Dawarich nicht erreichbar, bricht ein Track-Import mit einer Meldung ab, und der nächtliche Abgleich der Ländertage macht in der nächsten Nacht dort weiter, wo er stehen blieb. Vorhandene Tracks bleiben.",
+    "strava": "Antwortet Strava nicht, bricht der Import von Aktivitäten mit einer Meldung ab. Bereits übernommene Touren bleiben.",
+    "openData": "Antwortet einer dieser Dienste nicht, sagt die betroffene Ansicht das; schon gespeichertes Wetter bleibt stehen, und beim nächsten Öffnen wird erneut gefragt."
   }
 }

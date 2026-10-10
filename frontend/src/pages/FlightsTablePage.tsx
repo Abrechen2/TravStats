@@ -473,7 +473,9 @@ export default function FlightsTablePage(): JSX.Element {
       <div className="w-full">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h1 className="t-screen-title">{t("dashboard:flightsTitle")}</h1>
-          <div className="flex items-center gap-2">
+          {/* flex-wrap like every other logbook: three buttons are 404px, and
+              without it they pushed a 360px phone's page sideways (forgejo#88). */}
+          <div className="flex flex-wrap items-center gap-2">
             {!selection.selecting && (
               <button
                 type="button"

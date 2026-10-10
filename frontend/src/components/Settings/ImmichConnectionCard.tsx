@@ -111,6 +111,7 @@ export default function ImmichConnectionCard(): JSX.Element {
       <SectionTitle
         title={t("title")}
         description={t("subtitle")}
+        whenUnreachable={t("settings:unreachable.immich")}
         badge={status?.isShared ? <Pill color={token("accent")}>{t("shared")}</Pill> : undefined}
       />
 

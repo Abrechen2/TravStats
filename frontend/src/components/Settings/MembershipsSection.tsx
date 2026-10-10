@@ -29,7 +29,7 @@ interface MembershipsSectionProps {
   description?: string;
   /** More per-card content under the coverage line (activity, status history). */
   renderExtra?: (membership: LodgingMembership) => ReactNode;
-  /** Fired with the fresh list after every load and write. */
+  /** Fired with the fresh list after every write (not the initial load). */
   onChanged?: (memberships: LodgingMembership[]) => void;
 }
 

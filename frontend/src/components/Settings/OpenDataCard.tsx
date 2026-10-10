@@ -44,6 +44,7 @@ export default function OpenDataCard({ isAdmin }: { isAdmin: boolean }): JSX.Ele
       <SectionTitle
         title={t("openData:settings.title")}
         description={t("openData:settings.description")}
+        whenUnreachable={t("settings:unreachable.openData")}
       />
       <SettingRows>
         {isAdmin ? (

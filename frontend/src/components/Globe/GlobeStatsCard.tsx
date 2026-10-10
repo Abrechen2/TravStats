@@ -6,6 +6,7 @@
 // computed, with no knowledge of layers, cameras or projections in it.
 
 import type { JSX } from "react";
+import { formatNumber } from "../../lib/units";
 import type { useTranslation } from "../../hooks/useTranslation";
 
 export interface GlobeLiveStats {
@@ -85,7 +86,7 @@ export function GlobeStatsCard({ stats, t }: GlobeStatsCardProps): JSX.Element |
           <Row
             show={stats.flightKm > 0}
             label={t("map:globe.stats.flightKm")}
-            value={`${stats.flightKm.toLocaleString()} km`}
+            value={`${formatNumber(stats.flightKm)} km`}
           />
           <Row
             show={stats.cruises > 0}

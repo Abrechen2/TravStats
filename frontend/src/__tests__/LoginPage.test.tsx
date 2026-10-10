@@ -222,6 +222,23 @@ describe("LoginPage", () => {
     });
   });
 
+  // The expired-reset-link page sends the reader here with ?forgot=1 to ask
+  // for a new link; the dialog must already be open (forgejo#88 acceptance).
+  it("opens the forgot-password dialog straight away for ?forgot=1", async () => {
+    mockUseLocation.mockReturnValue({
+      pathname: "/login",
+      search: "?forgot=1",
+      hash: "",
+      state: null,
+    });
+    render(
+      <BrowserRouter>
+        <LoginPage />
+      </BrowserRouter>
+    );
+    expect(await screen.findByText(/login\.forgotPasswordModal\.title/i)).toBeInTheDocument();
+  });
+
   it("redirects to /change-password when login returns requiresPasswordChange", async () => {
     vi.mocked(authApi.login).mockResolvedValue({
       requiresPasswordChange: true as const,
