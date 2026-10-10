@@ -233,6 +233,25 @@ describe("POST /trips/package/{preview,commit}", () => {
     expect(dayBooking.freeCancellationOn?.toISOString().slice(0, 10)).toBe("2026-03-01");
     expect(dayBooking.freeCancellationUntil).toBeNull();
 
+    // A later document of the same booking only fills what is still empty.
+    await prisma.booking.update({
+      where: { id: dayBooking.id },
+      data: { paymentDueOn: new Date("2026-03-10T00:00:00Z") },
+    });
+    const later = await commit({
+      reading: {
+        bookingReference: "DL-286",
+        issuedOn: "2026-02-02",
+        freeCancellationUntil: "2026-03-05",
+        paymentDueOn: "2026-03-20",
+      },
+    }).expect(201);
+    expect(later.body.data.booking).toMatchObject({ action: "attach", id: dayBooking.id });
+    expect(later.body.data.booking).not.toHaveProperty("filledDeadlines");
+    const kept = await prisma.booking.findUniqueOrThrow({ where: { id: dayBooking.id } });
+    expect(kept.freeCancellationOn?.toISOString().slice(0, 10)).toBe("2026-03-01");
+    expect(kept.paymentDueOn?.toISOString().slice(0, 10)).toBe("2026-03-10");
+
     const unplaced = await commit({
       reading: {
         bookingReference: "DL-287",
@@ -245,6 +264,25 @@ describe("POST /trips/package/{preview,commit}", () => {
     });
     expect(unplacedBooking.freeCancellationUntil).toBeNull();
     expect(unplacedBooking.freeCancellationOn).toBeNull();
+
+    // ...and an attached booking that holds none takes the document's.
+    const filled = await commit({
+      reading: {
+        bookingReference: "DL-287",
+        issuedOn: "2026-02-02",
+        freeCancellationUntil: "2026-03-01T12:00",
+        deadlineZone: "Africa/Nairobi",
+        paymentDueOn: "2026-03-15",
+      },
+    }).expect(201);
+    expect(filled.body.data.booking).toMatchObject({
+      action: "attach",
+      filledDeadlines: ["freeCancellationUntil", "paymentDueOn"],
+    });
+    const filledBooking = await prisma.booking.findUniqueOrThrow({
+      where: { id: unplacedBooking.id },
+    });
+    expect(filledBooking.freeCancellationUntil?.toISOString()).toBe("2026-03-01T09:00:00.000Z");
   });
 
   it("never guesses an airport: an ambiguous city skips the leg until the reviewer picks one", async () => {

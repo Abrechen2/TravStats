@@ -125,7 +125,17 @@ const committed = z.object({
 
 const commitResult = z.object({
   trip: z.object({ action: z.enum(["create", "attach"]), id: z.string().uuid() }),
-  booking: z.object({ action: z.enum(["create", "attach"]), id: z.string().uuid() }),
+  booking: z.object({
+    action: z.enum(["create", "attach"]),
+    id: z.string().uuid(),
+    filledDeadlines: z
+      .array(z.enum(["freeCancellationUntil", "paymentDueOn"]))
+      .optional()
+      .describe(
+        "On an attached booking: deadlines this document filled because the booking held " +
+          "none (forgejo#285). A deadline already stored is never overwritten."
+      ),
+  }),
   flights: z.array(committed.extend({ index: z.number().int() })),
   stays: z.array(
     committed.extend({ index: z.number().int(), lodgingId: z.string().uuid().nullable() })
