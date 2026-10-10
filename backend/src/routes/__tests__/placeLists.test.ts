@@ -102,6 +102,27 @@ describe("Place lists API", () => {
       expect(direct.status).toBe(404);
     });
 
+    it("a double tap on 'add' answers twice and stores the place once", async () => {
+      const list = await request(app)
+        .post("/api/v1/place-lists")
+        .set("Cookie", authCookie)
+        .send({ name: "Doppelt" });
+      const place = await makePlace("Akropolis");
+      for (let round = 0; round < 5; round++) {
+        await prisma.placeListEntry.deleteMany({ where: { listId: list.body.data.id } });
+        const results = await Promise.all(
+          [0, 1, 2].map(() =>
+            request(app)
+              .post(`/api/v1/place-lists/${list.body.data.id}/entries`)
+              .set("Cookie", authCookie)
+              .send({ placeId: place.id })
+          )
+        );
+        expect(results.map((r) => r.status)).toEqual([201, 201, 201]);
+        expect(await prisma.placeListEntry.count({ where: { listId: list.body.data.id } })).toBe(1);
+      }
+    });
+
     it("counts a wishlist entry as a member but not as visited", async () => {
       const list = await request(app)
         .post("/api/v1/place-lists")

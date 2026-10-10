@@ -75,11 +75,14 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     // The row may not exist yet for an account that never saved a setting.
     // `data` is a required column; a new row starts with an empty object,
     // exactly as `/app-settings` creates one.
-    await prisma.userSettings.upsert({
-      where: { userId },
-      update: {},
-      create: { userId, data: {} as unknown as Prisma.InputJsonValue },
-      select: { id: true },
+    // `createMany … skipDuplicates` is one `INSERT … ON CONFLICT DO NOTHING`.
+    // A Prisma `upsert` with an empty `update` reads first and inserts second,
+    // so two tabs saving their first preference at the same moment both found
+    // no row, both inserted, and the loser failed on the unique user_id — its
+    // section was lost (seen as an intermittent red "two concurrent writes" test).
+    await prisma.userSettings.createMany({
+      data: [{ userId, data: {} as unknown as Prisma.InputJsonValue }],
+      skipDuplicates: true,
     });
 
     const outcome = await prisma.$transaction(async (tx) => {

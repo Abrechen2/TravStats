@@ -139,17 +139,7 @@ router.post("/:key/subscribe", async (req: AuthRequest, res: Response, next: Nex
     // In one transaction, so a list can never exist without the memberships it
     // is supposed to carry.
     const [list] = await prisma.$transaction(async (tx) => {
-      const created = await tx.placeList.upsert({
-        where: { userId_curatedKey: { userId, curatedKey: curated.key } },
-        create: {
-          userId,
-          curatedKey: curated.key,
-          name: curated.name,
-          description: curated.description,
-          icon: curated.icon,
-        },
-        update: {},
-      });
+      const created = await ensureCuratedList(tx, userId, curated);
 
       // `Place` carries the catalogue item as a bare foreign key with no
       // relation field, so the catalogue is read first and the places matched
@@ -542,22 +532,13 @@ router.post("/items/:itemId/tick", async (req: AuthRequest, res: Response, next:
       logger.error({ error, placeId: place.id }, "Failed to complete address after tick");
     });
 
-    const list = await prisma.placeList.upsert({
-      where: { userId_curatedKey: { userId, curatedKey: curated.key } },
-      create: {
-        userId,
-        curatedKey: curated.key,
-        name: curated.name,
-        description: curated.description,
-        icon: curated.icon,
-      },
-      update: {},
-    });
+    const list = await ensureCuratedList(prisma, userId, curated);
 
-    await prisma.placeListEntry.upsert({
-      where: { listId_placeId: { listId: list.id, placeId: place.id } },
-      create: { listId: list.id, placeId: place.id, sortIdx: item.sortIdx },
-      update: {},
+    // One `INSERT … ON CONFLICT DO NOTHING`: a double tap must not race into
+    // a unique violation (a read-then-insert upsert does).
+    await prisma.placeListEntry.createMany({
+      data: [{ listId: list.id, placeId: place.id, sortIdx: item.sortIdx }],
+      skipDuplicates: true,
     });
 
     // A dated tick records the visit too, once. `createMany` with a guard
@@ -615,3 +596,31 @@ router.delete(
 );
 
 export default router;
+
+/**
+ * The account's copy of a curated list, created if missing. `createMany …
+ * skipDuplicates` is one `INSERT … ON CONFLICT DO NOTHING`; a Prisma `upsert`
+ * with an empty `update` reads first and inserts second, so two adoptions at
+ * the same moment raced into a unique violation on (user, curatedKey).
+ */
+async function ensureCuratedList(
+  client: Pick<typeof prisma, "placeList">,
+  userId: string,
+  curated: { key: string; name: string; description: string | null; icon: string | null }
+) {
+  await client.placeList.createMany({
+    data: [
+      {
+        userId,
+        curatedKey: curated.key,
+        name: curated.name,
+        description: curated.description,
+        icon: curated.icon,
+      },
+    ],
+    skipDuplicates: true,
+  });
+  return client.placeList.findUniqueOrThrow({
+    where: { userId_curatedKey: { userId, curatedKey: curated.key } },
+  });
+}
