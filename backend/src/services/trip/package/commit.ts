@@ -15,6 +15,7 @@
  * has one; an attached flight or stay keeps its booking when it has one; a
  * row on another trip stays where it is (the proposal skipped it already).
  */
+import { parsedDeadlineColumns } from "../../deadlines/parsedDeadlines";
 import { propagateWrites } from "../../sharing/propagate";
 import { prisma, type DbTransaction } from "../../../db";
 import { AppError } from "../../../middleware/errorHandler";
@@ -263,6 +264,9 @@ export async function commitPackageProposal(
   );
   const cruise = proposal.cruise?.action === "create" ? await cruiseRow(userId, contract) : null;
   const fx = await bookingFx(userId, contract);
+  // The document's deadlines (forgejo#285). A package names no place, so a
+  // cancellation TIME needs the zone the template states; a day stands alone.
+  const deadlines = await parsedDeadlineColumns(contract, contract.deadlineZone ?? null, userId);
   const document = proposal.document;
   if (document?.action === "file") {
     await assertLinkable(userId, [document.id]);
@@ -322,6 +326,7 @@ export async function commitPackageProposal(
               price: contract.totalPrice ?? null,
               currency: contract.currency ?? (contract.totalPrice == null ? null : "EUR"),
               ...fx,
+              ...deadlines,
             },
             select: { id: true },
           })

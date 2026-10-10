@@ -1,3 +1,4 @@
+import { parsedDeadlineColumns } from "../deadlines/parsedDeadlines";
 import { Prisma } from "../../prisma";
 import { propagateWrite, shareSnapshot } from "../sharing/propagate";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
@@ -314,6 +315,7 @@ async function createStay(
   const fx = resolveFxFields(fxOutcome);
 
   const checkOut = toDate(fields.checkOut);
+  const zone = await zoneOfLodging(lodgingId);
   await prisma.lodgingStay.create({
     data: {
       userId,
@@ -325,9 +327,11 @@ async function createStay(
       // clock, so the instants stay null; an import is a machine reading.
       ...stayTimeColumns(
         { checkIn, checkOut, checkInTime: null, checkOutTime: null },
-        await zoneOfLodging(lodgingId),
+        zone,
         "machine"
       ),
+      // The confirmation's deadlines on the hotel's clock (forgejo#285).
+      ...(await parsedDeadlineColumns(fields, zone, userId)),
       status: "completed",
       roomCategory: fields.roomCategory ?? null,
       board: fields.board ?? null,

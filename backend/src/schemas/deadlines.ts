@@ -1,3 +1,5 @@
+import { z } from "./zod";
+import { isLocalDate } from "../shared/time/localDate";
 import { dayFieldSchema, timeFieldSchema } from "../shared/time/timeInput";
 
 /**
@@ -46,4 +48,24 @@ export const onlineCheckInInputShape = {
     .nullable()
     .optional()
     .openapi({ description: CHECK_IN_DESCRIPTION }),
+};
+
+/**
+ * The deadlines as a DOCUMENT states them — the value names a v2 template may
+ * fill (lodging, rental, package) and the import candidates carry
+ * (forgejo#285). `freeCancellationUntil`: `YYYY-MM-DDTHH:mm` on the place's
+ * clock, or `YYYY-MM-DD` when only the day is known; `paymentDueOn`:
+ * `YYYY-MM-DD`. Placed on a clock at commit
+ * (`services/deadlines/parsedDeadlines.ts`).
+ */
+const LOCAL_MINUTE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/;
+
+const isDeadline = (value: string): boolean => {
+  const day = value.slice(0, 10);
+  return isLocalDate(day) && (value.length === 10 || LOCAL_MINUTE.test(value));
+};
+
+export const parsedDeadlineValuesShape = {
+  freeCancellationUntil: z.string().refine(isDeadline, "YYYY-MM-DD or YYYY-MM-DDTHH:mm").nullish(),
+  paymentDueOn: z.string().refine(isLocalDate, "YYYY-MM-DD").nullish(),
 };

@@ -69,6 +69,17 @@ function stationInput(name: string, resolution: StationResolution) {
   return { name };
 }
 
+/** A parsed deadline as the create body takes it: a bare day, or the station's wall clock. */
+function rentalDeadlineInput(
+  doc: ParsedRentalConfirmation
+): Pick<CreateRentalBody, "freeCancellationUntil" | "paymentDueOn"> {
+  const until = doc.freeCancellationUntil;
+  return {
+    ...(until ? { freeCancellationUntil: until.length === 10 ? until : { local: until } } : {}),
+    ...(doc.paymentDueOn ? { paymentDueOn: doc.paymentDueOn } : {}),
+  };
+}
+
 async function confirmationCandidate(
   userId: string,
   doc: ParsedRentalConfirmation,
@@ -97,6 +108,8 @@ async function confirmationCandidate(
     currency: doc.currency,
     inclusions: doc.inclusions,
     status: "scheduled",
+    // On the pickup station's clock — the rental route reads its zone (forgejo#285).
+    ...rentalDeadlineInput(doc),
   };
   return {
     kind: "confirmation",

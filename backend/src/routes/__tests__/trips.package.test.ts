@@ -201,6 +201,52 @@ describe("POST /trips/package/{preview,commit}", () => {
     expect(proposal.warnings).toContainEqual({ code: "priceConflict", subject: "9Z123456" });
   });
 
+  it("stores the deadlines a package reading carries on the new booking (forgejo#285)", async () => {
+    const res = await commit({
+      reading: {
+        bookingReference: "DL-285",
+        issuedOn: "2026-02-01",
+        freeCancellationUntil: "2026-03-01T12:00",
+        deadlineZone: "Africa/Nairobi",
+        paymentDueOn: "2026-03-15",
+      },
+    }).expect(201);
+    const booking = await prisma.booking.findUniqueOrThrow({
+      where: { id: res.body.data.booking.id },
+    });
+    // 12:00 in Nairobi (UTC+3) is 09:00Z; the payment day carries no zone.
+    expect(booking.freeCancellationUntil?.toISOString()).toBe("2026-03-01T09:00:00.000Z");
+    expect(booking.freeCancellationZone).toBe("Africa/Nairobi");
+    expect(booking.paymentDueOn?.toISOString().slice(0, 10)).toBe("2026-03-15");
+
+    // A day alone needs no zone and stays a day; a time without one is left out.
+    const dayOnly = await commit({
+      reading: {
+        bookingReference: "DL-286",
+        issuedOn: "2026-02-01",
+        freeCancellationUntil: "2026-03-01",
+      },
+    }).expect(201);
+    const dayBooking = await prisma.booking.findUniqueOrThrow({
+      where: { id: dayOnly.body.data.booking.id },
+    });
+    expect(dayBooking.freeCancellationOn?.toISOString().slice(0, 10)).toBe("2026-03-01");
+    expect(dayBooking.freeCancellationUntil).toBeNull();
+
+    const unplaced = await commit({
+      reading: {
+        bookingReference: "DL-287",
+        issuedOn: "2026-02-01",
+        freeCancellationUntil: "2026-03-01T12:00",
+      },
+    }).expect(201);
+    const unplacedBooking = await prisma.booking.findUniqueOrThrow({
+      where: { id: unplaced.body.data.booking.id },
+    });
+    expect(unplacedBooking.freeCancellationUntil).toBeNull();
+    expect(unplacedBooking.freeCancellationOn).toBeNull();
+  });
+
   it("never guesses an airport: an ambiguous city skips the leg until the reviewer picks one", async () => {
     const reading = {
       bookingReference: "AMB-1",
