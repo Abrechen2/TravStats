@@ -14,7 +14,12 @@
  * loading the account in one pass.
  */
 import { prisma } from "../../db";
-import { buildTzMap, airportCalendarDay, flightEndZone } from "./departureClock";
+import {
+  FLIGHT_CLOCK_SELECT,
+  buildTzMap,
+  airportCalendarDay,
+  flightEndZone,
+} from "./departureClock";
 import type { FlightTimeSemantics } from "../../utils/timezone";
 import type {
   AccountCruise,
@@ -199,8 +204,16 @@ export async function loadTravelAccountData(
         cruises: {
           select: { ...TRIP_COST_SELECT.cruises.select, startDate: true, endDate: true },
         },
+        // The clock columns too: a trip's covered nights are LOCAL nights,
+        // read exactly as the account reads them (forgejo#266).
         flights: {
-          select: { ...TRIP_COST_SELECT.flights.select, departureTime: true, arrivalTime: true },
+          select: {
+            ...TRIP_COST_SELECT.flights.select,
+            departureTime: true,
+            arrivalTime: true,
+            ...FLIGHT_CLOCK_SELECT,
+            arrTimeSemantics: true,
+          },
         },
         // A night train covers its nights on the trip, as on the account.
         railJourneys: {
@@ -262,7 +275,8 @@ export async function loadTravelAccountData(
   ]);
 
   // Resolve both ends' calendar days here, at the load, so the account stays
-  // a pure function over rows that carry their own answer (AUD-079).
+  // a pure function over rows that carry their own answer (AUD-079). Every
+  // trip flight is one of the account's, so one catalogue lookup serves both.
   const tzMap = await buildTzMap(flights);
 
   return {
@@ -283,31 +297,17 @@ export async function loadTravelAccountData(
       endDate: c.endDate,
       label: c.routeName ?? c.shipNameOverride ?? c.ship?.name ?? "—",
     })),
-    flights: when("flight", flights).map((f) => {
-      // Each end in the zone it was written with, else today's catalogue
-      // zone — `flightEndZone`, as every other flight figure (forgejo#273).
-      const depTz = flightEndZone(f.depTimezone, tzMap, f.depIata, f.depIcao);
-      const arrTz = flightEndZone(f.arrTimezone, tzMap, f.arrIata, f.arrIcao);
-      return {
-        id: f.id,
-        status: f.status,
-        departureTime: f.departureTime,
-        arrivalTime: f.arrivalTime,
-        flightNumber: f.flightNumber,
-        depIata: f.depIata,
-        arrIata: f.arrIata,
-        depTimezone: depTz,
-        depTimeSemantics: f.depTimeSemantics as FlightTimeSemantics,
-        depLocalDay:
-          f.departureTime && depTz
-            ? airportCalendarDay(f.departureTime, depTz, f.depTimeSemantics as FlightTimeSemantics)
-            : null,
-        arrLocalDay:
-          f.arrivalTime && arrTz
-            ? airportCalendarDay(f.arrivalTime, arrTz, f.arrTimeSemantics as FlightTimeSemantics)
-            : null,
-      };
-    }),
+    flights: when("flight", flights).map((f) => ({
+      id: f.id,
+      status: f.status,
+      departureTime: f.departureTime,
+      arrivalTime: f.arrivalTime,
+      flightNumber: f.flightNumber,
+      depIata: f.depIata,
+      arrIata: f.arrIata,
+      depTimeSemantics: f.depTimeSemantics as FlightTimeSemantics,
+      ...flightLocalDays(f, tzMap),
+    })),
     freeNights: when("roadtrip", roadtrips)
       // A planned roadtrip counts nowhere, the cut the Stats overview makes.
       .filter((route) => roadtripHasStarted(route.stops, now))
@@ -348,7 +348,12 @@ export async function loadTravelAccountData(
       cost: toTripCostInput(t, visible),
       stays: when("lodging", t.lodgingStays),
       cruises: when("cruise", t.cruises),
-      flights: when("flight", t.flights),
+      flights: when("flight", t.flights).map((f) => ({
+        status: f.status,
+        departureTime: f.departureTime,
+        arrivalTime: f.arrivalTime,
+        ...flightLocalDays(f, tzMap),
+      })),
       rail: when("rail", t.railJourneys),
       bus: when("bus", t.busJourneys),
     })),
@@ -370,4 +375,44 @@ export async function loadTravelAccountData(
  */
 export async function loadVisibleTravelAccountData(userId: string): Promise<TravelAccountData> {
   return loadTravelAccountData(userId, await loadVisibleDomainSet(userId));
+}
+
+interface FlightClockRow {
+  departureTime: Date | null;
+  arrivalTime: Date | null;
+  depIata: string | null;
+  depIcao: string | null;
+  arrIata: string | null;
+  arrIcao: string | null;
+  depTimeSemantics: string;
+  arrTimeSemantics: string;
+  depTimezone: string | null;
+  arrTimezone: string | null;
+}
+
+/**
+ * Both ends of a flight on their airports' calendars — the ONE reading the
+ * year account and the trip coverage share, so the same evening hop cannot be
+ * a night in one and none in the other (forgejo#266). Each end in the zone it
+ * was written with, else today's catalogue zone (`flightEndZone`, as every
+ * other flight figure, forgejo#273); null where no zone is known, and the
+ * account then falls back to the stored instant.
+ */
+export function flightLocalDays(
+  f: FlightClockRow,
+  tzMap: ReadonlyMap<string, string>
+): { depTimezone: string | null; depLocalDay: Date | null; arrLocalDay: Date | null } {
+  const depTz = flightEndZone(f.depTimezone, tzMap, f.depIata, f.depIcao);
+  const arrTz = flightEndZone(f.arrTimezone, tzMap, f.arrIata, f.arrIcao);
+  return {
+    depTimezone: depTz,
+    depLocalDay:
+      f.departureTime && depTz
+        ? airportCalendarDay(f.departureTime, depTz, f.depTimeSemantics as FlightTimeSemantics)
+        : null,
+    arrLocalDay:
+      f.arrivalTime && arrTz
+        ? airportCalendarDay(f.arrivalTime, arrTz, f.arrTimeSemantics as FlightTimeSemantics)
+        : null,
+  };
 }

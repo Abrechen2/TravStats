@@ -15,6 +15,7 @@ import { tripCostItems, tripSpend, type TripCostInput } from "../../shared/tripC
 import { resolveStayTiming } from "../../shared/lodgingTiming";
 import { nightTrainNights, type NightTrainFacts } from "../../shared/railRideKinds";
 import { nightBusNights, type BusNightFacts } from "../../shared/busRideKinds";
+import type { AccountFlight } from "./travelAccount";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -45,7 +46,17 @@ export interface TripAccountInput {
     nights: number | null;
   }[];
   cruises: { status: string; startDate: Date | null; endDate: Date | null }[];
-  flights: { status: string; departureTime: Date | null; arrivalTime: Date | null }[];
+  /**
+   * `depLocalDay` / `arrLocalDay` are the airports' calendar days, resolved
+   * at the load exactly as for the year account (`AccountFlight`): coverage
+   * asks the same question — did this flight take a night — and once answered
+   * it on UTC days, so an evening hop out of Los Angeles covered a night the
+   * year account rightly never counted (forgejo#266).
+   */
+  flights: Pick<
+    AccountFlight,
+    "status" | "departureTime" | "arrivalTime" | "depLocalDay" | "arrLocalDay"
+  >[];
   /**
    * A night train covers the nights it ran through (forgejo#266). Like every
    * coverage row here it counts unless cancelled — a planned trip's booked
@@ -104,8 +115,10 @@ export function buildTripAccount(trips: TripAccountInput[]): TripAccount {
     for (const flight of trip.flights) {
       if (flight.status === "cancelled") continue;
       if (flight.departureTime === null || flight.arrivalTime === null) continue;
-      const dep = dayKey(flight.departureTime);
-      const arr = dayKey(flight.arrivalTime);
+      // Local days where known, the stored instant otherwise — the year
+      // account's reading (`travelAccount.ts`), so the two cannot disagree.
+      const dep = dayKey(flight.depLocalDay ?? flight.departureTime);
+      const arr = dayKey(flight.arrLocalDay ?? flight.arrivalTime);
       for (let c = dep; c < arr; c += DAY_MS) covered.add(c);
     }
     for (const ride of trip.rail) {
