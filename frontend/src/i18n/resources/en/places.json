@@ -308,7 +308,8 @@
       "byMonth": "Visits per month",
       "byWeekday": "Visits per weekday",
       "undatedNote": "{{count}} visits carry no date. They are in the totals but on no chart — they have no day.",
-      "undatedNote_one": "One visit carries no date. It is in the totals but on no chart — it has no day."
+      "undatedNote_one": "One visit carries no date. It is in the totals but on no chart — it has no day.",
+      "charts": "Visits per year, month and weekday"
     },
     "quality": {
       "title": "Ratings",
@@ -338,7 +339,6 @@
         "title": "Discoveries and returns",
         "new": "First visits",
         "again": "Return visits",
-        "description": "first visits / return visits",
         "yearRow": "{{year}}: {{discoveries}} new · {{revisits}} again",
         "empty": "Appears once a dated visit is over.",
         "help": {
@@ -347,7 +347,10 @@
           "source": "Your visits to places in your logbook.",
           "coverage": "{{unordered}} dated visits belong to places with an undated visit — whether they were the first, nobody knows, so they are in neither column. {{withoutDate}} places have no dated visit at all, {{undated}} visits are undated.",
           "exclusions": "Wishlist places and visits dated in the future do not count."
-        }
+        },
+        "before": "first visits · ",
+        "after_one": " return visit",
+        "after_other": " return visits"
       },
       "returning": {
         "title": "Returning after a long break",
@@ -387,7 +390,7 @@
         "photo": "Visits with a photo",
         "note": "Visits with a note",
         "rating": "Visits with a rating",
-        "description": "Photo {{photo}} · note {{note}} · rating {{rating}} — of {{count}} visits",
+        "description": "{{photo}} with a photo · {{note}} with a note · {{rating}} with a rating – of {{count}} visits",
         "empty": "Appears with the first past visit.",
         "help": {
           "unit": "One visit. Photo, note and rating are each counted on their own, never folded into one score.",
@@ -395,7 +398,10 @@
           "source": "Photos attached to the visit itself, the visit's note and its rating.",
           "coverage": "A trip photo not attached to any visit does not count here.",
           "exclusions": "A missing rating is not a bad one — none is ever asked for or filled in."
-        }
+        },
+        "photoValue": "{{pct}} with a photo",
+        "noteValue": "{{pct}} with a note",
+        "ratingValue": "{{pct}} with a rating"
       },
       "jump": {
         "title": "Largest jump",
@@ -408,6 +414,169 @@
           "coverage": "{{uncertain}} pairs of visits on the same day without a time are in an unknown order and are not measured; {{undated}} visits without a day are in no sequence.",
           "exclusions": "The wishlist and planned visits."
         }
+      }
+    },
+    "help": {
+      "visitedPlaces": {
+        "unit": "A place in the logbook that counts as visited — three visits to one café are one place.",
+        "time": "All years: every visited place. A year: a place with a past visit dated in that calendar year (the date entered at the place).",
+        "source": "Your places and their visits (the places list).",
+        "coverage": "A place marked visited without a dated visit counts in the lifetime figure but in no year.",
+        "exclusions": "Places on the wishlist and places whose only visit is still in the future."
+      },
+      "wishlist": {
+        "unit": "A place you have saved but not visited yet.",
+        "time": "Shown only for all years: a wishlist has a state, not a date.",
+        "source": "Your places that do not count as visited.",
+        "coverage": "A place whose only visit is still ahead is listed here: planned is not visited.",
+        "exclusions": "Visited places."
+      },
+      "visits": {
+        "unit": "A visit — three visits to one café are three.",
+        "time": "A visit counts once its date has passed; for a year only visits dated in that year.",
+        "source": "The visits at your visited places.",
+        "coverage": "Undated visits count in the lifetime figure but in no year and in no chart.",
+        "exclusions": "Visits still in the future, and places on the wishlist."
+      },
+      "countries": {
+        "unit": "A country, counted by the place's country code — \"Deutschland\" and \"Germany\" are one country.",
+        "time": "As for \"Places visited\": for a year only places with a visit in that year.",
+        "source": "The country code the place search resolved for each place.",
+        "coverage": "A place without a resolved country code counts in no country.",
+        "exclusions": "Wishlist places; the free-text country name is not read."
+      },
+      "cities": {
+        "unit": "A city, by the name the place search wrote — there is no code for a city.",
+        "time": "As for \"Places visited\".",
+        "source": "The city field of your visited places.",
+        "coverage": "Places without a city count in none; two cities of one name in different countries are one here.",
+        "exclusions": "Wishlist places."
+      },
+      "lists": {
+        "unit": "A list — your own and subscribed checklists alike.",
+        "time": "Shown only for all years: a list is something you keep and belongs to no year.",
+        "source": "Your place lists and the checklists you subscribed to.",
+        "coverage": "Every list counts, an empty one too.",
+        "exclusions": "Checklists you have not subscribed to."
+      },
+      "byCategory": {
+        "unit": "Visited places per category, each place once.",
+        "time": "As for \"Places visited\".",
+        "source": "The category of each visited place.",
+        "coverage": "Every place has exactly one category (unset: \"Other\").",
+        "exclusions": "Wishlist places."
+      },
+      "mostVisited": {
+        "unit": "Visits per place; the name opens the place.",
+        "time": "Past visits count; for a year only that year's.",
+        "source": "The visits of each visited place.",
+        "coverage": "Undated visits count while no year is selected.",
+        "exclusions": "Future visits and places without a counted visit."
+      },
+      "byCountry": {
+        "unit": "Visited places per country, by country code.",
+        "time": "As for \"Places visited\".",
+        "source": "The country code of each visited place.",
+        "coverage": "Places without a resolved country code are missing from this list.",
+        "exclusions": "Wishlist places."
+      },
+      "byCity": {
+        "unit": "Visited places per city, by city name.",
+        "time": "As for \"Places visited\".",
+        "source": "The city field of each visited place.",
+        "coverage": "Places without a city are missing from this list.",
+        "exclusions": "Wishlist places."
+      },
+      "checklists": {
+        "unit": "Ticked entries of a checklist out of all its entries; ordered by share, not by count.",
+        "time": "Shown only for all years: today's state.",
+        "source": "The checklists you subscribed to and their ticked entries.",
+        "coverage": "Only checklists with at least one ticked entry are listed.",
+        "exclusions": "Your own lists have no progress and are not listed."
+      },
+      "busiestMonth": {
+        "unit": "The calendar month with the most visits, summed over all years; on a tie the earlier month.",
+        "time": "The month of the entered visit date — the clock at the place, not your device's.",
+        "source": "Your dated past visits.",
+        "coverage": "A visit recorded in the Companion app close to midnight can land one day off. {{undated}} undated visits are in no month.",
+        "exclusions": "Undated visits, future visits, wishlist places."
+      },
+      "busiestWeekday": {
+        "unit": "The weekday with the most visits; on a tie the earlier one, counting from Sunday.",
+        "time": "The weekday of the entered visit date at the place.",
+        "source": "Your dated past visits.",
+        "coverage": "{{undated}} undated visits are on no weekday.",
+        "exclusions": "Undated visits, future visits, wishlist places."
+      },
+      "busiestDay": {
+        "unit": "Distinct places on one calendar day — two visits to one place that day are one; on a tie the earlier day.",
+        "time": "The day of the entered visit date at the place.",
+        "source": "Your dated past visits.",
+        "coverage": "{{undated}} undated visits belong to no day.",
+        "exclusions": "Undated visits, future visits, wishlist places."
+      },
+      "streak": {
+        "unit": "Consecutive calendar days with at least one visit; on a tie the earlier run.",
+        "time": "Calendar days of the entered visit date at the place — a clock change breaks no run.",
+        "source": "Your dated past visits.",
+        "coverage": "{{undated}} undated visits cannot extend a run.",
+        "exclusions": "Undated visits, future visits, wishlist places."
+      },
+      "charts": {
+        "unit": "Visits per year, per month (all twelve, empty ones too) and per weekday.",
+        "time": "The entered visit date at the place.",
+        "source": "Your dated past visits.",
+        "coverage": "{{undated}} undated visits count in the totals above but in no chart.",
+        "exclusions": "Undated visits, future visits, wishlist places."
+      },
+      "average": {
+        "unit": "Average stars (1–5) over rated visits.",
+        "time": "As for \"Visits\": for a year only that year's visits.",
+        "source": "The rating you gave a visit.",
+        "coverage": "{{rated}} of {{total}} visits are rated.",
+        "exclusions": "A visit without a rating is not a zero and drags nothing down — it is simply left out."
+      },
+      "bestRated": {
+        "unit": "The five highest ratings of single visits; ties by name.",
+        "time": "As for \"Average rating\".",
+        "source": "The ratings of your visits.",
+        "coverage": "A place with several rated visits can appear more than once.",
+        "exclusions": "Unrated visits."
+      },
+      "firstVisit": {
+        "unit": "The earliest dated visit.",
+        "time": "The entered visit date; for a year the earliest of that year.",
+        "source": "Your dated past visits.",
+        "coverage": "An undated visit may have been earlier — nobody knows, so it is not considered.",
+        "exclusions": "Undated visits, future visits, wishlist places."
+      },
+      "favourite": {
+        "unit": "The place with the most visits, from two on; ties by name.",
+        "time": "As for \"Visits\".",
+        "source": "The visits of your visited places.",
+        "coverage": "Undated visits count while no year is selected.",
+        "exclusions": "Future visits and wishlist places."
+      },
+      "categoryCoverage": {
+        "unit": "A place category carried by at least one visited place, out of all categories in the catalogue.",
+        "time": "As for \"Places visited\".",
+        "source": "The category of your visited places and the fixed category catalogue.",
+        "coverage": "Every place has exactly one category.",
+        "exclusions": "Wishlist places."
+      },
+      "extremes": {
+        "unit": "The visited place with the highest or lowest latitude.",
+        "time": "As for \"Places visited\".",
+        "source": "The coordinates of your visited places.",
+        "coverage": "Every place has coordinates; if two share the exact latitude, the evidence names both.",
+        "exclusions": "Wishlist places — even one further north."
+      },
+      "onTrips": {
+        "unit": "A visit filed on a trip — a visit, not a place, belongs to a trip.",
+        "time": "As for \"Visits\".",
+        "source": "The trip entered on a visit.",
+        "coverage": "Out of {{total}} visits; visits without a trip are not in it.",
+        "exclusions": "Future visits; a trip is never guessed from a date."
       }
     }
   },

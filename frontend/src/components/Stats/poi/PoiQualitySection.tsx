@@ -2,12 +2,16 @@ import type { JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { PoiStatsDetail } from "../../../lib/stats/poiStatsDetail";
+import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import StatCard from "../StatCard";
+import CountingHelp from "../counting/CountingHelp";
 import RankedBarList, { type RankedRow } from "../lodging/RankedBarList";
 
 interface Props {
   detail: PoiStatsDetail;
   accent: string;
+  /** The period the tab shows — the population the average's evidence lists. */
+  scope: EvidenceScopeParams;
 }
 
 const MAX_RATING = 5;
@@ -21,7 +25,7 @@ const MAX_RATING = 5;
  * says how many of the visits are actually rated, so the average can be read
  * for what it is.
  */
-export default function PoiQualitySection({ detail, accent }: Props): JSX.Element | null {
+export default function PoiQualitySection({ detail, accent, scope }: Props): JSX.Element | null {
   const { t } = useTranslation(["places", "common"]);
 
   if (detail.ratedVisits === 0 || detail.averageRating === null) return null;
@@ -47,6 +51,14 @@ export default function PoiQualitySection({ detail, accent }: Props): JSX.Elemen
           valueSize="md"
           title={t("places:stats.quality.average")}
           value={detail.averageRating.toFixed(1)}
+          // The panel lists the rated visits the average is taken over — the
+          // count the description names, in the measure's own unit.
+          evidence={{
+            kind: "metric",
+            key: "placeRatedVisitCount",
+            scope,
+            renderedValue: detail.ratedVisits,
+          }}
           description={t("places:stats.quality.averageDesc", {
             rated: detail.ratedVisits,
             total: detail.visitsTotal,
@@ -62,6 +74,17 @@ export default function PoiQualitySection({ detail, accent }: Props): JSX.Elemen
           />
         </div>
       </div>
+      <CountingHelp
+        testId="poi-quality-help"
+        entries={[
+          {
+            term: t("places:stats.quality.average"),
+            helpKey: "places:stats.help.average",
+            values: { rated: detail.ratedVisits, total: detail.visitsTotal },
+          },
+          { term: t("places:stats.quality.bestRated"), helpKey: "places:stats.help.bestRated" },
+        ]}
+      />
     </section>
   );
 }

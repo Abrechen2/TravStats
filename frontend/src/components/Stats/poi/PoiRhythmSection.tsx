@@ -2,7 +2,10 @@ import type { JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { PoiStatsDetail } from "../../../lib/stats/poiStatsDetail";
+import { busiestIndex } from "../../../shared/placeRhythm";
+import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import StatCard from "../StatCard";
+import CountingHelp from "../counting/CountingHelp";
 
 /**
  * The month and weekday key lists the flight statistics already use. Reusing
@@ -39,6 +42,8 @@ interface Props {
   accent: string;
   /** For the one date this section shows — the month name has a language. */
   locale: string;
+  /** The period the tab shows — the population each card's evidence lists. */
+  scope: EvidenceScopeParams;
 }
 
 /**
@@ -49,7 +54,12 @@ interface Props {
  * drawn on, and a bar chart that quietly folded it into January would be
  * inventing one.
  */
-export default function PoiRhythmSection({ detail, accent, locale }: Props): JSX.Element | null {
+export default function PoiRhythmSection({
+  detail,
+  accent,
+  locale,
+  scope,
+}: Props): JSX.Element | null {
   const { t } = useTranslation(["places", "stats", "common"]);
 
   if (detail.visitsDated === 0) return null;
@@ -58,8 +68,12 @@ export default function PoiRhythmSection({ detail, accent, locale }: Props): JSX
   const maxMonth = Math.max(...detail.byMonth, 1);
   const maxWeekday = Math.max(...detail.byWeekday, 1);
 
-  const busiestMonth = detail.byMonth.indexOf(Math.max(...detail.byMonth));
-  const busiestWeekday = detail.byWeekday.indexOf(Math.max(...detail.byWeekday));
+  // The tie rule the evidence panel applies too (`shared/placeRhythm`): the
+  // first month, the first weekday from Sunday. Dated visits exist here, so
+  // neither is null.
+  const busiestMonth = busiestIndex(detail.byMonth) ?? 0;
+  const busiestWeekday = busiestIndex(detail.byWeekday) ?? 0;
+  const undated = { undated: detail.visitsUndated };
 
   return (
     <section className="mt-8">
@@ -73,6 +87,12 @@ export default function PoiRhythmSection({ detail, accent, locale }: Props): JSX
           valueSize="md"
           title={t("places:stats.rhythm.busiestMonth")}
           value={MONTH_KEYS.map((k) => t(`stats:months.${k}`))[busiestMonth]}
+          evidence={{
+            kind: "metric",
+            key: "placeBusiestMonthVisits",
+            scope,
+            renderedValue: detail.byMonth[busiestMonth],
+          }}
           description={t("places:stats.rhythm.visitsCount", {
             count: detail.byMonth[busiestMonth],
           })}
@@ -82,6 +102,12 @@ export default function PoiRhythmSection({ detail, accent, locale }: Props): JSX
           valueSize="md"
           title={t("places:stats.rhythm.busiestWeekday")}
           value={WEEKDAY_KEYS.map((k) => t(`stats:weekdays.${k}`))[busiestWeekday]}
+          evidence={{
+            kind: "metric",
+            key: "placeBusiestWeekdayVisits",
+            scope,
+            renderedValue: detail.byWeekday[busiestWeekday],
+          }}
           description={t("places:stats.rhythm.visitsCount", {
             count: detail.byWeekday[busiestWeekday],
           })}
@@ -91,6 +117,12 @@ export default function PoiRhythmSection({ detail, accent, locale }: Props): JSX
           valueSize="md"
           title={t("places:stats.rhythm.busiestDay")}
           value={detail.busiestDay ? String(detail.busiestDay.places) : "—"}
+          evidence={{
+            kind: "metric",
+            key: "placeBusiestDayPlaces",
+            scope,
+            renderedValue: detail.busiestDay?.places ?? null,
+          }}
           description={
             detail.busiestDay
               ? t("places:stats.rhythm.busiestDayDesc", {
@@ -109,6 +141,12 @@ export default function PoiRhythmSection({ detail, accent, locale }: Props): JSX
           valueSize="md"
           title={t("places:stats.rhythm.streak")}
           value={detail.longestStreakDays ?? "—"}
+          evidence={{
+            kind: "metric",
+            key: "placeLongestStreakDays",
+            scope,
+            renderedValue: detail.longestStreakDays,
+          }}
           description={t("places:stats.rhythm.streakDesc")}
         />
       </div>
@@ -211,6 +249,37 @@ export default function PoiRhythmSection({ detail, accent, locale }: Props): JSX
           ))}
         </div>
       </div>
+
+      <CountingHelp
+        testId="poi-rhythm-help"
+        entries={[
+          {
+            term: t("places:stats.rhythm.busiestMonth"),
+            helpKey: "places:stats.help.busiestMonth",
+            values: undated,
+          },
+          {
+            term: t("places:stats.rhythm.busiestWeekday"),
+            helpKey: "places:stats.help.busiestWeekday",
+            values: undated,
+          },
+          {
+            term: t("places:stats.rhythm.busiestDay"),
+            helpKey: "places:stats.help.busiestDay",
+            values: undated,
+          },
+          {
+            term: t("places:stats.rhythm.streak"),
+            helpKey: "places:stats.help.streak",
+            values: undated,
+          },
+          {
+            term: t("places:stats.rhythm.charts"),
+            helpKey: "places:stats.help.charts",
+            values: undated,
+          },
+        ]}
+      />
 
       {detail.visitsUndated > 0 && (
         <p className="mt-3 text-xs" style={{ color: "var(--text-muted)" }}>

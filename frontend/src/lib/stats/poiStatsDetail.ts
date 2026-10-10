@@ -17,6 +17,7 @@
  */
 
 import { classifyPlace, classifyVisit } from "../../shared/placeCounting";
+import { busiestDay as pickBusiestDay, longestRun } from "../../shared/placeRhythm";
 import type { Place, PlaceVisit } from "../../types/place";
 
 export interface RatedPlace {
@@ -177,12 +178,10 @@ export function derivePoiStats(
   datedVisits.sort((a, b) => a.at.getTime() - b.at.getTime());
   mostVisited.sort((a, b) => b.visits - a.visits || a.place.name.localeCompare(b.place.name));
 
-  let busiestDay: PoiStatsDetail["busiestDay"] = null;
-  for (const [date, ids] of placesPerDay) {
-    if (busiestDay === null || ids.size > busiestDay.places) {
-      busiestDay = { date, places: ids.size };
-    }
-  }
+  // A tie goes to the earlier day (`shared/placeRhythm`), not to whichever
+  // place the list happened to return first — the evidence panel picks the
+  // same day on the server and must name the visits this tile counted.
+  const busiestDay = pickBusiestDay(placesPerDay);
 
   return {
     visitedPlaces,
@@ -226,22 +225,9 @@ export function derivePoiStats(
 }
 
 /**
- * The longest run of consecutive calendar days present in the set.
- *
- * Days are compared as UTC dates rather than by subtracting timestamps: an
- * hour of daylight saving would otherwise break a run, and the run is about
- * days on a calendar, not about elapsed time.
+ * The length of the longest run of consecutive calendar days in the set —
+ * `shared/placeRhythm.longestRun`, whose run the evidence panel lists.
  */
 export function longestRunOfDays(days: readonly string[]): number | null {
-  if (days.length === 0) return null;
-  const sorted = [...new Set(days)].sort();
-  let best = 1;
-  let current = 1;
-  for (let i = 1; i < sorted.length; i += 1) {
-    const previous = Date.parse(`${sorted[i - 1]}T00:00:00Z`);
-    const day = Date.parse(`${sorted[i]}T00:00:00Z`);
-    current = day - previous === 86_400_000 ? current + 1 : 1;
-    if (current > best) best = current;
-  }
-  return best;
+  return longestRun(days)?.days ?? null;
 }

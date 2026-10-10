@@ -31,6 +31,14 @@ interface Props {
   accent: string;
 }
 
+/** The "Verknüpfungen" rows: one evidence measure each, in the order they read. */
+const LINK_ROWS = [
+  { key: "tourOnTripCount", label: "onTrip" },
+  { key: "tourFromRoadtripCount", label: "fromRoadtrip" },
+  { key: "tourDuringCruiseCount", label: "duringCruise" },
+  { key: "tourStandaloneCount", label: "standalone" },
+] as const;
+
 export default function TourStatsSection(props: Props): JSX.Element | null {
   return useToursVisible() ? <TourStatsBody {...props} /> : null;
 }
@@ -88,6 +96,7 @@ function TourStatsBody({ year, accent }: Props): JSX.Element | null {
   const ascent = totalFor(data.totals, "tourAscentM", year);
   const moving = totalFor(data.totals, "tourMovingMinutes", year);
   const lifetime = t("roadtrips:stats.tours.lifetime");
+  const linked = totalFor(data.totals, "tourLinkedCount", year);
 
   return (
     <section className="flex flex-col gap-4" data-testid="tour-stats">
@@ -155,17 +164,11 @@ function TourStatsBody({ year, accent }: Props): JSX.Element | null {
           title={t("roadtrips:stats.tours.moving.title")}
           accent={accent}
           value={
-            data.all.movingSeconds.tours > 0 ? (
-              <EvidenceNumber
-                evidenceKey="tourMovingMinutes"
-                scope={scope}
-                renderedValue={moving}
-                label={t("roadtrips:stats.tours.moving.moving")}
-              >
-                {t("roadtrips:stats.tours.moving.value", { duration: duration(moving * 60) })}
-              </EvidenceNumber>
-            ) : null
+            data.all.movingSeconds.tours > 0
+              ? t("roadtrips:stats.tours.moving.value", { duration: duration(moving * 60) })
+              : null
           }
+          evidence={{ key: "tourMovingMinutes", scope, renderedValue: moving }}
           empty={t("roadtrips:stats.tours.moving.empty")}
           description={
             data.all.pauseSeconds.tours > 0
@@ -191,6 +194,8 @@ function TourStatsBody({ year, accent }: Props): JSX.Element | null {
               ? t("roadtrips:stats.tours.records.value", { count: data.records.length })
               : null
           }
+          // Records are read over all years; the panel lists the tours holding one.
+          evidence={{ key: "tourRecordTours", scope: { period: "allTime" }, renderedValue: null }}
           empty={t("roadtrips:stats.tours.records.empty")}
           description={lifetime}
           help={help("records")}
@@ -237,6 +242,11 @@ function TourStatsBody({ year, accent }: Props): JSX.Element | null {
               ? t("roadtrips:stats.tours.rhythm.value", { count: data.rhythm.firstAreas.length })
               : null
           }
+          evidence={{
+            key: "tourCountriesCount",
+            scope: { period: "allTime" },
+            renderedValue: data.rhythm.firstAreas.length,
+          }}
           empty={t("roadtrips:stats.tours.rhythm.empty")}
           description={data.rhythm.byYear.map((y) => `${y.year}: ${y.tours}`).join(" · ")}
           help={help("rhythm", { withoutArea: data.rhythm.withoutArea })}
@@ -279,21 +289,31 @@ function TourStatsBody({ year, accent }: Props): JSX.Element | null {
           testId="tour-links"
           title={t("roadtrips:stats.tours.links.title")}
           accent={accent}
-          value={
-            data.all.completed > 0
-              ? t("roadtrips:stats.tours.links.value", {
-                  trip: data.links.onTrip,
-                  roadtrip: data.links.fromRoadtrip,
-                  cruise: data.links.duringCruise,
-                })
-              : null
-          }
+          value={count > 0 ? t("roadtrips:stats.tours.links.value", { count: linked }) : null}
+          evidence={{ key: "tourLinkedCount", scope, renderedValue: linked }}
           empty={t("roadtrips:stats.tours.links.empty")}
-          description={t("roadtrips:stats.tours.links.description", {
-            standalone: data.links.standalone,
-          })}
           help={help("links")}
         >
+          {/* forgejo#264: every number opens its own tours. The three links
+              overlap (a shore excursion is on its trip AND during the cruise),
+              so they stand side by side and are never added up. */}
+          {count > 0 && (
+            <ul className="mt-2 space-y-1 text-sm" data-testid="tour-links-rows">
+              {LINK_ROWS.map(({ key, label }) => (
+                <li key={key}>
+                  <EvidenceNumber
+                    evidenceKey={key}
+                    scope={scope}
+                    renderedValue={totalFor(data.totals, key, year)}
+                    label={t(`roadtrips:stats.tours.links.${label}`)}
+                  >
+                    {nf.format(totalFor(data.totals, key, year))}
+                  </EvidenceNumber>{" "}
+                  {t(`roadtrips:stats.tours.links.${label}`)}
+                </li>
+              ))}
+            </ul>
+          )}
           {(data.links.excursions.completed > 0 || data.links.excursions.planned > 0) && (
             <p className="mt-2 text-sm" data-testid="tour-links-excursions">
               {t("roadtrips:stats.tours.links.excursions", {

@@ -26,19 +26,12 @@
     "components/Stats/PeriodComparisonStrip.tsx": {
       "missingCountingHelp": true
     },
-    "components/Stats/PoiStatsSection.tsx": {
-      "missingCountingHelp": true
-    },
     "components/Stats/PunctualitySection.tsx": {
       "missingCountingHelp": true
     },
     "components/Stats/RecordsSection.tsx": {
       "missingCountingHelp": true,
       "figuresWithoutEvidence": 1
-    },
-    "components/Stats/RoadtripStatsSection.tsx": {
-      "missingCountingHelp": true,
-      "figuresWithoutEvidence": 4
     },
     "components/Stats/StatsAirportsSection.tsx": {
       "missingCountingHelp": true,
@@ -102,21 +95,6 @@
       "missingCountingHelp": true,
       "figuresWithoutEvidence": 3
     },
-    "components/Stats/poi/PoiFunSection.tsx": {
-      "missingCountingHelp": true,
-      "figuresWithoutEvidence": 6
-    },
-    "components/Stats/poi/PoiInsightsSection.tsx": {
-      "figuresWithoutEvidence": 5
-    },
-    "components/Stats/poi/PoiQualitySection.tsx": {
-      "missingCountingHelp": true,
-      "figuresWithoutEvidence": 1
-    },
-    "components/Stats/poi/PoiRhythmSection.tsx": {
-      "missingCountingHelp": true,
-      "figuresWithoutEvidence": 4
-    },
     "components/Stats/rail/RailJourneySections.tsx": {
       "figuresWithoutEvidence": 1
     },
@@ -129,12 +107,6 @@
     },
     "components/Stats/rental/RentalStatsSection.tsx": {
       "figuresWithoutEvidence": 2
-    },
-    "components/Stats/roadtrip/RoadtripInsightsSection.tsx": {
-      "figuresWithoutEvidence": 5
-    },
-    "components/Stats/roadtrip/TourStatsSection.tsx": {
-      "figuresWithoutEvidence": 4
     },
     "components/Stats/scorecard/KpiScorecard.tsx": {
       "missingCountingHelp": true

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
+import { Link } from "react-router-dom";
 
 import { roadtripsApi } from "../../lib/api/roadtrips";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -7,6 +8,11 @@ import { useDomainColors } from "../../hooks/useDomainColors";
 import { logger } from "../../lib/logger";
 import type { RoadtripSummary } from "../../types/roadtrip";
 import StatCard from "./StatCard";
+import EvidenceNumber from "./EvidenceNumber";
+import CountingHelp from "./counting/CountingHelp";
+import type { EvidenceScopeParams } from "../evidence/useEvidence";
+import { roadtripCountsIn } from "../../shared/tour/roadtripListScope";
+import { now as clockNow } from "../../shared/time";
 import RankedBarList, { type RankedRow } from "./lodging/RankedBarList";
 import type { PeriodScope } from "./useStatsPeriod";
 import PeriodComparisonStrip from "./PeriodComparisonStrip";
@@ -134,7 +140,12 @@ export default function RoadtripStatsSection({
   const byNights = [...scoped].sort((a, b) => b.nights - a.nights).slice(0, 5);
   const toRow = (r: RoadtripSummary, weight: number, value: string): RankedRow => ({
     key: r.id,
-    label: r.name,
+    // Each record row opens the roadtrip it names.
+    label: (
+      <Link to={`/roadtrips/${r.id}`} className="underline-offset-2 hover:underline">
+        {r.name}
+      </Link>
+    ),
     weight,
     value,
   });
@@ -163,6 +174,17 @@ export default function RoadtripStatsSection({
       ? t("roadtrips:stats.insights.aheadFootnote", { km: nf.format(Math.round(aheadKm)) })
       : undefined;
 
+  // The population the tiles fold, as the evidence panel cuts it: started
+  // roadtrips, filed under the year they started (`roadtripListScope`).
+  const evidenceScope: EvidenceScopeParams =
+    scope.year === null ? { period: "allTime" } : { period: "year", year: scope.year };
+  const evidence = (key: string, renderedValue: number) => ({
+    kind: "metric" as const,
+    key,
+    scope: evidenceScope,
+    renderedValue,
+  });
+
   const show = visibility.isVisible;
   return (
     <section className="space-y-8">
@@ -174,6 +196,7 @@ export default function RoadtripStatsSection({
             valueSize="md"
             title={t("roadtrips:stats.count")}
             value={nf.format(scoped.length)}
+            evidence={evidence("roadtripCount", scoped.length)}
             description={t("roadtrips:stats.countHint", { count: scoped.length })}
           />
           <StatCard
@@ -181,6 +204,7 @@ export default function RoadtripStatsSection({
             valueSize="md"
             title={t("roadtrips:stats.distance")}
             value={`${nf.format(Math.round(km))} km`}
+            evidence={evidence("roadtripRouteKm", Math.round(km))}
             description={t("roadtrips:stats.drivenHint", { km: nf.format(Math.round(driven)) })}
             // The list's distance is the whole route of every roadtrip that has
             // started — including the stretches still ahead of one under way.
@@ -192,6 +216,7 @@ export default function RoadtripStatsSection({
             valueSize="md"
             title={t("roadtrips:stats.nights")}
             value={nf.format(stayNights + freeNights)}
+            evidence={evidence("roadtripNightsTotal", stayNights + freeNights)}
             description={t("roadtrips:stats.nightsHint", {
               stay: nf.format(stayNights),
               free: nf.format(freeNights),
@@ -203,8 +228,20 @@ export default function RoadtripStatsSection({
             valueSize="md"
             title={t("roadtrips:stats.countries")}
             value={nf.format(countries.size)}
+            evidence={evidence("roadtripCountriesCount", countries.size)}
             description={[...countries].sort().join(" · ") || "—"}
           />
+          <div className="md:col-span-2 lg:col-span-4">
+            <CountingHelp
+              testId="roadtrip-kpis-help"
+              entries={[
+                { term: t("roadtrips:stats.count"), helpKey: "roadtrips:stats.help.count" },
+                { term: t("roadtrips:stats.distance"), helpKey: "roadtrips:stats.help.distance" },
+                { term: t("roadtrips:stats.nights"), helpKey: "roadtrips:stats.help.nights" },
+                { term: t("roadtrips:stats.countries"), helpKey: "roadtrips:stats.help.countries" },
+              ]}
+            />
+          </div>
         </div>
       )}
       {show("records") && (
@@ -225,15 +262,52 @@ export default function RoadtripStatsSection({
               toRow(r, r.nights, t("roadtrips:nightsCount", { count: r.nights }))
             )}
           />
+          <div className="lg:col-span-2">
+            <CountingHelp
+              testId="roadtrip-records-help"
+              entries={[
+                {
+                  term: t("roadtrips:stats.longestByKm"),
+                  helpKey: "roadtrips:stats.help.longestByKm",
+                },
+                {
+                  term: t("roadtrips:stats.longestByNights"),
+                  helpKey: "roadtrips:stats.help.longestByNights",
+                },
+              ]}
+            />
+          </div>
         </div>
       )}
       {show("vehicles") && (
-        <RankedBarList
-          title={t("roadtrips:stats.vehicles")}
-          emptyLabel={t("roadtrips:stats.empty")}
-          accent={accent}
-          rows={vehicleRows}
-        />
+        <div>
+          <RankedBarList
+            title={t("roadtrips:stats.vehicles")}
+            emptyLabel={t("roadtrips:stats.empty")}
+            accent={accent}
+            rows={vehicleRows}
+            // The roadtrips behind the bars, each with its vehicle in the panel.
+            total={
+              <>
+                <EvidenceNumber
+                  evidenceKey="roadtripCount"
+                  scope={evidenceScope}
+                  renderedValue={scoped.length}
+                  label={t("roadtrips:stats.count")}
+                >
+                  {nf.format(scoped.length)}
+                </EvidenceNumber>
+                {t("roadtrips:stats.vehiclesTotalAfter", { count: scoped.length })}
+              </>
+            }
+          />
+          <CountingHelp
+            testId="roadtrip-vehicles-help"
+            entries={[
+              { term: t("roadtrips:stats.vehicles"), helpKey: "roadtrips:stats.help.vehicles" },
+            ]}
+          />
+        </div>
       )}
       {show("insights") &&
         (insights ? (
@@ -247,14 +321,11 @@ export default function RoadtripStatsSection({
 }
 
 /**
- * The roadtrips that count in a year: started (a planned one counts nowhere)
- * and started IN that year, the rule cruises follow. `null` is lifetime.
+ * The roadtrips that count in a year — the one rule of
+ * `shared/tour/roadtripListScope.ts`, which the evidence panel applies too.
+ * `null` is lifetime.
  */
 function roadtripsIn(rows: readonly RoadtripSummary[], year: number | null): RoadtripSummary[] {
-  const now = Date.now();
-  return rows.filter((r) => {
-    if (r.startDate && new Date(r.startDate).getTime() > now) return false;
-    if (year === null) return true;
-    return r.startDate !== null && new Date(r.startDate).getUTCFullYear() === year;
-  });
+  const at = clockNow();
+  return rows.filter((r) => roadtripCountsIn(r.startDate, year, at));
 }

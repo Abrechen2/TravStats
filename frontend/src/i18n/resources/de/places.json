@@ -308,7 +308,8 @@
       "byMonth": "Besuche pro Monat",
       "byWeekday": "Besuche pro Wochentag",
       "undatedNote": "{{count}} Besuche ohne Datum sind in den Summen enthalten, aber in keinem Diagramm — sie haben keinen Tag.",
-      "undatedNote_one": "Ein Besuch ohne Datum ist in den Summen enthalten, aber in keinem Diagramm — er hat keinen Tag."
+      "undatedNote_one": "Ein Besuch ohne Datum ist in den Summen enthalten, aber in keinem Diagramm — er hat keinen Tag.",
+      "charts": "Besuche pro Jahr, Monat und Wochentag"
     },
     "quality": {
       "title": "Bewertungen",
@@ -338,7 +339,6 @@
         "title": "Entdeckungen und Wiederbesuche",
         "new": "Erstbesuche",
         "again": "Wiederbesuche",
-        "description": "Erstbesuche / Wiederbesuche",
         "yearRow": "{{year}}: {{discoveries}} neu · {{revisits}} wieder",
         "empty": "Erscheint, sobald ein Besuch mit Datum vorbei ist.",
         "help": {
@@ -347,7 +347,10 @@
           "source": "Deine Besuche an Orten im Logbuch.",
           "coverage": "{{unordered}} datierte Besuche gehören zu Orten mit einem undatierten Besuch – ob sie der erste waren, weiß niemand, sie stehen in keiner Spalte. {{withoutDate}} Orte haben gar keinen datierten Besuch, {{undated}} Besuche sind ohne Datum.",
           "exclusions": "Orte auf der Wunschliste und Besuche mit Datum in der Zukunft zählen nicht."
-        }
+        },
+        "before": "Erstbesuche · ",
+        "after_one": " Wiederbesuch",
+        "after_other": " Wiederbesuche"
       },
       "returning": {
         "title": "Rückkehr nach langer Pause",
@@ -387,7 +390,7 @@
         "photo": "Besuche mit Foto",
         "note": "Besuche mit Notiz",
         "rating": "Besuche mit Bewertung",
-        "description": "Foto {{photo}} · Notiz {{note}} · Bewertung {{rating}} – von {{count}} Besuchen",
+        "description": "{{photo}} mit Foto · {{note}} mit Notiz · {{rating}} mit Bewertung – von {{count}} Besuchen",
         "empty": "Erscheint mit dem ersten vergangenen Besuch.",
         "help": {
           "unit": "Ein Besuch. Foto, Notiz und Bewertung werden jeweils für sich gezählt, nie zu einer Note verrechnet.",
@@ -395,7 +398,10 @@
           "source": "Fotos, die am Besuch selbst hängen, die Notiz des Besuchs und seine Bewertung.",
           "coverage": "Ein Foto der Reise, das keinem Besuch zugeordnet ist, zählt hier nicht.",
           "exclusions": "Eine fehlende Bewertung ist keine schlechte – es wird nie eine verlangt oder ergänzt."
-        }
+        },
+        "photoValue": "{{pct}} mit Foto",
+        "noteValue": "{{pct}} mit Notiz",
+        "ratingValue": "{{pct}} mit Bewertung"
       },
       "jump": {
         "title": "Größter Sprung",
@@ -408,6 +414,169 @@
           "coverage": "{{uncertain}} Besuchspaare am selben Tag ohne Uhrzeit sind in unklarer Reihenfolge und werden nicht gemessen; {{undated}} Besuche ohne Tag stehen in keiner Folge.",
           "exclusions": "Wunschliste und geplante Besuche."
         }
+      }
+    },
+    "help": {
+      "visitedPlaces": {
+        "unit": "Ein Ort im Logbuch, der als besucht gilt – drei Besuche im selben Café sind ein Ort.",
+        "time": "Ohne Jahr: jeder besuchte Ort. Mit Jahr: ein Ort, von dem ein vergangener Besuch in dieses Kalenderjahr fällt (das eingetragene Datum am Ort).",
+        "source": "Deine Orte und ihre Besuche (Orte-Liste).",
+        "coverage": "Ein als besucht markierter Ort ohne datierten Besuch zählt im Gesamtwert, aber in keinem Jahr.",
+        "exclusions": "Orte auf der Merkliste und Orte, deren einziger Besuch noch in der Zukunft liegt."
+      },
+      "wishlist": {
+        "unit": "Ein Ort, den du dir vorgemerkt hast, aber noch nicht besucht.",
+        "time": "Nur ohne Jahr gezeigt: eine Merkliste hat einen Zustand, kein Datum.",
+        "source": "Deine Orte, die nicht als besucht gelten.",
+        "coverage": "Ein Ort mit einem Besuch, der erst in der Zukunft liegt, steht hier: geplant ist nicht besucht.",
+        "exclusions": "Besuchte Orte."
+      },
+      "visits": {
+        "unit": "Ein Besuch – drei Besuche im selben Café sind drei.",
+        "time": "Ein Besuch zählt, sobald sein Datum vorbei ist; mit Jahr nur Besuche, die in dieses Jahr fallen.",
+        "source": "Die Besuche an deinen besuchten Orten.",
+        "coverage": "Besuche ohne Datum zählen im Gesamtwert, aber in keinem Jahr und in keinem Diagramm.",
+        "exclusions": "Besuche, die noch in der Zukunft liegen, und Orte auf der Merkliste."
+      },
+      "countries": {
+        "unit": "Ein Land, gezählt über den Ländercode des Ortes – „Deutschland“ und „Germany“ sind ein Land.",
+        "time": "Wie bei „Orte besucht“: mit Jahr nur Orte mit einem Besuch in diesem Jahr.",
+        "source": "Der Ländercode, den die Ortssuche zu jedem Ort ermittelt hat.",
+        "coverage": "Ein Ort ohne ermittelten Ländercode zählt in keinem Land.",
+        "exclusions": "Orte auf der Merkliste; der frei eingetragene Ländername wird nicht gelesen."
+      },
+      "cities": {
+        "unit": "Eine Stadt, nach dem Namen, den die Ortssuche geschrieben hat – für Städte gibt es keinen Code.",
+        "time": "Wie bei „Orte besucht“.",
+        "source": "Das Stadtfeld deiner besuchten Orte.",
+        "coverage": "Orte ohne Stadt zählen in keiner Stadt; zwei gleichnamige Städte in verschiedenen Ländern sind hier eine.",
+        "exclusions": "Orte auf der Merkliste."
+      },
+      "lists": {
+        "unit": "Eine Liste – eigene und abonnierte Checklisten gleichermaßen.",
+        "time": "Nur ohne Jahr gezeigt: eine Liste ist, was du führst, und gehört zu keinem Jahr.",
+        "source": "Deine Ortslisten und die Checklisten, die du abonniert hast.",
+        "coverage": "Jede Liste zählt, auch eine leere.",
+        "exclusions": "Checklisten, die du nicht abonniert hast."
+      },
+      "byCategory": {
+        "unit": "Besuchte Orte je Kategorie, jeder Ort einmal.",
+        "time": "Wie bei „Orte besucht“.",
+        "source": "Die Kategorie jedes besuchten Ortes.",
+        "coverage": "Jeder Ort hat genau eine Kategorie (ohne Angabe: „Sonstiges“).",
+        "exclusions": "Orte auf der Merkliste."
+      },
+      "mostVisited": {
+        "unit": "Besuche je Ort; der Name führt zum Ort.",
+        "time": "Gezählt werden vergangene Besuche; mit Jahr nur die dieses Jahres.",
+        "source": "Die Besuche jedes besuchten Ortes.",
+        "coverage": "Besuche ohne Datum zählen mit, solange kein Jahr gewählt ist.",
+        "exclusions": "Zukünftige Besuche und Orte ohne gezählten Besuch."
+      },
+      "byCountry": {
+        "unit": "Besuchte Orte je Land, über den Ländercode.",
+        "time": "Wie bei „Orte besucht“.",
+        "source": "Der Ländercode jedes besuchten Ortes.",
+        "coverage": "Orte ohne ermittelten Ländercode fehlen in dieser Liste.",
+        "exclusions": "Orte auf der Merkliste."
+      },
+      "byCity": {
+        "unit": "Besuchte Orte je Stadt, nach Stadtname.",
+        "time": "Wie bei „Orte besucht“.",
+        "source": "Das Stadtfeld jedes besuchten Ortes.",
+        "coverage": "Orte ohne Stadt fehlen in dieser Liste.",
+        "exclusions": "Orte auf der Merkliste."
+      },
+      "checklists": {
+        "unit": "Abgehakte Einträge einer Checkliste von allen ihren Einträgen; sortiert nach Anteil, nicht nach Anzahl.",
+        "time": "Nur ohne Jahr gezeigt: der Stand von heute.",
+        "source": "Die Checklisten, die du abonniert hast, und ihre abgehakten Einträge.",
+        "coverage": "Nur Checklisten mit mindestens einem abgehakten Eintrag stehen hier.",
+        "exclusions": "Deine eigenen Listen haben keinen Fortschritt und stehen nicht hier."
+      },
+      "busiestMonth": {
+        "unit": "Der Kalendermonat mit den meisten Besuchen, über alle Jahre zusammengezählt; bei Gleichstand der frühere Monat.",
+        "time": "Der Monat des eingetragenen Besuchsdatums – die Uhrzeit am Ort, nicht die deines Geräts.",
+        "source": "Deine datierten, vergangenen Besuche.",
+        "coverage": "Ein in der Companion-App erfasster Besuch kurz vor oder nach Mitternacht kann einen Tag daneben liegen. {{undated}} Besuche ohne Datum stehen in keinem Monat.",
+        "exclusions": "Besuche ohne Datum, zukünftige Besuche, Orte auf der Merkliste."
+      },
+      "busiestWeekday": {
+        "unit": "Der Wochentag mit den meisten Besuchen; bei Gleichstand der frühere, ab Sonntag gezählt.",
+        "time": "Der Wochentag des eingetragenen Besuchsdatums am Ort.",
+        "source": "Deine datierten, vergangenen Besuche.",
+        "coverage": "{{undated}} Besuche ohne Datum stehen auf keinem Wochentag.",
+        "exclusions": "Besuche ohne Datum, zukünftige Besuche, Orte auf der Merkliste."
+      },
+      "busiestDay": {
+        "unit": "Verschiedene Orte an einem Kalendertag – zwei Besuche desselben Ortes am selben Tag sind einer; bei Gleichstand der frühere Tag.",
+        "time": "Der Tag des eingetragenen Besuchsdatums am Ort.",
+        "source": "Deine datierten, vergangenen Besuche.",
+        "coverage": "{{undated}} Besuche ohne Datum gehören zu keinem Tag.",
+        "exclusions": "Besuche ohne Datum, zukünftige Besuche, Orte auf der Merkliste."
+      },
+      "streak": {
+        "unit": "Kalendertage hintereinander mit mindestens einem Besuch; bei Gleichstand die frühere Serie.",
+        "time": "Kalendertage des eingetragenen Besuchsdatums am Ort – eine Zeitumstellung unterbricht keine Serie.",
+        "source": "Deine datierten, vergangenen Besuche.",
+        "coverage": "{{undated}} Besuche ohne Datum können keine Serie verlängern.",
+        "exclusions": "Besuche ohne Datum, zukünftige Besuche, Orte auf der Merkliste."
+      },
+      "charts": {
+        "unit": "Besuche je Jahr, je Monat (alle zwölf, auch leere) und je Wochentag.",
+        "time": "Das eingetragene Besuchsdatum am Ort.",
+        "source": "Deine datierten, vergangenen Besuche.",
+        "coverage": "{{undated}} Besuche ohne Datum zählen in den Summen oben, aber in keinem Diagramm.",
+        "exclusions": "Besuche ohne Datum, zukünftige Besuche, Orte auf der Merkliste."
+      },
+      "average": {
+        "unit": "Durchschnitt der Sterne (1–5) über bewertete Besuche.",
+        "time": "Wie bei „Besuche“: mit Jahr nur Besuche dieses Jahres.",
+        "source": "Die Bewertung, die du an einem Besuch vergeben hast.",
+        "coverage": "Bewertet sind {{rated}} von {{total}} Besuchen.",
+        "exclusions": "Ein Besuch ohne Bewertung ist keine Null und zieht nichts herunter – er fehlt einfach."
+      },
+      "bestRated": {
+        "unit": "Die fünf höchsten Bewertungen einzelner Besuche; bei Gleichstand nach Name.",
+        "time": "Wie bei „Ø Bewertung“.",
+        "source": "Die Bewertungen deiner Besuche.",
+        "coverage": "Ein Ort mit mehreren bewerteten Besuchen kann mehrmals erscheinen.",
+        "exclusions": "Unbewertete Besuche."
+      },
+      "firstVisit": {
+        "unit": "Der früheste datierte Besuch.",
+        "time": "Das eingetragene Besuchsdatum; mit Jahr der früheste dieses Jahres.",
+        "source": "Deine datierten, vergangenen Besuche.",
+        "coverage": "Ein Besuch ohne Datum kann früher gewesen sein – niemand weiß es, er wird nicht berücksichtigt.",
+        "exclusions": "Besuche ohne Datum, zukünftige Besuche, Orte auf der Merkliste."
+      },
+      "favourite": {
+        "unit": "Der Ort mit den meisten Besuchen, ab zwei; bei Gleichstand nach Name.",
+        "time": "Wie bei „Besuche“.",
+        "source": "Die Besuche deiner besuchten Orte.",
+        "coverage": "Besuche ohne Datum zählen mit, solange kein Jahr gewählt ist.",
+        "exclusions": "Zukünftige Besuche und Orte auf der Merkliste."
+      },
+      "categoryCoverage": {
+        "unit": "Eine Ortskategorie, die mindestens ein besuchter Ort trägt, von allen Kategorien des Katalogs.",
+        "time": "Wie bei „Orte besucht“.",
+        "source": "Die Kategorie deiner besuchten Orte und der feste Kategorienkatalog.",
+        "coverage": "Jeder Ort hat genau eine Kategorie.",
+        "exclusions": "Orte auf der Merkliste."
+      },
+      "extremes": {
+        "unit": "Der besuchte Ort mit der größten bzw. kleinsten geografischen Breite.",
+        "time": "Wie bei „Orte besucht“.",
+        "source": "Die Koordinaten deiner besuchten Orte.",
+        "coverage": "Jeder Ort hat Koordinaten; liegen zwei auf genau derselben Breite, nennt der Beleg beide.",
+        "exclusions": "Orte auf der Merkliste – auch wenn einer weiter nördlich läge."
+      },
+      "onTrips": {
+        "unit": "Ein Besuch, der einer Reise zugeordnet ist – ein Besuch, nicht ein Ort, gehört zu einer Reise.",
+        "time": "Wie bei „Besuche“.",
+        "source": "Die Reise, die an einem Besuch eingetragen ist.",
+        "coverage": "Von {{total}} Besuchen; Besuche ohne Reise fehlen hier.",
+        "exclusions": "Zukünftige Besuche; eine Reise wird nie aus dem Datum erraten."
       }
     }
   },

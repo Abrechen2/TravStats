@@ -74,18 +74,8 @@ export default function RoadtripInsightsSection({
           testId="insight-progress"
           title={t("roadtrips:stats.insights.progress.title")}
           accent={accent}
-          value={
-            rows.length > 0 ? (
-              <EvidenceNumber
-                evidenceKey="roadtripDrivenKm"
-                scope={scope}
-                renderedValue={roadKm}
-                label={t("roadtrips:stats.insights.progress.recorded")}
-              >
-                {km(roadKm)}
-              </EvidenceNumber>
-            ) : null
-          }
+          value={rows.length > 0 ? km(roadKm) : null}
+          evidence={{ key: "roadtripDrivenKm", scope, renderedValue: roadKm }}
           empty={t("roadtrips:stats.insights.progress.empty")}
           description={t("roadtrips:stats.insights.progress.description", {
             current: km(sum((r) => r.roadKm.current)),
@@ -147,6 +137,13 @@ export default function RoadtripInsightsSection({
               ? null
               : t("roadtrips:stats.insights.pace.value", { km: km(data.pace.medianDayKm) })
           }
+          // The median's evidence is the driving days it is taken over — the
+          // count the description names; the pace is read over all years.
+          evidence={{
+            key: "roadtripDayStages",
+            scope: { period: "allTime" },
+            renderedValue: data.pace.dayStages,
+          }}
           empty={t("roadtrips:stats.insights.pace.empty")}
           description={t("roadtrips:stats.insights.pace.description", {
             count: data.pace.dayStages,
@@ -184,31 +181,25 @@ export default function RoadtripInsightsSection({
           testId="insight-modes"
           title={t("roadtrips:stats.insights.modes.title")}
           accent={accent}
-          value={
-            roadKm + ferryKm > 0 ? (
-              <>
-                <EvidenceNumber
-                  evidenceKey="roadtripDrivenKm"
-                  scope={scope}
-                  renderedValue={roadKm}
-                  label={t("roadtrips:stats.insights.modes.road")}
-                >
-                  {km(roadKm)}
-                </EvidenceNumber>
-                {" / "}
-                <EvidenceNumber
-                  evidenceKey="roadtripFerryKm"
-                  scope={scope}
-                  renderedValue={ferryKm}
-                  label={t("roadtrips:stats.insights.modes.ferry")}
-                >
-                  {km(ferryKm)}
-                </EvidenceNumber>
-              </>
-            ) : null
-          }
+          value={roadKm + ferryKm > 0 ? km(roadKm) : null}
+          evidence={{ key: "roadtripDrivenKm", scope, renderedValue: roadKm }}
           empty={t("roadtrips:stats.insights.modes.empty")}
-          description={t("roadtrips:stats.insights.modes.description")}
+          // The road is the number; the ferry stands beside it and opens its
+          // own legs — carried, never driven.
+          description={
+            <>
+              {t("roadtrips:stats.insights.modes.ferryBefore")}
+              <EvidenceNumber
+                evidenceKey="roadtripFerryKm"
+                scope={scope}
+                renderedValue={ferryKm}
+                label={t("roadtrips:stats.insights.modes.ferry")}
+              >
+                {km(ferryKm)}
+              </EvidenceNumber>
+              {t("roadtrips:stats.insights.modes.ferryAfter")}
+            </>
+          }
           help={help("modes")}
         >
           {otherModes.length > 0 && (
@@ -231,6 +222,13 @@ export default function RoadtripInsightsSection({
                 })
               : null
           }
+          // Every recorded night has exactly one style, so the styles add up to
+          // the recorded nights — the panel lists them per roadtrip.
+          evidence={{
+            key: "roadtripRecordedNights",
+            scope,
+            renderedValue: styleRows.reduce((s, r) => s + r.weight, 0),
+          }}
           empty={t("roadtrips:stats.insights.nightStyle.empty")}
           help={help("nightStyle", { unknown: unknownStations })}
           entries={rows
@@ -272,6 +270,11 @@ export default function RoadtripInsightsSection({
                 })
               : null
           }
+          evidence={{
+            key: "roadtripToursAlongCount",
+            scope,
+            renderedValue: sum((r) => r.tours.completed),
+          }}
           empty={t("roadtrips:stats.insights.toursAlong.empty")}
           description={t("roadtrips:stats.insights.toursAlong.description", {
             km: km(sum((r) => r.tours.km)),

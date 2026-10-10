@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
+import { Link } from "react-router-dom";
 
 import { listPlaces } from "../../lib/api/places";
 import { listPlaceLists, listCuratedChecklists } from "../../lib/api/placeLists";
@@ -13,6 +14,7 @@ import type { Place } from "../../types/place";
 import type { CuratedListSummary, PlaceList } from "../../types/placeList";
 import StatCard from "./StatCard";
 import EvidenceNumber from "./EvidenceNumber";
+import CountingHelp from "./counting/CountingHelp";
 import RankedBarList, { type RankedRow } from "./lodging/RankedBarList";
 import PoiRhythmSection from "./poi/PoiRhythmSection";
 import PoiFunSection from "./poi/PoiFunSection";
@@ -197,7 +199,12 @@ export default function PoiStatsSection({
   const mostVisitedMax = detail.mostVisited[0]?.visits ?? 1;
   const placeRows: RankedRow[] = detail.mostVisited.map(({ place, visits }) => ({
     key: place.id,
-    label: place.name,
+    // The row opens the place whose visits it counts.
+    label: (
+      <Link to={`/places/${place.id}`} className="underline-offset-2 hover:underline">
+        {place.name}
+      </Link>
+    ),
     weight: visits / mostVisitedMax,
     value: String(visits),
   }));
@@ -209,7 +216,11 @@ export default function PoiStatsSection({
     .filter((c) => c.itemCount > 0 && c.tickedCount > 0)
     .map((c) => ({
       key: c.key,
-      label: (i18n.language === "de" ? c.name : (c.nameEn ?? c.name)) || c.key,
+      label: (
+        <Link to={`/places/checklists/${c.key}`} className="underline-offset-2 hover:underline">
+          {(i18n.language === "de" ? c.name : (c.nameEn ?? c.name)) || c.key}
+        </Link>
+      ),
       weight: c.tickedCount / c.itemCount,
       value: `${c.tickedCount}/${c.itemCount}`,
       hint: `${Math.round((c.tickedCount / c.itemCount) * 100)} %`,
@@ -336,6 +347,27 @@ export default function PoiStatsSection({
           )}
         </div>
       )}
+      {show("kpis") && (
+        <CountingHelp
+          testId="poi-kpis-help"
+          entries={[
+            { term: t("places:stats.visitedPlaces"), helpKey: "places:stats.help.visitedPlaces" },
+            ...(year === null
+              ? [{ term: t("places:stats.wishlistLabel"), helpKey: "places:stats.help.wishlist" }]
+              : []),
+            {
+              term: t("places:stats.visits"),
+              helpKey: "places:stats.help.visits",
+              values: { undated: detail.visitsUndated },
+            },
+            { term: t("places:stats.countries"), helpKey: "places:stats.help.countries" },
+            { term: t("places:stats.citiesLabel"), helpKey: "places:stats.help.cities" },
+            ...(year === null
+              ? [{ term: t("places:stats.lists"), helpKey: "places:stats.help.lists" }]
+              : []),
+          ]}
+        />
+      )}
 
       {show("rankings") && (
         <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -369,6 +401,17 @@ export default function PoiStatsSection({
             limit={8}
             moreLabel={(hidden) => t("places:stats.more", { count: hidden })}
           />
+          <div className="lg:col-span-2">
+            <CountingHelp
+              testId="poi-rankings-help"
+              entries={[
+                { term: t("places:stats.byCategory"), helpKey: "places:stats.help.byCategory" },
+                { term: t("places:stats.mostVisited"), helpKey: "places:stats.help.mostVisited" },
+                { term: t("places:stats.byCountry"), helpKey: "places:stats.help.byCountry" },
+                { term: t("places:stats.byCity"), helpKey: "places:stats.help.byCity" },
+              ]}
+            />
+          </div>
         </div>
       )}
 
@@ -380,12 +423,24 @@ export default function PoiStatsSection({
             accent={accent}
             emptyLabel={t("places:stats.empty")}
           />
+          <CountingHelp
+            testId="poi-checklists-help"
+            entries={[
+              { term: t("places:stats.checklists"), helpKey: "places:stats.help.checklists" },
+            ]}
+          />
         </div>
       )}
 
-      {show("rhythm") && <PoiRhythmSection detail={detail} accent={accent} locale={locale} />}
-      {show("quality") && <PoiQualitySection detail={detail} accent={accent} />}
-      {show("fun") && <PoiFunSection detail={detail} accent={accent} locale={locale} />}
+      {show("rhythm") && (
+        <PoiRhythmSection detail={detail} accent={accent} locale={locale} scope={evidenceScope} />
+      )}
+      {show("quality") && (
+        <PoiQualitySection detail={detail} accent={accent} scope={evidenceScope} />
+      )}
+      {show("fun") && (
+        <PoiFunSection detail={detail} accent={accent} locale={locale} scope={evidenceScope} />
+      )}
       {/* forgejo#259 — lifetime readings with per-year slices, from their own endpoint. */}
       {show("insights") && <PoiInsightsSection year={year} accent={accent} />}
     </section>

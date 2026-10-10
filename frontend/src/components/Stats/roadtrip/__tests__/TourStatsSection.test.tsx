@@ -102,6 +102,11 @@ const FULL: TourInsights = {
     tourDistanceKm: { allTime: 108, byYear: { "2024": 108 } },
     tourAscentM: { allTime: 1100, byYear: { "2024": 1100 } },
     tourMovingMinutes: { allTime: 360, byYear: { "2024": 360 } },
+    tourLinkedCount: { allTime: 2, byYear: { "2024": 2 } },
+    tourOnTripCount: { allTime: 5, byYear: { "2024": 1, "2023": 4 } },
+    tourFromRoadtripCount: { allTime: 1, byYear: { "2024": 1 } },
+    tourDuringCruiseCount: { allTime: 1, byYear: { "2024": 1 } },
+    tourStandaloneCount: { allTime: 1, byYear: { "2024": 1 } },
   },
 };
 
@@ -136,9 +141,7 @@ describe("TourStatsSection (forgejo#264)", () => {
     const moving = await screen.findByTestId("tour-moving");
     expect(moving.textContent).toContain("6 Std. in Bewegung");
     expect(moving.textContent).toContain("1 Std. Pause – aus 1 von 3 Touren, über alle Jahre");
-    fireEvent.click(
-      within(moving).getByRole("button", { name: "Bewegungszeit aus Aufzeichnungen" })
-    );
+    fireEvent.click(within(moving).getByRole("button", { name: "Bewegung und Pausen" }));
     expect(screen.getByTestId("url").textContent).toContain("evidence=metric%3AtourMovingMinutes");
   });
 
@@ -172,6 +175,36 @@ describe("TourStatsSection (forgejo#264)", () => {
     expect(records.textContent).toContain("längste Tour, 21 km (aufgezeichnet)");
     expect(records.textContent).toContain("höchster Punkt, 2.962 m");
     expect(within(records).getAllByRole("link")[0].getAttribute("href")).toBe("/tours/t1");
+  });
+
+  it("lets each link's number open its own tours (forgejo#264)", async () => {
+    tours.mockResolvedValueOnce(FULL);
+    renderAt(2024);
+    const links = await screen.findByTestId("tour-links");
+    expect(links.textContent).toContain("2 Touren verknüpft");
+    const opened = (name: string): string => {
+      fireEvent.click(within(links).getByRole("button", { name }));
+      return screen.getByTestId("url").textContent ?? "";
+    };
+    expect(opened("Verknüpfungen")).toContain("evidence=metric%3AtourLinkedCount");
+    expect(opened("auf einer Reise")).toContain("evidence=metric%3AtourOnTripCount");
+    expect(opened("von einer Roadtrip-Station")).toContain("tourFromRoadtripCount");
+    expect(opened("während einer Kreuzfahrt")).toContain("tourDuringCruiseCount");
+    expect(opened("für sich, ohne Reise und Station")).toContain("tourStandaloneCount");
+    // The year's slice, not the lifetime count of 5.
+    expect(within(links).getByTestId("tour-links-rows").textContent).toContain("1 auf einer Reise");
+  });
+
+  it("opens the record holders and the areas toured", async () => {
+    tours.mockResolvedValueOnce(FULL);
+    renderAt(null);
+    const records = await screen.findByTestId("tour-records");
+    fireEvent.click(within(records).getByRole("button", { name: /Persönliche Rekorde/ }));
+    expect(screen.getByTestId("url").textContent).toContain("tourRecordTours");
+    fireEvent.click(
+      within(screen.getByTestId("tour-rhythm")).getByRole("button", { name: /Rhythmus/ })
+    );
+    expect(screen.getByTestId("url").textContent).toContain("tourCountriesCount");
   });
 
   it("keeps guided excursions out of bus rides and driven kilometres", async () => {

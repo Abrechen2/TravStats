@@ -230,7 +230,6 @@
         "title": "Road and ferry",
         "road": "Road kilometres",
         "ferry": "Ferry kilometres",
-        "description": "road / ferry — counted apart",
         "empty": "Appears with the first driven stage.",
         "help": {
           "unit": "A stage's kilometres by its mode of transport.",
@@ -238,7 +237,9 @@
           "source": "The mode of each stage (road, ferry, rail, on foot, bike).",
           "coverage": "Every stage has exactly one mode.",
           "exclusions": "Ferry kilometres are never kilometres you drove; only the road counts as driven."
-        }
+        },
+        "ferryBefore": "by road · by ferry ",
+        "ferryAfter": " — counted apart, never as driven"
       },
       "nightStyle": {
         "title": "Where the nights were slept",
@@ -364,21 +365,77 @@
       },
       "links": {
         "title": "Links",
-        "value": "{{trip}} on a trip · {{roadtrip}} from a roadtrip · {{cruise}} on a cruise",
-        "description_one": "{{standalone}} tour stands on its own",
-        "description_other": "{{standalone}} tours stand on their own",
         "excursions_one": "Guided excursions: {{count}} completed, {{km}} km, {{planned}} planned — as tours, never as bus rides or driven kilometres.",
         "excursions_other": "Guided excursions: {{count}} completed, {{km}} km, {{planned}} planned — as tours, never as bus rides or driven kilometres.",
         "empty": "Appears with the first completed tour.",
         "help": {
-          "unit": "One completed tour; a tour can belong to a trip and a roadtrip at once.",
-          "time": "A tour is a cruise excursion when its trip holds a cruise and its day falls within it.",
+          "unit": "A completed tour. \"Linked\" is a tour on a trip or from a roadtrip station.",
+          "time": "Counted in the tour's year (its day, else the day of its first recording). A tour counts as a cruise excursion when its trip holds a cruise whose days include the tour's day.",
           "source": "A tour's trip, the roadtrip station it starts from, and the trip's cruises.",
           "coverage": "Tours with neither a trip nor a station stand on their own. A tour can be on a trip and start from a roadtrip station at once — the figures overlap and do not add up.",
           "exclusions": "Tour kilometres go into no driving or bus statistic; a guided excursion is not a bus ride."
-        }
+        },
+        "value_one": "{{count}} tour linked",
+        "value_other": "{{count}} tours linked",
+        "onTrip": "on a trip",
+        "fromRoadtrip": "from a roadtrip station",
+        "duringCruise": "during a cruise",
+        "standalone": "on their own, with no trip or station"
       }
-    }
+    },
+    "help": {
+      "count": {
+        "unit": "A roadtrip.",
+        "time": "A roadtrip counts once it has started (earliest station, else a linked stay's check-in), in the year it started — the entered date, no time zone.",
+        "source": "Your roadtrips (the roadtrip list).",
+        "coverage": "A roadtrip without a dated station counts in the lifetime figure but in no year.",
+        "exclusions": "Roadtrips that have not started yet."
+      },
+      "distance": {
+        "unit": "Kilometres of the whole route of every counted roadtrip, across every mode — road, ferry, rail, on foot, bike.",
+        "time": "As for \"Roadtrips\": a roadtrip counts with its whole route in the year it started.",
+        "source": "The legs of your roadtrips; the distance comes from a recording, a computed route, a drawn line or a straight line.",
+        "coverage": "On a roadtrip under way the stretch still ahead is included — the footnote names it, \"Driven, today, planned\" separates it.",
+        "exclusions": "Only the road counts as driven (the line below); ferry kilometres are never driven kilometres. Day tours are not in it."
+      },
+      "nights": {
+        "unit": "A night: a linked stay's nights once, a station without a stay by its dates (without dates: one).",
+        "time": "As for \"Roadtrips\": every night of a counted roadtrip, in the year it started.",
+        "source": "Overnight stations of your roadtrips and the stays linked to them.",
+        "coverage": "If a night has no known length the tile says so — the number is then a lower bound.",
+        "exclusions": "A stay linked from two stations counts once; a cancelled one not at all. The same night also appears in the lodging statistics — never twice in one combined sum."
+      },
+      "countries": {
+        "unit": "A country holding a station of a counted roadtrip.",
+        "time": "As for \"Roadtrips\".",
+        "source": "The stations' coordinates against the country borders; on the shore the country of a linked stay.",
+        "coverage": "A station that neither its point nor a stay can place counts in no country. Route corrections do not count.",
+        "exclusions": "Roadtrips that have not started. On a roadtrip under way countries still ahead count here too — \"Driven, today, planned\" separates them."
+      },
+      "longestByKm": {
+        "unit": "The five roadtrips with the longest whole route; the name opens the roadtrip.",
+        "time": "As for \"Roadtrips\".",
+        "source": "Each roadtrip's legs, across every mode.",
+        "coverage": "As for \"Distance\": a roadtrip under way is listed with its whole planned route.",
+        "exclusions": "Roadtrips that have not started."
+      },
+      "longestByNights": {
+        "unit": "The five roadtrips with the most nights; the name opens the roadtrip.",
+        "time": "As for \"Roadtrips\".",
+        "source": "Overnight stations and linked stays, by the night rule of \"Nights\".",
+        "coverage": "Nights of unknown length count with their minimum.",
+        "exclusions": "Roadtrips that have not started."
+      },
+      "vehicles": {
+        "unit": "Counted roadtrips per vehicle type.",
+        "time": "As for \"Roadtrips\".",
+        "source": "The vehicle type entered on the roadtrip; the evidence names it per roadtrip.",
+        "coverage": "A roadtrip without a vehicle is under \"Not stated\".",
+        "exclusions": "Roadtrips that have not started."
+      }
+    },
+    "vehiclesTotalAfter_one": " roadtrip — the evidence names its vehicle",
+    "vehiclesTotalAfter_other": " roadtrips — the evidence names each one's vehicle"
   },
   "strava": {
     "title": "Strava",
