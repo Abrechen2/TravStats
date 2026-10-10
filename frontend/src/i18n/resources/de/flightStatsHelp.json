@@ -679,8 +679,8 @@
       "unit": "Die 15 Länder mit den meisten Flügen. Ein Flug zählt bei jedem Land, das Start oder Ziel berührt, einmal: ein Inlandsflug einmal, ein internationaler Flug bei beiden Ländern.",
       "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
       "source": "Geflogene und nachgetragene Flüge, das Land von Start- und Zielflughafen aus dem Flughafenkatalog (gesucht über den IATA-, sonst den ICAO-Code).",
-      "coverage": "Kennt der Katalog einen Flughafen oder sein Land nicht, zählt dieses Ende unter „Unknown“. Das gilt auch für einen Start ohne Code, während ein Ziel ohne Code einfach wegfällt.",
-      "exclusions": "Nicht enthalten: Ziele ohne Flughafen-Code, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+      "coverage": "Jedes Ende wird gleich behandelt: Nennt es keinen Flughafen-Code oder kennt der Katalog den Flughafen oder sein Land nicht, zählt es unter „Unbekannt“ – ob Start oder Ziel. Ein Flug mit zwei unbekannten Enden zählt dort einmal. Ein Code oder ein Katalogeintrag für den Flughafen verschiebt ihn ins richtige Land.",
+      "exclusions": "Nicht enthalten: geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
     }
   }
 }

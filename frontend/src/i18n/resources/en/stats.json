@@ -619,7 +619,8 @@
     "country": "Country",
     "flights": "Flights",
     "noData": "No flights yet",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "unknown": "Unknown"
   },
   "reportActions": {
     "label": "Reports"

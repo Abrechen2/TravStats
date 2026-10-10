@@ -619,7 +619,8 @@
     "country": "Land",
     "flights": "Flüge",
     "noData": "Noch keine Flüge vorhanden",
-    "loading": "Lädt..."
+    "loading": "Lädt...",
+    "unknown": "Unbekannt"
   },
   "reportActions": {
     "label": "Berichte"
