@@ -517,6 +517,72 @@ describe("the field allow-list decides the payload", () => {
   });
 });
 
+describe("trip notes (forgejo#146)", () => {
+  const shareableNote = (userId: string, body: string, utc: string) =>
+    prisma.note.create({
+      data: {
+        userId,
+        body,
+        occurredAt: new Date(utc),
+        occurredZone: "America/New_York",
+        placeName: "Brooklyn Bridge",
+        lat: 40.7061,
+        lon: -73.9969,
+        visibility: "shareable",
+      },
+    });
+
+  it("carries the owner's shareable notes on the trip's days — never a private one", async () => {
+    const trip = await makeTrip(anna.id);
+    await shareableNote(anna.id, "Sunset on the bridge", "2030-06-04T23:30:00Z");
+    // After the trip on its own clock (the 9th in New York), and Eve's note.
+    await shareableNote(anna.id, "Back home", "2030-06-09T14:00:00Z");
+    await shareableNote(eve.id, "Eve's shareable line", "2030-06-04T12:00:00Z");
+
+    const { token } = await tokenFor(anna, { kind: "trip", targetId: trip.id, fields: ["notes"] });
+    const res = await view(token).expect(200);
+    const notes = res.body.data.view.trip.notes;
+    expect(notes.truncated).toBe(false);
+    expect(notes.items).toEqual([
+      {
+        body: "Sunset on the bridge",
+        placeName: "Brooklyn Bridge",
+        at: expect.objectContaining({ local: "2030-06-04T19:30:00", zone: "America/New_York" }),
+        day: { date: "2030-06-04", zone: "America/New_York", precision: "day" },
+      },
+    ]);
+    const body = JSON.stringify(res.body);
+    for (const absent of [
+      "PRIVATE standalone note",
+      "Back home",
+      "Eve's shareable line",
+      "40.7061",
+    ]) {
+      expect(body).not.toContain(absent);
+    }
+  });
+
+  it("re-reads the flag on every view: a note made private disappears at once", async () => {
+    const trip = await makeTrip(anna.id);
+    const shared = await shareableNote(anna.id, "Was shareable", "2030-06-04T16:00:00Z");
+    const { token } = await tokenFor(anna, { kind: "trip", targetId: trip.id, fields: ["notes"] });
+    expect((await view(token)).body.data.view.trip.notes.items).toHaveLength(1);
+    await prisma.note.update({ where: { id: shared.id }, data: { visibility: "private" } });
+    expect((await view(token)).body.data.view.trip.notes.items).toEqual([]);
+  });
+
+  it("names no note when notes were not chosen", async () => {
+    const trip = await makeTrip(anna.id);
+    await shareableNote(anna.id, "Sunset on the bridge", "2030-06-04T23:30:00Z");
+    const { token } = await tokenFor(anna, {
+      kind: "trip",
+      targetId: trip.id,
+      fields: ["name", "dates"],
+    });
+    expect(JSON.stringify((await view(token)).body)).not.toContain("Sunset on the bridge");
+  });
+});
+
 describe("trip photos", () => {
   it("serves the snapshotted photos by index, without their metadata", async () => {
     const trip = await makeTrip(anna.id);

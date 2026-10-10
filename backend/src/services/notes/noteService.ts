@@ -1,7 +1,7 @@
 import { prisma } from "../../db";
 import type { Note } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
-import type { CreateNoteInput, UpdateNoteInput } from "../../schemas/note";
+import type { CreateNoteInput, NoteVisibility, UpdateNoteInput } from "../../schemas/note";
 import type { NoteTimes } from "../../schemas/times";
 import { TzUnresolvedError } from "../../shared/time/errors";
 import { localDay } from "../../shared/time/instant";
@@ -24,7 +24,11 @@ export interface NotePhotoDto {
   sizeBytes: number;
 }
 
-export type NoteDto = Omit<Note, "photoFilename" | "photoMimetype" | "photoSizeBytes"> & {
+export type NoteDto = Omit<
+  Note,
+  "photoFilename" | "photoMimetype" | "photoSizeBytes" | "visibility"
+> & {
+  visibility: NoteVisibility;
   photo: NotePhotoDto | null;
   times: NoteTimes;
 };
@@ -38,6 +42,8 @@ export function toNoteDto(note: Note): NoteDto {
   const precision = note.occurredPrecision === "day" ? "day" : "minute";
   return {
     ...rest,
+    // A stored value outside the vocabulary reads as the safe one.
+    visibility: note.visibility === "shareable" ? "shareable" : "private",
     photo:
       photoFilename && photoMimetype && photoSizeBytes !== null
         ? { url: notePhotoUrl(note), mimetype: photoMimetype, sizeBytes: photoSizeBytes }
@@ -128,6 +134,8 @@ export async function createNote(
         userId,
         body: input.body,
         placeName: input.placeName ?? null,
+        // Private unless the writer says otherwise (forgejo#146).
+        visibility: input.visibility ?? "private",
         ...position,
         ...time,
       },
@@ -162,6 +170,7 @@ export async function updateNote(
       ...(input.placeName !== undefined && { placeName: input.placeName }),
       ...(input.lat !== undefined && { lat: input.lat }),
       ...(input.lon !== undefined && { lon: input.lon }),
+      ...(input.visibility !== undefined && { visibility: input.visibility }),
       ...time,
     },
   });

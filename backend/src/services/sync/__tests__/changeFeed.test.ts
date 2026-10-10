@@ -155,4 +155,20 @@ describe("GET /api/v1/sync/changes", () => {
     expect((await readFeed(user, "not-a-cursor")).status).toBe(400);
     expect((await readFeed({ id: user.id, cookie: [] })).status).toBe(401);
   });
+
+  it("carries a note's private/shareable flag (forgejo#146)", async () => {
+    const user = await registerUser("sync-feed-notes");
+    const note = await prisma.note.create({
+      data: {
+        userId: user.id,
+        body: "Sunset",
+        occurredAt: new Date("2026-09-27T17:00:00Z"),
+        occurredZone: "Europe/Berlin",
+        visibility: "shareable",
+      },
+    });
+    const feed = await drainFeed(user);
+    const item = feed.items.find((i) => i.id === note.id);
+    expect(item?.record?.visibility).toBe("shareable");
+  });
 });

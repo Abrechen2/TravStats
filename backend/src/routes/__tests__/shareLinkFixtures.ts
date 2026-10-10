@@ -85,6 +85,7 @@ export const NEVER_PUBLIC = [
   "private-tag",
   "PRIVATE journal text",
   "PRIVATE caption",
+  "PRIVATE standalone note",
 ];
 
 /** A flight with every private column filled, at the pinned clock's future. */
@@ -141,6 +142,17 @@ export async function makeTrip(ownerId: string) {
   });
   await prisma.tripJournalEntry.create({
     data: { tripId: trip.id, date: new Date("2030-06-02T00:00:00Z"), body: "PRIVATE journal text" },
+  });
+  // A standalone note on the trip's days that was never marked shareable
+  // (forgejo#146): it must not appear whatever the link offers.
+  await prisma.note.create({
+    data: {
+      userId: ownerId,
+      body: "PRIVATE standalone note",
+      occurredAt: new Date("2030-06-03T12:00:00Z"),
+      occurredZone: "America/New_York",
+      placeName: "PRIVATE standalone note place",
+    },
   });
   return trip;
 }

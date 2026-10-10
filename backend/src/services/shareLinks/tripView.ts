@@ -7,6 +7,7 @@ import {
   tripCountries,
 } from "../../routes/trips/tripCountries";
 import {
+  SHARE_LINK_MAX_NOTES,
   SHARE_LINK_MAX_PHOTOS,
   type ShareLinkField,
   type TripView,
@@ -15,13 +16,16 @@ import { daysBetween } from "../../shared/time/localDate";
 import { calculateDistance } from "../../utils/geo";
 import { tripPageCost } from "../trip/tripCostSuperlative";
 import { withTripTimes } from "../trips/timesDto";
+import { toNoteDto } from "../notes/noteService";
+import { notesInSpan, tripDaySpan } from "../notes/tripNotes";
 import { shareablePhotoIds } from "./photoProxy";
 
 /**
  * The public view of one trip — the share card and Trip Wrapped (forgejo#154,
  * companion#39). Field by field, like the flight view: the trip row's notes,
  * journal, documents, seats, booking references and every id stay where they
- * are because no line below reads them.
+ * are because no line below reads them. Standalone notes travel only through
+ * the `notes` field, and only the owner's shareable ones.
  *
  * Counting reuses the trip page's own homes — `tripCountries` for the
  * countries, `tripPageCost` for the money — so the card cannot disagree with
@@ -142,6 +146,27 @@ async function costsOf(userId: string, tripId: string): Promise<TripView["costs"
   return { byCurrency, complete: cost.unpricedEntries === 0 };
 }
 
+/**
+ * The owner's SHAREABLE notes on the trip's days (forgejo#146). The
+ * visibility filter is part of the query, so a private note is never even
+ * loaded here; text, place name and moment only — no position, photo or id.
+ */
+async function notesOf(userId: string, trip: TripRow): Promise<TripView["notes"]> {
+  const span = tripDaySpan(trip);
+  if (!span) return { items: [], truncated: false };
+  const { notes, truncated } = await notesInSpan(userId, span, {
+    visibility: "shareable",
+    limit: SHARE_LINK_MAX_NOTES,
+  });
+  return {
+    items: notes.map((note) => {
+      const { times } = toNoteDto(note);
+      return { body: note.body, placeName: note.placeName, at: times.occurredAt, day: times.day };
+    }),
+    truncated,
+  };
+}
+
 export async function buildTripView(
   userId: string,
   trip: TripRow,
@@ -181,5 +206,6 @@ export async function buildTripView(
     const live = await shareablePhotoIds(trip.id, photoIds);
     view.photos = { count: Math.min(live.length, SHARE_LINK_MAX_PHOTOS) };
   }
+  if (fields.has("notes")) view.notes = await notesOf(userId, trip);
   return view;
 }

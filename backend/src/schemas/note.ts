@@ -11,6 +11,13 @@ import { isValidZone } from "../shared/time/zonedParts";
 export const NOTE_BODY_MAX = 4000;
 export const NOTE_PLACE_NAME_MAX = 200;
 export const NOTE_PRECISIONS = ["minute", "day"] as const;
+/**
+ * Who may read a note besides its owner (forgejo#146). `private` — nobody;
+ * `shareable` — the places the owner deliberately shares a trip: the other
+ * members of a shared trip, and a public trip link that offers `notes`.
+ */
+export const NOTE_VISIBILITIES = ["private", "shareable"] as const;
+export type NoteVisibility = (typeof NOTE_VISIBILITIES)[number];
 
 const body = z
   .string()
@@ -41,6 +48,13 @@ const placeName = z
   .max(NOTE_PLACE_NAME_MAX)
   .nullable()
   .describe("Where it was written, as text — a snapshot, not a link to a place.");
+const visibility = z
+  .enum(NOTE_VISIBILITIES)
+  .describe(
+    "`private` (the default): only the owner reads the note. `shareable`: it may also appear " +
+      "where the owner deliberately shares — to the other members of a shared trip whose days " +
+      "it falls on, and in a public trip link that offers the `notes` field."
+  );
 const lat = z.number().min(-90).max(90).nullable();
 const lon = z.number().min(-180).max(180).nullable();
 
@@ -59,6 +73,7 @@ export const createNoteSchema = z
     placeName: placeName.optional(),
     lat: lat.optional(),
     lon: lon.optional(),
+    visibility: visibility.optional(),
   })
   .refine(positionIsPair, POSITION_PAIR);
 export type CreateNoteInput = z.infer<typeof createNoteSchema>;
@@ -71,6 +86,7 @@ export const updateNoteSchema = z
     placeName: placeName.optional(),
     lat: lat.optional(),
     lon: lon.optional(),
+    visibility: visibility.optional(),
   })
   .refine(positionIsPair, POSITION_PAIR)
   // A zone alone would re-label the stored instant's clock without the user

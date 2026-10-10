@@ -4476,6 +4476,13 @@ model Note {
   photoMimetype  String? @map("photo_mimetype")
   photoSizeBytes Int?    @map("photo_size_bytes")
 
+  /// `private` (the default) or `shareable` (forgejo#146). A shareable note may
+  /// appear where its owner deliberately shares a trip: read by the other
+  /// members of the trip's share group, and in a public trip link that offers
+  /// the `notes` field. A private note never leaves its owner. See
+  /// docs/superpowers/specs/2026-10-10-note-visibility.md.
+  visibility String @default("private")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 

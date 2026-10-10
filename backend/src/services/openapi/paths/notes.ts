@@ -8,11 +8,13 @@ import { registry } from "../registry";
 import { errorContent, photoConversionUnavailable, photoUnreadable, timeRefused } from "./shared";
 import {
   NOTE_PRECISIONS,
+  NOTE_VISIBILITIES,
   createNoteSchema,
   noteQuerySchema,
   updateNoteSchema,
 } from "../../../schemas/note";
 import { noteTimesSchema } from "../../../schemas/times";
+import { localDateValueSchema } from "../../../shared/time/wire";
 import { photoFileQuerySchema } from "../../../schemas/photoVariant";
 import { clientRefBodySchema } from "../../../schemas/clientRef";
 import { clientRefResponses } from "./clientRef";
@@ -41,6 +43,12 @@ const note = registry.register(
           sizeBytes: z.number().int(),
         })
         .nullable(),
+      visibility: z
+        .enum(NOTE_VISIBILITIES)
+        .describe(
+          "`private` (default): only the owner reads it. `shareable`: also the other members " +
+            "of a shared trip whose days it falls on, and a public trip link offering `notes`."
+        ),
       createdAt: z.string().datetime(),
       updatedAt: z.string().datetime(),
       times: noteTimesSchema,
@@ -49,6 +57,29 @@ const note = registry.register(
       description:
         "A standalone note: a date, a body, optionally where it was written and a photo. " +
         "Belongs to no trip — which trip it falls in follows from `times.day`.",
+    })
+);
+
+const memberNote = registry.register(
+  "MemberNote",
+  z
+    .object({
+      id: z.string().uuid(),
+      author: z
+        .object({
+          id: z.string(),
+          username: z.string(),
+          displayName: z.string(),
+        })
+        .describe("The member who wrote it"),
+      body: z.string(),
+      placeName: z.string().nullable(),
+      times: noteTimesSchema,
+    })
+    .openapi("MemberNote", {
+      description:
+        "Another member's shareable note on a shared trip — read-only: no position, no photo, " +
+        "and its id opens nothing (`/notes/{id}` answers the owner only).",
     })
 );
 
@@ -81,6 +112,39 @@ registry.registerPath({
       ),
     },
     400: { description: "Invalid query", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/notes/trip/{tripId}",
+  summary: "Notes on a trip's days",
+  description:
+    "The caller's notes whose `times.day` lies between the trip's first and last day " +
+    "(inclusive), oldest first — private and shareable. On a shared trip also the other " +
+    "members' `shareable` notes on days both trips cover (`memberNotes`); a member with a " +
+    "withdrawn consent towards the caller is left out. A trip with no first or last day has " +
+    "`span: null` and no notes. At most 200 notes per list; `truncated` says a list was cut.",
+  tags,
+  request: { params: z.object({ tripId: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: "The trip's notes",
+      content: json(
+        envelope(
+          z.object({
+            span: z
+              .object({ start: localDateValueSchema, end: localDateValueSchema })
+              .nullable()
+              .describe("The days matched against; null when the trip has no first or last day"),
+            notes: z.array(note),
+            memberNotes: z.array(memberNote),
+            truncated: z.boolean(),
+          })
+        )
+      ),
+    },
+    404: { description: "TRIP_NOT_FOUND — not the caller's trip", content: errorContent },
   },
 });
 

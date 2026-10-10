@@ -99,7 +99,7 @@ ${SHARE_PAGE_FORMAT_JS}
         reported: "nach gemeldeten Zeiten", schedule: "nach Flugplan", aircraft: "Flugzeug",
         position: "Letzte Position", noPosition: "Noch keine Position gesendet.", map: "Karte",
         flights: "Flüge", km: "km Flug", cruises: "Kreuzfahrten", rail: "Zugfahrten", countries: "Länder", days: "Tage",
-        route: "Route", costs: "Kosten", incomplete: "(nicht alle Einträge mit Preis)", companions: "Mitreisende", photos: "Fotos",
+        route: "Route", costs: "Kosten", incomplete: "(nicht alle Einträge mit Preis)", companions: "Mitreisende", photos: "Fotos", notes: "Notizen", moreNotes: "Weitere Notizen nicht gezeigt.",
         distance: "km", earth: "× um die Erde", newCountries: "neue Länder", topAirline: "Meistgeflogene Airline", topRoute: "Häufigste Strecke",
         sharedBy: "Geteilt von"
       }
@@ -112,7 +112,7 @@ ${SHARE_PAGE_FORMAT_JS}
         reported: "from reported times", schedule: "from the schedule", aircraft: "Aircraft",
         position: "Last position", noPosition: "No position sent yet.", map: "Map",
         flights: "Flights", km: "km flown", cruises: "Cruises", rail: "Train rides", countries: "Countries", days: "Days",
-        route: "Route", costs: "Costs", incomplete: "(not every entry has a price)", companions: "Companions", photos: "Photos",
+        route: "Route", costs: "Costs", incomplete: "(not every entry has a price)", companions: "Companions", photos: "Photos", notes: "Notes", moreNotes: "More notes not shown.",
         distance: "km", earth: "× around the Earth", newCountries: "new countries", topAirline: "Most-flown airline", topRoute: "Most-flown route",
         sharedBy: "Shared by"
       };
@@ -234,6 +234,17 @@ ${SHARE_PAGE_FORMAT_JS}
       var ph = el("div", "card"); ph.appendChild(el("p", "big", T.photos));
       var grid = el("div", "photos"); ph.appendChild(grid); root.appendChild(ph);
       for (var i = 0; i < t.photos.count; i++) loadPhoto(grid, i);
+    }
+    if (t.notes && t.notes.items.length) {
+      var nc = el("div", "card"); nc.appendChild(el("p", "big", T.notes));
+      t.notes.items.forEach(function (n) {
+        var item = el("div", "row");
+        item.appendChild(el("span", null, [clock(n.at), n.placeName].filter(Boolean).join(" · ")));
+        item.appendChild(el("span", null, n.body));
+        nc.appendChild(item);
+      });
+      if (t.notes.truncated) nc.appendChild(el("p", "note", T.moreNotes));
+      root.appendChild(nc);
     }
   }
 

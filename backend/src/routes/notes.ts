@@ -23,6 +23,7 @@ import {
   toNoteDto,
   updateNote,
 } from "../services/notes/noteService";
+import { tripNotes } from "../services/notes/tripNotes";
 import { ingestUploadedPhotos } from "../services/photos/ingestPhotos";
 import { parsePhotoVariant, photoFileToServe } from "../services/photos/displayRendition";
 import { createOnce, takeClientRef } from "../services/sync/clientRef";
@@ -63,6 +64,23 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     const offset = query.offset ?? 0;
     const { notes, total } = await listNotes(userId, { limit, offset });
     res.json({ success: true, data: notes.map(toNoteDto), meta: { total, limit, offset } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * The notes on a trip's days (forgejo#146): the caller's own, and — on a
+ * shared trip — the other members' shareable ones. 404 for a trip that is not
+ * the caller's, so the answer never says whether someone else's trip exists.
+ */
+router.get("/trip/:tripId", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const parsed = uuid.safeParse(req.params.tripId);
+    const found = parsed.success ? await tripNotes(userId, parsed.data) : null;
+    if (!found) throw new AppError("Trip not found", 404, "TRIP_NOT_FOUND");
+    res.json({ success: true, data: found });
   } catch (error) {
     next(error);
   }

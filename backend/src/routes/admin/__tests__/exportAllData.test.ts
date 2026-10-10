@@ -57,6 +57,16 @@ describe("GET /api/v1/admin/export/all-data", () => {
           },
         },
         trips: { create: [{ name: "Export test trip" }] },
+        notes: {
+          create: [
+            {
+              body: "Export test note",
+              occurredAt: new Date("2026-09-27T17:00:00Z"),
+              occurredZone: "Europe/Berlin",
+              visibility: "shareable",
+            },
+          ],
+        },
         companions: {
           create: [
             {
@@ -124,6 +134,10 @@ describe("GET /api/v1/admin/export/all-data", () => {
     // shells from a select that silently matched nothing.
     expect(user.trips).toHaveLength(1);
     expect(user.companions).toHaveLength(1);
+    // A note travels with its private/shareable flag (forgejo#146).
+    expect(user.notes).toEqual([
+      expect.objectContaining({ body: "Export test note", visibility: "shareable" }),
+    ]);
   });
 
   // Trip suggestions (2026-09-26): the ANSWERS travel with the account, or a

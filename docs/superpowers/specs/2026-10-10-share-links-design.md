@@ -53,12 +53,14 @@ not chosen is absent from the JSON — not null, not empty — so the response c
 | trip | `costs` | the trip's total in the owner's base currency (the trip page's figure) |
 | trip | `companions` | companion display names |
 | trip | `photos` | up to 12 photos (count + per-photo index), bytes through the photo proxy |
+| trip | `notes` | the owner's standalone notes marked `shareable` whose day falls in the trip (forgejo#146, `2026-10-10-note-visibility.md`): text, place name, moment — at most 50, re-read on every request; a private note is never listed |
 | wrapped | `totals` | flights, km, earth factor, new countries, cruises, rail rides/km |
 | wrapped | `topAirline` | name and code of the year's most-flown carrier |
 | wrapped | `topRoute` | the year's most-flown pair |
 
 **Never, whatever is chosen:** seat, booking reference, ticket number, PNR, frequent-flyer
-number, price per flight, notes, journal text, documents, photo captions, photo coordinates,
+number, price per flight, the notes fields of entries and trips, private standalone notes,
+journal text, documents, photo captions, photo coordinates,
 EXIF, co-passenger names parsed from mails, aircraft registration, internal ids (user, flight,
 trip, photo), the username, other accounts. These are not fields — there is no way to ask
 for them.

@@ -19,7 +19,18 @@ export type ShareLinkKind = (typeof SHARE_LINK_KINDS)[number];
 /** The allow-list. A field not listed for a kind cannot be asked for. */
 export const SHARE_LINK_FIELDS = {
   flight: ["owner", "flightNumber", "route", "schedule", "progress", "aircraft", "lastPosition"],
-  trip: ["owner", "name", "dates", "totals", "countries", "route", "costs", "companions", "photos"],
+  trip: [
+    "owner",
+    "name",
+    "dates",
+    "totals",
+    "countries",
+    "route",
+    "costs",
+    "companions",
+    "photos",
+    "notes",
+  ],
   wrapped: ["owner", "totals", "topAirline", "topRoute"],
 } as const satisfies Record<ShareLinkKind, readonly string[]>;
 
@@ -28,6 +39,8 @@ export type ShareLinkField<K extends ShareLinkKind = ShareLinkKind> =
 
 /** At most this many photos travel with a trip link. */
 export const SHARE_LINK_MAX_PHOTOS = 12;
+/** At most this many notes travel with a trip link — only the owner's `shareable` ones. */
+export const SHARE_LINK_MAX_NOTES = 50;
 /** The furthest a link may be set to expire. */
 export const SHARE_LINK_MAX_DAYS = 90;
 /** Active links one account may hold at once. */
@@ -184,6 +197,29 @@ const tripView = z.strictObject({
     .strictObject({ count: z.number().int().min(0).max(SHARE_LINK_MAX_PHOTOS) })
     .optional()
     .describe("Fetch photo i (0 ≤ i < count) through POST /public/share-links/photo"),
+  notes: z
+    .strictObject({
+      items: z
+        .array(
+          z.strictObject({
+            body: z.string(),
+            placeName: z
+              .string()
+              .nullable()
+              .describe("Where it was written, as the owner typed it"),
+            at: timeValueSchema.describe("On the clock of the zone it was written in"),
+            day: localDateValueSchema,
+          })
+        )
+        .max(SHARE_LINK_MAX_NOTES),
+      truncated: z.boolean().describe("True when the trip holds more shareable notes than shown"),
+    })
+    .optional()
+    .describe(
+      "The owner's notes marked `shareable` whose day falls in the trip, oldest first — " +
+        "re-read on every request, so a note made private disappears at once. A private note " +
+        "is never listed; no position, photo or id travels."
+    ),
 });
 
 const wrappedView = z.strictObject({

@@ -216,3 +216,10 @@ on the notice in its own words. The trip panel shows the members' booking totals
   booking/assign routes) propagate in a transaction of their own right after the write; a
   failure there is reported, but the member's own write is already stored.
 - A cruise's leg-route overrides still do not travel.
+
+## Standalone notes (forgejo#146, 2026-10-10)
+
+A standalone note is never copied. A member reads the other members' notes marked
+`shareable` on the days both trips cover, live through the group, read-only
+(`GET /api/v1/notes/trip/:tripId`, `memberNotes`); private notes never cross. See
+`2026-10-10-note-visibility.md`.
