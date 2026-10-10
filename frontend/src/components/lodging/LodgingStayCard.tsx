@@ -6,6 +6,7 @@ import { formatStayPeriod, hasUnknownLength, stayNights } from "../../lib/lodgin
 import type { StayMembershipSource } from "../../shared/membershipDerivation";
 import type { LodgingStay } from "../../types/lodging";
 import { StayStatusPill } from "./StayStatusPill";
+import { StayNightPriceLine } from "./StayNightPriceLine";
 
 interface LodgingStayCardProps {
   stay: LodgingStay;
@@ -217,6 +218,8 @@ export function LodgingStayCard({
           </span>
         )}
       </div>
+
+      <StayNightPriceLine stay={stay} nights={hasUnknownLength(stay) ? null : nights} />
 
       {stay.bookingReference && (
         <p className="mt-2 text-xs text-[var(--text-muted)]">
