@@ -54,7 +54,11 @@ setup("authenticate", async ({ page }) => {
   // `isVisible()` answers "no" and silently does nothing — which is precisely
   // the conditional-that-does-not-run pattern this whole rewrite is about, and
   // it caught me here first.
-  const dismiss = page.getByRole("button", { name: /Verstanden|Got it/i });
+  // Scoped to a dialog and anchored: the globe's coachmark carries a
+  // "Verstanden, los geht's" button too, and an unanchored match clicked THAT
+  // — sometimes while the usage-statistics dialog below already covered it,
+  // which timed the whole setup out on an intercepted click.
+  const dismiss = page.getByRole("dialog").getByRole("button", { name: /^(Verstanden|Got it)$/ });
   const appeared = await dismiss
     .waitFor({ state: "visible", timeout: 10_000 })
     .then(() => true)

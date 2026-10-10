@@ -205,7 +205,16 @@ test.describe("Multi-domain dashboard", () => {
   //    tab strip was hidden (owner, 2026-09-28).
   // -------------------------------------------------------------------------
   test("tab switch restores last-used flight mode from localStorage", async ({ page }) => {
-    // Start on flight tab with heatmap mode (writes to localStorage).
+    // Expand the map panel FIRST, on a light view. Its open state is a device
+    // preference (`mapAppearance.panelExpanded`), so it is still open when the
+    // flight view comes back — and the test never has to click into a page
+    // that is busy drawing a heatmap. Without a GPU that draw can hold the
+    // main thread long enough for a click to sit in "performing click action"
+    // until the test times out (measured on a loaded runner, 3 of 5 repeats).
+    await page.goto("/dashboard/cruise");
+    await openMapPanel(page);
+
+    // Flight tab with heatmap mode (writes to localStorage).
     await page.goto("/dashboard/flight?mode=heatmap");
     await expect(page).toHaveURL(/[?&]mode=heatmap/);
 
