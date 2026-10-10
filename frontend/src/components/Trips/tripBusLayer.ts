@@ -1,9 +1,7 @@
 import { PathLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import type { TripBusJourney } from "../../types/bus";
-
-/** `--ts-domain-bus` (#c49a6c) as deck.gl reads a colour: RGB(A) numbers. */
-const BUS_RGB: [number, number, number] = [196, 154, 108];
+import { hexToRgb } from "../../lib/domainColor";
 
 export interface BusPathDatum {
   id: string;
@@ -38,15 +36,20 @@ export function busPaths(rides: readonly TripBusJourney[]): BusPathDatum[] {
   return out;
 }
 
-export function buildBusLayers(rides: readonly TripBusJourney[]): Layer[] {
+/**
+ * `colorHex` is the bus colour from the domain colour store — never a constant
+ * here, or a user's own bus colour would show everywhere but the trip map.
+ */
+export function buildBusLayers(rides: readonly TripBusJourney[], colorHex: string): Layer[] {
   const data = busPaths(rides);
   if (data.length === 0) return [];
+  const [r, g, b] = hexToRgb(colorHex);
   return [
     new PathLayer<BusPathDatum>({
       id: "trip-bus-rides",
       data,
       getPath: (d) => d.path,
-      getColor: (d) => [...BUS_RGB, d.routed ? 230 : 150],
+      getColor: (d) => [r, g, b, d.routed ? 230 : 150],
       getWidth: (d) => (d.routed ? 3 : 2),
       widthUnits: "pixels",
       capRounded: true,
