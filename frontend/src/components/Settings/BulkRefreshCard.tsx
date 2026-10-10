@@ -185,7 +185,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
       <BulkRefreshStatus state={state} />
 
       {quota && state.kind !== "demo" && state.kind !== "upToDate" && (
-        <div className="t-caption">{`AeroDataBox: ${quotaLine(quota, t)}`}</div>
+        <div className="t-caption">{`AeroDataBox: ${quotaLine({ kind: "observed", ...quota }, t)}`}</div>
       )}
 
       <div className="flex items-center justify-end">
@@ -281,7 +281,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
         </p>
         {quota && quota.remaining !== null && (
           <p className="mb-3 text-sm text-(--text-primary)">
-            {`AeroDataBox: ${quotaLine(quota, t)}`}
+            {`AeroDataBox: ${quotaLine({ kind: "observed", ...quota }, t)}`}
             {quota.remaining < estimatedCalls && (
               <span className="mt-1 block" style={{ color: "var(--ts-warn)" }}>
                 ⚠ {t("settings:apiKeys.bulkRefresh.confirmQuotaWarn")}
