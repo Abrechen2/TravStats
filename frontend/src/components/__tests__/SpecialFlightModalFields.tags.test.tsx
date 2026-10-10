@@ -11,9 +11,18 @@ import userEvent from "@testing-library/user-event";
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
-vi.mock("../../lib/api", () => ({
-  companionsApi: { list: vi.fn().mockResolvedValue([]) },
-}));
+vi.mock("../../lib/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/api")>();
+  return {
+    ...actual,
+    companionsApi: { list: vi.fn().mockResolvedValue([]) },
+    // AirportAutocomplete polls this on mount; the real one would reach the network.
+    setupApi: {
+      ...actual.setupApi,
+      getAirportSeedingStatus: vi.fn().mockResolvedValue({ status: "completed" }),
+    },
+  };
+});
 vi.mock("@/hooks/useTagSuggestions", () => ({
   useTagSuggestions: () => [{ name: "bucket-list", usageCount: 1 }],
 }));

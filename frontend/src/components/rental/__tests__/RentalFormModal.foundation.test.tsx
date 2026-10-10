@@ -27,10 +27,16 @@ vi.mock("../../../lib/api/rental", () => ({
 
 import { RentalFormModal } from "../RentalFormModal";
 import { makeRental } from "./rentalFixture";
+import {
+  findLabelled,
+  getLabelled,
+  getNamed,
+  queryNamed,
+} from "../../../__tests__/helpers/namedElement";
 
 const tab = (step: "booking" | "pickup" | "return"): HTMLElement =>
-  screen.getByRole("tab", { name: new RegExp(`^rental:form\\.steps\\.${step}`) });
-const save = (): HTMLElement => screen.getByRole("button", { name: "rental:form.save" });
+  getNamed("tab", new RegExp(`^rental:form\\.steps\\.${step}`));
+const save = (): HTMLElement => getNamed("button", "rental:form.save");
 const networkError = { isAxiosError: true, code: "ERR_NETWORK", message: "Network Error" };
 
 describe("RentalFormModal — steps and form blocks", () => {
@@ -41,40 +47,32 @@ describe("RentalFormModal — steps and form blocks", () => {
 
   it("marks the required fields and explains the mark", () => {
     render(<RentalFormModal rental={null} onClose={vi.fn()} onSaved={vi.fn()} />);
-    expect(screen.getByLabelText(/^rental:form\.provider/).getAttribute("aria-required")).toBe(
+    expect(getLabelled(/^rental:form\.provider/).getAttribute("aria-required")).toBe("true");
+    expect(getLabelled(/^rental:form\.pickupStation/).getAttribute("aria-required")).toBe("true");
+    expect(getLabelled(/^rental:form\.pickupLocal\s*\*?$/).getAttribute("aria-required")).toBe(
       "true"
     );
-    expect(screen.getByLabelText(/^rental:form\.pickupStation/).getAttribute("aria-required")).toBe(
-      "true"
-    );
-    expect(
-      screen.getByLabelText(/^rental:form\.pickupLocal\s*\*?$/).getAttribute("aria-required")
-    ).toBe("true");
     expect(screen.getByText("common:form.requiredLegend")).toBeInTheDocument();
   });
 
   it("keeps every entry when switching steps, and saves them together", async () => {
     update.mockResolvedValue(makeRental());
     render(<RentalFormModal rental={makeRental()} onClose={vi.fn()} onSaved={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText(/^rental:form\.broker/), {
+    fireEvent.change(getLabelled(/^rental:form\.broker/), {
       target: { value: "Holiday Cars" },
     });
     fireEvent.click(tab("pickup"));
-    fireEvent.change(screen.getByLabelText("rental:form.licensePlate"), {
+    fireEvent.change(getLabelled("rental:form.licensePlate"), {
       target: { value: "F-TS 1" },
     });
     fireEvent.click(tab("return"));
-    fireEvent.change(screen.getByLabelText("rental:form.odometerInKm"), {
+    fireEvent.change(getLabelled("rental:form.odometerInKm"), {
       target: { value: "1200" },
     });
     fireEvent.click(tab("booking"));
-    expect(screen.getByLabelText<HTMLInputElement>(/^rental:form\.broker/).value).toBe(
-      "Holiday Cars"
-    );
+    expect((getLabelled(/^rental:form\.broker/) as HTMLInputElement).value).toBe("Holiday Cars");
     fireEvent.click(tab("pickup"));
-    expect(screen.getByLabelText<HTMLInputElement>("rental:form.licensePlate").value).toBe(
-      "F-TS 1"
-    );
+    expect((getLabelled("rental:form.licensePlate") as HTMLInputElement).value).toBe("F-TS 1");
     fireEvent.click(save());
     await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
     expect(update.mock.calls[0][1]).toMatchObject({
@@ -111,7 +109,7 @@ describe("RentalFormModal — steps and form blocks", () => {
     render(<RentalFormModal rental={null} onClose={vi.fn()} onSaved={vi.fn()} />);
     fireEvent.click(tab("return"));
     fireEvent.click(save());
-    const provider = await screen.findByLabelText(/^rental:form\.provider/);
+    const provider = await findLabelled(/^rental:form\.provider/);
     expect(tab("booking").getAttribute("aria-selected")).toBe("true");
     expect(provider.getAttribute("aria-invalid")).toBe("true");
     await waitFor(() => expect(document.activeElement).toBe(provider));
@@ -135,7 +133,7 @@ describe("RentalFormModal — steps and form blocks", () => {
       />
     );
     fireEvent.click(save());
-    const field = await screen.findByLabelText(/^rental:form\.actualReturnLocal\s*$/);
+    const field = await findLabelled(/^rental:form\.actualReturnLocal\s*$/);
     expect(tab("return").getAttribute("aria-selected")).toBe("true");
     expect(field.getAttribute("aria-invalid")).toBe("true");
     expect(screen.getByText("rental:form.errors.actualReturnBeforePickup")).toBeInTheDocument();
@@ -146,16 +144,14 @@ describe("RentalFormModal — steps and form blocks", () => {
     update.mockRejectedValueOnce(networkError).mockResolvedValueOnce(makeRental());
     const onSaved = vi.fn();
     render(<RentalFormModal rental={makeRental()} onClose={vi.fn()} onSaved={onSaved} />);
-    fireEvent.change(screen.getByLabelText(/^rental:form\.broker/), {
+    fireEvent.change(getLabelled(/^rental:form\.broker/), {
       target: { value: "Holiday Cars" },
     });
     fireEvent.click(save());
     const banner = await screen.findByText("common:saveErrors.network");
     expect(banner.closest("[role=alert]")).not.toBeNull();
-    expect(screen.getByLabelText<HTMLInputElement>(/^rental:form\.broker/).value).toBe(
-      "Holiday Cars"
-    );
-    fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    expect((getLabelled(/^rental:form\.broker/) as HTMLInputElement).value).toBe("Holiday Cars");
+    fireEvent.click(getNamed("button", "common:buttons.retry"));
     await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
     expect(update).toHaveBeenCalledTimes(2);
   });
@@ -165,7 +161,7 @@ describe("RentalFormModal — steps and form blocks", () => {
     render(<RentalFormModal rental={makeRental()} onClose={vi.fn()} onSaved={vi.fn()} />);
     fireEvent.click(save());
     await screen.findByText("common:saveErrors.network");
-    fireEvent.change(screen.getByLabelText(/^rental:form\.broker/), { target: { value: "x" } });
+    fireEvent.change(getLabelled(/^rental:form\.broker/), { target: { value: "x" } });
     expect(screen.queryByText("common:saveErrors.network")).toBeNull();
   });
 
@@ -186,7 +182,7 @@ describe("RentalFormModal — steps and form blocks", () => {
     render(<RentalFormModal rental={makeRental()} onClose={vi.fn()} onSaved={onSaved} />);
     fireEvent.click(save());
     expect(await screen.findByText("common:form.savedButRefreshFailed")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "rental:form.save" })).toBeNull();
+    expect(queryNamed("button", "rental:form.save")).toBeNull();
     expect(update).toHaveBeenCalledTimes(1);
   });
 
@@ -200,11 +196,11 @@ describe("RentalFormModal — steps and form blocks", () => {
     unmount();
     onClose.mockReset();
     render(<RentalFormModal rental={makeRental()} onClose={onClose} onSaved={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText(/^rental:form\.broker/), { target: { value: "x" } });
+    fireEvent.change(getLabelled(/^rental:form\.broker/), { target: { value: "x" } });
     await userEvent.keyboard("{Escape}");
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByText("common:discard.title")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "common:discard.confirm" }));
+    await userEvent.click(getNamed("button", "common:discard.confirm"));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -237,10 +233,10 @@ describe("RentalFormModal — steps and form blocks", () => {
         onSaved={vi.fn()}
       />
     );
-    const actual = screen.getByLabelText(/^rental:form\.actualReturnLocal\s*$/);
+    const actual = getLabelled(/^rental:form\.actualReturnLocal\s*$/);
     fireEvent.change(actual, { target: { value: "2026-10-25T02:30" } });
     // Berlin's clock showed 02:30 twice that night: the notice offers the later one.
-    fireEvent.click(screen.getByLabelText("common:clockChange.later"));
+    fireEvent.click(getLabelled("common:clockChange.later"));
     fireEvent.click(save());
     await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
     expect(update.mock.calls[0][1]).toMatchObject({
@@ -258,10 +254,10 @@ describe("RentalFormModal — steps and form blocks", () => {
         onSaved={vi.fn()}
       />
     );
-    fireEvent.change(screen.getByLabelText(/^rental:form\.actualReturnLocal\s*$/), {
+    fireEvent.change(getLabelled(/^rental:form\.actualReturnLocal\s*$/), {
       target: { value: "2026-07-05T09:40" },
     });
-    fireEvent.click(screen.getByLabelText("rental:form.actualReturnLocal: rental:form.dayOnly"));
+    fireEvent.click(getLabelled("rental:form.actualReturnLocal: rental:form.dayOnly"));
     fireEvent.click(save());
     await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
     expect(update.mock.calls[0][1]).toMatchObject({
@@ -286,7 +282,7 @@ describe("RentalFormModal — steps and form blocks", () => {
         onSaved={vi.fn()}
       />
     );
-    fireEvent.change(screen.getByLabelText("rental:form.odometerInKm"), {
+    fireEvent.change(getLabelled("rental:form.odometerInKm"), {
       target: { value: "12634" },
     });
     fireEvent.click(save());
@@ -313,7 +309,7 @@ describe("RentalFormModal — steps and form blocks", () => {
     expect("finalAmount" in update.mock.calls[0][1]).toBe(false);
     unmount();
     render(<RentalFormModal rental={rental} onClose={vi.fn()} onSaved={vi.fn()} />);
-    fireEvent.change(screen.getByLabelText("rental:form.finalAmount"), {
+    fireEvent.change(getLabelled("rental:form.finalAmount"), {
       target: { value: "162,50" },
     });
     fireEvent.click(save());
@@ -328,9 +324,7 @@ describe("RentalFormModal — steps and form blocks", () => {
     fireEvent.click(screen.getAllByText("rental:station.useAddress")[0]);
     fireEvent.click(tab("return"));
     fireEvent.click(tab("booking"));
-    expect(
-      screen.getByLabelText(/rental:form\.pickupStation: rental:form\.stationName/)
-    ).toBeInTheDocument();
+    expect(getLabelled(/rental:form\.pickupStation: rental:form\.stationName/)).toBeInTheDocument();
   });
 
   it("moves between the steps with the arrow keys, one tab stop for the set", () => {
@@ -348,7 +342,7 @@ describe("RentalFormModal — steps and form blocks", () => {
   it("gives the station name a visible label in address mode", () => {
     render(<RentalFormModal rental={null} onClose={vi.fn()} onSaved={vi.fn()} />);
     fireEvent.click(screen.getAllByText("rental:station.useAddress")[0]);
-    const name = screen.getByLabelText(/rental:form\.pickupStation: rental:form\.stationName/);
+    const name = getLabelled(/rental:form\.pickupStation: rental:form\.stationName/);
     expect(name.getAttribute("placeholder")).toBeNull();
     expect(name.getAttribute("aria-required")).toBe("true");
   });

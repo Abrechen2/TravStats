@@ -65,6 +65,7 @@ vi.mock("../../components/NavigationBar", () => ({
 vi.mock("../../components/Roadtrips/useTripRoadtrips", () => ({ useTripRoadtrips: () => [] }));
 
 import TripDetailPage from "../TripDetailPage";
+import { findNamed, getNamed, queryNamed } from "../../__tests__/helpers/namedElement";
 
 function makeTrip(overrides: Partial<Trip> = {}): Trip {
   return {
@@ -197,12 +198,8 @@ describe("TripDetailPage — linked lodging stays on the timeline", () => {
     // Switch to the Timeline tab (default tab is Overview).
     await userEvent.click(screen.getByText("trips:detail.tabs.timeline"));
 
-    const checkInLink = await screen.findByRole("link", {
-      name: /trips:detail.timeline.lodgingCheckIn/,
-    });
-    const checkOutLink = screen.getByRole("link", {
-      name: /trips:detail.timeline.lodgingCheckOut/,
-    });
+    const checkInLink = await findNamed("link", /trips:detail.timeline.lodgingCheckIn/);
+    const checkOutLink = getNamed("link", /trips:detail.timeline.lodgingCheckOut/);
     expect(checkInLink).toHaveAttribute("href", "/lodging/lodging-1");
     expect(checkOutLink).toHaveAttribute("href", "/lodging/lodging-1");
   });
@@ -213,9 +210,7 @@ describe("TripDetailPage — linked lodging stays on the timeline", () => {
 
     await userEvent.click(screen.getByText("trips:detail.tabs.timeline"));
 
-    expect(
-      screen.queryByRole("link", { name: /trips:detail.timeline.lodgingCheckIn/ })
-    ).not.toBeInTheDocument();
+    expect(queryNamed("link", /trips:detail.timeline.lodgingCheckIn/)).not.toBeInTheDocument();
     expect(screen.getByText("trips:detail.timeline.noEvents")).toBeInTheDocument();
   });
 });

@@ -35,7 +35,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { fromZonedTime } from "date-fns-tz";
 import type { Flight } from "../../types";
@@ -130,6 +130,7 @@ vi.mock("@/lib/api/catalogue", async (importOriginal) => {
 
 import FlightEditModal from "../../components/FlightEditModal";
 import { airlinesApi } from "@/lib/api/catalogue";
+import { findNamed, getNamed } from "../helpers/namedElement";
 
 // A flight stored at 12:35/16:50 UTC, departing Tokyo (UTC+9), arriving New
 // York (UTC-4 in August). Browser (mocked above) runs in Berlin. All three
@@ -196,7 +197,7 @@ describe("FlightEditModal route editing (Task 4)", () => {
     render(<FlightEditModal flight={FLIGHT} isOpen onClose={() => {}} onSave={onSave} />);
     await waitForHydration();
 
-    await userEvent.click(await screen.findByRole("button", { name: /speichern|save/i }));
+    await userEvent.click(await findNamed("button", /speichern|save/i));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
 
     const [, payload] = onSave.mock.calls[onSave.mock.calls.length - 1];
@@ -210,9 +211,7 @@ describe("FlightEditModal route editing (Task 4)", () => {
     await waitForHydration();
 
     // Switch the departure airport from Tokyo to London.
-    await userEvent.click(
-      screen.getByRole("button", { name: "flights:form.placeholders.departureAirport" })
-    );
+    await userEvent.click(getNamed("button", "flights:form.placeholders.departureAirport"));
 
     // The re-resolved zone (Europe/London) must land on the wall-clock inputs
     // too — the hydration effect re-derives them from the SAME stored UTC
@@ -225,7 +224,7 @@ describe("FlightEditModal route editing (Task 4)", () => {
       expect(timeInput.value).toBe("13:35");
     });
 
-    await userEvent.click(await screen.findByRole("button", { name: /speichern|save/i }));
+    await userEvent.click(await findNamed("button", /speichern|save/i));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
 
     const [, payload] = onSave.mock.calls[onSave.mock.calls.length - 1];
@@ -257,9 +256,7 @@ describe("FlightEditModal route editing (Task 4)", () => {
         })
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "flights:form.placeholders.departureAirport" })
-    );
+    await userEvent.click(getNamed("button", "flights:form.placeholders.departureAirport"));
 
     // Give the pending effect a tick to start (and NOT finish).
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -271,7 +268,7 @@ describe("FlightEditModal route editing (Task 4)", () => {
     expect(dateInput.value).toBe("2026-08-14");
     expect(timeInput.value).toBe("21:35");
 
-    await userEvent.click(await screen.findByRole("button", { name: /speichern|save/i }));
+    await userEvent.click(await findNamed("button", /speichern|save/i));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
 
     const [, payload] = onSave.mock.calls[onSave.mock.calls.length - 1];
@@ -288,10 +285,8 @@ describe("FlightEditModal route editing (Task 4)", () => {
     render(<FlightEditModal flight={FLIGHT} isOpen onClose={() => {}} onSave={onSave} />);
     await waitForHydration();
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "flights:form.placeholders.departureAirport" })
-    );
-    await userEvent.click(await screen.findByRole("button", { name: /speichern|save/i }));
+    await userEvent.click(getNamed("button", "flights:form.placeholders.departureAirport"));
+    await userEvent.click(await findNamed("button", /speichern|save/i));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
 
     const [, payload] = onSave.mock.calls[onSave.mock.calls.length - 1];
@@ -309,11 +304,9 @@ describe("FlightEditModal route editing (Task 4)", () => {
     render(<FlightEditModal flight={FLIGHT} isOpen onClose={() => {}} onSave={onSave} />);
     await waitForHydration();
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "flights:form.placeholders.departureAirport-clear" })
-    );
+    await userEvent.click(getNamed("button", "flights:form.placeholders.departureAirport-clear"));
 
-    await userEvent.click(await screen.findByRole("button", { name: /speichern|save/i }));
+    await userEvent.click(await findNamed("button", /speichern|save/i));
     await waitFor(() => expect(onSave).toHaveBeenCalled());
 
     const [, payload] = onSave.mock.calls[onSave.mock.calls.length - 1];

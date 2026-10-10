@@ -44,6 +44,7 @@ vi.mock("../../AirportAutocomplete", () => ({
 }));
 
 import HomeAirportSection from "../HomeAirportSection";
+import { allNamed, findNamed, getNamed, queryNamed } from "../../../__tests__/helpers/namedElement";
 
 const CGN_AIRPORT = { name: "Köln/Bonn", lat: 50.8659, lon: 7.1427 };
 const MIGRATED = {
@@ -78,11 +79,11 @@ describe("HomeAirportSection", () => {
     const user = userEvent.setup();
     render(<HomeAirportSection />);
     expect(await screen.findByText("Bitte bestätige deinen Wohnort")).toBeInTheDocument();
-    await user.click(screen.getAllByRole("button", { name: "Bestätigen" })[0]);
+    await user.click(allNamed("button", "Bestätigen")[0]);
 
-    await user.click(screen.getByRole("button", { name: "pick-koeln" }));
+    await user.click(getNamed("button", "pick-koeln"));
     await user.click(await screen.findByRole("checkbox", { name: /DUS/ }));
-    await user.click(screen.getByRole("button", { name: "Speichern" }));
+    await user.click(getNamed("button", "Speichern"));
 
     await waitFor(() => expect(saveHomePeriods).toHaveBeenCalledTimes(1));
     expect(saveHomePeriods.mock.calls[0][0]).toEqual([
@@ -110,7 +111,7 @@ describe("HomeAirportSection", () => {
         "Flughäfen in der Nähe konnten nicht geladen werden. Du kannst deinen Flughafen unten suchen."
       )
     ).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "pick-nrn" }));
+    await user.click(getNamed("button", "pick-nrn"));
     expect(screen.getByText("NRN")).toBeInTheDocument();
   });
 
@@ -121,7 +122,7 @@ describe("HomeAirportSection", () => {
     await user.click(await screen.findByRole("checkbox", { name: /DUS/ }));
     await user.click(screen.getByRole("checkbox", { name: /NRN/ }));
     expect(screen.getByText("Höchstens drei Heimatflughäfen.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "pick-nrn" })).toBeNull();
+    expect(queryNamed("button", "pick-nrn")).toBeNull();
     expect(screen.getByRole("checkbox", { name: /DTM/ })).toBeDisabled();
   });
 
@@ -132,7 +133,7 @@ describe("HomeAirportSection", () => {
     const user = userEvent.setup();
     render(<HomeAirportSection />);
     await user.click((await screen.findAllByRole("button", { name: "Bestätigen" }))[0]);
-    await user.click(screen.getByRole("button", { name: "Speichern" }));
+    await user.click(getNamed("button", "Speichern"));
     const message = "Diesen Flughafen kennt der Katalog nicht: QQX.";
     expect(await screen.findByRole("alert")).toHaveTextContent(message);
     expect(addToast).toHaveBeenCalledWith("error", message);
@@ -148,13 +149,13 @@ describe("HomeAirportSection", () => {
     });
     const user = userEvent.setup();
     render(<HomeAirportSection />);
-    await user.click(await screen.findByRole("button", { name: "Ich bin umgezogen" }));
-    await user.click(screen.getByRole("button", { name: "pick-koeln" }));
+    await user.click(await findNamed("button", "Ich bin umgezogen"));
+    await user.click(getNamed("button", "pick-koeln"));
     await user.click(await screen.findByRole("checkbox", { name: /DUS/ }));
     const from = screen.getByLabelText("Ab wann gilt das?");
     await user.clear(from);
     await user.type(from, "2025-06-01");
-    await user.click(screen.getByRole("button", { name: "Speichern" }));
+    await user.click(getNamed("button", "Speichern"));
     expect(await screen.findByText(/Der Umzug muss nach dem Beginn/)).toBeInTheDocument();
     expect(saveHomePeriods).not.toHaveBeenCalled();
   });
@@ -165,6 +166,6 @@ describe("HomeAirportSection", () => {
     expect(
       await screen.findByText("Dein Zuhause konnte nicht geladen werden.")
     ).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Zuhause festlegen" })).toBeNull();
+    expect(queryNamed("button", "Zuhause festlegen")).toBeNull();
   });
 });

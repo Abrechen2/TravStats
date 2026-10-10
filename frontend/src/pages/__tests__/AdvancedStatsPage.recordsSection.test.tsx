@@ -19,6 +19,14 @@ vi.mock("../../components/Stats/RecordsSection", () => ({
   default: () => <div data-testid="records-section" />,
 }));
 
+// The insights section loads through `statsApi.getFlightInsights`, which the
+// api mock below does not carry. Rendered for real it threw "fetcher is not a
+// function" from an effect — an uncaught error that passed every assertion here
+// and still turned the whole Vitest run red. Like Rekorde, it is not the subject.
+vi.mock("../../components/Stats/insights/FlightInsightsSection", () => ({
+  default: () => <div data-testid="flight-insights-stub" />,
+}));
+
 const hidden = new Set<string>();
 vi.mock("../../hooks/useSectionVisibility", () => ({
   useSectionVisibility: () => ({

@@ -8,6 +8,13 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import DomainImportPanel from "../DomainImportPanel";
 import { useRentalImportAdapter } from "../adapters/rentalAdapter";
 import { makeRental } from "../../rental/__tests__/rentalFixture";
+import {
+  findLabelled,
+  findNamed,
+  getLabelled,
+  getNamed,
+  queryNamed,
+} from "../../../__tests__/helpers/namedElement";
 
 const create = vi.fn();
 vi.mock("../../../lib/api/rental", () => ({
@@ -53,27 +60,26 @@ describe("rental add flow — a failed reload after the create", () => {
     const reload = vi.fn().mockRejectedValue(new Error("list unavailable"));
     render(<Host reload={reload} />);
 
-    fireEvent.click(screen.getByRole("button", { name: "import:route.manual" }));
-    fireEvent.change(await screen.findByLabelText(/^rental:form\.provider/), {
+    fireEvent.click(getNamed("button", "import:route.manual"));
+    fireEvent.change(await findLabelled(/^rental:form\.provider/), {
       target: { value: "Testcar" },
     });
-    fireEvent.change(screen.getByLabelText(/^rental:form\.pickupStation/), {
+    fireEvent.change(getLabelled(/^rental:form\.pickupStation/), {
       target: { value: "Frank" },
     });
-    fireEvent.click(await screen.findByText("Frankfurt Airport"));
-    fireEvent.change(screen.getByLabelText(/^rental:form\.pickupLocal\s*\*?$/), {
+    // The hit as the button it is, found without a role query (helpers/namedElement).
+    fireEvent.click(await findNamed("button", /Frankfurt Airport/));
+    fireEvent.change(getLabelled(/^rental:form\.pickupLocal\s*\*?$/), {
       target: { value: "2026-07-01T10:00" },
     });
-    fireEvent.change(screen.getByLabelText(/^rental:form\.returnLocal\s*\*?$/), {
+    fireEvent.change(getLabelled(/^rental:form\.returnLocal\s*\*?$/), {
       target: { value: "2026-07-05T09:30" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "rental:form.save" }));
+    fireEvent.click(getNamed("button", "rental:form.save"));
 
     expect(await screen.findByText("common:form.savedButRefreshFailed")).toBeInTheDocument();
     expect(reload).toHaveBeenCalledTimes(1);
     expect(create).toHaveBeenCalledTimes(1);
-    await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "rental:form.save" })).toBeNull()
-    );
+    await waitFor(() => expect(queryNamed("button", "rental:form.save")).toBeNull());
   });
 });

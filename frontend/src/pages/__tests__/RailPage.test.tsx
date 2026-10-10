@@ -92,6 +92,7 @@ import { MemoryRouter } from "react-router-dom";
 
 import RailPage from "../RailPage";
 import type { RailJourney } from "../../types/rail";
+import { getNamed } from "../../__tests__/helpers/namedElement";
 
 // A row opens the journey's own page since the detail page (phase 2b); the
 // loyalty notice reads the URL, so the page renders inside a router.
@@ -222,7 +223,7 @@ describe("RailPage", () => {
     const alert = await screen.findByRole("alert");
     expect(alert.querySelector('[data-empty-kind="degraded"]')).not.toBeNull();
     expect(alert).toHaveTextContent("HTTP 503");
-    fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    fireEvent.click(getNamed("button", "common:buttons.retry"));
     expect(await screen.findByTestId("rail-row-back")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -271,7 +272,7 @@ describe("RailPage", () => {
     listForEntry.mockResolvedValue([{ id: "d1" }, { id: "d2" }]);
     renderPage();
     await screen.findByTestId("rail-row-j1");
-    fireEvent.click(screen.getByRole("button", { name: "rail:delete" }));
+    fireEvent.click(getNamed("button", "rail:delete"));
     await waitFor(() =>
       expect(screen.getByTestId("delete-message").textContent).toContain(
         "documents:deleteCascadeNote/2"
@@ -289,7 +290,7 @@ describe("RailPage", () => {
     renderPage();
     await screen.findByText("rail:empty");
     // The header's button reads "+ rail:add"; this one is the empty state's.
-    fireEvent.click(screen.getByRole("button", { name: "rail:add" }));
+    fireEvent.click(getNamed("button", "rail:add"));
     expect(screen.getByTestId("rail-import-panel")).toHaveTextContent("rail");
   });
 
@@ -299,7 +300,7 @@ describe("RailPage", () => {
     remove.mockResolvedValue(undefined);
     renderPage();
     await screen.findByTestId("rail-row-j1");
-    fireEvent.click(screen.getByRole("button", { name: "rail:delete" }));
+    fireEvent.click(getNamed("button", "rail:delete"));
     fireEvent.click(screen.getByText("confirm-delete"));
     await waitFor(() => expect(remove).toHaveBeenCalledWith("j1"));
     expect(await screen.findByText("rail:empty")).toBeInTheDocument();
@@ -382,7 +383,10 @@ describe("RailPage — a ride with changes", () => {
     listConnections.mockResolvedValueOnce({ ...page([journey({ id: "solo" })]), total: 60 });
     renderPage();
     await screen.findByTestId("rail-connection-row-leg-1");
-    fireEvent.click(screen.getAllByRole("button", { name: "common:table.pagination.next" })[0]);
+    // By its aria-label, not by role: with 51 rides on screen a role query
+    // weighs the name of all ~110 buttons over ~1500 nodes — 4.4 s measured on
+    // its own, which ran this test past 5 s on a loaded runner.
+    fireEvent.click(screen.getAllByLabelText("common:table.pagination.next")[0]);
     await screen.findByTestId("rail-row-solo");
     expect(listConnections.mock.calls[1][0]).toMatchObject({ limit: 50, offset: 50 });
   });

@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { act, render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { act, render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { StayEditor } from "../StayEditor";
 import { createStay, listMemberships, getFxPreview } from "../../../lib/api/lodging";
 import { tripsApi } from "../../../lib/api";
 import type { LodgingStay } from "../../../types/lodging";
+import { queryNamed } from "../../../__tests__/helpers/namedElement";
 
 // Same module boundary as StayEditor.test.tsx; see there for why each mock exists.
 const suggestions = vi.hoisted(() => ({
@@ -65,6 +66,17 @@ async function saved(): Promise<Parameters<typeof createStay>[1]> {
   return vi.mocked(createStay).mock.calls[0][1];
 }
 
+/**
+ * The board field's section: the group of board buttons and the offer beside
+ * it. Button queries are scoped to it because a document-wide one weighs the
+ * accessible name of every button in this long form, which on a loaded runner
+ * took this test past its 5 s budget. Found through the group's aria-label,
+ * not `getByRole("group")`, for the same reason (~0.5 s measured).
+ */
+function boardSection(): HTMLElement {
+  return screen.getByLabelText("lodging:field.board").parentElement as HTMLElement;
+}
+
 describe("StayEditor — suggestions from the user's own stays", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -78,7 +90,13 @@ describe("StayEditor — suggestions from the user's own stays", () => {
     await renderCreate();
     await fillDates();
     await userEvent.type(screen.getByLabelText("lodging:field.roomAmenities"), "bal");
-    fireEvent.mouseDown(screen.getByRole("option", { name: /Balkon/ }));
+    // Scoped to the chip field's list: the editor's currency select holds ~160
+    // options, and a document-wide option query weighs every one of them —
+    // enough, on a loaded runner, to time this test out and let its remaining
+    // typing land in the next test's form.
+    fireEvent.mouseDown(
+      within(screen.getByRole("listbox")).getByRole("option", { name: /Balkon/ })
+    );
     await userEvent.type(screen.getByLabelText("lodging:field.roomAmenities"), "Meerblick{Enter}");
 
     expect((await saved()).roomAmenities).toEqual(["Balkon", "Meerblick"]);
@@ -101,15 +119,16 @@ describe("StayEditor — suggestions from the user's own stays", () => {
   it("offers the usual board on a new stay, never writes it", async () => {
     await renderCreate();
     await fillDates();
-    const offer = screen.getByRole("button", { name: /lodging:stayEditor.boardSuggestion/ });
+    const offer = within(boardSection()).getByRole("button", {
+      name: /lodging:stayEditor.boardSuggestion/,
+    });
     await userEvent.click(offer);
-    expect(screen.getByRole("button", { name: "lodging:board.half" })).toHaveAttribute(
-      "aria-pressed",
-      "true"
-    );
+    expect(
+      within(boardSection()).getByRole("button", { name: "lodging:board.half" })
+    ).toHaveAttribute("aria-pressed", "true");
     // A chosen board makes the offer disappear.
     expect(
-      screen.queryByRole("button", { name: /lodging:stayEditor.boardSuggestion/ })
+      within(boardSection()).queryByRole("button", { name: /lodging:stayEditor.boardSuggestion/ })
     ).not.toBeInTheDocument();
     expect((await saved()).board).toBe("half");
   });
@@ -125,8 +144,6 @@ describe("StayEditor — suggestions from the user's own stays", () => {
       />
     );
     await act(async () => {});
-    expect(
-      screen.queryByRole("button", { name: /lodging:stayEditor.boardSuggestion/ })
-    ).not.toBeInTheDocument();
+    expect(queryNamed("button", /lodging:stayEditor.boardSuggestion/)).not.toBeInTheDocument();
   });
 });
