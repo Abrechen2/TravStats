@@ -182,7 +182,24 @@ export default function StatsSeatSection({ seatStats }: StatsSeatSectionProps): 
           style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
         >
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            <Distribution title={t("stats:seats.positionTitle")} bars={positions} />
+            <div>
+              <Distribution title={t("stats:seats.positionTitle")} bars={positions} />
+              {/* Abstention is a result: a letter the cabin layout does not
+                  decide is counted here, never guessed into a bar. */}
+              {seatStats.unknownCount > 0 && (
+                <EvidenceTrigger
+                  kind="ranking"
+                  evidenceKey={rankingKey("seat", "position:unknown")}
+                  scope={ALL_TIME}
+                  renderedValue={seatStats.unknownCount}
+                  label={t("stats:seats.unplaced", { count: seatStats.unknownCount })}
+                  className="block text-xs underline decoration-dotted underline-offset-2"
+                  style={{ color: "var(--text-muted)" }}
+                >
+                  {t("stats:seats.unplaced", { count: seatStats.unknownCount })}
+                </EvidenceTrigger>
+              )}
+            </div>
             <Distribution title={t("stats:seats.zoneTitle")} bars={zones} />
             <div className="flex flex-col gap-3">
               {seatStats.mostCommonSeat && (

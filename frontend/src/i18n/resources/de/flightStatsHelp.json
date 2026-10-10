@@ -627,9 +627,9 @@
     "position": {
       "unit": "Wie oft du am Fenster, in der Mitte und am Gang gesessen hast, je Flug einmal. Prozent = Anteil an diesen drei zusammen.",
       "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
-      "source": "Geflogene und nachgetragene Flüge mit Sitzplatz, etwa 23A: Reihennummer plus Buchstabe; entscheidend ist der letzte Buchstabe.",
-      "coverage": "Eine feste Buchstabentabelle für alle Flugzeugtypen: A, F, K Fenster; B, E, H, J Mitte; C, D, G Gang. Bei Großraumflugzeugen stimmt das nicht immer – in einer 3-4-3-Reihe ist F ein Mittelplatz und H ein Gangplatz.",
-      "exclusions": "Nicht enthalten: Flüge ohne Sitzplatz, Angaben, die nicht wie Zahl plus Buchstabe aussehen, andere Buchstaben (etwa L), geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
+      "source": "Geflogene und nachgetragene Flüge mit Sitzplatz, etwa 23A (Reihennummer plus Buchstabe; der letzte Buchstabe zählt), dazu Flugzeugtyp und Sitzklasse des Flugs.",
+      "coverage": "Zugeordnet wird nur, was in jedem Kabinenlayout gilt: A und K Fenster, C und D Gang, B und E Mitte; F ist Fenster nur bei einem Schmalrumpfflugzeug (etwa A320, 737), G Gang und J Mitte nur bei einem Großraumflugzeug. H und F auf einem Großraumflugzeug hängen vom Layout ab (3-3-3, 3-4-3, 2-4-2) und werden nicht geraten, sondern als „nicht zuordenbar“ gezählt – ebenso in Business und First alles außer Fenster und Gang. Ein eingetragener Flugzeugtyp ordnet mehr Sitze zu.",
+      "exclusions": "Nicht enthalten: Flüge ohne Sitzplatz, Angaben, die nicht wie Zahl plus Buchstabe aussehen, Sitze, die sich ohne Kabinenlayout nicht zuordnen lassen (sie stehen gesondert darunter), geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
     },
     "zone": {
       "unit": "Wie oft du vorne, in der Mitte und hinten gesessen hast, nach Reihennummer: Reihen 1–10 vorne, 11–25 Mitte, alles andere hinten. Prozent = Anteil an diesen drei zusammen.",

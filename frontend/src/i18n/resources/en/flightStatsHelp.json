@@ -627,9 +627,9 @@
     "position": {
       "unit": "How often you sat at the window, in the middle and on the aisle, once per flight. Percent = share of these three together.",
       "time": "No time element: all-time; the page's year filter does not apply.",
-      "source": "Flown and logged (historical) flights with a seat, such as 23A: row number plus letter; the last letter decides.",
-      "coverage": "One fixed letter table for every aircraft type: A, F, K window; B, E, H, J middle; C, D, G aisle. On wide-body aircraft this is not always right – in a 3-4-3 row F is a middle seat and H an aisle seat.",
-      "exclusions": "Not included: flights without a seat, entries that do not look like number plus letter, other letters (such as L), scheduled and cancelled flights, and drafts (duplicates)."
+      "source": "Flown and logged (historical) flights with a seat, such as 23A (row number plus letter; the last letter decides), plus the flight's aircraft type and seat class.",
+      "coverage": "Only what holds in every cabin layout is placed: A and K window, C and D aisle, B and E middle; F is a window only on a narrow-body (such as A320, 737), G an aisle and J a middle seat only on a wide-body. H, and F on a wide-body, depend on the layout (3-3-3, 3-4-3, 2-4-2) and are not guessed but counted as \"cannot be placed\" – as is everything but window and aisle in business and first. An entered aircraft type places more seats.",
+      "exclusions": "Not included: flights without a seat, entries that do not look like number plus letter, seats that cannot be placed without the cabin layout (listed separately below), scheduled and cancelled flights, and drafts (duplicates)."
     },
     "zone": {
       "unit": "How often you sat at the front, in the middle and at the back, by row number: rows 1–10 front, 11–25 middle, everything else back. Percent = share of these three together.",

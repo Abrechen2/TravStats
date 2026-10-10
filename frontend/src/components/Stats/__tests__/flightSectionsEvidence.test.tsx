@@ -105,7 +105,7 @@ describe("flight-tab figures open their entries (forgejo#256)", () => {
       windowCount: 2,
       middleCount: 1,
       aisleCount: 0,
-      unknownCount: 0,
+      unknownCount: 1,
       noSeatCount: 0,
       frontCount: 3,
       middleZoneCount: 0,
@@ -120,6 +120,8 @@ describe("flight-tab figures open their entries (forgejo#256)", () => {
     expect(keys).toContain("ranking:seat:number:3A");
     expect(keys).toContain("ranking:seat:row:numbered");
     expect(keys).toContain("ranking:seat:class:economy");
+    // A seat the layout cannot place is said and opened, never guessed into a bar.
+    expect(keys).toContain("ranking:seat:position:unknown");
     expectServed(keys);
     expect(screen.getByTestId("seats-counting-help")).toBeTruthy();
   });

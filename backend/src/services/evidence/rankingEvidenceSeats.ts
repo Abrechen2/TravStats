@@ -56,7 +56,13 @@ export async function resolveSeatRankingEvidence(
     await withDepartureClock(
       await prisma.flight.findMany({
         where: { userId, ...countableFlightWhere() },
-        select: { id: true, seatNumber: true, seatClass: true, ...FLIGHT_DAY_SELECT },
+        select: {
+          id: true,
+          seatNumber: true,
+          seatClass: true,
+          aircraft: true,
+          ...FLIGHT_DAY_SELECT,
+        },
       })
     )
   ).filter((row) => facet(row, wanted));

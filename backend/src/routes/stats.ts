@@ -997,6 +997,7 @@ router.get("/seats", async (req: AuthRequest, res: Response, next: NextFunction)
       select: {
         seatNumber: true,
         seatClass: true,
+        aircraft: true,
       },
     });
 

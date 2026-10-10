@@ -8,23 +8,26 @@
  */
 
 import type { SeatStats } from "../../schemas/statsFlights";
+import { seatPositionOf, type SeatPosition } from "./seatPosition";
 
 /** Everything a seat figure is derived from. */
 export interface SeatRow {
   seatNumber: string | null;
   seatClass: string | null;
+  /** The aircraft type — decides which letters are windows (`seatPosition.ts`). */
+  aircraft?: string | null;
 }
 
 const SEAT_PATTERN = /^(\d+)([A-Z]+)$/i;
 
-export type SeatPosition = "window" | "middle" | "aisle" | "unknown";
+export type { SeatPosition };
 export type SeatZone = "front" | "middle" | "back";
 
 /** What one flight's seat says — the ONE reading every seat figure counts. */
 export interface SeatFacts {
   /** The seat upper-cased; null without a seat number. */
   seat: string | null;
-  /** Null without a seat; `unknown` for a seat the pattern or letter table cannot place. */
+  /** Null without a seat; `unknown` for a seat the pattern or the cabin layout cannot place. */
   position: SeatPosition | null;
   /** Rows 1–10 front, 11–25 middle, anything else back; null without a row. */
   zone: SeatZone | null;
@@ -41,16 +44,7 @@ export function seatFactsOf(flight: SeatRow): SeatFacts {
   const lastLetter = letters[letters.length - 1];
   const zone: SeatZone =
     row >= 1 && row <= 10 ? "front" : row >= 11 && row <= 25 ? "middle" : "back";
-  // Position by last letter. Covers narrow-body (A-F: 3+3) and wide-body
-  // (A-K: 3+4+3) layouts: window A, F, K; middle B, E, H, J (wide-body
-  // centre section); aisle C, D, G.
-  const position: SeatPosition = "AFK".includes(lastLetter)
-    ? "window"
-    : "BEHJ".includes(lastLetter)
-      ? "middle"
-      : "CDG".includes(lastLetter)
-        ? "aisle"
-        : "unknown";
+  const position = seatPositionOf(lastLetter, flight.aircraft, flight.seatClass);
   return { seat, position, zone, row };
 }
 
