@@ -12,12 +12,14 @@ import { PlaceDocumentImportTile } from "../PlaceDocumentImportTile";
 // The tile reads through the shared parse routes with `domain: "place"`.
 const parseEmail = vi.fn();
 const parseEmailFile = vi.fn();
+const parsePdf = vi.fn();
 const previewPlaceImport = vi.fn();
 const commitPlaceImport = vi.fn();
 vi.mock("../../../lib/api/parse", () => ({
   parseApi: {
     parseEmail: (...args: unknown[]) => parseEmail(...args),
     parseEmailFile: (...args: unknown[]) => parseEmailFile(...args),
+    parsePdf: (...args: unknown[]) => parsePdf(...args),
   },
 }));
 vi.mock("../../../lib/api/placeImport", () => ({
@@ -43,6 +45,7 @@ describe("PlaceDocumentImportTile", () => {
   beforeEach(() => {
     parseEmail.mockReset();
     parseEmailFile.mockReset();
+    parsePdf.mockReset();
     previewPlaceImport.mockReset();
     commitPlaceImport.mockReset();
   });
@@ -92,6 +95,25 @@ describe("PlaceDocumentImportTile", () => {
       expect(previewPlaceImport).not.toHaveBeenCalled();
     }
   );
+
+  it("reads a PDF ticket through the shared PDF route, as a place document", async () => {
+    const candidate = { sourceRowIndex: 0, name: "Museum am Probeufer" };
+    parsePdf.mockResolvedValueOnce({ candidates: [candidate], templateId: "place:user-1" });
+    previewPlaceImport.mockResolvedValueOnce({
+      rows: [
+        { ...candidate, flags: [], dedupeHint: "none", matchedPlaceId: null, action: "create" },
+      ],
+      summary: { newRows: 1, alreadyPresent: 0, needsInput: 0 },
+    });
+    render(<PlaceDocumentImportTile />);
+    const pdf = new File(["%PDF-1.4 invented"], "ticket.pdf", { type: "application/pdf" });
+    fireEvent.change(screen.getByLabelText("places:import.document.uploadLabel"), {
+      target: { files: [pdf] },
+    });
+    await waitFor(() => expect(screen.getByTestId("preview")).toHaveTextContent("Museum"));
+    expect(parsePdf).toHaveBeenCalledWith(btoa("%PDF-1.4 invented"), "place");
+    expect(parseEmailFile).not.toHaveBeenCalled();
+  });
 
   it("reads a mail file through the shared file route, as a place document", async () => {
     parseEmailFile.mockResolvedValueOnce({

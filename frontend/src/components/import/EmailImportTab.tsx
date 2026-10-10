@@ -8,6 +8,7 @@ import { useMinLoadingState } from "../../hooks/useMinLoadingState";
 import { GlobeLoader } from "../GlobeLoader";
 import { logger } from "../../lib/logger";
 import { parseFailureMessage } from "../../lib/parseErrorCopy";
+import { fileToBase64 } from "../../lib/fileBase64";
 import type { ParseableImportDomain } from "./types";
 import type { ImportDocument } from "./documentHandoff";
 import {
@@ -112,13 +113,7 @@ export default function EmailImportTab({
       if (isPdf && onPdfResult) {
         setDropState("loading");
         try {
-          const arrayBuffer = await file.arrayBuffer();
-          const bytes = new Uint8Array(arrayBuffer);
-          let binary = "";
-          for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
-          }
-          const pdfBase64 = btoa(binary);
+          const pdfBase64 = await fileToBase64(file);
           // A package's document is kept: the commit files it on the trip.
           const result =
             domain === "package"

@@ -545,7 +545,7 @@
     },
     "document": {
       "title": "Ort aus einem Dokument",
-      "description": "Ein Museumsticket oder eine Führungsbuchung: Text einfügen oder als .txt, .eml oder .msg wählen. Gelesen wird wie jedes andere Dokument, mit deinen Orts-Templates aus der Parser-Werkstatt; der Ort landet in der Vorschau, und erst du legst ihn an.",
+      "description": "Ein Museumsticket oder eine Führungsbuchung: Text einfügen oder als PDF, .eml, .msg oder .txt wählen. Gelesen wird wie jedes andere Dokument, mit deinen Orts-Templates aus der Parser-Werkstatt; der Ort landet in der Vorschau, und erst du legst ihn an.",
       "textLabel": "Text des Dokuments",
       "placeholder": "Text des Tickets oder der Buchung hier einfügen …",
       "read": "Dokument lesen",

@@ -5,6 +5,7 @@ import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
 import { commitPlaceImport, previewPlaceImport } from "../../lib/api/placeImport";
 import { parseApi, type ParseEmailPlaceResult } from "../../lib/api/parse";
+import { fileToBase64, isPdfFile } from "../../lib/fileBase64";
 import { describePlaceCommitResult } from "../../lib/placeImportResult";
 import { PlaceImportPreviewModal } from "../places/PlaceImportPreviewModal";
 import { ImportTileShell, ImportFilePicker, ImportErrorBlock } from "./ImportTileShell";
@@ -64,8 +65,15 @@ export function PlaceDocumentImportTile({ onImported }: Props): JSX.Element {
     [readWith, text]
   );
 
+  // A PDF ticket goes through the same PDF route and text extraction as any
+  // other domain's PDF; a mail file through the mail-file route.
   const handleFile = useCallback(
-    (file: File): Promise<void> => readWith(() => parseApi.parseEmailFile(file, "place")),
+    (file: File): Promise<void> =>
+      readWith(async () =>
+        isPdfFile(file)
+          ? parseApi.parsePdf(await fileToBase64(file), "place")
+          : parseApi.parseEmailFile(file, "place")
+      ),
     [readWith]
   );
 
@@ -100,7 +108,7 @@ export function PlaceDocumentImportTile({ onImported }: Props): JSX.Element {
             </button>
             <ImportFilePicker
               label={t("places:import.document.uploadLabel")}
-              accept=".txt,.eml,.msg"
+              accept=".txt,.eml,.msg,.pdf"
               disabled={busy}
               onFile={(file) => void handleFile(file)}
             />
