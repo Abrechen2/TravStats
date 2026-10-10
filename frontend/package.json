@@ -96,6 +96,12 @@
     },
     "eslint-plugin-react": {
       "eslint": "$eslint"
+    },
+    "@loaders.gl/compression": {
+      "fflate": "0.7.5"
+    },
+    "texture-compressor": {
+      "image-size": "^2.0.3"
     }
   }
 }
