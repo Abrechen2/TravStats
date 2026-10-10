@@ -150,31 +150,8 @@ export interface Flight {
   times?: FlightTimes; // ADR 0002 phase 4 — read through lib/entityTimes.ts
 }
 
-export interface Booking {
-  id: string;
-  userId: string;
-  tripId: string | null;
-  pnr: string | null;
-  price: number | null;
-  /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …) or null. */
-  currency: string | null;
-  /** Who sold the package (#356). Optional: an older server does not send it. */
-  operator?: string | null;
-  /** How many travellers the price covers — "für N Personen" (#356). */
-  travellers?: number | null;
-  /** The day it was booked, which dates the FX snapshot (#356). */
-  bookedOn?: string | null;
-}
-
-export interface UpdateBookingInput {
-  pnr?: string | null;
-  price?: number | null;
-  currency?: string | null;
-  operator?: string | null;
-  travellers?: number | null;
-  /** `YYYY-MM-DD`. */
-  bookedOn?: string | null;
-}
+import type { Booking } from "./booking";
+export type { Booking, UpdateBookingInput } from "./booking";
 
 export type TripStatus = "planned" | "in_progress" | "completed";
 export type TripCategory = "vacation" | "business" | "weekend" | "family" | "other";

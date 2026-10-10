@@ -120,7 +120,7 @@ export default function BookingEditModal({
       travellers: parseTravellers(travellers),
       bookedOn: bookedOn || null,
     };
-    let stored: Booking | null = booking;
+    let stored: Booking;
     try {
       if (booking) {
         stored = await tripsApi.updateBooking(booking.id, fields);
@@ -145,7 +145,7 @@ export default function BookingEditModal({
     // The entries are a second request on an edit. Its failure is reported as
     // itself: the booking IS saved, only the ticked entries are not filed.
     // Only when the ticks changed — an untouched list is not a request.
-    if (booking && stored && !sameSelection(opened, selection)) {
+    if (booking && !sameSelection(opened, selection)) {
       try {
         await tripsApi.setBookingEntries(stored.id, selection);
       } catch (err) {
