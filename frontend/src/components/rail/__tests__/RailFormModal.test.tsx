@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" }, ready: true }),
@@ -77,6 +77,19 @@ function pickBothViaGeocoder(): void {
   fireEvent.click(screen.getByText("pick rail:form.arrivalStation"));
 }
 
+/**
+ * Waits for the trip list to arrive in the trip select. Scoped to that select
+ * on purpose: the form also holds the currency select with ~160 options, and a
+ * document-wide `findByRole("option", { name })` computes the accessible name
+ * and visibility of every one of them on each poll — about a second per try
+ * locally, enough to run a test past its 5 s budget on a loaded CI runner.
+ */
+async function tripsLoaded(name = "Paris weekend"): Promise<void> {
+  await waitFor(() =>
+    within(screen.getByLabelText("rail:form.trip")).getByRole("option", { name })
+  );
+}
+
 /** The two "only the date is known" checkboxes: departure first, arrival second. */
 function dayOnlyBoxes(): HTMLElement[] {
   return screen.getAllByRole("checkbox", { name: /: rail:form\.dayOnly$/ });
@@ -119,7 +132,7 @@ describe("RailFormModal", () => {
     create.mockResolvedValue({ journey: saved, geometry: null });
     const onSaved = vi.fn();
     render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={onSaved} />);
-    await screen.findByRole("option", { name: "Paris weekend" });
+    await tripsLoaded();
 
     pickBothViaGeocoder();
     fireEvent.change(screen.getByLabelText(DEPARTURE_TIME), {
@@ -166,7 +179,7 @@ describe("RailFormModal", () => {
       { id: "t2", name: "Später", startDate: "2026-08-01", endDate: "2026-08-05" },
     ]);
     render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={vi.fn()} />);
-    await screen.findByRole("option", { name: "Paris weekend" });
+    await tripsLoaded();
     const trip = screen.getByLabelText("rail:form.trip") as HTMLSelectElement;
     expect(trip.value).toBe("");
 
@@ -272,7 +285,14 @@ describe("RailFormModal", () => {
 
     const [depSearch] = screen.getAllByRole("combobox");
     fireEvent.change(depSearch, { target: { value: "frankfurt hbf" } });
-    fireEvent.click(await screen.findByRole("button", { name: /Frankfurt \(Main\) Hbf/ }));
+    // Scoped to the picker: its search answers after a 250 ms debounce, and a
+    // document-wide role query over this form is slow enough under load to use
+    // up findBy's one-second window in two or three polls.
+    fireEvent.click(
+      await within(depSearch.parentElement as HTMLElement).findByRole("button", {
+        name: /Frankfurt \(Main\) Hbf/,
+      })
+    );
     expect(screen.getByText("rail:station.picked")).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("rail:form.number"), { target: { value: "ICE 696" } });
@@ -375,7 +395,7 @@ describe("RailFormModal", () => {
     render(
       <RailFormModal journey={null} onClose={vi.fn()} onSaved={onSaved} onProgress={onProgress} />
     );
-    await screen.findByRole("option", { name: "Paris weekend" });
+    await tripsLoaded();
     pickBothViaGeocoder();
     fireEvent.change(screen.getByLabelText(DEPARTURE_TIME), {
       target: { value: "2026-07-01T08:15" },

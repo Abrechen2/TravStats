@@ -201,9 +201,17 @@ const renderAt = (initialEntry: string): void => {
 /** `t` echoes the key, so a nav entry or a section for the old one reads this. */
 const ADMIN_LABEL = "settings:admin.title";
 
+/*
+ * Options and links are looked up by their text, which is their accessible
+ * name here, rather than by role. This page holds ~460 <option>s (currency,
+ * country, home country), and a role query weighs the accessible name and
+ * visibility of every candidate through jsdom's getComputedStyle: measured
+ * 2026-10-09 at 5-7 s for one `queryByRole("link", { name })` on a developer
+ * machine, which ran a test past 33 s under coverage on the CI runner.
+ */
 const navListsAdmin = (): boolean =>
   screen.queryByRole("button", { name: ADMIN_LABEL }) !== null ||
-  screen.queryByRole("option", { name: ADMIN_LABEL }) !== null ||
+  screen.queryByText(ADMIN_LABEL, { selector: "option" }) !== null ||
   screen.queryByRole("region", { name: ADMIN_LABEL }) !== null;
 
 describe("SettingsPage — the settings/admin boundary", () => {
@@ -288,7 +296,8 @@ describe("SettingsPage — the settings/admin boundary", () => {
     renderAt("/settings/lodging");
     // The empty group sends the reader to the general page.
     expect(await screen.findByRole("region", { name: "settings:profile.title" })).toBeTruthy();
-    expect(screen.queryByRole("link", { name: "settings:tabs.lodging" })).toBeNull();
+    // By text, not by role: see `navListsAdmin` for what a role query costs here.
+    expect(screen.queryByText("settings:tabs.lodging", { selector: "a, a *" })).toBeNull();
   });
 
   it("says nothing of the sort to an admin, who can see the section", async () => {

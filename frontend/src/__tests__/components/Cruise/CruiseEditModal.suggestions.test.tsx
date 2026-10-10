@@ -255,7 +255,11 @@ describe("CruiseEditModal — entry suggestions", () => {
       const line = screen.getByLabelText("field.line");
 
       await userEvent.type(line, "ai");
-      await userEvent.click(await screen.findByRole("button", { name: "AIDA Cruises" }));
+      // Scoped to the field's combobox: the suggestion arrives after a 300 ms
+      // debounce, and a document-wide role query over this modal is slow
+      // enough under load to use up findBy's one-second window.
+      const combobox = line.parentElement as HTMLElement;
+      await userEvent.click(await within(combobox).findByRole("button", { name: "AIDA Cruises" }));
 
       expect(shipsApi.cruiseLines).toHaveBeenCalledWith("ai");
       expect(line).toHaveValue("AIDA Cruises");

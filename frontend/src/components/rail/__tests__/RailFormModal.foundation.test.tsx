@@ -51,6 +51,19 @@ vi.mock("../../location/LocationInput", () => ({
   ),
 }));
 
+// The chips re-query on a real 500 ms debounce after a station changes. Once a
+// loaded runner stretched a test past those 500 ms, the re-query's answer set
+// state in the middle of it, outside act(...) (CI, 2026-10-09: "An update to
+// RailFormModal"). The chips have their own file; here they stay empty and
+// nothing is left in flight.
+vi.mock("../../../hooks/useRailEntrySuggestions", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../hooks/useRailEntrySuggestions")>();
+  return {
+    ...actual,
+    useRailEntrySuggestions: () => ({ suggestions: actual.NO_RAIL_SUGGESTIONS, failed: false }),
+  };
+});
+
 const getAllTrips = vi.fn();
 vi.mock("../../../lib/api", () => ({
   tripsApi: { getAll: (...a: unknown[]) => getAllTrips(...a) },
