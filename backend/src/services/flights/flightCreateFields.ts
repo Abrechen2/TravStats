@@ -1,5 +1,4 @@
 import { Prisma } from "../../prisma";
-import { normalizeRegistration } from "../../shared/aircraftRegistration";
 
 import { extendedFlightCreateFields, type ExtendedFlightInput } from "./extendedFlightFields";
 
@@ -40,7 +39,7 @@ export function sharedFlightCreateFields(data: SharedFlightCreateInput) {
   return {
     // Persist the cabin, do not merely price its CO2 from it.
     seatClass: data.seatClass,
-    aircraftRegistration: normalizeRegistration(data.aircraftRegistration),
+    aircraftRegistration: data.aircraftRegistration,
     aircraftModeS: data.aircraftModeS,
     ...extendedFlightCreateFields(data),
     // Special flights (Sonder-Flüge) — a non-null `specialType` marks this

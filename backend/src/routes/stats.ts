@@ -27,8 +27,7 @@ import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from "../ut
 import { calculateLodgingStats } from "../utils/lodgingStats";
 import logger from "../utils/logger";
 import { localWallClockOf } from "../utils/timezone";
-import { profileZoneOf } from "../shared/time/profileZone";
-import { todayIn } from "../shared/time/clock";
+import { userToday } from "../services/stats/userToday";
 import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "../services/stats/departureClock";
 import { loadPassport } from "../services/stats/passportLoader";
 import { buildWhere, computeSummary } from "../services/stats/summary";
@@ -768,29 +767,18 @@ router.get(
           arrLat: true,
           arrLon: true,
           ...FLIGHT_CLOCK_SELECT,
-          airline: true,
-          aircraft: true,
           departureTime: true,
           arrivalTime: true,
           status: true,
-          price: true,
-          taxes: true,
-          fees: true,
-          category: true,
-          seatClass: true,
           createdAt: true,
         },
       });
 
-      const [homePeriods, profile] = await Promise.all([
-        loadHomePeriods(userId),
-        profileZoneOf(userId),
-      ]);
-
+      const [homePeriods, today] = await Promise.all([loadHomePeriods(userId), userToday(userId)]);
       const stats = await calculateAirportStats(
         await withDepartureClock(flights),
         homePeriods,
-        todayIn(profile.zone)
+        today
       );
       res.json(stats);
     } catch (error) {

@@ -1,4 +1,5 @@
 import { z } from "./zod";
+import { normalizeRegistration } from "../shared/aircraftRegistration";
 import { receiptUrlValidator } from "./receiptUrl";
 import { chronologyProblem, departsInFuture } from "../shared/flightChronology";
 import { wallClockExists } from "../shared/wallClockExistence";
@@ -133,7 +134,14 @@ const baseFlightSchema = z.object({
   flightNumber: normalizedFlightNumber,
   callsign: z.string().nullable().optional(),
   aircraft: z.string().nullable().optional(),
-  aircraftRegistration: z.string().max(20).nullable().optional(),
+  // One airframe, one key (forgejo#256): every write stores the normalised
+  // mark, so "d-aixa" and "D-AIXA" are one hull (`shared/aircraftRegistration`).
+  aircraftRegistration: z
+    .string()
+    .max(20)
+    .nullable()
+    .optional()
+    .transform((v) => (v === undefined ? undefined : normalizeRegistration(v))),
   aircraftModeS: z.string().max(10).nullable().optional(),
   departure: z.object({
     icao: z.string().nullable().optional(),

@@ -27,3 +27,16 @@ describe("the hull ranking keys a registration once", () => {
     expect(normalizeRegistration(null)).toBeNull();
   });
 });
+
+describe("a flight write stores the registration normalised", () => {
+  it("normalises on the schema, and leaves an absent field absent", async () => {
+    const { updateFlightSchema } = await import("../../../schemas/flight");
+    expect(
+      updateFlightSchema.parse({ aircraftRegistration: " d-aixa " }).aircraftRegistration
+    ).toBe("D-AIXA");
+    expect(updateFlightSchema.parse({ seatNumber: "3A" }).aircraftRegistration).toBeUndefined();
+    expect(
+      updateFlightSchema.parse({ aircraftRegistration: null }).aircraftRegistration
+    ).toBeNull();
+  });
+});

@@ -1,5 +1,4 @@
 import { Router, Response, NextFunction } from "express";
-import { normalizeRegistration } from "../shared/aircraftRegistration";
 import { Prisma } from "../prisma";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
@@ -878,7 +877,7 @@ router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     if (data.aircraft !== undefined)
       updateData.aircraft = data.aircraft ? normalizeAircraft(data.aircraft) : data.aircraft;
     if (data.aircraftRegistration !== undefined)
-      updateData.aircraftRegistration = normalizeRegistration(data.aircraftRegistration);
+      updateData.aircraftRegistration = data.aircraftRegistration;
     if (data.aircraftModeS !== undefined) updateData.aircraftModeS = data.aircraftModeS;
     if (data.notes !== undefined) updateData.notes = data.notes;
     if (data.price !== undefined) updateData.price = data.price;
