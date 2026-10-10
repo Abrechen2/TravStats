@@ -5,9 +5,10 @@ import { hashPassword } from "../utils/password";
 import {
   forgotPasswordSchema,
   resetPasswordSchema,
+  resetTokenCheckSchema,
   forceChangePasswordSchema,
 } from "../schemas/auth";
-import { passwordResetLimiter } from "../middleware/rateLimit";
+import { passwordResetCheckLimiter, passwordResetLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import { SMTP_CONFIG_ID } from "./admin/smtp";
 import { sendPasswordResetEmail } from "../services/emailService";
@@ -172,6 +173,30 @@ router.post(
       res.json({
         message: "If the username exists and has an email configured, a reset link has been sent.",
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// POST /reset-password/check — is this link still good? Asked when the reset
+// page opens, so an expired link says so BEFORE the reader types a new
+// password twice (forgejo#88 acceptance, 2026-10-10). POST, not GET: the token
+// is a secret and a query string lands in access logs. The answer is one
+// boolean about the token the caller already holds — no username, no
+// account — so it tells nothing about who has an account. The shared demo is
+// "not valid" here because the reset itself refuses it.
+router.post(
+  "/reset-password/check",
+  passwordResetCheckLimiter,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { token } = resetTokenCheckSchema.parse(req.body);
+      const user = await prisma.user.findFirst({
+        where: { resetToken: hashToken(token), resetTokenExpiry: { gt: new Date() } },
+        select: { isDemo: true, username: true },
+      });
+      res.json({ valid: user !== null && !isSharedDemoAccount(user) });
     } catch (error) {
       next(error);
     }

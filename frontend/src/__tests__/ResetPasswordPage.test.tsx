@@ -6,6 +6,7 @@ import { authApi } from "../lib/api";
 vi.mock("../lib/api", () => ({
   authApi: {
     resetPassword: vi.fn(),
+    checkResetToken: vi.fn(),
   },
 }));
 
@@ -44,15 +45,16 @@ import ResetPasswordPage from "../pages/ResetPasswordPage";
 describe("ResetPasswordPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(authApi.checkResetToken).mockResolvedValue(true);
   });
 
-  it("renders form with new password and confirm fields", () => {
+  it("renders form with new password and confirm fields", async () => {
     render(
       <BrowserRouter>
         <ResetPasswordPage />
       </BrowserRouter>
     );
-    expect(screen.getByLabelText(/auth:resetPassword\.newPassword/i)).toBeInTheDocument();
+    expect(await screen.findByLabelText(/auth:resetPassword\.newPassword/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/auth:resetPassword\.confirmPassword/i)).toBeInTheDocument();
   });
 
@@ -62,7 +64,7 @@ describe("ResetPasswordPage", () => {
         <ResetPasswordPage />
       </BrowserRouter>
     );
-    fireEvent.change(screen.getByLabelText(/auth:resetPassword\.newPassword/i), {
+    fireEvent.change(await screen.findByLabelText(/auth:resetPassword\.newPassword/i), {
       target: { value: "password1" },
     });
     fireEvent.change(screen.getByLabelText(/auth:resetPassword\.confirmPassword/i), {
@@ -79,7 +81,7 @@ describe("ResetPasswordPage", () => {
         <ResetPasswordPage />
       </BrowserRouter>
     );
-    fireEvent.change(screen.getByLabelText(/auth:resetPassword\.newPassword/i), {
+    fireEvent.change(await screen.findByLabelText(/auth:resetPassword\.newPassword/i), {
       target: { value: "newpassword1" },
     });
     fireEvent.change(screen.getByLabelText(/auth:resetPassword\.confirmPassword/i), {
@@ -93,4 +95,30 @@ describe("ResetPasswordPage", () => {
       timeout: 3000,
     });
   }, 10000);
+
+  // forgejo#88 acceptance, 2026-10-10: an expired link only said so after the
+  // new password had been typed twice.
+  it("says an expired link up front, without a form, and offers a new one", async () => {
+    vi.mocked(authApi.checkResetToken).mockResolvedValue(false);
+    render(
+      <BrowserRouter>
+        <ResetPasswordPage />
+      </BrowserRouter>
+    );
+    expect(await screen.findByText("auth:resetPassword.expiredTitle")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/auth:resetPassword\.newPassword/i)).toBeNull();
+    expect(authApi.checkResetToken).toHaveBeenCalledWith("testtoken123");
+    fireEvent.click(screen.getByRole("button", { name: "auth:resetPassword.backToForgot" }));
+    expect(mockNavigate).toHaveBeenCalledWith("/login?forgot=1");
+  });
+
+  it("still offers the form when the check itself could not be made", async () => {
+    vi.mocked(authApi.checkResetToken).mockRejectedValue(new Error("Network Error"));
+    render(
+      <BrowserRouter>
+        <ResetPasswordPage />
+      </BrowserRouter>
+    );
+    expect(await screen.findByLabelText(/auth:resetPassword\.newPassword/i)).toBeInTheDocument();
+  });
 });

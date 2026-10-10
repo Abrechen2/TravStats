@@ -682,6 +682,21 @@ export const passwordResetLimiter = rateLimit({
 });
 
 /**
+ * Asking whether a reset link is still good — once per opening of the reset
+ * page. A bucket of its own, so reading the page does not spend the five
+ * attempts `passwordResetLimiter` gives the actual reset. The token is 32
+ * random bytes, so the cap is about abuse volume, not guessing.
+ */
+export const passwordResetCheckLimiter = rateLimit({
+  windowMs: RATE_LIMITS.PASSWORD_RESET_WINDOW_MS,
+  max: 30,
+  message: "Too many password reset checks, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: skipOutsideProduction,
+});
+
+/**
  * Rate limiter for the public device-pairing claim endpoint.
  *
  * `/pairing/claim` is unauthenticated by design (the mobile app has no
