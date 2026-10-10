@@ -33,6 +33,10 @@
       "home": {
         "title": "Home",
         "description": "Your home is not fully set up yet. Nothing changes until you confirm it."
+      },
+      "records": {
+        "title": "Check entries",
+        "description": "Duplicate, overlapping or incomplete entries. We change nothing — you decide."
       }
     },
     "photoJourneys": {
@@ -265,7 +269,8 @@
       "trip_journal_entry": "Journal entry",
       "lodging_stay": "Stay",
       "profile": "Profile",
-      "home": "Home"
+      "home": "Home",
+      "bus_journey": "Bus ride"
     },
     "status": {
       "open": "Open",
@@ -283,7 +288,8 @@
       }
     },
     "timeUnchanged": "Nothing was changed on the entry. The time stays as it was stored until you fill it in.",
-    "homeSubject": "Your home"
+    "homeSubject": "Your home",
+    "recordUnchanged": "Nothing about the entry was changed, and it keeps counting as before."
   },
   "kinds": {
     "address_country_mismatch": {
@@ -331,6 +337,69 @@
       "body": "So far TravStats only knows your home airport ({{airports}}) and measures distances from there. Confirm where you live and pick up to three airports you fly from.",
       "unchanged": "Until you confirm, every statistic stays exactly as it was.",
       "action": "Set up your home"
+    },
+    "duplicate_candidate": {
+      "title": "Possible duplicate",
+      "question": "This entry looks like a second copy of another — the same {{fields}}. Is it the same journey twice?",
+      "thisSource": "This entry: {{source}}",
+      "copiesTitle": "Looks like:",
+      "copyMeta": "({{source}}, added on {{date}})",
+      "safePath": "If so: open the extra copy, delete it there, then tap “I have corrected it”. If these are two real entries, tap “This is correct as it is”.",
+      "fields": {
+        "flightNumber": "flight number",
+        "trainNumber": "train number",
+        "lineName": "line",
+        "route": "route",
+        "departureDay": "travel day",
+        "departureTime": "departure time",
+        "lodging": "lodging",
+        "stayDates": "check-in and check-out day",
+        "ship": "ship",
+        "cruiseDates": "cruise dates"
+      },
+      "sources": {
+        "unknown": "source unknown",
+        "manual": "typed by hand",
+        "email_import": "from an email",
+        "boarding_pass_scan": "from a boarding pass",
+        "bulk_import": "from an import",
+        "api_lookup": "from a flight lookup"
+      }
+    },
+    "chronology_conflict": {
+      "title": "Entries overlap",
+      "questionFlight": "This flight departs {{minutes}} minutes before the previous one has landed. Both cannot be right — which time is wrong?",
+      "questionStay_one": "This stay shares {{count}} night with a stay at another lodging. Which dates are right?",
+      "questionStay_other": "This stay shares {{count}} nights with a stay at another lodging. Which dates are right?",
+      "this": "This entry",
+      "other": "Other entry",
+      "otherLink": "Overlaps with:",
+      "safePath": "Correct the time or date on the wrong entry. If both are right (two paid lodgings, say), tap “This is correct as it is”."
+    },
+    "flight_number_missing": {
+      "title": "Flight number missing",
+      "question": "No flight number is stored for this {{airline}} flight. Do you know it?",
+      "safePath": "Enter it on the flight. If there is none (a charter without one, say), tap “This is correct as it is”."
+    },
+    "airport_unknown": {
+      "title": "Unknown airport",
+      "question": "The catalogue does not know this airport code. A typo — or an airfield the catalogue is missing?",
+      "side": {
+        "departure": "Departure",
+        "arrival": "Arrival"
+      },
+      "safePath": "Pick the airport again on the flight. If the code is right, tap “This is correct as it is”."
+    },
+    "trip_end_missing": {
+      "title": "Trip without an end",
+      "question": "This trip starts on {{start}} but has no end. When did it end?",
+      "suggestion": "The last linked entry ends on {{day}}.",
+      "safePath": "Enter the end on the trip. If it is still going, tap “This is correct as it is”."
+    },
+    "trip_entries_outside": {
+      "title": "Entries outside the trip",
+      "question": "These entries belong to the trip ({{span}}) but fall outside its days. Are the trip dates right — or does the entry belong to another trip?",
+      "safePath": "Adjust the trip dates or move the entry to another trip."
     }
   },
   "passwordResets": {

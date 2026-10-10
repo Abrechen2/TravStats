@@ -109,4 +109,20 @@ describe("inbox — the time questions have their own sentence", () => {
     expect(within(contradictions).getByText("Widersprüche")).toBeTruthy();
     expect(within(contradictions).queryByText(/LH 2462/)).toBeNull();
   });
+
+  it("gives the record checks (forgejo#282) their own group, not the contradiction sentence", async () => {
+    const duplicate: DataQualityFlag = {
+      ...timeQuestion,
+      id: "flag-3",
+      kind: "flight_number_missing",
+      details: { airline: "Condor", status: "flown" },
+    };
+    await show([contradiction, duplicate]);
+    const records = screen.getByTestId("flag-group-records");
+    expect(within(records).getByText("Einträge prüfen")).toBeTruthy();
+    expect(within(records).getByText(/Doppelte, sich überschneidende/)).toBeTruthy();
+    expect(within(records).getByText(/LH 2462/)).toBeTruthy();
+    const contradictions = screen.getByTestId("flag-group-contradictions");
+    expect(within(contradictions).queryByText(/LH 2462/)).toBeNull();
+  });
 });

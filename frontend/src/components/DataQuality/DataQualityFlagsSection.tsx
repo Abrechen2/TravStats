@@ -6,6 +6,7 @@ import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import type { DataQualityFlag, DataQualityFlagStatus } from "../../types/dataQuality";
 import { TIME_FLAG_KINDS } from "../../types/timeMigration";
+import { isRecordCheckKind } from "./recordFlagLinks";
 
 import DataQualityFlagCard from "./DataQualityFlagCard";
 import Button from "../ui/Button";
@@ -44,6 +45,13 @@ const isTimeQuestion = (flag: DataQualityFlag): boolean =>
 /** The home question (owner decision 2026-09-27) is not a contradiction either: nothing is set yet. */
 const isHomeQuestion = (flag: DataQualityFlag): boolean =>
   flag.kind === "home_residence_unconfirmed";
+
+/**
+ * The record checks (forgejo#282) — a possible duplicate, an overlap, a missing
+ * flight number or airport, an incomplete trip — are about entries, not about
+ * two values of one entry, so they get their own heading too.
+ */
+const isRecordQuestion = (flag: DataQualityFlag): boolean => isRecordCheckKind(flag.kind);
 
 export default function DataQualityFlagsSection({
   onOpenCount,
@@ -183,8 +191,11 @@ export default function DataQualityFlagsSection({
         [
           {
             key: "contradictions",
-            items: flags.filter((f) => !isTimeQuestion(f) && !isHomeQuestion(f)),
+            items: flags.filter(
+              (f) => !isTimeQuestion(f) && !isHomeQuestion(f) && !isRecordQuestion(f)
+            ),
           },
+          { key: "records", items: flags.filter(isRecordQuestion) },
           { key: "home", items: flags.filter(isHomeQuestion) },
           { key: "time", items: flags.filter(isTimeQuestion) },
         ]

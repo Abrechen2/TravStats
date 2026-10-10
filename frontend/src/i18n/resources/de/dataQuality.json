@@ -33,6 +33,10 @@
       "home": {
         "title": "Zuhause",
         "description": "Dein Zuhause ist noch nicht vollständig eingerichtet. Wir ändern nichts, bis du es bestätigst."
+      },
+      "records": {
+        "title": "Einträge prüfen",
+        "description": "Doppelte, sich überschneidende oder unvollständige Einträge. Wir ändern nichts – du entscheidest."
       }
     },
     "photoJourneys": {
@@ -265,7 +269,8 @@
       "trip_journal_entry": "Tagebucheintrag",
       "lodging_stay": "Aufenthalt",
       "profile": "Profil",
-      "home": "Zuhause"
+      "home": "Zuhause",
+      "bus_journey": "Busfahrt"
     },
     "status": {
       "open": "Offen",
@@ -283,7 +288,8 @@
       }
     },
     "timeUnchanged": "Am Eintrag wurde nichts geändert. Die Zeit steht, wie sie gespeichert war, bis du sie ergänzt.",
-    "homeSubject": "Dein Zuhause"
+    "homeSubject": "Dein Zuhause",
+    "recordUnchanged": "Am Eintrag wurde nichts geändert, und er zählt unverändert weiter."
   },
   "kinds": {
     "address_country_mismatch": {
@@ -331,6 +337,69 @@
       "body": "Bisher kennt TravStats nur deinen Heimatflughafen ({{airports}}) und misst Abstände von dort aus. Bestätige, wo du wohnst, und wähle bis zu drei Flughäfen, von denen du fliegst.",
       "unchanged": "Bis du bestätigst, rechnen alle Statistiken genau wie bisher.",
       "action": "Zuhause einrichten"
+    },
+    "duplicate_candidate": {
+      "title": "Möglicher Doppeleintrag",
+      "question": "Dieser Eintrag sieht aus wie ein zweites Exemplar eines anderen – gleich sind: {{fields}}. Ist es dieselbe Reise zweimal?",
+      "thisSource": "Dieser Eintrag: {{source}}",
+      "copiesTitle": "Sieht aus wie:",
+      "copyMeta": "({{source}}, angelegt am {{date}})",
+      "safePath": "Wenn ja: Öffne die überzählige Kopie, lösche sie dort und tippe dann „Ich habe es korrigiert“. Sind es zwei echte Einträge, tippe „Das stimmt so“.",
+      "fields": {
+        "flightNumber": "Flugnummer",
+        "trainNumber": "Zugnummer",
+        "lineName": "Linie",
+        "route": "Strecke",
+        "departureDay": "Reisetag",
+        "departureTime": "Startzeit",
+        "lodging": "Unterkunft",
+        "stayDates": "An- und Abreisetag",
+        "ship": "Schiff",
+        "cruiseDates": "Reisedaten"
+      },
+      "sources": {
+        "unknown": "Quelle unbekannt",
+        "manual": "von Hand",
+        "email_import": "aus einer Mail",
+        "boarding_pass_scan": "aus einer Bordkarte",
+        "bulk_import": "aus einem Import",
+        "api_lookup": "aus einer Flugabfrage"
+      }
+    },
+    "chronology_conflict": {
+      "title": "Einträge überschneiden sich",
+      "questionFlight": "Dieser Flug startet {{minutes}} Minuten, bevor der vorherige gelandet ist. Beides kann nicht stimmen – welche Zeit ist falsch?",
+      "questionStay_one": "Dieser Aufenthalt teilt sich {{count}} Nacht mit einem Aufenthalt in einer anderen Unterkunft. Welche Daten stimmen?",
+      "questionStay_other": "Dieser Aufenthalt teilt sich {{count}} Nächte mit einem Aufenthalt in einer anderen Unterkunft. Welche Daten stimmen?",
+      "this": "Dieser Eintrag",
+      "other": "Anderer Eintrag",
+      "otherLink": "Überschneidet sich mit:",
+      "safePath": "Korrigiere die Zeit oder das Datum am falschen Eintrag. Stimmt beides (etwa zwei bezahlte Unterkünfte), tippe „Das stimmt so“."
+    },
+    "flight_number_missing": {
+      "title": "Flugnummer fehlt",
+      "question": "Für diesen Flug mit {{airline}} ist keine Flugnummer gespeichert. Kennst du sie?",
+      "safePath": "Trag sie im Flug ein. Gibt es keine (etwa ein Charter ohne Nummer), tippe „Das stimmt so“."
+    },
+    "airport_unknown": {
+      "title": "Unbekannter Flughafen",
+      "question": "Diesen Flughafen-Code kennt der Katalog nicht. Ein Tippfehler – oder ein Flugplatz, der im Katalog fehlt?",
+      "side": {
+        "departure": "Abflug",
+        "arrival": "Ankunft"
+      },
+      "safePath": "Wähle den Flughafen im Flug neu aus. Stimmt der Code, tippe „Das stimmt so“."
+    },
+    "trip_end_missing": {
+      "title": "Reise ohne Ende",
+      "question": "Diese Reise beginnt am {{start}}, hat aber kein Ende. Wann war sie zu Ende?",
+      "suggestion": "Der letzte verknüpfte Eintrag endet am {{day}}.",
+      "safePath": "Trag das Ende in der Reise ein. Läuft sie noch, tippe „Das stimmt so“."
+    },
+    "trip_entries_outside": {
+      "title": "Einträge außerhalb der Reise",
+      "question": "Diese Einträge gehören zur Reise ({{span}}), liegen aber außerhalb ihrer Tage. Stimmen die Reisedaten – oder gehört der Eintrag zu einer anderen Reise?",
+      "safePath": "Passe die Reisedaten an oder ordne den Eintrag einer anderen Reise zu."
     }
   },
   "passwordResets": {
