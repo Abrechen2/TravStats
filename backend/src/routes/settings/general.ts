@@ -22,6 +22,7 @@ import {
 } from "../../services/settings/profileZoneSettings";
 import { isValidZone } from "../../shared/time/zonedParts";
 import { homeSettingsView } from "../../services/home/homeStore";
+import { canonicalProfilePictureUrl } from "../../services/files/privateFileUrls";
 
 const router = Router();
 
@@ -277,6 +278,10 @@ function buildSettingsResponse(
     // here, so the settings page and the header cannot drift apart (#241).
     profile: {
       ...(baseData.profile ?? {}),
+      // A stored avatar URL in the legacy `<name>.jpg` form is answered in its
+      // extension-less form, so clients never request the cacheable one
+      // (forgejo#284). The blob is not rewritten; the old URL still redirects.
+      profilePicture: canonicalProfilePictureUrl(baseData.profile?.profilePicture),
       firstName: name.firstName,
       lastName: name.lastName,
     },

@@ -7,6 +7,7 @@ import logger from "../utils/logger";
 import { AppError } from "./errorHandler";
 import { FILE_LIMITS, CLEANUP } from "../config/constants";
 import { HEIF_MIME_TYPES, removeDisplayRendition } from "../services/photos/displayRendition";
+import { receiptUrlForms } from "../services/files/privateFileUrls";
 
 /**
  * A file this endpoint does not accept — the CLIENT's mistake, answered 400.
@@ -180,7 +181,7 @@ export async function cleanupOldReceipts(prisma: Db): Promise<number> {
     // Check if file is referenced in the database — via a flight OR a
     // lodging stay (a lodging-only receipt must not be treated as orphaned
     // just because no flight references it; same gap fixed in routes/uploads.ts).
-    const receiptUrl = `/api/v1/uploads/receipts/${file}`;
+    const receiptUrl = { in: receiptUrlForms(file) };
     const [referencedFlight, referencedStay] = await Promise.all([
       prisma.flight.findFirst({ where: { receiptUrl } }),
       prisma.lodgingStay.findFirst({ where: { receiptUrl } }),

@@ -5,6 +5,7 @@ import { prisma } from "../../db";
 import { getUploadDir } from "../../middleware/upload";
 import logger from "../../utils/logger";
 import { createDocument } from "./documentService";
+import { receiptUrlForms } from "../files/privateFileUrls";
 
 /**
  * Receipts are kept documents (forgejo#116, owner decision 2026-09-17).
@@ -29,7 +30,6 @@ import { createDocument } from "./documentService";
 export const RECEIPT_SOURCE = "receipt";
 
 const DOCUMENT_URL = /^\/api\/v1\/documents\/([0-9a-f-]{36})\/file$/i;
-const LEGACY_PREFIX = "/api/v1/uploads/receipts/";
 
 export function receiptUrlFor(documentId: string): string {
   return `/api/v1/documents/${documentId}/file`;
@@ -162,7 +162,9 @@ export async function migrateLegacyReceipts(): Promise<{ migrated: number; skipp
       continue;
     }
 
-    const legacyUrl = `${LEGACY_PREFIX}${upload.filename}`;
+    // Both forms of the old URL: the one the upload route wrote, and the
+    // extension-less one it redirects to (forgejo#284).
+    const legacyUrl = { in: receiptUrlForms(upload.filename) };
     const next = { receiptUrl: receiptUrlFor(documentId) };
     await prisma.$transaction([
       prisma.flight.updateMany({

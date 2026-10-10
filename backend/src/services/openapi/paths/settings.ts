@@ -131,11 +131,13 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/settings/profile-picture/{filename}",
+  path: "/settings/profile-picture/{filename}/content",
   summary: "Fetch a profile picture",
   description:
-    "Sets its own `Cache-Control: private`, overriding the API-wide `no-store`. " +
-    "Private and never public: a shared cache must not hold one user's face.",
+    "Answered with `Cache-Control: private, no-store`: a shared cache must not hold " +
+    "one user's face. The former URL `/settings/profile-picture/{filename}` ends in " +
+    "the image's extension, which extension-based proxy caches store regardless of " +
+    "headers; it answers a 308 redirect to this one.",
   tags: settingsTag,
   request: { params: z.object({ filename: z.string() }) },
   responses: {

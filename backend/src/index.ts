@@ -10,6 +10,7 @@ import { recheckAchievementsAfterWrite } from "./middleware/recheckAchievementsA
 import { apiMounts } from "./routes/mounts";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { requestLoggerMiddleware } from "./middleware/requestLogger";
+import { assetPathGuard } from "./middleware/assetPathGuard";
 import { prisma } from "./db";
 import logger from "./utils/logger";
 import { DATABASE_URL } from "./utils/database";
@@ -157,6 +158,12 @@ app.use("/api", (_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   next();
 });
+
+// No private answer at a URL that ends like a static asset (forgejo#284):
+// extension-based proxy caches (Nginx Proxy Manager "Cache Assets", Cloudflare's
+// default list) ignore the no-store above. Legacy file URLs redirect to their
+// extension-less form; see middleware/assetPathGuard.ts.
+app.use("/api", assetPathGuard);
 
 // Health check — see routes/health.ts (reports a broken time zone lookup).
 app.get("/health", healthHandler);

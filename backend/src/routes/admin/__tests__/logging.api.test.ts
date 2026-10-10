@@ -110,7 +110,9 @@ describe("reading a log file", () => {
   });
 
   it("pages newest first with total and hasMore", async () => {
-    const first = await admin(request(app).get("/api/v1/admin/logging/files/fixture.log?limit=2"));
+    const first = await admin(
+      request(app).get("/api/v1/admin/logging/files/fixture.log/entries?limit=2")
+    );
     expect(first.status).toBe(200);
     expect(first.body.entries.map((e: { operation: string }) => e.operation)).toEqual([
       "entry_4",
@@ -119,7 +121,7 @@ describe("reading a log file", () => {
     expect(first.body).toMatchObject({ total: 5, offset: 0, limit: 2, hasMore: true });
 
     const last = await admin(
-      request(app).get("/api/v1/admin/logging/files/fixture.log?limit=2&offset=4")
+      request(app).get("/api/v1/admin/logging/files/fixture.log/entries?limit=2&offset=4")
     );
     expect(last.body.entries.map((e: { operation: string }) => e.operation)).toEqual(["entry_0"]);
     expect(last.body.hasMore).toBe(false);
@@ -127,7 +129,7 @@ describe("reading a log file", () => {
 
   it("filters by category on the single category field", async () => {
     const res = await admin(
-      request(app).get("/api/v1/admin/logging/files/fixture.log?category=security")
+      request(app).get("/api/v1/admin/logging/files/fixture.log/entries?category=security")
     );
     expect(res.body.total).toBe(2);
     expect(res.body.entries.every((e: { category: string }) => e.category === "security")).toBe(
@@ -137,7 +139,7 @@ describe("reading a log file", () => {
 
   it("reads a rotated .gz file instead of refusing it", async () => {
     const res = await admin(
-      request(app).get("/api/v1/admin/logging/files/fixture-20260919-0000-01.log.gz")
+      request(app).get("/api/v1/admin/logging/files/fixture-20260919-0000-01.log.gz/entries")
     );
     expect(res.status).toBe(200);
     expect(res.body.entries.map((e: { operation: string }) => e.operation)).toEqual([
@@ -146,8 +148,20 @@ describe("reading a log file", () => {
     ]);
   });
 
+  it("redirects the old page URL, which ends in .gz, to /entries (forgejo#284)", async () => {
+    // `.gz` is on Cloudflare's default cached list, so a page of a rotated log
+    // must not be served at a URL ending in it. The redirect keeps the query.
+    const res = await request(app).get(
+      "/api/v1/admin/logging/files/fixture-20260919-0000-01.log.gz?limit=1"
+    );
+    expect(res.status).toBe(308);
+    expect(res.headers.location).toBe(
+      "/api/v1/admin/logging/files/fixture-20260919-0000-01.log.gz/entries?limit=1"
+    );
+  });
+
   it("answers a missing file with 404 and a stable code", async () => {
-    const res = await admin(request(app).get("/api/v1/admin/logging/files/nothere.log"));
+    const res = await admin(request(app).get("/api/v1/admin/logging/files/nothere.log/entries"));
     expect(res.status).toBe(404);
     expect(res.body.code).toBe("LOG_FILE_NOT_FOUND");
   });
@@ -155,7 +169,7 @@ describe("reading a log file", () => {
   it.each(["..%2F..%2Fpackage.json", "..%2F.env.log", "app.log%00.txt", "%2E%2E%5Capp.log"])(
     "refuses a traversal attempt %s with 400 LOG_FILE_INVALID_NAME",
     async (name) => {
-      const res = await admin(request(app).get(`/api/v1/admin/logging/files/${name}`));
+      const res = await admin(request(app).get(`/api/v1/admin/logging/files/${name}/entries`));
       expect(res.status).toBe(400);
       expect(res.body.code).toBe("LOG_FILE_INVALID_NAME");
     }

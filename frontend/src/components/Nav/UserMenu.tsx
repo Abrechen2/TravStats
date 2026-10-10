@@ -5,6 +5,7 @@ import { useClickOutside } from "../../hooks/useClickOutside";
 import { displayName, initials, type DisplayableUser } from "../../lib/userDisplay";
 import { Icon } from "../ui/Icon";
 import { useInstallPrompt } from "../../hooks/useInstallPrompt";
+import { canonicalPrivateFileUrl } from "../../lib/privateFileUrl";
 
 interface UserMenuProps {
   user: DisplayableUser | null | undefined;
@@ -97,7 +98,7 @@ export default function UserMenu({
       >
         {profilePicture ? (
           <img
-            src={profilePicture}
+            src={canonicalPrivateFileUrl(profilePicture)}
             alt=""
             className="h-7 w-7 rounded-full object-cover"
             style={{ border: "1px solid var(--color-border)" }}

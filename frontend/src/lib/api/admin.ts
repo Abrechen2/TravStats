@@ -604,7 +604,7 @@ export const adminApi = {
     params: { level?: string; category?: string; search?: string; offset?: number; limit?: number }
   ): Promise<LogReadResponse> => {
     const { data } = await api.get<LogReadResponse>(
-      `/admin/logging/files/${encodeURIComponent(filename)}`,
+      `/admin/logging/files/${encodeURIComponent(filename)}/entries`,
       { params }
     );
     return data;

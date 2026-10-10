@@ -79,16 +79,25 @@ router.get("/files", async (_req: AuthRequest, res: Response, next: NextFunction
   }
 });
 
-/** One page of a file, newest first — plain or gzip. */
-router.get("/files/:filename", async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const query = readLogFileQuerySchema.parse(req.query);
-    const page: LogReadResponse = await readLogFile(req.params.filename, query);
-    res.json(page);
-  } catch (error) {
-    next(error);
+/**
+ * One page of a file, newest first — plain or gzip.
+ *
+ * Under `/entries`, not at the bare file name (forgejo#284): a rotated log is
+ * `<name>.log.gz`, and `.gz` is on Cloudflare's default cached list. The old
+ * URL redirects here (`middleware/assetPathGuard.ts`).
+ */
+router.get(
+  "/files/:filename/entries",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const query = readLogFileQuerySchema.parse(req.query);
+      const page: LogReadResponse = await readLogFile(req.params.filename, query);
+      res.json(page);
+    } catch (error) {
+      next(error);
+    }
   }
-});
+);
 
 router.get(
   "/files/:filename/download",
@@ -97,6 +106,7 @@ router.get(
       const { filename } = req.params;
       const filepath = resolveLogFile(filename);
       res.setHeader("Content-Type", logFileContentType(filename));
+      res.setHeader("Cache-Control", "private, no-store");
       res.setHeader(
         "Content-Disposition",
         `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`
