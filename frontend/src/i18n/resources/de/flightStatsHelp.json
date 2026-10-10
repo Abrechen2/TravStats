@@ -356,7 +356,7 @@
       "unit": "Kosten pro Flugstunde = Kosten ÷ Flugstunden derselben Flüge, auf Cent gerundet. Bei einer Buchung mit Preis zählen die Stunden all ihrer geflogenen Flüge.",
       "time": "Gemessene Stunden aus Abflug- und Ankunftszeit, wenn sie als echte Zeitpunkte gespeichert sind; sonst eine Schätzung aus der Entfernung (800 km/h plus 15 Minuten). Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
       "source": "Geflogene Flüge mit Abflug- und Ankunftszeit: Buchungspreis (je Buchung einmal), sonst Preis + Steuern + Gebühren, und die Flugdauer.",
-      "coverage": "Nur geflogene Flüge mit Preis und beiden Zeiten. Beträge in fremder Währung brauchen einen gespeicherten Kurs. Ohne einen einzigen Preis steht hier ein Strich; tragen nur nachgetragene Flüge einen Preis, steht hier 0.",
+      "coverage": "Nur geflogene Flüge mit Preis und beiden Zeiten. Beträge in fremder Währung brauchen einen gespeicherten Kurs. Gibt es keinen solchen Flug, steht hier ein Strich – eine Rate über nichts ist keine 0.",
       "exclusions": "Nicht enthalten: nachgetragene Flüge, Flüge ohne Ankunftszeit, Flüge ohne Preis, nicht umrechenbare Beträge, geplante, stornierte und als Entwurf duplizierte Flüge."
     },
     "totalCost": {
@@ -377,7 +377,7 @@
       "unit": "Durchschnitt in Stunden = Summe der Flugdauern ÷ Zahl der Flüge, die eine Dauer beitragen, auf eine Nachkommastelle.",
       "time": "Gemessen aus Abflug- und Ankunftszeit bei geflogenen Flügen mit echten Zeitpunkten; sonst geschätzt aus der Entfernung (800 km/h plus 15 Minuten). Gesamtes Logbuch – der Jahresfilter der Seite gilt hier nicht.",
       "source": "Geflogene und nachgetragene Flüge: Abflug- und Ankunftszeit, sonst die Koordinaten beider Flughäfen.",
-      "coverage": "Nachgetragene Flüge werden immer geschätzt, weil ihre Uhrzeiten meist Platzhalter sind. Ein Flug ohne Zeiten und ohne Entfernung trägt nichts bei.",
+      "coverage": "Nachgetragene Flüge werden immer geschätzt, weil ihre Uhrzeiten meist Platzhalter sind. Ein Flug ohne Zeiten und ohne Entfernung trägt nichts bei; trägt keiner etwas bei, steht hier ein Strich statt 0.",
       "exclusions": "Nicht enthalten: geplante, stornierte und als Entwurf duplizierte Flüge."
     },
     "busiestMonth": {

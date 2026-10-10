@@ -125,7 +125,8 @@ export function calculateBusinessStats(flights: FlightData[], baseCurrency: stri
   const costPerKm =
     totalDistanceWithCost > 0 && totalCost > 0
       ? Math.round((totalCost / totalDistanceWithCost) * 100) / 100
-      : 0;
+      : // Abstention: a rate over no priced kilometre is unknown, not 0 (forgejo#256).
+        null;
 
   // Cost per flight hour — only include hours for flights that have a cost entry.
   // Flown-only, and the hours come from the shared rule: a DATE_ONLY row's
@@ -169,7 +170,7 @@ export function calculateBusinessStats(flights: FlightData[], baseCurrency: stri
   const costPerHour =
     totalFlightHoursWithCost > 0 && totalCostForHours > 0
       ? Math.round((totalCostForHours / totalFlightHoursWithCost) * 100) / 100
-      : 0;
+      : null;
 
   // Seat class distribution (time-insensitive).
   const seatClassCounts: Record<string, number> = {};
@@ -233,7 +234,8 @@ export function calculateBusinessStats(flights: FlightData[], baseCurrency: stri
     });
   }
   const avgMinutes = averageDurationMinutes(durationTotals);
-  const avgFlightDuration = avgMinutes === null ? 0 : Math.round((avgMinutes / 60) * 10) / 10;
+  // No flight with a duration or coordinates: unknown, not "0 h" (forgejo#256).
+  const avgFlightDuration = avgMinutes === null ? null : Math.round((avgMinutes / 60) * 10) / 10;
 
   // Seasonal analysis — month is reliable for historical flights when the
   // user knows the month (e.g. "March 1989"); UNKNOWN-year-only entries

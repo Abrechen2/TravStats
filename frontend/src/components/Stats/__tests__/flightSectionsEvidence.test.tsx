@@ -149,14 +149,14 @@ describe("flight-tab figures open their entries (forgejo#256)", () => {
   });
 
   const business: BusinessStats = {
-    costPerKm: 0,
-    costPerHour: 0,
+    costPerKm: null,
+    costPerHour: null,
     totalCost: null,
     totalDistance: 1000,
     seatClassDistribution: {},
     mostCommonCategory: null,
     airportDiversity: 2,
-    avgFlightDuration: 1.5,
+    avgFlightDuration: null,
     busiestMonth: "Mar",
     busiestMonthFlights: 4,
     categoryDistribution: {},
@@ -171,7 +171,7 @@ describe("flight-tab figures open their entries (forgejo#256)", () => {
     expect(screen.getByText("stats:months.mar")).toBeTruthy();
   });
 
-  it("business: a rate over no priced flight is a dash, never 0", () => {
+  it("business: a rate or average the server could not derive is a dash, never 0", () => {
     cleanup();
     render(
       <MemoryRouter>
@@ -179,7 +179,8 @@ describe("flight-tab figures open their entries (forgejo#256)", () => {
       </MemoryRouter>
     );
     expect(screen.queryByText(/0[.,]00/)).toBeNull();
-    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(3);
+    // Both rates, the total and the average duration.
+    expect(screen.getAllByText("—").length).toBeGreaterThanOrEqual(4);
   });
 
   it("overview: the average opens the flight time it divides", async () => {

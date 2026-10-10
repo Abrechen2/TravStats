@@ -31,9 +31,6 @@ export default function StatsBusinessSection({
   const { t, i18n } = useTranslation(["stats"]);
   const { units, baseCurrency } = useSettingsStore();
   const lang = i18n.language;
-  // No priced flight: a rate over nothing is not "0,00 €" (forgejo#83) — the
-  // server answers 0 for both rates then, so the total decides.
-  const unpriced = businessStats.totalCost === null;
   // The server names the month in English ("Mar"); the reader's language does.
   const monthIndex = businessStats.busiestMonth
     ? MONTH_KEYS.indexOf(businessStats.busiestMonth.toLowerCase())
@@ -64,10 +61,12 @@ export default function StatsBusinessSection({
             {t("stats:business.costPerKm")}
           </h3>
           <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-            {unpriced ? "—" : formatCurrency(businessStats.costPerKm, baseCurrency)}
+            {businessStats.costPerKm === null
+              ? "—"
+              : formatCurrency(businessStats.costPerKm, baseCurrency)}
           </p>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-            {unpriced
+            {businessStats.costPerKm === null
               ? t("stats:business.noPricesRecorded")
               : t("stats:business.costPerKmDesc", {
                   cost: formatCurrency(businessStats.costPerKm, baseCurrency),
@@ -92,10 +91,12 @@ export default function StatsBusinessSection({
             {t("stats:business.costPerHour")}
           </h3>
           <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-            {unpriced ? "—" : formatCurrency(businessStats.costPerHour, baseCurrency)}
+            {businessStats.costPerHour === null
+              ? "—"
+              : formatCurrency(businessStats.costPerHour, baseCurrency)}
           </p>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-            {unpriced
+            {businessStats.costPerHour === null
               ? t("stats:business.noPricesRecorded")
               : t("stats:business.costPerHourDesc", {
                   cost: formatCurrency(businessStats.costPerHour, baseCurrency),
@@ -175,12 +176,15 @@ export default function StatsBusinessSection({
             {t("stats:business.avgFlightDuration")}
           </h3>
           <p className="text-3xl font-bold" style={{ color: "var(--text-primary)" }}>
-            {formatHours(businessStats.avgFlightDuration, lang)}
+            {businessStats.avgFlightDuration === null
+              ? "—"
+              : formatHours(businessStats.avgFlightDuration, lang)}
           </p>
           <p className="text-sm mt-1" style={{ color: "var(--text-muted)" }}>
-            {t("stats:business.avgFlightDurationDesc", {
-              hours: formatHoursValue(businessStats.avgFlightDuration, lang),
-            })}
+            {businessStats.avgFlightDuration !== null &&
+              t("stats:business.avgFlightDurationDesc", {
+                hours: formatHoursValue(businessStats.avgFlightDuration, lang),
+              })}
           </p>
         </div>
 

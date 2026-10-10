@@ -356,7 +356,7 @@
       "unit": "Cost per flight hour = cost ÷ flight hours of the same flights, rounded to the cent. For a booking with a price, the hours of all its flown flights count.",
       "time": "Measured hours from departure and arrival time when they are stored as real instants; otherwise an estimate from the distance (800 km/h plus 15 minutes). Your whole logbook – the page's year filter does not apply.",
       "source": "Flown flights with departure and arrival times: booking price (once per booking), otherwise price + taxes + fees, and the flight duration.",
-      "coverage": "Only flown flights with a price and both times. Foreign-currency amounts need a stored exchange rate. With no price at all this shows a dash; if only historical flights carry a price, it shows 0.",
+      "coverage": "Only flown flights with a price and both times. Foreign-currency amounts need a stored exchange rate. If there is no such flight, this shows a dash – a rate over nothing is not 0.",
       "exclusions": "Not included: historical flights, flights without an arrival time, flights without a price, amounts that cannot be converted, planned, cancelled and duplicated (draft) flights."
     },
     "totalCost": {
@@ -377,7 +377,7 @@
       "unit": "Average in hours = sum of flight durations ÷ number of flights that contribute a duration, to one decimal.",
       "time": "Measured from departure and arrival time for flown flights with real instants; otherwise estimated from the distance (800 km/h plus 15 minutes). Your whole logbook – the page's year filter does not apply.",
       "source": "Flown and historical flights: departure and arrival time, otherwise both airports' coordinates.",
-      "coverage": "Historical flights are always estimated, because their times are usually placeholders. A flight with neither times nor a distance contributes nothing.",
+      "coverage": "Historical flights are always estimated, because their times are usually placeholders. A flight with neither times nor a distance contributes nothing; if none contributes, this shows a dash instead of 0.",
       "exclusions": "Not included: planned, cancelled and duplicated (draft) flights."
     },
     "busiestMonth": {

@@ -595,15 +595,16 @@ export interface FunStats {
 }
 
 export interface BusinessStats {
-  costPerKm: number;
-  costPerHour: number;
+  /** Null when nothing priced can be divided (forgejo#256) — unknown, never 0. */
+  costPerKm: number | null;
+  costPerHour: number | null;
   /** Null when no counted flight carries a price (forgejo#83). */
   totalCost: number | null;
   totalDistance: number;
   seatClassDistribution: Record<string, number>;
   mostCommonCategory: string | null;
   airportDiversity: number;
-  avgFlightDuration: number;
+  avgFlightDuration: number | null;
   busiestMonth: string | null;
   busiestMonthFlights: number;
   categoryDistribution: Record<string, number>;

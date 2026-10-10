@@ -610,14 +610,14 @@ router.get(
         });
         // Return minimal response
         businessStats = {
-          costPerKm: 0,
-          costPerHour: 0,
+          costPerKm: null,
+          costPerHour: null,
           totalCost: null,
           totalDistance: 0,
           seatClassDistribution: {},
           mostCommonCategory: null,
           airportDiversity: 0,
-          avgFlightDuration: 0,
+          avgFlightDuration: null,
           busiestMonth: null,
           busiestMonthFlights: 0,
           categoryDistribution: {},

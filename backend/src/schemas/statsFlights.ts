@@ -161,8 +161,12 @@ export const routeRankingResponseSchema = z.object({
 // ─── /stats/business ─────────────────────────────────────────────────────────
 
 export const businessStatsSchema = z.object({
-  costPerKm: z.number(),
-  costPerHour: z.number(),
+  costPerKm: z.number().nullable().openapi({
+    description: "Null when no counted kilometre carries a converted price — unknown, not 0.",
+  }),
+  costPerHour: z.number().nullable().openapi({
+    description: "Null when no flown, priced flight has a duration — unknown, not 0.",
+  }),
   totalCost: z.number().nullable().openapi({
     description: "Null when nothing carries a price — not 0, which would read as free.",
   }),
@@ -170,7 +174,9 @@ export const businessStatsSchema = z.object({
   seatClassDistribution: z.record(z.string(), z.number().int()),
   mostCommonCategory: z.string().nullable(),
   airportDiversity: z.number(),
-  avgFlightDuration: z.number(),
+  avgFlightDuration: z.number().nullable().openapi({
+    description: "Hours; null when no counted flight has a duration or coordinates.",
+  }),
   busiestMonth: z.string().nullable(),
   busiestMonthFlights: z.number().int(),
   categoryDistribution: z.record(z.string(), z.number().int()),
