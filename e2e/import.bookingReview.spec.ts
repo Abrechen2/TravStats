@@ -24,6 +24,7 @@ import path from "path";
 import { test, expect, type APIRequestContext, type Page } from "@playwright/test";
 
 import { adminApi, createAccount, deleteAccount, type TestAccount } from "./support/accounts";
+import { confirmProfileZone } from "./support/profileZone";
 
 const MAIL = path.join(__dirname, "fixtures", "lh-buchungsdetails-synthetic.eml");
 // Departures as UTC instants. The mail gives local wall-clock times, so these
@@ -90,6 +91,9 @@ test.describe("booking mail with three legs", () => {
     await page.fill("input#password", account!.password);
     await page.click('button[type="submit"]');
     await expect(page).not.toHaveURL(/\/login/, { timeout: 15_000 });
+    // A brand-new account is asked for its profile zone first, in a modal
+    // that covers the page (ADR 0002 Q1).
+    await confirmProfileZone(page);
 
     // Precondition, stated as one: the template answered, not a language model.
     const probe = await page.request.post("/api/v1/parse-email-file", {

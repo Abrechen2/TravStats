@@ -1,6 +1,7 @@
 import { test as setup, expect } from "@playwright/test";
 
 import { STORAGE_STATE } from "./storageState";
+import { confirmProfileZone } from "./support/profileZone";
 
 /**
  * Sign in once, and hand the session to every spec that needs one.
@@ -20,6 +21,12 @@ const USERNAME = process.env.E2E_USERNAME ?? "admin";
 const PASSWORD = process.env.E2E_PASSWORD ?? "admin123";
 
 setup("authenticate", async ({ page }) => {
+  // Up to three first-login dialogs are prepared below, two of them with a
+  // bounded wait for a dialog that may legitimately never come. Together they
+  // outgrow the 30 s default — which then fails inside whichever step happens
+  // to be running, and reads like a broken dialog rather than a full budget.
+  setup.setTimeout(90_000);
+
   await page.goto("/login");
 
   await page.fill("input#username", USERNAME);
@@ -74,6 +81,20 @@ setup("authenticate", async ({ page }) => {
     await decline.click();
     await expect(decline).toBeHidden({ timeout: 10_000 });
   }
+
+  // Third in line since 2026-09-27: an account without a profile zone is asked
+  // for one (ADR 0002 Q1), in a modal that waits until the two dialogs above
+  // are gone. The seeded admin has none, so on a fresh CI database it covered
+  // every page — the 'element found, click timed out' signature once more,
+  // this time with "Vorschlag von deinem Gerät" named as the interceptor.
+  // Not a waited-for maybe: the server says whether the account has a zone,
+  // and when it has none the dialog MUST appear.
+  const settings = await page.request.get("/api/v1/settings");
+  expect(settings.ok()).toBe(true);
+  const { profileZone } = (await settings.json()) as {
+    profileZone?: { hasProfileZone?: boolean };
+  };
+  if (profileZone?.hasProfileZone !== true) await confirmProfileZone(page);
 
   await page.context().storageState({ path: STORAGE_STATE });
 });

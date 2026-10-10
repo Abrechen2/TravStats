@@ -29,6 +29,7 @@ import {
   freshTotp,
   type TestAccount,
 } from "./support/accounts";
+import { confirmProfileZone } from "./support/profileZone";
 
 // These are logged-out journeys: they must not start inside the admin session.
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -237,6 +238,10 @@ test.describe("passkey", () => {
     await page.fill("input#twofa-input", await freshTotp(account!.totpSecret!));
     await page.click('button[type="submit"]');
     await expectSignedIn(page);
+    // A brand-new account has no profile zone, so it is asked for one before
+    // anything else (ADR 0002 Q1). The dialog is modal: until it is answered,
+    // no click reaches the security settings underneath.
+    await confirmProfileZone(page);
 
     await page.goto("/settings?section=security");
     await page.getByRole("button", { name: /Passkey hinzufügen|Add passkey/i }).click();
