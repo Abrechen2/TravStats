@@ -151,11 +151,14 @@ ruled out first). `icon.png` is the same design rendered once with the text
 already baked to pixels, so no renderer's font availability matters again.
 `icon.svg` stays in the repo as the editable source.
 
-`my-travstats-db.xml` still points at
-[`icon-travstats-db.svg`](https://raw.githubusercontent.com/Abrechen2/docker-templates/main/icon-travstats-db.svg)
-— it draws no text at all (a database/globe glyph only), so it is not
-subject to this failure mode. If that ever turns out wrong too, render it
-the same way `icon.png` was rendered.
+`my-travstats-db.xml` and the Community Apps author profile (`ca_profile.xml`)
+point at PNGs as well (since 2026-10-10):
+[`icon-travstats-db.png`](https://raw.githubusercontent.com/Abrechen2/docker-templates/main/icon-travstats-db.png)
+and `icon.png`. The profile had still pointed at `icon.svg` — the one with the
+font-dependent labels, so the same failure as above. The database icon draws no
+text and was not broken; it was rendered to PNG the same way (120 × 140 on its
+own background) so that every icon URL serves one format and nobody has to
+re-check which SVGs are safe. The SVGs stay as the editable sources.
 
 Around 120 of the ~4100 apps in the CA feed ship an SVG icon at all, so SVG
 generally works there — this was one SVG with a font dependency, not a
