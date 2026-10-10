@@ -754,15 +754,24 @@ model UserSettings {
   autoCreateTrips Boolean @default(true) @map("auto_create_trips")
 
   // Auto-update settings
-  autoUpdateEnabled          Boolean @default(false) @map("auto_update_enabled")
+  autoUpdateEnabled           Boolean   @default(false) @map("auto_update_enabled")
   /// Opt-in: scan the user's Immich for photo journeys every night (forgejo#94).
   /// Off by default, like flight auto-updates — a scan reads the whole library
   /// and asks a third-party geocoder about the result.
-  photoJourneyNightlyScan    Boolean @default(false) @map("photo_journey_nightly_scan")
-  autoUpdateRequireApproval  Boolean @default(true) @map("auto_update_require_approval")
-  autoUpdateCheckInterval    Int     @default(15) @map("auto_update_check_interval") // minutes
-  autoUpdateOnlyDuringFlight Boolean @default(true) @map("auto_update_only_during_flight")
-  autoUpdateExpiryHours      Int     @default(24) @map("auto_update_expiry_hours")
+  photoJourneyNightlyScan     Boolean   @default(false) @map("photo_journey_nightly_scan")
+  /// The last nightly run for this account, so the settings card can say what
+  /// happened instead of leaving an opt-in that may be failing every night
+  /// silent (forgejo#94). `scanned` | `noImmich` | `failed`; null = never ran.
+  photoJourneyLastScanAt      DateTime? @map("photo_journey_last_scan_at")
+  photoJourneyLastScanResult  String?   @map("photo_journey_last_scan_result")
+  /// `failed` only: the Immich error kind (`unreachable`, `auth`, …) or `internal`.
+  photoJourneyLastScanFailure String?   @map("photo_journey_last_scan_failure")
+  /// `scanned` only: how many new findings the run wrote.
+  photoJourneyLastScanCreated Int?      @map("photo_journey_last_scan_created")
+  autoUpdateRequireApproval   Boolean   @default(true) @map("auto_update_require_approval")
+  autoUpdateCheckInterval     Int       @default(15) @map("auto_update_check_interval") // minutes
+  autoUpdateOnlyDuringFlight  Boolean   @default(true) @map("auto_update_only_during_flight")
+  autoUpdateExpiryHours       Int       @default(24) @map("auto_update_expiry_hours")
 
   // Boarding pass parser strategy
   // null = auto (LLM wenn verfügbar, sonst basierend auf Verfügbarkeit)
@@ -2126,12 +2135,12 @@ model JournalEntryPhoto {
 }
 
 model Booking {
-  id       String  @id @default(uuid())
-  userId   String  @map("user_id")
-  tripId   String? @map("trip_id")
-  pnr      String?
-  price    Float?
-  currency String? @default("EUR")
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  tripId     String?   @map("trip_id")
+  pnr        String?
+  price      Float?
+  currency   String?   @default("EUR")
   /// Who sold the package — tour operator, agency (#356). Free text.
   operator   String?
   /// How many travellers `price` covers — "für N Personen" (#356).

@@ -11,6 +11,11 @@ import { scanPhotoJourneys } from "../services/photoJourneys/scan";
 import { acceptVisitFinding } from "../services/photoJourneys/acceptVisit";
 import { attachJourneyPhotosToVisit } from "../services/places/visitPhotoLinks";
 import { startJob } from "../services/jobs/jobRegistry";
+import { rejectDemo } from "../middleware/demoGuard";
+import { nightlyScanView } from "../services/photoJourneys/nightlyScanView";
+import { reviewPhotoFindings } from "../services/photoJourneys/batchReview";
+import { nearestVisits } from "../services/photoJourneys/nearestVisits";
+import { timeFieldSchema } from "../shared/time/timeInput";
 
 const router = Router();
 router.use(authenticate);
@@ -100,36 +105,42 @@ const settingsBodySchema = z.object({ nightlyScan: z.boolean() }).strict();
  * The account's opt-in to the nightly scan (forgejo#94, point 5). Off until the
  * user turns it on: the scan reads their library and asks a third-party
  * geocoder about what it finds (see jobs/photoJourneyScanScheduler.ts).
+ *
+ * The answer carries everything the settings card needs to say what the
+ * switch DOES (forgejo#94, point 1): when it runs next, how far back it reads,
+ * whether a library is connected at all (the same resolver the scan asks, so
+ * the shared demo account reads "not connected"), and how the last nightly run
+ * for this account ended — a failing run must not hide behind a switch that
+ * says "on".
  */
 router.get(
   "/settings",
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const row = await prisma.userSettings.findUnique({
-        where: { userId: req.userId! },
-        select: { photoJourneyNightlyScan: true },
-      });
-      res.json({ success: true, data: { nightlyScan: row?.photoJourneyNightlyScan ?? false } });
+      res.json({ success: true, data: await nightlyScanView(req.userId!) });
     } catch (err) {
       next(err);
     }
   }
 );
 
+// The shared demo account is everyone's: one visitor switching an outbound
+// job on or off for all the others is what `rejectDemo` exists to refuse.
 router.put(
   "/settings",
+  rejectDemo,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const parsed = settingsBodySchema.safeParse(req.body);
       if (!parsed.success) throw new AppError(parsed.error.message, 400);
       const update = { photoJourneyNightlyScan: parsed.data.nightlyScan };
-      const row = await prisma.userSettings.upsert({
+      await prisma.userSettings.upsert({
         where: { userId: req.userId! },
         update,
         create: { userId: req.userId!, data: {}, ...update },
-        select: { photoJourneyNightlyScan: true },
+        select: { userId: true },
       });
-      res.json({ success: true, data: { nightlyScan: row.photoJourneyNightlyScan } });
+      res.json({ success: true, data: await nightlyScanView(req.userId!) });
     } catch (err) {
       next(err);
     }
@@ -209,9 +220,11 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       },
     });
 
+    const rows = journeys.map((j) => withLocalDays(withNames(j, userId)));
+    const nearest = await nearestVisits(userId, rows);
     res.json({
       success: true,
-      data: journeys.map((j) => withLocalDays(withNames(j, userId))),
+      data: rows.map((row) => ({ ...row, nearestVisit: nearest.get(row.id) ?? null })),
     });
   } catch (err) {
     next(err);
@@ -317,6 +330,59 @@ router.post(
         return;
       }
       res.json({ success: true, data: await run() });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/** A batch is a review screen's selection, not an import. */
+export const BATCH_REVIEW_MAX = 50;
+
+const batchBodySchema = z.object({
+  items: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        action: z.enum(["accept", "dismiss"]),
+        name: z.string().trim().min(1).max(200).optional(),
+        localName: z.string().trim().max(200).optional(),
+        placeId: z.string().uuid().optional(),
+        visitedAt: timeFieldSchema({ allowDate: true, impliedPlace: true }).optional(),
+      })
+    )
+    .min(1)
+    .max(BATCH_REVIEW_MAX)
+    .refine((items) => new Set(items.map((item) => item.id)).size === items.length, {
+      message: "Each finding may appear once",
+    }),
+});
+
+/**
+ * Answer several findings at once (forgejo#211, O5). Always 200 for a valid
+ * body: the outcome is PER ITEM, because one finding that cannot be accepted
+ * must neither undo nor hide the four that were. See
+ * `services/photoJourneys/batchReview.ts`.
+ */
+router.post(
+  "/batch",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = batchBodySchema.safeParse(req.body);
+      if (!parsed.success) throw new AppError(parsed.error.message, 400);
+      const results = await reviewPhotoFindings(req.userId!, parsed.data.items);
+      const count = (outcome: string) => results.filter((r) => r.outcome === outcome).length;
+      res.json({
+        success: true,
+        data: {
+          results,
+          summary: {
+            accepted: count("accepted"),
+            dismissed: count("dismissed"),
+            failed: count("failed"),
+          },
+        },
+      });
     } catch (err) {
       next(err);
     }

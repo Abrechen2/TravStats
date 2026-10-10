@@ -33,11 +33,50 @@ import type { ScheduledTask } from "node-cron";
 
 import { prisma } from "../db";
 import { scanPhotoJourneys } from "../services/photoJourneys/scan";
+import { ImmichError } from "../services/immich/types";
+import {
+  NIGHTLY_CRON_EXPRESSION,
+  NIGHTLY_WINDOW_DAYS,
+} from "../services/photoJourneys/nightlySchedule";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
 
-const CRON_EXPRESSION = "55 4 * * *";
-export const NIGHTLY_WINDOW_DAYS = 400;
+const CRON_EXPRESSION = NIGHTLY_CRON_EXPRESSION;
+export { NIGHTLY_WINDOW_DAYS };
+
+/** What one account's nightly run ended in — stored for its settings card. */
+type LastRun =
+  | { result: "scanned"; created: number }
+  | { result: "noImmich" }
+  | { result: "failed"; failure: string };
+
+/**
+ * Written per account after its run, so the opt-in is not a switch that may be
+ * failing every night without anyone seeing it. A failed write is logged and
+ * never ends the night: the scan itself already happened.
+ */
+async function recordLastRun(userId: string, at: Date, run: LastRun): Promise<void> {
+  try {
+    await prisma.userSettings.update({
+      where: { userId },
+      data: {
+        photoJourneyLastScanAt: at,
+        photoJourneyLastScanResult: run.result,
+        photoJourneyLastScanFailure: run.result === "failed" ? run.failure : null,
+        photoJourneyLastScanCreated: run.result === "scanned" ? run.created : null,
+      },
+    });
+  } catch (error) {
+    logger.warn(
+      {
+        operation: "photo_journey_nightly_record_failed",
+        userId,
+        message: error instanceof Error ? error.message : String(error),
+      },
+      "Could not record the nightly photo-journey result for one account"
+    );
+  }
+}
 
 let schedulerTask: ScheduledTask | null = null;
 
@@ -77,12 +116,17 @@ export async function runPhotoJourneyNightlyScan(
       const outcome = await scanPhotoJourneys(userId, { since, until: now });
       if (outcome.kind === "no-immich") {
         result.skippedNoImmich += 1;
+        await recordLastRun(userId, now, { result: "noImmich" });
         continue;
       }
       result.scanned += 1;
       result.created += outcome.created;
+      await recordLastRun(userId, now, { result: "scanned", created: outcome.created });
     } catch (error) {
       result.failed += 1;
+      // The Immich vocabulary the web already speaks; anything else is ours.
+      const failure = error instanceof ImmichError ? error.kind : "internal";
+      await recordLastRun(userId, now, { result: "failed", failure });
       logger.warn(
         {
           operation: "photo_journey_nightly_user_failed",

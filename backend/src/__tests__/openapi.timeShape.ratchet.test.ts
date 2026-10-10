@@ -54,6 +54,10 @@ const BOOKKEEPING_INSTANTS = new Set([
   "decidedAt",
   "readAt",
   "undoneAt",
+  // A scheduled job's own clock: when the nightly photo scan last ran for an
+  // account and when it runs next (forgejo#94) — a server slot, no place's.
+  "ranAt",
+  "nextRunAt",
 ]);
 
 const doc = buildOpenApiDocument() as unknown as { paths: Json; components: { schemas: Json } };
