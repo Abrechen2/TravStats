@@ -116,6 +116,8 @@ export const packageContractSchema = z
     startDate: isoDay.nullish(),
     endDate: isoDay.nullish(),
     travellers: z.number().int().min(1).max(50).nullish(),
+    /** The tour operator that sold the package (#356), when the document names it. */
+    operator: text.max(120).nullish(),
     totalPrice: z.number().min(0).nullish(),
     currency: z
       .string()

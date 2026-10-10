@@ -2132,12 +2132,19 @@ model Booking {
   pnr      String?
   price    Float?
   currency String? @default("EUR")
+  /// Who sold the package — tour operator, agency (#356). Free text.
+  operator   String?
+  /// How many travellers `price` covers — "für N Personen" (#356).
+  travellers Int?
+  /// The day it was booked / its confirmation issued (#356). Dates the FX
+  /// snapshot; a booking without one is rated on the day it was recorded.
+  bookedOn   DateTime? @map("booked_on") @db.Date
 
   /// FX snapshot (#267) — same contract as `Flight`. A booking's price counts
   /// once for the whole booking rather than once per segment, so the cost
   /// aggregates read this instead of the segments' own prices; without a
   /// snapshot here a multi-currency logbook could not be totalled honestly
-  /// either. Dated by `createdAt`, the only day a booking carries.
+  /// either. Dated by `bookedOn`, else `createdAt` (#356).
   priceBase      Float?    @map("price_base")
   fxRate         Float?    @map("fx_rate")
   fxRateDate     DateTime? @map("fx_rate_date")

@@ -40,6 +40,7 @@ import {
   createBookingSchema,
   updateBookingSchema,
   bookingFlightsSchema,
+  bookingEntriesSchema,
   createStopSchema,
   updateStopSchema,
   createJournalSchema,
@@ -705,9 +706,9 @@ registry.registerPath({
   path: "/trips/bookings/{id}",
   summary: "Update a booking",
   description:
-    "Reference, price and currency, and the trip the booking belongs to (`tripId`; null " +
-    "takes it off its trip). A trip that is not the caller's answers 404 `TRIP_NOT_FOUND`. " +
-    "The booking's flights stay where they are.",
+    "Reference, price, currency, operator, travellers and booking day (which re-dates the " +
+    "FX snapshot), and the trip it belongs to (`tripId`; null takes it off its trip). A trip " +
+    "that is not the caller's answers 404 `TRIP_NOT_FOUND`. Its entries stay where they are.",
   tags: ["Trips"],
   request: {
     params: tripId,
@@ -745,4 +746,46 @@ registry.registerPath({
     400: badInput,
     404: notFound,
   },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/trips/bookings/{id}/entries",
+  summary: "Set the flights, stays and cruises a booking covers",
+  description:
+    "Each list given replaces that kind's set (an entry left out leaves the booking); an " +
+    "absent list is untouched. An entry on no trip joins the booking's trip. All or nothing: " +
+    "an id that is not the caller's answers 404 and changes nothing (#356).",
+  tags: ["Trips"],
+  request: {
+    params: tripId,
+    body: { content: { "application/json": { schema: bookingEntriesSchema } }, required: true },
+  },
+  responses: {
+    200: {
+      description: "Filed",
+      content: {
+        "application/json": {
+          schema: z.object({
+            bookingId: z.string().uuid(),
+            flights: z.number().int(),
+            stays: z.number().int(),
+            cruises: z.number().int(),
+          }),
+        },
+      },
+    },
+    400: badInput,
+    404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/trips/bookings/{id}",
+  summary: "Delete a booking",
+  description: "Its flights, stays and cruises are kept and belong to no booking any more.",
+  tags: ["Trips"],
+  request: { params: tripId },
+  responses: { 204: deleted, 404: notFound },
 });

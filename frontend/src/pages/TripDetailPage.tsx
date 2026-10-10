@@ -24,7 +24,7 @@ import { usePlacesVisible } from "../hooks/usePlacesVisible";
 import { useTranslation } from "../hooks/useTranslation";
 import { useConfirmDialog } from "../hooks/useConfirmDialog";
 import { DetailRow, OpenFullLink } from "../components/Trips/TimelineDetailParts";
-import type { Booking, Trip, TripJournalEntry, TripStop } from "../types";
+import type { Trip, TripJournalEntry, TripStop } from "../types";
 import TripDeleteConfirm from "../components/Trips/TripDeleteConfirm";
 import AppShell from "../components/ui/AppShell";
 import TripModal from "../components/Trips/TripModal";
@@ -34,13 +34,12 @@ import JournalEntryModal from "../components/Trips/JournalEntryModal";
 import TimelineActions from "../components/Trips/TimelineActions";
 import JournalViewModal from "../components/Trips/JournalViewModal";
 import StopModal from "../components/Trips/StopModal";
-import BookingEditModal from "../components/Trips/BookingEditModal";
+import { TripBookingsPanel } from "../components/Trips/TripBookingsPanel";
 import TripMapWithTours from "../components/Trips/TripMapWithTours";
 import TripGallery from "../components/Trips/TripGallery";
 import TourSectionList from "../components/Trips/TourSectionList";
 import { useToursVisible } from "../hooks/useToursVisible";
 import { PanelHeader, Placeholder } from "../components/Trips/TripDetailPanels";
-import { RowActionButton } from "../components/table/RowActionButton";
 import { formatTimelineDate } from "../lib/tripTimeline";
 import { TripRailList } from "../components/rail/RailTripCard";
 import { useRailVisible } from "../hooks/useRailVisible";
@@ -981,16 +980,16 @@ function LogisticsTab({
 }): JSX.Element {
   const flights = trip.flights ?? [];
   const cruises = trip.cruises ?? [];
-  const bookings = trip.bookings ?? [];
-  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
-
   const railJourneys = trip.railJourneys ?? [];
-  if (!flights.length && !cruises.length && !bookings.length && !railJourneys.length) {
-    return <Placeholder text={t("trips:detail.noLogistics")} />;
-  }
+  // The bookings panel stays reachable on an empty trip: a package booking
+  // can be created by hand before anything else is on it (#356).
+  const empty = !flights.length && !cruises.length && !railJourneys.length;
 
   return (
     <div className="space-y-4">
+      {empty && (trip.bookings ?? []).length === 0 && (
+        <Placeholder text={t("trips:detail.noLogistics")} />
+      )}
       {flights.length > 0 && (
         <div
           className="rounded-xl"
@@ -1081,61 +1080,13 @@ function LogisticsTab({
 
       {railJourneys.length > 0 && <TripRailList journeys={railJourneys} />}
 
-      {bookings.length > 0 && (
-        <div
-          className="rounded-xl"
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-        >
-          <PanelHeader>
-            {t("trips:detail.logistics.bookings")} ({bookings.length})
-            {/* No subtotal here: a client sum of the booking list could differ
-                from the trip's cost the overview shows — the server's figure,
-                which counts trains, rentals and expenses and a booking only on
-                the trip its segments are on (forgejo#274 review M8). */}
-          </PanelHeader>
-          <table className="w-full text-sm">
-            <thead>
-              <tr
-                className="text-xs uppercase tracking-wide"
-                style={{ color: "var(--text-muted)" }}
-              >
-                <th className="text-left px-4 py-2">PNR</th>
-                <th className="text-right px-4 py-2">Preis</th>
-                <th className="text-right px-4 py-2"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {bookings.map((b) => (
-                <tr key={b.id} style={{ borderTop: "1px solid var(--color-border)" }}>
-                  <td className="px-4 py-2.5 font-mono">{b.pnr ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-right">
-                    {b.price != null ? formatAmount(b.price, b.currency, { language }) : "—"}
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
-                    <RowActionButton
-                      icon="edit"
-                      label={t("trips:bookingEdit.title")}
-                      onClick={() => setEditingBooking(b)}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {editingBooking && (
-        <BookingEditModal
-          booking={editingBooking}
-          flights={flights}
-          onClose={() => setEditingBooking(null)}
-          onSaved={() => {
-            setEditingBooking(null);
-            onChanged();
-          }}
-        />
-      )}
+      <TripBookingsPanel
+        trip={trip}
+        language={language}
+        onChanged={onChanged}
+        flightDay={formatFlightDay}
+        cruiseDay={formatCruiseDay}
+      />
     </div>
   );
 }

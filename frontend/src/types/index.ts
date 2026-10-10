@@ -158,12 +158,22 @@ export interface Booking {
   price: number | null;
   /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …) or null. */
   currency: string | null;
+  /** Who sold the package (#356). Optional: an older server does not send it. */
+  operator?: string | null;
+  /** How many travellers the price covers — "für N Personen" (#356). */
+  travellers?: number | null;
+  /** The day it was booked, which dates the FX snapshot (#356). */
+  bookedOn?: string | null;
 }
 
 export interface UpdateBookingInput {
   pnr?: string | null;
   price?: number | null;
   currency?: string | null;
+  operator?: string | null;
+  travellers?: number | null;
+  /** `YYYY-MM-DD`. */
+  bookedOn?: string | null;
 }
 
 export type TripStatus = "planned" | "in_progress" | "completed";
