@@ -18,8 +18,7 @@ import {
   type DocumentKind,
 } from "./documentFormats";
 import {
-  documentFileAgeMs,
-  listStoredNames,
+  DOCUMENT_DIR,
   newStoredName,
   removeDocumentFile,
   sha256Hex,
@@ -28,6 +27,8 @@ import {
 import type { ExtractedValues } from "./documentValues";
 import { storedReading } from "./storedReading";
 import { countPdfPages } from "../pdfPageCount";
+import { sweepUploadDir } from "../files/uploadSweep";
+import { uploadFileAgeMs } from "../files/uploadFiles";
 
 /**
  * Kept originals, filed with the entry they produced (forgejo#116).
@@ -90,12 +91,6 @@ const FORMAT_HINT_MIME: Partial<Record<DocumentFormat, string>> = {
   emailText: "text/plain",
   pkpass: "application/vnd.apple.pkpass",
 };
-
-/**
- * A file with no row younger than this is left alone by the sweep: it may be an
- * upload whose row is being inserted right now.
- */
-export const ORPHAN_GRACE_MS = 60 * 60 * 1000;
 
 /**
  * Unfiled uploads older than this are removed by the sweep.
@@ -632,7 +627,7 @@ export interface SweepResult {
 export async function sweepDocuments(
   now = new Date(),
   fileAgeMs: (name: string) => Promise<number | null> = (name) =>
-    documentFileAgeMs(name, now.getTime())
+    uploadFileAgeMs(DOCUMENT_DIR, name, now.getTime())
 ): Promise<SweepResult> {
   const cutoff = new Date(now.getTime() - UNLINKED_TTL_DAYS * 24 * 60 * 60 * 1000);
   const expired = await prisma.document.findMany({
@@ -647,25 +642,12 @@ export async function sweepDocuments(
     await removeStoredFiles(expired.map((d) => d.storedName));
   }
 
-  const onDisk = await listStoredNames();
-  const known = new Set(
-    (
-      await prisma.document.findMany({
-        where: { storedName: { in: onDisk } },
-        select: { storedName: true },
-      })
-    ).map((d) => d.storedName)
-  );
-  let orphanFiles = 0;
-  for (const name of onDisk) {
-    if (known.has(name)) continue;
-    // No age means the file vanished between the listing and now: nothing to remove.
-    const age = await fileAgeMs(name);
-    if (age === null || age < ORPHAN_GRACE_MS) continue;
-    await removeDocumentFile(name);
-    orphanFiles++;
-  }
-
+  // The orphan half is the generic sweep's (forgejo#287), which every other
+  // upload directory runs too; the TTL above is the documents' own.
+  const { removed: orphanFiles } = await sweepUploadDir("documents", {
+    now: now.getTime(),
+    fileAgeMs: (_dir, name) => fileAgeMs(name),
+  });
   if (expired.length > 0 || orphanFiles > 0) {
     logger.info(
       { operation: "document_sweep", expiredUnfiled: expired.length, orphanFiles },

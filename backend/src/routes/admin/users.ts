@@ -11,6 +11,7 @@ import {
   isReservedUsername,
 } from "../../schemas/auth";
 import { sendAdminPasswordResetEmail } from "../../services/emailService";
+import { deleteAccountWithFiles } from "../../services/files/accountFiles";
 import { SMTP_CONFIG_ID } from "./smtp";
 import logger from "../../utils/logger";
 import { getInstanceSettings } from "../../services/instanceSettingsService";
@@ -150,7 +151,8 @@ router.patch(
 // Guards: cannot delete yourself; cannot remove the last remaining admin.
 // Cascade: flights, trips, bookings, user_settings, achievements,
 // pending_flight_updates, parser_templates, etc. are all removed via
-// Prisma onDelete: Cascade on their User foreign key.
+// Prisma onDelete: Cascade on their User foreign key; the files under
+// uploads/ by `deleteAccountWithFiles`, which the cascade cannot reach.
 router.delete("/users/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
@@ -175,7 +177,9 @@ router.delete("/users/:id", async (req: AuthRequest, res: Response, next: NextFu
       }
     }
 
-    await prisma.user.delete({ where: { id } });
+    // Rows by cascade, then the account's uploaded files — every upload
+    // directory, through the one step every account deletion uses (forgejo#287).
+    await deleteAccountWithFiles(id, () => prisma.user.delete({ where: { id } }));
 
     logger.info({
       operation: "admin_delete_user",

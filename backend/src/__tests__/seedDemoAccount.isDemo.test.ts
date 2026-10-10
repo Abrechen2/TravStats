@@ -1,4 +1,8 @@
+import fs from "fs";
+import path from "path";
+
 import { prisma } from "../db";
+import { UPLOADS_ROOT } from "../config/uploadDirs";
 import { hashPassword } from "../utils/password";
 import { Prisma } from "../prisma";
 import { ensureUser, ensureUserSettings } from "../seedDemoAccount";
@@ -322,6 +326,22 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
    * the counterpart of the enumeration comment beside the wipe — a list in a
    * comment that nothing exercises would rot the first time a model is added.
    */
+  it("removes the files the wiped rows owned, through the account-file step (forgejo#287)", async () => {
+    const id = await ensureUser();
+    const name = `demo-wipe-${Date.now()}.pdf`;
+    const file = path.join(UPLOADS_ROOT, "receipts", name);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, "%PDF a visitor's receipt");
+    await prisma.receiptUpload.create({ data: { userId: id, filename: name } });
+
+    try {
+      await ensureUser();
+      expect(fs.existsSync(file)).toBe(false);
+    } finally {
+      fs.rmSync(file, { force: true });
+    }
+  });
+
   it("removes every user-owned row the wipe used to miss", async () => {
     const id = await ensureUser();
 

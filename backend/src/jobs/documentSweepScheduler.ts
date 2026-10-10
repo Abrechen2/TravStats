@@ -1,5 +1,6 @@
 /**
- * Document Sweep Scheduler (forgejo#116)
+ * Document Sweep Scheduler (forgejo#116) — and the orphan sweep of every other
+ * upload directory (forgejo#287)
  *
  * Kept originals leave the disk in exactly one place: `sweepDocuments`. It
  * removes uploads that were never filed with an entry within a week, and the
@@ -12,6 +13,12 @@
  * file gets, plus the wait for the next run) is a promise that can be kept,
  * where "by tomorrow" is one nobody would guess.
  *
+ * The same run then sweeps every other upload directory with the same rule —
+ * a file no row references, older than an hour, goes (`sweepOrphanUploads`).
+ * That is how a deleted account's photos, receipts and samples leave the disk
+ * when the deletion step's own unlink failed, and how a deleted trip, stay or
+ * place loses its photos whichever route deleted it.
+ *
  * :25 past the hour stays clear of the top-of-hour status sweep. Both
  * containers run `TZ=UTC`, so the expression means what it says.
  */
@@ -21,6 +28,7 @@ import type { ScheduledTask } from "node-cron";
 
 import { sweepDocuments } from "../services/documents/documentService";
 import { migrateLegacyReceipts, reconcileReceiptDocuments } from "../services/documents/receipts";
+import { sweepOrphanUploads } from "../services/files/uploadSweep";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
 
@@ -36,6 +44,8 @@ export async function runDocumentSweep(): Promise<void> {
     await migrateLegacyReceipts();
     await reconcileReceiptDocuments();
     await sweepDocuments();
+    // Documents were just swept, with their TTL; every other directory here.
+    await sweepOrphanUploads({ except: ["documents"] });
   } catch (error) {
     // A failed run is retried by the next one; it must not take the process down.
     logger.warn(

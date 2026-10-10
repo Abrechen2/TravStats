@@ -32,6 +32,7 @@ import { AVAILABLE_DOMAINS } from "./shared/domains";
 import { seedRealisticDemo } from "./seedDemo/realistic";
 import { fillSeededTimeColumns } from "./services/timeModel/seedTimeColumns";
 import { ensureDemoCatalogues, enableBetaForDemo } from "./seedDemo/instance";
+import { deleteAccountWithFiles } from "./services/files/accountFiles";
 
 const DEMO_PASSWORD = "demo123";
 
@@ -97,6 +98,13 @@ const SECOND_HOME_AIRPORT = "DUS";
  * the shared demo account may not write to them (finding A3).
  */
 async function wipeDemoUser(userId: string): Promise<void> {
+  // The rows go below; the files under `uploads/` that those rows owned go
+  // after them, through the same step an admin's account deletion uses
+  // (forgejo#287). Until then a reseed dropped every row and kept every byte.
+  await deleteAccountWithFiles(userId, () => wipeDemoRows(userId));
+}
+
+async function wipeDemoRows(userId: string): Promise<void> {
   // Cascade-safe teardown: deleting the user would wipe all owned rows via
   // onDelete: Cascade, but we want to keep the user row stable so we just
   // delete owned data. Order matters where there are optional FKs.
@@ -118,9 +126,8 @@ async function wipeDemoUser(userId: string): Promise<void> {
   // still readable through `GET /documents/:id/file`. `routes/documents.ts`
   // arrived from main after the wipe was enumerated on 2026-09-17, so `Document`
   // was never in any of the three lists above — an omission, not a decision
-  // (security audit of 2026-09-19, finding 1). Rows only: the bytes under
-  // `uploads/documents/` are the orphan sweep's business, which is the second
-  // reason the upload route now refuses the shared account outright.
+  // (security audit of 2026-09-19, finding 1). Rows only here: the bytes under
+  // `uploads/documents/` go with every other upload in `wipeDemoUser`.
   await prisma.document.deleteMany({ where: { userId } });
   await prisma.placeVisit.deleteMany({ where: { userId } });
   await prisma.placeList.deleteMany({ where: { userId } }); // entries cascade
