@@ -62,7 +62,7 @@ export const userOrIpKey = (req: Request): string => {
  * concurrent agent users on the same PAT pool.
  */
 const PAT_MULTIPLIER = 10;
-const patAwareMax =
+export const patAwareMax =
   (baseMax: number) =>
   (req: Request): number => {
     const r = req as { apiToken?: { id: string } };
@@ -300,16 +300,6 @@ export const busCreationLimiter = rateLimit({
   windowMs: RATE_LIMITS.FLIGHT_CREATION_WINDOW_MS,
   max: patAwareMax(RATE_LIMITS.BUS_CREATION_MAX),
   message: "Too many bus rides saved, please try again later",
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: userOrIpKey,
-});
-
-/** Note creation (forgejo#137): rail's budget, its own bucket and message (rail's reasons). */
-export const noteCreationLimiter = rateLimit({
-  windowMs: RATE_LIMITS.FLIGHT_CREATION_WINDOW_MS,
-  max: patAwareMax(RATE_LIMITS.NOTE_CREATION_MAX),
-  message: "Too many notes saved, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: userOrIpKey,

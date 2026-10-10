@@ -6,7 +6,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
-import { noteCreationLimiter } from "../../middleware/rateLimit";
+import { noteCreationLimiter } from "../../middleware/noteRateLimit";
 import { getNotePhotoDir } from "../../middleware/notePhotoUpload";
 
 /**

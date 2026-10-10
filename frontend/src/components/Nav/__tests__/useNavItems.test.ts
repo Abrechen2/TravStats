@@ -91,6 +91,17 @@ describe("useNavItems — Mehr › Sammlungen", () => {
     expect(section(more, "collections").map((i) => i.path)).toContain("/achievements");
   });
 
+  // forgejo#137: a note needs no domain, so the entry does not either.
+  it("offers Notizen without flights", () => {
+    useSettingsStore.setState({ enabledDomains: ["cruise"] });
+    expect(section(run().more, "collections").map((i) => i.path)).toContain("/notes");
+  });
+
+  it("offers Notizen with every domain off", () => {
+    useSettingsStore.setState({ enabledDomains: [] });
+    expect(section(run().more, "collections").map((i) => i.path)).toContain("/notes");
+  });
+
   // Built from flights alone; the entry depends on the flights domain.
   it("offers the passport whenever flights are on, whatever the beta switch says", () => {
     useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: false });

@@ -1,0 +1,65 @@
+{
+  "title": "Notizen",
+  "subtitle": "Momente ohne Reise – ein Sonnenuntergang, ein Gedanke, ein Flug, aus dem nie eine Reise wurde.",
+  "count_one": "{{count}} Notiz",
+  "count_other": "{{count}} Notizen",
+  "new": "Neue Notiz",
+  "loading": "Notizen werden geladen …",
+  "loadError": "Die Notizen konnten nicht geladen werden.",
+  "empty": {
+    "title": "Noch keine Notizen",
+    "description": "Halte einen Moment fest, der zu keiner Reise gehört. Zu welcher Reise eine Notiz passt, ergibt sich später von selbst aus ihrem Datum.",
+    "action": "Erste Notiz schreiben"
+  },
+  "card": {
+    "edit": "Notiz bearbeiten",
+    "delete": "Notiz löschen",
+    "photoAlt": "Foto zur Notiz vom {{date}}",
+    "writtenIn": "Geschrieben in {{zone}}"
+  },
+  "editor": {
+    "createTitle": "Neue Notiz",
+    "editTitle": "Notiz bearbeiten",
+    "body": "Notiz",
+    "bodyPlaceholder": "Was war das für ein Moment?",
+    "bodyRequired": "Bitte schreib etwas in die Notiz.",
+    "date": "Datum",
+    "time": "Uhrzeit",
+    "timeHint": "Leer lassen, wenn nur der Tag zählt.",
+    "zone": "Zeitzone",
+    "zoneHint": "Die Zeitzone, in der du die Notiz schreibst. Nach ihr richtet sich, zu welchem Tag die Notiz gehört – kurz nach Mitternacht in Berlin ist in London noch gestern.",
+    "zoneHelpLabel": "Warum eine Zeitzone?",
+    "place": "Ort",
+    "placePlaceholder": "z. B. Bayrischzell",
+    "placeHint": "Optional. Nur als Text gespeichert – ändert sich der Ort später, bleibt die Notiz, wie sie war.",
+    "photo": "Foto",
+    "photoChoose": "Foto auswählen",
+    "photoReplace": "Foto ersetzen",
+    "photoRemove": "Foto entfernen",
+    "photoSelected": "Ausgewählt: {{name}}",
+    "photoWillBeRemoved": "Das Foto wird beim Speichern entfernt.",
+    "save": "Speichern",
+    "create": "Notiz speichern",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "dateRequired": "Bitte wähle ein Datum."
+  },
+  "delete": {
+    "title": "Notiz löschen?",
+    "body": "Die Notiz vom {{date}} wird gelöscht, mit ihrem Foto. Das lässt sich nicht rückgängig machen.",
+    "confirm": "Löschen",
+    "cancel": "Abbrechen"
+  },
+  "errors": {
+    "saveFailed": "Die Notiz konnte nicht gespeichert werden.",
+    "deleteFailed": "Die Notiz konnte nicht gelöscht werden.",
+    "zoneMissing": "Ohne Zeitzone lässt sich nicht sagen, zu welchem Tag die Notiz gehört. Bitte wähle eine Zeitzone.",
+    "photoFailed": "Die Notiz ist gespeichert, das Foto aber nicht.",
+    "photoTooLarge": "Das Foto ist zu groß (höchstens 15 MB). Die Notiz ist gespeichert, das Foto nicht.",
+    "photoUnreadable": "Das Foto ließ sich nicht lesen. Die Notiz ist gespeichert, das Foto nicht.",
+    "photoType": "Nur Bilder (JPEG, PNG, WebP, GIF, HEIC) können an eine Notiz. Die Notiz ist gespeichert, das Foto nicht.",
+    "photoRemoveFailed": "Die Notiz ist gespeichert, das Foto konnte aber nicht entfernt werden.",
+    "photoTooLargeLocal": "Das Foto ist zu groß (höchstens 15 MB).",
+    "photoTypeLocal": "Nur Bilder (JPEG, PNG, WebP, GIF, HEIC) können an eine Notiz."
+  }
+}

@@ -84,6 +84,7 @@ export function useNavItems(): {
     "passport",
     "dataQuality",
     "stats",
+    "notes",
   ]);
   const user = useAuthStore((s) => s.user);
   const { isEnabled } = useEnabledDomains();
@@ -138,6 +139,17 @@ export function useNavItems(): {
         path: "/achievements",
         label: t("dashboard:achievements"),
         icon: "trophy",
+      },
+      // Standalone notes (forgejo#137) belong to no domain and no trip, so the
+      // entry is there whatever domains are on — a moment needs no flight.
+      // A collection like the others here: something the user keeps, not a
+      // logbook of one kind of travel.
+      {
+        kind: "leaf",
+        id: "notes",
+        path: "/notes",
+        label: t("notes:title"),
+        icon: "pencil",
       },
       // Built from flights alone, so it is offered only when flights are on —
       // an entry leading to a page that explains why it is empty is worse than

@@ -13,7 +13,8 @@ import {
   getNotePhotoDir,
   uploadNotePhoto,
 } from "../middleware/notePhotoUpload";
-import { noteCreationLimiter, uploadReceiptLimiter } from "../middleware/rateLimit";
+import { noteCreationLimiter } from "../middleware/noteRateLimit";
+import { uploadReceiptLimiter } from "../middleware/rateLimit";
 import { createNoteSchema, noteQuerySchema, updateNoteSchema } from "../schemas/note";
 import {
   createNote,
