@@ -2,7 +2,6 @@ import path from "path";
 
 import { BACKED_UP_UPLOAD_DIRS, UPLOADS_ROOT, type UploadDirName } from "../../config/uploadDirs";
 import logger from "../../utils/logger";
-import { displayRenditionName } from "../photos/displayRendition";
 import { UPLOAD_DIR_POLICIES } from "./uploadDirPolicies";
 import {
   QUARANTINE_RETENTION_MS,
@@ -10,7 +9,10 @@ import {
   quarantineUpload,
   restoreFromQuarantine,
 } from "./quarantine";
-import { listUploadFiles, unlinkUpload, uploadFileAgeMs } from "./uploadFiles";
+import { isReferenced, listUploadFiles, unlinkUpload, uploadFileAgeMs } from "./uploadFiles";
+import { retryPendingDeletions } from "./pendingDeletions";
+
+export { isReferenced };
 
 /**
  * The orphan sweep, for every upload directory (forgejo#287).
@@ -28,17 +30,6 @@ import { listUploadFiles, unlinkUpload, uploadFileAgeMs } from "./uploadFiles";
  * moment before its row is committed.
  */
 export const ORPHAN_GRACE_MS = 60 * 60 * 1000;
-
-const RENDITION_SUFFIX = displayRenditionName("x").slice(1);
-
-/**
- * Is this stored name still wanted? A HEIC original's display copy is wanted
- * exactly as long as its original is.
- */
-export function isReferenced(name: string, referenced: ReadonlySet<string>): boolean {
-  if (referenced.has(name)) return true;
-  return name.endsWith(RENDITION_SUFFIX) && referenced.has(name.slice(0, -RENDITION_SUFFIX.length));
-}
 
 export interface SweepOptions {
   /** The uploads root; tests point it at a temporary directory. */
@@ -153,6 +144,9 @@ export async function sweepUploadDir(
 
 /** Sweeps every upload directory; one that cannot be read does not stop the others. */
 export async function sweepOrphanUploads(options: SweepOptions = {}): Promise<DirSweepResult[]> {
+  // First what a deleted account left behind: those are deleted outright, not
+  // quarantined (`pendingDeletions.ts`).
+  await retryPendingDeletions(options.root ?? UPLOADS_ROOT);
   const results: DirSweepResult[] = [];
   for (const dir of BACKED_UP_UPLOAD_DIRS) {
     if (options.except?.includes(dir)) continue;

@@ -4,8 +4,8 @@ import { BACKED_UP_UPLOAD_DIRS, UPLOADS_ROOT, type UploadDirName } from "../../c
 import logger from "../../utils/logger";
 import { displayRenditionName } from "../photos/displayRendition";
 import { UPLOAD_DIR_POLICIES } from "./uploadDirPolicies";
-import { isReferenced } from "./uploadSweep";
-import { unlinkUpload } from "./uploadFiles";
+import { recordPendingDeletions } from "./pendingDeletions";
+import { isReferenced, unlinkUpload } from "./uploadFiles";
 
 /**
  * The one account-file deletion step (forgejo#287). Every path that deletes an
@@ -17,10 +17,10 @@ import { unlinkUpload } from "./uploadFiles";
  *   2. delete the rows — the caller's step, and the one that must succeed;
  *   3. remove the files, never throwing.
  * A missing file is not an error, a failed unlink is logged with the account,
- * directory and stored name, and either way the orphan sweep finishes the job
- * on its next run, because by then no row references the file (it quarantines
- * it — out of the product and the backups at once, deleted after 30 days). A
- * row deletion that fails leaves every file where it was.
+ * directory and stored name and recorded in the pending-deletion manifest,
+ * which the next sweep run retries and deletes outright (`pendingDeletions.ts`)
+ * — the user asked for deletion, so such a file is not quarantined like an
+ * orphan. A row deletion that fails leaves every file where it was.
  *
  * Unlike the sweep, this step deletes outright: removing an account is an
  * explicit request, not an inference from missing rows.
@@ -90,6 +90,9 @@ export async function removeAccountFiles(
 ): Promise<AccountFileRemoval> {
   const root = options.root ?? UPLOADS_ROOT;
   const totals: AccountFileRemoval = { removed: 0, missing: 0, failed: 0, kept: 0 };
+  // Every path that could not be removed now, for the sweep to delete outright
+  // — not to quarantine for thirty days (`pendingDeletions.ts`).
+  const pending: Array<{ dir: UploadDirName; storedName: string; userId: string }> = [];
   for (const [dir, names] of files) {
     const dirPath = path.join(root, dir);
     const sweep = UPLOAD_DIR_POLICIES[dir].sweep;
@@ -107,6 +110,8 @@ export async function removeAccountFiles(
         "Could not check an upload directory's references; its files are left to the orphan sweep"
       );
       totals.failed += names.length;
+      // The retry checks references itself before deleting anything.
+      for (const name of names) pending.push({ dir, storedName: path.basename(name), userId });
       continue;
     }
     for (const name of names) {
@@ -117,13 +122,17 @@ export async function removeAccountFiles(
       const context = { operation: "account_delete", dir, userId };
       const outcome = await unlinkUpload(dirPath, name, context);
       totals[outcome]++;
+      if (outcome === "failed") pending.push({ dir, storedName: path.basename(name), userId });
       // A HEIC original's display copy (forgejo#192) goes with it; most
       // files have none, which is `missing` and not counted.
-      if ((await unlinkUpload(dirPath, displayRenditionName(name), context)) === "failed") {
+      const rendition = displayRenditionName(name);
+      if ((await unlinkUpload(dirPath, rendition, context)) === "failed") {
         totals.failed++;
+        pending.push({ dir, storedName: rendition, userId });
       }
     }
   }
+  await recordPendingDeletions(root, pending);
   logger.info(
     { operation: "account_files_removed", userId, ...totals },
     "Removed the deleted account's uploaded files"

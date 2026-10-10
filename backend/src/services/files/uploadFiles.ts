@@ -2,6 +2,7 @@ import fsp from "fs/promises";
 import path from "path";
 
 import logger from "../../utils/logger";
+import { displayRenditionName } from "../photos/displayRendition";
 
 /**
  * The three file operations the account-deletion step and the orphan sweep
@@ -47,7 +48,7 @@ export async function unlinkUpload(
         ...(context.userId ? { userId: context.userId } : {}),
         error: { code, message: (error as Error).message },
       },
-      "Could not remove an uploaded file; the orphan sweep retries it"
+      "Could not remove an uploaded file; the next sweep run retries it"
     );
     return "failed";
   }
@@ -75,4 +76,15 @@ export async function uploadFileAgeMs(
   } catch {
     return null;
   }
+}
+
+const RENDITION_SUFFIX = displayRenditionName("x").slice(1);
+
+/**
+ * Is this stored name still wanted? A HEIC original's display copy is wanted
+ * exactly as long as its original is.
+ */
+export function isReferenced(name: string, referenced: ReadonlySet<string>): boolean {
+  if (referenced.has(name)) return true;
+  return name.endsWith(RENDITION_SUFFIX) && referenced.has(name.slice(0, -RENDITION_SUFFIX.length));
 }

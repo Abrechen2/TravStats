@@ -9,6 +9,8 @@ import { displayRenditionName } from "../../photos/displayRendition";
 import { profilePictureContentUrl } from "../privateFileUrls";
 import { collectAccountFiles, deleteAccountWithFiles, removeAccountFiles } from "../accountFiles";
 import { sweepOrphanUploads } from "../uploadSweep";
+import { PENDING_DELETIONS_FILE, recordPendingDeletions } from "../pendingDeletions";
+import { quarantineDirPath } from "../quarantine";
 import { shareTrip } from "../../sharing/shareTrip";
 import {
   linkWithConsent,
@@ -24,7 +26,6 @@ import {
  * Real rows, files under a temporary uploads root.
  */
 const TAG = `acctfiles-${Date.now()}`;
-const HOUR = 60 * 60 * 1000;
 
 let root: string;
 const userIds: string[] = [];
@@ -36,6 +37,10 @@ const put = (dir: string, name: string): string => {
   return full;
 };
 const exists = (dir: string, name: string): boolean => fs.existsSync(path.join(root, dir, name));
+const pendingManifest = (): unknown[] => {
+  const file = path.join(root, PENDING_DELETIONS_FILE);
+  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : [];
+};
 
 async function makeUser(label: string): Promise<string> {
   const user = await prisma.user.create({
@@ -174,7 +179,7 @@ describe("deleteAccountWithFiles", () => {
     expect(await prisma.user.findUnique({ where: { id: userId } })).toBeNull();
   });
 
-  it("logs a failed unlink with its context, deletes the account anyway, and leaves the file to the sweep", async () => {
+  it("logs a failed unlink with its context, deletes the account anyway, and the next sweep deletes the file outright", async () => {
     const userId = await makeUser("eacces");
     const name = `${TAG}-stuck.pdf`;
     await prisma.receiptUpload.create({ data: { userId, filename: name } });
@@ -205,11 +210,60 @@ describe("deleteAccountWithFiles", () => {
       expect.any(String)
     );
 
-    // The next sweep run finds it: no row names it any more.
+    // Recorded for the sweep, which deletes it outright — the user asked for
+    // deletion, so it does not sit in the quarantine for thirty days.
+    expect(pendingManifest()).toEqual([
+      expect.objectContaining({ dir: "receipts", storedName: name, userId, attempts: 1 }),
+    ]);
     jest.mocked(fsp.unlink).mockRestore();
-    // ...into the quarantine: out of the product and every later backup.
-    await sweepOrphanUploads({ root, now: Date.now() + 2 * HOUR });
+    // Within the grace period: the ordinary orphan rule would not even touch it yet.
+    await sweepOrphanUploads({ root });
     expect(exists("receipts", name)).toBe(false);
+    expect(fs.existsSync(path.join(quarantineDirPath(root, "receipts"), name))).toBe(false);
+    expect(pendingManifest()).toEqual([]);
+  });
+
+  it("keeps a pending entry, counted and logged, while the unlink keeps failing", async () => {
+    const userId = await makeUser("stillstuck");
+    const name = `${TAG}-stillstuck.pdf`;
+    await prisma.receiptUpload.create({ data: { userId, filename: name } });
+    put("receipts", name);
+    const realUnlink = fsp.unlink;
+    jest.spyOn(fsp, "unlink").mockImplementation(async (target) => {
+      if (String(target).endsWith(name)) {
+        throw Object.assign(new Error("permission denied"), { code: "EACCES" });
+      }
+      return realUnlink(target);
+    });
+    await deleteAccountWithFiles(userId, () => prisma.user.delete({ where: { id: userId } }), {
+      root,
+    });
+    const warn = jest.spyOn(logger, "warn");
+
+    await sweepOrphanUploads({ root });
+
+    expect(exists("receipts", name)).toBe(true);
+    expect(pendingManifest()).toEqual([
+      expect.objectContaining({ dir: "receipts", storedName: name, attempts: 2 }),
+    ]);
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({ operation: "pending_deletion_still_failing", storedName: name }),
+      expect.any(String)
+    );
+  });
+
+  it("does not delete a pending file that a row references again", async () => {
+    const keeper = await makeUser("referenced-again");
+    const name = `${TAG}-back.pdf`;
+    put("receipts", name);
+    await recordPendingDeletions(root, [{ dir: "receipts", storedName: name, userId: "gone" }]);
+    // A restore brought a row naming it back.
+    await prisma.receiptUpload.create({ data: { userId: keeper, filename: name } });
+
+    await sweepOrphanUploads({ root });
+
+    expect(exists("receipts", name)).toBe(true);
+    expect(pendingManifest()).toEqual([]);
   });
 
   it("touches no file when the row delete fails", async () => {
