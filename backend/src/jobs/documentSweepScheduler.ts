@@ -3,21 +3,25 @@
  * upload directory (forgejo#287)
  *
  * Kept originals leave the disk in exactly one place: `sweepDocuments`. It
- * removes uploads that were never filed with an entry within a week, and the
- * bytes of every document whose row is gone — which is how a deleted flight,
- * stay, lodging, place, trip or account loses its files, whichever route
- * deleted it.
+ * removes uploads that were never filed with an entry within their TTL, and
+ * moves the bytes of every document whose row is gone into the quarantine —
+ * which is how a deleted flight, stay, lodging, place or trip loses its files,
+ * whichever route deleted it.
  *
  * Hourly rather than nightly because of that second job: a user who deletes a
  * bill expects it gone, and "within about two hours" (the hour of grace a young
  * file gets, plus the wait for the next run) is a promise that can be kept,
- * where "by tomorrow" is one nobody would guess.
+ * where "by tomorrow" is one nobody would guess. Gone from the product and
+ * from every later backup, that is: the quarantine is neither served nor
+ * archived, and deletes for good after 30 days (`services/files/quarantine.ts`,
+ * which says why an orphan is not deleted on the spot).
  *
  * The same run then sweeps every other upload directory with the same rule —
- * a file no row references, older than an hour, goes (`sweepOrphanUploads`).
- * That is how a deleted account's photos, receipts and samples leave the disk
- * when the deletion step's own unlink failed, and how a deleted trip, stay or
- * place loses its photos whichever route deleted it.
+ * a file no row references, older than an hour, is quarantined
+ * (`sweepOrphanUploads`). That is how a deleted trip, stay or place loses its
+ * photos whichever route deleted it, and how a deleted account's file leaves
+ * when the deletion step's own unlink failed. (A deleted account's files
+ * otherwise go at once, through `services/files/accountFiles.ts`.)
  *
  * :25 past the hour stays clear of the top-of-hour status sweep. Both
  * containers run `TZ=UTC`, so the expression means what it says.

@@ -18,8 +18,19 @@ import { unlinkUpload } from "./uploadFiles";
  *   3. remove the files, never throwing.
  * A missing file is not an error, a failed unlink is logged with the account,
  * directory and stored name, and either way the orphan sweep finishes the job
- * on its next run, because by then no row references the file. A row deletion
- * that fails leaves every file where it was.
+ * on its next run, because by then no row references the file (it quarantines
+ * it — out of the product and the backups at once, deleted after 30 days). A
+ * row deletion that fails leaves every file where it was.
+ *
+ * Unlike the sweep, this step deletes outright: removing an account is an
+ * explicit request, not an inference from missing rows.
+ *
+ * Across accounts: a trip shared with another account is a set of linked
+ * COPIES (`services/sharing/`) that carry facts only — no photo, cover,
+ * document or receipt reference travels (`sharing/facts/*`) — so no row of
+ * one account names another's file. Should one ever do so, step 3 asks which
+ * names any remaining row still references, across every account, and keeps
+ * those.
  */
 
 export type AccountFileSet = ReadonlyMap<UploadDirName, readonly string[]>;
@@ -60,7 +71,7 @@ export async function collectAccountFiles(
           dir,
           error: { message: error instanceof Error ? error.message : String(error) },
         },
-        "Could not list an account's files in one upload directory; the orphan sweep will remove them"
+        "Could not list an account's files in one upload directory; the orphan sweep will quarantine them"
       );
     }
   }

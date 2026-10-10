@@ -7,6 +7,8 @@ import path from "path";
 import { prisma } from "../../../db";
 import logger from "../../../utils/logger";
 import { displayRenditionName } from "../../photos/displayRendition";
+import type { UploadDirName } from "../../../config/uploadDirs";
+import { QUARANTINE_RETENTION_MS, quarantineDirPath } from "../quarantine";
 import { UPLOAD_DIR_POLICIES } from "../uploadDirPolicies";
 import { listArchivedUploads, sweepAfterFilesRestore } from "../restoreSweep";
 import { ORPHAN_GRACE_MS, sweepOrphanUploads, sweepUploadDir } from "../uploadSweep";
@@ -28,6 +30,8 @@ const put = (dir: string, name: string): void => {
   fs.writeFileSync(path.join(root, dir, name), name);
 };
 const exists = (dir: string, name: string): boolean => fs.existsSync(path.join(root, dir, name));
+const held = (dir: UploadDirName, name: string): boolean =>
+  fs.existsSync(path.join(quarantineDirPath(root, dir), name));
 const ages =
   (young: string[]) =>
   async (_dir: string, name: string): Promise<number> =>
@@ -52,7 +56,7 @@ afterEach(() => {
 });
 
 describe("sweepOrphanUploads", () => {
-  it("removes an old file no row names and keeps a referenced one with its display copy", async () => {
+  it("quarantines an old file no row names and keeps a referenced one with its display copy", async () => {
     const kept = `${TAG}-kept.heic`;
     await prisma.tripPhoto.create({
       data: { tripId, filename: kept, mimetype: "image/heic", sizeBytes: 1 },
@@ -66,7 +70,14 @@ describe("sweepOrphanUploads", () => {
       rs.filter((r) => r.dir === "trip-photos")
     );
 
-    expect(result).toEqual({ dir: "trip-photos", removed: 2, failed: 0 });
+    expect(result).toEqual({
+      dir: "trip-photos",
+      quarantined: 2,
+      restored: 0,
+      purged: 0,
+      failed: 0,
+    });
+    expect(held("trip-photos", `${TAG}-orphan.jpg`)).toBe(true);
     expect(exists("trip-photos", kept)).toBe(true);
     expect(exists("trip-photos", displayRenditionName(kept))).toBe(true);
     expect(exists("trip-photos", `${TAG}-orphan.jpg`)).toBe(false);
@@ -127,30 +138,55 @@ describe("sweepOrphanUploads", () => {
     expect(exists("profile-pictures", `${userId}_${TAG}-before.jpg`)).toBe(false);
   });
 
-  it("counts a failed unlink, logs it, and goes on to the next file", async () => {
+  it("counts a failed move, logs it, and goes on to the next file", async () => {
     put("training", `${TAG}-a.eml`);
     put("training", `${TAG}-b.eml`);
-    const realUnlink = fsp.unlink;
-    jest.spyOn(fsp, "unlink").mockImplementation(async (target) => {
-      if (String(target).endsWith(`${TAG}-a.eml`)) {
+    const realRename = fsp.rename;
+    jest.spyOn(fsp, "rename").mockImplementation(async (from, to) => {
+      if (String(from).endsWith(`${TAG}-a.eml`)) {
         throw Object.assign(new Error("busy"), { code: "EBUSY" });
       }
-      return realUnlink(target);
+      return realRename(from, to);
     });
     const warn = jest.spyOn(logger, "warn");
 
     const result = await sweepUploadDir("training", { root, fileAgeMs: ages([]) });
 
-    expect(result).toEqual({ dir: "training", removed: 1, failed: 1 });
+    expect(result).toEqual({ dir: "training", quarantined: 1, restored: 0, purged: 0, failed: 1 });
     expect(exists("training", `${TAG}-a.eml`)).toBe(true);
+    expect(held("training", `${TAG}-b.eml`)).toBe(true);
     expect(warn).toHaveBeenCalledWith(
       expect.objectContaining({
-        operation: "orphan_sweep_unlink_failed",
+        operation: "orphan_sweep_quarantine_failed",
         dir: "training",
         storedName: `${TAG}-a.eml`,
       }),
       expect.any(String)
     );
+  });
+
+  it("sweeps note photos by the column on the note, display copy included", async () => {
+    const kept = `${TAG}-note.heic`;
+    await prisma.note.create({
+      data: {
+        userId,
+        body: "Notiz",
+        occurredAt: new Date("2026-01-01T00:00:00Z"),
+        occurredZone: "Europe/Berlin",
+        photoFilename: kept,
+        photoMimetype: "image/heic",
+        photoSizeBytes: 1,
+      },
+    });
+    put("note-photos", kept);
+    put("note-photos", displayRenditionName(kept));
+    put("note-photos", `${TAG}-gone.jpg`);
+
+    await sweepOrphanUploads({ root, fileAgeMs: ages([]) });
+
+    expect(exists("note-photos", kept)).toBe(true);
+    expect(exists("note-photos", displayRenditionName(kept))).toBe(true);
+    expect(held("note-photos", `${TAG}-gone.jpg`)).toBe(true);
   });
 
   it("keeps sweeping the other directories when one cannot read its references", async () => {
@@ -169,8 +205,84 @@ describe("sweepOrphanUploads", () => {
   });
 });
 
+describe("the quarantine", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+
+  it("holds an orphan instead of deleting it, and purges it only after the retention period", async () => {
+    const name = `${TAG}-later.pdf`;
+    put("documents", name);
+    await sweepUploadDir("documents", { root, fileAgeMs: ages([]) });
+    expect(exists("documents", name)).toBe(false);
+    expect(held("documents", name)).toBe(true);
+
+    const nearly = await sweepUploadDir("documents", {
+      root,
+      now: Date.now() + QUARANTINE_RETENTION_MS - DAY,
+    });
+    expect(nearly.purged).toBe(0);
+    expect(held("documents", name)).toBe(true);
+
+    const info = jest.spyOn(logger, "info");
+    const past = await sweepUploadDir("documents", {
+      root,
+      now: Date.now() + QUARANTINE_RETENTION_MS + DAY,
+    });
+    expect(past.purged).toBe(1);
+    expect(held("documents", name)).toBe(false);
+    expect(info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operation: "orphan_sweep_purged",
+        dir: "documents",
+        storedName: name,
+      }),
+      expect.any(String)
+    );
+  });
+
+  it("puts a file back when a row references it again — a newer database restored", async () => {
+    // A database-only restore to an older point drops this photo's row...
+    const name = `${TAG}-comeback.heic`;
+    put("trip-photos", name);
+    put("trip-photos", displayRenditionName(name));
+    await sweepUploadDir("trip-photos", { root, fileAgeMs: ages([]) });
+    expect(held("trip-photos", name)).toBe(true);
+    expect(held("trip-photos", displayRenditionName(name))).toBe(true);
+
+    // ...and restoring the newer one brings the row back, days later.
+    await prisma.tripPhoto.create({
+      data: { tripId, filename: name, mimetype: "image/heic", sizeBytes: 1 },
+    });
+    const result = await sweepUploadDir("trip-photos", { root, now: Date.now() + 10 * DAY });
+
+    expect(result.restored).toBe(2);
+    expect(exists("trip-photos", name)).toBe(true);
+    expect(exists("trip-photos", displayRenditionName(name))).toBe(true);
+    expect(held("trip-photos", name)).toBe(false);
+  });
+
+  it("never overwrites a live file with its quarantined namesake", async () => {
+    const name = `${TAG}-twice.jpg`;
+    await prisma.tripPhoto.create({
+      data: { tripId, filename: name, mimetype: "image/jpeg", sizeBytes: 1 },
+    });
+    fs.mkdirSync(quarantineDirPath(root, "trip-photos"), { recursive: true });
+    fs.writeFileSync(path.join(quarantineDirPath(root, "trip-photos"), name), "old");
+    put("trip-photos", name);
+
+    const result = await sweepUploadDir("trip-photos", { root, fileAgeMs: ages([]) });
+
+    expect(result.restored).toBe(0);
+    expect(fs.readFileSync(path.join(root, "trip-photos", name), "utf8")).toBe(name);
+
+    // The redundant copy still ages out.
+    await sweepUploadDir("trip-photos", { root, now: Date.now() + QUARANTINE_RETENTION_MS + 1000 });
+    expect(held("trip-photos", name)).toBe(false);
+    expect(exists("trip-photos", name)).toBe(true);
+  });
+});
+
 describe("sweepAfterFilesRestore", () => {
-  it("removes the archive's files no row names at once, and keeps everything else", async () => {
+  it("quarantines the archive's files no row names at once, and keeps everything else", async () => {
     const owned = `${TAG}-owned.jpg`;
     await prisma.tripPhoto.create({
       data: { tripId, filename: owned, mimetype: "image/jpeg", sizeBytes: 1 },
@@ -195,6 +307,10 @@ describe("sweepAfterFilesRestore", () => {
 
     const left = fs.readdirSync(path.join(uploadsRoot, "trip-photos")).sort();
     expect(left).toEqual([`${TAG}-inflight.jpg`, owned].sort());
+    // Out of the live directory and every later backup, not yet gone for good.
+    expect(
+      fs.existsSync(path.join(quarantineDirPath(uploadsRoot, "trip-photos"), `${TAG}-deleted.jpg`))
+    ).toBe(true);
     fs.rmSync(staging, { recursive: true, force: true });
   });
 

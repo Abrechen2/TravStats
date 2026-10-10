@@ -643,15 +643,16 @@ export async function sweepDocuments(
   }
 
   // The orphan half is the generic sweep's (forgejo#287), which every other
-  // upload directory runs too; the TTL above is the documents' own.
-  const { removed: orphanFiles } = await sweepUploadDir("documents", {
+  // upload directory runs too; the TTL above is the documents' own. An orphan
+  // is quarantined, not deleted — see `services/files/quarantine.ts`.
+  const { quarantined: orphanFiles } = await sweepUploadDir("documents", {
     now: now.getTime(),
     fileAgeMs: (_dir, name) => fileAgeMs(name),
   });
   if (expired.length > 0 || orphanFiles > 0) {
     logger.info(
       { operation: "document_sweep", expiredUnfiled: expired.length, orphanFiles },
-      "Document sweep removed unfiled uploads and orphan files"
+      "Document sweep removed unfiled uploads and quarantined orphan files"
     );
   }
   return { expiredUnfiled: expired.length, orphanFiles };

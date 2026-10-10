@@ -9,6 +9,12 @@ import { displayRenditionName } from "../../photos/displayRendition";
 import { profilePictureContentUrl } from "../privateFileUrls";
 import { collectAccountFiles, deleteAccountWithFiles, removeAccountFiles } from "../accountFiles";
 import { sweepOrphanUploads } from "../uploadSweep";
+import { shareTrip } from "../../sharing/shareTrip";
+import {
+  linkWithConsent,
+  makeAccount,
+  makeFullTrip,
+} from "../../../routes/__tests__/sharingFixtures";
 
 /**
  * forgejo#287: deleting an account removes its files in every upload
@@ -88,6 +94,17 @@ async function seedAccountFiles(userId: string, label: string): Promise<string[]
       extractedData: {},
     },
   });
+  await prisma.note.create({
+    data: {
+      userId,
+      body: "Notiz",
+      occurredAt: new Date("2026-01-01T00:00:00Z"),
+      occurredZone: "Europe/Berlin",
+      photoFilename: n("note", ".heic"),
+      photoMimetype: "image/heic",
+      photoSizeBytes: 1,
+    },
+  });
   const avatar = `${userId}_${TAG}.jpg`;
   await prisma.userSettings.create({
     data: { userId, data: { profile: { profilePicture: profilePictureContentUrl(avatar) } } },
@@ -101,6 +118,8 @@ async function seedAccountFiles(userId: string, label: string): Promise<string[]
     `documents/${n("doc", ".pdf")}`,
     `receipts/${n("receipt", ".pdf")}`,
     `training/${n("training", ".eml")}`,
+    `note-photos/${n("note", ".heic")}`,
+    `note-photos/${displayRenditionName(n("note", ".heic"))}`,
     `profile-pictures/${avatar}`,
     // A replaced avatar the settings no longer name: still the account's.
     `profile-pictures/${userId}_${TAG}-old.jpg`,
@@ -188,6 +207,7 @@ describe("deleteAccountWithFiles", () => {
 
     // The next sweep run finds it: no row names it any more.
     jest.mocked(fsp.unlink).mockRestore();
+    // ...into the quarantine: out of the product and every later backup.
     await sweepOrphanUploads({ root, now: Date.now() + 2 * HOUR });
     expect(exists("receipts", name)).toBe(false);
   });
@@ -227,5 +247,107 @@ describe("deleteAccountWithFiles", () => {
 
     expect(result.kept).toBe(1);
     expect(exists("trip-photos", shared)).toBe(true);
+  });
+
+  it("keeps every file across a shared trip, whichever of the two accounts is deleted", async () => {
+    const owner = await makeAccount(`${TAG}-owner`);
+    const member = await makeAccount(`${TAG}-member`);
+    userIds.push(owner.id, member.id);
+    const companion = await linkWithConsent(owner, member);
+    const { trip, lodging } = await makeFullTrip(owner);
+
+    // The owner's files on the trip: a photo (also the cover), a lodging
+    // photo, a document filed with the trip.
+    const ownerPhoto = `${TAG}-owner-trip.jpg`;
+    const photo = await prisma.tripPhoto.create({
+      data: { tripId: trip.id, filename: ownerPhoto, mimetype: "image/jpeg", sizeBytes: 1 },
+    });
+    await prisma.trip.update({
+      where: { id: trip.id },
+      data: { coverImageUrl: `/api/v1/trips/${trip.id}/photos/${photo.id}/file` },
+    });
+    const ownerLodgingPhoto = `${TAG}-owner-lodging.jpg`;
+    await prisma.lodgingPhoto.create({
+      data: {
+        lodgingId: lodging.id,
+        filename: ownerLodgingPhoto,
+        mimetype: "image/jpeg",
+        sizeBytes: 1,
+      },
+    });
+    const ownerDoc = `${TAG}-owner-doc.pdf`;
+    await prisma.document.create({
+      data: {
+        userId: owner.id,
+        tripId: trip.id,
+        storedName: ownerDoc,
+        mimetype: "application/pdf",
+        sizeBytes: 1,
+        sha256: "0".repeat(64),
+        format: "pdf",
+      },
+    });
+    const ownerFiles = [
+      `trip-photos/${ownerPhoto}`,
+      `lodging-photos/${ownerLodgingPhoto}`,
+      `documents/${ownerDoc}`,
+    ];
+
+    await shareTrip(owner.id, trip.id, companion.id);
+    const copy = await prisma.trip.findFirstOrThrow({ where: { userId: member.id } });
+    const memberPhoto = `${TAG}-member-trip.jpg`;
+    await prisma.tripPhoto.create({
+      data: { tripId: copy.id, filename: memberPhoto, mimetype: "image/jpeg", sizeBytes: 1 },
+    });
+    for (const f of [...ownerFiles, `trip-photos/${memberPhoto}`]) {
+      put(path.dirname(f), path.basename(f));
+    }
+
+    // The copies carry facts only: no row of the member names an owner file.
+    const memberFiles = await collectAccountFiles(member.id, { root });
+    expect([...memberFiles.entries()]).toEqual([["trip-photos", [memberPhoto]]]);
+
+    // The owner goes first: the member's copy and its own photo stay.
+    await deleteAccountWithFiles(owner.id, () => prisma.user.delete({ where: { id: owner.id } }), {
+      root,
+    });
+    expect(ownerFiles.filter((f) => fs.existsSync(path.join(root, f)))).toEqual([]);
+    expect(exists("trip-photos", memberPhoto)).toBe(true);
+    expect(await prisma.trip.count({ where: { id: copy.id } })).toBe(1);
+
+    // Then the member, with its own file only.
+    await deleteAccountWithFiles(
+      member.id,
+      () => prisma.user.delete({ where: { id: member.id } }),
+      {
+        root,
+      }
+    );
+    expect(exists("trip-photos", memberPhoto)).toBe(false);
+  });
+
+  it("deleting the member of a shared trip leaves the owner's files", async () => {
+    const owner = await makeAccount(`${TAG}-owner2`);
+    const member = await makeAccount(`${TAG}-member2`);
+    userIds.push(owner.id, member.id);
+    const companion = await linkWithConsent(owner, member);
+    const { trip } = await makeFullTrip(owner);
+    const ownerPhoto = `${TAG}-owner2-trip.jpg`;
+    await prisma.tripPhoto.create({
+      data: { tripId: trip.id, filename: ownerPhoto, mimetype: "image/jpeg", sizeBytes: 1 },
+    });
+    put("trip-photos", ownerPhoto);
+    await shareTrip(owner.id, trip.id, companion.id);
+
+    await deleteAccountWithFiles(
+      member.id,
+      () => prisma.user.delete({ where: { id: member.id } }),
+      {
+        root,
+      }
+    );
+
+    expect(exists("trip-photos", ownerPhoto)).toBe(true);
+    expect(await prisma.tripPhoto.count({ where: { filename: ownerPhoto } })).toBe(1);
   });
 });

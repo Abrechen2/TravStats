@@ -37,12 +37,9 @@ export interface UploadDirPolicy {
 }
 
 /**
- * The common shape: a model with a `filename` column, owned through a path to
- * a user. `load(null)` reads every row, `load(userId)` one account's. A new
- * photo directory is one entry built from this, e.g. for `note-photos`:
- *
- *   "note-photos": filenameRows((userId) =>
- *     prisma.notePhoto.findMany({ where: userId ? { note: { userId } } : {}, select: { filename: true } })),
+ * The common shape: rows that name a stored file, owned through a path to a
+ * user. `load(null)` reads every row, `load(userId)` one account's; a column
+ * not called `filename` is renamed in the select's result (see `note-photos`).
  *
  * A HEIC original's `<name>.display.jpg` (forgejo#192) needs no entry of its
  * own — the deletion step and the sweep both treat it as part of its original.
@@ -170,4 +167,14 @@ export const UPLOAD_DIR_POLICIES: Readonly<Record<UploadDirName, UploadDirPolicy
       reason: "The directory IS the list — no row names a background, so every file is wanted.",
     },
   },
+  // The photo lives ON the note (`Note.photoFilename`), not in a model of its
+  // own (forgejo#137); its HEIC display copy follows it like any other.
+  "note-photos": filenameRows(async (userId) =>
+    (
+      await prisma.note.findMany({
+        where: { ...(userId ? { userId } : {}), photoFilename: { not: null } },
+        select: { photoFilename: true },
+      })
+    ).map((n) => ({ filename: n.photoFilename }))
+  ),
 };

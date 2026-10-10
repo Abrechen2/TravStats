@@ -20,6 +20,10 @@ import { sweepOrphanUploads, type DirSweepResult } from "./uploadSweep";
  * database decide alone whether they stay. Files that were already on disk
  * keep their grace as always. A full restore runs this after the database, so
  * the rows that judge are the archive's own.
+ *
+ * "Go" means into the quarantine, like every orphan: out of the live
+ * directory, unserved and out of every later backup at once, deleted after the
+ * retention period — and back again if a later restore brings their rows.
  */
 
 /** `<dir>/<name>` for every file under `uploads/` in an uploads archive. */
@@ -62,9 +66,9 @@ export async function sweepAfterFilesRestore(
       {
         operation: "restore_orphan_sweep",
         archivedFiles: noGrace.size,
-        removed: results.reduce((n, r) => n + r.removed, 0),
+        quarantined: results.reduce((n, r) => n + r.quarantined, 0),
       },
-      "Restored files no row references were removed"
+      "Restored files no row references were moved to the quarantine"
     );
     return results;
   } catch (error) {
