@@ -25,6 +25,16 @@ export const INSIGHT_MEASURES: Record<string, MeasureSpec> = {
   lodgingBusinessNights: insight("sum", "nights", "LodgingInsightsSection"),
   /** Houses with stays in two or more calendar years; a lifetime question. */
   lodgingReturnHouseCount: insight("distinct", "lodgings", "LodgingInsightsSection", ["allTime"]),
+  /** The nights the sleeping-style shares are taken over: known length, filed in a year. */
+  lodgingSleepStyleNights: insight("sum", "nights", "LodgingInsightsSection"),
+  /** Weekend plus weekday nights: every night with a hotel-local date. */
+  lodgingCalendarWeekNights: insight("sum", "nights", "LodgingInsightsSection"),
+  /** Finished trips with dated stays — the median of moves is read over these. */
+  lodgingCompletedTripBaseCount: insight("sum", "trips", "LodgingInsightsSection"),
+  /** Like-for-like price comparisons (same house, room, board, currency); lifetime only. */
+  lodgingPriceComparisonCount: insight("sum", "comparisons", "LodgingInsightsSection", ["allTime"]),
+  /** Months of a year holding a night — the "once through the calendar" tile, per year. */
+  lodgingCalendarMonthCount: insight("distinct", "months", "LodgingInsightsSection"),
 
   /** A place's first dated visit, when no undated visit of it could be earlier. */
   placeDiscoveryVisits: insight("sum", "visits", "PoiInsightsSection"),

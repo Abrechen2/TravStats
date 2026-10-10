@@ -1,5 +1,5 @@
 import { haversineKm } from "../shared/geo/haversine";
-import { isRiverCruise } from "../shared/cruiseKind";
+import { isRiverCruise, isSeaDay } from "../shared/cruiseKind";
 
 export interface CruisePortData {
   id: number;
@@ -257,8 +257,9 @@ export function calculateCruiseStats(
 
     for (const stop of effectiveStops) {
       if (stop.isAtSea) {
-        // A river cruise's day between ports is not a sea day (#359).
-        if (river) continue;
+        // A river cruise's day between ports is not a sea day (#359) —
+        // `isSeaDay` is the one place that says so.
+        if (!isSeaDay(cruise, stop)) continue;
         seaDays += 1;
         currentSeaStreak += 1;
         if (currentSeaStreak > seaDaysStreak) seaDaysStreak = currentSeaStreak;

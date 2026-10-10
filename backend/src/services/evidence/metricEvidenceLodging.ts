@@ -48,7 +48,7 @@ import { domainDistinctEvidence, domainSumEvidence, readYearScope } from "./doma
  * fact.
  */
 
-interface ScopedLodging {
+export interface ScopedLodging {
   stats: LodgingStats;
   stays: StayView[];
   houses: LodgingHouseRow[];
@@ -58,7 +58,7 @@ interface ScopedLodging {
 }
 
 /** One stay with everything a measure reads, resolved once. */
-interface StayView {
+export interface StayView {
   id: string;
   data: LodgingStayData;
   state: LodgingCountState;
@@ -88,7 +88,7 @@ function viewOf(row: LodgingStayRow): StayView {
   return { id: row.id, data: row.stay, state, timing, nights };
 }
 
-async function loadScoped(
+export async function loadScoped(
   userId: string,
   scope: EvidenceScope,
   key: string
@@ -112,11 +112,11 @@ async function loadScoped(
 }
 
 /** The stays that feed every actual figure — the calculator's `activeStays`. */
-function visited(stays: StayView[]): StayView[] {
+export function visited(stays: StayView[]): StayView[] {
   return stays.filter((s) => s.state === "visited");
 }
 
-function entryOf(
+export function entryOf(
   stay: StayView,
   fields: Partial<Pick<EvidenceEntry, "contribution" | "credits" | "subtitle">>
 ): EvidenceEntry {

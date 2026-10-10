@@ -84,6 +84,13 @@ describe("time in port (forgejo#257)", () => {
     ]);
     expect(foldPortStays([odd])).toMatchObject({ stays: [], inconsistent: 1 });
   });
+
+  it("refuses a departure AT the arrival too — a stay of zero minutes is no stay", () => {
+    const still = cruise("z", "2024-01-01", "2024-01-02", null, null, [
+      call(1, "OSL", "2024-01-01", { arrive: "2024-01-01T08:00", leave: "2024-01-01T08:00" }),
+    ]);
+    expect(foldPortStays([still])).toMatchObject({ stays: [], inconsistent: 1 });
+  });
 });
 
 describe("sea days and port days (forgejo#257)", () => {
@@ -102,6 +109,22 @@ describe("sea days and port days (forgejo#257)", () => {
     ]);
     expect(cruiseDays(crossing).type).toBe("seaHeavy");
     expect(cruiseDays(BALTIC_2024)).toMatchObject({ portDays: 1, type: null });
+  });
+
+  it("calls a river cruise's portless day a river day — no sea day, and not unlisted (#359)", () => {
+    // The same itinerary on the Rhine: the rollup and the badges say a
+    // river's day between ports is not a sea day (`isSeaDay`); the day
+    // pattern asked `isAtSea` alone and made one up.
+    const rhine = cruise("r", "2019-06-01", "2019-06-05", "HAM", "HAM", NORWAY_2019.calls);
+    const river = { ...rhine, input: { ...rhine.input, kind: "river" } };
+    expect(cruiseDays(river)).toMatchObject({
+      seaDays: 0,
+      portDays: 2,
+      riverDays: 1,
+      listedDays: 2,
+      unlistedDays: 2,
+      type: "portIntensive",
+    });
   });
 });
 

@@ -45,6 +45,16 @@ const base: LodgingStats = {
 
 const EUR = "EUR";
 
+/**
+ * A card's or list's own heading. Its title also names an entry of the
+ * section's "So wird gezählt", so the text alone matches twice.
+ */
+function heading(text: string): HTMLElement {
+  const found = screen.getAllByText(text).find((el) => el.tagName === "H3");
+  if (!found) throw new Error(`no heading "${text}"`);
+  return found;
+}
+
 describe("LodgingMoneySection", () => {
   beforeEach(() => {
     useSettingsStore.setState({
@@ -107,7 +117,7 @@ describe("LodgingMoneySection", () => {
         stats={{ ...base, awardNights: 3, price: { ...base.price, awardNightsValue: 300 } }}
       />
     );
-    expect(screen.getByText("lodging:stats.money.awardValue")).toBeTruthy();
+    expect(heading("lodging:stats.money.awardValue")).toBeTruthy();
   });
 
   it("labels money with the base currency, not the independent units preference", () => {
@@ -230,7 +240,7 @@ describe("LodgingQualitySection", () => {
         }}
       />
     );
-    expect(screen.getByText("lodging:stats.quality.bestValue")).toBeTruthy();
+    expect(heading("lodging:stats.quality.bestValue")).toBeTruthy();
     expect(screen.getByText(/Pension Seeblick/)).toBeTruthy();
   });
 });

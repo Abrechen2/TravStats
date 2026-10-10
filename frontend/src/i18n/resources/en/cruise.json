@@ -345,7 +345,7 @@
     "fun": {
       "title": "Curiosities",
       "first": "First cruise",
-      "mostPorts": "Most ports",
+      "mostPorts": "Most stops in one itinerary",
       "highestDeck": "Highest deck",
       "onTrips": "On a trip",
       "onTripsDesc": "cruises that belong to a trip",
@@ -358,6 +358,78 @@
       "companionsTotalAfter_other": " different people",
       "noCompanions": "No companions recorded.",
       "more": "+ {{count}} more"
+    },
+    "help": {
+      "season": {
+        "unit": "The month in which most cruises began, across all years; on a tie, the earlier one. With it the cruises per start year and per start month.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Every cruise on your list, booked and cancelled ones included – in this period {{booked}} booked or running and {{cancelled}} cancelled.",
+        "coverage": "{{undated}} cruises without a start date are missing from this block. Tap the value for the cruises with a start date.",
+        "exclusions": "Nothing is left out by status; what is only booked or cancelled is named under source."
+      },
+      "averageNights": {
+        "unit": "Nights aboard per cruise on average: days between start and end date.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Every cruise on your list, booked and cancelled ones included – in this period {{booked}} booked or running and {{cancelled}} cancelled.",
+        "coverage": "Only cruises with both dates; without any, “—”. Tap the value for the cruises with their nights.",
+        "exclusions": "Nothing is left out by status; what is only booked or cancelled is named under source."
+      },
+      "longestShortest": {
+        "unit": "The cruise with the most and the one with the fewest nights aboard (days between start and end date); on a tie, the first one found.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Every cruise on your list, booked and cancelled ones included – in this period {{booked}} booked or running and {{cancelled}} cancelled.",
+        "coverage": "Only cruises with both dates. Tap a value for the cruises with their nights.",
+        "exclusions": "Nothing is left out by status; what is only booked or cancelled is named under source."
+      },
+      "byCurrency": {
+        "unit": "What the cruises cost, per currency on its own – never added across currencies; with a price per night within the currency where nights are known.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards), the price recorded and its currency.",
+        "coverage": "{{priced}} of {{total}} sailed cruises have a price (0 included).",
+        "exclusions": "Booked cruises with a price do not count – they are named under the list. Booked, running and cancelled cruises do not count."
+      },
+      "baseTotal": {
+        "unit": "Sum of the prices in your current base currency ({{currency}}).",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Your sailed cruises (completed or recorded afterwards): a price recorded in {{currency}} or converted into {{currency}} when saved.",
+        "coverage": "Cruises whose price could not be converted are named, not guessed; when none converts, the value stays open (“—”) rather than 0. Tap the value for the cruises.",
+        "exclusions": "A conversion into an earlier base currency does not count. Booked, running and cancelled cruises do not count."
+      },
+      "first": {
+        "unit": "The cruise with the earliest start date.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Every cruise on your list, booked and cancelled ones included – in this period {{booked}} booked or running and {{cancelled}} cancelled.",
+        "coverage": "Cruises without a start date cannot be the first. Tap the value for the cruises with a start date, oldest first.",
+        "exclusions": "Nothing is left out by status; what is only booked or cancelled is named under source."
+      },
+      "mostPorts": {
+        "unit": "The most port calls in the itinerary of a single cruise – every stop that is not a sea day, at unrecognised ports too.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Every cruise on your list, booked and cancelled ones included – in this period {{booked}} booked or running and {{cancelled}} cancelled.",
+        "coverage": "Embarkation and disembarkation count only when entered as a stop – unlike “Most catalogued ports in one cruise” above, which counts only ports from the port catalogue, embarkation and disembarkation included, and only sailed cruises. Tap the value for the cruises with their calls.",
+        "exclusions": "Nothing is left out by status; what is only booked or cancelled is named under source."
+      },
+      "highestDeck": {
+        "unit": "The highest deck number of your cabin, and the cruise.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Every cruise on your list, booked and cancelled ones included – in this period {{booked}} booked or running and {{cancelled}} cancelled.",
+        "coverage": "Only cruises with a deck recorded. Tap the value for those cruises with their deck.",
+        "exclusions": "Nothing is left out by status; what is only booked or cancelled is named under source."
+      },
+      "onTrips": {
+        "unit": "Cruises filed under a trip.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Every cruise on your list, booked and cancelled ones included – in this period {{booked}} booked or running and {{cancelled}} cancelled.",
+        "coverage": "Tap the value for the list.",
+        "exclusions": "Nothing is left out by status; what is only booked or cancelled is named under source."
+      },
+      "cabinsCompanions": {
+        "unit": "Cruises per cabin type and per companion; the number below names the companions, each once however often they came.",
+        "time": "Year: the year of the start day (the stored calendar day, read in UTC); without a year, all.",
+        "source": "Every cruise on your list, booked and cancelled ones included – in this period {{booked}} booked or running and {{cancelled}} cancelled.",
+        "coverage": "Without a cabin type or companions recorded a cruise is missing from that list only. Tap the number of companions for the list.",
+        "exclusions": "Nothing is left out by status; what is only booked or cancelled is named under source."
+      }
     }
   },
   "tracks": {

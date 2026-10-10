@@ -20,7 +20,7 @@ import { computeRevisits } from "./revisits";
 import { computeTripBases } from "./tripBases";
 import { computePriceTrends } from "./priceTrends";
 import { computeCalendar, computeWeekRhythm, isWeekendNight } from "./weekRhythm";
-import type { InsightStay, LodgingInsights } from "./types";
+import type { InsightStay, LodgingInsights, PriceTrend, TripBase } from "./types";
 
 export type { InsightStay, LodgingInsights } from "./types";
 
@@ -30,6 +30,11 @@ export const LODGING_INSIGHT_MEASURES = [
   "lodgingWeekdayNights",
   "lodgingBusinessNights",
   "lodgingReturnHouseCount",
+  "lodgingSleepStyleNights",
+  "lodgingCalendarWeekNights",
+  "lodgingCompletedTripBaseCount",
+  "lodgingPriceComparisonCount",
+  "lodgingCalendarMonthCount",
 ] as const;
 
 function stayRef(p: PreparedStay): EntryRef {
@@ -57,10 +62,98 @@ function perYear(
   return [...years.entries()].map(([year, nights]) => ({ year, nights }));
 }
 
-function measureItems(counted: readonly PreparedStay[]): MeasureItems {
+/**
+ * The nights the sleeping style shares are taken over (`sleepStyle.ts`): a
+ * stay with a known length, filed per year by its nights — and only where it
+ * HAS a year, because the tile's total is the sum of the years.
+ */
+function sleepStyleItems(p: PreparedStay, ref: EntryRef): MeasureItem[] {
+  if (!p.timing.nightsKnown) return [];
+  if (p.nightDays.length > 0) {
+    return perYear(p, () => true).map(({ year, nights }) => ({
+      entry: ref,
+      year,
+      contribution: nights,
+    }));
+  }
+  if (p.year === null || p.nights <= 0) return [];
+  return [{ entry: ref, year: p.year, contribution: p.nights }];
+}
+
+/**
+ * The months a stay fills (`computeCalendar`): every month a dated night
+ * falls in, or the one month a month-precise stay names; a year-precise stay
+ * proves no month. Credited as `YYYY-MM`, so a year's figure is its distinct
+ * months.
+ */
+function calendarItems(p: PreparedStay, ref: EntryRef): MeasureItem[] {
+  const byYear = new Map<number, Set<string>>();
+  const mark = (at: Date): void => {
+    const year = at.getUTCFullYear();
+    const set = byYear.get(year) ?? new Set<string>();
+    set.add(at.toISOString().slice(0, 7));
+    byYear.set(year, set);
+  };
+  if (p.nightDays.length > 0) {
+    for (const day of p.nightDays) mark(new Date(day));
+  } else if (p.timing.precision === "MONTH" && p.timing.anchor && p.nights > 0) {
+    mark(p.timing.anchor);
+  }
+  return [...byYear.entries()].map(([year, months]) => ({
+    entry: ref,
+    year,
+    credits: [...months].sort(),
+  }));
+}
+
+/** A finished trip with dated stays — the trips the median of moves is read over. */
+function tripBaseItem(base: TripBase): MeasureItem {
+  return {
+    entry: {
+      domain: "trip",
+      id: base.tripId,
+      href: `/trips/${base.tripId}`,
+      title: { text: base.tripName },
+      subtitle: {
+        key: "evidence.subtitle.tripBase",
+        values: { houses: base.houses, changes: base.changes },
+      },
+      // The trip's year is all the table files it under (its first dated night).
+      date: { value: `${base.year}-01-01`, precision: "year" },
+    },
+    year: base.year,
+    contribution: 1,
+  };
+}
+
+/** One like-for-like price comparison: a house, its room and board, one currency. */
+function priceComparisonItem(group: PriceTrend): MeasureItem {
+  const detail = [group.roomCategory, group.board, group.currency].filter(Boolean).join(" · ");
+  return {
+    entry: {
+      domain: "lodging",
+      id: [group.lodgingId, group.roomCategory ?? "", group.board ?? "", group.currency].join("|"),
+      href: `/lodging/${group.lodgingId}`,
+      title: { text: group.name },
+      subtitle: { text: detail },
+      date: null,
+    },
+    year: null,
+    contribution: 1,
+  };
+}
+
+function measureItems(
+  counted: readonly PreparedStay[],
+  trips: readonly TripBase[],
+  prices: readonly PriceTrend[]
+): MeasureItems {
   const weekend: MeasureItem[] = [];
   const weekday: MeasureItem[] = [];
+  const week: MeasureItem[] = [];
   const business: MeasureItem[] = [];
+  const sleepStyle: MeasureItem[] = [];
+  const calendar: MeasureItem[] = [];
   const houseYears = new Map<string, { ref: PreparedStay; years: Set<number> }>();
 
   for (const p of counted) {
@@ -71,6 +164,11 @@ function measureItems(counted: readonly PreparedStay[]): MeasureItems {
     for (const { year, nights } of perYear(p, (day) => !isWeekendNight(day))) {
       weekday.push({ entry: ref, year, contribution: nights });
     }
+    for (const { year, nights } of perYear(p, () => true)) {
+      week.push({ entry: ref, year, contribution: nights });
+    }
+    sleepStyle.push(...sleepStyleItems(p, ref));
+    calendar.push(...calendarItems(p, ref));
     if (p.stay.trip?.category === "business" && p.nights > 0) {
       if (p.nightDays.length > 0) {
         for (const { year, nights } of perYear(p, () => true)) {
@@ -111,6 +209,11 @@ function measureItems(counted: readonly PreparedStay[]): MeasureItems {
     lodgingWeekdayNights: weekday,
     lodgingBusinessNights: business,
     lodgingReturnHouseCount: returned,
+    lodgingSleepStyleNights: sleepStyle,
+    lodgingCalendarWeekNights: week,
+    lodgingCompletedTripBaseCount: trips.filter((b) => b.completed).map(tripBaseItem),
+    lodgingPriceComparisonCount: prices.map(priceComparisonItem),
+    lodgingCalendarMonthCount: calendar,
   };
 }
 
@@ -120,16 +223,18 @@ export function computeLodgingInsights(
 ): { insights: LodgingInsights; items: MeasureItems; plannedStays: number } {
   const prepared = prepareStays(stays, now);
   const counted = prepared.counted;
+  const tripBases = computeTripBases(prepared, now);
+  const priceTrends = computePriceTrends(counted);
   return {
     insights: {
       sleepStyle: computeSleepStyle(counted),
       revisits: computeRevisits(counted),
-      tripBases: computeTripBases(prepared, now),
-      priceTrends: computePriceTrends(counted),
+      tripBases,
+      priceTrends,
       weekRhythm: computeWeekRhythm(counted),
       calendar: computeCalendar(counted),
     },
-    items: measureItems(counted),
+    items: measureItems(counted, tripBases.trips, priceTrends.groups),
     plannedStays: prepared.planned,
   };
 }

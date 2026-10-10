@@ -4,6 +4,8 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import type { LodgingStats } from "../../../types/lodging";
 import StatCard from "../StatCard";
+import CountingHelp from "../counting/CountingHelp";
+import type { CountingEntry } from "../counting/countingEntry";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import RankedBarList, { type RankedRow } from "./RankedBarList";
 
@@ -56,14 +58,30 @@ export default function LodgingRecordsSection({ stats, evidenceScope }: Props): 
   }));
 
   const cards: JSX.Element[] = [];
+  // The counting help names the cards that are drawn, and only those.
+  const help: CountingEntry[] = [];
+  // A record names one stay or one house; it opens the stays it was found
+  // among — every stay with its nights for the longest, every stay for the
+  // most returns — where the record holder is one row of the list.
+  const among = (key: string) =>
+    evidenceScope
+      ? { kind: "metric" as const, key, scope: evidenceScope, renderedValue: null }
+      : undefined;
 
   if (stats.longestStayNights > 0) {
+    help.push({
+      term: t("lodging:stats.records.longestStay"),
+      helpKey: "lodging:stats.help.longestStay",
+      values: { unknown: stats.staysWithUnknownLength ?? 0 },
+    });
+
     cards.push(
       <StatCard
         key="longest"
         accent={accent}
         valueSize="md"
         title={t("lodging:stats.records.longestStay")}
+        evidence={among("lodgingNightsTotal")}
         value={stats.longestStayNights}
         description={t("lodging:stats.records.longestStayDesc")}
       />
@@ -71,12 +89,18 @@ export default function LodgingRecordsSection({ stats, evidenceScope }: Props): 
   }
 
   if (stats.sameHotelRepeatMax > 1) {
+    help.push({
+      term: t("lodging:stats.records.mostReturns"),
+      helpKey: "lodging:stats.help.mostReturns",
+    });
+
     cards.push(
       <StatCard
         key="repeat"
         accent={accent}
         valueSize="md"
         title={t("lodging:stats.records.mostReturns")}
+        evidence={among("lodgingStaysCount")}
         value={stats.sameHotelRepeatMax}
         description={t("lodging:stats.records.mostReturnsDesc")}
       />
@@ -84,6 +108,11 @@ export default function LodgingRecordsSection({ stats, evidenceScope }: Props): 
   }
 
   if (stats.perfectStays > 0 || stats.enduredStays > 0) {
+    help.push({
+      term: t("lodging:stats.records.perfectStays"),
+      helpKey: "lodging:stats.help.perfectStays",
+    });
+
     cards.push(
       <StatCard
         key="perfect"
@@ -109,6 +138,11 @@ export default function LodgingRecordsSection({ stats, evidenceScope }: Props): 
   }
 
   if (stats.oneNightStays > 0) {
+    help.push({
+      term: t("lodging:stats.records.oneNighters"),
+      helpKey: "lodging:stats.help.oneNighters",
+    });
+
     cards.push(
       <StatCard
         key="onenight"
@@ -155,6 +189,16 @@ export default function LodgingRecordsSection({ stats, evidenceScope }: Props): 
           moreLabel={(hidden) => t("lodging:stats.records.more", { count: hidden })}
         />
       )}
+
+      <CountingHelp
+        testId="lodging-records-help"
+        entries={[
+          ...help,
+          ...(rankingAvailable
+            ? [{ term: t("lodging:stats.records.byHotel"), helpKey: "lodging:stats.help.byHotel" }]
+            : []),
+        ]}
+      />
     </section>
   );
 }

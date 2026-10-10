@@ -3,6 +3,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { countryName } from "../../../lib/countryFlag";
 import type { LodgingPlace, LodgingStats } from "../../../types/lodging";
 import StatCard from "../StatCard";
+import CountingHelp from "../counting/CountingHelp";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import RankedBarList from "./RankedBarList";
 import { formatLatitude as formatLat, formatLongitude as formatLon } from "../../../lib/hemisphere";
@@ -38,6 +39,17 @@ export default function LodgingGeoSection({ stats, evidenceScope }: Props): JSX.
   const { t, i18n } = useTranslation(["lodging"]);
   const { geo } = stats;
   const locale = i18n.language.startsWith("en") ? "en" : "de";
+  // The extremes and the centre are read off the stays with coordinates; each
+  // tile opens that list, every stay naming its position and night weight.
+  const located = evidenceScope
+    ? {
+        kind: "metric" as const,
+        key: "lodgingLocatedStaysCount",
+        scope: evidenceScope,
+        renderedValue: null,
+      }
+    : undefined;
+  const unlocated = { unlocated: geo.unlocatedStays };
 
   return (
     <section className="mt-8">
@@ -72,6 +84,7 @@ export default function LodgingGeoSection({ stats, evidenceScope }: Props): JSX.
           accent={LODGING_ACCENT}
           valueSize="md"
           title={t("lodging:stats.geo.northernmost")}
+          evidence={located}
           value={geo.northernmost ? formatLat(geo.northernmost.lat) : "—"}
           description={
             geo.northernmost ? placeLabel(geo.northernmost) : t("lodging:stats.geo.noCoords")
@@ -81,6 +94,7 @@ export default function LodgingGeoSection({ stats, evidenceScope }: Props): JSX.
           accent={LODGING_ACCENT}
           valueSize="md"
           title={t("lodging:stats.geo.southernmost")}
+          evidence={located}
           value={geo.southernmost ? formatLat(geo.southernmost.lat) : "—"}
           description={
             geo.southernmost ? placeLabel(geo.southernmost) : t("lodging:stats.geo.noCoords")
@@ -90,6 +104,7 @@ export default function LodgingGeoSection({ stats, evidenceScope }: Props): JSX.
           accent={LODGING_ACCENT}
           valueSize="sm"
           title={t("lodging:stats.geo.centre")}
+          evidence={located}
           value={
             geo.centreOfGravity
               ? `${formatLat(geo.centreOfGravity.lat)} · ${formatLon(geo.centreOfGravity.lon)}`
@@ -130,6 +145,27 @@ export default function LodgingGeoSection({ stats, evidenceScope }: Props): JSX.
           moreLabel={(hidden) => t("lodging:stats.more", { count: hidden })}
         />
       </div>
+
+      <CountingHelp
+        testId="lodging-geo-help"
+        entries={[
+          { term: t("lodging:stats.geo.continents"), helpKey: "lodging:stats.help.continents" },
+          {
+            term: `${t("lodging:stats.geo.northernmost")} · ${t("lodging:stats.geo.southernmost")}`,
+            helpKey: "lodging:stats.help.northSouth",
+            values: unlocated,
+          },
+          {
+            term: t("lodging:stats.geo.centre"),
+            helpKey: "lodging:stats.help.centre",
+            values: unlocated,
+          },
+          {
+            term: `${t("lodging:stats.geo.topCities")} · ${t("lodging:stats.geo.topCountries")}`,
+            helpKey: "lodging:stats.help.topPlaces",
+          },
+        ]}
+      />
     </section>
   );
 }

@@ -345,7 +345,7 @@
     "fun": {
       "title": "Kurioses",
       "first": "Erste Kreuzfahrt",
-      "mostPorts": "Meiste Häfen",
+      "mostPorts": "Meiste Stopps im Reiseverlauf",
       "highestDeck": "Höchstes Deck",
       "onTrips": "In einer Reise",
       "onTripsDesc": "Kreuzfahrten, die zu einer Reise gehören",
@@ -358,6 +358,78 @@
       "companionsTotalAfter_other": " verschiedene Personen",
       "noCompanions": "Keine Mitreisenden erfasst.",
       "more": "+ {{count}} weitere"
+    },
+    "help": {
+      "season": {
+        "unit": "Der Monat, in dem die meisten Kreuzfahrten begannen, über alle Jahre; bei Gleichstand der frühere. Dazu die Kreuzfahrten je Startjahr und je Startmonat.",
+        "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
+        "source": "Alle Kreuzfahrten deiner Liste, auch gebuchte und stornierte – in diesem Zeitraum {{booked}} gebuchte oder laufende und {{cancelled}} stornierte.",
+        "coverage": "{{undated}} Kreuzfahrten ohne Startdatum fehlen in diesem Block. Tippe auf den Wert für die Kreuzfahrten mit Startdatum.",
+        "exclusions": "Nichts wird nach Status ausgeschlossen; was nur gebucht oder storniert ist, nennt die Quelle."
+      },
+      "averageNights": {
+        "unit": "Nächte an Bord je Kreuzfahrt im Durchschnitt: Tage zwischen Start- und Enddatum.",
+        "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
+        "source": "Alle Kreuzfahrten deiner Liste, auch gebuchte und stornierte – in diesem Zeitraum {{booked}} gebuchte oder laufende und {{cancelled}} stornierte.",
+        "coverage": "Nur Kreuzfahrten mit beiden Daten; ohne solche „—“. Tippe auf den Wert für die Kreuzfahrten mit ihren Nächten.",
+        "exclusions": "Nichts wird nach Status ausgeschlossen; was nur gebucht oder storniert ist, nennt die Quelle."
+      },
+      "longestShortest": {
+        "unit": "Die Kreuzfahrt mit den meisten und die mit den wenigsten Nächten an Bord (Tage zwischen Start- und Enddatum); bei Gleichstand die zuerst gefundene.",
+        "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
+        "source": "Alle Kreuzfahrten deiner Liste, auch gebuchte und stornierte – in diesem Zeitraum {{booked}} gebuchte oder laufende und {{cancelled}} stornierte.",
+        "coverage": "Nur Kreuzfahrten mit beiden Daten. Tippe auf einen Wert für die Kreuzfahrten mit ihren Nächten.",
+        "exclusions": "Nichts wird nach Status ausgeschlossen; was nur gebucht oder storniert ist, nennt die Quelle."
+      },
+      "byCurrency": {
+        "unit": "Was die Kreuzfahrten kosteten, je Währung für sich – nie über Währungen addiert; mit Preis pro Nacht innerhalb der Währung, wo Nächte bekannt sind.",
+        "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
+        "source": "Deine gefahrenen Kreuzfahrten (abgeschlossen oder nachgetragen), der eingetragene Preis und seine Währung.",
+        "coverage": "{{priced}} von {{total}} gefahrenen Kreuzfahrten haben einen Preis (auch 0).",
+        "exclusions": "Gebuchte Kreuzfahrten mit Preis zählen nicht – sie stehen unter der Liste. Gebuchte, laufende und stornierte Kreuzfahrten zählen nicht."
+      },
+      "baseTotal": {
+        "unit": "Summe der Preise in deiner heutigen Basiswährung ({{currency}}).",
+        "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
+        "source": "Deine gefahrenen Kreuzfahrten (abgeschlossen oder nachgetragen): ein Preis, der in {{currency}} erfasst ist oder beim Speichern in {{currency}} umgerechnet wurde.",
+        "coverage": "Kreuzfahrten, deren Preis sich nicht umrechnen ließ, werden genannt und nicht geraten; lässt sich keiner umrechnen, bleibt der Wert offen („—“) statt 0. Tippe auf den Wert für die Kreuzfahrten.",
+        "exclusions": "Eine Umrechnung in eine frühere Basiswährung zählt nicht. Gebuchte, laufende und stornierte Kreuzfahrten zählen nicht."
+      },
+      "first": {
+        "unit": "Die Kreuzfahrt mit dem frühesten Startdatum.",
+        "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
+        "source": "Alle Kreuzfahrten deiner Liste, auch gebuchte und stornierte – in diesem Zeitraum {{booked}} gebuchte oder laufende und {{cancelled}} stornierte.",
+        "coverage": "Kreuzfahrten ohne Startdatum können nicht die erste sein. Tippe auf den Wert für die Kreuzfahrten mit Startdatum, älteste zuerst.",
+        "exclusions": "Nichts wird nach Status ausgeschlossen; was nur gebucht oder storniert ist, nennt die Quelle."
+      },
+      "mostPorts": {
+        "unit": "Die meisten Hafenstopps im Reiseverlauf einer einzigen Kreuzfahrt – jeder Stopp, der kein Seetag ist, auch an nicht erkannten Häfen.",
+        "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
+        "source": "Alle Kreuzfahrten deiner Liste, auch gebuchte und stornierte – in diesem Zeitraum {{booked}} gebuchte oder laufende und {{cancelled}} stornierte.",
+        "coverage": "Ein- und Ausschiffungshafen zählen nur, wenn sie als Stopp eingetragen sind – anders als „Meiste bekannte Häfen einer Kreuzfahrt“ oben, das nur Häfen aus dem Hafenkatalog zählt, Ein- und Ausschiffung eingeschlossen, und nur gefahrene Kreuzfahrten. Tippe auf den Wert für die Kreuzfahrten mit ihren Stopps.",
+        "exclusions": "Nichts wird nach Status ausgeschlossen; was nur gebucht oder storniert ist, nennt die Quelle."
+      },
+      "highestDeck": {
+        "unit": "Die höchste Decknummer deiner Kabine und die Kreuzfahrt dazu.",
+        "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
+        "source": "Alle Kreuzfahrten deiner Liste, auch gebuchte und stornierte – in diesem Zeitraum {{booked}} gebuchte oder laufende und {{cancelled}} stornierte.",
+        "coverage": "Nur Kreuzfahrten mit eingetragenem Deck. Tippe auf den Wert für diese Kreuzfahrten mit ihrem Deck.",
+        "exclusions": "Nichts wird nach Status ausgeschlossen; was nur gebucht oder storniert ist, nennt die Quelle."
+      },
+      "onTrips": {
+        "unit": "Kreuzfahrten, die einer Reise zugeordnet sind.",
+        "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
+        "source": "Alle Kreuzfahrten deiner Liste, auch gebuchte und stornierte – in diesem Zeitraum {{booked}} gebuchte oder laufende und {{cancelled}} stornierte.",
+        "coverage": "Tippe auf den Wert für die Liste.",
+        "exclusions": "Nichts wird nach Status ausgeschlossen; was nur gebucht oder storniert ist, nennt die Quelle."
+      },
+      "cabinsCompanions": {
+        "unit": "Kreuzfahrten je Kabinenart und je Mitreisendem; die Zahl darunter nennt die Mitreisenden, jeden einmal, wie oft er auch mitfuhr.",
+        "time": "Jahr: das Jahr des Starttags (der gespeicherte Kalendertag, in UTC gelesen); ohne Jahr alle.",
+        "source": "Alle Kreuzfahrten deiner Liste, auch gebuchte und stornierte – in diesem Zeitraum {{booked}} gebuchte oder laufende und {{cancelled}} stornierte.",
+        "coverage": "Ohne eingetragene Kabinenart oder Mitreisende fehlt eine Kreuzfahrt nur in der jeweiligen Liste. Tippe auf die Zahl der Mitreisenden für die Liste.",
+        "exclusions": "Nichts wird nach Status ausgeschlossen; was nur gebucht oder storniert ist, nennt die Quelle."
+      }
     }
   },
   "tracks": {

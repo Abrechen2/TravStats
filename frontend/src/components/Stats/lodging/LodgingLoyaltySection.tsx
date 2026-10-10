@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { LodgingStats } from "../../../types/lodging";
 import StatCard from "../StatCard";
+import CountingHelp from "../counting/CountingHelp";
+import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import RankedBarList from "./RankedBarList";
 import { loyaltyListLink } from "../../Loyalty/LoyaltyListFilter";
 
@@ -11,6 +13,12 @@ const LIST_LIMIT = 8;
 
 interface Props {
   stats: LodgingStats;
+  /**
+   * The population these figures were measured over, present only where a
+   * tile may open the evidence panel — the statistics page passes it, a
+   * screen without a chosen period does not, and its tiles stay plain.
+   */
+  evidenceScope?: EvidenceScopeParams;
 }
 
 /**
@@ -25,7 +33,7 @@ interface Props {
  * loyal" even for someone who stays in chains twice a year and sleeps in
  * guesthouses the rest of the time.
  */
-export default function LodgingLoyaltySection({ stats }: Props): JSX.Element {
+export default function LodgingLoyaltySection({ stats, evidenceScope }: Props): JSX.Element {
   const { t } = useTranslation(["lodging"]);
   const { loyalty } = stats;
   const totalNights = loyalty.chainNights + loyalty.independentNights;
@@ -44,6 +52,14 @@ export default function LodgingLoyaltySection({ stats }: Props): JSX.Element {
     []
   );
 
+  // Every share here is read off the chain nights (`lodgingChainNightsTotal`,
+  // each stay naming its chain); the top chain opens its own nights, which is
+  // the number its description states.
+  const opens = (key: string, renderedValue: number | null) =>
+    evidenceScope
+      ? { kind: "metric" as const, key, scope: evidenceScope, renderedValue }
+      : undefined;
+
   return (
     <section className="mt-8">
       <h2 className="mb-6 text-2xl font-bold" style={{ color: "var(--text-primary)" }}>
@@ -55,6 +71,7 @@ export default function LodgingLoyaltySection({ stats }: Props): JSX.Element {
           accent={LODGING_ACCENT}
           valueSize="md"
           title={t("lodging:stats.loyalty.chainShare")}
+          evidence={opens("lodgingChainNightsTotal", null)}
           value={totalNights > 0 ? percent(loyalty.chainNights / totalNights) : "—"}
           description={t("lodging:stats.loyalty.chainShareDesc", {
             chain: loyalty.chainNights,
@@ -65,6 +82,7 @@ export default function LodgingLoyaltySection({ stats }: Props): JSX.Element {
           accent={LODGING_ACCENT}
           valueSize="md"
           title={t("lodging:stats.loyalty.topChain")}
+          evidence={opens("lodgingTopChainNights", loyalty.topChain?.nights ?? null)}
           value={loyalty.topChain?.name ?? "—"}
           description={
             loyalty.topChain
@@ -76,6 +94,7 @@ export default function LodgingLoyaltySection({ stats }: Props): JSX.Element {
           accent={LODGING_ACCENT}
           valueSize="md"
           title={t("lodging:stats.loyalty.topChainShare")}
+          evidence={opens("lodgingChainNightsTotal", null)}
           value={percent(loyalty.topChainShare)}
           description={t("lodging:stats.loyalty.topChainShareDesc")}
         />
@@ -83,6 +102,7 @@ export default function LodgingLoyaltySection({ stats }: Props): JSX.Element {
           accent={LODGING_ACCENT}
           valueSize="md"
           title={t("lodging:stats.loyalty.concentration")}
+          evidence={opens("lodgingChainNightsTotal", null)}
           value={loyalty.concentration !== null ? loyalty.concentration.toFixed(2) : "—"}
           description={t("lodging:stats.loyalty.concentrationDesc")}
           footnote={t("lodging:stats.loyalty.concentrationFootnote")}
@@ -179,6 +199,31 @@ export default function LodgingLoyaltySection({ stats }: Props): JSX.Element {
           )}
         </div>
       </div>
+
+      <CountingHelp
+        testId="lodging-loyalty-help"
+        entries={[
+          {
+            term: t("lodging:stats.loyalty.chainShare"),
+            helpKey: "lodging:stats.help.chainShare",
+            values: { chain: loyalty.chainNights, independent: loyalty.independentNights },
+          },
+          { term: t("lodging:stats.loyalty.topChain"), helpKey: "lodging:stats.help.topChain" },
+          {
+            term: t("lodging:stats.loyalty.topChainShare"),
+            helpKey: "lodging:stats.help.topChainShare",
+          },
+          {
+            term: t("lodging:stats.loyalty.concentration"),
+            helpKey: "lodging:stats.help.concentration",
+          },
+          { term: t("lodging:stats.loyalty.byChain"), helpKey: "lodging:stats.help.chainRanking" },
+          {
+            term: t("lodging:stats.loyalty.programmeYears"),
+            helpKey: "lodging:stats.help.programmeYears",
+          },
+        ]}
+      />
     </section>
   );
 }

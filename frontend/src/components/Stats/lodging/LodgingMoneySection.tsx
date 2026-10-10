@@ -6,6 +6,7 @@ import { countryName } from "../../../lib/countryFlag";
 import type { LodgingPriceGroup, LodgingStats } from "../../../types/lodging";
 import StatCard from "../StatCard";
 import EvidenceNumber from "../EvidenceNumber";
+import CountingHelp from "../counting/CountingHelp";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import RankedBarList, { type RankedRow } from "./RankedBarList";
 
@@ -15,8 +16,8 @@ const LIST_LIMIT = 6;
 interface Props {
   stats: LodgingStats;
   /**
-   * The population these figures were measured over, present only where the
-   * award-nights count may open the evidence panel. The statistics page passes
+   * The population these figures were measured over, present only where a
+   * figure may open the evidence panel. The statistics page passes
    * it; anywhere without a chosen period the number stays plain text, because a
    * panel opened from there would answer for a period the screen never showed —
    * the same rule `LodgingStatStrip` follows.
@@ -55,6 +56,25 @@ export default function LodgingMoneySection({ stats, evidenceScope }: Props): JS
     }));
 
   const noPrices = price.pricedStays === 0;
+
+  // The average, the median and the two extremes are all read off the stays
+  // with a comparable price; each tile opens that set, every stay naming its
+  // price per night (`lodgingPricedNightsTotal`). The tile's own figure is not
+  // that count, so no rendered value is compared against it.
+  const pricedNights = evidenceScope
+    ? {
+        kind: "metric" as const,
+        key: "lodgingPricedNightsTotal",
+        scope: evidenceScope,
+        renderedValue: null,
+      }
+    : undefined;
+  const helpValues = {
+    currency: baseCurrency,
+    stays: price.pricedStays,
+    nights: price.pricedNights,
+    omitted: price.unpricedStays,
+  };
 
   // Without a single price the four tiles and four rankings were eight empty
   // states in a row — most of an 8,000px phone page for one stay (CT106 audit
@@ -97,6 +117,7 @@ export default function LodgingMoneySection({ stats, evidenceScope }: Props): JS
           accent={LODGING_ACCENT}
           valueSize="md"
           title={t("lodging:stats.money.avgPerNight")}
+          evidence={pricedNights}
           value={price.avgPricePerNight !== null ? money(price.avgPricePerNight) : "—"}
           description={t("lodging:stats.money.avgPerNightDesc")}
         />
@@ -104,6 +125,7 @@ export default function LodgingMoneySection({ stats, evidenceScope }: Props): JS
           accent={LODGING_ACCENT}
           valueSize="md"
           title={t("lodging:stats.money.medianPerNight")}
+          evidence={pricedNights}
           value={price.medianPricePerNight !== null ? money(price.medianPricePerNight) : "—"}
           description={t("lodging:stats.money.medianPerNightDesc")}
         />
@@ -111,6 +133,7 @@ export default function LodgingMoneySection({ stats, evidenceScope }: Props): JS
           accent={LODGING_ACCENT}
           valueSize="md"
           title={t("lodging:stats.money.cheapest")}
+          evidence={pricedNights}
           value={price.cheapestNight ? money(price.cheapestNight.pricePerNight) : "—"}
           description={
             price.cheapestNight
@@ -124,6 +147,7 @@ export default function LodgingMoneySection({ stats, evidenceScope }: Props): JS
           accent={LODGING_ACCENT}
           valueSize="md"
           title={t("lodging:stats.money.dearest")}
+          evidence={pricedNights}
           value={price.dearestNight ? money(price.dearestNight.pricePerNight) : "—"}
           description={
             price.dearestNight
@@ -142,6 +166,20 @@ export default function LodgingMoneySection({ stats, evidenceScope }: Props): JS
             valueSize="md"
             title={t("lodging:stats.money.awardValue")}
             value={price.awardNightsValue !== null ? money(price.awardNightsValue) : "—"}
+            // The value is the paid nights' rate times the award nights: the
+            // figure opens the paid nights, the number in the sentence the
+            // award nights — two triggers, so the card is not one itself.
+            evidence={
+              evidenceScope
+                ? {
+                    kind: "metric",
+                    key: "lodgingPaidNightsTotal",
+                    scope: evidenceScope,
+                    renderedValue: null,
+                  }
+                : undefined
+            }
+            descriptionHasOwnTrigger={evidenceScope !== undefined}
             // The card's own number is the VALUE; the nights it was computed
             // over sit in the sentence below it. Splitting the sentence at the
             // number rather than making the whole line a button is what keeps
@@ -198,6 +236,47 @@ export default function LodgingMoneySection({ stats, evidenceScope }: Props): JS
           emptyLabel={t("lodging:stats.money.noBoardPrices")}
         />
       </div>
+
+      <CountingHelp
+        testId="lodging-money-help"
+        entries={[
+          {
+            term: t("lodging:stats.money.avgPerNight"),
+            helpKey: "lodging:stats.help.avgPerNight",
+            values: helpValues,
+          },
+          {
+            term: t("lodging:stats.money.medianPerNight"),
+            helpKey: "lodging:stats.help.medianPerNight",
+            values: helpValues,
+          },
+          {
+            term: `${t("lodging:stats.money.cheapest")} · ${t("lodging:stats.money.dearest")}`,
+            helpKey: "lodging:stats.help.cheapestDearest",
+            values: helpValues,
+          },
+          // Only where its card is drawn — help for a figure not on screen is noise.
+          ...(stats.awardNights > 0
+            ? [
+                {
+                  term: t("lodging:stats.money.awardValue"),
+                  helpKey: "lodging:stats.help.awardValue",
+                  values: helpValues,
+                },
+              ]
+            : []),
+          {
+            term: [
+              t("lodging:stats.money.byYear"),
+              t("lodging:stats.money.byCountry"),
+              t("lodging:stats.money.byChain"),
+              t("lodging:stats.money.byBoard"),
+            ].join(" · "),
+            helpKey: "lodging:stats.help.priceRankings",
+            values: helpValues,
+          },
+        ]}
+      />
     </section>
   );
 }

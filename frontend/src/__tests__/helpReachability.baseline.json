@@ -4,7 +4,6 @@
     "components/Stats/AircraftRankingCard.tsx": { "count": 1, "why": "expansion" },
     "components/Stats/AirlineRankingCard.tsx": { "count": 1, "why": "truncation" },
     "components/Stats/CountryDistributionCard.tsx": { "count": 1, "why": "truncation" },
-    "components/Stats/CruiseStatsSection.tsx": { "count": 1, "why": "truncation" },
     "components/Stats/Overview/CrossDomainActivityChart.tsx": { "count": 1, "why": "chart-value" },
     "components/Stats/Overview/TravelAccountSection.tsx": { "count": 1, "why": "chart-value" },
     "components/Stats/RecordsSection.tsx": { "count": 1, "why": "expansion" },

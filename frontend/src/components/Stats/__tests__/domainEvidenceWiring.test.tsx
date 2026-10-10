@@ -17,9 +17,12 @@ import LodgingGeoSection from "../lodging/LodgingGeoSection";
 import LodgingRhythmSection from "../lodging/LodgingRhythmSection";
 import LodgingRecordsSection from "../lodging/LodgingRecordsSection";
 import LodgingMoneySection from "../lodging/LodgingMoneySection";
+import LodgingQualitySection from "../lodging/LodgingQualitySection";
+import LodgingLoyaltySection from "../lodging/LodgingLoyaltySection";
 import PeriodComparisonStrip from "../PeriodComparisonStrip";
-import { CruiseFunSection } from "../cruise/CruiseDetailSections";
-import type { CruiseStatsDetail } from "../../../lib/stats/cruiseStatsDetail";
+import { CruiseFunSection, CruiseRhythmSection } from "../cruise/CruiseDetailSections";
+import { deriveCruiseStats, type CruiseStatsDetail } from "../../../lib/stats/cruiseStatsDetail";
+import type { Cruise } from "../../../types/cruise";
 import { expectNoNestedTriggers } from "./noNestedTriggers";
 
 /**
@@ -123,6 +126,34 @@ const lodgingStats = {
   loyalty: { byChain: [], byProgramme: [], tiers: [] },
 } as unknown as LodgingStats;
 
+/** The same stats with ratings and chains, so the quality and loyalty sections draw their tiles. */
+const ratedStats = {
+  ...lodgingStats,
+  ratings: {
+    ...(lodgingStats as unknown as { ratings: object }).ratings,
+    avgOverall: 4.2,
+    avgRoom: 4,
+    avgBreakfast: 3.5,
+    avgService: 4.5,
+    ratedStays: 6,
+    unratedStays: 3,
+  },
+} as unknown as LodgingStats;
+
+const chainStats = {
+  ...lodgingStats,
+  loyalty: {
+    chainNights: 12,
+    independentNights: 9,
+    topChain: { name: "Rhein Hotels", nights: 8 },
+    topChainShare: 0.6667,
+    concentration: 0.5556,
+    chainNightsRanked: [],
+    lodgingNightsRanked: [],
+    programmeYears: [],
+  },
+} as unknown as LodgingStats;
+
 /** Reports the search string after each click — `MemoryRouter` never touches `window.location`. */
 function LocationProbe({ onChange }: { onChange: (search: string) => void }): null {
   onChange(useLocation().search);
@@ -183,16 +214,52 @@ describe("the lodging tiles open the measures they render", () => {
     expect(screen.queryAllByRole("button")).toHaveLength(0);
   });
 
-  it("the geo, rhythm and records sections wire one tile each, or two", async () => {
+  /**
+   * forgejo#258: every tile opens its entries. A count opens its own measure;
+   * an extreme, an average or a centre opens the POPULATION it is read from —
+   * the northernmost stay is a row among the stays with coordinates, the
+   * longest streak a run in the nights away.
+   */
+  it("the geo, rhythm and records sections wire every tile", async () => {
     expect(
       await keysOpenedBy(<LodgingGeoSection stats={lodgingStats} evidenceScope={SCOPE} />)
-    ).toEqual(["lodgingContinentsCount"]);
+    ).toEqual(
+      [
+        "lodgingContinentsCount",
+        "lodgingLocatedStaysCount",
+        "lodgingLocatedStaysCount",
+        "lodgingLocatedStaysCount",
+      ].sort()
+    );
     expect(
       await keysOpenedBy(<LodgingRhythmSection stats={lodgingStats} evidenceScope={SCOPE} />)
-    ).toEqual(["lodgingNightsAwayTotal"]);
+    ).toEqual(Array(4).fill("lodgingNightsAwayTotal"));
     expect(
       await keysOpenedBy(<LodgingRecordsSection stats={lodgingStats} evidenceScope={SCOPE} />)
-    ).toEqual(["lodgingOneNightStayCount", "lodgingPerfectStayCount"].sort());
+    ).toEqual(
+      [
+        "lodgingNightsTotal",
+        "lodgingStaysCount",
+        "lodgingOneNightStayCount",
+        "lodgingPerfectStayCount",
+      ].sort()
+    );
+  });
+
+  it("the money, quality and loyalty sections open the population of every figure", async () => {
+    expect(
+      await keysOpenedBy(<LodgingQualitySection stats={ratedStats} evidenceScope={SCOPE} />)
+    ).toEqual(Array(4).fill("lodgingRatedStaysCount"));
+    expect(
+      await keysOpenedBy(<LodgingLoyaltySection stats={chainStats} evidenceScope={SCOPE} />)
+    ).toEqual(
+      [
+        "lodgingChainNightsTotal",
+        "lodgingChainNightsTotal",
+        "lodgingChainNightsTotal",
+        "lodgingTopChainNights",
+      ].sort()
+    );
   });
 
   it("every key these surfaces open is a registered measure that release 1 serves", async () => {
@@ -203,6 +270,9 @@ describe("the lodging tiles open the measures they render", () => {
       ...(await keysOpenedBy(<LodgingGeoSection stats={lodgingStats} evidenceScope={SCOPE} />)),
       ...(await keysOpenedBy(<LodgingRhythmSection stats={lodgingStats} evidenceScope={SCOPE} />)),
       ...(await keysOpenedBy(<LodgingRecordsSection stats={lodgingStats} evidenceScope={SCOPE} />)),
+      ...(await keysOpenedBy(<LodgingMoneySection stats={lodgingStats} evidenceScope={SCOPE} />)),
+      ...(await keysOpenedBy(<LodgingQualitySection stats={ratedStats} evidenceScope={SCOPE} />)),
+      ...(await keysOpenedBy(<LodgingLoyaltySection stats={chainStats} evidenceScope={SCOPE} />)),
     ];
     expect(keys.filter((key) => EVIDENCE_MEASURES[key]?.servedIn !== 1)).toEqual([]);
   });
@@ -236,9 +306,17 @@ describe("the lodging tiles open the measures they render", () => {
  */
 describe("the numbers inside a sentence, and the strip's own figures", () => {
   it("the money section opens the award NIGHTS from inside the value card's sentence", async () => {
+    // Beside it, the award value opens the PAID nights it is priced at, and
+    // the four price tiles the stays with a comparable price.
     expect(
       await keysOpenedBy(<LodgingMoneySection stats={lodgingStats} evidenceScope={SCOPE} />)
-    ).toEqual(["lodgingAwardNightsCount"]);
+    ).toEqual(
+      [
+        "lodgingAwardNightsCount",
+        "lodgingPaidNightsTotal",
+        ...Array(4).fill("lodgingPricedNightsTotal"),
+      ].sort()
+    );
   });
 
   it("the same section opens nothing where no period was chosen", async () => {
@@ -379,5 +457,81 @@ describe("the numbers inside a sentence, and the strip's own figures", () => {
       </MemoryRouter>
     );
     expectNoNestedTriggers(cruise.container);
+  });
+});
+
+/**
+ * forgejo#257: the rhythm and fun tiles of the cruise tab name one cruise or
+ * an average; each opens the cruises its figure is read from, and none opens
+ * anything where no period was chosen.
+ */
+describe("the cruise rhythm and fun tiles open their populations", () => {
+  const cruise = (over: Partial<Cruise>): Cruise =>
+    ({
+      id: "c",
+      status: "completed",
+      startDate: "2024-05-01",
+      endDate: "2024-05-08",
+      stops: [],
+      companions: [],
+      deck: null,
+      tripId: null,
+      price: null,
+      currency: null,
+      ...over,
+    }) as unknown as Cruise;
+  const detail = deriveCruiseStats([
+    cruise({
+      id: "a",
+      deck: 9,
+      tripId: "t1",
+      stops: [{ isAtSea: false }, { isAtSea: true }] as Cruise["stops"],
+    }),
+    cruise({ id: "b", status: "scheduled", startDate: "2027-06-01", endDate: "2027-06-04" }),
+    cruise({ id: "x", status: "cancelled", startDate: null, endDate: null }),
+  ]);
+
+  it("names what the fold keeps that has not sailed", () => {
+    expect([detail.bookedCount, detail.cancelledCount, detail.undatedCount]).toEqual([1, 1, 1]);
+  });
+
+  it("wires the four rhythm tiles and the four fun cards", async () => {
+    expect(
+      await keysOpenedBy(
+        <CruiseRhythmSection detail={detail} accent="#5ec2b2" locale="de" evidenceScope={SCOPE} />
+      )
+    ).toEqual(["cruiseDatedCount", ...Array(3).fill("cruiseNightsTotal")].sort());
+    expect(
+      await keysOpenedBy(
+        <CruiseFunSection detail={detail} accent="#5ec2b2" locale="de" evidenceScope={SCOPE} />
+      )
+    ).toEqual(
+      [
+        "cruiseDatedCount",
+        "cruiseDeckRecordedCount",
+        "cruiseListedPortCallsTotal",
+        "cruiseOnTripCount",
+      ].sort()
+    );
+  });
+
+  it("every key they open is served, and none opens without a period", async () => {
+    const keys = [
+      ...(await keysOpenedBy(
+        <CruiseRhythmSection detail={detail} accent="#5ec2b2" locale="de" evidenceScope={SCOPE} />
+      )),
+      ...(await keysOpenedBy(
+        <CruiseFunSection detail={detail} accent="#5ec2b2" locale="de" evidenceScope={SCOPE} />
+      )),
+    ];
+    expect(keys.filter((key) => EVIDENCE_MEASURES[key]?.servedIn !== 1)).toEqual([]);
+    cleanup();
+    render(
+      <MemoryRouter>
+        <CruiseRhythmSection detail={detail} accent="#5ec2b2" locale="de" />
+        <CruiseFunSection detail={detail} accent="#5ec2b2" locale="de" />
+      </MemoryRouter>
+    );
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
   });
 });

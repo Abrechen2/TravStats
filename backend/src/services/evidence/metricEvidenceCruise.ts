@@ -29,14 +29,14 @@ import { domainDistinctEvidence, domainSumEvidence, readYearScope } from "./doma
  * and what the registry names are not the same shape.
  */
 
-interface ScopedCruises {
+export interface ScopedCruises {
   rows: CruiseStatsRow[];
   total: CruiseStats;
   /** That cruise's own run of the calculator, keyed by cruise id. */
   own: Map<string, CruiseStats>;
 }
 
-async function loadScoped(
+export async function loadScoped(
   userId: string,
   scope: EvidenceScope,
   key: string
@@ -54,7 +54,7 @@ async function loadScoped(
 }
 
 /** The panel's row for one cruise, with whatever this measure credits it. */
-function entryOf(
+export function entryOf(
   row: CruiseStatsRow,
   fields: Partial<Pick<EvidenceEntry, "contribution" | "credits" | "creditLabels" | "subtitle">>
 ): EvidenceEntry {

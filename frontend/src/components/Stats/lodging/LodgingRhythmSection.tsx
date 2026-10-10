@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { LodgingStats } from "../../../types/lodging";
 import StatCard from "../StatCard";
+import CountingHelp from "../counting/CountingHelp";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import RankedBarList from "./RankedBarList";
 
@@ -75,6 +76,17 @@ export default function LodgingRhythmSection({ stats, evidenceScope }: Props): J
   // already name their gaps; this one stayed silent and turned its own gap
   // into the wrong claim above.
   const undatedStays = stats.undatedStays ?? 0;
+  // The streak, the gap and the busiest month are all read off the set of
+  // nights away — the very list the nights-away tile opens, each stay with its
+  // dates. Their own figure is not that count, so none is compared.
+  const nightDates = evidenceScope
+    ? {
+        kind: "metric" as const,
+        key: "lodgingNightsAwayTotal",
+        scope: evidenceScope,
+        renderedValue: null,
+      }
+    : undefined;
 
   return (
     <section className="mt-8">
@@ -113,6 +125,7 @@ export default function LodgingRhythmSection({ stats, evidenceScope }: Props): J
           accent={LODGING_ACCENT}
           valueSize="md"
           title={t("lodging:stats.rhythm.longestStreak")}
+          evidence={nightDates}
           value={rhythm.longestStreakNights}
           description={
             rhythm.longestStreak
@@ -127,6 +140,7 @@ export default function LodgingRhythmSection({ stats, evidenceScope }: Props): J
           accent={LODGING_ACCENT}
           valueSize="md"
           title={t("lodging:stats.rhythm.longestGap")}
+          evidence={nightDates}
           value={rhythm.longestGapDays}
           description={t("lodging:stats.rhythm.longestGapDesc")}
         />
@@ -134,6 +148,7 @@ export default function LodgingRhythmSection({ stats, evidenceScope }: Props): J
           accent={LODGING_ACCENT}
           valueSize="md"
           title={t("lodging:stats.rhythm.busiestMonth")}
+          evidence={nightDates}
           value={busiestMonthLabel(rhythm.nightsByMonthOfYear, t)}
           description={t("lodging:stats.rhythm.busiestMonthDesc")}
         />
@@ -159,6 +174,31 @@ export default function LodgingRhythmSection({ stats, evidenceScope }: Props): J
           emptyLabel={t("lodging:stats.rhythm.noNights")}
         />
       </div>
+
+      <CountingHelp
+        testId="lodging-rhythm-help"
+        entries={[
+          {
+            term: t("lodging:stats.rhythm.nightsAway"),
+            helpKey: "lodging:stats.help.nightsAway",
+            values: { overlap: overlapNights, undated: undatedStays },
+          },
+          {
+            term: t("lodging:stats.rhythm.longestStreak"),
+            helpKey: "lodging:stats.help.longestStreak",
+          },
+          { term: t("lodging:stats.rhythm.longestGap"), helpKey: "lodging:stats.help.longestGap" },
+          {
+            term: t("lodging:stats.rhythm.busiestMonth"),
+            helpKey: "lodging:stats.help.busiestMonth",
+          },
+          {
+            term: `${t("lodging:stats.rhythm.byWeekday")} · ${t("lodging:stats.rhythm.bySeason")}`,
+            helpKey: "lodging:stats.help.weekdaySeason",
+          },
+          { term: t("lodging:stats.rhythm.awayShare"), helpKey: "lodging:stats.help.awayShare" },
+        ]}
+      />
     </section>
   );
 }

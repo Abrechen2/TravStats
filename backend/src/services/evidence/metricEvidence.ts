@@ -159,6 +159,27 @@ import {
 import { INSIGHT_RESOLVERS } from "./metricEvidenceInsights";
 import { PLACE_DETAIL_RESOLVERS } from "./metricEvidencePlaceDetail";
 import { ROADTRIP_LIST_RESOLVERS } from "./metricEvidenceRoadtrip";
+import {
+  resolveCruiseDatedCount,
+  resolveCruiseNightsTotal,
+  resolveCruiseListedPortCallsTotal,
+  resolveCruiseDeckRecordedCount,
+  resolveCruiseOnTripCount,
+} from "./metricEvidenceCruiseDetail";
+import {
+  resolveCruisePortCallsTotal,
+  resolveCruiseCataloguePortCallsTotal,
+  resolveCruiseRiverCount,
+  resolveCruiseSailedDeckCount,
+} from "./metricEvidenceCruiseDepth";
+import {
+  resolveLodgingPricedNightsTotal,
+  resolveLodgingPaidNightsTotal,
+  resolveLodgingChainNightsTotal,
+  resolveLodgingTopChainNights,
+  resolveLodgingRatedStaysCount,
+  resolveLodgingLocatedStaysCount,
+} from "./metricEvidenceLodgingDetail";
 
 /**
  * `EvidenceResolver` for `kind: "metric"` (Task 7,
@@ -306,6 +327,23 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   cruiseNewYearAtSeaCruiseCount: resolveCruiseNewYearAtSeaCruiseCount,
   cruiseCanalCruiseCount: resolveCruiseCanalCruiseCount,
   cruisePolarCruiseCount: resolveCruisePolarCruiseCount,
+  // The populations behind the cruise and lodging tiles that show an average,
+  // a share or an extreme (forgejo#257/#258) — release 1 serves sums only.
+  cruiseDatedCount: resolveCruiseDatedCount,
+  cruiseNightsTotal: resolveCruiseNightsTotal,
+  cruiseListedPortCallsTotal: resolveCruiseListedPortCallsTotal,
+  cruiseDeckRecordedCount: resolveCruiseDeckRecordedCount,
+  cruiseOnTripCount: resolveCruiseOnTripCount,
+  cruisePortCallsTotal: resolveCruisePortCallsTotal,
+  cruiseCataloguePortCallsTotal: resolveCruiseCataloguePortCallsTotal,
+  cruiseRiverCount: resolveCruiseRiverCount,
+  cruiseSailedDeckCount: resolveCruiseSailedDeckCount,
+  lodgingPricedNightsTotal: resolveLodgingPricedNightsTotal,
+  lodgingPaidNightsTotal: resolveLodgingPaidNightsTotal,
+  lodgingChainNightsTotal: resolveLodgingChainNightsTotal,
+  lodgingTopChainNights: resolveLodgingTopChainNights,
+  lodgingRatedStaysCount: resolveLodgingRatedStaysCount,
+  lodgingLocatedStaysCount: resolveLodgingLocatedStaysCount,
   // The statistics expansion (forgejo#258/#259/#260/#264), one shape for all.
   ...INSIGHT_RESOLVERS,
   // The places tab's rhythm/quality/fun cards and the roadtrip list tiles

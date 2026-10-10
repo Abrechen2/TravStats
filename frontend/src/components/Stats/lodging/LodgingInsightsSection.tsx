@@ -124,6 +124,7 @@ export default function LodgingInsightsSection({
           value={
             sleep.total > 0 ? t("lodging:stats.insights.nights", { count: sleep.total }) : null
           }
+          evidence={{ key: "lodgingSleepStyleNights", scope, renderedValue: sleep.total }}
           empty={t("lodging:stats.insights.sleepStyle.empty")}
           description={year === null ? lifetime : undefined}
           help={help("sleepStyle", {
@@ -148,31 +149,37 @@ export default function LodgingInsightsSection({
           testId="insight-week"
           title={t("lodging:stats.insights.week.title")}
           accent={accent}
-          value={
-            weekend + weekday > 0 ? (
-              <>
-                <EvidenceNumber
-                  evidenceKey="lodgingWeekendNights"
-                  scope={scope}
-                  renderedValue={weekend}
-                  label={t("lodging:stats.insights.week.weekend")}
-                >
-                  {nf.format(weekend)}
-                </EvidenceNumber>
-                {" / "}
-                <EvidenceNumber
-                  evidenceKey="lodgingWeekdayNights"
-                  scope={scope}
-                  renderedValue={weekday}
-                  label={t("lodging:stats.insights.week.weekday")}
-                >
-                  {nf.format(weekday)}
-                </EvidenceNumber>
-              </>
-            ) : null
-          }
+          // The figure opens every night with a weekday; the two halves open
+          // their own lists from the line beneath it — outside the figure's
+          // trigger, so no button sits inside another.
+          value={weekend + weekday > 0 ? `${nf.format(weekend)} / ${nf.format(weekday)}` : null}
+          evidence={{ key: "lodgingCalendarWeekNights", scope, renderedValue: weekend + weekday }}
           empty={t("lodging:stats.insights.week.empty")}
-          description={t("lodging:stats.insights.week.description")}
+          description={
+            <>
+              <EvidenceNumber
+                evidenceKey="lodgingWeekendNights"
+                scope={scope}
+                renderedValue={weekend}
+                label={t("lodging:stats.insights.week.weekend")}
+              >
+                {nf.format(weekend)}
+              </EvidenceNumber>{" "}
+              {t("lodging:stats.insights.week.weekend")}
+              {" · "}
+              <EvidenceNumber
+                evidenceKey="lodgingWeekdayNights"
+                scope={scope}
+                renderedValue={weekday}
+                label={t("lodging:stats.insights.week.weekday")}
+              >
+                {nf.format(weekday)}
+              </EvidenceNumber>{" "}
+              {t("lodging:stats.insights.week.weekday")}
+              {" — "}
+              {t("lodging:stats.insights.week.description")}
+            </>
+          }
           help={help("week", { notWalkable: data.weekRhythm.notWalkableNights })}
         >
           {weekend + weekday > 0 && (
@@ -201,18 +208,13 @@ export default function LodgingInsightsSection({
           testId="insight-revisits"
           title={t("lodging:stats.insights.revisits.title")}
           accent={accent}
-          value={
-            data.revisits.houses.length > 0 ? (
-              <EvidenceNumber
-                evidenceKey="lodgingReturnHouseCount"
-                scope={{ period: "allTime" }}
-                renderedValue={data.revisits.houses.length}
-                label={t("lodging:stats.insights.revisits.title")}
-              >
-                {nf.format(data.revisits.houses.length)}
-              </EvidenceNumber>
-            ) : null
-          }
+          value={data.revisits.houses.length > 0 ? nf.format(data.revisits.houses.length) : null}
+          // Coming back across years is a lifetime question, whatever the period.
+          evidence={{
+            key: "lodgingReturnHouseCount",
+            scope: { period: "allTime" },
+            renderedValue: data.revisits.houses.length,
+          }}
           empty={t("lodging:stats.insights.revisits.empty")}
           description={`${t("lodging:stats.insights.revisits.description")} · ${lifetime}`}
           help={help("revisits", { returned: data.revisits.returnedHouses })}
@@ -249,6 +251,13 @@ export default function LodgingInsightsSection({
               ? null
               : t("lodging:stats.insights.tripBases.value", { count: changesMedian })
           }
+          // The median is read over the finished trips the description counts;
+          // the figure opens them, each naming its houses and moves.
+          evidence={{
+            key: "lodgingCompletedTripBaseCount",
+            scope,
+            renderedValue: finishedTrips.length,
+          }}
           empty={t("lodging:stats.insights.tripBases.empty")}
           description={t("lodging:stats.insights.tripBases.description", {
             count: finishedTrips.length,
@@ -297,6 +306,11 @@ export default function LodgingInsightsSection({
               ? t("lodging:stats.insights.prices.value", { count: data.priceTrends.groups.length })
               : null
           }
+          evidence={{
+            key: "lodgingPriceComparisonCount",
+            scope: { period: "allTime" },
+            renderedValue: data.priceTrends.groups.length,
+          }}
           empty={t("lodging:stats.insights.prices.empty")}
           description={lifetime}
           help={help("prices", {
@@ -335,6 +349,17 @@ export default function LodgingInsightsSection({
             calendarYear
               ? t("lodging:stats.insights.calendar.value", { count: calendarYear.months.length })
               : null
+          }
+          // The figure is ONE year's months — the chosen year, or the fullest
+          // one — so the panel is scoped to that year, whatever the strip says.
+          evidence={
+            calendarYear
+              ? {
+                  key: "lodgingCalendarMonthCount",
+                  scope: { period: "year", year: calendarYear.year },
+                  renderedValue: calendarYear.months.length,
+                }
+              : undefined
           }
           empty={t("lodging:stats.insights.calendar.empty")}
           description={

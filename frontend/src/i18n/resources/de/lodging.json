@@ -733,6 +733,218 @@
           "exclusions": "Fehlende Monate werden nie ergänzt oder geschätzt. Geplante Aufenthalte zählen nicht."
         }
       }
+    },
+    "help": {
+      "avgPerNight": {
+        "unit": "Preis pro Nacht in {{currency}}, gemittelt über Nächte: die Summe der Preise geteilt durch die Zahl ihrer Nächte. Ein dreiwöchiger Aufenthalt wiegt so viel wie drei Wochen Einzelnächte.",
+        "time": "Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Der Gesamtpreis jedes Aufenthalts, wenn er in {{currency}} erfasst ist oder beim Speichern mit einem Kurs in {{currency}} umgerechnet wurde, geteilt durch seine Nächte. Deine Aufenthalte, die zählen: deren Check-out vorbei ist. Ein Prämienaufenthalt zählt mit, wenn ein Preis eingetragen ist (auch 0).",
+        "coverage": "{{stays}} Aufenthalte mit {{nights}} Nächten haben einen vergleichbaren Preis; {{omitted}} Aufenthalte mit Preis ließen sich nicht in {{currency}} umrechnen. Tippe auf den Wert für die Aufenthalte mit ihrem Preis pro Nacht.",
+        "exclusions": "Aufenthalte ohne Preis, ohne Nacht (an einem Tag ein- und ausgecheckt) und Preise ohne Umrechnung in {{currency}} – auch eine Umrechnung in eine frühere Basiswährung zählt nicht, Währungen werden nie ohne Kurs addiert. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "medianPerNight": {
+        "unit": "Der Median des Preises pro Nacht in {{currency}} über alle Nächte: die Hälfte der Nächte war günstiger, die Hälfte teurer; bei gerader Zahl der Mittelwert der beiden mittleren Nächte.",
+        "time": "Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Der Gesamtpreis jedes Aufenthalts, wenn er in {{currency}} erfasst ist oder beim Speichern mit einem Kurs in {{currency}} umgerechnet wurde, geteilt durch seine Nächte. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "{{stays}} Aufenthalte mit {{nights}} Nächten haben einen vergleichbaren Preis; {{omitted}} Aufenthalte mit Preis ließen sich nicht in {{currency}} umrechnen. Tippe auf den Wert für die Aufenthalte mit ihrem Preis pro Nacht.",
+        "exclusions": "Aufenthalte ohne Preis, ohne Nacht (an einem Tag ein- und ausgecheckt) und Preise ohne Umrechnung in {{currency}} – auch eine Umrechnung in eine frühere Basiswährung zählt nicht, Währungen werden nie ohne Kurs addiert. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "cheapestDearest": {
+        "unit": "Der niedrigste und der höchste Preis pro Nacht in {{currency}} eines einzelnen Aufenthalts (Gesamtpreis geteilt durch seine Nächte), mit dem Haus, in dem er lag. Bei Gleichstand gilt der zuerst gefundene.",
+        "time": "Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Der Gesamtpreis jedes Aufenthalts, wenn er in {{currency}} erfasst ist oder beim Speichern mit einem Kurs in {{currency}} umgerechnet wurde, geteilt durch seine Nächte. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "{{stays}} Aufenthalte mit {{nights}} Nächten haben einen vergleichbaren Preis; {{omitted}} Aufenthalte mit Preis ließen sich nicht in {{currency}} umrechnen. Tippe auf den Wert für die Aufenthalte mit ihrem Preis pro Nacht.",
+        "exclusions": "Aufenthalte ohne Preis, ohne Nacht (an einem Tag ein- und ausgecheckt) und Preise ohne Umrechnung in {{currency}} – auch eine Umrechnung in eine frühere Basiswährung zählt nicht, Währungen werden nie ohne Kurs addiert. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "awardValue": {
+        "unit": "Ein geschätzter Betrag in {{currency}}: deine Prämiennächte, bewertet zum Durchschnittspreis deiner bezahlten Nächte – ein Schätzwert, kein gezahlter Betrag.",
+        "time": "Eine Nacht gehört zu dem Tag, an dem sie beginnt, nach dem Kalender im Haus (der Check-out-Tag ist keine Nacht). Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Die Nächte deiner als Prämienaufenthalt markierten Aufenthalte; der Durchschnitt aus den Aufenthalten mit vergleichbarem Preis ohne die Prämienaufenthalte. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Ohne bezahlte Nacht mit vergleichbarem Preis gibt es keinen Durchschnitt, und der Wert bleibt offen („—“) statt 0. Tippe auf den Wert für die bezahlten Nächte, auf die Zahl im Satz für die Prämiennächte.",
+        "exclusions": "Prämiennächte zählen nicht in den Durchschnitt, mit dem sie bewertet werden – eine Gratisnacht drückte sonst den Preis, zu dem die anderen bewertet werden. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "priceRankings": {
+        "unit": "Preis pro Nacht in {{currency}} je Gruppe – Jahr, Land, Kette, Verpflegung: Summe der Preise geteilt durch die Nächte der Gruppe, dazu Nächte und Gesamtbetrag. Nie über Währungen addiert.",
+        "time": "Nach Jahr: das Jahr des Check-ins; ein Aufenthalt ohne Datum fehlt nur in dieser Liste. Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Der Gesamtpreis jedes Aufenthalts, wenn er in {{currency}} erfasst ist oder beim Speichern mit einem Kurs in {{currency}} umgerechnet wurde, geteilt durch seine Nächte. Deine Aufenthalte, die zählen: deren Check-out vorbei ist. Land, Kette und Verpflegung, wie sie am Haus und am Aufenthalt eingetragen sind.",
+        "coverage": "{{stays}} Aufenthalte mit {{nights}} Nächten haben einen vergleichbaren Preis; {{omitted}} Aufenthalte mit Preis ließen sich nicht in {{currency}} umrechnen. Ohne Kette oder Verpflegung fehlt ein Aufenthalt nur in dieser Liste.",
+        "exclusions": "Aufenthalte ohne Preis, ohne Nacht (an einem Tag ein- und ausgecheckt) und Preise ohne Umrechnung in {{currency}} – auch eine Umrechnung in eine frühere Basiswährung zählt nicht, Währungen werden nie ohne Kurs addiert. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "chainShare": {
+        "unit": "Anteil der Nächte in Kettenhotels an allen Nächten: {{chain}} in Ketten, {{independent}} unabhängig.",
+        "time": "Eine Nacht gehört zu dem Tag, an dem sie beginnt, nach dem Kalender im Haus (der Check-out-Tag ist keine Nacht). Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Die Kette, die am Haus eingetragen ist. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Ein Aufenthalt, dessen Länge unbekannt ist, bringt 0 Nächte ein. Tippe auf den Wert für die Nächte in Kettenhotels.",
+        "exclusions": "Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "topChain": {
+        "unit": "Die Kette mit den meisten Nächten und ihre Nächte; bei Gleichstand die alphabetisch erste.",
+        "time": "Eine Nacht gehört zu dem Tag, an dem sie beginnt, nach dem Kalender im Haus (der Check-out-Tag ist keine Nacht). Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Die Kette, die am Haus eingetragen ist. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Nur Häuser mit eingetragener Kette. Tippe auf den Wert für die Nächte dieser Kette.",
+        "exclusions": "Unabhängige Häuser. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "topChainShare": {
+        "unit": "Anteil der häufigsten Kette an den Nächten in Kettenhotels – nicht an allen Nächten; das sagt die Kachel daneben.",
+        "time": "Eine Nacht gehört zu dem Tag, an dem sie beginnt, nach dem Kalender im Haus (der Check-out-Tag ist keine Nacht). Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Die Kette, die am Haus eingetragen ist. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Ohne Nacht in einem Kettenhotel bleibt der Anteil offen („—“). Tippe auf den Wert für die Nächte in Kettenhotels.",
+        "exclusions": "Unabhängige Häuser. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "concentration": {
+        "unit": "Herfindahl-Index der Kettennächte: die Summe der quadrierten Anteile jeder Kette. 1 = alle Kettennächte bei einer Kette, nahe 0 = auf viele verteilt.",
+        "time": "Eine Nacht gehört zu dem Tag, an dem sie beginnt, nach dem Kalender im Haus (der Check-out-Tag ist keine Nacht). Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Die Kette, die am Haus eingetragen ist. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Ohne Nacht in einem Kettenhotel bleibt der Index offen („—“). Tippe auf den Wert für die Nächte in Kettenhotels mit ihrer Kette.",
+        "exclusions": "Unabhängige Häuser – wie oft du überhaupt Ketten wählst, sagt der Kettenanteil. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "chainRanking": {
+        "unit": "Nächte und Aufenthalte je Kette, nach Nächten geordnet.",
+        "time": "Eine Nacht gehört zu dem Tag, an dem sie beginnt, nach dem Kalender im Haus (der Check-out-Tag ist keine Nacht). Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Die Kette, die am Haus eingetragen ist. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Nur Häuser mit eingetragener Kette; ein Aufenthalt unbekannter Länge zählt als Aufenthalt mit 0 Nächten.",
+        "exclusions": "Unabhängige Häuser. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "programmeYears": {
+        "unit": "Nächte und Aufenthalte je Bonusprogramm und Kalenderjahr – so zählen Hotelprogramme ihren Status. Der Status oben ist der heutige der Karte, nicht der eines Jahres.",
+        "time": "Ein Aufenthalt zählt ganz im Jahr seines Check-ins (der Tag, wie er im Haus gilt). Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Das Programm deiner Mitgliedskarte, die den Aufenthalt abdeckt – über die Kette oder das Haus, mit dem die Karte verknüpft ist. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Nur Aufenthalte, die einer Karte zugeordnet sind. Tippe auf ein Programm für die Liste seiner Aufenthalte im Jahr.",
+        "exclusions": "Aufenthalte ohne Datum: das Statusjahr ist hier die Zahl selbst und wird nicht geraten. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "ratingOverall": {
+        "unit": "Durchschnitt deiner Gesamtbewertung (1–5 Sterne) über die Aufenthalte, die eine haben, auf eine Nachkommastelle.",
+        "time": "Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Deine eigene Bewertung am Aufenthalt. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "{{rated}} Aufenthalte mit Gesamtbewertung, {{unrated}} ohne. Tippe auf den Wert für die bewerteten Aufenthalte mit allen vier Bewertungen.",
+        "exclusions": "Aufenthalte ohne Gesamtbewertung – sie zählen nie als 0 Sterne. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "ratingParts": {
+        "unit": "Je ein Durchschnitt deiner Bewertung für Zimmer, Frühstück und Service (1–5 Sterne), jeder über die Aufenthalte, die genau diese Bewertung haben.",
+        "time": "Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Deine eigene Bewertung am Aufenthalt. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Jeder Durchschnitt hat seine eigene Zahl an Aufenthalten – auch ein Aufenthalt ohne Gesamtbewertung zählt hier mit. Tippe auf einen Wert für die Aufenthalte mit allen vier Bewertungen.",
+        "exclusions": "Aufenthalte ohne die jeweilige Bewertung – nie als 0 Sterne. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "ratingRankings": {
+        "unit": "Durchschnitt der Gesamtbewertung je Kette, Land, Hotelsterne und Unterkunftsart, mit der Zahl der Aufenthalte. Die Sterne-Liste steht in Reihenfolge der Sterne, nicht nach Note.",
+        "time": "Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Deine Gesamtbewertung; Kette, Land, Sterne und Art, wie sie am Haus eingetragen sind. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Nur Aufenthalte mit Gesamtbewertung; ohne Kette, Land oder offizielle Sterne fehlt ein Aufenthalt nur in der jeweiligen Liste – ein Haus ohne Sterne ist kein 0-Sterne-Haus.",
+        "exclusions": "Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "bestValue": {
+        "unit": "Die fünf Aufenthalte mit der höchsten Gesamtbewertung je {{currency}} pro Nacht (Bewertung geteilt durch den Preis pro Nacht).",
+        "time": "Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Deine Gesamtbewertung und der Preis pro Nacht in {{currency}} wie bei den Kosten. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Nur Aufenthalte mit Gesamtbewertung und einem vergleichbaren Preis über 0.",
+        "exclusions": "Aufenthalte ohne Preis, mit Preis 0 oder ohne Umrechnung in {{currency}}. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "continents": {
+        "unit": "Kontinente, auf denen du übernachtet hast – jeder einmal.",
+        "time": "Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Das Land des Hauses; ohne Land seine Koordinaten. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Ein Aufenthalt ohne Land und ohne Koordinaten zählt zu keinem Kontinent. Tippe auf den Wert für die Aufenthalte mit ihrem Kontinent.",
+        "exclusions": "Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "northSouth": {
+        "unit": "Die nördlichste und die südlichste geografische Breite, auf der du übernachtet hast, mit dem Haus.",
+        "time": "Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Die Koordinaten des Hauses. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "{{unlocated}} Aufenthalte ohne Koordinaten sind nicht dabei. Tippe auf einen Wert für die Aufenthalte mit Koordinaten.",
+        "exclusions": "Aufenthalte, deren Haus keine Koordinaten hat. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "centre": {
+        "unit": "Der Schwerpunkt deiner Übernachtungsorte: der Mittelpunkt auf der Erdkugel, jeder Aufenthalt gewichtet mit seinen Nächten (mindestens 1). Auf der Kugel gerechnet, damit Nächte beiderseits der Datumsgrenze nicht in Afrika landen.",
+        "time": "Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Die Koordinaten des Hauses und die Nächte des Aufenthalts. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "{{unlocated}} Aufenthalte ohne Koordinaten sind nicht dabei; heben sich die Orte genau auf, bleibt der Wert offen („—“). Tippe auf den Wert für die Aufenthalte mit Koordinaten und Gewicht.",
+        "exclusions": "Aufenthalte, deren Haus keine Koordinaten hat. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "topPlaces": {
+        "unit": "Nächte und Aufenthalte je Stadt und je Land, nach Nächten geordnet.",
+        "time": "Eine Nacht gehört zu dem Tag, an dem sie beginnt, nach dem Kalender im Haus (der Check-out-Tag ist keine Nacht). Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Stadt und Land, wie sie am Haus eingetragen sind. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Ohne Stadt oder Land fehlt ein Aufenthalt nur in der jeweiligen Liste; ein Aufenthalt unbekannter Länge zählt mit 0 Nächten.",
+        "exclusions": "Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "nightsAway": {
+        "unit": "Kalendertage, an denen du auswärts übernachtet hast – jeder Tag einmal, auch wenn zwei Buchungen ihn halten.",
+        "time": "Eine Nacht gehört zu dem Tag, an dem sie beginnt, nach dem Kalender im Haus (der Check-out-Tag ist keine Nacht). Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Aufenthalte mit Check-in und Check-out auf den Tag genau. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Doppelt gebuchte Nächte ({{overlap}}) zählen einmal; {{undated}} Aufenthalte ohne Datum haben keinen Platz im Kalender. Tippe auf den Wert für die Aufenthalte mit ihren Tagen.",
+        "exclusions": "Aufenthalte, die nur auf den Monat oder das Jahr genau datiert sind – ihre Nächte zählen bei den Übernachtungen, nicht hier. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "longestStreak": {
+        "unit": "Die längste Folge aufeinanderfolgender Nächte auswärts, auch über mehrere Aufenthalte hinweg, die nahtlos aneinander anschließen.",
+        "time": "Eine Nacht gehört zu dem Tag, an dem sie beginnt, nach dem Kalender im Haus (der Check-out-Tag ist keine Nacht). Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Die Kalendertage der Nächte auswärts. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Nur Aufenthalte, die auf den Tag genau datiert sind. Tippe auf den Wert für die Aufenthalte mit ihren Tagen.",
+        "exclusions": "Nächte ohne Platz im Kalender (Monat, Jahr oder kein Datum). Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "longestGap": {
+        "unit": "Die längste Zahl an Nächten ohne erfassten Aufenthalt zwischen der ersten und der letzten Nacht auswärts. Das heißt nicht „zu Hause“ – dazwischen kann eine Kreuzfahrt, ein Nachtzug oder ein nicht erfasstes Hotel liegen.",
+        "time": "Eine Nacht gehört zu dem Tag, an dem sie beginnt, nach dem Kalender im Haus (der Check-out-Tag ist keine Nacht). Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Die Kalendertage der Nächte auswärts. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Vor der ersten und nach der letzten erfassten Nacht gibt es keine Daten, also keine Lücke. Tippe auf den Wert für die Aufenthalte mit ihren Tagen.",
+        "exclusions": "Nächte ohne Platz im Kalender und Übernachtungen anderer Bereiche. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "busiestMonth": {
+        "unit": "Der Kalendermonat mit den meisten Nächten auswärts, über alle Jahre zusammen; bei Gleichstand der frühere Monat.",
+        "time": "Eine Nacht gehört zu dem Tag, an dem sie beginnt, nach dem Kalender im Haus (der Check-out-Tag ist keine Nacht). Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Die Kalendertage der Nächte auswärts. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Nur Aufenthalte, die auf den Tag genau datiert sind. Tippe auf den Wert für die Aufenthalte mit ihren Tagen.",
+        "exclusions": "Nächte ohne Platz im Kalender. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "weekdaySeason": {
+        "unit": "Nächte auswärts je Wochentag (die Nacht des Tages, an dem sie beginnt) und je Jahreszeit (meteorologisch, Nordhalbkugel: Winter = Dez–Feb).",
+        "time": "Eine Nacht gehört zu dem Tag, an dem sie beginnt, nach dem Kalender im Haus (der Check-out-Tag ist keine Nacht). Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Die Kalendertage der Nächte auswärts. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Jeder Kalendertag einmal; nur Aufenthalte, die auf den Tag genau datiert sind.",
+        "exclusions": "Nächte ohne Platz im Kalender. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "awayShare": {
+        "unit": "Anteil der Tage eines Jahres, an denen du auswärts übernachtet hast. Das laufende Jahr wird an den bisher vergangenen Tagen gemessen, nicht an 365 – der Anteil sinkt also mit jeder Nacht zu Hause.",
+        "time": "Eine Nacht gehört zu dem Tag, an dem sie beginnt, nach dem Kalender im Haus (der Check-out-Tag ist keine Nacht). Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Die Kalendertage der Nächte auswärts. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Nur Aufenthalte, die auf den Tag genau datiert sind; ein Jahr ohne solche Nacht fehlt.",
+        "exclusions": "Nächte ohne Platz im Kalender und Übernachtungen anderer Bereiche (Schiff, Zug, Bus). Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "longestStay": {
+        "unit": "Die meisten Nächte eines einzelnen Aufenthalts.",
+        "time": "Eine Nacht gehört zu dem Tag, an dem sie beginnt, nach dem Kalender im Haus (der Check-out-Tag ist keine Nacht). Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Die Nächte jedes Aufenthalts: zwischen Check-in und Check-out gezählt, sonst die eingetragene Zahl. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "{{unknown}} Aufenthalte ohne bekannte Länge zählen mit 0 Nächten. Tippe auf den Wert für alle Aufenthalte mit ihren Nächten.",
+        "exclusions": "Zwei aneinander anschließende Buchungen sind zwei Aufenthalte – die längste Folge steht beim Rhythmus. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "mostReturns": {
+        "unit": "Die meisten Aufenthalte in ein und demselben Haus.",
+        "time": "Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Deine Aufenthalte, nach Haus gezählt – zwei gleichnamige Häuser sind zwei Häuser. Es zählen Aufenthalte: deren Check-out vorbei ist.",
+        "coverage": "Jeder Aufenthalt zählt, auch ohne Datum. Tippe auf den Wert für die Aufenthalte.",
+        "exclusions": "Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "perfectStays": {
+        "unit": "Aufenthalte mit vier Mal 5 Sternen – Gesamt, Zimmer, Frühstück und Service; daneben die überstandenen mit Gesamtbewertung 2 oder weniger.",
+        "time": "Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Deine eigenen Bewertungen am Aufenthalt. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Fehlt eine der vier Bewertungen, ist der Aufenthalt nicht perfekt. Tippe auf den Wert für die perfekten Aufenthalte.",
+        "exclusions": "Aufenthalte ohne Gesamtbewertung. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "oneNighters": {
+        "unit": "Aufenthalte mit genau einer Nacht.",
+        "time": "Eine Nacht gehört zu dem Tag, an dem sie beginnt, nach dem Kalender im Haus (der Check-out-Tag ist keine Nacht). Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Die Nächte jedes Aufenthalts. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Ein Aufenthalt ohne bekannte Länge ist kein Eine-Nacht-Aufenthalt. Tippe auf den Wert für die Liste.",
+        "exclusions": "Aufenthalte mit 0 Nächten. Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      },
+      "byHotel": {
+        "unit": "Nächte und Aufenthalte je Haus, nach Nächten geordnet – aus demselben Durchgang wie die Kettenliste, beide zählen jede Nacht gleich.",
+        "time": "Eine Nacht gehört zu dem Tag, an dem sie beginnt, nach dem Kalender im Haus (der Check-out-Tag ist keine Nacht). Zeitraum: Aufenthalte, deren Check-in im gewählten Jahr liegt – der Tag, wie er im Haus gilt; ohne Jahr alle.",
+        "source": "Deine Aufenthalte, nach Haus gezählt. Deine Aufenthalte, die zählen: deren Check-out vorbei ist.",
+        "coverage": "Jeder Aufenthalt zählt; einer ohne bekannte Länge mit 0 Nächten.",
+        "exclusions": "Geplante Aufenthalte (Check-out noch offen) und stornierte zählen nicht; ein nur gemerktes Haus ist kein Aufenthalt."
+      }
     }
   },
   "period": {

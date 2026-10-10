@@ -66,6 +66,17 @@ const base = {
   hasNewYearsAtSea: false,
 } as unknown as CruiseStatsResponse;
 
+/**
+ * The KPI tile's own heading. Its label also names an entry of the block's
+ * "So wird gezählt" beneath the grid, so the text alone matches twice.
+ */
+async function findTileHeading(label: string): Promise<HTMLElement> {
+  const matches = await screen.findAllByText(label);
+  const heading = matches.find((el) => el.tagName === "H3");
+  if (!heading) throw new Error(`no tile heading "${label}"`);
+  return heading;
+}
+
 /** `MemoryRouter` never touches `window.location`, so the search string has to be read from inside it. */
 function LocationProbe({ onChange }: { onChange: (search: string) => void }): null {
   onChange(useLocation().search);
@@ -92,7 +103,7 @@ describe("CruiseStatsSection evidence wiring", () => {
     api.getCruiseStats.mockReset();
   });
 
-  it("wires the eight tiles whose measures release 1 serves", async () => {
+  it("wires all sixteen key figures, each to a measure release 1 serves", async () => {
     api.getCruiseStats.mockResolvedValue(base);
     let search = "";
     render(
@@ -105,7 +116,7 @@ describe("CruiseStatsSection evidence wiring", () => {
         />
       </MemoryRouter>
     );
-    await screen.findByText("stats:cruiseSection.countries");
+    await findTileHeading("stats:cruiseSection.countries");
 
     const keys: string[] = [];
     for (const trigger of screen.getAllByRole("button")) {
@@ -115,21 +126,29 @@ describe("CruiseStatsSection evidence wiring", () => {
       const raw = new URLSearchParams(search).get("evidence") ?? "";
       keys.push(raw.slice(raw.indexOf(":") + 1));
     }
+    // forgejo#257: the ratio, extreme and streak tiles open the cruises they
+    // are read from — a sum release 1 serves — never a ratio key of their own.
     expect(keys.sort()).toEqual(
       [
         "cruiseCount",
         "cruiseCountriesCount",
         "cruiseDistanceKmTotal",
+        "cruiseDistanceKmTotal",
+        "cruiseLinesUniqueCount",
         "cruiseLinesUniqueCount",
         "cruisePortsUniqueCount",
         "cruiseSeaDaysTotal",
+        "cruiseSeaDaysTotal",
         "cruiseShipsUniqueCount",
         "cruiseTotalDays",
+        "cruisePortCallsTotal",
+        "cruiseCataloguePortCallsTotal",
+        "cruiseCataloguePortCallsTotal",
+        "cruiseRiverCount",
+        "cruiseSailedDeckCount",
       ].sort()
     );
     expect(keys.every((key) => EVIDENCE_MEASURES[key]?.servedIn === 1)).toBe(true);
-    // The ratio, extremum and sequence tiles beside them stay plain: release 1
-    // serves neither kind, and a trigger there is a pointer cursor on a 404.
     expect(keys).not.toContain("cruiseAvgPortsPerCruise");
     expect(keys).not.toContain("cruiseLongestLegKm");
   });
@@ -148,7 +167,7 @@ describe("CruiseStatsSection countries tile", () => {
       </MemoryRouter>
     );
     // 2 (DE, US) — not 3, which counting the raw names would give.
-    const tile = await screen.findByText("stats:cruiseSection.countries");
+    const tile = await findTileHeading("stats:cruiseSection.countries");
     expect(tile.parentElement?.textContent).toContain("2");
   });
 
@@ -169,7 +188,7 @@ describe("CruiseStatsSection countries tile", () => {
         <CruiseStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />
       </MemoryRouter>
     );
-    const tile = await screen.findByText("stats:cruiseSection.countries");
+    const tile = await findTileHeading("stats:cruiseSection.countries");
     expect(tile.parentElement?.textContent).toContain("3");
   });
 });
@@ -188,7 +207,7 @@ describe("CruiseStatsSection under the page's period", () => {
         <CruiseStatsSection scope={{ year: 2024, compareYear: null }} visibility={ALL_VISIBLE} />
       </MemoryRouter>
     );
-    await screen.findByText("stats:cruiseSection.countries");
+    await findTileHeading("stats:cruiseSection.countries");
     expect(api.getCruiseStats).toHaveBeenCalledTimes(1);
     expect(api.getCruiseStats).toHaveBeenCalledWith({ year: 2024 });
   });
@@ -200,7 +219,7 @@ describe("CruiseStatsSection under the page's period", () => {
         <CruiseStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />
       </MemoryRouter>
     );
-    await screen.findByText("stats:cruiseSection.countries");
+    await findTileHeading("stats:cruiseSection.countries");
     expect(api.getCruiseStats).toHaveBeenCalledWith(undefined);
   });
 
@@ -244,7 +263,7 @@ describe("CruiseStatsSection hides the blocks the reader switched off", () => {
       </MemoryRouter>
     );
     // The depth grid still draws, so the section did render.
-    expect(await screen.findByText("stats:cruiseSection.countries")).toBeInTheDocument();
+    expect(await findTileHeading("stats:cruiseSection.countries")).toBeInTheDocument();
     expect(screen.queryByText("stats:cruiseSection.regionsHeading")).not.toBeInTheDocument();
     expect(screen.queryByText("United States of America")).not.toBeInTheDocument();
   });

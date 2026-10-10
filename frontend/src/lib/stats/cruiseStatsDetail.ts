@@ -28,6 +28,7 @@
 
 import type { Cruise } from "../../types/cruise";
 import { isAmountRecorded } from "../../shared/flightPricing";
+import { cruiseNights, cruiseStartMonth, listedPortCalls } from "../../shared/cruiseRowFacts";
 
 export interface CurrencySpend {
   currency: string;
@@ -66,10 +67,18 @@ export interface CruiseStatsDetail {
   companions: Map<string, number>;
   /** Cruises that belong to a trip, out of all of them. */
   onTrips: number;
+
+  /**
+   * How many of the folded cruises have not sailed: booked or running, and
+   * cancelled. The fold keeps them (it is the logbook, not money spent), so
+   * the counting help names them — a booking must stay distinguishable from
+   * a voyage that happened.
+   */
+  bookedCount: number;
+  cancelledCount: number;
 }
 
 const MONTHS = 12;
-const DAY_MS = 86_400_000;
 
 /**
  * Whether a price was recorded for the cruise.
@@ -85,13 +94,9 @@ export function isPricedCruise<T extends { price: number | null }>(
   return isAmountRecorded(cruise.price);
 }
 
-/** Nights between two dates, or null when either is missing or unreadable. */
+/** Nights between two dates, or null when either is missing or unreadable (`shared/cruiseRowFacts`). */
 export function nightsBetween(start: string | null, end: string | null): number | null {
-  if (!start || !end) return null;
-  const from = Date.parse(start);
-  const to = Date.parse(end);
-  if (Number.isNaN(from) || Number.isNaN(to) || to < from) return null;
-  return Math.round((to - from) / DAY_MS);
+  return cruiseNights(start, end);
 }
 
 export function deriveCruiseStats(cruises: readonly Cruise[]): CruiseStatsDetail {
@@ -106,6 +111,8 @@ export function deriveCruiseStats(cruises: readonly Cruise[]): CruiseStatsDetail
   let undatedCount = 0;
   let pricedCruises = 0;
   let onTrips = 0;
+  let bookedCount = 0;
+  let cancelledCount = 0;
 
   let longest: CruiseStatsDetail["longest"] = null;
   let shortest: CruiseStatsDetail["shortest"] = null;
@@ -116,15 +123,14 @@ export function deriveCruiseStats(cruises: readonly Cruise[]): CruiseStatsDetail
   let nightsCount = 0;
 
   for (const cruise of cruises) {
-    const startMs = cruise.startDate ? Date.parse(cruise.startDate) : NaN;
-    if (Number.isNaN(startMs)) {
+    const month = cruiseStartMonth(cruise.startDate);
+    if (month === null) {
       undatedCount += 1;
     } else {
-      const start = new Date(startMs);
       dated.push(cruise);
-      const year = start.getUTCFullYear();
+      const year = new Date(Date.parse(cruise.startDate ?? "")).getUTCFullYear();
       byYearCounts.set(year, (byYearCounts.get(year) ?? 0) + 1);
-      byMonth[start.getUTCMonth()] += 1;
+      byMonth[month] += 1;
     }
 
     const nights = nightsBetween(cruise.startDate, cruise.endDate);
@@ -135,9 +141,8 @@ export function deriveCruiseStats(cruises: readonly Cruise[]): CruiseStatsDetail
       if (shortest === null || nights < shortest.nights) shortest = { cruise, nights };
     }
 
-    // Sea days are not port calls. Counting them would make a transatlantic
-    // crossing look like the most-visited itinerary in the logbook.
-    const ports = (cruise.stops ?? []).filter((s) => !s.isAtSea).length;
+    // Sea days are not port calls (`shared/cruiseRowFacts`).
+    const ports = listedPortCalls(cruise.stops);
     if (ports > 0 && (mostPorts === null || ports > mostPorts.ports)) {
       mostPorts = { cruise, ports };
     }
@@ -164,6 +169,8 @@ export function deriveCruiseStats(cruises: readonly Cruise[]): CruiseStatsDetail
       companions.set(name, (companions.get(name) ?? 0) + 1);
     }
     if (cruise.tripId) onTrips += 1;
+    if (cruise.status === "scheduled" || cruise.status === "in_progress") bookedCount += 1;
+    if (cruise.status === "cancelled") cancelledCount += 1;
   }
 
   dated.sort((a, b) => Date.parse(a.startDate ?? "") - Date.parse(b.startDate ?? ""));
@@ -191,5 +198,7 @@ export function deriveCruiseStats(cruises: readonly Cruise[]): CruiseStatsDetail
     highestDeck,
     companions,
     onTrips,
+    bookedCount,
+    cancelledCount,
   };
 }
