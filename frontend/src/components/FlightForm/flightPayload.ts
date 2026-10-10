@@ -135,6 +135,11 @@ export function buildFlightPayload(fields: FlightPayloadFields): FlightInput & F
   const depTimeSemantics: FlightInput["depTimeSemantics"] =
     depShape === "year_month_day" ? "DATE_ONLY" : depShape !== "unknown" ? "UNKNOWN" : undefined;
   const arrTimeSemantics: FlightInput["arrTimeSemantics"] = depTimeSemantics;
+  // The year or month a placeholder date stands for, so the server stores it
+  // as the date's precision and never files the 1 January placeholder under
+  // another day (forgejo#256).
+  const datePrecision: FlightInput["datePrecision"] =
+    depShape === "year" ? "year" : depShape === "year_month" ? "month" : undefined;
 
   // For DATE_ONLY historical rows, arrival mirrors departure so the wall-clock
   // duration is 0 (great-circle estimate takes over downstream). The form already
@@ -222,6 +227,7 @@ export function buildFlightPayload(fields: FlightPayloadFields): FlightInput & F
     actualArrivalTz: actualArrivalDate ? zoneFor("actualArrivalLocal", arrTz) : undefined,
     depTimeSemantics,
     arrTimeSemantics,
+    ...(datePrecision ? { datePrecision } : {}),
     status,
     notes: notes || undefined,
     bookingReference: bookingReference || undefined,

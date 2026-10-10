@@ -30,6 +30,7 @@ export const FLIGHT_CLOCK_SELECT = {
   arrIcao: true,
   depTimeSemantics: true,
   depTimezone: true,
+  depPrecision: true,
   arrTimezone: true,
 } as const;
 

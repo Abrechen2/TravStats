@@ -184,6 +184,15 @@ const baseFlightSchema = z.object({
   arrivalFold: foldField,
   depTimeSemantics: z.enum(["UTC", "DATE_ONLY", "UNKNOWN"]).optional(),
   arrTimeSemantics: z.enum(["UTC", "DATE_ONLY", "UNKNOWN"]).optional(),
+  datePrecision: z
+    .enum(["year", "month"])
+    .optional()
+    .describe(
+      "For an UNKNOWN-semantics historical entry: the date is known only to the YEAR " +
+        "or the MONTH, and the wall clock sent is its placeholder (the 1st, 00:00). " +
+        "Stored as dep_precision/arr_precision so no reading ever files the " +
+        "placeholder on another day."
+    ),
   actualDepartureLocal: localDateTime.optional().nullable(),
   actualDepartureTz: ianaTimezone
     .optional()

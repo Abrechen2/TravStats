@@ -1,5 +1,10 @@
 import { localDay, toInstant } from "../../shared/time/instant";
-import { fakeUtcToInstant, placeholderDayOf, startOfDayAt } from "../../shared/time/legacyValues";
+import {
+  fakeUtcToInstant,
+  isPlaceholderPrecision,
+  placeholderDayOf,
+  startOfDayAt,
+} from "../../shared/time/legacyValues";
 import {
   TIME_PRECISIONS,
   serializeTime,
@@ -91,14 +96,20 @@ function endTime(
   // A year-/month-only placeholder (midnight UTC on the 1st, `UNKNOWN`) names
   // a day no zone may move: shown as the start of that day at the airport, so
   // "2015" does not read as 31 December 2014 west of UTC (forgejo#256).
-  const placeholder = placeholderDayOf(time, semantics);
+  const placeholder = placeholderDayOf(time, semantics, stored.precision);
   if (placeholder !== null) {
     return zone
       ? serializeTime(startOfDayAt(placeholder, zone), zone, "unknown", source)
       : serializeTime(time, null, "unknown");
   }
   const precision: TimePrecision =
-    semantics === "UTC" ? (isPrecision(stored.precision) ? stored.precision : "minute") : "unknown";
+    semantics === "UTC"
+      ? isPrecision(stored.precision)
+        ? stored.precision
+        : "minute"
+      : isPlaceholderPrecision(stored.precision)
+        ? (stored.precision as TimePrecision)
+        : "unknown";
   return serializeTime(time, zone, precision, source);
 }
 

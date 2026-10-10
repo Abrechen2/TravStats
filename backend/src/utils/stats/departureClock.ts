@@ -18,11 +18,18 @@ export interface DepartureClockRow {
   departureTime: Date | null;
   depTimezone?: string | null;
   depTimeSemantics?: FlightTimeSemantics;
+  /** `year` / `month` for a placeholder date (forgejo#256); absent from older selects. */
+  depPrecision?: string | null;
 }
 
 export function departureClockOf(flight: DepartureClockRow): LocalWallClock | null {
   if (!flight.departureTime) return null;
-  return localWallClockOf(flight.departureTime, flight.depTimezone, flight.depTimeSemantics);
+  return localWallClockOf(
+    flight.departureTime,
+    flight.depTimezone,
+    flight.depTimeSemantics,
+    flight.depPrecision
+  );
 }
 
 /**

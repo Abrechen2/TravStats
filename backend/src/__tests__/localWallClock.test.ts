@@ -103,4 +103,34 @@ describe("localWallClockOf", () => {
     const clock = localWallClockOf(new Date("2026-01-01T03:30:00Z"), "America/New_York", "UNKNOWN");
     expect(clock.date).toBe("2025-12-31");
   });
+
+  it("never reads a real 00:00 UTC departure as a placeholder", () => {
+    // A known time is stored with UTC semantics: 1 March 00:00 UTC is still
+    // 28 February in New York.
+    const clock = localWallClockOf(new Date("2015-03-01T00:00:00Z"), "America/New_York", "UTC");
+    expect(clock.date).toBe("2015-02-28");
+    expect(clock.hour).toBe(19);
+  });
+
+  it("trusts a stored minute precision over the placeholder shape", () => {
+    const clock = localWallClockOf(
+      new Date("2015-03-01T00:00:00Z"),
+      "America/New_York",
+      "UNKNOWN",
+      "minute"
+    );
+    expect(clock.date).toBe("2015-02-28");
+  });
+
+  it("reads a marked year-only entry written through its zone on its own day, with no hour", () => {
+    // The form writes 2015-01-01T00:00 in New York → 05:00 UTC, precision year.
+    const clock = localWallClockOf(
+      new Date("2015-01-01T05:00:00Z"),
+      "America/New_York",
+      "UNKNOWN",
+      "year"
+    );
+    expect(clock.date).toBe("2015-01-01");
+    expect(clock.hour).toBeNull();
+  });
 });

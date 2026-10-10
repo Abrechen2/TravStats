@@ -63,6 +63,31 @@ describe("Flights — time model (phase 2)", () => {
     expect(row.depPrecision).toBe("minute");
   });
 
+  it("stores a year-only historical date as precision `year`, and its times say so (forgejo#256)", async () => {
+    const res = await request(app)
+      .post("/api/v1/flights?force=true")
+      .set("Cookie", cookie)
+      .send({
+        departure: JFK,
+        arrival: { iata: "LAX", lat: 33.9416, lon: -118.4085 },
+        status: "historical",
+        departureLocal: "2015-01-01T00:00",
+        arrivalLocal: "2015-01-01T00:00",
+        depTimeSemantics: "UNKNOWN",
+        arrTimeSemantics: "UNKNOWN",
+        datePrecision: "year",
+      });
+    expect(res.status).toBe(201);
+    const id = res.body.id ?? res.body.flight?.id;
+    const row = await prisma.flight.findUniqueOrThrow({ where: { id } });
+    expect(row.depPrecision).toBe("year");
+    expect(row.arrPrecision).toBe("year");
+    const read = await request(app).get(`/api/v1/flights/${id}`).set("Cookie", cookie);
+    const times = (read.body.flight ?? read.body).times;
+    expect(times.departure.precision).toBe("year");
+    expect(times.departure.local.slice(0, 10)).toBe("2015-01-01");
+  });
+
   it("records the airports' zones even for a flight with no times", async () => {
     const res = await create({ status: "historical" });
     expect(res.status).toBe(201);

@@ -334,6 +334,8 @@ export interface FlightInput {
   // intentional (it's a backend-only marker that should never be re-sent).
   depTimeSemantics?: "UTC" | "DATE_ONLY" | "UNKNOWN" | "LEGACY_FAKE_UTC";
   arrTimeSemantics?: "UTC" | "DATE_ONLY" | "UNKNOWN" | "LEGACY_FAKE_UTC";
+  /** A historical date known only to the year or month (forgejo#256). */
+  datePrecision?: "year" | "month";
   status?: "scheduled" | "flown" | "cancelled" | "historical" | "duplicated";
   dataSource?:
     | "manual"
