@@ -43,6 +43,12 @@ export interface RentalListQuery {
 }
 
 export const rentalApi = {
+  /** The common providers, as suggestions for the free-text field (forgejo#196). */
+  async listProviders(): Promise<{ id: string; name: string }[]> {
+    const res = await api.get<Envelope<{ id: string; name: string }[]>>("/rentals/providers");
+    return Array.isArray(res.data.data) ? res.data.data : [];
+  },
+
   async list(query: RentalListQuery = {}): Promise<RentalPage> {
     const res = await api.get<
       Envelope<RentalBooking[]> & { meta: { total: number; summary: RentalListSummary } }

@@ -639,3 +639,43 @@ registry.registerPath({
     },
   },
 });
+
+registry.registerPath({
+  method: "get",
+  path: "/rentals/providers",
+  summary: "Common rental providers",
+  description:
+    "The catalogue behind the provider field's suggestions (forgejo#196), in suggestion " +
+    "order. The field stays free text; this list only saves typing.",
+  tags: ["Rentals"],
+  responses: {
+    200: {
+      description: "Providers",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.array(z.object({ id: z.string(), name: z.string() })),
+          }),
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/rentals/providers/logo",
+  summary: "A rental provider's logo",
+  description:
+    "Looked up only for a catalogued provider, on its own website first, then an icon " +
+    "service asked about the same domain. 404 for an unknown provider or when no source " +
+    "has a logo — the client draws a monogram then; there is never a stand-in image.",
+  tags: ["Rentals"],
+  request: { query: z.object({ name: z.string() }) },
+  responses: {
+    200: { description: "Image bytes", content: { "image/*": { schema: z.string() } } },
+    400: { description: "No provider name" },
+    404: { description: "No logo for this provider" },
+  },
+});
