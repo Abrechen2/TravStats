@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 
 // ---------------------------------------------------------------------------
 // The session comes from the `setup` project (AUD-098), so this confirms one
@@ -28,6 +28,67 @@ async function openMapPanel(page: Page): Promise<void> {
   }
 }
 
+/**
+ * Open the domain filter ("Domänen · n/m") and return its panel.
+ *
+ * The domain tab strip is hidden (owner, 2026-09-28): the six-row domain
+ * filter answers "what is on the map" in its place, and its "Nur" button is
+ * the in-page way into a single-domain view. A single-domain view IS a
+ * selection of one, so the filter's ticks are how the page says which view is
+ * active — the job `aria-selected` on the strip's tabs used to do.
+ */
+async function openDomainFilter(page: Page): Promise<Locator> {
+  const button = page.getByRole("button", { name: /^(Domänen|Domains) · \d+\/\d+$/ });
+  await expect(button).toBeVisible({ timeout: 8_000 });
+  if ((await button.getAttribute("aria-expanded")) !== "true") await button.click();
+  const panel = page.getByRole("dialog", { name: /^(Auf der Karte|On the map)$/ });
+  await expect(panel).toBeVisible();
+  return panel;
+}
+
+/** A domain row in the open filter panel — `role="checkbox"`, named by its domain. */
+function domainRow(panel: Locator, name: RegExp): Locator {
+  return panel.getByRole("checkbox", { name });
+}
+
+const FLIGHTS = /^(Flüge|Flights)$/;
+const CRUISES = /^(Kreuzfahrten|Cruises)$/;
+
+async function closeDomainFilter(page: Page, panel: Locator): Promise<void> {
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+}
+
+/** "Alle": every domain on the map, flights and cruises among them. */
+async function expectAllDomainsShown(page: Page): Promise<void> {
+  const panel = await openDomainFilter(page);
+  await expect(domainRow(panel, FLIGHTS)).toHaveAttribute("aria-checked", "true");
+  await expect(domainRow(panel, CRUISES)).toHaveAttribute("aria-checked", "true");
+  await expect(panel.getByRole("checkbox", { checked: false })).toHaveCount(0);
+  await closeDomainFilter(page, panel);
+}
+
+/** A single-domain view: its own row ticked, every other row not. */
+async function expectOnlyDomainShown(page: Page, name: RegExp): Promise<void> {
+  const panel = await openDomainFilter(page);
+  await expect(domainRow(panel, name)).toHaveAttribute("aria-checked", "true");
+  await expect(panel.getByRole("checkbox", { checked: true })).toHaveCount(1);
+  await closeDomainFilter(page, panel);
+}
+
+/** "Nur" in a domain's row: the door into that domain's own view. */
+async function showOnly(page: Page, name: RegExp): Promise<void> {
+  const panel = await openDomainFilter(page);
+  await domainRow(panel, name)
+    .getByRole("button", { name: /^(Nur|Only)$/ })
+    .click();
+  // The route change remounts the page (App keys its animated routes on the
+  // path), and the outgoing page keeps its open panel until it has left. Wait
+  // for that, or the next `openDomainFilter` finds the old page's open panel,
+  // skips the click, and holds a panel that is about to detach.
+  await expect(panel).toBeHidden();
+}
+
 // ---------------------------------------------------------------------------
 // Multi-domain dashboard E2E
 // ---------------------------------------------------------------------------
@@ -37,19 +98,15 @@ test.describe("Multi-domain dashboard", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 1. Default route lands on All tab (aria-selected="true") on its default mode
+  // 1. Default route lands on "Alle" (every domain ticked) on its default mode
   // -------------------------------------------------------------------------
   test("default lands on All tab on the mode the registry opens it with", async ({ page }) => {
     await page.goto("/dashboard");
 
-    // The DomainTabStrip renders buttons with role="tab".
-    // i18n key dashboard:tabStrip.tabs.all = "Alle"
-    const allTab = page.getByRole("tab", { name: /alle/i });
-    await expect(allTab).toBeVisible({ timeout: 8_000 });
-    await expect(allTab).toHaveAttribute("aria-selected", "true");
-
-    // URL should be exactly /dashboard (no extra segment).
+    // URL should be exactly /dashboard (no extra segment), and every domain
+    // is on the map.
     await expect(page).toHaveURL(/\/dashboard$/);
+    await expectAllDomainsShown(page);
 
     // The mode control is a segmented row of buttons in the map chrome, not the
     // "Modus: …" dropdown this file was written against — that one is retired.
@@ -76,9 +133,7 @@ test.describe("Multi-domain dashboard", () => {
   test("deep link to /dashboard?mode=overview shows the flat overview mode", async ({ page }) => {
     await page.goto("/dashboard?mode=overview");
 
-    const allTab = page.getByRole("tab", { name: /alle/i });
-    await expect(allTab).toBeVisible({ timeout: 8_000 });
-    await expect(allTab).toHaveAttribute("aria-selected", "true");
+    await expectAllDomainsShown(page);
 
     await openMapPanel(page);
     await expect(page.getByRole("button", { name: /^Übersicht$/i, pressed: true })).toBeVisible({
@@ -87,15 +142,19 @@ test.describe("Multi-domain dashboard", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 2. Deep-link to /dashboard/cruise renders Kreuzfahrten tab as active
+  // 2. Deep-link to /dashboard/cruise still resolves to the cruise view — the
+  //    tab ROUTES outlived the strip (owner, 2026-09-28), so a bookmark into
+  //    a single-domain view keeps working.
   // -------------------------------------------------------------------------
   test("deep link to /dashboard/cruise renders the cruise tab as active", async ({ page }) => {
     await page.goto("/dashboard/cruise");
 
-    // i18n key dashboard:tabStrip.tabs.cruise = "Kreuzfahrten"
-    const cruiseTab = page.getByRole("tab", { name: /kreuzfahrten/i });
-    await expect(cruiseTab).toBeVisible({ timeout: 8_000 });
-    await expect(cruiseTab).toHaveAttribute("aria-selected", "true");
+    await expect(page).toHaveURL(/\/dashboard\/cruise$/);
+    // The view's own "+" names its domain; "Alle" offers a picker instead.
+    await expect(
+      page.getByRole("button", { name: /Kreuzfahrt hinzufügen|Add cruise/i })
+    ).toBeVisible({ timeout: 8_000 });
+    await expectOnlyDomainShown(page, CRUISES);
   });
 
   // -------------------------------------------------------------------------
@@ -107,8 +166,7 @@ test.describe("Multi-domain dashboard", () => {
   }) => {
     await page.goto("/dashboard/cruise?mode=itinerary");
 
-    const cruiseTab = page.getByRole("tab", { name: /kreuzfahrten/i });
-    await expect(cruiseTab).toHaveAttribute("aria-selected", "true");
+    await expectOnlyDomainShown(page, CRUISES);
 
     // The deep-linked mode is the selected option, and the URL keeps saying so.
     await openMapPanel(page);
@@ -140,22 +198,23 @@ test.describe("Multi-domain dashboard", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 5. Tab switch restores the last-used mode via localStorage
+  // 5. Switching views restores the last-used mode via localStorage
   //    Scenario: set flight to heatmap, go to cruise, come back to flight —
-  //    heatmap should be re-applied.
+  //    heatmap should be re-applied. The switch goes through the domain
+  //    filter's "Nur", the in-page way between single-domain views since the
+  //    tab strip was hidden (owner, 2026-09-28).
   // -------------------------------------------------------------------------
   test("tab switch restores last-used flight mode from localStorage", async ({ page }) => {
     // Start on flight tab with heatmap mode (writes to localStorage).
     await page.goto("/dashboard/flight?mode=heatmap");
+    await expect(page).toHaveURL(/[?&]mode=heatmap/);
 
-    // Switch to cruise tab.
-    const cruiseTab = page.getByRole("tab", { name: /kreuzfahrten/i });
-    await cruiseTab.click();
+    // Cruises alone.
+    await showOnly(page, CRUISES);
     await expect(page).toHaveURL(/\/dashboard\/cruise/);
 
-    // Switch back to flight tab.
-    const flightTab = page.getByRole("tab", { name: /flüge/i });
-    await flightTab.click();
+    // Back to flights alone.
+    await showOnly(page, FLIGHTS);
     await expect(page).toHaveURL(/\/dashboard\/flight/);
 
     // Restored from localStorage: the option is selected again, and the URL
@@ -179,9 +238,10 @@ test.describe("Multi-domain dashboard", () => {
   test("All tab Hinzufügen button opens domain picker with flight option", async ({ page }) => {
     await page.goto("/dashboard");
 
-    // "Alle" tab should already be active.
-    const allTab = page.getByRole("tab", { name: /alle/i });
-    await expect(allTab).toHaveAttribute("aria-selected", "true");
+    // "Alle" should already be active — the picker is its button; a
+    // single-domain view has a "+ <domain> hinzufügen" button instead.
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await expectAllDomainsShown(page);
 
     // Click the "+ Hinzufügen ▾" button.
     // The button text is `+ ${t("dashboard:addPicker.button")} ▾` = "+ Hinzufügen ▾"
