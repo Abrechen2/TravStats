@@ -89,7 +89,7 @@ export default function ResetPasswordPage(): JSX.Element {
             borderRadius: "var(--ts-radius-card)",
           }}
         >
-          <h1 className="t-card-title" style={{ marginBottom: "var(--ts-space-md)" }}>
+          <h1 className="t-screen-title" style={{ marginBottom: "var(--ts-space-md)" }}>
             {t("auth:resetPassword.expiredTitle")}
           </h1>
           <p className="t-body" style={{ marginBottom: "var(--ts-space-xl)" }}>
