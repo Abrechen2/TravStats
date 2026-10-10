@@ -82,7 +82,6 @@
     "components/FlightForm/FlightCompleteStep.tsx",
     "components/FlightForm/FlightLookupStep.tsx",
     "components/FlightForm/FlightSelectStep.tsx",
-    "components/Help/HelpIcon.tsx",
     "components/PendingUpdateCard.tsx",
     "components/PendingUpdateEditor.tsx",
     "components/ReceiptUpload.tsx",
