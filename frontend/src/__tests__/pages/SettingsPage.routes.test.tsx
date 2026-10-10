@@ -119,6 +119,9 @@ vi.mock("../../components/Settings/StravaConnectionCard", () => ({
 vi.mock("../../components/Settings/ImmichConnectionCard", () => ({
   default: () => <div data-testid="immich-connection-card" />,
 }));
+vi.mock("../../components/Settings/PhotoJourneyNightlyScanCard", () => ({
+  default: () => <div data-testid="photo-journey-nightly-scan-card" />,
+}));
 vi.mock("../../components/Settings/RoutingProviderSection", () => ({
   default: () => <div data-testid="routing-provider-section" />,
 }));
