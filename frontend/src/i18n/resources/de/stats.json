@@ -552,7 +552,8 @@
     "empty": "Keine Daten vorhanden.",
     "continent": {
       "other": "Sonstige"
-    }
+    },
+    "rarestAirportsOf": "{{shown}} von {{total}} – die zuletzt erstmals besuchten zuerst"
   },
   "certificate": {
     "title": "Flug-Zertifikat",

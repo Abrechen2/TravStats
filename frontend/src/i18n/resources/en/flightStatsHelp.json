@@ -612,7 +612,7 @@
       "unit": "Airports with exactly one visit – a single departure or a single landing there; at most five.",
       "time": "No time element: all-time; the page's year filter does not apply.",
       "source": "Flown and logged (historical) flights, with the airport code of both ends (IATA, else ICAO); name and country from the airport catalogue.",
-      "coverage": "The first five in the order the flights are read are shown – not sorted by date or name. An airport recorded with both its IATA and its ICAO code can appear here with one visit under each.",
+      "coverage": "Every airport with exactly one visit ties; at most five of them are shown, the most recently first visited first (by code on the same day), with how many there are in total above them. An airport recorded with both its IATA and its ICAO code can appear here with one visit under each.",
       "exclusions": "Not included: ends without an airport code, scheduled and cancelled flights, and drafts (duplicates)."
     },
     "continentDistribution": {

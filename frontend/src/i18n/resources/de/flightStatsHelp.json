@@ -612,7 +612,7 @@
       "unit": "Flughäfen mit genau einem Besuch – ein einziger Start oder eine einzige Landung dort, höchstens fünf.",
       "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
       "source": "Geflogene und nachgetragene Flüge, mit dem Flughafen-Code beider Enden (IATA, sonst ICAO); Name und Land aus dem Flughafenkatalog.",
-      "coverage": "Gezeigt werden die ersten fünf in der Reihenfolge, in der die Flüge gelesen werden – nicht nach Datum oder Name sortiert. Ein Flughafen, der mit IATA- und mit ICAO-Code erfasst ist, kann hier mit je einem Besuch stehen.",
+      "coverage": "Alle Flughäfen mit genau einem Besuch liegen gleichauf; gezeigt werden höchstens fünf davon, die zuletzt erstmals besuchten zuerst (bei gleichem Tag nach Code), und darüber, wie viele es insgesamt sind. Ein Flughafen, der mit IATA- und mit ICAO-Code erfasst ist, kann hier mit je einem Besuch stehen.",
       "exclusions": "Nicht enthalten: Enden ohne Flughafen-Code, geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
     },
     "continentDistribution": {

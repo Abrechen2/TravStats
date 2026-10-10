@@ -684,6 +684,8 @@ export interface AirportStats {
     name: string | null;
     country: string | null;
   }>;
+  /** How many airports were visited exactly once (forgejo#256); the list is five of them. */
+  rarestAirportsTotal: number;
   newThisYear: Array<{
     code: string;
     name: string | null;

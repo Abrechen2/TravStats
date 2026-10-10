@@ -35,6 +35,7 @@ function emptyAirportStats(): AirportStats {
     continentTotal: CONTINENTS.length,
     topAirports: [],
     rarestAirports: [],
+    rarestAirportsTotal: 0,
     newThisYear: [],
     farthestFromHome: null,
     topCountries: [],
@@ -131,15 +132,18 @@ export async function calculateAirportStats(
       visits: count,
     }));
 
-  // Rarest airports — visited exactly once. Cap at 5 to keep payload small.
-  const rarestAirports = Array.from(visits.entries())
+  // Rarest airports — visited exactly once. Many tie at one visit, so the
+  // five shown are chosen by a stated rule (forgejo#256): the most recently
+  // first visited first, then by code; `rarestAirportsTotal` says how many tie.
+  const once = Array.from(visits.entries())
     .filter(([, count]) => count === 1)
-    .slice(0, 5)
-    .map(([code]) => ({
-      code,
-      name: airportInfo.get(code)?.name ?? null,
-      country: airportInfo.get(code)?.country ?? null,
-    }));
+    .map(([code]) => ({ code, day: firstVisit.get(code) ?? "" }))
+    .sort((a, b) => (a.day === b.day ? a.code.localeCompare(b.code) : a.day < b.day ? 1 : -1));
+  const rarestAirports = once.slice(0, 5).map(({ code }) => ({
+    code,
+    name: airportInfo.get(code)?.name ?? null,
+    country: airportInfo.get(code)?.country ?? null,
+  }));
 
   // New this year — airports whose first visit falls in the current year.
   const currentYear = new Date().getUTCFullYear();
@@ -180,6 +184,7 @@ export async function calculateAirportStats(
     continentTotal: CONTINENTS.length,
     topAirports,
     rarestAirports,
+    rarestAirportsTotal: once.length,
     newThisYear,
     farthestFromHome,
     topCountries,

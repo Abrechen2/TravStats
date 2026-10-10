@@ -252,7 +252,12 @@ export const airportStatsSchema = z.object({
     }),
   topAirports: z.array(airportRefSchema.extend({ visits: z.number().int() })),
   rarestAirports: z.array(airportRefSchema).openapi({
-    description: "Airports visited exactly once. Capped, to keep the payload small.",
+    description:
+      "Airports visited exactly once, at most five: the most recently first visited " +
+      "first, then by code — a stated tie rule, since every one of them ties at one visit.",
+  }),
+  rarestAirportsTotal: z.number().int().openapi({
+    description: "How many airports were visited exactly once — the five above are a cut of these.",
   }),
   newThisYear: z.array(airportRefSchema.extend({ firstVisitDate: z.string() })),
   farthestFromHome: airportRefSchema

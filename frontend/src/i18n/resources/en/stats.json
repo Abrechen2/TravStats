@@ -552,7 +552,8 @@
     "empty": "No data yet.",
     "continent": {
       "other": "Other"
-    }
+    },
+    "rarestAirportsOf": "{{shown}} of {{total}} – the most recently first visited first"
   },
   "certificate": {
     "title": "Flight Certificate",

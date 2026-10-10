@@ -343,6 +343,15 @@ export default function StatsAirportsSection({
           >
             {t("stats:airportStats.rarestAirports")}
           </h3>
+          {/* Many airports tie at one visit; the list is a stated cut of them. */}
+          {airportStats.rarestAirportsTotal > rarestAirports.length && (
+            <p className="mb-2 text-xs" style={{ color: "var(--text-muted)" }}>
+              {t("stats:airportStats.rarestAirportsOf", {
+                shown: rarestAirports.length,
+                total: airportStats.rarestAirportsTotal,
+              })}
+            </p>
+          )}
           {rarestAirports.length === 0 ? (
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
               {t("stats:airportStats.rarestAirportsEmpty")}

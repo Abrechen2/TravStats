@@ -20,6 +20,7 @@ const stats: AirportStats = {
   continentTotal: 7,
   topAirports: [],
   rarestAirports: [],
+  rarestAirportsTotal: 0,
   newThisYear: [],
   farthestFromHome: null,
   topCountries: [],
@@ -96,5 +97,23 @@ describe("StatsAirportsSection — country names", () => {
     // which used to print the bare code as the airport's own label.
     expect(screen.getAllByText("Deutschland").length).toBeGreaterThan(1);
     expect(screen.getAllByText("Vereinigtes Königreich").length).toBeGreaterThan(1);
+  });
+});
+
+// forgejo#256 — five airports of many that tie at one visit: the cut is said.
+describe("StatsAirportsSection — rarest airports", () => {
+  it("says how many tie when the list shows only some of them", () => {
+    render(
+      <MemoryRouter>
+        <StatsAirportsSection
+          airportStats={{
+            ...stats,
+            rarestAirports: [{ code: "LHR", name: null, country: "GB" }],
+            rarestAirportsTotal: 12,
+          }}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getByText("stats:airportStats.rarestAirportsOf:12")).toBeInTheDocument();
   });
 });
