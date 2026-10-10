@@ -471,6 +471,15 @@
     "figDrivenSub": "ohne Fähre · gesamt {{km}} km",
     "figRoute": "Strecke",
     "figRoutePlanned": "geplant",
+    "figSoFar": "bisher {{driven}} km gefahren · {{ahead}} km geplant",
+    "distanceSourceKm": "{{km}} km {{source}}",
+    "distanceSource": {
+      "track": "GPS-Spur",
+      "routed": "Route",
+      "drawn": "gezeichnet",
+      "straight": "Luftlinie"
+    },
+    "distanceRule": "Strecke gemessen: {{parts}}. Luftlinie ist die gerade Verbindung der Stationen, Route der Straßenweg des Routing-Anbieters, GPS-Spur eine aufgezeichnete Fahrt. Als gefahren zählt eine Etappe, sobald ihre Zielstation vor heute erreicht ist; „Gefahren“ steht erst, wenn eine GPS-Spur jeden Kilometer belegt.",
     "figDays": "Tage",
     "figDaysAhead_one": "davon einer noch vor dir",
     "figDaysAhead_other": "davon {{count}} noch vor dir",

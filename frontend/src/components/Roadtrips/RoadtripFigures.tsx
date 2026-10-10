@@ -2,6 +2,7 @@ import type { JSX } from "react";
 
 import { Icon } from "../ui/Icon";
 import { useTranslation } from "../../hooks/useTranslation";
+import { distanceFigure } from "../../lib/roadtrip/distanceFigure";
 import { daysAhead, spanDays } from "../../lib/roadtrip/roadtripView";
 import type { RoadtripDetail } from "../../types/roadtrip";
 
@@ -35,24 +36,44 @@ export default function RoadtripFigures({
   const ahead = daysAhead(detail.startDate, detail.endDate, today);
   const approx = n.nightsKnown ? "" : "≈ ";
 
-  // The km figure is the length of ALL legs, whatever their date. It may be
-  // called driven only once the roadtrip is over; before that it is the
-  // planned distance (forgejo#179: "Gefahren 254 km" on day 1 of 3, with the
-  // only leg still ahead).
-  const over = days !== null && ahead === null;
+  // The km figure is the length of ALL road legs, whatever their date. What
+  // of it is driven comes from the server's timeline rule (`progress`), and
+  // "Gefahren" needs a recorded track behind every km (forgejo#179: "Gefahren
+  // 254 km" on day 1 of 3, with the only leg still ahead).
+  const distance = distanceFigure(r.drivenKm, detail.progress);
   const ferryNote =
     r.drivenKm !== r.distanceKm
       ? t("roadtrips:detail.figDrivenSub", { km: nf.format(r.distanceKm) })
       : undefined;
+  const splitNote = distance.split
+    ? t("roadtrips:detail.figSoFar", {
+        driven: nf.format(distance.split.driven),
+        ahead: nf.format(distance.split.ahead),
+      })
+    : undefined;
+  const basisParts = distance.basis
+    .map((b) =>
+      t("roadtrips:detail.distanceSourceKm", {
+        km: nf.format(b.km),
+        source: t(`roadtrips:detail.distanceSource.${b.source}`),
+      })
+    )
+    .join(", ");
+  // Without the server's split (an older server) the dates say only whether
+  // the plan still lies ahead; nothing is called driven.
+  const overByDates = days !== null && ahead === null;
+  const fallbackNote = overByDates ? undefined : t("roadtrips:detail.figRoutePlanned");
+  const stateNote = splitNote ?? (detail.progress ? basisParts || undefined : fallbackNote);
 
   const figures: Figure[] = [
     {
       key: "driven",
-      label: over ? t("roadtrips:detail.figDriven") : t("roadtrips:detail.figRoute"),
+      label:
+        distance.label === "driven"
+          ? t("roadtrips:detail.figDriven")
+          : t("roadtrips:detail.figRoute"),
       value: `${nf.format(r.drivenKm)} km`,
-      sub: over
-        ? ferryNote
-        : [t("roadtrips:detail.figRoutePlanned"), ferryNote].filter(Boolean).join(" · "),
+      sub: [stateNote, ferryNote].filter(Boolean).join(" · ") || undefined,
     },
     ...(days !== null
       ? [
@@ -146,6 +167,7 @@ export default function RoadtripFigures({
           </span>
         )}
         {!n.nightsKnown && <span>{t("roadtrips:detail.approxHint")}</span>}
+        {basisParts && <span>{t("roadtrips:detail.distanceRule", { parts: basisParts })}</span>}
         {!detail.routingAvailable && <span>{t("roadtrips:detail.noRouting")}</span>}
       </div>
     </div>

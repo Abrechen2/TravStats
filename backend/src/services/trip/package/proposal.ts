@@ -12,10 +12,10 @@
  *           cannot be named (`unresolvedAirport` — never guessed), or what the
  *           reviewer excluded
  */
+import { resolveCountryCode } from "../../../shared/geo/countryCode";
 import { prisma } from "../../../db";
 import { AppError } from "../../../middleware/errorHandler";
 import { entryOf } from "../../documents/documentService";
-import { normalizeLodgingName } from "../../lodging/lodgingImportPreview";
 import { tripNameLanguageOf, tripNameMonth } from "../tripGrouping";
 import { packageSpan, type PackageContract } from "./contract";
 import {
@@ -215,15 +215,17 @@ async function proposeStays(
   choices: PackageChoices,
   tripId: string | null
 ): Promise<{ stays: ProposalStay[]; warnings: ProposalWarning[] }> {
-  const index = await lodgingIndex(
-    userId,
-    contract.stays.map((s) => s.name)
-  );
+  // A package names its country in words ("Kenia"); the account stores the
+  // ISO code beside whatever spelling it has, so compare on the code.
+  const houses = contract.stays.map((s) => ({
+    ...s,
+    isoCountryCode: resolveCountryCode(s.country ?? null),
+  }));
+  const index = await lodgingIndex(userId, houses);
   const excluded = new Set(choices.excludeStays ?? []);
   const warnings: ProposalWarning[] = [];
   const stays = contract.stays.map((s, i): ProposalStay => {
-    const lodgingId = index.lodgings.get(normalizeLodgingName(s.name)) ?? null;
-    const existing = lodgingId ? index.stays.get(`${lodgingId}|${s.checkIn}`) : undefined;
+    const { lodgingId, stay: existing } = index.resolve(houses[i], s.checkIn);
     let decision: Decision = existing
       ? decideExisting(existing, tripId)
       : { action: "create", id: null };

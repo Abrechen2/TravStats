@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 import RoadtripFigures from "../RoadtripFigures";
-import type { RoadtripDetail } from "../../../types/roadtrip";
+import type { RoadtripDetail, RoadtripProgress } from "../../../types/roadtrip";
 
 vi.mock("../../../hooks/useTranslation", async () => {
   const { germanUseTranslationNs } = await import("../../../__tests__/helpers/germanT");
@@ -77,13 +77,52 @@ describe("RoadtripFigures distance figure (forgejo#179)", () => {
     expect(screen.getByText("geplant")).toBeInTheDocument();
   });
 
-  it("calls it driven once the roadtrip is over", () => {
+  function withProgress(
+    phase: RoadtripProgress["phase"],
+    recorded: number,
+    source: string
+  ): RoadtripDetail {
+    const d = withKm("2026-10-03T00:00:00.000Z", "2026-10-05T00:00:00.000Z");
+    return {
+      ...d,
+      progress: {
+        phase,
+        roadKm: { recorded, current: 0, planned: 254 - recorded, unplaced: 0 },
+        roadKmBySource: { [source]: 254 },
+        recordedRoadKmBySource: recorded > 0 ? { [source]: recorded } : {},
+      },
+    };
+  }
+
+  it("splits driven so far from planned while under way (the reported case)", () => {
+    render(<RoadtripFigures detail={withProgress("current", 0, "straight")} today="2026-10-03" />);
+    expect(screen.queryByText("Gefahren")).not.toBeInTheDocument();
+    expect(screen.getByText("Strecke")).toBeInTheDocument();
+    expect(screen.getByText("bisher 0 km gefahren · 254 km geplant")).toBeInTheDocument();
+    expect(screen.getByText(/^Strecke gemessen: 254 km Luftlinie\./)).toBeInTheDocument();
+  });
+
+  it("does not call a finished roadtrip driven without a GPS track behind it", () => {
+    render(<RoadtripFigures detail={withProgress("past", 254, "straight")} today="2026-10-09" />);
+    expect(screen.queryByText("Gefahren")).not.toBeInTheDocument();
+    expect(screen.getByText("Strecke")).toBeInTheDocument();
+    expect(screen.getByText("254 km Luftlinie")).toBeInTheDocument();
+  });
+
+  it("calls it driven once the roadtrip is over and a track covers every km", () => {
+    render(<RoadtripFigures detail={withProgress("past", 254, "track")} today="2026-10-09" />);
+    expect(screen.getByText("Gefahren")).toBeInTheDocument();
+    expect(screen.getByText("254 km GPS-Spur")).toBeInTheDocument();
+  });
+
+  it("claims nothing driven when the server sends no split", () => {
     render(
       <RoadtripFigures
         detail={withKm("2026-09-03T00:00:00.000Z", "2026-09-05T00:00:00.000Z")}
         today="2026-10-03"
       />
     );
-    expect(screen.getByText("Gefahren")).toBeInTheDocument();
+    expect(screen.queryByText("Gefahren")).not.toBeInTheDocument();
+    expect(screen.getByText("Strecke")).toBeInTheDocument();
   });
 });

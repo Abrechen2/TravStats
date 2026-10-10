@@ -84,11 +84,40 @@ export type HouseIdentity = Pick<
 const hasCoordinates = (h: HouseIdentity): h is HouseIdentity & { lat: number; lon: number } =>
   h.lat !== null && h.lon !== null;
 
-function sameCountry(a: HouseIdentity, b: HouseIdentity): boolean {
-  if (a.isoCountryCode && b.isoCountryCode) return a.isoCountryCode === b.isoCountryCode;
+/** Same country, different country, or nothing to compare on one side. */
+function countryVerdict(a: HouseIdentity, b: HouseIdentity): HouseVerdict {
+  if (a.isoCountryCode && b.isoCountryCode) {
+    return a.isoCountryCode === b.isoCountryCode ? "same" : "different";
+  }
   const ca = normalisedLodgingName(a.country ?? "");
   const cb = normalisedLodgingName(b.country ?? "");
-  return ca !== "" && ca === cb;
+  if (ca === "" || cb === "") return "unknown";
+  return ca === cb ? "same" : "different";
+}
+
+/**
+ * What the place data of two same-named houses says about them: `same`
+ * (coordinates within `SAME_HOUSE_RADIUS_KM`, or the same city in the same
+ * country), `different` (a different name, coordinates apart, another city or
+ * another country), or `unknown` — a side carries too little to tell, which is
+ * NOT a match. Importers use the three-way answer to tell "nothing contradicts
+ * it" from "it is proven"; `isSameHouse` is its `same`.
+ */
+export type HouseVerdict = "same" | "different" | "unknown";
+
+export function houseVerdict(a: HouseIdentity, b: HouseIdentity): HouseVerdict {
+  if (normalisedLodgingName(a.name) !== normalisedLodgingName(b.name)) return "different";
+  if (hasCoordinates(a) && hasCoordinates(b)) {
+    return calculateDistance(a.lat, a.lon, b.lat, b.lon) <= SAME_HOUSE_RADIUS_KM
+      ? "same"
+      : "different";
+  }
+  const cityA = normalisedLodgingName(a.city ?? "");
+  const cityB = normalisedLodgingName(b.city ?? "");
+  if (cityA === "" || cityB === "")
+    return countryVerdict(a, b) === "different" ? "different" : "unknown";
+  if (cityA !== cityB) return "different";
+  return countryVerdict(a, b);
 }
 
 /**
@@ -101,11 +130,5 @@ function sameCountry(a: HouseIdentity, b: HouseIdentity): boolean {
  * recoverable, a stay silently moved to another city is not.
  */
 export function isSameHouse(a: HouseIdentity, b: HouseIdentity): boolean {
-  if (normalisedLodgingName(a.name) !== normalisedLodgingName(b.name)) return false;
-  if (hasCoordinates(a) && hasCoordinates(b)) {
-    return calculateDistance(a.lat, a.lon, b.lat, b.lon) <= SAME_HOUSE_RADIUS_KM;
-  }
-  const cityA = normalisedLodgingName(a.city ?? "");
-  const cityB = normalisedLodgingName(b.city ?? "");
-  return cityA !== "" && cityA === cityB && sameCountry(a, b);
+  return houseVerdict(a, b) === "same";
 }
