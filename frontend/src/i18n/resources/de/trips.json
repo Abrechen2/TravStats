@@ -395,7 +395,9 @@
     "deleteError": "Foto konnte nicht gelöscht werden",
     "empty": "Noch keine Fotos — lade die ersten Erinnerungen dieser Reise hoch.",
     "fromLibrary": "Aus der Fotobibliothek",
-    "fromLibraryAlt": "Foto aus der Fotobibliothek"
+    "fromLibraryAlt": "Foto aus der Fotobibliothek",
+    "tooLarge": "„{{name}}“ ist zu groß — ein Foto darf höchstens {{maxMb}} MB haben. Es wurde nicht hochgeladen.",
+    "tooLargeServer": "Ein Foto ist zu groß — erlaubt sind höchstens {{maxMb}} MB pro Foto. Nichts wurde hochgeladen."
   },
   "insights": {
     "longest": "Längste Reise",

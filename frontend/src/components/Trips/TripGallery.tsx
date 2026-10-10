@@ -20,6 +20,16 @@ interface TripGalleryProps {
 const ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
 
 /**
+ * Mirrors the server's `FILE_LIMITS.TRIP_PHOTO_MAX_SIZE` (backend
+ * config/constants.ts) — change both together. Checked here so a photo that
+ * is too large is named BEFORE it is sent: the server only answers 413, and
+ * the gallery used to turn that into "Upload fehlgeschlagen" without saying
+ * why (forgejo#88 acceptance, 2026-10-10).
+ */
+export const TRIP_PHOTO_MAX_BYTES = 15 * 1024 * 1024;
+const TRIP_PHOTO_MAX_MB = TRIP_PHOTO_MAX_BYTES / (1024 * 1024);
+
+/**
  * Gallery tab content (Phase-1 iteration 7). Multi-image upload, grid
  * preview, click-to-enlarge lightbox, hover delete + caption edit — plus
  * one section per linked Immich album (Phase-A Immich integration).
@@ -49,19 +59,31 @@ export default function TripGallery({
     const files = Array.from(e.target.files ?? []);
     e.target.value = ""; // allow re-uploading the same file
     if (files.length === 0) return;
+    const tooLarge = files.filter((f) => f.size > TRIP_PHOTO_MAX_BYTES);
+    for (const file of tooLarge) {
+      addToast("error", t("trips:gallery.tooLarge", { name: file.name, maxMb: TRIP_PHOTO_MAX_MB }));
+    }
+    const accepted = files.filter((f) => f.size <= TRIP_PHOTO_MAX_BYTES);
+    if (accepted.length === 0) return;
     setUploading(true);
     try {
-      await tripsApi.uploadPhotos(tripId, files);
+      await tripsApi.uploadPhotos(tripId, accepted);
       addToast(
         "success",
         t("trips:gallery.uploaded", {
-          count: files.length,
+          count: accepted.length,
           defaultValue: "{{count}} Foto hochgeladen",
         })
       );
       onChange();
-    } catch {
-      addToast("error", t("trips:gallery.uploadError"));
+    } catch (error: unknown) {
+      const status = (error as { response?: { status?: number } }).response?.status;
+      addToast(
+        "error",
+        status === 413
+          ? t("trips:gallery.tooLargeServer", { maxMb: TRIP_PHOTO_MAX_MB })
+          : t("trips:gallery.uploadError")
+      );
     } finally {
       setUploading(false);
     }
