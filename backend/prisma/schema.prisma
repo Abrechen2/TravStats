@@ -341,6 +341,7 @@ model Airport {
   country          String?
   lat              Float
   lon              Float
+  /// Metres above sea level — sources publish feet; writers convert (shared/airportAltitude.ts).
   altitude         Int?
   timezone         String?
   shortName        String? @map("short_name")

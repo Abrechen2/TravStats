@@ -504,7 +504,7 @@
     "highestAirport": {
       "unit": "The airport with the greatest elevation above sea level among all airports you departed from or landed at, in metres.",
       "time": "No time element: all-time; the page's year filter does not apply.",
-      "source": "Flown and logged (historical) flights, both ends; name and elevation from the airport catalogue.",
+      "source": "Flown and logged (historical) flights, both ends; name and elevation from the airport catalogue. The sources publish feet; the catalogue stores them converted to metres.",
       "coverage": "Only airports for which the catalogue has an elevation; an airport without a catalogue entry or without an elevation is missing here. On equal elevation, the one found first stays.",
       "exclusions": "Not included: scheduled and cancelled flights, and drafts (duplicates)."
     },

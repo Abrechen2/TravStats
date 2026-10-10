@@ -504,7 +504,7 @@
     "highestAirport": {
       "unit": "Der Flughafen mit der größten Höhe über dem Meeresspiegel unter allen Flughäfen, an denen du gestartet oder gelandet bist, in Metern.",
       "time": "Kein Zeitbezug: ganze Logbuch-Zeit, der Jahresfilter der Seite gilt hier nicht.",
-      "source": "Geflogene und nachgetragene Flüge, beide Enden; Name und Höhe aus dem Flughafenkatalog.",
+      "source": "Geflogene und nachgetragene Flüge, beide Enden; Name und Höhe aus dem Flughafenkatalog. Die Quellen nennen Fuß, der Katalog speichert sie umgerechnet in Metern.",
       "coverage": "Nur Flughäfen, für die der Katalog eine Höhe kennt; ein Flughafen ohne Katalogeintrag oder ohne Höhe fehlt hier. Bei gleicher Höhe bleibt der zuerst gefundene stehen.",
       "exclusions": "Nicht enthalten: geplante und stornierte Flüge sowie Entwürfe (Duplikate)."
     },
