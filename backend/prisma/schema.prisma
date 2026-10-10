@@ -2202,6 +2202,10 @@ model Booking {
   /// "none": the reminder side treats an absent deadline as unknown.
   freeCancellationUntil DateTime? @map("free_cancellation_until")
   freeCancellationZone  String?   @map("free_cancellation_zone")
+  /// A cancellation deadline known only to the DAY ("bis 1. Mai") — until the
+  /// end of that local day. Never turned into an invented instant; exactly one
+  /// of it and `freeCancellationUntil` is set (CHECK).
+  freeCancellationOn    DateTime? @map("free_cancellation_on") @db.Date
   paymentDueOn          DateTime? @map("payment_due_on") @db.Date
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -2710,6 +2714,10 @@ model LodgingStay {
   /// "none": the reminder side treats an absent deadline as unknown.
   freeCancellationUntil DateTime? @map("free_cancellation_until")
   freeCancellationZone  String?   @map("free_cancellation_zone")
+  /// A cancellation deadline known only to the DAY ("bis 1. Mai") — until the
+  /// end of that local day. Never turned into an invented instant; exactly one
+  /// of it and `freeCancellationUntil` is set (CHECK).
+  freeCancellationOn    DateTime? @map("free_cancellation_on") @db.Date
   paymentDueOn          DateTime? @map("payment_due_on") @db.Date
   companions            String[]  @default([])
   notes                 String?
@@ -4119,6 +4127,10 @@ model RentalBooking {
   /// "none": the reminder side treats an absent deadline as unknown.
   freeCancellationUntil DateTime? @map("free_cancellation_until")
   freeCancellationZone  String?   @map("free_cancellation_zone")
+  /// A cancellation deadline known only to the DAY ("bis 1. Mai") — until the
+  /// end of that local day. Never turned into an invented instant; exactly one
+  /// of it and `freeCancellationUntil` is set (CHECK).
+  freeCancellationOn    DateTime? @map("free_cancellation_on") @db.Date
   paymentDueOn          DateTime? @map("payment_due_on") @db.Date
 
   /// The booked price. Null = unknown (a tour-operator package prints 0.00 for a price that exists).
