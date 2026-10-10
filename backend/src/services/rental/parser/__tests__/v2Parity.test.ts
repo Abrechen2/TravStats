@@ -10,6 +10,7 @@ import {
   SIXT_LAYOUT_B,
 } from "./sixtFixtures";
 import { legacyConfirmation, legacyInvoice, v2Confirmation, v2Invoice } from "./readers";
+import type { ParsedRentalInvoice } from "../types";
 
 /**
  * Plan 2026-10-09 P4b: the Sixt readers became v2 template files. This is the
@@ -23,6 +24,14 @@ const asMail = (input: TemplateTestInput): { text: string; subject?: string; fro
 /** How `parseRentalBookingText` handed the old readers a mail: subject, blank line, body. */
 const combined = (mail: { text: string; subject?: string }): string =>
   mail.subject ? `${mail.subject}\n\n${mail.text}` : mail.text;
+
+const withoutFees = (
+  read: ParsedRentalInvoice | null
+): Omit<ParsedRentalInvoice, "fees"> | null => {
+  if (!read) return null;
+  const { fees: _fees, ...rest } = read;
+  return rest;
+};
 
 const CONFIRMATIONS: Array<[string, string, string | undefined]> = [
   ["layout A", SIXT_LAYOUT_A, "reservation@e.sixt.com"],
@@ -73,8 +82,10 @@ describe("rental templates — legacy reader and v2 file agree", () => {
 
   it.each(cases)("%s — %s", (id, _name, mail) => {
     if (id === "rental:sixt-invoice") {
-      expect(v2Invoice(combined(mail), mail.subject)).toEqual(
-        legacyInvoice(combined(mail), mail.subject)
+      // Fee lines are new in the file (forgejo#237); the compiled reader never
+      // read them, so they are compared apart, below.
+      expect(withoutFees(v2Invoice(combined(mail), mail.subject))).toEqual(
+        withoutFees(legacyInvoice(combined(mail), mail.subject))
       );
     } else {
       expect(v2Confirmation(combined(mail), mail.from)).toEqual(

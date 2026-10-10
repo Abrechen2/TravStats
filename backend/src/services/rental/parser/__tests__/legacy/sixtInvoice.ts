@@ -120,5 +120,7 @@ export function parseSixtInvoice(
     actualReturnLocal: times[1] ?? null,
     finalAmount,
     finalCurrency: finalAmount !== null ? "EUR" : null,
+    // The compiled reader never read single fee lines (forgejo#237 added them to the template).
+    fees: [],
   };
 }

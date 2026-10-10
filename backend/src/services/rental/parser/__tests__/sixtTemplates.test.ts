@@ -1,5 +1,5 @@
 import { looksLikeParking, parseCancellation } from "../rentalBookingParser";
-import { CONFIRMATION_READERS, INVOICE_READERS } from "./readers";
+import { CONFIRMATION_READERS, INVOICE_READERS, v2Invoice } from "./readers";
 import {
   SIXT_INVOICE_ONE_CAR,
   SIXT_INVOICE_SWAP,
@@ -94,6 +94,38 @@ describe.each(INVOICE_READERS)("Sixt invoice (%s)", (_name, parseSixtInvoice) =>
   it("does not read a vehicle row whose km do not add up — null, never a guess", () => {
     const wrong = SIXT_INVOICE_ONE_CAR.replace("10000 10412 412", "10000 10412 999");
     expect(parseSixtInvoice(wrong)).toMatchObject({ distanceKm: null, vehicleDriven: null });
+  });
+});
+
+// forgejo#237: the template reads the invoice's single fee lines; the compiled
+// reader it replaced never did, so this runs on the file alone.
+describe("Sixt invoice fee lines (v2 template)", () => {
+  const withFees = SIXT_INVOICE_ONE_CAR.replace(
+    "Montant total brut 150,75 €",
+    [
+      "Prix de location 3 jours 90,00 €",
+      "Carburant 1 33,25 €",
+      "Péage 12,50 €",
+      "Frais administratifs 15,00 €",
+      "Montant total brut 150,75 €",
+    ].join("\n")
+  );
+
+  it("reads each known fee line with its amount in the invoice's currency", () => {
+    expect(v2Invoice(withFees)?.fees).toEqual([
+      { label: "Carburant", amount: 33.25, currency: "EUR" },
+      { label: "Péage", amount: 12.5, currency: "EUR" },
+      { label: "Frais administratifs", amount: 15, currency: "EUR" },
+    ]);
+  });
+
+  it("reads no line whose label it does not know — not the base rental, not a guess", () => {
+    expect(v2Invoice(SIXT_INVOICE_ONE_CAR)?.fees).toEqual([]);
+    const unknown = SIXT_INVOICE_ONE_CAR.replace(
+      "Montant total brut",
+      "Unbekannter Posten 9,99 €\nMontant total brut"
+    );
+    expect(v2Invoice(unknown)?.fees).toEqual([]);
   });
 });
 

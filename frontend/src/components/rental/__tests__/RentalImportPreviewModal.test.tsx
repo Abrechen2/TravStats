@@ -20,7 +20,7 @@ vi.mock("../../../lib/api/rental", () => ({
 }));
 
 import { RentalImportPreviewModal } from "../RentalImportPreviewModal";
-import type { RentalImportCandidate } from "../../../types/rental";
+import type { RentalImportCandidate, RentalInvoiceReading } from "../../../types/rental";
 import { makeRental } from "./rentalFixture";
 
 const AIRPORT_A = { airportId: 1, iata: "AAA", name: "Testport A", country: "DE" };
@@ -217,7 +217,7 @@ describe("RentalImportPreviewModal", () => {
 
   // forgejo#237: the invoice beside its booking, each reading taken on its own.
   describe("an invoice beside its booking", () => {
-    const invoiceFor = (over: Partial<typeof INVOICE> = {}) =>
+    const invoiceFor = (over: Partial<RentalInvoiceReading> = {}) =>
       confirmation({
         kind: "invoice",
         action: "invoice",
@@ -227,12 +227,12 @@ describe("RentalImportPreviewModal", () => {
         invoice: { ...INVOICE, vehicleDriven: "Opel Corsa", ...over },
       });
 
-    it("shows booked, invoiced and their difference, and names fees as not read", async () => {
+    it("shows booked, invoiced and their difference, and says when no fee line was read", async () => {
       render(
         <RentalImportPreviewModal candidate={invoiceFor()} onCancel={vi.fn()} onSaved={vi.fn()} />
       );
       expect((await screen.findByTestId("rental-invoice-difference")).textContent).toMatch(/^\+30/);
-      expect(screen.getByText("rental:invoiceReview.feesNote")).toBeTruthy();
+      expect(screen.getByTestId("rental-invoice-no-fees")).toBeTruthy();
       expect(screen.getByTestId("rental-invoice-row-vehicleDriven")).toBeTruthy();
     });
 
@@ -264,6 +264,47 @@ describe("RentalImportPreviewModal", () => {
         ).toBeNull()
       );
       expect(screen.getByText("rental:invoiceReview.same")).toBeTruthy();
+    });
+
+    // forgejo#237: each fee line the invoice lists is reviewed and taken on its own.
+    it("lists the fee lines read, beside the difference, and sends only those left ticked", async () => {
+      importDocument.mockResolvedValue({ outcome: "invoiced" });
+      const onSaved = vi.fn();
+      const fees = [
+        { label: "Tankfüllung", amount: 18, currency: "EUR" },
+        { label: "Mautgebühren", amount: 12, currency: "EUR" },
+      ];
+      render(
+        <RentalImportPreviewModal
+          candidate={invoiceFor({ fees })}
+          onCancel={vi.fn()}
+          onSaved={onSaved}
+        />
+      );
+      expect(await screen.findByTestId("rental-invoice-fees-total")).toHaveTextContent(
+        "rental:invoiceReview.fees.totalBesideDifference"
+      );
+      // Untick the first line; the second stays ticked.
+      fireEvent.click(
+        screen.getAllByRole("checkbox", { name: "rental:invoiceReview.fees.adoptLine" })[0]
+      );
+      fireEvent.click(screen.getByRole("button", { name: "rental:import.action.invoice" }));
+      await waitFor(() => expect(onSaved).toHaveBeenCalled());
+      expect(importDocument.mock.calls[0][0].adopt).toMatchObject({ fees: [1] });
+    });
+
+    it("offers no tick for a fee line the rental already holds", async () => {
+      const fee = { label: "Mautgebühren", amount: 12, currency: "EUR" };
+      getRental.mockResolvedValue(makeRental({ price: 120, currency: "EUR", invoiceFees: [fee] }));
+      render(
+        <RentalImportPreviewModal
+          candidate={invoiceFor({ fees: [fee] })}
+          onCancel={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      );
+      expect(await screen.findByText("rental:invoiceReview.fees.recorded")).toBeTruthy();
+      expect(screen.getByTestId("rental-invoice-fee-0").querySelector("input")).toBeNull();
     });
 
     it("says when the booking cannot be loaded, and retries", async () => {

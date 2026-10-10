@@ -1,7 +1,7 @@
 {
   "id": "rental:sixt-invoice",
   "domain": "rental",
-  "version": "2026.10.9",
+  "version": "2026.10.10",
   "issuer": {
     "name": "Sixt",
     "kind": "other",
@@ -109,6 +109,22 @@
           }
         },
         "minimum": 0
+      },
+      "fees": {
+        "mode": "matchAll",
+        "pattern": "^(?<label>(?:Tankfüllung|Nachtanken|Betankungsservice|Refuelling(?: charge| service)?|Refueling(?: charge| service)?|Carburant|Brandstof|Sonderreinigung|Reinigung|Cleaning(?: fee)?|Nettoyage|Schoonmaak|Mautgebühren|Mautgebühr|Toll charges?|Péage|Tolkosten|Bearbeitungsgebühr|Verwaltungsgebühr|Administration fee|Frais administratifs|Administratiekosten|Zusatzfahrer|Additional driver|Conducteur additionnel|Extra bestuurder|Einweggebühr|Einwegmiete|One[- ]way fee|Frais d'abandon|Flughafengebühr|Flughafenzuschlag|Airport (?:fee|surcharge)|Surcharge aéroport|Luchthaventoeslag|Mehrkilometer|Extra (?:km|kilometres|kilometers)|Kilomètres supplémentaires|Schadensbearbeitung|Damage handling(?: fee)?|Frais de dossier sinistre|Verspätete Rückgabe|Late return(?: fee)?|Retour tardif|Te late inlevering)[^\\n€\\d]{0,40}?)(?:[ \\t]+\\d{1,3})?[ \\t]+(?<amount>\\d{1,3}(?:\\.\\d{3})*,\\d{2})[ \\t]*€[ \\t]*$",
+        "flags": "gim",
+        "fields": {
+          "label": {
+            "group": "label",
+            "transform": "trim"
+          },
+          "amount": {
+            "group": "amount",
+            "transform": "amount"
+          }
+        },
+        "minimum": 0
       }
     },
     "required": ["confirmationNumber"]
@@ -151,6 +167,28 @@
           {
             "driven": 420,
             "model": "Skoda Octavia"
+          }
+        ]
+      }
+    },
+    {
+      "name": "single fee lines, German and English labels; the base rental is no fee",
+      "input": "RENTAL_INV\nRechnung\nRes. no. : 7788990011\nCL No. : 3344556677\nStation : Musterstadt Hbf\nStation : Musterstadt Hbf\n02.12.2026 09:00\n05.12.2026 10:00\nMietpreis 3 Tage 180,00 €\nTankfüllung 1 45,60 €\nMautgebühren 12,40 €\nAdministration fee 1.250,00 €\nGesamtbetrag brutto 1.488,00 €\nMusterstadt 05.12.2026 300 600 300 MU-ST 1 VW Golf 0 28.000,00 €\t10:00",
+      "expect": "match",
+      "expected": {
+        "finalAmount": 1488,
+        "fees": [
+          {
+            "label": "Tankfüllung",
+            "amount": 45.6
+          },
+          {
+            "label": "Mautgebühren",
+            "amount": 12.4
+          },
+          {
+            "label": "Administration fee",
+            "amount": 1250
           }
         ]
       }

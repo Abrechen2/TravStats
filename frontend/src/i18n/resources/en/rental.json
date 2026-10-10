@@ -249,7 +249,8 @@
       "booked": "The cost counted is the booked price until an invoice arrives.",
       "cancellationFee": "Only the cancellation fee counts as a cost.",
       "none": "No amount known yet – the rental is in no cost total."
-    }
+    },
+    "feesFromInvoice": "Single items from the invoice — part of the final amount, not counted on top:"
   },
   "import": {
     "panelTitle": "Add a rental car",
@@ -406,7 +407,6 @@
   "invoiceReview": {
     "loadFailed": "The rental for this invoice could not be loaded – the comparison is missing.",
     "noDifference": "cannot be computed",
-    "feesNote": "TravStats does not read single items out of invoices yet; the difference may contain fees, extra days or price changes. The booked price is kept either way.",
     "part": {
       "finalAmount": "Final amount",
       "vehicleDriven": "Car driven",
@@ -418,7 +418,16 @@
     "invoice": "Invoice: {{value}}",
     "nothingYet": "nothing",
     "same": "Matches the rental.",
-    "adopt": "Take over"
+    "adopt": "Take over",
+    "fees": {
+      "title": "Single items on the invoice",
+      "none": "The invoice lists no single items TravStats can read; the difference may contain fees, extra days or price changes. The booked price is kept either way.",
+      "total": "Items read add up to {{total}}. They are part of the final amount and are not counted again.",
+      "totalBesideDifference": "Items read add up to {{total}}, against a difference to the booking of {{difference}}. They are part of the final amount and are not counted again.",
+      "mixedCurrencies": "The items are in more than one currency; no total is formed and nothing is converted.",
+      "recorded": "Already recorded on the rental.",
+      "adoptLine": "Take over item “{{label}}”"
+    }
   },
   "deposit": {
     "title": "Deposit",

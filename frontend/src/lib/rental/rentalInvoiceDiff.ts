@@ -82,9 +82,10 @@ export function rentalInvoiceDiff(
 }
 
 /**
- * The booked → invoiced difference the review names first: the sum of every
- * new fee, since the readers do not take an invoice's fee lines apart. Same
- * currency only; null otherwise.
+ * The booked → invoiced difference the review names first: everything the
+ * invoice charged beyond the booking, fee lines read or not
+ * (`rentalInvoiceFees.ts` lists those it could read). Same currency only;
+ * null otherwise.
  */
 export function invoiceDifference(
   rental: Pick<RentalBooking, "price" | "currency"> | null,

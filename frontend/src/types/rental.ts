@@ -113,6 +113,8 @@ export interface RentalBooking {
   depositReturnedAmount: number | null;
   /** Where the booked `price` came from — the booking mail, or typed; null without a price. */
   priceSource: "booking" | "user" | null;
+  /** Fee lines taken over from the invoice (forgejo#237) — inside `finalAmount`, never added. */
+  invoiceFees: RentalInvoiceFee[];
   /** Returned, and no km from an invoice or a correction yet (D11 b). */
   invoiceMissing: boolean;
   trip?: { id: string; name: string; color: string } | null;
@@ -227,6 +229,15 @@ export interface RentalInvoiceReading {
   actualReturnLocal: string | null;
   finalAmount: number | null;
   finalCurrency: string | null;
+  /** The single fee lines the invoice lists (forgejo#237); part of `finalAmount`. */
+  fees?: RentalInvoiceFee[];
+}
+
+/** One fee line of an invoice — already in its final amount, never a cost on top. */
+export interface RentalInvoiceFee {
+  label: string;
+  amount: number;
+  currency: string;
 }
 
 /** One reviewed document, as `POST /parse-*` with domain `rental` answers it. */

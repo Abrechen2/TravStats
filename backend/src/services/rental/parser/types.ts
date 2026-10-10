@@ -79,6 +79,18 @@ export interface ParsedRentalInvoice {
   actualPickupLocal: string | null;
   finalAmount: number | null;
   finalCurrency: string | null;
+  /**
+   * The single extra charges the invoice lists (refuelling, tolls, …), as
+   * printed (forgejo#237). Already part of `finalAmount` — an explanation of
+   * the difference to the booked price, never a cost on top of it.
+   */
+  fees: ParsedRentalFee[];
+}
+
+export interface ParsedRentalFee {
+  label: string;
+  amount: number;
+  currency: string;
 }
 
 export type ParsedRentalDocument =

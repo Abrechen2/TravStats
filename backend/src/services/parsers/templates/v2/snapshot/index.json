@@ -106,7 +106,7 @@
     {
       "id": "rental:sixt-invoice",
       "domain": "rental",
-      "version": "2026.10.9",
+      "version": "2026.10.10",
       "path": "rental/sixt-invoice.json"
     },
     {

@@ -212,6 +212,44 @@ describe("POST /api/v1/rentals/import", () => {
     });
   });
 
+  // forgejo#237: single fee lines are reviewed one by one, stored with their
+  // origin, and never counted on top of the final amount that contains them.
+  describe("invoice fee lines", () => {
+    const fees = [
+      { label: "Tankfüllung", amount: 15.3, currency: "EUR" },
+      { label: "Mautgebühren", amount: 12, currency: "EUR" },
+    ];
+
+    it("stores only the lines the review took over, and counts the final amount once", async () => {
+      await post(confirmation());
+      const res = await post({ ...invoice({ fees }), adopt: { fees: [1] } });
+      expect(res.status).toBe(200);
+      expect(res.body.data).toMatchObject({
+        invoiceFees: [{ label: "Mautgebühren", amount: 12, currency: "EUR" }],
+        cost: { amount: 150.75, source: "final" },
+      });
+    });
+
+    it("takes every line when the client does not say, and none with an empty list", async () => {
+      await post(confirmation());
+      const all = await post(invoice({ fees }));
+      expect(all.body.data.invoiceFees).toEqual(fees);
+      // A later import that takes no line leaves the stored ones as they are.
+      const none = await post({ ...invoice({ fees }), adopt: { fees: [] } });
+      expect(none.body.data.invoiceFees).toEqual(fees);
+    });
+
+    it("refuses an index the invoice has no line for, and writes nothing", async () => {
+      await post(confirmation());
+      const res = await post({ ...invoice({ fees }), adopt: { fees: [2] } });
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe("RENTAL_INVOICE_FEE_UNKNOWN");
+      const row = await prisma.rentalBooking.findFirstOrThrow({ where: { userId } });
+      expect(row.finalAmount).toBeNull();
+      expect(row.invoiceFees).toBeNull();
+    });
+  });
+
   it("does not ask about a typed km figure when the review left the invoice's km out", async () => {
     const created = (await post(confirmation())).body.data;
     await request(app)

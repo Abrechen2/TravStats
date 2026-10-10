@@ -85,6 +85,10 @@ const invoiceSchema = z.object({
   finalAmount: money,
   finalCurrency: currency,
   vehicles: z.array(vehicleRow).max(20).optional(),
+  fees: z
+    .array(z.object({ label: text, amount: money }))
+    .max(30)
+    .optional(),
 });
 
 export type RentalTemplateKind = "confirmation" | "invoice";
@@ -151,6 +155,16 @@ function toInvoice(v: z.infer<typeof invoiceSchema>, name: string): ParsedRental
   );
   const models = [...new Set(rows.map((r) => r.model).filter((m): m is string => !!m))];
   const finalAmount = nn(v.finalAmount);
+  const currency = nn(v.finalCurrency);
+  // A fee line is kept whole or not at all: a label without an amount, or an
+  // amount in a currency the invoice never states, says nothing (forgejo#237).
+  const fees = currency
+    ? (v.fees ?? []).flatMap((f) =>
+        f.label && typeof f.amount === "number"
+          ? [{ label: f.label, amount: f.amount, currency }]
+          : []
+      )
+    : [];
   return {
     kind: "invoice",
     source: name,
@@ -165,7 +179,8 @@ function toInvoice(v: z.infer<typeof invoiceSchema>, name: string): ParsedRental
     actualPickupLocal: nn(v.actualPickupLocal),
     actualReturnLocal: nn(v.actualReturnLocal),
     finalAmount,
-    finalCurrency: finalAmount !== null ? nn(v.finalCurrency) : null,
+    finalCurrency: finalAmount !== null ? currency : null,
+    fees,
   };
 }
 

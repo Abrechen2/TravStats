@@ -110,6 +110,7 @@ export type ApiErrorCode =
   | "RENTAL_UNKNOWN_BOOKING"
   /** An invoice's km beside a figure the user typed; the review shows both and asks. */
   | "RENTAL_INVOICE_KM_CONFLICT"
+  | "RENTAL_INVOICE_FEE_UNKNOWN"
   /** A parse needed the configured LLM and could not reach it — "try later",
    *  not "broken". */
   | "LLM_UNREACHABLE"
