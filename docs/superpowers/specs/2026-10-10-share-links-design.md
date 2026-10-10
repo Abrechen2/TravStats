@@ -123,6 +123,9 @@ The switch also rides on `GET /api/v1/settings` as read-only `shareLinksEnabled`
 - `POST /api/v1/public/share-links/view` `{ token }` → `{ kind, expiresAt, view }`.
 - `POST /api/v1/public/share-links/photo` `{ token, index }` → image bytes.
 - Every failure: `404 { error: "Not found", code: "SHARE_LINK_NOT_FOUND" }`.
+- Left out of the `CORS_ORIGIN` refusal and given no CORS headers: the page that asks is served by
+  this same server, and an instance reached under a name `CORS_ORIGIN` does not list refused every
+  link with 403 (found in the browser check). A foreign page still cannot read the answers.
 
 ## 4. Why a server-rendered shell, not a route in the SPA
 

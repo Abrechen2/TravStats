@@ -21,6 +21,11 @@ export const SHARE_PAGE_CSP =
   "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' blob:; " +
   "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
+/** The public share-link API, which the CORS middleware leaves alone (see index.ts). */
+export function isPublicShareLinkPath(path: string): boolean {
+  return path.startsWith("/api/v1/public/share-links/");
+}
+
 const router = Router();
 
 function pageHeaders(res: Response, cache: "no-store" | "no-cache"): void {
