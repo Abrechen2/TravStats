@@ -414,6 +414,7 @@ export interface ParsedBooking {
   baggageAllowance?: string;
   frequentFlyerNumber?: string;
   bookingClassLetter?: string;
+  onlineCheckInOpensAt?: string; // "YYYY-MM-DDTHH:mm", departure clock (forgejo#285)
   coPassengers?: string[];
   parserTemplate?: string;
   parserConfidence?: number;
