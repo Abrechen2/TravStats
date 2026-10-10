@@ -643,7 +643,7 @@ router.get("/geo", async (req: AuthRequest, res: Response, next: NextFunction) =
 // returned `remaining` hits zero.
 router.get(
   "/refresh-historical-bulk/preview",
-  flightCreationLimiter,
+  statsLimiter, // a read: flightCreationLimiter here spent 20 flights/h on Settings visits
   rejectDemoQuota,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
