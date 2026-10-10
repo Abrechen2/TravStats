@@ -64,9 +64,18 @@ vi.mock("../../lib/api/catalogue", () => ({
   },
 }));
 
-vi.mock("../../lib/api", () => ({
-  companionsApi: { list: vi.fn().mockResolvedValue([]) },
-}));
+vi.mock("../../lib/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/api")>();
+  return {
+    ...actual,
+    companionsApi: { list: vi.fn().mockResolvedValue([]) },
+    // AirportAutocomplete polls this on mount; the real one would reach the network.
+    setupApi: {
+      ...actual.setupApi,
+      getAirportSeedingStatus: vi.fn().mockResolvedValue({ status: "completed" }),
+    },
+  };
+});
 
 import FlightEditModal from "../../components/FlightEditModal";
 

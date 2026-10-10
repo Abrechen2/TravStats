@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, within, waitFor, act } from "@testing-library/react";
+import { render, within, waitFor, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import AdminPage from "../AdminPage";
 import { DEEP_LINK_ALIGN_BUDGET_MS } from "../Admin/useDeepLinkScroll";
@@ -11,6 +11,7 @@ import {
   installFakeResizeObserver,
   type FakeResizeObserverHandle,
 } from "../Admin/__tests__/resizeObserverStub";
+import { findNamed, getNamed } from "../../__tests__/helpers/namedElement";
 
 /**
  * Round 4 ("one page, anchor jumps" — tester feedback, forgejo#…): the admin
@@ -99,23 +100,23 @@ describe("AdminPage — one page, anchor jumps", () => {
     // Today only the active section rendered; asserting on FOUR distinct
     // sections at once (not just two) is what the pre-round-4 page cannot
     // pass no matter which single section happened to be active.
-    expect(await screen.findByRole("region", { name: "admin:tabs.system" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "admin:tabs.users" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "admin:tabs.invitations" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "admin:tabs.parsers" })).toBeInTheDocument();
+    expect(await findNamed("region", "admin:tabs.system")).toBeInTheDocument();
+    expect(getNamed("region", "admin:tabs.users")).toBeInTheDocument();
+    expect(getNamed("region", "admin:tabs.invitations")).toBeInTheDocument();
+    expect(getNamed("region", "admin:tabs.parsers")).toBeInTheDocument();
   });
 
   // Acceptance 2026-09-26: the page nested its own <main> inside AppShell's —
   // two main landmarks, which a screen reader announces as two pages.
   it("has exactly one main landmark", async () => {
     const { container } = renderAdmin();
-    await screen.findByRole("region", { name: "admin:tabs.system" });
+    await findNamed("region", "admin:tabs.system");
     expect(container.querySelectorAll("main")).toHaveLength(1);
   });
 
   it("gives every section landmark its admin-<id> anchor id, lazy sections included", async () => {
     renderAdmin();
-    await screen.findByRole("region", { name: "admin:tabs.system" });
+    await findNamed("region", "admin:tabs.system");
 
     for (const id of [
       "system",
@@ -135,9 +136,9 @@ describe("AdminPage — one page, anchor jumps", () => {
 
   it("draws the section index as anchors into the page, not buttons that swap sections", async () => {
     renderAdmin();
-    await screen.findByRole("region", { name: "admin:tabs.system" });
+    await findNamed("region", "admin:tabs.system");
 
-    const sectionNav = screen.getByRole("navigation", { name: "admin:sectionPicker" });
+    const sectionNav = getNamed("navigation", "admin:sectionPicker");
     const links = within(sectionNav).getAllByRole("link");
     expect(links.length).toBeGreaterThanOrEqual(9); // the general tab's own sections
     expect(links.some((link) => link.getAttribute("href") === "#admin-system")).toBe(true);
@@ -152,7 +153,7 @@ describe("AdminPage — one page, anchor jumps", () => {
     Element.prototype.scrollIntoView = scrollSpy;
 
     renderAdmin("/admin?section=logging");
-    await screen.findByRole("region", { name: "admin:tabs.system" });
+    await findNamed("region", "admin:tabs.system");
 
     await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
     expect(scrollSpy.mock.instances[0]).toBe(document.getElementById("admin-logging"));
@@ -163,7 +164,7 @@ describe("AdminPage — one page, anchor jumps", () => {
     Element.prototype.scrollIntoView = scrollSpy;
 
     renderAdmin("/admin");
-    await screen.findByRole("region", { name: "admin:tabs.system" });
+    await findNamed("region", "admin:tabs.system");
 
     expect(scrollSpy).not.toHaveBeenCalled();
   });
@@ -196,7 +197,7 @@ describe("AdminPage — lazy section reveal (Wave C finding C3)", () => {
 
   it("mounts the logging section's body and fetches its data on first intersection, but not again on a second", async () => {
     renderAdmin();
-    await screen.findByRole("region", { name: "admin:tabs.system" });
+    await findNamed("region", "admin:tabs.system");
 
     const sectionEl = document.getElementById("admin-logging");
     expect(sectionEl?.childElementCount).toBe(0);
@@ -269,7 +270,7 @@ describe("AdminPage — deep-link scroll aligner (Wave C finding C1, follow-up)"
 
   it("re-aligns the deep-linked section when ANY section's height changes, not only its own", async () => {
     renderAdmin("/admin?section=logging");
-    await screen.findByRole("region", { name: "admin:tabs.system" });
+    await findNamed("region", "admin:tabs.system");
 
     // The first scroll runs against placeholder heights, same as before.
     await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
@@ -291,7 +292,7 @@ describe("AdminPage — deep-link scroll aligner (Wave C finding C1, follow-up)"
 
   it("cancels re-aligning on real user scroll input", async () => {
     renderAdmin("/admin?section=logging");
-    await screen.findByRole("region", { name: "admin:tabs.system" });
+    await findNamed("region", "admin:tabs.system");
     await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
 
     act(() => {
@@ -307,7 +308,7 @@ describe("AdminPage — deep-link scroll aligner (Wave C finding C1, follow-up)"
 
   it("does not cancel on an unrelated key (only scroll-intent keys do)", async () => {
     renderAdmin("/admin?section=logging");
-    await screen.findByRole("region", { name: "admin:tabs.system" });
+    await findNamed("region", "admin:tabs.system");
     await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
 
     act(() => {
@@ -325,7 +326,7 @@ describe("AdminPage — deep-link scroll aligner (Wave C finding C1, follow-up)"
     vi.useFakeTimers({ shouldAdvanceTime: true });
 
     renderAdmin("/admin?section=logging");
-    await screen.findByRole("region", { name: "admin:tabs.system" });
+    await findNamed("region", "admin:tabs.system");
     await waitFor(() => expect(scrollSpy).toHaveBeenCalledTimes(1));
 
     act(() => {

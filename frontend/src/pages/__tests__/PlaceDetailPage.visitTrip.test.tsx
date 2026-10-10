@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import PlaceDetailPage from "../PlaceDetailPage";
+import { findNamed, getNamed } from "../../__tests__/helpers/namedElement";
 
 const createVisit = vi.fn();
 
@@ -69,10 +70,10 @@ describe("PlaceDetailPage — attaching a visit to a trip", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(await screen.findByRole("button", { name: /detail\.addVisit/ }));
+    await user.click(await findNamed("button", /detail\.addVisit/));
     const select = await screen.findByRole("combobox", { name: /detail\.visitTrip/ });
     await user.selectOptions(select, "t1");
-    await user.click(screen.getByRole("button", { name: /buttons\.save/ }));
+    await user.click(getNamed("button", /buttons\.save/));
 
     await waitFor(() =>
       expect(createVisit).toHaveBeenCalledWith("p1", expect.objectContaining({ tripId: "t1" }))
@@ -85,10 +86,10 @@ describe("PlaceDetailPage — attaching a visit to a trip", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(await screen.findByRole("button", { name: /detail\.addVisit/ }));
+    await user.click(await findNamed("button", /detail\.addVisit/));
     const select = await screen.findByRole("combobox", { name: /detail\.visitTrip/ });
     await user.selectOptions(select, "none");
-    await user.click(screen.getByRole("button", { name: /buttons\.save/ }));
+    await user.click(getNamed("button", /buttons\.save/));
 
     await waitFor(() =>
       expect(createVisit).toHaveBeenCalledWith("p1", expect.objectContaining({ tripId: null }))
@@ -102,8 +103,8 @@ describe("PlaceDetailPage — attaching a visit to a trip", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(await screen.findByRole("button", { name: /detail\.addVisit/ }));
-    await user.click(screen.getByRole("button", { name: /buttons\.save/ }));
+    await user.click(await findNamed("button", /detail\.addVisit/));
+    await user.click(getNamed("button", /buttons\.save/));
 
     await waitFor(() => expect(createVisit).toHaveBeenCalled());
     expect(createVisit.mock.calls[0][1]).not.toHaveProperty("tripId");
@@ -114,11 +115,11 @@ describe("PlaceDetailPage — attaching a visit to a trip", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(await screen.findByRole("button", { name: /detail\.addVisit/ }));
+    await user.click(await findNamed("button", /detail\.addVisit/));
     // The suggestions belong to "Anderes Datum" (forgejo#231).
-    await user.click(screen.getByRole("button", { name: /visit\.mode\.other/ }));
-    await user.click(await screen.findByRole("button", { name: /suggestionChip/ }));
-    await user.click(screen.getByRole("button", { name: /buttons\.save/ }));
+    await user.click(getNamed("button", /visit\.mode\.other/));
+    await user.click(await findNamed("button", /suggestionChip/));
+    await user.click(getNamed("button", /buttons\.save/));
 
     await waitFor(() =>
       expect(createVisit).toHaveBeenCalledWith(

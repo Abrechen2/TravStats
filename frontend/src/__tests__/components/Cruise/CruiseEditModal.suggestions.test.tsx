@@ -4,23 +4,28 @@ import userEvent from "@testing-library/user-event";
 import { CruiseEditModal } from "../../../components/Cruise/CruiseEditModal";
 import { cruiseApi, companionsApi, shipsApi, tripsApi } from "../../../lib/api";
 import type { Cruise } from "../../../types";
+import { findNamed, getNamed, queryNamed } from "../../helpers/namedElement";
 
 /**
  * Entry suggestions in the cruise form: values the form can derive from data
  * already in it are filled only where empty, and never over something typed.
  */
 
-vi.mock("../../../lib/api", () => ({
-  cruiseApi: { create: vi.fn(), update: vi.fn() },
-  portsApi: { search: vi.fn().mockResolvedValue([]), create: vi.fn() },
-  shipsApi: {
-    search: vi.fn().mockResolvedValue([]),
-    create: vi.fn(),
-    cruiseLines: vi.fn().mockResolvedValue([]),
-  },
-  companionsApi: { list: vi.fn() },
-  tripsApi: { getAll: vi.fn() },
-}));
+vi.mock("../../../lib/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/api")>();
+  return {
+    ...actual,
+    cruiseApi: { create: vi.fn(), update: vi.fn() },
+    portsApi: { search: vi.fn().mockResolvedValue([]), create: vi.fn() },
+    shipsApi: {
+      search: vi.fn().mockResolvedValue([]),
+      create: vi.fn(),
+      cruiseLines: vi.fn().mockResolvedValue([]),
+    },
+    companionsApi: { list: vi.fn() },
+    tripsApi: { getAll: vi.fn() },
+  };
+});
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
@@ -222,10 +227,10 @@ describe("CruiseEditModal — entry suggestions", () => {
       const route = screen.getByLabelText("field.routeName") as HTMLInputElement;
       expect(route.value).toBe("");
 
-      await userEvent.click(screen.getByRole("button", { name: "form.routeNameSuggestion" }));
+      await userEvent.click(getNamed("button", "form.routeNameSuggestion"));
 
       expect(route.value).toBe("Kiel → Oslo → Kiel");
-      expect(screen.queryByRole("button", { name: "form.routeNameSuggestion" })).toBeNull();
+      expect(queryNamed("button", "form.routeNameSuggestion")).toBeNull();
     });
 
     it("offers nothing over a name the cruise already has", async () => {
@@ -240,7 +245,7 @@ describe("CruiseEditModal — entry suggestions", () => {
       // Let the trip list settle, so the assertion below is not made mid-load.
       await act(async () => {});
       expect(screen.getByLabelText("field.routeName")).toHaveValue("Norwegen");
-      expect(screen.queryByRole("button", { name: "form.routeNameSuggestion" })).toBeNull();
+      expect(queryNamed("button", "form.routeNameSuggestion")).toBeNull();
     });
   });
 
@@ -251,7 +256,11 @@ describe("CruiseEditModal — entry suggestions", () => {
       const line = screen.getByLabelText("field.line");
 
       await userEvent.type(line, "ai");
-      await userEvent.click(await screen.findByRole("button", { name: "AIDA Cruises" }));
+      // Scoped to the field's combobox: the suggestion arrives after a 300 ms
+      // debounce, and a document-wide role query over this modal is slow
+      // enough under load to use up findBy's one-second window.
+      const combobox = line.parentElement as HTMLElement;
+      await userEvent.click(await within(combobox).findByRole("button", { name: "AIDA Cruises" }));
 
       expect(shipsApi.cruiseLines).toHaveBeenCalledWith("ai");
       expect(line).toHaveValue("AIDA Cruises");
@@ -317,8 +326,8 @@ describe("CruiseEditModal — entry suggestions", () => {
         await act(async () => {
           fireEvent.focus(screen.getByLabelText("field.line"));
         });
-        expect(await screen.findByRole("button", { name: "TUI Cruises" })).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "Hurtigruten" })).toBeInTheDocument();
+        expect(await findNamed("button", "TUI Cruises")).toBeInTheDocument();
+        expect(getNamed("button", "Hurtigruten")).toBeInTheDocument();
       }
     );
   });

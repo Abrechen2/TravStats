@@ -522,6 +522,18 @@ export default function LodgingDetailPage(): JSX.Element {
               },
             ]}
           >
+            {/* The average says how it was made (forgejo#178): total over the
+                counted nights, everything paid — not the room rate a stay
+                card shows as "Zimmer pro Nacht". */}
+            {baseKnown && avgPerNight !== null && (
+              <p data-testid="lodging-per-night-calc" className="t-caption">
+                {t("lodging:detail.spendPerNightCalc", {
+                  total: formatCurrency(lodging.totalSpendBase, baseCurrency),
+                  count: lodging.nights,
+                  result: formatCurrency(avgPerNight, baseCurrency),
+                })}
+              </p>
+            )}
             <PlannedSpendNote stays={lodging.stays} />
             {/* A total that left rows out must say so. Silence here reads as
                 "this is everything", which is exactly the lie the marker on

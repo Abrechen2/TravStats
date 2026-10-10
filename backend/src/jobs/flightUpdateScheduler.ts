@@ -5,13 +5,14 @@
  */
 
 import cron from "node-cron";
+import type { ScheduledTask } from "node-cron";
 import { checkAndUpdateAllFlights } from "../services/flightAutoUpdate";
 import { cleanupExpiredUpdates } from "../services/pendingUpdateService";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
 
 let schedulerRunning = false;
-let schedulerTask: cron.ScheduledTask | null = null;
+let schedulerTask: ScheduledTask | null = null;
 
 /**
  * Start the flight update scheduler

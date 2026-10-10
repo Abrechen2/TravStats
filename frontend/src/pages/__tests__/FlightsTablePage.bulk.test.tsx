@@ -89,6 +89,7 @@ vi.mock("../../lib/api", () => ({
 }));
 
 import FlightsTablePage from "../FlightsTablePage";
+import { getNamed } from "../../__tests__/helpers/namedElement";
 
 const FLIGHTS = ["f1", "f2", "f3"].map((id) => ({
   id,
@@ -121,27 +122,27 @@ describe("FlightsTablePage bulk selection", () => {
   it("edits exactly the ticked flights", async () => {
     render(<FlightsTablePage />);
     await screen.findByTestId("row-f1");
-    fireEvent.click(screen.getByRole("button", { name: "flights:bulk.start" }));
+    fireEvent.click(getNamed("button", "flights:bulk.start"));
     fireEvent.click(screen.getByRole("checkbox", { name: /"name":"F1 MUC → CPH"/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: /"name":"F3 MUC → CPH"/ }));
     expect(screen.getByTestId("flight-bulk-bar")).toHaveTextContent(
       'flights:bulk.selected {"count":2}'
     );
-    fireEvent.click(screen.getByRole("button", { name: /flights:bulk\.edit/ }));
+    fireEvent.click(getNamed("button", /flights:bulk\.edit/));
     expect(screen.getByTestId("bulk-modal")).toHaveTextContent("f1,f3");
   });
 
   it("selects the page on request, and ending the selection forgets it", async () => {
     render(<FlightsTablePage />);
     await screen.findByTestId("row-f1");
-    fireEvent.click(screen.getByRole("button", { name: "flights:bulk.start" }));
-    fireEvent.click(screen.getByRole("button", { name: "flights:bulk.selectPage" }));
+    fireEvent.click(getNamed("button", "flights:bulk.start"));
+    fireEvent.click(getNamed("button", "flights:bulk.selectPage"));
     expect(screen.getAllByRole("checkbox").every((c) => (c as HTMLInputElement).checked)).toBe(
       true
     );
-    fireEvent.click(screen.getByRole("button", { name: "flights:bulk.stop" }));
+    fireEvent.click(getNamed("button", "flights:bulk.stop"));
     expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
-    fireEvent.click(screen.getByRole("button", { name: "flights:bulk.start" }));
+    fireEvent.click(getNamed("button", "flights:bulk.start"));
     await waitFor(() =>
       expect(screen.getByTestId("flight-bulk-bar")).toHaveTextContent(
         'flights:bulk.selected {"count":0}'

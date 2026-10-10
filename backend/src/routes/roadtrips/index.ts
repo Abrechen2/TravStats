@@ -23,6 +23,7 @@ import companionRoutes from "./companion";
 import { resolveRoadtrip } from "../../services/roadtrip/resolveRoadtrip";
 import { EXPENSE_ORDER, EXPENSE_SELECT, toExpenseDto } from "../../services/expenses/expenseDto";
 import { roadtripCosts } from "../../services/expenses/roadtripCosts";
+import { roadtripProgress } from "../../utils/roadtripInsights/progress";
 
 /**
  * Roadtrips (design 2026-09-24). A roadtrip is a `TripRoute` with
@@ -237,6 +238,9 @@ router.get(
           source: t.tracks[0]?.source ?? null,
         })),
         routingAvailable: routing.configured,
+        // Driven against planned, by the statistics' own timeline rule, and
+        // what the kilometres were measured on (forgejo#179).
+        progress: roadtripProgress(stations, legs, new Date()),
         // Money spent on the way (forgejo#140): the list, and its sums per
         // station, per station-to-station leg and in total — per currency.
         expenses,

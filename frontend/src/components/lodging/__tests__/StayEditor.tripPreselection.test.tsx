@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { StayEditor } from "../StayEditor";
 import { listMemberships, getFxPreview } from "../../../lib/api/lodging";
 import { tripsApi } from "../../../lib/api";
@@ -26,9 +26,10 @@ vi.mock("../../../lib/api/lodging", () => ({
   // The overlap notice asks which stays touch the saved dates (forgejo#229).
   listStayPage: vi.fn(async () => ({ rows: [], total: 0 })),
 }));
-vi.mock("../../../lib/api", () => ({
-  tripsApi: { getAll: vi.fn() },
-}));
+vi.mock("../../../lib/api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../lib/api")>();
+  return { ...actual, tripsApi: { getAll: vi.fn() } };
+});
 vi.mock("@/hooks/useRecentCurrencies", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/hooks/useRecentCurrencies")>();
   return { ...actual, useRecentCurrencies: () => [] };
@@ -53,8 +54,17 @@ function tripSelect(): HTMLSelectElement {
   return screen.getByLabelText("lodging:field.trip") as HTMLSelectElement;
 }
 
+/**
+ * Scoped to the trip select on purpose: the editor also renders the currency
+ * select with ~160 options, and a document-wide `getByRole("option", { name })`
+ * computes the accessible name and visibility of every one of them — about a
+ * second per poll locally, which ran these tests past their 5 s budget on a
+ * loaded CI runner.
+ */
 async function tripsLoaded(): Promise<void> {
-  await waitFor(() => expect(screen.getByRole("option", { name: "Sommer" })).toBeInTheDocument());
+  await waitFor(() =>
+    expect(within(tripSelect()).getByRole("option", { name: "Sommer" })).toBeInTheDocument()
+  );
 }
 
 describe("StayEditor — trip preselection by check-in", () => {

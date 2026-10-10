@@ -67,6 +67,7 @@ vi.mock("../../components/places/PlaceFormModal", () => ({
 }));
 
 import PlaceListDetailPage from "../PlaceListDetailPage";
+import { allNamed, findNamed, getNamed, queryNamed } from "../../__tests__/helpers/namedElement";
 
 const CREATED = { id: "new", name: "Bocca della Verità", category: "landmark", city: null };
 
@@ -130,9 +131,7 @@ describe("PlaceListDetailPage — a new place from the list", () => {
     await searchForNothing();
     expect(screen.getByText("Kein passender Ort in deinem Logbuch.")).toBeInTheDocument();
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "„Bocca della Verità“ als Ort anlegen und hinzufügen" })
-    );
+    fireEvent.click(getNamed("button", "„Bocca della Verità“ als Ort anlegen und hinzufügen"));
     expect(screen.getByRole("dialog", { name: "place-form" })).toBeInTheDocument();
     expect(formProps.last).toMatchObject({ initialName: "Bocca della Verità", forList: "Rom" });
   });
@@ -140,21 +139,21 @@ describe("PlaceListDetailPage — a new place from the list", () => {
   it("returns to the list and files the new place in it exactly once", async () => {
     addPlaceToList.mockResolvedValue(withNew);
     await searchForNothing();
-    fireEvent.click(screen.getByRole("button", { name: /als Ort anlegen/ }));
-    fireEvent.click(screen.getByRole("button", { name: "mock-save" }));
+    fireEvent.click(getNamed("button", /als Ort anlegen/));
+    fireEvent.click(getNamed("button", "mock-save"));
 
     await waitFor(() => expect(addPlaceToList).toHaveBeenCalledWith("l1", "new"));
     expect(addPlaceToList).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("dialog", { name: "place-form" })).not.toBeInTheDocument();
-    expect(await screen.findByRole("link", { name: "Bocca della Verità" })).toBeInTheDocument();
+    expect(await findNamed("link", "Bocca della Verità")).toBeInTheDocument();
     expect(screen.getByLabelText("Ort hinzufügen")).toHaveValue("");
   });
 
   it("keeps the saved place when only the filing fails, and files it again on request", async () => {
     addPlaceToList.mockRejectedValueOnce(network).mockResolvedValueOnce(withNew);
     await searchForNothing();
-    fireEvent.click(screen.getByRole("button", { name: /als Ort anlegen/ }));
-    fireEvent.click(screen.getByRole("button", { name: "mock-save" }));
+    fireEvent.click(getNamed("button", /als Ort anlegen/));
+    fireEvent.click(getNamed("button", "mock-save"));
 
     const row = await screen.findByRole("alert");
     expect(row).toHaveTextContent(
@@ -163,7 +162,7 @@ describe("PlaceListDetailPage — a new place from the list", () => {
     expect(row).toHaveTextContent("Der Server ist nicht erreichbar");
 
     // Two quick taps send one request.
-    const again = screen.getByRole("button", { name: "Erneut zuordnen" });
+    const again = getNamed("button", "Erneut zuordnen");
     await act(async () => {
       fireEvent.click(again);
       fireEvent.click(again);
@@ -171,24 +170,24 @@ describe("PlaceListDetailPage — a new place from the list", () => {
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
     expect(addPlaceToList).toHaveBeenCalledTimes(2);
     expect(addPlaceToList).toHaveBeenLastCalledWith("l1", "new");
-    expect(screen.getByRole("link", { name: "Bocca della Verità" })).toBeInTheDocument();
+    expect(getNamed("link", "Bocca della Verità")).toBeInTheDocument();
   });
 
   it("the row can be hidden — the place stays in the logbook either way", async () => {
     addPlaceToList.mockRejectedValue(network);
     await searchForNothing();
-    fireEvent.click(screen.getByRole("button", { name: /als Ort anlegen/ }));
-    fireEvent.click(screen.getByRole("button", { name: "mock-save" }));
+    fireEvent.click(getNamed("button", /als Ort anlegen/));
+    fireEvent.click(getNamed("button", "mock-save"));
     await screen.findByRole("alert");
-    fireEvent.click(screen.getByRole("button", { name: "Ausblenden" }));
+    fireEvent.click(getNamed("button", "Ausblenden"));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("does not offer to create while the search still finds a place", async () => {
     await searchForNothing();
     fireEvent.change(screen.getByLabelText("Ort hinzufügen"), { target: { value: "Panth" } });
-    expect(screen.getByRole("button", { name: /Pantheon/ })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /als Ort anlegen/ })).not.toBeInTheDocument();
+    expect(getNamed("button", /Pantheon/)).toBeInTheDocument();
+    expect(queryNamed("button", /als Ort anlegen/)).not.toBeInTheDocument();
   });
 
   // Review I3: a member is said as a member, never offered as "new".
@@ -196,7 +195,7 @@ describe("PlaceListDetailPage — a new place from the list", () => {
     await searchForNothing();
     fireEvent.change(screen.getByLabelText("Ort hinzufügen"), { target: { value: "Kolosseum" } });
     expect(screen.getByText("„Kolosseum“ steht schon in dieser Liste.")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /als Ort anlegen/ })).not.toBeInTheDocument();
+    expect(queryNamed("button", /als Ort anlegen/)).not.toBeInTheDocument();
     expect(screen.queryByText("Kein passender Ort in deinem Logbuch.")).not.toBeInTheDocument();
   });
 
@@ -205,8 +204,8 @@ describe("PlaceListDetailPage — a new place from the list", () => {
     fireEvent.change(screen.getByLabelText("Ort hinzufügen"), {
       target: { value: "Fontana di" },
     });
-    expect(screen.getByRole("button", { name: /Trevi Fountain/ })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /als Ort anlegen/ })).not.toBeInTheDocument();
+    expect(getNamed("button", /Trevi Fountain/)).toBeInTheDocument();
+    expect(queryNamed("button", /als Ort anlegen/)).not.toBeInTheDocument();
   });
 
   // Review M2: a create the server answered with an existing place lists it once.
@@ -220,10 +219,10 @@ describe("PlaceListDetailPage — a new place from the list", () => {
     };
     addPlaceToList.mockRejectedValue(network);
     await searchForNothing();
-    fireEvent.click(screen.getByRole("button", { name: /als Ort anlegen/ }));
-    fireEvent.click(screen.getByRole("button", { name: "mock-save" }));
+    fireEvent.click(getNamed("button", /als Ort anlegen/));
+    fireEvent.click(getNamed("button", "mock-save"));
     await screen.findByRole("alert");
     fireEvent.change(screen.getByLabelText("Ort hinzufügen"), { target: { value: "Panth" } });
-    expect(screen.getAllByRole("button", { name: /Pantheon/ })).toHaveLength(1);
+    expect(allNamed("button", /Pantheon/)).toHaveLength(1);
   });
 });
