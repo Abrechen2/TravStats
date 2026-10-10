@@ -751,7 +751,14 @@
       "toll": "Toll",
       "pitch": "Pitch",
       "fuel": "Fuel",
+      "charging": "EV charging",
       "parking": "Parking",
+      "transport": "Local transport & taxi",
+      "food": "Food & drink",
+      "groceries": "Groceries",
+      "activity": "Admission & activities",
+      "shopping": "Shopping",
+      "fees": "Fees",
       "other": "Other"
     },
     "dialog": {
@@ -781,6 +788,56 @@
       "title": "Delete this cost?",
       "message": "“{{name}}” ({{place}}) will be deleted. This cannot be undone.\nKept: the roadtrip, its stations and every other cost.",
       "confirm": "Delete cost"
+    },
+    "paidBy": "paid by {{name}}",
+    "payer": {
+      "label": "Paid by",
+      "none": "Not recorded",
+      "other": "Another name …",
+      "name": "Name",
+      "unknown": "Saved companion",
+      "hint": "Only records who paid — the cost is not split.",
+      "loadFailed": "Your companions could not be loaded. You can still type a name.",
+      "missing": "the name of who paid"
+    },
+    "fx": {
+      "title": "Exchange rate",
+      "source": {
+        "ecb": "ECB daily rate",
+        "cdn": "market daily rate",
+        "cached": "cached rate",
+        "manual": "entered by hand"
+      },
+      "recorded": "{{rate}} · {{source}} of {{day}} · ≈ {{amount}}",
+      "none": "No rate recorded — the cost counts in its own currency only. Saving looks up the daily rate for the date.",
+      "noneUndated": "No rate: without a date there is no daily rate. The cost then counts in its own currency only — unless you enter a rate by hand.",
+      "relookupHint": "If you change the amount, currency or date, saving looks up a new daily rate.",
+      "enterManual": "Enter a rate by hand",
+      "remove": "Remove the rate",
+      "manualLabel": "Rate: 1 {{currency}} = … {{base}}",
+      "preview": "≈ {{amount}} at this rate",
+      "cancelManual": "No hand-entered rate after all",
+      "removing": "The rate is removed on saving. The cost then counts in its own currency only.",
+      "undoRemove": "Keep the rate",
+      "missing": "a valid rate",
+      "invalid": "Please enter a rate above 0.",
+      "rowConverted": "≈ {{amount}} · {{source}}",
+      "outcome": {
+        "lookupFailed": "Saved — but no exchange rate could be found for this cost. It counts in {{currency}} only; you can add a rate by hand.",
+        "keptStoredRate": "Saved — no new daily rate could be found, so the rate already stored was applied to the new amount."
+      }
+    },
+    "receipt": {
+      "title": "Receipt",
+      "afterSave": "You can attach a receipt once the cost is saved.",
+      "count_one": "{{count}} receipt",
+      "count_other": "{{count}} receipts"
+    },
+    "base": {
+      "total": "≈ {{amount}} in your base currency",
+      "hint": "Converted at the rate stored with each cost.",
+      "noneConverted": "No total in your base currency: none of these costs has an exchange rate stored.",
+      "unconverted": "Not included, because no rate is stored: {{amounts}}"
     }
   },
   "deleteWithCosts": {

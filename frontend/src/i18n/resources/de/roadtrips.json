@@ -751,7 +751,14 @@
       "toll": "Maut",
       "pitch": "Stellplatz",
       "fuel": "Tanken",
+      "charging": "Laden (E-Auto)",
       "parking": "Parken",
+      "transport": "Nahverkehr & Taxi",
+      "food": "Essen & Trinken",
+      "groceries": "Lebensmittel",
+      "activity": "Eintritt & Aktivitäten",
+      "shopping": "Einkäufe",
+      "fees": "Gebühren",
       "other": "Sonstiges"
     },
     "dialog": {
@@ -781,6 +788,56 @@
       "title": "Kosten löschen?",
       "message": "„{{name}}“ ({{place}}) wird gelöscht. Das lässt sich nicht rückgängig machen.\nErhalten bleiben: der Roadtrip, seine Stationen und alle anderen Kosten.",
       "confirm": "Kosten löschen"
+    },
+    "paidBy": "bezahlt von {{name}}",
+    "payer": {
+      "label": "Bezahlt von",
+      "none": "Nicht erfasst",
+      "other": "Anderer Name …",
+      "name": "Name",
+      "unknown": "Gespeicherte Begleitung",
+      "hint": "Hält nur fest, wer bezahlt hat — die Kosten werden nicht aufgeteilt.",
+      "loadFailed": "Deine Begleitungen konnten nicht geladen werden. Einen Namen kannst du trotzdem eintragen.",
+      "missing": "den Namen, wer bezahlt hat"
+    },
+    "fx": {
+      "title": "Wechselkurs",
+      "source": {
+        "ecb": "EZB-Tageskurs",
+        "cdn": "Markt-Tageskurs",
+        "cached": "zwischengespeicherter Kurs",
+        "manual": "von Hand eingetragen"
+      },
+      "recorded": "{{rate}} · {{source}} vom {{day}} · ≈ {{amount}}",
+      "none": "Kein Kurs erfasst — die Kosten zählen nur in ihrer eigenen Währung. Beim Speichern wird der Tageskurs für das Datum gesucht.",
+      "noneUndated": "Kein Kurs: ohne Datum gibt es keinen Tageskurs. Die Kosten zählen dann nur in ihrer eigenen Währung — außer du trägst einen Kurs von Hand ein.",
+      "relookupHint": "Änderst du Betrag, Währung oder Datum, wird beim Speichern ein neuer Tageskurs gesucht.",
+      "enterManual": "Kurs von Hand eingeben",
+      "remove": "Kurs entfernen",
+      "manualLabel": "Kurs: 1 {{currency}} = … {{base}}",
+      "preview": "≈ {{amount}} mit diesem Kurs",
+      "cancelManual": "Doch keinen Kurs von Hand",
+      "removing": "Der Kurs wird beim Speichern entfernt. Die Kosten zählen dann nur in ihrer eigenen Währung.",
+      "undoRemove": "Kurs behalten",
+      "missing": "einen gültigen Kurs",
+      "invalid": "Bitte einen Kurs größer als 0 eingeben.",
+      "rowConverted": "≈ {{amount}} · {{source}}",
+      "outcome": {
+        "lookupFailed": "Gespeichert — aber für diese Kosten war kein Wechselkurs zu finden. Sie zählen nur in {{currency}}; einen Kurs kannst du von Hand nachtragen.",
+        "keptStoredRate": "Gespeichert — ein neuer Tageskurs war nicht zu finden, der bisher gespeicherte Kurs wurde auf den neuen Betrag angewandt."
+      }
+    },
+    "receipt": {
+      "title": "Beleg",
+      "afterSave": "Einen Beleg kannst du anhängen, sobald die Kosten gespeichert sind.",
+      "count_one": "{{count}} Beleg",
+      "count_other": "{{count}} Belege"
+    },
+    "base": {
+      "total": "≈ {{amount}} in Hauswährung",
+      "hint": "Umgerechnet mit dem Kurs, der bei jeder Ausgabe gespeichert ist.",
+      "noneConverted": "Keine Summe in Hauswährung: für keine dieser Kosten ist ein Wechselkurs gespeichert.",
+      "unconverted": "Nicht enthalten, weil kein Kurs gespeichert ist: {{amounts}}"
     }
   },
   "deleteWithCosts": {
