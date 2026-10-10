@@ -97,6 +97,25 @@ export function formatDistance(
 }
 
 /**
+ * A SHORT distance in the reader's unit — the gap between a photo stop and a
+ * logged visit. `formatDistance` rounds to whole units, which turns 350 m into
+ * "0 km" and claims the two places coincide. Kilometres below one are given in
+ * metres; miles and nautical miles keep one decimal and never print 0.
+ */
+export function formatShortDistance(
+  km: number,
+  unit: DistanceUnit,
+  t: (key: string) => string,
+  language?: string
+): string {
+  if (unit === "kilometers" && km < 1) {
+    return `${formatNumber(Math.round(km * 1000), undefined, language)} m`;
+  }
+  const value = Math.max(convertDistance(km, unit), 0.1);
+  return `${formatNumber(value, { maximumFractionDigits: 1 }, language)} ${getDistanceLabel(unit, t)}`;
+}
+
+/**
  * A number of hours with one decimal in the reader's language: "1,5" on a
  * German page, "1.5" on an English one, "64" rather than "64,0". The flight
  * statistics printed the same figure as "2 h", "1.5 h", "64 h" and "374.7h"

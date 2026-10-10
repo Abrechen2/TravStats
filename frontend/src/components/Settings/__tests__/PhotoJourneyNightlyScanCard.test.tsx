@@ -69,7 +69,16 @@ describe("PhotoJourneyNightlyScanCard", () => {
       settings({ nightlyScan: true, immichConnected: false })
     );
     render(<PhotoJourneyNightlyScanCard />);
-    expect(await screen.findByRole("note")).toHaveTextContent(`${K}.notConnected`);
+    const note = await screen.findByRole("note");
+    expect(note).toHaveTextContent(`${K}.notConnected`);
+    // A normal account is told to connect Immich — nothing about the demo.
+    expect(note).not.toHaveTextContent("notConnectedDemo");
+  });
+
+  it("says the line is the NIGHTLY run, and where a manual scan reports", async () => {
+    vi.mocked(photoJourneysApi.getNightlySettings).mockResolvedValue(settings());
+    render(<PhotoJourneyNightlyScanCard />);
+    expect(await screen.findByText(`${K}.manualNote`)).toBeInTheDocument();
   });
 
   it("reports a failed last run with the library's own reason", async () => {
@@ -136,6 +145,7 @@ describe("PhotoJourneyNightlyScanCard", () => {
     render(<PhotoJourneyNightlyScanCard />);
     expect(await screen.findByText("settings:demoLocked")).toBeInTheDocument();
     expect(screen.queryByRole("switch")).toBeNull();
-    expect(screen.getByText(`${K}.notConnected`)).toBeInTheDocument();
+    expect(screen.getByText(`${K}.notConnectedDemo`)).toBeInTheDocument();
+    expect(screen.queryByText(`${K}.notConnected`)).toBeNull();
   });
 });

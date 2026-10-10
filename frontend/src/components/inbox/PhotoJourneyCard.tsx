@@ -1,12 +1,8 @@
-import { useState } from "react";
-
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
-import type { PhotoJourney } from "../../types/photoJourney";
+import type { CardPhotoJourney } from "../../types/photoJourney";
 import Button from "../ui/Button";
-import { Field, Input } from "../ui/Field";
 
-import type { AcceptInput } from "./acceptPhotoJourney";
 import PhotoJourneyPreviewStrip from "./PhotoJourneyPreviewStrip";
 import { photoJourneyPlan } from "./photoJourneyPlan";
 import { photoJourneySpan } from "./photoJourneySpan";
@@ -32,19 +28,15 @@ import { photoJourneySpan } from "./photoJourneySpan";
  * whatever `photoJourneyLabel` made of the row — including coordinates where
  * the reverse lookup answered nothing.
  *
- * ## A visit finding may need a name from the reader
- *
- * A `visit` finding (forgejo#211) whose lookup named nothing still stands on
- * its dates and photographs, but the place it creates needs a name, and the
- * server refuses to mint "unknown" (`VISIT_NAME_REQUIRED`). The card asks for
- * one, and accept waits until it is given.
+ * A `visit` finding is not drawn here: the batch review answers it
+ * (`visitReview/`, forgejo#211 O5).
  */
 
 interface PhotoJourneyCardProps {
-  journey: PhotoJourney;
+  journey: CardPhotoJourney;
   /** Localized place line, built by the tab so both card and message agree. */
   label: string;
-  onAccept: (input: AcceptInput) => void;
+  onAccept: () => void;
   onDismiss: () => void;
   busy?: boolean;
 }
@@ -58,12 +50,8 @@ export default function PhotoJourneyCard({
 }: PhotoJourneyCardProps): JSX.Element {
   const { t } = useTranslation(["dataQuality", "common"]);
   const format = useDisplayFormat();
-  const [name, setName] = useState("");
 
   const plan = photoJourneyPlan(journey);
-  // The lookup named nothing and no own place takes the visit: the reader names it.
-  const needsName = plan === "visitInTrip" && !journey.suggestedName;
-  const nameMissing = needsName && name.trim().length === 0;
 
   const facts = [
     t("dataQuality:inbox.photoJourneys.facts.photos", { photos: journey.photoCount }),
@@ -107,24 +95,6 @@ export default function PhotoJourneyCard({
 
       <PhotoJourneyPreviewStrip journey={journey} />
 
-      {needsName && (
-        <div className="mt-3">
-          <Field
-            label={t("dataQuality:inbox.photoJourneys.nameField.label")}
-            htmlFor={`journey-name-${journey.id}`}
-            hint={t("dataQuality:inbox.photoJourneys.nameField.hint")}
-          >
-            <Input
-              id={`journey-name-${journey.id}`}
-              value={name}
-              maxLength={200}
-              onChange={(event) => setName(event.target.value)}
-              placeholder={t("dataQuality:inbox.photoJourneys.nameField.placeholder")}
-            />
-          </Field>
-        </div>
-      )}
-
       {/* What accepting will do, permanently rather than in a tooltip, and read
           from `photoJourneyPlan` — the same rule the act uses. Keyed on the row
           KIND, this line promised a visit for a `place` finding whose place had
@@ -133,11 +103,7 @@ export default function PhotoJourneyCard({
       <p className="t-caption mt-3">{t(`dataQuality:inbox.photoJourneys.creates.${plan}`)}</p>
 
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button
-          variant="primary"
-          onClick={() => onAccept(needsName ? { name: name.trim() } : {})}
-          disabled={busy || nameMissing}
-        >
+        <Button variant="primary" onClick={onAccept} disabled={busy}>
           {t("dataQuality:inbox.photoJourneys.actions.accept")}
         </Button>
         <Button onClick={onDismiss} disabled={busy}>

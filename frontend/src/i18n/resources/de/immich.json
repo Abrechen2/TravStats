@@ -92,7 +92,7 @@
     "privacy": "Bilder verlassen Immich nicht; nur die Positionen der Funde gehen an den Ortsdienst.",
     "privacyHelp": "Um einen Fund zu benennen, fragt der Server den Ortsdienst (Nominatim, Photon) nach dem Namen an dieser Position — höchstens 40 bzw. 20 Anfragen pro Lauf.",
     "privacyHelpMore": "Die Suche läuft auf deinem Server mit deiner eigenen Immich-Verbindung. Eine Suche über die ganze Bibliothek startest du jederzeit im Posteingang mit „Fotos durchsuchen“.",
-    "notConnected": "Keine Immich-Verbindung — die nächtliche Suche überspringt dieses Konto, bis oben eine eingerichtet ist. Im Demo-Zugang gibt es keine.",
+    "notConnected": "Keine Immich-Verbindung — die nächtliche Suche überspringt dieses Konto, bis oben eine eingerichtet ist.",
     "loading": "Wird geladen …",
     "loadFailed": "Die Einstellung konnte nicht geladen werden.",
     "retry": "Erneut laden",
@@ -100,11 +100,13 @@
     "saveFailedOff": "Konnte nicht gespeichert werden — die nächtliche Suche bleibt ausgeschaltet.",
     "lastRun": {
       "never": "Für dieses Konto ist noch keine nächtliche Suche gelaufen.",
-      "scanned": "Letzter Lauf {{when}}: {{count}} neuer Vorschlag.",
-      "scanned_other": "Letzter Lauf {{when}}: {{count}} neue Vorschläge.",
-      "noImmich": "Letzter Lauf {{when}}: übersprungen — keine Immich-Verbindung.",
-      "failed": "Letzter Lauf {{when}} fehlgeschlagen: {{reason}} Die nächste Nacht versucht es erneut.",
+      "scanned": "Letzter nächtlicher Lauf {{when}}: {{count}} neuer Vorschlag.",
+      "scanned_other": "Letzter nächtlicher Lauf {{when}}: {{count}} neue Vorschläge.",
+      "noImmich": "Letzter nächtlicher Lauf {{when}}: übersprungen — keine Immich-Verbindung.",
+      "failed": "Letzter nächtlicher Lauf {{when}} fehlgeschlagen: {{reason}} Die nächste Nacht versucht es erneut.",
       "internal": "Interner Fehler auf dem Server (siehe Server-Log)."
-    }
+    },
+    "manualNote": "Hier steht nur der nächtliche Lauf. „Fotos durchsuchen“ im Posteingang meldet sein Ergebnis dort, mit Grund, wenn Immich nicht antwortet.",
+    "notConnectedDemo": "Der Demo-Zugang hat keine Fotobibliothek — die nächtliche Suche läuft für ihn nicht."
   }
 }

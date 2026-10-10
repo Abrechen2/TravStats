@@ -58,14 +58,7 @@
         "trip": "Übernehmen legt eine Reise mit diesem Zeitraum an.",
         "placeVisit": "Übernehmen legt einen Besuch an diesem Ort am ersten Tag an.",
         "stayAnswerOnly": "Übernehmen merkt die Frage nur als beantwortet. Eine Übernachtung braucht eine Unterkunft, die dieser Fund nicht nennt — die legst du selbst an.",
-        "placeMissingAnswerOnly": "Übernehmen merkt die Frage nur als beantwortet. Den Ort, den dieser Fund nannte, gibt es nicht mehr — angelegt wird nichts.",
-        "visitInTrip": "Übernehmen legt den Ort an und trägt einen Besuch zur Zeit des ersten Fotos in der Reise ein.",
-        "visitInTripOwnPlace": "Übernehmen trägt einen Besuch an diesem Ort zur Zeit des ersten Fotos in der Reise ein — der Ort ist schon da."
-      },
-      "nameField": {
-        "label": "Name des Ortes",
-        "hint": "Die Suche hat hier nichts Benanntes gefunden — gib dem Ort einen Namen, dann kann er angelegt werden.",
-        "placeholder": "z. B. Gyeongbokgung"
+        "placeMissingAnswerOnly": "Übernehmen merkt die Frage nur als beantwortet. Den Ort, den dieser Fund nannte, gibt es nicht mehr — angelegt wird nichts."
       },
       "actions": {
         "accept": "Übernehmen",
@@ -87,8 +80,7 @@
         "accepted": {
           "trip": "Reise angelegt.",
           "placeVisit": "Besuch am Ort eingetragen.",
-          "none": "Als beantwortet gemerkt. Angelegt wurde nichts.",
-          "serverVisit": "Besuch in der Reise eingetragen."
+          "none": "Als beantwortet gemerkt. Angelegt wurde nichts."
         },
         "dismissed": "Verworfen. Diese Fotoserie wird nicht mehr vorgeschlagen.",
         "photosLinked": "{{count}} Fotos mit dem Besuch verknüpft.",
@@ -103,7 +95,8 @@
           "trip": "Die Reise wurde angelegt, aber der Vorschlag konnte nicht als übernommen markiert werden — noch einmal versuchen verknüpft nur.",
           "placeVisit": "Der Besuch wurde eingetragen, aber der Vorschlag konnte nicht als übernommen markiert werden — noch einmal versuchen verknüpft nur."
         },
-        "dismissFailed": "Der Vorschlag konnte nicht verworfen werden."
+        "dismissFailed": "Der Vorschlag konnte nicht verworfen werden.",
+        "scanFailedImmich": "Die Foto-Suche ist fehlgeschlagen: {{reason}}"
       },
       "nightlyLink": "Nächtliche Suche einstellen",
       "review": {
@@ -151,6 +144,11 @@
           "VISIT_PLACE_NOT_FOUND": "der gewählte Ort existiert nicht mehr — unter „Korrigieren“ einen anderen wählen.",
           "TIME_INVALID": "die Zeit ließ sich an diesem Ort nicht lesen (etwa eine Uhrzeit, die es wegen der Zeitumstellung nicht gibt).",
           "INTERNAL": "unerwarteter Fehler auf dem Server — bitte noch einmal versuchen."
+        },
+        "creates": {
+          "newPlace": "Übernehmen legt den Ort an und trägt einen Besuch in der Reise ein — zur Zeit des ersten Fotos, wenn du sie nicht korrigierst.",
+          "ownPlace": "Übernehmen trägt einen Besuch an deinem Ort ganz in der Nähe in der Reise ein — der Ort ist schon da.",
+          "chosenPlace": "Übernehmen trägt den Besuch an „{{name}}“ ein; ein neuer Ort wird nicht angelegt. Hat er an dem Tag schon einen Besuch, wird der Vorschlag damit verknüpft."
         }
       }
     },

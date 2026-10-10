@@ -2,12 +2,13 @@ import { useState, type JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useDisplayFormat } from "../../../lib/displayFormat";
+import { useSettingsStore } from "../../../store/settingsStore";
 import type { PhotoJourney } from "../../../types/photoJourney";
 import Button from "../../ui/Button";
 import PhotoJourneyPreviewStrip from "../PhotoJourneyPreviewStrip";
 import { photoJourneySpan } from "../photoJourneySpan";
 
-import { needsName, type VisitCorrection } from "./reviewItems";
+import { needsName, visitAcceptPlan, type VisitCorrection } from "./reviewItems";
 import type { ReviewFailure } from "./useVisitReview";
 import { visitReasoning } from "./visitReasoning";
 import VisitSuggestionCorrection from "./VisitSuggestionCorrection";
@@ -45,7 +46,8 @@ export default function VisitSuggestionCard({
   onAccept: () => void;
   onDismiss: () => void;
 }): JSX.Element {
-  const { t, i18n } = useTranslation(["dataQuality"]);
+  const { t, i18n } = useTranslation(["dataQuality", "stats"]);
+  const distanceUnit = useSettingsStore((s) => s.units.distanceUnit);
   const format = useDisplayFormat();
   const [correcting, setCorrecting] = useState(false);
   const base = "dataQuality:inbox.photoJourneys";
@@ -96,7 +98,7 @@ export default function VisitSuggestionCard({
             className="t-caption mt-1 flex flex-wrap gap-x-3"
             aria-label={t(`${base}.review.reasonLabel`)}
           >
-            {visitReasoning(journey, t, i18n.language).map((fact) => (
+            {visitReasoning(journey, t, distanceUnit, i18n.language).map((fact) => (
               <li key={fact}>{fact}</li>
             ))}
           </ul>
@@ -122,6 +124,13 @@ export default function VisitSuggestionCard({
       {correcting && (
         <VisitSuggestionCorrection journey={journey} correction={correction} onChange={onCorrect} />
       )}
+
+      {/* What accepting will make, from the inputs the server acts on. */}
+      <p className="t-caption mt-3">
+        {t(`${base}.review.creates.${visitAcceptPlan(journey, correction)}`, {
+          name: correction.place?.name ?? "",
+        })}
+      </p>
 
       <div className="mt-3 flex flex-wrap gap-2">
         <Button variant="primary" onClick={onAccept} disabled={busy || nameMissing}>

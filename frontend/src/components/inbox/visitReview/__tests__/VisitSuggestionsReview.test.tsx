@@ -149,6 +149,22 @@ describe("VisitSuggestionsReview (forgejo#211, O5)", () => {
     ]);
   });
 
+  it("promises what accepting will make: a new place, the own place nearby, or the chosen one", async () => {
+    vi.mocked(listPlaces).mockResolvedValue([
+      { id: "near", name: "Palace grounds", lat: 37.58, lon: 126.977, city: "Seoul" },
+    ] as never);
+    renderReview([visit(), { ...MEMORIAL, placeId: "own-memorial" }]);
+    const palace = card("Gyeongbokgung");
+    expect(within(palace).getByText(`${K}.review.creates.newPlace`)).toBeInTheDocument();
+    expect(
+      within(card("War Memorial of Korea")).getByText(`${K}.review.creates.ownPlace`)
+    ).toBeInTheDocument();
+
+    await userEvent.click(within(palace).getByRole("button", { name: `${K}.review.correct` }));
+    await userEvent.click(await within(palace).findByRole("button", { name: /Palace grounds/ }));
+    expect(within(palace).getByText(`${K}.review.creates.chosenPlace`)).toBeInTheDocument();
+  });
+
   it("flags a suggestion a visit logged since the scan already explains", () => {
     renderReview([
       visit({

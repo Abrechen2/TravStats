@@ -1,10 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 
 import PhotoJourneyCard from "../PhotoJourneyCard";
 import { photoJourneyLabel } from "../photoJourneyLabel";
-import type { PhotoJourney } from "../../../types/photoJourney";
+import type { CardPhotoJourney, PhotoJourney } from "../../../types/photoJourney";
 
 /**
  * The card PROMISES what accepting will do, and the promise must be the rule
@@ -43,25 +42,22 @@ function makeJourney(over: Partial<PhotoJourney> = {}): PhotoJourney {
   };
 }
 
-function renderCard(
-  over: Partial<PhotoJourney>,
-  onAccept: (input: { name?: string }) => void = () => {}
-): void {
-  const journey = makeJourney(over);
+function renderCard(over: Partial<CardPhotoJourney>): void {
+  const journey = makeJourney(over) as CardPhotoJourney;
   render(
     <PhotoJourneyCard
       journey={journey}
-      label={journey.kind === "visit" ? photoJourneyLabel(journey) : "Lissabon, Portugal"}
-      onAccept={onAccept}
+      label="Lissabon, Portugal"
+      onAccept={() => {}}
       onDismiss={() => {}}
     />
   );
 }
 
 const creates = (plan: string): string => `dataQuality:inbox.photoJourneys.creates.${plan}`;
-const ACCEPT = "dataQuality:inbox.photoJourneys.actions.accept";
 
-/** A stop at Gyeongbokgung inside the Korea trip, as prod held it (forgejo#211). */
+/** A stop at Gyeongbokgung inside the Korea trip, as prod held it (forgejo#211) — only
+ * its label is read here; the card never draws a visit finding. */
 const VISIT: Partial<PhotoJourney> = {
   kind: "visit",
   placeId: null,
@@ -81,44 +77,6 @@ const VISIT: Partial<PhotoJourney> = {
   city: "Seoul",
   countryName: "South Korea",
 };
-
-describe("PhotoJourneyCard — a visit finding (forgejo#211)", () => {
-  it("heads with both names, names the trip, and shows the stop on the place's clock", () => {
-    renderCard(VISIT);
-    expect(screen.getByRole("heading")).toHaveTextContent("Gyeongbokgung · 경복궁");
-    expect(screen.getByText("dataQuality:inbox.photoJourneys.kind.visit")).toBeInTheDocument();
-    expect(screen.getByText("dataQuality:inbox.photoJourneys.facts.trip")).toBeInTheDocument();
-    // 14:10 Seoul, never the reader's zone: the instant is 05:10Z.
-    expect(screen.getByText(/01\.05\.2026 · 14:10 – 14:30/)).toBeInTheDocument();
-  });
-
-  it("promises a new place and a visit in the trip, and accepts with no name of its own", async () => {
-    const onAccept = vi.fn();
-    renderCard(VISIT, onAccept);
-    expect(screen.getByText(creates("visitInTrip"))).toBeInTheDocument();
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: ACCEPT }));
-    expect(onAccept).toHaveBeenCalledWith({});
-  });
-
-  it("promises only the visit when an own place within reach takes it", () => {
-    renderCard({ ...VISIT, placeId: "place-7" });
-    expect(screen.getByText(creates("visitInTripOwnPlace"))).toBeInTheDocument();
-  });
-
-  it("asks for a name when the lookup named nothing, and accepts only once it has one", async () => {
-    const onAccept = vi.fn();
-    renderCard({ ...VISIT, suggestedName: null, suggestedLocalName: null }, onAccept);
-    const accept = screen.getByRole("button", { name: ACCEPT });
-    expect(accept).toBeDisabled();
-
-    await userEvent.type(screen.getByRole("textbox"), "  Palace Grounds ");
-    expect(accept).toBeEnabled();
-    await userEvent.click(accept);
-    expect(onAccept).toHaveBeenCalledWith({ name: "Palace Grounds" });
-  });
-});
 
 describe("photoJourneyLabel for a visit finding", () => {
   it("shows the sign beside the name only where the two differ", () => {

@@ -1,4 +1,4 @@
-import type { PhotoJourney } from "../../types/photoJourney";
+import type { CardPhotoJourney } from "../../types/photoJourney";
 
 /**
  * What accepting a finding will do — ONE rule, read by the card that PROMISES
@@ -23,22 +23,14 @@ import type { PhotoJourney } from "../../types/photoJourney";
  *   FK cascades, so the row is normally deleted with the place; this is the
  *   window between a scan and a deletion. Answering it is still right,
  *   inventing a place is not.
- * - `visitInTrip` / `visitInTripOwnPlace` — a `visit` finding (forgejo#211).
- *   The SERVER creates on accept: a new place and a visit in the trip, or —
- *   when the row points at an own place within reach — the visit at that
- *   place. The web sends one PATCH and creates nothing itself.
+ *
+ * A `visit` finding has no plan here: it is answered in the batch review,
+ * whose promise is `visitReview/visitAcceptPlan.ts`.
  */
-export type PhotoJourneyPlan =
-  | "trip"
-  | "placeVisit"
-  | "stayAnswerOnly"
-  | "placeMissingAnswerOnly"
-  | "visitInTrip"
-  | "visitInTripOwnPlace";
+export type PhotoJourneyPlan = "trip" | "placeVisit" | "stayAnswerOnly" | "placeMissingAnswerOnly";
 
-export function photoJourneyPlan(journey: PhotoJourney): PhotoJourneyPlan {
+export function photoJourneyPlan(journey: CardPhotoJourney): PhotoJourneyPlan {
   if (journey.kind === "trip") return "trip";
   if (journey.kind === "stay") return "stayAnswerOnly";
-  if (journey.kind === "visit") return journey.placeId ? "visitInTripOwnPlace" : "visitInTrip";
   return journey.placeId ? "placeVisit" : "placeMissingAnswerOnly";
 }

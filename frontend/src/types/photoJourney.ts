@@ -35,6 +35,17 @@ export type PhotoJourneyStatus = "pending" | "accepted" | "dismissed";
  */
 export type PhotoJourneyKind = "place" | "trip" | "stay" | "visit";
 
+/**
+ * A finding answered card by card — every kind but `visit`. A `visit` finding
+ * is answered in the batch review (`components/inbox/visitReview`, forgejo#211
+ * O5), so the card and its two-step accept never see one.
+ */
+export type CardPhotoJourney = PhotoJourney & { kind: Exclude<PhotoJourneyKind, "visit"> };
+
+export function isCardPhotoJourney(journey: PhotoJourney): journey is CardPhotoJourney {
+  return journey.kind !== "visit";
+}
+
 export interface PhotoJourney {
   id: string;
   status: PhotoJourneyStatus;

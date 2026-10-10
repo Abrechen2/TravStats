@@ -3,6 +3,7 @@ import request from "supertest";
 import app from "../../index";
 import { prisma } from "../../db";
 import { clearJobs, settleAllJobs } from "../../services/jobs/jobRegistry";
+import { ImmichError } from "../../services/immich/types";
 import { generateToken } from "../../utils/jwt";
 import { hashPassword } from "../../utils/password";
 
@@ -84,6 +85,20 @@ describe("POST /photo-journeys/scan with background: true", () => {
     expect(await job(res.body.data.jobId)).toMatchObject({
       status: "failed",
       error: { code: "JOB_FAILED", status: 500 },
+    });
+  });
+
+  it("a scan the library refused names the Immich reason, not a bare failure", async () => {
+    const res = await request(app)
+      .post("/api/v1/photo-journeys/scan")
+      .set("Cookie", cookie)
+      .send({ background: true });
+
+    failScan!(new ImmichError("unreachable", "connect ECONNREFUSED"));
+    await settleAllJobs();
+    expect(await job(res.body.data.jobId)).toMatchObject({
+      status: "failed",
+      error: { code: "unreachable", status: 502 },
     });
   });
 });

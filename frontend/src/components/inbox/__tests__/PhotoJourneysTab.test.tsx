@@ -42,7 +42,8 @@ vi.mock("../../../lib/api/photoJourneys", async (importOriginal) => {
     },
   };
 });
-vi.mock("../../../lib/api/immich", () => ({
+vi.mock("../../../lib/api/immich", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/api/immich")>()),
   immichApi: { getSettings: vi.fn() },
 }));
 vi.mock("../../../lib/api/trips", () => ({

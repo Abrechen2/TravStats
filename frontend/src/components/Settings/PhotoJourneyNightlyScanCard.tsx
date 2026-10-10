@@ -4,6 +4,7 @@ import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { logger } from "../../lib/logger";
+import { failureKey, isImmichFailureKind } from "../../lib/api/immich";
 import { photoJourneysApi, type PhotoJourneyNightlySettings } from "../../lib/api/photoJourneys";
 import Button from "../ui/Button";
 import { Switch } from "../ui/Field";
@@ -12,9 +13,6 @@ import { token } from "../ui/tokens";
 
 import DemoLockedNotice from "./DemoLockedNotice";
 import { SectionCard, SectionTitle } from "./SettingsShared";
-
-/** The Immich failure kinds the card has words for; anything else reads as ours. */
-const IMMICH_FAILURES = new Set(["unreachable", "auth", "notFound", "protocol", "invalidUrl"]);
 
 /**
  * The account's opt-in to the nightly photo scan (forgejo#94, point 1 — the
@@ -139,14 +137,20 @@ function NightlyScanBody({
           expandedContent={t(k("privacyHelpMore"))}
         />
       </p>
+      {/* The demo account is a different case, not a missing step: there is
+          no connection to set up, so it is not told to set one up. */}
       {!settings.immichConnected && (
         <p role="note" className="text-sm" style={{ color: token("warn") }}>
-          {t(k("notConnected"))}
+          {t(k(isDemo ? "notConnectedDemo" : "notConnected"))}
         </p>
       )}
       <p className="text-sm" role="status">
         {lastRunText(settings, t, format)}
       </p>
+      {/* Only the NIGHTLY run is recorded: the card answers "is my opt-in
+          working", and a manual scan's success would hide a nightly failure.
+          A manual scan reports its own outcome where it is started. */}
+      <p className="t-caption">{t(k("manualNote"))}</p>
       {saveFailed && (
         <p role="alert" className="text-sm" style={{ color: token("bad") }}>
           {t(k(settings.nightlyScan ? "saveFailedOn" : "saveFailedOff"))}
@@ -169,8 +173,8 @@ function lastRunText(
   }
   if (run.result === "noImmich") return t("immich:nightlyScan.lastRun.noImmich", { when });
   const reason =
-    run.failure && IMMICH_FAILURES.has(run.failure)
-      ? t(`immich:errors.${run.failure}`)
+    run.failure && isImmichFailureKind(run.failure)
+      ? t(`immich:${failureKey(run.failure)}`)
       : t("immich:nightlyScan.lastRun.internal");
   return t("immich:nightlyScan.lastRun.failed", { when, reason });
 }

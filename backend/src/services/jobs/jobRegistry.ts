@@ -20,6 +20,7 @@
 import { randomUUID } from "crypto";
 
 import { AppError } from "../../middleware/errorHandler";
+import { ImmichError } from "../immich/types";
 import logger from "../../utils/logger";
 
 export type JobKind =
@@ -93,8 +94,15 @@ function prune(now: number): void {
   for (const job of finished.slice(0, jobs.size - MAX_JOBS)) jobs.delete(job.id);
 }
 
-/** The failure as the client sees it: a code, never the thrower's prose. */
+/**
+ * The failure as the client sees it: a code, never the thrower's prose.
+ *
+ * An Immich failure keeps its kind (`unreachable`, `auth`, …) — the fixed
+ * vocabulary every Immich error body speaks — so a photo scan run as a job
+ * can say WHY the library did not answer instead of a bare "failed".
+ */
 export function jobErrorOf(err: unknown): JobError {
+  if (err instanceof ImmichError) return { code: err.kind, status: 502 };
   if (err instanceof AppError) {
     return {
       code: err.code ?? err.message.match(/^[a-z_]+$/)?.[0] ?? "JOB_FAILED",

@@ -92,7 +92,7 @@
     "privacy": "Pictures never leave Immich; only the positions of findings go to the place-name service.",
     "privacyHelp": "To name a finding, the server asks the place-name service (Nominatim, Photon) what is at that position — at most 40 or 20 requests per run.",
     "privacyHelpMore": "The scan runs on your server with your own Immich connection. A scan of the whole library can be started any time in the inbox with “Scan photos”.",
-    "notConnected": "No Immich connection — the nightly scan skips this account until one is set up above. The demo account has none.",
+    "notConnected": "No Immich connection — the nightly scan skips this account until one is set up above.",
     "loading": "Loading …",
     "loadFailed": "The setting could not be loaded.",
     "retry": "Load again",
@@ -100,11 +100,13 @@
     "saveFailedOff": "Could not be saved — the nightly scan stays off.",
     "lastRun": {
       "never": "No nightly scan has run for this account yet.",
-      "scanned": "Last run {{when}}: {{count}} new suggestion.",
-      "scanned_other": "Last run {{when}}: {{count}} new suggestions.",
-      "noImmich": "Last run {{when}}: skipped — no Immich connection.",
-      "failed": "Last run {{when}} failed: {{reason}} The next night tries again.",
+      "scanned": "Last nightly run {{when}}: {{count}} new suggestion.",
+      "scanned_other": "Last nightly run {{when}}: {{count}} new suggestions.",
+      "noImmich": "Last nightly run {{when}}: skipped — no Immich connection.",
+      "failed": "Last nightly run {{when}} failed: {{reason}} The next night tries again.",
       "internal": "Internal error on the server (see the server log)."
-    }
+    },
+    "manualNote": "Only the nightly run is shown here. “Scan photos” in the inbox reports its own result there, with the reason if Immich does not answer.",
+    "notConnectedDemo": "The demo account has no photo library — the nightly scan does not run for it."
   }
 }

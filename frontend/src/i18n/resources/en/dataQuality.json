@@ -58,14 +58,7 @@
         "trip": "Accepting creates a trip covering these dates.",
         "placeVisit": "Accepting records a visit to this place on the first day.",
         "stayAnswerOnly": "Accepting only marks the question answered. A stay needs a lodging this finding does not name — you create that yourself.",
-        "placeMissingAnswerOnly": "Accepting only marks the question answered. The place this finding named no longer exists — nothing is created.",
-        "visitInTrip": "Accepting creates the place and records a visit in the trip at the time of the first photo.",
-        "visitInTripOwnPlace": "Accepting records a visit to this place in the trip at the time of the first photo — the place already exists."
-      },
-      "nameField": {
-        "label": "Name of the place",
-        "hint": "The lookup found nothing named here — give the place a name so it can be created.",
-        "placeholder": "e.g. Gyeongbokgung"
+        "placeMissingAnswerOnly": "Accepting only marks the question answered. The place this finding named no longer exists — nothing is created."
       },
       "actions": {
         "accept": "Accept",
@@ -87,8 +80,7 @@
         "accepted": {
           "trip": "Trip created.",
           "placeVisit": "Visit recorded at the place.",
-          "none": "Marked as answered. Nothing was created.",
-          "serverVisit": "Visit recorded in the trip."
+          "none": "Marked as answered. Nothing was created."
         },
         "dismissed": "Dismissed. This burst will not be suggested again.",
         "photosLinked": "{{count}} photos linked to the visit.",
@@ -103,7 +95,8 @@
           "trip": "The trip was created, but the suggestion could not be marked as accepted — trying again only links it.",
           "placeVisit": "The visit was recorded, but the suggestion could not be marked as accepted — trying again only links it."
         },
-        "dismissFailed": "The suggestion could not be dismissed."
+        "dismissFailed": "The suggestion could not be dismissed.",
+        "scanFailedImmich": "The photo scan failed: {{reason}}"
       },
       "nightlyLink": "Set up the nightly scan",
       "review": {
@@ -151,6 +144,11 @@
           "VISIT_PLACE_NOT_FOUND": "the chosen place no longer exists — pick another under “Correct”.",
           "TIME_INVALID": "the time could not be read at this place (for example a clock time that does not exist because of a DST change).",
           "INTERNAL": "unexpected error on the server — please try again."
+        },
+        "creates": {
+          "newPlace": "Accepting creates the place and records a visit in the trip — at the time of the first photo unless you correct it.",
+          "ownPlace": "Accepting records a visit to your own place right next to it in the trip — the place already exists.",
+          "chosenPlace": "Accepting records the visit at “{{name}}”; no new place is created. If it already has a visit that day, the suggestion is linked to it."
         }
       }
     },

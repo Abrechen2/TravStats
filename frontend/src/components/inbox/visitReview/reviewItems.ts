@@ -53,6 +53,21 @@ export function buildReviewItems(
   });
 }
 
+/**
+ * What accepting will make — the promise the card prints, read from the same
+ * inputs the server acts on: a place the reader chose, else the own place the
+ * scan found within reach, else a new one.
+ */
+export type VisitAcceptPlan = "chosenPlace" | "ownPlace" | "newPlace";
+
+export function visitAcceptPlan(
+  journey: PhotoJourney,
+  correction: VisitCorrection | undefined
+): VisitAcceptPlan {
+  if (correction?.place) return "chosenPlace";
+  return journey.placeId ? "ownPlace" : "newPlace";
+}
+
 /** Whether accepting this suggestion as it stands would be refused for want of a name. */
 export function needsName(journey: PhotoJourney, correction: VisitCorrection | undefined): boolean {
   if (journey.suggestedName || journey.placeId || correction?.place) return false;
