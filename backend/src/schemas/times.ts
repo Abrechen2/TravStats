@@ -20,6 +20,26 @@ import { localDateValueSchema, timeValueSchema } from "../shared/time/wire";
 const time = timeValueSchema.nullable();
 const day = localDateValueSchema.nullable();
 
+/**
+ * The booking deadlines (forgejo#285) a stay, a rental and a booking share.
+ * A cancellation deadline is EITHER an instant (`freeCancellationUntil`) OR a
+ * day (`freeCancellationOn`) — at most one is non-null; nothing invents an hour.
+ */
+const deadlineMembers = {
+  freeCancellationUntil: time.describe(
+    "Free cancellation until this instant, on the clock it was stated on; null when not " +
+      "recorded or known only to the day."
+  ),
+  freeCancellationOn: day.describe(
+    "Free cancellation until the END of this local day — the deadline known only to the day. " +
+      "`zone` is the place's, null for an entity without one. Null when not recorded or when " +
+      "`freeCancellationUntil` holds the instant."
+  ),
+  paymentDue: day.describe(
+    "The day payment is due — a calendar day with no zone; null when not recorded."
+  ),
+};
+
 export const flightTimesSchema = z
   .object({
     departure: time,
@@ -30,6 +50,10 @@ export const flightTimesSchema = z
     actualArrival: time,
     runwayDeparture: time.describe("Wheels-up as a provider reported it."),
     runwayArrival: time,
+    onlineCheckInOpens: time.describe(
+      "When online check-in opens, on the clock it was stated on (forgejo#285); null when " +
+        "not recorded — never derived from the departure."
+    ),
   })
   .openapi("FlightTimes", {
     description:
@@ -61,6 +85,7 @@ export const rentalTimesSchema = z
       "The day the deposit was held, as the statement shows it — no zone (forgejo#238)."
     ),
     depositReturned: day.describe("The day the deposit came back; null while it is held."),
+    ...deadlineMembers,
   })
   .openapi("RentalTimes", { description: "Booked and actual times at their stations." });
 export type RentalTimes = z.infer<typeof rentalTimesSchema>;
@@ -73,9 +98,15 @@ export const stayTimesSchema = z
       "Check-in day plus its time on the hotel's clock; null without a time."
     ),
     checkOutAt: time,
+    ...deadlineMembers,
   })
   .openapi("StayTimes", { description: "A stay's days and, where known, its hours." });
 export type StayTimes = z.infer<typeof stayTimesSchema>;
+
+export const bookingTimesSchema = z.object(deadlineMembers).openapi("BookingTimes", {
+  description: "A booking's deadlines (forgejo#285): free cancellation and payment due.",
+});
+export type BookingTimes = z.infer<typeof bookingTimesSchema>;
 
 export const visitTimesSchema = z
   .object({
@@ -137,6 +168,7 @@ export const TIMES_SCHEMAS = {
   BusTimes: busTimesSchema,
   RentalTimes: rentalTimesSchema,
   StayTimes: stayTimesSchema,
+  BookingTimes: bookingTimesSchema,
   VisitTimes: visitTimesSchema,
   PlaceTimes: placeTimesSchema,
   CruiseTimes: cruiseTimesSchema,

@@ -12,6 +12,7 @@ import { rentalExtraStatsSchema } from "./rentalStatsExtra";
 import { rentalStatsQuerySchema } from "../../../routes/rental/stats";
 
 import { registry } from "../registry";
+import { deadlineDayColumns } from "./deadlineColumns";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { errorContent, timeRefused } from "./shared";
 import { documentIdsBodySchema } from "../../../schemas/document";
@@ -212,6 +213,7 @@ export const rentalBookingSchema = registry.register(
         .nullable()
         .optional()
         .describe("The roadtrip this car was driven on"),
+      ...deadlineDayColumns,
       times: rentalTimesSchema,
     })
     .openapi("RentalBooking")

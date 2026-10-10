@@ -1,6 +1,11 @@
 import type { TimePrecision } from "../../shared/time/wire";
 import { zoneOf } from "../../shared/time/zoneOf";
 import { getCachedAirports } from "../../services/airportCache";
+import type { TimeFieldInput } from "../../shared/time/timeInput";
+import {
+  resolveOnlineCheckInColumns,
+  type OnlineCheckInColumns,
+} from "../../services/deadlines/bookingDeadlines";
 
 /**
  * A flight's zones on the time model (ADR 0002 phase 2).
@@ -128,6 +133,8 @@ interface ZoneInput {
   arrTimeSemantics?: string | null;
   /** A year-/month-only historical entry (forgejo#256) — see `schemas/flight.ts`. */
   datePrecision?: "year" | "month";
+  /** When online check-in opens (forgejo#285) — resolved beside the zones. */
+  onlineCheckInOpensAt?: TimeFieldInput | null;
 }
 
 interface Endpoints {
@@ -144,13 +151,17 @@ interface Endpoints {
 export async function flightZoneColumns(
   data: ZoneInput,
   endpoints: Endpoints,
-  stored?: {
-    depTimeSemantics: string;
-    arrTimeSemantics: string;
-    departureTime: Date | null;
-    arrivalTime: Date | null;
-  }
-): Promise<FlightZoneColumns> {
+  stored:
+    | {
+        depTimeSemantics: string;
+        arrTimeSemantics: string;
+        departureTime: Date | null;
+        arrivalTime: Date | null;
+        depTimezone?: string | null;
+      }
+    | undefined,
+  writer: Writer
+): Promise<FlightZoneColumns & Partial<OnlineCheckInColumns>> {
   const out: FlightZoneColumns = {};
   const ends = [
     [
@@ -185,5 +196,34 @@ export async function flightZoneColumns(
       out[precisionKey] = precisionOf(semantics, hasTime);
     }
   }
-  return out;
+  return { ...out, ...(await onlineCheckInColumns(data, out, stored, writer)) };
+}
+
+/** Who writes — the request (or an importer's user), for the zone-resolving fields. */
+export interface Writer {
+  userId?: string;
+  /** Set on a request made with a personal access token (`resolveInput.ts`). */
+  apiToken?: unknown;
+}
+
+/**
+ * The online check-in opening (forgejo#285). A bare `{local}` is stated on
+ * the DEPARTURE airport's clock: the zone this write leaves for the
+ * departure, else the one stored, else the one the body was given. Rides on
+ * `flightZoneColumns` so the frozen `routes/flights.ts` does not grow.
+ */
+async function onlineCheckInColumns(
+  data: ZoneInput,
+  zones: FlightZoneColumns,
+  stored: { depTimezone?: string | null } | undefined,
+  writer: Writer
+): Promise<Partial<OnlineCheckInColumns>> {
+  if (data.onlineCheckInOpensAt === undefined) return {};
+  if (!writer.userId) throw new Error("onlineCheckInOpensAt needs the writing user");
+  const departureZone = zones.depTimezone ?? stored?.depTimezone ?? data.depTimezone ?? null;
+  return resolveOnlineCheckInColumns(data, {
+    userId: writer.userId,
+    placeZone: () => departureZone,
+    viaToken: Boolean(writer.apiToken),
+  });
 }

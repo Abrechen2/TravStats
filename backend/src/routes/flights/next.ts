@@ -46,6 +46,8 @@ const NEXT_FLIGHT_SELECT = {
   actualArrival: true,
   runwayDepartureTime: true,
   runwayArrivalTime: true,
+  onlineCheckInOpensAt: true,
+  onlineCheckInZone: true,
   tripId: true,
 } as const;
 

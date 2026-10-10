@@ -24,6 +24,7 @@ const ROW_SCHEMAS: ReadonlyArray<[schema: string, model: Prisma.ModelName]> = [
   ["PlaceList", "PlaceList"],
   ["Achievement", "Achievement"],
   ["RentalBooking", "RentalBooking"],
+  ["Booking", "Booking"],
 ];
 
 type SchemaDoc = { properties?: Record<string, unknown> };

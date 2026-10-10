@@ -28,6 +28,20 @@ import { recomputeTripStatus } from "../../services/tripStatusService";
 import { fxColumnsFor, getBaseCurrency } from "../../services/fx/snapshot";
 import { propagateWrites, shareSnapshots } from "../../services/sharing/propagate";
 import { bookingFxDay, setBookingEntries } from "../../services/trip/bookingEntries";
+import {
+  resolveDeadlineColumns,
+  type DeadlineContext,
+} from "../../services/deadlines/bookingDeadlines";
+import { withBookingTimes } from "../../services/deadlines/bookingTimesDto";
+
+/**
+ * How a booking's deadlines resolve (forgejo#285): a booking names no place,
+ * so there is no implied zone — a `{local}` carries its own, a zone-less
+ * instant is refused (TZ_UNRESOLVED), a bare day stays a floating day.
+ */
+function deadlineContext(req: AuthRequest): DeadlineContext {
+  return { userId: req.userId!, placeZone: () => null, viaToken: Boolean(req.apiToken) };
+}
 
 const router = Router();
 
@@ -48,6 +62,7 @@ router.post(
       const body = createBookingSchema.parse(req.body);
 
       if (body.tripId) await assertOwnTrip(userId, body.tripId);
+      const deadlines = await resolveDeadlineColumns(body, deadlineContext(req));
 
       // FX snapshot (#267), dated by the day the booking was made (#356) —
       // the package import already used the document's issue day. Only a
@@ -73,6 +88,7 @@ router.post(
             operator: body.operator ?? null,
             travellers: body.travellers ?? null,
             bookedOn: body.bookedOn ?? null,
+            ...deadlines,
             ...bookingFx,
           },
         });
@@ -91,7 +107,7 @@ router.post(
       });
       if (booking.tripId) await recomputeTripStatus(booking.tripId);
 
-      res.status(201).json({ booking });
+      res.status(201).json({ booking: withBookingTimes(booking) });
     } catch (error) {
       next(error);
     }
@@ -127,6 +143,8 @@ router.patch(
       if (body.operator !== undefined) data.operator = body.operator;
       if (body.travellers !== undefined) data.travellers = body.travellers;
       if (body.bookedOn !== undefined) data.bookedOn = body.bookedOn;
+      // Absent leaves a deadline alone, null clears it (forgejo#285).
+      Object.assign(data, await resolveDeadlineColumns(body, deadlineContext(req)));
 
       // Re-snapshot only when the amount, its unit or its day actually moved (#267).
       if (body.price !== undefined || body.currency !== undefined || body.bookedOn !== undefined) {
@@ -148,7 +166,7 @@ router.patch(
         where: { id: existing.id },
         data,
       });
-      res.json({ booking });
+      res.json({ booking: withBookingTimes(booking) });
     } catch (error) {
       next(error);
     }

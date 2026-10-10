@@ -15,6 +15,7 @@ import "./shared";
 
 import "./flights";
 import "./trips";
+import "./tripBookings";
 import "./tripPackage";
 import "./tripExchange";
 import "./tours";

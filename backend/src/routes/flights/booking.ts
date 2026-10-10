@@ -11,6 +11,7 @@ import {
   type SplitRefusalCode,
 } from "../../services/flights/bookingPriceSplit";
 import { bookingSplitBodySchema } from "../../schemas/flightBooking";
+import { bookingTimes } from "../../services/deadlines/bookingTimesDto";
 
 /**
  * A flight's booking and its flight segments (forgejo#218), and the optional
@@ -55,6 +56,11 @@ async function bookingRow(userId: string, bookingId: string) {
       tripId: true,
       trip: { select: { name: true } },
       priceSplit: true,
+      // Its deadlines (forgejo#285), answered as `times`.
+      freeCancellationUntil: true,
+      freeCancellationOn: true,
+      freeCancellationZone: true,
+      paymentDueOn: true,
       _count: {
         select: { cruises: true, railJourneys: true, busJourneys: true, lodgingStays: true },
       },
@@ -97,10 +103,25 @@ async function bookingAnswer(userId: string, bookingId: string | null) {
   const row = await bookingRow(userId, bookingId);
   if (!row) return { booking: null, segments: [] };
   const segments = await segmentRows(userId, bookingId);
-  const { _count, priceSplit, trip, ...booking } = row;
+  const {
+    _count,
+    priceSplit,
+    trip,
+    freeCancellationUntil,
+    freeCancellationOn,
+    freeCancellationZone,
+    paymentDueOn,
+    ...booking
+  } = row;
   return {
     booking: {
       ...booking,
+      times: bookingTimes({
+        freeCancellationUntil,
+        freeCancellationOn,
+        freeCancellationZone,
+        paymentDueOn,
+      }),
       tripName: trip?.name ?? null,
       otherEntries: otherEntryCount(_count),
       split: readBookingSplit(

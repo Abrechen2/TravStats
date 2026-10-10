@@ -31,6 +31,7 @@ import type { LocalTimeOrigin } from "../../shared/time/instant";
 import { dayAnchorNow } from "../../shared/time/clock";
 import { profileZoneOf } from "../../shared/time/profileZone";
 import { getBaseCurrency } from "../fx/snapshot";
+import { resolveDeadlineColumns } from "../deadlines/bookingDeadlines";
 import {
   applyFxSnapshot,
   applyManualRate,
@@ -50,6 +51,8 @@ export interface StayProvenance {
    * time the hotel's clock skipped is refused) or an import ("machine").
    */
   origin?: LocalTimeOrigin;
+  /** The write came with a personal access token (the Companion) — see `resolveInput.ts`. */
+  viaToken?: boolean;
 }
 
 /**
@@ -108,8 +111,13 @@ export async function buildStayCreateData(
   // always stored, and the FX snapshot below converts the right amount.
   // `manualFxRate` is a request field, not a stay column — it must not reach
   // the spread below, where Prisma would reject it as an unknown argument.
-  const { manualFxRate, ...body } = data;
+  // The deadlines (forgejo#285) are resolved on the hotel's clock, not spread.
+  const { manualFxRate, freeCancellationUntil, paymentDueOn, ...body } = data;
   const input = { ...body, totalPrice: deriveStayTotalPrice(body) };
+  const deadlineColumns = await resolveDeadlineColumns(
+    { freeCancellationUntil, paymentDueOn },
+    { userId, placeZone: () => lodgingZone, viaToken: provenance.viaToken ?? false }
+  );
   const timeColumns = stayTimeColumns(
     {
       checkIn: legacyDay(input.checkIn),
@@ -144,6 +152,7 @@ export async function buildStayCreateData(
     ...input,
     ...fxFields,
     ...timeColumns,
+    ...deadlineColumns,
     // Status follows the dates (see deriveLodgingStatus). Whatever the
     // client sent is only consulted for the one value derivation honours,
     // "cancelled" — so an old client, an importer or a stale form can no
@@ -182,12 +191,13 @@ export async function updateStayRecord(
   userId: string,
   stay: StoredStay,
   data: UpdateStayData,
-  origin: LocalTimeOrigin = "typed"
+  origin: LocalTimeOrigin = "typed",
+  viaToken = false
 ): Promise<StoredStay> {
   // Re-linking is a write too — see the create path (AUD-038).
   await assertReferencesOwned(userId, data);
-  // Same reason as the create path: this one is not a stay column.
-  const { manualFxRate, ...input } = data;
+  // Same reason as the create path: these are not stay columns as sent.
+  const { manualFxRate, freeCancellationUntil, paymentDueOn, ...input } = data;
 
   // The whole merge rule, and the trap in it, live in `stayPatchMerge`.
   const effective = resolveEffectiveStayDates(input, stay);
@@ -329,6 +339,7 @@ export async function updateStayRecord(
     if (key in timeClears) return null;
     return stay[key];
   };
+  const lodgingZone = await zoneOfLodging(stay.lodgingId);
   const timeColumns = stayTimeColumns(
     {
       checkIn: effectiveCheckIn,
@@ -336,8 +347,13 @@ export async function updateStayRecord(
       checkInTime: effectiveTime("checkInTime"),
       checkOutTime: effectiveTime("checkOutTime"),
     },
-    await zoneOfLodging(stay.lodgingId),
+    lodgingZone,
     origin
+  );
+  // Only the deadlines sent: absent leaves them, null clears (forgejo#285).
+  const deadlineColumns = await resolveDeadlineColumns(
+    { freeCancellationUntil, paymentDueOn },
+    { userId, placeZone: () => lodgingZone, viaToken }
   );
 
   const before = await shareSnapshot(prisma, "lodgingStay", stay.id);
@@ -347,6 +363,7 @@ export async function updateStayRecord(
       ...input,
       ...timeClears,
       ...timeColumns,
+      ...deadlineColumns,
       // totalPrice is authoritative and derived above from the merged view,
       // so it overrides whatever `...input` carried (which may be a stale
       // re-send or absent while only the per-night price changed).

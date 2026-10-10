@@ -292,7 +292,7 @@ router.post(
         },
         await getBaseCurrency(userId)
       );
-      const zoneColumns = await flightZoneColumns(data, enriched);
+      const zoneColumns = await flightZoneColumns(data, enriched, undefined, req);
 
       const flight = await prisma.$transaction(async (tx) => {
         const created = await tx.flight.create({
@@ -328,9 +328,8 @@ router.post(
             arrivalTime: arrivalUtc,
             actualDeparture: actualDepartureUtc,
             actualArrival: actualArrivalUtc,
-            // Default to 'UTC' (the canonical contract). Bulk-import callers can
-            // override with 'DATE_ONLY' or 'UNKNOWN' when the time component is
-            // a placeholder so downstream display/aggregation knows to estimate.
+            // 'UTC' by default; an importer may say 'DATE_ONLY'/'UNKNOWN' for a
+            // placeholder time, so display and aggregation know to estimate.
             depTimeSemantics: data.depTimeSemantics ?? "UTC",
             arrTimeSemantics: data.arrTimeSemantics ?? "UTC",
             delayMinutes:
@@ -972,7 +971,8 @@ router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
           departure: changed("departure") ? enrichedDeparture : null,
           arrival: changed("arrival") ? enrichedArrival : null,
         },
-        existingFlight
+        existingFlight,
+        req
       )
     );
     const incomingActualDepUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);

@@ -1,6 +1,11 @@
 import { serializeTime, type LocalDateValue } from "../../shared/time/wire";
 import { readDay } from "../timeModel/readDay";
 import type { StayTimes } from "../../schemas/times";
+import {
+  deadlineDayFields,
+  deadlineTimes,
+  type DeadlineColumns,
+} from "../deadlines/bookingDeadlines";
 
 /**
  * A stay's `times` (ADR 0002 phase 4): the check-in/-out DAYS as the hotel
@@ -12,7 +17,7 @@ import type { StayTimes } from "../../schemas/times";
  * A stay the backfill has not reached yet is read from its legacy anchor
  * (`readDay`).
  */
-export interface StayTimeColumns {
+export interface StayTimeColumns extends DeadlineColumns {
   checkIn: Date | null;
   checkOut: Date | null;
   checkInDate: Date | null;
@@ -56,16 +61,21 @@ export function stayTimes(s: StayTimeColumns): StayTimes {
     // Filled only with a zone (stayColumns.ts); the guard keeps a bad row honest.
     checkInAt: s.checkInAt && s.stayZone ? serializeTime(s.checkInAt, s.stayZone) : null,
     checkOutAt: s.checkOutAt && s.stayZone ? serializeTime(s.checkOutAt, s.stayZone) : null,
+    ...deadlineTimes(s),
   };
 }
 
-export function withStayTimes<T extends StayTimeColumns>(s: T): T & { times: StayTimes } {
-  return { ...s, times: stayTimes(s) };
+/** The DAY deadline columns go out as `YYYY-MM-DD`, never as a JS midnight (forgejo#285). */
+type DeadlineDays = { freeCancellationOn: string | null; paymentDueOn: string | null };
+export type StayWithTimes<T> = Omit<T, keyof DeadlineDays> & DeadlineDays & { times: StayTimes };
+
+export function withStayTimes<T extends StayTimeColumns>(s: T): StayWithTimes<T> {
+  return { ...s, ...deadlineDayFields(s), times: stayTimes(s) };
 }
 
 /** A lodging with each of its stays carrying `times`. */
 export function withLodgingStayTimes<S extends StayTimeColumns, T extends { stays: S[] }>(
   lodging: T
-): T & { stays: Array<S & { times: StayTimes }> } {
+): T & { stays: Array<StayWithTimes<S>> } {
   return { ...lodging, stays: lodging.stays.map(withStayTimes) };
 }

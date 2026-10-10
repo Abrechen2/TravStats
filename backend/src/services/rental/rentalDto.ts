@@ -5,6 +5,7 @@ import { rentalCost, rentalDays, rentalDrivenKm } from "../../shared/rentalCount
 import { isOneWay } from "./rentalWrite";
 import { rentalTimes, type RentalTimeColumns } from "./timesDto";
 import { fromDbDate } from "../../shared/time/localDate";
+import { deadlineDayFields } from "../deadlines/bookingDeadlines";
 
 /**
  * What a rental row carries beyond its columns when it is read: the D3
@@ -73,6 +74,8 @@ export function withRentalReadFields<T extends RentalReadColumns>(row: T) {
     // Days, never instants: the deposit columns are calendar days.
     depositPaidOn: dayOf(row.depositPaidOn),
     depositReturnedOn: dayOf(row.depositReturnedOn),
+    // The day deadlines likewise (forgejo#285); the instant stays a real UTC instant.
+    ...deadlineDayFields(row),
     pickupIata: pickupAirport?.iata ?? null,
     returnIata: returnAirport?.iata ?? null,
     oneWay: isOneWay(row),
