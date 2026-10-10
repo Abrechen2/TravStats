@@ -68,6 +68,21 @@ const MAIL = [
 ].join("\n");
 
 describe("applyV2FlightTemplate", () => {
+  it("carries when online check-in opens, as the departure airport's wall clock (forgejo#285)", () => {
+    const t = template({
+      onlineCheckInOpensAt: {
+        patterns: ["^Check-in ab (\\d{2}\\.\\d{2}\\.\\d{4}) (\\d{2}:\\d{2})$"],
+        format: "{1}T{2}",
+        transform: "dateTime",
+      },
+    });
+    const mail = MAIL.replace("To JFK", "To JFK\nCheck-in ab 30.12.2026 22:15");
+    const outcome = applyV2FlightTemplate(t, { subject: "Your trip", text: mail });
+    if (outcome.kind !== "legs") throw new Error(outcome.kind);
+    expect(outcome.legs[0].onlineCheckInOpensAt).toBe("2026-12-30T22:15");
+    expect(outcome.legs[1]).not.toHaveProperty("onlineCheckInOpensAt");
+  });
+
   it("maps each leg onto the v1 booking keys, with confidence and missing as v1 counts them", () => {
     const outcome = applyV2FlightTemplate(template(), { subject: "Your trip", text: MAIL });
     expect(outcome.kind).toBe("legs");

@@ -256,7 +256,11 @@ registry.registerPath({
     },
     400: { description: "Validation failed", content: errorContent },
     409: {
-      description: "Duplicate detected (omit `?force` or pass `?merge=true` to handle)",
+      description:
+        "Duplicate detected (omit `?force` or pass `?merge=true` to handle). A document import " +
+        'of a flight already stored answers `{ error: "already_imported", data: { id, ' +
+        "filledDeadlines? } }`: nothing is overwritten, but an `onlineCheckInOpensAt` the stored " +
+        "flight lacks is filled and named in `filledDeadlines` (forgejo#285).",
       content: errorContent,
     },
   },

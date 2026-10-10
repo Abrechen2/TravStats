@@ -1,3 +1,4 @@
+import { findReimportedFlight } from "./flights/reimport";
 import { Router, Response, NextFunction } from "express";
 import { Prisma } from "../prisma";
 import { prisma } from "../db";
@@ -176,17 +177,14 @@ router.post(
           })
         : null;
       if (externalRef) {
-        const existing = await prisma.flight.findFirst({
-          where: { userId, externalRef },
-          select: { id: true },
-        });
+        const existing = await findReimportedFlight(userId, externalRef, data, !!req.apiToken);
         if (existing) {
           // Re-reading a forwarded confirmation is ordinary. 409 says what
           // happened; a 500 from the unique index would say the import broke.
           res.status(409).json({
             success: false,
             error: "already_imported",
-            data: { id: existing.id },
+            data: existing,
           });
           return;
         }

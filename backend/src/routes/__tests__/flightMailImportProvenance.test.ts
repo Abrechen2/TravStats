@@ -73,6 +73,31 @@ describe("flight import from a booking mail — provenance", () => {
     expect(created.importBatchId).toBe(batchId);
   });
 
+  it("lets a re-read mail fill the check-in opening once, and never overwrite it (forgejo#285)", async () => {
+    await request(app).post("/api/v1/flights").set("Cookie", cookie).send(flight()).expect(201);
+
+    const filled = await request(app)
+      .post("/api/v1/flights")
+      .set("Cookie", cookie)
+      .send(flight({ onlineCheckInOpensAt: { local: "2026-09-13T14:35" } }))
+      .expect(409);
+    expect(filled.body.data.filledDeadlines).toEqual(["onlineCheckInOpensAt"]);
+    const once = await prisma.flight.findFirstOrThrow();
+    // On Frankfurt's clock: 14:35 CEST is 12:35Z.
+    expect(once.onlineCheckInOpensAt?.toISOString()).toBe("2026-09-13T12:35:00.000Z");
+    expect(once.onlineCheckInZone).toBe("Europe/Berlin");
+
+    const again = await request(app)
+      .post("/api/v1/flights")
+      .set("Cookie", cookie)
+      .send(flight({ onlineCheckInOpensAt: { local: "2026-09-12T10:00" } }))
+      .expect(409);
+    expect(again.body.data).not.toHaveProperty("filledDeadlines");
+    const kept = await prisma.flight.findFirstOrThrow();
+    expect(kept.onlineCheckInOpensAt?.toISOString()).toBe("2026-09-13T12:35:00.000Z");
+    expect(await prisma.flight.count()).toBe(1);
+  });
+
   it("answers the same confirmation read twice with 409, not a second flight", async () => {
     const batchId = await makeBatch();
     await request(app)
