@@ -22,11 +22,6 @@ vi.mock("../../hooks/useEnabledDomains", () => ({
   }),
 }));
 
-const rail = { visible: false };
-vi.mock("../../hooks/useRailVisible", () => ({
-  useRailVisible: (): boolean => rail.visible,
-}));
-
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-stub" />,
 }));
@@ -42,7 +37,8 @@ const railYear: Wrapped = {
   distanceKm: 0,
   earthFactor: 0,
   newCountries: 2,
-  cruises: 0,
+  // Cruises are switched off for this reader: the server abstains.
+  cruises: null,
   railRides: 3,
   railKm: 721,
   railStraightLineKm: 300,
@@ -67,15 +63,21 @@ describe("WrappedPage — rail", () => {
   });
 
   it("tells a year of train rides with the straight-line part named", async () => {
-    rail.visible = true;
     renderPage();
     expect(await screen.findByText("stats:wrapped.rail")).toBeInTheDocument();
     expect(screen.getByText("stats:wrapped.railDescStraight")).toBeInTheDocument();
     expect(screen.queryByText("stats:wrapped.emptyYear")).not.toBeInTheDocument();
   });
 
+  // forgejo#265: the server answers null for rail the reader does not see,
+  // and the page follows the payload.
   it("keeps rail out, and calls the year empty, while rail is not visible", async () => {
-    rail.visible = false;
+    getWrappedMock.mockResolvedValue({
+      ...railYear,
+      railRides: null,
+      railKm: null,
+      railStraightLineKm: null,
+    });
     renderPage();
     expect(await screen.findByText("stats:wrapped.emptyYear")).toBeInTheDocument();
     expect(screen.queryByText("stats:wrapped.rail")).not.toBeInTheDocument();
