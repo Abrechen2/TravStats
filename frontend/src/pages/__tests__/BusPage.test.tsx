@@ -50,10 +50,14 @@ vi.mock("../../hooks/useDocumentCount", () => ({ useDocumentCount: () => documen
 
 const list = vi.fn();
 const remove = vi.fn();
+const routingMock = vi.fn();
+const routeAllMock = vi.fn();
 vi.mock("../../lib/api/bus", () => ({
   busApi: {
     list: (...a: unknown[]) => list(...a),
     remove: (...a: unknown[]) => remove(...a),
+    routing: () => routingMock(),
+    routeAll: (...a: unknown[]) => routeAllMock(...a),
   },
 }));
 
@@ -100,6 +104,9 @@ describe("BusPage", () => {
   beforeEach(() => {
     list.mockReset();
     remove.mockReset();
+    routingMock.mockReset();
+    routingMock.mockResolvedValue({ configured: true, providerId: "graphhopper" });
+    routeAllMock.mockReset();
     addToast.mockReset();
     navigate.mockReset();
     documentCount.value = null;
@@ -117,8 +124,9 @@ describe("BusPage", () => {
     expect(row.textContent).toContain("11:20");
     expect(row.textContent).toContain("2 h 20 min");
     expect(within(row).getByTestId("bus-status")).toHaveTextContent("Gefahren");
-    // Only the measured chord says it is one; a typed figure stands bare.
+    // Every figure says what it measures; "Luftlinie" is for the chord alone.
     expect(row.textContent).toContain("Luftlinie");
+    expect(screen.getByTestId("bus-row-r2").textContent).toContain("laut Ticket");
     expect(screen.getByTestId("bus-row-r2").textContent).not.toContain("Luftlinie");
     expect(within(screen.getByTestId("bus-row-r2")).getByTestId("bus-status")).toHaveTextContent(
       "Storniert"
@@ -294,6 +302,62 @@ describe("BusPage", () => {
       const alert = await screen.findByRole("alert");
       fireEvent.click(within(alert).getByRole("button", { name: "Erneut versuchen" }));
       expect(await screen.findByTestId("bus-row-r1")).toBeInTheDocument();
+    });
+  });
+
+  describe("routing the straight rides", () => {
+    it("labels a routed length 'Straße', not Luftlinie", async () => {
+      list.mockResolvedValue(
+        page({ ...rideFixture(), distanceSource: "route", geometrySource: "road" })
+      );
+      renderPage();
+      const row = await screen.findByTestId("bus-row-r1");
+      expect(row.textContent).toContain("Straße");
+      expect(row.textContent).not.toContain("Luftlinie");
+    });
+
+    it("offers 'route all' for straight rides, runs it and reports each outcome with its reason", async () => {
+      list.mockResolvedValue(page(rideFixture()));
+      routeAllMock.mockResolvedValue({
+        straightRides: 2,
+        attempted: 2,
+        routed: 1,
+        straight: 1,
+        remaining: 3,
+        stoppedBy: "rate_limited",
+        rides: [
+          { id: "r1", outcome: "routed", fallback: null },
+          { id: "r9", outcome: "straight", fallback: "rate_limited" },
+        ],
+      });
+      renderPage();
+      fireEvent.click(await screen.findByRole("button", { name: /über die Straße berechnen/ }));
+      const result = await screen.findAllByTestId("bus-route-all-result");
+      const text = result.map((n) => n.textContent).join(" ");
+      expect(text).toContain("1 über die Straße berechnet, 1 blieben bei der Luftlinie");
+      expect(text).toContain("Das Kontingent des Routing-Dienstes ist aufgebraucht");
+      expect(text).toContain("3 Fahrten sind noch offen");
+      // The list is read again so the new lines show.
+      await waitFor(() => expect(list.mock.calls.length).toBeGreaterThan(1));
+    });
+
+    it("on an instance without a provider says so once and offers no button that could only fail", async () => {
+      list.mockResolvedValue(page(rideFixture()));
+      routingMock.mockResolvedValue({ configured: false, providerId: null });
+      renderPage();
+      expect(await screen.findByTestId("bus-no-routing")).toHaveTextContent(
+        "Ohne Routing-Dienst bleibt es bei der Luftlinie."
+      );
+      expect(screen.queryByRole("button", { name: /über die Straße berechnen/ })).toBeNull();
+    });
+
+    it("says nothing about routing when no ride is straight", async () => {
+      list.mockResolvedValue(
+        page({ ...rideFixture(), distanceSource: "route", geometrySource: "road" })
+      );
+      renderPage();
+      await screen.findByTestId("bus-row-r1");
+      expect(screen.queryByTestId("bus-route-all")).toBeNull();
     });
   });
 });

@@ -91,6 +91,7 @@ export const RATE_LIMITS = {
   // Bus rides take rail's budget, for rail's reason: a later import saves one
   // ride per request, and a first sitting is years of tickets.
   BUS_CREATION_MAX: 300, // rides per hour
+  BUS_ROUTE_MAX: 60, // 'route again' / 'route all' requests per hour — each spends the provider's quota
 
   // Standalone notes (forgejo#137): rail's budget. The Companion keeps notes
   // offline and sends its outbox in one burst after a trip without signal.

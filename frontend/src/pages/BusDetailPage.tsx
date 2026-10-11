@@ -12,12 +12,16 @@ import TripPill from "../components/Trips/TripPill";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import { BusFormModal } from "../components/bus/BusFormModal";
+import { BusNoRoutingNote } from "../components/bus/BusNoRoutingNote";
+import { useBusRouting } from "../hooks/useBusRouting";
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
 import { busApi } from "../lib/api/bus";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { busDeleteMessage } from "../lib/bus/busDeleteMessage";
+import { distanceSourceKey, fallbackReasonKey } from "../lib/bus/busRoutingWords";
+import { apiErrorMachineCode } from "../lib/apiError";
 import { formatAmount } from "../lib/units";
 import { formatStationTime, railDurationMinutes } from "../lib/railTime";
 import { railArrival, railDeparture } from "../lib/entityTimes";
@@ -48,6 +52,10 @@ export default function BusDetailPage(): JSX.Element {
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [routingAgain, setRoutingAgain] = useState(false);
+  /** What the last "route again" said, kept on the page: a failure must not vanish with a toast. */
+  const [routeMessage, setRouteMessage] = useState<string | null>(null);
+  const routing = useBusRouting();
   const documentCount = useDocumentCount(
     confirmingDelete && ride ? { type: "busJourney", id: ride.id } : null
   );
@@ -88,6 +96,37 @@ export default function BusDetailPage(): JSX.Element {
       addToast("error", t("bus:deleteError"));
       setDeleting(false);
       setConfirmingDelete(false);
+    }
+  };
+
+  const handleRouteAgain = async (): Promise<void> => {
+    if (!ride) return;
+    setRoutingAgain(true);
+    setRouteMessage(null);
+    try {
+      const { ride: routed, geometry } = await busApi.routeAgain(ride.id);
+      setRide(routed);
+      if (geometry?.outcome === "routed") {
+        const km = Math.round(routed.distanceKm ?? 0).toLocaleString(locale);
+        setRouteMessage(t("bus:routing.routed", { km }));
+      } else if (geometry?.outcome === "straight") {
+        const reason = t(fallbackReasonKey(geometry.fallback));
+        setRouteMessage(t("bus:routing.stillStraight", { reason }));
+      } else {
+        setRouteMessage(t("bus:routing.unchanged"));
+      }
+    } catch (err: unknown) {
+      logger.error("BusDetailPage: route again failed", err);
+      const status = (err as { response?: { status?: number } }).response?.status;
+      setRouteMessage(
+        status === 403 || apiErrorMachineCode(err) === "DEMO_ACCOUNT_FORBIDDEN"
+          ? t("bus:routing.demoRefused")
+          : status === 429
+            ? t("bus:routing.tooMany")
+            : t("bus:routing.requestFailed")
+      );
+    } finally {
+      setRoutingAgain(false);
     }
   };
 
@@ -139,9 +178,11 @@ export default function BusDetailPage(): JSX.Element {
       : ride.delayMinutes > 0
         ? t("bus:delay", { minutes: ride.delayMinutes })
         : t("bus:onTime");
-  // A typed or traced figure stands bare; only the measured chord says so.
-  const distanceLabel =
-    ride.distanceSource === "great_circle" ? t("bus:straightLine") : t("bus:detail.distance");
+  // The figure says what it measures — "Luftlinie" only for the chord.
+  const sourceKey = distanceSourceKey(ride.distanceSource);
+  const distanceLabel = sourceKey
+    ? `${t("bus:detail.distance")} · ${t(sourceKey)}`
+    : t("bus:detail.distance");
   // The caption names the terminal's zone: the clock is the one on the ticket.
   const timeLabel = (key: "departure" | "arrival", zone: string | null | undefined): string =>
     zone ? `${t(`bus:detail.${key}`)} · ${zone}` : t(`bus:detail.${key}`);
@@ -225,8 +266,34 @@ export default function BusDetailPage(): JSX.Element {
               { label: t("bus:detail.seat"), value: ride.seat, mono: true },
               { label: t("bus:detail.bookingReference"), value: ride.bookingReference, mono: true },
               { label: t("bus:detail.delay"), value: delayText },
+              {
+                label: t("bus:detail.mapLine"),
+                value: t(`bus:routing.mapLine.${ride.geometrySource}`),
+              },
             ]}
           />
+
+          {(ride.geometrySource === "straight" || routeMessage !== null) && (
+            <DetailSection title={t("bus:detail.routeTitle")}>
+              <div className="flex flex-col items-start gap-2" data-testid="bus-route-again">
+                {routing?.configured === false ? (
+                  <BusNoRoutingNote />
+                ) : (
+                  <Button
+                    onClick={() => void handleRouteAgain()}
+                    disabled={routingAgain || routing === null}
+                  >
+                    {routingAgain ? t("bus:routing.againBusy") : t("bus:routing.again")}
+                  </Button>
+                )}
+                {routeMessage && (
+                  <p role="status" className="t-caption" data-testid="bus-route-message">
+                    {routeMessage}
+                  </p>
+                )}
+              </div>
+            </DetailSection>
+          )}
 
           <DocumentsSection entry={{ type: "busJourney", id: ride.id }} />
         </div>

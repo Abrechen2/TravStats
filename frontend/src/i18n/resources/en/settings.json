@@ -595,7 +595,7 @@
   },
   "routing": {
     "title": "Routing provider",
-    "description": "Determines which provider computes a leg's route — one at a time, or for the whole tour at once. Without a provider, every leg stays a straight line. A selected provider receives the leg's coordinates to compute the route — they leave this instance to do so.",
+    "description": "Determines which provider routes a leg or a bus ride along the road. Without a provider, every leg and every bus ride stays a straight line. A selected provider receives the start and end coordinates to compute the route — they leave this instance to do so.",
     "providerLabel": "Provider",
     "provider": {
       "none": "No provider",
@@ -603,7 +603,7 @@
       "graphhopper": "GraphHopper",
       "custom": "Self-hosted OSRM server"
     },
-    "noneHint": "Without a provider, \"Routed\" stays disabled in the tours view — every leg stays a straight line until one is set up here.",
+    "noneHint": "Without a provider, \"Routed\" stays disabled in the tours view — every leg and every bus ride stays a straight line until one is set up here.",
     "customUrlLabel": "Base URL",
     "customUrlHint": "Address of a self-hosted OSRM server, e.g. https://osrm.example.com.",
     "loadError": "Routing settings could not be loaded",

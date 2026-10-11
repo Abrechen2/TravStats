@@ -70,6 +70,35 @@ describe("bus rides in the workbook and on the trip (forgejo#180)", () => {
     expect([after.seat, after.lineName]).toEqual(["14", "Premium"]);
   });
 
+  it("re-importing a road-routed ride keeps its routed length and line, and a moved terminal drops them", async () => {
+    const ride = await prisma.busJourney.findFirstOrThrow({ where: { userId } });
+    const line = [
+      [127.0049, 37.5045],
+      [127.9, 37.9],
+      [128.5868, 38.1987],
+    ];
+    await prisma.busJourney.update({
+      where: { id: ride.id },
+      data: { geometry: line, geometrySource: "road", distanceKm: 214.3, distanceSource: "route" },
+    });
+    const row = { ...seoulSokcho, id: ride.id, tripId: `Korea [${tripId}]` };
+    await run([{ ...row, seat: "15" }]);
+    const kept = await prisma.busJourney.findUniqueOrThrow({ where: { id: ride.id } });
+    expect([kept.geometrySource, kept.distanceKm, kept.distanceSource]).toEqual([
+      "road",
+      214.3,
+      "route",
+    ]);
+
+    await run([{ ...row, arrLat: "38.25", arrLon: "128.6" }]);
+    const moved = await prisma.busJourney.findUniqueOrThrow({ where: { id: ride.id } });
+    expect([moved.geometrySource, moved.geometry, moved.distanceSource]).toEqual([
+      "straight",
+      null,
+      "great_circle",
+    ]);
+  });
+
   it("refuses a new ride whose terminal has no coordinates, and one without a departure", async () => {
     const [noCoords] = await run([
       { ...seoulSokcho, depStationName: "Jeonju", depLat: "", depLon: "", tripId: "" },

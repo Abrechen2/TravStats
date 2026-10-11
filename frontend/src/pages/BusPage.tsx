@@ -19,6 +19,7 @@ import { useSortPrefs } from "../components/table/useSortPrefs";
 import { SkeletonTable } from "../components/SkeletonLoader";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { BusFormModal } from "../components/bus/BusFormModal";
+import { BusRouteAllPanel } from "../components/bus/BusRouteAllPanel";
 import { BusTableRow, BUS_COLUMN_LAYOUT, type BusColumnId } from "../components/bus/BusTableRow";
 import { railSummaryFigures } from "../lib/rail/railSummaryFigures";
 import { busApi, type BusListQuery, type BusListSummary } from "../lib/api/bus";
@@ -252,6 +253,11 @@ export default function BusPage(): JSX.Element {
         <p className="mb-4 text-xs text-(--text-muted)">
           {t("bus:subtitle")} {t("bus:betaNote", { add })}
         </p>
+
+        <BusRouteAllPanel
+          straightRides={rides.filter((r) => r.geometrySource === "straight").length}
+          onDone={reload}
+        />
 
         <ListFilterBar
           search={{ value: search, onChange: setSearch, placeholder: t("bus:search") }}

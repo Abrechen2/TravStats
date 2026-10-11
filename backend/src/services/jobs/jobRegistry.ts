@@ -32,7 +32,8 @@ export type JobKind =
   | "timeModel.backfill"
   | "timeZones.reResolveDryRun"
   | "timeZones.reResolveApply"
-  | "placeImport.resolve";
+  | "placeImport.resolve"
+  | "bus.routeStraight";
 
 export type JobStatus = "running" | "succeeded" | "failed";
 

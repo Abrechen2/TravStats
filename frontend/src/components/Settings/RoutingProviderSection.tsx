@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { adminApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { ROUTING_PROVIDER_IDS, type RoutingProviderId } from "../../types/tour";
+import { useBusOffered } from "../../hooks/useBusVisible";
 import { useToursVisible } from "../../hooks/useToursVisible";
 
 type LoadStatus = "loading" | "error" | "ready";
@@ -21,13 +22,16 @@ interface RoutingProviderSectionProps {
 /**
  * The instance's routing card as Administration → Externe Dienste shows it.
  *
- * Routing serves tours and roadtrips only, both behind the `roadtrips` beta
- * key since 2026-09-24 — a card for a feature hidden everywhere else would
- * offer nothing, so it follows that gate here as it did on the settings page.
+ * Routing serves tours and roadtrips (behind the `roadtrips` beta key since
+ * 2026-09-24) and, since B3, bus rides (their road line) — a card for features
+ * hidden everywhere else would offer nothing, so it shows when ANY of them is
+ * visible. Gating it on tours alone would have left an instance with the bus
+ * domain on and tours off no way to set the provider the bus form points to.
  */
 export function InstanceRoutingProviderCard(): JSX.Element | null {
   const toursVisible = useToursVisible();
-  return toursVisible ? <RoutingProviderSection isAdmin /> : null;
+  const busVisible = useBusOffered();
+  return toursVisible || busVisible ? <RoutingProviderSection isAdmin /> : null;
 }
 
 /**

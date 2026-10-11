@@ -12,10 +12,14 @@ vi.mock("../../hooks/useTranslation", async () => {
 vi.mock("../../components/NavigationBar", () => ({ default: () => <div /> }));
 const getMock = vi.fn();
 const removeMock = vi.fn();
+const routingMock = vi.fn();
+const routeAgainMock = vi.fn();
 vi.mock("../../lib/api/bus", () => ({
   busApi: {
     get: (...a: unknown[]) => getMock(...a),
     remove: (...a: unknown[]) => removeMock(...a),
+    routing: () => routingMock(),
+    routeAgain: (...a: unknown[]) => routeAgainMock(...a),
   },
 }));
 // Its own suite covers it; here it would only reach for the network.
@@ -97,6 +101,9 @@ describe("BusDetailPage", () => {
   beforeEach(() => {
     getMock.mockReset();
     removeMock.mockReset();
+    routingMock.mockReset();
+    routingMock.mockResolvedValue({ configured: true, providerId: "graphhopper" });
+    routeAgainMock.mockReset();
     addToast.mockReset();
     navigate.mockReset();
     documentCount.value = 0;
@@ -113,15 +120,90 @@ describe("BusDetailPage", () => {
     expect(screen.getByText("2 h 20 min")).toBeInTheDocument();
     // A measured chord is labelled as one.
     expect(screen.getByText("159 km")).toBeInTheDocument();
-    expect(screen.getByText("Luftlinie")).toBeInTheDocument();
+    expect(screen.getByText("Entfernung · Luftlinie")).toBeInTheDocument();
     expect(screen.getByText("Kobus · Premium")).toBeInTheDocument();
     expect(screen.getByTestId("bus-detail-status")).toHaveTextContent("Gefahren");
   });
 
-  it("does not call a typed distance a straight line", async () => {
+  it("names a typed distance 'laut Ticket' and a routed one 'Straße', never Luftlinie", async () => {
     await renderPage({ ...rideFixture(), distanceSource: "user" });
     await screen.findByText("159 km");
-    expect(screen.queryByText("Luftlinie")).toBeNull();
+    expect(screen.getByText("Entfernung · laut Ticket")).toBeInTheDocument();
+    expect(screen.queryByText(/Luftlinie/)).toBeNull();
+  });
+
+  it("names a routed length 'Straße' and offers no routing for a ride that has its road line", async () => {
+    await renderPage({
+      ...rideFixture(),
+      distanceSource: "route",
+      geometrySource: "road",
+      geometry: [
+        [127, 37.5],
+        [128.6, 38.2],
+      ],
+    });
+    await screen.findByText("159 km");
+    expect(screen.getByText("Entfernung · Straße")).toBeInTheDocument();
+    expect(screen.queryByText(/Luftlinie/)).toBeNull();
+    expect(screen.queryByTestId("bus-route-again")).toBeNull();
+  });
+
+  describe("route again", () => {
+    it("routes a straight ride and shows the road length", async () => {
+      routeAgainMock.mockResolvedValue({
+        ride: {
+          ...rideFixture(),
+          distanceKm: 214,
+          distanceSource: "route",
+          geometrySource: "road",
+        },
+        geometry: { outcome: "routed", geometrySource: "road", fallback: null },
+      });
+      await renderPage(rideFixture());
+      fireEvent.click(await screen.findByRole("button", { name: "Über die Straße berechnen" }));
+      expect(await screen.findByTestId("bus-route-message")).toHaveTextContent(
+        "Über die Straße berechnet: 214 km."
+      );
+      expect(screen.getByText("Entfernung · Straße")).toBeInTheDocument();
+      expect(routeAgainMock).toHaveBeenCalledWith("r1");
+    });
+
+    it("words the provider's reason when it does not deliver, and the ride stays as it was", async () => {
+      routeAgainMock.mockResolvedValue({
+        ride: rideFixture(),
+        geometry: {
+          outcome: "straight",
+          geometrySource: "straight",
+          fallback: "point_not_near_road",
+        },
+      });
+      await renderPage(rideFixture());
+      fireEvent.click(await screen.findByRole("button", { name: "Über die Straße berechnen" }));
+      const message = await screen.findByTestId("bus-route-message");
+      expect(message).toHaveTextContent(
+        "Ein Terminal liegt zu weit von der nächsten Straße entfernt."
+      );
+      expect(message).toHaveTextContent("Die Fahrt bleibt bei der Luftlinie.");
+      expect(screen.getByText("Entfernung · Luftlinie")).toBeInTheDocument();
+    });
+
+    it("words a failed request instead of failing silently", async () => {
+      routeAgainMock.mockRejectedValue(new Error("Network Error"));
+      await renderPage(rideFixture());
+      fireEvent.click(await screen.findByRole("button", { name: "Über die Straße berechnen" }));
+      expect(await screen.findByTestId("bus-route-message")).toHaveTextContent(
+        "Die Berechnung ist nicht angekommen"
+      );
+    });
+
+    it("on an instance without a provider says so instead of offering a button that cannot work", async () => {
+      routingMock.mockResolvedValue({ configured: false, providerId: null });
+      await renderPage(rideFixture());
+      expect(await screen.findByTestId("bus-no-routing")).toHaveTextContent(
+        "Ohne Routing-Dienst bleibt es bei der Luftlinie."
+      );
+      expect(screen.queryByRole("button", { name: "Über die Straße berechnen" })).toBeNull();
+    });
   });
 
   it("keeps an unrecorded delay apart from an on-time arrival", async () => {

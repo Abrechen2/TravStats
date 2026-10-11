@@ -69,10 +69,16 @@ export function buildBusLegendRows(
   const paths = busPaths(rides);
   const [r, g, b] = hexToRgb(colorHex);
   const rows: JSX.Element[] = [];
-  if (paths.some((p) => p.routed)) {
-    rows.push(row(`rgb(${r},${g},${b})`, t("dashboard:legend.busRoad"), "bus-road"));
+  const hasRoad = paths.some((p) => p.routed);
+  const hasChord = paths.some((p) => !p.routed);
+  // "Luftlinie" is said only when a chord is actually drawn. A map of road
+  // lines alone is just "Bus"; the two kinds are told apart only when both
+  // are on the map.
+  if (hasRoad) {
+    const label = hasChord ? "dashboard:legend.busRoad" : "dashboard:legend.bus";
+    rows.push(row(`rgb(${r},${g},${b})`, t(label), "bus-road"));
   }
-  if (paths.some((p) => !p.routed)) {
+  if (hasChord) {
     const faint = `rgba(${r},${g},${b},${(CHORD_ALPHA / 255).toFixed(2)})`;
     rows.push(row(faint, t("dashboard:legend.busStraight"), "bus-straight"));
   }

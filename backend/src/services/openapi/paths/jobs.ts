@@ -24,6 +24,7 @@ export const jobSchema = z.object({
     "timeZones.reResolveDryRun",
     "timeZones.reResolveApply",
     "placeImport.resolve",
+    "bus.routeStraight",
   ]),
   status: z.enum(["running", "succeeded", "failed"]),
   startedAt: z.string().datetime(),

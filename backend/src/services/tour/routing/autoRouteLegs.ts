@@ -58,7 +58,7 @@ function asRoutableMode(mode: string): RoutableMode | null {
   return known !== undefined && isRoutableMode(known) ? known : null;
 }
 
-function withTimeout<T>(work: Promise<T>, ms: number): Promise<T | null> {
+export function withTimeout<T>(work: Promise<T>, ms: number): Promise<T | null> {
   let timer: NodeJS.Timeout | undefined;
   const timeout = new Promise<null>((resolve) => {
     timer = setTimeout(() => resolve(null), ms);

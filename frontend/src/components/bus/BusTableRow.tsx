@@ -3,6 +3,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { formatRailSpan, railDurationMinutes } from "../../lib/railTime";
 import { railArrival, railDeparture } from "../../lib/entityTimes";
 import { formatRailDuration } from "../../lib/rail/railDuration";
+import { distanceSourceKey } from "../../lib/bus/busRoutingWords";
 import type { BusJourney } from "../../types/bus";
 import { OperatorTile } from "../table/OperatorTile";
 import { statusPillProps } from "../table/statusPillStyle";
@@ -63,16 +64,16 @@ export function BusTableRow({ journey, columns, onOpen, actions }: Props): JSX.E
         ? t("bus:delay", { minutes: journey.delayMinutes })
         : t("bus:onTime");
 
-  // A typed or traced figure stands bare; only the measured chord says so.
+  // Every figure says what it measures: "Luftlinie" only for the chord,
+  // "Straße" for a routed length, "laut Ticket" for the typed one.
+  const sourceKey = distanceSourceKey(journey.distanceSource);
   const distance =
     journey.distanceKm === null ? (
       "—"
     ) : (
       <span className="flex flex-col items-end">
         <span>{`${Math.round(journey.distanceKm).toLocaleString(locale)} km`}</span>
-        {journey.distanceSource === "great_circle" ? (
-          <span className="t-caption">{t("bus:straightLine")}</span>
-        ) : null}
+        {sourceKey ? <span className="t-caption">{t(sourceKey)}</span> : null}
       </span>
     );
 

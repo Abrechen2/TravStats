@@ -56,4 +56,23 @@ describe("bus layer of the 'Alle' map (forgejo#180)", () => {
     expect(row.mock.calls.map((c) => c[2])).toEqual(["bus-road", "bus-straight"]);
     expect(buildBusLegendRows([], "#c49a6c", t, row)).toEqual([]);
   });
+
+  it("says Luftlinie only when a chord is drawn; a map of road lines alone is just 'Bus'", () => {
+    const road: [number, number][] = [
+      [127, 37.5],
+      [128.6, 38.2],
+    ];
+    row.mockClear();
+    buildBusLegendRows([ride({ geometry: road })], "#c49a6c", t, row);
+    expect(row.mock.calls.map((c) => [c[1], c[2]])).toEqual([["dashboard:legend.bus", "bus-road"]]);
+    row.mockClear();
+    buildBusLegendRows([ride()], "#c49a6c", t, row);
+    expect(row.mock.calls.map((c) => c[1])).toEqual(["dashboard:legend.busStraight"]);
+    row.mockClear();
+    buildBusLegendRows([ride({ geometry: road }), ride({ id: "r2" })], "#c49a6c", t, row);
+    expect(row.mock.calls.map((c) => c[1])).toEqual([
+      "dashboard:legend.busRoad",
+      "dashboard:legend.busStraight",
+    ]);
+  });
 });

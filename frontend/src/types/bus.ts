@@ -13,6 +13,45 @@ export type BusRideKind = "intercity" | "shuttle" | "other";
 export type BusDistanceSource = "great_circle" | "user" | "route";
 export type BusGeometrySource = "straight" | "road" | "manual";
 
+/** Why no road line came back — the server's `ROUTE_FALLBACK_REASONS`, never shown raw. */
+export type BusRouteFallback =
+  | "no_provider"
+  | "unroutable_mode"
+  | "provider_error"
+  | "no_route"
+  | "point_not_near_road"
+  | "rate_limited"
+  | "auth"
+  | "untrustworthy";
+
+/** `meta.geometry` beside a saved ride: what the save did to the frozen road line. */
+export interface BusGeometryReport {
+  outcome: "unchanged" | "routed" | "straight" | "kept";
+  geometrySource: BusGeometrySource;
+  fallback: BusRouteFallback | null;
+}
+
+/** `GET /bus/routing` — whether this instance can give a ride a road line at all. */
+export interface BusRoutingAvailability {
+  configured: boolean;
+  providerId: "openrouteservice" | "graphhopper" | "custom" | null;
+}
+
+/** The result of the bulk "route all straight rides" job. */
+export interface BusRouteAllResult {
+  straightRides: number;
+  attempted: number;
+  routed: number;
+  straight: number;
+  remaining: number;
+  stoppedBy: BusRouteFallback | null;
+  rides: Array<{
+    id: string;
+    outcome: BusGeometryReport["outcome"];
+    fallback: BusRouteFallback | null;
+  }>;
+}
+
 export const BUS_RIDE_KINDS: readonly BusRideKind[] = ["intercity", "shuttle", "other"];
 
 /** The same four members as a rail ride's times; the OpenAPI name is `BusTimes`. */

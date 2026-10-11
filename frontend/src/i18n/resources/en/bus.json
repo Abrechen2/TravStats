@@ -96,7 +96,7 @@
     "arrivalTime": "Arrival (local time at the terminal)",
     "dayOnly": "Only the date is known",
     "distance": "Distance (km, from the ticket)",
-    "distanceHint": "Leave empty: the straight line is measured and labelled as such.",
+    "distanceHint": "Leave empty: the distance is calculated and labelled with its source (road, otherwise straight line).",
     "class": "Class",
     "classPlaceholder": "Udeung, Lounge …",
     "seatNumber": "Seat",
@@ -144,7 +144,9 @@
     "loadError": "The bus ride could not be loaded.",
     "delay": "Delay",
     "delayUnknown": "not recorded",
-    "facts": "Ride"
+    "facts": "Ride",
+    "mapLine": "Line on the map",
+    "routeTitle": "Road routing"
   },
   "stats": {
     "loadError": "The bus statistics could not be loaded.",
@@ -155,7 +157,7 @@
     "km": "Bus kilometres",
     "kmRoute": "{{km}} km along the road",
     "kmTicket": "{{km}} km per ticket",
-    "kmStraight": "{{km}} km straight line (the real route is longer)",
+    "kmStraight": "{{km}} km straight line, where no road was routed (the real route is longer)",
     "kmUnmeasured_one": "{{count}} ride without a distance",
     "kmUnmeasured_other": "{{count}} rides without a distance",
     "hours": "Hours on the bus",
@@ -196,7 +198,7 @@
     "longest": "Longest ride",
     "sourceRoute": "along the road",
     "sourceTicket": "per ticket",
-    "sourceStraight": "straight line",
+    "sourceStraight": "straight line (fallback)",
     "byYear": "Rides per year",
     "sections": {
       "kpis": "Key figures",
@@ -217,7 +219,7 @@
       "km": {
         "unit": "A kilometre, summed over every counted ride. Kilometres per source: along the road, per ticket, or as the straight line between the two terminals, which understates a coach route by 10–40 %. The total adds all three; the line below names each source.",
         "time": "A ride's kilometres count in the year it left on the departure terminal's calendar, like the ride itself.",
-        "source": "Completed bus rides and their stored distance with its source. Without a ticket distance, the straight line between the terminals' coordinates is stored on save.",
+        "source": "Completed bus rides and their stored distance with its source. Without a ticket distance, the length of the routed road is stored on save – and only where no routing service answers, the straight line between the terminals' coordinates.",
         "coverage": "A ride without a distance stays out and is counted as such, never as 0 km – the line below and the list by year say how many. A year in which no ride has a distance shows no kilometres rather than 0 km.",
         "exclusions": "Planned, running and cancelled rides do not count. Nothing is estimated or extrapolated."
       },
@@ -309,5 +311,52 @@
   },
   "tripCard": {
     "open": "Open bus ride"
+  },
+  "distanceSource": {
+    "great_circle": "Straight line",
+    "route": "Road",
+    "user": "per ticket"
+  },
+  "routing": {
+    "noProvider": "Without a routing service, rides stay a straight line.",
+    "setUp": "Set up a routing service (Administration → External services)",
+    "askAdmin": "An administrator sets up a routing service under Administration → External services.",
+    "again": "Route along the road",
+    "againBusy": "Routing …",
+    "routed": "Routed along the road: {{km}} km.",
+    "unchanged": "This ride already has its line; nothing was changed.",
+    "stillStraight": "The road could not be routed. {{reason}} The ride stays a straight line.",
+    "requestFailed": "The request did not get through. Please try again.",
+    "demoRefused": "The demo account may not use a routing service.",
+    "tooMany": "Too many routing requests in a short time. Please wait a moment.",
+    "savedStraight": "Saved. The road could not be routed: {{reason}} It stays a straight line.",
+    "savedKept": "Saved. The road could not be routed again: {{reason}} The stored road line stays.",
+    "mapLine": {
+      "road": "Road route (fetched once and stored)",
+      "straight": "Direct connection between the terminals",
+      "manual": "Drawn by hand"
+    },
+    "all": {
+      "button": "Route all straight-line rides along the road",
+      "busy": "Routing rides …",
+      "progress": "{{done}} of {{total}} rides",
+      "noProvider": "This instance has no routing service, so rides stay a straight line.",
+      "done": "{{routed}} routed along the road, {{straight}} stayed a straight line.",
+      "reasons": "Reasons: {{reasons}}.",
+      "stopped": "Stopped: {{reason}}",
+      "remaining": "{{count}} rides are still open; run the routing again.",
+      "failed": "Routing could not be completed. Please try again.",
+      "lost": "The state of the routing can no longer be read. Reload the list to see what is already done."
+    },
+    "reason": {
+      "no_provider": "This instance has no routing service.",
+      "unroutable_mode": "This ride cannot be routed along a road.",
+      "provider_error": "The routing service did not answer (in time).",
+      "no_route": "The routing service finds no road connection.",
+      "point_not_near_road": "A terminal is too far from the nearest road.",
+      "rate_limited": "The routing service's quota is used up.",
+      "auth": "The routing service refused the key.",
+      "untrustworthy": "The routing service's answer did not match the terminals and was discarded."
+    }
   }
 }
