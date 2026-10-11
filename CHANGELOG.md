@@ -18,10 +18,114 @@ fixes first written for the never-promoted 2.6.3-rc.1 ship here too, further
 down this entry.
 
 **Before upgrading:** take a backup. The first start after the update runs the
-new migrations and recalculates stored cruise legs along the sea route (see
-below), which can take a minute on a large logbook.
+new migrations — 26 of them since 2.7.0-rc.10, one of which rewrites stored
+cruise statuses from `flown` to `completed` — and recalculates stored cruise
+legs along the sea route (see below), which can take a minute on a large
+logbook. A database restored from before the update is the way back; the
+previous image alone does not know `completed`.
 
 ### Added
+
+- **A moment without a trip has a place: notes.** A note is a date (or a date and
+  a time on the clock of the place it was written), a text, optionally a place
+  and one photo — nothing else is assumed. Notes live under Mehr › Sammlungen,
+  appear on a trip's timeline when their day falls inside it, and are **private
+  by default**; a note switched to shareable is shown only where you already
+  share a trip (to the members of a shared trip, read-only, without position or
+  photo; on a public link only if you pick "Notizen"). Sending a note twice
+  from the phone creates it once.
+- **A trip can be shared with a companion who has an account on the same
+  server.** Each person gets a linked copy; changes to the shared facts —
+  flights, stays, cruises, rail, coach and rental rides, stops — reach the
+  others as a notice in the inbox and can be undone; price, seat, booking
+  reference and notes stay private. Consent is asked first and can be withdrawn,
+  and a copy can be detached. A single trip also travels as a `.travstats` file
+  to another instance, through a proposal you review before anything is created.
+- **Public share links** for a flight, a trip or a year in review, behind an
+  instance switch that is **off by default**. You choose the fields; nothing
+  else leaves the server (a test per field proves it), the link expires (a
+  flight link two hours after landing), can be revoked at once, never appears
+  in a server log (the token travels in the URL fragment) and carries photos
+  without location data: the stripper keeps a short allow-list of JPEG and PNG
+  parts and drops everything after the image, so the second image and the
+  motion-photo video a phone appends are gone too.
+- **Booking deadlines.** Free cancellation until, payment due and online
+  check-in opening are stored on stays, rentals, bookings and flights; a
+  deadline known only as a day stays a day ("bis Ende 12. Oktober") and never
+  gets an invented time. Templates may carry them, and a re-read mail fills a
+  deadline only where it is empty.
+- **Trip expenses grew up.** A payer (a companion or a name), the exchange rate
+  with its source (bank, cached or typed by hand), receipts that can be attached
+  while creating the cost, and 13 categories. A home-currency total counts only
+  what has a recorded rate and lists the rest per currency.
+- **The inbox asks six more questions about your data**, as questions and never
+  as verdicts: possible duplicates, entries that cannot both be true (a flight
+  leaving before the previous one landed, two houses on one night), a missing
+  flight number, an unknown airport, a trip without an end, entries outside
+  the trip's days.
+- **Every statistic says how it is counted and opens the entries behind it** —
+  flights, cruises, lodging, places, roadtrips, tours, rail, rental, coach
+  rides, the year in review and the overview: unit, time and zone rule, source,
+  coverage and what is left out, in one "So wird gezählt" under each block, and
+  a tap on any figure lists the entries it stands on. Extremes list the entries
+  they were taken from; every one of the 192 badge rules shows what its
+  progress stands on, under a work budget and a rate limit of its own.
+- **The coach (bus) domain, behind the beta switch**: logbook, detail page,
+  trip map and timeline, statistics tab, night buses in the night account,
+  badges, dashboard overlay, spreadsheet round trip and sync. A ride is drawn
+  **along the road** when the instance has a routing service: the line is
+  fetched once when the ride is saved and frozen, its length becomes the
+  distance, and "Luftlinie" appears only for a ride that has no road line. An
+  instance without a routing service says so in the form and keeps the straight
+  line; one click routes the rides saved before ("Alle Luftlinien-Fahrten über
+  die Straße berechnen"). One daily budget (300 per person, 1,500 per instance,
+  under OpenRouteService's free 2,000) covers every call, and the shared demo
+  account never calls the provider. Setup: `docs/features/routing-provider.md`.
+- **Photos: a nightly scan and a review of many suggestions at once.** An opt-in
+  switch in Settings → Externe Dienste (it says what leaves the server and how
+  the last run ended), and in the inbox visit suggestions show place, time span
+  and reasoning together; you accept, correct or reject several in one go, and
+  one that a logged visit already explains is flagged, not hidden.
+- **Parsers moved out of the server.** Issuer readers (Berge & Meer, Booking.com,
+  TUI Cruises, DB, Sixt, airlines) are template files in the template
+  repository, read by one generic engine with a per-document time budget; the
+  home country orders templates and never filters them. The template workshop
+  derives templates for cruises, places and package tours from rows you mark.
+- **Package tours import as a trip**: the operator's mail or PDF is read into a
+  trip with its flights, stays and total price — after a preview — and a
+  package booking can be entered by hand (operator, travellers, booking day).
+- **Rental invoices and rental details**: single fee lines on an invoice
+  (refuelling, tolls, cleaning, extra km, damage handling…) are shown beside the
+  booked price and taken over one by one without counting the cost twice; the
+  provider list is data, with logos where the provider's site has one; deposit,
+  odometer, hand-over evidence by what it shows and a compact return card.
+- **Rail**: a journey with changes is one logbook entry, the change between two
+  trains can be marked tight, seats and tickets per train read at a glance, a
+  DB share link imports a connection (and says plainly why it cannot when
+  bahn.de refuses), and the import review shows unread booking facts instead of
+  a dash.
+- **Cruises**: river ships and river cruises, kept apart in the statistics (a
+  portless river day is not a sea day), a day card with time in port and an
+  all-aboard time, and a booking read again is compared with the stored
+  itinerary change by change.
+- **Forms ask before they lose your input**: closing, Back and navigation ask
+  when a form changed; a field error sits at its field with a jump to the first;
+  a save is never sent twice, and a create whose answer was lost offers a
+  reload instead of a blind retry.
+- **Help is reachable by tap, keyboard and screen reader**: one toggletip for
+  every field help; keyboard focus shows a 2 px outline on every control and
+  field; touch targets follow the pointer, not the width.
+- **Deleting an account removes its uploaded files.** Photos, documents,
+  receipts and note photos go with the account; an hourly sweep moves orphaned
+  files to a quarantine and deletes them after 30 days — and returns them if a
+  row points to them again, so a database restore to an older point cannot
+  destroy newer files.
+- **Creates from the phone's outbox are exactly-once** for rail, coach rides,
+  expenses, tours and notes (`clientRef`); a push reminder can be muted per trip
+  on each phone.
+- **A stale page repairs itself**: after an update a browser holding an old page
+  reloads once instead of staying blank, and says so if that fails.
+
 - **One look for web and app.** The web app now uses the Companion app's
   colours, spacing and type, one heading per page, and a dark mode built from
   the colour tokens. Settings are split into groups — flights, cruises and
@@ -118,6 +222,21 @@ below), which can take a minute on a large logbook.
   times arrive as suggestions to confirm.
 
 ### Changed
+
+- **A sailed cruise is `completed`, not `flown`.** The flight word leaked into
+  cruises; `flown` is still accepted on write and read as `completed`, and
+  stored rows were migrated.
+- **Private files are served at addresses that do not end in an image or
+  document extension** (receipts, profile pictures, admin log pages), because a
+  proxy that caches by extension served them without asking the app. The old
+  addresses redirect.
+- **Numbers follow the app's language**, never the browser's.
+- **A trip's entry count and the trip page include coach rides**; the trip
+  export, trip merge, micro-trip cleanup, delete question, countries and the AI
+  summary brief know them, and so does sharing.
+- **The what's-new dialog** is short again — eight items — and describes what 2.7.0
+  contains; a test keeps it from growing back.
+
 - **Cruise kilometres go up.** A cruise leg is now measured along the sea route
   the map draws; some legs used to count only as a straight line. Stored legs
   are recalculated once on the first start after the update.
@@ -127,6 +246,54 @@ below), which can take a minute on a large logbook.
   now stops the container instead of starting on an outdated schema.
 
 ### Fixed
+
+- **A year-only or month-only flight stays in its year** — in the year summary,
+  the time series, the passport and the flight's own times — instead of landing
+  on 31 December of the year before at airports west of UTC. The precision is
+  stored with the flight.
+- **Counting rules have one home.** The busiest day, "connection", the time-travel
+  index (landing earlier than you left, date included), a trip's cost, a trip's
+  duration, "new this year" (in your zone), the country distribution (an end
+  without an airport code proves no country) and the aircraft registration
+  (one hull, whatever its case) each follow one rule everywhere they appear.
+- **An empty value is shown as unknown, not as 0**: business rates, average flight
+  duration, a rail tile without timed rides. Seats are placed by the cabin's own
+  layout, or not at all.
+- **A Takeout re-import no longer repeats places**: a place is found in every
+  spelling of its Google id, and a trip stop within 100 m on the same day is not
+  added twice.
+- **First writes no longer race into a unique violation** (display preferences,
+  place-list entries): two settings saved at the same moment on a new account.
+- **A fresh setup says it is set up**, the welcome hint no longer covers the
+  empty-state buttons, and a session that only exists as a cookie signs in.
+- **Opening Settings no longer eats the limit for adding flights.** The bulk-refresh
+  preview shared the flight-creation limit of 20 an hour, so about twenty visits to
+  Settings → Konto blocked adding flights for an hour; it now has its own limit,
+  and the card shows one state, in plain words and in the reader's language.
+- **One unreadable row no longer rejects a whole flight file**; the preview names
+  the line and the reason.
+- **An expired reset link is said when the page opens**, with a way to a new one.
+- **The trip map frames a trip's coach rides** and does not call the trip empty;
+  the trip card counts them; the trip export no longer leaves them out.
+- **Layout**: the admin pages, the cruise statistics, a lodging tile and the
+  backup form no longer widen the page on a phone; the flights toolbar and
+  settings selects wrap.
+- **Security and hardening**: a refused cross-origin request answers 403 and not
+  500; templates cannot impose unbounded regex cost on the server; the public
+  share API is exempt from the origin list on purpose (it carries no cookie and
+  answers no cross-origin read); dependency alerts that have a fix are patched.
+- **Backups**: an archive from an older version migrates inside the restore's own
+  transaction, and a newer one is refused by name.
+- **Smaller corrections you can see**: a train ticket with a change of trains keeps
+  every train; a day-only ride keeps its day in the form; the autumn hour that
+  occurs twice keeps its occurrence on edit; a rental's actual return can no
+  longer precede its actual pick-up; roadtrip station drafts survive a lost
+  connection and are merged before they overwrite anything; overlapping stays
+  are a notice on saving, never a block; two of your own places can be merged
+  without losing a visit, photo or list; a hovered station, train or rental on
+  the map says what it is; every table, dialog and list reaches the touch size
+  on a coarse pointer.
+
 - **A flight is "flown" once it has landed.** It stayed "scheduled" for six
   hours after its scheduled arrival. A landing reported by the live flight
   data now counts at once, and a flight without live data turns an hour after
