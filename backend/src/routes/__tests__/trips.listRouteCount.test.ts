@@ -52,6 +52,7 @@ describe("the trip list counts tour sections in _count.routes", () => {
     const trip = res.body.trips.find((t: { id: string }) => t.id === tripWithRoutes);
     expect(trip).toBeDefined();
     expect(trip._count).toEqual({
+      busJourneys: 0,
       flights: 0,
       cruises: 0,
       lodgingStays: 0,

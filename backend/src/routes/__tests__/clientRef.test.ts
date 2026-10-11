@@ -128,7 +128,16 @@ describe("clientRef — create at most once", () => {
     expect(first.status).toBe(201);
     const again = await post("/bus", { ...bus, clientRef: ref(4) });
     expect(again.status).toBe(200);
-    expect(again.body).toEqual(first.body);
+    // The ride is the same row; what the answer says about its road line is not:
+    // the first save looked the line up (no provider here, so it stayed straight),
+    // the repeat looks nothing up and says "unchanged" — like rail's repeat.
+    expect(again.body.data).toEqual(first.body.data);
+    expect(first.body.meta.geometry.outcome).toBe("straight");
+    expect(again.body.meta.geometry).toEqual({
+      outcome: "unchanged",
+      geometrySource: "straight",
+      fallback: null,
+    });
     expect(await prisma.busJourney.count({ where: { userId } })).toBe(1);
   });
 

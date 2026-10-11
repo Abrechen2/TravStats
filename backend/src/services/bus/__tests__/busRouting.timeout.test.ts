@@ -1,6 +1,11 @@
 jest.mock("../../tour/routing/resolveProvider", () => ({
   resolveRouteProvider: jest.fn(),
 }));
+// The demo gate reads the account from the database first; under fake timers
+// that query never settles, so the test supplies the answer itself.
+jest.mock("../../../utils/sharedDemo", () => ({
+  isSharedDemoUser: jest.fn().mockResolvedValue(false),
+}));
 
 import { resolveRouteProvider } from "../../tour/routing/resolveProvider";
 import { BUS_ROUTE_TIMEOUT_MS, fetchBusLine } from "../busRouting";
