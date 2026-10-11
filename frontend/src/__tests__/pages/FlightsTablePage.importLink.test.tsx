@@ -15,7 +15,10 @@ import { findNamed } from "../helpers/namedElement";
 // 5 s default — the first CI run on the merged main (f1e1085c) failed on
 // exactly that. A hang would still be caught at 20 s; a slow render is not a
 // wrong render.
-vi.setConfig({ testTimeout: 20_000 });
+// The page renders a whole logbook page of rows; under coverage instrumentation on a
+// busy machine 20 s was not enough (it passed alone and failed in the full run), and
+// this setConfig outranks the CLI's --testTimeout, so the time is stated here.
+vi.setConfig({ testTimeout: 60_000 });
 
 /**
  * FlightsTablePage pulls in many heavy siblings (filters, modals, table
