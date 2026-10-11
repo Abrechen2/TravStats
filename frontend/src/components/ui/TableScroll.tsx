@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
  * A table is as wide as its columns need, and on a phone that is wider than
  * the card around it — which, with no scroll region of its own, widens the
  * whole document (the cruise day-pattern table pushed it to 334 px at 320,
- * forgejo#290). Wrap any table that is not already a `Table` primitive.
+ * forgejo issue 290). Wrap any table that is not already a `Table` primitive.
  * `tabIndex=0` keeps the region reachable by keyboard, which a scrollable
  * region must be; the label names it for a screen reader.
  */
