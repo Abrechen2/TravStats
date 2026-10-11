@@ -5,6 +5,7 @@ import type { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useRailVisible } from "../../hooks/useRailVisible";
+import { useBusVisible } from "../../hooks/useBusVisible";
 import { useRentalVisible } from "../../hooks/useRentalVisible";
 import type { Trip } from "../../types";
 import { tripCostTotals } from "../../lib/tripCost";
@@ -176,6 +177,7 @@ export default function TripOverview({
   const cruises = cruiseEnabled ? (trip.cruises ?? []) : [];
   const stays = lodgingEnabled ? (trip.lodgingStays ?? []) : [];
   const railJourneys = useRailVisible() ? (trip.railJourneys ?? []) : [];
+  const busRides = useBusVisible() ? (trip.busJourneys ?? []) : [];
   const rentals = useRentalVisible() ? (trip.rentalBookings ?? []) : [];
 
   const days =
@@ -228,6 +230,7 @@ export default function TripOverview({
       stays.length +
       roadtrips.length +
       railJourneys.length +
+      busRides.length +
       rentals.length ===
     0;
   // The side column only when it has something to hold: an empty 1fr beside
@@ -368,6 +371,28 @@ export default function TripOverview({
                     .filter(Boolean)
                     .join(" · ")}
                   sub={railDay(j)}
+                />
+              ))}
+            </EntryList>
+          )}
+
+          {busRides.length > 0 && (
+            <EntryList
+              title={t("trips:detail.stats.bus")}
+              count={t("trips:detail.busCount", { count: busRides.length })}
+            >
+              {busRides.map((r) => (
+                <EntryRow
+                  key={r.id}
+                  to={`/bus/${r.id}`}
+                  icon="bus"
+                  title={[
+                    [r.operator, r.lineName].filter(Boolean).join(" "),
+                    `${r.depStationName} → ${r.arrStationName}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                  sub={railDay(r)}
                 />
               ))}
             </EntryList>

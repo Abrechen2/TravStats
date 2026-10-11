@@ -12,7 +12,8 @@ export interface TripExportOptions {
   private: boolean;
 }
 
-export type TripFileEntryKind = "flight" | "stay" | "cruise" | "rail" | "rental" | "visit" | "stop";
+export type TripFileEntryKind =
+  "flight" | "stay" | "cruise" | "rail" | "bus" | "rental" | "visit" | "stop";
 
 export interface TripFileEntryProposal {
   key: string;

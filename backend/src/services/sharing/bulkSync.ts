@@ -28,9 +28,11 @@ async function sharedIds(c: DbTransaction, userId: string, entity: ShareEntity) 
           ? await c.cruise.findMany({ where: own, select })
           : entity === "rail"
             ? await c.railJourney.findMany({ where: own, select })
-            : entity === "rental"
-              ? await c.rentalBooking.findMany({ where: own, select })
-              : await c.tripStop.findMany({ where: { trip: { userId }, ...where }, select });
+            : entity === "bus"
+              ? await c.busJourney.findMany({ where: own, select })
+              : entity === "rental"
+                ? await c.rentalBooking.findMany({ where: own, select })
+                : await c.tripStop.findMany({ where: { trip: { userId }, ...where }, select });
   return rows.map((r) => r.id);
 }
 

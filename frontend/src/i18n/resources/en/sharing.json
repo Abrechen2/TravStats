@@ -100,7 +100,7 @@
     "leaveConfirm": "Leave the group? Your copy stays as your own trip; the others are notified.",
     "left": "You left the group. Your trip stays.",
     "shared": "Shared with {{name}}.",
-    "privateHint": "Only facts are copied — flights, stays, cruises, rail journeys, rentals and stops. Seat, room, price, ratings and notes stay private.",
+    "privateHint": "Only facts are copied — flights, stays, cruises, rail journeys, bus rides, rentals and stops. Seat, room, price, ratings and notes stay private.",
     "errors": {
       "loadFailed": "This trip's sharing could not be loaded.",
       "shareFailed": "The trip could not be shared.",
@@ -133,6 +133,7 @@
     "lodgingStay": "the stay",
     "cruise": "the cruise",
     "rail": "the train ride",
+    "bus": "the bus ride",
     "rental": "the rental car",
     "stop": "the stop"
   },
@@ -222,6 +223,10 @@
     "operator": "Operator",
     "trainCategory": "Train category",
     "trainNumber": "Train number",
+    "lineName": "Line",
+    "rideKind": "Kind of ride",
+    "depAddress": "Departure address",
+    "arrAddress": "Arrival address",
     "depStationName": "Departure station",
     "depStationCode": "Departure (code)",
     "depStationId": "Departure station (catalogue)",

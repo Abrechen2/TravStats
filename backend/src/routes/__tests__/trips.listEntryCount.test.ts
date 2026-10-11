@@ -43,6 +43,21 @@ describe("the trip list counts every area the trip page lists (forgejo#169)", ()
         status: "planned",
       },
     });
+    await prisma.busJourney.create({
+      data: {
+        userId,
+        tripId,
+        depStationName: "Berlin ZOB",
+        arrStationName: "Hamburg ZOB",
+        depLat: 52.5,
+        depLon: 13.28,
+        arrLat: 53.55,
+        arrLon: 10.0,
+        departureTime: new Date("2026-10-17T06:00:00Z"),
+        depTimezone: "Europe/Berlin",
+        arrTimezone: "Europe/Berlin",
+      },
+    });
     const rental = (status: string) =>
       prisma.rentalBooking.create({
         data: {
@@ -76,7 +91,7 @@ describe("the trip list counts every area the trip page lists (forgejo#169)", ()
     await prisma.user.deleteMany({ where: { id: userId } });
   });
 
-  it("reports the train ride, the one live rental and the roadtrip", async () => {
+  it("reports the train ride, the bus ride (forgejo#289), the one live rental and the roadtrip", async () => {
     const res = await request(app).get("/api/v1/trips").set("Cookie", authCookie);
     expect(res.status).toBe(200);
     const trip = res.body.trips.find((t: { id: string }) => t.id === tripId);
@@ -85,6 +100,7 @@ describe("the trip list counts every area the trip page lists (forgejo#169)", ()
       cruises: 0,
       lodgingStays: 0,
       railJourneys: 1,
+      busJourneys: 1,
       rentalBookings: 1,
       roadtrips: 1,
       routes: 2,

@@ -12,11 +12,18 @@ import { plainData, type EntityAdapter, type SharedRow } from "./types";
  */
 
 export interface EntryRef {
-  table: "flight" | "lodgingStay" | "cruise" | "railJourney" | "rentalBooking";
+  table: "flight" | "lodgingStay" | "cruise" | "railJourney" | "busJourney" | "rentalBooking";
   key: string;
 }
 
-const REF_TABLES = ["flight", "lodgingStay", "cruise", "railJourney", "rentalBooking"] as const;
+const REF_TABLES = [
+  "flight",
+  "lodgingStay",
+  "cruise",
+  "railJourney",
+  "busJourney",
+  "rentalBooking",
+] as const;
 
 /** id → reference by share key, for every id that names a keyed entry. */
 async function refsOf(c: DbTransaction, ids: string[]): Promise<Map<string, EntryRef>> {
@@ -29,6 +36,7 @@ async function refsOf(c: DbTransaction, ids: string[]): Promise<Map<string, Entr
     ["lodgingStay", await c.lodgingStay.findMany({ where, select })],
     ["cruise", await c.cruise.findMany({ where, select })],
     ["railJourney", await c.railJourney.findMany({ where, select })],
+    ["busJourney", await c.busJourney.findMany({ where, select })],
     ["rentalBooking", await c.rentalBooking.findMany({ where, select })],
   ];
   for (const [table, rows] of found) {
@@ -55,7 +63,9 @@ async function resolveRef(
           ? await c.cruise.findUnique({ where, select })
           : ref.table === "railJourney"
             ? await c.railJourney.findUnique({ where, select })
-            : await c.rentalBooking.findUnique({ where, select });
+            : ref.table === "busJourney"
+              ? await c.busJourney.findUnique({ where, select })
+              : await c.rentalBooking.findUnique({ where, select });
   return row?.id ?? null;
 }
 

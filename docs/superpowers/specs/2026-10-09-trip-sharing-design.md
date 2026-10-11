@@ -210,7 +210,7 @@ values through the time helpers), Rückgängig / Bei mir auch löschen / Gelesen
 on the notice in its own words. The trip panel shows the members' booking totals.
 
 **Open for later**
-- Trip-level facts (name, dates) are not propagated; only the six entry types.
+- Trip-level facts (name, dates) are not propagated; only the entry types (six, plus bus rides since forgejo#288).
 - Roadtrip stations, tour points and route membership stay unshared (S1 scope).
 - Writes without a transaction around them (stay create/update, accepted pending updates, the
   booking/assign routes) propagate in a transaction of their own right after the write; a
@@ -223,3 +223,37 @@ A standalone note is never copied. A member reads the other members' notes marke
 `shareable` on the days both trips cover, live through the group, read-only
 (`GET /api/v1/notes/trip/:tripId`, `memberNotes`); private notes never cross. See
 `2026-10-10-note-visibility.md`.
+
+## Bus rides (forgejo#288 sweep, 2026-10-11)
+
+Bus was added to the domain contract after sharing was written, so a shared trip silently
+carried no bus ride: not copied when the trip was shared, not followed when one changed, and
+`detach` left its `shareKey` behind. Bus is the seventh shareable entry type, on rail's rule —
+the two ends carry rail's columns, so the rule is the same line by line.
+
+- **`bus_journeys.share_key`** (migration `bus_journey_share_key`), unique per user like the
+  other tables.
+- **Shared (facts, `facts/bus.ts`)**: operator, line name, kind of ride, both terminals with
+  address, position, country and zone, departure and arrival instants, their precisions, the
+  distance and its source, the frozen road line and its source, the actual times, status and
+  delay.
+- **Private (never copied)**: fare class, seat, booking reference, price and its FX snapshot,
+  notes, tags, companions. Same as rail's class, coach, seat, reference, price, notes.
+- The booking's total stays read-only for the other members, and now covers a booking that is
+  sold on a bus ride (`bookingTotals`).
+- Merging trips moves rides (and rentals, which had the same hole) to the surviving trip and
+  copies them to its members, instead of unfiling them with the deleted source.
+
+## The `.travstats` file and bus rides (forgejo#288)
+
+`trip.json` gained `bus[]`, rail's shape with `lineName`/`rideKind`/addresses in place of the
+train fields. Private fields (`fareClass`, `seat`, `bookingReference`, own price, notes,
+companions) travel only in a private file; the booking reference is private for a ride —
+rail writes it in the open, which is rail's call, not copied here.
+
+**Versioning.** A file with no bus ride is still written as `formatVersion` 1, byte-compatible
+for every older importer. A file with bus rides is stamped 2. An importer from before this
+change reads the stamp first and refuses version 2 BY NAME (`TRIP_FILE_VERSION_UNSUPPORTED`,
+422, "format version 2 is not supported") — never as a schema error, and never by importing the
+trip minus its rides. This build reads 1 and 2; a version-1 file has no `bus` key and imports
+as before.

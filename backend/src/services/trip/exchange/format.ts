@@ -23,7 +23,20 @@ import { z } from "zod";
 import { isValidZone } from "../../../shared/time/zonedParts";
 
 export const TRIP_FILE_FORMAT = "travstats-trip";
-export const TRIP_FILE_VERSION = 1;
+/**
+ * What this build WRITES. Version 1 had no bus rides; a file that carries any
+ * is stamped 2 (`tripFileVersionFor`), so an importer that predates the `bus`
+ * key refuses it by name ("format version 2 is not supported", 422) instead
+ * of by a schema error — and a trip without bus rides is still a version-1
+ * file every older importer reads.
+ */
+export const TRIP_FILE_VERSION = 2;
+/** What this build READS: version 1 (no `bus` key) and 2. */
+export const TRIP_FILE_SUPPORTED_VERSIONS = [1, 2] as const;
+
+export function tripFileVersionFor(file: { bus?: readonly unknown[] }): 1 | 2 {
+  return (file.bus?.length ?? 0) > 0 ? 2 : 1;
+}
 export const TRIP_FILE_EXTENSION = ".travstats";
 
 /** Hard limits on what a reader unpacks — a few KB of ZIP must not become gigabytes. */
@@ -78,7 +91,7 @@ export const manifestHeadSchema = z.object({
 
 export const manifestSchema = manifestHeadSchema
   .extend({
-    formatVersion: z.literal(TRIP_FILE_VERSION),
+    formatVersion: z.union([z.literal(1), z.literal(2)]),
     appVersion: str(200),
     exportedAt: z.iso.datetime({ offset: true }),
     options: exportOptionsSchema,
@@ -337,6 +350,51 @@ const railSchema = z
   })
   .strict();
 
+const busEnd = z
+  .object({
+    name: str(200).min(1),
+    address: optStr(300),
+    lat,
+    lon,
+    country: optStr(200),
+    timezone: zone,
+  })
+  .strict();
+
+/** Seat, own price, booking reference and notes travel only in a private file (spec: rail's rule). */
+const busPrivate = z
+  .object({
+    fareClass: optStr(200),
+    seat: optStr(200),
+    bookingReference: optStr(200),
+    price: money,
+    currency,
+    notes: optStr(10_000),
+    companions: names,
+  })
+  .strict();
+
+const busSchema = z
+  .object({
+    key,
+    bookingKey: key.nullable(),
+    externalRef: optStr(200),
+    operator: optStr(200),
+    lineName: optStr(200),
+    rideKind: optStr(200),
+    dep: busEnd,
+    arr: busEnd,
+    departureTime: z.iso.datetime({ offset: true }),
+    arrivalTime: instant,
+    depPrecision: optStr(200),
+    arrPrecision: optStr(200),
+    distanceKm: z.number().min(0).max(50_000).nullable(),
+    distanceSource: optStr(200),
+    status: str(200),
+    private: busPrivate.optional(),
+  })
+  .strict();
+
 const rentalEnd = z
   .object({
     stationName: str(200).min(1),
@@ -469,6 +527,7 @@ export const ENTITY_KINDS = [
   "stay",
   "cruise",
   "rail",
+  "bus",
   "rental",
   "visit",
 ] as const;
@@ -504,6 +563,8 @@ export const tripFileSchema = z
     stays: z.array(staySchema).max(300),
     cruises: z.array(cruiseSchema).max(20),
     rail: z.array(railSchema).max(300),
+    /** Absent in a version-1 file (written before bus rides were in the contract). */
+    bus: z.array(busSchema).max(300).default([]),
     rentals: z.array(rentalSchema).max(50),
     places: z.array(placeSchema).max(1000),
     visits: z.array(visitSchema).max(2000),
@@ -527,6 +588,7 @@ export const tripFileSchema = z
       stay: stays,
       cruise: keysOf(file.cruises),
       rail: keysOf(file.rail),
+      bus: keysOf(file.bus),
       rental: keysOf(file.rentals),
       visit: keysOf(file.visits),
     };
@@ -540,6 +602,7 @@ export const tripFileSchema = z
       [file.stays, "stays"],
       [file.cruises, "cruises"],
       [file.rail, "rail"],
+      [file.bus, "bus"],
     ] as const) {
       list.forEach((e, i) => dangling([name, i, "bookingKey"], e.bookingKey, bookings));
     }
@@ -561,6 +624,7 @@ export type TripFileFlight = TripFile["flights"][number];
 export type TripFileStay = TripFile["stays"][number];
 export type TripFileCruise = TripFile["cruises"][number];
 export type TripFileRail = TripFile["rail"][number];
+export type TripFileBus = TripFile["bus"][number];
 export type TripFileRental = TripFile["rentals"][number];
 export type TripFilePlace = TripFile["places"][number];
 export type TripFileVisit = TripFile["visits"][number];

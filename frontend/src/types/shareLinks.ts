@@ -89,11 +89,16 @@ export interface TripShareView {
     flightKm: number | null;
     cruises: number;
     railRides: number;
+    busRides: number;
     countries: number;
     days: number | null;
   };
   countries?: string[];
-  route?: Array<{ mode: "flight" | "rail" | "cruise"; from: string | null; to: string | null }>;
+  route?: Array<{
+    mode: "flight" | "rail" | "bus" | "cruise";
+    from: string | null;
+    to: string | null;
+  }>;
   costs?: { byCurrency: Array<{ currency: string; amount: number }>; complete: boolean } | null;
   companions?: string[];
   photos?: { count: number };

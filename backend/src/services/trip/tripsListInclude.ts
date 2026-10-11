@@ -128,6 +128,9 @@ export const TRIPS_LIST_INCLUDE = {
       // card (forgejo#169). A cancelled rental never happened, as on the page
       // (TRIP_DETAIL_RENTALS). Roadtrips: services/trip/tripRoadtripCounts.ts.
       railJourneys: true,
+      // Bus rides: "Bus – 1 Fahrt" on the page sat over "1 Eintrag" on the card
+      // (forgejo#289) — the card's counter had `bus: () => 0` and no count to read.
+      busJourneys: true,
       rentalBookings: { where: { status: { not: "cancelled" } } },
     },
   },

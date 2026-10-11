@@ -1,3 +1,4 @@
+import { busAdapter } from "./bus";
 import { cruiseAdapter } from "./cruise";
 import { flightAdapter, railAdapter, rentalAdapter } from "./flat";
 import { lodgingStayAdapter } from "./lodgingStay";
@@ -11,6 +12,7 @@ export const ADAPTERS: Readonly<Record<ShareEntity, EntityAdapter>> = {
   lodgingStay: lodgingStayAdapter,
   cruise: cruiseAdapter,
   rail: railAdapter,
+  bus: busAdapter,
   rental: rentalAdapter,
   stop: stopAdapter,
 };

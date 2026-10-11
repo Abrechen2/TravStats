@@ -39,9 +39,10 @@ describe("trip export / import (.travstats)", () => {
   let plain: TestUser;
   let overlap: TestUser;
   let stranger: TestUser;
+  let older: TestUser;
   let seeded: SeededTrip;
   let fullFile: Buffer;
-  const users = (): TestUser[] => [owner, friend, plain, overlap, stranger];
+  const users = (): TestUser[] => [owner, friend, plain, overlap, stranger, older];
 
   const exportTrip = (u: TestUser, query: string) =>
     request(app)
@@ -61,6 +62,7 @@ describe("trip export / import (.travstats)", () => {
     plain = await user("tx-plain");
     overlap = await user("tx-overlap");
     stranger = await user("tx-stranger");
+    older = await user("tx-older");
     seeded = await seedFullTrip(owner.id, stamp);
     const res = await exportTrip(owner, "?documents=1&photos=1&private=1");
     expect(res.status).toBe(200);
@@ -94,25 +96,45 @@ describe("trip export / import (.travstats)", () => {
     const manifest = JSON.parse(Buffer.from(entries["manifest.json"]).toString());
     expect(manifest).toMatchObject({
       format: "travstats-trip",
-      formatVersion: 1,
+      // The trip holds a bus ride, which a version-1 importer cannot read: the
+      // stamp says so, instead of the old importer failing on an unknown key.
+      formatVersion: 2,
       options: { documents: false, photos: false, private: false },
     });
     const text = Buffer.from(entries["trip.json"]).toString();
     expect(text).not.toContain('"private"');
     expect(text).not.toContain("12A");
     expect(text).not.toContain("aisle please");
+    expect(text).not.toContain("B7");
+    expect(text).not.toContain("FLX-4711");
+    expect(text).not.toContain("window side");
     const trip = JSON.parse(text);
     expect(trip.flights[0]).toMatchObject({
       departureTime: "2026-05-01T06:35:00.000Z",
       depTimezone: "Europe/Berlin",
     });
     expect(trip.bookings[0].price).toBe(1800);
+    // forgejo#288: the ride is in the file, its times as stored and its zone beside them.
+    expect(trip.bus).toHaveLength(1);
+    expect(trip.bus[0]).toMatchObject({
+      operator: "FlixBus",
+      lineName: "N17",
+      rideKind: "intercity",
+      departureTime: "2026-05-08T09:15:00.000Z",
+      dep: { name: "Lisboa Sete Rios", timezone: "Europe/Lisbon" },
+    });
     expect(trip.journal).toBeUndefined();
   });
 
   it("carries documents, photos and private fields when asked", () => {
     const { file, blobs } = readTripArchive(fullFile);
     expect(file.flights[0].private).toMatchObject({ seatNumber: "12A", price: 240 });
+    expect(file.bus[0].private).toMatchObject({
+      seat: "B7",
+      bookingReference: "FLX-4711",
+      price: 19.9,
+      notes: "window side",
+    });
     expect(file.documents).toHaveLength(1);
     expect(file.photos).toHaveLength(1);
     expect(file.journal).toHaveLength(1);
@@ -128,7 +150,7 @@ describe("trip export / import (.travstats)", () => {
       new Set(["create"])
     );
     expect(proposal.entries.map((e: { kind: string }) => e.kind).sort()).toEqual(
-      ["cruise", "flight", "rail", "rental", "stay", "stop", "visit"].sort()
+      ["bus", "cruise", "flight", "rail", "rental", "stay", "stop", "visit"].sort()
     );
 
     const commit = await send(friend, "commit", fullFile);
@@ -143,6 +165,7 @@ describe("trip export / import (.travstats)", () => {
         lodgingStays: { include: { lodging: true } },
         cruises: { include: { stops: { orderBy: { dayNumber: "asc" } } } },
         railJourneys: true,
+        busJourneys: true,
         rentalBookings: true,
         placeVisits: { include: { place: true } },
         stops: true,
@@ -176,6 +199,30 @@ describe("trip export / import (.travstats)", () => {
       [false, false, "Atlantis"],
     ]);
     expect(trip.railJourneys[0]).toMatchObject({ trainNumber: "AP 133", seat: "61" });
+    // forgejo#288: the ride is back, on the trip and its booking, with the
+    // instants and zones as exported and (this file is private) its own fields.
+    expect(trip.busJourneys).toHaveLength(1);
+    expect(trip.busJourneys[0]).toMatchObject({
+      userId: friend.id,
+      tripId: trip.id,
+      bookingId: trip.bookings[0].id,
+      operator: "FlixBus",
+      lineName: "N17",
+      rideKind: "intercity",
+      depStationName: "Lisboa Sete Rios",
+      depAddress: "Av. Casal Ribeiro",
+      depTimezone: "Europe/Lisbon",
+      arrTimezone: "Europe/Lisbon",
+      departureTime: new Date("2026-05-08T09:15:00Z"),
+      arrivalTime: new Date("2026-05-08T11:30:00Z"),
+      depPrecision: "minute",
+      distanceKm: 313,
+      distanceSource: "route",
+      seat: "B7",
+      bookingReference: "FLX-4711",
+      price: 19.9,
+      notes: "window side",
+    });
     expect(trip.rentalBookings[0]).toMatchObject({ provider: "Sixt", licensePlate: "AA-00-BB" });
     expect(trip.placeVisits[0]).toMatchObject({ rating: 5, visitedZone: "Europe/Lisbon" });
     expect(trip.placeVisits[0].place.userId).toBe(friend.id);
@@ -193,6 +240,7 @@ describe("trip export / import (.travstats)", () => {
         prisma.lodgingStay.count({ where: { userId: friend.id } }),
         prisma.cruise.count({ where: { userId: friend.id } }),
         prisma.railJourney.count({ where: { userId: friend.id } }),
+        prisma.busJourney.count({ where: { userId: friend.id } }),
         prisma.rentalBooking.count({ where: { userId: friend.id } }),
         prisma.placeVisit.count({ where: { userId: friend.id } }),
         prisma.place.count({ where: { userId: friend.id } }),
@@ -230,6 +278,15 @@ describe("trip export / import (.travstats)", () => {
     });
     const stay = await prisma.lodgingStay.findFirstOrThrow({ where: { userId: plain.id } });
     expect(stay).toMatchObject({ roomNumber: null, ratingOverall: null });
+    const ride = await prisma.busJourney.findFirstOrThrow({ where: { userId: plain.id } });
+    expect(ride).toMatchObject({
+      operator: "FlixBus",
+      lineName: "N17",
+      seat: null,
+      bookingReference: null,
+      price: null,
+      notes: null,
+    });
     expect(await prisma.tripJournalEntry.count({ where: { trip: { userId: plain.id } } })).toBe(0);
     expect(await prisma.document.count({ where: { userId: plain.id } })).toBe(0);
   });
@@ -260,6 +317,43 @@ describe("trip export / import (.travstats)", () => {
     expect(after).toHaveLength(1);
     expect(after[0].tripId).toBe(commit.body.data.tripId);
     expect(after[0].bookingId).not.toBeNull();
+  });
+
+  it("reads an older file with no bus key and writes the rest (version 1)", async () => {
+    const entries = unzipSync(new Uint8Array(fullFile));
+    const trip = JSON.parse(Buffer.from(entries["trip.json"]).toString());
+    delete trip.bus;
+    const manifest = JSON.parse(Buffer.from(entries["manifest.json"]).toString());
+    manifest.formatVersion = 1;
+    const olderFile = Buffer.from(
+      zipSync({
+        "manifest.json": strToU8(JSON.stringify(manifest)),
+        "trip.json": strToU8(JSON.stringify(trip)),
+        ...Object.fromEntries(
+          Object.entries(entries).filter(([name]) => /^(documents|photos)\//.test(name))
+        ),
+      })
+    );
+    const commit = await send(older, "commit", olderFile);
+    expect(commit.status).toBe(201);
+    expect(await prisma.busJourney.count({ where: { userId: older.id } })).toBe(0);
+    expect(await prisma.flight.count({ where: { userId: older.id } })).toBe(1);
+  });
+
+  it("stamps version 1 on a trip with no bus ride, which an older importer still reads", async () => {
+    const lone = await prisma.trip.create({
+      data: { userId: owner.id, name: "Nur Zug", startDate: new Date("2026-06-01T00:00:00Z") },
+    });
+    const res = await request(app)
+      .get(`/api/v1/trips/${lone.id}/export`)
+      .set("Cookie", owner.cookie)
+      .buffer(true)
+      .parse(binary);
+    const manifest = JSON.parse(
+      Buffer.from(unzipSync(new Uint8Array(res.body as Buffer))["manifest.json"]).toString()
+    );
+    expect(manifest.formatVersion).toBe(1);
+    await prisma.trip.delete({ where: { id: lone.id } });
   });
 
   describe("refusals", () => {
@@ -308,10 +402,10 @@ describe("trip export / import (.travstats)", () => {
       const res = await send(
         stranger,
         "preview",
-        zip({ "manifest.json": manifest({ formatVersion: 2 }), "trip.json": "{}" })
+        zip({ "manifest.json": manifest({ formatVersion: 3 }), "trip.json": "{}" })
       );
       expect(res.status).toBe(422);
-      expect(res.body).toMatchObject({ code: "TRIP_FILE_VERSION_UNSUPPORTED", formatVersion: 2 });
+      expect(res.body).toMatchObject({ code: "TRIP_FILE_VERSION_UNSUPPORTED", formatVersion: 3 });
     });
 
     it("refuses a trip.json that breaks the schema", () =>

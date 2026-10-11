@@ -42,7 +42,7 @@ import TourSectionList from "../components/Trips/TourSectionList";
 import { useToursVisible } from "../hooks/useToursVisible";
 import { PanelHeader, Placeholder } from "../components/Trips/TripDetailPanels";
 import { formatTimelineDate } from "../lib/tripTimeline";
-import { TripRailList } from "../components/rail/RailTripCard";
+import { TripGroundLists, groundRideCount } from "../components/Trips/TripGroundLists";
 import { useRailVisible } from "../hooks/useRailVisible";
 import { useRentalVisible } from "../hooks/useRentalVisible";
 import { useBusVisible } from "../hooks/useBusVisible";
@@ -975,10 +975,9 @@ function LogisticsTab({
 }): JSX.Element {
   const flights = trip.flights ?? [];
   const cruises = trip.cruises ?? [];
-  const railJourneys = trip.railJourneys ?? [];
   // The bookings panel stays reachable on an empty trip: a package booking
   // can be created by hand before anything else is on it (#356).
-  const empty = !flights.length && !cruises.length && !railJourneys.length;
+  const empty = !flights.length && !cruises.length && !groundRideCount(trip);
 
   return (
     <div className="space-y-4">
@@ -1073,7 +1072,7 @@ function LogisticsTab({
         </div>
       )}
 
-      {railJourneys.length > 0 && <TripRailList journeys={railJourneys} />}
+      <TripGroundLists trip={trip} />
 
       <TripBookingsPanel
         trip={trip}

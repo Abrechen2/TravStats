@@ -67,7 +67,15 @@ describe("TripSharingPanel", () => {
     api.shareTrip.mockResolvedValue({
       groupId: "g1",
       tripCreated: true,
-      created: { flights: 1, lodgingStays: 0, cruises: 0, railJourneys: 0, rentals: 0, stops: 0 },
+      created: {
+        flights: 1,
+        lodgingStays: 0,
+        cruises: 0,
+        railJourneys: 0,
+        busJourneys: 0,
+        rentals: 0,
+        stops: 0,
+      },
     });
     const onChanged = renderPanel();
     const [benBox] = await screen.findAllByRole("checkbox");
