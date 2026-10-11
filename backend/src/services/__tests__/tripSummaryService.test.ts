@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import {
   briefEntityNouns,
+  briefEntryCount,
   briefFromTrip,
   briefHasVoice,
   buildSystemPrompt,
@@ -191,6 +192,7 @@ describe("tripSummaryService", () => {
         tags: [],
         flights: [],
         cruises: [],
+        rides: [],
         stays: [
           {
             lodging: "Casa",
@@ -251,6 +253,7 @@ describe("tripSummaryService", () => {
       tags: [],
       flights: [],
       cruises: [],
+      rides: [],
       stays: [],
       places: [],
       stops: [],
@@ -371,6 +374,7 @@ describe("tripSummaryService", () => {
         tags: [],
         flights: [],
         cruises: [],
+        rides: [],
         places: [],
         stops: [],
         journal: [],
@@ -501,6 +505,64 @@ describe("tripSummaryService", () => {
       expect(brief.places).toEqual([
         expect.objectContaining({ name: "Kölner Dom", category: "landmark", date: "2026-05-11" }),
       ]);
+    });
+
+    // forgejo#288 sweep: the brief knew flights and cruises and nothing on the
+    // ground, so a trip of trains and coaches was told as an empty one.
+    it("the brief carries the train and the bus ride, in order, on the terminal's own day", async () => {
+      const end = { depLat: 1, depLon: 1, arrLat: 2, arrLon: 2 };
+      await prisma.busJourney.create({
+        data: {
+          userId,
+          tripId,
+          ...end,
+          depStationName: "Köln ZOB",
+          arrStationName: "Brüssel Nord",
+          operator: "FlixBus",
+          lineName: "N17",
+          depTimezone: "Europe/Berlin",
+          // 23:30 UTC on the 12th is 01:30 on the 13th in Berlin.
+          departureTime: new Date("2026-05-12T23:30:00Z"),
+        },
+      });
+      await prisma.railJourney.create({
+        data: {
+          userId,
+          tripId,
+          ...end,
+          depStationName: "Köln Hbf",
+          arrStationName: "Berlin Hbf",
+          trainCategory: "ICE",
+          trainNumber: "945",
+          depTimezone: "Europe/Berlin",
+          departureTime: new Date("2026-05-10T08:00:00Z"),
+        },
+      });
+      const trip = await prisma.trip.findFirstOrThrow({
+        where: { id: tripId },
+        include: TRIP_BRIEF_INCLUDE,
+      });
+      const brief = briefFromTrip(trip);
+      expect(brief.rides).toEqual([
+        {
+          mode: "train",
+          from: "Köln Hbf",
+          to: "Berlin Hbf",
+          date: "2026-05-10",
+          service: "ICE 945",
+        },
+        {
+          mode: "bus",
+          from: "Köln ZOB",
+          to: "Brüssel Nord",
+          date: "2026-05-13",
+          service: "FlixBus N17",
+        },
+      ]);
+      expect(briefEntityNouns(brief, "de")).toContain("Bahn- und Busfahrten");
+      expect(briefEntryCount(brief)).toBeGreaterThanOrEqual(2);
+      await prisma.busJourney.deleteMany({ where: { userId } });
+      await prisma.railJourney.deleteMany({ where: { userId } });
     });
 
     it("never hands a Strava recording to the model", async () => {

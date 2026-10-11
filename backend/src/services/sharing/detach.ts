@@ -20,6 +20,7 @@ export async function detachTrip(
   await tx.lodgingStay.updateMany({ where: own, data: clear });
   await tx.cruise.updateMany({ where: own, data: clear });
   await tx.railJourney.updateMany({ where: own, data: clear });
+  await tx.busJourney.updateMany({ where: own, data: clear });
   await tx.rentalBooking.updateMany({ where: own, data: clear });
   await tx.tripStop.updateMany({
     where: { tripId: trip.id, shareKey: { not: null } },

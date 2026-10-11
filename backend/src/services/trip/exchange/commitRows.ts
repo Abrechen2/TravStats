@@ -24,6 +24,7 @@ import type {
   TripFileCruise,
   TripFileFlight,
   TripFilePortRef,
+  TripFileBus,
   TripFileRail,
   TripFileRental,
   TripFileStay,
@@ -99,6 +100,7 @@ export async function resolveContext(userId: string, file: TripFile): Promise<Re
     ...file.flights.flatMap((f) => f.private?.companions ?? []),
     ...file.cruises.flatMap((c) => c.private?.companions ?? []),
     ...file.rail.flatMap((r) => r.private?.companions ?? []),
+    ...file.bus.flatMap((r) => r.private?.companions ?? []),
     ...file.rentals.flatMap((r) => r.private?.companions ?? []),
   ];
   const companions = new Map<string, string>();
@@ -124,6 +126,17 @@ export async function resolveContext(userId: string, file: TripFile): Promise<Re
     fx.set(c.key, await fxFor(c.private?.price, c.private?.currency, c.startDay, base));
   }
   for (const r of file.rail) {
+    fx.set(
+      r.key,
+      await fxFor(
+        r.private?.price,
+        r.private?.currency,
+        dayAt(r.departureTime, r.dep.timezone),
+        base
+      )
+    );
+  }
+  for (const r of file.bus) {
     fx.set(
       r.key,
       await fxFor(
@@ -450,6 +463,55 @@ export function railRow(
           travelClass: p.travelClass,
           coach: p.coach,
           seat: p.seat,
+          price: p.price,
+          currency: p.currency,
+          ...fxOf(ctx, r.key),
+          notes: p.notes,
+          companions: p.companions,
+          companionLinks: companionLinks(ctx, p.companions),
+        }
+      : { currency: null }),
+  };
+}
+
+export function busRow(
+  userId: string,
+  r: TripFileBus,
+  ctx: ResolvedContext,
+  link: Linked
+): Prisma.BusJourneyUncheckedCreateInput {
+  const p = r.private;
+  return {
+    userId,
+    ...link,
+    externalRef: r.externalRef,
+    operator: r.operator,
+    lineName: r.lineName,
+    rideKind: r.rideKind,
+    depStationName: r.dep.name,
+    depAddress: r.dep.address,
+    depLat: r.dep.lat,
+    depLon: r.dep.lon,
+    depCountry: r.dep.country,
+    depTimezone: r.dep.timezone,
+    arrStationName: r.arr.name,
+    arrAddress: r.arr.address,
+    arrLat: r.arr.lat,
+    arrLon: r.arr.lon,
+    arrCountry: r.arr.country,
+    arrTimezone: r.arr.timezone,
+    departureTime: new Date(r.departureTime),
+    arrivalTime: date(r.arrivalTime),
+    depPrecision: r.depPrecision,
+    arrPrecision: r.arrPrecision,
+    distanceKm: r.distanceKm,
+    distanceSource: r.distanceSource,
+    status: r.status,
+    ...(p
+      ? {
+          fareClass: p.fareClass,
+          seat: p.seat,
+          bookingReference: p.bookingReference,
           price: p.price,
           currency: p.currency,
           ...fxOf(ctx, r.key),

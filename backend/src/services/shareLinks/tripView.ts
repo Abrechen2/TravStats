@@ -3,6 +3,7 @@ import {
   airportFactsFor,
   cruiseCountriesByTrip,
   lodgingCountriesByTrip,
+  rideCountriesByTrip,
   roadtripCountriesByTrip,
   tripCountries,
 } from "../../routes/trips/tripCountries";
@@ -51,7 +52,7 @@ export async function loadOwnedTrip(userId: string, tripId: string) {
 type TripRow = NonNullable<Awaited<ReturnType<typeof loadOwnedTrip>>>;
 
 async function loadLegs(tripId: string) {
-  const [flights, rail, cruises] = await Promise.all([
+  const [flights, rail, bus, cruises] = await Promise.all([
     prisma.flight.findMany({
       where: { tripId, status: { not: "cancelled" } },
       select: {
@@ -72,6 +73,11 @@ async function loadLegs(tripId: string) {
       select: { depStationName: true, arrStationName: true, departureTime: true },
       orderBy: { departureTime: "asc" },
     }),
+    prisma.busJourney.findMany({
+      where: { tripId },
+      select: { depStationName: true, arrStationName: true, departureTime: true },
+      orderBy: { departureTime: "asc" },
+    }),
     prisma.cruise.findMany({
       where: { tripId },
       select: {
@@ -82,16 +88,17 @@ async function loadLegs(tripId: string) {
       orderBy: { startDate: "asc" },
     }),
   ]);
-  return { flights, rail, cruises };
+  return { flights, rail, bus, cruises };
 }
 type Legs = Awaited<ReturnType<typeof loadLegs>>;
 
 async function countriesOf(trip: TripRow, legs: Legs): Promise<string[]> {
-  const [facts, cruise, lodging, roadtrip] = await Promise.all([
+  const [facts, cruise, lodging, roadtrip, ride] = await Promise.all([
     airportFactsFor(legs.flights),
     cruiseCountriesByTrip([trip.id]),
     lodgingCountriesByTrip([trip.id]),
     roadtripCountriesByTrip([trip.id]),
+    rideCountriesByTrip([trip.id]),
   ]);
   return tripCountries(
     trip.countries,
@@ -99,7 +106,8 @@ async function countriesOf(trip: TripRow, legs: Legs): Promise<string[]> {
     facts,
     cruise.get(trip.id) ?? [],
     lodging.get(trip.id) ?? [],
-    roadtrip.get(trip.id) ?? []
+    roadtrip.get(trip.id) ?? [],
+    ride.get(trip.id) ?? []
   );
 }
 
@@ -114,6 +122,10 @@ function routeOf(legs: Legs): NonNullable<TripView["route"]> {
     ...legs.rail.map((r) => ({
       t: at(r.departureTime),
       leg: { mode: "rail" as const, from: r.depStationName, to: r.arrStationName },
+    })),
+    ...legs.bus.map((r) => ({
+      t: at(r.departureTime),
+      leg: { mode: "bus" as const, from: r.depStationName, to: r.arrStationName },
     })),
     ...legs.cruises.map((c) => ({
       t: at(c.startDate),
@@ -195,6 +207,7 @@ export async function buildTripView(
       flightKm: legs.flights.length > 0 ? Math.round(km) : null,
       cruises: legs.cruises.length,
       railRides: legs.rail.length,
+      busRides: legs.bus.length,
       countries: countries.length,
       days: times.start && times.end ? daysBetween(times.start.date, times.end.date) + 1 : null,
     };

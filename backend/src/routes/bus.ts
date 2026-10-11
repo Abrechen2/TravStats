@@ -16,6 +16,7 @@ import {
 } from "../schemas/bus";
 import { mergeBusJourney } from "../services/bus/busJourneyWrite";
 import { withBusTimes } from "../services/bus/timesDto";
+import { propagateDelete, propagateWrite, shareSnapshot } from "../services/sharing/propagate";
 import { recomputeTripStatus } from "../services/tripStatusService";
 import { busYear } from "../shared/busCounting";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
@@ -252,6 +253,7 @@ async function createBusRide(userId: string, body: unknown, claim: ClaimClientRe
         skipDuplicates: true,
       });
     }
+    await propagateWrite(tx, userId, "bus", created.id);
     await claim(tx, created.id);
     return tx.busJourney.findUniqueOrThrow({ where: { id: created.id }, include: BUS_INCLUDE });
   });
@@ -296,6 +298,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       : undefined;
 
     const ride = await prisma.$transaction(async (tx) => {
+      const before = await shareSnapshot(tx, "bus", existing.id);
       if (resolved !== undefined) {
         await tx.busJourneyCompanion.deleteMany({ where: { busJourneyId: existing.id } });
         if (resolved.length > 0) {
@@ -317,6 +320,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
           ...(resolved !== undefined && { companions: resolved.map((c) => c.displayName) }),
         },
       });
+      await propagateWrite(tx, userId, "bus", existing.id, before);
       return tx.busJourney.findUniqueOrThrow({ where: { id: existing.id }, include: BUS_INCLUDE });
     });
 
@@ -335,7 +339,11 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
       select: { id: true, tripId: true },
     });
     if (!existing) throw new AppError("Bus ride not found", 404);
-    await prisma.busJourney.delete({ where: { id: existing.id } });
+    await prisma.$transaction(async (tx) => {
+      const gone = await shareSnapshot(tx, "bus", existing.id);
+      await tx.busJourney.delete({ where: { id: existing.id } });
+      await propagateDelete(tx, userId, gone);
+    });
     await restatusTrips(existing.tripId);
     res.status(204).send();
   } catch (err) {

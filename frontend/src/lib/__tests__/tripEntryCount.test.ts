@@ -31,6 +31,14 @@ describe("tripEntryCounts (forgejo#169)", () => {
     expect(tripEntryTotal(counts)).toBe(9);
   });
 
+  it("counts a bus ride beside a flight (forgejo#289)", () => {
+    const trip = { _count: { flights: 1, busJourneys: 1 } } as unknown as Trip;
+    const counts = tripEntryCounts(trip, all);
+    expect(counts.bus).toBe(1);
+    expect(tripEntryTotal(counts)).toBe(2);
+    expect(tripEntryTotal(tripEntryCounts(trip, (d) => d !== "bus"))).toBe(1);
+  });
+
   it("leaves out an area the reader cannot see", () => {
     const trip = { _count: { flights: 1, railJourneys: 2 } } as unknown as Trip;
     const counts = tripEntryCounts(trip, (d) => d !== "rail");

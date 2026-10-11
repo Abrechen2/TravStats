@@ -42,6 +42,13 @@ async function zoneOfWrapped(place: Place, userId: string): Promise<string | nul
     });
     return r ? zoneOf({ catalogueZone: r.depTimezone, lat: r.depLat, lon: r.depLon }) : null;
   }
+  if (domain === "bus") {
+    const b = await prisma.busJourney.findFirst({
+      where: { id: sourceId, userId },
+      select: { depTimezone: true, depLat: true, depLon: true },
+    });
+    return b ? zoneOf({ catalogueZone: b.depTimezone, lat: b.depLat, lon: b.depLon }) : null;
+  }
   if (domain === "hotel" || domain === "lodging") {
     const s = await prisma.lodgingStay.findFirst({
       where: { id: sourceId, userId },

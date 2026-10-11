@@ -65,6 +65,12 @@ export const EMPTY_TRIP_COUNTS = {
   journalEntries: true,
   photos: true,
   lodgingStays: true,
+  // Train rides, bus rides and rentals are `SetNull` on the trip like flights:
+  // a trip holding only one of them looked empty here, and dissolving it
+  // silently unfiled the ride (forgejo#288 sweep).
+  railJourneys: true,
+  busJourneys: true,
+  rentalBookings: true,
   placeVisits: true,
   immichAlbums: true,
   documents: true,
@@ -81,6 +87,9 @@ export const EMPTY_TRIP_WHERE = {
   journalEntries: { none: {} },
   photos: { none: {} },
   lodgingStays: { none: {} },
+  railJourneys: { none: {} },
+  busJourneys: { none: {} },
+  rentalBookings: { none: {} },
   placeVisits: { none: {} },
   immichAlbums: { none: {} },
   documents: { none: {} },
@@ -258,11 +267,19 @@ export async function mergeTrips(
       flight: await tx.flight.findMany(onSources),
       cruise: await tx.cruise.findMany(onSources),
       lodgingStay: await tx.lodgingStay.findMany(onSources),
+      rail: await tx.railJourney.findMany(onSources),
+      bus: await tx.busJourney.findMany(onSources),
+      rental: await tx.rentalBooking.findMany(onSources),
       stop: await tx.tripStop.findMany(onSources),
     };
     const move = { where: { tripId: { in: sourceIds } }, data: { tripId: targetId } };
     await tx.flight.updateMany(move);
     await tx.cruise.updateMany(move);
+    // Rides and rentals are `SetNull` on the trip: left behind they would be
+    // unfiled the moment the source trip is deleted below (forgejo#288 sweep).
+    await tx.railJourney.updateMany(move);
+    await tx.busJourney.updateMany(move);
+    await tx.rentalBooking.updateMany(move);
     await tx.booking.updateMany(move);
     await tx.tripStop.updateMany(move);
     // Sections move with their stops. Without this a section stays on a trip

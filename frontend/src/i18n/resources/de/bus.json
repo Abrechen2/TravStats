@@ -15,6 +15,11 @@
     "companions_one": "{{count}} mitreisende Person",
     "companions_other": "{{count}} Mitreisende"
   },
+  "trip": {
+    "open": "Fahrt öffnen",
+    "listTitle_one": "Bus ({{count}} Fahrt)",
+    "listTitle_other": "Bus ({{count}} Fahrten)"
+  },
   "edit": "Bearbeiten",
   "delete": "Löschen",
   "straightLine": "Luftlinie",

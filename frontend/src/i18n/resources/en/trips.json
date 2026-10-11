@@ -16,7 +16,17 @@
   "deleteTrip": "Delete Journey",
   "removeFromTrip": "Remove from journey",
   "deleteTripConfirm": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours built from its stops with their recorded tracks, and the documents filed here. Flights, cruises, stays and roadtrips are kept, and so are day tours with points of their own — they become standalone tours.",
-  "deleteTripConfirmWithRail": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours built from its stops with their recorded tracks, and the documents filed here. Flights, cruises, rail journeys, stays and roadtrips are kept, and so are day tours with points of their own — they become standalone tours.",
+  "deleteTripConfirmKept": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours built from its stops with their recorded tracks, and the documents filed here. {{kept}} are kept, and so are day tours with points of their own — they become standalone tours.",
+  "deleteTripKept": {
+    "and": "and",
+    "flights": "flights",
+    "cruises": "cruises",
+    "rail": "rail journeys",
+    "bus": "bus rides",
+    "rental": "rental cars",
+    "stays": "stays",
+    "roadtrips": "roadtrips"
+  },
   "showOnMap": "Show on Map",
   "flightCount_one": "{{count}} Flight",
   "flightCount_other": "{{count}} Flights",
@@ -211,6 +221,8 @@
     "noLogistics": "This trip's connections and bookings appear here – none is linked yet.",
     "railCount_one": "{{count}} ride",
     "railCount_other": "{{count}} rides",
+    "busCount_one": "{{count}} ride",
+    "busCount_other": "{{count}} rides",
     "rentalCount_one": "{{count}} rental",
     "rentalCount_other": "{{count}} rentals"
   },

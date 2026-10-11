@@ -56,6 +56,63 @@ describe("micro-trip candidates", () => {
       (tripId) =>
         prisma.lodgingStay.create({ data: { userId, lodgingId, tripId, status: "completed" } }),
     ],
+    // forgejo#288 sweep: all three are SetNull on the trip, so a dissolve would
+    // have silently unfiled them from a trip that looked empty.
+    [
+      "a train ride",
+      (tripId) =>
+        prisma.railJourney.create({
+          data: {
+            userId,
+            tripId,
+            depStationName: "A",
+            depLat: 1,
+            depLon: 1,
+            arrStationName: "B",
+            arrLat: 2,
+            arrLon: 2,
+            departureTime: new Date("2026-06-01T08:00:00Z"),
+          },
+        }),
+    ],
+    [
+      "a bus ride",
+      (tripId) =>
+        prisma.busJourney.create({
+          data: {
+            userId,
+            tripId,
+            depStationName: "A",
+            depLat: 1,
+            depLon: 1,
+            arrStationName: "B",
+            arrLat: 2,
+            arrLon: 2,
+            departureTime: new Date("2026-06-01T08:00:00Z"),
+          },
+        }),
+    ],
+    [
+      "a rental car",
+      (tripId) =>
+        prisma.rentalBooking.create({
+          data: {
+            userId,
+            tripId,
+            provider: "Sixt",
+            pickupStationName: "X",
+            pickupLat: 1,
+            pickupLon: 1,
+            pickupTimezone: "UTC",
+            returnStationName: "X",
+            returnLat: 1,
+            returnLon: 1,
+            returnTimezone: "UTC",
+            pickupTime: new Date("2026-06-01T09:00:00Z"),
+            returnTime: new Date("2026-06-02T09:00:00Z"),
+          },
+        }),
+    ],
     ["a place visit", (tripId) => prisma.placeVisit.create({ data: { userId, placeId, tripId } })],
     [
       // forgejo#140: a vignette booked on the trip is money a dissolve would delete.

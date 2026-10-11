@@ -102,6 +102,37 @@ describe("receipts as documents", () => {
     ).toBe(stayId);
   });
 
+  it("never re-files a document that sits on a bus ride (forgejo#288 sweep)", async () => {
+    const ride = await prisma.busJourney.create({
+      data: {
+        userId,
+        depStationName: "A",
+        depLat: 1,
+        depLon: 1,
+        arrStationName: "B",
+        arrLat: 2,
+        arrLon: 2,
+        departureTime: new Date("2026-06-01T08:00:00Z"),
+      },
+    });
+    const { document } = await createDocument({
+      userId,
+      buffer: PDF(`${PREFIX}-bus`),
+      source: RECEIPT_SOURCE,
+      kind: "invoice",
+      entry: { type: "busJourney", id: ride.id },
+    });
+    await prisma.flight.update({
+      where: { id: flightId },
+      data: { receiptUrl: receiptUrlFor(document.id) },
+    });
+    await reconcileReceiptDocuments();
+    const after = await prisma.document.findUniqueOrThrow({ where: { id: document.id } });
+    expect(after.busJourneyId).toBe(ride.id);
+    expect(after.flightId).toBeNull();
+    await prisma.flight.update({ where: { id: flightId }, data: { receiptUrl: null } });
+  });
+
   it("moves a legacy receipt into documents and points the stay at it", async () => {
     const filename = `${PREFIX}-legacy.pdf`;
     fs.writeFileSync(path.join(getUploadDir(), filename), PDF(`${PREFIX}-legacy`));

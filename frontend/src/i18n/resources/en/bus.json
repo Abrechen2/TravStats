@@ -15,6 +15,11 @@
     "companions_one": "{{count}} travel companion",
     "companions_other": "{{count}} travel companions"
   },
+  "trip": {
+    "open": "Open ride",
+    "listTitle_one": "Bus ({{count}} ride)",
+    "listTitle_other": "Bus ({{count}} rides)"
+  },
   "edit": "Edit",
   "delete": "Delete",
   "straightLine": "straight line",

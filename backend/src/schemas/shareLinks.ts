@@ -159,7 +159,7 @@ const flightView = z.strictObject({
 });
 
 const tripLeg = z.strictObject({
-  mode: z.enum(["flight", "rail", "cruise"]),
+  mode: z.enum(["flight", "rail", "bus", "cruise"]),
   from: z.string().nullable(),
   to: z.string().nullable(),
 });
@@ -176,6 +176,7 @@ const tripView = z.strictObject({
       flightKm: z.number().int().nullable().describe("Great-circle; null without a flight"),
       cruises: z.number().int(),
       railRides: z.number().int(),
+      busRides: z.number().int().describe("Bus rides on the trip (forgejo#288 sweep)"),
       countries: z.number().int(),
       days: z.number().int().nullable().describe("Null when the trip has no first or last day"),
     })

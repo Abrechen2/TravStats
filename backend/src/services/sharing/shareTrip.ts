@@ -8,6 +8,7 @@ import {
   copyCruises,
   copyFlights,
   copyLodgingStays,
+  copyBusJourneys,
   copyRailJourneys,
   copyRentals,
   copyStops,
@@ -24,7 +25,7 @@ import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
  * decision 5) and leaving a share group again.
  *
  * Decision 1 is the shape of all of it: the recipient gets a COMPLETE trip of
- * their own — trip, flights, stays, cruises, rail rides, rentals, stops —
+ * their own — trip, flights, stays, cruises, rail and bus rides, rentals, stops —
  * joined to the sharer's by a `TripShareGroup` and, entry by entry, by a
  * common `shareKey`. Nothing is ever shared as one row between two accounts,
  * so every statistic keeps counting exactly the rows its user owns.
@@ -113,6 +114,7 @@ export async function shareTrip(
         lodgingStays: await copyLodgingStays(ctx),
         cruises: await copyCruises(ctx),
         railJourneys: await copyRailJourneys(ctx),
+        busJourneys: await copyBusJourneys(ctx),
         rentals: await copyRentals(ctx),
         stops: await copyStops(ctx),
       };

@@ -35,6 +35,7 @@ export async function groupBookingTotals(
           { flights: { some: onTrip } },
           { cruises: { some: onTrip } },
           { railJourneys: { some: onTrip } },
+          { busJourneys: { some: onTrip } },
           { lodgingStays: { some: onTrip } },
         ],
       },

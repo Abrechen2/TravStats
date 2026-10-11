@@ -66,6 +66,20 @@ describe("GET /api/v1/tags", () => {
         tags: ["beach", "Zeta"],
       },
     });
+    // A bus ride carries tags like a train ride (forgejo#288 sweep).
+    await prisma.busJourney.create({
+      data: {
+        userId: user.id,
+        depStationName: "A",
+        depLat: 1,
+        depLon: 1,
+        arrStationName: "B",
+        arrLat: 2,
+        arrLon: 2,
+        departureTime: new Date("2026-06-01T08:00:00Z"),
+        tags: ["Zeta", "Coach"],
+      },
+    });
   });
 
   afterAll(async () => {
@@ -73,10 +87,11 @@ describe("GET /api/v1/tags", () => {
     await prisma.flight.deleteMany({ where: { userId: ids } });
     await prisma.trip.deleteMany({ where: { userId: ids } });
     await prisma.cruise.deleteMany({ where: { userId: ids } });
+    await prisma.busJourney.deleteMany({ where: { userId: ids } });
     await prisma.user.deleteMany({ where: { id: ids } });
   });
 
-  it("merges spellings across flights, trips and cruises, most used first", async () => {
+  it("merges spellings across flights, trips, cruises and bus rides, most used first", async () => {
     const res = await tags();
     expect(res.status).toBe(200);
     expect(res.body.tags).toEqual([
@@ -85,8 +100,9 @@ describe("GET /api/v1/tags", () => {
       { name: "beach", usageCount: 3 },
       { name: "business", usageCount: 3 },
       { name: "Family", usageCount: 2 },
+      { name: "Zeta", usageCount: 2 },
+      { name: "Coach", usageCount: 1 },
       { name: "Sightseeing", usageCount: 1 },
-      { name: "Zeta", usageCount: 1 },
     ]);
   });
 

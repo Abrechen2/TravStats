@@ -3,7 +3,7 @@ import { Prisma } from "../../../prisma";
 import type { FactRecord } from "../factValues";
 
 /**
- * The six shareable entry types (design 2026-10-09). The names are the
+ * The seven shareable entry types (design 2026-10-09). The names are the
  * `ShareNotice.entityType` vocabulary the inbox reads.
  */
 export const SHARE_ENTITIES = [
@@ -11,6 +11,7 @@ export const SHARE_ENTITIES = [
   "lodgingStay",
   "cruise",
   "rail",
+  "bus",
   "rental",
   "stop",
 ] as const;

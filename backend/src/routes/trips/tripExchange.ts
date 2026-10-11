@@ -87,7 +87,7 @@ router.get(
         "Content-Disposition",
         `attachment; filename="${fileSlug(collected.tripName)}-${now.toISOString().slice(0, 10)}${TRIP_FILE_EXTENSION}"`
       );
-      await writeTripArchive(collected, buildManifest(options, now), res);
+      await writeTripArchive(collected, buildManifest(options, now, collected.file), res);
       logger.info({
         operation: "trip_export",
         userId,

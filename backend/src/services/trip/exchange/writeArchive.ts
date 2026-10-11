@@ -17,7 +17,7 @@ import { buildVersion } from "../../../utils/version";
 import type { CollectedTrip } from "./collect";
 import {
   TRIP_FILE_FORMAT,
-  TRIP_FILE_VERSION,
+  tripFileVersionFor,
   manifestSchema,
   tripFileSchema,
   type ExportOptions,
@@ -37,10 +37,14 @@ export function presentFiles(collected: CollectedTrip): CollectedTrip {
   return { ...collected, file, files: present };
 }
 
-export function buildManifest(options: ExportOptions, now: Date): TripFileManifest {
+export function buildManifest(
+  options: ExportOptions,
+  now: Date,
+  file: Pick<TripFile, "bus">
+): TripFileManifest {
   return {
     format: TRIP_FILE_FORMAT,
-    formatVersion: TRIP_FILE_VERSION,
+    formatVersion: tripFileVersionFor(file),
     appVersion: buildVersion,
     exportedAt: now.toISOString(),
     options,

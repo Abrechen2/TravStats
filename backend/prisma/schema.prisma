@@ -4047,6 +4047,8 @@ model BusJourney {
 
   externalRef   String? @map("external_ref")
   importBatchId String? @map("import_batch_id")
+  /// Trip sharing: the same key on every member's copy of this entry. Null = never shared.
+  shareKey      String? @map("share_key")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -4059,6 +4061,7 @@ model BusJourney {
   documents      Document[]
 
   @@unique([userId, externalRef])
+  @@unique([userId, shareKey])
   @@index([userId, departureTime])
   @@index([status])
   @@index([tripId])

@@ -30,8 +30,9 @@ const mockRoadtrips = vi.hoisted(() => vi.fn((): unknown[] => []));
 vi.mock("../../Roadtrips/useTripRoadtrips", () => ({ useTripRoadtrips: () => mockRoadtrips() }));
 
 // Rail and rental are beta areas; each test says whether they are on.
-const visible = vi.hoisted(() => ({ rail: true, rental: true }));
+const visible = vi.hoisted(() => ({ rail: true, rental: true, bus: true }));
 vi.mock("../../../hooks/useRailVisible", () => ({ useRailVisible: () => visible.rail }));
+vi.mock("../../../hooks/useBusVisible", () => ({ useBusVisible: () => visible.bus }));
 vi.mock("../../../hooks/useRentalVisible", () => ({ useRentalVisible: () => visible.rental }));
 
 import TripOverview from "../TripOverview";
@@ -123,6 +124,39 @@ describe("TripOverview", () => {
     expect(screen.getByText(/Testcar/).closest("a")).toHaveAttribute("href", "/rentals/r1");
     expect(screen.getByText(/Teststadt Hbf/).closest("a")).toHaveAttribute("href", "/rail/j1");
     expect(screen.queryByText("trips:detail.noLinks")).not.toBeInTheDocument();
+  });
+
+  // forgejo#288/#289 sweep: the overview listed trains and rentals but not the
+  // bus ride beside them, and a bus-only trip said "nothing linked".
+  const busRide = {
+    id: "b1",
+    operator: "FlixBus",
+    lineName: "N17",
+    depStationName: "Busstadt ZOB",
+    arrStationName: "Probeburg ZOB",
+    depTimezone: "Europe/Berlin",
+    arrTimezone: "Europe/Berlin",
+    departureTime: "2026-07-01T08:00:00.000Z",
+    arrivalTime: "2026-07-01T11:00:00.000Z",
+    status: "completed",
+  };
+
+  it("lists a linked bus ride and does not call a bus-only trip empty", () => {
+    renderOverview(trip({ busJourneys: [busRide] } as Partial<Trip>));
+    expect(screen.getByText(/Busstadt ZOB/).closest("a")).toHaveAttribute("href", "/bus/b1");
+    expect(screen.getByText("trips:detail.busCount:1")).toBeInTheDocument();
+    expect(screen.queryByText("trips:detail.noLinks")).not.toBeInTheDocument();
+  });
+
+  it("keeps a bus ride of a hidden domain out", () => {
+    visible.bus = false;
+    try {
+      renderOverview(trip({ busJourneys: [busRide] } as Partial<Trip>));
+      expect(screen.queryByText(/Busstadt ZOB/)).toBeNull();
+      expect(screen.getByText("trips:detail.noLinks")).toBeInTheDocument();
+    } finally {
+      visible.bus = true;
+    }
   });
 
   it("keeps a rental of a hidden beta area out — and then says nothing is linked", () => {

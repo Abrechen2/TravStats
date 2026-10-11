@@ -10,6 +10,8 @@ export interface TripCounts {
   photos?: number;
   /** forgejo#169 — the other areas the trip page lists, so the card counts them. */
   railJourneys?: number;
+  /** forgejo#289 — bus rides, counted on the card like rail. */
+  busJourneys?: number;
   rentalBookings?: number;
   roadtrips?: number;
 }

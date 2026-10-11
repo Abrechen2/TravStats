@@ -12,6 +12,7 @@ import {
   lodgingStayFacts,
   type HouseIdentity,
   railFacts,
+  busFacts,
   rentalFacts,
   stopFacts,
 } from "./facts";
@@ -42,6 +43,7 @@ export interface CopyCounts {
   lodgingStays: number;
   cruises: number;
   railJourneys: number;
+  busJourneys: number;
   rentals: number;
   stops: number;
 }
@@ -69,6 +71,9 @@ export async function assignShareKeys(tx: DbTransaction, ownerId: string, tripId
   );
   await keyed(await tx.railJourney.findMany({ where, select: { id: true } }), (id) =>
     tx.railJourney.update({ where: { id }, data: key() })
+  );
+  await keyed(await tx.busJourney.findMany({ where, select: { id: true } }), (id) =>
+    tx.busJourney.update({ where: { id }, data: key() })
   );
   await keyed(await tx.rentalBooking.findMany({ where, select: { id: true } }), (id) =>
     tx.rentalBooking.update({ where: { id }, data: key() })
@@ -292,6 +297,38 @@ export async function copyRailJourneys(ctx: CopyContext): Promise<number> {
     const copy = await tx.railJourney.create({
       data: {
         ...railFacts(row),
+        userId: ctx.recipientId,
+        tripId: ctx.recipientTripId,
+        shareKey: key,
+      },
+      select: { id: true },
+    });
+    ctx.idMap.set(row.id, copy.id);
+    created += 1;
+  }
+  return created;
+}
+
+export async function copyBusJourneys(ctx: CopyContext): Promise<number> {
+  const { tx } = ctx;
+  const rows = await tx.busJourney.findMany({ where: ownerWhere(ctx), orderBy: { id: "asc" } });
+  const have = held(
+    await tx.busJourney.findMany({
+      where: recipientWhere(ctx, keysOf(rows)),
+      select: { id: true, shareKey: true },
+    })
+  );
+  let created = 0;
+  for (const row of rows) {
+    const key = row.shareKey as string;
+    const existing = have.get(key);
+    if (existing) {
+      ctx.idMap.set(row.id, existing);
+      continue;
+    }
+    const copy = await tx.busJourney.create({
+      data: {
+        ...busFacts(row),
         userId: ctx.recipientId,
         tripId: ctx.recipientTripId,
         shareKey: key,

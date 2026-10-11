@@ -28,7 +28,7 @@ import {
   ENTRY_FILE_NAME,
   TRIP_FILE_FORMAT,
   TRIP_FILE_LIMITS,
-  TRIP_FILE_VERSION,
+  TRIP_FILE_SUPPORTED_VERSIONS,
   manifestHeadSchema,
   manifestSchema,
   tripFileSchema,
@@ -153,13 +153,16 @@ export function readTripArchive(
   if (!head.success) {
     throw invalid(`The manifest does not name the ${TRIP_FILE_FORMAT} format`);
   }
-  if (head.data.formatVersion !== TRIP_FILE_VERSION) {
+  if (!(TRIP_FILE_SUPPORTED_VERSIONS as readonly number[]).includes(head.data.formatVersion)) {
     throw new AppError(
       `Format version ${head.data.formatVersion} is not supported`,
       422,
       "TRIP_FILE_VERSION_UNSUPPORTED",
       undefined,
-      { formatVersion: head.data.formatVersion, supported: TRIP_FILE_VERSION }
+      {
+        formatVersion: head.data.formatVersion,
+        supported: Math.max(...TRIP_FILE_SUPPORTED_VERSIONS),
+      }
     );
   }
   const manifest = manifestSchema.safeParse(rawManifest);

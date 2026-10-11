@@ -154,6 +154,40 @@ export async function seedFullTrip(userId: string, stamp: number): Promise<Seede
       seat: "61",
     },
   });
+  // A coach ride on the terminals' own clocks: 10:15 and 12:30 in Lisbon are
+  // 09:15 and 11:30 UTC in May (WEST, UTC+1). Seat, price and notes are private.
+  await prisma.busJourney.create({
+    data: {
+      userId,
+      tripId: trip.id,
+      bookingId: booking.id,
+      operator: "FlixBus",
+      lineName: "N17",
+      rideKind: "intercity",
+      depStationName: "Lisboa Sete Rios",
+      depAddress: "Av. Casal Ribeiro",
+      depLat: 38.73,
+      depLon: -9.17,
+      depCountry: "PT",
+      depTimezone: "Europe/Lisbon",
+      arrStationName: "Porto Campanhã",
+      arrLat: 41.15,
+      arrLon: -8.59,
+      arrCountry: "PT",
+      arrTimezone: "Europe/Lisbon",
+      departureTime: new Date("2026-05-08T09:15:00Z"),
+      arrivalTime: new Date("2026-05-08T11:30:00Z"),
+      depPrecision: "minute",
+      arrPrecision: "minute",
+      distanceKm: 313,
+      distanceSource: "route",
+      seat: "B7",
+      bookingReference: "FLX-4711",
+      price: 19.9,
+      currency: "EUR",
+      notes: "window side",
+    },
+  });
   await prisma.rentalBooking.create({
     data: {
       userId,

@@ -32,6 +32,7 @@ import {
   cruiseRow,
   flightRow,
   lodgingRow,
+  busRow,
   railRow,
   rentalRow,
   resolveContext,
@@ -140,7 +141,14 @@ type IdMaps = Record<EntityKind | "booking" | "place" | "stop", Map<string, stri
 
 async function attach(
   tx: DbTransaction,
-  model: "flight" | "lodgingStay" | "cruise" | "railJourney" | "rentalBooking" | "placeVisit",
+  model:
+    | "flight"
+    | "lodgingStay"
+    | "cruise"
+    | "railJourney"
+    | "busJourney"
+    | "rentalBooking"
+    | "placeVisit",
   userId: string,
   id: string,
   tripId: string,
@@ -160,6 +168,7 @@ const MODEL = {
   stay: "lodgingStay",
   cruise: "cruise",
   rail: "railJourney",
+  bus: "busJourney",
   rental: "rentalBooking",
   visit: "placeVisit",
 } as const;
@@ -247,6 +256,7 @@ async function writeAll(
     stay: new Map(),
     cruise: new Map(),
     rail: new Map(),
+    bus: new Map(),
     rental: new Map(),
     visit: new Map(),
     booking: new Map(),
@@ -383,6 +393,7 @@ const SHARED_KINDS = [
   ["stay", "lodgingStay"],
   ["cruise", "cruise"],
   ["rail", "rail"],
+  ["bus", "bus"],
   ["rental", "rental"],
   ["stop", "stop"],
 ] as const;
@@ -401,7 +412,9 @@ function bookingOfEntry(
           ? file.cruises
           : entry.kind === "rail"
             ? file.rail
-            : [];
+            : entry.kind === "bus"
+              ? file.bus
+              : [];
   return bookingOf(list.find((e) => e.key === entry.key)?.bookingKey ?? null);
 }
 
@@ -458,6 +471,10 @@ async function createEntry(
     case "rail":
       return (
         await tx.railJourney.create({ data: railRow(userId, byKey(file.rail), ctx, link), select })
+      ).id;
+    case "bus":
+      return (
+        await tx.busJourney.create({ data: busRow(userId, byKey(file.bus), ctx, link), select })
       ).id;
     case "rental":
       return (
@@ -529,6 +546,7 @@ const ENTRY_TYPE: Record<Exclude<EntityKind, "trip">, EntryRef["type"]> = {
   stay: "lodgingStay",
   cruise: "cruise",
   rail: "railJourney",
+  bus: "busJourney",
   rental: "rentalBooking",
   visit: "placeVisit",
 };

@@ -149,6 +149,7 @@ const tripListItem = tripResponse.extend({
         "Trip photos — the rows served by GET /trips/{id}/photos, linked and imported alike"
       ),
     railJourneys: z.number().int().describe("Linked train rides"),
+    busJourneys: z.number().int().describe("Linked bus rides"),
     rentalBookings: z.number().int().describe("Linked rental cars, a cancelled one excluded"),
     roadtrips: z.number().int().describe("Tour sections of kind roadtrip — a subset of `routes`"),
   }),

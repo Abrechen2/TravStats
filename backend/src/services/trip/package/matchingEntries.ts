@@ -4,6 +4,7 @@
  *
  *   rail     the provenance key, else the same operator and train number, or
  *            the same two stations, departing on the same LOCAL day
+ *   bus      rail's rule with the line name where rail has the train number
  *   rental   the provenance key, else the same provider picking up on the
  *            same local day
  *   place    the provenance key, else the nearest of the user's places within
@@ -80,6 +81,50 @@ export async function existingRail(userId: string, q: RailQuery): Promise<Existi
     (r) =>
       dayAt(r.departureTime, r.depTimezone) === q.day &&
       ((same(r.operator, q.operator) && same(r.trainNumber, q.trainNumber)) ||
+        (same(r.depStationName, q.depName) && same(r.arrStationName, q.arrName)))
+  );
+  return hit ? { id: hit.id, tripId: hit.tripId, bookingId: hit.bookingId } : null;
+}
+
+// ------------------------------------------------------------------ bus
+
+export interface BusQuery {
+  externalRef: string | null;
+  operator: string | null;
+  lineName: string | null;
+  depName: string;
+  arrName: string;
+  /** Local day of departure. */
+  day: string;
+}
+
+/** Rail's rule, on the bus table: the provenance key, else the same line of the same operator or the same two terminals, on the same local day. */
+export async function existingBus(userId: string, q: BusQuery): Promise<ExistingEntry | null> {
+  const select = { id: true, tripId: true, bookingId: true } as const;
+  if (q.externalRef) {
+    const byRef = await prisma.busJourney.findFirst({
+      where: { userId, externalRef: q.externalRef },
+      select,
+    });
+    if (byRef) return byRef;
+  }
+  const rows = await prisma.busJourney.findMany({
+    where: { userId, departureTime: windowAround(q.day) },
+    select: {
+      ...select,
+      operator: true,
+      lineName: true,
+      depStationName: true,
+      arrStationName: true,
+      departureTime: true,
+      depTimezone: true,
+    },
+    take: 50,
+  });
+  const hit = rows.find(
+    (r) =>
+      dayAt(r.departureTime, r.depTimezone) === q.day &&
+      ((same(r.operator, q.operator) && same(r.lineName, q.lineName)) ||
         (same(r.depStationName, q.depName) && same(r.arrStationName, q.arrName)))
   );
   return hit ? { id: hit.id, tripId: hit.tripId, bookingId: hit.bookingId } : null;

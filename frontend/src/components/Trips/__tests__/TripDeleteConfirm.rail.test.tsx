@@ -5,10 +5,16 @@ import { act, render, screen } from "@testing-library/react";
  * Browser acceptance 2026-09-26: the trip delete dialog listed what survives
  * (flights, cruises, stays, roadtrips) but not rail journeys, which survive
  * too (`RailJourney.trip` is SetNull). Named only where rail is shown at all.
+ * Bus rides and rentals are SetNull as well and are named on the same terms
+ * (forgejo#288 sweep).
  */
 
 const railVisible = vi.hoisted(() => ({ value: true }));
 vi.mock("../../../hooks/useRailVisible", () => ({ useRailVisible: () => railVisible.value }));
+const busVisible = vi.hoisted(() => ({ value: false }));
+const rentalVisible = vi.hoisted(() => ({ value: false }));
+vi.mock("../../../hooks/useBusVisible", () => ({ useBusVisible: () => busVisible.value }));
+vi.mock("../../../hooks/useRentalVisible", () => ({ useRentalVisible: () => rentalVisible.value }));
 vi.mock("../../../lib/api/documents", () => ({
   documentsApi: { listForEntry: vi.fn(async () => []) },
 }));
@@ -31,6 +37,20 @@ async function renderDialog(): Promise<HTMLElement> {
 describe("TripDeleteConfirm — rail journeys", () => {
   beforeEach(() => {
     railVisible.value = true;
+    busVisible.value = false;
+    rentalVisible.value = false;
+  });
+
+  it("names bus rides and rentals where those domains are shown (forgejo#288 sweep)", async () => {
+    busVisible.value = true;
+    rentalVisible.value = true;
+    expect((await renderDialog()).textContent).toContain(
+      "Flüge, Kreuzfahrten, Bahnfahrten, Busfahrten, Mietwagen, Unterkünfte und Roadtrips bleiben erhalten"
+    );
+  });
+
+  it("leaves bus rides out where the bus domain is hidden", async () => {
+    expect((await renderDialog()).textContent).not.toContain("Busfahrten");
   });
 
   it("says rail journeys are kept when rail is shown", async () => {
