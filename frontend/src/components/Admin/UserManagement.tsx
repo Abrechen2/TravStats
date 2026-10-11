@@ -79,7 +79,7 @@ export default function UserManagement({
           outside the scroller's clip, and widened the WHOLE document to
           621px on a 360px phone. */}
       <div
-        className="relative overflow-x-auto md:overflow-visible"
+        className="relative overflow-x-auto lg:overflow-visible"
         style={{
           background: "var(--ts-surface)",
           border: "1px solid var(--ts-border)",

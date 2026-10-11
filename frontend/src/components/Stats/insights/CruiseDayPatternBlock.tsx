@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 
 import { STAT_CARD_CLASS, STAT_CARD_STYLE } from "../StatCard";
+import TableScroll from "../../ui/TableScroll";
 import EvidenceCount from "./EvidenceCount";
 import { InsightHeading } from "./InsightHeading";
 import { CruiseLink } from "./cruiseLinks";
@@ -31,43 +32,45 @@ export default function CruiseDayPatternBlock({
         title={t("stats:insights.cruise.days.title")}
         topic="cruiseDays"
       />
-      <table className="w-full text-sm" aria-labelledby="cruise-insights-days">
-        <thead style={muted}>
-          <tr>
-            <th className="px-2 py-1 text-left font-medium">
-              {t("stats:insights.discovery.year")}
-            </th>
-            <th className={head}>{t("stats:insights.cruise.days.seaDays")}</th>
-            <th className={head}>{t("stats:insights.cruise.days.portDays")}</th>
-            <th className={head}>{t("stats:insights.cruise.days.types")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {[...pattern.years].reverse().map((y) => (
-            <tr key={y.year} className="border-t" style={{ borderColor: "var(--color-border)" }}>
-              <th scope="row" className="px-2 py-1 text-left font-medium">
-                {y.year}
+      <TableScroll labelledBy="cruise-insights-days">
+        <table className="w-full text-sm" aria-labelledby="cruise-insights-days">
+          <thead style={muted}>
+            <tr>
+              <th className="px-2 py-1 text-left font-medium">
+                {t("stats:insights.discovery.year")}
               </th>
-              <td className={cell}>{fmt.num(y.seaDays)}</td>
-              <td className={cell}>
-                <EvidenceCount
-                  evidenceKey="cruisePortDaysTotal"
-                  scope={{ period: "year", year: y.year }}
-                  value={y.portDays}
-                  label={`${t("stats:insights.cruise.days.portDays")} ${y.year}`}
-                />
-              </td>
-              <td className={`${cell} text-xs`}>
-                {t("stats:insights.cruise.days.typeCounts", {
-                  seaHeavy: y.seaHeavy,
-                  balanced: y.balanced,
-                  portIntensive: y.portIntensive,
-                })}
-              </td>
+              <th className={head}>{t("stats:insights.cruise.days.seaDays")}</th>
+              <th className={head}>{t("stats:insights.cruise.days.portDays")}</th>
+              <th className={head}>{t("stats:insights.cruise.days.types")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {[...pattern.years].reverse().map((y) => (
+              <tr key={y.year} className="border-t" style={{ borderColor: "var(--color-border)" }}>
+                <th scope="row" className="px-2 py-1 text-left font-medium">
+                  {y.year}
+                </th>
+                <td className={cell}>{fmt.num(y.seaDays)}</td>
+                <td className={cell}>
+                  <EvidenceCount
+                    evidenceKey="cruisePortDaysTotal"
+                    scope={{ period: "year", year: y.year }}
+                    value={y.portDays}
+                    label={`${t("stats:insights.cruise.days.portDays")} ${y.year}`}
+                  />
+                </td>
+                <td className={`${cell} text-xs`}>
+                  {t("stats:insights.cruise.days.typeCounts", {
+                    seaHeavy: y.seaHeavy,
+                    balanced: y.balanced,
+                    portIntensive: y.portIntensive,
+                  })}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableScroll>
       <ul className="mt-4 space-y-1 text-sm">
         {pattern.perCruise.map((c) => (
           <li key={c.cruise.id}>

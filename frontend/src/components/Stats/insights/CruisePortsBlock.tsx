@@ -1,6 +1,7 @@
 import type { JSX } from "react";
 
 import { STAT_CARD_CLASS, STAT_CARD_STYLE } from "../StatCard";
+import TableScroll from "../../ui/TableScroll";
 import EvidenceCount from "./EvidenceCount";
 import { InsightHeading } from "./InsightHeading";
 import { CruiseLink, CruiseLinks } from "./cruiseLinks";
@@ -36,53 +37,55 @@ export default function CruisePortsBlock({
           title={t("stats:insights.cruise.ports.title")}
           topic="cruisePorts"
         />
-        <table className="w-full text-sm" aria-labelledby="cruise-insights-ports">
-          <thead style={muted}>
-            <tr>
-              <th className="px-2 py-1 text-left font-medium">
-                {t("stats:insights.discovery.year")}
-              </th>
-              <th className={head}>{t("stats:insights.cruise.ports.cruises")}</th>
-              <th className={head}>{t("stats:insights.cruise.ports.ports")}</th>
-              <th className={head}>{t("stats:insights.cruise.ports.new")}</th>
-              <th className={head}>{t("stats:insights.cruise.ports.again")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[...ports.years].reverse().map((y) => {
-              const yearScope = { period: "year" as const, year: y.year };
-              return (
-                <tr
-                  key={y.year}
-                  className="border-t"
-                  style={{ borderColor: "var(--color-border)" }}
-                >
-                  <th scope="row" className="px-2 py-1 text-left font-medium">
-                    {y.year}
-                  </th>
-                  <td className={cell}>{fmt.num(y.cruises)}</td>
-                  <td className={cell}>{fmt.num(y.ports)}</td>
-                  <td className={cell}>
-                    <EvidenceCount
-                      evidenceKey="cruiseNewPortsCount"
-                      scope={yearScope}
-                      value={y.newPorts.length}
-                      label={`${t("stats:insights.cruise.ports.new")} ${y.year}`}
-                    />
-                  </td>
-                  <td className={cell}>
-                    <EvidenceCount
-                      evidenceKey="cruisePortRevisitCount"
-                      scope={yearScope}
-                      value={y.revisitedPorts}
-                      label={`${t("stats:insights.cruise.ports.again")} ${y.year}`}
-                    />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <TableScroll labelledBy="cruise-insights-ports">
+          <table className="w-full text-sm" aria-labelledby="cruise-insights-ports">
+            <thead style={muted}>
+              <tr>
+                <th className="px-2 py-1 text-left font-medium">
+                  {t("stats:insights.discovery.year")}
+                </th>
+                <th className={head}>{t("stats:insights.cruise.ports.cruises")}</th>
+                <th className={head}>{t("stats:insights.cruise.ports.ports")}</th>
+                <th className={head}>{t("stats:insights.cruise.ports.new")}</th>
+                <th className={head}>{t("stats:insights.cruise.ports.again")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...ports.years].reverse().map((y) => {
+                const yearScope = { period: "year" as const, year: y.year };
+                return (
+                  <tr
+                    key={y.year}
+                    className="border-t"
+                    style={{ borderColor: "var(--color-border)" }}
+                  >
+                    <th scope="row" className="px-2 py-1 text-left font-medium">
+                      {y.year}
+                    </th>
+                    <td className={cell}>{fmt.num(y.cruises)}</td>
+                    <td className={cell}>{fmt.num(y.ports)}</td>
+                    <td className={cell}>
+                      <EvidenceCount
+                        evidenceKey="cruiseNewPortsCount"
+                        scope={yearScope}
+                        value={y.newPorts.length}
+                        label={`${t("stats:insights.cruise.ports.new")} ${y.year}`}
+                      />
+                    </td>
+                    <td className={cell}>
+                      <EvidenceCount
+                        evidenceKey="cruisePortRevisitCount"
+                        scope={yearScope}
+                        value={y.revisitedPorts}
+                        label={`${t("stats:insights.cruise.ports.again")} ${y.year}`}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </TableScroll>
         {(ports.undatedCruises > 0 || ports.unresolvedCalls > 0) && (
           <p className="mt-3 text-xs" style={muted}>
             {t("stats:insights.cruise.ports.coverage", {

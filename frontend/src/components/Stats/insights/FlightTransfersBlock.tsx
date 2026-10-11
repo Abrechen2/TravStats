@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import { Link } from "react-router-dom";
 
 import { STAT_CARD_CLASS, STAT_CARD_STYLE } from "../StatCard";
+import TableScroll from "../../ui/TableScroll";
 import EvidenceCount from "./EvidenceCount";
 import { InsightHeading } from "./InsightHeading";
 import { useInsightFormat } from "./insightFormat";
@@ -78,61 +79,63 @@ export default function FlightTransfersBlock({
               record(t("stats:insights.transfers.shortest"), transfers.shortest)}
             {transfers.longest && record(t("stats:insights.transfers.longest"), transfers.longest)}
           </dl>
-          <table className="w-full text-sm" aria-labelledby="insights-transfers">
-            <thead style={muted}>
-              <tr>
-                <th className="px-2 py-1 text-left font-medium">
-                  {t("stats:insights.discovery.year")}
-                </th>
-                <th className="px-2 py-1 text-right font-medium">
-                  {t("stats:insights.transfers.count")}
-                </th>
-                <th className="px-2 py-1 text-right font-medium">
-                  {t("stats:insights.transfers.median")}
-                </th>
-                <th className="px-2 py-1 text-right font-medium">
-                  {t("stats:insights.transfers.shortest")}
-                </th>
-                <th className="px-2 py-1 text-right font-medium">
-                  {t("stats:insights.transfers.longest")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...transfers.years].reverse().map((y) => (
-                <tr
-                  key={y.year}
-                  className="border-t"
-                  style={{ borderColor: "var(--color-border)" }}
-                >
-                  <th scope="row" className="px-2 py-1 text-left font-medium">
-                    {y.year}
+          <TableScroll labelledBy="insights-transfers">
+            <table className="w-full text-sm" aria-labelledby="insights-transfers">
+              <thead style={muted}>
+                <tr>
+                  <th className="px-2 py-1 text-left font-medium">
+                    {t("stats:insights.discovery.year")}
                   </th>
-                  <td className="px-2 py-1 text-right tabular-nums">
-                    <EvidenceCount
-                      evidenceKey="flightTransferCount"
-                      scope={{ period: "year", year: y.year }}
-                      value={y.count}
-                      label={`${t("stats:insights.transfers.measured")} ${y.year}`}
-                    />
-                  </td>
-                  <td className="px-2 py-1 text-right tabular-nums">
-                    {fmt.duration(y.medianMinutes)}
-                  </td>
-                  <td className="px-2 py-1 text-right tabular-nums">
-                    <Link to={`/flights/${y.shortest.arrivingFlightId}`} className="underline">
-                      {fmt.duration(y.shortest.minutes)}
-                    </Link>
-                  </td>
-                  <td className="px-2 py-1 text-right tabular-nums">
-                    <Link to={`/flights/${y.longest.arrivingFlightId}`} className="underline">
-                      {fmt.duration(y.longest.minutes)}
-                    </Link>
-                  </td>
+                  <th className="px-2 py-1 text-right font-medium">
+                    {t("stats:insights.transfers.count")}
+                  </th>
+                  <th className="px-2 py-1 text-right font-medium">
+                    {t("stats:insights.transfers.median")}
+                  </th>
+                  <th className="px-2 py-1 text-right font-medium">
+                    {t("stats:insights.transfers.shortest")}
+                  </th>
+                  <th className="px-2 py-1 text-right font-medium">
+                    {t("stats:insights.transfers.longest")}
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {[...transfers.years].reverse().map((y) => (
+                  <tr
+                    key={y.year}
+                    className="border-t"
+                    style={{ borderColor: "var(--color-border)" }}
+                  >
+                    <th scope="row" className="px-2 py-1 text-left font-medium">
+                      {y.year}
+                    </th>
+                    <td className="px-2 py-1 text-right tabular-nums">
+                      <EvidenceCount
+                        evidenceKey="flightTransferCount"
+                        scope={{ period: "year", year: y.year }}
+                        value={y.count}
+                        label={`${t("stats:insights.transfers.measured")} ${y.year}`}
+                      />
+                    </td>
+                    <td className="px-2 py-1 text-right tabular-nums">
+                      {fmt.duration(y.medianMinutes)}
+                    </td>
+                    <td className="px-2 py-1 text-right tabular-nums">
+                      <Link to={`/flights/${y.shortest.arrivingFlightId}`} className="underline">
+                        {fmt.duration(y.shortest.minutes)}
+                      </Link>
+                    </td>
+                    <td className="px-2 py-1 text-right tabular-nums">
+                      <Link to={`/flights/${y.longest.arrivingFlightId}`} className="underline">
+                        {fmt.duration(y.longest.minutes)}
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </TableScroll>
         </>
       )}
       {c.gaps > 0 && (

@@ -61,7 +61,7 @@ export default function InvitationManagement({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
         <div>
           <h2 className="text-lg font-semibold text-(--text-primary)">
             {t("admin:invitations.invitationLinks")}
@@ -70,7 +70,7 @@ export default function InvitationManagement({
               sending one — single use, seven days — now simply stand here. */}
           <p className="text-sm text-(--text-muted) mt-1">{t("admin:invitations.description")}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button onClick={onCreateLink} className="btn-primary">
             {t("admin:invitations.actions.createLink")}
           </button>

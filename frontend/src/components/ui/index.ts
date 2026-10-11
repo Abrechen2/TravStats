@@ -19,5 +19,6 @@ export { default as Dialog } from "./Dialog";
 export { default as Toggletip } from "./Toggletip";
 export { Field, Input, TextArea, Select, Switch } from "./Field";
 export { default as EmptyState, type EmptyStateKind } from "./EmptyState";
+export { default as TableScroll } from "./TableScroll";
 export { Table, TableRow, ListRow, type TableColumn } from "./Table";
 export { alpha, token, MONO_KEYS, STATUS_TOKEN, DOMAIN_TOKEN, DASHED_STATUSES } from "./tokens";

@@ -439,7 +439,7 @@ export default function LodgingDetailPage(): JSX.Element {
             <TripPhotoWindowStrip entry="lodging" id={lodging.id} />
           )}
           <section className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="t-label-mono">
                 {t("lodging:detail.stays")} · {lodging.stays.length}
               </h2>

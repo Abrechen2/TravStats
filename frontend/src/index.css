@@ -49,6 +49,34 @@
   color utility to any element that depends on these defaults.
 */
 @layer base {
+  /*
+    A fieldset's UA default is `min-inline-size: min-content`, so it can
+    never be narrower than its widest unbreakable child and pushes a form past
+    its card on a phone (forgejo#292, the WebDAV form). Every fieldset in the
+    app wants to shrink like any other block.
+  */
+  fieldset {
+    min-inline-size: 0;
+  }
+
+  /*
+    A long unbroken string — a URL in a hint, a booking reference, a file name —
+    must wrap inside its box instead of widening the page (forgejo#292: the
+    WebDAV hint "https://…" at 360 px). `break-word`, not `anywhere`: it only
+    acts when the box is already too narrow and leaves min-content sizing alone,
+    so a flex item is not squeezed to a letter wide before its neighbours give.
+  */
+  p,
+  li,
+  dd,
+  h1,
+  h2,
+  h3,
+  h4,
+  label {
+    overflow-wrap: break-word;
+  }
+
   *,
   ::after,
   ::before,
