@@ -6,7 +6,7 @@ import { Prisma } from "../prisma";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { busCreationLimiter } from "../middleware/rateLimit";
 import { busRouteLimiter } from "../middleware/busRouteLimiter";
-import { rejectDemo } from "../middleware/demoGuard";
+import { isSharedDemoUser, rejectDemo } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";
 import {
   busQuerySchema,
@@ -200,7 +200,11 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
 router.get("/routing", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
-    res.json({ success: true, data: await describeRoutingAvailability(userId) });
+    // The demo account cannot spend the routing key, so for it there is none.
+    const availability = (await isSharedDemoUser(userId))
+      ? { configured: false, providerId: null }
+      : await describeRoutingAvailability(userId);
+    res.json({ success: true, data: availability });
   } catch (err) {
     next(err);
   }

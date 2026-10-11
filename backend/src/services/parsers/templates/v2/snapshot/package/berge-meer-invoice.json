@@ -6,66 +6,41 @@
     "name": "Berge & Meer",
     "kind": "tour-operator",
     "keys": {
-      "senderDomains": [
-        "berge-meer.de"
-      ]
+      "senderDomains": ["berge-meer.de"]
     }
   },
-  "markets": [
-    "DE",
-    "AT",
-    "CH"
-  ],
+  "markets": ["DE", "AT", "CH"],
   "match": {
-    "markers": [
-      "Berge & Meer"
-    ],
-    "anchors": [
-      "Gesamtbetrag",
-      "IHRE FLUGSTRECKE"
-    ]
+    "markers": ["Berge & Meer"],
+    "anchors": ["Gesamtbetrag", "IHRE FLUGSTRECKE"]
   },
   "extraction": {
     "fields": {
       "bookingReference": {
-        "patterns": [
-          "^Buchungs-Nr\\.\\s+(?<v>[A-Z0-9]+)"
-        ]
+        "patterns": ["^Buchungs-Nr\\.\\s+(?<v>[A-Z0-9]+)"]
       },
       "issuedOn": {
-        "patterns": [
-          "^(?:Rechnungsdatum|Datum)[:\\s]+(\\d{2}\\.\\d{2}\\.(?:\\d{4}|\\d{2}))\\b"
-        ],
+        "patterns": ["^(?:Rechnungsdatum|Datum)[:\\s]+(\\d{2}\\.\\d{2}\\.(?:\\d{4}|\\d{2}))\\b"],
         "transform": "date"
       },
       "tripName": {
-        "patterns": [
-          "^Sie haben bei uns gebucht:\\s*(.+)$"
-        ],
+        "patterns": ["^Sie haben bei uns gebucht:\\s*(.+)$"],
         "transform": "text"
       },
       "startDate": {
-        "patterns": [
-          "^(?:Ihr Reisetag:|Reisedatum)\\s*(\\d{2}\\.\\d{2}\\.(?:\\d{4}|\\d{2}))\\b"
-        ],
+        "patterns": ["^(?:Ihr Reisetag:|Reisedatum)\\s*(\\d{2}\\.\\d{2}\\.(?:\\d{4}|\\d{2}))\\b"],
         "transform": "date"
       },
       "travellers": {
-        "patterns": [
-          "\\bfür\\s+(\\d+)\\s+Erw\\."
-        ],
+        "patterns": ["\\bfür\\s+(\\d+)\\s+Erw\\."],
         "transform": "integer"
       },
       "totalPrice": {
-        "patterns": [
-          "^Gesamtbetrag\\s+([\\d.,]+)\\s+[A-Z]{3}"
-        ],
+        "patterns": ["^Gesamtbetrag\\s+([\\d.,]+)\\s+[A-Z]{3}"],
         "transform": "money"
       },
       "currency": {
-        "patterns": [
-          "^Gesamtbetrag\\s+[\\d.,]+\\s+([A-Z]{3})\\b"
-        ],
+        "patterns": ["^Gesamtbetrag\\s+[\\d.,]+\\s+([A-Z]{3})\\b"],
         "transform": "currency"
       }
     },
@@ -112,13 +87,7 @@
         }
       }
     },
-    "required": [
-      "bookingReference",
-      "issuedOn",
-      "totalPrice",
-      "currency",
-      "flights"
-    ]
+    "required": ["bookingReference", "issuedOn", "totalPrice", "currency", "flights"]
   },
   "testCases": [
     {

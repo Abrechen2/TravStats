@@ -15,6 +15,7 @@ import {
   describeRoutingAvailability,
   resolveRouteProvider,
 } from "../../services/tour/routing/resolveProvider";
+import { clearRouteAllState } from "../../services/bus/busRouteAgain";
 import { clearJobs, settleAllJobs } from "../../services/jobs/jobRegistry";
 import { ROUTE_FALLBACK_REASONS } from "../../services/tour/routing/types";
 import type { RouteFailure, RouteProvider, RouteResult } from "../../services/tour/routing/types";
@@ -368,6 +369,7 @@ describe("Bus rides — road routing (B3)", () => {
           .jobId
       );
       route.mockClear();
+      clearRouteAllState(); // past the restart cool-down
       const job = await poll(
         (await request(app).post("/api/v1/bus/route-straight").set("Cookie", cookie)).body.data
           .jobId

@@ -91,6 +91,18 @@ export const RATE_LIMITS = {
   // Bus rides take rail's budget, for rail's reason: a later import saves one
   // ride per request, and a first sitting is years of tickets.
   BUS_CREATION_MAX: 300, // rides per hour
+  /**
+   * Road-routing provider calls per UTC day (`services/tour/routing/providerBudget.ts`).
+   * The instance cap sits below OpenRouteService's free tier (2,000 requests a
+   * day) so tours and roadtrips keep headroom; the per-user cap keeps one
+   * account (or a looped client) from spending the instance's share alone.
+   * Counted in memory: a restart resets the day, which at worst doubles one
+   * day's spend, never makes it unbounded.
+   */
+  ROUTING_CALLS_PER_USER_PER_DAY: 300,
+  ROUTING_CALLS_PER_INSTANCE_PER_DAY: 1500,
+  /** A finished bulk-routing pass answers a restart with its own result for this long. */
+  BUS_ROUTE_ALL_COOLDOWN_MS: 10 * 60 * 1000,
   BUS_ROUTE_MAX: 60, // 'route again' / 'route all' requests per hour — each spends the provider's quota
 
   // Standalone notes (forgejo#137): rail's budget. The Companion keeps notes

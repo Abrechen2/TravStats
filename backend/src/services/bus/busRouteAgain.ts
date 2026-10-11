@@ -1,7 +1,8 @@
 import { propagateWrite, shareSnapshot } from "../sharing/propagate";
 import { prisma } from "../../db";
 import type { RouteFallbackReason } from "../tour/routing/types";
-import { startJob, type JobView } from "../jobs/jobRegistry";
+import { RATE_LIMITS } from "../../config/constants";
+import { getJob, startJob, type JobView } from "../jobs/jobRegistry";
 import { describeRoutingAvailability } from "../tour/routing/resolveProvider";
 import {
   busGeometryColumns,
@@ -109,6 +110,14 @@ export interface BusRouteAllResult {
 
 /** The running bulk job of this user, if any — a second click joins it. */
 const running = new Map<string, JobView>();
+/** The last finished pass per user, for the restart cool-down. */
+const finished = new Map<string, { jobId: string; at: number }>();
+
+/** Test seam. */
+export function clearRouteAllState(): void {
+  running.clear();
+  finished.clear();
+}
 
 async function routeAll(
   userId: string,
@@ -155,9 +164,17 @@ export class BusRoutingUnavailableError extends Error {}
  * outlast the browser's request timeout). Idempotent: while this user's pass
  * runs, asking again answers that same job.
  */
-export async function startRouteAllJob(userId: string): Promise<JobView> {
+export async function startRouteAllJob(userId: string, now: number = Date.now()): Promise<JobView> {
   const current = running.get(userId);
   if (current) return current;
+  // A finished pass is not restarted at once: inside the cool-down the
+  // previous result is the answer. (The daily budget bounds the total;
+  // this keeps a finished pass from being re-run only to fail the same way.)
+  const last = finished.get(userId);
+  if (last && now - last.at < RATE_LIMITS.BUS_ROUTE_ALL_COOLDOWN_MS) {
+    const previous = getJob(last.jobId, userId);
+    if (previous) return previous;
+  }
   const availability = await describeRoutingAvailability(userId);
   if (!availability.configured) throw new BusRoutingUnavailableError();
   const job = startJob("bus.routeStraight", userId, async (reportProgress) => {
@@ -165,6 +182,7 @@ export async function startRouteAllJob(userId: string): Promise<JobView> {
       return await routeAll(userId, reportProgress);
     } finally {
       running.delete(userId);
+      finished.set(userId, { jobId: job.id, at: Date.now() });
     }
   });
   running.set(userId, job);

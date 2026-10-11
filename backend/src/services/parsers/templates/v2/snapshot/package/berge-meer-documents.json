@@ -6,48 +6,29 @@
     "name": "Berge & Meer",
     "kind": "tour-operator",
     "keys": {
-      "senderDomains": [
-        "berge-meer.de"
-      ]
+      "senderDomains": ["berge-meer.de"]
     }
   },
-  "markets": [
-    "DE",
-    "AT",
-    "CH"
-  ],
+  "markets": ["DE", "AT", "CH"],
   "match": {
-    "markers": [
-      "Berge & Meer"
-    ],
-    "anchors": [
-      "Ihr Reiseablauf",
-      "Details zu Ihren Unterkünften"
-    ]
+    "markers": ["Berge & Meer"],
+    "anchors": ["Ihr Reiseablauf", "Details zu Ihren Unterkünften"]
   },
   "extraction": {
     "fields": {
       "bookingReference": {
-        "patterns": [
-          "^Buchungs-Nr\\.\\s+(?<v>[A-Z0-9]+)"
-        ]
+        "patterns": ["^Buchungs-Nr\\.\\s+(?<v>[A-Z0-9]+)"]
       },
       "issuedOn": {
-        "patterns": [
-          "^(?:Rechnungsdatum|Datum)[:\\s]+(\\d{2}\\.\\d{2}\\.(?:\\d{4}|\\d{2}))\\b"
-        ],
+        "patterns": ["^(?:Rechnungsdatum|Datum)[:\\s]+(\\d{2}\\.\\d{2}\\.(?:\\d{4}|\\d{2}))\\b"],
         "transform": "date"
       },
       "tripName": {
-        "patterns": [
-          "^Sie haben bei uns gebucht:\\s*(.+)$"
-        ],
+        "patterns": ["^Sie haben bei uns gebucht:\\s*(.+)$"],
         "transform": "text"
       },
       "startDate": {
-        "patterns": [
-          "^(?:Ihr Reisetag:|Reisedatum)\\s*(\\d{2}\\.\\d{2}\\.(?:\\d{4}|\\d{2}))\\b"
-        ],
+        "patterns": ["^(?:Ihr Reisetag:|Reisedatum)\\s*(\\d{2}\\.\\d{2}\\.(?:\\d{4}|\\d{2}))\\b"],
         "transform": "date"
       }
     },
@@ -103,21 +84,15 @@
         "splitPattern": "^\\d{2}\\.\\d{2}\\.\\d{2} - \\d{2}\\.\\d{2}\\.\\d{2} ",
         "fields": {
           "checkIn": {
-            "patterns": [
-              "^(\\d{2}\\.\\d{2}\\.\\d{2}) - \\d{2}\\.\\d{2}\\.\\d{2} "
-            ],
+            "patterns": ["^(\\d{2}\\.\\d{2}\\.\\d{2}) - \\d{2}\\.\\d{2}\\.\\d{2} "],
             "transform": "date"
           },
           "checkOut": {
-            "patterns": [
-              "^\\d{2}\\.\\d{2}\\.\\d{2} - (\\d{2}\\.\\d{2}\\.\\d{2}) "
-            ],
+            "patterns": ["^\\d{2}\\.\\d{2}\\.\\d{2} - (\\d{2}\\.\\d{2}\\.\\d{2}) "],
             "transform": "date"
           },
           "name": {
-            "patterns": [
-              "^\\d{2}\\.\\d{2}\\.\\d{2} - \\d{2}\\.\\d{2}\\.\\d{2} (.+)$"
-            ],
+            "patterns": ["^\\d{2}\\.\\d{2}\\.\\d{2} - \\d{2}\\.\\d{2}\\.\\d{2} (.+)$"],
             "transform": "text"
           },
           "address": {
@@ -144,11 +119,7 @@
         }
       }
     },
-    "required": [
-      "bookingReference",
-      "issuedOn",
-      "stays"
-    ]
+    "required": ["bookingReference", "issuedOn", "stays"]
   },
   "testCases": [
     {
