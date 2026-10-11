@@ -97,6 +97,7 @@ export type ApiErrorCode =
   /** A bus arrival instant before its departure (spec 2026-10-07-bus-domain-design §3.2).
    *  `field` is `arrivalLocal`. */
   | "BUS_ARRIVAL_BEFORE_DEPARTURE"
+  | "BUS_NO_ROUTING_PROVIDER"
   // Car rentals (spec 2026-10-01-rental-domain-design).
   | "RENTAL_INVALID_INPUT"
   | "RENTAL_INVALID_QUERY"

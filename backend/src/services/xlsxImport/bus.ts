@@ -22,6 +22,7 @@ import { Prisma, type BusJourney } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import { BUS_RIDE_KINDS, BUS_STATUSES, type UpdateBusJourneyInput } from "../../schemas/bus";
 import { mergeBusJourney } from "../bus/busJourneyWrite";
+import { withRoutedDistance } from "../bus/busRouting";
 import { instantToWallClock } from "../rail/railJourneyWrite";
 import { linkRowsFor, resolveCompanions } from "../companionService";
 import { recomputeTripStatus } from "../tripStatusService";
@@ -178,7 +179,12 @@ function derivedColumns(
 ): Prisma.BusJourneyUncheckedUpdateInput {
   const state = mergeBusJourney(stored, input);
   const moved = input.departureStation !== undefined || input.arrivalStation !== undefined;
-  if (!stored || !moved) return state;
+  if (!stored) return state;
+  // A terminal that did not move leaves the frozen road line AND its routed
+  // length alone (the merge alone would relabel the length "great_circle"
+  // under a road line). An import never calls a routing provider: a moved
+  // terminal drops the line, and "route all" in the logbook fetches it again.
+  if (!moved) return withRoutedDistance(state, stored, { kind: "unchanged" });
   return { ...state, geometry: Prisma.DbNull, geometrySource: "straight" };
 }
 

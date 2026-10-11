@@ -329,6 +329,7 @@
     "rentalSame": "Rental car · returned where picked up (one point)",
     "rentalEnds": "Rental car · pickup hollow, return filled",
     "rentalOneWay": "Rental car · one-way, not the route driven",
+    "bus": "Bus",
     "busRoad": "Bus · road route",
     "busStraight": "Bus · straight line"
   },

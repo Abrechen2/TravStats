@@ -172,7 +172,7 @@
       "railKmMeasured": "Strecke",
       "railKmStraight": "Luftlinie",
       "busRides": "Busfahrten",
-      "busKmMeasured": "Strecke",
+      "busKmMeasured": "Strecke (Straße oder Ticket)",
       "busKmStraight": "Luftlinie"
     },
     "topItems": {

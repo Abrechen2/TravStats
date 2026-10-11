@@ -70,10 +70,24 @@ vi.mock("../../../lib/api", () => ({
 }));
 const create = vi.fn();
 const update = vi.fn();
+const geometryReport = vi.hoisted(() => ({ value: null as unknown }));
+const routingMock = vi.hoisted(() => vi.fn());
+vi.mock("../BusNoRoutingNote", () => ({
+  BusNoRoutingNote: () => <p data-testid="bus-form-no-routing">no routing</p>,
+}));
 vi.mock("../../../lib/api/bus", () => ({
   busApi: {
     create: (...a: unknown[]) => create(...a),
     update: (...a: unknown[]) => update(...a),
+    createReported: async (...a: unknown[]) => ({
+      ride: await create(...a),
+      geometry: geometryReport.value,
+    }),
+    updateReported: async (...a: unknown[]) => ({
+      ride: await update(...a),
+      geometry: geometryReport.value,
+    }),
+    routing: () => routingMock(),
     entrySuggestions: () => Promise.resolve({ operators: [], fareClasses: [], terminals: [] }),
   },
 }));
@@ -131,6 +145,9 @@ async function readyForm(props: Parameters<typeof renderForm>[0] = {}): Promise<
 
 describe("BusFormModal — shared form blocks", () => {
   beforeEach(() => {
+    geometryReport.value = null;
+    routingMock.mockReset();
+    routingMock.mockResolvedValue({ configured: true, providerId: "graphhopper" });
     create.mockReset();
     update.mockReset();
     getAllTrips.mockReset().mockResolvedValue([]);

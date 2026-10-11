@@ -172,7 +172,7 @@
       "railKmMeasured": "Track",
       "railKmStraight": "Straight line",
       "busRides": "Bus rides",
-      "busKmMeasured": "Distance",
+      "busKmMeasured": "Distance (road or ticket)",
       "busKmStraight": "Straight line"
     },
     "topItems": {

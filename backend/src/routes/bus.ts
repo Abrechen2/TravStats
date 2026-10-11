@@ -5,6 +5,8 @@ import { prisma } from "../db";
 import { Prisma } from "../prisma";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { busCreationLimiter } from "../middleware/rateLimit";
+import { busRouteLimiter } from "../middleware/busRouteLimiter";
+import { rejectDemo } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";
 import {
   busQuerySchema,
@@ -16,6 +18,21 @@ import {
 } from "../schemas/bus";
 import { mergeBusJourney } from "../services/bus/busJourneyWrite";
 import { withBusTimes } from "../services/bus/timesDto";
+import {
+  busGeometryColumns,
+  busGeometryReport,
+  fetchBusLine,
+  resolveEditedBusLine,
+  withRoutedDistance,
+  writtenLine,
+  type BusLineEdit,
+} from "../services/bus/busRouting";
+import {
+  BusRoutingUnavailableError,
+  routeStraightRide,
+  startRouteAllJob,
+} from "../services/bus/busRouteAgain";
+import { describeRoutingAvailability } from "../services/tour/routing/resolveProvider";
 import { recomputeTripStatus } from "../services/tripStatusService";
 import { busYear } from "../shared/busCounting";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
@@ -174,6 +191,40 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   }
 });
 
+/**
+ * Does this instance have a routing provider? The form says once, plainly,
+ * when it has none ("without one, rides stay a straight line"). Never leaks a
+ * key or a URL — only whether routing works and which provider answers.
+ */
+router.get("/routing", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    res.json({ success: true, data: await describeRoutingAvailability(userId) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/** Route every straight ride as a background job; per-ride outcomes are the job's result. */
+router.post(
+  "/route-straight",
+  busRouteLimiter,
+  rejectDemo,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = requireUser(req);
+      const job = await startRouteAllJob(userId);
+      res.status(202).json({ success: true, data: { jobId: job.id } });
+    } catch (err) {
+      next(
+        err instanceof BusRoutingUnavailableError
+          ? new AppError("This instance has no routing provider", 409, "BUS_NO_ROUTING_PROVIDER")
+          : err
+      );
+    }
+  }
+);
+
 router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
@@ -208,10 +259,17 @@ router.post(
             where: { id, userId },
             include: BUS_INCLUDE,
           });
-          return ride && withBusTimes(ride);
+          return (
+            ride && {
+              ride: withBusTimes(ride),
+              report: busGeometryReport({ kind: "unchanged" }, ride.geometrySource),
+            }
+          );
         },
       });
-      res.status(created ? 201 : 200).json({ success: true, data: result });
+      res
+        .status(created ? 201 : 200)
+        .json({ success: true, data: result.ride, meta: { geometry: result.report } });
     } catch (err) {
       next(err);
     }
@@ -226,7 +284,12 @@ async function createBusRide(userId: string, body: unknown, claim: ClaimClientRe
   await assertReferencesOwned(userId, { tripId: input.tripId, bookingId: input.bookingId });
   const documentIds = await takeDocumentIds(userId, body);
 
-  const state = mergeBusJourney(null, input);
+  const merged = mergeBusJourney(null, input);
+  // Fetched once and frozen with the row; a failure stores the chord and says
+  // why in `meta.geometry`. Bounded by a timeout well under the client's.
+  const line = await fetchBusLine(userId, merged);
+  const edit: BusLineEdit = { kind: "fetched", line };
+  const state = withRoutedDistance(merged, null, edit);
   const companions = await resolveCompanions(userId, input.companions ?? []);
   const fxColumns = await fxColumnsFor(
     { amount: input.price, currency: input.currency, date: state.departureTime },
@@ -238,6 +301,7 @@ async function createBusRide(userId: string, body: unknown, claim: ClaimClientRe
       data: {
         ...plainColumns(input),
         ...state,
+        ...busGeometryColumns(line),
         ...fxColumns,
         userId,
         companions: companions.map((c) => c.displayName),
@@ -259,7 +323,7 @@ async function createBusRide(userId: string, body: unknown, claim: ClaimClientRe
   await linkDocuments(userId, documentIds, { type: "busJourney", id: ride.id });
   await restatusTrips(ride.tripId);
   logger.info({ operation: "bus_journey_create", busJourneyId: ride.id, userId });
-  return withBusTimes(ride);
+  return { ride: withBusTimes(ride), report: busGeometryReport(edit, "straight") };
 }
 
 router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -273,7 +337,12 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     const input = parsed.data;
     await assertReferencesOwned(userId, { tripId: input.tripId, bookingId: input.bookingId });
 
-    const state = mergeBusJourney(existing, input);
+    const merged = mergeBusJourney(existing, input);
+    // Fetched again only when a terminal's coordinates changed; a failed
+    // re-fetch keeps the frozen road line (resolveEditedBusLine).
+    const edit = await resolveEditedBusLine(userId, existing, merged);
+    const state = withRoutedDistance(merged, existing, edit);
+    const written = writtenLine(edit);
     const resolved =
       input.companions !== undefined
         ? await resolveCompanions(userId, input.companions)
@@ -313,6 +382,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
         data: {
           ...plainColumns(input),
           ...state,
+          ...(written && busGeometryColumns(written)),
           ...fxColumns,
           ...(resolved !== undefined && { companions: resolved.map((c) => c.displayName) }),
         },
@@ -321,11 +391,41 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     });
 
     await restatusTrips(existing.tripId, ride.tripId);
-    res.json({ success: true, data: withBusTimes(ride) });
+    res.json({
+      success: true,
+      data: withBusTimes(ride),
+      meta: { geometry: busGeometryReport(edit, existing.geometrySource) },
+    });
   } catch (err) {
     next(err);
   }
 });
+
+/**
+ * "Route again": give one straight ride its road line now. 200 in every case
+ * that is not a refusal — a provider that did not deliver is `outcome:
+ * straight` with its reason, exactly as on save, never a 5xx for the ride.
+ * Idempotent: a ride that already has its line answers `unchanged`.
+ */
+router.post(
+  "/:id/route",
+  busRouteLimiter,
+  rejectDemo,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = requireUser(req);
+      const report = await routeStraightRide(userId, req.params.id);
+      if (!report) throw new AppError("Bus ride not found", 404);
+      const ride = await prisma.busJourney.findFirstOrThrow({
+        where: { id: req.params.id, userId },
+        include: BUS_INCLUDE,
+      });
+      res.json({ success: true, data: withBusTimes(ride), meta: { geometry: report } });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

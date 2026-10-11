@@ -61,15 +61,30 @@ vi.mock("../../../lib/api", () => ({
 const create = vi.fn();
 const update = vi.fn();
 const entrySuggestions = vi.fn();
+const geometryReport = vi.hoisted(() => ({ value: null as unknown }));
+const routingMock = vi.hoisted(() => vi.fn());
+vi.mock("../BusNoRoutingNote", () => ({
+  BusNoRoutingNote: () => <p data-testid="bus-form-no-routing">no routing</p>,
+}));
 vi.mock("../../../lib/api/bus", () => ({
   busApi: {
     create: (...a: unknown[]) => create(...a),
     update: (...a: unknown[]) => update(...a),
+    createReported: async (...a: unknown[]) => ({
+      ride: await create(...a),
+      geometry: geometryReport.value,
+    }),
+    updateReported: async (...a: unknown[]) => ({
+      ride: await update(...a),
+      geometry: geometryReport.value,
+    }),
+    routing: () => routingMock(),
     entrySuggestions: (...a: unknown[]) => entrySuggestions(...a),
   },
 }));
 
 import { BusFormModal } from "../BusFormModal";
+import { useToastStore } from "../../../store/toastStore";
 import type { BusJourney } from "../../../types/bus";
 import { rideFixture } from "./busFixture";
 
@@ -109,6 +124,9 @@ function typeDeparture(value: string): void {
 
 describe("BusFormModal", () => {
   beforeEach(() => {
+    geometryReport.value = null;
+    routingMock.mockReset();
+    routingMock.mockResolvedValue({ configured: true, providerId: "graphhopper" });
     create.mockReset();
     update.mockReset();
     entrySuggestions.mockReset();
@@ -608,6 +626,67 @@ describe("BusFormModal", () => {
         "r1",
         expect.objectContaining({ departureLocal: "2026-10-25T02:30", departureFold: "later" })
       );
+    });
+  });
+
+  describe("road routing (B3)", () => {
+    const saveNewRide = async (): Promise<void> => {
+      create.mockResolvedValue({ id: "new" });
+      await renderModal(null);
+      pickBothTerminals();
+      typeDeparture("2026-09-20T09:00");
+      fireEvent.click(saveButton());
+      await waitFor(() => expect(create).toHaveBeenCalled());
+      await settle();
+    };
+
+    beforeEach(() => useToastStore.getState().clearToasts());
+
+    it("says once, plainly, that this instance has no routing provider", async () => {
+      routingMock.mockResolvedValue({ configured: false, providerId: null });
+      await renderModal(null);
+      expect(await screen.findByTestId("bus-form-no-routing")).toBeInTheDocument();
+    });
+
+    it("says nothing about routing where a provider exists, or while that is unknown", async () => {
+      await renderModal(null);
+      expect(screen.queryByTestId("bus-form-no-routing")).toBeNull();
+      routingMock.mockRejectedValue(new Error("offline"));
+      await renderModal(null);
+      expect(screen.queryByTestId("bus-form-no-routing")).toBeNull();
+    });
+
+    it("tells the user why the road did not come, in words, after a save that fell back", async () => {
+      geometryReport.value = {
+        outcome: "straight",
+        geometrySource: "straight",
+        fallback: "rate_limited",
+      };
+      await saveNewRide();
+      const toasts = useToastStore.getState().toasts;
+      expect(toasts).toHaveLength(1);
+      expect(toasts[0].type).toBe("warning");
+      expect(toasts[0].message).toContain("bus:routing.savedStraight");
+    });
+
+    it("says the stored road line stayed when a re-fetch failed", async () => {
+      geometryReport.value = {
+        outcome: "kept",
+        geometrySource: "road",
+        fallback: "provider_error",
+      };
+      await saveNewRide();
+      expect(useToastStore.getState().toasts[0].message).toContain("bus:routing.savedKept");
+    });
+
+    it("does not repeat 'no provider' as a toast on every save — the form said it already", async () => {
+      geometryReport.value = {
+        outcome: "straight",
+        geometrySource: "straight",
+        fallback: "no_provider",
+      };
+      await saveNewRide();
+      expect(useToastStore.getState().toasts).toHaveLength(0);
     });
   });
 });

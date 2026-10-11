@@ -15,14 +15,23 @@ import {
 import type { MissingStep } from "../form";
 import { useTripPreselection } from "../../hooks/useTripPreselection";
 import { useBusEntrySuggestions } from "../../hooks/useBusEntrySuggestions";
+import { useBusRouting } from "../../hooks/useBusRouting";
 import { useTranslation } from "../../hooks/useTranslation";
 import { busApi } from "../../lib/api/bus";
 import { tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
+import { saveGeometryNotice } from "../../lib/bus/busRoutingWords";
+import { useToastStore } from "../../store/toastStore";
 import { isOutcomeUnknownSaveError, isTransientSaveError } from "../../lib/saveErrorMessage";
 import type { Trip } from "../../types";
-import { BUS_RIDE_KINDS, type BusJourney, type BusRideKind } from "../../types/bus";
+import {
+  BUS_RIDE_KINDS,
+  type BusGeometryReport,
+  type BusJourney,
+  type BusRideKind,
+} from "../../types/bus";
 import { BusStationField, type BusStationDraft } from "./BusStationField";
+import { BusNoRoutingNote } from "./BusNoRoutingNote";
 import { BusTerminalChips } from "./BusTerminalChips";
 import { BusTimeField } from "./BusTimeField";
 import { BusFormDetails } from "./BusFormDetails";
@@ -110,6 +119,9 @@ export function BusFormModal({
     badArrivalCoordinate: arrBad,
   });
   const saving = useSaveOnce<BusJourney>({ afterSaveFailedKey });
+  const addToast = useToastStore((s) => s.addToast);
+  // Unknown (null) says nothing: only a measured "no provider" is worth a sentence.
+  const routing = useBusRouting();
   const failure = useFormFailure(JSON.stringify(draft));
 
   const set = <K extends keyof BusFormDraft>(key: K, value: BusFormDraft[K]): void =>
@@ -203,9 +215,20 @@ export function BusFormModal({
     // stored once the API accepts it, and a parent whose refetch fails must
     // not turn that into "nicht gespeichert" — the next click would file the
     // ride a second time. `useSaveOnce` sends nothing after a success.
+    // The road line is fetched by the save; when it did not come, the user is
+    // told why (never a raw server string) — see `saveGeometryNotice`.
+    let report: BusGeometryReport | null = null;
     const outcome = await saving.save(
-      () => (journey ? busApi.update(journey.id, input) : busApi.create(input)),
+      async () => {
+        const result = await (journey
+          ? busApi.updateReported(journey.id, input)
+          : busApi.createReported(input));
+        report = result.geometry;
+        return result.ride;
+      },
       async (saved) => {
+        const notice = saveGeometryNotice(report);
+        if (notice) addToast("warning", t(notice.key, { reason: t(notice.reasonKey) }), 9000);
         markSaved();
         await onSaved(saved);
       }
@@ -438,6 +461,7 @@ export function BusFormModal({
               hint={t("bus:form.distanceHint")}
               onChange={(e): void => set("distanceKm", e.target.value)}
             />
+            {routing?.configured === false && <BusNoRoutingNote testId="bus-form-no-routing" />}
           </div>
           <label className={`mt-3 ${CHECK_ROW}`}>
             <input

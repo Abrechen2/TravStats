@@ -24,6 +24,7 @@ import {
   updateBusJourneySchema,
 } from "../../../schemas/bus";
 import { busTimesSchema } from "../../../schemas/times";
+import { ROUTE_FALLBACK_REASONS } from "../../tour/routing/types";
 
 const busJourney = registry.register(
   "BusJourney",
@@ -78,6 +79,32 @@ const busJourney = registry.register(
 );
 
 const envelope = <T extends z.ZodTypeAny>(data: T) => z.object({ success: z.literal(true), data });
+
+/** What a save did to the frozen road line — beside the row, so the row stays the row. */
+const geometryReport = z
+  .object({
+    outcome: z
+      .enum(["unchanged", "routed", "straight", "kept"])
+      .describe(
+        "unchanged = nothing the line depends on moved (or the ride already had its line); " +
+          "routed = a road line was fetched and frozen; straight = the chord was stored " +
+          "because no road line came back; kept = a re-fetch failed and the frozen road " +
+          "line stayed"
+      ),
+    geometrySource: z.enum(BUS_GEOMETRY_SOURCES),
+    fallback: z
+      .enum(ROUTE_FALLBACK_REASONS)
+      .nullable()
+      .describe(
+        "Why no road line was delivered: no_provider (the instance has no routing " +
+          "provider), provider_error (network, 5xx, unreadable answer or timeout), no_route, " +
+          "point_not_near_road, rate_limited, auth, untrustworthy; null when nothing asked for failed"
+      ),
+  })
+  .openapi("BusGeometryReport");
+
+const writeEnvelope = <T extends z.ZodTypeAny>(data: T) =>
+  z.object({ success: z.literal(true), data, meta: z.object({ geometry: geometryReport }) });
 
 const busListSummarySchema = z
   .object({
@@ -168,7 +195,10 @@ registry.registerPath({
     "(`YYYY-MM-DD`): stored as the start of that day at the terminal with precision " +
     "`day`, it has no duration and no delay (`delayMinutes` is refused). Without " +
     "`distanceKm` the great-circle distance is stored and labelled `great_circle` — a " +
-    "straight line, not the road.",
+    "straight line, not the road. The road line is fetched ONCE from the instance's routing " +
+    "provider, with a short timeout, and frozen: `geometrySource: road`, `distanceKm` its " +
+    "routed length, `distanceSource: route` (a typed `distanceKm` stays `user`). When no " +
+    "road line comes back the chord is stored and `meta.geometry.fallback` says why.",
   tags: ["Bus"],
   request: {
     body: {
@@ -186,9 +216,9 @@ registry.registerPath({
     422: timeRefused,
     201: {
       description: "Created",
-      content: { "application/json": { schema: envelope(busJourney) } },
+      content: { "application/json": { schema: writeEnvelope(busJourney) } },
     },
-    ...clientRefResponses({ "application/json": { schema: envelope(busJourney) } }),
+    ...clientRefResponses({ "application/json": { schema: writeEnvelope(busJourney) } }),
     400: { description: "Validation failed", content: errorContent },
     404: { description: "Trip or booking not found", content: errorContent },
     429: { description: "Too many rides created", content: errorContent },
@@ -202,7 +232,9 @@ registry.registerPath({
   description:
     "Partial update. A terminal is replaced whole. The wall clock not sent is kept " +
     "and re-read in the (possibly new) terminal zone. `distanceKm: null` returns to " +
-    "the measured distance.",
+    "the measured distance. The road line is fetched again ONLY when a terminal's " +
+    "coordinates changed; a failed re-fetch keeps the frozen road line while it still " +
+    "reaches both terminals (`meta.geometry.outcome: kept`).",
   tags: ["Bus"],
   request: {
     params: z.object({ id: z.string().uuid() }),
@@ -216,10 +248,84 @@ registry.registerPath({
     422: timeRefused,
     200: {
       description: "Updated",
-      content: { "application/json": { schema: envelope(busJourney) } },
+      content: { "application/json": { schema: writeEnvelope(busJourney) } },
     },
     400: { description: "Validation failed", content: errorContent },
     404: { description: "Not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/bus/routing",
+  summary: "Does this instance have a road routing provider?",
+  description:
+    "Whether rides can get a road line at all, and which provider answers. Never leaks a key " +
+    "or a URL. Without a provider every ride stays a straight line until an admin sets one " +
+    "up under Admin → External services.",
+  tags: ["Bus"],
+  responses: {
+    200: {
+      description: "Routing availability",
+      content: {
+        "application/json": {
+          schema: envelope(
+            z.object({
+              configured: z.boolean(),
+              providerId: z.enum(["openrouteservice", "graphhopper", "custom"]).nullable(),
+            })
+          ),
+        },
+      },
+    },
+    401: { description: "Missing or invalid token", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/bus/{id}/route",
+  summary: "Route a straight ride along the road",
+  description:
+    '"Route again" for a ride logged before routing existed (or while the provider was down). ' +
+    "Only a ride whose `geometrySource` is `straight` is routed; any other answers " +
+    "`meta.geometry.outcome: unchanged` without a provider call, so repeating the request is " +
+    "harmless. A provider that does not deliver answers 200 with `outcome: straight` and its " +
+    "reason in `fallback`. A typed ticket distance is kept. Rate-limited; the shared demo " +
+    "account is refused.",
+  tags: ["Bus"],
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: "The ride and what routing did to its line",
+      content: { "application/json": { schema: writeEnvelope(busJourney) } },
+    },
+    403: { description: "The shared demo account may not route", content: errorContent },
+    404: { description: "Not found", content: errorContent },
+    429: { description: "Too many routing requests", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/bus/route-straight",
+  summary: "Route every straight ride along the road (background job)",
+  description:
+    "Starts a background job (kind `bus.routeStraight`, poll `GET /jobs/{id}`) that routes up " +
+    "to 200 of the caller's straight rides, newest first, one provider call each. The job's " +
+    "`result` lists every ride's outcome with the provider's reason; the pass stops early on " +
+    "`rate_limited` or `auth` (`stoppedBy`) and reports what is `remaining`. While a pass " +
+    "runs, asking again answers the same job. 409 `BUS_NO_ROUTING_PROVIDER` when the " +
+    "instance has no provider. Rate-limited; the shared demo account is refused.",
+  tags: ["Bus"],
+  responses: {
+    202: {
+      description: "The job to poll",
+      content: { "application/json": { schema: envelope(z.object({ jobId: z.string().uuid() })) } },
+    },
+    403: { description: "The shared demo account may not route", content: errorContent },
+    409: { description: "BUS_NO_ROUTING_PROVIDER", content: errorContent },
+    429: { description: "Too many routing requests", content: errorContent },
   },
 });
 

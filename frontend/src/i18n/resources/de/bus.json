@@ -91,7 +91,7 @@
     "arrivalTime": "Ankunft (Ortszeit am Terminal)",
     "dayOnly": "Nur das Datum ist bekannt",
     "distance": "Entfernung (km, laut Ticket)",
-    "distanceHint": "Leer lassen: die Luftlinie wird gemessen und als solche ausgewiesen.",
+    "distanceHint": "Leer lassen: die Strecke wird berechnet und mit ihrer Quelle ausgewiesen (Straße, sonst Luftlinie).",
     "class": "Klasse",
     "classPlaceholder": "Udeung, Lounge …",
     "seatNumber": "Sitzplatz",
@@ -139,7 +139,9 @@
     "loadError": "Die Busfahrt konnte nicht geladen werden.",
     "delay": "Verspätung",
     "delayUnknown": "nicht erfasst",
-    "facts": "Fahrt"
+    "facts": "Fahrt",
+    "mapLine": "Linie auf der Karte",
+    "routeTitle": "Straße berechnen"
   },
   "stats": {
     "loadError": "Die Bus-Statistik konnte nicht geladen werden.",
@@ -150,7 +152,7 @@
     "km": "Bus-Kilometer",
     "kmRoute": "{{km}} km entlang der Straße",
     "kmTicket": "{{km}} km laut Ticket",
-    "kmStraight": "{{km}} km Luftlinie (die echte Strecke ist länger)",
+    "kmStraight": "{{km}} km Luftlinie, wo keine Straße berechnet wurde (die echte Strecke ist länger)",
     "kmUnmeasured_one": "{{count}} Fahrt ohne Entfernung",
     "kmUnmeasured_other": "{{count}} Fahrten ohne Entfernung",
     "hours": "Stunden im Bus",
@@ -191,7 +193,7 @@
     "longest": "Längste Fahrt",
     "sourceRoute": "entlang der Straße",
     "sourceTicket": "laut Ticket",
-    "sourceStraight": "Luftlinie",
+    "sourceStraight": "Luftlinie (Rückfall)",
     "byYear": "Fahrten pro Jahr",
     "sections": {
       "kpis": "Kennzahlen",
@@ -212,7 +214,7 @@
       "km": {
         "unit": "Ein Kilometer, summiert über alle gezählten Fahrten. Kilometer je Quelle: entlang der Straße, laut Ticket oder als Luftlinie zwischen den beiden Terminals, die eine Busstrecke um 10–40 % unterschätzt. Die Summe zählt alle drei zusammen; die Zeile darunter nennt jede Quelle einzeln.",
         "time": "Die Kilometer einer Fahrt zählen im Jahr ihrer Abfahrt nach dem Kalender des Abfahrtsterminals, wie die Fahrt selbst.",
-        "source": "Abgeschlossene Busfahrten und ihre gespeicherte Entfernung samt Quelle. Gibst du keine Ticket-Entfernung an, wird beim Speichern die Luftlinie zwischen den Koordinaten der Terminals eingetragen.",
+        "source": "Abgeschlossene Busfahrten und ihre gespeicherte Entfernung samt Quelle. Gibst du keine Ticket-Entfernung an, wird beim Speichern die Länge der berechneten Straße eingetragen – und nur wo kein Routing-Dienst antwortet, die Luftlinie zwischen den Koordinaten der Terminals.",
         "coverage": "Eine Fahrt ohne Entfernung bleibt draußen und wird als solche gezählt, nie als 0 km – die Zeile darunter und die Jahresliste nennen, wie viele es sind. Ein Jahr, in dem keine Fahrt eine Entfernung hat, zeigt keine Kilometer statt 0 km.",
         "exclusions": "Geplante, laufende und stornierte Fahrten zählen nicht. Nichts wird geschätzt oder hochgerechnet."
       },
@@ -304,5 +306,52 @@
   },
   "tripCard": {
     "open": "Busfahrt öffnen"
+  },
+  "distanceSource": {
+    "great_circle": "Luftlinie",
+    "route": "Straße",
+    "user": "laut Ticket"
+  },
+  "routing": {
+    "noProvider": "Ohne Routing-Dienst bleibt es bei der Luftlinie.",
+    "setUp": "Routing-Dienst einrichten (Administration → Externe Dienste)",
+    "askAdmin": "Einen Routing-Dienst richtet ein Administrator unter Administration → Externe Dienste ein.",
+    "again": "Über die Straße berechnen",
+    "againBusy": "Wird berechnet …",
+    "routed": "Über die Straße berechnet: {{km}} km.",
+    "unchanged": "Diese Fahrt hat ihre Linie schon; es wurde nichts geändert.",
+    "stillStraight": "Die Straße konnte nicht berechnet werden. {{reason}} Die Fahrt bleibt bei der Luftlinie.",
+    "requestFailed": "Die Berechnung ist nicht angekommen. Bitte versuche es noch einmal.",
+    "demoRefused": "Das Demo-Konto darf keinen Routing-Dienst ansprechen.",
+    "tooMany": "Zu viele Berechnungen in kurzer Zeit. Bitte warte etwas.",
+    "savedStraight": "Gespeichert. Die Straße konnte nicht berechnet werden: {{reason}} Es bleibt bei der Luftlinie.",
+    "savedKept": "Gespeichert. Die Straße konnte nicht neu berechnet werden: {{reason}} Die gespeicherte Straßenlinie bleibt.",
+    "mapLine": {
+      "road": "Straßenverlauf (einmal berechnet und gespeichert)",
+      "straight": "Gerade Verbindung zwischen den Terminals",
+      "manual": "Von Hand gezeichnet"
+    },
+    "all": {
+      "button": "Alle Luftlinien-Fahrten über die Straße berechnen",
+      "busy": "Fahrten werden berechnet …",
+      "progress": "{{done}} von {{total}} Fahrten",
+      "noProvider": "Diese Instanz hat keinen Routing-Dienst, deshalb bleiben Fahrten bei der Luftlinie.",
+      "done": "{{routed}} über die Straße berechnet, {{straight}} blieben bei der Luftlinie.",
+      "reasons": "Gründe: {{reasons}}.",
+      "stopped": "Gestoppt: {{reason}}",
+      "remaining": "{{count}} Fahrten sind noch offen; starte die Berechnung erneut.",
+      "failed": "Die Berechnung konnte nicht abgeschlossen werden. Bitte versuche es noch einmal.",
+      "lost": "Der Stand der Berechnung ist nicht mehr abrufbar. Lade die Liste neu, um zu sehen, was schon fertig ist."
+    },
+    "reason": {
+      "no_provider": "Diese Instanz hat keinen Routing-Dienst.",
+      "unroutable_mode": "Für diese Fahrt ist keine Straßenberechnung möglich.",
+      "provider_error": "Der Routing-Dienst hat nicht (rechtzeitig) geantwortet.",
+      "no_route": "Der Routing-Dienst findet keine Straßenverbindung.",
+      "point_not_near_road": "Ein Terminal liegt zu weit von der nächsten Straße entfernt.",
+      "rate_limited": "Das Kontingent des Routing-Dienstes ist aufgebraucht.",
+      "auth": "Der Routing-Dienst hat den Schlüssel abgelehnt.",
+      "untrustworthy": "Die Antwort des Routing-Dienstes passte nicht zu den Terminals und wurde verworfen."
+    }
   }
 }
