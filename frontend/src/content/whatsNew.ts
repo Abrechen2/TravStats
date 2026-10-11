@@ -58,18 +58,18 @@ export const WHATS_NEW_ENTRIES: WhatsNewEntry[] = [
       },
       {
         icon: "✍️",
-        titleKey: "entries.v270.entrySuggestions.title",
-        bodyKey: "entries.v270.entrySuggestions.body",
+        titleKey: "entries.v270.entryHelp.title",
+        bodyKey: "entries.v270.entryHelp.body",
       },
       {
         icon: "🗺️",
-        titleKey: "entries.v270.placesPassport.title",
-        bodyKey: "entries.v270.placesPassport.body",
+        titleKey: "entries.v270.placesPhotos.title",
+        bodyKey: "entries.v270.placesPhotos.body",
       },
       {
-        icon: "🌦️",
-        titleKey: "entries.v270.summaryOpenData.title",
-        bodyKey: "entries.v270.summaryOpenData.body",
+        icon: "🤝",
+        titleKey: "entries.v270.sharing.title",
+        bodyKey: "entries.v270.sharing.body",
       },
       {
         icon: "📱",
