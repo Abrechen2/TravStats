@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { busPaths, buildBusLayers } from "../tripBusLayer";
+import { busPaths, busPathPoints, buildBusLayers } from "../tripBusLayer";
 import { buildTimelineEvents } from "../../../lib/tripTimelineEvents";
 import { busSheet } from "../../../lib/xlsx/busSheet";
 import type { Trip } from "../../../types";
@@ -50,6 +50,20 @@ describe("bus rides on the trip (forgejo#180)", () => {
       [128.6, 38.2],
     ];
     expect(busPaths([ride({ geometry: road })])[0]).toMatchObject({ path: road, routed: true });
+  });
+
+  it("gives the camera every point of every line, the road geometry where there is one", () => {
+    const road: [number, number][] = [
+      [127.0, 37.5],
+      [127.9, 37.9],
+      [128.6, 38.2],
+    ];
+    expect(busPathPoints([ride({ geometry: road })])).toEqual(road);
+    expect(busPathPoints([ride()])).toEqual([
+      [127.0, 37.5],
+      [128.6, 38.2],
+    ]);
+    expect(busPathPoints([ride({ depLat: Number.NaN })])).toEqual([]);
   });
 
   it("leaves out a ride without coordinates and draws nothing for none", () => {

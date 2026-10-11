@@ -9,10 +9,12 @@ vi.mock("../TripMap", async () => {
   return {
     default: ({
       tourGeometries = [],
+      extraPoints = [],
     }: {
       tourGeometries?: Parameters<typeof buildTourPaths>[0];
+      extraPoints?: readonly unknown[];
     }) => (
-      <ul data-testid="tour-lines">
+      <ul data-testid="tour-lines" data-extra-points={extraPoints.length}>
         {buildTourPaths(tourGeometries).map((p) => (
           <li key={p.legId} data-roadtrip={String(p.isRoadtrip)}>
             {p.label}
@@ -92,6 +94,25 @@ describe("TripMapWithTours", () => {
     expect(await screen.findByText("Mosel · 62 km")).toBeInTheDocument();
     expect(screen.getByText("Mosel · 201 km")).toBeInTheDocument();
     expect(toursApi.list).toHaveBeenCalledWith("trip-1");
+  });
+
+  // The bus lines are drawn through extraLayers; the map frames the trip and
+  // decides "no geo data" from the points it is handed, so the rides' points
+  // must come with them (found on the 2.7.0-beta.20 beta).
+  it("hands the map the points of the trip's bus rides, so it frames them", async () => {
+    const withBus = {
+      id: "trip-bus",
+      flights: [],
+      cruises: [],
+      lodgingStays: [],
+      stops: [],
+      busJourneys: [
+        { id: "r1", depLat: 37.5, depLon: 127.0, arrLat: 38.2, arrLon: 128.6, geometry: null },
+      ],
+    } as never;
+    vi.mocked(toursApi.list).mockResolvedValue([]);
+    render(<TripMapWithTours trip={withBus} />);
+    expect((await screen.findByTestId("tour-lines")).getAttribute("data-extra-points")).toBe("2");
   });
 
   it("says so when the tours could not be loaded, instead of looking tourless", async () => {

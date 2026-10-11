@@ -6,7 +6,7 @@ import { useTripTourGeometries } from "../../hooks/useTripTourGeometries";
 import TripMap from "./TripMap";
 import type { TripMapContent } from "./tripMapContent";
 import type { TripBusJourney } from "../../types/bus";
-import { buildBusLayers } from "./tripBusLayer";
+import { buildBusLayers, busPathPoints } from "./tripBusLayer";
 
 /**
  * The trip detail page's "Karte" tab: the trip, and — while tours are visible
@@ -27,6 +27,7 @@ export default function TripMapWithTours({
     () => buildBusLayers(trip.busJourneys ?? [], busColor),
     [trip.busJourneys, busColor]
   );
+  const busPoints = useMemo(() => busPathPoints(trip.busJourneys ?? []), [trip.busJourneys]);
   return (
     <>
       {failed && (
@@ -34,7 +35,12 @@ export default function TripMapWithTours({
           {t("trips:tours.map.loadError")}
         </p>
       )}
-      <TripMap trip={trip} tourGeometries={geometries} extraLayers={busLayers} />
+      <TripMap
+        trip={trip}
+        tourGeometries={geometries}
+        extraLayers={busLayers}
+        extraPoints={busPoints}
+      />
     </>
   );
 }

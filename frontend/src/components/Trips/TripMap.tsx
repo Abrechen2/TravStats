@@ -37,6 +37,7 @@ import {
   resolveTripStopColor,
   useTripMapColorConfig,
 } from "./tripMapColors";
+import { tripBoundsPoints, type LngLat } from "./tripMapBounds";
 
 const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
@@ -124,6 +125,11 @@ interface TripMapProps {
   }[];
   /** Drawn over everything else — the roadtrip page's selected station. */
   extraLayers?: readonly Layer[];
+  /**
+   * The points `extraLayers` cover, so the camera frames them and a trip whose
+   * only geo data is in those layers is not reported as empty.
+   */
+  extraPoints?: readonly LngLat[];
 }
 
 // Stable module-level default. `tourGeometries = []` inline in the props
@@ -133,11 +139,13 @@ interface TripMapProps {
 // `layers` useMemo below every single render, defeating the dependency array
 // entirely even though it lists `tourGeometries` correctly.
 const NO_TOUR_GEOMETRIES: NonNullable<TripMapProps["tourGeometries"]> = [];
+const NO_EXTRA_POINTS: readonly LngLat[] = [];
 
 export default function TripMap({
   trip,
   tourGeometries = NO_TOUR_GEOMETRIES,
   extraLayers,
+  extraPoints = NO_EXTRA_POINTS,
 }: TripMapProps): JSX.Element {
   const { t, i18n } = useTranslation(["trips", "map"]);
   const locale = i18n.language || "de";
@@ -588,27 +596,18 @@ export default function TripMap({
 
   /* ---- bbox fit ---- */
 
-  const bboxPoints = useMemo<Array<[number, number]>>(() => {
-    const pts: Array<[number, number]> = [];
-    for (const a of flightArcs) {
-      pts.push(a.source, a.target);
-    }
-    for (const p of cruisePaths) {
-      for (const c of p.path) pts.push(c);
-    }
-    for (const s of stopPoints) {
-      pts.push(s.position);
-    }
-    // Hotels count towards the fit too. A round trip whose flights all land in
-    // one capital would otherwise open zoomed on the airport while the twelve
-    // houses it actually visited sit outside the frame.
-    for (const l of lodgings) {
-      if (l.lat != null && l.lon != null) pts.push([l.lon, l.lat]);
-    }
-    // Tour lines too: a day tour may be nothing but its recording (2.7).
-    for (const p of tourPathData) for (const c of p.path) pts.push(c);
-    return pts;
-  }, [flightArcs, cruisePaths, stopPoints, lodgings, tourPathData]);
+  const bboxPoints = useMemo<LngLat[]>(
+    () =>
+      tripBoundsPoints({
+        flightArcs,
+        cruisePaths,
+        stopPoints,
+        lodgings,
+        tourPaths: tourPathData,
+        extraPoints,
+      }),
+    [flightArcs, cruisePaths, stopPoints, lodgings, tourPathData, extraPoints]
+  );
 
   /**
    * Frame the whole trip, at a zoom the current projection can honour.

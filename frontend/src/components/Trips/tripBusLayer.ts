@@ -40,6 +40,11 @@ export function busPaths(rides: readonly TripBusJourney[]): BusPathDatum[] {
  * `colorHex` is the bus colour from the domain colour store — never a constant
  * here, or a user's own bus colour would show everywhere but the trip map.
  */
+/** Every point the bus lines cover, for framing the trip map around them. */
+export function busPathPoints(rides: readonly TripBusJourney[]): [number, number][] {
+  return busPaths(rides).flatMap((d) => d.path);
+}
+
 export function buildBusLayers(rides: readonly TripBusJourney[], colorHex: string): Layer[] {
   const data = busPaths(rides);
   if (data.length === 0) return [];
