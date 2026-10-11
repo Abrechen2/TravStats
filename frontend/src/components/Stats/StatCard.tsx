@@ -40,9 +40,9 @@ interface StatCardProps {
 export type StatValueSize = "sm" | "md" | "lg";
 
 export const STAT_VALUE_CLASS: Record<StatValueSize, string> = {
-  sm: "text-2xl",
-  md: "text-3xl",
-  lg: "text-4xl",
+  sm: "text-xl sm:text-2xl",
+  md: "text-2xl sm:text-3xl",
+  lg: "text-3xl sm:text-4xl",
 };
 
 /**
@@ -51,7 +51,11 @@ export const STAT_VALUE_CLASS: Record<StatValueSize, string> = {
  * a split card that no longer matches the cards beside it reads as a bug in the
  * data rather than in the layout.
  */
-export const STAT_CARD_CLASS = "rounded-lg border p-6 shadow-md";
+// `min-w-0` + `break-words`: a card is a grid/flex child, whose automatic
+// minimum width is its longest unbreakable word — "Keine Bewertung" at 30 px
+// is wider than half of a 320 px screen and pushed the whole document to 340
+// (forgejo#291). The padding also eases below `sm`.
+export const STAT_CARD_CLASS = "min-w-0 rounded-lg border p-4 shadow-md break-words sm:p-6";
 
 export const STAT_CARD_STYLE: CSSProperties = {
   background: "var(--bg-elevated)",

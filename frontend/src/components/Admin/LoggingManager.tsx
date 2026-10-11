@@ -62,7 +62,7 @@ export default function LoggingManager({
   return (
     <div className="space-y-6">
       {/* Header with Quick Actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold text-(--text-primary)">
             {t("admin:logging.title")}
@@ -72,7 +72,7 @@ export default function LoggingManager({
             {t("admin:logging.help.warning")}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             onClick={onToggleDebug}
             disabled={pinned}

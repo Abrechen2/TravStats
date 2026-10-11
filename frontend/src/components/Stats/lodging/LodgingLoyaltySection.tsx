@@ -1,4 +1,5 @@
 import type { JSX } from "react";
+import TableScroll from "../../ui/TableScroll";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { LodgingStats } from "../../../types/lodging";
@@ -133,7 +134,11 @@ export default function LodgingLoyaltySection({ stats, evidenceScope }: Props): 
             color: "var(--text-primary)",
           }}
         >
-          <h3 className="mb-3 text-sm font-medium" style={{ color: "var(--text-muted)" }}>
+          <h3
+            id="lodging-loyalty-programmes"
+            className="mb-3 text-sm font-medium"
+            style={{ color: "var(--text-muted)" }}
+          >
             {t("lodging:stats.loyalty.programmeYears")}
           </h3>
           {/* The CARD's tier belongs to today, not to a year: printed beside
@@ -151,51 +156,61 @@ export default function LodgingLoyaltySection({ stats, evidenceScope }: Props): 
               {t("lodging:stats.loyalty.noProgrammes")}
             </p>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr style={{ color: "var(--text-muted)" }}>
-                  <th className="pb-2 text-left font-normal">
-                    {t("lodging:stats.loyalty.programme")}
-                  </th>
-                  <th className="pb-2 text-left font-normal">{t("lodging:stats.loyalty.year")}</th>
-                  <th className="pb-2 text-right font-normal">
-                    {t("lodging:stats.loyalty.nights")}
-                  </th>
-                  <th className="pb-2 text-right font-normal">
-                    {t("lodging:stats.loyalty.stays")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {loyalty.programmeYears.map((row) => (
-                  <tr key={`${row.programme}-${row.year}`}>
-                    <td className="py-1">
-                      {/* The hotels whose stays make up this row's nights —
-                          the list the tester asked to reach from the figure. */}
-                      {row.membershipId ? (
-                        <Link
-                          to={loyaltyListLink("lodging", row.membershipId, Number(row.year))}
-                          title={t("lodging:stats.loyalty.staysLink", { year: row.year })}
-                          className="hover:underline"
-                          style={{ color: "var(--ts-accent)" }}
-                        >
-                          {row.programme}
-                        </Link>
-                      ) : (
-                        row.programme
-                      )}
-                    </td>
-                    <td className="py-1">{row.year}</td>
-                    <td className="py-1 text-right" style={{ fontVariantNumeric: "tabular-nums" }}>
-                      {row.nights}
-                    </td>
-                    <td className="py-1 text-right" style={{ fontVariantNumeric: "tabular-nums" }}>
-                      {row.stays}
-                    </td>
+            <TableScroll labelledBy="lodging-loyalty-programmes">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ color: "var(--text-muted)" }}>
+                    <th className="pb-2 text-left font-normal">
+                      {t("lodging:stats.loyalty.programme")}
+                    </th>
+                    <th className="pb-2 text-left font-normal">
+                      {t("lodging:stats.loyalty.year")}
+                    </th>
+                    <th className="pb-2 text-right font-normal">
+                      {t("lodging:stats.loyalty.nights")}
+                    </th>
+                    <th className="pb-2 text-right font-normal">
+                      {t("lodging:stats.loyalty.stays")}
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {loyalty.programmeYears.map((row) => (
+                    <tr key={`${row.programme}-${row.year}`}>
+                      <td className="py-1">
+                        {/* The hotels whose stays make up this row's nights —
+                          the list the tester asked to reach from the figure. */}
+                        {row.membershipId ? (
+                          <Link
+                            to={loyaltyListLink("lodging", row.membershipId, Number(row.year))}
+                            title={t("lodging:stats.loyalty.staysLink", { year: row.year })}
+                            className="hover:underline"
+                            style={{ color: "var(--ts-accent)" }}
+                          >
+                            {row.programme}
+                          </Link>
+                        ) : (
+                          row.programme
+                        )}
+                      </td>
+                      <td className="py-1">{row.year}</td>
+                      <td
+                        className="py-1 text-right"
+                        style={{ fontVariantNumeric: "tabular-nums" }}
+                      >
+                        {row.nights}
+                      </td>
+                      <td
+                        className="py-1 text-right"
+                        style={{ fontVariantNumeric: "tabular-nums" }}
+                      >
+                        {row.stays}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableScroll>
           )}
         </div>
       </div>

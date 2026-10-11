@@ -223,9 +223,9 @@ function TourSectionListBody({ tripId }: Props): JSX.Element {
                     ? `/roadtrips/${route.id}`
                     : `/trips/${tripId}/route/${route.id}`
                 }
-                className="flex flex-1 items-center justify-between gap-3 p-3"
+                className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1 p-3"
               >
-                <span className="flex items-center gap-2">
+                <span className="flex min-w-0 flex-wrap items-center gap-2">
                   <span className="font-medium">{route.name}</span>
                   <span className="rounded-sm bg-(--bg-surface) px-1.5 py-0.5 text-xs">
                     {route.kind === "roadtrip"
@@ -242,7 +242,7 @@ function TourSectionListBody({ tripId }: Props): JSX.Element {
               </Link>
               <button
                 type="button"
-                className="text-xs underline"
+                className="shrink-0 text-xs underline"
                 onClick={() => setPendingDelete(route)}
               >
                 {t("trips:tours.deleteLabel")}
