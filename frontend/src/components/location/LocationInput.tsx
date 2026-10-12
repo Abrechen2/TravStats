@@ -66,6 +66,7 @@ export interface LocationSelection {
 }
 
 export interface LocationInputProps {
+  searchKind?: "ferry_terminal";
   value: LocationCoordinates | null;
   onChange: (selection: LocationSelection) => void;
   /** Reduced chrome (shorter map, no search hint) for denser embeds — e.g.
@@ -132,6 +133,7 @@ export function LocationInput({
   idPrefix = "location-input",
   onValidityChange,
   required = false,
+  searchKind,
 }: LocationInputProps): JSX.Element {
   const { t, i18n } = useTranslation(["location"]);
 
@@ -150,7 +152,8 @@ export function LocationInput({
   // hook's own "too short, don't search" branch, so nothing fires.
   const { results, isSearching, searchError, reset } = useLocationSearch(
     coordsDetected ? "" : query,
-    lang
+    lang,
+    searchKind
   );
 
   // Keep the advanced raw inputs in sync when the parent changes `value`

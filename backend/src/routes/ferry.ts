@@ -1,5 +1,7 @@
 /** Ferry crossings (dennis/TravStats forgejo#293). */
 import { Router, Response, NextFunction } from "express";
+import liveRoutes from "./ferry/live";
+import ticketRoutes from "./ferry/tickets";
 import type { z } from "zod";
 
 import { prisma } from "../db";
@@ -131,6 +133,8 @@ function plainColumns(input: UpdateFerryJourneyInput) {
 const router = Router();
 router.use(authenticate);
 router.use(requireWriteScope);
+router.use(ticketRoutes);
+router.use(liveRoutes);
 
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

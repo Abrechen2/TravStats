@@ -499,3 +499,31 @@ keeps the lights on for AirLabs quota top-ups. ❤️
 <sub>Made with ❤️ and a bit of AI for flight enthusiasts.</sub>
 
 </div>
+
+### Ferry data sources (beta)
+
+Ferry terminal search uses the configured Photon service with OpenStreetMap's
+`amenity=ferry_terminal` filter. The editor can switch back to general place
+search, coordinates or a map pin when a terminal is missing. Provider outages
+are shown separately from an empty search result.
+
+In **Ferries → Add crossing → Read ferry ticket**, upload a text PDF/EML or
+paste ticket text. A preview shows each proposed value with its source text.
+English/German labelled tickets work without AI; unfamiliar layouts can use the
+existing admin-enabled, consented AI provider chain. Scanned PDFs need pasted
+text or manual entry; an EML currently reads the message body. Dates without a
+printed year and ambiguous numeric dates are not guessed. Confirm port positions
+before saving. One crossing is created per save, and an uploaded original is
+attached to it. Cancelling leaves the original in the existing unfiled-document
+inbox, subject to its normal retention rules.
+
+Optional live vessel snapshots use [AISStream](https://aisstream.io/documentation).
+Set `AISSTREAM_API_KEY` on the backend through the normal secret configuration,
+then enter the ship's nine-digit MMSI on a crossing's detail page and request a
+position. This is an explicit current-vessel lookup, not automatic ship matching
+or a historical journey track. Requests wait at most 15 seconds, share requests
+for the same MMSI and cache answers for 30 seconds. Each backend process uses at
+most two simultaneous sockets; account/IP limits also include other processes.
+No signal is distinct from a stopped ship. Receipt time and source time are
+separate; no observation time is invented when the source omits it. No historical
+crossing, distance or status is changed. No API key is sent to the browser.

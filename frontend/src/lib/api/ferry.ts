@@ -1,3 +1,5 @@
+import type { FerryAisResult } from "../../components/ferry/FerryLivePosition";
+import type { FerryTicketPreview } from "../../components/ferry/FerryTicketImport";
 import { api } from "./client";
 import type { FerryJourney } from "../../types/ferry";
 interface Envelope<T> {
@@ -37,6 +39,26 @@ export interface FerryListQuery {
 }
 
 export const ferryApi = {
+  async liveAvailability() {
+    return (await api.get<Envelope<{ configured: boolean }>>("/ferry/live-availability")).data.data;
+  },
+  async livePosition(id: string, mmsi: string): Promise<FerryAisResult> {
+    return (
+      await api.get<Envelope<FerryAisResult>>(`/ferry/${encodeURIComponent(id)}/live-position`, {
+        params: { mmsi },
+        timeout: 20000,
+      })
+    ).data.data;
+  },
+  async ticketPreview(
+    input: { text: string } | { documentId: string }
+  ): Promise<FerryTicketPreview> {
+    return (
+      await api.post<Envelope<FerryTicketPreview>>("/ferry/ticket-preview", input, {
+        timeout: 180000,
+      })
+    ).data.data;
+  },
   async roadtripLegs() {
     return (await api.get<Envelope<FerryRoadtripLeg[]>>("/ferry/roadtrip-legs")).data.data;
   },

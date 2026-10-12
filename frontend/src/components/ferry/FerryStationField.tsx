@@ -1,5 +1,5 @@
 /** Ferry crossings (dennis/TravStats forgejo#293). */
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import type { JSX } from "react";
 import { LocationInput, type LocationSelection } from "../location/LocationInput";
 import { RequiredMark } from "../form";
@@ -41,6 +41,7 @@ export function FerryStationField({
   inputClassName,
 }: Props): JSX.Element {
   const { t } = useTranslation(["ferry"]);
+  const [allPlaces, setAllPlaces] = useState(false);
 
   const handlePick = useCallback(
     (selection: LocationSelection): void => {
@@ -51,7 +52,7 @@ export function FerryStationField({
         // point moves and the pick brings no country, the old terminal's
         // country is not this one's (null, never guessed — spec §3.1).
         name: selection.name ?? value.name,
-        address: value.address,
+        address: selection.address ?? value.address,
         lat: selection.lat,
         lon: selection.lon,
         country: moved ? pickedCountry : (pickedCountry ?? value.country),
@@ -71,6 +72,7 @@ export function FerryStationField({
   return (
     <div className="space-y-2">
       <LocationInput
+        searchKind={allPlaces ? undefined : "ferry_terminal"}
         label={label}
         idPrefix={idPrefix}
         value={position}
@@ -79,6 +81,15 @@ export function FerryStationField({
         required={required}
         compact
       />
+      <p className="t-caption">{t("ferry:portSearch.attribution")}</p>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={allPlaces}
+          onChange={(e) => setAllPlaces(e.target.checked)}
+        />
+        {t("ferry:portSearch.allPlaces")}
+      </label>
       <div>
         <label htmlFor={nameId} className="block text-sm">
           {t("ferry:form.stationName")}

@@ -122,3 +122,90 @@ registry.registerPath({
     ...errors,
   },
 });
+
+registry.registerPath({
+  method: "post",
+  path: "/ferry/ticket-preview",
+  tags: ["Ferry"],
+  summary: "Preview ferry ticket values without creating a crossing",
+  request: {
+    body: {
+      content: json(
+        z.union([
+          z.object({ documentId: z.string().uuid() }),
+          z.object({ text: z.string().min(1).max(60000) }),
+        ])
+      ),
+    },
+  },
+  responses: {
+    200: {
+      description: "Evidence-backed proposals for user review",
+      content: json(
+        envelope(
+          z.object({
+            crossings: z.array(
+              z.record(z.string(), z.object({ value: z.string(), evidence: z.string() }))
+            ),
+            parser: z.string().nullable(),
+            reason: z.string().nullable(),
+            provider: z.unknown().nullable(),
+          })
+        )
+      ),
+    },
+    ...errors,
+    415: { description: "Document format not supported" },
+    429: { description: "Rate limited" },
+  },
+});
+registry.registerPath({
+  method: "get",
+  path: "/ferry/live-availability",
+  tags: ["Ferry"],
+  summary: "Whether AISStream is configured (no credentials)",
+  responses: {
+    200: {
+      description: "Provider availability",
+      content: json(
+        envelope(z.object({ configured: z.boolean(), provider: z.literal("AISStream") }))
+      ),
+    },
+    ...errors,
+  },
+});
+registry.registerPath({
+  method: "get",
+  path: "/ferry/{id}/live-position",
+  tags: ["Ferry"],
+  summary: "On-demand current AIS snapshot for an explicitly selected MMSI",
+  description:
+    "Checks crossing ownership. No historical journey data is overwritten. Returns noSignal after 15 seconds without a usable message; receipt time is not observation time.",
+  request: { params, query: z.object({ mmsi: z.string().regex(/^\d{9}$/) }) },
+  responses: {
+    200: {
+      description: "Snapshot or explicit unavailable status",
+      content: json(
+        envelope(
+          z.object({
+            status: z.enum(["ok", "notConfigured", "noSignal", "unavailable", "busy"]),
+            position: z
+              .object({
+                mmsi: z.string(),
+                vesselName: z.string().nullable(),
+                lat: z.number(),
+                lon: z.number(),
+                speedKnots: z.number().nullable(),
+                courseDegrees: z.number().nullable(),
+                receivedAt: z.string(),
+                observedAt: z.string().nullable(),
+              })
+              .nullable(),
+          })
+        )
+      ),
+    },
+    ...errors,
+    429: { description: "Rate limited" },
+  },
+});

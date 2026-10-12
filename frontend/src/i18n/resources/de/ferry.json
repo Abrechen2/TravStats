@@ -123,5 +123,43 @@
     "trip": "Reise und Begleitung"
   },
   "companionNames": "Reisebegleiter",
-  "clockChange": "Zeitumstellung"
+  "clockChange": "Zeitumstellung",
+  "portSearch": {
+    "attribution": "Fährterminals aus OpenStreetMap · Suche über Photon",
+    "allPlaces": "Auch andere Orte suchen"
+  },
+  "import": {
+    "title": "Fährticket einlesen",
+    "hint": "PDF mit Text, E-Mail (.eml) oder kopierten Tickettext einlesen. Unbekannte Layouts nutzen die konfigurierte KI-Verarbeitung. Du prüfst die Vorschläge vor der Übernahme.",
+    "file": "Ticketdatei (PDF oder EML)",
+    "text": "Tickettext",
+    "reading": "Wird gelesen …",
+    "read": "Vorschau erstellen",
+    "retained": "Die Datei liegt in deinen unzugeordneten Dokumenten. Beim Speichern wird sie an diese Überfahrt angehängt.",
+    "error": "Das Ticket konnte nicht gelesen werden. Du kannst die Überfahrt weiterhin manuell eintragen.",
+    "provider": "Gelesen mit {{name}}",
+    "partial": "Nur ein Teil wurde erkannt. Die KI war nicht verfügbar oder nicht freigegeben.",
+    "noText": "Kein lesbarer Text gefunden. Bei einem Scan bitte Tickettext einfügen oder die Daten manuell eintragen.",
+    "nothingFound": "Keine belegten Werte gefunden. Bitte manuell eintragen.",
+    "crossing": "Überfahrt auswählen",
+    "oneCrossing": "Pro Import wird eine Überfahrt angelegt. Das Original wird nur dieser Überfahrt zugeordnet.",
+    "review": "Prüfe Werte und Textbelege. Bereits ausgefüllte Felder sind nicht vorausgewählt.",
+    "apply": "Auswahl ins Formular übernehmen",
+    "checkPorts": "Werte übernommen. Bitte beide Häfen auf der Karte oder über die Hafensuche bestätigen und alle Angaben prüfen."
+  },
+  "live": {
+    "title": "Aktueller Schiffsstandort",
+    "hint": "Aktuelle AIS-Meldung für die eingegebene MMSI. Keine historische Reiseroute; Fahrplan und Überfahrt werden nicht verändert.",
+    "mmsi": "MMSI des Schiffes (9 Ziffern)",
+    "read": "Standort abrufen",
+    "waiting": "Warte auf AIS-Meldung …",
+    "notConfigured": "Live-Schiffspositionen sind auf dieser Instanz noch nicht eingerichtet.",
+    "noSignal": "Im Abfragezeitraum wurde keine passende AIS-Meldung empfangen. Das bedeutet nicht, dass das Schiff nicht unterwegs ist.",
+    "unavailable": "Der Standortdienst ist derzeit nicht erreichbar.",
+    "busy": "Der Standortdienst bearbeitet gerade andere Abfragen. Bitte später erneut versuchen.",
+    "received": "Empfangen: {{time}}",
+    "observed": "Zeitangabe der Quelle: {{time}}",
+    "ageUnknown": "Die Quelle liefert keinen vollständigen Beobachtungszeitpunkt. Das Alter der Position ist unbekannt.",
+    "map": "Auf OpenStreetMap ansehen"
+  }
 }

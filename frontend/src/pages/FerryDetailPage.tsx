@@ -16,6 +16,7 @@ import { formatRailDuration } from "../lib/rail/railDuration";
 import Button from "../components/ui/Button";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import ConfirmModal from "../components/Training/ConfirmModal";
+import { FerryLivePosition } from "../components/ferry/FerryLivePosition";
 import { FerryRoadtripLink } from "../components/ferry/FerryRoadtripLink";
 import { useToursVisible } from "../hooks/useToursVisible";
 import { FerryFormModal } from "../components/ferry/FerryFormModal";
@@ -191,6 +192,7 @@ export default function FerryDetailPage() {
           <DocumentsSection entry={{ type: "ferryJourney", id: ride.id }} />
         </div>
         <aside className="flex flex-col gap-6 md:col-span-2">
+          <FerryLivePosition key={ride.id} id={ride.id} />
           {ride.trip && (
             <DetailSection title={t("ferry:trip")}>
               <TripPill trip={ride.trip} />

@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { FerryTicketImport } from "./FerryTicketImport";
 import Modal from "../Modal";
 import RequiredLegend from "../form/RequiredLegend";
 import Button from "../ui/Button";
@@ -70,6 +71,10 @@ export function FerryFormModal({
   const [fields, setFields] = useState(opened);
   const [dep, setDep] = useState(() => port(journey, "dep"));
   const [arr, setArr] = useState(() => port(journey, "arr"));
+  const [ticketDocumentId, setTicketDocumentId] = useState<string | null>(null);
+  const [imported, setImported] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importDirty, setImportDirty] = useState(false);
   const [cancelled, setCancelled] = useState(journey?.status === "cancelled");
   const [trips, setTrips] = useState<Trip[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +97,8 @@ export function FerryFormModal({
     };
   }, [t]);
   const dirty =
+    importDirty ||
+    ticketDocumentId !== null ||
     JSON.stringify(fields) !== JSON.stringify(opened) ||
     JSON.stringify(dep) !== JSON.stringify(port(journey, "dep")) ||
     JSON.stringify(arr) !== JSON.stringify(port(journey, "arr")) ||
@@ -111,11 +118,12 @@ export function FerryFormModal({
     setError(null);
   };
   const save = async () => {
-    if (savingRef.current || !complete) return;
+    if (savingRef.current || importBusy || !complete) return;
     savingRef.current = true;
     setSaving(true);
     setError(null);
     const input: Record<string, unknown> = {
+      ...(ticketDocumentId ? { documentIds: [ticketDocumentId] } : {}),
       departureStation: dep,
       arrivalStation: arr,
       departureLocal: fields.departureLocal,
@@ -193,17 +201,27 @@ export function FerryFormModal({
       onClose={onClose}
       title={t(journey ? "ferry:edit" : "ferry:add")}
       dirty={dirty}
-      busy={saving}
+      busy={saving || importBusy}
       maxWidth={760}
       footer={(requestClose) => (
         <>
           {!complete && (
             <p className="mr-auto self-center text-sm text-(--text-muted)">{t("ferry:required")}</p>
           )}
-          <Button type="button" variant="secondary" onClick={requestClose} disabled={saving}>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={requestClose}
+            disabled={saving || importBusy}
+          >
             {t("ferry:cancel")}
           </Button>
-          <Button variant="primary" type="submit" form={formId} disabled={!complete || saving}>
+          <Button
+            variant="primary"
+            type="submit"
+            form={formId}
+            disabled={!complete || saving || importBusy}
+          >
             {t("ferry:save")}
           </Button>
         </>
@@ -217,6 +235,26 @@ export function FerryFormModal({
           void save();
         }}
       >
+        {!journey && !imported && (
+          <FerryTicketImport
+            current={{ ...fields, departurePort: dep.name, arrivalPort: arr.name }}
+            onBusyChange={setImportBusy}
+            onDirtyChange={setImportDirty}
+            onApply={(values, id) => {
+              const { departurePort, arrivalPort, ...rest } = values;
+              setFields((old) => ({ ...old, ...rest }));
+              if (departurePort) setDep({ ...EMPTY_TERMINAL, name: departurePort });
+              if (arrivalPort) setArr({ ...EMPTY_TERMINAL, name: arrivalPort });
+              setTicketDocumentId(id);
+              setImported(true);
+            }}
+          />
+        )}
+        {imported && (
+          <p role="status" className="t-caption">
+            {t("ferry:import.checkPorts")}
+          </p>
+        )}
         {error && (
           <p
             role="alert"

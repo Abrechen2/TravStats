@@ -27,7 +27,11 @@ export interface UseLocationSearchResult {
  * late-arriving responses from a superseded keystroke — the same
  * "cancelled" pattern already used by `ChainPicker`.
  */
-export function useLocationSearch(query: string, lang?: string): UseLocationSearchResult {
+export function useLocationSearch(
+  query: string,
+  lang?: string,
+  kind?: "ferry_terminal"
+): UseLocationSearchResult {
   const [results, setResults] = useState<PlaceSearchResult[]>([]);
   const [isSearching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState(false);
@@ -58,7 +62,9 @@ export function useLocationSearch(query: string, lang?: string): UseLocationSear
     const timer = window.setTimeout(() => {
       void (async (): Promise<void> => {
         try {
-          const { results: hits, degraded } = await searchPlaces(trimmed, lang);
+          const { results: hits, degraded } = await (kind
+            ? searchPlaces(trimmed, lang, kind)
+            : searchPlaces(trimmed, lang));
           if (requestIdRef.current !== requestId) return; // superseded
           if (degraded) {
             // The geocoder itself failed (#263) — surface the error state,
@@ -81,7 +87,7 @@ export function useLocationSearch(query: string, lang?: string): UseLocationSear
     }, SEARCH_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timer);
-  }, [query, lang]);
+  }, [query, lang, kind]);
 
   return { results, isSearching, searchError, reset };
 }

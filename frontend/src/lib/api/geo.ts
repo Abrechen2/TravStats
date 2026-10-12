@@ -41,9 +41,14 @@ export interface PlaceSearchResponse {
  * Same-origin Photon place search (search-as-you-type), proxied through our
  * backend — the browser's CSP forbids fetching Photon/Nominatim directly.
  */
-export const searchPlaces = async (q: string, lang?: string): Promise<PlaceSearchResponse> => {
+export const searchPlaces = async (
+  q: string,
+  lang?: string,
+  kind?: "ferry_terminal"
+): Promise<PlaceSearchResponse> => {
   const params: Record<string, string> = { q };
   if (lang) params.lang = lang;
+  if (kind) params.kind = kind;
   const { data } = await api.get<Envelope<PlaceSearchResult[]>>("/geo/search", { params });
   return { results: data.data, degraded: data.degraded === true };
 };

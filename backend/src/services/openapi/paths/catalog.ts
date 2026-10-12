@@ -481,6 +481,7 @@ registry.registerPath({
   request: {
     query: z.object({
       q: z.string().min(2).max(200),
+      kind: z.literal("ferry_terminal").optional(),
       lang: z.string().length(2).optional(),
       lat: z.coerce.number().min(-90).max(90).optional().describe("Location bias; requires `lon`"),
       lon: z.coerce

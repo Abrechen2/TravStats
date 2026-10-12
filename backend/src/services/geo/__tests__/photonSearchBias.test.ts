@@ -51,6 +51,23 @@ describe("Photon search location bias", () => {
     jest.clearAllMocks();
   });
 
+  it("keeps the ferry-terminal filter when retrying an unsupported language", async () => {
+    const urls: URL[] = [];
+    global.fetch = jest.fn(async (raw: string) => {
+      const url = new URL(raw);
+      urls.push(url);
+      return url.searchParams.has("lang") ? jsonResponse({}, 400) : jsonResponse({ features: [] });
+    }) as unknown as typeof fetch;
+    await searchPlacesDetailed("Bari", { kind: "ferry_terminal", lang: "pt" });
+    expect(urls).toHaveLength(2);
+    expect(urls.every((url) => url.searchParams.get("osm_tag") === "amenity:ferry_terminal")).toBe(
+      true
+    );
+    urls.length = 0;
+    await searchPlacesDetailed("Bari");
+    expect(urls[0].searchParams.has("osm_tag")).toBe(false);
+  });
+
   it("sends lat and lon when a point is given", async () => {
     const fetchMock = jest.fn(async () => jsonResponse({ features: [] }));
     global.fetch = fetchMock as unknown as typeof fetch;

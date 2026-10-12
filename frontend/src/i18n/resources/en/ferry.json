@@ -123,5 +123,43 @@
     "trip": "Trip and companions"
   },
   "companionNames": "Companions",
-  "clockChange": "Clock change"
+  "clockChange": "Clock change",
+  "portSearch": {
+    "attribution": "Ferry terminals from OpenStreetMap · Search via Photon",
+    "allPlaces": "Search other places too"
+  },
+  "import": {
+    "title": "Read ferry ticket",
+    "hint": "Read a text PDF, email (.eml) or pasted ticket text. Unfamiliar layouts use the configured AI parser. Review suggestions before applying them.",
+    "file": "Ticket file (PDF or EML)",
+    "text": "Ticket text",
+    "reading": "Reading …",
+    "read": "Create preview",
+    "retained": "The file is in your unfiled documents. Saving attaches it to this crossing.",
+    "error": "Could not read the ticket. You can still enter the crossing manually.",
+    "provider": "Read with {{name}}",
+    "partial": "Only some fields were found. AI was unavailable or not enabled.",
+    "noText": "No readable text found. For a scanned ticket, paste its text or enter the details manually.",
+    "nothingFound": "No supported values found. Please enter the details manually.",
+    "crossing": "Choose crossing",
+    "oneCrossing": "One crossing is created per import. The original is attached only to that crossing.",
+    "review": "Check values and supporting text. Fields you already filled are not preselected.",
+    "apply": "Apply selection to form",
+    "checkPorts": "Values applied. Confirm both ports on the map or through port search and review all details."
+  },
+  "live": {
+    "title": "Current vessel position",
+    "hint": "Current AIS report for the MMSI you enter. This is not a historical track; it does not change the timetable or crossing.",
+    "mmsi": "Vessel MMSI (9 digits)",
+    "read": "Look up position",
+    "waiting": "Waiting for AIS report …",
+    "notConfigured": "Live vessel positions have not been configured on this instance yet.",
+    "noSignal": "No matching AIS report arrived during this request. This does not mean the vessel is not sailing.",
+    "unavailable": "The position service is currently unavailable.",
+    "busy": "The position service is handling other requests. Please try again later.",
+    "received": "Received: {{time}}",
+    "observed": "Source timestamp: {{time}}",
+    "ageUnknown": "The source provides no complete observation timestamp. The age of this position is unknown.",
+    "map": "View on OpenStreetMap"
+  }
 }

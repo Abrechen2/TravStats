@@ -38,6 +38,7 @@ export const BIAS_PAIR_MESSAGE = "lat and lon must be given together";
 const searchQuerySchema = z
   .object({
     q: z.string().min(2).max(200),
+    kind: z.literal("ferry_terminal").optional(),
     lang: z.string().length(2).optional(),
     lat: z.coerce.number().min(-90).max(90).optional(),
     lon: z.coerce.number().min(-180).max(180).optional(),
@@ -62,13 +63,17 @@ router.get(
     try {
       const parsed = searchQuerySchema.safeParse(req.query);
       if (!parsed.success) throw invalidQuery(parsed.error);
-      const { q, lang, lat, lon } = parsed.data;
+      const { q, lang, lat, lon, kind } = parsed.data;
 
       // `degraded: true` = the geocoder itself failed (still HTTP 200 with
       // an empty list, so a flaky geocoder never breaks the form) — the UI
       // uses it to show "search unavailable" instead of "no results" (#263).
       const near = lat !== undefined && lon !== undefined ? { lat, lon } : undefined;
-      const outcome = await searchPlacesDetailed(q, { lang, ...(near ? { near } : {}) });
+      const outcome = await searchPlacesDetailed(q, {
+        lang,
+        ...(kind ? { kind } : {}),
+        ...(near ? { near } : {}),
+      });
       res.json({ success: true, data: outcome.results, degraded: outcome.degraded });
     } catch (err) {
       next(err);

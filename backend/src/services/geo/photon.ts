@@ -104,6 +104,8 @@ export interface SearchPlacesOptions {
 }
 
 export interface SearchPlacesBiasedOptions extends SearchPlacesOptions {
+  /** Optional terminal-only search; omitted for every existing place picker. */
+  kind?: "ferry_terminal";
   /** Prefer hits near this point (Photon's location bias, forgejo#209). */
   near?: { lat: number; lon: number };
 }
@@ -436,6 +438,8 @@ export async function searchPlacesDetailed(
     params.set("lat", String(options.near.lat));
     params.set("lon", String(options.near.lon));
   }
+  // osm_tag remains supported by older self-hosted Photon installations.
+  if (options?.kind === "ferry_terminal") params.set("osm_tag", "amenity:ferry_terminal");
   const url = `${baseUrl}/api/?${params.toString()}`;
 
   const first = await fetchPhoton(url, limit);

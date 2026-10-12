@@ -1,3 +1,10 @@
+jest.mock("../../services/ferry/ticketPreview", () => ({ previewFerryText: jest.fn() }));
+jest.mock("../../services/ferry/aisStream", () => ({
+  aisConfigured: () => false,
+  lookupVessel: jest.fn(),
+}));
+import { previewFerryText } from "../../services/ferry/ticketPreview";
+import { lookupVessel } from "../../services/ferry/aisStream";
 import request from "supertest";
 import app from "../../index";
 import { prisma } from "../../db";
@@ -396,5 +403,68 @@ describe("Ferry rides API", () => {
     ).toBe(404);
     await request(app).delete(`/api/v1/ferry/${id}`).set("Cookie", cookie);
     expect(await prisma.document.findUnique({ where: { id: ticket.id } })).toBeNull();
+  });
+  it("previews text without creating a crossing", async () => {
+    jest.mocked(previewFerryText).mockResolvedValue({
+      crossings: [],
+      parser: "labels",
+      reason: "nothingFound",
+      provider: null,
+    });
+    const before = await prisma.ferryJourney.count({ where: { userId } });
+    const res = await request(app)
+      .post("/api/v1/ferry/ticket-preview")
+      .set("Cookie", cookie)
+      .send({ text: "Ferry booking from Bari to Durres with a cabin for two people" });
+    expect(res.status).toBe(200);
+    expect(previewFerryText).toHaveBeenCalledWith(expect.any(String), userId);
+    expect(await prisma.ferryJourney.count({ where: { userId } })).toBe(before);
+  });
+  it("requires authentication and rejects another user's document before reading it", async () => {
+    expect(
+      (await request(app).post("/api/v1/ferry/ticket-preview").send({ text: "ticket" })).status
+    ).toBe(401);
+    const doc = await prisma.document.create({
+      data: {
+        userId: otherUserId,
+        storedName: "ferry-test-no-bytes.pdf",
+        mimetype: "application/pdf",
+        sizeBytes: 10,
+        sha256: "preview-test",
+        format: "pdf",
+      },
+    });
+    const res = await request(app)
+      .post("/api/v1/ferry/ticket-preview")
+      .set("Cookie", cookie)
+      .send({ documentId: doc.id });
+    expect(res.status).toBe(404);
+  });
+  it("tells an unreadable text layer from a parsing failure", async () => {
+    const res = await request(app)
+      .post("/api/v1/ferry/ticket-preview")
+      .set("Cookie", cookie)
+      .send({ text: "1" });
+    expect(res.body.data.reason).toBe("noText");
+  });
+  it("checks ownership before any live provider request and exposes no credential", async () => {
+    jest.mocked(lookupVessel).mockClear();
+    const mine = await create(base);
+    expect(
+      (
+        await request(app)
+          .get(`/api/v1/ferry/${mine.body.data.id}/live-position?mmsi=211123456`)
+          .set("Cookie", otherCookie)
+      ).status
+    ).toBe(404);
+    expect(lookupVessel).not.toHaveBeenCalled();
+    jest.mocked(lookupVessel).mockResolvedValue({ status: "notConfigured", position: null });
+    const res = await request(app)
+      .get(`/api/v1/ferry/${mine.body.data.id}/live-position?mmsi=211123456`)
+      .set("Cookie", cookie);
+    expect(res.body.data).toEqual({ status: "notConfigured", position: null });
+    expect(
+      (await request(app).get("/api/v1/ferry/live-availability").set("Cookie", cookie)).body.data
+    ).toEqual({ configured: false, provider: "AISStream" });
   });
 });
