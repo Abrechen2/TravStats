@@ -207,3 +207,25 @@ export async function resolveEditedGeometry(
   }
   return { kind: "refetched", geo };
 }
+
+/** Explicit refresh keeps every equally good stored line without re-cutting it. */
+export async function refetchJourneyGeometry(existing: StoredJourneyLine): Promise<GeometryEdit> {
+  const geo = await resolveJourneyGeometry({
+    lookupProvider: existing.lookupProvider,
+    lookupRef: existing.lookupRef,
+    dep: { lat: existing.depLat, lon: existing.depLon },
+    arr: { lat: existing.arrLat, lon: existing.arrLon },
+  });
+  if (geo.geometrySource === "straight" && geo.fallback === null)
+    geo.fallback = "railRoutingNotConfigured";
+  const stored = readStoredLine(existing.geometry);
+  if (stored && lineRank(existing.geometrySource) >= lineRank(geo.geometrySource)) {
+    return {
+      kind: "kept",
+      line: stored,
+      geometrySource: existing.geometrySource,
+      fallback: geo.fallback,
+    };
+  }
+  return { kind: "refetched", geo };
+}

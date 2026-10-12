@@ -1,3 +1,4 @@
+import { ConnectionDistance } from "./ConnectionDistance";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatRailSpan } from "../../lib/railTime";
@@ -15,7 +16,6 @@ import { OperatorTile } from "../table/OperatorTile";
 import { statusPillProps } from "../table/statusPillStyle";
 import TripPill from "../Trips/TripPill";
 import { TableRow, type TableColumn } from "../ui/Table";
-import { railDistanceNoteKey } from "./railDistanceLabel";
 import { StationShortCode } from "./StationShortCode";
 import { trainLabel } from "./trainLabel";
 
@@ -70,8 +70,7 @@ function StationPair({ journey }: { journey: RailJourney }): JSX.Element {
  * changed at, destination; first departure to last arrival; all trains — and
  * opens the connection's page, where each train is edited on its own.
  *
- * A ride with changes shows no distance: its legs may mix a straight line
- * with a traced one, and a sum would pass the mix off as one measurement.
+ * The distance names mixed sources and missing legs instead of claiming a complete trace.
  */
 export function RailTableRow({ connection, columns, onOpen, actions }: Props): JSX.Element | null {
   const { t, i18n } = useTranslation(["rail"]);
@@ -93,16 +92,7 @@ export function RailTableRow({ connection, columns, onOpen, actions }: Props): J
         ? t("rail:delay", { minutes: single.delayMinutes })
         : t("rail:onTime");
 
-  const kmNoteKey = single ? railDistanceNoteKey(single.distanceSource) : null;
-  const distance =
-    single === null || single.distanceKm === null ? (
-      "—"
-    ) : (
-      <span className="flex flex-col items-end">
-        <span>{`${Math.round(single.distanceKm).toLocaleString(locale)} km`}</span>
-        {kmNoteKey ? <span className="t-caption">{t(kmNoteKey)}</span> : null}
-      </span>
-    );
+  const distance = <ConnectionDistance legs={legs} />;
 
   const train = single ? (
     trainLabel(single) || "—"
@@ -114,7 +104,17 @@ export function RailTableRow({ connection, columns, onOpen, actions }: Props): J
   );
 
   const cell: Record<RailColumnId, ReactNode> = {
-    operator: <OperatorTile name={primaryOperator(legs)} domain="rail" />,
+    operator: (
+      <OperatorTile
+        name={primaryOperator(legs)}
+        domain="rail"
+        logoUrl={
+          primaryOperator(legs)
+            ? `/api/v1/rail/operators/logo?name=${encodeURIComponent(primaryOperator(legs)!)}`
+            : null
+        }
+      />
+    ),
     route: single ? <StationPair journey={single} /> : connectionStations(legs).join(" → "),
     time: span ? formatRailSpan(span, locale) : "—",
     train,

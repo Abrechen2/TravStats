@@ -2,7 +2,7 @@ import cron from "node-cron";
 import type { ScheduledTask } from "node-cron";
 import { prisma } from "../db";
 import logger from "../utils/logger";
-import { createBackup } from "./backupService";
+import { createBackup, cleanupOldBackups } from "./backupService";
 import { schedulerZone, setAdminBackupZone } from "../shared/time/schedulerZone";
 
 const VALID_INTERVALS = ["daily", "weekly", "monthly"] as const;
@@ -90,6 +90,15 @@ async function checkAndRunBackup(): Promise<void> {
     });
 
     await createBackup({ type: "full" });
+    // Retention only follows a successful local backup, never a failed dump.
+    try {
+      await cleanupOldBackups();
+    } catch {
+      logger.warn({
+        operation: "backup_cleanup_failed",
+        message: "Backup completed but retention cleanup failed; archives retained",
+      });
+    }
 
     logger.info({
       operation: "backup_scheduler_complete",

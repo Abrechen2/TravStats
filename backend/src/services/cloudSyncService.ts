@@ -1,3 +1,4 @@
+import { createHash } from "crypto";
 import { createClient } from "webdav";
 import * as fs from "fs";
 import * as path from "path";
@@ -27,7 +28,11 @@ type WebDAVClient = ReturnType<typeof createClient>;
  * Build a WebDAV client from current DB settings (with ENV fallback).
  * Throws 409 if sync is disabled or any required field is missing.
  */
-async function getWebDAVClient(): Promise<{ client: WebDAVClient; backupPath: string }> {
+async function getWebDAVClient(): Promise<{
+  client: WebDAVClient;
+  backupPath: string;
+  target: string;
+}> {
   const { enabled, url, username, password, backupPath } = await getWebDAVSettings();
   if (!enabled) {
     throw new AppError("WebDAV sync is not enabled", 409);
@@ -38,6 +43,9 @@ async function getWebDAVClient(): Promise<{ client: WebDAVClient; backupPath: st
   return {
     client: createClient(url, { username, password }),
     backupPath,
+    target: createHash("sha256")
+      .update(JSON.stringify([url.replace(/\/+$/, ""), username, backupPath]))
+      .digest("hex"),
   };
 }
 
@@ -103,7 +111,7 @@ export async function syncToCloud(backupId: string): Promise<void> {
     throw new AppError("Backup file not found", 404);
   }
 
-  const { client, backupPath } = await getWebDAVClient();
+  const { client, backupPath, target } = await getWebDAVClient();
 
   try {
     // Ensure backup directory exists on WebDAV (ignore if it already does)
@@ -131,6 +139,9 @@ export async function syncToCloud(backupId: string): Promise<void> {
       data: {
         syncedToCloud: true,
         cloudSyncAt: new Date(),
+        cloudTarget: target,
+        cloudPath: remotePath,
+        cloudDeleteError: null,
         // A success clears the previous reason. Leaving it would show the
         // admin a red explanation next to a green tick.
         cloudSyncError: null,
@@ -307,6 +318,47 @@ export async function downloadFromCloud(backupName: string, localPath: string): 
       message: "Failed to download backup from WebDAV",
       backupName,
       error: error instanceof Error ? error.message : "Unknown error",
+    });
+    throw asUpstreamError(error);
+  }
+}
+
+/** Delete exactly the object we uploaded. A changed target is never guessed. */
+export async function deleteCloudBackup(backup: {
+  id: string;
+  cloudTarget?: string | null;
+  cloudPath?: string | null;
+}): Promise<void> {
+  try {
+    const { client, backupPath, target } = await getWebDAVClient();
+    const remote = backup.cloudPath;
+    if (
+      !remote ||
+      !backup.cloudTarget ||
+      backup.cloudTarget !== target ||
+      path.posix.dirname(remote) !== (path.posix.normalize(backupPath).replace(/\/$/, "") || "/") ||
+      !/^backup-[a-zA-Z0-9._-]+\.tar\.gz$/.test(path.posix.basename(remote))
+    ) {
+      throw new AppError(
+        "Remote backup target is unknown or changed; upload this backup again to record its current target",
+        409
+      );
+    }
+    try {
+      await client.deleteFile(remote);
+    } catch (error) {
+      // A retry after a lost DELETE response must still be able to finish.
+      if ((error as { status?: number }).status !== 404) throw error;
+    }
+  } catch (error) {
+    await prisma.backup.update({
+      where: { id: backup.id },
+      data: {
+        cloudDeleteError:
+          error instanceof AppError && error.statusCode === 409
+            ? "REMOTE_TARGET_UNKNOWN"
+            : "REMOTE_DELETE_FAILED",
+      },
     });
     throw asUpstreamError(error);
   }

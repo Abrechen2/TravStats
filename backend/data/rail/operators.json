@@ -1,0 +1,10 @@
+[
+  { "id": "rail-db", "name": "Deutsche Bahn", "aliases": ["DB", "DB Fernverkehr", "DB Fernverkehr AG", "DB Regio", "DB Regio AG"], "domain": "bahn.de" },
+  { "id": "rail-oebb", "name": "ÖBB", "aliases": ["Österreichische Bundesbahnen", "ÖBB-Personenverkehr AG"], "domain": "oebb.at" },
+  { "id": "rail-sbb", "name": "SBB", "aliases": ["SBB CFF FFS", "Schweizerische Bundesbahnen"], "domain": "sbb.ch" },
+  { "id": "rail-sncf", "name": "SNCF", "aliases": ["SNCF Voyageurs"], "domain": "sncf.com" },
+  { "id": "rail-eurostar", "name": "Eurostar", "aliases": ["Eurostar International"], "domain": "eurostar.com" },
+  { "id": "rail-trenitalia", "name": "Trenitalia", "aliases": ["Trenitalia S.p.A."], "domain": "trenitalia.com" },
+  { "id": "rail-renfe", "name": "Renfe", "aliases": ["Renfe Operadora"], "domain": "renfe.com" },
+  { "id": "rail-ns", "name": "Nederlandse Spoorwegen", "aliases": ["NS", "NS International"], "domain": "ns.nl" }
+]

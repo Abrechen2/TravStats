@@ -5,6 +5,8 @@ import type { z } from "zod";
 import { prisma } from "../db";
 import { Prisma } from "../prisma";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
+import { railRouteLimiter } from "../middleware/railRouteLimiter";
+import { rejectDemo } from "../middleware/demoGuard";
 import { railCreationLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import {
@@ -23,6 +25,7 @@ import {
 } from "../services/rail/railJourneyWrite";
 import {
   readStoredLine,
+  refetchJourneyGeometry,
   resolveEditedGeometry,
   resolveJourneyGeometry,
   tracedLengthKm,
@@ -507,6 +510,52 @@ async function replayRailRide(userId: string, id: string) {
     meta: { geometry: editReport({ kind: "unchanged" }, journey.geometrySource) },
   };
 }
+
+/** Re-fetch the line without editing the recorded journey (#364). */
+router.post(
+  "/:id/route",
+  railRouteLimiter,
+  rejectDemo,
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const userId = requireUser(req);
+      const existing = await prisma.railJourney.findFirst({ where: { id: req.params.id, userId } });
+      if (!existing) throw new AppError("Rail journey not found", 404);
+      const edit = await refetchJourneyGeometry(existing);
+      const journey = await prisma.$transaction(async (tx) => {
+        const before = await shareSnapshot(tx, "rail", existing.id);
+        const changed = edit.kind === "refetched" && edit.geo.geometry !== null;
+        if (changed) {
+          const result = await tx.railJourney.updateMany({
+            where: { id: existing.id, userId, updatedAt: existing.updatedAt },
+            data: {
+              geometry: edit.geo.geometry as unknown as Prisma.InputJsonValue,
+              geometrySource: edit.geo.geometrySource,
+              ...(existing.distanceSource !== "user" && {
+                distanceKm: tracedLengthKm(edit.geo.geometry!),
+                distanceSource: "route",
+              }),
+            },
+          });
+          if (result.count !== 1)
+            throw new AppError("Journey changed while routing; reload and try again", 409);
+          await propagateWrite(tx, userId, "rail", existing.id, before);
+        }
+        return tx.railJourney.findFirstOrThrow({
+          where: { id: existing.id, userId },
+          include: RAIL_INCLUDE,
+        });
+      });
+      res.json({
+        success: true,
+        data: withRailSource(withStationShortCodes(withRailTimes(journey))),
+        meta: { geometry: editReport(edit, existing.geometrySource) },
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

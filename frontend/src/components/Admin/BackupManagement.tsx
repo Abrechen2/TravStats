@@ -12,199 +12,14 @@ import { backupFailureKey, backupRowFailureKey } from "../../lib/backupFailure";
 import { useTranslation } from "../../hooks/useTranslation";
 // The shared frame: role=dialog, aria-modal, Escape, focus in and back out,
 // and a panel that scrolls instead of running off a 320px screen (AUD-037).
-import Modal from "../Modal";
-import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import { RestoreModal } from "./RestoreModal";
+export { RestoreModal } from "./RestoreModal";
+import type { Backup } from "./backupTypes";
+import BackupDeleteModal from "./BackupDeleteModal";
 import Toggletip from "../ui/Toggletip";
-
-interface Backup {
-  id: string;
-  type: string;
-  status: string;
-  backupPath: string;
-  size: string;
-  retentionDays: number;
-  startedAt: string | null;
-  completedAt: string | null;
-  errorMessage: string | null;
-  /** Why a failed backup failed — a code, worded by `backupRowFailureKey`. */
-  errorCode?: string | null;
-  metadata: Record<string, unknown> | null;
-  syncedToCloud: boolean;
-  cloudSyncAt: string | null;
-  cloudSyncError: string | null;
-  createdAt: string;
-  fileExists?: boolean;
-}
-
-interface RestoreModalProps {
-  backup: Backup;
-  onClose: () => void;
-  onConfirm: (
-    scope: "full" | "database" | "files",
-    createBackupBefore: boolean,
-    acceptEncryptionKeyChange: boolean
-  ) => void;
-  /**
-   * The server refused the last attempt because the archive's encrypted values
-   * were written with a different instance key (audit SRV-RESTORE-001). The
-   * dialog stays open and asks for that acknowledgement rather than closing on
-   * a toast: the admin is mid-recovery, and what is needed from them is a
-   * decision, not an error message.
-   */
-  encryptionKeyMismatch?: boolean;
-  /** The restore job is running: the dialog says so and cannot be sent twice. */
-  restoring?: boolean;
-}
-
-/** Exported for its own test — the dialog contract is worth holding on its
- *  own, without driving the whole backup page to reach it. */
-export function RestoreModal({
-  backup,
-  onClose,
-  onConfirm,
-  encryptionKeyMismatch = false,
-  restoring = false,
-}: RestoreModalProps): JSX.Element {
-  const { t } = useTranslation(["admin", "common"]);
-  const [scope, setScope] = useState<"full" | "database" | "files">("full");
-  const [createBackupBefore, setCreateBackupBefore] = useState(true);
-  const [acceptKeyChange, setAcceptKeyChange] = useState(false);
-
-  const [confirmText, setConfirmText] = useState("");
-
-  const formatDate = (dateString: string | null | undefined): string => {
-    if (!dateString) return t("common:labels.unknown");
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        return t("common:labels.unknown");
-      }
-      // A backup belongs to no place: the user's profile clock (ADR 0002 Q1).
-      return profileDateTime(date) ?? t("common:labels.unknown");
-    } catch {
-      return t("common:labels.unknown");
-    }
-  };
-
-  const mayConfirm =
-    confirmText === t("admin:backup.restore.confirmText") &&
-    (!encryptionKeyMismatch || acceptKeyChange);
-
-  const handleConfirm = () => {
-    if (!mayConfirm) {
-      return;
-    }
-    onConfirm(scope, createBackupBefore, acceptKeyChange);
-  };
-
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      busy={restoring}
-      title={<span style={{ color: "var(--danger)" }}>⚠️ {t("admin:backup.restore.title")}</span>}
-      maxWidth={672}
-      closeLabel={t("common:buttons.cancel")}
-      footer={
-        <>
-          <button onClick={onClose} disabled={restoring} className="btn-secondary">
-            {t("common:buttons.cancel")}
-          </button>
-          <button
-            onClick={handleConfirm}
-            disabled={!mayConfirm || restoring}
-            className="btn-danger disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {restoring
-              ? t("admin:backup.restore.inProgress")
-              : t("admin:backup.restore.confirmButton")}
-          </button>
-        </>
-      }
-    >
-      <div className="space-y-4">
-        <div
-          className="border rounded-lg p-4"
-          style={{ background: "var(--bg-elevated)", borderColor: "var(--danger)" }}
-        >
-          <p className="font-semibold" style={{ color: "var(--danger)" }}>
-            {t("admin:backup.restore.warning")}
-          </p>
-          <p className="text-sm mt-2" style={{ color: "var(--danger)" }}>
-            {t("admin:backup.restore.backupFrom", { date: formatDate(backup.completedAt) })}
-          </p>
-        </div>
-
-        {encryptionKeyMismatch && (
-          <div
-            className="border rounded-lg p-4"
-            style={{ background: "var(--bg-elevated)", borderColor: "var(--danger)" }}
-          >
-            <p className="font-semibold" style={{ color: "var(--danger)" }}>
-              {t("admin:backup.restore.keyMismatchTitle")}
-            </p>
-            <p className="text-sm mt-2">{t("admin:backup.restore.keyMismatchBody")}</p>
-            <label className="flex items-start gap-3 mt-3">
-              <input
-                type="checkbox"
-                checked={acceptKeyChange}
-                onChange={(e) => setAcceptKeyChange(e.target.checked)}
-                className="checkbox"
-              />
-              <span>{t("admin:backup.restore.keyMismatchAcknowledge")}</span>
-            </label>
-          </div>
-        )}
-
-        <div>
-          <label className="label" htmlFor="restore-scope">
-            {t("admin:backup.restore.scope")}
-          </label>
-          <select
-            id="restore-scope"
-            value={scope}
-            onChange={(e) => setScope(e.target.value as "full" | "database" | "files")}
-            className="input"
-          >
-            <option value="full">{t("admin:backup.restore.scopeFull")}</option>
-            <option value="database">{t("admin:backup.restore.scopeDatabase")}</option>
-            <option value="files">{t("admin:backup.restore.scopeFiles")}</option>
-          </select>
-        </div>
-
-        <label className="flex items-center gap-3">
-          <input
-            type="checkbox"
-            checked={createBackupBefore}
-            onChange={(e) => setCreateBackupBefore(e.target.checked)}
-            className="checkbox"
-          />
-          <span>{t("admin:backup.restore.createBackupBefore")}</span>
-        </label>
-
-        <div>
-          <label className="label" htmlFor="restore-confirm">
-            {t("admin:backup.restore.confirmLabel", {
-              text: t("admin:backup.restore.confirmText"),
-            })}
-          </label>
-          <input
-            id="restore-confirm"
-            type="text"
-            value={confirmText}
-            onChange={(e) => setConfirmText(e.target.value)}
-            className="input"
-            placeholder={t("admin:backup.restore.confirmText")}
-          />
-        </div>
-      </div>
-    </Modal>
-  );
-}
 
 export default function BackupManagement(): JSX.Element {
   const { t } = useTranslation(["admin", "common", "settings"]);
-  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
   const addToast = useToastStore((state) => state.addToast);
   const [backups, setBackups] = useState<Backup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -215,6 +30,8 @@ export default function BackupManagement(): JSX.Element {
    *  Cleared whenever the dialog opens or closes, so an acknowledgement can
    *  never carry over to a different archive. */
   const [keyMismatch, setKeyMismatch] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<Backup | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [webdavEnabled, setWebdavEnabled] = useState(false);
   const [status, setStatus] = useState<{
@@ -312,11 +129,18 @@ export default function BackupManagement(): JSX.Element {
   const handleSaveBackupSettings = async (): Promise<void> => {
     setSavingSettings(true);
     try {
-      const { backupEnabled, backupInterval, backupRetentionDays, backupZone } = backupSettings;
+      const {
+        backupEnabled,
+        backupInterval,
+        backupRetentionDays,
+        backupZone,
+        backupCloudRetention,
+      } = backupSettings;
       const updated = await backupApi.updateBackupSettings({
         backupEnabled,
         backupInterval,
         backupRetentionDays,
+        backupCloudRetention: backupCloudRetention ?? false,
         backupZone: backupZone ?? null,
       });
       setBackupSettings(updated);
@@ -437,17 +261,21 @@ export default function BackupManagement(): JSX.Element {
     }
   };
 
-  const handleDelete = async (backup: Backup) => {
-    const message = t("admin:backup.deleteConfirm", { date: formatDate(backup.completedAt) });
-    if (!(await askConfirm({ message, destructive: true }))) return;
-
+  const handleDelete = async (backup: Backup, remote: boolean) => {
+    setDeleting(true);
     try {
-      await backupApi.delete(backup.id);
+      await backupApi.delete(backup.id, remote);
+      setDeleteModal(null);
       addToast("success", t("admin:backup.toasts.deleted"));
-      loadBackups();
     } catch (error) {
       logger.error("Failed to delete backup:", error);
-      addToast("error", t("admin:backup.toasts.deleteFailed"));
+      addToast(
+        "error",
+        t(remote ? "admin:backup.remoteDeleteFailed" : "admin:backup.toasts.deleteFailed")
+      );
+    } finally {
+      setDeleting(false);
+      void loadBackups();
     }
   };
 
@@ -616,6 +444,19 @@ export default function BackupManagement(): JSX.Element {
               />
             </div>
           </div>
+          <label className="flex items-start gap-3 mt-3">
+            <input
+              type="checkbox"
+              checked={backupSettings.backupCloudRetention ?? false}
+              onChange={(e) =>
+                setBackupSettings({ ...backupSettings, backupCloudRetention: e.target.checked })
+              }
+            />
+            <span>{t("admin:backup.cloudRetention")}</span>
+          </label>
+          <p className="text-sm text-(--text-muted) mt-2">
+            {t("admin:backup.retentionProtection")}
+          </p>
           <BackupZoneField
             value={backupSettings.backupZone ?? null}
             effective={backupSettings.backupZoneEffective ?? null}
@@ -742,23 +583,35 @@ export default function BackupManagement(): JSX.Element {
                           >
                             {t("admin:backup.actions.restore")}
                           </button>
-                          {webdavEnabled && !backup.syncedToCloud && (
-                            <button
-                              onClick={() => handleSync(backup)}
-                              disabled={syncingId === backup.id}
-                              className="hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
-                              style={{ color: "var(--accent)" }}
-                            >
-                              {syncingId === backup.id
-                                ? t("admin:backup.actions.uploading")
-                                : t("admin:backup.actions.upload")}
-                            </button>
+                          {backup.cloudDeleteError && (
+                            <p role="alert" className="text-sm text-(--danger)">
+                              {t(
+                                backup.cloudDeleteError === "REMOTE_TARGET_UNKNOWN"
+                                  ? "admin:backup.remoteTargetUnknown"
+                                  : "admin:backup.remoteDeleteFailed"
+                              )}
+                            </p>
                           )}
+                          {webdavEnabled &&
+                            (!backup.syncedToCloud ||
+                              !backup.cloudTarget ||
+                              backup.cloudDeleteError === "REMOTE_TARGET_UNKNOWN") && (
+                              <button
+                                onClick={() => handleSync(backup)}
+                                disabled={syncingId === backup.id}
+                                className="hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                                style={{ color: "var(--accent)" }}
+                              >
+                                {syncingId === backup.id
+                                  ? t("admin:backup.actions.uploading")
+                                  : t("admin:backup.actions.upload")}
+                              </button>
+                            )}
                         </>
                       )}
                       {backup.status !== "running" && (
                         <button
-                          onClick={() => handleDelete(backup)}
+                          onClick={() => setDeleteModal(backup)}
                           className="hover:underline"
                           style={{ color: "var(--danger)" }}
                         >
@@ -786,7 +639,14 @@ export default function BackupManagement(): JSX.Element {
           restoring={restoring}
         />
       )}
-      {confirmDialog}
+      {deleteModal && (
+        <BackupDeleteModal
+          backup={deleteModal}
+          busy={deleting}
+          onClose={() => setDeleteModal(null)}
+          onConfirm={(remote) => void handleDelete(deleteModal, remote)}
+        />
+      )}
     </div>
   );
 }

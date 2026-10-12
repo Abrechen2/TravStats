@@ -5,6 +5,7 @@ export interface BackupScheduleSettings {
   backupEnabled: boolean;
   backupInterval: "daily" | "weekly" | "monthly";
   backupRetentionDays: number;
+  backupCloudRetention?: boolean;
   /** The zone the backup hour is read in; null = the server's own zone (ADR 0002). */
   backupZone?: string | null;
   /** Server-reported: the zone the scheduler actually runs in. */
@@ -91,7 +92,8 @@ export const backupApi = {
   },
 
   delete: async (
-    id: string
+    id: string,
+    remote = false
   ): Promise<{
     success: boolean;
     message: string;
@@ -99,7 +101,7 @@ export const backupApi = {
     const { data } = await api.delete<{
       success: boolean;
       message: string;
-    }>(`/backup/${id}`);
+    }>(`/backup/${id}`, { params: { remote: String(remote) } });
     return data;
   },
 

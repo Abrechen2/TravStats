@@ -99,6 +99,58 @@ describe("Rail journeys and the instance's OpenRailRouting", () => {
     await prisma.$disconnect();
   });
 
+  describe("explicit line refresh", () => {
+    it("routes an old straight journey without changing stations, times or typed distance", async () => {
+      await updateInstanceSettings({ railRoutingUrl: null });
+      const old = (await create(plainJourney({ distanceKm: 777 }))).body.data;
+      await updateInstanceSettings({ railRoutingUrl: ORR });
+      mock([[/orr\.lan:8989\/route/, routeAnswer([FRANKFURT, HANNOVER, BERLIN])]]);
+      const res = await request(app)
+        .post(`/api/v1/rail/${old.id}/route`)
+        .set("Cookie", cookie)
+        .send({});
+      expect(res.status).toBe(200);
+      expect(res.body.meta.geometry.outcome).toBe("routed");
+      expect(res.body.data).toMatchObject({
+        depLat: old.depLat,
+        arrLat: old.arrLat,
+        departureTime: old.departureTime,
+        distanceKm: 777,
+      });
+    });
+    it("names an unconfigured service and refuses another user's journey", async () => {
+      await updateInstanceSettings({ railRoutingUrl: null });
+      const old = (await create(plainJourney())).body.data;
+      const res = await request(app)
+        .post(`/api/v1/rail/${old.id}/route`)
+        .set("Cookie", cookie)
+        .send({});
+      expect(res.status).toBe(200);
+      expect(res.body.meta.geometry).toMatchObject({
+        outcome: "straight",
+        fallback: "railRoutingNotConfigured",
+      });
+      const forbidden = await request(app)
+        .post(`/api/v1/rail/${old.id}/route`)
+        .set("Cookie", adminCookie)
+        .send({});
+      expect(forbidden.status).toBe(404);
+    });
+    it("keeps a stored line and its distance when a new fetch fails", async () => {
+      mock([[/orr\.lan:8989\/route/, routeAnswer([FRANKFURT, HANNOVER, BERLIN])]]);
+      const old = (await create(plainJourney())).body.data;
+      await updateInstanceSettings({ railRoutingUrl: null });
+      const res = await request(app)
+        .post(`/api/v1/rail/${old.id}/route`)
+        .set("Cookie", cookie)
+        .send({});
+      expect(res.status).toBe(200);
+      expect(res.body.meta.geometry.outcome).toBe("kept");
+      expect(res.body.data.geometry).toEqual(old.geometry);
+      expect(res.body.data.distanceKm).toBe(old.distanceKm);
+    });
+  });
+
   describe("saving a journey without a Transitous match", () => {
     it("routes the line over the tracks in ONE request and says it was routed", async () => {
       const m = mock([[/orr\.lan:8989\/route/, routeAnswer([FRANKFURT, HANNOVER, BERLIN])]]);

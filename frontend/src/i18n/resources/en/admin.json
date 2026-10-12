@@ -779,7 +779,13 @@
       "BACKUP_FAILED": "The backup failed. The cause is in the server log.",
       "RESTORE_FAILED": "The restore failed. The cause is in the server log.",
       "BACKUP_INTERRUPTED": "The backup was cut off because the server restarted or a restore was applied. Simply start it again."
-    }
+    },
+    "cloudRetention": "Also delete expired backups from WebDAV.",
+    "retentionProtection": "Cleanup runs after a successful automatic backup. The last available full backup is retained.",
+    "deleteRemote": "Also delete the WebDAV copy",
+    "deleteLocalOnly": "The local backup will be deleted. A WebDAV copy is retained unless you explicitly select it.",
+    "remoteDeleteFailed": "WebDAV deletion failed. The local backup is retained. Check the connection and try again.",
+    "remoteTargetUnknown": "The original WebDAV target is unknown or changed. Upload this backup again before deleting both copies, or delete locally only."
   },
   "feedback": {
     "title": "Parser Feedback Statistics",

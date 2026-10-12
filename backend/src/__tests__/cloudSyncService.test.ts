@@ -41,6 +41,7 @@ jest.mock("fs", () => ({
 }));
 
 const mockClient = {
+  deleteFile: jest.fn(),
   getDirectoryContents: jest.fn(),
   createDirectory: jest.fn(),
   putFileContents: jest.fn(),
@@ -461,6 +462,46 @@ describe("cloudSyncService", () => {
 
       await expect(downloadFromCloud("missing.tar.gz", "/tmp/out.tar.gz")).rejects.toThrow(/404/);
       expect(mockWriteFileSync).not.toHaveBeenCalled();
+    });
+  });
+});
+
+describe("remote backup deletion identity", () => {
+  it("records the target at upload and deletes exactly that object; missing remote is idempotent", async () => {
+    const { syncToCloud, deleteCloudBackup } = await loadModule(true);
+    mockBackupFindUnique.mockResolvedValue({
+      id: "b",
+      status: "completed",
+      backupPath: "/tmp/backup-2026.tar.gz",
+    });
+    mockExistsSync.mockReturnValue(true);
+    mockReadFileSync.mockReturnValue(Buffer.from("backup"));
+    mockClient.putFileContents.mockResolvedValue(undefined);
+    await syncToCloud("b");
+    const written = mockBackupUpdate.mock.calls.at(-1)[0].data;
+    expect(written.cloudTarget).toMatch(/^[a-f0-9]{64}$/);
+    mockClient.deleteFile.mockResolvedValueOnce(undefined).mockRejectedValueOnce({ status: 404 });
+    const backup = { id: "b", ...written };
+    await deleteCloudBackup(backup);
+    await deleteCloudBackup(backup);
+    expect(mockClient.deleteFile).toHaveBeenLastCalledWith("/TravStats/backups/backup-2026.tar.gz");
+  });
+
+  it("refuses legacy or changed targets and retains an actionable error", async () => {
+    const { deleteCloudBackup } = await loadModule(true);
+    mockClient.deleteFile.mockClear();
+    await expect(deleteCloudBackup({ id: "b" })).rejects.toMatchObject({ statusCode: 409 });
+    await expect(
+      deleteCloudBackup({
+        id: "b",
+        cloudTarget: "different",
+        cloudPath: "/TravStats/backups/backup-2026.tar.gz",
+      })
+    ).rejects.toMatchObject({ statusCode: 409 });
+    expect(mockClient.deleteFile).not.toHaveBeenCalled();
+    expect(mockBackupUpdate).toHaveBeenLastCalledWith({
+      where: { id: "b" },
+      data: { cloudDeleteError: "REMOTE_TARGET_UNKNOWN" },
     });
   });
 });

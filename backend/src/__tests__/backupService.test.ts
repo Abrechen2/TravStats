@@ -5,6 +5,8 @@ const mockBackupFindMany = jest.fn();
 const mockBackupFindUnique = jest.fn();
 const mockBackupDelete = jest.fn();
 const mockAdminSettingsFindFirst = jest.fn();
+const mockDeleteCloudBackup = jest.fn();
+jest.mock("../services/cloudSyncService", () => ({ deleteCloudBackup: mockDeleteCloudBackup }));
 
 jest.mock("../db", () => ({
   prisma: {
@@ -209,16 +211,32 @@ describe("backupService", () => {
     });
   });
 
+  it("retains the local file and row when remote deletion fails", async () => {
+    mockBackupFindUnique.mockResolvedValue({ ...MOCK_BACKUP, syncedToCloud: true });
+    mockDeleteCloudBackup.mockRejectedValueOnce(new Error("offline"));
+    await expect(deleteBackup("backup-1", true)).rejects.toThrow("offline");
+    expect(mockRmSync).not.toHaveBeenCalled();
+    expect(mockBackupDelete).not.toHaveBeenCalled();
+  });
+
+  it("never deletes a running backup", async () => {
+    mockBackupFindUnique.mockResolvedValue({ ...MOCK_BACKUP, status: "running" });
+    await expect(deleteBackup("backup-1")).rejects.toMatchObject({ statusCode: 409 });
+    expect(mockBackupDelete).not.toHaveBeenCalled();
+  });
+
   // ─── cleanupOldBackups ─────────────────────────────────────────────────────
 
   describe("cleanupOldBackups", () => {
     it("deletes old completed backups and returns deleted count", async () => {
       const oldBackup1 = { ...MOCK_BACKUP, id: "old-1" };
       const oldBackup2 = { ...MOCK_BACKUP, id: "old-2" };
-      mockBackupFindMany.mockResolvedValue([oldBackup1, oldBackup2]);
+      mockBackupFindMany
+        .mockResolvedValueOnce([oldBackup1, oldBackup2])
+        .mockResolvedValueOnce([{ id: "latest", backupPath: "/latest" }]);
       // deleteBackup calls findUnique for each; return the corresponding backup
       mockBackupFindUnique.mockResolvedValueOnce(oldBackup1).mockResolvedValueOnce(oldBackup2);
-      mockExistsSync.mockReturnValue(false);
+      mockExistsSync.mockImplementation((p) => p === "/latest");
 
       const count = await cleanupOldBackups();
 
@@ -226,6 +244,37 @@ describe("backupService", () => {
       expect(mockBackupDelete).toHaveBeenCalledTimes(2);
       expect(mockBackupDelete).toHaveBeenCalledWith({ where: { id: "old-1" } });
       expect(mockBackupDelete).toHaveBeenCalledWith({ where: { id: "old-2" } });
+    });
+
+    it("retains the last full archive even when expired", async () => {
+      mockBackupFindMany.mockResolvedValue([MOCK_BACKUP]);
+      mockExistsSync.mockReturnValue(true);
+      expect(await cleanupOldBackups()).toBe(0);
+      expect(mockBackupDelete).not.toHaveBeenCalled();
+    });
+
+    it("does not prune anything without an available full archive", async () => {
+      mockBackupFindMany.mockResolvedValue([MOCK_BACKUP]);
+      mockExistsSync.mockReturnValue(false);
+      expect(await cleanupOldBackups()).toBe(0);
+      expect(mockBackupDelete).not.toHaveBeenCalled();
+    });
+
+    it("uses the configured retention and remote opt-in", async () => {
+      mockAdminSettingsFindFirst.mockResolvedValue({
+        backupRetentionDays: 4,
+        backupCloudRetention: true,
+      });
+      const old = { ...MOCK_BACKUP, syncedToCloud: true };
+      mockBackupFindMany
+        .mockResolvedValueOnce([old])
+        .mockResolvedValueOnce([{ id: "latest", backupPath: "/latest" }]);
+      mockBackupFindUnique.mockResolvedValue(old);
+      mockExistsSync.mockImplementation((p) => p === "/latest");
+      expect(await cleanupOldBackups()).toBe(1);
+      const cutoff = mockBackupFindMany.mock.calls[0][0].where.createdAt.lt.getTime();
+      expect(Math.abs(cutoff - (Date.now() - 4 * 86400000))).toBeLessThan(1000);
+      expect(mockDeleteCloudBackup).toHaveBeenCalledWith(old);
     });
 
     it("returns 0 when no old backups exist", async () => {
@@ -255,13 +304,15 @@ describe("backupService", () => {
     it("continues deleting remaining backups if one deletion fails", async () => {
       const failingBackup = { ...MOCK_BACKUP, id: "failing-1" };
       const successBackup = { ...MOCK_BACKUP, id: "success-2" };
-      mockBackupFindMany.mockResolvedValue([failingBackup, successBackup]);
+      mockBackupFindMany
+        .mockResolvedValueOnce([failingBackup, successBackup])
+        .mockResolvedValueOnce([{ id: "latest", backupPath: "/latest" }]);
 
       // First findUnique for failing backup returns null → deleteBackup throws
       mockBackupFindUnique
         .mockResolvedValueOnce(null) // failing-1: not found → throws
         .mockResolvedValueOnce(successBackup); // success-2: found → deletes
-      mockExistsSync.mockReturnValue(false);
+      mockExistsSync.mockImplementation((p) => p === "/latest");
 
       const count = await cleanupOldBackups();
 

@@ -1116,6 +1116,7 @@ model AdminSettings {
   backupEnabled       Boolean   @default(false) @map("backup_enabled")
   backupInterval      String    @default("weekly") @map("backup_interval")
   backupRetentionDays Int       @default(30) @map("backup_retention_days")
+  backupCloudRetention Boolean @default(false) @map("backup_cloud_retention")
   /// IANA zone the backup cron expression is read in (owner decision
   /// 2026-09-26). Null = the host zone the process booted with, which is what
   /// every instance ran in before the setting existed — so an upgrade keeps
@@ -1336,6 +1337,9 @@ model Backup {
   metadata        Json? // JSON: userCount, flightCount, etc.
   syncedToCloud   Boolean   @default(false) @map("synced_to_cloud")
   cloudSyncAt     DateTime? @map("cloud_sync_at")
+  cloudTarget     String? @map("cloud_target") // Hash of endpoint, account and directory at upload
+  cloudPath       String? @map("cloud_path") // Exact object uploaded, never a directory
+  cloudDeleteError String? @map("cloud_delete_error")
   cloudSyncError  String?   @map("cloud_sync_error") // Why the last upload attempt failed; null once one succeeds
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")

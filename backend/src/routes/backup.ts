@@ -392,7 +392,8 @@ router.post(
 router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
-    await deleteBackup(id);
+    const { remote } = z.object({ remote: z.enum(["true", "false"]).optional() }).parse(req.query);
+    await deleteBackup(id, remote === "true");
     res.json({
       success: true,
       message: "Backup deleted successfully",

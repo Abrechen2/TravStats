@@ -10,7 +10,7 @@ import path from "path";
 import { z } from "zod";
 import logger from "../../utils/logger";
 
-const providerSchema = z.object({
+export const providerSchema = z.object({
   id: z.string().regex(/^[a-z0-9-]{2,40}$/),
   name: z.string().min(1).max(80),
   aliases: z.array(z.string().min(1).max(80)).default([]),

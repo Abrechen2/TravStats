@@ -779,7 +779,13 @@
       "BACKUP_FAILED": "Das Backup ist fehlgeschlagen. Die Ursache steht im Server-Log.",
       "RESTORE_FAILED": "Die Wiederherstellung ist fehlgeschlagen. Die Ursache steht im Server-Log.",
       "BACKUP_INTERRUPTED": "Das Backup wurde abgebrochen, weil der Server neu gestartet oder eine Wiederherstellung eingespielt wurde. Einfach neu starten."
-    }
+    },
+    "cloudRetention": "Abgelaufene Sicherungen auch auf WebDAV löschen.",
+    "retentionProtection": "Die Bereinigung läuft nach einer erfolgreichen automatischen Sicherung. Die letzte vorhandene vollständige Sicherung bleibt erhalten.",
+    "deleteRemote": "Auch die WebDAV-Kopie löschen",
+    "deleteLocalOnly": "Die lokale Sicherung wird gelöscht. Eine vorhandene WebDAV-Kopie bleibt erhalten, sofern du sie nicht ausdrücklich auswählst.",
+    "remoteDeleteFailed": "WebDAV-Löschung fehlgeschlagen. Die lokale Sicherung bleibt erhalten. Verbindung prüfen und erneut versuchen.",
+    "remoteTargetUnknown": "Das ursprüngliche WebDAV-Ziel ist unbekannt oder wurde geändert. Die Sicherung erneut hochladen, bevor du beide Kopien löschst, oder nur lokal löschen."
   },
   "feedback": {
     "title": "Parser Feedback-Statistiken",

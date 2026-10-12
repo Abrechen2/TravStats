@@ -13,7 +13,7 @@ import {
 import { createDatabaseDump } from "./backup/backupDatabase";
 import { archiveUploads, getMetadata } from "./backup/backupFiles";
 import { restoreBackup as restoreBackupImpl } from "./backup/backupRestore";
-import { syncToCloudIfEnabled } from "./cloudSyncService";
+import { syncToCloudIfEnabled, deleteCloudBackup } from "./cloudSyncService";
 import { AppError } from "../middleware/errorHandler";
 import { backupFailureCode, backupRowFailureCode } from "./backup/backupFailure";
 
@@ -340,7 +340,7 @@ export async function getBackup(id: string): Promise<Backup & { fileExists: bool
 /**
  * Delete backup
  */
-export async function deleteBackup(id: string): Promise<void> {
+export async function deleteBackup(id: string, deleteRemote = false): Promise<void> {
   const backup = await prisma.backup.findUnique({
     where: { id },
   });
@@ -348,6 +348,12 @@ export async function deleteBackup(id: string): Promise<void> {
   if (!backup) {
     throw new AppError("Backup not found", 404);
   }
+
+  if (backup.status === "running" || backup.status === "pending") {
+    throw new AppError("A running backup cannot be deleted", 409);
+  }
+  // Remote first: retain the row and local archive when the share refuses.
+  if (deleteRemote && backup.syncedToCloud) await deleteCloudBackup(backup);
 
   // Delete backup files
   if (backup.backupPath && fs.existsSync(backup.backupPath)) {
@@ -395,11 +401,21 @@ export async function cleanupOldBackups(): Promise<number> {
     },
   });
 
+  // Keep the newest completed full archive that actually remains on disk.
+  const completed = await prisma.backup.findMany({
+    where: { status: "completed", type: "full" },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, backupPath: true },
+  });
+  const protectedBackup = completed.find((row) => row.backupPath && fs.existsSync(row.backupPath));
+  // Without a usable replacement, automatic deletion is not justified.
+  if (!protectedBackup) return 0;
   let deletedCount = 0;
 
   for (const backup of oldBackups) {
+    if (backup.id === protectedBackup.id) continue;
     try {
-      await deleteBackup(backup.id);
+      await deleteBackup(backup.id, adminSettings?.backupCloudRetention ?? false);
       deletedCount++;
     } catch (error) {
       logger.error({

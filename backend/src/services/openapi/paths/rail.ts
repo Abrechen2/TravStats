@@ -460,3 +460,55 @@ registry.registerPath({
     404: { description: "No such journey, or not the caller's", content: errorContent },
   },
 });
+
+registry.registerPath({
+  method: "post",
+  path: "/rail/{id}/route",
+  tags: ["Rail"],
+  summary: "Re-fetch a journey's line without changing its stations or booking",
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: "Current journey and route outcome, including a failed provider's reason",
+      content: { "application/json": { schema: writeEnvelope(railJourney) } },
+    },
+    401: { description: "Authentication required", content: errorContent },
+    403: {
+      description: "Write access required; unavailable for the shared demo",
+      content: errorContent,
+    },
+    404: { description: "Journey not found", content: errorContent },
+    409: { description: "Journey changed while routing", content: errorContent },
+    429: { description: "Too many routing requests", content: errorContent },
+  },
+});
+registry.registerPath({
+  method: "get",
+  path: "/rail/operators",
+  tags: ["Rail"],
+  summary: "Known rail operators",
+  responses: {
+    200: {
+      description: "Operator catalogue",
+      content: {
+        "application/json": {
+          schema: envelope(z.array(z.object({ id: z.string(), name: z.string() }))),
+        },
+      },
+    },
+  },
+});
+registry.registerPath({
+  method: "get",
+  path: "/rail/operators/logo",
+  tags: ["Rail"],
+  summary: "Known operator logo, or no logo",
+  request: { query: z.object({ name: z.string().min(1).max(120) }) },
+  responses: {
+    200: {
+      description: "Raster logo",
+      content: { "image/png": { schema: z.string().openapi({ format: "binary" }) } },
+    },
+    404: { description: "Unknown operator or no logo available", content: errorContent },
+  },
+});

@@ -64,6 +64,14 @@ export interface RailConnectionPage {
 export type RailConnectionQuery = Omit<RailListQuery, "sort" | "membershipId">;
 
 export const railApi = {
+  async route(id: string): Promise<RailSaveResult> {
+    const res = await api.post<SaveEnvelope>(
+      `/rail/${encodeURIComponent(id)}/route`,
+      {},
+      { timeout: API_TIMEOUTS.RAIL_LOOKUP }
+    );
+    return { journey: res.data.data, geometry: res.data.meta?.geometry ?? null };
+  },
   async list(query: RailListQuery = {}): Promise<RailPage> {
     const res = await api.get<
       Envelope<RailJourney[]> & { meta: { total: number; summary: RailListSummary } }

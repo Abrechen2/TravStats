@@ -1,3 +1,4 @@
+import { ConnectionDistance } from "../components/rail/ConnectionDistance";
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -27,8 +28,7 @@ import type { RailConnectionDetail } from "../types/rail";
  * train. It lists the ride's trains in travel order, each linking to its own
  * page, with the wait at every change. Reached by any of its legs' ids, so a
  * link stays good when the first leg is deleted. It edits nothing — a train is
- * edited on its own page — and it states no distance, because the legs'
- * figures may mix a straight line with a traced one.
+ * edited on its own page. The total distance names mixed sources and missing legs.
  *
  * Gated in App.tsx like the logbook: the `railDomain` beta switch, then the
  * user's domain choice.
@@ -146,6 +146,9 @@ export default function RailConnectionPage(): JSX.Element {
         }
       />
 
+      <DetailSection title={t("rail:connection.totalDistance")}>
+        <ConnectionDistance legs={legs} />
+      </DetailSection>
       <DetailSection title={t("rail:connection.legs")}>
         <RailConnectionView legs={legs} pnr={connection.booking?.pnr ?? null} showPnr={false} />
       </DetailSection>

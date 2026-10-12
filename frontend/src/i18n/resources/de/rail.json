@@ -211,7 +211,12 @@
     "legs": "Züge dieser Verbindung",
     "whole": "Ganze Verbindung ansehen: {{route}}",
     "loadError": "Die Verbindung konnte nicht geladen werden.",
-    "notFound": "Diese Verbindung gibt es nicht (mehr)."
+    "notFound": "Diese Verbindung gibt es nicht (mehr).",
+    "totalDistance": "Gesamtstrecke",
+    "distanceUnknown": "Entfernung unbekannt",
+    "distancePartial_one": "Teilstrecke: Entfernung für {{count}} Abschnitt fehlt",
+    "distancePartial_other": "Teilstrecke: Entfernung für {{count}} Abschnitte fehlt",
+    "distanceMixed": "Gemischte Quellen: Streckenwerte und Schätzungen"
   },
   "trip": {
     "open": "Fahrt öffnen",
@@ -458,7 +463,8 @@
       "stationOffLine": "ein Bahnhof liegt nicht auf der Strecke dieses Zuges",
       "untracedShape": "Transitous kennt für diesen Zug nur gerade Linien zwischen den Halten",
       "railRoutingUnavailable": "der Streckenrouter (OpenRailRouting) dieser Instanz hat nicht geantwortet",
-      "railRoutingNoRoute": "der Streckenrouter (OpenRailRouting) kennt keine Gleisverbindung zwischen diesen Bahnhöfen"
+      "railRoutingNoRoute": "der Streckenrouter (OpenRailRouting) kennt keine Gleisverbindung zwischen diesen Bahnhöfen",
+      "railRoutingNotConfigured": "kein Bahn-Routingdienst eingerichtet ist"
     }
   },
   "import": {
@@ -595,5 +601,16 @@
       "requestRateLimited": "Zu viele Abfragen in kurzer Zeit — warte eine Minute.",
       "requestFailed": "Der Link konnte nicht an den Server geschickt werden."
     }
+  },
+  "routeRefresh": {
+    "action": "Streckenverlauf erneut laden",
+    "busy": "Streckenverlauf wird geladen …",
+    "done": "Streckenverlauf geprüft.",
+    "failed": "Streckenverlauf konnte nicht geladen werden. Bitte später erneut versuchen.",
+    "rateLimited": "Zu viele Anfragen. Bitte später erneut versuchen.",
+    "conflict": "Die Bahnfahrt wurde inzwischen geändert. Bitte neu laden.",
+    "denied": "Die Berechtigung fehlt oder die Sitzung ist abgelaufen.",
+    "missing": "Diese Bahnfahrt wurde nicht gefunden.",
+    "network": "Der Server ist nicht erreichbar oder die Anfrage dauerte zu lange. Bitte erneut versuchen."
   }
 }

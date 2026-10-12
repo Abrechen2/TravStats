@@ -157,7 +157,13 @@ async function resolveFresh(provider: RentalProvider): Promise<ProviderLogo | nu
  * refresh runs behind it; a failed refresh keeps the old bytes.
  */
 export async function resolveProviderLogo(typed: string): Promise<ProviderLogo | null> {
-  const provider = findRentalProvider(typed);
+  return resolveCataloguedProviderLogo(findRentalProvider(typed));
+}
+
+/** Both catalogues use this cache; rail ids carry their own prefix. */
+export async function resolveCataloguedProviderLogo(
+  provider: RentalProvider | null
+): Promise<ProviderLogo | null> {
   if (!provider) return null;
 
   const cached = await readCached(provider.id);

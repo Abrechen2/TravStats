@@ -10,6 +10,7 @@ import { isValidZone } from "../../shared/time/zonedParts";
 
 const backupSettingsSchema = z.object({
   backupEnabled: z.boolean().optional(),
+  backupCloudRetention: z.boolean().optional(),
   backupInterval: z.enum(["daily", "weekly", "monthly"]).optional(),
   backupRetentionDays: z.number().int().min(1).max(365).optional(),
   /**
@@ -45,6 +46,7 @@ router.get("/backup-settings", async (req: AuthRequest, res: Response, next: Nex
       backupEnabled: adminSettings?.backupEnabled ?? false,
       backupInterval: adminSettings?.backupInterval ?? "weekly",
       backupRetentionDays: adminSettings?.backupRetentionDays ?? 30,
+      backupCloudRetention: adminSettings?.backupCloudRetention ?? false,
       ...zoneFields(adminSettings?.backupZone),
     });
   } catch (error) {
@@ -58,6 +60,7 @@ router.put("/backup-settings", async (req: AuthRequest, res: Response, next: Nex
       backupEnabled,
       backupInterval,
       backupRetentionDays,
+      backupCloudRetention,
       backupZone: zone,
     } = backupSettingsSchema.parse(req.body);
 
@@ -67,11 +70,13 @@ router.put("/backup-settings", async (req: AuthRequest, res: Response, next: Nex
       backupEnabled?: boolean;
       backupInterval?: string;
       backupRetentionDays?: number;
+      backupCloudRetention?: boolean;
       backupZone?: string | null;
     } = {};
 
     if (backupEnabled !== undefined) updateData.backupEnabled = backupEnabled;
     if (backupInterval !== undefined) updateData.backupInterval = backupInterval;
+    if (backupCloudRetention !== undefined) updateData.backupCloudRetention = backupCloudRetention;
     if (backupRetentionDays !== undefined) updateData.backupRetentionDays = backupRetentionDays;
     if (zone !== undefined) updateData.backupZone = zone;
 
@@ -91,6 +96,7 @@ router.put("/backup-settings", async (req: AuthRequest, res: Response, next: Nex
       backupEnabled: adminSettings.backupEnabled,
       backupInterval: adminSettings.backupInterval,
       backupRetentionDays: adminSettings.backupRetentionDays,
+      backupCloudRetention: adminSettings.backupCloudRetention,
       ...zoneFields(adminSettings.backupZone),
     });
   } catch (error) {

@@ -51,6 +51,7 @@ export const RAIL_GEOMETRY_FALLBACK_REASONS = [
   "untracedShape",
   "railRoutingUnavailable",
   "railRoutingNoRoute",
+  "railRoutingNotConfigured",
 ] as const;
 export const RAIL_SORT_FIELDS = ["departure", "distance", "created"] as const;
 

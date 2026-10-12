@@ -211,7 +211,12 @@
     "legs": "Trains of this journey",
     "whole": "View the whole journey: {{route}}",
     "loadError": "The journey could not be loaded.",
-    "notFound": "This journey does not exist (any more)."
+    "notFound": "This journey does not exist (any more).",
+    "totalDistance": "Total distance",
+    "distanceUnknown": "Distance unknown",
+    "distancePartial_one": "Partial distance: {{count}} leg has no distance",
+    "distancePartial_other": "Partial distance: {{count}} legs have no distance",
+    "distanceMixed": "Mixed sources: recorded distances and estimates"
   },
   "trip": {
     "open": "Open journey",
@@ -458,7 +463,8 @@
       "stationOffLine": "a station is not on this train's route",
       "untracedShape": "Transitous only has straight lines between this train's stops",
       "railRoutingUnavailable": "this instance's rail router (OpenRailRouting) did not answer",
-      "railRoutingNoRoute": "the rail router (OpenRailRouting) knows no track connection between these stations"
+      "railRoutingNoRoute": "the rail router (OpenRailRouting) knows no track connection between these stations",
+      "railRoutingNotConfigured": "no rail routing service is configured"
     }
   },
   "import": {
@@ -595,5 +601,16 @@
       "requestRateLimited": "Too many lookups in a short time — wait a minute.",
       "requestFailed": "The link could not be sent to the server."
     }
+  },
+  "routeRefresh": {
+    "action": "Fetch line again",
+    "busy": "Fetching line…",
+    "done": "Route checked.",
+    "failed": "Could not fetch the line. Please try again later.",
+    "rateLimited": "Too many requests. Please try again later.",
+    "conflict": "The journey changed in the meantime. Please reload.",
+    "denied": "Permission is missing or your session expired.",
+    "missing": "This rail journey could not be found.",
+    "network": "The server is unreachable or the request timed out. Please try again."
   }
 }

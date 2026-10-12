@@ -89,6 +89,7 @@ import airlinesRoutes from "./airlines";
 import aircraftRoutes from "./aircraft";
 import cruisesRouter from "./cruises";
 import cruiseRouteOverrideRoutes from "./cruises/routeOverride";
+import railOperatorRouter from "./rail/operators";
 import railRouter from "./rail";
 import railStationsRouter from "./rail/stations";
 import railEntrySuggestionsRouter from "./rail/entrySuggestions";
@@ -357,6 +358,7 @@ export const apiMounts: ApiMount[] = [
   // Train journeys (spec 2026-09-25-rail-domain). Behind the beta switch in the UI only.
   // The catalogue typeahead and the train lookup mount FIRST on the same
   // prefix: the journey router's '/:id' would otherwise answer them as a 404.
+  { id: "rail.operators", base: "/api/v1/rail/operators", router: railOperatorRouter },
   { id: "rail.stations", base: "/api/v1/rail/stations", router: railStationsRouter },
   { id: "rail.lookup", base: "/api/v1/rail/lookup", router: railLookupRouter },
   { id: "rail.shareLink", base: "/api/v1/rail/share-link", router: railShareLinkRouter },

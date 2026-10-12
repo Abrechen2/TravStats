@@ -56,9 +56,9 @@ describe("RailTableRow distance label", () => {
     expect(cellOf(row, "distance").textContent).toContain("rail:straightLine");
   });
 
-  it("shows no distance for a ride with changes — a sum would mix measurements", () => {
+  it("sums known distances for a ride with changes", () => {
     const row = renderRow([base, { ...base, id: "j2", depStationName: "Fulda" }]);
-    expect(cellOf(row, "distance").textContent).toBe("—");
+    expect(cellOf(row, "distance").textContent).toContain("177 km");
   });
 });
 
@@ -89,11 +89,12 @@ describe("RailTableRow station codes", () => {
 // forgejo#197: the operator tile — a monogram, and for a grouped ride the
 // operator that carried it furthest.
 describe("RailTableRow operator tile", () => {
-  it("draws the operator's monogram and names it for a screen reader", () => {
+  it("loads the operator logo and keeps its accessible name", () => {
     const row = renderRow([{ ...base, operator: "DB Fernverkehr" }]);
     const tile = within(cellOf(row, "operator")).getByTestId("operator-tile");
     expect(tile).toHaveAttribute("title", "DB Fernverkehr");
-    expect(tile.textContent).toBe("DBDB Fernverkehr");
+    expect(tile.textContent).toBe("DB Fernverkehr");
+    expect(within(tile).getByTestId("operator-logo")).toHaveAttribute("src", "/api/v1/rail/operators/logo?name=DB%20Fernverkehr");
   });
 
   it("names a grouped ride after the operator of its longest stretch", () => {

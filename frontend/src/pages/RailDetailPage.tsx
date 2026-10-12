@@ -14,6 +14,7 @@ import DocumentsSection from "../components/documents/DocumentsSection";
 import { railExtractTarget } from "../lib/extractTargets";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import { RailFormModal } from "../components/rail/RailFormModal";
+import { RailRouteRefresh } from "../components/rail/RailRouteRefresh";
 import { RailRouteMap } from "../components/rail/RailRouteMap";
 import { RailConnectionView } from "../components/rail/RailConnectionView";
 import { RailConnectionLink } from "../components/rail/RailConnectionLink";
@@ -259,6 +260,8 @@ export default function RailDetailPage(): JSX.Element {
           </>
         }
       />
+
+      <RailRouteRefresh id={journey.id} source={journey.geometrySource} onUpdated={() => setReloadKey((k) => k + 1)} />
 
       {isConvertedFromRoadtrip(journey) && (
         <p className="t-caption mb-4" data-testid="rail-converted-note">
