@@ -82,7 +82,7 @@ export default function FerryDetailPage() {
           />
         ) : (
           <p role="status" className="text-(--text-muted)">
-            {t("common:loading")}
+            {t("common:loading.default")}
           </p>
         )}
       </AppShell>

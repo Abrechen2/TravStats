@@ -35,7 +35,7 @@
       },
       "beta": {
         "title": "Roadtrips, rail, rental cars, coaches and more",
-        "body": "Roadtrips and tours (with trip costs including payer, exchange rate and receipts), rail, rental cars, coach rides, recorded cruise tracks and hotel enrichment from OpenStreetMap are built but still under review. An admin switches them on with the beta switch; the demo account of a new installation does so by itself."
+        "body": "Roadtrips and tours (with trip costs including payer, exchange rate and receipts), rail, rental cars, coach rides, ferry crossings (with vehicle, booking and ticket), recorded cruise tracks and hotel enrichment from OpenStreetMap are built but still under review. An admin switches them on with the beta switch; the demo account of a new installation does so by itself."
       }
     },
     "v260": {

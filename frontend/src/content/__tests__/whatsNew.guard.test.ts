@@ -34,7 +34,7 @@ const KEYWORDS: Record<keyof typeof BETA_FEATURES, [RegExp, RegExp]> = {
   lodgingEnrichment: [/Anreicherung/, /enrichment/i],
   railDomain: [/Bahn\b/, /\brail\b/i],
   rentalDomain: [/Mietwagen/, /rental car/i],
-  ferryDomain: [/ferry/i, /fähre/i],
+  ferryDomain: [/fähre/i, /ferry/i],
   busDomain: [/Fernbus/, /coach/i],
   cruiseTracks: [/Kreuzfahrt-Spuren/, /cruise tracks/i],
 };

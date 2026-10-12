@@ -35,7 +35,7 @@
       },
       "beta": {
         "title": "Roadtrips, Bahn, Mietwagen, Bus und mehr",
-        "body": "Roadtrips und Touren (mit Reisekosten samt Zahler, Kurs und Belegen), Bahn, Mietwagen, Fernbus, aufgezeichnete Kreuzfahrt-Spuren und die Hotel-Anreicherung aus OpenStreetMap sind gebaut, aber noch in Prüfung. Ein Admin schaltet sie mit dem Beta-Schalter ein; das Demo-Konto einer neuen Installation tut das von sich aus."
+        "body": "Roadtrips und Touren (mit Reisekosten samt Zahler, Kurs und Belegen), Bahn, Mietwagen, Fernbus, Fähren (Überfahrten mit Fahrzeug, Buchung und Beleg), aufgezeichnete Kreuzfahrt-Spuren und die Hotel-Anreicherung aus OpenStreetMap sind gebaut, aber noch in Prüfung. Ein Admin schaltet sie mit dem Beta-Schalter ein; das Demo-Konto einer neuen Installation tut das von sich aus."
       }
     },
     "v260": {
