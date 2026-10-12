@@ -37,6 +37,8 @@ const RailDetailPage = lazy(() => import("./pages/RailDetailPage"));
 const RailConnectionPage = lazy(() => import("./pages/RailConnectionPage"));
 const RentalsPage = lazy(() => import("./pages/RentalsPage"));
 const RentalDetailPage = lazy(() => import("./pages/RentalDetailPage"));
+const FerryPage = lazy(() => import("./pages/FerryPage"));
+const FerryDetailPage = lazy(() => import("./pages/FerryDetailPage"));
 const BusPage = lazy(() => import("./pages/BusPage"));
 const BusDetailPage = lazy(() => import("./pages/BusDetailPage"));
 const CruiseDetailPage = lazy(() => import("./pages/CruiseDetailPage"));
@@ -391,6 +393,21 @@ function AppContent() {
                 }
               />
               <Route
+                path="/ferry"
+                element={
+                  isAuthenticated ? (
+                    // Two gates, outer first: the instance beta switch (ferryDomain), then the user's own domain choice.
+                    <BetaFeatureRouteGuard feature="ferryDomain" redirectTo="/dashboard">
+                      <DomainRouteGuard domain="ferry">
+                        <FerryPage />
+                      </DomainRouteGuard>
+                    </BetaFeatureRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
+              <Route
                 path="/bus/:id"
                 element={
                   isAuthenticated ? (
@@ -398,6 +415,21 @@ function AppContent() {
                     <BetaFeatureRouteGuard feature="busDomain" redirectTo="/dashboard">
                       <DomainRouteGuard domain="bus">
                         <BusDetailPage />
+                      </DomainRouteGuard>
+                    </BetaFeatureRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
+              <Route
+                path="/ferry/:id"
+                element={
+                  isAuthenticated ? (
+                    // The same two gates as the logbook, in the same order.
+                    <BetaFeatureRouteGuard feature="ferryDomain" redirectTo="/dashboard">
+                      <DomainRouteGuard domain="ferry">
+                        <FerryDetailPage />
                       </DomainRouteGuard>
                     </BetaFeatureRouteGuard>
                   ) : (

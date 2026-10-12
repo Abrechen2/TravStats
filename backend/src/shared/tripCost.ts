@@ -128,6 +128,7 @@ export interface TripCostInput {
    * caller written before bus keeps its exact answer.
    */
   bus?: (BookedSegment & StoredPrice)[];
+  ferry?: (BookedSegment & StoredPrice)[];
   /** Rentals on the trip, and those driven on its roadtrips with no trip of their own. */
   rentals: (StoredPrice & {
     status: string;
@@ -149,7 +150,7 @@ export interface TripCostInput {
 }
 
 export type TripCostSource =
-  "booking" | "flight" | "cruise" | "stay" | "rail" | "bus" | "rental" | "expense";
+  "booking" | "flight" | "cruise" | "stay" | "rail" | "bus" | "ferry" | "rental" | "expense";
 
 /** One recorded amount on a trip. `amount` is never null; 0 is a recorded free price. */
 export interface TripCostItem {
@@ -223,6 +224,9 @@ export function tripCostItems(trip: TripCostInput): TripCostItems {
   // The same `counted` set: one booking may sell a train and a coach.
   for (const ride of live(trip.bus ?? [])) {
     take("bus", segmentCostShare({ ...ride, own: ownPrice(ride) }, counted));
+  }
+  for (const ride of live(trip.ferry ?? [])) {
+    take("ferry", segmentCostShare({ ...ride, own: ownPrice(ride) }, counted));
   }
   for (const rental of trip.rentals) {
     const cost = rentalCost(rental);

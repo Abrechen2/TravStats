@@ -131,6 +131,7 @@ export const TRIPS_LIST_INCLUDE = {
       // Bus rides: "Bus – 1 Fahrt" on the page sat over "1 Eintrag" on the card
       // (forgejo#289) — the card's counter had `bus: () => 0` and no count to read.
       busJourneys: true,
+      ferryJourneys: true,
       rentalBookings: { where: { status: { not: "cancelled" } } },
     },
   },

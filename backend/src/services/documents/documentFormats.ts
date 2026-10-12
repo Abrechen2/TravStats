@@ -44,6 +44,7 @@ export const ENTRY_TYPES = [
   "railJourney",
   "rentalBooking",
   "busJourney",
+  "ferryJourney",
   /** An expense's receipt (forgejo#150). */
   "tripExpense",
 ] as const;

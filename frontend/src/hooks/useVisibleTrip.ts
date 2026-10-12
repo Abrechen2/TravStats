@@ -1,0 +1,49 @@
+import { useMemo } from "react";
+import type { Trip } from "../types";
+import { useEnabledDomains } from "./useEnabledDomains";
+import { useRailVisible } from "./useRailVisible";
+import { useRentalVisible } from "./useRentalVisible";
+import { useBusVisible } from "./useBusVisible";
+import { useFerryVisible } from "./useFerryVisible";
+
+/** Filter every trip surface through the same domain gates. */
+export function useVisibleTrip(trip: Trip | null) {
+  // Domain-gating: a disabled domain's segments are stripped from the trip copy
+  // every tab reads; a banner below the tab bar says they are hidden, not lost.
+  const { isEnabled } = useEnabledDomains();
+  const cruiseEnabled = isEnabled("cruise");
+  const lodgingEnabled = isEnabled("lodging");
+  // Rail and rentals ask their own hooks: the beta switch AND the domain.
+  const railVisible = useRailVisible();
+  const rentalVisible = useRentalVisible();
+  const busVisible = useBusVisible();
+  const ferryVisible = useFerryVisible();
+  const displayTrip = useMemo<Trip | null>(() => {
+    const allShown =
+      cruiseEnabled && lodgingEnabled && railVisible && rentalVisible && busVisible && ferryVisible;
+    if (trip === null || allShown) return trip;
+    return {
+      ...trip,
+      cruises: cruiseEnabled ? trip.cruises : [],
+      lodgingStays: lodgingEnabled ? trip.lodgingStays : [],
+      railJourneys: railVisible ? trip.railJourneys : [],
+      rentalBookings: rentalVisible ? trip.rentalBookings : [],
+      busJourneys: busVisible ? trip.busJourneys : [],
+      ferryJourneys: ferryVisible ? trip.ferryJourneys : [],
+      _count: trip._count
+        ? {
+            ...trip._count,
+            ...(cruiseEnabled ? {} : { cruises: 0 }),
+            ...(lodgingEnabled ? {} : { lodgingStays: 0 }),
+          }
+        : trip._count,
+    };
+  }, [trip, cruiseEnabled, lodgingEnabled, railVisible, rentalVisible, busVisible, ferryVisible]);
+  const hiddenCruiseCount = cruiseEnabled
+    ? 0
+    : (trip?._count?.cruises ?? trip?.cruises?.length ?? 0);
+  const hiddenLodgingCount = lodgingEnabled
+    ? 0
+    : (trip?._count?.lodgingStays ?? trip?.lodgingStays?.length ?? 0);
+  return { displayTrip, hiddenCruiseCount, hiddenLodgingCount };
+}

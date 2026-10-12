@@ -20,6 +20,7 @@ export const BETA_GATED_DOMAINS: Partial<Record<DomainKey, string>> = {
   roadtrip: "roadtrips",
   rental: "rentalDomain",
   bus: "busDomain",
+  ferry: "ferryDomain",
 };
 
 /**

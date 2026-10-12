@@ -1,0 +1,72 @@
+{
+  "status": {
+    "scheduled": "Geplant",
+    "in_progress": "Unterwegs",
+    "completed": "Abgeschlossen",
+    "cancelled": "Storniert"
+  },
+  "form": {
+    "stationName": "Hafenname wie auf dem Ticket",
+    "stationAddress": "Terminaladresse (optional)",
+    "operator": "Reederei",
+    "price": "Preis"
+  },
+  "distanceSource": {
+    "great_circle": "Luftlinie",
+    "route": "Straße",
+    "user": "laut Ticket"
+  },
+  "title": "Fähren",
+  "add": "Überfahrt hinzufügen",
+  "edit": "Überfahrt bearbeiten",
+  "empty": "Noch keine Überfahrten.",
+  "error": "Überfahrten konnten nicht geladen werden.",
+  "saveError": "Speichern fehlgeschlagen. Bitte Eingaben prüfen.",
+  "departure": "Abfahrtshafen",
+  "arrival": "Ankunftshafen",
+  "departureLocal": "Abfahrt (Ortszeit)",
+  "arrivalLocal": "Ankunft (Ortszeit)",
+  "operator": "Reederei",
+  "vesselName": "Schiff",
+  "vehicleType": "Fahrzeugtyp",
+  "vehicleRegistration": "Kennzeichen",
+  "vehicleLengthM": "Länge (m)",
+  "vehicleWidthM": "Breite (m)",
+  "vehicleHeightM": "Höhe (m)",
+  "passengerCount": "Personenanzahl",
+  "cabinType": "Kabine / Unterbringung",
+  "seat": "Sitzplatz",
+  "bookingReference": "Buchungsreferenz",
+  "ticketReference": "Ticketreferenz",
+  "price": "Preis",
+  "currency": "Währung",
+  "distanceKm": "Strecke laut Ticket (km)",
+  "companions": "Mitreisende (durch Komma getrennt)",
+  "notes": "Notizen",
+  "trip": "Reise",
+  "noTrip": "Keine Reise",
+  "cancelled": "Storniert",
+  "remove": "Überfahrt löschen",
+  "confirmDelete": "Überfahrt und zugehörige Dokumente löschen?",
+  "straightDistance": "Luftlinie (Schätzung)",
+  "duration": "Dauer",
+  "details": "Überfahrt",
+  "previous": "Zurück",
+  "next": "Weiter",
+  "search": "Überfahrten suchen",
+  "save": "Speichern",
+  "cancel": "Abbrechen",
+  "required": "Beide Häfen mit Position und die Abfahrt sind erforderlich.",
+  "roadtrip": {
+    "title": "Roadtrip-Etappe",
+    "hint": "Die verknüpfte Etappe wird als Fähre gezählt und aus den Straßenkilometern ausgeschlossen.",
+    "none": "Keine Verknüpfung"
+  },
+  "departureFold": "Abfahrt bei Zeitumstellung",
+  "arrivalFold": "Ankunft bei Zeitumstellung",
+  "fold": {
+    "unchanged": "Automatisch / unverändert",
+    "earlier": "Erstes Vorkommen",
+    "later": "Zweites Vorkommen"
+  }
+}

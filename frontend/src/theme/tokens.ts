@@ -44,7 +44,8 @@ export const tokens = {
     "roadtrip": "#a9c46a",
     "rail": "#a597e8",
     "rental": "#d98cb3",
-    "bus": "#c49a6c"
+    "bus": "#c49a6c",
+    "ferry": "#5686b8"
   },
   "statusColor": {
     "pending": "#6fa0d6",

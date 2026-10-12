@@ -133,6 +133,7 @@ const BY_TAB: Record<DomainKey | "all", (t: Translate) => SectionOption[]> = {
   rail: RAIL_SECTIONS,
   rental: RENTAL_SECTIONS,
   bus: BUS_SECTIONS,
+  ferry: () => [],
 };
 
 /** The menu's options for a tab. */

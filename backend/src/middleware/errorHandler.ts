@@ -93,6 +93,8 @@ export type ApiErrorCode =
    *  whose arrival kept the departure's date. `field` is `arrivalLocal`. */
   | "RAIL_ARRIVAL_BEFORE_DEPARTURE"
   /** A bus write body failed validation; `field` names the first field. */
+  | "FERRY_INVALID_INPUT"
+  | "FERRY_ARRIVAL_BEFORE_DEPARTURE"
   | "BUS_INVALID_INPUT"
   /** A bus arrival instant before its departure (spec 2026-10-07-bus-domain-design §3.2).
    *  `field` is `arrivalLocal`. */

@@ -110,6 +110,14 @@ router.put(
       const body = legOverrideSchema.parse(req.body);
 
       const leg = await findLegOrThrow(routeId, req.params.fromStopId, req.params.toStopId);
+      if (body.mode && body.mode !== "ferry") {
+        const linked = await prisma.ferryJourney.findFirst({
+          where: { roadtripLegId: leg.id },
+          select: { id: true },
+        });
+        if (linked)
+          throw new AppError("Unlink the ferry crossing before changing this leg's mode", 409);
+      }
       const fromCoord = requireCoords(leg.fromStop, "from");
       const toCoord = requireCoords(leg.toStop, "to");
 

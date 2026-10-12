@@ -1,0 +1,124 @@
+/** Ferry crossing contract (dennis/TravStats forgejo#293). */
+import { z } from "zod";
+import { registry } from "../registry";
+import { prismaColumns } from "../prismaColumns";
+import {
+  createFerryJourneySchema,
+  updateFerryJourneySchema,
+  ferryQuerySchema,
+} from "../../../schemas/ferry";
+import { documentIdsBodySchema } from "../../../schemas/document";
+import { railTimesSchema } from "../../../schemas/times";
+import { errorContent, timeRefused } from "./shared";
+const journey = registry.register(
+  "FerryJourney",
+  z.object({
+    ...prismaColumns("FerryJourney"),
+    trip: z.object({ id: z.string(), name: z.string(), color: z.string() }).nullable().optional(),
+    times: railTimesSchema,
+  })
+);
+const envelope = <T extends z.ZodTypeAny>(data: T) => z.object({ success: z.literal(true), data });
+const json = <T extends z.ZodTypeAny>(schema: T) => ({ "application/json": { schema } });
+const params = z.object({ id: z.string().uuid() });
+const errors = {
+  400: { description: "Invalid input", content: errorContent },
+  401: { description: "Authentication required", content: errorContent },
+  403: { description: "Write scope required", content: errorContent },
+  404: { description: "Entry not found or not owned", content: errorContent },
+  409: { description: "Roadtrip link conflicts with this change", content: errorContent },
+  422: timeRefused,
+};
+registry.registerPath({
+  method: "get",
+  path: "/ferry",
+  tags: ["Ferry"],
+  summary: "List ferry crossings",
+  request: { query: ferryQuerySchema },
+  responses: {
+    200: {
+      description: "Paginated crossings",
+      content: json(
+        envelope(z.array(journey)).extend({
+          meta: z.object({
+            total: z.number(),
+            limit: z.number(),
+            offset: z.number(),
+            summary: z.object({
+              journeys: z.number(),
+              operators: z.number(),
+              withoutOperator: z.number(),
+              stations: z.number(),
+            }),
+          }),
+        })
+      ),
+    },
+    ...errors,
+  },
+});
+registry.registerPath({
+  method: "get",
+  path: "/ferry/{id}",
+  tags: ["Ferry"],
+  summary: "Read a ferry crossing",
+  request: { params },
+  responses: { 200: { description: "Crossing", content: json(envelope(journey)) }, ...errors },
+});
+registry.registerPath({
+  method: "post",
+  path: "/ferry",
+  tags: ["Ferry"],
+  summary: "Create a ferry crossing",
+  description:
+    "Both ports include coordinates. Times are local wall clocks or calendar days; zones are resolved on the server. Distance without a ticket value is explicitly a straight-line estimate. Documents and companions use the same ownership rules as other journeys.",
+  request: { body: { content: json(createFerryJourneySchema.and(documentIdsBodySchema)) } },
+  responses: { 201: { description: "Created", content: json(envelope(journey)) }, ...errors },
+});
+registry.registerPath({
+  method: "patch",
+  path: "/ferry/{id}",
+  tags: ["Ferry"],
+  summary: "Edit a ferry crossing",
+  request: { params, body: { content: json(updateFerryJourneySchema) } },
+  responses: { 200: { description: "Updated", content: json(envelope(journey)) }, ...errors },
+});
+registry.registerPath({
+  method: "delete",
+  path: "/ferry/{id}",
+  tags: ["Ferry"],
+  summary: "Delete a ferry crossing and its documents",
+  request: { params },
+  responses: { 204: { description: "Deleted" }, ...errors },
+});
+const leg = z.object({
+  id: z.string(),
+  mode: z.string(),
+  ferryJourney: z.object({ id: z.string() }).nullable(),
+  fromStop: z.object({ title: z.string() }),
+  toStop: z.object({ title: z.string() }),
+  route: z.object({ name: z.string(), tripId: z.string().nullable() }),
+});
+registry.registerPath({
+  method: "get",
+  path: "/ferry/roadtrip-legs",
+  tags: ["Ferry"],
+  summary: "List owned roadtrip legs available for linking",
+  responses: { 200: { description: "Legs", content: json(envelope(z.array(leg))) }, ...errors },
+});
+registry.registerPath({
+  method: "put",
+  path: "/ferry/{id}/roadtrip-leg",
+  tags: ["Ferry"],
+  summary: "Link a crossing to a roadtrip leg, or unlink with null",
+  description:
+    "Linking marks the leg as ferry and clears road routing. Unlinking preserves its ferry mode. A crossing and roadtrip must belong to the same trip.",
+  request: { params, body: { content: json(z.object({ legId: z.string().uuid().nullable() })) } },
+  responses: {
+    200: {
+      description: "Linked",
+      content: json(envelope(z.object({ tripId: z.string().nullable() }))),
+    },
+    ...errors,
+  },
+});

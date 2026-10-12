@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { JSX } from "react";
 import { RailTripCard } from "../rail/RailTripCard";
 import { RentalTripCard } from "../rental/RentalTripCard";
+import { FerryTripCard } from "../ferry/FerryTripCard";
 import { BusTripCard } from "../bus/BusTripCard";
 import { formatTimelineDate } from "../../lib/tripTimeline";
 import type { TimelineEvent } from "../../lib/tripTimelineEvents";
@@ -20,6 +21,8 @@ export function TransitCard({ ev }: { ev: TimelineEvent }): JSX.Element | null {
       <RailTripCard journey={ev.journey} date={ev.date} dateLabel={formatTimelineDate(ev.when)} />
     );
   }
+  if (ev.kind === "ferry")
+    return <FerryTripCard ride={ev.ride} date={ev.date} dateLabel={formatTimelineDate(ev.when)} />;
   if (ev.kind === "bus") {
     return <BusTripCard ride={ev.ride} date={ev.date} dateLabel={formatTimelineDate(ev.when)} />;
   }

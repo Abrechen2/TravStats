@@ -1,3 +1,6 @@
+import { ferryApi } from "../../api/ferry";
+import { adaptFerry } from "./ferryStatsAdapter";
+import { useFerryOffered } from "../../../hooks/useFerryVisible";
 // Hook: orchestrates per-domain stat fetches with failure isolation.
 //
 // Each domain runs in its own try/catch so a single 500 (e.g. cruise
@@ -60,14 +63,18 @@ export function useDomainStats(input: {
   // is not fetched, so it can reach neither a card nor a sum on the overview.
   const railOffered = useRailOffered();
   // Bus likewise, behind `busDomain` (forgejo#265).
+  const ferryOffered = useFerryOffered();
   const busOffered = useBusOffered();
   const enabled = useMemo(
     () =>
       enabledDomains.filter(
         (d): d is StatsDomain =>
-          d !== "rental" && (d !== "rail" || railOffered) && (d !== "bus" || busOffered)
+          d !== "rental" &&
+          (d !== "ferry" || ferryOffered) &&
+          (d !== "rail" || railOffered) &&
+          (d !== "bus" || busOffered)
       ),
-    [enabledDomains, railOffered, busOffered]
+    [enabledDomains, railOffered, busOffered, ferryOffered]
   );
   const [stats, setStats] = useState<DomainStatsMap>({});
   const [errors, setErrors] = useState<Partial<Record<DomainKey, string>>>({});
@@ -139,6 +146,8 @@ async function loadDomain(domain: StatsDomain, flights: Flight[]): Promise<Domai
       return adaptRoadtrip({ roadtrips: await roadtripsApi.list() });
     case "rail":
       return adaptRail({ journeys: await railApi.listAll({ status: "completed" }) });
+    case "ferry":
+      return adaptFerry({ journeys: await ferryApi.listAll() });
     case "bus":
       return adaptBus({ journeys: await busApi.listAll({ status: "completed" }) });
   }

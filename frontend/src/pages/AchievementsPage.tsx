@@ -63,7 +63,8 @@ export function achievementDomains(
     (d) =>
       (d !== "rail" || railVisible) &&
       (d !== "rental" || rentalVisible) &&
-      (d !== "bus" || busVisible)
+      (d !== "bus" || busVisible) &&
+      d !== "ferry"
   );
 }
 
@@ -87,6 +88,7 @@ const DOMAIN_LABEL: Record<DomainKey, string> = {
   rail: "achievements:filters.domainRail",
   rental: "achievements:filters.domainRental",
   bus: "achievements:filters.domainBus",
+  ferry: "common:domain.ferry",
 };
 
 type DomainFilter = "all" | "shared" | DomainKey;

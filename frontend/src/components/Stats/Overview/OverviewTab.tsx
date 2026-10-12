@@ -63,7 +63,10 @@ export default function OverviewTab({
   // the cross-domain folds (rental spec §11 D3), so it is dropped here.
   const busOffered = useBusOffered();
   const enabled = useMemo(
-    () => visibleStatsTabs(enabledDomains, placesAccess, railOffered, false, busOffered),
+    () => [
+      ...visibleStatsTabs(enabledDomains, placesAccess, railOffered, false, busOffered),
+      ...enabledDomains.filter((key) => key === "ferry"),
+    ],
     [enabledDomains, placesAccess, railOffered, busOffered]
   );
   const { selectedYear, compareYear, compareEnabled } = period;

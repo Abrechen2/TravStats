@@ -7,6 +7,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useRailOffered } from "../../hooks/useRailVisible";
 import { useRentalOffered } from "../../hooks/useRentalVisible";
+import { useFerryOffered } from "../../hooks/useFerryVisible";
 import { useBusOffered } from "../../hooks/useBusVisible";
 import { Switch } from "../ui/Field";
 import { SettingRows } from "../ui/SettingRow";
@@ -34,11 +35,13 @@ export default function ModuleSection(): JSX.Element {
   const enabledRental = enabledDomains.includes("rental");
   // Bus: the same rule on its own gate (hooks/useBusVisible.ts).
   const busOffered = useBusOffered();
+  const ferryOffered = useFerryOffered();
   const enabledBus = enabledDomains.includes("bus");
   const visibleKeys = DOMAIN_KEYS.filter((key) => {
     if (key === "roadtrip") return isFeatureVisible("roadtrips");
     if (key === "rail") return railOffered || enabledRail;
     if (key === "rental") return rentalOffered || enabledRental;
+    if (key === "ferry") return ferryOffered || enabledDomains.includes("ferry");
     if (key === "bus") return busOffered || enabledBus;
     return true;
   });

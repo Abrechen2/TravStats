@@ -8,8 +8,14 @@ import type { TripBusJourney } from "../../types/bus";
 import { TripRailList } from "../rail/RailTripCard";
 
 /** How many train and bus rides a trip holds — what the logistics tab calls "empty" by. */
-export function groundRideCount(trip: Pick<Trip, "railJourneys" | "busJourneys">): number {
-  return (trip.railJourneys?.length ?? 0) + (trip.busJourneys?.length ?? 0);
+export function groundRideCount(
+  trip: Pick<Trip, "railJourneys" | "busJourneys" | "ferryJourneys">
+): number {
+  return (
+    (trip.railJourneys?.length ?? 0) +
+    (trip.busJourneys?.length ?? 0) +
+    (trip.ferryJourneys?.length ?? 0)
+  );
 }
 
 /**
@@ -60,6 +66,11 @@ export function TripGroundLists({ trip }: { trip: Trip }): JSX.Element {
   const bus = trip.busJourneys ?? [];
   return (
     <>
+      {(trip.ferryJourneys ?? []).map((ride) => (
+        <Link key={ride.id} to={`/ferry/${ride.id}`}>
+          ⛴ {ride.depStationName} → {ride.arrStationName}
+        </Link>
+      ))}
       {rail.length > 0 && <TripRailList journeys={rail} />}
       {bus.length > 0 && <TripBusList rides={bus} />}
     </>

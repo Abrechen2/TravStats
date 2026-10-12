@@ -21,6 +21,7 @@ import { readsAsUtc, timeValueAtZone, type TimeValue } from "../shared/time";
 import type { Trip, TripJournalEntry, TripStop } from "../types";
 import type { Place, PlaceVisit } from "../types/place";
 import type { TripRailJourney } from "../types/rail";
+import type { TripFerryJourney } from "../types/ferry";
 import type { TripBusJourney } from "../types/bus";
 import type { TripRental } from "../types/rental";
 import type { MemberNote, Note, TripNotes } from "./api/notes";
@@ -100,6 +101,14 @@ export type TimelineEvent =
     }
   | {
       id: string;
+      kind: "ferry";
+      /** `when.utc` — kept for callers that only need an instant to compare. */
+      date: string;
+      when: TimeValue;
+      ride: TripFerryJourney;
+    }
+  | {
+      id: string;
       kind: "rental-pickup" | "rental-return";
       /** `when.utc` — kept for callers that only need an instant to compare. */
       date: string;
@@ -173,6 +182,15 @@ function busEvents(trip: Trip): TimelineEvent[] {
     const when = railDeparture(ride);
     if (!when) continue;
     out.push({ id: `bus-${ride.id}`, kind: "bus", date: when.utc, when, ride });
+  }
+  return out;
+}
+function ferryEvents(trip: Trip): TimelineEvent[] {
+  const out: TimelineEvent[] = [];
+  for (const ride of trip.ferryJourneys ?? []) {
+    const when = railDeparture(ride);
+    if (!when) continue;
+    out.push({ id: `ferry-${ride.id}`, kind: "ferry", date: when.utc, when, ride });
   }
   return out;
 }
@@ -302,6 +320,7 @@ export function buildTimelineEvents(
     ...noteEvents(notes),
     ...railEvents(trip),
     ...busEvents(trip),
+    ...ferryEvents(trip),
     ...rentalEvents(trip),
     ...flightEvents(trip),
     ...cruiseEvents(trip),

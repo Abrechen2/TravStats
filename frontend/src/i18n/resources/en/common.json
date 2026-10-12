@@ -206,7 +206,8 @@
     "rental": "Rental cars",
     "rental_desc": "Rental cars with station, period, car and the kilometres from the invoice. (Beta)",
     "bus": "Bus",
-    "bus_desc": "Coach, intercity and shuttle rides: terminals, line, seat, kilometres. Not city transit. (Beta)"
+    "bus_desc": "Coach, intercity and shuttle rides: terminals, line, seat, kilometres. Not city transit. (Beta)",
+    "ferry": "Ferries"
   },
   "settings": {
     "modules": {
@@ -221,7 +222,8 @@
         "roadtrip": "Stations, nights, map",
         "rail": "Beta: a logbook for train journeys",
         "rental": "Beta: a logbook for rental cars",
-        "bus": "Beta: logbook for bus rides"
+        "bus": "Beta: logbook for bus rides",
+        "ferry": "Crossings, vehicle and tickets"
       }
     }
   },

@@ -56,6 +56,7 @@ export async function fillTripDatesFromSegments(tripId: string): Promise<void> {
           arrLon: true,
         },
       },
+      ferryJourneys: { select: RAIL_CLOCK_SELECT },
       busJourneys: {
         select: {
           departureTime: true,
@@ -75,7 +76,7 @@ export async function fillTripDatesFromSegments(tripId: string): Promise<void> {
 
   // A ride has the flight's shape (departure, arrival), so it joins them.
   const bounds = tripDateBounds(
-    [...trip.flights, ...trip.railJourneys, ...trip.busJourneys],
+    [...trip.flights, ...trip.railJourneys, ...trip.busJourneys, ...trip.ferryJourneys],
     trip.cruises
   );
   if (bounds.earliestStart == null && bounds.latestEnd == null) return;
@@ -83,7 +84,12 @@ export async function fillTripDatesFromSegments(tripId: string): Promise<void> {
   // The local days of the first departure and the last arrival (ADR 0002,
   // owner decision on open point 1). A cruise's ends are days already, so a
   // span that includes one keeps its UTC days without a zone.
-  const { starts, ends } = flightEnds([...trip.flights, ...trip.railJourneys, ...trip.busJourneys]);
+  const { starts, ends } = flightEnds([
+    ...trip.flights,
+    ...trip.railJourneys,
+    ...trip.busJourneys,
+    ...trip.ferryJourneys,
+  ]);
   const days =
     trip.cruises.length > 0
       ? typedTripDays({ startDate: bounds.earliestStart, endDate: bounds.latestEnd })
@@ -110,6 +116,7 @@ export async function recomputeTripStatus(tripId: string): Promise<void> {
         select: { stops: { select: { startDate: true, endDate: true } } },
       },
       railJourneys: { select: RAIL_CLOCK_SELECT },
+      ferryJourneys: { select: RAIL_CLOCK_SELECT },
       busJourneys: { select: RAIL_CLOCK_SELECT },
       rentalBookings: {
         where: { status: { not: "cancelled" } },
@@ -128,7 +135,9 @@ export async function recomputeTripStatus(tripId: string): Promise<void> {
     lodgingStays: trip.lodgingStays,
     roadtrips: trip.routes,
     // Bus rides carry rail's clock columns and join its bounds (spec 2026-10-07 §8).
-    railJourneys: [...trip.railJourneys, ...trip.busJourneys].map(rideStatusSpan),
+    railJourneys: [...trip.railJourneys, ...trip.busJourneys, ...trip.ferryJourneys].map(
+      rideStatusSpan
+    ),
     rentals: trip.rentalBookings,
     ownStartDate: trip.startDate,
     ownEndDate: trip.endDate,

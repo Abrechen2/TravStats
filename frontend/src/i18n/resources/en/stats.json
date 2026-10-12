@@ -173,7 +173,10 @@
       "railKmStraight": "Straight line",
       "busRides": "Bus rides",
       "busKmMeasured": "Distance (road or ticket)",
-      "busKmStraight": "Straight line"
+      "busKmStraight": "Straight line",
+      "ferryRides": "Fähre rides",
+      "ferryKmMeasured": "Ticket distance",
+      "ferryKmStraight": "Straight line"
     },
     "topItems": {
       "airlines": "Top airlines",
@@ -182,7 +185,8 @@
       "categories": "Top categories",
       "vehicles": "Vehicles",
       "railOperators": "Top operators",
-      "busOperators": "Top bus operators"
+      "busOperators": "Top bus operators",
+      "ferryOperators": "Top ferry operators"
     },
     "badge": {
       "balconyCabin": "Balcony cabin",

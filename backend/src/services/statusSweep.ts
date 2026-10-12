@@ -173,6 +173,7 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
   rail: number;
   rentals: number;
   bus: number;
+  ferry: number;
   trips: number;
 }> {
   const arrivalCutoff = new Date(now.getTime() - FLIGHT_ARRIVAL_SLACK_HOURS * H);
@@ -328,6 +329,28 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
     data: { status: "scheduled" },
   });
   const busClockless = await sweepClocklessBus(now);
+  const ferryToInProgress = await prisma.ferryJourney.updateMany({
+    where: {
+      ...clocked,
+      status: { in: ["scheduled", "completed"] },
+      departureTime: { lte: now },
+      arrivalTime: { gt: now },
+    },
+    data: { status: "in_progress" },
+  });
+  const ferryToCompleted = await prisma.ferryJourney.updateMany({
+    where: {
+      ...clocked,
+      status: { in: ["scheduled", "in_progress"] },
+      OR: [{ arrivalTime: { lte: now } }, { arrivalTime: null, departureTime: { lte: now } }],
+    },
+    data: { status: "completed" },
+  });
+  const ferryToScheduled = await prisma.ferryJourney.updateMany({
+    where: { status: { in: ["in_progress", "completed"] }, departureTime: { gt: now } },
+    data: { status: "scheduled" },
+  });
+  const ferryClockless = await sweepClocklessFerry(now);
 
   // Trips: recompute from segment date bounds, update diffs only. A trip's
   // days begin in its owner's profile zone (ADR 0002 D4, `tripStatusBounds`).
@@ -348,6 +371,7 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
       },
       railJourneys: { select: RAIL_CLOCK_SELECT },
       busJourneys: { select: RAIL_CLOCK_SELECT },
+      ferryJourneys: { select: RAIL_CLOCK_SELECT },
       rentalBookings: {
         where: { status: { not: "cancelled" } },
         select: { pickupTime: true, returnTime: true },
@@ -365,7 +389,9 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
       lodgingStays: trip.lodgingStays,
       roadtrips: trip.routes,
       // Bus rides carry rail's clock columns and join its bounds (spec 2026-10-07 §8).
-      railJourneys: [...trip.railJourneys, ...trip.busJourneys].map(rideStatusSpan),
+      railJourneys: [...trip.railJourneys, ...trip.busJourneys, ...trip.ferryJourneys].map(
+        rideStatusSpan
+      ),
       rentals: trip.rentalBookings,
       ownStartDate: trip.startDate,
       ownEndDate: trip.endDate,
@@ -383,14 +409,16 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
     railToInProgress.count + railToCompleted.count + railToScheduled.count + railClockless;
   const rentals =
     rentalToInProgress.count + rentalToCompleted.count + rentalToScheduled.count + rentalDayReturns;
+  const ferry =
+    ferryToInProgress.count + ferryToCompleted.count + ferryToScheduled.count + ferryClockless;
   const bus = busToInProgress.count + busToCompleted.count + busToScheduled.count + busClockless;
-  if (flights + cruises + lodging + rail + rentals + bus + tripFlips > 0) {
+  if (flights + cruises + lodging + rail + rentals + bus + ferry + tripFlips > 0) {
     logger.info({
       operation: "status_sweep_done",
-      context: { flights, cruises, lodging, rail, rentals, bus, trips: tripFlips },
+      context: { flights, cruises, lodging, rail, rentals, bus, ferry, trips: tripFlips },
     });
   }
-  return { flights, cruises, lodging, rail, rentals, bus, trips: tripFlips };
+  return { flights, cruises, lodging, rail, rentals, bus, ferry, trips: tripFlips };
 }
 
 /** Rides whose arrival carries a clock, or that have none at all. */
@@ -533,6 +561,42 @@ async function sweepClocklessBus(now: Date): Promise<number> {
     });
     if (status === ride.status) continue;
     await prisma.busJourney.update({ where: { id: ride.id }, data: { status } });
+    changed += 1;
+  }
+  return changed;
+}
+
+async function sweepClocklessFerry(now: Date): Promise<number> {
+  const rides = await prisma.ferryJourney.findMany({
+    where: {
+      status: { in: ["scheduled", "in_progress"] },
+      departureTime: { lte: now },
+      OR: [
+        { depPrecision: { in: [...CLOCKLESS_PRECISIONS] } },
+        { arrPrecision: { in: [...CLOCKLESS_PRECISIONS] } },
+      ],
+    },
+    select: {
+      id: true,
+      status: true,
+      departureTime: true,
+      arrivalTime: true,
+      depTimezone: true,
+      arrTimezone: true,
+      depPrecision: true,
+      arrPrecision: true,
+    },
+  });
+  let changed = 0;
+  for (const ride of rides) {
+    const status = deriveBusStatus({
+      ...ride,
+      current: ride.status,
+      now,
+      endsAt: rideEndsAt(ride),
+    });
+    if (status === ride.status) continue;
+    await prisma.ferryJourney.update({ where: { id: ride.id }, data: { status } });
     changed += 1;
   }
   return changed;

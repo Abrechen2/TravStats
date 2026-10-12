@@ -1,0 +1,72 @@
+{
+  "status": {
+    "scheduled": "Scheduled",
+    "in_progress": "On the road",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "form": {
+    "stationName": "Port name as printed on the ticket",
+    "stationAddress": "Terminal address (optional)",
+    "operator": "Operator",
+    "price": "Price"
+  },
+  "distanceSource": {
+    "great_circle": "Straight line",
+    "route": "Road",
+    "user": "per ticket"
+  },
+  "title": "Ferries",
+  "add": "Add crossing",
+  "edit": "Edit crossing",
+  "empty": "No crossings yet.",
+  "error": "Could not load crossings.",
+  "saveError": "Could not save. Please check the fields.",
+  "departure": "Departure port",
+  "arrival": "Arrival port",
+  "departureLocal": "Departure (local time)",
+  "arrivalLocal": "Arrival (local time)",
+  "operator": "Operator",
+  "vesselName": "Vessel",
+  "vehicleType": "Vehicle type",
+  "vehicleRegistration": "Registration",
+  "vehicleLengthM": "Length (m)",
+  "vehicleWidthM": "Width (m)",
+  "vehicleHeightM": "Height (m)",
+  "passengerCount": "Passengers",
+  "cabinType": "Cabin / accommodation",
+  "seat": "Seat",
+  "bookingReference": "Booking reference",
+  "ticketReference": "Ticket reference",
+  "price": "Price",
+  "currency": "Currency",
+  "distanceKm": "Ticket distance (km)",
+  "companions": "Companions (comma separated)",
+  "notes": "Notes",
+  "trip": "Trip",
+  "noTrip": "No trip",
+  "cancelled": "Cancelled",
+  "remove": "Delete crossing",
+  "confirmDelete": "Delete this crossing and its documents?",
+  "straightDistance": "Straight line (estimate)",
+  "duration": "Duration",
+  "details": "Crossing",
+  "previous": "Previous",
+  "next": "Next",
+  "search": "Search crossings",
+  "save": "Save",
+  "cancel": "Cancel",
+  "required": "Both ports with coordinates and departure are required.",
+  "roadtrip": {
+    "title": "Roadtrip leg",
+    "hint": "The linked leg counts as a ferry and is excluded from road kilometres.",
+    "none": "No linked leg"
+  },
+  "departureFold": "Departure during clock change",
+  "arrivalFold": "Arrival during clock change",
+  "fold": {
+    "unchanged": "Automatic / unchanged",
+    "earlier": "First occurrence",
+    "later": "Second occurrence"
+  }
+}

@@ -12,6 +12,7 @@ export interface TripCounts {
   railJourneys?: number;
   /** forgejo#289 — bus rides, counted on the card like rail. */
   busJourneys?: number;
+  ferryJourneys?: number;
   rentalBookings?: number;
   roadtrips?: number;
 }

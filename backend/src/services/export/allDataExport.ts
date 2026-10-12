@@ -90,6 +90,7 @@ export const USER_EXPORT_SELECT = {
   // Bus rides (spec 2026-10-07-bus-domain-design): the rides with their
   // companion links — the terminals' frozen names and zones included.
   busJourneys: { include: { companionLinks: true } },
+  ferryJourneys: { include: { companionLinks: true } },
   companions: true,
   // Trip sharing (design 2026-10-09): the consents this account asked for and
   // gave, the groups it started and the notices addressed to it.

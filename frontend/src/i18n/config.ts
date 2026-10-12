@@ -1,3 +1,5 @@
+import enFerry from "./resources/en/ferry.json";
+import deFerry from "./resources/de/ferry.json";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { useSettingsStore } from "../store/settingsStore";
@@ -129,6 +131,7 @@ const resources = {
     cruise: enCruise,
     rail: enRail,
     bus: enBus,
+    ferry: enFerry,
     rental: enRental,
     import: enImport,
     aircraft: enAircraft,
@@ -172,6 +175,7 @@ const resources = {
     cruise: deCruise,
     rail: deRail,
     bus: deBus,
+    ferry: deFerry,
     rental: deRental,
     import: deImport,
     aircraft: deAircraft,

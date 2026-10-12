@@ -12,6 +12,7 @@ const TAB_ICON: Record<DomainKey, string> = {
   rail: "🚆",
   rental: "🚗",
   bus: "🚌",
+  ferry: "⛴",
 };
 
 /**

@@ -301,6 +301,7 @@ router.get(
           railJourneys: { select: TRIP_RAIL_SELECT, orderBy: { departureTime: "asc" } },
           // Bus rides for the timeline and the map, between the hotels (forgejo#180).
           busJourneys: { select: TRIP_BUS_SELECT, orderBy: { departureTime: "asc" } },
+          ferryJourneys: { orderBy: { departureTime: "asc" } },
           rentalBookings: TRIP_DETAIL_RENTALS,
         },
       });

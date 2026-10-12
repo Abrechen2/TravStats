@@ -64,7 +64,8 @@ export function visibleStatsTabs(
       (key !== "poi" || placesAccess !== "denied") &&
       (key !== "rail" || railOffered) &&
       (key !== "rental" || rentalOffered) &&
-      (key !== "bus" || busOffered)
+      (key !== "bus" || busOffered) &&
+      key !== "ferry"
   );
 }
 
@@ -76,7 +77,7 @@ export function resolveStatsTab(
   rentalOffered = false,
   busOffered = false
 ): StatsTab {
-  if (requested === "all") return "all";
+  if (requested === "all" || requested === "ferry") return "all";
   if (requested === "poi") return placesAccess === "denied" ? "all" : "poi";
   // Rail behind a closed beta gate has no tab to land on, however it was asked.
   if (requested === "rail" && !railOffered) return "all";

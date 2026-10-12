@@ -135,6 +135,11 @@ export const BETA_FEATURES = Object.freeze({
     reason: "beta",
   }),
 
+  ferryDomain: Object.freeze({
+    why: "Ferry crossings (forgejo#293) await acceptance with real tickets on RC.",
+    returnsWhen: "The owner accepts ferry crossings for release after RC verification.",
+    reason: "beta",
+  }),
   busDomain: Object.freeze({
     why: "Long-distance coach rides are a new domain (spec 2026-10-07-bus-domain-design), built in packages; the Companion app does not handle them yet and no release candidate has carried them.",
     returnsWhen:

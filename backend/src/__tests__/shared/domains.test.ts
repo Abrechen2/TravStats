@@ -22,6 +22,7 @@ describe("domain registry", () => {
       "rail",
       "rental",
       "bus",
+      "ferry",
     ]);
   });
 
@@ -41,6 +42,7 @@ describe("domain registry", () => {
       "rail",
       "rental",
       "bus",
+      "ferry",
     ]);
   });
 
@@ -87,6 +89,7 @@ describe("domain colours agree with design/tokens.json", () => {
     rail: "rail",
     rental: "rental",
     bus: "bus",
+    ferry: "ferry",
   };
 
   it.each(DOMAIN_KEYS)("%s", (key) => {

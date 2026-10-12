@@ -74,7 +74,11 @@ export default function ImportSection(): JSX.Element {
   // dialog like every booking mail (rental spec §4). Bus has none in B1
   // either (spec 2026-10-07 §12: manual entry only; the importer is B2).
   const groups = AVAILABLE_DOMAINS.filter((key) =>
-    key === "rental" || key === "bus" ? false : key === "poi" ? placesVisible : isEnabled(key)
+    key === "rental" || key === "bus" || key === "ferry"
+      ? false
+      : key === "poi"
+        ? placesVisible
+        : isEnabled(key)
   );
 
   return (

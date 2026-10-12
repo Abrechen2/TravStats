@@ -206,7 +206,8 @@
     "rental": "Mietwagen",
     "rental_desc": "Mietwagen mit Station, Zeitraum, Fahrzeug und Kilometern aus der Rechnung. (Beta)",
     "bus": "Bus",
-    "bus_desc": "Fernbus-, Intercity- und Shuttlefahrten: Terminals, Linie, Sitzplatz, Kilometer. Kein Stadtverkehr. (Beta)"
+    "bus_desc": "Fernbus-, Intercity- und Shuttlefahrten: Terminals, Linie, Sitzplatz, Kilometer. Kein Stadtverkehr. (Beta)",
+    "ferry": "Fähren"
   },
   "settings": {
     "modules": {
@@ -221,7 +222,8 @@
         "roadtrip": "Stationen, Übernachtungen, Karte",
         "rail": "Beta: Fahrtenbuch für Zugfahrten",
         "rental": "Beta: Fahrtenbuch für Mietwagen",
-        "bus": "Beta: Fahrtenbuch für Busfahrten"
+        "bus": "Beta: Fahrtenbuch für Busfahrten",
+        "ferry": "Überfahrten, Fahrzeug und Tickets"
       }
     }
   },

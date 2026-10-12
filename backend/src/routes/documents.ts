@@ -58,6 +58,7 @@ const ENTRY_LIST_PATHS: Record<EntryType, string> = {
   railJourney: "/rail/:id/documents",
   rentalBooking: "/rentals/:id/documents",
   busJourney: "/bus/:id/documents",
+  ferryJourney: "/ferry/:id/documents",
   // An expense lives under three path families (trip, roadtrip, section);
   // its receipts under the one that needs no owner to be named.
   tripExpense: "/expenses/:id/documents",

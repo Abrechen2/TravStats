@@ -277,6 +277,7 @@ export interface Trip {
   railJourneys?: TripRailJourney[];
   /** Bus rides linked to this trip, in departure order (forgejo#180). */
   busJourneys?: import("./bus").TripBusJourney[];
+  ferryJourneys?: import("./ferry").TripFerryJourney[];
   rentalBookings?: import("./rental").TripRental[];
   immichAlbums?: LinkedAlbum[];
 }

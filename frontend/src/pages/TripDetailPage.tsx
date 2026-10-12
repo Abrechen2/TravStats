@@ -1,3 +1,4 @@
+import { useVisibleTrip } from "../hooks/useVisibleTrip";
 import { deadlineSummary } from "../lib/deadlines";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -20,7 +21,6 @@ import { buildTimelineEvents, type TimelineEvent } from "../lib/tripTimelineEven
 import { ExpandableEventCard } from "../components/Trip/ExpandableEventCard";
 import { JournalCard, RowActions } from "../components/Trips/TimelineJournalCard";
 import { useToastStore } from "../store/toastStore";
-import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../hooks/usePlacesVisible";
 import { useTranslation } from "../hooks/useTranslation";
 import { useConfirmDialog } from "../hooks/useConfirmDialog";
@@ -43,9 +43,6 @@ import { useToursVisible } from "../hooks/useToursVisible";
 import { PanelHeader, Placeholder } from "../components/Trips/TripDetailPanels";
 import { formatTimelineDate } from "../lib/tripTimeline";
 import { TripGroundLists, groundRideCount } from "../components/Trips/TripGroundLists";
-import { useRailVisible } from "../hooks/useRailVisible";
-import { useRentalVisible } from "../hooks/useRentalVisible";
-import { useBusVisible } from "../hooks/useBusVisible";
 import { RentalBand, TransitCard, useRentalBands } from "../components/Trips/timelineTransit";
 import { useTripPlaceVisits } from "../hooks/useTripPlaceVisits";
 import { useTripNotes } from "../hooks/useTripNotes";
@@ -104,40 +101,7 @@ export default function TripDetailPage(): JSX.Element {
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Domain-gating: a disabled domain's segments are stripped from the trip copy
-  // every tab reads; a banner below the tab bar says they are hidden, not lost.
-  const { isEnabled } = useEnabledDomains();
-  const cruiseEnabled = isEnabled("cruise");
-  const lodgingEnabled = isEnabled("lodging");
-  // Rail and rentals ask their own hooks: the beta switch AND the domain.
-  const railVisible = useRailVisible();
-  const rentalVisible = useRentalVisible();
-  const busVisible = useBusVisible();
-  const displayTrip = useMemo<Trip | null>(() => {
-    const allShown = cruiseEnabled && lodgingEnabled && railVisible && rentalVisible && busVisible;
-    if (trip === null || allShown) return trip;
-    return {
-      ...trip,
-      cruises: cruiseEnabled ? trip.cruises : [],
-      lodgingStays: lodgingEnabled ? trip.lodgingStays : [],
-      railJourneys: railVisible ? trip.railJourneys : [],
-      rentalBookings: rentalVisible ? trip.rentalBookings : [],
-      busJourneys: busVisible ? trip.busJourneys : [],
-      _count: trip._count
-        ? {
-            ...trip._count,
-            ...(cruiseEnabled ? {} : { cruises: 0 }),
-            ...(lodgingEnabled ? {} : { lodgingStays: 0 }),
-          }
-        : trip._count,
-    };
-  }, [trip, cruiseEnabled, lodgingEnabled, railVisible, rentalVisible, busVisible]);
-  const hiddenCruiseCount = cruiseEnabled
-    ? 0
-    : (trip?._count?.cruises ?? trip?.cruises?.length ?? 0);
-  const hiddenLodgingCount = lodgingEnabled
-    ? 0
-    : (trip?._count?.lodgingStays ?? trip?.lodgingStays?.length ?? 0);
+  const { displayTrip, hiddenCruiseCount, hiddenLodgingCount } = useVisibleTrip(trip);
 
   const load = async (): Promise<void> => {
     if (!id) return;
@@ -614,6 +578,8 @@ function dotColor(ev: TimelineEvent): string {
       return "var(--domain-cruise, #6fa0d6)";
     case "rail":
       return "var(--domain-rail)";
+    case "ferry":
+      return "var(--ts-domain-ferry)";
     case "bus":
       return "var(--ts-domain-bus)";
     case "rental-pickup":

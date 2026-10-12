@@ -173,7 +173,10 @@
       "railKmStraight": "Luftlinie",
       "busRides": "Busfahrten",
       "busKmMeasured": "Strecke (Straße oder Ticket)",
-      "busKmStraight": "Luftlinie"
+      "busKmStraight": "Luftlinie",
+      "ferryRides": "Überfahrten",
+      "ferryKmMeasured": "Strecke laut Ticket",
+      "ferryKmStraight": "Luftlinie"
     },
     "topItems": {
       "airlines": "Top-Airlines",
@@ -182,7 +185,8 @@
       "categories": "Top-Kategorien",
       "vehicles": "Fahrzeuge",
       "railOperators": "Top-Bahngesellschaften",
-      "busOperators": "Top-Busunternehmen"
+      "busOperators": "Top-Busunternehmen",
+      "ferryOperators": "Top-Reedereien"
     },
     "badge": {
       "balconyCabin": "Balkon-Kabine",

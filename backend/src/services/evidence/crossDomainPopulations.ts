@@ -1,3 +1,9 @@
+import {
+  ferryCountries,
+  ferryDayKeys,
+  ferryYear,
+  countableFerryWhere,
+} from "../../shared/ferryCounting";
 import { prisma } from "../../db";
 import type { EvidenceEntry } from "../../schemas/evidence";
 import type { DomainKey } from "../../shared/domains";
@@ -585,6 +591,37 @@ async function loadBus(userId: string): Promise<CrossDomainPopulation> {
   return { events, countryRows };
 }
 
+async function loadFerry(userId: string): Promise<CrossDomainPopulation> {
+  const rows = await prisma.ferryJourney.findMany({
+    where: { userId, ...countableFerryWhere() },
+    select: {
+      id: true,
+      operator: true,
+      depStationName: true,
+      arrStationName: true,
+      depCountry: true,
+      arrCountry: true,
+      depTimezone: true,
+      arrTimezone: true,
+      departureTime: true,
+      arrivalTime: true,
+    },
+  });
+  const events: CrossDomainEventRow[] = [];
+  const countryRows: CrossDomainCountryRow[] = [];
+  for (const row of rows) {
+    const entry: EvidenceEntry = {
+      ...busEvidenceEntry(row, {}),
+      domain: "ferry",
+      href: `/ferry/${row.id}`,
+    };
+    const year = ferryYear(row);
+    events.push({ domain: "ferry", entry, year, dayKeys: ferryDayKeys(row) });
+    countryRows.push({ domain: "ferry", entry, countries: ferryCountries(row), years: [year] });
+  }
+  return { events, countryRows };
+}
+
 const LOADERS: Record<DomainKey, (userId: string) => Promise<CrossDomainPopulation>> = {
   flight: loadFlights,
   cruise: loadCruises,
@@ -594,6 +631,7 @@ const LOADERS: Record<DomainKey, (userId: string) => Promise<CrossDomainPopulati
   rail: loadRail,
   rental: loadRental,
   bus: loadBus,
+  ferry: loadFerry,
 };
 
 /** Loads only the domains asked for — a chip that is off is never queried. */

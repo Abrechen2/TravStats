@@ -105,6 +105,7 @@ model User {
   cruises                Cruise[]
   railJourneys           RailJourney[]
   busJourneys            BusJourney[]
+  ferryJourneys            FerryJourney[]
   rentalBookings         RentalBooking[]
   apiTokens              ApiToken[]
   pairingCodes           PairingCode[]
@@ -1725,6 +1726,7 @@ model Trip {
   cruises          Cruise[]
   railJourneys     RailJourney[]
   busJourneys      BusJourney[]
+  ferryJourneys      FerryJourney[]
   rentalBookings   RentalBooking[]
   stops            TripStop[]
   routes           TripRoute[]
@@ -2022,6 +2024,7 @@ model TripRoute {
 /// router broke. With endpoint keying an inserted stop leaves its
 /// neighbours' stored geometry untouched.
 model TripRouteLeg {
+  ferryJourney FerryJourney?
   id         String @id @default(uuid())
   routeId    String @map("route_id")
   fromStopId String @map("from_stop_id")
@@ -2292,6 +2295,7 @@ model Booking {
   cruises      Cruise[]
   railJourneys RailJourney[]
   busJourneys  BusJourney[]
+  ferryJourneys  FerryJourney[]
   lodgingStays LodgingStay[]
 
   @@index([userId])
@@ -3414,6 +3418,7 @@ model ImportBatch {
   cruises  Cruise[]
   rail     RailJourney[]
   bus      BusJourney[]
+  ferry      FerryJourney[]
   rentals  RentalBooking[]
   places   Place[]
 
@@ -3467,6 +3472,7 @@ model Companion {
   cruises      CruiseCompanion[]
   rail         RailJourneyCompanion[]
   bus          BusJourneyCompanion[]
+  ferry          FerryJourneyCompanion[]
   rentals      RentalBookingCompanion[]
   /// Expenses this companion paid (forgejo#150).
   expensesPaid TripExpense[]
@@ -3734,6 +3740,7 @@ model Document {
   railJourneyId   String? @map("rail_journey_id")
   rentalBookingId String? @map("rental_booking_id")
   busJourneyId    String? @map("bus_journey_id")
+  ferryJourneyId    String? @map("ferry_journey_id")
   /// An expense's receipt (forgejo#150).
   tripExpenseId   String? @map("trip_expense_id")
   /// What a rental's evidence shows (forgejo#239): pickup | return | damage |
@@ -3765,6 +3772,7 @@ model Document {
   railJourney   RailJourney?   @relation(fields: [railJourneyId], references: [id], onDelete: Cascade)
   rentalBooking RentalBooking? @relation(fields: [rentalBookingId], references: [id], onDelete: Cascade)
   busJourney    BusJourney?    @relation(fields: [busJourneyId], references: [id], onDelete: Cascade)
+  ferryJourney    FerryJourney?    @relation(fields: [ferryJourneyId], references: [id], onDelete: Cascade)
   tripExpense   TripExpense?   @relation(fields: [tripExpenseId], references: [id], onDelete: Cascade)
 
   @@index([userId, sha256])
@@ -3776,6 +3784,7 @@ model Document {
   @@index([railJourneyId])
   @@index([rentalBookingId])
   @@index([busJourneyId])
+  @@index([ferryJourneyId])
   @@index([tripExpenseId])
   @@index([userId, linkedAt])
   /// The sweep asks exactly this: unfiled rows past their stamp.
@@ -4493,4 +4502,106 @@ model Note {
 
   @@index([userId, occurredAt])
   @@map("notes")
+}
+
+
+model FerryJourney {
+  roadtripLegId String? @unique @map("roadtrip_leg_id")
+  roadtripLeg TripRouteLeg? @relation(fields: [roadtripLegId], references: [id], onDelete: SetNull)
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+
+  operator String?
+  vesselName String? @map("vessel_name")
+  vehicleType String? @map("vehicle_type")
+  vehicleRegistration String? @map("vehicle_registration")
+  vehicleLengthM Float? @map("vehicle_length_m")
+  vehicleWidthM Float? @map("vehicle_width_m")
+  vehicleHeightM Float? @map("vehicle_height_m")
+  passengerCount Int? @map("passenger_count")
+  cabinType String? @map("cabin_type")
+  ticketReference String? @map("ticket_reference")
+
+  depStationName String  @map("dep_station_name")
+  depAddress     String? @map("dep_address")
+  depLat         Float   @map("dep_lat")
+  depLon         Float   @map("dep_lon")
+  depCountry     String? @map("dep_country")
+  depTimezone    String? @map("dep_timezone")
+  arrStationName String  @map("arr_station_name")
+  arrAddress     String? @map("arr_address")
+  arrLat         Float   @map("arr_lat")
+  arrLon         Float   @map("arr_lon")
+  arrCountry     String? @map("arr_country")
+  arrTimezone    String? @map("arr_timezone")
+
+  departureTime DateTime  @map("departure_time")
+  arrivalTime   DateTime? @map("arrival_time")
+  depPrecision  String?   @map("dep_precision")
+  arrPrecision  String?   @map("arr_precision")
+
+  distanceKm     Float?  @map("distance_km")
+  distanceSource String? @map("distance_source")
+  geometry       Json?
+  geometrySource String  @default("straight") @map("geometry_source")
+
+  actualDepartureTime DateTime? @map("actual_departure_time")
+  actualArrivalTime   DateTime? @map("actual_arrival_time")
+
+  fareClass        String? @map("fare_class")
+  seat             String?
+  bookingReference String? @map("booking_reference")
+
+  price          Float?
+  currency       String?   @default("EUR")
+  priceBase      Float?    @map("price_base")
+  fxRate         Float?    @map("fx_rate")
+  fxRateDate     DateTime? @map("fx_rate_date")
+  fxBaseCurrency String?   @map("fx_base_currency")
+  fxSource       String?   @map("fx_source")
+
+  status       String   @default("scheduled")
+  delayMinutes Int?     @map("delay_minutes")
+  notes        String?
+  tags         String[] @default([])
+  companions   String[] @default([])
+
+  tripId    String? @map("trip_id")
+  bookingId String? @map("booking_id")
+
+  externalRef   String? @map("external_ref")
+  importBatchId String? @map("import_batch_id")
+  shareKey      String? @map("share_key")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip           Trip?                 @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking        Booking?              @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  importBatch    ImportBatch?          @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  companionLinks FerryJourneyCompanion[]
+  documents      Document[]
+
+  @@unique([userId, externalRef])
+  @@unique([userId, shareKey])
+  @@index([userId, departureTime])
+  @@index([status])
+  @@index([tripId])
+  @@index([bookingId])
+  @@index([importBatchId])
+  @@map("ferry_journeys")
+}
+
+model FerryJourneyCompanion {
+  ferryJourneyId String @map("ferry_journey_id")
+  companionId  String @map("companion_id")
+  position     Int
+
+  ferryJourney FerryJourney @relation(fields: [ferryJourneyId], references: [id], onDelete: Cascade)
+  companion  Companion  @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  @@id([ferryJourneyId, companionId])
+  @@index([companionId])
+  @@map("ferry_journey_companions")
 }

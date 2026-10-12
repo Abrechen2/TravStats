@@ -45,6 +45,7 @@ import "./statsDomainRecords";
 import "./railEntrySuggestions";
 import "./railRoadtripConversion";
 import "./bus";
+import "./ferry";
 import "./busEntrySuggestions";
 import "./rental";
 import "./cruiseTracks";

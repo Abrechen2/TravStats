@@ -24,7 +24,9 @@ export interface EndReading {
 
 /** The refusal codes an arrival before its departure may carry, one per domain. */
 export type ArrivalBeforeDepartureCode =
-  "RAIL_ARRIVAL_BEFORE_DEPARTURE" | "BUS_ARRIVAL_BEFORE_DEPARTURE";
+  | "RAIL_ARRIVAL_BEFORE_DEPARTURE"
+  | "BUS_ARRIVAL_BEFORE_DEPARTURE"
+  | "FERRY_ARRIVAL_BEFORE_DEPARTURE";
 
 /**
  * The instant a stop's wall clock names, read back from a STORED row or a

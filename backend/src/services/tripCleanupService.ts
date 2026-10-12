@@ -70,6 +70,7 @@ export const EMPTY_TRIP_COUNTS = {
   // silently unfiled the ride (forgejo#288 sweep).
   railJourneys: true,
   busJourneys: true,
+  ferryJourneys: true,
   rentalBookings: true,
   placeVisits: true,
   immichAlbums: true,
@@ -89,6 +90,7 @@ export const EMPTY_TRIP_WHERE = {
   lodgingStays: { none: {} },
   railJourneys: { none: {} },
   busJourneys: { none: {} },
+  ferryJourneys: { none: {} },
   rentalBookings: { none: {} },
   placeVisits: { none: {} },
   immichAlbums: { none: {} },
@@ -279,6 +281,7 @@ export async function mergeTrips(
     // unfiled the moment the source trip is deleted below (forgejo#288 sweep).
     await tx.railJourney.updateMany(move);
     await tx.busJourney.updateMany(move);
+    await tx.ferryJourney.updateMany(move);
     await tx.rentalBooking.updateMany(move);
     await tx.booking.updateMany(move);
     await tx.tripStop.updateMany(move);

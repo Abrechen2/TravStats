@@ -8,6 +8,7 @@ import { isBrandDefault, needsOutline } from "../../lib/domainColor";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
 import { useRailVisible } from "../../hooks/useRailVisible";
 import { useRentalVisible } from "../../hooks/useRentalVisible";
+import { useFerryVisible } from "../../hooks/useFerryVisible";
 import { useBusVisible } from "../../hooks/useBusVisible";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 
@@ -38,10 +39,12 @@ export default function DomainColorSection(): JSX.Element | null {
   const railVisible = useRailVisible();
   const rentalVisible = useRentalVisible();
   const busVisible = useBusVisible();
+  const ferryVisible = useFerryVisible();
   const keys = AVAILABLE_DOMAINS.filter((key) => {
     if (key === "roadtrip") return isFeatureVisible("roadtrips");
     if (key === "rail") return railVisible;
     if (key === "rental") return rentalVisible;
+    if (key === "ferry") return ferryVisible;
     if (key === "bus") return busVisible;
     return true;
   });

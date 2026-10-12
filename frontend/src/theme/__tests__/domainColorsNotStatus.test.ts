@@ -31,6 +31,7 @@ const TOKEN_NAME: Record<DomainKey, keyof typeof tokens.domainColor> = {
   rail: "rail",
   rental: "rental",
   bus: "bus",
+  ferry: "ferry",
 };
 
 function tokenDomainColors(): [string, string][] {

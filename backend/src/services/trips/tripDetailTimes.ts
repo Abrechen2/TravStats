@@ -32,6 +32,7 @@ export function withTripDetailTimes<
     cruises: Array<CruiseTimeColumns & { stops?: CruiseStopTimeColumns[] }>;
     lodgingStays: StayTimeColumns[];
     railJourneys: RailTimeColumns[];
+    ferryJourneys: RailTimeColumns[];
     busJourneys: RailTimeColumns[];
     bookings: DeadlineColumns[];
     rentalBookings: RentalTimeColumns[];
@@ -46,6 +47,7 @@ export function withTripDetailTimes<
     railJourneys: trip.railJourneys.map(withRailTimes),
     // A bus ride's ends carry rail's columns, so rail's reader serves (forgejo#180).
     busJourneys: trip.busJourneys.map(withBusTimes),
+    ferryJourneys: trip.ferryJourneys.map(withRailTimes),
     bookings: trip.bookings.map(withBookingTimes),
     // Rentals carry their `times` too, deadlines included (forgejo#285).
     rentalBookings: trip.rentalBookings.map((r) => ({

@@ -5,6 +5,7 @@ import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { useRailVisible } from "../../hooks/useRailVisible";
 import { useRentalVisible } from "../../hooks/useRentalVisible";
+import { useFerryVisible } from "../../hooks/useFerryVisible";
 import { useBusVisible } from "../../hooks/useBusVisible";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
 import type { IconName } from "../ui/Icon";
@@ -92,6 +93,7 @@ export function useNavItems(): {
   const railVisible = useRailVisible();
   const rentalVisible = useRentalVisible();
   const busVisible = useBusVisible();
+  const ferryVisible = useFerryVisible();
   const isAdmin = user?.isAdmin ?? false;
 
   return useMemo(() => {
@@ -106,7 +108,9 @@ export function useNavItems(): {
             ? rentalVisible
             : key === "bus"
               ? busVisible
-              : isEnabled(key)
+              : key === "ferry"
+                ? ferryVisible
+                : isEnabled(key)
     ).map((key) => ({
       kind: "leaf",
       id: `domain-${key}`,
@@ -219,5 +223,5 @@ export function useNavItems(): {
     ];
 
     return { primary, more };
-  }, [t, isEnabled, placesVisible, railVisible, rentalVisible, busVisible, isAdmin]);
+  }, [t, isEnabled, placesVisible, railVisible, rentalVisible, busVisible, ferryVisible, isAdmin]);
 }
