@@ -37,13 +37,12 @@ export function FerryRoadtripLink({ ride, onSaved }: { ride: FerryJourney; onSav
     }
   };
   return (
-    <section className="space-y-2">
-      <h2>{t("ferry:roadtrip.title")}</h2>
-      <p className="text-sm">{t("ferry:roadtrip.hint")}</p>
+    <div className="space-y-3">
+      <p className="t-caption">{t("ferry:roadtrip.hint")}</p>
       {error && <p role="alert">{t("ferry:saveError")}</p>}
       <select
         aria-label={t("ferry:roadtrip.title")}
-        className="rounded border bg-[var(--bg-surface)] p-2"
+        className="w-full min-w-0 rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) focus:border-(--accent)"
         value={selected}
         onChange={(e) => setSelected(e.target.value)}
         disabled={busy}
@@ -67,6 +66,6 @@ export function FerryRoadtripLink({ ride, onSaved }: { ride: FerryJourney; onSav
       >
         {t("ferry:save")}
       </Button>
-    </section>
+    </div>
   );
 }

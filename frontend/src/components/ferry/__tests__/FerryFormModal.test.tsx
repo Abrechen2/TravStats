@@ -7,7 +7,18 @@ vi.mock("../../../lib/api/ferry", () => ({ ferryApi: { save: mocks.save } }));
 vi.mock("../../../lib/api", () => ({ tripsApi: { getAll: mocks.trips } }));
 vi.mock("../../../hooks/useTranslation", () => ({ useTranslation: () => ({ t: mocks.t }) }));
 vi.mock("../../Modal", () => ({
-  default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  default: ({
+    children,
+    footer,
+  }: {
+    children: React.ReactNode;
+    footer: (close: () => void) => React.ReactNode;
+  }) => (
+    <div>
+      {children}
+      {footer(() => {})}
+    </div>
+  ),
 }));
 vi.mock("../FerryStationField", () => ({
   EMPTY_TERMINAL: { name: "", address: "", lat: null, lon: null, country: null },

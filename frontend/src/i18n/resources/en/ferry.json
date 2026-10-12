@@ -1,7 +1,7 @@
 {
   "status": {
     "scheduled": "Scheduled",
-    "in_progress": "On the road",
+    "in_progress": "Under way",
     "completed": "Completed",
     "cancelled": "Cancelled"
   },
@@ -13,7 +13,6 @@
   },
   "distanceSource": {
     "great_circle": "Straight line",
-    "route": "Road",
     "user": "per ticket"
   },
   "title": "Ferries",
@@ -60,7 +59,8 @@
   "roadtrip": {
     "title": "Roadtrip leg",
     "hint": "The linked leg counts as a ferry and is excluded from road kilometres.",
-    "none": "No linked leg"
+    "none": "No linked leg",
+    "tripLocked": "Unlink the roadtrip leg before changing the trip."
   },
   "departureFold": "Departure during clock change",
   "arrivalFold": "Arrival during clock change",
@@ -68,5 +68,60 @@
     "unchanged": "Automatic / unchanged",
     "earlier": "First occurrence",
     "later": "Second occurrence"
-  }
+  },
+  "list": {
+    "operator": "Operator",
+    "route": "Route",
+    "time": "Time",
+    "duration": "Duration",
+    "distance": "Distance",
+    "status": "Status",
+    "trip": "Trip",
+    "actions": "Actions",
+    "filterStatus": "Status",
+    "filterYear": "Year",
+    "all": "All",
+    "sortBy": "Sort by {{col}}",
+    "sortedBy": "sorted by {{col}}, {{dir}}",
+    "ascending": "ascending",
+    "descending": "descending",
+    "allStatuses": "All statuses",
+    "allYears": "All years",
+    "emptyHint": "Add your first crossing.",
+    "created": "Added",
+    "vessel": "Vessel"
+  },
+  "summary": {
+    "journeys_one": "crossing",
+    "journeys_other": "crossings",
+    "operators_one": "Operator",
+    "operators_other": "Operators",
+    "stations_one": "port",
+    "stations_other": "ports",
+    "withoutOperator_one": "{{count}} without an operator",
+    "withoutOperator_other": "{{count}} without an operator"
+  },
+  "saved": "Crossing saved",
+  "deleted": "Crossing deleted",
+  "deleteError": "The crossing could not be deleted.",
+  "deleteConfirm": "Really delete the crossing {{route}}? This cannot be undone.",
+  "deleteSurvivors": {
+    "trip": "trip “{{name}}”",
+    "companions_one": "{{count}} travel companion",
+    "companions_other": "{{count}} travel companions"
+  },
+  "delay": "+{{minutes}} min",
+  "onTime": "on time",
+  "delete": "Delete crossing",
+  "loadError": "Could not load crossings.",
+  "subtitle": "Crossings between two ports.",
+  "betaNote": "Available in beta. Tickets can be attached as documents.",
+  "sections": {
+    "route": "Ports and times",
+    "booking": "Booking and accommodation",
+    "vehicle": "Vehicle",
+    "trip": "Trip and companions"
+  },
+  "companionNames": "Companions",
+  "clockChange": "Clock change"
 }

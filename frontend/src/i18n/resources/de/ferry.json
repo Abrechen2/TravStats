@@ -13,7 +13,6 @@
   },
   "distanceSource": {
     "great_circle": "Luftlinie",
-    "route": "Straße",
     "user": "laut Ticket"
   },
   "title": "Fähren",
@@ -60,7 +59,8 @@
   "roadtrip": {
     "title": "Roadtrip-Etappe",
     "hint": "Die verknüpfte Etappe wird als Fähre gezählt und aus den Straßenkilometern ausgeschlossen.",
-    "none": "Keine Verknüpfung"
+    "none": "Keine Verknüpfung",
+    "tripLocked": "Zum Wechseln der Reise zuerst die Roadtrip-Verknüpfung lösen."
   },
   "departureFold": "Abfahrt bei Zeitumstellung",
   "arrivalFold": "Ankunft bei Zeitumstellung",
@@ -68,5 +68,60 @@
     "unchanged": "Automatisch / unverändert",
     "earlier": "Erstes Vorkommen",
     "later": "Zweites Vorkommen"
-  }
+  },
+  "list": {
+    "operator": "Reederei",
+    "route": "Strecke",
+    "time": "Zeit",
+    "duration": "Dauer",
+    "distance": "Entfernung",
+    "status": "Status",
+    "trip": "Reise",
+    "actions": "Aktionen",
+    "filterStatus": "Status",
+    "filterYear": "Jahr",
+    "all": "Alle",
+    "sortBy": "Nach {{col}} sortieren",
+    "sortedBy": "sortiert nach {{col}}, {{dir}}",
+    "ascending": "aufsteigend",
+    "descending": "absteigend",
+    "allStatuses": "Alle Status",
+    "allYears": "Alle Jahre",
+    "emptyHint": "Trage deine erste Überfahrt ein.",
+    "created": "Angelegt",
+    "vessel": "Schiff"
+  },
+  "summary": {
+    "journeys_one": "Überfahrt",
+    "journeys_other": "Überfahrten",
+    "operators_one": "Reederei",
+    "operators_other": "Reedereien",
+    "stations_one": "Hafen",
+    "stations_other": "Häfen",
+    "withoutOperator_one": "{{count}} ohne Reederei",
+    "withoutOperator_other": "{{count}} ohne Reederei"
+  },
+  "saved": "Überfahrt gespeichert",
+  "deleted": "Überfahrt gelöscht",
+  "deleteError": "Die Überfahrt konnte nicht gelöscht werden.",
+  "deleteConfirm": "Die Überfahrt {{route}} wirklich löschen? Das lässt sich nicht rückgängig machen.",
+  "deleteSurvivors": {
+    "trip": "Reise „{{name}}“",
+    "companions_one": "{{count}} mitreisende Person",
+    "companions_other": "{{count}} Mitreisende"
+  },
+  "delay": "+{{minutes}} min",
+  "onTime": "pünktlich",
+  "delete": "Überfahrt löschen",
+  "loadError": "Überfahrten konnten nicht geladen werden.",
+  "subtitle": "Überfahrten zwischen zwei Häfen.",
+  "betaNote": "Als Beta verfügbar. Tickets können als Dokument angehängt werden.",
+  "sections": {
+    "route": "Häfen und Zeiten",
+    "booking": "Buchung und Unterkunft",
+    "vehicle": "Fahrzeug",
+    "trip": "Reise und Begleitung"
+  },
+  "companionNames": "Reisebegleiter",
+  "clockChange": "Zeitumstellung"
 }

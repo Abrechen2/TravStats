@@ -5,11 +5,12 @@ import { Icon } from "../ui/Icon";
 /** The airline tile's size, so the logbooks' leading marks line up. */
 const TILE_PX = 44;
 
-type TileDomain = "rail" | "rental" | "bus";
+type TileDomain = "rail" | "rental" | "bus" | "ferry";
 
-const DOMAIN: Record<TileDomain, { colour: string; icon: "train-front" | "car" | "bus" }> = {
+const DOMAIN: Record<TileDomain, { colour: string; icon: "train-front" | "car" | "bus" | "ship" }> = {
   rail: { colour: "var(--ts-domain-rail)", icon: "train-front" },
   rental: { colour: "var(--ts-domain-rental)", icon: "car" },
+  ferry: { colour: "var(--ts-domain-ferry)", icon: "ship" },
   bus: { colour: "var(--ts-domain-bus)", icon: "bus" },
 };
 

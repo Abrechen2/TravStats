@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Modal from "../Modal";
+import RequiredLegend from "../form/RequiredLegend";
 import Button from "../ui/Button";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ferryApi } from "../../lib/api/ferry";
@@ -30,7 +31,7 @@ const NUMBERS = [
   "distanceKm",
 ] as const;
 const INPUT =
-  "w-full rounded border border-[var(--color-border)] bg-[var(--bg-surface)] p-2 text-[var(--text-primary)]";
+  "mt-1 w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent)";
 function port(ride: FerryJourney | null, prefix: "dep" | "arr"): FerryStationDraft {
   return ride
     ? {
@@ -64,6 +65,7 @@ export function FerryFormModal({
   onSaved: (ride: FerryJourney) => void;
 }) {
   const { t } = useTranslation(["ferry"]);
+  const formId = useId();
   const [opened] = useState(() => initial(journey));
   const [fields, setFields] = useState(opened);
   const [dep, setDep] = useState(() => port(journey, "dep"));
@@ -145,6 +147,46 @@ export function FerryFormModal({
       setSaving(false);
     }
   };
+  const field = (key: string) => (
+    <label key={key} className="block text-sm">
+      {t(`ferry:${key}`)}
+      {key === "departureLocal" || key === "currency" ? " *" : ""}
+      {key === "notes" ? (
+        <textarea
+          className={INPUT}
+          rows={3}
+          value={fields[key]}
+          onChange={(e) => set(key, e.target.value)}
+        />
+      ) : (
+        <input
+          className={INPUT}
+          value={fields[key]}
+          required={key === "departureLocal" || key === "currency"}
+          type={
+            key.endsWith("Local")
+              ? fields[key].length === 10
+                ? "date"
+                : "datetime-local"
+              : (NUMBERS as readonly string[]).includes(key)
+                ? "number"
+                : "text"
+          }
+          min={
+            (NUMBERS as readonly string[]).includes(key)
+              ? key === "price"
+                ? 0
+                : key === "passengerCount"
+                  ? 1
+                  : 0.01
+              : undefined
+          }
+          step={key === "passengerCount" ? 1 : "any"}
+          onChange={(e) => set(key, e.target.value)}
+        />
+      )}
+    </label>
+  );
   return (
     <Modal
       open
@@ -152,113 +194,143 @@ export function FerryFormModal({
       title={t(journey ? "ferry:edit" : "ferry:add")}
       dirty={dirty}
       busy={saving}
+      maxWidth={760}
+      footer={(requestClose) => (
+        <>
+          {!complete && (
+            <p className="mr-auto self-center text-sm text-(--text-muted)">{t("ferry:required")}</p>
+          )}
+          <Button type="button" variant="secondary" onClick={requestClose} disabled={saving}>
+            {t("ferry:cancel")}
+          </Button>
+          <Button variant="primary" type="submit" form={formId} disabled={!complete || saving}>
+            {t("ferry:save")}
+          </Button>
+        </>
+      )}
     >
       <form
-        className="space-y-4"
+        id={formId}
+        className="space-y-6"
         onSubmit={(event) => {
           event.preventDefault();
           void save();
         }}
       >
-        {error && <p role="alert">{error}</p>}
-        <FerryStationField
-          label={t("ferry:departure")}
-          idPrefix="ferry-dep"
-          value={dep}
-          onChange={setDep}
-          onValidityChange={(ok) => setBadDep(!ok)}
-          required
-          inputClassName={INPUT}
-        />
-        <FerryStationField
-          label={t("ferry:arrival")}
-          idPrefix="ferry-arr"
-          value={arr}
-          onChange={setArr}
-          onValidityChange={(ok) => setBadArr(!ok)}
-          required
-          inputClassName={INPUT}
-        />
-        <div className="grid gap-3 sm:grid-cols-2">
-          {["departureLocal", "arrivalLocal", ...TEXT, ...NUMBERS, "companions"].map((key) => (
-            <label key={key} className="text-sm">
-              {t(`ferry:${key}`)}
-              <input
-                className={INPUT}
-                value={fields[key]}
-                required={key === "departureLocal" || key === "currency"}
-                type={
-                  key.endsWith("Local")
-                    ? fields[key].length === 10
-                      ? "date"
-                      : "datetime-local"
-                    : (NUMBERS as readonly string[]).includes(key)
-                      ? "number"
-                      : "text"
-                }
-                min={
-                  (NUMBERS as readonly string[]).includes(key)
-                    ? key === "price"
-                      ? 0
-                      : key === "passengerCount"
-                        ? 1
-                        : 0.01
-                    : undefined
-                }
-                step={key === "passengerCount" ? 1 : "any"}
-                onChange={(e) => set(key, e.target.value)}
-              />
-            </label>
-          ))}
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {["departureFold", "arrivalFold"].map((key) => (
-            <label key={key}>
-              {t(`ferry:${key}`)}
-              <select
-                className={INPUT}
-                value={fields[key]}
-                onChange={(e) => set(key, e.target.value)}
-              >
-                <option value="">{t("ferry:fold.unchanged")}</option>
-                <option value="earlier">{t("ferry:fold.earlier")}</option>
-                <option value="later">{t("ferry:fold.later")}</option>
-              </select>
-            </label>
-          ))}
-        </div>
-        <label className="block text-sm">
-          {t("ferry:trip")}
-          <select
-            className={INPUT}
-            value={fields.tripId}
-            onChange={(e) => set("tripId", e.target.value)}
+        {error && (
+          <p
+            role="alert"
+            className="rounded-md border border-(--danger)/50 bg-(--danger)/10 p-3 text-sm text-(--danger)"
           >
-            <option value="">{t("ferry:noTrip")}</option>
-            {trips.map((trip) => (
-              <option key={trip.id} value={trip.id}>
-                {trip.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="flex gap-2">
-          <input
-            type="checkbox"
-            checked={cancelled}
-            onChange={(e) => setCancelled(e.target.checked)}
-          />
-          {t("ferry:cancelled")}
-        </label>
-        {!complete && <p className="text-sm">{t("ferry:required")}</p>}
-        <div className="flex gap-2">
-          <Button type="submit" disabled={!complete || saving}>
-            {t("ferry:save")}
-          </Button>
-          <Button type="button" onClick={onClose} disabled={saving}>
-            {t("ferry:cancel")}
-          </Button>
-        </div>
+            {error}
+          </p>
+        )}
+        <fieldset className="space-y-4">
+          <legend className="t-label-mono mb-3">{t("ferry:sections.route")}</legend>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FerryStationField
+              label={t("ferry:departure")}
+              idPrefix="ferry-dep"
+              value={dep}
+              onChange={setDep}
+              onValidityChange={(ok) => setBadDep(!ok)}
+              required
+              inputClassName={INPUT}
+            />
+            <FerryStationField
+              label={t("ferry:arrival")}
+              idPrefix="ferry-arr"
+              value={arr}
+              onChange={setArr}
+              onValidityChange={(ok) => setBadArr(!ok)}
+              required
+              inputClassName={INPUT}
+            />
+            {field("departureLocal")}
+            {field("arrivalLocal")}
+          </div>
+          <details>
+            <summary className="cursor-pointer text-sm text-(--text-muted)">
+              {t("ferry:clockChange")}
+            </summary>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              {["departureFold", "arrivalFold"].map((key) => (
+                <label key={key} className="block text-sm">
+                  {t(`ferry:${key}`)}
+                  <select
+                    className={INPUT}
+                    value={fields[key]}
+                    onChange={(e) => set(key, e.target.value)}
+                  >
+                    <option value="">{t("ferry:fold.unchanged")}</option>
+                    <option value="earlier">{t("ferry:fold.earlier")}</option>
+                    <option value="later">{t("ferry:fold.later")}</option>
+                  </select>
+                </label>
+              ))}
+            </div>
+          </details>
+          {field("distanceKm")}
+        </fieldset>
+        <fieldset>
+          <legend className="t-label-mono mb-3">{t("ferry:sections.booking")}</legend>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              "operator",
+              "vesselName",
+              "bookingReference",
+              "ticketReference",
+              "passengerCount",
+              "cabinType",
+              "seat",
+              "price",
+              "currency",
+            ].map(field)}
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend className="t-label-mono mb-3">{t("ferry:sections.vehicle")}</legend>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              "vehicleType",
+              "vehicleRegistration",
+              "vehicleLengthM",
+              "vehicleWidthM",
+              "vehicleHeightM",
+            ].map(field)}
+          </div>
+        </fieldset>
+        <fieldset className="space-y-3">
+          <legend className="t-label-mono mb-3">{t("ferry:sections.trip")}</legend>
+          <label className="block text-sm">
+            {t("ferry:trip")}
+            <select
+              className={INPUT}
+              value={fields.tripId}
+              onChange={(e) => set("tripId", e.target.value)}
+              disabled={!!journey?.roadtripLegId}
+            >
+              <option value="">{t("ferry:noTrip")}</option>
+              {trips.map((trip) => (
+                <option key={trip.id} value={trip.id}>
+                  {trip.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {journey?.roadtripLegId && <p className="t-caption">{t("ferry:roadtrip.tripLocked")}</p>}
+          {field("companions")}
+          {field("notes")}
+          <label className="flex items-center gap-2 text-sm pointer-coarse:min-h-(--ts-size-touch-min)">
+            <input
+              type="checkbox"
+              checked={cancelled}
+              onChange={(e) => setCancelled(e.target.checked)}
+            />
+            {t("ferry:cancelled")}
+          </label>
+        </fieldset>
+        <RequiredLegend />
       </form>
     </Modal>
   );
