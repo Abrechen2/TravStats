@@ -256,4 +256,101 @@ describe("Dawarich stay review (forgejo#294)", () => {
     expect(result.body.data.visitId).toBe(visit.id);
     await prisma.trip.delete({ where: { id: trip.id } });
   });
+  it("survives fifty cycles with outages without reviving a rejected finding", async () => {
+    const row = await scan();
+    await api().post(`/api/v1/dawarich-stays/${row.id}/reject`).set("Cookie", cookie).send({});
+    for (let cycle = 0; cycle < 50; cycle++) {
+      await reserveScan(userId);
+      const failed = cycle % 5 === 0;
+      const run = scanStays(userId, {
+        now,
+        client: {
+          ...client,
+          getPoints: async () => {
+            if (failed) throw new DawarichError("unreachable", "synthetic outage");
+            return {
+              points: [
+                ...points,
+                { ...points[3], id: 5, timestampMs: points[3].timestampMs + 600_000 },
+              ],
+              truncated: cycle % 3 === 0,
+            };
+          },
+        },
+      });
+      if (failed) await expect(run).rejects.toMatchObject({ statusCode: 502 });
+      else await run;
+      expect(await prisma.dawarichStay.count({ where: { userId } })).toBe(1);
+      expect(await prisma.placeVisit.count({ where: { userId } })).toBe(0);
+    }
+    expect((await prisma.dawarichStay.findUniqueOrThrow({ where: { id: row.id } })).status).toBe(
+      "rejected"
+    );
+  });
+  it("serializes a burst of twelve accept requests into one visit", async () => {
+    const row = await scan();
+    const results = await Promise.all(
+      Array.from({ length: 12 }, () =>
+        api().post(`/api/v1/dawarich-stays/${row.id}/accept`).set("Cookie", cookie).send(review)
+      )
+    );
+    expect(results.every((r) => r.status === 200 || r.status === 409)).toBe(true);
+    expect(results.some((r) => r.status === 200)).toBe(true);
+    expect(await prisma.placeVisit.count({ where: { userId } })).toBe(1);
+    expect(await prisma.place.count({ where: { userId } })).toBe(1);
+  });
+  it("does not create a finding when consent is revoked during the upstream request", async () => {
+    await reserveScan(userId);
+    await scanStays(userId, {
+      now,
+      client: {
+        ...client,
+        getPoints: async () => {
+          await prisma.dawarichStayScan.update({ where: { userId }, data: { enabled: false } });
+          return { points, truncated: false };
+        },
+      },
+    });
+    expect(await prisma.dawarichStay.count({ where: { userId } })).toBe(0);
+  });
+  it.each([false, true])(
+    "a superseded scan cannot overwrite the current lease (upstream failure=%s)",
+    async (fail) => {
+      await reserveScan(userId);
+      let entered!: () => void;
+      let release!: () => void;
+      const waiting = new Promise<void>((r) => {
+        entered = r;
+      });
+      const blocked = new Promise<void>((r) => {
+        release = r;
+      });
+      const old = scanStays(userId, {
+        now,
+        client: {
+          ...client,
+          getPoints: async () => {
+            entered();
+            await blocked;
+            if (fail) throw new DawarichError("unreachable", "late outage");
+            return { points, truncated: false };
+          },
+        },
+      }).catch(() => null);
+      await waiting;
+      await prisma.dawarichStayScan.update({
+        where: { userId },
+        data: { leaseUntil: new Date(0) },
+      });
+      const takeover = new Date(Date.now() + 1000);
+      await reserveScan(userId, takeover);
+      release();
+      await old;
+      const state = await prisma.dawarichStayScan.findUniqueOrThrow({ where: { userId } });
+      expect(state.result).toBe("running");
+      expect(state.startedAt).toEqual(takeover);
+      expect(state.leaseUntil).not.toBeNull();
+      expect(await prisma.dawarichStay.count({ where: { userId } })).toBe(0);
+    }
+  );
 });

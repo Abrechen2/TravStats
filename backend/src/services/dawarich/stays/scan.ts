@@ -42,9 +42,13 @@ export async function scanStays(
 ) {
   const now = options.now ?? new Date();
   const start = new Date(now.getTime() - 7 * DAY);
+  let reservation: { startedAt: Date; leaseUntil: Date } | null = null;
   try {
     const state = await prisma.dawarichStayScan.findUnique({ where: { userId } });
     if (!state?.enabled) throw new AppError("Scan disabled", 409, "DAWARICH_SCAN_UNAVAILABLE");
+    if (!state.startedAt || !state.leaseUntil)
+      throw new AppError("Scan reservation required", 409, "DAWARICH_SCAN_UNAVAILABLE");
+    reservation = { startedAt: state.startedAt, leaseUntil: state.leaseUntil };
     const client = options.client ?? createDawarichClient(await ownConnection(userId));
     const result = await client.getPoints({ startAt: start, endAt: now });
     const points = result.points.filter(
@@ -61,13 +65,12 @@ export async function scanStays(
     });
     let created = 0;
     for (const c of candidates) {
-      // Consent can be revoked while an upstream request is in flight.
-      if (
-        !(
-          await prisma.dawarichStayScan.findUnique({ where: { userId }, select: { enabled: true } })
-        )?.enabled
-      )
-        break;
+      // A late upstream response belongs to this reservation, never its successor.
+      const current = await prisma.dawarichStayScan.findFirst({
+        where: { userId, ...reservation, enabled: true },
+        select: { userId: true },
+      });
+      if (!current) break;
       const old = await prisma.dawarichStay.findMany({
         where: { userId, sourceStartAt: { lte: c.endAt }, sourceEndAt: { gte: c.startAt } },
         select: { id: true, sourceLat: true, sourceLon: true },
@@ -135,47 +138,56 @@ export async function scanStays(
           ])
         )
         .digest("hex");
-      const inserted = await prisma.dawarichStay.createMany({
-        skipDuplicates: true,
-        data: [
-          {
-            userId,
-            fingerprint,
-            sourceStartAt: c.startAt,
-            sourceEndAt: c.endAt,
-            sourceLat: c.lat,
-            sourceLon: c.lon,
-            startAt: c.startAt,
-            endAt: c.endAt,
-            lat: c.lat,
-            lon: c.lon,
-            zone,
-            pointCount: c.pointCount,
-            evidence: {
-              source: "dawarich",
-              matchingVisitId: matchingVisit?.id ?? null,
+      const inserted = await prisma.$transaction(async (tx) => {
+        // Lock the scan row with the consent/reservation predicate. Revocation
+        // or takeover cannot slip between this check and the finding insert.
+        const owned = await tx.dawarichStayScan.updateMany({
+          where: { userId, ...reservation!, enabled: true },
+          data: { result: "running" },
+        });
+        if (!owned.count) return { count: 0 };
+        return tx.dawarichStay.createMany({
+          skipDuplicates: true,
+          data: [
+            {
+              userId,
+              fingerprint,
+              sourceStartAt: c.startAt,
+              sourceEndAt: c.endAt,
+              sourceLat: c.lat,
+              sourceLon: c.lon,
+              startAt: c.startAt,
+              endAt: c.endAt,
+              lat: c.lat,
+              lon: c.lon,
               zone,
-              pointIds: c.pointIds,
-              maxGapMinutes: c.maxGapMinutes,
-              uncertainties: [
-                ...c.uncertainties,
-                ...(matchingTrips.length > 1 ? ["tripAmbiguous"] : []),
-                ...(nearby.length > 1 ? ["placeAmbiguous"] : []),
-              ],
+              pointCount: c.pointCount,
+              evidence: {
+                source: "dawarich",
+                matchingVisitId: matchingVisit?.id ?? null,
+                zone,
+                pointIds: c.pointIds,
+                maxGapMinutes: c.maxGapMinutes,
+                uncertainties: [
+                  ...c.uncertainties,
+                  ...(matchingTrips.length > 1 ? ["tripAmbiguous"] : []),
+                  ...(nearby.length > 1 ? ["placeAmbiguous"] : []),
+                ],
+              },
+              placeId: place?.id,
+              name: place?.name,
+              tripId: matchingTrips.length === 1 ? matchingTrips[0].id : null,
             },
-            placeId: place?.id,
-            name: place?.name,
-            tripId: matchingTrips.length === 1 ? matchingTrips[0].id : null,
-          },
-        ],
+          ],
+        });
       });
       created += inserted.count;
     }
     const dataThrough = points.length
       ? new Date(Math.max(...points.map((p) => p.timestampMs)))
       : null;
-    await prisma.dawarichStayScan.update({
-      where: { userId },
+    await prisma.dawarichStayScan.updateMany({
+      where: { userId, ...reservation },
       data: {
         finishedAt: new Date(),
         leaseUntil: null,
@@ -196,10 +208,11 @@ export async function scanStays(
         : error instanceof AppError
           ? (error.code ?? "FAILED")
           : "FAILED";
-    await prisma.dawarichStayScan.update({
-      where: { userId },
-      data: { finishedAt: new Date(), leaseUntil: null, result: "failed", error: code },
-    });
+    if (reservation)
+      await prisma.dawarichStayScan.updateMany({
+        where: { userId, ...reservation },
+        data: { finishedAt: new Date(), leaseUntil: null, result: "failed", error: code },
+      });
     throw new AppError("Dawarich stay scan failed", 502, "DAWARICH_STAY_SCAN_FAILED");
   }
 }

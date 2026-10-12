@@ -16,11 +16,13 @@ export default function DawarichStayScanCard({
   const [state, setState] = useState<StayScanState | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const load = useCallback(async () => {
     try {
       setState(await dawarichStaysApi.state());
+      setLoadError(false);
     } catch {
-      setError(true);
+      setLoadError(true);
     }
   }, []);
   useEffect(() => {
@@ -99,7 +101,7 @@ export default function DawarichStayScanCard({
           })}
         </p>
       )}
-      {(error || state?.error) && (
+      {(error || loadError || state?.error) && (
         <p role="alert" className="mt-3">
           {errorKey ? t(errorKey) : text("error")}
         </p>
