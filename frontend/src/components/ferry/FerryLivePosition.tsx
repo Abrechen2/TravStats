@@ -95,13 +95,19 @@ export function FerryLivePosition({ id }: { id: string }) {
           </p>
           <p className="t-caption">
             {t("ferry:live.received", {
-              time: new Date(p.receivedAt).toLocaleString(i18n.language),
+              time: new Date(p.receivedAt).toLocaleString(i18n.language, {
+                timeZone: "UTC",
+                timeZoneName: "short",
+              }),
             })}
           </p>
           <p className="t-caption">
             {p.observedAt
               ? t("ferry:live.observed", {
-                  time: new Date(p.observedAt).toLocaleString(i18n.language),
+                  time: new Date(p.observedAt).toLocaleString(i18n.language, {
+                    timeZone: "UTC",
+                    timeZoneName: "short",
+                  }),
                 })
               : t("ferry:live.ageUnknown")}
           </p>
