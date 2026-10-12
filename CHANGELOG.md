@@ -26,6 +26,15 @@ previous image alone does not know `completed`.
 
 ### Added
 
+- **Dawarich can suggest stays.** With your consent, Dawarich location history
+  is scanned for places you stayed. Each suggestion is reviewed, edited and
+  accepted or rejected, and a rejection is remembered. A slow scan can no
+  longer overwrite the result of a newer one, and a polling error disappears
+  once a read succeeds.
+
+- **Buses are part of "Upcoming".** They appear with the same day-by-day
+  countdown as trains.
+
 - **Ferry crossings are a journey of their own.** A ferry booked with a vehicle
   — operator, departure and arrival port with local times, crossing duration,
   booking reference, seat or cabin, vehicle dimensions, passengers, price and
@@ -254,6 +263,14 @@ previous image alone does not know `completed`.
   now stops the container instead of starting on an outdated schema.
 
 ### Fixed
+
+- **Backup retention keeps what it should, and a remote copy is deleted only
+  when you say so.** Old backups were pruned by the wrong identity. A WebDAV
+  delete that fails with 401, 423 or 500 now keeps both copies and the
+  database row.
+
+- **Rail lines are re-fetched when their inputs change, and a failed fetch
+  keeps the stored route.** The distance is shown consistently.
 
 - **A year-only or month-only flight stays in its year** — in the year summary,
   the time series, the passport and the flight's own times — instead of landing
