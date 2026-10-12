@@ -1,0 +1,137 @@
+import { z } from "zod";
+import { timeValueSchema } from "../../../shared/time/wire";
+import { registry } from "../registry";
+import { prismaColumns } from "../prismaColumns";
+import { errorContent } from "./shared";
+import { jobStartedSchema } from "./jobs";
+import { stayReviewSchema } from "../../../schemas/dawarichStays";
+const scanTimes = z.object({
+  startedAt: timeValueSchema.nullable(),
+  finishedAt: timeValueSchema.nullable(),
+  leaseUntil: timeValueSchema.nullable(),
+  dataThrough: timeValueSchema.nullable(),
+  windowStart: timeValueSchema.nullable(),
+  windowEnd: timeValueSchema.nullable(),
+});
+const tags = ["Dawarich"];
+const failure = {
+  description: "Invalid input, inaccessible finding, absent connection, or concurrent operation",
+  content: errorContent,
+};
+const stay = z.object({
+  times: z.object({
+    startAt: timeValueSchema.nullable(),
+    endAt: timeValueSchema.nullable(),
+    sourceStartAt: timeValueSchema.nullable(),
+    sourceEndAt: timeValueSchema.nullable(),
+    detectedAt: timeValueSchema.nullable(),
+    resolvedAt: timeValueSchema.nullable(),
+  }),
+  ...prismaColumns("DawarichStay"),
+  visit: z.object({ id: z.string(), placeId: z.string() }).nullable().optional(),
+});
+const response = (schema: z.ZodTypeAny) => ({
+  description: "Account-scoped result",
+  content: { "application/json": { schema: z.object({ success: z.literal(true), data: schema }) } },
+});
+registry.registerPath({
+  method: "get",
+  path: "/dawarich-stays",
+  tags,
+  summary: "Own location-history suggestions and retained decisions",
+  description:
+    "Conservative stationary clusters; not proof of GPS measurement or overnight accommodation. Original evidence and corrected times remain separate. Up to 200 most recent rows per status.",
+  request: { query: z.object({ status: z.enum(["pending", "accepted", "rejected"]).optional() }) },
+  responses: { 200: response(z.array(stay)) },
+});
+registry.registerPath({
+  method: "get",
+  path: "/dawarich-stays/settings",
+  tags,
+  summary: "Consent, own-connection availability and persistent last scan outcome",
+  responses: {
+    200: response(
+      z
+        .object({
+          ...prismaColumns("DawarichStayScan"),
+          times: scanTimes,
+          connected: z.boolean(),
+          result: z.string().nullable(),
+        })
+        .partial()
+    ),
+  },
+});
+registry.registerPath({
+  method: "patch",
+  path: "/dawarich-stays/settings",
+  tags,
+  summary: "Explicit per-account opt-in, separate from Immich and country days",
+  request: {
+    body: {
+      content: { "application/json": { schema: z.object({ enabled: z.boolean() }).strict() } },
+    },
+  },
+  responses: {
+    200: response(z.object({ ...prismaColumns("DawarichStayScan"), times: scanTimes })),
+    409: failure,
+  },
+});
+registry.registerPath({
+  method: "post",
+  path: "/dawarich-stays/scan",
+  tags,
+  summary: "Start an asynchronous scan of the last seven days",
+  description:
+    "Requires opt-in and the user's own connection. A cross-process lease excludes overlapping scans; errors and partial upstream results remain visible. Scheduled scans run every six hours at :15 UTC.",
+  responses: {
+    202: {
+      description: "Poll /jobs/{jobId}",
+      content: { "application/json": { schema: jobStartedSchema } },
+    },
+    409: failure,
+    429: failure,
+  },
+});
+registry.registerPath({
+  method: "get",
+  path: "/dawarich-stays/choices",
+  tags,
+  summary: "Own places and trips for reviewing a finding",
+  responses: {
+    200: response(
+      z.object({
+        places: z.array(
+          z.object({ id: z.string(), name: z.string(), lat: z.number(), lon: z.number() })
+        ),
+        trips: z.array(z.object({ id: z.string(), name: z.string() })),
+      })
+    ),
+  },
+});
+registry.registerPath({
+  method: "post",
+  path: "/dawarich-stays/{id}/accept",
+  tags,
+  summary: "Confirm a corrected stay, reusing or creating one visit atomically",
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: { content: { "application/json": { schema: stayReviewSchema } } },
+  },
+  responses: { 200: response(stay), 400: failure, 404: failure, 409: failure, 422: failure },
+});
+registry.registerPath({
+  method: "post",
+  path: "/dawarich-stays/{id}/reject",
+  tags,
+  summary: "Dismiss a finding and retain it for subsequent deduplication",
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: "Dismissed",
+      content: { "application/json": { schema: z.object({ success: z.literal(true) }) } },
+    },
+    404: failure,
+    409: failure,
+  },
+});

@@ -28,6 +28,7 @@ export type SchedulerJob =
   | "historicalEnrichment"
   | "logRetention"
   | "photoJourneyScan"
+  | "dawarichStayScan"
   | "placeAddressBackfill"
   | "statusSweep"
   | "syncRetention"

@@ -662,5 +662,65 @@
       "notFound": "This trip no longer exists.",
       "rateLimited": "Too many exports in a short time. Please wait a few minutes."
     }
+  },
+  "dawarichStays": {
+    "title": "Dawarich stays",
+    "description": "Every six hours, your own Dawarich location history is checked for possible stays in the last seven days. These are suggestions only: a visit is recorded after your confirmation. This does not enable Immich scanning or country detection.",
+    "enable": "Detect stays automatically",
+    "ownConnection": "Save your own Dawarich connection first. A shared connection cannot be used for this.",
+    "scan": "Scan now",
+    "running": "Scanning …",
+    "inbox": "Review suggestions",
+    "window": "Checked window",
+    "dataThrough": "Newest returned point",
+    "scanCount": "Points: {{points}} · New suggestions: {{created}}",
+    "error": "The action could not be completed. Please check the connection and reload.",
+    "filter": "Show suggestions",
+    "loading": "Loading suggestions …",
+    "empty": "No suggestions in this view.",
+    "unnamed": "Possible stay",
+    "evidence": "{{count}} location points · longest gap {{gap}} minutes",
+    "provenance": "Origin and evidence",
+    "detected": "Detected",
+    "resolved": "Reviewed",
+    "points": "Dawarich point IDs",
+    "place": "Place",
+    "newPlace": "Create a new place",
+    "name": "Name",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "localTime": "Times are local to the chosen place. Its coordinates determine the time zone.",
+    "start": "Start",
+    "end": "End",
+    "trip": "Trip",
+    "noTrip": "No trip",
+    "accept": "Review and accept",
+    "reject": "Dismiss",
+    "openVisit": "Open entry",
+    "tripConflict": "The existing visit belongs to another trip. Please check the trip selection.",
+    "invalidInterval": "The end must follow the start; a confirmed stay cannot be in the future.",
+    "ambiguousTime": "This local time is ambiguous or does not exist because of a clock change. Please correct it.",
+    "result": {
+      "running": "Scanning",
+      "succeeded": "Scan completed",
+      "partial": "Only part of the data was returned",
+      "failed": "Scan failed",
+      "interrupted": "Scan interrupted; please start again"
+    },
+    "status": {
+      "pending": "To review",
+      "accepted": "Accepted",
+      "rejected": "Dismissed"
+    },
+    "uncertainty": {
+      "sourceUnknown": "Dawarich does not reliably distinguish recorded GPS from reconstructed photo locations here. These points do not establish an overnight stay.",
+      "accuracyUnknown": "Some points have no known accuracy.",
+      "signalGaps": "There are gaps between points. Presence during these gaps is not established.",
+      "outliersIgnored": "Isolated jumps were left out of detection.",
+      "truncated": "Dawarich returned only part of the requested window.",
+      "tripAmbiguous": "Several trips match this window. Please choose the correct one.",
+      "placeAmbiguous": "Several saved places are nearby. Please check the place."
+    },
+    "existingVisit": "An existing visit was found in this window. Acceptance checks whether this suggestion can be linked to it."
   }
 }

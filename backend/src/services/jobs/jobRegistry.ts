@@ -28,6 +28,7 @@ export type JobKind =
   | "backup.restore"
   | "xlsx.import"
   | "photoJourneys.scan"
+  | "dawarichStays.scan"
   | "journal.weather"
   | "timeModel.backfill"
   | "timeZones.reResolveDryRun"

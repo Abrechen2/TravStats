@@ -133,6 +133,8 @@ model User {
   tripSuggestionAnswers  TripSuggestionDecision[]
   dataQualityFlags       DataQualityFlag[]
   countryDays            CountryDay[]
+  dawarichStayScan       DawarichStayScan?
+  dawarichStays          DawarichStay[]
   dawarichSweepState     DawarichSweepState?
 
   documents Document[]
@@ -3139,6 +3141,7 @@ model PlaceVisit {
   /// evidence that the user stood in front of the Colosseum.
   trip  Trip? @relation(fields: [tripId], references: [id], onDelete: SetNull)
 
+  dawarichStays DawarichStay[]
   photos        PlaceVisitPhoto[]
   photoRefusals VisitPhotoRefusal[]
 
@@ -4608,4 +4611,52 @@ model FerryJourneyCompanion {
   @@id([ferryJourneyId, companionId])
   @@index([companionId])
   @@map("ferry_journey_companions")
+}
+
+/// Explicitly opted-in location-history suggestions, separate from Immich and country days.
+model DawarichStayScan {
+  userId String @id @map("user_id")
+  enabled Boolean @default(false)
+  startedAt DateTime? @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+  leaseUntil DateTime? @map("lease_until")
+  result String?
+  error String?
+  dataThrough DateTime? @map("data_through")
+  windowStart DateTime? @map("window_start")
+  windowEnd DateTime? @map("window_end")
+  pointCount Int @default(0) @map("point_count")
+  createdCount Int @default(0) @map("created_count")
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@map("dawarich_stay_scans")
+}
+
+model DawarichStay {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  fingerprint String
+  sourceStartAt DateTime @map("source_start_at")
+  sourceEndAt DateTime @map("source_end_at")
+  sourceLat Float @map("source_lat")
+  sourceLon Float @map("source_lon")
+  status String @default("pending")
+  startAt DateTime @map("start_at")
+  endAt DateTime @map("end_at")
+  lat Float
+  lon Float
+  zone String
+  pointCount Int @map("point_count")
+  evidence Json
+  placeId String? @map("place_id")
+  tripId String? @map("trip_id")
+  name String?
+  visitId String? @map("visit_id")
+  detectedAt DateTime @default(now()) @map("detected_at")
+  resolvedAt DateTime? @map("resolved_at")
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  visit PlaceVisit? @relation(fields:[visitId], references:[id], onDelete:SetNull)
+  @@unique([userId, fingerprint])
+  @@index([userId, status, startAt])
+  @@index([visitId])
+  @@map("dawarich_stays")
 }

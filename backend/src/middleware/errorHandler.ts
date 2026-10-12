@@ -25,6 +25,12 @@ export interface ApiError extends Error {
  * `error` field rather than in `code`.
  */
 export type ApiErrorCode =
+  | "DAWARICH_OWN_CONNECTION_REQUIRED"
+  | "DAWARICH_SCAN_UNAVAILABLE"
+  | "DAWARICH_STAY_SCAN_FAILED"
+  | "DAWARICH_ALREADY_RESOLVED"
+  | "DAWARICH_INVALID_INTERVAL"
+  | "DAWARICH_VISIT_TRIP_CONFLICT"
   /** An edit or delete named a base version (If-Match / baseVersion) the
    *  record has moved past — forgejo#141, `services/sync/versionPrecondition.ts`.
    *  The 409 carries the current record and the changed fields. */

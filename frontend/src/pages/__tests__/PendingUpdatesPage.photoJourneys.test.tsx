@@ -127,11 +127,11 @@ describe("PendingUpdatesPage — the photo-journey tab", () => {
     vi.mocked(immichApi.getSettings).mockRejectedValue(new Error("not asked in these cases"));
   });
 
-  it("offers five tabs, with the photo tab counting the pending rows", async () => {
+  it("offers six tabs, with the photo tab counting the pending rows", async () => {
     vi.mocked(photoJourneysApi.list).mockResolvedValue([makeJourney("a"), makeJourney("b")]);
     renderPage();
 
-    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(5));
+    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(6));
     const tab = screen.getByRole("tab", { name: new RegExp(PHOTO_TAB) });
     await waitFor(() => expect(within(tab).getByText("2")).toBeInTheDocument());
   });
@@ -139,7 +139,7 @@ describe("PendingUpdatesPage — the photo-journey tab", () => {
   it("is there with no rows at all — the scan lives behind it", async () => {
     renderPage();
 
-    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(5));
+    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(6));
     expect(screen.getByRole("tab", { name: new RegExp(PHOTO_TAB) })).toBeInTheDocument();
   });
 
@@ -178,7 +178,7 @@ describe("PendingUpdatesPage — the photo-journey tab", () => {
     visible.value = false;
     renderPage("/pending-updates?tab=photos");
 
-    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(4));
+    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(5));
     expect(screen.queryByRole("tab", { name: new RegExp(PHOTO_TAB) })).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /inbox.review.title/ })).toHaveAttribute(
       "aria-selected",

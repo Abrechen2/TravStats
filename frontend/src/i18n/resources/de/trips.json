@@ -662,5 +662,65 @@
       "notFound": "Diese Reise gibt es nicht mehr.",
       "rateLimited": "Zu viele Exporte in kurzer Zeit. Bitte warte ein paar Minuten."
     }
+  },
+  "dawarichStays": {
+    "title": "Dawarich-Aufenthalte",
+    "description": "Aus deinen eigenen Dawarich-Positionsdaten werden alle sechs Stunden mögliche Aufenthalte der letzten sieben Tage erkannt. Es entstehen nur Vorschläge: Ein Besuch wird erst nach deiner Bestätigung eingetragen. Dies aktiviert weder den Immich-Scan noch die Ländererkennung.",
+    "enable": "Aufenthalte automatisch erkennen",
+    "ownConnection": "Speichere zuerst deine eigene Dawarich-Verbindung. Eine gemeinsam konfigurierte Verbindung reicht hierfür nicht.",
+    "scan": "Jetzt auswerten",
+    "running": "Auswertung läuft …",
+    "inbox": "Vorschläge prüfen",
+    "window": "Geprüfter Zeitraum",
+    "dataThrough": "Neuester gelieferter Punkt",
+    "scanCount": "Punkte: {{points}} · Neue Vorschläge: {{created}}",
+    "error": "Die Aktion konnte nicht abgeschlossen werden. Bitte prüfe die Verbindung und lade erneut.",
+    "filter": "Vorschläge anzeigen",
+    "loading": "Vorschläge werden geladen …",
+    "empty": "Keine Vorschläge in dieser Ansicht.",
+    "unnamed": "Möglicher Aufenthalt",
+    "evidence": "{{count}} Positionspunkte · größte Lücke {{gap}} Minuten",
+    "provenance": "Herkunft und Belege",
+    "detected": "Erkannt",
+    "resolved": "Bearbeitet",
+    "points": "Dawarich-Punkt-IDs",
+    "place": "Ort",
+    "newPlace": "Neuen Ort anlegen",
+    "name": "Name",
+    "latitude": "Breitengrad",
+    "longitude": "Längengrad",
+    "localTime": "Uhrzeiten gelten lokal am gewählten Ort. Die Zeitzone wird aus seinen Koordinaten ermittelt.",
+    "start": "Beginn",
+    "end": "Ende",
+    "trip": "Reise",
+    "noTrip": "Ohne Reisezuordnung",
+    "accept": "Prüfen und übernehmen",
+    "reject": "Verwerfen",
+    "openVisit": "Eintrag öffnen",
+    "tripConflict": "Der vorhandene Besuch ist einer anderen Reise zugeordnet. Bitte prüfe die Reiseauswahl.",
+    "invalidInterval": "Das Ende muss nach dem Beginn liegen; ein bestätigter Aufenthalt darf nicht in der Zukunft liegen.",
+    "ambiguousTime": "Diese lokale Uhrzeit ist wegen einer Zeitumstellung nicht eindeutig oder existiert nicht. Bitte korrigiere sie.",
+    "result": {
+      "running": "Auswertung läuft",
+      "succeeded": "Auswertung abgeschlossen",
+      "partial": "Nur ein Teil der Daten wurde geliefert",
+      "failed": "Auswertung fehlgeschlagen",
+      "interrupted": "Auswertung unterbrochen; bitte erneut starten"
+    },
+    "status": {
+      "pending": "Zu prüfen",
+      "accepted": "Übernommen",
+      "rejected": "Verworfen"
+    },
+    "uncertainty": {
+      "sourceUnknown": "Dawarich unterscheidet hier nicht zuverlässig zwischen GPS-Aufzeichnung und rekonstruierten Foto-Positionen. Dies ist kein Nachweis einer Übernachtung.",
+      "accuracyUnknown": "Für einige Punkte ist die Positionsgenauigkeit unbekannt.",
+      "signalGaps": "Zwischen den Punkten liegen Signallücken. Die Anwesenheit dazwischen ist nicht belegt.",
+      "outliersIgnored": "Einzelne Positionssprünge wurden bei der Erkennung ausgelassen.",
+      "truncated": "Dawarich hat nur einen Teil des angefragten Zeitraums geliefert.",
+      "tripAmbiguous": "Mehrere Reisen passen zum Zeitraum. Bitte wähle die richtige Zuordnung.",
+      "placeAmbiguous": "Mehrere gespeicherte Orte liegen in der Nähe. Bitte prüfe den Ort."
+    },
+    "existingVisit": "Für diesen Zeitraum wurde bereits ein Besuch gefunden. Bei der Übernahme wird geprüft, ob dein Vorschlag damit verknüpft werden kann."
   }
 }

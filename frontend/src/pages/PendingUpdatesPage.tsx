@@ -39,6 +39,7 @@ import { logger } from "../lib/logger";
 import PendingUpdateCard from "../components/PendingUpdateCard";
 import StatisticsImpactPreview from "../components/StatisticsImpactPreview";
 import DataQualityFlagsSection from "../components/DataQuality/DataQualityFlagsSection";
+import DawarichStaysTab from "../components/inbox/DawarichStaysTab";
 import PhotoJourneysTab from "../components/inbox/PhotoJourneysTab";
 import TripSuggestionsTab from "../components/inbox/TripSuggestionsTab";
 import SharingTab from "../components/inbox/SharingTab";
@@ -101,7 +102,7 @@ interface PendingUpdate {
  * naming it while it is hidden falls back to `review` rather than opening a tab
  * that is not in the list.
  */
-type InboxTab = "review" | "trips" | "sharing" | "updates" | "photos";
+type InboxTab = "dawarich" | "review" | "trips" | "sharing" | "updates" | "photos";
 
 interface Statistics {
   totalUpdates: number;
@@ -114,7 +115,7 @@ interface Statistics {
 }
 
 export default function PendingUpdatesPage(): JSX.Element {
-  const { t } = useTranslation(["common", "pendingUpdates", "dataQuality", "sharing"]);
+  const { t } = useTranslation(["common", "pendingUpdates", "dataQuality", "sharing", "trips"]);
   const addToast = useToastStore((state) => state.addToast);
 
   const [updates, setUpdates] = useState<PendingUpdate[]>([]);
@@ -130,15 +131,17 @@ export default function PendingUpdatesPage(): JSX.Element {
   const photoJourneysVisible = usePhotoJourneysVisible();
   const requestedTab = searchParams.get("tab");
   const tab: InboxTab =
-    requestedTab === "updates"
-      ? "updates"
-      : requestedTab === "trips"
-        ? "trips"
-        : requestedTab === "sharing"
-          ? "sharing"
-          : requestedTab === "photos" && photoJourneysVisible
-            ? "photos"
-            : "review";
+    requestedTab === "dawarich"
+      ? "dawarich"
+      : requestedTab === "updates"
+        ? "updates"
+        : requestedTab === "trips"
+          ? "trips"
+          : requestedTab === "sharing"
+            ? "sharing"
+            : requestedTab === "photos" && photoJourneysVisible
+              ? "photos"
+              : "review";
   const [openQuestions, setOpenQuestions] = useState<number | null>(null);
   const reportOpen = useCallback((n: number) => setOpenQuestions(n), []);
   const [pendingJourneys, setPendingJourneys] = useState<number | null>(null);
@@ -246,6 +249,7 @@ export default function PendingUpdatesPage(): JSX.Element {
       count: tripSuggestions,
     },
     // Shared trips (design 2026-10-09): consent requests and notices.
+    { key: "dawarich", label: t("trips:dawarichStays.title"), count: null },
     { key: "sharing", label: t("sharing:inbox.title"), count: sharingOpen },
     {
       key: "updates",
@@ -484,6 +488,8 @@ export default function PendingUpdatesPage(): JSX.Element {
             <PhotoJourneysTab onPendingCount={reportJourneys} active={tab === "photos"} />
           </div>
         )}
+
+        {tab === "dawarich" && <DawarichStaysTab />}
 
         {/* Statistics Impact Preview Modal */}
         {selectedUpdate && (

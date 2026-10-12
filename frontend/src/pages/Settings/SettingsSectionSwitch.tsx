@@ -34,6 +34,7 @@ import GeocoderSettingsCard from "../../components/Settings/GeocoderSettingsCard
 import PersonalRoutingKeysSection from "../../components/Settings/PersonalRoutingKeysSection";
 import ImmichConnectionCard from "../../components/Settings/ImmichConnectionCard";
 import PhotoJourneyNightlyScanCard from "../../components/Settings/PhotoJourneyNightlyScanCard";
+import DawarichStayScanCard from "../../components/Settings/DawarichStayScanCard";
 import DawarichConnectionCard from "../../components/Settings/DawarichConnectionCard";
 import RailProvidersCard from "../../components/Settings/RailProvidersCard";
 import StravaConnectionCard from "../../components/Settings/StravaConnectionCard";
@@ -160,6 +161,7 @@ export default function SettingsSectionSwitch({
               scoped onto the same connection. Both keys left the registry on
               2026-09-18. */}
           <DawarichConnectionCard />
+          <DawarichStayScanCard />
           {/* Strava (2.7): day tours from Strava activities. */}
           {toursVisible && <StravaConnectionCard isAdmin={isAdmin} />}
           {/* Open data (2.7): Open-Meteo, Wikipedia, OpenStreetMap — off by default. */}

@@ -254,6 +254,7 @@ const shutdown = (signal: string) => async (): Promise<void> => {
   (await import("./jobs/dawarichCountryDaySweepScheduler")).stopDawarichCountryDaySweepScheduler();
   (await import("./jobs/documentSweepScheduler")).stopDocumentSweepScheduler();
   (await import("./jobs/photoJourneyScanScheduler")).stopPhotoJourneyScanScheduler();
+  (await import("./jobs/dawarichStayScheduler")).stopDawarichStayScheduler();
   (await import("./jobs/logRetentionScheduler")).stopLogRetentionScheduler();
   (await import("./jobs/syncRetentionScheduler")).stopSyncRetentionScheduler();
   await prisma.$disconnect();
@@ -704,6 +705,10 @@ if (process.env.NODE_ENV !== "test") {
         "photo_journey_scan",
         async () =>
           (await import("./jobs/photoJourneyScanScheduler")).startPhotoJourneyScanScheduler(),
+      ],
+      [
+        "dawarich_stay_scan",
+        async () => (await import("./jobs/dawarichStayScheduler")).startDawarichStayScheduler(),
       ],
       // Log retention, daily 03:45 and once now.
       [

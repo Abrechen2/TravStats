@@ -26,6 +26,7 @@ import flightObservedTimesRoutes from "./flights/observedTimes";
 import flightBookingRoutes from "./flights/booking";
 import flightBulkEditRoutes from "./flights/bulkEdit";
 import upcomingRoutes from "./upcoming";
+import dawarichStayRoutes from "./dawarichStays";
 import photoJourneyRoutes from "./photoJourneys";
 import tripSuggestionRoutes from "./tripSuggestions";
 import flightLookupRoutes from "./flightLookup";
@@ -167,6 +168,7 @@ export const apiMounts: ApiMount[] = [
   { id: "openapi", base: "/api/v1", router: openapiRoutes },
   // Public and unauthenticated, like the spec: the About section reads it before login.
   { id: "version", base: "/api/v1", router: versionRoutes },
+  { id: "dawarichStays", base: "/api/v1/dawarich-stays", router: dawarichStayRoutes },
   { id: "setup", base: "/api/v1/setup", router: setupRoutes },
   { id: "admin", base: "/api/v1/admin", router: adminRoutes },
   // Mounted BEFORE the generic /api/v1/auth routers so a future catch-all there
