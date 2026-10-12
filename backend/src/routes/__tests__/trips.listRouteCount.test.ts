@@ -53,6 +53,7 @@ describe("the trip list counts tour sections in _count.routes", () => {
     expect(trip).toBeDefined();
     expect(trip._count).toEqual({
       busJourneys: 0,
+      ferryJourneys: 0,
       flights: 0,
       cruises: 0,
       lodgingStays: 0,

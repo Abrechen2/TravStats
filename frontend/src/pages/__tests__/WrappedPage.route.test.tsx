@@ -93,6 +93,6 @@ describe("the /wrapped route", () => {
     await waitFor(() => expect(screen.getByText("stats:wrapped.title")).toBeTruthy(), {
       timeout: 3000,
     });
-    expect(getWrappedMock).toHaveBeenCalled();
+    await waitFor(() => expect(getWrappedMock).toHaveBeenCalled());
   });
 });
