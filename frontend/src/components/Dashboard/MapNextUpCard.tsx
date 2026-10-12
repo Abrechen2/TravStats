@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { UpcomingEntry } from "../../lib/api/upcoming";
 import { Icon } from "../ui/Icon";
-import { nextUpCountdown, nextUpCountdownKey } from "./nextUpCountdown";
+import { entryCountdown, nextUpCountdownKey } from "./nextUpCountdown";
 
 /**
  * "Als Nächstes" as a card in the map's right column — the layout Claude
@@ -58,7 +58,7 @@ interface MapNextUpCardProps {
 export function MapNextUpCard({ entry, nowMs }: MapNextUpCardProps): JSX.Element {
   const { t } = useTranslation(["dashboard"]);
   const navigate = useNavigate();
-  const { key, options } = nextUpCountdownKey(nextUpCountdown(entry.startsAt, nowMs));
+  const { key, options } = nextUpCountdownKey(entryCountdown(entry, nowMs));
 
   return (
     <div

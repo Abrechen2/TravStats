@@ -8,6 +8,8 @@ import type { DomainKey } from "../shared/domains";
 import { loadVisibleDomains } from "../services/domainVisibility";
 import { endHasClock, rideEndsAt } from "../shared/railClock";
 import { groupRailLegs } from "../shared/railJourneyGrouping";
+import { nextBus } from "../services/bus/upcoming";
+import type { BusTimes } from "../schemas/times";
 import { RAIL_GROUPING_SELECT } from "../services/rail/railGroupingSelect";
 
 // No rate limiter, and deliberately so — for the same reason `stats.ts` has
@@ -44,11 +46,13 @@ export interface UpcomingEntry {
   /** ISO instant this starts — departure, embarkation, check-in, trip start. */
   startsAt: string;
   /**
-   * Rail only: `day` when the ride was logged without a clock — `startsAt` is
+   * Rail and bus: `day` when the ride was logged without a clock — `startsAt` is
    * then the start of that day at the station, not a departure time
    * (forgejo#132 item 17). Absent on the other domains.
    */
   startsAtPrecision?: "minute" | "day";
+  /** Bus endpoints on their terminal clocks. */
+  times?: BusTimes;
   /**
    * The row a click should OPEN, which is not always `id`: a stay has no page
    * of its own, so its target is the lodging whose page lists it. Always set,
@@ -405,6 +409,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       enabled.has("cruise") ? nextCruise(userId) : null,
       enabled.has("lodging") ? nextStay(userId) : null,
       enabled.has("rail") ? nextRail(userId) : null,
+      enabled.has("bus") ? nextBus(userId) : null,
       enabled.has("rental") ? nextRental(userId) : null,
       nextTrip(userId),
     ]);

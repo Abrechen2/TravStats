@@ -1,3 +1,6 @@
+import type { UpcomingEntry } from "../../lib/api/upcoming";
+import { localDay, daysBetween } from "../../shared/time";
+
 /**
  * How far ahead the next entry is — ONE home for the rule.
  *
@@ -36,4 +39,22 @@ export function nextUpCountdownKey(countdown: NextUpCountdown): {
     case "today":
       return { key: "dashboard:nextUp.today" };
   }
+}
+
+/** Day-only tickets count terminal calendar days, never hours to midnight. */
+export function entryCountdown(entry: UpcomingEntry, nowMs: number): NextUpCountdown {
+  const departure = entry.times?.departure;
+  if (
+    entry.startsAtPrecision !== "day" &&
+    departure?.precision !== "day" &&
+    departure?.precision !== "unknown"
+  ) {
+    return nextUpCountdown(entry.startsAt, nowMs);
+  }
+  if (!departure?.zone) {
+    const fallback = nextUpCountdown(entry.startsAt, nowMs);
+    return fallback.kind === "days" ? fallback : { kind: "today" };
+  }
+  const days = daysBetween(localDay(nowMs, departure.zone), departure.local.slice(0, 10));
+  return days > 0 ? { kind: "days", count: days } : { kind: "today" };
 }

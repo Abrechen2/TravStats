@@ -25,7 +25,6 @@
     "GET /trips/{id}/routes/{routeId}/tracks .tracks[].startedAt",
     "GET /trips/{id}/routes/{routeId}/tracks/{trackId} .track.endedAt",
     "GET /trips/{id}/routes/{routeId}/tracks/{trackId} .track.startedAt",
-    "GET /upcoming .data.entries[].startsAt",
     "POST /tours/{routeId}/tracks .track.endedAt",
     "POST /tours/{routeId}/tracks .track.startedAt",
     "POST /tours/{routeId}/tracks/dawarich .track.endedAt",

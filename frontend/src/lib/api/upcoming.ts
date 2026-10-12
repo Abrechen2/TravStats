@@ -1,3 +1,4 @@
+import type { RailTimes } from "../../types/times";
 import { api } from "./client";
 import type { DomainKey } from "../../shared/domains";
 
@@ -11,6 +12,8 @@ export interface UpcomingEntry {
   id: string;
   /** ISO instant it starts: departure, embarkation, check-in, trip start. */
   startsAt: string;
+  startsAtPrecision?: "minute" | "day";
+  times?: RailTimes;
   /**
    * The row a click opens. Equal to `id` everywhere except lodging, where it
    * is the LODGING's id — a stay has no page of its own (see the server's

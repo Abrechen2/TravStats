@@ -1,3 +1,4 @@
+import { entryCountdown, nextUpCountdownKey } from "./nextUpCountdown";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -57,18 +58,8 @@ export function NextUpEntry({ entry, nowMs }: NextUpEntryProps): JSX.Element {
   const { t } = useTranslation(["dashboard"]);
   const navigate = useNavigate();
 
-  const msAhead = new Date(entry.startsAt).getTime() - nowMs;
-  const daysAhead = Math.floor(msAhead / 86_400_000);
-  const hoursAhead = Math.floor(msAhead / 3_600_000);
-  // Glanceable, not precise: days out at range, hours on the last day, "today"
-  // inside it. Minute precision would need the departure airport's timezone,
-  // which this line does not resolve — and does not need to.
-  const countdown =
-    daysAhead >= 1
-      ? t("dashboard:nextUp.inDays", { count: daysAhead })
-      : hoursAhead >= 1
-        ? t("dashboard:nextUp.inHours", { count: hoursAhead })
-        : t("dashboard:nextUp.today");
+  const { key, options } = nextUpCountdownKey(entryCountdown(entry, nowMs));
+  const countdown = t(key, options);
 
   return (
     <button

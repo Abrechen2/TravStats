@@ -13,6 +13,7 @@ import { registry } from "../registry";
 import { prismaColumns } from "../prismaColumns";
 import { errorContent } from "./shared";
 import { evidenceResponseSchema } from "../../../schemas/evidence";
+import { busTimesSchema } from "../../../schemas/times";
 import { EVIDENCE_PAGE_SIZE } from "../../../shared/evidence";
 
 const achievement = registry.register(
@@ -150,7 +151,7 @@ registry.registerPath({
   path: "/upcoming",
   summary: "The next item across every enabled domain",
   description:
-    "One entry per domain the user has enabled — next flight, cruise, stay, train — " +
+    "One entry per domain the user has enabled — next flight, cruise, stay, train, bus, rental — " +
     "plus the next trip, sorted by start. Domains the user cannot see are absent " +
     "rather than empty: switched off by the user, OR hidden by the instance's beta " +
     "switch (rail while `betaFeaturesEnabled` is false) — a client need not apply " +
@@ -173,6 +174,7 @@ registry.registerPath({
                     "lodging",
                     "place",
                     "rail",
+                    "bus",
                     "rental",
                     "trip",
                   ]),
@@ -188,10 +190,13 @@ registry.registerPath({
                     .enum(["minute", "day"])
                     .optional()
                     .describe(
-                      "Rail only. `day` for a ride logged without a clock: `startsAt` is " +
+                      "Rail and bus. `day` for a ride logged without a clock: `startsAt` is " +
                         "the start of that day at the station, not a departure time, and " +
                         "the entry stays upcoming until the day is over."
                     ),
+                  times: busTimesSchema
+                    .optional()
+                    .describe("Bus: departure and arrival on the terminal clocks."),
                   tripId: z.string().uuid().nullable(),
                   tripName: z.string().nullable(),
                   primary: z
