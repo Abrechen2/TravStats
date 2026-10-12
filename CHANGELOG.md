@@ -26,6 +26,14 @@ previous image alone does not know `completed`.
 
 ### Added
 
+- **Ferry crossings are a journey of their own.** A ferry booked with a vehicle
+  — operator, departure and arrival port with local times, crossing duration,
+  booking reference, seat or cabin, vehicle dimensions, passengers, price and
+  the ticket PDF — is now an entry like a rail or bus journey instead of a line
+  in the expenses. Ports are found by search, a ticket can be previewed before
+  it is saved, an optional AIS lookup shows the live position, and a crossing
+  can be linked as a leg of a roadtrip. The domain sits behind the beta switch.
+
 - **A moment without a trip has a place: notes.** A note is a date (or a date and
   a time on the clock of the place it was written), a text, optionally a place
   and one photo — nothing else is assumed. Notes live under Mehr › Sammlungen,
