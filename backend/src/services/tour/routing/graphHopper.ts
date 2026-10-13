@@ -82,6 +82,9 @@ function isGraphHopperResponse(value: unknown): value is GraphHopperResponse {
 export function createGraphHopper(apiKey: string, fetchImpl: typeof fetch = fetch): RouteProvider {
   return {
     id: "graphhopper",
+    cacheIdentity: GRAPHHOPPER_BASE_URL,
+    cacheProfile: (req) =>
+      isRoutableMode(req.mode) ? GRAPHHOPPER_PROFILE_BY_MODE[req.mode] : req.mode,
     async route(req: RouteRequest): Promise<RouteResult | null> {
       if (!isRoutableMode(req.mode)) {
         return null;
@@ -97,7 +100,7 @@ export function createGraphHopper(apiKey: string, fetchImpl: typeof fetch = fetc
 
       let response: Response;
       try {
-        response = await fetchImpl(url);
+        response = await fetchImpl(url, { signal: AbortSignal.timeout(8_000) });
       } catch (err) {
         logger.warn(
           { provider: "graphhopper", error: err instanceof Error ? err.message : String(err) },

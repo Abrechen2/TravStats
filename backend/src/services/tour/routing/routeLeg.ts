@@ -1,3 +1,5 @@
+import { z } from "zod";
+import { RouteStore, routeDirectory, routeKey } from "../../routing/routeStore";
 import { haversineKm } from "../../../shared/geo/haversine";
 import logger from "../../../utils/logger";
 import { Coord, LegMode, legDistanceKm } from "../tourDistance";
@@ -193,7 +195,7 @@ function isTrustworthy(
  * failure (a non-finite input coordinate is a caller bug at the system
  * boundary and is left to `legDistanceKm`'s own throw).
  */
-export async function routeLegGeometry(
+async function computeLegGeometry(
   provider: RouteProvider | null,
   input: { from: Coord; to: Coord; mode: LegMode; vehicle?: string | null }
 ): Promise<RoutedLeg> {
@@ -227,4 +229,45 @@ export async function routeLegGeometry(
     drivingMinutes: result.drivingMinutes,
     fallbackReason: null,
   };
+}
+
+const storedLegSchema = z.object({
+  waypoints: z
+    .array(z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]))
+    .min(2)
+    .max(200_000),
+  distanceKm: z.number().finite().nonnegative(),
+  source: z.literal("routed"),
+  confidence: z.literal("high"),
+  drivingMinutes: z.number().finite().nonnegative().nullable(),
+  fallbackReason: z.null(),
+});
+export const roadRouteStore = new RouteStore<RoutedLeg>(routeDirectory("road"), (value) => {
+  const parsed = storedLegSchema.safeParse(value);
+  return parsed.success ? parsed.data : null;
+});
+
+/** Same road geometry is shared by bus, tour and roadtrip, with directional keys.
+ * Vehicle, mode and endpoint configuration remain distinct. Failures are never kept.
+ * Budget is spent only for an actual provider request, not a cache hit or waiter.
+ */
+export async function routeLegGeometry(
+  provider: RouteProvider | null,
+  input: { from: Coord; to: Coord; mode: LegMode; vehicle?: string | null },
+  beforeRequest?: () => boolean
+): Promise<RoutedLeg> {
+  const compute = () =>
+    beforeRequest && provider && isRoutableMode(input.mode) && !beforeRequest()
+      ? Promise.resolve(straightFallback({ ...input, reason: "rate_limited" }))
+      : computeLegGeometry(provider, input);
+  if (!provider?.cacheIdentity || !isRoutableMode(input.mode)) return compute();
+  const key = routeKey([
+    1,
+    provider.id,
+    provider.cacheIdentity,
+    [input.from.lon, input.from.lat],
+    [input.to.lon, input.to.lat],
+    provider.cacheProfile?.(input) ?? [input.mode, input.vehicle ?? null],
+  ]);
+  return roadRouteStore.resolve(key, compute, (result) => result.source === "routed");
 }

@@ -625,3 +625,25 @@ describe("cruise arrow icon — rasterised above display resolution (sharp when 
     expect(svg).toContain(`height="${icon.height}"`);
   });
 });
+
+it("groups ten repeated cruise legs and highlights a selected member, not only the first cruise", () => {
+  const cruise = makeCruise([
+    makeStop(1, 1, { id: 1, lat: 40, lon: 0 }),
+    makeStop(2, 2, { id: 2, lat: 42, lon: 3 }),
+  ]);
+  const cruises = Array.from({ length: 10 }, (_, i) => ({ ...cruise, id: `c${i}` }));
+  const layer = createCruiseArcsLayer(cruises, new Map(), "c9")!;
+  const props = layer.props as unknown as {
+    data: { memberIds: string[]; count: number }[];
+    getColor: (d: unknown) => number[];
+    getWidth: (d: unknown) => number;
+  };
+  expect(props.data).toHaveLength(1);
+  expect(props.data[0].memberIds).toHaveLength(10);
+  expect(props.data[0].count).toBe(10);
+  expect(props.getColor(props.data[0])).toEqual([253, 224, 71, 220]);
+  expect(props.getWidth(props.data[0])).toBe(3);
+  const arrows = createCruiseArrowsLayer(cruises, new Map(), "c9")!;
+  const single = createCruiseArrowsLayer([cruise])!;
+  expect((arrows.props.data as unknown[]).length).toBe((single.props.data as unknown[]).length);
+});

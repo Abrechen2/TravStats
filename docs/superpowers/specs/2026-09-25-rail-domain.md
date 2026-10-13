@@ -149,13 +149,23 @@ the train took:
    journeys Transitous cannot match. It routes over the tracks and may pick
    another line than the train used, hence its own source label. The public
    demo is experimental and is never a default.
-   Successful routes are cached across journeys for 30 days, keyed by the
-   configured URL, profile, direction and every ordered waypoint. The bounded
-   cache (500 routes / 200,000 points) lives at `/app/data/cache/rail-routes`
-   in production, or `.travstats-data/cache/rail-routes` under the backend's
-   working directory in development. It survives restarts; corrupt or
-   unwritable storage does not prevent saving a journey. Failures are not
-   cached and simultaneous identical requests share one calculation.
+   Successful routes are kept across journeys without a TTL, keyed by the
+   configured URL, profile, direction and every ordered waypoint. Atomic,
+   individual files live at `/app/data/routes/rail` in production, or
+   `.travstats-data/routes/rail` under the backend working directory in
+   development. The 500-entry hot-memory limit evicts no disk geometry.
+   Corrupt or unwritable storage does not prevent saving a journey; a failed
+   disk write is logged and keeps the current process's hot copy. Failures
+   are not persisted and simultaneous identical requests share one calculation.
+   The same durable store serves road routing (bus, tour, roadtrip) and
+   schematic sea routing in separate namespaces. Changed routing policies
+   require a key-version bump. Existing journey geometry remains untouched.
+   Map layers group matching full paths (including reversed paths) by visual
+   style, retaining member IDs and occurrence counts. Different recorded or
+   drawn paths between the same endpoints remain distinct; cancelled rides
+   draw no paths. This grouping applies after the user's filters. The API's
+   per-journey geometry fields remain compatible with existing clients.
+
 
    If GraphHopper reports `ConnectionNotFoundException`, retry once on the
    same coordinates with a custom model excluding non-rail tracks. This

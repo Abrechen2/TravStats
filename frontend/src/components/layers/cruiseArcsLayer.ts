@@ -1,3 +1,4 @@
+import { groupMapData, pathIdentity } from "./routeAggregation";
 import { IconLayer, PathLayer } from "@deck.gl/layers";
 import { screenTangentDeg } from "./screenTangent";
 import { CollisionFilterExtension, type CollisionFilterExtensionProps } from "@deck.gl/extensions";
@@ -17,6 +18,8 @@ import {
 interface ArcDatum {
   path: [number, number][];
   cruiseId: string;
+  memberIds?: string[];
+  count?: number;
   cruiseLine: string | null;
   status: CruiseStatus;
   color: Rgb;
@@ -32,6 +35,8 @@ interface ArrowDatum {
   position: [number, number];
   angleDeg: number;
   cruiseId: string;
+  memberIds?: string[];
+  count?: number;
   color: Rgb;
   planned: boolean;
 }
@@ -113,7 +118,9 @@ export function buildCruiseArcs(
 ): ArcDatum[] {
   const colorConfig = options.colorConfig ?? DEFAULT_CRUISE_COLOR_CONFIG;
   const arcs: ArcDatum[] = [];
+  const rendered = new Map<string, [number, number][]>();
   for (const cruise of cruises) {
+    if (cruise.status === "cancelled") continue;
     // Effective sequence includes departure/arrival ports so minimal
     // A-to-B cruises (no detailed stop list) still draw a route.
     const ports = effectivePortSequence(cruise);
@@ -136,8 +143,14 @@ export function buildCruiseArcs(
         protectedPrefixCount: 0,
         protectedSuffixCount: 0,
       };
+      const shapeKey = JSON.stringify(routeGeometry);
+      let path = rendered.get(shapeKey);
+      if (!path) {
+        path = buildRenderableRoutePath(routeGeometry, options);
+        rendered.set(shapeKey, path);
+      }
       arcs.push({
-        path: buildRenderableRoutePath(routeGeometry, options),
+        path,
         cruiseId: cruise.id,
         cruiseLine: cruise.cruiseLine,
         status: cruise.status,
@@ -148,7 +161,11 @@ export function buildCruiseArcs(
       });
     }
   }
-  return arcs;
+  return groupMapData(
+    arcs,
+    (a) => JSON.stringify([a.color, a.planned, pathIdentity(a.path, true)]),
+    (a) => a.cruiseId
+  );
 }
 
 export function createCruiseArcsLayer(
@@ -163,7 +180,11 @@ export function createCruiseArcsLayer(
   onCruiseClick?: (cruiseId: string) => void,
   options: CruiseArcBuildOptions = {}
 ): Layer | null {
-  const arcs = buildCruiseArcs(cruises, geometryByCruise, options);
+  const arcs = groupMapData(
+    buildCruiseArcs(cruises, geometryByCruise, options),
+    (a) => JSON.stringify([a.color, a.planned, pathIdentity(a.path)]),
+    (a) => a.cruiseId
+  );
   if (arcs.length === 0) return null;
 
   const hasSelection = selectedCruiseId !== null;
@@ -184,11 +205,15 @@ export function createCruiseArcsLayer(
         ? d.path
         : (d.path.map(([lon, lat]) => [lon, lat, altitudeM]) as unknown as [number, number][]),
     getColor: (d) => {
-      if (hasSelection && d.cruiseId === selectedCruiseId) return [...HIGHLIGHT_COLOR, FULL_ALPHA];
+      if (hasSelection && (d.memberIds ?? [d.cruiseId]).includes(selectedCruiseId ?? ""))
+        return [...HIGHLIGHT_COLOR, FULL_ALPHA];
       const base = d.planned ? PLANNED_ALPHA : FULL_ALPHA;
       return [...d.color, hasSelection ? DIM_ALPHA : base];
     },
-    getWidth: (d) => (d.cruiseId === selectedCruiseId ? 3 * widthScale : 2 * widthScale),
+    getWidth: (d) =>
+      (d.memberIds ?? [d.cruiseId]).includes(selectedCruiseId ?? "")
+        ? 3 * widthScale
+        : 2 * widthScale,
     widthUnits: "pixels",
     widthMinPixels: 1,
     capRounded: true,
@@ -196,7 +221,12 @@ export function createCruiseArcsLayer(
     pickable: true,
     onClick: onCruiseClick
       ? ({ object }: { object?: ArcDatum }) => {
-          if (object?.cruiseId) onCruiseClick(object.cruiseId);
+          if (object?.cruiseId)
+            onCruiseClick(
+              selectedCruiseId && object.memberIds?.includes(selectedCruiseId)
+                ? selectedCruiseId
+                : object.cruiseId
+            );
         }
       : undefined,
     updateTriggers: {
@@ -236,7 +266,14 @@ export function createCruiseArrowsLayer(
   for (const arc of arcs) {
     const hasOpposingTwin = orderedPairKeys.has(pairKey(arc.toPortId, arc.fromPortId));
     for (const anchor of pickArrowAnchors(arc.path, hasOpposingTwin)) {
-      arrows.push({ ...anchor, cruiseId: arc.cruiseId, color: arc.color, planned: arc.planned });
+      arrows.push({
+        ...anchor,
+        cruiseId: arc.cruiseId,
+        memberIds: arc.memberIds,
+        count: arc.count,
+        color: arc.color,
+        planned: arc.planned,
+      });
     }
   }
   const arrowSizeScale = options.arrowSizeScale ?? 1;
@@ -250,7 +287,7 @@ export function createCruiseArrowsLayer(
   const PLANNED_ALPHA = 150;
 
   const iconFor = (d: ArrowDatum): { url: string; width: number; height: number } => {
-    if (hasSelection && d.cruiseId === selectedCruiseId) {
+    if (hasSelection && (d.memberIds ?? [d.cruiseId]).includes(selectedCruiseId ?? "")) {
       return arrowIcon(rgba(HIGHLIGHT_COLOR, FULL_ALPHA));
     }
     const alpha = hasSelection ? DIM_ALPHA : d.planned ? PLANNED_ALPHA : FULL_ALPHA;
@@ -289,7 +326,11 @@ export function createCruiseArrowsLayer(
     collisionGroup: "cruise-arrows",
     // The selected cruise always wins its corridor; flown beats planned.
     getCollisionPriority: (d) =>
-      hasSelection && d.cruiseId === selectedCruiseId ? 100 : d.planned ? 0 : 10,
+      hasSelection && (d.memberIds ?? [d.cruiseId]).includes(selectedCruiseId ?? "")
+        ? 100
+        : d.planned
+          ? 0
+          : 10,
     // Test with enlarged footprints so arrows disappear BEFORE they visually
     // touch — a chevron needs breathing room to stay readable, not just
     // non-overlapping pixels.

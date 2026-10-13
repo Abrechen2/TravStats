@@ -97,6 +97,8 @@ export function createCustomOsrm(baseUrl: string, fetchImpl: typeof fetch = fetc
 
   return {
     id: "custom",
+    cacheIdentity: base.toString(),
+    cacheProfile: (req) => (isRoutableMode(req.mode) ? OSRM_PROFILE_BY_MODE[req.mode] : req.mode),
     async route(req: RouteRequest): Promise<RouteResult | null> {
       if (!isRoutableMode(req.mode)) {
         return null;
@@ -111,7 +113,7 @@ export function createCustomOsrm(baseUrl: string, fetchImpl: typeof fetch = fetc
 
       let response: Response;
       try {
-        response = await fetchImpl(url.toString());
+        response = await fetchImpl(url.toString(), { signal: AbortSignal.timeout(8_000) });
       } catch (err) {
         logger.warn(
           { provider: "custom", error: err instanceof Error ? err.message : String(err) },

@@ -27,11 +27,11 @@ it("reuses a route after a process restart without exposing mutable cache state"
   copy![0][0] = 0;
   expect(await restarted.get(key)).toEqual(line);
 });
-it("expires routes after thirty days", async () => {
+it("retains routes beyond thirty days", async () => {
   await new RailRouteCache(directory).put(key, line);
   const later = Date.now() + 31 * 86400_000;
   jest.spyOn(Date, "now").mockReturnValue(later);
-  expect(await new RailRouteCache(directory).get(key)).toBeNull();
+  expect(await new RailRouteCache(directory).get(key)).toEqual(line);
 });
 it("keys direction, intermediate stops, profile and provider separately", () => {
   const variants = [
@@ -44,7 +44,7 @@ it("keys direction, intermediate stops, profile and provider separately", () => 
   expect(railRouteCacheKey("https://routing.test/", "all_tracks", line)).toBe(key);
 });
 it("treats corrupt disk content as a cache miss", async () => {
-  await fs.writeFile(path.join(directory, "routes.json"), "broken");
+  await fs.writeFile(path.join(directory, `${key}.json`), "broken");
   expect(await new RailRouteCache(directory).get(key)).toBeNull();
 });
 it("keeps a successful route usable when disk storage is unwritable", async () => {
@@ -54,10 +54,10 @@ it("keeps a successful route usable when disk storage is unwritable", async () =
   await expect(cache.put(key, line)).resolves.toBeUndefined();
   expect(await cache.get(key)).toEqual(line);
 });
-it("bounds the number of stored routes", async () => {
+it("evicts only memory and retains older routes on disk", async () => {
   const cache = new RailRouteCache(directory);
   for (let i = 0; i < 501; i++)
     await cache.put(railRouteCacheKey("https://routing.test", String(i), line), line);
-  expect(await cache.get(railRouteCacheKey("https://routing.test", "0", line))).toBeNull();
+  expect(await cache.get(railRouteCacheKey("https://routing.test", "0", line))).toEqual(line);
   expect(await cache.get(railRouteCacheKey("https://routing.test", "500", line))).toEqual(line);
 });
