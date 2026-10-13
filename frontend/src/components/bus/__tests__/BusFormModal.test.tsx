@@ -690,3 +690,43 @@ describe("BusFormModal", () => {
     });
   });
 });
+
+describe("bus price entry (forgejo#295)", () => {
+  beforeEach(() => {
+    update.mockReset();
+    update.mockResolvedValue(rideFixture());
+    getAllTrips.mockResolvedValue([]);
+    entrySuggestions.mockResolvedValue(NO_CHIPS);
+    routingMock.mockResolvedValue({ configured: true, providerId: "graphhopper" });
+  });
+
+  it.each([
+    ["39,90", 39.9],
+    ["39.90", 39.9],
+    ["0", 0],
+    ["", null],
+  ])("sends %s as %s without losing a decimal separator", async (raw, expected) => {
+    await renderModal(rideFixture());
+    const price = screen.getByLabelText("bus:form.price");
+    expect(price).toHaveAttribute("type", "text");
+    expect(price).toHaveAttribute("inputmode", "decimal");
+    fireEvent.change(price, { target: { value: raw } });
+    fireEvent.click(saveButton());
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith("r1", expect.objectContaining({ price: expected }))
+    );
+  });
+
+  it.each(["invalid", "39,9,0", "-1", "Infinity"])(
+    "refuses %s visibly instead of clearing the price",
+    async (raw) => {
+      await renderModal(rideFixture());
+      const price = screen.getByLabelText("bus:form.price");
+      fireEvent.change(price, { target: { value: raw } });
+      fireEvent.click(saveButton());
+      expect(await screen.findByText("bus:form.errors.invalidPrice")).toBeVisible();
+      expect(price).toHaveAttribute("aria-invalid", "true");
+      expect(update).not.toHaveBeenCalled();
+    }
+  );
+});

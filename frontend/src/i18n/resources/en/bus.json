@@ -121,7 +121,8 @@
       "nonexistentTime": "This time did not exist on that day (clock change).",
       "noZone": "No time zone could be found for this terminal. Please pick another point.",
       "invalidField": "The field “{{field}}” is invalid.",
-      "invalid": "The input is invalid."
+      "invalid": "The input is invalid.",
+      "invalidPrice": "Enter a valid price of 0 or more (e.g. 39.90)."
     }
   },
   "detail": {

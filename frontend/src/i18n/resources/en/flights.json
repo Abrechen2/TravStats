@@ -289,7 +289,9 @@
     "batchImported_other": "{{count}} flights imported",
     "batchImportedWithSkips": "{{created}} imported, {{skipped}} skipped — already on file",
     "batchAllDuplicates_one": "Nothing imported — that flight was already on file",
-    "batchAllDuplicates_other": "Nothing imported — all {{count}} flights were already on file"
+    "batchAllDuplicates_other": "Nothing imported — all {{count}} flights were already on file",
+    "cancellationNotice": "This text contains a cancellation notice. Do not import this candidate as a new flown booking. Check the existing flight’s status instead.",
+    "unconfirmedTimeNotice": "Times were not confirmed by the source text. In particular, 00:00 may only be a placeholder for a date without a time. Check and enter the actual times before importing."
   },
   "lookup": {
     "resultsTitle_one": "Found {{count}} flight",

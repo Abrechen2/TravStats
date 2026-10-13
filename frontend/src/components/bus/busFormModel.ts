@@ -1,3 +1,4 @@
+import { parseDecimalInput } from "../../lib/decimalInput";
 import { saveErrorKey, type SaveErrorOptions } from "../../lib/saveErrorMessage";
 import type { Fold } from "../../lib/api/timeInput";
 import type { BusJourney, BusJourneyInput, BusRideKind } from "../../types/bus";
@@ -274,7 +275,7 @@ export function toBusInput(draft: BusFormDraft): BusJourneyInput {
     seat: orNull(draft.seat),
     delayMinutes: delay === null ? null : Math.round(delay),
     bookingReference: orNull(draft.bookingReference),
-    price: numberOrNull(draft.price),
+    price: parseDecimalInput(draft.price),
     currency: draft.currency || "EUR",
     status: draft.cancelled ? "cancelled" : "scheduled",
     tags: draft.tags.map((tag) => tag.trim()).filter((tag) => tag.length > 0),

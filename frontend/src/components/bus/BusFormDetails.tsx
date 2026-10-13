@@ -6,7 +6,6 @@ import CompanionPicker from "../CompanionPicker";
 import { FieldError, fieldErrorProps } from "../form";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useTranslation } from "../../hooks/useTranslation";
-import { minorUnits } from "../../shared/currencies";
 import type { Trip } from "../../types";
 import { INPUT_CLASS, LabelledInput, type BusFieldErrorFor } from "./busFormFields";
 import { busFieldId, type BusFormDraft } from "./busFormModel";
@@ -79,9 +78,8 @@ export function BusFormDetails({
           label={t("bus:form.price")}
           field="price"
           error={errorFor("price")}
-          type="number"
-          min={0}
-          step={10 ** -minorUnits(draft.currency)}
+          type="text"
+          inputMode="decimal"
           value={draft.price}
           onChange={(e): void => set("price", e.target.value)}
         />

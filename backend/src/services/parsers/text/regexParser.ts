@@ -4,6 +4,7 @@ import { ParsedBooking } from "../../bookingParser";
 import { normalizeParsedBooking, PATTERNS } from "../shared/utils";
 import logger from "../../../utils/logger";
 
+import { annotateRegexBooking } from "./regexBookingNotice";
 import { FLIGHT_NUMBER_FALSE_PREFIXES } from "./regexMappings";
 import { resolveAirlineCodes } from "../../../utils/airlineNormalize";
 import {
@@ -165,7 +166,9 @@ export class RegexTextParser implements ITextParser {
       const source = [subject || "", text || "", this.extractText(html)].join("\n");
 
       // Try to extract multiple flights (round-trip, multi-leg)
-      const flights = this.parseMultipleFlights(source);
+      const flights = this.parseMultipleFlights(source).map((flight) =>
+        annotateRegexBooking(source, flight)
+      );
 
       logger.info(
         { flightCount: flights.length, missing: flights.map((f) => f.missing.length) },

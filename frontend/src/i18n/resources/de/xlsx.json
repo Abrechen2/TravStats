@@ -5,7 +5,7 @@
     "running": "Datei wird erstellt …",
     "failed": "Der Export ist fehlgeschlagen.",
     "empty": "Es gibt nichts zu exportieren.",
-    "description": "Die bearbeitbare Tabelle: alle Einträge als Excel-Datei – ein Blatt je Bereich, mit ID-Spalte, damit du sie ändern und wieder einlesen kannst. Eine Sicherung ist das nicht: Fotos, Dokumente und Einstellungen fehlen darin – dafür ist das Backup da."
+    "description": "Die bearbeitbare Excel-Tabelle enthält Reiseeinträge der unterstützten Bereiche, einschließlich Busfahrten – ein Blatt je Bereich, mit ID-Spalte zum Ändern und Wiedereinlesen. Eigenständige Notizen, Fotos, Dokumente und Einstellungen sind nicht enthalten. Für eine vollständige Sicherung nutze das Instanz-Backup unter Administration → Backups; bei fehlenden Rechten frage deinen Administrator."
   },
   "sheets": {
     "flights": "Flüge",

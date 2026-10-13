@@ -121,7 +121,8 @@
       "nonexistentTime": "Diese Uhrzeit gab es an diesem Tag nicht (Zeitumstellung).",
       "noZone": "Für dieses Terminal ließ sich keine Zeitzone bestimmen. Bitte einen anderen Punkt wählen.",
       "invalidField": "Das Feld „{{field}}“ ist ungültig.",
-      "invalid": "Die Eingaben sind ungültig."
+      "invalid": "Die Eingaben sind ungültig.",
+      "invalidPrice": "Bitte gib einen gültigen Preis ab 0 ein (z. B. 39,90)."
     }
   },
   "detail": {

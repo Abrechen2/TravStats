@@ -114,6 +114,7 @@ export function GenericCsvImportTile(): JSX.Element {
 
   const handleFile = useCallback(
     async (file: File): Promise<void> => {
+      setError(null);
       try {
         const text = await file.text();
         const records = parseCsv(text);
@@ -134,6 +135,7 @@ export function GenericCsvImportTile(): JSX.Element {
   const handleMappingSubmit = useCallback(
     async (mapping: GenericMapping): Promise<void> => {
       if (!csvText) return;
+      setError(null);
       const parsed = parseGenericCsv(csvText, mapping);
       const outcome = describeParseResult(parsed, t);
       if (outcome.fatal) {
@@ -166,11 +168,13 @@ export function GenericCsvImportTile(): JSX.Element {
     >
       {csvText && !preview && (
         <ColumnMappingWizard
+          submitError={error}
           fields={flightFields}
           csvHeaders={csvHeaders}
           csvSamples={csvSamples}
           onSubmit={(mapping) => void handleMappingSubmit(mapping)}
           onCancel={() => {
+            setError(null);
             setCsvText(null);
             setCsvHeaders([]);
             setCsvSamples({});

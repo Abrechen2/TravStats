@@ -19,6 +19,7 @@ import { useBusRouting } from "../../hooks/useBusRouting";
 import { useTranslation } from "../../hooks/useTranslation";
 import { busApi } from "../../lib/api/bus";
 import { tripsApi } from "../../lib/api";
+import { parseDecimalInput } from "../../lib/decimalInput";
 import { logger } from "../../lib/logger";
 import { saveGeometryNotice } from "../../lib/bus/busRoutingWords";
 import { useToastStore } from "../../store/toastStore";
@@ -210,6 +211,12 @@ export function BusFormModal({
   const submit = async (): Promise<void> => {
     if (!ready) return;
     failure.clear();
+    const price = parseDecimalInput(draft.price);
+    if (price !== null && (!Number.isFinite(price) || price < 0)) {
+      setRefusal({ key: "bus:form.errors.invalidPrice", field: "price" });
+      failure.fail("bus:form.errors.invalidPrice");
+      return;
+    }
     const input = toBusInput(draft);
     // The request and what follows are two steps (forgejo#247): the ride is
     // stored once the API accepts it, and a parent whose refetch fails must

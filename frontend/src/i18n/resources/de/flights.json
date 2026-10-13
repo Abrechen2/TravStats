@@ -289,7 +289,9 @@
     "batchImported_other": "{{count}} Flüge importiert",
     "batchImportedWithSkips": "{{created}} importiert, {{skipped}} übersprungen — die gab es schon",
     "batchAllDuplicates_one": "Nichts importiert — der Flug war bereits erfasst",
-    "batchAllDuplicates_other": "Nichts importiert — alle {{count}} Flüge waren bereits erfasst"
+    "batchAllDuplicates_other": "Nichts importiert — alle {{count}} Flüge waren bereits erfasst",
+    "cancellationNotice": "Dieser Text enthält eine Stornierungsmitteilung. Übernimm den Vorschlag nicht als neue geflogene Buchung. Prüfe stattdessen den Status des bestehenden Flugs.",
+    "unconfirmedTimeNotice": "Uhrzeiten wurden nicht sicher aus dem Text gelesen. Insbesondere kann 00:00 nur ein Platzhalter für ein Datum ohne Uhrzeit sein. Prüfe und ergänze die tatsächlichen Zeiten vor dem Übernehmen."
   },
   "lookup": {
     "resultsTitle_one": "{{count}} Flug gefunden",

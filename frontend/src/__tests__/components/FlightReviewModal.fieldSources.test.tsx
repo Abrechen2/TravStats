@@ -150,3 +150,24 @@ describe("FlightReviewModal parser info", () => {
     expect(container.querySelector("[data-testid='parser-info-row']")).toBeNull();
   });
 });
+
+describe("cancellation review (forgejo#298)", () => {
+  it("puts cancellation and unconfirmed-clock warnings inside the review", () => {
+    render(
+      <FlightReviewModal
+        isOpen
+        onClose={() => {}}
+        onConfirm={noop}
+        source="email"
+        initialData={{
+          ...parsedData,
+          airlineNotice: "flight_cancellation",
+          departureTime: "2025-07-10T00:00",
+          inferredFields: ["departureTime"],
+        }}
+      />
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("flights:review.cancellationNotice");
+    expect(screen.getByRole("alert")).toHaveTextContent("flights:review.unconfirmedTimeNotice");
+  });
+});

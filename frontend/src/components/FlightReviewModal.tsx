@@ -34,6 +34,7 @@ import {
   isInferred,
   mapSeatClass,
 } from "../lib/flightReviewFields";
+import ReviewParserNotices from "./FlightForm/ReviewParserNotices";
 import ReviewCostSection from "./FlightForm/ReviewCostSection";
 import ReviewField, { REVIEW_INPUT } from "./FlightForm/ReviewField";
 import ReviewOnlineCheckIn, { onlineCheckInRequest } from "./FlightForm/ReviewOnlineCheckIn";
@@ -434,6 +435,7 @@ export default function FlightReviewModal({
       )}
     >
       <div ref={failure.rootRef}>
+        <ReviewParserNotices data={initialData} />
         {(initialData.parserTemplate || initialData.parserConfidence !== undefined) && (
           <div data-testid="parser-info-row" className="flex items-center gap-2 mb-3 flex-wrap">
             <span className="text-xs text-(--text-muted) flex items-center gap-1">
