@@ -301,6 +301,21 @@ const passportResponse = registry.register(
         byTier: z.record(countryTierSchema, z.number()),
       }),
       countries: z.array(passportCountrySchema),
+      unconfirmedCountries: z
+        .array(
+          z.object({
+            code: z.string(),
+            source: z.literal("dawarich"),
+            reason: z.literal("ground-unconfirmed"),
+            observedDays: z.number().int(),
+            pointCount: z.number().int(),
+            firstDate: z.string(),
+            lastDate: z.string(),
+          })
+        )
+        .describe(
+          "Location observations; never included in country counts, visit years or presence days"
+        ),
       continents: z.array(
         z.object({ continent: continentSchema, visited: z.number(), total: z.number() })
       ),

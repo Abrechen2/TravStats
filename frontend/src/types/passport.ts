@@ -227,6 +227,16 @@ export interface Passport {
     byTier: Record<CountryTier, number>;
   };
   countries: PassportCountry[];
+  /** Absent on older servers. Observations do not contribute to visit figures. */
+  unconfirmedCountries?: Array<{
+    code: string;
+    source: "dawarich";
+    reason: "ground-unconfirmed";
+    observedDays: number;
+    pointCount: number;
+    firstDate: string;
+    lastDate: string;
+  }>;
   continents: PassportContinentQuota[];
   groups: PassportContinentGroup[];
   stamps: PassportStamp[];

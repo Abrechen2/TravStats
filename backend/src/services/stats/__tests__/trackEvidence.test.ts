@@ -1,152 +1,66 @@
-/**
- * What a location history proves — the four cases §8.2 and §3.4c turn on.
- *
- * The one worth reading first is the last: an account that never left the
- * terminal in Doha and an account that spent the day in the city produce the
- * same country-days, and the ONLY thing that tells them apart is where the
- * points were relative to an airport the traveller is known to have flown
- * through. That is the rung this module exists for, and a test that stopped at
- * "a track proves a country" would not touch it.
- */
-import { describe, it, expect } from "@jest/globals";
+import { unconfirmedTrackCountries, type CountryDayRow } from "../trackEvidence";
 
-import { trackEvidence, type CountryDayRow } from "../trackEvidence";
-
+const NOW = new Date("2026-10-13T12:00:00Z");
 const day = (
   date: string,
   countryCode: string,
-  overrides: Partial<CountryDayRow> = {}
+  over: Partial<CountryDayRow> = {}
 ): CountryDayRow => ({
   date,
   countryCode,
   pointCount: 20,
   airportPointCount: 0,
   partialWindow: false,
-  ...overrides,
+  ...over,
 });
 
-const tierOf = (rows: CountryDayRow[], code: string): string | undefined =>
-  trackEvidence(rows).find((input) => input.country === code)?.tier;
-
-describe("trackEvidence — the days", () => {
-  it("hands over every recorded day, and only recorded days", () => {
-    // §3.4b-bis: a track day is ATTESTED — a point was actually recorded. So
-    // unlike a spell between two flights, it needs no endpoint rule, and the
-    // gap between the 2nd and the 5th is simply not there.
-    const [input] = trackEvidence([day("2024-06-01", "EE"), day("2024-06-05", "EE")]);
-
-    expect(input.days).toEqual(["2024-06-01", "2024-06-05"]);
-    expect(input.kind).toBe("track");
-  });
-
-  it("dates the country at its EARLIEST day", () => {
-    const [input] = trackEvidence([day("2024-06-05", "EE"), day("2024-06-01", "EE")]);
-
-    expect(input.at?.toISOString().slice(0, 10)).toBe("2024-06-01");
-  });
-
-  it("never publishes a ground time", () => {
-    // A first and a last fix are two clocks, but they are not a landing and a
-    // take-off: nothing says the traveller was still there in between, and
-    // nothing says they left after. `notApplicable`, never a synthesised span.
-    const [input] = trackEvidence([day("2024-06-01", "EE")]);
-
-    expect(input.groundMinutes).toBeUndefined();
-  });
-
-  it("emits ONE input per country, not one per day", () => {
-    const inputs = trackEvidence([
-      day("2024-06-01", "EE"),
-      day("2024-06-02", "EE"),
-      day("2024-06-02", "LV"),
+describe("unconfirmed location observations (forgejo#299)", () => {
+  it("summarises distinct observed days and points, never a tier or presence days", () => {
+    const rows = [day("2024-06-05", "EE"), day("2024-06-01", "EE"), day("2024-06-01", "ee")];
+    expect(unconfirmedTrackCountries(rows, NOW)).toEqual([
+      {
+        code: "EE",
+        source: "dawarich",
+        reason: "ground-unconfirmed",
+        observedDays: 2,
+        pointCount: 60,
+        firstDate: "2024-06-01",
+        lastDate: "2024-06-05",
+      },
     ]);
-
-    expect(inputs.map((i) => i.country)).toEqual(["EE", "LV"]);
-  });
-});
-
-describe("trackEvidence — the tier", () => {
-  it("calls two calendar-adjacent days `slept`", () => {
-    // The same structural cut every other tier is made on: the day changed
-    // while the traveller was there.
-    expect(tierOf([day("2024-06-01", "EE"), day("2024-06-02", "EE")], "EE")).toBe("slept");
   });
 
-  it("does not read two SEPARATE days as a night", () => {
-    // A day in June and a day in August are two visits, not a two-month stay.
-    // Neither is shared with another country here, so both are whole days.
-    expect(tierOf([day("2024-06-01", "EE"), day("2024-08-01", "EE")], "EE")).toBe("visited");
+  it.each([
+    { pointCount: 1 },
+    { pointCount: 10000 },
+    { airportPointCount: 20 },
+    { airportPointCount: 19 },
+    { partialWindow: true },
+  ])("does not infer ground presence from aggregate properties: %j", (over) => {
+    const rows = [day("2024-06-01", "QA", over), day("2024-06-02", "QA", over)];
+    expect(unconfirmedTrackCountries(rows, NOW)[0]).toMatchObject({ reason: "ground-unconfirmed" });
+    expect(unconfirmedTrackCountries(rows, NOW)[0]).not.toHaveProperty("tier");
   });
 
-  it("calls a day the country had to itself `visited`", () => {
-    expect(tierOf([day("2024-06-01", "EE")], "EE")).toBe("visited");
+  it("sorts country codes and does not expand gaps into dates", () => {
+    const rows = [day("2024-08-01", "LV"), day("2024-06-01", "EE"), day("2024-06-01", "LV")];
+    expect(unconfirmedTrackCountries(rows, NOW).map((r) => [r.code, r.observedDays])).toEqual([
+      ["EE", 1],
+      ["LV", 2],
+    ]);
   });
 
-  it("calls a day SHARED with another country `transited` — the Baltic case", () => {
-    // Driving Riga → Tallinn: both countries hold the same day, so neither was
-    // a day spent somewhere. §3.4c: this counts, and it is not a connection.
-    const rows = [day("2024-06-01", "LV"), day("2024-06-01", "EE")];
-
-    expect(tierOf(rows, "EE")).toBe("transited");
-    expect(tierOf(rows, "LV")).toBe("transited");
-  });
-
-  it("does not let a PARTIAL day be read as a day the country had to itself", () => {
-    // The window was truncated, so the absence of a second country on that day
-    // proves nothing — Dawarich answers newest-first and the older part was
-    // never read. It falls to `transited` rather than claiming a whole day.
-    expect(tierOf([day("2024-06-01", "EE", { partialWindow: true })], "EE")).toBe("transited");
-  });
-
-  it("still reaches `slept` across two partial days", () => {
-    // A partial window withdraws the day's SILENCE, not the day. Two adjacent
-    // days are two days however thinly each was read.
+  it("ignores unknown countries, invalid dates, future observations and empty rows", () => {
     const rows = [
-      day("2024-06-01", "EE", { partialWindow: true }),
-      day("2024-06-02", "EE", { partialWindow: true }),
+      day("2024-06-01", "ZZ"),
+      day("not-a-day", "DE"),
+      day("2024-02-30", "DE"),
+      day("2026-10-14", "DE"),
+      day("2024-06-01", "DE", { pointCount: 0 }),
+      day("2024-06-01", "DE", { pointCount: NaN }),
     ];
-
-    expect(tierOf(rows, "EE")).toBe("slept");
-  });
-});
-
-describe("trackEvidence — §8.2, the point in Doha", () => {
-  it("keeps a country whose every point sat at a flown-through airport a `connection`", () => {
-    // The whole reason the rung exists. A GPS point in Doha is a point in
-    // Qatar even airside; what says "airside" is that every one of them was on
-    // the grounds of an airport this traveller demonstrably flew through.
-    const rows = [day("2024-06-01", "QA", { pointCount: 40, airportPointCount: 40 })];
-
-    expect(tierOf(rows, "QA")).toBe("connection");
-  });
-
-  it("lifts the same country off `connection` as soon as ONE point was elsewhere", () => {
-    // Six hours in Doha with a trip into the city. One fix off the airport is
-    // enough, and it should be: the claim being made is "every point", so a
-    // single counter-example ends it.
-    const rows = [day("2024-06-01", "QA", { pointCount: 40, airportPointCount: 39 })];
-
-    expect(tierOf(rows, "QA")).toBe("visited");
-  });
-
-  it("applies airside-only across the WHOLE country, not one day at a time", () => {
-    // An overnight on a terminal bench is still a connection. The rule is a
-    // statement about the country, so two adjacent airside days do not become
-    // `slept` — which is exactly the upgrade §1.1 was written to prevent.
-    const rows = [
-      day("2024-06-01", "QA", { pointCount: 10, airportPointCount: 10 }),
-      day("2024-06-02", "QA", { pointCount: 10, airportPointCount: 10 }),
-    ];
-
-    expect(tierOf(rows, "QA")).toBe("connection");
-  });
-
-  it("does not call a country airside on the strength of a row that recorded nothing", () => {
-    // 0 of 0 is vacuously "every point", and reading it that way would demote
-    // a country on the absence of evidence. A row with no points cannot make
-    // the claim.
-    const rows = [day("2024-06-01", "QA", { pointCount: 0, airportPointCount: 0 })];
-
-    expect(tierOf(rows, "QA")).toBe("visited");
+    expect(unconfirmedTrackCountries(rows, NOW)).toEqual([]);
+    expect(unconfirmedTrackCountries([], NOW)).toEqual([]);
+    expect(unconfirmedTrackCountries([day("2026-10-13", "DE")], NOW)).toHaveLength(1);
   });
 });

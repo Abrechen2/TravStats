@@ -3,7 +3,7 @@
   "backToStats": "Back to statistics",
   "print": "Print",
   "since": "since {{year}}",
-  "empty": "No flown flights yet — the passport fills up with the first entry.",
+  "empty": "No confirmed travel records for the passport yet.",
   "needsFlights": "The passport is built from your flights. Switch the Flights area on in settings to see it.",
   "loadError": "The passport could not be loaded.",
   "stamps": "Stamps",
@@ -61,7 +61,7 @@
     "truncated": "Only the most recent records are shown.",
     "none": "No individual record available. The country belongs in the list all the same — there is simply no single record to open here.",
     "trackLabel": "Location history — {{days}} days, {{points}} recorded points",
-    "trackNote": "These days come from your location history, not from a record you created. How many points held each day up is shown; whether a point was measured by GPS or estimated from a photograph is not something the data says, so it is not said here either."
+    "trackNote": "These Dawarich locations do not prove ground presence. They may come from overflights or inaccurate positions and do not add to country counts or days present. Confirmed place visits and travel records are counted independently."
   },
   "continents": {
     "title": "Continents",
@@ -119,5 +119,10 @@
     "text": "Counting changed — {{before}} countries before, {{after}} now.",
     "what": "What counts?",
     "dismiss": "Got it"
+  },
+  "unconfirmed": {
+    "title": "Unconfirmed location days",
+    "explanation": "These Dawarich locations do not prove ground presence. They may come from overflights or inaccurate positions and do not add to country counts or days present. Confirmed place visits and travel records are counted independently.",
+    "observation": "Dawarich · Location days: {{days}} · Points: {{points}}"
   }
 }

@@ -26,17 +26,9 @@
  *    the passport, and finding it took a database session. With the lodging in
  *    this timeline, carrying its id, it takes two clicks.
  *
- * 7. MEASURED PRESENCE IS EVIDENCE TOO (spec §8). A country-day is the one
- *    kind that names no record a user typed, so it cannot be opened the way a
- *    flight or a house can — but leaving it out would answer 404 for a country
- *    that only a location history proves, and put the list and this page back
- *    into exactly the disagreement rule 6 was written about.
- *
- * Rules 5, 6 and 7 are the reason this returns a country the user has never flown
- * to. A passport row evidenced by a cruise or a hotel is clickable; answering
- * 404 for it would put the list and the detail page into exactly the
- * disagreement #42 is about. Such a country carries no entries and no
- * airports — it has none — and says so through `evidence`.
+ * 7. LOCATION OBSERVATIONS REMAIN INSPECTABLE (forgejo#299). A track-only
+ *    country may be inspected, but its observations are not ground proof and
+ *    do not extend firstYear or lastYear. The client labels them unconfirmed.
  *
  * ## What this page does NOT carry, and why
  *
@@ -428,15 +420,14 @@ export function buildCountryDetail(
    * there, how many, and how thinly they were observed.
    *
    * Dated at the LATEST day, because the timeline is newest-first and a summary
-   * belongs beside the most recent thing it describes. `stretchYears` still
-   * sees both ends, so the period the page reports covers the whole track.
+   * belongs beside the most recent observation. These dates never extend the
+   * confirmed visit years: location alone does not establish ground presence.
    */
   const trackHere = trackDays.filter((row) => row.countryCode.toUpperCase() === wanted);
   const trackDayCount = new Set(trackHere.map((row) => row.date)).size;
   if (trackDayCount > 0) {
     const days = [...new Set(trackHere.map((row) => row.date))].sort();
-    stretchYears(new Date(`${days[0]}T00:00:00.000Z`));
-    stretchYears(new Date(`${days[days.length - 1]}T00:00:00.000Z`));
+    // Observations remain inspectable, but cannot date a ground visit (forgejo#299).
     timeline.push({
       kind: "track",
       date: days[days.length - 1],

@@ -85,6 +85,59 @@ describe("PassportPage — headline, total and threshold", () => {
     getCountryDetailMock.mockReset();
   });
 
+  it("keeps unconfirmed locations visible even when no country is confirmed", async () => {
+    getPassportMock.mockResolvedValue({
+      ...passport({ countries: 0, countriesTotal: 0 }, []),
+      unconfirmedCountries: [
+        {
+          code: "SY",
+          source: "dawarich",
+          reason: "ground-unconfirmed",
+          observedDays: 1,
+          pointCount: 1,
+          firstDate: "2024-06-01",
+          lastDate: "2024-06-01",
+        },
+      ],
+    });
+    render(
+      <MemoryRouter>
+        <PassportPage />
+      </MemoryRouter>
+    );
+    const section = await screen.findByRole("region", { name: "passport:unconfirmed.title" });
+    expect(within(section).getByText("Syria")).toBeInTheDocument();
+    expect(within(section).getByText("passport:unconfirmed.explanation")).toBeInTheDocument();
+    expect(screen.getByText("passport:empty")).toBeInTheDocument();
+    expect(section.querySelector("time")?.getAttribute("datetime")).toBe("2024-06-01");
+  });
+
+  it("shows unconfirmed days separately from confirmed countries", async () => {
+    getPassportMock.mockResolvedValue({
+      ...passport({ countries: 1, countriesTotal: 1 }, [country({})]),
+      unconfirmedCountries: [
+        {
+          code: "SY",
+          source: "dawarich",
+          reason: "ground-unconfirmed",
+          observedDays: 2,
+          pointCount: 500,
+          firstDate: "2024-06-01",
+          lastDate: "2024-06-02",
+        },
+      ],
+    });
+    render(
+      <MemoryRouter>
+        <PassportPage />
+      </MemoryRouter>
+    );
+    const section = await screen.findByRole("region", { name: "passport:unconfirmed.title" });
+    expect(within(section).getByText("Syria")).toBeInTheDocument();
+    expect(section.querySelectorAll("time")).toHaveLength(2);
+    expect(within(screen.getByRole("table")).queryByText("Syria")).not.toBeInTheDocument();
+  });
+
   it("renders the headline and the total distinctly, and names the threshold", async () => {
     getPassportMock.mockResolvedValue(
       passport({}, [country({}), country({ code: "ET", tier: "connection", counted: false })])

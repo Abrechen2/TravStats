@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AppShell from "../components/ui/AppShell";
 
+import UnconfirmedCountries from "../components/Passport/UnconfirmedCountries";
 import CountryTable from "../components/Passport/CountryTable";
 import EvidenceSummary from "../components/Passport/EvidenceSummary";
 import { countryName } from "../components/Passport/countryName";
@@ -393,6 +394,10 @@ export default function PassportPage(): JSX.Element {
                   <CountryTable countries={passport.countries} locale={locale} />
                 </>
               )}
+              <UnconfirmedCountries
+                countries={passport.unconfirmedCountries ?? []}
+                locale={locale}
+              />
             </div>
           </>
         )}

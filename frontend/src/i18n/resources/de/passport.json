@@ -3,7 +3,7 @@
   "backToStats": "Zurück zur Statistik",
   "print": "Drucken",
   "since": "seit {{year}}",
-  "empty": "Noch keine geflogenen Flüge — der Pass füllt sich mit dem ersten Eintrag.",
+  "empty": "Noch keine bestätigten Reiseeinträge für den Pass.",
   "needsFlights": "Der Reisepass wird aus deinen Flügen gebildet. Aktiviere den Bereich „Flüge“ in den Einstellungen, um ihn zu sehen.",
   "loadError": "Der Reisepass konnte nicht geladen werden.",
   "stamps": "Stempel",
@@ -61,7 +61,7 @@
     "truncated": "Nur die neuesten Belege werden gezeigt.",
     "none": "Kein einzelner Datensatz abrufbar. Das Land steht trotzdem zu Recht in der Liste — nur lässt sich hier kein einzelner Beleg öffnen.",
     "trackLabel": "Standortverlauf — {{days}} Tage, {{points}} Messpunkte",
-    "trackNote": "Diese Tage stammen aus deinem Standortverlauf, nicht aus einem Datensatz, den du angelegt hast. Wie viele Messpunkte einen Tag belegen, steht dabei — ob ein Punkt per GPS gemessen oder aus einem Foto geschätzt wurde, sagen die Daten nicht, und darum steht es hier auch nicht."
+    "trackNote": "Diese Dawarich-Standorte belegen keinen Bodenkontakt. Sie können von Überflügen oder ungenauen Positionen stammen und erhöhen weder Länderzahlen noch Aufenthaltstage. Ein bestätigter Ortsbesuch oder Reiseeintrag wird unabhängig davon gezählt."
   },
   "continents": {
     "title": "Kontinente",
@@ -119,5 +119,10 @@
     "text": "Zählweise geändert — vorher {{before}} Länder, jetzt {{after}}.",
     "what": "Was zählt?",
     "dismiss": "Verstanden"
+  },
+  "unconfirmed": {
+    "title": "Unbestätigte Standorttage",
+    "explanation": "Diese Dawarich-Standorte belegen keinen Bodenkontakt. Sie können von Überflügen oder ungenauen Positionen stammen und erhöhen weder Länderzahlen noch Aufenthaltstage. Ein bestätigter Ortsbesuch oder Reiseeintrag wird unabhängig davon gezählt.",
+    "observation": "Dawarich · Standorttage: {{days}} · Punkte: {{points}}"
   }
 }

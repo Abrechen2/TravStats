@@ -61,24 +61,13 @@
  *      independent tracker. The tier is a hint, never a verdict, so nothing may
  *      disappear from the list on the strength of one.
  *
- * 7. MEASURED PRESENCE IS EVIDENCE TOO (spec §8). Rules 5 and 6 count curated
- *    EVENTS — a flight, a cruise, a house — and driving across a border is not
- *    one, which is why Estonia and Lithuania were absent from this passport
- *    while Latvia survived only because there happened to be a house in it.
- *    Location history, reduced to country-days and nothing else, is the
- *    evidence class that answers it, and it brings the `transited` rung with
- *    it: no other source can populate one.
+ * 7. LOCATION OBSERVATIONS ARE UNCONFIRMED (forgejo#299). Country-days
+ *    do not distinguish ground travel from overflights or erroneous positions.
+ *    They are returned separately, never folded into country evidence, days
+ *    present or visit years. Curated roadtrip stations still prove road travel.
  *
- *    It also brings the obligation §8.3 puts on it. The payload cannot say
- *    whether a fix was measured by GPS or estimated from a photograph, so
- *    nothing here claims to know — `pointCount` is stored as a number and left
- *    to be read. A track proves DAYS, never hours: it bounds no departure.
- *
- * What the FLIGHTS prove — the spells on the ground, their tiers, their days and
- * their measured durations — lives in `./flightEvidence.ts`, and what the
- * TRACKS prove in `./trackEvidence.ts`. Both moved out when this file crossed
- * the 800-line limit; the seam is that this file assembles a card around
- * answers it does not compute.
+ * Flight evidence lives in `./flightEvidence.ts`; unconfirmed location summaries
+ * in `./trackEvidence.ts`. This file assembles the card around those answers.
  */
 
 import {
@@ -101,7 +90,11 @@ import {
   type EvidenceKind,
 } from "../../shared/countryEvidence";
 import { FLOWN, flightDay, flightEvidence, isoDayOf, type PassportFlight } from "./flightEvidence";
-import { trackEvidence, type CountryDayRow } from "./trackEvidence";
+import {
+  unconfirmedTrackCountries,
+  type CountryDayRow,
+  type UnconfirmedTrackCountry,
+} from "./trackEvidence";
 import { localDay } from "../../shared/time/instant";
 import { roadtripEvidence, type PassportRoadtripStation } from "./roadtripEvidence";
 import { railEvidence, type RailEnd } from "./railEvidence";
@@ -350,6 +343,8 @@ export interface Passport {
     byTier: Record<CountryTier, number>;
   };
   countries: PassportCountry[];
+  /** Raw location history, excluded from all country and presence figures. */
+  unconfirmedCountries: UnconfirmedTrackCountry[];
   continents: Array<{ continent: Continent; visited: number; total: number }>;
   /**
    * How the rows are drawn. Presentation only: summary.continentsVisited counts
@@ -413,16 +408,7 @@ export function buildPassport(
    * stay VISIBLE to be corrected.
    */
   threshold: CountryTier = PASSPORT_COUNTRY_THRESHOLD,
-  /**
-   * MEASURED presence — the stored country-days of spec §8, which is the one
-   * evidence class that can raise a country nobody logged. Everything else in
-   * this function is a curated event, and driving across a border is not one.
-   *
-   * Last in the list and defaulted, like every parameter before it, so an
-   * account with no location history — which is most of them — reaches exactly
-   * the same code it did before. What a track proves lives in
-   * `./trackEvidence.ts`; nothing about it is decided here.
-   */
+  /** Stored location observations; never proof of ground presence (forgejo#299). */
   trackDays: readonly CountryDayRow[] = [],
   /**
    * Stations of roadtrips that have started, each already reduced to its
@@ -640,13 +626,7 @@ export function buildPassport(
       at: visit.at,
     })),
     ...lodgingInputs,
-    // Measured presence. It creates its OWN rows for countries no curated
-    // record mentions — the fold loop below calls `addNonFlight` for any code
-    // `byCountry` does not already hold — which is the entire point: Estonia
-    // and Lithuania exist in this account only because somebody drove there.
-    ...trackEvidence(trackDays),
-    // Like a track it raises its own rows through the loop below — a country
-    // reached only by campervan has no other record to be found under.
+    // Curated roadtrip stations attest ground travel; raw location points do not.
     ...roadtripEvidence(roadtripStations),
     ...railEvidence(railEnds),
     ...busEvidence(busEnds),
@@ -782,6 +762,7 @@ export function buildPassport(
       },
     },
     countries,
+    unconfirmedCountries: unconfirmedTrackCountries(trackDays, now),
     continents: (Object.keys(totals) as Continent[])
       .map((continent) => ({
         continent,

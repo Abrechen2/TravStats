@@ -1,13 +1,3 @@
-/**
- * A country nobody logged — spec §8, and the reason the `transited` rung exists.
- *
- * TravStats stores curated events: a flight, a cruise, a house. Driving across
- * a border is none of those, which is why Estonia and Lithuania were absent
- * from the owner's passport while Latvia survived only because there happened
- * to be a house in it. What these pin is that measured presence raises a
- * country, that it raises it at the RIGHT rung, and that it never overrules a
- * record that says something stronger.
- */
 import { buildPassport, type PassportFlight, type PassportLodging } from "../passport";
 import type { CountryDayRow } from "../trackEvidence";
 
@@ -49,146 +39,82 @@ const house = (code: string): PassportLodging => ({ isoCountryCode: code, stays:
 const withTracks = (rows: CountryDayRow[], lodgings: PassportLodging[] = []) =>
   buildPassport([], AIRPORTS, [], NOW, [], [], lodgings, undefined, rows);
 
-describe("measured presence raises a country nobody logged", () => {
-  it("puts a country in the passport on track evidence alone", () => {
+describe("location observations stay outside country evidence (forgejo#299)", () => {
+  it("does not count any country, continent, visit day, year or stamp from tracks alone", () => {
     const p = withTracks([day("2024-06-01", "LV"), day("2024-06-01", "EE")]);
-
-    const ee = p.countries.find((c) => c.code === "EE");
-    expect(ee).toBeDefined();
-    expect(ee?.kinds).toEqual(["track"]);
-    expect(ee?.evidence).toBe("track");
-    expect(ee?.daysPresent).toBe(1);
-  });
-
-  it("counts a road crossing in the headline, at the default threshold", () => {
-    // The Baltic question, answered. §3.4c: only `connection` is excluded by
-    // default, so driving through counts — folding it into `connection` would
-    // have answered the owner's question wrongly.
-    const p = withTracks([day("2024-06-01", "LV"), day("2024-06-01", "EE")]);
-
-    expect(p.countries.find((c) => c.code === "EE")?.tier).toBe("transited");
-    expect(p.countries.find((c) => c.code === "EE")?.counted).toBe(true);
-    expect(p.summary.byTier.transited).toBe(2);
-    expect(p.summary.countries).toBe(2);
-  });
-
-  it("adds no airport, no entry and no stamp", () => {
-    // A track is not a flight. Same honesty a house already gets.
-    const p = withTracks([day("2024-06-01", "EE")]);
-
-    expect(p.summary.airports).toBe(0);
-    expect(p.summary.entries).toBe(0);
+    expect(p.countries).toEqual([]);
+    expect(p.summary).toMatchObject({
+      countries: 0,
+      countriesTotal: 0,
+      airports: 0,
+      entries: 0,
+      continentsVisited: 0,
+      firstStampYear: null,
+      newThisYear: 0,
+    });
     expect(p.stamps).toEqual([]);
-    expect(p.countries.find((c) => c.code === "EE")?.groundTime).toEqual({
-      state: "notApplicable",
+    expect(p.unconfirmedCountries.map((r) => r.code)).toEqual(["EE", "LV"]);
+  });
+
+  it("keeps an undated house counted without adding track days or years to it", () => {
+    const p = withTracks([day("2024-06-01", "LV"), day("2024-06-01", "EE")], [house("LV")]);
+    expect(p.summary.countries).toBe(1);
+    expect(p.countries[0]).toMatchObject({
+      code: "LV",
+      tier: "slept",
+      kinds: ["lodging"],
+      daysPresent: 0,
+      firstYear: null,
+      lastYear: null,
+      hasUndatedEvidence: true,
+    });
+    expect(p.unconfirmedCountries).toHaveLength(2);
+  });
+
+  it.each([0, 29, 30])(
+    "does not promote a connection from %s airport points",
+    (airportPointCount) => {
+      const p = buildPassport(
+        [flight("MUC", "DOH", "2024-03-01"), flight("DOH", "SIN", "2024-03-01")],
+        AIRPORTS,
+        [],
+        NOW,
+        [],
+        [],
+        [],
+        undefined,
+        [day("2024-03-01", "QA", { pointCount: 30, airportPointCount })]
+      );
+      expect(p.countries.find((c) => c.code === "QA")).toMatchObject({
+        tier: "connection",
+        counted: false,
+        kinds: ["flight"],
+      });
+      expect(p.summary.countriesTotal).toBe(3);
+      expect(p.unconfirmedCountries[0].code).toBe("QA");
+    }
+  );
+
+  it("a confirmed city visit still promotes a connection", () => {
+    const p = buildPassport(
+      [flight("MUC", "DOH", "2024-03-01"), flight("DOH", "SIN", "2024-03-01")],
+      AIRPORTS,
+      [],
+      NOW,
+      [],
+      [{ isoCountryCode: "QA", at: new Date("2024-03-01T12:00:00Z") }],
+      [],
+      undefined,
+      [day("2024-03-01", "QA")]
+    );
+    expect(p.countries.find((c) => c.code === "QA")).toMatchObject({
+      tier: "visited",
+      counted: true,
+      kinds: ["flight", "place"],
     });
   });
 
-  it("counts the distinct days it recorded, and never the gap between them", () => {
-    const p = withTracks([
-      day("2024-06-01", "EE"),
-      day("2024-06-02", "EE"),
-      day("2024-08-01", "EE"),
-    ]);
-
-    expect(p.countries.find((c) => c.code === "EE")?.daysPresent).toBe(3);
-  });
-});
-
-describe("a track never overrules a stronger record", () => {
-  it("leaves a country proved by a house at `slept`", () => {
-    // Strongest wins, and a house is the strongest proof there is. A single
-    // track day must not pull Latvia down to `transited`.
-    const p = withTracks([day("2024-06-01", "LV"), day("2024-06-01", "EE")], [house("LV")]);
-
-    const lv = p.countries.find((c) => c.code === "LV");
-    expect(lv?.tier).toBe("slept");
-    expect(lv?.kinds).toEqual(["lodging", "track"]);
-    // The LABEL stays the record a reader can open. `track` takes the bottom
-    // rung of `EVIDENCE_RANK` precisely so nothing already correct is
-    // relabelled when location history arrives.
-    expect(lv?.evidence).toBe("lodging");
-  });
-
-  it("does not let a connection's own GPS trail promote it", () => {
-    // §8.2 end to end: MUC → DOH → SIN is a connection, and the points in
-    // Qatar all sat at the airport it flew through. The passport must still
-    // read Qatar as a connection, and still leave it out of the headline.
-    const p = buildPassport(
-      [flight("MUC", "DOH", "2024-03-01"), flight("DOH", "SIN", "2024-03-01")],
-      AIRPORTS,
-      [],
-      NOW,
-      [],
-      [],
-      [],
-      undefined,
-      [day("2024-03-01", "QA", { pointCount: 30, airportPointCount: 30 })]
-    );
-
-    const qa = p.countries.find((c) => c.code === "QA");
-    expect(qa?.tier).toBe("connection");
-    expect(qa?.counted).toBe(false);
-    // …and it is still in the list, which is the whole point of `counted`.
-    expect(p.summary.countriesTotal).toBe(3);
-  });
-
-  it("promotes the same connection once the traveller left the airport", () => {
-    // One fix in the city is the difference between "changed planes" and
-    // "spent the day in Doha", and it is the only difference the data holds.
-    const p = buildPassport(
-      [flight("MUC", "DOH", "2024-03-01"), flight("DOH", "SIN", "2024-03-01")],
-      AIRPORTS,
-      [],
-      NOW,
-      [],
-      [],
-      [],
-      undefined,
-      [day("2024-03-01", "QA", { pointCount: 30, airportPointCount: 29 })]
-    );
-
-    const qa = p.countries.find((c) => c.code === "QA");
-    // The day is shared with Germany and Singapore in reality, but the track
-    // recorded only Qatar — so it was a day this country had to itself.
-    expect(qa?.tier).toBe("visited");
-    expect(qa?.counted).toBe(true);
-  });
-});
-
-describe("the threshold still moves nothing but the headline", () => {
-  it("keeps every track country in the list at the strictest setting", () => {
-    const rows = [day("2024-06-01", "LV"), day("2024-06-01", "EE")];
-    const strict = buildPassport([], AIRPORTS, [], NOW, [], [], [], "slept", rows);
-
-    expect(strict.summary.countriesTotal).toBe(2);
-    expect(strict.summary.countries).toBe(0);
-    expect(strict.countries.every((c) => c.counted === false)).toBe(true);
-  });
-});
-
-/**
- * AUD-086. The fold that turns evidence into passport rows only ever read
- * `firstDate`, and only when the row CREATED the country's accumulator — so a
- * country that already had a row got no year update from its evidence at all.
- * `countryDetail` has always extended by both ends, which is why the two pages
- * disagreed about the same account.
- */
-describe("evidence widens a country's years by BOTH of its ends", () => {
-  it("spans from the first track day to the last", () => {
-    const p = withTracks([day("2020-06-01", "DE"), day("2025-06-01", "DE")]);
-
-    const de = p.countries.find((c) => c.code === "DE");
-    expect(de?.daysPresent).toBe(2);
-    expect(de?.firstYear).toBe(2020);
-    // Read 2020 before the fix: the last end was never looked at.
-    expect(de?.lastYear).toBe(2025);
-  });
-
-  it("does not collapse to a single year when another record lands between", () => {
-    // Codex's mixed case: a place visit in 2023 alongside the two track days.
-    // The passport reported 2023-2023 while the detail page still read
-    // 2020-2025 — the visit's year replaced the span instead of sitting in it.
+  it("does not widen a dated visit using unrelated observations", () => {
     const p = buildPassport(
       [],
       AIRPORTS,
@@ -200,9 +126,10 @@ describe("evidence widens a country's years by BOTH of its ends", () => {
       undefined,
       [day("2020-06-01", "DE"), day("2025-06-01", "DE")]
     );
-
-    const de = p.countries.find((c) => c.code === "DE");
-    expect(de?.firstYear).toBe(2020);
-    expect(de?.lastYear).toBe(2025);
+    expect(p.countries[0]).toMatchObject({ firstYear: 2023, lastYear: 2023, daysPresent: 1 });
+    expect(p.unconfirmedCountries[0]).toMatchObject({
+      firstDate: "2020-06-01",
+      lastDate: "2025-06-01",
+    });
   });
 });

@@ -1,6 +1,10 @@
 /**
  * What proves you were in a country — one rule, one home.
  *
+ * forgejo#299 (2026-10-13): raw country-day tracks no longer enter this fold.
+ * Their old tier rules below are historical; observations are now returned
+ * separately by the passport until ground presence can actually be proved.
+ *
  * Design: `docs/superpowers/specs/2026-09-02-country-counting-design.md`.
  * Written after the owner looked at his own figures and said the count was too
  * high. It was too high AND too low at once, which is why it looked plausible:
