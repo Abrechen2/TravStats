@@ -37,7 +37,7 @@ describe("GET /api/v1/evidence/metric/... — what the domain measures do when t
   let sakuraStay: string;
   let casaStay: string;
 
-  interface EvidenceBody {
+  type EvidenceBody = import("../../schemas/evidence").EvidenceResponse & {
     measure: { value: number | null; unit: string; aggregation: string };
     entries: Array<{
       id: string;
@@ -46,7 +46,7 @@ describe("GET /api/v1/evidence/metric/... — what the domain measures do when t
     }>;
     omitted: { count: number; contribution?: number; credits?: number };
     unattributed: Array<{ count: number; reason: string }>;
-  }
+  };
 
   const day = (iso: string): Date => new Date(`${iso}T00:00:00Z`);
 

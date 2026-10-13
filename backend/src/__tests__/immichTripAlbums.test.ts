@@ -5,13 +5,44 @@ import request from "supertest";
 const resolveTrip = jest.fn(async () => ({ id: "trip-1" }));
 jest.mock("../routes/trips", () => ({ resolveTrip }));
 
-const findManyLinks = jest.fn();
-const findFirstLink = jest.fn();
-const createManyLinks = jest.fn();
-const deleteLink = jest.fn();
-const updateManyPhotos = jest.fn();
-const findManyPhotos = jest.fn();
-const upsertJob = jest.fn();
+const findManyLinks =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.TripImmichAlbumFindManyArgs
+    ) => Promise<Partial<import("../generated/prisma/client").TripImmichAlbum>[]>
+  >();
+const findFirstLink =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.TripImmichAlbumFindFirstArgs
+    ) => Promise<Partial<import("../generated/prisma/client").TripImmichAlbum> | null>
+  >();
+const createManyLinks =
+  jest.fn<
+    (args: import("../prisma").Prisma.TripImmichAlbumCreateManyArgs) => Promise<{ count: number }>
+  >();
+const deleteLink =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.TripImmichAlbumDeleteArgs
+    ) => Promise<Partial<import("../generated/prisma/client").TripImmichAlbum>>
+  >();
+const updateManyPhotos =
+  jest.fn<
+    (args: import("../prisma").Prisma.TripPhotoUpdateManyArgs) => Promise<{ count: number }>
+  >();
+const findManyPhotos =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.TripPhotoFindManyArgs
+    ) => Promise<Partial<import("../generated/prisma/client").TripPhoto>[]>
+  >();
+const upsertJob =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.ImmichImportJobUpsertArgs
+    ) => Promise<Partial<import("../generated/prisma/client").ImmichImportJob>>
+  >();
 jest.mock("../db", () => ({
   prisma: {
     tripImmichAlbum: {
@@ -21,30 +52,64 @@ jest.mock("../db", () => ({
       delete: deleteLink,
     },
     tripPhoto: { findMany: findManyPhotos, updateMany: updateManyPhotos },
-    trip: { findUnique: jest.fn(), update: jest.fn() },
+    trip: {
+      findUnique:
+        jest.fn<
+          (
+            args: import("../prisma").Prisma.TripFindUniqueArgs
+          ) => Promise<Partial<import("../generated/prisma/client").Trip> | null>
+        >(),
+      update:
+        jest.fn<
+          (
+            args: import("../prisma").Prisma.TripUpdateArgs
+          ) => Promise<Partial<import("../generated/prisma/client").Trip>>
+        >(),
+    },
     immichImportJob: { upsert: upsertJob },
-    adminSettings: { findFirst: jest.fn() },
+    adminSettings: {
+      findFirst:
+        jest.fn<
+          (
+            args: import("../prisma").Prisma.AdminSettingsFindFirstArgs
+          ) => Promise<Partial<import("../generated/prisma/client").AdminSettings> | null>
+        >(),
+    },
   },
 }));
 
-const listAlbums = jest.fn();
-const listAlbumAssets = jest.fn();
+const listAlbums = jest.fn<import("../services/immich/immichClient").ImmichClient["listAlbums"]>();
+const listAlbumAssets =
+  jest.fn<import("../services/immich/immichClient").ImmichClient["listAlbumAssets"]>();
 jest.mock("../services/immich/immichClient", () => ({
   createImmichClient: () => ({ listAlbums, listAlbumAssets }),
 }));
 
-const getImmichConnection = jest.fn();
-const getImmichDefaultMode = jest.fn();
+const getImmichConnection =
+  jest.fn<typeof import("../services/immich/immichResolver").getImmichConnection>();
+const getImmichDefaultMode =
+  jest.fn<typeof import("../services/immich/immichResolver").getImmichDefaultMode>();
 jest.mock("../services/immich/immichResolver", () => ({
   getImmichConnection,
   getImmichDefaultMode,
 }));
 
-const startAlbumImport = jest.fn();
-const deleteImportedPhotoFiles = jest.fn();
-const estimateAlbumImport = jest.fn();
-const getImportJob = jest.fn();
-const isImportInFlight = jest.fn();
+const startAlbumImport =
+  jest.fn<typeof import("../services/immich/immichImport").startAlbumImport>();
+const deleteImportedPhotoFiles =
+  jest.fn<typeof import("../services/immich/immichImport").deleteImportedPhotoFiles>();
+const estimateAlbumImport =
+  jest.fn<typeof import("../services/immich/immichImport").estimateAlbumImport>();
+const getImportJob =
+  jest.fn<
+    () => Promise<Partial<
+      NonNullable<
+        Awaited<ReturnType<typeof import("../services/immich/immichImport").getImportJob>>
+      >
+    > | null>
+  >();
+const isImportInFlight =
+  jest.fn<typeof import("../services/immich/immichImport").isImportInFlight>();
 jest.mock("../services/immich/immichImport", () => ({
   startAlbumImport,
   deleteImportedPhotoFiles,
@@ -103,7 +168,7 @@ beforeEach(() => {
   getImmichDefaultMode.mockResolvedValue("link");
   findManyLinks.mockResolvedValue([]);
   isImportInFlight.mockReturnValue(false);
-  upsertJob.mockResolvedValue(undefined);
+  upsertJob.mockResolvedValue({});
 });
 
 describe("GET /trips/:id/immich/albums", () => {
@@ -299,7 +364,12 @@ describe("DELETE /trips/:id/immich/albums/:linkId", () => {
       mode: "import",
     });
     const { prisma } = jest.requireMock("../db") as {
-      prisma: { trip: { findUnique: jest.Mock; update: jest.Mock } };
+      prisma: {
+        trip: {
+          findUnique: jest.Mock<() => Promise<{ coverImageUrl: string } | null>>;
+          update: jest.Mock;
+        };
+      };
     };
     prisma.trip.findUnique.mockResolvedValue(null);
   });
@@ -362,7 +432,12 @@ describe("DELETE /trips/:id/immich/albums/:linkId", () => {
       mode: "link",
     });
     const { prisma } = jest.requireMock("../db") as {
-      prisma: { trip: { findUnique: jest.Mock; update: jest.Mock } };
+      prisma: {
+        trip: {
+          findUnique: jest.Mock<() => Promise<{ coverImageUrl: string } | null>>;
+          update: jest.Mock;
+        };
+      };
     };
     prisma.trip.findUnique.mockResolvedValue({
       coverImageUrl: "/api/v1/trips/trip-1/immich/albums/link-2/assets/x/file?size=preview",
@@ -375,7 +450,12 @@ describe("DELETE /trips/:id/immich/albums/:linkId", () => {
 
   it("clears the trip cover when the unlinked album provided it", async () => {
     const { prisma } = jest.requireMock("../db") as {
-      prisma: { trip: { findUnique: jest.Mock; update: jest.Mock } };
+      prisma: {
+        trip: {
+          findUnique: jest.Mock<() => Promise<{ coverImageUrl: string } | null>>;
+          update: jest.Mock;
+        };
+      };
     };
     prisma.trip.findUnique.mockResolvedValue({
       coverImageUrl: "/api/v1/trips/trip-1/immich/albums/link-1/assets/x/file?size=preview",
@@ -401,7 +481,7 @@ describe("GET /trips/:id/immich/albums/:linkId/assets", () => {
     listAlbumAssets.mockResolvedValue([
       {
         id: "p1",
-        type: "IMAGE",
+        type: "IMAGE" as const,
         fileCreatedAt: "2026-05-01T00:00:00.000Z",
         originalFileName: "p1.jpg",
         mimeType: "image/jpeg",
@@ -435,7 +515,7 @@ describe("GET /trips/:id/immich/albums/:linkId/assets", () => {
     });
     const asset = (id: string, takenAt: string) => ({
       id,
-      type: "IMAGE",
+      type: "IMAGE" as const,
       fileCreatedAt: takenAt,
       originalFileName: `${id}.jpg`,
       mimeType: "image/jpeg",

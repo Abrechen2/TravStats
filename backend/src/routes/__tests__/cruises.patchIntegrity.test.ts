@@ -60,7 +60,7 @@ describe("a cruise PATCH is held to the same rules as a POST", () => {
     return cruise.id;
   }
 
-  const patch = (id: string, body: unknown) =>
+  const patch = (id: string, body: object | string) =>
     request(app).patch(`/api/v1/cruises/${id}`).set("Cookie", cookie).send(body);
 
   describe("AUD-088 — the dates it would END UP with have to make sense", () => {

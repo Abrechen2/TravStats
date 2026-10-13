@@ -1,18 +1,19 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
-const mockFindMany = jest.fn();
+const mockFindMany = jest.fn<() => Promise<FlightFixture[]>>();
 jest.mock("../../../db", () => ({
   prisma: { flight: { findMany: mockFindMany } },
 }));
 
-const mockSendFlightReminder = jest.fn();
+const mockSendFlightReminder = jest.fn<typeof import("../../emailService").sendFlightReminder>();
 jest.mock("../../emailService", () => ({
   sendFlightReminder: mockSendFlightReminder,
 }));
 
 jest.mock("../../airportCache", () => ({ getCachedAirport: jest.fn() }));
 
-const mockNotifyReminder = jest.fn();
+const mockNotifyReminder =
+  jest.fn<typeof import("../../notifications/dispatcher").notifyReminder>();
 jest.mock("../../notifications/dispatcher", () => ({
   notifyReminder: mockNotifyReminder,
 }));
@@ -28,6 +29,14 @@ type UserFixture = {
   notifyBefore24h: boolean;
   notifyBefore2h: boolean;
   settings: { data: unknown; enabledDomains: string[] } | null;
+};
+
+type FlightFixture = Omit<ReturnType<typeof makeFlight>, "tripId"> & {
+  tripId: string | null;
+  terminal?: string | null;
+  gate?: string | null;
+  seatClass?: string | null;
+  bookingReference?: string | null;
 };
 
 function makeFlight(user: Partial<UserFixture> = {}, hoursAhead = 24, id = "flight-a") {
@@ -73,7 +82,7 @@ function makeFlight(user: Partial<UserFixture> = {}, hoursAhead = 24, id = "flig
 }
 
 /** The cron queries once per window: 24h first, then 2h. */
-function stage(first: unknown[], second: unknown[] = []): void {
+function stage(first: FlightFixture[], second: FlightFixture[] = []): void {
   mockFindMany.mockResolvedValueOnce(first);
   mockFindMany.mockResolvedValueOnce(second);
 }
@@ -96,11 +105,7 @@ describe("checkFlightReminders - push", () => {
     await run();
 
     expect(mockNotifyReminder).toHaveBeenCalledTimes(1);
-    const [userId, flight, key] = mockNotifyReminder.mock.calls[0] as [
-      string,
-      { id: string },
-      string,
-    ];
+    const [userId, flight, key] = mockNotifyReminder.mock.calls[0];
     expect(userId).toBe("user-1");
     expect(flight.id).toBe("flight-a");
     expect(key).toBe("24h");
@@ -111,9 +116,7 @@ describe("checkFlightReminders - push", () => {
     stage([{ ...makeFlight({ notificationEmail: null }), tripId: "trip-9" }]);
     await run();
 
-    expect((mockNotifyReminder.mock.calls[0][1] as { tripId: string | null }).tripId).toBe(
-      "trip-9"
-    );
+    expect(mockNotifyReminder.mock.calls[0][1].tripId).toBe("trip-9");
   });
 
   it("pushes the 2h reminder with key 2h", async () => {
@@ -173,7 +176,7 @@ describe("checkFlightReminders - push", () => {
     await run();
 
     expect(mockNotifyReminder).toHaveBeenCalledTimes(1);
-    expect((mockNotifyReminder.mock.calls[0][1] as { id: string }).id).toBe("flight-b");
+    expect(mockNotifyReminder.mock.calls[0][1].id).toBe("flight-b");
   });
 
   it("keeps trying the push on the next run (the dispatcher dedupes) but e-mails only once", async () => {
@@ -208,7 +211,7 @@ describe("checkFlightReminders - push", () => {
     ]);
     await run();
 
-    const [flight] = mockSendFlightReminder.mock.calls[0] as [Record<string, unknown>];
+    const [flight] = mockSendFlightReminder.mock.calls[0];
     expect(flight).toMatchObject({
       terminal: "2",
       gate: "K24",

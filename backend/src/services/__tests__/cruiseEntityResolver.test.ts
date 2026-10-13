@@ -40,6 +40,7 @@ function baseParsedCruise(overrides: Partial<ParsedCruise> = {}): ParsedCruise {
     price: 2499,
     currency: "EUR",
     stops: [],
+    flights: [],
     parserTemplate: "ollama-cruise",
     parserConfidence: 80,
     missing: [],

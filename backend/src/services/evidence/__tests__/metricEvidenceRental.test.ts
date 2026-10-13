@@ -76,7 +76,7 @@ describe("rental evidence measures", () => {
 
     const oneWay = await resolve("rentalOneWayCount");
     expect(oneWay.measure.value).toBe(tab.oneWay);
-    expect(oneWay.entries.map((e) => e.title.text)).toEqual([
+    expect(oneWay.entries.map((e) => ("text" in e.title ? e.title.text : undefined))).toEqual([
       "Sixt · Lisboa Aeroporto → Porto Aeroporto",
     ]);
 

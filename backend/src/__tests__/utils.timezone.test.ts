@@ -10,7 +10,7 @@
  */
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
-const mockGetCachedAirport = jest.fn();
+const mockGetCachedAirport = jest.fn<() => Promise<{ iata: string; timezone: string | null }>>();
 jest.mock("../services/airportCache", () => ({
   getCachedAirport: mockGetCachedAirport,
 }));

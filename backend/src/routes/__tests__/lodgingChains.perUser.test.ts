@@ -186,6 +186,7 @@ describe("hotel chains are per user, the catalogue is shared", () => {
         {
           sourceRowIndex: 0,
           action: "create",
+          stay: null,
           lodging: { name: `A Import Hotel ${stamp}`, chainName: importName, createChain: true },
         },
       ]);
@@ -196,7 +197,11 @@ describe("hotel chains are per user, the catalogue is shared", () => {
 
     it("B's import does not match A's chain: flagged unknown, committed without it", async () => {
       const preview = await buildLodgingPreviewRows(bId, [
-        { lodging: { name: `B Import Hotel ${stamp}`, chainName: importName } },
+        {
+          sourceRowIndex: 0,
+          stay: null,
+          lodging: { name: `B Import Hotel ${stamp}`, chainName: importName },
+        },
       ]);
       expect(preview.rows[0].flags).toContain("unknown_chain");
 
@@ -204,6 +209,7 @@ describe("hotel chains are per user, the catalogue is shared", () => {
         {
           sourceRowIndex: 0,
           action: "create",
+          stay: null,
           lodging: { name: `B Import Hotel ${stamp}`, chainName: importName },
         },
       ]);
@@ -218,6 +224,7 @@ describe("hotel chains are per user, the catalogue is shared", () => {
         {
           sourceRowIndex: 0,
           action: "create",
+          stay: null,
           lodging: { name: `B Catalogue Hotel ${stamp}`, chainName: catalogueName.toUpperCase() },
         },
       ]);

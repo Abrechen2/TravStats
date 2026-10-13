@@ -295,7 +295,7 @@ describe("deriveRailStatus", () => {
 
 describe("tripStatusBounds — rail (owner decision 6, 2026-09-25)", () => {
   const ride = (dep: Date, arr: Date | null) => ({ departureTime: dep, arrivalTime: arr });
-  const none = { flights: [], cruises: [], ownStartDate: null, ownEndDate: null };
+  const none = { flights: [], cruises: [], ownStartDate: null, ownEndDate: null, zone: "UTC" };
 
   it("spans a trip that holds only a train ride", () => {
     const bounds = tripStatusBounds({ ...none, railJourneys: [ride(past(3), past(1))] });

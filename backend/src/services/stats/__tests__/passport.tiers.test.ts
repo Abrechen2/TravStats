@@ -1,4 +1,5 @@
-import type { CountableStay } from "../../../shared/countryEvidence";
+jest.mock("../../loggingConfig", () => ({ isDebugEnabled: () => false }));
+
 import { buildPassport, type PassportFlight, type PassportLodging } from "../passport";
 
 /**
@@ -66,7 +67,7 @@ const house = (code: string | null, stays: PassportLodging["stays"] = []): Passp
  * every case that is not about cancellation reads exactly as it did before the
  * status started travelling.
  */
-const stay = (checkOut: string | null, status = "completed"): CountableStay => ({
+const stay = (checkOut: string | null, status = "completed"): PassportLodging["stays"][number] => ({
   status,
   checkIn: null,
   checkOut: checkOut === null ? null : new Date(`${checkOut}T00:00:00Z`),
@@ -515,7 +516,11 @@ describe("ports and places keep working, mapped onto the tiers", () => {
  */
 describe("the evidence beside the tier", () => {
   /** A stay with both ends, which the fixture above deliberately does not have. */
-  const dated = (from: string, to: string, status = "completed"): CountableStay => ({
+  const dated = (
+    from: string,
+    to: string,
+    status = "completed"
+  ): PassportLodging["stays"][number] => ({
     status,
     checkIn: new Date(`${from}T00:00:00Z`),
     checkOut: new Date(`${to}T00:00:00Z`),

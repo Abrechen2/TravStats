@@ -57,7 +57,7 @@ describe("spreadsheet import — roadtrip costs", () => {
     const hamburg = "aaaaaaaa-0000-4000-8000-000000000001";
     const hirtshals = "aaaaaaaa-0000-4000-8000-000000000002";
     const ref = `Fjorde 2026 [${sourceId}]`;
-    const sheets = [
+    const sheets: Parameters<typeof importSheets>[0] = [
       { key: "roadtrips", rows: [{ id: sourceId, name: "Fjorde 2026" }] },
       {
         key: "roadtripStations",

@@ -1,3 +1,4 @@
+import { Prisma } from "../../prisma";
 import request from "supertest";
 import app from "../../index";
 import { prisma } from "../../db";
@@ -124,7 +125,13 @@ describe("Dawarich stay review (forgejo#294)", () => {
       .set("Cookie", cookie)
       .send(review);
     const second = await prisma.dawarichStay.create({
-      data: { ...row, id: undefined, fingerprint: "repeat-visit", status: "pending" },
+      data: {
+        ...row,
+        evidence: row.evidence ?? Prisma.JsonNull,
+        id: undefined,
+        fingerprint: "repeat-visit",
+        status: "pending",
+      },
     });
     const accepted = await api()
       .post(`/api/v1/dawarich-stays/${second.id}/accept`)
@@ -132,7 +139,13 @@ describe("Dawarich stay review (forgejo#294)", () => {
       .send(review);
     expect(accepted.body.data.visitId).toBe(first.body.data.visitId);
     const third = await prisma.dawarichStay.create({
-      data: { ...row, id: undefined, fingerprint: "later-visit", status: "pending" },
+      data: {
+        ...row,
+        evidence: row.evidence ?? Prisma.JsonNull,
+        id: undefined,
+        fingerprint: "later-visit",
+        status: "pending",
+      },
     });
     expect(
       (

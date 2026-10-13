@@ -34,7 +34,7 @@ describe("lookupFlightWithHistorical — nothing configured (#232)", () => {
   });
 
   it("reports 'not_configured' for a dateless ad-hoc lookup too", async () => {
-    const result = await lookupFlightWithHistorical("LH400");
+    const result = await lookupFlightWithHistorical("LH400", undefined);
     expect(result.unavailableReason).toBe("not_configured");
   });
 

@@ -3,14 +3,14 @@ import type { TimeValue } from "../shared/time/wire";
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
-const mockSendMail = jest.fn();
+const mockSendMail = jest.fn<(mail: import("nodemailer").SendMailOptions) => Promise<void>>();
 const mockCreateTransport = jest.fn(() => ({ sendMail: mockSendMail }));
 jest.mock("nodemailer", () => ({
   __esModule: true,
   default: { createTransport: mockCreateTransport },
 }));
 
-const mockSmtpConfigFindUnique = jest.fn();
+const mockSmtpConfigFindUnique = jest.fn<() => Promise<typeof SMTP_CONFIG | null>>();
 jest.mock("../db", () => ({
   prisma: { smtpConfig: { findUnique: mockSmtpConfigFindUnique } },
 }));
@@ -22,7 +22,17 @@ jest.mock("../utils/encryption", () => ({
   encryptApiKey: (v: string) => v,
 }));
 
-const mockGetInstanceSettings = jest.fn();
+const mockGetInstanceSettings =
+  jest.fn<
+    () => Promise<
+      Pick<
+        Awaited<
+          ReturnType<typeof import("../services/instanceSettingsService").getInstanceSettings>
+        >,
+        "frontendUrl"
+      >
+    >
+  >();
 jest.mock("../services/instanceSettingsService", () => ({
   getInstanceSettings: mockGetInstanceSettings,
 }));

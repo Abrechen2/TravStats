@@ -38,7 +38,7 @@ describe("applying a flight suggestion", () => {
   const DEP = new Date("2025-06-01T08:00:00Z");
   const ARR = new Date("2025-06-01T10:00:00Z");
 
-  async function makeFlight(over: Record<string, unknown> = {}) {
+  async function makeFlight(over: import("../prisma").Prisma.InputJsonObject = {}) {
     return prisma.flight.create({
       data: {
         userId,
@@ -62,10 +62,10 @@ describe("applying a flight suggestion", () => {
   async function makeSuggestion(
     flightId: string,
     field: string,
-    oldValue: unknown,
-    newValue: unknown,
-    original: Record<string, unknown>,
-    proposed: Record<string, unknown>
+    oldValue: import("../prisma").Prisma.InputJsonValue | null,
+    newValue: import("../prisma").Prisma.InputJsonValue | null,
+    original: import("../prisma").Prisma.InputJsonObject,
+    proposed: import("../prisma").Prisma.InputJsonObject
   ) {
     return prisma.pendingFlightUpdate.create({
       data: {

@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "rootDir": "..",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "baseUrl": "..",
+    "paths": { "@/*": ["frontend/src/*"] }
+  },
+  "include": ["src/**/*.ts", "../frontend/src/vite-env.d.ts"],
+  "exclude": ["node_modules", "dist"]
+}

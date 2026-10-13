@@ -161,10 +161,10 @@ describe("Pending Update Service", () => {
       const updated = await updatePendingUpdate(pendingUpdateId, userId, editedData);
 
       expect(updated).toBeDefined();
-      expect(updated.status).toBe("edited");
-      expect(updated.editedData).toBeDefined();
-      expect(updated.editedChanges).toBeDefined();
-      expect(updated.editedAt).toBeDefined();
+      expect(updated!.status).toBe("edited");
+      expect(updated!.editedData).toBeDefined();
+      expect(updated!.editedChanges).toBeDefined();
+      expect(updated!.editedAt).toBeDefined();
     });
   });
 

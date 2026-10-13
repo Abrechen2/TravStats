@@ -1,7 +1,8 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
 const checkHealth = jest.fn<() => Promise<{ reachable: true; version: string | null }>>();
-const getPoints = jest.fn();
+const getPoints =
+  jest.fn<ReturnType<typeof import("../dawarichClient").createDawarichClient>["getPoints"]>();
 
 jest.mock("../dawarichClient", () => ({
   createDawarichClient: () => ({ checkHealth, getPoints }),
@@ -17,7 +18,7 @@ beforeEach(() => {
 describe("testDawarichConnection", () => {
   it("reports the server version on success", async () => {
     checkHealth.mockResolvedValue({ reachable: true, version: "1.9.2" });
-    getPoints.mockResolvedValue([]);
+    getPoints.mockResolvedValue({ points: [], truncated: false });
 
     await expect(testDawarichConnection("https://dawarich.lan", "key")).resolves.toEqual({
       success: true,
@@ -28,7 +29,7 @@ describe("testDawarichConnection", () => {
 
   it("omits details when the version header was absent", async () => {
     checkHealth.mockResolvedValue({ reachable: true, version: null });
-    getPoints.mockResolvedValue([]);
+    getPoints.mockResolvedValue({ points: [], truncated: false });
 
     await expect(testDawarichConnection("https://dawarich.lan", "key")).resolves.toEqual({
       success: true,

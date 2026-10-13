@@ -11,7 +11,6 @@
  * which limiter instance each route carries, and twenty real requests would
  * measure the limiter's arithmetic, not the wiring.
  */
-import type { Router } from "express";
 import { flightCreationLimiter, statsLimiter } from "../../middleware/rateLimit";
 import router from "../flights";
 
@@ -20,7 +19,7 @@ interface Layer {
 }
 
 function handlesOf(path: string, method: "get" | "post"): unknown[] {
-  const layer = (router as unknown as Router & { stack: Layer[] }).stack.find(
+  const layer = (router as unknown as { stack: Layer[] }).stack.find(
     (l) => l.route?.path === path && l.route.methods[method]
   );
   if (!layer?.route) throw new Error(`no ${method.toUpperCase()} ${path} on the flights router`);

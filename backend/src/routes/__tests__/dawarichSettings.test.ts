@@ -9,11 +9,36 @@ import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import express from "express";
 import request from "supertest";
 
-const userSettingsFindUnique = jest.fn();
-const userSettingsUpsert = jest.fn();
-const adminSettingsFindFirst = jest.fn();
-const adminSettingsUpdate = jest.fn();
-const adminSettingsCreate = jest.fn();
+const userSettingsFindUnique =
+  jest.fn<
+    (
+      args: import("../../prisma").Prisma.UserSettingsFindUniqueArgs
+    ) => Promise<Partial<import("../../generated/prisma/client").UserSettings> | null>
+  >();
+const userSettingsUpsert =
+  jest.fn<
+    (
+      args: import("../../prisma").Prisma.UserSettingsUpsertArgs
+    ) => Promise<Partial<import("../../generated/prisma/client").UserSettings>>
+  >();
+const adminSettingsFindFirst =
+  jest.fn<
+    (
+      args: import("../../prisma").Prisma.AdminSettingsFindFirstArgs
+    ) => Promise<Partial<import("../../generated/prisma/client").AdminSettings> | null>
+  >();
+const adminSettingsUpdate =
+  jest.fn<
+    (
+      args: import("../../prisma").Prisma.AdminSettingsUpdateArgs
+    ) => Promise<Partial<import("../../generated/prisma/client").AdminSettings>>
+  >();
+const adminSettingsCreate =
+  jest.fn<
+    (
+      args: import("../../prisma").Prisma.AdminSettingsCreateArgs
+    ) => Promise<Partial<import("../../generated/prisma/client").AdminSettings>>
+  >();
 
 jest.mock("../../db", () => ({
   prisma: {
@@ -33,10 +58,12 @@ jest.mock("../../utils/encryption", () => ({
   ),
 }));
 
-const testDawarichConnection = jest.fn();
+const testDawarichConnection =
+  jest.fn<typeof import("../../services/dawarich/dawarichTester").testDawarichConnection>();
 jest.mock("../../services/dawarich/dawarichTester", () => ({ testDawarichConnection }));
 
-const getDawarichConnection = jest.fn();
+const getDawarichConnection =
+  jest.fn<typeof import("../../services/dawarich/dawarichResolver").getDawarichConnection>();
 jest.mock("../../services/dawarich/dawarichResolver", () => ({ getDawarichConnection }));
 
 import dawarichSettingsRouter from "../settings/dawarich";

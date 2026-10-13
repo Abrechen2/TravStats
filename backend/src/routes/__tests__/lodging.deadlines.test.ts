@@ -41,9 +41,9 @@ describe("Lodging stays — booking deadlines (forgejo#285)", () => {
     await prisma.$disconnect();
   });
 
-  const post = (lodgingId: string, body: unknown) =>
+  const post = (lodgingId: string, body: object | string) =>
     request(app).post(`/api/v1/lodging/${lodgingId}/stays`).set("Cookie", cookie).send(body);
-  const patch = (lodgingId: string, stayId: string, body: unknown) =>
+  const patch = (lodgingId: string, stayId: string, body: object | string) =>
     request(app)
       .patch(`/api/v1/lodging/${lodgingId}/stays/${stayId}`)
       .set("Cookie", cookie)

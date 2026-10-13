@@ -33,7 +33,7 @@ describe("flight batch import — trip auto-creation", () => {
       .post("/api/v1/auth/register")
       .send({ username: "auto-trips", password: "password123" })
       .expect(201);
-    cookie = registration.headers["set-cookie"];
+    cookie = [registration.headers["set-cookie"]].flat();
     const user = await prisma.user.findUniqueOrThrow({ where: { username: "auto-trips" } });
     userId = user.id;
   });
@@ -68,7 +68,7 @@ describe("flight batch import — trip auto-creation", () => {
     },
   ];
 
-  const post = (body: unknown) =>
+  const post = (body: object | string) =>
     request(app).post("/api/v1/flights/batch").set("Cookie", cookie).send(body);
 
   it("an auto-created trip carries the date range of its flights", async () => {

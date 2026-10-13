@@ -13,6 +13,24 @@ import { schedulerZone } from "../shared/time/schedulerZone";
 
 let schedulerRunning = false;
 let schedulerTask: ScheduledTask | null = null;
+type UpdateResult = { updatesCreated: number; expiredCount: number };
+let activeUpdate: Promise<UpdateResult> | null = null;
+
+/** Cron and manual requests share one complete run, including cleanup. */
+function runUpdateCheck(): Promise<UpdateResult> {
+  if (activeUpdate) return activeUpdate;
+  // Defer work until after the shared promise is installed, including sync throws.
+  activeUpdate = Promise.resolve()
+    .then(async () => {
+      const updatesCreated = await checkAndUpdateAllFlights();
+      const expiredCount = await cleanupExpiredUpdates();
+      return { updatesCreated, expiredCount };
+    })
+    .finally(() => {
+      activeUpdate = null;
+    });
+  return activeUpdate;
+}
 
 /**
  * Start the flight update scheduler
@@ -47,11 +65,7 @@ export function startFlightUpdateScheduler(intervalMinutes: number = 15): void {
           message: "Running scheduled flight update check",
         });
 
-        // Check and update flights
-        const updatesCreated = await checkAndUpdateAllFlights();
-
-        // Cleanup expired updates
-        const expiredCount = await cleanupExpiredUpdates();
+        const { updatesCreated, expiredCount } = await runUpdateCheck();
 
         logger.info({
           operation: "scheduler_run_complete",
@@ -115,11 +129,5 @@ export async function runManualUpdateCheck(): Promise<{
     message: "Running manual flight update check",
   });
 
-  const updatesCreated = await checkAndUpdateAllFlights();
-  const expiredCount = await cleanupExpiredUpdates();
-
-  return {
-    updatesCreated,
-    expiredCount,
-  };
+  return runUpdateCheck();
 }

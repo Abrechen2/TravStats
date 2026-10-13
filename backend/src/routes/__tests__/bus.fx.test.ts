@@ -50,7 +50,7 @@ describe("Bus rides API — the FX snapshot", () => {
       fxRate: 0.00064,
       fxRateDate: input.date as Date,
       fxBaseCurrency: "EUR",
-      fxSource: "test",
+      fxSource: "manual",
     }));
   });
 

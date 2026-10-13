@@ -53,8 +53,8 @@ async function callDeleteRoute(req: MinimalAuthRequest): Promise<{
 
   // Find the delete handler on the router stack
   const layer = router.stack.find(
-    (l: { route?: { path: string; methods: Record<string, boolean> } }) =>
-      l.route?.path === "/users/:id" && l.route.methods.delete === true
+    (l) =>
+      l.route?.path === "/users/:id" && l.route.stack.some((handler) => handler.method === "delete")
   );
 
   if (!layer?.route?.stack[0]?.handle) {
@@ -84,7 +84,7 @@ async function callDeleteRoute(req: MinimalAuthRequest): Promise<{
     };
 
     (
-      layer.route.stack[0].handle as (
+      layer.route!.stack[0].handle as (
         req: Request,
         res: Response,
         next: NextFunction

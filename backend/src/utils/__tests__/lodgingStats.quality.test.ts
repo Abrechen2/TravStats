@@ -3,6 +3,8 @@ import { calculateLodgingStats, type LodgingStayData } from "../lodgingStats";
 const NOW = new Date("2026-08-15T12:00:00Z");
 
 const stay = (o: Partial<LodgingStayData>): LodgingStayData => ({
+  programName: null,
+  membershipTier: null,
   lodgingId: "l1",
   lodgingName: "Hotel Adlon",
   type: "hotel",

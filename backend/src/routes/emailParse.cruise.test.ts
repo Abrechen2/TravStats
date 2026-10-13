@@ -1,6 +1,22 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
-const mockParseCruiseBookingText = jest.fn();
+// This suite tests dispatch to the selected parser, not instance LLM configuration.
+jest.mock("../services/llm/llmGate", () => ({
+  isLlmEnabledByAdmin: jest.fn(async () => true),
+}));
+jest.mock("../services/llm/reachableTarget", () => ({
+  resolveReachableLlmTarget: jest.fn(async () => null),
+}));
+
+const mockParseCruiseBookingText = jest.fn<
+  () => Promise<{
+    cruises: (Partial<import("../services/cruiseBookingParser").ParsedCruise> & {
+      shipNameOverride?: string;
+    })[];
+    parserUsed: string;
+    ollamaAvailable: boolean;
+  }>
+>();
 const mockResolveCruiseEntities = jest.fn();
 // Pass-through hydration: keep input/shipMatched/unmatchedPorts, add empty
 // display objects (matches the real signature's enrichment).
@@ -13,7 +29,13 @@ const mockHydrateResolvedCruises = jest.fn(async (resolved: Array<Record<string,
     stopPorts: {},
   }))
 );
-const mockParseBookingEmail = jest.fn();
+const mockParseBookingEmail = jest.fn<
+  () => Promise<{
+    flights: { flightNumber: string }[];
+    parserUsed: string;
+    ollamaAvailable: boolean;
+  }>
+>();
 const mockExtractEmailFromFile = jest.fn();
 
 jest.mock("../services/cruiseBookingParser", () => ({

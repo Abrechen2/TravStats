@@ -1,15 +1,19 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
-const mockFindFirst = jest.fn();
+type ScheduleSettings = Pick<
+  import("../generated/prisma/client").AdminSettings,
+  "backupEnabled" | "backupInterval" | "backupRetentionDays"
+>;
+const mockFindFirst = jest.fn<() => Promise<ScheduleSettings | null>>();
 jest.mock("../db", () => ({
   prisma: {
     adminSettings: { findFirst: mockFindFirst },
-    backup: { findFirst: jest.fn().mockResolvedValue(null) },
+    backup: { findFirst: jest.fn(async () => null) },
   },
 }));
 
 jest.mock("../services/backupService", () => ({
-  createBackup: jest.fn().mockResolvedValue({}),
+  createBackup: jest.fn(async () => ({})),
 }));
 
 const mockSchedule = jest.fn(() => ({ start: jest.fn(), stop: jest.fn() }));

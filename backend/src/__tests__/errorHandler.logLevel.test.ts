@@ -29,7 +29,7 @@ describe("errorHandler logs through a bound logger (#245 regression)", () => {
   });
 
   const makeRes = (): Partial<Response> => {
-    const json = jest.fn();
+    const json = jest.fn<Response["json"]>().mockReturnThis();
     return { status: jest.fn().mockReturnValue({ json }) as unknown as Response["status"], json };
   };
 

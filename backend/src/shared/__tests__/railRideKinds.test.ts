@@ -11,6 +11,8 @@ import {
 /** The kinds of ride the rail badges count — one truth table per question. */
 
 const ride = (over: Partial<RailRideKindInput> = {}): RailRideKindInput => ({
+  depPrecision: "minute",
+  arrPrecision: "minute",
   trainCategory: null,
   travelClass: null,
   depCountry: "DE",

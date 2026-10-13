@@ -193,16 +193,19 @@ describe("Tour route sections — stop assignment", () => {
     });
 
     const originalFindMany = prisma.tripStop.findMany.bind(prisma.tripStop);
-    const spy = jest
-      .spyOn(prisma.tripStop, "findMany")
-      .mockImplementationOnce(async (...args: Parameters<typeof prisma.tripStop.findMany>) => {
-        const result = await originalFindMany(...args);
-        await prisma.tripStop.update({
-          where: { id: stopIds.bergen },
-          data: { routeId: otherRoute.id, routeOrderIdx: 0 },
-        });
-        return result;
+    // This hook is only awaited by the pre-check; it is not submitted to $transaction.
+    const spy = jest.spyOn(prisma.tripStop, "findMany") as jest.SpyInstance<
+      Promise<Awaited<ReturnType<typeof prisma.tripStop.findMany>>>,
+      Parameters<typeof prisma.tripStop.findMany>
+    >;
+    spy.mockImplementationOnce(async (...args) => {
+      const result = await originalFindMany(...args);
+      await prisma.tripStop.update({
+        where: { id: stopIds.bergen },
+        data: { routeId: otherRoute.id, routeOrderIdx: 0 },
       });
+      return result;
+    });
 
     try {
       const res = await put([stopIds.kristiansand, stopIds.bergen]);

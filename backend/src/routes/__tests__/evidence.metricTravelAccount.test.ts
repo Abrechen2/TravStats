@@ -66,7 +66,7 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
     "travelAccountJournalEntryCount",
   ] as const;
 
-  interface EvidenceBody {
+  type EvidenceBody = import("../../schemas/evidence").EvidenceResponse & {
     measure: { value: number | null; unit: string; aggregation: string };
     entries: Array<{
       id: string;
@@ -78,7 +78,7 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
     }>;
     unattributed: Array<{ count: number; reason: string }>;
     omitted: { count: number; contribution?: number };
-  }
+  };
 
   const answers = new Map<string, EvidenceBody>();
   const day = (iso: string): Date => new Date(`${iso}T00:00:00Z`);
@@ -294,7 +294,9 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
   it("travelAccountAirNights: the red-eye, credited to the flight that flew it", () => {
     const res = answer("travelAccountAirNights");
     expect(res.measure.value).toBe(1);
-    expect(res.entries.map((e) => e.title.text)).toEqual(["TA100"]);
+    expect(res.entries.map((e) => ("text" in e.title ? e.title.text : undefined))).toEqual([
+      "TA100",
+    ]);
     expect(res.entries[0].domain).toBe("flight");
     assertSumInvariant(res, Math.round);
   });
@@ -322,9 +324,13 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
       expect(entry.contribution).toBe(1);
     }
     const stay = res.entries.find((e) => e.id === juneStayId)!;
-    expect(stay.subtitle?.key).toBe("evidence.travelAccount.contestedWith.sea");
+    expect(stay.subtitle && "key" in stay.subtitle ? stay.subtitle.key : undefined).toBe(
+      "evidence.travelAccount.contestedWith.sea"
+    );
     const cruise = res.entries.find((e) => e.id === cruiseId)!;
-    expect(cruise.subtitle?.key).toBe("evidence.travelAccount.contestedWith.hotel");
+    expect(cruise.subtitle && "key" in cruise.subtitle ? cruise.subtitle.key : undefined).toBe(
+      "evidence.travelAccount.contestedWith.hotel"
+    );
     assertSumInvariant(res, Math.round);
   });
 
@@ -450,8 +456,10 @@ describe("GET /api/v1/evidence/metric/... — the travel account", () => {
       .set("Cookie", userBCookie);
     expect(res.status).toBe(200);
     expect(res.body.measure.value).toBe(2);
-    expect(res.body.entries.map((e: { title: { text: string } }) => e.title.text)).toEqual([
-      "Pension Anders",
-    ]);
+    expect(
+      res.body.entries.map((e: { title: { text: string } }) =>
+        "text" in e.title ? e.title.text : undefined
+      )
+    ).toEqual(["Pension Anders"]);
   });
 });

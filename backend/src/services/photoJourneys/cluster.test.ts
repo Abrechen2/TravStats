@@ -143,6 +143,7 @@ describe("which journeys nobody recorded", () => {
     photoCount: 8,
     position: { lat: 38.72, lon: -9.14 },
     locatedCount: 8,
+    samples: [],
   });
 
   const window = (startOffset: number, endOffset: number) => ({

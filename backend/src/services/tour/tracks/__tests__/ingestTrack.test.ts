@@ -19,7 +19,7 @@ const START = new Date("2026-06-01T08:00:00Z");
 function withTimestamps(points: Array<[number, number]>): ParsedTrack {
   const startedAt = new Date(START.getTime());
   const endedAt = new Date(START.getTime() + (points.length - 1) * 1000);
-  return { points, startedAt, endedAt, name: "Test Track" };
+  return { points, segmentStarts: [], startedAt, endedAt, name: "Test Track" };
 }
 
 /**
@@ -148,6 +148,7 @@ describe("ingestTrack", () => {
 
   it("case 8b: returns null for a zero-point track", () => {
     const parsed: ParsedTrack = {
+      segmentStarts: [],
       points: [],
       startedAt: new Date("2026-06-01T08:00:00Z"),
       endedAt: new Date("2026-06-01T08:10:00Z"),
@@ -159,6 +160,7 @@ describe("ingestTrack", () => {
 
   it("case 5: returns null when startedAt is missing — cannot be matched to a leg by time", () => {
     const parsed: ParsedTrack = {
+      segmentStarts: [],
       points: [
         [13.0, 50.0],
         [13.01, 50.001],
@@ -173,6 +175,7 @@ describe("ingestTrack", () => {
 
   it("case 6: returns null when endedAt is missing", () => {
     const parsed: ParsedTrack = {
+      segmentStarts: [],
       points: [
         [13.0, 50.0],
         [13.01, 50.001],

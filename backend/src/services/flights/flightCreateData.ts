@@ -1,7 +1,6 @@
 /**
- * The row a document-sourced flight is written as — moved out of
- * `routes/flightsBatch.ts` so the batch import and the package-tour commit
- * (`services/trip/package/commit.ts`) write a flight through the SAME
+ * The row written by single create, batch import and package-tour commit.
+ * All three write a flight through the same
  * derivations: status from the dates, airline codes from a name, CO2 and the
  * route distance from the enriched ends, the zone columns, and the shared
  * create fields. A second copy is how the two paths would come to disagree
@@ -26,6 +25,8 @@ import { flightZoneColumns } from "../../routes/flights/timeInput";
 import type { FxColumns } from "../fx/snapshot";
 
 export interface FlightCreateContext {
+  /** Entry point, independent of the client-supplied dataSource. */
+  mode: "single" | "import";
   userId: string;
   externalRef: string | null;
   importBatchId: string | null;
@@ -33,6 +34,10 @@ export interface FlightCreateContext {
   /** Resolved display names — the legacy array, dual-written with the links. */
   companionNames: string[];
   fx: FxColumns;
+  /** Already checked for ownership by the caller. */
+  tripId?: string | null;
+  /** Preserve token-specific validation for online check-in times. */
+  apiToken?: unknown;
 }
 
 export async function buildFlightCreateData(
@@ -63,7 +68,10 @@ export async function buildFlightCreateData(
       ? resolveAirlineCodes(data.airline)
       : null;
   const resolvedOperating =
-    data.operatingAirline && !data.operatingAirlineIata && !data.operatingAirlineIcao
+    ctx.mode === "import" &&
+    data.operatingAirline &&
+    !data.operatingAirlineIata &&
+    !data.operatingAirlineIcao
       ? resolveAirlineCodes(data.operatingAirline)
       : null;
 
@@ -71,14 +79,26 @@ export async function buildFlightCreateData(
     userId: ctx.userId,
     externalRef: ctx.externalRef,
     importBatchId: ctx.importBatchId,
+    ...(ctx.tripId !== undefined ? { tripId: ctx.tripId } : {}),
     // The zone each end was written with (ADR 0002 phase 2).
-    ...(await flightZoneColumns(data, enriched, undefined, { userId: ctx.userId })),
+    ...(await flightZoneColumns(data, enriched, undefined, {
+      userId: ctx.userId,
+      apiToken: ctx.apiToken,
+    })),
     airline: data.airline,
     airlineIata: data.airlineIata ?? resolvedAirline?.iata,
     airlineIcao: data.airlineIcao ?? resolvedAirline?.icao,
     operatingAirline: data.operatingAirline,
-    operatingAirlineIata: data.operatingAirlineIata ?? resolvedOperating?.iata,
-    operatingAirlineIcao: data.operatingAirlineIcao ?? resolvedOperating?.icao,
+    // Single create historically leaves operating-airline designators as sent;
+    // import entry points also resolve a free-text operating-airline name.
+    operatingAirlineIata:
+      ctx.mode === "single"
+        ? data.operatingAirlineIata
+        : (data.operatingAirlineIata ?? resolvedOperating?.iata),
+    operatingAirlineIcao:
+      ctx.mode === "single"
+        ? data.operatingAirlineIcao
+        : (data.operatingAirlineIcao ?? resolvedOperating?.icao),
     isCodeshare: data.isCodeshare,
     flightNumber: data.flightNumber,
     callsign: data.callsign,
@@ -156,7 +176,7 @@ export async function buildFlightCreateData(
     // Default to 'email_import' for backward compat (this route was
     // originally only called from the email/PDF parsers). AI-agent
     // and xlsx imports can override with 'bulk_import'.
-    dataSource: data.dataSource ?? "email_import",
+    dataSource: data.dataSource ?? (ctx.mode === "single" ? "manual" : "email_import"),
     lastModifiedBy: "user",
     nextApiCheckAt: calculateNextApiCheckAt(
       departureUtc,

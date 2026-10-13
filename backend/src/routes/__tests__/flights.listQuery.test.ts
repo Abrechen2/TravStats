@@ -45,7 +45,7 @@ describe("GET /api/v1/flights — server-side search, filters and sort", () => {
 
     const make = async (
       key: string,
-      data: Parameters<typeof prisma.flight.create>[0]["data"]
+      data: import("../../prisma").Prisma.FlightUncheckedCreateInput
     ): Promise<void> => {
       const row = await prisma.flight.create({ data });
       ids[key] = row.id;

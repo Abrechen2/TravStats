@@ -4,14 +4,52 @@ import { pipeline } from "stream/promises";
 import { Prisma } from "../prisma";
 import { FILE_LIMITS } from "../config/constants";
 
-const jobUpsert = jest.fn();
-const jobUpdate = jest.fn();
-const jobUpdateMany = jest.fn();
-const jobFindUnique = jest.fn();
-const linkFindUnique = jest.fn();
-const linkUpdate = jest.fn();
-const photoFindMany = jest.fn();
-const photoCreate = jest.fn();
+const jobUpsert =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.ImmichImportJobUpsertArgs
+    ) => Promise<Partial<import("../generated/prisma/client").ImmichImportJob>>
+  >();
+const jobUpdate =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.ImmichImportJobUpdateArgs
+    ) => Promise<Partial<import("../generated/prisma/client").ImmichImportJob>>
+  >();
+const jobUpdateMany =
+  jest.fn<
+    (args: import("../prisma").Prisma.ImmichImportJobUpdateManyArgs) => Promise<{ count: number }>
+  >();
+const jobFindUnique =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.ImmichImportJobFindUniqueArgs
+    ) => Promise<Partial<import("../generated/prisma/client").ImmichImportJob> | null>
+  >();
+const linkFindUnique =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.TripImmichAlbumFindUniqueArgs
+    ) => Promise<Partial<import("../generated/prisma/client").TripImmichAlbum> | null>
+  >();
+const linkUpdate =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.TripImmichAlbumUpdateArgs
+    ) => Promise<Partial<import("../generated/prisma/client").TripImmichAlbum>>
+  >();
+const photoFindMany =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.TripPhotoFindManyArgs
+    ) => Promise<Partial<import("../generated/prisma/client").TripPhoto>[]>
+  >();
+const photoCreate =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.TripPhotoCreateArgs
+    ) => Promise<Partial<import("../generated/prisma/client").TripPhoto>>
+  >();
 const photoAggregate = jest.fn();
 
 jest.mock("../db", () => ({
@@ -27,13 +65,16 @@ jest.mock("../db", () => ({
   },
 }));
 
-const listAlbumAssets = jest.fn();
-const fetchAssetStream = jest.fn();
+const listAlbumAssets =
+  jest.fn<import("../services/immich/immichClient").ImmichClient["listAlbumAssets"]>();
+const fetchAssetStream =
+  jest.fn<import("../services/immich/immichClient").ImmichClient["fetchAssetStream"]>();
 jest.mock("../services/immich/immichClient", () => ({
   createImmichClient: () => ({ listAlbumAssets, fetchAssetStream }),
 }));
 
-const getImmichConnection = jest.fn();
+const getImmichConnection =
+  jest.fn<typeof import("../services/immich/immichResolver").getImmichConnection>();
 jest.mock("../services/immich/immichResolver", () => ({ getImmichConnection }));
 
 const writtenFiles: string[] = [];
@@ -72,9 +113,12 @@ import {
 } from "../services/immich/immichImport";
 import { ImmichError } from "../services/immich/types";
 
-const unlinkSyncMock = jest.requireMock("fs").unlinkSync as jest.Mock;
+const unlinkSyncMock = jest.requireMock<{ unlinkSync: jest.Mock }>("fs").unlinkSync;
 
-const asset = (id: string, over: Record<string, unknown> = {}) => ({
+const asset = (
+  id: string,
+  over: Partial<import("../services/immich/types").ImmichAsset> = {}
+): import("../services/immich/types").ImmichAsset => ({
   id,
   type: "IMAGE",
   fileCreatedAt: "2026-05-01T00:00:00.000Z",

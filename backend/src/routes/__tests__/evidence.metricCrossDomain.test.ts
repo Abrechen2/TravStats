@@ -39,7 +39,7 @@ describe("GET /api/v1/evidence/metric/... — the cross-domain KPI strip", () =>
   let userId: string;
   let cookie: string;
 
-  interface EvidenceBody {
+  type EvidenceBody = import("../../schemas/evidence").EvidenceResponse & {
     measure: { value: number | null; unit: string; aggregation: string };
     entries: Array<{
       id: string;
@@ -49,7 +49,7 @@ describe("GET /api/v1/evidence/metric/... — the cross-domain KPI strip", () =>
     }>;
     omitted: { count: number; contribution?: number; credits?: number };
     unattributed: Array<{ count: number; reason: string }>;
-  }
+  };
 
   const KEYS = [
     "crossDomainEventCount",

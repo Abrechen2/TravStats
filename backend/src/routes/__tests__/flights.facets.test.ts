@@ -44,8 +44,8 @@ describe("GET /api/v1/flights/facets", () => {
     tripId = trip.id;
 
     const flight = (
-      over: Partial<Parameters<typeof prisma.flight.create>[0]["data"]>
-    ): Parameters<typeof prisma.flight.create>[0]["data"] => ({
+      over: Partial<import("../../prisma").Prisma.FlightUncheckedCreateInput>
+    ): import("../../prisma").Prisma.FlightUncheckedCreateInput => ({
       userId: user.id,
       depIata: "MUC",
       depLat: 48.3538,

@@ -96,7 +96,7 @@ describe("Place visit photos API", () => {
 
     const stored = await prisma.placeVisitPhoto.findMany({ where: { placeVisitId: visitId } });
     expect(stored).toHaveLength(1);
-    expect(fs.existsSync(path.join(getPlacePhotoDir(), stored[0].filename))).toBe(true);
+    expect(fs.existsSync(path.join(getPlacePhotoDir(), stored[0].filename!))).toBe(true);
   });
 
   it("serves the bytes back with a PRIVATE cache header", async () => {
@@ -179,7 +179,7 @@ describe("Place visit photos API", () => {
 
     expect(res.status).toBe(204);
     expect(await prisma.placeVisitPhoto.findUnique({ where: { id: photoId } })).toBeNull();
-    expect(fs.existsSync(path.join(getPlacePhotoDir(), stored!.filename))).toBe(false);
+    expect(fs.existsSync(path.join(getPlacePhotoDir(), stored!.filename!))).toBe(false);
   });
 
   it("takes its photos with the visit when the visit goes", async () => {

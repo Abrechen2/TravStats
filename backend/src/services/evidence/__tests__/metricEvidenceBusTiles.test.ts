@@ -89,7 +89,7 @@ describe("bus tile evidence", () => {
     const changes = await resolve("busTransferCount", Y2025);
     expect(changes.measure.value).toBe(tab.transfers.count);
     expect(changes.measure.value).toBe(1);
-    expect(changes.entries[0]?.title.text).toBe("Hamburg ZOB → Praha Florenc");
+    expect(changes.entries[0]?.title).toEqual({ text: "Hamburg ZOB → Praha Florenc" });
   });
 
   it("names the ride holding the longest-ride record, per period", async () => {

@@ -54,7 +54,9 @@ describe("POST /api/v1/parse-pdf — a place document", () => {
     });
   });
 
-  beforeEach(() => extractTextFromPdf.mockReset());
+  beforeEach(() => {
+    extractTextFromPdf.mockReset();
+  });
 
   afterAll(async () => {
     await prisma.parserTemplate.deleteMany({ where: { userId } });

@@ -33,7 +33,7 @@ describe("GET /api/v1/evidence/metric/... — the populations behind averages an
   const ids: Record<string, string> = {};
   const day = (iso: string): Date => new Date(`${iso}T00:00:00Z`);
 
-  interface EvidenceBody {
+  type EvidenceBody = import("../../schemas/evidence").EvidenceResponse & {
     measure: { value: number | null; unit: string; aggregation: string };
     entries: Array<{
       id: string;
@@ -43,7 +43,7 @@ describe("GET /api/v1/evidence/metric/... — the populations behind averages an
     }>;
     omitted: { count: number; contribution?: number };
     unattributed: Array<{ count: number; reason: string }>;
-  }
+  };
 
   const get = async (key: string, query = ""): Promise<EvidenceBody> => {
     const res = await request(app)
@@ -273,7 +273,9 @@ describe("GET /api/v1/evidence/metric/... — the populations behind averages an
         values: { amount: 100, currency: "EUR" },
       });
       const award = body.entries.find((e) => e.id === ids.rheinAward)!;
-      expect(award.subtitle?.key).toBe("evidence.subtitle.pricePerNightAward");
+      expect(award.subtitle && "key" in award.subtitle ? award.subtitle.key : undefined).toBe(
+        "evidence.subtitle.pricePerNightAward"
+      );
 
       expect(body.measure.value).toBe((await lodgingTab()).price.pricedNights);
     });

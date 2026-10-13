@@ -10,20 +10,37 @@ import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
 // ─── Mocks (all declared before module under test imports) ──────────────────
 
-const mockUserSettingsFindUnique = jest.fn();
-const mockFlightFindUnique = jest.fn();
+const mockUserSettingsFindUnique =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.UserSettingsFindUniqueArgs
+    ) => Promise<Partial<import("../generated/prisma/client").UserSettings> | null>
+  >();
+const mockFlightFindMany =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.FlightFindManyArgs
+    ) => Promise<Partial<import("../generated/prisma/client").Flight>[]>
+  >();
 
 jest.mock("../db", () => ({
   prisma: {
     userSettings: { findUnique: mockUserSettingsFindUnique },
-    flight: { findUnique: mockFlightFindUnique },
+    flight: { findMany: mockFlightFindMany },
   },
 }));
 
-const mockGetUserEnrichmentSettings = jest.fn();
-const mockFindEnrichmentCandidates = jest.fn();
-const mockAggregateFlightData = jest.fn();
-const mockCreateHistoricalEnrichment = jest.fn();
+const mockGetUserEnrichmentSettings =
+  jest.fn<
+    () => Promise<
+      Awaited<
+        ReturnType<typeof import("../services/flightEnrichmentService").getUserEnrichmentSettings>
+      >
+    >
+  >();
+const mockFindEnrichmentCandidates = jest.fn<() => Promise<ReturnType<typeof mockCandidate>[]>>();
+const mockAggregateFlightData = jest.fn<() => Promise<ReturnType<typeof mockAggregated> | null>>();
+const mockCreateHistoricalEnrichment = jest.fn<(flightId: string) => Promise<string | null>>();
 
 jest.mock("../services/flightEnrichmentService", () => ({
   getUserEnrichmentSettings: mockGetUserEnrichmentSettings,
@@ -32,7 +49,7 @@ jest.mock("../services/flightEnrichmentService", () => ({
   createHistoricalEnrichment: mockCreateHistoricalEnrichment,
 }));
 
-const mockApplyPendingUpdate = jest.fn();
+const mockApplyPendingUpdate = jest.fn<() => Promise<{ id: string } | null>>();
 jest.mock("../services/pendingUpdateService", () => ({
   applyPendingUpdate: mockApplyPendingUpdate,
 }));
@@ -65,7 +82,7 @@ const mockAggregated = () => ({
 
 describe("processUserHistoricalEnrichment auto-apply branch", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    jest.resetAllMocks();
     mockGetUserEnrichmentSettings.mockResolvedValue({
       enabled: true,
       minConfidence: 60,
@@ -77,15 +94,19 @@ describe("processUserHistoricalEnrichment auto-apply branch", () => {
   it("auto-applies created enrichments when user has requireApproval=false", async () => {
     mockUserSettingsFindUnique.mockResolvedValue({ autoUpdateRequireApproval: false });
     mockFindEnrichmentCandidates.mockResolvedValue([mockCandidate("f1"), mockCandidate("f2")]);
-    mockFlightFindUnique.mockImplementation(async ({ where }: { where: { id: string } }) =>
-      mockFlight(where.id)
-    );
+    mockFlightFindMany.mockResolvedValue([mockFlight("f2"), mockFlight("f1")]);
     mockCreateHistoricalEnrichment.mockImplementation(async (flightId: string) => `pu-${flightId}`);
     mockApplyPendingUpdate.mockResolvedValue({ id: "dummy" });
 
     const result = await processUserHistoricalEnrichment(USER_ID);
 
     expect(result).toEqual({ processed: 2, created: 2, skipped: 0 });
+    expect(mockFlightFindMany).toHaveBeenCalledTimes(1);
+    expect(mockFlightFindMany).toHaveBeenCalledWith({
+      where: { userId: USER_ID, id: { in: ["f1", "f2"] } },
+      select: { id: true, flightNumber: true },
+    });
+    expect(mockCreateHistoricalEnrichment.mock.calls.map(([id]) => id)).toEqual(["f1", "f2"]);
     // Both pending updates must be auto-applied
     expect(mockApplyPendingUpdate).toHaveBeenCalledTimes(2);
     expect(mockApplyPendingUpdate).toHaveBeenCalledWith("pu-f1", USER_ID);
@@ -95,7 +116,7 @@ describe("processUserHistoricalEnrichment auto-apply branch", () => {
   it("leaves enrichments pending when user has requireApproval=true", async () => {
     mockUserSettingsFindUnique.mockResolvedValue({ autoUpdateRequireApproval: true });
     mockFindEnrichmentCandidates.mockResolvedValue([mockCandidate("f1")]);
-    mockFlightFindUnique.mockResolvedValue(mockFlight("f1"));
+    mockFlightFindMany.mockResolvedValue([mockFlight("f1")]);
     mockCreateHistoricalEnrichment.mockResolvedValue("pu-f1");
 
     const result = await processUserHistoricalEnrichment(USER_ID);
@@ -109,7 +130,7 @@ describe("processUserHistoricalEnrichment auto-apply branch", () => {
     // default to the safe side (require approval).
     mockUserSettingsFindUnique.mockResolvedValue(null);
     mockFindEnrichmentCandidates.mockResolvedValue([mockCandidate("f1")]);
-    mockFlightFindUnique.mockResolvedValue(mockFlight("f1"));
+    mockFlightFindMany.mockResolvedValue([mockFlight("f1")]);
     mockCreateHistoricalEnrichment.mockResolvedValue("pu-f1");
 
     await processUserHistoricalEnrichment(USER_ID);
@@ -120,9 +141,7 @@ describe("processUserHistoricalEnrichment auto-apply branch", () => {
   it("continues to the next candidate when one applyPendingUpdate fails", async () => {
     mockUserSettingsFindUnique.mockResolvedValue({ autoUpdateRequireApproval: false });
     mockFindEnrichmentCandidates.mockResolvedValue([mockCandidate("f1"), mockCandidate("f2")]);
-    mockFlightFindUnique.mockImplementation(async ({ where }: { where: { id: string } }) =>
-      mockFlight(where.id)
-    );
+    mockFlightFindMany.mockResolvedValue([mockFlight("f2"), mockFlight("f1")]);
     mockCreateHistoricalEnrichment.mockImplementation(async (flightId: string) => `pu-${flightId}`);
     // First apply returns null (failure), second succeeds
     mockApplyPendingUpdate.mockResolvedValueOnce(null).mockResolvedValueOnce({ id: "dummy" });
@@ -133,5 +152,48 @@ describe("processUserHistoricalEnrichment auto-apply branch", () => {
     // Apply was attempted for both.
     expect(result.created).toBe(2);
     expect(mockApplyPendingUpdate).toHaveBeenCalledTimes(2);
+  });
+  it("limits the batch before loading and skips missing or unnumbered flights", async () => {
+    mockGetUserEnrichmentSettings.mockResolvedValue({
+      enabled: true,
+      minConfidence: 60,
+      maxPerDay: 3,
+    });
+    mockUserSettingsFindUnique.mockResolvedValue({ autoUpdateRequireApproval: true });
+    mockFindEnrichmentCandidates.mockResolvedValue(
+      ["missing", "unnumbered", "ok", "over-limit"].map(mockCandidate)
+    );
+    mockFlightFindMany.mockResolvedValue([
+      { id: "unnumbered", flightNumber: null },
+      mockFlight("ok"),
+    ]);
+    mockCreateHistoricalEnrichment.mockResolvedValue("pu-ok");
+
+    expect(await processUserHistoricalEnrichment(USER_ID)).toEqual({
+      processed: 3,
+      created: 1,
+      skipped: 2,
+    });
+    expect(mockFlightFindMany).toHaveBeenCalledWith({
+      where: { userId: USER_ID, id: { in: ["missing", "unnumbered", "ok"] } },
+      select: { id: true, flightNumber: true },
+    });
+    expect(mockAggregateFlightData).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([0, 50])("does no flight read when there is no work (limit %i)", async (maxPerDay) => {
+    mockGetUserEnrichmentSettings.mockResolvedValue({
+      enabled: true,
+      minConfidence: 60,
+      maxPerDay,
+    });
+    mockFindEnrichmentCandidates.mockResolvedValue(maxPerDay === 0 ? [mockCandidate("f1")] : []);
+    expect(await processUserHistoricalEnrichment(USER_ID)).toEqual({
+      processed: 0,
+      created: 0,
+      skipped: 0,
+    });
+    expect(mockFlightFindMany).not.toHaveBeenCalled();
+    expect(mockUserSettingsFindUnique).not.toHaveBeenCalled();
   });
 });

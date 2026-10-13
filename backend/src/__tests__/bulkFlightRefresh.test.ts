@@ -22,17 +22,41 @@ const apiKeyResolverMock = {
 };
 jest.mock("../services/apiKeyResolver", () => apiKeyResolverMock);
 
+type LookupResult = import("../services/flightLookup").LookupWithHistoricalResult;
+type LookupFlight = LookupResult["flights"][number];
+type LookupFixture = Omit<LookupResult, "flights"> & {
+  flights: (Partial<Omit<LookupFlight, "departure" | "arrival">> & {
+    departure?: Partial<LookupFlight["departure"]>;
+    arrival?: Partial<LookupFlight["arrival"]>;
+  })[];
+};
+
 const flightLookupMock = {
-  lookupFlightWithHistorical: jest.fn(),
+  lookupFlightWithHistorical: jest.fn<() => Promise<LookupFixture>>(),
 };
 jest.mock("../services/flightLookup", () => flightLookupMock);
 
 const prismaMock = {
   flight: {
-    findMany: jest.fn(),
-    findUnique: jest.fn(),
-    update: jest.fn(),
-    count: jest.fn(),
+    findMany:
+      jest.fn<
+        (
+          args: import("../prisma").Prisma.FlightFindManyArgs
+        ) => Promise<Partial<import("../generated/prisma/client").Flight>[]>
+      >(),
+    findUnique:
+      jest.fn<
+        (
+          args: import("../prisma").Prisma.FlightFindUniqueArgs
+        ) => Promise<Partial<import("../generated/prisma/client").Flight> | null>
+      >(),
+    update:
+      jest.fn<
+        (
+          args: import("../prisma").Prisma.FlightUpdateArgs
+        ) => Promise<Partial<import("../generated/prisma/client").Flight>>
+      >(),
+    count: jest.fn<(args: import("../prisma").Prisma.FlightCountArgs) => Promise<number>>(),
   },
 };
 jest.mock("../db", () => ({ prisma: prismaMock }));
@@ -219,7 +243,7 @@ describe("runBulkRefresh", () => {
     await runBulkRefresh(USER_ID);
 
     const where = prismaMock.flight.findMany.mock.calls[0][0].where;
-    expect(where.OR).toEqual(expect.arrayContaining([{ aircraft: null }, { aircraft: "" }]));
+    expect(where!.OR).toEqual(expect.arrayContaining([{ aircraft: null }, { aircraft: "" }]));
   });
 
   it("counts provider 'no_provider' / empty result as no_data and writes nothing", async () => {

@@ -20,10 +20,7 @@ import { testAirlabsKey, testAerodataboxKey } from "../apiKeyTester";
 beforeEach(() => {
   jest.resetAllMocks();
   mockedAxios.isAxiosError.mockImplementation(
-    (error: unknown): boolean =>
-      typeof error === "object" &&
-      error !== null &&
-      (error as { isAxiosError?: unknown }).isAxiosError === true
+    jest.requireActual<typeof import("axios")>("axios").isAxiosError
   );
 });
 

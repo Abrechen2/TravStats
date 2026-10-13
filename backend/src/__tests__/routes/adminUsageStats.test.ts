@@ -126,8 +126,8 @@ describe("PUT /usage-stats handler", () => {
     const res = { json: jsonResponse } as unknown as Response;
     const next: NextFunction = jest.fn();
 
-    const putHandler = router.stack.find(
-      (layer: { route?: { methods?: Record<string, boolean> } }) => layer.route?.methods?.put
+    const putHandler = router.stack.find((layer) =>
+      layer.route?.stack.some((handler) => handler.method === "put")
     )?.route?.stack[0]?.handle as
       ((req: AuthRequest, res: Response, next: NextFunction) => Promise<void>) | undefined;
 

@@ -33,9 +33,9 @@ jest.mock("../utils/logger", () => ({
 // ── DB (Prisma) ───────────────────────────────────────────────────────────────
 jest.mock("../db", () => ({
   prisma: {
-    userTemplate: { findMany: jest.fn() },
-    logConfig: { findUnique: jest.fn() },
-    adminSettings: { findFirst: jest.fn().mockResolvedValue(null) },
+    userTemplate: { findMany: jest.fn(async () => []) },
+    logConfig: { findUnique: jest.fn(async () => null) },
+    adminSettings: { findFirst: jest.fn(async () => null) },
   },
 }));
 
@@ -57,7 +57,8 @@ jest.mock("../services/parsers/userTemplates/engine", () => ({
 }));
 
 // ── TemplateParser ────────────────────────────────────────────────────────────
-const mockTemplateParserCheckAvailability = jest.fn();
+const mockTemplateParserCheckAvailability =
+  jest.fn<() => Promise<{ available: boolean; reason?: string }>>();
 const mockTemplateParserParseEmail = jest.fn();
 
 jest.mock("../services/parsers/text/templateParser", () => ({

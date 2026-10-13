@@ -27,7 +27,9 @@ describe("documentService", () => {
   let tripId: string;
   let otherFlightId: string;
 
-  const flightData = (uid: string): Parameters<typeof prisma.flight.create>[0]["data"] => ({
+  const flightData = (
+    uid: string
+  ): import("../../../prisma").Prisma.FlightUncheckedCreateInput => ({
     userId: uid,
     depIata: "FRA",
     depLat: 50.03,

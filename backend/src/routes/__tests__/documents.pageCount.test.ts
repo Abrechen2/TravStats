@@ -46,7 +46,9 @@ describe("the page count of a kept document", () => {
     cookie = `auth_token=${generateToken(user.id)}`;
   });
 
-  beforeEach(() => countPdfPages.mockReset());
+  beforeEach(() => {
+    countPdfPages.mockReset();
+  });
 
   afterAll(async () => {
     const rows = await prisma.document.findMany({

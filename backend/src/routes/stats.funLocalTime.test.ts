@@ -1,12 +1,17 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
-const mockFindMany = jest.fn();
+const mockFindMany =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.FlightFindManyArgs
+    ) => Promise<Partial<import("../generated/prisma/client").Flight>[]>
+  >();
 const mockGetCachedAirports = jest.fn();
 
 jest.mock("../db", () => ({
   prisma: {
     flight: { findMany: mockFindMany },
-    userSettings: { findUnique: jest.fn().mockResolvedValue(null) },
+    userSettings: { findUnique: jest.fn(async () => null) },
   },
 }));
 jest.mock("../services/airportCache", () => ({

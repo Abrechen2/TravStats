@@ -1,6 +1,10 @@
 import { buildPassport, type PassportFlight } from "../passport";
 
-const flight = (dep: string, arr: string, over: Partial<PassportFlight> = {}): PassportFlight => ({
+const flight = (
+  dep: string,
+  arr: string,
+  over: Partial<PassportFlight> & { arrivalTime?: Date | null } = {}
+): PassportFlight => ({
   depIata: dep,
   depLat: 48.35,
   depLon: 11.78,

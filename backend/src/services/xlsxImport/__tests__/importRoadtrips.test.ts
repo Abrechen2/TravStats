@@ -142,7 +142,7 @@ describe("spreadsheet import — roadtrips", () => {
   it("moves a roadtrip with its stations into another account in one file", async () => {
     // As exported from another account: ids that mean nothing here.
     const sourceId = "11111111-2222-4333-8444-555555555555";
-    const sheets = [
+    const sheets: Parameters<typeof importSheets>[0] = [
       { key: "roadtrips", rows: [{ id: sourceId, name: "Fjorde 2026", vehicle: "campervan" }] },
       {
         key: "roadtripStations",

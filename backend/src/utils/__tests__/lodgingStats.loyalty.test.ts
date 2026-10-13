@@ -198,6 +198,8 @@ describe("lodgingNightsRanked", () => {
           checkOut: new Date("2024-06-03T00:00:00Z"),
         }),
       ],
+      "EUR",
+      undefined,
       NOW
     );
 
@@ -214,6 +216,8 @@ describe("lodgingNightsRanked", () => {
         stay({ lodgingId: "muc", lodgingName: "Motel One", city: "München" }),
         stay({ lodgingId: "ber", lodgingName: "Motel One", city: "Berlin" }),
       ],
+      "EUR",
+      undefined,
       NOW
     );
 
@@ -222,7 +226,9 @@ describe("lodgingNightsRanked", () => {
   });
 
   it("is empty for an empty logbook", () => {
-    expect(calculateLodgingStats([], NOW).loyalty.lodgingNightsRanked).toEqual([]);
+    expect(calculateLodgingStats([], "EUR", undefined, NOW).loyalty.lodgingNightsRanked).toEqual(
+      []
+    );
   });
 });
 

@@ -5,24 +5,48 @@ import request from "supertest";
 const resolveTrip = jest.fn(async () => ({ id: "trip-1" }));
 jest.mock("../routes/trips", () => ({ resolveTrip }));
 
-const findFirstLink = jest.fn();
-const findFirstPhoto = jest.fn();
-const tripUpdate = jest.fn();
+const findFirstLink =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.TripImmichAlbumFindFirstArgs
+    ) => Promise<Partial<import("../generated/prisma/client").TripImmichAlbum> | null>
+  >();
+const findFirstPhoto =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.TripPhotoFindFirstArgs
+    ) => Promise<Partial<import("../generated/prisma/client").TripPhoto> | null>
+  >();
+const tripUpdate =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.TripUpdateArgs
+    ) => Promise<Partial<import("../generated/prisma/client").Trip>>
+  >();
 jest.mock("../db", () => ({
   prisma: {
     tripImmichAlbum: { findFirst: findFirstLink },
     tripPhoto: { findFirst: findFirstPhoto },
     trip: { update: tripUpdate },
-    adminSettings: { findFirst: jest.fn() },
+    adminSettings: {
+      findFirst:
+        jest.fn<
+          (
+            args: import("../prisma").Prisma.AdminSettingsFindFirstArgs
+          ) => Promise<Partial<import("../generated/prisma/client").AdminSettings> | null>
+        >(),
+    },
   },
 }));
 
-const listAlbumAssets = jest.fn();
+const listAlbumAssets =
+  jest.fn<import("../services/immich/immichClient").ImmichClient["listAlbumAssets"]>();
 jest.mock("../services/immich/immichClient", () => ({
   createImmichClient: () => ({ listAlbumAssets }),
 }));
 
-const getImmichConnection = jest.fn();
+const getImmichConnection =
+  jest.fn<typeof import("../services/immich/immichResolver").getImmichConnection>();
 jest.mock("../services/immich/immichResolver", () => ({ getImmichConnection }));
 
 // The route module wires the real `authenticate` per-route (matching every

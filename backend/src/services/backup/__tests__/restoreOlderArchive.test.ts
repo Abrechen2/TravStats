@@ -6,7 +6,6 @@ import { Client } from "pg";
 import request from "supertest";
 import type { Express } from "express";
 
-import type { PrismaClient } from "../../../prisma";
 import type * as JobRegistry from "../../jobs/jobRegistry";
 
 /**
@@ -148,7 +147,7 @@ describeWithTools("restoring an archive written by another version (forgejo#157)
 
   let workDir: string;
   let app: Express;
-  let prisma: PrismaClient;
+  let prisma: typeof import("../../../db").prisma;
   let jobs: typeof JobRegistry;
   let createDatabaseDump: (outputPath: string, targetDatabaseUrl?: string) => Promise<void>;
   const archives: Record<"older" | "colliding" | "earlyExit" | "newer", string> = {

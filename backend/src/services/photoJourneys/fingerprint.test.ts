@@ -10,6 +10,7 @@ const cluster = (over: Partial<PhotoCluster> = {}): PhotoCluster => ({
   photoCount: 4,
   position: { lat: 38.72, lon: -9.14 },
   locatedCount: 4,
+  samples: [],
   ...over,
 });
 

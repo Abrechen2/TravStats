@@ -73,7 +73,7 @@ describe("home = residence + home airports", () => {
       data: { data: data as never },
     });
 
-  type FlightData = Parameters<typeof prisma.flight.create>[0]["data"];
+  type FlightData = import("../prisma").Prisma.FlightUncheckedCreateInput;
   const fly = (
     dep: string,
     arr: string,
@@ -368,7 +368,7 @@ describe("home = residence + home airports", () => {
   });
 
   describe("the settings API", () => {
-    const put = (body: unknown) =>
+    const put = (body: object | string) =>
       request(app).put("/api/v1/settings/home-airports/periods").set("Cookie", cookie).send(body);
 
     it("keeps serving the old shape a Companion reads, derived from the periods", async () => {

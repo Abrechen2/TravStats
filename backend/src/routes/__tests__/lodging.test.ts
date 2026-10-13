@@ -489,7 +489,7 @@ describe("Lodging API", () => {
         .send({ checkIn: "2024-10-13T00:00:00.000Z" });
       expect(res.status).toBe(400);
       const stay = await prisma.lodgingStay.findUnique({ where: { id: dateStayId } });
-      expect(stay?.checkIn.toISOString()).toBe("2024-10-10T15:00:00.000Z");
+      expect(stay?.checkIn?.toISOString()).toBe("2024-10-10T15:00:00.000Z");
     });
 
     it("rejects a checkOut-only PATCH landing before the existing checkIn (row unchanged)", async () => {
@@ -499,7 +499,7 @@ describe("Lodging API", () => {
         .send({ checkOut: "2024-10-09T00:00:00.000Z" });
       expect(res.status).toBe(400);
       const stay = await prisma.lodgingStay.findUnique({ where: { id: dateStayId } });
-      expect(stay?.checkOut.toISOString()).toBe("2024-10-12T11:00:00.000Z");
+      expect(stay?.checkOut?.toISOString()).toBe("2024-10-12T11:00:00.000Z");
     });
 
     it("accepts a legitimate single-date PATCH that keeps the order valid", async () => {

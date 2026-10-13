@@ -27,7 +27,10 @@ const MARKETING_MAIL = [
   "Emirates-Flüge ab 380 EUR. Angebot gültig bis Ostern.",
 ].join("\n");
 
-const routeless = (n: number) => Array.from({ length: n }, () => ({ flightNumber: "AF1423" }));
+const routeless = (
+  n: number
+): Array<{ flightNumber: string; departureCode?: string; arrivalCode?: string }> =>
+  Array.from({ length: n }, () => ({ flightNumber: "AF1423" }));
 
 describe("parenthesisedCodes", () => {
   it("reads the codes in itinerary order, duplicates kept", () => {

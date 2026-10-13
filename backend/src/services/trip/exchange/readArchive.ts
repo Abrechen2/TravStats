@@ -43,7 +43,7 @@ export interface TripArchive {
   blobs: Map<string, Buffer>;
 }
 
-export type TripArchiveLimits = typeof TRIP_FILE_LIMITS;
+export type TripArchiveLimits = { [K in keyof typeof TRIP_FILE_LIMITS]: number };
 
 /** Small enough that one slice of a maximal-ratio deflate stream stays a few MB. */
 const SLICE = 16 * 1024;

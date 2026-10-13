@@ -49,10 +49,9 @@ import {
   resolveAirportCoordinate,
 } from "../services/airportCoordinates";
 import { assertMergedChronology, toUtcDate } from "../services/flights/mergedChronology";
-import { sharedFlightCreateFields } from "../services/flights/flightCreateFields";
+import { buildFlightCreateData } from "../services/flights/flightCreateData";
 import { warnIfScheduledInPast } from "../services/flights/scheduledInPastWarning";
 import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
-import { resolveAirlineCodes } from "../utils/airlineNormalize";
 import { airlineCodeUpdate } from "../utils/airlineCodeUpdate";
 import { normalizeAircraft } from "../utils/aircraftNormalize";
 import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
@@ -193,33 +192,6 @@ router.post(
       warnIfScheduledInPast(userId, data);
 
       const departureUtc = toUtcDate(data.departureLocal, data.depTimezone, data.departureFold);
-      const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone, data.arrivalFold);
-      const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
-      const actualArrivalUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
-
-      // The status field is a client-sent HINT, not the source of truth (spec
-      // 2026-07-17-status-from-dates) — passthrough statuses (cancelled,
-      // historical, duplicated) are assigned verbatim, everything else is
-      // derived from the actual departure/arrival dates being written.
-      const effectiveStatus = (FLIGHT_PASSTHROUGH as readonly string[]).includes(data.status ?? "")
-        ? data.status!
-        : deriveFlightStatus({
-            departureTime: departureUtc,
-            arrivalTime: arrivalUtc,
-            current: data.status ?? "scheduled",
-          });
-
-      // Resolve airline codes if name provided but IATA/ICAO missing
-      let airlineIata = data.airlineIata;
-      let airlineIcao = data.airlineIcao;
-      if (data.airline && !airlineIata && !airlineIcao) {
-        const resolved = resolveAirlineCodes(data.airline);
-        if (resolved) {
-          airlineIata = resolved.iata ?? null;
-          airlineIcao = resolved.icao ?? null;
-        }
-      }
-
       // ?force=true → bypass the duplicate check and create a real second row
       //   (user opt-in). ?merge=true → fold the incoming data into the flight
       //   the user already has. force wins if both are set.
@@ -290,107 +262,21 @@ router.post(
         },
         await getBaseCurrency(userId)
       );
-      const zoneColumns = await flightZoneColumns(data, enriched, undefined, req);
+      const createData = await buildFlightCreateData(data, {
+        mode: "single",
+        userId,
+        externalRef,
+        importBatchId,
+        tripId,
+        enriched,
+        companionNames: resolvedCompanions.map((c) => c.displayName),
+        fx: fxColumns,
+        apiToken: req.apiToken,
+      });
 
       const flight = await prisma.$transaction(async (tx) => {
         const created = await tx.flight.create({
-          data: {
-            userId,
-            externalRef,
-            ...zoneColumns,
-            importBatchId,
-            tripId,
-            airline: data.airline,
-            airlineIata,
-            airlineIcao,
-            operatingAirline: data.operatingAirline,
-            operatingAirlineIata: data.operatingAirlineIata,
-            operatingAirlineIcao: data.operatingAirlineIcao,
-            isCodeshare: data.isCodeshare,
-            flightNumber: data.flightNumber,
-            callsign: data.callsign,
-            aircraft: data.aircraft ? normalizeAircraft(data.aircraft) : null,
-            // Use enriched departure data (fills in missing IATA/ICAO/names)
-            depIcao: enriched.departure.icao,
-            depIata: enriched.departure.iata,
-            depName: enriched.departure.name,
-            depLat: enriched.departure.lat,
-            depLon: enriched.departure.lon,
-            // Use enriched arrival data (fills in missing IATA/ICAO/names)
-            arrIcao: enriched.arrival.icao,
-            arrIata: enriched.arrival.iata,
-            arrName: enriched.arrival.name,
-            arrLat: enriched.arrival.lat,
-            arrLon: enriched.arrival.lon,
-            departureTime: departureUtc,
-            arrivalTime: arrivalUtc,
-            actualDeparture: actualDepartureUtc,
-            actualArrival: actualArrivalUtc,
-            // 'UTC' by default; an importer may say 'DATE_ONLY'/'UNKNOWN' for a
-            // placeholder time, so display and aggregation know to estimate.
-            depTimeSemantics: data.depTimeSemantics ?? "UTC",
-            arrTimeSemantics: data.arrTimeSemantics ?? "UTC",
-            delayMinutes:
-              actualDepartureUtc && departureUtc
-                ? Math.round((actualDepartureUtc.getTime() - departureUtc.getTime()) / 60000)
-                : null,
-            co2Kg: calculateCo2Kg({
-              depLat: enriched.departure.lat,
-              depLon: enriched.departure.lon,
-              arrLat: enriched.arrival.lat,
-              arrLon: enriched.arrival.lon,
-              seatClass: toSeatClass(data.seatClass),
-            }),
-            // Haversine route distance — see flightsBatch.ts for context.
-            routeDistance: haversineKm(
-              enriched.departure.lat,
-              enriched.departure.lon,
-              enriched.arrival.lat,
-              enriched.arrival.lon
-            ),
-            status: effectiveStatus,
-            notes: data.notes,
-            price: data.price,
-            taxes: data.taxes,
-            fees: data.fees,
-            currency: data.currency,
-            // FX snapshot (#267). Converted at write time against the DEPARTURE
-            // day, so a historical total never moves when the ECB publishes.
-            // All-null where no honest rate exists — the statistics then report
-            // this amount in its own currency rather than folding it into a sum.
-            ...fxColumns,
-            category: data.category,
-            tags: data.tags ?? [],
-            // Dual write: resolved display names keep this legacy array in
-            // agreement with `companionLinks` below (trimmed, blanks dropped,
-            // newest spelling wins) — the previous image still reads this column.
-            companions: resolvedCompanions.map((c) => c.displayName),
-            receiptUrl: data.receiptUrl,
-            // Boarding pass / email import fields
-            seatNumber: data.seatNumber,
-            boardingGroup: data.boardingGroup,
-            gate: data.gate,
-            terminal: data.terminal,
-            bookingReference: data.bookingReference,
-            ticketNumber: data.ticketNumber,
-            baggageAllowance: data.baggageAllowance,
-            frequentFlyerNumber: data.frequentFlyerNumber,
-            bookingClassLetter: data.bookingClassLetter,
-            coPassengers: data.coPassengers ?? [],
-            // The columns both create paths must write — see the module. The
-            // cabin is one of them: it was missing from the batch while its own
-            // CO2 was priced from it (AUD-022).
-            ...sharedFlightCreateFields(data),
-            // Data source tracking
-            dataSource: data.dataSource ?? "manual",
-            lastModifiedBy: "user",
-            nextApiCheckAt: calculateNextApiCheckAt(
-              departureUtc,
-              arrivalUtc,
-              effectiveStatus,
-              data.flightNumber
-            ),
-          },
+          data: createData,
         });
 
         if (resolvedCompanions.length > 0) {

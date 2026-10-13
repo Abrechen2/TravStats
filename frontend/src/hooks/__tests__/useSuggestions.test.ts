@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { act, cleanup, renderHook } from "@testing-library/react";
 
 // vi.hoisted lets these vi.fn()s survive vi.mock factory hoisting and stay
 // reachable from the test bodies below (see ImmichAlbumSection.test.tsx).
@@ -21,6 +21,8 @@ describe("useSuggestions", () => {
   });
 
   afterEach(() => {
+    cleanup();
+    vi.clearAllTimers();
     vi.clearAllMocks();
     vi.useRealTimers();
   });
@@ -29,15 +31,18 @@ describe("useSuggestions", () => {
   // /suggestions/airlines endpoint can search past its 50-row cap instead of
   // always returning the first 50 alphabetically.
   it("forwards the query to suggestionsApi.airlines once the debounce settles", async () => {
-    const { rerender } = renderHook(({ q }: { q: string }) => useSuggestions(q), {
+    const { result, rerender } = renderHook(({ q }: { q: string }) => useSuggestions(q), {
       initialProps: { q: "" },
     });
     airlines.mockClear(); // drop the mount-time call with the initial (empty) query
 
     rerender({ q: "luft" });
-    await vi.advanceTimersByTimeAsync(300);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
 
     expect(airlines).toHaveBeenCalledWith("luft");
+    expect(result.current.airlines).toEqual(["Lufthansa"]);
   });
 
   // Debounce: rapid keystrokes must coalesce into a single request for the
@@ -45,39 +50,93 @@ describe("useSuggestions", () => {
   // useSuggestions (or firing on every change) makes this assertion fail
   // with 4 calls instead of 1.
   it("coalesces rapid query changes into a single debounced call", async () => {
-    const { rerender } = renderHook(({ q }: { q: string }) => useSuggestions(q), {
+    const { result, rerender } = renderHook(({ q }: { q: string }) => useSuggestions(q), {
       initialProps: { q: "" },
     });
     airlines.mockClear();
 
     rerender({ q: "l" });
-    await vi.advanceTimersByTimeAsync(100);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
     rerender({ q: "lu" });
-    await vi.advanceTimersByTimeAsync(100);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
     rerender({ q: "luf" });
-    await vi.advanceTimersByTimeAsync(100);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
     rerender({ q: "luft" });
     // Only the last change gets the full 300ms window without interruption.
-    await vi.advanceTimersByTimeAsync(300);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
 
     expect(airlines).toHaveBeenCalledTimes(1);
     expect(airlines).toHaveBeenCalledWith("luft");
+    expect(result.current.airlines).toEqual(["Lufthansa"]);
   });
 
   // Callers that never pass a query (FlightEditModal, FlightReviewModal) must
   // keep getting the old unfiltered (first-50) behavior — no `q` forwarded.
   it("calls suggestionsApi.airlines with an empty string when no query is given", async () => {
-    renderHook(() => useSuggestions());
-    await vi.advanceTimersByTimeAsync(300);
+    const { result } = renderHook(() => useSuggestions());
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
 
     expect(airlines).toHaveBeenCalledWith("");
+    expect(result.current.airlines).toEqual(["Lufthansa"]);
   });
 
   it("still fetches aircraft suggestions once on mount, unaffected by the query debounce", async () => {
-    renderHook(({ q }: { q: string }) => useSuggestions(q), { initialProps: { q: "luft" } });
-    await vi.advanceTimersByTimeAsync(0);
+    const { result } = renderHook(({ q }: { q: string }) => useSuggestions(q), {
+      initialProps: { q: "luft" },
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
 
     expect(aircraft).toHaveBeenCalledTimes(1);
     expect(aircraft).toHaveBeenCalledWith();
+    expect(result.current.aircraft).toEqual(["A320"]);
+  });
+
+  it("does not let an older response replace suggestions for the current query", async () => {
+    let resolveOld!: (value: string[]) => void;
+    airlines.mockReturnValueOnce(
+      new Promise<string[]>((resolve) => {
+        resolveOld = resolve;
+      })
+    );
+    const { result, rerender } = renderHook(({ q }) => useSuggestions(q), {
+      initialProps: { q: "old" },
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    expect(airlines).toHaveBeenCalledWith("old");
+
+    airlines.mockResolvedValueOnce(["New airline"]);
+    rerender({ q: "new" });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    expect(result.current.airlines).toEqual(["New airline"]);
+
+    await act(async () => {
+      resolveOld(["Old airline"]);
+    });
+    expect(result.current.airlines).toEqual(["New airline"]);
+  });
+
+  it("cancels a pending debounced request when unmounted", async () => {
+    const { unmount } = renderHook(() => useSuggestions("pending"));
+    unmount();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    expect(airlines).not.toHaveBeenCalled();
   });
 });

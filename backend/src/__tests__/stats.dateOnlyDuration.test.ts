@@ -64,7 +64,7 @@ jest.mock("../services/airportCache", () => ({
 const PLACEHOLDER_DEP = new Date("1989-03-15T12:00:00Z");
 const PLACEHOLDER_ARR = new Date("1989-03-15T13:00:00Z");
 
-function statsFlight(semantics: string): FlightData {
+function statsFlight(semantics: FlightData["depTimeSemantics"]): FlightData {
   return {
     id: `FRA-JFK-${semantics}`,
     status: "flown",
@@ -83,6 +83,7 @@ function statsFlight(semantics: string): FlightData {
     aircraft: null,
     price: 800,
     priceBase: 800,
+    fxBaseCurrency: "EUR",
     taxes: null,
     fees: null,
     category: null,
@@ -120,7 +121,7 @@ function achievementFlight(semantics: string): AchievementFlight {
 
 describe("business stats — a DATE_ONLY row is estimated, its placeholder clocks are not measured", () => {
   it("cost per hour uses the coordinate estimate, not the one-hour placeholder", () => {
-    const stats = calculateBusinessStats([statsFlight("DATE_ONLY")]);
+    const stats = calculateBusinessStats([statsFlight("DATE_ONLY")], "EUR");
     // 800 € over the placeholder hour would be 800 €/h; over the ~8 h estimate
     // it is about 100 €/h.
     expect(stats.costPerHour).toBeGreaterThan(80);
@@ -128,13 +129,13 @@ describe("business stats — a DATE_ONLY row is estimated, its placeholder clock
   });
 
   it("still measures a UTC row with the same clocks", () => {
-    const stats = calculateBusinessStats([statsFlight("UTC")]);
+    const stats = calculateBusinessStats([statsFlight("UTC")], "EUR");
     expect(stats.costPerHour).toBe(800);
     expect(stats.avgFlightDuration).toBe(1);
   });
 
   it("the average duration counts the row as an estimate", () => {
-    const stats = calculateBusinessStats([statsFlight("DATE_ONLY")]);
+    const stats = calculateBusinessStats([statsFlight("DATE_ONLY")], "EUR");
     expect(stats.avgFlightDuration).toBeGreaterThan(6.5);
     expect(stats.avgFlightDuration).toBeLessThan(9.5);
   });

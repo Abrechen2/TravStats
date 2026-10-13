@@ -94,7 +94,7 @@ describe("rail evidence measures", () => {
 
     const night = await resolve("railNightTrainCount");
     expect(night.measure.value).toBe(badge.railNightTrains);
-    expect(night.entries.map((e) => e.title.text)).toEqual([
+    expect(night.entries.map((e) => ("text" in e.title ? e.title.text : undefined))).toEqual([
       "NJ · Frankfurt (Main) Hbf → Wien Hbf",
     ]);
 

@@ -14,7 +14,7 @@ describe("flight companions", () => {
       .post("/api/v1/auth/register")
       .send({ username: "flight-companions", password: "password123" })
       .expect(201);
-    cookie = registration.headers["set-cookie"];
+    cookie = [registration.headers["set-cookie"]].flat();
   });
 
   afterAll(async () => {

@@ -8,7 +8,12 @@
  */
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
-const mockAdminFindFirst = jest.fn();
+const mockAdminFindFirst =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.AdminSettingsFindFirstArgs
+    ) => Promise<Partial<import("../generated/prisma/client").AdminSettings> | null>
+  >();
 jest.mock("../db", () => ({
   prisma: {
     adminSettings: { findFirst: mockAdminFindFirst },

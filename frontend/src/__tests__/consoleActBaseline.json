@@ -5,7 +5,6 @@
   "src/__tests__/components/Cruise/CruiseEditModal.test.tsx",
   "src/__tests__/components/FlightEditModal.test.tsx",
   "src/__tests__/components/FlightPanel.test.tsx",
-  "src/__tests__/components/FlightReviewModal.fieldSources.test.tsx",
   "src/__tests__/components/FlightReviewModal.finalStep.test.tsx",
   "src/__tests__/components/NavigationBar.test.tsx",
   "src/__tests__/components/Trips/TripsTab.test.tsx",
@@ -29,7 +28,6 @@
   "src/hooks/__tests__/useDashboardTours.test.ts",
   "src/hooks/__tests__/usePlacesAccess.test.ts",
   "src/hooks/__tests__/useSessionValidation.test.tsx",
-  "src/hooks/__tests__/useSuggestions.test.ts",
   "src/hooks/__tests__/useTourTracks.test.ts",
   "src/pages/__tests__/DashboardPage.test.tsx"
 ]

@@ -78,6 +78,12 @@ jobs:
       - name: Typecheck backend
         run: cd backend && npx tsc --noEmit
 
+      - name: Test typecheck guard
+        run: npm run test:typecheck
+
+      - name: Typecheck backend tests
+        run: npm run typecheck:tests
+
       - name: Typecheck frontend
         run: cd frontend && npx tsc --noEmit
 

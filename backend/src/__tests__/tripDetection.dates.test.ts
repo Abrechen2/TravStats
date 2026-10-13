@@ -29,7 +29,7 @@ describe("trip detection — committed trips carry their date range", () => {
       .post("/api/v1/auth/register")
       .send({ username: "detect-dates", password: "password123" })
       .expect(201);
-    cookie = registration.headers["set-cookie"];
+    cookie = [registration.headers["set-cookie"]].flat();
     const user = await prisma.user.findUniqueOrThrow({ where: { username: "detect-dates" } });
     userId = user.id;
   });
@@ -77,7 +77,7 @@ describe("trip detection — committed trips carry their date range", () => {
 
     await request(app)
       .post("/api/v1/trips/detect")
-      .set("Cookie", cookie)
+      .set("Cookie", [cookie].flat())
       .send({ dryRun: false })
       .expect(200);
 

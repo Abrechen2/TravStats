@@ -1,13 +1,14 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
-const mockFindMany = jest.fn();
+const mockFindMany = jest.fn<() => Promise<StayFixture[]>>();
 jest.mock("../../../db", () => ({
   prisma: { lodgingStay: { findMany: mockFindMany } },
 }));
 
 const ENABLED = ["flight", "lodging"];
 
-const mockSendLodgingCheckInReminder = jest.fn();
+const mockSendLodgingCheckInReminder =
+  jest.fn<typeof import("../../emailService").sendLodgingCheckInReminder>();
 jest.mock("../../emailService", () => ({
   sendLodgingCheckInReminder: mockSendLodgingCheckInReminder,
 }));
@@ -203,7 +204,7 @@ describe("checkLodgingCheckInReminders", () => {
     const { checkLodgingCheckInReminders } = await import("../lodgingReminders");
     await checkLodgingCheckInReminders(morningInstant(checkInDate));
 
-    const [stay] = mockSendLodgingCheckInReminder.mock.calls[0] as [Record<string, unknown>];
+    const [stay] = mockSendLodgingCheckInReminder.mock.calls[0];
     expect(stay.nights).toBe(3);
     expect(stay.checkOutDay).toEqual({ date: "2026-09-30", zone: "Asia/Tokyo", precision: "day" });
   });
@@ -215,7 +216,7 @@ describe("checkLodgingCheckInReminders", () => {
     const { checkLodgingCheckInReminders } = await import("../lodgingReminders");
     await checkLodgingCheckInReminders(morningInstant(checkInDate));
 
-    const [stay] = mockSendLodgingCheckInReminder.mock.calls[0] as [Record<string, unknown>];
+    const [stay] = mockSendLodgingCheckInReminder.mock.calls[0];
     expect(stay.nights ?? null).toBeNull();
     expect(stay.checkOutDay).toBeNull();
   });

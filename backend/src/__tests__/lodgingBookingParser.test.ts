@@ -817,6 +817,11 @@ describe("parseLodgingBookingText — the budget is wall-clock (AUD-058)", () =>
 
 describe("bookingsToCandidates", () => {
   const booking: ParsedLodgingBooking = {
+    pricePerNight: null,
+    board: null,
+    guests: null,
+    type: null,
+    chainName: null,
     hotelName: "Musterhotel",
     checkIn: "2026-01-05",
     checkOut: "2026-01-07",

@@ -99,7 +99,7 @@ describe("passkey endpoints", () => {
     const res = await request(app).post("/api/v1/auth/passkeys/login/options");
     expect(res.status).toBe(200);
     expect(res.body.allowCredentials ?? []).toEqual([]);
-    expect(res.headers["set-cookie"].join(";")).toContain("passkey_handle=");
+    expect([res.headers["set-cookie"]].flat().join(";")).toContain("passkey_handle=");
   });
 
   it("requires a session to register", async () => {
@@ -188,7 +188,7 @@ describe("passkey endpoints", () => {
       .set("Cookie", options.headers["set-cookie"])
       .send({ response: { id: "nobody-has-this" } });
     expect(res.status).toBe(401);
-    expect(res.headers["set-cookie"]?.join(";") ?? "").not.toContain("auth_token=");
+    expect([res.headers["set-cookie"] ?? []].flat().join(";")).not.toContain("auth_token=");
   });
 
   // A bare IP cannot be an rpId, and accepting one would mint credentials the

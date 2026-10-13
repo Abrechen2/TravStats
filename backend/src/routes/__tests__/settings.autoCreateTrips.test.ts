@@ -23,7 +23,7 @@ describe("settings — autoCreateTrips", () => {
       .post("/api/v1/auth/register")
       .send({ username: "auto-trips-settings", password: "password123" })
       .expect(201);
-    cookie = registration.headers["set-cookie"];
+    cookie = [registration.headers["set-cookie"]].flat();
     const user = await prisma.user.findUniqueOrThrow({
       where: { username: "auto-trips-settings" },
     });

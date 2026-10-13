@@ -1,7 +1,10 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
-const mockGroupBy = jest.fn();
-const mockCount = jest.fn();
+const mockGroupBy =
+  jest.fn<
+    () => Promise<(Partial<import("../generated/prisma/client").Flight> & { _count: number })[]>
+  >();
+const mockCount = jest.fn<(args: import("../prisma").Prisma.FlightCountArgs) => Promise<number>>();
 
 jest.mock("../db", () => ({
   prisma: {

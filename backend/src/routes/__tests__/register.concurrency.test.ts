@@ -20,7 +20,7 @@ const USERNAMES = ["raceA", "raceB", "raceC", "raceD"];
 describe("registration under concurrency", () => {
   let previousMaxUsers: number | null = null;
   let previousAllowRegistration: boolean | null = null;
-  let settingsId: string | null = null;
+  let settingsId: number | null = null;
 
   beforeAll(async () => {
     const settings = await prisma.adminSettings.findFirst();

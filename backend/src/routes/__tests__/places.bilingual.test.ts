@@ -101,7 +101,7 @@ describe("Places — two names and the trip a visit belongs to", () => {
 
     it("clears the local name on an explicit null and keeps it when only the name changes", async () => {
       const id = (await createPlace({ name: "Seoul Station", localName: "서울역" })).body.data.id;
-      const patch = (body: unknown) =>
+      const patch = (body: object | string) =>
         request(app).patch(`/api/v1/places/${id}`).set("Cookie", cookie).send(body);
 
       const renamed = await patch({ name: "Seoul Stn" });

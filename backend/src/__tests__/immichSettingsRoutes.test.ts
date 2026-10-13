@@ -7,11 +7,36 @@ import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import express from "express";
 import request from "supertest";
 
-const userSettingsFindUnique = jest.fn();
-const userSettingsUpsert = jest.fn();
-const adminSettingsFindFirst = jest.fn();
-const adminSettingsUpdate = jest.fn();
-const adminSettingsCreate = jest.fn();
+const userSettingsFindUnique =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.UserSettingsFindUniqueArgs
+    ) => Promise<Partial<import("../generated/prisma/client").UserSettings> | null>
+  >();
+const userSettingsUpsert =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.UserSettingsUpsertArgs
+    ) => Promise<Partial<import("../generated/prisma/client").UserSettings>>
+  >();
+const adminSettingsFindFirst =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.AdminSettingsFindFirstArgs
+    ) => Promise<Partial<import("../generated/prisma/client").AdminSettings> | null>
+  >();
+const adminSettingsUpdate =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.AdminSettingsUpdateArgs
+    ) => Promise<Partial<import("../generated/prisma/client").AdminSettings>>
+  >();
+const adminSettingsCreate =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.AdminSettingsCreateArgs
+    ) => Promise<Partial<import("../generated/prisma/client").AdminSettings>>
+  >();
 
 jest.mock("../db", () => ({
   prisma: {
@@ -31,10 +56,12 @@ jest.mock("../utils/encryption", () => ({
   ),
 }));
 
-const testImmichConnection = jest.fn();
+const testImmichConnection =
+  jest.fn<typeof import("../services/immich/immichTester").testImmichConnection>();
 jest.mock("../services/immich/immichTester", () => ({ testImmichConnection }));
 
-const getImmichConnection = jest.fn();
+const getImmichConnection =
+  jest.fn<typeof import("../services/immich/immichResolver").getImmichConnection>();
 jest.mock("../services/immich/immichResolver", () => ({ getImmichConnection }));
 
 import immichSettingsRouter from "../routes/settings/immich";
@@ -58,7 +85,7 @@ beforeEach(() => {
   getImmichConnection.mockResolvedValue({
     baseUrl: "https://immich.lan",
     apiKey: "k",
-    source: "user",
+    source: "user" as const,
   });
 });
 
@@ -77,7 +104,7 @@ describe("GET /settings/immich", () => {
       baseUrl: "https://immich.lan",
       hasKey: true,
       defaultMode: "import",
-      source: "user",
+      source: "user" as const,
       isShared: false,
       hasAccess: true,
     });
@@ -230,7 +257,7 @@ describe("POST /settings/immich/test", () => {
     const shared = {
       baseUrl: "https://immich.lan",
       apiKey: "instance-wide-secret",
-      source: "global",
+      source: "global" as const,
     };
 
     it("refuses to spend an admin-global key on a target the caller chose", async () => {

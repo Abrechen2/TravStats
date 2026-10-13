@@ -296,7 +296,7 @@ describe("calculateBusinessStats — historical flights", () => {
         category: "business",
       }),
     ];
-    const stats = calculateBusinessStats(flights);
+    const stats = calculateBusinessStats(flights, "EUR");
     // Both flights are category 'business' → most common category.
     expect(stats.mostCommonCategory).toBe("business");
     // Two distinct seat classes counted (economy + business).
@@ -327,7 +327,7 @@ describe("calculateBusinessStats — historical flights", () => {
         arrivalTime: new Date("1989-03-15T13:00:00Z"),
       }),
     ];
-    const stats = calculateBusinessStats(flights);
+    const stats = calculateBusinessStats(flights, "EUR");
     // NOT the 1 h the placeholder timestamps would have measured — that is the
     // fiction this test exists to keep out.
     expect(stats.avgFlightDuration).not.toBe(1);

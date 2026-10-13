@@ -1,11 +1,17 @@
-import { admitsAirport, isAntarcticAirfield } from "../shared/antarcticAirfields";
+import {
+  admitsAirport,
+  isAntarcticAirfield,
+  type AntarcticCandidate,
+} from "../shared/antarcticAirfields";
+
+type AirportRow = AntarcticCandidate & { ident: string; name: string };
 
 /**
  * Rows quoted verbatim from the OurAirports CSV
  * (`davidmegginson.github.io/ourairports-data/airports.csv`, read 2026-08-25).
  * Only the columns the predicate reads are kept.
  */
-function row(over: Partial<Record<string, string>>): Record<string, string> {
+function row(over: Partial<AirportRow>): AirportRow {
   return {
     ident: "",
     type: "small_airport",

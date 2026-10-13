@@ -154,7 +154,7 @@ describe("POST /api/v1/admin/time-zones/re-resolve", () => {
     expect(applied.skippedChanged).toBeGreaterThanOrEqual(1);
 
     const flight = await prisma.flight.findUniqueOrThrow({ where: { id: flightId } });
-    expect([flight.depTimezone, flight.arrTimezone, flight.departureTime.toISOString()]).toEqual([
+    expect([flight.depTimezone, flight.arrTimezone, flight.departureTime!.toISOString()]).toEqual([
       "Europe/Berlin",
       "America/New_York",
       "2027-01-10T08:00:00.000Z",

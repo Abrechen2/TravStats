@@ -17,9 +17,8 @@ import { extendedFlightCreateFields, type ExtendedFlightInput } from "./extended
  * `routes/flights.ts` is over the 800-line limit and frozen at its size, so it
  * could not have lived there anyway.
  *
- * NOT in here: anything the two paths legitimately compute differently — the
- * airport enrichment, the derived status, CO2, the route distance, the FX
- * snapshot. Those are each a decision, not a copy.
+ * Derived status, CO2 and route distance belong to buildFlightCreateData.
+ * Airport enrichment and the FX snapshot are supplied by its callers.
  */
 
 export interface SharedFlightCreateInput extends ExtendedFlightInput {

@@ -1,3 +1,5 @@
+jest.mock("../../../services/loggingConfig", () => ({ isDebugEnabled: () => false }));
+
 import { computeLodgingInsights, type InsightStay } from "..";
 import { totalsOf } from "../../../services/stats/insights/measureItems";
 
@@ -6,7 +8,10 @@ const d = (iso: string): Date => new Date(`${iso}T00:00:00Z`);
 
 let seq = 0;
 function stay(
-  over: Partial<InsightStay> & { checkIn?: string | null; checkOut?: string | null }
+  over: Omit<Partial<InsightStay>, "checkIn" | "checkOut"> & {
+    checkIn?: string | null;
+    checkOut?: string | null;
+  }
 ): InsightStay {
   seq += 1;
   const { checkIn, checkOut, ...rest } = over;

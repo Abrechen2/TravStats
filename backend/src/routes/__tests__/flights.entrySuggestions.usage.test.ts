@@ -20,7 +20,7 @@ describe("flight entry suggestions: usage counts, airlines and aircraft", () => 
   const suggest = (query: Record<string, string> = {}) =>
     request(app).get("/api/v1/flights/entry-suggestions").query(query).set("Cookie", cookie);
 
-  type FlightData = Parameters<typeof prisma.flight.create>[0]["data"];
+  type FlightData = import("../../prisma").Prisma.FlightUncheckedCreateInput;
   const flight = (owner: string, over: Partial<FlightData>): FlightData => ({
     userId: owner,
     depIata: "MUC",

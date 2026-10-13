@@ -57,8 +57,8 @@ describe("applyPendingUpdate time-semantics upgrade", () => {
   async function createUpdate(
     flightId: string,
     apiSource: string,
-    proposedData: Record<string, unknown>,
-    metadata?: Record<string, unknown>
+    proposedData: import("../prisma").Prisma.InputJsonObject,
+    metadata?: import("../prisma").Prisma.InputJsonObject
   ) {
     return prisma.pendingFlightUpdate.create({
       data: {

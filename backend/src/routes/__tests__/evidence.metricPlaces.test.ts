@@ -44,7 +44,7 @@ describe("GET /api/v1/evidence/metric/... — the places tab", () => {
   let ownListId: string;
   let curatedListId: string;
 
-  interface EvidenceBody {
+  type EvidenceBody = import("../../schemas/evidence").EvidenceResponse & {
     measure: { value: number | null; unit: string; aggregation: string };
     entries: Array<{
       id: string;
@@ -56,7 +56,7 @@ describe("GET /api/v1/evidence/metric/... — the places tab", () => {
     }>;
     omitted: { count: number; contribution?: number; credits?: number };
     unattributed: Array<{ count: number; reason: string }>;
-  }
+  };
 
   const KEYS = [
     "placesVisitedCount",

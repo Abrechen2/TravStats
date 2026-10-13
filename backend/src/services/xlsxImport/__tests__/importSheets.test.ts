@@ -226,6 +226,7 @@ describe("spreadsheet import", () => {
     const results = await importSheets([{ key: "meine-notizen", rows: [{ a: "b" }] }], {
       userId,
       dryRun: true,
+      mode: "merge",
     });
     expect(results).toHaveLength(0);
   });

@@ -63,7 +63,7 @@ describe("POST /flights/batch — tripId per row", () => {
       ...extra,
     };
   };
-  const post = (body: unknown) =>
+  const post = (body: object | string) =>
     request(app).post("/api/v1/flights/batch").set("Cookie", cookie).send(body);
 
   it("files each row on the trip it names, and leaves the others alone", async () => {

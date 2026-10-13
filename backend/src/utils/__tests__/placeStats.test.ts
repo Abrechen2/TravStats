@@ -6,6 +6,9 @@ const PAST = new Date("2024-06-12T10:00:00Z");
 const FUTURE = new Date("2026-09-30T10:00:00Z");
 
 const place = (over: Partial<PlaceStatsInput> = {}): PlaceStatsInput => ({
+  city: null,
+  lat: 0,
+  lon: 0,
   visited: true,
   category: "landmark",
   isoCountryCode: "IT",

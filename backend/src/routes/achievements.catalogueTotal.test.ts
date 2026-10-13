@@ -1,7 +1,18 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
-const mockAchievementFindMany = jest.fn();
-const mockUserAchievementFindMany = jest.fn();
+const mockAchievementFindMany =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.AchievementFindManyArgs
+    ) => Promise<Partial<import("../generated/prisma/client").Achievement>[]>
+  >();
+const mockUserAchievementFindMany = jest.fn<
+  (args: import("../prisma").Prisma.UserAchievementFindManyArgs) => Promise<
+    (Partial<import("../generated/prisma/client").UserAchievement> & {
+      achievement: Partial<import("../generated/prisma/client").Achievement>;
+    })[]
+  >
+>();
 
 jest.mock("../db", () => ({
   prisma: {

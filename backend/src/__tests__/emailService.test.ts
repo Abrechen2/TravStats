@@ -3,8 +3,9 @@ import nodemailer from "nodemailer";
 
 // Persistent mock transporter shared across all calls to createTransport
 const mockTransporter = {
-  sendMail: jest.fn(),
-  verify: jest.fn(),
+  sendMail:
+    jest.fn<(mail: import("nodemailer").SendMailOptions) => Promise<{ messageId: string }>>(),
+  verify: jest.fn<() => Promise<boolean>>(),
 };
 
 // jest.mock is hoisted — factories run before any import statements
@@ -18,7 +19,12 @@ jest.mock("nodemailer", () => ({
 jest.mock("../db", () => ({
   prisma: {
     smtpConfig: {
-      findUnique: jest.fn(),
+      findUnique:
+        jest.fn<
+          (
+            args: import("../prisma").Prisma.SmtpConfigFindUniqueArgs
+          ) => Promise<Partial<import("../generated/prisma/client").SmtpConfig> | null>
+        >(),
     },
   },
 }));
@@ -39,7 +45,17 @@ jest.mock("../routes/admin/smtp", () => ({ SMTP_CONFIG_ID: 1 }));
 // URL for the entity link and the settings-page footer link — mocked here
 // exactly like the flight/cruise/rail/lodging reminder content tests
 // (`emailService.reminders.test.ts`) do.
-const mockGetInstanceSettings = jest.fn();
+const mockGetInstanceSettings =
+  jest.fn<
+    () => Promise<
+      Pick<
+        Awaited<
+          ReturnType<typeof import("../services/instanceSettingsService").getInstanceSettings>
+        >,
+        "frontendUrl"
+      >
+    >
+  >();
 jest.mock("../services/instanceSettingsService", () => ({
   getInstanceSettings: mockGetInstanceSettings,
 }));
@@ -54,7 +70,9 @@ import {
 } from "../services/emailService";
 import { prisma } from "../db";
 
-const mockFindUnique = prisma.smtpConfig.findUnique as jest.Mock;
+const mockFindUnique = prisma.smtpConfig.findUnique as jest.Mock<
+  () => Promise<typeof MOCK_SMTP_CONFIG | null>
+>;
 const mockCreateTransport = nodemailer.createTransport as jest.Mock;
 
 // Shape of `FlightReminderData` (services/emailService.ts) since the

@@ -1,6 +1,8 @@
 import { calculateLodgingStats, LodgingStayData } from "../lodgingStats";
 
 const stay = (o: Partial<LodgingStayData>): LodgingStayData => ({
+  programName: null,
+  membershipTier: null,
   lodgingId: "l1",
   lodgingName: "Hotel Adlon",
   type: "hotel",
@@ -288,8 +290,8 @@ describe("calculateLodgingStats", () => {
       JSON.stringify(
         stays.map((s) => ({
           ...s,
-          checkIn: s.checkIn.toISOString(),
-          checkOut: s.checkOut.toISOString(),
+          checkIn: s.checkIn!.toISOString(),
+          checkOut: s.checkOut!.toISOString(),
         }))
       )
     );
@@ -298,8 +300,8 @@ describe("calculateLodgingStats", () => {
       JSON.stringify(
         stays.map((s) => ({
           ...s,
-          checkIn: s.checkIn.toISOString(),
-          checkOut: s.checkOut.toISOString(),
+          checkIn: s.checkIn!.toISOString(),
+          checkOut: s.checkOut!.toISOString(),
         }))
       )
     );

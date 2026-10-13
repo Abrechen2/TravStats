@@ -1,13 +1,16 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
-const mockFindMany = jest.fn();
+const mockFindMany =
+  jest.fn<
+    (args: import("../../../prisma").Prisma.RailJourneyFindManyArgs) => Promise<JourneyFixture[]>
+  >();
 jest.mock("../../../db", () => ({
   prisma: { railJourney: { findMany: mockFindMany } },
 }));
 
 const ENABLED = ["flight", "rail"];
 
-const mockSendRailReminder = jest.fn();
+const mockSendRailReminder = jest.fn<typeof import("../../emailService").sendRailReminder>();
 jest.mock("../../emailService", () => ({
   sendRailReminder: mockSendRailReminder,
 }));
@@ -18,6 +21,8 @@ jest.mock("../../../utils/logger", () => ({
 }));
 
 interface JourneyFixture {
+  bookingReference?: string | null;
+  travelClass?: string | null;
   id: string;
   bookingId: string | null;
   depStationId: number | null;
@@ -144,17 +149,13 @@ describe("checkRailReminders", () => {
     await checkRailReminders(new Date());
 
     expect(mockSendRailReminder).toHaveBeenCalledTimes(1);
-    const [legs, , hoursAhead] = mockSendRailReminder.mock.calls[0] as [
-      Array<{ departure: { zone: string }; arrival: { zone: string } }>,
-      unknown,
-      number,
-    ];
+    const [legs, , hoursAhead] = mockSendRailReminder.mock.calls[0];
     expect(hoursAhead).toBe(24);
     // A ride of one train is a list of one — the single-train mail, as before.
     expect(legs).toHaveLength(1);
     const [journeyData] = legs;
     expect(journeyData.departure.zone).toBe("Asia/Tokyo");
-    expect(journeyData.arrival.zone).toBe("Europe/Berlin");
+    expect(journeyData.arrival!.zone).toBe("Europe/Berlin");
   });
 
   it("does not re-send the same journey+window on a second call (dedupe)", async () => {
@@ -227,7 +228,7 @@ describe("checkRailReminders", () => {
     const { checkRailReminders } = await import("../railReminders");
     await checkRailReminders(new Date());
 
-    const [[journey]] = mockSendRailReminder.mock.calls[0] as [Array<Record<string, unknown>>];
+    const [[journey]] = mockSendRailReminder.mock.calls[0];
     expect(journey.travelClass).toBe("first");
     expect(journey.bookingReference).toBe("ABC123");
   });
@@ -329,10 +330,8 @@ describe("checkRailReminders — one reminder per ride (forgejo#210)", () => {
   }
 
   type SentLeg = { id: string; trainNumber: string | null; arrStationName: string };
-  const sentRides = (): Array<{ legs: SentLeg[]; hours: number }> =>
-    (mockSendRailReminder.mock.calls as Array<[SentLeg[], unknown, number]>).map(
-      ([legs, , hours]) => ({ legs, hours })
-    );
+  const sentRides = (): Array<{ legs: readonly SentLeg[]; hours: number }> =>
+    mockSendRailReminder.mock.calls.map(([legs, , hours]) => ({ legs, hours }));
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -357,9 +356,7 @@ describe("checkRailReminders — one reminder per ride (forgejo#210)", () => {
       expect(ride.legs.map((l) => l.id)).toEqual(["leg-ice", "leg-ec"]);
     }
 
-    const [legs] = mockSendRailReminder.mock.calls[0] as [
-      Parameters<typeof railRideReminderContent>[0],
-    ];
+    const [legs] = mockSendRailReminder.mock.calls[0];
     const de = railRideReminderContent(legs, 24, "de", { base: "https://x.test" });
     const en = railRideReminderContent(legs, 24, "en", { base: "https://x.test" });
     expect(de.subject).toBe("Zug-Erinnerung: Deine Fahrt nach Salzburg Hbf in 24h");

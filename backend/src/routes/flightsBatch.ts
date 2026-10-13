@@ -216,6 +216,7 @@ router.post(
           const flight = await tx.flight.create({
             data: {
               ...(await buildFlightCreateData(data, {
+                mode: "import",
                 userId,
                 externalRef,
                 importBatchId,

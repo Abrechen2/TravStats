@@ -48,12 +48,15 @@ describe("createOpenRouteService", () => {
   };
 
   it("decodes a successful response into waypoints/distanceKm/drivingMinutes", async () => {
-    const fetchImpl = jest.fn(async () => jsonResponse(200, orsFixture));
-    const provider = createOpenRouteService("test-key", fetchImpl as unknown as typeof fetch);
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      jsonResponse(200, orsFixture)
+    );
+    const provider = createOpenRouteService("test-key", fetchImpl);
 
     const result = await provider.route(roadRequest());
 
     expect(result).not.toBeNull();
+    if (!result || "failure" in result) throw new Error("Expected a successful route");
     expect(result?.waypoints).toEqual([
       [13.38886, 52.517037],
       [13.390006, 52.520008],
@@ -64,8 +67,10 @@ describe("createOpenRouteService", () => {
   });
 
   it("puts the mapped profile in the request path and the coordinates in the body", async () => {
-    const fetchImpl = jest.fn(async () => jsonResponse(200, orsFixture));
-    const provider = createOpenRouteService("test-key", fetchImpl as unknown as typeof fetch);
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      jsonResponse(200, orsFixture)
+    );
+    const provider = createOpenRouteService("test-key", fetchImpl);
 
     await provider.route(roadRequest());
 
@@ -93,8 +98,10 @@ describe("createOpenRouteService", () => {
   ] as const)(
     "routes a %s leg of a %s roadtrip with the %s profile",
     async (mode, vehicle, profile) => {
-      const fetchImpl = jest.fn(async () => jsonResponse(200, orsFixture));
-      const provider = createOpenRouteService("test-key", fetchImpl as unknown as typeof fetch);
+      const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+        jsonResponse(200, orsFixture)
+      );
+      const provider = createOpenRouteService("test-key", fetchImpl);
 
       await provider.route({ from: FROM, to: TO, mode, vehicle });
 
@@ -103,11 +110,10 @@ describe("createOpenRouteService", () => {
   );
 
   it("never puts the API key in the URL or body", async () => {
-    const fetchImpl = jest.fn(async () => jsonResponse(200, orsFixture));
-    const provider = createOpenRouteService(
-      "super-secret-key",
-      fetchImpl as unknown as typeof fetch
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      jsonResponse(200, orsFixture)
     );
+    const provider = createOpenRouteService("super-secret-key", fetchImpl);
 
     await provider.route(roadRequest());
 
@@ -120,8 +126,10 @@ describe("createOpenRouteService", () => {
   });
 
   it("reports a provider error on a 500", async () => {
-    const fetchImpl = jest.fn(async () => jsonResponse(500, { error: "boom" }));
-    const provider = createOpenRouteService("test-key", fetchImpl as unknown as typeof fetch);
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      jsonResponse(500, { error: "boom" })
+    );
+    const provider = createOpenRouteService("test-key", fetchImpl);
 
     const result = await provider.route(roadRequest());
 
@@ -142,8 +150,10 @@ describe("createOpenRouteService", () => {
       code === null
         ? { error: "Access to this API has been disallowed" }
         : { error: { code, message: "Could not find routable point" } };
-    const fetchImpl = jest.fn(async () => jsonResponse(status, body));
-    const provider = createOpenRouteService("test-key", fetchImpl as unknown as typeof fetch);
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      jsonResponse(status, body)
+    );
+    const provider = createOpenRouteService("test-key", fetchImpl);
 
     const result = await provider.route(roadRequest());
 
@@ -156,13 +166,10 @@ describe("createOpenRouteService", () => {
     // ORS quotes the user's stop coordinates in its error text.
     const orsText =
       "Could not find routable point within a radius of 350.0 meters of specified coordinate 1: 13.4050 52.5200.";
-    const fetchImpl = jest.fn(async () =>
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
       jsonResponse(404, { error: { code: 2010, message: orsText } })
     );
-    const provider = createOpenRouteService(
-      "super-secret-key",
-      fetchImpl as unknown as typeof fetch
-    );
+    const provider = createOpenRouteService("super-secret-key", fetchImpl);
 
     await provider.route(roadRequest());
 
@@ -180,15 +187,19 @@ describe("createOpenRouteService", () => {
   });
 
   it("reports a provider error when the error body is not JSON", async () => {
-    const fetchImpl = jest.fn(async () => malformedResponse(502));
-    const provider = createOpenRouteService("test-key", fetchImpl as unknown as typeof fetch);
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      malformedResponse(502)
+    );
+    const provider = createOpenRouteService("test-key", fetchImpl);
 
     expect(await provider.route(roadRequest())).toEqual({ failure: "provider_error" });
   });
 
   it("reports a provider error on a 200 with a malformed body", async () => {
-    const fetchImpl = jest.fn(async () => malformedResponse(200));
-    const provider = createOpenRouteService("test-key", fetchImpl as unknown as typeof fetch);
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      malformedResponse(200)
+    );
+    const provider = createOpenRouteService("test-key", fetchImpl);
 
     const result = await provider.route(roadRequest());
 
@@ -196,8 +207,10 @@ describe("createOpenRouteService", () => {
   });
 
   it("reports a provider error on a 200 with a well-formed but wrong-shaped body", async () => {
-    const fetchImpl = jest.fn(async () => jsonResponse(200, { features: [] }));
-    const provider = createOpenRouteService("test-key", fetchImpl as unknown as typeof fetch);
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      jsonResponse(200, { features: [] })
+    );
+    const provider = createOpenRouteService("test-key", fetchImpl);
 
     const result = await provider.route(roadRequest());
 
@@ -205,10 +218,10 @@ describe("createOpenRouteService", () => {
   });
 
   it("reports a provider error when fetch itself rejects", async () => {
-    const fetchImpl = jest.fn(async () => {
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () => {
       throw new Error("network down");
     });
-    const provider = createOpenRouteService("test-key", fetchImpl as unknown as typeof fetch);
+    const provider = createOpenRouteService("test-key", fetchImpl);
 
     const result = await provider.route(roadRequest());
 
@@ -216,8 +229,10 @@ describe("createOpenRouteService", () => {
   });
 
   it("returns null for a non-routable mode without calling fetch", async () => {
-    const fetchImpl = jest.fn(async () => jsonResponse(200, orsFixture));
-    const provider = createOpenRouteService("test-key", fetchImpl as unknown as typeof fetch);
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      jsonResponse(200, orsFixture)
+    );
+    const provider = createOpenRouteService("test-key", fetchImpl);
 
     const result = await provider.route({ from: FROM, to: TO, mode: "ferry" });
 
@@ -245,12 +260,15 @@ describe("createGraphHopper", () => {
   };
 
   it("decodes a successful response, converting metres/ms to km/minutes", async () => {
-    const fetchImpl = jest.fn(async () => jsonResponse(200, graphHopperFixture));
-    const provider = createGraphHopper("test-key", fetchImpl as unknown as typeof fetch);
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      jsonResponse(200, graphHopperFixture)
+    );
+    const provider = createGraphHopper("test-key", fetchImpl);
 
     const result = await provider.route(roadRequest());
 
     expect(result).not.toBeNull();
+    if (!result || "failure" in result) throw new Error("Expected a successful route");
     expect(result?.waypoints).toEqual([
       [13.38886, 52.517037],
       [13.390006, 52.520008],
@@ -261,8 +279,10 @@ describe("createGraphHopper", () => {
   });
 
   it("requests points_encoded=false and the mapped profile", async () => {
-    const fetchImpl = jest.fn(async () => jsonResponse(200, graphHopperFixture));
-    const provider = createGraphHopper("test-key", fetchImpl as unknown as typeof fetch);
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      jsonResponse(200, graphHopperFixture)
+    );
+    const provider = createGraphHopper("test-key", fetchImpl);
 
     await provider.route(roadRequest());
 
@@ -279,8 +299,10 @@ describe("createGraphHopper", () => {
   });
 
   it("returns null on a non-200 response", async () => {
-    const fetchImpl = jest.fn(async () => jsonResponse(401, { message: "invalid key" }));
-    const provider = createGraphHopper("test-key", fetchImpl as unknown as typeof fetch);
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      jsonResponse(401, { message: "invalid key" })
+    );
+    const provider = createGraphHopper("test-key", fetchImpl);
 
     const result = await provider.route(roadRequest());
 
@@ -288,8 +310,10 @@ describe("createGraphHopper", () => {
   });
 
   it("returns null on a 200 with a malformed body", async () => {
-    const fetchImpl = jest.fn(async () => malformedResponse(200));
-    const provider = createGraphHopper("test-key", fetchImpl as unknown as typeof fetch);
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      malformedResponse(200)
+    );
+    const provider = createGraphHopper("test-key", fetchImpl);
 
     const result = await provider.route(roadRequest());
 
@@ -297,8 +321,10 @@ describe("createGraphHopper", () => {
   });
 
   it("returns null on a 200 with a well-formed but wrong-shaped body", async () => {
-    const fetchImpl = jest.fn(async () => jsonResponse(200, { paths: [] }));
-    const provider = createGraphHopper("test-key", fetchImpl as unknown as typeof fetch);
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      jsonResponse(200, { paths: [] })
+    );
+    const provider = createGraphHopper("test-key", fetchImpl);
 
     const result = await provider.route(roadRequest());
 
@@ -309,8 +335,10 @@ describe("createGraphHopper", () => {
     const encodedFixture = {
       paths: [{ points: "ghrlHir~s@?BIC", distance: 1500.4, time: 210700 }],
     };
-    const fetchImpl = jest.fn(async () => jsonResponse(200, encodedFixture));
-    const provider = createGraphHopper("test-key", fetchImpl as unknown as typeof fetch);
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      jsonResponse(200, encodedFixture)
+    );
+    const provider = createGraphHopper("test-key", fetchImpl);
 
     const result = await provider.route(roadRequest());
 
@@ -337,15 +365,15 @@ describe("createCustomOsrm", () => {
   };
 
   it("decodes a successful response into waypoints/distanceKm/drivingMinutes", async () => {
-    const fetchImpl = jest.fn(async () => jsonResponse(200, osrmFixture));
-    const provider = createCustomOsrm(
-      "http://osrm.local:5000",
-      fetchImpl as unknown as typeof fetch
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      jsonResponse(200, osrmFixture)
     );
+    const provider = createCustomOsrm("http://osrm.local:5000", fetchImpl);
 
     const result = await provider.route(roadRequest());
 
     expect(result).not.toBeNull();
+    if (!result || "failure" in result) throw new Error("Expected a successful route");
     expect(result?.waypoints).toEqual([
       [13.38886, 52.517037],
       [13.390006, 52.520008],
@@ -356,11 +384,10 @@ describe("createCustomOsrm", () => {
   });
 
   it("builds the OSRM URL shape with the mapped profile and no key", async () => {
-    const fetchImpl = jest.fn(async () => jsonResponse(200, osrmFixture));
-    const provider = createCustomOsrm(
-      "http://osrm.local:5000/",
-      fetchImpl as unknown as typeof fetch
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      jsonResponse(200, osrmFixture)
     );
+    const provider = createCustomOsrm("http://osrm.local:5000/", fetchImpl);
 
     await provider.route(roadRequest());
 
@@ -373,11 +400,10 @@ describe("createCustomOsrm", () => {
   });
 
   it("preserves a base URL's own path and query string (e.g. a reverse-proxy token)", async () => {
-    const fetchImpl = jest.fn(async () => jsonResponse(200, osrmFixture));
-    const provider = createCustomOsrm(
-      "http://osrm.local:5000/proxy?token=abc123",
-      fetchImpl as unknown as typeof fetch
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      jsonResponse(200, osrmFixture)
     );
+    const provider = createCustomOsrm("http://osrm.local:5000/proxy?token=abc123", fetchImpl);
 
     await provider.route(roadRequest());
 
@@ -388,11 +414,10 @@ describe("createCustomOsrm", () => {
   });
 
   it("returns null on a non-200 response", async () => {
-    const fetchImpl = jest.fn(async () => jsonResponse(400, { code: "InvalidQuery" }));
-    const provider = createCustomOsrm(
-      "http://osrm.local:5000",
-      fetchImpl as unknown as typeof fetch
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      jsonResponse(400, { code: "InvalidQuery" })
     );
+    const provider = createCustomOsrm("http://osrm.local:5000", fetchImpl);
 
     const result = await provider.route(roadRequest());
 
@@ -400,11 +425,10 @@ describe("createCustomOsrm", () => {
   });
 
   it("returns null on a 200 with a malformed body", async () => {
-    const fetchImpl = jest.fn(async () => malformedResponse(200));
-    const provider = createCustomOsrm(
-      "http://osrm.local:5000",
-      fetchImpl as unknown as typeof fetch
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      malformedResponse(200)
     );
+    const provider = createCustomOsrm("http://osrm.local:5000", fetchImpl);
 
     const result = await provider.route(roadRequest());
 
@@ -412,11 +436,10 @@ describe("createCustomOsrm", () => {
   });
 
   it("returns null on a 200 with a well-formed but wrong-shaped body", async () => {
-    const fetchImpl = jest.fn(async () => jsonResponse(200, { routes: [] }));
-    const provider = createCustomOsrm(
-      "http://osrm.local:5000",
-      fetchImpl as unknown as typeof fetch
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      jsonResponse(200, { routes: [] })
     );
+    const provider = createCustomOsrm("http://osrm.local:5000", fetchImpl);
 
     const result = await provider.route(roadRequest());
 
@@ -424,11 +447,10 @@ describe("createCustomOsrm", () => {
   });
 
   it("returns null for a non-routable mode without calling fetch", async () => {
-    const fetchImpl = jest.fn(async () => jsonResponse(200, osrmFixture));
-    const provider = createCustomOsrm(
-      "http://osrm.local:5000",
-      fetchImpl as unknown as typeof fetch
+    const fetchImpl = jest.fn<ReturnType<typeof fetch>, Parameters<typeof fetch>>(async () =>
+      jsonResponse(200, osrmFixture)
     );
+    const provider = createCustomOsrm("http://osrm.local:5000", fetchImpl);
 
     const result = await provider.route({ from: FROM, to: TO, mode: "rail" });
 

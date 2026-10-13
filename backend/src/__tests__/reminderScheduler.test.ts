@@ -2,13 +2,13 @@ import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
-const mockFindMany = jest.fn();
+const mockFindMany = jest.fn<() => Promise<FlightFixture[]>>();
 // The scheduler now runs all four domains in parallel each tick (2026-09-27
 // redesign); the other three resolve empty here so this file can stay
 // flight-only — cruise/rail/lodging get their own test files.
-const mockCruiseStopFindMany = jest.fn();
-const mockRailJourneyFindMany = jest.fn();
-const mockLodgingStayFindMany = jest.fn();
+const mockCruiseStopFindMany = jest.fn<() => Promise<never[]>>();
+const mockRailJourneyFindMany = jest.fn<() => Promise<never[]>>();
+const mockLodgingStayFindMany = jest.fn<() => Promise<never[]>>();
 jest.mock("../db", () => ({
   prisma: {
     flight: { findMany: mockFindMany },
@@ -18,13 +18,16 @@ jest.mock("../db", () => ({
   },
 }));
 
-const mockSendFlightReminder = jest.fn();
+const mockSendFlightReminder =
+  jest.fn<typeof import("../services/emailService").sendFlightReminder>();
 jest.mock("../services/notifications/dispatcher", () => ({
   notifyReminder: jest.fn(async () => undefined),
 }));
-const mockSendCruiseReminder = jest.fn();
-const mockSendRailReminder = jest.fn();
-const mockSendLodgingCheckInReminder = jest.fn();
+const mockSendCruiseReminder =
+  jest.fn<typeof import("../services/emailService").sendCruiseReminder>();
+const mockSendRailReminder = jest.fn<typeof import("../services/emailService").sendRailReminder>();
+const mockSendLodgingCheckInReminder =
+  jest.fn<typeof import("../services/emailService").sendLodgingCheckInReminder>();
 jest.mock("../services/emailService", () => ({
   sendFlightReminder: mockSendFlightReminder,
   sendCruiseReminder: mockSendCruiseReminder,
@@ -34,13 +37,19 @@ jest.mock("../services/emailService", () => ({
 
 // Scheduler short-circuits airportCache for canonical-UTC rows, but we still
 // mock it so any incidental lookup resolves cleanly during the test.
-const mockGetCachedAirport = jest.fn();
+const mockGetCachedAirport = jest.fn<() => Promise<{ iata: string; timezone: string } | null>>();
 jest.mock("../services/airportCache", () => ({
   getCachedAirport: mockGetCachedAirport,
 }));
 
 const mockScheduleTask = { start: jest.fn(), stop: jest.fn() };
-const mockCronSchedule = jest.fn(() => mockScheduleTask);
+const mockCronSchedule = jest.fn<
+  (
+    expression: string,
+    task: () => void,
+    options?: Parameters<typeof import("node-cron").schedule>[2]
+  ) => typeof mockScheduleTask
+>(() => mockScheduleTask);
 jest.mock("node-cron", () => ({
   __esModule: true,
   default: { schedule: mockCronSchedule },

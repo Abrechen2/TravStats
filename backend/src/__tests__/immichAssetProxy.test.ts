@@ -6,16 +6,24 @@ import { Readable } from "stream";
 const resolveTrip = jest.fn(async () => ({ id: "trip-1" }));
 jest.mock("../routes/trips", () => ({ resolveTrip }));
 
-const findFirstLink = jest.fn();
+const findFirstLink =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.TripImmichAlbumFindFirstArgs
+    ) => Promise<Partial<import("../generated/prisma/client").TripImmichAlbum> | null>
+  >();
 jest.mock("../db", () => ({ prisma: { tripImmichAlbum: { findFirst: findFirstLink } } }));
 
-const listAlbumAssets = jest.fn();
-const fetchAssetStream = jest.fn();
+const listAlbumAssets =
+  jest.fn<import("../services/immich/immichClient").ImmichClient["listAlbumAssets"]>();
+const fetchAssetStream =
+  jest.fn<import("../services/immich/immichClient").ImmichClient["fetchAssetStream"]>();
 jest.mock("../services/immich/immichClient", () => ({
   createImmichClient: () => ({ listAlbumAssets, fetchAssetStream }),
 }));
 
-const getImmichConnection = jest.fn();
+const getImmichConnection =
+  jest.fn<typeof import("../services/immich/immichResolver").getImmichConnection>();
 jest.mock("../services/immich/immichResolver", () => ({ getImmichConnection }));
 
 // The proxy must not be rate-limited in unit tests.

@@ -1,13 +1,16 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
-const mockFindMany = jest.fn();
+const mockFindMany =
+  jest.fn<
+    (args: import("../../../prisma").Prisma.CruiseStopFindManyArgs) => Promise<StopFixture[]>
+  >();
 jest.mock("../../../db", () => ({
   prisma: { cruiseStop: { findMany: mockFindMany } },
 }));
 
 const ENABLED = ["flight", "cruise"];
 
-const mockSendCruiseReminder = jest.fn();
+const mockSendCruiseReminder = jest.fn<typeof import("../../emailService").sendCruiseReminder>();
 jest.mock("../../emailService", () => ({
   sendCruiseReminder: mockSendCruiseReminder,
 }));
@@ -31,6 +34,9 @@ interface StopFixture {
     lon: number;
   } | null;
   cruise: {
+    bookingReference?: string | null;
+    endDay?: Date | null;
+    endZone?: string | null;
     id: string;
     tripId: string | null;
     cruiseLine: string | null;
@@ -130,7 +136,7 @@ describe("checkCruiseReminders - domain switch and cruise facts", () => {
     const { checkCruiseReminders } = await import("../cruiseReminders");
     await checkCruiseReminders(new Date());
 
-    const [cruise] = mockSendCruiseReminder.mock.calls[0] as [Record<string, unknown>];
+    const [cruise] = mockSendCruiseReminder.mock.calls[0];
     expect(cruise.endDay).toEqual({
       date: "2026-10-10",
       zone: "Pacific/Kiritimati",
@@ -240,7 +246,7 @@ describe("checkCruiseReminders", () => {
     await checkCruiseReminders(new Date());
 
     const [{ where }] = mockFindMany.mock.calls[0];
-    expect(where.departureUtc).toBeDefined();
+    expect(where!.departureUtc).toBeDefined();
     expect(mockSendCruiseReminder).not.toHaveBeenCalled();
   });
 });

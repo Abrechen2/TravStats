@@ -66,7 +66,13 @@ describe("cost rates and unconvertible bookings", () => {
       bookingId: "b-usd",
       // 500 USD with no snapshot in the base currency — `baseCost` answers
       // null, and nothing of it may reach either side of the ratio.
-      booking: { price: 500, currency: "USD", priceBase: null, fxBaseCurrency: null },
+      booking: {
+        id: "booking-1",
+        price: 500,
+        currency: "USD",
+        priceBase: null,
+        fxBaseCurrency: null,
+      },
     });
 
     const stats = calculateBusinessStats([priced, unconvertible], "EUR");
@@ -80,14 +86,26 @@ describe("cost rates and unconvertible bookings", () => {
     const legA = flight({
       id: "legA",
       bookingId: "b-eur",
-      booking: { price: 200, currency: "EUR", priceBase: 200, fxBaseCurrency: "EUR" },
+      booking: {
+        id: "booking-1",
+        price: 200,
+        currency: "EUR",
+        priceBase: 200,
+        fxBaseCurrency: "EUR",
+      },
     });
     const legB = flight({
       id: "legB",
       departureTime: new Date("2026-06-01T12:00:00Z"),
       arrivalTime: new Date("2026-06-01T13:00:00Z"),
       bookingId: "b-eur",
-      booking: { price: 200, currency: "EUR", priceBase: 200, fxBaseCurrency: "EUR" },
+      booking: {
+        id: "booking-1",
+        price: 200,
+        currency: "EUR",
+        priceBase: 200,
+        fxBaseCurrency: "EUR",
+      },
     });
 
     const stats = calculateBusinessStats([legA, legB], "EUR");

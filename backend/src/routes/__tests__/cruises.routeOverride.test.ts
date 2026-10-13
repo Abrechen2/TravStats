@@ -26,7 +26,7 @@ describe("Cruise route overrides", () => {
     [toPort.lon, toPort.lat],
   ];
 
-  const key = (): Record<string, string> => ({
+  const key = () => ({
     fromKind: "port",
     fromRef: String(fromPortId),
     toKind: "port",

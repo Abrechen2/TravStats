@@ -170,7 +170,9 @@ describe("rail statistics", () => {
   it("brings the same rides into the cross-domain evidence", async () => {
     const population = await loadCrossDomainPopulation(userId, ["rail"]);
     expect(population.events).toHaveLength(3);
-    const night = population.events.find((e) => e.entry.title.text === "Wien Hbf → Zürich HB");
+    const night = population.events.find(
+      (e) => ("text" in e.entry.title ? e.entry.title.text : undefined) === "Wien Hbf → Zürich HB"
+    );
     expect(night).toMatchObject({ year: 2024, dayKeys: ["2024-12-31", "2025-01-01"] });
     expect(night?.entry.href).toMatch(/^\/rail\//);
     expect(new Set(population.countryRows.flatMap((r) => r.countries))).toEqual(

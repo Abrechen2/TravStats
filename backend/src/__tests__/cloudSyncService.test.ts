@@ -2,26 +2,41 @@ import { describe, it, expect, jest, beforeEach, afterEach } from "@jest/globals
 
 // ─── Shared mocks ───────────────────────────────────────────────────────────
 
-const mockBackupFindUnique = jest.fn();
-const mockBackupUpdate = jest.fn();
+const mockBackupFindUnique =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.BackupFindUniqueArgs
+    ) => Promise<Partial<import("../generated/prisma/client").Backup> | null>
+  >();
+const mockBackupUpdate =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.BackupUpdateArgs
+    ) => Promise<Partial<import("../generated/prisma/client").Backup>>
+  >();
 // Empty AdminSettings row — getWebDAVSettings / getInstanceSettings fall
 // through to the ENV fallback that the beforeEach in each describe sets.
-const mockAdminFindFirst = jest.fn().mockResolvedValue({
-  id: "test",
-  webdavSyncEnabled: null,
-  webdavUrl: null,
-  webdavUsername: null,
-  webdavPasswordEncrypted: null,
-  webdavBackupPath: null,
-});
-const mockAdminCreate = jest.fn();
+const mockAdminFindFirst = jest
+  .fn<() => Promise<Partial<import("../generated/prisma/client").AdminSettings>>>()
+  .mockResolvedValue({});
+const mockAdminCreate =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.AdminSettingsCreateArgs
+    ) => Promise<Partial<import("../generated/prisma/client").AdminSettings>>
+  >();
 jest.mock("../db", () => ({
   prisma: {
     backup: { findUnique: mockBackupFindUnique, update: mockBackupUpdate },
     adminSettings: {
       findFirst: mockAdminFindFirst,
       create: mockAdminCreate,
-      update: jest.fn(),
+      update:
+        jest.fn<
+          (
+            args: import("../prisma").Prisma.AdminSettingsUpdateArgs
+          ) => Promise<Partial<import("../generated/prisma/client").AdminSettings>>
+        >(),
     },
   },
 }));
@@ -40,12 +55,14 @@ jest.mock("fs", () => ({
   writeFileSync: mockWriteFileSync,
 }));
 
+type DirectoryEntry = Pick<import("webdav").FileStat, "type" | "basename" | "size" | "lastmod">;
 const mockClient = {
-  deleteFile: jest.fn(),
-  getDirectoryContents: jest.fn(),
-  createDirectory: jest.fn(),
-  putFileContents: jest.fn(),
-  getFileContents: jest.fn(),
+  deleteFile: jest.fn<(path: string) => Promise<void>>(),
+  getDirectoryContents: jest.fn<() => Promise<DirectoryEntry[] | { data: DirectoryEntry[] }>>(),
+  createDirectory: jest.fn<() => Promise<void>>(),
+  putFileContents:
+    jest.fn<(path: string, contents: Buffer, options?: object) => Promise<boolean>>(),
+  getFileContents: jest.fn<() => Promise<Buffer>>(),
 };
 const mockCreateClient = jest.fn(() => mockClient);
 jest.mock("webdav", () => ({
@@ -224,7 +241,7 @@ describe("cloudSyncService", () => {
       mockReadFileSync.mockReturnValue(Buffer.from("backup-contents"));
       mockClient.createDirectory.mockResolvedValue(undefined);
       mockClient.putFileContents.mockResolvedValue(true);
-      mockBackupUpdate.mockResolvedValue(undefined);
+      mockBackupUpdate.mockResolvedValue({});
 
       await syncToCloud("backup-1");
 
@@ -250,7 +267,7 @@ describe("cloudSyncService", () => {
       mockReadFileSync.mockReturnValue(Buffer.from("data"));
       mockClient.createDirectory.mockRejectedValue(new Error("405 Directory exists"));
       mockClient.putFileContents.mockResolvedValue(true);
-      mockBackupUpdate.mockResolvedValue(undefined);
+      mockBackupUpdate.mockResolvedValue({});
 
       await expect(syncToCloud("backup-1")).resolves.toBeUndefined();
       expect(mockClient.putFileContents).toHaveBeenCalled();
@@ -278,7 +295,7 @@ describe("cloudSyncService", () => {
       mockReadFileSync.mockReturnValue(Buffer.from("data"));
       mockClient.createDirectory.mockResolvedValue(undefined);
       mockClient.putFileContents.mockResolvedValue(true);
-      mockBackupUpdate.mockResolvedValue(undefined);
+      mockBackupUpdate.mockResolvedValue({});
 
       await syncToCloud("backup-1");
 
@@ -316,7 +333,7 @@ describe("cloudSyncService", () => {
       mockReadFileSync.mockReturnValue(Buffer.from("data"));
       mockClient.createDirectory.mockResolvedValue(undefined);
       mockClient.putFileContents.mockResolvedValue(true);
-      mockBackupUpdate.mockResolvedValue(undefined);
+      mockBackupUpdate.mockResolvedValue({});
 
       await syncToCloudIfEnabled("backup-1");
 
@@ -330,7 +347,7 @@ describe("cloudSyncService", () => {
       mockReadFileSync.mockReturnValue(Buffer.from("data"));
       mockClient.createDirectory.mockResolvedValue(undefined);
       mockClient.putFileContents.mockRejectedValue(new Error("507 Insufficient Storage"));
-      mockBackupUpdate.mockResolvedValue(undefined);
+      mockBackupUpdate.mockResolvedValue({});
 
       // Not throwing is the contract: the archive is on local disk and is a
       // real backup. An upload that fails afterwards must not turn a good
@@ -358,7 +375,7 @@ describe("cloudSyncService", () => {
       process.env.WEBDAV_SYNC_ENABLED = "true";
       mockBackupFindUnique.mockResolvedValue(MOCK_BACKUP);
       mockExistsSync.mockReturnValue(true);
-      mockBackupUpdate.mockResolvedValue(undefined);
+      mockBackupUpdate.mockResolvedValue({});
 
       await expect(syncToCloudIfEnabled("backup-1")).resolves.toBeUndefined();
 
@@ -378,7 +395,7 @@ describe("cloudSyncService", () => {
       mockReadFileSync.mockReturnValue(Buffer.from("data"));
       mockClient.createDirectory.mockResolvedValue(undefined);
       mockClient.putFileContents.mockRejectedValue(new Error("x".repeat(5000)));
-      mockBackupUpdate.mockResolvedValue(undefined);
+      mockBackupUpdate.mockResolvedValue({});
 
       await syncToCloudIfEnabled("backup-1");
 
@@ -476,12 +493,19 @@ describe("remote backup deletion identity", () => {
     });
     mockExistsSync.mockReturnValue(true);
     mockReadFileSync.mockReturnValue(Buffer.from("backup"));
-    mockClient.putFileContents.mockResolvedValue(undefined);
+    mockClient.putFileContents.mockResolvedValue(true);
     await syncToCloud("b");
-    const written = mockBackupUpdate.mock.calls.at(-1)[0].data;
+    const written = mockBackupUpdate.mock.calls.at(-1)?.[0].data;
+    if (
+      !written ||
+      typeof written.cloudTarget !== "string" ||
+      typeof written.cloudPath !== "string"
+    ) {
+      throw new Error("Expected the uploaded backup identity to be persisted");
+    }
     expect(written.cloudTarget).toMatch(/^[a-f0-9]{64}$/);
     mockClient.deleteFile.mockResolvedValueOnce(undefined).mockRejectedValueOnce({ status: 404 });
-    const backup = { id: "b", ...written };
+    const backup = { id: "b", cloudTarget: written.cloudTarget, cloudPath: written.cloudPath };
     await deleteCloudBackup(backup);
     await deleteCloudBackup(backup);
     expect(mockClient.deleteFile).toHaveBeenLastCalledWith("/TravStats/backups/backup-2026.tar.gz");

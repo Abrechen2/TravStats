@@ -12,7 +12,9 @@ const eur = (price: number | null): StoredPrice => ({
   priceBase: null,
   fxBaseCurrency: null,
 });
-const segment = (o: Record<string, unknown> = {}) => ({
+const segment = (
+  o: Partial<NonNullable<TripCostInput["bus"]>[number]> = {}
+): NonNullable<TripCostInput["bus"]>[number] => ({
   status: "completed",
   ...none,
   bookingId: null,

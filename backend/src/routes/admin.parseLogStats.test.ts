@@ -1,7 +1,13 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
-const mockParseTrainingLogFindMany = jest.fn();
-const mockParseTrainingLogCount = jest.fn();
+const mockParseTrainingLogFindMany =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.ParseTrainingLogFindManyArgs
+    ) => Promise<Partial<import("../generated/prisma/client").ParseTrainingLog>[]>
+  >();
+const mockParseTrainingLogCount =
+  jest.fn<(args: import("../prisma").Prisma.ParseTrainingLogCountArgs) => Promise<number>>();
 
 jest.mock("../db", () => ({
   prisma: {

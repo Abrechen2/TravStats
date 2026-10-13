@@ -31,6 +31,7 @@ describe("haversineCalculator", () => {
 
   it("returns a low-confidence haversine result", async () => {
     const result = await haversineCalculator.compute(KIEL, COPENHAGEN);
+    if (!result) throw new Error("Expected a haversine distance");
     expect(result.method).toBe("haversine");
     expect(result.confidence).toBe("low");
     expect(result.dataVersion).toBeNull();
@@ -41,6 +42,7 @@ describe("haversineCalculator", () => {
   it("matches a known transatlantic ballpark within 5%", async () => {
     // Kiel → New York great-circle ≈ 6360 km
     const result = await haversineCalculator.compute(KIEL, NEW_YORK);
+    if (!result) throw new Error("Expected a haversine distance");
     expect(result.distanceKm).toBeGreaterThan(6050);
     expect(result.distanceKm).toBeLessThan(6700);
   });

@@ -143,6 +143,7 @@ async function flightRow(
     arrival: { iata: arrIata, name: arr.name, lat: arr.lat, lon: arr.lon },
   });
   return buildFlightCreateData(data, {
+    mode: "import",
     userId,
     externalRef: flightExternalRef({
       flightNumber: data.flightNumber,

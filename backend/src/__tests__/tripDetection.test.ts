@@ -1,4 +1,15 @@
-import { describe, it, expect } from "@jest/globals";
+jest.mock("../db", () => ({
+  prisma: new Proxy(
+    {},
+    {
+      get() {
+        throw new Error("Unexpected database access in trip heuristics test");
+      },
+    }
+  ),
+}));
+
+import { describe, it, expect, jest } from "@jest/globals";
 import { _internals } from "../services/tripDetectionService";
 import { periodsFromLegacy } from "../utils/homeAirport";
 
@@ -17,6 +28,7 @@ const {
 
 interface TestFlight {
   id: string;
+  flightNumber: string | null;
   bookingReference: string | null;
   departureTime: Date | null;
   depIata: string | null;
@@ -31,7 +43,7 @@ interface TestFlight {
 }
 
 const f = (overrides: Partial<TestFlight> & Pick<TestFlight, "id">): TestFlight => ({
-  id: overrides.id,
+  flightNumber: null,
   bookingReference: null,
   departureTime: null,
   depIata: null,

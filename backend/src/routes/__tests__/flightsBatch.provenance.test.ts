@@ -27,7 +27,7 @@ describe("flight batch import — provenance", () => {
       .post("/api/v1/auth/register")
       .send({ username: "batch-provenance", password: "password123" })
       .expect(201);
-    cookie = registration.headers["set-cookie"];
+    cookie = [registration.headers["set-cookie"]].flat();
   });
 
   afterAll(async () => {
@@ -58,7 +58,7 @@ describe("flight batch import — provenance", () => {
       arrTimezone: "Europe/Berlin",
     });
 
-  const post = (body: unknown, batchId?: string) =>
+  const post = (body: object | string, batchId?: string) =>
     request(app)
       .post(`/api/v1/flights/batch${batchId ? `?batchId=${batchId}` : ""}`)
       .set("Cookie", cookie)

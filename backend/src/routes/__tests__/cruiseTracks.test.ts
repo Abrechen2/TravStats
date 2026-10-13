@@ -343,7 +343,7 @@ describe("Cruise recorded tracks", () => {
           dawarichApiKey: encryptApiKey("sk-test"),
         },
       });
-      const fetchMock = jest.fn(async () =>
+      const fetchMock = jest.fn<typeof fetch>(async () =>
         fakeOk(dawarichPoints([...meridian(54, 55), ...meridian(55.3, 56)]))
       );
       global.fetch = fetchMock as unknown as typeof fetch;

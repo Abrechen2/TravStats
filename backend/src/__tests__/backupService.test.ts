@@ -1,11 +1,34 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
 // Mock prisma
-const mockBackupFindMany = jest.fn();
-const mockBackupFindUnique = jest.fn();
-const mockBackupDelete = jest.fn();
-const mockAdminSettingsFindFirst = jest.fn();
-const mockDeleteCloudBackup = jest.fn();
+const mockBackupFindMany =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.BackupFindManyArgs
+    ) => Promise<Partial<import("../generated/prisma/client").Backup>[]>
+  >();
+const mockBackupFindUnique = jest.fn<
+  (args: import("../prisma").Prisma.BackupFindUniqueArgs) => Promise<
+    | (Omit<Partial<import("../generated/prisma/client").Backup>, "backupPath"> & {
+        backupPath?: string | null;
+      })
+    | null
+  >
+>();
+const mockBackupDelete =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.BackupDeleteArgs
+    ) => Promise<Partial<import("../generated/prisma/client").Backup>>
+  >();
+const mockAdminSettingsFindFirst =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.AdminSettingsFindFirstArgs
+    ) => Promise<Partial<import("../generated/prisma/client").AdminSettings> | null>
+  >();
+const mockDeleteCloudBackup =
+  jest.fn<typeof import("../services/cloudSyncService").deleteCloudBackup>();
 jest.mock("../services/cloudSyncService", () => ({ deleteCloudBackup: mockDeleteCloudBackup }));
 
 jest.mock("../db", () => ({
@@ -272,7 +295,16 @@ describe("backupService", () => {
       mockBackupFindUnique.mockResolvedValue(old);
       mockExistsSync.mockImplementation((p) => p === "/latest");
       expect(await cleanupOldBackups()).toBe(1);
-      const cutoff = mockBackupFindMany.mock.calls[0][0].where.createdAt.lt.getTime();
+      const filter = mockBackupFindMany.mock.calls[0][0].where?.createdAt;
+      if (
+        !filter ||
+        typeof filter !== "object" ||
+        !("lt" in filter) ||
+        !(filter.lt instanceof Date)
+      ) {
+        throw new Error("Expected a dated backup retention cutoff");
+      }
+      const cutoff = filter.lt.getTime();
       expect(Math.abs(cutoff - (Date.now() - 4 * 86400000))).toBeLessThan(1000);
       expect(mockDeleteCloudBackup).toHaveBeenCalledWith(old);
     });

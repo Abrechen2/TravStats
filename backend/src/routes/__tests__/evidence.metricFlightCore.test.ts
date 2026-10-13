@@ -27,8 +27,8 @@ describe("GET /api/v1/evidence/metric/... — the flight-core allTime family", (
   function flightFixture(
     userId: string,
     day: string,
-    overrides: Record<string, unknown>
-  ): Record<string, unknown> {
+    overrides: Partial<import("../../prisma").Prisma.FlightUncheckedCreateInput>
+  ): import("../../prisma").Prisma.FlightUncheckedCreateInput {
     return {
       userId,
       depLat: 50.0379,

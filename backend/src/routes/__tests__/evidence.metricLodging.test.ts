@@ -46,7 +46,7 @@ describe("GET /api/v1/evidence/metric/... — the lodging tab", () => {
   let staySakura: string;
   let stayCasa: string;
 
-  interface EvidenceBody {
+  type EvidenceBody = import("../../schemas/evidence").EvidenceResponse & {
     measure: { value: number | null; unit: string; aggregation: string };
     entries: Array<{
       id: string;
@@ -59,7 +59,7 @@ describe("GET /api/v1/evidence/metric/... — the lodging tab", () => {
     }>;
     omitted: { count: number; contribution?: number; credits?: number };
     unattributed: Array<{ count: number; reason: string }>;
-  }
+  };
 
   const KEYS = [
     "lodgingStaysCount",
@@ -77,7 +77,10 @@ describe("GET /api/v1/evidence/metric/... — the lodging tab", () => {
   const lifetime = new Map<string, EvidenceBody>();
   const day = (iso: string): Date => new Date(`${iso}T00:00:00Z`);
   const answer = (key: (typeof KEYS)[number]): EvidenceBody => lifetime.get(key)!;
-  const entry = (key: (typeof KEYS)[number], id: string): EvidenceBody["entries"][number] =>
+  const entry = (
+    key: (typeof KEYS)[number],
+    id: string
+  ): import("../../schemas/evidence").EvidenceEntry =>
     answer(key).entries.find((e) => e.id === id)!;
 
   /**

@@ -130,32 +130,38 @@ export async function loadTravelAccountData(
 ): Promise<TravelAccountData> {
   const when = <T>(domain: DomainKey, rows: T[]): T[] => rowsIfVisible(visible, domain, rows);
   const now = new Date();
+  const loadIfVisible = <T>(domain: DomainKey, load: () => PromiseLike<T[]>): PromiseLike<T[]> =>
+    visible.has(domain) ? load() : Promise.resolve([]);
   const [stays, cruises, flights, trips, roadtrips, expenses, rail, bus] = await Promise.all([
-    prisma.lodgingStay.findMany({
-      where: { userId },
-      select: {
-        id: true,
-        lodgingId: true,
-        lodging: { select: { name: true } },
-        status: true,
-        checkIn: true,
-        checkOut: true,
-        datePrecision: true,
-        nights: true,
-      },
-    }),
-    prisma.cruise.findMany({
-      where: { userId },
-      select: {
-        id: true,
-        status: true,
-        startDate: true,
-        endDate: true,
-        routeName: true,
-        shipNameOverride: true,
-        ship: { select: { name: true } },
-      },
-    }),
+    loadIfVisible("lodging", () =>
+      prisma.lodgingStay.findMany({
+        where: { userId },
+        select: {
+          id: true,
+          lodgingId: true,
+          lodging: { select: { name: true } },
+          status: true,
+          checkIn: true,
+          checkOut: true,
+          datePrecision: true,
+          nights: true,
+        },
+      })
+    ),
+    loadIfVisible("cruise", () =>
+      prisma.cruise.findMany({
+        where: { userId },
+        select: {
+          id: true,
+          status: true,
+          startDate: true,
+          endDate: true,
+          routeName: true,
+          shipNameOverride: true,
+          ship: { select: { name: true } },
+        },
+      })
+    ),
     prisma.flight.findMany({
       where: { userId },
       select: {
@@ -192,7 +198,28 @@ export async function loadTravelAccountData(
         // "most expensive trip" superlative — forgejo#274), plus the dates
         // coverage needs on the same rows.
         ...TRIP_COST_SELECT,
+        // Empty hidden relations at the database boundary, while preserving
+        // the typed row shape and the ungated booking segment counts.
+        ferryJourneys: {
+          ...TRIP_COST_SELECT.ferryJourneys,
+          take: visible.has("ferry") ? undefined : 0,
+        },
+        rentalBookings: {
+          ...TRIP_COST_SELECT.rentalBookings,
+          take: visible.has("rental") ? undefined : 0,
+        },
+        routes: {
+          take: visible.has("roadtrip") ? undefined : 0,
+          select: {
+            expenses: TRIP_COST_SELECT.routes.select.expenses,
+            rentals: {
+              ...TRIP_COST_SELECT.routes.select.rentals,
+              take: visible.has("rental") ? undefined : 0,
+            },
+          },
+        },
         lodgingStays: {
+          take: visible.has("lodging") ? undefined : 0,
           select: {
             ...TRIP_COST_SELECT.lodgingStays.select,
             checkIn: true,
@@ -202,6 +229,7 @@ export async function loadTravelAccountData(
           },
         },
         cruises: {
+          take: visible.has("cruise") ? undefined : 0,
           select: { ...TRIP_COST_SELECT.cruises.select, startDate: true, endDate: true },
         },
         // The clock columns too: a trip's covered nights are LOCAL nights,
@@ -217,10 +245,12 @@ export async function loadTravelAccountData(
         },
         // A night train covers its nights on the trip, as on the account.
         railJourneys: {
+          take: visible.has("rail") ? undefined : 0,
           select: { ...TRIP_COST_SELECT.railJourneys.select, ...RAIL_NIGHT_SELECT },
         },
         // A night bus covers its night as a night train does (forgejo#263).
         busJourneys: {
+          take: visible.has("bus") ? undefined : 0,
           select: { ...TRIP_COST_SELECT.busJourneys.select, ...BUS_NIGHT_SELECT },
         },
       },
@@ -228,50 +258,56 @@ export async function loadTravelAccountData(
     // Roadtrip stations, for the nights spent at a free pitch. The linked
     // stays are selected only for the "has it started" test the Stats
     // overview applies; their nights reach the account through `stays`.
-    prisma.tripRoute.findMany({
-      where: { userId, kind: "roadtrip" },
-      select: {
-        id: true,
-        name: true,
-        stops: {
-          where: { viaPoint: false },
-          select: {
-            id: true,
-            title: true,
-            startDate: true,
-            endDate: true,
-            overnight: true,
-            lodgingStayId: true,
-            lodgingStay: {
-              select: {
-                checkIn: true,
-                checkOut: true,
-                datePrecision: true,
-                nights: true,
-                status: true,
+    loadIfVisible("roadtrip", () =>
+      prisma.tripRoute.findMany({
+        where: { userId, kind: "roadtrip" },
+        select: {
+          id: true,
+          name: true,
+          stops: {
+            where: { viaPoint: false },
+            select: {
+              id: true,
+              title: true,
+              startDate: true,
+              endDate: true,
+              overnight: true,
+              lodgingStayId: true,
+              lodgingStay: {
+                select: {
+                  checkIn: true,
+                  checkOut: true,
+                  datePrecision: true,
+                  nights: true,
+                  status: true,
+                },
               },
             },
           },
         },
-      },
-    }),
+      })
+    ),
     prisma.tripExpense.findMany({
-      where: { userId },
+      where: { userId, ...(visible.has("roadtrip") ? {} : { routeId: null }) },
       select: { amount: true, currency: true, date: true, routeId: true },
     }),
-    prisma.railJourney.findMany({
-      where: { userId },
-      select: {
-        ...RAIL_NIGHT_SELECT,
-        trainNumber: true,
-        depStationName: true,
-        arrStationName: true,
-      },
-    }),
-    prisma.busJourney.findMany({
-      where: { userId },
-      select: { ...BUS_NIGHT_SELECT, operator: true, depStationName: true, arrStationName: true },
-    }),
+    loadIfVisible("rail", () =>
+      prisma.railJourney.findMany({
+        where: { userId },
+        select: {
+          ...RAIL_NIGHT_SELECT,
+          trainNumber: true,
+          depStationName: true,
+          arrStationName: true,
+        },
+      })
+    ),
+    loadIfVisible("bus", () =>
+      prisma.busJourney.findMany({
+        where: { userId },
+        select: { ...BUS_NIGHT_SELECT, operator: true, depStationName: true, arrStationName: true },
+      })
+    ),
   ]);
 
   // Resolve both ends' calendar days here, at the load, so the account stays

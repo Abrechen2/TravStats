@@ -22,6 +22,7 @@ import axios from "axios";
 
 jest.mock("axios");
 const mockedAxios = axios as jest.Mocked<typeof axios>;
+const mockGet = jest.mocked(axios.get<unknown, { data: unknown }>);
 
 jest.mock("../services/airportLookup", () => ({
   findOrCreateAirport: jest.fn(async (code: string) => ({
@@ -57,7 +58,14 @@ jest.mock("../db", () => ({
     adminSettings: {
       findFirst: jest.fn(async () => ({ aviationstackDailyBudget: 10 })),
     },
-    userSettings: { findUnique: jest.fn() },
+    userSettings: {
+      findUnique:
+        jest.fn<
+          (
+            args: import("../prisma").Prisma.UserSettingsFindUniqueArgs
+          ) => Promise<Partial<import("../generated/prisma/client").UserSettings> | null>
+        >(),
+    },
   },
 }));
 
@@ -236,7 +244,7 @@ describe("Aviationstack date-filter restriction handling", () => {
 
   it("discards a date-less response whose flight_date does not match the request", async () => {
     __setAviationstackDateFilterRestrictedForTests(true);
-    mockedAxios.get.mockImplementation(async (url: string) => {
+    mockGet.mockImplementation(async (url: string) => {
       if (url === AVS_URL) return aviationstackBody("2099-01-01"); // wrong day
       if (url === AIRLABS_URL) return airlabsBody();
       return { data: {} };
@@ -250,7 +258,7 @@ describe("Aviationstack date-filter restriction handling", () => {
   });
 
   it("labels the AirLabs fallback result with source 'airlabs'", async () => {
-    mockedAxios.get.mockImplementation(async (url: string) => {
+    mockGet.mockImplementation(async (url: string) => {
       if (url === AVS_URL) return { data: { data: [] } }; // no Aviationstack match
       if (url === AIRLABS_URL) return airlabsBody();
       return { data: {} };

@@ -1,11 +1,42 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
-const mockCruiseFindMany = jest.fn();
-const mockStayFindMany = jest.fn();
-const mockLodgingFindMany = jest.fn();
-const mockUserFindUnique = jest.fn();
-const mockSettingsFindUnique = jest.fn();
-const mockMembershipFindMany = jest.fn();
+const mockCruiseFindMany =
+  jest.fn<
+    (
+      args: import("../../prisma").Prisma.CruiseFindManyArgs
+    ) => Promise<Partial<import("../../generated/prisma/client").Cruise>[]>
+  >();
+const mockStayFindMany = jest.fn<
+  (args: import("../../prisma").Prisma.LodgingStayFindManyArgs) => Promise<
+    (Partial<import("../../generated/prisma/client").LodgingStay> & {
+      lodging: Partial<import("../../generated/prisma/client").Lodging> & { chain: null };
+    })[]
+  >
+>();
+const mockLodgingFindMany =
+  jest.fn<
+    (
+      args: import("../../prisma").Prisma.LodgingFindManyArgs
+    ) => Promise<Partial<import("../../generated/prisma/client").Lodging>[]>
+  >();
+const mockUserFindUnique =
+  jest.fn<
+    (
+      args: import("../../prisma").Prisma.UserFindUniqueArgs
+    ) => Promise<Partial<import("../../generated/prisma/client").User> | null>
+  >();
+const mockSettingsFindUnique =
+  jest.fn<
+    (
+      args: import("../../prisma").Prisma.UserSettingsFindUniqueArgs
+    ) => Promise<Partial<import("../../generated/prisma/client").UserSettings> | null>
+  >();
+const mockMembershipFindMany =
+  jest.fn<
+    (
+      args: import("../../prisma").Prisma.LoyaltyMembershipFindManyArgs
+    ) => Promise<Partial<import("../../generated/prisma/client").LoyaltyMembership>[]>
+  >();
 
 jest.mock("../../db", () => ({
   prisma: {
@@ -70,7 +101,7 @@ describe("domain stats honour ?year=", () => {
     await request(app).get("/api/v1/stats/cruise?year=2024").expect(200);
 
     const where = mockCruiseFindMany.mock.calls[0]?.[0]?.where;
-    expect(where.startDate).toEqual({
+    expect(where!.startDate).toEqual({
       gte: new Date(Date.UTC(2024, 0, 1)),
       lt: new Date(Date.UTC(2025, 0, 1)),
     });
@@ -78,14 +109,14 @@ describe("domain stats honour ?year=", () => {
 
   it("asks for every cruise when no year is given", async () => {
     await request(app).get("/api/v1/stats/cruise").expect(200);
-    expect(mockCruiseFindMany.mock.calls[0]?.[0]?.where.startDate).toBeUndefined();
+    expect(mockCruiseFindMany.mock.calls[0]?.[0]?.where?.startDate).toBeUndefined();
   });
 
   it("dates a stay by its check-in, so a New Year stay belongs to the year it began", async () => {
     await request(app).get("/api/v1/stats/lodging?year=2024").expect(200);
 
     const where = mockStayFindMany.mock.calls[0]?.[0]?.where;
-    expect(where.checkIn).toEqual({
+    expect(where!.checkIn).toEqual({
       gte: new Date(Date.UTC(2024, 0, 1)),
       lt: new Date(Date.UTC(2025, 0, 1)),
     });
@@ -120,16 +151,16 @@ describe("domain stats honour ?year=", () => {
         lodgingId: "h1",
         checkIn: new Date("2024-03-01"),
         checkOut: new Date("2024-03-03"),
-        price: null,
-        currency: null,
-        priceBase: null,
-        baseCurrency: null,
-        overallRating: null,
-        roomRating: null,
-        breakfastRating: null,
-        serviceRating: null,
+        totalPrice: null,
+        currency: "EUR",
+        totalPriceBase: null,
+        fxBaseCurrency: null,
+        ratingOverall: null,
+        ratingRoom: null,
+        ratingBreakfast: null,
+        ratingService: null,
         board: null,
-        roomType: null,
+        roomCategory: null,
         lodging: {
           id: "h1",
           chainId: null,

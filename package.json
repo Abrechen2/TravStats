@@ -20,13 +20,15 @@
     "format:check": "npx --prefix frontend prettier --check --ignore-unknown .",
     "lint:backend": "cd backend && npm run lint",
     "lint:frontend": "cd frontend && npm run lint",
-    "typecheck": "npm run typecheck:backend && npm run typecheck:frontend",
+    "typecheck": "npm run typecheck:backend && npm run typecheck:frontend && npm run typecheck:tests",
     "typecheck:backend": "cd backend && npx tsc --noEmit",
     "typecheck:frontend": "cd frontend && npx tsc --noEmit",
     "check:size": "node scripts/check-file-size.mjs",
     "check:drift": "cd backend && npm run check:drift",
     "check:coverage": "node scripts/check-coverage.mjs",
-    "check": "npm run check:size && npm run check:drift"
+    "check": "npm run check:size && npm run check:drift",
+    "typecheck:tests": "node --max-old-space-size=6144 scripts/check-test-types.mjs",
+    "test:typecheck": "node --test scripts/check-test-types.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

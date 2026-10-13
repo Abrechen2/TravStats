@@ -60,7 +60,7 @@ describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
 
   const UNLOCODES = ["DEHAM-EVID", "NOOSL-EVID", "DEKEL-EVID"];
 
-  interface EvidenceBody {
+  type EvidenceBody = import("../../schemas/evidence").EvidenceResponse & {
     measure: { value: number | null; unit: string; aggregation: string };
     entries: Array<{
       id: string;
@@ -73,7 +73,7 @@ describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
     }>;
     omitted: { count: number; contribution?: number; credits?: number };
     unattributed: Array<{ count: number; reason: string }>;
-  }
+  };
 
   const KEYS = [
     "cruiseCount",
@@ -449,7 +449,9 @@ describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
     expect(cruiseStats.totalSpendBase.value).toBe(res.measure.value);
     expect(cruiseStats.totalSpendBase.currency).toBe("EUR");
     const notConverted = res.entries.filter(
-      (e) => e.subtitle?.key === "evidence.subtitle.notConverted"
+      (e) =>
+        (e.subtitle && "key" in e.subtitle ? e.subtitle.key : undefined) ===
+        "evidence.subtitle.notConverted"
     );
     expect(cruiseStats.totalSpendBase.excludedCount).toBe(notConverted.length);
     expect(notConverted.map((e) => e.id)).toEqual([cruise2025]);

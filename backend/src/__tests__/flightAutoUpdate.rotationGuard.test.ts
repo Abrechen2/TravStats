@@ -104,7 +104,6 @@ describe("flightAutoUpdate — local lookup date + rotation guard", () => {
       // The PREVIOUS day's rotation — exactly what the buggy lookup returned.
       departureTime: "2026-08-09T20:00:00Z",
       arrivalTime: "2026-08-10T10:00:00Z",
-      status: "flown",
     });
 
     await checkAndUpdateFlightsForUser(userId);

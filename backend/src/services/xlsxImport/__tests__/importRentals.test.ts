@@ -227,8 +227,18 @@ describe("spreadsheet import — rentals", () => {
     const dto = await storedRental(userId);
     const [outcome] = await importSheets(sheetOf([exportRow(dto)]), ctx(otherId));
     expect(outcome).toMatchObject({ created: 1, errors: 0 });
-    const moved = await prisma.rentalBooking.findFirstOrThrow({ where: { userId: otherId } });
-    const original = await prisma.rentalBooking.findUniqueOrThrow({ where: { id: dto.id } });
+    const moved = withRentalReadFields(
+      await prisma.rentalBooking.findFirstOrThrow({
+        where: { userId: otherId },
+        include: RENTAL_INCLUDE,
+      })
+    );
+    const original = withRentalReadFields(
+      await prisma.rentalBooking.findUniqueOrThrow({
+        where: { id: dto.id },
+        include: RENTAL_INCLUDE,
+      })
+    );
     for (const field of FIELDS) {
       expect({ field, value: moved[field] }).toEqual({ field, value: original[field] });
     }

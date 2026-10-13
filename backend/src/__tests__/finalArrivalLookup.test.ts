@@ -9,15 +9,34 @@
  */
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
+type LookupResult = import("../services/flightLookup").LookupWithHistoricalResult;
+type LookupFlight = LookupResult["flights"][number];
+type LookupFixture = Omit<LookupResult, "flights"> & {
+  flights: (Partial<Omit<LookupFlight, "departure" | "arrival">> & {
+    departure?: Partial<LookupFlight["departure"]>;
+    arrival?: Partial<LookupFlight["arrival"]>;
+  })[];
+};
+
 const flightLookupMock = {
-  lookupFlightWithHistorical: jest.fn(),
+  lookupFlightWithHistorical: jest.fn<() => Promise<LookupFixture>>(),
 };
 jest.mock("../services/flightLookup", () => flightLookupMock);
 
 const prismaMock = {
   flight: {
-    findMany: jest.fn(),
-    update: jest.fn(),
+    findMany:
+      jest.fn<
+        (
+          args: import("../prisma").Prisma.FlightFindManyArgs
+        ) => Promise<Partial<import("../generated/prisma/client").Flight>[]>
+      >(),
+    update:
+      jest.fn<
+        (
+          args: import("../prisma").Prisma.FlightUpdateArgs
+        ) => Promise<Partial<import("../generated/prisma/client").Flight>>
+      >(),
   },
 };
 jest.mock("../db", () => ({ prisma: prismaMock }));

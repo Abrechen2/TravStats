@@ -19,7 +19,7 @@ describe("GET /api/v1/lodging/entry-suggestions", () => {
   let houseA: string;
   let foreignHouse: string;
 
-  const suggestions = (query: Record<string, string> = {}) =>
+  const suggestions = (query: { lodgingId?: string } = {}) =>
     request(app).get("/api/v1/lodging/entry-suggestions").query(query).set("Cookie", authCookie);
 
   beforeAll(async () => {

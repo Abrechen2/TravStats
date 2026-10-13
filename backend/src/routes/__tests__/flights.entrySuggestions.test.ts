@@ -19,7 +19,7 @@ describe("GET /api/v1/flights/entry-suggestions", () => {
   const suggest = (query: Record<string, string> = {}) =>
     request(app).get("/api/v1/flights/entry-suggestions").query(query).set("Cookie", authCookie);
 
-  type FlightData = Parameters<typeof prisma.flight.create>[0]["data"];
+  type FlightData = import("../../prisma").Prisma.FlightUncheckedCreateInput;
   const flight = (userId: string, over: Partial<FlightData>): FlightData => ({
     userId,
     depIata: "MUC",

@@ -43,9 +43,16 @@ jest.mock("../utils/timezone", () => ({
 
 jest.mock("../db", () => ({
   prisma: {
-    userSettings: { findUnique: jest.fn() },
-    apiKey: { findFirst: jest.fn() },
-    setting: { findUnique: jest.fn() },
+    userSettings: {
+      findUnique:
+        jest.fn<
+          (
+            args: import("../prisma").Prisma.UserSettingsFindUniqueArgs
+          ) => Promise<Partial<import("../generated/prisma/client").UserSettings> | null>
+        >(),
+    },
+    apiKey: { findFirst: jest.fn(async () => null) },
+    setting: { findUnique: jest.fn(async () => null) },
     adminSettings: { findFirst: jest.fn(async () => null) },
   },
 }));
@@ -64,7 +71,7 @@ import { testAeroapiKey } from "../services/apiKeyTesterAeroapi";
 import { getAirlineName } from "../services/flightLookup/fieldReaders";
 import logger from "../utils/logger";
 
-type Flight = (typeof fixture.flights)[number];
+type Flight = import("../services/aeroapiLookup").AeroapiFlight;
 
 /** "Now" for every test: inside AeroAPI's -10 d / +2 d window for 2026-10-05. */
 const NOW = Date.parse("2026-10-05T08:00:00Z");
@@ -419,8 +426,10 @@ describe("lookupFlightAeroapi — edges", () => {
       string,
       { params: Record<string, string> },
     ];
-    expect(Date.parse(config.params.start)).toBeLessThanOrEqual(Date.parse(auckland.scheduled_out));
-    expect(Date.parse(config.params.end)).toBeGreaterThan(Date.parse(auckland.scheduled_out));
+    expect(Date.parse(config.params.start)).toBeLessThanOrEqual(
+      Date.parse(auckland.scheduled_out!)
+    );
+    expect(Date.parse(config.params.end)).toBeGreaterThan(Date.parse(auckland.scheduled_out!));
     expect(result?.departure?.gate).toBe("NZ7");
   });
 
@@ -483,10 +492,7 @@ describe("lookupFlightDetails — AeroAPI goes first", () => {
 describe("testAeroapiKey", () => {
   beforeEach(() => {
     mockedAxios.isAxiosError.mockImplementation(
-      (error: unknown): boolean =>
-        typeof error === "object" &&
-        error !== null &&
-        (error as { isAxiosError?: unknown }).isAxiosError === true
+      jest.requireActual<typeof import("axios")>("axios").isAxiosError
     );
   });
 

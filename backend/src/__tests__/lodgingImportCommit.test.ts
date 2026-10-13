@@ -108,7 +108,7 @@ describe("commitLodgingImport", () => {
       where: { batchId: result.batchId },
     });
     expect(stay?.totalPriceBase).toBeCloseTo(385.07, 2);
-    expect(stay?.checkIn.toISOString()).toBe("2026-04-22T00:00:00.000Z");
+    expect(stay?.checkIn?.toISOString()).toBe("2026-04-22T00:00:00.000Z");
   });
 
   it("commits a priceless stay without an FX snapshot — that is not an error", async () => {

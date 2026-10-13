@@ -26,7 +26,7 @@ import { isAchievementHeld, type HeldInput } from "../achievementHeld";
  * the hazard is gone by construction; the case stays because a row with only a
  * progress value is still the shape a hand-written `select` produces.
  */
-const withoutTheColumn = { progress: 0 } as unknown as HeldInput;
+const withoutTheColumn: HeldInput = { progress: 0 };
 
 describe("isAchievementHeld", () => {
   it("does not hand out a badge to a row that carries only a progress value", () => {
@@ -34,7 +34,8 @@ describe("isAchievementHeld", () => {
   });
 
   it("holds a badge whose measure meets the requirement", () => {
-    expect(isAchievementHeld({ progress: 12, unlockedAt: null }, 10)).toBe(true);
+    const row = { progress: 12, unlockedAt: null };
+    expect(isAchievementHeld(row, 10)).toBe(true);
   });
 
   it("does NOT hold a badge whose measure has fallen, however old the date on it", () => {
@@ -42,17 +43,20 @@ describe("isAchievementHeld", () => {
     // this badge; the points go with them, and the card goes back to showing a
     // progress bar. The date stays in the database — see
     // `achievements.revocation.test.ts` — it just no longer confers anything.
-    expect(isAchievementHeld({ progress: 4, unlockedAt: new Date("2026-09-03") }, 10)).toBe(false);
+    const row = { progress: 4, unlockedAt: new Date("2026-09-03") };
+    expect(isAchievementHeld(row, 10)).toBe(false);
   });
 
   it("holds a badge that meets its requirement but was never dated", () => {
     // Migration `20260902170000` left such rows behind, and so does any run
     // from before the column meant anything. The numbers decide.
-    expect(isAchievementHeld({ progress: 10, unlockedAt: null }, 10)).toBe(true);
+    const row = { progress: 10, unlockedAt: null };
+    expect(isAchievementHeld(row, 10)).toBe(true);
   });
 
   it("does not hold a badge that was neither earned nor measured", () => {
-    expect(isAchievementHeld({ progress: 4, unlockedAt: null }, 10)).toBe(false);
+    const row = { progress: 4, unlockedAt: null };
+    expect(isAchievementHeld(row, 10)).toBe(false);
   });
 
   it("holds nothing for a user with no row at all", () => {

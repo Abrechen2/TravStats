@@ -99,7 +99,9 @@ describe("rail journey evidence", () => {
     const journeys = await resolve("railJourneyCount", ALL);
     expect(journeys.measure.value).toBe(tab.connected.journeys.total);
     expect(journeys.measure.value).toBe(3);
-    expect(journeys.entries.map((e) => e.title.text)).toContain("Köln Hbf → Basel SBB");
+    expect(journeys.entries.map((e) => ("text" in e.title ? e.title.text : undefined))).toContain(
+      "Köln Hbf → Basel SBB"
+    );
 
     const documented = await resolve("railDocumentedTransferJourneyCount", ALL);
     const badge = await calculateRailAchievementStats(userId);
@@ -139,7 +141,9 @@ describe("rail journey evidence", () => {
     const changes = await resolve("railTransferCount", Y2025);
     expect(changes.measure.value).toBe(tab.connected.transfers.count);
     expect(changes.measure.value).toBe(1);
-    expect(changes.entries.map((e) => e.title.text)).toEqual(["Köln Hbf → Basel SBB"]);
+    expect(changes.entries.map((e) => ("text" in e.title ? e.title.text : undefined))).toEqual([
+      "Köln Hbf → Basel SBB",
+    ]);
   });
 
   it("names the ride that holds the longest-ride record, per period", async () => {

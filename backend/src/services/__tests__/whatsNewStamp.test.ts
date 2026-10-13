@@ -11,7 +11,8 @@ import { appVersion } from "../../utils/version";
  * row, and stamping there would silence a modal it has every right to see.
  */
 describe("stampWhatsNewSeen", () => {
-  const upsert = jest.fn<() => Promise<unknown>>();
+  const upsert =
+    jest.fn<(args: import("../../prisma").Prisma.UserSettingsUpsertArgs) => Promise<unknown>>();
   const db = { userSettings: { upsert } } as unknown as Parameters<typeof stampWhatsNewSeen>[0];
 
   beforeEach(() => {

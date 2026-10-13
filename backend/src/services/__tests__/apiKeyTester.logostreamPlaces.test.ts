@@ -28,10 +28,7 @@ beforeEach(() => {
   // so extractAxiosErrorInfo() would never recognise a mocked rejection as
   // an axios error. Reimplement the real check for the mock.
   mockedAxios.isAxiosError.mockImplementation(
-    (error: unknown): boolean =>
-      typeof error === "object" &&
-      error !== null &&
-      (error as { isAxiosError?: unknown }).isAxiosError === true
+    jest.requireActual<typeof import("axios")>("axios").isAxiosError
   );
 });
 

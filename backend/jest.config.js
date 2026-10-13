@@ -66,8 +66,9 @@ module.exports = {
   // `isolatedModules` (2026-09-17): each file is transpiled on its own, without
   // building a TypeScript program over it and everything it imports. The type
   // information that program produced was thrown away anyway — diagnostics
-  // are off, because `tsc --noEmit` is the type gate in CI and in the
-  // pre-commit hook. Measured on 46 route and shared suites without a cache:
+  // are off: production uses `tsc --noEmit`; test diagnostics are checked by
+  // `npm run typecheck:tests`, separately from Jest, in both CI workflows.
+  // Measured on 46 route and shared suites without a cache:
   // 108 s before, 75 s after, same 435 tests green. swc was faster still
   // (68 s) and was tried first; it emits exports as non-configurable getters,
   // so every `jest.spyOn(module, "export")` in the suite fails with "Cannot

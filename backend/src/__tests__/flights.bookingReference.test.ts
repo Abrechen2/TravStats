@@ -24,7 +24,7 @@ describe("POST /flights — the booking reference as a match key", () => {
       .post("/api/v1/auth/register")
       .send({ username: "pnr-dedupe", password: "password123" })
       .expect(201);
-    cookie = registration.headers["set-cookie"];
+    cookie = [registration.headers["set-cookie"]].flat();
   });
 
   afterAll(async () => {

@@ -136,7 +136,7 @@ describe("Tour tracks — pull a Dawarich window", () => {
     delete process.env.DAWARICH_BASE_URL;
     delete process.env.DAWARICH_API_KEY;
 
-    global.fetch = jest.fn() as unknown as typeof fetch;
+    global.fetch = jest.fn<typeof fetch>() as unknown as typeof fetch;
   });
 
   async function seedUserConnection(): Promise<void> {
@@ -163,7 +163,9 @@ describe("Tour tracks — pull a Dawarich window", () => {
 
   it("pulls the section's own date span by default and stores a track with source dawarich", async () => {
     await seedUserConnection();
-    (global.fetch as jest.Mock).mockResolvedValueOnce(fakeOkResponse(NEWEST_FIRST_POINTS));
+    (global.fetch as jest.Mock<typeof fetch>).mockResolvedValueOnce(
+      fakeOkResponse(NEWEST_FIRST_POINTS)
+    );
 
     const res = await pull();
 
@@ -175,7 +177,7 @@ describe("Tour tracks — pull a Dawarich window", () => {
     // T_OLD, Voss T_NEW) — assert the OUTGOING request actually asked for
     // that span, proving the "one click" default really ran. A stop's time
     // is its local wall clock (08:00 in Bergen = 06:00Z in June).
-    const calledUrl = new URL((global.fetch as jest.Mock).mock.calls[0][0] as string);
+    const calledUrl = new URL((global.fetch as jest.Mock<typeof fetch>).mock.calls[0][0] as string);
     expect(calledUrl.searchParams.get("start_at")).toBe("2026-06-01T06:00:00.000Z");
     expect(calledUrl.searchParams.get("end_at")).toBe("2026-06-01T06:10:00.000Z");
   });
@@ -191,19 +193,23 @@ describe("Tour tracks — pull a Dawarich window", () => {
         endDate: new Date("2026-06-01T00:00:00Z"),
       },
     });
-    (global.fetch as jest.Mock).mockResolvedValueOnce(fakeOkResponse(NEWEST_FIRST_POINTS));
+    (global.fetch as jest.Mock<typeof fetch>).mockResolvedValueOnce(
+      fakeOkResponse(NEWEST_FIRST_POINTS)
+    );
 
     const res = await pull();
 
     expect(res.status).toBe(201);
-    const calledUrl = new URL((global.fetch as jest.Mock).mock.calls[0][0] as string);
+    const calledUrl = new URL((global.fetch as jest.Mock<typeof fetch>).mock.calls[0][0] as string);
     expect(calledUrl.searchParams.get("start_at")).toBe("2026-05-31T22:00:00.000Z");
     expect(calledUrl.searchParams.get("end_at")).toBe("2026-06-01T22:00:00.000Z");
   });
 
   it("stores the geometry in ascending time order although the fixture arrives newest-first", async () => {
     await seedUserConnection();
-    (global.fetch as jest.Mock).mockResolvedValueOnce(fakeOkResponse(NEWEST_FIRST_POINTS));
+    (global.fetch as jest.Mock<typeof fetch>).mockResolvedValueOnce(
+      fakeOkResponse(NEWEST_FIRST_POINTS)
+    );
 
     const res = await pull();
 
@@ -220,7 +226,9 @@ describe("Tour tracks — pull a Dawarich window", () => {
 
   it("accepts an explicit override that replaces the derived window", async () => {
     await seedUserConnection();
-    (global.fetch as jest.Mock).mockResolvedValueOnce(fakeOkResponse(NEWEST_FIRST_POINTS));
+    (global.fetch as jest.Mock<typeof fetch>).mockResolvedValueOnce(
+      fakeOkResponse(NEWEST_FIRST_POINTS)
+    );
 
     const overrideStart = new Date("2026-06-01T00:00:00Z");
     const overrideEnd = new Date("2026-06-01T23:59:59Z");
@@ -230,7 +238,7 @@ describe("Tour tracks — pull a Dawarich window", () => {
     });
 
     expect(res.status).toBe(201);
-    const calledUrl = new URL((global.fetch as jest.Mock).mock.calls[0][0] as string);
+    const calledUrl = new URL((global.fetch as jest.Mock<typeof fetch>).mock.calls[0][0] as string);
     expect(calledUrl.searchParams.get("start_at")).toBe(overrideStart.toISOString());
     expect(calledUrl.searchParams.get("end_at")).toBe(overrideEnd.toISOString());
   });
@@ -243,12 +251,14 @@ describe("Tour tracks — pull a Dawarich window", () => {
     expect(res.status).toBe(409);
     expect(res.body.error).toBe("notConfigured");
 
-    expect(global.fetch as jest.Mock).not.toHaveBeenCalled();
+    expect(global.fetch as jest.Mock<typeof fetch>).not.toHaveBeenCalled();
   });
 
   it("Dawarich unreachable → 409 with kind unreachable, and nothing is stored", async () => {
     await seedUserConnection();
-    (global.fetch as jest.Mock).mockRejectedValueOnce(new Error("connect ECONNREFUSED"));
+    (global.fetch as jest.Mock<typeof fetch>).mockRejectedValueOnce(
+      new Error("connect ECONNREFUSED")
+    );
 
     const before = await prisma.tripRouteTrack.count({ where: { routeId } });
     const res = await pull();
@@ -268,7 +278,9 @@ describe("Tour tracks — pull a Dawarich window", () => {
     const fullPage = (offset: number) =>
       Array.from({ length: 1000 }, (_, i) => rawPoint(offset + i, 60.4, 5.33, T_MID));
     for (let page = 1; page <= 50; page += 1) {
-      (global.fetch as jest.Mock).mockResolvedValueOnce(fakeOkResponse(fullPage(page * 1000)));
+      (global.fetch as jest.Mock<typeof fetch>).mockResolvedValueOnce(
+        fakeOkResponse(fullPage(page * 1000))
+      );
     }
 
     const res = await pull();
@@ -282,7 +294,9 @@ describe("Tour tracks — pull a Dawarich window", () => {
 
   it("stores truncated=false for a normal (non-capped) pull", async () => {
     await seedUserConnection();
-    (global.fetch as jest.Mock).mockResolvedValueOnce(fakeOkResponse(NEWEST_FIRST_POINTS));
+    (global.fetch as jest.Mock<typeof fetch>).mockResolvedValueOnce(
+      fakeOkResponse(NEWEST_FIRST_POINTS)
+    );
 
     const res = await pull();
 
@@ -296,7 +310,7 @@ describe("Tour tracks — pull a Dawarich window", () => {
   // refused the way an equivalent GPX file already is.
   it("refuses a window with exactly one point instead of storing a one-point track", async () => {
     await seedUserConnection();
-    (global.fetch as jest.Mock).mockResolvedValueOnce(
+    (global.fetch as jest.Mock<typeof fetch>).mockResolvedValueOnce(
       fakeOkResponse([rawPoint(1, 60.39, 5.32, T_OLD)])
     );
 
@@ -310,7 +324,7 @@ describe("Tour tracks — pull a Dawarich window", () => {
 
   it("an empty window (fetch succeeds, no points) → 409 with a message, not a zero-point track", async () => {
     await seedUserConnection();
-    (global.fetch as jest.Mock).mockResolvedValueOnce(fakeOkResponse([]));
+    (global.fetch as jest.Mock<typeof fetch>).mockResolvedValueOnce(fakeOkResponse([]));
 
     const before = await prisma.tripRouteTrack.count({ where: { routeId } });
     const res = await pull();
@@ -326,7 +340,7 @@ describe("Tour tracks — pull a Dawarich window", () => {
     await seedUserConnection();
     // Exercise both a success and a failure path — the key must appear in
     // neither, and the failure path is where the client's own warn log fires.
-    (global.fetch as jest.Mock)
+    (global.fetch as jest.Mock<typeof fetch>)
       .mockResolvedValueOnce(fakeOkResponse(NEWEST_FIRST_POINTS))
       .mockRejectedValueOnce(new Error("connect ECONNREFUSED"));
 

@@ -37,7 +37,8 @@ describe("POST /api/v1/admin/airline-logos/refresh", () => {
   let nonAdminCookie: string;
   const createdUserIds: string[] = [];
 
-  const neverResolves = () => new Promise(() => {});
+  const neverResolves = () =>
+    new Promise<Awaited<ReturnType<typeof scheduler.sweepStaleLogos>>>(() => {});
   const flushPromises = () => new Promise((resolve) => setImmediate(resolve));
 
   const createAdminCookie = async (): Promise<string> => {

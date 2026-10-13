@@ -26,7 +26,7 @@ describe("cruise import — provenance", () => {
       .post("/api/v1/auth/register")
       .send({ username: "cruise-provenance", password: "password123" })
       .expect(201);
-    cookie = registration.headers["set-cookie"];
+    cookie = [registration.headers["set-cookie"]].flat();
     userId = (await prisma.user.findFirstOrThrow()).id;
   });
 

@@ -18,7 +18,8 @@ jest.mock("../services/immich/immichClient", () => ({
   createImmichClient: () => ({ listAlbumAssets: jest.fn(), fetchAssetStream }),
 }));
 
-const getImmichConnection = jest.fn();
+const getImmichConnection =
+  jest.fn<typeof import("../services/immich/immichResolver").getImmichConnection>();
 jest.mock("../services/immich/immichResolver", () => ({ getImmichConnection }));
 
 jest.mock("../middleware/rateLimit", () => ({

@@ -141,10 +141,10 @@ describe("seedCruises", () => {
           ["departure", stop.departureTime],
         ] as const) {
           if (time === null) continue;
-          if (time < cruise.startDate || time > cruise.endDate) {
+          if (time < cruise.startDate! || time > cruise.endDate!) {
             throw new Error(
               `stop ${stop.dayNumber}'s ${label} ${time.toISOString()} is outside ` +
-                `${cruise.startDate.toISOString()}..${cruise.endDate.toISOString()}`
+                `${cruise.startDate!.toISOString()}..${cruise.endDate!.toISOString()}`
             );
           }
         }

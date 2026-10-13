@@ -25,7 +25,7 @@ describe("resolveEnd", () => {
         sent: "2026-10-25T02:30",
         zone: BERLIN,
         field: "departureLocal",
-      }).time;
+      })!.time!;
     expect(at("later").toISOString()).toBe("2026-10-25T01:30:00.000Z");
     expect(at("earlier").toISOString()).toBe("2026-10-25T00:30:00.000Z");
     expect(at(undefined).toISOString()).toBe("2026-10-25T00:30:00.000Z");

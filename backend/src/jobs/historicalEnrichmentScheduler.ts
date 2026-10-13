@@ -46,6 +46,14 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
 
     // Limit to maxPerDay
     const candidatesToProcess = candidates.slice(0, settings.maxPerDay);
+    if (candidatesToProcess.length === 0) return { processed: 0, created: 0, skipped: 0 };
+
+    // Load only the chosen candidates, scoped to their owner, in one round trip.
+    const flights = await prisma.flight.findMany({
+      where: { userId, id: { in: candidatesToProcess.map((candidate) => candidate.flightId) } },
+      select: { id: true, flightNumber: true },
+    });
+    const flightsById = new Map(flights.map((flight) => [flight.id, flight]));
 
     // Mirror the live auto-update path: when the user has turned off the approval
     // gate for live API updates, historical enrichment should also auto-apply —
@@ -62,10 +70,7 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
 
     for (const candidate of candidatesToProcess) {
       try {
-        // Get flight to enrich
-        const flight = await prisma.flight.findUnique({
-          where: { id: candidate.flightId },
-        });
+        const flight = flightsById.get(candidate.flightId);
 
         if (!flight || !flight.flightNumber) {
           skipped++;

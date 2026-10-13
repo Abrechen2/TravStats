@@ -58,8 +58,8 @@ describe("railJourneyWrite", () => {
   it("refuses an update of a journey that would leave it without a departure", () => {
     expect(() =>
       mergeRailJourney(null, {
-        departureStation: { name: "A", lat: 50, lon: 8 },
-        arrivalStation: { name: "B", lat: 48, lon: 2 },
+        departureStation: { code: null, name: "A", lat: 50, lon: 8 },
+        arrivalStation: { code: null, name: "B", lat: 48, lon: 2 },
       })
     ).toThrow("departureLocal is required");
   });
@@ -68,8 +68,8 @@ describe("railJourneyWrite", () => {
     const state = mergeRailJourney(
       null,
       {
-        departureStation: { name: "Wien Hbf", lat: 48.185, lon: 16.376 },
-        arrivalStation: { name: "Zürich HB", lat: 47.378, lon: 8.54 },
+        departureStation: { code: null, name: "Wien Hbf", lat: 48.185, lon: 16.376 },
+        arrivalStation: { code: null, name: "Zürich HB", lat: 47.378, lon: 8.54 },
         departureLocal: "2026-07-01T08:25",
       },
       new Date("2026-06-01T00:00:00Z")

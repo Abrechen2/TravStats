@@ -2,9 +2,14 @@ import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import { calculateDistance } from "../utils/geo";
 import { calculateCo2Kg, toSeatClass } from "../services/co2Calculator";
 
-const mockFindMany = jest.fn();
-const mockCount = jest.fn();
-const mockGroupBy = jest.fn();
+const mockFindMany =
+  jest.fn<
+    (
+      args: import("../prisma").Prisma.FlightFindManyArgs
+    ) => Promise<Partial<import("../generated/prisma/client").Flight>[]>
+  >();
+const mockCount = jest.fn<(args: import("../prisma").Prisma.FlightCountArgs) => Promise<number>>();
+const mockGroupBy = jest.fn<() => Promise<never[]>>();
 const mockGetCachedAirports = jest.fn();
 
 jest.mock("../db", () => ({
@@ -18,7 +23,7 @@ jest.mock("../db", () => ({
     // cost total (#267). No row means "no settings yet", which falls back to
     // EUR — the same path a brand-new account takes.
     userSettings: {
-      findUnique: jest.fn().mockResolvedValue(null),
+      findUnique: jest.fn(async () => null),
     },
   },
 }));
@@ -36,7 +41,7 @@ jest.mock("../services/airportCache", () => ({
  * from this fixture (it would say 2: DE and US). A fixture where the two agree
  * proves nothing about which of them was read.
  */
-const mockLoadPassport = jest.fn();
+const mockLoadPassport = jest.fn<() => Promise<{ summary: { countries: number } }>>();
 jest.mock("../services/stats/passportLoader", () => ({
   loadPassport: mockLoadPassport,
 }));

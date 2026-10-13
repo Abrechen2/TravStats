@@ -1,9 +1,24 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
-const findUniqueUserSettings = jest.fn();
-const findFirstAdminSettings = jest.fn();
+const findUniqueUserSettings =
+  jest.fn<
+    (
+      args: import("../../../prisma").Prisma.UserSettingsFindUniqueArgs
+    ) => Promise<Partial<import("../../../generated/prisma/client").UserSettings> | null>
+  >();
+const findFirstAdminSettings =
+  jest.fn<
+    (
+      args: import("../../../prisma").Prisma.AdminSettingsFindFirstArgs
+    ) => Promise<Partial<import("../../../generated/prisma/client").AdminSettings> | null>
+  >();
 
-const findUniqueUser = jest.fn();
+const findUniqueUser =
+  jest.fn<
+    (
+      args: import("../../../prisma").Prisma.UserFindUniqueArgs
+    ) => Promise<Partial<import("../../../generated/prisma/client").User> | null>
+  >();
 
 jest.mock("../../../db", () => ({
   prisma: {

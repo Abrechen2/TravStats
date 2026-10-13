@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "typescript": "5.9.3",
+  "description": "Existing backend test diagnostics. npm run typecheck:tests -- --update may only remove resolved errors. Do not add entries by hand.",
+  "diagnostics": []
+}

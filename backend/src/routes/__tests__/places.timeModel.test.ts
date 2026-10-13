@@ -46,7 +46,7 @@ describe("Place visits — time model (phase 2)", () => {
     await prisma.placeVisit.deleteMany({ where: { userId } });
   });
 
-  const post = (body: unknown, auth: { cookie?: string; bearer?: string } = { cookie }) => {
+  const post = (body: object | string, auth: { cookie?: string; bearer?: string } = { cookie }) => {
     const req = request(app).post(`/api/v1/places/${placeId}/visits`);
     if (auth.bearer) req.set("Authorization", auth.bearer);
     else req.set("Cookie", auth.cookie ?? cookie);

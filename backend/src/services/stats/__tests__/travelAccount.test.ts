@@ -1,3 +1,5 @@
+jest.mock("../../loggingConfig", () => ({ isDebugEnabled: () => false }));
+
 import { attributeTravelNights, buildTravelAccount } from "../travelAccount";
 import { buildTripAccount, type TripAccountInput } from "../tripAccount";
 import type { TripCostInput } from "../../../shared/tripCost";
@@ -10,6 +12,8 @@ const nextId = (prefix: string): string => `${prefix}${(fixtureSeq += 1)}`;
 
 const stay = (checkIn: string, checkOut: string, status = "completed") => ({
   id: nextId("stay-"),
+  bookingId: null,
+  booking: null,
   datePrecision: "DAY",
   nights: null,
   status,
@@ -253,10 +257,13 @@ describe("attributeTravelNights", () => {
 });
 
 /** A trip flight with the full cost shape, defaulting to "nothing recorded". */
-const costFlight = (o: Partial<TripAccountInput["flights"][number]> = {}) => ({
+type CostFlight = TripAccountInput["flights"][number] & TripCostInput["flights"][number];
+const costFlight = (o: Partial<CostFlight> = {}): CostFlight => ({
   status: "flown",
   departureTime: null,
   arrivalTime: null,
+  depLocalDay: null,
+  arrLocalDay: null,
   price: null,
   taxes: null,
   fees: null,
@@ -282,7 +289,7 @@ const trip = (
     flights: [],
     rail: [],
     ...o,
-  } as unknown as TripAccountInput;
+  };
   return {
     id: "t1",
     name: "Norwegen",
@@ -296,10 +303,10 @@ const trip = (
     ...rows,
     cost: {
       bookings: o.bookings ?? [],
-      flights: (o.flights ?? []) as TripCostInput["flights"],
-      cruises: (o.cruises ?? []) as TripCostInput["cruises"],
-      stays: (o.stays ?? []) as TripCostInput["stays"],
-      rail: (o.rail ?? []) as TripCostInput["rail"],
+      flights: o.flights ?? [],
+      cruises: o.cruises ?? [],
+      stays: o.stays ?? [],
+      rail: o.rail ?? [],
       rentals: o.rentals ?? [],
       expenses: o.expenses ?? [],
     },
@@ -311,7 +318,17 @@ describe("buildTripAccount", () => {
     const account = buildTripAccount([
       trip({
         cruises: [
-          { status: "flown", startDate: null, endDate: null, price: 1000, currency: "EUR" },
+          {
+            ...cruise("2025-06-01", "2025-06-08"),
+            startDate: null,
+            endDate: null,
+            bookingId: null,
+            booking: null,
+            priceBase: null,
+            fxBaseCurrency: null,
+            price: 1000,
+            currency: "EUR",
+          },
         ],
         expenses: [
           { amount: 1290, currency: "NOK" },
@@ -354,6 +371,10 @@ describe("buildTripAccount", () => {
         cruises: [
           {
             status: "flown",
+            bookingId: null,
+            booking: null,
+            priceBase: null,
+            fxBaseCurrency: null,
             startDate: d("2025-06-01"),
             endDate: d("2025-06-08"),
             price: 2400,
@@ -383,6 +404,10 @@ describe("buildTripAccount", () => {
         cruises: [
           {
             status: "flown",
+            bookingId: null,
+            booking: null,
+            priceBase: null,
+            fxBaseCurrency: null,
             startDate: d("2025-06-04"),
             endDate: d("2025-06-08"),
             price: 500,
@@ -391,7 +416,7 @@ describe("buildTripAccount", () => {
         ],
         flights: [
           {
-            status: "flown",
+            ...costFlight(),
             departureTime: new Date("2025-06-01T08:00:00Z"),
             arrivalTime: new Date("2025-06-01T11:00:00Z"),
             price: 120,

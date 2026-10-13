@@ -10,6 +10,18 @@
 
 import { calculateUserStats, type FlightData } from "../utils/achievementStats";
 
+// These infrastructure modules are imported transitively by the pure helpers.
+// This suite must stay independent of a database and filesystem log streams.
+jest.mock("../db", () => {
+  throw new Error("Historical statistics unit tests must not load the database");
+});
+jest.mock("../services/aircraftCatalogCache", () => ({ getAircraftCatalogSync: () => [] }));
+jest.mock("../services/loggingConfig", () => ({ isDebugEnabled: () => false }));
+jest.mock("../utils/logger", () => ({
+  __esModule: true,
+  default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+}));
+
 const AIRPORT_DB: Record<string, { country: string | null; lat: number; lon: number }> = {
   FRA: { country: "Germany", lat: 50.0379, lon: 8.5622 },
   MUC: { country: "Germany", lat: 48.3538, lon: 11.7861 },
@@ -39,6 +51,7 @@ function makeFlight(opts: {
   return {
     id: `${opts.depIata}-${opts.arrIata}-${opts.departureTime?.toISOString() ?? "na"}`,
     status: opts.status,
+    specialType: null,
     depIata: opts.depIata,
     depIcao: null,
     arrIata: opts.arrIata,
