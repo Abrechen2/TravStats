@@ -77,7 +77,7 @@
     "dayOnly": "Only the date is known",
     "delayNeedsClock": "A delay needs the ride's times.",
     "distance": "Distance in km",
-    "distanceHint": "Leave empty: TravStats measures along the line taken from Transitous, otherwise the straight line. Fill it in when the ticket names the distance.",
+    "distanceHint": "Leave empty: TravStats measures along the stored route (Transitous or OpenRailRouting), otherwise the straight line. Fill it in when the ticket names the distance.",
     "seat": "Seat",
     "class": "Class",
     "coach": "Coach",
@@ -113,6 +113,8 @@
     }
   },
   "tracedLine": "along the line, Transitous",
+  "routedLine": "along the rail network, OpenRailRouting",
+  "alongLine": "along the stored route",
   "roadtripLine": "along the roadtrip route",
   "station": {
     "searchPlaceholder": "Search a station, e.g. Frankfurt Hbf",

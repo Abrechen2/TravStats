@@ -64,7 +64,8 @@ async function transitousGeometry(input: {
  * Which line a journey is saved with. The train's own Transitous trace first;
  * without one, and only where the admin configured an OpenRailRouting, the
  * line over the tracks between the stations (and the stops between them, in
- * order, when known) — ONE request per save. Its failure is reported as
+ * order, when known). Successful routes are cached across saves; a disconnected
+ * network gets one rail-only retry within the same time budget. Its failure is reported as
  * `railRoutingUnavailable` / `railRoutingNoRoute` and the journey keeps the
  * straight line under the name `straight`, never a chord presented as routed.
  */

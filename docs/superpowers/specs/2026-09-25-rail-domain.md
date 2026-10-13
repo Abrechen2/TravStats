@@ -149,6 +149,20 @@ the train took:
    journeys Transitous cannot match. It routes over the tracks and may pick
    another line than the train used, hence its own source label. The public
    demo is experimental and is never a default.
+   Successful routes are cached across journeys for 30 days, keyed by the
+   configured URL, profile, direction and every ordered waypoint. The bounded
+   cache (500 routes / 200,000 points) lives at `/app/data/cache/rail-routes`
+   in production, or `.travstats-data/cache/rail-routes` under the backend's
+   working directory in development. It survives restarts; corrupt or
+   unwritable storage does not prevent saving a journey. Failures are not
+   cached and simultaneous identical requests share one calculation.
+
+   If GraphHopper reports `ConnectionNotFoundException`, retry once on the
+   same coordinates with a custom model excluding non-rail tracks. This
+   handles a station coordinate snapping to an isolated tram/subway network
+   (reproduced at Frankfurt (Main) Hbf). Both requests share the eight-second
+   budget. Every retry waypoint must snap within 500 metres; otherwise the
+   journey retains its normal fallback. No station coordinates are rewritten.
 3. **Straight line** (great-circle chord), always — the fallback, and the whole
    of phase 1. Stored as `geometry = null`, `geometrySource = 'straight'`.
 

@@ -42,6 +42,18 @@ describe("RailTableRow distance label", () => {
     expect(cellOf(row, "distance").textContent).toBe("88 kmrail:tracedLine");
   });
 
+  it("credits OpenRailRouting for a routed distance", () => {
+    const row = renderRow([{ ...base, geometrySource: "openrailrouting" }]);
+    expect(cellOf(row, "distance").textContent).toContain("rail:routedLine");
+    expect(cellOf(row, "distance").textContent).not.toContain("rail:tracedLine");
+  });
+
+  it("names mixed providers in a connection instead of attributing both to Transitous", () => {
+    const row = renderRow([base, { ...base, id: "j2", geometrySource: "openrailrouting" }]);
+    expect(cellOf(row, "distance").textContent).toContain("rail:connection.distanceMixed");
+    expect(cellOf(row, "distance").textContent).not.toContain("rail:tracedLine");
+  });
+
   // Review 2026-09-26, finding 7: a converted roadtrip leg read "along the
   // track, Transitous" although Transitous never traced it.
   it("says a converted roadtrip leg's distance runs along the roadtrip route", () => {
@@ -94,7 +106,10 @@ describe("RailTableRow operator tile", () => {
     const tile = within(cellOf(row, "operator")).getByTestId("operator-tile");
     expect(tile).toHaveAttribute("title", "DB Fernverkehr");
     expect(tile.textContent).toBe("DB Fernverkehr");
-    expect(within(tile).getByTestId("operator-logo")).toHaveAttribute("src", "/api/v1/rail/operators/logo?name=DB%20Fernverkehr");
+    expect(within(tile).getByTestId("operator-logo")).toHaveAttribute(
+      "src",
+      "/api/v1/rail/operators/logo?name=DB%20Fernverkehr"
+    );
   });
 
   it("names a grouped ride after the operator of its longest stretch", () => {

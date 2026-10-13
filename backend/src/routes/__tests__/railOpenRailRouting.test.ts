@@ -1,4 +1,5 @@
 import request from "supertest";
+import { railRouteCache } from "../../services/rail/railRouteCache";
 
 import app from "../../index";
 import { prisma } from "../../db";
@@ -79,6 +80,8 @@ describe("Rail journeys and the instance's OpenRailRouting", () => {
 
   beforeEach(async () => {
     __clearRailHttpCache();
+    jest.spyOn(railRouteCache, "get").mockResolvedValue(null);
+    jest.spyOn(railRouteCache, "put").mockResolvedValue(undefined);
     await updateInstanceSettings({
       railTransitousEnabled: true,
       railDbRestEnabled: true,
@@ -89,6 +92,7 @@ describe("Rail journeys and the instance's OpenRailRouting", () => {
   afterEach(async () => {
     fetchMock?.restore();
     fetchMock = null;
+    jest.restoreAllMocks();
     await prisma.railJourney.deleteMany({ where: { userId } });
     await railCreationLimiter.resetKey(`user:${userId}`);
   });
@@ -275,6 +279,8 @@ describe("Rail journeys and the instance's OpenRailRouting", () => {
       expect(created.geometrySource).toBe("transitous");
 
       __clearRailHttpCache();
+      jest.spyOn(railRouteCache, "get").mockResolvedValue(null);
+      jest.spyOn(railRouteCache, "put").mockResolvedValue(undefined);
       const m = mock([
         [/api\/v6\/trip/, { error: "down" }, 503],
         [/orr\.lan:8989\/route/, routeAnswer([FRANKFURT, FULDA])],

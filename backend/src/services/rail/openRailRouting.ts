@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { calculateDistance } from "../../utils/geo";
+import { railRouteCache, railRouteCacheKey } from "./railRouteCache";
 
 import { getInstanceSettings } from "../instanceSettingsService";
 import { simplifyDegrees } from "../schematicRouter";
@@ -12,9 +14,9 @@ import { densifyLine, isTracedShape, type LonLat } from "./railGeometryMath";
  * connect these stations", which is the line a journey is drawn with when no
  * timetable trace exists (spec 2026-09-25-rail-domain, phase 3).
  *
- * Off unless an admin configures the base URL. One request per journey, when
- * it is saved; the answer is frozen on the row, so there is no cache here —
- * the row IS the cache. A failure is a result with a reason, never an
+ * Off unless an admin configures the base URL. Resolved when a journey
+ * is saved; successful routes are shared through a bounded disk cache,
+ * then frozen on each journey. A failure is a result with a reason, never an
  * exception and never a straight line wearing the name `openrailrouting`.
  */
 
@@ -52,9 +54,16 @@ const routeAnswerSchema = z.object({
   paths: z
     .array(
       z.object({
-        distance: z.number(),
+        distance: z.number().finite().nonnegative(),
+        snapped_waypoints: z
+          .object({ coordinates: z.array(z.tuple([z.number(), z.number()])) })
+          .optional(),
         points: z.object({
-          coordinates: z.array(z.tuple([z.number(), z.number()]).rest(z.number())).min(2),
+          coordinates: z
+            .array(
+              z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)]).rest(z.number())
+            )
+            .min(2),
         }),
       })
     )
@@ -78,12 +87,15 @@ function routeUrl(baseUrl: string, points: readonly LonLat[]): string {
 }
 
 async function getJson(
-  url: string
+  url: string,
+  init: RequestInit = {},
+  signal = AbortSignal.timeout(RAIL_ROUTING_TIMEOUT_MS)
 ): Promise<{ status: number; body: unknown } | { status: null; error: string }> {
   try {
     const response = await fetch(url, {
-      headers: { "User-Agent": railUserAgent(), Accept: "application/json" },
-      signal: AbortSignal.timeout(RAIL_ROUTING_TIMEOUT_MS),
+      ...init,
+      headers: { "User-Agent": railUserAgent(), Accept: "application/json", ...init.headers },
+      signal,
     });
     const body: unknown = await response.json().catch(() => null);
     return { status: response.status, body };
@@ -98,11 +110,44 @@ async function getJson(
  * connection (a station off its extract, or no tracks between); anything else
  * that is not a usable line is `unavailable`.
  */
-export async function routeRailLine(
+async function fetchRailLine(
   baseUrl: string,
   points: readonly LonLat[]
 ): Promise<RailRoutingResult> {
-  const answer = await getJson(routeUrl(baseUrl, points));
+  const signal = AbortSignal.timeout(RAIL_ROUTING_TIMEOUT_MS);
+  let answer = await getJson(routeUrl(baseUrl, points), {}, signal);
+  let railOnly = false;
+  // At large stations all_tracks can snap to a disconnected tram/subway network.
+  // Retry only that failure, on the SAME coordinates, excluding non-rail tracks.
+  // The shared signal bounds both requests together to the normal save budget.
+  const disconnected = z
+    .object({ hints: z.array(z.object({ details: z.string() })) })
+    .safeParse(answer.status === 400 ? answer.body : null);
+  if (
+    disconnected.success &&
+    disconnected.data.hints.some(
+      (hint) => hint.details === "com.graphhopper.util.exceptions.ConnectionNotFoundException"
+    )
+  ) {
+    railOnly = true;
+    answer = await getJson(
+      `${baseUrl}/route`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          profile: RAIL_ROUTING_PROFILE,
+          points,
+          points_encoded: false,
+          instructions: false,
+          calc_points: true,
+          "ch.disable": true,
+          custom_model: { priority: [{ if: "railway_class != RAIL", multiply_by: "0" }] },
+        }),
+      },
+      signal
+    );
+  }
   if (answer.status === null) {
     logger.warn({ operation: "rail_routing_request", reason: "no_answer", error: answer.error });
     return { ok: false, reason: "unavailable" };
@@ -122,10 +167,47 @@ export async function routeRailLine(
     logger.warn({ operation: "rail_routing_request", reason: "unexpected_shape" });
     return { ok: false, reason: "unavailable" };
   }
+  const snapped = parsed.data.paths[0].snapped_waypoints?.coordinates;
+  // Never rescue a route by silently moving a requested station far away.
+  if (
+    railOnly &&
+    (!snapped ||
+      snapped.length !== points.length ||
+      snapped.some(
+        ([lon, lat], i) => calculateDistance(lat, lon, points[i][1], points[i][0]) > 0.5
+      ))
+  )
+    return { ok: false, reason: "noRoute" };
   const raw = parsed.data.paths[0].points.coordinates.map(([lon, lat]) => [lon, lat] as LonLat);
   const line = densifyLine(simplifyDegrees(raw, SIMPLIFY_TOLERANCE_DEG), MAX_STORED_SEGMENT_KM);
   if (!isTracedShape(line)) return { ok: false, reason: "unavailable" };
   return { ok: true, line };
+}
+
+const inFlight = new Map<string, Promise<RailRoutingResult>>();
+
+/** Reuse only successful routes; concurrent identical saves make one request. */
+export async function routeRailLine(
+  baseUrl: string,
+  points: readonly LonLat[]
+): Promise<RailRoutingResult> {
+  baseUrl = baseUrl.replace(/\/+$/, "");
+  const key = railRouteCacheKey(baseUrl, RAIL_ROUTING_PROFILE, points);
+  const existing = inFlight.get(key);
+  if (existing) return structuredClone(await existing);
+  const pending = (async (): Promise<RailRoutingResult> => {
+    const cached = await railRouteCache.get(key);
+    if (cached) return { ok: true, line: cached };
+    const result = await fetchRailLine(baseUrl, points);
+    if (result.ok) await railRouteCache.put(key, result.line);
+    return result;
+  })();
+  inFlight.set(key, pending);
+  try {
+    return structuredClone(await pending);
+  } finally {
+    inFlight.delete(key);
+  }
 }
 
 export type RailRoutingProbe =
