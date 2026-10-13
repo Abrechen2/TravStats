@@ -1,5 +1,5 @@
-import { sourceRecords } from "../services/federation/records";
-import { listAtHub, circleInfo, acceptAtHub, readAtHub } from "../services/federation/circles";
+import { handleSealed } from "../services/federation/e2e/relay";
+import { listAtHub, circleInfo, acceptAtHub } from "../services/federation/circles";
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { prisma } from "../db";
@@ -7,12 +7,10 @@ import { getInstanceSettings } from "../services/instanceSettingsService";
 import { packetBody } from "../services/federation/contract";
 import { authenticatePeer, envelope, refused } from "../services/federation/security";
 import { receiveClaim, receiveState } from "../services/federation/links";
-import { sourceSnapshot } from "../services/federation/snapshots";
-import { sourceDetails, sourceAttachment } from "../services/federation/details";
 
 const router = Router();
 router.use(
-  rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: true, legacyHeaders: false })
+  rateLimit({ windowMs: 60_000, limit: 1200, standardHeaders: true, legacyHeaders: false })
 );
 router.post("/", async (req, res) => {
   try {
@@ -31,7 +29,13 @@ router.post("/", async (req, res) => {
       data = await receiveClaim(message.origin, body.code, body.channel);
     else if (body.action === "state")
       data = await receiveState(message.origin, body.channel, body.confirmed, body.revoked);
-    else if (body.action === "circle") {
+    else if (body.action === "sealed") {
+      const link = await prisma.comparisonLink.findFirst({
+        where: { origin: message.origin, channel: body.channel, revoked: false },
+      });
+      if (!link) throw refused();
+      data = await handleSealed(link, body);
+    } else if (body.action === "circle") {
       const link = await prisma.comparisonLink.findFirst({
         where: { origin: message.origin, channel: body.channel, revoked: false },
       });
@@ -41,25 +45,13 @@ router.post("/", async (req, res) => {
         if (!body.circleId) throw refused();
         if (body.operation === "info") data = await circleInfo(link, body.circleId);
         else if (body.operation === "read")
-          data = await readAtHub(link.userId, body.circleId, body.year ?? null, link);
+          throw refused(); // No plaintext group fallback in protocol v2.
         else {
           if (!body.version) throw refused();
           data = await acceptAtHub(link, body.circleId, body.version, body.operation === "accept");
         }
       }
-    } else {
-      const link = await prisma.comparisonLink.findFirst({
-        where: { origin: message.origin, channel: body.channel },
-      });
-      if (!link) throw refused();
-      data = body.recordDomain
-        ? await sourceRecords(link, body.audience, body.recordDomain, body.cursor, body.year)
-        : body.tripId
-          ? body.attachment
-            ? await sourceAttachment(link, body.audience, body.tripId, body.attachment)
-            : await sourceDetails(link, body.audience, body.tripId)
-          : await sourceSnapshot(link, body.audience, body.year);
-    }
+    } else throw refused(); // Legacy plaintext travel reads are deliberately disabled.
     const signed = envelope(data, message.origin, message.nonce);
     if (Buffer.byteLength(JSON.stringify(signed)) > 10_000_000) throw refused();
     res.setHeader("Cache-Control", "no-store");

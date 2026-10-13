@@ -1,0 +1,458 @@
+{
+  "Flight": {
+    "details": "id airline airlineIata airlineIcao isCodeshare flightNumber callsign aircraft aircraftRegistration aircraftModeS depIcao depIata depName depLat depLon arrIcao arrIata arrName arrLat arrLon departureTime arrivalTime status boardingGroup gate terminal taxes fees category createdAt updatedAt actualRoute overflownCountries routeDistance durationMinutes routeSource hasLiveTracking depTimeSemantics arrTimeSemantics depTimezone arrTimezone onlineCheckInOpensAt onlineCheckInZone depPrecision arrPrecision lastModifiedBy enrichmentHistory actualDeparture actualArrival delayMinutes co2Kg baggageAllowance bookingClassLetter runwayDepartureTime runwayArrivalTime isCargo aerodataboxLastUpdatedUtc baggageBelt checkInDesk nextApiCheckAt tripId bookingId specialType eventLat eventLon eventLabel patternLat patternLon specialData externalRef importBatchId",
+    "costs": "price currency priceBase fxRate fxRateDate fxBaseCurrency fxSource ticketPrice",
+    "personal": "operatingAirline operatingAirlineIata operatingAirlineIcao notes seatNumber seatClass tags companions aerodataboxQualityTags coPassengers",
+    "photos": "",
+    "documents": "bookingReference ticketNumber frequentFlyerNumber",
+    "excluded": "userId receiptUrl dataSource parserTemplate parserConfidence shareKey"
+  },
+  "FlightTrack": {
+    "details": "id flightId source startedAt endedAt geometry segmentStarts cumulativeKm elevations pointCount distanceKm createdAt updatedAt",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": "uploadId deviceId"
+  },
+  "Cruise": {
+    "details": "id shipId shipNameOverride cruiseLine departurePortId arrivalPortId routeName startDate endDate startDay endDay startZone endZone status kind deck tripId bookingId color createdAt updatedAt externalRef importBatchId",
+    "costs": "price currency priceBase fxRate fxRateDate fxBaseCurrency fxSource",
+    "personal": "cabinNumber cabinType notes tags companions",
+    "photos": "",
+    "documents": "bookingReference",
+    "excluded": "userId parserTemplate parserConfidence dataSource shareKey"
+  },
+  "CruiseStop": {
+    "details": "id cruiseId portId dayNumber date isAtSea arrivalTime departureTime arrivalUtc departureUtc stopZone stopDate timePrecision updatedAt allAboardTime unresolvedPortName",
+    "costs": "",
+    "personal": "excursionNote",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "CruiseLeg": {
+    "details": "id cruiseId ordinal fromPortId toPortId distanceKm method routerVersion dataVersion confidence computedAt updatedAt",
+    "costs": "",
+    "personal": "notes",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "CruiseLegRoute": {
+    "details": "id cruiseId fromKind fromRef toKind toRef createdAt updatedAt",
+    "costs": "waypoints",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "CruiseTrack": {
+    "details": "id cruiseId source name startedAt endedAt geometry segmentStarts cumulativeKm pointCount distanceKm truncated externalRef createdAt",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "Ship": {
+    "details": "id name imo cruiseLine yearBuilt grossTonnage capacity status isUserAdded kind",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "Port": {
+    "details": "id name city country unlocode lat lon timezone region isUserAdded",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "Trip": {
+    "details": "id name color startDate endDate status startDay endDay startZone endZone category originLabel destinationLabel coverImageUrl icon countries shareGroupId createdAt updatedAt",
+    "costs": "",
+    "personal": "description tags companions notes summary summarySource summaryGeneratedAt summaryEntryCount",
+    "photos": "",
+    "documents": "",
+    "excluded": "userId"
+  },
+  "TripPhoto": {
+    "details": "",
+    "costs": "",
+    "personal": "",
+    "photos": "id tripId mimetype sizeBytes caption takenAt sortIdx createdAt lat lon stopId",
+    "documents": "",
+    "excluded": "filename immichAssetId immichAlbumLinkId"
+  },
+  "TripImmichAlbum": {
+    "details": "",
+    "costs": "",
+    "personal": "",
+    "photos": "id tripId albumName assetCount mode sortIdx lastSyncedAt createdAt",
+    "documents": "",
+    "excluded": "immichAlbumId thumbnailAssetId"
+  },
+  "TripStop": {
+    "details": "id tripId orderIdx domain title startDate endDate lat lon startUtc endUtc stopZone precision routeId routeOrderIdx lodgingStayId overnight viaPoint placeId createdAt updatedAt",
+    "costs": "",
+    "personal": "description notes",
+    "photos": "",
+    "documents": "",
+    "excluded": "sourceId shareKey"
+  },
+  "TripRoute": {
+    "details": "id tripId name mode orderIdx color startOdometerKm endOdometerKm kind activity vehicle vehicleName anchorStopId kindAssignedAutomatically tourDate tourStartMinute createdAt updatedAt",
+    "costs": "",
+    "personal": "notes",
+    "photos": "",
+    "documents": "",
+    "excluded": "userId"
+  },
+  "TripRouteLeg": {
+    "details": "id routeId fromStopId toStopId distanceKm source mode confidence drivingMinutes computedAt updatedAt",
+    "costs": "waypoints",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "TripRouteTrack": {
+    "details": "id routeId source name startedAt endedAt geometry segmentStarts cumulativeKm pointCount distanceKm truncated elevations ascentM descentM movingSeconds externalRef createdAt",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "TripJournalEntry": {
+    "details": "",
+    "costs": "",
+    "personal": "id tripId date title day body mood weather observedWeather createdAt updatedAt",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "JournalEntryPhoto": {
+    "details": "",
+    "costs": "",
+    "personal": "",
+    "photos": "id entryId tripPhotoId sortIdx",
+    "documents": "",
+    "excluded": ""
+  },
+  "Booking": {
+    "details": "id tripId operator travellers bookedOn freeCancellationUntil freeCancellationZone freeCancellationOn createdAt updatedAt",
+    "costs": "price currency priceBase fxRate fxRateDate fxBaseCurrency fxSource priceSplit paymentDueOn",
+    "personal": "",
+    "photos": "",
+    "documents": "pnr",
+    "excluded": "userId"
+  },
+  "TripExpense": {
+    "details": "id tripId routeId stopId legFromStopId legToStopId kind date createdAt updatedAt",
+    "costs": "amount currency amountBase fxRate fxRateDate fxBaseCurrency fxSource",
+    "personal": "note payerCompanionId payerName",
+    "photos": "",
+    "documents": "",
+    "excluded": "userId"
+  },
+  "Lodging": {
+    "details": "id type name chainId address city country isoCountryCode lat lon geocodeAttemptedAt stars website wikidataId amenities visited externalRef createdAt updatedAt",
+    "costs": "",
+    "personal": "notes",
+    "photos": "",
+    "documents": "",
+    "excluded": "userId dataSource batchId"
+  },
+  "LodgingStay": {
+    "details": "id lodgingId tripId bookingId checkIn checkOut checkInTime checkOutTime checkInDate checkOutDate checkInAt checkOutAt stayZone datePrecision nights status roomCategory board guests roomAmenities membershipId membershipOptOut freeCancellationUntil freeCancellationZone freeCancellationOn externalRef createdAt updatedAt",
+    "costs": "pricePerNight currency totalPrice totalPriceBase fxRate fxRateDate fxBaseCurrency fxSource isAwardStay paymentDueOn",
+    "personal": "roomNumber ratingRoom ratingBreakfast ratingService ratingOverall companions notes",
+    "photos": "",
+    "documents": "bookingReference",
+    "excluded": "userId receiptUrl parserTemplate parserConfidence dataSource batchId shareKey"
+  },
+  "LodgingPhoto": {
+    "details": "",
+    "costs": "",
+    "personal": "",
+    "photos": "id lodgingId mimetype sizeBytes caption sortIdx createdAt",
+    "documents": "",
+    "excluded": "filename"
+  },
+  "LodgingChain": {
+    "details": "id name brandColor loyaltyProgram isUserAdded createdAt",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": "userId"
+  },
+  "LoyaltyMembership": {
+    "details": "",
+    "costs": "",
+    "personal": "id domain programName tier notes airlineCodes cruiseLines railOperators createdAt updatedAt",
+    "photos": "",
+    "documents": "membershipNumber",
+    "excluded": "userId"
+  },
+  "LodgingMembershipChain": {
+    "details": "membershipId chainId createdAt",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "LodgingMembershipLodging": {
+    "details": "membershipId lodgingId createdAt",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "Place": {
+    "details": "id name localName category lat lon address city country isoCountryCode externalRef curatedItemId wikidataId visited coverPhotoId createdAt updatedAt",
+    "costs": "",
+    "personal": "notes",
+    "photos": "",
+    "documents": "",
+    "excluded": "userId dataSource batchId"
+  },
+  "PlaceExternalRef": {
+    "details": "id placeId ref createdAt",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": "userId"
+  },
+  "PlaceVisit": {
+    "details": "id placeId tripId visitedAt visitedAtUtc visitedZone visitedPrecision writtenVia orderIdx createdAt updatedAt",
+    "costs": "",
+    "personal": "notes rating",
+    "photos": "",
+    "documents": "",
+    "excluded": "userId"
+  },
+  "PlaceVisitPhoto": {
+    "details": "",
+    "costs": "",
+    "personal": "",
+    "photos": "id placeVisitId mimetype sizeBytes caption sortIdx checksum takenAt tripPhotoId createdAt",
+    "documents": "",
+    "excluded": "filename immichAssetId"
+  },
+  "PlaceList": {
+    "details": "id name color icon sortIdx labelMode curatedKey createdAt updatedAt",
+    "costs": "",
+    "personal": "description",
+    "photos": "",
+    "documents": "",
+    "excluded": "userId"
+  },
+  "PlaceListEntry": {
+    "details": "id listId placeId sortIdx createdAt",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "RailJourney": {
+    "details": "id operator trainCategory trainNumber depStationName depStationCode depStationId depLat depLon depCountry depTimezone arrStationName arrStationCode arrStationId arrLat arrLon arrCountry arrTimezone departureTime arrivalTime depPrecision arrPrecision distanceKm distanceSource geometry geometrySource actualDepartureTime actualArrivalTime lookupProvider lookupRef travelClass coach status delayMinutes tightConnection tripId bookingId externalRef importBatchId createdAt updatedAt",
+    "costs": "price currency priceBase fxRate fxRateDate fxBaseCurrency fxSource",
+    "personal": "seat notes tags companions",
+    "photos": "",
+    "documents": "bookingReference",
+    "excluded": "userId shareKey"
+  },
+  "RailStation": {
+    "details": "id name searchName uic dbId shortCode lat lon country timezone parentSourceId isUserAdded",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": "sourceId"
+  },
+  "BusJourney": {
+    "details": "id operator lineName rideKind depStationName depAddress depLat depLon depCountry depTimezone arrStationName arrAddress arrLat arrLon arrCountry arrTimezone departureTime arrivalTime depPrecision arrPrecision distanceKm distanceSource geometry geometrySource actualDepartureTime actualArrivalTime fareClass status delayMinutes tripId bookingId externalRef importBatchId createdAt updatedAt",
+    "costs": "price currency priceBase fxRate fxRateDate fxBaseCurrency fxSource",
+    "personal": "seat notes tags companions",
+    "photos": "",
+    "documents": "bookingReference",
+    "excluded": "userId shareKey"
+  },
+  "RentalBooking": {
+    "details": "id provider operatedBy broker pickupStationName pickupAddress pickupAirportId pickupLat pickupLon pickupCountry pickupTimezone returnStationName returnAddress returnAirportId returnLat returnLon returnCountry returnTimezone pickupTime returnTime pickupPrecision returnPrecision actualPickupTime actualReturnTime actualPickupPrecision actualReturnPrecision vehicleClass acrissCode vehicleExample vehicleDriven odometerOutKm odometerInKm distanceKm distanceSource invoiceFees lastMailSentAt mileagePolicy mileageCapKm fuelPolicy freeCancellationUntil freeCancellationZone freeCancellationOn inclusions arrivalFlightNumber status userEditedFields tripId routeId externalRef importBatchId createdAt updatedAt",
+    "costs": "finalAmount finalCurrency finalAmountBase finalFxRate finalFxRateDate finalFxBaseCurrency finalFxSource finalAmountSource depositAmount depositCurrency depositPaidOn depositReturnedOn depositReturnedAmount paymentTiming paymentDueOn price currency priceBase fxRate fxRateDate fxBaseCurrency fxSource",
+    "personal": "licensePlate notes tags companions",
+    "photos": "",
+    "documents": "confirmationNumber brokerReference agreementNumber invoiceNumber",
+    "excluded": "userId shareKey"
+  },
+  "FerryJourney": {
+    "details": "roadtripLegId id operator vesselName vehicleType vehicleRegistration vehicleLengthM vehicleWidthM vehicleHeightM passengerCount depStationName depAddress depLat depLon depCountry depTimezone arrStationName arrAddress arrLat arrLon arrCountry arrTimezone departureTime arrivalTime depPrecision arrPrecision distanceKm distanceSource geometry geometrySource actualDepartureTime actualArrivalTime fareClass status delayMinutes tripId bookingId externalRef importBatchId createdAt updatedAt",
+    "costs": "price currency priceBase fxRate fxRateDate fxBaseCurrency fxSource",
+    "personal": "cabinType seat notes tags companions",
+    "photos": "",
+    "documents": "bookingReference ticketReference",
+    "excluded": "userId shareKey"
+  },
+  "Companion": {
+    "details": "",
+    "costs": "",
+    "personal": "id canonicalName displayName searchName createdAt updatedAt",
+    "photos": "",
+    "documents": "",
+    "excluded": "userId linkedUserId"
+  },
+  "FlightCompanion": {
+    "details": "",
+    "costs": "",
+    "personal": "flightId companionId position",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "TripCompanion": {
+    "details": "",
+    "costs": "",
+    "personal": "tripId companionId position",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "CruiseCompanion": {
+    "details": "",
+    "costs": "",
+    "personal": "cruiseId companionId position",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "RailJourneyCompanion": {
+    "details": "",
+    "costs": "",
+    "personal": "railJourneyId companionId position",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "BusJourneyCompanion": {
+    "details": "",
+    "costs": "",
+    "personal": "busJourneyId companionId position",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "RentalBookingCompanion": {
+    "details": "",
+    "costs": "",
+    "personal": "rentalBookingId companionId position",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "FerryJourneyCompanion": {
+    "details": "",
+    "costs": "",
+    "personal": "ferryJourneyId companionId position",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "Document": {
+    "details": "",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "id originalName mimetype sizeBytes sha256 pageCount format kind issuedOn source parsedDomain parsedPayload flightId cruiseId lodgingStayId tripId placeVisitId railJourneyId rentalBookingId busJourneyId ferryJourneyId tripExpenseId rentalCategory createdAt linkedAt unlinkedAt",
+    "excluded": "userId storedName"
+  },
+  "Note": {
+    "details": "",
+    "costs": "",
+    "personal": "id body occurredAt occurredZone occurredPrecision placeName lat lon photoMimetype photoSizeBytes visibility createdAt updatedAt",
+    "photos": "",
+    "documents": "",
+    "excluded": "userId photoFilename"
+  },
+  "ReceiptUpload": {
+    "details": "",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "id createdAt",
+    "excluded": "filename userId"
+  },
+  "CountryDay": {
+    "details": "id date countryCode source pointCount airportPointCount spanKm partialWindow createdAt updatedAt",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": "userId"
+  },
+  "PhotoJourney": {
+    "details": "id status startDate endDate locatedCount lat lon countryCode countryName city kind placeId distanceKm nights airportIata spreadKm tripId suggestedName suggestedLocalName suggestedRef suggestedCategory createdTripId createdPlaceVisitId createdLodgingStayId resolvedAt createdAt updatedAt",
+    "costs": "",
+    "personal": "",
+    "photos": "photoCount",
+    "documents": "",
+    "excluded": "userId previewAssetIds fingerprint"
+  },
+  "DawarichStay": {
+    "details": "id sourceStartAt sourceEndAt sourceLat sourceLon status startAt endAt lat lon zone pointCount evidence placeId tripId name visitId detectedAt resolvedAt",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": "userId fingerprint"
+  },
+  "UserAchievement": {
+    "details": "id updatedAt achievementId unlockedAt progress",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": "userId"
+  },
+  "Achievement": {
+    "details": "id code name category domain icon tier requirement requirementType isHidden createdAt",
+    "costs": "points",
+    "personal": "description",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "Airport": {
+    "details": "id iata icao name city country lat lon altitude timezone shortName municipalityName isClosed isUserAdded",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "Airline": {
+    "details": "id iata icao name callsign country active isUserAdded",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  },
+  "Aircraft": {
+    "details": "id icao name isUserAdded",
+    "costs": "",
+    "personal": "",
+    "photos": "",
+    "documents": "",
+    "excluded": ""
+  }
+}

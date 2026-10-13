@@ -1,12 +1,12 @@
+import sealedRouter from "./comparisonSealed";
 import { prepareScope } from "../services/federation/permissions";
-import { sourceRecords, recordPageSchema, buildRecords } from "../services/federation/records";
+import { buildRecords } from "../services/federation/records";
 import { RECORD_FIELDS, type RecordDomain } from "../services/federation/recordFields";
 import {
   createCircle,
   listCircles,
   grantCircle,
   ownerGrant,
-  readAtHub,
   leaveCircle,
   removeMember,
   addMember,
@@ -26,7 +26,6 @@ import {
   label,
   origin,
   scopeSchema,
-  circleBoardSchema,
 } from "../services/federation/contract";
 import {
   invite,
@@ -35,15 +34,8 @@ import {
   saveGrant,
   revokeGrant,
   listLinks,
-  ownedLink,
 } from "../services/federation/links";
-import { buildSnapshot, readFriend } from "../services/federation/snapshots";
-import {
-  sourceDetails,
-  detailSchema,
-  sourceAttachment,
-  attachmentSchema,
-} from "../services/federation/details";
+import { buildSnapshot } from "../services/federation/snapshots";
 import { exchange, identity, refused, hash } from "../services/federation/security";
 import { saveBoard } from "../services/federation/groups";
 
@@ -64,12 +56,13 @@ router.use((req: AuthRequest, _res, next) => {
 router.use(
   rateLimit({
     windowMs: 60_000,
-    limit: 120,
+    limit: 1200,
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => (req as AuthRequest).userId ?? ipKeyGenerator(req.ip ?? "unknown"),
   })
 );
+router.use("/sealed", sealedRouter);
 router.get(
   "/links",
   handle(async (req, res) => {
@@ -127,57 +120,11 @@ router.post(
     });
   })
 );
-const read = z.strictObject({
-  audience: z.string().max(100).default(""),
-  year: z.number().int().min(1900).max(2200).nullable(),
-  tripId: id.optional(),
-  recordDomain: z.enum(Object.keys(RECORD_FIELDS) as [RecordDomain, ...RecordDomain[]]).optional(),
-  cursor: id.optional(),
-  attachment: z
-    .string()
-    .regex(/^(photos|documents)\/[A-Za-z0-9_-]{1,64}\.[a-z0-9]{1,8}$/)
-    .optional(),
-});
+// No plaintext travel-data endpoint remains reachable by another account.
 router.post(
   "/links/:id/read",
-  handle(async (req, res) => {
-    const b = read.parse(req.body);
-    const link = await ownedLink(req.userId!, id.parse(req.params.id));
-    if (b.recordDomain) {
-      let data;
-      if (link.origin !== "local")
-        data = recordPageSchema.parse(
-          await exchange(link.origin, { action: "read", channel: link.channel, ...b })
-        );
-      else {
-        const source = await prisma.comparisonLink.findFirst({
-          where: { channel: link.channel, id: { not: link.id }, origin: "local" },
-        });
-        if (!source) throw refused();
-        data = await sourceRecords(source, b.audience, b.recordDomain, b.cursor, b.year);
-      }
-      res.json({ success: true, data });
-      return;
-    }
-    if (b.tripId) {
-      let data;
-      if (link.origin !== "local")
-        data = (b.attachment ? attachmentSchema : detailSchema).parse(
-          await exchange(link.origin, { action: "read", channel: link.channel, ...b })
-        );
-      else {
-        const source = await prisma.comparisonLink.findFirst({
-          where: { channel: link.channel, id: { not: link.id }, origin: "local" },
-        });
-        if (!source) throw refused();
-        data = b.attachment
-          ? await sourceAttachment(source, b.audience, b.tripId, b.attachment)
-          : await sourceDetails(source, b.audience, b.tripId);
-      }
-      res.json({ success: true, data });
-      return;
-    }
-    res.json({ success: true, data: await readFriend(req.userId!, link.id, b.audience, b.year) });
+  handle(async () => {
+    throw refused();
   })
 );
 router.post(
@@ -332,31 +279,8 @@ router.post(
 );
 router.post(
   "/circles/read",
-  handle(async (req, res) => {
-    const b = circleAction
-      .extend({ year: z.number().int().min(1900).max(2200).nullable() })
-      .parse(req.body);
-    let data;
-    if (!b.linkId) data = await readAtHub(req.userId!, b.circleId, b.year);
-    else {
-      const link = await ownedLink(req.userId!, b.linkId);
-      if (link.origin !== "local")
-        data = await exchange(link.origin, {
-          action: "circle",
-          operation: "read",
-          channel: link.channel,
-          circleId: b.circleId,
-          year: b.year,
-        });
-      else {
-        const hub = await prisma.comparisonLink.findFirst({
-          where: { channel: link.channel, id: { not: link.id }, origin: "local" },
-        });
-        if (!hub) throw refused();
-        data = await readAtHub(hub.userId, b.circleId, b.year, hub);
-      }
-    }
-    res.json({ success: true, data: circleBoardSchema.parse(data) });
+  handle(async () => {
+    throw refused();
   })
 );
 router.post(

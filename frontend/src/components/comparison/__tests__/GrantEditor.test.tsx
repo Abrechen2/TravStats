@@ -5,7 +5,10 @@ import { comparisonPost, type Link } from "../../../lib/api/comparison";
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
-vi.mock("../../../lib/api/comparison", () => ({ comparisonPost: vi.fn() }));
+vi.mock("../../../lib/api/comparison", async (original) => ({
+  ...(await original<typeof import("../../../lib/api/comparison")>()),
+  comparisonPost: vi.fn(),
+}));
 const link: Link = {
   id: "a",
   channel: "b",

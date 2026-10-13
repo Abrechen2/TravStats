@@ -1,3 +1,5 @@
+import { sourceData, type SourceData } from "../../lib/comparison/transport";
+import { downloadBlob } from "./DevicePanel";
 import type { RecordPage } from "./RecordBrowser";
 import { useState } from "react";
 import { Button } from "../ui";
@@ -26,12 +28,14 @@ export default function GrantEditor({
   trips,
   onSaved,
   onClose,
+  onAuthorize,
 }: {
   link: Link;
   domains: string[];
   trips: Array<{ id: string; name: string }>;
   onSaved: () => void;
   onClose: () => void;
+  onAuthorize?: (scope: Scope, data: SourceData) => Promise<void>;
 }) {
   const { t } = useTranslation("comparison");
   const [scope, setScope] = useState<Scope>(() => {
@@ -45,6 +49,7 @@ export default function GrantEditor({
         }
       : initialScope(domains);
   });
+  const [fullPreview, setFullPreview] = useState<SourceData | null>(null);
   const [recordPreview, setRecordPreview] = useState<RecordPage | null>(null);
   const [preview, setPreview] = useState<Snapshot | null>(null),
     [busy, setBusy] = useState(false),
@@ -53,6 +58,7 @@ export default function GrantEditor({
   const change = (next: Scope) => {
     setScope(next);
     setPreview(null);
+    setFullPreview(null);
     setRecordPreview(null);
     setAccepted(false);
   };
@@ -61,8 +67,15 @@ export default function GrantEditor({
     setError(false);
     try {
       if (save) {
-        await comparisonPost(`/links/${link.id}/grant`, { audience: "", scope });
+        if (onAuthorize) {
+          if (!fullPreview) throw Error("preview");
+          await onAuthorize(scope, fullPreview);
+        } else await comparisonPost(`/links/${link.id}/grant`, { audience: "", scope });
         onSaved();
+      } else if (onAuthorize) {
+        const data = await sourceData(scope);
+        setFullPreview(data);
+        setPreview(data.snapshot);
       } else setPreview(await comparisonPost<Snapshot>("/preview", scope));
     } catch {
       setError(true);
@@ -70,7 +83,7 @@ export default function GrantEditor({
       setBusy(false);
     }
   };
-  const categories = ["statistics", "details", "costs", "personal", "documents"] as const;
+  const categories = ["statistics", "details", "costs", "personal", "photos", "documents"] as const;
   return (
     <section
       className="rounded-2xl border border-[var(--ts-border)] p-5 space-y-4"
@@ -258,6 +271,45 @@ export default function GrantEditor({
             ))}
           </dl>
           <p>{t("tripCount", { count: preview.trips.length })}</p>
+          {fullPreview && (
+            <div className="space-y-2">
+              <h4>{t("e2e.previewContents")}</h4>
+              <ul>
+                {Object.entries(fullPreview.sections).map(([name, rows]) => (
+                  <li key={name}>
+                    {t(`e2e.section.${name}`, { defaultValue: name })}: {rows.length}
+                  </li>
+                ))}
+              </ul>
+              <p>{t("e2e.files", { count: fullPreview.assets.length })}</p>
+              <details>
+                <summary>{t("e2e.fileList")}</summary>
+                <ul>
+                  {fullPreview.assets.map((f) => (
+                    <li key={f.key}>
+                      {f.name} · {f.size ?? "?"} B
+                    </li>
+                  ))}
+                </ul>
+              </details>
+              {fullPreview.omitted.length > 0 && (
+                <p role="status">
+                  {t("e2e.filtered")}: {fullPreview.omitted.join(", ")}
+                </p>
+              )}
+              <Button
+                onClick={() =>
+                  downloadBlob(
+                    new Blob([JSON.stringify(fullPreview, null, 2)], { type: "application/json" }),
+                    "comparison-preview.json"
+                  )
+                }
+              >
+                {t("e2e.previewDownload")}
+              </Button>
+            </div>
+          )}
+
           <p className="my-3">{t("disclosure")}</p>
           <label>
             <input
@@ -278,7 +330,7 @@ export default function GrantEditor({
           disabled={busy || !preview || !accepted}
           onClick={() => void run(true)}
         >
-          {t("saveGrant")}
+          {t(onAuthorize ? "e2e.encryptPublish" : "saveGrant")}
         </Button>
         <Button onClick={onClose}>{t("close")}</Button>
       </div>

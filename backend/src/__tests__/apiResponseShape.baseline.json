@@ -132,6 +132,8 @@
     "bus.ts",
     "bus/entrySuggestions.ts",
     "bus/stats.ts",
+    "comparison.ts",
+    "comparisonSealed.ts",
     "cruises.ts",
     "cruises/facets.ts",
     "cruises/list.ts",
@@ -201,8 +203,7 @@
     "trips/tripPackage.ts",
     "upcoming.ts",
     "uploads.ts",
-    "xlsxImport.ts",
-    "comparison.ts"
+    "xlsxImport.ts"
   ],
   "frozenEnvelopes": {
     "admin/invitations.ts": 1,

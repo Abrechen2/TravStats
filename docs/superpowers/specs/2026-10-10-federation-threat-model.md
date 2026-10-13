@@ -6,6 +6,15 @@ See [the DEV runbook](../../FEDERATION_DEV.md) for implemented coverage, limits 
 The broader product descriptions below remain the target; they are not a claim that every
 analysis, map, nested field or asset type is implemented.
 
+## Implementation update: device E2E (2026-10-13)
+
+The owner subsequently authorised device-to-device E2E and full travel-data comparison.
+[Protocol v2](../../FEDERATION_E2E.md) is now the authoritative implemented design. It replaces
+the v1 plaintext group-statistics relay described below: the host relays ciphertext, browsers
+verify device keys and decrypt, and shared groups can explicitly include all travel categories.
+Legacy plaintext read endpoints are disabled. The historical sections below preserve the
+product discussion; consult the linked protocol for actual behaviour and limits.
+
 ## 1. Product direction and decision status
 
 Owner direction on 2026-10-13: people who explicitly want to compare should be able to

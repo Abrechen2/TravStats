@@ -65,3 +65,26 @@ it("returns only this user's links and refuses oversized or unknown grant fields
     .send({ audience: "", scope: { all: true } });
   expect(bad.status).toBe(400);
 });
+
+it("has no plaintext comparison fallback and applies the same cookie gate to encrypted routes", async () => {
+  expect(
+    (
+      await request(app)
+        .post(`/api/v1/comparison/links/${randomUUID()}/read`)
+        .set("x-test-user", userId)
+        .send({ year: null })
+    ).status
+  ).toBe(403);
+  expect(
+    (await request(app).post("/api/v1/comparison/circles/read").set("x-test-user", userId).send({}))
+      .status
+  ).toBe(403);
+  expect(
+    (
+      await request(app)
+        .get("/api/v1/comparison/sealed/devices")
+        .set("x-test-user", userId)
+        .set("x-test-pat", "yes")
+    ).status
+  ).toBe(403);
+});

@@ -1,3 +1,4 @@
+import { e2eRequest } from "./e2e/wire";
 import { RECORD_FIELDS, type RecordDomain } from "./recordFields";
 import { z } from "zod";
 import { AVAILABLE_DOMAINS } from "../../shared/domains";
@@ -57,6 +58,7 @@ export const circleSchema = z.strictObject({
 });
 export type Circle = z.infer<typeof circleSchema>;
 export const packetBody = z.discriminatedUnion("action", [
+  e2eRequest,
   circleRequest,
   z.strictObject({ action: z.literal("ping") }),
   z.strictObject({

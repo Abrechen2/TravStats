@@ -28,6 +28,8 @@ datasource db {
 }
 
 model User {
+  comparisonDevices ComparisonDevice[]
+  comparisonPublications ComparisonPublication[]
   comparisonLinks ComparisonLink[]
   comparisonInvites ComparisonInvite[]
   comparisonGroups ComparisonGroup[]
@@ -4750,4 +4752,47 @@ model ComparisonCircle {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId])
   @@map("comparison_circles")
+}
+
+/// Public device identity only. Private keys live in browser storage, never on the server.
+model ComparisonDevice {
+ id String @id
+ userId String @map("user_id")
+ name String
+ encryption String
+ signing String
+ fingerprint String @unique
+ revoked Boolean @default(false)
+ createdAt DateTime @default(now()) @map("created_at")
+ user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ @@index([userId])
+ @@map("comparison_devices")
+}
+model ComparisonPublication {
+ id String @id
+ userId String @map("user_id")
+ linkId String @map("link_id")
+ audience String
+ revision Int
+ sender String
+ context Json
+ manifest Json?
+ ready Boolean @default(false)
+ bytes Int @default(0)
+ expiresAt DateTime @map("expires_at")
+ createdAt DateTime @default(now()) @map("created_at")
+ user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ chunks ComparisonChunk[]
+ @@index([userId, audience, ready])
+ @@index([linkId])
+ @@map("comparison_publications")
+}
+model ComparisonChunk {
+ publicationId String @map("publication_id")
+ part Int
+ bytes String
+ digest String
+ publication ComparisonPublication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+ @@id([publicationId, part])
+ @@map("comparison_chunks")
 }
