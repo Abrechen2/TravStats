@@ -1,4 +1,4 @@
-import type { JSX } from "react";
+import { useId, type JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { PhotoJourney } from "../../../types/photoJourney";
@@ -28,7 +28,8 @@ export default function VisitSuggestionCorrection({
 }): JSX.Element {
   const { t } = useTranslation(["dataQuality"]);
   const key = (k: string) => `dataQuality:inbox.photoJourneys.review.correction.${k}`;
-  const id = (k: string) => `visit-${journey.id}-${k}`;
+  const prefix = useId();
+  const id = (k: string) => `visit-${prefix}-${journey.id}-${k}`;
   const local = correction.local ?? defaultLocal(journey);
 
   return (

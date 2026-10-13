@@ -1,0 +1,182 @@
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { useTranslation } from "../../../hooks/useTranslation";
+import { flightsApi } from "../../../lib/api/flights";
+import { tripsApi } from "../../../lib/api/trips";
+import type { DataQualityFlag } from "../../../types/dataQuality";
+import { recordFlagSubjectPath } from "../../DataQuality/recordFlagLinks";
+import { timeFlagEditorPath } from "../../DataQuality/timeFlagLinks";
+import { flaggedRecordPath } from "../../DataQuality/flagLinks";
+import Button from "../../ui/Button";
+import { W } from "./model";
+
+import RecordEditButton from "./RecordEditButton";
+export type InboxAction = (
+  operation: () => Promise<unknown>,
+  recheck?: boolean
+) => Promise<boolean>;
+
+function TripDates({
+  flag,
+  busy,
+  act,
+}: {
+  flag: Extract<DataQualityFlag, { kind: "trip_end_missing" | "trip_entries_outside" }>;
+  busy: boolean;
+  act: InboxAction;
+}) {
+  const { t } = useTranslation(["dataQuality"]);
+  const [start, setStart] = useState(flag.details.startDay);
+  const [end, setEnd] = useState(
+    flag.kind === "trip_entries_outside" ? flag.details.endDay : (flag.details.lastEntryDay ?? "")
+  );
+  const valid = Boolean(start && end && end >= start);
+  return (
+    <form
+      className="space-y-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (valid && !busy)
+          void act(() => tripsApi.update(flag.entityId, { startDate: start, endDate: end }), true);
+      }}
+    >
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="text-sm">
+          {t(`${W}.start`)}
+          <input
+            required
+            type="date"
+            className="input mt-1 w-full"
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+          />
+        </label>
+        <label className="text-sm">
+          {t(`${W}.end`)}
+          <input
+            required
+            type="date"
+            className="input mt-1 w-full"
+            value={end}
+            min={start}
+            onChange={(e) => setEnd(e.target.value)}
+          />
+        </label>
+      </div>
+      {!valid && <p className="t-caption">{t(`${W}.invalidDates`)}</p>}
+      <p className="t-caption">{t(`${W}.tripEffect`)}</p>
+      <Button type="submit" variant="primary" disabled={busy || !valid}>
+        {t(`${W}.saveDates`)}
+      </Button>
+    </form>
+  );
+}
+
+function FlightNumber({
+  flag,
+  busy,
+  act,
+}: {
+  flag: DataQualityFlag;
+  busy: boolean;
+  act: InboxAction;
+}) {
+  const { t } = useTranslation(["dataQuality"]);
+  const [number, setNumber] = useState("");
+  return (
+    <form
+      className="space-y-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (number.trim() && !busy)
+          void act(
+            () => flightsApi.update(flag.entityId, { flightNumber: number.trim().toUpperCase() }),
+            true
+          );
+      }}
+    >
+      <label className="block text-sm">
+        {t(`${W}.flightNumber`)}
+        <input
+          required
+          className="input mt-1 w-full"
+          maxLength={20}
+          value={number}
+          onChange={(e) => setNumber(e.target.value)}
+        />
+      </label>
+      <p className="t-caption">{t(`${W}.numberEffect`)}</p>
+      <Button type="submit" variant="primary" disabled={busy || !number.trim()}>
+        {t(`${W}.saveNumber`)}
+      </Button>
+    </form>
+  );
+}
+
+export default function FlagQuickEditor({
+  flag,
+  busy,
+  act,
+}: {
+  flag: DataQualityFlag;
+  busy: boolean;
+  act: InboxAction;
+}) {
+  const { t } = useTranslation(["dataQuality", "common"]);
+  const path =
+    recordFlagSubjectPath(flag) ??
+    timeFlagEditorPath(flag) ??
+    (flag.entityType === "lodging" || flag.entityType === "place"
+      ? flaggedRecordPath({ entityType: flag.entityType, entityId: flag.entityId, label: "" })
+      : flag.entityType === "home"
+        ? "/settings?section=homeAirport"
+        : null);
+  return (
+    <div className="space-y-3">
+      {(flag.kind === "trip_end_missing" || flag.kind === "trip_entries_outside") && (
+        <TripDates flag={flag} busy={busy} act={act} />
+      )}
+      {flag.kind === "flight_number_missing" && <FlightNumber flag={flag} busy={busy} act={act} />}
+      <RecordEditButton
+        entityType={flag.entityType}
+        entityId={flag.entityId}
+        parentId={flag.subject && "parentId" in flag.subject ? flag.subject.parentId : null}
+        disabled={busy}
+        onSaved={() => void act(async () => {}, true)}
+      />
+      {flag.kind === "stay_dates_reversed" &&
+        flag.details.stays.map((stay) => (
+          <RecordEditButton
+            key={stay.stayId}
+            entityType="lodging_stay"
+            entityId={stay.stayId}
+            parentId={flag.entityId}
+            label={t(`${W}.stay`)}
+            disabled={busy}
+            onSaved={() => void act(async () => {}, true)}
+          />
+        ))}
+      {(flag.kind === "chronology_conflict"
+        ? [flag.details.conflictWith]
+        : flag.kind === "duplicate_candidate"
+          ? flag.details.copies
+          : flag.kind === "trip_entries_outside"
+            ? flag.details.entries
+            : []
+      ).map((record) => (
+        <RecordEditButton
+          key={`${record.entityType}:${record.entityId}`}
+          {...record}
+          disabled={busy}
+          label={record.label}
+          onSaved={() => void act(async () => {}, true)}
+        />
+      ))}
+      {path && (
+        <Link className="inline-block text-sm underline" to={path}>
+          {t(`${W}.openRecord`)}
+        </Link>
+      )}
+    </div>
+  );
+}

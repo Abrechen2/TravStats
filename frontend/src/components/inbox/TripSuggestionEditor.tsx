@@ -26,12 +26,14 @@ export default function TripSuggestionEditor({
   busy,
   onSubmit,
   onCancel,
+  submitLabel,
 }: {
   suggestion: TripSuggestion;
   initialName: string;
   busy: boolean;
   onSubmit: (edits: TripSuggestionEdits) => void;
   onCancel: () => void;
+  submitLabel?: string;
 }): JSX.Element {
   const { t } = useTranslation(["dataQuality", "common"]);
   const isVisit = suggestion.kind === "place_visit";
@@ -52,10 +54,11 @@ export default function TripSuggestionEditor({
       return next;
     });
 
-  const invalidSpan = !isVisit && endDay < startDay;
+  const invalidSpan = isVisit ? !visitDay : !startDay || !endDay || endDay < startDay;
   const nothingKept = !isVisit && kept.size === 0;
 
   const submit = (): void => {
+    if (busy || invalidSpan || nothingKept) return;
     if (isVisit) {
       onSubmit({ visitDay });
       return;
@@ -154,7 +157,7 @@ export default function TripSuggestionEditor({
 
       <div className="flex flex-wrap gap-2">
         <Button type="submit" variant="primary" disabled={busy || invalidSpan || nothingKept}>
-          {t(`${NS}.actions.acceptEdited`)}
+          {submitLabel ?? t(`${NS}.actions.acceptEdited`)}
         </Button>
         <Button type="button" onClick={onCancel} disabled={busy}>
           {t("common:buttons.cancel")}

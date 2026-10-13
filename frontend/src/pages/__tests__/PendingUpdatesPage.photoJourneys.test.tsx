@@ -55,6 +55,9 @@ vi.mock("../../components/inbox/UnfiledDocumentsSection", () => ({
 // The flight-updates tab shows it while loading; in jsdom its canvas prints a
 // "getContext is not implemented" stack per render and says nothing about tabs.
 // The trip-suggestion tab loads its own list; it has its own tests.
+vi.mock("../../components/inbox/workspace/InboxWorkspace", () => ({
+  default: () => <div data-testid="inbox-workspace-stub" />,
+}));
 vi.mock("../../components/inbox/TripSuggestionsTab", () => ({
   default: () => <div data-testid="trip-suggestions-stub" />,
 }));
@@ -111,7 +114,7 @@ function makeJourney(id: string): PhotoJourney {
 
 const PHOTO_TAB = "dataQuality:inbox.photoJourneys.title";
 
-function renderPage(initialEntry = "/pending-updates"): void {
+function renderPage(initialEntry = "/pending-updates?tab=review"): void {
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <PendingUpdatesPage />
@@ -127,11 +130,20 @@ describe("PendingUpdatesPage — the photo-journey tab", () => {
     vi.mocked(immichApi.getSettings).mockRejectedValue(new Error("not asked in these cases"));
   });
 
-  it("offers six tabs, with the photo tab counting the pending rows", async () => {
+  it("opens the combined workspace by default", async () => {
+    renderPage("/pending-updates");
+    await waitFor(() => expect(screen.getByTestId("inbox-workspace-stub")).toBeVisible());
+    expect(screen.getByRole("tab", { name: /inbox.workspace.title/ })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+  });
+
+  it("offers seven tabs, with the photo tab counting the pending rows", async () => {
     vi.mocked(photoJourneysApi.list).mockResolvedValue([makeJourney("a"), makeJourney("b")]);
     renderPage();
 
-    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(6));
+    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(7));
     const tab = screen.getByRole("tab", { name: new RegExp(PHOTO_TAB) });
     await waitFor(() => expect(within(tab).getByText("2")).toBeInTheDocument());
   });
@@ -139,7 +151,7 @@ describe("PendingUpdatesPage — the photo-journey tab", () => {
   it("is there with no rows at all — the scan lives behind it", async () => {
     renderPage();
 
-    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(6));
+    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(7));
     expect(screen.getByRole("tab", { name: new RegExp(PHOTO_TAB) })).toBeInTheDocument();
   });
 
@@ -178,7 +190,7 @@ describe("PendingUpdatesPage — the photo-journey tab", () => {
     visible.value = false;
     renderPage("/pending-updates?tab=photos");
 
-    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(5));
+    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(6));
     expect(screen.queryByRole("tab", { name: new RegExp(PHOTO_TAB) })).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /inbox.review.title/ })).toHaveAttribute(
       "aria-selected",

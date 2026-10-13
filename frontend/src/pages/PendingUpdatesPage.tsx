@@ -42,6 +42,7 @@ import DataQualityFlagsSection from "../components/DataQuality/DataQualityFlagsS
 import DawarichStaysTab from "../components/inbox/DawarichStaysTab";
 import PhotoJourneysTab from "../components/inbox/PhotoJourneysTab";
 import TripSuggestionsTab from "../components/inbox/TripSuggestionsTab";
+import InboxWorkspace from "../components/inbox/workspace/InboxWorkspace";
 import SharingTab from "../components/inbox/SharingTab";
 import PasswordResetRequestsSection from "../components/inbox/PasswordResetRequestsSection";
 import UnfiledDocumentsSection from "../components/inbox/UnfiledDocumentsSection";
@@ -102,7 +103,7 @@ interface PendingUpdate {
  * naming it while it is hidden falls back to `review` rather than opening a tab
  * that is not in the list.
  */
-type InboxTab = "dawarich" | "review" | "trips" | "sharing" | "updates" | "photos";
+type InboxTab = "overview" | "dawarich" | "review" | "trips" | "sharing" | "updates" | "photos";
 
 interface Statistics {
   totalUpdates: number;
@@ -131,17 +132,25 @@ export default function PendingUpdatesPage(): JSX.Element {
   const photoJourneysVisible = usePhotoJourneysVisible();
   const requestedTab = searchParams.get("tab");
   const tab: InboxTab =
-    requestedTab === "dawarich"
-      ? "dawarich"
-      : requestedTab === "updates"
-        ? "updates"
-        : requestedTab === "trips"
-          ? "trips"
-          : requestedTab === "sharing"
-            ? "sharing"
-            : requestedTab === "photos" && photoJourneysVisible
-              ? "photos"
-              : "review";
+    !requestedTab || requestedTab === "overview"
+      ? "overview"
+      : requestedTab === "dawarich"
+        ? "dawarich"
+        : requestedTab === "updates"
+          ? "updates"
+          : requestedTab === "trips"
+            ? "trips"
+            : requestedTab === "sharing"
+              ? "sharing"
+              : requestedTab === "photos" && photoJourneysVisible
+                ? "photos"
+                : "review";
+  const [workspaceVisited, setWorkspaceVisited] = useState(
+    !requestedTab || requestedTab === "overview"
+  );
+  useEffect(() => {
+    if (tab === "overview") setWorkspaceVisited(true);
+  }, [tab]);
   const [openQuestions, setOpenQuestions] = useState<number | null>(null);
   const reportOpen = useCallback((n: number) => setOpenQuestions(n), []);
   const [pendingJourneys, setPendingJourneys] = useState<number | null>(null);
@@ -152,9 +161,11 @@ export default function PendingUpdatesPage(): JSX.Element {
   const reportSharing = useCallback((n: number) => setSharingOpen(n), []);
 
   useEffect(() => {
-    loadUpdates();
-    loadStatistics();
-  }, [statusFilter]);
+    if (tab !== "overview") {
+      loadUpdates();
+      loadStatistics();
+    }
+  }, [statusFilter, tab]);
 
   const loadUpdates = async () => {
     try {
@@ -240,6 +251,7 @@ export default function PendingUpdatesPage(): JSX.Element {
   const pendingCount = updates.filter((u) => u.status === "pending").length;
 
   const tabs: { key: InboxTab; label: string; count: number | null }[] = [
+    { key: "overview", label: t("dataQuality:inbox.workspace.title"), count: null },
     { key: "review", label: t("dataQuality:inbox.review.title"), count: openQuestions },
     // The trip engine's proposals (owner, 2026-09-26). Second: answering them
     // shapes the logbook itself, and nothing else will.
@@ -294,7 +306,7 @@ export default function PendingUpdatesPage(): JSX.Element {
                 role="tab"
                 aria-selected={active}
                 onClick={() =>
-                  setSearchParams(item.key === "review" ? {} : { tab: item.key }, {
+                  setSearchParams(item.key === "overview" ? {} : { tab: item.key }, {
                     replace: true,
                   })
                 }
@@ -316,180 +328,184 @@ export default function PendingUpdatesPage(): JSX.Element {
           })}
         </div>
 
-        {/* Questions about the records first: nobody else will answer them,
+        {/* Lockouts and uploads with retention deadlines precede record questions.
+            Keep one instance when moving between overview and review. */}
+        <div hidden={tab !== "overview" && tab !== "review"}>
+          <PasswordResetRequestsSection />
+          <UnfiledDocumentsSection />
+        </div>
+        {(workspaceVisited || tab === "overview") && (
+          <div hidden={tab !== "overview"}>
+            <InboxWorkspace photosVisible={photoJourneysVisible} active={tab === "overview"} />
+          </div>
+        )}
+        {tab !== "overview" && (
+          <>
+            {/* Questions about the records first: nobody else will answer them,
             while a flight update expires on its own. The section stays mounted
             so its open count keeps the tab label current. */}
-        <div hidden={tab !== "review"}>
-          {/* Admin-only, and gone entirely when there is nothing to show —
-              see the component. It sits ABOVE the user's own questions
-              because somebody is locked out of the instance while it is
-              there, which outranks a disagreement between two dates. */}
-          <PasswordResetRequestsSection />
-          {/* The reader's own files, and the one block here with a deadline on
-              it: an unfiled upload is deleted thirty days after it arrived.
-              Below the lockout, above the record questions — a document that
-              expires next month is more urgent than two dates disagreeing, and
-              less urgent than somebody unable to log in. */}
-          <UnfiledDocumentsSection />
-          <DataQualityFlagsSection onOpenCount={reportOpen} />
-        </div>
+            <div hidden={tab !== "review"}>
+              <DataQualityFlagsSection onOpenCount={reportOpen} />
+            </div>
 
-        {/* Mounted like the review section, so the label carries its count. */}
-        <div hidden={tab !== "trips"}>
-          <TripSuggestionsTab onCount={reportTripSuggestions} />
-        </div>
+            {/* Mounted like the review section, so the label carries its count. */}
+            <div hidden={tab !== "trips"}>
+              <TripSuggestionsTab onCount={reportTripSuggestions} />
+            </div>
 
-        <div hidden={tab !== "sharing"}>
-          <SharingTab onCount={reportSharing} />
-        </div>
+            <div hidden={tab !== "sharing"}>
+              <SharingTab onCount={reportSharing} />
+            </div>
 
-        <div hidden={tab !== "updates"}>
-          <p className="t-caption mb-4">{t("dataQuality:inbox.flightUpdates.description")}</p>
+            <div hidden={tab !== "updates"}>
+              <p className="t-caption mb-4">{t("dataQuality:inbox.flightUpdates.description")}</p>
 
-          {/* The totals only once there are any: five zeros in colour read as
+              {/* The totals only once there are any: five zeros in colour read as
             a result, not as "nothing has happened yet". */}
-          {statistics && statistics.totalUpdates > 0 && (
-            <p
-              className="t-caption mb-4 flex flex-wrap gap-x-4 gap-y-1"
-              style={{ fontFamily: "var(--ts-font-mono)" }}
-            >
-              {(
-                [
-                  ["total", statistics.totalUpdates],
-                  ["applied", statistics.appliedUpdates],
-                  ["rejected", statistics.rejectedUpdates],
-                  ["edited", statistics.editedUpdates],
-                  ["expired", statistics.expiredUpdates],
-                ] as const
-              ).map(([key, value]) => (
-                <span key={key}>
-                  <span style={{ color: "var(--ts-text-bright)" }}>{value}</span>{" "}
-                  {t(`pendingUpdates:statistics.${key}`)}
-                </span>
-              ))}
-            </p>
-          )}
-
-          <div className="mb-5 flex flex-wrap items-center gap-3">
-            <div
-              role="group"
-              aria-label={t("pendingUpdates:filters.status")}
-              className="flex flex-wrap gap-2"
-            >
-              {(["pending", "edited", "applied", "rejected", "expired", "all"] as const).map(
-                (option) => {
-                  const active = statusFilter === option;
-                  return (
-                    <button
-                      key={option}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() => setStatusFilter(option)}
-                      className="rounded-full px-3.5 py-1.5 text-sm font-semibold"
-                      style={{
-                        background: active ? "var(--ts-accent)" : "transparent",
-                        color: active ? "var(--ts-accent-text)" : "var(--ts-text-bright)",
-                        border: `1px solid ${active ? "var(--ts-accent)" : "var(--ts-border)"}`,
-                      }}
-                    >
-                      {t(`pendingUpdates:filters.${option}`)}
-                    </button>
-                  );
-                }
+              {statistics && statistics.totalUpdates > 0 && (
+                <p
+                  className="t-caption mb-4 flex flex-wrap gap-x-4 gap-y-1"
+                  style={{ fontFamily: "var(--ts-font-mono)" }}
+                >
+                  {(
+                    [
+                      ["total", statistics.totalUpdates],
+                      ["applied", statistics.appliedUpdates],
+                      ["rejected", statistics.rejectedUpdates],
+                      ["edited", statistics.editedUpdates],
+                      ["expired", statistics.expiredUpdates],
+                    ] as const
+                  ).map(([key, value]) => (
+                    <span key={key}>
+                      <span style={{ color: "var(--ts-text-bright)" }}>{value}</span>{" "}
+                      {t(`pendingUpdates:statistics.${key}`)}
+                    </span>
+                  ))}
+                </p>
               )}
-            </div>
-            <label className="ml-auto flex items-center gap-2 text-sm">
-              <span className="t-caption">{t("pendingUpdates:filters.sortBy")}</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as "createdAt" | "expiresAt")}
-                className="rounded-full border px-3 py-1.5 text-sm"
-                style={{
-                  background: "var(--ts-surface)",
-                  borderColor: "var(--ts-border)",
-                  color: "var(--ts-text-bright)",
-                }}
-              >
-                <option value="createdAt">{t("pendingUpdates:filters.createdAt")}</option>
-                <option value="expiresAt">{t("pendingUpdates:filters.expiresAt")}</option>
-              </select>
-            </label>
-            <button
-              type="button"
-              onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-              aria-label={t("pendingUpdates:filters.sortOrder")}
-              className="rounded-full border px-3 py-1.5 text-sm"
-              style={{ borderColor: "var(--ts-border)", color: "var(--ts-text-bright)" }}
-            >
-              {sortOrder === "asc" ? "↑" : "↓"}
-            </button>
-          </div>
 
-          {/* Updates List */}
-          {showLoader ? (
-            <div className="flex justify-center py-12">
-              <GlobeLoader size={160} label={t("common:loading.default")} />
-            </div>
-          ) : sortedUpdates.length === 0 ? (
-            /* `pending`, not `nothing`. The copy is already in the future tense
+              <div className="mb-5 flex flex-wrap items-center gap-3">
+                <div
+                  role="group"
+                  aria-label={t("pendingUpdates:filters.status")}
+                  className="flex flex-wrap gap-2"
+                >
+                  {(["pending", "edited", "applied", "rejected", "expired", "all"] as const).map(
+                    (option) => {
+                      const active = statusFilter === option;
+                      return (
+                        <button
+                          key={option}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => setStatusFilter(option)}
+                          className="rounded-full px-3.5 py-1.5 text-sm font-semibold"
+                          style={{
+                            background: active ? "var(--ts-accent)" : "transparent",
+                            color: active ? "var(--ts-accent-text)" : "var(--ts-text-bright)",
+                            border: `1px solid ${active ? "var(--ts-accent)" : "var(--ts-border)"}`,
+                          }}
+                        >
+                          {t(`pendingUpdates:filters.${option}`)}
+                        </button>
+                      );
+                    }
+                  )}
+                </div>
+                <label className="ml-auto flex items-center gap-2 text-sm">
+                  <span className="t-caption">{t("pendingUpdates:filters.sortBy")}</span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as "createdAt" | "expiresAt")}
+                    className="rounded-full border px-3 py-1.5 text-sm"
+                    style={{
+                      background: "var(--ts-surface)",
+                      borderColor: "var(--ts-border)",
+                      color: "var(--ts-text-bright)",
+                    }}
+                  >
+                    <option value="createdAt">{t("pendingUpdates:filters.createdAt")}</option>
+                    <option value="expiresAt">{t("pendingUpdates:filters.expiresAt")}</option>
+                  </select>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                  aria-label={t("pendingUpdates:filters.sortOrder")}
+                  className="rounded-full border px-3 py-1.5 text-sm"
+                  style={{ borderColor: "var(--ts-border)", color: "var(--ts-text-bright)" }}
+                >
+                  {sortOrder === "asc" ? "↑" : "↓"}
+                </button>
+              </div>
+
+              {/* Updates List */}
+              {showLoader ? (
+                <div className="flex justify-center py-12">
+                  <GlobeLoader size={160} label={t("common:loading.default")} />
+                </div>
+              ) : sortedUpdates.length === 0 ? (
+                /* `pending`, not `nothing`. The copy is already in the future tense
              — "Updates erscheinen hier, wenn …" — so this is not "there is
              nothing", it is "it has not happened yet", which is the kind the
              design system paints in `info` and never in red. `nothing` would
              have owed the reader a call to action; a waiting state does not,
              because the nightly run is what fills this. */
-            <Card flush>
-              <EmptyState
-                kind="pending"
-                icon={
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                  >
-                    <path d="M22 12h-6l-2 3h-4l-2-3H2" />
-                    <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
-                  </svg>
-                }
-                title={t("pendingUpdates:empty.title")}
-                description={t("pendingUpdates:empty.description")}
-              />
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {sortedUpdates.map((update) => (
-                <PendingUpdateCard
-                  key={update.id}
-                  update={update}
-                  onApply={() => handleApply(update.id)}
-                  onReject={() => handleReject(update.id)}
-                  onEdit={(editedData) => handleEdit(update.id, editedData)}
-                  onSelect={() => setSelectedUpdate(update.id)}
-                  isSelected={selectedUpdate === update.id}
-                />
-              ))}
+                <Card flush>
+                  <EmptyState
+                    kind="pending"
+                    icon={
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M22 12h-6l-2 3h-4l-2-3H2" />
+                        <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+                      </svg>
+                    }
+                    title={t("pendingUpdates:empty.title")}
+                    description={t("pendingUpdates:empty.description")}
+                  />
+                </Card>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  {sortedUpdates.map((update) => (
+                    <PendingUpdateCard
+                      key={update.id}
+                      update={update}
+                      onApply={() => handleApply(update.id)}
+                      onReject={() => handleReject(update.id)}
+                      onEdit={(editedData) => handleEdit(update.id, editedData)}
+                      onSelect={() => setSelectedUpdate(update.id)}
+                      isSelected={selectedUpdate === update.id}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Mounted like the review section above, and for the same reason: the
+            {/* Mounted like the review section above, and for the same reason: the
             tab label's count comes from the tab's own load, so it would stay
             blank until somebody opened it. Last in the DOM because it is last
             in the strip. `active` is what keeps the rest of the tab's fetching
             — the Immich connection status — off an inbox visit that never opens
             it; the list is the price of the count and runs either way. */}
-        {photoJourneysVisible && (
-          <div hidden={tab !== "photos"}>
-            <PhotoJourneysTab onPendingCount={reportJourneys} active={tab === "photos"} />
-          </div>
-        )}
+            {photoJourneysVisible && (
+              <div hidden={tab !== "photos"}>
+                <PhotoJourneysTab onPendingCount={reportJourneys} active={tab === "photos"} />
+              </div>
+            )}
 
-        {tab === "dawarich" && <DawarichStaysTab />}
+            {tab === "dawarich" && <DawarichStaysTab />}
+          </>
+        )}
 
         {/* Statistics Impact Preview Modal */}
         {selectedUpdate && (
