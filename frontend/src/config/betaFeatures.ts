@@ -62,6 +62,12 @@ export interface BetaFeatureMeta {
  * the app, and nothing else.
  */
 export const BETA_FEATURES = Object.freeze({
+  comparison: Object.freeze({
+    reason: "beta",
+    why: "Friend comparisons and federation require owner acceptance and security review (forgejo#40).",
+    returnsWhen:
+      "The owner accepts scoped sharing, remote-peer security and group behaviour on RC.",
+  }),
   /**
    * The "Devices" section in user settings (QR claim-code pairing flow).
    *

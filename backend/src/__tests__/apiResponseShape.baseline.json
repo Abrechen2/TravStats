@@ -122,7 +122,8 @@
     "trips/tripExpenses.ts",
     "trips/tripPhotos.ts",
     "trips/tripStops.ts",
-    "version.ts"
+    "version.ts",
+    "comparisonPeer.ts"
   ],
   "enveloped": [
     "aircraft.ts",
@@ -200,7 +201,8 @@
     "trips/tripPackage.ts",
     "upcoming.ts",
     "uploads.ts",
-    "xlsxImport.ts"
+    "xlsxImport.ts",
+    "comparison.ts"
   ],
   "frozenEnvelopes": {
     "admin/invitations.ts": 1,

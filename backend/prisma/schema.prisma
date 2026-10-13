@@ -28,6 +28,10 @@ datasource db {
 }
 
 model User {
+  comparisonLinks ComparisonLink[]
+  comparisonInvites ComparisonInvite[]
+  comparisonGroups ComparisonGroup[]
+  comparisonCircles ComparisonCircle[]
   id                     String                   @id @default(uuid())
   devicePushes           DevicePush[]
   clientWriteRefs        ClientWriteRef[]
@@ -4659,4 +4663,91 @@ model DawarichStay {
   @@index([userId, status, startAt])
   @@index([visitId])
   @@map("dawarich_stays")
+}
+
+
+model ComparisonPeer {
+  origin String @id
+  publicKey String @map("public_key")
+  enabled Boolean @default(true)
+  verifiedAt DateTime? @map("verified_at")
+  @@map("comparison_peers")
+}
+model ComparisonInvite {
+  hash String @id
+  userId String @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  usedAt DateTime? @map("used_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("comparison_invites")
+}
+model ComparisonLink {
+  id String @id @default(uuid())
+  channel String
+  userId String @map("user_id")
+  origin String
+  label String
+  confirmed Boolean @default(false)
+  remoteConfirmed Boolean @default(false) @map("remote_confirmed")
+  revoked Boolean @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grants ComparisonGrant[]
+  @@unique([userId, channel])
+  @@index([channel, origin])
+  @@map("comparison_links")
+}
+model ComparisonGrant {
+  id String @id @default(uuid())
+  linkId String @map("link_id")
+  audience String @default("")
+  scope Json
+  revision Int @default(1)
+  active Boolean @default(true)
+  expiresAt DateTime? @map("expires_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  link ComparisonLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  @@unique([linkId, audience])
+  @@map("comparison_grants")
+}
+model ComparisonGroup {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  name String
+  channels String[]
+  version Int @default(1)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("comparison_groups")
+}
+model ComparisonAudit {
+  id String @id @default(uuid())
+  ownerId String @map("owner_id")
+  channel String
+  audience String
+  revision Int
+  operation String
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([ownerId, createdAt])
+  @@map("comparison_audit")
+}
+model ComparisonNonce {
+  id String @id
+  expiresAt DateTime @map("expires_at")
+  @@index([expiresAt])
+  @@map("comparison_nonces")
+}
+
+
+/// Shared comparison audience hosted by one explicitly trusted instance.
+model ComparisonCircle {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  name String
+  version Int @default(1)
+  members Json
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("comparison_circles")
 }
