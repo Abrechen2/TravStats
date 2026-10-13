@@ -527,6 +527,22 @@
       "dawarichStays": "Measured stays",
       "userAchievements": "Achievements"
     },
-    "photoPreview": "View decrypted photo"
+    "photoPreview": "View decrypted photo",
+    "qrShow": "Device fingerprint as QR code",
+    "qrHelp": "Show this code in person or through an independently verified channel. A QR code supplied by the comparison server itself does not verify identity.",
+    "qrRead": "Read QR image from the other device locally (max. 5 MiB), then confirm",
+    "revokeLimit": "Revocation blocks further retrieval. Copies already decrypted or downloaded remain with recipients.",
+    "sharingOverview": "Sharing overview",
+    "sharingHelp": "Your permissions and last completed publication. New or changed trips require publishing again. Permissions and devices are rechecked on every retrieval.",
+    "packageExpiry": "Package expires",
+    "tripSelection": "Selected trips: {{count}} (0 = all)",
+    "noShares": "No sharing permissions configured yet.",
+    "shareState": {
+      "revoked": "Permission revoked or connection not confirmed",
+      "expired": "Expired",
+      "unpublished": "Publish again to apply this permission",
+      "published": "Encrypted package published",
+      "audienceChanged": "Group changed or unavailable — check again"
+    }
   }
 }

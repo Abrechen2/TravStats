@@ -94,6 +94,7 @@ export default function FriendManager({
           </Button>
         </form>
       </div>
+      <p>{t("e2e.revokeLimit")}</p>
       {error && <p role="alert">{t("error")}</p>}
       {links.map((link) => (
         <article

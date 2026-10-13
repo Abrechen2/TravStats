@@ -527,6 +527,22 @@
       "dawarichStays": "Gemessene Aufenthalte",
       "userAchievements": "Erfolge"
     },
-    "photoPreview": "Foto entschlüsselt ansehen"
+    "photoPreview": "Foto entschlüsselt ansehen",
+    "qrShow": "Geräte-Fingerprint als QR-Code",
+    "qrHelp": "Zeige diesen Code persönlich oder über einen unabhängig bestätigten Kanal. Ein QR-Code vom Vergleichsserver selbst bestätigt die Identität nicht.",
+    "qrRead": "QR-Bild vom anderen Gerät lokal lesen (max. 5 MiB), anschließend bestätigen",
+    "revokeLimit": "Widerruf sperrt weitere Abrufe. Bereits entschlüsselte oder heruntergeladene Kopien bleiben bei den Empfängern.",
+    "sharingOverview": "Freigabeübersicht",
+    "sharingHelp": "Deine Freigaben und der letzte fertig veröffentlichte Datenstand. Neue oder geänderte Reisen erfordern eine erneute Veröffentlichung. Berechtigungen und Geräte werden bei jedem Abruf erneut geprüft.",
+    "packageExpiry": "Paket gültig bis",
+    "tripSelection": "Reiseauswahl: {{count}} (0 = alle)",
+    "noShares": "Noch keine Freigaben eingerichtet.",
+    "shareState": {
+      "revoked": "Freigabe widerrufen oder Verbindung nicht bestätigt",
+      "expired": "Abgelaufen",
+      "unpublished": "Erneute Veröffentlichung erforderlich",
+      "published": "Verschlüsseltes Paket veröffentlicht",
+      "audienceChanged": "Gruppenstand geändert oder nicht verfügbar – erneut prüfen"
+    }
   }
 }

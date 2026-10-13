@@ -1,3 +1,4 @@
+import { FingerprintImage } from "./FingerprintQR";
 import { useEffect, useState } from "react";
 import { Button } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -58,6 +59,10 @@ export default function KeyVerification({
                         autoComplete="off"
                       />
                     </label>
+                    <FingerprintImage
+                      onRead={(fingerprint) => setValues((v) => ({ ...v, [key]: fingerprint }))}
+                      onError={() => setError(true)}
+                    />
                     <Button
                       onClick={() => {
                         setError(false);

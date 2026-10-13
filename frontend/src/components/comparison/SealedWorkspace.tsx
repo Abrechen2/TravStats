@@ -1,3 +1,4 @@
+import SharingOverview from "./SharingOverview";
 import { useCallback, useEffect, useState } from "react";
 import { AppShell, Button, PageHeader } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -182,22 +183,33 @@ export default function SealedWorkspace() {
         actions={<Button onClick={() => setTab("friends")}>{t("connect")}</Button>}
       />
       <nav className="flex flex-wrap gap-2 mb-6" aria-label={t("views")}>
-        {["leaderboard", "friends", "circles", "devices", ...(user.isAdmin ? ["peers"] : [])].map(
-          (key) => (
-            <Button
-              key={key}
-              disabled={busy}
-              variant={tab === key ? "primary" : "secondary"}
-              onClick={() => {
-                setTab(key);
-                setPeople([]);
-                setRows([]);
-              }}
-            >
-              {t(key === "devices" ? "e2e.devices" : key)}
-            </Button>
-          )
-        )}
+        {[
+          "leaderboard",
+          "friends",
+          "circles",
+          "sharingOverview",
+          "devices",
+          ...(user.isAdmin ? ["peers"] : []),
+        ].map((key) => (
+          <Button
+            key={key}
+            disabled={busy}
+            variant={tab === key ? "primary" : "secondary"}
+            onClick={() => {
+              setTab(key);
+              setPeople([]);
+              setRows([]);
+            }}
+          >
+            {t(
+              key === "devices"
+                ? "e2e.devices"
+                : key === "sharingOverview"
+                  ? "e2e.sharingOverview"
+                  : key
+            )}
+          </Button>
+        ))}
       </nav>
       {error && (
         <p role="alert" className="my-4">
@@ -220,6 +232,7 @@ export default function SealedWorkspace() {
           onGrant={(l) => void run(() => open({ linkId: l.id }))}
         />
       )}
+      {tab === "sharingOverview" && <SharingOverview links={links} />}
       {tab === "peers" && user.isAdmin && <PeerManager />}
       {tab === "circles" && (
         <SealedGroups

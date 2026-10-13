@@ -1,3 +1,4 @@
+import { FingerprintQR } from "./FingerprintQR";
 import { useEffect, useState } from "react";
 import { Button } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -118,6 +119,7 @@ export default function DevicePanel({
           </details>
         </>
       )}
+      {device && <FingerprintQR fingerprint={device.public.fingerprint} />}
       {recovery && (
         <div className="space-y-3 rounded-xl bg-[var(--ts-surface)] p-4">
           <p>{t("e2e.backupHelp")}</p>

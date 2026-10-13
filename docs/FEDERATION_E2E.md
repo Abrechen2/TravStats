@@ -36,7 +36,9 @@ are registered with the server. Up to five active devices per account are suppor
 
 A SHA-256 fingerprint covers both public keys using sorted-key canonical JSON. Each friend
 compares the full fingerprint with the other device over an independent channel (for example,
-a phone call) and enters it. Pins are stored locally, bound to the friendship channel or the
+a phone call) and enters it. Alternatively, display the public-device QR code and read its image locally;
+QR decoding fills the fingerprint but still requires explicit confirmation. Codes obtained
+from the relay itself are not independent identity verification. Pins are stored locally, bound to the friendship channel or the
 specific group member, not merely to any previously trusted fingerprint. New or substituted
 keys are not silently trusted. All named recipients' devices must be verified before publishing.
 The sender's current device is also included so the sender can retain an encrypted copy.
@@ -162,5 +164,44 @@ No private key lives in the database backup; users need their separate device re
   and 390-pixel mobile smoke tests, no page errors or horizontal page overflow.
 - TypeScript, targeted lint, locale parity, API-shape/no-store, restore and schema-drift checks.
 
-The browser run used a loopback test server. It was not a live public multi-server HTTPS test,
-a production build, a deployment or an independent security audit.
+The initial browser run used a loopback test server. A subsequent sandbox run exercised two
+independent instances and databases through actual HTTPS, DNS/IP pinning and Ed25519 signatures.
+All 13 checks passed: bidirectional exchange; nonce replay/tampering; wrong signing pin and TLS
+hostname; invitation/confirmation/device discovery; plaintext fallback rejection; incomplete
+publication; a 32 MiB encrypted round-trip with matching SHA-256 and duplicate chunk retry;
+unverified sender rejection; outage/recovery; grant revocation; sender revocation/replacement;
+and disabled peer. The transfer took 12.46 seconds in this lab, not a performance guarantee.
+
+This found and fixed a Node 22 pinned-DNS callback incompatibility. The dedicated TLS regression
+test opens a real Node socket with family autoselection enabled globally. The application now
+explicitly connects using the selected family/address. No SSRF or TLS check was disabled.
+See [sandbox driver and repeat instructions](../scripts/federation-sandbox/README.md).
+
+The sandbox contains both instances on one VM and uses its own trusted test CA. Public-Internet
+connectivity, reverse proxies, IPv6-only peers, mixed application versions and multi-host
+failures remain untested. This was not a production rollout or an independent security audit.
+
+## Sharing controls added after the sandbox review
+
+The device screen exposes a QR code containing only its versioned public fingerprint. A locally
+read PNG/JPEG/WebP image (maximum 5 MiB) can fill the verification field; matching and explicit
+confirmation still happen against the selected friend's/group member's current public keys.
+No QR image is uploaded. Manual fingerprint entry remains available; live camera scanning is
+not implemented.
+
+The owner-only sharing overview lists recipients/group membership where available, categories,
+domains, year/trip selection, publication timestamp and expiry. It distinguishes completed
+packages, missing/new consent revisions, expired/revoked grants and changed/unavailable groups.
+It is a metadata summary, not a guarantee of current reachability: every actual retrieval
+reauthorizes its grant, audience and device. New or edited travel records still require manual
+republication; automatic source-change detection and resumable uploads remain open. Revocation
+copy explicitly says that downloaded/decrypted copies cannot be recalled.
+
+Additional validation after these controls: 46 selected backend tests and 103 frontend tests
+passed, including owner-only publication status, QR format rejection and share-state handling.
+The PostgreSQL integration run used a 30-second per-test allowance after two default-five-second
+runs timed out under local load; the timeouts are not counted as passes. A Chromium smoke run
+rendered a real QR, captured it as PNG, decoded it with ZXing, required manual confirmation,
+and displayed synthetic sharing metadata at desktop and 390-pixel widths without page errors
+or horizontal overflow. Targeted lint, TypeScript and the complete frontend/backend production builds
+passed. The frontend build retains large-chunk/vendor-comment warnings.

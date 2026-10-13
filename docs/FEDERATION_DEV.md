@@ -44,3 +44,12 @@ The supported restore hook revokes grants/links/devices, disables peers and dele
 Manual SQL/machine restores must suspend federation and re-enrol peers/devices before access.
 The hook cannot intercept external restore tools. Device recovery material lives with users,
 not in the server database backup.
+
+## Isolated federation verification
+
+The [two-instance sandbox driver](../scripts/federation-sandbox/README.md) exercises the real
+HTTPS peer protocol in an egress-isolated lab, with separate databases and a private test CA.
+It found the Node 22 DNS callback issue now fixed in `exchange()`. See
+[FEDERATION_E2E.md](FEDERATION_E2E.md#validation-in-this-task) for measured checks and remaining
+limits. The UI additionally provides local QR-image fingerprint verification and an owner-only
+sharing overview. No deployment to an existing instance follows from these test results.

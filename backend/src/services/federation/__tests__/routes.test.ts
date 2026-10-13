@@ -88,3 +88,46 @@ it("has no plaintext comparison fallback and applies the same cookie gate to enc
     ).status
   ).toBe(403);
 });
+
+it("lists only the owner's publication metadata without ciphertext or sender keys", async () => {
+  const other = await prisma.user.create({
+    data: { username: `comparison-other-${randomUUID()}`, passwordHash: "test-only" },
+  });
+  const make = (owner: string) =>
+    prisma.comparisonPublication.create({
+      data: {
+        id: randomUUID(),
+        userId: owner,
+        linkId: randomUUID(),
+        audience: "",
+        revision: 1,
+        sender: "must-not-be-in-status",
+        context: { private: "not-in-status" },
+        expiresAt: new Date(Date.now() + 60000),
+      },
+    });
+  const own = await make(userId);
+  try {
+    const foreign = await make(other.id);
+    const response = await request(app)
+      .get("/api/v1/comparison/sealed/publications")
+      .set("x-test-user", userId);
+    expect(response.status).toBe(200);
+    expect(response.body.data.map((p: { id: string }) => p.id)).toEqual([own.id]);
+    expect(JSON.stringify(response.body)).not.toMatch(
+      new RegExp(`${foreign.id}|must-not-be-in-status|not-in-status`)
+    );
+    expect(response.body.data[0]).not.toHaveProperty("manifest");
+    expect(
+      (
+        await request(app)
+          .get("/api/v1/comparison/sealed/publications")
+          .set("x-test-user", userId)
+          .set("x-test-pat", "yes")
+      ).status
+    ).toBe(403);
+  } finally {
+    await prisma.comparisonPublication.delete({ where: { id: own.id } });
+    await prisma.user.delete({ where: { id: other.id } });
+  }
+});

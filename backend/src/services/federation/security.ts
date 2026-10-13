@@ -110,40 +110,41 @@ export async function exchange(remoteOrigin: string, body: PeerBody): Promise<un
   const bytes = Buffer.from(JSON.stringify(outgoing));
   if (bytes.length > 16_384) throw refused();
   const raw = await new Promise<Buffer>((resolve, reject) => {
-    const request = https.request(
-      {
-        hostname: url.hostname,
-        servername: url.hostname,
-        port: 443,
-        path: "/api/v1/comparison-peer",
-        method: "POST",
-        agent: false,
-        lookup: ((
-          _host: string,
-          _options: unknown,
-          cb: (err: null, address: string, family: number) => void
-        ) => cb(null, selected.address, selected.family)) as never,
-        headers: { "Content-Type": "application/json", "Content-Length": bytes.length },
-      },
-      (response) => {
-        if (response.statusCode !== 200) {
-          response.resume();
-          reject(refused());
-          return;
-        }
-        const chunks: Buffer[] = [];
-        let size = 0;
-        response.on("data", (b: Buffer) => {
-          size += b.length;
-          if (size > 10_000_000) {
-            response.destroy();
-            reject(refused());
-          } else chunks.push(b);
-        });
-        response.on("end", () => resolve(Buffer.concat(chunks)));
-        response.on("error", () => reject(refused()));
+    const options: https.RequestOptions & { autoSelectFamily: boolean } = {
+      hostname: url.hostname,
+      servername: url.hostname,
+      port: 443,
+      path: "/api/v1/comparison-peer",
+      method: "POST",
+      agent: false,
+      // A single vetted address is pinned; Node 22 otherwise asks lookup for an array.
+      autoSelectFamily: false,
+      family: selected.family,
+      lookup: ((
+        _host: string,
+        _options: unknown,
+        cb: (err: null, address: string, family: number) => void
+      ) => cb(null, selected.address, selected.family)) as never,
+      headers: { "Content-Type": "application/json", "Content-Length": bytes.length },
+    };
+    const request = https.request(options, (response) => {
+      if (response.statusCode !== 200) {
+        response.resume();
+        reject(refused());
+        return;
       }
-    );
+      const chunks: Buffer[] = [];
+      let size = 0;
+      response.on("data", (b: Buffer) => {
+        size += b.length;
+        if (size > 10_000_000) {
+          response.destroy();
+          reject(refused());
+        } else chunks.push(b);
+      });
+      response.on("end", () => resolve(Buffer.concat(chunks)));
+      response.on("error", () => reject(refused()));
+    });
     const deadline = setTimeout(() => request.destroy(), 10_000);
     request.on("close", () => clearTimeout(deadline));
     request.setTimeout(10_000, () => request.destroy());

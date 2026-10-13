@@ -32,6 +32,26 @@ router.get(
     res.json({ success: true, data: await ownDevices(req.userId!) });
   })
 );
+router.get(
+  "/publications",
+  handle(async (req, res) => {
+    const data = await prisma.comparisonPublication.findMany({
+      where: { userId: req.userId! },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+      select: {
+        id: true,
+        linkId: true,
+        audience: true,
+        revision: true,
+        ready: true,
+        createdAt: true,
+        expiresAt: true,
+      },
+    });
+    res.json({ success: true, data });
+  })
+);
 router.post(
   "/devices",
   handle(async (req, res) => {
