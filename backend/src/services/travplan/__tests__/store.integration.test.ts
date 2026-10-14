@@ -1,0 +1,52 @@
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import request from 'supertest';
+import jwt from 'jsonwebtoken';
+import { randomUUID } from 'node:crypto';
+import { prisma } from '../../../db';
+import { JWT_SECRET } from '../../../utils/jwtSecret';
+import travplanRouter from '../../../routes/travplan';
+import { errorHandler } from '../../../middleware/errorHandler';
+import { emptyState, bookingSchema, itemSchema } from '../schema';
+import { hash } from '../store';
+const app=express();app.use(express.json());app.use(cookieParser());app.use('/api/v1',travplanRouter);app.use(errorHandler);
+let owner:string,other:string,admin:string;
+const cookie=(id:string)=>'auth_token='+jwt.sign({userId:id,epoch:0},JWT_SECRET);
+const get=(url:string,who=owner)=>request(app).get('/api/v1'+url).set('Cookie',cookie(who));
+const post=(url:string,body:unknown,who=owner)=>request(app).post('/api/v1'+url).set('Cookie',cookie(who)).send(body);
+beforeAll(async()=>{
+ const rows=await Promise.all([false,false,true].map(isAdmin=>prisma.user.create({data:{username:'plan-test-'+randomUUID(),passwordHash:'not-a-login-password',isAdmin}})));[owner,other,admin]=rows.map(r=>r.id);
+ await prisma.travelPlanConfig.upsert({where:{id:'default'},create:{enabled:true},update:{enabled:true}});
+});
+afterAll(async()=>{await prisma.$disconnect()});
+async function create(){const response=await post('/travplan/plans',{name:'Integration trip',clientRef:randomUUID(),settings:{destination:'Madeira',startDay:'2026-11-12',endDay:'2026-11-19'}});expect(response.status).toBe(201);return response.body}
+async function write(plan:{tripId:string;revision:number},operation:unknown,clientRef=randomUUID()){return post('/trips/'+plan.tripId+'/plan/mutations',{operation,clientRef,baseRevision:plan.revision})}
+describe('Travel plan transactions against an isolated PostgreSQL database',()=>{
+ it('requires auth and limits config writes to an administrator',async()=>{expect((await request(app).get('/api/v1/travplan/plans')).status).toBe(401);expect((await get('/travplan/config')).status).toBe(403);expect((await get('/travplan/config',admin)).status).toBe(200)});
+ it('hides a stranger’s plan on both reads and writes',async()=>{const p=await create();expect((await get('/trips/'+p.tripId+'/plan',other)).status).toBe(404);const result=await post('/trips/'+p.tripId+'/plan/mutations',{clientRef:randomUUID(),baseRevision:1,operation:{type:'handover'}},other);expect(result.status).toBe(404)});
+ it('replays an identical mutation exactly once and rejects key reuse',async()=>{const p=await create(),clientRef=randomUUID(),operation={type:'settings',values:{budget:2500}};const a=await write(p,operation,clientRef),b=await write(p,operation,clientRef);expect(a.status).toBe(200);expect(b.body).toEqual(a.body);expect(await prisma.travelPlanMutation.count({where:{planId:p.id}})).toBe(1);expect((await write(p,{type:'settings',values:{budget:2600}},clientRef)).status).toBe(409)});
+ it('arbitrates concurrent edits by revision rather than last write wins',async()=>{const p=await create(),responses=await Promise.all([write(p,{type:'settings',values:{budget:1000}}),write(p,{type:'settings',values:{budget:2000}})]);expect(responses.map(r=>r.status).sort()).toEqual([200,409]);expect((await get('/trips/'+p.tripId+'/plan')).body.revision).toBe(2)});
+ it('undoes the latest mutation using a new, increasing revision',async()=>{const p=await create(),a=await write(p,{type:'settings',values:{budget:1000}}),b=await write(a.body,{type:'undo',mutationId:a.body.lastMutationId});expect(b.status).toBe(200);expect(b.body.revision).toBe(3);expect(b.body.state.budget).toBeNull();expect((await write(b.body,{type:'undo',mutationId:a.body.lastMutationId})).status).toBe(409)});
+ it('imports planning bookings without creating countable flights or stays',async()=>{const p=await create(),before=await prisma.flight.count({where:{userId:owner}});const booking=bookingSchema.parse({id:randomUUID(),kind:'flight',title:'Past planned flight',reference:'PLAN-'+randomUUID(),provider:'',day:'2013-01-01',endDay:null,time:'10:00',timezone:null,amount:600,paid:0,currency:'EUR',place:'',documentIds:[],source:'manual',details:{}});const a=await write(p,{type:'upsert',collection:'bookings',value:booking});expect(a.status).toBe(200);expect(a.body.state.items[0].execution).toBe('unconfirmed');expect(await prisma.flight.count({where:{userId:owner}})).toBe(before);const b=await write(a.body,{type:'handover'});expect(b.status).toBe(200);expect(await prisma.flight.count({where:{userId:owner}})).toBe(before);expect(await prisma.lodgingStay.count({where:{userId:owner,tripId:p.tripId}})).toBe(0)});
+ it('only writes a journal experience on explicit confirmation, and reverses it on undo',async()=>{const p=await create(),item=itemSchema.parse({id:randomUUID(),title:'Actual walk',kind:'activity',day:'2026-01-01',time:null,duration:30,timezone:null,place:'',note:'A remembered walk',booked:false,bookingId:null,execution:'unconfirmed',source:null});const a=await write(p,{type:'upsert',collection:'items',value:item});expect(a.status).toBe(200);expect(await prisma.tripJournalEntry.count({where:{tripId:p.tripId}})).toBe(0);const b=await write(a.body,{type:'execution',id:item.id,execution:'confirmed'});expect(b.status).toBe(200);expect(await prisma.tripJournalEntry.count({where:{tripId:p.tripId}})).toBe(1);const c=await write(b.body,{type:'undo',mutationId:b.body.lastMutationId});expect(c.status).toBe(200);expect(await prisma.tripJournalEntry.count({where:{tripId:p.tripId}})).toBe(0)});
+ it('rejects stale proposals and never lets them change booked anchors',async()=>{const p=await create(),item=itemSchema.parse({id:randomUUID(),title:'A flexible walk',kind:'activity',day:'2026-11-12',time:'17:00',duration:30,timezone:null,place:'',note:'',booked:false,bookingId:null,execution:'unconfirmed',source:null});const a=await write(p,{type:'upsert',collection:'items',value:item}),proposal=await prisma.travelPlanProposal.create({data:{planId:p.id,baseRevision:a.body.revision,inputHash:hash(a.body.state),provider:'test',model:'test',expiresAt:new Date(Date.now()+3600000),content:{summary:'Move the walk',assumptions:[],changes:[{id:item.id,day:'2026-11-13',time:'10:00',reason:'Rest after arrival'}]}}});const b=await write(a.body,{type:'settings',values:{pace:'relaxed'}});expect((await write(b.body,{type:'proposal',proposalId:proposal.id})).status).toBe(409)});
+ it('does not retain a document reference belonging to another trip',async()=>{const p=await create(),booking=bookingSchema.parse({id:randomUUID(),kind:'hotel',title:'A hotel',reference:null,provider:'',day:null,endDay:null,time:null,timezone:null,amount:null,paid:0,currency:'EUR',place:'',documentIds:[randomUUID()],source:'manual',details:{}});expect((await write(p,{type:'upsert',collection:'bookings',value:booking})).status).toBe(404);expect((await get('/trips/'+p.tripId+'/plan')).body.revision).toBe(1)});
+ it('keeps planning write controls active when the server flag is off',async()=>{const p=await create();await prisma.travelPlanConfig.update({where:{id:'default'},data:{enabled:false}});expect((await write(p,{type:'handover'})).status).toBe(403);expect((await get('/trips/'+p.tripId+'/plan')).status).toBe(200);await prisma.travelPlanConfig.update({where:{id:'default'},data:{enabled:true}})});
+  it('materializes a confirmed flight exactly once and removes only that untouched evidence on undo',async()=>{
+    for (const [iata,lat,lon] of [['XAA',50,8],['XBB',40,-73]] as const) {const existing=await prisma.airport.findFirst({where:{iata,isClosed:false}});if(!existing)await prisma.airport.create({data:{iata,name:'Isolated test airport',lat,lon,timezone:'UTC'}})};
+    const p=await create(),booking=bookingSchema.parse({id:randomUUID(),kind:'flight',title:'A confirmed journey',reference:'EXECT1',provider:'',day:'2026-01-01',endDay:null,time:'09:00',timezone:'UTC',arrivalDay:'2026-01-01',arrivalTime:'12:00',arrivalTimezone:'UTC',originPlace:'XAA',place:'XBB',amount:200,paid:200,currency:'EUR',documentIds:[],source:'manual',details:{}});
+    const a=await write(p,{type:'upsert',collection:'bookings',value:booking});const item=a.body.state.items[0],ref=randomUUID();
+    const b=await write(a.body,{type:'execution',id:item.id,execution:'confirmed'},ref);expect(b.status).toBe(200);
+    expect(await prisma.flight.count({where:{tripId:p.tripId}})).toBe(1);expect(await prisma.booking.count({where:{tripId:p.tripId}})).toBe(1);
+    expect((await write(a.body,{type:'execution',id:item.id,execution:'confirmed'},ref)).body).toEqual(b.body);
+    const c=await write(b.body,{type:'undo',mutationId:b.body.lastMutationId});expect(c.status).toBe(200);expect(await prisma.flight.count({where:{tripId:p.tripId}})).toBe(0);expect(await prisma.booking.count({where:{tripId:p.tripId}})).toBe(0);
+  });
+  it('materializes a confirmed hotel stay with qualified local dates and reverses its untouched place',async()=>{
+    const p=await create(),booking=bookingSchema.parse({id:randomUUID(),kind:'hotel',title:'Isolated plan hotel '+randomUUID(),reference:null,provider:'',day:'2026-01-01',endDay:'2026-01-03',time:null,timezone:'Atlantic/Madeira',amount:200,paid:200,currency:'EUR',place:'Funchal',documentIds:[],source:'manual',details:{country:'Portugal',city:'Funchal'}});
+    const a=await write(p,{type:'upsert',collection:'bookings',value:booking}),b=await write(a.body,{type:'execution',id:a.body.state.items[0].id,execution:'confirmed'});expect(b.status).toBe(200);
+    expect(await prisma.lodgingStay.count({where:{tripId:p.tripId}})).toBe(1);const source=b.body.state.items[0].source;
+    const c=await write(b.body,{type:'undo',mutationId:b.body.lastMutationId});expect(c.status).toBe(200);expect(await prisma.lodgingStay.count({where:{tripId:p.tripId}})).toBe(0);expect(await prisma.lodging.count({where:{id:source.auxId}})).toBe(0);
+  });
+  it('refuses future execution before creating countable data',async()=>{const p=await create(),item=itemSchema.parse({id:randomUUID(),title:'Future experience',kind:'activity',day:'2099-01-01',time:null,duration:30,timezone:'UTC',place:'',note:'',booked:false,bookingId:null,execution:'unconfirmed',source:null});const a=await write(p,{type:'upsert',collection:'items',value:item});expect((await write(a.body,{type:'execution',id:item.id,execution:'confirmed'})).status).toBe(400);expect(await prisma.tripJournalEntry.count({where:{tripId:p.tripId}})).toBe(0)});
+
+});

@@ -31,6 +31,7 @@ model User {
   id                     String                   @id @default(uuid())
   devicePushes           DevicePush[]
   clientWriteRefs        ClientWriteRef[]
+  travelPlanUsage        TravelPlanUsage[]
   username               String                   @unique
   passwordHash           String                   @map("password_hash")
   // Real name, shown wherever the person is addressed rather than identified
@@ -1747,6 +1748,7 @@ model Trip {
   publicShareLinks PublicShareLink[]
 
   documents Document[]
+  travelPlan TravelPlan?
 
   @@index([userId])
   @@index([userId, status])
@@ -4659,4 +4661,71 @@ model DawarichStay {
   @@index([userId, status, startAt])
   @@index([visitId])
   @@map("dawarich_stays")
+}
+
+// Plans are separate from travel evidence. Dates never promote an intention.
+model TravelPlan {
+  id String @id @default(uuid())
+  createRef String @unique @map("create_ref")
+  tripId String @unique @map("trip_id")
+  revision Int @default(1)
+  state Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  mutations TravelPlanMutation[]
+  proposals TravelPlanProposal[]
+  @@map("travel_plans")
+}
+
+model TravelPlanMutation {
+  id String @id @default(uuid())
+  planId String @map("plan_id")
+  clientRef String @map("client_ref")
+  payloadHash String @map("payload_hash")
+  baseRevision Int @map("base_revision")
+  revision Int
+  before Json
+  result Json
+  createdAt DateTime @default(now()) @map("created_at")
+  plan TravelPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  @@unique([planId, clientRef])
+  @@index([planId, createdAt])
+  @@map("travel_plan_mutations")
+}
+
+model TravelPlanProposal {
+  id String @id @default(uuid())
+  planId String @map("plan_id")
+  baseRevision Int @map("base_revision")
+  inputHash String @map("input_hash")
+  status String @default("pending")
+  provider String
+  model String
+  content Json
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  plan TravelPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  @@index([planId, createdAt])
+  @@map("travel_plan_proposals")
+}
+
+model TravelPlanConfig {
+  id String @id @default("default")
+  enabled Boolean @default(false)
+  aiDailyLimit Int @default(10) @map("ai_daily_limit")
+  weatherDailyLimit Int @default(20) @map("weather_daily_limit")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("travel_plan_config")
+}
+
+model TravelPlanUsage {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  day DateTime @db.Date
+  kind String
+  count Int @default(0)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, day, kind])
+  @@map("travel_plan_usage")
 }

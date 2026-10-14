@@ -45,6 +45,8 @@ import enDocuments from "./resources/en/documents.json";
 import enRoadtrips from "./resources/en/roadtrips.json";
 import enOpenData from "./resources/en/openData.json";
 import enLoyalty from "./resources/en/loyalty.json";
+import enTravplan from "./resources/en/travplan.json";
+import deTravplan from "./resources/de/travplan.json";
 import enNotes from "./resources/en/notes.json";
 
 import deCommon from "./resources/de/common.json";
@@ -154,6 +156,7 @@ const resources = {
     openData: enOpenData,
     loyalty: enLoyalty,
     notes: enNotes,
+    travplan: enTravplan,
   },
   de: {
     common: deCommon,
@@ -198,6 +201,7 @@ const resources = {
     openData: deOpenData,
     loyalty: deLoyalty,
     notes: deNotes,
+    travplan: deTravplan,
   },
 };
 

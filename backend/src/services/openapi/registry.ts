@@ -46,7 +46,7 @@ const bearerAuth = registry.registerComponent("securitySchemes", "BearerAuth", {
 
 export { registry, bearerAuth };
 
-export function buildOpenApiDocument() {
+export function buildOpenApiDocument(): ReturnType<OpenApiGeneratorV3["generateDocument"]> {
   const generator = new OpenApiGeneratorV3(registry.definitions);
   const document = generator.generateDocument({
     openapi: "3.0.3",

@@ -61,6 +61,7 @@ import templateStatusRoutes from "./templateStatus";
 import parserTemplatesRoutes from "./parserTemplates";
 import trainingRoutes from "./training";
 import tripsRoutes from "./trips";
+import travplanRoutes from "./travplan";
 import tripBookingRoutes from "./trips/tripBookings";
 import tripPackageRoutes from "./trips/tripPackage";
 import tripExchangeRoutes from "./trips/tripExchange";
@@ -163,6 +164,7 @@ export interface ApiMount {
 }
 
 export const apiMounts: ApiMount[] = [
+  { id: "travplan", base: "/api/v1", router: travplanRoutes },
   // OpenAPI spec + Swagger UI mounted FIRST so /api/v1/docs and
   // /api/v1/openapi.json don't fall through into authenticated routers.
   { id: "openapi", base: "/api/v1", router: openapiRoutes },

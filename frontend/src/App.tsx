@@ -55,6 +55,7 @@ import { AdminOnlyNotice } from "./components/AdminOnlyNotice";
 import { LOYALTY_SETTINGS_PATH } from "./pages/Settings/settingsModel";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
+const TravPlanPage = lazy(() => import("./pages/TravPlanPage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
 const TripDetailPage = lazy(() => import("./pages/TripDetailPage"));
 const TripRouteEditorPage = lazy(() => import("./pages/TripRouteEditorPage"));
@@ -233,6 +234,9 @@ function AppContent() {
             <Routes location={location} key={location.pathname}>
               {/* Public routes */}
               <Route path="/setup" element={<SetupPage />} />
+              <Route path="/plan" element={isAuthenticated ? <TravPlanPage /> : <Navigate to="/login" />} />
+              <Route path="/plan/admin" element={isAuthenticated ? <TravPlanPage /> : <Navigate to="/login" />} />
+              <Route path="/plan/:tripId/:section?" element={isAuthenticated ? <TravPlanPage /> : <Navigate to="/login" />} />
               <Route
                 path="/login"
                 element={isAuthenticated ? <Navigate to="/" /> : <LoginPage />}

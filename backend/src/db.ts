@@ -128,7 +128,7 @@ export const prisma = basePrisma.$extends({
                 context: {
                   model,
                   action: operation,
-                  args: toLoggable(args),
+                  args: model?.startsWith("TravelPlan") ? "[redacted planning data]" : toLoggable(args),
                   resultCount: Array.isArray(result) ? result.length : result ? 1 : 0,
                 },
                 performance: { duration: Date.now() - startTime },
@@ -140,7 +140,7 @@ export const prisma = basePrisma.$extends({
         return result;
       } catch (error) {
         logQuerySafely(
-          () => logQueryFailure(error, model, operation, verbose ? args : undefined, startTime),
+          () => logQueryFailure(error, model, operation, verbose && !model?.startsWith("TravelPlan") ? args : undefined, startTime),
           model,
           operation
         );
@@ -167,7 +167,7 @@ function logQueryFailure(
   args: unknown,
   startTime: number
 ): void {
-  const errorMessage = error instanceof Error ? error.message : "Unknown error";
+  const errorMessage = model?.startsWith("TravelPlan") ? "Planning database operation failed" : error instanceof Error ? error.message : "Unknown error";
   const code = (error as { code?: unknown })?.code;
   const entry = {
     context: {

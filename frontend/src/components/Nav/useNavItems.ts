@@ -74,7 +74,7 @@ function collapseSingleChild(group: NavGroup): NavNode {
  * Import-Logbuch page and Mitreisende page do not exist yet, so they are not
  * here — an entry that leads nowhere is worse than none.
  */
-export function useNavItems(): {
+export function useNavItems(pathname = "/"): {
   primary: NavNode[];
   more: NavSection[];
 } {
@@ -86,6 +86,7 @@ export function useNavItems(): {
     "dataQuality",
     "stats",
     "notes",
+    "travplan",
   ]);
   const user = useAuthStore((s) => s.user);
   const { isEnabled } = useEnabledDomains();
@@ -97,6 +98,27 @@ export function useNavItems(): {
   const isAdmin = user?.isAdmin ?? false;
 
   return useMemo(() => {
+    if (pathname.startsWith("/plan")) {
+      const match = /^\/plan\/([\da-f-]{36})/.exec(pathname);
+      const prefix = match ? `/plan/${match[1]}` : "/plan";
+      const leaf = (section: string): NavLeaf => ({
+        kind: "leaf",
+        id: `plan-${section}`,
+        path: match ? `${prefix}/${section}` : prefix,
+        label: t(`travplan:sections.${section}`),
+      });
+      return {
+        primary: ["overview", "workspace", "import", "packing"].map(leaf),
+        more: [
+          {
+            id: "planning",
+            label: t("travplan:title"),
+            items: ["transfer", "budget", "ai", "handover"].map(leaf),
+          },
+        ],
+      };
+    }
+
     // `poi` asks through `usePlacesVisible`, the one home of the places rule.
     // `rail`, `rental` and `bus` ask their own hooks: the beta gate AND the domain choice.
     const domainChildren: NavLeaf[] = AVAILABLE_DOMAINS.filter((key) =>
@@ -223,5 +245,15 @@ export function useNavItems(): {
     ];
 
     return { primary, more };
-  }, [t, isEnabled, placesVisible, railVisible, rentalVisible, busVisible, ferryVisible, isAdmin]);
+  }, [
+    t,
+    pathname,
+    isEnabled,
+    placesVisible,
+    railVisible,
+    rentalVisible,
+    busVisible,
+    ferryVisible,
+    isAdmin,
+  ]);
 }
