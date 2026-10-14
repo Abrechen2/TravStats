@@ -165,6 +165,8 @@ router.post(
  *   `routedCount` used to count both, so a tour whose every leg failed
  *   reported "5 legs processed" and looked routed (2026-09-26).
  *   `fallbackReason` is the first fallback's cause, null when none fell back.
+ *   A failed attempt preserves existing drawn, adopted and routed geometry,
+ *   matching the single-leg endpoint; only straight legs receive a fallback.
  *
  * Each leg is routed and persisted sequentially rather than in one
  * transaction: a provider call is a network round trip, and holding a
@@ -214,7 +216,9 @@ router.post(
           mode,
           vehicle,
         });
-        await applyRoutedLeg(leg.id, routed);
+        if (routed.fallbackReason === null || leg.source === "straight") {
+          await applyRoutedLeg(leg.id, routed);
+        }
         if (routed.fallbackReason === null) {
           routedCount++;
         } else {

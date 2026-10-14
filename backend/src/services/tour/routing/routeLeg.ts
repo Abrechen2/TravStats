@@ -140,14 +140,25 @@ function isTrustworthy(
   }
 
   for (const [lon, lat] of line) {
-    if (!finite(lon) || !finite(lat)) {
+    if (!finite(lon) || !finite(lat) || Math.abs(lon) > 180 || Math.abs(lat) > 90) {
       logger.warn(
         { providerId },
-        "routing provider returned a non-finite waypoint coordinate; falling back to straight line"
+        "routing provider returned an invalid waypoint coordinate; falling back to straight line"
       );
-      logger.debug({ providerId, lon, lat }, "non-finite waypoint coordinate");
+      logger.debug({ providerId, lon, lat }, "invalid waypoint coordinate");
       return false;
     }
+  }
+
+  if (
+    result.drivingMinutes !== null &&
+    (!finite(result.drivingMinutes) || result.drivingMinutes < 0)
+  ) {
+    logger.warn(
+      { providerId },
+      "routing provider returned an invalid duration; falling back to straight line"
+    );
+    return false;
   }
 
   const head = toCoord(line[0]);

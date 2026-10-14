@@ -77,3 +77,39 @@ it("shares identical actual road profiles between bus and car trips", async () =
   await routeLegGeometry(createCustomOsrm(url, fetchImpl), { ...input, vehicle: "car" });
   expect(fetchImpl).toHaveBeenCalledTimes(1);
 });
+
+it.each([
+  {
+    waypoints: [
+      [8, 50],
+      [181, 50],
+      [9, 51],
+    ],
+  },
+  {
+    waypoints: [
+      [8, 50],
+      [8.5, 91],
+      [9, 51],
+    ],
+  },
+  { drivingMinutes: -1 },
+  { drivingMinutes: NaN },
+  { drivingMinutes: Infinity },
+])(
+  "rejects invalid road results on the first response and never caches them: %j",
+  async (invalid) => {
+    const route = jest
+      .fn()
+      .mockResolvedValueOnce({ ...good, ...invalid })
+      .mockResolvedValue(good);
+    const p: RouteProvider = { ...provider(), route };
+    expect(await routeLegGeometry(p, input)).toMatchObject({
+      source: "straight",
+      fallbackReason: "untrustworthy",
+    });
+    expect((await routeLegGeometry(p, input)).source).toBe("routed");
+    expect((await routeLegGeometry(p, input)).source).toBe("routed");
+    expect(route).toHaveBeenCalledTimes(2);
+  }
+);

@@ -26,6 +26,11 @@ const DE_DIR = path.join(__dirname, "..", "resources", "de");
  */
 const ALLOWED: Array<{ file: string; fragment: string; why: string }> = [
   {
+    file: "passport.json",
+    fragment: "Sie können von Überflügen oder ungenauen Positionen stammen",
+    why: "third person plural: the Dawarich locations, not the reader",
+  },
+  {
     file: "admin.json",
     fragment: "Ihre Schlüssel haben Vorrang vor globalen Schlüsseln.",
     why: "third person: the USERS' keys, in a sentence about what users may enter",
