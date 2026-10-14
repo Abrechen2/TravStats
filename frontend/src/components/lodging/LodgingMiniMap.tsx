@@ -1,3 +1,4 @@
+import { mapStyleUrl } from "../../lib/mapStyles";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
 import MapGL, { useControl } from "react-map-gl/maplibre";
@@ -7,7 +8,7 @@ import { buildLodgingPins } from "../layers/lodgingPinsLayer";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Lodging } from "../../types/lodging";
 
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const DARK_MAP_STYLE = mapStyleUrl("dark");
 
 interface DeckOverlayProps {
   layers: Layer[];

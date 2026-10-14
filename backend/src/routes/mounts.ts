@@ -1,3 +1,4 @@
+import mapConfigRoutes from "./mapConfig";
 /**
  * The API mount table — the single source of truth for what is served
  * under /api/v1 and in which order.
@@ -163,6 +164,7 @@ export interface ApiMount {
 }
 
 export const apiMounts: ApiMount[] = [
+  { id: "map-config", base: "/api/v1/map-config", router: mapConfigRoutes },
   // OpenAPI spec + Swagger UI mounted FIRST so /api/v1/docs and
   // /api/v1/openapi.json don't fall through into authenticated routers.
   { id: "openapi", base: "/api/v1", router: openapiRoutes },

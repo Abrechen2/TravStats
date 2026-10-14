@@ -1,3 +1,4 @@
+import { mapStyleUrl } from "../../lib/mapStyles";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
 import MapGL, { useControl } from "react-map-gl/maplibre";
@@ -10,7 +11,7 @@ import { useDomainColors } from "../../hooks/useDomainColors";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { RentalBooking } from "../../types/rental";
 
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const DARK_MAP_STYLE = mapStyleUrl("dark");
 
 function DeckGLOverlay({ layers }: { layers: Layer[] }): null {
   const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay({ layers }), {

@@ -1,3 +1,4 @@
+import { getMapConfig } from "../services/mapConfig";
 /**
  * Environment variable validation schema
  * Validates all environment variables at application startup
@@ -133,6 +134,7 @@ let validatedEnv: EnvConfig | null = null;
  * @throws Error if validation fails
  */
 export function validateEnv(): EnvConfig {
+  getMapConfig();
   if (validatedEnv) {
     return validatedEnv;
   }

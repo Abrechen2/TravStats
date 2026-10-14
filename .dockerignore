@@ -37,7 +37,7 @@ backend/dist
 **/.env
 **/.env.*
 !**/.env.example
-backend/.travstats-data
+**/.travstats-data
 data/logs
 **/*.log
 
