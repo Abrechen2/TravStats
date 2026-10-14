@@ -147,6 +147,9 @@ export const countryTimelineEntrySchema = z.discriminatedUnion("kind", [
 ]);
 
 export const countryDetailSchema = z.object({
+  groundPresence: z.boolean().optional(),
+  visited: z.boolean().optional(),
+  visitUncertain: z.boolean().optional(),
   code: z.string().openapi({
     description: "ISO-3166 alpha-2. Never a flag: flags are political and age.",
   }),

@@ -56,7 +56,8 @@ export function busEvidence(ends: readonly BusEnd[]): EvidenceInput[] {
   return ends.map((e) => ({
     country: e.country,
     kind: "bus",
-    tier: e.tier,
+    // A station/terminal proves ground contact, not an off-site visit.
+    tier: "transited",
     at: e.at,
     days: e.days,
   }));

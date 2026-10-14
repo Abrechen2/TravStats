@@ -206,7 +206,14 @@ export default function TravelComparison({ people }: { people: TravelPerson[] })
                 key={`${p.id}:${i}`}
                 points={line.map(([lon, lat]) => `${(lon + 180) * 2},${(90 - lat) * 2}`).join(" ")}
                 fill="none"
-                stroke={["#f0a947", "#4aa6b0", "#dc7faa", "#5ec2b2"][index % 4]}
+                stroke={
+                  [
+                    "var(--domain-flight)",
+                    "var(--domain-cruise)",
+                    "var(--domain-lodging)",
+                    "var(--domain-poi)",
+                  ][index % 4]
+                }
                 strokeWidth="1.5"
               >
                 <title>{p.label}</title>
@@ -216,7 +223,17 @@ export default function TravelComparison({ people }: { people: TravelPerson[] })
         </svg>
         <ul>
           {tracks.map((p, i) => (
-            <li key={p.id} style={{ color: ["#f0a947", "#4aa6b0", "#dc7faa", "#5ec2b2"][i % 4] }}>
+            <li
+              key={p.id}
+              style={{
+                color: [
+                  "var(--domain-flight)",
+                  "var(--domain-cruise)",
+                  "var(--domain-lodging)",
+                  "var(--domain-poi)",
+                ][i % 4],
+              }}
+            >
               {p.label}: {p.lines.length}
             </li>
           ))}

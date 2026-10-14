@@ -104,7 +104,7 @@ describe("PassportPage — the counting-changed notice (§5)", () => {
         <PassportPage />
       </MemoryRouter>
     );
-    await screen.findByText("passport:summary.countries");
+    await screen.findAllByText("passport:summary.countries");
     expect(screen.queryByText(/countingChanged\.text/)).toBeNull();
   });
 
@@ -124,7 +124,7 @@ describe("PassportPage — the counting-changed notice (§5)", () => {
         <PassportPage />
       </MemoryRouter>
     );
-    await screen.findByText("passport:summary.countries");
+    await screen.findAllByText("passport:summary.countries");
     expect(screen.queryByText(/countingChanged\.text/)).toBeNull();
   });
 });

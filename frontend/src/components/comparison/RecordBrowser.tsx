@@ -73,9 +73,7 @@ export default function RecordBrowser({
                 .filter((f) => f.value !== null && f.value !== "")
                 .map((field) => (
                   <div key={field.name}>
-                    <dt className="text-xs text-[var(--ts-text-muted)]">
-                      {t(`field.${field.name}`)}
-                    </dt>
+                    <dt className="text-xs text-[var(--text-muted)]">{t(`field.${field.name}`)}</dt>
                     <dd className="break-words whitespace-pre-wrap">
                       {typeof field.value === "boolean"
                         ? t(field.value ? "yes" : "no")

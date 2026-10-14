@@ -1843,6 +1843,7 @@ model ImmichImportJob {
 }
 
 model TripStop {
+  countryVisitKind String @default("visit") @map("country_visit_kind")
   id            String    @id @default(uuid())
   /// The trip this stop sits on, or NULL for a stop that exists only as a
   /// vertex of a standalone tour. A stop always has one or the other —
@@ -2662,6 +2663,9 @@ model Port {
 }
 
 model Lodging {
+  /// Explicit transit-only location; an airport hotel name alone is not proof.
+  countryVisitKind String @default("visit") @map("country_visit_kind")
+
   id                 String    @id @default(uuid())
   userId             String    @map("user_id")
   type               String    @default("hotel") // hotel | campsite | guesthouse | apartment | hostel
@@ -2988,6 +2992,9 @@ model LodgingMembershipLodging {
 /// is nobody else's business. Curated checklist targets live in their own
 /// global tables and only become a Place once the user ticks them off.
 model Place {
+  /// Explicit transit-only location; an airport hotel name alone is not proof.
+  countryVisitKind String @default("visit") @map("country_visit_kind")
+
   id     String @id @default(uuid())
   userId String @map("user_id")
 

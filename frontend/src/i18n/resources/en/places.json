@@ -94,7 +94,11 @@
     "listPartial_other": "Place saved. These lists did not take it: {{lists}}.",
     "listRetry": "Assign again",
     "listContinue": "Continue",
-    "forList": "Once saved, the place goes into the list “{{list}}”."
+    "forList": "Once saved, the place goes into the list “{{list}}”.",
+    "countryVisitKind": "Stay purpose for country counts",
+    "countryVisit": "Visit beyond a transit stop",
+    "countryTransit": "Transit / airport / rest area only",
+    "countryVisitHint": "A transit stop counts as ground presence, even overnight. The place name does not determine this."
   },
   "detail": {
     "backToList": "Back to the list",

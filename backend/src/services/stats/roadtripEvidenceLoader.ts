@@ -46,6 +46,7 @@ export async function loadRoadtripStations(
           startDate: true,
           endDate: true,
           overnight: true,
+          countryVisitKind: true,
           lodgingStayId: true,
           lodgingStay: {
             select: {
@@ -54,7 +55,7 @@ export async function loadRoadtripStations(
               datePrecision: true,
               nights: true,
               status: true,
-              lodging: { select: { isoCountryCode: true } },
+              lodging: { select: { isoCountryCode: true, countryVisitKind: true } },
             },
           },
         },
@@ -79,6 +80,7 @@ export async function loadRoadtripStations(
       if (!country) continue;
       out.push({
         ...attested,
+        countryVisitKind: stop.lodgingStay?.lodging.countryVisitKind ?? stop.countryVisitKind,
         country,
         roadtripId: row.id,
         roadtripName: row.name,

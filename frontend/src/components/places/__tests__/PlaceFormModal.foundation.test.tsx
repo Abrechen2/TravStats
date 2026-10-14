@@ -94,6 +94,21 @@ describe("PlaceFormModal — the shared form blocks", () => {
     addPlaceToList.mockResolvedValue({});
   });
 
+  it("sends an explicitly selected transit purpose with the place", async () => {
+    render(<PlaceFormModal place={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+    await fillValid();
+    await userEvent.selectOptions(
+      screen.getByRole("combobox", { name: /places:form.countryVisitKind/ }),
+      "transit"
+    );
+    await userEvent.click(saveButton());
+    await waitFor(() =>
+      expect(createPlace).toHaveBeenCalledWith(
+        expect.objectContaining({ countryVisitKind: "transit" })
+      )
+    );
+  });
+
   it("marks name and position as required and explains the mark", async () => {
     render(<PlaceFormModal place={null} onClose={vi.fn()} onSaved={vi.fn()} />);
     await act(async () => {}); // the list picker's load settles

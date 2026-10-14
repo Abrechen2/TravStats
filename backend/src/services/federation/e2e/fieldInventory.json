@@ -96,7 +96,7 @@
     "excluded": "immichAlbumId thumbnailAssetId"
   },
   "TripStop": {
-    "details": "id tripId orderIdx domain title startDate endDate lat lon startUtc endUtc stopZone precision routeId routeOrderIdx lodgingStayId overnight viaPoint placeId createdAt updatedAt",
+    "details": "id tripId orderIdx domain title startDate endDate lat lon startUtc endUtc stopZone precision routeId routeOrderIdx lodgingStayId overnight viaPoint placeId createdAt updatedAt countryVisitKind",
     "costs": "",
     "personal": "description notes",
     "photos": "",
@@ -160,7 +160,7 @@
     "excluded": "userId"
   },
   "Lodging": {
-    "details": "id type name chainId address city country isoCountryCode lat lon geocodeAttemptedAt stars website wikidataId amenities visited externalRef createdAt updatedAt",
+    "details": "id type name chainId address city country isoCountryCode lat lon geocodeAttemptedAt stars website wikidataId amenities visited externalRef createdAt updatedAt countryVisitKind",
     "costs": "",
     "personal": "notes",
     "photos": "",
@@ -216,7 +216,7 @@
     "excluded": ""
   },
   "Place": {
-    "details": "id name localName category lat lon address city country isoCountryCode externalRef curatedItemId wikidataId visited coverPhotoId createdAt updatedAt",
+    "details": "id name localName category lat lon address city country isoCountryCode externalRef curatedItemId wikidataId visited coverPhotoId createdAt updatedAt countryVisitKind",
     "costs": "",
     "personal": "notes",
     "photos": "",

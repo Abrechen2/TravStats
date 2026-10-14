@@ -55,11 +55,12 @@ import { lodgingCountry } from "./evidenceCountry";
  * night count, which is what the columns default to.
  */
 export interface StampStay extends CountableStay {
-  datePrecision?: string;
+  datePrecision?: string | null;
   nights?: number | null;
 }
 
 export interface StampLodging {
+  countryVisitKind?: string;
   isoCountryCode: string | null;
   /** As the geocoder or the user wrote it. Null when nobody did. */
   city?: string | null;

@@ -239,7 +239,7 @@ export async function loadPassport(
     readPlace
       ? prisma.place.findMany({
           where: { userId, visited: true, isoCountryCode: { not: null } },
-          select: { isoCountryCode: true, visits: { select: { visitedAt: true, visitedAtUtc: true, visitedZone: true } } },
+          select: { countryVisitKind: true, isoCountryCode: true, visits: { select: { visitedAt: true, visitedAtUtc: true, visitedZone: true } } },
         })
       : [],
     /**
@@ -262,6 +262,7 @@ export async function loadPassport(
       where: { userId, visited: true, isoCountryCode: { not: null } },
       select: {
         isoCountryCode: true,
+        countryVisitKind: true,
         // For the lodging stamp (forgejo#93): the town, and what each stay's
         // dates are good for — `resolveStayTiming` refuses to count nights
         // between two placeholders, and needs the precision to know.
@@ -345,8 +346,18 @@ export async function loadPassport(
     placeVisits.flatMap((place) => {
       const happened = place.visits.filter((v) => classifyVisit(v, now) === "visited");
       return happened.length > 0
-        ? happened.map((v) => ({ isoCountryCode: place.isoCountryCode, at: v.visitedAt }))
-        : [{ isoCountryCode: place.isoCountryCode, at: null }];
+        ? happened.map((v) => ({
+            isoCountryCode: place.isoCountryCode,
+            countryVisitKind: place.countryVisitKind,
+            at: v.visitedAt,
+          }))
+        : [
+            {
+              isoCountryCode: place.isoCountryCode,
+              countryVisitKind: place.countryVisitKind,
+              at: null,
+            },
+          ];
     }),
     lodgings,
     threshold,

@@ -206,7 +206,11 @@
     "errors": {
       "stars": "Stars: a whole number from 1 to 5.",
       "website": "A web address starts with http:// or https://."
-    }
+    },
+    "countryVisitKind": "Stay purpose for country counts",
+    "countryVisit": "Visit beyond a transit stop",
+    "countryTransit": "Transit / airport / rest area only",
+    "countryVisitHint": "A transit stop counts as ground presence, even overnight. The place name does not determine this."
   },
   "fx": {
     "conversion": "Conversion",

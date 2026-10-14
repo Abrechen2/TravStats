@@ -130,6 +130,8 @@ export const USER_EXPORT_SELECT = {
   // journeys the photo inbox proposed from it: evidence the passport reads.
   countryDays: true,
   photoJourneys: true,
+  // Includes review decisions and edited evidence, not just regenerable suggestions.
+  dawarichStays: true,
   // The answers to trip suggestions: without them a restored account would be
   // asked again every question it already dismissed. The suggestions
   // themselves are derived and never stored.

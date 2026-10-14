@@ -146,6 +146,7 @@ export interface LodgingStay {
  * alongside the other three, so it's included here too.
  */
 export interface Lodging {
+  countryVisitKind?: "visit" | "transit";
   id: string;
   userId: string;
   type: LodgingType;
@@ -198,6 +199,7 @@ export interface Lodging {
 // are actually required on create (e.g. `name`, `checkIn`/`checkOut`).
 
 export interface LodgingInput {
+  countryVisitKind?: "visit" | "transit";
   type?: LodgingType;
   name?: string;
   chainId?: number | null;

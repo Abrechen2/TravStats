@@ -104,6 +104,9 @@ export function PlaceFormModal({
   const [country, setCountry] = useState(initial.country);
   const [notes, setNotes] = useState(initial.notes);
   const [visited, setVisited] = useState(initial.visited);
+  const [countryVisitKind, setCountryVisitKind] = useState<"visit" | "transit">(
+    initial.countryVisitKind ?? "visit"
+  );
   /**
    * Provenance, never user-editable: it is the dedup key the server matches on,
    * so letting it be typed would let a user collide with their own row. It is
@@ -171,6 +174,7 @@ export function PlaceFormModal({
     country,
     notes,
     visited,
+    countryVisitKind,
     externalRef,
   };
   // The list picks are input the user would lose too; a refused coordinate as
@@ -476,6 +480,18 @@ export function PlaceFormModal({
             </ChipGroup>
           )}
 
+          <label className="flex flex-col gap-1 text-sm text-[var(--text-muted)] sm:col-span-2">
+            {t("places:form.countryVisitKind")}
+            <select
+              value={countryVisitKind}
+              onChange={(e) => setCountryVisitKind(e.target.value as "visit" | "transit")}
+              className={INPUT_CLASS}
+            >
+              <option value="visit">{t("places:form.countryVisit")}</option>
+              <option value="transit">{t("places:form.countryTransit")}</option>
+            </select>
+            <span className="text-xs">{t("places:form.countryVisitHint")}</span>
+          </label>
           <ChipGroup label={t("places:form.status")} hintId="place-form-status-hint">
             {([true, false] as const).map((v) => (
               <button

@@ -15,6 +15,7 @@ export type Station = StationsInput["stations"][number];
  * `TripStop.viaPoint`.
  */
 function nightColumns(station: Station): {
+  countryVisitKind?: string;
   lodgingStayId: string | null;
   overnight: boolean;
   viaPoint: boolean;
@@ -29,7 +30,13 @@ function nightColumns(station: Station): {
         placeId: null,
       };
     case "free":
-      return { lodgingStayId: null, overnight: true, viaPoint: false, placeId: null };
+      return {
+        lodgingStayId: null,
+        overnight: true,
+        viaPoint: false,
+        placeId: null,
+        countryVisitKind: station.night.countryVisitKind,
+      };
     case "pass":
       return {
         lodgingStayId: null,
@@ -167,6 +174,18 @@ export async function replaceStations(
       // would otherwise collide mid-reorder.
       await tx.tripStop.updateMany({ where: { routeId }, data: { routeOrderIdx: null } });
 
+      const stayIds = stations.flatMap((station) =>
+        station.night.kind === "stay" ? [station.night.lodgingStayId] : []
+      );
+      const stayPurposes = new Map(
+        (stayIds.length === 0
+          ? []
+          : await tx.lodgingStay.findMany({
+              where: { userId, id: { in: stayIds } },
+              select: { id: true, lodging: { select: { countryVisitKind: true } } },
+            })
+        ).map((stay) => [stay.id, stay.lodging.countryVisitKind])
+      );
       const ordered: StopCoords[] = [];
       for (const [index, station] of stations.entries()) {
         const data = {
@@ -183,6 +202,10 @@ export async function replaceStations(
           }),
           notes: station.notes ?? null,
           ...nightColumns(station),
+          // Keep the explicit purpose if deleting the linked stay later leaves a free night.
+          ...(station.night.kind === "stay"
+            ? { countryVisitKind: stayPurposes.get(station.night.lodgingStayId) }
+            : {}),
           routeId,
           routeOrderIdx: index,
         };

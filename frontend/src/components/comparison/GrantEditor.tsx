@@ -91,7 +91,7 @@ export default function GrantEditor({
     >
       <h2 className="text-xl font-bold">{t("grantFor", { name: link.label })}</h2>
       <p>{link.origin === "local" ? t("local") : link.origin}</p>
-      <p className="text-sm text-[var(--ts-text-muted)]">{t("supported")}</p>
+      <p className="text-sm text-[var(--text-muted)]">{t("supported")}</p>
       <Button
         disabled={busy}
         onClick={() =>
