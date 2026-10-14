@@ -92,9 +92,10 @@ export async function fetchRailJson<T>(
   service: string,
   url: string,
   schema: z.ZodType<T>,
-  deadline: RailDeadline | null = null
+  deadline: RailDeadline | null = null,
+  refresh = false
 ): Promise<RailFetchResult<T>> {
-  const hit = cache.get<T>(url);
+  const hit = refresh ? undefined : cache.get<T>(url);
   if (hit !== undefined) return { ok: true, data: hit };
   if (deadline && !hasTimeLeft(deadline)) return { ok: false, reason: "outOfTime" };
   const timeout = deadline
@@ -119,7 +120,7 @@ export async function fetchRailJson<T>(
       });
       return { ok: false, reason: "failed" };
     }
-    if (cache.keys().length < MAX_ENTRIES) cache.set(url, parsed.data);
+    if (cache.has(url) || cache.keys().length < MAX_ENTRIES) cache.set(url, parsed.data);
     return { ok: true, data: parsed.data };
   } catch (error) {
     logger.warn({

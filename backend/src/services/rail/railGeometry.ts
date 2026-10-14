@@ -2,7 +2,13 @@ import { RAIL_GEOMETRY_FALLBACK_REASONS } from "../../schemas/rail";
 import { railProviderSwitches } from "./lookup";
 import { fetchTransitousLine } from "./lookup/transitous";
 import { railRoutingBaseUrl, routeRailLine } from "./openRailRouting";
-import { isTracedShape, lineLengthKm, sliceBetween, type LonLat } from "./railGeometryMath";
+import {
+  isTracedShape,
+  isValidLonLat,
+  lineLengthKm,
+  sliceBetween,
+  type LonLat,
+} from "./railGeometryMath";
 
 /**
  * Which line a journey is drawn with (spec 2026-09-25-rail-domain,
@@ -49,10 +55,11 @@ async function transitousGeometry(input: {
   lookupRef: string | null;
   dep: { lat: number; lon: number };
   arr: { lat: number; lon: number };
+  refresh?: boolean;
 }): Promise<JourneyGeometry> {
   if (input.lookupProvider !== "transitous" || !input.lookupRef) return straight(null);
   if (!(await railProviderSwitches()).transitous) return straight("providerDisabled");
-  const line = await fetchTransitousLine(input.lookupRef);
+  const line = await fetchTransitousLine(input.lookupRef, input.refresh === true);
   if (!line) return straight("providerUnavailable");
   const slice = sliceBetween(line, [input.dep.lon, input.dep.lat], [input.arr.lon, input.arr.lat]);
   if (!slice) return straight("stationOffLine");
@@ -64,8 +71,8 @@ async function transitousGeometry(input: {
  * Which line a journey is saved with. The train's own Transitous trace first;
  * without one, and only where the admin configured an OpenRailRouting, the
  * line over the tracks between the stations (and the stops between them, in
- * order, when known). Successful routes are cached across saves; a disconnected
- * network gets one rail-only retry within the same time budget. Its failure is reported as
+ * order, when known). Successful rail-only routes are cached across saves.
+ * Explicit refresh bypasses cached answers. Failure is reported as
  * `railRoutingUnavailable` / `railRoutingNoRoute` and the journey keeps the
  * straight line under the name `straight`, never a chord presented as routed.
  */
@@ -75,13 +82,14 @@ export async function resolveJourneyGeometry(input: {
   dep: { lat: number; lon: number };
   arr: { lat: number; lon: number };
   via?: ReadonlyArray<{ lat: number; lon: number }>;
+  refresh?: boolean;
 }): Promise<JourneyGeometry> {
   const traced = await transitousGeometry(input);
   if (traced.geometrySource !== "straight") return traced;
   const baseUrl = await railRoutingBaseUrl();
   if (!baseUrl) return traced;
   const points: LonLat[] = [input.dep, ...(input.via ?? []), input.arr].map((p) => [p.lon, p.lat]);
-  const routed = await routeRailLine(baseUrl, points);
+  const routed = await routeRailLine(baseUrl, points, { refresh: input.refresh });
   if (!routed.ok) {
     return straight(routed.reason === "noRoute" ? "railRoutingNoRoute" : "railRoutingUnavailable");
   }
@@ -99,9 +107,7 @@ export function tracedLengthKm(geometry: LonLat[]): number {
 /** A stored `geometry` value read back, or null when it is not a line. */
 export function readStoredLine(value: unknown): LonLat[] | null {
   if (!Array.isArray(value) || value.length < 2) return null;
-  const ok = value.every(
-    (p) => Array.isArray(p) && p.length === 2 && p.every((n) => typeof n === "number")
-  );
+  const ok = value.every(isValidLonLat);
   return ok ? (value as LonLat[]) : null;
 }
 
@@ -209,18 +215,24 @@ export async function resolveEditedGeometry(
   return { kind: "refetched", geo };
 }
 
-/** Explicit refresh keeps every equally good stored line without re-cutting it. */
+/** Explicit refresh replaces automatic lines of equal quality; preserves manual lines and falls back safely. */
 export async function refetchJourneyGeometry(existing: StoredJourneyLine): Promise<GeometryEdit> {
+  const stored = readStoredLine(existing.geometry);
+  if (stored && existing.geometrySource === "manual")
+    return { kind: "kept", line: stored, geometrySource: existing.geometrySource, fallback: null };
   const geo = await resolveJourneyGeometry({
     lookupProvider: existing.lookupProvider,
     lookupRef: existing.lookupRef,
+    refresh: true,
     dep: { lat: existing.depLat, lon: existing.depLon },
     arr: { lat: existing.arrLat, lon: existing.arrLon },
   });
   if (geo.geometrySource === "straight" && geo.fallback === null)
     geo.fallback = "railRoutingNotConfigured";
-  const stored = readStoredLine(existing.geometry);
-  if (stored && lineRank(existing.geometrySource) >= lineRank(geo.geometrySource)) {
+  if (
+    stored &&
+    (geo.geometry === null || lineRank(existing.geometrySource) > lineRank(geo.geometrySource))
+  ) {
     return {
       kind: "kept",
       line: stored,

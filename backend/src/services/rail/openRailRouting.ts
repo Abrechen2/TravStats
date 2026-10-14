@@ -6,7 +6,7 @@ import { getInstanceSettings } from "../instanceSettingsService";
 import { simplifyDegrees } from "../schematicRouter";
 import logger from "../../utils/logger";
 import { railUserAgent } from "./lookup/railHttp";
-import { densifyLine, isTracedShape, type LonLat } from "./railGeometryMath";
+import { densifyLine, isTracedShape, isValidLonLat, type LonLat } from "./railGeometryMath";
 
 /**
  * A self-hosted OpenRailRouting (https://github.com/geofabrik/OpenRailRouting):
@@ -15,7 +15,7 @@ import { densifyLine, isTracedShape, type LonLat } from "./railGeometryMath";
  * timetable trace exists (spec 2026-09-25-rail-domain, phase 3).
  *
  * Off unless an admin configures the base URL. Resolved when a journey
- * is saved; successful routes are shared through a bounded disk cache,
+ * is saved; successful routes are shared through a persistent route store,
  * then frozen on each journey. A failure is a result with a reason, never an
  * exception and never a straight line wearing the name `openrailrouting`.
  */
@@ -55,9 +55,22 @@ const routeAnswerSchema = z.object({
     .array(
       z.object({
         distance: z.number().finite().nonnegative(),
-        snapped_waypoints: z
-          .object({ coordinates: z.array(z.tuple([z.number(), z.number()])) })
-          .optional(),
+        snapped_waypoints: z.object({
+          coordinates: z.array(
+            z.tuple([z.number().min(-180).max(180), z.number().min(-90).max(90)])
+          ),
+        }),
+        details: z.object({
+          railway_class: z
+            .array(
+              z.tuple([
+                z.number().int().nonnegative(),
+                z.number().int().nonnegative(),
+                z.literal("rail"),
+              ])
+            )
+            .min(1),
+        }),
         points: z.object({
           coordinates: z
             .array(
@@ -74,16 +87,6 @@ const routeAnswerSchema = z.object({
 export async function railRoutingBaseUrl(): Promise<string | null> {
   const { railRoutingUrl } = await getInstanceSettings();
   return railRoutingUrl;
-}
-
-function routeUrl(baseUrl: string, points: readonly LonLat[]): string {
-  const url = new URL(`${baseUrl}/route`);
-  for (const [lon, lat] of points) url.searchParams.append("point", `${lat},${lon}`);
-  url.searchParams.set("profile", RAIL_ROUTING_PROFILE);
-  url.searchParams.set("points_encoded", "false");
-  url.searchParams.set("instructions", "false");
-  url.searchParams.set("calc_points", "true");
-  return url.toString();
 }
 
 async function getJson(
@@ -115,39 +118,26 @@ async function fetchRailLine(
   points: readonly LonLat[]
 ): Promise<RailRoutingResult> {
   const signal = AbortSignal.timeout(RAIL_ROUTING_TIMEOUT_MS);
-  let answer = await getJson(routeUrl(baseUrl, points), {}, signal);
-  let railOnly = false;
-  // At large stations all_tracks can snap to a disconnected tram/subway network.
-  // Retry only that failure, on the SAME coordinates, excluding non-rail tracks.
-  // The shared signal bounds both requests together to the normal save budget.
-  const disconnected = z
-    .object({ hints: z.array(z.object({ details: z.string() })) })
-    .safeParse(answer.status === 400 ? answer.body : null);
-  if (
-    disconnected.success &&
-    disconnected.data.hints.some(
-      (hint) => hint.details === "com.graphhopper.util.exceptions.ConnectionNotFoundException"
-    )
-  ) {
-    railOnly = true;
-    answer = await getJson(
-      `${baseUrl}/route`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          profile: RAIL_ROUTING_PROFILE,
-          points,
-          points_encoded: false,
-          instructions: false,
-          calc_points: true,
-          "ch.disable": true,
-          custom_model: { priority: [{ if: "railway_class != RAIL", multiply_by: "0" }] },
-        }),
-      },
-      signal
-    );
-  }
+  // Request the railway network from the start. An all_tracks success can
+  // otherwise include tram/subway tracks, not merely fail to connect.
+  const answer = await getJson(
+    `${baseUrl}/route`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        profile: RAIL_ROUTING_PROFILE,
+        points,
+        points_encoded: false,
+        instructions: false,
+        calc_points: true,
+        details: ["railway_class"],
+        "ch.disable": true,
+        custom_model: { priority: [{ if: "railway_class != RAIL", multiply_by: "0" }] },
+      }),
+    },
+    signal
+  );
   if (answer.status === null) {
     logger.warn({ operation: "rail_routing_request", reason: "no_answer", error: answer.error });
     return { ok: false, reason: "unavailable" };
@@ -167,42 +157,70 @@ async function fetchRailLine(
     logger.warn({ operation: "rail_routing_request", reason: "unexpected_shape" });
     return { ok: false, reason: "unavailable" };
   }
-  const snapped = parsed.data.paths[0].snapped_waypoints?.coordinates;
-  // Never rescue a route by silently moving a requested station far away.
+  const route = parsed.data.paths[0];
+  const snapped = route.snapped_waypoints.coordinates;
+  const raw = route.points.coordinates.map(([lon, lat]) => [lon, lat] as LonLat);
+  const distance = (a: LonLat, b: LonLat) => calculateDistance(a[1], a[0], b[1], b[0]);
   if (
-    railOnly &&
-    (!snapped ||
-      snapped.length !== points.length ||
-      snapped.some(
-        ([lon, lat], i) => calculateDistance(lat, lon, points[i][1], points[i][0]) > 0.5
-      ))
+    snapped.length !== points.length ||
+    snapped.some((point, i) => distance(point, points[i]) > 0.5)
   )
     return { ok: false, reason: "noRoute" };
-  const raw = parsed.data.paths[0].points.coordinates.map(([lon, lat]) => [lon, lat] as LonLat);
+  // Validate the provider's actual geometry BEFORE inserting interpolated points.
+  if (
+    !isTracedShape(raw) ||
+    distance(raw[0], snapped[0]) > 0.05 ||
+    distance(raw[raw.length - 1], snapped[snapped.length - 1]) > 0.05
+  )
+    return { ok: false, reason: "unavailable" };
+  let covered = 0;
+  for (const [from, to] of route.details.railway_class) {
+    if (from !== covered || to <= from || to >= raw.length)
+      return { ok: false, reason: "unavailable" };
+    covered = to;
+  }
+  if (covered !== raw.length - 1) return { ok: false, reason: "unavailable" };
   const line = densifyLine(simplifyDegrees(raw, SIMPLIFY_TOLERANCE_DEG), MAX_STORED_SEGMENT_KM);
   if (!isTracedShape(line)) return { ok: false, reason: "unavailable" };
   return { ok: true, line };
 }
 
-const inFlight = new Map<string, Promise<RailRoutingResult>>();
+const inFlight = new Map<
+  string,
+  { promise: Promise<RailRoutingResult>; refresh: boolean; network: boolean }
+>();
 
 /** Reuse only successful routes; concurrent identical saves make one request. */
 export async function routeRailLine(
   baseUrl: string,
-  points: readonly LonLat[]
+  points: readonly LonLat[],
+  options: { refresh?: boolean } = {}
 ): Promise<RailRoutingResult> {
+  if (points.length < 2 || !points.every(isValidLonLat)) return { ok: false, reason: "noRoute" };
   baseUrl = baseUrl.replace(/\/+$/, "");
   const key = railRouteCacheKey(baseUrl, RAIL_ROUTING_PROFILE, points);
   const existing = inFlight.get(key);
-  if (existing) return structuredClone(await existing);
+  if (existing) {
+    if (!options.refresh || existing.refresh) return structuredClone(await existing.promise);
+    // Do not let an older ordinary request overwrite an explicit fresh result.
+    const result = await existing.promise;
+    if (existing.network) return structuredClone(result);
+    return routeRailLine(baseUrl, points, options);
+  }
   const pending = (async (): Promise<RailRoutingResult> => {
-    const cached = await railRouteCache.get(key);
+    const cached = options.refresh ? null : await railRouteCache.get(key);
     if (cached) return { ok: true, line: cached };
+    const entry = inFlight.get(key);
+    if (entry) entry.network = true;
     const result = await fetchRailLine(baseUrl, points);
     if (result.ok) await railRouteCache.put(key, result.line);
     return result;
   })();
-  inFlight.set(key, pending);
+  inFlight.set(key, {
+    promise: pending,
+    refresh: options.refresh === true,
+    network: options.refresh === true,
+  });
   try {
     return structuredClone(await pending);
   } finally {

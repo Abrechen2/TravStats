@@ -269,9 +269,8 @@ describe("createGraphHopper", () => {
     const [url] = fetchImpl.mock.calls[0];
     const parsed = new URL(String(url));
     expect(parsed.searchParams.get("points_encoded")).toBe("false");
-    // Literal — GraphHopper's cloud API has no "hgv" profile at all; its
-    // documented heavy-vehicle profile is "truck".
-    expect(parsed.searchParams.get("profile")).toBe("truck");
+    // Ordinary road journeys use the car profile.
+    expect(parsed.searchParams.get("profile")).toBe("car");
     expect(parsed.searchParams.getAll("point")).toEqual([
       `${FROM.lat},${FROM.lon}`,
       `${TO.lat},${TO.lon}`,
@@ -436,3 +435,22 @@ describe("createCustomOsrm", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 });
+
+it.each(["osrm", "graphhopper"])(
+  "%s uses distinct car and bicycle profiles in requests and cache",
+  async (name) => {
+    const fetchImpl = jest.fn(async () => jsonResponse(503, {}));
+    const provider =
+      name === "osrm"
+        ? createCustomOsrm("https://router.test", fetchImpl as typeof fetch)
+        : createGraphHopper("test-key", fetchImpl as typeof fetch);
+    const car: RouteRequest = { ...roadRequest(), vehicle: "car" };
+    const bike: RouteRequest = { ...roadRequest(), vehicle: "bicycle" };
+    expect(provider.cacheProfile?.(car)).not.toBe(provider.cacheProfile?.(bike));
+    await provider.route(car);
+    await provider.route(bike);
+    const urls = fetchImpl.mock.calls.map((call) => String((call as unknown[])[0]));
+    expect(urls[0]).toContain("car");
+    expect(urls[1]).toContain(name === "osrm" ? "bicycle" : "bike");
+  }
+);

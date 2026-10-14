@@ -167,12 +167,22 @@ the train took:
    per-journey geometry fields remain compatible with existing clients.
 
 
-   If GraphHopper reports `ConnectionNotFoundException`, retry once on the
-   same coordinates with a custom model excluding non-rail tracks. This
-   handles a station coordinate snapping to an isolated tram/subway network
-   (reproduced at Frankfurt (Main) Hbf). Both requests share the eight-second
-   budget. Every retry waypoint must snap within 500 metres; otherwise the
-   journey retains its normal fallback. No station coordinates are rewritten.
+   Always request a custom model excluding non-rail tracks: a successful
+   `all_tracks` route can silently include tram tracks (reproduced for
+   Wolfratshausen–München Hbf (tief)), not only fail at a disconnected snap.
+   The single request has an eight-second budget. Every waypoint must snap
+   within 500 metres; geometry endpoints must agree with those snaps and
+   railway-class details must cover the entire line with rail segments.
+   Validate raw geometry before simplification/densification, so interpolation
+   cannot disguise a long station-to-station chord as a traced route.
+   No station coordinates are rewritten. The nearest catalogue position wins
+   over a neighbouring station having a UIC code.
+
+   Explicit refresh bypasses both routing and timetable caches and replaces
+   an automatic line of equal quality. A failed refresh retains the previous
+   line; manually drawn lines and higher-quality timetable traces survive.
+   Ordinary saves continue sharing successful cached routes. Version 2 keys
+   isolate previously cached rail geometry and road vehicle-profile results.
 3. **Straight line** (great-circle chord), always — the fallback, and the whole
    of phase 1. Stored as `geometry = null`, `geometrySource = 'straight'`.
 

@@ -35,7 +35,16 @@ const station = (s: { name: string; lat: number; lon: number }) => ({ ...s, coun
 
 /** A GraphHopper /route answer: a dense line through the stops. */
 const routeAnswer = (stops: ReadonlyArray<{ lat: number; lon: number }>) => ({
-  paths: [{ distance: 123_456, points: { type: "LineString", coordinates: tracedLine(stops) } }],
+  paths: [
+    {
+      snapped_waypoints: {
+        coordinates: [stops[0], stops[stops.length - 1]].map((s) => [s.lon, s.lat]),
+      },
+      details: { railway_class: [[0, tracedLine(stops).length - 1, "rail"]] },
+      distance: 123_456,
+      points: { type: "LineString", coordinates: tracedLine(stops) },
+    },
+  ],
 });
 
 describe("Rail journeys and the instance's OpenRailRouting", () => {
@@ -104,6 +113,25 @@ describe("Rail journeys and the instance's OpenRailRouting", () => {
   });
 
   describe("explicit line refresh", () => {
+    it("replaces an existing routed detour, bypasses its cache, and persists the repaired line", async () => {
+      mock([[/orr\.lan:8989\/route/, routeAnswer([FRANKFURT, HANNOVER, BERLIN])]]);
+      const old = (await create(plainJourney())).body.data;
+      jest.mocked(railRouteCache.get).mockResolvedValue(old.geometry);
+      const refreshed = mock([[/orr\.lan:8989\/route/, routeAnswer([FRANKFURT, FULDA, BERLIN])]]);
+      const res = await request(app)
+        .post(`/api/v1/rail/${old.id}/route`)
+        .set("Cookie", cookie)
+        .send({});
+      expect(res.status).toBe(200);
+      expect(refreshed.calls).toHaveLength(1);
+      expect(res.body.data.geometrySource).toBe("openrailrouting");
+      expect(res.body.data.geometry).not.toEqual(old.geometry);
+      expect(res.body.data.distanceKm).toBeLessThan(old.distanceKm);
+      const saved = await prisma.railJourney.findUniqueOrThrow({ where: { id: old.id } });
+      expect(saved.geometry).toEqual(res.body.data.geometry);
+      expect(saved.depLat).toBe(old.depLat);
+      expect(saved.arrLon).toBe(old.arrLon);
+    });
     it("routes an old straight journey without changing stations, times or typed distance", async () => {
       await updateInstanceSettings({ railRoutingUrl: null });
       const old = (await create(plainJourney({ distanceKm: 777 }))).body.data;
@@ -161,12 +189,15 @@ describe("Rail journeys and the instance's OpenRailRouting", () => {
       const res = await create(plainJourney());
       expect(res.status).toBe(201);
       expect(m.calls).toHaveLength(1);
-      const url = new URL(m.calls[0]);
-      expect(url.searchParams.getAll("point")).toEqual([
-        `${FRANKFURT.lat},${FRANKFURT.lon}`,
-        `${BERLIN.lat},${BERLIN.lon}`,
-      ]);
-      expect(url.searchParams.get("profile")).toBe("all_tracks");
+      const init = jest.mocked(global.fetch).mock.calls[0][1];
+      expect(init?.method).toBe("POST");
+      expect(JSON.parse(String(init?.body))).toMatchObject({
+        points: [
+          [FRANKFURT.lon, FRANKFURT.lat],
+          [BERLIN.lon, BERLIN.lat],
+        ],
+        profile: "all_tracks",
+      });
       const row = res.body.data;
       expect(row.geometrySource).toBe("openrailrouting");
       expect(row.geometry[0]).toEqual([FRANKFURT.lon, FRANKFURT.lat]);

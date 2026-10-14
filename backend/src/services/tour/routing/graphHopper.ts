@@ -22,18 +22,10 @@ import { isRoutableMode, RoutableMode, RouteProvider, RouteRequest, RouteResult 
 
 const GRAPHHOPPER_BASE_URL = "https://graphhopper.com/api/1/route";
 
-/**
- * GraphHopper's own profile vocabulary (verified: the pre-built profiles
- * listed in GraphHopper's own blog posts on customizable routing and the
- * routing API docs are `car`, `bike`, `foot`, `hike`, `mtb`, `racingbike`,
- * `scooter`, `truck`, `small_truck` — there is NO `hgv` profile on
- * GraphHopper's cloud API; that string is ORS's vocabulary, not theirs.
- * `truck` is GraphHopper's documented heavy-vehicle profile (dimensions
- * matching a rigid truck like a MAN/Mercedes-Benz Actros), the closest match
- * to a motorhome of the pre-built options.
- */
+/** Default to car: recording a roadtrip does not establish truck dimensions.
+ * Bicycle roadtrips select bike even when their leg mode is road. */
 export const GRAPHHOPPER_PROFILE_BY_MODE: Record<RoutableMode, string> = {
-  road: "truck",
+  road: "car",
   foot: "foot",
   bike: "bike",
 };
@@ -84,12 +76,19 @@ export function createGraphHopper(apiKey: string, fetchImpl: typeof fetch = fetc
     id: "graphhopper",
     cacheIdentity: GRAPHHOPPER_BASE_URL,
     cacheProfile: (req) =>
-      isRoutableMode(req.mode) ? GRAPHHOPPER_PROFILE_BY_MODE[req.mode] : req.mode,
+      isRoutableMode(req.mode)
+        ? GRAPHHOPPER_PROFILE_BY_MODE[
+            req.mode === "road" && req.vehicle === "bicycle" ? "bike" : req.mode
+          ]
+        : req.mode,
     async route(req: RouteRequest): Promise<RouteResult | null> {
       if (!isRoutableMode(req.mode)) {
         return null;
       }
-      const profile = GRAPHHOPPER_PROFILE_BY_MODE[req.mode];
+      const profile =
+        GRAPHHOPPER_PROFILE_BY_MODE[
+          req.mode === "road" && req.vehicle === "bicycle" ? "bike" : req.mode
+        ];
       const params = new URLSearchParams();
       params.append("point", `${req.from.lat},${req.from.lon}`);
       params.append("point", `${req.to.lat},${req.to.lon}`);

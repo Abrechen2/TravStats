@@ -262,7 +262,7 @@ export async function routeLegGeometry(
       : computeLegGeometry(provider, input);
   if (!provider?.cacheIdentity || !isRoutableMode(input.mode)) return compute();
   const key = routeKey([
-    1,
+    2,
     provider.id,
     provider.cacheIdentity,
     [input.from.lon, input.from.lat],

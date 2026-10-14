@@ -98,12 +98,16 @@ export function createCustomOsrm(baseUrl: string, fetchImpl: typeof fetch = fetc
   return {
     id: "custom",
     cacheIdentity: base.toString(),
-    cacheProfile: (req) => (isRoutableMode(req.mode) ? OSRM_PROFILE_BY_MODE[req.mode] : req.mode),
+    cacheProfile: (req) =>
+      isRoutableMode(req.mode)
+        ? OSRM_PROFILE_BY_MODE[req.mode === "road" && req.vehicle === "bicycle" ? "bike" : req.mode]
+        : req.mode,
     async route(req: RouteRequest): Promise<RouteResult | null> {
       if (!isRoutableMode(req.mode)) {
         return null;
       }
-      const profile = OSRM_PROFILE_BY_MODE[req.mode];
+      const profile =
+        OSRM_PROFILE_BY_MODE[req.mode === "road" && req.vehicle === "bicycle" ? "bike" : req.mode];
       const coordinates = `${req.from.lon},${req.from.lat};${req.to.lon},${req.to.lat}`;
 
       const url = new URL(base.toString());

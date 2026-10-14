@@ -95,10 +95,11 @@ const missOf = (reason: "failed" | "outOfTime"): Miss =>
 
 async function fetchTrip(
   tripId: string,
-  deadline: RailDeadline | null
+  deadline: RailDeadline | null,
+  refresh = false
 ): Promise<TripResponse | Miss> {
   const url = `${TRANSITOUS_BASE_URL}/api/v6/trip?tripId=${encodeURIComponent(tripId)}`;
-  const res = await fetchRailJson("transitous", url, tripResponse, deadline);
+  const res = await fetchRailJson("transitous", url, tripResponse, deadline, refresh);
   if (!res.ok) return missOf(res.reason);
   return res.data.legs.length > 0 ? res.data : "unavailable";
 }
@@ -167,8 +168,11 @@ export async function lookupTransitous(query: RailLookupQuery): Promise<Provider
  * answer or has no shape. Cached by URL with the lookup, so saving a journey
  * right after looking it up costs no second request.
  */
-export async function fetchTransitousLine(tripId: string): Promise<LonLat[] | null> {
-  const trip = await fetchTrip(tripId, null);
+export async function fetchTransitousLine(
+  tripId: string,
+  refresh = false
+): Promise<LonLat[] | null> {
+  const trip = await fetchTrip(tripId, null, refresh);
   if (typeof trip === "string") return null;
   const line: LonLat[] = [];
   for (const leg of trip.legs) {
