@@ -122,7 +122,8 @@
     "trips/tripExpenses.ts",
     "trips/tripPhotos.ts",
     "trips/tripStops.ts",
-    "version.ts"
+    "version.ts",
+    "comparisonPeer.ts"
   ],
   "enveloped": [
     "aircraft.ts",
@@ -131,6 +132,8 @@
     "bus.ts",
     "bus/entrySuggestions.ts",
     "bus/stats.ts",
+    "comparison.ts",
+    "comparisonSealed.ts",
     "cruises.ts",
     "cruises/facets.ts",
     "cruises/list.ts",
