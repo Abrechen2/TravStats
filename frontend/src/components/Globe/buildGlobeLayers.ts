@@ -1,3 +1,4 @@
+import { groupMapData, pathIdentity } from "../layers/routeAggregation";
 // Factory for the deck.gl layer stack rendered by GlobeView.
 // Extracted from the inline `useMemo` body so the React component shell
 // stays focused on state + UI and the layer construction can be read
@@ -414,9 +415,11 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     // constructor while keeping the rest literal-checked.
     new PathLayer<CruisePathDatum>({
       id: "globe-cruise-paths",
-      data: cruisePaths,
-      // Lift each [lng, lat] point to [lng, lat, alt] so the line
-      // renders just above the sphere instead of through it.
+      data: groupMapData(
+        cruisePaths,
+        (p) => JSON.stringify([p.color, p.status === "scheduled", pathIdentity(p.path)]),
+        (p) => p.cruiseId
+      ),
       getPath: (d) =>
         d.path.map((p) => [p[0], p[1], CRUISE_PATH_ALTITUDE_M] as [number, number, number]),
       // `d.color` is pre-resolved per-leg in GlobeView's `cruisePaths`

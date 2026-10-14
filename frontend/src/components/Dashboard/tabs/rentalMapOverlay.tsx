@@ -80,7 +80,6 @@ export function buildRentalLegendRows(
 
 /** The logbook's page bound; the map reads pages until it has them all. */
 const PAGE = 500;
-const MAX_RENTALS = 5_000;
 
 /**
  * Every rental the map draws, for one year or all. `enabled` gates the FETCH,
@@ -99,7 +98,7 @@ export function useDashboardRentals(enabled: boolean, year: number | null): Rent
     void (async () => {
       try {
         const all: RentalMapSource[] = [];
-        for (let offset = 0; offset < MAX_RENTALS; offset += PAGE) {
+        for (let offset = 0; !cancelled; offset += PAGE) {
           const page = await rentalApi.list({ limit: PAGE, offset, year: year ?? undefined });
           all.push(...page.rentals);
           if (all.length >= page.total || page.rentals.length === 0) break;

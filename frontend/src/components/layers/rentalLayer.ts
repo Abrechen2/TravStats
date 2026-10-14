@@ -1,3 +1,4 @@
+import { groupMapData, pathIdentity } from "./routeAggregation";
 import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { PathStyleExtension, type PathStyleExtensionProps } from "@deck.gl/extensions";
 import type { Layer } from "@deck.gl/core";
@@ -47,6 +48,8 @@ export type RentalPointRole = "same" | "pickup" | "return";
 
 export interface RentalPointDatum {
   key: string;
+  memberIds?: string[];
+  count?: number;
   position: [number, number];
   role: RentalPointRole;
   label: string;
@@ -54,6 +57,8 @@ export interface RentalPointDatum {
 
 export interface RentalLinkDatum {
   id: string;
+  memberIds?: string[];
+  count?: number;
   path: Array<[number, number]>;
   label: string;
 }
@@ -88,12 +93,16 @@ export function buildRentalPoints(rentals: readonly RentalMapSource[]): RentalPo
       }
     );
   }
-  return points;
+  return groupMapData(
+    points,
+    (p) => JSON.stringify([p.position, p.role, p.label]),
+    (p) => p.key
+  );
 }
 
 /** The dashed link of a one-way rental — none for a rental a roadtrip already draws. */
 export function buildRentalLinks(rentals: readonly RentalMapSource[]): RentalLinkDatum[] {
-  return rentals
+  const links = rentals
     .filter((r) => r.status !== "cancelled" && r.oneWay && r.routeId === null)
     .map((r) => ({
       id: r.id,
@@ -102,6 +111,11 @@ export function buildRentalLinks(rentals: readonly RentalMapSource[]): RentalLin
       >,
       label: `${r.pickupStationName} → ${r.returnStationName}`,
     }));
+  return groupMapData(
+    links,
+    (p) => pathIdentity(p.path),
+    (p) => p.id
+  );
 }
 
 export interface RentalLayerOptions {

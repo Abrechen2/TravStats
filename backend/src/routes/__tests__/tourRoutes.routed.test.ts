@@ -166,6 +166,39 @@ describe("Tour route sections — provider routing", () => {
     expect(res.body.leg.waypoints).toEqual(drawn);
   });
 
+  it.each(["drawn", "routed", "adopted"])(
+    "route-all preserves a stored %s line and distance when the provider fails",
+    async (source) => {
+      const waypoints: Array<[number, number]> = [
+        [OSLO.lon, OSLO.lat],
+        [9.5, 59.2],
+        [KRISTIANSAND.lon, KRISTIANSAND.lat],
+      ];
+      const leg = await prisma.tripRouteLeg.findFirstOrThrow({
+        where: { routeId, fromStopId: osloId, toStopId: kristiansandId },
+      });
+      await prisma.tripRouteLeg.update({
+        where: { id: leg.id },
+        data: { source, waypoints, distanceKm: 345, confidence: "high", drivingMinutes: 234 },
+      });
+      mockResolveProvider.mockResolvedValue(
+        fakeProvider(jest.fn().mockResolvedValue({ failure: "no_route" }))
+      );
+      const res = await request(app).post(routeAllUrl()).set("Cookie", cookie).send();
+      expect(res.status).toBe(200);
+      expect(res.body.fallbackCount).toBe(2);
+      expect(res.body.fallbackReason).toBe("no_route");
+      const saved = await prisma.tripRouteLeg.findUniqueOrThrow({ where: { id: leg.id } });
+      expect(saved).toMatchObject({
+        source,
+        waypoints,
+        distanceKm: 345,
+        confidence: "high",
+        drivingMinutes: 234,
+      });
+    }
+  );
+
   it("hands the section's vehicle to the provider", async () => {
     await prisma.tripRoute.update({ where: { id: routeId }, data: { vehicle: "bicycle" } });
     const routeImpl = jest.fn().mockResolvedValue(null);

@@ -36,7 +36,7 @@ const ride = (over: Partial<TripBusJourney> = {}): TripBusJourney => ({
 describe("bus rides on the trip (forgejo#180)", () => {
   it("draws the chord between the terminals, or the frozen road line where there is one", () => {
     const [chord] = busPaths([ride()]);
-    expect(chord).toEqual({
+    expect(chord).toMatchObject({
       id: "r1",
       path: [
         [127.0, 37.5],
@@ -104,4 +104,25 @@ describe("bus rides on the trip (forgejo#180)", () => {
       ])
     );
   });
+});
+
+it("draws repeated bus geometry once, excluding cancellations and retaining actual variants", () => {
+  const rides = Array.from({ length: 10 }, (_, i) => ride({ id: `bus-${i}` }));
+  expect(busPaths(rides)).toHaveLength(1);
+  expect(busPaths(rides)[0]).toMatchObject({ count: 10, memberIds: rides.map((r) => r.id) });
+  expect(busPaths([ride({ status: "cancelled" })])).toEqual([]);
+  expect(busPathPoints([ride({ status: "cancelled" })])).toEqual([]);
+  expect(
+    busPaths([
+      ...rides,
+      ride({
+        id: "detour",
+        geometry: [
+          [127, 37.5],
+          [128, 38],
+          [128.6, 38.2],
+        ],
+      }),
+    ])
+  ).toHaveLength(2);
 });

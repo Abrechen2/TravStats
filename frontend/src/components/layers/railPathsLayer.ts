@@ -1,3 +1,4 @@
+import { groupMapData, pathIdentity } from "./routeAggregation";
 import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import { greatCirclePath } from "./greatCircle";
@@ -42,10 +43,13 @@ export type RailPathSource = Pick<
  * line "Transitous" — a demo/BRouter line and an OpenRailRouting line are
  * both drawn firmly (`traced`), but neither is the train's own trace.
  */
-export type RailPathSourceKind = "transitous" | "openrailrouting" | "brouter" | "straight";
+export type RailPathSourceKind =
+  "transitous" | "openrailrouting" | "brouter" | "manual" | "straight";
 
 export interface RailPathDatum {
   id: string;
+  memberIds?: string[];
+  count?: number;
   path: Array<[number, number]>;
   /** True when the line follows real track (Transitous or routed); false for a chord. */
   traced: boolean;
@@ -101,6 +105,8 @@ export function railPathSourceKind(journey: RailPathSource): RailPathSourceKind 
   if (isTrackRoutedRailLine(journey)) {
     return journey.geometrySource === "brouter" ? "brouter" : "openrailrouting";
   }
+  if (journey.geometrySource === "manual" && journey.geometry && journey.geometry.length >= 2)
+    return "manual";
   return "straight";
 }
 
@@ -109,7 +115,7 @@ export function railPathSourceKind(journey: RailPathSource): RailPathSourceKind 
  * rail statistic takes of it.
  */
 export function buildRailPaths(journeys: readonly RailPathSource[]): RailPathDatum[] {
-  return journeys
+  const paths = journeys
     .filter((j) => j.status !== "cancelled")
     .map((j) => {
       const source = railPathSourceKind(j);
@@ -121,6 +127,11 @@ export function buildRailPaths(journeys: readonly RailPathSource[]): RailPathDat
         label: `${j.depStationName} → ${j.arrStationName}`,
       };
     });
+  return groupMapData(
+    paths,
+    (p) => `${p.source}:${pathIdentity(p.path)}`,
+    (p) => p.id
+  );
 }
 
 /** Each station once, however many journeys start or end there. */

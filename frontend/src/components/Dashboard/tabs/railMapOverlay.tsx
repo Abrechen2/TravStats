@@ -72,6 +72,7 @@ const SOURCE_KEYS: Record<RailPathSourceKind, string> = {
   transitous: "dashboard:legend.railTraced",
   openrailrouting: "dashboard:legend.railRouted",
   brouter: "dashboard:legend.railBrouter",
+  manual: "dashboard:legend.railManual",
   straight: "dashboard:legend.railStraight",
 };
 
@@ -89,7 +90,13 @@ export function buildRailLegendRows(
   const paths = buildRailPaths(journeys);
   const rows: JSX.Element[] = [];
   const [r, g, b] = hexToRgb(colorHex);
-  for (const source of ["transitous", "openrailrouting", "brouter", "straight"] as const) {
+  for (const source of [
+    "transitous",
+    "openrailrouting",
+    "brouter",
+    "manual",
+    "straight",
+  ] as const) {
     if (!paths.some((p) => p.source === source)) continue;
     const rgba = source === "straight" ? `rgba(${r},${g},${b},0.67)` : `rgb(${r},${g},${b})`;
     rows.push(legendRow(rgba, t(SOURCE_KEYS[source]), `rail-${source}`));

@@ -56,9 +56,20 @@ export function lineLengthKm(line: readonly LonLat[]): number {
   return total;
 }
 
+/** Structural checks shared by provider answers and stored/manual lines. */
+export function isValidLonLat(point: unknown): point is LonLat {
+  return (
+    Array.isArray(point) &&
+    point.length === 2 &&
+    point.every((n) => typeof n === "number" && Number.isFinite(n)) &&
+    Math.abs(point[0]) <= 180 &&
+    Math.abs(point[1]) <= 90
+  );
+}
+
 /** True when every segment is short enough to be a traced track. */
 export function isTracedShape(line: readonly LonLat[]): boolean {
-  if (line.length < 2) return false;
+  if (line.length < 2 || !line.every(isValidLonLat)) return false;
   for (let i = 1; i < line.length; i++) {
     if (km(line[i - 1], line[i]) > MAX_PLAUSIBLE_SEGMENT_KM) return false;
   }
@@ -85,6 +96,7 @@ function nearestIndex(
  * connect the two stations is no line for this journey.
  */
 export function sliceBetween(line: readonly LonLat[], dep: LonLat, arr: LonLat): LonLat[] | null {
+  if (!line.every(isValidLonLat) || !isValidLonLat(dep) || !isValidLonLat(arr)) return null;
   const start = nearestIndex(line, dep, 0);
   if (start.index < 0 || start.km > MAX_STATION_OFFSET_KM) return null;
   const end = nearestIndex(line, arr, start.index);

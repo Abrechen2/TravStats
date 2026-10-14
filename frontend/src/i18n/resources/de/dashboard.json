@@ -323,6 +323,7 @@
     "title": "Legende",
     "railTraced": "Bahn · Streckenverlauf (Transitous)",
     "railRouted": "Bahn · Streckenverlauf (OpenRailRouting)",
+    "railManual": "Bahnstrecke (manuell)",
     "railBrouter": "Bahn · Streckenverlauf (BRouter)",
     "railStraight": "Bahn · Luftlinie",
     "tour": "Tour",

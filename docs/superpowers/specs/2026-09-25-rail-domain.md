@@ -149,6 +149,40 @@ the train took:
    journeys Transitous cannot match. It routes over the tracks and may pick
    another line than the train used, hence its own source label. The public
    demo is experimental and is never a default.
+   Successful routes are kept across journeys without a TTL, keyed by the
+   configured URL, profile, direction and every ordered waypoint. Atomic,
+   individual files live at `/app/data/routes/rail` in production, or
+   `.travstats-data/routes/rail` under the backend working directory in
+   development. The 500-entry hot-memory limit evicts no disk geometry.
+   Corrupt or unwritable storage does not prevent saving a journey; a failed
+   disk write is logged and keeps the current process's hot copy. Failures
+   are not persisted and simultaneous identical requests share one calculation.
+   The same durable store serves road routing (bus, tour, roadtrip) and
+   schematic sea routing in separate namespaces. Changed routing policies
+   require a key-version bump. Existing journey geometry remains untouched.
+   Map layers group matching full paths (including reversed paths) by visual
+   style, retaining member IDs and occurrence counts. Different recorded or
+   drawn paths between the same endpoints remain distinct; cancelled rides
+   draw no paths. This grouping applies after the user's filters. The API's
+   per-journey geometry fields remain compatible with existing clients.
+
+
+   Always request a custom model excluding non-rail tracks: a successful
+   `all_tracks` route can silently include tram tracks (reproduced for
+   Wolfratshausen–München Hbf (tief)), not only fail at a disconnected snap.
+   The single request has an eight-second budget. Every waypoint must snap
+   within 500 metres; geometry endpoints must agree with those snaps and
+   railway-class details must cover the entire line with rail segments.
+   Validate raw geometry before simplification/densification, so interpolation
+   cannot disguise a long station-to-station chord as a traced route.
+   No station coordinates are rewritten. The nearest catalogue position wins
+   over a neighbouring station having a UIC code.
+
+   Explicit refresh bypasses both routing and timetable caches and replaces
+   an automatic line of equal quality. A failed refresh retains the previous
+   line; manually drawn lines and higher-quality timetable traces survive.
+   Ordinary saves continue sharing successful cached routes. Version 2 keys
+   isolate previously cached rail geometry and road vehicle-profile results.
 3. **Straight line** (great-circle chord), always — the fallback, and the whole
    of phase 1. Stored as `geometry = null`, `geometrySource = 'straight'`.
 

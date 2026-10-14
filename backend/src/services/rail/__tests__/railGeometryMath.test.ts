@@ -75,3 +75,17 @@ describe("sliceBetween", () => {
     expect(sliceBetween(line, at(FULDA), at(FRANKFURT))).toBeNull();
   });
 });
+
+it.each([
+  [NaN, 50],
+  [Infinity, 50],
+  [181, 50],
+  [8, 91],
+])("rejects invalid coordinate %s,%s", (lon, lat) => {
+  const line: LonLat[] = [
+    [8, 50],
+    [lon, lat],
+  ];
+  expect(isTracedShape(line)).toBe(false);
+  expect(sliceBetween(line, [8, 50], [8.01, 50])).toBeNull();
+});

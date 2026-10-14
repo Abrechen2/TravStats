@@ -111,7 +111,7 @@ const SAME_STATION_KM = 0.3;
 const BOX_DEG = 0.01;
 
 /**
- * The catalogue row at a position, preferring one with a rail code — how a
+ * The catalogue row at a position, preferring the closest platform, with a rail code only as a tie-breaker — how a
  * lookup's stops (named by the provider) are tied back to the catalogue.
  * Null when nothing lies within 300 m.
  */
@@ -127,7 +127,7 @@ export async function catalogueStationAt(lat: number, lon: number): Promise<Rail
   const ranked = candidates
     .map((s) => ({ s, km: calculateDistance(lat, lon, s.lat, s.lon) }))
     .filter((c) => c.km <= SAME_STATION_KM)
-    .sort((a, b) => Number(b.s.uic !== null) - Number(a.s.uic !== null) || a.km - b.km);
+    .sort((a, b) => a.km - b.km || Number(b.s.uic !== null) - Number(a.s.uic !== null));
   return ranked[0]?.s ?? null;
 }
 
