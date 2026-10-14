@@ -23,7 +23,15 @@ export interface PlanItem {
   booked: boolean;
   bookingId: string | null;
   execution: "unconfirmed" | "confirmed" | "skipped" | "cancelled";
-  source: { kind: string; id: string; version?: string; bookingVersion?: string; auxId?: string; auxVersion?: string; createdAux?: boolean } | null;
+  source: {
+    kind: string;
+    id: string;
+    version?: string;
+    bookingVersion?: string;
+    auxId?: string;
+    auxVersion?: string;
+    createdAux?: boolean;
+  } | null;
 }
 export interface PlanIdea {
   id: string;
@@ -35,6 +43,7 @@ export interface PlanIdea {
 }
 export interface PlanBooking {
   actualBookingId?: string | null;
+  priceGroupId?: string | null;
   id: string;
   kind: PlanKind;
   title: string;
@@ -53,6 +62,9 @@ export interface PlanBooking {
   paid: number;
   currency: string;
   place: string;
+  city?: string;
+  country?: string;
+  address?: string;
   documentIds: string[];
   source: string;
   details: Record<string, unknown>;
@@ -114,6 +126,7 @@ export interface PlanForecast {
 }
 export interface PlanState {
   version: 1;
+  creationHash?: string | null;
   destination: string;
   startDay: string | null;
   endDay: string | null;
@@ -153,7 +166,7 @@ export interface PlanBudget {
   booked: number;
   estimates: number;
   paid: number;
-  due: number;
+  due: number | null;
   total: number;
   remaining: number | null;
   unknown: number;
@@ -168,6 +181,7 @@ export interface PlanProposal {
   expiresAt: string;
   content: {
     summary: string;
+    ideas?: { title: string; note: string; category: string }[];
     assumptions: string[];
     changes: { id: string; day: string | null; time: string | null; reason: string }[];
   };
@@ -185,7 +199,8 @@ export interface PlanView {
 export type PlanCollection =
   "items" | "ideas" | "bookings" | "transfers" | "packing" | "tasks" | "costs";
 export type PlanOperation =
- | { type:"link_actual"; id:string; sourceId:string }
+  | { type: "refresh_existing" }
+  | { type: "link_actual"; id: string; sourceId: string }
   | {
       type: "settings";
       values: Partial<
@@ -227,4 +242,18 @@ export interface PlanWrite {
   clientRef: string;
   baseRevision: number;
   operation: PlanOperation;
+}
+
+/** The plan list carries no notes, documents or full itinerary payload. */
+export interface PlanSummary {
+  id: string;
+  tripId: string;
+  name: string;
+  revision: number;
+  destination: string;
+  startDay: string | null;
+  endDay: string | null;
+  status: PlanState["status"];
+  ideasCount: number;
+  bookingsCount: number;
 }

@@ -13,11 +13,14 @@ import { usePlan } from "./TravPlan/usePlan";
 import { PlanList, PlanAdmin } from "./TravPlan/PlanList";
 import PlanEditor, { type EditorState } from "./TravPlan/PlanEditor";
 import { editors, newEntry, settingFields } from "./TravPlan/editorModel";
-import {PlanTasks,PlanMetrics} from "./TravPlan/PlanParts";
-import {ActualRecordPicker} from "./TravPlan/ActualRecordPicker";
+import { PlanTasks, PlanMetrics } from "./TravPlan/PlanParts";
+import { BookingPlanToggle } from "./TravPlan/BookingPlanToggle";
+import { PlanHandover } from "./TravPlan/PlanHandover";
 import WeatherLocation from "./TravPlan/WeatherLocation";
 import PlanAI from "./TravPlan/PlanAI";
 import ImportPanel from "./TravPlan/ImportPanel";
+import { PackingProfile } from "./TravPlan/PackingProfile";
+import AppShell from "../components/ui/AppShell";
 import "./TravPlan/travplan.css";
 const sections = [
   "overview",
@@ -217,8 +220,10 @@ function PlanContent({ tripId, section }: { tripId: string; section: string }) {
       </div>
     ));
   }
-  const tasks=<PlanTasks state={state} busy={busy} edit={task=>edit("tasks",task)} mutate={mutate}/>;
-  const metrics=<PlanMetrics budget={plan.budget}/>;
+  const tasks = (
+    <PlanTasks state={state} busy={busy} edit={(task) => edit("tasks", task)} mutate={mutate} />
+  );
+  const metrics = <PlanMetrics budget={plan.budget} />;
   return (
     <>
       <div className="tp-head">
@@ -322,10 +327,14 @@ function PlanContent({ tripId, section }: { tripId: string; section: string }) {
                 </button>
               )}
               {state.items
-                .filter((i) => i.day === day)
+                .filter(
+                  (i) => i.day === day && i.execution !== "cancelled" && i.execution !== "skipped"
+                )
                 .sort((a, b) => (a.time || "").localeCompare(b.time || ""))
                 .map(itemRow)}
-              {!state.items.some((i) => i.day === day) && <p>{t("empty")}</p>}
+              {!state.items.some(
+                (i) => i.day === day && i.execution !== "cancelled" && i.execution !== "skipped"
+              ) && <p>{t("empty")}</p>}
             </div>
             <div className="tp-card">
               <div className="tp-head">
@@ -382,6 +391,9 @@ function PlanContent({ tripId, section }: { tripId: string; section: string }) {
       {section === "import" && (
         <>
           <p>{t("bookingsIntro")}</p>
+          <button disabled={busy} onClick={() => void mutate({ type: "refresh_existing" })}>
+            {t("refreshExisting")}
+          </button>
           <div className="tp-actions">
             <button
               className="tp-primary"
@@ -412,9 +424,20 @@ function PlanContent({ tripId, section }: { tripId: string; section: string }) {
                         {b.amount === null ? t("review.unknown") : b.amount + " " + b.currency} ·{" "}
                         {t("review.source")}: {b.source}
                       </p>
-                      <button onClick={() => edit("bookings", b, { review: true })}>
+                      <button
+                        disabled={state.items.some(
+                          (i) => i.bookingId === b.id && i.source !== null
+                        )}
+                        onClick={() => edit("bookings", b, { review: true })}
+                      >
                         {t("edit")}
                       </button>
+                      <BookingPlanToggle
+                        state={state}
+                        bookingId={b.id}
+                        busy={busy}
+                        mutate={mutate}
+                      />
                     </div>
                   </div>
                 ))}
@@ -513,6 +536,7 @@ function PlanContent({ tripId, section }: { tripId: string; section: string }) {
       {section === "ai" && <PlanAI key={tripId} plan={plan} mutate={mutate} onError={onError} />}
       {section === "packing" && (
         <>
+          <PackingProfile state={state} mutate={mutate} busy={busy} />
           <p>{t("packIntro")}</p>
           <div className="tp-grid">
             <div className="tp-card">
@@ -558,7 +582,7 @@ function PlanContent({ tripId, section }: { tripId: string; section: string }) {
             </div>
             <div className="tp-card">
               <h2>{t("forecast")}</h2>
-              <WeatherLocation plan={plan} mutate={mutate} onError={onError}/>
+              <WeatherLocation plan={plan} mutate={mutate} onError={onError} />
               <button
                 disabled={weatherBusy || busy}
                 onClick={() => {
@@ -601,23 +625,38 @@ function PlanContent({ tripId, section }: { tripId: string; section: string }) {
               ) : (
                 <p>{t("weatherUnknown")}</p>
               )}
-              {suggestions.map((s) => (
-                <div key={s} className="tp-row">
-                  <span className="tp-grow">{t("packingIdeas." + s)}</span>
-                  <button
-                    onClick={() =>
-                      edit("packing", {
-                        ...newEntry("packing", null, state.currency, day),
-                        label: t("packingIdeas." + s),
-                        note: state.forecast?.source || "",
-                        manual: false,
-                      })
-                    }
-                  >
-                    {t("add")}
-                  </button>
-                </div>
-              ))}
+              <button
+                disabled={busy || weatherBusy}
+                onClick={() =>
+                  void travplanApi.packingSuggestions(tripId).then(setSuggestions).catch(onError)
+                }
+              >
+                {t("showPackingIdeas")}
+              </button>
+              {suggestions
+                .filter(
+                  (s) =>
+                    !state.packing.some((p) => p.category === "suggestion:" + s) &&
+                    !state.decisions.some((d) => d.id === "packing:" + s)
+                )
+                .map((s) => (
+                  <div key={s} className="tp-row">
+                    <span className="tp-grow">{t("packingIdeas." + s)}</span>
+                    <button
+                      onClick={() =>
+                        edit("packing", {
+                          ...newEntry("packing", null, state.currency, day),
+                          label: t("packingIdeas." + s),
+                          note: state.forecast?.source || "",
+                          manual: false,
+                          category: "suggestion:" + s,
+                        })
+                      }
+                    >
+                      {t("add")}
+                    </button>
+                  </div>
+                ))}
             </div>
           </div>
           {tasks}
@@ -692,55 +731,7 @@ function PlanContent({ tripId, section }: { tripId: string; section: string }) {
           </div>
         </>
       )}
-      {section === "handover" && (
-        <>
-          <div className="tp-card">
-            <h2>{t("readyIntro")}</h2>
-            <p>{t("noAutoCount")}</p>
-            <div className="tp-actions">
-              {state.status === "planning" ? (
-                <button
-                  className="tp-primary"
-                  disabled={busy}
-                  onClick={() => void mutate({ type: "handover" })}
-                >
-                  {t("handover")}
-                </button>
-              ) : (
-                <p>{t("handoverDone")}</p>
-              )}
-              <Link className="tp-button" to={"/trips/" + tripId}>
-                {t("stats")}
-              </Link>
-            </div>
-          </div>
-          <div className="tp-card">
-            {state.items.map((i) => (
-              <div key={i.id} className="tp-row">
-                <div className="tp-grow">
-                  <h3>{i.title}</h3>
-                  <p>
-                    {i.day} · {t("options." + i.kind)}
-                  </p>
-                </div>
-                {(["activity","free","transfer","flight","hotel"].includes(i.kind)||i.execution==="confirmed")&&(<button
-                  disabled={busy}
-                  onClick={() =>
-                    void mutate({
-                      type: "execution",
-                      id: i.id,
-                      execution: i.execution === "confirmed" ? "unconfirmed" : "confirmed",
-                    })
-                  }
-                >
-                  {t(i.execution === "confirmed" ? "unconfirmVisit" : "confirmVisit")}
-                </button>)}
-                  <ActualRecordPicker tripId={tripId} item={i} busy={busy} onLink={sourceId=>void mutate({type:"link_actual",id:i.id,sourceId})}/>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
+      {section === "handover" && <PlanHandover plan={plan} busy={busy} mutate={mutate} />}
       {editor && (
         <PlanEditor
           key={editor.value.id ? String(editor.value.id) : "settings"}
@@ -757,7 +748,7 @@ export default function TravPlanPage() {
   const { tripId, section = "overview" } = useParams(),
     location = useLocation();
   return (
-    <main className="tp-main">
+    <AppShell width="list" className="tp-main">
       {location.pathname === "/plan/admin" ? (
         <PlanAdmin />
       ) : tripId ? (
@@ -765,6 +756,6 @@ export default function TravPlanPage() {
       ) : (
         <PlanList />
       )}
-    </main>
+    </AppShell>
   );
 }

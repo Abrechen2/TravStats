@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useAuthStore } from "../../store/authStore";
-import { travplanApi, type PlanState, type PlanView } from "../../lib/api/travplan";
+import { travplanApi, type PlanState, type PlanSummary } from "../../lib/api/travplan";
 import PlanEditor from "./PlanEditor";
 import { settingFields } from "./editorModel";
 export function PlanList() {
   const { t } = useTranslation("travplan"),
     navigate = useNavigate(),
     isAdmin = useAuthStore((s) => s.user?.isAdmin),
-    [plans, setPlans] = useState<PlanView[]>([]),
+    [plans, setPlans] = useState<PlanSummary[]>([]),
     [enabled, setEnabled] = useState<boolean | null>(null),
     [error, setError] = useState(""),
     [create, setCreate] = useState(false),
@@ -61,15 +61,14 @@ export function PlanList() {
         {plans.map((p) => (
           <div className="tp-card tp-hero" key={p.id}>
             <span className="tp-badge">
-              {t(p.state.status === "ready" ? "readyStatus" : "planningStatus")}
+              {t(p.status === "ready" ? "readyStatus" : "planningStatus")}
             </span>
             <h2>{p.name}</h2>
             <p>
-              {p.state.destination} · {p.state.startDay} – {p.state.endDay}
+              {p.destination} · {p.startDay} – {p.endDay}
             </p>
             <p className="tp-muted">
-              {p.state.ideas.length} {t("sections.workspace")} · {p.state.bookings.length}{" "}
-              {t("sections.import")}
+              {p.ideasCount} {t("sections.workspace")} · {p.bookingsCount} {t("sections.import")}
             </p>
             <Link className="tp-button" to={"/plan/" + p.tripId + "/overview"}>
               {t("continue")}

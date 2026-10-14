@@ -20,9 +20,10 @@ import {
 } from "../services/travplan/store";
 import { writeSchema, proposalContentSchema, stateSchema } from "../services/travplan/schema";
 import { generateProposal } from "../services/travplan/ai";
-import {findLocations} from "../services/travplan/locations";
+import { findLocations } from "../services/travplan/locations";
 import { refreshForecast } from "../services/travplan/weather";
 import { packingSuggestions } from "../services/travplan/rules";
+import { recheckAchievementsAfterWrite } from "../middleware/recheckAchievementsAfterWrite";
 import { planningImportPolicy } from "./travplan/importPolicy";
 const router = Router();
 router.use(planningImportPolicy);
@@ -105,6 +106,11 @@ router.get(
 router.post(
   "/trips/:tripId/plan/mutations",
   ...writeGuard,
+  (req, res, next) => {
+    if (["execution", "link_actual", "undo"].includes(req.body?.operation?.type))
+      recheckAchievementsAfterWrite(req, res, next);
+    else next();
+  },
   route(async (req, res) => {
     res.json(await writePlan(req.userId!, tripId(req), writeSchema.parse(req.body)));
   })
@@ -175,5 +181,17 @@ router.get(
     res.json({ suggestions: packingSuggestions(stateSchema.parse(plan.state)) });
   })
 );
-router.get("/travplan/locations",authenticate,route(async(req,res)=>{const q=z.object({q:z.string().trim().min(2).max(120),language:z.enum(["de","en"]).default("de")}).parse(req.query);res.json({locations:await findLocations(req.userId!,q.q,q.language)})}));
+router.get(
+  "/travplan/locations",
+  authenticate,
+  route(async (req, res) => {
+    const q = z
+      .object({
+        q: z.string().trim().min(2).max(120),
+        language: z.enum(["de", "en"]).default("de"),
+      })
+      .parse(req.query);
+    res.json({ locations: await findLocations(req.userId!, q.q, q.language) });
+  })
+);
 export default router;

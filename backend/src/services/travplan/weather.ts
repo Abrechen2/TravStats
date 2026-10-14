@@ -110,6 +110,8 @@ export async function refreshForecast(
         wind: daily.wind_speed_10m_max[i] ?? null,
       })),
     });
+  if (Buffer.byteLength(JSON.stringify({ ...state, forecast })) > 1024 * 1024)
+    throw new AppError("Plan is too large", 413, "PLAN_TOO_LARGE");
   await assertEnabled();
   return prisma.$transaction(async (tx) => {
     const changed = await tx.travelPlan.updateMany({

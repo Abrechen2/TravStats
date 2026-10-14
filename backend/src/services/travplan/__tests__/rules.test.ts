@@ -186,4 +186,84 @@ describe("Travel planning invariants", () => {
     ];
     expect(checkPlan(s).some((f) => f.code === "arrivalBuffer")).toBe(false);
   });
+  it("keeps separate legs sharing one PNR", () => {
+    let s = booking(emptyState(), "flight", "SAME");
+    const returnLeg = {
+      ...s.bookings[0],
+      id: randomUUID(),
+      day: "2026-11-19",
+      originPlace: "FNC",
+      place: "FRA",
+    };
+    s = applyOperation(s, { type: "upsert", collection: "bookings", value: returnLeg }, 2);
+    expect(s.bookings).toHaveLength(2);
+    expect(s.items).toHaveLength(2);
+  });
+  it("counts a package price once across flights and stays", () => {
+    let s = booking(booking(emptyState(), "flight", "A"), "hotel", "B");
+    const group = randomUUID();
+    s.bookings = s.bookings.map((b) => ({ ...b, priceGroupId: group, amount: 2000, paid: 500 }));
+    expect(deriveBudget(s)).toMatchObject({ total: 2000, paid: 500, due: 1500 });
+  });
+  it("invalidates destination weather after changing the location", () => {
+    const s = emptyState();
+    s.forecast = {
+      latitude: 1,
+      longitude: 2,
+      timezone: "UTC",
+      source: "https://example.com",
+      fetchedAt: new Date().toISOString(),
+      days: [],
+    };
+    expect(applyOperation(s, { type: "settings", values: { latitude: 3 } }, 1).forecast).toBeNull();
+  });
+  it("detects overlap across known local time zones without treating clocks as equal", () => {
+    let s = booking(emptyState(), "flight", "A");
+    s = applyOperation(
+      s,
+      {
+        type: "upsert",
+        collection: "items",
+        value: {
+          id: randomUUID(),
+          title: "Too early",
+          kind: "activity",
+          day: "2026-11-12",
+          time: "11:00",
+          duration: 60,
+          timezone: "Atlantic/Madeira",
+          place: "",
+          note: "",
+          booked: false,
+          bookingId: null,
+          execution: "unconfirmed",
+          source: null,
+        },
+      },
+      2
+    );
+    expect(checkPlan(s).some((f) => f.code === "overlap")).toBe(true);
+  });
+  it("keeps an excluded booking’s record and price without using it as accommodation", () => {
+    let s = booking(emptyState(), "hotel", "A");
+    s.startDay = "2026-11-12";
+    s.endDay = "2026-11-19";
+    s = applyOperation(s, { type: "execution", id: s.items[0].id, execution: "cancelled" }, 2);
+    expect(s.bookings).toHaveLength(1);
+    expect(deriveBudget(s).booked).toBe(840);
+    expect(checkPlan(s).some((f) => f.code === "nightGap")).toBe(true);
+  });
+  it("keeps an unknown committed remainder unknown and includes a known deposit as a cost floor", () => {
+    let s = booking(emptyState(), "hotel", "A");
+    s.bookings[0].amount = null;
+    s.bookings[0].paid = 100;
+    s.budget = 1000;
+    expect(deriveBudget(s)).toMatchObject({
+      total: 100,
+      paid: 100,
+      due: null,
+      remaining: null,
+      unknown: 1,
+    });
+  });
 });

@@ -409,7 +409,8 @@ export interface LlmGenerateRequest {
  * sits behind them).
  */
 async function assertMayAsk(target: LlmTarget): Promise<void> {
-  if (!permitsLlmTarget(target)) throw new AppError("Provider forbidden by request policy",403,"LLM_REQUEST_POLICY");
+  if (!permitsLlmTarget(target))
+    throw new AppError("Provider forbidden by request policy", 403, "LLM_REQUEST_POLICY");
   await assertLlmEnabled();
   await assertLlmCloudConsent({
     kind: kindOf(target),

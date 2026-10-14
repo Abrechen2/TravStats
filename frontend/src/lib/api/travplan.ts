@@ -1,6 +1,8 @@
+import { newPlanId } from "../travplanId";
 import { api, parserApi } from "./client";
 import type {
   PlanView,
+  PlanSummary,
   PlanState,
   PlanOperation,
   PlanProposal,
@@ -20,20 +22,32 @@ export interface PlanConfig {
   weatherDailyLimit: number;
 }
 export const travplanApi = {
- locations:async(q:string,language:"de"|"en")=>(await api.get<{locations:{id:number;name:string;country?:string;latitude:number;longitude:number;timezone:string}[]}>("/travplan/locations",{params:{q,language}})).data.locations,
+  locations: async (q: string, language: "de" | "en") =>
+    (
+      await api.get<{
+        locations: {
+          id: number;
+          name: string;
+          country?: string;
+          latitude: number;
+          longitude: number;
+          timezone: string;
+        }[];
+      }>("/travplan/locations", { params: { q, language } })
+    ).data.locations,
   capabilities: async () => (await api.get<PlanCapabilities>("/travplan/capabilities")).data,
   config: async () => (await api.get<PlanConfig>("/travplan/config")).data,
   setConfig: async (config: PlanConfig) =>
     (await api.patch<PlanConfig>("/travplan/config", config)).data,
-  list: async () => (await api.get<{ plans: PlanView[] }>("/travplan/plans")).data.plans,
+  list: async () => (await api.get<{ plans: PlanSummary[] }>("/travplan/plans")).data.plans,
   create: async (
     name: string,
     settings: Partial<PlanState>,
     tripId?: string,
-    clientRef = crypto.randomUUID()
+    clientRef = newPlanId()
   ) => (await api.post<PlanView>("/travplan/plans", { name, settings, tripId, clientRef })).data,
   get: async (id: string) => (await api.get<PlanView>("/trips/" + id + "/plan")).data,
-  write: async (plan: PlanView, operation: PlanOperation, clientRef = crypto.randomUUID()) =>
+  write: async (plan: PlanView, operation: PlanOperation, clientRef = newPlanId()) =>
     (
       await api.post<PlanView>("/trips/" + plan.tripId + "/plan/mutations", {
         baseRevision: plan.revision,
@@ -52,7 +66,7 @@ export const travplanApi = {
     (
       await api.post<PlanView>("/trips/" + plan.tripId + "/plan/forecast", {
         baseRevision: plan.revision,
-        clientRef: crypto.randomUUID(),
+        clientRef: newPlanId(),
       })
     ).data,
   packingSuggestions: async (id: string) =>

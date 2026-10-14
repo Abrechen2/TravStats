@@ -1,14 +1,17 @@
+import { instantMinute } from "./temporal";
 import type { PlanBudget, PlanFinding, PlanState, PlanTransfer } from "./types";
 export function transferFingerprint(state: PlanState, fromId: string, toId: string): string {
   const from = state.items.find((i) => i.id === fromId),
     to = state.items.find((i) => i.id === toId),
     booking = state.bookings.find((b) => b.id === from?.bookingId);
   return JSON.stringify([
-    booking?.arrivalDay ?? from?.day,
-    booking?.arrivalTime ?? from?.time,
-    booking?.arrivalTimezone ?? from?.timezone,
+    booking ? booking.arrivalDay : from?.day,
+    booking ? booking.arrivalTime : from?.time,
+    booking ? booking.arrivalTimezone : from?.timezone,
     from?.place,
     to?.place,
+    to?.title,
+    state.bookings.find((b) => b.id === to?.bookingId)?.address,
   ]);
 }
 export function deriveBudget(state: PlanState): PlanBudget {
@@ -16,15 +19,29 @@ export function deriveBudget(state: PlanState): PlanBudget {
     estimates = 0,
     paid = 0,
     unknown = 0;
+  let unknownCommitted = false;
   const other = new Set<string>();
-  for (const row of [...state.bookings.map((b) => ({ ...b, kind: "booked" })), ...state.costs]) {
+  const groups = new Set<string>();
+  const bookings = state.bookings.filter((b) => {
+    const key = b.priceGroupId || b.actualBookingId;
+    if (!key) return true;
+    if (groups.has(key)) return false;
+    groups.add(key);
+    return true;
+  });
+  for (const row of [...bookings.map((b) => ({ ...b, kind: "booked" })), ...state.costs]) {
     if (row.currency !== state.currency) {
       other.add(row.currency);
+      if (row.kind === "booked") unknownCommitted = true;
       continue;
     }
     if (row.kind === "booked") paid += Math.round(row.paid * 100);
     if (row.amount === null) {
       unknown++;
+      if (row.kind === "booked") {
+        unknownCommitted = true;
+        booked += Math.round(row.paid * 100);
+      }
       continue;
     }
     const amount = Math.round(row.amount * 100);
@@ -37,9 +54,12 @@ export function deriveBudget(state: PlanState): PlanBudget {
     booked: booked / 100,
     estimates: estimates / 100,
     paid: paid / 100,
-    due: Math.max(0, booked - paid) / 100,
+    due: unknownCommitted ? null : Math.max(0, booked - paid) / 100,
     total: total / 100,
-    remaining: state.budget === null ? null : Math.round(state.budget * 100 - total) / 100,
+    remaining:
+      state.budget === null || unknown > 0 || other.size > 0
+        ? null
+        : Math.round(state.budget * 100 - total) / 100,
     unknown,
     otherCurrencies: [...other],
   };
@@ -68,9 +88,18 @@ export function checkPlan(state: PlanState): PlanFinding[] {
   const active = state.items.filter(
     (i) => i.execution !== "cancelled" && i.execution !== "skipped"
   );
-  for (const flight of active.filter((i) => i.kind === "flight")) {
+  for (const flight of active.filter((i) => ["flight", "rail", "bus", "ferry"].includes(i.kind))) {
+    const arrival = state.bookings.find((b) => b.id === flight.bookingId)?.arrivalDay ?? flight.day;
     const hotel = active
-      .filter((i) => i.kind === "hotel" && (!flight.day || !i.day || i.day >= flight.day))
+      .filter(
+        (i) =>
+          i.kind === "hotel" &&
+          (!arrival ||
+            !i.day ||
+            (i.day <= arrival &&
+              state.bookings.find((b) => b.id === i.bookingId)?.endDay! > arrival) ||
+            i.day >= arrival)
+      )
       .sort((a, b) => (a.day || "").localeCompare(b.day || ""))[0];
     if (!hotel) continue;
     const id = "transfer:" + flight.id + ":" + hotel.id,
@@ -100,7 +129,11 @@ export function checkPlan(state: PlanState): PlanFinding[] {
         "attention"
       );
     const booking = state.bookings.find((b) => b.id === flight.bookingId);
-    const start = localMinute(booking?.arrivalDay ?? null, booking?.arrivalTime ?? null);
+    const start = instantMinute(
+      booking?.arrivalDay ?? null,
+      booking?.arrivalTime ?? null,
+      booking?.arrivalTimezone ?? null
+    );
     if (start !== null && transfer?.duration !== null && transfer?.duration !== undefined) {
       const ready = start + transfer.buffer + transfer.duration;
       const first = active
@@ -110,7 +143,7 @@ export function checkPlan(state: PlanState): PlanFinding[] {
             i.execution === "unconfirmed" &&
             !state.freeDays.includes(i.day || "")
         )
-        .map((i) => ({ i, start: localMinute(i.day, i.time) }))
+        .map((i) => ({ i, start: instantMinute(i.day, i.time, i.timezone) }))
         .filter((x) => x.start !== null && x.start >= start)
         .sort((a, b) => a.start! - b.start!)[0];
       if (first && first.start! < ready)
@@ -119,14 +152,23 @@ export function checkPlan(state: PlanState): PlanFinding[] {
           "arrivalBuffer",
           "workspace",
           { title: first.i.title, minutes: Math.ceil(ready - first.start!) },
-          [flight.day, flight.time, transfer.buffer, transfer.duration, first.i.day, first.i.time],
+          [
+            booking?.arrivalDay,
+            booking?.arrivalTime,
+            booking?.arrivalTimezone,
+            transfer.buffer,
+            transfer.duration,
+            first.i.day,
+            first.i.time,
+          ],
           "attention"
         );
     }
   }
   const events = active
     .filter((i) => !["hotel", "free"].includes(i.kind) && i.day && i.time && i.duration !== null)
-    .map((i) => ({ i, start: localMinute(i.day, i.time)! }))
+    .map((i) => ({ i, start: instantMinute(i.day, i.time, i.timezone) }))
+    .filter((x): x is { i: (typeof active)[number]; start: number } => x.start !== null)
     .sort((a, b) => a.start - b.start);
   const overlapDays = new Set<string>();
   for (let a = 0; a < events.length; a++)
@@ -137,7 +179,7 @@ export function checkPlan(state: PlanState): PlanFinding[] {
     ) {
       const x = events[a],
         y = events[b];
-      if (x.i.timezone !== y.i.timezone) continue;
+
       if (!overlapDays.has(y.i.day!)) {
         overlapDays.add(y.i.day!);
         add(
@@ -156,7 +198,7 @@ export function checkPlan(state: PlanState): PlanFinding[] {
       loads.set(i.day, (loads.get(i.day) || 0) + (i.duration || 0));
   for (const [day, minutes] of loads)
     if (
-      minutes > (state.pace === "relaxed" ? 300 : 480) &&
+      minutes > (state.pace === "relaxed" ? 300 : state.pace === "busy" ? 600 : 480) &&
       !overlapDays.has(day) &&
       !state.freeDays.includes(day)
     )
@@ -179,7 +221,9 @@ export function checkPlan(state: PlanState): PlanFinding[] {
       "attention"
     );
   const hotels = state.bookings.filter(
-    (b) => b.kind === "hotel" || b.kind === "cruise" || b.overnight
+    (b) =>
+      active.some((i) => i.bookingId === b.id) &&
+      (b.kind === "hotel" || b.kind === "cruise" || b.overnight)
   );
   if (hotels.some((h) => !h.day || !h.endDay))
     add(
@@ -206,12 +250,12 @@ export function checkPlan(state: PlanState): PlanFinding[] {
       );
   }
   const budget = deriveBudget(state);
-  if (budget.remaining !== null && budget.remaining < 0)
+  if (state.budget !== null && budget.total > state.budget)
     add(
       "budget",
       "budgetOver",
       "budget",
-      { amount: -budget.remaining, currency: budget.currency },
+      { amount: budget.total - state.budget!, currency: budget.currency },
       [budget.total, state.budget],
       "attention"
     );
@@ -234,10 +278,15 @@ export function packingSuggestions(state: PlanState): string[] {
         (!state.startDay || d.day >= state.startDay) && (!state.endDay || d.day <= state.endDay)
     ) || [];
   const result: string[] = [];
+  if (days.some((d) => d.max !== null && d.max >= 25)) result.push("sun");
   if (days.some((d) => d.rainProbability !== null && d.rainProbability >= 40)) result.push("rain");
   if (days.some((d) => d.min !== null && d.min < 12)) result.push("warm");
   if (state.items.some((i) => /hike|wandern|wanderung|levada/i.test(i.title))) result.push("shoes");
-  return result;
+  return result.filter(
+    (code) =>
+      !state.packing.some((p) => p.category === "suggestion:" + code) &&
+      !state.decisions.some((d) => d.id === "packing:" + code)
+  );
 }
 export function transferNeedsReview(state: PlanState, transfer: PlanTransfer): boolean {
   return (

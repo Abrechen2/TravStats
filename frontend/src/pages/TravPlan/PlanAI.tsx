@@ -114,6 +114,12 @@ export default function PlanAI({
                 <p key={i}>{a}</p>
               ))}
               {stale && <div className="tp-banner">{t("stale")}</div>}
+              {(p.content.ideas || []).map((idea, i) => (
+                <div className="tp-row" key={i}>
+                  <strong>{idea.title}</strong>
+                  <p>{idea.note}</p>
+                </div>
+              ))}
               <div className="tp-grid">
                 {[false, true].map((after) => (
                   <div key={String(after)}>

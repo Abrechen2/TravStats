@@ -43,7 +43,11 @@ export default function TravPlanModeSwitcher() {
   }, [isPlan]);
   const brand = (
     <span className="flex min-w-0 items-center gap-2.5">
-      <LogoMark size={26} />
+      <LogoMark
+        size={26}
+        color={isPlan ? "var(--ts-accent)" : "var(--accent)"}
+        title={isPlan ? "TravPlan" : "TravStats"}
+      />
       <span className="hidden min-[400px]:flex">
         {isPlan ? (
           <strong style={{ fontSize: 19, color: "var(--ts-accent)" }}>TravPlan</strong>

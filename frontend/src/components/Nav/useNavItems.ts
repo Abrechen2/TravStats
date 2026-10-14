@@ -108,14 +108,16 @@ export function useNavItems(pathname = "/"): {
         label: t(`travplan:sections.${section}`),
       });
       return {
-        primary: ["overview", "workspace", "import", "packing"].map(leaf),
-        more: [
-          {
-            id: "planning",
-            label: t("travplan:title"),
-            items: ["transfer", "budget", "ai", "handover"].map(leaf),
-          },
-        ],
+        primary: (match ? ["overview", "workspace", "import", "packing"] : ["overview"]).map(leaf),
+        more: match
+          ? [
+              {
+                id: "planning",
+                label: "TravPlan",
+                items: ["transfer", "budget", "ai", "handover"].map(leaf),
+              },
+            ]
+          : [],
       };
     }
 

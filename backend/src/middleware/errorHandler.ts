@@ -25,10 +25,11 @@ export interface ApiError extends Error {
  * `error` field rather than in `code`.
  */
 export type ApiErrorCode =
- | "LLM_REQUEST_POLICY"
- | "PLAN_EXECUTION_FUTURE"
- | "PLAN_EXECUTION_LINK"
- | "PLAN_EXECUTION_DETAILS"
+  | "LLM_REQUEST_POLICY"
+  | "PLAN_EXECUTION_FUTURE"
+  | "PLAN_EXECUTION_LINK"
+  | "PLAN_EXECUTION_DETAILS"
+  | "PLAN_ANCHOR_STALE"
   | "PLAN_AI_CONSENT"
   | "PLAN_AI_INVALID"
   | "PLAN_AI_NO_ITEMS"

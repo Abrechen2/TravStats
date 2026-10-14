@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { AppError } from "../../middleware/errorHandler";
 import { collectionSchemas, stateSchema } from "./schema";
+import { bookingDuration } from "./temporal";
 import { transferFingerprint } from "./rules";
 import type { PlanState, PlanOperation, PlanItem, PlanBooking } from "./types";
 function refuse(message: string): never {
@@ -12,8 +13,15 @@ export function applyOperation(
   revision: number
 ): PlanState {
   let state: PlanState = structuredClone(input);
-  if (operation.type === "settings") Object.assign(state, operation.values);
-  else if (operation.type === "assign_idea") {
+  if (operation.type === "settings") {
+    Object.assign(state, operation.values);
+    if (
+      state.latitude !== input.latitude ||
+      state.longitude !== input.longitude ||
+      state.timezone !== input.timezone
+    )
+      state.forecast = null;
+  } else if (operation.type === "assign_idea") {
     const idea = state.ideas.find((i) => i.id === operation.ideaId);
     if (!idea) throw new AppError("Idea not found", 404, "PLAN_ITEM_NOT_FOUND");
     let item = state.items.find((i) => i.id === idea.itemId);
@@ -45,6 +53,8 @@ export function applyOperation(
     const item = state.items.find((i) => i.id === operation.id);
     if (!item) throw new AppError("Plan item not found", 404, "PLAN_ITEM_NOT_FOUND");
     item.execution = operation.execution;
+    if (item.source?.kind.startsWith("linkedActual:") && operation.execution !== "confirmed")
+      item.source = null;
   } else if (operation.type === "decision") {
     state.decisions = state.decisions
       .filter((d) => d.id !== operation.value.id)
@@ -64,8 +74,15 @@ export function applyOperation(
         refuse("Confirm execution explicitly");
     }
     if (key === "bookings") {
-      const previousBooking=existing as PlanBooking|undefined;
-      if ((!previousBooking?.actualBookingId&&(value as PlanBooking).actualBookingId)|| (previousBooking?.actualBookingId&&(value as PlanBooking).actualBookingId!==previousBooking.actualBookingId))refuse("Actual booking links cannot be edited here");
+      const previousBooking = existing as PlanBooking | undefined;
+      if (previousBooking?.source === "existing")
+        refuse("Review existing booking data in TravStats");
+      if (
+        (!previousBooking?.actualBookingId && (value as PlanBooking).actualBookingId) ||
+        (previousBooking?.actualBookingId &&
+          (value as PlanBooking).actualBookingId !== previousBooking.actualBookingId)
+      )
+        refuse("Actual booking links cannot be edited here");
 
       const booking = value as PlanBooking,
         duplicate = booking.reference
@@ -73,10 +90,25 @@ export function applyOperation(
               (b) =>
                 b.kind === booking.kind &&
                 b.reference?.toLowerCase() === booking.reference?.toLowerCase() &&
-                b.id !== booking.id
+                b.id !== booking.id &&
+                b.day === booking.day &&
+                b.endDay === booking.endDay &&
+                b.originPlace === booking.originPlace &&
+                b.place === booking.place &&
+                b.details.flightNumber === booking.details.flightNumber
             )
           : undefined;
-      if (duplicate) booking.id = duplicate.id;
+      if (duplicate) {
+        if (
+          duplicate.actualBookingId ||
+          state.items.some((i) => i.bookingId === duplicate.id && i.source)
+        )
+          refuse("Review the existing actual booking instead of reimporting it");
+        booking.id = duplicate.id;
+        booking.priceGroupId = duplicate.priceGroupId;
+      }
+      if (existing && state.items.some((i) => i.bookingId === booking.id && i.source))
+        refuse("Review actual bookings in TravStats");
       let item = state.items.find((i) => i.bookingId === booking.id);
       if (!item) {
         item = {
@@ -99,11 +131,23 @@ export function applyOperation(
       Object.assign(item, {
         title: booking.title,
         kind: booking.kind,
+        duration: bookingDuration(booking),
         day: booking.day,
         time: booking.time,
         timezone: booking.timezone,
         place: booking.place,
       });
+      if (booking.priceGroupId)
+        for (const related of state.bookings.filter(
+          (b) => b.priceGroupId === booking.priceGroupId && b.id !== booking.id
+        )) {
+          if (related.actualBookingId) refuse("Review actual booking costs in TravStats");
+          Object.assign(related, {
+            amount: booking.amount,
+            paid: booking.paid,
+            currency: booking.currency,
+          });
+        }
       const booked = state.bookings.find((b) => b.id === booking.id);
       if (booked && booked.kind !== booking.kind) refuse("A booking cannot change its kind");
     }

@@ -1,13 +1,16 @@
-import { createHash } from "node:crypto";
+import { assertAnchorsCurrent } from "./anchors";
+import { randomUUID, createHash } from "node:crypto";
 import { prisma } from "../../db";
 import type { Prisma, TravelPlan } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import { emptyState, stateSchema, createPlanSchema, proposalContentSchema } from "./schema";
 import { applyOperation, applyProposal } from "./operations";
-import {linkActual} from "./linkActual";
+import { mirrorEmptyTrip } from "./metadata";
+import { adoptExisting } from "./existing";
+import { linkActual } from "./linkActual";
 import { checkPlan, deriveBudget } from "./rules";
-import {prepareExecution,synchronizeExecution,type PreparedExecution} from "./execution";
-import type { PlanState, PlanView, PlanWrite } from "./types";
+import { prepareExecution, synchronizeExecution, type PreparedExecution } from "./execution";
+import type { PlanState, PlanView, PlanWrite, PlanSummary } from "./types";
 export function canonical(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
@@ -66,17 +69,26 @@ export async function ownedPlan(userId: string, tripId: string) {
 }
 export async function readPlan(userId: string, tripId: string): Promise<PlanView> {
   const row = await ownedPlan(userId, tripId);
-  const last=await prisma.travelPlanMutation.findFirst({where:{planId:row.id,revision:row.revision},orderBy:{createdAt:"desc"},select:{id:true}});
-  return view(row, row.trip.name,last?.id);
-}
-export async function listPlans(userId: string) {
-  const rows = await prisma.travelPlan.findMany({
-    where: { trip: { userId } },
-    orderBy: { updatedAt: "desc" },
-    take: 500,
-    include: { trip: { select: { name: true } } },
+  const last = await prisma.travelPlanMutation.findFirst({
+    where: { planId: row.id, revision: row.revision },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
   });
-  return rows.map((r) => view(r, r.trip.name));
+  return view(row, row.trip.name, last?.id);
+}
+export async function listPlans(userId: string): Promise<PlanSummary[]> {
+  // Extract only list metadata in PostgreSQL; do not load hundreds of full plans into Node.
+  return prisma.$queryRaw<PlanSummary[]>`
+    SELECT p.id,p.trip_id AS "tripId",t.name,p.revision,
+      COALESCE(p.state->>'destination','') AS destination,
+      p.state->>'startDay' AS "startDay",p.state->>'endDay' AS "endDay",
+      p.state->>'status' AS status,
+      jsonb_array_length(p.state->'ideas')::int AS "ideasCount",
+      jsonb_array_length(p.state->'bookings')::int AS "bookingsCount"
+    FROM travel_plans p JOIN trips t ON t.id=p.trip_id
+    WHERE t.user_id=${userId}
+    ORDER BY p.updated_at DESC LIMIT 500
+  `;
 }
 export async function createPlan(userId: string, input: unknown): Promise<PlanView> {
   await assertEnabled();
@@ -86,11 +98,22 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
     include: { trip: { select: { name: true } } },
   });
   if (prior) {
-    const first=await prisma.travelPlanMutation.findFirst({where:{planId:prior.id},orderBy:{createdAt:"asc"},select:{before:true}});
-    const original=first?.before as unknown as {state:unknown;name:string}|undefined;
+    if (stateSchema.parse(prior.state).creationHash) {
+      if (stateSchema.parse(prior.state).creationHash !== hash(body))
+        throw new AppError("Creation key has different content", 409, "PLAN_IDEMPOTENCY_CONFLICT");
+      return view(prior, prior.trip.name);
+    }
+    const first = await prisma.travelPlanMutation.findFirst({
+      where: { planId: prior.id },
+      orderBy: { createdAt: "asc" },
+      select: { before: true },
+    });
+    const original = first?.before as unknown as { state: unknown; name: string } | undefined;
     if (
-      (original?.name??prior.trip.name) !== body.name ||
-      hash({ ...emptyState(), ...body.settings }) !== hash(original?.state??prior.state)
+      (body.tripId && prior.tripId !== body.tripId) ||
+      (original?.name ?? prior.trip.name) !== body.name ||
+      hash({ ...emptyState(), ...body.settings }) !==
+        hash({ ...stateSchema.parse(original?.state ?? prior.state), items: [], bookings: [] })
     )
       throw new AppError("Creation key has different content", 409, "PLAN_IDEMPOTENCY_CONFLICT");
     return view(prior, prior.trip.name);
@@ -100,7 +123,16 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
       let trip = body.tripId
         ? await tx.trip.findFirst({
             where: { id: body.tripId, userId },
-            select: { id: true, name: true },
+            select: {
+              id: true,
+              name: true,
+              startDay: true,
+              endDay: true,
+              startDate: true,
+              endDate: true,
+              startZone: true,
+              destinationLabel: true,
+            },
           })
         : null;
       if (body.tripId && !trip) throw new AppError("Trip not found", 404, "TRIP_NOT_FOUND");
@@ -110,10 +142,47 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
       }
       if (!trip)
         trip = await tx.trip.create({
-          data: { userId, name: body.name, status: "planned" },
-          select: { id: true, name: true },
+          data: {
+            userId,
+            name: body.name,
+            status: "planned",
+            destinationLabel: body.settings.destination,
+            startDate: body.settings.startDay
+              ? new Date(body.settings.startDay + "T00:00:00Z")
+              : null,
+            endDate: body.settings.endDay ? new Date(body.settings.endDay + "T00:00:00Z") : null,
+            startDay: body.settings.startDay
+              ? new Date(body.settings.startDay + "T00:00:00Z")
+              : null,
+            endDay: body.settings.endDay ? new Date(body.settings.endDay + "T00:00:00Z") : null,
+            startZone: body.settings.timezone,
+            endZone: body.settings.timezone,
+          },
+          select: {
+            id: true,
+            name: true,
+            startDay: true,
+            endDay: true,
+            startDate: true,
+            endDate: true,
+            startZone: true,
+            destinationLabel: true,
+          },
         });
-      const state = stateSchema.parse({ ...emptyState(), ...body.settings });
+      let state: PlanState = stateSchema.parse({
+        ...emptyState(),
+        ...(body.tripId
+          ? {
+              destination: trip.destinationLabel || "",
+              startDay: (trip.startDay ?? trip.startDate)?.toISOString().slice(0, 10) ?? null,
+              endDay: (trip.endDay ?? trip.endDate)?.toISOString().slice(0, 10) ?? null,
+              timezone: trip.startZone,
+            }
+          : {}),
+        ...body.settings,
+        creationHash: hash(body),
+      });
+      if (body.tripId) state = await adoptExisting(tx, userId, trip.id, state);
       const row = await tx.travelPlan.create({
         data: { tripId: trip.id, createRef: body.clientRef, state: asJson(state) },
       });
@@ -125,12 +194,18 @@ export async function createPlan(userId: string, input: unknown): Promise<PlanVi
       where: { createRef: body.clientRef, trip: { userId } },
       include: { trip: { select: { name: true } } },
     });
-    if (
-      retry &&
-      hash(retry.state) === hash({ ...emptyState(), ...body.settings }) &&
-      retry.trip.name === body.name
-    )
+    if (retry && stateSchema.parse(retry.state).creationHash === hash(body))
       return view(retry, retry.trip.name);
+    if ((error as { code?: string }).code === "P2002") {
+      if (body.tripId) {
+        const existing = await prisma.travelPlan.findFirst({
+          where: { tripId: body.tripId, trip: { userId } },
+          include: { trip: { select: { name: true } } },
+        });
+        if (existing) return view(existing, existing.trip.name);
+      }
+      throw new AppError("Creation key has already been used", 409, "PLAN_IDEMPOTENCY_CONFLICT");
+    }
     throw error;
   }
 }
@@ -153,13 +228,28 @@ export async function writePlan(
   }
   const previous = await replay();
   if (previous) return previous;
-  const prepared = new Map<string,PreparedExecution>();
-  const initial=stateSchema.parse(owned.state);
-  if (owned.revision!==body.baseRevision) throw new AppError("Plan has changed",409,"PLAN_REVISION_CONFLICT");
-  if (body.operation.type==='execution' && body.operation.execution==='confirmed') prepared.set(body.operation.id,await prepareExecution(userId,tripId,initial,body.operation.id));
-  if (body.operation.type==='undo') {
-    const target=await prisma.travelPlanMutation.findFirst({where:{id:body.operation.mutationId,planId:owned.id,revision:owned.revision}});
-    if (target) {const before=stateSchema.parse((target.before as unknown as {state:unknown}).state);for(const item of before.items)if(item.execution==='confirmed'&&initial.items.find(i=>i.id===item.id)?.execution!=='confirmed')prepared.set(item.id,await prepareExecution(userId,tripId,before,item.id))}
+  const prepared = new Map<string, PreparedExecution>();
+  const initial = stateSchema.parse(owned.state);
+  if (owned.revision !== body.baseRevision)
+    throw new AppError("Plan has changed", 409, "PLAN_REVISION_CONFLICT");
+  if (body.operation.type === "execution" && body.operation.execution === "confirmed")
+    prepared.set(
+      body.operation.id,
+      await prepareExecution(userId, tripId, initial, body.operation.id)
+    );
+  if (body.operation.type === "undo") {
+    const target = await prisma.travelPlanMutation.findFirst({
+      where: { id: body.operation.mutationId, planId: owned.id, revision: owned.revision },
+    });
+    if (target) {
+      const before = stateSchema.parse((target.before as unknown as { state: unknown }).state);
+      for (const item of before.items)
+        if (
+          item.execution === "confirmed" &&
+          initial.items.find((i) => i.id === item.id)?.execution !== "confirmed"
+        )
+          prepared.set(item.id, await prepareExecution(userId, tripId, before, item.id));
+    }
   }
   try {
     return await prisma.$transaction(async (tx) => {
@@ -174,6 +264,12 @@ export async function writePlan(
           409,
           "PLAN_REVISION_CONFLICT"
         );
+      const reservation = await tx.travelPlan.updateMany({
+        where: { id: row.id, revision: row.revision },
+        data: { revision: { increment: 1 } },
+      });
+      if (reservation.count !== 1)
+        throw new AppError("Plan changed during this edit", 409, "PLAN_REVISION_CONFLICT");
       const before = stateSchema.parse(row.state);
       let name = row.trip.name,
         next: PlanState;
@@ -187,6 +283,7 @@ export async function writePlan(
         next = stateSchema.parse(saved.state);
         name = saved.name;
       } else if (body.operation.type === "proposal") {
+        await assertAnchorsCurrent(tx, userId, tripId, before);
         const proposal = await tx.travelPlanProposal.findFirst({
           where: { id: body.operation.proposalId, planId: row.id, status: "pending" },
         });
@@ -197,7 +294,12 @@ export async function writePlan(
           proposal.expiresAt < new Date()
         )
           throw new AppError("Proposal is stale; generate it again", 409, "PLAN_PROPOSAL_STALE");
-        next = applyProposal(before, proposalContentSchema.parse(proposal.content).changes);
+        const content = proposalContentSchema.parse(proposal.content);
+        next = applyProposal(before, content.changes);
+        for (const idea of content.ideas)
+          if (!next.ideas.some((i) => i.title.toLowerCase() === idea.title.toLowerCase()))
+            next.ideas.push({ id: randomUUID(), ...idea, priority: "optional", itemId: null });
+        next = stateSchema.parse(next);
         const priorProblems = new Set(
           checkPlan(before)
             .filter((f) => f.code === "overlap")
@@ -213,12 +315,24 @@ export async function writePlan(
           where: { id: proposal.id },
           data: { status: "accepted" },
         });
-      } else if(body.operation.type==="link_actual") {next=await linkActual(tx,userId,tripId,before,body.operation.id,body.operation.sourceId);
+      } else if (body.operation.type === "refresh_existing") {
+        next = await adoptExisting(tx, userId, tripId, before);
+      } else if (body.operation.type === "link_actual") {
+        next = await linkActual(
+          tx,
+          userId,
+          tripId,
+          before,
+          body.operation.id,
+          body.operation.sourceId
+        );
       } else {
         next = applyOperation(before, body.operation, row.revision);
         if (body.operation.type === "settings" && body.operation.name) name = body.operation.name;
       }
       // Kept originals belong to this account and this canonical trip.
+      if (Buffer.byteLength(JSON.stringify(next)) > 1024 * 1024)
+        throw new AppError("Plan is too large", 413, "PLAN_TOO_LARGE");
       const documentIds = [...new Set(next.bookings.flatMap((b) => b.documentIds))];
       if (
         documentIds.length &&
@@ -230,13 +344,10 @@ export async function writePlan(
           404,
           "PLAN_DOCUMENT_NOT_FOUND"
         );
-      await synchronizeExecution(tx,userId,tripId,before,next,prepared);
-      const updated = await tx.travelPlan.updateMany({
-        where: { id: row.id, revision: row.revision },
-        data: { state: asJson(next), revision: { increment: 1 } },
-      });
-      if (updated.count !== 1)
-        throw new AppError("Plan changed during this edit", 409, "PLAN_REVISION_CONFLICT");
+      await synchronizeExecution(tx, userId, tripId, before, next, prepared);
+      if (body.operation.type === "settings" || body.operation.type === "undo")
+        await mirrorEmptyTrip(tx, tripId, next);
+      await tx.travelPlan.update({ where: { id: row.id }, data: { state: asJson(next) } });
       if (name !== row.trip.name) await tx.trip.update({ where: { id: tripId }, data: { name } });
       // Invalidate the trip feed without deriving execution from the plan dates.
       else await tx.trip.update({ where: { id: tripId }, data: { updatedAt: new Date() } });
@@ -271,13 +382,12 @@ export async function writePlan(
 export async function reserveUsage(userId: string, kind: "ai" | "weather", limit: number) {
   const day = new Date(new Date().toISOString().slice(0, 10) + "T00:00:00Z");
   await prisma.$transaction(async (tx) => {
-    const row = await tx.travelPlanUsage.upsert({
-      where: { userId_day_kind: { userId, day, kind } },
-      create: { userId, day, kind, count: 0 },
-      update: {},
+    await tx.travelPlanUsage.createMany({
+      data: [{ userId, day, kind, count: 0 }],
+      skipDuplicates: true,
     });
     const reserved = await tx.travelPlanUsage.updateMany({
-      where: { id: row.id, count: { lt: limit } },
+      where: { userId, day, kind, count: { lt: limit } },
       data: { count: { increment: 1 } },
     });
     if (reserved.count !== 1)

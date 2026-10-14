@@ -237,3 +237,12 @@
     grid-column: auto;
   }
 }
+
+.tp-main .tp-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.tp-hero p {
+  margin: 12px 0 18px;
+}

@@ -16,7 +16,7 @@
   "refresh": "Load current version",
   "undo": "Undo latest change",
   "review": {
-    "confirm": "I checked the dates, local times, references and amounts.",
+    "confirm": "I checked the places, dates, local times, references and amounts.",
     "unknown": "Unknown information stays unknown.",
     "source": "Source"
   },
@@ -62,11 +62,16 @@
     "quantity": "Quantity",
     "scope": "For whom?",
     "due": "Due date · optional",
-    "arrivalDay": "Arrival date (flight)",
-    "arrivalTime": "Local arrival time (flight)",
+    "arrivalDay": "Arrival date",
+    "arrivalTime": "Local arrival time",
     "arrivalTimezone": "Arrival time zone",
     "originPlace": "Departure place",
-    "overnight": "Overnight accommodation included in this booking"
+    "overnight": "Overnight accommodation included in this booking",
+    "washing": "Laundry during the trip",
+    "luggage": "Luggage",
+    "city": "Lodging city",
+    "country": "Lodging country",
+    "address": "Lodging address"
   },
   "options": {
     "relaxed": "Relaxed",
@@ -90,7 +95,12 @@
     "personal": "Personal",
     "shared": "Shared",
     "estimate": "Estimated",
-    "booked": "Committed"
+    "booked": "Committed",
+    "unknown": "Unknown",
+    "yes": "Yes",
+    "no": "No",
+    "cabin": "Cabin luggage",
+    "checked": "Checked luggage"
   },
   "errors": {
     "unknown": "That did not work. Your inputs are preserved. Please try again.",
@@ -116,7 +126,11 @@
     "PLAN_EXECUTION_FUTURE": "This trip is still in the future. Confirm it after it has actually happened.",
     "PLAN_EXECUTION_LINK": "Link the actual record from TravStats.",
     "PLAN_EXECUTION_EDITED": "This record has been edited in TravStats. Reconcile it there to preserve its information.",
-    "LLM_REQUEST_POLICY": "This AI provider is not permitted for this request."
+    "LLM_REQUEST_POLICY": "The configured AI provider is not permitted for this request.",
+    "PLAN_ANCHOR_STALE": "A fixed booking changed in TravStats. Refresh the plan’s source bookings first.",
+    "LLM_DISABLED": "AI is disabled on this server.",
+    "LLM_CLOUD_NOT_CONSENTED": "Cloud providers have not been approved on this server.",
+    "LLM_UNREACHABLE": "The AI provider is currently unreachable."
   },
   "enabled": "Enable TravPlan on this server",
   "config": "TravPlan settings",
@@ -211,7 +225,8 @@
   "packingIdeas": {
     "rain": "Rain jacket or rain protection",
     "warm": "A warm layer",
-    "shoes": "Suitable shoes for the hiking idea"
+    "shoes": "Suitable shoes for the hiking idea",
+    "sun": "Sun protection for warm days"
   },
   "parseAI": "Use AI to read this document (otherwise templates only)",
   "parseLocal": "Document analysis permits a local provider only.",
@@ -220,5 +235,16 @@
   "weatherLocation": "Choose weather location",
   "searchLocation": "Search location",
   "choose": "Choose",
-  "locationSource": "Location data: Open-Meteo / GeoNames. Search and forecast retrieval only run when you ask."
+  "locationSource": "Location data: Open-Meteo / GeoNames. Search and forecast retrieval only run when you ask.",
+  "groupPrice": "Total booking price: counted once across all associated segments.",
+  "refreshExisting": "Refresh bookings from TravStats",
+  "packingProfile": "Your packing preferences",
+  "clothingGuide": "Prepare clothes for around {{days}} days. Adjust quantities per item.",
+  "clothingUnknown": "Travel dates help estimate clothing quantities.",
+  "packingGuide": "Check cabin luggage limits, liquid rules and entry documents with the carrier or responsible authority.",
+  "showPackingIdeas": "Show packing ideas",
+  "excludeBooking": "Exclude from itinerary",
+  "restoreBooking": "Restore to itinerary",
+  "knownTotal": "Known costs so far",
+  "unknownValue": "Not yet known"
 }

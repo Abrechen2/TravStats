@@ -1,3 +1,4 @@
+import { newPlanId } from "../../lib/travplanId";
 import type { PlanCollection, PlanItem } from "../../lib/api/travplan";
 export type Field = {
   key: string;
@@ -35,6 +36,9 @@ export const editors: Record<PlanCollection, Field[]> = {
     field("time", "time", true),
     field("timezone", "text", true),
     field("place"),
+    field("country"),
+    field("city"),
+    field("address"),
     field("originPlace"),
     field("arrivalDay", "date", true),
     field("arrivalTime", "time", true),
@@ -73,7 +77,7 @@ export function newEntry(
   currency: string,
   day: string | null
 ): Record<string, unknown> {
-  const id = crypto.randomUUID();
+  const id = newPlanId();
   const common = { id };
   switch (key) {
     case "items":
@@ -104,7 +108,7 @@ export function newEntry(
         day,
         endDay: null,
         time: null,
-        timezone,
+        timezone: null,
         amount: null,
         paid: 0,
         currency,
@@ -152,6 +156,4 @@ export const settingFields: Field[] = [
   { key: "pace", options: ["relaxed", "balanced", "busy"] },
   field("budget", "number", true),
   field("currency"),
-  field("latitude", "number", true),
-  field("longitude", "number", true),
 ];

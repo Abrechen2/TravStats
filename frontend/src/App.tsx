@@ -234,9 +234,13 @@ function AppContent() {
             <Routes location={location} key={location.pathname}>
               {/* Public routes */}
               <Route path="/setup" element={<SetupPage />} />
-              <Route path="/plan" element={isAuthenticated ? <TravPlanPage /> : <Navigate to="/login" />} />
-              <Route path="/plan/admin" element={isAuthenticated ? <TravPlanPage /> : <Navigate to="/login" />} />
-              <Route path="/plan/:tripId/:section?" element={isAuthenticated ? <TravPlanPage /> : <Navigate to="/login" />} />
+              {["/plan", "/plan/admin", "/plan/:tripId/:section?"].map((path) => (
+                <Route
+                  key={path}
+                  path={path}
+                  element={isAuthenticated ? <TravPlanPage /> : <Navigate to="/login" />}
+                />
+              ))}
               <Route
                 path="/login"
                 element={isAuthenticated ? <Navigate to="/" /> : <LoginPage />}

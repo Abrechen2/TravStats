@@ -39,61 +39,71 @@ export default function PlanEditor({
     >
       <form className="tp-main" style={{ padding: 0 }} onSubmit={(e) => void submit(e)}>
         <div className="tp-form">
-          {editor.fields.map((f) => (
-            <label key={f.key} className={f.type === "textarea" ? "tp-wide" : undefined}>
-              {t("fields." + f.key)}
-              {f.type === "checkbox" ? (
-                <input
-                  type="checkbox"
-                  checked={value[f.key] === true}
-                  onChange={(e) => setValue({ ...value, [f.key]: e.target.checked })}
-                />
-              ) : f.options ? (
-                <select
-                  value={String(value[f.key] ?? "")}
-                  onChange={(e) => setValue({ ...value, [f.key]: e.target.value })}
-                >
-                  {f.options.map((o) => (
-                    <option key={o} value={o}>
-                      {t("options." + o, { defaultValue: o })}
-                    </option>
-                  ))}
-                </select>
-              ) : f.type === "textarea" ? (
-                <textarea
-                  rows={4}
-                  maxLength={1000}
-                  value={String(value[f.key] ?? "")}
-                  onChange={(e) => setValue({ ...value, [f.key]: e.target.value })}
-                />
-              ) : (
-                <input
-                  type={f.type || "text"}
-                  required={f.required}
-                  maxLength={f.max || 200}
-                  min={
-                    f.type === "number" && !["latitude", "longitude"].includes(f.key)
-                      ? 0
-                      : undefined
-                  }
-                  step={f.type === "number" ? "any" : undefined}
-                  value={String(value[f.key] ?? "")}
-                  onChange={(e) =>
-                    setValue({
-                      ...value,
-                      [f.key]:
-                        e.target.value === "" && f.nullable
-                          ? null
-                          : f.type === "number"
-                            ? Number(e.target.value)
-                            : e.target.value,
-                    })
-                  }
-                />
-              )}
-            </label>
-          ))}
+          {editor.fields
+            .filter((f) => {
+              if (editor.collection !== "bookings") return true;
+              if (["country", "city", "address"].includes(f.key)) return value.kind === "hotel";
+              if (["originPlace", "arrivalDay", "arrivalTime", "arrivalTimezone"].includes(f.key))
+                return ["flight", "rail", "bus", "ferry"].includes(String(value.kind));
+              return true;
+            })
+            .map((f) => (
+              <label key={f.key} className={f.type === "textarea" ? "tp-wide" : undefined}>
+                {t("fields." + f.key)}
+                {f.type === "checkbox" ? (
+                  <input
+                    type="checkbox"
+                    checked={value[f.key] === true}
+                    onChange={(e) => setValue({ ...value, [f.key]: e.target.checked })}
+                  />
+                ) : f.options ? (
+                  <select
+                    aria-label={t("fields." + f.key)}
+                    value={String(value[f.key] ?? "")}
+                    onChange={(e) => setValue({ ...value, [f.key]: e.target.value })}
+                  >
+                    {f.options.map((o) => (
+                      <option key={o} value={o}>
+                        {t("options." + o, { defaultValue: o })}
+                      </option>
+                    ))}
+                  </select>
+                ) : f.type === "textarea" ? (
+                  <textarea
+                    rows={4}
+                    maxLength={1000}
+                    value={String(value[f.key] ?? "")}
+                    onChange={(e) => setValue({ ...value, [f.key]: e.target.value })}
+                  />
+                ) : (
+                  <input
+                    type={f.type || "text"}
+                    required={f.required}
+                    maxLength={f.max || 200}
+                    min={
+                      f.type === "number" && !["latitude", "longitude"].includes(f.key)
+                        ? 0
+                        : undefined
+                    }
+                    step={f.type === "number" ? "any" : undefined}
+                    value={String(value[f.key] ?? "")}
+                    onChange={(e) =>
+                      setValue({
+                        ...value,
+                        [f.key]:
+                          e.target.value === "" && f.nullable
+                            ? null
+                            : f.type === "number"
+                              ? Number(e.target.value)
+                              : e.target.value,
+                      })
+                    }
+                  />
+                )}
+              </label>
+            ))}
         </div>
+        {editor.review && value.priceGroupId ? <p>{t("groupPrice")}</p> : null}
         {editor.review && (
           <label className="tp-check">
             <input

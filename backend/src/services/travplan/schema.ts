@@ -52,7 +52,17 @@ export const itemSchema = z
     booked: z.boolean(),
     bookingId: id.nullable(),
     execution: z.enum(["unconfirmed", "confirmed", "skipped", "cancelled"]),
-    source: z.object({ kind: text(40), id, version:text(100).optional(),bookingVersion:text(100).optional(),auxId:id.optional(),auxVersion:text(100).optional(),createdAux:z.boolean().optional() }).nullable(),
+    source: z
+      .object({
+        kind: text(40),
+        id,
+        version: text(100).optional(),
+        bookingVersion: text(100).optional(),
+        auxId: id.optional(),
+        auxVersion: text(100).optional(),
+        createdAux: z.boolean().optional(),
+      })
+      .nullable(),
   })
   .strict();
 export const ideaSchema = z
@@ -68,7 +78,8 @@ export const ideaSchema = z
 export const bookingSchema = z
   .object({
     id,
-    actualBookingId:id.nullable().optional().default(null),
+    actualBookingId: id.nullable().optional().default(null),
+    priceGroupId: id.nullable().optional().default(null),
     kind: kindSchema,
     title: text(200).min(1),
     reference: text(100).nullable(),
@@ -86,6 +97,9 @@ export const bookingSchema = z
     paid: money,
     currency,
     place: text(200),
+    city: text(200).optional().default(""),
+    country: text(200).optional().default(""),
+    address: text(300).optional().default(""),
     documentIds: z.array(id).max(10),
     source: text(200),
     details: z.record(z.string(), z.unknown()),
@@ -182,6 +196,12 @@ export const settingsSchema = z
 export const stateSchema = settingsSchema
   .extend({
     version: z.literal(1),
+    creationHash: z
+      .string()
+      .regex(/^[a-f0-9]{64}$/)
+      .nullable()
+      .optional()
+      .default(null),
     status: z.enum(["planning", "ready", "archived"]),
     handoverRevision: z.number().int().nullable(),
     items: z.array(itemSchema).max(500),
@@ -211,7 +231,8 @@ export const collectionSchemas = {
   costs: costSchema,
 };
 const operationSchema = z.discriminatedUnion("type", [
- z.object({type:z.literal("link_actual"),id,sourceId:id}).strict(),
+  z.object({ type: z.literal("refresh_existing") }).strict(),
+  z.object({ type: z.literal("link_actual"), id, sourceId: id }).strict(),
   z
     .object({
       type: z.literal("settings"),
@@ -262,16 +283,20 @@ export const createPlanSchema = z
 export const proposalContentSchema = z
   .object({
     summary: text(1000).min(1),
+    ideas: z
+      .array(z.object({ title: text(200).min(1), note: text(1000), category: text(40) }).strict())
+      .max(10)
+      .optional()
+      .default([]),
     assumptions: z.array(text(300)).max(10),
-    changes: z
-      .array(z.object({ id, day, time, reason: text(300) }).strict())
-      .min(1)
-      .max(20),
+    changes: z.array(z.object({ id, day, time, reason: text(300) }).strict()).max(20),
   })
-  .strict();
+  .strict()
+  .refine((p) => p.changes.length > 0 || p.ideas.length > 0);
 export function emptyState(): PlanState {
   return {
     version: 1,
+    creationHash: null,
     destination: "",
     startDay: null,
     endDay: null,

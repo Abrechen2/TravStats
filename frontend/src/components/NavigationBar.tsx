@@ -140,7 +140,7 @@ export default function NavigationBar(): JSX.Element {
                   <PrimaryLink key={node.id} node={node} pathname={location.pathname} />
                 )
               )}
-              <MoreMenu sections={more} />
+              {more.length > 0 && <MoreMenu sections={more} />}
             </nav>
           </div>
 

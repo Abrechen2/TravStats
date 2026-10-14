@@ -64,7 +64,7 @@ export function usePlan(tripId: string | undefined) {
           planRef.current = next;
           setPlan(next);
         }
-        return true;
+        return mounted.current && request === generation.current;
       } catch (cause) {
         if (mounted.current && request === generation.current) {
           setError(message(cause));

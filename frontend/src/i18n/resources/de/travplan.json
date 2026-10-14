@@ -16,7 +16,7 @@
   "refresh": "Aktuellen Stand laden",
   "undo": "Letzte Änderung rückgängig",
   "review": {
-    "confirm": "Datum, lokale Uhrzeit, Bezug und Beträge geprüft.",
+    "confirm": "Ich habe Orte, Daten, Ortszeiten, Referenzen und Beträge geprüft.",
     "unknown": "Unbekannte Angaben bleiben offen.",
     "source": "Quelle"
   },
@@ -62,11 +62,16 @@
     "quantity": "Menge",
     "scope": "Für wen?",
     "due": "Bis wann? · optional",
-    "arrivalDay": "Ankunftsdatum (Flug)",
-    "arrivalTime": "Ankunftszeit vor Ort (Flug)",
+    "arrivalDay": "Ankunftsdatum",
+    "arrivalTime": "Örtliche Ankunftszeit",
     "arrivalTimezone": "Zeitzone der Ankunft",
     "originPlace": "Abflug- / Abfahrtsort",
-    "overnight": "Übernachtung bereits in dieser Buchung enthalten"
+    "overnight": "Übernachtung bereits in dieser Buchung enthalten",
+    "washing": "Wäsche waschen vor Ort",
+    "luggage": "Gepäck",
+    "city": "Ort der Unterkunft",
+    "country": "Land der Unterkunft",
+    "address": "Adresse der Unterkunft"
   },
   "options": {
     "relaxed": "Entspannt",
@@ -90,7 +95,12 @@
     "personal": "Persönlich",
     "shared": "Gemeinsam",
     "estimate": "Geschätzt",
-    "booked": "Verbindlich"
+    "booked": "Verbindlich",
+    "unknown": "Noch offen",
+    "yes": "Ja",
+    "no": "Nein",
+    "cabin": "Handgepäck",
+    "checked": "Aufgabegepäck"
   },
   "errors": {
     "unknown": "Das hat gerade nicht geklappt. Deine Eingaben bleiben erhalten. Bitte erneut versuchen.",
@@ -116,7 +126,11 @@
     "PLAN_EXECUTION_FUTURE": "Diese Reise liegt noch in der Zukunft. Bestätige sie erst nach der tatsächlichen Durchführung.",
     "PLAN_EXECUTION_LINK": "Verknüpfe den tatsächlichen Eintrag aus TravStats.",
     "PLAN_EXECUTION_EDITED": "Dieser Eintrag wurde in TravStats erweitert. Gleiche die Durchführung dort ab, damit keine Angaben verloren gehen.",
-    "LLM_REQUEST_POLICY": "Dieser KI-Anbieter ist für diese Anfrage nicht freigegeben."
+    "LLM_REQUEST_POLICY": "Für diesen Auftrag ist der konfigurierte KI-Anbieter nicht freigegeben.",
+    "PLAN_ANCHOR_STALE": "Eine feste Buchung wurde in TravStats geändert. Aktualisiere zuerst die Buchungen im Plan.",
+    "LLM_DISABLED": "Die KI ist auf diesem Server ausgeschaltet.",
+    "LLM_CLOUD_NOT_CONSENTED": "Cloudanbieter sind auf diesem Server noch nicht freigegeben.",
+    "LLM_UNREACHABLE": "Der KI-Anbieter ist gerade nicht erreichbar."
   },
   "enabled": "TravPlan auf diesem Server aktivieren",
   "config": "TravPlan-Einstellungen",
@@ -211,7 +225,8 @@
   "packingIdeas": {
     "rain": "Regenjacke oder Regenschutz",
     "warm": "Eine warme Schicht",
-    "shoes": "Geeignete Schuhe für die Wanderidee"
+    "shoes": "Geeignete Schuhe für die Wanderidee",
+    "sun": "Sonnenschutz für warme Tage"
   },
   "parseAI": "KI zum Auslesen dieses Dokuments verwenden (sonst nur Vorlagen)",
   "parseLocal": "Für die Dokumentanalyse ist ausschließlich ein lokaler Anbieter erlaubt.",
@@ -220,5 +235,16 @@
   "weatherLocation": "Wetterort auswählen",
   "searchLocation": "Ort suchen",
   "choose": "Auswählen",
-  "locationSource": "Ortsdaten: Open-Meteo / GeoNames. Suche und Wetterabruf erfolgen nur auf deinen Wunsch."
+  "locationSource": "Ortsdaten: Open-Meteo / GeoNames. Suche und Wetterabruf erfolgen nur auf deinen Wunsch.",
+  "groupPrice": "Gesamtpreis der Buchung: wird über alle zugehörigen Abschnitte einmal gezählt.",
+  "refreshExisting": "Buchungen aus TravStats aktualisieren",
+  "packingProfile": "Deine Packplanung",
+  "clothingGuide": "Kleidung für etwa {{days}} Tage vorbereiten. Mengen kannst du pro Eintrag anpassen.",
+  "clothingUnknown": "Mit Reisedaten lässt sich die benötigte Kleidungsmenge besser einschätzen.",
+  "packingGuide": "Handgepäckmaße, Flüssigkeitsregeln und Einreiseunterlagen bitte beim Anbieter oder der zuständigen Stelle prüfen.",
+  "showPackingIdeas": "Packideen anzeigen",
+  "excludeBooking": "Aus dem Reiseplan nehmen",
+  "restoreBooking": "Wieder im Reiseplan verwenden",
+  "knownTotal": "Bisher bekannte Kosten",
+  "unknownValue": "Noch unbekannt"
 }
