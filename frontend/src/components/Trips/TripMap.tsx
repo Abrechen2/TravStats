@@ -1,3 +1,4 @@
+import { mapStyleUrl } from "../../lib/mapStyles";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, useMap, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
@@ -38,7 +39,7 @@ import {
   useTripMapColorConfig,
 } from "./tripMapColors";
 
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const DARK_MAP_STYLE = mapStyleUrl("dark");
 
 const INITIAL_VIEW: MapViewState = {
   longitude: 10,

@@ -1,5 +1,6 @@
+import { mapStyleUrl } from "../../lib/mapStyles";
 // Globe basemap catalogue — six tokenless styles, modelled after geojson.io.
-// CARTO + OpenFreeMap + ESRI World Imagery + OSM Standard. None of them
+// OpenFreeMap + ESRI World Imagery + OSM Standard. None of them
 // require an API key.
 //
 // Each entry pairs the MapLibre style with a globe-only `sky` config, which
@@ -96,25 +97,25 @@ export const STYLE_OPTIONS: StyleOption[] = [
   {
     id: "standard",
     label: "Standard",
-    url: "https://tiles.openfreemap.org/styles/liberty",
+    url: mapStyleUrl("standard"),
     sky: SKY_LIGHT,
   },
   {
     id: "light",
     label: "Light",
-    url: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+    url: mapStyleUrl("light"),
     sky: SKY_LIGHT,
   },
   {
     id: "dark",
     label: "Dark",
-    url: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+    url: mapStyleUrl("dark"),
     sky: SKY_DARK,
   },
   {
     id: "voyager",
-    label: "Voyager",
-    url: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
+    label: "Bright",
+    url: mapStyleUrl("voyager"),
     sky: SKY_VOYAGER,
   },
   {

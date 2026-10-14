@@ -1,3 +1,4 @@
+import { mapStyleUrl } from "../../lib/mapStyles";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
 import MapGL, { useControl } from "react-map-gl/maplibre";
@@ -16,7 +17,7 @@ import { useDomainColors } from "../../hooks/useDomainColors";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { RailJourney } from "../../types/rail";
 
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const DARK_MAP_STYLE = mapStyleUrl("dark");
 /** Degrees of margin around the line, so the stations never sit on the frame. */
 const BOUNDS_PAD_DEG = 0.3;
 
