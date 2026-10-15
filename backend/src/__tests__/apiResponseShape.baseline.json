@@ -103,6 +103,8 @@
     "tags.ts",
     "templateStatus.ts",
     "training.ts",
+    "travplan.ts",
+    "travplan/importPolicy.ts",
     "trips.ts",
     "trips/entrySuggestions.ts",
     "trips/photoDto.ts",

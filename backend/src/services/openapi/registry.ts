@@ -46,34 +46,3 @@ const bearerAuth = registry.registerComponent("securitySchemes", "BearerAuth", {
 
 export { registry, bearerAuth };
 
-export function buildOpenApiDocument(): ReturnType<typeof withVersionPreconditions> {
-  const generator = new OpenApiGeneratorV3(registry.definitions);
-  const document = generator.generateDocument({
-    openapi: "3.0.3",
-    info: {
-      title: "TravStats API",
-      version: appVersion,
-      description:
-        "Programmatic access to your travel log: flights, cruises, " +
-        "lodging, places, trips, and the statistics derived from them.\n\n" +
-        "**Scope of this spec.** Everything a normal user token can reach " +
-        "is documented here, and a test fails the build when an endpoint " +
-        "ships without an entry. Two areas are deliberately outside that " +
-        "promise: the admin console API, which is admin-scope only and " +
-        "changes between minor versions, and the first-boot setup wizard, " +
-        "which is unauthenticated and single-use. Neither is an " +
-        "integration surface. If you need something from either, please " +
-        "open an issue rather than reverse-engineering it — the answer is " +
-        "usually a stable endpoint we should have exposed.\n\n" +
-        "**Authentication.** Authenticate every request with a Personal " +
-        "Access Token in the `Authorization` header. Tokens are managed " +
-        "via `/settings/tokens` in the web UI and respect their declared " +
-        "scope (`read`, `write`, `admin`) — write endpoints reject " +
-        "`read`-scoped tokens with 403.",
-      license: { name: "AGPL-3.0-only" },
-    },
-    servers: [{ url: "/api/v1", description: "Same-origin API root" }],
-    security: [{ BearerAuth: [] }],
-  });
-  return withVersionPreconditions(document);
-}

@@ -80,3 +80,5 @@ import "./timeMigration";
 import "./sync";
 
 import "./dawarichStays";
+
+import "./travplan";
