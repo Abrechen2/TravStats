@@ -1,4 +1,5 @@
-import { mapStyleUrl } from "../../lib/mapStyles";
+import { SharedMapOverlays } from "../map/SharedMapOverlays";
+import { useBasemapStyle } from "../map/useBasemapStyle";
 /** Collapsible MapLibre pin-picker map for `LocationInput` — extracted to
  * keep the parent under the project's file-size guideline. Plain
  * `react-map-gl/maplibre` `<Marker draggable>` + click-to-move, NOT deck.gl
@@ -6,8 +7,6 @@ import { mapStyleUrl } from "../../lib/mapStyles";
 import { useEffect, useRef, type JSX } from "react";
 import Map, { Marker, type MapLayerMouseEvent, type MapRef } from "react-map-gl/maplibre";
 import type { LocationCoordinates } from "./LocationInput";
-
-const DARK_MAP_STYLE = mapStyleUrl("dark");
 
 export interface LocationMiniMapProps {
   value: LocationCoordinates | null;
@@ -47,6 +46,7 @@ export function LocationMiniMap({
   onMapClick,
   onMarkerDragEnd,
 }: LocationMiniMapProps): JSX.Element {
+  const mapStyle = useBasemapStyle();
   const mapRef = useRef<MapRef | null>(null);
 
   /**
@@ -85,7 +85,7 @@ export function LocationMiniMap({
       <Map
         ref={mapRef}
         initialViewState={initialViewState}
-        mapStyle={DARK_MAP_STYLE}
+        mapStyle={mapStyle}
         style={{ position: "absolute", inset: 0 }}
         onClick={onMapClick}
         attributionControl={false}
@@ -112,6 +112,7 @@ export function LocationMiniMap({
             />
           </Marker>
         )}
+        <SharedMapOverlays />
       </Map>
       <a
         href="https://www.openstreetmap.org/copyright"

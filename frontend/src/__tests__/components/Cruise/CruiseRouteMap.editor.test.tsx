@@ -33,6 +33,7 @@ vi.mock("react-map-gl/maplibre", async () => {
 
   return {
     default: MapStub,
+    useMap: () => ({}),
     useControl: (factory: () => unknown) => {
       useControlSpy();
       return factory();

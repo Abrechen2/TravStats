@@ -1,4 +1,5 @@
-import { mapStyleUrl } from "../../lib/mapStyles";
+import { SharedMapOverlays } from "../map/SharedMapOverlays";
+import { useBasemapStyle } from "../map/useBasemapStyle";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, useMap, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
@@ -38,8 +39,6 @@ import {
   resolveTripStopColor,
   useTripMapColorConfig,
 } from "./tripMapColors";
-
-const DARK_MAP_STYLE = mapStyleUrl("dark");
 
 const INITIAL_VIEW: MapViewState = {
   longitude: 10,
@@ -140,6 +139,7 @@ export default function TripMap({
   tourGeometries = NO_TOUR_GEOMETRIES,
   extraLayers,
 }: TripMapProps): JSX.Element {
+  const mapStyle = useBasemapStyle();
   const { t, i18n } = useTranslation(["trips", "map"]);
   const locale = i18n.language || "de";
   const getTooltip = useMemo(() => createMarkerTooltip(t, locale), [t, locale]);
@@ -710,7 +710,7 @@ export default function TripMap({
         ref={mapRef}
         reuseMaps
         initialViewState={INITIAL_VIEW}
-        mapStyle={DARK_MAP_STYLE}
+        mapStyle={mapStyle}
         style={{ position: "absolute", inset: 0 }}
         cursor="grab"
         onLoad={(e): void => {
@@ -734,6 +734,7 @@ export default function TripMap({
             interleaved={projection === "globe"}
           />
         )}
+        <SharedMapOverlays />
       </MapGL>
       {/* Names on the globe. deck.gl 9's billboard TextLayer renders nothing
           under globe projection, so the flat map's `trip-stop-labels` and the
