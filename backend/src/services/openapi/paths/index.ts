@@ -82,3 +82,5 @@ import "./sync";
 import "./dawarichStays";
 
 import "./travplan";
+
+import "./geoServer";
