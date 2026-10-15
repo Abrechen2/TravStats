@@ -99,3 +99,33 @@ describe("railPathsLayer", () => {
     expect(buildRailDeckLayers([], [], { color: [1, 2, 3] })).toEqual([]);
   });
 });
+
+it("groups repeat journeys and reversed geometry while retaining every journey id", () => {
+  const base = makeRailJourney();
+  const journeys = Array.from({ length: 10 }, (_, i) => ({
+    ...base,
+    id: `j${i}`,
+    geometry: i % 2 ? [...base.geometry!].reverse() : base.geometry,
+  }));
+  const paths = buildRailPaths(journeys);
+  expect(paths).toHaveLength(1);
+  expect(paths[0].count).toBe(10);
+  expect(paths[0].memberIds).toEqual(journeys.map((j) => j.id));
+  const other = {
+    ...base,
+    id: "detour",
+    geometry: [
+      base.geometry![0],
+      [9, 51] as [number, number],
+      base.geometry![base.geometry!.length - 1],
+    ],
+  };
+  expect(buildRailPaths([...journeys, other])).toHaveLength(2);
+  expect(journeys).toHaveLength(10);
+});
+it("labels manually drawn rail geometry as manual", () => {
+  expect(buildRailPaths([makeRailJourney({ geometrySource: "manual" })])[0]).toMatchObject({
+    source: "manual",
+    traced: true,
+  });
+});

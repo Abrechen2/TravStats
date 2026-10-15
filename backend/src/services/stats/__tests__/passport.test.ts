@@ -100,7 +100,11 @@ describe("buildPassport", () => {
 
   it("marks the home country and the countries first reached this year", () => {
     const p = buildPassport(
-      [flight(MUC, JFK, "2005-07-16"), flight(MUC, NRT, "2026-02-02")],
+      [
+        flight(MUC, JFK, "2005-07-16"),
+        flight(MUC, NRT, "2026-02-02"),
+        flight(NRT, MUC, "2026-02-12"),
+      ],
       COUNTRIES,
       ["MUC"],
       NOW
@@ -117,7 +121,7 @@ describe("buildPassport", () => {
     const p = buildPassport([flight(MUC, JFK, "2019-03-02")], COUNTRIES, [], NOW);
 
     const europe = p.continents.find((c) => c.continent === "Europe");
-    expect(europe?.visited).toBe(1);
+    expect(europe?.visited).toBe(0); // A lone endpoint proves ground only.
     // The denominator is the catalogue's own country list, so it is a real
     // number rather than one of the several competing counts of the world.
     expect(europe?.total).toBeGreaterThan(europe!.visited);
@@ -131,7 +135,7 @@ describe("buildPassport", () => {
     expect(africaRow?.continents).toEqual(["Africa", "Antarctica"]);
 
     const p = buildPassport([flight(MUC, HRG, "2015-02-01")], COUNTRIES, [], NOW);
-    expect(p.summary.continentsVisited).toBe(2); // Europe and Africa, not one row
+    expect(p.summary.continentsVisited).toBe(0); // No off-transit visit recorded.
     expect(p.summary.continentsTotal).toBe(CONTINENTS.length);
   });
 

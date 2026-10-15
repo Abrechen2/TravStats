@@ -105,6 +105,7 @@ export interface CountryDetailPortCall {
 
 /** A place the user recorded visiting, with its country already resolved. */
 export interface CountryDetailPlaceVisit {
+  countryVisitKind?: string;
   placeId: string;
   name: string;
   isoCountryCode: string | null;
@@ -144,6 +145,7 @@ export interface CountryDetailTrackDay {
  * counts as a night, so a cancellation would prove a country.
  */
 export interface CountryDetailLodging {
+  countryVisitKind?: string;
   lodgingId: string;
   /** As the user or the parser wrote it. The client links, it does not compose. */
   name: string;

@@ -197,3 +197,12 @@ describe("buildTripMapGlobeLayers: labels", () => {
     expect(toGlobeLabelPoints([{ ...airport, label: "" }])).toEqual([]);
   });
 });
+
+it("draws repeated cruise geometry only once on the trip globe", () => {
+  const paths = Array.from({ length: 10 }, (_, i) => ({ ...cruisePath, cruiseId: `c${i}` }));
+  const layer = layerById(build({ cruisePaths: paths }), "trip-cruise-paths");
+  const data = layer.props.data as unknown as { count: number; memberIds: string[] }[];
+  expect(data).toHaveLength(1);
+  expect(data[0].count).toBe(10);
+  expect(data[0].memberIds).toHaveLength(10);
+});

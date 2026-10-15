@@ -1,3 +1,4 @@
+import { groupMapData, pathIdentity } from "../layers/routeAggregation";
 // Globe-mode deck.gl layers for the trip map (`Trips/TripMap.tsx`).
 //
 // TripMap is the app's THIRD renderer — the trip "Karte" tab and the tour
@@ -261,7 +262,11 @@ export function buildTripMapGlobeLayers(opts: TripMapGlobeLayersOptions): Layer[
 
   const cruises = new PathLayer<TripCruisePath>({
     id: "trip-cruise-paths",
-    data: cruisePaths as TripCruisePath[],
+    data: groupMapData(
+      cruisePaths,
+      (p) => JSON.stringify([p.color, pathIdentity(p.path)]),
+      (p) => p.cruiseId
+    ),
     getPath: (d) => lift(d.path),
     getColor: (d) => [...d.color, LINE_ALPHA] as [number, number, number, number],
     getWidth: 3,

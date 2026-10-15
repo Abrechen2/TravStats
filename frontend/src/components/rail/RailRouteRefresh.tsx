@@ -17,7 +17,7 @@ export function RailRouteRefresh({
   const { t } = useTranslation(["rail"]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  if (source !== "straight" && !message) return null;
+  if (source === "manual") return null;
   const refresh = async () => {
     setBusy(true);
     try {
@@ -49,11 +49,9 @@ export function RailRouteRefresh({
   };
   return (
     <div className="mb-4">
-      {source === "straight" && (
-        <Button disabled={busy} onClick={() => void refresh()}>
-          {t(busy ? "rail:routeRefresh.busy" : "rail:routeRefresh.action")}
-        </Button>
-      )}
+      <Button disabled={busy} onClick={() => void refresh()}>
+        {t(busy ? "rail:routeRefresh.busy" : "rail:routeRefresh.action")}
+      </Button>
       {message && (
         <p role="status" className="mt-2 text-sm">
           {message}

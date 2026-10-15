@@ -1,3 +1,5 @@
+import enComparison from "./resources/en/comparison.json";
+import deComparison from "./resources/de/comparison.json";
 import enFerry from "./resources/en/ferry.json";
 import deFerry from "./resources/de/ferry.json";
 import i18n from "i18next";
@@ -154,6 +156,7 @@ const resources = {
     openData: enOpenData,
     loyalty: enLoyalty,
     notes: enNotes,
+    comparison: enComparison,
   },
   de: {
     common: deCommon,
@@ -198,6 +201,7 @@ const resources = {
     openData: deOpenData,
     loyalty: deLoyalty,
     notes: deNotes,
+    comparison: deComparison,
   },
 };
 

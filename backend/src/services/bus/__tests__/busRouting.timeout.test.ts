@@ -1,3 +1,7 @@
+import { randomUUID } from "crypto";
+import { createCustomOsrm } from "../../tour/routing/customOsrm";
+import { routeLegGeometry } from "../../tour/routing/routeLeg";
+import * as budget from "../../tour/routing/providerBudget";
 jest.mock("../../tour/routing/resolveProvider", () => ({
   resolveRouteProvider: jest.fn(),
 }));
@@ -33,4 +37,47 @@ describe("fetchBusLine timeout", () => {
       fallback: "provider_error",
     });
   });
+});
+
+it("shares one actual road calculation across ten buses and a roadtrip", async () => {
+  const fetchImpl = jest.fn(
+    async () =>
+      new Response(
+        JSON.stringify({
+          code: "Ok",
+          routes: [
+            {
+              distance: 180000,
+              duration: 9000,
+              geometry: {
+                coordinates: [
+                  [ends.depLon, ends.depLat],
+                  [ends.arrLon, ends.arrLat],
+                ],
+              },
+            },
+          ],
+        })
+      )
+  );
+  const provider = createCustomOsrm(`https://${randomUUID()}.test`, fetchImpl);
+  (resolveRouteProvider as jest.Mock).mockResolvedValue(provider);
+  const spend = jest.spyOn(budget, "takeProviderCall");
+  try {
+    const buses = await Promise.all(
+      Array.from({ length: 10 }, () => fetchBusLine("repeat-bus-test", ends))
+    );
+    expect(buses.every((b) => b.geometrySource === "road")).toBe(true);
+    const trip = await routeLegGeometry(provider, {
+      from: { lon: ends.depLon, lat: ends.depLat },
+      to: { lon: ends.arrLon, lat: ends.arrLat },
+      mode: "road",
+      vehicle: "car",
+    });
+    expect(trip.source).toBe("routed");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(spend).toHaveBeenCalledTimes(1);
+  } finally {
+    spend.mockRestore();
+  }
 });

@@ -50,3 +50,16 @@ describe("roadtrip station markers", () => {
     expect(buildRoadtripStationLayers([], COLORS, 0)).toEqual([]);
   });
 });
+
+it("groups repeated stations while keeping distinct station states", () => {
+  const stations = Array.from({ length: 10 }, (_, i) => ({ ...STATIONS[0], id: `s${i}` }));
+  const [layer] = buildRoadtripStationLayers(stations, COLORS);
+  expect(layer.props.data).toHaveLength(1);
+  const data = layer.props.data as unknown as { count: number; memberIds: string[] }[];
+  expect(data[0].count).toBe(10);
+  expect(data[0].memberIds).toHaveLength(10);
+  expect(
+    buildRoadtripStationLayers([...stations, { ...STATIONS[0], state: "stay" }], COLORS)[0].props
+      .data
+  ).toHaveLength(2);
+});

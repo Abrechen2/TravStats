@@ -67,16 +67,16 @@ export async function fetchBusLine(userId: string, ends: BusEnds): Promise<BusLi
     // rides save as straight lines, and the routing endpoint reports "none".
     if (await isSharedDemoUser(userId)) return straight("no_provider");
     const provider = await resolveRouteProvider(userId);
-    // Checked before the call, after the provider is known to exist (an
-    // instance without one spends nothing). One budget for save, edit,
-    // route-again and the bulk pass alike.
-    if (provider !== null && takeProviderCall(userId) !== "ok") return straight("rate_limited");
     const routed = await withTimeout(
-      routeLegGeometry(provider, {
-        from: { lat: ends.depLat, lon: ends.depLon },
-        to: { lat: ends.arrLat, lon: ends.arrLon },
-        mode: "road",
-      }),
+      routeLegGeometry(
+        provider,
+        {
+          from: { lat: ends.depLat, lon: ends.depLon },
+          to: { lat: ends.arrLat, lon: ends.arrLon },
+          mode: "road",
+        },
+        () => takeProviderCall(userId) === "ok"
+      ),
       BUS_ROUTE_TIMEOUT_MS
     );
     if (routed === null) {

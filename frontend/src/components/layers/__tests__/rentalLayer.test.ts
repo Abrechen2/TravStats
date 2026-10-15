@@ -151,3 +151,21 @@ describe("rentalLayer — the same-station dot", () => {
     expect(resolve(props, "getRadius", pickup)).toBe(RENTAL_RADIUS_PX.end);
   });
 });
+
+it("draws ten repeated rentals as one link and two station markers", () => {
+  const rentals = Array.from({ length: 10 }, (_, i) => ({
+    ...base,
+    id: `r${i}`,
+    oneWay: true,
+    returnStationName: "B",
+    returnLat: 48,
+    returnLon: 11,
+  }));
+  expect(buildRentalLinks(rentals)).toHaveLength(1);
+  expect(buildRentalLinks(rentals)[0].count).toBe(10);
+  expect(buildRentalPoints(rentals)).toHaveLength(2);
+  expect(buildRentalPoints(rentals).every((p) => p.count === 10)).toBe(true);
+  expect(
+    buildRentalLinks([...rentals, { ...rentals[0], id: "linked", routeId: "roadtrip" }])[0].count
+  ).toBe(10);
+});

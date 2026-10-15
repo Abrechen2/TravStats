@@ -1,3 +1,4 @@
+import { groupMapData, pathIdentity } from "../layers/routeAggregation";
 import { PathLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import type { TripBusJourney } from "../../types/bus";
@@ -5,6 +6,8 @@ import { hexToRgb } from "../../lib/domainColor";
 
 export interface BusPathDatum {
   id: string;
+  memberIds?: string[];
+  count?: number;
   path: [number, number][];
   /** Whether the line follows the road or is only the chord between the terminals. */
   routed: boolean;
@@ -19,6 +22,7 @@ export interface BusPathDatum {
 export function busPaths(rides: readonly TripBusJourney[]): BusPathDatum[] {
   const out: BusPathDatum[] = [];
   for (const ride of rides) {
+    if (ride.status === "cancelled") continue;
     const coords = [ride.depLat, ride.depLon, ride.arrLat, ride.arrLon];
     if (coords.some((v) => typeof v !== "number" || !Number.isFinite(v))) continue;
     const routed = Array.isArray(ride.geometry) && ride.geometry.length >= 2;
@@ -33,7 +37,11 @@ export function busPaths(rides: readonly TripBusJourney[]): BusPathDatum[] {
       routed,
     });
   }
-  return out;
+  return groupMapData(
+    out,
+    (p) => `${p.routed}:${pathIdentity(p.path)}`,
+    (p) => p.id
+  );
 }
 
 /**

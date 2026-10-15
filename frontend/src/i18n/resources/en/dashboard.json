@@ -323,6 +323,7 @@
     "title": "Key",
     "railTraced": "Rail · route (Transitous)",
     "railRouted": "Rail · route (OpenRailRouting)",
+    "railManual": "Rail route (manual)",
     "railBrouter": "Rail · route (BRouter)",
     "railStraight": "Rail · straight line",
     "tour": "Tour",

@@ -25,6 +25,8 @@ import DemoBetaNotice from "./components/DemoBetaNotice";
 import SetupIncompleteBanner from "./components/SetupIncompleteBanner";
 import UsageStatsConsentDialog from "./components/UsageStatsConsentDialog";
 
+const ComparisonPage = lazy(() => import("./pages/ComparisonPage"));
+
 // Lazy load pages for code splitting
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const RegisterPage = lazy(() => import("./pages/RegisterPage"));
@@ -231,6 +233,7 @@ function AppContent() {
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
+              <Route path="/compare" element={<ComparisonPage />} />
               {/* Public routes */}
               <Route path="/setup" element={<SetupPage />} />
               <Route

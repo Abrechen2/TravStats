@@ -142,12 +142,12 @@ describe("passport evidence", () => {
     const byDomain = (domain: string) => res.entries.filter((e) => e.domain === domain);
     expect(byDomain("lodging").map((e) => e.credits)).toEqual([["IT"]]);
     expect(byDomain("place").map((e) => e.credits)).toEqual([["ES"]]);
-    expect(byDomain("rail")[0]?.credits).toEqual(["AT", "DE"]);
+    expect(byDomain("rail")).toEqual([]); // Stations alone do not prove visits.
 
     // Norway: counted, and proved by location history alone.
-    expect(counted.has("NO")).toBe(true);
+    expect(counted.has("NO")).toBe(false);
     expect(credited.has("NO")).toBe(false);
-    expect(res.unattributed).toEqual([{ count: 1, reason: "locationHistoryOnly" }]);
+    expect(res.unattributed).toEqual([]);
   });
 
   it("agrees with the passport on airports, entries and continents", async () => {
