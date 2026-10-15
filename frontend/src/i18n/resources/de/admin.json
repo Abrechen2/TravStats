@@ -177,6 +177,10 @@
           "ferryDomain": {
             "name": "Fähren",
             "what": "Überfahrten mit Häfen, Ortszeiten, Fahrzeug, Tickets und Roadtrip-Verknüpfung."
+          },
+          "comparison": {
+            "name": "Freundesvergleiche",
+            "what": "Reisedaten nach ausdrücklicher Freigabe zwischen verknüpften Personen vergleichen."
           }
         }
       },

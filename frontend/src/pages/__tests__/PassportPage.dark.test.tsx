@@ -90,7 +90,9 @@ describe("PassportPage — dark like the rest of the app (T3)", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("passport:summary.countries")).toBeInTheDocument();
+      expect(
+        screen.getByText("passport:summary.countries", { selector: "dt" })
+      ).toBeInTheDocument();
     });
 
     expect(screen.queryByText(/Zurück/)).not.toBeInTheDocument();
@@ -107,7 +109,9 @@ describe("PassportPage — dark like the rest of the app (T3)", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("passport:summary.countries")).toBeInTheDocument();
+      expect(
+        screen.getByText("passport:summary.countries", { selector: "dt" })
+      ).toBeInTheDocument();
     });
 
     expect(container.querySelector(".ts-paper")).toBeNull();

@@ -6,6 +6,7 @@ import type { Lodging, LodgingChain, LodgingType } from "../../types/lodging";
  * rendering the form, and so `LodgingFormModal` stays a component.
  */
 export interface LodgingFormFields {
+  countryVisitKind?: "visit" | "transit";
   type: LodgingType;
   chain: LodgingChain | null;
   name: string;
@@ -30,6 +31,7 @@ export interface LodgingFormFields {
 export function lodgingFormFields(lodging: Lodging | null | undefined): LodgingFormFields {
   return {
     type: lodging?.type ?? "hotel",
+    countryVisitKind: lodging?.countryVisitKind ?? "visit",
     chain: lodging?.chain ?? null,
     name: lodging?.name ?? "",
     address: lodging?.address ?? "",

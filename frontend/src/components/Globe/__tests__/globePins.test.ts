@@ -256,3 +256,22 @@ describe("globePinLabels", () => {
     expect(pills[0].text).toBe("Place a");
   });
 });
+
+it("deduplicates cruise paths on the main globe without reducing source journey counts", () => {
+  const cruisePaths = Array.from({ length: 10 }, (_, i) => ({
+    cruiseId: `c${i}`,
+    cruiseLabel: "Cruise",
+    status: "completed" as const,
+    color: [1, 2, 3] as [number, number, number],
+    path: [
+      [8, 50],
+      [9, 51],
+    ] as [number, number][],
+  }));
+  const layer = layersFor({ cruisePaths }).find((l) => l.id === "globe-cruise-paths")!;
+  const data = layer.props.data as unknown as { count: number; memberIds: string[] }[];
+  expect(data).toHaveLength(1);
+  expect(data[0].count).toBe(10);
+  expect(data[0].memberIds).toHaveLength(10);
+  expect(cruisePaths).toHaveLength(10);
+});

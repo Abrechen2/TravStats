@@ -92,7 +92,7 @@ describe("stats — rail as evidence and as a year", () => {
 
   // The year in review counts rail only where the reader SEES rail — their
   // domain choice and the beta switch (forgejo#265); hidden, it adds no year.
-  it("tells a year of train rides, with its new countries", async () => {
+  it("tells a year of train rides without inferring country visits", async () => {
     const betaBefore = (await getInstanceSettings()).betaFeaturesEnabled;
     await prisma.userSettings.upsert({
       where: { userId },
@@ -112,7 +112,7 @@ describe("stats — rail as evidence and as a year", () => {
       railRides: 1,
       railKm: 262,
       railStraightLineKm: 262,
-      newCountries: 2,
+      newCountries: 0,
     });
   });
 });

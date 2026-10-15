@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { PassportCountry } from "../../types/passport";
 import CountryRow from "./CountryRow";
@@ -30,6 +31,8 @@ export default function CountryTable({
   locale: string;
 }): JSX.Element {
   const { t } = useTranslation(["passport"]);
+  const [view, setView] = useState<"ground" | "visited">("ground");
+  const visible = view === "visited" ? countries.filter((c) => c.visited ?? c.counted) : countries;
 
   return (
     <section
@@ -40,6 +43,26 @@ export default function CountryTable({
       <h2 id="countries-heading" className="text-sm font-semibold px-4 pt-4 pb-1 sm:px-6 sm:pt-6">
         {t("passport:countries.title")}
       </h2>
+      <div
+        className="flex gap-3 px-4 py-3 sm:px-6"
+        role="group"
+        aria-label={t("passport:countries.title")}
+      >
+        {(["ground", "visited"] as const).map((kind) => (
+          <button
+            type="button"
+            key={kind}
+            aria-pressed={view === kind}
+            onClick={() => setView(kind)}
+            className="rounded-md border px-3 py-2 text-sm"
+            style={{ borderColor: "var(--border)" }}
+          >
+            {t(
+              kind === "ground" ? "passport:summary.groundCountries" : "passport:summary.countries"
+            )}
+          </button>
+        ))}
+      </div>
       <p className="text-xs px-4 pb-3 sm:px-6" style={{ color: "var(--text-muted)" }}>
         {t("passport:countries.listNote")}
       </p>
@@ -69,7 +92,7 @@ export default function CountryTable({
             </tr>
           </thead>
           <tbody>
-            {countries.map((row) => (
+            {visible.map((row) => (
               <CountryRow key={row.code} row={row} countryLabel={countryName(row.code, locale)} />
             ))}
           </tbody>

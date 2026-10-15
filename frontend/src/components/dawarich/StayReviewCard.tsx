@@ -65,6 +65,12 @@ export default function StayReviewCard({
   };
   return (
     <Card>
+      {row.evidence.kind === "market" && <p className="t-caption">{text("markets.venue")}</p>}
+      {row.evidence.kind === "venue" && (
+        <p className="t-caption">
+          {text(`venues.types.${row.evidence.market?.venueType ?? "unknown"}`)}
+        </p>
+      )}
       <h3 className="t-heading-sm">{row.name || text("unnamed")}</h3>
       <p className="t-body">
         {(
@@ -92,6 +98,31 @@ export default function StayReviewCard({
       <details>
         <summary>{text("provenance")}</summary>
         <p className="break-all">Dawarich · {row.id}</p>
+        {row.evidence.market && (
+          <div>
+            <p>
+              {t(
+                `trips:dawarichStays.${row.evidence.kind === "venue" ? "venues" : "markets"}.interior`,
+                {
+                  count: row.evidence.market.interiorPointCount,
+                }
+              )}
+            </p>
+            <ul>
+              {row.evidence.market.sourceUrls
+                .filter((url) =>
+                  /^https:\/\/www\.openstreetmap\.org\/(node|way|relation)\/\d+$/.test(url)
+                )
+                .map((url) => (
+                  <li key={url}>
+                    <a className="underline" href={url} target="_blank" rel="noopener noreferrer">
+                      {text(row.evidence.kind === "venue" ? "venues.source" : "markets.source")}
+                    </a>
+                  </li>
+                ))}
+            </ul>
+          </div>
+        )}
         <p>
           {text("detected")}: {row.detectedAt}
         </p>

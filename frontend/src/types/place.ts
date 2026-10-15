@@ -34,6 +34,7 @@ export interface PlaceVisit {
 }
 
 export interface Place {
+  countryVisitKind?: "visit" | "transit";
   id: string;
   /** In Latin script wherever one is known. */
   name: string;
@@ -81,6 +82,7 @@ export interface Place {
 }
 
 export interface PlaceInput {
+  countryVisitKind?: "visit" | "transit";
   name: string;
   /** Null clears it; left out on create, a name glued from both scripts is split by the server. */
   localName?: string | null;

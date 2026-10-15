@@ -6,6 +6,7 @@ import { zoneOf } from "../../../shared/time/zoneOf";
 import { visitColumnsFromResolved } from "../../timeModel/visitColumns";
 import { recheckAchievements } from "../../../utils/achievements";
 import type { StayReview } from "../../../schemas/dawarichStays";
+import { venueCategory, VENUE_TYPES, type VenueType } from "../marketVisits/venueTypes";
 import { meters } from "./detect";
 
 async function acceptStayOnce(userId: string, id: string, input: StayReview) {
@@ -27,10 +28,37 @@ async function acceptStayOnce(userId: string, id: string, input: StayReview) {
         !(await tx.trip.findFirst({ where: { id: input.tripId, userId }, select: { id: true } }))
       )
         throw new AppError("Trip not found", 404);
+      const evidence = (row.evidence ?? {}) as {
+        kind?: string;
+        market?: { identity?: string; osmRef?: string; venueType?: VenueType };
+      };
+      const sameVenue =
+        (evidence.kind === "market" || evidence.kind === "venue") &&
+        (!evidence.market?.venueType || VENUE_TYPES.includes(evidence.market.venueType)) &&
+        input.name === row.name &&
+        meters(input, { lat: row.sourceLat, lon: row.sourceLon }) <= 100;
+      const osmRef =
+        sameVenue && /^((node|way|relation)\/\d+)$/.test(evidence.market?.osmRef ?? "")
+          ? `osm:${evidence.market!.osmRef}`
+          : null;
+      const wikidataId =
+        sameVenue && /^wikidata:Q[1-9][0-9]*$/.test(evidence.market?.identity ?? "")
+          ? evidence.market!.identity!.slice(9)
+          : null;
       let place = input.placeId
         ? await tx.place.findFirst({ where: { id: input.placeId, userId } })
         : null;
       if (input.placeId && !place) throw new AppError("Place not found", 404);
+      if (!place && (osmRef || wikidataId))
+        place = await tx.place.findFirst({
+          where: {
+            userId,
+            OR: [
+              ...(osmRef ? [{ externalRef: osmRef }] : []),
+              ...(wikidataId ? [{ wikidataId }] : []),
+            ],
+          },
+        });
       // A second finding may have been accepted since the scan. Reuse an own
       // nearby place of the same name before making another copy.
       if (!place) {
@@ -60,7 +88,8 @@ async function acceptStayOnce(userId: string, id: string, input: StayReview) {
             name: input.name,
             lat: input.lat,
             lon: input.lon,
-            category: "other",
+            category: sameVenue ? venueCategory(evidence.market?.venueType ?? "market") : "other",
+            ...(sameVenue ? { externalRef: osmRef, wikidataId } : {}),
             dataSource: "dawarich",
             visited: true,
           },
@@ -87,7 +116,12 @@ async function acceptStayOnce(userId: string, id: string, input: StayReview) {
           OR: [
             ...(prior?.visitId ? [{ id: prior.visitId }] : []),
             { visitedAtUtc: null, visitedAt: { gte: start.visitedAt!, lte: end.visitedAt! } },
-            { visitedAtUtc: { gte: start.visitedAtUtc, lte: end.visitedAtUtc } },
+            {
+              visitedAtUtc: {
+                gte: new Date(start.visitedAtUtc.getTime() - (sameVenue ? 600000 : 0)),
+                lte: new Date(end.visitedAtUtc.getTime() + (sameVenue ? 600000 : 0)),
+              },
+            },
             { visitedPrecision: "day", visitedAt: { gte: dayStart, lt: dayEnd } },
           ],
         },

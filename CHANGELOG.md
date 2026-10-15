@@ -26,6 +26,16 @@ previous image alone does not know `completed`.
 
 ### Added
 
+- **Dawarich can suggest whole venues beyond markets.** A separate opt-in adds shopping malls, parks, zoos, theme parks and museum grounds. Independent overlapping venues stay reviewable, and visits are recorded only after confirmation.
+
+- **Markets are suggested as whole venues.** With separate consent, Dawarich
+  scans automatically fetch public OpenStreetMap market boundaries for coarse
+  regions along your track. A visit across several stalls stays one suggestion,
+  with original point IDs, boundary sources and visible coverage gaps. Cached
+  maps, bounded requests and remembered decisions avoid repeated work and
+  duplicate visits; only confirmation records a visit. Hidden Places pause
+  scanning, and manual scans can review the last 7, 14 or 30 days.
+
 - **Dawarich can suggest stays.** With your consent, Dawarich location history
   is scanned for places you stayed. Each suggestion is reviewed, edited and
   accepted or rejected, and a rejection is remembered. A slow scan can no

@@ -31,6 +31,7 @@ const latField = z.number().min(-90).max(90);
 const lonField = z.number().min(-180).max(180);
 
 const basePlaceSchema = z.object({
+  countryVisitKind: z.enum(["visit", "transit"]).optional(),
   name: z.string().trim().min(1).max(200),
   /**
    * The name in the place's own script, beside a Latin `name` (forgejo#199) —

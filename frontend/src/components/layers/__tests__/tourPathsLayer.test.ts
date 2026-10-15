@@ -106,3 +106,30 @@ describe("buildTourPaths", () => {
     ).toEqual([]);
   });
 });
+
+it.each([false, true])(
+  "groups repeated tour/roadtrip shapes (roadtrip=%s) without losing legs",
+  (isRoadtrip) => {
+    const entries = Array.from({ length: 10 }, (_, i) => {
+      const geometry = geo("road", "drawn");
+      geometry.features[0].properties.legId = `leg-${i}`;
+      if (i % 2) geometry.features[0].geometry.coordinates.reverse();
+      return { routeId: `route-${i}`, name: `Tour ${i}`, geometry, isRoadtrip };
+    });
+    const paths = buildTourPaths(entries);
+    expect(paths).toHaveLength(1);
+    expect(paths[0].count).toBe(10);
+    expect(paths[0].memberIds).toHaveLength(10);
+    const variant = geo("road", "drawn");
+    variant.features[0].geometry.coordinates.splice(1, 0, [6, 59]);
+    expect(
+      buildTourPaths([
+        ...entries,
+        { routeId: "different", name: "Detour", geometry: variant, isRoadtrip },
+      ])
+    ).toHaveLength(2);
+    expect(buildTourPaths([...entries, { ...entries[0], isRoadtrip: !isRoadtrip }])).toHaveLength(
+      2
+    );
+  }
+);

@@ -63,6 +63,7 @@ const stayDay = legacyDayFieldSchema();
 const rating = z.number().min(0.5).max(5).nullable().optional();
 
 const baseLodgingSchema = z.object({
+  countryVisitKind: z.enum(["visit", "transit"]).optional(),
   type: z.enum(LODGING_TYPES).default("hotel"),
   name: z.string().trim().min(1).max(200),
   chainId: z.number().int().positive().nullable().optional(),

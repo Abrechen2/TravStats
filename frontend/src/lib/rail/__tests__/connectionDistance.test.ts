@@ -7,7 +7,7 @@ describe("connection distance", () => {
         { distanceKm: 100, distanceSource: "route" },
         { distanceKm: 40, distanceSource: "great_circle" },
       ])
-    ).toEqual({ km: 140, missing: 0, mixed: true, source: null });
+    ).toEqual({ km: 140, missing: 0, mixed: true, source: null, geometrySource: null });
   });
   it("does not count an unknown distance as a zero-length journey", () => {
     expect(

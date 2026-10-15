@@ -130,6 +130,8 @@ export const USER_EXPORT_SELECT = {
   // journeys the photo inbox proposed from it: evidence the passport reads.
   countryDays: true,
   photoJourneys: true,
+  // Includes review decisions and edited evidence, not just regenerable suggestions.
+  dawarichStays: true,
   // The answers to trip suggestions: without them a restored account would be
   // asked again every question it already dismissed. The suggestions
   // themselves are derived and never stored.
@@ -161,6 +163,12 @@ export const USER_EXPORT_SELECT = {
 
 /** Every `User` list relation the export leaves out, and why. */
 export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
+  comparisonDevices: "public device identities, re-enrol after restore",
+  comparisonPublications: "recipient-bound ciphertext, never portable travel records",
+  comparisonCircles: "private group audiences, re-established after restore",
+  comparisonLinks: "private recipient permissions, not portable travel records",
+  comparisonInvites: "single-use credentials",
+  comparisonGroups: "private comparison audiences, re-established after restore",
   twoFactorRecoveryCodes: "credential material",
   webauthnCredentials: "credential material",
   apiTokens: "credential material",

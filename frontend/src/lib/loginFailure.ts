@@ -94,6 +94,7 @@ export interface LoginFailure {
 }
 
 interface ErrorBody {
+  error?: unknown;
   code?: unknown;
   retryAfterSeconds?: unknown;
 }
@@ -148,10 +149,10 @@ export function loginFailure(
   if (code === "INVALID_CREDENTIALS") return { key: copy.refused };
 
   // Status fallbacks, for an instance that has not yet learned the codes.
-  // Guarded by the copy rather than applied everywhere: a 403 means only "this
-  // account is switched off" on the PASSWORD form, and something else as well
-  // on the passkey one.
-  if (status === 403 && copy.deactivated) return { key: copy.deactivated };
+  // A bare 403 may come from CORS or a proxy. Only the known legacy
+  // deactivation message establishes that the account itself is disabled.
+  if (status === 403 && body.error === "This account has been deactivated" && copy.deactivated)
+    return { key: copy.deactivated };
   if (status === 400 && copy.malformed) return { key: copy.malformed };
   if (status === 401) return { key: copy.refused };
 

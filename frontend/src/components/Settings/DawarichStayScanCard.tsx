@@ -14,6 +14,7 @@ export default function DawarichStayScanCard({
   const { t } = useTranslation("trips");
   const demo = useIsDemoAccount();
   const [state, setState] = useState<StayScanState | null>(null);
+  const [lookbackDays, setLookbackDays] = useState(7);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const [loadError, setLoadError] = useState(false);
@@ -46,6 +47,10 @@ export default function DawarichStayScanCard({
       setBusy(false);
     }
   };
+  const coverageScope = state?.marketResult?.scope === "venues" ? "venues" : "markets";
+  const placesPaused = state?.placesEnabled === false;
+  const stale =
+    !!state?.dataThrough && Date.now() - Date.parse(state.dataThrough) > 24 * 60 * 60_000;
   const text = (key: string) => t(`trips:dawarichStays.${key}`);
   const errorKey =
     state?.error &&
@@ -60,19 +65,104 @@ export default function DawarichStayScanCard({
         <input
           type="checkbox"
           checked={state?.enabled ?? false}
-          disabled={demo || busy || !state || (!state.connected && !state.enabled)}
+          disabled={
+            demo || busy || !state || ((!state.connected || placesPaused) && !state.enabled)
+          }
           onChange={(e) => void action(() => dawarichStaysApi.enable(e.target.checked))}
         />
         {text("enable")}
       </label>
+      <label className="flex items-center gap-3 my-4">
+        <input
+          type="checkbox"
+          checked={state?.marketEnabled ?? false}
+          disabled={
+            demo ||
+            busy ||
+            !state ||
+            (!state.marketEnabled && (!state.enabled || !state.connected || placesPaused))
+          }
+          onChange={(e) => void action(() => dawarichStaysApi.enableMarkets(e.target.checked))}
+        />
+        {text("markets.enable")}
+      </label>
+      <p className="t-caption mb-4">{text("markets.privacy")}</p>
+      <label className="flex items-center gap-3 my-4">
+        <input
+          type="checkbox"
+          checked={state?.venueEnabled ?? false}
+          disabled={
+            demo ||
+            busy ||
+            !state ||
+            (!state.venueEnabled && (!state.enabled || !state.connected || placesPaused))
+          }
+          onChange={(e) => void action(() => dawarichStaysApi.enableVenues(e.target.checked))}
+        />
+        {text("venues.enable")}
+      </label>
+      <p className="t-caption mb-4">{text("venues.description")}</p>
+      {state?.marketResult && (
+        <div className="my-3" role="status">
+          <p>{text(`${coverageScope}.status.${state.marketResult.status}`)}</p>
+          <p className="t-caption">
+            {t("trips:dawarichStays.markets.coverage", {
+              tiles: state.marketResult.tiles,
+              total: state.marketResult.totalTiles,
+              cached: state.marketResult.cachedTiles,
+            })}
+          </p>
+          {!!state.marketResult.missingAreaCount && (
+            <p>
+              {t(`trips:dawarichStays.${coverageScope}.missing`, {
+                count: state.marketResult.missingAreaCount,
+              })}
+            </p>
+          )}
+          {!!state.marketResult.staleTiles && <p>{text("markets.stale")}</p>}
+          <p>
+            {t(`trips:dawarichStays.${coverageScope}.counts`, {
+              created: state.marketResult.createdCount,
+              known: state.marketResult.alreadyRecordedCount,
+            })}
+          </p>
+        </div>
+      )}
       {state && !state.connected && <p>{text("ownConnection")}</p>}
+      {placesPaused && <p className="my-3">{text("placesPaused")}</p>}
+      {state && !state.enabled && <p className="my-3">{text("disabled")}</p>}
+      {state?.nextScanAt && (
+        <p className="t-caption my-3">
+          {text("nextScan")}: {profileDateTime(state.nextScanAt)}
+        </p>
+      )}
+      <label className="block my-3">
+        {text("lookback")}
+        <select
+          className="input"
+          value={lookbackDays}
+          disabled={busy || state?.result === "running"}
+          onChange={(e) => setLookbackDays(Number(e.target.value))}
+        >
+          {[7, 14, 30].map((days) => (
+            <option key={days} value={days}>
+              {t("trips:dawarichStays.days", { count: days })}
+            </option>
+          ))}
+        </select>
+      </label>
       <div className="flex flex-wrap gap-3">
         <button
           className="btn-secondary"
           disabled={
-            demo || busy || !state?.enabled || !state.connected || state.result === "running"
+            demo ||
+            busy ||
+            placesPaused ||
+            !state?.enabled ||
+            !state.connected ||
+            state.result === "running"
           }
-          onClick={() => void action(dawarichStaysApi.scan)}
+          onClick={() => void action(() => dawarichStaysApi.scan(lookbackDays))}
         >
           {text(busy || state?.result === "running" ? "running" : "scan")}
         </button>
@@ -101,7 +191,11 @@ export default function DawarichStayScanCard({
           })}
         </p>
       )}
-      {(error || loadError || state?.error) && (
+      {state?.finishedAt &&
+        ["succeeded", "partial"].includes(state.result ?? "") &&
+        !state.dataThrough && <p>{text("noPoints")}</p>}
+      {stale && <p>{text("staleData")}</p>}
+      {(error || loadError || (state?.error && !state.pausedReason)) && (
         <p role="alert" className="mt-3">
           {errorKey ? t(errorKey) : text("error")}
         </p>

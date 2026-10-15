@@ -74,6 +74,9 @@ export function isRouteFailure(value: RouteResult | RouteFailure | null): value 
  */
 export interface RouteProvider {
   readonly id: RoutingProviderId;
+  /** Stable provider/configuration identity; never include credentials. */
+  readonly cacheIdentity?: string;
+  cacheProfile?(req: RouteRequest): string;
   route(req: RouteRequest): Promise<RouteResult | RouteFailure | null>;
 }
 

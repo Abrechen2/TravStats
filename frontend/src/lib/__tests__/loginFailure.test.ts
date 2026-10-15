@@ -41,10 +41,17 @@ describe("loginFailure — the login form speaks the reader's language", () => {
         axiosLike(403, { error: "This account has been deactivated", code: "ACCOUNT_DEACTIVATED" })
       ).key
     ).toBe("login.errors.accountDeactivated");
-    // A 403 from this route can only be the deactivation check.
+    // Older servers identify deactivation by this exact message.
     expect(loginFailure(axiosLike(403, { error: "This account has been deactivated" })).key).toBe(
       "login.errors.accountDeactivated"
     );
+  });
+
+  it("does not call an origin refusal a deactivated account", () => {
+    expect(loginFailure(axiosLike(403, { error: "Not allowed by CORS" })).key).not.toBe(
+      "login.errors.accountDeactivated"
+    );
+    expect(loginFailure(axiosLike(403, {})).key).not.toBe("login.errors.accountDeactivated");
   });
 
   it("names the rate limit as the cause, and quotes the wait the server sent", () => {
@@ -119,10 +126,8 @@ describe("loginFailure — the login form speaks the reader's language", () => {
       expect(loginFailure(axiosLike(403, { error: "Account is deactivated" }), PASSKEY).key).toBe(
         "login.passkeyFailed"
       );
-      // The password form: 403 can only be the deactivation check there.
-      expect(loginFailure(axiosLike(403, {}), PASSWORD_LOGIN_COPY).key).toBe(
-        "login.errors.accountDeactivated"
-      );
+      // The password form cannot infer deactivation from the status alone.
+      expect(loginFailure(axiosLike(403, {}), PASSWORD_LOGIN_COPY).key).toBe("login.failed");
     });
 
     it("does not call a browser-side ceremony failure a server outage", () => {

@@ -1,3 +1,4 @@
+import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useMemo } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useAuthStore } from "../../store/authStore";
@@ -86,6 +87,7 @@ export function useNavItems(): {
     "dataQuality",
     "stats",
     "notes",
+    "comparison",
   ]);
   const user = useAuthStore((s) => s.user);
   const { isEnabled } = useEnabledDomains();
@@ -95,6 +97,8 @@ export function useNavItems(): {
   const busVisible = useBusVisible();
   const ferryVisible = useFerryVisible();
   const isAdmin = user?.isAdmin ?? false;
+  const { isFeatureVisible } = useBetaFeatures();
+  const comparisonVisible = isFeatureVisible("comparison");
 
   return useMemo(() => {
     // `poi` asks through `usePlacesVisible`, the one home of the places rule.
@@ -137,6 +141,17 @@ export function useNavItems(): {
     ];
 
     const collections: NavLeaf[] = [
+      ...(comparisonVisible
+        ? [
+            {
+              kind: "leaf" as const,
+              id: "comparison",
+              path: "/compare",
+              label: t("comparison:title"),
+              icon: "trophy" as const,
+            },
+          ]
+        : []),
       {
         kind: "leaf",
         id: "achievements",
@@ -223,5 +238,15 @@ export function useNavItems(): {
     ];
 
     return { primary, more };
-  }, [t, isEnabled, placesVisible, railVisible, rentalVisible, busVisible, ferryVisible, isAdmin]);
+  }, [
+    t,
+    isEnabled,
+    placesVisible,
+    railVisible,
+    rentalVisible,
+    busVisible,
+    ferryVisible,
+    isAdmin,
+    comparisonVisible,
+  ]);
 }

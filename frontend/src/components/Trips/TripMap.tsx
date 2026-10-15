@@ -1,3 +1,4 @@
+import { groupMapData, pathIdentity } from "../layers/routeAggregation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, useMap, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
@@ -189,8 +190,6 @@ export default function TripMap({
     };
   }, [cruiseIds]);
 
-  /* ---- Build deck.gl data ---- */
-
   const flightArcs = useMemo<FlightArc[]>(() => {
     const out: FlightArc[] = [];
     for (const f of trip.flights ?? []) {
@@ -218,8 +217,7 @@ export default function TripMap({
   const cruisePaths = useMemo<CruisePath[]>(() => {
     const out: CruisePath[] = [];
     const cruiseLabel = new Map<string, string>();
-    // Resolved per CRUISE, not per leg: "perCruise" mode gives each voyage its
-    // own hue, so every leg of one cruise must land on the same one.
+    // Resolve each cruise colour once for all its legs.
     const cruiseTint = new Map<string, [number, number, number]>();
     for (const c of trip.cruises ?? []) {
       cruiseLabel.set(c.id, c.cruiseLine ?? "Cruise");
@@ -450,7 +448,11 @@ export default function TripMap({
 
     const paths = new PathLayer<CruisePath>({
       id: "trip-cruise-paths",
-      data: cruisePaths,
+      data: groupMapData(
+        cruisePaths,
+        (p) => JSON.stringify([p.color, pathIdentity(p.path)]),
+        (p) => p.cruiseId
+      ),
       getPath: (d) => d.path,
       getColor: (d) => [...d.color, 230] as [number, number, number, number],
       getWidth: 3,

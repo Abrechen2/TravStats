@@ -111,12 +111,16 @@ export type CountryGroundTime =
   { state: "measured"; minutes: number } | { state: "unknown" } | { state: "notApplicable" };
 
 export interface PassportCountry {
+  groundPresence?: boolean;
+  visited?: boolean;
+  visitUncertain?: boolean;
   /** ISO-3166 alpha-2 — the glyph shown, deliberately not a flag. */
   code: string;
   continent: Continent | null;
   /** Flights that began or ended here. Zero for a country proved another way. */
   entries: number;
   firstYear: number | null;
+  firstVisitedYear?: number | null;
   lastYear: number | null;
   airports: string[];
   isHome: boolean;
@@ -206,6 +210,8 @@ export interface Passport {
      * complete while the number states a rule.
      */
     countries: number;
+    groundCountries?: number;
+    visitedCountries?: number;
     /** Every row in `countries`, whatever its tier. */
     countriesTotal: number;
     /** What the rule before evidence tiers would have said — for the one-time notice (§5). */
@@ -322,6 +328,9 @@ export interface CountryAirportUse {
 }
 
 export interface CountryDetail {
+  groundPresence?: boolean;
+  visited?: boolean;
+  visitUncertain?: boolean;
   code: string;
   continent: Continent | null;
   evidence: PassportEvidenceKind;

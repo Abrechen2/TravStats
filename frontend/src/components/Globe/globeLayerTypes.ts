@@ -88,6 +88,8 @@ export interface PointDatum {
 }
 
 export interface CruisePathDatum {
+  memberIds?: string[];
+  count?: number;
   path: [number, number][];
   cruiseId: string;
   cruiseLabel: string;

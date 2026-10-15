@@ -206,7 +206,11 @@
     "errors": {
       "stars": "Sterne: eine ganze Zahl von 1 bis 5.",
       "website": "Eine Webadresse beginnt mit http:// oder https://."
-    }
+    },
+    "countryVisitKind": "Aufenthaltsart für die Länderzählung",
+    "countryVisit": "Besuch außerhalb eines reinen Zwischenstopps",
+    "countryTransit": "Nur Transit / Flughafen / Raststätte",
+    "countryVisitHint": "Ein reiner Zwischenstopp zählt als Bodenkontakt, auch mit Übernachtung. Der Name des Ortes entscheidet nicht."
   },
   "fx": {
     "conversion": "Umrechnung",

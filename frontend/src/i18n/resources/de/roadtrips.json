@@ -665,7 +665,12 @@
       "viaOnTimeline": "Ein Halt aus dem Reiseverlauf kann keine Streckenkorrektur werden. Wähle für ihn eine andere Art."
     },
     "removedRestores": "Rückgängig stellt die Station samt ihren Etappen wieder her – gespeichert wird erst danach.",
-    "removedRestoresLine": "Daneben liegt eine aufgezeichnete oder von Hand gezeichnete Linie: sie geht verloren, wenn du nicht rückgängig machst. Gespeichert wird erst danach."
+    "removedRestoresLine": "Daneben liegt eine aufgezeichnete oder von Hand gezeichnete Linie: sie geht verloren, wenn du nicht rückgängig machst. Gespeichert wird erst danach.",
+    "countryVisitKind": {
+      "label": "Art des Aufenthalts",
+      "visit": "Übernachtung außerhalb eines Transitorts",
+      "transit": "Reiner Zwischenstopp, z. B. Raststätte"
+    }
   },
   "legDialog": {
     "title": "Etappe",

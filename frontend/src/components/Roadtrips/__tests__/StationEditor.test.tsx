@@ -144,6 +144,16 @@ describe("StationEditor", () => {
     ]);
   });
 
+  it("saves an explicitly marked transit overnight without upgrading it", async () => {
+    renderEditor("new");
+    fireEvent.change(screen.getByLabelText("roadtrips:editor.countryVisitKind.label"), {
+      target: { value: "transit" },
+    });
+    fireEvent.click(screen.getByText("pick-location"));
+    await pause();
+    expect(sent()[1].night).toEqual({ kind: "free", countryVisitKind: "transit" });
+  });
+
   it("sends a burst of changes once, and a later change carries the id the server gave", async () => {
     renderEditor("new");
     fireEvent.click(screen.getByText("pick-location"));

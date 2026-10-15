@@ -145,3 +145,57 @@ describe("Dawarich stays remain reviewable suggestions", () => {
     expect(dawarichStaysApi.scan).not.toHaveBeenCalled();
   });
 });
+
+it("labels the entire market and exposes only safe OSM provenance links", () => {
+  mount({
+    name: "Market",
+    evidence: {
+      ...row.evidence,
+      kind: "market",
+      market: {
+        identity: "wikidata:Q1234",
+        areaIds: ["way/1234"],
+        sourceUrls: ["https://www.openstreetmap.org/way/1234", "javascript:alert(1)"],
+        interiorPointCount: 12,
+        overlappingMarketIds: [],
+      },
+    },
+  });
+  expect(screen.getByText("trips:dawarichStays.markets.venue")).toBeInTheDocument();
+  fireEvent.click(screen.getByText("trips:dawarichStays.provenance"));
+  expect(screen.getByRole("link", { name: "trips:dawarichStays.markets.source" })).toHaveAttribute(
+    "rel",
+    "noopener noreferrer"
+  );
+  expect(screen.queryByRole("link", { name: "javascript:alert(1)" })).not.toBeInTheDocument();
+  expect(dawarichStaysApi.accept).not.toHaveBeenCalled();
+});
+
+it.each(["mall", "park", "zoo", "themePark", "museum"] as const)(
+  "labels %s as an independent venue and keeps review manual",
+  (venueType) => {
+    mount({
+      name: "Whole venue",
+      evidence: {
+        ...row.evidence,
+        kind: "venue",
+        market: {
+          identity: "wikidata:Q9876",
+          venueType,
+          areaIds: ["way/9876"],
+          sourceUrls: ["https://www.openstreetmap.org/way/9876", "javascript:alert(1)"],
+          interiorPointCount: 15,
+          overlappingMarketIds: [],
+        },
+      },
+    });
+    expect(screen.getByText(`trips:dawarichStays.venues.types.${venueType}`)).toBeInTheDocument();
+    fireEvent.click(screen.getByText("trips:dawarichStays.provenance"));
+    expect(screen.getByRole("link", { name: "trips:dawarichStays.venues.source" })).toHaveAttribute(
+      "href",
+      "https://www.openstreetmap.org/way/9876"
+    );
+    expect(screen.queryByRole("link", { name: "javascript:alert(1)" })).not.toBeInTheDocument();
+    expect(dawarichStaysApi.accept).not.toHaveBeenCalled();
+  }
+);

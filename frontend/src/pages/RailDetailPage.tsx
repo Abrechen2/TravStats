@@ -165,7 +165,10 @@ export default function RailDetailPage(): JSX.Element {
     );
   }
 
-  const distanceNoteKey = railDistanceNoteKey(journey.distanceSource, { includeTicket: true });
+  const distanceNoteKey = railDistanceNoteKey(journey.distanceSource, {
+    includeTicket: true,
+    geometrySource: journey.geometrySource,
+  });
   const distanceNote = distanceNoteKey ? t(distanceNoteKey) : null;
   const departure = railDeparture(journey);
   const duration = departure ? railDurationMinutes(departure, railArrival(journey)) : null;
@@ -261,7 +264,11 @@ export default function RailDetailPage(): JSX.Element {
         }
       />
 
-      <RailRouteRefresh id={journey.id} source={journey.geometrySource} onUpdated={() => setReloadKey((k) => k + 1)} />
+      <RailRouteRefresh
+        id={journey.id}
+        source={journey.geometrySource}
+        onUpdated={() => setReloadKey((k) => k + 1)}
+      />
 
       {isConvertedFromRoadtrip(journey) && (
         <p className="t-caption mb-4" data-testid="rail-converted-note">

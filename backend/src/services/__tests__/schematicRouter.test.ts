@@ -414,7 +414,8 @@ describe("schematicRouter — route cache", () => {
     const stats2 = getSchematicRouteCacheStats();
     expect(stats2.misses).toBe(1);
     expect(stats2.hits).toBe(1);
-    expect(second).toBe(first); // identity — same cached object
+    expect(second).toEqual(first);
+    expect(second).not.toBe(first); // callers cannot mutate the shared route
   });
 
   it("treats reversed direction as a separate cache entry", async () => {
@@ -437,6 +438,15 @@ describe("schematicRouter — route cache", () => {
     expect(stats.hits).toBe(0);
     // misses are not bumped for uncacheable lookups either — they're skipped entirely.
     expect(stats.misses).toBe(0);
+  });
+
+  it("does not reuse a port pair after its coordinates change", async () => {
+    const dep = { id: 1, lat: 40, lon: 0 },
+      arr = { id: 2, lat: 42, lon: 3 };
+    await computeSchematicRoute(dep, arr);
+    const changed = await computeSchematicRoute(dep, { ...arr, lon: 4 });
+    expect(changed.waypoints.at(-1)).toEqual([4, 42]);
+    expect(getSchematicRouteCacheStats().misses).toBe(2);
   });
 
   it("clearSchematicRouteCache resets state", async () => {

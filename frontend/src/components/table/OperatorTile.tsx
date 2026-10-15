@@ -7,12 +7,13 @@ const TILE_PX = 44;
 
 type TileDomain = "rail" | "rental" | "bus" | "ferry";
 
-const DOMAIN: Record<TileDomain, { colour: string; icon: "train-front" | "car" | "bus" | "ship" }> = {
-  rail: { colour: "var(--ts-domain-rail)", icon: "train-front" },
-  rental: { colour: "var(--ts-domain-rental)", icon: "car" },
-  ferry: { colour: "var(--ts-domain-ferry)", icon: "ship" },
-  bus: { colour: "var(--ts-domain-bus)", icon: "bus" },
-};
+const DOMAIN: Record<TileDomain, { colour: string; icon: "train-front" | "car" | "bus" | "ship" }> =
+  {
+    rail: { colour: "var(--ts-domain-rail)", icon: "train-front" },
+    rental: { colour: "var(--ts-domain-rental)", icon: "car" },
+    ferry: { colour: "var(--ts-domain-ferry)", icon: "ship" },
+    bus: { colour: "var(--ts-domain-bus)", icon: "bus" },
+  };
 
 interface Props {
   /** The operator or provider as recorded; null when none is. */
