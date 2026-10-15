@@ -7,6 +7,8 @@ import {
   updateFerryJourneySchema,
   ferryQuerySchema,
 } from "../../../schemas/ferry";
+import { clientRefBodySchema } from "../../../schemas/clientRef";
+import { clientRefResponses } from "./clientRef";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import { railTimesSchema } from "../../../schemas/times";
 import { errorContent, timeRefused } from "./shared";
@@ -72,8 +74,16 @@ registry.registerPath({
   summary: "Create a ferry crossing",
   description:
     "Both ports include coordinates. Times are local wall clocks or calendar days; zones are resolved on the server. Distance without a ticket value is explicitly a straight-line estimate. Documents and companions use the same ownership rules as other journeys.",
-  request: { body: { content: json(createFerryJourneySchema.and(documentIdsBodySchema)) } },
-  responses: { 201: { description: "Created", content: json(envelope(journey)) }, ...errors },
+  request: {
+    body: {
+      content: json(createFerryJourneySchema.and(documentIdsBodySchema).and(clientRefBodySchema)),
+    },
+  },
+  responses: {
+    201: { description: "Created", content: json(envelope(journey)) },
+    ...errors,
+    ...clientRefResponses(json(envelope(journey))),
+  },
 });
 registry.registerPath({
   method: "patch",
