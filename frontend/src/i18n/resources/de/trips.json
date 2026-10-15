@@ -666,6 +666,29 @@
   "dawarichStays": {
     "title": "Dawarich-Aufenthalte",
     "description": "Aus deinen eigenen Dawarich-Positionsdaten werden alle sechs Stunden mögliche Aufenthalte der letzten sieben Tage erkannt. Es entstehen nur Vorschläge: Ein Besuch wird erst nach deiner Bestätigung eingetragen. Dies aktiviert weder den Immich-Scan noch die Ländererkennung.",
+    "placesPaused": "Pausiert: Der Bereich Orte ist ausgeschaltet. Aktiviere Orte in den Einstellungen, um neue Aufenthalte zu erkennen. Deine Einwilligung und bisherigen Vorschläge bleiben erhalten.",
+    "disabled": "Automatische Erkennung ist ausgeschaltet. Vorhandene Vorschläge bleiben prüfbar.",
+    "nextScan": "Nächste automatische Auswertung",
+    "noPoints": "Für diesen Zeitraum wurden keine Positionspunkte geliefert. Daraus lassen sich keine Aufenthalte ableiten.",
+    "staleData": "Die zuletzt gelieferten Positionsdaten sind mehr als 24 Stunden alt. Prüfe die Synchronisierung mit Dawarich; ein erfolgreicher Abruf bedeutet nicht, dass aktuelle Punkte vorliegen.",
+    "markets": {
+      "enable": "Marktbesuche automatisch vorschlagen",
+      "privacy": "Für die Marktflächen werden ungefähre Regionen (etwa 5-km-Raster) bei OpenStreetMap/Overpass abgefragt. Deine Positionsfolgen, Zeiten und Punkt-IDs werden nicht übertragen. Marktbesuche werden erst nach deiner Bestätigung eingetragen.",
+      "coverage": "Geprüfte Regionen: {{tiles}} von {{total}} · {{cached}} aus gespeicherten Kartendaten",
+      "missing": "Bei {{count}} Karteneinträgen fehlt eine nutzbare Marktfläche. Das bedeutet nicht, dass du dort nicht warst.",
+      "stale": "Ein Teil der Kartendaten ist älter. Bitte prüfe die Zuordnung besonders sorgfältig.",
+      "counts": "Neue Markt-Vorschläge: {{created}} · Bereits erfasst: {{known}}",
+      "venue": "Marktbesuch – gesamtes Gelände statt einzelner Stände",
+      "source": "Marktfläche in OpenStreetMap ansehen",
+      "interior": "{{count}} Positionspunkte innerhalb des Marktgeländes",
+      "status": {
+        "complete": "Marktflächen ausgewertet",
+        "partial": "Marktflächen nur teilweise verfügbar – Auswertung später ergänzen",
+        "cancelled": "Marktauswertung pausiert"
+      }
+    },
+    "lookback": "Zeitraum auswerten",
+    "days": "Letzte {{count}} Tage",
     "enable": "Aufenthalte automatisch erkennen",
     "ownConnection": "Speichere zuerst deine eigene Dawarich-Verbindung. Eine gemeinsam konfigurierte Verbindung reicht hierfür nicht.",
     "scan": "Jetzt auswerten",
@@ -701,9 +724,10 @@
     "invalidInterval": "Das Ende muss nach dem Beginn liegen; ein bestätigter Aufenthalt darf nicht in der Zukunft liegen.",
     "ambiguousTime": "Diese lokale Uhrzeit ist wegen einer Zeitumstellung nicht eindeutig oder existiert nicht. Bitte korrigiere sie.",
     "result": {
+      "paused": "Auswertung pausiert",
       "running": "Auswertung läuft",
       "succeeded": "Auswertung abgeschlossen",
-      "partial": "Nur ein Teil der Daten wurde geliefert",
+      "partial": "Auswertung teilweise – bitte die Datenlücken beachten",
       "failed": "Auswertung fehlgeschlagen",
       "interrupted": "Auswertung unterbrochen; bitte erneut starten"
     },
@@ -713,6 +737,14 @@
       "rejected": "Verworfen"
     },
     "uncertainty": {
+      "staleMapData": "Die verwendeten Marktflächen sind älter.",
+      "partialMapData": "Für einen Teil des Zeitraums fehlen aktuelle Marktflächen.",
+      "visitAmbiguous": "Mehrere vorhandene Besuche kommen infrage. Bitte prüfe den Besuch.",
+      "overlappingMarkets": "Mehrere Marktflächen überschneiden sich. Bitte prüfe, welcher Markt gemeint ist.",
+      "boundaryTolerance": "Ein Teil der Punkte liegt am Marktrand (bis zu 20 m Toleranz).",
+      "briefExcursion": "Die Positionsspur enthält eine kurze Unterbrechung im Marktbereich.",
+      "speedUnknown": "Die Bewegungsgeschwindigkeit ist teilweise unbekannt.",
+      "tripIncomplete": "Der Aufenthalt liegt nur teilweise im Zeitraum einer Reise. Bitte ordne ihn selbst zu.",
       "sourceUnknown": "Dawarich unterscheidet hier nicht zuverlässig zwischen GPS-Aufzeichnung und rekonstruierten Foto-Positionen. Dies ist kein Nachweis einer Übernachtung.",
       "accuracyUnknown": "Für einige Punkte ist die Positionsgenauigkeit unbekannt.",
       "signalGaps": "Zwischen den Punkten liegen Signallücken. Die Anwesenheit dazwischen ist nicht belegt.",

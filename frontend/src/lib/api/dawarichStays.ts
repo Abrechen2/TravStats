@@ -4,6 +4,24 @@ import { waitForJob } from "./jobs";
 export interface StayScanState {
   enabled: boolean;
   connected: boolean;
+  marketEnabled?: boolean;
+  marketResult?: {
+    status: "complete" | "partial" | "cancelled";
+    tiles: number;
+    totalTiles: number;
+    cachedTiles: number;
+    fetchedTiles: number;
+    staleTiles: number;
+    failedTiles: number;
+    missingAreaCount: number;
+    invalidAreaCount: number;
+    alreadyRecordedCount: number;
+    createdCount: number;
+    limited: boolean;
+  } | null;
+  placesEnabled?: boolean;
+  pausedReason?: "disabled" | "placesDisabled" | "connectionMissing" | null;
+  nextScanAt?: string | null;
   result: string | null;
   error: string | null;
   startedAt: string | null;
@@ -40,6 +58,14 @@ export interface DawarichStay {
   resolvedAt: string | null;
   evidence: {
     source: "dawarich";
+    kind?: "market";
+    market?: {
+      identity: string;
+      areaIds: string[];
+      sourceUrls: string[];
+      interiorPointCount: number;
+      overlappingMarketIds: string[];
+    };
     matchingVisitId?: string | null;
     zone: string;
     pointIds: number[];
@@ -66,8 +92,11 @@ export const dawarichStaysApi = {
   enable: async (enabled: boolean): Promise<void> => {
     await api.patch(`${base}/settings`, { enabled });
   },
-  scan: async (): Promise<void> => {
-    const { data } = await api.post(`${base}/scan`, {});
+  enableMarkets: async (marketEnabled: boolean): Promise<void> => {
+    await api.patch(`${base}/settings`, { marketEnabled });
+  },
+  scan: async (lookbackDays = 7): Promise<void> => {
+    const { data } = await api.post(`${base}/scan`, { lookbackDays });
     await waitForJob(data.data.jobId);
   },
   list: async (status: string): Promise<DawarichStay[]> =>

@@ -2,6 +2,7 @@ import { Prisma } from "../../prisma";
 import request from "supertest";
 import app from "../../index";
 import { prisma } from "../../db";
+import { encryptApiKey } from "../../utils/encryption";
 import { generateToken } from "../../utils/jwt";
 import { reserveScan, scanStays } from "../../services/dawarich/stays/scan";
 import { DawarichError } from "../../services/dawarich/errors";
@@ -53,15 +54,27 @@ beforeAll(async () => {
 });
 afterAll(async () => {
   await prisma.user.deleteMany({ where: { id: { in: [userId, otherId] } } });
+  await prisma.$disconnect();
 });
 beforeEach(async () => {
+  await prisma.userSettings.upsert({
+    where: { userId },
+    create: { userId, enabledDomains: ["poi"], data: {} },
+    update: { enabledDomains: ["poi"], dawarichBaseUrl: null, dawarichApiKey: null },
+  });
   await prisma.dawarichStay.deleteMany({ where: { userId } });
   await prisma.placeVisit.deleteMany({ where: { userId } });
   await prisma.place.deleteMany({ where: { userId } });
   await prisma.dawarichStayScan.upsert({
     where: { userId },
     create: { userId, enabled: true },
-    update: { enabled: true, leaseUntil: null, result: null },
+    update: {
+      enabled: true,
+      marketEnabled: false,
+      marketResult: Prisma.DbNull,
+      leaseUntil: null,
+      result: null,
+    },
   });
 });
 describe("Dawarich stay review (forgejo#294)", () => {
@@ -241,7 +254,7 @@ describe("Dawarich stay review (forgejo#294)", () => {
       data: {
         userId,
         name: "Korea midnight",
-        startDate: new Date("2026-10-11"),
+        startDate: new Date("2026-10-10"),
         endDate: new Date("2026-10-11"),
       },
     });
@@ -366,4 +379,171 @@ describe("Dawarich stay review (forgejo#294)", () => {
       expect(await prisma.dawarichStay.count({ where: { userId } })).toBe(0);
     }
   );
+});
+
+describe("Dawarich optional features and consent lifecycle", () => {
+  it("pauses scans with Places hidden, without upstream requests or deleting findings", async () => {
+    const row = await scan();
+    await prisma.userSettings.update({ where: { userId }, data: { enabledDomains: ["flight"] } });
+    await expect(reserveScan(userId)).rejects.toMatchObject({ code: "DAWARICH_PLACES_DISABLED" });
+    const r = await api().post("/api/v1/dawarich-stays/scan").set("Cookie", cookie).send({});
+    expect(r.status).toBe(409);
+    expect(r.body.code).toBe("DAWARICH_PLACES_DISABLED");
+    const status = await api().get("/api/v1/dawarich-stays/settings").set("Cookie", cookie);
+    expect(status.body.data).toMatchObject({
+      enabled: true,
+      placesEnabled: false,
+      pausedReason: "placesDisabled",
+      nextScanAt: null,
+    });
+    const history = await api().get("/api/v1/dawarich-stays").set("Cookie", cookie);
+    expect(history.body.data.map((r: { id: string }) => r.id)).toContain(row.id);
+    await prisma.userSettings.update({ where: { userId }, data: { enabledDomains: ["poi"] } });
+    await expect(reserveScan(userId)).resolves.toBeUndefined();
+  });
+  it("works with Places alone, no Immich, no flights, no hotels and no trip", async () => {
+    const row = await scan();
+    expect(row.tripId).toBeNull();
+    const r = await api()
+      .post(`/api/v1/dawarich-stays/${row.id}/accept`)
+      .set("Cookie", cookie)
+      .send(review);
+    expect(r.status).toBe(200);
+    expect(r.body.data.tripId).toBeNull();
+    expect(await prisma.placeVisit.count({ where: { userId } })).toBe(1);
+    const place = await prisma.place.findFirstOrThrow({ where: { userId } });
+    expect(place.dataSource).toBe("dawarich");
+  });
+  it("does not write findings when Places is switched off during the request", async () => {
+    await reserveScan(userId);
+    await scanStays(userId, {
+      now,
+      client: {
+        ...client,
+        getPoints: async () => {
+          await prisma.userSettings.update({ where: { userId }, data: { enabledDomains: [] } });
+          return { points, truncated: false };
+        },
+      },
+    });
+    expect(await prisma.dawarichStay.count({ where: { userId } })).toBe(0);
+    const r = await api().get("/api/v1/dawarich-stays/settings").set("Cookie", cookie);
+    expect(r.body.data.result).toBe("paused");
+  });
+  it("does not resurrect an old response after consent is switched off and back on", async () => {
+    await prisma.userSettings.update({
+      where: { userId },
+      data: {
+        dawarichBaseUrl: "http://localhost:3000",
+        dawarichApiKey: encryptApiKey("synthetic-dawarich-test-key"),
+      },
+    });
+    await reserveScan(userId);
+    await scanStays(userId, {
+      now,
+      client: {
+        ...client,
+        getPoints: async () => {
+          expect(
+            (
+              await api()
+                .patch("/api/v1/dawarich-stays/settings")
+                .set("Cookie", cookie)
+                .send({ enabled: false })
+            ).status
+          ).toBe(200);
+          expect(
+            (
+              await api()
+                .patch("/api/v1/dawarich-stays/settings")
+                .set("Cookie", cookie)
+                .send({ enabled: true })
+            ).status
+          ).toBe(200);
+          return { points, truncated: false };
+        },
+      },
+    });
+    expect(await prisma.dawarichStay.count({ where: { userId } })).toBe(0);
+    const state = await prisma.dawarichStayScan.findUniqueOrThrow({ where: { userId } });
+    expect(state.enabled).toBe(true);
+    expect(state.leaseUntil).toBeNull();
+    await scan();
+    expect(await prisma.dawarichStay.count({ where: { userId } })).toBe(1);
+  });
+  it("requires manual place selection when multiple venues are close", async () => {
+    await prisma.place.createMany({
+      data: [
+        { userId, name: "Museum", lat: 37.57, lon: 126.97 },
+        { userId, name: "Cafe", lat: 37.5701, lon: 126.97 },
+      ],
+    });
+    const row = await scan();
+    expect(row.placeId).toBeNull();
+    expect(row.name).toBeNull();
+    expect(row.evidence).toMatchObject({
+      uncertainties: expect.arrayContaining(["placeAmbiguous"]),
+    });
+  });
+  it("does not assign a trip that covers only part of an overnight stop", async () => {
+    const trip = await prisma.trip.create({
+      data: {
+        userId,
+        name: "Only second day",
+        startDate: new Date("2026-10-11"),
+        endDate: new Date("2026-10-11"),
+      },
+    });
+    const row = await scan();
+    expect(row.tripId).toBeNull();
+    expect(row.evidence).toMatchObject({
+      uncertainties: expect.arrayContaining(["tripIncomplete"]),
+    });
+    await prisma.trip.delete({ where: { id: trip.id } });
+  });
+  it("leaves overlapping trips unassigned and explains the ambiguity", async () => {
+    await prisma.trip.createMany({
+      data: ["Korea", "Weekend"].map((name) => ({
+        userId,
+        name,
+        startDate: new Date("2026-10-10"),
+        endDate: new Date("2026-10-12"),
+      })),
+    });
+    const row = await scan();
+    expect(row.tripId).toBeNull();
+    expect(row.evidence).toMatchObject({
+      uncertainties: expect.arrayContaining(["tripAmbiguous"]),
+    });
+    await prisma.trip.deleteMany({ where: { userId } });
+  });
+  it("reuses an existing Immich visit, preserving both original sources", async () => {
+    const place = await prisma.place.create({
+      data: { userId, name: "Photo stop", lat: 37.57, lon: 126.97, dataSource: "immich" },
+    });
+    const visit = await prisma.placeVisit.create({
+      data: {
+        userId,
+        placeId: place.id,
+        visitedAt: new Date("2026-10-10T23:55:00Z"),
+        visitedAtUtc: new Date("2026-10-10T14:55:00Z"),
+        visitedZone: "Asia/Seoul",
+        visitedPrecision: "minute",
+        writtenVia: "suggestion",
+      },
+    });
+    const row = await scan();
+    expect(row.evidence).toMatchObject({ matchingVisitId: visit.id });
+    const r = await api()
+      .post(`/api/v1/dawarich-stays/${row.id}/accept`)
+      .set("Cookie", cookie)
+      .send({ ...review, placeId: place.id });
+    expect(r.status).toBe(200);
+    expect(r.body.data.visitId).toBe(visit.id);
+    expect(r.body.data.evidence.source).toBe("dawarich");
+    expect((await prisma.place.findUniqueOrThrow({ where: { id: place.id } })).dataSource).toBe(
+      "immich"
+    );
+    expect(await prisma.placeVisit.count({ where: { userId } })).toBe(1);
+  });
 });

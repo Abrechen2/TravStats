@@ -56,6 +56,9 @@ registry.registerPath({
           ...prismaColumns("DawarichStayScan"),
           times: scanTimes,
           connected: z.boolean(),
+          placesEnabled: z.boolean(),
+          pausedReason: z.enum(["disabled", "placesDisabled", "connectionMissing"]).nullable(),
+          nextScanAt: z.string().datetime().nullable(),
           result: z.string().nullable(),
         })
         .partial()
@@ -69,7 +72,14 @@ registry.registerPath({
   summary: "Explicit per-account opt-in, separate from Immich and country days",
   request: {
     body: {
-      content: { "application/json": { schema: z.object({ enabled: z.boolean() }).strict() } },
+      content: {
+        "application/json": {
+          schema: z
+            .object({ enabled: z.boolean().optional(), marketEnabled: z.boolean().optional() })
+            .strict()
+            .refine((v) => v.enabled !== undefined || v.marketEnabled !== undefined),
+        },
+      },
     },
   },
   responses: {
@@ -81,9 +91,18 @@ registry.registerPath({
   method: "post",
   path: "/dawarich-stays/scan",
   tags,
-  summary: "Start an asynchronous scan of the last seven days",
+  summary: "Start a bounded asynchronous scan, optionally including opted-in market discovery",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({ lookbackDays: z.number().int().min(1).max(30).default(7) }).strict(),
+        },
+      },
+    },
+  },
   description:
-    "Requires opt-in and the user's own connection. A cross-process lease excludes overlapping scans; errors and partial upstream results remain visible. Scheduled scans run every six hours at :15 UTC.",
+    "Requires opt-in, the Places domain and the user's own connection. Hiding Places pauses scans without deleting consent or findings. A cross-process lease excludes overlapping scans; errors and partial upstream results remain visible. Scheduled scans run every six hours at :15 UTC. Market discovery requires separate consent: approximate grid regions are sent to Overpass, never point sequences, times or ids. Public map data is cached; missing/failed coverage remains visible. Only confirmation creates a visit.",
   responses: {
     202: {
       description: "Poll /jobs/{jobId}",

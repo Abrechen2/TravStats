@@ -4615,6 +4615,8 @@ model FerryJourneyCompanion {
 
 /// Explicitly opted-in location-history suggestions, separate from Immich and country days.
 model DawarichStayScan {
+  marketEnabled Boolean @default(false) @map("market_enabled")
+  marketResult Json? @map("market_result")
   userId String @id @map("user_id")
   enabled Boolean @default(false)
   startedAt DateTime? @map("started_at")
@@ -4659,4 +4661,25 @@ model DawarichStay {
   @@index([userId, status, startAt])
   @@index([visitId])
   @@map("dawarich_stays")
+}
+
+
+/// Public OSM geometry cache. Contains no user ids, timestamps or location tracks.
+model MarketCatalogTile {
+  key String @id
+  payload Json
+  fetchedAt DateTime @map("fetched_at")
+  @@index([fetchedAt])
+  @@map("market_catalog_tiles")
+}
+
+/// Cross-process budget/lease for public catalog queries across all accounts.
+model MarketCatalogState {
+  id String @id
+  day DateTime @db.Date
+  requests Int @default(0)
+  bytes Int @default(0)
+  leaseUntil DateTime? @map("lease_until")
+  backoffUntil DateTime? @map("backoff_until")
+  @@map("market_catalog_state")
 }
