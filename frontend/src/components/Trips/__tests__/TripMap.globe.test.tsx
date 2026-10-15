@@ -63,6 +63,7 @@ vi.mock("react-map-gl/maplibre", async () => {
     },
     once: () => {},
     getZoom: () => 2,
+    getStyle: () => ({ version: 8, layers: [] }),
     getCenter: () => ({ lng: 0, lat: 0 }),
     getCanvas: () => ({ style: {} }),
     getContainer: () => document.createElement("div"),
@@ -318,4 +319,16 @@ it("retains globe projection and selects the matching sky after changing basemap
   );
   view.unmount();
   expect(mapCalls.styleListeners.size).toBe(0);
+});
+
+it("updates the sky when an inline satellite style has already finished loading", async () => {
+  const { saveMapAppearance } = await import("../../map/mapAppearance");
+  const { STYLE_OPTIONS } = await import("../../Globe/globeStyles");
+  render(<TripMap trip={trip} />);
+  await toggleToGlobe();
+  act(() => saveMapAppearance({ styleId: "satellite" }));
+  expect(mapCalls.setSky[mapCalls.setSky.length - 1]).toEqual(
+    STYLE_OPTIONS.find((s) => s.id === "satellite")!.sky
+  );
+  expect(mapCalls.setProjection[mapCalls.setProjection.length - 1]).toEqual({ type: "globe" });
 });
