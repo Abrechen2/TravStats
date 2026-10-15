@@ -1,3 +1,4 @@
+import { ownMapStyle } from "../../lib/ownGeoServer";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
@@ -39,7 +40,7 @@ import {
   type RouteEditorState,
 } from "./routeEditorState";
 
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const DARK_MAP_STYLE = ownMapStyle("dark", "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json");
 
 /** The detail map shows ONE cruise — always in that cruise's own hue. */
 const DETAIL_MAP_COLOR_CONFIG: CruiseColorConfig = {

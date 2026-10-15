@@ -1,3 +1,4 @@
+import { ownMapStyle } from "../../lib/ownGeoServer";
 /** Collapsible MapLibre pin-picker map for `LocationInput` — extracted to
  * keep the parent under the project's file-size guideline. Plain
  * `react-map-gl/maplibre` `<Marker draggable>` + click-to-move, NOT deck.gl
@@ -6,7 +7,7 @@ import { useEffect, useRef, type JSX } from "react";
 import Map, { Marker, type MapLayerMouseEvent, type MapRef } from "react-map-gl/maplibre";
 import type { LocationCoordinates } from "./LocationInput";
 
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const DARK_MAP_STYLE = ownMapStyle("dark", "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json");
 
 export interface LocationMiniMapProps {
   value: LocationCoordinates | null;

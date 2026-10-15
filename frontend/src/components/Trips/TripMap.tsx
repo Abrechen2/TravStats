@@ -1,3 +1,4 @@
+import { ownMapStyle } from "../../lib/ownGeoServer";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, useMap, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
@@ -39,7 +40,7 @@ import {
 } from "./tripMapColors";
 import { tripBoundsPoints, type LngLat } from "./tripMapBounds";
 
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const DARK_MAP_STYLE = ownMapStyle("dark", "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json");
 
 const INITIAL_VIEW: MapViewState = {
   longitude: 10,

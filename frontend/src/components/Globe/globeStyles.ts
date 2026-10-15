@@ -1,3 +1,4 @@
+import { ownBasemapCatalogue } from "../../lib/ownGeoServer";
 // Globe basemap catalogue — six tokenless styles, modelled after geojson.io.
 // CARTO + OpenFreeMap + ESRI World Imagery + OSM Standard. None of them
 // require an API key.
@@ -92,7 +93,7 @@ const buildRasterStyle = (
   glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
 });
 
-export const STYLE_OPTIONS: StyleOption[] = [
+export const STYLE_OPTIONS: StyleOption[] = ownBasemapCatalogue([
   {
     id: "standard",
     label: "Standard",
@@ -141,4 +142,4 @@ export const STYLE_OPTIONS: StyleOption[] = [
     ),
     sky: SKY_LIGHT,
   },
-];
+]);

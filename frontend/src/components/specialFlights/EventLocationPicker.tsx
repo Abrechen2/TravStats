@@ -1,3 +1,4 @@
+import { ownMapStyle } from "../../lib/ownGeoServer";
 /**
  * EventLocationPicker — hybrid geocoding + mini-map widget.
  *
@@ -33,7 +34,7 @@ import { FieldError, fieldErrorProps } from "../form";
 
 /** MapLibre styles — reuse the same CartoCDN basemaps as DeckGLMap so the
  *  mini-map blends visually with the main map. */
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const DARK_MAP_STYLE = ownMapStyle("dark", "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json");
 
 /** Fallback view when no position is set — Europe-centered, continent-scale. */
 const DEFAULT_VIEW = { longitude: 10, latitude: 50, zoom: 3 };

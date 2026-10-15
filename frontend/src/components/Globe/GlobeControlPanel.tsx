@@ -1,3 +1,4 @@
+import { usesOwnGeoServer } from "../../lib/ownGeoServer";
 // Consolidated map control panel for the globe.
 //
 // One collapsible surface in the app's own design language: dark glass,
@@ -171,12 +172,14 @@ export function GlobeControlPanel({
                   icon="🗺️"
                   label={t("map:globe.panel.placeLabels")}
                 />
+                {!usesOwnGeoServer() && (
                 <Toggle
                   checked={showTerrain}
                   onChange={onShowTerrainChange}
                   icon="⛰️"
                   label={t("map:globe.panel.terrain")}
                 />
+                )}
                 <Toggle
                   checked={autoRotate}
                   onChange={onAutoRotateChange}

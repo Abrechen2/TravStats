@@ -1,3 +1,4 @@
+import { ownMapStyle } from "../../lib/ownGeoServer";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
 import MapGL, { useControl } from "react-map-gl/maplibre";
@@ -8,7 +9,7 @@ import { hexToRgb } from "../../lib/domainColor";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { flightTrackBounds, flightTrackPaths } from "./flightTrackPaths";
 
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+const DARK_MAP_STYLE = ownMapStyle("dark", "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json");
 
 function DeckGLOverlay({ layers }: { layers: Layer[] }): null {
   const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay({ layers }), {

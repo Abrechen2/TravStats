@@ -145,6 +145,7 @@ import devicePushRoutes from "./devicePush";
 import appSettingsRoutes from "./appSettings";
 import jobRoutes from "./jobs";
 import geoRoutes from "./geo";
+import geoServerRoutes from "./geoServer";
 import documentRoutes from "./documents";
 import tripPhotoWindowRoutes from "./tripPhotoWindows";
 import syncRoutes from "./sync";
@@ -467,6 +468,7 @@ export const apiMounts: ApiMount[] = [
   // The paired phone's push registration (TravStats#156).
   { id: "devicePush", base: "/api/v1/devices", router: devicePushRoutes },
   { id: "appSettings", base: "/api/v1/app-settings", router: appSettingsRoutes },
+  { id: "geo-server", base: "/api/v1/geo-server", router: geoServerRoutes },
   { id: "geo", base: "/api/v1/geo", router: geoRoutes },
   // Background jobs a long-running request started (backup, restore, import, scans).
   { id: "jobs", base: "/api/v1/jobs", router: jobRoutes },
