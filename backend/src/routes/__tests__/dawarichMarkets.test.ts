@@ -65,6 +65,7 @@ beforeEach(async () => {
     update: {
       enabled: true,
       marketEnabled: false,
+      venueEnabled: false,
       marketResult: Prisma.DbNull,
       leaseUntil: null,
       result: null,
@@ -325,5 +326,124 @@ describe("Automatic market suggestions", () => {
     });
     expect(write).not.toHaveBeenCalled();
     expect(await prisma.dawarichStay.count({ where: { userId } })).toBe(0);
+  });
+  it.each([
+    [{ shop: "mall" }, "mall", "shopping"],
+    [{ leisure: "park" }, "park", "nature"],
+    [{ tourism: "zoo" }, "zoo", "nature"],
+    [{ tourism: "theme_park" }, "themePark", "entertainment"],
+    [{ tourism: "museum" }, "museum", "museum"],
+  ])("keeps %j as one reviewable venue and confirms it once", async (tags, type, category) => {
+    await prisma.dawarichStayScan.update({ where: { userId }, data: { venueEnabled: true } });
+    const payload = {
+      elements: [{ ...raw.elements[0], tags: { ...tags, name: "Whole venue", wikidata: "Q5678" } }],
+    };
+    const store = memoryStore();
+    const fetcher = jest.fn(async () => Response.json(payload));
+    const result = await run({ marketStore: store, marketFetcher: fetcher });
+    expect(result.markets?.createdCount).toBe(1);
+    expect(await prisma.placeVisit.count({ where: { userId } })).toBe(0);
+    const row = await prisma.dawarichStay.findFirstOrThrow({ where: { userId } });
+    expect(row.evidence).toMatchObject({
+      kind: "venue",
+      market: { venueType: type, osmRef: "way/1234" },
+    });
+    expect((await run({ marketStore: store, marketFetcher: fetcher })).created).toBe(0);
+    const url = `/api/v1/dawarich-stays/${row.id}/accept`;
+    const first = await api()
+      .post(url)
+      .set("Cookie", cookie)
+      .send({ ...review, name: "Whole venue" });
+    expect(first.status).toBe(200);
+    const second = await api()
+      .post(url)
+      .set("Cookie", cookie)
+      .send({ ...review, name: "Whole venue" });
+    expect(second.body.data.visitId).toBe(first.body.data.visitId);
+    expect(await prisma.placeVisit.count({ where: { userId } })).toBe(1);
+    expect(await prisma.place.findFirstOrThrow({ where: { userId } })).toMatchObject({
+      category,
+      externalRef: "osm:way/1234",
+      wikidataId: "Q5678",
+    });
+  });
+  it("does not broaden market consent into other venue types", async () => {
+    await prisma.dawarichStayScan.update({ where: { userId }, data: { marketEnabled: true } });
+    await run({
+      marketStore: memoryStore(),
+      marketFetcher: async () =>
+        Response.json({ elements: [{ ...raw.elements[0], tags: { shop: "mall", name: "Mall" } }] }),
+    });
+    expect(await prisma.dawarichStay.count({ where: { userId, name: "Mall" } })).toBe(0);
+  });
+  it("keeps market findings off when only other venues are enabled", async () => {
+    await prisma.dawarichStayScan.update({ where: { userId }, data: { venueEnabled: true } });
+    const result = await run({
+      marketStore: memoryStore(),
+      marketFetcher: async () => Response.json(raw),
+    });
+    expect(result.markets?.createdCount).toBe(0);
+    expect(await prisma.dawarichStay.count({ where: { userId, name: "Test Market" } })).toBe(0);
+  });
+  it("requires an own connection for venue consent and permits revocation with hidden Places", async () => {
+    const url = "/api/v1/dawarich-stays/settings";
+    expect(
+      (await api().patch(url).set("Cookie", cookie).send({ venueEnabled: true })).body.code
+    ).toBe("DAWARICH_OWN_CONNECTION_REQUIRED");
+    await prisma.userSettings.update({
+      where: { userId },
+      data: {
+        dawarichBaseUrl: "https://dawarich.example.test",
+        dawarichApiKey: encryptApiKey("synthetic-key"),
+      },
+    });
+    expect((await api().patch(url).set("Cookie", cookie).send({ venueEnabled: true })).status).toBe(
+      200
+    );
+    await prisma.userSettings.update({ where: { userId }, data: { enabledDomains: [] } });
+    expect(
+      (await api().patch(url).set("Cookie", cookie).send({ venueEnabled: false })).status
+    ).toBe(200);
+  });
+  it("discards broad map responses after venue consent is revoked", async () => {
+    await prisma.dawarichStayScan.update({ where: { userId }, data: { venueEnabled: true } });
+    const store = memoryStore(),
+      write = jest.spyOn(store, "write");
+    await run({
+      marketStore: store,
+      marketFetcher: async () => {
+        await api()
+          .patch("/api/v1/dawarich-stays/settings")
+          .set("Cookie", cookie)
+          .send({ venueEnabled: false });
+        return Response.json({
+          elements: [{ ...raw.elements[0], tags: { shop: "mall", name: "Mall" } }],
+        });
+      },
+    });
+    expect(write).not.toHaveBeenCalled();
+    expect(await prisma.dawarichStay.count({ where: { userId } })).toBe(0);
+  });
+  it("keeps a museum inside a park as an independent venue", async () => {
+    await prisma.dawarichStayScan.update({ where: { userId }, data: { venueEnabled: true } });
+    const elements = [
+      { ...raw.elements[0], id: 2001, tags: { leisure: "park", name: "Park", wikidata: "Q7654" } },
+      {
+        ...raw.elements[0],
+        id: 2002,
+        tags: { tourism: "museum", name: "Museum", wikidata: "Q7654" },
+      },
+    ];
+    await run({
+      marketStore: memoryStore(),
+      marketFetcher: async () => Response.json({ elements }),
+    });
+    const rows = await prisma.dawarichStay.findMany({ where: { userId, status: "pending" } });
+    expect(rows.map((r) => r.name).sort()).toEqual(["Museum", "Park"]);
+    expect(
+      rows.every((r) =>
+        (r.evidence as { uncertainties: string[] }).uncertainties.includes("overlappingMarkets")
+      )
+    ).toBe(true);
   });
 });

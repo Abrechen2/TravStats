@@ -71,6 +71,7 @@ beforeEach(async () => {
     update: {
       enabled: true,
       marketEnabled: false,
+      venueEnabled: false,
       marketResult: Prisma.DbNull,
       leaseUntil: null,
       result: null,

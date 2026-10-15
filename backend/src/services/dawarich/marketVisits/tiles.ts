@@ -60,7 +60,10 @@ export function planMarketTiles(points: readonly DawarichPoint[]) {
     totalTiles: eligible.length,
   };
 }
-export function marketTileQuery(tile: MarketTile): string {
+export function marketTileQuery(tile: MarketTile, includeVenues = false): string {
   const bbox = [tile.south, tile.west, tile.north, tile.east].map((n) => n.toFixed(5)).join(",");
-  return `[out:json][timeout:12][maxsize:8388608];(nwr["amenity"="marketplace"](${bbox});wr["name:en"~"market",i](${bbox}););out body geom;`;
+  const venues = includeVenues
+    ? `nwr["shop"="mall"](${bbox});nwr["leisure"="park"](${bbox});nwr["tourism"~"^(zoo|theme_park|museum)$"](${bbox});`
+    : "";
+  return `[out:json][timeout:12][maxsize:8388608];(nwr["amenity"="marketplace"](${bbox});wr["name:en"~"market",i](${bbox});${venues});out body geom;`;
 }

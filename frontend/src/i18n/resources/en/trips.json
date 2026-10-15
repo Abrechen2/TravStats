@@ -673,7 +673,7 @@
     "staleData": "The newest returned location data is over 24 hours old. Check your Dawarich sync; a successful request does not mean current points are available.",
     "markets": {
       "enable": "Suggest market visits automatically",
-      "privacy": "Market boundaries are requested from OpenStreetMap/Overpass for approximate regions (roughly a 5 km grid). Your position sequences, times and point IDs are not sent. Visits are recorded only after you confirm them.",
+      "privacy": "Area recognition queries approximate regions (roughly 5 km grid cells) from OpenStreetMap/Overpass. Your location sequences, times and point IDs are not sent. Visits are only recorded after your confirmation.",
       "coverage": "Regions checked: {{tiles}} of {{total}} · {{cached}} from stored map data",
       "missing": "{{count}} map entries have no usable market boundary. This does not mean you did not visit.",
       "stale": "Some map data is older. Please check these suggestions carefully.",
@@ -737,12 +737,12 @@
       "rejected": "Dismissed"
     },
     "uncertainty": {
-      "staleMapData": "The market boundaries used are older.",
-      "partialMapData": "Current market boundaries are missing for part of this period.",
+      "staleMapData": "Some venue boundaries are older.",
+      "partialMapData": "Current venue boundaries are missing for part of the period.",
       "visitAmbiguous": "Several existing visits may match. Please check the visit.",
-      "overlappingMarkets": "Several market boundaries overlap. Please check which market you visited.",
-      "boundaryTolerance": "Some points are near the market edge (up to 20 m tolerance).",
-      "briefExcursion": "The position sequence includes a brief interruption within the market area.",
+      "overlappingMarkets": "Venue boundaries overlap. Independent venues remain separate; check which ones you visited.",
+      "boundaryTolerance": "Some points are near the venue boundary (up to 20 m tolerance).",
+      "briefExcursion": "The location track contains a brief excursion outside the venue.",
       "speedUnknown": "Movement speed is partly unknown.",
       "tripIncomplete": "This stay is only partly within a trip’s dates. Please choose the trip yourself.",
       "sourceUnknown": "Dawarich does not reliably distinguish recorded GPS from reconstructed photo locations here. These points do not establish an overnight stay.",
@@ -753,6 +753,28 @@
       "tripAmbiguous": "Several trips match this window. Please choose the correct one.",
       "placeAmbiguous": "Several saved places are nearby. Please check the place."
     },
-    "existingVisit": "An existing visit was found in this window. Acceptance checks whether this suggestion can be linked to it."
+    "existingVisit": "An existing visit was found in this window. Acceptance checks whether this suggestion can be linked to it.",
+    "venues": {
+      "enable": "Suggest other places as whole venues",
+      "description": "Recognize shopping malls, parks, zoos, theme parks and museums using their OSM boundaries. Parks require at least 15 minutes; other venues require 10 minutes. Independent places within larger grounds remain available for review. Only suggestions are created.",
+      "missing": "{{count}} map entries have no usable venue boundary. This does not mean you did not visit.",
+      "counts": "New area suggestions: {{created}} · Already recorded: {{known}}",
+      "source": "View venue boundary in OpenStreetMap",
+      "interior": "{{count}} location points inside the venue",
+      "status": {
+        "complete": "Venue boundaries evaluated",
+        "partial": "Venue boundaries only partly available — check coverage gaps",
+        "cancelled": "Area evaluation paused"
+      },
+      "types": {
+        "market": "Market grounds",
+        "mall": "Shopping mall — whole venue",
+        "park": "Park visit",
+        "zoo": "Zoo visit",
+        "themePark": "Theme park visit",
+        "museum": "Museum visit — whole venue",
+        "unknown": "Whole venue"
+      }
+    }
   }
 }

@@ -3,6 +3,7 @@ import type { DawarichPoint } from "../dawarichClient";
 import { meters } from "../stays/detect";
 import { contains, distanceToArea, polygons, type MarketArea } from "./geometry";
 
+import { venueMinimumMinutes } from "./venueTypes";
 import { prepareMarketAreas } from "./areas";
 
 const MINUTE = 60_000;
@@ -71,8 +72,9 @@ export function detectMarketVisits(
   }
   const points = [...byTime.values()].sort((a, b) => a.timestampMs - b.timestampMs);
   const result: MarketVisit[] = [];
-  // A supplied parent market represents its stalls and smaller parts.
+  // Only explicit identity/parent links group parts; geometric nesting stays separate.
   for (const area of prepared) {
+    const minimumMinutes = venueMinimumMinutes(area.venueType ?? "market");
     const vertices = polygons(area).flat(2);
     const latitudePadding = MARKET_RULES.boundaryToleranceMeters / 111_320;
     const furthestLatitude = Math.max(...vertices.map((p) => Math.abs(p[1])));
@@ -93,7 +95,7 @@ export function detectMarketVisits(
         first &&
         last &&
         group.length >= MARKET_RULES.minPoints &&
-        last.point.timestampMs - first.point.timestampMs >= MARKET_RULES.minMinutes * MINUTE &&
+        last.point.timestampMs - first.point.timestampMs >= minimumMinutes * MINUTE &&
         interior.length >= MARKET_RULES.minInteriorPoints &&
         interior[interior.length - 1].point.timestampMs - interior[0].point.timestampMs >=
           MARKET_RULES.minInteriorMinutes * MINUTE

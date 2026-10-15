@@ -5,7 +5,13 @@ import DawarichStayScanCard from "../../Settings/DawarichStayScanCard";
 import { dawarichStaysApi } from "../../../lib/api/dawarichStays";
 
 vi.mock("../../../lib/api/dawarichStays", () => ({
-  dawarichStaysApi: { state: vi.fn(), enable: vi.fn(), enableMarkets: vi.fn(), scan: vi.fn() },
+  dawarichStaysApi: {
+    state: vi.fn(),
+    enable: vi.fn(),
+    enableMarkets: vi.fn(),
+    enableVenues: vi.fn(),
+    scan: vi.fn(),
+  },
 }));
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -194,5 +200,85 @@ describe("Market discovery consent", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("trips:dawarichStays.markets.missing")).toBeInTheDocument();
     expect(screen.getByText("trips:dawarichStays.markets.stale")).toBeInTheDocument();
+  });
+});
+
+describe("additional whole venues", () => {
+  it("requires a separate opt-in even when markets are already enabled", async () => {
+    vi.mocked(dawarichStaysApi.state).mockResolvedValue({
+      ...state,
+      result: "succeeded",
+      marketEnabled: true,
+      venueEnabled: false,
+    } as never);
+    mount();
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "trips:dawarichStays.venues.enable",
+    });
+    expect(checkbox).not.toBeChecked();
+    fireEvent.click(checkbox);
+    await waitFor(() => expect(dawarichStaysApi.enableVenues).toHaveBeenCalledWith(true));
+    expect(dawarichStaysApi.enableMarkets).not.toHaveBeenCalled();
+  });
+  it("permits revoking venue consent when Places is hidden", async () => {
+    vi.mocked(dawarichStaysApi.state).mockResolvedValue({
+      ...state,
+      result: "succeeded",
+      placesEnabled: false,
+      venueEnabled: true,
+    } as never);
+    mount();
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "trips:dawarichStays.venues.enable",
+    });
+    expect(checkbox).toBeEnabled();
+    fireEvent.click(checkbox);
+    await waitFor(() => expect(dawarichStaysApi.enableVenues).toHaveBeenCalledWith(false));
+  });
+  it("keeps a failed consent change visible", async () => {
+    vi.mocked(dawarichStaysApi.state).mockResolvedValue({
+      ...state,
+      result: "succeeded",
+      venueEnabled: false,
+    } as never);
+    vi.mocked(dawarichStaysApi.enableVenues).mockRejectedValue(new Error("offline"));
+    mount();
+    fireEvent.click(
+      await screen.findByRole("checkbox", { name: "trips:dawarichStays.venues.enable" })
+    );
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+    expect(
+      screen.getByRole("checkbox", { name: "trips:dawarichStays.venues.enable" })
+    ).not.toBeChecked();
+  });
+  it("keeps the last broad result labeled correctly after broader consent is disabled", async () => {
+    vi.mocked(dawarichStaysApi.state).mockResolvedValue({
+      ...state,
+      result: "succeeded",
+      venueEnabled: false,
+      marketEnabled: true,
+      marketResult: {
+        scope: "venues",
+        status: "partial",
+        tiles: 1,
+        totalTiles: 2,
+        cachedTiles: 1,
+        fetchedTiles: 0,
+        staleTiles: 0,
+        failedTiles: 1,
+        missingAreaCount: 1,
+        invalidAreaCount: 0,
+        alreadyRecordedCount: 0,
+        createdCount: 1,
+        limited: false,
+      },
+    } as never);
+    mount();
+    expect(
+      await screen.findByText("trips:dawarichStays.venues.status.partial")
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("trips:dawarichStays.markets.status.partial")
+    ).not.toBeInTheDocument();
   });
 });

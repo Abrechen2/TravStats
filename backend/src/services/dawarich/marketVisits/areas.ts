@@ -24,7 +24,7 @@ export function prepareMarketAreas(input: readonly MarketArea[]): PreparedMarket
   for (const area of input) {
     if (area.entityRef && !/^wikidata:Q[1-9][0-9]*$/.test(area.entityRef))
       throw new Error("Unsupported market entity reference");
-    const key = area.entityRef ?? area.id;
+    const key = `${area.venueType ?? "market"}:${area.entityRef ?? area.id}`;
     const group = groups.get(key) ?? [];
     group.push(area);
     groups.set(key, group);

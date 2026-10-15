@@ -47,6 +47,7 @@ export default function DawarichStayScanCard({
       setBusy(false);
     }
   };
+  const coverageScope = state?.marketResult?.scope === "venues" ? "venues" : "markets";
   const placesPaused = state?.placesEnabled === false;
   const stale =
     !!state?.dataThrough && Date.now() - Date.parse(state.dataThrough) > 24 * 60 * 60_000;
@@ -86,9 +87,24 @@ export default function DawarichStayScanCard({
         {text("markets.enable")}
       </label>
       <p className="t-caption mb-4">{text("markets.privacy")}</p>
+      <label className="flex items-center gap-3 my-4">
+        <input
+          type="checkbox"
+          checked={state?.venueEnabled ?? false}
+          disabled={
+            demo ||
+            busy ||
+            !state ||
+            (!state.venueEnabled && (!state.enabled || !state.connected || placesPaused))
+          }
+          onChange={(e) => void action(() => dawarichStaysApi.enableVenues(e.target.checked))}
+        />
+        {text("venues.enable")}
+      </label>
+      <p className="t-caption mb-4">{text("venues.description")}</p>
       {state?.marketResult && (
         <div className="my-3" role="status">
-          <p>{text(`markets.status.${state.marketResult.status}`)}</p>
+          <p>{text(`${coverageScope}.status.${state.marketResult.status}`)}</p>
           <p className="t-caption">
             {t("trips:dawarichStays.markets.coverage", {
               tiles: state.marketResult.tiles,
@@ -98,14 +114,14 @@ export default function DawarichStayScanCard({
           </p>
           {!!state.marketResult.missingAreaCount && (
             <p>
-              {t("trips:dawarichStays.markets.missing", {
+              {t(`trips:dawarichStays.${coverageScope}.missing`, {
                 count: state.marketResult.missingAreaCount,
               })}
             </p>
           )}
           {!!state.marketResult.staleTiles && <p>{text("markets.stale")}</p>}
           <p>
-            {t("trips:dawarichStays.markets.counts", {
+            {t(`trips:dawarichStays.${coverageScope}.counts`, {
               created: state.marketResult.createdCount,
               known: state.marketResult.alreadyRecordedCount,
             })}

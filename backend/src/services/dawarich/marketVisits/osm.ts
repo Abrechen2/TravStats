@@ -6,11 +6,13 @@ import {
   type Ring,
   type Polygon,
 } from "./geometry";
+import { venueType, type VenueType } from "./venueTypes";
 export interface PointMarket {
   id: string;
   name: string;
   sourceUrl: string;
   entityRef?: string;
+  venueType?: VenueType;
 }
 export interface MarketCatalog {
   areas: MarketArea[];
@@ -98,7 +100,7 @@ function geometry(e: RecordValue): MarketArea["geometry"] {
   }
   return { type: "MultiPolygon", coordinates: result };
 }
-export function parseMarketCatalog(raw: unknown): MarketCatalog {
+export function parseMarketCatalog(raw: unknown, includeVenues = false): MarketCatalog {
   if (!record(raw) || !Array.isArray(raw.elements) || raw.elements.length > 3000 || raw.remark)
     throw new Error("Incomplete Overpass response");
   const areas: MarketArea[] = [],
@@ -115,20 +117,15 @@ export function parseMarketCatalog(raw: unknown): MarketCatalog {
     const tags = record(value.tags) ? value.tags : {};
     const english = typeof tags["name:en"] === "string" ? tags["name:en"] : "";
     const name = (english || (typeof tags.name === "string" ? tags.name : "")).trim().slice(0, 200);
-    const explicit = tags.amenity === "marketplace";
-    const named =
-      /\bmarket\b/i.test(english) &&
-      !tags.shop &&
-      !tags.highway &&
-      (!tags.amenity || explicit) &&
-      (!!tags.landuse || !!tags.building);
-    if (!name || (!explicit && !named)) continue;
+    const type = venueType(tags);
+    if (!name || !type || (!includeVenues && type !== "market")) continue;
     const id = `${value.type}/${value.id}`;
     if (seen.has(id)) continue;
     seen.add(id);
     const base = {
       id,
       name,
+      ...(type !== "market" ? { venueType: type } : {}),
       sourceUrl: `https://www.openstreetmap.org/${id}`,
       ...(typeof tags.wikidata === "string" && /^Q[1-9][0-9]*$/.test(tags.wikidata)
         ? { entityRef: `wikidata:${tags.wikidata}` }

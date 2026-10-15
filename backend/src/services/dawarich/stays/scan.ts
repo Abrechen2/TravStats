@@ -102,7 +102,7 @@ export async function scanStays(
       select: { id: true, name: true, startDate: true, endDate: true },
     });
     let markets: Awaited<ReturnType<typeof collectMarketFindings>> | null = null;
-    if (state.marketEnabled) {
+    if (state.marketEnabled || state.venueEnabled) {
       const visits = await prisma.placeVisit.findMany({
         where: { userId },
         select: {
@@ -130,6 +130,8 @@ export async function scanStays(
           })),
         },
         {
+          includeVenues: state.venueEnabled,
+          includeMarkets: state.marketEnabled,
           store: options.marketStore,
           fetcher: options.marketFetcher,
           endpoint: options.marketEndpoint,
@@ -139,7 +141,8 @@ export async function scanStays(
                 userId,
                 ...reservation!,
                 enabled: true,
-                marketEnabled: true,
+                ...(state.marketEnabled ? { marketEnabled: true } : {}),
+                ...(state.venueEnabled ? { venueEnabled: true } : {}),
                 ...placesEnabledWhere,
               },
               select: { userId: true },
@@ -149,7 +152,7 @@ export async function scanStays(
     }
     const candidates: ((typeof stationary)[number] | MarketFinding)[] = [
       ...(markets?.findings ?? []),
-      ...stationary.filter((c) => !markets || !isMarketFragment(c, markets)),
+      ...stationary.filter((c) => !markets || !isMarketFragment(c, markets, places)),
     ];
     let created = 0;
     for (const c of candidates) {
@@ -175,6 +178,16 @@ export async function scanStays(
               const evidence = (row.evidence ?? {}) as { market?: unknown; pointIds?: number[] };
               if (evidence.market) return false;
               const area = markets.areas.find((a) => a.id === market.market.osmRef);
+              if (
+                area?.venueType &&
+                area.venueType !== "market" &&
+                !isMarketFragment(
+                  { ...c, lat: row.sourceLat, lon: row.sourceLon },
+                  markets!,
+                  places
+                )
+              )
+                return false;
               const shared =
                 evidence.pointIds?.filter((id) => market.pointIds.includes(id)).length ?? 0;
               return shared >= 3 || !!(area && contains(area, row.sourceLon, row.sourceLat));
@@ -185,10 +198,11 @@ export async function scanStays(
           if (!market)
             return meters({ lat: row.sourceLat, lon: row.sourceLon }, c) <= RADIUS_METERS * 2;
           const evidence = (row.evidence ?? {}) as {
-            market?: { identity?: string; areaIds?: string[] };
+            market?: { identity?: string; areaIds?: string[]; venueType?: string };
           };
           return (
-            evidence.market?.identity === market.market.identity ||
+            (evidence.market?.identity === market.market.identity &&
+              (evidence.market?.venueType ?? "market") === (market.market.venueType ?? "market")) ||
             evidence.market?.areaIds?.some((id) => market.market.areaIds.includes(id)) ||
             (row.status === "rejected" && fragments.some((f) => f.id === row.id))
           );
@@ -305,7 +319,16 @@ export async function scanStays(
               pointCount: c.pointCount,
               evidence: {
                 source: "dawarich",
-                ...(market ? { kind: "market", market: market.market, supersededFindingIds } : {}),
+                ...(market
+                  ? {
+                      kind:
+                        market.market.venueType && market.market.venueType !== "market"
+                          ? "venue"
+                          : "market",
+                      market: market.market,
+                      supersededFindingIds,
+                    }
+                  : {}),
                 matchingVisitId: matchingVisit?.id ?? null,
                 zone,
                 pointIds: c.pointIds,

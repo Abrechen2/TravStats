@@ -16,6 +16,7 @@ export interface CatalogStore {
   complete(token: Date, bytes: number, backoffMs: number): Promise<void>;
 }
 export interface MarketCoverage {
+  scope?: "markets" | "venues";
   status: "complete" | "partial" | "cancelled";
   tiles: number;
   totalTiles: number;
@@ -54,7 +55,8 @@ class CatalogFailure extends Error {
 export async function fetchMarketTile(
   tile: MarketTile,
   endpoint: string,
-  fetcher: typeof fetch = fetch
+  fetcher: typeof fetch = fetch,
+  includeVenues = false
 ): Promise<{ value: MarketCatalog; bytes: number }> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 16000);
@@ -63,7 +65,7 @@ export async function fetchMarketTile(
     const url = new URL(endpoint);
     if (!["http:", "https:"].includes(url.protocol) || url.username || url.password)
       throw new Error("endpoint");
-    url.searchParams.set("data", marketTileQuery(tile));
+    url.searchParams.set("data", marketTileQuery(tile, includeVenues));
     const response = await fetcher(url, {
       signal: controller.signal,
       headers: {
@@ -98,7 +100,7 @@ export async function fetchMarketTile(
       chunks.push(next.value);
     }
     const raw = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-    return { value: parseMarketCatalog(raw), bytes };
+    return { value: parseMarketCatalog(raw, includeVenues), bytes };
   } catch (e) {
     if (e instanceof CatalogFailure) {
       e.bytes = bytes;
@@ -118,6 +120,7 @@ export async function discoverMarketAreas(
     endpoint?: string;
     fetcher?: typeof fetch;
     clock?: () => Date;
+    includeVenues?: boolean;
   }
 ) {
   const clock = options.clock ?? (() => new Date());
@@ -128,6 +131,7 @@ export async function discoverMarketAreas(
   const prefix = createHash("sha256").update(endpoint).digest("hex").slice(0, 16);
   const plan = planMarketTiles(points);
   const coverage = emptyCoverage();
+  coverage.scope = options.includeVenues ? "venues" : "markets";
   coverage.totalTiles = plan.totalTiles;
   coverage.limited = plan.limited;
   const areas = new Map<string, MarketCatalog["areas"][number]>(),
@@ -140,7 +144,7 @@ export async function discoverMarketAreas(
       break;
     }
     const at = clock(),
-      key = `market-v1:${prefix}:${tile.key}`;
+      key = `${options.includeVenues ? "venue-v1" : "market-v1"}:${prefix}:${tile.key}`;
     const cached = await options.store.read(key);
     let data: MarketCatalog | null = null;
     if (cached && at.getTime() - cached.fetchedAt.getTime() <= CATALOG_TTL_MS) {
@@ -158,7 +162,12 @@ export async function discoverMarketAreas(
               coverage.status = "cancelled";
               break;
             }
-            const result = await fetchMarketTile(tile, endpoint, options.fetcher);
+            const result = await fetchMarketTile(
+              tile,
+              endpoint,
+              options.fetcher,
+              options.includeVenues
+            );
             bytes = result.bytes;
             if (!(await options.isAllowed())) {
               coverage.status = "cancelled";

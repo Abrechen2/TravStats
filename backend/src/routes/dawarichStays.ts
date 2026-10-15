@@ -60,6 +60,7 @@ router.get("/settings", async (req: AuthRequest, res, next) => {
         enabled: state?.enabled ?? false,
         connected,
         marketEnabled: state?.marketEnabled ?? false,
+        venueEnabled: state?.venueEnabled ?? false,
         marketResult: state?.marketResult ?? null,
         result:
           state?.result === "running" && pausedReason
@@ -77,21 +78,33 @@ router.patch("/settings", rejectDemo, async (req: AuthRequest, res, next) => {
   try {
     const userId = user(req);
     const patch = z
-      .object({ enabled: z.boolean().optional(), marketEnabled: z.boolean().optional() })
+      .object({
+        enabled: z.boolean().optional(),
+        marketEnabled: z.boolean().optional(),
+        venueEnabled: z.boolean().optional(),
+      })
       .strict()
-      .refine((v) => v.enabled !== undefined || v.marketEnabled !== undefined)
+      .refine(
+        (v) =>
+          v.enabled !== undefined || v.marketEnabled !== undefined || v.venueEnabled !== undefined
+      )
       .parse(req.body);
     const current = await prisma.dawarichStayScan.findUnique({ where: { userId } });
     const enabled = patch.enabled ?? current?.enabled ?? false;
-    if (patch.marketEnabled && !enabled)
+    if ((patch.marketEnabled || patch.venueEnabled) && !enabled)
       throw new AppError("Enable own stay scan first", 409, "DAWARICH_SCAN_UNAVAILABLE");
-    if (enabled && (patch.enabled || patch.marketEnabled)) {
+    if (enabled && (patch.enabled || patch.marketEnabled || patch.venueEnabled)) {
       await requirePlacesEnabled(userId);
       await ownConnection(userId);
     }
     const state = await prisma.dawarichStayScan.upsert({
       where: { userId },
-      create: { userId, enabled, marketEnabled: patch.marketEnabled ?? false },
+      create: {
+        userId,
+        enabled,
+        marketEnabled: patch.marketEnabled ?? false,
+        venueEnabled: patch.venueEnabled ?? false,
+      },
       // Invalidate an in-flight reservation across off/on consent changes.
       // Its delayed response may never write under a later consent.
       update: { ...patch, leaseUntil: null },

@@ -4629,6 +4629,7 @@ model FerryJourneyCompanion {
 /// Explicitly opted-in location-history suggestions, separate from Immich and country days.
 model DawarichStayScan {
   marketEnabled Boolean @default(false) @map("market_enabled")
+  venueEnabled Boolean @default(false) @map("venue_enabled")
   marketResult Json? @map("market_result")
   userId String @id @map("user_id")
   enabled Boolean @default(false)

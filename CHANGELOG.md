@@ -26,6 +26,8 @@ previous image alone does not know `completed`.
 
 ### Added
 
+- **Dawarich can suggest whole venues beyond markets.** A separate opt-in adds shopping malls, parks, zoos, theme parks and museum grounds. Independent overlapping venues stay reviewable, and visits are recorded only after confirmation.
+
 - **Markets are suggested as whole venues.** With separate consent, Dawarich
   scans automatically fetch public OpenStreetMap market boundaries for coarse
   regions along your track. A visit across several stalls stays one suggestion,

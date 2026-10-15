@@ -1,3 +1,5 @@
+import { VENUE_TYPES, type VenueType } from "./venueTypes";
+
 /** WGS84 GeoJSON order: longitude, latitude. Small local market areas only. */
 export type Position = readonly [number, number];
 export type Ring = readonly Position[];
@@ -11,6 +13,8 @@ export interface MarketArea {
   sourceUrl: string;
   /** Shared public identity, e.g. wikidata:Q490809; not a name similarity. */
   entityRef?: string;
+  /** Absent in legacy market snapshots. */
+  venueType?: VenueType;
   geometry: MarketGeometry;
   /** Explicit parent venue, never inferred merely from nearby coordinates. */
   parentId?: string;
@@ -62,6 +66,8 @@ export function validateAreas(areas: readonly MarketArea[]): void {
   for (const area of areas) {
     if (!area.id || !area.name?.trim() || !/^https?:\/\//.test(area.sourceUrl) || ids.has(area.id))
       throw new Error("Market areas require unique ids, names and source URLs");
+    if (area.venueType !== undefined && !VENUE_TYPES.includes(area.venueType))
+      throw new Error("Unsupported venue type");
     ids.add(area.id);
     if (!["Polygon", "MultiPolygon"].includes(area.geometry?.type))
       throw new Error("A market point is not a market area");
@@ -112,7 +118,10 @@ export function validateAreas(areas: readonly MarketArea[]): void {
     while (parent) {
       if (!ids.has(parent) || seen.has(parent)) throw new Error("Invalid market parent hierarchy");
       seen.add(parent);
-      parent = areas.find((a) => a.id === parent)!.parentId;
+      const ancestor = areas.find((a) => a.id === parent)!;
+      if ((ancestor.venueType ?? "market") !== (area.venueType ?? "market"))
+        throw new Error("Independent venue types cannot be merged as parts");
+      parent = ancestor.parentId;
     }
   }
 }

@@ -673,7 +673,7 @@
     "staleData": "Die zuletzt gelieferten Positionsdaten sind mehr als 24 Stunden alt. Prüfe die Synchronisierung mit Dawarich; ein erfolgreicher Abruf bedeutet nicht, dass aktuelle Punkte vorliegen.",
     "markets": {
       "enable": "Marktbesuche automatisch vorschlagen",
-      "privacy": "Für die Marktflächen werden ungefähre Regionen (etwa 5-km-Raster) bei OpenStreetMap/Overpass abgefragt. Deine Positionsfolgen, Zeiten und Punkt-IDs werden nicht übertragen. Marktbesuche werden erst nach deiner Bestätigung eingetragen.",
+      "privacy": "Für die Flächenerkennung werden ungefähre Regionen (etwa 5-km-Raster) bei OpenStreetMap/Overpass abgefragt. Deine Positionsfolgen, Zeiten und Punkt-IDs werden nicht übertragen. Besuche werden erst nach deiner Bestätigung eingetragen.",
       "coverage": "Geprüfte Regionen: {{tiles}} von {{total}} · {{cached}} aus gespeicherten Kartendaten",
       "missing": "Bei {{count}} Karteneinträgen fehlt eine nutzbare Marktfläche. Das bedeutet nicht, dass du dort nicht warst.",
       "stale": "Ein Teil der Kartendaten ist älter. Bitte prüfe die Zuordnung besonders sorgfältig.",
@@ -737,12 +737,12 @@
       "rejected": "Verworfen"
     },
     "uncertainty": {
-      "staleMapData": "Die verwendeten Marktflächen sind älter.",
-      "partialMapData": "Für einen Teil des Zeitraums fehlen aktuelle Marktflächen.",
+      "staleMapData": "Die verwendeten Ortsflächen sind älter.",
+      "partialMapData": "Für einen Teil des Zeitraums fehlen aktuelle Ortsflächen.",
       "visitAmbiguous": "Mehrere vorhandene Besuche kommen infrage. Bitte prüfe den Besuch.",
-      "overlappingMarkets": "Mehrere Marktflächen überschneiden sich. Bitte prüfe, welcher Markt gemeint ist.",
-      "boundaryTolerance": "Ein Teil der Punkte liegt am Marktrand (bis zu 20 m Toleranz).",
-      "briefExcursion": "Die Positionsspur enthält eine kurze Unterbrechung im Marktbereich.",
+      "overlappingMarkets": "Mehrere Ortsflächen überschneiden sich. Eigenständige Orte bleiben getrennt; bitte prüfe, welche du besucht hast.",
+      "boundaryTolerance": "Ein Teil der Punkte liegt am Geländerand (bis zu 20 m Toleranz).",
+      "briefExcursion": "Die Positionsspur enthält eine kurze Unterbrechung im Gelände.",
       "speedUnknown": "Die Bewegungsgeschwindigkeit ist teilweise unbekannt.",
       "tripIncomplete": "Der Aufenthalt liegt nur teilweise im Zeitraum einer Reise. Bitte ordne ihn selbst zu.",
       "sourceUnknown": "Dawarich unterscheidet hier nicht zuverlässig zwischen GPS-Aufzeichnung und rekonstruierten Foto-Positionen. Dies ist kein Nachweis einer Übernachtung.",
@@ -753,6 +753,28 @@
       "tripAmbiguous": "Mehrere Reisen passen zum Zeitraum. Bitte wähle die richtige Zuordnung.",
       "placeAmbiguous": "Mehrere gespeicherte Orte liegen in der Nähe. Bitte prüfe den Ort."
     },
-    "existingVisit": "Für diesen Zeitraum wurde bereits ein Besuch gefunden. Bei der Übernahme wird geprüft, ob dein Vorschlag damit verknüpft werden kann."
+    "existingVisit": "Für diesen Zeitraum wurde bereits ein Besuch gefunden. Bei der Übernahme wird geprüft, ob dein Vorschlag damit verknüpft werden kann.",
+    "venues": {
+      "enable": "Weitere Orte als gesamtes Gelände vorschlagen",
+      "description": "Einkaufszentren, Parks, Zoos, Freizeitparks und Museen anhand ihrer OSM-Flächen erkennen. Parks benötigen mindestens 15 Minuten, die übrigen Orte 10 Minuten Aufenthalt. Eigenständige Orte innerhalb größerer Gelände bleiben prüfbar. Es entstehen nur Vorschläge.",
+      "missing": "Bei {{count}} Karteneinträgen fehlt eine nutzbare Ortsfläche. Das bedeutet nicht, dass du dort nicht warst.",
+      "counts": "Neue Flächen-Vorschläge: {{created}} · Bereits erfasst: {{known}}",
+      "source": "Ortsfläche in OpenStreetMap ansehen",
+      "interior": "{{count}} Positionspunkte innerhalb des Geländes",
+      "status": {
+        "complete": "Ortsflächen ausgewertet",
+        "partial": "Ortsflächen nur teilweise verfügbar – Datenlücken beachten",
+        "cancelled": "Flächenauswertung pausiert"
+      },
+      "types": {
+        "market": "Marktgelände",
+        "mall": "Einkaufszentrum – gesamtes Gelände",
+        "park": "Parkbesuch",
+        "zoo": "Zoobesuch",
+        "themePark": "Freizeitparkbesuch",
+        "museum": "Museumsbesuch – gesamtes Gelände",
+        "unknown": "Zusammengehöriges Gelände"
+      }
+    }
   }
 }

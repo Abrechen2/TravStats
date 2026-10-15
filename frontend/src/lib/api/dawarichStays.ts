@@ -5,7 +5,9 @@ export interface StayScanState {
   enabled: boolean;
   connected: boolean;
   marketEnabled?: boolean;
+  venueEnabled?: boolean;
   marketResult?: {
+    scope?: "markets" | "venues";
     status: "complete" | "partial" | "cancelled";
     tiles: number;
     totalTiles: number;
@@ -58,9 +60,10 @@ export interface DawarichStay {
   resolvedAt: string | null;
   evidence: {
     source: "dawarich";
-    kind?: "market";
+    kind?: "market" | "venue";
     market?: {
       identity: string;
+      venueType?: "market" | "mall" | "park" | "zoo" | "themePark" | "museum";
       areaIds: string[];
       sourceUrls: string[];
       interiorPointCount: number;
@@ -94,6 +97,9 @@ export const dawarichStaysApi = {
   },
   enableMarkets: async (marketEnabled: boolean): Promise<void> => {
     await api.patch(`${base}/settings`, { marketEnabled });
+  },
+  enableVenues: async (venueEnabled: boolean): Promise<void> => {
+    await api.patch(`${base}/settings`, { venueEnabled });
   },
   scan: async (lookbackDays = 7): Promise<void> => {
     const { data } = await api.post(`${base}/scan`, { lookbackDays });

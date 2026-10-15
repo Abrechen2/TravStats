@@ -6,6 +6,7 @@ import { zoneOf } from "../../../shared/time/zoneOf";
 import { visitColumnsFromResolved } from "../../timeModel/visitColumns";
 import { recheckAchievements } from "../../../utils/achievements";
 import type { StayReview } from "../../../schemas/dawarichStays";
+import { venueCategory, VENUE_TYPES, type VenueType } from "../marketVisits/venueTypes";
 import { meters } from "./detect";
 
 async function acceptStayOnce(userId: string, id: string, input: StayReview) {
@@ -29,10 +30,11 @@ async function acceptStayOnce(userId: string, id: string, input: StayReview) {
         throw new AppError("Trip not found", 404);
       const evidence = (row.evidence ?? {}) as {
         kind?: string;
-        market?: { identity?: string; osmRef?: string };
+        market?: { identity?: string; osmRef?: string; venueType?: VenueType };
       };
       const sameVenue =
-        evidence.kind === "market" &&
+        (evidence.kind === "market" || evidence.kind === "venue") &&
+        (!evidence.market?.venueType || VENUE_TYPES.includes(evidence.market.venueType)) &&
         input.name === row.name &&
         meters(input, { lat: row.sourceLat, lon: row.sourceLon }) <= 100;
       const osmRef =
@@ -86,7 +88,7 @@ async function acceptStayOnce(userId: string, id: string, input: StayReview) {
             name: input.name,
             lat: input.lat,
             lon: input.lon,
-            category: sameVenue ? "shopping" : "other",
+            category: sameVenue ? venueCategory(evidence.market?.venueType ?? "market") : "other",
             ...(sameVenue ? { externalRef: osmRef, wikidataId } : {}),
             dataSource: "dawarich",
             visited: true,

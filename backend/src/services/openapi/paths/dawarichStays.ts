@@ -75,9 +75,18 @@ registry.registerPath({
       content: {
         "application/json": {
           schema: z
-            .object({ enabled: z.boolean().optional(), marketEnabled: z.boolean().optional() })
+            .object({
+              enabled: z.boolean().optional(),
+              marketEnabled: z.boolean().optional(),
+              venueEnabled: z.boolean().optional(),
+            })
             .strict()
-            .refine((v) => v.enabled !== undefined || v.marketEnabled !== undefined),
+            .refine(
+              (v) =>
+                v.enabled !== undefined ||
+                v.marketEnabled !== undefined ||
+                v.venueEnabled !== undefined
+            ),
         },
       },
     },

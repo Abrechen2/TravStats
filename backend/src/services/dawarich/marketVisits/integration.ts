@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { DawarichPoint } from "../dawarichClient";
-import type { StayCandidate } from "../stays/detect";
+import { meters, type StayCandidate } from "../stays/detect";
 import { discoverMarketAreas, type CatalogStore } from "./catalog";
 import { marketCatalogStore } from "./catalogStore";
 import { prepareMarketAreas } from "./areas";
@@ -12,6 +12,7 @@ import {
   type KnownTrip,
   type KnownVisit,
 } from "./preview";
+import type { VenueType } from "./venueTypes";
 import { contains, type MarketArea } from "./geometry";
 export interface MarketFinding extends StayCandidate {
   name: string;
@@ -19,6 +20,7 @@ export interface MarketFinding extends StayCandidate {
   tripId: string | null;
   market: {
     identity: string;
+    venueType?: VenueType;
     osmRef: string;
     areaIds: string[];
     sourceUrls: string[];
@@ -34,14 +36,21 @@ export async function collectMarketFindings(
     store?: CatalogStore;
     endpoint?: string;
     fetcher?: typeof fetch;
+    includeVenues?: boolean;
+    includeMarkets?: boolean;
   }
 ) {
   const catalog = await discoverMarketAreas(points, {
     ...options,
     store: options.store ?? marketCatalogStore,
   });
-  const prepared = prepareMarketAreas(catalog.areas);
-  const hits = detectMarketVisits(points, catalog.areas);
+  const selected = catalog.areas.filter((a) =>
+    (a.venueType ?? "market") === "market"
+      ? options.includeMarkets !== false
+      : options.includeVenues
+  );
+  const prepared = prepareMarketAreas(selected);
+  const hits = detectMarketVisits(points, selected);
   const byId = new Map(points.map((p) => [p.id, p]));
   const findings: MarketFinding[] = [];
   for (const hit of hits) {
@@ -77,6 +86,7 @@ export async function collectMarketFindings(
       ],
       market: {
         identity,
+        ...(area.venueType ? { venueType: area.venueType } : {}),
         osmRef: area.id,
         areaIds: hit.areaIds,
         sourceUrls: hit.sourceUrls,
@@ -91,7 +101,9 @@ export function marketFingerprint(candidate: MarketFinding): string {
   return createHash("sha256")
     .update(
       JSON.stringify([
-        "market",
+        candidate.market.venueType && candidate.market.venueType !== "market"
+          ? `venue:${candidate.market.venueType}`
+          : "market",
         candidate.market.identity,
         candidate.startAt.toISOString(),
         candidate.endAt.toISOString(),
@@ -102,13 +114,25 @@ export function marketFingerprint(candidate: MarketFinding): string {
 /** Any raw stationary fragment supported by the SAME market visit is redundant. */
 export function isMarketFragment(
   candidate: StayCandidate,
-  markets: Awaited<ReturnType<typeof collectMarketFindings>>
+  markets: Awaited<ReturnType<typeof collectMarketFindings>>,
+  places: readonly KnownPlace[] = []
 ): boolean {
   for (const hit of markets.hits) {
     if (candidate.startAt > hit.endAt || candidate.endAt < hit.startAt) continue;
+    const area = markets.areas.find((a) => a.id === hit.marketId) as MarketArea;
+    if (
+      area?.venueType &&
+      area.venueType !== "market" &&
+      places.some(
+        (p) =>
+          !matchesMarketPlace(p, area) &&
+          contains(area, p.lon, p.lat) &&
+          meters(p, candidate) <= 100
+      )
+    )
+      continue;
     const ids = new Set(hit.pointIds);
     if (candidate.pointIds.filter((id) => ids.has(id)).length >= 3) return true;
-    const area = markets.areas.find((a) => a.id === hit.marketId) as MarketArea;
     if (area && contains(area, candidate.lon, candidate.lat)) return true;
   }
   return false;
