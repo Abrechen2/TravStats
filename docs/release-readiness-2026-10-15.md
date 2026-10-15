@@ -39,6 +39,10 @@ failures in UI tests, type imports and theme/locale use.
 - Backend coverage passes every existing baseline: lines 89.50%, statements
   87.81%, functions 90.44%, branches 74.63%. Peak full-run RSS was 2.34 GiB.
 
+The clean image build exposed a missing build-stage input: the frontend imports
+the dependency-free TravPlan type contract from the backend. The Dockerfile now
+copies that contract into the frontend builder as well. No runtime API change.
+
 ## Remaining gates
 
 - Container build and isolated image boot; production frontend/backend builds passed.

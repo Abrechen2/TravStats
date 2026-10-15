@@ -16,6 +16,9 @@ RUN npm config set fetch-retries 5 \
     && npm ci
 
 COPY frontend/ ./
+# TravPlan imports this dependency-free contract as types only. Include it in
+# the isolated frontend stage; no backend runtime code is bundled into the UI.
+COPY backend/src/services/travplan/types.ts /app/backend/src/services/travplan/types.ts
 # Build without VITE_API_URL - frontend will use relative path /api/v1
 ENV VITE_API_URL=
 RUN npm run build
