@@ -1,3 +1,4 @@
+import { STYLE_OPTIONS } from "../Globe/globeStyles";
 import { SharedMapOverlays } from "../map/SharedMapOverlays";
 import { useBasemapStyle } from "../map/useBasemapStyle";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -140,6 +141,7 @@ export default function TripMap({
   extraLayers,
 }: TripMapProps): JSX.Element {
   const mapStyle = useBasemapStyle();
+  const globeSky = STYLE_OPTIONS.find((option) => option.url === mapStyle)?.sky ?? GLOBE_SKY;
   const { t, i18n } = useTranslation(["trips", "map"]);
   const locale = i18n.language || "de";
   const getTooltip = useMemo(() => createMarkerTooltip(t, locale), [t, locale]);
@@ -652,6 +654,30 @@ export default function TripMap({
     // is still "mercator". The switch does its own fit.
   }, [mapLoaded, bboxPoints, fitTrip]);
 
+  // A new basemap resets MapLibre's projection and sky. Restore both before
+  // the next frame so travel layers keep sharing the globe's coordinates.
+  useEffect(() => {
+    if (!mapLoaded) return;
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    const restoreProjection = (): void => {
+      try {
+        map.setProjection({ type: projection });
+      } catch (err) {
+        logger.warn("TripMap: restoring projection failed", err);
+      }
+      try {
+        if (projection === "globe") map.setSky(globeSky);
+      } catch (err) {
+        logger.warn("TripMap: restoring sky failed", err);
+      }
+    };
+    map.on("style.load", restoreProjection);
+    return () => {
+      map.off("style.load", restoreProjection);
+    };
+  }, [mapLoaded, projection, globeSky]);
+
   /* ---- Globe / Mercator toggle ---- */
 
   const toggleProjection = useCallback((): void => {
@@ -682,7 +708,7 @@ export default function TripMap({
     try {
       // A globe without a sky has a hard black edge where the horizon should
       // be; a flat map has no horizon at all, so the sky comes off again.
-      projApi.setSky?.(next === "globe" ? GLOBE_SKY : undefined);
+      projApi.setSky?.(next === "globe" ? globeSky : undefined);
     } catch (err) {
       // Its OWN try, and deliberately non-fatal. A style source may not
       // support a sky, and a missing horizon is cosmetic — but while this
@@ -694,7 +720,7 @@ export default function TripMap({
     }
     setProjection(next);
     fitTrip(next, 600);
-  }, [projection, fitTrip]);
+  }, [projection, fitTrip, globeSky]);
 
   const empty = bboxPoints.length === 0;
 
