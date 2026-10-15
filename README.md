@@ -550,3 +550,9 @@ lädt dieselbe Konfiguration über `/api/v1/map-config/runtime` vor dem App-Star
 Die mobile Kartenintegration unterstützt ältere Server ohne diesen Endpunkt über
 den OpenFreeMap-Standard. Änderungen an der Server-Umgebung wirken nach einem
 autorisierten Neustart; mobile Codeänderungen benötigen einen neuen App-Build.
+
+The web dashboard, globe and detail maps share the same basemap catalogue.
+Detail maps follow the saved basemap, place-label and relief settings, including
+changes received through web preference sync. Existing style IDs and route,
+marker and colour preferences are retained; `voyager` displays Bright.
+Satellite and relief still use Esri and the OSM raster option remains available.

@@ -42,6 +42,7 @@ interface MockMarkerProps {
 
 vi.mock("react-map-gl/maplibre", () => ({
   __esModule: true,
+  useMap: () => ({}),
   default: ({ children, onClick }: MockMapProps): JSX.Element => (
     <div data-testid="mock-map" onClick={() => onClick?.({ lngLat: { lng: 1.111, lat: 2.222 } })}>
       {children}

@@ -1,4 +1,4 @@
-import { mapStyleUrl } from "../../lib/mapStyles";
+import { FLAT_BASEMAPS } from "../map/basemapStyles";
 // Globe basemap catalogue — six tokenless styles, modelled after geojson.io.
 // OpenFreeMap + ESRI World Imagery + OSM Standard. None of them
 // require an API key.
@@ -68,78 +68,16 @@ const SKY_SATELLITE: SkyConfig = {
   "atmosphere-blend": 0,
 };
 
-const buildRasterStyle = (
-  tiles: string[],
-  attribution: string,
-  maxzoom = 19
-): StyleSpecification => ({
-  version: 8,
-  sources: {
-    base: {
-      type: "raster",
-      tiles,
-      tileSize: 256,
-      maxzoom,
-      attribution,
-    },
-  },
-  layers: [
-    {
-      id: "base",
-      type: "raster",
-      source: "base",
-    },
-  ],
-  glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
-});
-
-export const STYLE_OPTIONS: StyleOption[] = [
-  {
-    id: "standard",
-    label: "Standard",
-    url: mapStyleUrl("standard"),
-    sky: SKY_LIGHT,
-  },
-  {
-    id: "light",
-    label: "Light",
-    url: mapStyleUrl("light"),
-    sky: SKY_LIGHT,
-  },
-  {
-    id: "dark",
-    label: "Dark",
-    url: mapStyleUrl("dark"),
-    sky: SKY_DARK,
-  },
-  {
-    id: "voyager",
-    label: "Bright",
-    url: mapStyleUrl("voyager"),
-    sky: SKY_VOYAGER,
-  },
-  {
-    id: "satellite",
-    label: "Satellite",
-    url: buildRasterStyle(
-      [
-        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      ],
-      "Tiles &copy; Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
-    ),
-    sky: SKY_SATELLITE,
-  },
-  {
-    id: "osm",
-    label: "OSM",
-    url: buildRasterStyle(
-      [
-        "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-        "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      ],
-      "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
-    ),
-    sky: SKY_LIGHT,
-  },
-];
+export const STYLE_OPTIONS: StyleOption[] = FLAT_BASEMAPS.map(({ id, label, style }) => ({
+  id,
+  label,
+  url: style,
+  sky:
+    id === "dark"
+      ? SKY_DARK
+      : id === "satellite"
+        ? SKY_SATELLITE
+        : id === "voyager"
+          ? SKY_VOYAGER
+          : SKY_LIGHT,
+}));

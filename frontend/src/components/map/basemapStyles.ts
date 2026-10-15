@@ -53,7 +53,7 @@ export const FLAT_BASEMAPS: readonly FlatBasemap[] = [
       [
         "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       ],
-      "Tiles &copy; Esri"
+      "Tiles &copy; Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
     ),
   },
   {
@@ -65,7 +65,7 @@ export const FLAT_BASEMAPS: readonly FlatBasemap[] = [
         "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
         "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
       ],
-      "&copy; OpenStreetMap contributors"
+      "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
     ),
   },
 ];
