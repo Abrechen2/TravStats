@@ -1,3 +1,5 @@
+import { SharedMapOverlays } from "../map/SharedMapOverlays";
+import { useBasemapStyle } from "../map/useBasemapStyle";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
 import MapGL, { useControl } from "react-map-gl/maplibre";
@@ -16,7 +18,6 @@ import { useDomainColors } from "../../hooks/useDomainColors";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { RailJourney } from "../../types/rail";
 
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 /** Degrees of margin around the line, so the stations never sit on the frame. */
 const BOUNDS_PAD_DEG = 0.3;
 
@@ -46,6 +47,7 @@ export function railBounds(
  * between the stations. A reader must never take a chord for the route.
  */
 export function RailRouteMap({ journey }: { journey: RailJourney }): JSX.Element {
+  const mapStyle = useBasemapStyle();
   const { t } = useTranslation(["rail"]);
   const { colorOf } = useDomainColors();
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -76,11 +78,12 @@ export function RailRouteMap({ journey }: { journey: RailJourney }): JSX.Element
         <MapGL
           reuseMaps
           initialViewState={{ bounds, fitBoundsOptions: { padding: 24 } }}
-          mapStyle={DARK_MAP_STYLE}
+          mapStyle={mapStyle}
           style={{ position: "absolute", inset: "0" }}
           onLoad={(): void => setMapLoaded(true)}
         >
           {mapLoaded && <DeckGLOverlay layers={layers} />}
+          <SharedMapOverlays />
         </MapGL>
       </div>
       <p className="t-caption" data-testid="rail-line-source">

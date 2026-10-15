@@ -1,3 +1,5 @@
+import { SharedMapOverlays } from "../map/SharedMapOverlays";
+import { useBasemapStyle } from "../map/useBasemapStyle";
 /**
  * EventLocationPicker — hybrid geocoding + mini-map widget.
  *
@@ -31,9 +33,8 @@ import { LocationMapModal } from "../location/LocationMapModal";
 import type { LocationSelection } from "../location/LocationInput";
 import { FieldError, fieldErrorProps } from "../form";
 
-/** MapLibre styles — reuse the same CartoCDN basemaps as DeckGLMap so the
+/** MapLibre styles — reuse the same shared basemaps as DeckGLMap so the
  *  mini-map blends visually with the main map. */
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 /** Fallback view when no position is set — Europe-centered, continent-scale. */
 const DEFAULT_VIEW = { longitude: 10, latitude: 50, zoom: 3 };
@@ -94,6 +95,7 @@ export function EventLocationPicker({
   idPrefix = "event-location",
   errors,
 }: EventLocationPickerProps): JSX.Element {
+  const mapStyle = useBasemapStyle();
   const { t } = useTranslation(["specialFlights", "location"]);
 
   const mapRef = useRef<MapRef | null>(null);
@@ -268,8 +270,6 @@ export function EventLocationPicker({
     return DEFAULT_VIEW;
   }, [hasPosition, value.lat, value.lon]);
 
-  const mapStyle = DARK_MAP_STYLE;
-
   // ---- Render ------------------------------------------------------------
   return (
     <div className="space-y-3">
@@ -406,6 +406,7 @@ export function EventLocationPicker({
               />
             </Marker>
           )}
+          <SharedMapOverlays />
         </Map>
       </div>
 

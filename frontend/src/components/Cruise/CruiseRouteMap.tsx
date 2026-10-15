@@ -1,3 +1,5 @@
+import { SharedMapOverlays } from "../map/SharedMapOverlays";
+import { useBasemapStyle } from "../map/useBasemapStyle";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
@@ -38,8 +40,6 @@ import {
   type LonLat,
   type RouteEditorState,
 } from "./routeEditorState";
-
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 /** The detail map shows ONE cruise — always in that cruise's own hue. */
 const DETAIL_MAP_COLOR_CONFIG: CruiseColorConfig = {
@@ -109,6 +109,7 @@ interface EditingLeg {
  * first geometry + port load, then lets the user pan/zoom freely.
  */
 export function CruiseRouteMap({ cruise }: Props): JSX.Element {
+  const mapStyle = useBasemapStyle();
   // Both namespaces: the tooltip machinery speaks "map", the route editor's
   // strings live in "cruise" beside the rest of this feature's wording.
   const { t, i18n } = useTranslation(["map", "cruise"]);
@@ -806,7 +807,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
         reuseMaps
         ref={mapRef}
         initialViewState={INITIAL_VIEW}
-        mapStyle={DARK_MAP_STYLE}
+        mapStyle={mapStyle}
         style={{ position: "absolute", inset: "0" }}
         onLoad={(): void => setMapLoaded(true)}
         onMove={(evt): void => {
@@ -841,6 +842,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
             }
           />
         )}
+        <SharedMapOverlays />
       </MapGL>
       {marquee && (
         <div

@@ -1,3 +1,5 @@
+import { SharedMapOverlays } from "../map/SharedMapOverlays";
+import { useBasemapStyle } from "../map/useBasemapStyle";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
 import MapGL, { useControl } from "react-map-gl/maplibre";
@@ -6,8 +8,6 @@ import type { Layer, MapViewState } from "@deck.gl/core";
 import { buildLodgingPins } from "../layers/lodgingPinsLayer";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Lodging } from "../../types/lodging";
-
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 interface DeckOverlayProps {
   layers: Layer[];
@@ -43,6 +43,7 @@ interface LodgingMiniMapProps {
  * see `services/geo/nominatim.ts`).
  */
 export function LodgingMiniMap({ lodging, onSetLocation }: LodgingMiniMapProps): JSX.Element {
+  const mapStyle = useBasemapStyle();
   const { t } = useTranslation(["lodging"]);
   const [mapLoaded, setMapLoaded] = useState(false);
 
@@ -82,11 +83,12 @@ export function LodgingMiniMap({ lodging, onSetLocation }: LodgingMiniMapProps):
       <MapGL
         reuseMaps
         initialViewState={initialView}
-        mapStyle={DARK_MAP_STYLE}
+        mapStyle={mapStyle}
         style={{ position: "absolute", inset: "0" }}
         onLoad={(): void => setMapLoaded(true)}
       >
         {mapLoaded && <DeckGLOverlay layers={layers} />}
+        <SharedMapOverlays />
       </MapGL>
     </div>
   );

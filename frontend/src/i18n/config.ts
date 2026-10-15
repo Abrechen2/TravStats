@@ -158,4 +158,137 @@ const resources = {
     openData: enOpenData,
     loyalty: enLoyalty,
     notes: enNotes,
+    comparison: enComparison,
+    travplan: enTravplan,
+  },
+  de: {
+    common: deCommon,
+    dashboard: deDashboard,
+    settings: deSettings,
+    flights: deFlights,
+    auth: deAuth,
+    admin: deAdmin,
+    training: deTraining,
+    errors: deErrors,
+    achievements: deAchievements,
+    stats: deStats,
+    flightStatsHelp: deFlightStatsHelp,
+    setup: deSetup,
+    map: deMap,
+    pendingUpdates: dePendingUpdates,
+    parser: deParser,
+    trips: deTrips,
+    cruise: deCruise,
+    rail: deRail,
+    bus: deBus,
+    ferry: deFerry,
+    rental: deRental,
+    import: deImport,
+    aircraft: deAircraft,
+    passport: dePassport,
+    specialFlights: deSpecialFlights,
+    immich: deImmich,
+    whatsNew: deWhatsNew,
+    usageStats: deUsageStats,
+    pushRelay: dePushRelay,
+    lodging: deLodging,
+    location: deLocation,
+    companions: deCompanions,
+    places: dePlaces,
+    xlsx: deXlsx,
+    dataQuality: deDataQuality,
+    sharing: deSharing,
+    evidence: deEvidence,
+    documents: deDocuments,
+    roadtrips: deRoadtrips,
+    openData: deOpenData,
+    loyalty: deLoyalty,
+    notes: deNotes,
+    comparison: deComparison,
     travplan: deTravplan,
+  },
+};
+
+// Initialize i18n synchronously with initAsync: false (named initImmediate
+// before i18next 24; the alias was dropped in 26)
+// This ensures resources are available immediately
+i18n.use(initReactI18next).init({
+  resources,
+  lng: getInitialLanguage(),
+  fallbackLng: "en",
+  defaultNS: "common",
+  ns: [
+    "common",
+    "dashboard",
+    "settings",
+    "flights",
+    "auth",
+    "admin",
+    "training",
+    "errors",
+    "achievements",
+    "stats",
+    "flightStatsHelp",
+    "setup",
+    "map",
+    "pendingUpdates",
+    "parser",
+    "trips",
+    "cruise",
+    "rail",
+    "bus",
+    "rental",
+    "import",
+    "aircraft",
+    "passport",
+    "specialFlights",
+    "immich",
+    "whatsNew",
+    "usageStats",
+    "pushRelay",
+    "lodging",
+    "location",
+    "companions",
+    "places",
+    "xlsx",
+    "dataQuality",
+    "sharing",
+    "evidence",
+    "documents",
+    "roadtrips",
+    "openData",
+    "loyalty",
+    "notes",
+  ],
+  interpolation: {
+    escapeValue: false, // React already escapes values
+  },
+  react: {
+    useSuspense: false, // Disable suspense for better compatibility
+    bindI18n: "languageChanged loaded", // Re-render on language change
+    bindI18nStore: "added removed", // Re-render when resources change
+  },
+  // Critical: Initialize synchronously so resources are available immediately
+  initAsync: false,
+  // Ensure translations are available immediately
+  load: "languageOnly",
+  // Return key if translation is missing (for debugging)
+  returnEmptyString: false,
+  returnNull: false,
+  // Key separator for nested keys
+  keySeparator: ".",
+  // Namespace separator
+  nsSeparator: ":",
+});
+
+// Function to change language and update settings store
+export const changeLanguage = async (lng: "en" | "de"): Promise<void> => {
+  await i18n.changeLanguage(lng);
+  const settingsStore = useSettingsStore.getState();
+  settingsStore.setDisplay({ language: lng });
+  settingsStore.saveRemoteSettings().catch((error: unknown) => {
+    console.warn("[i18n] Failed to save language preference remotely", error);
+  });
+};
+
+export default i18n;

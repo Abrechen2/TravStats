@@ -87,3 +87,191 @@ export function useNavItems(pathname = "/"): {
     "dataQuality",
     "stats",
     "notes",
+    "comparison",
+    "travplan",
+  ]);
+  const user = useAuthStore((s) => s.user);
+  const { isEnabled } = useEnabledDomains();
+  const placesVisible = usePlacesVisible();
+  const railVisible = useRailVisible();
+  const rentalVisible = useRentalVisible();
+  const busVisible = useBusVisible();
+  const ferryVisible = useFerryVisible();
+  const isAdmin = user?.isAdmin ?? false;
+  const { isFeatureVisible } = useBetaFeatures();
+  const comparisonVisible = isFeatureVisible("comparison");
+
+  return useMemo(() => {
+    if (pathname.startsWith("/plan")) {
+      const match = /^\/plan\/([\da-f-]{36})/.exec(pathname);
+      const prefix = match ? `/plan/${match[1]}` : "/plan";
+      const leaf = (section: string): NavLeaf => ({
+        kind: "leaf",
+        id: `plan-${section}`,
+        path: match ? `${prefix}/${section}` : prefix,
+        label: t(`travplan:sections.${section}`),
+      });
+      return {
+        primary: (match ? ["overview", "workspace", "import", "packing"] : ["overview"]).map(leaf),
+        more: match
+          ? [
+              {
+                id: "planning",
+                label: "TravPlan",
+                items: ["transfer", "budget", "ai", "handover"].map(leaf),
+              },
+            ]
+          : [],
+      };
+    }
+
+    // `poi` asks through `usePlacesVisible`, the one home of the places rule.
+    // `rail`, `rental` and `bus` ask their own hooks: the beta gate AND the domain choice.
+    const domainChildren: NavLeaf[] = AVAILABLE_DOMAINS.filter((key) =>
+      key === "poi"
+        ? placesVisible
+        : key === "rail"
+          ? railVisible
+          : key === "rental"
+            ? rentalVisible
+            : key === "bus"
+              ? busVisible
+              : key === "ferry"
+                ? ferryVisible
+                : isEnabled(key)
+    ).map((key) => ({
+      kind: "leaf",
+      id: `domain-${key}`,
+      path: DOMAINS[key].routePrefix,
+      label: t(`common:${DOMAINS[key].i18nKey}`),
+    }));
+
+    const primary: NavNode[] = [
+      // `/dashboard`, not `/`: the root only redirects, so an entry pointing at
+      // `/` was never marked active on the page it leads to.
+      { kind: "leaf", id: "dashboard", path: "/dashboard", label: t("dashboard:title") },
+      ...(domainChildren.length > 0
+        ? [
+            collapseSingleChild({
+              kind: "group",
+              id: "logbook",
+              label: t("dashboard:nav.logbook"),
+              children: domainChildren,
+            }),
+          ]
+        : []),
+      { kind: "leaf", id: "trips", path: "/trips", label: t("trips:tab") },
+      { kind: "leaf", id: "stats", path: "/stats", label: t("dashboard:stats") },
+    ];
+
+    const collections: NavLeaf[] = [
+      ...(comparisonVisible
+        ? [
+            {
+              kind: "leaf" as const,
+              id: "comparison",
+              path: "/compare",
+              label: t("comparison:title"),
+              icon: "trophy" as const,
+            },
+          ]
+        : []),
+      {
+        kind: "leaf",
+        id: "achievements",
+        path: "/achievements",
+        label: t("dashboard:achievements"),
+        icon: "trophy",
+      },
+      // Standalone notes (forgejo#137) belong to no domain and no trip, so the
+      // entry is there whatever domains are on — a moment needs no flight.
+      // A collection like the others here: something the user keeps, not a
+      // logbook of one kind of travel.
+      {
+        kind: "leaf",
+        id: "notes",
+        path: "/notes",
+        label: t("notes:title"),
+        icon: "pencil",
+      },
+      // Built from flights alone, so it is offered only when flights are on —
+      // an entry leading to a page that explains why it is empty is worse than
+      // no entry.
+      ...(isEnabled("flight")
+        ? [
+            {
+              kind: "leaf" as const,
+              id: "passport",
+              path: "/passport",
+              label: t("passport:title"),
+              icon: "book-open" as const,
+            },
+            // Same condition, and for the same reason: the year in review is
+            // built from flights, and an entry leading to a page that explains
+            // why it is empty is worse than no entry.
+            //
+            // `/wrapped`, not `/stats/wrapped`: `isPathActive` marks a parent
+            // active for its children, so the nested path highlighted the
+            // Statistik entry alongside this leaf.
+            {
+              kind: "leaf" as const,
+              id: "wrapped",
+              path: "/wrapped",
+              label: t("stats:wrapped.title"),
+              icon: "sparkles" as const,
+            },
+          ]
+        : []),
+      ...(placesVisible
+        ? [
+            {
+              kind: "leaf" as const,
+              id: "place-lists",
+              path: "/places/lists",
+              label: t("dashboard:nav.placeLists"),
+              icon: "list" as const,
+            },
+          ]
+        : []),
+    ];
+
+    // T4 (2026-09-17 tester feedback): Posteingang left this list entirely —
+    // it is the header's own icon now (`NavigationBar`), and drawing it here
+    // too duplicated it. Admin moved into `UserMenu`, beside settings.
+    const tools: NavLeaf[] = [
+      // Out of beta on 2026-09-17 (owner decision): the gate asked for the
+      // template and regex parsers to be measured against the sample set,
+      // and they were — 31 of 31 flight mails, 97 of 108 lodging, 4 of 4
+      // cruise, without an LLM. Admin-only, as it has always been.
+      ...(isAdmin
+        ? [
+            {
+              kind: "leaf" as const,
+              id: "parser",
+              path: "/parser",
+              label: t("dashboard:parser"),
+              icon: "mail" as const,
+            },
+          ]
+        : []),
+    ];
+
+    const more: NavSection[] = [
+      { id: "collections", label: t("dashboard:nav.collections"), items: collections },
+      { id: "tools", label: t("dashboard:nav.tools"), items: tools },
+    ];
+
+    return { primary, more };
+  }, [
+    t,
+    pathname,
+    isEnabled,
+    placesVisible,
+    railVisible,
+    rentalVisible,
+    busVisible,
+    ferryVisible,
+    isAdmin,
+    comparisonVisible,
+  ]);
+}

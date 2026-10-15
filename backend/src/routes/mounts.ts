@@ -1,3 +1,4 @@
+import mapConfigRoutes from "./mapConfig";
 import comparisonRoutes from "./comparison";
 import comparisonPeerRoutes from "./comparisonPeer";
 /**
@@ -166,4 +167,315 @@ export interface ApiMount {
 }
 
 export const apiMounts: ApiMount[] = [
+  { id: "map-config", base: "/api/v1/map-config", router: mapConfigRoutes },
+  { id: "comparison", base: "/api/v1/comparison", router: comparisonRoutes },
+  { id: "comparison-peer", base: "/api/v1/comparison-peer", router: comparisonPeerRoutes },
   { id: "travplan", base: "/api/v1", router: travplanRoutes },
+  // OpenAPI spec + Swagger UI mounted FIRST so /api/v1/docs and
+  // /api/v1/openapi.json don't fall through into authenticated routers.
+  { id: "openapi", base: "/api/v1", router: openapiRoutes },
+  // Public and unauthenticated, like the spec: the About section reads it before login.
+  { id: "version", base: "/api/v1", router: versionRoutes },
+  { id: "dawarichStays", base: "/api/v1/dawarich-stays", router: dawarichStayRoutes },
+  { id: "setup", base: "/api/v1/setup", router: setupRoutes },
+  { id: "admin", base: "/api/v1/admin", router: adminRoutes },
+  // Mounted BEFORE the generic /api/v1/auth routers so a future catch-all there
+  // can never swallow the two-factor endpoints.
+  { id: "auth.twoFactor", base: "/api/v1/auth/2fa", router: twoFactorRoutes },
+  { id: "auth.passkeys", base: "/api/v1/auth/passkeys", router: passkeyRoutes },
+  { id: "auth", base: "/api/v1/auth", router: authRoutes },
+  { id: "auth.passwordReset", base: "/api/v1/auth", router: passwordResetRoutes },
+  // Version preconditions (If-Match / baseVersion) on the Companion's edits
+  // and deletes, forgejo#141. BEFORE every router it guards — flights, rail,
+  // cruises, lodging, trips, tours, places; a request without a base version
+  // passes through it untouched.
+  { id: "syncPreconditions", base: "/api/v1", router: syncPreconditionRoutes },
+  // The incremental change feed, forgejo#141. Its only path is `/sync/...`.
+  { id: "sync", base: "/api/v1", router: syncRoutes },
+  // Kept originals (forgejo#116). At /api/v1 because the per-entry lists span
+  // five prefixes (`/flights/:id/documents`, `/lodging/stays/:id/documents`,
+  // ...); mounted BEFORE those routers so none of their `router.use` guards
+  // (lodging's write-scope requirement, say) decides a document read. It has
+  // no router-level middleware of its own, so passing through it is free.
+  // "Take the values from this receipt": one POST under `/documents/:id`, in
+  // its own file; mounted first so the documents router never sees the path.
+  { id: "documents.extractValues", base: "/api/v1", router: documentExtractValueRoutes },
+  { id: "documents", base: "/api/v1", router: documentRoutes },
+  // Trip photos on a stay, a flight and a cruise — read-only, on /api/v1 with
+  // per-route middleware; the extra path segment keeps it off the `/:id` routes.
+  { id: "tripPhotoWindows", base: "/api/v1", router: tripPhotoWindowRoutes },
+  // Before `flights`, whose `GET /:id` would otherwise take the word
+  // "entry-suggestions" for a flight id.
+  {
+    id: "flights.entrySuggestions",
+    base: "/api/v1/flights",
+    router: flightEntrySuggestionRoutes,
+  },
+  // Trip, tags and companions over a selection (forgejo#217) — before
+  // `flights` too, for the same reason.
+  { id: "flights.bulkEdit", base: "/api/v1/flights", router: flightBulkEditRoutes },
+  { id: "flights", base: "/api/v1/flights", router: flightRoutes },
+  // What a paired phone sends about a flight (forgejo#193/#194) — satellites
+  // at the same prefix, the `cruises.tracks` pattern: flights.ts is frozen.
+  { id: "flights.track", base: "/api/v1/flights", router: flightTrackRoutes },
+  { id: "flights.observedTimes", base: "/api/v1/flights", router: flightObservedTimesRoutes },
+  // A flight's booking and its segments (forgejo#218/#219).
+  { id: "flights.booking", base: "/api/v1/flights", router: flightBookingRoutes },
+  // The dashboard tab strip's "next up" line — one route for every domain,
+  // so the strip never depends on which tab happens to have loaded.
+  { id: "upcoming", base: "/api/v1/upcoming", router: upcomingRoutes },
+  { id: "photoJourneys", base: "/api/v1/photo-journeys", router: photoJourneyRoutes },
+  // The cross-domain trip-suggestion engine's inbox tab (owner, 2026-09-26).
+  { id: "tripSuggestions", base: "/api/v1/trip-suggestions", router: tripSuggestionRoutes },
+  { id: "flightLookup", base: "/api/v1/flight-lookup", router: flightLookupRoutes },
+  // One arc of the globe (forgejo#132 item 9). Its own base because
+  // `routes/stats.ts` may not grow; it brings that router's middlewares along.
+  {
+    id: "stats.networkRoute",
+    base: "/api/v1/stats/network/route",
+    router: statsNetworkRouteRoutes,
+  },
+  // Flight insights (forgejo#256), on their own base for the same reason.
+  {
+    id: "stats.flightInsights",
+    base: "/api/v1/stats/flight-insights",
+    router: statsFlightInsightsRoutes,
+  },
+  // Cruise insights (forgejo#257), likewise.
+  {
+    id: "stats.cruiseInsights",
+    base: "/api/v1/stats/cruise-insights",
+    router: statsCruiseInsightsRoutes,
+  },
+  // The statistics expansion (forgejo#258/#259/#260/#264), likewise beside
+  // the frozen stats router rather than in it.
+  { id: "stats.insights", base: "/api/v1/stats/insights", router: statsInsightRoutes },
+  // forgejo#265 — records beyond flights; the same reason as the route above.
+  {
+    id: "stats.domainRecords",
+    base: "/api/v1/stats/domain-records",
+    router: statsDomainRecordsRoutes,
+  },
+  { id: "stats", base: "/api/v1/stats", router: statsRoutes },
+  { id: "airports", base: "/api/v1/airports", router: airportRoutes },
+  { id: "airlineLogos", base: "/api/v1/airline-logos", router: airlineLogoRoutes },
+  { id: "countryFlags", base: "/api/v1/country-flags", router: countryFlagRoutes },
+  // Sign-in decoration. Its two GETs are deliberately unauthenticated — the
+  // page that reads them is what a visitor sees BEFORE a session exists.
+  { id: "loginBackgrounds", base: "/api/v1/login-backgrounds", router: loginBackgroundRoutes },
+  { id: "achievements", base: "/api/v1/achievements", router: achievementRoutes },
+  // "Which entries produced this number" — plumbing only until Task 5 wires
+  // a resolver (task-3-brief.md); every metric/ranking request 404s until then.
+  { id: "evidence", base: "/api/v1/evidence", router: evidenceRoutes },
+  { id: "settings", base: "/api/v1/settings", router: settingsRoutes },
+  { id: "analytics", base: "/api/v1/analytics", router: analyticsRoutes },
+  { id: "uploads", base: "/api/v1/uploads", router: uploadsRoutes },
+  { id: "emailParse", base: "/api/v1", router: emailParseRoutes },
+  { id: "boardingpassParse", base: "/api/v1", router: boardingpassParseRoutes },
+  { id: "boardingpassMatch", base: "/api/v1/boardingpass", router: boardingpassMatchRoutes },
+  { id: "pdfParse", base: "/api/v1", router: pdfParseRoutes },
+  { id: "imageParse", base: "/api/v1", router: imageParseRoutes },
+  { id: "diagnosticExport", base: "/api/v1", router: diagnosticExportRoutes },
+  { id: "parserTemplates", base: "/api/v1/parser-templates", router: parserTemplatesRoutes },
+  { id: "backup", base: "/api/v1/backup", router: backupRoutes },
+  { id: "pendingUpdates", base: "/api/v1/pending-updates", router: pendingUpdatesRoutes },
+  // The other half of the Posteingang: questions about a record rather than a
+  // provider's proposed field values. Own prefix, own table — see the router's
+  // header for why it is not a generalised PendingFlightUpdate.
+  { id: "dataQualityFlags", base: "/api/v1/data-quality-flags", router: dataQualityFlagRoutes },
+  { id: "templateStatus", base: "/api/v1/template-status", router: templateStatusRoutes },
+  { id: "training", base: "/api/v1/training", router: trainingRoutes },
+  // Before `trips`, whose `GET /trips/:id` would otherwise take the word
+  // "entry-suggestions" for a trip id.
+  {
+    id: "trips.entrySuggestions",
+    base: "/api/v1/trips",
+    router: tripEntrySuggestionRoutes,
+  },
+  // Bookings (#356): split out of trips.ts; BEFORE it, so `/trips/bookings`
+  // is never read as a trip id.
+  { id: "trips.bookings", base: "/api/v1", router: tripBookingRoutes },
+  // Package tours → trips (plan 2026-10-09 P3), same reason.
+  { id: "trips.package", base: "/api/v1", router: tripPackageRoutes },
+  // One trip as a `.travstats` file (spec 2026-10-09 S3), same reason.
+  { id: "trips.exchange", base: "/api/v1", router: tripExchangeRoutes },
+  { id: "trips", base: "/api/v1", router: tripsRoutes },
+  // Stops + journal, and photos + cover: split out of trips.ts (forgejo#59).
+  // Mounted directly after `trips`, before every other satellite, so Express
+  // meets these routes in exactly the order it did when they lived in trips.ts.
+  { id: "tripStops", base: "/api/v1", router: tripStopRoutes },
+  { id: "tripPhotos", base: "/api/v1", router: tripPhotoRoutes },
+  // Tour route sections — same-prefix satellite router, same pattern as
+  // cruises.routeOverride above — split out of trips.ts once that file
+  // crossed the 800-line max. Mounted right after `trips` so `/trips/:id`
+  // still resolves to the main router first.
+  { id: "tourRoutes", base: "/api/v1", router: tourRouteRoutes },
+  // Leg overrides — same-prefix satellite router, split out of tourRoutes
+  // once that file crossed the 400-line ideal ceiling on its own. Mounted
+  // right after `tourRoutes` for the same reason that one follows `trips`.
+  { id: "tourLegs", base: "/api/v1", router: tourLegRoutes },
+  // Provider-routing endpoints (task 6, phase 3) — same-prefix satellite
+  // router, split out of `tourLegs.ts` once it grew past the 400-line ideal
+  // ceiling. Mounted right after `tourLegs` for the same reason it follows
+  // `tourRoutes`.
+  { id: "tourRouting", base: "/api/v1", router: tourRoutingRoutes },
+  // Recorded tracks (task 4, phase 3b) — same-prefix satellite router, split
+  // out alongside the others above. Mounted right after `tourRouting`, last
+  // among the tour satellites: the plan originally said "after tourLegs",
+  // written before `tourRouting` existed; this ordering is a controller
+  // ruling made when `tourRouting` landed first.
+  { id: "tourTracks", base: "/api/v1", router: tourTrackRoutes },
+  // Recordings as GPX files and ZIPs, out and back in (2.7).
+  { id: "tourTrackArchive", base: "/api/v1", router: tourTrackArchiveRoutes },
+  // Dashboard-wide tour listing + batch geometry (task 1, phase 4) — NOT
+  // trip-scoped like the four satellites above, so it cannot reuse their
+  // `/trips/:id/...` prefix pattern for ownership; mounted last among the
+  // tour satellites so it never shadows a more specific `/trips/:id/...`
+  // route above it.
+  { id: "tourIndex", base: "/api/v1", router: tourIndexRoutes },
+  // The point list of a standalone tour. After `tourIndex` because it is
+  // the same family, and its one path (`/tours/:routeId/points`) collides
+  // with nothing above it.
+  { id: "tourPoints", base: "/api/v1", router: tourPointRoutes },
+  // Moving a row between the tour and roadtrip pages (2.7). Its paths end in
+  // `/kind`, so they collide with nothing above.
+  { id: "tourKind", base: "/api/v1", router: tourKindRoutes },
+  // Roadtrips (2.7): list, detail, creation and the station list. The rest of
+  // a roadtrip — legs, tracks, geometry — is the `/tours/:routeId` family.
+  { id: "roadtrips", base: "/api/v1", router: roadtripRoutes },
+  // Expenses (forgejo#140) on a trip, a roadtrip or any section. Every path
+  // ends in `/expenses` or `/expenses/:expenseId`, so they shadow nothing above.
+  { id: "tripExpenses", base: "/api/v1", router: tripExpenseRoutes },
+  // Strava (2.7): the OAuth round trip, the activity list and the imports.
+  // Its `/tours/...` paths end in `/strava`, so they shadow nothing above.
+  { id: "strava", base: "/api/v1", router: stravaRoutes },
+  // Open data (2.7): weather, planned elevation, Wikipedia, OSM enrichment.
+  // Every path ends in a segment no other router uses (`/weather`,
+  // `/planned-profile`, `/wikipedia`, `/enrich`), so it shadows nothing.
+  { id: "openData", base: "/api/v1", router: openDataRoutes },
+  { id: "immich.tripAlbums", base: "/api/v1", router: immichTripRoutes },
+  { id: "immich.assetProxy", base: "/api/v1", router: immichAssetProxyRoutes },
+  { id: "immich.tripCover", base: "/api/v1", router: immichTripCoverRoutes },
+  { id: "suggestions", base: "/api/v1/suggestions", router: suggestionsRoutes },
+  { id: "ports", base: "/api/v1/ports", router: portsRoutes },
+  { id: "ships", base: "/api/v1/ships", router: shipsRoutes },
+  { id: "airlines", base: "/api/v1/airlines", router: airlinesRoutes },
+  { id: "aircraft", base: "/api/v1/aircraft", router: aircraftRoutes },
+  { id: "cruises", base: "/api/v1/cruises", router: cruisesRouter },
+  // Same-prefix satellite router, same pattern as authRoutes + passwordResetRoutes
+  // above — split out of cruises.ts once that file crossed the 800-line max.
+  { id: "cruises.routeOverride", base: "/api/v1/cruises", router: cruiseRouteOverrideRoutes },
+  // Train journeys (spec 2026-09-25-rail-domain). Behind the beta switch in the UI only.
+  // The catalogue typeahead and the train lookup mount FIRST on the same
+  // prefix: the journey router's '/:id' would otherwise answer them as a 404.
+  { id: "rail.operators", base: "/api/v1/rail/operators", router: railOperatorRouter },
+  { id: "rail.stations", base: "/api/v1/rail/stations", router: railStationsRouter },
+  { id: "rail.lookup", base: "/api/v1/rail/lookup", router: railLookupRouter },
+  { id: "rail.shareLink", base: "/api/v1/rail/share-link", router: railShareLinkRouter },
+  { id: "rail.stats", base: "/api/v1/rail/stats", router: railStatsRouter },
+  { id: "rail.connections", base: "/api/v1/rail/connections", router: railConnectionsRouter },
+  {
+    id: "rail.entrySuggestions",
+    base: "/api/v1/rail/entry-suggestions",
+    router: railEntrySuggestionsRouter,
+  },
+  {
+    id: "rail.roadtripConversion",
+    base: "/api/v1/rail/roadtrip-conversion",
+    router: railRoadtripConversionRouter,
+  },
+  { id: "rail", base: "/api/v1/rail", router: railRouter },
+  // Bus rides (spec 2026-10-07-bus-domain-design). Behind the beta switch in the UI only.
+  // Mounts FIRST on its prefix: the bus router's '/:id' would answer it as a 404.
+  {
+    id: "bus.entrySuggestions",
+    base: "/api/v1/bus/entry-suggestions",
+    router: busEntrySuggestionsRouter,
+  },
+  { id: "bus.stats", base: "/api/v1/bus/stats", router: busStatsRouter },
+  { id: "bus", base: "/api/v1/bus", router: busRouter },
+  { id: "ferry.roadtrip", base: "/api/v1/ferry", router: ferryRoadtripRouter },
+  { id: "ferry", base: "/api/v1/ferry", router: ferryRouter },
+  // Car rentals (spec 2026-10-01-rental-domain-design). Behind the beta switch in
+  // the UI only. Sub-routers mount FIRST: '/:id' would answer them as a 404.
+  { id: "rental.stations", base: "/api/v1/rentals/stations", router: rentalStationsRouter },
+  { id: "rental.providers", base: "/api/v1/rentals/providers", router: rentalProvidersRouter },
+  { id: "rental.import", base: "/api/v1/rentals/import", router: rentalImportRouter },
+  { id: "rental.stats", base: "/api/v1/rentals/stats", router: rentalStatsRouter },
+  {
+    id: "rental.reminders",
+    base: "/api/v1/rentals/invoice-reminders",
+    router: rentalRemindersRouter,
+  },
+  { id: "rental.links", base: "/api/v1/rentals", router: rentalLinksRouter },
+  { id: "rental", base: "/api/v1/rentals", router: rentalRouter },
+  // Recorded tracks of a cruise (2.7) — the same satellite pattern.
+  { id: "cruises.tracks", base: "/api/v1/cruises", router: cruiseTrackRoutes },
+  { id: "currencies", base: "/api/v1/currencies", router: currenciesRouter },
+  // Photographs of the house — same prefix, own file. Mounted FIRST for the
+  // same reason the visit-photo router is: relying on segment counts to keep
+  // two routers on one prefix apart is a rule nobody can see.
+  { id: "lodging.photos", base: "/api/v1/lodging", router: lodgingPhotoRouter },
+  { id: "lodging", base: "/api/v1/lodging", router: lodgingRouter },
+  // Photo proof for a visit — same prefix, own file, split out before places.ts
+  // approaches the 800-line max. Mounted first so nothing depends on segment
+  // counts to keep the two routers apart.
+  { id: "places.visitPhotos", base: "/api/v1/places", router: placeVisitPhotoRouter },
+  // Dates the add-visit form can offer — same prefix, own file, same reason.
+  {
+    id: "places.visitDateSuggestions",
+    base: "/api/v1/places",
+    router: placeVisitDateSuggestionRouter,
+  },
+  // Photographs a visit could link — same prefix, own file, same reason.
+  {
+    id: "places.visitPhotoSuggestions",
+    base: "/api/v1/places",
+    router: placeVisitPhotoSuggestionRouter,
+  },
+  // The place page's lead photograph — same prefix, own file, same reason.
+  { id: "places.cover", base: "/api/v1/places", router: placeCoverRouter },
+  // What hangs off a place, counted — for the delete and merge questions.
+  { id: "places.related", base: "/api/v1/places", router: placeRelationsRouter },
+  // Folding a duplicate into a place (forgejo#232).
+  { id: "places.merge", base: "/api/v1/places", router: placeMergeRouter },
+  { id: "places", base: "/api/v1/places", router: placesRouter },
+  { id: "xlsxImport", base: "/api/v1/xlsx-import", router: xlsxImportRouter },
+  // Curated checklists mount FIRST on the same path: '/curated' would
+  // otherwise be captured by the lists router's '/:id' and answered 404.
+  { id: "placeLists.curated", base: "/api/v1/place-lists/curated", router: curatedListsRouter },
+  { id: "placeLists", base: "/api/v1/place-lists", router: placeListsRouter },
+  { id: "lodgingChains", base: "/api/v1/lodging-chains", router: lodgingChainsRouter },
+  {
+    id: "lodgingMemberships",
+    base: "/api/v1/lodging-memberships",
+    router: lodgingMembershipsRouter,
+  },
+  // Every domain's loyalty cards (2.7). Same rows as lodging-memberships.
+  {
+    id: "loyaltyMemberships",
+    base: "/api/v1/loyalty-memberships",
+    router: loyaltyMembershipsRouter,
+  },
+  { id: "lodgingImport", base: "/api/v1/lodging-import", router: lodgingImportRoutes },
+  { id: "placeImport", base: "/api/v1/place-import", router: placeImportRoutes },
+  { id: "importBatches", base: "/api/v1/import-batches", router: importBatchRoutes },
+  { id: "companions", base: "/api/v1/companions", router: companionRoutes },
+  // Standalone notes (forgejo#137).
+  { id: "notes", base: "/api/v1/notes", router: noteRoutes },
+  // Shared trips (design 2026-10-09): consent, companion link, share, leave.
+  { id: "sharing", base: "/api/v1/sharing", router: sharingRoutes },
+  // Public share links (forgejo#281): the owner's list/preview/create/revoke,
+  // and the unauthenticated side a link's page asks with its token.
+  { id: "shareLinks", base: "/api/v1/share-links", router: shareLinkRoutes },
+  { id: "publicShareLinks", base: "/api/v1/public/share-links", router: publicShareLinkRoutes },
+  { id: "tags", base: "/api/v1/tags", router: tagRoutes },
+  { id: "import", base: "/api/v1/import", router: importRoutes },
+  { id: "pairing", base: "/api/v1/pairing", router: pairingRoutes },
+  // The paired phone's push registration (TravStats#156).
+  { id: "devicePush", base: "/api/v1/devices", router: devicePushRoutes },
+  { id: "appSettings", base: "/api/v1/app-settings", router: appSettingsRoutes },
+  { id: "geo", base: "/api/v1/geo", router: geoRoutes },
+  // Background jobs a long-running request started (backup, restore, import, scans).
+  { id: "jobs", base: "/api/v1/jobs", router: jobRoutes },
+];
