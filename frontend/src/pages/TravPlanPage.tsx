@@ -755,7 +755,11 @@ export default function TravPlanPage() {
       {location.pathname === "/plan/admin" ? (
         <PlanAdmin />
       ) : tripId ? (
-        <PlanContent tripId={tripId} section={sections.includes(section) ? section : "overview"} />
+        <PlanContent
+          key={tripId}
+          tripId={tripId}
+          section={sections.includes(section) ? section : "overview"}
+        />
       ) : (
         <PlanList />
       )}

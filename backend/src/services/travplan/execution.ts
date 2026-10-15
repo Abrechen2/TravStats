@@ -7,6 +7,7 @@ import { createFlightSchema } from "../../schemas/flight";
 import { buildFlightCreateData } from "../flights/flightCreateData";
 import { fxColumnsFor, getBaseCurrency, type FxColumns } from "../fx/snapshot";
 import type { PlanState, PlanBooking } from "./types";
+import { propagateWrite, propagateDelete, shareSnapshot } from "../sharing/propagate";
 export type PlanTransaction = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 export interface PreparedExecution {
   flight?: Prisma.FlightUncheckedCreateInput;
@@ -253,10 +254,17 @@ export async function synchronizeExecution(
       } else if (item.kind === "flight" && ready?.flight && ready.fx && b) {
         const booking = await actualBooking(tx, userId, tripId, b, ready.fx, next),
           created = await tx.flight.create({ data: { ...ready.flight, bookingId: booking.id } });
+        await propagateWrite(tx, userId, "flight", created.id);
+        // Assigning a sharing key advances updatedAt. Undo must compare with
+        // the completed write, rather than refusing its own bookkeeping.
+        const persisted = await tx.flight.findUniqueOrThrow({
+          where: { id: created.id },
+          select: { updatedAt: true },
+        });
         item.source = {
           kind: "planFlight",
           id: created.id,
-          version: created.updatedAt.toISOString(),
+          version: persisted.updatedAt.toISOString(),
           bookingVersion: booking.updatedAt.toISOString(),
         };
       } else if (item.kind === "hotel" && ready?.fx && b) {
@@ -312,10 +320,15 @@ export async function synchronizeExecution(
               externalRef: "travplan:" + item.id,
             },
           });
+        await propagateWrite(tx, userId, "lodgingStay", created.id);
+        const persisted = await tx.lodgingStay.findUniqueOrThrow({
+          where: { id: created.id },
+          select: { updatedAt: true },
+        });
         item.source = {
           kind: "planHotel",
           id: created.id,
-          version: created.updatedAt.toISOString(),
+          version: persisted.updatedAt.toISOString(),
           bookingVersion: booking.updatedAt.toISOString(),
           auxId: lodging.id,
           auxVersion: lodging.updatedAt.toISOString(),
@@ -350,7 +363,9 @@ export async function synchronizeExecution(
           flight.companionLinks.length)
       )
         throw refused();
+      const shared = await shareSnapshot(tx, "flight", old.source.id);
       await tx.flight.deleteMany({ where: { id: old.source.id, userId, tripId } });
+      await propagateDelete(tx, userId, shared);
       item.source = null;
       const booking = next.bookings.find((x) => x.id === old.bookingId);
       if (booking && !booking.actualBookingId)
@@ -369,7 +384,9 @@ export async function synchronizeExecution(
           stay.documents.length)
       )
         throw refused();
+      const shared = await shareSnapshot(tx, "lodgingStay", old.source.id);
       await tx.lodgingStay.deleteMany({ where: { id: old.source.id, userId, tripId } });
+      await propagateDelete(tx, userId, shared);
       item.source = null;
       if (
         old.source.createdAux &&

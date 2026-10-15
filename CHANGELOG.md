@@ -6,6 +6,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+- Full data export includes saved TravPlan content and proposals; daily quota counters are explicitly excluded.
+
 ### Changed
 
 - Ferry edits and deletes accept an optional read version. Conflicting writes

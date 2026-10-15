@@ -578,3 +578,96 @@ describe("Travel plan transactions against an isolated PostgreSQL database", () 
     expect(p.body.state.items).toHaveLength(0);
   });
 });
+
+it.each(["flight", "hotel"] as const)(
+  "shares explicitly confirmed %s facts and leaves recipients' copies intact on undo",
+  async (kind) => {
+    if (kind === "flight") {
+      for (const [iata, lat, lon] of [
+        ["XAA", 50, 8],
+        ["XBB", 40, -73],
+      ] as const) {
+        if (!(await prisma.airport.findFirst({ where: { iata, isClosed: false } })))
+          await prisma.airport.create({
+            data: { iata, name: "Isolated sharing airport", lat, lon, timezone: "UTC" },
+          });
+      }
+    }
+    const plan = await create();
+    const group = await prisma.tripShareGroup.create({ data: { createdById: owner } });
+    await prisma.trip.update({ where: { id: plan.tripId }, data: { shareGroupId: group.id } });
+    const recipient = await prisma.trip.create({
+      data: { userId: other, name: "Shared plan result", shareGroupId: group.id },
+    });
+    const booking = bookingSchema.parse({
+      id: randomUUID(),
+      kind,
+      title: "Private planning booking " + randomUUID(),
+      reference: "PRIVATE-PNR",
+      provider: "",
+      day: "2026-01-01",
+      endDay: kind === "hotel" ? "2026-01-03" : null,
+      time: "09:00",
+      timezone: "UTC",
+      arrivalDay: "2026-01-01",
+      arrivalTime: "12:00",
+      arrivalTimezone: "UTC",
+      originPlace: "XAA",
+      place: kind === "flight" ? "XBB" : "Funchal",
+      city: "Funchal",
+      country: "Portugal",
+      address: "Test Street 1",
+      amount: 200,
+      paid: 200,
+      currency: "EUR",
+      documentIds: [],
+      source: "manual",
+      details: {},
+    });
+    const prepared = await write(plan, { type: "upsert", collection: "bookings", value: booking });
+    expect(prepared.status).toBe(200);
+    const copies = () =>
+      kind === "flight"
+        ? prisma.flight.findMany({ where: { tripId: recipient.id } })
+        : prisma.lodgingStay.findMany({ where: { tripId: recipient.id } });
+    expect(await copies()).toHaveLength(0);
+    const confirmed = await write(prepared.body, {
+      type: "execution",
+      id: prepared.body.state.items[0].id,
+      execution: "confirmed",
+    });
+    expect(confirmed.status).toBe(200);
+    const source = confirmed.body.state.items[0].source;
+    const own =
+      kind === "flight"
+        ? await prisma.flight.findUniqueOrThrow({ where: { id: source.id } })
+        : await prisma.lodgingStay.findUniqueOrThrow({ where: { id: source.id } });
+    const received = await copies();
+    expect(received).toHaveLength(1);
+    expect(received[0]).toMatchObject({
+      userId: other,
+      tripId: recipient.id,
+      bookingId: null,
+      bookingReference: null,
+      shareKey: own.shareKey,
+    });
+    expect(own.shareKey).not.toBeNull();
+    expect(received[0]).toHaveProperty(kind === "flight" ? "price" : "totalPrice", null);
+    expect(source.version).toBe(own.updatedAt.toISOString());
+    const undone = await write(confirmed.body, {
+      type: "undo",
+      mutationId: confirmed.body.lastMutationId,
+    });
+    expect(undone.status).toBe(200);
+    expect(
+      kind === "flight"
+        ? await prisma.flight.count({ where: { id: source.id } })
+        : await prisma.lodgingStay.count({ where: { id: source.id } })
+    ).toBe(0);
+    expect(await copies()).toHaveLength(1);
+    const notices = await prisma.shareNotice.findMany({
+      where: { groupId: group.id, userId: other },
+    });
+    expect(notices.map((n) => n.kind).sort()).toEqual(["created", "deleted"]);
+  }
+);

@@ -1,7 +1,7 @@
 # Release preparation — 15 October 2026
 
-Status: validation in progress. This document does not authorize deployment or
-claim that an RC has been published.
+Status: source validation completed; image build and isolated boot pending.
+This document does not authorize deployment or claim that an RC has been published.
 
 ## Source and scope
 
@@ -23,16 +23,25 @@ failures in UI tests, type imports and theme/locale use.
   production/infrastructure diagnostics also cleared.
 - Backend and frontend lint passed.
 - Backend and frontend production builds passed; peak RSS about 2.7 GiB each.
-- Initial full frontend run: 1,134 suites passed, 8 failed (8,804 tests passed,
-  26 failed). The failures were missing plan API / map-hook test mocks. After
-  correction, 15 affected suites / 88 tests passed, including extracted map
-  overlays. Final frontend type check and lint passed.
-- Full backend suite is running against the isolated test database.
+- Final frontend run: all 1,144 suites and 8,837 tests passed. This includes the
+  corrected trip/map fixtures and new request lifecycle, conflict and trip-switch
+  cases. Final frontend type check, lint and production build passed.
+- Frontend coverage passes all baselines: lines 77.21%, statements 76.04%,
+  functions 71.88%, branches 72.28%. Full-run peak RSS was 859 MiB.
+- Full backend run against the isolated database completed: 1,214 suites passed,
+  3 failed and 3 skipped; 12,026 tests passed, 3 failed and 34 skipped.
+  The three failures were the usage-counter federation classification, missing
+  propagation for confirmed travel-plan facts and missing map-router response
+  classifications. All were corrected. The final regression run passed all
+  46 tests in 5 suites, including new sharing/privacy/undo and full-data export
+  database cases. The original full-run report and regression report are retained
+  separately; this is not described as a second full green run.
+- Backend coverage passes every existing baseline: lines 89.50%, statements
+  87.81%, functions 90.44%, branches 74.63%. Peak full-run RSS was 2.34 GiB.
 
 ## Remaining gates
 
-- Complete frontend and backend test runs and coverage comparison.
-- Production frontend/backend builds, container build and isolated image boot.
+- Container build and isolated image boot; production frontend/backend builds passed.
 - Source commit/push, unused RC tag selection and immutable image digest record.
 - RC deployment approval, followed by live RC acceptance. Deployment has not
   happened in this preparation pass.
@@ -44,8 +53,10 @@ paused until native provider limits are enforced and verified.
 
 ## Resource bounds
 
-Heavy checks run sequentially. Jest uses one worker and worker recycling.
-The standalone backend test type check requires about 3.8 GiB RSS; it is run
+Heavy checks run sequentially. The final backend run uses two recycled workers,
+each with its own fresh temporary database. Frontend uses two workers within
+the same 4 GiB group memory guard; Companion uses one.
+The standalone backend test type check requires about 3.9 GiB RSS; it is run
 with a 6 GiB heap cap and stopped if host available memory falls below 10 GiB.
 Other test processes have a 4 GiB group RSS limit and a 5 GiB host reserve.
 An earlier parallel run exhausted resources; those incomplete logs are not
