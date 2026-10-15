@@ -6,6 +6,8 @@ const fonts = /^\/fonts\/Noto Sans(?: Regular| Medium| Italic| Devanagari Regula
 
 /** Fixed resources only: this is deliberately not a general-purpose URL proxy. */
 export function allowedMapAsset(path: string): boolean {
+  // Reject literal control bytes as well as URL delimiters before matching the allowlist.
+  // eslint-disable-next-line no-control-regex
   if (path.length > 240 || /[\\?#%\x00-\x1f]/.test(path) || path.includes("..")) return false;
   if (styles.test(path) || sprites.test(path) || path === "/tiles/basemap" || path === "/tiles/terrain" || path === "/attribution.json") return true;
   const tile = tiles.exec(path);

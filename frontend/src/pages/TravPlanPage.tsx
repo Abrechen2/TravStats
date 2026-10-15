@@ -1,3 +1,4 @@
+import { appLocale } from "../lib/units";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams, useLocation } from "react-router-dom";
 import { useTranslation } from "../hooks/useTranslation";
@@ -98,7 +99,9 @@ function PlanContent({ tripId, section }: { tripId: string; section: string }) {
     days = calendarDays(state.startDay, state.endDay),
     prefix = "/plan/" + tripId;
   const money = (n: number | null) =>
-    n === null ? "—" : n.toLocaleString(undefined, { style: "currency", currency: state.currency });
+    n === null
+      ? "—"
+      : n.toLocaleString(appLocale(), { style: "currency", currency: state.currency });
   function edit(key: PlanCollection, row?: object, extras?: Partial<EditorState>) {
     setEditor({
       title: t("edit"),

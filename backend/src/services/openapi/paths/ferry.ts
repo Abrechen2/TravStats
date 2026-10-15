@@ -88,9 +88,20 @@ registry.registerPath({
 registry.registerPath({
   method: "patch",
   path: "/ferry/{id}",
+  description:
+    "Optional baseVersion (updatedAt) or If-Match precondition; stale versions return 409 VERSION_CONFLICT.",
   tags: ["Ferry"],
   summary: "Edit a ferry crossing",
-  request: { params, body: { content: json(updateFerryJourneySchema) } },
+  request: {
+    params,
+    body: {
+      content: json(
+        updateFerryJourneySchema.and(
+          z.object({ baseVersion: z.iso.datetime({ offset: true }).optional() })
+        )
+      ),
+    },
+  },
   responses: { 200: { description: "Updated", content: json(envelope(journey)) }, ...errors },
 });
 registry.registerPath({
@@ -98,7 +109,9 @@ registry.registerPath({
   path: "/ferry/{id}",
   tags: ["Ferry"],
   summary: "Delete a ferry crossing and its documents",
-  request: { params },
+  description:
+    "Optional If-Match version precondition; stale versions return 409 VERSION_CONFLICT.",
+  request: { params, headers: z.object({ "If-Match": z.string().optional() }) },
   responses: { 204: { description: "Deleted" }, ...errors },
 });
 const leg = z.object({

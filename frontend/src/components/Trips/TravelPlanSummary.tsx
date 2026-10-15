@@ -28,14 +28,14 @@ export function TravelPlanSummary({ tripId }: { tripId: string }) {
         background: "var(--ts-tile)",
       }}
     >
-      <h2 style={{ fontSize: 20, color: "#7cb8ff" }}>
+      <h2 style={{ fontSize: 20, color: "var(--ts-info)" }}>
         TravPlan · {t(plan.state.status === "ready" ? "readyStatus" : "planningStatus")}
       </h2>
       <p>
         {plan.state.destination} · {plan.state.startDay} – {plan.state.endDay}
       </p>
       <p style={{ color: "var(--ts-muted)", margin: "10px 0" }}>{t("noAutoCount")}</p>
-      <Link to={"/plan/" + tripId + "/overview"} style={{ color: "#7cb8ff" }}>
+      <Link to={"/plan/" + tripId + "/overview"} style={{ color: "var(--ts-info)" }}>
         {t("continue")}
       </Link>
     </section>

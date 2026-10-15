@@ -1,3 +1,5 @@
+// Node.js provides these Web API globals to the test runner.
+/* global Response, ReadableStream */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createRegionalRouting, createRegionalSearch, createRegionalElevation} from './regionalProvider.ts';

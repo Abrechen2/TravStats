@@ -10,7 +10,7 @@
   color: var(--ts-text);
 }
 .tp-main h1 {
-  font-family: var(--ts-font-display, Georgia, serif);
+  font-family: var(--ts-font-serif);
   font-size: clamp(28px, 4vw, 42px);
   line-height: 1.15;
   margin: 12px 0 18px;
@@ -190,7 +190,7 @@
   margin: 16px 0;
 }
 .tp-error {
-  color: var(--ts-danger, #f58e8e);
+  color: var(--ts-bad);
   border: 1px solid currentColor;
   padding: 14px;
   border-radius: 12px;

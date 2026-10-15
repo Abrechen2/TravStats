@@ -55,6 +55,8 @@ registry.registerPath({
   path: "/settings",
   summary: "Get the user's settings",
   description:
+    "`availableDomains` lists supported domain keys independently of `enabledDomains`; " +
+    "beta-gated domains still require `betaFeaturesEnabled`. " +
     "Carries read-only instance flags beside the user's own settings: `betaFeaturesEnabled`, " +
     "`openDataEnabled` and `shareLinksEnabled` (public share links, forgejo#281 — offer " +
     "'share as link' only while it is on).",

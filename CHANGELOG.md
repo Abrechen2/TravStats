@@ -6,6 +6,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+### Changed
+
+- Ferry edits and deletes accept an optional read version. Conflicting writes
+  return HTTP 409; edits claim the version atomically in their transaction.
+  Older clients can continue to write without a version precondition.
+- Settings expose supported travel domains independently of enabled domains,
+  allowing compatible clients to offer a disabled domain again.
+- TravPlan uses shared theme tokens and the selected application locale for
+  number formatting.
+
 ## [2.7.0] - 2026-10-03
 
 TravStats 2.7.0 is the largest release since lodging became a domain. Web and

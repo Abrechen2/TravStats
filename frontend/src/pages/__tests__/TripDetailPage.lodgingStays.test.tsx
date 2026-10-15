@@ -241,3 +241,8 @@ describe("TripDetailPage — linked lodging stays on the timeline", () => {
     expect(screen.getByText("trips:detail.timeline.noEvents")).toBeInTheDocument();
   });
 });
+
+// The trip summary loads its plan independently of the timeline feature under test.
+vi.mock("../../lib/api/travplan", () => ({
+  travplanApi: { get: vi.fn().mockResolvedValue(null) },
+}));

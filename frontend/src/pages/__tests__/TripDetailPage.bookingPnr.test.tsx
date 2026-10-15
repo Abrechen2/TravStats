@@ -149,3 +149,8 @@ describe("TripDetailPage booking editor", () => {
     expect(await screen.findByText("XYZ123")).toBeInTheDocument();
   });
 });
+
+// The trip summary loads its plan independently of the timeline feature under test.
+vi.mock("../../lib/api/travplan", () => ({
+  travplanApi: { get: vi.fn().mockResolvedValue(null) },
+}));

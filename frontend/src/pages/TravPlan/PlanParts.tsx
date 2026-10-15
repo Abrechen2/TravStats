@@ -1,3 +1,4 @@
+import { appLocale } from "../../lib/units";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { PlanOperation, PlanState, PlanBudget, PlanTask } from "../../lib/api/travplan";
 export function PlanTasks({
@@ -53,7 +54,7 @@ export function PlanTasks({
 export function PlanMetrics({ budget }: { budget: PlanBudget }) {
   const { t } = useTranslation("travplan");
   const money = (n: number) =>
-    n.toLocaleString(undefined, { style: "currency", currency: budget.currency });
+    n.toLocaleString(appLocale(), { style: "currency", currency: budget.currency });
   return (
     <div className="tp-metrics">
       {[

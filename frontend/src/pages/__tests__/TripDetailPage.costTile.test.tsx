@@ -164,3 +164,8 @@ describe("TripDetailPage cost tile", () => {
     expect(euroRow?.textContent).not.toContain("EUR 40206.00");
   });
 });
+
+// The trip summary loads its plan independently of the timeline feature under test.
+vi.mock("../../lib/api/travplan", () => ({
+  travplanApi: { get: vi.fn().mockResolvedValue(null) },
+}));

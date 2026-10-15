@@ -27,6 +27,7 @@ import { linkDocumentsInTx, takeDocumentIds } from "../services/documents/docume
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import logger from "../utils/logger";
 import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
+import { requestedBaseVersion } from "../services/sync/versionPrecondition";
 import { railListSummary } from "../shared/listSummary";
 
 export const FERRY_INCLUDE = {
@@ -272,6 +273,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     const existing = await prisma.ferryJourney.findFirst({ where: { id: req.params.id, userId } });
     if (!existing) throw new AppError("Ferry ride not found", 404);
     refuseStrayFold(req.body);
+    const baseVersion = requestedBaseVersion(req);
     const parsed = updateFerryJourneySchema.safeParse(req.body);
     if (!parsed.success) throw invalidInput(parsed.error);
     const input = parsed.data;
@@ -303,6 +305,15 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       : undefined;
 
     const ride = await prisma.$transaction(async (tx) => {
+      // Claim the read version atomically inside the same transaction as the edit.
+      if (baseVersion !== null) {
+        const claimed = await tx.ferryJourney.updateMany({
+          where: { id: existing.id, userId, updatedAt: new Date(baseVersion) },
+          data: { updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)) },
+        });
+        if (claimed.count !== 1)
+          throw new AppError("Crossing changed elsewhere", 409, "VERSION_CONFLICT");
+      }
       if (resolved !== undefined) {
         await tx.ferryJourneyCompanion.deleteMany({ where: { ferryJourneyId: existing.id } });
         if (resolved.length > 0) {
@@ -320,6 +331,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
         data: {
           ...plainColumns(input),
           ...state,
+          updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)),
           ...fxColumns,
           ...(resolved !== undefined && { companions: resolved.map((c) => c.displayName) }),
         },
@@ -345,7 +357,16 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
       select: { id: true, tripId: true },
     });
     if (!existing) throw new AppError("Ferry ride not found", 404);
-    await prisma.ferryJourney.delete({ where: { id: existing.id } });
+    const baseVersion = requestedBaseVersion(req);
+    const deleted = await prisma.ferryJourney.deleteMany({
+      where: {
+        id: existing.id,
+        userId,
+        ...(baseVersion === null ? {} : { updatedAt: new Date(baseVersion) }),
+      },
+    });
+    if (deleted.count !== 1)
+      throw new AppError("Crossing changed elsewhere", 409, "VERSION_CONFLICT");
     await restatusTrips(existing.tripId);
     res.status(204).send();
   } catch (err) {

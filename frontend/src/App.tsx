@@ -297,9 +297,6 @@ function AppContent() {
                 path="/cruises"
                 element={
                   isAuthenticated ? (
-                    // Not a boolean guard — see DomainRouteGuard: the domain
-                    // list is unknown for one request on a cold load, and
-                    // deciding then bounced every bookmark and refresh.
                     <DomainRouteGuard domain="cruise">
                       <CruisesPage />
                     </DomainRouteGuard>

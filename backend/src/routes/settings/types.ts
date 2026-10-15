@@ -92,6 +92,8 @@ export interface SettingsResponse extends SettingsDataJson {
   boardingPassParserStrategy: string | null;
   historicalEnrichment: HistoricalEnrichmentResponseSettings;
   enabledDomains: string[];
+  /** Read-only server capabilities, independent of the account selection. */
+  availableDomains?: string[];
   baseCurrency: string;
   /** Silent trip auto-creation during flight import (column-backed). */
   autoCreateTrips: boolean;
