@@ -672,6 +672,8 @@ export default function TripMap({
       }
     };
     map.on("style.load", restoreProjection);
+    // Inline raster styles can finish before this effect installs its listener.
+    if (map.getStyle()) restoreProjection();
     return () => {
       map.off("style.load", restoreProjection);
     };
