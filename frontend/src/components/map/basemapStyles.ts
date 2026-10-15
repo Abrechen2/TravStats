@@ -1,4 +1,5 @@
 import { mapStyleUrl } from "../../lib/mapStyles";
+import { ownBasemapCatalogue } from "../../lib/ownGeoServer";
 // Shared basemap catalogue for the flat 2D map's basemap switcher.
 //
 // The globe keeps its own STYLE_OPTIONS in `Globe/globeStyles.ts` because it pairs each
@@ -29,7 +30,7 @@ export interface FlatBasemap {
   style: string | StyleSpecification;
 }
 
-export const FLAT_BASEMAPS: readonly FlatBasemap[] = [
+export const FLAT_BASEMAPS: readonly FlatBasemap[] = ownBasemapCatalogue([
   { id: "standard", label: "Standard", style: mapStyleUrl("standard") },
   {
     id: "light",
@@ -68,7 +69,7 @@ export const FLAT_BASEMAPS: readonly FlatBasemap[] = [
       "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
     ),
   },
-];
+]);
 
 export function resolveFlatStyle(id: FlatStyleId): string | StyleSpecification {
   return (FLAT_BASEMAPS.find((s) => s.id === id) ?? FLAT_BASEMAPS[2]).style;

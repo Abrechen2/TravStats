@@ -1,3 +1,4 @@
+import { usesOwnGeoServer } from "../../lib/ownGeoServer";
 // Consolidated control panel for the flat 2D routes map.
 //
 // Structurally identical to the globe panel: global EBENEN / BASISKARTE
@@ -113,12 +114,14 @@ export function FlatMapControlPanel({
                   icon="🗺️"
                   label={t("map:globe.panel.placeLabels")}
                 />
+                {!usesOwnGeoServer() && (
                 <Toggle
                   checked={showTerrain}
                   onChange={onShowTerrainChange}
                   icon="⛰️"
                   label={t("map:globe.panel.terrain")}
                 />
+                )}
               </div>
               {/* Marker labels: off / key markers only / all */}
               <div className="mt-2">

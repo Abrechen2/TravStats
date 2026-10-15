@@ -6,6 +6,7 @@ import { getMapConfig } from "../services/mapConfig";
 
 import { z } from "zod";
 import logger from "../utils/logger";
+import { parseOwnGeoUrl } from "../services/geo/ownServerConfig";
 
 // Define environment variable schema
 /**
@@ -147,6 +148,7 @@ export function validateEnv(): EnvConfig {
       );
     }
 
+    parseOwnGeoUrl(process.env.TRAVSTATS_GEO_URL);
     validatedEnv = envSchema.parse(process.env);
 
     logger.info({
