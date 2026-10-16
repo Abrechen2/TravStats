@@ -4,6 +4,7 @@ import type { Db, DbTransaction } from "../../db";
 import type { Prisma } from "../../prisma";
 import { ADAPTERS, type EntityAdapter, type ShareEntity, type SharedRow } from "./adapters";
 import { changedKeys, jsonSubset, sameFact } from "./factValues";
+import { recomputeTripStatus } from "../tripStatusService";
 import { receivingMembers, type MemberTrip } from "./members";
 import { asPropagation, isPropagating } from "./propagationGuard";
 
@@ -160,6 +161,7 @@ async function createCopies(
   const source = { ...row, shareKey: key };
   for (const member of await receivingMembers(c, groupId, actorId)) {
     const copyId = await adapter.createCopy(c, source, member.userId, member.id);
+    await recomputeTripStatus(member.id, c);
     await notice(c, {
       recipient: member,
       groupId,
@@ -219,6 +221,9 @@ async function updateCopies(
     // from the dates all differ from the sharer's values, and an undo compares
     // against this side — recording the sharer's would refuse every such undo.
     const [applied] = await adapter.load(c, [copy.id]);
+    // The trip's status caches its entries' dates; the route that made the
+    // change re-derives only the writer's own trip.
+    await recomputeTripStatus(member.id, c);
     await notice(c, {
       recipient: member,
       groupId,
