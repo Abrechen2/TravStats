@@ -128,7 +128,9 @@ export const prisma = basePrisma.$extends({
                 context: {
                   model,
                   action: operation,
-                  args: toLoggable(args),
+                  args: model?.startsWith("TravelPlan")
+                    ? "[redacted planning data]"
+                    : toLoggable(args),
                   resultCount: Array.isArray(result) ? result.length : result ? 1 : 0,
                 },
                 performance: { duration: Date.now() - startTime },
@@ -140,7 +142,14 @@ export const prisma = basePrisma.$extends({
         return result;
       } catch (error) {
         logQuerySafely(
-          () => logQueryFailure(error, model, operation, verbose ? args : undefined, startTime),
+          () =>
+            logQueryFailure(
+              error,
+              model,
+              operation,
+              verbose && !model?.startsWith("TravelPlan") ? args : undefined,
+              startTime
+            ),
           model,
           operation
         );
@@ -167,7 +176,12 @@ function logQueryFailure(
   args: unknown,
   startTime: number
 ): void {
-  const errorMessage = error instanceof Error ? error.message : "Unknown error";
+  const originalMessage = error instanceof Error ? error.message : "Unknown error";
+  const errorMessage = model?.startsWith("TravelPlan")
+    ? "Planning database operation failed"
+    : error instanceof Error
+      ? error.message
+      : "Unknown error";
   const code = (error as { code?: unknown })?.code;
   const entry = {
     context: {
@@ -189,7 +203,7 @@ function logQueryFailure(
   }
 
   // Connection errors are expected during startup and shutdown: a warning.
-  if (CONNECTION_ERROR_MARKERS.some((marker) => errorMessage.includes(marker))) {
+  if (CONNECTION_ERROR_MARKERS.some((marker) => originalMessage.includes(marker))) {
     dbLogger.warn({
       ...entry,
       operation: "database_connection_error",
@@ -206,7 +220,7 @@ function logQueryFailure(
       name: error instanceof Error ? error.name : undefined,
       code: typeof code === "string" ? code : undefined,
       message: errorMessage,
-      stack: error instanceof Error ? error.stack : undefined,
+      stack: !model?.startsWith("TravelPlan") && error instanceof Error ? error.stack : undefined,
     },
   });
 }

@@ -7,7 +7,10 @@ export function ConnectionDistance({ legs }: { legs: readonly RailJourney[] }): 
   const { t, i18n } = useTranslation(["rail"]);
   const distance = connectionDistance(legs);
   const source = distance.source
-    ? railDistanceNoteKey(distance.source, { includeTicket: true })
+    ? railDistanceNoteKey(distance.source, {
+        includeTicket: true,
+        geometrySource: distance.geometrySource,
+      })
     : null;
   return (
     <span className="flex flex-col">

@@ -104,7 +104,8 @@ registry.registerPath({
     "Returns the URL ONCE — `<public base>/share#<token>`; the token rides in the fragment, " +
     "which never reaches a server log. Anyone holding the URL reads the chosen fields until " +
     "the link expires or is revoked. A flight link also ends two hours after the arrival " +
-    "(`effectiveExpiresAt`). Limited to 30 an hour per user, " +
+    "(`effectiveExpiresAt`). Supply exactly one of expiresInDays (1–90, measured by the server) " +
+    "or expiresAt (absolute timestamp, at most 90 days ahead). Limited to 30 an hour per user, " +
     `${SHARE_LINK_MAX_ACTIVE} live links per account.`,
   tags,
   request: { body: json(shareLinkCreateSchema) },

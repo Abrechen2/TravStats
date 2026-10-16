@@ -185,7 +185,7 @@ describe("wrapped and badges across domains", () => {
   });
 
   // Review M1: "new countries" follow the same gate — a hidden domain proves none.
-  it("counts no new country from a hidden domain", async () => {
+  it("counts no visited country from train endpoints, whether visible or hidden", async () => {
     await updateInstanceSettings({ betaFeaturesEnabled: true });
     await prisma.railJourney.create({
       data: {
@@ -212,7 +212,7 @@ describe("wrapped and badges across domains", () => {
     const withRail = await request(app)
       .get("/api/v1/stats/wrapped?year=2024")
       .set("Cookie", cookie);
-    expect(withRail.body.newCountries).toBe(2);
+    expect(withRail.body.newCountries).toBe(0);
     await prisma.userSettings.update({ where: { userId }, data: { enabledDomains: ["rental"] } });
     const hidden = await request(app).get("/api/v1/stats/wrapped?year=2024").set("Cookie", cookie);
     expect(hidden.body.newCountries).toBe(0);

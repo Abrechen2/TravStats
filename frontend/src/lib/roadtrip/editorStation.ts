@@ -33,7 +33,11 @@ export interface EditorStation extends StationDraft {
 function nightOf(s: RoadtripStation): EditorStation["night"] {
   if (s.state === "stay" && s.lodgingStayId)
     return { kind: "stay", lodgingStayId: s.lodgingStayId };
-  if (s.state === "free") return { kind: "free" };
+  if (s.state === "free")
+    return {
+      kind: "free",
+      ...(s.countryVisitKind ? { countryVisitKind: s.countryVisitKind } : {}),
+    };
   if (s.state === "via") return { kind: "via" };
   // The place travels with the night: dropping it here would unlink it on
   // the next autosave of any other change.

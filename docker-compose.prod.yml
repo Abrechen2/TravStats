@@ -111,6 +111,11 @@ services:
 
       # CORS stays disabled (same-origin) unless an override is provided.
       CORS_ORIGIN: ${CORS_ORIGIN:-}
+      # Public HTTPS map style URLs; empty uses OpenFreeMap.
+      MAP_STYLE_STANDARD_URL: ${MAP_STYLE_STANDARD_URL:-}
+      MAP_STYLE_LIGHT_URL: ${MAP_STYLE_LIGHT_URL:-}
+      MAP_STYLE_DARK_URL: ${MAP_STYLE_DARK_URL:-}
+      MAP_STYLE_VOYAGER_URL: ${MAP_STYLE_VOYAGER_URL:-}
 
       # Name any reverse proxy in front of this stack (see .env.prod.example),
       # or all visitors share its address and one login rate limit.

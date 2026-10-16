@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 // Shared building blocks for the map control panels (globe + flat 2D).
 //
 // Extracted from GlobeControlPanel so BOTH panels render from one source

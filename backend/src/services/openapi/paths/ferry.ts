@@ -7,6 +7,8 @@ import {
   updateFerryJourneySchema,
   ferryQuerySchema,
 } from "../../../schemas/ferry";
+import { clientRefBodySchema } from "../../../schemas/clientRef";
+import { clientRefResponses } from "./clientRef";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import { railTimesSchema } from "../../../schemas/times";
 import { errorContent, timeRefused } from "./shared";
@@ -72,15 +74,34 @@ registry.registerPath({
   summary: "Create a ferry crossing",
   description:
     "Both ports include coordinates. Times are local wall clocks or calendar days; zones are resolved on the server. Distance without a ticket value is explicitly a straight-line estimate. Documents and companions use the same ownership rules as other journeys.",
-  request: { body: { content: json(createFerryJourneySchema.and(documentIdsBodySchema)) } },
-  responses: { 201: { description: "Created", content: json(envelope(journey)) }, ...errors },
+  request: {
+    body: {
+      content: json(createFerryJourneySchema.and(documentIdsBodySchema).and(clientRefBodySchema)),
+    },
+  },
+  responses: {
+    201: { description: "Created", content: json(envelope(journey)) },
+    ...errors,
+    ...clientRefResponses(json(envelope(journey))),
+  },
 });
 registry.registerPath({
   method: "patch",
   path: "/ferry/{id}",
+  description:
+    "Optional baseVersion (updatedAt) or If-Match precondition; stale versions return 409 VERSION_CONFLICT.",
   tags: ["Ferry"],
   summary: "Edit a ferry crossing",
-  request: { params, body: { content: json(updateFerryJourneySchema) } },
+  request: {
+    params,
+    body: {
+      content: json(
+        updateFerryJourneySchema.and(
+          z.object({ baseVersion: z.iso.datetime({ offset: true }).optional() })
+        )
+      ),
+    },
+  },
   responses: { 200: { description: "Updated", content: json(envelope(journey)) }, ...errors },
 });
 registry.registerPath({
@@ -88,7 +109,9 @@ registry.registerPath({
   path: "/ferry/{id}",
   tags: ["Ferry"],
   summary: "Delete a ferry crossing and its documents",
-  request: { params },
+  description:
+    "Optional If-Match version precondition; stale versions return 409 VERSION_CONFLICT.",
+  request: { params, headers: z.object({ "If-Match": z.string().optional() }) },
   responses: { 204: { description: "Deleted" }, ...errors },
 });
 const leg = z.object({

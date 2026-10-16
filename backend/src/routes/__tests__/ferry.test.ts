@@ -467,4 +467,46 @@ describe("Ferry rides API", () => {
       (await request(app).get("/api/v1/ferry/live-availability").set("Cookie", cookie)).body.data
     ).toEqual({ configured: false, provider: "AISStream" });
   });
+  it("refuses stale edits and deletes, and permits a delete of the current version", async () => {
+    const created = await create(base);
+    const ride = created.body.data;
+    expect(created.status).toBe(201);
+    const updated = await request(app)
+      .patch(`/api/v1/ferry/${ride.id}`)
+      .set("Cookie", cookie)
+      .send({ notes: "first edit", baseVersion: ride.updatedAt });
+    expect(updated.status).toBe(200);
+    expect(updated.body.data.updatedAt).not.toBe(ride.updatedAt);
+    await request(app)
+      .patch(`/api/v1/ferry/${ride.id}`)
+      .set("Cookie", cookie)
+      .send({ notes: "stale edit", baseVersion: ride.updatedAt })
+      .expect(409);
+    await request(app)
+      .delete(`/api/v1/ferry/${ride.id}`)
+      .set("Cookie", cookie)
+      .set("If-Match", ride.updatedAt)
+      .expect(409);
+    const stored = await prisma.ferryJourney.findUniqueOrThrow({ where: { id: ride.id } });
+    expect(stored.notes).toBe("first edit");
+    await request(app)
+      .delete(`/api/v1/ferry/${ride.id}`)
+      .set("Cookie", cookie)
+      .set("If-Match", stored.updatedAt.toISOString())
+      .expect(204);
+  });
+
+  it("allows only one concurrent edit based on the same version", async () => {
+    const created = await create(base);
+    const ride = created.body.data;
+    const replies = await Promise.all(
+      ["one", "two"].map((notes) =>
+        request(app)
+          .patch(`/api/v1/ferry/${ride.id}`)
+          .set("Cookie", cookie)
+          .send({ notes, baseVersion: ride.updatedAt })
+      )
+    );
+    expect(replies.map((r) => r.status).sort()).toEqual([200, 409]);
+  });
 });

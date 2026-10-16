@@ -123,7 +123,7 @@ export default function SettingsSectionSwitch({
           <TripsSection />
           {/* Shared trips (design 2026-10-09): consent and companion links. */}
           <SharingSection />
-          {/* Public share links (forgejo#281): the instance switch and own links. */}
+          {/* Public share links (forgejo#281): own links and a pointer to administration. */}
           <ShareLinksSection isAdmin={isAdmin} />
         </div>
       );

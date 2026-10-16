@@ -1,3 +1,6 @@
+import mapConfigRoutes from "./mapConfig";
+import comparisonRoutes from "./comparison";
+import comparisonPeerRoutes from "./comparisonPeer";
 /**
  * The API mount table — the single source of truth for what is served
  * under /api/v1 and in which order.
@@ -61,6 +64,7 @@ import templateStatusRoutes from "./templateStatus";
 import parserTemplatesRoutes from "./parserTemplates";
 import trainingRoutes from "./training";
 import tripsRoutes from "./trips";
+import travplanRoutes from "./travplan";
 import tripBookingRoutes from "./trips/tripBookings";
 import tripPackageRoutes from "./trips/tripPackage";
 import tripExchangeRoutes from "./trips/tripExchange";
@@ -145,6 +149,7 @@ import devicePushRoutes from "./devicePush";
 import appSettingsRoutes from "./appSettings";
 import jobRoutes from "./jobs";
 import geoRoutes from "./geo";
+import geoServerRoutes from "./geoServer";
 import documentRoutes from "./documents";
 import tripPhotoWindowRoutes from "./tripPhotoWindows";
 import syncRoutes from "./sync";
@@ -163,6 +168,10 @@ export interface ApiMount {
 }
 
 export const apiMounts: ApiMount[] = [
+  { id: "map-config", base: "/api/v1/map-config", router: mapConfigRoutes },
+  { id: "comparison", base: "/api/v1/comparison", router: comparisonRoutes },
+  { id: "comparison-peer", base: "/api/v1/comparison-peer", router: comparisonPeerRoutes },
+  { id: "travplan", base: "/api/v1", router: travplanRoutes },
   // OpenAPI spec + Swagger UI mounted FIRST so /api/v1/docs and
   // /api/v1/openapi.json don't fall through into authenticated routers.
   { id: "openapi", base: "/api/v1", router: openapiRoutes },
@@ -467,6 +476,7 @@ export const apiMounts: ApiMount[] = [
   // The paired phone's push registration (TravStats#156).
   { id: "devicePush", base: "/api/v1/devices", router: devicePushRoutes },
   { id: "appSettings", base: "/api/v1/app-settings", router: appSettingsRoutes },
+  { id: "geo-server", base: "/api/v1/geo-server", router: geoServerRoutes },
   { id: "geo", base: "/api/v1/geo", router: geoRoutes },
   // Background jobs a long-running request started (backup, restore, import, scans).
   { id: "jobs", base: "/api/v1/jobs", router: jobRoutes },

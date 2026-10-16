@@ -52,4 +52,18 @@ describe("settings enabledDomains", () => {
       .send({ enabledDomains: ["flight", "rockets"] });
     expect(res.status).toBe(400);
   });
+  it("keeps supported domains discoverable after switching them off", async () => {
+    await request(app)
+      .put("/api/v1/settings")
+      .set("Cookie", [`auth_token=${token}`])
+      .send({ enabledDomains: ["flight"], availableDomains: ["rockets"] })
+      .expect(200);
+    const res = await request(app)
+      .get("/api/v1/settings")
+      .set("Cookie", [`auth_token=${token}`])
+      .expect(200);
+    expect(res.body.enabledDomains).toEqual(["flight"]);
+    expect(res.body.availableDomains).toEqual(expect.arrayContaining(["bus", "rental", "ferry"]));
+    expect(res.body.availableDomains).not.toContain("rockets");
+  });
 });

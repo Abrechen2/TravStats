@@ -665,7 +665,12 @@
       "viaOnTimeline": "A stop from the trip's timeline cannot become a route correction. Choose another kind for it."
     },
     "removedRestores": "Undo restores the station with its legs — nothing is saved until then.",
-    "removedRestoresLine": "A recorded or hand-drawn line runs next to it: it is lost unless you undo. Nothing is saved until then."
+    "removedRestoresLine": "A recorded or hand-drawn line runs next to it: it is lost unless you undo. Nothing is saved until then.",
+    "countryVisitKind": {
+      "label": "Type of stay",
+      "visit": "Overnight stay outside a transit location",
+      "transit": "Transit stop only, e.g. a service area"
+    }
   },
   "legDialog": {
     "title": "Leg",

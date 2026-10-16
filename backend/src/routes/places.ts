@@ -378,6 +378,7 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
         externalRef: input.externalRef ?? null,
         notes: input.notes ?? null,
         visited: input.visited,
+        countryVisitKind: input.countryVisitKind,
         dataSource: "manual",
       },
       include: PLACE_INCLUDE,
@@ -427,6 +428,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     if (input.city !== undefined) data.city = input.city;
     if (input.notes !== undefined) data.notes = input.notes;
     if (input.visited !== undefined) data.visited = input.visited;
+    if (input.countryVisitKind !== undefined) data.countryVisitKind = input.countryVisitKind;
     if (input.externalRef !== undefined) {
       // A reference another place answers to — as its own or as an alias a
       // merge left on it — is that place's identity; writing it here would make

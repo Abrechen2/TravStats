@@ -77,7 +77,7 @@
     "dayOnly": "Nur das Datum ist bekannt",
     "delayNeedsClock": "Eine Verspätung braucht die Uhrzeiten der Fahrt.",
     "distance": "Entfernung in km",
-    "distanceHint": "Leer lassen: TravStats misst entlang der von Transitous übernommenen Strecke, sonst die Luftlinie. Eintragen, wenn das Ticket die Strecke nennt.",
+    "distanceHint": "Leer lassen: TravStats misst entlang des gespeicherten Streckenverlaufs (Transitous oder OpenRailRouting), sonst die Luftlinie. Eintragen, wenn das Ticket die Strecke nennt.",
     "seat": "Platz",
     "class": "Klasse",
     "coach": "Wagen",
@@ -113,6 +113,8 @@
     }
   },
   "tracedLine": "entlang der Strecke, Transitous",
+  "routedLine": "entlang des Gleisnetzes, OpenRailRouting",
+  "alongLine": "entlang der gespeicherten Strecke",
   "roadtripLine": "entlang der Roadtrip-Route",
   "station": {
     "searchPlaceholder": "Bahnhof suchen, z. B. Frankfurt Hbf",

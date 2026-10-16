@@ -9,6 +9,7 @@
 
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { logger } from "../../lib/logger";
+import { usesOwnGeoServer } from "../../lib/ownGeoServer";
 
 const HILLSHADE_SOURCE = "ts-hillshade";
 const HILLSHADE_LAYER = "ts-hillshade";
@@ -20,6 +21,8 @@ const HILLSHADE_TILES = [
 
 /** Add or remove the hillshade relief overlay, kept below basemap labels. */
 export function applyHillshade(map: MapLibreMap, show: boolean): void {
+  // The map-only service has no terrain dataset; never request Esri implicitly.
+  show = show && !usesOwnGeoServer();
   try {
     if (show) {
       if (!map.getSource(HILLSHADE_SOURCE)) {

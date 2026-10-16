@@ -6,6 +6,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
+- Full data export includes saved TravPlan content and proposals; daily quota counters are explicitly excluded.
+
+### Fixed
+
+- Public-link lifetimes are calculated from the server clock, preventing a fast
+  browser clock from rejecting “Until landing (+2 hours)” or “90 days”.
+  Explicit expiry timestamps remain supported for existing API clients.
+- Public-link permission is now under Administration → Instance. Personal
+  settings retain link management and point admins to the instance switch.
+
+### Changed
+
+- Ferry edits and deletes accept an optional read version. Conflicting writes
+  return HTTP 409; edits claim the version atomically in their transaction.
+  Older clients can continue to write without a version precondition.
+- Settings expose supported travel domains independently of enabled domains,
+  allowing compatible clients to offer a disabled domain again.
+- TravPlan uses shared theme tokens and the selected application locale for
+  number formatting.
+
 ## [2.7.0] - 2026-10-03
 
 TravStats 2.7.0 is the largest release since lodging became a domain. Web and
@@ -25,6 +45,16 @@ logbook. A database restored from before the update is the way back; the
 previous image alone does not know `completed`.
 
 ### Added
+
+- **Dawarich can suggest whole venues beyond markets.** A separate opt-in adds shopping malls, parks, zoos, theme parks and museum grounds. Independent overlapping venues stay reviewable, and visits are recorded only after confirmation.
+
+- **Markets are suggested as whole venues.** With separate consent, Dawarich
+  scans automatically fetch public OpenStreetMap market boundaries for coarse
+  regions along your track. A visit across several stalls stays one suggestion,
+  with original point IDs, boundary sources and visible coverage gaps. Cached
+  maps, bounded requests and remembered decisions avoid repeated work and
+  duplicate visits; only confirmation records a visit. Hidden Places pause
+  scanning, and manual scans can review the last 7, 14 or 30 days.
 
 - **Dawarich can suggest stays.** With your consent, Dawarich location history
   is scanned for places you stayed. Each suggestion is reviewed, edited and

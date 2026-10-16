@@ -31,6 +31,7 @@ const mapProps: MapProps[] = [];
 
 vi.mock("react-map-gl/maplibre", () => ({
   __esModule: true,
+  useMap: () => ({}),
   default: (props: MapProps): JSX.Element => {
     mapProps.push(props);
     return <div data-testid="mock-map">{props.children}</div>;

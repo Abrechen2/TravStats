@@ -217,3 +217,8 @@ describe("a diary entry on the trip timeline", () => {
     expect(screen.getByText("trips:detail.timeline.openJournal")).toBeInTheDocument();
   });
 });
+
+// The trip summary loads its plan independently of the timeline feature under test.
+vi.mock("../../lib/api/travplan", () => ({
+  travplanApi: { get: vi.fn().mockResolvedValue(null) },
+}));

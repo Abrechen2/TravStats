@@ -25,6 +25,8 @@ import DemoBetaNotice from "./components/DemoBetaNotice";
 import SetupIncompleteBanner from "./components/SetupIncompleteBanner";
 import UsageStatsConsentDialog from "./components/UsageStatsConsentDialog";
 
+const ComparisonPage = lazy(() => import("./pages/ComparisonPage"));
+
 // Lazy load pages for code splitting
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const RegisterPage = lazy(() => import("./pages/RegisterPage"));
@@ -55,6 +57,7 @@ import { AdminOnlyNotice } from "./components/AdminOnlyNotice";
 import { LOYALTY_SETTINGS_PATH } from "./pages/Settings/settingsModel";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
+const TravPlanPage = lazy(() => import("./pages/TravPlanPage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
 const TripDetailPage = lazy(() => import("./pages/TripDetailPage"));
 const TripRouteEditorPage = lazy(() => import("./pages/TripRouteEditorPage"));
@@ -231,8 +234,16 @@ function AppContent() {
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
+              <Route path="/compare" element={<ComparisonPage />} />
               {/* Public routes */}
               <Route path="/setup" element={<SetupPage />} />
+              {["/plan", "/plan/admin", "/plan/:tripId/:section?"].map((path) => (
+                <Route
+                  key={path}
+                  path={path}
+                  element={isAuthenticated ? <TravPlanPage /> : <Navigate to="/login" />}
+                />
+              ))}
               <Route
                 path="/login"
                 element={isAuthenticated ? <Navigate to="/" /> : <LoginPage />}
@@ -286,9 +297,6 @@ function AppContent() {
                 path="/cruises"
                 element={
                   isAuthenticated ? (
-                    // Not a boolean guard — see DomainRouteGuard: the domain
-                    // list is unknown for one request on a cold load, and
-                    // deciding then bounced every bookmark and refresh.
                     <DomainRouteGuard domain="cruise">
                       <CruisesPage />
                     </DomainRouteGuard>

@@ -8,13 +8,20 @@ import type { RailDistanceSource } from "../../types/rail";
  */
 export function railDistanceNoteKey(
   source: RailDistanceSource | string | null,
-  { includeTicket = false }: { includeTicket?: boolean } = {}
+  {
+    includeTicket = false,
+    geometrySource,
+  }: { includeTicket?: boolean; geometrySource?: string | null } = {}
 ): string | null {
   switch (source) {
     case "great_circle":
       return "rail:straightLine";
     case "route":
-      return "rail:tracedLine";
+      return geometrySource === "transitous"
+        ? "rail:tracedLine"
+        : geometrySource === "openrailrouting"
+          ? "rail:routedLine"
+          : "rail:alongLine";
     case "roadtrip":
       return "rail:roadtripLine";
     case "user":

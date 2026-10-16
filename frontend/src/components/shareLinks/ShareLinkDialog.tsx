@@ -5,7 +5,6 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { shareLinksApi } from "../../lib/api/shareLinks";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { logger } from "../../lib/logger";
-import { now } from "../../shared/time";
 import {
   SHARE_LINK_DEFAULT_FIELDS,
   SHARE_LINK_FIELDS,
@@ -104,9 +103,8 @@ export default function ShareLinkDialog({
     setBusy(true);
     setError(null);
     try {
-      const days = EXPIRY_CHOICES[expiry];
-      const expiresAt = new Date(now().getTime() + days * 86_400_000).toISOString();
-      setCreated(await shareLinksApi.create({ kind, targetId, fields, expiresAt }));
+      const expiresInDays = EXPIRY_CHOICES[expiry];
+      setCreated(await shareLinksApi.create({ kind, targetId, fields, expiresInDays }));
     } catch (err) {
       logger.error("Creating a share link failed:", err);
       setError(t(shareLinkErrorKey(err, `${NS}.errors.createFailed`)));

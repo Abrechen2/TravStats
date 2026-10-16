@@ -5,8 +5,6 @@ import type { RailJourney } from "../types/rail";
 
 /** The logbook's own page bound; the map reads pages until it has them all. */
 const PAGE = 500;
-/** A ceiling, not a page: past it the map says it is showing a part. */
-const MAX_JOURNEYS = 5_000;
 
 export interface UseDashboardRailResult {
   journeys: RailJourney[];
@@ -44,7 +42,7 @@ export function useDashboardRail(enabled: boolean, year: number | null): UseDash
     void (async () => {
       try {
         const all: RailJourney[] = [];
-        for (let offset = 0; offset < MAX_JOURNEYS; offset += PAGE) {
+        for (let offset = 0; !cancelled; offset += PAGE) {
           const page = await railApi.list({ limit: PAGE, offset, year: year ?? undefined });
           all.push(...page.journeys);
           if (all.length >= page.total || page.journeys.length === 0) break;

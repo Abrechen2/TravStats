@@ -1,3 +1,5 @@
+import { SharedMapOverlays } from "../map/SharedMapOverlays";
+import { useBasemapStyle } from "../map/useBasemapStyle";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
 import MapGL, { useControl } from "react-map-gl/maplibre";
@@ -7,8 +9,6 @@ import type { Layer } from "@deck.gl/core";
 import { hexToRgb } from "../../lib/domainColor";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { flightTrackBounds, flightTrackPaths } from "./flightTrackPaths";
-
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 function DeckGLOverlay({ layers }: { layers: Layer[] }): null {
   const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay({ layers }), {
@@ -30,6 +30,7 @@ export function FlightTrackMap({
   geometry: Array<[number, number]>;
   segmentStarts: number[];
 }): JSX.Element | null {
+  const mapStyle = useBasemapStyle();
   const { colorOf } = useDomainColors();
   const [mapLoaded, setMapLoaded] = useState(false);
   const color = colorOf("flight");
@@ -60,11 +61,12 @@ export function FlightTrackMap({
       <MapGL
         reuseMaps
         initialViewState={{ bounds, fitBoundsOptions: { padding: 24 } }}
-        mapStyle={DARK_MAP_STYLE}
+        mapStyle={mapStyle}
         style={{ position: "absolute", inset: "0" }}
         onLoad={(): void => setMapLoaded(true)}
       >
         {mapLoaded && <DeckGLOverlay layers={layers} />}
+        <SharedMapOverlays />
       </MapGL>
     </div>
   );

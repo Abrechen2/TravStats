@@ -390,6 +390,76 @@ describe("GET /api/v1/admin/export/all-data", () => {
     expect(Number(me.tripExpenses[0].amount)).toBe(1290);
   });
 
+  it("exports the review decision and evidence of a Dawarich stay", async () => {
+    const stay = await prisma.dawarichStay.create({
+      data: {
+        userId: createdUserIds[0],
+        fingerprint: "export-dismissed-stay",
+        sourceStartAt: new Date("2025-01-01T10:00:00Z"),
+        sourceEndAt: new Date("2025-01-01T11:00:00Z"),
+        startAt: new Date("2025-01-01T10:00:00Z"),
+        endAt: new Date("2025-01-01T11:00:00Z"),
+        sourceLat: 52,
+        sourceLon: 13,
+        lat: 52,
+        lon: 13,
+        zone: "Europe/Berlin",
+        pointCount: 12,
+        evidence: { reason: "stationary" },
+        status: "dismissed",
+      },
+    });
+    const res = await request(app)
+      .get("/api/v1/admin/export/all-data")
+      .set("Cookie", adminCookie)
+      .expect(200);
+    const me = res.body.users.find((u: { id: string }) => u.id === createdUserIds[0]);
+    expect(me.dawarichStays).toContainEqual(
+      expect.objectContaining({
+        id: stay.id,
+        status: "dismissed",
+        evidence: { reason: "stationary" },
+      })
+    );
+  });
+
+  it("exports saved travel plans and proposals without replay keys", async () => {
+    const trip = await prisma.trip.findFirstOrThrow({ where: { userId: createdUserIds[0] } });
+    const state = { destination: "Lisbon", notes: "Keep the riverside walk" };
+    const content = { title: "Museum visit", reason: "Requested by the traveller" };
+    const plan = await prisma.travelPlan.create({
+      data: {
+        tripId: trip.id,
+        createRef: `export-plan-${Date.now()}`,
+        state,
+        proposals: {
+          create: {
+            baseRevision: 1,
+            inputHash: "internal-input-hash",
+            provider: "test",
+            model: "test",
+            content,
+            expiresAt: new Date("2030-01-01T00:00:00Z"),
+          },
+        },
+      },
+    });
+    const res = await request(app)
+      .get("/api/v1/admin/export/all-data")
+      .set("Cookie", adminCookie)
+      .expect(200);
+    const me = res.body.users.find((u: { id: string }) => u.id === createdUserIds[0]);
+    const exported = me.trips.find((t: { id: string }) => t.id === trip.id).travelPlan;
+    expect(exported).toEqual(expect.objectContaining({ id: plan.id, revision: 1, state }));
+    expect(exported.proposals).toEqual([
+      expect.objectContaining({ content, status: "pending", provider: "test", model: "test" }),
+    ]);
+    expect(exported).not.toHaveProperty("createRef");
+    expect(exported).not.toHaveProperty("mutations");
+    expect(exported.proposals[0]).not.toHaveProperty("inputHash");
+    expect(me).not.toHaveProperty("travelPlanUsage");
+  });
+
   /**
    * The guard that keeps the file honest as tables are added: every list
    * relation on `User` in the schema is either exported or named, with its

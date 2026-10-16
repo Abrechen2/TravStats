@@ -200,3 +200,8 @@ describe("the trip page opens its own and a journal entry's editor from a link",
     expect(screen.queryByTestId("journal-editor")).not.toBeInTheDocument();
   });
 });
+
+// The trip summary loads its plan independently of the timeline feature under test.
+vi.mock("../../lib/api/travplan", () => ({
+  travplanApi: { get: vi.fn().mockResolvedValue(null) },
+}));

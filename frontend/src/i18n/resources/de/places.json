@@ -94,7 +94,11 @@
     "listPartial_other": "Ort gespeichert. Diese Listen haben ihn nicht aufgenommen: {{lists}}.",
     "listRetry": "Erneut zuordnen",
     "listContinue": "Weiter",
-    "forList": "Nach dem Speichern kommt der Ort in die Liste „{{list}}“."
+    "forList": "Nach dem Speichern kommt der Ort in die Liste „{{list}}“.",
+    "countryVisitKind": "Aufenthaltsart für die Länderzählung",
+    "countryVisit": "Besuch außerhalb eines reinen Zwischenstopps",
+    "countryTransit": "Nur Transit / Flughafen / Raststätte",
+    "countryVisitHint": "Ein reiner Zwischenstopp zählt als Bodenkontakt, auch mit Übernachtung. Der Name des Ortes entscheidet nicht."
   },
   "detail": {
     "backToList": "Zurück zur Übersicht",

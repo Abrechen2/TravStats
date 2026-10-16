@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
 import type { Layer } from "@deck.gl/core";
@@ -43,6 +43,7 @@ const { captured, mapCalls } = vi.hoisted(() => ({
     fitBounds: [] as Array<{ maxZoom?: number }>,
     flyTo: [] as Array<{ zoom?: number }>,
     skyThrows: false,
+    styleListeners: new Set<() => void>(),
   },
 }));
 
@@ -54,10 +55,15 @@ vi.mock("react-map-gl/maplibre", async () => {
       mapCalls.setSky.push(s);
       if (mapCalls.skyThrows) throw new Error("this style has no sky");
     },
-    on: () => {},
-    off: () => {},
+    on: (event: string, listener: () => void) => {
+      if (event === "style.load") mapCalls.styleListeners.add(listener);
+    },
+    off: (event: string, listener: () => void) => {
+      if (event === "style.load") mapCalls.styleListeners.delete(listener);
+    },
     once: () => {},
     getZoom: () => 2,
+    getStyle: () => ({ version: 8, layers: [] }),
     getCenter: () => ({ lng: 0, lat: 0 }),
     getCanvas: () => ({ style: {} }),
     getContainer: () => document.createElement("div"),
@@ -144,6 +150,7 @@ const trip = {
 
 beforeEach(() => {
   captured.length = 0;
+  mapCalls.styleListeners.clear();
   mapCalls.setProjection.length = 0;
   mapCalls.setSky.length = 0;
   mapCalls.fitBounds.length = 0;
@@ -294,4 +301,34 @@ describe("TripMap: the globe toggle mounts the overlay the way the globe needs i
     expect(arcs).toBeDefined();
     expect(arcs?.constructor.name).toBe("PathLayer");
   });
+});
+
+it("retains globe projection and selects the matching sky after changing basemaps", async () => {
+  const { saveMapAppearance } = await import("../../map/mapAppearance");
+  const { STYLE_OPTIONS } = await import("../../Globe/globeStyles");
+  const view = render(<TripMap trip={trip} />);
+  await toggleToGlobe();
+  act(() => saveMapAppearance({ styleId: "light" }));
+  mapCalls.setProjection.length = 0;
+  act(() => {
+    for (const listener of mapCalls.styleListeners) listener();
+  });
+  expect(mapCalls.setProjection).toEqual([{ type: "globe" }]);
+  expect(mapCalls.setSky[mapCalls.setSky.length - 1]).toEqual(
+    STYLE_OPTIONS.find((s) => s.id === "light")!.sky
+  );
+  view.unmount();
+  expect(mapCalls.styleListeners.size).toBe(0);
+});
+
+it("updates the sky when an inline satellite style has already finished loading", async () => {
+  const { saveMapAppearance } = await import("../../map/mapAppearance");
+  const { STYLE_OPTIONS } = await import("../../Globe/globeStyles");
+  render(<TripMap trip={trip} />);
+  await toggleToGlobe();
+  act(() => saveMapAppearance({ styleId: "satellite" }));
+  expect(mapCalls.setSky[mapCalls.setSky.length - 1]).toEqual(
+    STYLE_OPTIONS.find((s) => s.id === "satellite")!.sky
+  );
+  expect(mapCalls.setProjection[mapCalls.setProjection.length - 1]).toEqual({ type: "globe" });
 });

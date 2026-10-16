@@ -1,3 +1,5 @@
+import { SharedMapOverlays } from "../map/SharedMapOverlays";
+import { useBasemapStyle } from "../map/useBasemapStyle";
 import { useMemo, useState } from "react";
 import type { JSX } from "react";
 import MapGL, { useControl } from "react-map-gl/maplibre";
@@ -9,8 +11,6 @@ import { hexToRgb } from "../../lib/domainColor";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { RentalBooking } from "../../types/rental";
-
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
 function DeckGLOverlay({ layers }: { layers: Layer[] }): null {
   const overlay = useControl<MapboxOverlay>(() => new MapboxOverlay({ layers }), {
@@ -27,6 +27,7 @@ function DeckGLOverlay({ layers }: { layers: Layer[] }): null {
  * route driven. The colour is the domain colour store's.
  */
 export function RentalRouteMap({ rental }: { rental: RentalBooking }): JSX.Element {
+  const mapStyle = useBasemapStyle();
   const { t } = useTranslation(["rental"]);
   const { colorOf } = useDomainColors();
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -58,11 +59,12 @@ export function RentalRouteMap({ rental }: { rental: RentalBooking }): JSX.Eleme
         <MapGL
           reuseMaps
           initialViewState={{ bounds, fitBoundsOptions: { padding: 24 } }}
-          mapStyle={DARK_MAP_STYLE}
+          mapStyle={mapStyle}
           style={{ position: "absolute", inset: "0" }}
           onLoad={(): void => setMapLoaded(true)}
         >
           {mapLoaded && <DeckGLOverlay layers={layers} />}
+          <SharedMapOverlays />
         </MapGL>
       </div>
       <p className="t-caption" data-testid="rental-map-caption">

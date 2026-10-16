@@ -11,7 +11,7 @@ import {
   UserSettingsUpdateData,
   defaultSettings,
 } from "./types";
-import { DOMAIN_KEYS, type DomainKey } from "../../shared/domains";
+import { AVAILABLE_DOMAINS, DOMAIN_KEYS, type DomainKey } from "../../shared/domains";
 import { ECB_CURRENCIES } from "../../shared/currencies";
 import { COUNTRY_TIERS, parseCountryTier, type CountryTier } from "../../shared/countryEvidence";
 import { getInstanceSettings } from "../../services/instanceSettingsService";
@@ -300,6 +300,7 @@ function buildSettingsResponse(
       maxPerDay: record.historicalEnrichmentMaxPerDay ?? 50,
     },
     enabledDomains: record.enabledDomains,
+    availableDomains: [...AVAILABLE_DOMAINS],
     baseCurrency: record.baseCurrency,
     autoCreateTrips: record.autoCreateTrips ?? true,
     // `parseCountryTier`, not a cast: the column is TEXT, so an unreadable

@@ -138,9 +138,13 @@ describe("sharing — propagation of every entry type", () => {
 
   it("a change to the house itself reaches the other member's house", async () => {
     await as(anna)
-      .patch(`/lodging/${pair.full.lodging.id}`, { website: "https://avenidapalace.pt" })
+      .patch(`/lodging/${pair.full.lodging.id}`, {
+        website: "https://avenidapalace.pt",
+        countryVisitKind: "transit",
+      })
       .expect(200);
     expect((await bens.stay()).lodging.website).toBe("https://avenidapalace.pt");
+    expect((await bens.stay()).lodging.countryVisitKind).toBe("transit");
     const [notice] = await notices(ben);
     expect(notice).toMatchObject({ kind: "updated", entityType: "lodgingStay" });
   });

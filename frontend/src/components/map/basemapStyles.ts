@@ -1,3 +1,5 @@
+import { mapStyleUrl } from "../../lib/mapStyles";
+import { ownBasemapCatalogue } from "../../lib/ownGeoServer";
 // Shared basemap catalogue for the flat 2D map's basemap switcher.
 //
 // The globe keeps its own STYLE_OPTIONS in `Globe/globeStyles.ts` because it pairs each
@@ -28,22 +30,22 @@ export interface FlatBasemap {
   style: string | StyleSpecification;
 }
 
-export const FLAT_BASEMAPS: readonly FlatBasemap[] = [
-  { id: "standard", label: "Standard", style: "https://tiles.openfreemap.org/styles/liberty" },
+export const FLAT_BASEMAPS: readonly FlatBasemap[] = ownBasemapCatalogue([
+  { id: "standard", label: "Standard", style: mapStyleUrl("standard") },
   {
     id: "light",
     label: "Light",
-    style: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
+    style: mapStyleUrl("light"),
   },
   {
     id: "dark",
     label: "Dark",
-    style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+    style: mapStyleUrl("dark"),
   },
   {
     id: "voyager",
-    label: "Voyager",
-    style: "https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json",
+    label: "Bright",
+    style: mapStyleUrl("voyager"),
   },
   {
     id: "satellite",
@@ -52,7 +54,7 @@ export const FLAT_BASEMAPS: readonly FlatBasemap[] = [
       [
         "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
       ],
-      "Tiles &copy; Esri"
+      "Tiles &copy; Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
     ),
   },
   {
@@ -64,10 +66,10 @@ export const FLAT_BASEMAPS: readonly FlatBasemap[] = [
         "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
         "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
       ],
-      "&copy; OpenStreetMap contributors"
+      "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
     ),
   },
-];
+]);
 
 export function resolveFlatStyle(id: FlatStyleId): string | StyleSpecification {
   return (FLAT_BASEMAPS.find((s) => s.id === id) ?? FLAT_BASEMAPS[2]).style;

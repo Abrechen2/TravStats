@@ -145,6 +145,8 @@ export function roadtripAttestedSpan(
 
 /** A station as the passport reads it — its country already resolved by the loader. */
 export interface PassportRoadtripStation extends AttestedStation {
+  /** An explicitly marked transit stay does not attest a country visit. */
+  countryVisitKind?: string;
   /** ISO 3166-1 alpha-2, or null when neither the point nor a stay could place it. */
   country: string | null;
 }
@@ -154,7 +156,7 @@ export function roadtripEvidence(stations: readonly PassportRoadtripStation[]): 
   return stations.map((s) => ({
     country: s.country,
     kind: "roadtrip",
-    tier: s.night ? "slept" : "transited",
+    tier: s.night && s.countryVisitKind !== "transit" ? "slept" : "transited",
     at: s.at,
     days: s.days,
   }));

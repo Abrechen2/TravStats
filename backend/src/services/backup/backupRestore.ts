@@ -1,3 +1,4 @@
+import { suspendComparisonAfterRestore } from "../federation/restore";
 import { spawn } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
@@ -90,6 +91,7 @@ export async function afterDatabaseRestore(
   identityBefore: InstanceIdentity | null,
   backupId: string
 ): Promise<void> {
+  await suspendComparisonAfterRestore();
   await restoreInstanceIdentity(identityBefore);
   await resetSyncHistory(`restore of backup ${backupId}`);
   // A dump taken before a revoke would bring the revoked link back to life.

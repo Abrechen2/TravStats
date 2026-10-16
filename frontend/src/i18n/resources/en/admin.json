@@ -177,6 +177,10 @@
           "ferryDomain": {
             "name": "Ferries",
             "what": "Crossings with ports, local times, vehicle details, tickets and roadtrip links."
+          },
+          "comparison": {
+            "name": "Friend comparisons",
+            "what": "Compare travel data between linked people after explicit consent."
           }
         }
       },

@@ -30,6 +30,11 @@ vi.mock("@/lib/api/sharing", () => ({
 
 vi.mock("../../hooks/useHasLlm", () => ({ useHasLlm: () => true }));
 
+// The summary requests a plan on mount; this suite exercises standalone notes.
+vi.mock("../../lib/api/travplan", () => ({
+  travplanApi: { get: vi.fn().mockResolvedValue(null) },
+}));
+
 // The documents section fetches its entry's kept originals on mount. It has
 // its own suite, and `__tests__/documentsMountPoints.test.tsx` checks that
 // this surface mounts it — here it would only be a request reaching the

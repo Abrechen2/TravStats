@@ -527,3 +527,32 @@ most two simultaneous sockets; account/IP limits also include other processes.
 No signal is distinct from a stopped ship. Receipt time and source time are
 separate; no observation time is invented when the source omits it. No historical
 crossing, distance or status is changed. No API key is sent to the browser.
+
+### Karten in Web und App
+
+Die Vektorkarten verwenden standardmäßig OpenFreeMap (Liberty, Positron, Dark, Bright).
+Es ist kein eigener Kartenserver und kein API-Schlüssel nötig. Kartendaten werden
+vom Client direkt beim Anbieter geladen; dieser sieht IP-Adresse und angeforderte
+Kartenausschnitte. Reise-Overlays bleiben im Client. Quellenangaben dürfen nicht
+entfernt werden. Anbieterbedingungen: https://openfreemap.org/tos/ und
+https://openfreemap.org/privacy/. Keine garantierte Verfügbarkeit; Offline-Downloads
+unterliegen separaten Grenzen und werden durch diese Integration nicht angeboten.
+
+Optional können Betreiber öffentliche HTTPS-Stil-URLs setzen:
+`MAP_STYLE_STANDARD_URL`, `MAP_STYLE_LIGHT_URL`, `MAP_STYLE_DARK_URL`,
+`MAP_STYLE_VOYAGER_URL` (historische Stil-ID für Bright). Keine Zugangsdaten,
+Query-Parameter oder Fragmente verwenden: Diese URLs sind öffentlich. Alternative
+Anbieter benötigen passende Nutzungsrechte und CORS für Web/App; ihre Stile müssen
+alle benötigten Quellen, Schriftarten und Sprites korrekt referenzieren.
+
+`GET /api/v1/map-config` liefert Version 1 und `styles` für Clients. Die Weboberfläche
+lädt dieselbe Konfiguration über `/api/v1/map-config/runtime` vor dem App-Start.
+Die mobile Kartenintegration unterstützt ältere Server ohne diesen Endpunkt über
+den OpenFreeMap-Standard. Änderungen an der Server-Umgebung wirken nach einem
+autorisierten Neustart; mobile Codeänderungen benötigen einen neuen App-Build.
+
+The web dashboard, globe and detail maps share the same basemap catalogue.
+Detail maps follow the saved basemap, place-label and relief settings, including
+changes received through web preference sync. Existing style IDs and route,
+marker and colour preferences are retained; `voyager` displays Bright.
+Satellite and relief still use Esri and the OSM raster option remains available.

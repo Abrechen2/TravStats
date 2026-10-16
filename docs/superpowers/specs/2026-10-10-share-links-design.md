@@ -106,7 +106,8 @@ for them.
   effectiveExpiresAt, createdAt, viewCount, lastViewedAt`.
 - `POST /api/v1/share-links/preview` `{ kind, targetId, fields }` → `{ view }` — exactly the
   payload the public will see, built by the same serializer.
-- `POST /api/v1/share-links` `{ kind, targetId, expiresAt, fields }` → `{ id, url, token,
+- `POST /api/v1/share-links` `{ kind, targetId, fields, expiresInDays }` (1–90 days from the server clock),
+  or `{ kind, targetId, fields, expiresAt }` for an absolute timestamp; exactly one expiry form → `{ id, url, token,
   expiresAt, effectiveExpiresAt }`. `url` is `<public base>/share#<token>`. **Shown once.**
   409 `SHARE_LINKS_DISABLED` while the switch is off; 404 for a target the caller does not
   own; 400 for an unknown field, an expiry in the past or beyond 90 days; 409
@@ -151,3 +152,13 @@ one `location ^~ /share` that proxies to the backend.
 | Backup restored | every link deleted |
 | Export (`/admin/export/all-data`) | links listed without the token hash |
 | Sync feed | not carried — the Companion reads the list endpoint when it opens the share sheet; a link is not travel data |
+
+### Public-link settings and clock handling (15 October 2026)
+
+The instance-wide switch is under **Administration → Instance → Public links**.
+Personal settings keep the user's link list and revocation controls; administrators
+get a direct link to instance administration. Disabled-state messages name this location.
+The web dialog sends a relative lifetime for every expiry choice, including
+“Until landing (+2 hours)”. The server derives the timestamp from its own clock
+and retains the 90-day limit and dynamic arrival-plus-two-hours cap. Existing
+clients supplying an absolute `expiresAt` remain supported with the same limits.

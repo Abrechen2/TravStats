@@ -23,9 +23,11 @@ import { recomputeTripStatus } from "../services/tripStatusService";
 import { ferryYear } from "../shared/ferryCounting";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
-import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
+import { linkDocumentsInTx, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import logger from "../utils/logger";
+import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
+import { requestedBaseVersion } from "../services/sync/versionPrecondition";
 import { railListSummary } from "../shared/listSummary";
 
 export const FERRY_INCLUDE = {
@@ -190,54 +192,80 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const userId = requireUser(req);
-      refuseStrayFold(req.body);
-      const parsed = createFerryJourneySchema.safeParse(req.body);
-      if (!parsed.success) throw invalidInput(parsed.error);
-      const input = parsed.data;
-      await assertReferencesOwned(userId, { tripId: input.tripId, bookingId: input.bookingId });
-      const documentIds = await takeDocumentIds(userId, req.body);
-
-      const state = mergeFerryJourney(null, input);
-      const companions = await resolveCompanions(userId, input.companions ?? []);
-      const fxColumns = await fxColumnsFor(
-        { amount: input.price, currency: input.currency, date: state.departureTime },
-        await getBaseCurrency(userId)
-      );
-
-      const ride = await prisma.$transaction(async (tx) => {
-        const created = await tx.ferryJourney.create({
-          data: {
-            ...plainColumns(input),
-            ...state,
-            ...fxColumns,
-            userId,
-            companions: companions.map((c) => c.displayName),
-          },
-        });
-        if (companions.length > 0) {
-          await tx.ferryJourneyCompanion.createMany({
-            data: linkRowsFor(companions.map((c) => c.id)).map((row) => ({
-              ...row,
-              ferryJourneyId: created.id,
-            })),
-            skipDuplicates: true,
+      const { clientRef, rest: body } = takeClientRef(req.body);
+      const { created, result } = await createOnce({
+        userId,
+        clientRef,
+        kind: "ferry",
+        payload: body,
+        create: (claim) => createFerryRide(userId, body, claim),
+        replay: async (id) => {
+          const ride = await prisma.ferryJourney.findFirst({
+            where: { id, userId },
+            include: FERRY_INCLUDE,
           });
-        }
-        return tx.ferryJourney.findUniqueOrThrow({
-          where: { id: created.id },
-          include: FERRY_INCLUDE,
-        });
+          return ride ? withFerryTimes(ride) : null;
+        },
       });
-
-      await linkDocuments(userId, documentIds, { type: "ferryJourney", id: ride.id });
-      await restatusTrips(ride.tripId);
-      logger.info({ operation: "ferry_journey_create", ferryJourneyId: ride.id, userId });
-      res.status(201).json({ success: true, data: withFerryTimes(ride) });
+      await restatusTrips(result.tripId);
+      res.status(created ? 201 : 200).json({ success: true, data: result });
     } catch (err) {
       next(err);
     }
   }
 );
+
+async function createFerryRide(userId: string, body: unknown, claim: ClaimClientRef) {
+  refuseStrayFold(body);
+  const parsed = createFerryJourneySchema.safeParse(body);
+  if (!parsed.success) throw invalidInput(parsed.error);
+  const input = parsed.data;
+  await assertReferencesOwned(userId, { tripId: input.tripId, bookingId: input.bookingId });
+  const documentIds = await takeDocumentIds(userId, body);
+
+  const state = mergeFerryJourney(null, input);
+  const companions = await resolveCompanions(userId, input.companions ?? []);
+  const fxColumns = await fxColumnsFor(
+    { amount: input.price, currency: input.currency, date: state.departureTime },
+    await getBaseCurrency(userId)
+  );
+
+  const ride = await prisma.$transaction(async (tx) => {
+    const created = await tx.ferryJourney.create({
+      data: {
+        ...plainColumns(input),
+        ...state,
+        ...fxColumns,
+        userId,
+        companions: companions.map((c) => c.displayName),
+      },
+    });
+    if (companions.length > 0) {
+      await tx.ferryJourneyCompanion.createMany({
+        data: linkRowsFor(companions.map((c) => c.id)).map((row) => ({
+          ...row,
+          ferryJourneyId: created.id,
+        })),
+        skipDuplicates: true,
+      });
+    }
+    await claim(tx, created.id);
+    const linked = await linkDocumentsInTx(tx, userId, documentIds, {
+      type: "ferryJourney",
+      id: created.id,
+    });
+    if (linked !== new Set(documentIds).size) {
+      throw new AppError("A document was linked elsewhere during creation", 409);
+    }
+    return tx.ferryJourney.findUniqueOrThrow({
+      where: { id: created.id },
+      include: FERRY_INCLUDE,
+    });
+  });
+
+  logger.info({ operation: "ferry_journey_create", ferryJourneyId: ride.id, userId });
+  return withFerryTimes(ride);
+}
 
 router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -245,6 +273,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     const existing = await prisma.ferryJourney.findFirst({ where: { id: req.params.id, userId } });
     if (!existing) throw new AppError("Ferry ride not found", 404);
     refuseStrayFold(req.body);
+    const baseVersion = requestedBaseVersion(req);
     const parsed = updateFerryJourneySchema.safeParse(req.body);
     if (!parsed.success) throw invalidInput(parsed.error);
     const input = parsed.data;
@@ -276,6 +305,15 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       : undefined;
 
     const ride = await prisma.$transaction(async (tx) => {
+      // Claim the read version atomically inside the same transaction as the edit.
+      if (baseVersion !== null) {
+        const claimed = await tx.ferryJourney.updateMany({
+          where: { id: existing.id, userId, updatedAt: new Date(baseVersion) },
+          data: { updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)) },
+        });
+        if (claimed.count !== 1)
+          throw new AppError("Crossing changed elsewhere", 409, "VERSION_CONFLICT");
+      }
       if (resolved !== undefined) {
         await tx.ferryJourneyCompanion.deleteMany({ where: { ferryJourneyId: existing.id } });
         if (resolved.length > 0) {
@@ -293,6 +331,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
         data: {
           ...plainColumns(input),
           ...state,
+          updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)),
           ...fxColumns,
           ...(resolved !== undefined && { companions: resolved.map((c) => c.displayName) }),
         },
@@ -318,7 +357,16 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
       select: { id: true, tripId: true },
     });
     if (!existing) throw new AppError("Ferry ride not found", 404);
-    await prisma.ferryJourney.delete({ where: { id: existing.id } });
+    const baseVersion = requestedBaseVersion(req);
+    const deleted = await prisma.ferryJourney.deleteMany({
+      where: {
+        id: existing.id,
+        userId,
+        ...(baseVersion === null ? {} : { updatedAt: new Date(baseVersion) }),
+      },
+    });
+    if (deleted.count !== 1)
+      throw new AppError("Crossing changed elsewhere", 409, "VERSION_CONFLICT");
     await restatusTrips(existing.tripId);
     res.status(204).send();
   } catch (err) {

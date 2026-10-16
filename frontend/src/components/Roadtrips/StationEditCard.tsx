@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { CSSProperties, JSX } from "react";
 
 import Button from "../ui/Button";
-import { Field, Input } from "../ui/Field";
+import { Field, Input, Select } from "../ui/Field";
 import { RequiredLegend, RequiredMark } from "../form";
 import { LocationInput } from "../location/LocationInput";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -224,6 +224,29 @@ export default function StationEditCard({
           ))}
         </div>
       </fieldset>
+
+      {station.night.kind === "free" && (
+        <Field
+          label={t("roadtrips:editor.countryVisitKind.label")}
+          htmlFor={`${idBase}-visit-kind`}
+        >
+          <Select
+            id={`${idBase}-visit-kind`}
+            value={station.night.countryVisitKind ?? "visit"}
+            onChange={(event) =>
+              onChange({
+                night: {
+                  kind: "free",
+                  countryVisitKind: event.target.value as "visit" | "transit",
+                },
+              })
+            }
+          >
+            <option value="visit">{t("roadtrips:editor.countryVisitKind.visit")}</option>
+            <option value="transit">{t("roadtrips:editor.countryVisitKind.transit")}</option>
+          </Select>
+        </Field>
+      )}
 
       {/* Pflicht (forgejo#245): a station without a place waits and is never
           sent. `LocationInput` takes only a text label, so the mark sits on

@@ -29,6 +29,7 @@ import type { Trip, TripJournalEntry, TripStop } from "../types";
 import TripDeleteConfirm from "../components/Trips/TripDeleteConfirm";
 import AppShell from "../components/ui/AppShell";
 import TripModal from "../components/Trips/TripModal";
+import { TravelPlanSummary } from "../components/Trips/TravelPlanSummary";
 import TripHead from "../components/Trips/TripHead";
 import TripOverview from "../components/Trips/TripOverview";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
@@ -150,6 +151,7 @@ export default function TripDetailPage(): JSX.Element {
 
   return (
     <AppShell width="list">
+      <TravelPlanSummary tripId={trip.id} />
       <TripHead
         trip={shownTrip}
         locale={i18n.language}

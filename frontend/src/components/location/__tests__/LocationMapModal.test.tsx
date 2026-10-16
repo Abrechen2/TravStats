@@ -60,6 +60,7 @@ function MockMap({ children, onClick, initialViewState }: MockMapProps): JSX.Ele
 vi.mock("react-map-gl/maplibre", () => ({
   __esModule: true,
   default: MockMap,
+  useMap: () => ({}),
   Marker: ({ children, onDragEnd }: MockMarkerProps): JSX.Element => (
     <div
       data-testid="mock-marker"

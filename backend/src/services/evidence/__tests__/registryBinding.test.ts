@@ -103,8 +103,9 @@ describe("the evidence registry binds the resolvers that exist", () => {
     expect(promised.length).toBeGreaterThanOrEqual(servedMetricKeys().length);
   });
 
-  it("each resolver answers with the aggregation and unit its registry entry declares", async () => {
-    for (const key of servedMetricKeys()) {
+  it.each(servedMetricKeys())(
+    "%s answers with its registered aggregation and unit",
+    async (key) => {
       const entry = EVIDENCE_MEASURES[key];
       const scope = scopeFor(entry.scopes[0]);
       expect([key, scope]).not.toEqual([key, null]);
@@ -117,30 +118,28 @@ describe("the evidence registry binds the resolvers that exist", () => {
       expect([key, res!.measure.unit]).toEqual([key, entry.unit]);
       expect([key, res!.measure.key]).toEqual([key, key]);
     }
-  });
+  );
 
-  it("each resolver accepts exactly the scopes its registry entry lists, and 400s on the others", async () => {
-    for (const key of servedMetricKeys()) {
-      const entry = EVIDENCE_MEASURES[key];
-      const accepts = acceptedPeriodsOf(entry.scopes);
-      for (const candidate of ALL_PERIOD_SCOPES) {
-        const scope = scopeFor(candidate)!;
-        const declared = accepts.includes(candidate);
-        let accepted = true;
-        try {
-          await resolveMetricEvidence(userId, key, scope, page);
-        } catch (err) {
-          accepted = false;
-          // A rejected scope is a BAD REQUEST, not a missing key and not a
-          // crash: the measure exists, the population asked for does not.
-          expect([key, candidate, (err as { statusCode?: number }).statusCode]).toEqual([
-            key,
-            candidate,
-            400,
-          ]);
-        }
-        expect([key, candidate, accepted]).toEqual([key, candidate, declared]);
+  it.each(servedMetricKeys())("%s accepts exactly its registered scopes", async (key) => {
+    const entry = EVIDENCE_MEASURES[key];
+    const accepts = acceptedPeriodsOf(entry.scopes);
+    for (const candidate of ALL_PERIOD_SCOPES) {
+      const scope = scopeFor(candidate)!;
+      const declared = accepts.includes(candidate);
+      let accepted = true;
+      try {
+        await resolveMetricEvidence(userId, key, scope, page);
+      } catch (err) {
+        accepted = false;
+        // A rejected scope is a BAD REQUEST, not a missing key and not a
+        // crash: the measure exists, the population asked for does not.
+        expect([key, candidate, (err as { statusCode?: number }).statusCode]).toEqual([
+          key,
+          candidate,
+          400,
+        ]);
       }
+      expect([key, candidate, accepted]).toEqual([key, candidate, declared]);
     }
   });
 

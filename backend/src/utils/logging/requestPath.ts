@@ -16,5 +16,6 @@ export function requestPathForLog(req: Pick<Request, "originalUrl" | "url">): st
   const raw = req.originalUrl || req.url || "";
   const cut = raw.search(/[?#]/);
   const path = cut === -1 ? raw : raw.slice(0, cut);
+  if (path.startsWith("/api/v1/geo-server/assets/")) return "/api/v1/geo-server/assets/[resource]";
   return path.replace(SHARE_TOKEN_PATTERN, "ts_share_[redacted]");
 }

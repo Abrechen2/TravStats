@@ -38,7 +38,8 @@ export const shareLinksApi = {
   },
 
   create: async (
-    selection: ShareLinkSelection & { expiresAt: string }
+    selection: ShareLinkSelection &
+      ({ expiresAt: string; expiresInDays?: never } | { expiresInDays: number; expiresAt?: never })
   ): Promise<CreatedShareLink> => {
     const { data } = await api.post<Envelope<CreatedShareLink>>("/share-links", selection);
     return data.data;

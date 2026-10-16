@@ -1,6 +1,9 @@
+import { SharedMapOverlays } from "../map/SharedMapOverlays";
+import { useBasemapStyle } from "../map/useBasemapStyle";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
-import { MapboxOverlay } from "@deck.gl/mapbox";
+import MapGL, { type MapRef } from "react-map-gl/maplibre";
+import type { MapboxOverlay } from "@deck.gl/mapbox";
+import { DeckGLOverlay } from "./CruiseRouteDeckOverlay";
 import { PathLayer } from "@deck.gl/layers";
 import { createMarkerTooltip } from "../map/markerTooltip";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
@@ -39,8 +42,6 @@ import {
   type RouteEditorState,
 } from "./routeEditorState";
 
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
-
 /** The detail map shows ONE cruise — always in that cruise's own hue. */
 const DETAIL_MAP_COLOR_CONFIG: CruiseColorConfig = {
   mode: "perCruise",
@@ -54,42 +55,6 @@ const INITIAL_VIEW: MapViewState = {
   pitch: 0,
   bearing: 0,
 };
-
-interface DeckOverlayProps {
-  layers: Layer[];
-  getTooltip: ReturnType<typeof createMarkerTooltip>;
-  /**
-   * Deck-level fallback click handler. deck.gl calls a picked layer's OWN
-   * `onClick` first; only a pick that no layer's onClick handled (or that
-   * returned falsy) reaches this root handler. The route editor's guide
-   * line returns `true` on a successful insert, so it consumes its own
-   * clicks — this handler only ever sees the ones nothing else claimed,
-   * which is exactly the "click a leg to enter the editor" case.
-   */
-  onClick?: (info: PickingInfo) => void;
-  /** Handed the overlay so a right-click can ask deck WHAT is under the
-   *  cursor. A context menu arrives as a DOM event, not a deck pick, so
-   *  without this there is no way to name the leg the user aimed at. */
-  onReady?: (overlay: MapboxOverlay) => void;
-}
-
-function DeckGLOverlay({ layers, getTooltip, onClick, onReady }: DeckOverlayProps): null {
-  const overlay = useControl<MapboxOverlay>(
-    () =>
-      new MapboxOverlay({
-        layers,
-        pickingRadius: 5,
-        getTooltip,
-        onClick,
-      }),
-    { position: "top-left" }
-  );
-  overlay.setProps({ layers, pickingRadius: 5, getTooltip, onClick });
-  useEffect(() => {
-    onReady?.(overlay);
-  }, [overlay, onReady]);
-  return null;
-}
 
 interface Props {
   cruise: Cruise;
@@ -109,6 +74,7 @@ interface EditingLeg {
  * first geometry + port load, then lets the user pan/zoom freely.
  */
 export function CruiseRouteMap({ cruise }: Props): JSX.Element {
+  const mapStyle = useBasemapStyle();
   // Both namespaces: the tooltip machinery speaks "map", the route editor's
   // strings live in "cruise" beside the rest of this feature's wording.
   const { t, i18n } = useTranslation(["map", "cruise"]);
@@ -806,7 +772,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
         reuseMaps
         ref={mapRef}
         initialViewState={INITIAL_VIEW}
-        mapStyle={DARK_MAP_STYLE}
+        mapStyle={mapStyle}
         style={{ position: "absolute", inset: "0" }}
         onLoad={(): void => setMapLoaded(true)}
         onMove={(evt): void => {
@@ -841,6 +807,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
             }
           />
         )}
+        <SharedMapOverlays />
       </MapGL>
       {marquee && (
         <div

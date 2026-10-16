@@ -212,3 +212,9 @@ backend/src/generated/
 
 # Raw router answers cached by scripts/demo/generateDemoGeometry.ts (regenerable).
 backend/scripts/demo/.cache/
+
+# Workspace tooling dependencies are local, including symlinked installs.
+/node_modules
+
+# Temporary local preview profile from the initial UI verification.
+/frontend/travplan.preview.config.ts

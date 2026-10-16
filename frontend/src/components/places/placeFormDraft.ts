@@ -8,6 +8,7 @@ import type { Place, PlaceInput } from "../../types/place";
  * here and as null there) every edit form would open already "changed".
  */
 export interface PlaceFormFields {
+  countryVisitKind?: "visit" | "transit";
   name: string;
   /** The name on the sign, in the place's own script (forgejo#199). */
   localName: string;
@@ -31,6 +32,7 @@ export interface PlaceFormFields {
 export function placeFormFields(place: Place | null, initialName = ""): PlaceFormFields {
   return {
     name: place?.name ?? initialName,
+    countryVisitKind: place?.countryVisitKind ?? "visit",
     localName: place?.localName ?? "",
     category: place?.category ?? "other",
     lat: place?.lat ?? null,
@@ -64,6 +66,7 @@ export function placePayload(fields: PlaceFormFields): PlaceInput | null {
     country: orNull(fields.country),
     notes: orNull(fields.notes),
     visited: fields.visited,
+    countryVisitKind: fields.countryVisitKind ?? "visit",
     externalRef: orNull(fields.externalRef),
   };
 }

@@ -1,3 +1,4 @@
+import { getMapConfig } from "../services/mapConfig";
 /**
  * Environment variable validation schema
  * Validates all environment variables at application startup
@@ -5,6 +6,7 @@
 
 import { z } from "zod";
 import logger from "../utils/logger";
+import { parseOwnGeoUrl } from "../services/geo/ownServerConfig";
 
 // Define environment variable schema
 /**
@@ -133,6 +135,7 @@ let validatedEnv: EnvConfig | null = null;
  * @throws Error if validation fails
  */
 export function validateEnv(): EnvConfig {
+  getMapConfig();
   if (validatedEnv) {
     return validatedEnv;
   }
@@ -145,6 +148,7 @@ export function validateEnv(): EnvConfig {
       );
     }
 
+    parseOwnGeoUrl(process.env.TRAVSTATS_GEO_URL);
     validatedEnv = envSchema.parse(process.env);
 
     logger.info({

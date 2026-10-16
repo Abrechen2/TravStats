@@ -92,7 +92,8 @@ describe("ShareLinkDialog", () => {
     expect(input.readOnly).toBe(true);
     const sent = api.create.mock.calls[0][0];
     expect(sent).toMatchObject({ kind: "flight", targetId: "f1" });
-    expect(Date.parse(sent.expiresAt)).toBeGreaterThan(Date.now());
+    expect(sent.expiresInDays).toBe(90);
+    expect(sent).not.toHaveProperty("expiresAt");
     expect(screen.queryByRole("button", { name: "sharing:links.dialog.create" })).toBeNull();
   });
 

@@ -71,6 +71,7 @@ export function fieldValue(s: EditorStation, field: StationField): string {
       const n = s.night;
       if (n.kind === "stay") return `stay:${n.lodgingStayId ?? ""}`;
       if (n.kind === "pass") return `pass:${n.placeId ?? ""}`;
+      if (n.kind === "free") return `free:${n.countryVisitKind ?? "visit"}`;
       return n.kind;
     }
   }

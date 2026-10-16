@@ -1,3 +1,5 @@
+import { createSchematicRouteStore } from "./routing/schematicRouteStore";
+import { routeKey } from "./routing/routeStore";
 /**
  * Schematic cruise-route pipeline — coarse waypoints + spline approach.
  *
@@ -856,21 +858,9 @@ export interface SchematicRoute {
   readonly method: "short_hop" | "maritime_graph" | "coarse_a_star" | "direct";
 }
 
-/**
- * In-memory LRU cache for computed routes. The schematic algorithm is
- * fast on its own (~1-5ms per leg on the 1° grid), but the dashboard
- * loads geometry for every cruise on mount — for a user with 50 cruises
- * × ~10 legs each that's still ~500 cell-lookups + simplify + buffer
- * passes per page-view, plus the per-request DB roundtrip. Caching the
- * computed `SchematicRoute` by directional (depId, arrId) key drops
- * subsequent loads to a Map.get.
- *
- * Cache key is null when either port lacks an `id` (pure ad-hoc lookup,
- * not worth caching). LRU eviction at ROUTE_CACHE_MAX entries; on
- * overflow the oldest insertion is dropped. No TTL — routes are
- * deterministic given (port coordinates, algorithm version), and a
- * server restart clears the cache anyway.
- */
+/** Hot set backed by durable successful routes. Bump the policy version below
+ * when the maritime graph, masks or routing algorithm change. */
+let durableRoutes = createSchematicRouteStore();
 const ROUTE_CACHE_MAX = 5000;
 const routeCache = new Map<string, SchematicRoute>();
 let routeCacheHits = 0;
@@ -878,7 +868,7 @@ let routeCacheMisses = 0;
 
 function routeCacheKey(dep: SchematicRoutePort, arr: SchematicRoutePort): string | null {
   if (dep.id === undefined || arr.id === undefined) return null;
-  return `${dep.id}->${arr.id}`;
+  return routeKey(["schematic-v1", dep, arr, getPortApproach(dep), getPortApproach(arr)]);
 }
 
 export function getSchematicRouteCacheStats(): {
@@ -898,6 +888,7 @@ export function getSchematicRouteCacheStats(): {
 
 export function clearSchematicRouteCache(): void {
   routeCache.clear();
+  durableRoutes = createSchematicRouteStore();
   routeCacheHits = 0;
   routeCacheMisses = 0;
 }
@@ -908,8 +899,7 @@ export function clearSchematicRouteCache(): void {
  * inconsistencies) you get `{waypoints: [dep, arr], routed: false}`,
  * which the frontend can still render as a straight link.
  *
- * Cached: identical (dep.id, arr.id) pairs return the prior result
- * without re-running A*. See ROUTE_CACHE_MAX above.
+ * Cache identity includes coordinates and harbour approaches, not only IDs.
  */
 export async function computeSchematicRoute(
   dep: SchematicRoutePort,
@@ -923,22 +913,20 @@ export async function computeSchematicRoute(
       routeCache.delete(key);
       routeCache.set(key, cached);
       routeCacheHits++;
-      return cached;
+      return structuredClone(cached);
     }
     routeCacheMisses++;
   }
 
-  const raw = await computeSchematicRouteUncached(dep, arr);
-  // Smoothing pass — collapse marnet duplicate-cluster nodes inside the
-  // non-corridor middle so the downstream Catmull-Rom spline can't snap
-  // through a 150°+ u-turn. Corridor prefix/suffix are left intact.
-  const smoothed = resampleNonCorridorMiddle(raw);
-  const result: SchematicRoute = {
-    ...raw,
-    waypoints: smoothed.waypoints,
-    protectedPrefixCount: smoothed.protectedPrefixCount,
-    protectedSuffixCount: smoothed.protectedSuffixCount,
+  const compute = async (): Promise<SchematicRoute> => {
+    const raw = await computeSchematicRouteUncached(dep, arr);
+    const smoothed = resampleNonCorridorMiddle(raw);
+    return { ...raw, ...smoothed };
   };
+  const result =
+    key === null
+      ? await compute()
+      : await durableRoutes.resolve(key, compute, (route) => route.routed);
 
   if (key !== null) {
     if (routeCache.size >= ROUTE_CACHE_MAX) {
@@ -947,7 +935,7 @@ export async function computeSchematicRoute(
       const oldest = routeCache.keys().next().value;
       if (oldest !== undefined) routeCache.delete(oldest);
     }
-    routeCache.set(key, result);
+    routeCache.set(key, structuredClone(result));
   }
   return result;
 }

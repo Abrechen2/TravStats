@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 /**
  * The per-domain appearance sections of the map control panels.
  *

@@ -42,6 +42,7 @@ export const STATION_STAY_SELECT = {
 } as const;
 
 export const STATION_SELECT = {
+  countryVisitKind: true,
   id: true,
   title: true,
   lat: true,
@@ -85,6 +86,7 @@ export const STATION_DTO_SELECT = {
 export const STATIONS_ONLY = { viaPoint: false } as const;
 
 export interface StationRow {
+  countryVisitKind?: string;
   id: string;
   title: string;
   lat: number | null;
@@ -178,6 +180,7 @@ export function toStationDto(s: StationDtoRow): Record<string, unknown> {
   const stay = s.lodgingStay;
   return {
     id: s.id,
+    countryVisitKind: s.countryVisitKind,
     title: s.title,
     lat: s.lat,
     lon: s.lon,

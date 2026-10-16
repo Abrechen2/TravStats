@@ -1,7 +1,10 @@
+import { groupMapData, pathIdentity } from "../layers/routeAggregation";
+import { STYLE_OPTIONS } from "../Globe/globeStyles";
+import { SharedMapOverlays } from "../map/SharedMapOverlays";
+import { useBasemapStyle } from "../map/useBasemapStyle";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import MapGL, { useControl, useMap, type MapRef } from "react-map-gl/maplibre";
-import { MapboxOverlay } from "@deck.gl/mapbox";
-import { applyHoverCursor } from "../map/mapCursor";
+import MapGL, { type MapRef } from "react-map-gl/maplibre";
+import { DeckGLOverlay } from "./TripMapDeckOverlay";
 import { createMarkerTooltip } from "../map/markerTooltip";
 import { ArcLayer, PathLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
@@ -39,8 +42,6 @@ import {
 } from "./tripMapColors";
 import { tripBoundsPoints, type LngLat } from "./tripMapBounds";
 
-const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
-
 const INITIAL_VIEW: MapViewState = {
   longitude: 10,
   latitude: 30,
@@ -57,62 +58,6 @@ type Projection = TripProjection;
 type FlightArc = TripFlightArc;
 type CruisePath = TripCruisePath;
 type PointDatum = TripPointDatum;
-
-/**
- * The deck.gl overlay, mounted the way the projection needs it.
- *
- * `interleaved` shares MapLibre's WebGL context so deck.gl uses MapLibre's
- * own projection matrices. Under the globe that is not an optimisation: an
- * overlay with its own context keeps mercator matrices, and the data detaches
- * into a flat strip floating beside the sphere. It stays OFF on the flat map,
- * where the overlay draws above the basemap and interleaving would only give
- * MapLibre's own layers a chance to paint over the trip.
- *
- * No `position`, and that part is cosmetic rather than load-bearing — this
- * comment used to claim otherwise. Measured in `@deck.gl/mapbox`:
- * `MapboxOverlay.getDefaultPosition()` returns `"top-left"`, and MapLibre's
- * `addControl` falls back to it when no position is given, so passing
- * `{ position: "top-left" }` and passing nothing are the same call. It is
- * omitted because the overlay is a render pipeline rather than a corner
- * widget and saying so is clearer, NOT because passing it broke anything.
- * The four sibling overlays still pass it, correctly.
- *
- * The caller REMOUNTS this control (a `key` on the projection) rather than
- * updating it, because the constructor — which runs inside `useControl`, i.e.
- * before any projection change lands — is where deck.gl decides which shaders
- * to compile. An overlay built in mercator never re-detects globe.
- */
-function DeckGLOverlay({
-  layers,
-  onClick,
-  getTooltip,
-  interleaved,
-}: {
-  layers: Layer[];
-  onClick: (info: PickingInfo) => void;
-  getTooltip: ReturnType<typeof createMarkerTooltip>;
-  interleaved: boolean;
-}): null {
-  const { current: map } = useMap();
-  // Issue #247. See map/mapCursor.ts for why this cannot be deck.gl's
-  // `getCursor`: the deck canvas has no pointer events, MapLibre owns the
-  // cursor.
-  const handleHover = (info: PickingInfo): void => {
-    applyHoverCursor(map, Boolean(info.object));
-  };
-  const overlay = useControl<MapboxOverlay>(
-    () =>
-      new MapboxOverlay({
-        layers,
-        pickingRadius: 8,
-        interleaved,
-        getTooltip,
-        onHover: handleHover,
-      })
-  );
-  overlay.setProps({ layers, pickingRadius: 8, onClick, getTooltip, onHover: handleHover });
-  return null;
-}
 
 interface TripMapProps {
   trip: TripMapContent;
@@ -147,6 +92,8 @@ export default function TripMap({
   extraLayers,
   extraPoints = NO_EXTRA_POINTS,
 }: TripMapProps): JSX.Element {
+  const mapStyle = useBasemapStyle();
+  const globeSky = STYLE_OPTIONS.find((option) => option.url === mapStyle)?.sky ?? GLOBE_SKY;
   const { t, i18n } = useTranslation(["trips", "map"]);
   const locale = i18n.language || "de";
   const getTooltip = useMemo(() => createMarkerTooltip(t, locale), [t, locale]);
@@ -189,8 +136,6 @@ export default function TripMap({
     };
   }, [cruiseIds]);
 
-  /* ---- Build deck.gl data ---- */
-
   const flightArcs = useMemo<FlightArc[]>(() => {
     const out: FlightArc[] = [];
     for (const f of trip.flights ?? []) {
@@ -218,8 +163,7 @@ export default function TripMap({
   const cruisePaths = useMemo<CruisePath[]>(() => {
     const out: CruisePath[] = [];
     const cruiseLabel = new Map<string, string>();
-    // Resolved per CRUISE, not per leg: "perCruise" mode gives each voyage its
-    // own hue, so every leg of one cruise must land on the same one.
+    // Resolve each cruise colour once for all its legs.
     const cruiseTint = new Map<string, [number, number, number]>();
     for (const c of trip.cruises ?? []) {
       cruiseLabel.set(c.id, c.cruiseLine ?? "Cruise");
@@ -450,7 +394,11 @@ export default function TripMap({
 
     const paths = new PathLayer<CruisePath>({
       id: "trip-cruise-paths",
-      data: cruisePaths,
+      data: groupMapData(
+        cruisePaths,
+        (p) => JSON.stringify([p.color, pathIdentity(p.path)]),
+        (p) => p.cruiseId
+      ),
       getPath: (d) => d.path,
       getColor: (d) => [...d.color, 230] as [number, number, number, number],
       getWidth: 3,
@@ -650,6 +598,32 @@ export default function TripMap({
     // is still "mercator". The switch does its own fit.
   }, [mapLoaded, bboxPoints, fitTrip]);
 
+  // A new basemap resets MapLibre's projection and sky. Restore both before
+  // the next frame so travel layers keep sharing the globe's coordinates.
+  useEffect(() => {
+    if (!mapLoaded) return;
+    const map = mapRef.current?.getMap();
+    if (!map) return;
+    const restoreProjection = (): void => {
+      try {
+        map.setProjection({ type: projection });
+      } catch (err) {
+        logger.warn("TripMap: restoring projection failed", err);
+      }
+      try {
+        if (projection === "globe") map.setSky(globeSky);
+      } catch (err) {
+        logger.warn("TripMap: restoring sky failed", err);
+      }
+    };
+    map.on("style.load", restoreProjection);
+    // Inline raster styles can finish before this effect installs its listener.
+    if (map.getStyle()) restoreProjection();
+    return () => {
+      map.off("style.load", restoreProjection);
+    };
+  }, [mapLoaded, projection, globeSky]);
+
   /* ---- Globe / Mercator toggle ---- */
 
   const toggleProjection = useCallback((): void => {
@@ -680,7 +654,7 @@ export default function TripMap({
     try {
       // A globe without a sky has a hard black edge where the horizon should
       // be; a flat map has no horizon at all, so the sky comes off again.
-      projApi.setSky?.(next === "globe" ? GLOBE_SKY : undefined);
+      projApi.setSky?.(next === "globe" ? globeSky : undefined);
     } catch (err) {
       // Its OWN try, and deliberately non-fatal. A style source may not
       // support a sky, and a missing horizon is cosmetic — but while this
@@ -692,7 +666,7 @@ export default function TripMap({
     }
     setProjection(next);
     fitTrip(next, 600);
-  }, [projection, fitTrip]);
+  }, [projection, fitTrip, globeSky]);
 
   const empty = bboxPoints.length === 0;
 
@@ -708,7 +682,7 @@ export default function TripMap({
         ref={mapRef}
         reuseMaps
         initialViewState={INITIAL_VIEW}
-        mapStyle={DARK_MAP_STYLE}
+        mapStyle={mapStyle}
         style={{ position: "absolute", inset: 0 }}
         cursor="grab"
         onLoad={(e): void => {
@@ -732,6 +706,7 @@ export default function TripMap({
             interleaved={projection === "globe"}
           />
         )}
+        <SharedMapOverlays />
       </MapGL>
       {/* Names on the globe. deck.gl 9's billboard TextLayer renders nothing
           under globe projection, so the flat map's `trip-stop-labels` and the

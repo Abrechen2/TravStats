@@ -39,6 +39,7 @@ export function lodgingStayFacts(row: Pick<LodgingStay, LodgingStayFactField>) {
  * own row, which another account must not point at.
  */
 export const LODGING_FACT_FIELDS = [
+  "countryVisitKind",
   "type",
   "name",
   "address",

@@ -28,9 +28,16 @@ datasource db {
 }
 
 model User {
+  comparisonDevices ComparisonDevice[]
+  comparisonPublications ComparisonPublication[]
+  comparisonLinks ComparisonLink[]
+  comparisonInvites ComparisonInvite[]
+  comparisonGroups ComparisonGroup[]
+  comparisonCircles ComparisonCircle[]
   id                     String                   @id @default(uuid())
   devicePushes           DevicePush[]
   clientWriteRefs        ClientWriteRef[]
+  travelPlanUsage        TravelPlanUsage[]
   username               String                   @unique
   passwordHash           String                   @map("password_hash")
   // Real name, shown wherever the person is addressed rather than identified
@@ -1747,6 +1754,7 @@ model Trip {
   publicShareLinks PublicShareLink[]
 
   documents Document[]
+  travelPlan TravelPlan?
 
   @@index([userId])
   @@index([userId, status])
@@ -1837,6 +1845,7 @@ model ImmichImportJob {
 }
 
 model TripStop {
+  countryVisitKind String @default("visit") @map("country_visit_kind")
   id            String    @id @default(uuid())
   /// The trip this stop sits on, or NULL for a stop that exists only as a
   /// vertex of a standalone tour. A stop always has one or the other —
@@ -2656,6 +2665,9 @@ model Port {
 }
 
 model Lodging {
+  /// Explicit transit-only location; an airport hotel name alone is not proof.
+  countryVisitKind String @default("visit") @map("country_visit_kind")
+
   id                 String    @id @default(uuid())
   userId             String    @map("user_id")
   type               String    @default("hotel") // hotel | campsite | guesthouse | apartment | hostel
@@ -2982,6 +2994,9 @@ model LodgingMembershipLodging {
 /// is nobody else's business. Curated checklist targets live in their own
 /// global tables and only become a Place once the user ticks them off.
 model Place {
+  /// Explicit transit-only location; an airport hotel name alone is not proof.
+  countryVisitKind String @default("visit") @map("country_visit_kind")
+
   id     String @id @default(uuid())
   userId String @map("user_id")
 
@@ -4615,6 +4630,9 @@ model FerryJourneyCompanion {
 
 /// Explicitly opted-in location-history suggestions, separate from Immich and country days.
 model DawarichStayScan {
+  marketEnabled Boolean @default(false) @map("market_enabled")
+  venueEnabled Boolean @default(false) @map("venue_enabled")
+  marketResult Json? @map("market_result")
   userId String @id @map("user_id")
   enabled Boolean @default(false)
   startedAt DateTime? @map("started_at")
@@ -4659,4 +4677,221 @@ model DawarichStay {
   @@index([userId, status, startAt])
   @@index([visitId])
   @@map("dawarich_stays")
+}
+
+
+/// Public OSM geometry cache. Contains no user ids, timestamps or location tracks.
+model MarketCatalogTile {
+  key String @id
+  payload Json
+  fetchedAt DateTime @map("fetched_at")
+  @@index([fetchedAt])
+  @@map("market_catalog_tiles")
+}
+
+/// Cross-process budget/lease for public catalog queries across all accounts.
+model MarketCatalogState {
+  id String @id
+  day DateTime @db.Date
+  requests Int @default(0)
+  bytes Int @default(0)
+  leaseUntil DateTime? @map("lease_until")
+  backoffUntil DateTime? @map("backoff_until")
+  @@map("market_catalog_state")
+}
+
+model ComparisonPeer {
+  origin String @id
+  publicKey String @map("public_key")
+  enabled Boolean @default(true)
+  verifiedAt DateTime? @map("verified_at")
+  @@map("comparison_peers")
+}
+model ComparisonInvite {
+  hash String @id
+  userId String @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  usedAt DateTime? @map("used_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("comparison_invites")
+}
+model ComparisonLink {
+  id String @id @default(uuid())
+  channel String
+  userId String @map("user_id")
+  origin String
+  label String
+  confirmed Boolean @default(false)
+  remoteConfirmed Boolean @default(false) @map("remote_confirmed")
+  revoked Boolean @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  grants ComparisonGrant[]
+  @@unique([userId, channel])
+  @@index([channel, origin])
+  @@map("comparison_links")
+}
+model ComparisonGrant {
+  id String @id @default(uuid())
+  linkId String @map("link_id")
+  audience String @default("")
+  scope Json
+  revision Int @default(1)
+  active Boolean @default(true)
+  expiresAt DateTime? @map("expires_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  link ComparisonLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  @@unique([linkId, audience])
+  @@map("comparison_grants")
+}
+model ComparisonGroup {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  name String
+  channels String[]
+  version Int @default(1)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("comparison_groups")
+}
+model ComparisonAudit {
+  id String @id @default(uuid())
+  ownerId String @map("owner_id")
+  channel String
+  audience String
+  revision Int
+  operation String
+  createdAt DateTime @default(now()) @map("created_at")
+  @@index([ownerId, createdAt])
+  @@map("comparison_audit")
+}
+model ComparisonNonce {
+  id String @id
+  expiresAt DateTime @map("expires_at")
+  @@index([expiresAt])
+  @@map("comparison_nonces")
+}
+
+
+/// Shared comparison audience hosted by one explicitly trusted instance.
+model ComparisonCircle {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  name String
+  version Int @default(1)
+  members Json
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("comparison_circles")
+}
+
+/// Public device identity only. Private keys live in browser storage, never on the server.
+model ComparisonDevice {
+ id String @id
+ userId String @map("user_id")
+ name String
+ encryption String
+ signing String
+ fingerprint String @unique
+ revoked Boolean @default(false)
+ createdAt DateTime @default(now()) @map("created_at")
+ user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ @@index([userId])
+ @@map("comparison_devices")
+}
+model ComparisonPublication {
+ id String @id
+ userId String @map("user_id")
+ linkId String @map("link_id")
+ audience String
+ revision Int
+ sender String
+ context Json
+ manifest Json?
+ ready Boolean @default(false)
+ bytes Int @default(0)
+ expiresAt DateTime @map("expires_at")
+ createdAt DateTime @default(now()) @map("created_at")
+ user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ chunks ComparisonChunk[]
+ @@index([userId, audience, ready])
+ @@index([linkId])
+ @@map("comparison_publications")
+}
+model ComparisonChunk {
+ publicationId String @map("publication_id")
+ part Int
+ bytes String
+ digest String
+ publication ComparisonPublication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+ @@id([publicationId, part])
+ @@map("comparison_chunks")
+}
+
+// Plans are separate from travel evidence. Dates never promote an intention.
+model TravelPlan {
+  id String @id @default(uuid())
+  createRef String @unique @map("create_ref")
+  tripId String @unique @map("trip_id")
+  revision Int @default(1)
+  state Json
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  mutations TravelPlanMutation[]
+  proposals TravelPlanProposal[]
+  @@map("travel_plans")
+}
+
+model TravelPlanMutation {
+  id String @id @default(uuid())
+  planId String @map("plan_id")
+  clientRef String @map("client_ref")
+  payloadHash String @map("payload_hash")
+  baseRevision Int @map("base_revision")
+  revision Int
+  before Json
+  result Json
+  createdAt DateTime @default(now()) @map("created_at")
+  plan TravelPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  @@unique([planId, clientRef])
+  @@index([planId, createdAt])
+  @@map("travel_plan_mutations")
+}
+
+model TravelPlanProposal {
+  id String @id @default(uuid())
+  planId String @map("plan_id")
+  baseRevision Int @map("base_revision")
+  inputHash String @map("input_hash")
+  status String @default("pending")
+  provider String
+  model String
+  content Json
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  plan TravelPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  @@index([planId, createdAt])
+  @@map("travel_plan_proposals")
+}
+
+model TravelPlanConfig {
+  id String @id @default("default")
+  enabled Boolean @default(false)
+  aiDailyLimit Int @default(10) @map("ai_daily_limit")
+  weatherDailyLimit Int @default(20) @map("weather_daily_limit")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  @@map("travel_plan_config")
+}
+
+model TravelPlanUsage {
+  id String @id @default(uuid())
+  userId String @map("user_id")
+  day DateTime @db.Date
+  kind String
+  count Int @default(0)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, day, kind])
+  @@map("travel_plan_usage")
 }

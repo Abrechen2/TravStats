@@ -134,7 +134,7 @@ export async function previewShareLink(
 export async function createShareLink(
   userId: string,
   selection: ShareLinkSelection,
-  expiresAt: Date,
+  expiry: Date | number,
   publicBaseUrl: string
 ): Promise<{
   id: string;
@@ -151,8 +151,11 @@ export async function createShareLink(
     );
   }
   const at = now();
+  // Relative lifetimes use this same server instant for calculation and validation.
+  const expiresAt =
+    typeof expiry === "number" ? new Date(at.getTime() + expiry * 86_400_000) : expiry;
   const latest = new Date(at.getTime() + SHARE_LINK_MAX_DAYS * 86_400_000);
-  if (expiresAt <= at || expiresAt > latest) {
+  if (!Number.isFinite(expiresAt.getTime()) || expiresAt <= at || expiresAt > latest) {
     throw new AppError(
       `The expiry must lie between now and ${SHARE_LINK_MAX_DAYS} days ahead`,
       400,

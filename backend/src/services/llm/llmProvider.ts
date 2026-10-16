@@ -48,6 +48,8 @@
  * the protocol, the HTTP status or the failure kind — never the body.
  */
 
+import { permitsLlmTarget } from "./requestPolicy";
+import { AppError } from "../../middleware/errorHandler";
 import { requestTextWithDeadline } from "../http/boundedHttp";
 import { LLM_AVAILABILITY_TIMEOUT_MS, LLM_MAX_RESPONSE_BYTES } from "../http/llmTimeout";
 import { getAdminParserSettings, type AdminParserSettings } from "../parserSettings";
@@ -271,7 +273,7 @@ export async function resolveLlmChain(options: ResolveLlmTargetOptions = {}): Pr
         options.url ?? admin?.ollamaUrl ?? undefined,
         options.model ?? admin?.ollamaModel ?? undefined
       ),
-    ];
+    ].filter(permitsLlmTarget);
   }
 
   const chain: LlmTarget[] = [];
@@ -294,7 +296,7 @@ export async function resolveLlmChain(options: ResolveLlmTargetOptions = {}): Pr
     chain.push(ollamaTarget());
   }
 
-  return chain;
+  return chain.filter(permitsLlmTarget);
 }
 
 /**
@@ -407,6 +409,8 @@ export interface LlmGenerateRequest {
  * sits behind them).
  */
 async function assertMayAsk(target: LlmTarget): Promise<void> {
+  if (!permitsLlmTarget(target))
+    throw new AppError("Provider forbidden by request policy", 403, "LLM_REQUEST_POLICY");
   await assertLlmEnabled();
   await assertLlmCloudConsent({
     kind: kindOf(target),

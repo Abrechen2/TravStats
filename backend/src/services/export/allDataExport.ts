@@ -48,6 +48,29 @@ export const USER_EXPORT_SELECT = {
       // Which Immich albums a trip links, and in which mode. The album's
       // images live on the user's Immich; the link is what exists only here.
       immichAlbums: true,
+      // The saved plan and proposals are user content. Mutation receipts and
+      // creation/replay keys are transport bookkeeping, not portable records.
+      travelPlan: {
+        select: {
+          id: true,
+          revision: true,
+          state: true,
+          createdAt: true,
+          updatedAt: true,
+          proposals: {
+            select: {
+              id: true,
+              baseRevision: true,
+              status: true,
+              provider: true,
+              model: true,
+              content: true,
+              expiresAt: true,
+              createdAt: true,
+            },
+          },
+        },
+      },
     },
   },
   // Tours and roadtrips from the user's side, not the trip's: one with no
@@ -130,6 +153,8 @@ export const USER_EXPORT_SELECT = {
   // journeys the photo inbox proposed from it: evidence the passport reads.
   countryDays: true,
   photoJourneys: true,
+  // Includes review decisions and edited evidence, not just regenerable suggestions.
+  dawarichStays: true,
   // The answers to trip suggestions: without them a restored account would be
   // asked again every question it already dismissed. The suggestions
   // themselves are derived and never stored.
@@ -161,6 +186,12 @@ export const USER_EXPORT_SELECT = {
 
 /** Every `User` list relation the export leaves out, and why. */
 export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
+  comparisonDevices: "public device identities, re-enrol after restore",
+  comparisonPublications: "recipient-bound ciphertext, never portable travel records",
+  comparisonCircles: "private group audiences, re-established after restore",
+  comparisonLinks: "private recipient permissions, not portable travel records",
+  comparisonInvites: "single-use credentials",
+  comparisonGroups: "private comparison audiences, re-established after restore",
   twoFactorRecoveryCodes: "credential material",
   webauthnCredentials: "credential material",
   apiTokens: "credential material",
@@ -172,6 +203,7 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   analyticsEvents: "anonymous usage telemetry, not the user's travel data",
   trainingData: "parser training corpus of raw source text, operational",
   parseLogs: "parser training log, operational",
+  travelPlanUsage: "operational daily AI/weather quota counters, not travel-plan content",
   pendingFlightUpdates: "transient queue of suggested flight changes",
   clientWriteRefs:
     "transport bookkeeping: the outbox's idempotency keys (forgejo#283), pruned after 90 days",

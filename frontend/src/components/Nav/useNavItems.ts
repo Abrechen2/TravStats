@@ -1,3 +1,4 @@
+import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useMemo } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useAuthStore } from "../../store/authStore";
@@ -74,7 +75,7 @@ function collapseSingleChild(group: NavGroup): NavNode {
  * Import-Logbuch page and Mitreisende page do not exist yet, so they are not
  * here — an entry that leads nowhere is worse than none.
  */
-export function useNavItems(): {
+export function useNavItems(pathname = "/"): {
   primary: NavNode[];
   more: NavSection[];
 } {
@@ -86,6 +87,8 @@ export function useNavItems(): {
     "dataQuality",
     "stats",
     "notes",
+    "comparison",
+    "travplan",
   ]);
   const user = useAuthStore((s) => s.user);
   const { isEnabled } = useEnabledDomains();
@@ -95,8 +98,33 @@ export function useNavItems(): {
   const busVisible = useBusVisible();
   const ferryVisible = useFerryVisible();
   const isAdmin = user?.isAdmin ?? false;
+  const { isFeatureVisible } = useBetaFeatures();
+  const comparisonVisible = isFeatureVisible("comparison");
 
   return useMemo(() => {
+    if (pathname.startsWith("/plan")) {
+      const match = /^\/plan\/([\da-f-]{36})/.exec(pathname);
+      const prefix = match ? `/plan/${match[1]}` : "/plan";
+      const leaf = (section: string): NavLeaf => ({
+        kind: "leaf",
+        id: `plan-${section}`,
+        path: match ? `${prefix}/${section}` : prefix,
+        label: t(`travplan:sections.${section}`),
+      });
+      return {
+        primary: (match ? ["overview", "workspace", "import", "packing"] : ["overview"]).map(leaf),
+        more: match
+          ? [
+              {
+                id: "planning",
+                label: "TravPlan",
+                items: ["transfer", "budget", "ai", "handover"].map(leaf),
+              },
+            ]
+          : [],
+      };
+    }
+
     // `poi` asks through `usePlacesVisible`, the one home of the places rule.
     // `rail`, `rental` and `bus` ask their own hooks: the beta gate AND the domain choice.
     const domainChildren: NavLeaf[] = AVAILABLE_DOMAINS.filter((key) =>
@@ -137,6 +165,17 @@ export function useNavItems(): {
     ];
 
     const collections: NavLeaf[] = [
+      ...(comparisonVisible
+        ? [
+            {
+              kind: "leaf" as const,
+              id: "comparison",
+              path: "/compare",
+              label: t("comparison:title"),
+              icon: "trophy" as const,
+            },
+          ]
+        : []),
       {
         kind: "leaf",
         id: "achievements",
@@ -223,5 +262,16 @@ export function useNavItems(): {
     ];
 
     return { primary, more };
-  }, [t, isEnabled, placesVisible, railVisible, rentalVisible, busVisible, ferryVisible, isAdmin]);
+  }, [
+    t,
+    pathname,
+    isEnabled,
+    placesVisible,
+    railVisible,
+    rentalVisible,
+    busVisible,
+    ferryVisible,
+    isAdmin,
+    comparisonVisible,
+  ]);
 }

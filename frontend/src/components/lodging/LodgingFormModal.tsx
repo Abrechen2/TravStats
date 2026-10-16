@@ -84,6 +84,9 @@ export function LodgingFormModal({
   // there), every edit form would open already "changed" and ask about it.
   const initial = lodgingFormFields(lodging);
   const [type, setType] = useState<LodgingType>(initial.type);
+  const [countryVisitKind, setCountryVisitKind] = useState<"visit" | "transit">(
+    initial.countryVisitKind ?? "visit"
+  );
   // "hotel" is only the select's starting point, so an OSM pick may replace it
   // on a new lodging — until the user chooses a type themselves.
   const [typeChosen, setTypeChosen] = useState<boolean>(mode === "edit");
@@ -128,6 +131,7 @@ export function LodgingFormModal({
     stars,
     amenities,
     notes,
+    countryVisitKind,
     website,
     // A refused coordinate is the user's input too: Escape must not drop it
     // silently just because it never became a position. Empty (null) while
@@ -243,6 +247,7 @@ export function LodgingFormModal({
       return;
     }
     const input: LodgingInput = {
+      countryVisitKind,
       type,
       name: name.trim(),
       chainId: chain?.id ?? null,
@@ -385,6 +390,18 @@ export function LodgingFormModal({
               </button>
             )}
           </div>
+          <label className="flex flex-col gap-1 text-sm text-[var(--text-muted)] sm:col-span-2">
+            {t("lodging:form.countryVisitKind")}
+            <select
+              value={countryVisitKind}
+              onChange={(e) => setCountryVisitKind(e.target.value as "visit" | "transit")}
+              className={FIELD_CLASS}
+            >
+              <option value="visit">{t("lodging:form.countryVisit")}</option>
+              <option value="transit">{t("lodging:form.countryTransit")}</option>
+            </select>
+            <span className="text-xs">{t("lodging:form.countryVisitHint")}</span>
+          </label>
           <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)] sm:col-span-2">
             <span>
               {t("lodging:field.name")} <RequiredMark />
