@@ -3,7 +3,7 @@ import { propagateWrites } from "../sharing/propagate";
 import { AppError } from "../../middleware/errorHandler";
 import { TRIP_COLORS } from "../../schemas/trip";
 import { statusFromOwnDates } from "../trips/ownDatesStatus";
-import { classifyVisit } from "../../shared/placeCounting";
+import { visitPromotesPlace } from "../../shared/placeCounting";
 import { recheckAchievements } from "../../utils/achievements";
 import { recomputeTripStatus } from "../tripStatusService";
 import { invalidateTripSuggestions } from "./engine";
@@ -211,13 +211,12 @@ async function acceptVisit(
       )?.id ?? null)
     : null;
   const tripId = anchorTripId ?? (await tripForVisitDay(tx, userId, time));
-  const visitedAt = time.visitedAt;
   const visit = await tx.placeVisit.create({
     data: { placeId: place.id, userId, tripId, ...time, writtenVia: "suggestion" },
   });
   // The places route's rule: a visit that HAPPENED promotes the place out of
   // the wishlist in the same transaction, a future one never does.
-  if (!place.visited && classifyVisit({ visitedAt }) === "visited") {
+  if (!place.visited && visitPromotesPlace(time)) {
     await tx.place.update({ where: { id: place.id }, data: { visited: true } });
   }
   await recordAnswer(tx, userId, proposal, "accepted", { createdPlaceVisitId: visit.id });

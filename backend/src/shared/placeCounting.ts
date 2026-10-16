@@ -72,6 +72,31 @@ export function classifyVisit(visit: CountableVisit, now: Date = clockNow()): Pl
 }
 
 /**
+ * Whether writing this visit takes its place out of the wishlist (`visited`).
+ *
+ * The write-side twin of `classifyVisit`, and the one rule every writer of a
+ * visit asks. It exists because the writers used to ask `classifyVisit` with
+ * the legacy `visitedAt` alone — the place's wall clock as fake UTC — and
+ * dropped the instant. East of UTC that clock runs ahead of the real time by
+ * the zone's offset, so a visit logged in Korea within nine hours of standing
+ * there read as a future plan and never promoted its place: 24 places of a
+ * trip to Korea in October 2026 had a past visit and were missing from "Orte
+ * besucht".
+ *
+ * `visitedAtUtc` is REQUIRED here, null included, so a caller cannot leave the
+ * instant out by accident — that omission was the whole defect. A writer that
+ * truly has no instant (a legacy importer) says so with an explicit null.
+ *
+ * Backend only: the frontend never writes a visit, so the mirror has no twin.
+ */
+export function visitPromotesPlace(
+  visit: { visitedAt: Date | string | null; visitedAtUtc: Date | string | null },
+  now: Date = clockNow()
+): boolean {
+  return classifyVisit(visit, now) === "visited";
+}
+
+/**
  * The year a visit falls in, or null when it carries no readable date.
  *
  * On the PLACE's calendar (ADR 0002 D4): the visit's instant read in the zone

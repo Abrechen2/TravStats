@@ -11,7 +11,7 @@ import { resolveCountryCode } from "../shared/geo/countryCode";
 import { completeAddressFromCoordinates } from "../services/geo/nominatim";
 import { getContinent } from "../utils/continents";
 import { recheckAchievements } from "../utils/achievements";
-import { classifyVisit } from "../shared/placeCounting";
+import { classifyVisit, visitPromotesPlace } from "../shared/placeCounting";
 import { deletePlacePhotoFile } from "../middleware/upload";
 import logger from "../utils/logger";
 import { toPhotoDto, VISIT_PHOTO_INCLUDE } from "./places/visitPhotoDto";
@@ -528,15 +528,16 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
     // A FUTURE-dated visit is the opposite statement — "I will be here" — and
     // must not promote anything. Flipping the flag for it made the place read
     // "Besucht" the moment a plan was entered, which is how a place you have
-    // never been to ends up in the visited count. The rule comes from
-    // `classifyVisit`, the same one that already keeps future visits out of
-    // every total, so the flag and the figures cannot disagree.
+    // never been to ends up in the visited count. The rule is
+    // `visitPromotesPlace`, asked of the INSTANT: the legacy wall-clock column
+    // alone runs ahead east of UTC, and a visit logged in Korea within nine
+    // hours read as a plan and never promoted its place (24 places, 2026-10).
     //
     // One-directional on purpose: nothing here ever sets `visited` back to
     // false. A place may legitimately be visited with no visit rows at all
     // ("I have been to that Maccis, no idea when"), and recomputing the flag
     // from the visits would erase exactly that.
-    const happened = classifyVisit({ visitedAt: time.visitedAt }) === "visited";
+    const happened = visitPromotesPlace(time);
 
     const writes: Prisma.PrismaPromise<unknown>[] = [
       prisma.placeVisit.create({
@@ -605,7 +606,7 @@ router.patch("/visits/:visitId", async (req: AuthRequest, res: Response, next: N
     // Moving a planned visit into the past is the same statement as recording
     // one, so it promotes the place too. The reverse does NOT demote it — see
     // the create handler for why the flag is one-directional.
-    if (classifyVisit({ visitedAt: visit.visitedAt }) === "visited") {
+    if (visitPromotesPlace(visit)) {
       await prisma.place.updateMany({
         where: { id: visit.placeId, userId, visited: false },
         data: { visited: true },
