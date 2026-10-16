@@ -72,3 +72,34 @@ export async function supersedeSatisfied(
   }
   return superseded;
 }
+
+/**
+ * The undo of a propagated change takes back what superseded the member's own
+ * suggestion, so the suggestion proposes something again: it reopens — as
+ * `edited` when the member had edited it, else `pending` — and loses the
+ * `supersededBy` mark. Only the suggestions THIS notice superseded.
+ */
+export async function reopenSuperseded(
+  c: DbTransaction,
+  flightId: string,
+  noticeId: string
+): Promise<number> {
+  const superseded = await c.pendingFlightUpdate.findMany({
+    where: {
+      flightId,
+      status: "superseded",
+      metadata: { path: ["supersededBy", "noticeId"], equals: noticeId },
+    },
+  });
+  for (const update of superseded) {
+    const { supersededBy: _gone, ...metadata } = asObject(update.metadata);
+    await c.pendingFlightUpdate.update({
+      where: { id: update.id },
+      data: {
+        status: update.editedChanges === null ? "pending" : "edited",
+        metadata: metadata as Prisma.InputJsonValue,
+      },
+    });
+  }
+  return superseded.length;
+}

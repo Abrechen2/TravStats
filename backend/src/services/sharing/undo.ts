@@ -7,6 +7,7 @@ import { restatusTrips } from "../trip/restatusTrips";
 import { ADAPTERS, type ShareEntity, type SharedRow } from "./adapters";
 import { revivedRecord, sameFact } from "./factValues";
 import { keyedDelegate } from "./keyOps";
+import { reopenSuperseded } from "./pendingSupersede";
 import { propagateDelete, propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "./propagate";
 
 /**
@@ -106,6 +107,8 @@ export async function undoNotice(userId: string, noticeId: string): Promise<Undo
       }
       const snapshot = await shareSnapshot(tx, entity, own.id);
       await ADAPTERS[entity].apply(tx, own, before, keys);
+      // Flights are the one type with provider suggestions (PendingFlightUpdate).
+      if (entity === "flight") await reopenSuperseded(tx, own.id, notice.id);
       await tx.shareNotice.update({
         where: { id: notice.id },
         data: { undoneAt: new Date(), readAt: notice.readAt ?? new Date() },

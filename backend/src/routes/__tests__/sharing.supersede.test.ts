@@ -6,6 +6,7 @@ import { prisma } from "../../db";
 import type { Flight } from "../../prisma";
 import type { ChangeEntry, FlightDataSnapshot } from "../../services/pendingUpdates/snapshot";
 import { propagateWrite, shareSnapshot } from "../../services/sharing/propagate";
+import { undoNotice } from "../../services/sharing/undo";
 import {
   sharedPair,
   makeAccount,
@@ -169,6 +170,44 @@ describe("trip sharing — a propagated change supersedes the member's own sugge
     );
     await annaChanges({ gate: "C3" });
     expect(await statusOf(update.id)).toBe("superseded");
+  });
+
+  it("undoing the change reopens the suggestion it superseded", async () => {
+    const copy = await bensFlight();
+    const update = await pendingFor(ben.id, bensFlightId, fullSnapshot(copy, { gate: "B12" }), [
+      change("gate", copy.gate, "B12"),
+    ]);
+    await annaChanges({ gate: "B12" });
+    expect(await statusOf(update.id)).toBe("superseded");
+    const notice = await prisma.shareNotice.findFirstOrThrow({
+      where: { userId: ben.id, kind: "updated", entityType: "flight" },
+    });
+
+    await undoNotice(ben.id, notice.id);
+
+    expect((await bensFlight()).gate).toBe(copy.gate);
+    const reopened = await prisma.pendingFlightUpdate.findUniqueOrThrow({
+      where: { id: update.id },
+    });
+    expect(reopened.status).toBe("pending");
+    expect((reopened.metadata as { supersededBy?: unknown } | null)?.supersededBy).toBeUndefined();
+  });
+
+  it("reopens an edited suggestion as edited", async () => {
+    const copy = await bensFlight();
+    const update = await pendingFor(
+      ben.id,
+      bensFlightId,
+      fullSnapshot(copy, { gate: "B12" }),
+      [change("gate", copy.gate, "B12")],
+      { data: { gate: "C3" }, changes: [change("gate", copy.gate, "C3")] }
+    );
+    await annaChanges({ gate: "C3" });
+    const notice = await prisma.shareNotice.findFirstOrThrow({
+      where: { userId: ben.id, kind: "updated", entityType: "flight" },
+    });
+    await undoNotice(ben.id, notice.id);
+    expect(await statusOf(update.id)).toBe("edited");
   });
 
   it("accepting a suggestion supersedes the other member's identical one, which leaves the inbox", async () => {
