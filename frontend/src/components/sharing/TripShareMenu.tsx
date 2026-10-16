@@ -9,7 +9,7 @@ import { sharingApi } from "../../lib/api/sharing";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import { useTripSharingStore } from "../../store/tripSharingStore";
-import type { TripPerson } from "../../types/sharing";
+import type { SharePerson, TripPerson } from "../../types/sharing";
 import ShareLinkDialog from "../shareLinks/ShareLinkDialog";
 import { Button } from "../ui";
 import ShareTripDialog from "./ShareTripDialog";
@@ -71,7 +71,11 @@ export default function TripShareMenu({ tripId }: { tripId: string }): JSX.Eleme
   const [open, setOpen] = useState(false);
   const [dialog, setDialog] = useState<MenuItem | null>(null);
   // Tagged with its trip, so a trip change never offers the previous trip's people.
-  const [loaded, setLoaded] = useState<{ tripId: string; people: TripPerson[] } | null>(null);
+  const [loaded, setLoaded] = useState<{
+    tripId: string;
+    people: TripPerson[];
+    linkableUsers: SharePerson[];
+  } | null>(null);
   const [placement, setPlacement] = useState<ReturnType<typeof placeMenu> | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -132,7 +136,9 @@ export default function TripShareMenu({ tripId }: { tripId: string }): JSX.Eleme
     void (async () => {
       try {
         const view = await sharingApi.tripSharing(tripId);
-        if (!cancelled) setLoaded({ tripId, people: view.people });
+        if (!cancelled) {
+          setLoaded({ tripId, people: view.people, linkableUsers: view.linkableUsers });
+        }
       } catch (error) {
         if (cancelled) return;
         logger.error("Failed to load trip sharing:", error);
@@ -189,7 +195,8 @@ export default function TripShareMenu({ tripId }: { tripId: string }): JSX.Eleme
     itemRefs.current[(at + step + ITEMS.length) % ITEMS.length]?.focus();
   };
 
-  const people = loaded?.tripId === tripId ? loaded.people : null;
+  const current = loaded?.tripId === tripId ? loaded : null;
+  const people = current?.people ?? null;
   // Between the pick and the people arriving nothing else is on screen: the
   // trigger says so, and is not a second way in while the first is loading.
   const loading = dialog === "companions" && !people;
@@ -247,7 +254,9 @@ export default function TripShareMenu({ tripId }: { tripId: string }): JSX.Eleme
           onClose={() => setDialog(null)}
           tripId={tripId}
           people={people}
+          linkableUsers={current?.linkableUsers ?? []}
           onShared={() => bump(tripId)}
+          onPeopleChanged={() => bump(tripId)}
         />
       )}
     </div>

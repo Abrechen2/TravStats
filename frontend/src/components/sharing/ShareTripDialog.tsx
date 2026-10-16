@@ -5,8 +5,10 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { sharingApi } from "../../lib/api/sharing";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
-import type { TripPerson } from "../../types/sharing";
+import type { SharePerson, TripPerson } from "../../types/sharing";
 import { Button, Dialog, Field, Select } from "../ui";
+import AddTravellerList from "./AddTravellerList";
+import { AddTravellerError, addAndLinkTraveller } from "./addTraveller";
 import { shareBlockKey, sharingErrorKey } from "./sharingCopy";
 
 const NS = "sharing:shareDialog";
@@ -21,6 +23,12 @@ const NS = "sharing:shareDialog";
  *
  * The form is mounted only while the dialog is open, so every opening starts
  * from the then-current people, with no stale selection or error.
+ *
+ * When nobody can be chosen but an account that agreed to sharing is not a
+ * traveller on the trip yet, the dialog offers to add and link it (browser
+ * finding 2026-10-16) — the dead end "mit niemandem teilen" sent the user off
+ * to two other screens. After that the ordinary confirmation follows; nothing
+ * is copied before it.
  */
 export default function ShareTripDialog(props: ShareTripDialogProps): JSX.Element | null {
   return props.open ? <ShareTripForm {...props} /> : null;
@@ -31,20 +39,27 @@ interface ShareTripDialogProps {
   onClose: () => void;
   tripId: string;
   people: readonly TripPerson[];
+  /** Accounts that accepted the reader's consent request (`TripSharing.linkableUsers`). */
+  linkableUsers?: readonly SharePerson[];
   preselectedKey?: string;
   onShared: () => void;
+  /** The trip's travellers changed from inside the dialog (one was added). */
+  onPeopleChanged?: () => void;
 }
 
 function ShareTripForm({
   open,
   onClose,
   tripId,
-  people,
+  people: initialPeople,
+  linkableUsers = [],
   preselectedKey,
   onShared,
+  onPeopleChanged,
 }: ShareTripDialogProps): JSX.Element {
   const { t } = useTranslation(["sharing"]);
   const addToast = useToastStore((s) => s.addToast);
+  const [people, setPeople] = useState<readonly TripPerson[]>(initialPeople);
   const eligible = people.filter((p) => p.shareBlockedBy === null && p.companionId && p.account);
   const blocked = people.filter((p) => p.shareBlockedBy !== null);
   const [key, setKey] = useState(
@@ -59,6 +74,30 @@ function ShareTripForm({
   // picks someone else; the picker is hidden only for a selectable preselection.
   const preselectionSelectable = eligible.some((p) => p.key === preselectedKey);
   const shownBlocked = preselectedKey ? blocked.filter((p) => p.key === preselectedKey) : blocked;
+
+  const candidates = linkableUsers.filter((u) => !people.some((p) => p.account?.id === u.id));
+
+  const addTraveller = async (user: SharePerson): Promise<void> => {
+    setBusy(true);
+    setError(null);
+    try {
+      const { view, key: added } = await addAndLinkTraveller(tripId, user);
+      setPeople(view.people);
+      setKey(added);
+      onPeopleChanged?.();
+    } catch (err) {
+      logger.error("Failed to add a traveller:", err);
+      const stage = err instanceof AddTravellerError ? err.stage : "add";
+      setError(t(`${NS}.add.${stage}Failed`, { name: user.displayName }));
+      // Past the first step the trip has a new traveller: show it, never a half state.
+      if (stage !== "add") {
+        if (err instanceof AddTravellerError && err.people) setPeople(err.people);
+        onPeopleChanged?.();
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const share = async (): Promise<void> => {
     if (!person?.companionId) return;
@@ -97,7 +136,13 @@ function ShareTripForm({
       }
     >
       <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-        {eligible.length === 0 ? (
+        {eligible.length === 0 && candidates.length > 0 ? (
+          <AddTravellerList
+            users={candidates}
+            busy={busy}
+            onAdd={(user) => void addTraveller(user)}
+          />
+        ) : eligible.length === 0 ? (
           <p className="text-sm">{t(`${NS}.nobody`)}</p>
         ) : (
           <>

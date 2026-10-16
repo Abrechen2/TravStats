@@ -15,6 +15,7 @@ import DetailSection from "../ui/DetailSection";
 import PeopleList, { type PersonRow } from "../ui/PeopleList";
 import LinkAccountDialog from "./LinkAccountDialog";
 import ShareTripDialog from "./ShareTripDialog";
+import { nameKey } from "./addTraveller";
 import { shareBlockKey, sharingErrorKey } from "./sharingCopy";
 
 const NS = "sharing:people";
@@ -211,8 +212,10 @@ export default function TripPeopleSection({
           onClose={() => setPicked(null)}
           tripId={tripId}
           people={view.people}
+          linkableUsers={view.linkableUsers}
           preselectedKey={pick.person.key}
           onShared={changed}
+          onPeopleChanged={changed}
         />
       )}
       {pick?.kind === "link" && pick.person.companionId && (
@@ -228,14 +231,6 @@ export default function TripPeopleSection({
     </>
   );
 }
-
-/**
- * "ilse " and "Ilse" are one person. The same fold as the server's companion
- * identity (`canonicalizeCompanionName`, backend `utils/companionName.ts`), so
- * the page never splits a person the server holds as one.
- */
-const nameKey = (name: string): string =>
-  name.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
 
 /**
  * The trip's companion names that no companion row stands for, as plain rows.

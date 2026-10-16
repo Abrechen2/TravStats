@@ -163,6 +163,14 @@
     "confirm": "Share trip",
     "done": "Trip shared with {{name}}.",
     "nobody": "Right now you can't share this trip with anyone. Link travellers to their account — that works once they have accepted your request.",
+    "add": {
+      "title": "These accounts have agreed to share with you but are not travellers on this trip yet. Add a person and link them — then you can share the trip with them.",
+      "action": "Add as traveller and link",
+      "actionLabel": "Add {{name}} as a traveller and link their account",
+      "addFailed": "{{name}} could not be added as a traveller. Nothing was changed.",
+      "linkFailed": "{{name}} is now a traveller, but linking their account did not work. Please try again.",
+      "reloadFailed": "{{name}} is added and linked, but the list could not be reloaded. Close the dialog and open it again."
+    },
     "blockedTitle": "Not possible right now",
     "blocked": {
       "notLinked": "{{name}} is not linked to an account.",

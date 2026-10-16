@@ -163,6 +163,14 @@
     "confirm": "Reise teilen",
     "done": "Reise mit {{name}} geteilt.",
     "nobody": "Gerade kannst du diese Reise mit niemandem teilen. Verknüpfe Reisende mit ihrem Konto — das geht, sobald die Person deiner Anfrage zugestimmt hat.",
+    "add": {
+      "title": "Diese Konten haben dem Teilen mit dir zugestimmt, stehen aber noch nicht bei den Reisenden dieser Reise. Trag eine Person ein und verknüpfe sie — danach kannst du die Reise mit ihr teilen.",
+      "action": "Als Reisende:n eintragen und verknüpfen",
+      "actionLabel": "{{name}} als Reisende:n eintragen und mit dem Konto verknüpfen",
+      "addFailed": "{{name}} konnte nicht bei den Reisenden eingetragen werden. Es wurde nichts geändert.",
+      "linkFailed": "{{name}} steht jetzt bei den Reisenden, die Verknüpfung mit dem Konto hat aber nicht geklappt. Versuch es noch einmal.",
+      "reloadFailed": "{{name}} ist eingetragen und verknüpft, die Liste konnte aber nicht neu geladen werden. Schließ den Dialog und öffne ihn erneut."
+    },
     "blockedTitle": "Gerade nicht möglich",
     "blocked": {
       "notLinked": "{{name}} ist mit keinem Konto verknüpft.",
