@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-import DataQualityFlagCard from "../../components/DataQuality/DataQualityFlagCard";
+import ReviewCard from "../../components/inbox/workspace/ReviewCard";
 import type { DataQualityFlag } from "../../types/dataQuality";
 
 /**
@@ -35,7 +35,7 @@ const flightSubject = (id: string, label: string) => ({
 function renderCard(flag: DataQualityFlag) {
   render(
     <MemoryRouter>
-      <DataQualityFlagCard flag={flag} onResolve={() => {}} onDismiss={() => {}} />
+      <ReviewCard flag={flag} busy={false} act={vi.fn(async () => true)} />
     </MemoryRouter>
   );
   expect(screen.queryByText(/kennt diese Version/)).toBeNull();
@@ -44,7 +44,7 @@ function renderCard(flag: DataQualityFlag) {
   ).toBeInTheDocument();
 }
 
-describe("DataQualityFlagCard — record checks", () => {
+describe("ReviewCard — record checks", () => {
   it("asks about a duplicate and links the other copy, without offering to delete it", () => {
     renderCard({
       ...base,

@@ -11,9 +11,11 @@ import { MemoryRouter } from "react-router-dom";
  * poll run here; only the HTTP client is stubbed.
  */
 
-vi.mock("../../../lib/api/immich", async (importOriginal) => ({
+const onScanned = vi.fn(async () => {});
+
+vi.mock("../../../../lib/api/immich", async (importOriginal) => ({
   // The failure-kind helpers stay real: the tab maps a job's code with them.
-  ...(await importOriginal<typeof import("../../../lib/api/immich")>()),
+  ...(await importOriginal<typeof import("../../../../lib/api/immich")>()),
   immichApi: {
     getSettings: vi.fn().mockResolvedValue({
       baseUrl: "https://immich.example",
@@ -28,12 +30,12 @@ vi.mock("../../../lib/api/immich", async (importOriginal) => ({
 
 const addToast = vi.fn();
 const toastState = { addToast: (...args: unknown[]) => addToast(...args) };
-vi.mock("../../../store/toastStore", () => ({
+vi.mock("../../../../store/toastStore", () => ({
   useToastStore: (selector: (s: typeof toastState) => unknown) => selector(toastState),
 }));
 
-import { api } from "../../../lib/api/client";
-import PhotoJourneysTab from "../PhotoJourneysTab";
+import { api } from "../../../../lib/api/client";
+import PhotoScanPanel from "../PhotoScanPanel";
 
 const SCAN = "dataQuality:inbox.photoJourneys.scan";
 
@@ -60,6 +62,7 @@ describe("the photo scan reports the job's outcome", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     addToast.mockClear();
+    onScanned.mockClear();
   });
 
   it("a scan that runs past the old timeout ends in its counts, never in 'failed'", async () => {
@@ -69,7 +72,7 @@ describe("the photo scan reports the job's outcome", () => {
     ]);
     render(
       <MemoryRouter>
-        <PhotoJourneysTab active />
+        <PhotoScanPanel empty onScanned={onScanned} />
       </MemoryRouter>
     );
 
@@ -104,7 +107,7 @@ describe("the photo scan reports the job's outcome", () => {
     ]);
     render(
       <MemoryRouter>
-        <PhotoJourneysTab active />
+        <PhotoScanPanel empty onScanned={onScanned} />
       </MemoryRouter>
     );
 
@@ -126,7 +129,7 @@ describe("the photo scan reports the job's outcome", () => {
     stubServer([() => Promise.reject({ isAxiosError: true, response: { status: 404 } })]);
     render(
       <MemoryRouter>
-        <PhotoJourneysTab active />
+        <PhotoScanPanel empty onScanned={onScanned} />
       </MemoryRouter>
     );
 
@@ -139,5 +142,7 @@ describe("the photo scan reports the job's outcome", () => {
       )
     );
     expect(addToast).not.toHaveBeenCalledWith("error", expect.anything());
+    // The scan may have stored findings: the inbox is read again.
+    expect(onScanned).toHaveBeenCalled();
   });
 });

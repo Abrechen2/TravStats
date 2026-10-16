@@ -1,299 +1,64 @@
 /**
  * Posteingang — the one place the user answers questions about their data.
  *
- * Four sections, four backends, on purpose (design §3.5, owner 2026-09-02):
+ * ONE inbox (2026-10-16). Codex's workspace (`components/inbox/workspace`)
+ * had been added beside the per-kind tabs it was meant to replace, so every
+ * question, flight update, trip proposal and photo suggestion had two cards
+ * with two different action sets. The workspace is now the inbox: each kind
+ * has one card, the per-kind tabs became its filter, and what only the old
+ * tabs could do (resolve a question, apply a flight update with its source
+ * and expiry shown, quick-accept a trip, scan the photo library, answer
+ * several visits at once, look back at answered items) moved into it.
  *
- * - **Zu prüfen** — `DataQualityFlag` rows: a record whose own two sources
- *   disagree, raised as a QUESTION. Nothing has been changed and nothing is
- *   marked correct.
- * - **Flug-Updates** — `PendingFlightUpdate` rows: a provider's proposed field
- *   values for one flight, with a diff and an apply/reject decision.
- * - **Reise-Vorschläge** — the cross-domain trip engine's proposals (owner,
- *   2026-09-26): derived on the server from every entry, never stored; only
- *   the user's answer is. Lives in `components/inbox/TripSuggestionsTab`.
- * - **Foto-Reisen** — `PhotoJourney` rows: a burst of photographs nothing
- *   recorded explains. The only tab that can be absent (forgejo#94, point 1);
- *   it lives in `components/inbox/`.
+ * The backends stay apart on purpose (design §3.5): `DataQualityFlag`,
+ * `PendingFlightUpdate`, the trip engine's derived proposals and
+ * `PhotoJourney` are different things that share a page, not a table.
  *
- * `PendingFlightUpdate` carries a required `flightId`, `apiSource` and
- * `expiresAt` — it is flight-shaped by construction, and 858 lines of service
- * code depend on that shape. So the flag model got its own table with a generic
- * subject rather than being forced through it. The user sees one inbox; the
- * schema keeps apart two things that genuinely differ.
+ * Shared trips keep their own tab: consent requests and notices are not
+ * questions about the user's records.
  *
- * The route stays `/pending-updates`. It is linked from the nav and from
- * `Settings/AutoUpdateSection`, and renaming a page is not a reason to break a
- * bookmark.
+ * The route stays `/pending-updates`, and every `?tab=` an old link carries
+ * still lands: a kind (`review`, `trips`, `updates`, `photos`, `dawarich`)
+ * opens the inbox filtered to it, `sharing` opens the sharing tab.
  */
 
-import AppShell from "../components/ui/AppShell";
-import EmptyState from "../components/ui/EmptyState";
-import { Card } from "../components/ui/Card";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import AppShell from "../components/ui/AppShell";
 import PageHeader from "../components/ui/PageHeader";
 import { useTranslation } from "../hooks/useTranslation";
-import { pendingUpdatesApi, type StatisticsImpact } from "../lib/api";
-import { useToastStore } from "../store/toastStore";
-import { logger } from "../lib/logger";
-import PendingUpdateCard from "../components/PendingUpdateCard";
-import StatisticsImpactPreview from "../components/StatisticsImpactPreview";
-import DataQualityFlagsSection from "../components/DataQuality/DataQualityFlagsSection";
-import DawarichStaysTab from "../components/inbox/DawarichStaysTab";
-import PhotoJourneysTab from "../components/inbox/PhotoJourneysTab";
-import TripSuggestionsTab from "../components/inbox/TripSuggestionsTab";
-import InboxWorkspace from "../components/inbox/workspace/InboxWorkspace";
+import InboxWorkspace, { type InboxCount } from "../components/inbox/workspace/InboxWorkspace";
 import SharingTab from "../components/inbox/SharingTab";
 import PasswordResetRequestsSection from "../components/inbox/PasswordResetRequestsSection";
 import UnfiledDocumentsSection from "../components/inbox/UnfiledDocumentsSection";
 import { usePhotoJourneysVisible } from "../components/inbox/usePhotoJourneysVisible";
-import { GlobeLoader } from "../components/GlobeLoader";
-import { useMinLoadingState } from "../hooks/useMinLoadingState";
 
-interface FlightUpdateData {
-  airline?: string;
-  aircraft?: string;
-  gate?: string;
-  terminal?: string;
-  depIata?: string;
-  arrIata?: string;
-  departureTime?: string;
-  arrivalTime?: string;
-  [key: string]: string | number | boolean | null | undefined;
-}
-
-interface ChangeEntry {
-  field: string;
-  type: "added" | "removed" | "changed";
-  oldValue: string | number | boolean | null | undefined;
-  newValue: string | number | boolean | null | undefined;
-}
-
-interface PendingUpdate {
-  id: string;
-  flightId: string;
-  userId: string;
-  status: "pending" | "applied" | "rejected" | "expired" | "edited";
-  originalData: FlightUpdateData;
-  proposedData: FlightUpdateData;
-  editedData?: FlightUpdateData;
-  changes: ChangeEntry[];
-  editedChanges?: ChangeEntry[];
-  apiSource: string;
-  fetchedAt: string;
-  expiresAt: string;
-  appliedAt?: string;
-  rejectedAt?: string;
-  editedAt?: string;
-  statisticsImpact?: StatisticsImpact;
-  flight?: {
-    id: string;
-    flightNumber: string | null;
-    airline: string | null;
-    departureTime: string;
-    arrivalTime: string;
-    depIata: string | null;
-    arrIata: string | null;
-  };
-}
-
-/**
- * Four tabs since the trip engine (2026-09-26). The photo scan's findings are
- * the only one that can be absent — see `usePhotoJourneysVisible`. A `?tab=`
- * naming it while it is hidden falls back to `review` rather than opening a tab
- * that is not in the list.
- */
-type InboxTab = "overview" | "dawarich" | "review" | "trips" | "sharing" | "updates" | "photos";
-
-interface Statistics {
-  totalUpdates: number;
-  appliedUpdates: number;
-  rejectedUpdates: number;
-  editedUpdates: number;
-  expiredUpdates: number;
-  mostChangedFields: Record<string, number>;
-  averageUpdateTime: number | null;
-}
+type PageTab = "inbox" | "sharing";
 
 export default function PendingUpdatesPage(): JSX.Element {
-  const { t } = useTranslation(["common", "pendingUpdates", "dataQuality", "sharing", "trips"]);
-  const addToast = useToastStore((state) => state.addToast);
-
-  const [updates, setUpdates] = useState<PendingUpdate[]>([]);
-  const [statistics, setStatistics] = useState<Statistics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const showLoader = useMinLoadingState(loading, 2000);
-  const [statusFilter, setStatusFilter] = useState<string>("pending");
-  const [sortBy, setSortBy] = useState<"createdAt" | "expiresAt">("createdAt");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [selectedUpdate, setSelectedUpdate] = useState<string | null>(null);
-  // Which half is open lives in the URL, so a link can land on the updates.
+  const { t } = useTranslation(["dataQuality", "sharing"]);
   const [searchParams, setSearchParams] = useSearchParams();
   const photoJourneysVisible = usePhotoJourneysVisible();
-  const requestedTab = searchParams.get("tab");
-  const tab: InboxTab =
-    !requestedTab || requestedTab === "overview"
-      ? "overview"
-      : requestedTab === "dawarich"
-        ? "dawarich"
-        : requestedTab === "updates"
-          ? "updates"
-          : requestedTab === "trips"
-            ? "trips"
-            : requestedTab === "sharing"
-              ? "sharing"
-              : requestedTab === "photos" && photoJourneysVisible
-                ? "photos"
-                : "review";
-  const [workspaceVisited, setWorkspaceVisited] = useState(
-    !requestedTab || requestedTab === "overview"
-  );
-  const [openQuestions, setOpenQuestions] = useState<number | null>(null);
-  const reportOpen = useCallback((n: number) => setOpenQuestions(n), []);
-  const [pendingJourneys, setPendingJourneys] = useState<number | null>(null);
-  const reportJourneys = useCallback((n: number) => setPendingJourneys(n), []);
-  const [tripSuggestions, setTripSuggestions] = useState<number | null>(null);
-  const reportTripSuggestions = useCallback((n: number) => setTripSuggestions(n), []);
+  const tab: PageTab = searchParams.get("tab") === "sharing" ? "sharing" : "inbox";
+
+  // Both labels carry a count only once it is measured; `null` is "not yet",
+  // never a zero. The sharing tab stays mounted so its count is measured too.
+  const [inboxCount, setInboxCount] = useState<InboxCount | null>(null);
+  const reportInbox = useCallback((count: InboxCount | null) => setInboxCount(count), []);
   const [sharingOpen, setSharingOpen] = useState<number | null>(null);
   const reportSharing = useCallback((n: number) => setSharingOpen(n), []);
-  // The status filter the shown list was loaded with; null until one has been.
-  const [loadedFilter, setLoadedFilter] = useState<string | null>(null);
-  useEffect(() => {
-    if (tab !== "overview") return;
-    setWorkspaceVisited(true);
-    // The overview unmounts the tabs that report these counts, so they would
-    // freeze at their last value while the workspace resolves the same items.
-    // Unknown again until the tab is opened; a label never shows a stale number.
-    setOpenQuestions(null);
-    setPendingJourneys(null);
-    setTripSuggestions(null);
-    setSharingOpen(null);
-    setLoadedFilter(null);
-  }, [tab]);
 
-  useEffect(() => {
-    if (tab !== "overview") {
-      loadUpdates();
-      loadStatistics();
-    }
-  }, [statusFilter, tab]);
-
-  const loadUpdates = async () => {
-    try {
-      setLoading(true);
-      const filters: { status?: string; flightId?: string } = {};
-      if (statusFilter && statusFilter !== "all") {
-        filters.status = statusFilter;
-      }
-      const data = await pendingUpdatesApi.getAll(filters);
-      setUpdates(data.updates || []);
-      setLoadedFilter(statusFilter);
-    } catch (error) {
-      logger.error("Failed to load pending updates:", error);
-      addToast("error", t("pendingUpdates:errors.loadFailed"));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadStatistics = async () => {
-    try {
-      const stats = await pendingUpdatesApi.getStatistics();
-      setStatistics(stats);
-    } catch (error) {
-      logger.error("Failed to load statistics:", error);
-    }
-  };
-
-  const handleApply = async (id: string) => {
-    try {
-      await pendingUpdatesApi.apply(id);
-      addToast("success", t("pendingUpdates:messages.applied"));
-      loadUpdates();
-      loadStatistics();
-    } catch (error) {
-      logger.error("Failed to apply update:", error);
-      addToast("error", t("pendingUpdates:errors.applyFailed"));
-    }
-  };
-
-  const handleReject = async (id: string) => {
-    try {
-      await pendingUpdatesApi.reject(id);
-      addToast("success", t("pendingUpdates:messages.rejected"));
-      loadUpdates();
-      loadStatistics();
-    } catch (error) {
-      logger.error("Failed to reject update:", error);
-      addToast("error", t("pendingUpdates:errors.rejectFailed"));
-    }
-  };
-
-  const handleEdit = async (id: string, editedData: FlightUpdateData) => {
-    try {
-      await pendingUpdatesApi.update(id, editedData);
-      addToast("success", t("pendingUpdates:messages.updated"));
-      loadUpdates();
-      loadStatistics();
-    } catch (error) {
-      logger.error("Failed to update:", error);
-      addToast("error", t("pendingUpdates:errors.updateFailed"));
-    }
-  };
-
-  const sortedUpdates = [...updates].sort((a, b) => {
-    let aValue: number;
-    let bValue: number;
-
-    if (sortBy === "createdAt") {
-      aValue = new Date(a.fetchedAt).getTime();
-      bValue = new Date(b.fetchedAt).getTime();
-    } else {
-      aValue = new Date(a.expiresAt).getTime();
-      bValue = new Date(b.expiresAt).getTime();
-    }
-
-    if (sortOrder === "asc") {
-      return aValue - bValue;
-    } else {
-      return bValue - aValue;
-    }
-  });
-
-  const pendingCount = updates.filter((u) => u.status === "pending").length;
-
-  const tabs: { key: InboxTab; label: string; count: number | null }[] = [
-    { key: "overview", label: t("dataQuality:inbox.workspace.title"), count: null },
-    { key: "review", label: t("dataQuality:inbox.review.title"), count: openQuestions },
-    // The trip engine's proposals (owner, 2026-09-26). Second: answering them
-    // shapes the logbook itself, and nothing else will.
+  const tabs: { key: PageTab; label: string; count: string | null }[] = [
     {
-      key: "trips",
-      label: t("dataQuality:inbox.tripSuggestions.title"),
-      count: tripSuggestions,
+      key: "inbox",
+      label: t("dataQuality:inbox.workspace.title"),
+      count: inboxCount ? `${inboxCount.count}${inboxCount.complete ? "" : "+?"}` : null,
     },
-    // Shared trips (design 2026-10-09): consent requests and notices.
-    { key: "dawarich", label: t("trips:dawarichStays.title"), count: null },
-    { key: "sharing", label: t("sharing:inbox.title"), count: sharingOpen },
     {
-      key: "updates",
-      label: t("dataQuality:inbox.flightUpdates.title"),
-      // Only a loaded pending list is a count. On the overview the list is
-      // never loaded, and the empty initial one read as "0".
-      count: statusFilter === "pending" && loadedFilter === "pending" ? pendingCount : null,
+      key: "sharing",
+      label: t("sharing:inbox.title"),
+      count: sharingOpen === null ? null : String(sharingOpen),
     },
-    // Counted the same way as the tabs above: the tab reports what it loaded,
-    // and `null` until it has, so the label never claims a zero it has not
-    // measured.
-    ...(photoJourneysVisible
-      ? [
-          {
-            key: "photos" as const,
-            label: t("dataQuality:inbox.photoJourneys.title"),
-            count: pendingJourneys,
-          },
-        ]
-      : []),
   ];
 
   return (
@@ -304,8 +69,6 @@ export default function PendingUpdatesPage(): JSX.Element {
           meta={t("dataQuality:inbox.description")}
         />
 
-        {/* Round 4: the two halves as tabs rather than two stacked sections —
-            the flight updates sat a long scroll below the questions. */}
         <div
           role="tablist"
           className="mb-6 flex overflow-x-auto scrollbar-none"
@@ -320,7 +83,7 @@ export default function PendingUpdatesPage(): JSX.Element {
                 role="tab"
                 aria-selected={active}
                 onClick={() =>
-                  setSearchParams(item.key === "overview" ? {} : { tab: item.key }, {
+                  setSearchParams(item.key === "inbox" ? {} : { tab: item.key }, {
                     replace: true,
                   })
                 }
@@ -342,222 +105,19 @@ export default function PendingUpdatesPage(): JSX.Element {
           })}
         </div>
 
-        {/* Lockouts and uploads with retention deadlines precede record questions.
-            Keep one instance when moving between overview and review. */}
-        <div hidden={tab !== "overview" && tab !== "review"}>
+        {/* Lockouts and uploads with retention deadlines precede record questions. */}
+        <div hidden={tab !== "inbox"}>
           <PasswordResetRequestsSection />
           <UnfiledDocumentsSection />
+          <InboxWorkspace
+            photosVisible={photoJourneysVisible}
+            active={tab === "inbox"}
+            onCount={reportInbox}
+          />
         </div>
-        {(workspaceVisited || tab === "overview") && (
-          <div hidden={tab !== "overview"}>
-            <InboxWorkspace photosVisible={photoJourneysVisible} active={tab === "overview"} />
-          </div>
-        )}
-        {tab !== "overview" && (
-          <>
-            {/* Questions about the records first: nobody else will answer them,
-            while a flight update expires on its own. The section stays mounted
-            across these tabs so its open count keeps the tab label current; the
-            overview unmounts it, and the count is cleared there. */}
-            <div hidden={tab !== "review"}>
-              <DataQualityFlagsSection onOpenCount={reportOpen} />
-            </div>
-
-            {/* Mounted like the review section, so the label carries its count. */}
-            <div hidden={tab !== "trips"}>
-              <TripSuggestionsTab onCount={reportTripSuggestions} />
-            </div>
-
-            <div hidden={tab !== "sharing"}>
-              <SharingTab onCount={reportSharing} />
-            </div>
-
-            <div hidden={tab !== "updates"}>
-              <p className="t-caption mb-4">{t("dataQuality:inbox.flightUpdates.description")}</p>
-
-              {/* The totals only once there are any: five zeros in colour read as
-            a result, not as "nothing has happened yet". */}
-              {statistics && statistics.totalUpdates > 0 && (
-                <p
-                  className="t-caption mb-4 flex flex-wrap gap-x-4 gap-y-1"
-                  style={{ fontFamily: "var(--ts-font-mono)" }}
-                >
-                  {(
-                    [
-                      ["total", statistics.totalUpdates],
-                      ["applied", statistics.appliedUpdates],
-                      ["rejected", statistics.rejectedUpdates],
-                      ["edited", statistics.editedUpdates],
-                      ["expired", statistics.expiredUpdates],
-                    ] as const
-                  ).map(([key, value]) => (
-                    <span key={key}>
-                      <span style={{ color: "var(--ts-text-bright)" }}>{value}</span>{" "}
-                      {t(`pendingUpdates:statistics.${key}`)}
-                    </span>
-                  ))}
-                </p>
-              )}
-
-              <div className="mb-5 flex flex-wrap items-center gap-3">
-                <div
-                  role="group"
-                  aria-label={t("pendingUpdates:filters.status")}
-                  className="flex flex-wrap gap-2"
-                >
-                  {(["pending", "edited", "applied", "rejected", "expired", "all"] as const).map(
-                    (option) => {
-                      const active = statusFilter === option;
-                      return (
-                        <button
-                          key={option}
-                          type="button"
-                          aria-pressed={active}
-                          onClick={() => setStatusFilter(option)}
-                          className="rounded-full px-3.5 py-1.5 text-sm font-semibold"
-                          style={{
-                            background: active ? "var(--ts-accent)" : "transparent",
-                            color: active ? "var(--ts-accent-text)" : "var(--ts-text-bright)",
-                            border: `1px solid ${active ? "var(--ts-accent)" : "var(--ts-border)"}`,
-                          }}
-                        >
-                          {t(`pendingUpdates:filters.${option}`)}
-                        </button>
-                      );
-                    }
-                  )}
-                </div>
-                <label className="ml-auto flex items-center gap-2 text-sm">
-                  <span className="t-caption">{t("pendingUpdates:filters.sortBy")}</span>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as "createdAt" | "expiresAt")}
-                    className="rounded-full border px-3 py-1.5 text-sm"
-                    style={{
-                      background: "var(--ts-surface)",
-                      borderColor: "var(--ts-border)",
-                      color: "var(--ts-text-bright)",
-                    }}
-                  >
-                    <option value="createdAt">{t("pendingUpdates:filters.createdAt")}</option>
-                    <option value="expiresAt">{t("pendingUpdates:filters.expiresAt")}</option>
-                  </select>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                  aria-label={t("pendingUpdates:filters.sortOrder")}
-                  className="rounded-full border px-3 py-1.5 text-sm"
-                  style={{ borderColor: "var(--ts-border)", color: "var(--ts-text-bright)" }}
-                >
-                  {sortOrder === "asc" ? "↑" : "↓"}
-                </button>
-              </div>
-
-              {/* Updates List */}
-              {showLoader ? (
-                <div className="flex justify-center py-12">
-                  <GlobeLoader size={160} label={t("common:loading.default")} />
-                </div>
-              ) : sortedUpdates.length === 0 ? (
-                /* `pending`, not `nothing`. The copy is already in the future tense
-             — "Updates erscheinen hier, wenn …" — so this is not "there is
-             nothing", it is "it has not happened yet", which is the kind the
-             design system paints in `info` and never in red. `nothing` would
-             have owed the reader a call to action; a waiting state does not,
-             because the nightly run is what fills this. */
-                <Card flush>
-                  <EmptyState
-                    kind="pending"
-                    icon={
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M22 12h-6l-2 3h-4l-2-3H2" />
-                        <path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
-                      </svg>
-                    }
-                    title={t("pendingUpdates:empty.title")}
-                    description={t("pendingUpdates:empty.description")}
-                  />
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                  {sortedUpdates.map((update) => (
-                    <PendingUpdateCard
-                      key={update.id}
-                      update={update}
-                      onApply={() => handleApply(update.id)}
-                      onReject={() => handleReject(update.id)}
-                      onEdit={(editedData) => handleEdit(update.id, editedData)}
-                      onSelect={() => setSelectedUpdate(update.id)}
-                      isSelected={selectedUpdate === update.id}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Mounted like the review section above, and for the same reason: the
-            tab label's count comes from the tab's own load, so it would stay
-            blank until somebody opened it. Last in the DOM because it is last
-            in the strip. `active` is what keeps the rest of the tab's fetching
-            — the Immich connection status — off an inbox visit that never opens
-            it; the list is the price of the count and runs either way. */}
-            {photoJourneysVisible && (
-              <div hidden={tab !== "photos"}>
-                <PhotoJourneysTab onPendingCount={reportJourneys} active={tab === "photos"} />
-              </div>
-            )}
-
-            {tab === "dawarich" && <DawarichStaysTab />}
-          </>
-        )}
-
-        {/* Statistics Impact Preview Modal */}
-        {selectedUpdate && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div
-              className="rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-auto"
-              style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-            >
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold" style={{ color: "var(--text-primary)" }}>
-                    {t("pendingUpdates:preview.title")}
-                  </h2>
-                  <button
-                    onClick={() => setSelectedUpdate(null)}
-                    style={{ color: "var(--text-muted)" }}
-                  >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
-                      />
-                    </svg>
-                  </button>
-                </div>
-                {(() => {
-                  const update = updates.find((u) => u.id === selectedUpdate);
-                  return update ? (
-                    <StatisticsImpactPreview impact={update.statisticsImpact} />
-                  ) : null;
-                })()}
-              </div>
-            </div>
-          </div>
-        )}
+        <div hidden={tab !== "sharing"}>
+          <SharingTab onCount={reportSharing} />
+        </div>
       </div>
     </AppShell>
   );

@@ -3,8 +3,13 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
-import DataQualityFlagCard from "../../components/DataQuality/DataQualityFlagCard";
+import ReviewCard from "../../components/inbox/workspace/ReviewCard";
 import type { DataQualityFlag } from "../../types/dataQuality";
+import { dataQualityFlagsApi } from "../../lib/api/dataQualityFlags";
+
+vi.mock("../../lib/api/dataQualityFlags", () => ({
+  dataQualityFlagsApi: { resolve: vi.fn(), dismiss: vi.fn(), run: vi.fn() },
+}));
 import { formatDate } from "../../lib/displayFormat";
 
 /**
@@ -77,22 +82,21 @@ const reversedFlag: DataQualityFlag = {
   },
 };
 
-function renderCard(
-  flag: DataQualityFlag,
-  handlers?: { resolve?: () => void; dismiss?: () => void }
-) {
-  return render(
+/** The card's act runs the answer it is handed, as the workspace's does. */
+function renderCard(flag: DataQualityFlag) {
+  const act = vi.fn(async (operation: () => Promise<unknown>) => {
+    await operation();
+    return true;
+  });
+  render(
     <MemoryRouter>
-      <DataQualityFlagCard
-        flag={flag}
-        onResolve={handlers?.resolve ?? vi.fn()}
-        onDismiss={handlers?.dismiss ?? vi.fn()}
-      />
+      <ReviewCard flag={flag} busy={false} act={act} />
     </MemoryRouter>
   );
+  return act;
 }
 
-describe("DataQualityFlagCard — both values, neither marked correct", () => {
+describe("ReviewCard — both values, neither marked correct", () => {
   it("shows the stored country AND the country read from the address", () => {
     renderCard(mismatchFlag);
 
@@ -136,7 +140,7 @@ describe("DataQualityFlagCard — both values, neither marked correct", () => {
   });
 });
 
-describe("DataQualityFlagCard — the record is reachable and editable", () => {
+describe("ReviewCard — the record is reachable and editable", () => {
   it("links a lodging flag to the lodging detail page", () => {
     renderCard(mismatchFlag);
     expect(screen.getByRole("link", { name: "Hotel Sport" }).getAttribute("href")).toBe(
@@ -155,13 +159,13 @@ describe("DataQualityFlagCard — the record is reachable and editable", () => {
   });
 });
 
-describe("DataQualityFlagCard — the subject is named, never coded", () => {
+describe("ReviewCard — the subject is named, never coded", () => {
   it("localises a country subject instead of printing its ISO code", () => {
     // The whole reason a country subject carries `countryCode` and no `label`:
     // the server cannot know the reader's language, so the name is made here.
     renderCard(undatedFlag);
 
-    expect(screen.getByRole("heading", { level: 3 }).textContent).toBe("Czechia");
+    expect(screen.getByRole("heading", { level: 4 }).textContent).toBe("Czechia");
     expect(screen.queryByRole("heading", { name: "CZ" })).toBeNull();
   });
 
@@ -174,18 +178,18 @@ describe("DataQualityFlagCard — the subject is named, never coded", () => {
       subject: { entityType: "country", countryCode: "not-a-code" },
     });
 
-    expect(screen.getByRole("heading", { level: 3 }).textContent).toBe(
+    expect(screen.getByRole("heading", { level: 4 }).textContent).toBe(
       "dataQuality:flag.unknownCountry"
     );
   });
 
   it("names a row from the label the user wrote", () => {
     renderCard(mismatchFlag);
-    expect(screen.getByRole("heading", { level: 3 }).textContent).toBe("Hotel Sport");
+    expect(screen.getByRole("heading", { level: 4 }).textContent).toBe("Hotel Sport");
   });
 });
 
-describe("DataQualityFlagCard — the two answers are not synonyms", () => {
+describe("ReviewCard — the two answers are not synonyms", () => {
   it("labels them differently and states the different consequence of each", () => {
     renderCard(mismatchFlag);
 
@@ -202,22 +206,27 @@ describe("DataQualityFlagCard — the two answers are not synonyms", () => {
     expect(screen.getByText("dataQuality:flag.actions.dismiss.hint")).toBeInTheDocument();
   });
 
-  it("calls resolve and dismiss separately", async () => {
-    const resolve = vi.fn();
-    const dismiss = vi.fn();
-    renderCard(mismatchFlag, { resolve, dismiss });
+  it("sends resolve and dismiss to their own endpoints, never both", async () => {
+    const act = renderCard(mismatchFlag);
 
     await userEvent.click(
       screen.getByRole("button", { name: "dataQuality:flag.actions.resolve.label" })
     );
-    expect(resolve).toHaveBeenCalledTimes(1);
-    expect(dismiss).not.toHaveBeenCalled();
+    expect(dataQualityFlagsApi.resolve).toHaveBeenCalledWith("flag-1");
+    expect(dataQualityFlagsApi.dismiss).not.toHaveBeenCalled();
+    // The confirmation the old tab toasted travels with the answer.
+    expect(act).toHaveBeenLastCalledWith(
+      expect.any(Function),
+      false,
+      "dataQuality:inbox.messages.resolved"
+    );
 
     await userEvent.click(
       screen.getByRole("button", { name: "dataQuality:flag.actions.dismiss.label" })
     );
-    expect(dismiss).toHaveBeenCalledTimes(1);
-    expect(resolve).toHaveBeenCalledTimes(1);
+    expect(dataQualityFlagsApi.dismiss).toHaveBeenCalledWith("flag-1");
+    expect(dataQualityFlagsApi.resolve).toHaveBeenCalledTimes(1);
+    expect(dataQualityFlagsApi.run).not.toHaveBeenCalled();
   });
 
   it("offers no answer buttons on a flag that was already answered", () => {
@@ -227,7 +236,7 @@ describe("DataQualityFlagCard — the two answers are not synonyms", () => {
   });
 });
 
-describe("DataQualityFlagCard — degrades instead of crashing", () => {
+describe("ReviewCard — degrades instead of crashing", () => {
   it("renders a flag whose subject is missing", () => {
     const { subject: _subject, ...withoutSubject } = mismatchFlag;
     renderCard(withoutSubject as DataQualityFlag);

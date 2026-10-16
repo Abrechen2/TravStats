@@ -30,6 +30,7 @@ vi.mock("../../../../lib/api/photoJourneys", () => ({
   photoJourneysApi: { list: vi.fn(), accept: vi.fn(), dismiss: vi.fn(), review: vi.fn() },
   photoJourneyPreviewUrl: () => "",
 }));
+vi.mock("../../../GlobeLoader", () => ({ GlobeLoader: () => null }));
 vi.mock("../../../../lib/api/trips", () => ({
   tripsApi: { getAll: vi.fn(), getById: vi.fn(), update: vi.fn(), create: vi.fn() },
 }));
@@ -74,9 +75,9 @@ describe("Inbox workspace", () => {
     await ready();
     const end = screen.getAllByLabelText("Ende")[0];
     fireEvent.change(end, { target: { value: "2026-09-17" } });
-    await userEvent.click(screen.getByRole("button", { name: "Liste" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Liste" }));
     expect(screen.getAllByLabelText("Ende")[0]).toHaveValue("2026-09-17");
-    await userEvent.click(screen.getByRole("button", { name: "Nach Reise" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Nach Reise" }));
     expect(screen.getAllByLabelText("Ende")[0]).toHaveValue("2026-09-17");
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Wien" } });
     expect(
@@ -210,8 +211,8 @@ describe("Inbox workspace", () => {
     await userEvent.click(screen.getByRole("button", { name: "Reise mit diesen Angaben anlegen" }));
     await screen.findByRole("alert");
     expect(tripsApi.create).toHaveBeenCalledOnce();
-    await userEvent.click(screen.getByRole("button", { name: "Liste" }));
-    await userEvent.click(screen.getByRole("button", { name: "Nach Reise" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Liste" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Nach Reise" }));
     await userEvent.click(screen.getByRole("button", { name: "Reise mit diesen Angaben anlegen" }));
     await waitFor(() => expect(photoJourneysApi.accept).toHaveBeenCalledTimes(2));
     expect(tripsApi.create).toHaveBeenCalledOnce();
@@ -224,10 +225,13 @@ describe("Inbox workspace", () => {
     mount();
     await ready();
     expect(photoJourneysApi.list).not.toHaveBeenCalled();
-    const views = screen.getByRole("group", { name: "Ansicht wählen" });
-    const list = within(views).getByRole("button", { name: "Liste" });
-    list.focus();
-    await userEvent.keyboard("{Enter}");
-    expect(list).toHaveAttribute("aria-pressed", "true");
+    // A radio group: arrow keys move the choice, the chosen pill is the tab stop.
+    const views = screen.getByRole("radiogroup", { name: "Ansicht wählen" });
+    within(views).getByRole("radio", { name: "Karten" }).focus();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(within(views).getByRole("radio", { name: "Liste" })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
   });
 });

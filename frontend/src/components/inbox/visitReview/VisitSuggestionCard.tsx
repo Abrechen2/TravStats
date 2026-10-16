@@ -34,6 +34,7 @@ export default function VisitSuggestionCard({
   onCorrect,
   onAccept,
   onDismiss,
+  embedded = false,
 }: {
   journey: PhotoJourney;
   label: string;
@@ -45,6 +46,11 @@ export default function VisitSuggestionCard({
   onCorrect: (next: VisitCorrection) => void;
   onAccept: () => void;
   onDismiss: () => void;
+  /**
+   * Drawn inside an inbox card that already names the place and carries the
+   * border: no second frame and no second heading.
+   */
+  embedded?: boolean;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["dataQuality", "stats"]);
   const distanceUnit = useSettingsStore((s) => s.units.distanceUnit);
@@ -63,12 +69,17 @@ export default function VisitSuggestionCard({
 
   return (
     <article
-      aria-labelledby={headingId}
-      className="rounded-[var(--ts-radius-card)] p-4"
-      style={{
-        background: "var(--ts-surface)",
-        border: `1px solid ${selected ? "var(--ts-accent)" : "var(--ts-border)"}`,
-      }}
+      aria-labelledby={embedded ? undefined : headingId}
+      aria-label={embedded ? label : undefined}
+      className={embedded ? undefined : "rounded-[var(--ts-radius-card)] p-4"}
+      style={
+        embedded
+          ? undefined
+          : {
+              background: "var(--ts-surface)",
+              border: `1px solid ${selected ? "var(--ts-accent)" : "var(--ts-border)"}`,
+            }
+      }
     >
       <div className="flex items-start" style={{ gap: "var(--ts-space-md)" }}>
         <label
@@ -88,12 +99,14 @@ export default function VisitSuggestionCard({
           <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
             {photoJourneySpan(journey, format)}
           </span>
-          <h3
-            id={headingId}
-            style={{ fontSize: 16, fontWeight: 700, color: "var(--ts-text-bright)" }}
-          >
-            {label}
-          </h3>
+          {!embedded && (
+            <h3
+              id={headingId}
+              style={{ fontSize: 16, fontWeight: 700, color: "var(--ts-text-bright)" }}
+            >
+              {label}
+            </h3>
+          )}
           <ul
             className="t-caption mt-1 flex flex-wrap gap-x-3"
             aria-label={t(`${base}.review.reasonLabel`)}

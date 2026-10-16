@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useDisplayFormat } from "../../../lib/displayFormat";
 import { tripSuggestionsApi } from "../../../lib/api/tripSuggestions";
-import type { TripSuggestion } from "../../../types/tripSuggestion";
+import type { TripSuggestion, TripSuggestionEdits } from "../../../types/tripSuggestion";
 import TripSuggestionEditor, { domainKey } from "../TripSuggestionEditor";
 import { suggestedTripName } from "../tripSuggestionCopy";
 import Button from "../../ui/Button";
@@ -37,6 +37,15 @@ export default function TripProposalCard({
       span: s.newSpan ? `${day(s.newSpan.startDay)} – ${day(s.newSpan.endDay)}` : "",
     }
   );
+  const accept = (edits: TripSuggestionEdits) =>
+    void act(
+      () => tripSuggestionsApi.accept(s.id, edits),
+      false,
+      t(`${NS}.messages.accepted.${s.kind}`)
+    );
+  // What an unedited accept sends: the localized name for a new trip (the
+  // server never composes one in a language), nothing else.
+  const quickEdits: TripSuggestionEdits = s.kind === "new_trip" ? { name } : {};
   return (
     <div className="space-y-3">
       <h4 className="t-label-mono">{t(`${W}.why`)}</h4>
@@ -79,6 +88,9 @@ export default function TripProposalCard({
             </li>
           ))}
       </ol>
+      {s.members.some((m) => m.domain === "tour") && (
+        <p className="t-caption">{t(`${NS}.tourNote`)}</p>
+      )}
       <p className="t-caption">{t(`${NS}.creates.${s.kind}`)}</p>
       <fieldset disabled={busy} className="min-w-0">
         {editing ? (
@@ -87,16 +99,23 @@ export default function TripProposalCard({
             initialName={name}
             busy={busy}
             submitLabel={t(`${W}.acceptProposal.${s.kind}`, { count: s.members.length })}
-            onSubmit={(edits) => void act(() => tripSuggestionsApi.accept(s.id, edits))}
+            onSubmit={accept}
             onCancel={() => setEditing(false)}
           />
         ) : (
-          <Button onClick={() => setEditing(true)}>{t(`${W}.editProposal`)}</Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="primary" disabled={busy} onClick={() => accept(quickEdits)}>
+              {t(`${W}.acceptProposal.${s.kind}`, { count: s.members.length })}
+            </Button>
+            <Button onClick={() => setEditing(true)}>{t(`${W}.editProposal`)}</Button>
+          </div>
         )}
         <Button
           className="mt-3"
           disabled={busy}
-          onClick={() => void act(() => tripSuggestionsApi.dismiss(s.id))}
+          onClick={() =>
+            void act(() => tripSuggestionsApi.dismiss(s.id), false, t(`${NS}.messages.dismissed`))
+          }
         >
           {t(`${W}.dismissProposal.${s.kind}`)}
         </Button>
