@@ -106,3 +106,23 @@ describe("accepting a Dawarich stay", () => {
     expect(place.city).toBe("Seoul");
   });
 });
+
+describe("GET /dawarich-stays/settings", () => {
+  it("answers connected:false only for a missing own connection", async () => {
+    const r = await api().get("/api/v1/dawarich-stays/settings").set("Cookie", cookie);
+    expect(r.status).toBe(200);
+    expect(r.body.data.connected).toBe(false);
+    expect(r.body.data.pausedReason).toBe("connectionMissing");
+  });
+  it("lets a database failure surface instead of reporting a disconnected account", async () => {
+    const spy = jest
+      .spyOn(prisma.userSettings, "findUnique")
+      .mockRejectedValueOnce(new Error("connection terminated"));
+    try {
+      const r = await api().get("/api/v1/dawarich-stays/settings").set("Cookie", cookie);
+      expect(r.status).toBe(500);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});

@@ -39,8 +39,11 @@ router.get("/settings", async (req: AuthRequest, res, next) => {
     try {
       await ownConnection(userId);
       connected = true;
-    } catch {
-      /* connection unavailable, no secret returned */
+    } catch (error) {
+      // Only "no own connection" means disconnected. A database error used to
+      // land here too and was shown as a missing connection.
+      if (!(error instanceof AppError && error.code === "DAWARICH_OWN_CONNECTION_REQUIRED"))
+        throw error;
     }
     const places = await placesEnabled(userId);
     const pausedReason = !state?.enabled
