@@ -62,7 +62,13 @@ async function bookingRow(userId: string, bookingId: string) {
       freeCancellationZone: true,
       paymentDueOn: true,
       _count: {
-        select: { cruises: true, railJourneys: true, busJourneys: true, lodgingStays: true },
+        select: {
+          cruises: true,
+          railJourneys: true,
+          busJourneys: true,
+          ferryJourneys: true,
+          lodgingStays: true,
+        },
       },
     },
   });
@@ -76,17 +82,26 @@ async function segmentRows(userId: string, bookingId: string) {
 }
 
 /**
- * The entries on the booking that are not flights. A bus ride shares a booking
- * the same way a train ride does (the bus domain arrived after the split), so
- * it counts too — or a flights-only split would misstate a mixed booking.
+ * The entries on the booking that are not flights. A bus ride or a ferry
+ * crossing shares a booking the same way a train ride does (both domains
+ * arrived after the split), so they count too — or a flights-only split would
+ * misstate a mixed booking. Ferries were left out, and such a booking could be
+ * split across its flights alone.
  */
 function otherEntryCount(count: {
   cruises: number;
   railJourneys: number;
   busJourneys: number;
+  ferryJourneys: number;
   lodgingStays: number;
 }): number {
-  return count.cruises + count.railJourneys + count.busJourneys + count.lodgingStays;
+  return (
+    count.cruises +
+    count.railJourneys +
+    count.busJourneys +
+    count.ferryJourneys +
+    count.lodgingStays
+  );
 }
 
 /**

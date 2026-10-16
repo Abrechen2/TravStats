@@ -55,7 +55,7 @@ export const flightBookingSummary = registry.register(
       otherEntries: z
         .number()
         .int()
-        .describe("Cruises, train and bus journeys and stays filed on the same booking"),
+        .describe("Cruises, train, bus and ferry journeys and stays filed on the same booking"),
       split: bookingSplit.nullable().describe("The optional split across the segments, or null"),
       times: bookingTimesSchema,
     })
