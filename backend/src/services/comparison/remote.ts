@@ -10,7 +10,6 @@
  * for up to ten seconds per peer would pin a pooled connection and every lock it took.
  */
 import { randomBytes } from "crypto";
-import { ZodError } from "zod";
 import type { AppError } from "../../middleware/errorHandler";
 import { prisma, type DbTransaction } from "../../db";
 import { Prisma, type LeaderboardRemote } from "../../prisma";
@@ -43,6 +42,7 @@ import {
   scopeJson,
 } from "./consents";
 import { comparisonError } from "./errors";
+import { UnexpectedReply, failureKind, tellEnded } from "./remoteNotice";
 
 const INVITE_TTL_MS = 72 * 3_600_000;
 const OPEN_INVITES = 20;
@@ -52,25 +52,6 @@ export type PeerReadiness = "ready" | "outdated" | "unknown" | "unreachable";
 export type RemoteResult =
   | { status: "ok"; snapshot: LeaderboardSnapshot }
   | { status: Exclude<RowStatus, "ok">; sharedYear?: number };
-
-/** Why a reply that parsed was still not used. */
-type UnexpectedReplyKind = "wrong-year" | "nameless" | "channel-reused";
-
-/** A reply that parsed but does not answer what was asked (another year, a reused channel). */
-class UnexpectedReply extends Error {
-  constructor(readonly kind: UnexpectedReplyKind) {
-    super(`Unexpected peer reply: ${kind}`);
-    this.name = "UnexpectedReply";
-  }
-}
-
-/** The log's name for why another server's answer was not used. */
-const failureKind = (error: unknown): string => {
-  if (error instanceof PeerRefusal) return error.kind;
-  if (error instanceof UnexpectedReply) return error.kind;
-  if (error instanceof ZodError || error instanceof SyntaxError) return "malformed";
-  return "unreachable";
-};
 
 const speaksOurVersion = (versions: readonly number[]) =>
   versions.some((v) => (SERVED_VERSIONS as readonly number[]).includes(v));
@@ -309,19 +290,6 @@ async function recordClaim(
     // No withdrawal for a reused channel: on the other server it names a friendship that exists.
     if (reused) throw unreachable(userId, origin, "channel-reused");
     throw error;
-  }
-}
-
-/** Best-effort: tells the other server a friendship on this channel is over. */
-async function tellEnded(origin: string, channel: string): Promise<void> {
-  try {
-    await exchange(origin, { action: "lb-state", channel, status: "withdrawn" });
-  } catch (error) {
-    // Its pulls are refused (unknown channel) from now on, so nothing more is served.
-    logger.warn(
-      { operation: "comparison_remote_end_unsent", origin, kind: failureKind(error) },
-      "The other server was not told that a comparison ended"
-    );
   }
 }
 

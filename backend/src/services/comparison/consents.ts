@@ -31,6 +31,7 @@ import {
   type RequestView,
 } from "../../schemas/comparison";
 import { comparisonError } from "./errors";
+import { tellEnded } from "./remoteNotice";
 
 export const localKey = (userId: string): string => `local:${userId}`;
 export const remoteKey = (remoteId: string): string => `remote:${remoteId}`;
@@ -274,9 +275,9 @@ export async function declineConsent(
 ): Promise<{ declined: true }> {
   const row = await ownedConsent(ownerId, consentId);
   if (!isQuestion(row)) throw notPending(ownerId, consentId);
+  if (row.remoteId) return declineRemote(ownerId, consentId, row.remoteId);
   await prisma.$transaction(async (tx) => {
     if (row.viewerId) await lockPair(tx, ownerId, row.viewerId);
-    else if (row.remoteId) await lockRemotePair(tx, ownerId, row.remoteId);
     const now = new Date();
     const answered = await tx.leaderboardConsent.updateMany({
       where: { id: row.id, status: "pending", decidedAt: null },
@@ -291,6 +292,57 @@ export async function declineConsent(
         data: { status: "withdrawn", decidedAt: now },
       });
   });
+  return { declined: true };
+}
+
+const OPEN_QUESTION = { status: "pending", decidedAt: null };
+
+/**
+ * A no to someone on another server ends that friendship outright: a declined row would keep
+ * the claimant on this owner's leaderboard (every remote row is a row there) and the other
+ * server would never learn the answer. The remote row goes, its consent with it by cascade,
+ * and the other server is told afterwards, best-effort, as `endRemote` does.
+ *
+ * Two invitation codes redeemed by the same person leave two questions here; a no answers both,
+ * so no second request from them stays behind.
+ */
+async function declineRemote(
+  ownerId: string,
+  consentId: string,
+  remoteId: string
+): Promise<{ declined: true }> {
+  const ended = await prisma.$transaction(async (tx) => {
+    const asked = await tx.leaderboardRemote.findFirst({
+      where: {
+        id: remoteId,
+        userId: ownerId,
+        consents: { some: { id: consentId, ...OPEN_QUESTION } },
+      },
+    });
+    if (!asked) throw notPending(ownerId, consentId);
+    const sameQuestion = {
+      userId: ownerId,
+      origin: asked.origin,
+      username: asked.username,
+      consents: { some: { ownerId, ...OPEN_QUESTION } },
+    };
+    const siblings = await tx.leaderboardRemote.findMany({
+      where: sameQuestion,
+      select: { id: true },
+    });
+    // Every pair lock in one order, so two declines of the same person cannot deadlock.
+    const ids = [...new Set([remoteId, ...siblings.map((r) => r.id)])].sort();
+    for (const id of ids) await lockRemotePair(tx, ownerId, id);
+    // Re-read under the locks: the other server may have ended one of them in between.
+    const gone = await tx.leaderboardRemote.findMany({
+      where: { ...sameQuestion, id: { in: ids } },
+      select: { id: true, origin: true, channel: true },
+    });
+    if (!gone.some((r) => r.id === remoteId)) throw notPending(ownerId, consentId);
+    await tx.leaderboardRemote.deleteMany({ where: { id: { in: gone.map((r) => r.id) } } });
+    return gone;
+  });
+  for (const remote of ended) await tellEnded(remote.origin, remote.channel);
   return { declined: true };
 }
 

@@ -13,6 +13,8 @@ import {
   peerReadiness,
   pullRemote,
 } from "../remote";
+import { declineConsent, listPeople } from "../consents";
+import { readLeaderboard } from "../leaderboard";
 
 jest.mock("../../federation/security", () => ({
   ...jest.requireActual("../../federation/security"),
@@ -515,5 +517,99 @@ describe("ending a remote friendship", () => {
       }),
       expect.any(String)
     );
+  });
+});
+
+describe("declining a request from another server", () => {
+  /** What the other server's lb-claim leaves here: a remote friend and the owner's question. */
+  async function questionFrom(owner: string, username = "bea", channel = randomUUID()) {
+    const remote = await prisma.leaderboardRemote.create({
+      data: {
+        userId: owner,
+        origin: PEER,
+        channel,
+        username,
+        displayName: `${username} B`,
+        consents: { create: { ownerId: owner } },
+      },
+      include: { consents: true },
+    });
+    return { remote, consentId: remote.consents[0].id };
+  }
+  const neverPulled = async () => ({ status: "unreachable" as const });
+
+  it("removes the friend from the list and the leaderboard and tells the other server", async () => {
+    const owner = await newUser("lb-dec");
+    try {
+      const { remote, consentId } = await questionFrom(owner);
+      const tx = watchTransactions();
+      const open: number[] = [];
+      jest.mocked(exchange).mockImplementation(async () => {
+        open.push(tx.open());
+        return { ok: true };
+      });
+      try {
+        await expect(declineConsent(owner, consentId)).resolves.toEqual({ declined: true });
+      } finally {
+        tx.restore();
+      }
+      expect(await prisma.leaderboardRemote.count({ where: { id: remote.id } })).toBe(0);
+      expect(await prisma.leaderboardConsent.count({ where: { remoteId: remote.id } })).toBe(0);
+      expect(exchange).toHaveBeenCalledWith(PEER, {
+        action: "lb-state",
+        channel: remote.channel,
+        status: "withdrawn",
+      });
+      expect(open).toEqual([0]);
+      const listedNow = await listPeople(owner);
+      expect(listedNow.requests).toEqual([]);
+      expect(listedNow.people).toEqual([]);
+      const board = await readLeaderboard(owner, { year: null }, neverPulled);
+      expect(board.rows.map((r) => r.person.kind)).toEqual(["self"]);
+    } finally {
+      await prisma.user.delete({ where: { id: owner } });
+    }
+  });
+
+  it("leaves no second question from the same person behind (two codes, one claimant)", async () => {
+    const owner = await newUser("lb-dec2");
+    try {
+      const first = await questionFrom(owner, "bea");
+      const second = await questionFrom(owner, "bea");
+      const friend = await remoteFor(owner); // someone else, already a friend
+      jest.mocked(exchange).mockResolvedValue({ ok: true });
+      await declineConsent(owner, first.consentId);
+      const left = await prisma.leaderboardRemote.findMany({
+        where: { userId: owner },
+        select: { id: true },
+      });
+      expect(left).toEqual([{ id: friend.id }]);
+      for (const channel of [first.remote.channel, second.remote.channel])
+        expect(exchange).toHaveBeenCalledWith(PEER, {
+          action: "lb-state",
+          channel,
+          status: "withdrawn",
+        });
+      const board = await readLeaderboard(owner, { year: null }, neverPulled);
+      expect(board.rows.filter((r) => r.person.kind === "remote")).toHaveLength(1);
+    } finally {
+      await prisma.user.delete({ where: { id: owner } });
+    }
+  });
+
+  it("still removes it here when the other server cannot be told", async () => {
+    const owner = await newUser("lb-dec3");
+    try {
+      const { remote, consentId } = await questionFrom(owner);
+      jest.mocked(exchange).mockRejectedValue(refused("unknown-channel"));
+      await expect(declineConsent(owner, consentId)).resolves.toEqual({ declined: true });
+      expect(await prisma.leaderboardRemote.count({ where: { id: remote.id } })).toBe(0);
+      expect(warn).toHaveBeenCalledWith(
+        expect.objectContaining({ operation: "comparison_remote_end_unsent" }),
+        expect.any(String)
+      );
+    } finally {
+      await prisma.user.delete({ where: { id: owner } });
+    }
   });
 });
