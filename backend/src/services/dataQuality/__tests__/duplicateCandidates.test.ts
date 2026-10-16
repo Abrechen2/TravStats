@@ -95,6 +95,15 @@ describe("findDuplicateCandidates — the same entry twice, asked on the newer c
     expect(findings).toEqual([]);
   });
 
+  it("does not ask again about a flight the user already marked as a duplicate", () => {
+    const findings = findDuplicateCandidates(
+      snapshot({
+        flights: [flight({ id: "a", status: "duplicated" }), flight({ id: "b", createdAt: later })],
+      })
+    );
+    expect(findings).toEqual([]);
+  });
+
   it("asks about the same train number on the same day, not on the next one", () => {
     const twice = findDuplicateCandidates(
       snapshot({

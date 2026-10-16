@@ -1,6 +1,7 @@
 import { daysBetween } from "../../../shared/time/localDate";
 import type { FlightRecord, RecordSnapshot, StayRecord } from "../recordGather";
 import type { DataQualityFinding } from "../types";
+import { isSetAside } from "./setAside";
 
 /**
  * Entries one traveller cannot all have made (forgejo#282).
@@ -34,7 +35,6 @@ import type { DataQualityFinding } from "../types";
 
 export const FLIGHT_OVERLAP_TOLERANCE_MINUTES = 60;
 
-const CANCELLED = "cancelled";
 const pairKey = (a: string, b: string): string => `${a}|${b}`;
 
 interface TimedFlight {
@@ -49,7 +49,7 @@ function flightConflicts(
 ): DataQualityFinding[] {
   const tolerance = FLIGHT_OVERLAP_TOLERANCE_MINUTES * 60_000;
   const timed: TimedFlight[] = flights
-    .filter((f) => f.status !== CANCELLED && f.departureAt && f.arrivalAt)
+    .filter((f) => !isSetAside(f.status) && f.departureAt && f.arrivalAt)
     .map((f) => ({
       record: f,
       dep: (f.departureAt as Date).getTime(),
@@ -105,7 +105,7 @@ function stayConflicts(
   skipPairs: ReadonlySet<string>
 ): DataQualityFinding[] {
   const spans: NightSpan[] = stays
-    .filter((s) => s.status !== CANCELLED && s.firstDay && s.lastDay && s.firstDay < s.lastDay)
+    .filter((s) => !isSetAside(s.status) && s.firstDay && s.lastDay && s.firstDay < s.lastDay)
     .map((s) => ({ record: s, checkIn: s.firstDay as string, checkOut: s.lastDay as string }))
     .sort((a, b) =>
       a.checkIn < b.checkIn ? -1 : a.checkIn > b.checkIn ? 1 : a.record.id < b.record.id ? -1 : 1
