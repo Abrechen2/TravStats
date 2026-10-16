@@ -27,9 +27,27 @@ vi.mock("../../../lib/api/placeImport", () => ({
   commitPlaceImport: (...args: unknown[]) => commitPlaceImport(...args),
 }));
 vi.mock("../../places/PlaceImportPreviewModal", () => ({
-  PlaceImportPreviewModal: ({ rows }: { rows: Array<{ name: string }> }) => (
-    <div data-testid="preview">{rows.map((r) => r.name).join(",")}</div>
+  PlaceImportPreviewModal: ({
+    rows,
+    onCommit,
+  }: {
+    rows: Array<{ name: string }>;
+    onCommit: (rows: Array<{ name: string }>) => Promise<void>;
+  }) => (
+    <div>
+      <div data-testid="preview">{rows.map((r) => r.name).join(",")}</div>
+      <button type="button" onClick={() => void onCommit(rows)}>
+        commit
+      </button>
+    </div>
   ),
+}));
+const { addToast } = vi.hoisted(() => ({ addToast: vi.fn() }));
+vi.mock("../../../store/toastStore", () => ({
+  useToastStore: (select: (s: { addToast: () => void }) => unknown) => select({ addToast }),
+}));
+vi.mock("../../../lib/placeImportResult", () => ({
+  describePlaceCommitResult: () => ({ type: "success", message: "ok" }),
 }));
 
 const TICKET = "Museum am Probeufer\nBesuchstag: 14.09.2027";
@@ -48,6 +66,7 @@ describe("PlaceDocumentImportTile", () => {
     parsePdf.mockReset();
     previewPlaceImport.mockReset();
     commitPlaceImport.mockReset();
+    addToast.mockReset();
   });
 
   it("does not read an empty document", () => {
@@ -111,7 +130,7 @@ describe("PlaceDocumentImportTile", () => {
       target: { files: [pdf] },
     });
     await waitFor(() => expect(screen.getByTestId("preview")).toHaveTextContent("Museum"));
-    expect(parsePdf).toHaveBeenCalledWith(btoa("%PDF-1.4 invented"), "place");
+    expect(parsePdf).toHaveBeenCalledWith(btoa("%PDF-1.4 invented"), "place", { retain: true });
     expect(parseEmailFile).not.toHaveBeenCalled();
   });
 
@@ -126,10 +145,61 @@ describe("PlaceDocumentImportTile", () => {
     fireEvent.change(screen.getByLabelText("places:import.document.uploadLabel"), {
       target: { files: [file] },
     });
-    await waitFor(() => expect(parseEmailFile).toHaveBeenCalledWith(file, "place"));
+    await waitFor(() =>
+      expect(parseEmailFile).toHaveBeenCalledWith(file, "place", { retain: true })
+    );
     expect(
       await screen.findByText("places:import.document.fallback.notRecognised")
     ).toBeInTheDocument();
+  });
+
+  // The ticket a place was read from was thrown away: parsed without
+  // `retain`, nothing was kept to file on the visit.
+  it("keeps the document and files it with the import", async () => {
+    const candidate = { sourceRowIndex: 0, name: "Museum am Probeufer", visitedAt: "2027-09-14" };
+    parsePdf.mockResolvedValueOnce({
+      candidates: [candidate],
+      templateId: "place:user-1",
+      documentId: "doc-7",
+    });
+    previewPlaceImport.mockResolvedValueOnce({
+      rows: [
+        { ...candidate, flags: [], dedupeHint: "none", matchedPlaceId: null, action: "create" },
+      ],
+      summary: { newRows: 1, alreadyPresent: 0, needsInput: 0 },
+    });
+    commitPlaceImport.mockResolvedValueOnce({ created: 1, documentsFiled: 1 });
+    render(<PlaceDocumentImportTile />);
+    const pdf = new File(["%PDF-1.4 invented"], "ticket.pdf", { type: "application/pdf" });
+    fireEvent.change(screen.getByLabelText("places:import.document.uploadLabel"), {
+      target: { files: [pdf] },
+    });
+    fireEvent.click(await screen.findByText("commit"));
+    await waitFor(() => expect(commitPlaceImport).toHaveBeenCalled());
+    expect(commitPlaceImport.mock.calls[0][0]).toBe("document");
+    expect(commitPlaceImport.mock.calls[0][3]).toEqual(["doc-7"]);
+    expect(addToast).not.toHaveBeenCalledWith("info", "places:import.document.notFiled");
+  });
+
+  it("says so when the kept document could not be filed", async () => {
+    const candidate = { sourceRowIndex: 0, name: "Museum am Probeufer" };
+    parsePdf.mockResolvedValueOnce({ candidates: [candidate], documentId: "doc-8" });
+    previewPlaceImport.mockResolvedValueOnce({
+      rows: [
+        { ...candidate, flags: [], dedupeHint: "none", matchedPlaceId: null, action: "create" },
+      ],
+      summary: { newRows: 1, alreadyPresent: 0, needsInput: 0 },
+    });
+    commitPlaceImport.mockResolvedValueOnce({ created: 1, documentsFiled: 0 });
+    render(<PlaceDocumentImportTile />);
+    const pdf = new File(["%PDF-1.4 invented"], "ticket.pdf", { type: "application/pdf" });
+    fireEvent.change(screen.getByLabelText("places:import.document.uploadLabel"), {
+      target: { files: [pdf] },
+    });
+    fireEvent.click(await screen.findByText("commit"));
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith("info", "places:import.document.notFiled")
+    );
   });
 
   it("says the request failed, in its own words, when it did", async () => {

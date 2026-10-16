@@ -675,7 +675,11 @@ registry.registerPath({
     "leak protections, so the vocabulary is closed on purpose.",
   tags: placesTag,
   request: {
-    body: { content: { "application/json": { schema: placeImportCommitSchema } } },
+    body: {
+      content: {
+        "application/json": { schema: placeImportCommitSchema.and(documentIdsBodySchema) },
+      },
+    },
   },
   responses: {
     201: {
