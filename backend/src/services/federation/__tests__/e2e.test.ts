@@ -254,3 +254,71 @@ it("relays group ciphertext for three members and invalidates it when membership
   await removeMember(host, circle.id, hb.a.channel);
   await expect(groupRead(host, circle.id, request, hb.a)).rejects.toThrow();
 });
+
+it("hands a friend only the ciphertext addressed to the friend's own devices", async () => {
+  // readSealed checked only that the fingerprint was in the manifest, so the friend could ask for
+  // the copy wrapped for the OWNER's device and walk away with every recipient's envelope.
+  const a = await user(),
+    b = await user(),
+    links = await pair(a, b);
+  const sender = await generateDevice("sender"),
+    receiver = await generateDevice("receiver");
+  await registerDevice(a, sender.device.public);
+  await registerDevice(b, receiver.device.public);
+  const grant = await saveGrant(a, links.a.id, "", scope);
+  const c = {
+    version: 2 as const,
+    id: randomUUID(),
+    channel: links.a.channel,
+    audience: "",
+    revision: grant.revision,
+    sender: sender.device.public.fingerprint,
+    createdAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 600000).toISOString(),
+  };
+  const sealed = await createPublication(sender.device, c, [
+    receiver.device.public,
+    sender.device.public,
+  ]);
+  await beginPublication(a, links.a.id, c);
+  await putChunk(a, c.id, await sealed.chunk(new TextEncoder().encode("value")));
+  await finishPublication(a, c.id, await sealed.finish());
+  expect(await readSealed(links.a, "", receiver.device.public.fingerprint)).not.toBeNull();
+  await expect(readSealed(links.a, "", sender.device.public.fingerprint)).rejects.toThrow();
+});
+it("deletes a grant's ciphertext when the grant or the friendship is revoked", async () => {
+  // Revocation only flipped `active`; the encrypted copies stayed on the server until expiry.
+  const a = await user(),
+    b = await user(),
+    links = await pair(a, b);
+  const sender = await generateDevice("sender"),
+    receiver = await generateDevice("receiver");
+  await registerDevice(a, sender.device.public);
+  await registerDevice(b, receiver.device.public);
+  const publish = async () => {
+    const grant = await saveGrant(a, links.a.id, "", scope);
+    const c = {
+      version: 2 as const,
+      id: randomUUID(),
+      channel: links.a.channel,
+      audience: "",
+      revision: grant.revision,
+      sender: sender.device.public.fingerprint,
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 600000).toISOString(),
+    };
+    const sealed = await createPublication(sender.device, c, [receiver.device.public]);
+    await beginPublication(a, links.a.id, c);
+    await putChunk(a, c.id, await sealed.chunk(new TextEncoder().encode("value")));
+    await finishPublication(a, c.id, await sealed.finish());
+  };
+  const stored = () => prisma.comparisonPublication.count({ where: { linkId: links.a.id } });
+  await publish();
+  expect(await stored()).toBe(1);
+  await revokeGrant(a, links.a.id, "");
+  expect(await stored()).toBe(0);
+  await publish();
+  expect(await stored()).toBe(1);
+  await changeLink(b, links.b.id, "revoke");
+  expect(await stored()).toBe(0);
+});

@@ -1,4 +1,12 @@
-import { createHash, createPrivateKey, createPublicKey, randomBytes, sign, verify } from "crypto";
+import {
+  createHash,
+  createPrivateKey,
+  createPublicKey,
+  randomBytes,
+  sign,
+  verify,
+  type KeyObject,
+} from "crypto";
 import fs from "fs";
 import { isAbsolute } from "path";
 import { BlockList, isIP } from "net";
@@ -10,15 +18,23 @@ import { origin as originSchema, signedEnvelope, type Envelope, type PeerBody } 
 
 export const refused = () => new AppError("Comparison request refused", 403);
 export const hash = (v: string) => createHash("sha256").update(v).digest("hex");
-export function identity() {
+type Identity = { origin: string; key: KeyObject; publicKey: string; fingerprint: string };
+// Every signed packet re-read and re-parsed the key file synchronously, blocking the event loop
+// once per request. The key is loaded once per configuration; a rotated file needs a restart.
+let cachedIdentity: { config: string; value: Identity } | null = null;
+export function identity(): Identity {
   const origin = originSchema.parse(process.env.FEDERATION_PUBLIC_ORIGIN);
   const file = process.env.FEDERATION_KEY_FILE;
   if (process.env.FEDERATION_ENABLED !== "1" || origin === "local" || !file || !isAbsolute(file))
     throw refused();
+  const config = `${origin}|${file}`;
+  if (cachedIdentity?.config === config) return cachedIdentity.value;
   const key = createPrivateKey(fs.readFileSync(file));
   if (key.asymmetricKeyType !== "ed25519") throw refused();
   const publicKey = createPublicKey(key).export({ type: "spki", format: "pem" }).toString();
-  return { origin, key, publicKey, fingerprint: hash(publicKey) };
+  const value = { origin, key, publicKey, fingerprint: hash(publicKey) };
+  cachedIdentity = { config, value };
+  return value;
 }
 export function envelope(
   body: unknown,
@@ -155,12 +171,16 @@ export async function exchange(remoteOrigin: string, body: PeerBody): Promise<un
   if (received.origin !== remoteOrigin || received.nonce !== outgoing.nonce) throw refused();
   return JSON.parse(received.body) as unknown;
 }
+/** Signature and admission only. The nonce is consumed separately, once the peer may act. */
 export async function authenticatePeer(value: unknown) {
   const local = identity();
   const candidate = signedEnvelope.parse(value);
   const peer = await prisma.comparisonPeer.findUnique({ where: { origin: candidate.origin } });
   if (!peer?.enabled) throw refused();
-  const message = verifyEnvelope(candidate, peer.publicKey, local.origin);
+  return { message: verifyEnvelope(candidate, peer.publicKey, local.origin), peer };
+}
+/** Replay protection. Called only for a verified peer, so an unverified key cannot fill the table. */
+export async function consumeNonce(message: Envelope) {
   await prisma.comparisonNonce.deleteMany({ where: { expiresAt: { lt: new Date() } } });
   try {
     await prisma.comparisonNonce.create({
@@ -169,5 +189,4 @@ export async function authenticatePeer(value: unknown) {
   } catch {
     throw refused();
   }
-  return message;
 }

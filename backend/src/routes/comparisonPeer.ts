@@ -5,24 +5,33 @@ import rateLimit from "express-rate-limit";
 import { prisma } from "../db";
 import { getInstanceSettings } from "../services/instanceSettingsService";
 import { packetBody } from "../services/federation/contract";
-import { authenticatePeer, envelope, refused } from "../services/federation/security";
+import { authenticatePeer, consumeNonce, envelope, refused } from "../services/federation/security";
+import logger from "../utils/logger";
 import { receiveClaim, receiveState } from "../services/federation/links";
 
 const router = Router();
+const MAX_PACKET_BODY = 8_192;
 router.use(
   rateLimit({ windowMs: 60_000, limit: 1200, standardHeaders: true, legacyHeaders: false })
 );
 router.post("/", async (req, res) => {
   try {
     if (!(await getInstanceSettings()).betaFeaturesEnabled) throw refused();
-    const message = await authenticatePeer(req.body);
-    const body = packetBody.parse(JSON.parse(message.body));
-    if (message.body.length > 8_192) throw refused();
+    // Size first: an 8 MB body was signature-checked, parsed and validated before this refused it.
+    const raw: unknown = req.body;
     if (
-      body.action !== "ping" &&
-      !(await prisma.comparisonPeer.findUnique({ where: { origin: message.origin } }))?.verifiedAt
+      !raw ||
+      typeof raw !== "object" ||
+      !("body" in raw) ||
+      typeof raw.body !== "string" ||
+      raw.body.length > MAX_PACKET_BODY
     )
       throw refused();
+    const { message, peer } = await authenticatePeer(raw);
+    const body = packetBody.parse(JSON.parse(message.body));
+    // A replayed ping is harmless; anything else needs a verified peer BEFORE a nonce row is kept.
+    if (body.action !== "ping" && !peer.verifiedAt) throw refused();
+    if (peer.verifiedAt) await consumeNonce(message);
     let data: unknown;
     if (body.action === "ping") data = { ready: true };
     else if (body.action === "claim")
@@ -54,7 +63,15 @@ router.post("/", async (req, res) => {
     if (Buffer.byteLength(JSON.stringify(signed)) > 10_000_000) throw refused();
     res.setHeader("Cache-Control", "no-store");
     res.json(signed);
-  } catch {
+  } catch (error) {
+    // The peer learns nothing; the operator learns why a federation partner is being turned away.
+    logger.warn(
+      {
+        operation: "comparison_peer_refused",
+        reason: error instanceof Error ? error.message : String(error),
+      },
+      "Comparison peer packet refused"
+    );
     res.status(403).json({ error: "COMPARISON_REFUSED" });
   }
 });
