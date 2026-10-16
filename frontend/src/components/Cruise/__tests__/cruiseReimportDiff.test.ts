@@ -155,3 +155,70 @@ describe("re-import edge cases", () => {
     });
   });
 });
+
+/** An unresolved imported name stands for a resolved stored port only when it names that port. */
+describe("re-import: pairing an unresolved name with a resolved port", () => {
+  const unresolved = (day: number, name: string, extra: Partial<CruiseStopInput> = {}) =>
+    ({
+      dayNumber: day,
+      isAtSea: false,
+      portId: null,
+      unresolvedPortName: name,
+      ...extra,
+    }) as CruiseStopInput;
+
+  it("offers a port change when the name names neither of the day's ports", () => {
+    const storedDay = [
+      call(4, 3, "Bergen", { departureTime: "2026-10-08T17:00:00.000Z" }),
+      call(4, 5, "Stavanger"),
+    ];
+    const reread = [
+      call(4, 5, "Stavanger"),
+      unresolved(4, "Haugesund", { departureTime: "2026-10-08T20:00:00.000Z" }),
+    ];
+    const changes = diffItinerary(storedDay, reread);
+    expect(changes.map((c) => [c.kind, c.day])).toEqual([["port", 4]]);
+  });
+
+  it("keeps a resolution whose port the name names, on a day with two calls", () => {
+    const storedDay = [
+      call(4, 3, "Bergen"),
+      call(4, 77, "Cristóbal (Colón)", { arrivalTime: "2026-10-08T07:00:00.000Z" }),
+    ];
+    const reread = [
+      call(4, 3, "Bergen"),
+      unresolved(4, "Colón", { arrivalTime: "2026-10-08T07:30:00.000Z" }),
+    ];
+    const changes = diffItinerary(storedDay, reread);
+    expect(changes.map((c) => [c.kind, c.kind === "times" ? c.stored.portId : null])).toEqual([
+      ["times", 77],
+    ]);
+  });
+});
+
+/** Imports number days by list position; the stored itinerary by day of the cruise. */
+describe("re-import: matching days by date", () => {
+  const storedTrip = [
+    call(1, 1, "Kiel", { date: "2026-10-05" }),
+    call(3, 2, "Oslo", { date: "2026-10-07", departureTime: "2026-10-07T17:00:00.000Z" }),
+  ];
+
+  it("matches a booking that leaves the sea days out by the stops' dates", () => {
+    const reread = [
+      call(1, 1, "Kiel", { date: "2026-10-05" }),
+      call(2, 2, "Oslo", { date: "2026-10-07", departureTime: "2026-10-07T17:00:00.000Z" }),
+    ];
+    expect(diffItinerary(storedTrip, reread)).toEqual([]);
+  });
+
+  it("puts a new dated call on the day its date falls on", () => {
+    const reread = [
+      call(1, 1, "Kiel", { date: "2026-10-05" }),
+      call(2, 2, "Oslo", { date: "2026-10-07" }),
+      call(3, 3, "Bergen", { date: "2026-10-08T00:00:00.000Z" }),
+    ];
+    const changes = diffItinerary(storedTrip, reread);
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toMatchObject({ kind: "added", day: 4, imported: { dayNumber: 4 } });
+  });
+});
