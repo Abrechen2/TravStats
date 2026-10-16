@@ -11,6 +11,7 @@ import { FILE_LIMITS } from "../../config/constants";
 import { TRACK_SOURCES, pullDawarichTrackSchema } from "../../schemas/tour";
 import { parseTrackFile } from "../../services/tour/tracks/parseTrackFile";
 import { ingestedTrackColumns, isDuplicateExternalRef } from "../../services/tour/tracks/trackRow";
+import { relocalizedTrackName } from "../../services/tour/tracks/workoutName";
 import { ingestTrack } from "../../services/tour/tracks/ingestTrack";
 import {
   EmptyDawarichWindowError,
@@ -261,13 +262,18 @@ router.post(
       }
 
       const source = trackSource.parse(fields.data.origin ?? file.format);
+      // A Companion workout is named on the phone in the phone's zone; its
+      // clock is re-read at the track's first point (`workoutName.ts`).
+      const workoutName = fields.data.origin
+        ? relocalizedTrackName(file.track.name, ingested.startedAt, ingested.geometry)
+        : null;
       let track;
       try {
         track = await prisma.tripRouteTrack.create({
           data: {
             routeId,
             source,
-            name: file.track.name,
+            name: workoutName ?? file.track.name,
             ...ingestedTrackColumns(ingested),
             externalRef: fields.data.externalRef ?? null,
             // A file upload refuses an oversized file outright (see
@@ -286,6 +292,13 @@ router.post(
         }
         throw error;
       }
+      // The Companion made the tour under the same generated name; it follows
+      // the track unless the user has renamed it since.
+      if (workoutName && file.track.name)
+        await prisma.tripRoute.updateMany({
+          where: { id: routeId, name: file.track.name },
+          data: { name: workoutName },
+        });
       // A day tour with no date takes the recording's day (D2).
       await prefillTourDateFromTrack(routeId, track);
 
