@@ -10,7 +10,14 @@
     -->
     <script src="/boot-guard.js"></script>
     <script src="/geo-bootstrap.js"></script>
-    <script src="/api/v1/geo-server/runtime"></script>
+    <!--
+      The runtime configuration is deferred so a slow backend does not hold the
+      first paint. Deferred scripts run in document order before the module
+      entry (which the build injects at the end of <head>); if one fails, the
+      geo mode stays "pending" and the maps use the public styles.
+    -->
+    <script defer src="/api/v1/geo-server/runtime"></script>
+    <script defer src="/api/v1/map-config/runtime"></script>
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <!-- iOS never reads the manifest, so its icon is linked separately — and it
          must be SQUARE: /logo.png is 512x597, which the home screen squashed. -->
@@ -55,7 +62,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <script src="/api/v1/map-config/runtime"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
