@@ -1605,6 +1605,11 @@ model DawarichSweepState {
   /// incomplete day. Null on every healthy instance; a value here is the
   /// pointer to the `partial_window` rows.
   lastTruncatedAt DateTime? @map("last_truncated_at")
+  /// The `COUNTRY_DAY_REDUCER_VERSION` this account's rows were made with
+  /// (`services/dawarich/countryDaySweep.ts`). Lower than the running one =
+  /// the rows follow older rules, and the next sweep re-walks the whole
+  /// history and replaces them. 0 = before versioning (forgejo#299 fix).
+  reducerVersion  Int       @default(0) @map("reducer_version")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

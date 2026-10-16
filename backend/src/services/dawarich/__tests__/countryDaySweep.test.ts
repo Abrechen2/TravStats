@@ -34,6 +34,7 @@ interface StoredState {
   lastRunAt: Date | null;
   lastErrorKind: string | null;
   lastTruncatedAt: Date | null;
+  reducerVersion?: number;
 }
 
 const db = {
@@ -112,7 +113,11 @@ jest.mock("../../../utils/logger", () => ({
   },
 }));
 
-import { sweepUserCountryDays, type CountryDaySweepDeps } from "../countryDaySweep";
+import {
+  COUNTRY_DAY_REDUCER_VERSION,
+  sweepUserCountryDays,
+  type CountryDaySweepDeps,
+} from "../countryDaySweep";
 import type { DawarichClient, DawarichPoint, DawarichPointsWindow } from "../dawarichClient";
 import { DawarichError } from "../errors";
 
@@ -299,6 +304,60 @@ describe("sweepUserCountryDays", () => {
     expect(outcome.monthsSwept).toBe(4);
     expect(outcome.backfillComplete).toBe(false);
     expect(db.states.get(USER)?.backfilledFromMonth).toEqual(new Date("2025-12-01T00:00:00.000Z"));
+  });
+
+  /**
+   * forgejo#299: rows written before in-flight points were dropped are not
+   * corrected by the forward pass, which reads only the newest month. The
+   * owner's Syrian day of 10 September sat in an already-swept month — and
+   * #299 rules out deleting it by hand, because the next sweep would write it
+   * again. So an account swept under older rules is walked again.
+   */
+  it("re-walks an account swept under older rules and replaces the rows it made", async () => {
+    db.states.set(USER, {
+      userId: USER,
+      backfilledFromMonth: new Date("2006-03-01T00:00:00.000Z"),
+      backfillComplete: true,
+      sweptThroughAt: NOW,
+      lastRunAt: NOW,
+      lastErrorKind: null,
+      lastTruncatedAt: null,
+    });
+    db.days.push({
+      userId: USER,
+      source: "dawarich",
+      date: new Date("2026-02-10T00:00:00.000Z"),
+      countryCode: "SY",
+      pointCount: 1,
+      spanKm: 0,
+      partialWindow: false,
+    });
+
+    await sweepUserCountryDays(USER, deps(fakeClient(HISTORY), { maxMonthsWithData: 12 }));
+
+    expect(db.days.map((row) => row.countryCode)).not.toContain("SY");
+    expect(db.states.get(USER)?.reducerVersion).toBe(COUNTRY_DAY_REDUCER_VERSION);
+  });
+
+  it("does not re-walk an account already swept under the current rules", async () => {
+    await sweepUserCountryDays(USER, deps(fakeClient(HISTORY)));
+    const client = fakeClient(HISTORY);
+
+    await sweepUserCountryDays(USER, deps(client, { maxMonthsWithData: 12, maxWindows: 3 }));
+
+    // One forward window plus the bounded backward walk it was already on —
+    // not a restart from the current month with a fresh budget.
+    expect(db.states.get(USER)?.reducerVersion).toBe(COUNTRY_DAY_REDUCER_VERSION);
+    expect(client.calls.length).toBeLessThanOrEqual(3);
+  });
+
+  it("drops the points the account's flights place in the air", async () => {
+    // Riga, in the stand-in geography, plays the country flown over.
+    const inFlight = (_timestampMs: number, countryCode: string): boolean => countryCode === "LV";
+
+    await sweepUserCountryDays(USER, deps(fakeClient(HISTORY), { inFlight }));
+
+    expect(db.days.map((row) => row.countryCode)).toEqual(["EE"]);
   });
 
   describe("when Dawarich does not answer", () => {

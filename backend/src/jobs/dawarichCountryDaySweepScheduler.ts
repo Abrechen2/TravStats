@@ -49,6 +49,7 @@ import cron from "node-cron";
 import type { ScheduledTask } from "node-cron";
 
 import { prisma } from "../db";
+import { buildFlightAirTimeTest } from "../services/countryDays/flightAirTime";
 import { buildKnownAirportTest } from "../services/countryDays/knownAirports";
 import { getCountryResolver } from "../services/geo/countryFromCoordinates";
 import { createDawarichClient, type DawarichClient } from "../services/dawarich/dawarichClient";
@@ -78,6 +79,8 @@ export interface CountryDaySweepOptions {
    * PER ACCOUNT below, because it is a statement about that account's flights.
    */
   atKnownAirport?: (lat: number, lon: number) => boolean;
+  /** Injected by tests; in production built PER ACCOUNT from its flights. */
+  inFlight?: (timestampMs: number, countryCode: string) => boolean;
   maxMonthsWithData?: number;
   maxWindows?: number;
 }
@@ -179,11 +182,15 @@ export async function runDawarichCountryDaySweep(
        */
       const atKnownAirport =
         options.atKnownAirport ?? (await buildKnownAirportTest(account.userId));
+      // forgejo#299: a point taken in the air on a flown flight is no country-day.
+      const inFlight =
+        options.inFlight ?? (await buildFlightAirTimeTest(account.userId, countryAt));
 
       const outcome = await sweepUserCountryDays(account.userId, {
         client: createClient(account.connection),
         countryAt,
         atKnownAirport,
+        inFlight,
         now,
         force: options.force,
         maxMonthsWithData: options.maxMonthsWithData,
