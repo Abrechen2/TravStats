@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { ExpandableEventCard } from "../Trip/ExpandableEventCard";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatRailSpan } from "../../lib/railTime";
-import { formatAmount } from "../../lib/units";
+import { formatAmount, dateLocaleForLanguage } from "../../lib/units";
 import type { TripBusJourney } from "../../types/bus";
 
 /** "Kobus · Premium" — whatever of the two is known. */
@@ -29,7 +29,7 @@ export function BusTripCard({
   dateLabel: string;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["bus", "trips"]);
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const [open, setOpen] = useState(false);
   const rows: Array<[string, string | null]> = [
     [t("bus:form.operator"), serviceOf(ride)],

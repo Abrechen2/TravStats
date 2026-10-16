@@ -20,6 +20,8 @@ export const PANEL_BG = "rgba(13,17,23,0.85)";
 export const HAIRLINE = "rgba(255,255,255,0.08)";
 export const BORDER = "rgba(255,255,255,0.12)";
 export const TEXT = "rgba(241,245,249,0.95)";
+/** Hints and captions on the always-dark glass panel; a theme token would flip in light mode. */
+export const MUTED_TEXT = "rgba(241,245,249,0.45)";
 
 // ── RGB <-> hex helpers ──────────────────────────────────────────────
 const clamp255 = (n: number): number => Math.max(0, Math.min(255, n));
@@ -197,7 +199,7 @@ export function SectionLabel({ children }: { children: React.ReactNode }): JSX.E
   return (
     <div
       className="mb-1.5 text-[10px] font-semibold uppercase"
-      style={{ letterSpacing: "0.08em", color: "rgba(241,245,249,0.45)" }}
+      style={{ letterSpacing: "0.08em", color: MUTED_TEXT }}
     >
       {children}
     </div>

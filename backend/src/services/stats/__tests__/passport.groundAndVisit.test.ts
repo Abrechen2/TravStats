@@ -33,10 +33,12 @@ describe("forgejo#299: ground presence and actual visits", () => {
     const result = buildPassport(chain, countries, [], now);
     expect(result.summary).toMatchObject({ groundCountries: 3, visitedCountries: 1, countries: 1 });
     expect(result.countries.find((c) => c.code === "VN")).toMatchObject({ visited: true });
+    // Qatar is a DECIDED connection — the chain turns around in Vietnam — so
+    // it is ground presence only and not "unclear" (forgejo#299).
     expect(result.countries.find((c) => c.code === "QA")).toMatchObject({
       visited: false,
       groundPresence: true,
-      visitUncertain: true,
+      visitUncertain: false,
     });
   });
 

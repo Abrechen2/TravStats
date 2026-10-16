@@ -37,6 +37,28 @@ export function aggregate(values: unknown[], operation: string): string | number
   if (operation === "mean") return total / numbers.length;
   return numbers.reduce((a, b) => (operation === "min" ? Math.min(a, b) : Math.max(a, b)));
 }
+const MONEY_FIELD = /price|amount|cost|tax|fee/i;
+/**
+ * The column naming the unit of a money field, at the same nesting. A *Base amount is converted
+ * into fxBaseCurrency (the cell once labelled it with the booking's own currency), a rental's
+ * final and deposit amounts carry their own currency columns, and taxes/fees count as money so
+ * the mixed-currency guard covers them too.
+ */
+export function moneyUnitPath(path: string): string | null {
+  const segments = path.split(".");
+  const name = segments[segments.length - 1];
+  if (!MONEY_FIELD.test(name)) return null;
+  const unit = /Base$/.test(name)
+    ? name.startsWith("final")
+      ? "finalFxBaseCurrency"
+      : "fxBaseCurrency"
+    : name.startsWith("final")
+      ? "finalCurrency"
+      : name.startsWith("deposit")
+        ? "depositCurrency"
+        : "currency";
+  return [...segments.slice(0, -1), unit].join(".");
+}
 export function lines(value: unknown, into: number[][][] = []): number[][][] {
   if (Array.isArray(value)) {
     for (const child of value) lines(child, into);
@@ -162,12 +184,14 @@ export default function TravelComparison({ people }: { people: TravelPerson[] })
           <tbody>
             {people.map((p) => {
               const records = p.data.sections[active],
-                currencies = new Set(fieldValues(records, ["currency"]).map(String));
+                unitPath = moneyUnitPath(selected),
+                currencies = new Set(
+                  unitPath ? fieldValues(records, unitPath.split(".")).map(String) : []
+                );
               const incompatible =
                 operation !== "values" &&
                 operation !== "count" &&
-                /price|amount|cost/i.test(selected) &&
-                !/base/i.test(selected) &&
+                unitPath !== null &&
                 currencies.size > 1;
               return (
                 <tr key={p.id} className="border-t border-[var(--ts-border)]">
@@ -177,9 +201,7 @@ export default function TravelComparison({ people }: { people: TravelPerson[] })
                     {incompatible
                       ? t("e2e.mixedCurrencies")
                       : fmt(aggregate(fieldValues(records, selected.split(".")), operation))}
-                    {/price|amount|cost/i.test(selected) && currencies.size === 1
-                      ? ` ${[...currencies][0]}`
-                      : ""}
+                    {unitPath && currencies.size === 1 ? ` ${[...currencies][0]}` : ""}
                   </td>
                   <td className="p-3">{p.data.scope.year ?? t("lifetime")}</td>
                 </tr>

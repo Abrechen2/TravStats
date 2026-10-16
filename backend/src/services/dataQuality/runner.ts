@@ -15,6 +15,7 @@ import { findUnknownAirports } from "./checks/airportUnknown";
 import { findIncompleteTrips } from "./checks/tripIncomplete";
 import { loadAccountSnapshot } from "./gather";
 import { findingKey, type DataQualityFinding } from "./types";
+import { outgrowsDismissal } from "./dismissalScope";
 
 /**
  * Run every check for one account and reconcile the inbox with the answer.
@@ -34,14 +35,16 @@ import { findingKey, type DataQualityFinding } from "./types";
  * | `open` | yes | details refreshed |
  * | `open` | no | `resolved` — the disagreement is gone |
  * | `resolved` | yes | **re-opened** |
- * | `dismissed` | yes | untouched |
+ * | `dismissed` | yes | untouched — unless it now names a record the dismissal did not cover |
  *
  * **`resolved` re-opens.** Resolving means "I have corrected the data"; if the
  * contradiction is still there, the correction did not happen, and staying quiet
  * would turn the button into a way of hiding a fault. **`dismissed` never
  * re-opens** — that is the answer "this is not wrong", and it is the escape
  * hatch for a check that is right about the disagreement and wrong about the
- * conclusion. Two different answers, deliberately not one.
+ * conclusion. Two different answers, deliberately not one. The one exception is
+ * a question about OTHER records — an overlap's partner, a trip's outside
+ * entries: a new partner or entry is a new question (`dismissalScope.ts`).
  *
  * ## Two runs at once
  *
@@ -224,9 +227,11 @@ async function reconcileExisting(
   current: DataQualityFlag,
   finding: DataQualityFinding
 ): Promise<ReconcileOutcome> {
-  if (current.status === "dismissed") return "untouched";
+  const askedAnew =
+    current.status === "dismissed" && outgrowsDismissal(current.kind, current.details, finding);
+  if (current.status === "dismissed" && !askedAnew) return "untouched";
 
-  if (current.status === "resolved") {
+  if (current.status === "resolved" || askedAnew) {
     await prisma.dataQualityFlag.update({
       where: { id: current.id },
       data: { status: "open", resolvedAt: null, details: asJson(finding.details) },

@@ -76,8 +76,19 @@ export function decodePosition(
 export const aisConfigured = () => Boolean(process.env.AISSTREAM_API_KEY?.trim());
 const pending = new Map<string, Promise<AisResult>>();
 const cache = new Map<string, { until: number; result: AisResult }>();
-/** On-demand snapshot, not a persistent voyage tracker. Max two sockets per process, no background polling. */
-export async function lookupVessel(mmsi: string): Promise<AisResult> {
+/** Sockets the whole instance holds open at once — the provider's key is shared. */
+const MAX_SOCKETS = 2;
+/**
+ * Accounts with a socket open. One each: the cap above used to be shared by
+ * everyone, so one account reading two vessels left all others "busy".
+ */
+const openFor = new Set<string>();
+/**
+ * On-demand snapshot, not a persistent voyage tracker, no background polling.
+ * At most one socket per user and `MAX_SOCKETS` in all; beyond that "busy".
+ * A vessel someone is already reading joins that socket at no cost.
+ */
+export async function lookupVessel(mmsi: string, userId: string): Promise<AisResult> {
   if (!/^\d{9}$/.test(mmsi)) return { status: "unavailable", position: null };
   const key = process.env.AISSTREAM_API_KEY?.trim();
   if (!key) return { status: "notConfigured", position: null };
@@ -85,7 +96,10 @@ export async function lookupVessel(mmsi: string): Promise<AisResult> {
   if (cached && cached.until > Date.now()) return cached.result;
   const same = pending.get(mmsi);
   if (same) return same;
-  if (pending.size >= 2) return { status: "busy", position: null };
+  if (pending.size >= MAX_SOCKETS || openFor.has(userId)) {
+    return { status: "busy", position: null };
+  }
+  openFor.add(userId);
   const request = new Promise<AisResult>((resolve) => {
     let finished = false;
     const socket = new WebSocket(ENDPOINT, {
@@ -141,5 +155,6 @@ export async function lookupVessel(mmsi: string): Promise<AisResult> {
     return result;
   } finally {
     pending.delete(mmsi);
+    openFor.delete(userId);
   }
 }

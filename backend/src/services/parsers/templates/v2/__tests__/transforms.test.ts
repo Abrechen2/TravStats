@@ -75,6 +75,13 @@ describe("v2 transforms", () => {
     ["£", "GBP"],
     ["chf", "CHF"],
     ["EUR 2,437.00", "EUR"],
+    // Any three letters used to become a currency, and every $ was USD.
+    ["450.00 pro Nacht", null],
+    ["TEL 1.234,50", null],
+    ["A$ 199", "AUD"],
+    ["NZ$ 50", "NZD"],
+    ["US$628,70", "USD"],
+    ["¥ 3000", "JPY"],
   ])("currency %s → %s", (input, out) => {
     expect(t("currency", input)).toBe(out);
   });

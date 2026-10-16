@@ -5,6 +5,7 @@ import {
   type LocalDateValue,
   type TimeValue,
 } from "../shared/time";
+import { dateLocaleForLanguage } from "./units";
 
 /**
  * Booking deadlines on the read side (forgejo#285): the members a stay's,
@@ -90,7 +91,7 @@ export function deadlineSummary(
   times: DeadlineTimes | null | undefined,
   t: Translate
 ): string | null {
-  const locale = (i18next.language ?? "de").startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18next.language);
   const parts = deadlineFacts(times, t, locale).filter((fact) => fact.value !== null);
   return parts.length > 0 ? parts.map((fact) => `${fact.label}: ${fact.value}`).join(" · ") : null;
 }

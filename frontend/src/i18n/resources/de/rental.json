@@ -256,6 +256,11 @@
     "panelTitle": "Mietwagen hinzufügen",
     "panelHint": "Hast du eine Buchungsbestätigung oder eine Rechnung? Dann lies sie ein.",
     "saved": "Mietwagen übernommen.",
+    "deadlinesFilledSuffix": " Fehlende Fristen ergänzt: {{fields}}.",
+    "deadlineField": {
+      "freeCancellationUntil": "kostenlose Stornierung",
+      "paymentDueOn": "Zahlungsfrist"
+    },
     "title": {
       "confirmation": "Buchung übernehmen",
       "cancellation": "Stornierung übernehmen",

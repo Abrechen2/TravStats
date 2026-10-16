@@ -1,3 +1,4 @@
+import { parseDecimalInput } from "../../lib/decimalInput";
 import type {
   CabinType,
   Cruise,
@@ -170,8 +171,9 @@ export function cruiseFieldErrors(fields: {
   if (deck && !(/^\d+$/.test(deck) && Number(deck) >= 1 && Number(deck) <= 30)) {
     errors.deck = "cruise:form.errors.deck";
   }
-  const price = fields.price.trim();
-  if (price && !(Number.isFinite(Number(price)) && Number(price) >= 0)) {
+  // Either notation ("39,90", "1.500,00"): `Number` refused the German one.
+  const price = parseDecimalInput(fields.price);
+  if (price !== null && !(Number.isFinite(price) && price >= 0)) {
     errors.price = "cruise:form.errors.price";
   }
   return errors;
@@ -216,7 +218,7 @@ export function cruiseWriteBody(fields: CruiseFormFields): CruiseWriteBody {
     cabinType: (fields.cabinType || null) as CabinType | null,
     deck: fields.deck ? Number.parseInt(fields.deck, 10) : null,
     bookingReference: fields.bookingReference || null,
-    price: fields.price ? Number.parseFloat(fields.price) : null,
+    price: parseDecimalInput(fields.price),
     currency: (fields.currency || "EUR") as CruiseInput["currency"],
     tags: fields.tags,
     companions: fields.companions,

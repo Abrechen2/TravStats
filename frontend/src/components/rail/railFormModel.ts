@@ -1,3 +1,4 @@
+import { parseDecimalInput } from "../../lib/decimalInput";
 import { saveErrorKey, type SaveErrorOptions } from "../../lib/saveErrorMessage";
 import type {
   RailGeometryReport,
@@ -223,6 +224,23 @@ const numberOrNull = (value: string): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
+/**
+ * The typed price in either notation ("39,90", "1.500,00"). Not
+ * `numberOrNull`: that read "1.500,00" as nothing and the save cleared the
+ * price. A price that is not a number is refused before it gets here — see
+ * `invalidRailPrice`.
+ */
+const priceOrNull = (value: string): number | null => {
+  const n = parseDecimalInput(value);
+  return n !== null && Number.isFinite(n) ? n : null;
+};
+
+/** A typed price the form must refuse rather than send as "no price". */
+export function invalidRailPrice(draft: Pick<RailFormDraft, "price">): boolean {
+  const n = parseDecimalInput(draft.price);
+  return n !== null && (!Number.isFinite(n) || n < 0);
+}
+
 const timeOf = (local: string, dayOnly: boolean): string => (dayOnly ? dayPart(local) : local);
 
 const roundedOrNull = (value: string): number | null => {
@@ -269,7 +287,7 @@ export function toRailInput(draft: RailFormDraft): RailJourneyInput {
     // with a day-only end (RAIL_INVALID_INPUT).
     delayMinutes: hasDayOnlyEnd(draft) ? null : roundedOrNull(draft.delayMinutes),
     bookingReference: orNull(draft.bookingReference),
-    price: numberOrNull(draft.price),
+    price: priceOrNull(draft.price),
     currency: draft.currency || "EUR",
     status: draft.cancelled ? "cancelled" : "scheduled",
     tags: draft.tags.map((tag) => tag.trim()).filter((tag) => tag.length > 0),

@@ -12,7 +12,7 @@ import {
 import type { Cruise } from "../../types/cruise";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
-import { convertDistance, getDistanceLabel } from "../../lib/units";
+import { convertDistance, getDistanceLabel, dateLocaleForLanguage } from "../../lib/units";
 import { useSettingsStore } from "../../store/settingsStore";
 import { cruisesStartedIn } from "../../lib/stats/periodScope";
 import PeriodComparisonStrip from "./PeriodComparisonStrip";
@@ -347,7 +347,7 @@ export default function CruiseStatsSection({
     (cruise) => !isCountableCruise(cruise) && isPricedCruise(cruise)
   ).length;
   const accent = colorOf("cruise");
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const show = visibility.isVisible;
 
   return (

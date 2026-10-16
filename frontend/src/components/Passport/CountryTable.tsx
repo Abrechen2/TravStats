@@ -23,6 +23,25 @@ import { countryName } from "./countryName";
  * still comes from structure, and the second legend line says which of the two
  * blanks a reader can do something about.
  */
+type CountryView = "ground" | "visited" | "unclear";
+
+/**
+ * The three lists of forgejo#299: every country with ground presence, the
+ * visited subset, and the ground countries whose visit the records cannot
+ * decide — shown on their own so an open-jaw end is found, not lost.
+ */
+const VIEW_FILTER: Record<CountryView, (c: PassportCountry) => boolean> = {
+  ground: () => true,
+  visited: (c) => c.visited ?? c.counted,
+  unclear: (c) => c.visitUncertain === true,
+};
+
+const VIEW_LABEL: Record<CountryView, string> = {
+  ground: "passport:summary.groundCountries",
+  visited: "passport:summary.countries",
+  unclear: "passport:summary.unclearCountries",
+};
+
 export default function CountryTable({
   countries,
   locale,
@@ -31,8 +50,8 @@ export default function CountryTable({
   locale: string;
 }): JSX.Element {
   const { t } = useTranslation(["passport"]);
-  const [view, setView] = useState<"ground" | "visited">("ground");
-  const visible = view === "visited" ? countries.filter((c) => c.visited ?? c.counted) : countries;
+  const [view, setView] = useState<CountryView>("ground");
+  const visible = countries.filter(VIEW_FILTER[view]);
 
   return (
     <section
@@ -48,7 +67,7 @@ export default function CountryTable({
         role="group"
         aria-label={t("passport:countries.title")}
       >
-        {(["ground", "visited"] as const).map((kind) => (
+        {(Object.keys(VIEW_LABEL) as CountryView[]).map((kind) => (
           <button
             type="button"
             key={kind}
@@ -57,9 +76,7 @@ export default function CountryTable({
             className="rounded-md border px-3 py-2 text-sm"
             style={{ borderColor: "var(--border)" }}
           >
-            {t(
-              kind === "ground" ? "passport:summary.groundCountries" : "passport:summary.countries"
-            )}
+            {t(VIEW_LABEL[kind])}
           </button>
         ))}
       </div>

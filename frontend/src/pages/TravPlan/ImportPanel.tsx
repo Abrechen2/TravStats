@@ -1,9 +1,15 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { parserApi } from "../../lib/api/client";
 import { documentsApi } from "../../lib/api/documents";
 import type { PlanBooking, PlanView } from "../../lib/api/travplan";
 import { bookingDrafts } from "./bookingDrafts";
+import { Button, Card, Field, Input, TextArea } from "../../components/ui";
+import { PlanActions, PlanCardHead, PlanGrow, PlanRow } from "./planLayout";
+import { PlanCheck } from "./PlanParts";
+
+const MAX_FILE_BYTES = 20 * 1024 * 1024;
+const MAX_PASTE_CHARS = 200000;
 export default function ImportPanel({
   plan,
   onDraft,
@@ -19,7 +25,8 @@ export default function ImportPanel({
     [file, setFile] = useState<File | null>(null),
     [retain, setRetain] = useState(false),
     [busy, setBusy] = useState(false),
-    [drafts, setDrafts] = useState<PlanBooking[] | null>(null);
+    [drafts, setDrafts] = useState<PlanBooking[] | null>(null),
+    uid = useId();
   async function parse() {
     setBusy(true);
     try {
@@ -28,7 +35,7 @@ export default function ImportPanel({
       };
       let result: unknown;
       if (file) {
-        if (file.size > 20 * 1024 * 1024) throw new Error("File too large");
+        if (file.size > MAX_FILE_BYTES) throw new Error("File too large");
         if (file.name.toLowerCase().endsWith(".txt")) {
           result = (
             await parserApi.post(
@@ -74,23 +81,20 @@ export default function ImportPanel({
     }
   }
   return (
-    <div className="tp-card">
-      <h2>{t("parse")}</h2>
-      <label className="tp-form">
-        <span className="tp-wide">
-          {t("paste")}
-          <textarea
-            className="tp-search"
-            rows={6}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            maxLength={200000}
-          />
-        </span>
-      </label>
-      <label className="tp-check">
-        {t("parseFile")}
-        <input
+    <Card>
+      <PlanCardHead title={t("parse")} />
+      <Field label={t("paste")} htmlFor={uid + "-paste"}>
+        <TextArea
+          id={uid + "-paste"}
+          rows={6}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          maxLength={MAX_PASTE_CHARS}
+        />
+      </Field>
+      <Field label={t("parseFile")} htmlFor={uid + "-file"}>
+        <Input
+          id={uid + "-file"}
           type="file"
           accept=".pdf,.eml,.msg,.txt"
           onChange={(e) => {
@@ -98,56 +102,51 @@ export default function ImportPanel({
             setDrafts(null);
           }}
         />
-      </label>
-      <label className="tp-check">
-        <input
-          type="checkbox"
-          checked={retain}
-          disabled={!file}
-          onChange={(e) => setRetain(e.target.checked)}
-        />
+      </Field>
+      <PlanCheck checked={retain} disabled={!file} onChange={setRetain}>
         {t("retain")}
-      </label>
-      <label className="tp-check">
-        <input type="checkbox" checked={useAI} onChange={(e) => setUseAI(e.target.checked)} />
+      </PlanCheck>
+      <PlanCheck checked={useAI} onChange={setUseAI}>
         {t("parseAI")}
-      </label>
-      <p className="tp-muted">
+      </PlanCheck>
+      <p className="t-caption">
         {plan.state.ai.policy === "cloud_allowed" ? t("parseCloud") : t("parseLocal")}
       </p>
-      <button
-        disabled={busy || (!file && !text.trim())}
-        onClick={() => void parse()}
-        className="tp-primary"
-      >
-        {busy ? t("parsing") : t("parse")}
-      </button>
+      <PlanActions>
+        <Button
+          variant="primary"
+          disabled={busy || (!file && !text.trim())}
+          onClick={() => void parse()}
+        >
+          {busy ? t("parsing") : t("parse")}
+        </Button>
+      </PlanActions>
       {drafts && (
         <div>
           {!drafts.length ? (
-            <p>{t("noCandidates")}</p>
+            <p className="t-body">{t("noCandidates")}</p>
           ) : (
             drafts.map((b, i) => (
-              <div className="tp-row" key={b.id}>
-                <div className="tp-grow">
-                  <h3>{b.title}</h3>
-                  <p className="tp-muted">
+              <PlanRow key={b.id}>
+                <PlanGrow>
+                  <h3 className="t-card-title">{b.title}</h3>
+                  <p className="t-caption">
                     {b.day || t("review.unknown")} · {b.reference || t("review.unknown")}
                   </p>
-                </div>
-                <button
+                </PlanGrow>
+                <Button
                   onClick={() => {
                     onDraft(b);
                     setDrafts((d) => d?.filter((_, j) => i !== j) || null);
                   }}
                 >
                   {t("readCandidates")}
-                </button>
-              </div>
+                </Button>
+              </PlanRow>
             ))
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

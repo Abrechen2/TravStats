@@ -41,6 +41,7 @@ import { derivePricePerNight } from "../../lib/lodgingFormat";
 import { deriveStayOverallRating } from "../../shared/ratingDerivation";
 import { deriveLodgingStatus } from "../../shared/statusDerivation";
 import { deriveStayMembership } from "../../shared/membershipDerivation";
+import { parseDecimalInput } from "../../lib/decimalInput";
 import type {
   LodgingStay,
   StayInput,
@@ -320,7 +321,8 @@ export function StayEditor({
   // The single value the save path sends - no second source to drift from.
   const effectiveStatus: StayStatus = isCancelled ? "cancelled" : derivedStatus;
 
-  const parsedTotalPrice = totalPrice.trim() ? Number.parseFloat(totalPrice) : null;
+  // Either notation: `parseFloat` read "1.500,00" as 1.5 and "39,90" as 39.
+  const parsedTotalPrice = parseDecimalInput(totalPrice);
   const parsedManualFxRate =
     manualFxRate.trim() && Number.isFinite(Number.parseFloat(manualFxRate))
       ? Number.parseFloat(manualFxRate)
@@ -371,6 +373,13 @@ export function StayEditor({
     // is sent.
     if (Object.keys(stayDateErrors({ datePrecision, checkIn, checkOut })).length > 0) {
       failure.focusFirstProblem();
+      return;
+    }
+    if (
+      parsedTotalPrice !== null &&
+      !(Number.isFinite(parsedTotalPrice) && parsedTotalPrice >= 0)
+    ) {
+      failure.fail("lodging:stayEditor.invalidPrice");
       return;
     }
     if (mode === "edit" && !stay) {

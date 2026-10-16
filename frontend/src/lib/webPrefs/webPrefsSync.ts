@@ -10,7 +10,13 @@
  *    opened for the first time shows what was chosen on the computer.
  * 2. **The first device seeds; nothing is wiped.** A section the server does
  *    not hold yet, but this device has a non-default value for, is uploaded
- *    instead of being reset.
+ *    instead of being reset — but only when that value is this account's.
+ *    The device records which account its synced sections belong to
+ *    (`OWNER_STORAGE_KEY`); when it names another account, the browser is
+ *    shared, the value is that account's taste, and the new account starts
+ *    from the defaults. A device that has no owner recorded (it synced before
+ *    the owner was kept) still seeds, so a single user's choices made before
+ *    the sync existed are not wiped.
  * 3. **An edit this device never delivered is not lost.** Every local change
  *    is recorded as pending (persisted, with the instant it was made) until the
  *    server confirms it. A pending change carried over from an earlier visit —
@@ -37,6 +43,8 @@ export interface WebPrefSectionDef {
   read: () => unknown;
   /** Whether `read()` is only the default — used to decide first-device seeding. */
   isDefault: (value: unknown) => boolean;
+  /** The value a fresh account starts from; `isDefault(defaultValue)` holds. */
+  defaultValue: unknown;
   /** Writes a server value into this device's storage and stores. */
   apply: (value: unknown) => void;
   /** Calls back on every local write of this section. Returns the unsubscribe. */
@@ -96,6 +104,9 @@ export interface WebPrefsSync {
 /** The key the pending changes are kept under. Per device, never synced. */
 export const PENDING_STORAGE_KEY = "travstats.webPrefs.pending.v1";
 
+/** The account this device's synced sections belong to. Per device, never synced. */
+export const OWNER_STORAGE_KEY = "travstats.webPrefs.owner.v1";
+
 interface PendingRecord {
   userId: string;
   sections: Record<string, string>;
@@ -153,6 +164,8 @@ export function createWebPrefsSync(options: WebPrefsSyncOptions): WebPrefsSync {
   let pending: Record<string, string> = {};
   /** Pending changes from an earlier page, read at `start`. */
   let carried: Record<string, string> = {};
+  /** Whether this device's synced sections were last another account's (rule 2). */
+  let ownedByOther = false;
 
   const iso = () => new Date(now()).toISOString();
 
@@ -179,6 +192,24 @@ export function createWebPrefsSync(options: WebPrefsSyncOptions): WebPrefsSync {
       );
     } catch {
       return {};
+    }
+  }
+
+  function readOwnedByOther(): boolean {
+    try {
+      const owner = storage.getItem(OWNER_STORAGE_KEY);
+      return owner !== null && owner !== userId;
+    } catch {
+      // Storage blocked: nothing local survives a reload, so nothing is foreign.
+      return false;
+    }
+  }
+
+  function writeOwner(): void {
+    try {
+      storage.setItem(OWNER_STORAGE_KEY, userId);
+    } catch {
+      // Storage blocked: see writePending.
     }
   }
 
@@ -257,7 +288,11 @@ export function createWebPrefsSync(options: WebPrefsSyncOptions): WebPrefsSync {
           // and say nothing about a default.
           const local = section.read();
           if (section.isDefault(local)) withoutPending(name);
-          else if (!(name in pending)) pending = { ...pending, [name]: iso() };
+          else if (ownedByOther && !(name in pending)) {
+            // Another account's taste on a shared browser: seeding it would
+            // make it this account's on every device. Start from the defaults.
+            applyServer(name, section.defaultValue);
+          } else if (!(name in pending)) pending = { ...pending, [name]: iso() };
           continue;
         }
         const carriedAt = carried[name];
@@ -283,6 +318,8 @@ export function createWebPrefsSync(options: WebPrefsSyncOptions): WebPrefsSync {
       const state = await transport.get();
       if (gen !== generation || !active) return;
       reconcile(state, true);
+      writeOwner();
+      ownedByOther = false;
       loaded = true;
       failures = 0;
       carried = {};
@@ -386,6 +423,7 @@ export function createWebPrefsSync(options: WebPrefsSyncOptions): WebPrefsSync {
     failures = 0;
     agreed.clear();
     carried = readPending();
+    ownedByOther = readOwnedByOther();
     pending = { ...carried };
     writePending();
     unsubscribers = sections.map((s) => s.subscribe(() => onLocalChange(s.name)));

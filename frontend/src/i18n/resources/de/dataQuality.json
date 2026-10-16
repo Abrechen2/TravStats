@@ -307,7 +307,6 @@
       "flightNumber": "Flugnummer",
       "saveNumber": "Flugnummer speichern und prüfen",
       "numberEffect": "Ergänzt die Flugnummer dieses Flugs und prüft anschließend den Hinweis erneut.",
-      "editFlight": "Flug hier bearbeiten",
       "openRecord": "Eintrag öffnen und bearbeiten",
       "source": "Quelle",
       "compare": "Gespeichert und vorgeschlagen",
@@ -369,7 +368,14 @@
       "groupCount_one": "1 offener Eintrag",
       "groupCount_other": "{{count}} offene Einträge",
       "flightChanges_one": "Eine Angabe zum Flug aktualisieren?",
-      "flightChanges_other": "{{count}} Angaben zum Flug aktualisieren?"
+      "flightChanges_other": "{{count}} Angaben zum Flug aktualisieren?",
+      "history": {
+        "show": "Erledigte anzeigen",
+        "hide": "Erledigte ausblenden",
+        "title": "Bereits beantwortet",
+        "empty": "Hier hast du noch nichts beantwortet.",
+        "failed": "Die erledigten Einträge konnten nicht geladen werden."
+      }
     }
   },
   "flag": {

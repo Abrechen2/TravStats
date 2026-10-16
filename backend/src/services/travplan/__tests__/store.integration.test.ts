@@ -594,6 +594,12 @@ it.each(["flight", "hotel"] as const)(
       }
     }
     const plan = await create();
+    // A shared trip carries changes only between accounts that consented to each
+    // other (trip-sharing rule since 2026-10-16); without this row nothing is copied.
+    await prisma.shareConsent.deleteMany({ where: { requesterId: owner, targetId: other } });
+    await prisma.shareConsent.create({
+      data: { requesterId: owner, targetId: other, status: "accepted", decidedAt: new Date() },
+    });
     const group = await prisma.tripShareGroup.create({ data: { createdById: owner } });
     await prisma.trip.update({ where: { id: plan.tripId }, data: { shareGroupId: group.id } });
     const recipient = await prisma.trip.create({

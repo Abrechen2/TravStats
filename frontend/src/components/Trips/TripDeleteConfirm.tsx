@@ -3,10 +3,8 @@ import type { JSX } from "react";
 import ConfirmModal from "../Training/ConfirmModal";
 import { useDocumentCount } from "../../hooks/useDocumentCount";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useRailVisible } from "../../hooks/useRailVisible";
-import { useBusVisible } from "../../hooks/useBusVisible";
-import { useRentalVisible } from "../../hooks/useRentalVisible";
 import { DELETE_BUTTON_CLASS, withDocumentNote } from "../../lib/deleteConfirm";
+import { useDomainVisible } from "../../hooks/useDomainVisible";
 
 /** The entry kinds that outlive the trip, in the order the sentence names them. */
 export function keptEntries(visible: {
@@ -65,9 +63,9 @@ export default function TripDeleteConfirm({
   // Train rides, bus rides and rentals survive a trip too (`trip` is SetNull on
   // all three). The sentence names each where its domain is shown at all
   // (rail: browser acceptance 2026-09-26; bus and rental: forgejo#288 sweep).
-  const railVisible = useRailVisible();
-  const busVisible = useBusVisible();
-  const rentalVisible = useRentalVisible();
+  const railVisible = useDomainVisible("rail");
+  const busVisible = useDomainVisible("bus");
+  const rentalVisible = useDomainVisible("rental");
   const kept = keptEntries({ railVisible, busVisible, rentalVisible }).map((key) =>
     t(`trips:deleteTripKept.${key}`)
   );

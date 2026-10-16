@@ -1,10 +1,16 @@
 import { sourceData, type SourceData } from "../../lib/comparison/transport";
 import { downloadBlob } from "./DevicePanel";
-import type { RecordPage } from "./RecordBrowser";
+import { comparisonFieldLabel } from "./fieldLabel";
 import { useState } from "react";
 import { Button } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
-import { comparisonPost, type Link, type Scope, type Snapshot } from "../../lib/api/comparison";
+import {
+  comparisonPost,
+  type Link,
+  type RecordPage,
+  type Scope,
+  type Snapshot,
+} from "../../lib/api/comparison";
 
 export function initialScope(domains: string[]): Scope {
   return {
@@ -40,14 +46,16 @@ export default function GrantEditor({
   const { t } = useTranslation("comparison");
   const [scope, setScope] = useState<Scope>(() => {
     const previous = link.grants.find((g) => g.active && g.audience === "")?.scope;
-    return previous
-      ? {
-          ...initialScope(domains),
-          ...Object.fromEntries(
-            Object.keys(initialScope(domains)).map((k) => [k, previous[k as keyof Scope]])
-          ),
-        }
-      : initialScope(domains);
+    if (!previous) return initialScope(domains);
+    const restored: Scope = {
+      ...initialScope(domains),
+      ...Object.fromEntries(
+        Object.keys(initialScope(domains)).map((k) => [k, previous[k as keyof Scope]])
+      ),
+    };
+    // The server stores "all existing trips" with the ids it resolved. Sending those ids back
+    // froze the grant to that list and dropped the trip-less records it also covered.
+    return previous.allExisting ? { ...restored, tripIds: [], futureTrips: false } : restored;
   });
   const [fullPreview, setFullPreview] = useState<SourceData | null>(null);
   const [recordPreview, setRecordPreview] = useState<RecordPage | null>(null);
@@ -249,7 +257,7 @@ export default function GrantEditor({
                     .filter((f) => f.value !== null && f.value !== "")
                     .map((f) => (
                       <div key={f.name}>
-                        <dt>{t(`field.${f.name}`)}</dt>
+                        <dt>{comparisonFieldLabel(t, recordPreview.domain, f.name)}</dt>
                         <dd>{String(f.value)}</dd>
                       </div>
                     ))}

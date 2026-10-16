@@ -6,6 +6,7 @@ import type { FerryJourney } from "../../types/ferry";
 export function FerryRoadtripLink({ ride, onSaved }: { ride: FerryJourney; onSaved: () => void }) {
   const { t } = useTranslation(["ferry"]);
   const [legs, setLegs] = useState<FerryRoadtripLeg[]>([]);
+  const [truncated, setTruncated] = useState(false);
   const [selected, setSelected] = useState(ride.roadtripLegId ?? "");
   const [error, setError] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -13,8 +14,10 @@ export function FerryRoadtripLink({ ride, onSaved }: { ride: FerryJourney; onSav
     let live = true;
     void ferryApi
       .roadtripLegs()
-      .then((items) => {
-        if (live) setLegs(items);
+      .then((answer) => {
+        if (!live) return;
+        setLegs(answer.legs);
+        setTruncated(answer.truncated);
       })
       .catch(() => {
         if (live) setError(true);
@@ -40,6 +43,7 @@ export function FerryRoadtripLink({ ride, onSaved }: { ride: FerryJourney; onSav
     <div className="space-y-3">
       <p className="t-caption">{t("ferry:roadtrip.hint")}</p>
       {error && <p role="alert">{t("ferry:saveError")}</p>}
+      {truncated && <p className="t-caption">{t("ferry:roadtrip.truncated")}</p>}
       <select
         aria-label={t("ferry:roadtrip.title")}
         className="w-full min-w-0 rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) focus:border-(--accent)"

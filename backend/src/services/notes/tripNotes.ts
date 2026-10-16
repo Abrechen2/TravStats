@@ -53,8 +53,10 @@ function intersect(a: DaySpan, b: DaySpan): DaySpan | null {
  * One account's notes whose day lies in `span`, oldest first (`id` breaks
  * ties). The query is bounded by instants a day wider than the span on both
  * sides — every zone's day sits inside that — and `localDay` then decides
- * exactly. `truncated` says the bound was reached, so the caller can say
- * there may be more instead of presenting a cut list as complete.
+ * exactly. It reads page by page until `limit + 1` notes of the span are in
+ * hand: bounding the wider read instead let notes from the margin fill the
+ * page and be dropped, so a span with notes came back empty and "truncated".
+ * `truncated` says notes of the span were left out.
  */
 export async function notesInSpan(
   userId: string,
@@ -62,24 +64,32 @@ export async function notesInSpan(
   options: { visibility?: NoteVisibility; limit?: number } = {}
 ): Promise<{ notes: Note[]; truncated: boolean }> {
   const limit = options.limit ?? TRIP_NOTES_MAX;
-  const rows = await prisma.note.findMany({
-    where: {
-      userId,
-      ...(options.visibility && { visibility: options.visibility }),
-      occurredAt: {
-        gte: new Date(toDbDate(span.start).getTime() - DAY_MS),
-        lt: new Date(toDbDate(span.end).getTime() + 2 * DAY_MS),
-      },
+  const pageSize = limit + 1;
+  const where = {
+    userId,
+    ...(options.visibility && { visibility: options.visibility }),
+    occurredAt: {
+      gte: new Date(toDbDate(span.start).getTime() - DAY_MS),
+      lt: new Date(toDbDate(span.end).getTime() + 2 * DAY_MS),
     },
-    orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
-    take: limit + 1,
-  });
-  const truncated = rows.length > limit;
-  const notes = rows.slice(0, limit).filter((note) => {
-    const day = localDay(note.occurredAt, note.occurredZone);
-    return day >= span.start && day <= span.end;
-  });
-  return { notes, truncated };
+  };
+  const inSpan: Note[] = [];
+  let cursor: string | null = null;
+  while (inSpan.length <= limit) {
+    const page: Note[] = await prisma.note.findMany({
+      where,
+      orderBy: [{ occurredAt: "asc" }, { id: "asc" }],
+      take: pageSize,
+      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+    });
+    for (const note of page) {
+      const day = localDay(note.occurredAt, note.occurredZone);
+      if (day >= span.start && day <= span.end) inSpan.push(note);
+    }
+    if (page.length < pageSize) break;
+    cursor = page[page.length - 1].id;
+  }
+  return { notes: inSpan.slice(0, limit), truncated: inSpan.length > limit };
 }
 
 /** Another member's note as a trip member reads it: no position, no photo, no owner id. */
@@ -111,7 +121,8 @@ const TRIP_SELECT = {
 /**
  * The other members' shareable notes for the caller's trip. A member counts
  * when their own trip is in the caller's trip's group and no consent between
- * the two was withdrawn (`withdrawnTowards`, the propagation rule); their
+ * the two was withdrawn (`withdrawnTowards` — propagation itself asks for
+ * an ACCEPTED consent since 2026-10-16, `members.ts`); their
  * note's day must lie in their OWN trip of the group — the days they shared —
  * and in the caller's.
  */

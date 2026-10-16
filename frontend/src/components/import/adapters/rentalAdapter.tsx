@@ -7,6 +7,8 @@ import type { ParseEmailRentalResult, ParsePdfRentalResult } from "../../../lib/
 import { RentalFormModal } from "../../rental/RentalFormModal";
 import { RentalImportPreviewModal } from "../../rental/RentalImportPreviewModal";
 import type { DomainImportAdapter, ReviewModalProps } from "../types";
+import type { RentalDeadlineField } from "../../../lib/api/rental";
+import { describeRentalImportSaved } from "../../../lib/rental/rentalImportResult";
 
 type RentalParse = ParseEmailRentalResult | ParsePdfRentalResult;
 
@@ -59,7 +61,7 @@ export function useRentalImportAdapter(): DomainImportAdapter {
       <RentalReviewSlot
         {...props}
         onEmpty={(message) => addToast("error", message)}
-        onDone={() => addToast("success", t("rental:import.saved"))}
+        onDone={(filled) => addToast("success", describeRentalImportSaved(filled, t))}
       />
     ),
   };
@@ -67,7 +69,7 @@ export function useRentalImportAdapter(): DomainImportAdapter {
 
 interface RentalReviewSlotProps extends ReviewModalProps {
   onEmpty: (message: string) => void;
-  onDone: () => void;
+  onDone: (filledDeadlines: RentalDeadlineField[]) => void;
 }
 
 function RentalReviewSlot({
@@ -96,8 +98,8 @@ function RentalReviewSlot({
     <RentalImportPreviewModal
       candidate={candidate}
       onCancel={onCancel}
-      onSaved={async () => {
-        onDone();
+      onSaved={async ({ filledDeadlines }) => {
+        onDone(filledDeadlines);
         await onCommit();
       }}
     />

@@ -130,7 +130,12 @@
     "PLAN_ANCHOR_STALE": "Eine feste Buchung wurde in TravStats geändert. Aktualisiere zuerst die Buchungen im Plan.",
     "LLM_DISABLED": "Die KI ist auf diesem Server ausgeschaltet.",
     "LLM_CLOUD_NOT_CONSENTED": "Cloudanbieter sind auf diesem Server noch nicht freigegeben.",
-    "LLM_UNREACHABLE": "Der KI-Anbieter ist gerade nicht erreichbar."
+    "LLM_UNREACHABLE": "Der KI-Anbieter ist gerade nicht erreichbar.",
+    "PLAN_TOO_LARGE": "Der Plan ist zu groß, um ihn zu speichern. Entferne nicht mehr benötigte Einträge oder Ideen und versuche es dann erneut.",
+    "PLAN_ITEM_NOT_FOUND": "Dieser Eintrag existiert nicht mehr – vermutlich wurde er inzwischen gelöscht. Lade die Seite neu, um den aktuellen Stand zu sehen.",
+    "PLAN_PROPOSAL_NOT_FOUND": "Diesen Vorschlag gibt es nicht mehr. Erstelle bei Bedarf einen neuen.",
+    "PLAN_DOCUMENT_NOT_FOUND": "Ein verknüpftes Dokument gehört nicht (mehr) zu dieser Reise. Entferne es aus der Buchung und speichere erneut.",
+    "PLAN_WEATHER_INVALID": "Die Wetterquelle hat unbrauchbare Daten geliefert. Die gespeicherte Vorhersage bleibt erhalten; versuche es später erneut."
   },
   "enabled": "TravPlan auf diesem Server aktivieren",
   "config": "TravPlan-Einstellungen",
@@ -158,7 +163,6 @@
   },
   "conscious": "Bewusst offen lassen",
   "dismiss": "Brauche ich nicht",
-  "allChecks": "Alle Hinweise ansehen",
   "freeDay": "Tag bewusst frei lassen",
   "openDay": "Tag wieder für Ideen öffnen",
   "fixed": "Gebucht · fester Anker",
@@ -193,7 +197,6 @@
   "apply": "Vorschlag übernehmen",
   "reject": "So lassen",
   "stale": "Dieser Vorschlag passt nicht mehr zum aktuellen Plan. Bitte neu erstellen.",
-  "noAI": "Manuelle Planung und Reisecheck funktionieren auch ohne KI.",
   "packIntro": "Packhilfe passend zu deinem Ziel und deinen Plänen. Deine eigenen Mengen bleiben erhalten.",
   "forecast": "Wettervorhersage abrufen",
   "weatherUnknown": "Für diesen Zeitraum liegen noch keine Wetterdaten vor. Eine fehlende Vorhersage bedeutet kein gutes Wetter.",
@@ -220,7 +223,6 @@
   "newItem": "Neuer Programmpunkt",
   "newIdea": "Eine Idee festhalten",
   "newPacking": "Etwas auf die Packliste",
-  "newTask": "Eine Aufgabe festhalten",
   "newCost": "Kostenpunkt hinzufügen",
   "packingIdeas": {
     "rain": "Regenjacke oder Regenschutz",

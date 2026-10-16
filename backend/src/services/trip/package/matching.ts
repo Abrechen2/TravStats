@@ -66,7 +66,15 @@ export function resolveEndpoint(
   ctx: EndpointContext
 ): ProposalEndpoint {
   if (iata) {
-    return { iata, city: city ?? null, status: ctx.known.has(iata) ? "given" : "unknown" };
+    if (ctx.known.has(iata)) return { iata, city: city ?? null, status: "given" };
+    // A code the catalogue lacks (a misread, a new field) is the reviewer's
+    // to correct, keyed by the code itself — or by the city, where one was
+    // named — as an unplaced city is.
+    const corrected = ctx.choices[iata] ?? (city ? ctx.choices[city] : undefined);
+    if (corrected && ctx.known.has(corrected)) {
+      return { iata: corrected, city: city ?? null, status: "chosen" };
+    }
+    return { iata, city: city ?? null, status: "unknown" };
   }
   const name = city ?? "";
   const picked = ctx.choices[name];

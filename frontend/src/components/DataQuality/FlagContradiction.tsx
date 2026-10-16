@@ -19,7 +19,7 @@ import { formatDate as formatUserDate } from "../../lib/displayFormat";
  * This is the visual half of "a flag is a question, not a verdict". The two
  * sides get the SAME box, the same weight and the same colour: no
  * strikethrough, no red-to-green arrow, no "correct to". That vocabulary
- * belongs to `PendingUpdateCard`, where a provider really is proposing a
+ * belongs to `FlightUpdateCard`, where a provider really is proposing a
  * replacement value; here the whole point is that nobody knows yet which of the
  * two is right. The known false positive makes it concrete — an address ending
  * "…, Atlanta, Georgia" reads as Georgia the country, and the stored US is the

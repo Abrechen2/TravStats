@@ -1,5 +1,6 @@
 import type { DawarichStay, DawarichStayScan } from "../../../prisma";
 import { serializeTime } from "../../../shared/time/wire";
+import { publicMarketCoverage } from "./publicCoverage";
 const at = (value: Date | null, zone = "UTC") =>
   value ? serializeTime(value, zone, "minute") : null;
 export function withStayTimes<T extends DawarichStay>(row: T) {
@@ -19,6 +20,7 @@ export function withStayTimes<T extends DawarichStay>(row: T) {
 export function withScanTimes(row: DawarichStayScan | null) {
   return {
     ...row,
+    ...(row ? { marketResult: publicMarketCoverage(row.marketResult) } : {}),
     times: {
       startedAt: at(row?.startedAt ?? null),
       finishedAt: at(row?.finishedAt ?? null),

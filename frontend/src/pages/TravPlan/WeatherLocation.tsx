@@ -1,6 +1,11 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { travplanApi, type PlanView, type PlanOperation } from "../../lib/api/travplan";
+import { Button, Field, Input } from "../../components/ui";
+import { PlanActions, PlanGrow, PlanRow } from "./planLayout";
+
+const MIN_QUERY_CHARS = 2;
+const MAX_QUERY_CHARS = 120;
 export default function WeatherLocation({
   plan,
   mutate,
@@ -22,7 +27,8 @@ export default function WeatherLocation({
         timezone: string;
       }[]
     >([]),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    inputId = useId();
   async function search() {
     setBusy(true);
     try {
@@ -34,25 +40,31 @@ export default function WeatherLocation({
     }
   }
   return (
-    <div style={{ marginBottom: 20 }}>
-      <label>
-        {t("weatherLocation")}
-        <input
-          className="tp-search"
+    <div style={{ marginBottom: "var(--ts-space-xl)" }}>
+      <Field label={t("weatherLocation")} htmlFor={inputId}>
+        <Input
+          id={inputId}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          maxLength={120}
+          maxLength={MAX_QUERY_CHARS}
         />
-      </label>
-      <button disabled={busy || query.trim().length < 2} onClick={() => void search()}>
-        {t("searchLocation")}
-      </button>
+      </Field>
+      <PlanActions>
+        <Button
+          disabled={busy || query.trim().length < MIN_QUERY_CHARS}
+          onClick={() => void search()}
+        >
+          {t("searchLocation")}
+        </Button>
+      </PlanActions>
       {rows.map((row) => (
-        <div key={row.id} className="tp-row">
-          <span className="tp-grow">
-            {row.name} · {row.country}
-          </span>
-          <button
+        <PlanRow key={row.id}>
+          <PlanGrow>
+            <span className="t-body">
+              {row.name} · {row.country}
+            </span>
+          </PlanGrow>
+          <Button
             onClick={() =>
               void mutate({
                 type: "settings",
@@ -67,10 +79,10 @@ export default function WeatherLocation({
             }
           >
             {t("choose")}
-          </button>
-        </div>
+          </Button>
+        </PlanRow>
       ))}
-      <p className="tp-muted">{t("locationSource")}</p>
+      <p className="t-caption">{t("locationSource")}</p>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { prisma } from "../../db";
 import { findNearbyLodgings } from "./proximityMatch";
 import logger from "../../utils/logger";
 import { resolveStayTiming } from "../../shared/lodgingTiming";
+import { isLocalDate } from "../../shared/time/localDate";
 import type {
   LodgingDedupeHint,
   LodgingImportAction,
@@ -147,7 +148,9 @@ interface Indexes {
  */
 export function stayChanges(
   incoming: StayCandidateFields,
-  stored: ComparableStay
+  stored: ComparableStay,
+  /** Whether the hotel has a clock (a position) a cancellation TIME can be read on. */
+  hotelClockKnown = true
 ): LodgingStayChange[] {
   const changes: LodgingStayChange[] = [];
   const day = (d: Date | null): string | null => (d ? dayKey(d) : null);
@@ -200,7 +203,10 @@ export function stayChanges(
   const fills = emptyDeadlineFills(incoming, stored);
   for (const field of DEADLINE_FIELDS) {
     const to = fills[field];
-    if (to) changes.push({ field, from: null, to });
+    // A cancellation time no clock can place is dropped at the write; offered
+    // here, it made an update that wrote nothing and was counted as one.
+    const unplaceable = field === "freeCancellationUntil" && !hotelClockKnown && !isLocalDate(to);
+    if (to && !unplaceable) changes.push({ field, from: null, to });
   }
   return changes;
 }
@@ -387,7 +393,8 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
         // ...but "the same booking" is not "the same values". A changed
         // booking carries the same reference and different dates, and it was
         // skipped in silence until 2026-09-17 (forgejo#122).
-        changes = stayChanges(stay, hit);
+        const house = idx.allLodgings.find((l) => l.id === hit.lodgingId);
+        changes = stayChanges(stay, hit, house?.lat != null && house?.lon != null);
       }
     }
 

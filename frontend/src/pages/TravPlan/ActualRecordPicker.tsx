@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { tripsApi } from "../../lib/api";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { PlanItem } from "../../lib/api/travplan";
+import { logger } from "../../lib/logger";
+import { Button, Field, Select } from "../../components/ui";
+import { PlanActions } from "./planLayout";
 const collections: Record<string, string> = {
   flight: "flights",
   hotel: "lodgingStays",
@@ -24,7 +27,8 @@ export function ActualRecordPicker({
 }) {
   const { t } = useTranslation("travplan"),
     [rows, setRows] = useState<{ id: string; title: string }[]>([]),
-    [selected, setSelected] = useState("");
+    [selected, setSelected] = useState(""),
+    selectId = useId();
   useEffect(() => {
     let live = true;
     tripsApi
@@ -50,32 +54,26 @@ export function ActualRecordPicker({
           setSelected(options[0]?.id || "");
         }
       })
-      .catch(() => {});
+      .catch((cause: unknown) => logger.warn("Failed to load the trip's records", cause));
     return () => {
       live = false;
     };
   }, [tripId, item.kind]);
   if (!collections[item.kind] || !rows.length) return null;
   return (
-    <div className="tp-actions">
-      <label>
-        {t("linkActual")}
-        <select
-          aria-label={t("linkActual")}
-          className="tp-search"
-          value={selected}
-          onChange={(e) => setSelected(e.target.value)}
-        >
+    <PlanActions>
+      <Field label={t("linkActual")} htmlFor={selectId}>
+        <Select id={selectId} value={selected} onChange={(e) => setSelected(e.target.value)}>
           {rows.map((row) => (
             <option value={row.id} key={row.id}>
               {row.title}
             </option>
           ))}
-        </select>
-      </label>
-      <button disabled={busy || !selected} onClick={() => onLink(selected)}>
+        </Select>
+      </Field>
+      <Button disabled={busy || !selected} onClick={() => onLink(selected)}>
         {t("linkActual")}
-      </button>
-    </div>
+      </Button>
+    </PlanActions>
   );
 }

@@ -193,20 +193,44 @@ describe("GET /api/v1/evidence/metric/... — the cross-domain KPI strip", () =>
   });
 
   /**
-   * DE, GB, JP, IT — four, not five: the hotel's Germany is the flights'
-   * Germany. A sum of the four domains' own country counts would say five.
+   * "Länder besucht" counts by the passport's rule (forgejo#299), not by
+   * "any record touched it". DE (the hotel stay), JP and IT (places) — three.
+   * The United Kingdom is the end of an open chain (FRA -> LHR, next flight
+   * leaves Frankfurt): ground presence, not a visit, so no row credits it.
    */
-  it("crossDomainCountryCount: the UNION, so Germany is proved twice and counted once", () => {
+  it("crossDomainCountryCount: only VISITED countries, each from the record that proves the visit", () => {
     const res = answer("crossDomainCountryCount");
-    expect(res.measure.value).toBe(4);
+    expect(res.measure.value).toBe(3);
     expect(res.measure.aggregation).toBe("distinct");
     const credited = new Set(res.entries.flatMap((e) => e.credits ?? []));
-    expect([...credited].sort()).toEqual(["DE", "GB", "IT", "JP"]);
-    // One international flight proves TWO countries; that is what `credits`
-    // exists to express and a scalar per row could not.
-    const international = res.entries.find((e) => (e.credits ?? []).includes("GB"))!;
-    expect([...international.credits!].sort()).toEqual(["DE", "GB"]);
+    expect([...credited].sort()).toEqual(["DE", "IT", "JP"]);
+    // The flights prove no visit: Germany is visited through the stay.
+    expect(res.entries.filter((e) => e.domain === "flight")).toEqual([]);
     assertDistinctInvariant(res);
+  });
+
+  it("crossDomainCountryCount: a year takes the visits dated in it, an undated one only lifetime", async () => {
+    const res = await request(app)
+      .get("/api/v1/evidence/metric/crossDomainCountryCount")
+      .query({ period: "year", year: 2024 })
+      .set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    // Italy's place has no visit date, so it proves no year.
+    expect(res.body.measure.value).toBe(2);
+    const credited = new Set(
+      (res.body.entries as Array<{ credits?: string[] }>).flatMap((e) => e.credits ?? [])
+    );
+    expect([...credited].sort()).toEqual(["DE", "JP"]);
+  });
+
+  it("crossDomainCountryCount: the flight chip alone proves no visited country here", async () => {
+    const res = await request(app)
+      .get("/api/v1/evidence/metric/crossDomainCountryCount")
+      .query({ domains: "flight" })
+      .set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.measure.value).toBe(0);
+    expect(res.body.entries).toEqual([]);
   });
 
   /**
@@ -301,7 +325,8 @@ describe("GET /api/v1/evidence/metric/... — the cross-domain KPI strip", () =>
       {
         domain: "flight",
         events: 2,
-        countries: ["DE", "GB", "DE"],
+        // Ground presence only (open chain ends): no visited country.
+        countries: [],
         activeDayKeys: ["2024-03-10", "2024-03-10"],
       },
       {
@@ -319,7 +344,7 @@ describe("GET /api/v1/evidence/metric/... — the cross-domain KPI strip", () =>
       {
         domain: "poi",
         events: 2,
-        countries: ["JP", "IT"],
+        countries: ["IT", "JP"],
         activeDayKeys: ["2024-05-01", "2024-05-02"],
       },
     ]);

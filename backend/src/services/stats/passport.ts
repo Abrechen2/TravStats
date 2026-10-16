@@ -2,6 +2,8 @@
  * Country evidence for the passport and its dependent statistics (forgejo#299).
  * Ground presence includes flown endpoints, transit and curated road stations.
  * Visits require an actual destination, a confirmed place or a non-transit stay.
+ * Owner rulings 2026-10-16: a port call is a visit; train, coach and ferry
+ * rides count like flights, in one chain with them (`./journeyEvidence.ts`).
  * Raw location observations never prove either set. Planned and cancelled
  * travel is excluded; undated confirmed records remain undated.
  * Each country appears once, with its evidence and uncertainty retained.
@@ -25,7 +27,13 @@ import {
   type EvidenceInput,
   type EvidenceKind,
 } from "../../shared/countryEvidence";
-import { FLOWN, flightDay, flightEvidence, isoDayOf, type PassportFlight } from "./flightEvidence";
+import { FLOWN, flightDay, flightLegs, isoDayOf, type PassportFlight } from "./flightEvidence";
+import { journeyEvidence } from "./journeyEvidence";
+import {
+  countryAnnotations,
+  type CountryVisitSource,
+  type PassportUnclearReason,
+} from "./countryAnnotations";
 import {
   unconfirmedTrackCountries,
   type CountryDayRow,
@@ -33,8 +41,9 @@ import {
 } from "./trackEvidence";
 import { localDay } from "../../shared/time/instant";
 import { roadtripEvidence, type PassportRoadtripStation } from "./roadtripEvidence";
-import { railEvidence, type RailEnd } from "./railEvidence";
-import { busEvidence, type BusEnd } from "./busEvidence";
+import { legsOfEnds, type RailEnd } from "./railEvidence";
+import type { BusEnd } from "./busEvidence";
+import type { FerryEnd } from "./ferryEvidence";
 import { countEvidencePerCountry } from "./evidenceCountry";
 import { lodgingStampsPerCountry, type LodgingStamp, type StampLodging } from "./lodgingStamp";
 
@@ -125,6 +134,8 @@ const EVIDENCE_RANK: Record<PassportEvidence, number> = {
   rail: 3,
   // A coach terminal (forgejo#265): beside the station, a step below it.
   bus: 2.5,
+  // A ferry port (owner ruling 2026-10-16 #3): beside the coach terminal.
+  ferry: 2.4,
   // Below the house, so a country already labelled by its stay keeps that
   // label; above the track, because a station is a record somebody typed and
   // can open, which a country-day is not.
@@ -137,24 +148,28 @@ const strongestKind = (kinds: readonly EvidenceKind[]): PassportEvidence =>
   [...kinds].sort((a, b) => EVIDENCE_RANK[b] - EVIDENCE_RANK[a])[0];
 
 /**
- * The tier `summary.countries` counts from when the caller names none.
- *
- * A connection does not count, everything else does. It stopped being THE
- * threshold on 2026-09-02 (spec §3.2): "does a connection count" is a personal
- * definition, so an admin now sets the instance default and any user may
- * override it — `services/countryThresholdResolver.ts` resolves the pair, and
- * `loadPassport` passes the answer in. This constant is what a caller with no
- * user in hand gets, which is what every unit test in this directory is.
- *
- * It is an alias for the shared default rather than a second copy of the word:
- * two places naming a default is how they start disagreeing about it.
+ * The legacy threshold default, kept only so old callers compile: since
+ * forgejo#299 the headline is always "Land besucht" and no threshold moves it.
  */
 export const PASSPORT_COUNTRY_THRESHOLD: CountryTier = DEFAULT_COUNTRY_TIER;
 
+export type { PassportUnclearReason };
+
 export interface PassportCountry {
+  /** "Am Boden gewesen" — every row is, by construction. */
   groundPresence: boolean;
+  /** "Land besucht" (forgejo#299). The same value as `counted`. */
   visited: boolean;
+  /**
+   * Not visited, and the records cannot decide whether it was — shown as
+   * "unklar" with `visitUncertainReasons`, never dropped and never upgraded.
+   * False for a DECIDED connection (Qatar on MUC->DOH->HAN and back).
+   */
   visitUncertain: boolean;
+  /** Sorted, distinct; empty unless `visitUncertain`. */
+  visitUncertainReasons: PassportUnclearReason[];
+  /** Which domains prove the visit, in which years; empty unless `visited`. */
+  visitSources: CountryVisitSource[];
   /** ISO-3166 alpha-2. What a client shows — never a flag: flags are political and age. */
   code: string;
   continent: Continent | null;
@@ -249,6 +264,8 @@ export interface Passport {
     countries: number;
     groundCountries: number;
     visitedCountries: number;
+    /** Ground-presence countries whose visit the records cannot decide. */
+    unclearCountries: number;
     /** Every row in `countries`, whatever its tier. What `byEvidence` sums to. */
     countriesTotal: number;
     /**
@@ -359,7 +376,7 @@ export function buildPassport(
    * overview counted a roadtrip's countries while the passport did not.
    */
   roadtripStations: readonly PassportRoadtripStation[] = [],
-  /** Station ends of completed train rides, graded by `./railEvidence.ts`. */
+  /** Station ends of completed train rides (`./railEvidence.ts`), each with its ride as a leg. */
   railEnds: readonly RailEnd[] = [],
   /**
    * The user's profile zone: "this year" for `isNew` is THEIR year. Stamps are
@@ -368,13 +385,27 @@ export function buildPassport(
    */
   profileZone: string = "UTC",
   /** Terminal ends of completed bus rides (`./busEvidence.ts`), while bus is visible. */
-  busEnds: readonly BusEnd[] = []
+  busEnds: readonly BusEnd[] = [],
+  /**
+   * ISO codes of the countries the user lives or lived in — a home period that
+   * has begun (`./passportLoader.ts` `loadHomeCountries`). Living somewhere is
+   * the longest stay there is, so a home country with any record counts as
+   * visited even when every flight there is a chain end; without this the
+   * owner's Germany dropped out of "Land besucht" (forgejo#299 lists it). It
+   * never creates a row: a country needs a record to open.
+   */
+  homeCountries: readonly string[] = [],
+  /** Port ends of completed ferry crossings (`./ferryEvidence.ts`), while ferry is visible. */
+  ferryEnds: readonly FerryEnd[] = []
 ): Passport {
   flights = flights.filter((f) => !f.departureTime || f.departureTime <= now);
   placeVisits = placeVisits.filter((v) => !v.at || v.at <= now);
   portCalls = portCalls.filter((v) => !v.at || v.at <= now);
   const thisYear = Number(localDay(now, profileZone).slice(0, 4));
   const home = new Set(homeIatas.map((c) => c.toUpperCase()));
+  const homeCountrySet = new Set(
+    homeCountries.map((c) => isoCountryCode(c)).filter((c): c is string => c !== null)
+  );
 
   const byCountry = new Map<string, CountryAcc>();
   const firstSeen = new Map<string, { date: string | null; country: string | null }>();
@@ -545,16 +576,29 @@ export function buildPassport(
   const countryOfAirport = (iata: string | null): string | null =>
     iata ? isoCountryCode(airportCountries.get(iata.toUpperCase()) ?? null) : null;
 
+  // Flights, trains and coaches as ONE chain (owner ruling 2026-10-16).
+  const journeyInputs = journeyEvidence(
+    [
+      ...flightLegs(flights, countryOfAirport),
+      ...legsOfEnds(railEnds),
+      ...legsOfEnds(busEnds),
+      ...legsOfEnds(ferryEnds),
+    ],
+    homeCountrySet
+  );
   const evidenceInputs: EvidenceInput[] = [
-    ...flightEvidence(flights, countryOfAirport),
+    ...journeyInputs,
     ...portCalls.map((call): EvidenceInput => {
       const from = isoDayOf(call.at);
       const to = isoDayOf(call.until);
       return {
         country: call.country,
         kind: "port",
-        // A port call alone does not establish a visit ashore.
-        tier: "transited",
+        // Owner ruling 2026-10-16: "Landgang ist eindeutig ein Besuch". A port
+        // call (a port day, never a sea day — sea days carry no port) is a
+        // visit; graded `transited` it left a cruise-only account with no
+        // visited country at all.
+        tier: "visited",
         at: call.at,
         // The days the ship was alongside. No `groundMinutes`: a port call
         // bounds no departure that this derivation can read, and §3.4b forbids
@@ -571,10 +615,10 @@ export function buildPassport(
     ...lodgingInputs,
     // Curated roadtrip stations attest ground travel; raw location points do not.
     ...roadtripEvidence(roadtripStations),
-    ...railEvidence(railEnds),
-    ...busEvidence(busEnds),
   ];
   const evidence = foldCountryEvidence(evidenceInputs);
+  const annotations = countryAnnotations(evidenceInputs);
+  const liftedHome = new Set<string>();
   const firstVisitYears = new Map(
     foldCountryEvidence(
       evidenceInputs.filter((input) => input.tier === "visited" || input.tier === "slept")
@@ -622,6 +666,14 @@ export function buildPassport(
     // place. A second copy of "which tier outranks which" is the drift the
     // shared module exists to end.
     acc.counted = countCountries([row], "visited") === 1;
+    if (homeCountrySet.has(row.code)) {
+      acc.isHome = true;
+      if (!acc.counted) {
+        acc.tier = "visited";
+        acc.counted = true;
+        liftedHome.add(row.code);
+      }
+    }
   }
 
   /**
@@ -633,13 +685,18 @@ export function buildPassport(
   const evidenceCounts = countEvidencePerCountry(portCalls, placeVisits);
   const lodgingStamps = lodgingStampsPerCountry(lodgings, now);
 
+  // A home country lifted to visited dates from its own earliest record — a
+  // real year, never the home setting's.
+  const visitedYearOf = (code: string, acc: CountryAcc): number | null =>
+    firstVisitYears.get(code) ?? (homeCountrySet.has(code) ? acc.firstYear : null);
+
   const countries: PassportCountry[] = [...byCountry.entries()]
     .map(([code, acc]) => ({
       code,
       continent: acc.continent,
       entries: acc.entries.size,
       firstYear: acc.firstYear,
-      firstVisitedYear: firstVisitYears.get(code) ?? null,
+      firstVisitedYear: visitedYearOf(code, acc),
       lastYear: acc.lastYear,
       airports: [...acc.airports.entries()]
         .sort(
@@ -648,7 +705,7 @@ export function buildPassport(
         )
         .map(([iata]) => iata),
       isHome: acc.isHome,
-      isNew: acc.counted && firstVisitYears.get(code) === thisYear,
+      isNew: acc.counted && visitedYearOf(code, acc) === thisYear,
       evidence: acc.evidence,
       tier: acc.tier,
       kinds: acc.kinds,
@@ -658,8 +715,9 @@ export function buildPassport(
       counted: acc.counted,
       groundPresence: true,
       visited: acc.counted,
-      visitUncertain:
-        !acc.counted && acc.kinds.some((kind) => ["flight", "port", "rail", "bus"].includes(kind)),
+      visitUncertain: !acc.counted && annotations.unclearReasons(code).length > 0,
+      visitUncertainReasons: acc.counted ? [] : annotations.unclearReasons(code),
+      visitSources: acc.counted ? annotations.visitSources(code, liftedHome.has(code)) : [],
       portCalls: evidenceCounts.get(code)?.portCalls ?? 0,
       places: evidenceCounts.get(code)?.places ?? 0,
       lodging: lodgingStamps.get(code) ?? null,
@@ -690,6 +748,7 @@ export function buildPassport(
       countries: countries.filter((c) => c.counted).length,
       groundCountries: countries.length,
       visitedCountries: countries.filter((c) => c.counted).length,
+      unclearCountries: countries.filter((c) => c.visitUncertain).length,
       countriesTotal: countries.length,
       legacyCountries: countries.filter((c) => c.airports.length > 0).length,
       // The RESOLVED value, so a client never has to guess which rule produced
@@ -710,6 +769,7 @@ export function buildPassport(
         lodging: countries.filter((c) => c.evidence === "lodging").length,
         rail: countries.filter((c) => c.evidence === "rail").length,
         bus: countries.filter((c) => c.evidence === "bus").length,
+        ferry: countries.filter((c) => c.evidence === "ferry").length,
         roadtrip: countries.filter((c) => c.evidence === "roadtrip").length,
         track: countries.filter((c) => c.evidence === "track").length,
       },

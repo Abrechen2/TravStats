@@ -4,6 +4,7 @@ import type { PendingUpdate } from "../../../lib/api/types";
 import type { PhotoJourney } from "../../../types/photoJourney";
 import type { TripSuggestion } from "../../../types/tripSuggestion";
 import { countryName } from "../../../shared/geo/countryCode";
+import { flagSubjectLabel } from "../../DataQuality/flagSubject";
 import { photoJourneyLabel } from "../photoJourneyLabel";
 import { suggestedTripName } from "../tripSuggestionCopy";
 
@@ -30,12 +31,14 @@ export type InboxItem = InboxRecord & {
   groupName: string;
 };
 
+/** The card's subject line: one naming rule with the card body (`flagSubjectLabel`). */
 export function flagSubject(flag: DataQualityFlag, t: Translate, language: string): string {
-  if (flag.entityType === "country") return countryName(flag.entityId, language) || flag.entityId;
-  if (flag.entityType === "home") return t("dataQuality:flag.homeSubject");
-  return flag.subject && "label" in flag.subject && flag.subject.label
-    ? flag.subject.label
-    : t("dataQuality:flag.unnamedRecord");
+  return flagSubjectLabel(
+    flag,
+    (code) => countryName(code, language) || t("dataQuality:flag.unknownCountry", { code }),
+    t("dataQuality:flag.unnamedRecord"),
+    t("dataQuality:flag.homeSubject")
+  );
 }
 
 /** A travel day, never the date the inbox check happened to run. */

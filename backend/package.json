@@ -36,7 +36,8 @@
     "dead-code": "ts-prune | grep -v \"(used in module)\"",
     "lint:py": "ruff check src/scripts/",
     "refresh:airline-logos": "bash scripts/refresh-airline-logos.sh",
-    "typecheck:tests": "node --max-old-space-size=6144 ../scripts/check-test-types.mjs"
+    "typecheck:tests": "node --max-old-space-size=6144 ../scripts/check-test-types.mjs",
+    "typecheck:manual": "tsc -p tsconfig.manual.json"
   },
   "keywords": [
     "flight",

@@ -7,6 +7,11 @@ import { generateToken } from "../../utils/jwt";
 import { reserveScan, scanStays } from "../../services/dawarich/stays/scan";
 import type { DawarichClient, DawarichPoint } from "../../services/dawarich/dawarichClient";
 jest.mock("../../utils/achievements", () => ({ recheckAchievements: jest.fn(async () => {}) }));
+// Accepting a stay completes the new place's address from its pin; no test reaches Nominatim.
+jest.mock("../../services/geo/nominatim", () => ({
+  ...jest.requireActual("../../services/geo/nominatim"),
+  completeAddressFromCoordinates: jest.fn(async () => null),
+}));
 const now = new Date("2026-10-11T06:00:00Z");
 const points: DawarichPoint[] = [0, 10, 20, 30].map((m, i) => ({
   id: i + 1,
@@ -212,6 +217,34 @@ describe("Automatic market suggestions", () => {
       ).status
     ).toBe(409);
   });
+  it("gives the replaced stays back when the venue suggestion is rejected", async () => {
+    await run();
+    const old = await prisma.dawarichStay.findFirstOrThrow({ where: { userId } });
+    await prisma.dawarichStayScan.update({ where: { userId }, data: { marketEnabled: true } });
+    const store = memoryStore(),
+      fetcher = jest.fn(async () => Response.json(raw));
+    await run({ marketStore: store, marketFetcher: fetcher });
+    const parent = await prisma.dawarichStay.findFirstOrThrow({
+      where: { userId, status: "pending" },
+    });
+    expect(
+      (
+        await api()
+          .post(`/api/v1/dawarich-stays/${parent.id}/reject`)
+          .set("Cookie", cookie)
+          .send({})
+      ).status
+    ).toBe(200);
+    const restored = await prisma.dawarichStay.findUniqueOrThrow({ where: { id: old.id } });
+    expect(restored.status).toBe("pending");
+    expect(restored.resolvedAt).toBeNull();
+    // A later scan remembers the rejected venue and must not swallow the stay again.
+    await run({ marketStore: store, marketFetcher: fetcher });
+    expect((await prisma.dawarichStay.findUniqueOrThrow({ where: { id: old.id } })).status).toBe(
+      "pending"
+    );
+    expect(await prisma.dawarichStay.count({ where: { userId } })).toBe(2);
+  });
   it("does not mistake a confirmed shop inside the market for the whole venue", async () => {
     await run();
     const row = await prisma.dawarichStay.findFirstOrThrow({ where: { userId } });
@@ -365,6 +398,34 @@ describe("Automatic market suggestions", () => {
       category,
       externalRef: "osm:way/1234",
       wikidataId: "Q5678",
+    });
+  });
+  it("asks for map consent again after the scan was switched off", async () => {
+    await prisma.userSettings.update({
+      where: { userId },
+      data: {
+        dawarichBaseUrl: "https://dawarich.example.test",
+        dawarichApiKey: encryptApiKey("synthetic-key"),
+      },
+    });
+    await prisma.dawarichStayScan.update({
+      where: { userId },
+      data: { marketEnabled: true, venueEnabled: true },
+    });
+    const off = await api()
+      .patch("/api/v1/dawarich-stays/settings")
+      .set("Cookie", cookie)
+      .send({ enabled: false });
+    expect(off.status).toBe(200);
+    expect(off.body.data).toMatchObject({ marketEnabled: false, venueEnabled: false });
+    const on = await api()
+      .patch("/api/v1/dawarich-stays/settings")
+      .set("Cookie", cookie)
+      .send({ enabled: true });
+    expect(on.body.data).toMatchObject({
+      enabled: true,
+      marketEnabled: false,
+      venueEnabled: false,
     });
   });
   it("does not broaden market consent into other venue types", async () => {

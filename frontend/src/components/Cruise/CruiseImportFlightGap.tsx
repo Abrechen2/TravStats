@@ -59,11 +59,12 @@ export function CruiseImportFlightGap({
         left.map((item) => item.flight),
         { checkFirst: true, failedReason: "failed" }
       );
-      if (tripId && result.ids.length > 0) {
+      const tripFlights = [...result.ids, ...result.attachable];
+      if (tripId && tripFlights.length > 0) {
         // Filed with the import's trip like the others; a failure here is
         // logged, the flights themselves are stored.
         try {
-          await tripsApi.assignFlights(tripId, { flightIds: result.ids, action: "add" });
+          await tripsApi.assignFlights(tripId, { flightIds: tripFlights, action: "add" });
         } catch (err: unknown) {
           logger.error("CruiseImportFlightGap: assigning the added flights failed", err);
         }

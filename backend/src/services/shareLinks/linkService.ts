@@ -170,7 +170,9 @@ export async function createShareLink(
   if (built.autoExpiry && built.autoExpiry <= at) {
     throw new AppError("This flight has already landed", 409, "SHARE_LINK_FLIGHT_LANDED");
   }
-  const active = await prisma.publicShareLink.count({ where: { userId, expiresAt: { gt: at } } });
+  // The same settled set the list shows: a link the owner cannot see must not
+  // hold one of their slots.
+  const active = (await settleLinks(userId, at)).length;
   if (active >= SHARE_LINK_MAX_ACTIVE) {
     throw new AppError(
       `At most ${SHARE_LINK_MAX_ACTIVE} links can be active at once`,
@@ -180,8 +182,17 @@ export async function createShareLink(
   }
 
   const { token, tokenHash } = generateShareToken();
+  const effectiveExpiresAt = earlier(expiresAt, built.autoExpiry);
   const row = await prisma.publicShareLink.create({
-    data: { userId, ...target, fields: selection.fields, photoIds, tokenHash, expiresAt },
+    data: {
+      userId,
+      ...target,
+      fields: selection.fields,
+      photoIds,
+      tokenHash,
+      expiresAt,
+      effectiveExpiresAt,
+    },
     select: { id: true },
   });
   logger.info({ operation: "share_link_created", userId, linkId: row.id, kind: target.kind });
@@ -192,7 +203,7 @@ export async function createShareLink(
     url: `${publicBaseUrl}/share#${token}`,
     token,
     expiresAt: expiresAt.toISOString(),
-    effectiveExpiresAt: earlier(expiresAt, built.autoExpiry).toISOString(),
+    effectiveExpiresAt: effectiveExpiresAt.toISOString(),
   };
 }
 
@@ -201,38 +212,63 @@ type LinkRow = Awaited<ReturnType<typeof prisma.publicShareLink.findMany>>[numbe
 const targetIdOf = (row: Pick<LinkRow, "flightId" | "tripId" | "year">): string =>
   row.flightId ?? row.tripId ?? String(row.year);
 
-/** A flight link's end as of now, from the flight's current times. */
-async function effectiveExpiry(row: LinkRow): Promise<Date> {
-  if (!row.flightId) return row.expiresAt;
+/**
+ * A link's end as of now: the stored end, LOWERED (and stored) when its
+ * flight now lands earlier. Never raised — recomputing the end from the
+ * flight's current times brought an ended link back to life when the flight
+ * was later moved to another day.
+ */
+async function settledExpiry(row: LinkRow): Promise<Date> {
+  if (!row.flightId) return row.effectiveExpiresAt;
   const loaded = await loadOwnedFlightTimes(row.userId, row.flightId);
-  return earlier(row.expiresAt, loaded ? flightAutoExpiry(loaded.times) : null);
-}
-
-/** The caller's live links. Lapsed ones are deleted on the way: nothing reads them again. */
-export async function listShareLinks(userId: string): Promise<OwnerShareLink[]> {
-  const at = now();
-  await prisma.publicShareLink.deleteMany({ where: { userId, expiresAt: { lte: at } } });
-  const rows = await prisma.publicShareLink.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-  });
-  const out: OwnerShareLink[] = [];
-  for (const row of rows) {
-    const effective = await effectiveExpiry(row);
-    if (effective <= at) continue;
-    out.push({
-      id: row.id,
-      kind: row.kind as ShareLinkKind,
-      targetId: targetIdOf(row),
-      fields: row.fields,
-      expiresAt: row.expiresAt.toISOString(),
-      effectiveExpiresAt: effective.toISOString(),
-      createdAt: row.createdAt.toISOString(),
-      viewCount: row.viewCount,
-      lastViewedAt: row.lastViewedAt?.toISOString() ?? null,
+  const effective = earlier(row.effectiveExpiresAt, loaded ? flightAutoExpiry(loaded.times) : null);
+  if (effective < row.effectiveExpiresAt) {
+    await prisma.publicShareLink.update({
+      where: { id: row.id },
+      data: { effectiveExpiresAt: effective },
     });
   }
-  return out;
+  return effective;
+}
+
+/**
+ * The owner's live links, newest first. Ended ones are deleted on the way, so
+ * the active count, the list and the public side all read one set — a landed
+ * flight's link used to hold a slot of the limit while the list hid it and
+ * nothing could revoke it.
+ */
+async function settleLinks(userId: string, at: Date): Promise<LinkRow[]> {
+  const rows = await prisma.publicShareLink.findMany({
+    where: { userId },
+    orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+  });
+  const live: LinkRow[] = [];
+  const ended: string[] = [];
+  for (const row of rows) {
+    const effectiveExpiresAt = await settledExpiry(row);
+    if (effectiveExpiresAt <= at) ended.push(row.id);
+    else live.push({ ...row, effectiveExpiresAt });
+  }
+  if (ended.length > 0) {
+    await prisma.publicShareLink.deleteMany({ where: { id: { in: ended }, userId } });
+  }
+  return live;
+}
+
+/** The caller's live links. */
+export async function listShareLinks(userId: string): Promise<OwnerShareLink[]> {
+  const rows = await settleLinks(userId, now());
+  return rows.map((row) => ({
+    id: row.id,
+    kind: row.kind as ShareLinkKind,
+    targetId: targetIdOf(row),
+    fields: row.fields,
+    expiresAt: row.expiresAt.toISOString(),
+    effectiveExpiresAt: row.effectiveExpiresAt.toISOString(),
+    createdAt: row.createdAt.toISOString(),
+    viewCount: row.viewCount,
+    lastViewedAt: row.lastViewedAt?.toISOString() ?? null,
+  }));
 }
 
 export async function revokeShareLink(userId: string, id: string): Promise<void> {
@@ -254,8 +290,12 @@ async function liveLink(token: unknown): Promise<LinkRow | null> {
     select: { isActive: true },
   });
   if (!owner?.isActive) return null;
-  if ((await effectiveExpiry(row)) <= now()) return null;
-  return row;
+  const effectiveExpiresAt = await settledExpiry(row);
+  if (effectiveExpiresAt <= now()) {
+    await prisma.publicShareLink.deleteMany({ where: { id: row.id } });
+    return null;
+  }
+  return { ...row, effectiveExpiresAt };
 }
 
 const targetOfRow = (row: LinkRow): Target => ({
@@ -279,7 +319,7 @@ export async function resolvePublicView(
     data: { viewCount: { increment: 1 }, lastViewedAt: now() },
   });
   return {
-    expiresAt: earlier(row.expiresAt, built.autoExpiry).toISOString(),
+    expiresAt: earlier(row.effectiveExpiresAt, built.autoExpiry).toISOString(),
     view: built.view,
   };
 }

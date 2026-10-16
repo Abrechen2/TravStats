@@ -15,6 +15,15 @@ import {
   calculateStatisticsImpact,
   type StatisticsImpact,
 } from "./pendingUpdates/statisticsImpact";
+import {
+  calculateChanges,
+  proposalWithEdits,
+  restrictToUncontestedProposal,
+  type ChangeEntry,
+  type FlightDataSnapshot,
+} from "./pendingUpdates/snapshot";
+
+export type { ChangeEntry, FlightDataSnapshot } from "./pendingUpdates/snapshot";
 
 const prismaClient = prisma as PrismaClient;
 
@@ -24,39 +33,6 @@ const prismaClient = prisma as PrismaClient;
  * `FlightLookupSource` in flightLookup.ts.
  */
 const LIVE_API_SOURCES = ["aeroapi", "aviationstack", "airlabs", "aerodatabox", "opensky"];
-
-/** Flight data fields used for original/proposed data snapshots */
-export interface FlightDataSnapshot {
-  airline?: string | null;
-  aircraft?: string | null;
-  gate?: string | null;
-  terminal?: string | null;
-  depIata?: string | null;
-  depIcao?: string | null;
-  depName?: string | null;
-  arrIata?: string | null;
-  arrIcao?: string | null;
-  arrName?: string | null;
-  departureTime?: string | null;
-  arrivalTime?: string | null;
-  /** Actual off-block time (UTC ISO); populated when an API reports it */
-  actualDeparture?: string | null;
-  /** Actual on-block time (UTC ISO); populated when an API reports it */
-  actualArrival?: string | null;
-  status?: string | null;
-  actualRoute?: unknown;
-  overflownCountries?: string[] | null;
-  routeDistance?: number | null;
-}
-
-/** Flight data snapshot extended with coordinate info */
-/** A single change entry between original and proposed data */
-export interface ChangeEntry {
-  field: string;
-  oldValue: string | number | boolean | null | undefined;
-  newValue: string | number | boolean | null | undefined;
-  type: "added" | "removed" | "changed";
-}
 
 /** Metadata for pending updates (e.g. historical enrichment) */
 interface PendingUpdateMetadata {
@@ -158,22 +134,32 @@ export async function updatePendingUpdate(
       throw new Error("Can only edit pending or edited updates");
     }
 
-    // Calculate edited changes
+    // The edit lands ON the proposal. Replacing the proposal with it dropped
+    // every field the editor did not send — actual times, a cancellation, a
+    // route — so editing a gate cost the flight what the provider had reported.
+    // A second edit builds on the first rather than on the bare proposal.
+    const mergedData = proposalWithEdits(
+      proposalWithEdits(
+        pendingUpdate.proposedData as FlightDataSnapshot | null,
+        pendingUpdate.editedData as FlightDataSnapshot | null
+      ),
+      editedData
+    );
     const editedChanges = calculateChanges(
       pendingUpdate.originalData as FlightDataSnapshot,
-      editedData
+      mergedData
     );
 
     // Recalculate statistics impact
     if (!pendingUpdate.flight) {
       throw new Error("Flight not found for pending update");
     }
-    const statisticsImpact = await previewStatisticsImpact(id, userId, editedData);
+    const statisticsImpact = await previewStatisticsImpact(id, userId, mergedData);
 
     const updated = await prismaClient.pendingFlightUpdate.update({
       where: { id },
       data: {
-        editedData: editedData as Prisma.InputJsonValue,
+        editedData: mergedData as unknown as Prisma.InputJsonValue,
         editedChanges: editedChanges as unknown as Prisma.InputJsonValue,
         statisticsImpact: statisticsImpact as unknown as Prisma.InputJsonValue,
         editedAt: new Date(),
@@ -207,110 +193,6 @@ export async function updatePendingUpdate(
 }
 
 /**
- * Calculate changes between two data objects
- */
-function calculateChanges(
-  original: FlightDataSnapshot,
-  proposed: FlightDataSnapshot
-): ChangeEntry[] {
-  const changes: ChangeEntry[] = [];
-  const allKeys = new Set([...Object.keys(original), ...Object.keys(proposed)]);
-
-  for (const field of allKeys) {
-    const oldValue = (original as Record<string, unknown>)[field];
-    const newValue = (proposed as Record<string, unknown>)[field];
-
-    if (oldValue !== newValue) {
-      changes.push({
-        field,
-        oldValue: oldValue as ChangeEntry["oldValue"],
-        newValue: newValue as ChangeEntry["newValue"],
-        type: oldValue === undefined ? "added" : newValue === undefined ? "removed" : "changed",
-      });
-    }
-  }
-
-  return changes;
-}
-
-/**
- * Fields written as a consequence of another one, and the field they follow.
- * Applying a coordinate while refusing the airport it belongs to would produce
- * a flight that contradicts itself.
- */
-const DERIVED_FIELDS: Record<string, string> = {
-  depLat: "depIata",
-  depLon: "depIata",
-  arrLat: "arrIata",
-  arrLon: "arrIata",
-  delayMinutes: "actualDeparture",
-};
-
-/** Fields that describe the UPDATE itself rather than the flight's data. */
-const PROVENANCE_FIELDS = new Set([
-  "dataSource",
-  "lastModifiedBy",
-  "routeSource",
-  "hasLiveTracking",
-  "enrichmentHistory",
-  "depTimeSemantics",
-  "arrTimeSemantics",
-]);
-
-/** Compare a stored value with its snapshot form — dates arrive as strings. */
-function sameStoredValue(current: unknown, snapshot: unknown): boolean {
-  if (current instanceof Date) {
-    if (snapshot === null || snapshot === undefined) return false;
-    const asDate = new Date(String(snapshot));
-    return !Number.isNaN(asDate.getTime()) && asDate.getTime() === current.getTime();
-  }
-  if (current === null || current === undefined) {
-    return snapshot === null || snapshot === undefined;
-  }
-  return current === snapshot;
-}
-
-/**
- * Narrow `updateData` in place to the fields this suggestion actually proposes
- * AND that the user has not changed since it was made. Returns the names it
- * removed for a conflict, so the caller can say so.
- *
- * A suggestion with no recorded change list is applied whole, as before —
- * refusing it would break every row written before `changes` existed.
- */
-function restrictToUncontestedProposal(
-  updateData: Record<string, unknown>,
-  changes: ChangeEntry[] | null,
-  originalData: FlightDataSnapshot | null,
-  flight: Record<string, unknown>
-): string[] {
-  if (!Array.isArray(changes) || changes.length === 0) return [];
-
-  const proposed = new Set(changes.map((c) => c.field));
-  const original = (originalData ?? {}) as Record<string, unknown>;
-  const conflicted: string[] = [];
-
-  for (const key of Object.keys(updateData)) {
-    if (PROVENANCE_FIELDS.has(key)) continue;
-
-    const governing = DERIVED_FIELDS[key] ?? key;
-    if (!proposed.has(governing)) {
-      // Never proposed: leave whatever the flight says today.
-      delete updateData[key];
-      continue;
-    }
-    if (originalData && !sameStoredValue(flight[governing], original[governing])) {
-      // Proposed, but the user has since written something else here. Their
-      // edit is the more recent statement of intent, so it stands.
-      conflicted.push(governing);
-      delete updateData[key];
-    }
-  }
-
-  return [...new Set(conflicted)];
-}
-
-/**
  * Apply a pending update to the flight
  */
 export async function applyPendingUpdate(id: string, userId: string): Promise<Flight | null> {
@@ -329,8 +211,15 @@ export async function applyPendingUpdate(id: string, userId: string): Promise<Fl
     }
 
     const flight = pendingUpdate.flight;
-    const dataToApply = (pendingUpdate.editedData ||
-      pendingUpdate.proposedData) as FlightDataSnapshot | null;
+    // Merged rather than `editedData || proposedData`: rows edited before the
+    // edit was stored merged carry only the fields the old schema let through.
+    const dataToApply =
+      pendingUpdate.editedData || pendingUpdate.proposedData
+        ? proposalWithEdits(
+            pendingUpdate.proposedData as FlightDataSnapshot | null,
+            pendingUpdate.editedData as FlightDataSnapshot | null
+          )
+        : null;
 
     if (!dataToApply) {
       throw new Error("No data to apply");
@@ -746,7 +635,13 @@ export async function previewStatisticsImpact(
   }
 
   const flight = pendingUpdate.flight;
-  const dataToUse = (editedData || pendingUpdate.proposedData) as FlightDataSnapshot | null;
+  const dataToUse =
+    editedData || pendingUpdate.proposedData
+      ? proposalWithEdits(
+          pendingUpdate.proposedData as FlightDataSnapshot | null,
+          editedData ?? null
+        )
+      : null;
 
   if (!dataToUse) {
     return null;

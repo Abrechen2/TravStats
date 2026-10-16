@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { loadMapAppearance, MAP_APPEARANCE_KEY } from "./mapAppearance";
-import { FLAT_BASEMAPS, resolveFlatStyle, type FlatStyleId } from "./basemapStyles";
+import { FLAT_BASEMAPS, type resolveFlatStyle, type FlatStyleId } from "./basemapStyles";
+import { useResilientStyle } from "./basemapFallback";
 import { onLocalPrefWrite, useWebPrefsEpochStore } from "../../lib/webPrefs/prefEvents";
 
 function snapshot(): FlatStyleId {
@@ -20,7 +21,7 @@ export function subscribeMapAppearance(notify: () => void): () => void {
     window.removeEventListener("storage", storage);
   };
 }
-/** Detail maps follow the same saved style as the dashboard and globe. */
+/** Detail maps follow the same saved style as the dashboard and globe, and its fallback. */
 export function useBasemapStyle(): ReturnType<typeof resolveFlatStyle> {
-  return resolveFlatStyle(useSyncExternalStore(subscribeMapAppearance, snapshot, () => "dark"));
+  return useResilientStyle(useSyncExternalStore(subscribeMapAppearance, snapshot, () => "dark"));
 }

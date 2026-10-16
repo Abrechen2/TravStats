@@ -210,7 +210,7 @@ export default function WrappedPage(): JSX.Element {
               no flights used to fail this test and draw a grid reading
               "Flüge 0 / Strecke 0 km" — every figure on screen a zero, and the
               one number that was not zero hidden. */}
-          {(!flightsOn || wrapped.flights === 0) &&
+          {(!flightsOn || (wrapped.flights ?? 0) === 0) &&
           (wrapped.cruises ?? 0) === 0 &&
           (wrapped.railRides ?? 0) === 0 &&
           !chaptersHoldAnything(wrapped.chapters) ? (
@@ -219,27 +219,34 @@ export default function WrappedPage(): JSX.Element {
             </p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-              {flightsOn && (
+              {flightsOn && wrapped.flights !== null && (
                 <StatCard
                   title={t("stats:wrapped.flights")}
                   value={count(wrapped.flights)}
                   description={t("stats:wrapped.flightsDesc", { year: wrapped.year })}
                 />
               )}
-              {flightsOn && (
+              {flightsOn && wrapped.flights !== null && (
                 <StatCard
                   title={t("stats:wrapped.distance")}
-                  value={formatDistance(wrapped.distanceKm, distanceUnit, t, i18n.language)}
+                  value={
+                    // Unmeasured is a dash, not "0 km" (abstention).
+                    wrapped.distanceKm === null
+                      ? "—"
+                      : formatDistance(wrapped.distanceKm, distanceUnit, t, i18n.language)
+                  }
                   description={
-                    // Below a tenth of a lap the figure rounds to 0.0, and "0×
-                    // around the Earth" is a sentence about nothing.
-                    wrapped.earthFactor >= 0.1
-                      ? t("stats:wrapped.distanceDesc", {
-                          factor: wrapped.earthFactor.toLocaleString(locale, {
-                            maximumFractionDigits: 1,
-                          }),
-                        })
-                      : t("stats:wrapped.distanceDescShort")
+                    wrapped.earthFactor === null
+                      ? t("stats:wrapped.distanceNotRecorded")
+                      : // Below a tenth of a lap the figure rounds to 0.0, and "0×
+                        // around the Earth" is a sentence about nothing.
+                        wrapped.earthFactor >= 0.1
+                        ? t("stats:wrapped.distanceDesc", {
+                            factor: wrapped.earthFactor.toLocaleString(locale, {
+                              maximumFractionDigits: 1,
+                            }),
+                          })
+                        : t("stats:wrapped.distanceDescShort")
                   }
                 />
               )}
@@ -263,12 +270,14 @@ export default function WrappedPage(): JSX.Element {
                   title={t("stats:wrapped.rail")}
                   value={count(wrapped.railRides)}
                   description={
-                    (wrapped.railStraightLineKm ?? 0) > 0
-                      ? t("stats:wrapped.railDescStraight", {
-                          km: count(wrapped.railKm ?? 0),
-                          straight: count(wrapped.railStraightLineKm ?? 0),
-                        })
-                      : t("stats:wrapped.railDesc", { km: count(wrapped.railKm ?? 0) })
+                    wrapped.railKm === null
+                      ? t("stats:wrapped.railNoKm")
+                      : (wrapped.railStraightLineKm ?? 0) > 0
+                        ? t("stats:wrapped.railDescStraight", {
+                            km: count(wrapped.railKm),
+                            straight: count(wrapped.railStraightLineKm ?? 0),
+                          })
+                        : t("stats:wrapped.railDesc", { km: count(wrapped.railKm) })
                   }
                 />
               )}

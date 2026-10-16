@@ -8,7 +8,7 @@ import { sharingApi } from "../lib/api/sharing";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 import DiagnosticExportModal from "./DiagnosticExportModal";
-import TravPlanModeSwitcher from "./TravPlanModeSwitcher";
+import { LogoMark, LogoWordmark } from "./Brand/Logo";
 import UpdateBadge from "./UpdateBadge";
 import NavDropdown from "./Nav/NavDropdown";
 import MoreMenu from "./Nav/MoreMenu";
@@ -106,7 +106,7 @@ export default function NavigationBar(): JSX.Element {
   };
 
   const inboxCount = pendingUpdatesCount + openFlagCount + tripSuggestionCount + sharingCount;
-  const { primary, more } = useNavItems(location.pathname);
+  const { primary, more } = useNavItems();
   const inboxActive = isPathActive("/pending-updates", location.pathname);
   const inboxLabel =
     inboxCount > 0 ? `${t("dataQuality:inbox.nav")} (${inboxCount})` : t("dataQuality:inbox.nav");
@@ -126,7 +126,18 @@ export default function NavigationBar(): JSX.Element {
           {/* `min-w-0`: the wordmark is the one thing that can lose width
               without losing meaning (measured at 390px on 2026-09-15). */}
           <div className="flex min-w-0 items-center gap-3">
-            <TravPlanModeSwitcher />
+            <Link
+              to="/dashboard"
+              className="flex min-w-0 items-center gap-2.5 no-underline"
+              aria-label={t("common:accessibility.home")}
+            >
+              <span aria-hidden="true" className="flex min-w-0 items-center gap-2.5">
+                <LogoMark size={26} />
+                <span className="hidden min-[400px]:flex">
+                  <LogoWordmark size={16} />
+                </span>
+              </span>
+            </Link>
             <UpdateBadge />
             <nav
               aria-label={t("dashboard:nav.main")}

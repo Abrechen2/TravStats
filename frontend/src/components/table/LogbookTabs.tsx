@@ -3,9 +3,6 @@ import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
-import { useRailVisible } from "../../hooks/useRailVisible";
-import { useRentalVisible } from "../../hooks/useRentalVisible";
-import { useBusVisible } from "../../hooks/useBusVisible";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
 import { Icon } from "../ui/Icon";
 import { DOMAIN_ICON } from "../ui/domainIcons";
@@ -24,22 +21,11 @@ export default function LogbookTabs(): JSX.Element | null {
   const { t } = useTranslation(["common", "dashboard"]);
   const { isEnabled } = useEnabledDomains();
   const placesVisible = usePlacesVisible();
-  const railVisible = useRailVisible();
-  const rentalVisible = useRentalVisible();
-  const busVisible = useBusVisible();
   const { pathname } = useLocation();
 
-  const areas = AVAILABLE_DOMAINS.filter((key) =>
-    key === "poi"
-      ? placesVisible
-      : key === "rail"
-        ? railVisible
-        : key === "rental"
-          ? rentalVisible
-          : key === "bus"
-            ? busVisible
-            : isEnabled(key)
-  );
+  // The same rule as the navigation: places ask their own hook, every other
+  // domain's beta switch is already applied by `isEnabled`.
+  const areas = AVAILABLE_DOMAINS.filter((key) => (key === "poi" ? placesVisible : isEnabled(key)));
   if (areas.length < 2) return null;
 
   return (

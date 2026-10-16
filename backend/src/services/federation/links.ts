@@ -93,6 +93,12 @@ export function comparisonCode(channel: string) {
     .toString()
     .padStart(6, "0");
 }
+/** Revoked permission takes its ciphertext with it, rather than leaving it stored until expiry. */
+async function dropPublications(linkIds: string[], audience?: string) {
+  await prisma.comparisonPublication.deleteMany({
+    where: { linkId: { in: linkIds }, ...(audience === undefined ? {} : { audience }) },
+  });
+}
 export async function receiveState(
   origin: string,
   channel: string,
@@ -105,11 +111,13 @@ export async function receiveState(
     where: { id: link.id },
     data: { remoteConfirmed: confirmed, revoked: link.revoked || revoked },
   });
-  if (revoked)
+  if (revoked) {
     await prisma.comparisonGrant.updateMany({
       where: { linkId: link.id },
       data: { active: false, revision: { increment: 1 } },
     });
+    await dropPublications([link.id]);
+  }
   return { confirmed: link.confirmed, revoked: link.revoked || revoked };
 }
 export async function changeLink(
@@ -138,7 +146,15 @@ export async function changeLink(
       where: { channel: link.channel, id: { not: id } },
       data: action === "confirm" ? { remoteConfirmed: true } : { revoked: true },
     });
+    if (action === "revoke") {
+      const both = await prisma.comparisonLink.findMany({
+        where: { channel: link.channel },
+        select: { id: true },
+      });
+      await dropPublications(both.map((l) => l.id));
+    }
   } else {
+    if (action === "revoke") await dropPublications([id]);
     try {
       const state = await exchange(link.origin, {
         action: "state",
@@ -198,6 +214,7 @@ export async function revokeGrant(userId: string, id: string, audience: string) 
     where: { linkId: id, audience },
     data: { active: false, revision: { increment: 1 } },
   });
+  await dropPublications([id], audience);
   await prisma.comparisonAudit.create({
     data: { ownerId: userId, channel: link.channel, audience, revision: 0, operation: "revoke" },
   });

@@ -5,7 +5,6 @@ import CompanionPicker from "../CompanionPicker";
 import TagInput from "../TagInput";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useTranslation } from "../../hooks/useTranslation";
-import { minorUnits } from "../../shared/currencies";
 import type { Trip } from "../../types";
 import {
   RAIL_TRAVEL_CLASSES,
@@ -123,9 +122,8 @@ export function RailFormDetails({
             label={t("rail:form.price")}
             field="price"
             error={errorFor("price")}
-            type="number"
-            min={0}
-            step={10 ** -minorUnits(draft.currency)}
+            type="text"
+            inputMode="decimal"
             value={draft.price}
             onChange={(e): void => set("price", e.target.value)}
           />

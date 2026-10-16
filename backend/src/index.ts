@@ -275,6 +275,17 @@ if (process.env.NODE_ENV !== "test") {
       nodeVersion: process.version,
     });
 
+    // The ~10 MB country boundary index takes seconds to build cold, and the
+    // first save after a deploy used to pay that inside its badge re-check.
+    // Built here in the background — deliberately not awaited, so start-up
+    // goes on — and memoised by `getCountryBoundaryIndex` for every caller.
+    void import("./services/geo/countryFromCoordinates")
+      .then(({ getCountryResolver }) => getCountryResolver())
+      .then(() => logger.info({ operation: "server_start_country_index_warmed" }))
+      .catch((error: unknown) =>
+        logger.warn({ operation: "server_start_country_index_warm_error", error })
+      );
+
     // The admin's logging settings — level, category files, HTTP/query logs —
     // are applied to the running loggers before anything else logs. They used
     // to be stored and never applied (audit 2026-09-26).

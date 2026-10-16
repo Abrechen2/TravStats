@@ -1,4 +1,5 @@
 import type { RailTimes } from "./times";
+/** The same four members as a rail ride's times; the OpenAPI name is `FerryTimes`. */
 export type FerryTimes = RailTimes;
 export type FerryStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
 export type FerryDistanceSource = "great_circle" | "user";
@@ -9,6 +10,8 @@ export interface FerryJourney {
   userId: string;
   operator: string | null;
   vesselName: string | null;
+  /** The vessel the live position reads; bound on the first answered lookup. */
+  vesselMmsi: string | null;
   vehicleType: string | null;
   vehicleRegistration: string | null;
   vehicleLengthM: number | null;

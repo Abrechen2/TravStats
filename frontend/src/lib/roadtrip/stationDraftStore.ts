@@ -36,7 +36,9 @@ export interface StoredStationDraft {
 
 const night = z.union([
   z.object({ kind: z.literal("stay"), lodgingStayId: z.string().nullable() }),
-  z.object({ kind: z.literal("free") }),
+  // countryVisitKind must survive the draft: a stripped one restored a chosen
+  // transit night as a visit.
+  z.object({ kind: z.literal("free"), countryVisitKind: z.enum(["visit", "transit"]).optional() }),
   z.object({ kind: z.literal("pass"), placeId: z.string().nullish() }),
   z.object({ kind: z.literal("via") }),
 ]);

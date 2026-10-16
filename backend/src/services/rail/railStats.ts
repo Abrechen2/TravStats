@@ -214,12 +214,15 @@ export function railRideHours(
 /**
  * The longest ride by distance — the tab's record and the panel's one row.
  * Ties go to the earlier ride (rows arrive oldest first); a ride with no
- * distance cannot hold a distance record.
+ * distance, or 0 km or less, cannot hold a distance record — the rule
+ * `domainRecords.longest` applies, so the tab and the records page agree.
  */
 export function longestRide<T extends { distanceKm: number | null }>(rows: readonly T[]): T | null {
   return rows.reduce<T | null>(
     (best, r) =>
-      r.distanceKm === null || (best !== null && r.distanceKm <= (best.distanceKm as number))
+      r.distanceKm === null ||
+      r.distanceKm <= 0 ||
+      (best !== null && r.distanceKm <= (best.distanceKm as number))
         ? best
         : r,
     null

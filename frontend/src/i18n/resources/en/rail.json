@@ -98,6 +98,7 @@
     "saving": "Saving …",
     "saveError": "The journey could not be saved.",
     "errors": {
+      "invalidPrice": "Enter a valid price of 0 or more (e.g. 39.90).",
       "arrivalBeforeDeparture": "The arrival is before the departure. If the train runs overnight, give the arrival the next day's date.",
       "nonexistentTime": "This time does not exist on that day: the clocks jump an hour ahead for summer time. Check the time on the ticket.",
       "invalidField": "“{{field}}” was not accepted. Please check it.",

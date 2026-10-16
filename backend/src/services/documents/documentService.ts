@@ -517,6 +517,21 @@ export async function linkDocumentsInTx(
   return count;
 }
 
+/**
+ * `linkDocumentsInTx` for a create that must not outlive its receipts: a
+ * document filed elsewhere since `takeDocumentIds` checked it throws 409,
+ * which rolls the caller's transaction (and its client-ref claim) back.
+ */
+export async function fileReceipts(
+  tx: Pick<DbTransaction, "document">,
+  userId: string,
+  ids: readonly string[],
+  entry: EntryRef
+): Promise<void> {
+  if ((await linkDocumentsInTx(tx, userId, ids, entry)) !== new Set(ids).size)
+    throw new AppError("A document was linked elsewhere during creation", 409);
+}
+
 /** Takes a document off its entry; it becomes unfiled and expires unless filed again. */
 export async function unlinkDocument(userId: string, id: string): Promise<Document> {
   const document = await getOwnDocument(userId, id);

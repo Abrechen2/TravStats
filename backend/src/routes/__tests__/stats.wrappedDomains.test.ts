@@ -181,11 +181,15 @@ describe("wrapped and badges across domains", () => {
     });
     const off = await wrapped();
     expect(off.body.availableYears).toEqual([2024]);
-    expect(off.body.flights).toBe(0);
+    // A hidden domain abstains: no figure, not a zero.
+    expect(off.body.flights).toBeNull();
   });
 
-  // Review M1: "new countries" follow the same gate — a hidden domain proves none.
-  it("counts no visited country from train endpoints, whether visible or hidden", async () => {
+  // Review M1: "new countries" follow the same gate — a hidden domain proves
+  // none. Proven with a place visit, which IS a visit under forgejo#299, so
+  // the hidden case can only read 0 because of the gate; a one-way train ride
+  // rides along and must add nothing either way (a station is ground only).
+  it("counts a new country from a visible domain's visit and none from a hidden one", async () => {
     await updateInstanceSettings({ betaFeaturesEnabled: true });
     await prisma.railJourney.create({
       data: {
@@ -205,16 +209,26 @@ describe("wrapped and badges across domains", () => {
         arrivalTime: new Date("2024-04-02T15:00:00Z"),
       },
     });
-    await prisma.userSettings.update({
-      where: { userId },
-      data: { enabledDomains: ["rental", "rail"] },
+    await prisma.place.create({
+      data: {
+        userId,
+        name: "Torre de Belém",
+        lat: 38.6916,
+        lon: -9.216,
+        isoCountryCode: "PT",
+        visited: true,
+        visits: { create: [{ userId, visitedAt: new Date("2024-04-03T00:00:00Z") }] },
+      },
     });
-    const withRail = await request(app)
-      .get("/api/v1/stats/wrapped?year=2024")
-      .set("Cookie", cookie);
-    expect(withRail.body.newCountries).toBe(0);
-    await prisma.userSettings.update({ where: { userId }, data: { enabledDomains: ["rental"] } });
-    const hidden = await request(app).get("/api/v1/stats/wrapped?year=2024").set("Cookie", cookie);
-    expect(hidden.body.newCountries).toBe(0);
+    const newCountries = async (enabledDomains: string[]) => {
+      await prisma.userSettings.update({ where: { userId }, data: { enabledDomains } });
+      const res = await request(app).get("/api/v1/stats/wrapped?year=2024").set("Cookie", cookie);
+      expect(res.status).toBe(200);
+      return res.body.newCountries;
+    };
+
+    expect(await newCountries(["rental", "rail", "poi"])).toBe(1); // PT, from the place
+    expect(await newCountries(["rental", "rail"])).toBe(0); // places hidden
+    expect(await newCountries(["rental", "poi"])).toBe(1); // the ride never added ES
   });
 });

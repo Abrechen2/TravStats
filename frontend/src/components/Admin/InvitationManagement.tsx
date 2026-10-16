@@ -170,7 +170,10 @@ export default function InvitationManagement({
                       <Toggletip
                         content={invitation.emailError ?? t("admin:invitations.status.emailFailed")}
                         triggerClassName="px-2 py-1 text-xs font-semibold rounded-full"
-                        triggerStyle={{ background: "rgba(245,158,11,0.2)", color: "#d97706" }}
+                        triggerStyle={{
+                          background: "color-mix(in srgb, var(--ts-warn) 20%, transparent)",
+                          color: "var(--ts-warn)",
+                        }}
                       >
                         {t("admin:invitations.status.emailFailed")}
                       </Toggletip>

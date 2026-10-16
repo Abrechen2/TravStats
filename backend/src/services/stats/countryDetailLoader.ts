@@ -22,12 +22,19 @@ import { prisma } from "../../db";
 import { buildPassport } from "./passport";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { buildCountryDetail, type CountryDetail } from "./countryDetail";
-import { loadAirportCountries, loadHomeIatas, passportAirportCodes } from "./passportLoader";
+import {
+  loadAirportCountries,
+  loadHomeCountries,
+  loadHomeIatas,
+  passportAirportCodes,
+  placeVisitAt,
+} from "./passportLoader";
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
 import { classifyVisit } from "../../shared/placeCounting";
 import { loadRoadtripStations } from "./roadtripEvidenceLoader";
 import { loadRailEnds } from "./railEvidenceLoader";
 import { loadBusEnds } from "./busEvidence";
+import { loadFerryEnds } from "./ferryEvidence";
 import { loadVisibleDomains } from "../domainVisibility";
 import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "./departureClock";
 import { departureDayOf } from "../../utils/stats/departureClock";
@@ -47,7 +54,8 @@ export async function loadCountryDetail(
   const inputs = await loadCountryDetailInputs(userId);
   const detail = buildCountryDetail(code, ...inputs);
   if (!detail) return null;
-  const [flights, airports, home, ports, places, lodgings, , , stations, rail, bus] = inputs;
+  const [flights, airports, home, ports, places, lodgings, , , stations, rail, bus, ferry] = inputs;
+  const homeCountries = await loadHomeCountries(userId, new Date().toISOString().slice(0, 10));
   // Reuse the same fold and loaded records. No second database scan or local rule.
   const passport = buildPassport(
     flights,
@@ -62,7 +70,9 @@ export async function loadCountryDetail(
     stations,
     rail,
     undefined,
-    bus
+    bus,
+    homeCountries,
+    ferry
   );
   const row = passport.countries.find((country) => country.code === detail.code);
   return {
@@ -70,6 +80,7 @@ export async function loadCountryDetail(
     groundPresence: row?.groundPresence ?? false,
     visited: row?.visited ?? false,
     visitUncertain: row?.visitUncertain ?? true,
+    visitUncertainReasons: row?.visitUncertainReasons ?? [],
   };
 }
 
@@ -122,6 +133,7 @@ export async function loadCountryDetailInputs(userId: string): Promise<CountryDe
     stations,
     rail,
     bus,
+    ferry,
   ] = await Promise.all([
     loadAirportCountries(passportAirportCodes(flights)),
     prisma.cruiseStop.findMany({
@@ -192,6 +204,10 @@ export async function loadCountryDetailInputs(userId: string): Promise<CountryDe
     loadVisibleDomains(userId).then((visible) =>
       visible.includes("bus") ? loadBusEnds(userId) : []
     ),
+    // The ninth: ferry port ends, only while ferry is visible.
+    loadVisibleDomains(userId).then((visible) =>
+      visible.includes("ferry") ? loadFerryEnds(userId) : []
+    ),
   ]);
 
   return [
@@ -217,7 +233,7 @@ export async function loadCountryDetailInputs(userId: string): Promise<CountryDe
             name: place.name,
             isoCountryCode: place.isoCountryCode,
             countryVisitKind: place.countryVisitKind,
-            at: v.visitedAt,
+            at: placeVisitAt(v),
           }))
         : [
             {
@@ -245,5 +261,6 @@ export async function loadCountryDetailInputs(userId: string): Promise<CountryDe
     stations,
     rail,
     bus,
+    ferry,
   ];
 }

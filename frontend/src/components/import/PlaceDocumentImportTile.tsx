@@ -11,7 +11,7 @@ import { PlaceImportPreviewModal } from "../places/PlaceImportPreviewModal";
 import { ImportTileShell, ImportFilePicker, ImportErrorBlock } from "./ImportTileShell";
 import type { PlaceImportPreview } from "../../types/placeImport";
 
-type PlaceReading = Pick<ParseEmailPlaceResult, "candidates" | "fallbackCode">;
+type PlaceReading = Pick<ParseEmailPlaceResult, "candidates" | "fallbackCode" | "documentId">;
 interface Props {
   /** The import hub's log reload — see `PlaceCsvImportTile`. */
   onImported?: () => void | Promise<void>;
@@ -34,6 +34,8 @@ export function PlaceDocumentImportTile({ onImported }: Props): JSX.Element {
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState<PlaceImportPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The kept file the place was read from, filed on the visit at commit.
+  const [documentId, setDocumentId] = useState<string | null>(null);
 
   // Every way in goes through the same parse routes as any other domain's
   // document (`domain: "place"`), so the server reads a pasted text, a mail
@@ -44,6 +46,7 @@ export function PlaceDocumentImportTile({ onImported }: Props): JSX.Element {
       setBusy(true);
       try {
         const reading = await parse();
+        setDocumentId(reading.documentId ?? null);
         if (reading.candidates.length === 0) {
           setError(t(`places:import.document.fallback.${reading.fallbackCode ?? "notRecognised"}`));
           return;
@@ -66,13 +69,14 @@ export function PlaceDocumentImportTile({ onImported }: Props): JSX.Element {
   );
 
   // A PDF ticket goes through the same PDF route and text extraction as any
-  // other domain's PDF; a mail file through the mail-file route.
+  // other domain's PDF; a mail file through the mail-file route. Both are
+  // KEPT: without `retain` the ticket a visit came from was gone once read.
   const handleFile = useCallback(
     (file: File): Promise<void> =>
       readWith(async () =>
         isPdfFile(file)
-          ? parseApi.parsePdf(await fileToBase64(file), "place")
-          : parseApi.parseEmailFile(file, "place")
+          ? parseApi.parsePdf(await fileToBase64(file), "place", { retain: true })
+          : parseApi.parseEmailFile(file, "place", { retain: true })
       ),
     [readWith]
   );
@@ -81,6 +85,7 @@ export function PlaceDocumentImportTile({ onImported }: Props): JSX.Element {
     setText("");
     setPreview(null);
     setError(null);
+    setDocumentId(null);
   }, []);
 
   return (
@@ -123,9 +128,19 @@ export function PlaceDocumentImportTile({ onImported }: Props): JSX.Element {
           summary={preview.summary}
           onCancel={reset}
           onCommit={async (rows) => {
-            const result = await commitPlaceImport("document", null, rows);
+            const result = await commitPlaceImport(
+              "document",
+              null,
+              rows,
+              documentId ? [documentId] : []
+            );
             const toast = describePlaceCommitResult(result, t);
             addToast(toast.type, toast.message);
+            // An unfiled document expires; the user is told rather than left
+            // to find the ticket missing later.
+            if (documentId && result.documentsFiled === 0) {
+              addToast("info", t("places:import.document.notFiled"));
+            }
             reset();
             await onImported?.();
           }}

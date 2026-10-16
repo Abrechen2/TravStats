@@ -93,10 +93,11 @@ async function checkAndRunBackup(): Promise<void> {
     // Retention only follows a successful local backup, never a failed dump.
     try {
       await cleanupOldBackups();
-    } catch {
+    } catch (error) {
       logger.warn({
         operation: "backup_cleanup_failed",
         message: "Backup completed but retention cleanup failed; archives retained",
+        err: error,
       });
     }
 

@@ -23,7 +23,8 @@
     "rail": "Bahnfahrten",
     "roadtripExpenses": "Roadtrip-Kosten",
     "rental": "Mietwagen",
-    "bus": "Busfahrten"
+    "bus": "Busfahrten",
+    "ferry": "Fährüberfahrten"
   },
   "hints": {
     "cruises": "Eine Zeile je Kreuzfahrt. Die ID in Spalte A nicht ändern – sie ordnet die Zeile beim Import wieder ihrem Eintrag zu. Zeilen ohne ID werden als neue Kreuzfahrt angelegt.",
@@ -40,7 +41,8 @@
     "rail": "Eine Zeile je Zugfahrt. Eine Zeile mit der ID einer deiner Fahrten ändert sie; ohne ID — oder mit einer ID aus einem anderen Konto — wird eine neue angelegt, außer es gibt schon eine mit gleicher Zugnummer, gleichen Bahnhöfen und gleichem Abfahrtstag. Zeiten stehen in Ortszeit des jeweiligen Bahnhofs. Ein Bahnhof wird über seinen UIC-Code gefunden, sonst über Breite und Länge, sonst über seinen Namen im Bahnhofskatalog. Klasse: first, second, sleeper oder couchette; Status: nur cancelled wird gesetzt, der Rest ergibt sich aus den Zeiten. Die Entfernung wird neu gemessen — außer in „Quelle“ steht user, die Angabe vom Ticket. Quelle: great_circle = Luftlinie, route = berechnete Straße, user = laut Ticket. Eine berechnete Straße bleibt bei der Fahrt, solange sich ihre Haltestellen nicht ändern; wer eine Haltestelle ändert, bekommt die Luftlinie zurück und berechnet die Straße im Logbuch neu.",
     "roadtripExpenses": "Eine Ausgabe pro Zeile. Die Spalte „Roadtrip“ verweist über die ID in eckigen Klammern auf das Blatt „Roadtrips“ – fehlt die ID, zählt der Name davor. Art: ferry (Fähre), toll (Maut), pitch (Stellplatz), fuel (Tanken), charging (Laden), parking (Parken), transport (Nahverkehr & Taxi), food (Essen & Trinken), groceries (Lebensmittel), activity (Eintritt & Aktivitäten), shopping (Einkäufe), fees (Gebühren) oder other (Sonstiges). Betrag und Währung (ISO-Code wie EUR, NOK) sind Pflicht; Beträge in verschiedenen Währungen werden nie zusammengerechnet. Station ODER Strecke von/bis – nie beides; eine Station, die nicht gefunden wird, entfällt, die Ausgabe bleibt. Eine leere Zelle lässt den gespeicherten Wert stehen.",
     "rental": "Eine Zeile je Miete. Die ID in Spalte A nicht ändern – sie ordnet die Zeile beim Import wieder ihrer Miete zu; ohne ID wird über Anbieter und Buchungsnummer (sonst Abholstation und -tag) wiedererkannt statt verdoppelt. Zeiten in der Ortszeit der Station; Genauigkeit „day“ heißt: nur der Tag ist bekannt. Leere Zellen bleiben unbekannt, nie 0. Die Kaution zählt nie als Kosten.",
-    "bus": "Eine Zeile je Busfahrt. Eine Zeile mit der ID einer deiner Fahrten ändert sie; ohne ID — oder mit einer ID aus einem anderen Konto — wird eine neue angelegt, außer es gibt schon eine mit gleichen Haltestellen und gleichem Abfahrtstag. Zeiten stehen in Ortszeit der jeweiligen Haltestelle. Jede Haltestelle braucht Breite und Länge, denn es gibt keinen Haltestellenkatalog. Art: intercity, shuttle oder other; Status: nur cancelled wird gesetzt, der Rest ergibt sich aus den Zeiten. Die Entfernung wird neu gemessen — außer in „Quelle“ steht user, die Angabe vom Ticket."
+    "bus": "Eine Zeile je Busfahrt. Eine Zeile mit der ID einer deiner Fahrten ändert sie; ohne ID — oder mit einer ID aus einem anderen Konto — wird eine neue angelegt, außer es gibt schon eine mit gleichen Haltestellen und gleichem Abfahrtstag. Zeiten stehen in Ortszeit der jeweiligen Haltestelle. Jede Haltestelle braucht Breite und Länge, denn es gibt keinen Haltestellenkatalog. Art: intercity, shuttle oder other; Status: nur cancelled wird gesetzt, der Rest ergibt sich aus den Zeiten. Die Entfernung wird neu gemessen — außer in „Quelle“ steht user, die Angabe vom Ticket.",
+    "ferry": "Eine Zeile je Fährüberfahrt. Eine Zeile mit der ID einer deiner Überfahrten ändert sie; ohne ID – oder mit einer ID aus einem anderen Konto – wird eine neue angelegt, außer es gibt schon eine mit gleichen Häfen und gleichem Abfahrtstag. Zeiten stehen in Ortszeit des jeweiligen Hafens. Jeder Hafen braucht Breite und Länge, denn es gibt keinen Hafenkatalog. Status: nur cancelled wird gesetzt, der Rest ergibt sich aus den Zeiten. Die Entfernung wird neu gemessen – außer in „Quelle“ steht user, die Angabe vom Ticket. Die Verknüpfung mit einem Roadtrip-Abschnitt steht nicht in der Datei und bleibt, wie sie ist."
   },
   "columns": {
     "id": "ID",
@@ -215,6 +217,22 @@
       "toAddress": "Nach (Adresse)",
       "toCountry": "Nach (Land)",
       "fareClass": "Tarif"
+    },
+    "ferry": {
+      "operator": "Reederei",
+      "vesselName": "Schiff",
+      "fromPort": "Von (Hafen)",
+      "fromAddress": "Von (Adresse)",
+      "fromCountry": "Von (Land)",
+      "toPort": "Nach (Hafen)",
+      "toAddress": "Nach (Adresse)",
+      "toCountry": "Nach (Land)",
+      "vehicleType": "Fahrzeug",
+      "vehicleRegistration": "Kennzeichen",
+      "passengerCount": "Personen",
+      "cabinType": "Kabine",
+      "fareClass": "Tarif",
+      "ticketReference": "Ticketnummer"
     }
   },
   "import": {
@@ -270,6 +288,7 @@
       "rail_needs_route": "Eine neue Zugfahrt braucht Von, Nach und die Abfahrt.",
       "expense_needs_amount": "Eine Ausgabe braucht einen Betrag von 0 oder mehr.",
       "invalid_currency": "Die Währung ist kein ISO-Code wie EUR oder NOK.",
+      "negative_price": "Ein Preis kann nicht negativ sein.",
       "expense_needs_roadtrip": "Die Ausgabe nennt keinen Roadtrip.",
       "expense_station_or_leg": "Eine Ausgabe gehört zu einer Station ODER zu einer Strecke – nicht zu beidem.",
       "rental_needs_booking": "Eine neue Miete braucht Anbieter, Abholstation sowie gebuchte Abholung und Rückgabe.",
@@ -281,7 +300,9 @@
       "odometer_order": "Der Kilometerstand bei Rückgabe liegt unter dem bei Abholung.",
       "deposit_return_exceeds": "Zurück kam mehr Kaution, als hinterlegt wurde.",
       "bus_needs_route": "Eine neue Busfahrt braucht Von, Nach (mit Breite und Länge) und die Abfahrt.",
-      "bus_needs_coordinates": "Eine Haltestelle braucht Name, Breite und Länge — es gibt keinen Haltestellenkatalog, in dem sie sich finden ließe."
+      "bus_needs_coordinates": "Eine Haltestelle braucht Name, Breite und Länge — es gibt keinen Haltestellenkatalog, in dem sie sich finden ließe.",
+      "ferry_needs_route": "Eine neue Fährüberfahrt braucht Von, Nach (mit Breite und Länge) und die Abfahrt.",
+      "ferry_needs_coordinates": "Ein Hafen braucht Name, Breite und Länge — es gibt keinen Hafenkatalog, in dem er sich finden ließe."
     },
     "modeLabel": "Was soll mit vorhandenen Einträgen passieren?",
     "modes": {

@@ -24,6 +24,7 @@ import type { SheetSpec } from "./sheetSpec";
 import { roadtripSheet, roadtripStationSheet, tourPointSheet, tourSheet } from "./roadtripSheets";
 import { railSheet } from "./railSheet";
 import { busSheet } from "./busSheet";
+import { ferrySheet } from "./ferrySheet";
 import { rentalSheet } from "./rentalSheet";
 import { roadtripExpenseSheet } from "./roadtripExpenseSheet";
 
@@ -80,13 +81,13 @@ export interface ImportOutcome {
  * editing AND moving entries, and a moved hotel without its stays, or a
  * cruise without its itinerary, is not a moved entry.
  *
- * The rail sheet is read only where rail is visible (`useRailVisible`: the
- * `railDomain` beta switch AND the user's domain) — the owner rule that keeps
+ * The rail sheet is read only where rail is visible (`useDomainVisible("rail")`:
+ * the `railDomain` beta switch AND the user's domain) — the owner rule that keeps
  * rail behind its gate. Last, where the export writes it.
  */
 export function importableSpecs(
   t: T,
-  options: { rail?: boolean; bus?: boolean; rental?: boolean } = {}
+  options: { rail?: boolean; bus?: boolean; ferry?: boolean; rental?: boolean } = {}
 ): SheetSpec<never>[] {
   return [
     flightSheet(t),
@@ -106,6 +107,8 @@ export function importableSpecs(
     ...(options.rail ? [railSheet(t)] : []),
     // Bus behind `busDomain` + the user's domain (forgejo#180), beside rail.
     ...(options.bus ? [busSheet(t)] : []),
+    // Ferry behind `ferryDomain` + the user's domain, beside bus.
+    ...(options.ferry ? [ferrySheet(t)] : []),
     // Rentals the same way, behind `rentalDomain` + the user's domain (forgejo#267).
     ...(options.rental ? [rentalSheet(t)] : []),
   ] as unknown as SheetSpec<never>[];
@@ -123,7 +126,7 @@ export function importableSpecs(
 export async function readWorkbookForImport(
   t: T,
   file: File,
-  options: { rail?: boolean; bus?: boolean; rental?: boolean } = {},
+  options: { rail?: boolean; bus?: boolean; ferry?: boolean; rental?: boolean } = {},
   otherLanguages: readonly T[] = []
 ): Promise<ParsedSheet[]> {
   const buffer = await file.arrayBuffer();

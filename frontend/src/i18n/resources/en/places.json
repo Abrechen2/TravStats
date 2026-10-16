@@ -174,7 +174,8 @@
     "removeFromList": "Remove “{{name}}” from the list",
     "deleteList": "Delete list",
     "deleteTitle": "Delete list?",
-    "deleteMessage": "“{{name}}” will be deleted. The {{count}} places in it stay in your logbook — only the grouping goes.",
+    "deleteMessage_one": "“{{name}}” will be deleted. The one place in it stays in your logbook — only the grouping goes.",
+    "deleteMessage_other": "“{{name}}” will be deleted. The {{count}} places in it stay in your logbook — only the grouping goes.",
     "deleted": "“{{name}}” was deleted.",
     "notFound": "This list does not exist (any more).",
     "loadError": "The lists could not be loaded.",
@@ -725,6 +726,7 @@
       "reading": "Reading …",
       "uploadLabel": "Choose file",
       "readFailed": "The document could not be read. Please try again.",
+      "notFiled": "The document was not filed: without a visit date no visit was created for it to belong to.",
       "fallback": {
         "noTemplate": "No place template is active yet. In the parser workshop (document type: place), derive one from a ticket of this provider, check it with the preview and activate it.",
         "notRecognised": "None of your place templates recognises this document. For a new provider, derive one of its own in the parser workshop.",

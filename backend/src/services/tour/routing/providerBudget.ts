@@ -7,8 +7,12 @@ import { RATE_LIMITS } from "../../../config/constants";
  * provider's own 429 gives, so every client already words it.
  *
  * Per-user and instance-wide, both per UTC day. A request limiter bounds how
- * often an endpoint may be hit; this bounds what the hits may SPEND — a save
- * that routes, a "route again" and a bulk pass all draw from the same counter.
+ * often an endpoint may be hit; this bounds what the hits may SPEND. Every
+ * caller of `routeLegGeometry` with a provider passes `providerCallGate`: a
+ * bus save or "route again", a tour or roadtrip save's automatic pass, a
+ * single leg and "route all". Until 2026-10 only the bus drew from it, so
+ * tour and roadtrip routing spent the instance's key without a cap. Rail and
+ * ferry do not call the road provider.
  */
 
 export type BudgetVerdict = "ok" | "user_cap" | "instance_cap";
@@ -33,6 +37,11 @@ export function takeProviderCall(userId: string, now: Date = new Date()): Budget
   today.perUser.set(userId, used + 1);
   today.instance += 1;
   return "ok";
+}
+
+/** The `beforeRequest` gate `routeLegGeometry` asks before a real provider call. */
+export function providerCallGate(userId: string): () => boolean {
+  return () => takeProviderCall(userId) === "ok";
 }
 
 /** Test seam. */

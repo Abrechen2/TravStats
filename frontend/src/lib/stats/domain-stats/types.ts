@@ -135,8 +135,12 @@ export interface YearScopedAgg {
   /** Per-domain breakdown of `totalEvents` — drives the
    *  "X Flüge · Y Kreuzfahrten" subtitle. */
   perDomainEvents: Partial<Record<DomainKey, number>>;
-  /** Distinct countries touched. */
-  countriesCount: number;
+  /**
+   * "Länder besucht": distinct countries the passport counts as visited
+   * (forgejo#299) through the folded domains. Null while that index is not
+   * available — an abstention, never a fallback to touched countries.
+   */
+  countriesCount: number | null;
   /** Distinct travel days (any visible domain active). */
   activeDays: number;
 }

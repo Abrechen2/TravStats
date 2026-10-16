@@ -5,6 +5,8 @@ export interface NodeSpec {
   category?: "personal" | "photos" | "documents" | "costs";
   date?: string;
   zone?: string;
+  /** Column values a row must carry to leave its owner at all, whatever the grant says. */
+  only?: Record<string, string>;
   relations?: Record<string, NodeSpec>;
 }
 const companion: NodeSpec = { model: "Companion", category: "personal" };
@@ -146,7 +148,14 @@ export const TRAVEL_GRAPH: Record<string, NodeSpec> = {
     },
   },
   documents: { model: "Document", category: "documents", date: "issuedOn" },
-  notes: { model: "Note", category: "personal", date: "occurredAt", zone: "occurredZone" },
+  // A private note never leaves its owner (forgejo#146); only a shareable one may be compared.
+  notes: {
+    model: "Note",
+    category: "personal",
+    date: "occurredAt",
+    zone: "occurredZone",
+    only: { visibility: "shareable" },
+  },
   receiptUploads: { model: "ReceiptUpload", category: "documents" },
   countryDays: { model: "CountryDay", date: "date" },
   photoJourneys: { model: "PhotoJourney", date: "startDate" },
@@ -162,6 +171,7 @@ export const NON_TRAVEL_RELATIONS = [
   "comparisonDevices",
   "comparisonPublications",
   "comparisonLinks",
+  "comparisonAudits",
   "comparisonInvites",
   "comparisonGroups",
   "comparisonCircles",

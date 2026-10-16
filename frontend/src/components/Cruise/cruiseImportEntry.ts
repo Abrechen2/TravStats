@@ -1,5 +1,25 @@
-import type { CruiseStopInput, CruiseWriteBody, FlightInput, TripStatus } from "../../types";
+import type { CruiseStopInput, CruiseWriteBody, FlightInput, Port, TripStatus } from "../../types";
 import type { MissingZoneError } from "../../lib/api/timeInput";
+import type { ParsedCruiseEntry } from "../../lib/api/parse";
+
+/**
+ * The catalogue port an imported stop shows. Stops are numbered by date, so
+ * one day can hold two calls: the by-day map then names only one of them,
+ * and an unresolved stop on that day must not borrow the other's port.
+ */
+export function stopPortOf(
+  entry: Pick<ParsedCruiseEntry, "stopPorts" | "stopPortsById">,
+  stop: CruiseStopInput
+): Port | null {
+  if (stop.portId == null) return stop.port ?? null;
+  const byDay = entry.stopPorts?.[stop.dayNumber];
+  return (
+    entry.stopPortsById?.[stop.portId] ??
+    (byDay?.id === stop.portId ? byDay : undefined) ??
+    stop.port ??
+    null
+  );
+}
 
 /** One reviewed cruise of an import, as its card built it for the save. */
 export interface EntryData {
@@ -11,6 +31,8 @@ export interface EntryData {
   /** A time whose place brings no zone (a portless stop, a zoneless airport):
    *  the save refuses with its sentence before writing anything. */
   timeError?: MissingZoneError;
+  /** A typed price that is no number: the save refuses rather than drop it. */
+  priceInvalid?: boolean;
 }
 
 /**

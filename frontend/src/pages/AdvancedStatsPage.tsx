@@ -54,6 +54,7 @@ import PoiStatsSection from "../components/Stats/PoiStatsSection";
 import RailStatsSection from "../components/Stats/rail/RailStatsSection";
 import RentalStatsSection from "../components/Stats/rental/RentalStatsSection";
 import BusStatsSection from "../components/Stats/bus/BusStatsSection";
+import FerryStatsSection from "../components/Stats/ferry/FerryStatsSection";
 import { mergeYears, useBetaDomainYears } from "../lib/stats/useBetaDomainYears";
 import RoadtripStatsSection from "../components/Stats/RoadtripStatsSection";
 import OverviewTab from "../components/Stats/Overview/OverviewTab";
@@ -71,9 +72,6 @@ import { useMinLoadingState } from "../hooks/useMinLoadingState";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useStatsPageSections } from "../lib/stats/useStatsPageSections";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
-import { useRailOffered } from "../hooks/useRailVisible";
-import { useRentalOffered } from "../hooks/useRentalVisible";
-import { useBusOffered } from "../hooks/useBusVisible";
 import { parseStatsTab, resolveStatsTab, visibleStatsTabs } from "./statsTabAccess";
 import type { DomainKey } from "../shared/domains";
 import { flightDeparture } from "../lib/entityTimes";
@@ -154,8 +152,7 @@ export default function AdvancedStatsPage(): JSX.Element {
    * to the overview, which is a page rather than a blank.
    */
   const placesAccess = usePlacesAccess();
-  const gates = [useRailOffered(), useRentalOffered(), useBusOffered()] as const; // beta gates
-  const effectiveFilter = resolveStatsTab(filter, enabled, placesAccess, ...gates);
+  const effectiveFilter = resolveStatsTab(filter, enabled, placesAccess);
 
   // Which blocks this tab draws. Per tab, because hiding costs on flights says
   // nothing about cruises — and everything is visible until someone says
@@ -551,7 +548,7 @@ export default function AdvancedStatsPage(): JSX.Element {
             second instance. */}
         <EvidencePanel />
         <StatsTabStrip
-          tabs={visibleStatsTabs(enabled, placesAccess, ...gates)}
+          tabs={visibleStatsTabs(enabled, placesAccess)}
           active={filter}
           onSelect={setFilter}
         />
@@ -598,6 +595,7 @@ export default function AdvancedStatsPage(): JSX.Element {
             <RentalStatsSection scope={scope} visibility={sections} />
           )}
           {effectiveFilter === "bus" && <BusStatsSection scope={scope} visibility={sections} />}
+          {effectiveFilter === "ferry" && <FerryStatsSection scope={scope} visibility={sections} />}
 
           {/* Generate Certificate + Year Report Buttons — flight-only now. */}
           {effectiveFilter === "flight" && flights.length > 0 && (

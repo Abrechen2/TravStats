@@ -35,6 +35,11 @@ export function strayFerryFoldKey(body: unknown): string | null {
 const baseFerrySchema = z.object({
   operator: optionalText(100),
   vesselName: optionalText(100),
+  vesselMmsi: z
+    .string()
+    .regex(/^\d{9}$/)
+    .nullable()
+    .optional(),
   vehicleType: optionalText(80),
   vehicleRegistration: optionalText(40),
   vehicleLengthM: z.number().positive().max(100).nullable().optional(),

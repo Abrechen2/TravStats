@@ -41,3 +41,15 @@ it("retains the previous archives when the new dump fails", async () => {
   await run();
   expect(mockCleanup).not.toHaveBeenCalled();
 });
+it("names why retention failed instead of only that it did", async () => {
+  const cause = new Error("EACCES: permission denied, rmdir '/app/data/backups/old'");
+  mockCreate.mockResolvedValue("new");
+  mockCleanup.mockRejectedValue(cause);
+  const logger = jest.requireMock("../utils/logger").default as { warn: jest.Mock };
+  await startScheduler();
+  const run = (mockSchedule.mock.calls[0] as unknown as [string, () => Promise<void>])[1];
+  await run();
+  expect(logger.warn).toHaveBeenCalledWith(
+    expect.objectContaining({ operation: "backup_cleanup_failed", err: cause })
+  );
+});

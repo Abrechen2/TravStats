@@ -1,4 +1,6 @@
 import { prisma } from "../../db";
+import { Prisma } from "../../prisma";
+import { minorUnits } from "../../shared/currencies";
 import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
 
 /**
@@ -36,22 +38,29 @@ export async function groupBookingTotals(
           { cruises: { some: onTrip } },
           { railJourneys: { some: onTrip } },
           { busJourneys: { some: onTrip } },
+          { ferryJourneys: { some: onTrip } },
           { lodgingStays: { some: onTrip } },
         ],
       },
       select: { price: true, currency: true },
     });
-    if (bookings.length === 0) continue;
-    const sums = new Map<string, number>();
+    const sums = new Map<string, Prisma.Decimal>();
     for (const b of bookings) {
-      const currency = b.currency ?? "EUR";
-      sums.set(currency, (sums.get(currency) ?? 0) + (b.price ?? 0));
+      // A price without a currency is no amount anyone can read: it is left
+      // out, not presented as euros (abstention, not a guess).
+      if (b.price === null || !b.currency) continue;
+      const sum = sums.get(b.currency) ?? new Prisma.Decimal(0);
+      sums.set(b.currency, sum.plus(new Prisma.Decimal(b.price)));
     }
+    if (sums.size === 0) continue;
     out.push({
       member: toPerson(trip.user),
       totals: [...sums].map(([currency, amount]) => ({
         currency,
-        amount: Math.round(amount * 100) / 100,
+        // Yen have no cents and dinars have three decimals: a fixed two was wrong for both.
+        amount: amount
+          .toDecimalPlaces(minorUnits(currency), Prisma.Decimal.ROUND_HALF_UP)
+          .toNumber(),
       })),
     });
   }

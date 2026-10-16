@@ -24,6 +24,7 @@ registry.registerPath({
   path: "/photo-journeys",
   summary: "Journeys proposed from photo timestamps",
   description:
+    "At most 500 rows of the requested status, newest first. " +
     "Each row is ONE reading of a burst of photos nothing recorded explains, the strongest that fits: " +
     "`place` (photos within 2 km of an own place, no visit that day; `placeId`, `distanceKm`), " +
     "`trip` (an own, flown airport other than home within 300 km; `airportIata`, `distanceKm`, `spreadKm`), " +
@@ -277,7 +278,8 @@ registry.registerPath({
     "them; `name` is required, 400 `VISIT_NAME_REQUIRED`, when the scan named nothing) — and the visit at " +
     "the first photo's instant, filed on the finding's trip, in one transaction. `data.created` says what " +
     "was made; its photographs are linked as for a place finding. Accepting it again returns the same " +
-    "visit and creates nothing more.",
+    "visit and creates nothing more; accepting a finding that was dismissed (or answered by a " +
+    "concurrent request) is 409 `VISIT_ALREADY_ANSWERED` and writes nothing.",
   tags: miscTag,
   request: {
     params: z.object({ id: uuid }),

@@ -338,9 +338,19 @@ export async function getBackup(id: string): Promise<Backup & { fileExists: bool
 }
 
 /**
- * Delete backup
+ * Delete backup.
+ *
+ * `leaveUnknownRemote` is retention's choice: a remote copy whose target was
+ * never recorded (uploads before 2026-10-12) or has changed cannot be deleted
+ * safely, and keeping the LOCAL archive for that reason meant retention never
+ * deleted such an archive at all. An explicit delete from the admin page still
+ * refuses, so the admin decides what happens to the remote copy.
  */
-export async function deleteBackup(id: string, deleteRemote = false): Promise<void> {
+export async function deleteBackup(
+  id: string,
+  deleteRemote = false,
+  { leaveUnknownRemote = false }: { leaveUnknownRemote?: boolean } = {}
+): Promise<void> {
   const backup = await prisma.backup.findUnique({
     where: { id },
   });
@@ -353,7 +363,21 @@ export async function deleteBackup(id: string, deleteRemote = false): Promise<vo
     throw new AppError("A running backup cannot be deleted", 409);
   }
   // Remote first: retain the row and local archive when the share refuses.
-  if (deleteRemote && backup.syncedToCloud) await deleteCloudBackup(backup);
+  if (deleteRemote && backup.syncedToCloud) {
+    try {
+      await deleteCloudBackup(backup);
+    } catch (error) {
+      const targetUnknown = error instanceof AppError && error.code === "REMOTE_TARGET_UNKNOWN";
+      if (!(leaveUnknownRemote && targetUnknown)) throw error;
+      logger.warn({
+        operation: "backup_remote_copy_left",
+        message:
+          "Remote target of this backup is unknown or changed; the local archive is deleted and its remote copy, if any, is left in place",
+        backupId: id,
+        cloudPath: backup.cloudPath,
+      });
+    }
+  }
 
   // Delete backup files
   if (backup.backupPath && fs.existsSync(backup.backupPath)) {
@@ -415,7 +439,9 @@ export async function cleanupOldBackups(): Promise<number> {
   for (const backup of oldBackups) {
     if (backup.id === protectedBackup.id) continue;
     try {
-      await deleteBackup(backup.id, adminSettings?.backupCloudRetention ?? false);
+      await deleteBackup(backup.id, adminSettings?.backupCloudRetention ?? false, {
+        leaveUnknownRemote: true,
+      });
       deletedCount++;
     } catch (error) {
       logger.error({

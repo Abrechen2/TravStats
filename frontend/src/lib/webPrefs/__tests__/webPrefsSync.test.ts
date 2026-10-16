@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createStore, type StoreApi } from "zustand/vanilla";
 
 import {
+  OWNER_STORAGE_KEY,
   PENDING_STORAGE_KEY,
   createWebPrefsSync,
   stableStringify,
@@ -46,6 +47,7 @@ function device(initial: Partial<Prefs> = {}) {
     name,
     read: () => store.getState()[key],
     isDefault: (v) => (Array.isArray(v) ? v.length === 0 : Object.keys(v as object).length === 0),
+    defaultValue: key === "hidden" ? [] : {},
     apply: (v) => {
       applied.push(name);
       store.setState({ [key]: v } as Partial<Prefs>);
@@ -261,17 +263,44 @@ describe("web prefs sync", () => {
   });
 
   it("never sends another account's undelivered edits", async () => {
+    // The server holds nothing, so only the pending record's owner check can
+    // keep the edit back: with a server copy the load would win anyway and
+    // the test would pass without the check.
     const dev = device({ colors: { flight: "#0000ff" } });
+    dev.storage.setItem(OWNER_STORAGE_KEY, "user-1");
     dev.storage.setItem(
       PENDING_STORAGE_KEY,
       JSON.stringify({ userId: "someone-else", sections: { domainColors: "2026-10-03T00:00:00Z" } })
     );
-    const server = fakeServer({
-      domainColors: { value: { flight: "#ff0000" }, ...at("2026-10-02T00:00:00Z") },
-    });
+    const server = fakeServer();
     await startSync(dev, server).start();
-    expect(dev.store.getState().colors).toEqual({ flight: "#ff0000" });
+    await vi.advanceTimersByTimeAsync(5000);
+    // user-1's own local choice still seeds (rule 2); the timestamp is ours, not the stranger's.
+    expect(server.transport.put).toHaveBeenCalledTimes(1);
+    expect(server.transport.put.mock.calls[0][0].domainColors.updatedAt).not.toBe(
+      "2026-10-03T00:00:00Z"
+    );
+  });
+
+  it("does not seed a new account with the previous account's prefs on a shared browser", async () => {
+    // Account A used this browser; its colours are in local storage. Account B
+    // signs in for the first time: the server holds nothing for B.
+    const dev = device({ colors: { flight: "#0000ff" }, hidden: ["cruise"] });
+    dev.storage.setItem(OWNER_STORAGE_KEY, "account-a");
+    const server = fakeServer();
+    await startSync(dev, server, { userId: "account-b" }).start();
+    await vi.advanceTimersByTimeAsync(5000);
     expect(server.transport.put).not.toHaveBeenCalled();
+    expect(dev.store.getState()).toEqual({ colors: {}, hidden: [] });
+    expect(dev.storage.getItem(OWNER_STORAGE_KEY)).toBe("account-b");
+  });
+
+  it("seeds from this account's own local prefs once it has owned them", async () => {
+    const dev = device({ colors: { flight: "#00ff00" } });
+    dev.storage.setItem(OWNER_STORAGE_KEY, "user-1");
+    const server = fakeServer();
+    await startSync(dev, server).start();
+    expect(server.sections.domainColors.value).toEqual({ flight: "#00ff00" });
   });
 
   it("lets the server's copy win over a change made on this page before the load answered", async () => {

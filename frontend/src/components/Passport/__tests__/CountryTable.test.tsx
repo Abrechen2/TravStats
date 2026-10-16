@@ -94,6 +94,34 @@ describe("CountryTable — a country that does not count is greyed, not hidden",
     expect(screen.getByText("Germany")).toBeInTheDocument();
   });
 
+  it("shows an undecidable chain as unclear with its reason, apart from a decided connection (forgejo#299)", async () => {
+    renderTable([
+      country({ code: "DE", visited: true, counted: true }),
+      country({ code: "QA", visited: false, counted: false, tier: "connection" }),
+      country({
+        code: "TH",
+        visited: false,
+        counted: false,
+        tier: "connection",
+        visitUncertain: true,
+        visitUncertainReasons: ["openChain"],
+      }),
+    ]);
+
+    // On the ground list the unclear row carries its reason, the decided
+    // connection carries none.
+    expect(screen.getAllByText("passport:countries.visitUncertain")).toHaveLength(1);
+    expect(screen.getByText("passport:countries.unclearReason.openChain")).toBeInTheDocument();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "passport:summary.unclearCountries" })
+    );
+
+    expect(screen.getByText("Thailand")).toBeInTheDocument();
+    expect(screen.queryByText("Katar")).not.toBeInTheDocument();
+    expect(screen.queryByText("Deutschland")).not.toBeInTheDocument();
+  });
+
   it("keeps an uncounted connection country in the list and marks it as not counted", () => {
     renderTable([
       country({ code: "DE" }),

@@ -6,7 +6,7 @@ import type { EvidenceEntry, EvidenceResponse } from "../../schemas/evidence";
 import type { CountryTimelineEntry } from "../../schemas/statsCountryDetail";
 import { buildCountryDetail, type CountryDetail } from "../stats/countryDetail";
 import { loadCountryDetailInputs, type CountryDetailInputs } from "../stats/countryDetailLoader";
-import { loadPassport } from "../stats/passportLoader";
+import { loadPassport, type PassportSources } from "../stats/passportLoader";
 import type { PagingParams } from "./paging";
 import { pageDistinctEntries, pageSumEntries } from "./entryMappersDomains";
 
@@ -29,9 +29,10 @@ import { pageDistinctEntries, pageSumEntries } from "./entryMappersDomains";
  * roadtrip only while visible); their evidence is not this evidence, and the
  * headline must not borrow their narrower rule.
  *
- * A country the drill-down can prove only through location history has no row
- * a reader could open: it is reported as `locationHistoryOnly`, never folded
- * into a row that does not prove it.
+ * Location history proves no passport country since forgejo#299, so a country
+ * no listed record credits is `notPerEntry`. Reporting it as
+ * `locationHistoryOnly` — the rule before #299 — named a cause that can no
+ * longer put a country in the passport.
  */
 
 /** The drill-down's timeline, whole — the page caps it, the evidence must not. */
@@ -152,6 +153,19 @@ function recordOf(
           date: dayOf(row.date),
         },
       };
+    // Owner ruling 2026-10-16 #3 — a ferry crossing with a port in the country.
+    case "ferry":
+      return {
+        key: `ferry:${row.rideId}`,
+        entry: {
+          domain: "ferry",
+          id: row.rideId,
+          href: `/ferry/${row.rideId}`,
+          title: { text: row.rideLabel },
+          subtitle: { text: row.stationName },
+          date: dayOf(row.date),
+        },
+      };
     case "roadtrip":
       return {
         key: `roadtrip:${row.roadtripId}`,
@@ -185,15 +199,35 @@ async function loadCruiseLabels(
 interface PassportEvidenceIndex {
   passport: Awaited<ReturnType<typeof loadPassport>>;
   records: PassportRecord[];
-  /** Countries whose drill-down lists measured presence. */
-  trackCountries: Set<string>;
 }
 
-export async function loadPassportEvidenceIndex(userId: string): Promise<PassportEvidenceIndex> {
+/** The evidence domain a timeline row belongs to, keyed like `PassportSources`. */
+const SOURCE_OF_ROW: Partial<Record<CountryTimelineEntry["kind"], keyof PassportSources>> = {
+  rail: "rail",
+  bus: "bus",
+  ferry: "ferry",
+  roadtrip: "roadtrip",
+  place: "place",
+  track: "track",
+};
+
+/**
+ * @param sources the passport's source gating. The country BADGES pass their
+ *   own (`badgePassportSources`); without it their evidence listed rides and
+ *   roadtrips of domains the user had hidden, records that never counted.
+ */
+export async function loadPassportEvidenceIndex(
+  userId: string,
+  sources: PassportSources = {}
+): Promise<PassportEvidenceIndex> {
   const [passport, inputs] = await Promise.all([
-    loadPassport(userId),
+    loadPassport(userId, undefined, sources),
     loadCountryDetailInputs(userId),
   ]);
+  const readsRow = (row: CountryTimelineEntry): boolean => {
+    const source = SOURCE_OF_ROW[row.kind];
+    return source === undefined || sources[source] !== false;
+  };
 
   const details = passport.countries
     .map((row) => ({ code: row.code, detail: detailFor(row.code, inputs) }))
@@ -207,14 +241,10 @@ export async function loadPassportEvidenceIndex(userId: string): Promise<Passpor
   const cruiseLabels = await loadCruiseLabels(userId, [...cruiseIds]);
 
   const records = new Map<string, PassportRecord>();
-  const trackCountries = new Set<string>();
   for (const { code, detail } of details) {
     const airportsHere = new Set(detail.airports.map((a) => a.iata));
     for (const row of detail.timeline) {
-      if (row.kind === "track") {
-        trackCountries.add(code);
-        continue;
-      }
+      if (!readsRow(row)) continue;
       const found = recordOf(row, cruiseLabels);
       if (!found) continue;
       const record = records.get(found.key) ?? {
@@ -235,7 +265,7 @@ export async function loadPassportEvidenceIndex(userId: string): Promise<Passpor
       records.set(found.key, record);
     }
   }
-  return { passport, records: [...records.values()], trackCountries };
+  return { passport, records: [...records.values()] };
 }
 
 function requireAllTime(scope: EvidenceScope, key: string): void {
@@ -248,23 +278,16 @@ function requireAllTime(scope: EvidenceScope, key: string): void {
 }
 
 /**
- * The units of `expected` no returned row credits, each with its reason. A
- * unit whose only proof is location history says so; anything else would be a
- * disagreement between the passport and its drill-down, and is reported as
+ * The units of `expected` no returned row credits. Such a unit is a
+ * disagreement between the passport and its drill-down, reported as
  * `notPerEntry` rather than hidden inside a row that does not prove it.
  */
 export function residual(
   expected: ReadonlySet<string>,
-  credited: ReadonlySet<string>,
-  isLocationHistory: (unit: string) => boolean
+  credited: ReadonlySet<string>
 ): Array<{ count: number; reason: UnattributedReason }> {
-  const missing = [...expected].filter((unit) => !credited.has(unit));
-  const history = missing.filter(isLocationHistory).length;
-  const other = missing.length - history;
-  return [
-    ...(history > 0 ? [{ count: history, reason: "locationHistoryOnly" as const }] : []),
-    ...(other > 0 ? [{ count: other, reason: "notPerEntry" as const }] : []),
-  ];
+  const missing = [...expected].filter((unit) => !credited.has(unit)).length;
+  return missing > 0 ? [{ count: missing, reason: "notPerEntry" }] : [];
 }
 
 export function distinctResponse(
@@ -302,7 +325,7 @@ export async function resolvePassportCountryCount(
   page: PagingParams
 ): Promise<EvidenceResponse> {
   requireAllTime(scope, "passportCountryCount");
-  const { passport, records, trackCountries } = await loadPassportEvidenceIndex(userId);
+  const { passport, records } = await loadPassportEvidenceIndex(userId);
   const counted = new Set(passport.countries.filter((c) => c.counted).map((c) => c.code));
   const entries = records
     .map((r) => ({ ...r.entry, credits: [...r.countries].filter((c) => counted.has(c)).sort() }))
@@ -315,7 +338,7 @@ export async function resolvePassportCountryCount(
     scope,
     page,
     entries,
-    residual(counted, credited, (code) => trackCountries.has(code))
+    residual(counted, credited)
   );
 }
 
@@ -326,7 +349,7 @@ export async function resolvePassportContinentCount(
   page: PagingParams
 ): Promise<EvidenceResponse> {
   requireAllTime(scope, "passportContinentCount");
-  const { passport, records, trackCountries } = await loadPassportEvidenceIndex(userId);
+  const { passport, records } = await loadPassportEvidenceIndex(userId);
   const continentOf = new Map(
     passport.countries.filter((c) => c.counted).map((c) => [c.code, c.continent])
   );
@@ -347,12 +370,6 @@ export async function resolvePassportContinentCount(
     passport.countries.flatMap((c) => (c.counted && c.continent ? [c.continent as string] : []))
   );
   const credited = new Set(entries.flatMap((e) => e.credits));
-  // A continent is location history only when every country that puts it in
-  // the passport is.
-  const historyOnly = (continent: string): boolean =>
-    passport.countries
-      .filter((c) => c.continent === continent)
-      .every((c) => trackCountries.has(c.code));
   return distinctResponse(
     "passportContinentCount",
     "continents",
@@ -360,7 +377,7 @@ export async function resolvePassportContinentCount(
     scope,
     page,
     entries,
-    residual(visited, credited, historyOnly)
+    residual(visited, credited)
   );
 }
 
@@ -384,7 +401,7 @@ export async function resolvePassportAirportCount(
     page,
     entries,
     // `stamps` is the passport's own airport list — the set the figure counts.
-    residual(new Set(passport.stamps.map((s) => s.iata)), credited, () => false)
+    residual(new Set(passport.stamps.map((s) => s.iata)), credited)
   );
 }
 

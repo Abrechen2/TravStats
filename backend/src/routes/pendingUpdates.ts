@@ -18,6 +18,7 @@ import {
 } from "../services/pendingUpdateService";
 import { prisma } from "../db";
 import logger from "../utils/logger";
+import { updatePendingUpdateSchema } from "../schemas/pendingUpdate";
 
 const router = Router();
 
@@ -35,26 +36,6 @@ router.use(authenticate);
 // cannot apply/edit/reject/delete — applying MUTATES the underlying flight.
 // Consistent with routes/flights.ts and routes/lodging.ts.
 router.use(requireWriteScope);
-
-// Schema for updating pending update
-const updatePendingUpdateSchema = z.object({
-  editedData: z
-    .object({
-      airline: z.string().optional(),
-      aircraft: z.string().optional(),
-      gate: z.string().optional(),
-      terminal: z.string().optional(),
-      depIata: z.string().optional(),
-      depIcao: z.string().optional(),
-      arrIata: z.string().optional(),
-      arrIcao: z.string().optional(),
-      // Real timestamps, not "any string". These are applied straight onto the
-      // flight, so an unparseable value became a stored `Invalid Date` (AUD-093).
-      departureTime: z.string().datetime({ offset: true }).optional(),
-      arrivalTime: z.string().datetime({ offset: true }).optional(),
-    })
-    .optional(),
-});
 
 /**
  * Bulk apply / reject.

@@ -91,6 +91,9 @@ export type ApiErrorCode =
    *  (forgejo#211, the batch review's "correct the place"): gone since the
    *  list was read, or never theirs. */
   | "VISIT_PLACE_NOT_FOUND"
+  /** A `visit` finding was accepted after it had been answered — dismissed, or
+   *  accepted by a request that won the race. Nothing is written. */
+  | "VISIT_ALREADY_ANSWERED"
   /** A training annotation whose offsets do not cut their own value out of
    *  the text being saved. The two used to be allowed to disagree, which
    *  corrupted every derivation built on it in silence. */
@@ -123,6 +126,9 @@ export type ApiErrorCode =
   /** The archive was taken while a migration had failed on its database
    *  (Prisma's P3009 state); its schema is no version's (forgejo#157). */
   | "RESTORE_ARCHIVE_FAILED_MIGRATION"
+  /** A backup's remote copy has no recorded target, or the target changed
+   *  since the upload: the object to delete cannot be named safely. */
+  | "REMOTE_TARGET_UNKNOWN"
   /** A rail write body failed validation; `field` names the first field. */
   | "RAIL_INVALID_INPUT"
   /** A rail arrival instant before its departure — usually a night train
@@ -383,6 +389,7 @@ export type ApiErrorCode =
   /** Linking or sharing needs an accepted consent the other account gave to
    *  the caller (403). */
   | "SHARE_CONSENT_REQUIRED"
+  | "SHARE_GROUP_CONSENT_REQUIRED"
   /** No companion of this caller under that id (404). */
   | "COMPANION_NOT_FOUND"
   /** Another of the caller's companions is already linked to that account (409). */

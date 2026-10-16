@@ -66,6 +66,10 @@ export default function EvidenceSummary({
     ...((summary.byEvidence.bus ?? 0) > 0
       ? [{ kind: "bus" as const, count: summary.byEvidence.bus ?? 0 }]
       : []),
+    // Ferry crossings (owner ruling 2026-10-16 #3), drawn once one proved a country.
+    ...((summary.byEvidence.ferry ?? 0) > 0
+      ? [{ kind: "ferry" as const, count: summary.byEvidence.ferry ?? 0 }]
+      : []),
     ...(summary.byEvidence.roadtrip > 0
       ? [{ kind: "roadtrip" as const, count: summary.byEvidence.roadtrip }]
       : []),

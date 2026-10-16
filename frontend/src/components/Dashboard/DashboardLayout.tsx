@@ -7,11 +7,8 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useDashboardRoute } from "../../hooks/useDashboardRoute";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
-import { useRailVisible } from "../../hooks/useRailVisible";
 import { useRailImportAdapter } from "../import/adapters/railAdapter";
 import { useRentalImportAdapter } from "../import/adapters/rentalAdapter";
-import { useRentalVisible } from "../../hooks/useRentalVisible";
-import { useBusVisible } from "../../hooks/useBusVisible";
 import { BusFormModal } from "../bus/BusFormModal";
 import { flightsApi } from "../../lib/api/flights";
 import { getUpcoming, type UpcomingEntry } from "../../lib/api/upcoming";
@@ -33,6 +30,7 @@ import type { Flight, FlightInput } from "../../types";
 import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
 import type { ImportDocument } from "../import/documentHandoff";
 import type { ParseDomain } from "../../lib/api/parse";
+import { isEntryDomainShown } from "../../config/domainBetaGates";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -88,12 +86,9 @@ export function DashboardLayout({
   const cruiseAdapter = useCruiseImportAdapter();
   const railAdapter = useRailImportAdapter();
   const rentalAdapter = useRentalImportAdapter();
-  const rentalVisible = useRentalVisible();
-  const busVisible = useBusVisible();
   const [showSpecialModal, setShowSpecialModal] = useState(false);
   const { isEnabled } = useEnabledDomains();
   const placesVisible = usePlacesVisible();
-  const railVisible = useRailVisible();
   const { addToast } = useToastStore();
   // What is coming up, per domain. Fetched HERE rather than inside the strip so
   // it reloads with the same `onDataChanged` signal the counts do — adding a
@@ -104,15 +99,9 @@ export function DashboardLayout({
     let cancelled = false;
     getUpcoming()
       .then((entries) => {
-        // The server answers by the user's domains alone; the rail beta
-        // switch is the client's to apply (owner rule 2026-09-25).
-        if (!cancelled)
-          setUpcoming(
-            entries.filter(
-              (e) =>
-                (e.domain !== "rail" || railVisible) && (e.domain !== "rental" || rentalVisible)
-            )
-          );
+        // The server answers by the user's domains alone; the beta switches
+        // are the client's to apply (owner rule 2026-09-25).
+        if (!cancelled) setUpcoming(entries.filter((e) => isEntryDomainShown(e.domain, isEnabled)));
       })
       .catch((err: unknown) => logger.error("Failed to load the upcoming entries", err));
     return () => {
@@ -120,7 +109,7 @@ export function DashboardLayout({
     };
     // `counts` changes whenever the page refetches after a create — the cheapest
     // honest trigger for "something might now be sooner than what is shown".
-  }, [counts, railVisible, rentalVisible]);
+  }, [counts, isEnabled]);
 
   // On a domain tab, that domain's next entry; on "Alle", the soonest of all —
   // including the trip, which belongs to no single tab. `upcoming` arrives
@@ -188,9 +177,6 @@ export function DashboardLayout({
   const addableDomains = {
     ...enabledDomains,
     poi: placesVisible,
-    rail: railVisible,
-    rental: rentalVisible,
-    bus: busVisible,
     tour: toursVisible,
   };
 

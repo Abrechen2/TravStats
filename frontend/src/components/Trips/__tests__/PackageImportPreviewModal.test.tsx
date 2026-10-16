@@ -136,6 +136,34 @@ describe("PackageImportPreviewModal", () => {
     );
   });
 
+  // A code the catalogue lacks skips the leg; without a field to correct it
+  // the reviewer could only watch a real flight be left out.
+  it("lets the reviewer correct an airport code the catalogue lacks", async () => {
+    const base = proposal();
+    preview.mockResolvedValue(
+      proposal({
+        flights: [
+          {
+            ...base.flights[0],
+            departure: { iata: "ZZQ", city: null, status: "unknown" },
+          },
+        ],
+        warnings: [{ code: "airportUnknown", subject: "ZZQ" }],
+      })
+    );
+    renderModal();
+    const field = await screen.findByLabelText(/IATA-Code für „ZZQ“/);
+    fireEvent.change(field, { target: { value: "nbo" } });
+    fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
+    await waitFor(() =>
+      expect(preview).toHaveBeenLastCalledWith({
+        reading,
+        documentId: "doc-1",
+        choices: { airports: { ZZQ: "NBO" } },
+      })
+    );
+  });
+
   it("commits through the server with the reviewer's choices and reports success", async () => {
     const result = { trip: { action: "create", id: "t1" } };
     commit.mockResolvedValue(result);

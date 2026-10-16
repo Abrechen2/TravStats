@@ -38,6 +38,9 @@ export default function Button({
 }: ButtonProps): JSX.Element {
   const height =
     variant === "primary" ? "var(--ts-size-button-primary)" : "var(--ts-size-button-secondary)";
+  // Height, padding and white-space read context hooks, so a surface that must
+  // let long labels wrap (the inbox workspace) sets three custom properties on
+  // its root instead of beating these inline styles with `!important`.
 
   const skin =
     variant === "primary"
@@ -65,8 +68,8 @@ export default function Button({
       data-variant={variant}
       className={`ts-button ${className ?? ""}`.trim()}
       style={{
-        height,
-        padding: "0 var(--ts-space-xl)",
+        height: `var(--ts-button-height, ${height})`,
+        padding: "var(--ts-button-padding, 0 var(--ts-space-xl))",
         borderRadius: "var(--ts-radius-button)",
         fontWeight: 700,
         fontSize: 16,
@@ -76,7 +79,7 @@ export default function Button({
         alignItems: "center",
         justifyContent: "center",
         gap: "var(--ts-space-sm)",
-        whiteSpace: "nowrap",
+        whiteSpace: "var(--ts-button-white-space, nowrap)",
         // 0.5 everywhere; the create button's 0.3 belongs to the form-error
         // recipe, not to every disabled button.
         opacity: disabled ? 0.5 : 1,

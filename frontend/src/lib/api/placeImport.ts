@@ -64,12 +64,15 @@ export const resolvePlaceImport = async (
 export const commitPlaceImport = async (
   source: PlaceImportSource,
   fileName: string | null,
-  rows: PlaceImportCandidate[]
+  rows: PlaceImportCandidate[],
+  /** Kept documents (the ticket a place was read from), filed on the visit written. */
+  documentIds: string[] = []
 ): Promise<PlaceImportCommitResult> => {
   const { data } = await api.post<Envelope<PlaceImportCommitResult>>("/place-import/commit", {
     source,
     fileName,
     rows,
+    ...(documentIds.length > 0 ? { documentIds } : {}),
   });
   return data.data;
 };

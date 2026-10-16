@@ -8,7 +8,8 @@
  * at. They are about to lose data they cannot see.
  *
  * A row the file mentioned but FAILED on is in `seen` and therefore safe: a
- * refused row is not permission to delete the record it named.
+ * refused row is not permission to delete the record it named. A refused row
+ * WITHOUT an id names no record we can tell, so then nothing is pruned.
  *
  * Cruise stops and lodging stays are deliberately NOT pruned: they go with
  * their parent (the cascade), and a stays sheet that is merely shorter than
@@ -22,7 +23,7 @@ import {
   collectLodgingPhotoFilenames,
   removeLodgingPhotoFiles,
 } from "../lodging/deleteLodgingPhotoFiles";
-import type { Ctx } from "./context";
+import { UNIDENTIFIED_REFUSAL, type Ctx } from "./context";
 
 export type PrunableModel =
   | "place"
@@ -32,6 +33,7 @@ export type PrunableModel =
   | "placeVisit"
   | "railJourney"
   | "busJourney"
+  | "ferryJourney"
   | "rentalBooking";
 
 export async function pruneMissing(
@@ -40,6 +42,13 @@ export async function pruneMissing(
   ctx: Ctx
 ): Promise<number> {
   if (ctx.mode !== "replace") return 0;
+  if (seen.has(UNIDENTIFIED_REFUSAL)) {
+    logger.warn(
+      { operation: "xlsx_import_replace_held", model, userId: ctx.userId },
+      "Spreadsheet import in replace mode pruned nothing: a refused row carried no id"
+    );
+    return 0;
+  }
 
   const where = { userId: ctx.userId, id: { notIn: [...seen] } };
 
@@ -52,6 +61,7 @@ export async function pruneMissing(
     if (model === "placeVisit") return prisma.placeVisit.count({ where });
     if (model === "railJourney") return prisma.railJourney.count({ where });
     if (model === "busJourney") return prisma.busJourney.count({ where });
+    if (model === "ferryJourney") return prisma.ferryJourney.count({ where });
     if (model === "rentalBooking") return prisma.rentalBooking.count({ where });
     return prisma.lodging.count({ where });
   };
@@ -62,6 +72,7 @@ export async function pruneMissing(
     else if (model === "placeVisit") await prisma.placeVisit.deleteMany({ where });
     else if (model === "railJourney") await prisma.railJourney.deleteMany({ where });
     else if (model === "busJourney") await prisma.busJourney.deleteMany({ where });
+    else if (model === "ferryJourney") await prisma.ferryJourney.deleteMany({ where });
     else if (model === "rentalBooking") await prisma.rentalBooking.deleteMany({ where });
     else {
       // The cascade takes the photo rows and with them the only record of

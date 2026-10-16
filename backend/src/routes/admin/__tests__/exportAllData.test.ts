@@ -173,6 +173,7 @@ describe("GET /api/v1/admin/export/all-data", () => {
         fields: ["totals"],
         tokenHash: "export-test-hash-must-not-appear",
         expiresAt: new Date("2099-01-01T00:00:00Z"),
+        effectiveExpiresAt: new Date("2099-01-01T00:00:00Z"),
       },
     });
     const res = await request(app)

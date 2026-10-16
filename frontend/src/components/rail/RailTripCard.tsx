@@ -5,7 +5,7 @@ import { ExpandableEventCard } from "../Trip/ExpandableEventCard";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatRailSpan, formatStationTime } from "../../lib/railTime";
 import { railDeparture } from "../../lib/entityTimes";
-import { formatAmount } from "../../lib/units";
+import { formatAmount, dateLocaleForLanguage } from "../../lib/units";
 import type { TripRailJourney } from "../../types/rail";
 
 /** "ICE 578 · DB Fernverkehr" — whatever of the three is known. */
@@ -31,7 +31,7 @@ export function RailTripCard({
   dateLabel: string;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["rail", "trips"]);
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const [open, setOpen] = useState(false);
   const when = formatRailSpan(journey, locale, " → ");
   const delay =
@@ -89,7 +89,7 @@ export function RailTripCard({
  */
 export function TripRailList({ journeys }: { journeys: readonly TripRailJourney[] }): JSX.Element {
   const { t, i18n } = useTranslation(["rail"]);
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   return (
     <div
       className="rounded-xl"

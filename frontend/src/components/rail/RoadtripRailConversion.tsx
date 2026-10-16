@@ -6,11 +6,11 @@ import Button from "../ui/Button";
 import { Card } from "../ui/Card";
 import Dialog from "../ui/Dialog";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useRailVisible } from "../../hooks/useRailVisible";
 import { railApi, type RoadtripConversionPreview } from "../../lib/api/rail";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import type { StoredRoadtripVehicle } from "../../shared/tour/roadtrip";
+import { useDomainVisible } from "../../hooks/useDomainVisible";
 
 interface Props {
   routeId: string;
@@ -25,7 +25,7 @@ interface Props {
  * offered for conversion into rail journeys, one per leg.
  *
  * Shown only where rail is visible at all (beta switch AND the user's domain,
- * `useRailVisible`), and only for a roadtrip by rail. The dialog shows what
+ * `useDomainVisible("rail")`), and only for a roadtrip by rail. The dialog shows what
  * will be written before anything is; the roadtrip is deleted only when the
  * user ticks that box, and the box is offered only when every leg converts.
  */
@@ -35,7 +35,7 @@ export function RoadtripRailConversion({
   onConverted,
 }: Props): JSX.Element | null {
   const { t } = useTranslation(["rail", "common"]);
-  const railVisible = useRailVisible();
+  const railVisible = useDomainVisible("rail");
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
   const [open, setOpen] = useState(false);

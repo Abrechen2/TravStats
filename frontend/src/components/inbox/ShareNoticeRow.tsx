@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import type { ShareNotice } from "../../types/sharing";
 import { formatShareValue, shareFieldLabel } from "../sharing/noticeValues";
 import Button from "../ui/Button";
+import { dateLocaleForLanguage } from "../../lib/units";
 
 const NS = "sharing:inbox.notices";
 
@@ -32,7 +33,7 @@ export default function ShareNoticeRow({
   onDeleteCopy: () => void;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["sharing"]);
-  const locale = i18n.language?.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const after = notice.after ?? {};
   const kindKey =
     notice.kind === "deleted" && after.reason === "movedOut" ? "movedOut" : notice.kind;

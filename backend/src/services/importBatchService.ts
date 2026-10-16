@@ -25,7 +25,15 @@ export interface ImportBatchSummary {
   fileName: string | null;
   createdAt: string;
   /** How many rows this batch still owns, per kind. */
-  counts: { lodgings: number; stays: number; flights: number; cruises: number; places: number };
+  counts: {
+    lodgings: number;
+    stays: number;
+    flights: number;
+    cruises: number;
+    places: number;
+    /** Trip stops a Takeout import wrote (POI batches only). */
+    stops: number;
+  };
 }
 
 /**
@@ -88,12 +96,21 @@ export async function listImportBatches(userId: string): Promise<ImportBatchSumm
         // Without this a POI batch existed and was invisible in the log — the
         // user could neither see nor undo an import that had happened.
         { places: { some: {} } },
+        // A Takeout import may write only trip stops; it is still an import.
+        { tripStops: { some: {} } },
       ],
     },
     orderBy: { createdAt: "desc" },
     include: {
       _count: {
-        select: { lodgings: true, stays: true, flights: true, cruises: true, places: true },
+        select: {
+          lodgings: true,
+          stays: true,
+          flights: true,
+          cruises: true,
+          places: true,
+          tripStops: true,
+        },
       },
     },
   });
@@ -110,13 +127,14 @@ export async function listImportBatches(userId: string): Promise<ImportBatchSumm
       flights: b._count.flights,
       cruises: b._count.cruises,
       places: b._count.places,
+      stops: b._count.tripStops,
     },
   }));
 }
 
 /** One row an import brought in, flattened across the domains. */
 export interface ImportBatchItem {
-  kind: "flight" | "cruise" | "lodging" | "stay" | "place";
+  kind: "flight" | "cruise" | "lodging" | "stay" | "place" | "stop";
   id: string;
   /** What to call it on screen: flight number, ship, hotel name. */
   label: string;
@@ -162,7 +180,7 @@ export async function listImportBatchItems(
   });
   if (!batch) throw new AppError("Import batch not found", 404);
 
-  const [flights, cruises, lodgings, stays, places] = await Promise.all([
+  const [flights, cruises, lodgings, stays, places, stops] = await Promise.all([
     prisma.flight.findMany({
       where: { userId, importBatchId: batchId },
       select: {
@@ -205,13 +223,26 @@ export async function listImportBatchItems(
       orderBy: { name: "asc" },
       take: ITEM_CAP,
     }),
+    prisma.tripStop.findMany({
+      where: { importBatchId: batchId, trip: { userId } },
+      select: { id: true, title: true, startDate: true, trip: { select: { name: true } } },
+      orderBy: [{ startDate: { sort: "asc", nulls: "last" } }, { id: "asc" }],
+      take: ITEM_CAP,
+    }),
   ]);
 
   const counts = await prisma.importBatch.findFirst({
     where: { id: batchId, userId },
     select: {
       _count: {
-        select: { flights: true, cruises: true, lodgings: true, stays: true, places: true },
+        select: {
+          flights: true,
+          cruises: true,
+          lodgings: true,
+          stays: true,
+          places: true,
+          tripStops: true,
+        },
       },
     },
   });
@@ -220,7 +251,8 @@ export async function listImportBatchItems(
     (counts?._count.cruises ?? 0) +
     (counts?._count.lodgings ?? 0) +
     (counts?._count.stays ?? 0) +
-    (counts?._count.places ?? 0);
+    (counts?._count.places ?? 0) +
+    (counts?._count.tripStops ?? 0);
 
   const items: ImportBatchItem[] = [
     ...flights.map((f) => ({
@@ -260,6 +292,13 @@ export async function listImportBatchItems(
       // there", which is a different fact.
       date: null,
       detail: [p.city, p.country].filter(Boolean).join(", ") || null,
+    })),
+    ...stops.map((s) => ({
+      kind: "stop" as const,
+      id: s.id,
+      label: s.title,
+      date: s.startDate ? s.startDate.toISOString() : null,
+      detail: s.trip?.name ?? null,
     })),
   ];
 
@@ -318,9 +357,18 @@ export async function revertImportBatch(userId: string, batchId: string): Promis
      * and looked like an empty batch.
      */
     return await prisma.$transaction(async (tx) => {
-      const deleted = (await tx.place.deleteMany({ where: { userId, batchId } })).count;
+      const deletedPlaces = (await tx.place.deleteMany({ where: { userId, batchId } })).count;
+      // Trip stops the import wrote. Members of a shared trip are told, as for
+      // any other deleted stop; their copies stay.
+      const stopWhere = { importBatchId: batchId, trip: { userId } };
+      const stopIds = (await tx.tripStop.findMany({ where: stopWhere, select: { id: true } })).map(
+        (s) => s.id
+      );
+      const gone = await shareSnapshots(tx, "stop", stopIds);
+      const deletedStops = (await tx.tripStop.deleteMany({ where: { id: { in: stopIds } } })).count;
+      await propagateDeletes(tx, userId, [...gone.values()]);
       await tx.importBatch.delete({ where: { id: batchId } });
-      return { domain, deleted };
+      return { domain, deleted: deletedPlaces + deletedStops };
     });
   }
 

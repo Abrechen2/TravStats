@@ -174,7 +174,8 @@
     "removeFromList": "„{{name}}“ aus der Liste entfernen",
     "deleteList": "Liste löschen",
     "deleteTitle": "Liste löschen?",
-    "deleteMessage": "„{{name}}“ wird gelöscht. Die {{count}} Orte darin bleiben in deinem Logbuch — nur die Gruppierung verschwindet.",
+    "deleteMessage_one": "„{{name}}“ wird gelöscht. Der eine Ort darin bleibt in deinem Logbuch — nur die Gruppierung verschwindet.",
+    "deleteMessage_other": "„{{name}}“ wird gelöscht. Die {{count}} Orte darin bleiben in deinem Logbuch — nur die Gruppierung verschwindet.",
     "deleted": "„{{name}}“ wurde gelöscht.",
     "notFound": "Diese Liste existiert nicht (mehr).",
     "loadError": "Die Listen konnten nicht geladen werden.",
@@ -725,6 +726,7 @@
       "reading": "Wird gelesen …",
       "uploadLabel": "Datei wählen",
       "readFailed": "Das Dokument konnte nicht gelesen werden. Bitte noch einmal versuchen.",
+      "notFiled": "Das Dokument wurde nicht abgelegt: Ohne Besuchsdatum entsteht kein Besuch, zu dem es gehören könnte.",
       "fallback": {
         "noTemplate": "Noch kein Orts-Template aktiv. Leite in der Parser-Werkstatt (Art des Dokuments: Ort) aus einem Ticket dieses Anbieters eines ab, prüfe es mit der Vorschau und aktiviere es.",
         "notRecognised": "Keines deiner Orts-Templates erkennt dieses Dokument. Für einen neuen Anbieter leitest du in der Parser-Werkstatt ein eigenes ab.",

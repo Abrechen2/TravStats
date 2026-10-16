@@ -172,6 +172,8 @@ describe("Ferry rides API", () => {
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].operator).toBe("Kumho");
+    // The pre-link routing snapshot is bookkeeping for unlinking, not part of a crossing.
+    expect(res.body.data[0]).not.toHaveProperty("roadtripLegBefore");
     expect(res.body.meta.total).toBe(2);
     expect(res.body.meta.summary).toEqual({
       journeys: 2,
@@ -364,9 +366,113 @@ describe("Ferry rides API", () => {
     expect((await request(app).put(url).set("Cookie", cookie).send({ legId: null })).status).toBe(
       200
     );
-    expect((await prisma.tripRouteLeg.findUniqueOrThrow({ where: { id: leg.id } })).mode).toBe(
-      "ferry"
+  });
+
+  it("gives a leg back exactly as it was when its crossing is unlinked or moved to another leg", async () => {
+    // Linking wiped the leg's road routing (mode, waypoints, driving time,
+    // distance) and nothing ever restored it: unlinking left a straight ferry
+    // leg where a routed road had been.
+    const trip = await prisma.trip.create({ data: { userId, name: "Relink trip" } });
+    const route = await prisma.tripRoute.create({
+      data: { userId, tripId: trip.id, name: "Coast", kind: "roadtrip", mode: "road" },
+    });
+    const stops = await Promise.all(
+      ["A", "B", "C"].map((title, i) =>
+        prisma.tripStop.create({
+          data: { tripId: trip.id, routeId: route.id, title, lat: 37 + i, lon: 127 + i },
+        })
+      )
     );
+    const routed = {
+      mode: "road",
+      source: "routed",
+      confidence: "high",
+      distanceKm: 512.5,
+      drivingMinutes: 301,
+      waypoints: [
+        [127, 37],
+        [127.5, 37.6],
+        [128, 38],
+      ],
+    };
+    const first = await prisma.tripRouteLeg.create({
+      data: { routeId: route.id, fromStopId: stops[0].id, toStopId: stops[1].id, ...routed },
+    });
+    const second = await prisma.tripRouteLeg.create({
+      data: {
+        routeId: route.id,
+        fromStopId: stops[1].id,
+        toStopId: stops[2].id,
+        ...routed,
+        mode: "bike",
+        distanceKm: 99,
+      },
+    });
+    const pick = (leg: Record<string, unknown>) => ({
+      mode: leg.mode,
+      source: leg.source,
+      confidence: leg.confidence,
+      distanceKm: leg.distanceKm,
+      drivingMinutes: leg.drivingMinutes,
+      waypoints: leg.waypoints,
+    });
+    const ride = await create({ ...base, tripId: trip.id });
+    const url = `/api/v1/ferry/${ride.body.data.id}/roadtrip-leg`;
+    const link = (legId: string | null) =>
+      request(app).put(url).set("Cookie", cookie).send({ legId });
+    const read = async (id: string) =>
+      pick(await prisma.tripRouteLeg.findUniqueOrThrow({ where: { id } }));
+
+    expect((await link(first.id)).status).toBe(200);
+    expect((await read(first.id)).mode).toBe("ferry");
+    // Linking the same leg again keeps the original, not the ferry state.
+    expect((await link(first.id)).status).toBe(200);
+    // Moving the crossing restores the first leg and takes the second.
+    expect((await link(second.id)).status).toBe(200);
+    expect(await read(first.id)).toEqual(pick(routed));
+    expect((await read(second.id)).mode).toBe("ferry");
+    expect((await link(null)).status).toBe(200);
+    expect(await read(second.id)).toEqual(pick({ ...routed, mode: "bike", distanceKm: 99 }));
+    await prisma.trip.delete({ where: { id: trip.id } });
+  });
+
+  it("lists the newest roadtrip legs first and says when the list was cut", async () => {
+    const trip = await prisma.trip.create({ data: { userId, name: "Long trip" } });
+    const route = await prisma.tripRoute.create({
+      data: { userId, tripId: trip.id, name: "Long", kind: "roadtrip", mode: "road" },
+    });
+    const stops = await prisma.tripStop.createManyAndReturn({
+      data: Array.from({ length: 24 }, (_, i) => ({
+        tripId: trip.id,
+        routeId: route.id,
+        title: `S${i}`,
+        lat: 40 + i / 10,
+        lon: 10,
+      })),
+    });
+    const pairs = stops.flatMap((a) => stops.filter((b) => b !== a).map((b) => [a, b] as const));
+    const computedAt = new Date("2026-01-01T00:00:00Z");
+    await prisma.tripRouteLeg.createMany({
+      data: pairs.slice(0, 501).map(([a, b]) => ({
+        routeId: route.id,
+        fromStopId: a.id,
+        toStopId: b.id,
+        mode: "road",
+        source: "straight",
+        distanceKm: 1,
+        computedAt,
+      })),
+    });
+    const res = await request(app).get("/api/v1/ferry/roadtrip-legs").set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(500);
+    expect(res.body.meta).toEqual({ truncated: true });
+    // Same computedAt for every row: the id tie-breaker makes the cut stable.
+    const again = await request(app).get("/api/v1/ferry/roadtrip-legs").set("Cookie", cookie);
+    expect(again.body.data.map((l: { id: string }) => l.id)).toEqual(
+      res.body.data.map((l: { id: string }) => l.id)
+    );
+    await prisma.trip.delete({ where: { id: trip.id } });
   });
   it("files a retained ticket, refuses a foreign document and cascades ownership on delete", async () => {
     const ticket = await prisma.document.create({
@@ -467,6 +573,52 @@ describe("Ferry rides API", () => {
       (await request(app).get("/api/v1/ferry/live-availability").set("Cookie", cookie)).body.data
     ).toEqual({ configured: false, provider: "AISStream" });
   });
+  it("binds the vessel to the crossing: the first answered MMSI is kept, another is refused", async () => {
+    // The MMSI was free input on every call, so any crossing worked as a
+    // general AIS proxy for any vessel.
+    const ride = (await create(base)).body.data;
+    const ok = {
+      status: "ok" as const,
+      position: {
+        mmsi: "211123456",
+        vesselName: "PREMIUM",
+        lat: 38,
+        lon: 128,
+        speedKnots: 10,
+        courseDegrees: 90,
+        receivedAt: "2026-09-20T09:30:00.000Z",
+        observedAt: null,
+      },
+    };
+    jest.mocked(lookupVessel).mockReset().mockResolvedValue(ok);
+    const url = `/api/v1/ferry/${ride.id}/live-position`;
+    expect((await request(app).get(`${url}?mmsi=211123456`).set("Cookie", cookie)).status).toBe(
+      200
+    );
+    expect(lookupVessel).toHaveBeenCalledWith("211123456", userId);
+    const stored = await prisma.ferryJourney.findUniqueOrThrow({ where: { id: ride.id } });
+    expect(stored.vesselMmsi).toBe("211123456");
+
+    const other = await request(app).get(`${url}?mmsi=211999999`).set("Cookie", cookie);
+    expect(other.status).toBe(400);
+    expect(other.body.field).toBe("mmsi");
+    expect(lookupVessel).toHaveBeenCalledTimes(1);
+
+    // Without a query the bound vessel is read.
+    expect((await request(app).get(url).set("Cookie", cookie)).status).toBe(200);
+    expect(lookupVessel).toHaveBeenLastCalledWith("211123456", userId);
+
+    // The crossing's editor can rebind it.
+    await request(app)
+      .patch(`/api/v1/ferry/${ride.id}`)
+      .set("Cookie", cookie)
+      .send({ vesselMmsi: "211999999" })
+      .expect(200);
+    expect((await request(app).get(`${url}?mmsi=211999999`).set("Cookie", cookie)).status).toBe(
+      200
+    );
+  });
+
   it("refuses stale edits and deletes, and permits a delete of the current version", async () => {
     const created = await create(base);
     const ride = created.body.data;
@@ -494,6 +646,61 @@ describe("Ferry rides API", () => {
       .set("Cookie", cookie)
       .set("If-Match", stored.updatedAt.toISOString())
       .expect(204);
+  });
+
+  it("answers a stale edit and delete with the crossing as it is now, like every other domain", async () => {
+    // The 409 carried only `{error, code}`, so a client could not show what
+    // changed or retry on the current version without another read.
+    const ride = (await create(base)).body.data;
+    await request(app)
+      .patch(`/api/v1/ferry/${ride.id}`)
+      .set("Cookie", cookie)
+      .send({ notes: "first edit", baseVersion: ride.updatedAt })
+      .expect(200);
+    const stored = await prisma.ferryJourney.findUniqueOrThrow({ where: { id: ride.id } });
+    for (const res of [
+      await request(app)
+        .patch(`/api/v1/ferry/${ride.id}`)
+        .set("Cookie", cookie)
+        .send({ notes: "stale", baseVersion: ride.updatedAt }),
+      await request(app)
+        .delete(`/api/v1/ferry/${ride.id}`)
+        .set("Cookie", cookie)
+        .set("If-Match", ride.updatedAt),
+    ]) {
+      expect(res.status).toBe(409);
+      expect(res.body).toMatchObject({
+        code: "VERSION_CONFLICT",
+        entity: "ferry_journey",
+        id: ride.id,
+        baseVersion: ride.updatedAt,
+        currentVersion: stored.updatedAt.toISOString(),
+        changedFields: null,
+        current: { id: ride.id, notes: "first edit" },
+      });
+    }
+  });
+
+  it("answers 404, not a version conflict, when a racing delete removed the crossing first", async () => {
+    const ride = (await create(base)).body.data;
+    const original = prisma.ferryJourney.deleteMany.bind(prisma.ferryJourney);
+    const spy = jest
+      .spyOn(prisma.ferryJourney, "deleteMany")
+      // A plain async function stands in for Prisma's PrismaPromise-returning delegate.
+      .mockImplementationOnce((async (args?: Parameters<typeof original>[0]) => {
+        // The other device's delete lands between the lookup and this one.
+        await original({ where: { id: ride.id } });
+        return original(args);
+      }) as unknown as typeof original);
+    try {
+      const res = await request(app)
+        .delete(`/api/v1/ferry/${ride.id}`)
+        .set("Cookie", cookie)
+        .set("If-Match", ride.updatedAt);
+      expect(res.status).toBe(404);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("allows only one concurrent edit based on the same version", async () => {

@@ -15,6 +15,8 @@ import type { RailJourney } from "../../types/rail";
 import { railSheet } from "./railSheet";
 import { busSheet } from "./busSheet";
 import type { BusJourney } from "../../types/bus";
+import { ferrySheet } from "./ferrySheet";
+import type { FerryJourney } from "../../types/ferry";
 import { rentalSheet } from "./rentalSheet";
 import type { RentalBooking } from "../../types/rental";
 import {
@@ -53,6 +55,8 @@ export interface ExportInput {
   rail?: readonly RailJourney[];
   /** Only passed when the bus domain is visible (beta gate + user), forgejo#180. */
   bus?: readonly BusJourney[];
+  /** Only passed when the ferry domain is visible (beta gate + user). */
+  ferry?: readonly FerryJourney[];
   /** Only passed when the rental domain is visible (beta gate + user), forgejo#267. */
   rentals?: readonly RentalBooking[];
   roadtrips?: readonly RoadtripDetail[];
@@ -166,6 +170,8 @@ export function buildSheets(t: T, input: ExportInput, locale = "de"): AnySheetDa
   if (rail.length > 0) sheets.push(sheet(railSheet(t), rail));
   const bus = input.bus ?? [];
   if (bus.length > 0) sheets.push(sheet(busSheet(t), bus));
+  const ferry = input.ferry ?? [];
+  if (ferry.length > 0) sheets.push(sheet(ferrySheet(t), ferry));
   const rentals = input.rentals ?? [];
   if (rentals.length > 0) sheets.push(sheet(rentalSheet(t), rentals));
 

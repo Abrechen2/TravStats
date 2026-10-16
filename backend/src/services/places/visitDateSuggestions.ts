@@ -111,7 +111,8 @@ async function nearbyStays(
  * cruise import's midnight) written through the airport's zone, so its UTC
  * date is the day before east of UTC for a midnight write and at UTC+13/+14
  * for a noon one (forgejo#273). It is read in the zone it was written with —
- * the stored arrival zone, else the place's, else UTC as every other row.
+ * the stored arrival zone (the departure's, when only the departure is
+ * known), else the place's, else UTC as every other row.
  */
 async function nearbyArrivals(
   userId: string,
@@ -124,13 +125,20 @@ async function nearbyArrivals(
     ? Prisma.sql`AND f.trip_id = ${tripId}`
     : Prisma.sql`AND coalesce(f.arrival_time, f.departure_time) <= now()`;
   const when = Prisma.sql`coalesce(f.arrival_time, f.departure_time)`;
+  // Without an arrival time the value is the DEPARTURE, written with the
+  // departure's semantics and zone: read in the arrival zone, an Auckland
+  // date-only departure landed a day early at Honolulu.
+  const semantics = Prisma.sql`CASE WHEN f.arrival_time IS NOT NULL
+    THEN f.arr_time_semantics ELSE f.dep_time_semantics END`;
+  const writtenZone = Prisma.sql`CASE WHEN f.arrival_time IS NOT NULL
+    THEN f.arr_timezone ELSE f.dep_timezone END`;
   return prisma.$queryRaw<ArrivalRow[]>(Prisma.sql`
     SELECT CASE
-             WHEN f.arr_time_semantics = 'LEGACY_FAKE_UTC'
+             WHEN ${semantics} = 'LEGACY_FAKE_UTC'
                THEN to_char(${when}, 'YYYY-MM-DD')
-             WHEN f.arr_time_semantics = 'DATE_ONLY'
+             WHEN ${semantics} = 'DATE_ONLY'
                THEN to_char(
-                 (${when} AT TIME ZONE 'UTC') AT TIME ZONE coalesce(f.arr_timezone, ${tz}, 'UTC'),
+                 (${when} AT TIME ZONE 'UTC') AT TIME ZONE coalesce(${writtenZone}, ${tz}, 'UTC'),
                  'YYYY-MM-DD'
                )
              ELSE ${localDay(when, tz)}

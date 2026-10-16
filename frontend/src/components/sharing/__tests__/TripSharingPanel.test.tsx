@@ -108,6 +108,19 @@ describe("TripSharingPanel", () => {
     );
   });
 
+  it("says when another member of the trip has not agreed to the recipient", async () => {
+    api.shareTrip.mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 403, data: { code: "SHARE_GROUP_CONSENT_REQUIRED" } },
+    });
+    renderPanel();
+    const [benBox] = await screen.findAllByRole("checkbox");
+    await userEvent.click(benBox);
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith("error", "sharing:errors.groupConsentRequired")
+    );
+  });
+
   it("shows the other member's booking total read-only", async () => {
     api.tripSharing.mockResolvedValue({
       groupId: "g1",

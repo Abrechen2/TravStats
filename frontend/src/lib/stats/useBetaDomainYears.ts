@@ -3,8 +3,7 @@ import { useEffect, useState } from "react";
 import { rentalLinksApi } from "../api/rentalLinks";
 import { busApi } from "../api/bus";
 import { logger } from "../logger";
-import { useRentalVisible } from "../../hooks/useRentalVisible";
-import { useBusVisible } from "../../hooks/useBusVisible";
+import { useDomainVisible } from "../../hooks/useDomainVisible";
 
 /**
  * The years rentals and bus rides hold (forgejo#265: a year picker must exist
@@ -18,8 +17,8 @@ import { useBusVisible } from "../../hooks/useBusVisible";
  * none either and is logged; the page still has every other domain's years.
  */
 export function useBetaDomainYears(): number[] {
-  const rentalVisible = useRentalVisible();
-  const busVisible = useBusVisible();
+  const rentalVisible = useDomainVisible("rental");
+  const busVisible = useDomainVisible("bus");
   const [years, setYears] = useState<number[]>([]);
 
   useEffect(() => {

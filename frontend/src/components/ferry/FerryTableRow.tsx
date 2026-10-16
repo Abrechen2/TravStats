@@ -8,6 +8,7 @@ import { OperatorTile } from "../table/OperatorTile";
 import { statusPillProps } from "../table/statusPillStyle";
 import TripPill from "../Trips/TripPill";
 import { TableRow, type TableColumn } from "../ui/Table";
+import { dateLocaleForLanguage } from "../../lib/units";
 
 export type FerryColumnId =
   | "operator"
@@ -47,7 +48,7 @@ interface Props {
 
 export function FerryTableRow({ journey, columns, onOpen, actions }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["ferry", "rail"]);
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const departure = railDeparture(journey);
   const minutes = departure ? railDurationMinutes(departure, railArrival(journey)) : null;
 

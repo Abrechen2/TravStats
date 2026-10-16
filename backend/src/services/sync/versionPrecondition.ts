@@ -114,6 +114,26 @@ async function claimVersion(
   return claimed.length === 1;
 }
 
+/** What a 409 VERSION_CONFLICT carries, for every domain alike. */
+export interface VersionConflict {
+  entity: string;
+  id: string;
+  baseVersion: string;
+  currentVersion: string | null;
+  /** Null when no change log reaches back to `baseVersion`: compare yourself. */
+  changedFields: string[] | null;
+  current: Record<string, unknown>;
+}
+
+/** Answers the conflict in the one shape every client reads (forgejo#141). */
+export function sendVersionConflict(res: Response, conflict: VersionConflict): void {
+  res.status(409).json({
+    error: "This record was changed elsewhere since it was read.",
+    code: "VERSION_CONFLICT",
+    ...conflict,
+  });
+}
+
 /**
  * Route middleware: `requireCurrentVersion("flight", "id")`. Must run after
  * `authenticate` and `requireWriteScope`. Without a base version it does
@@ -148,9 +168,7 @@ export function requireCurrentVersion(entityName: string, idParam: string) {
         next();
         return;
       }
-      res.status(409).json({
-        error: "This record was changed elsewhere since it was read.",
-        code: "VERSION_CONFLICT",
+      sendVersionConflict(res, {
         entity: entity.name,
         id,
         baseVersion: base,

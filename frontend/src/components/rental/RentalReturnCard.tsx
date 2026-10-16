@@ -3,7 +3,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { formatStationMoment } from "../../lib/rentalTime";
 import { depositSummary } from "../../lib/rental/rentalDeposit";
 import { rentalReturnFacts } from "../../lib/rental/rentalReturnCard";
-import { formatAmount } from "../../lib/units";
+import { formatAmount, dateLocaleForLanguage } from "../../lib/units";
 import { formatDayLong } from "../../shared/time";
 import type { RentalBooking } from "../../types/rental";
 
@@ -25,7 +25,7 @@ const ACTION_CLASS =
  */
 export function RentalReturnCard({ rental, onRecordReturn }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["rental"]);
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const facts = rentalReturnFacts(rental);
   const when = rental.times.return;
   const deposit = depositSummary(

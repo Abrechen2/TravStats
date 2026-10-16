@@ -1,7 +1,7 @@
 import type { EvidenceScope } from "../../../shared/evidence";
 import type { EvidenceResponse } from "../../../schemas/evidence";
 import { BADGE_PROOF_TYPES, badgeProofKey } from "../../../shared/badgeEvidence";
-import { achievementCountries } from "../../../utils/achievementCountries";
+import { achievementCountries, badgePassportSources } from "../../../utils/achievementCountries";
 import { computeCoreStats, loadCoreInputs } from "../../../utils/achievementInputs";
 import type { PagingParams } from "../paging";
 import { domainSumEvidence, requireLifetime } from "../domainMeasureResponse";
@@ -61,7 +61,8 @@ async function resolveProof(
 /**
  * The country badges count like the passport (`achievementCountries`), so
  * their evidence is the passport's records — every record that proves one of
- * the BADGE's countries, a place pin excluded as the badge excludes it.
+ * the BADGE's countries, read from the badge's own sources (no track, no hidden
+ * domain; a confirmed place counts since forgejo#299).
  */
 async function resolveCountries(
   userId: string,
@@ -72,7 +73,7 @@ async function resolveCountries(
   requireLifetime(scope, key);
   const [inputs, index] = await Promise.all([
     loadCoreInputs(userId),
-    loadPassportEvidenceIndex(userId),
+    badgePassportSources(userId).then((sources) => loadPassportEvidenceIndex(userId, sources)),
   ]);
   // The country set is the only measure read here; the trip count is not.
   const { stats } = await computeCoreStats(inputs, {
@@ -80,8 +81,9 @@ async function resolveCountries(
     tripsFullyDocumented: 0,
   });
   const counted = stats.countries;
+  // The index already reads the badge's own sources — no track, no hidden
+  // rail/roadtrip/bus — so every record here could have counted.
   const entries = index.records
-    .filter((r) => r.entry.domain !== "place")
     .map((r) => ({ ...r.entry, credits: [...r.countries].filter((c) => counted.has(c)).sort() }))
     .filter((e) => e.credits.length > 0);
   const credited = new Set(entries.flatMap((e) => e.credits));
@@ -92,7 +94,7 @@ async function resolveCountries(
     scope,
     page,
     entries,
-    residual(counted, credited, () => false)
+    residual(counted, credited)
   );
   return { ...response, measure: { ...response.measure, label: LABEL } };
 }

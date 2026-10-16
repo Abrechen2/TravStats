@@ -21,8 +21,6 @@ vi.mock("../../../store/settingsStore", () => ({
 vi.mock("../../../hooks/useBetaFeatures", () => ({
   useBetaFeatures: () => ({ isFeatureVisible: () => true }),
 }));
-vi.mock("../../../hooks/useRailVisible", () => ({ useRailVisible: () => true }));
-vi.mock("../../../hooks/useRentalVisible", () => ({ useRentalVisible: () => true }));
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (k: string, o?: { count?: number }) => (o?.count !== undefined ? `${k}/${o.count}` : k),

@@ -4,6 +4,7 @@ import { loadPassport } from "../../stats/passportLoader";
 import { loadCountryDetail } from "../../stats/countryDetailLoader";
 import { resolveMetricEvidence } from "../metricEvidence";
 import { resolveRankingEvidence } from "../rankingEvidence";
+import { residual } from "../metricEvidencePassport";
 import { assertDistinctInvariant, assertSumInvariant } from "./invariants";
 
 /**
@@ -21,6 +22,17 @@ const USER = "passportevidence";
 const ALL: EvidenceScope = { period: { kind: "allTime" } };
 const PAGE = { offset: 0, limit: 100 };
 const d = (day: string) => new Date(`${day}T00:00:00Z`);
+
+describe("the residual of a passport figure", () => {
+  it("names an uncredited country `notPerEntry`, never location history (forgejo#299)", () => {
+    // Called the way the pre-#299 callers did, with a predicate that blames a
+    // track: a track proves no country any more, so it cannot be the reason.
+    const legacyCall = residual as unknown as (...args: unknown[]) => unknown;
+    expect(legacyCall(new Set(["NO", "DE"]), new Set(["DE"]), () => true)).toEqual([
+      { count: 1, reason: "notPerEntry" },
+    ]);
+  });
+});
 
 describe("passport evidence", () => {
   let userId: string;
@@ -142,9 +154,10 @@ describe("passport evidence", () => {
     const byDomain = (domain: string) => res.entries.filter((e) => e.domain === domain);
     expect(byDomain("lodging").map((e) => e.credits)).toEqual([["IT"]]);
     expect(byDomain("place").map((e) => e.credits)).toEqual([["ES"]]);
-    expect(byDomain("rail")).toEqual([]); // Stations alone do not prove visits.
+    // A one-way ride is an open chain: ground presence, not a visit.
+    expect(byDomain("rail")).toEqual([]);
 
-    // Norway: counted, and proved by location history alone.
+    // Norway: location history alone — counted nowhere (forgejo#299).
     expect(counted.has("NO")).toBe(false);
     expect(credited.has("NO")).toBe(false);
     expect(res.unattributed).toEqual([]);

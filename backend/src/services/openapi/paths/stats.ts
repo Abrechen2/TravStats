@@ -4,6 +4,12 @@
 
 import { z } from "zod";
 import { countryDetailSchema } from "../../../schemas/statsCountryDetail";
+import {
+  continentSchema,
+  countryTierSchema,
+  evidenceKindSchema,
+  passportCountrySchema,
+} from "../../../schemas/statsPassport";
 import { lodgingStatsResponseSchema } from "../../../schemas/statsLodging";
 import { wrappedSchema } from "../../../schemas/statsWrapped";
 import { cruiseStatsResponseSchema } from "../../../schemas/statsCruise";
@@ -210,78 +216,6 @@ const statsTag = ["Stats"];
 // (forgejo#52), so it has no callers — and leaving it would be leaving the
 // easy way to add another shapeless endpoint.
 
-const continentSchema = z.enum([
-  "Africa",
-  "Antarctica",
-  "Asia",
-  "Europe",
-  "North America",
-  "Oceania",
-  "South America",
-]);
-const evidenceKindSchema = z.enum([
-  "flight",
-  "lodging",
-  "port",
-  "place",
-  "rail",
-  "bus",
-  "roadtrip",
-  "track",
-]);
-const countryTierSchema = z.enum(["slept", "visited", "transited", "connection"]);
-
-const passportCountrySchema = z.object({
-  groundPresence: z.boolean(),
-  visited: z.boolean(),
-  visitUncertain: z.boolean(),
-  code: z
-    .string()
-    .describe("ISO 3166-1 alpha-2. A code, never a flag: flags are political and age"),
-  continent: continentSchema.nullable(),
-  entries: z
-    .number()
-    .describe("Flights that began or ended here; 0 for a country proved another way"),
-  firstYear: z.number().nullable(),
-  firstVisitedYear: z.number().nullable().optional(),
-  lastYear: z.number().nullable(),
-  airports: z.array(z.string()).describe("IATA codes used here, first visit first"),
-  isHome: z.boolean(),
-  isNew: z.boolean().describe("First confirmed visit in the current calendar year"),
-  evidence: evidenceKindSchema.describe("The strongest KIND of record behind this country"),
-  tier: countryTierSchema.describe("How strong that evidence is"),
-  kinds: z.array(evidenceKindSchema).describe("Every kind that contributed, alphabetical"),
-  hasUndatedEvidence: z.boolean(),
-  daysPresent: z.number().describe("Distinct calendar days any record ATTESTS the traveller here"),
-  groundTime: z.discriminatedUnion("state", [
-    z.object({ state: z.literal("measured"), minutes: z.number() }),
-    z.object({ state: z.literal("unknown") }),
-    z.object({ state: z.literal("notApplicable") }),
-  ]),
-  counted: z
-    .boolean()
-    .describe("Whether the row reaches `summary.countries`; a false greys, never removes"),
-  portCalls: z.number().describe("Port calls of sailed cruises in this country"),
-  places: z.number().describe("Recorded visits to places in this country"),
-  lodging: z
-    .object({
-      place: z
-        .string()
-        .nullable()
-        .describe(
-          "The city of the house with the most proved nights; null when none names one. The client abbreviates — there is no canonical short code for a city"
-        ),
-      nights: z
-        .number()
-        .nullable()
-        .describe(
-          "Nights proved by stays that happened. Null when no stay proves a span — 'slept here, nobody knows how long' — never 0, which would claim zero nights"
-        ),
-    })
-    .nullable()
-    .describe("The lodging stamp. Null when no house proves this country"),
-});
-
 const passportResponse = registry.register(
   "Passport",
   z
@@ -291,6 +225,9 @@ const passportResponse = registry.register(
           .number()
           .describe("Countries with attested ground contact, including transit"),
         visitedCountries: z.number().describe("Countries with a visit beyond a transit stop"),
+        unclearCountries: z
+          .number()
+          .describe("Ground-presence countries whose visit the records cannot decide"),
         countries: z
           .number()
           .describe("THE HEADLINE — countries whose evidence reaches `countryThreshold`"),

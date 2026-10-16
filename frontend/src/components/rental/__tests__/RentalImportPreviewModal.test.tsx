@@ -93,6 +93,19 @@ describe("RentalImportPreviewModal", () => {
     expect(importDocument.mock.calls[0][0].input.pickupStation).toMatchObject({ airportId: 2 });
   });
 
+  it("hands the deadlines the mail filled on to the caller, so the toast can name them", async () => {
+    importDocument.mockResolvedValue({ outcome: "updated", filledDeadlines: ["paymentDueOn"] });
+    const onSaved = vi.fn();
+    render(
+      <RentalImportPreviewModal candidate={confirmation()} onCancel={vi.fn()} onSaved={onSaved} />
+    );
+    fireEvent.click(screen.getByText("Testport B (BBB)"));
+    fireEvent.click(screen.getByRole("button", { name: "rental:import.action.create" }));
+    await waitFor(() =>
+      expect(onSaved).toHaveBeenCalledWith({ filledDeadlines: ["paymentDueOn"] })
+    );
+  });
+
   it("starts from the geocoder's proposal and saves it as a position", async () => {
     importDocument.mockResolvedValue({});
     const onSaved = vi.fn();

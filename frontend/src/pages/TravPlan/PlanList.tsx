@@ -1,10 +1,25 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useId, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useAuthStore } from "../../store/authStore";
 import { travplanApi, type PlanState, type PlanSummary } from "../../lib/api/travplan";
 import PlanEditor from "./PlanEditor";
 import { settingFields } from "./editorModel";
+import {
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  HeroCard,
+  Input,
+  PageHeader,
+  SectionLabel,
+  StatusPill,
+  Switch,
+} from "../../components/ui";
+import { PlanActions, PlanGrid, PlanLink, PlanNotice, PlanStack } from "./planLayout";
+
+const LIMIT_MAX = { aiDailyLimit: 100, weatherDailyLimit: 200 } as const;
 export function PlanList() {
   const { t } = useTranslation("travplan"),
     navigate = useNavigate(),
@@ -32,51 +47,54 @@ export function PlanList() {
   }, [t]);
   return (
     <>
-      <div className="tp-head">
-        <div>
-          <span className="tp-kicker">{t("tagline")}</span>
-          <h1>{t("heading")}</h1>
-          <p className="tp-muted">{t("intro")}</p>
-        </div>
-        <button className="tp-primary" disabled={!enabled} onClick={() => setCreate(true)}>
-          {t("newTrip")}
-        </button>
-      </div>
-      {error && (
-        <div className="tp-error" role="alert">
-          {error}
-        </div>
-      )}
-      {enabled === false && (
-        <div className="tp-banner">
-          {t("disabled")}
-          {isAdmin && (
-            <div className="tp-actions">
-              <Link to="/plan/admin">{t("config")}</Link>
-            </div>
-          )}
-        </div>
-      )}
-      <div className="tp-grid">
+      <SectionLabel>{t("tagline")}</SectionLabel>
+      <PageHeader
+        title={t("heading")}
+        meta={t("intro")}
+        actions={
+          <>
+            {isAdmin && <PlanLink to="/plan/admin">{t("config")}</PlanLink>}
+            <Button variant="primary" disabled={!enabled} onClick={() => setCreate(true)}>
+              {t("newTrip")}
+            </Button>
+          </>
+        }
+      />
+      {error && <PlanNotice tone="bad">{error}</PlanNotice>}
+      {enabled === false && <PlanNotice>{t("disabled")}</PlanNotice>}
+      <PlanGrid>
         {plans.map((p) => (
-          <div className="tp-card tp-hero" key={p.id}>
-            <span className="tp-badge">
-              {t(p.status === "ready" ? "readyStatus" : "planningStatus")}
-            </span>
-            <h2>{p.name}</h2>
-            <p>
-              {p.destination} · {p.startDay} – {p.endDay}
-            </p>
-            <p className="tp-muted">
-              {p.ideasCount} {t("sections.workspace")} · {p.bookingsCount} {t("sections.import")}
-            </p>
-            <Link className="tp-button" to={"/plan/" + p.tripId + "/overview"}>
-              {t("continue")}
-            </Link>
-          </div>
+          <HeroCard key={p.id}>
+            <PlanStack>
+              <div>
+                <StatusPill status={p.status === "ready" ? "flown" : "scheduled"}>
+                  {t(p.status === "ready" ? "readyStatus" : "planningStatus")}
+                </StatusPill>
+              </div>
+              <h2 className="t-card-title">{p.name}</h2>
+              <p className="t-body">
+                {p.destination} · {p.startDay} – {p.endDay}
+              </p>
+              <p className="t-caption">
+                {p.ideasCount} {t("sections.workspace")} · {p.bookingsCount} {t("sections.import")}
+              </p>
+              <div>
+                <PlanLink to={"/plan/" + p.tripId + "/overview"}>{t("continue")}</PlanLink>
+              </div>
+            </PlanStack>
+          </HeroCard>
         ))}
-      </div>
-      {!plans.length && enabled && <p>{t("empty")}</p>}
+      </PlanGrid>
+      {!plans.length && enabled && (
+        <EmptyState
+          title={t("empty")}
+          action={
+            <Button variant="primary" onClick={() => setCreate(true)}>
+              {t("newTrip")}
+            </Button>
+          }
+        />
+      )}
       {create && (
         <PlanEditor
           editor={{
@@ -123,7 +141,8 @@ export function PlanAdmin() {
     [config, setConfig] = useState({ enabled: false, aiDailyLimit: 10, weatherDailyLimit: 20 }),
     [loaded, setLoaded] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    uid = useId();
   useEffect(() => {
     let live = true;
     if (isAdmin)
@@ -142,59 +161,58 @@ export function PlanAdmin() {
       live = false;
     };
   }, [isAdmin, t]);
-  if (!isAdmin) return <div className="tp-error">{t("disabled")}</div>;
+  if (!isAdmin) return <PlanNotice tone="bad">{t("disabled")}</PlanNotice>;
   return (
     <>
-      <h1>{t("config")}</h1>
-      <p>{t("configHelp")}</p>
-      {error && (
-        <div className="tp-error" role="alert">
-          {error}
-        </div>
-      )}
-      <form
-        className="tp-card"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setBusy(true);
-          void travplanApi
-            .setConfig(config)
-            .then(() => {
-              window.location.assign("/plan");
-            })
-            .catch(() => setError(t("errors.unknown")))
-            .finally(() => setBusy(false));
-        }}
-      >
-        <label className="tp-check">
-          <input
-            type="checkbox"
+      <PageHeader title={t("config")} meta={t("configHelp")} />
+      {error && <PlanNotice tone="bad">{error}</PlanNotice>}
+      <Card>
+        <form
+          className="flex flex-col"
+          style={{ gap: "var(--ts-space-lg)" }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            setBusy(true);
+            void travplanApi
+              .setConfig(config)
+              .then(() => {
+                window.location.assign("/plan");
+              })
+              .catch(() => setError(t("errors.unknown")))
+              .finally(() => setBusy(false));
+          }}
+        >
+          <Switch
             checked={config.enabled}
-            onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
+            label={t("enabled")}
+            onChange={(enabled) => setConfig({ ...config, enabled })}
           />
-          {t("enabled")}
-        </label>
-        <div className="tp-form">
-          {(["aiDailyLimit", "weatherDailyLimit"] as const).map((key) => (
-            <label key={key}>
-              {t(key === "aiDailyLimit" ? "aiLimit" : "weatherLimit")}
-              <input
-                type="number"
-                min={0}
-                max={key === "aiDailyLimit" ? 100 : 200}
-                required
-                value={config[key]}
-                onChange={(e) => setConfig({ ...config, [key]: Number(e.target.value) })}
-              />
-            </label>
-          ))}
-        </div>
-        <div className="tp-actions">
-          <button className="tp-primary" disabled={!loaded || busy}>
-            {t("save")}
-          </button>
-        </div>
-      </form>
+          <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: "var(--ts-space-lg)" }}>
+            {(["aiDailyLimit", "weatherDailyLimit"] as const).map((key) => (
+              <Field
+                key={key}
+                label={t(key === "aiDailyLimit" ? "aiLimit" : "weatherLimit")}
+                htmlFor={uid + key}
+              >
+                <Input
+                  id={uid + key}
+                  type="number"
+                  min={0}
+                  max={LIMIT_MAX[key]}
+                  required
+                  value={config[key]}
+                  onChange={(e) => setConfig({ ...config, [key]: Number(e.target.value) })}
+                />
+              </Field>
+            ))}
+          </div>
+          <PlanActions>
+            <Button type="submit" variant="primary" disabled={!loaded || busy}>
+              {t("save")}
+            </Button>
+          </PlanActions>
+        </form>
+      </Card>
     </>
   );
 }

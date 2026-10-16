@@ -7,6 +7,7 @@ import {
   type Polygon,
 } from "./geometry";
 import { venueType, type VenueType } from "./venueTypes";
+import logger from "../../../utils/logger";
 export interface PointMarket {
   id: string;
   name: string;
@@ -139,8 +140,12 @@ export function parseMarketCatalog(raw: unknown, includeVenues = false): MarketC
       const area = { ...base, geometry: geometry(value) };
       validateAreas([area]);
       areas.push(area);
-    } catch {
+    } catch (err) {
       invalidCount++;
+      logger.warn(
+        { operation: "market_catalog_invalid_area", osmRef: id, reason: (err as Error).message },
+        "OSM venue boundary skipped: geometry is invalid"
+      );
     }
   }
   const meta = record(raw.osm3s) ? raw.osm3s : {};

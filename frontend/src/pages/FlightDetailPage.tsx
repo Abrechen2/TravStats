@@ -28,7 +28,12 @@ import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { flightDeleteMessage } from "../lib/flights/flightDeleteMessage";
 import { getFlightDuration } from "../lib/flightDuration";
 import { flightExtractTarget } from "../lib/extractTargets";
-import { convertDistance, formatAmount, getDistanceLabel } from "../lib/units";
+import {
+  convertDistance,
+  formatAmount,
+  getDistanceLabel,
+  dateLocaleForLanguage,
+} from "../lib/units";
 import { useSettingsStore } from "../store/settingsStore";
 import { formatBaggageAllowance } from "../lib/baggageAllowance";
 import { formatDurationWithEstimate } from "../lib/formatters";
@@ -274,7 +279,7 @@ export default function FlightDetailPage(): JSX.Element {
               onlineCheckInFact(
                 flight.times?.onlineCheckInOpens,
                 t,
-                i18n.language.startsWith("en") ? "en-GB" : "de-DE"
+                dateLocaleForLanguage(i18n.language)
               ),
             ]}
           />

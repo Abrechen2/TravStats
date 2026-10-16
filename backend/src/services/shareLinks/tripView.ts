@@ -51,10 +51,13 @@ export async function loadOwnedTrip(userId: string, tripId: string) {
 }
 type TripRow = NonNullable<Awaited<ReturnType<typeof loadOwnedTrip>>>;
 
+/** A cancelled leg never happened: no total, route or country counts it. */
+const NOT_CANCELLED = { status: { not: "cancelled" } } as const;
+
 async function loadLegs(tripId: string) {
   const [flights, rail, bus, cruises] = await Promise.all([
     prisma.flight.findMany({
-      where: { tripId, status: { not: "cancelled" } },
+      where: { tripId, ...NOT_CANCELLED },
       select: {
         depIata: true,
         depIcao: true,
@@ -69,17 +72,17 @@ async function loadLegs(tripId: string) {
       orderBy: { departureTime: "asc" },
     }),
     prisma.railJourney.findMany({
-      where: { tripId },
+      where: { tripId, ...NOT_CANCELLED },
       select: { depStationName: true, arrStationName: true, departureTime: true },
       orderBy: { departureTime: "asc" },
     }),
     prisma.busJourney.findMany({
-      where: { tripId },
+      where: { tripId, ...NOT_CANCELLED },
       select: { depStationName: true, arrStationName: true, departureTime: true },
       orderBy: { departureTime: "asc" },
     }),
     prisma.cruise.findMany({
-      where: { tripId },
+      where: { tripId, ...NOT_CANCELLED },
       select: {
         startDate: true,
         departurePort: { select: { name: true } },

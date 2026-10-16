@@ -7,8 +7,6 @@ vi.mock("../../../api/rentalLinks", () => ({
 vi.mock("../../../../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({ enabled: ["rental"] }),
 }));
-vi.mock("../../../../hooks/useBusVisible", () => ({ useBusOffered: () => false }));
-vi.mock("../../../../hooks/useRailVisible", () => ({ useRailOffered: () => false }));
 
 import { rentalLinksApi } from "../../../api/rentalLinks";
 import { useDomainStats } from "../useDomainStats";
