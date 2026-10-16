@@ -110,6 +110,8 @@
     },
     "blocked": {
       "consentMissing": "{{name}} has not agreed to sharing yet.",
+      "consentDeclined": "{{name}} declined your request to share.",
+      "consentWithdrawn": "The agreement to share with {{name}} was withdrawn.",
       "groupConsentMissing": "Not everyone on this shared trip has agreed to sharing with {{name}}."
     },
     "leave": "Leave shared trip"
@@ -163,6 +165,8 @@
     "blocked": {
       "notLinked": "{{name}} is not linked to an account.",
       "consentMissing": "{{name}} has not agreed to share with you yet. You have not sent a request yet — you can do that under Settings → Trips → Share trips.",
+      "consentDeclined": "{{name}} declined your request to share. You can send a new request under Settings → Trips → Share trips.",
+      "consentWithdrawn": "The agreement to share between you and {{name}} was withdrawn. You can send a new request under Settings → Trips → Share trips.",
       "consentPending": "Your request to {{name}} is still open.",
       "groupConsentMissing": "{{name}} first has to connect with everyone who already shares this trip.",
       "alreadyMember": "{{name}} is already part of this shared trip.",

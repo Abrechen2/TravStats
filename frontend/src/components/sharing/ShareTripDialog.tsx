@@ -7,7 +7,7 @@ import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import type { TripPerson } from "../../types/sharing";
 import { Button, Dialog, Field, Select } from "../ui";
-import { sharingErrorKey } from "./sharingCopy";
+import { shareBlockKey, sharingErrorKey } from "./sharingCopy";
 
 const NS = "sharing:shareDialog";
 
@@ -130,7 +130,7 @@ function ShareTripForm({
             </p>
             {shownBlocked.map((p) => (
               <p key={p.key} className="text-sm" style={{ color: "var(--ts-muted)" }}>
-                {t(`${NS}.blocked.${p.shareBlockedBy}`, { name: p.name })}
+                {t(`${NS}.blocked.${shareBlockKey(p)}`, { name: p.name })}
               </p>
             ))}
           </div>

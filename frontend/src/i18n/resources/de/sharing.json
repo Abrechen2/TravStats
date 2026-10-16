@@ -110,6 +110,8 @@
     },
     "blocked": {
       "consentMissing": "{{name}} hat dem Teilen noch nicht zugestimmt.",
+      "consentDeclined": "{{name}} hat deine Anfrage zum Teilen abgelehnt.",
+      "consentWithdrawn": "Die Zustimmung zum Teilen mit {{name}} wurde zurückgezogen.",
       "groupConsentMissing": "Nicht alle, die diese Reise teilen, haben dem Teilen mit {{name}} zugestimmt."
     },
     "leave": "Geteilte Reise verlassen"
@@ -163,6 +165,8 @@
     "blocked": {
       "notLinked": "{{name}} ist mit keinem Konto verknüpft.",
       "consentMissing": "{{name}} hat dem Teilen mit dir noch nicht zugestimmt. Du hast noch keine Anfrage gesendet — das geht unter Einstellungen → Reisen → Reisen teilen.",
+      "consentDeclined": "{{name}} hat deine Anfrage zum Teilen abgelehnt. Eine neue Anfrage kannst du unter Einstellungen → Reisen → Reisen teilen senden.",
+      "consentWithdrawn": "Die Zustimmung zum Teilen zwischen dir und {{name}} wurde zurückgezogen. Eine neue Anfrage kannst du unter Einstellungen → Reisen → Reisen teilen senden.",
       "consentPending": "Deine Anfrage an {{name}} ist noch offen.",
       "groupConsentMissing": "{{name}} muss sich erst mit allen verbinden, die diese Reise schon teilen.",
       "alreadyMember": "{{name}} ist schon Teil dieser geteilten Reise.",

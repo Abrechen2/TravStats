@@ -122,6 +122,39 @@ describe("ShareTripDialog", () => {
     }
   });
 
+  it("tells a declined and a withdrawn request apart from one never sent", () => {
+    const missing = (name: string, consent: TripPerson["consent"]): TripPerson => ({
+      ...ben,
+      key: `c:${name}`,
+      companionId: name,
+      name,
+      consent,
+      shareBlockedBy: "consentMissing",
+    });
+    render(
+      <ShareTripDialog
+        open
+        onClose={vi.fn()}
+        tripId="t1"
+        people={[
+          ben,
+          missing("Nie", "none"),
+          missing("Nein", "declined"),
+          missing("Weg", "withdrawn"),
+        ]}
+        onShared={vi.fn()}
+      />
+    );
+    expect(screen.getByText("sharing:shareDialog.blocked.consentMissing")).toBeTruthy();
+    expect(screen.getByText("sharing:shareDialog.blocked.consentDeclined")).toBeTruthy();
+    expect(screen.getByText("sharing:shareDialog.blocked.consentWithdrawn")).toBeTruthy();
+    for (const bundle of [de, en]) {
+      const blocked = bundle.shareDialog.blocked as Record<string, string>;
+      expect(blocked.consentDeclined).toBeTruthy();
+      expect(blocked.consentWithdrawn).toBeTruthy();
+    }
+  });
+
   it("offers no confirm when a blocked person is preselected", () => {
     render(
       <ShareTripDialog

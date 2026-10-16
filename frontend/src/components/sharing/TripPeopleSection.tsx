@@ -15,7 +15,7 @@ import DetailSection from "../ui/DetailSection";
 import PeopleList, { type PersonRow } from "../ui/PeopleList";
 import LinkAccountDialog from "./LinkAccountDialog";
 import ShareTripDialog from "./ShareTripDialog";
-import { sharingErrorKey } from "./sharingCopy";
+import { shareBlockKey, sharingErrorKey } from "./sharingCopy";
 
 const NS = "sharing:people";
 
@@ -134,7 +134,7 @@ export default function TripPeopleSection({
   const meta = (p: TripPerson): string | undefined => {
     if (p.receivesChanges === false) return t(`${NS}.noChangesHint`);
     if (p.shareBlockedBy === "consentMissing")
-      return t(`${NS}.blocked.consentMissing`, { name: p.name });
+      return t(`${NS}.blocked.${shareBlockKey(p)}`, { name: p.name });
     if (p.shareBlockedBy === "accountInactive") {
       return t("sharing:shareDialog.blocked.accountInactive", { name: p.name });
     }
