@@ -79,6 +79,7 @@
     "pdf-parse": "^2.4.5",
     "pg": "^8.23.0",
     "pino": "^10.3.1",
+    "postal-mime": "^3.0.1",
     "rotating-file-stream": "^3.2.10",
     "swagger-ui-express": "^5.0.1",
     "tesseract.js": "^6.0.1",
