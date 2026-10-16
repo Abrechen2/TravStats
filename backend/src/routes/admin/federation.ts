@@ -177,6 +177,9 @@ router.post(
     const previous = await prisma.comparisonPeer.findUnique({ where: { origin: body.origin } });
     if (previous && previous.publicKey !== pem) {
       // A replaced key ends every E2E friendship through it, exactly as before the move.
+      // Leaderboard friendships (LeaderboardRemote) deliberately survive (controller ruling):
+      // they are addressed by origin + channel, not by the key, and nothing flows over them
+      // until the admin re-verifies the new pin (verifiedAt is reset below).
       await prisma.comparisonLink.updateMany({
         where: { origin: body.origin },
         data: { revoked: true },
