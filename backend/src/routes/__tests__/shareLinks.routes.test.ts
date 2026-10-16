@@ -541,6 +541,42 @@ describe("the field allow-list decides the payload", () => {
     }
   );
 
+  it("counts no cancelled rail ride, bus ride or cruise in the totals or the route", async () => {
+    const trip = await makeTrip(anna.id);
+    const ride = (status: string, name: string) => ({
+      userId: anna.id,
+      tripId: trip.id,
+      depStationName: `${name} A`,
+      depLat: 50,
+      depLon: 8,
+      arrStationName: `${name} B`,
+      arrLat: 51,
+      arrLon: 9,
+      departureTime: new Date("2030-06-03T09:00:00Z"),
+      status,
+    });
+    await prisma.railJourney.create({ data: ride("completed", "Rail kept") });
+    await prisma.railJourney.create({ data: ride("cancelled", "Rail cancelled") });
+    await prisma.busJourney.create({ data: ride("cancelled", "Bus cancelled") });
+    await prisma.cruise.create({
+      data: {
+        userId: anna.id,
+        tripId: trip.id,
+        startDate: new Date("2030-06-04T00:00:00Z"),
+        endDate: new Date("2030-06-06T00:00:00Z"),
+        status: "cancelled",
+      },
+    });
+    const { token } = await tokenFor(anna, {
+      kind: "trip",
+      targetId: trip.id,
+      fields: ["totals", "route"],
+    });
+    const { trip: shown } = (await view(token).expect(200)).body.data.view;
+    expect(shown.totals).toMatchObject({ railRides: 1, busRides: 0, cruises: 0 });
+    expect(shown.route).toEqual([{ mode: "rail", from: "Rail kept A", to: "Rail kept B" }]);
+  });
+
   it("names cost and companions only when they were chosen", async () => {
     const ids = await targets(anna);
     const bare = await tokenFor(anna, {
