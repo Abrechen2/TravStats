@@ -34,6 +34,19 @@ describe("stationDraftStore (forgejo#244)", () => {
     expect(readStationDraft("u1", "r2")).toBeNull();
   });
 
+  it("keeps a free night's visit/transit choice through a reload", () => {
+    // The free-night schema used to strip countryVisitKind, so an offline
+    // draft came back as a visit even when the reader had chosen transit.
+    const transit: EditorStation = {
+      ...STATION,
+      night: { kind: "free", countryVisitKind: "transit" },
+    };
+    writeStationDraft("u1", "r1", { base: [transit], drafts: [transit] });
+    const back = readStationDraft("u1", "r1");
+    expect(back?.drafts[0].night).toEqual({ kind: "free", countryVisitKind: "transit" });
+    expect(back?.base[0].night).toEqual({ kind: "free", countryVisitKind: "transit" });
+  });
+
   it("forgets it when cleared", () => {
     writeStationDraft("u1", "r1", { base: [], drafts: [STATION] });
     clearStationDraft("u1", "r1");
