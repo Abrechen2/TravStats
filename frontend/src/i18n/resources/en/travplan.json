@@ -130,7 +130,12 @@
     "PLAN_ANCHOR_STALE": "A fixed booking changed in TravStats. Refresh the plan’s source bookings first.",
     "LLM_DISABLED": "AI is disabled on this server.",
     "LLM_CLOUD_NOT_CONSENTED": "Cloud providers have not been approved on this server.",
-    "LLM_UNREACHABLE": "The AI provider is currently unreachable."
+    "LLM_UNREACHABLE": "The AI provider is currently unreachable.",
+    "PLAN_TOO_LARGE": "The plan is too large to save. Remove entries or ideas you no longer need, then try again.",
+    "PLAN_ITEM_NOT_FOUND": "This entry no longer exists – it was probably deleted in the meantime. Reload the page to see the current version.",
+    "PLAN_PROPOSAL_NOT_FOUND": "This proposal no longer exists. Generate a new one if you need it.",
+    "PLAN_DOCUMENT_NOT_FOUND": "A linked document does not belong to this trip (any more). Remove it from the booking and save again.",
+    "PLAN_WEATHER_INVALID": "The weather provider returned unusable data. The saved forecast is preserved; try again later."
   },
   "enabled": "Enable TravPlan on this server",
   "config": "TravPlan settings",
