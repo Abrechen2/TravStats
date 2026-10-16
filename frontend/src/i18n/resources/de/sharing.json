@@ -89,7 +89,7 @@
       "noLinkable": "Noch hat niemand deiner Anfrage zugestimmt."
     },
     "errors": {
-      "loadFailed": "Die Freigaben konnten nicht geladen werden.",
+      "loadFailed": "Die Einstellungen zum Teilen konnten nicht geladen werden.",
       "requestFailed": "Die Anfrage konnte nicht gesendet werden.",
       "withdrawFailed": "Die Zustimmung konnte nicht zurückgezogen werden.",
       "linkFailed": "Die Verknüpfung konnte nicht gespeichert werden."

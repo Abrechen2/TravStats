@@ -89,7 +89,7 @@
       "noLinkable": "Nobody has agreed to your request yet."
     },
     "errors": {
-      "loadFailed": "Sharing could not be loaded.",
+      "loadFailed": "The sharing settings could not be loaded.",
       "requestFailed": "The request could not be sent.",
       "withdrawFailed": "The consent could not be withdrawn.",
       "linkFailed": "The link could not be saved."
