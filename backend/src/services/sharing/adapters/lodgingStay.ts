@@ -2,6 +2,7 @@ import type { DbTransaction } from "../../../db";
 import type { Lodging, LodgingStay, Prisma } from "../../../prisma";
 import { deriveLodgingStatus } from "../../../shared/statusDerivation";
 import { SHARED_SOURCE } from "../copyEntries";
+import { sameFact } from "../factValues";
 import {
   LODGING_FACT_FIELDS,
   LODGING_STAY_FACT_FIELDS,
@@ -104,6 +105,23 @@ function derivedStatus(data: Prisma.LodgingStayUncheckedUpdateInput, current: Sh
   });
 }
 
+/**
+ * The house columns that differ between `before` and `after`. The member's
+ * house may be their OWN lodging, reused because it is the same building and
+ * shared with their other stays: writing all of the sharer's house onto it
+ * replaced the member's address, stars and website with the sharer's
+ * (often empty) values whenever any one fact of the house changed.
+ */
+function changedHouseFacts(before: HouseFacts, after: HouseFacts) {
+  const data: Record<string, unknown> = {};
+  for (const key of LODGING_FACT_FIELDS) {
+    if (!sameFact(before[key], after[key])) {
+      data[key] = after[key];
+    }
+  }
+  return data as Prisma.LodgingUncheckedUpdateInput;
+}
+
 export const lodgingStayAdapter: EntityAdapter = {
   entity: "lodgingStay",
   fields: [...LODGING_STAY_FACT_FIELDS, "lodging"],
@@ -146,7 +164,7 @@ export const lodgingStayAdapter: EntityAdapter = {
     });
     return copy.id;
   },
-  async apply(c, copy, values, keys) {
+  async apply(c, copy, values, keys, previous) {
     const data = plainData(
       values,
       keys,
@@ -163,9 +181,11 @@ export const lodgingStayAdapter: EntityAdapter = {
       });
       const target = await houseFor(c, copy.userId, house, stay.lodgingId);
       if (target.id === stay.lodgingId) {
-        // The same house: its facts follow (a corrected address, a website).
-        const { catalogueChainId: _chain, ...facts } = house;
-        await c.lodging.update({ where: { id: target.id }, data: lodgingFacts(facts) });
+        const baseline = (previous?.lodging ?? copy.facts.lodging) as HouseFacts;
+        const moved = changedHouseFacts(baseline, house);
+        if (Object.keys(moved).length > 0) {
+          await c.lodging.update({ where: { id: target.id }, data: moved });
+        }
       } else {
         data.lodgingId = target.id;
       }

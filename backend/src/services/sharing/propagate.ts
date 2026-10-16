@@ -213,7 +213,12 @@ async function updateCopies(
     if (!copy) continue;
     const keys = changed.filter((k) => !sameFact(copy.facts[k], row.facts[k]));
     if (keys.length === 0) continue;
-    await adapter.apply(c, copy, row.facts, keys);
+    await adapter.apply(c, copy, row.facts, keys, before.facts);
+    // What the copy holds NOW, not what the sharer sent: a house written field
+    // by field, a cruise that kept a member's own call, a status re-derived
+    // from the dates all differ from the sharer's values, and an undo compares
+    // against this side — recording the sharer's would refuse every such undo.
+    const [applied] = await adapter.load(c, [copy.id]);
     await notice(c, {
       recipient: member,
       groupId,
@@ -222,7 +227,7 @@ async function updateCopies(
       entity: adapter.entity,
       shareKey: row.shareKey as string,
       before: { facts: jsonSubset(copy.facts, keys), zones: copy.zones },
-      after: { ...meta(row, member, copy.id), facts: jsonSubset(row.facts, keys) },
+      after: { ...meta(row, member, copy.id), facts: jsonSubset((applied ?? row).facts, keys) },
     });
   }
 }
