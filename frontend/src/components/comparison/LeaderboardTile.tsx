@@ -4,8 +4,11 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useSettingsStore } from "../../store/settingsStore";
 import { rankPeople, type RankedEntry } from "../../lib/comparison/ranking";
-import { formatMetricValue } from "../../lib/comparison/formatMetric";
+import { ABSENT_MARKER, formatMetricValue } from "../../lib/comparison/formatMetric";
 import type { LeaderboardMetric, LeaderboardRow } from "../../lib/comparison/types";
+
+/** En dash, not the em dash of an absent value: an empty rank slot and an empty figure are two different gaps. */
+const UNRANKED_MARK = "–";
 
 interface Props {
   metric: LeaderboardMetric;
@@ -27,26 +30,24 @@ export default function LeaderboardTile({ metric, rows, year }: Props): JSX.Elem
   const ranked = rankPeople(rows, metric.key, year);
   const show = (entry: RankedEntry | undefined): string =>
     !entry || entry.value === null
-      ? "—"
+      ? ABSENT_MARKER
       : `${entry.partial ? "≥ " : ""}${formatMetricValue(entry.value, metric.unit, { distanceUnit, t: tr, language: i18n.language })}`;
   const label = tr(`metric.${metric.key}`);
   return (
     <Card
       data-testid={`metric-${metric.key}`}
       style={{
-        borderLeft: `4px solid ${metric.domain ? colorOf(metric.domain) : "var(--ts-accent)"}`,
+        borderLeftWidth: "var(--ts-space-xs)",
+        borderLeftColor: metric.domain ? colorOf(metric.domain) : "var(--ts-accent)",
       }}
     >
       <StatTile value={show(ranked.find((e) => e.row.person.kind === "self"))} label={label} />
-      <ol
-        aria-label={tr("tile.ranking", { metric: label })}
-        style={{ listStyle: "none", margin: 0, padding: 0 }}
-      >
+      <ol aria-label={tr("tile.ranking", { metric: label })} className="m-0 list-none p-0">
         {ranked.map((entry) => (
           <li key={entry.row.person.key}>
             <ListRow
               dense
-              mark={<span className="t-stat-number">{entry.rank ?? "–"}</span>}
+              mark={<span className="t-stat-number">{entry.rank ?? UNRANKED_MARK}</span>}
               title={entry.row.person.kind === "self" ? tr("you") : entry.row.person.displayName}
               subtitle={
                 entry.reason
