@@ -77,13 +77,13 @@ export interface UndoResult {
 export async function undoNotice(userId: string, noticeId: string): Promise<UndoResult> {
   const notice = await ownNotice(userId, noticeId);
   const movedFrom = notice.kind === "created" ? movedFromOf(notice.after) : null;
-  if (movedFrom && !notice.undoneAt) return undoMoveIn(userId, notice, movedFrom);
-  if (notice.kind !== "updated") {
+  if (notice.kind !== "updated" && !movedFrom) {
     throw new AppError("Only a change can be undone", 409, "SHARE_UNDO_UNAVAILABLE");
   }
   if (notice.undoneAt) {
     throw new AppError("This change was already undone", 409, "SHARE_UNDO_UNAVAILABLE");
   }
+  if (movedFrom) return undoMoveIn(userId, notice, movedFrom);
   const entity = entityOf(notice.entityType);
   const after = revivedRecord(factsOf(notice.after));
   const before = revivedRecord(factsOf(notice.before));

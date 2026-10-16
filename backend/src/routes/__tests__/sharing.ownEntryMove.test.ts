@@ -233,6 +233,35 @@ describe("sharing — the recipient's own entry on another trip is moved in", ()
     ).toBe(0);
   });
 
+  it("answers a second undo of the move-in with 'already undone'", async () => {
+    await bensFlightJoinedFromOtherTrip();
+    const notice = await createdNotice();
+    await undoNotice(ben.id, notice.id);
+    await expect(undoNotice(ben.id, notice.id)).rejects.toMatchObject({
+      statusCode: 409,
+      code: "SHARE_UNDO_UNAVAILABLE",
+      message: "This change was already undone",
+    });
+  });
+
+  it("refuses the undo cleanly when the trip it came from is gone, and keeps the entry", async () => {
+    const { other, bens, memberTrip } = await bensFlightJoinedFromOtherTrip();
+    const notice = await createdNotice();
+    const keyed = await prisma.flight.findUniqueOrThrow({ where: { id: bens.id } });
+    await prisma.trip.delete({ where: { id: other.id } });
+
+    await expect(undoNotice(ben.id, notice.id)).rejects.toMatchObject({
+      statusCode: 409,
+      code: "SHARE_UNDO_UNAVAILABLE",
+    });
+
+    const kept = await prisma.flight.findUniqueOrThrow({ where: { id: bens.id } });
+    expect(kept.tripId).toBe(memberTrip.id);
+    expect(kept.shareKey).toBe(keyed.shareKey);
+    const open = await prisma.shareNotice.findUniqueOrThrow({ where: { id: notice.id } });
+    expect(open.undoneAt).toBeNull();
+  });
+
   it("keeps the key through Ben's next own edit", async () => {
     const { bens, annas } = await bensFlightJoinedFromOtherTrip();
     const key = (await prisma.flight.findUniqueOrThrow({ where: { id: annas.id } })).shareKey;
