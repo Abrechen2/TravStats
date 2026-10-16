@@ -52,14 +52,12 @@ export interface BetaFeatureMeta {
 }
 
 /**
- * OWNER DECISION 2026-09-18: everything comes out of the registry EXCEPT the
- * phone app. `tripAiSummary`, `tourRoutes` and `dawarich` are released; the
- * one entry left is `devicePairing`, and it stays for the reason its own text
- * gives — the Companion is a TestFlight build, so offering a Devices section
- * to everybody would mint claim codes for an app they cannot install.
- *
- * That makes the 2.7 goal ("nothing left in the registry") a question about
- * the app, and nothing else.
+ * The entries below are the list — nothing else restates it, because a list in
+ * prose beside a list in code is a list that goes wrong (this comment once
+ * said "the one entry left is devicePairing" while six more had been added).
+ * Each entry carries `why` it is hidden and `returnsWhen` it may come back;
+ * the 2.7 goal is that the map is empty, and an entry leaves only on the
+ * owner's word, never because its `returnsWhen` reads as met.
  */
 export const BETA_FEATURES = Object.freeze({
   comparison: Object.freeze({
