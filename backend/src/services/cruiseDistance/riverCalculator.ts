@@ -177,6 +177,9 @@ function projectOntoRiver(port: PortPoint, river: PreparedRiver): ProjectionResu
 /** Above this offset (km) from the river polyline → reject (port not on river). */
 const RIVER_OFFSET_REJECT_KM = 25;
 
+/** An anchor closer than this to a leg's port is that port, not a bend. */
+const ANCHOR_AT_PORT_KM = 1;
+
 function classifyConfidence(fromOffsetKm: number, toOffsetKm: number, hasKm: boolean): Confidence {
   const worstOffset = Math.max(fromOffsetKm, toOffsetKm);
   if (hasKm && worstOffset < 5) return "high";
@@ -185,28 +188,48 @@ function classifyConfidence(fromOffsetKm: number, toOffsetKm: number, hasKm: boo
   return "low";
 }
 
+interface LocatedLeg {
+  river: PreparedRiver;
+  fromProj: ProjectionResult;
+  toProj: ProjectionResult;
+}
+
+function sharesRiverRegion(from: PortPoint, to: PortPoint): boolean {
+  if (!from.region || !to.region) return false;
+  if (!from.region.startsWith("river_")) return false;
+  return from.region === to.region;
+}
+
+/**
+ * Both ports projected onto their shared river, or null when they share none
+ * or either lies too far off it. The ONE acceptance the distance and the map
+ * line both go through — a leg measured along the river is drawn along it.
+ */
+async function locateLeg(from: PortPoint, to: PortPoint): Promise<LocatedLeg | null> {
+  if (!sharesRiverRegion(from, to)) return null;
+  const rivers = await loadRivers();
+  const river = rivers.get(from.region!);
+  if (!river) return null;
+  const fromProj = projectOntoRiver(from, river);
+  const toProj = projectOntoRiver(to, river);
+  if (fromProj.offsetKm > RIVER_OFFSET_REJECT_KM || toProj.offsetKm > RIVER_OFFSET_REJECT_KM) {
+    return null;
+  }
+  return { river, fromProj, toProj };
+}
+
 export const riverCalculator: DistanceCalculator = {
   method: "river-osm",
   routerVersion: ROUTER_VERSION,
 
   accepts(from: PortPoint, to: PortPoint): boolean {
-    if (!from.region || !to.region) return false;
-    if (!from.region.startsWith("river_")) return false;
-    if (from.region !== to.region) return false;
-    return true;
+    return sharesRiverRegion(from, to);
   },
 
   async compute(from: PortPoint, to: PortPoint): Promise<ComputedLeg | null> {
-    const rivers = await loadRivers();
-    const river = rivers.get(from.region!);
-    if (!river) return null;
-
-    const fromProj = projectOntoRiver(from, river);
-    const toProj = projectOntoRiver(to, river);
-
-    if (fromProj.offsetKm > RIVER_OFFSET_REJECT_KM || toProj.offsetKm > RIVER_OFFSET_REJECT_KM) {
-      return null;
-    }
+    const located = await locateLeg(from, to);
+    if (located === null) return null;
+    const { river, fromProj, toProj } = located;
 
     let distanceKm: number;
     if (river.hasKm && fromProj.riverKm !== null && toProj.riverKm !== null) {
@@ -231,6 +254,38 @@ export const riverCalculator: DistanceCalculator = {
     };
   },
 };
+
+/**
+ * The line a river leg is drawn along, `[lon, lat]`: the departure port, the
+ * river anchors passed between the two projections, the arrival port. The
+ * same polyline the distance above is measured on (cumulative anchor chords),
+ * so the map shows what the kilometres count. Null exactly when `compute`
+ * would decline — the caller then draws the chord the chain falls back to.
+ */
+export async function riverLegPath(
+  from: PortPoint,
+  to: PortPoint
+): Promise<[number, number][] | null> {
+  const located = await locateLeg(from, to);
+  if (located === null) return null;
+  const { river, fromProj, toProj } = located;
+
+  // Anchor i sits at the end of segment i-1; the anchors strictly after the
+  // departure's segment start, up to the arrival's segment start, lie between.
+  const lo = Math.min(fromProj.segmentIndex, toProj.segmentIndex);
+  const hi = Math.max(fromProj.segmentIndex, toProj.segmentIndex);
+  // An anchor that IS one of the ports (Luxor is both) would be a doubled
+  // vertex — a zero-length segment the client's spline turns into a kink.
+  const isEndpoint = (a: Anchor): boolean =>
+    haversineKm(a, from) < ANCHOR_AT_PORT_KM || haversineKm(a, to) < ANCHOR_AT_PORT_KM;
+  const between: [number, number][] = river.anchors
+    .slice(lo + 1, hi + 1)
+    .filter((a) => !isEndpoint(a))
+    .map((a) => [a.lon, a.lat] as [number, number]);
+  const downstream = fromProj.cumulativeKm <= toProj.cumulativeKm;
+  const ordered = downstream ? between : [...between].reverse();
+  return [[from.lon, from.lat], ...ordered, [to.lon, to.lat]];
+}
 
 /** Test helper. */
 export function __resetRiverCache(): void {

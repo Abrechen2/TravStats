@@ -344,8 +344,11 @@ const geometry = z
       "consecutive coordinate-bearing stops. Per leg, in precedence order: a " +
       "covering recording (properties.geometrySource 'track', method " +
       "'recorded_track', trackId; every vertex protected — draw it as given), a " +
-      "hand-drawn line ('drawn'), the shipping-lane router ('sea_route'), or a " +
-      "straight chord between the two ports ('chord')."
+      "hand-drawn line ('drawn'), for an inland leg the river line ('river', " +
+      "method 'river_line'; every vertex protected) and otherwise the " +
+      "shipping-lane router ('sea_route'), or a straight chord between the two " +
+      "ports ('chord'). A leg from a port to itself has no computed line and " +
+      "carries no feature."
   );
 
 registry.registerPath({

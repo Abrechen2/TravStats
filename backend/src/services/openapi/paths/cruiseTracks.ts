@@ -65,7 +65,7 @@ const cruiseLegTrack = z.object({
   toPortName: z.string(),
   distanceKm: z.number().nullable().describe("As counted in the statistics"),
   geometrySource: z
-    .enum(["track", "drawn", "sea_route", "chord"])
+    .enum(["track", "drawn", "river", "sea_route", "chord"])
     .describe(
       "Where the leg's line and kilometres come from, in precedence order: a covering " +
         "recording, a hand-drawn line, the shipping-lane router, a straight chord"

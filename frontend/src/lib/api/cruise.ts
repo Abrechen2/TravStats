@@ -57,7 +57,7 @@ export interface CruiseListQuery {
  * ports were on disconnected seas; those get a 2-point direct chord
  * which the spline renders as a straight line.
  */
-export type CruiseGeometrySource = "track" | "drawn" | "sea_route" | "chord";
+export type CruiseGeometrySource = "track" | "drawn" | "river" | "sea_route" | "chord";
 
 export interface CruiseRouteFeature {
   type: "Feature";
@@ -74,8 +74,9 @@ export interface CruiseRouteFeature {
       | "coarse_a_star"
       | "direct"
       | "manual_polyline"
-      | "recorded_track";
-    /** Where the line came from (2.7): a recording, a drawing, the router or a chord. */
+      | "recorded_track"
+      | "river_line";
+    /** Where the line came from (2.7): a recording, a drawing, the river, the router or a chord. */
     geometrySource?: CruiseGeometrySource;
     /** The recording the line was cut from, on `geometrySource: "track"`. */
     trackId?: string;

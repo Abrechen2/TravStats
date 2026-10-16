@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createCruiseArcsLayer, createCruiseArrowsLayer } from "./cruiseArcsLayer";
+import { buildCruiseArcs, createCruiseArcsLayer, createCruiseArrowsLayer } from "./cruiseArcsLayer";
 import type { Cruise } from "../../types";
 import type { CruiseRouteFeatureCollection } from "../../lib/api/cruise";
 
@@ -646,4 +646,43 @@ it("groups ten repeated cruise legs and highlights a selected member, not only t
   const arrows = createCruiseArrowsLayer(cruises, new Map(), "c9")!;
   const single = createCruiseArrowsLayer([cruise])!;
   expect((arrows.props.data as unknown[]).length).toBe((single.props.data as unknown[]).length);
+});
+
+describe("a night in port is no leg (Nile cruise, prod 2026-10-16)", () => {
+  // Luxor -> Luxor -> Edfu: the ship lies in Luxor overnight. The server sends
+  // no feature for the same-port pair; the chord fallback used to mount a
+  // zero-length path for it anyway.
+  const LUXOR = { id: 10, lat: 25.6872, lon: 32.6396 };
+  const EDFU = { id: 11, lat: 24.9781, lon: 32.8731 };
+  const nile = makeCruise([makeStop(1, 10, LUXOR), makeStop(2, 10, LUXOR), makeStop(3, 11, EDFU)]);
+
+  it("draws only the leg that goes somewhere", () => {
+    const arcs = buildCruiseArcs([nile]);
+    expect(arcs.map((a) => [a.fromPortId, a.toPortId])).toEqual([[10, 11]]);
+  });
+
+  it("still draws a line the server does send for the pair (a recording, a drawing)", () => {
+    const geometry: CruiseRouteFeatureCollection = {
+      type: "FeatureCollection",
+      features: [
+        {
+          type: "Feature",
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [32.6396, 25.6872],
+              [32.66, 25.75],
+              [32.6396, 25.6872],
+            ],
+          },
+          properties: { fromPortId: 10, toPortId: 10, routed: false },
+        },
+      ],
+    };
+    const arcs = buildCruiseArcs([nile], new Map([[nile.id, geometry]]));
+    expect(arcs.map((a) => [a.fromPortId, a.toPortId])).toEqual([
+      [10, 10],
+      [10, 11],
+    ]);
+  });
 });

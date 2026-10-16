@@ -67,6 +67,9 @@ function sourceOfMethod(method: string | undefined): CruiseGeometrySource {
   if (method === RECORDED_TRACK_METHOD) return "track";
   if (method === "manual_polyline") return "drawn";
   if (method === "haversine") return "chord";
+  // Measured along the river anchors and drawn along them (cruiseGeometry.ts)
+  // — labelled "computed sea route" until 2026-10-16, on a Nile cruise.
+  if (method === "river-osm") return "river";
   return "sea_route";
 }
 

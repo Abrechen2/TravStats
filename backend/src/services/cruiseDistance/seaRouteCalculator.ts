@@ -21,7 +21,8 @@
 
 import { polylineLengthKm } from "../../shared/geo/haversine";
 import { computeSchematicRoute, type SchematicRoute } from "../schematicRouter";
-import type { ComputedLeg, Confidence, DistanceCalculator, PortPoint } from "./types";
+import { isInlandLeg } from "./inlandLeg";
+import type { ComputedLeg, Confidence, DistanceCalculator, LegContext, PortPoint } from "./types";
 
 const ROUTER_VERSION = "2.0.0";
 
@@ -30,17 +31,15 @@ function confidenceOf(method: SchematicRoute["method"]): Confidence {
   return method === "coarse_a_star" ? "medium" : "high";
 }
 
-function isInlandPort(port: PortPoint): boolean {
-  // River ports are measured by the river calculator, ahead in the chain.
-  return port.region?.startsWith("river_") === true;
-}
-
 export const seaRouteCalculator: DistanceCalculator = {
   method: "eurostat",
   routerVersion: ROUTER_VERSION,
 
-  accepts(from: PortPoint, to: PortPoint): boolean {
-    if (isInlandPort(from) || isInlandPort(to)) return false;
+  accepts(from: PortPoint, to: PortPoint, context?: LegContext): boolean {
+    // River ports are measured by the river calculator, ahead in the chain; a
+    // river cruise between ports the catalogue has no region for falls to the
+    // chord. Neither is ever walked through the sea mask (`inlandLeg.ts`).
+    if (isInlandLeg(from, to, context?.cruiseKind)) return false;
     // The network loads a large GeoJSON; suites that create cruises by the
     // hundred measure chords instead, as they did under marnetCalculator.
     if (process.env.NODE_ENV === "test") return false;
