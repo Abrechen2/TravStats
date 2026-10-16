@@ -86,7 +86,8 @@
     "previewFailed": "Die Vorschau konnte nicht geladen werden.",
     "finePrint": "Nur Summen – keine Reisen, Orte, Daten oder Kosten. Du kannst das jederzeit ändern oder beenden.",
     "remoteNotice": "Die Zahlen gehen an den Server {{origin}}. Wer diesen Server betreibt, kann sie lesen.",
-    "pendingNotice": "Solange {{name}} nicht zugestimmt hat, wird nichts geteilt und niemand sieht Zahlen von dir."
+    "pendingNotice": "Solange {{name}} nicht zugestimmt hat, wird nichts geteilt und niemand sieht Zahlen von dir.",
+    "acceptNotice": "Mit „Teilen“ seht ihr gegenseitig eure Zahlen – du nur die, die {{name}} freigegeben hat, {{name}} nur diese hier."
   },
   "requests": {
     "title": "Anfragen",

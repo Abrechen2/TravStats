@@ -8,8 +8,20 @@ vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
 }));
 vi.mock("../ConsentDialog", () => ({
-  default: ({ open, onConfirm }: { open: boolean; onConfirm: (s: unknown) => Promise<void> }) =>
-    open ? <button onClick={() => void onConfirm(SCOPE)}>confirm-dialog</button> : null,
+  default: ({
+    open,
+    mode,
+    onConfirm,
+  }: {
+    open: boolean;
+    mode: string;
+    onConfirm: (s: unknown) => Promise<void>;
+  }) =>
+    open ? (
+      <button data-mode={mode} onClick={() => void onConfirm(SCOPE)}>
+        confirm-dialog
+      </button>
+    ) : null,
 }));
 vi.mock("../../../lib/api/comparison", async (original) => ({
   ...(await original<typeof import("../../../lib/api/comparison")>()),
@@ -41,6 +53,10 @@ describe("AddPersonCard", () => {
     render(<AddPersonCard onChanged={onChanged} />);
     fireEvent.change(screen.getByLabelText("add.username"), { target: { value: "ben" } });
     fireEvent.click(screen.getByRole("button", { name: "add.ask" }));
+    expect(screen.getByRole("button", { name: "confirm-dialog" })).toHaveAttribute(
+      "data-mode",
+      "ask"
+    );
     fireEvent.click(screen.getByRole("button", { name: "confirm-dialog" }));
     await waitFor(() => expect(comparisonApi.request).toHaveBeenCalledWith("ben", SCOPE));
     expect(onChanged).toHaveBeenCalled();
@@ -75,6 +91,11 @@ describe("AddPersonCard", () => {
     render(<AddPersonCard onChanged={vi.fn()} />);
     fireEvent.change(screen.getByLabelText("add.claimLabel"), { target: { value: CODE } });
     fireEvent.click(screen.getByRole("button", { name: "add.claim" }));
+    // Redeeming an invitation still waits for the inviter's yes on their own server.
+    expect(screen.getByRole("button", { name: "confirm-dialog" })).toHaveAttribute(
+      "data-mode",
+      "ask"
+    );
     fireEvent.click(screen.getByRole("button", { name: "confirm-dialog" }));
     await waitFor(() => expect(comparisonApi.claimInvite).toHaveBeenCalledWith(CODE, SCOPE));
     await waitFor(() =>

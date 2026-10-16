@@ -44,7 +44,9 @@ describe("ConsentDialog", () => {
 
   it("shows the numbers the scope would share and confirms exactly that scope", async () => {
     const onConfirm = vi.fn().mockResolvedValue(undefined);
-    render(<ConsentDialog open person={person} onClose={() => {}} onConfirm={onConfirm} />);
+    render(
+      <ConsentDialog open mode="ask" person={person} onClose={() => {}} onConfirm={onConfirm} />
+    );
     expect(screen.getByText("consent.title:Ben")).toBeInTheDocument();
     expect(await screen.findByText("metric.flights")).toBeInTheDocument();
     expect(screen.getByText("12")).toBeInTheDocument();
@@ -70,6 +72,7 @@ describe("ConsentDialog", () => {
     render(
       <ConsentDialog
         open
+        mode="ask"
         person={{ displayName: "Far", origin: "https://far.example" }}
         onClose={() => {}}
         onConfirm={vi.fn()}
@@ -79,7 +82,9 @@ describe("ConsentDialog", () => {
   });
 
   it("cannot share nothing", async () => {
-    render(<ConsentDialog open person={person} onClose={() => {}} onConfirm={vi.fn()} />);
+    render(
+      <ConsentDialog open mode="ask" person={person} onClose={() => {}} onConfirm={vi.fn()} />
+    );
     for (const group of ["distance", "trips", "time", "places"])
       fireEvent.click(screen.getByRole("button", { name: `group.${group}` }));
     expect(await screen.findByText("consent.nothingChosen")).toBeInTheDocument();
@@ -87,13 +92,36 @@ describe("ConsentDialog", () => {
   });
 
   it("states that nothing is shared until the other person has agreed too", async () => {
-    render(<ConsentDialog open person={person} onClose={() => {}} onConfirm={vi.fn()} />);
+    render(
+      <ConsentDialog open mode="ask" person={person} onClose={() => {}} onConfirm={vi.fn()} />
+    );
     expect(await screen.findByText("consent.pendingNotice:Ben")).toBeInTheDocument();
+    expect(screen.queryByText("consent.acceptNotice:Ben")).toBeNull();
     await screen.findByText("metric.flights");
   });
 
+  it("answering a request says both now see each other's numbers, not that nothing is shared", async () => {
+    render(
+      <ConsentDialog open mode="accept" person={person} onClose={() => {}} onConfirm={vi.fn()} />
+    );
+    expect(await screen.findByText("consent.acceptNotice:Ben")).toBeInTheDocument();
+    expect(screen.queryByText("consent.pendingNotice:Ben")).toBeNull();
+    await screen.findByText("metric.flights");
+  });
+
+  it("changing an existing share claims neither that nothing is shared nor a new exchange", async () => {
+    render(
+      <ConsentDialog open mode="change" person={person} onClose={() => {}} onConfirm={vi.fn()} />
+    );
+    await screen.findByText("metric.flights");
+    expect(screen.queryByText("consent.pendingNotice:Ben")).toBeNull();
+    expect(screen.queryByText("consent.acceptNotice:Ben")).toBeNull();
+  });
+
   it("asks the server once for a burst of toggles (debounced), with the final scope", async () => {
-    render(<ConsentDialog open person={person} onClose={() => {}} onConfirm={vi.fn()} />);
+    render(
+      <ConsentDialog open mode="ask" person={person} onClose={() => {}} onConfirm={vi.fn()} />
+    );
     fireEvent.click(screen.getByRole("button", { name: "group.time" }));
     fireEvent.click(screen.getByRole("button", { name: "group.places" }));
     fireEvent.click(screen.getByRole("button", { name: "group.trips" }));
@@ -113,7 +141,9 @@ describe("ConsentDialog", () => {
         data: "Too many requests",
       } as AxiosResponse)
     );
-    render(<ConsentDialog open person={person} onClose={() => {}} onConfirm={vi.fn()} />);
+    render(
+      <ConsentDialog open mode="ask" person={person} onClose={() => {}} onConfirm={vi.fn()} />
+    );
     expect(await screen.findByText("error.rateLimited")).toBeInTheDocument();
     expect(screen.queryByText("consent.previewFailed")).not.toBeInTheDocument();
   });
@@ -123,14 +153,18 @@ describe("ConsentDialog", () => {
       ...snapshot,
       metrics: { flights: null },
     });
-    render(<ConsentDialog open person={person} onClose={() => {}} onConfirm={vi.fn()} />);
+    render(
+      <ConsentDialog open mode="ask" person={person} onClose={() => {}} onConfirm={vi.fn()} />
+    );
     expect(await screen.findByText("metric.flights")).toBeInTheDocument();
     expect(screen.getByText("—")).toBeInTheDocument();
     expect(screen.queryByText("0")).not.toBeInTheDocument();
   });
   it("cannot confirm a scope whose numbers have not arrived yet", async () => {
     const onConfirm = vi.fn().mockResolvedValue(undefined);
-    render(<ConsentDialog open person={person} onClose={() => {}} onConfirm={onConfirm} />);
+    render(
+      <ConsentDialog open mode="ask" person={person} onClose={() => {}} onConfirm={onConfirm} />
+    );
     await screen.findByText("metric.flights");
     const share = screen.getByRole("button", { name: "consent.share" });
     expect(share).toBeEnabled();
@@ -150,6 +184,7 @@ describe("ConsentDialog", () => {
     render(
       <ConsentDialog
         open
+        mode="ask"
         person={person}
         onClose={() => {}}
         onConfirm={onConfirm}
@@ -168,6 +203,7 @@ describe("ConsentDialog", () => {
     render(
       <ConsentDialog
         open
+        mode="ask"
         person={person}
         onClose={() => {}}
         onConfirm={vi.fn()}
@@ -180,7 +216,9 @@ describe("ConsentDialog", () => {
 
   it("toggles a chip with Space and says so through aria-pressed", async () => {
     const user = userEvent.setup();
-    render(<ConsentDialog open person={person} onClose={() => {}} onConfirm={vi.fn()} />);
+    render(
+      <ConsentDialog open mode="ask" person={person} onClose={() => {}} onConfirm={vi.fn()} />
+    );
     const chip = screen.getByRole("button", { name: "group.time" });
     expect(chip).toHaveAttribute("aria-pressed", "true");
     chip.focus();
@@ -194,7 +232,9 @@ describe("ConsentDialog", () => {
     vi.mocked(comparisonApi.preview)
       .mockImplementationOnce(() => new Promise((resolve) => (releaseFirst = resolve)))
       .mockResolvedValue({ ...snapshot, metrics: { flights: 99 } });
-    render(<ConsentDialog open person={person} onClose={() => {}} onConfirm={vi.fn()} />);
+    render(
+      <ConsentDialog open mode="ask" person={person} onClose={() => {}} onConfirm={vi.fn()} />
+    );
     await waitFor(() => expect(comparisonApi.preview).toHaveBeenCalledTimes(1));
     fireEvent.click(screen.getByRole("button", { name: "group.time" }));
     expect(await screen.findByText("99")).toBeInTheDocument();
@@ -205,12 +245,22 @@ describe("ConsentDialog", () => {
 
   it("starts from the initial scope again when it is reopened", async () => {
     const { rerender } = render(
-      <ConsentDialog open person={person} onClose={() => {}} onConfirm={vi.fn()} />
+      <ConsentDialog open mode="ask" person={person} onClose={() => {}} onConfirm={vi.fn()} />
     );
     fireEvent.click(screen.getByRole("button", { name: "group.time" }));
     await screen.findByText("metric.flights");
-    rerender(<ConsentDialog open={false} person={person} onClose={() => {}} onConfirm={vi.fn()} />);
-    rerender(<ConsentDialog open person={person} onClose={() => {}} onConfirm={vi.fn()} />);
+    rerender(
+      <ConsentDialog
+        open={false}
+        mode="ask"
+        person={person}
+        onClose={() => {}}
+        onConfirm={vi.fn()}
+      />
+    );
+    rerender(
+      <ConsentDialog open mode="ask" person={person} onClose={() => {}} onConfirm={vi.fn()} />
+    );
     expect(screen.getByRole("button", { name: "group.time" })).toHaveAttribute(
       "aria-pressed",
       "true"

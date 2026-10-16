@@ -86,7 +86,8 @@
     "previewFailed": "The preview could not be loaded.",
     "finePrint": "Totals only — no trips, places, dates or costs. You can change or stop this at any time.",
     "remoteNotice": "The numbers go to the server {{origin}}. Whoever runs that server can read them.",
-    "pendingNotice": "Until {{name}} agrees, nothing is shared and nobody sees numbers of yours."
+    "pendingNotice": "Until {{name}} agrees, nothing is shared and nobody sees numbers of yours.",
+    "acceptNotice": "Once you choose “Share”, you see each other’s numbers — you only the ones {{name}} released, {{name}} only these."
   },
   "requests": {
     "title": "Requests",

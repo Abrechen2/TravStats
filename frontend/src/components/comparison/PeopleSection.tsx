@@ -164,6 +164,7 @@ export default function PeopleSection({
       {question && (
         <ConsentDialog
           open
+          mode={question.kind}
           person={question.person}
           initialScope={question.kind === "change" ? question.scope : null}
           onClose={() => setQuestion(null)}

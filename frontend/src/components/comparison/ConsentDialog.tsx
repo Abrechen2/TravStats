@@ -17,8 +17,16 @@ import { logger } from "../../lib/logger";
  */
 const PREVIEW_DEBOUNCE_MS = 300;
 
+/**
+ * Why the dialog is open, which decides the one sentence about the other side: a new question
+ * ("ask") shares nothing until they agree; answering their request ("accept") starts the exchange
+ * at once, because their yes came with the request; "change" edits a share that already exists.
+ */
+export type ConsentMode = "ask" | "accept" | "change";
+
 export interface ConsentDialogProps {
   open: boolean;
+  mode: ConsentMode;
   onClose: () => void;
   /** Who will see the numbers; `origin` is set for a person on another server. */
   person: { displayName: string; origin: string | null };
@@ -38,6 +46,7 @@ const gap = (size: string) => ({ gap: `var(--ts-space-${size})` });
  */
 export default function ConsentDialog({
   open,
+  mode,
   onClose,
   person,
   initialScope,
@@ -211,7 +220,13 @@ export default function ConsentDialog({
         )}
         {previewError && <p role="alert">{previewError}</p>}
         <p className="t-caption">{tr("consent.finePrint")}</p>
-        <p className="t-caption">{tr("consent.pendingNotice", { name: person.displayName })}</p>
+        {mode !== "change" && (
+          <p className="t-caption">
+            {tr(mode === "ask" ? "consent.pendingNotice" : "consent.acceptNotice", {
+              name: person.displayName,
+            })}
+          </p>
+        )}
         {person.origin && (
           <p className="t-caption" role="note">
             {tr("consent.remoteNotice", { origin: person.origin })}

@@ -10,8 +10,20 @@ vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
 }));
 vi.mock("../ConsentDialog", () => ({
-  default: ({ open, onConfirm }: { open: boolean; onConfirm: (s: unknown) => Promise<void> }) =>
-    open ? <button onClick={() => void onConfirm(SCOPE)}>confirm-dialog</button> : null,
+  default: ({
+    open,
+    mode,
+    onConfirm,
+  }: {
+    open: boolean;
+    mode: string;
+    onConfirm: (s: unknown) => Promise<void>;
+  }) =>
+    open ? (
+      <button data-mode={mode} onClick={() => void onConfirm(SCOPE)}>
+        confirm-dialog
+      </button>
+    ) : null,
 }));
 vi.mock("../../../lib/api/comparison", async (original) => ({
   ...(await original<typeof import("../../../lib/api/comparison")>()),
@@ -64,6 +76,11 @@ describe("PeopleSection", () => {
     const onChanged = vi.fn();
     render(<PeopleSection people={people} onChanged={onChanged} />);
     fireEvent.click(screen.getByRole("button", { name: "requests.accept" }));
+    // Answering: the asker already said yes, so the dialog must not claim nothing is shared.
+    expect(screen.getByRole("button", { name: "confirm-dialog" })).toHaveAttribute(
+      "data-mode",
+      "accept"
+    );
     fireEvent.click(screen.getByRole("button", { name: "confirm-dialog" }));
     await waitFor(() => expect(comparisonApi.accept).toHaveBeenCalledWith("c-1", SCOPE));
     expect(onChanged).toHaveBeenCalled();
@@ -132,6 +149,10 @@ describe("PeopleSection", () => {
   it("changes the scope of an accepted person through the dialog", async () => {
     render(<PeopleSection people={people} onChanged={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "people.change" }));
+    expect(screen.getByRole("button", { name: "confirm-dialog" })).toHaveAttribute(
+      "data-mode",
+      "change"
+    );
     fireEvent.click(screen.getByRole("button", { name: "confirm-dialog" }));
     await waitFor(() => expect(comparisonApi.updateScope).toHaveBeenCalledWith("c-2", SCOPE));
     await waitFor(() =>

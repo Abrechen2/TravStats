@@ -135,6 +135,7 @@ export default function AddPersonCard({ onChanged }: { onChanged: () => void }):
       {pending && (
         <ConsentDialog
           open
+          mode="ask"
           person={
             pending.kind === "username"
               ? { displayName: pending.username, origin: null }
