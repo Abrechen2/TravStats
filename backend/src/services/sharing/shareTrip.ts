@@ -3,12 +3,19 @@ import type { DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { Prisma } from "../../prisma";
 import { consentRequired, hasAcceptedConsent } from "./consent";
-import { copyMissing } from "./copyInto";
+import { copyMissing, joinedMeta, type CopiedEntry } from "./copyInto";
 import { groupBookingTotals, type MemberBookingTotal } from "./bookingTotals";
 import { detachTrip } from "./detach";
 import { assignShareKeys } from "./keyOps";
-import { SHARE_ENTITIES, SHARE_TYPES, emptyCounts, type CopyCounts } from "./shareTypes";
-import { missingGroupConsent } from "./members";
+import {
+  SHARE_ENTITIES,
+  SHARE_TYPES,
+  emptyCounts,
+  type CopyCounts,
+  type ShareEntity,
+} from "./shareTypes";
+import { missingGroupConsent, type MemberTrip } from "./members";
+import { noticeMeta, recordEntryNotice } from "./propagate";
 import { tripFacts } from "./facts";
 import { restatusTrips } from "../trip/restatusTrips";
 import type { SharePerson } from "./people";
@@ -83,6 +90,33 @@ async function requireGroupConsent(
   }
 }
 
+/**
+ * The share's one `shared` notice counts what was created. An own entry moved
+ * in from another of the recipient's trips gets a notice of its own: it says
+ * where it came from, and undoing it puts the entry back there.
+ */
+async function noticeMovedIn(
+  tx: DbTransaction,
+  entity: ShareEntity,
+  groupId: string,
+  actorId: string,
+  recipient: MemberTrip,
+  copied: readonly CopiedEntry[]
+): Promise<void> {
+  for (const entry of copied) {
+    if (!entry.movedFrom) continue;
+    await recordEntryNotice(tx, {
+      recipient,
+      groupId,
+      actorId,
+      kind: "created",
+      entity,
+      shareKey: entry.source.shareKey as string,
+      after: { ...noticeMeta(entry.source, recipient, entry.id), ...joinedMeta(entry) },
+    });
+  }
+}
+
 export async function shareTrip(
   userId: string,
   tripId: string,
@@ -134,6 +168,14 @@ export async function shareTrip(
           { userId: recipientId, tripId: target.id }
         );
         created[SHARE_TYPES[entity].countKey] = copied.filter((e) => !e.joined).length;
+        await noticeMovedIn(
+          tx,
+          entity,
+          groupId,
+          userId,
+          { userId: recipientId, id: target.id },
+          copied
+        );
       }
       await restatusTrips([target.id], tx);
 

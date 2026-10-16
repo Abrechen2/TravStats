@@ -21,8 +21,10 @@
       "deleted": "{{name}} deleted {{type}} “{{entry}}”. Your copy stays — it is your call.",
       "movedOut": "{{name}} took {{type}} “{{entry}}” out of the shared trip. Your copy stays — it is your call.",
       "joined": "{{name}} added {{type}} “{{entry}}” to the shared trip. Your own entry is now linked to it.",
+      "joinedMoved": "{{name}} added {{type}} “{{entry}}” to the shared trip. Your own entry from “{{from}}” is now linked to this trip and was moved here.",
       "unknownEntry": "an entry",
       "undo": "Undo",
+      "undoMove": "Move back to “{{from}}”",
       "deleteCopy": "Delete mine too",
       "undone": "Undone on your copy.",
       "kinds": {

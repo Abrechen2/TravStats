@@ -61,6 +61,37 @@ describe("ShareNoticeCard", () => {
     expect(h.onUndo).toHaveBeenCalled();
   });
 
+  it("says an own entry was moved in from another trip, and offers to move it back", async () => {
+    const h = renderCard(
+      notice({
+        kind: "created",
+        changes: [],
+        after: {
+          label: "TP576 LIS → FRA",
+          tripId: "t1",
+          entryId: "f1",
+          joined: true,
+          movedFrom: { tripId: "t-old", tripName: "Lissabon allein" },
+        },
+      })
+    );
+    expect(screen.getByText("sharing:inbox.notices.joinedMoved")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "sharing:inbox.notices.undoMove" }));
+    expect(h.onUndo).toHaveBeenCalled();
+  });
+
+  it("offers no undo for a plain join", () => {
+    renderCard(
+      notice({
+        kind: "created",
+        changes: [],
+        after: { label: "TP576", tripId: "t1", joined: true },
+      })
+    );
+    expect(screen.getByText("sharing:inbox.notices.joined")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /undo/ })).toBeNull();
+  });
+
   it("shows three changes inline and the rest in the details", async () => {
     renderCard(notice({}));
     expect(screen.getByText("B12")).toBeTruthy();

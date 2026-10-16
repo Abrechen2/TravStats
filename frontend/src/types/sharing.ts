@@ -140,6 +140,8 @@ export interface ShareNoticeAfter {
   reason?: "deleted" | "movedOut";
   /** `created`: the reader's own entry was linked instead of a copy being made. */
   joined?: boolean;
+  /** `created`, joined: the reader's own entry was moved here from this trip of theirs. */
+  movedFrom?: { tripId: string; tripName: string };
 }
 
 export interface ShareNotice {

@@ -50,18 +50,23 @@ export default function ShareNoticeCard({
   const textKey =
     notice.kind === "deleted" && after.reason === "movedOut"
       ? "movedOut"
-      : notice.kind === "created" && after.joined
-        ? "joined"
-        : notice.kind;
+      : notice.kind === "created" && after.movedFrom
+        ? "joinedMoved"
+        : notice.kind === "created" && after.joined
+          ? "joined"
+          : notice.kind;
   const text = t(`${NS}.${textKey}`, {
     name: notice.actor?.displayName ?? t(`${NS}.someone`),
     trip: after.tripName ?? t(`${NS}.unknownTrip`),
     entry: after.label || t(`${NS}.unknownEntry`),
     type: t(`sharing:entityTypes.${notice.entityType ?? "trip"}`),
+    from: after.movedFrom?.tripName ?? t(`${NS}.unknownTrip`),
   });
   const unread = notice.readAt === null;
   const tripLink = notice.entityType === "trip" ? notice.entityKey : (after.tripId ?? null);
-  const canUndo = notice.kind === "updated" && notice.undoneAt === null;
+  // A join that moved the reader's own entry in can be undone too: it goes back.
+  const movedIn = notice.kind === "created" && !!after.movedFrom;
+  const canUndo = (notice.kind === "updated" || movedIn) && notice.undoneAt === null;
   const changes: ChangeEntry[] = notice.changes.map((c) => ({
     field: c.field,
     type: "changed",
@@ -121,7 +126,7 @@ export default function ShareNoticeCard({
         <div className="flex flex-wrap items-center" style={{ gap: 8 }}>
           {canUndo && (
             <Button variant="primary" disabled={busy} onClick={onUndo}>
-              {t(`${NS}.undo`)}
+              {movedIn ? t(`${NS}.undoMove`, { from: after.movedFrom?.tripName }) : t(`${NS}.undo`)}
             </Button>
           )}
           {notice.kind === "deleted" && (

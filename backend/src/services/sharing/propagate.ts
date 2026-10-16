@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import type { Db, DbTransaction } from "../../db";
 import type { Prisma } from "../../prisma";
 import { ADAPTERS, type EntityAdapter, type ShareEntity, type SharedRow } from "./adapters";
-import { copyInto } from "./copyInto";
+import { copyInto, joinedMeta } from "./copyInto";
 import { changedKeys, jsonSubset, sameFact } from "./factValues";
 import { restatusTrips } from "../trip/restatusTrips";
 import { DERIVE } from "./deriveCopy";
@@ -182,7 +182,7 @@ async function createCopies(
       kind: "created",
       entity: adapter.entity,
       shareKey: key,
-      after: { ...noticeMeta(source, member, copy.id), ...(copy.joined ? { joined: true } : {}) },
+      after: { ...noticeMeta(source, member, copy.id), ...joinedMeta(copy) },
     });
   }
 }

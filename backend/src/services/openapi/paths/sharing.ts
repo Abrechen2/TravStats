@@ -287,11 +287,13 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/sharing/notices/{id}/undo",
-  summary: "Undo another member's change on the caller's own copy",
+  summary: "Undo another member's change, or a move-in, on the caller's own copy",
   description:
     "Restores the values the change replaced, on the caller's copy only, when the copy still " +
     "holds exactly what the change wrote. The undo is a change by the caller and propagates " +
-    "to the other members with a notice of its own.",
+    "to the other members with a notice of its own. A `created` notice whose `after.movedFrom` " +
+    "names a trip (the caller's own entry was joined and moved in from it) is undone by moving " +
+    "the entry back there and unlinking it.",
   tags,
   request: { params: idParam },
   responses: {

@@ -1,6 +1,6 @@
 import { prisma } from "../../db";
 import { restatusTrips } from "../trip/restatusTrips";
-import { copyMissing } from "./copyInto";
+import { copyMissing, joinedMeta, type CopiedEntry } from "./copyInto";
 import { assignKeysFor } from "./keyOps";
 import { acceptedWith, receivingMembers } from "./members";
 import { noticeMeta, recordEntryNotice, SHARE_TX_TIMEOUT_MS } from "./propagate";
@@ -26,17 +26,23 @@ class DryRun extends Error {}
 export interface BackfillResult {
   groups: number;
   keyed: number;
+  /** Own crossings joined where they were (on the group trip, or on none). */
   joined: number;
+  /** Own crossings joined AND moved in from another of the member's trips. */
+  moved: number;
   copied: number;
 }
 
 type Counts = Omit<BackfillResult, "groups">;
 
+const countOf = (entry: CopiedEntry): keyof Counts =>
+  entry.movedFrom ? "moved" : entry.joined ? "joined" : "copied";
+
 export async function backfillSharedFerries(opts: { apply: boolean }): Promise<BackfillResult> {
   const groups = await prisma.tripShareGroup.findMany({ select: { id: true } });
-  const total: BackfillResult = { groups: groups.length, keyed: 0, joined: 0, copied: 0 };
+  const total: BackfillResult = { groups: groups.length, keyed: 0, joined: 0, moved: 0, copied: 0 };
   for (const [done, group] of groups.entries()) {
-    const counted: Counts = { keyed: 0, joined: 0, copied: 0 };
+    const counted: Counts = { keyed: 0, joined: 0, moved: 0, copied: 0 };
     try {
       await prisma.$transaction(
         async (tx) => {
@@ -55,7 +61,7 @@ export async function backfillSharedFerries(opts: { apply: boolean }): Promise<B
                 { userId: member.userId, tripId: member.id }
               );
               for (const entry of copied) {
-                counted[entry.joined ? "joined" : "copied"] += 1;
+                counted[countOf(entry)] += 1;
                 await recordEntryNotice(tx, {
                   recipient: member,
                   groupId: group.id,
@@ -63,10 +69,7 @@ export async function backfillSharedFerries(opts: { apply: boolean }): Promise<B
                   kind: "created",
                   entity: "ferry",
                   shareKey: entry.source.shareKey as string,
-                  after: {
-                    ...noticeMeta(entry.source, member, entry.id),
-                    ...(entry.joined ? { joined: true } : {}),
-                  },
+                  after: { ...noticeMeta(entry.source, member, entry.id), ...joinedMeta(entry) },
                 });
               }
               if (copied.length > 0) await restatusTrips([member.id], tx);
@@ -90,6 +93,7 @@ export async function backfillSharedFerries(opts: { apply: boolean }): Promise<B
     }
     total.keyed += counted.keyed;
     total.joined += counted.joined;
+    total.moved += counted.moved;
     total.copied += counted.copied;
   }
   return total;

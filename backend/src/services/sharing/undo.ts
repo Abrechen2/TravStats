@@ -1,9 +1,12 @@
 import { prisma, type DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { Prisma } from "../../prisma";
+import { z } from "zod";
 import { shareEntityTypeSchema } from "../../schemas/sharing";
+import { restatusTrips } from "../trip/restatusTrips";
 import { ADAPTERS, type ShareEntity, type SharedRow } from "./adapters";
 import { revivedRecord, sameFact } from "./factValues";
+import { keyedDelegate } from "./keyOps";
 import { propagateDelete, propagateWrite, shareSnapshot } from "./propagate";
 
 /**
@@ -72,6 +75,8 @@ export interface UndoResult {
  */
 export async function undoNotice(userId: string, noticeId: string): Promise<UndoResult> {
   const notice = await ownNotice(userId, noticeId);
+  const movedFrom = notice.kind === "created" ? movedFromOf(notice.after) : null;
+  if (movedFrom && !notice.undoneAt) return undoMoveIn(userId, notice, movedFrom);
   if (notice.kind !== "updated") {
     throw new AppError("Only a change can be undone", 409, "SHARE_UNDO_UNAVAILABLE");
   }
@@ -105,6 +110,53 @@ export async function undoNotice(userId: string, noticeId: string): Promise<Undo
       data: { undoneAt: new Date(), readAt: notice.readAt ?? new Date() },
     });
     await propagateWrite(tx, userId, entity, own.id, snapshot);
+    return { undone: true as const, entryId: own.id };
+  });
+}
+
+/** `after.movedFrom` of a `created` notice whose join moved the caller's own entry in. */
+const movedFromSchema = z.object({
+  movedFrom: z.object({ tripId: z.string(), tripName: z.string() }),
+});
+
+function movedFromOf(after: Prisma.JsonValue | null): { tripId: string } | null {
+  const parsed = movedFromSchema.safeParse(after);
+  return parsed.success ? parsed.data.movedFrom : null;
+}
+
+/**
+ * Undo a join that moved the caller's own entry in from another of their trips
+ * (owner decision 2026-10-16): it goes back to that trip and loses the link.
+ * Moving it out is an ordinary write, so it propagates like one — its key is
+ * cleared and the other members are told it left the shared trip.
+ */
+async function undoMoveIn(
+  userId: string,
+  notice: Awaited<ReturnType<typeof ownNotice>>,
+  movedFrom: { tripId: string }
+): Promise<UndoResult> {
+  const entity = entityOf(notice.entityType);
+  return prisma.$transaction(async (tx) => {
+    const own = await ownCopy(tx, entity, notice, userId);
+    const back = await tx.trip.findFirst({
+      where: { id: movedFrom.tripId, userId },
+      select: { id: true },
+    });
+    if (!back) {
+      throw new AppError(
+        "The trip this entry came from no longer exists",
+        409,
+        "SHARE_UNDO_UNAVAILABLE"
+      );
+    }
+    const snapshot = await shareSnapshot(tx, entity, own.id);
+    await keyedDelegate(tx, entity).update({ where: { id: own.id }, data: { tripId: back.id } });
+    await tx.shareNotice.update({
+      where: { id: notice.id },
+      data: { undoneAt: new Date(), readAt: notice.readAt ?? new Date() },
+    });
+    await propagateWrite(tx, userId, entity, own.id, snapshot);
+    await restatusTrips([own.tripId, back.id], tx);
     return { undone: true as const, entryId: own.id };
   });
 }
