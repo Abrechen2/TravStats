@@ -146,7 +146,18 @@ export function documentListPath(entry: DocumentEntryRef): string {
  * origin) and set only when the dev frontend talks to a backend on another
  * port.
  */
+/**
+ * Where opening a document goes. A mail opens as the server's plain-text
+ * reading of it (`?view=text`): the `.eml` itself is a download, and a link
+ * that only downloads left a booking confirmation impossible to look at.
+ */
 export function documentFileUrl(document: TravelDocument): string {
+  const url = documentDownloadUrl(document);
+  return document.format === "eml" ? `${url}?view=text` : url;
+}
+
+/** The stored original's bytes, as kept. */
+export function documentDownloadUrl(document: TravelDocument): string {
   return API_URL ? `${API_URL}${document.url}` : document.url;
 }
 

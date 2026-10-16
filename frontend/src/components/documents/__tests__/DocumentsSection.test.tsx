@@ -85,6 +85,32 @@ describe("DocumentsSection", () => {
     expect(documentsApiMock.listForEntry).toHaveBeenCalledWith({ type: "flight", id: "f1" });
   });
 
+  it("opens a mail as its text reading and offers the original as a separate download", async () => {
+    documentsApiMock.listForEntry.mockResolvedValue([
+      makeDocument({
+        format: "eml",
+        kind: "booking",
+        mimetype: "message/rfc822",
+        displayName: "Buchung.eml",
+      }),
+    ]);
+    render(<DocumentsSection entry={FLIGHT} />);
+
+    const open = await screen.findByRole("link", { name: "documents:openLabel" });
+    expect(open).toHaveAttribute("href", "/api/v1/documents/d1/file?view=text");
+    const download = screen.getByRole("link", { name: "documents:downloadLabel" });
+    expect(download).toHaveAttribute("href", "/api/v1/documents/d1/file");
+    expect(download).toHaveAttribute("download");
+  });
+
+  it("offers no separate download for a format the browser shows itself", async () => {
+    documentsApiMock.listForEntry.mockResolvedValue([makeDocument()]);
+    render(<DocumentsSection entry={FLIGHT} />);
+
+    await screen.findByRole("link", { name: "documents:openLabel" });
+    expect(screen.queryByRole("link", { name: "documents:downloadLabel" })).toBeNull();
+  });
+
   it("says there are none yet, rather than drawing an empty list", async () => {
     render(<DocumentsSection entry={FLIGHT} />);
     expect(await screen.findByText("documents:empty")).toBeInTheDocument();

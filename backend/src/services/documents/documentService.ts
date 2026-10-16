@@ -19,8 +19,8 @@ import {
 } from "./documentFormats";
 import {
   DOCUMENT_DIR,
-  newStoredName,
   removeDocumentFile,
+  storedNameFor,
   sha256Hex,
   writeDocumentFile,
 } from "./documentStore";
@@ -373,7 +373,7 @@ export async function createDocument(input: CreateDocumentInput): Promise<Create
   }
 
   const pageCount = detected.format === "pdf" ? await countPdfPages(input.buffer) : null;
-  const storedName = newStoredName(detected.extension);
+  const storedName = storedNameFor(sha256, detected.extension);
   await writeDocumentFile(storedName, input.buffer);
   try {
     const document = await prisma.document.create({
@@ -404,10 +404,35 @@ export async function createDocument(input: CreateDocumentInput): Promise<Create
       },
       "Document kept"
     );
+    // A delete of the last other row may have removed the file between the
+    // write above and this insert; the row now names it, so it must exist.
+    await writeDocumentFile(storedName, input.buffer);
     return { document, created: true };
   } catch (error) {
-    await removeDocumentFile(storedName);
+    await releaseDocumentFiles([storedName]);
     throw error;
+  }
+}
+
+/**
+ * Removes each named file that no row names any more. Call it AFTER the rows
+ * are gone. A file named by its content may be shared by rows of other
+ * entries or other accounts, so a row's delete is never by itself a reason to
+ * delete the bytes.
+ */
+export async function releaseDocumentFiles(storedNames: readonly string[]): Promise<void> {
+  const unique = [...new Set(storedNames)];
+  if (unique.length === 0) return;
+  const stillNamed = new Set(
+    (
+      await prisma.document.findMany({
+        where: { storedName: { in: unique } },
+        select: { storedName: true },
+      })
+    ).map((row) => row.storedName)
+  );
+  for (const name of unique) {
+    if (!stillNamed.has(name)) await removeDocumentFile(name);
   }
 }
 
@@ -619,7 +644,7 @@ export async function deleteDocument(userId: string, id: string): Promise<void> 
     prisma.lodgingStay.updateMany({ where: { userId, receiptUrl }, data: { receiptUrl: null } }),
     prisma.document.delete({ where: { id: document.id } }),
   ]);
-  await removeDocumentFile(document.storedName);
+  await releaseDocumentFiles([document.storedName]);
   logger.info(
     { operation: "document_deleted", documentId: document.id, format: document.format },
     "Document deleted"
@@ -636,8 +661,9 @@ export async function storedNamesFor(where: Prisma.DocumentWhereInput): Promise<
   return rows.map((r) => r.storedName);
 }
 
+/** Removes the files of rows already deleted — each only once no other row names it. */
 export async function removeStoredFiles(storedNames: readonly string[]): Promise<void> {
-  for (const name of storedNames) await removeDocumentFile(name);
+  await releaseDocumentFiles(storedNames);
 }
 
 export interface SweepResult {

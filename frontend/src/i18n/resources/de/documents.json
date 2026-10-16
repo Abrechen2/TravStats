@@ -9,6 +9,8 @@
   "uploadFailed": "Die Datei konnte nicht hochgeladen werden.",
   "deleteFailed": "Das Dokument konnte nicht entfernt werden.",
   "openLabel": "{{name}} öffnen",
+  "download": "Original",
+  "downloadLabel": "{{name}} als Original-Mail herunterladen",
   "remove": "Entfernen",
   "removeLabel": "{{name}} entfernen",
   "deleteTitle": "Dokument entfernen?",

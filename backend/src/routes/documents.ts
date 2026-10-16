@@ -1,4 +1,5 @@
 import fs from "fs";
+import fsp from "fs/promises";
 import { Router, Request, Response, NextFunction } from "express";
 import multer from "multer";
 import { z } from "zod";
@@ -23,6 +24,7 @@ import {
   type EntryType,
 } from "../services/documents/documentService";
 import { documentPath } from "../services/documents/documentStore";
+import { renderEmlAsText } from "../services/documents/emlPreview";
 
 /**
  * Kept originals — the HTTP side of forgejo#116. The rules live in
@@ -217,6 +219,14 @@ router.get(
       // pass may sit in their own browser cache, never in a shared one.
       res.setHeader("Cache-Control", "private, max-age=3600");
       res.setHeader("X-Content-Type-Options", "nosniff");
+      // A mail is a download, but `?view=text` reads it as plain text the
+      // browser shows and cannot execute — see services/documents/emlPreview.ts.
+      if (req.query.view === "text" && document.format === "eml") {
+        const language = req.acceptsLanguages("de", "en") === "en" ? "en" : "de";
+        const text = await renderEmlAsText(await fsp.readFile(filePath), language);
+        res.type("text/plain; charset=utf-8").send(text);
+        return;
+      }
       res.type(document.mimetype);
       if (DOWNLOAD_ONLY.has(document.format)) {
         res.attachment(toDocumentDto(document).displayName);
