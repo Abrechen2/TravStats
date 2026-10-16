@@ -20,7 +20,12 @@ import {
 import { mergeFerryJourney } from "../services/ferry/ferryJourneyWrite";
 import { withFerryTimes } from "../services/ferry/timesDto";
 import { restatusTrips } from "../services/trip/restatusTrips";
-import { propagateDelete, propagateWrite, shareSnapshot } from "../services/sharing/propagate";
+import {
+  propagateDelete,
+  propagateWrite,
+  shareSnapshot,
+  SHARE_TX_TIMEOUT_MS,
+} from "../services/sharing/propagate";
 import { ferryYear } from "../shared/ferryCounting";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
@@ -255,40 +260,43 @@ async function createFerryRide(userId: string, body: unknown, claim: ClaimClient
     await getBaseCurrency(userId)
   );
 
-  const ride = await prisma.$transaction(async (tx) => {
-    const created = await tx.ferryJourney.create({
-      data: {
-        ...plainColumns(input),
-        ...state,
-        ...fxColumns,
-        userId,
-        companions: companions.map((c) => c.displayName),
-      },
-    });
-    if (companions.length > 0) {
-      await tx.ferryJourneyCompanion.createMany({
-        data: linkRowsFor(companions.map((c) => c.id)).map((row) => ({
-          ...row,
-          ferryJourneyId: created.id,
-        })),
-        skipDuplicates: true,
+  const ride = await prisma.$transaction(
+    async (tx) => {
+      const created = await tx.ferryJourney.create({
+        data: {
+          ...plainColumns(input),
+          ...state,
+          ...fxColumns,
+          userId,
+          companions: companions.map((c) => c.displayName),
+        },
       });
-    }
-    await claim(tx, created.id);
-    // On a shared trip: copied to the other members (design 2026-10-09).
-    await propagateWrite(tx, userId, "ferry", created.id);
-    const linked = await linkDocumentsInTx(tx, userId, documentIds, {
-      type: "ferryJourney",
-      id: created.id,
-    });
-    if (linked !== new Set(documentIds).size) {
-      throw new AppError("A document was linked elsewhere during creation", 409);
-    }
-    return tx.ferryJourney.findUniqueOrThrow({
-      where: { id: created.id },
-      include: FERRY_INCLUDE,
-    });
-  });
+      if (companions.length > 0) {
+        await tx.ferryJourneyCompanion.createMany({
+          data: linkRowsFor(companions.map((c) => c.id)).map((row) => ({
+            ...row,
+            ferryJourneyId: created.id,
+          })),
+          skipDuplicates: true,
+        });
+      }
+      await claim(tx, created.id);
+      // On a shared trip: copied to the other members (design 2026-10-09).
+      await propagateWrite(tx, userId, "ferry", created.id);
+      const linked = await linkDocumentsInTx(tx, userId, documentIds, {
+        type: "ferryJourney",
+        id: created.id,
+      });
+      if (linked !== new Set(documentIds).size) {
+        throw new AppError("A document was linked elsewhere during creation", 409);
+      }
+      return tx.ferryJourney.findUniqueOrThrow({
+        where: { id: created.id },
+        include: FERRY_INCLUDE,
+      });
+    },
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
 
   logger.info({ operation: "ferry_journey_create", ferryJourneyId: ride.id, userId });
   return withFerryTimes(ride);
@@ -333,44 +341,47 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
 
     let ride;
     try {
-      ride = await prisma.$transaction(async (tx) => {
-        const before = await shareSnapshot(tx, "ferry", existing.id);
-        // Claim the read version atomically inside the same transaction as the edit.
-        if (baseVersion !== null) {
-          const claimed = await tx.ferryJourney.updateMany({
-            where: { id: existing.id, userId, updatedAt: new Date(baseVersion) },
-            data: { updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)) },
-          });
-          if (claimed.count !== 1) throw new FerryVersionMoved();
-        }
-        if (resolved !== undefined) {
-          await tx.ferryJourneyCompanion.deleteMany({ where: { ferryJourneyId: existing.id } });
-          if (resolved.length > 0) {
-            await tx.ferryJourneyCompanion.createMany({
-              data: linkRowsFor(resolved.map((c) => c.id)).map((row) => ({
-                ...row,
-                ferryJourneyId: existing.id,
-              })),
-              skipDuplicates: true,
+      ride = await prisma.$transaction(
+        async (tx) => {
+          const before = await shareSnapshot(tx, "ferry", existing.id);
+          // Claim the read version atomically inside the same transaction as the edit.
+          if (baseVersion !== null) {
+            const claimed = await tx.ferryJourney.updateMany({
+              where: { id: existing.id, userId, updatedAt: new Date(baseVersion) },
+              data: { updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)) },
             });
+            if (claimed.count !== 1) throw new FerryVersionMoved();
           }
-        }
-        await tx.ferryJourney.update({
-          where: { id: existing.id },
-          data: {
-            ...plainColumns(input),
-            ...state,
-            updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)),
-            ...fxColumns,
-            ...(resolved !== undefined && { companions: resolved.map((c) => c.displayName) }),
-          },
-        });
-        await propagateWrite(tx, userId, "ferry", existing.id, before);
-        return tx.ferryJourney.findUniqueOrThrow({
-          where: { id: existing.id },
-          include: FERRY_INCLUDE,
-        });
-      });
+          if (resolved !== undefined) {
+            await tx.ferryJourneyCompanion.deleteMany({ where: { ferryJourneyId: existing.id } });
+            if (resolved.length > 0) {
+              await tx.ferryJourneyCompanion.createMany({
+                data: linkRowsFor(resolved.map((c) => c.id)).map((row) => ({
+                  ...row,
+                  ferryJourneyId: existing.id,
+                })),
+                skipDuplicates: true,
+              });
+            }
+          }
+          await tx.ferryJourney.update({
+            where: { id: existing.id },
+            data: {
+              ...plainColumns(input),
+              ...state,
+              updatedAt: new Date(Math.max(Date.now(), existing.updatedAt.getTime() + 1)),
+              ...fxColumns,
+              ...(resolved !== undefined && { companions: resolved.map((c) => c.displayName) }),
+            },
+          });
+          await propagateWrite(tx, userId, "ferry", existing.id, before);
+          return tx.ferryJourney.findUniqueOrThrow({
+            where: { id: existing.id },
+            include: FERRY_INCLUDE,
+          });
+        },
+        { timeout: SHARE_TX_TIMEOUT_MS }
+      );
     } catch (err) {
       if (!(err instanceof FerryVersionMoved) || baseVersion === null) throw err;
       await answerMovedVersion(res, userId, existing.id, baseVersion);
@@ -394,19 +405,22 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
     if (!existing) throw new AppError("Ferry ride not found", 404);
     const baseVersion = requestedBaseVersion(req);
     try {
-      await prisma.$transaction(async (tx) => {
-        const gone = await shareSnapshot(tx, "ferry", existing.id);
-        const deleted = await tx.ferryJourney.deleteMany({
-          where: {
-            id: existing.id,
-            userId,
-            ...(baseVersion === null ? {} : { updatedAt: new Date(baseVersion) }),
-          },
-        });
-        if (deleted.count !== 1) throw new FerryVersionMoved();
-        // The others keep their copies and are told (decision 3).
-        await propagateDelete(tx, userId, gone);
-      });
+      await prisma.$transaction(
+        async (tx) => {
+          const gone = await shareSnapshot(tx, "ferry", existing.id);
+          const deleted = await tx.ferryJourney.deleteMany({
+            where: {
+              id: existing.id,
+              userId,
+              ...(baseVersion === null ? {} : { updatedAt: new Date(baseVersion) }),
+            },
+          });
+          if (deleted.count !== 1) throw new FerryVersionMoved();
+          // The others keep their copies and are told (decision 3).
+          await propagateDelete(tx, userId, gone);
+        },
+        { timeout: SHARE_TX_TIMEOUT_MS }
+      );
     } catch (err) {
       if (!(err instanceof FerryVersionMoved)) throw err;
       // Only a base version can make a found row miss; without one it was a

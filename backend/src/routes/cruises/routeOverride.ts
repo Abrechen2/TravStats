@@ -7,7 +7,11 @@ import { routeOverrideSchema, routeOverrideKeySchema } from "../../schemas/cruis
 import { buildEffectivePortSequence } from "../../shared/cruise/portSequence";
 import { haversineKm } from "../../shared/geo/haversine";
 import { recomputeLegsForCruise } from "../../services/cruiseDistance/cruiseLegService";
-import { propagateWrite, shareSnapshot } from "../../services/sharing/propagate";
+import {
+  propagateWrite,
+  shareSnapshot,
+  SHARE_TX_TIMEOUT_MS,
+} from "../../services/sharing/propagate";
 import logger from "../../utils/logger";
 
 /**
@@ -145,25 +149,28 @@ router.put("/:id/route-override", async (req: AuthRequest, res: Response, next: 
     // next to zero legs: the map still draws the user's line while the
     // statistics silently fall back to inline haversine. Mirrors POST / and
     // PATCH /:id in routes/cruises.ts.
-    const { row, replaced } = await prisma.$transaction(async (tx) => {
-      // The legs are facts of the cruise: a shared cruise's copies follow them.
-      const before = await shareSnapshot(tx, "cruise", req.params.id);
-      const existing = await tx.cruiseLegRoute.findUnique({
-        where: { cruiseId_fromKind_fromRef_toKind_toRef: key },
-        select: { id: true },
-      });
+    const { row, replaced } = await prisma.$transaction(
+      async (tx) => {
+        // The legs are facts of the cruise: a shared cruise's copies follow them.
+        const before = await shareSnapshot(tx, "cruise", req.params.id);
+        const existing = await tx.cruiseLegRoute.findUnique({
+          where: { cruiseId_fromKind_fromRef_toKind_toRef: key },
+          select: { id: true },
+        });
 
-      const row = await tx.cruiseLegRoute.upsert({
-        where: { cruiseId_fromKind_fromRef_toKind_toRef: key },
-        create: { ...key, waypoints: waypoints as unknown as Prisma.InputJsonValue },
-        update: { waypoints: waypoints as unknown as Prisma.InputJsonValue },
-      });
+        const row = await tx.cruiseLegRoute.upsert({
+          where: { cruiseId_fromKind_fromRef_toKind_toRef: key },
+          create: { ...key, waypoints: waypoints as unknown as Prisma.InputJsonValue },
+          update: { waypoints: waypoints as unknown as Prisma.InputJsonValue },
+        });
 
-      await recomputeLegsForCruise(req.params.id, tx);
-      await propagateWrite(tx, userId, "cruise", req.params.id, before);
+        await recomputeLegsForCruise(req.params.id, tx);
+        await propagateWrite(tx, userId, "cruise", req.params.id, before);
 
-      return { row, replaced: existing !== null };
-    });
+        return { row, replaced: existing !== null };
+      },
+      { timeout: SHARE_TX_TIMEOUT_MS }
+    );
 
     logger.info({
       operation: "cruise_route_override_saved",
@@ -201,17 +208,20 @@ router.delete(
       // "automatic again" button on an already-automatic leg) would
       // otherwise delete-and-reinsert every leg and re-run the router for
       // nothing.
-      const { count } = await prisma.$transaction(async (tx) => {
-        const before = await shareSnapshot(tx, "cruise", req.params.id);
-        const result = await tx.cruiseLegRoute.deleteMany({
-          where: { cruiseId: req.params.id, ...parsed.data },
-        });
-        if (result.count > 0) {
-          await recomputeLegsForCruise(req.params.id, tx);
-          await propagateWrite(tx, userId, "cruise", req.params.id, before);
-        }
-        return result;
-      });
+      const { count } = await prisma.$transaction(
+        async (tx) => {
+          const before = await shareSnapshot(tx, "cruise", req.params.id);
+          const result = await tx.cruiseLegRoute.deleteMany({
+            where: { cruiseId: req.params.id, ...parsed.data },
+          });
+          if (result.count > 0) {
+            await recomputeLegsForCruise(req.params.id, tx);
+            await propagateWrite(tx, userId, "cruise", req.params.id, before);
+          }
+          return result;
+        },
+        { timeout: SHARE_TX_TIMEOUT_MS }
+      );
 
       logger.info({
         operation: "cruise_route_override_cleared",
