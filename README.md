@@ -520,36 +520,38 @@ inbox, subject to its normal retention rules.
 Optional live vessel snapshots use [AISStream](https://aisstream.io/documentation).
 Set `AISSTREAM_API_KEY` on the backend through the normal secret configuration,
 then enter the ship's nine-digit MMSI on a crossing's detail page and request a
-position. This is an explicit current-vessel lookup, not automatic ship matching
-or a historical journey track. Requests wait at most 15 seconds, share requests
-for the same MMSI and cache answers for 30 seconds. Each backend process uses at
-most two simultaneous sockets; account/IP limits also include other processes.
+position. The first MMSI that answers is stored on the crossing (`vesselMmsi`)
+and later lookups read only that vessel; edit the crossing to change it. This is
+an explicit current-vessel lookup, not automatic ship matching or a historical
+journey track. Requests wait at most 15 seconds, share requests for the same MMSI
+and cache answers for 30 seconds. An account holds at most one open lookup and a
+backend process at most two; beyond that the answer is `busy`.
 No signal is distinct from a stopped ship. Receipt time and source time are
 separate; no observation time is invented when the source omits it. No historical
 crossing, distance or status is changed. No API key is sent to the browser.
 
-### Karten in Web und App
+### Maps in web and app
 
-Die Vektorkarten verwenden standardmäßig OpenFreeMap (Liberty, Positron, Dark, Bright).
-Es ist kein eigener Kartenserver und kein API-Schlüssel nötig. Kartendaten werden
-vom Client direkt beim Anbieter geladen; dieser sieht IP-Adresse und angeforderte
-Kartenausschnitte. Reise-Overlays bleiben im Client. Quellenangaben dürfen nicht
-entfernt werden. Anbieterbedingungen: https://openfreemap.org/tos/ und
-https://openfreemap.org/privacy/. Keine garantierte Verfügbarkeit; Offline-Downloads
-unterliegen separaten Grenzen und werden durch diese Integration nicht angeboten.
+The vector maps use OpenFreeMap by default (Liberty, Positron, Dark, Bright).
+No map server of your own and no API key is needed. The client loads map data
+directly from the provider, which sees the IP address and the requested map
+tiles. Trip overlays stay in the client. Attributions must not be removed.
+Provider terms: https://openfreemap.org/tos/ and
+https://openfreemap.org/privacy/. Availability is not guaranteed; offline
+downloads are subject to separate limits and are not offered by this integration.
 
-Optional können Betreiber öffentliche HTTPS-Stil-URLs setzen:
+Operators may optionally set public HTTPS style URLs:
 `MAP_STYLE_STANDARD_URL`, `MAP_STYLE_LIGHT_URL`, `MAP_STYLE_DARK_URL`,
-`MAP_STYLE_VOYAGER_URL` (historische Stil-ID für Bright). Keine Zugangsdaten,
-Query-Parameter oder Fragmente verwenden: Diese URLs sind öffentlich. Alternative
-Anbieter benötigen passende Nutzungsrechte und CORS für Web/App; ihre Stile müssen
-alle benötigten Quellen, Schriftarten und Sprites korrekt referenzieren.
+`MAP_STYLE_VOYAGER_URL` (historical style ID for Bright). Do not use
+credentials, query parameters or fragments: these URLs are public. Alternative
+providers need matching usage rights and CORS for web and app; their styles must
+reference every source, font and sprite they need correctly.
 
-`GET /api/v1/map-config` liefert Version 1 und `styles` für Clients. Die Weboberfläche
-lädt dieselbe Konfiguration über `/api/v1/map-config/runtime` vor dem App-Start.
-Die mobile Kartenintegration unterstützt ältere Server ohne diesen Endpunkt über
-den OpenFreeMap-Standard. Änderungen an der Server-Umgebung wirken nach einem
-autorisierten Neustart; mobile Codeänderungen benötigen einen neuen App-Build.
+`GET /api/v1/map-config` returns version 1 and `styles` for clients. The web UI
+loads the same configuration through `/api/v1/map-config/runtime` before the app
+starts. The mobile map integration supports older servers without this endpoint
+through the OpenFreeMap default. Changes to the server environment take effect
+after an authorised restart; mobile code changes need a new app build.
 
 The web dashboard, globe and detail maps share the same basemap catalogue.
 Detail maps follow the saved basemap, place-label and relief settings, including
