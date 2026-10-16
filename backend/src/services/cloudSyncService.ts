@@ -341,7 +341,8 @@ export async function deleteCloudBackup(backup: {
     ) {
       throw new AppError(
         "Remote backup target is unknown or changed; upload this backup again to record its current target",
-        409
+        409,
+        "REMOTE_TARGET_UNKNOWN"
       );
     }
     try {
@@ -351,15 +352,14 @@ export async function deleteCloudBackup(backup: {
       if ((error as { status?: number }).status !== 404) throw error;
     }
   } catch (error) {
+    // A 409 here is also "WebDAV not enabled/configured": without settings the
+    // object cannot be named either, so it carries the same code.
+    const targetUnknown = error instanceof AppError && error.statusCode === 409;
     await prisma.backup.update({
       where: { id: backup.id },
-      data: {
-        cloudDeleteError:
-          error instanceof AppError && error.statusCode === 409
-            ? "REMOTE_TARGET_UNKNOWN"
-            : "REMOTE_DELETE_FAILED",
-      },
+      data: { cloudDeleteError: targetUnknown ? "REMOTE_TARGET_UNKNOWN" : "REMOTE_DELETE_FAILED" },
     });
+    if (targetUnknown) throw new AppError(error.message, 409, "REMOTE_TARGET_UNKNOWN");
     throw asUpstreamError(error);
   }
 }
