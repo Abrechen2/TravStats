@@ -9,12 +9,13 @@ import en from "../resources/en/sharing.json";
  * "Reisegruppe" belong to Vergleichen. Trip sharing's copy said "Freigabe" and
  * "Gruppe verlassen" — a reader could not tell the features apart.
  */
-const strings = (node: unknown, path = ""): [string, string][] =>
-  typeof node === "string"
-    ? [[path, node]]
-    : Object.entries(node as Record<string, unknown>).flatMap(([k, v]) =>
-        strings(v, path ? `${path}.${k}` : k)
-      );
+const strings = (node: unknown, path = ""): [string, string][] => {
+  if (typeof node === "string") return [[path, node]];
+  if (node === null || typeof node !== "object") return [];
+  return Object.entries(node as Record<string, unknown>).flatMap(([k, v]) =>
+    strings(v, path ? `${path}.${k}` : k)
+  );
+};
 
 const outsideLinks = (file: unknown) =>
   strings(file).filter(([path]) => !path.startsWith("links."));
@@ -38,7 +39,7 @@ describe("trip sharing terminology", () => {
     const hits = outsideLinks(polluted).filter(([, s]) => DE_FORBIDDEN.test(s));
     expect(hits.map(([p]) => p)).toEqual(["injected.probe"]);
 
-    const pollutedEn = { ...en, injected: { probe: "Leave the group" } };
+    const pollutedEn = { ...en, injected: { probe: "Leave the group" }, nothing: null };
     const hitsEn = outsideLinks(pollutedEn).filter(([, s]) => EN_FORBIDDEN.test(s));
     expect(hitsEn.map(([p]) => p)).toEqual(["injected.probe"]);
   });
