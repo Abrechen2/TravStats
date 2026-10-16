@@ -105,6 +105,16 @@ async function lockPair(tx: Tx, a: string, b: string): Promise<void> {
 }
 
 /**
+ * The same lock for a local user and one of their remote friends. Every writer of that pair
+ * takes it — the owner answering here and the other server's packets alike — so a remote
+ * packet cannot land between a local read and its write. The `remote:` prefix keeps the key
+ * apart from any local pair.
+ */
+export async function lockRemotePair(tx: Tx, userId: string, remoteId: string): Promise<void> {
+  await lockPair(tx, userId, remoteKey(remoteId));
+}
+
+/**
  * A write that holds only if the row is still in the state it was read in. A count of 0 means
  * the other side moved first (ended, answered); the transaction rolls back as a whole.
  */
@@ -220,6 +230,7 @@ export async function acceptConsent(
   const parsed = scopeJson(leaderboardScopeSchema.parse(scope));
   await prisma.$transaction(async (tx) => {
     if (row.viewerId) await lockPair(tx, ownerId, row.viewerId);
+    else if (row.remoteId) await lockRemotePair(tx, ownerId, row.remoteId);
     const now = new Date();
     // Conditional on still being a question: two answers racing must not both win.
     const answered = await tx.leaderboardConsent.updateMany({
@@ -245,6 +256,7 @@ export async function declineConsent(
   if (!isQuestion(row)) throw notPending(ownerId, consentId);
   await prisma.$transaction(async (tx) => {
     if (row.viewerId) await lockPair(tx, ownerId, row.viewerId);
+    else if (row.remoteId) await lockRemotePair(tx, ownerId, row.remoteId);
     const now = new Date();
     const answered = await tx.leaderboardConsent.updateMany({
       where: { id: row.id, status: "pending", decidedAt: null },

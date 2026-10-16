@@ -15,6 +15,8 @@ import {
 } from "../services/federation/security";
 import logger from "../utils/logger";
 import { receiveClaim, receiveState } from "../services/federation/links";
+import { SERVED_VERSIONS } from "../schemas/comparison";
+import { serveAggregate, serveClaim, serveState } from "../services/comparison/peerActions";
 
 const router = Router();
 const MAX_PACKET_BODY = 8_192;
@@ -40,7 +42,12 @@ router.post("/", async (req, res) => {
     if (body.action !== "ping" && !peer.verifiedAt) throw refused("unverified-peer");
     if (peer.verifiedAt) await consumeNonce(message);
     let data: unknown;
-    if (body.action === "ping") data = { ready: true };
+    // `leaderboard` tells a newer server which snapshot versions this one serves; a server
+    // from before 2026-10-16 answers without it, which is how "needs an update" is detected.
+    if (body.action === "ping") data = { ready: true, leaderboard: [...SERVED_VERSIONS] };
+    else if (body.action === "aggregate") data = await serveAggregate(message.origin, body);
+    else if (body.action === "lb-claim") data = await serveClaim(message.origin, body);
+    else if (body.action === "lb-state") data = await serveState(message.origin, body);
     else if (body.action === "claim")
       data = await receiveClaim(message.origin, body.code, body.channel);
     else if (body.action === "state")

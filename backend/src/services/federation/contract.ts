@@ -1,6 +1,11 @@
 import { e2eRequest } from "./e2e/wire";
 import { z } from "zod";
 import { AVAILABLE_DOMAINS } from "../../shared/domains";
+import {
+  aggregateRequestSchema,
+  lbClaimRequestSchema,
+  lbStateRequestSchema,
+} from "../../schemas/comparison";
 
 export const id = z.string().uuid();
 export const label = z.string().trim().min(1).max(80);
@@ -70,6 +75,9 @@ export const packetBody = z.discriminatedUnion("action", [
     confirmed: z.boolean(),
     revoked: z.boolean(),
   }),
+  aggregateRequestSchema,
+  lbClaimRequestSchema,
+  lbStateRequestSchema,
 ]);
 export type PeerBody = z.infer<typeof packetBody>;
 export const signedEnvelope = z.strictObject({
