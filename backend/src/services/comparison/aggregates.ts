@@ -40,9 +40,13 @@ export async function buildLeaderboardSnapshot(
   const allowedKeys = new Set<string>(allowed.map((m) => m.key));
   const values: Partial<Record<MetricKey, number | null>> = {};
   const partial: MetricKey[] = [];
-  for (const domain of domains) {
-    if (!allowed.some((m) => m.domain === domain)) continue;
-    const figures = await DOMAIN_AGGREGATES[domain](userId, year);
+  // Independent loaders, one per shared domain: read them side by side, merge in domain order.
+  const loaded = await Promise.all(
+    domains
+      .filter((domain) => allowed.some((m) => m.domain === domain))
+      .map((domain) => DOMAIN_AGGREGATES[domain](userId, year))
+  );
+  for (const figures of loaded) {
     for (const [key, value] of Object.entries(figures.values) as Array<[MetricKey, number | null]>)
       if (allowedKeys.has(key)) values[key] = value;
     partial.push(...figures.partial.filter((k) => allowedKeys.has(k)));

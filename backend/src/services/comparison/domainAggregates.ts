@@ -10,7 +10,6 @@ import type { MetricKey } from "../../shared/comparisonMetrics";
 import { countableFerryWhere, ferryYear } from "../../shared/ferryCounting";
 import {
   classifyPlace,
-  classifyVisit,
   countCompletedVisits,
   visitCountsForYear,
 } from "../../shared/placeCounting";
@@ -54,9 +53,9 @@ const flight: Loader = async (userId, year) => {
   const { stats } = await computeSummary(where, settings?.baseCurrency ?? "EUR");
   return {
     values: {
-      flights: stats.totalFlights ?? null,
-      flightKm: stats.totalDistance ?? null,
-      flightMinutes: stats.totalFlightTime ?? null,
+      flights: stats.totalFlights,
+      flightKm: stats.totalDistance,
+      flightMinutes: stats.totalFlightTime,
     },
     partial: [],
   };
@@ -105,7 +104,8 @@ const bus: Loader = async (userId, year) => {
 const rental: Loader = async (userId, year) => {
   const s = await rentalStatsFor(userId, year);
   return {
-    values: { rentals: s.rentals, rentalDays: s.days, rentalKm: s.km.total },
+    // No rental is a known 0 km; `km.total` is null then only because nothing covers it.
+    values: { rentals: s.rentals, rentalDays: s.days, rentalKm: s.rentals === 0 ? 0 : s.km.total },
     partial: s.km.total !== null && s.km.covered < s.km.of ? ["rentalKm"] : [],
   };
 };
@@ -146,8 +146,14 @@ const roadtrip: Loader = async (userId, year) => {
   };
 };
 
+/**
+ * Places as the places page counts them (utils/placeStats.ts, evidence/metricEvidencePlaces.ts):
+ * only a place `classifyPlace` calls visited contributes at all — a wishlist entry with a dated
+ * visit attached is still not a place been to — and then its happened visits, or in a year
+ * its visits that count for that year.
+ */
 const poi: Loader = async (userId, year) => {
-  const places = await prisma.place.findMany({
+  const rows = await prisma.place.findMany({
     where: { userId },
     select: {
       visited: true,
@@ -155,23 +161,17 @@ const poi: Loader = async (userId, year) => {
     },
   });
   const at = now();
+  const visited = rows.filter((p) => classifyPlace(p) === "visited");
   if (year === null) {
-    const visited = places.filter(
-      (p) =>
-        classifyPlace({
-          visited: p.visited,
-          plannedVisitCount: p.visits.filter((v) => classifyVisit(v, at) === "planned").length,
-        }) === "visited"
-    );
     return {
       values: {
         places: visited.length,
-        placeVisits: places.reduce((n, p) => n + countCompletedVisits(p.visits, at), 0),
+        placeVisits: visited.reduce((n, p) => n + countCompletedVisits(p.visits, at), 0),
       },
       partial: [],
     };
   }
-  const perPlace = places.map(
+  const perPlace = visited.map(
     (p) => p.visits.filter((v) => visitCountsForYear(v, year, at)).length
   );
   return {
