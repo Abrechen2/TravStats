@@ -121,7 +121,10 @@ export default function TripPeopleSection({
   }
 
   const badges = (p: TripPerson): JSX.Element | undefined => {
-    const pending = p.consent === "pending" || p.receivesChanges === false;
+    // A member whose changes already arrive (consent accepted the other way)
+    // waits on nothing, even while the reader's own request to them is open.
+    const pending =
+      p.receivesChanges === false || (p.consent === "pending" && p.receivesChanges !== true);
     if (!p.account && !p.member && !pending) return undefined;
     return (
       <>

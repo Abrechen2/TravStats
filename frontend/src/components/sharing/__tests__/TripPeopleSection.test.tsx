@@ -112,6 +112,30 @@ describe("TripPeopleSection", () => {
     expect(screen.getByText("sharing:people.noChangesHint")).toBeTruthy();
   });
 
+  it("shows no Zustimmung offen for a member whose changes already arrive", async () => {
+    // Erik accepted in the other direction; the reader's own request to him is
+    // still open — but changes travel, so nothing is waiting on anyone.
+    api.tripSharing.mockResolvedValue({
+      ...view,
+      people: [
+        row({
+          key: "u:u-erik",
+          companionId: null,
+          name: "Erik",
+          account: account("erik"),
+          member: true,
+          consent: "pending",
+          receivesChanges: true,
+          shareBlockedBy: "alreadyMember",
+        }),
+      ],
+    });
+    renderSection();
+    await screen.findByText("Erik");
+    expect(screen.getByText("sharing:people.badges.member")).toBeTruthy();
+    expect(screen.queryByText("sharing:people.badges.consentPending")).toBeNull();
+  });
+
   it("opens the share dialog for a row instead of sharing on click", async () => {
     renderSection();
     await userEvent.click(
