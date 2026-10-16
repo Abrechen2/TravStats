@@ -18,6 +18,7 @@ import { contains } from "../marketVisits/geometry";
 import type { CatalogStore } from "../marketVisits/catalog";
 import { Prisma } from "../../../prisma";
 import { placesEnabledWhere, requirePlacesEnabled } from "./availability";
+import { publicMarketCoverage } from "./publicCoverage";
 
 const DAY = 86_400_000;
 export async function ownConnection(userId: string) {
@@ -362,7 +363,7 @@ export async function scanStays(
             ? "partial"
             : "succeeded",
         marketResult: markets
-          ? (markets.coverage as unknown as Prisma.InputJsonValue)
+          ? (publicMarketCoverage(markets.coverage) as unknown as Prisma.InputJsonValue)
           : Prisma.DbNull,
         error: null,
         windowStart: start,
@@ -376,7 +377,7 @@ export async function scanStays(
       created,
       points: points.length,
       truncated: result.truncated,
-      ...(markets ? { markets: markets.coverage } : {}),
+      ...(markets ? { markets: publicMarketCoverage(markets.coverage) } : {}),
     };
   } catch (error) {
     const code =

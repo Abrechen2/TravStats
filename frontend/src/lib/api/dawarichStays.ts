@@ -11,15 +11,14 @@ export interface StayScanState {
     status: "complete" | "partial" | "cancelled";
     tiles: number;
     totalTiles: number;
-    cachedTiles: number;
-    fetchedTiles: number;
-    staleTiles: number;
     failedTiles: number;
     missingAreaCount: number;
     invalidAreaCount: number;
     alreadyRecordedCount: number;
     createdCount: number;
     limited: boolean;
+    /** The cache/fetch split is never sent: the tile cache is shared by every account. */
+    staleMapData: boolean;
   } | null;
   placesEnabled?: boolean;
   pausedReason?: "disabled" | "placesDisabled" | "connectionMissing" | null;

@@ -160,3 +160,52 @@ describe("GET /dawarich-stays/choices", () => {
     expect(r.body.data.places.map((p: { name: string }) => p.name)).toEqual(["Place 2000"]);
   });
 });
+
+describe("market coverage privacy", () => {
+  // The OSM tile cache is instance-wide: a cache hit on a tile this account
+  // never scanned says another account was there.
+  it("does not publish how many tiles came from the shared cache", async () => {
+    await prisma.dawarichStayScan.update({
+      where: { userId },
+      data: {
+        marketResult: {
+          scope: "markets",
+          status: "partial",
+          tiles: 3,
+          totalTiles: 4,
+          cachedTiles: 2,
+          fetchedTiles: 1,
+          staleTiles: 1,
+          failedTiles: 1,
+          missingAreaCount: 0,
+          invalidAreaCount: 0,
+          limited: false,
+          alreadyRecordedCount: 0,
+          createdCount: 1,
+        },
+      },
+    });
+    const r = await api().get("/api/v1/dawarich-stays/settings").set("Cookie", cookie);
+    expect(r.status).toBe(200);
+    expect(r.body.data.marketResult).toEqual({
+      scope: "markets",
+      status: "partial",
+      tiles: 3,
+      totalTiles: 4,
+      failedTiles: 1,
+      missingAreaCount: 0,
+      invalidAreaCount: 0,
+      limited: false,
+      alreadyRecordedCount: 0,
+      createdCount: 1,
+      staleMapData: true,
+    });
+    const patched = await api()
+      .patch("/api/v1/dawarich-stays/settings")
+      .set("Cookie", cookie)
+      .send({ enabled: false });
+    expect(patched.status).toBe(200);
+    expect(patched.body.data.marketResult).not.toHaveProperty("cachedTiles");
+    expect(JSON.stringify(patched.body)).not.toContain("fetchedTiles");
+  });
+});

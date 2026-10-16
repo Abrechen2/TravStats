@@ -674,7 +674,7 @@
     "markets": {
       "enable": "Marktbesuche automatisch vorschlagen",
       "privacy": "Für die Flächenerkennung werden ungefähre Regionen (etwa 5-km-Raster) bei OpenStreetMap/Overpass abgefragt. Deine Positionsfolgen, Zeiten und Punkt-IDs werden nicht übertragen. Besuche werden erst nach deiner Bestätigung eingetragen.",
-      "coverage": "Geprüfte Regionen: {{tiles}} von {{total}} · {{cached}} aus gespeicherten Kartendaten",
+      "coverage": "Geprüfte Regionen: {{tiles}} von {{total}}",
       "missing": "Bei {{count}} Karteneinträgen fehlt eine nutzbare Marktfläche. Das bedeutet nicht, dass du dort nicht warst.",
       "stale": "Ein Teil der Kartendaten ist älter. Bitte prüfe die Zuordnung besonders sorgfältig.",
       "counts": "Neue Markt-Vorschläge: {{created}} · Bereits erfasst: {{known}}",

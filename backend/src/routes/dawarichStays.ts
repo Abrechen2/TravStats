@@ -10,6 +10,7 @@ import { ownConnection, reserveScan, scanStays } from "../services/dawarich/stay
 import { acceptStay, rejectStay } from "../services/dawarich/stays/review";
 import { stayReviewSchema } from "../schemas/dawarichStays";
 import { withStayTimes, withScanTimes } from "../services/dawarich/stays/times";
+import { publicMarketCoverage } from "../services/dawarich/stays/publicCoverage";
 import { startJob } from "../services/jobs/jobRegistry";
 
 import {
@@ -64,7 +65,7 @@ router.get("/settings", async (req: AuthRequest, res, next) => {
         connected,
         marketEnabled: state?.marketEnabled ?? false,
         venueEnabled: state?.venueEnabled ?? false,
-        marketResult: state?.marketResult ?? null,
+        marketResult: publicMarketCoverage(state?.marketResult),
         result:
           state?.result === "running" && pausedReason
             ? "paused"
