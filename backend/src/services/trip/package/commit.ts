@@ -28,8 +28,7 @@ import { createFlightSchema } from "../../../schemas/flight";
 import { createStaySchema } from "../../../schemas/lodging";
 import { TRIP_COLORS } from "../../../schemas/trip";
 import { deriveCruiseStatus } from "../../../shared/statusDerivation";
-import { dayAnchorNow } from "../../../shared/time/clock";
-import { profileZoneOf } from "../../../shared/time/profileZone";
+import { dayAnchorNowFor } from "../../../shared/time/profileZone";
 import logger from "../../../utils/logger";
 import { checkAndUpdateAchievements } from "../../../utils/achievements";
 import { getCachedAirports } from "../../airportCache";
@@ -220,7 +219,7 @@ async function cruiseRow(
       startDate,
       endDate,
       current: "scheduled",
-      now: dayAnchorNow((await profileZoneOf(userId)).zone),
+      now: await dayAnchorNowFor(userId),
     }),
     ...(await cruiseDayColumns({ startDate, endDate, departurePortId: null, arrivalPortId: null })),
   };

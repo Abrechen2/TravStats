@@ -1,5 +1,6 @@
 import type { DbTransaction } from "../../db";
 import { ADAPTERS, type SharedRow } from "./adapters";
+import { DERIVE } from "./deriveCopy";
 import { heldKeys, keyedDelegate, keyedIdsOnTrip } from "./keyOps";
 import type { ShareEntity } from "./shareTypes";
 
@@ -37,6 +38,7 @@ export async function copyInto(
     return { id: own.id, joined: true };
   }
   const id = await adapter.createCopy(c, source, recipient.userId, recipient.tripId);
+  await DERIVE[entity](c, id, recipient.userId);
   return { id, joined: false };
 }
 

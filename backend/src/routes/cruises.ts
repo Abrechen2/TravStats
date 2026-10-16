@@ -27,8 +27,7 @@ import { refreshFxOnEdit } from "../services/fx/refreshOnEdit";
 import logger from "../utils/logger";
 import { cruiseDayColumns, stopColumnsFromRequest } from "../services/timeModel/cruiseColumns";
 import { keepStoredDay } from "../services/timeModel/dayColumns";
-import { dayAnchorNow } from "../shared/time/clock";
-import { profileZoneOf } from "../shared/time/profileZone";
+import { dayAnchorNowFor } from "../shared/time/profileZone";
 import { withCruiseTimes } from "../services/cruise/timesDto";
 import { propagateDelete, propagateWrite, shareSnapshot } from "../services/sharing/propagate";
 import { carryOverAllAboard } from "../services/cruise/stopCarryOver";
@@ -379,7 +378,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
         startDate: finalStartDate,
         endDate: finalEndDate,
         current: requestedStatus ?? existing.status,
-        now: dayAnchorNow((await profileZoneOf(userId)).zone),
+        now: await dayAnchorNowFor(userId),
       });
     }
 

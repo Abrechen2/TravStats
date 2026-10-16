@@ -10,6 +10,7 @@ import { assignShareKeys } from "./keyOps";
 import { SHARE_ENTITIES, SHARE_TYPES, emptyCounts, type CopyCounts } from "./shareTypes";
 import { acceptedWith } from "./members";
 import { tripFacts } from "./facts";
+import { restatusTrips } from "../trip/restatusTrips";
 import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
 
 /**
@@ -132,6 +133,7 @@ export async function shareTrip(
         );
         created[SHARE_TYPES[entity].countKey] = copied.filter((e) => !e.joined).length;
       }
+      await restatusTrips([target.id], tx);
 
       const anything = target.created || Object.values(created).some((n) => n > 0);
       if (anything) {

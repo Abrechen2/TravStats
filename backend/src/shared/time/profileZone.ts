@@ -1,5 +1,6 @@
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
+import { dayAnchorNow } from "./clock";
 import { isValidZone } from "./zonedParts";
 
 /**
@@ -52,4 +53,13 @@ export async function profileZoneOf(userId: string): Promise<ProfileZone> {
     });
   }
   return result;
+}
+
+/**
+ * "Now" against a DAY column, on `userId`'s own calendar (ADR 0002 D4) � the
+ * one home of what `stayWrites.ts` (`stayStatusNow`) and `createCruise.ts`
+ * each wrote inline, and what a shared copy is derived with for its recipient.
+ */
+export async function dayAnchorNowFor(userId: string): Promise<Date> {
+  return dayAnchorNow((await profileZoneOf(userId)).zone);
 }

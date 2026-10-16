@@ -28,8 +28,7 @@ import { assertReferencesOwned } from "../../utils/ownedReferences";
 import { resolveEffectiveStayDates } from "./stayPatchMerge";
 import { legacyDay, stayTimeColumns, zoneOfLodging } from "../timeModel/stayColumns";
 import type { LocalTimeOrigin } from "../../shared/time/instant";
-import { dayAnchorNow } from "../../shared/time/clock";
-import { profileZoneOf } from "../../shared/time/profileZone";
+import { dayAnchorNowFor } from "../../shared/time/profileZone";
 import { getBaseCurrency } from "../fx/snapshot";
 import { resolveDeadlineColumns } from "../deadlines/bookingDeadlines";
 import {
@@ -53,15 +52,6 @@ export interface StayProvenance {
   origin?: LocalTimeOrigin;
   /** The write came with a personal access token (the Companion) — see `resolveInput.ts`. */
   viaToken?: boolean;
-}
-
-/**
- * "Now" for a stay's status: the user's profile-zone wall clock against the
- * UTC-midnight day anchors, so a stay completes when check-out day begins
- * where the USER is, not in Greenwich (ADR 0002 D4).
- */
-async function stayStatusNow(userId: string): Promise<Date> {
-  return dayAnchorNow((await profileZoneOf(userId)).zone);
 }
 
 export async function createStayRecord(
@@ -164,7 +154,7 @@ export async function buildStayCreateData(
       checkIn: input.checkIn ? new Date(input.checkIn) : null,
       checkOut: input.checkOut ? new Date(input.checkOut) : null,
       current: input.status,
-      now: await stayStatusNow(userId),
+      now: await dayAnchorNowFor(userId),
     }),
     // Likewise derived, not accepted: the overall score follows the three
     // components wherever a stay is written — form, CSV, e-mail/PDF — so
@@ -378,7 +368,7 @@ export async function updateStayRecord(
         checkIn: effectiveCheckIn,
         checkOut: effectiveCheckOut,
         current: input.status ?? stay.status,
-        now: await stayStatusNow(userId),
+        now: await dayAnchorNowFor(userId),
       }),
       // Derived from the EFFECTIVE (merged) ratings for the same reason: a
       // PATCH sending one component must score the row that will actually

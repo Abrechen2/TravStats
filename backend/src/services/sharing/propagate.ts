@@ -5,7 +5,8 @@ import type { Prisma } from "../../prisma";
 import { ADAPTERS, type EntityAdapter, type ShareEntity, type SharedRow } from "./adapters";
 import { copyInto } from "./copyInto";
 import { changedKeys, jsonSubset, sameFact } from "./factValues";
-import { recomputeTripStatus } from "../tripStatusService";
+import { restatusTrips } from "../trip/restatusTrips";
+import { DERIVE } from "./deriveCopy";
 import { receivingMembers, type MemberTrip } from "./members";
 import { asPropagation, isPropagating } from "./propagationGuard";
 
@@ -167,7 +168,7 @@ async function createCopies(
       userId: member.userId,
       tripId: member.id,
     });
-    await recomputeTripStatus(member.id, c);
+    await restatusTrips([member.id], c);
     await recordEntryNotice(c, {
       recipient: member,
       groupId,
@@ -222,6 +223,7 @@ async function updateCopies(
     const keys = changed.filter((k) => !sameFact(copy.facts[k], row.facts[k]));
     if (keys.length === 0) continue;
     await adapter.apply(c, copy, row.facts, keys, before.facts);
+    await DERIVE[adapter.entity](c, copy.id, member.userId);
     // What the copy holds NOW, not what the sharer sent: a house written field
     // by field, a cruise that kept a member's own call, a status re-derived
     // from the dates all differ from the sharer's values, and an undo compares
@@ -229,7 +231,7 @@ async function updateCopies(
     const [applied] = await adapter.load(c, [copy.id]);
     // The trip's status caches its entries' dates; the route that made the
     // change re-derives only the writer's own trip.
-    await recomputeTripStatus(member.id, c);
+    await restatusTrips([member.id], c);
     await recordEntryNotice(c, {
       recipient: member,
       groupId,
