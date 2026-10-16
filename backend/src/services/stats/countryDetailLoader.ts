@@ -23,7 +23,12 @@ import { buildPassport } from "./passport";
 import { countryThresholdFor } from "../countryThresholdResolver";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { buildCountryDetail, type CountryDetail } from "./countryDetail";
-import { loadAirportCountries, loadHomeIatas, passportAirportCodes } from "./passportLoader";
+import {
+  loadAirportCountries,
+  loadHomeIatas,
+  passportAirportCodes,
+  placeVisitAt,
+} from "./passportLoader";
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
 import { classifyVisit } from "../../shared/placeCounting";
 import { loadRoadtripStations } from "./roadtripEvidenceLoader";
@@ -221,7 +226,7 @@ export async function loadCountryDetailInputs(userId: string): Promise<CountryDe
             name: place.name,
             isoCountryCode: place.isoCountryCode,
             countryVisitKind: place.countryVisitKind,
-            at: v.visitedAt,
+            at: placeVisitAt(v),
           }))
         : [
             {

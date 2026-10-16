@@ -33,6 +33,8 @@ import {
 import { buildPassport } from "./passport";
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
 import { classifyVisit } from "../../shared/placeCounting";
+import { localDay } from "../../shared/time/instant";
+import { isValidZone } from "../../shared/time/zonedParts";
 import { loadRoadtripStations } from "./roadtripEvidenceLoader";
 import { loadRailEnds } from "./railEvidenceLoader";
 import { loadBusEnds } from "./busEvidence";
@@ -148,6 +150,24 @@ export interface PassportSources {
   roadtrip?: boolean;
   place?: boolean;
   track?: boolean;
+}
+
+/**
+ * A place visit's evidence day, on the PLACE's calendar (ADR 0002 D4) and as
+ * UTC midnight, the carrier the fold reads its day and year from. `visitedAt`
+ * is a mixed legacy column that may hold the instant itself, so a New Year's
+ * morning in Tokyo was filed under the old year; it is only the fallback for
+ * a visit the backfill has not reached.
+ */
+export function placeVisitAt(v: {
+  visitedAt: Date | null;
+  visitedAtUtc: Date | null;
+  visitedZone: string | null;
+}): Date | null {
+  if (v.visitedAtUtc && v.visitedZone && isValidZone(v.visitedZone)) {
+    return new Date(`${localDay(v.visitedAtUtc, v.visitedZone)}T00:00:00.000Z`);
+  }
+  return v.visitedAt;
 }
 
 export async function loadPassport(
@@ -349,7 +369,7 @@ export async function loadPassport(
         ? happened.map((v) => ({
             isoCountryCode: place.isoCountryCode,
             countryVisitKind: place.countryVisitKind,
-            at: v.visitedAt,
+            at: placeVisitAt(v),
           }))
         : [
             {
