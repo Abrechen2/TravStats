@@ -48,13 +48,13 @@ const newUser = async (prefix: string) =>
       data: { username: `${prefix}-${randomUUID().slice(0, 8)}`, passwordHash: "test-only" },
     })
   ).id;
-const claimed = (channel = randomUUID(), username = "anna") => ({
+const claimed = (channel: string = randomUUID(), username = "anna") => ({
   accepted: true,
   channel,
   username,
   displayName: `${username} A`,
 });
-async function remoteFor(owner: string, channel = randomUUID()) {
+async function remoteFor(owner: string, channel: string = randomUUID()) {
   return prisma.leaderboardRemote.create({
     data: {
       userId: owner,
