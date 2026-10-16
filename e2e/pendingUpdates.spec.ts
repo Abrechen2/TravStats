@@ -62,7 +62,9 @@ test.describe("Pending updates page", () => {
     // Since the round-4 inbox (2db14145) the section is a TAB, not a heading:
     // the first CI run on the merged main (2026-09-19, f1e1085c) failed here
     // three times over with "element(s) not found" while the tab was on screen.
-    await expect(page.getByRole("tab", { name: /Flug-Updates|Flight updates/i })).toBeVisible({
+    // Since the consolidated inbox (2026-10-16) the kinds are filter buttons of
+    // one workspace (aria-pressed), no longer tabs.
+    await expect(page.getByRole("button", { name: /Flug-Updates|Flight updates/i })).toBeVisible({
       timeout: 15_000,
     });
   });

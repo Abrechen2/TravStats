@@ -296,7 +296,7 @@
     "excluded": "userId shareKey"
   },
   "FerryJourney": {
-    "details": "roadtripLegId id operator vesselName vehicleType vehicleLengthM vehicleWidthM vehicleHeightM passengerCount depStationName depAddress depLat depLon depCountry depTimezone arrStationName arrAddress arrLat arrLon arrCountry arrTimezone departureTime arrivalTime depPrecision arrPrecision distanceKm distanceSource geometry geometrySource actualDepartureTime actualArrivalTime fareClass status delayMinutes tripId bookingId externalRef importBatchId createdAt updatedAt",
+    "details": "roadtripLegId id operator vesselName vesselMmsi vehicleType vehicleLengthM vehicleWidthM vehicleHeightM passengerCount depStationName depAddress depLat depLon depCountry depTimezone arrStationName arrAddress arrLat arrLon arrCountry arrTimezone departureTime arrivalTime depPrecision arrPrecision distanceKm distanceSource geometry geometrySource actualDepartureTime actualArrivalTime fareClass status delayMinutes tripId bookingId externalRef importBatchId createdAt updatedAt",
     "costs": "price currency priceBase fxRate fxRateDate fxBaseCurrency fxSource",
     "personal": "cabinType seat notes tags companions vehicleRegistration",
     "photos": "",

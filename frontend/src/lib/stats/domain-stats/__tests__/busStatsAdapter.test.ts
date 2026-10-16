@@ -68,9 +68,11 @@ describe("adaptBus", () => {
     expect(agg.totalEvents).toBe(2);
     expect(agg.perDomainEvents).toMatchObject({ bus: 1, rail: 1 });
     expect(agg.activeDays).toBe(1);
-    expect(agg.countriesCount).toBe(2);
+    // Countries come from the passport's visited index (forgejo#299), not from
+    // the rides; without that index the figure abstains instead of guessing.
+    expect(agg.countriesCount).toBeNull();
     // The chip off takes the bus out of every figure.
     const off = aggregate({ bus, rail }, { bus: false, rail: true }, 2025);
-    expect(off).toMatchObject({ totalEvents: 1, countriesCount: 1, activeDays: 1 });
+    expect(off).toMatchObject({ totalEvents: 1, countriesCount: null, activeDays: 1 });
   });
 });

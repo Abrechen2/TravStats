@@ -866,7 +866,8 @@ describe("LodgingDetailPage", () => {
       expect(screen.getByLabelText(/^lodging:field\.checkOut\b/)).toHaveValue("");
       expect(screen.getByLabelText("lodging:field.room")).toHaveValue("");
       expect(screen.getByLabelText("lodging:field.bookingReference")).toHaveValue("");
-      expect(screen.getByLabelText("lodging:field.totalPrice")).toHaveValue(null);
+      // The price is a text field since decimal-comma input (forgejo#295): empty, not null.
+      expect(screen.getByLabelText("lodging:field.totalPrice")).toHaveValue("");
       // A create form has nothing to delete, and the earlier stay is untouched.
       expect(screen.queryByTestId("stay-editor-delete")).not.toBeInTheDocument();
       expect(screen.getByTestId("stay-card-stay-1")).toBeInTheDocument();
