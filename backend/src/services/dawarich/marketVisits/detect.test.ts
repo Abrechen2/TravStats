@@ -418,3 +418,68 @@ it("recognizes a translated existing market by public identity, but not an unrel
     }).status
   ).toBe("review");
 });
+
+describe("large venue boundaries", () => {
+  // A park or fairground mapped as many parts of one Wikidata entity is merged
+  // into one area; spreading its vertices into Math.max threw a RangeError.
+  const dense = (perEdge: number): Ring => {
+    const corners: Array<[number, number]> = [
+      [126, 33],
+      [126.004, 33],
+      [126.004, 33.004],
+      [126, 33.004],
+    ];
+    const out: Array<[number, number]> = [];
+    for (let c = 0; c < 4; c++) {
+      const [ax, ay] = corners[c],
+        [bx, by] = corners[(c + 1) % 4];
+      for (let k = 0; k < perEdge; k++)
+        out.push([ax + ((bx - ax) * k) / perEdge, ay + ((by - ay) * k) / perEdge]);
+    }
+    out.push([126, 33]);
+    return out;
+  };
+  it("recognizes a visit in a venue merged from many large parts of one identity", () => {
+    // Each part passes the 20 000-vertex check; the merge by shared identity
+    // happens after it, so the merged area is half a million vertices.
+    const parts: MarketArea[] = Array.from({ length: 25 }, (_, i) => ({
+      ...market,
+      id: `part-${i}`,
+      entityRef: "wikidata:Q42",
+      sourceUrl: `https://www.openstreetmap.org/way/${i + 1}`,
+      geometry: { type: "Polygon", coordinates: [dense(4999)] },
+    }));
+    const points = [0, 2, 4, 6, 8, 10].map((m) => point(m));
+    expect(detectMarketVisits(points, parts)).toHaveLength(1);
+  });
+  it("finds a venue visit in the middle of a long day elsewhere, and none for far areas", () => {
+    const far = (i: number): MarketArea => ({
+      ...market,
+      id: `far-${i}`,
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [10 + i * 0.01, 50],
+            [10.004 + i * 0.01, 50],
+            [10.004 + i * 0.01, 50.004],
+            [10 + i * 0.01, 50.004],
+            [10 + i * 0.01, 50],
+          ],
+        ],
+      },
+    });
+    const before = Array.from({ length: 50 }, (_, i) =>
+      point(-200 + i, { id: 10_000 + i, latitude: 37.5, longitude: 127 })
+    );
+    const after = Array.from({ length: 50 }, (_, i) =>
+      point(100 + i, { id: 20_000 + i, latitude: 37.5, longitude: 127 })
+    );
+    const result = detectMarketVisits(
+      [...before, ...walk(), ...after],
+      [market, ...Array.from({ length: 200 }, (_, i) => far(i))]
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].pointIds).toEqual([1, 3, 5, 7, 9, 11]);
+  });
+});

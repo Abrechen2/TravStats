@@ -148,9 +148,6 @@ export default function PendingUpdatesPage(): JSX.Element {
   const [workspaceVisited, setWorkspaceVisited] = useState(
     !requestedTab || requestedTab === "overview"
   );
-  useEffect(() => {
-    if (tab === "overview") setWorkspaceVisited(true);
-  }, [tab]);
   const [openQuestions, setOpenQuestions] = useState<number | null>(null);
   const reportOpen = useCallback((n: number) => setOpenQuestions(n), []);
   const [pendingJourneys, setPendingJourneys] = useState<number | null>(null);
@@ -159,6 +156,20 @@ export default function PendingUpdatesPage(): JSX.Element {
   const reportTripSuggestions = useCallback((n: number) => setTripSuggestions(n), []);
   const [sharingOpen, setSharingOpen] = useState<number | null>(null);
   const reportSharing = useCallback((n: number) => setSharingOpen(n), []);
+  // The status filter the shown list was loaded with; null until one has been.
+  const [loadedFilter, setLoadedFilter] = useState<string | null>(null);
+  useEffect(() => {
+    if (tab !== "overview") return;
+    setWorkspaceVisited(true);
+    // The overview unmounts the tabs that report these counts, so they would
+    // freeze at their last value while the workspace resolves the same items.
+    // Unknown again until the tab is opened; a label never shows a stale number.
+    setOpenQuestions(null);
+    setPendingJourneys(null);
+    setTripSuggestions(null);
+    setSharingOpen(null);
+    setLoadedFilter(null);
+  }, [tab]);
 
   useEffect(() => {
     if (tab !== "overview") {
@@ -176,6 +187,7 @@ export default function PendingUpdatesPage(): JSX.Element {
       }
       const data = await pendingUpdatesApi.getAll(filters);
       setUpdates(data.updates || []);
+      setLoadedFilter(statusFilter);
     } catch (error) {
       logger.error("Failed to load pending updates:", error);
       addToast("error", t("pendingUpdates:errors.loadFailed"));
@@ -266,9 +278,11 @@ export default function PendingUpdatesPage(): JSX.Element {
     {
       key: "updates",
       label: t("dataQuality:inbox.flightUpdates.title"),
-      count: statusFilter === "pending" ? pendingCount : null,
+      // Only a loaded pending list is a count. On the overview the list is
+      // never loaded, and the empty initial one read as "0".
+      count: statusFilter === "pending" && loadedFilter === "pending" ? pendingCount : null,
     },
-    // Counted the same way as the two above: the tab reports what it loaded,
+    // Counted the same way as the tabs above: the tab reports what it loaded,
     // and `null` until it has, so the label never claims a zero it has not
     // measured.
     ...(photoJourneysVisible
@@ -343,7 +357,8 @@ export default function PendingUpdatesPage(): JSX.Element {
           <>
             {/* Questions about the records first: nobody else will answer them,
             while a flight update expires on its own. The section stays mounted
-            so its open count keeps the tab label current. */}
+            across these tabs so its open count keeps the tab label current; the
+            overview unmounts it, and the count is cleared there. */}
             <div hidden={tab !== "review"}>
               <DataQualityFlagsSection onOpenCount={reportOpen} />
             </div>

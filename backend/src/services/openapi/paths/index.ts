@@ -84,3 +84,4 @@ import "./dawarichStays";
 import "./travplan";
 
 import "./geoServer";
+import "./mapConfig";

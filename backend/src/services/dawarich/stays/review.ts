@@ -192,16 +192,36 @@ async function completeAcceptedPlace(placeId: string): Promise<void> {
 }
 
 export async function rejectStay(userId: string, id: string) {
-  const result = await prisma.dawarichStay.updateMany({
-    where: { id, userId, status: "pending" },
-    data: { status: "rejected", resolvedAt: new Date() },
+  await prisma.$transaction(async (tx) => {
+    const result = await tx.dawarichStay.updateMany({
+      where: { id, userId, status: "pending" },
+      data: { status: "rejected", resolvedAt: new Date() },
+    });
+    if (!result.count) {
+      const row = await tx.dawarichStay.findFirst({ where: { id, userId } });
+      if (!row) throw new AppError("Finding not found", 404);
+      if (row.status !== "rejected")
+        throw new AppError("Finding already resolved", 409, "DAWARICH_ALREADY_RESOLVED");
+      return;
+    }
+    // A venue suggestion replaced the plain stays it grew out of. Rejecting the
+    // venue used to leave them `superseded` for good — the stays vanished from
+    // the inbox and no later scan offered them again.
+    const row = await tx.dawarichStay.findFirst({
+      where: { id, userId },
+      select: { evidence: true },
+    });
+    const replaced = (row?.evidence as { supersededFindingIds?: unknown } | null)
+      ?.supersededFindingIds;
+    const ids = Array.isArray(replaced)
+      ? replaced.filter((v): v is string => typeof v === "string")
+      : [];
+    if (ids.length)
+      await tx.dawarichStay.updateMany({
+        where: { userId, id: { in: ids }, status: "superseded" },
+        data: { status: "pending", resolvedAt: null },
+      });
   });
-  if (!result.count) {
-    const row = await prisma.dawarichStay.findFirst({ where: { id, userId } });
-    if (!row) throw new AppError("Finding not found", 404);
-    if (row.status !== "rejected")
-      throw new AppError("Finding already resolved", 409, "DAWARICH_ALREADY_RESOLVED");
-  }
 }
 
 /** Retry a serialization collision; a simultaneous acceptance then reads the same visit. */

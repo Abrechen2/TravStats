@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import type { DawarichPoint } from "../dawarichClient";
 import { meters } from "../stays/detect";
-import { contains, distanceToArea, polygons, type MarketArea } from "./geometry";
+import { contains, distanceToArea, type MarketArea } from "./geometry";
+import { boundsOf, pointGrid } from "./pointGrid";
 
 import { venueMinimumMinutes } from "./venueTypes";
 import { prepareMarketAreas } from "./areas";
@@ -72,18 +73,25 @@ export function detectMarketVisits(
   }
   const points = [...byTime.values()].sort((a, b) => a.timestampMs - b.timestampMs);
   const result: MarketVisit[] = [];
+  const grid = pointGrid(points);
   // Only explicit identity/parent links group parts; geometric nesting stays separate.
   for (const area of prepared) {
     const minimumMinutes = venueMinimumMinutes(area.venueType ?? "market");
-    const vertices = polygons(area).flat(2);
+    const box = boundsOf(area);
+    if (!box) continue;
     const latitudePadding = MARKET_RULES.boundaryToleranceMeters / 111_320;
-    const furthestLatitude = Math.max(...vertices.map((p) => Math.abs(p[1])));
+    const furthestLatitude = Math.max(Math.abs(box.minLat), Math.abs(box.maxLat));
     const longitudePadding =
       latitudePadding / Math.max(0.000001, Math.cos((furthestLatitude * Math.PI) / 180));
-    const minLon = Math.min(...vertices.map((p) => p[0])) - longitudePadding;
-    const maxLon = Math.max(...vertices.map((p) => p[0])) + longitudePadding;
-    const minLat = Math.min(...vertices.map((p) => p[1])) - latitudePadding;
-    const maxLat = Math.max(...vertices.map((p) => p[1])) + latitudePadding;
+    const minLon = box.minLon - longitudePadding;
+    const maxLon = box.maxLon + longitudePadding;
+    const minLat = box.minLat - latitudePadding;
+    const maxLat = box.maxLat + latitudePadding;
+    // Every area used to walk the whole timeline. Only the stretch between the
+    // first and last point inside its box can form a visit: before it the group
+    // is empty, after it nothing can rejoin the group.
+    const span = grid.span(minLat, maxLat, minLon, maxLon);
+    if (!span) continue;
     let group: Hit[] = [];
     let outsideSince: number | null = null;
     let excursion = false;
@@ -136,7 +144,7 @@ export function detectMarketVisits(
       outsideSince = null;
       excursion = false;
     };
-    for (let i = 0; i < points.length; i++) {
+    for (let i = span.first; i <= span.last; i++) {
       const p = points[i];
       if (
         group.length &&
