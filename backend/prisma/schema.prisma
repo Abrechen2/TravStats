@@ -1751,6 +1751,7 @@ model Trip {
   immichAlbums     TripImmichAlbum[]
   companionLinks   TripCompanion[]
   photoJourneys    PhotoJourney[]
+  dawarichStays    DawarichStay[]
   publicShareLinks PublicShareLink[]
 
   documents Document[]
@@ -3066,6 +3067,7 @@ model Place {
   roadtripStations   TripStop[]
   listEntries        PlaceListEntry[]
   photoJourneys      PhotoJourney[]
+  dawarichStays      DawarichStay[]
   /// References this place answers to besides `externalRef` — what a merge
   /// left of the place folded into it (forgejo#232).
   externalRefAliases PlaceExternalRef[]
@@ -4673,9 +4675,15 @@ model DawarichStay {
   resolvedAt DateTime? @map("resolved_at")
   user User @relation(fields:[userId], references:[id], onDelete:Cascade)
   visit PlaceVisit? @relation(fields:[visitId], references:[id], onDelete:SetNull)
+  /// A finding outlives the place or trip it named: it keeps its evidence and
+  /// loses only the link (a merge repoints it first, `placeMerge.ts`).
+  place Place? @relation(fields:[placeId], references:[id], onDelete:SetNull)
+  trip Trip? @relation(fields:[tripId], references:[id], onDelete:SetNull)
   @@unique([userId, fingerprint])
   @@index([userId, status, startAt])
   @@index([visitId])
+  @@index([placeId])
+  @@index([tripId])
   @@map("dawarich_stays")
 }
 
