@@ -1,5 +1,7 @@
 import enComparison from "./resources/en/comparison.json";
 import deComparison from "./resources/de/comparison.json";
+import enEncryptedShare from "./resources/en/encryptedShare.json";
+import deEncryptedShare from "./resources/de/encryptedShare.json";
 import enFerry from "./resources/en/ferry.json";
 import deFerry from "./resources/de/ferry.json";
 import i18n from "i18next";
@@ -159,6 +161,7 @@ const resources = {
     loyalty: enLoyalty,
     notes: enNotes,
     comparison: enComparison,
+    encryptedShare: enEncryptedShare,
     travplan: enTravplan,
   },
   de: {
@@ -205,6 +208,7 @@ const resources = {
     loyalty: deLoyalty,
     notes: deNotes,
     comparison: deComparison,
+    encryptedShare: deEncryptedShare,
     travplan: deTravplan,
   },
 };

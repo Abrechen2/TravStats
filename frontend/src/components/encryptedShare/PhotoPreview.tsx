@@ -11,7 +11,7 @@ export default function PhotoPreview({
   mime: string;
   load: () => Promise<Blob>;
 }) {
-  const { t } = useTranslation("comparison");
+  const { t } = useTranslation("encryptedShare");
   const [url, setUrl] = useState<string | null>(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(false);

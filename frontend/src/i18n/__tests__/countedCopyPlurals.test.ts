@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { createInstance } from "i18next";
 import deBus from "../resources/de/bus.json";
 import enBus from "../resources/en/bus.json";
-import deComparison from "../resources/de/comparison.json";
-import enComparison from "../resources/en/comparison.json";
+import deEncryptedShare from "../resources/de/encryptedShare.json";
+import enEncryptedShare from "../resources/en/encryptedShare.json";
 import deLodging from "../resources/de/lodging.json";
 import enLodging from "../resources/en/lodging.json";
 import dePlaces from "../resources/de/places.json";
@@ -26,7 +26,7 @@ void instance.init({
   resources: {
     de: {
       bus: deBus,
-      comparison: deComparison,
+      encryptedShare: deEncryptedShare,
       lodging: deLodging,
       places: dePlaces,
       sharing: deSharing,
@@ -34,7 +34,7 @@ void instance.init({
     },
     en: {
       bus: enBus,
-      comparison: enComparison,
+      encryptedShare: enEncryptedShare,
       lodging: enLodging,
       places: enPlaces,
       sharing: enSharing,
@@ -56,15 +56,15 @@ const CASES: readonly [string, string, string, string, string][] = [
     "3 rides are still open; run the routing again.",
   ],
   [
-    "comparison:tripCount",
+    "encryptedShare:tripCount",
     "1 Reise für Detailzugriff",
     "1 trip available for detail access",
     "3 Reisen für Detailzugriff",
     "3 trips available for detail access",
   ],
-  ["comparison:e2e.files", "1 Datei", "1 file", "3 Dateien", "3 files"],
+  ["encryptedShare:e2e.files", "1 Datei", "1 file", "3 Dateien", "3 files"],
   [
-    "comparison:entryCount",
+    "encryptedShare:entryCount",
     "1 Eintrag auf dieser Seite",
     "1 entry on this page",
     "3 Einträge auf dieser Seite",

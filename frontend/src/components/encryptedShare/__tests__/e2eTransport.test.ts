@@ -2,18 +2,18 @@ import { Blob as NodeBlob, Buffer } from "node:buffer";
 import { webcrypto } from "node:crypto";
 import { beforeAll, expect, it, vi } from "vitest";
 import { api } from "../../../lib/api/client";
-import { comparisonPost, type Link } from "../../../lib/api/comparison";
-import { pinnedDevices, checkFreshness } from "../../../lib/comparison/vault";
-import { generateDevice, digest, type Manifest } from "../../../lib/comparison/crypto";
-import { publish, readPublication, type SourceData } from "../../../lib/comparison/transport";
+import { encryptedSharePost, type Link } from "../../../lib/api/encryptedShare";
+import { pinnedDevices, checkFreshness } from "../../../lib/encryptedShare/vault";
+import { generateDevice, digest, type Manifest } from "../../../lib/encryptedShare/crypto";
+import { publish, readPublication, type SourceData } from "../../../lib/encryptedShare/transport";
 vi.mock("../../../lib/api/client", () => ({
   api: { get: vi.fn(), post: vi.fn(), delete: vi.fn() },
 }));
-vi.mock("../../../lib/api/comparison", async (original) => ({
-  ...(await original<typeof import("../../../lib/api/comparison")>()),
-  comparisonPost: vi.fn(),
+vi.mock("../../../lib/api/encryptedShare", async (original) => ({
+  ...(await original<typeof import("../../../lib/api/encryptedShare")>()),
+  encryptedSharePost: vi.fn(),
 }));
-vi.mock("../../../lib/comparison/vault", () => ({
+vi.mock("../../../lib/encryptedShare/vault", () => ({
   pinnedDevices: vi.fn(),
   checkFreshness: vi.fn(),
 }));
@@ -41,7 +41,7 @@ it("publishes and receives all nested data plus a file larger than the former 5 
     [`friend:${channel}:${account === "a" ? b.device.public.fingerprint : a.device.public.fingerprint}`]:
       account === "a" ? b.device.public : a.device.public,
   }));
-  vi.mocked(comparisonPost).mockResolvedValue({ revision: 1 });
+  vi.mocked(encryptedSharePost).mockResolvedValue({ revision: 1 });
   const data: SourceData = {
     version: 2,
     asOf: new Date().toISOString(),

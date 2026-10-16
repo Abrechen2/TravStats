@@ -1,4 +1,4 @@
-import type { Link } from "../api/comparison";
+import type { Link } from "../api/encryptedShare";
 export interface PublicationStatus {
   id: string;
   linkId: string;

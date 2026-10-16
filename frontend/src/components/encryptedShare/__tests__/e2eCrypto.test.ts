@@ -8,7 +8,7 @@ import {
   encode,
   base64,
   type Context,
-} from "../../../lib/comparison/crypto";
+} from "../../../lib/encryptedShare/crypto";
 beforeAll(() => {
   vi.stubGlobal("crypto", webcrypto);
 });

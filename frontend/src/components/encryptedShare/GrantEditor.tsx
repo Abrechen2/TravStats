@@ -1,16 +1,16 @@
-import { sourceData, type SourceData } from "../../lib/comparison/transport";
+import { sourceData, type SourceData } from "../../lib/encryptedShare/transport";
 import { downloadBlob } from "./DevicePanel";
 import { comparisonFieldLabel } from "./fieldLabel";
 import { useState } from "react";
 import { Button } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
-  comparisonPost,
+  encryptedSharePost,
   type Link,
   type RecordPage,
   type Scope,
   type Snapshot,
-} from "../../lib/api/comparison";
+} from "../../lib/api/encryptedShare";
 
 export function initialScope(domains: string[]): Scope {
   return {
@@ -43,7 +43,7 @@ export default function GrantEditor({
   onClose: () => void;
   onAuthorize?: (scope: Scope, data: SourceData) => Promise<void>;
 }) {
-  const { t } = useTranslation("comparison");
+  const { t } = useTranslation("encryptedShare");
   const [scope, setScope] = useState<Scope>(() => {
     const previous = link.grants.find((g) => g.active && g.audience === "")?.scope;
     if (!previous) return initialScope(domains);
@@ -78,13 +78,13 @@ export default function GrantEditor({
         if (onAuthorize) {
           if (!fullPreview) throw Error("preview");
           await onAuthorize(scope, fullPreview);
-        } else await comparisonPost(`/links/${link.id}/grant`, { audience: "", scope });
+        } else await encryptedSharePost(`/links/${link.id}/grant`, { audience: "", scope });
         onSaved();
       } else if (onAuthorize) {
         const data = await sourceData(scope);
         setFullPreview(data);
         setPreview(data.snapshot);
-      } else setPreview(await comparisonPost<Snapshot>("/preview", scope));
+      } else setPreview(await encryptedSharePost<Snapshot>("/preview", scope));
     } catch {
       setError(true);
     } finally {
@@ -239,7 +239,7 @@ export default function GrantEditor({
                 disabled={busy}
                 onClick={() => {
                   setBusy(true);
-                  void comparisonPost<RecordPage>("/preview/records", { scope, domain })
+                  void encryptedSharePost<RecordPage>("/preview/records", { scope, domain })
                     .then(setRecordPreview)
                     .catch(() => setError(true))
                     .finally(() => setBusy(false));

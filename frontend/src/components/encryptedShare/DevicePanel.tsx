@@ -2,14 +2,18 @@ import { FingerprintQR } from "./FingerprintQR";
 import { useEffect, useState } from "react";
 import { Button } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
-import { comparisonGet, comparisonPost, comparisonDelete } from "../../lib/api/comparison";
+import {
+  encryptedShareGet,
+  encryptedSharePost,
+  encryptedShareDelete,
+} from "../../lib/api/encryptedShare";
 import {
   generateDevice,
   recoverDevice,
   type DeviceKeys,
   type PublicDevice,
-} from "../../lib/comparison/crypto";
-import { localDevice, storeDevice } from "../../lib/comparison/vault";
+} from "../../lib/encryptedShare/crypto";
+import { localDevice, storeDevice } from "../../lib/encryptedShare/vault";
 export function downloadBlob(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob),
     a = document.createElement("a");
@@ -25,7 +29,7 @@ export default function DevicePanel({
   account: string;
   onDevice: (d: DeviceKeys | null) => void;
 }) {
-  const { t } = useTranslation("comparison");
+  const { t } = useTranslation("encryptedShare");
   const [device, setDevice] = useState<DeviceKeys | null>(null),
     [devices, setDevices] = useState<PublicDevice[]>([]),
     [name, setName] = useState(""),
@@ -35,7 +39,7 @@ export default function DevicePanel({
     [code, setCode] = useState(""),
     [file, setFile] = useState<File | null>(null);
   const refresh = async () => {
-    const list = await comparisonGet<PublicDevice[]>("/sealed/devices"),
+    const list = await encryptedShareGet<PublicDevice[]>("/sealed/devices"),
       d = await localDevice(account);
     setDevices(list);
     const active = d && list.some((p) => p.fingerprint === d.public.fingerprint) ? d : null;
@@ -77,7 +81,7 @@ export default function DevicePanel({
             onClick={() =>
               void run(async () => {
                 const generated = await generateDevice(name.trim());
-                await comparisonPost("/sealed/devices", generated.device.public);
+                await encryptedSharePost("/sealed/devices", generated.device.public);
                 await storeDevice(account, generated.device);
                 setRecovery(generated);
               })
@@ -108,7 +112,7 @@ export default function DevicePanel({
                 void run(async () => {
                   if (!file || file.size > 20000) throw Error("backup");
                   const restored = await recoverDevice(JSON.parse(await file.text()), code);
-                  await comparisonPost("/sealed/devices", restored.public);
+                  await encryptedSharePost("/sealed/devices", restored.public);
                   await storeDevice(account, restored);
                   setCode("");
                 })
@@ -148,7 +152,7 @@ export default function DevicePanel({
               disabled={busy}
               onClick={() =>
                 void run(async () => {
-                  await comparisonDelete(`/sealed/devices/${d.id}`);
+                  await encryptedShareDelete(`/sealed/devices/${d.id}`);
                 })
               }
             >

@@ -1,13 +1,13 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { vi, describe, it, expect } from "vitest";
 import GrantEditor from "../GrantEditor";
-import { comparisonPost, type Link } from "../../../lib/api/comparison";
+import { encryptedSharePost, type Link } from "../../../lib/api/encryptedShare";
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
-vi.mock("../../../lib/api/comparison", async (original) => ({
-  ...(await original<typeof import("../../../lib/api/comparison")>()),
-  comparisonPost: vi.fn(),
+vi.mock("../../../lib/api/encryptedShare", async (original) => ({
+  ...(await original<typeof import("../../../lib/api/encryptedShare")>()),
+  encryptedSharePost: vi.fn(),
 }));
 const link: Link = {
   id: "a",
@@ -21,7 +21,7 @@ const link: Link = {
 };
 describe("explicit comparison consent", () => {
   it("starts with every category off, requires preview AND consent, and invalidates approval on edits", async () => {
-    vi.mocked(comparisonPost).mockResolvedValue({ metrics: { flights: 2 }, trips: [] });
+    vi.mocked(encryptedSharePost).mockResolvedValue({ metrics: { flights: 2 }, trips: [] });
     render(
       <GrantEditor
         link={link}
@@ -41,7 +41,7 @@ describe("explicit comparison consent", () => {
     expect(screen.getByRole("button", { name: "saveGrant" })).not.toBeDisabled();
     fireEvent.click(screen.getByLabelText("category.costs"));
     await waitFor(() => expect(screen.getByRole("button", { name: "saveGrant" })).toBeDisabled());
-    expect(vi.mocked(comparisonPost)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(encryptedSharePost)).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -49,8 +49,8 @@ describe("republishing an all-existing-trips grant", () => {
   it("keeps the grant on all existing trips instead of freezing the trip list", async () => {
     // The stored scope carries the resolved trip ids; copying them back into the editor turned
     // "all existing trips (and trip-less records)" into a fixed list that dropped trip-less rows.
-    vi.mocked(comparisonPost).mockReset();
-    vi.mocked(comparisonPost).mockResolvedValue({ metrics: { flights: 2 }, trips: [] });
+    vi.mocked(encryptedSharePost).mockReset();
+    vi.mocked(encryptedSharePost).mockResolvedValue({ metrics: { flights: 2 }, trips: [] });
     const stored = {
       statistics: true,
       details: false,
@@ -83,8 +83,8 @@ describe("republishing an all-existing-trips grant", () => {
     fireEvent.click(screen.getByRole("button", { name: "preview" }));
     fireEvent.click(await screen.findByLabelText("consent"));
     fireEvent.click(screen.getByRole("button", { name: "saveGrant" }));
-    await waitFor(() => expect(vi.mocked(comparisonPost)).toHaveBeenCalledTimes(2));
-    const [, saved] = vi.mocked(comparisonPost).mock.calls[1] as [string, { scope: object }];
+    await waitFor(() => expect(vi.mocked(encryptedSharePost)).toHaveBeenCalledTimes(2));
+    const [, saved] = vi.mocked(encryptedSharePost).mock.calls[1] as [string, { scope: object }];
     expect(saved.scope).toMatchObject({ tripIds: [], futureTrips: false });
   });
 });

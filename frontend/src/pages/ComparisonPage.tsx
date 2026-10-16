@@ -1,8 +1,8 @@
-import "../components/comparison/comparison.css";
+import "../components/encryptedShare/encryptedShare.css";
 import { Navigate } from "react-router-dom";
 import { BetaFeatureRouteGuard } from "../components/BetaFeatureRouteGuard";
 import { useAuthStore } from "../store/authStore";
-import SealedWorkspace from "../components/comparison/SealedWorkspace";
+import SealedWorkspace from "../components/encryptedShare/SealedWorkspace";
 export default function ComparisonPage() {
   const user = useAuthStore((s) => s.user);
   return user ? (

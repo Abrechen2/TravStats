@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { rankRows, type ComparisonRow } from "../ranking";
-import type { Snapshot } from "../../../lib/api/comparison";
+import type { Snapshot } from "../../../lib/api/encryptedShare";
 const snapshot: Snapshot = {
   version: 1,
   definition: "travstats-comparison-1",

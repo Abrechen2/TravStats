@@ -83,13 +83,13 @@ export interface PeerState {
 }
 /** The E2E transfer's own API (moved from /comparison, 2026-10-16). */
 const BASE = "/encrypted-share";
-export async function comparisonGet<T>(path: string): Promise<T> {
+export async function encryptedShareGet<T>(path: string): Promise<T> {
   return (await api.get<{ success: true; data: T }>(`${BASE}${path}`)).data.data;
 }
-export async function comparisonPost<T>(path: string, body: unknown = {}): Promise<T> {
+export async function encryptedSharePost<T>(path: string, body: unknown = {}): Promise<T> {
   return (await api.post<{ success: true; data: T }>(`${BASE}${path}`, body)).data.data;
 }
-export async function comparisonDelete(path: string): Promise<void> {
+export async function encryptedShareDelete(path: string): Promise<void> {
   await api.delete(`${BASE}${path}`);
 }
 export interface Circle {

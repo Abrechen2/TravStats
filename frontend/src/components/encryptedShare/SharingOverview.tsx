@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { comparisonGet, type Link, type Circle } from "../../lib/api/comparison";
-import { sharingStatus, type PublicationStatus } from "../../lib/comparison/sharingStatus";
+import { encryptedShareGet, type Link, type Circle } from "../../lib/api/encryptedShare";
+import { sharingStatus, type PublicationStatus } from "../../lib/encryptedShare/sharingStatus";
 import { useTranslation } from "../../hooks/useTranslation";
 export default function SharingOverview({ links }: { links: Link[] }) {
-  const { t, i18n } = useTranslation("comparison");
+  const { t, i18n } = useTranslation("encryptedShare");
   const [publications, setPublications] = useState<PublicationStatus[]>([]);
   const [circles, setCircles] = useState<Circle[]>([]);
   const [loaded, setLoaded] = useState(false),
@@ -11,8 +11,8 @@ export default function SharingOverview({ links }: { links: Link[] }) {
   useEffect(() => {
     let active = true;
     void Promise.all([
-      comparisonGet<PublicationStatus[]>("/sealed/publications"),
-      comparisonGet<Circle[]>("/circles"),
+      encryptedShareGet<PublicationStatus[]>("/sealed/publications"),
+      encryptedShareGet<Circle[]>("/circles"),
     ])
       .then(([p, c]) => {
         if (active) {

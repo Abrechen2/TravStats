@@ -2,9 +2,9 @@ import { FingerprintImage } from "./FingerprintQR";
 import { useEffect, useState } from "react";
 import { Button } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
-import { pinnedDevices, pinDevice } from "../../lib/comparison/vault";
-import type { DeviceKeys, PublicDevice } from "../../lib/comparison/crypto";
-import { deviceBinding, type Audience, type Target } from "../../lib/comparison/transport";
+import { pinnedDevices, pinDevice } from "../../lib/encryptedShare/vault";
+import type { DeviceKeys, PublicDevice } from "../../lib/encryptedShare/crypto";
+import { deviceBinding, type Audience, type Target } from "../../lib/encryptedShare/transport";
 export default function KeyVerification({
   account,
   device,
@@ -18,7 +18,7 @@ export default function KeyVerification({
   target: Target;
   onVerified: () => void;
 }) {
-  const { t } = useTranslation("comparison");
+  const { t } = useTranslation("encryptedShare");
   const [pins, setPins] = useState<Record<string, PublicDevice>>({}),
     [values, setValues] = useState<Record<string, string>>({}),
     [error, setError] = useState(false);

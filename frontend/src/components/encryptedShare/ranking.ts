@@ -1,4 +1,4 @@
-import type { Snapshot } from "../../lib/api/comparison";
+import type { Snapshot } from "../../lib/api/encryptedShare";
 export type Metric = keyof Snapshot["metrics"];
 export interface ComparisonRow {
   id: string;

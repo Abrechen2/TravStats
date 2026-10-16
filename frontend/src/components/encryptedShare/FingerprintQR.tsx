@@ -1,8 +1,8 @@
 import { QRCodeSVG } from "qrcode.react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { fingerprintCode, readFingerprintCode } from "../../lib/comparison/verificationCode";
+import { fingerprintCode, readFingerprintCode } from "../../lib/encryptedShare/verificationCode";
 export function FingerprintQR({ fingerprint }: { fingerprint: string }) {
-  const { t } = useTranslation("comparison");
+  const { t } = useTranslation("encryptedShare");
   return (
     <details>
       <summary>{t("e2e.qrShow")}</summary>
@@ -25,7 +25,7 @@ export function FingerprintImage({
   onRead: (fingerprint: string) => void;
   onError: () => void;
 }) {
-  const { t } = useTranslation("comparison");
+  const { t } = useTranslation("encryptedShare");
   return (
     <label className="block my-3">
       {t("e2e.qrRead")}

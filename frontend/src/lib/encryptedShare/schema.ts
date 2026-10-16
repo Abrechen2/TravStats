@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { COMPARISON_METRICS } from "../api/comparison";
+import { COMPARISON_METRICS } from "../api/encryptedShare";
 const nullableNumber = z.number().finite().nullable();
 export const scope = z.object({
   statistics: z.boolean(),

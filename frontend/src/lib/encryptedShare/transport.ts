@@ -1,7 +1,7 @@
 import { sourceSchema, checkTree } from "./schema";
 import { z } from "zod";
 import { api } from "../api/client";
-import { comparisonPost, type Scope, type Snapshot, type Link } from "../api/comparison";
+import { encryptedSharePost, type Scope, type Snapshot, type Link } from "../api/encryptedShare";
 import {
   createPublication,
   openPublication,
@@ -98,7 +98,7 @@ export async function publish(
   if (!selectedLink) throw Error("E2E_LINK");
   let revision: number;
   if (target.circleId) {
-    await comparisonPost("/circles/grant", {
+    await encryptedSharePost("/circles/grant", {
       ...target,
       circleId: target.circleId,
       version: Number(audience.audience.split(":")[1]),
@@ -110,7 +110,7 @@ export async function publish(
       .grants.find((g) => g.audience === audience.audience && g.active)!.revision;
   } else
     revision = (
-      await comparisonPost<{ revision: number }>(`/links/${selectedLink.id}/grant`, {
+      await encryptedSharePost<{ revision: number }>(`/links/${selectedLink.id}/grant`, {
         audience: "",
         scope,
       })

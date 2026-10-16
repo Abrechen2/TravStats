@@ -5,11 +5,11 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useAuthStore } from "../../store/authStore";
 import {
-  comparisonGet,
+  encryptedShareGet,
   COMPARISON_METRICS,
   type Link,
   type Circle,
-} from "../../lib/api/comparison";
+} from "../../lib/api/encryptedShare";
 import {
   audienceDevices,
   publish,
@@ -18,8 +18,8 @@ import {
   ownDataView,
   type Target,
   type Audience,
-} from "../../lib/comparison/transport";
-import type { DeviceKeys } from "../../lib/comparison/crypto";
+} from "../../lib/encryptedShare/transport";
+import type { DeviceKeys } from "../../lib/encryptedShare/crypto";
 import DevicePanel from "./DevicePanel";
 import KeyVerification from "./KeyVerification";
 import FriendManager from "./FriendManager";
@@ -28,7 +28,7 @@ import GrantEditor, { initialScope } from "./GrantEditor";
 import TravelComparison, { type TravelPerson } from "./TravelComparison";
 import { rankRows, type Metric, type ComparisonRow } from "./ranking";
 export default function SealedWorkspace() {
-  const { t, i18n } = useTranslation("comparison"),
+  const { t, i18n } = useTranslation("encryptedShare"),
     { enabled } = useEnabledDomains();
   const user = useAuthStore((s) => s.user)!;
   const [device, setDevice] = useState<DeviceKeys | null>(null),
@@ -53,8 +53,8 @@ export default function SealedWorkspace() {
   }, []);
   const load = useCallback(async () => {
     const [l, tr] = await Promise.all([
-      comparisonGet<Link[]>("/links"),
-      comparisonGet<typeof trips>("/trips"),
+      encryptedShareGet<Link[]>("/links"),
+      encryptedShareGet<typeof trips>("/trips"),
     ]);
     setLinks(l);
     setTrips(tr);
@@ -175,7 +175,7 @@ export default function SealedWorkspace() {
     people.find((p) => p.id === "self")?.data.snapshot.currency
   );
   return (
-    <AppShell width="table" className="comparison-surface">
+    <AppShell width="table" className="encrypted-share-surface">
       <PageHeader
         title={t("title")}
         meta={t("e2e.subtitle")}

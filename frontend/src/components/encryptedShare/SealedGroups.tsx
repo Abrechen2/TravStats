@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { Button } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
-import { comparisonGet, comparisonPost, type Circle, type Link } from "../../lib/api/comparison";
+import {
+  encryptedShareGet,
+  encryptedSharePost,
+  type Circle,
+  type Link,
+} from "../../lib/api/encryptedShare";
 export default function SealedGroups({
   links,
   onOpen,
@@ -9,13 +14,13 @@ export default function SealedGroups({
   links: Link[];
   onOpen: (circle: Circle) => void;
 }) {
-  const { t } = useTranslation("comparison");
+  const { t } = useTranslation("encryptedShare");
   const [circles, setCircles] = useState<Circle[]>([]),
     [name, setName] = useState(""),
     [ids, setIds] = useState<string[]>([]),
     [error, setError] = useState(false),
     [busy, setBusy] = useState(false);
-  const load = async () => setCircles(await comparisonGet<Circle[]>("/circles"));
+  const load = async () => setCircles(await encryptedShareGet<Circle[]>("/circles"));
   useEffect(() => {
     void load().catch(() => setError(true));
   }, []);
@@ -39,7 +44,7 @@ export default function SealedGroups({
         className="space-y-3"
         onSubmit={(e) => {
           e.preventDefault();
-          void run(() => comparisonPost("/circles", { name, linkIds: ids }));
+          void run(() => encryptedSharePost("/circles", { name, linkIds: ids }));
         }}
       >
         <label>
@@ -85,7 +90,10 @@ export default function SealedGroups({
                     disabled={busy}
                     onClick={() =>
                       void run(() =>
-                        comparisonPost("/circles/remove", { circleId: c.id, channel: m.channel })
+                        encryptedSharePost("/circles/remove", {
+                          circleId: c.id,
+                          channel: m.channel,
+                        })
                       )
                     }
                   >
@@ -104,7 +112,7 @@ export default function SealedGroups({
                 onChange={(e) => {
                   if (e.target.value)
                     void run(() =>
-                      comparisonPost("/circles/add", { circleId: c.id, linkId: e.target.value })
+                      encryptedSharePost("/circles/add", { circleId: c.id, linkId: e.target.value })
                     );
                 }}
               >
@@ -129,7 +137,7 @@ export default function SealedGroups({
               disabled={busy}
               onClick={() =>
                 void run(() =>
-                  comparisonPost("/circles/leave", {
+                  encryptedSharePost("/circles/leave", {
                     circleId: c.id,
                     linkId: c.linkId,
                     version: c.version,

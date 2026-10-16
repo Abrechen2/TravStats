@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
-import { comparisonPost, comparisonDelete, type Link } from "../../lib/api/comparison";
+import { encryptedSharePost, encryptedShareDelete, type Link } from "../../lib/api/encryptedShare";
 export default function FriendManager({
   links,
   onChange,
@@ -11,7 +11,7 @@ export default function FriendManager({
   onChange: () => void;
   onGrant: (link: Link) => void;
 }) {
-  const { t } = useTranslation("comparison");
+  const { t } = useTranslation("encryptedShare");
   const [invite, setInvite] = useState<{ code: string; origin: string; expiresAt: string } | null>(
     null
   );
@@ -40,7 +40,7 @@ export default function FriendManager({
         <h2 className="text-xl font-bold">{t("connect")}</h2>
         <Button
           disabled={busy}
-          onClick={() => void run(async () => setInvite(await comparisonPost("/invites")))}
+          onClick={() => void run(async () => setInvite(await encryptedSharePost("/invites")))}
         >
           {t("createInvite")}
         </Button>
@@ -57,7 +57,7 @@ export default function FriendManager({
           onSubmit={(e) => {
             e.preventDefault();
             void run(async () => {
-              await comparisonPost("/claim", { origin, code, label });
+              await encryptedSharePost("/claim", { origin, code, label });
               setCode("");
             });
           }}
@@ -132,7 +132,7 @@ export default function FriendManager({
                 <Button
                   disabled={busy}
                   onClick={() =>
-                    void run(() => comparisonPost(`/links/${link.id}/revoke`, { audience: "" }))
+                    void run(() => encryptedSharePost(`/links/${link.id}/revoke`, { audience: "" }))
                   }
                 >
                   {t("revoke")}
@@ -141,7 +141,7 @@ export default function FriendManager({
             )}
             <Button
               disabled={busy}
-              onClick={() => void run(() => comparisonDelete(`/links/${link.id}`))}
+              onClick={() => void run(() => encryptedShareDelete(`/links/${link.id}`))}
             >
               {t("disconnect")}
             </Button>
@@ -154,7 +154,10 @@ export default function FriendManager({
           onSubmit={(e) => {
             e.preventDefault();
             void run(async () => {
-              await comparisonPost(`/links/${confirm.id}/confirm`, { label, code: verification });
+              await encryptedSharePost(`/links/${confirm.id}/confirm`, {
+                label,
+                code: verification,
+              });
               setConfirm(null);
             });
           }}

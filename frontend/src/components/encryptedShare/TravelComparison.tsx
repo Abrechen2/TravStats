@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { Button } from "../ui";
 import { downloadBlob } from "./DevicePanel";
-import type { OpenData, SourceData } from "../../lib/comparison/transport";
+import type { OpenData, SourceData } from "../../lib/encryptedShare/transport";
 export interface TravelPerson {
   id: string;
   label: string;
@@ -109,7 +109,7 @@ export function lines(value: unknown, into: number[][][] = []): number[][][] {
   return into;
 }
 export default function TravelComparison({ people }: { people: TravelPerson[] }) {
-  const { t, i18n } = useTranslation("comparison");
+  const { t, i18n } = useTranslation("encryptedShare");
   const sections = [...new Set(people.flatMap((p) => Object.keys(p.data.sections)))].sort();
   const [section, setSection] = useState("flights"),
     [field, setField] = useState(""),

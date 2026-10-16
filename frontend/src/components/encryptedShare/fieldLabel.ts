@@ -7,7 +7,7 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
  * train's "Abfahrt" — so the consent preview speaks each domain's language.
  */
 export function comparisonFieldLabel(t: Translate, domain: string, name: string): string {
-  return t(`comparison:fieldByDomain.${domain}.${name}`, {
-    defaultValue: t(`comparison:field.${name}`),
+  return t(`encryptedShare:fieldByDomain.${domain}.${name}`, {
+    defaultValue: t(`encryptedShare:field.${name}`),
   });
 }

@@ -1,8 +1,8 @@
 import { expect, it } from "vitest";
-import { fingerprintCode, readFingerprintCode } from "../../../lib/comparison/verificationCode";
-import { sharingStatus, type PublicationStatus } from "../../../lib/comparison/sharingStatus";
+import { fingerprintCode, readFingerprintCode } from "../../../lib/encryptedShare/verificationCode";
+import { sharingStatus, type PublicationStatus } from "../../../lib/encryptedShare/sharingStatus";
 import { initialScope } from "../GrantEditor";
-import type { Link } from "../../../lib/api/comparison";
+import type { Link } from "../../../lib/api/encryptedShare";
 it("reads only the exact public-device QR format, rejecting URLs, other protocols and partial fingerprints", () => {
   const fingerprint = "ab".repeat(32);
   expect(readFingerprintCode(fingerprintCode(fingerprint))).toBe(fingerprint);
