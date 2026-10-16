@@ -87,25 +87,30 @@
       "linkFailed": "The link could not be saved."
     }
   },
+  "people": {
+    "badges": {
+      "linked": "Account linked",
+      "member": "Shares this trip",
+      "consentPending": "Consent pending"
+    },
+    "noChangesHint": "Your changes don't reach each other until you have both agreed.",
+    "actions": {
+      "link": "Link to account…",
+      "share": "Share trip…"
+    },
+    "blocked": {
+      "consentMissing": "{{name}} has not agreed to sharing yet.",
+      "groupConsentMissing": "Not everyone on this shared trip has agreed to sharing with {{name}}."
+    },
+    "leave": "Leave shared trip"
+  },
   "trip": {
-    "title": "Shared",
-    "notShared": "This trip is not shared with anyone.",
-    "members": "Shared with",
-    "candidates": "Share with",
-    "shareTick": "Share with {{name}}",
-    "sharedTick": "Shared with {{name}}",
-    "noConsent": "{{name}} has not agreed to sharing (yet).",
-    "noCandidates": "Link companions to their account to share trips.",
-    "settingsLink": "Go to settings",
-    "leave": "Leave group",
-    "leaveConfirm": "Leave the group? Your copy stays as your own trip; the others are notified.",
-    "left": "You left the group. Your trip stays.",
-    "shared": "Shared with {{name}}.",
-    "privateHint": "Only facts are copied — flights, stays, cruises, train, bus and ferry rides, rentals and stops. Seat, cabin, room, price, ratings and notes stay private.",
+    "leaveConfirm": "Leave the shared trip? Your copy stays as your own trip; the others are notified.",
+    "left": "You left the shared trip. Your trip stays.",
     "errors": {
-      "loadFailed": "This trip's sharing could not be loaded.",
+      "loadFailed": "Who shares this trip could not be loaded.",
       "shareFailed": "The trip could not be shared.",
-      "leaveFailed": "The group could not be left."
+      "leaveFailed": "The shared trip could not be left."
     },
     "bookingTotals": "Booking total",
     "bookingTotalsHint": "View only — the person named booked and paid; your own share of the price stays private."
@@ -142,7 +147,7 @@
     "blockedTitle": "Not possible right now",
     "blocked": {
       "notLinked": "{{name}} is not linked to an account.",
-      "consentMissing": "{{name}} has not agreed to share with you yet. You have not sent a request yet — you can do that via “Link to account” on the row or in Settings.",
+      "consentMissing": "{{name}} has not agreed to share with you yet. You have not sent a request yet — you can do that under Settings → Trips → Share trips.",
       "consentPending": "Your request to {{name}} is still open.",
       "groupConsentMissing": "{{name}} first has to connect with everyone who already shares this trip.",
       "alreadyMember": "{{name}} is already part of this shared trip.",

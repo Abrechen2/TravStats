@@ -87,25 +87,30 @@
       "linkFailed": "Die Verknüpfung konnte nicht gespeichert werden."
     }
   },
+  "people": {
+    "badges": {
+      "linked": "Konto verknüpft",
+      "member": "Teilt diese Reise",
+      "consentPending": "Zustimmung offen"
+    },
+    "noChangesHint": "Eure Änderungen kommen gegenseitig nicht an, bis ihr beide zugestimmt habt.",
+    "actions": {
+      "link": "Mit Konto verknüpfen…",
+      "share": "Reise teilen…"
+    },
+    "blocked": {
+      "consentMissing": "{{name}} hat dem Teilen noch nicht zugestimmt.",
+      "groupConsentMissing": "Nicht alle, die diese Reise teilen, haben dem Teilen mit {{name}} zugestimmt."
+    },
+    "leave": "Geteilte Reise verlassen"
+  },
   "trip": {
-    "title": "Geteilt",
-    "notShared": "Diese Reise ist mit niemandem geteilt.",
-    "members": "Geteilt mit",
-    "candidates": "Teilen mit",
-    "shareTick": "Mit {{name}} teilen",
-    "sharedTick": "Mit {{name}} geteilt",
-    "noConsent": "{{name}} hat dem Teilen (noch) nicht zugestimmt.",
-    "noCandidates": "Verknüpfe Mitreisende mit ihrem Konto, um Reisen zu teilen.",
-    "settingsLink": "Zu den Einstellungen",
-    "leave": "Gruppe verlassen",
-    "leaveConfirm": "Gruppe verlassen? Deine Kopie bleibt als eigene Reise erhalten; die anderen werden benachrichtigt.",
-    "left": "Du hast die Gruppe verlassen. Deine Reise bleibt erhalten.",
-    "shared": "Mit {{name}} geteilt.",
-    "privateHint": "Kopiert werden nur Fakten — Flüge, Unterkünfte, Kreuzfahrten, Bahn-, Bus- und Fährfahrten, Mietwagen und Stopps. Sitzplatz, Kabine, Zimmer, Preis, Bewertungen und Notizen bleiben privat.",
+    "leaveConfirm": "Geteilte Reise verlassen? Deine Kopie bleibt als eigene Reise erhalten; die anderen werden benachrichtigt.",
+    "left": "Du hast die geteilte Reise verlassen. Deine Reise bleibt erhalten.",
     "errors": {
-      "loadFailed": "Die Freigabe dieser Reise konnte nicht geladen werden.",
+      "loadFailed": "Wer diese Reise teilt, konnte nicht geladen werden.",
       "shareFailed": "Die Reise konnte nicht geteilt werden.",
-      "leaveFailed": "Die Gruppe konnte nicht verlassen werden."
+      "leaveFailed": "Die geteilte Reise konnte nicht verlassen werden."
     },
     "bookingTotals": "Buchungssumme",
     "bookingTotalsHint": "Nur zur Ansicht — gebucht und bezahlt hat die genannte Person; dein eigener Preisanteil bleibt privat."
@@ -142,7 +147,7 @@
     "blockedTitle": "Gerade nicht möglich",
     "blocked": {
       "notLinked": "{{name}} ist mit keinem Konto verknüpft.",
-      "consentMissing": "{{name}} hat dem Teilen mit dir noch nicht zugestimmt. Du hast noch keine Anfrage gesendet — das geht über „Mit Konto verknüpfen“ an der Zeile oder unter Einstellungen.",
+      "consentMissing": "{{name}} hat dem Teilen mit dir noch nicht zugestimmt. Du hast noch keine Anfrage gesendet — das geht unter Einstellungen → Reisen → Reisen teilen.",
       "consentPending": "Deine Anfrage an {{name}} ist noch offen.",
       "groupConsentMissing": "{{name}} muss sich erst mit allen verbinden, die diese Reise schon teilen.",
       "alreadyMember": "{{name}} ist schon Teil dieser geteilten Reise.",

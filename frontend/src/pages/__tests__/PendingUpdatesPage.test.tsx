@@ -27,9 +27,14 @@ import { flag, suggestion } from "../../components/inbox/workspace/__tests__/fix
 const visible = vi.hoisted(() => ({ value: true }));
 vi.mock("@/lib/api/sharing", () => ({
   sharingApi: {
-    tripSharing: vi
-      .fn()
-      .mockResolvedValue({ groupId: null, members: [], candidates: [], bookingTotals: [] }),
+    tripSharing: vi.fn().mockResolvedValue({
+      groupId: null,
+      members: [],
+      candidates: [],
+      people: [],
+      linkableUsers: [],
+      bookingTotals: [],
+    }),
     listConsents: vi.fn().mockResolvedValue({ incoming: [], outgoing: [] }),
     listCompanions: vi.fn().mockResolvedValue({ companions: [], linkableUsers: [] }),
     listNotices: vi.fn().mockResolvedValue([]),
