@@ -93,6 +93,20 @@ export default function CountryRow({
         <td className="px-3 py-2.5" data-wide>
           <div className="flex flex-wrap items-center gap-1.5">
             <TierBadge tier={row.tier} />
+            {row.visitUncertain && (
+              <Toggletip
+                content={t("passport:countries.unclearResolve")}
+                triggerClassName="text-xs"
+              >
+                {t("passport:countries.visitUncertain")}
+              </Toggletip>
+            )}
+            {row.visitUncertain &&
+              (row.visitUncertainReasons ?? []).map((reason) => (
+                <span key={reason} className="text-xs" style={{ color: "var(--text-muted)" }}>
+                  {t(`passport:countries.unclearReason.${reason}`)}
+                </span>
+              ))}
             {!row.counted && (
               <Toggletip
                 content={t("passport:countries.notCountedExplained")}

@@ -8,7 +8,7 @@ import { resolveMetricEvidence } from "../../metricEvidence";
 
 /**
  * The countries badge's EVIDENCE must list the records its count was made from
- * (`utils/achievementCountries.ts`): no place pin (owner rule 2026-09-26) and
+ * (`utils/achievementCountries.ts`): a confirmed place visit (forgejo#299) and
  * no ride of a domain the user cannot see. It read the passport page's sources
  * instead, so a hidden train ride stood as proof of a badge it never counted
  * towards.
@@ -81,7 +81,7 @@ describe("countries badge evidence reads the badge's own sources", () => {
     expect(res.entries.map((e) => [e.domain, e.credits])).toEqual([["lodging", ["DE"]]]);
   });
 
-  it("neither counts nor lists a place, and leaves nothing unexplained", async () => {
+  it("counts and lists a confirmed place visit (forgejo#299), leaving nothing unexplained", async () => {
     await houseIn("DE");
     await prisma.place.create({
       data: {
@@ -96,8 +96,11 @@ describe("countries badge evidence reads the badge's own sources", () => {
 
     const res = await evidence();
 
-    expect(res.measure.value).toBe(1);
-    expect(res.entries.map((e) => e.domain)).toEqual(["lodging"]);
+    expect(res.measure.value).toBe(2);
+    expect(res.entries.map((e) => [e.domain, e.credits]).sort()).toEqual([
+      ["lodging", ["DE"]],
+      ["place", ["ES"]],
+    ]);
     expect(res.unattributed).toEqual([]);
   });
 });

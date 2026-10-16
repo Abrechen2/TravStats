@@ -3,7 +3,12 @@
 // shape the KPI / chart / heatmap components consume.
 import type { DomainKey } from "../../../shared/domains";
 import type { DomainStats, DomainStatsMap, YearScopedAgg } from "../../../lib/stats/domain-stats";
-import { foldCrossDomain, type DomainContribution } from "../../../shared/crossDomainCounting";
+import {
+  foldCrossDomain,
+  visitedCountryContribution,
+  type DomainContribution,
+  type VisitedCountrySource,
+} from "../../../shared/crossDomainCounting";
 import {
   eventsInWindow,
   windowFilter,
@@ -40,7 +45,13 @@ export function aggregate(
   statsMap: DomainStatsMap,
   visible: Partial<Record<DomainKey, boolean>>,
   year: number | null,
-  window: ComparisonWindow | null = null
+  window: ComparisonWindow | null = null,
+  /**
+   * The passport's visited index (`visitedSourcesOfRows` over
+   * `GET /stats/passport`). Null while it is loading or failed: the country
+   * figure then abstains rather than falling back to touched countries.
+   */
+  visited: readonly VisitedCountrySource[] | null = null
 ): YearScopedAgg {
   const contributions: DomainContribution[] = [];
   // The window is cut on the CONTRIBUTIONS, before the fold — the unions
@@ -73,28 +84,17 @@ export function aggregate(
           ? sumValues(stats.yearlyActiveDays)
           : (stats.yearlyActiveDays[year] ?? 0);
 
-    // Country union. Lifetime takes the full set; a selected year takes that
-    // year's slice from the backend's year-keyed index.
+    // "Länder besucht" by the passport's visited rule (forgejo#299): the
+    // countries THIS domain's records prove a visit to, in the selected year
+    // or lifetime. The adapters' own `countries` are what a record touched —
+    // a connection or an open-jaw end included — and counting those under
+    // this label contradicted the passport beside it.
     //
-    // This used to use the lifetime set for BOTH, which made the tile read
-    // "34 countries" under a "Year 2017" header and left its year-over-year
-    // delta badge structurally pinned at 0 (0%) — a comparison that could
-    // not exist, rendered as if it were data.
-    //
-    // A domain without the index (older adapter, stub domain) falls back to
-    // its lifetime set instead of contributing nothing: over-reporting is
-    // visible, under-reporting silently loses countries.
-    //
-    // It is NOT narrowed by the window, and cannot be: `countriesByYear` comes
-    // from the server for three of the four domains and is keyed by year only.
-    // Deriving a day-level index here would be a second source of truth for a
-    // figure the evidence panel answers from the first. The KPI strip therefore
-    // withholds the country DELTA under a same-period window rather than
-    // publishing a comparison of two spans of different length.
-    const countries =
-      year === null || stats.countriesByYear === undefined
-        ? stats.countries
-        : (stats.countriesByYear[year] ?? []);
+    // It is NOT narrowed by the window: the index is keyed by year only, and a
+    // day-level one derived here would be a second source of truth for a
+    // figure the evidence panel answers from the first. The KPI strip
+    // withholds the country DELTA under a same-period window instead.
+    const countries = visited === null ? [] : visitedCountryContribution(visited, domain, year);
 
     contributions.push({ domain, events, countries, activeDayKeys, activeDaysWithoutIndex });
   }
@@ -103,7 +103,8 @@ export function aggregate(
   // with the backend's `crossDomain*` evidence resolvers on the other side of
   // them. A union rule kept in two places is exactly how a panel comes to
   // disagree with the tile that opened it.
-  return foldCrossDomain(contributions);
+  const totals = foldCrossDomain(contributions);
+  return { ...totals, countriesCount: visited === null ? null : totals.countriesCount };
 }
 
 /**

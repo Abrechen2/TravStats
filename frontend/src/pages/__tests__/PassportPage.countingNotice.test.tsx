@@ -97,6 +97,20 @@ describe("PassportPage — the counting-changed notice (§5)", () => {
     expect(screen.getByText("passport:countingChanged.what")).toBeInTheDocument();
   });
 
+  it("names the unclear countries beside the two numbers (forgejo#299)", async () => {
+    getPassportMock.mockResolvedValue(
+      passport({ countries: 3, groundCountries: 6, visitedCountries: 3, unclearCountries: 2 })
+    );
+    render(
+      <MemoryRouter>
+        <PassportPage />
+      </MemoryRouter>
+    );
+    expect(await screen.findByTestId("passport-unclear-count")).toHaveTextContent(
+      "passport:summary.unclearCountries: 2"
+    );
+  });
+
   it("stays quiet when the old rule and the new one agree", async () => {
     getPassportMock.mockResolvedValue(passport({ countries: 32, legacyCountries: 32 }));
     render(
@@ -104,7 +118,7 @@ describe("PassportPage — the counting-changed notice (§5)", () => {
         <PassportPage />
       </MemoryRouter>
     );
-    await screen.findByText("passport:summary.countries");
+    await screen.findAllByText("passport:summary.countries");
     expect(screen.queryByText(/countingChanged\.text/)).toBeNull();
   });
 
@@ -124,7 +138,7 @@ describe("PassportPage — the counting-changed notice (§5)", () => {
         <PassportPage />
       </MemoryRouter>
     );
-    await screen.findByText("passport:summary.countries");
+    await screen.findAllByText("passport:summary.countries");
     expect(screen.queryByText(/countingChanged\.text/)).toBeNull();
   });
 });

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { crossDomainDayKey, dayKeyInYear, foldCrossDomain } from "../crossDomainCounting";
+import {
+  crossDomainDayKey,
+  dayKeyInYear,
+  foldCrossDomain,
+  visitedCountryContribution,
+  visitedSourcesOfRows,
+} from "../crossDomainCounting";
 
 /**
  * The frontend half of the mirror's truth table. `backend/src/shared/
@@ -81,5 +87,33 @@ describe("dayKeyInYear", () => {
   it("matches on the KEY's own year, not on a re-read of the date", () => {
     expect(dayKeyInYear("2025-12-31", 2025)).toBe(true);
     expect(dayKeyInYear("2026-01-01", 2025)).toBe(false);
+  });
+});
+
+describe("visitedCountryContribution — 'Länder besucht' by domain and year (forgejo#299)", () => {
+  const sources = visitedSourcesOfRows([
+    {
+      code: "VN",
+      visitSources: [
+        { domain: "flight", years: [2025], undated: false },
+        { domain: "lodging", years: [2024, 2025], undated: false },
+      ],
+    },
+    { code: "BE", visitSources: [{ domain: "poi", years: [], undated: true }] },
+    // A ground-only row carries no source and must contribute nothing.
+    { code: "QA", visitSources: [] },
+    { code: "TH" },
+  ]);
+
+  it("gives a domain only the countries its own records prove", () => {
+    expect(visitedCountryContribution(sources, "flight", null)).toEqual(["VN"]);
+    expect(visitedCountryContribution(sources, "poi", null)).toEqual(["BE"]);
+    expect(visitedCountryContribution(sources, "cruise", null)).toEqual([]);
+  });
+
+  it("scopes a year to sources dated in it; an undated source counts for the lifetime only", () => {
+    expect(visitedCountryContribution(sources, "lodging", 2024)).toEqual(["VN"]);
+    expect(visitedCountryContribution(sources, "flight", 2024)).toEqual([]);
+    expect(visitedCountryContribution(sources, "poi", 2025)).toEqual([]);
   });
 });

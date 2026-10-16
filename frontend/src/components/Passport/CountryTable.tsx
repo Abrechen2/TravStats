@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { PassportCountry } from "../../types/passport";
 import CountryRow from "./CountryRow";
@@ -22,6 +23,25 @@ import { countryName } from "./countryName";
  * still comes from structure, and the second legend line says which of the two
  * blanks a reader can do something about.
  */
+type CountryView = "ground" | "visited" | "unclear";
+
+/**
+ * The three lists of forgejo#299: every country with ground presence, the
+ * visited subset, and the ground countries whose visit the records cannot
+ * decide — shown on their own so an open-jaw end is found, not lost.
+ */
+const VIEW_FILTER: Record<CountryView, (c: PassportCountry) => boolean> = {
+  ground: () => true,
+  visited: (c) => c.visited ?? c.counted,
+  unclear: (c) => c.visitUncertain === true,
+};
+
+const VIEW_LABEL: Record<CountryView, string> = {
+  ground: "passport:summary.groundCountries",
+  visited: "passport:summary.countries",
+  unclear: "passport:summary.unclearCountries",
+};
+
 export default function CountryTable({
   countries,
   locale,
@@ -30,6 +50,8 @@ export default function CountryTable({
   locale: string;
 }): JSX.Element {
   const { t } = useTranslation(["passport"]);
+  const [view, setView] = useState<CountryView>("ground");
+  const visible = countries.filter(VIEW_FILTER[view]);
 
   return (
     <section
@@ -40,6 +62,24 @@ export default function CountryTable({
       <h2 id="countries-heading" className="text-sm font-semibold px-4 pt-4 pb-1 sm:px-6 sm:pt-6">
         {t("passport:countries.title")}
       </h2>
+      <div
+        className="flex gap-3 px-4 py-3 sm:px-6"
+        role="group"
+        aria-label={t("passport:countries.title")}
+      >
+        {(Object.keys(VIEW_LABEL) as CountryView[]).map((kind) => (
+          <button
+            type="button"
+            key={kind}
+            aria-pressed={view === kind}
+            onClick={() => setView(kind)}
+            className="rounded-md border px-3 py-2 text-sm"
+            style={{ borderColor: "var(--border)" }}
+          >
+            {t(VIEW_LABEL[kind])}
+          </button>
+        ))}
+      </div>
       <p className="text-xs px-4 pb-3 sm:px-6" style={{ color: "var(--text-muted)" }}>
         {t("passport:countries.listNote")}
       </p>
@@ -69,7 +109,7 @@ export default function CountryTable({
             </tr>
           </thead>
           <tbody>
-            {countries.map((row) => (
+            {visible.map((row) => (
               <CountryRow key={row.code} row={row} countryLabel={countryName(row.code, locale)} />
             ))}
           </tbody>

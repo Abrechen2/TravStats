@@ -6,8 +6,11 @@ import { BETA_GATED_DOMAINS, loadVisibleDomains } from "../domainVisibility";
 import {
   dayKeyInYear,
   foldCrossDomain,
+  visitedCountryContribution,
+  visitedSourcesOfRows,
   type DomainContribution,
 } from "../../shared/crossDomainCounting";
+import { loadPassport } from "../stats/passportLoader";
 import type { PagingParams } from "./paging";
 import { pageDistinctEntries, pageSumEntries } from "./entryMappersDomains";
 import {
@@ -151,9 +154,16 @@ export async function resolveCrossDomainEventCount(
 }
 
 /**
- * The UNION of the countries the visible domains reached — ten flights prove
- * one country and one international flight proves two, which is the whole
- * reason this is `distinct` and not a sum.
+ * "Länder besucht" over the visible domains: the passport's visited rule
+ * (forgejo#299), scoped by chip and year through each row's `visitSources`
+ * — the same index the tile folds. Before this it unioned every country a
+ * record touched, so a connection or an open-jaw end counted as a visit here
+ * while the passport, under the same words, did not count it.
+ *
+ * The rows listed are the domain's records, each crediting only the visited
+ * countries its own domain proves. A visited country no listed row names (a
+ * lodging the population files under another year, say) is reported as
+ * unattributed rather than dropped from the number.
  */
 export async function resolveCrossDomainCountryCount(
   userId: string,
@@ -161,23 +171,36 @@ export async function resolveCrossDomainCountryCount(
   page: PagingParams
 ): Promise<EvidenceResponse> {
   const { year, domains } = await readVisibleScope(userId, scope, "crossDomainCountryCount");
-  const { countryRows } = await loadCrossDomainPopulation(userId, domains);
-  const matched: CrossDomainCountryRow[] = countryRows.filter(
-    (row) => year === null || row.years.includes(year)
+  const [{ countryRows }, passport] = await Promise.all([
+    loadCrossDomainPopulation(userId, domains),
+    loadPassport(userId),
+  ]);
+  const sources = visitedSourcesOfRows(passport.countries);
+  const visitedBy = new Map(
+    domains.map((domain) => [domain, new Set(visitedCountryContribution(sources, domain, year))])
   );
 
-  const contributions: DomainContribution[] = [...byDomain(matched)].map(([domain, rows]) => ({
+  const contributions: DomainContribution[] = domains.map((domain) => ({
     domain,
     events: 0,
-    countries: rows.flatMap((row) => row.countries),
+    countries: [...(visitedBy.get(domain) ?? [])],
     activeDayKeys: [],
   }));
   const totals = foldCrossDomain(contributions);
 
-  const entries: EvidenceEntry[] = matched.map((row) => ({
-    ...row.entry,
-    credits: row.countries,
-  }));
+  const matched: Array<CrossDomainCountryRow & { credits: string[] }> = countryRows
+    .filter((row) => year === null || row.years.includes(year))
+    .map((row) => ({
+      ...row,
+      credits: row.countries.filter((code) => visitedBy.get(row.domain)?.has(code)),
+    }))
+    .filter((row) => row.credits.length > 0);
+  const credited = new Set(matched.flatMap((row) => row.credits));
+  const uncredited = new Set(
+    contributions.flatMap((c) => c.countries).filter((code) => !credited.has(code))
+  ).size;
+
+  const entries: EvidenceEntry[] = matched.map((row) => ({ ...row.entry, credits: row.credits }));
   const paged = pageDistinctEntries(entries, page);
   return {
     measure: {
@@ -192,7 +215,7 @@ export async function resolveCrossDomainCountryCount(
     entries: paged.entries,
     returned: paged.entries.length,
     omitted: { count: paged.omittedCount, credits: paged.omittedCredits },
-    unattributed: [],
+    unattributed: uncredited > 0 ? [{ count: uncredited, reason: "notPerEntry" }] : [],
     page,
   };
 }

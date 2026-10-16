@@ -25,12 +25,7 @@
  * this file only feeds them the run's own ends.
  */
 
-import {
-  attestedGroundDays,
-  groundTier,
-  measuredGroundMinutes,
-  type EvidenceInput,
-} from "../../shared/countryEvidence";
+import type { JourneyEvidenceInput, JourneyLeg, VisitUnclearReason } from "./journeyEvidence";
 
 /** A flight is a stamp only once it has been flown. Rule 1 of the passport. */
 export const FLOWN = new Set(["flown", "historical"]);
@@ -88,232 +83,41 @@ export const flightDay = (f: {
   departureTime: Date | null;
 }): string | null => f.localDay ?? isoDayOf(f.departureTime);
 
-/**
- * The `at` a flight hands the fold: its local day as UTC midnight. The fold
- * dates a record by the UTC day of `at` (`shared/countryEvidence.ts`) and
- * widens a country's first and last date with it, so the raw departure instant
- * put a Tokyo 07:30 departure on 1 January into the year before, beside the
- * local `days` it was handed (forgejo#273). UTC midnight is a carrier for the
- * day, the convention `airportCalendarDay` uses — not a claim about the zone.
- */
-const dayCarrier = (day: string | null): Date | null =>
-  day === null ? null : new Date(`${day}T00:00:00Z`);
-
 /** Undated rows sort last: they cannot take part in a day comparison. */
-const departedAt = (f: PassportFlight): number =>
-  f.departureTime ? f.departureTime.getTime() : Number.MAX_SAFE_INTEGER;
+const departedAt = (f: PassportFlight): number => {
+  const at = f.departureInstant ?? f.departureTime;
+  return at ? at.getTime() : Number.MAX_SAFE_INTEGER;
+};
+
+export type { VisitUnclearReason, JourneyEvidenceInput as FlightEvidenceInput };
 
 /**
- * What the flight list proves about each country, as evidence tiers.
+ * The FLOWN flights as legs of the travel chain (`./journeyEvidence.ts`),
+ * which reads them together with train and coach rides (owner ruling
+ * 2026-10-16). Both ends are filed on the flight's own local day
+ * (`flightDay`), as `/stats/countries` does: a red-eye is one journey.
  *
- * The case the old rule got wrong is the country somebody only changed planes
- * in. It is visible in the data as a GROUND SEGMENT — landed on one flight,
- * left on the next — so the flights are walked in chronological order and each
- * such segment is read through `groundTier`:
- *
- *   - the local day changed → `slept`. Same evidence a hotel gives, from a
- *     different source (spec §7.5).
- *   - the local day did not → a connection OR a day trip, and which one is
- *     decided by where the journey goes next. See below.
- *
- * `groundTier` answers `visited` for a same-day pair because it compares two
- * days and nothing more; what a same-day gap MEANS is this function's question.
- *
- * ## A connection continues onward; a day trip returns
- *
- * Filing every same-day ground segment as `connection` was wrong in a way that
- * silently deleted countries: fly MUC→FCO in the morning and FCO→MUC at night
- * and Italy dropped out of the headline, despite a day spent in Rome. The two
- * shapes were called "structurally identical". They are not — the structure that
- * tells them apart is the DESTINATION of the onward flight:
- *
- *   - it lands in the country the traveller came FROM → they went there and came
- *     back. That is a return, not a connection, in any ordinary sense of the
- *     word, and the tier is `visited`.
- *   - it lands anywhere else → the journey continued onward, which is what a
- *     connection is, and the tier stays `connection`.
- *
- * Compared at COUNTRY level, not airport level: MUC→FCO→FRA is a day in Rome
- * between two German airports just as much as MUC→FCO→MUC is.
- *
- * A run of several ground segments in one country is judged as ONE stay on the
- * ground, because that is what it is: JFK→LHR→EDI→JFK never leaves Britain in
- * between, and pairwise reading called both of its segments a connection and
- * dropped the United Kingdom out of a headline that contained three flights to
- * it.
- *
- * ## The ambiguous shape, and why it stays `connection`
- *
- * MUC→FCO→BCN on one day cannot be told apart from a morning in Rome. It is
- * ALSO the exact shape of every hub connection there is — MUC→DOH→SIN, the case
- * §1.1 was written about. Reading the triangle as `visited` would therefore not
- * be "erring towards the stronger tier at the margin"; it would empty the
- * `connection` tier completely and put all seven of the owner's sub-five-hour
- * connections back in the headline, which is the defect this whole rework
- * exists to remove. So the triangle keeps the weaker reading, and the country
- * keeps its row in the list where a reader can see it.
- *
- * A geometric tie-breaker — "is B on the way from A to C" — was considered and
- * rejected: it is a dial to turn until the total feels right, which is the thing
- * §2 refuses on principle.
- *
- * Every end NOT consumed by a segment is `visited`: the airport somebody first
- * flew out of, the one they never flew home from, both ends of a domestic hop.
- * None of those is a connection, and reading them as one would have demoted the
- * home country of anybody whose first recorded flight is an outbound one.
- *
- * The cost of filing both ends of a flight on its DEPARTURE day is named here
- * rather than hidden: a red-eye that lands after midnight reads as an overnight
- * even when the traveller connected in three hours. That errs towards the
- * stronger tier, which keeps a country in the headline rather than dropping one
- * out of it — the safe direction for a hint.
+ * Ordered by the real departure instant where the caller resolved one, so a
+ * flight and a train on the same day fall in the order they happened; a row
+ * without one falls back to the stored time.
  */
-export function flightEvidence(
+export function flightLegs(
   flights: readonly PassportFlight[],
   countryOf: (iata: string | null) => string | null
-): EvidenceInput[] {
-  const chain = flights
+): JourneyLeg[] {
+  return flights
     .filter((f) => FLOWN.has(f.status))
-    .sort((a, b) => departedAt(a) - departedAt(b));
-
-  const inputs: EvidenceInput[] = [];
-  const consumed = new Set<string>();
-
-  /**
-   * The ground segment between `chain[i]` and `chain[i + 1]`, or null where
-   * there is none to read. An undated end cannot say whether a night passed, so
-   * it is no segment either: both flights' ends then stay unconsumed and fall
-   * through to `visited` below — a weaker claim than the data may support, which
-   * is the right way round to be wrong.
-   */
-  interface GroundSegment {
-    country: string;
-    arrivalDay: string;
-    departureDay: string;
-  }
-
-  const segments: (GroundSegment | null)[] = [];
-  for (let i = 0; i < chain.length - 1; i += 1) {
-    const country = countryOf(chain[i].arrIata);
-    const arrivalDay = flightDay(chain[i]);
-    const departureDay = flightDay(chain[i + 1]);
-    const joined = country !== null && country === countryOf(chain[i + 1].depIata);
-    segments.push(
-      joined && country && arrivalDay && departureDay ? { country, arrivalDay, departureDay } : null
-    );
-  }
-
-  let start = 0;
-  while (start < segments.length) {
-    const first = segments[start];
-    if (!first) {
-      start += 1;
-      continue;
-    }
-
-    // The maximal run of consecutive segments in this same country — one
-    // uninterrupted spell on the ground, however many domestic hops it contains.
-    // `last` is carried along because the run's two ends are what the duration
-    // is judged on, and a null segment can never join a run (it has no country).
-    let end = start;
-    let last = first;
-    while (end + 1 < segments.length) {
-      const next = segments[end + 1];
-      if (!next || next.country !== first.country) break;
-      end += 1;
-      last = next;
-    }
-
-    // Where the traveller came from, and where they went afterwards. Null on
-    // either side means "cannot be known", and an unknown side is never read as
-    // a return: that would upgrade a country on the strength of a missing value.
-    const cameFrom = countryOf(chain[start].depIata);
-    const wentTo = countryOf(chain[end + 1].arrIata);
-    const returned = cameFrom !== null && cameFrom === wentTo;
-
-    /**
-     * The spell on the ground, measured across the WHOLE run rather than
-     * segment by segment — the same unit the tier is judged on, and for the
-     * same reason: JFK→LHR→EDI→JFK never leaves Britain in between, so the time
-     * there is the landing at Heathrow to the take-off from Edinburgh, not two
-     * shorter gaps with a domestic hop deleted from the middle.
-     *
-     * Null unless BOTH ends are real instants. A negative result is a record
-     * contradicting itself (an arrival stored after the next departure) and
-     * abstains rather than publishing a negative hour count.
-     *
-     * And null again, through `measuredGroundMinutes`, once the run spans more
-     * than one night: past that the interval stops describing a stay and starts
-     * describing a hole in the flight log. Judged on the RUN's two ends, because
-     * the run is what the interval was measured across — asking segment by
-     * segment would let a three-year gap publish itself as long as each
-     * individual hop happened to be short.
-     */
-    const landed = chain[start].arrivalInstant;
-    const leftAgain = chain[end + 1].departureInstant;
-    const spellMinutes =
-      landed && leftAgain && leftAgain.getTime() >= landed.getTime()
-        ? Math.round((leftAgain.getTime() - landed.getTime()) / 60_000)
-        : null;
-    const runMinutes = measuredGroundMinutes(first.arrivalDay, last.departureDay, spellMinutes);
-
-    for (let i = start; i <= end; i += 1) {
-      const segment = segments[i];
-      if (!segment) continue;
-      consumed.add(`${i}:arr`);
-      consumed.add(`${i + 1}:dep`);
-      inputs.push({
-        country: segment.country,
-        kind: "flight",
-        tier:
-          groundTier(segment.arrivalDay, segment.departureDay) === "slept"
-            ? "slept"
-            : returned
-              ? "visited"
-              : "connection",
-        at: dayCarrier(segment.arrivalDay),
-        // The two ends of the spell and nothing between them — the days the
-        // records attest. Read on the airports' own clocks, never on the UTC
-        // instant beside them: a red-eye that lands after midnight UTC would
-        // otherwise report a day in a country the traveller connected through
-        // in three hours.
-        days: attestedGroundDays(segment.arrivalDay, segment.departureDay),
-        groundMinutes: runMinutes,
-      });
-    }
-
-    start = end + 1;
-  }
-
-  /**
-   * An end no ground segment consumed places the traveller in the country for
-   * ONE day — the flight's own. It bounds no spell, so it carries no ground
-   * minutes and the country reports `unknown` unless some other pair measured
-   * one: a one-way arrival genuinely does not say how long the stay was.
-   */
-  for (let i = 0; i < chain.length; i += 1) {
-    const f = chain[i];
-    const day = flightDay(f);
-    const days = day === null ? [] : [day];
-    if (!consumed.has(`${i}:dep`)) {
-      inputs.push({
-        country: countryOf(f.depIata),
-        kind: "flight",
-        tier: "visited",
-        at: dayCarrier(day),
-        days,
-      });
-    }
-    if (!consumed.has(`${i}:arr`)) {
-      inputs.push({
-        country: countryOf(f.arrIata),
-        kind: "flight",
-        tier: "visited",
-        at: dayCarrier(day),
-        days,
-      });
-    }
-  }
-
-  return inputs;
+    .map((f) => {
+      const day = flightDay(f);
+      return {
+        mode: "flight" as const,
+        depCountry: countryOf(f.depIata),
+        arrCountry: countryOf(f.arrIata),
+        departedAt: departedAt(f),
+        depDay: day,
+        arrDay: day,
+        departureInstant: f.departureInstant ?? null,
+        arrivalInstant: f.arrivalInstant ?? null,
+      };
+    });
 }

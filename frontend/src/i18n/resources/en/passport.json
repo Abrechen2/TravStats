@@ -8,27 +8,29 @@
   "loadError": "The passport could not be loaded.",
   "stamps": "Stamps",
   "summary": {
-    "countries": "Countries",
+    "countries": "Countries visited",
     "countriesTotal": "counted / with evidence",
-    "countriesTotalExplained": "The second number is every country for which there is any evidence at all. The first counts only those whose evidence reaches the threshold.",
+    "countriesTotalExplained": "Countries visited counts actual stays. Ground presence also includes confirmed transit stops and travel through a country.",
     "airports": "Airports",
     "entries": "Entries",
-    "continents": "Continents"
+    "continents": "Continents",
+    "groundCountries": "Ground presence",
+    "unclearCountries": "Unclear"
   },
   "evidence": {
     "title": "Evidence",
-    "headlineNote": "{{counted}} of {{total}} countries with evidence are counted — counting starts at the tier “{{threshold}}”. The rest stay in the list, greyed out, so you can check and correct them.",
+    "headlineNote": "{{counted}} visited · {{total}} with confirmed ground presence. Transit stops remain visible; uncertain visits are marked.",
     "kindsSumNote": "this split adds up to every country with evidence, not to the counted headline"
   },
   "tiers": {
     "slept": "Stayed overnight",
-    "sleptExplained": "The calendar day changed: a completed stay, a recorded lodging, a port call spanning a night or a pair of flights across a day boundary.",
+    "sleptExplained": "An actual lodging stay or confirmed overnight beyond transit locations. A calendar-day change alone is insufficient.",
     "visited": "Visited",
-    "visitedExplained": "Arrival and departure on the same calendar day, a recorded place or a day in port.",
-    "connection": "Connection only",
-    "connectionExplained": "A connecting flight and nothing else. Nothing records whether you left the airport, so this country does not count. Add a place, a stay or another flight and the tier goes up.",
-    "transited": "Passed through",
-    "transitedExplained": "A stop on the ground without a night — a station, say, or a stop on a roadtrip. That is not a change of planes: you were in the country, so it counts. Your location history alone never makes a country one you passed through."
+    "visitedExplained": "A confirmed place visit, a port call, the country you live in, or a destination with an outbound and a return trip – by air, rail or bus, mixed too. Location points and connection duration are insufficient.",
+    "connection": "Flight endpoint / connection",
+    "connectionExplained": "The flight proves ground contact. A visit outside the airport is not established. Confirmed place visits or lodging can provide that evidence.",
+    "transited": "Ground presence",
+    "transitedExplained": "A recorded stop or ground transit, such as a change station or a rest area. Counts as ground presence; an actual visit requires further evidence."
   },
   "kinds": {
     "flight": "Flight",
@@ -75,7 +77,7 @@
   },
   "countries": {
     "title": "Countries",
-    "listNote": "This list shows every country with any evidence — including the ones that are not counted. Those are greyed out rather than removed, so you can check them.",
+    "listNote": "Ground presence includes confirmed transit stops and travel through a country. Select countries visited to show confirmed visits only.",
     "dashLegend": "“—” does not mean zero, it means not derivable: a country proved only by a lodging or a port call has no flights and no airports — and without a dated record, no period either.",
     "groundTimeLegend": "“Time on the ground” has three answers, and two of them are not a value: “unknown” means a flight was here but no second one bounds the stay — that you can fill in. “—” means no flight was here at all; a lodging bounds no departure, so there is nothing to add. “Days”, by contrast, is always counted: 0 means no record names a day.",
     "country": "Country",
@@ -87,12 +89,19 @@
     "airports": "Airports",
     "home": "Home",
     "new": "new",
-    "notCounted": "not counted",
-    "notCountedExplained": "This country does not reach the threshold for the headline. It stays in the list all the same: the tier comes from what was recorded, and what was recorded is incomplete.",
+    "notCounted": "Ground presence only",
+    "notCountedExplained": "This country counts as ground presence. A visit beyond a transit stop is not established.",
     "undated": "undated",
     "undatedExplained": "At least one record carries no date. This country therefore cannot appear in any year's figures.",
     "showRecords": "Show records",
-    "hideRecords": "Hide records"
+    "hideRecords": "Hide records",
+    "visitUncertain": "Visit unclear",
+    "unclearResolve": "A confirmed place, a stay or the missing flight settles it.",
+    "unclearReason": {
+      "openChain": "The recorded trip breaks off here (a one-way flight or ride, an open jaw, or the first or last trip).",
+      "noDestination": "The trip never turns around – which country was the destination cannot be decided.",
+      "undated": "The trip has no date and cannot be placed in a chain."
+    }
   },
   "thresholdChoice": {
     "options": {
@@ -124,5 +133,6 @@
     "title": "Unconfirmed location days",
     "explanation": "These Dawarich locations do not prove ground presence. They may come from overflights or inaccurate positions and do not add to country counts or days present. Confirmed place visits and travel records are counted independently.",
     "observation": "Dawarich · Location days: {{days}} · Points: {{points}}"
-  }
+  },
+  "countingRule": "Ground presence includes connections and transit. Visits require a recorded stay beyond transit locations or an identifiable return flight chain. Nights and location points alone do not prove a visit."
 }

@@ -1,44 +1,21 @@
 /**
- * What a TRAIN RIDE proves about a country — the passport and the country
- * drill-down both ask it, and both ask it here (like `./roadtripEvidence.ts`).
+ * The STATION ENDS of train rides — the passport and the country drill-down
+ * both read them here (like `./roadtripEvidence.ts`). Which rides: the
+ * counted ones (`shared/railCounting.ts`: completed only), passed in already
+ * filtered by the loader. A station the geocoder could not place proves
+ * nothing (abstention).
  *
- * Before this file the Stats overview counted a ride's countries
- * (`crossDomainPopulations.loadRail`) while the passport and the drill-down did
- * not know them, so the same account showed two different country totals on
- * two pages.
- *
- * ## Which rides
- *
- * The counted ones (`shared/railCounting.ts`: completed; cancelled and upcoming
- * never), passed in already filtered by the loader.
- *
- * ## The tier is structural, as for flights
- *
- * A ride has two ENDS, each a station in a country the geocoder named — a
- * station it could not place proves nothing (abstention). An end is where the
- * traveller stood on the ground. Walked in order, an arrival followed by the
- * next ride leaving from the same country is a spell on the ground, read on the
- * STATIONS' calendars (`stationDayKey`):
- *
- *   - the day changed → `slept`, the evidence an overnight between two flights
- *     gives (spec 2026-09-02 §7.5).
- *   - the same day, and the next ride goes back where the traveller came from
- *     → a day trip: `visited`.
- *   - the same day, onward → a change of trains: `transited`. Not
- *     `connection`: that tier is "a change of planes and nothing else", an
- *     airside stop. A station is inside the country, on the ground — the
- *     owner's rule for a border crossed by road (2026-09-02) — so it counts by
- *     default, like driving through.
- *
- * An end with no such partner — the first departure, the last arrival, or an
- * arrival followed by a flight — is `visited`: the traveller was there that
- * day, and nothing recorded says they stayed the night.
+ * What an end PROVES is no longer decided here. Owner ruling 2026-10-16 on
+ * forgejo#299: rides count like flights, in one chain with them, so each end
+ * carries its ride as a `leg` and `./journeyEvidence.ts` grades the chain —
+ * a ride out and back proves a visit, a change station is ground presence,
+ * an open chain is unclear. The grading that used to live here called a
+ * date change `slept`, which #299 rules out ("ein Datumswechsel allein").
  *
  * Pure: rides in, answers out. The loader lives beside it.
  */
 
-import type { EvidenceInput } from "../../shared/countryEvidence";
-import type { CountryTier } from "../../shared/countryEvidence";
+import type { JourneyLeg, JourneyMode } from "./journeyEvidence";
 import { stationDayKey } from "../../shared/railCounting";
 
 /** The columns this reads. Any rail journey row is a superset. */
@@ -62,11 +39,12 @@ export interface RailEnd {
   stationName: string;
   /** ISO 3166-1 alpha-2, upper case. */
   country: string;
-  tier: CountryTier;
-  /** First attested day as UTC midnight of that `YYYY-MM-DD`. */
+  /** The end's own day as UTC midnight of that `YYYY-MM-DD`. */
   at: Date;
-  /** The days this end attests, `YYYY-MM-DD`: its own, plus its partner's across a spell. */
+  /** The day this end attests, `YYYY-MM-DD`, on the station's clock. */
   days: string[];
+  /** The ride this end belongs to, as a leg of the travel chain. */
+  leg: JourneyLeg;
 }
 
 const code = (c: string | null): string | null =>
@@ -82,72 +60,49 @@ function arrivalDay(ride: RailEvidenceRide): string {
 const departureDay = (ride: RailEvidenceRide): string =>
   stationDayKey(ride.departureTime, ride.depTimezone);
 
-function end(
-  ride: RailEvidenceRide,
-  side: "dep" | "arr",
-  tier: CountryTier,
-  days: string[]
-): RailEnd | null {
-  const country = code(side === "dep" ? ride.depCountry : ride.arrCountry);
-  if (!country) return null;
-  const unique = [...new Set(days)].sort();
-  return {
-    rideId: ride.id,
-    rideLabel: ride.label,
-    stationName: side === "dep" ? ride.depStationName : ride.arrStationName,
-    country,
-    tier,
-    at: new Date(`${unique[0]}T00:00:00Z`),
-    days: unique,
-  };
-}
-
-/** Every station end of the counted rides, graded. Rides may arrive in any order. */
-export function railEnds(rides: readonly RailEvidenceRide[]): RailEnd[] {
-  const ordered = [...rides].sort(
-    (a, b) => a.departureTime.getTime() - b.departureTime.getTime() || a.id.localeCompare(b.id)
-  );
-  const out: RailEnd[] = [];
-  /** A departure end already written as the second half of a spell. */
-  const pairedDeparture = new Set<number>();
-
-  ordered.forEach((ride, i) => {
-    if (!pairedDeparture.has(i)) {
-      const dep = end(ride, "dep", "visited", [departureDay(ride)]);
-      if (dep) out.push(dep);
-    }
-    const next = ordered[i + 1];
-    const here = code(ride.arrCountry);
+/** Every station end of the counted rides, each carrying its ride as a chain leg. */
+export function railEnds(
+  rides: readonly RailEvidenceRide[],
+  mode: Exclude<JourneyMode, "flight"> = "rail"
+): RailEnd[] {
+  return rides.flatMap((ride) => {
+    const depDay = departureDay(ride);
     const arrDay = arrivalDay(ride);
-    if (next && here !== null && code(next.depCountry) === here) {
-      const leaveDay = departureDay(next);
-      const tier: CountryTier =
-        leaveDay !== arrDay
-          ? "slept"
-          : code(next.arrCountry) !== null && code(next.arrCountry) === code(ride.depCountry)
-            ? "visited"
-            : "transited";
-      const days = [arrDay, leaveDay];
-      const arr = end(ride, "arr", tier, days);
-      const leave = end(next, "dep", tier, days);
-      if (arr) out.push(arr);
-      if (leave) out.push(leave);
-      pairedDeparture.add(i + 1);
-      return;
-    }
-    const arr = end(ride, "arr", "visited", [arrDay]);
-    if (arr) out.push(arr);
+    const leg: JourneyLeg = {
+      mode,
+      depCountry: code(ride.depCountry),
+      arrCountry: code(ride.arrCountry),
+      departedAt: ride.departureTime.getTime(),
+      depDay,
+      arrDay,
+    };
+    const ends: Array<[string | null, string, string]> = [
+      [leg.depCountry, ride.depStationName, depDay],
+      [leg.arrCountry, ride.arrStationName, arrDay],
+    ];
+    return ends.flatMap(([country, stationName, day]) =>
+      country === null
+        ? []
+        : [
+            {
+              rideId: ride.id,
+              rideLabel: ride.label,
+              stationName,
+              country,
+              at: new Date(`${day}T00:00:00Z`),
+              days: [day],
+              leg,
+            },
+          ]
+    );
   });
-  return out;
 }
 
-/** The fold's inputs for every end. */
-export function railEvidence(ends: readonly RailEnd[]): EvidenceInput[] {
-  return ends.map((e) => ({
-    country: e.country,
-    kind: "rail",
-    tier: e.tier,
-    at: e.at,
-    days: e.days,
-  }));
+/**
+ * The chain legs behind a list of ends, one per ride. A ride none of whose
+ * stations could be placed has no end and no leg: it proves nothing, and the
+ * chain reads past it.
+ */
+export function legsOfEnds(ends: readonly RailEnd[]): JourneyLeg[] {
+  return [...new Map(ends.map((e) => [e.rideId, e.leg])).values()];
 }

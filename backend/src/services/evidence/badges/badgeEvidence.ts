@@ -61,8 +61,8 @@ async function resolveProof(
 /**
  * The country badges count like the passport (`achievementCountries`), so
  * their evidence is the passport's records — every record that proves one of
- * the BADGE's countries, read from the badge's own sources (no place, no track,
- * no hidden domain).
+ * the BADGE's countries, read from the badge's own sources (no track, no hidden
+ * domain; a confirmed place counts since forgejo#299).
  */
 async function resolveCountries(
   userId: string,
@@ -81,8 +81,8 @@ async function resolveCountries(
     tripsFullyDocumented: 0,
   });
   const counted = stats.countries;
-  // The index already reads the badge's own sources — no place, no track, no
-  // hidden rail/roadtrip/bus — so every record here could have counted.
+  // The index already reads the badge's own sources — no track, no hidden
+  // rail/roadtrip/bus — so every record here could have counted.
   const entries = index.records
     .map((r) => ({ ...r.entry, credits: [...r.countries].filter((c) => counted.has(c)).sort() }))
     .filter((e) => e.credits.length > 0);

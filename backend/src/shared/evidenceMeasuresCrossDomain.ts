@@ -38,8 +38,9 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
     unit: "countries",
     scopes: ["domainFiltered"],
     surface: "CrossDomainKpis",
+    // forgejo#299: the passport's visited rule, folded by chip and year.
     calculator:
-      "frontend Overview/aggregate.ts aggregate() over lib/stats/domain-stats/*Adapter.ts",
+      "frontend Overview/aggregate.ts aggregate() over GET /stats/passport countries[].visitSources (shared/crossDomainCounting.ts visitedCountryContribution)",
     servedIn: 1,
   },
   crossDomainActiveDayCount: {

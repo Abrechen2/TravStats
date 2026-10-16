@@ -137,7 +137,7 @@ describe("passport evidence", () => {
     return res;
   };
 
-  it("lists the rows behind the headline country count, and counts nothing only a track proves", async () => {
+  it("lists the rows behind the headline country count, and names what only a track proves", async () => {
     const passport = await loadPassport(userId);
     const res = await metric("passportCountryCount");
     assertDistinctInvariant(res);
@@ -154,9 +154,10 @@ describe("passport evidence", () => {
     const byDomain = (domain: string) => res.entries.filter((e) => e.domain === domain);
     expect(byDomain("lodging").map((e) => e.credits)).toEqual([["IT"]]);
     expect(byDomain("place").map((e) => e.credits)).toEqual([["ES"]]);
-    expect(byDomain("rail")[0]?.credits).toEqual(["AT", "DE"]);
+    // A one-way ride is an open chain: ground presence, not a visit.
+    expect(byDomain("rail")).toEqual([]);
 
-    // Norway: location history alone, which proves no country since forgejo#299.
+    // Norway: location history alone — counted nowhere (forgejo#299).
     expect(counted.has("NO")).toBe(false);
     expect(credited.has("NO")).toBe(false);
     expect(res.unattributed).toEqual([]);

@@ -13,7 +13,6 @@ import { useAuthStore } from "../store/authStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { logger } from "../lib/logger";
 import type { Passport, PassportContinentGroup } from "../types/passport";
-import Toggletip from "../components/ui/Toggletip";
 
 /**
  * The passport.
@@ -220,19 +219,32 @@ export default function PassportPage(): JSX.Element {
                           className="text-2xl font-semibold"
                           style={{ fontVariantNumeric: "tabular-nums" }}
                         >
-                          {passport.summary.countries}
-                          <Toggletip
-                            content={t("passport:summary.countriesTotalExplained")}
-                            triggerClassName="text-base"
-                            triggerStyle={{ color: "var(--text-muted)" }}
+                          {passport.summary.visitedCountries ?? passport.summary.countries}
+                        </dd>
+                        <dt
+                          className="text-[11px] uppercase tracking-wider mt-2"
+                          style={{ color: "var(--text-muted)" }}
+                        >
+                          {t("passport:summary.groundCountries")}
+                        </dt>
+                        <dd
+                          className="text-xl font-semibold"
+                          style={{ fontVariantNumeric: "tabular-nums" }}
+                        >
+                          {passport.summary.groundCountries ?? passport.summary.countriesTotal}
+                        </dd>
+                        {/* forgejo#299: a chain the records cannot decide is
+                            named, never folded silently into "ground only". */}
+                        {(passport.summary.unclearCountries ?? 0) > 0 && (
+                          <p
+                            className="text-xs mt-1"
+                            style={{ color: "var(--text-muted)" }}
+                            data-testid="passport-unclear-count"
                           >
-                            {" / "}
-                            {passport.summary.countriesTotal}
-                          </Toggletip>
-                        </dd>
-                        <dd className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-                          {t("passport:summary.countriesTotal")}
-                        </dd>
+                            {t("passport:summary.unclearCountries")}:{" "}
+                            {passport.summary.unclearCountries}
+                          </p>
+                        )}
                       </div>
                       {[
                         ["airports", passport.summary.airports],
