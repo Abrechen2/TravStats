@@ -44,6 +44,7 @@ const counts = z.object({
   cruises: z.number().int(),
   railJourneys: z.number().int(),
   busJourneys: z.number().int(),
+  ferryJourneys: z.number().int(),
   rentals: z.number().int(),
   stops: z.number().int(),
 });
@@ -210,7 +211,7 @@ registry.registerPath({
   path: "/sharing/trips/{tripId}/share",
   summary: "Share a trip with a linked companion",
   description:
-    "One transaction: copies the trip and every flight, stay, cruise, rail ride, bus ride, rental and " +
+    "One transaction: copies the trip and every flight, stay, cruise, rail ride, bus ride, ferry crossing, rental and " +
     "timeline stop into the companion's account — facts only — and joins both copies in a " +
     "share group. Idempotent: entries the other account already holds are not copied again.",
   tags,

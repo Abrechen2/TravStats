@@ -4468,7 +4468,7 @@ model ShareNotice {
   actorId    String?   @map("actor_id")
   /// shared | created | updated | deleted | left
   kind       String
-  /// trip | flight | lodgingStay | cruise | rail | rental | stop
+  /// trip | flight | lodgingStay | cruise | rail | bus | ferry | rental | stop — services/sharing/shareTypes.ts
   entityType String?   @map("entity_type")
   /// The entry's shareKey; for `trip` the RECIPIENT's own trip id.
   entityKey  String?   @map("entity_key")

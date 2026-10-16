@@ -15,7 +15,7 @@ import { DOMAIN_SHARING, SHARE_ENTITIES, SHARE_TYPES } from "../shareTypes";
  */
 
 /** Tables that carry `share_key` but are not shareable YET. Only shrinks. */
-const UNWIRED_SHARE_KEY_TABLES: readonly string[] = ["ferry_journeys"];
+const UNWIRED_SHARE_KEY_TABLES: readonly string[] = [];
 
 const sharingJson = (lang: "de" | "en") =>
   JSON.parse(

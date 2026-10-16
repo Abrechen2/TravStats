@@ -101,7 +101,7 @@
     "leaveConfirm": "Gruppe verlassen? Deine Kopie bleibt als eigene Reise erhalten; die anderen werden benachrichtigt.",
     "left": "Du hast die Gruppe verlassen. Deine Reise bleibt erhalten.",
     "shared": "Mit {{name}} geteilt.",
-    "privateHint": "Kopiert werden nur Fakten — Flüge, Unterkünfte, Kreuzfahrten, Bahnfahrten, Busfahrten, Mietwagen und Stopps. Sitzplatz, Zimmer, Preis, Bewertungen und Notizen bleiben privat.",
+    "privateHint": "Kopiert werden nur Fakten — Flüge, Unterkünfte, Kreuzfahrten, Bahn-, Bus- und Fährfahrten, Mietwagen und Stopps. Sitzplatz, Kabine, Zimmer, Preis, Bewertungen und Notizen bleiben privat.",
     "errors": {
       "loadFailed": "Die Freigabe dieser Reise konnte nicht geladen werden.",
       "shareFailed": "Die Reise konnte nicht geteilt werden.",
@@ -136,6 +136,7 @@
     "cruise": "die Kreuzfahrt",
     "rail": "die Bahnfahrt",
     "bus": "die Busfahrt",
+    "ferry": "die Fährfahrt",
     "rental": "den Mietwagen",
     "stop": "den Stopp"
   },
@@ -227,6 +228,7 @@
     "trainCategory": "Zuggattung",
     "trainNumber": "Zugnummer",
     "lineName": "Linie",
+    "vesselName": "Schiff",
     "rideKind": "Art der Fahrt",
     "depAddress": "Abfahrtsadresse",
     "arrAddress": "Zieladresse",

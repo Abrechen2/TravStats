@@ -20,6 +20,7 @@ import {
 import { mergeFerryJourney } from "../services/ferry/ferryJourneyWrite";
 import { withFerryTimes } from "../services/ferry/timesDto";
 import { restatusTrips } from "../services/trip/restatusTrips";
+import { propagateDelete, propagateWrite, shareSnapshot } from "../services/sharing/propagate";
 import { ferryYear } from "../shared/ferryCounting";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
@@ -274,6 +275,8 @@ async function createFerryRide(userId: string, body: unknown, claim: ClaimClient
       });
     }
     await claim(tx, created.id);
+    // On a shared trip: copied to the other members (design 2026-10-09).
+    await propagateWrite(tx, userId, "ferry", created.id);
     const linked = await linkDocumentsInTx(tx, userId, documentIds, {
       type: "ferryJourney",
       id: created.id,
@@ -331,6 +334,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     let ride;
     try {
       ride = await prisma.$transaction(async (tx) => {
+        const before = await shareSnapshot(tx, "ferry", existing.id);
         // Claim the read version atomically inside the same transaction as the edit.
         if (baseVersion !== null) {
           const claimed = await tx.ferryJourney.updateMany({
@@ -361,6 +365,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
             ...(resolved !== undefined && { companions: resolved.map((c) => c.displayName) }),
           },
         });
+        await propagateWrite(tx, userId, "ferry", existing.id, before);
         return tx.ferryJourney.findUniqueOrThrow({
           where: { id: existing.id },
           include: FERRY_INCLUDE,
@@ -388,14 +393,22 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
     });
     if (!existing) throw new AppError("Ferry ride not found", 404);
     const baseVersion = requestedBaseVersion(req);
-    const deleted = await prisma.ferryJourney.deleteMany({
-      where: {
-        id: existing.id,
-        userId,
-        ...(baseVersion === null ? {} : { updatedAt: new Date(baseVersion) }),
-      },
-    });
-    if (deleted.count !== 1) {
+    try {
+      await prisma.$transaction(async (tx) => {
+        const gone = await shareSnapshot(tx, "ferry", existing.id);
+        const deleted = await tx.ferryJourney.deleteMany({
+          where: {
+            id: existing.id,
+            userId,
+            ...(baseVersion === null ? {} : { updatedAt: new Date(baseVersion) }),
+          },
+        });
+        if (deleted.count !== 1) throw new FerryVersionMoved();
+        // The others keep their copies and are told (decision 3).
+        await propagateDelete(tx, userId, gone);
+      });
+    } catch (err) {
+      if (!(err instanceof FerryVersionMoved)) throw err;
       // Only a base version can make a found row miss; without one it was a
       // racing delete, and the crossing is simply gone.
       if (baseVersion === null) throw new AppError("Ferry ride not found", 404);

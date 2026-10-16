@@ -75,6 +75,13 @@ export const DERIVE: Readonly<Record<ShareEntity, DeriveCopy>> = {
     const status = deriveBusStatus({ ...r, current: r.status, endsAt: rideEndsAt(r) });
     if (status !== r.status) await c.busJourney.update({ where: { id }, data: { status } });
   },
+  async ferry(c, id) {
+    const r = await c.ferryJourney.findUniqueOrThrow({ where: { id }, select: RIDE_SELECT });
+    // A crossing derives with bus's rule: both are written through
+    // `services/rides/terminalRideWrite.ts`, which calls deriveBusStatus.
+    const status = deriveBusStatus({ ...r, current: r.status, endsAt: rideEndsAt(r) });
+    if (status !== r.status) await c.ferryJourney.update({ where: { id }, data: { status } });
+  },
   async rental(c, id) {
     const r = await c.rentalBooking.findUniqueOrThrow({
       where: { id },

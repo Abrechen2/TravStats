@@ -73,6 +73,7 @@ describe("TripSharingPanel", () => {
         cruises: 0,
         railJourneys: 0,
         busJourneys: 0,
+        ferryJourneys: 0,
         rentals: 0,
         stops: 0,
       },

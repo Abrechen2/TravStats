@@ -683,15 +683,14 @@ describe("Ferry rides API", () => {
 
   it("answers 404, not a version conflict, when a racing delete removed the crossing first", async () => {
     const ride = (await create(base)).body.data;
-    const original = prisma.ferryJourney.deleteMany.bind(prisma.ferryJourney);
-    const spy = jest
-      .spyOn(prisma.ferryJourney, "deleteMany")
-      // A plain async function stands in for Prisma's PrismaPromise-returning delegate.
-      .mockImplementationOnce((async (args?: Parameters<typeof original>[0]) => {
-        // The other device's delete lands between the lookup and this one.
-        await original({ where: { id: ride.id } });
-        return original(args);
-      }) as unknown as typeof original);
+    // The delete runs in a transaction beside its share propagation, so the
+    // other device's delete is slipped in just before that transaction opens —
+    // between the lookup and this delete, as before.
+    const original = prisma.$transaction.bind(prisma) as (fn: unknown) => Promise<unknown>;
+    const spy = jest.spyOn(prisma, "$transaction").mockImplementationOnce((async (fn: unknown) => {
+      await prisma.ferryJourney.delete({ where: { id: ride.id } });
+      return original(fn);
+    }) as never);
     try {
       const res = await request(app)
         .delete(`/api/v1/ferry/${ride.id}`)

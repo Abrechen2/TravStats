@@ -4,6 +4,7 @@ import { prisma, type DbTransaction } from "../../db";
 import { authenticate, requireWriteScope, type AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { z } from "../../schemas/zod";
+import { propagateWrite, shareSnapshot } from "../../services/sharing/propagate";
 import { recomputeTripStatus } from "../../services/tripStatusService";
 import logger from "../../utils/logger";
 
@@ -111,6 +112,7 @@ router.put("/:id/roadtrip-leg", async (req: AuthRequest, res: Response, next: Ne
         where: { id: req.params.id, userId: req.userId! },
       });
       if (!ferry) throw new AppError("Crossing not found", 404);
+      const before = await shareSnapshot(tx, "ferry", ferry.id);
       const previousLegId = ferry.roadtripLegId;
       if (!parsed.data.legId) {
         if (previousLegId) await restoreLeg(tx, previousLegId, ferry.roadtripLegBefore);
@@ -118,6 +120,7 @@ router.put("/:id/roadtrip-leg", async (req: AuthRequest, res: Response, next: Ne
           where: { id: ferry.id },
           data: { roadtripLegId: null, roadtripLegBefore: Prisma.DbNull },
         });
+        await propagateWrite(tx, req.userId!, "ferry", ferry.id, before);
         return { tripId: ferry.tripId };
       }
       const leg = await tx.tripRouteLeg.findFirst({
@@ -154,6 +157,10 @@ router.put("/:id/roadtrip-leg", async (req: AuthRequest, res: Response, next: Ne
           distanceKm: ferry.distanceKm ?? leg.distanceKm,
         },
       });
+      // Linking files the crossing on the roadtrip's trip — a move into a
+      // shared trip copies it. The leg itself is no fact: a link on a crossing
+      // already filed there propagates nothing.
+      await propagateWrite(tx, req.userId!, "ferry", ferry.id, before);
       return { tripId: leg.route.tripId };
     });
     if (result.tripId) await recomputeTripStatus(result.tripId);

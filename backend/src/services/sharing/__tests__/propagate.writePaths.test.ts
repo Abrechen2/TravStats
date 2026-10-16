@@ -8,8 +8,8 @@ import { join, relative } from "path";
  * Propagation is called explicitly (design 2026-10-09, "Propagation"), so a
  * new write path that forgets it would silently stop a shared trip's copies
  * from following. This scan finds every source file that writes a flight,
- * stay, house, cruise (or its calls and legs), rail or bus ride, rental or trip
- * stop, and requires each to either call propagation or stand in EXEMPT
+ * stay, house, cruise (or its calls and legs), rail, bus or ferry ride, rental
+ * or trip stop, and requires each to either call propagation or stand in EXEMPT
  * below with the reason. Both directions fail: an unlisted writer, and a
  * listed file that no longer writes or now propagates (a stale reason is a
  * wrong reason).
@@ -17,13 +17,14 @@ import { join, relative } from "path";
 
 const SRC = join(__dirname, "../../..");
 const WRITE =
-  /\.(flight|lodgingStay|lodging|cruise|cruiseStop|cruiseLeg|railJourney|busJourney|rentalBooking|tripStop)\s*\.(create|createMany|createManyAndReturn|update|updateMany|upsert|delete|deleteMany)\(/;
+  /\.(flight|lodgingStay|lodging|cruise|cruiseStop|cruiseLeg|railJourney|busJourney|ferryJourney|rentalBooking|tripStop)\s*\.(create|createMany|createManyAndReturn|update|updateMany|upsert|delete|deleteMany)\(/;
 const PROPAGATES = /\b(propagateWrites?|propagateDeletes?|detachTrip|propagateBulk)\(/;
 
 const EXEMPT: Record<string, string> = {
   // Propagation itself: its writes are the copies, guarded against recursion.
   "services/sharing/adapters/flat.ts": "propagation writes (the copies)",
   "services/sharing/adapters/bus.ts": "propagation writes (the copies)",
+  "services/sharing/adapters/ferry.ts": "propagation writes (the copies)",
   "services/sharing/adapters/lodgingStay.ts": "propagation writes (the copies)",
   "services/sharing/adapters/cruise.ts": "propagation writes (the copies)",
   "services/sharing/adapters/stop.ts": "propagation writes (the copies)",
@@ -37,6 +38,7 @@ const EXEMPT: Record<string, string> = {
   "services/xlsxImport/companionLinks.ts": "companions — private",
   "services/rail/railConnection.ts": "booking link — private",
   "routes/rental/links.ts": "roadtrip link — private (no roadtrip is shared)",
+  "routes/ferry/live.ts": "binds the vessel MMSI for the live position — private",
   "services/rental/rentalImport.ts":
     "last-mail mark only; its real updates go through rentalRowWrite.ts, which propagates",
   // Every account's rows alike: each copy is maintained on its own.
@@ -74,6 +76,7 @@ const EXEMPT: Record<string, string> = {
   "services/xlsxImport/flights.ts": "xlsx run, propagated by importSheets.ts",
   "services/xlsxImport/rail.ts": "xlsx run, propagated by importSheets.ts",
   "services/xlsxImport/bus.ts": "xlsx run, propagated by importSheets.ts",
+  "services/xlsxImport/ferry.ts": "xlsx run, propagated by importSheets.ts",
   "services/xlsxImport/cruises.ts": "xlsx run, propagated by importSheets.ts",
   "services/xlsxImport/lodging.ts": "xlsx run, propagated by importSheets.ts",
   "services/xlsxImport/prune.ts": "xlsx run, propagated by importSheets.ts",

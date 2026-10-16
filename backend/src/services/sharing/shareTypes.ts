@@ -18,6 +18,7 @@ export const SHARE_ENTITIES = [
   "cruise",
   "rail",
   "bus",
+  "ferry",
   "rental",
   "stop",
 ] as const;
@@ -86,6 +87,13 @@ export const SHARE_TYPES = {
     countKey: "busJourneys",
     exchangeKind: "bus",
   },
+  ferry: {
+    domain: "ferry",
+    delegate: "ferryJourney",
+    table: "ferry_journeys",
+    countKey: "ferryJourneys",
+    exchangeKind: null,
+  },
   rental: {
     domain: "rental",
     delegate: "rentalBooking",
@@ -124,9 +132,7 @@ export const DOMAIN_SHARING: Readonly<Record<DomainKey, ShareEntity | { notShare
   rail: "rail",
   rental: "rental",
   bus: "bus",
-  ferry: {
-    notShared: "Crossings join the registry with their adapter (rework 2026-10-16, Task 5).",
-  },
+  ferry: "ferry",
 };
 
 /** What a copy is marked with where the table has a `dataSource` column. */
