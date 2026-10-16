@@ -132,9 +132,12 @@ function movedFromOf(after: Prisma.JsonValue | null): { tripId: string } | null 
 
 /**
  * Undo a join that moved the caller's own entry in from another of their trips
- * (owner decision 2026-10-16): it goes back to that trip and loses the link.
- * Moving it out is an ordinary write, so it propagates like one — its key is
- * cleared and the other members are told it left the shared trip.
+ * (owner decision 2026-10-16): it goes back to that trip, unkeyed.
+ *
+ * Silent towards the other members: the entry was only ever the caller's own,
+ * so they are not told it left (a moved-out notice would offer the sharer to
+ * delete their ORIGINAL). And it is not shared into a group the previous trip
+ * may belong to — sharing it there is the owner's explicit step.
  */
 async function undoMoveIn(
   userId: string,
@@ -156,13 +159,17 @@ async function undoMoveIn(
           "SHARE_UNDO_UNAVAILABLE"
         );
       }
-      const snapshot = await shareSnapshot(tx, entity, own.id);
-      await keyedDelegate(tx, entity).update({ where: { id: own.id }, data: { tripId: back.id } });
+      // Deliberately NOT propagated (controller ruling 2026-10-16): no
+      // moved-out notice, no "delete yours too" offer on the sharer's
+      // original, and no auto-share into a group the previous trip belongs to.
+      await keyedDelegate(tx, entity).update({
+        where: { id: own.id },
+        data: { tripId: back.id, shareKey: null },
+      });
       await tx.shareNotice.update({
         where: { id: notice.id },
         data: { undoneAt: new Date(), readAt: notice.readAt ?? new Date() },
       });
-      await propagateWrite(tx, userId, entity, own.id, snapshot);
       await restatusTrips([own.tripId, back.id], tx);
       return { undone: true as const, entryId: own.id };
     },

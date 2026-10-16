@@ -134,6 +134,40 @@ describe("sharing — the recipient's own entry on another trip is moved in", ()
     expect(done.undoneAt).not.toBeNull();
   });
 
+  it("undoes silently towards the others: Anna gets no notice and her original is untouched", async () => {
+    const { annas } = await bensFlightJoinedFromOtherTrip();
+    const notice = await createdNotice();
+    const before = await prisma.flight.findUniqueOrThrow({ where: { id: annas.id } });
+    const annasNotices = await prisma.shareNotice.count({ where: { userId: anna.id } });
+
+    await undoNotice(ben.id, notice.id);
+
+    expect(await prisma.shareNotice.count({ where: { userId: anna.id } })).toBe(annasNotices);
+    const after = await prisma.flight.findUniqueOrThrow({ where: { id: annas.id } });
+    expect(after).toEqual(before);
+  });
+
+  it("puts it back unkeyed on a trip of another share group, with no copies made there", async () => {
+    const { other, bens } = await bensFlightJoinedFromOtherTrip();
+    // Ben's previous trip has since been shared with Carl.
+    const carl = await makeAccount("carl-move");
+    const otherGroup = await prisma.tripShareGroup.create({ data: { createdById: ben.id } });
+    await prisma.trip.update({ where: { id: other.id }, data: { shareGroupId: otherGroup.id } });
+    await prisma.trip.create({
+      data: { userId: carl.id, name: "Lissabon allein", shareGroupId: otherGroup.id },
+    });
+    await linkWithConsent(ben, carl);
+    const notice = await createdNotice();
+
+    await undoNotice(ben.id, notice.id);
+
+    const back = await prisma.flight.findUniqueOrThrow({ where: { id: bens.id } });
+    expect(back.tripId).toBe(other.id);
+    expect(back.shareKey).toBeNull();
+    expect(await prisma.flight.count({ where: { userId: carl.id } })).toBe(0);
+    expect(await prisma.shareNotice.count({ where: { userId: carl.id } })).toBe(0);
+  });
+
   it("keeps the key through Ben's next own edit", async () => {
     const { bens, annas } = await bensFlightJoinedFromOtherTrip();
     const key = (await prisma.flight.findUniqueOrThrow({ where: { id: annas.id } })).shareKey;

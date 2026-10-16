@@ -293,7 +293,8 @@ registry.registerPath({
     "holds exactly what the change wrote. The undo is a change by the caller and propagates " +
     "to the other members with a notice of its own. A `created` notice whose `after.movedFrom` " +
     "names a trip (the caller's own entry was joined and moved in from it) is undone by moving " +
-    "the entry back there and unlinking it.",
+    "the entry back there and unlinking it, without a notice to the other members and without " +
+    "sharing it into a group the previous trip belongs to.",
   tags,
   request: { params: idParam },
   responses: {
