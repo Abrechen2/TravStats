@@ -34,6 +34,13 @@ export const REMOTE_ROW_CAP = 20;
  */
 export const REMOTE_PULL_DEADLINE_MS = 12_000;
 
+/**
+ * How many friends' totals are built at once. Up to LOCAL_ROW_CAP of them, one by one, was a
+ * page load of fifty sequential aggregate passes; all at once would take fifty pooled
+ * connections from everyone else.
+ */
+const SNAPSHOT_CONCURRENCY = 4;
+
 type Pull = (remote: LeaderboardRemote, year: number | null) => Promise<RemoteResult>;
 
 const LOCAL_PREFIX = localKey("");
@@ -51,6 +58,27 @@ function boardWhere(members: Set<string> | null) {
     local: { ownerId: { in: ids(LOCAL_PREFIX) } },
     remote: { id: { in: ids(REMOTE_PREFIX) } },
   };
+}
+
+/**
+ * Maps with at most `limit` calls in flight and keeps the input order in the result. The mapper
+ * must not throw — each row turns its own failure into a status (see localRow).
+ */
+async function mapInOrder<T, R>(
+  items: readonly T[],
+  limit: number,
+  map: (item: T) => Promise<R>
+): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await map(items[i]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
 }
 
 async function localRow(
@@ -162,8 +190,11 @@ export async function readLeaderboard(
     orderBy: [{ decidedAt: "asc" }, { id: "asc" }],
     take: LOCAL_ROW_CAP,
   });
-  for (const consent of consents)
-    rows.push(await localRow(consent, localPerson(consent.owner), year));
+  rows.push(
+    ...(await mapInOrder(consents, SNAPSHOT_CONCURRENCY, (consent) =>
+      localRow(consent, localPerson(consent.owner), year)
+    ))
+  );
 
   const results = await pulled;
   rows.push(...remotes.map((remote, i) => remoteRow(remote, results[i])));

@@ -1,6 +1,8 @@
 import { randomUUID } from "crypto";
 import { prisma } from "../../../db";
 import { loadVisibleDomains } from "../../domainVisibility";
+import logger from "../../../utils/logger";
+import { buildLeaderboardSnapshot } from "../aggregates";
 import { saveBoard } from "../boards";
 import { LOCAL_ROW_CAP, readLeaderboard } from "../leaderboard";
 
@@ -8,6 +10,13 @@ jest.mock("../../domainVisibility", () => ({
   ...jest.requireActual("../../domainVisibility"),
   loadVisibleDomains: jest.fn(),
 }));
+
+// The real builder by default; one test wraps it to watch how many run at once.
+jest.mock("../aggregates", () => {
+  const actual = jest.requireActual("../aggregates");
+  return { ...actual, buildLeaderboardSnapshot: jest.fn(actual.buildLeaderboardSnapshot) };
+});
+const realBuild = jest.requireActual("../aggregates").buildLeaderboardSnapshot;
 
 const TRIPS = { groups: ["trips"], domains: ["ferry"], year: null };
 const users: string[] = [];
@@ -204,4 +213,49 @@ it("finds a board member who is not among the oldest LOCAL_ROW_CAP friends", asy
     `remote:${far}`,
   ]);
   expect(pull).toHaveBeenLastCalledWith(expect.objectContaining({ id: far }), null);
+});
+
+it("builds friends' totals a few at a time, in order, with the self row first", async () => {
+  const me = await user();
+  const friends: string[] = [];
+  for (let i = 0; i < 9; i++) friends.push(await user());
+  await prisma.leaderboardConsent.createMany({
+    data: friends.map((ownerId, i) => ({
+      ownerId,
+      viewerId: me,
+      status: "accepted",
+      scope: TRIPS,
+      decidedAt: new Date(2_000_000 + i * 1000),
+    })),
+  });
+  const broken = friends[4];
+  let open = 0;
+  let most = 0;
+  const order: string[] = [];
+  jest.mocked(buildLeaderboardSnapshot).mockImplementation(async (ownerId, ...rest) => {
+    order.push(ownerId);
+    open += 1;
+    most = Math.max(most, open);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 15));
+      if (ownerId === broken) throw new Error("loader down");
+      return await realBuild(ownerId, ...rest);
+    } finally {
+      open -= 1;
+    }
+  });
+  const quiet = jest.spyOn(logger, "error").mockImplementation(() => undefined);
+  try {
+    const res = await readLeaderboard(me, { year: null }, pull);
+    expect(order[0]).toBe(me);
+    expect(most).toBeGreaterThan(1);
+    expect(most).toBeLessThanOrEqual(4);
+    expect(res.rows.map((r) => [r.person.key, r.status])).toEqual([
+      ["self", "ok"],
+      ...friends.map((f) => [`local:${f}`, f === broken ? "unreachable" : "ok"]),
+    ]);
+  } finally {
+    quiet.mockRestore();
+    jest.mocked(buildLeaderboardSnapshot).mockImplementation(realBuild);
+  }
 });
