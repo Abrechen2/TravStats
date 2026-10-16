@@ -67,6 +67,20 @@ async function state(): Promise<FederationState> {
   };
 }
 
+/**
+ * A pasted PEM often arrives with its newlines flattened to spaces or dropped (single-line
+ * inputs, chat clients, e-mail). Re-wrap header, 64-column body and footer so
+ * createPublicKey sees what it requires; anything that is not a PEM block passes unchanged
+ * and is refused by the key parse as before.
+ */
+export function normalisePastedPem(input: string): string {
+  const match = /^\s*-----BEGIN ([A-Z ]+)-----([\s\S]*?)-----END \1-----\s*$/.exec(input);
+  if (!match) return input;
+  const body = match[2].replace(/\s+/g, "");
+  const lines = body.match(/.{1,64}/g) ?? [];
+  return `-----BEGIN ${match[1]}-----\n${lines.join("\n")}\n-----END ${match[1]}-----\n`;
+}
+
 async function requirePeer(origin: string): Promise<void> {
   if (!(await prisma.comparisonPeer.findUnique({ where: { origin }, select: { origin: true } })))
     throw comparisonError("COMPARISON_PEER_UNKNOWN", 404, "No such peer is pinned", { origin });
@@ -130,7 +144,7 @@ router.post(
       throw comparisonError("COMPARISON_PEER_KEY_INVALID", 400, "A server cannot pin itself");
     let pem: string;
     try {
-      const key = createPublicKey(body.publicKey);
+      const key = createPublicKey(normalisePastedPem(body.publicKey));
       if (key.asymmetricKeyType !== "ed25519") throw new Error("not ed25519");
       pem = key.export({ type: "spki", format: "pem" }).toString();
     } catch {

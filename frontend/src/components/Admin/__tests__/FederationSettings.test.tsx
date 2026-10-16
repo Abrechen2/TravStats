@@ -98,6 +98,60 @@ describe("FederationSettings", () => {
     await waitFor(() => expect(screen.queryByLabelText("federation.peerKey")).toBeNull());
   });
 
+  it("takes the peer key in a multi-line field and sends a pasted PEM intact", async () => {
+    const pem = ["-----BEGIN PUBLIC KEY-----", "AAA", "BBB", "-----END PUBLIC KEY-----", ""].join(
+      "\n"
+    );
+    vi.mocked(federationAdminApi.get).mockResolvedValue({
+      ...base,
+      source: "settings",
+      fingerprint: "ef".repeat(32),
+    });
+    vi.mocked(federationAdminApi.pinPeer).mockResolvedValue(base);
+    render(<FederationSettings />);
+    const key = await screen.findByLabelText("federation.peerKey");
+    expect(key.tagName).toBe("TEXTAREA");
+    fireEvent.change(screen.getByLabelText("federation.peerOrigin"), {
+      target: { value: "https://friend.example" },
+    });
+    fireEvent.change(key, { target: { value: pem } });
+    fireEvent.change(screen.getByLabelText("federation.peerFingerprint"), {
+      target: { value: "12".repeat(32) },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "federation.pin" }));
+    await waitFor(() =>
+      expect(federationAdminApi.pinPeer).toHaveBeenCalledWith(
+        expect.objectContaining({ publicKey: pem })
+      )
+    );
+    await waitFor(() => expect(screen.queryByLabelText("federation.peerKey")).toBeNull());
+  });
+
+  it("does not report a verify as failed when only the refresh afterwards fails", async () => {
+    const withPeer: FederationState = {
+      ...base,
+      source: "settings",
+      fingerprint: "ef".repeat(32),
+      peers: [
+        {
+          origin: "https://friend.example",
+          fingerprint: "12".repeat(32),
+          enabled: true,
+          verifiedAt: null,
+          leaderboardVersions: [],
+        },
+      ],
+    };
+    vi.mocked(federationAdminApi.get)
+      .mockResolvedValueOnce(withPeer)
+      .mockRejectedValueOnce(refusal(500));
+    vi.mocked(federationAdminApi.verifyPeer).mockResolvedValue(undefined);
+    render(<FederationSettings />);
+    fireEvent.click(await screen.findByRole("button", { name: "federation.verify" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("federation.error.refresh");
+    expect(screen.getByRole("alert")).not.toHaveTextContent("federation.error.generic");
+  });
+
   describe("tells the failure kinds apart", () => {
     const withIdentity: FederationState = {
       ...base,

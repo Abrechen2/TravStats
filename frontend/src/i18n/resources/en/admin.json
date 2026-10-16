@@ -1108,7 +1108,8 @@
       "COMPARISON_PEER_UNREACHABLE": "The other server did not answer or refused our request. Check its address and that it has enabled connections on its side.",
       "COMPARISON_PEER_UNKNOWN": "You have not pinned this server. Reload the page and try again.",
       "COMPARISON_FEDERATION_ENV": "This server's identity comes from environment variables (FEDERATION_*) and cannot be changed here.",
-      "generic": "That did not work. Check the details and try again."
+      "generic": "That did not work. Check the details and try again.",
+      "refresh": "Done, but the list could not be reloaded. Reload the page."
     }
   }
 }

@@ -1108,7 +1108,8 @@
       "COMPARISON_PEER_UNREACHABLE": "Der andere Server antwortet nicht oder hat unsere Anfrage abgelehnt. Prüfe seine Adresse und ob er die Verbindung bei sich freigeschaltet hat.",
       "COMPARISON_PEER_UNKNOWN": "Diesen Server hast du nicht hinterlegt. Lade die Seite neu und versuch es noch einmal.",
       "COMPARISON_FEDERATION_ENV": "Die Identität dieses Servers kommt aus Umgebungsvariablen (FEDERATION_*) und lässt sich hier nicht ändern.",
-      "generic": "Das hat nicht geklappt. Prüfe die Angaben und versuch es noch einmal."
+      "generic": "Das hat nicht geklappt. Prüfe die Angaben und versuch es noch einmal.",
+      "refresh": "Erledigt, aber die Liste konnte nicht neu geladen werden. Lade die Seite neu."
     }
   }
 }

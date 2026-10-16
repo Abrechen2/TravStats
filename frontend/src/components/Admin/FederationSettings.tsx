@@ -8,7 +8,7 @@ import {
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { logger } from "../../lib/logger";
-import { Button, Field, Input, Switch, ListRow, SectionLabel } from "../ui";
+import { Button, Field, Input, TextArea, Switch, ListRow, SectionLabel } from "../ui";
 import { SectionCard, SectionTitle } from "../Settings/SettingsShared";
 
 const NS = "federation";
@@ -47,12 +47,21 @@ export default function FederationSettings(): JSX.Element {
   const run = async (action: () => Promise<FederationState | void>): Promise<void> => {
     setBusy(true);
     setErrorKey(null);
+    let next: FederationState | void;
     try {
-      const next = await action();
-      setState(next ?? (await federationAdminApi.get()));
+      next = await action();
     } catch (error) {
       logger.error("A federation settings action failed:", error);
       setErrorKey(`${NS}.error.${federationErrorCode(error) ?? "generic"}`);
+      setBusy(false);
+      return;
+    }
+    try {
+      setState(next ?? (await federationAdminApi.get()));
+    } catch (error) {
+      // The action went through; only the list behind it is stale.
+      logger.error("Reloading the federation settings failed:", error);
+      setErrorKey(`${NS}.error.refresh`);
     } finally {
       setBusy(false);
     }
@@ -154,8 +163,9 @@ export default function FederationSettings(): JSX.Element {
             />
           </Field>
           <Field label={t(`${NS}.peerKey`)} htmlFor="peer-key">
-            <Input
+            <TextArea
               id="peer-key"
+              rows={6}
               value={peer.publicKey}
               onChange={(e) => setPeer({ ...peer, publicKey: e.target.value })}
             />

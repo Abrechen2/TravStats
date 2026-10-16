@@ -75,6 +75,34 @@ it("pins a peer only when its fingerprint matches its key", async () => {
   );
 });
 
+it("accepts a pasted key whose newlines were flattened to spaces or removed", async () => {
+  const pem = generateKeyPairSync("ed25519")
+    .publicKey.export({ type: "spki", format: "pem" })
+    .toString();
+  const flattened = [pem.trim().replaceAll("\n", " "), pem.trim().replaceAll("\n", "")];
+  for (const publicKey of flattened) {
+    const res = await request(app)
+      .post("/api/v1/admin/federation/peers")
+      .send({ origin: PEER, publicKey, fingerprint: hash(pem), enabled: true });
+    expect(res.status).toBe(200);
+  }
+  const stored = await prisma.comparisonPeer.findUniqueOrThrow({ where: { origin: PEER } });
+  expect(stored.publicKey).toBe(pem);
+});
+
+it("still refuses text that is not a key after normalising", async () => {
+  const res = await request(app)
+    .post("/api/v1/admin/federation/peers")
+    .send({
+      origin: PEER,
+      publicKey: "this is not a public key at all, just a sentence long enough to pass",
+      fingerprint: "0".repeat(64),
+      enabled: true,
+    });
+  expect(res.status).toBe(400);
+  expect(res.body.code).toBe("COMPARISON_PEER_KEY_INVALID");
+});
+
 it("refuses http origins and ports", async () => {
   for (const origin of ["http://x.example", "https://x.example:8443", "local"]) {
     const res = await request(app).put("/api/v1/admin/federation").send({ enabled: true, origin });
