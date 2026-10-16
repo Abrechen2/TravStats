@@ -41,6 +41,9 @@ export interface ParsedCruiseEntry {
   departurePort?: Port | null;
   arrivalPort?: Port | null;
   stopPorts?: Record<number, Port>;
+  /** The same ports keyed by port id — a day may hold two calls, which the
+   *  by-day map cannot both carry. Absent on older backends. */
+  stopPortsById?: Record<number, Port>;
 }
 
 export interface ParsePdfFlightResult {

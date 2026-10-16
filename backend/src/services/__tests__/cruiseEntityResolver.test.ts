@@ -124,9 +124,10 @@ describe("resolveCruiseEntities", () => {
     ]);
     expect(stops[0]).toMatchObject({ isAtSea: false, portId: null, date: "2025-12-19" });
     expect(stops[2]).toMatchObject({ isAtSea: false, portId: null, date: "2025-12-26" });
+    // The arrival lands on the end date: day 8 of a 19th-26th cruise.
     expect(result.unmatchedPorts).toEqual([
       { dayNumber: 1, portName: "Atlantis Harbour" },
-      { dayNumber: 3, portName: "Mu Pier" },
+      { dayNumber: 8, portName: "Mu Pier" },
     ]);
     expect(createCruiseSchema.safeParse(result.input).success).toBe(true);
   });
@@ -242,6 +243,34 @@ describe("resolveCruiseEntities", () => {
     const result = await resolveCruiseEntities(cruise);
     expect(result.input.stops?.[0]).toMatchObject({ portId: 10, date: "2025-12-19" });
     expect(result.input.stops?.[1]).toMatchObject({ isAtSea: true, date: "2025-12-20" });
+  });
+
+  // CLAUDE.md: dayNumber is the day of the cruise, not a list position. A
+  // booking that leaves the sea days out numbered Bergen "day 2".
+  it("numbers a dated stop by its date, not by its place in the list", async () => {
+    const cruise = baseParsedCruise({
+      stops: [
+        { dayNumber: 1, isAtSea: false, portName: "Hamburg", date: "2025-12-19" },
+        { dayNumber: 2, isAtSea: false, portName: "Bergen", date: "2025-12-21" },
+        { dayNumber: 3, isAtSea: false, portName: "Lisbon" },
+        { dayNumber: 4, isAtSea: false, portName: "Atlantis", date: "2025-12-24" },
+      ],
+    });
+    const result = await resolveCruiseEntities(cruise);
+    expect(result.input.stops?.map((s) => s.dayNumber)).toEqual([1, 3, 4, 6]);
+    expect(result.unmatchedPorts).toEqual([{ dayNumber: 6, portName: "Atlantis" }]);
+    expect(createCruiseSchema.safeParse(result.input).success).toBe(true);
+  });
+
+  it("falls back to the list position for a date before the previous stop's day", async () => {
+    const cruise = baseParsedCruise({
+      stops: [
+        { dayNumber: 1, isAtSea: false, portName: "Hamburg", date: "2025-12-20" },
+        { dayNumber: 2, isAtSea: false, portName: "Bergen", date: "2025-12-19" },
+      ],
+    });
+    const result = await resolveCruiseEntities(cruise);
+    expect(result.input.stops?.map((s) => s.dayNumber)).toEqual([2, 3]);
   });
 
   it("propagates routeName into CruiseInput (#133)", async () => {

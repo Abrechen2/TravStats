@@ -32,6 +32,7 @@ import type { TemplateEnvelope } from "../parsers/templates/v2/envelope";
 import { applyTemplate } from "../parsers/templates/v2/runners";
 import { toCabinType } from "./cabinType";
 import { isoDate } from "../parsers/templates/v2/calendar";
+import { importDayNumbers } from "./importDayNumbers";
 
 /** Every field here was read from a fixed position, not inferred — above the model's 80. */
 export const CRUISE_TEMPLATE_CONFIDENCE = 95;
@@ -127,11 +128,12 @@ function toStops(items: Voyage["stops"], startDate: string | null | undefined): 
     (items ?? []).map((item) => item.date),
     startDate
   );
+  const days = importDayNumbers(dates, startDate);
   return (items ?? []).map((item, i) => {
     const atSea = item.isAtSea === true;
     const date = dates[i];
     return {
-      dayNumber: i + 1,
+      dayNumber: days[i],
       ...(date ? { date } : {}),
       isAtSea: atSea,
       ...(atSea || !item.portName ? {} : { portName: item.portName }),
