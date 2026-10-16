@@ -288,7 +288,10 @@ export async function scanStays(
       }
       // Already recorded — a visit or a hotel stay there and then. Not a
       // question, and accepting it would record the stop a second time.
-      if (!growing && coverageFor({ ...c, zone }, coverage)) {
+      // Plain stops only: a market or venue finding is the whole site, and a
+      // confirmed shop inside it is not that visit — `collectMarketFindings`
+      // answers "already recorded" for those by the venue's own identity.
+      if (!market && !growing && coverageFor({ ...c, zone }, coverage)) {
         covered++;
         continue;
       }
