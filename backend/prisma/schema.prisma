@@ -3664,6 +3664,7 @@ model PhotoJourney {
   @@unique([userId, fingerprint])
   @@index([userId, status])
   @@index([startDate])
+  @@index([tripId])
   @@map("photo_journeys")
 }
 

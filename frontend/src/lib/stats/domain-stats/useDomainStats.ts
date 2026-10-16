@@ -1,6 +1,5 @@
 import { ferryApi } from "../../api/ferry";
 import { adaptFerry } from "./ferryStatsAdapter";
-import { useFerryOffered } from "../../../hooks/useFerryVisible";
 // Hook: orchestrates per-domain stat fetches with failure isolation.
 //
 // Each domain runs in its own try/catch so a single 500 (e.g. cruise
@@ -19,8 +18,6 @@ import { railApi } from "../../api/rail";
 import { busApi } from "../../api/bus";
 import { logger } from "../../logger";
 import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
-import { useRailOffered } from "../../../hooks/useRailVisible";
-import { useBusOffered } from "../../../hooks/useBusVisible";
 import type { DomainKey } from "../../../shared/domains";
 import { adaptFlight } from "./flightStatsAdapter";
 import { adaptCruise } from "./cruiseStatsAdapter";
@@ -59,22 +56,11 @@ export function useDomainStats(input: {
   // disabled domain must not surface in the cross-domain overview, so
   // its stats are never loaded in the first place.
   const { enabled: enabledDomains } = useEnabledDomains();
-  // Rail sits behind the `railDomain` beta gate as well: with the gate off it
-  // is not fetched, so it can reach neither a card nor a sum on the overview.
-  const railOffered = useRailOffered();
-  // Bus likewise, behind `busDomain` (forgejo#265).
-  const ferryOffered = useFerryOffered();
-  const busOffered = useBusOffered();
+  // A domain behind a closed beta switch is not in `enabledDomains`, so it is
+  // not fetched and can reach neither a card nor a sum on the overview.
   const enabled = useMemo(
-    () =>
-      enabledDomains.filter(
-        (d): d is StatsDomain =>
-          d !== "rental" &&
-          (d !== "ferry" || ferryOffered) &&
-          (d !== "rail" || railOffered) &&
-          (d !== "bus" || busOffered)
-      ),
-    [enabledDomains, railOffered, busOffered, ferryOffered]
+    () => enabledDomains.filter((d): d is StatsDomain => d !== "rental"),
+    [enabledDomains]
   );
   const [stats, setStats] = useState<DomainStatsMap>({});
   const [errors, setErrors] = useState<Partial<Record<DomainKey, string>>>({});

@@ -1,5 +1,5 @@
 /** Ferry crossings (dennis/TravStats forgejo#293). */
-import type { RailTimes } from "../../schemas/times";
+import type { FerryTimes } from "../../schemas/times";
 import { railTimes, type RailTimeColumns } from "../rail/timesDto";
 
 /**
@@ -10,7 +10,7 @@ import { railTimes, type RailTimeColumns } from "../rail/timesDto";
  */
 export function withFerryTimes<T extends RailTimeColumns & { roadtripLegBefore?: unknown }>(
   ride: T
-): Omit<T, "roadtripLegBefore"> & { times: RailTimes } {
+): Omit<T, "roadtripLegBefore"> & { times: FerryTimes } {
   const { roadtripLegBefore: _linkSnapshot, ...shown } = ride;
   return { ...shown, times: railTimes(ride) };
 }

@@ -28,7 +28,12 @@ vi.mock("../../../../hooks/useDashboardRoute", () => ({
   useDashboardRoute: () => ({ tab: "rail", mode: "globe", setTab: vi.fn(), setMode: vi.fn() }),
 }));
 const railVisible = vi.hoisted(() => ({ value: true }));
-vi.mock("../../../../hooks/useRailVisible", () => ({ useRailVisible: () => railVisible.value }));
+vi.mock("../../../../hooks/useDomainVisible", () => ({
+  useDomainVisible: (key: string): boolean =>
+    (
+      (({ rail: () => railVisible.value }) as Record<string, () => boolean>)[key] ?? (() => false)
+    )(),
+}));
 
 import { RailTab } from "../RailTab";
 import { useOverlayAppearanceStore } from "../../../../store/overlayAppearanceStore";

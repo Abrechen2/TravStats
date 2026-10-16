@@ -17,8 +17,8 @@ import { refCell, type SheetSpec } from "./sheetSpec";
 
 type T = (key: string) => string;
 
-/** A terminal wall clock as a Date whose UTC fields ARE that clock. */
-function terminalClockCell(value: TimeValue | null): Date | null {
+/** A terminal wall clock as a Date whose UTC fields ARE that clock (the ferry sheet's too). */
+export function terminalClockCell(value: TimeValue | null): Date | null {
   const wall = toStationWallClock(value);
   return wall ? new Date(`${wall}:00.000Z`) : null;
 }

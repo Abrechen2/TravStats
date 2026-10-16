@@ -155,4 +155,30 @@ describe("useDashboardDomainFilter", () => {
     expect(result.current.isVisible("bus")).toBe(true);
     expect(result.current.isVisible("flight")).toBe(false);
   });
+  // Ferry crossings: the one transport line the "Alle" map did not draw had no
+  // row either. Beside bus, behind its own beta gate, no view of its own.
+  it("ferry sits beside bus once its gate and the domain are on, with an unknown count", () => {
+    useSettingsStore.setState({
+      enabledDomains: ["flight", "bus", "ferry"],
+      betaFeaturesEnabled: true,
+    });
+    const { result } = renderHook(() => useDashboardDomainFilter(0), {
+      wrapper: wrapper(["/dashboard"]),
+    });
+    expect(result.current.rows.map((r) => r.key)).toEqual(["flight", "tour", "bus", "ferry"]);
+    const ferry = result.current.rows.find((r) => r.key === "ferry");
+    expect(ferry?.count).toBeNull();
+    expect(ferry?.beta).toBe(true);
+    act(() => result.current.isolate("ferry"));
+    expect(result.current.isVisible("ferry")).toBe(true);
+    expect(result.current.isVisible("flight")).toBe(false);
+  });
+
+  it("ferry stays out while its beta gate is closed", () => {
+    useSettingsStore.setState({ enabledDomains: ["flight", "ferry"], betaFeaturesEnabled: false });
+    const { result } = renderHook(() => useDashboardDomainFilter(0), {
+      wrapper: wrapper(["/dashboard"]),
+    });
+    expect(result.current.rows.map((r) => r.key)).not.toContain("ferry");
+  });
 });

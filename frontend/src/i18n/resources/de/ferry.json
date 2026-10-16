@@ -166,5 +166,48 @@
     "observed": "Zeitangabe der Quelle: {{time}}",
     "ageUnknown": "Die Quelle liefert keinen vollständigen Beobachtungszeitpunkt. Das Alter der Position ist unbekannt.",
     "map": "Auf OpenStreetMap ansehen"
+  },
+  "stats": {
+    "crossings": "Überfahrten",
+    "crossingsDesc": "Nur abgeschlossene Überfahrten.",
+    "km": "Strecke",
+    "kmMeasured": "{{km}} km vom Ticket oder eingezeichnet",
+    "kmStraight": "{{km}} km Luftlinie",
+    "hours": "Stunden an Bord",
+    "hoursDesc": "Nur Überfahrten mit Abfahrts- und Ankunftszeit.",
+    "countries": "Länder",
+    "operators": "Reedereien",
+    "empty": "Noch keine abgeschlossene Fährüberfahrt.",
+    "loadError": "Die Fährstatistik konnte nicht geladen werden.",
+    "help": {
+      "crossings": {
+        "unit": "Eine Überfahrt: eine Fähre vom Abfahrts- zum Ankunftshafen. Jede abgeschlossene Überfahrt zählt einmal.",
+        "time": "Gezählt im Jahr, in dem sie nach dem Kalender des Abfahrtshafens abgelegt hat.",
+        "source": "Deine Fährüberfahrten mit dem Status „abgeschlossen“. Eine Überfahrt ist abgeschlossen, sobald ihre Ankunft vorbei ist.",
+        "coverage": "Jede abgeschlossene Überfahrt hat ein Abfahrtsdatum und zählt deshalb immer. Ohne Zeitzone am Abfahrtshafen gilt der Tag nach UTC.",
+        "exclusions": "Geplante, laufende und stornierte Überfahrten zählen nicht."
+      },
+      "km": {
+        "unit": "Kilometer der abgeschlossenen Überfahrten, getrennt danach, was sie messen: vom Ticket bzw. entlang einer eingezeichneten Route oder als Luftlinie zwischen den Häfen.",
+        "time": "Im Jahr der Abfahrt nach dem Kalender des Abfahrtshafens.",
+        "source": "Die Entfernung jeder Überfahrt, wie sie gespeichert ist; ohne Angabe die Luftlinie zwischen den Häfen.",
+        "coverage": "Eine Überfahrt ohne gespeicherte Entfernung trägt nichts bei.",
+        "exclusions": "Geplante, laufende und stornierte Überfahrten zählen nicht. Die Luftlinie wird nie stillschweigend als gefahrene Strecke ausgegeben."
+      },
+      "hours": {
+        "unit": "Stunden zwischen Abfahrt und Ankunft, über alle abgeschlossenen Überfahrten summiert.",
+        "time": "Im Jahr der Abfahrt nach dem Kalender des Abfahrtshafens.",
+        "source": "Abfahrts- und Ankunftszeit jeder Überfahrt, jeweils in der Zeitzone ihres Hafens.",
+        "coverage": "Nur Überfahrten mit beiden Uhrzeiten; hat keine Überfahrt beide, steht hier „–“ statt 0.",
+        "exclusions": "Überfahrten nur mit Datum, ohne Ankunft oder storniert zählen nicht."
+      },
+      "countries": {
+        "unit": "Ein Land, in dem ein Abfahrts- oder Ankunftshafen liegt, einmal gezählt.",
+        "time": "Länder der Überfahrten, die im gewählten Jahr abgelegt haben.",
+        "source": "Das Land jedes Hafens, wie die Ortssuche es geliefert hat.",
+        "coverage": "Ein Hafen ohne bekanntes Land trägt kein Land bei.",
+        "exclusions": "Geplante, laufende und stornierte Überfahrten zählen nicht."
+      }
+    }
   }
 }

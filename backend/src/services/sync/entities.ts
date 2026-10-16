@@ -8,7 +8,8 @@ import type { SyncScope } from "./scope";
  * `20261001193030_sync_change_feed`, plus rental bookings, trip expenses and
  * the companion catalogue from `20261002172714_sync_feed_rentals_expenses_companions`
  * (domains that landed beside the first one), and bus rides from
- * `20261010040000_sync_feed_bus` (forgejo#180), and standalone notes from
+ * `20261010040000_sync_feed_bus` (forgejo#180), ferry crossings from
+ * `20261016090000_sync_feed_ferry`, and standalone notes from
  * `20261010175834_standalone_notes` (forgejo#137). The list is what the Companion reads and
  * edits today; `syncTriggers.test.ts` holds it against the triggers that
  * actually exist, so a table cannot be added on one side only.
@@ -164,6 +165,20 @@ const ENTITIES: readonly SyncEntity[] = [
     omit: ["geometry"],
     versioned: true,
     reachable: domainShown("bus"),
+  },
+  {
+    // The frozen sea line is derived, and the roadtrip-link snapshot is a
+    // server-side undo record; the feed carries the crossing itself.
+    name: "ferry_journey",
+    table: "ferry_journeys",
+    ownerSql: DIRECT_OWNER,
+    ownerWhere: (userId) => ({ userId }),
+    find: (args) => prisma.ferryJourney.findMany(args),
+    visible: inDomain("ferry"),
+    tombstoneVisible: inDomain("ferry"),
+    omit: ["geometry", "roadtripLegBefore"],
+    versioned: true,
+    reachable: domainShown("ferry"),
   },
   {
     name: "cruise",

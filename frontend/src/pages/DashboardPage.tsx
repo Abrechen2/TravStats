@@ -21,9 +21,9 @@ import { LodgingTab } from "../components/Dashboard/tabs/LodgingTab";
 import { TourTab } from "../components/Dashboard/tabs/TourTab";
 import { RailTab } from "../components/Dashboard/tabs/RailTab";
 import { railApi } from "../lib/api/rail";
-import { useRailVisible } from "../hooks/useRailVisible";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { roadtripsApi } from "../lib/api/roadtrips";
+import { useDomainVisible } from "../hooks/useDomainVisible";
 
 export default function DashboardPage(): JSX.Element {
   const { tab } = useDashboardRoute();
@@ -33,7 +33,7 @@ export default function DashboardPage(): JSX.Element {
   const { isEnabled } = useEnabledDomains();
   const placesVisible = usePlacesVisible();
   const placesAccess = usePlacesAccess();
-  const railVisible = useRailVisible();
+  const railVisible = useDomainVisible("rail");
   // Three-state like places: `false` only once the instance has answered.
   const { betaFeaturesEnabled } = useBetaFeatures();
   const toursAccess = useToursAccess();

@@ -4,13 +4,13 @@ import ActivityLine from "../Loyalty/ActivityLine";
 import LoyaltyCardSection from "../Loyalty/LoyaltyCardSection";
 import MembershipsSection from "./MembershipsSection";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
-import { useRailVisible } from "../../hooks/useRailVisible";
 import { useTranslation } from "../../hooks/useTranslation";
 import { cruiseApi } from "../../lib/api/cruise";
 import { listLoyaltyMemberships } from "../../lib/api/loyalty";
 import { logger } from "../../lib/logger";
 import { LOYALTY_DOMAINS, type LoyaltyDomain } from "../../shared/domains";
 import type { LoyaltyMembership } from "../../types/loyalty";
+import { useDomainVisible } from "../../hooks/useDomainVisible";
 
 /** The anchor each domain's block answers to inside the settings section. */
 export const loyaltySectionId = (domain: LoyaltyDomain): string => `loyalty-${domain}`;
@@ -40,7 +40,7 @@ export default function LoyaltySection(): JSX.Element {
   // Rail asks the rail rule — the user's switch AND the instance's beta gate —
   // so a BahnBonus block never appears where the rail domain is hidden
   // (forgejo#132 item 23). The others only need the user's switch.
-  const railVisible = useRailVisible();
+  const railVisible = useDomainVisible("rail");
   const domains = useMemo(
     () =>
       LOYALTY_DOMAINS.filter(

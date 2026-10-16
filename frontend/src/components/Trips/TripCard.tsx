@@ -1,8 +1,6 @@
 import { formatCurrency } from "../../lib/units";
 import type { Trip } from "../../types";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
-import { useRailVisible } from "../../hooks/useRailVisible";
-import { useRentalVisible } from "../../hooks/useRentalVisible";
 import { tripEntryCounts, tripEntryTotal } from "../../lib/tripEntryCount";
 import { useTranslation } from "../../hooks/useTranslation";
 import { tripCostTotals } from "../../lib/tripCost";
@@ -75,16 +73,9 @@ export default function TripCard({ trip, onOpen }: TripCardProps): JSX.Element {
   // advertise cruise segments — not as an icon, not inside the km or cost.
   const { isEnabled } = useEnabledDomains();
   const cruiseEnabled = isEnabled("cruise");
-  const railVisible = useRailVisible();
-  const rentalVisible = useRentalVisible();
   // Every area the trip page lists counts (forgejo#169), each behind the same
   // gate the page applies. Flights stay ungated, as they always were here.
-  const counts = tripEntryCounts(trip, (domain) => {
-    if (domain === "flight") return true;
-    if (domain === "rail") return railVisible;
-    if (domain === "rental") return rentalVisible;
-    return isEnabled(domain);
-  });
+  const counts = tripEntryCounts(trip, (domain) => domain === "flight" || isEnabled(domain));
   const flightCount = counts.flight;
   const cruiseCount = counts.cruise;
   const stayCount = counts.lodging;

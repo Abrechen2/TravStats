@@ -158,6 +158,7 @@ function onStoreChange<S>(
 
 const mapAppearance: WebPrefSectionDef = {
   name: "mapAppearance",
+  defaultValue: MAP_MOUNT_DEFAULTS,
   read: () => omit(loadMapAppearance() as Record<string, unknown>, MAP_DEVICE_ONLY_KEYS),
   isDefault: (value) =>
     isPlainObject(value) &&
@@ -184,6 +185,7 @@ const mapAppearance: WebPrefSectionDef = {
 
 const globeChrome: WebPrefSectionDef = {
   name: "globeChrome",
+  defaultValue: {},
   read: () => {
     const stored = readJson(GLOBE_CHROME_KEY);
     return isPlainObject(stored) ? stored : {};
@@ -200,6 +202,7 @@ const globeChrome: WebPrefSectionDef = {
 
 const domainColors: WebPrefSectionDef = {
   name: "domainColors",
+  defaultValue: {},
   read: () => domainColorOverrides(useDomainColorStore.getState().colors),
   isDefault: (value) => isPlainObject(value) && Object.keys(value).length === 0,
   apply: (value) => {
@@ -213,6 +216,7 @@ const domainColors: WebPrefSectionDef = {
 
 const dashboardHiddenDomains: WebPrefSectionDef = {
   name: "dashboardHiddenDomains",
+  defaultValue: [],
   read: () =>
     JSON.parse(serializeHiddenDomains(useDashboardDomainFilterStore.getState().hidden)) as unknown,
   isDefault: (value) => Array.isArray(value) && value.length === 0,
@@ -233,6 +237,7 @@ const dashboardHiddenDomains: WebPrefSectionDef = {
 
 const theme: WebPrefSectionDef = {
   name: "theme",
+  defaultValue: { mapTheme: "glassmorphism" },
   read: () => ({ mapTheme: useThemeStore.getState().mapTheme }),
   isDefault: (value) => isPlainObject(value) && value.mapTheme === "glassmorphism",
   apply: (value) => {
@@ -247,6 +252,7 @@ const theme: WebPrefSectionDef = {
 
 const statsCompare: WebPrefSectionDef = {
   name: "statsCompare",
+  defaultValue: { compareEnabled: false, compareYear: null, hasSetPreference: false },
   read: () => {
     const { compareEnabled, compareYear, hasSetPreference } = useStatsCompareStore.getState();
     return { compareEnabled, compareYear, hasSetPreference };
@@ -270,6 +276,7 @@ const statsCompare: WebPrefSectionDef = {
 
 const statsHiddenSections: WebPrefSectionDef = {
   name: "statsHiddenSections",
+  defaultValue: {},
   // Empty lists are dropped: the hook writes `[]` for every tab it opens, and
   // that is not a choice.
   read: () => readPrefixed(STATS_HIDDEN_SECTIONS_PREFIX, isNonEmptyStringList),
@@ -284,6 +291,7 @@ const statsHiddenSections: WebPrefSectionDef = {
 
 const tablePrefs: WebPrefSectionDef = {
   name: "tablePrefs",
+  defaultValue: { hiddenColumns: {}, sort: {} },
   read: () => ({
     hiddenColumns: readPrefixed(TABLE_HIDDEN_COLUMNS_PREFIX, isNonEmptyStringList),
     sort: readPrefixed(TABLE_SORT_PREFIX, isSort),

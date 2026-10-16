@@ -23,6 +23,7 @@ import { seedsPartJ } from "./achievementSeeds/partJ";
 import { seedsInsights } from "./achievementSeeds/insights";
 import { seedsPartK } from "./achievementSeeds/partK";
 import { seedsPartL } from "./achievementSeeds/partL";
+import { seedsPartM } from "./achievementSeeds/partM";
 
 export interface AchievementDefinition {
   code: string;
@@ -30,7 +31,16 @@ export interface AchievementDefinition {
   description: string;
   category: string;
   domain:
-    "flight" | "cruise" | "lodging" | "poi" | "roadtrip" | "rail" | "rental" | "bus" | "shared";
+    | "flight"
+    | "cruise"
+    | "lodging"
+    | "poi"
+    | "roadtrip"
+    | "rail"
+    | "rental"
+    | "bus"
+    | "ferry"
+    | "shared";
   icon: string;
   tier: string;
   requirement: number;
@@ -53,6 +63,7 @@ export const achievements: AchievementDefinition[] = [
   ...seedsInsights,
   ...seedsPartK,
   ...seedsPartL,
+  ...seedsPartM,
 ];
 
 type DefinitionFields = Omit<Required<AchievementDefinition>, "code">;

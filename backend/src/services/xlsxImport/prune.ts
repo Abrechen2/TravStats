@@ -33,6 +33,7 @@ export type PrunableModel =
   | "placeVisit"
   | "railJourney"
   | "busJourney"
+  | "ferryJourney"
   | "rentalBooking";
 
 export async function pruneMissing(
@@ -60,6 +61,7 @@ export async function pruneMissing(
     if (model === "placeVisit") return prisma.placeVisit.count({ where });
     if (model === "railJourney") return prisma.railJourney.count({ where });
     if (model === "busJourney") return prisma.busJourney.count({ where });
+    if (model === "ferryJourney") return prisma.ferryJourney.count({ where });
     if (model === "rentalBooking") return prisma.rentalBooking.count({ where });
     return prisma.lodging.count({ where });
   };
@@ -70,6 +72,7 @@ export async function pruneMissing(
     else if (model === "placeVisit") await prisma.placeVisit.deleteMany({ where });
     else if (model === "railJourney") await prisma.railJourney.deleteMany({ where });
     else if (model === "busJourney") await prisma.busJourney.deleteMany({ where });
+    else if (model === "ferryJourney") await prisma.ferryJourney.deleteMany({ where });
     else if (model === "rentalBooking") await prisma.rentalBooking.deleteMany({ where });
     else {
       // The cascade takes the photo rows and with them the only record of

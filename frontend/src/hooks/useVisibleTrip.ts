@@ -1,10 +1,7 @@
 import { useMemo } from "react";
 import type { Trip } from "../types";
 import { useEnabledDomains } from "./useEnabledDomains";
-import { useRailVisible } from "./useRailVisible";
-import { useRentalVisible } from "./useRentalVisible";
-import { useBusVisible } from "./useBusVisible";
-import { useFerryVisible } from "./useFerryVisible";
+import { useDomainVisible } from "./useDomainVisible";
 
 /** Filter every trip surface through the same domain gates. */
 export function useVisibleTrip(trip: Trip | null) {
@@ -14,10 +11,10 @@ export function useVisibleTrip(trip: Trip | null) {
   const cruiseEnabled = isEnabled("cruise");
   const lodgingEnabled = isEnabled("lodging");
   // Rail and rentals ask their own hooks: the beta switch AND the domain.
-  const railVisible = useRailVisible();
-  const rentalVisible = useRentalVisible();
-  const busVisible = useBusVisible();
-  const ferryVisible = useFerryVisible();
+  const railVisible = useDomainVisible("rail");
+  const rentalVisible = useDomainVisible("rental");
+  const busVisible = useDomainVisible("bus");
+  const ferryVisible = useDomainVisible("ferry");
   const displayTrip = useMemo<Trip | null>(() => {
     const allShown =
       cruiseEnabled && lodgingEnabled && railVisible && rentalVisible && busVisible && ferryVisible;

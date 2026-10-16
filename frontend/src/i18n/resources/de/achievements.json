@@ -1402,6 +1402,18 @@
       "name": "Neue Haltestellen",
       "description": "Zehn verschiedene Bus-Terminals besucht"
     },
+    "FERRY_FIRST": {
+      "name": "Leinen los",
+      "description": "Die erste Fährüberfahrt abgeschlossen"
+    },
+    "FERRY_NIGHT": {
+      "name": "Nacht an Bord",
+      "description": "Eine Fährüberfahrt über Nacht, belegt durch Abfahrts- und Ankunftszeit"
+    },
+    "FERRY_PORTS_5": {
+      "name": "Hafen für Hafen",
+      "description": "Fünf verschiedene Fährhäfen angelaufen"
+    },
     "TRIP_THREE_MODES": {
       "name": "Drei Verkehrsmittel",
       "description": "Eine abgeschlossene Reise mit drei verschiedenen Verkehrsmitteln"

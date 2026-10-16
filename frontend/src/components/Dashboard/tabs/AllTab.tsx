@@ -25,11 +25,7 @@ import {
   buildPoiLegendRows,
   legendRow,
 } from "./allTabLegendRows";
-import { useRailOverlay } from "./railMapOverlay";
-import { useRentalOverlay } from "./rentalMapOverlay";
-import { useBusOverlay } from "./busMapOverlay";
-import { useRailVisible } from "../../../hooks/useRailVisible";
-import { useRentalVisible } from "../../../hooks/useRentalVisible";
+import { useTransportOverlays } from "./allTabTransportOverlays";
 import { MAP_LAYER_COLORS } from "../../../types/mapTheme";
 import { logger } from "../../../lib/logger";
 import { useCruiseColorStore } from "../../../store/cruiseColorStore";
@@ -501,16 +497,12 @@ export function AllTab(): JSX.Element {
   // sphere mesh and draws zero pixels there (fix round 2, found in a real
   // browser). `visMode` already resolves "globe" vs "routes"/"heatmap"/
   // "journey" a few lines up.
-  // Rail and rentals beside the tours, each behind its own gates and filter row.
-  const railOn = useRailVisible() && showTours && domainFilter.isVisible("rail");
-  const rail = useRailOverlay(railOn, visMode === "globe", t);
-  const rentalOn = useRentalVisible() && showTours && domainFilter.isVisible("rental");
-  const rental = useRentalOverlay(rentalOn, visMode === "globe", t);
-  const bus = useBusOverlay(showTours && domainFilter.isVisible("bus"), visMode === "globe", t);
+  // Rail, bus, ferry and rentals beside the tours, each behind its own gates and filter row.
+  const transport = useTransportOverlays(showTours, domainFilter.isVisible, visMode === "globe", t);
   const tourDeck = useTourDeckLayers(tourPathData, visMode === "globe");
   const tourLayers = useMemo<Layer[]>(
-    () => [...tourDeck, ...rail.layers, ...bus.layers, ...rental.layers],
-    [tourDeck, rail.layers, bus.layers, rental.layers]
+    () => [...tourDeck, ...transport.layers],
+    [tourDeck, transport.layers]
   );
 
   // The activity toggle stays top-left (it opens the activity sidebar).
@@ -573,9 +565,7 @@ export function AllTab(): JSX.Element {
     // or they would sit below the collapsed panel and stay visible when
     // the key is shut — and be missing from the count on the button.
     ...(tourHasData ? tourLegend.rows : []),
-    ...rail.legendRows,
-    ...bus.legendRows,
-    ...rental.legendRows,
+    ...transport.legendRows,
   ];
 
   // Collapsible, like the map options beside it. The key grew a row per LIST

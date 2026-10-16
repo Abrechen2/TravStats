@@ -16,9 +16,6 @@ import { useLocale } from "../hooks/useLocale";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
-import { useRailVisible } from "../hooks/useRailVisible";
-import { useRentalVisible } from "../hooks/useRentalVisible";
-import { useBusVisible } from "../hooks/useBusVisible";
 import { countAchievements } from "../lib/achievementCounts";
 import { AVAILABLE_DOMAINS, type DomainKey } from "../shared/domains";
 
@@ -36,35 +33,6 @@ export function filterAchievementsByDomain(
 ): Achievement[] {
   return achievements.filter(
     (a) => a.domain === "shared" || enabled.includes(a.domain as DomainKey)
-  );
-}
-
-/**
- * The domains whose badges this reader sees: their enabled ones, minus rail
- * while the `railDomain` beta gate is closed. Rail is the one domain the
- * enabled list does not gate itself (roadtrips are dropped inside
- * `useEnabledDomains`), and a rail badge must not show on an instance where
- * rail does not exist — `useRailVisible` is that rule's one home.
- */
-export function achievementDomains(
-  enabled: DomainKey[],
-  railVisible: boolean,
-  /**
-   * Rental and bus (forgejo#262, #263) sit behind beta gates of their own,
-   * asked the same way. Omitted reads as closed, so a caller that forgets
-   * them hides a beta domain rather than showing it.
-   */
-  {
-    rentalVisible = false,
-    busVisible = false,
-  }: { rentalVisible?: boolean; busVisible?: boolean } = {}
-): DomainKey[] {
-  return enabled.filter(
-    (d) =>
-      (d !== "rail" || railVisible) &&
-      (d !== "rental" || rentalVisible) &&
-      (d !== "bus" || busVisible) &&
-      d !== "ferry"
   );
 }
 
@@ -142,14 +110,9 @@ export default function AchievementsPage(): JSX.Element {
   const { t } = useTranslation(["achievements", "common"]);
   const locale = useLocale();
   const { addToast } = useToastStore();
-  const { enabled: enabledDomains } = useEnabledDomains();
-  const railVisible = useRailVisible();
-  const rentalVisible = useRentalVisible();
-  const busVisible = useBusVisible();
-  const enabled = useMemo(
-    () => achievementDomains(enabledDomains, railVisible, { rentalVisible, busVisible }),
-    [enabledDomains, railVisible, rentalVisible, busVisible]
-  );
+  // Every domain has badges; a domain behind a closed beta switch is already
+  // missing from `enabled` (`useEnabledDomains`).
+  const { enabled } = useEnabledDomains();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   /** The card whose detail dialog is open, or null (#330). */
   const [selected, setSelected] = useState<Achievement | null>(null);
@@ -360,8 +323,6 @@ export default function AchievementsPage(): JSX.Element {
           <Pill active={selectedDomain === "all"} onClick={() => setSelectedDomain("all")}>
             {t("achievements:filters.allDomains")}
           </Pill>
-          {/* Every domain has badges since forgejo#262/#263; `enabled` already
-              drops a domain the reader does not see. */}
           {AVAILABLE_DOMAINS.filter((d) => enabled.includes(d)).map((d) => (
             <Pill key={d} active={selectedDomain === d} onClick={() => setSelectedDomain(d)}>
               {t(DOMAIN_LABEL[d])}

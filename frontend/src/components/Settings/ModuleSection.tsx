@@ -2,13 +2,10 @@ import { JSX } from "react";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { DOMAIN_KEYS, DOMAINS, type DomainKey } from "../../shared/domains";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
+import { switchableDomains } from "../../config/domainBetaGates";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
-import { useRailOffered } from "../../hooks/useRailVisible";
-import { useRentalOffered } from "../../hooks/useRentalVisible";
-import { useFerryOffered } from "../../hooks/useFerryVisible";
-import { useBusOffered } from "../../hooks/useBusVisible";
 import { Switch } from "../ui/Field";
 import { SettingRows } from "../ui/SettingRow";
 
@@ -18,33 +15,12 @@ export default function ModuleSection(): JSX.Element {
   const enabledDomains = useSettingsStore((s) => s.enabledDomains);
   const setEnabledDomains = useSettingsStore((s) => s.setEnabledDomains);
 
-  // Every domain, since 2026-09-05. Places sat behind the instance beta flag
-  // here (never behind "already enabled" — this list is where the user turns
-  // a domain on) until its gate's own condition was met.
-  // Roadtrips are beta (2.7): not offered as a switch while the instance
-  // gate is closed — `useEnabledDomains` would hide the domain anyway.
-  // Rail is offered only where its own beta switch allows it — the flag ALONE
-  // (hooks/useRailVisible.ts), because this list is where the user turns the
-  // domain on. A rail domain the user already enabled stays listed, so it can
-  // always be switched off again.
+  // Every domain, since 2026-09-05; a domain behind a beta switch by the
+  // switch ALONE (never behind "already enabled" — this list is where the user
+  // turns a domain on), see `switchableDomains`. Reads the stored choice raw,
+  // so a domain hidden by a closed switch is not dropped by the next toggle.
   const { isFeatureVisible } = useBetaFeatures();
-  const railOffered = useRailOffered();
-  const enabledRail = enabledDomains.includes("rail");
-  // Rental: the same rule on its own gate (hooks/useRentalVisible.ts).
-  const rentalOffered = useRentalOffered();
-  const enabledRental = enabledDomains.includes("rental");
-  // Bus: the same rule on its own gate (hooks/useBusVisible.ts).
-  const busOffered = useBusOffered();
-  const ferryOffered = useFerryOffered();
-  const enabledBus = enabledDomains.includes("bus");
-  const visibleKeys = DOMAIN_KEYS.filter((key) => {
-    if (key === "roadtrip") return isFeatureVisible("roadtrips");
-    if (key === "rail") return railOffered || enabledRail;
-    if (key === "rental") return rentalOffered || enabledRental;
-    if (key === "ferry") return ferryOffered || enabledDomains.includes("ferry");
-    if (key === "bus") return busOffered || enabledBus;
-    return true;
-  });
+  const visibleKeys = switchableDomains(DOMAIN_KEYS, enabledDomains, isFeatureVisible);
 
   const toggle = (key: DomainKey): void => {
     if (!DOMAINS[key].available) return;

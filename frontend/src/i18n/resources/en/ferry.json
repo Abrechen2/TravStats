@@ -166,5 +166,48 @@
     "observed": "Source timestamp: {{time}}",
     "ageUnknown": "The source provides no complete observation timestamp. The age of this position is unknown.",
     "map": "View on OpenStreetMap"
+  },
+  "stats": {
+    "crossings": "Crossings",
+    "crossingsDesc": "Completed crossings only.",
+    "km": "Distance",
+    "kmMeasured": "{{km}} km from the ticket or drawn",
+    "kmStraight": "{{km}} km straight line",
+    "hours": "Hours on board",
+    "hoursDesc": "Only crossings with both departure and arrival times.",
+    "countries": "Countries",
+    "operators": "Operators",
+    "empty": "No completed ferry crossing yet.",
+    "loadError": "The ferry statistics could not be loaded.",
+    "help": {
+      "crossings": {
+        "unit": "A crossing: one ferry from the departure to the arrival port. Every completed crossing counts once.",
+        "time": "Counted in the year it left on the departure port's calendar.",
+        "source": "Your ferry crossings with the status “completed”. A crossing is completed once its arrival is past.",
+        "coverage": "Every completed crossing has a departure date, so it always counts. Without a time zone at the departure port, the day is read in UTC.",
+        "exclusions": "Planned, running and cancelled crossings do not count."
+      },
+      "km": {
+        "unit": "Kilometres of the completed crossings, split by what they measure: from the ticket or along a drawn route, or the straight line between the ports.",
+        "time": "In the year of departure on the departure port's calendar.",
+        "source": "Each crossing's stored distance; without one, the straight line between the ports.",
+        "coverage": "A crossing without a stored distance adds nothing.",
+        "exclusions": "Planned, running and cancelled crossings do not count. The straight line is never passed off as the distance sailed."
+      },
+      "hours": {
+        "unit": "Hours between departure and arrival, summed over every completed crossing.",
+        "time": "In the year of departure on the departure port's calendar.",
+        "source": "Each crossing's departure and arrival time, each in its port's time zone.",
+        "coverage": "Only crossings with both times; when none has both, this shows “–” rather than 0.",
+        "exclusions": "Date-only, arrival-less and cancelled crossings do not count."
+      },
+      "countries": {
+        "unit": "A country a departure or arrival port lies in, counted once.",
+        "time": "Countries of the crossings that left in the picked year.",
+        "source": "Each port's country as the place search returned it.",
+        "coverage": "A port without a known country adds none.",
+        "exclusions": "Planned, running and cancelled crossings do not count."
+      }
+    }
   }
 }

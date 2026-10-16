@@ -23,7 +23,8 @@
     "rail": "Train rides",
     "roadtripExpenses": "Roadtrip costs",
     "rental": "Rental cars",
-    "bus": "Bus rides"
+    "bus": "Bus rides",
+    "ferry": "Ferry crossings"
   },
   "hints": {
     "cruises": "One row per cruise. Do not change the ID in column A — it is what matches the row back to its record on import. A row without an ID is created as a new cruise.",
@@ -40,7 +41,8 @@
     "rail": "One row per train ride. A row with the ID of one of your rides changes it; without an ID — or with an ID from another account — a new one is created, unless one with the same train number, stations and departure day is already here. Times are on each station's local clock. A station is found by its UIC code, else by latitude and longitude, else by its name in the station catalogue. Class: first, second, sleeper or couchette; status: only cancelled is set, the rest follows from the times. The distance is measured again — unless \"Source\" says user, the figure from the ticket.",
     "roadtripExpenses": "One cost per row. The Roadtrip column points to the Roadtrips sheet by the ID in square brackets — without an ID, the name before it counts. Kind: ferry, toll, pitch, fuel, charging, parking, transport, food, groceries, activity, shopping, fees or other. Amount and currency (an ISO code such as EUR, NOK) are required; amounts in different currencies are never added together. Station OR leg from/to — never both; a station that cannot be found is left out, the cost stays. An empty cell keeps the stored value.",
     "rental": "One row per rental. Do not change the id in column A – it ties the row back to its rental on import; without an id a rental is recognised by provider and booking number (else pickup station and day) instead of duplicated. Times in the station's local time; precision \"day\" means only the day is known. Empty cells stay unknown, never 0. The deposit never counts as a cost.",
-    "bus": "One row per bus ride. A row carrying the id of one of your rides changes it; without an id — or with an id from another account — a new one is created, unless one already has the same stops and departure day. Times are in each stop's local time. Every stop needs its latitude and longitude, as there is no stop catalogue. Kind: intercity, shuttle or other; status: only cancelled is set, the rest follows from the times. The distance is measured again — unless \"Source\" says user, the figure from the ticket. Source: great_circle = straight line, route = routed road, user = per ticket. A routed road stays with the ride as long as its stops do not change; changing a stop returns the straight line, and the road is routed again in the logbook."
+    "bus": "One row per bus ride. A row carrying the id of one of your rides changes it; without an id — or with an id from another account — a new one is created, unless one already has the same stops and departure day. Times are in each stop's local time. Every stop needs its latitude and longitude, as there is no stop catalogue. Kind: intercity, shuttle or other; status: only cancelled is set, the rest follows from the times. The distance is measured again — unless \"Source\" says user, the figure from the ticket. Source: great_circle = straight line, route = routed road, user = per ticket. A routed road stays with the ride as long as its stops do not change; changing a stop returns the straight line, and the road is routed again in the logbook.",
+    "ferry": "One row per ferry crossing. A row carrying the id of one of your crossings changes it; without an id – or with an id from another account – a new one is created, unless one already has the same ports and departure day. Times are in each port's local time. Every port needs its latitude and longitude, as there is no port catalogue. Status: only cancelled is set, the rest follows from the times. The distance is measured again – unless \"Source\" says user, the figure from the ticket. A link to a roadtrip leg is not in the file and stays as it is."
   },
   "columns": {
     "id": "ID",
@@ -215,6 +217,22 @@
       "toAddress": "To (address)",
       "toCountry": "To (country)",
       "fareClass": "Fare"
+    },
+    "ferry": {
+      "operator": "Operator",
+      "vesselName": "Vessel",
+      "fromPort": "From (port)",
+      "fromAddress": "From (address)",
+      "fromCountry": "From (country)",
+      "toPort": "To (port)",
+      "toAddress": "To (address)",
+      "toCountry": "To (country)",
+      "vehicleType": "Vehicle",
+      "vehicleRegistration": "Registration",
+      "passengerCount": "Passengers",
+      "cabinType": "Cabin",
+      "fareClass": "Fare",
+      "ticketReference": "Ticket number"
     }
   },
   "import": {
@@ -282,7 +300,9 @@
       "odometer_order": "The odometer at return is below the one at pickup.",
       "deposit_return_exceeds": "More deposit came back than was held.",
       "bus_needs_route": "A new bus ride needs From, To (with latitude and longitude) and the departure.",
-      "bus_needs_coordinates": "A stop needs its name, latitude and longitude — there is no stop catalogue to find it in."
+      "bus_needs_coordinates": "A stop needs its name, latitude and longitude — there is no stop catalogue to find it in.",
+      "ferry_needs_route": "A new ferry crossing needs From, To (with latitude and longitude) and the departure.",
+      "ferry_needs_coordinates": "A port needs its name, latitude and longitude — there is no port catalogue to find it in."
     },
     "modeLabel": "What should happen to entries that already exist?",
     "modes": {

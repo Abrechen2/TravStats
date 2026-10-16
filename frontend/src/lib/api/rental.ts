@@ -12,6 +12,9 @@ import type { RentalInvoicePart } from "../rental/rentalInvoiceDiff";
  * Enveloped, like every newer domain's router.
  */
 
+/** A deadline column a mail can fill on a stored booking (`meta.filledDeadlines`). */
+export type RentalDeadlineField = "freeCancellationUntil" | "paymentDueOn";
+
 interface Envelope<T> {
   success: boolean;
   data: T;
@@ -117,12 +120,19 @@ export const rentalApi = {
             fees?: number[];
           };
         }
-  ): Promise<{ rental: RentalBooking; outcome: string }> {
-    const res = await api.post<Envelope<RentalBooking> & { meta: { outcome: string } }>(
-      "/rentals/import",
-      body
-    );
-    return { rental: res.data.data, outcome: res.data.meta.outcome };
+  ): Promise<{ rental: RentalBooking; outcome: string; filledDeadlines: RentalDeadlineField[] }> {
+    const res = await api.post<
+      Envelope<RentalBooking> & {
+        meta: { outcome: string; filledDeadlines?: RentalDeadlineField[] };
+      }
+    >("/rentals/import", body);
+    // The server names the deadlines a later mail filled (forgejo#285); dropping
+    // them here left the user with "taken over" and no word that dates changed.
+    return {
+      rental: res.data.data,
+      outcome: res.data.meta.outcome,
+      filledDeadlines: res.data.meta.filledDeadlines ?? [],
+    };
   },
 
   /** Airports and the user's earlier stations matching `q`. */

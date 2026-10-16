@@ -4,11 +4,11 @@ import type { JSX } from "react";
 import RailRoutingUrlSetting from "./RailRoutingUrlSetting";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useRailOffered } from "../../hooks/useRailVisible";
 import { adminApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { Switch } from "../ui/Field";
 import { SettingRows } from "../ui/SettingRow";
+import { useDomainOffered } from "../../hooks/useDomainVisible";
 
 type Switches = { railTransitousEnabled: boolean; railDbRestEnabled: boolean };
 
@@ -23,7 +23,7 @@ type Switches = { railTransitousEnabled: boolean; railDbRestEnabled: boolean };
  */
 export default function RailProvidersCard({ isAdmin }: { isAdmin: boolean }): JSX.Element | null {
   const { t } = useTranslation(["settings"]);
-  const offered = useRailOffered();
+  const offered = useDomainOffered("rail");
   const [switches, setSwitches] = useState<Switches | null>(null);
   const [routingUrl, setRoutingUrl] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);

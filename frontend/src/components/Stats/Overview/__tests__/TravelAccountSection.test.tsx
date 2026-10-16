@@ -11,7 +11,10 @@ vi.mock("../../../../lib/api/stats", () => ({
 
 // Rail sits behind the beta switch; each case says which side it is on.
 const rail = vi.hoisted(() => ({ visible: true }));
-vi.mock("../../../../hooks/useRailVisible", () => ({ useRailVisible: () => rail.visible }));
+vi.mock("../../../../hooks/useDomainVisible", () => ({
+  useDomainVisible: (key: string): boolean =>
+    ((({ rail: () => rail.visible }) as Record<string, () => boolean>)[key] ?? (() => false))(),
+}));
 
 import TravelAccountSection from "../TravelAccountSection";
 
