@@ -4,13 +4,24 @@ import userEvent from "@testing-library/user-event";
 
 import TripShareMenu, { placeMenu } from "../TripShareMenu";
 import { sharingApi } from "../../../lib/api/sharing";
+import { tripsApi } from "../../../lib/api/trips";
+import type { Trip } from "../../../types";
+import type { TripPerson } from "../../../types/sharing";
 
 /**
  * "Teilen" is ONE entry point with two meanings kept apart (spec 2026-10-16,
  * D10/D11): a copy for travel companions, or a public link.
  */
 vi.mock("../../../lib/api/sharing", () => ({
-  sharingApi: { tripSharing: vi.fn(), shareTrip: vi.fn() },
+  sharingApi: {
+    tripSharing: vi.fn(),
+    shareTrip: vi.fn(),
+    linkCompanion: vi.fn(),
+    listCompanions: vi.fn(),
+  },
+}));
+vi.mock("../../../lib/api/trips", () => ({
+  tripsApi: { getById: vi.fn(), update: vi.fn() },
 }));
 vi.mock("../../shareLinks/ShareLinkDialog", () => ({
   default: ({ kind, targetId }: { kind: string; targetId: string }) => (
@@ -69,6 +80,44 @@ describe("TripShareMenu", () => {
     });
     expect(await screen.findByText("sharing:shareDialog.nobody")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "sharing:menu.loading" })).toBeNull();
+  });
+
+  it("reloads the trip after a traveller was added from the menu, so the page's companions hold them", async () => {
+    // Without the reload, the page kept its old companion list, and the next
+    // save of the trip form (a full-list PATCH) silently dropped the new traveller.
+    const carlAccount = { id: "u-carl", username: "carl", displayName: "Carl" };
+    const carl: TripPerson = {
+      key: "c:c-carl",
+      companionId: "c-carl",
+      name: "Carl",
+      account: null,
+      consent: "accepted",
+      member: false,
+      receivesChanges: null,
+      shareBlockedBy: "notLinked",
+    };
+    const empty = { groupId: null, bookingTotals: [], linkableUsers: [carlAccount] };
+    api.tripSharing
+      .mockResolvedValueOnce({ ...empty, people: [] })
+      .mockResolvedValueOnce({ ...empty, people: [carl] })
+      .mockResolvedValueOnce({
+        ...empty,
+        people: [{ ...carl, account: carlAccount, shareBlockedBy: null }],
+      });
+    api.listCompanions.mockResolvedValue({ companions: [], linkableUsers: [carlAccount] });
+    api.linkCompanion.mockResolvedValue({} as never);
+    vi.mocked(tripsApi.getById).mockResolvedValue({ id: "t1", companions: [] } as unknown as Trip);
+    vi.mocked(tripsApi.update).mockResolvedValue({ id: "t1" } as unknown as Trip);
+    const onChanged = vi.fn();
+    render(<TripShareMenu tripId="t1" onChanged={onChanged} />);
+    await userEvent.click(screen.getByRole("button", { name: "sharing:menu.button" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "sharing:menu.companions" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "sharing:shareDialog.add.actionLabel" })
+    );
+    expect(await screen.findByText("sharing:shareDialog.copied")).toBeTruthy();
+    expect(tripsApi.update).toHaveBeenCalledWith("t1", { companions: ["Carl"] });
+    expect(onChanged).toHaveBeenCalled();
   });
 
   it("is absent for the shared demo account", () => {

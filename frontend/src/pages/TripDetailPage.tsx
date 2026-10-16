@@ -158,6 +158,7 @@ export default function TripDetailPage(): JSX.Element {
         t={t}
         onEdit={() => setEditing(true)}
         onDelete={() => setConfirmDelete(true)}
+        onChanged={() => void load()}
       />
 
       <TabBar tab={tab} onChange={setTab} t={t} />
@@ -261,8 +262,7 @@ export function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
   const toursVisible = useToursVisible();
   const visibleTabs = TABS.filter((key) => key !== "tours" || toursVisible);
 
-  // Round 4: text tabs with the accent underline, like the logbook's. The
-  // emoji in front of each label were the last ones in a tab bar.
+  // Round 4: text tabs with the accent underline, like the logbook's; no emoji.
   return (
     <div
       role="tablist"

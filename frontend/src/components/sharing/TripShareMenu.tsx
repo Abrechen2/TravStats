@@ -63,7 +63,18 @@ export function placeMenu(
  * always opens on the current state. A failed load is said out loud and the
  * menu stays — an empty picker would read as "nobody to share with".
  */
-export default function TripShareMenu({ tripId }: { tripId: string }): JSX.Element | null {
+export default function TripShareMenu({
+  tripId,
+  onChanged,
+}: {
+  tripId: string;
+  /**
+   * The trip itself changed (a traveller was added from the dialog): the page
+   * reloads it, or its companion list goes stale and the next save of the trip
+   * form — a full-list PATCH — drops the new traveller.
+   */
+  onChanged?: () => void;
+}): JSX.Element | null {
   const { t } = useTranslation(["sharing"]);
   const isSharedDemo = useIsDemoAccount();
   const addToast = useToastStore((s) => s.addToast);
@@ -256,7 +267,10 @@ export default function TripShareMenu({ tripId }: { tripId: string }): JSX.Eleme
           people={people}
           linkableUsers={current?.linkableUsers ?? []}
           onShared={() => bump(tripId)}
-          onPeopleChanged={() => bump(tripId)}
+          onPeopleChanged={() => {
+            bump(tripId);
+            onChanged?.();
+          }}
         />
       )}
     </div>
