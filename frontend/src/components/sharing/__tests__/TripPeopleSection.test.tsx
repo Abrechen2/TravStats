@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
 import TripPeopleSection from "../TripPeopleSection";
 import { sharingApi } from "../../../lib/api/sharing";
+import { useTripSharingStore } from "../../../store/tripSharingStore";
 import type { TripPerson, TripSharing } from "../../../types/sharing";
 
 /**
@@ -139,5 +140,116 @@ describe("TripPeopleSection", () => {
       expect(screen.getByRole("alert").textContent).toBe("sharing:trip.errors.loadFailed")
     );
     expect(screen.getByText("Ilse")).toBeTruthy();
+  });
+
+  it("says the load failed even when the trip has no companion names", async () => {
+    api.tripSharing.mockRejectedValue(new Error("down"));
+    render(
+      <MemoryRouter>
+        <TripPeopleSection tripId="t1" companionNames={[]} />
+      </MemoryRouter>
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toBe("sharing:trip.errors.loadFailed")
+    );
+  });
+
+  it("says so when a reload fails after a good load, instead of keeping stale rows silently", async () => {
+    renderSection();
+    await screen.findByText("Carl");
+    api.tripSharing.mockRejectedValue(new Error("down"));
+    act(() => useTripSharingStore.getState().bump("t1"));
+    await waitFor(() =>
+      expect(screen.getByRole("alert").textContent).toBe("sharing:trip.errors.loadFailed")
+    );
+  });
+
+  it("does not show the previous trip's people after the trip changes", async () => {
+    const { rerender } = renderSection();
+    await screen.findByText("Carl");
+    api.tripSharing.mockReturnValue(new Promise(() => {}));
+    rerender(
+      <MemoryRouter>
+        <TripPeopleSection tripId="t2" companionNames={["Zora"]} />
+      </MemoryRouter>
+    );
+    expect(screen.getByText("Zora")).toBeTruthy();
+    expect(screen.queryByText("Carl")).toBeNull();
+  });
+
+  it("lets the newest response win when an older one arrives last", async () => {
+    let resolveOld: (v: TripSharing) => void = () => {};
+    let resolveNew: (v: TripSharing) => void = () => {};
+    api.tripSharing
+      .mockReturnValueOnce(new Promise((r) => (resolveOld = r)))
+      .mockReturnValueOnce(new Promise((r) => (resolveNew = r)));
+    renderSection();
+    act(() => useTripSharingStore.getState().bump("t1"));
+    await waitFor(() => expect(api.tripSharing).toHaveBeenCalledTimes(2));
+    await act(async () => resolveNew(view));
+    await screen.findByText("Carl");
+    await act(async () =>
+      resolveOld({ ...view, people: [row({ key: "c:old", companionId: "old", name: "Olaf" })] })
+    );
+    expect(screen.queryByText("Olaf")).toBeNull();
+    expect(screen.getByText("Carl")).toBeTruthy();
+  });
+
+  it("keeps a legacy name beside a member who is no companion, and nobody twice", async () => {
+    api.tripSharing.mockResolvedValue({
+      ...view,
+      people: [
+        row({
+          key: "u:u-carl",
+          companionId: null,
+          name: "Carl",
+          account: account("carl"),
+          member: true,
+          receivesChanges: true,
+          shareBlockedBy: "alreadyMember",
+        }),
+        row({
+          key: "c:ben",
+          companionId: "ben",
+          name: "Ben",
+          account: account("ben"),
+          consent: "accepted",
+          shareBlockedBy: null,
+        }),
+      ],
+    });
+    render(
+      <MemoryRouter>
+        <TripPeopleSection tripId="t1" companionNames={["Ilse", "Ben"]} />
+      </MemoryRouter>
+    );
+    await screen.findByText("Carl");
+    expect(screen.getByText("Ilse")).toBeTruthy();
+    expect(screen.getAllByText("Ben")).toHaveLength(1);
+  });
+
+  it("says why nothing can be done for a deactivated account", async () => {
+    api.tripSharing.mockResolvedValue({
+      ...view,
+      people: [
+        row({
+          key: "c:eva",
+          companionId: "eva",
+          name: "Eva",
+          account: account("eva"),
+          consent: "accepted",
+          shareBlockedBy: "accountInactive",
+        }),
+      ],
+    });
+    renderSection();
+    expect(await screen.findByText("sharing:shareDialog.blocked.accountInactive")).toBeTruthy();
+  });
+
+  it("draws no empty badge line for a person without pills", async () => {
+    renderSection();
+    await screen.findByText("Carl");
+    const ilse = screen.getByText("Ilse").closest("li");
+    expect(ilse?.querySelector(".flex-wrap")).toBeNull();
   });
 });

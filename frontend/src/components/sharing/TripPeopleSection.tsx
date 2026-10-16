@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
 
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
@@ -18,6 +18,16 @@ import ShareTripDialog from "./ShareTripDialog";
 import { sharingErrorKey } from "./sharingCopy";
 
 const NS = "sharing:people";
+
+/** A loaded view, a failure or a picked row — each remembers the trip it belongs to. */
+type ForTrip<T> = { tripId: string; value: T } | null;
+type Picked = { kind: "share" | "link"; person: TripPerson };
+
+const alertLine = (text: string): JSX.Element => (
+  <p role="alert" className="text-sm" style={{ color: "var(--ts-warn)" }}>
+    {text}
+  </p>
+);
 
 /**
  * "Reisende" on the trip overview (spec 2026-10-16, D9) — the trip's people
@@ -41,19 +51,30 @@ export default function TripPeopleSection({
   const revision = useTripSharingStore((s) => s.revision[tripId] ?? 0);
   const bump = useTripSharingStore((s) => s.bump);
   const { confirm, confirmDialog } = useConfirmDialog();
-  const [view, setView] = useState<TripSharing | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [sharing, setSharing] = useState<TripPerson | null>(null);
-  const [linking, setLinking] = useState<TripPerson | null>(null);
+  // State is tagged with its trip, so a trip change never shows the previous
+  // trip's rows, failure or open dialog, not even for one render.
+  const [loaded, setLoaded] = useState<ForTrip<TripSharing>>(null);
+  const [failedFor, setFailedFor] = useState<string | null>(null);
+  const [picked, setPicked] = useState<ForTrip<Picked>>(null);
   const [busy, setBusy] = useState(false);
+  const latestRequest = useRef(0);
+  const view = loaded?.tripId === tripId ? loaded.value : null;
+  const loadFailed = failedFor === tripId;
+  const pick = picked?.tripId === tripId ? picked.value : null;
 
   const load = useCallback(async () => {
+    // Only the newest request may land: an older answer arriving last would
+    // otherwise paint a state that is no longer true.
+    const request = ++latestRequest.current;
     try {
-      setView(await sharingApi.tripSharing(tripId));
-      setLoadFailed(false);
+      const next = await sharingApi.tripSharing(tripId);
+      if (request !== latestRequest.current) return;
+      setLoaded({ tripId, value: next });
+      setFailedFor(null);
     } catch (error) {
+      if (request !== latestRequest.current) return;
       logger.error("Failed to load trip sharing:", error);
-      setLoadFailed(true);
+      setFailedFor(tripId);
     }
   }, [tripId]);
 
@@ -84,33 +105,39 @@ export default function TripPeopleSection({
     }
   };
 
-  if (companionNames.length === 0 && (view?.people.length ?? 0) === 0) return null;
+  const failure = loadFailed && alertLine(t("sharing:trip.errors.loadFailed"));
+  // Hidden only when there is nobody AND nothing to say — a failed load on a
+  // trip without names still says it failed.
+  if (companionNames.length === 0 && (view?.people.length ?? 0) === 0 && !loadFailed) return null;
   if (isSharedDemo || !view) {
     return (
       <DetailSection title={t("trips:detail.companions")}>
-        <PeopleList names={companionNames} />
-        {loadFailed && (
-          <p role="alert" className="text-sm" style={{ color: "var(--ts-warn)" }}>
-            {t("sharing:trip.errors.loadFailed")}
-          </p>
-        )}
+        <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+          {failure}
+          <PeopleList names={companionNames} />
+        </div>
       </DetailSection>
     );
   }
 
-  const badges = (p: TripPerson): JSX.Element => (
-    <>
-      {p.account && <Pill color="var(--ts-muted)">{t(`${NS}.badges.linked`)}</Pill>}
-      {p.member && <Pill color="var(--ts-good)">{t(`${NS}.badges.member`)}</Pill>}
-      {(p.consent === "pending" || p.receivesChanges === false) && (
-        <Pill color="var(--ts-warn)">{t(`${NS}.badges.consentPending`)}</Pill>
-      )}
-    </>
-  );
+  const badges = (p: TripPerson): JSX.Element | undefined => {
+    const pending = p.consent === "pending" || p.receivesChanges === false;
+    if (!p.account && !p.member && !pending) return undefined;
+    return (
+      <>
+        {p.account && <Pill color="var(--ts-muted)">{t(`${NS}.badges.linked`)}</Pill>}
+        {p.member && <Pill color="var(--ts-good)">{t(`${NS}.badges.member`)}</Pill>}
+        {pending && <Pill color="var(--ts-warn)">{t(`${NS}.badges.consentPending`)}</Pill>}
+      </>
+    );
+  };
   const meta = (p: TripPerson): string | undefined => {
     if (p.receivesChanges === false) return t(`${NS}.noChangesHint`);
     if (p.shareBlockedBy === "consentMissing")
       return t(`${NS}.blocked.consentMissing`, { name: p.name });
+    if (p.shareBlockedBy === "accountInactive") {
+      return t("sharing:shareDialog.blocked.accountInactive", { name: p.name });
+    }
     if (p.shareBlockedBy === "groupConsentMissing") {
       return t(`${NS}.blocked.groupConsentMissing`, { name: p.name });
     }
@@ -118,28 +145,36 @@ export default function TripPeopleSection({
   };
   const action = (p: TripPerson): JSX.Element | undefined => {
     if (p.shareBlockedBy === "notLinked" && p.companionId) {
-      return <Button onClick={() => setLinking(p)}>{t(`${NS}.actions.link`)}</Button>;
+      return (
+        <Button onClick={() => setPicked({ tripId, value: { kind: "link", person: p } })}>
+          {t(`${NS}.actions.link`)}
+        </Button>
+      );
     }
     if (p.shareBlockedBy === null) {
-      return <Button onClick={() => setSharing(p)}>{t(`${NS}.actions.share`)}</Button>;
+      return (
+        <Button onClick={() => setPicked({ tripId, value: { kind: "share", person: p } })}>
+          {t(`${NS}.actions.share`)}
+        </Button>
+      );
     }
     return undefined;
   };
-  const rows: PersonRow[] = view.people.map((p) => ({
+  const personRows: PersonRow[] = view.people.map((p) => ({
     key: p.key,
     name: p.name,
     meta: meta(p),
     badges: badges(p),
     action: action(p),
   }));
+  const rows = [...personRows, ...uncoveredNameRows(companionNames, view.people)];
 
   return (
     <>
       <DetailSection title={t("trips:detail.companions")}>
         <div className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
-          {/* A trip whose companions are bare names, with no companion entry
-              behind them, has names but no person rows — keep the names. */}
-          {rows.length > 0 ? <PeopleList rows={rows} /> : <PeopleList names={companionNames} />}
+          {failure}
+          <PeopleList rows={rows} />
           {view.bookingTotals.length > 0 && (
             <div data-testid="share-booking-totals" className="text-sm">
               <p className="t-label-mono">{t("sharing:trip.bookingTotals")}</p>
@@ -167,21 +202,21 @@ export default function TripPeopleSection({
           )}
         </div>
       </DetailSection>
-      {sharing && (
+      {pick?.kind === "share" && (
         <ShareTripDialog
           open
-          onClose={() => setSharing(null)}
+          onClose={() => setPicked(null)}
           tripId={tripId}
           people={view.people}
-          preselectedKey={sharing.key}
+          preselectedKey={pick.person.key}
           onShared={changed}
         />
       )}
-      {linking?.companionId && (
+      {pick?.kind === "link" && pick.person.companionId && (
         <LinkAccountDialog
           open
-          onClose={() => setLinking(null)}
-          companion={{ id: linking.companionId, name: linking.name }}
+          onClose={() => setPicked(null)}
+          companion={{ id: pick.person.companionId, name: pick.person.name }}
           linkableUsers={view.linkableUsers}
           onLinked={changed}
         />
@@ -189,4 +224,21 @@ export default function TripPeopleSection({
       {confirmDialog}
     </>
   );
+}
+
+/**
+ * The trip's companion names that no companion row stands for, as plain rows.
+ * A trip may carry bare legacy names with no companion entry behind them, and
+ * then only share-group members have person rows — those names must still
+ * show. Each companion row covers one occurrence of its name, so nobody
+ * appears twice and two people of the same name both stay.
+ */
+function uncoveredNameRows(names: readonly string[], people: readonly TripPerson[]): PersonRow[] {
+  const covered = people.filter((p) => p.companionId !== null).map((p) => p.name);
+  const count = (list: readonly string[], name: string): number =>
+    list.filter((n) => n === name).length;
+  return names
+    .map((name, index) => ({ name, index }))
+    .filter(({ name, index }) => count(names.slice(0, index), name) >= count(covered, name))
+    .map(({ name, index }) => ({ key: `n:${index}:${name}`, name }));
 }

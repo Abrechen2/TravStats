@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 import PeopleList from "../PeopleList";
@@ -27,5 +27,13 @@ describe("PeopleList", () => {
     expect(screen.getByText("@ben")).toBeTruthy();
     expect(screen.getByText("linked")).toBeTruthy();
     expect(screen.getByRole("button", { name: "act" })).toBeTruthy();
+  });
+
+  it("draws two people of the same name without a key clash", () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    render(<PeopleList names={["Anna", "Anna"]} />);
+    expect(screen.getAllByText("Anna")).toHaveLength(2);
+    expect(error.mock.calls.some((c) => String(c[0]).includes("same key"))).toBe(false);
+    error.mockRestore();
   });
 });

@@ -30,7 +30,9 @@ type PeopleListProps = { names: readonly string[] } | { rows: readonly PersonRow
  */
 export default function PeopleList(props: PeopleListProps): JSX.Element {
   const rows: readonly PersonRow[] =
-    "rows" in props ? props.rows : props.names.map((name) => ({ key: name, name }));
+    "rows" in props
+      ? props.rows
+      : props.names.map((name, index) => ({ key: `${index}:${name}`, name }));
   return (
     <ul className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
       {rows.map((row) => (
