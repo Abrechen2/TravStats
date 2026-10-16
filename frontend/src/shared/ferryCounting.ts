@@ -1,3 +1,5 @@
+import { isValidZone, localDay } from "./time";
+
 /** Ferry crossings (dennis/TravStats forgejo#293). */
 export const COUNTABLE_FERRY_STATUSES = ["completed"] as const;
 
@@ -14,14 +16,10 @@ export function isCountableFerry(ride: CountableFerry): boolean {
 }
 
 function terminalDayKey(instant: Date | string, timezone: string | null): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone ?? "UTC",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date(instant));
-  const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
-  return `${get("year")}-${get("month")}-${get("day")}`;
+  // A zone this runtime's Intl does not know threw a RangeError and took the
+  // statistics page down with it; such a ride is read in UTC, the reading the
+  // server stores for a place it could not put in a zone.
+  return localDay(instant, timezone && isValidZone(timezone) ? timezone : "UTC");
 }
 
 export interface DatedFerry {

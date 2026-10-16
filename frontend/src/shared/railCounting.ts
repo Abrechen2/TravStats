@@ -1,3 +1,5 @@
+import { isValidZone, localDay } from "./time";
+
 /**
  * Single source of truth for "does this train ride count, and when".
  *
@@ -37,14 +39,10 @@ export function isCountableRail(ride: CountableRail): boolean {
  * UTC is then the honest way back — the same rule `lib/railTime.ts` shows.
  */
 export function stationDayKey(instant: Date | string, timezone: string | null): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone ?? "UTC",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date(instant));
-  const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
-  return `${get("year")}-${get("month")}-${get("day")}`;
+  // A zone this runtime's Intl does not know threw a RangeError and took the
+  // statistics page down with it; such a ride is read in UTC, the reading the
+  // server stores for a place it could not put in a zone.
+  return localDay(instant, timezone && isValidZone(timezone) ? timezone : "UTC");
 }
 
 export interface DatedRail {
