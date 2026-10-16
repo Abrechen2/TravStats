@@ -26,6 +26,11 @@ import { meters } from "./detect";
  *  - a lodging stay at that pin whose check-in..check-out days hold the stay's
  *    local day — sitting in your own hotel is not a place you visited.
  *
+ * Only PLAIN stops. A market or venue finding stands for the whole site, and
+ * a visit to one shop inside it is not a visit to the market (the market code
+ * keeps its own identity-based "already recorded" memory); treating that shop
+ * as cover suppressed exactly the suggestion the market scan exists to make.
+ *
  * A covered finding is never deleted: it is resolved as `covered`, and its
  * evidence names what covered it, so the inbox history can say why it left.
  */
@@ -203,7 +208,7 @@ export function coveredEvidence(evidence: unknown, coverage: StayCoverage): Pris
 }
 
 /**
- * Resolve every pending finding a record now covers. The visit is often
+ * Resolve every pending plain-stop finding a record now covers. The visit is often
  * logged AFTER the scan made the finding (live, on the phone), so this runs
  * after each scan and before the inbox reads its pending list. Returns how
  * many were resolved.
@@ -221,12 +226,13 @@ export async function resolveCoveredStays(userId: string): Promise<number> {
       evidence: true,
     },
   });
-  if (!pending.length) return 0;
-  const from = new Date(Math.min(...pending.map((p) => p.startAt.getTime())));
-  const to = new Date(Math.max(...pending.map((p) => p.endAt.getTime())));
+  const plain = pending.filter((p) => !(p.evidence as { market?: unknown } | null)?.market);
+  if (!plain.length) return 0;
+  const from = new Date(Math.min(...plain.map((p) => p.startAt.getTime())));
+  const to = new Date(Math.max(...plain.map((p) => p.endAt.getTime())));
   const ctx = await loadCoverage(userId, from, to);
   let resolved = 0;
-  for (const row of pending) {
+  for (const row of plain) {
     const coverage = coverageFor(row, ctx);
     if (!coverage) continue;
     // Status-guarded: a review that resolved the row meanwhile wins.
