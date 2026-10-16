@@ -82,6 +82,20 @@ it("classifies every scalar on every traversed travel model (new fields fail clo
     expect(new Set(Object.values(inventory).flatMap(words)).size).toBe(scalar.length);
   }
 });
+it("never classifies a cost or personal-looking field as a plain detail", () => {
+  // Flight taxes/fees, a ferry's number plate and a stay's guest list once sat in `details`,
+  // so a statistics-and-details grant published them with no cost or personal consent.
+  const costOrPersonal = /price|tax|fee|amount|cost|registration|plate|guest/i;
+  // An aircraft tail number is a public fact about the aeroplane, not about the traveller.
+  const publicFacts = new Set(["Flight.aircraftRegistration"]);
+  const leaks = Object.entries(FIELD_INVENTORY).flatMap(([model, inventory]) =>
+    words(inventory.details)
+      .filter((field) => costOrPersonal.test(field) && !publicFacts.has(`${model}.${field}`))
+      .map((field) => `${model}.${field}`)
+  );
+  expect(leaks).toEqual([]);
+  expect(words(FIELD_INVENTORY.Flight.personal)).toContain("boardingGroup");
+});
 it("collects the complete graph and keeps ownership, personal categories and credentials separate", async () => {
   const a = await user(),
     b = await user();
