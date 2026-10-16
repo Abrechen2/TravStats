@@ -172,6 +172,8 @@ describe("Ferry rides API", () => {
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(1);
     expect(res.body.data[0].operator).toBe("Kumho");
+    // The pre-link routing snapshot is bookkeeping for unlinking, not part of a crossing.
+    expect(res.body.data[0]).not.toHaveProperty("roadtripLegBefore");
     expect(res.body.meta.total).toBe(2);
     expect(res.body.meta.summary).toEqual({
       journeys: 2,

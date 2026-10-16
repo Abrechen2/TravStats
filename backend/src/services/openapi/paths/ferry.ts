@@ -12,10 +12,12 @@ import { clientRefResponses } from "./clientRef";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import { railTimesSchema } from "../../../schemas/times";
 import { errorContent, timeRefused } from "./shared";
+// The link snapshot never leaves the server (see withFerryTimes).
+const { roadtripLegBefore: _linkSnapshot, ...ferryColumns } = prismaColumns("FerryJourney");
 const journey = registry.register(
   "FerryJourney",
   z.object({
-    ...prismaColumns("FerryJourney"),
+    ...ferryColumns,
     trip: z.object({ id: z.string(), name: z.string(), color: z.string() }).nullable().optional(),
     times: railTimesSchema,
   })
