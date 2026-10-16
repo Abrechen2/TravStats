@@ -40,6 +40,11 @@ vi.mock("../../../lib/api/sharing", () => ({
   },
 }));
 
+// The real globe paints a canvas jsdom cannot; keep its status semantics.
+vi.mock("../../GlobeLoader", () => ({
+  GlobeLoader: ({ label }: { label?: string }) => <div role="status" aria-label={label} />,
+}));
+
 const addToast = vi.fn();
 const toastState = { addToast: (...args: unknown[]) => addToast(...args) };
 vi.mock("../../../store/toastStore", () => ({

@@ -24,7 +24,15 @@
       "unknownEntry": "einen Eintrag",
       "undo": "Rückgängig",
       "deleteCopy": "Bei mir auch löschen",
-      "undone": "Bei dir rückgängig gemacht."
+      "undone": "Bei dir rückgängig gemacht.",
+      "kinds": {
+        "shared": "Geteilt",
+        "created": "Hinzugefügt",
+        "updated": "Geändert",
+        "deleted": "Gelöscht",
+        "left": "Verlassen"
+      },
+      "details": "Details"
     },
     "empty": {
       "title": "Nichts Neues",

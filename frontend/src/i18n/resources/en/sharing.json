@@ -24,7 +24,15 @@
       "unknownEntry": "an entry",
       "undo": "Undo",
       "deleteCopy": "Delete mine too",
-      "undone": "Undone on your copy."
+      "undone": "Undone on your copy.",
+      "kinds": {
+        "shared": "Shared",
+        "created": "Added",
+        "updated": "Changed",
+        "deleted": "Deleted",
+        "left": "Left"
+      },
+      "details": "Details"
     },
     "empty": {
       "title": "Nothing new",
