@@ -3,15 +3,15 @@ import type { DbTransaction } from "../../db";
 /**
  * Who receives a member's changes.
  *
- * Membership of the group is the consent: a member joined because they had
- * accepted sharing from whoever brought them in, and two members brought in
- * by a third person have no consent row between them at all — decision 3
- * ("changes apply to everyone") still reaches them.
+ * Owner decision 2026-10-16: membership alone is NOT consent. A member could
+ * once share their copy on to a third account, which then wrote into every
+ * other member's data although none of them had agreed to it. Now a write
+ * reaches only members with an ACCEPTED consent with the writer (either
+ * direction of the pair — `acceptedWith`), and `shareTrip` admits a newcomer
+ * only with such a consent towards every current member.
  *
- * What stops a member receiving changes is a consent that was WITHDRAWN
- * between the actor and them (in either direction) with no accepted one
- * left. `withdrawConsent` detaches such a member right away (`detach.ts`);
- * this filter is the second line, for any pair that slipped past it.
+ * A withdrawn consent with no accepted one left still detaches the member
+ * (`withdrawConsent` → `detach.ts`); this filter is the second line.
  */
 export interface MemberTrip {
   id: string;
@@ -42,6 +42,26 @@ export async function withdrawnTowards(
   );
 }
 
+/** Users among `userIds` with an accepted consent with `actorId`, in either direction. */
+export async function acceptedWith(
+  c: Pick<DbTransaction, "shareConsent">,
+  actorId: string,
+  userIds: readonly string[]
+): Promise<Set<string>> {
+  if (userIds.length === 0) return new Set();
+  const rows = await c.shareConsent.findMany({
+    where: {
+      status: "accepted",
+      OR: [
+        { requesterId: actorId, targetId: { in: [...userIds] } },
+        { targetId: actorId, requesterId: { in: [...userIds] } },
+      ],
+    },
+    select: { requesterId: true, targetId: true },
+  });
+  return new Set(rows.map((r) => (r.requesterId === actorId ? r.targetId : r.requesterId)));
+}
+
 /** The other members' trips in `groupId` that may receive `actorId`'s changes. */
 export async function receivingMembers(
   c: Pick<DbTransaction, "trip" | "shareConsent">,
@@ -53,10 +73,10 @@ export async function receivingMembers(
     select: { id: true, userId: true },
     orderBy: { createdAt: "asc" },
   });
-  const blocked = await withdrawnTowards(
+  const consenting = await acceptedWith(
     c,
     actorId,
     trips.map((t) => t.userId)
   );
-  return trips.filter((t) => !blocked.has(t.userId));
+  return trips.filter((t) => consenting.has(t.userId));
 }

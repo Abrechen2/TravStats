@@ -116,6 +116,7 @@
     "consentNotFound": "This request no longer exists.",
     "notPending": "This request has already been answered.",
     "consentRequired": "This person has not agreed to sharing with you.",
+    "groupConsentRequired": "Not everyone who already shares this trip has agreed to sharing with this person. They need a consent with each of them first.",
     "companionNotFound": "This companion no longer exists.",
     "alreadyLinked": "Another companion is already linked to this account.",
     "notLinked": "This person is not linked to an account.",

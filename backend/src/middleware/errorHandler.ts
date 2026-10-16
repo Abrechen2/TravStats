@@ -383,6 +383,7 @@ export type ApiErrorCode =
   /** Linking or sharing needs an accepted consent the other account gave to
    *  the caller (403). */
   | "SHARE_CONSENT_REQUIRED"
+  | "SHARE_GROUP_CONSENT_REQUIRED"
   /** No companion of this caller under that id (404). */
   | "COMPANION_NOT_FOUND"
   /** Another of the caller's companions is already linked to that account (409). */

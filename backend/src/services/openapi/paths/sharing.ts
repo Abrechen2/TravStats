@@ -220,7 +220,9 @@ registry.registerPath({
       "What was created in the other account",
       z.object({ groupId: z.string(), tripCreated: z.boolean(), created: counts })
     ),
-    403: err("`SHARE_CONSENT_REQUIRED`"),
+    403: err(
+      "`SHARE_CONSENT_REQUIRED`, or `SHARE_GROUP_CONSENT_REQUIRED` when another member of the group has no accepted consent with that account"
+    ),
     404: err("`TRIP_NOT_FOUND` or `COMPANION_NOT_FOUND`"),
     409: err("`SHARE_COMPANION_NOT_LINKED`"),
   },
