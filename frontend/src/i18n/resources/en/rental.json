@@ -256,6 +256,11 @@
     "panelTitle": "Add a rental car",
     "panelHint": "Do you have a booking confirmation or an invoice? Read it in.",
     "saved": "Rental taken over.",
+    "deadlinesFilledSuffix": " Missing deadlines added: {{fields}}.",
+    "deadlineField": {
+      "freeCancellationUntil": "free cancellation",
+      "paymentDueOn": "payment due date"
+    },
     "title": {
       "confirmation": "Take over the booking",
       "cancellation": "Take over the cancellation",
