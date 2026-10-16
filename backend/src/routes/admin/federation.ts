@@ -67,6 +67,12 @@ async function state(): Promise<FederationState> {
   };
 }
 
+const PEM_BLOCK = /^\s*-----BEGIN ([A-Z ]+)-----([\s\S]*?)-----END \1-----\s*$/;
+const PUBLIC_KEY_LABEL = "PUBLIC KEY";
+
+/** The label of a single PEM block ("PUBLIC KEY", "PRIVATE KEY", …), or null for anything else. */
+const pemLabel = (pem: string): string | null => PEM_BLOCK.exec(pem)?.[1] ?? null;
+
 /**
  * A pasted PEM often arrives with its newlines flattened to spaces or dropped (single-line
  * inputs, chat clients, e-mail). Re-wrap header, 64-column body and footer so
@@ -74,7 +80,7 @@ async function state(): Promise<FederationState> {
  * and is refused by the key parse as before.
  */
 export function normalisePastedPem(input: string): string {
-  const match = /^\s*-----BEGIN ([A-Z ]+)-----([\s\S]*?)-----END \1-----\s*$/.exec(input);
+  const match = PEM_BLOCK.exec(input);
   if (!match) return input;
   const body = match[2].replace(/\s+/g, "");
   const lines = body.match(/.{1,64}/g) ?? [];
@@ -142,9 +148,16 @@ router.post(
     const own = await currentIdentity();
     if (own && body.origin === own.origin)
       throw comparisonError("COMPARISON_PEER_KEY_INVALID", 400, "A server cannot pin itself");
+    const pasted = normalisePastedPem(body.publicKey);
+    // createPublicKey also derives a public key from a PRIVATE key PEM, so a pasted private
+    // key would pin and look fine. A private key in this field is a leaked key — refuse it.
+    if (pemLabel(pasted) !== PUBLIC_KEY_LABEL)
+      throw comparisonError("COMPARISON_PEER_KEY_INVALID", 400, "Not an Ed25519 public key", {
+        origin: body.origin,
+      });
     let pem: string;
     try {
-      const key = createPublicKey(normalisePastedPem(body.publicKey));
+      const key = createPublicKey(pasted);
       if (key.asymmetricKeyType !== "ed25519") throw new Error("not ed25519");
       pem = key.export({ type: "spki", format: "pem" }).toString();
     } catch {

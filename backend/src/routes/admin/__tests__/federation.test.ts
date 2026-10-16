@@ -90,6 +90,25 @@ it("accepts a pasted key whose newlines were flattened to spaces or removed", as
   expect(stored.publicKey).toBe(pem);
 });
 
+it("refuses a pasted private key, even one whose public half matches the fingerprint", async () => {
+  const PRIVATE_PEER = "https://private.admin-federation.test";
+  const pair = generateKeyPairSync("ed25519");
+  const pub = pair.publicKey.export({ type: "spki", format: "pem" }).toString();
+  const priv = pair.privateKey.export({ type: "pkcs8", format: "pem" }).toString();
+  try {
+    for (const publicKey of [priv, priv.trim().replaceAll("\n", " ")]) {
+      const res = await request(app)
+        .post("/api/v1/admin/federation/peers")
+        .send({ origin: PRIVATE_PEER, publicKey, fingerprint: hash(pub), enabled: true });
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe("COMPARISON_PEER_KEY_INVALID");
+    }
+    expect(await prisma.comparisonPeer.count({ where: { origin: PRIVATE_PEER } })).toBe(0);
+  } finally {
+    await prisma.comparisonPeer.deleteMany({ where: { origin: PRIVATE_PEER } });
+  }
+});
+
 it("still refuses text that is not a key after normalising", async () => {
   const res = await request(app)
     .post("/api/v1/admin/federation/peers")
