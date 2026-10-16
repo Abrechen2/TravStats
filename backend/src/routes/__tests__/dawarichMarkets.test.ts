@@ -217,6 +217,34 @@ describe("Automatic market suggestions", () => {
       ).status
     ).toBe(409);
   });
+  it("gives the replaced stays back when the venue suggestion is rejected", async () => {
+    await run();
+    const old = await prisma.dawarichStay.findFirstOrThrow({ where: { userId } });
+    await prisma.dawarichStayScan.update({ where: { userId }, data: { marketEnabled: true } });
+    const store = memoryStore(),
+      fetcher = jest.fn(async () => Response.json(raw));
+    await run({ marketStore: store, marketFetcher: fetcher });
+    const parent = await prisma.dawarichStay.findFirstOrThrow({
+      where: { userId, status: "pending" },
+    });
+    expect(
+      (
+        await api()
+          .post(`/api/v1/dawarich-stays/${parent.id}/reject`)
+          .set("Cookie", cookie)
+          .send({})
+      ).status
+    ).toBe(200);
+    const restored = await prisma.dawarichStay.findUniqueOrThrow({ where: { id: old.id } });
+    expect(restored.status).toBe("pending");
+    expect(restored.resolvedAt).toBeNull();
+    // A later scan remembers the rejected venue and must not swallow the stay again.
+    await run({ marketStore: store, marketFetcher: fetcher });
+    expect((await prisma.dawarichStay.findUniqueOrThrow({ where: { id: old.id } })).status).toBe(
+      "pending"
+    );
+    expect(await prisma.dawarichStay.count({ where: { userId } })).toBe(2);
+  });
   it("does not mistake a confirmed shop inside the market for the whole venue", async () => {
     await run();
     const row = await prisma.dawarichStay.findFirstOrThrow({ where: { userId } });
