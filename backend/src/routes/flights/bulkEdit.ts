@@ -1,7 +1,7 @@
 import { Router, Response, NextFunction } from "express";
 
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
-import { batchCreationLimiter } from "../../middleware/rateLimit";
+import { bulkEditLimiter } from "../../middleware/rateLimit";
 import { flightBulkEditSchema } from "../../schemas/flightBulkEdit";
 import { bulkEditFlights } from "../../services/flights/bulkEdit";
 
@@ -19,7 +19,7 @@ router.post(
   "/bulk-edit",
   authenticate,
   requireWriteScope,
-  batchCreationLimiter,
+  bulkEditLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const edit = flightBulkEditSchema.parse(req.body);

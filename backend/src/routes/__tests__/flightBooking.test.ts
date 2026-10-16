@@ -52,6 +52,7 @@ describe("GET /flights/:id/booking", () => {
   beforeEach(async () => {
     await prisma.flight.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await prisma.busJourney.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
+    await prisma.ferryJourney.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await prisma.booking.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await prisma.trip.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
   });
@@ -226,6 +227,27 @@ describe("GET /flights/:id/booking", () => {
           depPrecision: "minute",
           arrPrecision: "minute",
           departureTime: new Date("2026-11-02T03:00:00Z"),
+        },
+      });
+      expect((await get(a.id)).body.booking.otherEntries).toBe(1);
+      const res = await put(a.id, { method: "equal" });
+      expect(res.status).toBe(409);
+      expect(res.body.code).toBe("BOOKING_SPLIT_MIXED");
+    });
+
+    it("refuses a booking a ferry crossing shares — the count left ferries out", async () => {
+      const { booking, a } = await bookedPair(100);
+      await prisma.ferryJourney.create({
+        data: {
+          userId,
+          bookingId: booking.id,
+          depStationName: "Kiel",
+          depLat: 54.316,
+          depLon: 10.138,
+          arrStationName: "Oslo",
+          arrLat: 59.903,
+          arrLon: 10.739,
+          departureTime: new Date("2026-11-03T12:00:00Z"),
         },
       });
       expect((await get(a.id)).body.booking.otherEntries).toBe(1);

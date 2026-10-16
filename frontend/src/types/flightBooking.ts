@@ -14,7 +14,7 @@ export interface FlightBookingSummary {
   /** The trip the BOOKING belongs to — where its price is edited. May differ from a segment's trip. */
   tripId: string | null;
   tripName: string | null;
-  /** Cruises, train journeys and stays filed on the same booking. */
+  /** Cruises, train, bus and ferry journeys and stays filed on the same booking. */
   otherEntries: number;
   /** The optional split across the segments (forgejo#219), or null. */
   split: FlightBookingSplit | null;

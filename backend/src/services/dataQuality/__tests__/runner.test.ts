@@ -88,6 +88,7 @@ jest.mock("../gather", () => ({ loadAccountSnapshot: jest.fn() }));
 
 import { loadAccountSnapshot } from "../gather";
 import { runDataQualityChecks } from "../runner";
+import { flight, snapshot } from "./recordFixtures";
 
 const mockedSnapshot = loadAccountSnapshot as jest.MockedFunction<typeof loadAccountSnapshot>;
 
@@ -266,5 +267,98 @@ describe("runDataQualityChecks", () => {
     await runDataQualityChecks("u1");
 
     expect(rows[0].status).toBe("resolved");
+  });
+});
+
+/**
+ * A dismissal answers ONE question: "this pair is fine", "these entries belong
+ * to the trip". The flag's identity is only (entity, kind), so when the partner
+ * or the set of entries changed, the dismissal silently swallowed a question
+ * the user had never been asked.
+ */
+describe("runDataQualityChecks — what a dismissal covers", () => {
+  const withRecords = (records: ReturnType<typeof snapshot>) => ({
+    ...cleanAccount(),
+    records,
+  });
+  const at = (iso: string) => new Date(iso);
+  const outbound = (id: string, flightNumber: string) =>
+    flight({
+      id,
+      flightNumber,
+      departureAt: at("2026-03-10T08:00:00Z"),
+      arrivalAt: at("2026-03-10T16:00:00Z"),
+    });
+  const later = flight({
+    id: "later",
+    flightNumber: "UA1",
+    departureAt: at("2026-03-10T13:00:00Z"),
+    arrivalAt: at("2026-03-10T15:00:00Z"),
+  });
+  const flagOf = (kind: string) => rows.find((r) => r.kind === kind);
+
+  it("asks again when an overlap's partner is a different entry", async () => {
+    mockedSnapshot.mockResolvedValue(
+      withRecords(snapshot({ flights: [outbound("a", "LH400"), later] }))
+    );
+    await runDataQualityChecks("u1");
+    flagOf("chronology_conflict")!.status = "dismissed";
+
+    mockedSnapshot.mockResolvedValue(
+      withRecords(snapshot({ flights: [outbound("c", "BA7"), later] }))
+    );
+    await runDataQualityChecks("u1");
+
+    expect(flagOf("chronology_conflict")).toMatchObject({
+      status: "open",
+      details: { conflictWith: { entityId: "c" } },
+    });
+  });
+
+  it("keeps an overlap dismissed while its partner stays the same", async () => {
+    mockedSnapshot.mockResolvedValue(
+      withRecords(snapshot({ flights: [outbound("a", "LH400"), later] }))
+    );
+    await runDataQualityChecks("u1");
+    flagOf("chronology_conflict")!.status = "dismissed";
+
+    const moved = { ...later, arrivalAt: at("2026-03-10T15:30:00Z") };
+    mockedSnapshot.mockResolvedValue(
+      withRecords(snapshot({ flights: [outbound("a", "LH400"), moved] }))
+    );
+    await runDataQualityChecks("u1");
+
+    expect(flagOf("chronology_conflict")!.status).toBe("dismissed");
+  });
+
+  it("asks again when a trip gains another entry outside its days", async () => {
+    const trip = { id: "t1", status: "completed", startDay: "2026-03-09", endDay: "2026-03-15" };
+    const away = (id: string, day: string) =>
+      flight({
+        id,
+        flightNumber: id.toUpperCase(),
+        tripId: "t1",
+        firstDay: day,
+        lastDay: day,
+        departureAt: at(`${day}T08:00:00Z`),
+        arrivalAt: at(`${day}T10:00:00Z`),
+      });
+    mockedSnapshot.mockResolvedValue(
+      withRecords(snapshot({ trips: [trip], flights: [away("x1", "2026-03-20")] }))
+    );
+    await runDataQualityChecks("u1");
+    flagOf("trip_entries_outside")!.status = "dismissed";
+
+    // Same entry, another run: the answer still covers it.
+    await runDataQualityChecks("u1");
+    expect(flagOf("trip_entries_outside")!.status).toBe("dismissed");
+
+    mockedSnapshot.mockResolvedValue(
+      withRecords(
+        snapshot({ trips: [trip], flights: [away("x1", "2026-03-20"), away("x2", "2026-03-25")] })
+      )
+    );
+    await runDataQualityChecks("u1");
+    expect(flagOf("trip_entries_outside")!.status).toBe("open");
   });
 });

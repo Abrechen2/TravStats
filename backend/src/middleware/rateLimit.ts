@@ -585,18 +585,21 @@ export const pdfParseLimiter = rateLimit({
 });
 
 /**
- * Rate limiter for batch flight creation
- * 1 batch = up to 20 flights. 50 batches/hour = max ~1000 flights/hour.
- * Generous limit to support bulk email import workflows.
+ * Batch limiters: 50/h with a cookie, 500/h with a PAT. For creation, 1 batch =
+ * up to 20 flights, so ~1000 flights/hour for bulk email imports. Bulk edit
+ * has a bucket of its own: sharing this one let a few edit rounds lock imports out.
  */
-export const batchCreationLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: patAwareMax(50), // 50/h cookie, 500/h with PAT (bulk imports)
-  message: "Too many batch requests, please try again later",
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: userOrIpKey,
-});
+const batchLimiter = (message: string) =>
+  rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: patAwareMax(50),
+    message,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: userOrIpKey,
+  });
+export const batchCreationLimiter = batchLimiter("Too many batch requests, please try again later");
+export const bulkEditLimiter = batchLimiter("Too many bulk edits, please try again later");
 
 /**
  * Rate limiter for user-supplied FILE uploads. Named for its first consumer
