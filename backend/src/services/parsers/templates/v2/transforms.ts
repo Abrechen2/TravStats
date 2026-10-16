@@ -27,12 +27,14 @@ import {
   type TransformValue,
 } from "./documentTransforms";
 import { fullYear, isoDate, LETTERS, monthNumber } from "./calendar";
+import { isCurrencyCode } from "../../../../shared/currencies";
 import {
   addressCity,
   addressCountry,
   addressPostcode,
   addressStreet,
   amount,
+  CURRENCY_SYMBOLS,
   dayMonthNear,
   laterClock,
   leadingAmount,
@@ -96,18 +98,26 @@ function money(input: TransformValue): number | null {
 
 // ------------------------------------------------------------------ currency
 
-const CURRENCY_SYMBOLS: ReadonlyArray<readonly [RegExp, string]> = [
-  [/€|\beuro?s?\b/i, "EUR"],
-  [/£/, "GBP"],
-  [/\$/, "USD"],
-];
-
+/**
+ * A symbol (the one table, `CURRENCY_SYMBOLS`: "A$" is AUD, a bare "$" USD),
+ * the word euro, else the first three-letter word that IS an ISO code. Any
+ * three letters used to become a currency ("450.00 pro Nacht" read as "PRO")
+ * and every dollar was USD.
+ */
 function currency(input: TransformValue): string | null {
   const text = asText(input);
   if (text === null) return null;
-  for (const [re, code] of CURRENCY_SYMBOLS) if (re.test(text)) return code;
-  const code = /(?:^|[^A-Za-z])([A-Za-z]{3})(?![A-Za-z])/.exec(text);
-  return code ? code[1].toUpperCase() : null;
+  const symbol = /(?:[A-Z]{1,2})?\$|[€£¥]/.exec(text);
+  if (symbol) {
+    const code = CURRENCY_SYMBOLS[symbol[0]] ?? CURRENCY_SYMBOLS[symbol[0].slice(-1)];
+    if (code) return code;
+  }
+  if (/\beuro?s?\b/i.test(text)) return "EUR";
+  for (const m of text.matchAll(/(?:^|[^A-Za-z])([A-Za-z]{3})(?![A-Za-z])/g)) {
+    const code = m[1].toUpperCase();
+    if (isCurrencyCode(code)) return code;
+  }
+  return null;
 }
 
 // ------------------------------------------------------------------ date
