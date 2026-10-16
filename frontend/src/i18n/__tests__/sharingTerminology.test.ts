@@ -21,7 +21,7 @@ const outsideLinks = (file: unknown) =>
   strings(file).filter(([path]) => !path.startsWith("links."));
 
 const DE_FORBIDDEN = /freigab|freigeb|gruppe/i;
-const EN_FORBIDDEN = /\bgroup\b/i;
+const EN_FORBIDDEN = /\bgroups?\b/i;
 
 describe("trip sharing terminology", () => {
   it("never says Freigabe or Gruppe for a shared trip (DE)", () => {
@@ -39,8 +39,12 @@ describe("trip sharing terminology", () => {
     const hits = outsideLinks(polluted).filter(([, s]) => DE_FORBIDDEN.test(s));
     expect(hits.map(([p]) => p)).toEqual(["injected.probe"]);
 
-    const pollutedEn = { ...en, injected: { probe: "Leave the group" }, nothing: null };
+    const pollutedEn = {
+      ...en,
+      injected: { probe: "Leave the group", plural: "Leave all groups" },
+      nothing: null,
+    };
     const hitsEn = outsideLinks(pollutedEn).filter(([, s]) => EN_FORBIDDEN.test(s));
-    expect(hitsEn.map(([p]) => p)).toEqual(["injected.probe"]);
+    expect(hitsEn.map(([p]) => p)).toEqual(["injected.probe", "injected.plural"]);
   });
 });
