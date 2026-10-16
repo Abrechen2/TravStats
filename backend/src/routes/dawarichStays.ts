@@ -8,6 +8,7 @@ import { userOrIpKey, patAwareMax } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import { ownConnection, reserveScan, scanStays } from "../services/dawarich/stays/scan";
 import { acceptStay, rejectStay } from "../services/dawarich/stays/review";
+import { resolveCoveredStays } from "../services/dawarich/stays/coverage";
 import { stayReviewSchema } from "../schemas/dawarichStays";
 import { withStayTimes, withScanTimes } from "../services/dawarich/stays/times";
 import { publicMarketCoverage } from "../services/dawarich/stays/publicCoverage";
@@ -142,8 +143,13 @@ router.get("/", async (req: AuthRequest, res, next) => {
   try {
     const userId = user(req);
     const { status } = z
-      .object({ status: z.enum(["pending", "accepted", "rejected"]).default("pending") })
+      .object({
+        status: z.enum(["pending", "accepted", "rejected", "covered"]).default("pending"),
+      })
       .parse(req.query);
+    // A visit logged after the last scan (live, on the phone) covers its
+    // finding from that moment; the inbox must not offer it until the next scan.
+    if (status === "pending") await resolveCoveredStays(userId);
     const rows = await prisma.dawarichStay.findMany({
       where: { userId, status },
       orderBy: { startAt: "desc" },

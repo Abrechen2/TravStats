@@ -21,6 +21,7 @@ import { placesEnabledWhere, requirePlacesEnabled } from "./availability";
 import { publicMarketCoverage } from "./publicCoverage";
 import { tripForStay } from "./tripMatch";
 import { loadSuppression, suppressionReason } from "./suppression";
+import { coverageFor, loadCoverage, resolveCoveredStays } from "./coverage";
 import { TRIP_SPAN_SELECT } from "../../places/visitTrip";
 import logger from "../../../utils/logger";
 
@@ -129,6 +130,7 @@ export async function scanStays(
     });
     const trips = await prisma.trip.findMany({ where: { userId }, select: TRIP_SPAN_SELECT });
     const suppression = await loadSuppression(userId);
+    const coverage = await loadCoverage(userId, start, now);
     let markets: Awaited<ReturnType<typeof collectMarketFindings>> | null = null;
     if (state.marketEnabled || state.venueEnabled) {
       const visits = await prisma.placeVisit.findMany({
@@ -188,6 +190,7 @@ export async function scanStays(
     let extended = 0;
     let suppressed = 0;
     let skippedNoZone = 0;
+    let covered = 0;
     for (const c of candidates) {
       // A late upstream response belongs to this reservation, never its successor.
       const current = await prisma.dawarichStayScan.findFirst({
@@ -282,6 +285,12 @@ export async function scanStays(
           suppressed++;
           continue;
         }
+      }
+      // Already recorded — a visit or a hotel stay there and then. Not a
+      // question, and accepting it would record the stop a second time.
+      if (!growing && coverageFor({ ...c, zone }, coverage)) {
+        covered++;
+        continue;
       }
       const tripMatch = tripForStay(trips, day, endDay);
       const overlappingTrips = tripMatch.overlapping;
@@ -406,6 +415,9 @@ export async function scanStays(
       extended += inserted.extended;
       if (market && markets) markets.coverage.createdCount += inserted.count;
     }
+    // Visits logged since an earlier scan made its finding (live, on the
+    // phone) resolve those findings now, as `covered`, with what covered them.
+    const resolvedCovered = await resolveCoveredStays(userId);
     const newest = points.reduce((max, p) => Math.max(max, p.timestampMs), -Infinity);
     const dataThrough = Number.isFinite(newest) ? new Date(newest) : null;
     await prisma.dawarichStayScan.updateMany({
@@ -428,9 +440,16 @@ export async function scanStays(
         createdCount: created,
       },
     });
-    if (suppressed || skippedNoZone)
+    if (suppressed || skippedNoZone || covered || resolvedCovered)
       logger.info(
-        { operation: "dawarich_stay_scan_filtered", userId, suppressed, skippedNoZone },
+        {
+          operation: "dawarich_stay_scan_filtered",
+          userId,
+          suppressed,
+          skippedNoZone,
+          covered,
+          resolvedCovered,
+        },
         "Dawarich stay candidates left out of this scan"
       );
     return {
@@ -438,6 +457,8 @@ export async function scanStays(
       extended,
       suppressed,
       skippedNoZone,
+      covered,
+      resolvedCovered,
       points: points.length,
       truncated: result.truncated,
       ...(markets ? { markets: publicMarketCoverage(markets.coverage) } : {}),

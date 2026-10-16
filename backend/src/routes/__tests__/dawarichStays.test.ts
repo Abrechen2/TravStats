@@ -255,7 +255,7 @@ describe("Dawarich stay review (forgejo#294)", () => {
     expect(new Set(results.map((r) => r.body.data.visitId)).size).toBe(1);
     expect(await prisma.placeVisit.count({ where: { userId } })).toBe(1);
   });
-  it("matches a trip on the place's local day and identifies an existing visit", async () => {
+  it("matches a trip on the place's local day and reuses a visit logged since the scan", async () => {
     const trip = await prisma.trip.create({
       data: {
         userId,
@@ -267,6 +267,11 @@ describe("Dawarich stay review (forgejo#294)", () => {
     const place = await prisma.place.create({
       data: { userId, name: "Already recorded", lat: 37.57, lon: 126.97 },
     });
+    // A visit there before the scan would cover the stop and no finding would
+    // exist (dawarichStays.coverage.test.ts). One logged between scan and
+    // accept is what the accept must still reuse instead of recording twice.
+    const row = await scan();
+    expect(row.tripId).toBe(trip.id);
     const visit = await prisma.placeVisit.create({
       data: {
         userId,
@@ -278,9 +283,6 @@ describe("Dawarich stay review (forgejo#294)", () => {
         visitedPrecision: "minute",
       },
     });
-    const row = await scan();
-    expect(row.tripId).toBe(trip.id);
-    expect(row.evidence).toMatchObject({ matchingVisitId: visit.id });
     const result = await api()
       .post(`/api/v1/dawarich-stays/${row.id}/accept`)
       .set("Cookie", cookie)
@@ -527,6 +529,8 @@ describe("Dawarich optional features and consent lifecycle", () => {
     const place = await prisma.place.create({
       data: { userId, name: "Photo stop", lat: 37.57, lon: 126.97, dataSource: "immich" },
     });
+    // Found before the photo visit existed; with it, the scan would not ask.
+    const row = await scan();
     const visit = await prisma.placeVisit.create({
       data: {
         userId,
@@ -538,8 +542,6 @@ describe("Dawarich optional features and consent lifecycle", () => {
         writtenVia: "suggestion",
       },
     });
-    const row = await scan();
-    expect(row.evidence).toMatchObject({ matchingVisitId: visit.id });
     const r = await api()
       .post(`/api/v1/dawarich-stays/${row.id}/accept`)
       .set("Cookie", cookie)
