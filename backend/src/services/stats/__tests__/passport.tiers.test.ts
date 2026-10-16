@@ -260,14 +260,17 @@ describe("a connection is not a visit", () => {
     expect(p.summary.countries).toBe(0);
   });
 
-  it("marks incomplete one-way evidence as ground-only", () => {
+  it("marks both ends of a one-way flight as unclear ground presence (forgejo#299)", () => {
     // The country somebody first flew OUT of has no arrival on record, and the
     // country they have not flown home from has no departure. Neither is a
-    // change of planes, and both were correct before this change.
+    // change of planes nor a proven visit: the chain is open, so both are
+    // ground presence and "unclear", never silently a connection.
     const p = buildPassport([flight("MUC", "SIN", "2024-03-01")], AIRPORTS, [], NOW);
 
     expect(p.summary.byTier).toEqual({ slept: 0, visited: 0, transited: 0, connection: 2 });
     expect(p.summary.countries).toBe(0);
+    expect(p.summary.unclearCountries).toBe(2);
+    expect(p.countries.map((c) => c.visitUncertainReasons)).toEqual([["openChain"], ["openChain"]]);
   });
 });
 
@@ -368,8 +371,9 @@ describe("a day trip is not a connection", () => {
   });
 
   it("uses return structure, not an overnight, as visit evidence", () => {
-    // The day change outranks everything this rule decides. A return that spans
-    // a night is not demoted to `visited` by being a return.
+    // Out to Rome and back three days later is a visit because the chain came
+    // back, not because nights passed: the tier is `visited`, not `slept` — a
+    // date change alone proves nothing (forgejo#299).
     const p = buildPassport(
       [flight("MUC", "FCO", "2024-03-01"), flight("FCO", "MUC", "2024-03-04")],
       AIRPORTS,
@@ -443,8 +447,10 @@ describe("strongest evidence wins, once", () => {
   });
 });
 
-describe("ports and places keep working, mapped onto the tiers", () => {
-  it("keeps port calls ground-only until an off-ship visit is recorded", () => {
+describe("ports and places map onto the tiers", () => {
+  it("calls a port call `visited`, a day in port and an overnight alike (owner ruling 2026-10-16)", () => {
+    // "Landgang ist eindeutig ein Besuch." The night alongside does not make
+    // it more of a visit, and a day in port is not less of one.
     const overnight = buildPassport([], AIRPORTS, [], NOW, [
       {
         country: "Italy",
@@ -460,17 +466,17 @@ describe("ports and places keep working, mapped onto the tiers", () => {
       },
     ]);
 
-    expect(overnight.countries.find((c) => c.code === "IT")?.tier).toBe("transited");
-    expect(dayCall.countries.find((c) => c.code === "IT")?.tier).toBe("transited");
+    expect(overnight.countries.find((c) => c.code === "IT")?.tier).toBe("visited");
+    expect(dayCall.countries.find((c) => c.code === "IT")?.tier).toBe("visited");
   });
 
-  it("a port call with no departure time proves ground contact only", () => {
+  it("counts a port call with no departure time as a visit too", () => {
     const p = buildPassport([], AIRPORTS, [], NOW, [
       { country: "Italy", at: new Date("2023-07-04T08:00:00Z") },
     ]);
 
-    expect(p.countries.find((c) => c.code === "IT")?.tier).toBe("transited");
-    expect(p.summary.countries).toBe(0);
+    expect(p.countries.find((c) => c.code === "IT")?.tier).toBe("visited");
+    expect(p.summary.countries).toBe(1);
   });
 
   it("calls a recorded place `visited`", () => {
@@ -637,8 +643,7 @@ describe("the evidence beside the tier", () => {
     // Landed on the 1st local, left on the 4th local. The records attest those
     // two days and nothing about the 2nd and the 3rd: the traveller may have
     // driven to Slovenia and back, and the flight log cannot tell. Two days,
-    // and the same overnight that makes the tier `slept` — the contribution
-    // changed on 2026-09-02, what the spell PROVES did not.
+    // and the return makes it a visit (forgejo#299) — the overnight does not.
     const p = buildPassport(
       [flight("MUC", "FCO", "2024-03-01"), flight("FCO", "MUC", "2024-03-04")],
       AIRPORTS,
@@ -696,13 +701,14 @@ describe("a gap in the flight log is not time spent in a country", () => {
     expect(de?.groundTime).toEqual({ state: "unknown" });
   });
 
-  it("still calls the gap `slept`, because the tier was never the thing that was wrong", () => {
+  it("still calls the gap a visit, because the tier was never the thing that was wrong", () => {
+    // SIN -> MUC ... MUC -> SIN came back to where it started: a return.
     const de = buildPassport(HOME_GAP, AIRPORTS, [], NOW).countries.find((c) => c.code === "DE");
 
     expect(de?.tier).toBe("visited");
   });
 
-  it("keeps a 25-hour stopover measured — one night is still a stay", () => {
+  it("keeps a 25-hour stopover's ground time measured, and still a connection", () => {
     // The contrast §3.4b exists to draw, and the reason the boundary is one
     // night rather than none: the owner's connection countries run 1.4 h–4.7 h
     // and the next country is France at 25 h. Losing that figure would delete
@@ -803,62 +809,53 @@ describe("a gap in the flight log is not time spent in a country", () => {
 });
 
 /**
- * The setting — spec §3.2, step 7.
- *
- * What is being pinned here is not that a threshold filters (that is
- * `countCountries`, tested in `shared/__tests__/countryEvidence.test.ts`) but
- * the boundary the whole design rests on: **changing the setting must never
- * change what is IN the list.** A country wrongly classed as a connection has
- * to stay visible to be corrected — that is how the Bucharest hotel was found —
- * so a threshold that hid rows would put back, from the other direction, the
- * invisible arithmetic this design removes.
+ * forgejo#299 replaced the threshold setting with two named numbers ("Am Boden
+ * gewesen" / "Land besucht"). A stored legacy threshold may still reach
+ * `buildPassport`; it must change NOTHING — neither the rows nor either
+ * number. A country classed as a connection stays in the ground list, where a
+ * reader can see it and correct it.
  */
 describe("legacy thresholds cannot change the two explicit sets", () => {
   /**
    * One country per tier, so every threshold has something to include AND
    * something to exclude:
    *
-   *   QA `connection` — MUC → DOH → SIN, both legs on the same local day at Doha
-   *   SG `visited` — flown to, never out of again
-   *   CZ `slept`   — a house with no stay at all (owner's decision 1.4)
-   *
-   * DE rides along as a second `visited`, which is what makes the middle
-   * threshold's count a number rather than a coincidence.
+   *   QA `connection` — MUC → DOH → SIN, a hub on a trip that never turns around
+   *   SG `connection` — flown to, never out of again: an open chain end
+   *   DE `connection` — the first departure on record: an open chain end
+   *   CZ `slept`      — a house with no stay at all (owner's decision 1.4)
    */
   const at = (threshold: "connection" | "transited" | "slept") =>
     buildPassport(CONNECTION, AIRPORTS, [], NOW, [], [], [house("CZ")], threshold);
 
-  /** Every row, with the ONE field the threshold is allowed to touch removed. */
-  const rowsWithoutVerdict = (p: ReturnType<typeof buildPassport>) =>
-    JSON.stringify(p.countries.map(({ counted: _counted, ...rest }) => rest));
+  const rows = (p: ReturnType<typeof buildPassport>) => JSON.stringify(p.countries);
 
-  it("returns a byte-identical country list at every threshold", () => {
+  it("returns a byte-identical country list at every legacy threshold, verdicts included", () => {
     const [connection, transited, slept] = [at("connection"), at("transited"), at("slept")];
 
-    expect(rowsWithoutVerdict(transited)).toBe(rowsWithoutVerdict(connection));
-    expect(rowsWithoutVerdict(slept)).toBe(rowsWithoutVerdict(connection));
+    expect(rows(transited)).toBe(rows(connection));
+    expect(rows(slept)).toBe(rows(connection));
   });
 
   it("keeps both sets fixed regardless of legacy threshold", () => {
     const [connection, transited, slept] = [at("connection"), at("transited"), at("slept")];
 
-    // The list is the same list, so everything that describes the WHOLE list
-    // is the same too. Only the number that applies a rule to it moves.
+    // The list is the same list, and so is every figure describing it.
     for (const p of [transited, slept]) {
       expect(p.summary.countriesTotal).toBe(connection.summary.countriesTotal);
       expect(p.summary.byTier).toEqual(connection.summary.byTier);
       expect(p.summary.byEvidence).toEqual(connection.summary.byEvidence);
     }
 
-    expect(connection.summary.countries).toBe(1); // Only the confirmed lodging.
-    expect(transited.summary.countries).toBe(1);
-    expect(slept.summary.countries).toBe(1); // …only the house
-    expect(connection.summary.countriesTotal).toBe(4);
+    for (const p of [connection, transited, slept]) {
+      expect(p.summary.visitedCountries).toBe(1); // only the house
+      expect(p.summary.groundCountries).toBe(4);
+    }
   });
 
-  it("never removes the connection country, at any threshold", () => {
-    // The row a stricter setting stops COUNTING is exactly the row a user most
-    // needs to see: it is the one they might want to correct.
+  it("never removes the connection country from the ground list, at any legacy threshold", () => {
+    // The row that is not a visit is exactly the row a user most needs to see:
+    // it is the one they might want to correct.
     for (const threshold of ["connection", "transited", "slept"] as const) {
       const qa = at(threshold).countries.find((c) => c.code === "QA");
       expect(qa).toBeDefined();
@@ -867,9 +864,9 @@ describe("legacy thresholds cannot change the two explicit sets", () => {
     }
   });
 
-  it("publishes the threshold it actually counted from", () => {
-    // Stated rather than assumed, so a client never explains the number with a
-    // rule that is not the one that produced it.
+  it("publishes `visited` as the rule it counted from, whatever legacy value came in", () => {
+    // Older clients read `countryThreshold` to explain the headline; it must
+    // name the rule that produced it, which is always "Land besucht" now.
     for (const threshold of ["connection", "transited", "slept"] as const) {
       expect(at(threshold).summary.countryThreshold).toBe("visited");
     }

@@ -91,6 +91,18 @@ export async function loadHomeIatas(userId: string): Promise<string[]> {
 }
 
 /**
+ * The countries the user lives or lived in, for `buildPassport`'s home rule
+ * (forgejo#299): the home airports' countries of every period that has begun
+ * by `today`. A period that starts later is a plan, and a plan proves nothing.
+ * Read from the airports because the residence carries coordinates only.
+ */
+export async function loadHomeCountries(userId: string, today: string): Promise<string[]> {
+  const begun = (await loadHomePeriods(userId)).filter((p) => p.fromDate <= today);
+  const countries = await loadAirportCountries(allHomeAirports(begun));
+  return [...new Set([...countries.values()].filter((c): c is string => Boolean(c)))];
+}
+
+/**
  * Build the whole passport for a user.
  *
  * Shared with `/stats/wrapped` so its "new countries this year" comes from the
@@ -242,7 +254,7 @@ export async function loadPassport(
    * "Deutschland" and "Germany" are one country and only the code knows that.
    */
   // prettier-ignore
-  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, countryDays, threshold, roadtripStations, railEnds, busEnds] = await Promise.all([
+  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, countryDays, threshold, roadtripStations, railEnds, busEnds, homeCountries] = await Promise.all([
     loadAirportCountries(passportAirportCodes(flights)),
     prisma.cruiseStop.findMany({
       where: {
@@ -338,6 +350,7 @@ export async function loadPassport(
     // until 2.7 by nothing here.
     readRail ? loadRailEnds(userId) : [],
     readBus ? loadBusEnds(userId) : [],
+    loadHomeCountries(userId, now.toISOString().slice(0, 10)),
   ]);
 
   return buildPassport(
@@ -394,6 +407,7 @@ export async function loadPassport(
     roadtripStations,
     railEnds,
     profile.zone,
-    busEnds
+    busEnds,
+    homeCountries
   );
 }

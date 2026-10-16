@@ -231,10 +231,15 @@ const evidenceKindSchema = z.enum([
 ]);
 const countryTierSchema = z.enum(["slept", "visited", "transited", "connection"]);
 
+const visitUnclearReasonSchema = z.enum(["openChain", "noDestination", "undated", "stationOnly"]);
+
 const passportCountrySchema = z.object({
-  groundPresence: z.boolean(),
-  visited: z.boolean(),
-  visitUncertain: z.boolean(),
+  groundPresence: z.boolean().describe('"Am Boden gewesen" — true on every row'),
+  visited: z.boolean().describe('"Land besucht" (forgejo#299); equals `counted`'),
+  visitUncertain: z.boolean().describe("Not visited, and the records cannot decide it: unclear"),
+  visitUncertainReasons: z
+    .array(visitUnclearReasonSchema)
+    .describe("Why the visit is unclear, sorted; empty unless `visitUncertain`"),
   code: z
     .string()
     .describe("ISO 3166-1 alpha-2. A code, never a flag: flags are political and age"),
@@ -291,6 +296,9 @@ const passportResponse = registry.register(
           .number()
           .describe("Countries with attested ground contact, including transit"),
         visitedCountries: z.number().describe("Countries with a visit beyond a transit stop"),
+        unclearCountries: z
+          .number()
+          .describe("Ground-presence countries whose visit the records cannot decide"),
         countries: z
           .number()
           .describe("THE HEADLINE — countries whose evidence reaches `countryThreshold`"),

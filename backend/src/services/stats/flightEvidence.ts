@@ -103,20 +103,48 @@ const departedAt = (f: PassportFlight): number =>
   f.departureTime ? f.departureTime.getTime() : Number.MAX_SAFE_INTEGER;
 
 /**
+ * Why a flight chain cannot decide whether a country was visited (forgejo#299:
+ * "nicht eindeutig entscheidbare Ketten als unklar ausweisen").
+ *
+ * - `openChain`: the recorded chain breaks here — a one-way arrival, an
+ *   open-jaw end (MUC->BKK, PNH->MUC), the first or last flight on record. The
+ *   traveller left or arrived by something nobody logged.
+ * - `noDestination`: a trip between two breaks or home touches that never
+ *   turns around (MUC->BKK->SGN->MUC). One of its countries was probably the
+ *   destination; no rule may pick which without a time threshold, which the
+ *   issue forbids.
+ * - `undated`: the flight has no day, so it cannot be placed in a chain.
+ */
+export type VisitUnclearReason = "openChain" | "noDestination" | "undated";
+
+/** A flight's evidence, plus why its chain could not decide a visit. */
+export interface FlightEvidenceInput extends EvidenceInput {
+  unclear?: VisitUnclearReason;
+}
+
+/**
  * Ground presence follows from flown endpoints. A visit needs a return-shaped
  * chain, never an overnight or an elapsed-time threshold (forgejo#299).
- * Consecutive domestic legs are one spell. An onward or incomplete chain
- * proves ground contact only; another curated source may prove a visit.
+ * Consecutive domestic legs are one spell. A spell between two other countries
+ * on a trip that turns around elsewhere is a connection — decided ground
+ * presence (MUC->DOH->HAN and back: Qatar). Everything the chain cannot decide
+ * carries an `unclear` reason instead of being called a connection; another
+ * curated source (a stay, a place) may still prove the visit.
+ *
+ * `homeCountries` split the chain into trips: a spell at home is neither a
+ * destination nor a connection of the trips on either side of it, so a
+ * turnaround on one trip cannot decide a country on another.
  */
 export function flightEvidence(
   flights: readonly PassportFlight[],
-  countryOf: (iata: string | null) => string | null
-): EvidenceInput[] {
+  countryOf: (iata: string | null) => string | null,
+  homeCountries: ReadonlySet<string> = new Set()
+): FlightEvidenceInput[] {
   const chain = flights
     .filter((f) => FLOWN.has(f.status))
     .sort((a, b) => departedAt(a) - departedAt(b));
 
-  const inputs: EvidenceInput[] = [];
+  const inputs: FlightEvidenceInput[] = [];
   const consumed = new Set<string>();
 
   /**
@@ -142,6 +170,16 @@ export function flightEvidence(
       joined && country && arrivalDay && departureDay ? { country, arrivalDay, departureDay } : null
     );
   }
+
+  /** One uninterrupted spell on the ground, with the flights that bound it. */
+  interface Run {
+    start: number;
+    end: number;
+    country: string;
+    returned: boolean;
+    inputs: FlightEvidenceInput[];
+  }
+  const runs: Run[] = [];
 
   let start = 0;
   while (start < segments.length) {
@@ -197,12 +235,14 @@ export function flightEvidence(
         : null;
     const runMinutes = measuredGroundMinutes(first.arrivalDay, last.departureDay, spellMinutes);
 
+    const run: Run = { start, end, country: first.country, returned, inputs: [] };
+    runs.push(run);
     for (let i = start; i <= end; i += 1) {
       const segment = segments[i];
       if (!segment) continue;
       consumed.add(`${i}:arr`);
       consumed.add(`${i + 1}:dep`);
-      inputs.push({
+      run.inputs.push({
         country: segment.country,
         kind: "flight",
         tier: returned ? "visited" : "connection",
@@ -221,6 +261,34 @@ export function flightEvidence(
   }
 
   /**
+   * Group the runs into trips: consecutive runs joined by one flight (the run
+   * before ends where the next begins), split at every spell at home. A trip
+   * with a turnaround decides its other runs as connections; a trip without
+   * one cannot tell its destination from its hubs, so those runs are unclear.
+   */
+  let trip: Run[] = [];
+  const closeTrip = () => {
+    const decided = trip.some((r) => r.returned);
+    for (const r of trip) {
+      for (const input of r.inputs) {
+        inputs.push(r.returned || decided ? input : { ...input, unclear: "noDestination" });
+      }
+    }
+    trip = [];
+  };
+  for (const run of runs) {
+    const previous = trip[trip.length - 1];
+    if (previous && previous.end + 1 !== run.start) closeTrip();
+    if (homeCountries.has(run.country)) {
+      closeTrip();
+      inputs.push(...run.inputs);
+      continue;
+    }
+    trip.push(run);
+  }
+  closeTrip();
+
+  /**
    * An end no ground segment consumed places the traveller in the country for
    * ONE day — the flight's own. It bounds no spell, so it carries no ground
    * minutes and the country reports `unknown` unless some other pair measured
@@ -230,6 +298,9 @@ export function flightEvidence(
     const f = chain[i];
     const day = flightDay(f);
     const days = day === null ? [] : [day];
+    // An unpaired end is where the recorded chain breaks: whether the
+    // traveller stayed is exactly what the records do not say.
+    const unclear: VisitUnclearReason = day === null ? "undated" : "openChain";
     if (!consumed.has(`${i}:dep`)) {
       inputs.push({
         country: countryOf(f.depIata),
@@ -237,6 +308,7 @@ export function flightEvidence(
         tier: "connection",
         at: dayCarrier(day),
         days,
+        unclear,
       });
     }
     if (!consumed.has(`${i}:arr`)) {
@@ -246,6 +318,7 @@ export function flightEvidence(
         tier: "connection",
         at: dayCarrier(day),
         days,
+        unclear,
       });
     }
   }
