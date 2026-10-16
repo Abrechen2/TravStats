@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-import DataQualityFlagCard from "../../components/DataQuality/DataQualityFlagCard";
+import ReviewCard from "../../components/inbox/workspace/ReviewCard";
 import type { DataQualityFlag } from "../../types/dataQuality";
 
 /**
@@ -29,11 +29,11 @@ const flag: DataQualityFlag = {
   details: { airports: ["MUC", "CGN"], periods: 2 },
 };
 
-describe("DataQualityFlagCard — the home question", () => {
+describe("ReviewCard — the home question", () => {
   it("asks the question, names the known airports and links to the Zuhause settings", () => {
     render(
       <MemoryRouter>
-        <DataQualityFlagCard flag={flag} onResolve={() => {}} onDismiss={() => {}} />
+        <ReviewCard flag={flag} busy={false} act={vi.fn(async () => true)} />
       </MemoryRouter>
     );
     expect(

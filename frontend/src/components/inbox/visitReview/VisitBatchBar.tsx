@@ -3,39 +3,33 @@ import { useId, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { PhotoJourney } from "../../../types/photoJourney";
 import Button from "../../ui/Button";
-import { photoJourneyLabel } from "../photoJourneyLabel";
 
 import { needsName } from "./reviewItems";
-import { useVisitReview } from "./useVisitReview";
-import VisitSuggestionCard from "./VisitSuggestionCard";
+import type { VisitReviewState } from "./useVisitReview";
 
 /**
- * The review of the `visit` suggestions — stops inside a recorded trip that
- * no visit explains (forgejo#211, O5). Several can be selected and accepted or
- * rejected in one answer; each can be corrected first. The answer goes to the
- * server as ONE batch, and its per-item result is shown per item: what failed
- * stays selected, names its reason, and is listed at the top so a failure on a
- * row that has since left the list is not lost either.
+ * Answering several visit suggestions at once (forgejo#211, O5): stops inside
+ * a recorded trip come in dozens, and one click per stop is the reason that
+ * review existed. The cards carry the checkboxes; this bar selects them all,
+ * answers the selection in ONE request, and names every item that failed and
+ * why — including one that has since left the list.
  *
- * Keyboard: every control is a native checkbox or button in reading order.
- * Touch: the checkbox's label is the touch target on a coarse pointer, and the
- * buttons are the design's own heights.
+ * Keyboard: a native checkbox and two buttons in reading order. Touch: the
+ * checkbox's label is the touch target on a coarse pointer.
  */
-export default function VisitSuggestionsReview({
+export default function VisitBatchBar({
   journeys,
-  onAnswered,
+  review,
 }: {
+  /** The visit suggestions currently on screen — "select all" means these. */
   journeys: readonly PhotoJourney[];
-  onAnswered: () => Promise<void>;
+  review: VisitReviewState;
 }): JSX.Element {
   const { t } = useTranslation(["dataQuality"]);
-  const review = useVisitReview(journeys, onAnswered);
   const base = "dataQuality:inbox.photoJourneys.review";
-  const headingId = useId();
   const selectAllId = useId();
-
   const ids = journeys.map((row) => row.id);
-  // A selection can outlive its rows (answered elsewhere, reloaded away).
+  // A selection can outlive its rows (answered elsewhere, filtered away).
   const selectedIds = ids.filter((id) => review.selected.has(id));
   const allSelected = selectedIds.length === ids.length && ids.length > 0;
   const working = review.busy.size > 0;
@@ -44,20 +38,16 @@ export default function VisitSuggestionsReview({
   ).length;
 
   return (
-    <section aria-labelledby={headingId} className="mb-6">
-      <h2 id={headingId} className="t-label-mono">
-        {t(`${base}.title`)}
-      </h2>
-      <p className="t-caption mb-3">{t(`${base}.description`)}</p>
-
+    <section aria-label={t(`${base}.title`)} className="space-y-3">
+      <p className="t-caption">{t(`${base}.description`)}</p>
       {review.requestFailed && (
-        <p role="alert" className="mb-3 text-sm" style={{ color: "var(--ts-bad)" }}>
+        <p role="alert" className="text-sm text-(--ts-bad)">
           {t(`${base}.requestFailed`)}
         </p>
       )}
       {review.failures.length > 0 && (
-        <div role="alert" className="mb-3 text-sm" style={{ color: "var(--ts-bad)" }}>
-          <p style={{ fontWeight: 600 }}>
+        <div role="alert" className="text-sm text-(--ts-bad)">
+          <p className="font-semibold">
             {t(`${base}.failedHeading`, { count: review.failures.length })}
           </p>
           <ul className="mt-1 list-disc pl-5">
@@ -69,14 +59,9 @@ export default function VisitSuggestionsReview({
           </ul>
         </div>
       )}
-
       <div
-        className="mb-3 flex flex-wrap items-center rounded-[var(--ts-radius-card)] p-3"
-        style={{
-          gap: "var(--ts-space-md)",
-          background: "var(--ts-surface)",
-          border: "1px solid var(--ts-border)",
-        }}
+        className="flex flex-wrap items-center rounded-[var(--ts-radius-card)] border border-(--ts-border) bg-(--ts-surface) p-3"
+        style={{ gap: "var(--ts-space-md)" }}
       >
         <label
           htmlFor={selectAllId}
@@ -113,24 +98,6 @@ export default function VisitSuggestionsReview({
         {unnamed > 0 && (
           <p className="t-caption w-full">{t(`${base}.unnamedSelected`, { count: unnamed })}</p>
         )}
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {journeys.map((journey) => (
-          <VisitSuggestionCard
-            key={journey.id}
-            journey={journey}
-            label={photoJourneyLabel(journey)}
-            selected={review.selected.has(journey.id)}
-            busy={review.busy.has(journey.id)}
-            correction={review.corrections[journey.id] ?? {}}
-            failure={review.failures.find((failure) => failure.id === journey.id)}
-            onToggle={() => review.toggle(journey.id)}
-            onCorrect={(next) => review.correct(journey.id, next)}
-            onAccept={() => void review.answer([journey.id], "accept")}
-            onDismiss={() => void review.answer([journey.id], "dismiss")}
-          />
-        ))}
       </div>
     </section>
   );

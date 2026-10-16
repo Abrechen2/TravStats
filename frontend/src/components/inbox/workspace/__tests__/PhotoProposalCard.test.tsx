@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-import PhotoJourneyCard from "../PhotoJourneyCard";
-import { photoJourneyLabel } from "../photoJourneyLabel";
-import type { CardPhotoJourney, PhotoJourney } from "../../../types/photoJourney";
+import PhotoProposalCard from "../PhotoProposalCard";
+import { photoJourneyLabel } from "../../photoJourneyLabel";
+import type { CardPhotoJourney, PhotoJourney } from "../../../../types/photoJourney";
 
 /**
  * The card PROMISES what accepting will do, and the promise must be the rule
@@ -44,14 +44,7 @@ function makeJourney(over: Partial<PhotoJourney> = {}): PhotoJourney {
 
 function renderCard(over: Partial<CardPhotoJourney>): void {
   const journey = makeJourney(over) as CardPhotoJourney;
-  render(
-    <PhotoJourneyCard
-      journey={journey}
-      label="Lissabon, Portugal"
-      onAccept={() => {}}
-      onDismiss={() => {}}
-    />
-  );
+  render(<PhotoProposalCard journey={journey} busy={false} act={vi.fn(async () => true)} />);
 }
 
 const creates = (plan: string): string => `dataQuality:inbox.photoJourneys.creates.${plan}`;
@@ -93,7 +86,7 @@ describe("photoJourneyLabel for a visit finding", () => {
   });
 });
 
-describe("PhotoJourneyCard — what it promises accepting will do", () => {
+describe("PhotoProposalCard — what it promises accepting will do", () => {
   it("promises a visit for a place finding that still has its place", () => {
     renderCard({ kind: "place", placeId: "place-7" });
     expect(screen.getByText(creates("placeVisit"))).toBeInTheDocument();

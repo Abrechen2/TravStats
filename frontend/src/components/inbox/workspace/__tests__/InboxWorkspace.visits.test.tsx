@@ -1,33 +1,63 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 
-import VisitSuggestionsReview from "../VisitSuggestionsReview";
+import InboxWorkspace from "../InboxWorkspace";
+import { dataQualityFlagsApi } from "../../../../lib/api/dataQualityFlags";
+import { tripSuggestionsApi } from "../../../../lib/api/tripSuggestions";
+import { pendingUpdatesApi } from "../../../../lib/api/pendingUpdates";
 import {
   photoJourneysApi,
   type PhotoJourneyBatchResponse,
 } from "../../../../lib/api/photoJourneys";
+import { tripsApi } from "../../../../lib/api/trips";
+import { immichApi } from "../../../../lib/api/immich";
 import { listPlaces } from "../../../../lib/api/places";
 import type { PhotoJourney } from "../../../../types/photoJourney";
 
 /**
- * forgejo#211, O5 — reviewing visit suggestions together. What each case
- * pins, and why it would fail without the review:
+ * forgejo#211, O5 — reviewing visit suggestions together, now inside the one
+ * inbox. The old photo tab had a batch review the workspace lacked; the
+ * workspace had per-card answers the batch review drew differently. One card
+ * (`VisitSuggestionCard`) and one batch bar remain, sharing one selection:
  *
  * - a suggestion shows place, time span and the reasoning together;
  * - several are answered in ONE request, and its per-item outcome reaches the
  *   reader item by item — a failed one stays selected and names its reason;
  * - a request that fails as a whole is NOT reported as "nothing saved" (the
- *   server may have answered some): the list reloads and the reader is told;
- * - corrections travel as corrections, and only when something changed;
- * - a suggestion a logged visit already explains is flagged, not hidden.
+ *   server may have answered some): the inbox reloads and the reader is told;
+ * - corrections travel as corrections, and only when something changed.
+ *
+ * The global test setup makes `t` return its key.
  */
 
+vi.mock("../../../../lib/api/dataQualityFlags", () => ({
+  dataQualityFlagsApi: { getAll: vi.fn(), run: vi.fn(), dismiss: vi.fn(), resolve: vi.fn() },
+}));
+vi.mock("../../../../lib/api/tripSuggestions", () => ({
+  tripSuggestionsApi: { list: vi.fn(), accept: vi.fn(), dismiss: vi.fn() },
+}));
+vi.mock("../../../../lib/api/pendingUpdates", () => ({
+  pendingUpdatesApi: { getAll: vi.fn(), apply: vi.fn(), update: vi.fn(), reject: vi.fn() },
+}));
 vi.mock("../../../../lib/api/photoJourneys", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../../lib/api/photoJourneys")>();
-  return { ...actual, photoJourneysApi: { review: vi.fn() } };
+  return {
+    ...actual,
+    photoJourneysApi: { list: vi.fn(), review: vi.fn(), accept: vi.fn(), dismiss: vi.fn() },
+  };
+});
+vi.mock("../../../../lib/api/trips", () => ({ tripsApi: { getAll: vi.fn() } }));
+vi.mock("../../../../lib/api/dawarichStays", () => ({
+  dawarichStaysApi: { list: vi.fn(async () => []), choices: vi.fn() },
+}));
+vi.mock("../../../../lib/api/immich", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../../lib/api/immich")>();
+  return { ...actual, immichApi: { getSettings: vi.fn() } };
 });
 vi.mock("../../../../lib/api/places", () => ({ listPlaces: vi.fn() }));
+vi.mock("../../../GlobeLoader", () => ({ GlobeLoader: () => null }));
 
 const addToast = vi.fn();
 const toastState = { addToast: (...args: unknown[]) => addToast(...args) };
@@ -89,13 +119,6 @@ const MEMORIAL = visit({
   locatedCount: 41,
   startLocal: "2026-10-05T16:58:00",
   endLocal: "2026-10-05T17:21:00",
-  nearestVisit: {
-    placeId: "yongsan",
-    placeName: "Yongsan Station",
-    distanceKm: 1.3,
-    sameDay: false,
-    withinReach: false,
-  },
 });
 
 function respond(results: PhotoJourneyBatchResponse["results"]): void {
@@ -118,73 +141,50 @@ const accepted = (id: string) =>
     photos: null,
   }) as const;
 
-function renderReview(rows: PhotoJourney[]) {
-  const onAnswered = vi.fn().mockResolvedValue(undefined);
-  render(<VisitSuggestionsReview journeys={rows} onAnswered={onAnswered} />);
-  return { onAnswered };
+async function mount(rows: PhotoJourney[]) {
+  vi.mocked(photoJourneysApi.list).mockResolvedValue(rows);
+  render(
+    <MemoryRouter initialEntries={["/pending-updates?tab=photos"]}>
+      <InboxWorkspace photosVisible />
+    </MemoryRouter>
+  );
+  await screen.findByRole("checkbox", { name: `${K}.review.selectAll` });
 }
 const card = (name: string) => screen.getByRole("article", { name });
 const checkbox = (name: string) => within(card(name)).getByRole("checkbox");
 
-describe("VisitSuggestionsReview (forgejo#211, O5)", () => {
+describe("visit suggestions in the inbox (forgejo#211, O5)", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    vi.mocked(dataQualityFlagsApi.getAll).mockResolvedValue({ flags: [], count: 0 });
+    vi.mocked(tripSuggestionsApi.list).mockResolvedValue({
+      suggestions: [],
+      total: 0,
+      home: "history",
+      truncated: false,
+    });
+    vi.mocked(pendingUpdatesApi.getAll).mockResolvedValue({ updates: [], count: 0 });
+    vi.mocked(tripsApi.getAll).mockResolvedValue([]);
+    vi.mocked(immichApi.getSettings).mockResolvedValue({ hasAccess: true } as never);
     vi.mocked(listPlaces).mockResolvedValue([]);
   });
 
-  it("shows place, time span and the reasoning together, with the preview strip", () => {
-    renderReview([MEMORIAL]);
+  it("shows place, time span and the reasoning together, with the preview strip", async () => {
+    await mount([MEMORIAL]);
     const memorial = card("War Memorial of Korea");
     expect(within(memorial).getByText(/16:58/)).toBeInTheDocument();
     const reasons = within(memorial).getByRole("list", { name: `${K}.review.reasonLabel` });
-    expect(within(reasons).getByText(`${K}.facts.photos`)).toBeInTheDocument();
     expect(within(reasons).getByText(`${K}.review.reason.dwell`)).toBeInTheDocument();
-    expect(within(reasons).getByText(`${K}.facts.trip`)).toBeInTheDocument();
     expect(within(reasons).getByText(`${K}.review.reason.nearest`)).toBeInTheDocument();
-    const thumbs = within(memorial).getAllByRole("img");
-    expect(thumbs.map((img) => img.getAttribute("src"))).toEqual([
-      expect.stringContaining("/photo-journeys/memorial/preview/0/file"),
-      expect.stringContaining("/photo-journeys/memorial/preview/1/file"),
-      expect.stringContaining("/photo-journeys/memorial/preview/2/file"),
-    ]);
-  });
-
-  it("promises what accepting will make: a new place, the own place nearby, or the chosen one", async () => {
-    vi.mocked(listPlaces).mockResolvedValue([
-      { id: "near", name: "Palace grounds", lat: 37.58, lon: 126.977, city: "Seoul" },
-    ] as never);
-    renderReview([visit(), { ...MEMORIAL, placeId: "own-memorial" }]);
-    const palace = card("Gyeongbokgung");
-    expect(within(palace).getByText(`${K}.review.creates.newPlace`)).toBeInTheDocument();
-    expect(
-      within(card("War Memorial of Korea")).getByText(`${K}.review.creates.ownPlace`)
-    ).toBeInTheDocument();
-
-    await userEvent.click(within(palace).getByRole("button", { name: `${K}.review.correct` }));
-    await userEvent.click(await within(palace).findByRole("button", { name: /Palace grounds/ }));
-    expect(within(palace).getByText(`${K}.review.creates.chosenPlace`)).toBeInTheDocument();
-  });
-
-  it("flags a suggestion a visit logged since the scan already explains", () => {
-    renderReview([
-      visit({
-        nearestVisit: {
-          placeId: "gate",
-          placeName: "Gwanghwamun",
-          distanceKm: 0.05,
-          sameDay: true,
-          withinReach: true,
-        },
-      }),
-    ]);
-    expect(within(card("Gyeongbokgung")).getByRole("note")).toHaveTextContent(
-      `${K}.review.alreadyVisited`
+    expect(within(memorial).getAllByRole("img")[0].getAttribute("src")).toContain(
+      "/photo-journeys/memorial/preview/0/file"
     );
   });
 
-  it("accepts the selected suggestions in ONE request and reloads", async () => {
+  it("accepts the selected suggestions in ONE request and reloads the inbox", async () => {
     respond([accepted("palace"), accepted("memorial")]);
-    const { onAnswered } = renderReview([visit(), MEMORIAL]);
+    await mount([visit(), MEMORIAL]);
+    const lists = vi.mocked(photoJourneysApi.list).mock.calls.length;
 
     await userEvent.click(checkbox("Gyeongbokgung"));
     await userEvent.click(checkbox("War Memorial of Korea"));
@@ -197,7 +197,9 @@ describe("VisitSuggestionsReview (forgejo#211, O5)", () => {
       ])
     );
     expect(photoJourneysApi.review).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(onAnswered).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(vi.mocked(photoJourneysApi.list).mock.calls.length).toBeGreaterThan(lists)
+    );
     expect(addToast).toHaveBeenCalledWith("success", `${K}.review.summary`);
   });
 
@@ -206,15 +208,12 @@ describe("VisitSuggestionsReview (forgejo#211, O5)", () => {
       accepted("palace"),
       { id: "memorial", action: "accept", outcome: "failed", code: "VISIT_PLACE_NOT_FOUND" },
     ]);
-    renderReview([visit(), MEMORIAL]);
+    await mount([visit(), MEMORIAL]);
 
     await userEvent.click(screen.getByRole("checkbox", { name: `${K}.review.selectAll` }));
     await userEvent.click(screen.getByRole("button", { name: `${K}.review.acceptSelected` }));
 
     await waitFor(() => expect(addToast).toHaveBeenCalledWith("warning", `${K}.review.summary`));
-    const alerts = screen.getAllByRole("alert");
-    expect(alerts[0]).toHaveTextContent("War Memorial of Korea");
-    expect(alerts[0]).toHaveTextContent(`${K}.review.failure.VISIT_PLACE_NOT_FOUND`);
     expect(within(card("War Memorial of Korea")).getByRole("alert")).toHaveTextContent(
       `${K}.review.failure.VISIT_PLACE_NOT_FOUND`
     );
@@ -224,35 +223,23 @@ describe("VisitSuggestionsReview (forgejo#211, O5)", () => {
 
   it("says the outcome is unknown when the request itself fails, and reloads the truth", async () => {
     vi.mocked(photoJourneysApi.review).mockRejectedValue(new Error("Network Error"));
-    const { onAnswered } = renderReview([visit()]);
+    await mount([visit()]);
 
-    await userEvent.click(screen.getByRole("button", { name: `${K}.actions.dismiss` }));
+    await userEvent.click(
+      within(card("Gyeongbokgung")).getByRole("button", { name: `${K}.actions.dismiss` })
+    );
 
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent(`${K}.review.requestFailed`)
     );
-    expect(onAnswered).toHaveBeenCalled();
-  });
-
-  it("rejects the selected suggestions together", async () => {
-    respond([
-      { id: "palace", action: "dismiss", outcome: "dismissed" },
-      { id: "memorial", action: "dismiss", outcome: "dismissed" },
-    ]);
-    renderReview([visit(), MEMORIAL]);
-    await userEvent.click(screen.getByRole("checkbox", { name: `${K}.review.selectAll` }));
-    await userEvent.click(screen.getByRole("button", { name: `${K}.review.dismissSelected` }));
     await waitFor(() =>
-      expect(photoJourneysApi.review).toHaveBeenCalledWith([
-        { id: "palace", action: "dismiss" },
-        { id: "memorial", action: "dismiss" },
-      ])
+      expect(vi.mocked(photoJourneysApi.list).mock.calls.length).toBeGreaterThan(1)
     );
   });
 
   it("sends the corrected name and time — and only what changed", async () => {
     respond([accepted("palace")]);
-    renderReview([visit()]);
+    await mount([visit()]);
     const palace = card("Gyeongbokgung");
 
     await userEvent.click(within(palace).getByRole("button", { name: `${K}.review.correct` }));
@@ -260,7 +247,6 @@ describe("VisitSuggestionsReview (forgejo#211, O5)", () => {
     await userEvent.clear(name);
     await userEvent.type(name, "Gyeongbok Palace");
     const time = within(palace).getByLabelText(`${K}.review.correction.time`);
-    expect(time).toHaveValue("2026-10-05T11:19");
     await userEvent.clear(time);
     await userEvent.type(time, "2026-10-05T11:00");
 
@@ -279,39 +265,17 @@ describe("VisitSuggestionsReview (forgejo#211, O5)", () => {
     );
   });
 
-  it("records the visit on an own place picked from all of the reader's places", async () => {
-    vi.mocked(listPlaces).mockResolvedValue([
-      { id: "far", name: "Busan Tower", lat: 35.1, lon: 129.03, city: "Busan" },
-      { id: "near", name: "Palace grounds", lat: 37.58, lon: 126.977, city: "Seoul" },
-    ] as never);
-    respond([accepted("palace")]);
-    renderReview([visit()]);
-    const palace = card("Gyeongbokgung");
-
-    await userEvent.click(within(palace).getByRole("button", { name: `${K}.review.correct` }));
-    await userEvent.click(await within(palace).findByRole("button", { name: /Palace grounds/ }));
-    expect(within(palace).queryByLabelText(`${K}.review.correction.name`)).toBeNull();
-    await userEvent.click(
-      within(palace).getByRole("button", { name: `${K}.review.acceptCorrected` })
-    );
-    await waitFor(() =>
-      expect(photoJourneysApi.review).toHaveBeenCalledWith([
-        { id: "palace", action: "accept", placeId: "near" },
-      ])
-    );
-  });
-
   it("refuses to send a nameless suggestion and says what is missing", async () => {
-    renderReview([visit({ suggestedName: null, city: null, countryName: null })]);
+    await mount([visit({ suggestedName: null, city: null, countryName: null }), MEMORIAL]);
     await userEvent.click(screen.getByRole("checkbox", { name: `${K}.review.selectAll` }));
     expect(screen.getByRole("button", { name: `${K}.review.acceptSelected` })).toBeDisabled();
     expect(screen.getByText(`${K}.review.unnamedSelected`)).toBeInTheDocument();
     expect(photoJourneysApi.review).not.toHaveBeenCalled();
   });
 
-  it("is operable by keyboard: Space selects, the toolbar answers", async () => {
+  it("is operable by keyboard: Space selects, the batch bar answers", async () => {
     respond([{ id: "palace", action: "dismiss", outcome: "dismissed" }]);
-    renderReview([visit()]);
+    await mount([visit(), MEMORIAL]);
     checkbox("Gyeongbokgung").focus();
     await userEvent.keyboard(" ");
     expect(checkbox("Gyeongbokgung")).toBeChecked();

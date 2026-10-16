@@ -3,7 +3,14 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useDisplayFormat } from "../../../lib/displayFormat";
 import { dataQualityFlagsApi } from "../../../lib/api/dataQualityFlags";
+import type { PhotoJourney } from "../../../types/photoJourney";
 import Button from "../../ui/Button";
+import { Card } from "../../ui/Card";
+import EmptyState from "../../ui/EmptyState";
+import { Segmented } from "../../ui/Segmented";
+import { GlobeLoader } from "../../GlobeLoader";
+import { useVisitReview } from "../visitReview/useVisitReview";
+import VisitBatchBar from "../visitReview/VisitBatchBar";
 import {
   buildInboxItems,
   filterInbox,
@@ -14,17 +21,40 @@ import {
 } from "./model";
 import { useInboxData } from "./useInboxData";
 import InboxCard from "./InboxCard";
+import InboxHistory, { HISTORY_SOURCES, type HistorySource } from "./InboxHistory";
+import SourcePanel from "./SourcePanel";
 import TripContext from "./TripContext";
+import WorkspaceToolbar from "./WorkspaceToolbar";
 import "./workspace.css";
 
-const SOURCES: InboxSource[] = ["review", "trips", "updates", "photos", "dawarich"];
+export const INBOX_SOURCES: readonly InboxSource[] = [
+  "review",
+  "trips",
+  "updates",
+  "photos",
+  "dawarich",
+];
+const VIEWS: readonly InboxView[] = ["cards", "list", "journey"];
 
+/** What the page's tab label carries: a measured number, and whether every kind answered. */
+export interface InboxCount {
+  count: number;
+  complete: boolean;
+}
+
+/**
+ * The inbox: every open question and proposal, one card per item, whatever
+ * kind it is. `?tab=<kind>` narrows it to one kind (the old per-kind tabs'
+ * links keep working), `?view=` picks cards, list or journey, `?item=` a card.
+ */
 export default function InboxWorkspace({
   photosVisible,
   active = true,
+  onCount,
 }: {
   photosVisible: boolean;
   active?: boolean;
+  onCount?: (count: InboxCount | null) => void;
 }) {
   const { t, i18n } = useTranslation(["dataQuality", "common"]);
   const format = useDisplayFormat();
@@ -33,10 +63,13 @@ export default function InboxWorkspace({
   const requestedView = params.get("view");
   const view: InboxView =
     requestedView === "list" || requestedView === "journey" ? requestedView : "cards";
+  const sources = INBOX_SOURCES.filter((s) => s !== "photos" || photosVisible);
+  const requestedSource = params.get("tab");
+  const source: InboxSource | "all" = sources.find((s) => s === requestedSource) ?? "all";
   const [query, setQuery] = useState("");
-  const [source, setSource] = useState<InboxSource | "all">("all");
   const [deferred, setDeferred] = useState<ReadonlySet<string>>(new Set());
   const [showDeferred, setShowDeferred] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [mobileDetail, setMobileDetail] = useState(params.has("item"));
   const [checking, setChecking] = useState(false);
   const [checkFailed, setCheckFailed] = useState(false);
@@ -47,8 +80,17 @@ export default function InboxWorkspace({
     () => buildInboxItems(data.records, data.trips, t, i18n.language),
     [data.records, data.trips, t, i18n.language]
   );
+  const visitJourneys = useMemo(
+    () =>
+      items.flatMap((item): PhotoJourney[] =>
+        item.source === "photos" && item.data.kind === "visit" ? [item.data] : []
+      ),
+    [items]
+  );
+  const visitReview = useVisitReview(visitJourneys, data.reload);
   const visible = filterInbox(items, query, source, deferred, showDeferred);
   const visibleKeys = new Set(visible.map((item) => item.key));
+  const visibleVisits = visitJourneys.filter((j) => visibleKeys.has(`photos:${j.id}`));
   const selected =
     visible.find((item) => item.key === params.get("item")) ??
     visible[Math.min(previousSelectionIndex.current, visible.length - 1)];
@@ -59,6 +101,31 @@ export default function InboxWorkspace({
       .filter((item, index) => index === 0 || item.groupKey !== visibleOrdered[index - 1].groupKey)
       .map((item) => item.key)
   );
+  const failedSources = data.failed.filter((s): s is InboxSource =>
+    INBOX_SOURCES.includes(s as InboxSource)
+  );
+  const countOf = (kind: InboxSource | "all"): string | null => {
+    if (!data.loaded) return null;
+    const n = items.filter(
+      (item) => (kind === "all" || item.source === kind) && deferred.has(item.key) === showDeferred
+    ).length;
+    return failedSources.some((s) => kind === "all" || s === kind) ? `${n}+?` : String(n);
+  };
+  const counts = Object.fromEntries(
+    (["all", ...INBOX_SOURCES] as const).map((kind) => [kind, countOf(kind)])
+  ) as Record<InboxSource | "all", string | null>;
+  const sourceEmpty =
+    data.loaded &&
+    source !== "all" &&
+    !failedSources.includes(source) &&
+    !items.some((item) => item.source === source);
+
+  // The page's tab label: null until measured, never a 0 nobody counted.
+  const total = data.loaded ? items.length : null;
+  const complete = failedSources.length === 0;
+  useEffect(() => {
+    onCount?.(total === null ? null : { count: total, complete });
+  }, [onCount, total, complete]);
 
   const setParam = (name: string, value: string | null) =>
     setParams(
@@ -103,6 +170,7 @@ export default function InboxWorkspace({
   };
   const day = (value: string | null) =>
     value ? format.date(`${value}T00:00:00Z`, { timeZone: "UTC" }) : t(`${W}.unknownDay`);
+  const historySource = HISTORY_SOURCES.find((s) => s === source) as HistorySource | undefined;
 
   return (
     <section aria-label={t(`${W}.title`)} className="inbox-workspace space-y-5">
@@ -111,63 +179,29 @@ export default function InboxWorkspace({
           <h2 className="text-xl font-semibold">{t(`${W}.heading`)}</h2>
           <p className="t-caption mt-1">{t(`${W}.intro`)}</p>
         </div>
-        <div role="group" aria-label={t(`${W}.viewLabel`)} className="flex flex-wrap gap-2">
-          {(["cards", "list", "journey"] as const).map((mode) => (
-            <Button
-              key={mode}
-              variant={view === mode ? "primary" : "secondary"}
-              aria-pressed={view === mode}
-              onClick={() => setParam("view", mode)}
-            >
-              {t(`${W}.views.${mode}`)}
-            </Button>
-          ))}
-        </div>
+        <Segmented
+          label={t(`${W}.viewLabel`)}
+          value={view}
+          options={VIEWS.map((mode) => ({ value: mode, label: t(`${W}.views.${mode}`) }))}
+          onChange={(mode) => setParam("view", mode)}
+        />
       </div>
-      <div className={view === "list" && mobileDetail ? "hidden lg:block space-y-4" : "space-y-4"}>
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="min-w-0 w-full text-sm sm:w-auto sm:flex-1">
-            {t(`${W}.search`)}
-            <input
-              type="search"
-              className="input mt-1 w-full"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t(`${W}.searchHint`)}
-            />
-          </label>
-          <Button disabled={data.loading} onClick={() => void data.reload()}>
-            {t(`${W}.refresh`)}
-          </Button>
-          <Button disabled={checking} onClick={() => void recheck()}>
-            {t(`${W}.recheckAll`)}
-          </Button>
-        </div>
-        <div
-          role="group"
-          aria-label={t(`${W}.filterLabel`)}
-          className="inbox-filters flex gap-2 overflow-x-auto pb-1 md:flex-wrap"
-        >
-          {(["all", ...SOURCES.filter((s) => s !== "photos" || photosVisible)] as const).map(
-            (kind) => (
-              <Button
-                key={kind}
-                aria-pressed={source === kind}
-                variant={source === kind ? "primary" : "secondary"}
-                onClick={() => setSource(kind)}
-              >
-                {t(`${W}.sources.${kind}`)}{" "}
-                {data.loaded
-                  ? `(${items.filter((item) => (kind === "all" || item.source === kind) && deferred.has(item.key) === showDeferred).length}${data.failed.some((s) => kind === "all" || s === kind) ? "+?" : ""})`
-                  : "…"}
-              </Button>
-            )
-          )}
-          <Button aria-pressed={showDeferred} onClick={() => setShowDeferred(!showDeferred)}>
-            {t(`${W}.later`)} ({items.filter((item) => deferred.has(item.key)).length})
-          </Button>
-        </div>
-        {showDeferred && <p className="t-caption">{t(`${W}.laterHint`)}</p>}
+      <div className={view === "list" && mobileDetail ? "hidden lg:block" : undefined}>
+        <WorkspaceToolbar
+          query={query}
+          onQuery={setQuery}
+          sources={sources}
+          source={source}
+          onSource={(kind) => setParam("tab", kind === "all" ? null : kind)}
+          counts={counts}
+          laterCount={items.filter((item) => deferred.has(item.key)).length}
+          showDeferred={showDeferred}
+          onShowDeferred={setShowDeferred}
+          loading={data.loading}
+          checking={checking}
+          onReload={() => void data.reload()}
+          onRecheck={() => void recheck()}
+        />
       </div>
       {data.failed.length > 0 && (
         <div role="alert" className="rounded-lg border border-(--ts-warn) p-4 text-sm">
@@ -178,37 +212,40 @@ export default function InboxWorkspace({
         </div>
       )}
       {checkFailed && <p role="alert">{t(`${W}.checkFailed`)}</p>}
-      {data.proposalInfo?.home === "missing" && (
-        <p className="t-caption">
-          {t("dataQuality:inbox.tripSuggestions.home.missing")}{" "}
-          <Link className="underline" to="/settings?section=homeAirport">
-            {t("dataQuality:inbox.tripSuggestions.home.link")}
-          </Link>
-        </p>
-      )}
-      {data.proposalInfo && data.proposalInfo.total > data.proposalInfo.suggestions.length && (
-        <p className="t-caption">
-          {t("dataQuality:inbox.tripSuggestions.capped", {
-            shown: data.proposalInfo.suggestions.length,
-            total: data.proposalInfo.total,
-          })}
-        </p>
-      )}
-      {data.proposalInfo?.truncated && (
-        <p className="t-caption">{t("dataQuality:inbox.tripSuggestions.truncated")}</p>
+      <SourcePanel
+        source={source}
+        empty={sourceEmpty}
+        proposalInfo={data.proposalInfo}
+        reload={data.reload}
+      />
+      {historySource && (
+        <div className="space-y-3">
+          <Button aria-expanded={showHistory} onClick={() => setShowHistory(!showHistory)}>
+            {t(`${W}.history.${showHistory ? "hide" : "show"}`)}
+          </Button>
+          {showHistory && <InboxHistory source={historySource} />}
+        </div>
       )}
       <p role="status" className="t-caption">
         {data.loading ? t(`${W}.loading`) : t(`${W}.shown`, { count: visible.length })}
       </p>
-      {data.loaded && visible.length === 0 && (
-        <div className="rounded-xl border border-(--ts-border) p-8 text-center">
-          <h3 className="font-semibold">
-            {t(
-              `${W}.${data.failed.length ? "incomplete" : query || source !== "all" || showDeferred ? "noMatches" : "empty"}`
-            )}
-          </h3>
+      {!data.loaded && (
+        <div className="flex justify-center py-8">
+          <GlobeLoader size={120} label={t(`${W}.loading`)} />
         </div>
       )}
+      {data.loaded && visible.length === 0 && !sourceEmpty && (
+        <Card flush>
+          <EmptyState
+            kind={failedSources.length ? "degraded" : "pending"}
+            title={t(
+              `${W}.${failedSources.length ? "incomplete" : query || source !== "all" || showDeferred ? "noMatches" : "empty"}`
+            )}
+          />
+        </Card>
+      )}
+      {/* Also for a single visit: the bar is where a failed answer is named. */}
+      {visibleVisits.length > 0 && <VisitBatchBar journeys={visibleVisits} review={visitReview} />}
 
       <div
         className={
@@ -316,6 +353,7 @@ export default function InboxWorkspace({
                   disabled={data.failed.includes(item.source)}
                   reload={data.reload}
                   stayChoices={data.stayChoices}
+                  visitReview={visitReview}
                 />
                 <div className="mt-4 border-t border-(--ts-border) pt-3">
                   <Button onClick={() => postpone(item.key)}>

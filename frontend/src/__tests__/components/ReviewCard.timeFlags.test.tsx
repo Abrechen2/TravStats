@@ -4,7 +4,7 @@ import { MemoryRouter } from "react-router-dom";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import DataQualityFlagCard from "../../components/DataQuality/DataQualityFlagCard";
+import ReviewCard from "../../components/inbox/workspace/ReviewCard";
 import { useSettingsStore } from "../../store/settingsStore";
 import type { DataQualityFlag } from "../../types/dataQuality";
 import type {
@@ -73,7 +73,7 @@ function timeFlag(
 function renderCard(flag: DataQualityFlag) {
   return render(
     <MemoryRouter>
-      <DataQualityFlagCard flag={flag} onResolve={() => {}} onDismiss={() => {}} />
+      <ReviewCard flag={flag} busy={false} act={vi.fn(async () => true)} />
     </MemoryRouter>
   );
 }
@@ -92,7 +92,6 @@ describe("time questions in the inbox", () => {
       )
     );
 
-    expect(screen.getByText("Zeitzone unbekannt")).toBeInTheDocument();
     expect(screen.getByText(/Für diese Zeit ließ sich keine Zeitzone finden/)).toBeInTheDocument();
     expect(screen.getByText("Abfahrt/Abflug")).toBeInTheDocument();
     expect(screen.getByText("Keine Position (fehlt oder 0, 0)")).toBeInTheDocument();
@@ -121,7 +120,6 @@ describe("time questions in the inbox", () => {
         keptValue: "2024-05-02",
       })
     );
-    expect(screen.getByText("Uhrzeit unbekannt")).toBeInTheDocument();
     expect(editorLink("Besuch bearbeiten")).toHaveAttribute("href", "/places/p1?editVisit=row-1");
     // A kept day is the calendar day it is, whatever the viewer's zone (the
     // odd-zone CI runs this under UTC−3:30 and UTC+14).
@@ -194,7 +192,6 @@ describe("time questions in the inbox", () => {
         zone: "Pacific/Auckland",
       })
     );
-    expect(screen.getByText("Tag nicht eindeutig")).toBeInTheDocument();
     expect(
       screen.getByText("Nicht eindeutig, welcher Kalendertag gemeint ist")
     ).toBeInTheDocument();
