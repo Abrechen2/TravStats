@@ -103,27 +103,6 @@
       "undated": "The trip has no date and cannot be placed in a chain."
     }
   },
-  "thresholdChoice": {
-    "options": {
-      "visited": "Stay — neither a connection nor passing through counts",
-      "slept": "Overnight — only where you slept",
-      "connection": "Connection — everything counts",
-      "transited": "Passing through — a connection does not count"
-    },
-    "effect": {
-      "visited": "Only countries you actually stayed in count. Passing straight through on the ground and changing planes at an airport then both fail to count. Your country total goes down.",
-      "slept": "Only countries with a recorded night count — through a lodging, a port call spanning a night, or a pair of flights across a day boundary. Your country total goes down.",
-      "connection": "Merely changing planes at an airport then counts as a country. Your country total goes up.",
-      "transited": "Merely changing planes at an airport does not count. A border you crossed on the ground, a day in port, a recorded place and every overnight stay still do. This is the default."
-    },
-    "listUnchanged": "This does not change the country list in your passport: every country with evidence stays visible, uncounted ones are merely greyed out. Only the headline number moves.",
-    "short": {
-      "connection": "Connection",
-      "transited": "Passing through",
-      "visited": "Stay",
-      "slept": "Overnight"
-    }
-  },
   "countingChanged": {
     "text": "Counting changed — {{before}} countries before, {{after}} now.",
     "what": "What counts?",
