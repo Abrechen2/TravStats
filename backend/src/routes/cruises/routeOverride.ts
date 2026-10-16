@@ -7,6 +7,7 @@ import { routeOverrideSchema, routeOverrideKeySchema } from "../../schemas/cruis
 import { buildEffectivePortSequence } from "../../shared/cruise/portSequence";
 import { haversineKm } from "../../shared/geo/haversine";
 import { recomputeLegsForCruise } from "../../services/cruiseDistance/cruiseLegService";
+import { propagateWrite, shareSnapshot } from "../../services/sharing/propagate";
 import logger from "../../utils/logger";
 
 /**
@@ -145,6 +146,8 @@ router.put("/:id/route-override", async (req: AuthRequest, res: Response, next: 
     // statistics silently fall back to inline haversine. Mirrors POST / and
     // PATCH /:id in routes/cruises.ts.
     const { row, replaced } = await prisma.$transaction(async (tx) => {
+      // The legs are facts of the cruise: a shared cruise's copies follow them.
+      const before = await shareSnapshot(tx, "cruise", req.params.id);
       const existing = await tx.cruiseLegRoute.findUnique({
         where: { cruiseId_fromKind_fromRef_toKind_toRef: key },
         select: { id: true },
@@ -157,6 +160,7 @@ router.put("/:id/route-override", async (req: AuthRequest, res: Response, next: 
       });
 
       await recomputeLegsForCruise(req.params.id, tx);
+      await propagateWrite(tx, userId, "cruise", req.params.id, before);
 
       return { row, replaced: existing !== null };
     });
@@ -198,11 +202,13 @@ router.delete(
       // otherwise delete-and-reinsert every leg and re-run the router for
       // nothing.
       const { count } = await prisma.$transaction(async (tx) => {
+        const before = await shareSnapshot(tx, "cruise", req.params.id);
         const result = await tx.cruiseLegRoute.deleteMany({
           where: { cruiseId: req.params.id, ...parsed.data },
         });
         if (result.count > 0) {
           await recomputeLegsForCruise(req.params.id, tx);
+          await propagateWrite(tx, userId, "cruise", req.params.id, before);
         }
         return result;
       });

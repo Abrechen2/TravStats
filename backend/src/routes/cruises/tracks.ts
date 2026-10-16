@@ -21,6 +21,7 @@ import {
 import { splitAtLongSteps } from "../../services/trackCoverage/splitAtLongSteps";
 import { CRUISE_TRACK_GAP_KM } from "../../services/trackCoverage/legCoverage";
 import { recomputeLegsForCruise } from "../../services/cruiseDistance/cruiseLegService";
+import { propagateWrite, shareSnapshot } from "../../services/sharing/propagate";
 import { loadCruiseTrackOverview } from "../../services/cruise/cruiseTrackOverview";
 import { createDawarichClient } from "../../services/dawarich/dawarichClient";
 import { getDawarichConnection } from "../../services/dawarich/dawarichResolver";
@@ -74,6 +75,7 @@ function cruiseTrackColumns(ingested: IngestedTrack) {
 }
 
 async function storeTrack(
+  userId: string,
   cruiseId: string,
   data: ReturnType<typeof cruiseTrackColumns> & {
     source: string;
@@ -83,11 +85,14 @@ async function storeTrack(
   }
 ): Promise<{ id: string }> {
   return prisma.$transaction(async (tx) => {
+    // The legs are facts of the cruise: a shared cruise's copies follow them.
+    const before = await shareSnapshot(tx, "cruise", cruiseId);
     const track = await tx.cruiseTrack.create({
       data: { cruiseId, ...data, source: trackSource.parse(data.source) },
       select: { id: true },
     });
     await recomputeLegsForCruise(cruiseId, tx);
+    await propagateWrite(tx, userId, "cruise", cruiseId, before);
     return track;
   });
 }
@@ -146,7 +151,7 @@ router.post(
 
       let track: { id: string };
       try {
-        track = await storeTrack(cruiseId, {
+        track = await storeTrack(userId, cruiseId, {
           ...cruiseTrackColumns(ingested),
           source: fields.data.origin ?? file.format,
           name: file.track.name,
@@ -250,7 +255,7 @@ router.post("/:id/tracks/dawarich", async (req: AuthRequest, res: Response, next
       throw error;
     }
 
-    const track = await storeTrack(cruiseId, {
+    const track = await storeTrack(userId, cruiseId, {
       ...cruiseTrackColumns(pulled.ingested),
       source: "dawarich",
       name: null,
@@ -287,10 +292,14 @@ router.delete(
       // Scoped by BOTH ids: a track id lifted from another cruise — another
       // user's included — deletes nothing and answers 404.
       const deleted = await prisma.$transaction(async (tx) => {
+        const before = await shareSnapshot(tx, "cruise", cruiseId);
         const result = await tx.cruiseTrack.deleteMany({
           where: { id: req.params.trackId, cruiseId },
         });
-        if (result.count > 0) await recomputeLegsForCruise(cruiseId, tx);
+        if (result.count > 0) {
+          await recomputeLegsForCruise(cruiseId, tx);
+          await propagateWrite(tx, userId, "cruise", cruiseId, before);
+        }
         return result.count;
       });
       if (deleted === 0) throw new AppError("Track not found", 404);
