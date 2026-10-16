@@ -59,6 +59,10 @@ describe("share type registry", () => {
     for (const entity of SHARE_ENTITIES) expect(ADAPTERS[entity].entity).toBe(entity);
   });
 
+  it("carries every shareable type in the .travstats file", () => {
+    expect(SHARE_ENTITIES.filter((e) => SHARE_TYPES[e].exchangeKind === null)).toEqual([]);
+  });
+
   it("keeps stops last: a stop resolves the entry it wraps by key", () => {
     expect(SHARE_ENTITIES[SHARE_ENTITIES.length - 1]).toBe("stop");
   });

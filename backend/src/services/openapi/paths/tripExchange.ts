@@ -48,7 +48,17 @@ const proposal = registry.register(
     entries: z.array(
       z.object({
         key: z.string(),
-        kind: z.enum(["flight", "stay", "cruise", "rail", "bus", "rental", "visit", "stop"]),
+        kind: z.enum([
+          "flight",
+          "stay",
+          "cruise",
+          "rail",
+          "bus",
+          "ferry",
+          "rental",
+          "visit",
+          "stop",
+        ]),
         action,
         id: z.string().uuid().nullable(),
         reason: z.enum(PROPOSAL_REASONS).optional(),
@@ -87,7 +97,7 @@ const failures = {
   422: {
     description:
       "`TRIP_FILE_INVALID` (not a ZIP, no manifest/trip.json, or a schema failure — `issues` " +
-      "names the paths), `TRIP_FILE_VERSION_UNSUPPORTED` (`formatVersion`, `supported`), or " +
+      "names the paths), `TRIP_FILE_VERSION_UNSUPPORTED` (`formatVersion`, `supported`; versions 1–3 are read), or " +
       "`TRIP_FILE_UNSAFE_PATH` (an entry names a path outside the archive)",
     content: errorContent,
   },
@@ -99,9 +109,9 @@ registry.registerPath({
   path: "/trips/{id}/export",
   summary: "Export one trip as a .travstats file",
   description:
-    "A ZIP holding `manifest.json` (format `travstats-trip`, `formatVersion` 1, or 2 when the trip holds bus rides — a version-1 importer refuses such a file by name; this server reads both, app version, " +
+    "A ZIP holding `manifest.json` (format `travstats-trip`, `formatVersion` 1, 2 when the trip holds bus rides, or 3 when it holds ferry crossings — the lowest version that carries the trip, so an older importer refuses such a file by name; this server reads all three, app version, " +
     "export time, options) and `trip.json` (the trip, bookings with their total, flights, stays " +
-    "with their lodging, cruises with stops, rail rides, bus rides (`bus`; absent in a version-1 file), rentals, stops, place visits with their " +
+    "with their lodging, cruises with stops, rail rides, bus rides (`bus`; absent in a version-1 file), ferry crossings (`ferry`; absent before version 3 — the vehicle on board and the roadtrip leg are never written), rentals, stops, place visits with their " +
     "places). Times are written as stored: instant, zone and calendar day. Private fields (seat, " +
     "cabin, own price, ratings, notes, journal, companion names), `documents/` and `photos/` are " +
     "included only when asked. Another user's trip is a 404.",
@@ -133,7 +143,7 @@ registry.registerPath({
     "tour: the trip by booking reference, else the one trip overlapping its days; flights by " +
     "provenance or number and local day; stays by lodging name and check-in; cruises by " +
     "provenance or booking reference; rail by provenance, operator and number or stations, and " +
-    "local day; bus rides the same way with the line name where rail has the train number; rentals by provider and pick-up day; places by provenance or within 100 m; " +
+    "local day; bus rides the same way with the line name where rail has the train number; ferry crossings by provenance, else both terminals and local day; rentals by provider and pick-up day; places by provenance or within 100 m; " +
     "visits by place and day; stops by place or title and day on the matched trip. Writes nothing.",
   tags: ["Trips"],
   request: upload,

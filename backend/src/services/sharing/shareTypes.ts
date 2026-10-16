@@ -92,7 +92,7 @@ export const SHARE_TYPES = {
     delegate: "ferryJourney",
     table: "ferry_journeys",
     countKey: "ferryJourneys",
-    exchangeKind: null,
+    exchangeKind: "ferry",
   },
   rental: {
     domain: "rental",

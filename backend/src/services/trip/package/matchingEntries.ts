@@ -130,6 +130,47 @@ export async function existingBus(userId: string, q: BusQuery): Promise<Existing
   return hit ? { id: hit.id, tripId: hit.tripId, bookingId: hit.bookingId } : null;
 }
 
+// ------------------------------------------------------------------ ferry
+
+export interface FerryQuery {
+  externalRef: string | null;
+  operator: string | null;
+  depName: string;
+  arrName: string;
+  /** Local day of departure. */
+  day: string;
+}
+
+/** Bus's rule on the ferry table: the provenance key, else the same two terminals on the same local day. */
+export async function existingFerry(userId: string, q: FerryQuery): Promise<ExistingEntry | null> {
+  const select = { id: true, tripId: true, bookingId: true } as const;
+  if (q.externalRef) {
+    const byRef = await prisma.ferryJourney.findFirst({
+      where: { userId, externalRef: q.externalRef },
+      select,
+    });
+    if (byRef) return byRef;
+  }
+  const rows = await prisma.ferryJourney.findMany({
+    where: { userId, departureTime: windowAround(q.day) },
+    select: {
+      ...select,
+      depStationName: true,
+      arrStationName: true,
+      departureTime: true,
+      depTimezone: true,
+    },
+    take: 50,
+  });
+  const hit = rows.find(
+    (r) =>
+      dayAt(r.departureTime, r.depTimezone) === q.day &&
+      same(r.depStationName, q.depName) &&
+      same(r.arrStationName, q.arrName)
+  );
+  return hit ? { id: hit.id, tripId: hit.tripId, bookingId: hit.bookingId } : null;
+}
+
 // ------------------------------------------------------------------ rental
 
 export interface RentalQuery {

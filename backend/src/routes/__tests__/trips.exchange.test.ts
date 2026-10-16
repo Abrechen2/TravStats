@@ -402,10 +402,10 @@ describe("trip export / import (.travstats)", () => {
       const res = await send(
         stranger,
         "preview",
-        zip({ "manifest.json": manifest({ formatVersion: 3 }), "trip.json": "{}" })
+        zip({ "manifest.json": manifest({ formatVersion: 4 }), "trip.json": "{}" })
       );
       expect(res.status).toBe(422);
-      expect(res.body).toMatchObject({ code: "TRIP_FILE_VERSION_UNSUPPORTED", formatVersion: 3 });
+      expect(res.body).toMatchObject({ code: "TRIP_FILE_VERSION_UNSUPPORTED", formatVersion: 4 });
     });
 
     it("refuses a trip.json that breaks the schema", () =>

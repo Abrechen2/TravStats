@@ -1,7 +1,7 @@
 /**
  * Writing a `.travstats` file — the proposal, rebuilt from the file, in ONE
  * transaction: trip, bookings, places, lodgings and stays, flights, cruises
- * with their stops, rail rides, rentals, visits, stops, journal and photo
+ * with their stops, rail, bus and ferry rides, rentals, visits, stops, journal and photo
  * rows. A failure half-way leaves no row behind, and the photo bytes written
  * for it are removed again.
  *
@@ -34,6 +34,7 @@ import {
   flightRow,
   lodgingRow,
   busRow,
+  ferryRow,
   railRow,
   rentalRow,
   resolveContext,
@@ -148,6 +149,7 @@ async function attach(
     | "cruise"
     | "railJourney"
     | "busJourney"
+    | "ferryJourney"
     | "rentalBooking"
     | "placeVisit",
   userId: string,
@@ -170,6 +172,7 @@ const MODEL = {
   cruise: "cruise",
   rail: "railJourney",
   bus: "busJourney",
+  ferry: "ferryJourney",
   rental: "rentalBooking",
   visit: "placeVisit",
 } as const;
@@ -258,6 +261,7 @@ async function writeAll(
     cruise: new Map(),
     rail: new Map(),
     bus: new Map(),
+    ferry: new Map(),
     rental: new Map(),
     visit: new Map(),
     booking: new Map(),
@@ -411,7 +415,9 @@ function bookingOfEntry(
             ? file.rail
             : entry.kind === "bus"
               ? file.bus
-              : [];
+              : entry.kind === "ferry"
+                ? file.ferry
+                : [];
   return bookingOf(list.find((e) => e.key === entry.key)?.bookingKey ?? null);
 }
 
@@ -478,6 +484,14 @@ async function createEntry(
       // share-exempt: returns the id to writeAll, which propagates ids[kind] after every kind is written
       return (
         await tx.busJourney.create({ data: busRow(userId, byKey(file.bus), ctx, link), select })
+      ).id;
+    case "ferry":
+      // share-exempt: returns the id to writeAll, which propagates ids[kind] after every kind is written
+      return (
+        await tx.ferryJourney.create({
+          data: ferryRow(userId, byKey(file.ferry), ctx, link),
+          select,
+        })
       ).id;
     case "rental":
       // share-exempt: returns the id to writeAll, which propagates ids[kind] after every kind is written
@@ -551,6 +565,7 @@ const ENTRY_TYPE: Record<Exclude<EntityKind, "trip">, EntryRef["type"]> = {
   cruise: "cruise",
   rail: "railJourney",
   bus: "busJourney",
+  ferry: "ferryJourney",
   rental: "rentalBooking",
   visit: "placeVisit",
 };

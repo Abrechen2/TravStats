@@ -93,6 +93,7 @@ async function loadTrip(userId: string, tripId: string) {
         include: { depStation: true, arrStation: true, companionLinks: byPosition },
       },
       busJourneys: { orderBy: { departureTime: "asc" }, include: { companionLinks: byPosition } },
+      ferryJourneys: { orderBy: { departureTime: "asc" }, include: { companionLinks: byPosition } },
       rentalBookings: {
         orderBy: { pickupTime: "asc" },
         include: { pickupAirport: true, returnAirport: true, companionLinks: byPosition },
@@ -162,6 +163,7 @@ export async function collectTrip(
   const cruiseKey = keyer("c");
   const railKey = keyer("r");
   const busKey = keyer("bu");
+  const ferryKey = keyer("fe");
   const rentalKey = keyer("rt");
   const stopKey = keyer("st");
   const bk = (id: string | null) =>
@@ -445,6 +447,53 @@ export async function collectTrip(
           }
         : {}),
     })),
+    // The vehicle on board, the vessel's AIS binding and the roadtrip leg are
+    // never written — not even privately (FERRY_FACT_FIELDS' rule).
+    ferry: trip.ferryJourneys.map((r) => ({
+      key: ferryKey(r.id),
+      bookingKey: bk(r.bookingId),
+      externalRef: r.externalRef,
+      operator: r.operator,
+      vesselName: r.vesselName,
+      dep: {
+        name: r.depStationName,
+        address: r.depAddress,
+        lat: r.depLat,
+        lon: r.depLon,
+        country: r.depCountry,
+        timezone: r.depTimezone,
+      },
+      arr: {
+        name: r.arrStationName,
+        address: r.arrAddress,
+        lat: r.arrLat,
+        lon: r.arrLon,
+        country: r.arrCountry,
+        timezone: r.arrTimezone,
+      },
+      departureTime: r.departureTime.toISOString(),
+      arrivalTime: iso(r.arrivalTime),
+      depPrecision: r.depPrecision,
+      arrPrecision: r.arrPrecision,
+      distanceKm: r.distanceKm,
+      distanceSource: r.distanceSource,
+      status: r.status,
+      ...(priv
+        ? {
+            private: {
+              fareClass: r.fareClass,
+              seat: r.seat,
+              cabinType: r.cabinType,
+              bookingReference: r.bookingReference,
+              ticketReference: r.ticketReference,
+              price: r.price,
+              currency: r.currency,
+              notes: r.notes,
+              companions: companionNames(r.companionLinks, r.companions),
+            },
+          }
+        : {}),
+    })),
     rentals: trip.rentalBookings.map((r) => ({
       key: rentalKey(r.id),
       externalRef: r.externalRef,
@@ -571,6 +620,7 @@ export async function collectTrip(
       cruise: cruiseKey,
       rail: railKey,
       bus: busKey,
+      ferry: ferryKey,
       rental: rentalKey,
       visit: visitKey,
     });
@@ -596,6 +646,7 @@ async function collectDocuments(
         { cruiseId: { in: ids(trip.cruises) } },
         { railJourneyId: { in: ids(trip.railJourneys) } },
         { busJourneyId: { in: ids(trip.busJourneys) } },
+        { ferryJourneyId: { in: ids(trip.ferryJourneys) } },
         { rentalBookingId: { in: ids(trip.rentalBookings) } },
         { placeVisitId: { in: ids(trip.placeVisits) } },
       ],
@@ -613,11 +664,13 @@ async function collectDocuments(
             ? { kind: "rail", key: keys.rail(d.railJourneyId) }
             : d.busJourneyId
               ? { kind: "bus", key: keys.bus(d.busJourneyId) }
-              : d.rentalBookingId
-                ? { kind: "rental", key: keys.rental(d.rentalBookingId) }
-                : d.placeVisitId
-                  ? { kind: "visit", key: keys.visit(d.placeVisitId) }
-                  : { kind: "trip", key: null };
+              : d.ferryJourneyId
+                ? { kind: "ferry", key: keys.ferry(d.ferryJourneyId) }
+                : d.rentalBookingId
+                  ? { kind: "rental", key: keys.rental(d.rentalBookingId) }
+                  : d.placeVisitId
+                    ? { kind: "visit", key: keys.visit(d.placeVisitId) }
+                    : { kind: "trip", key: null };
     const name = `documents/d${i + 1}.${extensionOf(d.storedName, "bin")}`;
     files.push({ name, source: documentPath(d.storedName) });
     file.documents.push({

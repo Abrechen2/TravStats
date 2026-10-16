@@ -220,6 +220,7 @@
       "cruise": "Kreuzfahrt",
       "rail": "Bahn",
       "bus": "Bus",
+      "ferry": "Fähre",
       "rental": "Mietwagen",
       "visit": "Ort",
       "stop": "Station"

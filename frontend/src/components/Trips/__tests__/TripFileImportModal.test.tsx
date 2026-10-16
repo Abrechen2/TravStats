@@ -82,6 +82,28 @@ describe("TripFileImportModal", () => {
     expect(screen.getByDisplayValue("Lissabon & Atlantik")).toBeInTheDocument();
   });
 
+  it("names a ferry crossing as one, not by its translation key", async () => {
+    preview.mockResolvedValue(
+      proposal({
+        entries: [
+          {
+            key: "fe1",
+            kind: "ferry",
+            action: "create",
+            id: null,
+            label: "Color Line Kiel–Oslo",
+            day: "2026-06-01",
+          },
+        ],
+      })
+    );
+    renderModal();
+    expect(await screen.findByText("Color Line Kiel–Oslo")).toBeInTheDocument();
+    const [row] = screen.getAllByTestId("trip-file-entry");
+    expect(row.textContent).toContain("Fähre");
+    expect(row.textContent).not.toContain("tripFile.kind");
+  });
+
   it("commits the file with the reviewer's trip name and reports success", async () => {
     const result = { tripId: "t1", created: 1, attached: 0, skipped: 1 };
     commit.mockResolvedValue(result);
