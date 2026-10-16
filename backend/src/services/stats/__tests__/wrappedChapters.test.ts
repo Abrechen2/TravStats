@@ -93,7 +93,13 @@ describe("buildWrapped — chapters beyond flights", () => {
     expect(off?.availableYears).toEqual([2024]);
     expect(
       buildWrapped([flight], [], [], 2022, [], { ...stays, flightsVisible: false })
-    ).toMatchObject({ year: 2022, flights: 0, distanceKm: 0, topAirline: null, topRoute: null });
+    ).toMatchObject({
+      year: 2022,
+      flights: null,
+      distanceKm: null,
+      topAirline: null,
+      topRoute: null,
+    });
     expect(
       buildWrapped([flight], [], [], null, [], { ...NO_CHAPTERS, flightsVisible: false })
     ).toBeNull();

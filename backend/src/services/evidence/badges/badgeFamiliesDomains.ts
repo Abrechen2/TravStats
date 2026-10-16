@@ -1,4 +1,6 @@
 import { prisma } from "../../../db";
+import { flightDateOf } from "../entryMappers";
+import type { FlightTimeSemantics } from "../../../utils/timezone";
 import type { EvidenceEntry } from "../../../schemas/evidence";
 import { now as clockNow } from "../../../shared/time/clock";
 import { loadVisibleDomains } from "../../domainVisibility";
@@ -178,8 +180,13 @@ async function flightInsightFamily(userId: string, rule: BadgeRule) {
         href: `/flights/${r.id}`,
         title: { text: r.flightNumber ?? "—" },
         subtitle: { text: `${r.depCode ?? "?"} → ${r.arrCode ?? "?"}` },
-        date: f?.departureTime
-          ? { value: f.departureTime.toISOString().slice(0, 10), precision: "day" }
+        // The departure airport's day, as every flight evidence row (forgejo#273).
+        date: f
+          ? flightDateOf({
+              departureTime: f.departureTime,
+              depTimezone: f.depTimezone,
+              depTimeSemantics: f.depTimeSemantics as FlightTimeSemantics,
+            })
           : null,
       };
     },

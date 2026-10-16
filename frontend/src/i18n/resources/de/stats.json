@@ -1001,6 +1001,7 @@
     "distance": "Strecke",
     "distanceDesc": "{{factor}}× um die Erde",
     "distanceDescShort": "Summe aller Flugstrecken des Jahres",
+    "distanceNotRecorded": "Strecke nicht erfasst",
     "newCountries": "Neue Länder",
     "newCountriesDesc": "in diesem Jahr erstmals belegt",
     "cruises": "Kreuzfahrten",
@@ -1017,6 +1018,7 @@
     "rail": "Bahnfahrten",
     "railDesc": "{{km}} km mit der Bahn",
     "railDescStraight": "{{km}} km mit der Bahn, davon {{straight}} km Luftlinie",
+    "railNoKm": "Strecke nicht erfasst",
     "chapters": {
       "stays": "Aufenthalte",
       "staysDesc_one": "{{count}} Nacht in Unterkünften",

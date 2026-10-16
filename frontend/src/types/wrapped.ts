@@ -37,10 +37,12 @@ export interface Wrapped {
   rank: WrappedRank;
   /** The one year that beat this one, when exactly one did. */
   comparisonYear: number | null;
-  flights: number;
-  distanceKm: number;
-  /** `distanceKm` in trips around the Earth, one decimal. */
-  earthFactor: number;
+  /** Null when the reader does not see flights — no figure, not a zero. */
+  flights: number | null;
+  /** Null with `flights`, or when no flight of the year measured a distance. */
+  distanceKm: number | null;
+  /** `distanceKm` in trips around the Earth, one decimal; null with it. */
+  earthFactor: number | null;
   /**
    * Countries first evidenced in this year AND reaching the user's counting
    * threshold — taken from the passport rather than re-decided, so the story
@@ -51,7 +53,7 @@ export interface Wrapped {
   cruises: number | null;
   /** Completed train rides that left in this year; null when the reader does not see rail. */
   railRides: number | null;
-  /** Their kilometres, every distance source together; null with `railRides`. */
+  /** Their kilometres, every distance source together; null with `railRides`, or when no ride measured one. */
   railKm: number | null;
   /** The part of `railKm` measured as the straight line — shown as such; null with `railRides`. */
   railStraightLineKm: number | null;

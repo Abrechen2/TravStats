@@ -206,12 +206,12 @@ describe("a connection is not a visit", () => {
 
     expect(p.countries.map((c) => c.code).sort()).toEqual(["DE", "QA", "SG"]);
     expect(p.summary.countriesTotal).toBe(3);
-    expect(p.summary.countries).toBe(0);
-    expect(p.summary.countryThreshold).toBe("visited");
-    expect(p.summary.byTier).toEqual({ slept: 0, visited: 0, transited: 0, connection: 3 });
+    expect(p.summary.countries).toBe(2);
+    expect(p.summary.countryThreshold).toBe("transited");
+    expect(p.summary.byTier).toEqual({ slept: 0, visited: 2, transited: 0, connection: 1 });
   });
 
-  it("does not upgrade an onward connection when the local day changes", () => {
+  it("calls the same two legs `slept` when the local day changed in between", () => {
     // "Different calendar day" is IN the data; "six hours" is a guess. Measured
     // on the owner's account six hours and twelve hours return the same set of
     // countries, so a configurable hour value would promise precision the data
@@ -223,8 +223,8 @@ describe("a connection is not a visit", () => {
       NOW
     );
 
-    expect(p.countries.find((c) => c.code === "QA")?.tier).toBe("connection");
-    expect(p.summary.countries).toBe(0);
+    expect(p.countries.find((c) => c.code === "QA")?.tier).toBe("slept");
+    expect(p.summary.countries).toBe(3);
   });
 
   it("reads the day at the airport's clock, not the UTC instant", () => {
@@ -249,25 +249,25 @@ describe("a connection is not a visit", () => {
     expect(p.countries.find((c) => c.code === "QA")?.tier).toBe("connection");
   });
 
-  it("keeps a domestic flight as ground-only without a recorded visit", () => {
+  it("does not call a domestic hop a connection", () => {
     // MUC -> TXL touches Germany twice on one day, which is the same SHAPE as a
     // connection and is nothing like one. Reading it as a connection would have
     // dropped the home country of anybody who only flies domestically.
     const domestic = new Map<string, string | null>(AIRPORTS).set("TXL", "DE");
     const p = buildPassport([flight("MUC", "TXL", "2021-05-01")], domestic, [], NOW);
 
-    expect(p.countries.find((c) => c.code === "DE")?.tier).toBe("connection");
-    expect(p.summary.countries).toBe(0);
+    expect(p.countries.find((c) => c.code === "DE")?.tier).toBe("visited");
+    expect(p.summary.countries).toBe(1);
   });
 
-  it("marks incomplete one-way evidence as ground-only", () => {
+  it("does not call a one-way departure or a one-way arrival a connection", () => {
     // The country somebody first flew OUT of has no arrival on record, and the
     // country they have not flown home from has no departure. Neither is a
     // change of planes, and both were correct before this change.
     const p = buildPassport([flight("MUC", "SIN", "2024-03-01")], AIRPORTS, [], NOW);
 
-    expect(p.summary.byTier).toEqual({ slept: 0, visited: 0, transited: 0, connection: 2 });
-    expect(p.summary.countries).toBe(0);
+    expect(p.summary.byTier).toEqual({ slept: 0, visited: 2, transited: 0, connection: 0 });
+    expect(p.summary.countries).toBe(2);
   });
 });
 
@@ -289,8 +289,8 @@ describe("a day trip is not a connection", () => {
     const it_ = p.countries.find((c) => c.code === "IT");
     expect(it_?.tier).toBe("visited");
     expect(it_?.counted).toBe(true);
-    expect(p.summary.countries).toBe(1);
-    expect(p.summary.byTier).toEqual({ slept: 0, visited: 1, transited: 0, connection: 1 });
+    expect(p.summary.countries).toBe(2);
+    expect(p.summary.byTier).toEqual({ slept: 0, visited: 2, transited: 0, connection: 0 });
   });
 
   it("still calls a same-day change of planes `connection` when the journey goes on", () => {
@@ -341,7 +341,7 @@ describe("a day trip is not a connection", () => {
 
     expect(p.countries.find((c) => c.code === "IT")?.tier).toBe("connection");
     expect(p.summary.countriesTotal).toBe(3);
-    expect(p.summary.countries).toBe(0);
+    expect(p.summary.countries).toBe(2);
   });
 
   it("judges a whole spell on the ground as one, not segment by segment", () => {
@@ -364,10 +364,10 @@ describe("a day trip is not a connection", () => {
     );
 
     expect(p.countries.find((c) => c.code === "IT")?.tier).toBe("visited");
-    expect(p.summary.countries).toBe(1);
+    expect(p.summary.countries).toBe(2);
   });
 
-  it("uses return structure, not an overnight, as visit evidence", () => {
+  it("still calls an overnight `slept`, whether or not the traveller returned", () => {
     // The day change outranks everything this rule decides. A return that spans
     // a night is not demoted to `visited` by being a return.
     const p = buildPassport(
@@ -377,7 +377,7 @@ describe("a day trip is not a connection", () => {
       NOW
     );
 
-    expect(p.countries.find((c) => c.code === "IT")?.tier).toBe("visited");
+    expect(p.countries.find((c) => c.code === "IT")?.tier).toBe("slept");
   });
 
   it("does not read a return out of an unknown origin country", () => {
@@ -427,7 +427,7 @@ describe("strongest evidence wins, once", () => {
     // here — the rank decides which single kind a row wears, not how strong the
     // proof is.
     expect(rows[0].evidence).toBe("flight");
-    expect(p.summary.countries).toBe(1);
+    expect(p.summary.countries).toBe(3);
   });
 
   it("splits by kind over the whole list, not over the headline", () => {
@@ -439,12 +439,12 @@ describe("strongest evidence wins, once", () => {
     const { flight: f, port, place, lodging } = p.summary.byEvidence;
     expect(f + port + place + lodging).toBe(p.summary.countriesTotal);
     expect(p.summary.countriesTotal).toBe(4);
-    expect(p.summary.countries).toBe(1);
+    expect(p.summary.countries).toBe(3);
   });
 });
 
 describe("ports and places keep working, mapped onto the tiers", () => {
-  it("keeps port calls ground-only until an off-ship visit is recorded", () => {
+  it("calls a port call that spanned a night `slept` and a day in port `visited`", () => {
     const overnight = buildPassport([], AIRPORTS, [], NOW, [
       {
         country: "Italy",
@@ -460,17 +460,17 @@ describe("ports and places keep working, mapped onto the tiers", () => {
       },
     ]);
 
-    expect(overnight.countries.find((c) => c.code === "IT")?.tier).toBe("transited");
-    expect(dayCall.countries.find((c) => c.code === "IT")?.tier).toBe("transited");
+    expect(overnight.countries.find((c) => c.code === "IT")?.tier).toBe("slept");
+    expect(dayCall.countries.find((c) => c.code === "IT")?.tier).toBe("visited");
   });
 
-  it("a port call with no departure time proves ground contact only", () => {
+  it("calls a port call with no departure time `visited` — what it can prove", () => {
     const p = buildPassport([], AIRPORTS, [], NOW, [
       { country: "Italy", at: new Date("2023-07-04T08:00:00Z") },
     ]);
 
-    expect(p.countries.find((c) => c.code === "IT")?.tier).toBe("transited");
-    expect(p.summary.countries).toBe(0);
+    expect(p.countries.find((c) => c.code === "IT")?.tier).toBe("visited");
+    expect(p.summary.countries).toBe(1);
   });
 
   it("calls a recorded place `visited`", () => {
@@ -648,7 +648,7 @@ describe("the evidence beside the tier", () => {
 
     const it_ = p.countries.find((c) => c.code === "IT");
     expect(it_?.daysPresent).toBe(2);
-    expect(it_?.tier).toBe("visited");
+    expect(it_?.tier).toBe("slept");
   });
 });
 
@@ -699,7 +699,7 @@ describe("a gap in the flight log is not time spent in a country", () => {
   it("still calls the gap `slept`, because the tier was never the thing that was wrong", () => {
     const de = buildPassport(HOME_GAP, AIRPORTS, [], NOW).countries.find((c) => c.code === "DE");
 
-    expect(de?.tier).toBe("visited");
+    expect(de?.tier).toBe("slept");
   });
 
   it("keeps a 25-hour stopover measured — one night is still a stay", () => {
@@ -726,7 +726,7 @@ describe("a gap in the flight log is not time spent in a country", () => {
     const it_ = p.countries.find((c) => c.code === "IT");
     expect(it_?.groundTime).toEqual({ state: "measured", minutes: 1500 });
     expect(it_?.daysPresent).toBe(2);
-    expect(it_?.tier).toBe("connection");
+    expect(it_?.tier).toBe("slept");
   });
 
   it("abstains one night later, on the same shape", () => {
@@ -752,7 +752,7 @@ describe("a gap in the flight log is not time spent in a country", () => {
     const it_ = p.countries.find((c) => c.code === "IT");
     expect(it_?.groundTime).toEqual({ state: "unknown" });
     expect(it_?.daysPresent).toBe(2);
-    expect(it_?.tier).toBe("connection");
+    expect(it_?.tier).toBe("slept");
   });
 
   it("leaves a same-day connection exactly as it was: one day, measured minutes", () => {
@@ -813,7 +813,7 @@ describe("a gap in the flight log is not time spent in a country", () => {
  * so a threshold that hid rows would put back, from the other direction, the
  * invisible arithmetic this design removes.
  */
-describe("legacy thresholds cannot change the two explicit sets", () => {
+describe("the counting threshold moves the headline and nothing else", () => {
   /**
    * One country per tier, so every threshold has something to include AND
    * something to exclude:
@@ -830,7 +830,12 @@ describe("legacy thresholds cannot change the two explicit sets", () => {
 
   /** Every row, with the ONE field the threshold is allowed to touch removed. */
   const rowsWithoutVerdict = (p: ReturnType<typeof buildPassport>) =>
-    JSON.stringify(p.countries.map(({ counted: _counted, ...rest }) => rest));
+    JSON.stringify(
+      p.countries.map(
+        // `visited` and `visitUncertain` restate `counted` for clients; they are verdict too.
+        ({ counted: _counted, visited: _visited, visitUncertain: _uncertain, ...rest }) => rest
+      )
+    );
 
   it("returns a byte-identical country list at every threshold", () => {
     const [connection, transited, slept] = [at("connection"), at("transited"), at("slept")];
@@ -839,7 +844,7 @@ describe("legacy thresholds cannot change the two explicit sets", () => {
     expect(rowsWithoutVerdict(slept)).toBe(rowsWithoutVerdict(connection));
   });
 
-  it("keeps both sets fixed regardless of legacy threshold", () => {
+  it("keeps `countriesTotal` and the tier split fixed while the headline moves", () => {
     const [connection, transited, slept] = [at("connection"), at("transited"), at("slept")];
 
     // The list is the same list, so everything that describes the WHOLE list
@@ -850,8 +855,8 @@ describe("legacy thresholds cannot change the two explicit sets", () => {
       expect(p.summary.byEvidence).toEqual(connection.summary.byEvidence);
     }
 
-    expect(connection.summary.countries).toBe(1); // Only the confirmed lodging.
-    expect(transited.summary.countries).toBe(1);
+    expect(connection.summary.countries).toBe(4); // DE, QA, SG, CZ
+    expect(transited.summary.countries).toBe(3); // …minus the Doha connection
     expect(slept.summary.countries).toBe(1); // …only the house
     expect(connection.summary.countriesTotal).toBe(4);
   });
@@ -863,7 +868,7 @@ describe("legacy thresholds cannot change the two explicit sets", () => {
       const qa = at(threshold).countries.find((c) => c.code === "QA");
       expect(qa).toBeDefined();
       expect(qa?.tier).toBe("connection");
-      expect(qa?.counted).toBe(false);
+      expect(qa?.counted).toBe(threshold === "connection");
     }
   });
 
@@ -871,13 +876,13 @@ describe("legacy thresholds cannot change the two explicit sets", () => {
     // Stated rather than assumed, so a client never explains the number with a
     // rule that is not the one that produced it.
     for (const threshold of ["connection", "transited", "slept"] as const) {
-      expect(at(threshold).summary.countryThreshold).toBe("visited");
+      expect(at(threshold).summary.countryThreshold).toBe(threshold);
     }
   });
 
-  it("counts only attested visits when the caller names no threshold", () => {
+  it("counts from `transited` when the caller names no threshold", () => {
     const p = buildPassport(CONNECTION, AIRPORTS, [], NOW, [], [], [house("CZ")]);
-    expect(p.summary.countryThreshold).toBe("visited");
-    expect(p.summary.countries).toBe(1);
+    expect(p.summary.countryThreshold).toBe("transited");
+    expect(p.summary.countries).toBe(3);
   });
 });

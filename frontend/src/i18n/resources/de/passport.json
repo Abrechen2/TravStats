@@ -8,27 +8,27 @@
   "loadError": "Der Reisepass konnte nicht geladen werden.",
   "stamps": "Stempel",
   "summary": {
-    "countries": "Land besucht",
+    "countries": "Länder",
     "countriesTotal": "gezählt / mit Nachweis",
+    "countriesTotalExplained": "Die zweite Zahl sind alle Länder, für die überhaupt ein Nachweis vorliegt. Die erste zählt nur die, deren Nachweis die Schwelle erreicht.",
     "airports": "Flughäfen",
     "entries": "Einreisen",
-    "continents": "Kontinente",
-    "groundCountries": "Am Boden gewesen"
+    "continents": "Kontinente"
   },
   "evidence": {
     "title": "Nachweis",
-    "headlineNote": "{{counted}} besucht · {{total}} mit belegtem Bodenkontakt. Reine Zwischenstopps bleiben sichtbar; ungeklärte Besuche sind gekennzeichnet.",
+    "headlineNote": "{{counted}} von {{total}} Ländern mit Nachweis werden gezählt — gezählt wird ab der Stufe „{{threshold}}“. Die übrigen bleiben in der Liste stehen, ausgegraut, damit du sie prüfen und korrigieren kannst.",
     "kindsSumNote": "diese Aufteilung summiert sich auf alle Länder mit Nachweis, nicht auf die gezählte Kopfzahl"
   },
   "tiers": {
     "slept": "Übernachtet",
-    "sleptExplained": "Ein tatsächlicher Unterkunftsaufenthalt oder eine bestätigte Übernachtung außerhalb reiner Transitorte. Ein Datumswechsel allein reicht nicht.",
+    "sleptExplained": "Der Kalendertag hat gewechselt: eine abgeschlossene Übernachtung, eine erfasste Unterkunft, ein Hafenaufenthalt über Nacht oder ein Flugpaar mit Tageswechsel.",
     "visited": "Besucht",
-    "visitedExplained": "Ein bestätigter Ortsbesuch oder ein nachvollziehbares Hin-/Rückflugziel. Standortpunkte und die Dauer eines Umstiegs reichen nicht.",
-    "connection": "Flug-Endpunkt / Umstieg",
-    "connectionExplained": "Der Flug belegt Bodenkontakt. Ein Besuch außerhalb des Flughafens ist noch nicht belegt. Bestätigte Ortsbesuche oder Unterkünfte können ihn ergänzen.",
-    "transited": "Bodenkontakt",
-    "transitedExplained": "Ein belegter Zwischenstopp oder eine Durchfahrt, etwa an Bahnhof, Hafen oder Raststätte. Zählt als Bodenkontakt; ein tatsächlicher Besuch braucht einen weiteren Beleg."
+    "visitedExplained": "Ankunft und Abflug am selben Kalendertag, ein erfasster Ort oder ein Hafentag.",
+    "connection": "Nur umgestiegen",
+    "connectionExplained": "Nur ein Anschlussflug und sonst nichts. Ob du den Flughafen verlassen hast, ist nirgends erfasst — deshalb zählt dieses Land nicht mit. Trag einen Ort, eine Unterkunft oder einen weiteren Flug nach, dann steigt die Stufe.",
+    "transited": "Durchgereist",
+    "transitedExplained": "Ein Halt am Boden ohne Übernachtung — etwa ein Bahnhof oder eine Station auf einem Roadtrip. Das ist kein Umsteigen: du warst im Land, und deshalb zählt es mit. Dein Standortverlauf allein macht kein Land zum Durchreiseland."
   },
   "kinds": {
     "flight": "Flug",
@@ -75,7 +75,7 @@
   },
   "countries": {
     "title": "Länder",
-    "listNote": "Am Boden gewesen umfasst auch belegte Zwischenstopps und Durchfahrten. Mit „Land besucht“ zeigst du nur Länder mit einem bestätigten Besuch.",
+    "listNote": "Diese Liste zeigt jedes Land mit irgendeinem Nachweis — auch die, die nicht mitgezählt werden. Die stehen ausgegraut da, statt zu verschwinden, damit du sie prüfen kannst.",
     "dashLegend": "„—“ heißt nicht null, sondern nicht ableitbar: ein Land, das nur durch eine Unterkunft oder einen Hafen belegt ist, hat keine Flüge und keine Flughäfen — und ohne datierten Beleg auch keinen Zeitraum.",
     "groundTimeLegend": "„Zeit am Boden“ kennt drei Antworten, und zwei davon sind kein Wert: „unbekannt“ heißt, ein Flug war hier, aber kein zweiter begrenzt den Aufenthalt — das kannst du nachtragen. „—“ heißt, hier war überhaupt kein Flug; eine Unterkunft begrenzt keinen Abflug, da ist nichts nachzutragen. „Tage“ ist dagegen immer gezählt: 0 heißt, kein Beleg nennt einen Tag.",
     "country": "Land",
@@ -87,13 +87,12 @@
     "airports": "Flughäfen",
     "home": "Heimat",
     "new": "neu",
-    "notCounted": "Nur Bodenkontakt",
-    "notCountedExplained": "Dieses Land zählt als Bodenkontakt. Ein Besuch außerhalb eines reinen Zwischenstopps ist nicht belegt.",
+    "notCounted": "zählt nicht mit",
+    "notCountedExplained": "Dieses Land erreicht die Schwelle für die Kopfzahl nicht. Es bleibt trotzdem in der Liste: die Einstufung stammt aus dem, was erfasst ist, und das ist unvollständig.",
     "undated": "ohne Datum",
     "undatedExplained": "Mindestens ein Beleg trägt kein Datum. Dieses Land kann deshalb in keiner Jahresauswertung auftauchen.",
     "showRecords": "Belege zeigen",
-    "hideRecords": "Belege ausblenden",
-    "visitUncertain": "Besuch außerhalb des Transitorts unbestätigt"
+    "hideRecords": "Belege ausblenden"
   },
   "thresholdChoice": {
     "options": {
@@ -125,6 +124,5 @@
     "title": "Unbestätigte Standorttage",
     "explanation": "Diese Dawarich-Standorte belegen keinen Bodenkontakt. Sie können von Überflügen oder ungenauen Positionen stammen und erhöhen weder Länderzahlen noch Aufenthaltstage. Ein bestätigter Ortsbesuch oder Reiseeintrag wird unabhängig davon gezählt.",
     "observation": "Dawarich · Standorttage: {{days}} · Punkte: {{points}}"
-  },
-  "countingRule": "Bodenkontakt umfasst Umstiege und Durchfahrten. Besuche brauchen einen belegten Aufenthalt außerhalb reiner Transitorte oder eine nachvollziehbare Hin-/Rückflugkette. Nächte und Standortpunkte allein beweisen keinen Besuch."
+  }
 }

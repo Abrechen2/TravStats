@@ -181,11 +181,12 @@ describe("wrapped and badges across domains", () => {
     });
     const off = await wrapped();
     expect(off.body.availableYears).toEqual([2024]);
-    expect(off.body.flights).toBe(0);
+    // A hidden domain abstains: no figure, not a zero.
+    expect(off.body.flights).toBeNull();
   });
 
   // Review M1: "new countries" follow the same gate — a hidden domain proves none.
-  it("counts no visited country from train endpoints, whether visible or hidden", async () => {
+  it("counts no new country from a hidden domain", async () => {
     await updateInstanceSettings({ betaFeaturesEnabled: true });
     await prisma.railJourney.create({
       data: {
@@ -212,7 +213,7 @@ describe("wrapped and badges across domains", () => {
     const withRail = await request(app)
       .get("/api/v1/stats/wrapped?year=2024")
       .set("Cookie", cookie);
-    expect(withRail.body.newCountries).toBe(0);
+    expect(withRail.body.newCountries).toBe(2);
     await prisma.userSettings.update({ where: { userId }, data: { enabledDomains: ["rental"] } });
     const hidden = await request(app).get("/api/v1/stats/wrapped?year=2024").set("Cookie", cookie);
     expect(hidden.body.newCountries).toBe(0);

@@ -37,7 +37,11 @@ function zoneAt(
  */
 export async function loadInsightTours(
   userId: string,
-  resolver: Pick<CountryResolver, "countryAt">,
+  /**
+   * Asked for only when the user HAS a tour: the boundary index behind it is
+   * ~10 MB and seconds to build cold, and most accounts have no tour at all.
+   */
+  loadResolver: () => Promise<Pick<CountryResolver, "countryAt">>,
   /**
    * The elevation profiles are the bulk of a track row and serve one figure,
    * the highest point. The badge re-check runs inside every save and needs
@@ -83,6 +87,8 @@ export async function loadInsightTours(
       },
     },
   });
+  if (rows.length === 0) return [];
+  const resolver = await loadResolver();
   return rows.map((r) => {
     const first = r.stops[0];
     const positioned = r.stops.find((s) => s.lat !== null && s.lon !== null);

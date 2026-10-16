@@ -94,7 +94,6 @@ export interface WrappedRail {
 /** What the passport already knows about a country, and all this needs of it. */
 export interface WrappedCountry {
   firstYear: number | null;
-  firstVisitedYear?: number | null;
   /**
    * Does the row reach the user's counting threshold? Taken from the passport
    * rather than re-decided here, so the story cannot count from a different
@@ -184,9 +183,13 @@ export function buildWrapped(
   const year = requestedYear ?? availableYears[availableYears.length - 1];
 
   const inYear = flown.filter((f) => f.departureYear === year);
-  const distanceKm = Math.round(
-    inYear.reduce((sum, f) => sum + (Number.isFinite(f.distanceKm) ? f.distanceKm : 0), 0)
-  );
+  // Null, not 0, when the year's flights measured no distance at all (or the
+  // reader cannot see flights): "0 km" would claim a distance nobody measured.
+  const measuredFlights = inYear.filter((f) => Number.isFinite(f.distanceKm));
+  const distanceKm =
+    !flightsVisible || (inYear.length > 0 && measuredFlights.length === 0)
+      ? null
+      : Math.round(measuredFlights.reduce((sum, f) => sum + f.distanceKm, 0));
 
   // Rule 2: exact. Counted over every year, including ones this account has
   // only cruises in — those simply contribute zero flights.
@@ -227,6 +230,10 @@ export function buildWrapped(
   const railInYear = (rail ?? []).filter((r) => r.year === year);
   const railKmOf = (rides: readonly WrappedRail[]): number =>
     Math.round(rides.reduce((sum, r) => sum + (r.distanceKm ?? 0), 0));
+  // Rides that all lack a distance are unknown kilometres, not zero (the
+  // bus chapter's rule); no ride at all is a true 0.
+  const railKmMeasured = (rides: readonly WrappedRail[]): number | null =>
+    rides.length > 0 && rides.every((r) => r.distanceKm === null) ? null : railKmOf(rides);
 
   // A year with no flights has no flying rank to hold. Calling it 'top'
   // because nothing beat it would let a cruise-only year headline as the
@@ -244,23 +251,22 @@ export function buildWrapped(
           ? "second"
           : "other",
     comparisonYear: ranked && bigger.length === 1 ? bigger[0][0] : null,
-    flights: inYear.length,
+    // A hidden domain abstains, as cruises and rail do (forgejo#265).
+    flights: flightsVisible ? inYear.length : null,
     distanceKm,
-    earthFactor: Math.round((distanceKm / EARTH_CIRCUMFERENCE_KM) * 10) / 10,
+    earthFactor:
+      distanceKm === null ? null : Math.round((distanceKm / EARTH_CIRCUMFERENCE_KM) * 10) / 10,
     // `counted`, not merely `firstYear` — the passport row already carries the
     // resolved threshold for this user, so the story and the headline cannot
     // disagree about whether a connection is a country. Without it, a year
     // spent changing planes in Doha would open the wrapped with a new country
     // the passport does not count, and neither number would explain the other.
-    newCountries: countries.filter(
-      (c) =>
-        c.counted && (c.firstVisitedYear === undefined ? c.firstYear : c.firstVisitedYear) === year
-    ).length,
+    newCountries: countries.filter((c) => c.counted && c.firstYear === year).length,
     // A hidden domain abstains — null, never a zero the client must know to
     // hide (forgejo#265), the rule every chapter follows.
     cruises: cruises === null ? null : (cruisesPerYear.get(year) ?? 0),
     railRides: rail === null ? null : railInYear.length,
-    railKm: rail === null ? null : railKmOf(railInYear),
+    railKm: rail === null ? null : railKmMeasured(railInYear),
     // Owner decision 7 (rail spec): straight-line km are shown as such.
     railStraightLineKm:
       rail === null

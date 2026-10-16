@@ -73,27 +73,6 @@ describe("CountryTable — a country that does not count is greyed, not hidden",
     getCountryDetailMock.mockImplementation((code: string) => Promise.resolve(emptyDetail(code)));
   });
 
-  it("switches between the ground-presence list and the visited subset", async () => {
-    render(
-      <MemoryRouter>
-        <CountryTable
-          locale="en"
-          countries={[
-            country({ code: "DE", visited: true, counted: true }),
-            country({ code: "QA", visited: false, counted: false, tier: "connection" }),
-          ]}
-        />
-      </MemoryRouter>
-    );
-    expect(screen.getByText("Qatar")).toBeInTheDocument();
-    const buttons = screen.getAllByRole("button");
-    const visitedButton = buttons.find((button) => button.getAttribute("aria-pressed") === "false");
-    expect(visitedButton).toBeDefined();
-    await userEvent.click(visitedButton!);
-    expect(screen.queryByText("Qatar")).not.toBeInTheDocument();
-    expect(screen.getByText("Germany")).toBeInTheDocument();
-  });
-
   it("keeps an uncounted connection country in the list and marks it as not counted", () => {
     renderTable([
       country({ code: "DE" }),

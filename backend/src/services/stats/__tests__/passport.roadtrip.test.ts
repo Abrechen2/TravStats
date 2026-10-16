@@ -47,16 +47,15 @@ describe("passport — roadtrip stations", () => {
     expect(p.summary.byEvidence.roadtrip).toBe(1);
   });
 
-  it("raises a country only driven through as `transited`, which only ground presence counts", () => {
+  it("raises a country only driven through as `transited`, which the default threshold counts", () => {
     const p = withStations([
       { country: "SE", night: false, at: d("2024-07-13"), days: ["2024-07-13"] },
     ]);
     expect(p.countries.find((c) => c.code === "SE")).toMatchObject({
       tier: "transited",
-      counted: false,
+      counted: true,
     });
-    expect(p.summary.groundCountries).toBe(1);
-    expect(p.summary.visitedCountries).toBe(0);
+    expect(p.summary.countries).toBe(1);
   });
 
   it("contributes nothing for a station no country could be read for", () => {

@@ -33,7 +33,7 @@ describe("the passport carries the number the old rule would give", () => {
   it("equals the headline when only flights are given", () => {
     const passport = buildPassport([flight("MUC", "JFK")], countries);
     expect(passport.summary.legacyCountries).toBe(2);
-    expect(passport.summary.groundCountries).toBe(2);
+    expect(passport.summary.countries).toBe(2);
   });
 
   it("leaves out a country proved only by a port call or a house — the old rule never saw those", () => {
@@ -44,7 +44,7 @@ describe("the passport carries the number the old rule would give", () => {
       new Date("2024-06-01T00:00:00Z"),
       [{ country: "Italy", at: new Date("2023-07-04T00:00:00Z") }]
     );
-    expect(passport.summary.groundCountries).toBe(2);
+    expect(passport.summary.countries).toBe(2);
     expect(passport.summary.legacyCountries).toBe(1);
   });
 

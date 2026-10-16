@@ -1,5 +1,5 @@
 import { prisma } from "../../db";
-import { countableFlightWhere } from "../../shared/flightCounting";
+import { countableCruiseWhere } from "../../shared/cruiseCounting";
 import { countableRailWhere, railYear } from "../../shared/railCounting";
 import { classifyStay } from "../../shared/lodgingCounting";
 import { resolveStayTiming } from "../../shared/lodgingTiming";
@@ -58,7 +58,9 @@ export async function loadWrappedDomains(userId: string): Promise<{
   const [cruises, rides, chapters] = await Promise.all([
     whenVisible(visible, "cruise", () =>
       prisma.cruise.findMany({
-        where: { userId, ...countableFlightWhere() },
+        // The cruise rule: a sailed cruise is `completed` since 20261010010000,
+        // which the flight rule (flown/historical) never matches.
+        where: { userId, ...countableCruiseWhere() },
         select: { startDate: true, status: true },
       })
     ),

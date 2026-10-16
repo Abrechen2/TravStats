@@ -54,6 +54,24 @@ function zonedComponents(stored: Date, timezone: string): Components | null {
   return parts ? { year: parts.year, month: parts.month, day: parts.day, hour: parts.hour } : null;
 }
 
+const DAY_MS = 86_400_000;
+
+/**
+ * Whether `stored` is a LEGACY year-/month-only placeholder. Mirrors
+ * `placeholderDayOf` in `backend/src/shared/time/legacyValues.ts`: the stored
+ * precision decides first (`minute`/`day` is a real time); without it only the
+ * exact legacy shape counts — `UNKNOWN` semantics, 00:00:00.000 UTC on the
+ * 1st of a month (forgejo#256).
+ */
+function isLegacyPlaceholder(
+  stored: Date,
+  semantics: FlightTimeSemantics,
+  precision: string | null | undefined
+): boolean {
+  if (semantics !== "UNKNOWN" || precision === "minute" || precision === "day") return false;
+  return stored.getTime() % DAY_MS === 0 && stored.getUTCDate() === 1;
+}
+
 /**
  * Read a stored flight time as the wall clock at its airport.
  *
@@ -72,9 +90,17 @@ function zonedComponents(stored: Date, timezone: string): Components | null {
 export function localWallClockOf(
   stored: Date,
   timezone: string | null | undefined,
-  semantics: FlightTimeSemantics = "UNKNOWN"
+  semantics: FlightTimeSemantics = "UNKNOWN",
+  /** The stored `dep_precision`, when the caller has it (forgejo#256). */
+  precision?: string | null
 ): LocalWallClock {
-  const useStored = semantics === "LEGACY_FAKE_UTC" || !timezone;
+  // A legacy year-/month-only placeholder names a day, not an instant: read
+  // through a western zone, 1 January 2015 became 31 December 2014. A marked
+  // one (precision year/month) was written through its zone and reads there,
+  // but has no hour either.
+  const legacyPlaceholder = isLegacyPlaceholder(stored, semantics, precision);
+  const placeholder = legacyPlaceholder || precision === "year" || precision === "month";
+  const useStored = semantics === "LEGACY_FAKE_UTC" || !timezone || legacyPlaceholder;
   const { year, month, day, hour } =
     (useStored ? null : zonedComponents(stored, timezone as string)) ?? storedComponents(stored);
 
@@ -86,6 +112,6 @@ export function localWallClockOf(
     // Derived from the local calendar date rather than parsed from a locale
     // weekday name, which would depend on the formatter's language.
     weekday: new Date(Date.UTC(year, month - 1, day)).getUTCDay(),
-    hour: semantics === "DATE_ONLY" ? null : hour,
+    hour: semantics === "DATE_ONLY" || placeholder ? null : hour,
   };
 }

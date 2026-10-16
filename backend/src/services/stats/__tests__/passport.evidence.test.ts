@@ -32,7 +32,7 @@ describe("the passport counts evidence", () => {
     // The two new arguments are optional so every existing caller — and every
     // existing account — keeps its number until evidence is actually passed.
     const passport = buildPassport([flight("MUC", "FRA")], countries);
-    expect(passport.summary.groundCountries).toBe(1);
+    expect(passport.summary.countries).toBe(1);
     // `lodging` joined the split on 2026-09-02 (a house is evidence too). The
     // three figures that existed before it are untouched, which is the point of
     // asserting the whole object rather than three keys of it.
@@ -57,7 +57,7 @@ describe("the passport counts evidence", () => {
       [{ country: "Italy", at: new Date("2023-07-04T00:00:00Z") }]
     );
 
-    expect(passport.summary.groundCountries).toBe(2);
+    expect(passport.summary.countries).toBe(2);
     expect(passport.summary.byEvidence).toEqual({
       flight: 1,
       port: 1,
@@ -133,7 +133,7 @@ describe("the passport counts evidence", () => {
     );
 
     const { flight: f, port, place } = passport.summary.byEvidence;
-    expect(f + port + place).toBe(passport.summary.groundCountries);
+    expect(f + port + place).toBe(passport.summary.countries);
   });
 
   it("ignores a place whose country was never resolved", () => {
@@ -148,7 +148,7 @@ describe("the passport counts evidence", () => {
       [{ isoCountryCode: null, at: new Date("2022-05-01T00:00:00Z") }]
     );
 
-    expect(passport.summary.groundCountries).toBe(1);
+    expect(passport.summary.countries).toBe(1);
     expect(passport.summary.byEvidence.place).toBe(0);
   });
 
@@ -164,13 +164,13 @@ describe("the passport counts evidence", () => {
       ]
     );
 
-    expect(passport.summary.groundCountries).toBe(1);
+    expect(passport.summary.countries).toBe(1);
   });
 
-  it("does not count a port call alone as a new visit", () => {
+  it("counts a country first reached this year as new, whatever proved it", () => {
     // The flight is dated an earlier year on purpose: with both in 2024 the
     // assertion below would pass for the wrong reason, since Germany would be
-    // new too. A port call proves ground presence but not a visit.
+    // new too. The point is that a PORT-proved country counts as new.
     const passport = buildPassport(
       [flight("MUC", "FRA", { departureTime: new Date("2019-04-12T08:00:00Z") })],
       countries,
@@ -179,7 +179,7 @@ describe("the passport counts evidence", () => {
       [{ country: "Italy", at: new Date("2024-03-01T00:00:00Z") }]
     );
 
-    expect(passport.countries.find((c) => c.code === "IT")?.isNew).toBe(false);
-    expect(passport.summary.newThisYear).toBe(0);
+    expect(passport.countries.find((c) => c.code === "IT")?.isNew).toBe(true);
+    expect(passport.summary.newThisYear).toBe(1);
   });
 });

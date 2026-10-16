@@ -1001,6 +1001,7 @@
     "distance": "Distance",
     "distanceDesc": "{{factor}}× around the Earth",
     "distanceDescShort": "The year's flight distances, added up",
+    "distanceNotRecorded": "distance not recorded",
     "newCountries": "New countries",
     "newCountriesDesc": "first evidenced this year",
     "cruises": "Cruises",
@@ -1017,6 +1018,7 @@
     "rail": "Train rides",
     "railDesc": "{{km}} km by train",
     "railDescStraight": "{{km}} km by train, {{straight}} km of it straight line",
+    "railNoKm": "distance not recorded",
     "chapters": {
       "stays": "Stays",
       "staysDesc_one": "{{count}} night in lodgings",

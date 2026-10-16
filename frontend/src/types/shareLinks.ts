@@ -113,9 +113,11 @@ export interface WrappedShareView {
   owner?: string | null;
   year: number;
   totals?: {
-    flights: number;
-    distanceKm: number;
-    earthFactor: number;
+    /** Null when the owner does not see flights. */
+    flights: number | null;
+    /** Null with `flights`, or when no flight of the year measured a distance. */
+    distanceKm: number | null;
+    earthFactor: number | null;
     newCountries: number;
     cruises: number | null;
     railRides: number | null;

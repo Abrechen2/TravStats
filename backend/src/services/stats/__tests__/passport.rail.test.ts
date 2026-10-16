@@ -98,8 +98,8 @@ describe("passport and drill-down — rail", () => {
     expect(p.countries.find((c) => c.code === "CH")).toMatchObject({
       evidence: "rail",
       kinds: ["rail"],
-      tier: "transited",
-      counted: false,
+      tier: "visited",
+      counted: true,
       firstYear: 2025,
     });
     expect(p.summary.byEvidence.rail).toBe(2); // CH and DE
