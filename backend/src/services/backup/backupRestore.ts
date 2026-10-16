@@ -1,9 +1,7 @@
-import { suspendComparisonAfterRestore } from "../federation/restore";
 import { spawn } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { prisma } from "../../db";
-import { Prisma } from "../../prisma";
 import logger from "../../utils/logger";
 import { DATABASE_URL } from "../../utils/database";
 import {
@@ -15,9 +13,6 @@ import {
 import { parseDatabaseUrl } from "./backupDatabase";
 import { AppError } from "../../middleware/errorHandler";
 import { encryptionKeyFingerprint } from "../../utils/encryption";
-import { reconcileInterruptedBackups } from "./reconcileBackups";
-import { resetSyncHistory } from "../sync/state";
-import { deleteAllShareLinks } from "../shareLinks/deleteAll";
 import { runSyncSchemaCheck } from "../sync/schemaCheck";
 import { CLEAN_SCHEMA_PREAMBLE, PsqlRestoreError, feedPsql } from "./restorePsql";
 import { sweepAfterFilesRestore } from "../files/restoreSweep";
@@ -28,134 +23,16 @@ import {
   planArchiveMigrations,
   readArchiveSchema,
 } from "./restoreMigrations";
+import { restoreDatabaseThenSettle } from "./restoreAftermath";
 
-/**
- * The columns of `admin_settings` that describe THIS MACHINE rather than the
- * data in it.
- *
- * A dump carries them like everything else, so a restore silently adopts the
- * identity of whichever instance produced it. That is not hypothetical: on
- * 2026-09-05 prod was rebuilt from an RC dump and inherited the RC's three
- * URLs, so every pairing QR prod printed for the next three days sent the
- * phone to a different server, where the code was unknown. It took until
- * 2026-09-08 to find, because nothing about the running instance looked wrong
- * (forgejo#115).
- *
- * The two WebAuthn columns are here for the same reason and are the more
- * dangerous half: a relying-party id is bound to a host, and a credential is
- * bound to ONE rpId forever. Adopting a foreign one does not degrade passkey
- * sign-in, it ends it.
- *
- * `null` is a real value here — it means "no override, fall back to ENV" — so
- * the raw row is read rather than the resolved settings, and a restore puts an
- * instance back on its own ENV rather than persisting it into the database.
- */
-const INSTANCE_IDENTITY_COLUMNS = [
-  "frontendUrl",
-  "publicUrl",
-  "lanUrl",
-  "webauthnRpId",
-  "webauthnOrigins",
-] as const;
-
-type InstanceIdentity = {
-  frontendUrl: string | null;
-  publicUrl: string | null;
-  lanUrl: string | null;
-  webauthnRpId: string | null;
-  webauthnOrigins: string[];
-};
-
-export async function readInstanceIdentity(): Promise<InstanceIdentity | null> {
-  const row = await prisma.adminSettings.findFirst({
-    orderBy: { id: "asc" },
-    select: {
-      frontendUrl: true,
-      publicUrl: true,
-      lanUrl: true,
-      webauthnRpId: true,
-      webauthnOrigins: true,
-    },
-  });
-  return row ?? null;
-}
-
-/**
- * What the instance must put right once psql has replaced the database:
- * its own identity (forgejo#115), and the sync feed's history — the phones'
- * cursors describe the database that was just replaced, and continuing them
- * would patch the archive with changes it never had (forgejo#141). A new
- * epoch sends every client to a full read. Exported for its test.
- */
-export async function afterDatabaseRestore(
-  identityBefore: InstanceIdentity | null,
-  backupId: string
-): Promise<void> {
-  await suspendComparisonAfterRestore();
-  await restoreInstanceIdentity(identityBefore);
-  await resetSyncHistory(`restore of backup ${backupId}`);
-  // A dump taken before a revoke would bring the revoked link back to life.
-  // A restored instance starts with no public links (forgejo#281, T14).
-  await deleteAllShareLinks(`restore of backup ${backupId}`);
-}
-
-/**
- * Put this instance's own identity back over whatever the dump brought.
- *
- * Deliberately loud: an administrator who restored a dump in order to ADOPT
- * its identity needs to see that it was overwritten, and the log names both
- * sides so the difference is readable without a database client.
- *
- * Exported for its test, like `extractUploadsArchive` above: the behaviour is
- * a before/after pairing around a psql run, and a test that drives the whole
- * restore to reach it would prove nothing more.
- */
-export async function restoreInstanceIdentity(before: InstanceIdentity | null): Promise<void> {
-  if (!before) return;
-
-  const row = await prisma.adminSettings.findFirst({
-    orderBy: { id: "asc" },
-    select: {
-      id: true,
-      frontendUrl: true,
-      publicUrl: true,
-      lanUrl: true,
-      webauthnRpId: true,
-      webauthnOrigins: true,
-    },
-  });
-  if (!row) return;
-
-  const changed = INSTANCE_IDENTITY_COLUMNS.filter((column) => {
-    const mine = before[column];
-    const theirs = row[column];
-    return Array.isArray(mine) || Array.isArray(theirs)
-      ? JSON.stringify(mine ?? []) !== JSON.stringify(theirs ?? [])
-      : mine !== theirs;
-  });
-
-  if (changed.length === 0) return;
-
-  await prisma.adminSettings.update({
-    where: { id: row.id },
-    data: {
-      frontendUrl: before.frontendUrl,
-      publicUrl: before.publicUrl,
-      lanUrl: before.lanUrl,
-      webauthnRpId: before.webauthnRpId,
-      webauthnOrigins: before.webauthnOrigins,
-    },
-  });
-
-  logger.warn({
-    operation: "restore_instance_identity_kept",
-    message:
-      "The archive carried another instance's identity; this instance kept its own. Set these under Settings -> Instance if the archive's values were the intended ones.",
-    fields: changed,
-    kept: before,
-    discarded: Object.fromEntries(changed.map((column) => [column, row[column]])),
-  });
-}
+// Their home is restoreAftermath.ts; the tests and the share-link suite still
+// reach them through this module.
+export {
+  afterDatabaseRestore,
+  keepRestoredBackupUsable,
+  readInstanceIdentity,
+  restoreInstanceIdentity,
+} from "./restoreAftermath";
 
 /**
  * Unpack an uploads archive so the files land where their database rows expect.
@@ -357,29 +234,6 @@ function toRestoreError(problem: RestoreArchiveProblem): AppError {
         "RESTORE_ENCRYPTION_KEY_MISMATCH"
       );
   }
-}
-
-/**
- * The archive just restored stays restorable (forgejo#157 follow-up).
- *
- * A dump carries the `backups` table as it stood while that very dump was
- * being written, with its own row still `running`. The reconcile above then
- * marks it failed ("Interrupted: restore of ..."), so the archive the admin
- * had just used successfully was refused the next time with "Backup is not
- * completed" (measured 2026-10-02, on the same version as well as across
- * versions). This instance read the row before the restore and knows the
- * archive is complete, having just restored from it, so that row is put back.
- * Exported for its test.
- */
-export async function keepRestoredBackupUsable(
-  before: NonNullable<Awaited<ReturnType<typeof prisma.backup.findUnique>>>
-): Promise<void> {
-  const { id, metadata, createdAt: _createdAt, updatedAt: _updatedAt, ...fields } = before;
-  const data = {
-    ...fields,
-    metadata: metadata === null ? Prisma.JsonNull : (metadata as Prisma.InputJsonValue),
-  };
-  await prisma.backup.upsert({ where: { id }, update: data, create: { id, ...data } });
 }
 
 /**
@@ -601,8 +455,6 @@ export async function restoreBackup(
     // Restore database if requested
     if (wantsDatabase) {
       logger.info({ operation: "restore_db", message: "Restoring database" });
-      // Read BEFORE psql runs — afterwards the row belongs to the archive.
-      const identityBefore = await readInstanceIdentity();
       // NOTE: no HTTP surface sets `targetDatabaseUrl`. The admin UI used to
       // offer a field for it and the route's Zod schema silently dropped it, so
       // an administrator who typed another database watched this instance be
@@ -612,18 +464,22 @@ export async function restoreBackup(
       const dbUrl = options.targetDatabaseUrl || DATABASE_URL;
       const dbInfo = parseDatabaseUrl(dbUrl);
 
-      try {
-        await runRestorePsql(dbInfo, dbBackupPath, migrationEpilogue(pendingMigrations));
-      } catch (error) {
-        throw asMigrationFailure(error);
-      }
-      logger.info({
-        operation: "restore_db_complete",
-        message: "Database restored",
-        migrationsApplied: pendingMigrations.length,
-      });
-      await assertRestoredSchema(localMigrations);
-      await afterDatabaseRestore(identityBefore, id);
+      await restoreDatabaseThenSettle(
+        backup,
+        async () => {
+          try {
+            await runRestorePsql(dbInfo, dbBackupPath, migrationEpilogue(pendingMigrations));
+          } catch (error) {
+            throw asMigrationFailure(error);
+          }
+          logger.info({
+            operation: "restore_db_complete",
+            message: "Database restored",
+            migrationsApplied: pendingMigrations.length,
+          });
+        },
+        () => assertRestoredSchema(localMigrations)
+      );
     }
 
     // Restore files if requested. The part is known to be present and
@@ -638,17 +494,6 @@ export async function restoreBackup(
       // not an hour from now (forgejo#287).
       await sweepAfterFilesRestore(filesBackupPath);
       logger.info({ operation: "restore_files_complete", message: "Files restored" });
-    }
-
-    // A restored database carries the backup rows as they stood when the dump
-    // was taken — including the row of the very backup being dumped, which was
-    // still 'running' at that moment. Left alone it becomes a permanent lock:
-    // further backups and restores answer 409 and the scheduler skips. The
-    // route verified no operation was running before this restore began, so
-    // anything in flight now came out of the archive (AUD-069).
-    if (wantsDatabase) {
-      await reconcileInterruptedBackups(`restore of backup ${id}`);
-      await keepRestoredBackupUsable(backup);
     }
 
     // Cleanup
