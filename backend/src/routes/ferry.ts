@@ -19,7 +19,7 @@ import {
 } from "../schemas/ferry";
 import { mergeFerryJourney } from "../services/ferry/ferryJourneyWrite";
 import { withFerryTimes } from "../services/ferry/timesDto";
-import { recomputeTripStatus } from "../services/tripStatusService";
+import { restatusTrips } from "../services/trip/restatusTrips";
 import { ferryYear } from "../shared/ferryCounting";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
@@ -50,12 +50,6 @@ function primaryOrder(query: FerryQueryInput): Prisma.FerryJourneyOrderByWithRel
   return column === "distanceKm"
     ? { distanceKm: { sort: query.order, nulls: "last" } }
     : { [column]: query.order };
-}
-
-async function restatusTrips(...tripIds: Array<string | null | undefined>): Promise<void> {
-  for (const id of new Set(tripIds.filter((t): t is string => Boolean(t)))) {
-    await recomputeTripStatus(id);
-  }
 }
 
 function refuseStrayFold(body: unknown): void {
@@ -207,7 +201,7 @@ router.post(
           return ride ? withFerryTimes(ride) : null;
         },
       });
-      await restatusTrips(result.tripId);
+      await restatusTrips([result.tripId]);
       res.status(created ? 201 : 200).json({ success: true, data: result });
     } catch (err) {
       next(err);
@@ -342,7 +336,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       });
     });
 
-    await restatusTrips(existing.tripId, ride.tripId);
+    await restatusTrips([existing.tripId, ride.tripId]);
     res.json({ success: true, data: withFerryTimes(ride) });
   } catch (err) {
     next(err);
@@ -367,7 +361,7 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
     });
     if (deleted.count !== 1)
       throw new AppError("Crossing changed elsewhere", 409, "VERSION_CONFLICT");
-    await restatusTrips(existing.tripId);
+    await restatusTrips([existing.tripId]);
     res.status(204).send();
   } catch (err) {
     next(err);

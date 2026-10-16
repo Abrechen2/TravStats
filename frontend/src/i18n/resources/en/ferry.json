@@ -60,7 +60,8 @@
     "title": "Roadtrip leg",
     "hint": "The linked leg counts as a ferry and is excluded from road kilometres.",
     "none": "No linked leg",
-    "tripLocked": "Unlink the roadtrip leg before changing the trip."
+    "tripLocked": "Unlink the roadtrip leg before changing the trip.",
+    "truncated": "Only the 500 newest legs are shown. Older ones are not listed here."
   },
   "departureFold": "Departure during clock change",
   "arrivalFold": "Arrival during clock change",

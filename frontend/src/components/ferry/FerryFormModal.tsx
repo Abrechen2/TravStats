@@ -48,6 +48,9 @@ function initial(ride: FerryJourney | null) {
   const fields: Record<string, string> = {};
   for (const key of [...TEXT, ...NUMBERS])
     fields[key] = String(ride?.[key] ?? (key === "currency" ? "EUR" : ""));
+  // Only a typed distance is shown: a prefilled great-circle figure would be
+  // saved back and stored as distanceSource "user", freezing it on every edit.
+  if (ride?.distanceSource !== "user") fields.distanceKm = "";
   fields.departureLocal = ride ? (railDeparture(ride)?.local.slice(0, 16) ?? "") : "";
   fields.arrivalLocal = ride ? (railArrival(ride)?.local.slice(0, 16) ?? "") : "";
   fields.companions = ride?.companions.join(", ") ?? "";

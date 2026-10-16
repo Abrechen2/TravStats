@@ -519,6 +519,20 @@ describe("GET /api/v1/upcoming", () => {
       expect(entry.detailId).toBe(entry.id);
     });
 
+    it("finds tomorrow's train behind more than twenty trains that already left today", async () => {
+      // The candidate query read 20 rows from 38 h ago and filtered the departed
+      // ones afterwards, so a busy day of trains hid every later ride.
+      await enableDomains(["flight", "rail"]);
+      const departed = Array.from({ length: 21 }, (_, i) =>
+        ride(new Date(Date.now() - 20 * 3_600_000 + i * 60_000))
+      );
+      await prisma.railJourney.createMany({ data: departed });
+      const next = await prisma.railJourney.create({ data: ride(inDays(1)) });
+      const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
+      const entry = res.body.data.entries.find((e: { domain: string }) => e.domain === "rail");
+      expect(entry?.id).toBe(next.id);
+    });
+
     /**
      * forgejo#210: a ride with a change is named from where it starts to where
      * it ENDS — "Als nächstes" used to name the first train's destination, the

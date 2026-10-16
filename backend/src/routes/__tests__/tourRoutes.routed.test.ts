@@ -11,6 +11,7 @@ import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { resolveRouteProvider } from "../../services/tour/routing/resolveProvider";
 import type { RouteFailure, RouteProvider, RouteResult } from "../../services/tour/routing/types";
+import { resetProviderBudget, takeProviderCall } from "../../services/tour/routing/providerBudget";
 
 const mockResolveProvider = resolveRouteProvider as jest.Mock<Promise<RouteProvider | null>>;
 
@@ -125,6 +126,33 @@ describe("Tour route sections — provider routing", () => {
     expect(res.body.leg.waypoints).toEqual(line);
     expect(res.body.fallbackReason).toBeNull();
     expect(routeImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("spends the instance's daily routing budget: a user who has used theirs is not routed", async () => {
+    // The budget used to be drawn only by bus routing, so tour and roadtrip
+    // routing spent the instance's key without any cap.
+    const routeImpl = jest.fn().mockResolvedValue({
+      waypoints: [
+        [OSLO.lon, OSLO.lat],
+        [KRISTIANSAND.lon, KRISTIANSAND.lat],
+      ],
+      distanceKm: 350,
+      drivingMinutes: 240,
+    });
+    mockResolveProvider.mockResolvedValue(fakeProvider(routeImpl));
+    try {
+      while (takeProviderCall(userId) === "ok");
+      const single = await request(app)
+        .post(routeLegUrl(osloId, kristiansandId))
+        .set("Cookie", cookie)
+        .send();
+      expect(single.body.fallbackReason).toBe("rate_limited");
+      const all = await request(app).post(routeAllUrl()).set("Cookie", cookie).send();
+      expect(all.body.fallbackReason).toBe("rate_limited");
+      expect(routeImpl).not.toHaveBeenCalled();
+    } finally {
+      resetProviderBudget();
+    }
   });
 
   it("names why a single leg stayed straight, so the client can say more than 'nothing happened'", async () => {

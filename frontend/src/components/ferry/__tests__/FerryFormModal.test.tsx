@@ -75,6 +75,27 @@ describe("Ferry editor", () => {
     expect(input).not.toHaveProperty("departureLocal");
     expect(input).not.toHaveProperty("departureStation");
   });
+  it("does not save a computed distance back as one the user typed", async () => {
+    // An edit used to prefill the great-circle figure and send it back, which the
+    // backend stores as distanceSource "user" — freezing a distance nobody typed.
+    mocks.save.mockResolvedValue(ride);
+    const computed = { ...ride, distanceKm: 512, distanceSource: "great_circle" } as FerryJourney;
+    render(<FerryFormModal journey={computed} onClose={vi.fn()} onSaved={vi.fn()} />);
+    expect(screen.getByLabelText("ferry:distanceKm")).toHaveValue(null);
+    fireEvent.change(screen.getByLabelText("ferry:notes"), { target: { value: "x" } });
+    fireEvent.click(screen.getByRole("button", { name: "ferry:save" }));
+    await waitFor(() => expect(mocks.save).toHaveBeenCalled());
+    expect(mocks.save.mock.calls[0][1].distanceKm).toBeNull();
+  });
+  it("keeps a distance the user typed", async () => {
+    mocks.save.mockResolvedValue(ride);
+    const typed = { ...ride, distanceKm: 333, distanceSource: "user" } as FerryJourney;
+    render(<FerryFormModal journey={typed} onClose={vi.fn()} onSaved={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("ferry:notes"), { target: { value: "x" } });
+    fireEvent.click(screen.getByRole("button", { name: "ferry:save" }));
+    await waitFor(() => expect(mocks.save).toHaveBeenCalled());
+    expect(mocks.save.mock.calls[0][1].distanceKm).toBe(333);
+  });
   it("keeps the form open and explains a failed save", async () => {
     mocks.save.mockRejectedValue(new Error("offline"));
     const onSaved = vi.fn();

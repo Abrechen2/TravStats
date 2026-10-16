@@ -9,6 +9,7 @@ import { extractTextFromPdf } from "../../services/pdfParser";
 import { extractEmailFromFile } from "../../services/emailExtractor";
 import { hasUsableText } from "../../services/parsing/usableText";
 import { previewFerryText } from "../../services/ferry/ticketPreview";
+import logger from "../../utils/logger";
 export const ferryTicketRequest = z.union([
   z.object({ documentId: z.string().uuid() }).strict(),
   z.object({ text: z.string().trim().min(1).max(60000) }).strict(),
@@ -34,7 +35,16 @@ router.post(
         if (document.format === "pdf") {
           try {
             text = await extractTextFromPdf(buffer);
-          } catch {
+          } catch (error) {
+            // Still answered as "no text", but the broken file is named in the log.
+            logger.warn(
+              {
+                operation: "ferry.ticketPreview.pdf",
+                documentId: parsed.data.documentId,
+                error: error instanceof Error ? error.message : String(error),
+              },
+              "Ferry ticket PDF could not be read"
+            );
             text = "";
           }
         } else if (document.format === "eml")

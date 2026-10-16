@@ -6,6 +6,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { LEG_MODES, LegMode } from "../../services/tour/tourDistance";
 import { resolveRouteProvider } from "../../services/tour/routing/resolveProvider";
 import { routeLegGeometry } from "../../services/tour/routing/routeLeg";
+import { providerCallGate } from "../../services/tour/routing/providerBudget";
 import { applyRoutedLeg } from "../../services/tour/routing/autoRouteLegs";
 import {
   isRoutableMode,
@@ -112,12 +113,11 @@ router.post(
       const mode = requireLegMode(leg.mode);
 
       const vehicle = await routeVehicle(routeId);
-      const routed = await routeLegGeometry(provider, {
-        from: fromCoord,
-        to: toCoord,
-        mode,
-        vehicle,
-      });
+      const routed = await routeLegGeometry(
+        provider,
+        { from: fromCoord, to: toCoord, mode, vehicle },
+        providerCallGate(userId)
+      );
       // A fallback replaces only a straight line. A drawn, adopted or earlier
       // routed line is closer to the road than the chord a failed attempt
       // would write over it, and nobody asked for it to go.
@@ -210,12 +210,11 @@ router.post(
 
         const fromCoord = requireCoords(leg.fromStop, "from");
         const toCoord = requireCoords(leg.toStop, "to");
-        const routed = await routeLegGeometry(provider, {
-          from: fromCoord,
-          to: toCoord,
-          mode,
-          vehicle,
-        });
+        const routed = await routeLegGeometry(
+          provider,
+          { from: fromCoord, to: toCoord, mode, vehicle },
+          providerCallGate(userId)
+        );
         if (routed.fallbackReason === null || leg.source === "straight") {
           await applyRoutedLeg(leg.id, routed);
         }

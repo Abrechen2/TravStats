@@ -60,7 +60,8 @@
     "title": "Roadtrip-Etappe",
     "hint": "Die verknüpfte Etappe wird als Fähre gezählt und aus den Straßenkilometern ausgeschlossen.",
     "none": "Keine Verknüpfung",
-    "tripLocked": "Zum Wechseln der Reise zuerst die Roadtrip-Verknüpfung lösen."
+    "tripLocked": "Zum Wechseln der Reise zuerst die Roadtrip-Verknüpfung lösen.",
+    "truncated": "Nur die 500 neuesten Etappen werden angezeigt. Ältere findest du hier nicht."
   },
   "departureFold": "Abfahrt bei Zeitumstellung",
   "arrivalFold": "Ankunft bei Zeitumstellung",

@@ -301,7 +301,7 @@
     "personal": "cabinType seat notes tags companions",
     "photos": "",
     "documents": "bookingReference ticketReference",
-    "excluded": "userId shareKey"
+    "excluded": "userId shareKey roadtripLegBefore"
   },
   "Companion": {
     "details": "",

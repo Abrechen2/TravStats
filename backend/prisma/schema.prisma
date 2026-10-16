@@ -4530,6 +4530,10 @@ model Note {
 model FerryJourney {
   roadtripLegId String? @unique @map("roadtrip_leg_id")
   roadtripLeg TripRouteLeg? @relation(fields: [roadtripLegId], references: [id], onDelete: SetNull)
+  /// The linked leg's routing as it was before linking (mode, source,
+  /// confidence, waypoints, drivingMinutes, distanceKm). Linking makes the leg
+  /// a straight ferry leg; unlinking or relinking restores it from here.
+  roadtripLegBefore Json? @map("roadtrip_leg_before")
   id     String @id @default(uuid())
   userId String @map("user_id")
 

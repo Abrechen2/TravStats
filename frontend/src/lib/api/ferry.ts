@@ -59,8 +59,12 @@ export const ferryApi = {
       })
     ).data.data;
   },
-  async roadtripLegs() {
-    return (await api.get<Envelope<FerryRoadtripLeg[]>>("/ferry/roadtrip-legs")).data.data;
+  /** The picker's legs, newest first; `truncated` when older ones were left out. */
+  async roadtripLegs(): Promise<{ legs: FerryRoadtripLeg[]; truncated: boolean }> {
+    const res = await api.get<Envelope<FerryRoadtripLeg[]> & { meta?: { truncated?: boolean } }>(
+      "/ferry/roadtrip-legs"
+    );
+    return { legs: res.data.data, truncated: res.data.meta?.truncated === true };
   },
   async linkLeg(id: string, legId: string | null) {
     await api.put(`/ferry/${encodeURIComponent(id)}/roadtrip-leg`, { legId });

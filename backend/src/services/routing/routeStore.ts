@@ -73,9 +73,20 @@ export class RouteStore<T> {
     }
   }
 
-  /** Coalesce the read AND computation, including callers arriving during disk I/O. */
-  async resolve(key: string, compute: () => Promise<T>, keep: (value: T) => boolean): Promise<T> {
+  /**
+   * Coalesce the read AND computation, including callers arriving during disk I/O.
+   * `share` says whether a waiter may take the originator's result: a refusal
+   * that belongs to the originator alone (its own spent budget) must not reach
+   * a waiter, who then computes once with its own `compute`.
+   */
+  async resolve(
+    key: string,
+    compute: () => Promise<T>,
+    keep: (value: T) => boolean,
+    share: (value: T) => boolean = () => true
+  ): Promise<T> {
     let pending = this.pending.get(key);
+    const waiter = pending !== undefined;
     if (!pending) {
       pending = (async () => {
         const stored = await this.get(key);
@@ -86,10 +97,15 @@ export class RouteStore<T> {
       })();
       this.pending.set(key, pending);
     }
+    let result: T;
     try {
-      return structuredClone(await pending);
+      result = structuredClone(await pending);
     } finally {
       if (this.pending.get(key) === pending) this.pending.delete(key);
     }
+    if (!waiter || share(result)) return result;
+    const own = await compute();
+    if (keep(own)) await this.put(key, own);
+    return own;
   }
 }
