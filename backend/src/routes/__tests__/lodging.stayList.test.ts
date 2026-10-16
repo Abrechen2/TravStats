@@ -202,6 +202,9 @@ describe("GET /api/v1/lodging/stays", () => {
     expect((await list({ from: "June" })).status).toBe(400);
     expect((await list({ from: "2025-06-10", to: "2025-06-01" })).status).toBe(400);
     expect((await list({ tripId: "nope" })).status).toBe(400);
+    // A day the calendar does not have reached the database and answered 500.
+    expect((await list({ from: "2026-02-30" })).status).toBe(400);
+    expect((await list({ to: "2026-13-01" })).status).toBe(400);
   });
 
   it("requires authentication", async () => {
