@@ -122,11 +122,11 @@ ALTER TABLE "leaderboard_board_members"
 -- and expiry have no counterpart in the new scope and are not carried. Remote friendships,
 -- group grants and grants without statistics are NOT copied: their users ask again. The E2E
 -- tables themselves stay untouched.
--- The old scope allowed duplicate and unknown domains and an absent list; the new scope
--- (leaderboardScopeSchema) allows 1..9 distinct known ones. So domains are de-duplicated,
--- filtered to the known keys, and an empty result falls back to every domain (an old grant
--- with no domain list restricted nothing). A grant whose year is not null or an integer in
--- 1900..2200 is not copied rather than widened to "every year".
+-- The old scope was an ALLOW-LIST of domains (empty list = nothing shared) and allowed
+-- duplicate and unknown entries; the new scope (leaderboardScopeSchema) allows 1..9 distinct
+-- known ones. So domains are de-duplicated and filtered to the known keys, and a grant whose
+-- filtered list is empty is NOT copied (never widened). Likewise a grant whose year is not
+-- null or an integer in 1900..2200 is not copied rather than widened to "every year".
 -- BEGIN LEADERBOARD DATA COPY
 DO $$
 DECLARE copied integer;
@@ -135,31 +135,32 @@ BEGIN
   SELECT gen_random_uuid()::text, l."user_id", c."user_id", 'accepted',
          jsonb_build_object(
            'groups', '["distance","trips","time","places"]'::jsonb,
-           'domains', COALESCE(
-             (SELECT jsonb_agg(DISTINCT d)
-                FROM jsonb_array_elements(
-                  CASE WHEN jsonb_typeof(g."scope"->'domains') = 'array'
-                       THEN g."scope"->'domains' ELSE '[]'::jsonb END) d
-               WHERE d IN ('"flight"', '"cruise"', '"lodging"', '"poi"', '"roadtrip"',
-                           '"rail"', '"rental"', '"bus"', '"ferry"')),
-             '["flight","cruise","lodging","poi","roadtrip","rail","rental","bus","ferry"]'::jsonb),
+           'domains', dm."domains",
            'year', COALESCE(g."scope"->'year', 'null'::jsonb)),
          NOW(), NOW()
   FROM "comparison_links" l
   JOIN "comparison_links" c
     ON c."channel" = l."channel" AND c."id" <> l."id" AND c."origin" = 'local' AND NOT c."revoked"
   JOIN "comparison_grants" g ON g."link_id" = l."id" AND g."audience" = ''
+  CROSS JOIN LATERAL (
+    SELECT jsonb_agg(DISTINCT d) AS "domains"
+    FROM jsonb_array_elements(
+      CASE WHEN jsonb_typeof(g."scope"->'domains') = 'array'
+           THEN g."scope"->'domains' ELSE '[]'::jsonb END) d
+    WHERE d IN ('"flight"', '"cruise"', '"lodging"', '"poi"', '"roadtrip"',
+                '"rail"', '"rental"', '"bus"', '"ferry"')
+  ) dm
   JOIN "users" ou ON ou."id" = l."user_id" AND ou."is_active"
   WHERE l."origin" = 'local'
     AND l."confirmed" AND l."remote_confirmed" AND NOT l."revoked"
     AND l."user_id" <> c."user_id"
     AND g."active" AND (g."expires_at" IS NULL OR g."expires_at" > NOW())
+    AND dm."domains" IS NOT NULL
     AND g."scope"->'statistics' = 'true'::jsonb
     AND (jsonb_typeof(g."scope"->'year') IS NULL
          OR jsonb_typeof(g."scope"->'year') = 'null'
          OR (jsonb_typeof(g."scope"->'year') = 'number'
-             AND (g."scope"->>'year') ~ '^(19|20|21)[0-9]{2}$'
-             AND (g."scope"->>'year')::int BETWEEN 1900 AND 2200))
+             AND (g."scope"->>'year') ~ '^(19[0-9]{2}|2[01][0-9]{2}|2200)$'))
   ON CONFLICT ("owner_id", "viewer_id") DO NOTHING;
   GET DIAGNOSTICS copied = ROW_COUNT;
   RAISE NOTICE 'leaderboard: % consents copied from comparison grants', copied;

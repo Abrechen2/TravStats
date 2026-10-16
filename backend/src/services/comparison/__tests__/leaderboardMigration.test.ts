@@ -14,9 +14,9 @@ const copy = sql.slice(
 );
 const users: string[] = [];
 
-type OldScope = { statistics: boolean; domains?: string[] };
+type OldScope = { statistics: boolean; domains?: string[]; year?: number | string | null };
 
-const oldScope = ({ statistics, domains }: OldScope) =>
+const oldScope = ({ statistics, domains, year = null }: OldScope) =>
   ({
     statistics,
     details: false,
@@ -27,12 +27,21 @@ const oldScope = ({ statistics, domains }: OldScope) =>
     ...(domains ? { domains } : {}),
     tripIds: [],
     futureTrips: true,
-    year: null,
+    year,
     precision: "exact",
     expiresAt: null,
     acceptedAt: new Date().toISOString(),
     allExisting: false,
   }) as unknown as Prisma.InputJsonValue;
+
+const quietly = async (run: () => Promise<unknown>) => {
+  const spy = jest.spyOn(console, "log").mockImplementation(() => undefined);
+  try {
+    await run();
+  } finally {
+    spy.mockRestore();
+  }
+};
 
 async function user(): Promise<string> {
   const u = await prisma.user.create({
@@ -81,25 +90,69 @@ it("carries an active statistics grant over as an accepted consent, exactly once
 it("de-duplicates domains and always produces a scope the schema accepts", async () => {
   const [a, b, c] = [await user(), await user(), await user()];
   await friends(a, b, { statistics: true, domains: ["flight", "flight", "rail"] });
-  await friends(a, c, { statistics: true });
+  await friends(a, c, { statistics: true, domains: ["flight", "teleport"], year: 2200 });
   await prisma.$executeRawUnsafe(copy);
   const rows = await prisma.leaderboardConsent.findMany({ where: { ownerId: a } });
   expect(rows).toHaveLength(2);
   for (const row of rows) expect(leaderboardScopeSchema.safeParse(row.scope).success).toBe(true);
   const dup = rows.find((r) => r.viewerId === b);
   expect((dup?.scope as { domains: string[] }).domains.slice().sort()).toEqual(["flight", "rail"]);
+  const known = rows.find((r) => r.viewerId === c);
+  expect(known?.scope).toMatchObject({ domains: ["flight"], year: 2200 });
 });
 
-it("holds exactly one viewer kind and a known status per consent", async () => {
+it("never widens a grant: no domains, an empty list, only unknown domains or a bad year copy nothing", async () => {
   const a = await user();
-  await expect(
-    prisma.$executeRawUnsafe(
-      `INSERT INTO "leaderboard_consents" ("id","owner_id","status") VALUES ('${randomUUID()}','${a}','pending')`
-    )
-  ).rejects.toThrow();
-  await expect(
-    prisma.$executeRawUnsafe(
-      `INSERT INTO "leaderboard_consents" ("id","owner_id","viewer_id","status") VALUES ('${randomUUID()}','${a}','${a}','maybe')`
-    )
-  ).rejects.toThrow();
+  await friends(a, await user(), { statistics: true });
+  await friends(a, await user(), { statistics: true, domains: [] });
+  await friends(a, await user(), { statistics: true, domains: ["teleport"] });
+  await friends(a, await user(), { statistics: true, domains: ["flight"], year: 1899 });
+  await friends(a, await user(), { statistics: true, domains: ["flight"], year: "2024" });
+  await friends(a, await user(), { statistics: true, domains: ["flight"], year: 2201 });
+  await prisma.$executeRawUnsafe(copy);
+  expect(await prisma.leaderboardConsent.count({ where: { ownerId: a } })).toBe(0);
+});
+
+describe("CHECK constraints", () => {
+  const consent = (cols: string, vals: string) =>
+    quietly(() =>
+      prisma.$executeRawUnsafe(
+        `INSERT INTO "leaderboard_consents" ("id",${cols}) VALUES ('${randomUUID()}',${vals})`
+      )
+    );
+  const reject = (p: Promise<unknown>, name: RegExp) => expect(p).rejects.toThrow(name);
+
+  it("holds exactly one viewer kind per consent", async () => {
+    const a = await user();
+    const remote = await prisma.leaderboardRemote.create({
+      data: { userId: a, origin: "o", channel: randomUUID(), username: "u", displayName: "U" },
+    });
+    await reject(consent('"owner_id"', `'${a}'`), /leaderboard_consents_one_viewer/);
+    await reject(
+      consent('"owner_id","viewer_id","remote_id"', `'${a}','${a}','${remote.id}'`),
+      /leaderboard_consents_one_viewer/
+    );
+    await consent('"owner_id","remote_id"', `'${a}','${remote.id}'`);
+  });
+
+  it("holds a known status per consent", async () => {
+    const a = await user();
+    await reject(
+      consent('"owner_id","viewer_id","status"', `'${a}','${a}','maybe'`),
+      /leaderboard_consents_status/
+    );
+  });
+
+  it("holds exactly one member kind per board member", async () => {
+    const a = await user();
+    const board = await prisma.leaderboardBoard.create({ data: { userId: a, name: "b" } });
+    await reject(
+      quietly(() =>
+        prisma.$executeRawUnsafe(
+          `INSERT INTO "leaderboard_board_members" ("id","board_id") VALUES ('${randomUUID()}','${board.id}')`
+        )
+      ),
+      /leaderboard_board_members_one_member/
+    );
+  });
 });
