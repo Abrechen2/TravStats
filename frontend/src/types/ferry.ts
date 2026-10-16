@@ -9,6 +9,8 @@ export interface FerryJourney {
   userId: string;
   operator: string | null;
   vesselName: string | null;
+  /** The vessel the live position reads; bound on the first answered lookup. */
+  vesselMmsi: string | null;
   vehicleType: string | null;
   vehicleRegistration: string | null;
   vehicleLengthM: number | null;

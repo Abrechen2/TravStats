@@ -210,10 +210,18 @@ registry.registerPath({
   method: "get",
   path: "/ferry/{id}/live-position",
   tags: ["Ferry"],
-  summary: "On-demand current AIS snapshot for an explicitly selected MMSI",
+  summary: "On-demand current AIS snapshot for the crossing's vessel",
   description:
-    "Checks crossing ownership. No historical journey data is overwritten. Returns noSignal after 15 seconds without a usable message; receipt time is not observation time.",
-  request: { params, query: z.object({ mmsi: z.string().regex(/^\d{9}$/) }) },
+    "Checks crossing ownership. The MMSI is the crossing's `vesselMmsi`; a crossing without one takes the first MMSI that answers, and a different one is refused (400, field mmsi) until the crossing is edited. One open lookup per user and two per instance, beyond that `busy`. Returns noSignal after 15 seconds without a usable message; receipt time is not observation time.",
+  request: {
+    params,
+    query: z.object({
+      mmsi: z
+        .string()
+        .regex(/^\d{9}$/)
+        .optional(),
+    }),
+  },
   responses: {
     200: {
       description: "Snapshot or explicit unavailable status",

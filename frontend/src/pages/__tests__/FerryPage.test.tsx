@@ -6,6 +6,7 @@ const rideFixture = (): FerryJourney => ({
   ...busFixture(),
   operator: "Adria Ferries",
   vesselName: "AF Mia",
+  vesselMmsi: null,
   roadtripLegId: null,
   vehicleType: "motorhome",
   vehicleRegistration: null,

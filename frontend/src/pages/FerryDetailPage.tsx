@@ -193,7 +193,7 @@ export default function FerryDetailPage() {
           <DocumentsSection entry={{ type: "ferryJourney", id: ride.id }} />
         </div>
         <aside className="flex flex-col gap-6 md:col-span-2">
-          <FerryLivePosition key={ride.id} id={ride.id} />
+          <FerryLivePosition key={ride.id} id={ride.id} boundMmsi={ride.vesselMmsi} />
           {ride.trip && (
             <DetailSection title={t("ferry:trip")}>
               <TripPill trip={ride.trip} />

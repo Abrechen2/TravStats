@@ -15,6 +15,7 @@ import { FerryStationField, EMPTY_TERMINAL, type FerryStationDraft } from "./Fer
 const TEXT = [
   "operator",
   "vesselName",
+  "vesselMmsi",
   "bookingReference",
   "ticketReference",
   "vehicleType",
@@ -145,6 +146,10 @@ export function FerryFormModal({
   };
   const save = async () => {
     if (savingRef.current || importBusy || !complete) return;
+    if (fields.vesselMmsi.trim() !== "" && !/^\d{9}$/.test(fields.vesselMmsi.trim())) {
+      setError(t("ferry:invalidMmsi"));
+      return;
+    }
     const numbers = readNumbers(fields);
     if ("invalid" in numbers) {
       setError(t("ferry:invalidNumber", { field: t(`ferry:${numbers.invalid}`) }));
@@ -340,6 +345,7 @@ export function FerryFormModal({
             {[
               "operator",
               "vesselName",
+              "vesselMmsi",
               "bookingReference",
               "ticketReference",
               "passengerCount",

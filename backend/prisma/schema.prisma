@@ -4555,6 +4555,9 @@ model FerryJourney {
 
   operator String?
   vesselName String? @map("vessel_name")
+  /// The MMSI the live position reads (9 digits). Bound on the first answered
+  /// lookup so a crossing is not a free AIS proxy for any vessel.
+  vesselMmsi String? @map("vessel_mmsi")
   vehicleType String? @map("vehicle_type")
   vehicleRegistration String? @map("vehicle_registration")
   vehicleLengthM Float? @map("vehicle_length_m")
