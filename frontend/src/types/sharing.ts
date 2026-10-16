@@ -55,10 +55,41 @@ export interface MemberBookingTotal {
   totals: { currency: string; amount: number }[];
 }
 
+/**
+ * The ONE reason sharing a trip with a person is not possible yet. The
+ * server decides it (`accountInactive` is added by the controller's person
+ * list), so the page never draws an action the server would refuse.
+ */
+export type ShareBlock =
+  | "notLinked"
+  | "consentMissing"
+  | "consentPending"
+  | "groupConsentMissing"
+  | "alreadyMember"
+  | "accountInactive";
+
+/** One person of a trip: a companion, or a group member who is none. */
+export interface TripPerson {
+  /** "c:<companionId>" for a companion, "u:<userId>" for a member who is none. */
+  key: string;
+  companionId: string | null;
+  name: string;
+  account: SharePerson | null;
+  /** The caller's request to `account`; "none" when there is no row. */
+  consent: "none" | ConsentStatus;
+  member: boolean;
+  /** Members only: an accepted consent in either direction lets changes through. */
+  receivesChanges: boolean | null;
+  shareBlockedBy: ShareBlock | null;
+}
+
 export interface TripSharing {
   groupId: string | null;
   members: SharePerson[];
   candidates: ShareCandidate[];
+  people: TripPerson[];
+  /** Accounts that accepted the caller's consent request. */
+  linkableUsers: SharePerson[];
   bookingTotals: MemberBookingTotal[];
 }
 

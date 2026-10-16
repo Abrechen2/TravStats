@@ -31,6 +31,8 @@ const unshared: TripSharing = {
   groupId: null,
   members: [],
   bookingTotals: [],
+  people: [],
+  linkableUsers: [],
   candidates: [
     { companionId: "c-ben", name: "Ben", user: ben, consenting: true, shared: false },
     { companionId: "c-carl", name: "Carl", user: carl, consenting: false, shared: false },
@@ -84,6 +86,8 @@ describe("TripSharingPanel", () => {
       groupId: "g1",
       members: [ben],
       bookingTotals: [],
+      people: [],
+      linkableUsers: [],
       candidates: [{ ...unshared.candidates[0], shared: true }, unshared.candidates[1]],
     });
     await userEvent.click(benBox);
@@ -127,6 +131,8 @@ describe("TripSharingPanel", () => {
       groupId: "g1",
       members: [ben],
       bookingTotals: [{ member: ben, totals: [{ currency: "EUR", amount: 980.5 }] }],
+      people: [],
+      linkableUsers: [],
       candidates: [{ ...unshared.candidates[0], shared: true }],
     });
     renderPanel();
@@ -147,6 +153,8 @@ describe("TripSharingPanel", () => {
       groupId: "g1",
       members: [ben],
       bookingTotals: [],
+      people: [],
+      linkableUsers: [],
       candidates: [{ ...unshared.candidates[0], shared: true }],
     });
     api.leaveGroup.mockResolvedValue(undefined);
