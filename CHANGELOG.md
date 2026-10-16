@@ -8,6 +8,44 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 - Full data export includes saved TravPlan content and proposals; daily quota counters are explicitly excluded.
 
+### Added
+
+- **Compare with friends is a leaderboard of totals.** `/compare` ranks you and
+  the people who agreed — kilometres, trips, time away, countries, places —
+  per year or overall. Each person decides which figures the other may see,
+  and a pending request shares nothing until it is accepted. Friends on other
+  TravStats servers join through an invitation code; between servers only
+  signed totals travel, never single trips.
+- **Server connections in Admin → Instanz.** The instance's identity and the
+  servers it trusts are managed in one card; the key is generated there and
+  never shown.
+- **Ferry crossings can be shared** with a trip and travel in the
+  `.travstats` file.
+- **A trip shows its travellers with their sharing state** — linked, shares
+  this trip, request open — and offers one action per person. A person who
+  agreed but is not yet on the trip can be added from the share dialog.
+- **One "Teilen" button** in the trip head for a companion's copy or a public
+  link.
+
+### Changed
+
+- The end-to-end encrypted transfer moved to its own page,
+  `/encrypted-share`, behind its own beta switch.
+- A shared trip is copied for each person on their own calendar: a copy's
+  status (planned, under way, done) follows the recipient's time zone.
+- If the recipient already logged the same flight or crossing on another of
+  their trips, sharing moves that entry into the shared trip and links it
+  instead of creating a duplicate; the notice says so and can be undone.
+- A provider change that reaches every member through the shared trip makes
+  one inbox item, not one per person.
+- Ferry edits and deletes accept an optional read version. Conflicting writes
+  return HTTP 409; edits claim the version atomically in their transaction.
+  Older clients can continue to write without a version precondition.
+- Settings expose supported travel domains independently of enabled domains,
+  allowing compatible clients to offer a disabled domain again.
+- TravPlan uses shared theme tokens and the selected application locale for
+  number formatting.
+
 ### Fixed
 
 - Public-link lifetimes are calculated from the server clock, preventing a fast
@@ -16,15 +54,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 - Public-link permission is now under Administration → Instance. Personal
   settings retain link management and point admins to the instance switch.
 
-### Changed
-
-- Ferry edits and deletes accept an optional read version. Conflicting writes
-  return HTTP 409; edits claim the version atomically in their transaction.
-  Older clients can continue to write without a version precondition.
-- Settings expose supported travel domains independently of enabled domains,
-  allowing compatible clients to offer a disabled domain again.
-- TravPlan uses shared theme tokens and the selected application locale for
-  number formatting.
 
 ## [2.7.0] - 2026-10-03
 
