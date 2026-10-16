@@ -115,12 +115,12 @@ export function FlatMapControlPanel({
                   label={t("map:globe.panel.placeLabels")}
                 />
                 {!usesOwnGeoServer() && (
-                <Toggle
-                  checked={showTerrain}
-                  onChange={onShowTerrainChange}
-                  icon="⛰️"
-                  label={t("map:globe.panel.terrain")}
-                />
+                  <Toggle
+                    checked={showTerrain}
+                    onChange={onShowTerrainChange}
+                    icon="⛰️"
+                    label={t("map:globe.panel.terrain")}
+                  />
                 )}
               </div>
               {/* Marker labels: off / key markers only / all */}

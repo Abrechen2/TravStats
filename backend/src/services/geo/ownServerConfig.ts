@@ -4,12 +4,21 @@ export function parseOwnGeoUrl(value: string | undefined): string | null {
   try {
     const url = new URL(value);
     if (
-      value !== value.trim() || url.protocol !== "https:" || url.username || url.password ||
-      url.search || url.hash || url.pathname !== "/" || !url.hostname
-    ) throw new Error();
+      value !== value.trim() ||
+      url.protocol !== "https:" ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash ||
+      url.pathname !== "/" ||
+      !url.hostname
+    )
+      throw new Error();
     return url.origin;
   } catch {
-    throw new Error("TRAVSTATS_GEO_URL must be an HTTPS origin without credentials, path, query or fragment");
+    throw new Error(
+      "TRAVSTATS_GEO_URL must be an HTTPS origin without credentials, path, query or fragment"
+    );
   }
 }
 

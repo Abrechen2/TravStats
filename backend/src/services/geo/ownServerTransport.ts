@@ -28,7 +28,10 @@ export async function ownGeoRequest(
   try {
     const response = await fetch(url, {
       method: options.body === undefined ? "GET" : "POST",
-      headers: { Accept: "*/*", ...(options.body === undefined ? {} : { "Content-Type": "application/json" }) },
+      headers: {
+        Accept: "*/*",
+        ...(options.body === undefined ? {} : { "Content-Type": "application/json" }),
+      },
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       redirect: "error",
       signal: controller.signal,
@@ -49,8 +52,12 @@ export async function ownGeoRequest(
         chunks.push(part.value);
       }
     }
-    return { body: Buffer.concat(chunks), status: response.status,
-      contentType: response.headers.get("content-type")?.split(";")[0].trim() ?? "application/octet-stream" };
+    return {
+      body: Buffer.concat(chunks),
+      status: response.status,
+      contentType:
+        response.headers.get("content-type")?.split(";")[0].trim() ?? "application/octet-stream",
+    };
   } catch (error) {
     throw error instanceof OwnGeoUnavailable ? error : new OwnGeoUnavailable("unavailable");
   } finally {

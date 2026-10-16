@@ -137,7 +137,11 @@ export interface PublicAssetPath {
  * an entry that names no mounted route.
  */
 export const PUBLIC_ASSET_PATHS: readonly PublicAssetPath[] = [
-  { path: "/geo-server/assets/*", reason: "Public basemap tiles, fonts and sprites only; same bytes for every caller. Strict resource allowlist in geoServer router." },
+  {
+    path: "/geo-server/assets/*",
+    reason:
+      "Public basemap tiles, fonts and sprites only; same bytes for every caller. Strict resource allowlist in geoServer router.",
+  },
   {
     path: "/login-backgrounds/{filename}",
     reason:
