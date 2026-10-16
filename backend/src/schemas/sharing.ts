@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 import { SHARE_ENTITIES, type ShareEntity } from "../services/sharing/shareTypes";
 
