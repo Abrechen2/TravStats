@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { RentalExtraStats, RentalStats } from "../../../lib/api/rentalLinks";
-import { formatAmount } from "../../../lib/units";
+import { formatAmount, dateLocaleForLanguage } from "../../../lib/units";
 import type { SectionVisibility } from "../../../hooks/useSectionVisibility";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import StatCard from "../StatCard";
@@ -38,7 +38,7 @@ export default function RentalStatsDetails({
   evidence: RentalEvidence;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["rental"]);
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const num = (n: number, digits = 0): string =>
     n.toLocaleString(locale, { maximumFractionDigits: digits });
   const money = (amount: number, currency: string): string =>

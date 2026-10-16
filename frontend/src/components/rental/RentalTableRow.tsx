@@ -8,6 +8,7 @@ import { statusPillProps } from "../table/statusPillStyle";
 import { rentalDeposit } from "../../lib/rental/rentalDeposit";
 import TripPill from "../Trips/TripPill";
 import { TableRow, type TableColumn } from "../ui/Table";
+import { dateLocaleForLanguage } from "../../lib/units";
 
 export type RentalColumnId =
   "provider" | "route" | "period" | "vehicle" | "km" | "status" | "trip" | "actions";
@@ -52,7 +53,7 @@ interface Props {
  */
 export function RentalTableRow({ rental, columns, onOpen, actions }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["rental"]);
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const route = rental.oneWay
     ? `${stationLabel(rental.pickupStationName, rental.pickupIata)} → ${stationLabel(
         rental.returnStationName,

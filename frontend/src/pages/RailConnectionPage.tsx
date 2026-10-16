@@ -22,6 +22,7 @@ import { RailConnectionView } from "../components/rail/RailConnectionView";
 import { formatRailDuration } from "../lib/rail/railDuration";
 import { formatRailSpan } from "../lib/railTime";
 import type { RailConnectionDetail } from "../types/rail";
+import { dateLocaleForLanguage } from "../lib/units";
 
 /**
  * A whole train ride (forgejo#187): the page between the logbook and a single
@@ -36,7 +37,7 @@ import type { RailConnectionDetail } from "../types/rail";
 export default function RailConnectionPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const { t, i18n } = useTranslation(["rail", "common"]);
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const [connection, setConnection] = useState<RailConnectionDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [failure, setFailure] = useState<LoadFailure | null>(null);

@@ -5,6 +5,7 @@ import { railApi } from "../../lib/api/rail";
 import { logger } from "../../lib/logger";
 import { formatRailDuration } from "../../lib/rail/railDuration";
 import { SHORT_TRANSFER_HINT_MINUTES, type RailTransfer } from "../../lib/rail/railTransfer";
+import { dateLocaleForLanguage } from "../../lib/units";
 
 interface Props {
   transfer: RailTransfer;
@@ -28,7 +29,7 @@ interface Props {
  */
 export function RailTransferNote({ transfer, arriving, departing, index }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["rail"]);
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
 
   if (transfer.kind === "separate") {
     return (

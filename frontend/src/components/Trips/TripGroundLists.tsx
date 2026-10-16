@@ -6,6 +6,7 @@ import { formatStationTime } from "../../lib/railTime";
 import type { Trip } from "../../types";
 import type { TripBusJourney } from "../../types/bus";
 import { TripRailList } from "../rail/RailTripCard";
+import { dateLocaleForLanguage } from "../../lib/units";
 
 /** How many train and bus rides a trip holds — what the logistics tab calls "empty" by. */
 export function groundRideCount(
@@ -24,7 +25,7 @@ export function groundRideCount(
  */
 export function TripBusList({ rides }: { rides: readonly TripBusJourney[] }): JSX.Element {
   const { t, i18n } = useTranslation(["bus"]);
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   return (
     <div
       className="rounded-xl"

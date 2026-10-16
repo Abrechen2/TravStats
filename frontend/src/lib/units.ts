@@ -44,6 +44,17 @@ export function localeForLanguage(language: string | undefined): string {
 }
 
 /**
+ * The locale the logbook screens write dates and times in: day-first British
+ * English for English, German for everything else. Deliberately not
+ * `localeForLanguage`, whose en-US would turn 03/04 into March 4th. This rule
+ * was written inline on thirty-two screens; one copy that drifted would print
+ * one page's dates in another order than its neighbour's.
+ */
+export function dateLocaleForLanguage(language: string | null | undefined): "en-GB" | "de-DE" {
+  return language?.startsWith("en") ? "en-GB" : "de-DE";
+}
+
+/**
  * The language i18next is currently serving, for the call sites that cannot
  * thread it through (#264). Read lazily from the singleton rather than the
  * app's own i18n config, which would make this module import the whole

@@ -26,7 +26,7 @@ import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { rentalDeleteMessage } from "../lib/rental/rentalDeleteMessage";
 import { depositSummary } from "../lib/rental/rentalDeposit";
 import { formatDayLong } from "../shared/time";
-import { formatAmount } from "../lib/units";
+import { formatAmount, dateLocaleForLanguage } from "../lib/units";
 import { deadlineFacts, hasDeadlines } from "../lib/deadlines";
 import { formatStationMoment } from "../lib/rentalTime";
 import type { TimeValue } from "../shared/time";
@@ -49,7 +49,7 @@ export default function RentalDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation(["rental", "common", "trips", "documents"]);
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const addToast = useToastStore((s) => s.addToast);
   const [rental, setRental] = useState<RentalBooking | null>(null);
   const [loading, setLoading] = useState(true);

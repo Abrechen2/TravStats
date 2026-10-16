@@ -18,6 +18,7 @@ import TripPill from "../Trips/TripPill";
 import { TableRow, type TableColumn } from "../ui/Table";
 import { StationShortCode } from "./StationShortCode";
 import { trainLabel } from "./trainLabel";
+import { dateLocaleForLanguage } from "../../lib/units";
 
 export type RailColumnId =
   "operator" | "route" | "time" | "train" | "duration" | "distance" | "status" | "trip" | "actions";
@@ -76,7 +77,7 @@ export function RailTableRow({ connection, columns, onOpen, actions }: Props): J
   const { t, i18n } = useTranslation(["rail"]);
   const { legs } = connection;
   if (legs.length === 0) return null;
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const single = legs.length === 1 ? legs[0] : null;
   const span = connectionSpan(legs);
   const duration = connectionDurationMinutes(legs);

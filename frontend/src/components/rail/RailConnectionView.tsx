@@ -9,6 +9,7 @@ import type { RailJourney } from "../../types/rail";
 import { RailTransferNote } from "./RailTransferNote";
 import { trainLabel } from "./trainLabel";
 import { useRailLegDocuments, type LegDocuments } from "./useRailLegDocuments";
+import { dateLocaleForLanguage } from "../../lib/units";
 
 /** What the view reads of a leg — a booking leg of the detail read, or a full row. */
 export type RailCompactLeg = RailTransferLeg &
@@ -52,7 +53,7 @@ const TOUCH_LINK =
  */
 export function RailConnectionView({ legs, currentId, pnr, showPnr = true }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["rail", "documents", "common"]);
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const transfers = railTransfers(legs);
   // The train on screen lists its originals in the page's own Documents
   // section, which can upload and delete; a second list here would go stale

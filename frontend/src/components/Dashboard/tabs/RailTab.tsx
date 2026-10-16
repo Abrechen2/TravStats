@@ -15,6 +15,7 @@ import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
 import { SidebarToggle } from "../SidebarToggle";
 import { legendRow } from "./allTabLegendRows";
 import { buildRailLegendRows, buildRailMapLayers, useRailMapStyle } from "./railMapOverlay";
+import { dateLocaleForLanguage } from "../../../lib/units";
 
 const PANEL_STYLE = {
   background: "rgba(22,27,34,0.85)",
@@ -38,7 +39,7 @@ const PANEL_STYLE = {
 export function RailTab(): JSX.Element {
   const { mode } = useDashboardRoute();
   const { t, i18n } = useTranslation(["dashboard", "rail", "common"]);
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const railVisible = useRailVisible();
   const year = useDashboardFilterStore((s) => s.year);
   const { journeys, loading, loadError, reload } = useDashboardRail(railVisible, year);
