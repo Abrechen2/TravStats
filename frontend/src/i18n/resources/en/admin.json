@@ -163,8 +163,8 @@
             "what": "The Rental cars area: a logbook for car rentals with pickup and return in station local time, car group, price and the kilometres from the final invoice."
           },
           "travPlan": {
-            "name": "TravPlan",
-            "what": "The planning mode for a trip still ahead: day plan, ideas, booking import, transfers, packing list, budget and the handover to the travel log."
+            "name": "TravPlan (alpha)",
+            "what": "The planning mode for a trip still ahead: day plan, ideas, booking import, transfers, packing list, budget and the handover to the travel log. Alpha experiment: may still change fundamentally."
           },
           "busDomain": {
             "name": "Bus",

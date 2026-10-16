@@ -162,7 +162,7 @@ export const BETA_FEATURES = Object.freeze({
    * hook also asks — this key decides whether the mode is shown at all.
    */
   travPlan: Object.freeze({
-    why: "The planning mode arrived on 2026-10-14 open to every logged-in user with no gate, drawn with its own theme and its own navigation outside the design system. It is unfinished: its screens were rebuilt on the primitives on 2026-10-16, and nobody has walked the planning flow in a browser since.",
+    why: "An alpha experiment (owner, 2026-10-16). The planning mode arrived on 2026-10-14 open to every logged-in user with no gate, drawn with its own theme and its own navigation outside the design system. It is unfinished: its screens were rebuilt on the primitives on 2026-10-16, and nobody has walked the planning flow in a browser since.",
     returnsWhen:
       "The owner has walked the planning flow after the UI rework in a browser review and accepts it for release.",
     reason: "beta",
