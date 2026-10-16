@@ -16,10 +16,18 @@ export interface FerryAisResult {
     observedAt: string | null;
   } | null;
 }
-export function FerryLivePosition({ id }: { id: string }) {
+export function FerryLivePosition({
+  id,
+  boundMmsi = null,
+}: {
+  id: string;
+  /** The crossing's vessel. The server reads only this one once it is set. */
+  boundMmsi?: string | null;
+}) {
   const { t, i18n } = useTranslation(["ferry"]);
   const [configured, setConfigured] = useState<boolean | null>(null);
-  const [mmsi, setMmsi] = useState("");
+  const [bound, setBound] = useState(boundMmsi);
+  const [mmsi, setMmsi] = useState(boundMmsi ?? "");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<FerryAisResult | null>(null);
   useEffect(() => {
@@ -41,7 +49,10 @@ export function FerryLivePosition({ id }: { id: string }) {
     setBusy(true);
     setResult(null);
     try {
-      setResult(await ferryApi.livePosition(id, mmsi));
+      const answer = await ferryApi.livePosition(id, mmsi);
+      setResult(answer);
+      // The first answered MMSI is now the crossing's; another would be refused.
+      if (answer.status === "ok" && answer.position) setBound(answer.position.mmsi);
     } catch {
       setResult({ status: "unavailable", position: null });
     } finally {
@@ -65,12 +76,19 @@ export function FerryLivePosition({ id }: { id: string }) {
               maxLength={9}
               pattern="[0-9]{9}"
               disabled={busy}
+              readOnly={bound !== null}
+              aria-describedby={bound !== null ? `${id}-mmsi-bound` : undefined}
               onChange={(e) => {
                 setMmsi(e.target.value);
                 setResult(null);
               }}
             />
           </label>
+          {bound !== null && (
+            <p id={`${id}-mmsi-bound`} className="t-caption">
+              {t("ferry:live.bound")}
+            </p>
+          )}
           <Button
             disabled={!configured || busy || !/^\d{9}$/.test(mmsi)}
             onClick={() => void read()}

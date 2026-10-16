@@ -9,8 +9,10 @@ import { loadVisibleDomains } from "../services/domainVisibility";
 import { CLOCKLESS_PRECISIONS, endHasClock, rideEndsAt } from "../shared/railClock";
 import { groupRailLegs } from "../shared/railJourneyGrouping";
 import { nextBus } from "../services/bus/upcoming";
+import { nextFerry } from "../services/ferry/upcoming";
 import type { BusTimes } from "../schemas/times";
 import { RAIL_GROUPING_SELECT } from "../services/rail/railGroupingSelect";
+import { railTimes } from "../services/rail/timesDto";
 
 // No rate limiter, and deliberately so — for the same reason `stats.ts` has
 // none, arrived at from the other side. This route exists BECAUSE the tab strip
@@ -46,12 +48,12 @@ export interface UpcomingEntry {
   /** ISO instant this starts — departure, embarkation, check-in, trip start. */
   startsAt: string;
   /**
-   * Rail and bus: `day` when the ride was logged without a clock — `startsAt` is
+   * Rail, bus and ferry: `day` when the ride was logged without a clock — `startsAt` is
    * then the start of that day at the station, not a departure time
    * (forgejo#132 item 17). Absent on the other domains.
    */
   startsAtPrecision?: "minute" | "day";
-  /** Bus endpoints on their terminal clocks. */
+  /** Rail, bus and ferry: the ride's ends on their stations', terminals' or ports' clocks. */
   times?: BusTimes;
   /**
    * The row a click should OPEN, which is not always `id`: a stay has no page
@@ -271,6 +273,11 @@ async function findNextRail(userId: string, now: Date) {
         departureTime: true,
         depTimezone: true,
         depPrecision: true,
+        actualDepartureTime: true,
+        arrivalTime: true,
+        arrTimezone: true,
+        arrPrecision: true,
+        actualArrivalTime: true,
         tripId: true,
         trip: { select: { name: true } },
       },
@@ -309,15 +316,29 @@ async function nextRail(userId: string): Promise<UpcomingEntry | null> {
   const trains = legs
     .map((leg) => [leg.trainCategory, leg.trainNumber].filter(Boolean).join(" "))
     .filter(Boolean);
+  const last = legs[legs.length - 1];
   return {
     domain: "rail",
     id: ride.id,
     detailId: ride.id,
     startsAt: ride.departureTime.toISOString(),
     startsAtPrecision: endHasClock(ride.depPrecision) ? "minute" : "day",
+    // The ride from its first station to where it ENDS. Without `times` a
+    // date-only train carried only `startsAt`, the start of its day, and a
+    // countdown had no station day to count to.
+    times: railTimes({
+      departureTime: ride.departureTime,
+      depTimezone: ride.depTimezone,
+      depPrecision: ride.depPrecision,
+      actualDepartureTime: ride.actualDepartureTime,
+      arrivalTime: last.arrivalTime,
+      arrTimezone: last.arrTimezone,
+      arrPrecision: last.arrPrecision,
+      actualArrivalTime: last.actualArrivalTime,
+    }),
     tripId: ride.tripId,
     tripName: ride.trip?.name ?? null,
-    primary: `${ride.depStationName} → ${legs[legs.length - 1].arrStationName}`,
+    primary: `${ride.depStationName} → ${last.arrStationName}`,
     secondary: trains.length > 0 ? trains.join(" · ") : ride.operator || null,
   };
 }
@@ -328,6 +349,10 @@ interface NextRailLeg {
   arrStationName: string;
   trainCategory: string | null;
   trainNumber: string | null;
+  arrivalTime: Date | null;
+  arrTimezone: string | null;
+  arrPrecision: string | null;
+  actualArrivalTime: Date | null;
 }
 
 /**
@@ -343,7 +368,13 @@ async function remainingRideLegs(userId: string, next: NextRailLeg): Promise<Nex
   if (next.bookingId === null) return [next];
   const siblings = await prisma.railJourney.findMany({
     where: { userId, bookingId: next.bookingId, status: { not: "cancelled" } },
-    select: { ...RAIL_GROUPING_SELECT, trainCategory: true, trainNumber: true },
+    select: {
+      ...RAIL_GROUPING_SELECT,
+      trainCategory: true,
+      trainNumber: true,
+      arrTimezone: true,
+      actualArrivalTime: true,
+    },
   });
   const ride = groupRailLegs(siblings).find((group) => group.some((leg) => leg.id === next.id));
   if (!ride) return [next];
@@ -432,6 +463,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       enabled.has("lodging") ? nextStay(userId) : null,
       enabled.has("rail") ? nextRail(userId) : null,
       enabled.has("bus") ? nextBus(userId) : null,
+      enabled.has("ferry") ? nextFerry(userId) : null,
       enabled.has("rental") ? nextRental(userId) : null,
       nextTrip(userId),
     ]);

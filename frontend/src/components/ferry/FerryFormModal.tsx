@@ -1,3 +1,4 @@
+import { parseDecimalInput } from "../../lib/decimalInput";
 import { useEffect, useId, useRef, useState } from "react";
 import { FerryTicketImport } from "./FerryTicketImport";
 import Modal from "../Modal";
@@ -14,6 +15,7 @@ import { FerryStationField, EMPTY_TERMINAL, type FerryStationDraft } from "./Fer
 const TEXT = [
   "operator",
   "vesselName",
+  "vesselMmsi",
   "bookingReference",
   "ticketReference",
   "vehicleType",
@@ -31,6 +33,28 @@ const NUMBERS = [
   "price",
   "distanceKm",
 ] as const;
+/** Typed in either notation ("39,90", "1.500,00") — see `parseDecimalInput`. */
+const DECIMALS: readonly string[] = NUMBERS.filter((key) => key !== "passengerCount");
+/**
+ * Each number field as the write body takes it, or the first field that is
+ * not a number. `Number("39,90")` was NaN, which JSON sends as null, so a
+ * German price, length or distance was silently cleared on save.
+ */
+function readNumbers(
+  fields: Record<string, string>
+): { values: Record<string, number | null> } | { invalid: string } {
+  const values: Record<string, number | null> = {};
+  for (const key of NUMBERS) {
+    const n = DECIMALS.includes(key)
+      ? parseDecimalInput(fields[key])
+      : fields[key].trim() === ""
+        ? null
+        : Number(fields[key]);
+    if (n !== null && (!Number.isFinite(n) || n < 0)) return { invalid: key };
+    values[key] = n;
+  }
+  return { values };
+}
 const INPUT =
   "mt-1 w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent)";
 function port(ride: FerryJourney | null, prefix: "dep" | "arr"): FerryStationDraft {
@@ -122,6 +146,15 @@ export function FerryFormModal({
   };
   const save = async () => {
     if (savingRef.current || importBusy || !complete) return;
+    if (fields.vesselMmsi.trim() !== "" && !/^\d{9}$/.test(fields.vesselMmsi.trim())) {
+      setError(t("ferry:invalidMmsi"));
+      return;
+    }
+    const numbers = readNumbers(fields);
+    if ("invalid" in numbers) {
+      setError(t("ferry:invalidNumber", { field: t(`ferry:${numbers.invalid}`) }));
+      return;
+    }
     savingRef.current = true;
     setSaving(true);
     setError(null);
@@ -139,7 +172,7 @@ export function FerryFormModal({
       status: cancelled ? "cancelled" : "scheduled",
     };
     for (const key of TEXT) input[key] = fields[key].trim() || null;
-    for (const key of NUMBERS) input[key] = fields[key] === "" ? null : Number(fields[key]);
+    Object.assign(input, numbers.values);
     for (const key of ["departureFold", "arrivalFold"]) if (fields[key]) input[key] = fields[key];
     if (journey && JSON.stringify(dep) === JSON.stringify(port(journey, "dep")))
       delete input.departureStation;
@@ -179,20 +212,13 @@ export function FerryFormModal({
               ? fields[key].length === 10
                 ? "date"
                 : "datetime-local"
-              : (NUMBERS as readonly string[]).includes(key)
+              : key === "passengerCount"
                 ? "number"
                 : "text"
           }
-          min={
-            (NUMBERS as readonly string[]).includes(key)
-              ? key === "price"
-                ? 0
-                : key === "passengerCount"
-                  ? 1
-                  : 0.01
-              : undefined
-          }
-          step={key === "passengerCount" ? 1 : "any"}
+          inputMode={DECIMALS.includes(key) ? "decimal" : undefined}
+          min={key === "passengerCount" ? 1 : undefined}
+          step={key === "passengerCount" ? 1 : undefined}
           onChange={(e) => set(key, e.target.value)}
         />
       )}
@@ -319,6 +345,7 @@ export function FerryFormModal({
             {[
               "operator",
               "vesselName",
+              "vesselMmsi",
               "bookingReference",
               "ticketReference",
               "passengerCount",

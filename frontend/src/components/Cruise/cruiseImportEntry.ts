@@ -31,6 +31,8 @@ export interface EntryData {
   /** A time whose place brings no zone (a portless stop, a zoneless airport):
    *  the save refuses with its sentence before writing anything. */
   timeError?: MissingZoneError;
+  /** A typed price that is no number: the save refuses rather than drop it. */
+  priceInvalid?: boolean;
 }
 
 /**

@@ -81,7 +81,7 @@ describe("Ferry editor", () => {
     mocks.save.mockResolvedValue(ride);
     const computed = { ...ride, distanceKm: 512, distanceSource: "great_circle" } as FerryJourney;
     render(<FerryFormModal journey={computed} onClose={vi.fn()} onSaved={vi.fn()} />);
-    expect(screen.getByLabelText("ferry:distanceKm")).toHaveValue(null);
+    expect(screen.getByLabelText("ferry:distanceKm")).toHaveValue("");
     fireEvent.change(screen.getByLabelText("ferry:notes"), { target: { value: "x" } });
     fireEvent.click(screen.getByRole("button", { name: "ferry:save" }));
     await waitFor(() => expect(mocks.save).toHaveBeenCalled());
@@ -104,4 +104,31 @@ describe("Ferry editor", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("ferry:saveError");
     expect(onSaved).not.toHaveBeenCalled();
   });
+  // `Number("39,90")` is NaN, which JSON sends as null: a German price, length
+  // or distance was silently cleared on save.
+  it.each([
+    ["39,90", 39.9],
+    ["1.500,00", 1500],
+    ["39.90", 39.9],
+  ])("sends a price typed as %s as %s", async (raw, expected) => {
+    mocks.save.mockResolvedValue(ride);
+    render(<FerryFormModal journey={ride} onClose={vi.fn()} onSaved={vi.fn()} />);
+    const price = screen.getByLabelText("ferry:price");
+    expect(price).toHaveAttribute("inputmode", "decimal");
+    fireEvent.change(price, { target: { value: raw } });
+    fireEvent.change(screen.getByLabelText("ferry:vehicleLengthM"), { target: { value: "7,45" } });
+    fireEvent.click(screen.getByRole("button", { name: "ferry:save" }));
+    await waitFor(() => expect(mocks.save).toHaveBeenCalled());
+    expect(mocks.save.mock.calls[0][1]).toMatchObject({ price: expected, vehicleLengthM: 7.45 });
+  });
+  it.each(["abc", "39,9,0", "-1"])(
+    "refuses a price typed as %s instead of clearing it",
+    async (raw) => {
+      render(<FerryFormModal journey={ride} onClose={vi.fn()} onSaved={vi.fn()} />);
+      fireEvent.change(screen.getByLabelText("ferry:price"), { target: { value: raw } });
+      fireEvent.click(screen.getByRole("button", { name: "ferry:save" }));
+      expect(await screen.findByRole("alert")).toHaveTextContent("ferry:invalidNumber");
+      expect(mocks.save).not.toHaveBeenCalled();
+    }
+  );
 });

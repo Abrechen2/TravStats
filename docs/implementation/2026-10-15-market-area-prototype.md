@@ -1,121 +1,120 @@
-# Marktbesuche aus Positionsdaten – Vorschau-Prototyp
+# Market visits from position data — preview prototype
 
-> Der Datei-Prototyp bleibt separat verwendbar. Die inzwischen implementierte
-> App-Anbindung steht in [Automatische Marktbesuche](2026-10-15-automatic-market-visits.md).
+> The file prototype remains usable on its own. The app integration built since
+> is described in [Automatic market visits](2026-10-15-automatic-market-visits.md).
 
-## Umfang
+## Scope
 
-Regelbasierte Erkennung eines Besuchs im gesamten Marktgelände, auch wenn sich
-jemand zwischen Ständen und mehreren Marktgebäuden bewegt. Kein KI-Aufruf.
-Dieser Prototyp läuft ausschließlich auf explizit übergebenen Dateien. Er ist
-noch nicht mit Scan-API, Scheduler, Vorschlagsliste oder Bestätigungs-Workflow
-verbunden. Keine Datenbank, keine Zugangsdaten, keine Netzwerkabfrage und keine
-Änderung an Prod. Die bestehende Aufenthaltserkennung bleibt unverändert.
+Rule-based detection of a visit to a whole market area, even when someone moves
+between stalls and several market buildings. No AI call. This prototype runs
+only on explicitly supplied files. It is not yet connected to the scan API, the
+scheduler, the suggestion list or the confirmation workflow. No database, no
+credentials, no network query and no change to Prod. The existing stay
+detection stays unchanged.
 
-## Aufruf
+## Usage
 
-Im Backend-Arbeitsverzeichnis:
+From the backend working directory:
 
 ```sh
 node_modules/.bin/tsx scripts/preview-market-visits.ts \
   /private/input.json /private/markets.geojson /private/new-preview.json
 ```
 
-Die Eingabe enthält `points` im vorhandenen `DawarichPoint`-Format. Optional:
-`places`, `visits`, `trips`, jeweils aus einem eigenen lesenden Auszug. Ohne
-Trips, Immich, Hotels oder Flüge funktioniert die Erkennung weiterhin; ohne
-bestehende Besuche ist nur deren Wiedererkennung nicht möglich.
+The input contains `points` in the existing `DawarichPoint` format. Optional:
+`places`, `visits`, `trips`, each from a separate read-only extract. Detection
+still works without trips, Immich, hotels or flights; without existing visits
+only their recognition is impossible.
 
-Der Markt-Katalog ist eine GeoJSON-FeatureCollection. Ein Feature benötigt
-`properties.kind = "market"`, `id`, `name`, `sourceUrl` und eine Polygon- oder
-MultiPolygon-Geometrie. Die Reihenfolge der Koordinaten ist `[lon, lat]`.
-Optionale `entityRef` (`wikidata:Q…`) verbindet mehrere Flächen desselben Ortes;
-`parentId` fasst explizit zugehörige Teilflächen unter einem übergeordneten Markt
-zusammen. Ähnliche Namen oder räumliche Nähe reichen dafür nicht.
+The market catalogue is a GeoJSON FeatureCollection. A feature needs
+`properties.kind = "market"`, `id`, `name`, `sourceUrl` and a Polygon or
+MultiPolygon geometry. Coordinate order is `[lon, lat]`. An optional `entityRef`
+(`wikidata:Q…`) joins several areas of the same place; `parentId` explicitly
+groups related partial areas under a parent market. Similar names or spatial
+proximity are not enough for that.
 
-Eine Punkt-Geometrie wird als `areaMissing` gemeldet. Es wird kein Kreis als
-vermeintliche Marktfläche erfunden. Ein Geschäft mit `kind = "shop"` wird nicht
-als Markt verarbeitet. Mehrdeutige überlappende Märkte bleiben getrennt und
-werden mit `overlappingMarkets` markiert.
+A point geometry is reported as `areaMissing`. No circle is invented as a
+supposed market area. A shop with `kind = "shop"` is not processed as a market.
+Ambiguous overlapping markets stay separate and are flagged with
+`overlappingMarkets`.
 
-Die Ausgabedatei wird mit 0600 und exklusivem Neuanlegen geschrieben. Vorhandene
-Dateien, insbesondere Eingabedateien, werden nicht überschrieben. Gekürzte
-Tracks werden für diese Reise-Vorschau abgelehnt.
+The output file is written with mode 0600 and exclusive creation. Existing
+files, input files in particular, are never overwritten. Truncated tracks are
+refused for this trip preview.
 
-## Konservative Regeln
+## Conservative rules
 
-- Mindestens fünf Minuten, fünf unterschiedliche Zeitpunkte und drei Punkte
-  tatsächlich innerhalb der Fläche. Innere Treffer müssen mindestens zwei
-  Minuten überspannen; bloßes Stehen am Rand reicht nicht.
-- Maximal 20 m Randtoleranz; sie wächst nicht mit schlechter GPS-Genauigkeit.
-- Gemeldete Ungenauigkeit über 100 m sowie ungültige Koordinaten,
-  Geschwindigkeiten und Zeitstempel werden ausgeschlossen.
-- Maximal 3 m/s. Fehlende Geschwindigkeit kann über kurze Messintervalle aus
-  der Bewegung abgeleitet werden. Auch eine gemeldete Nullgeschwindigkeit
-  überstimmt keine klare schnelle Bewegung; bei der Ableitung wird die
-  gemeldete Messungenauigkeit beider Punkte berücksichtigt.
-- Bis zu zehn Minuten zwischen passenden Punkten; beobachtete Abwesenheit
-  von mindestens zwei Minuten trennt Besuche. Kurze Unterbrechungen und
-  Messlücken bleiben als Unsicherheiten sichtbar.
-- Polygon-Löcher bleiben ausgeschlossen. Verschiedene Gebäude eines
-  MultiPolygons zählen zum selben Markt; dieselbe öffentliche Ortskennung
-  verbindet z. B. Halle und umliegendes Marktgelände.
-- Original-Punkt-IDs, verwendete Flächen-IDs, Quellen und Unsicherheiten
-  bleiben am Ergebnis erhalten. Eingabereihenfolge verändert es nicht.
-- Bestehende Besuche werden nur bei passendem Marktnamen UND passender
-  Lage/Zeit erkannt. Ein einzelner Laden innerhalb des Markts ersetzt keinen
-  Marktbesuch. Präzise Zeiten haben zehn Minuten Zuordnungstoleranz;
-  Tagesangaben werden am örtlichen Kalendertag verglichen. Unklare alte
-  Minutenangaben werden nicht still als UTC interpretiert.
-- Reisezuordnung nur bei einer eindeutig passenden Reise, deren Tage den
-  gesamten Besuch abdecken. Keine Reise wird erzeugt.
+- At least five minutes, five distinct timestamps and three points actually
+  inside the area. Points inside must span at least two minutes; merely
+  standing at the edge is not enough.
+- At most 20 m of edge tolerance; it does not grow with poor GPS accuracy.
+- A reported inaccuracy above 100 m and invalid coordinates, speeds and
+  timestamps are excluded.
+- At most 3 m/s. A missing speed can be derived from the movement over short
+  measurement intervals. A reported zero speed does not override clearly fast
+  movement either; the derivation takes the reported inaccuracy of both points
+  into account.
+- Up to ten minutes between matching points; an observed absence of at least
+  two minutes separates visits. Short interruptions and measurement gaps stay
+  visible as uncertainties.
+- Polygon holes stay excluded. Different buildings of one MultiPolygon count as
+  the same market; the same public place identifier joins, for example, a hall
+  and the surrounding market grounds.
+- Original point IDs, the area IDs used, sources and uncertainties stay on the
+  result. Input order does not change it.
+- Existing visits are recognised only with a matching market name AND a
+  matching location/time. A single shop inside the market does not replace a
+  market visit. Precise times have a ten-minute matching tolerance; day values
+  are compared on the local calendar day. Ambiguous old minute values are not
+  silently read as UTC.
+- Trip assignment only to a single clearly matching trip whose days cover the
+  whole visit. No trip is created.
 
-## Ergebnis der privaten Echtdaten-Prüfung
+## Result of the private real-data check
 
-Auf dem bereits lesend gewonnenen Korea-Auszug mit 62.902 originalen
-Positionspunkten liefert der finale Prototyp vier Marktbesuche. Zwei passen zu
-bestehenden Einträgen; zwei bleiben neue Vorschläge zur Prüfung. Insbesondere
-werden mehrere Flächen desselben Marktes zu einem Besuch zusammengefasst.
-Die genauen Orte, Zeiten, Punkt-IDs und Eingabedaten liegen ausschließlich in
-der privaten Arbeitsmappe, nicht im öffentlichen Repository.
+On the Korea extract already obtained read-only, with 62,902 original position
+points, the final prototype finds four market visits. Two match existing
+entries; two remain new suggestions for review. In particular, several areas of
+the same market are merged into one visit. The exact places, times, point IDs
+and input data are kept only in the private workbook, not in the public
+repository.
 
-Ein zuerst beobachtetes Doppel-Ergebnis für Halle und Gelände wurde durch
-Zusammenfassung anhand derselben öffentlichen Ortskennung behoben. Die
-Zuordnung zu einem schon erfassten Besuch berücksichtigt anschließend die
-kombinierten Flächen. Fehlende Flächen werden als Datenlücke gemeldet, nicht
-als Nachweis dafür, dass kein Besuch stattgefunden hat.
+A duplicate result first observed for a hall and its grounds was fixed by
+merging on the same public place identifier. Matching against an already
+recorded visit then takes the combined areas into account. Missing areas are
+reported as a data gap, not as proof that no visit took place.
 
-Geprüft: Wiederholung und umgekehrte Eingabereihenfolge, ausschließlich originale
-Punkt-IDs, unveränderte Quellen, bestehende Besuche, eigenständige Nutzung ohne
-andere Reisefunktionen, Vorbeifahrt-Gegenbeispiele und Übereinstimmung von CLI
-und Bibliotheksausgabe. Keine automatischen Übernahmen oder Prod-Schreibzugriffe.
+Checked: repetition and reversed input order, original point IDs only,
+unchanged sources, existing visits, standalone use without other travel
+features, drive-past counter-examples and agreement between the CLI and the
+library output. No automatic adoption and no writes to Prod.
 
-## Offene Schritte für eine reguläre Funktion
+## Open steps for a regular feature
 
-1. Begrenzter, gecachter Flächenkatalog mit sauberer Herkunft und Aktualisierung.
-   Der Prototyp liest einen bereits vorbereiteten Katalog; weltweite
-   automatische Marktsuche ist damit noch nicht umgesetzt.
-2. Datenlücken und Punkt-Orte im UI verständlich anzeigen; eine verifizierte
-   Fläche bei Bedarf nachtragen. Keine ungeprüften Händlerpunkte als Markt.
-3. An die bestehende Einwilligung, Modul-Pause und Scan-Reservierung anbinden.
-4. Vorschläge dauerhaft mit Quellen speichern, inklusive Wiedererkennung bei
-   wachsenden Zeitfenstern und bereits verworfenen Vorschlägen. Der derzeitige
-   Fingerprint ist nur für Wiederholungen desselben Datenauszugs stabil.
-5. Gemeinsame Prüfung/Bestätigung mit bestehenden Aufenthalts- und
-   Immich-Vorschlägen sowie Abgleich gegen inzwischen hinzugefügte Besuche.
+1. A bounded, cached area catalogue with clean provenance and updates. The
+   prototype reads a catalogue prepared beforehand; a worldwide automatic
+   market search is therefore not implemented yet.
+2. Show data gaps and point-only places understandably in the UI; add a
+   verified area where needed. No unchecked vendor points as markets.
+3. Connect to the existing consent, module pause and scan reservation.
+4. Store suggestions durably with their sources, including recognition across
+   growing time windows and already rejected suggestions. The current
+   fingerprint is stable only for repeats of the same data extract.
+5. Shared review/confirmation with the existing stay and Immich suggestions,
+   and matching against visits added in the meantime.
 
-Diese Arbeiten und ein Deployment wurden hier nicht durchgeführt. Auch ein
-belastbarer Marktaufenthalt bleibt zunächst ein Vorschlag, kein automatisch
-bestätigter Besuch und kein Beleg für einen Einkauf.
+This work and a deployment were not done here. Even a solid market stay stays a
+suggestion at first — not an automatically confirmed visit and not evidence of
+a purchase.
 
-## Technische Prüfungen
+## Technical checks
 
-- 46 gezielte Tests bestanden (neuer Erkennungskern, Datei-CLI und bisherige
-  stationäre Erkennung); die neuen Tests benötigen weder Datenbank noch Netz.
-- Backend-Typprüfung bestanden; zusätzlich 1.193 Backend-Testdateien ohne
-  Typfehler geprüft.
-- CLI separat mit `tsc -p tsconfig.market-preview.json` typgeprüft. Bei lokal
-  verknüpften Abhängigkeiten kann `--preserveSymlinks` nötig sein.
-- Lint der neuen Backend-Module, Formatierung und Dateigrößenprüfung bestanden.
-- Elf zusätzliche Kontrollbedingungen auf den privaten Echtdaten bestanden;
-  Vergleich mit der vorherigen unabhängigen geografischen Auswertung.
+- 46 targeted tests passed (new detection core, file CLI and the existing
+  stationary detection); the new tests need neither a database nor a network.
+- Backend typecheck passed; 1,193 backend test files additionally checked with
+  no type errors.
+- CLI typechecked separately with `tsc -p tsconfig.market-preview.json`. With
+  locally linked dependencies, `--preserveSymlinks` may be needed.
+- Lint of the new backend modules, formatting and the file-size check passed.
+- Eleven additional control conditions on the private real data passed;
+  compared with the earlier independent geographic analysis.

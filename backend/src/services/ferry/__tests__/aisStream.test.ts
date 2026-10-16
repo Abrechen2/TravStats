@@ -33,7 +33,10 @@ afterEach(() => {
 });
 it("works without a key by returning notConfigured, never opening a socket", async () => {
   delete process.env.AISSTREAM_API_KEY;
-  expect(await lookupVessel("211123456")).toEqual({ status: "notConfigured", position: null });
+  expect(await lookupVessel("211123456", "user-a")).toEqual({
+    status: "notConfigured",
+    position: null,
+  });
   expect(sockets()).toHaveLength(0);
 });
 it("distinguishes receipt time from missing observation time", () => {
@@ -59,8 +62,8 @@ it("ignores other vessels, invalid coordinates and AIS sentinel speed/course", (
 });
 it("coalesces requests, subscribes to one MMSI, closes after a valid report and caches it", async () => {
   process.env.AISSTREAM_API_KEY = "test-only-key";
-  const a = lookupVessel("211123457"),
-    b = lookupVessel("211123457");
+  const a = lookupVessel("211123457", "user-a"),
+    b = lookupVessel("211123457", "user-b");
   const socket = sockets().at(-1)!;
   socket.emit("open");
   expect(JSON.parse(socket.send.mock.calls[0][0])).toMatchObject({
@@ -72,24 +75,39 @@ it("coalesces requests, subscribes to one MMSI, closes after a valid report and 
   expect(await b).toEqual(await a);
   expect(socket.terminate).toHaveBeenCalledTimes(1);
   const count = sockets().length;
-  expect(await lookupVessel("211123457")).toEqual(await a);
+  expect(await lookupVessel("211123457", "user-a")).toEqual(await a);
   expect(sockets()).toHaveLength(count);
 });
 it("bounds wait time and rejects extra concurrent sockets", async () => {
   jest.useFakeTimers();
   process.env.AISSTREAM_API_KEY = "test-only-key";
-  const a = lookupVessel("211123458"),
-    b = lookupVessel("211123459");
-  expect((await lookupVessel("211123460")).status).toBe("busy");
+  const a = lookupVessel("211123458", "user-a"),
+    b = lookupVessel("211123459", "user-b");
+  expect((await lookupVessel("211123460", "user-c")).status).toBe("busy");
   await jest.advanceTimersByTimeAsync(15000);
   expect((await a).status).toBe("noSignal");
   expect((await b).status).toBe("noSignal");
 });
 it("does not return a provider error that could contain credentials", async () => {
   process.env.AISSTREAM_API_KEY = "test-only-key";
-  const result = lookupVessel("211123461");
+  const result = lookupVessel("211123461", "user-a");
   sockets()
     .at(-1)!
     .emit("message", Buffer.from(JSON.stringify({ error: "test-only-key invalid" })));
   expect(await result).toEqual({ status: "unavailable", position: null });
+});
+
+it("holds one user to one socket, so a single account cannot take both", async () => {
+  // The two-socket cap was shared by everyone: one account looking up two
+  // vessels left every other user "busy" for fifteen seconds.
+  jest.useFakeTimers();
+  process.env.AISSTREAM_API_KEY = "test-only-key";
+  const before = sockets().length;
+  const first = lookupVessel("211123470", "user-a");
+  expect((await lookupVessel("211123471", "user-a")).status).toBe("busy");
+  const other = lookupVessel("211123472", "user-b");
+  expect(sockets().length - before).toBe(2);
+  await jest.advanceTimersByTimeAsync(15000);
+  expect((await first).status).toBe("noSignal");
+  expect((await other).status).toBe("noSignal");
 });

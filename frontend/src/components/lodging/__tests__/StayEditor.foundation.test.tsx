@@ -296,4 +296,28 @@ describe("StayEditor - the shared form blocks", () => {
       );
     }
   });
+
+  // `parseFloat` read "1.500,00" as 1.5 and "39,90" as 39 — a German price was
+  // silently stored wrong (the bus form's forgejo#295, never carried here).
+  it.each([
+    ["1.500,00", 1500],
+    ["39,90", 39.9],
+  ])("stores a total typed as %s as %s", async (raw, expected) => {
+    vi.mocked(updateStay).mockResolvedValue(stored);
+    await renderEditor({ mode: "edit", stay: existing });
+    const price = screen.getByLabelText("lodging:field.totalPrice");
+    expect(price).toHaveAttribute("inputmode", "decimal");
+    await userEvent.type(price, raw);
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+    await waitFor(() => expect(updateStay).toHaveBeenCalled());
+    expect(vi.mocked(updateStay).mock.calls[0][2]).toMatchObject({ totalPrice: expected });
+  });
+
+  it("refuses a total that is not a number instead of dropping it", async () => {
+    await renderEditor({ mode: "edit", stay: existing });
+    await userEvent.type(screen.getByLabelText("lodging:field.totalPrice"), "abc");
+    await userEvent.click(screen.getByTestId("stay-editor-save"));
+    expect(await screen.findByText("lodging:stayEditor.invalidPrice")).toBeInTheDocument();
+    expect(updateStay).not.toHaveBeenCalled();
+  });
 });

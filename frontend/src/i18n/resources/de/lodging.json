@@ -261,6 +261,7 @@
     "receiptSection": "Beleg",
     "notesSection": "Notizen",
     "saveError": "Aufenthalt konnte nicht gespeichert werden",
+    "invalidPrice": "Bitte gib einen gültigen Preis ab 0 ein (z. B. 39,90).",
     "companionsHint": "Diese Buchung galt für {{count}} Personen. Trage die Begleitung ein — der Beleg nennt nur den Buchenden.",
     "tripSection": "Reise",
     "boardSuggestion": "Sonst meist: {{board}}",

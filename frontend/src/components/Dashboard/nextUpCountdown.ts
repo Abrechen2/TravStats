@@ -1,5 +1,5 @@
 import type { UpcomingEntry } from "../../lib/api/upcoming";
-import { localDay, daysBetween } from "../../shared/time";
+import { localDay, daysBetween, deviceZone } from "../../shared/time";
 
 /**
  * How far ahead the next entry is — ONE home for the rule.
@@ -51,10 +51,12 @@ export function entryCountdown(entry: UpcomingEntry, nowMs: number): NextUpCount
   ) {
     return nextUpCountdown(entry.startsAt, nowMs);
   }
-  if (!departure?.zone) {
-    const fallback = nextUpCountdown(entry.startsAt, nowMs);
-    return fallback.kind === "days" ? fallback : { kind: "today" };
-  }
-  const days = daysBetween(localDay(nowMs, departure.zone), departure.local.slice(0, 10));
+  // Without the station's zone, the day is read on a known clock rather than
+  // as "under 24 h ahead": that mapped tomorrow's day-only train to "today".
+  // A zone-less `times` value is the UTC reading; no `times` at all leaves the
+  // browser's clock, the start of the station's day falling on the same date.
+  const zone = departure ? (departure.zone ?? "UTC") : (deviceZone() ?? "UTC");
+  const day = departure ? departure.local.slice(0, 10) : localDay(entry.startsAt, zone);
+  const days = daysBetween(localDay(nowMs, zone), day);
   return days > 0 ? { kind: "days", count: days } : { kind: "today" };
 }

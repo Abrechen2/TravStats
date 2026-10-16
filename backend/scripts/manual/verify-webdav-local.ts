@@ -17,10 +17,10 @@ async function main() {
   assert(url.pathname.endsWith("_test"), "database name must end in _test");
   const dir = mkdtempSync(join(tmpdir(), "travstats-webdav-local-"));
   process.env.BACKUP_PATH = dir;
-  const { prisma } = await import("../src/db");
-  const { syncToCloud } = await import("../src/services/cloudSyncService");
-  const { deleteBackup, cleanupOldBackups } = await import("../src/services/backupService");
-  const { updateWebDAVSettings } = await import("../src/services/instanceSettingsService");
+  const { prisma } = await import("../../src/db");
+  const { syncToCloud } = await import("../../src/services/cloudSyncService");
+  const { deleteBackup, cleanupOldBackups } = await import("../../src/services/backupService");
+  const { updateWebDAVSettings } = await import("../../src/services/instanceSettingsService");
   const objects = new Map<string, Buffer>();
   const requests: Array<{ method: string; path: string }> = [];
   let deleteStatus = 0;

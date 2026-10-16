@@ -1,105 +1,102 @@
-# Automatische Marktbesuche aus Dawarich
+# Automatic market visits from Dawarich
 
-Implementiert im Branch `feat/dawarich-place-detection`. Kein Deployment oder
-Aktivieren auf bestehenden Instanzen durch diese Implementierung.
-Der [Datei-Prototyp](2026-10-15-market-area-prototype.md) bleibt als unabhängiges
-Werkzeug erhalten; die App verwendet jetzt denselben Detektor mit automatischem
-Kartenkatalog und dem vorhandenen Bestätigungsablauf.
+Implemented on the branch `feat/dawarich-place-detection`. This implementation
+does not deploy or enable anything on existing instances.
+The [file prototype](2026-10-15-market-area-prototype.md) remains available as
+an independent tool; the app now uses the same detector with an automatic map
+catalogue and the existing confirmation flow.
 
-## Verhalten
+## Behaviour
 
-- Eigene Dawarich-Verbindung, aktiviertes Orte-Modul und Aufenthaltserkennung
-  sind Voraussetzungen. Ein zusätzlicher Schalter erlaubt die Marktflächenabfrage.
-  Neue und bestehende Accounts haben dafür standardmäßig keine Freigabe.
-- Immich, Reisen, Flüge und Hotels sind keine Voraussetzung. Ohne Reisen bleibt
-  die Reisezuordnung leer. Überlappende oder unvollständig abgedeckte Reisen
-  werden nicht geraten. Immich-Besuche können bestehende Besuche belegen.
-- Der vorhandene Sechs-Stunden-Scan berücksichtigt die letzten sieben Tage.
-  Manuell sind in der Oberfläche 7/14/30 Tage auswählbar; die API erlaubt 1–30.
-  Lange oder gekürzte Dawarich-Antworten werden tageweise nachgeladen, insgesamt
-  höchstens 250.000 Originalpunkte. Übrige Lücken bleiben als Teilresultat sichtbar.
-- Nur Vorschläge werden erzeugt. Bestätigen legt höchstens einen Ort/Besuch an;
-  wiederholtes Bestätigen ist idempotent. Ablehnungen bleiben bei erneuten Scans
-  wirksam. Bestehende passende Marktbesuche erzeugen keinen neuen Vorschlag.
-- Ein Marktbesuch unterdrückt stationäre Teilaufenthalte desselben Besuchs.
-  Ältere offene Teilvorschläge werden atomar `superseded`, sobald der neue
-  Marktvorschlag gespeichert wird. Ihre Quellenfelder und Nachweise bleiben
-  unverändert; die neue Evidenz enthält ihre IDs. Gleichzeitiges Bestätigen
-  verhindert die Ablösung. Akzeptierte/abgelehnte Quellen werden nicht ersetzt.
+- Prerequisites are the user's own Dawarich connection, the Places module
+  switched on and stay detection. An additional switch allows the market-area
+  lookup. New and existing accounts have not given this permission by default.
+- Immich, trips, flights and hotels are not prerequisites. Without trips the
+  trip assignment stays empty. Overlapping or incompletely covered trips are not
+  guessed. Immich visits can serve as evidence for existing visits.
+- The existing six-hour scan covers the last seven days. Manually, 7/14/30 days
+  can be chosen in the UI; the API allows 1–30. Long or truncated Dawarich
+  answers are fetched day by day, at most 250,000 original points in total.
+  Remaining gaps stay visible as a partial result.
+- Only suggestions are created. Confirming creates at most one place/visit;
+  confirming again is idempotent. Rejections stay in force on later scans.
+  Existing matching market visits do not produce a new suggestion.
+- A market visit suppresses stationary partial stays of the same visit. Older
+  open partial suggestions are marked `superseded` atomically as soon as the new
+  market suggestion is stored. Their source fields and evidence stay unchanged;
+  the new evidence contains their IDs. A concurrent confirmation prevents the
+  replacement. Accepted/rejected sources are not replaced.
 
-## Automatische Flächenbeschaffung
+## Automatic area lookup
 
-Die Originalspur wird lokal in ein weltweites 0,05°-Raster eingeordnet. Nur
-Regionen mit mindestens fünf unterschiedlichen Zeitpunkten über fünf Minuten
-und ohne Lücke über zehn Minuten kommen in Betracht. Es gibt keine Liste von
-Städten oder Marktnamen. Abfragen übertragen Rastergrenzen mit kleinem Rand,
-keine ursprünglichen Koordinatenfolgen, Uhrzeiten, Punkt- oder Nutzer-IDs.
-Ungefähre Aufenthaltsregionen werden dem öffentlichen Kartendienst dadurch
-bekannt; dafür ist die getrennte Einwilligung vorgesehen.
+The original track is binned locally into a worldwide 0.05° grid. Only regions
+with at least five distinct timestamps across five minutes and no gap over ten
+minutes are considered. There is no list of cities or market names. Queries
+send grid bounds with a small margin, never original coordinate sequences,
+times, point or user IDs. The public map service does learn approximate stay
+regions this way; that is what the separate consent is for.
 
-Overpass liefert `amenity=marketplace` unabhängig von Sprache und Land. Zusätzlich
-werden benannte Marktgebäude/-gelände mit englischem `name:en` berücksichtigt;
-gewöhnliche Geschäfte, Straßen und Supermärkte nicht. Datenqualität und
-Tagging entscheiden über die Abdeckung. Ein beliebiger Markt in Antananarivo
-funktioniert bei vorhandener geeigneter Fläche genauso wie in Jeju; fehlende
-Flächen oder ungetaggte Märkte werden nicht erfunden. Kein KI-Dienst notwendig.
+Overpass returns `amenity=marketplace` regardless of language and country. In
+addition, named market buildings/grounds with an English `name:en` are taken
+into account; ordinary shops, streets and supermarkets are not. Data quality
+and tagging decide the coverage. Any market in Antananarivo works the same way
+as one in Jeju when a suitable area exists; missing areas or untagged markets
+are not invented. No AI service is needed.
 
-Geschlossene Ways und vollständige Multipolygon-Relationen werden übernommen,
-inklusive Löchern. Einzelne Marktpunkte sind keine Flächen. Unvollständige
-Geometrien werden verworfen und gezählt. Teilflächen mit derselben Wikidata-ID
-werden zu einem Veranstaltungsort zusammengefasst. Nähe oder ähnliche Namen
-allein verbinden keine unterschiedlichen Märkte.
+Closed ways and complete multipolygon relations are taken over, including
+holes. Single market points are not areas. Incomplete geometries are discarded
+and counted. Partial areas with the same Wikidata ID are merged into one venue.
+Proximity or similar names alone never join different markets.
 
-## Cache und Ausfälle
+## Cache and outages
 
-- Öffentliche Flächendaten liegen ohne Personenbezug in `market_catalog_tiles`.
-  Frisch für 14 Tage, markierter Rückfall auf höchstens 90 Tage alte Daten.
-  Maximal 2.048 gespeicherte Regionen. Quellen-URLs und OSM-Datenstand bleiben
-  im Katalog erhalten. Bei Anbieterwechsel wird der Cache getrennt.
-- Höchstens 48 ausgewählte Regionen und 24 neue Abfragen pro Scan; zusätzliche
-  Regionen oder nicht verfügbare Antworten ergeben sichtbare Teilresultate.
-  Wiederholung nutzt den Cache und ergänzt fehlende Regionen. Sehr große
-  Zeiträume können mit kürzerem Rückblick aufgeteilt werden.
-- Eine Datenbank-Lease serialisiert Abrufe über Accounts und Prozesse hinweg.
-  Gemeinsames Tageslimit: 80 Anfragen; ab 4 MB empfangener Nutzdaten wird keine
-  neue Anfrage zugelassen. Eine letzte Antwort ist auf 4 MB begrenzt.
-- Ein Abruf hat 16 Sekunden Zeitbudget. Nach Fehlern endet der Netzabruf für
-  diesen Scan; vorhandene Cache-Daten werden trotzdem ausgewertet. Mindestens
-  30 Sekunden gemeinsame Rückoffzeit, bei 406/429 längeres `Retry-After` bis 1 h.
-  Keine parallelen Abrufe und kein automatisches Ausweichen auf andere Server.
-- Ohne Flächen stehen die normalen Aufenthaltssuggestions weiterhin bereit.
-  Kartenausfall bedeutet nicht „kein Marktbesuch“. Bei Entzug der Einwilligung
-  werden verspätete Antworten weder gecacht noch als Vorschlag gespeichert.
+- Public area data is stored without any personal reference in
+  `market_catalog_tiles`. Fresh for 14 days, with a flagged fallback to data at
+  most 90 days old. At most 2,048 stored regions. Source URLs and the OSM data
+  timestamp are kept in the catalogue. Switching provider separates the cache.
+- At most 48 selected regions and 24 new queries per scan; additional regions
+  or unavailable answers produce visible partial results. A repeat uses the
+  cache and fills in missing regions. Very long periods can be split with a
+  shorter look-back.
+- A database lease serialises fetches across accounts and processes. Shared
+  daily limit: 80 requests; once 4 MB of payload has been received, no new
+  request is allowed. A final answer is capped at 4 MB.
+- A fetch has a 16-second time budget. After errors, network fetching ends for
+  that scan; existing cache data is still evaluated. At least 30 seconds of
+  shared back-off, and on 406/429 a longer `Retry-After` of up to 1 h. No
+  parallel fetches and no automatic fallback to other servers.
+- Without areas, the normal stay suggestions remain available. A map outage
+  does not mean "no market visit". When consent is withdrawn, late answers are
+  neither cached nor stored as a suggestion.
 
-`MARKET_OVERPASS_URL` kann serverseitig einen anderen Overpass-Endpunkt setzen.
-Das ist keine nutzerseitig beschreibbare URL. Standard:
-`https://overpass-api.de/api/interpreter`.
+`MARKET_OVERPASS_URL` can set a different Overpass endpoint on the server. It
+is not a URL users can write. Default: `https://overpass-api.de/api/interpreter`.
 
-## Nachweise und Übernahme
+## Evidence and adoption
 
-Die Vorschläge enthalten originale Dawarich-Punkt-IDs und Zeitfenster,
-Flächen-IDs, öffentliche Quellen, innere Trefferanzahl und Unsicherheiten.
-Grenzfälle bleiben zur manuellen Prüfung. Ein vollständig erkannter Markt wird
-als `shopping`, `dataSource=dawarich` mit OSM-/Wikidata-Referenz übernommen.
-Ändert der Nutzer Name oder Position wesentlich, werden diese Referenzen nicht
-an den korrigierten neuen Ort geheftet. Bestehende eigene Orte dürfen durch
-Name oder öffentliche Identität wiedererkannt werden; ein Laden innerhalb des
-Marktes gilt nicht als bereits erfasster Markt.
+The suggestions contain the original Dawarich point IDs and time windows, area
+IDs, public sources, the number of points inside and the uncertainties.
+Borderline cases stay for manual review. A fully detected market is adopted as
+`shopping`, `dataSource=dawarich` with an OSM/Wikidata reference. If the user
+changes the name or position substantially, these references are not attached
+to the corrected new place. Existing own places may be recognised by name or
+public identity; a shop inside the market does not count as the market already
+being recorded.
 
-## Migration und Validierung
+## Migration and validation
 
-Migration `20261015020000_market_area_catalog` ergänzt zwei optionale
-Scan-Felder und zwei Katalogtabellen. Sie verändert keine Reise-/Besuchsdaten.
-Vor Aktivierung auf einer Instanz müssen Migration und Anwendung zusammen
-bereitgestellt werden. Deployment/Containerwechsel benötigen die bestehende
-Freigabe; insbesondere wurde Prod nicht verändert.
+Migration `20261015020000_market_area_catalog` adds two optional scan fields
+and two catalogue tables. It does not change any trip or visit data. Before an
+instance enables it, the migration and the application must be deployed
+together. Deployment and container changes need the existing approval; in
+particular, Prod was not changed.
 
-Tests decken Geometrien, langsame Durchfahrt, Randtoleranz, Pausen,
-Punktduplikate, weltweite Raster, Cache, Antwortlimits, Budget-Leases,
-Einwilligungsentzug, Altdatenablösung, vorhandene Besuche und mehrfaches
-Bestätigen ab. Reale Korea-Positionsdaten wurden ausschließlich in einer
-isolierten lokalen Kopie geprüft. Private Ergebnisse gehören nicht ins Repo.
+Tests cover geometries, slow drive-throughs, edge tolerance, pauses, duplicate
+points, worldwide grids, the cache, answer limits, budget leases, consent
+withdrawal, replacing old data, existing visits and repeated confirmation. Real
+Korea position data was checked only in an isolated local copy. Private results
+do not belong in the repository.
 
-Quellen: [OSM marketplace](https://wiki.openstreetmap.org/wiki/Tag:amenity%3Dmarketplace),
+Sources: [OSM marketplace](https://wiki.openstreetmap.org/wiki/Tag:amenity%3Dmarketplace),
 [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API),
 [Overpass QL](https://wiki.openstreetmap.org/wiki/Overpass_API/Overpass_QL).

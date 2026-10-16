@@ -1,5 +1,4 @@
 import type { JSX, ReactNode } from "react";
-import { minorUnits } from "../../shared/currencies";
 import { CRUISE_DISTINCT_PALETTE } from "../../lib/cruiseColor";
 import type { CabinType, Trip } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -216,9 +215,8 @@ export function CruiseCostsSection({
             {t("field.price")}
             <input
               id={CRUISE_PRICE_ID}
-              type="number"
-              min={0}
-              step={10 ** -minorUnits(fields.currency)}
+              type="text"
+              inputMode="decimal"
               className={CRUISE_INPUT_CLASS}
               value={fields.price}
               onChange={(e): void => set("price", e.target.value)}

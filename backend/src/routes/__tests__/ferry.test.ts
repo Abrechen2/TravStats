@@ -573,6 +573,52 @@ describe("Ferry rides API", () => {
       (await request(app).get("/api/v1/ferry/live-availability").set("Cookie", cookie)).body.data
     ).toEqual({ configured: false, provider: "AISStream" });
   });
+  it("binds the vessel to the crossing: the first answered MMSI is kept, another is refused", async () => {
+    // The MMSI was free input on every call, so any crossing worked as a
+    // general AIS proxy for any vessel.
+    const ride = (await create(base)).body.data;
+    const ok = {
+      status: "ok" as const,
+      position: {
+        mmsi: "211123456",
+        vesselName: "PREMIUM",
+        lat: 38,
+        lon: 128,
+        speedKnots: 10,
+        courseDegrees: 90,
+        receivedAt: "2026-09-20T09:30:00.000Z",
+        observedAt: null,
+      },
+    };
+    jest.mocked(lookupVessel).mockReset().mockResolvedValue(ok);
+    const url = `/api/v1/ferry/${ride.id}/live-position`;
+    expect((await request(app).get(`${url}?mmsi=211123456`).set("Cookie", cookie)).status).toBe(
+      200
+    );
+    expect(lookupVessel).toHaveBeenCalledWith("211123456", userId);
+    const stored = await prisma.ferryJourney.findUniqueOrThrow({ where: { id: ride.id } });
+    expect(stored.vesselMmsi).toBe("211123456");
+
+    const other = await request(app).get(`${url}?mmsi=211999999`).set("Cookie", cookie);
+    expect(other.status).toBe(400);
+    expect(other.body.field).toBe("mmsi");
+    expect(lookupVessel).toHaveBeenCalledTimes(1);
+
+    // Without a query the bound vessel is read.
+    expect((await request(app).get(url).set("Cookie", cookie)).status).toBe(200);
+    expect(lookupVessel).toHaveBeenLastCalledWith("211123456", userId);
+
+    // The crossing's editor can rebind it.
+    await request(app)
+      .patch(`/api/v1/ferry/${ride.id}`)
+      .set("Cookie", cookie)
+      .send({ vesselMmsi: "211999999" })
+      .expect(200);
+    expect((await request(app).get(`${url}?mmsi=211999999`).set("Cookie", cookie)).status).toBe(
+      200
+    );
+  });
+
   it("refuses stale edits and deletes, and permits a delete of the current version", async () => {
     const created = await create(base);
     const ride = created.body.data;
@@ -600,6 +646,60 @@ describe("Ferry rides API", () => {
       .set("Cookie", cookie)
       .set("If-Match", stored.updatedAt.toISOString())
       .expect(204);
+  });
+
+  it("answers a stale edit and delete with the crossing as it is now, like every other domain", async () => {
+    // The 409 carried only `{error, code}`, so a client could not show what
+    // changed or retry on the current version without another read.
+    const ride = (await create(base)).body.data;
+    await request(app)
+      .patch(`/api/v1/ferry/${ride.id}`)
+      .set("Cookie", cookie)
+      .send({ notes: "first edit", baseVersion: ride.updatedAt })
+      .expect(200);
+    const stored = await prisma.ferryJourney.findUniqueOrThrow({ where: { id: ride.id } });
+    for (const res of [
+      await request(app)
+        .patch(`/api/v1/ferry/${ride.id}`)
+        .set("Cookie", cookie)
+        .send({ notes: "stale", baseVersion: ride.updatedAt }),
+      await request(app)
+        .delete(`/api/v1/ferry/${ride.id}`)
+        .set("Cookie", cookie)
+        .set("If-Match", ride.updatedAt),
+    ]) {
+      expect(res.status).toBe(409);
+      expect(res.body).toMatchObject({
+        code: "VERSION_CONFLICT",
+        entity: "ferry_journey",
+        id: ride.id,
+        baseVersion: ride.updatedAt,
+        currentVersion: stored.updatedAt.toISOString(),
+        changedFields: null,
+        current: { id: ride.id, notes: "first edit" },
+      });
+    }
+  });
+
+  it("answers 404, not a version conflict, when a racing delete removed the crossing first", async () => {
+    const ride = (await create(base)).body.data;
+    const original = prisma.ferryJourney.deleteMany.bind(prisma.ferryJourney);
+    const spy = jest
+      .spyOn(prisma.ferryJourney, "deleteMany")
+      .mockImplementationOnce(async (args) => {
+        // The other device's delete lands between the lookup and this one.
+        await original({ where: { id: ride.id } });
+        return original(args);
+      });
+    try {
+      const res = await request(app)
+        .delete(`/api/v1/ferry/${ride.id}`)
+        .set("Cookie", cookie)
+        .set("If-Match", ride.updatedAt);
+      expect(res.status).toBe(404);
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("allows only one concurrent edit based on the same version", async () => {

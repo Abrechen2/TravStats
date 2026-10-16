@@ -1,3 +1,4 @@
+import { parseDecimalInput } from "../../lib/decimalInput";
 import CurrencySelect from "../common/CurrencySelect";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useEffect, useId, useRef, useState, useCallback } from "react";
@@ -105,6 +106,10 @@ export function CruiseImportPreviewModal({
   const showTripToggle = anyFlightsDetected || entries.length > 1;
 
   const handleSave = async (): Promise<void> => {
+    if (entryData.some((e) => e.priceInvalid)) {
+      addToast("error", t("cruise:form.errors.price"));
+      return;
+    }
     const timeError = entryData.find((e) => e.timeError)?.timeError;
     if (timeError) {
       addToast("error", saveErrorMessage(timeError, t, "cruise:import.saveError"));
@@ -351,6 +356,12 @@ function CruiseImportEntryEditor({
     setFlights((prev) => prev.map((f, i) => (i === idx ? { ...f, ...patch } : f)));
   }, []);
 
+  // Either notation ("39,90", "1.500,00"). `Number` read the German one as
+  // NaN, which JSON sends as null, so the typed price was silently dropped.
+  const typedPrice = parseDecimalInput(price);
+  const priceInvalid = typedPrice !== null && !(Number.isFinite(typedPrice) && typedPrice >= 0);
+  const parsedPrice = priceInvalid ? null : typedPrice;
+
   useEffect(() => {
     const builtInput: CruiseWriteBody = {
       shipId: ship?.id ?? undefined,
@@ -366,7 +377,7 @@ function CruiseImportEntryEditor({
       cabinType: cabinType || undefined,
       deck: deck ? Number(deck) : undefined,
       bookingReference: bookingReference.trim() || undefined,
-      price: price ? Number(price) : undefined,
+      price: parsedPrice ?? undefined,
       currency: (currency as CruiseInput["currency"]) || undefined,
       stops: [],
     };
@@ -413,7 +424,14 @@ function CruiseImportEntryEditor({
     if (!timeError && flightInputs.some((f) => !f.depTimezone || !f.arrTimezone)) {
       timeError = new MissingZoneError("flights");
     }
-    onChange(index, { input: builtInput, stops, flightInputs, tripLabel, timeError });
+    onChange(index, {
+      input: builtInput,
+      stops,
+      flightInputs,
+      tripLabel,
+      timeError,
+      priceInvalid,
+    });
   }, [
     ship,
     cruiseLine,
@@ -425,7 +443,8 @@ function CruiseImportEntryEditor({
     cabinType,
     deck,
     bookingReference,
-    price,
+    parsedPrice,
+    priceInvalid,
     currency,
     departurePort,
     arrivalPort,
@@ -571,7 +590,9 @@ function CruiseImportEntryEditor({
       <div className="grid grid-cols-3 gap-3">
         <Field label={t("field.price")}>
           <input
-            type="number"
+            type="text"
+            inputMode="decimal"
+            aria-invalid={priceInvalid || undefined}
             value={price}
             onChange={(e): void => setPrice(e.target.value)}
             className={INPUT}

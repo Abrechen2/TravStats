@@ -78,6 +78,11 @@ jobs:
       - name: Typecheck backend
         run: cd backend && npx tsc --noEmit
 
+      # Hand-run verification scripts (backend/scripts/manual) are not in
+      # tsconfig.json's `src` scope; without this they rot unseen.
+      - name: Typecheck manual backend scripts
+        run: cd backend && npm run typecheck:manual
+
       - name: Test typecheck guard
         run: npm run test:typecheck
 

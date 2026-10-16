@@ -6,8 +6,8 @@ import type {
   PlanState,
   PlanOperation,
   PlanProposal,
-} from "../../../../backend/src/services/travplan/types";
-export type * from "../../../../backend/src/services/travplan/types";
+} from "../../types/travplan";
+export type * from "../../types/travplan";
 export interface PlanCapabilities {
   version: number;
   enabled: boolean;

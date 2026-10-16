@@ -20,22 +20,40 @@ import { isRoutableMode, type RouteProvider, type RoutableMode } from "./types";
  */
 const acceptedLegSource = z.enum(ACCEPTED_LEG_SOURCES);
 
+function routedLegData(routed: RoutedLeg) {
+  return {
+    source: acceptedLegSource.parse(routed.source),
+    confidence: routed.confidence,
+    waypoints:
+      routed.waypoints === null
+        ? Prisma.DbNull
+        : (routed.waypoints as unknown as Prisma.InputJsonValue),
+    distanceKm: routed.distanceKm,
+    drivingMinutes: routed.drivingMinutes,
+  };
+}
+
 /** Persist one leg's routing outcome. Shared by the routing endpoints and the automatic pass. */
 export async function applyRoutedLeg(legId: string, routed: RoutedLeg): Promise<void> {
-  const source = acceptedLegSource.parse(routed.source);
-  await prisma.tripRouteLeg.update({
-    where: { id: legId },
-    data: {
-      source,
-      confidence: routed.confidence,
-      waypoints:
-        routed.waypoints === null
-          ? Prisma.DbNull
-          : (routed.waypoints as unknown as Prisma.InputJsonValue),
-      distanceKm: routed.distanceKm,
-      drivingMinutes: routed.drivingMinutes,
-    },
+  await prisma.tripRouteLeg.update({ where: { id: legId }, data: routedLegData(routed) });
+}
+
+/**
+ * Persist a routing outcome only onto a leg that is still the straight line
+ * that was read, untouched since `readAt`. A provider round trip takes
+ * seconds; a line the user drew (or a track adopted) in that window used to
+ * be overwritten by the bulk "route the whole tour". Returns whether it wrote.
+ */
+export async function applyRoutedLegIfStillStraight(
+  legId: string,
+  readAt: Date,
+  routed: RoutedLeg
+): Promise<boolean> {
+  const { count } = await prisma.tripRouteLeg.updateMany({
+    where: { id: legId, source: "straight", updatedAt: readAt },
+    data: routedLegData(routed),
   });
+  return count === 1;
 }
 
 /**
