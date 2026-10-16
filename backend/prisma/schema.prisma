@@ -34,6 +34,11 @@ model User {
   comparisonAudits ComparisonAudit[]
   comparisonInvites ComparisonInvite[]
   comparisonCircles ComparisonCircle[]
+  leaderboardConsentsOwned  LeaderboardConsent[] @relation("LeaderboardConsentOwner")
+  leaderboardConsentsViewed LeaderboardConsent[] @relation("LeaderboardConsentViewer")
+  leaderboardRemotes        LeaderboardRemote[]
+  leaderboardInvites        LeaderboardInvite[]
+  leaderboardBoards         LeaderboardBoard[]
   id                     String                   @id @default(uuid())
   devicePushes           DevicePush[]
   clientWriteRefs        ClientWriteRef[]
@@ -4858,6 +4863,82 @@ model ComparisonChunk {
  publication ComparisonPublication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
  @@id([publicationId, part])
  @@map("comparison_chunks")
+}
+
+/// One direction: the owner's totals may be seen by ONE viewer — a local account or a remote
+/// friend. pending | accepted | declined | withdrawn. Comparison rework 2026-10-16.
+model LeaderboardConsent {
+  id        String    @id @default(uuid())
+  ownerId   String    @map("owner_id")
+  viewerId  String?   @map("viewer_id")
+  remoteId  String?   @map("remote_id")
+  status    String    @default("pending")
+  /// LeaderboardScope (schemas/comparison.ts); null until accepted.
+  scope     Json?
+  createdAt DateTime  @default(now()) @map("created_at")
+  decidedAt DateTime? @map("decided_at")
+  owner   User   @relation("LeaderboardConsentOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  viewer  User?  @relation("LeaderboardConsentViewer", fields: [viewerId], references: [id], onDelete: Cascade)
+  remote  LeaderboardRemote? @relation(fields: [remoteId], references: [id], onDelete: Cascade)
+  boardMembers LeaderboardBoardMember[]
+  @@unique([ownerId, viewerId])
+  @@unique([ownerId, remoteId])
+  @@index([viewerId, status])
+  @@map("leaderboard_consents")
+}
+
+/// A person on another instance, as one local user knows them. Both servers hold one row
+/// with the same random channel.
+model LeaderboardRemote {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  origin      String
+  channel     String
+  username    String
+  displayName String   @map("display_name")
+  createdAt   DateTime @default(now()) @map("created_at")
+  user     User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  consents LeaderboardConsent[]
+  boardMembers LeaderboardBoardMember[]
+  @@unique([origin, channel])
+  @@index([userId])
+  @@map("leaderboard_remotes")
+}
+
+model LeaderboardInvite {
+  hash      String    @id
+  userId    String    @map("user_id")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+  @@map("leaderboard_invites")
+}
+
+model LeaderboardBoard {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  user    User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  members LeaderboardBoardMember[]
+  @@index([userId])
+  @@map("leaderboard_boards")
+}
+
+/// A board member is a person the board owner can SEE: a local consent where the owner is the
+/// viewer, or one of the owner's remote friends.
+model LeaderboardBoardMember {
+  id        String  @id @default(uuid())
+  boardId   String  @map("board_id")
+  consentId String? @map("consent_id")
+  remoteId  String? @map("remote_id")
+  board   LeaderboardBoard    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  consent LeaderboardConsent? @relation(fields: [consentId], references: [id], onDelete: Cascade)
+  remote  LeaderboardRemote?  @relation(fields: [remoteId], references: [id], onDelete: Cascade)
+  @@unique([boardId, consentId])
+  @@unique([boardId, remoteId])
+  @@map("leaderboard_board_members")
 }
 
 // Plans are separate from travel evidence. Dates never promote an intention.
