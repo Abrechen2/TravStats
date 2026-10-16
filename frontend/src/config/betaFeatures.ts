@@ -154,6 +154,21 @@ export const BETA_FEATURES = Object.freeze({
   }),
 
   /**
+   * TravPlan, the planning mode for a trip that has not happened yet (`/plan*`).
+   *
+   * Gated in `hooks/useTravPlanVisible.ts` (nav entry, trip summary) and by
+   * `BetaFeatureRouteGuard` on the three routes in `App.tsx`. The instance's
+   * own `travel_plan_config.enabled` is a second, server-side condition the
+   * hook also asks — this key decides whether the mode is shown at all.
+   */
+  travPlan: Object.freeze({
+    why: "The planning mode arrived on 2026-10-14 open to every logged-in user with no gate, drawn with its own theme and its own navigation outside the design system. It is unfinished: its screens were rebuilt on the primitives on 2026-10-16, and nobody has walked the planning flow in a browser since.",
+    returnsWhen:
+      "The owner has walked the planning flow after the UI rework in a browser review and accepts it for release.",
+    reason: "beta",
+  }),
+
+  /**
    * Recorded tracks on a cruise (2.7, board item `cruise-tracks`): a GPS
    * recording replaces a leg's computed sea route on the map and in the
    * statistics. Gated at ONE place, the "Aufgezeichnete Spuren" section of

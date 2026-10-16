@@ -241,7 +241,15 @@ function AppContent() {
                 <Route
                   key={path}
                   path={path}
-                  element={isAuthenticated ? <TravPlanPage /> : <Navigate to="/login" />}
+                  element={
+                    isAuthenticated ? (
+                      <BetaFeatureRouteGuard feature="travPlan" redirectTo="/dashboard">
+                        <TravPlanPage />
+                      </BetaFeatureRouteGuard>
+                    ) : (
+                      <Navigate to="/login" />
+                    )
+                  }
                 />
               ))}
               <Route
