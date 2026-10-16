@@ -69,6 +69,26 @@ describe("WrappedPage — rail", () => {
     expect(screen.queryByText("stats:wrapped.emptyYear")).not.toBeInTheDocument();
   });
 
+  // Abstention: rides without a distance are "not recorded", never "0 km".
+  it("says the rail distance was not recorded when no ride measured one", async () => {
+    getWrappedMock.mockResolvedValue({ ...railYear, railKm: null, railStraightLineKm: 0 });
+    renderPage();
+    expect(await screen.findByText("stats:wrapped.railNoKm")).toBeInTheDocument();
+    expect(screen.queryByText("stats:wrapped.railDesc")).not.toBeInTheDocument();
+  });
+
+  it("shows a dash, not 0 km, for flights whose distance nobody measured", async () => {
+    getWrappedMock.mockResolvedValue({
+      ...railYear,
+      flights: 2,
+      distanceKm: null,
+      earthFactor: null,
+    });
+    renderPage();
+    expect(await screen.findByText("stats:wrapped.distanceNotRecorded")).toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
   // forgejo#265: the server answers null for rail the reader does not see,
   // and the page follows the payload.
   it("keeps rail out, and calls the year empty, while rail is not visible", async () => {

@@ -1,5 +1,6 @@
 import { buildWrapped, type WrappedFlight } from "../wrapped";
 import { wrappedSchema } from "../../../schemas/statsWrapped";
+import { NO_CHAPTERS } from "../wrappedChapters";
 
 /**
  * Forgejo #42, the last of the four pieces: the year in review is derived on
@@ -297,5 +298,37 @@ describe("buildWrapped — rail", () => {
 
   it("reports no rail for an account without rides", () => {
     expect(buildWrapped([flight()], [], [])).toMatchObject({ railRides: 0, railKm: 0 });
+  });
+});
+
+/**
+ * Abstention: a figure nothing measured is null, never a zero — a zero would
+ * read as "flew nowhere" or "rode 0 km", which the data never said.
+ */
+describe("buildWrapped — what was not measured", () => {
+  const ride = (distanceKm: number | null) => ({
+    year: 2024,
+    distanceKm,
+    distanceSource: distanceKm === null ? null : "routed",
+  });
+
+  it("answers null for flights the user switched off, not 0 flights and 0 km", () => {
+    const wrapped = buildWrapped([flight()], [], [], null, [ride(120)], {
+      ...NO_CHAPTERS,
+      flightsVisible: false,
+    });
+    expect(wrapped).toMatchObject({ flights: null, distanceKm: null, earthFactor: null });
+    expect(wrappedSchema.safeParse(wrapped).success).toBe(true);
+  });
+
+  it("answers null km for a year whose flights have no measurable distance", () => {
+    const wrapped = buildWrapped([flight({ distanceKm: Number.NaN })], [], []);
+    expect(wrapped).toMatchObject({ flights: 1, distanceKm: null, earthFactor: null });
+  });
+
+  it("answers null rail km when rides exist but none measured a distance", () => {
+    const wrapped = buildWrapped([], [], [], null, [ride(null), ride(null)]);
+    expect(wrapped).toMatchObject({ railRides: 2, railKm: null, railStraightLineKm: 0 });
+    expect(wrappedSchema.safeParse(wrapped).success).toBe(true);
   });
 });

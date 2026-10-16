@@ -75,10 +75,19 @@ export const wrappedSchema = z.object({
   comparisonYear: z.number().int().nullable().openapi({
     description: "The one year that beat this one, when exactly one did.",
   }),
-  flights: z.number().int(),
-  distanceKm: z.number(),
-  earthFactor: z.number().openapi({
-    description: "`distanceKm` in trips around the Earth, one decimal.",
+  flights: z.number().int().nullable().openapi({
+    description: "Null when the user does not see flights — no figure, not a zero.",
+  }),
+  distanceKm: z
+    .number()
+    .nullable()
+    .openapi({
+      description:
+        "Great-circle km of the year's flights. Null with `flights`, or when no flight of the " +
+        "year has a measurable distance — unknown, never 0.",
+    }),
+  earthFactor: z.number().nullable().openapi({
+    description: "`distanceKm` in trips around the Earth, one decimal. Null with `distanceKm`.",
   }),
   newCountries: z
     .number()
@@ -114,7 +123,7 @@ export const wrappedSchema = z.object({
     .openapi({
       description:
         "Their kilometres, every distance source together; a ride without one adds none. " +
-        "Null with `railRides`.",
+        "Null with `railRides`, and when every ride of the year lacks a distance.",
     }),
   railStraightLineKm: z
     .number()

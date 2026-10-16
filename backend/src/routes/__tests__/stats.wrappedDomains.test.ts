@@ -181,7 +181,8 @@ describe("wrapped and badges across domains", () => {
     });
     const off = await wrapped();
     expect(off.body.availableYears).toEqual([2024]);
-    expect(off.body.flights).toBe(0);
+    // A hidden domain abstains: no figure, not a zero.
+    expect(off.body.flights).toBeNull();
   });
 
   // Review M1: "new countries" follow the same gate — a hidden domain proves none.

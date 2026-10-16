@@ -267,9 +267,9 @@ ${SHARE_PAGE_FORMAT_JS}
     root.appendChild(head);
     if (w.totals) {
       var c = el("div", "card");
-      row(c, T.flights, w.totals.flights);
-      row(c, T.distance, Math.round(w.totals.distanceKm).toLocaleString());
-      row(c, T.earth, w.totals.earthFactor);
+      if (w.totals.flights !== null) row(c, T.flights, w.totals.flights);
+      if (w.totals.distanceKm !== null) row(c, T.distance, Math.round(w.totals.distanceKm).toLocaleString());
+      if (w.totals.earthFactor !== null) row(c, T.earth, w.totals.earthFactor);
       row(c, T.newCountries, w.totals.newCountries);
       if (w.totals.cruises !== null) row(c, T.cruises, w.totals.cruises);
       if (w.totals.railRides !== null) row(c, T.rail, w.totals.railRides);
