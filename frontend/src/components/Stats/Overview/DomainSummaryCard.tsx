@@ -16,6 +16,7 @@ import { delta, isWithData } from "./aggregate";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { Icon } from "../../ui/Icon";
 import { DOMAIN_ICON } from "../../ui/domainIcons";
+import { dateLocaleForLanguage } from "../../../lib/units";
 
 interface Props {
   domain: DomainKey;
@@ -44,7 +45,7 @@ export default function DomainSummaryCard({
   // The reader's language decides the thousands separator, not the machine's:
   // the adapters used to format with a hardcoded "de-DE", so an English page
   // showed "12.345 km" (#319).
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const formatKpi = (kpi: DomainKpi): string => {
     const value =
       typeof kpi.value === "number"

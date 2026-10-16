@@ -31,9 +31,18 @@ vi.mock("../../Roadtrips/useTripRoadtrips", () => ({ useTripRoadtrips: () => moc
 
 // Rail and rental are beta areas; each test says whether they are on.
 const visible = vi.hoisted(() => ({ rail: true, rental: true, bus: true }));
-vi.mock("../../../hooks/useRailVisible", () => ({ useRailVisible: () => visible.rail }));
-vi.mock("../../../hooks/useBusVisible", () => ({ useBusVisible: () => visible.bus }));
-vi.mock("../../../hooks/useRentalVisible", () => ({ useRentalVisible: () => visible.rental }));
+vi.mock("../../../hooks/useDomainVisible", () => ({
+  useDomainVisible: (key: string): boolean =>
+    (
+      (
+        ({
+          rail: () => visible.rail,
+          bus: () => visible.bus,
+          rental: () => visible.rental,
+        }) as Record<string, () => boolean>
+      )[key] ?? (() => false)
+    )(),
+}));
 
 import TripOverview from "../TripOverview";
 

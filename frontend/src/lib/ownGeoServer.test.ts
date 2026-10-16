@@ -13,8 +13,18 @@ describe("server runtime map opt-in", () => {
     );
     expect(ownBasemapCatalogue([{ id: "satellite", style: "legacy" }])).toHaveLength(1);
   });
-  it.each(["pending", "own"] as const)("never sends a map to a third party in %s mode", (mode) => {
-    window.__TRAVSTATS_GEO__ = { mode };
+  // A failed /geo-server/runtime (a 502 while the server restarts) left the
+  // bootstrap "pending", which pointed every map at own-server assets that 404
+  // without TRAVSTATS_GEO_URL: all maps blank until a reload.
+  it("keeps the legacy styles while the server mode is unconfirmed", () => {
+    window.__TRAVSTATS_GEO__ = { mode: "pending" };
+    expect(usesOwnGeoServer()).toBe(false);
+    expect(ownMapStyle("dark", "https://legacy.example/style")).toBe(
+      "https://legacy.example/style"
+    );
+  });
+  it("never sends a map to a third party in confirmed own mode", () => {
+    window.__TRAVSTATS_GEO__ = { mode: "own" };
     expect(usesOwnGeoServer()).toBe(true);
     expect(ownMapStyle("dark", "https://legacy.example/style")).toBe(
       "/api/v1/geo-server/assets/styles/dark/style.json"

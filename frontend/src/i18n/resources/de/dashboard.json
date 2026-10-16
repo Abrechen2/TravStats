@@ -200,7 +200,8 @@
       "roadtrip": "Roadtrips",
       "rail": "Bahn",
       "rental": "Mietwagen",
-      "bus": "Bus"
+      "bus": "Bus",
+      "ferry": "Fähren"
     },
     "disabledHint": "Bereich deaktiviert — Einstellungen → Bereiche"
   },
@@ -332,7 +333,10 @@
     "rentalOneWay": "Mietwagen · Einweg, keine Fahrstrecke",
     "bus": "Bus",
     "busRoad": "Bus · Straßenverlauf",
-    "busStraight": "Bus · Luftlinie"
+    "busStraight": "Bus · Luftlinie",
+    "ferry": "Fähre",
+    "ferryDrawn": "Fähre (eingezeichnet)",
+    "ferryStraight": "Fähre (Luftlinie)"
   },
   "userMenu": {
     "label": "Konto-Menü"

@@ -207,7 +207,8 @@
     "rental_desc": "Rental cars with station, period, car and the kilometres from the invoice. (Beta)",
     "bus": "Bus",
     "bus_desc": "Coach, intercity and shuttle rides: terminals, line, seat, kilometres. Not city transit. (Beta)",
-    "ferry": "Ferries"
+    "ferry": "Ferries",
+    "ferry_desc": "Ferry crossings like flights: ports, operator, vessel, vehicle on board, cabin, kilometres. (Beta)"
   },
   "settings": {
     "modules": {

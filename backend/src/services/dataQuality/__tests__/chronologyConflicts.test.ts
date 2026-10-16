@@ -101,6 +101,26 @@ describe("findChronologyConflicts — flights", () => {
   });
 });
 
+describe("findChronologyConflicts — answered duplicates", () => {
+  it("does not set a flight marked as a duplicate against its original", () => {
+    const flights = [
+      flight({
+        id: "original",
+        departureAt: at("2026-03-10T08:00:00Z"),
+        arrivalAt: at("2026-03-10T16:00:00Z"),
+      }),
+      flight({
+        id: "copy",
+        flightNumber: "UA1",
+        status: "duplicated",
+        departureAt: at("2026-03-10T09:00:00Z"),
+        arrivalAt: at("2026-03-10T17:00:00Z"),
+      }),
+    ];
+    expect(findChronologyConflicts(snapshot({ flights }))).toEqual([]);
+  });
+});
+
 describe("findChronologyConflicts — stays", () => {
   it("asks about two houses on the same night", () => {
     const findings = findChronologyConflicts(

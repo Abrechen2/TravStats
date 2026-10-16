@@ -11,7 +11,7 @@ import type { StyleSpecification } from "maplibre-gl";
 
 export type FlatStyleId = "standard" | "light" | "dark" | "voyager" | "satellite" | "osm";
 
-const buildRasterStyle = (
+export const buildRasterStyle = (
   tiles: string[],
   attribution: string,
   maxzoom = 19

@@ -94,9 +94,12 @@ export async function storeCruiseImport(params: {
     tripId = undefined;
   }
 
-  const stored = await storeFlights(newFlights, { checkFirst: false, failedReason: "failed" });
-  if (tripId && stored.ids.length > 0) {
-    await tripsApi.assignFlights(tripId, { flightIds: stored.ids, action: "add" });
+  // Asked first: created blindly with force, a flight the user had already
+  // typed in was doubled. One already held joins the trip instead.
+  const stored = await storeFlights(newFlights, { checkFirst: true, failedReason: "failed" });
+  const tripFlights = [...stored.ids, ...stored.attachable];
+  if (tripId && tripFlights.length > 0) {
+    await tripsApi.assignFlights(tripId, { flightIds: tripFlights, action: "add" });
   }
   const missing = await missingFlights(knownFlights);
 

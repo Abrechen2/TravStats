@@ -40,7 +40,8 @@ const dayOf = (d: Date | null | undefined): string | null =>
  */
 export async function writeTripStop(
   userId: string,
-  row: PlaceImportCandidate & { lat: number; lon: number }
+  row: PlaceImportCandidate & { lat: number; lon: number },
+  batchId: string
 ): Promise<"ok" | "invalid_target" | "exists"> {
   const trip = await ownTrip(userId, row.tripId);
   if (!trip) return "invalid_target";
@@ -82,6 +83,9 @@ export async function writeTripStop(
       startDate: times.startDate ?? null,
       ...times.timeColumns,
       orderIdx: (last._max.orderIdx ?? -1) + 1,
+      // Without the batch, undoing the import left its stops behind and a
+      // stop-only import never showed in the import log.
+      importBatchId: batchId,
     },
   });
   await propagateWrite(prisma, userId, "stop", stop.id);

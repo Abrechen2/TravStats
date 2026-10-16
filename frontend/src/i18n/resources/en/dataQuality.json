@@ -307,7 +307,6 @@
       "flightNumber": "Flight number",
       "saveNumber": "Save and check flight number",
       "numberEffect": "Adds this flight’s number, then checks the question again.",
-      "editFlight": "Edit flight here",
       "openRecord": "Open and edit record",
       "source": "Source",
       "compare": "Stored and proposed",
@@ -369,7 +368,14 @@
       "groupCount_one": "1 open item",
       "groupCount_other": "{{count}} open items",
       "flightChanges_one": "Update one flight detail?",
-      "flightChanges_other": "Update {{count}} flight details?"
+      "flightChanges_other": "Update {{count}} flight details?",
+      "history": {
+        "show": "Show answered",
+        "hide": "Hide answered",
+        "title": "Already answered",
+        "empty": "You haven't answered anything here yet.",
+        "failed": "The answered items could not be loaded."
+      }
     }
   },
   "flag": {

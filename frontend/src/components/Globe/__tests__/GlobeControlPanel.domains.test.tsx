@@ -33,7 +33,10 @@ vi.mock("../../../hooks/useTranslation", () => ({
 // The rail section is beta-gated; this file is about the panel honouring
 // `appearanceDomains`, so the gate is open here (OverlayAppearanceSections.test
 // covers it closed).
-vi.mock("../../../hooks/useRailVisible", () => ({ useRailVisible: () => true }));
+vi.mock("../../../hooks/useDomainVisible", () => ({
+  useDomainVisible: (key: string): boolean =>
+    ((({ rail: () => true }) as Record<string, () => boolean>)[key] ?? (() => false))(),
+}));
 
 import { GlobeControlPanel } from "../GlobeControlPanel";
 

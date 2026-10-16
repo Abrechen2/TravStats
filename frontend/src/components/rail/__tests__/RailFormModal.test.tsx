@@ -839,3 +839,44 @@ describe("RailFormModal", () => {
     });
   });
 });
+
+describe("RailFormModal price", () => {
+  // A `type="number"` field emptied "39,90" in a German browser and the model's
+  // `Number(...)` turned "1.500,00" into null, so a typed price was silently
+  // cleared on save (the bus form's forgejo#295, never carried over to rail).
+  beforeEach(() => {
+    update.mockReset();
+    getAllTrips.mockResolvedValue([]);
+    lookupProviders.mockResolvedValue({ transitous: true, dbRest: true });
+  });
+
+  it.each([
+    ["39,90", 39.9],
+    ["1.500,00", 1500],
+    ["39.90", 39.9],
+    ["", null],
+  ])("sends %s as %s", async (raw, expected) => {
+    const ride = makeRailJourney();
+    update.mockResolvedValue({ journey: ride, geometry: null });
+    render(<RailFormModal journey={ride} onClose={vi.fn()} onSaved={vi.fn()} />);
+    await waitFor(() => expect(getAllTrips).toHaveBeenCalled());
+    const price = screen.getByLabelText("rail:form.price");
+    expect(price).toHaveAttribute("type", "text");
+    expect(price).toHaveAttribute("inputmode", "decimal");
+    fireEvent.change(price, { target: { value: raw } });
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(update).toHaveBeenCalled());
+    expect(update.mock.calls[0][1]).toMatchObject({ price: expected });
+  });
+
+  it.each(["invalid", "39,9,0", "-1"])("refuses %s visibly instead of clearing it", async (raw) => {
+    const ride = makeRailJourney({ price: 12 });
+    render(<RailFormModal journey={ride} onClose={vi.fn()} onSaved={vi.fn()} />);
+    await waitFor(() => expect(getAllTrips).toHaveBeenCalled());
+    const price = screen.getByLabelText("rail:form.price");
+    fireEvent.change(price, { target: { value: raw } });
+    fireEvent.click(saveButton());
+    expect(await screen.findByText("rail:form.errors.invalidPrice")).toBeVisible();
+    expect(update).not.toHaveBeenCalled();
+  });
+});

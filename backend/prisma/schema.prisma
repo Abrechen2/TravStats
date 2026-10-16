@@ -31,6 +31,7 @@ model User {
   comparisonDevices ComparisonDevice[]
   comparisonPublications ComparisonPublication[]
   comparisonLinks ComparisonLink[]
+  comparisonAudits ComparisonAudit[]
   comparisonInvites ComparisonInvite[]
   comparisonGroups ComparisonGroup[]
   comparisonCircles ComparisonCircle[]
@@ -348,7 +349,14 @@ model PublicShareLink {
   /// The photos the owner saw in the preview, in order; the public proxy is keyed by index into this.
   photoIds     String[]  @default([]) @map("photo_ids")
   tokenHash    String    @unique @map("token_hash")
+  /// The owner's chosen end, as they set it.
   expiresAt    DateTime  @map("expires_at")
+  /// When the link really ends: the owner's end, capped at a flight's
+  /// landing-plus-grace when the link was made, and only ever LOWERED after
+  /// that (a flight moved earlier). Stored, because a value recomputed from the
+  /// flight's current times brought an ended link back when the flight was
+  /// moved later, and kept it in the active count while hiding it from the list.
+  effectiveExpiresAt DateTime @map("effective_expires_at")
   viewCount    Int       @default(0) @map("view_count")
   lastViewedAt DateTime? @map("last_viewed_at")
   createdAt    DateTime  @default(now()) @map("created_at")
@@ -1751,6 +1759,7 @@ model Trip {
   immichAlbums     TripImmichAlbum[]
   companionLinks   TripCompanion[]
   photoJourneys    PhotoJourney[]
+  dawarichStays    DawarichStay[]
   publicShareLinks PublicShareLink[]
 
   documents Document[]
@@ -1909,6 +1918,9 @@ model TripStop {
   /// has no user column, so the key is unique per TRIP — which is per user,
   /// since a trip has exactly one owner.
   shareKey      String?   @map("share_key")
+  /// The import that wrote this stop (Takeout "trip stop" rows), so undoing
+  /// the import takes it back. Null for every stop typed or planned by hand.
+  importBatchId String?   @map("import_batch_id")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -1934,6 +1946,7 @@ model TripStop {
   legsTo          TripRouteLeg[] @relation("LegTo")
   lodgingStay     LodgingStay?   @relation(fields: [lodgingStayId], references: [id], onDelete: SetNull)
   place           Place?         @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  importBatch     ImportBatch?   @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
   /// Tours that started from this station ("Preikestolen, from Mosvangen").
   anchoredTours   TripRoute[]    @relation("TourAnchor")
   /// Trip photos filed at this station (forgejo#139).
@@ -1949,6 +1962,7 @@ model TripStop {
   @@index([routeId])
   @@index([lodgingStayId])
   @@index([placeId])
+  @@index([importBatchId])
   @@map("trip_stops")
 }
 
@@ -3066,6 +3080,7 @@ model Place {
   roadtripStations   TripStop[]
   listEntries        PlaceListEntry[]
   photoJourneys      PhotoJourney[]
+  dawarichStays      DawarichStay[]
   /// References this place answers to besides `externalRef` — what a merge
   /// left of the place folded into it (forgejo#232).
   externalRefAliases PlaceExternalRef[]
@@ -3443,6 +3458,7 @@ model ImportBatch {
   ferry      FerryJourney[]
   rentals  RentalBooking[]
   places   Place[]
+  tripStops TripStop[]
 
   @@index([userId])
   @@index([userId, domain])
@@ -3648,6 +3664,7 @@ model PhotoJourney {
   @@unique([userId, fingerprint])
   @@index([userId, status])
   @@index([startDate])
+  @@index([tripId])
   @@map("photo_journeys")
 }
 
@@ -4530,11 +4547,18 @@ model Note {
 model FerryJourney {
   roadtripLegId String? @unique @map("roadtrip_leg_id")
   roadtripLeg TripRouteLeg? @relation(fields: [roadtripLegId], references: [id], onDelete: SetNull)
+  /// The linked leg's routing as it was before linking (mode, source,
+  /// confidence, waypoints, drivingMinutes, distanceKm). Linking makes the leg
+  /// a straight ferry leg; unlinking or relinking restores it from here.
+  roadtripLegBefore Json? @map("roadtrip_leg_before")
   id     String @id @default(uuid())
   userId String @map("user_id")
 
   operator String?
   vesselName String? @map("vessel_name")
+  /// The MMSI the live position reads (9 digits). Bound on the first answered
+  /// lookup so a crossing is not a free AIS proxy for any vessel.
+  vesselMmsi String? @map("vessel_mmsi")
   vehicleType String? @map("vehicle_type")
   vehicleRegistration String? @map("vehicle_registration")
   vehicleLengthM Float? @map("vehicle_length_m")
@@ -4673,9 +4697,15 @@ model DawarichStay {
   resolvedAt DateTime? @map("resolved_at")
   user User @relation(fields:[userId], references:[id], onDelete:Cascade)
   visit PlaceVisit? @relation(fields:[visitId], references:[id], onDelete:SetNull)
+  /// A finding outlives the place or trip it named: it keeps its evidence and
+  /// loses only the link (a merge repoints it first, `placeMerge.ts`).
+  place Place? @relation(fields:[placeId], references:[id], onDelete:SetNull)
+  trip Trip? @relation(fields:[tripId], references:[id], onDelete:SetNull)
   @@unique([userId, fingerprint])
   @@index([userId, status, startAt])
   @@index([visitId])
+  @@index([placeId])
+  @@index([tripId])
   @@map("dawarich_stays")
 }
 
@@ -4728,6 +4758,7 @@ model ComparisonLink {
   createdAt DateTime @default(now()) @map("created_at")
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   grants ComparisonGrant[]
+  publications ComparisonPublication[]
   @@unique([userId, channel])
   @@index([channel, origin])
   @@map("comparison_links")
@@ -4763,6 +4794,7 @@ model ComparisonAudit {
   revision Int
   operation String
   createdAt DateTime @default(now()) @map("created_at")
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   @@index([ownerId, createdAt])
   @@map("comparison_audit")
 }
@@ -4814,6 +4846,7 @@ model ComparisonPublication {
  expiresAt DateTime @map("expires_at")
  createdAt DateTime @default(now()) @map("created_at")
  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ link ComparisonLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
  chunks ComparisonChunk[]
  @@index([userId, audience, ready])
  @@index([linkId])

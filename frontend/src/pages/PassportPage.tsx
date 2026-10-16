@@ -233,6 +233,18 @@ export default function PassportPage(): JSX.Element {
                         >
                           {passport.summary.groundCountries ?? passport.summary.countriesTotal}
                         </dd>
+                        {/* forgejo#299: a chain the records cannot decide is
+                            named, never folded silently into "ground only". */}
+                        {(passport.summary.unclearCountries ?? 0) > 0 && (
+                          <p
+                            className="text-xs mt-1"
+                            style={{ color: "var(--text-muted)" }}
+                            data-testid="passport-unclear-count"
+                          >
+                            {t("passport:summary.unclearCountries")}:{" "}
+                            {passport.summary.unclearCountries}
+                          </p>
+                        )}
                       </div>
                       {[
                         ["airports", passport.summary.airports],

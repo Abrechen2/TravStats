@@ -6,6 +6,7 @@ import { busApi } from "../../../lib/api/bus";
 import { cruiseApi } from "../../../lib/api/cruise";
 import { getLodging } from "../../../lib/api/lodging";
 import { getPlace } from "../../../lib/api/places";
+import { logger } from "../../../lib/logger";
 import Button from "../../ui/Button";
 import { W } from "./model";
 
@@ -105,7 +106,9 @@ export default function RecordEditButton({
           break;
         }
       }
-    } catch {
+    } catch (error) {
+      // The alert says only THAT it failed; without this the cause was gone.
+      logger.error(`Inbox editor could not load ${entityType} ${entityId}`, error);
       setFailed(true);
     } finally {
       setLoading(false);

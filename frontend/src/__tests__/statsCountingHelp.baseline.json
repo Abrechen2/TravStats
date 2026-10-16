@@ -1,4 +1,8 @@
 {
   "_about": "Frozen gaps of statsCountingHelp.test.ts (forgejo#256-#265). One entry per statistics section, listing ONLY its gaps: missingCountingHelp (no CountingHelp rendered) and figuresWithoutEvidence (StatCard/InsightTile without an evidence prop). Only shrinks: fix a gap, then lower or delete the entry.",
-  "sections": {}
+  "sections": {
+    "components/Stats/ferry/FerryStatsSection.tsx": {
+      "figuresWithoutEvidence": 4
+    }
+  }
 }

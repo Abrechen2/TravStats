@@ -44,3 +44,47 @@ describe("explicit comparison consent", () => {
     expect(vi.mocked(comparisonPost)).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("republishing an all-existing-trips grant", () => {
+  it("keeps the grant on all existing trips instead of freezing the trip list", async () => {
+    // The stored scope carries the resolved trip ids; copying them back into the editor turned
+    // "all existing trips (and trip-less records)" into a fixed list that dropped trip-less rows.
+    vi.mocked(comparisonPost).mockReset();
+    vi.mocked(comparisonPost).mockResolvedValue({ metrics: { flights: 2 }, trips: [] });
+    const stored = {
+      statistics: true,
+      details: false,
+      costs: false,
+      personal: false,
+      photos: false,
+      documents: false,
+      domains: ["flight"],
+      tripIds: ["t1", "t2"],
+      futureTrips: false,
+      year: null,
+      precision: "exact" as const,
+      expiresAt: null,
+      allExisting: true,
+      acceptedAt: "2026-01-01T00:00:00.000Z",
+    };
+    render(
+      <GrantEditor
+        link={{ ...link, grants: [{ audience: "", active: true, revision: 1, scope: stored }] }}
+        domains={["flight"]}
+        trips={[
+          { id: "t1", name: "First" },
+          { id: "t2", name: "Second" },
+        ]}
+        onSaved={() => {}}
+        onClose={() => {}}
+      />
+    );
+    expect(screen.getByLabelText("First")).not.toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "preview" }));
+    fireEvent.click(await screen.findByLabelText("consent"));
+    fireEvent.click(screen.getByRole("button", { name: "saveGrant" }));
+    await waitFor(() => expect(vi.mocked(comparisonPost)).toHaveBeenCalledTimes(2));
+    const [, saved] = vi.mocked(comparisonPost).mock.calls[1] as [string, { scope: object }];
+    expect(saved.scope).toMatchObject({ tripIds: [], futureTrips: false });
+  });
+});

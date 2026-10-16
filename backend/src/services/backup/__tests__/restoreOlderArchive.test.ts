@@ -26,12 +26,21 @@ import type * as JobRegistry from "../../jobs/jobRegistry";
  *   <db>_r157_live — migrated to this version; the app is pointed at it.
  *
  * It needs `pg_dump` and `psql` on PATH, at least the server's major version
- * (CI's ubuntu runner has both). Without them it is skipped with a note.
+ * (CI's ubuntu runner has both). Without them it is skipped with a note on a
+ * developer machine, and FAILS in CI: a skipped suite is a green job, so a
+ * runner that lost the client tools would have stopped proving the restore
+ * round trip without anyone seeing it.
  */
 
 const TOOLS_MISSING = ["pg_dump", "psql"].filter(
   (tool) => spawnSync(tool, ["--version"], { stdio: "ignore" }).status !== 0
 );
+if (TOOLS_MISSING.length > 0 && process.env.CI) {
+  throw new Error(
+    `restoreOlderArchive: ${TOOLS_MISSING.join(" and ")} not on PATH. CI must run this suite, ` +
+      "not skip it: install the PostgreSQL client tools on the runner."
+  );
+}
 const describeWithTools = TOOLS_MISSING.length === 0 ? describe : describe.skip;
 if (TOOLS_MISSING.length > 0) {
   process.stderr.write(

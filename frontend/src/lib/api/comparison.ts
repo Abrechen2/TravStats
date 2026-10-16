@@ -21,7 +21,13 @@ export interface Link {
   confirmed: boolean;
   remoteConfirmed: boolean;
   code: string;
-  grants: Array<{ audience: string; active: boolean; revision: number; scope: Scope }>;
+  grants: Array<{
+    audience: string;
+    active: boolean;
+    revision: number;
+    /** As stored: "all existing trips" comes back with the trip ids the server resolved. */
+    scope: Scope & { allExisting?: boolean; acceptedAt?: string };
+  }>;
 }
 export interface Snapshot {
   version: 1;
@@ -56,15 +62,13 @@ export interface Snapshot {
   details: boolean;
   trips: Array<{ id: string; name: string }>;
 }
-export interface Detail {
-  tripId: string;
-  attachments: Array<{ key: string; name: string; kind: "photos" | "documents" }>;
-  sections: Array<{
-    name: string;
-    rows: Array<{
-      key: string;
-      fields: Array<{ name: string; value: string | number | boolean | null }>;
-    }>;
+/** One domain of a consent preview, cut from the same projection a grant publishes. */
+export interface RecordPage {
+  domain: string;
+  nextCursor: null;
+  rows: Array<{
+    key: string;
+    fields: Array<{ name: string; value: string | number | boolean | null }>;
   }>;
 }
 export interface Board {

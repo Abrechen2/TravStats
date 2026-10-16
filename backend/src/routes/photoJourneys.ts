@@ -205,15 +205,21 @@ function withLocalDays<T extends { startDate: Date; endDate: Date; lat: number; 
   };
 }
 
+/** Findings per list request — newest first; an answered one makes room for the next. */
+const LIST_CAP = 500;
+
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const parsed = listQuerySchema.safeParse(req.query);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
     const userId = req.userId!;
+    // Bounded, and totally ordered so the cut is stable: every finding of a
+    // status used to load, and the nearest-visit lookup scaled with it.
     const journeys = await prisma.photoJourney.findMany({
       where: { userId, status: parsed.data.status },
-      orderBy: { startDate: "desc" },
+      orderBy: [{ startDate: "desc" }, { id: "asc" }],
+      take: LIST_CAP,
       include: {
         place: { select: { name: true, userId: true } },
         trip: { select: { name: true } },

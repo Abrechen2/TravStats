@@ -268,7 +268,7 @@
     "errors": {
       "endBeforeStart": "The arrival date is before the departure date.",
       "deck": "A deck is a whole number from 1 to 30.",
-      "price": "The price cannot be negative."
+      "price": "Enter a valid price of 0 or more (e.g. 39.90)."
     },
     "colorPicked": "Chosen colour: {{color}}"
   },

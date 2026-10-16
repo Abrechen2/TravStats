@@ -81,47 +81,8 @@ describe("visibleStatsTabs", () => {
   });
 });
 
-// Rail stays behind the `railDomain` beta gate after phase 2 (owner rule,
-// 2026-09-25): the strip, the deep link and — through `visibleStatsTabs` —
-// the overview's chips and cards all ask the instance half.
-describe("rail statistics tab", () => {
-  it("is drawn only when the beta gate is on", () => {
-    expect(visibleStatsTabs(["flight", "rail"], "denied", true)).toEqual(["flight", "rail"]);
-    expect(visibleStatsTabs(["flight", "rail"], "denied", false)).toEqual(["flight"]);
-  });
-
-  it("hides rail when a caller does not say", () => {
-    expect(visibleStatsTabs(["flight", "rail"], "denied")).toEqual(["flight"]);
-  });
-
-  it("refuses a deep link to rail while the gate is off", () => {
-    expect(resolveStatsTab("rail", ["flight", "rail"], "denied", false)).toBe("all");
-    expect(resolveStatsTab("rail", ["flight", "rail"], "denied")).toBe("all");
-  });
-
-  it("opens rail with the gate on, but only for a user who has the domain", () => {
-    expect(resolveStatsTab("rail", ["flight", "rail"], "denied", true)).toBe("rail");
-    expect(resolveStatsTab("rail", ["flight"], "denied", true)).toBe("all");
-  });
-});
-
-// forgejo#263: bus gets its statistics tab, behind the `busDomain` gate like rail.
-describe("bus statistics tab", () => {
-  it("is drawn only when the bus gate is on, and hidden when a caller does not say", () => {
-    expect(visibleStatsTabs(["flight", "bus"], "denied", false, false, true)).toEqual([
-      "flight",
-      "bus",
-    ]);
-    expect(visibleStatsTabs(["flight", "bus"], "denied", true, true, false)).toEqual(["flight"]);
-    expect(visibleStatsTabs(["flight", "bus"], "denied")).toEqual(["flight"]);
-  });
-
-  it("opens a deep link to bus only with the gate on and the domain enabled", () => {
-    expect(resolveStatsTab("bus", ["flight", "bus"], "denied", false, false, true)).toBe("bus");
-    expect(resolveStatsTab("bus", ["flight", "bus"], "denied", true, true, false)).toBe("all");
-    expect(resolveStatsTab("bus", ["flight"], "denied", false, false, true)).toBe("all");
-  });
-});
+// Rail, rental and bus behind their beta switches: asked through the real
+// `useEnabledDomains` in `statsTabAccess.betaGates.test.ts`.
 
 describe("parseStatsTab", () => {
   it("reads every registered domain, rail included", () => {

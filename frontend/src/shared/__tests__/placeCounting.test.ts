@@ -115,3 +115,31 @@ describe("visitCountsForYear", () => {
     expect(visitCountsForYear({ visitedAt: later }, 2026, NOW)).toBe(false);
   });
 });
+
+// The backend mirror's own cases, verbatim: the two sides must answer the
+// same table, and this side still read only the legacy `visitedAt`.
+describe("placeCounting — the visit's own instant and zone (ADR 0002 phase 4)", () => {
+  it("files a visit in the year of the PLACE's calendar, from its stored instant", () => {
+    // 10:00 on 1 January in Auckland is 21:00Z on 31 December: the Companion
+    // stored that instant, so the legacy column's UTC year is the old one.
+    const visit = {
+      visitedAt: "2024-12-31T21:00:00.000Z",
+      visitedAtUtc: "2024-12-31T21:00:00.000Z",
+      visitedZone: "Pacific/Auckland",
+    };
+    expect(visitYear(visit)).toBe(2025);
+    // Without the new columns the legacy column's UTC date answers (Q4).
+    expect(visitYear({ visitedAt: visit.visitedAt })).toBe(2024);
+  });
+
+  it("asks the instant, not the fake-UTC wall clock, whether a visit has happened", () => {
+    // A web visit at 23:00 in Kiritimati (+14) stores 23:00 as fake UTC; the
+    // real instant is 09:00Z the same day, which has passed at 10:00Z.
+    const now = new Date("2027-05-02T10:00:00.000Z");
+    const visit = {
+      visitedAt: "2027-05-02T23:00:00.000Z",
+      visitedAtUtc: "2027-05-02T09:00:00.000Z",
+    };
+    expect(classifyVisit(visit, now)).toBe("visited");
+  });
+});

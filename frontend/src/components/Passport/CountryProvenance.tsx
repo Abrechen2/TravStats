@@ -66,6 +66,8 @@ const linkFor = (entry: CountryTimelineEntry): string => {
       return `/rail/${entry.rideId}`;
     case "bus":
       return `/bus/${entry.rideId}`;
+    case "ferry":
+      return `/ferry/${entry.rideId}`;
     case "track":
       // There is no record to open — a country-day is a reduction of a
       // location history, not something anybody typed. What CAN be reached is
@@ -104,6 +106,7 @@ const labelFor = (
       return `${entry.stationTitle} · ${entry.roadtripName}`;
     case "rail":
     case "bus":
+    case "ferry":
       // The station (or terminal) in this country, then the ride the link opens.
       return `${entry.stationName} · ${entry.rideLabel}`;
     case "track":
@@ -169,6 +172,10 @@ export default function CountryProvenance({ code }: { code: string }): JSX.Eleme
         <p className="mb-2">
           {t(detail.visited ? "passport:summary.countries" : "passport:summary.groundCountries")}
           {detail.visitUncertain && ` · ${t("passport:countries.visitUncertain")}`}
+          {detail.visitUncertain &&
+            (detail.visitUncertainReasons ?? []).map(
+              (reason) => ` · ${t(`passport:countries.unclearReason.${reason}`)}`
+            )}
         </p>
       )}
 

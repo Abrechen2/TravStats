@@ -44,9 +44,11 @@ export function detectStays(input: readonly DawarichPoint[], truncated = false):
   let skipped = 0;
   const flush = () => {
     if (group.length >= 3 && group.at(-1)!.timestampMs - group[0].timestampMs >= MIN_DURATION_MS) {
-      const maxGapMinutes = Math.max(
-        ...group.slice(1).map((p, i) => (p.timestampMs - group[i].timestampMs) / 60_000)
-      );
+      // A reduce, not Math.max(...gaps): a month at home logged every few
+      // seconds is several hundred thousand points and overflowed the stack.
+      const maxGapMinutes = group
+        .slice(1)
+        .reduce((max, p, i) => Math.max(max, (p.timestampMs - group[i].timestampMs) / 60_000), 0);
       result.push({
         startAt: new Date(group[0].timestampMs),
         endAt: new Date(group.at(-1)!.timestampMs),

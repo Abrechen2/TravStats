@@ -6,6 +6,7 @@ import { ACCEPTED_LEG_SOURCES } from "../../../schemas/tour";
 import type { LegPair } from "../../../shared/tour/legPlan";
 import logger from "../../../utils/logger";
 import { LEG_MODES, type LegMode } from "../tourDistance";
+import { providerCallGate } from "./providerBudget";
 import { resolveRouteProvider } from "./resolveProvider";
 import { routeLegGeometry, type RoutedLeg } from "./routeLeg";
 import { isRoutableMode, type RouteProvider, type RoutableMode } from "./types";
@@ -19,22 +20,40 @@ import { isRoutableMode, type RouteProvider, type RoutableMode } from "./types";
  */
 const acceptedLegSource = z.enum(ACCEPTED_LEG_SOURCES);
 
+function routedLegData(routed: RoutedLeg) {
+  return {
+    source: acceptedLegSource.parse(routed.source),
+    confidence: routed.confidence,
+    waypoints:
+      routed.waypoints === null
+        ? Prisma.DbNull
+        : (routed.waypoints as unknown as Prisma.InputJsonValue),
+    distanceKm: routed.distanceKm,
+    drivingMinutes: routed.drivingMinutes,
+  };
+}
+
 /** Persist one leg's routing outcome. Shared by the routing endpoints and the automatic pass. */
 export async function applyRoutedLeg(legId: string, routed: RoutedLeg): Promise<void> {
-  const source = acceptedLegSource.parse(routed.source);
-  await prisma.tripRouteLeg.update({
-    where: { id: legId },
-    data: {
-      source,
-      confidence: routed.confidence,
-      waypoints:
-        routed.waypoints === null
-          ? Prisma.DbNull
-          : (routed.waypoints as unknown as Prisma.InputJsonValue),
-      distanceKm: routed.distanceKm,
-      drivingMinutes: routed.drivingMinutes,
-    },
+  await prisma.tripRouteLeg.update({ where: { id: legId }, data: routedLegData(routed) });
+}
+
+/**
+ * Persist a routing outcome only onto a leg that is still the straight line
+ * that was read, untouched since `readAt`. A provider round trip takes
+ * seconds; a line the user drew (or a track adopted) in that window used to
+ * be overwritten by the bulk "route the whole tour". Returns whether it wrote.
+ */
+export async function applyRoutedLegIfStillStraight(
+  legId: string,
+  readAt: Date,
+  routed: RoutedLeg
+): Promise<boolean> {
+  const { count } = await prisma.tripRouteLeg.updateMany({
+    where: { id: legId, source: "straight", updatedAt: readAt },
+    data: routedLegData(routed),
   });
+  return count === 1;
 }
 
 /**
@@ -67,6 +86,7 @@ export function withTimeout<T>(work: Promise<T>, ms: number): Promise<T | null> 
 }
 
 async function routeLegs(
+  userId: string,
   provider: RouteProvider,
   routeId: string,
   pairs: readonly LegPair[]
@@ -99,12 +119,16 @@ async function routeLegs(
       continue;
     }
     const routed = await withTimeout(
-      routeLegGeometry(provider, {
-        from: { lat: a.lat, lon: a.lon },
-        to: { lat: b.lat, lon: b.lon },
-        mode,
-        vehicle,
-      }),
+      routeLegGeometry(
+        provider,
+        {
+          from: { lat: a.lat, lon: a.lon },
+          to: { lat: b.lat, lon: b.lon },
+          mode,
+          vehicle,
+        },
+        providerCallGate(userId)
+      ),
       AUTO_ROUTE_LEG_TIMEOUT_MS
     );
     // A provider that failed, timed out or answered something untrustworthy
@@ -141,7 +165,7 @@ export async function autoRouteNewLegs(
   try {
     const provider = await resolveRouteProvider(userId);
     if (!provider) return 0;
-    const routedCount = await routeLegs(provider, routeId, pairs);
+    const routedCount = await routeLegs(userId, provider, routeId, pairs);
     logger.info({
       operation: "tour.route.auto",
       routeId,

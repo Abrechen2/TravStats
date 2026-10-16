@@ -106,6 +106,47 @@ describe("restoreInstanceIdentity", () => {
     expect(after.webauthnOrigins).toEqual([]);
   });
 
+  it("keeps this instance's push registration, which the relay knows by id and secret", async () => {
+    // A foreign push id makes the relay deliver this server's notifications
+    // under the other server's registration — or refuse them once the other
+    // server rotates its secret.
+    const PUSH_COLUMNS = { pushInstanceId: true, pushInstanceSecret: true, pushRelayUrl: true };
+    const row = await prisma.adminSettings.findFirstOrThrow({ orderBy: { id: "asc" } });
+    const originalPush = await prisma.adminSettings.findUniqueOrThrow({
+      where: { id: row.id },
+      select: PUSH_COLUMNS,
+    });
+    const own = {
+      pushInstanceId: "own-instance",
+      pushInstanceSecret: "own-secret-ciphertext",
+      pushRelayUrl: "https://push.own.example",
+    };
+    try {
+      await prisma.adminSettings.update({ where: { id: row.id }, data: own });
+      const before = await readInstanceIdentity();
+
+      await prisma.adminSettings.update({
+        where: { id: row.id },
+        data: {
+          pushInstanceId: "someone-else",
+          pushInstanceSecret: "their-secret-ciphertext",
+          pushRelayUrl: "https://push.someone-else.example",
+        },
+      });
+
+      await restoreInstanceIdentity(before);
+
+      expect(
+        await prisma.adminSettings.findUniqueOrThrow({
+          where: { id: row.id },
+          select: PUSH_COLUMNS,
+        })
+      ).toEqual(own);
+    } finally {
+      await prisma.adminSettings.update({ where: { id: row.id }, data: originalPush });
+    }
+  });
+
   it("leaves the row alone when the archive agreed with it", async () => {
     await write(OWN);
     const before = await readInstanceIdentity();

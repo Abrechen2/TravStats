@@ -14,7 +14,10 @@ vi.mock("../../../hooks/useEnabledDomains", () => ({
 // Rail's own visibility rule — the user's switch AND the instance's beta gate —
 // stubbed so each case states which half it is about.
 let railVisible = false;
-vi.mock("../../../hooks/useRailVisible", () => ({ useRailVisible: () => railVisible }));
+vi.mock("../../../hooks/useDomainVisible", () => ({
+  useDomainVisible: (key: string): boolean =>
+    ((({ rail: () => railVisible }) as Record<string, () => boolean>)[key] ?? (() => false))(),
+}));
 
 const api = vi.hoisted(() => ({
   listLoyaltyMemberships: vi.fn(),

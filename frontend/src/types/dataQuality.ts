@@ -15,7 +15,7 @@ import type {
  * in `details` and NEITHER is marked correct. A third-party geocoder does not
  * get a veto over the user's own data, so no component may render one value as
  * "right" and the other as "wrong" — no strikethrough, no green/red pair, no
- * "correct to" arrow. That is the diff vocabulary of `PendingUpdateCard`, and
+ * "correct to" arrow. That is the diff vocabulary of `FlightUpdateCard`, and
  * borrowing it here would answer a question the user is being asked.
  */
 
@@ -58,7 +58,7 @@ export type DataQualityFlagKind =
 /**
  * `resolved` and `dismissed` are NOT two spellings of "done" — the UI must keep
  * them apart in words, not only in the endpoint it calls. See
- * `DataQualityFlagCard` for how the two buttons are worded and why.
+ * `inbox/workspace/ReviewCard` for how the two buttons are worded and why.
  */
 export type DataQualityFlagStatus = "open" | "resolved" | "dismissed";
 

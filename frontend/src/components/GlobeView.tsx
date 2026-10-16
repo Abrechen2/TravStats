@@ -21,6 +21,7 @@ import {
   DEFAULT_PORT_COLOR,
 } from "./Globe/buildGlobeLayers";
 import { type AppearanceDomain } from "./map/controlPanelKit";
+import { useResilientStyle } from "./map/basemapFallback";
 import type { LabelsMode } from "./map/labelPriority";
 import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
 import { loadGlobeChrome, saveGlobeChrome } from "./map/globeChrome";
@@ -196,10 +197,9 @@ interface DeckOverlayProps {
 }
 
 function DeckGLOverlay({ layers, onHover }: DeckOverlayProps): null {
-  // `interleaved: true` shares MapLibre's WebGL context so deck.gl uses
-  // MapLibre's globe projection matrices directly — without it, the
-  // overlay falls back to mercator and the layers detach into a flat
-  // strip floating beside the globe whenever the camera is rotated.
+  // `interleaved: true` shares MapLibre's WebGL context so deck.gl uses MapLibre's globe
+  // projection matrices directly — without it, the overlay falls back to mercator and the
+  // layers detach into a flat strip floating beside the globe whenever the camera is rotated.
   //
   // No `position` here: MapboxOverlay isn't a corner control, it's a
   // render-pipeline integration, so naming a corner for it reads as a
@@ -556,13 +556,13 @@ export default function GlobeView({
     () => STYLE_OPTIONS.find((s) => s.id === styleId) ?? STYLE_OPTIONS[0],
     [styleId]
   );
+  const resilientStyle = useResilientStyle(currentStyle.id);
   const currentStyleRef = useRef(currentStyle);
   useEffect(() => {
     currentStyleRef.current = currentStyle;
   }, [currentStyle]);
 
-  // Basemap choice persists via the shared appearance blob (save effect
-  // below), so it carries across the 2D ↔ 3D switch.
+  // Basemap choice persists via the shared appearance blob (save effect below) across 2D ↔ 3D.
   const onStyleChange = useCallback((next: StyleId) => setStyleId(next), []);
 
   // Apply globe projection + sky on initial load. Driven by
@@ -1202,7 +1202,7 @@ export default function GlobeView({
       <MapGL
         ref={mapRef}
         initialViewState={initialViewState}
-        mapStyle={currentStyle.url}
+        mapStyle={resilientStyle}
         attributionControl={false}
         onLoad={onMapLoad}
         // Auto-rotation drives `jumpTo` per frame, so this fires ~60 times a

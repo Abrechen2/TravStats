@@ -19,6 +19,7 @@ async function fresh() {
   const section = (name: string) => registry.WEB_PREF_SECTIONS.find((s) => s.name === name)!;
   return {
     section,
+    WEB_PREF_SECTIONS: registry.WEB_PREF_SECTIONS,
     useFlightColorStore,
     useOverlayAppearanceStore,
     useDashboardDomainFilterStore,
@@ -48,6 +49,17 @@ describe("web prefs registry", () => {
     for (const name of names) expect(section(name)).toBeDefined();
     const { WEB_PREF_SECTIONS } = await import("../registry");
     expect(WEB_PREF_SECTIONS.map((s) => s.name).sort()).toEqual([...names].sort());
+  });
+
+  it("gives every section a default that is a default, and that applying reads back as one", async () => {
+    // A new account on a shared browser is reset to these (webPrefsSync rule 2);
+    // a default that is not `isDefault` would be uploaded as a choice.
+    const { WEB_PREF_SECTIONS } = await fresh();
+    for (const s of WEB_PREF_SECTIONS) {
+      expect([s.name, s.isDefault(s.defaultValue)]).toEqual([s.name, true]);
+      s.apply(s.defaultValue);
+      expect([s.name, s.isDefault(s.read())]).toEqual([s.name, true]);
+    }
   });
 
   describe("mapAppearance", () => {

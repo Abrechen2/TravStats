@@ -6,6 +6,7 @@ import { PreviewModal } from "./PreviewModal";
 import { commitPreviewRows } from "./commitPreview";
 import { ImportTileShell, ImportFilePicker, ImportErrorBlock } from "./ImportTileShell";
 import { describeParseResult } from "./parserErrorCopy";
+import { logger } from "../../lib/logger";
 
 export function Fr24ImportTile(): JSX.Element {
   const { t } = useTranslation();
@@ -29,7 +30,9 @@ export function Fr24ImportTile(): JSX.Element {
         const result = await postImportPreview(parsed.rows);
         setSkippedNotice(outcome.skippedNotice);
         setPreview(result);
-      } catch {
+      } catch (err: unknown) {
+        // The sentence is the user's; the cause belongs in the log.
+        logger.error("Fr24ImportTile: preview failed", err);
         setError(t("settings:import.parserErrors.previewFailed"));
       } finally {
         setBusy(false);

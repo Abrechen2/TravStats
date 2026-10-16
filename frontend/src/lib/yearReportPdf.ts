@@ -10,6 +10,17 @@ interface YearReportOptions {
   units: "km" | "mi";
 }
 
+/**
+ * Great-circle km, or null when an end has no coordinates. Reading a missing
+ * coordinate as 0 measured the flight from a point in the Gulf of Guinea and
+ * added thousands of invented kilometres to the year.
+ */
+function distanceOf(f: Flight): number | null {
+  const ends = [f.depLat, f.depLon, f.arrLat, f.arrLon];
+  if (!ends.every((v): v is number => typeof v === "number" && Number.isFinite(v))) return null;
+  return calculateDistance(ends[0], ends[1], ends[2], ends[3]);
+}
+
 // jsPDF's built-in Helvetica is WinAnsi (Latin-1): it has no arrows, no subscript
 // two, no dingbats and no narrow no-break space (what some locales put into
 // `toLocaleString`). Every string drawn below stays inside Latin-1, so routes
@@ -45,13 +56,17 @@ export async function generateYearReportPdf(opts: YearReportOptions): Promise<vo
 
   // Compute summary stats
   let totalDistance = 0;
+  let measuredFlights = 0;
   let totalFlightTimeMin = 0;
   let totalCo2 = 0;
   const airlineCounts = new Map<string, number>();
 
   for (const f of flights) {
-    const dist = calculateDistance(f.depLat ?? 0, f.depLon ?? 0, f.arrLat ?? 0, f.arrLon ?? 0);
-    totalDistance += dist;
+    const dist = distanceOf(f);
+    if (dist !== null) {
+      totalDistance += dist;
+      measuredFlights += 1;
+    }
     if (f.departureTime && f.arrivalTime) {
       totalFlightTimeMin +=
         (new Date(f.arrivalTime).getTime() - new Date(f.departureTime).getTime()) / 60000;
@@ -70,7 +85,13 @@ export async function generateYearReportPdf(opts: YearReportOptions): Promise<vo
 
   const summaryItems: [string, string][] = [
     ["Total Flights", String(flights.length)],
-    ["Total Distance", `${distDisplay.toLocaleString("en-US")} ${distUnit}`],
+    // Nothing measured is "-", not "0 km".
+    [
+      "Total Distance",
+      flights.length > 0 && measuredFlights === 0
+        ? "-"
+        : `${distDisplay.toLocaleString("en-US")} ${distUnit}`,
+    ],
     ["Total Flight Time", `${totalHours} h`],
     ["Most Flown Airline", topAirline],
     ["Favourite Route", topRoute],
@@ -101,16 +122,15 @@ export async function generateYearReportPdf(opts: YearReportOptions): Promise<vo
     const date = f.departureTime ? formatDate(f.departureTime) : "-";
     const dep = f.depIata ?? f.depIcao ?? "?";
     const arr = f.arrIata ?? f.arrIcao ?? "?";
-    const dist = Math.round(
-      calculateDistance(f.depLat ?? 0, f.depLon ?? 0, f.arrLat ?? 0, f.arrLon ?? 0)
-    );
+    const km = distanceOf(f);
+    const dist = km === null ? null : Math.round(km);
     const co2 = f.co2Kg != null ? String(Math.round(f.co2Kg)) : "-";
     return [
       date,
       `${dep} - ${arr}`,
       f.airline ?? "-",
       f.flightNumber,
-      dist.toLocaleString("en-US"),
+      dist === null ? "-" : dist.toLocaleString("en-US"),
       co2,
     ];
   });

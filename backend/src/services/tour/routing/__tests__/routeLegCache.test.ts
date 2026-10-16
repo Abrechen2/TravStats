@@ -113,3 +113,18 @@ it.each([
     expect(route).toHaveBeenCalledTimes(2);
   }
 );
+
+it("does not hand one user's spent budget to another user waiting on the same leg", async () => {
+  // A coalesced `rate_limited` answer came from the FIRST caller's budget; a
+  // waiter with budget left used to receive it too and never routed.
+  const p = provider();
+  const ownBudget = jest.fn(() => true);
+  const [spent, waiter] = await Promise.all([
+    routeLegGeometry({ ...p }, input, () => false),
+    routeLegGeometry({ ...p }, input, ownBudget),
+  ]);
+  expect(spent.fallbackReason).toBe("rate_limited");
+  expect(waiter).toMatchObject({ source: "routed", fallbackReason: null });
+  expect(ownBudget).toHaveBeenCalledTimes(1);
+  expect(p.route).toHaveBeenCalledTimes(1);
+});

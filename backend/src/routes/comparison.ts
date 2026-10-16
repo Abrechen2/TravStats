@@ -1,7 +1,6 @@
 import sealedRouter from "./comparisonSealed";
 import { prepareScope } from "../services/federation/permissions";
-import { buildRecords } from "../services/federation/records";
-import { RECORD_FIELDS, type RecordDomain } from "../services/federation/recordFields";
+import { previewRecords, recordDomain } from "../services/federation/records";
 import {
   createCircle,
   listCircles,
@@ -120,13 +119,13 @@ router.post(
     });
   })
 );
-// No plaintext travel-data endpoint remains reachable by another account.
-router.post(
-  "/links/:id/read",
-  handle(async () => {
-    throw refused();
-  })
-);
+// The plaintext friend and group reads were retired for sealed publications. 410 tells an old
+// client the endpoint is gone for good, where 403 read like a permission it might yet obtain.
+const retired = (_req: unknown, res: Response) => {
+  res.status(410).json({ error: "COMPARISON_PLAINTEXT_READ_RETIRED" });
+};
+router.post("/links/:id/read", retired);
+router.post("/circles/read", retired);
 router.post(
   "/preview",
   handle(async (req, res) => {
@@ -278,12 +277,6 @@ router.post(
   })
 );
 router.post(
-  "/circles/read",
-  handle(async () => {
-    throw refused();
-  })
-);
-router.post(
   "/circles/leave",
   handle(async (req, res) => {
     const b = circleAction.parse(req.body);
@@ -319,11 +312,11 @@ router.post(
     const b = z
       .strictObject({
         scope: scopeSchema,
-        domain: z.enum(Object.keys(RECORD_FIELDS) as [RecordDomain, ...RecordDomain[]]),
+        domain: recordDomain,
       })
       .parse(req.body);
     const scope = await prepareScope(req.userId!, b.scope);
-    res.json({ success: true, data: await buildRecords(req.userId!, scope, b.domain) });
+    res.json({ success: true, data: await previewRecords(req.userId!, scope, b.domain) });
   })
 );
 router.post(

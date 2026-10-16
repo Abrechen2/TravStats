@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { JSX } from "react";
 import { adminApi } from "../../lib/api";
 import { useTranslation } from "../../hooks/useTranslation";
+import { logger } from "../../lib/logger";
 import { Switch } from "../ui/Field";
 import { SectionCard, SectionTitle } from "../Settings/SettingsShared";
 
@@ -21,7 +22,8 @@ export default function ShareLinksSettings(): JSX.Element {
       ({ settings }) => {
         if (alive) setEnabled(settings.shareLinksEnabled);
       },
-      () => {
+      (error: unknown) => {
+        logger.error("Loading the share-link instance setting failed:", error);
         if (alive) setLoadFailed(true);
       }
     );
@@ -36,7 +38,8 @@ export default function ShareLinksSettings(): JSX.Element {
     try {
       const { settings } = await adminApi.updateInstanceSettings({ shareLinksEnabled: on });
       setEnabled(settings.shareLinksEnabled);
-    } catch {
+    } catch (error) {
+      logger.error("Saving the share-link instance setting failed:", error);
       setSaveFailed(true);
     } finally {
       setBusy(false);

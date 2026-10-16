@@ -1,5 +1,5 @@
+import { parseDecimalInput } from "../../lib/decimalInput";
 import { useId } from "react";
-import { minorUnits } from "../../shared/currencies";
 import type { JSX } from "react";
 import CurrencySelect from "../common/CurrencySelect";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
@@ -61,7 +61,8 @@ export function StayEditorPriceSection({
 }: StayEditorPriceSectionProps): JSX.Element {
   const idPrefix = useId();
   const recentCurrencies = useRecentCurrencies();
-  const parsedTotalPrice = totalPrice.trim().length > 0 ? Number.parseFloat(totalPrice) : null;
+  const typedTotal = parseDecimalInput(totalPrice);
+  const parsedTotalPrice = typedTotal !== null && Number.isFinite(typedTotal) ? typedTotal : null;
   const preview = useLodgingFxPreview({
     totalPrice: parsedTotalPrice,
     currency,
@@ -123,9 +124,8 @@ export function StayEditorPriceSection({
           </label>
           <input
             id={`${idPrefix}-total`}
-            type="number"
-            min={0}
-            step={10 ** -minorUnits(currency)}
+            type="text"
+            inputMode="decimal"
             className={inputClassName}
             value={totalPrice}
             onChange={(e): void => onTotalPriceChange(e.target.value)}

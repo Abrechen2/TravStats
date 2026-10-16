@@ -1,6 +1,7 @@
 import { zoneOf } from "../../../shared/time/zoneOf";
 import { contains, distanceToArea, polygons, type MarketArea } from "./geometry";
 import type { MarketVisit } from "./detect";
+import { tripForStay, tripSpanColumns, type SerializedTripSpan } from "../stays/tripMatch";
 export interface KnownPlace {
   id: string;
   name: string;
@@ -17,11 +18,8 @@ export interface KnownVisit {
   visitedAtUtc: string | null;
   visitedPrecision: string | null;
 }
-export interface KnownTrip {
-  id: string;
+export interface KnownTrip extends SerializedTripSpan {
   name: string;
-  startDate: string | null;
-  endDate: string | null;
 }
 const normalized = (value: string) =>
   value
@@ -76,19 +74,10 @@ export function previewMarketVisit(
       instant <= candidate.endAt.getTime() + 10 * 60_000
     );
   });
-  const overlapping = known.trips.filter(
-    (t) =>
-      t.startDate &&
-      t.endDate &&
-      t.startDate.slice(0, 10) <= endDay &&
-      t.endDate.slice(0, 10) >= startDay
-  );
-  const trip =
-    overlapping.length === 1 &&
-    overlapping[0].startDate!.slice(0, 10) <= startDay &&
-    overlapping[0].endDate!.slice(0, 10) >= endDay
-      ? overlapping[0]
-      : null;
+  const byId = new Map(known.trips.map((t) => [t.id, t]));
+  const tripMatch = tripForStay(known.trips.map(tripSpanColumns), startDay, endDay);
+  const overlapping = tripMatch.overlapping;
+  const trip = tripMatch.trip ? (byId.get(tripMatch.trip.id) ?? null) : null;
   return {
     ...candidate,
     zone,

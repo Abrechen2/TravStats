@@ -14,7 +14,8 @@
     "airports": "Flughäfen",
     "entries": "Einreisen",
     "continents": "Kontinente",
-    "groundCountries": "Am Boden gewesen"
+    "groundCountries": "Am Boden gewesen",
+    "unclearCountries": "Unklar"
   },
   "evidence": {
     "title": "Nachweis",
@@ -25,11 +26,11 @@
     "slept": "Übernachtet",
     "sleptExplained": "Ein tatsächlicher Unterkunftsaufenthalt oder eine bestätigte Übernachtung außerhalb reiner Transitorte. Ein Datumswechsel allein reicht nicht.",
     "visited": "Besucht",
-    "visitedExplained": "Ein bestätigter Ortsbesuch oder ein nachvollziehbares Hin-/Rückflugziel. Standortpunkte und die Dauer eines Umstiegs reichen nicht.",
+    "visitedExplained": "Ein bestätigter Ortsbesuch, ein Landgang, dein Wohnland oder ein Reiseziel mit Hin- und Rückreise – per Flug, Bahn, Bus oder Fähre, auch gemischt. Standortpunkte und die Dauer eines Umstiegs reichen nicht.",
     "connection": "Flug-Endpunkt / Umstieg",
     "connectionExplained": "Der Flug belegt Bodenkontakt. Ein Besuch außerhalb des Flughafens ist noch nicht belegt. Bestätigte Ortsbesuche oder Unterkünfte können ihn ergänzen.",
     "transited": "Bodenkontakt",
-    "transitedExplained": "Ein belegter Zwischenstopp oder eine Durchfahrt, etwa an Bahnhof, Hafen oder Raststätte. Zählt als Bodenkontakt; ein tatsächlicher Besuch braucht einen weiteren Beleg."
+    "transitedExplained": "Ein belegter Zwischenstopp oder eine Durchfahrt, etwa ein Umsteigebahnhof oder eine Raststätte. Zählt als Bodenkontakt; ein tatsächlicher Besuch braucht einen weiteren Beleg."
   },
   "kinds": {
     "flight": "Flug",
@@ -39,7 +40,8 @@
     "roadtrip": "Roadtrip",
     "track": "Standortverlauf",
     "rail": "Bahn",
-    "bus": "Bus"
+    "bus": "Bus",
+    "ferry": "Fähre"
   },
   "value": {
     "dash": "—",
@@ -94,27 +96,12 @@
     "undatedExplained": "Mindestens ein Beleg trägt kein Datum. Dieses Land kann deshalb in keiner Jahresauswertung auftauchen.",
     "showRecords": "Belege zeigen",
     "hideRecords": "Belege ausblenden",
-    "visitUncertain": "Besuch außerhalb des Transitorts unbestätigt"
-  },
-  "thresholdChoice": {
-    "options": {
-      "visited": "Aufenthalt — Umsteigen und Durchreise zählen nicht",
-      "slept": "Übernachtung — nur wo du geschlafen hast",
-      "connection": "Umsteigen — alles zählt",
-      "transited": "Durchreise — Umsteigen zählt nicht"
-    },
-    "effect": {
-      "visited": "Es zählen nur Länder, in denen du dich aufgehalten hast. Eine reine Durchreise am Boden und ein Umsteigen am Flughafen zählen dann beide nicht. Deine Länderzahl wird dadurch kleiner.",
-      "slept": "Es zählen nur Länder, in denen eine Übernachtung belegt ist — durch eine Unterkunft, einen Hafenaufenthalt über Nacht oder ein Flugpaar mit Tageswechsel. Deine Länderzahl wird dadurch kleiner.",
-      "connection": "Auch ein reines Umsteigen am Flughafen zählt dann als Land. Deine Länderzahl wird dadurch größer.",
-      "transited": "Ein reines Umsteigen am Flughafen zählt dann nicht. Eine Grenze, die du am Boden überquert hast, ein Hafentag, ein erfasster Ort und jede Übernachtung zählen weiterhin. Das ist die Voreinstellung."
-    },
-    "listUnchanged": "Die Länderliste im Reisepass ändert sich dadurch nicht: Jedes Land mit Nachweis bleibt sichtbar, nicht gezählte werden nur ausgegraut. Verändert wird allein die Zahl in der Kopfzeile.",
-    "short": {
-      "connection": "Umsteigen",
-      "transited": "Durchreise",
-      "visited": "Aufenthalt",
-      "slept": "Übernachtung"
+    "visitUncertain": "Besuch unklar",
+    "unclearResolve": "Ein bestätigter Ort, eine Unterkunft oder der fehlende Flug klärt es.",
+    "unclearReason": {
+      "openChain": "Die erfasste Reisekette bricht hier ab (einfache Fahrt oder einfacher Flug, Gabelflug, erste oder letzte Reise).",
+      "noDestination": "Die Reise kehrt nirgends um – welches Land das Ziel war, lässt sich nicht entscheiden.",
+      "undated": "Die Reise hat kein Datum und lässt sich keiner Reisekette zuordnen."
     }
   },
   "countingChanged": {

@@ -163,7 +163,8 @@ export function adaptFerry(input: FerryAdapterInput): DomainStats {
         { labelKey: "overviewCard.kpi.countries", value: countries.size },
       ],
       topItems: { titleKey: "overviewCard.topItems.ferryOperators", items: topFive(operators) },
-      detailRoute: "/ferry",
+      // The ferry statistics tab, as bus's card opens bus's tab.
+      detailRoute: "/stats?tab=ferry",
     },
   };
 }

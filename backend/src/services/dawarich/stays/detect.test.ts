@@ -67,3 +67,12 @@ it.each([-1, Number.NaN, Number.POSITIVE_INFINITY])(
     expect(detectStays([point(0), point(10, { velocity }), point(20)])).toEqual([]);
   }
 );
+
+it("summarises a month-long stay with hundreds of thousands of points", () => {
+  // A phone logging every few seconds at home: spreading every gap into
+  // Math.max threw a RangeError and failed the whole scan.
+  const points = Array.from({ length: 300_000 }, (_, i) => point(i / 10, { id: i }));
+  const [stay] = detectStays(points);
+  expect(stay.pointCount).toBe(300_000);
+  expect(stay.maxGapMinutes).toBeCloseTo(0.1);
+});

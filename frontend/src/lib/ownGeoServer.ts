@@ -6,13 +6,15 @@ declare global {
   }
 }
 
-/** The static bootstrap starts pending; a failed runtime request never selects a third party. */
+/**
+ * Only a confirmed "own" mode routes maps to the instance's own server. The
+ * static bootstrap starts "pending" and stays there when /geo-server/runtime
+ * fails (a 502 during a restart); treating that as "own" pointed every map at
+ * own-server assets that 404 without TRAVSTATS_GEO_URL — all maps blank until
+ * a reload. Unconfirmed, the configured public styles are used.
+ */
 export function usesOwnGeoServer(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    window.__TRAVSTATS_GEO__ !== undefined &&
-    window.__TRAVSTATS_GEO__.mode !== "legacy"
-  );
+  return typeof window !== "undefined" && window.__TRAVSTATS_GEO__?.mode === "own";
 }
 
 export function ownMapStyle(

@@ -16,6 +16,7 @@ import {
   rentalFacts,
   stopFacts,
 } from "./facts";
+import { ownFlightCandidates, sameFlight } from "./ownFlightMatch";
 
 /**
  * Copying one shared trip's entries into another member's account (S1).
@@ -114,12 +115,29 @@ export async function copyFlights(ctx: CopyContext): Promise<number> {
       select: { id: true, shareKey: true },
     })
   );
+  const own = await ownFlightCandidates(
+    tx,
+    ctx.recipientId,
+    rows.filter((r) => !have.has(r.shareKey as string))
+  );
   let created = 0;
   for (const row of rows) {
     const key = row.shareKey as string;
     const existing = have.get(key);
     if (existing) {
       ctx.idMap.set(row.id, existing);
+      continue;
+    }
+    const mine = own.find((f) => sameFlight(row, f));
+    if (mine) {
+      // Joined, not copied: the recipient's own row (their seat, their notes)
+      // takes the key. Filed under another of their trips, it stays there.
+      own.splice(own.indexOf(mine), 1);
+      await tx.flight.update({
+        where: { id: mine.id },
+        data: { shareKey: key, ...(mine.tripId ? {} : { tripId: ctx.recipientTripId }) },
+      });
+      ctx.idMap.set(row.id, mine.id);
       continue;
     }
     const copy = await tx.flight.create({

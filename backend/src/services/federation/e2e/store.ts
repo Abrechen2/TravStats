@@ -1,9 +1,12 @@
 import { createHash, createPublicKey, verify } from "crypto";
+import { z } from "zod";
 import { prisma } from "../../../db";
 import type { ComparisonLink, Prisma } from "../../../prisma";
 import { ownedLink } from "../links";
 import { currentGrant, assertUnchanged, audit } from "../snapshots";
 import { refused } from "../security";
+// Runtime-only cycle: relay calls readSealed, readSealed asks the requester's roster via relay.
+import { ask } from "./relay";
 import {
   deviceSchema,
   contextSchema,
@@ -223,6 +226,40 @@ export async function finishPublication(userId: string, id: string, input: unkno
   await audit(link, grant, "encrypted-publication");
   return { published: true };
 }
+const REQUESTER_DEVICES_TTL_MS = 30_000;
+const requesterCache = new Map<string, { until: number; fingerprints: Set<string> }>();
+/**
+ * The devices a sealed read may legitimately be addressed to: the friend's own devices on a
+ * personal link, the group roster on a group audience. Checking only the manifest let the friend
+ * collect the copy wrapped for the OWNER's device (or any other recipient's). Cached briefly,
+ * because one publication is read chunk by chunk.
+ */
+async function requesterDevices(link: ComparisonLink, audience: string): Promise<Set<string>> {
+  const key = `${link.id}|${audience}`;
+  const hit = requesterCache.get(key);
+  if (hit && hit.until > Date.now()) return hit.fingerprints;
+  let fingerprints: string[];
+  if (!audience)
+    fingerprints = z
+      .array(deviceSchema)
+      .max(5)
+      .parse(await ask(link, { operation: "devices", audience: "" }))
+      .map((d) => d.fingerprint);
+  else {
+    const [circleId] = audience.split(":");
+    const roster = z
+      .strictObject({
+        audience: z.string().max(100),
+        members: z.array(z.object({ devices: z.array(deviceSchema).max(5) })).max(20),
+      })
+      .parse(await ask(link, { operation: "group-devices", audience: "", circleId }));
+    if (roster.audience !== audience) throw refused();
+    fingerprints = roster.members.flatMap((m) => m.devices.map((d) => d.fingerprint));
+  }
+  const value = new Set(fingerprints);
+  requesterCache.set(key, { until: Date.now() + REQUESTER_DEVICES_TTL_MS, fingerprints: value });
+  return value;
+}
 export async function readSealed(
   link: ComparisonLink,
   audience: string,
@@ -251,6 +288,7 @@ export async function readSealed(
     if (!groupOwner && p.revision !== grant.revision) continue;
     const sender = (await ownDevices(p.userId)).find((d) => d.fingerprint === p.sender);
     if (!sender) continue;
+    if (!groupOwner && !(await requesterDevices(link, audience)).has(recipient)) throw refused();
     let data: unknown = { manifest, sender };
     if (part !== undefined) {
       const chunk = await prisma.comparisonChunk.findUnique({

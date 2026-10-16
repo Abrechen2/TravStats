@@ -20,7 +20,7 @@ announcement, issue comment or issue closure was performed by this pass.
 | Check | Result | What it establishes |
 | --- | --- | --- |
 | Dawarich API, detector, scheduler | 25 tests passed | 50 repeated scan cycles, including 10 upstream failures and expanded/truncated responses; rejection memory; 12 concurrent accepts; consent revocation; late success/failure after lease takeover; existing time-zone and visit matching cases |
-| WebDAV over loopback HTTP | 10 scenarios passed, 22 requests | Real WebDAV client, PostgreSQL rows and temporary files; exact upload bytes; DELETE 401/423/500 keeps both copies and row; changed target sends no DELETE; lost response then 404 retry; upload 507; local-only/default and explicit remote retention; newest full archive protection; no cleanup without a full archive on disk |
+| WebDAV over loopback HTTP | 10 scenarios passed, 22 requests — one manual run of `backend/scripts/manual/verify-webdav-local.ts` on 2026-10-12; not part of CI (which only typechecks it) | Real WebDAV client, PostgreSQL rows and temporary files; exact upload bytes; DELETE 401/423/500 keeps both copies and row; changed target sends no DELETE; lost response then 404 retry; upload 507; local-only/default and explicit remote retention; newest full archive protection; no cleanup without a full archive on disk |
 | Backup and restore safeguards | 68 tests passed | Existing scheduler retention, backup/cloud deletion and restore preflight/migration guards |
 | Real PostgreSQL archive restore | 6 tests passed | Actual pg_dump/psql; disposable databases only; old/current archives, migration history and triggers; failed mid-stream restore does not kill the backend |
 | Dawarich settings/review UI | 7 tests passed | Recoverable polling failure versus persistent write failure, plus review behavior |
@@ -149,13 +149,16 @@ Do not regenerate connection secrets or enable either opt-in during rollout.
 
 ## Re-running the local WebDAV verification
 
-`backend/scripts/verify-webdav-local.ts` uses the actual application services.
+`backend/scripts/manual/verify-webdav-local.ts` uses the actual application
+services. It is a hand-run script, not a test: Jest maps `webdav` to a mock for
+every suite, so CI cannot execute it and only typechecks it
+(`npm run typecheck:manual`). See `backend/scripts/manual/README.md`.
 Prepare a fully migrated disposable PostgreSQL database on localhost whose name
 ends in `_test`, with an empty backup table. Keep its URL and a synthetic test
 secret in a gitignored environment file. From `backend`:
 
 ```sh
-node --env-file=.env.readiness-test --import tsx scripts/verify-webdav-local.ts
+node --env-file=.env.readiness-test --import tsx scripts/manual/verify-webdav-local.ts
 ```
 
 The script refuses non-local or non-test database names and existing backup rows.

@@ -5,6 +5,7 @@ import { prisma } from "../../db";
 import { canonicalPlaceRef, findPlaceIdByRef } from "./placeRefs";
 import { confirmOwnStay, visitTripId, writeTripStop } from "./takeout/takeoutCommit";
 import logger from "../../utils/logger";
+import { linkDocuments } from "../documents/documentService";
 import {
   PLACE_IMPORT_FAILURE_MESSAGES,
   type PlaceImportCandidate,
@@ -31,6 +32,9 @@ export interface PlaceCommitResult {
   stopsSkipped: number;
   /** Rows confirmed as one of the user's stays — nothing written for them. */
   matchedStays: number;
+  /** Kept documents filed on the visit the import wrote (forgejo#124: the
+   *  ticket a place was read from). 0 when no visit was written. */
+  documentsFiled: number;
   failed: PlaceImportFailure[];
 }
 
@@ -55,7 +59,8 @@ export async function commitPlaceImport(
   userId: string,
   source: PlaceImportSource,
   fileName: string | null,
-  rows: readonly PlaceImportCandidate[]
+  rows: readonly PlaceImportCandidate[],
+  documentIds: readonly string[] = []
 ): Promise<PlaceCommitResult> {
   const batch = await prisma.importBatch.create({
     data: { userId, domain: "poi", source, fileName },
@@ -66,6 +71,7 @@ export async function commitPlaceImport(
   let stops = 0;
   let matchedStays = 0;
   let stopsSkipped = 0;
+  let firstVisitId: string | null = null;
   const failed: PlaceImportFailure[] = [];
   const fail = (sourceRowIndex: number, code: PlaceImportFailureCode): void => {
     failed.push({ sourceRowIndex, code, error: PLACE_IMPORT_FAILURE_MESSAGES[code] });
@@ -97,11 +103,11 @@ export async function commitPlaceImport(
       }
 
       if (row.treatment === "trip_stop") {
-        const outcome = await writeTripStop(userId, {
-          ...row,
-          lat: row.lat as number,
-          lon: row.lon as number,
-        });
+        const outcome = await writeTripStop(
+          userId,
+          { ...row, lat: row.lat as number, lon: row.lon as number },
+          batch.id
+        );
         if (outcome === "ok") stops += 1;
         else if (outcome === "exists") stopsSkipped += 1;
         else fail(row.sourceRowIndex, outcome);
@@ -141,7 +147,8 @@ export async function commitPlaceImport(
       }
       const country = row.country?.trim() || null;
 
-      await prisma.place.create({
+      const place = await prisma.place.create({
+        select: { visits: { select: { id: true } } },
         data: {
           userId,
           batchId: batch.id,
@@ -176,6 +183,7 @@ export async function commitPlaceImport(
         },
       });
       created += 1;
+      firstVisitId ??= place.visits[0]?.id ?? null;
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === UNIQUE_VIOLATION) {
         skipped += 1;
@@ -185,6 +193,14 @@ export async function commitPlaceImport(
       fail(row.sourceRowIndex, "write_failed");
     }
   }
+
+  // The document a place was read from is filed on the visit it evidences.
+  // Without a visit (an undated row is a saved place, not a visit) there is
+  // no entry it can belong to; it stays unfiled and the answer says so.
+  const documentsFiled =
+    firstVisitId !== null && documentIds.length > 0
+      ? await fileOnVisit(userId, documentIds, firstVisitId)
+      : 0;
 
   logger.info(
     {
@@ -197,11 +213,39 @@ export async function commitPlaceImport(
         stops,
         matchedStays,
         stopsSkipped,
+        documentsFiled,
         failed: failed.length,
       },
     },
     "[Place Import] Commit complete"
   );
 
-  return { batchId: batch.id, created, skipped, stops, stopsSkipped, matchedStays, failed };
+  return {
+    batchId: batch.id,
+    created,
+    skipped,
+    stops,
+    stopsSkipped,
+    matchedStays,
+    documentsFiled,
+    failed,
+  };
+}
+
+/**
+ * The rows are written by now, so a document filed elsewhere in the meantime
+ * (the route checked it before the write) must not turn the import into a
+ * 500: it is logged and reported as not filed.
+ */
+async function fileOnVisit(
+  userId: string,
+  documentIds: readonly string[],
+  visitId: string
+): Promise<number> {
+  try {
+    return (await linkDocuments(userId, documentIds, { type: "placeVisit", id: visitId })).length;
+  } catch (err) {
+    logger.error({ err, userId, visitId }, "[Place Import] Filing the document failed");
+    return 0;
+  }
 }

@@ -3,7 +3,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { rentalApi } from "../../lib/api/rental";
 import { logger } from "../../lib/logger";
-import { formatAmount } from "../../lib/units";
+import { formatAmount, dateLocaleForLanguage } from "../../lib/units";
 import {
   invoiceDifference,
   rentalInvoiceDiff,
@@ -55,7 +55,7 @@ export function RentalInvoiceReview({
   onFeePicksChange,
 }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["rental", "common"]);
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const [rental, setRental] = useState<RentalBooking | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);

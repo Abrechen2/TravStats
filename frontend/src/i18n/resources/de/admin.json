@@ -162,6 +162,10 @@
             "name": "Mietwagen",
             "what": "Der Bereich „Mietwagen“: ein Fahrtenbuch für Mietwagen mit Abholung und Rückgabe in Ortszeit der Station, Fahrzeuggruppe, Preis und den Kilometern aus der Schlussrechnung."
           },
+          "travPlan": {
+            "name": "TravPlan (Alpha)",
+            "what": "Der Planungsmodus für eine Reise, die noch bevorsteht: Tagesplan, Ideen, Buchungsimport, Transfers, Packliste, Budget und die Übergabe an das Reisetagebuch. Alpha-Versuch: kann sich noch grundlegend ändern."
+          },
           "busDomain": {
             "name": "Bus",
             "what": "Der Bereich „Bus“: ein Fahrtenbuch für Fernbus-, Intercity- und Shuttlefahrten mit Abfahrt und Ankunft in Ortszeit des Terminals, Linie, Platz und Preis. Kein Stadtverkehr."

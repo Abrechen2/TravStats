@@ -3,7 +3,6 @@
   "hexLiterals": [
     "components/AchievementPopup.tsx",
     "components/Admin/BackupManagement.tsx",
-    "components/Admin/InvitationManagement.tsx",
     "components/Admin/InviteSuccessModal.tsx",
     "components/Admin/LoggingManager.tsx",
     "components/Admin/SystemInfo.tsx",
@@ -82,12 +81,9 @@
     "components/FlightForm/FlightCompleteStep.tsx",
     "components/FlightForm/FlightLookupStep.tsx",
     "components/FlightForm/FlightSelectStep.tsx",
-    "components/PendingUpdateCard.tsx",
-    "components/PendingUpdateEditor.tsx",
     "components/ReceiptUpload.tsx",
     "components/Settings/PasskeySection.tsx",
     "components/Settings/SecuritySection.tsx",
-    "components/StatisticsImpactPreview.tsx",
     "components/Stats/AircraftRankingCard.tsx",
     "components/Stats/AirlineRankingCard.tsx",
     "components/Stats/CountryDistributionCard.tsx",
@@ -122,8 +118,7 @@
     "components/import/ColumnMappingWizard.tsx",
     "components/import/PreviewModal.tsx",
     "components/places/PlaceImportPreviewModal.tsx",
-    "pages/LoginPage.tsx",
-    "pages/PendingUpdatesPage.tsx"
+    "pages/LoginPage.tsx"
   ],
   "overlaysNotDialogs": {
     "components/AchievementPopup.tsx": "A celebration, not a request. It interrupts without being asked, so the dialog contract is wrong for it: a focus trap would take the keyboard away from whatever the reader was doing, and Escape-to-dismiss implies a decision there is none. Named as not-a-dialog in Modal.tsx since 2026-08-23.",

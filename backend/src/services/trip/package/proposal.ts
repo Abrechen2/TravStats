@@ -35,6 +35,7 @@ import type {
   PackageProposal,
   ProposalBooking,
   ProposalCruise,
+  ProposalEndpoint,
   ProposalDocument,
   ProposalFlight,
   ProposalReason,
@@ -182,9 +183,15 @@ async function proposeFlights(
       if (end.status === "unknown") warnings.push({ code: "airportUnknown", subject });
     }
     const existing = await existingFlight(userId, f, departure.iata, arrival.iata);
+    // An airport the catalogue lacks still carries its code, but a create
+    // with it failed the whole package with a 422 at commit. The leg waits
+    // instead — skipped, named by the airportUnknown warning, and brought
+    // in once the reviewer corrects the code (owner rule: a real flight is
+    // never lost to the catalogue, so it is never dropped unseen either).
+    const placed = (end: ProposalEndpoint) => end.iata !== null && end.status !== "unknown";
     let decision: Decision = existing
       ? decideExisting(existing, tripId)
-      : departure.iata && arrival.iata
+      : placed(departure) && placed(arrival)
         ? { action: "create", id: null }
         : { action: "skip", id: null, reason: "unresolvedAirport" };
     if (decision.reason === "onOtherTrip") {

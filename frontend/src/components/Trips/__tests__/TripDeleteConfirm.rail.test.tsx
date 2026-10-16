@@ -10,11 +10,20 @@ import { act, render, screen } from "@testing-library/react";
  */
 
 const railVisible = vi.hoisted(() => ({ value: true }));
-vi.mock("../../../hooks/useRailVisible", () => ({ useRailVisible: () => railVisible.value }));
+vi.mock("../../../hooks/useDomainVisible", () => ({
+  useDomainVisible: (key: string): boolean =>
+    (
+      (
+        ({
+          rail: () => railVisible.value,
+          bus: () => busVisible.value,
+          rental: () => rentalVisible.value,
+        }) as Record<string, () => boolean>
+      )[key] ?? (() => false)
+    )(),
+}));
 const busVisible = vi.hoisted(() => ({ value: false }));
 const rentalVisible = vi.hoisted(() => ({ value: false }));
-vi.mock("../../../hooks/useBusVisible", () => ({ useBusVisible: () => busVisible.value }));
-vi.mock("../../../hooks/useRentalVisible", () => ({ useRentalVisible: () => rentalVisible.value }));
 vi.mock("../../../lib/api/documents", () => ({
   documentsApi: { listForEntry: vi.fn(async () => []) },
 }));

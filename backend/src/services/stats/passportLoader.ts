@@ -33,9 +33,12 @@ import {
 import { buildPassport } from "./passport";
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
 import { classifyVisit } from "../../shared/placeCounting";
+import { localDay } from "../../shared/time/instant";
+import { isValidZone } from "../../shared/time/zonedParts";
 import { loadRoadtripStations } from "./roadtripEvidenceLoader";
 import { loadRailEnds } from "./railEvidenceLoader";
 import { loadBusEnds } from "./busEvidence";
+import { loadFerryEnds } from "./ferryEvidence";
 import { loadVisibleDomains } from "../domainVisibility";
 
 /**
@@ -86,6 +89,18 @@ export async function loadAirportCountries(codes: string[]): Promise<Map<string,
 /** Every home airport the user ever had, newest period first — membership, not just the primary. */
 export async function loadHomeIatas(userId: string): Promise<string[]> {
   return allHomeAirports(await loadHomePeriods(userId));
+}
+
+/**
+ * The countries the user lives or lived in, for `buildPassport`'s home rule
+ * (forgejo#299): the home airports' countries of every period that has begun
+ * by `today`. A period that starts later is a plan, and a plan proves nothing.
+ * Read from the airports because the residence carries coordinates only.
+ */
+export async function loadHomeCountries(userId: string, today: string): Promise<string[]> {
+  const begun = (await loadHomePeriods(userId)).filter((p) => p.fromDate <= today);
+  const countries = await loadAirportCountries(allHomeAirports(begun));
+  return [...new Set([...countries.values()].filter((c): c is string => Boolean(c)))];
 }
 
 /**
@@ -145,9 +160,29 @@ export interface PassportSources {
   rail?: boolean;
   /** Omitted: read while the user sees the bus domain (its beta switch included). */
   bus?: boolean;
+  /** Omitted: read while the user sees the ferry domain (its beta switch included). */
+  ferry?: boolean;
   roadtrip?: boolean;
   place?: boolean;
   track?: boolean;
+}
+
+/**
+ * A place visit's evidence day, on the PLACE's calendar (ADR 0002 D4) and as
+ * UTC midnight, the carrier the fold reads its day and year from. `visitedAt`
+ * is a mixed legacy column that may hold the instant itself, so a New Year's
+ * morning in Tokyo was filed under the old year; it is only the fallback for
+ * a visit the backfill has not reached.
+ */
+export function placeVisitAt(v: {
+  visitedAt: Date | null;
+  visitedAtUtc: Date | null;
+  visitedZone: string | null;
+}): Date | null {
+  if (v.visitedAtUtc && v.visitedZone && isValidZone(v.visitedZone)) {
+    return new Date(`${localDay(v.visitedAtUtc, v.visitedZone)}T00:00:00.000Z`);
+  }
+  return v.visitedAt;
 }
 
 export async function loadPassport(
@@ -161,7 +196,12 @@ export async function loadPassport(
   const readTrack = sources.track ?? true;
   // Bus is the one source the page itself gates (forgejo#265): a ride proves a
   // country only while the bus domain is visible to this user.
-  const readBus = sources.bus ?? (await loadVisibleDomains(userId)).includes("bus");
+  const visibleDomains =
+    sources.bus === undefined || sources.ferry === undefined
+      ? await loadVisibleDomains(userId)
+      : [];
+  const readBus = sources.bus ?? visibleDomains.includes("bus");
+  const readFerry = sources.ferry ?? visibleDomains.includes("ferry");
   // One clock for the whole load, so two evidence sources cannot disagree
   // about whether a visit has happened yet.
   const now = new Date();
@@ -222,7 +262,7 @@ export async function loadPassport(
    * "Deutschland" and "Germany" are one country and only the code knows that.
    */
   // prettier-ignore
-  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, countryDays, threshold, roadtripStations, railEnds, busEnds] = await Promise.all([
+  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, countryDays, threshold, roadtripStations, railEnds, busEnds, homeCountries, ferryEnds] = await Promise.all([
     loadAirportCountries(passportAirportCodes(flights)),
     prisma.cruiseStop.findMany({
       where: {
@@ -318,6 +358,8 @@ export async function loadPassport(
     // until 2.7 by nothing here.
     readRail ? loadRailEnds(userId) : [],
     readBus ? loadBusEnds(userId) : [],
+    loadHomeCountries(userId, now.toISOString().slice(0, 10)),
+    readFerry ? loadFerryEnds(userId) : [],
   ]);
 
   return buildPassport(
@@ -349,7 +391,7 @@ export async function loadPassport(
         ? happened.map((v) => ({
             isoCountryCode: place.isoCountryCode,
             countryVisitKind: place.countryVisitKind,
-            at: v.visitedAt,
+            at: placeVisitAt(v),
           }))
         : [
             {
@@ -374,6 +416,8 @@ export async function loadPassport(
     roadtripStations,
     railEnds,
     profile.zone,
-    busEnds
+    busEnds,
+    homeCountries,
+    ferryEnds
   );
 }

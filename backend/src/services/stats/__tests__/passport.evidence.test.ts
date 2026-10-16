@@ -43,6 +43,7 @@ describe("the passport counts evidence", () => {
       lodging: 0,
       rail: 0,
       bus: 0,
+      ferry: 0,
       roadtrip: 0,
       track: 0,
     });
@@ -65,6 +66,7 @@ describe("the passport counts evidence", () => {
       lodging: 0,
       rail: 0,
       bus: 0,
+      ferry: 0,
       roadtrip: 0,
       track: 0,
     });
@@ -94,6 +96,7 @@ describe("the passport counts evidence", () => {
       lodging: 0,
       rail: 0,
       bus: 0,
+      ferry: 0,
       roadtrip: 0,
       track: 0,
     });
@@ -167,10 +170,10 @@ describe("the passport counts evidence", () => {
     expect(passport.summary.groundCountries).toBe(1);
   });
 
-  it("does not count a port call alone as a new visit", () => {
-    // The flight is dated an earlier year on purpose: with both in 2024 the
-    // assertion below would pass for the wrong reason, since Germany would be
-    // new too. A port call proves ground presence but not a visit.
+  it("counts a port call alone as a new visit in its year (owner ruling 2026-10-16)", () => {
+    // "Landgang ist eindeutig ein Besuch": a port day is a visit, so Italy is
+    // new in 2024. The flight is dated an earlier year on purpose, so Germany
+    // cannot be the country that makes the figure 1.
     const passport = buildPassport(
       [flight("MUC", "FRA", { departureTime: new Date("2019-04-12T08:00:00Z") })],
       countries,
@@ -179,7 +182,7 @@ describe("the passport counts evidence", () => {
       [{ country: "Italy", at: new Date("2024-03-01T00:00:00Z") }]
     );
 
-    expect(passport.countries.find((c) => c.code === "IT")?.isNew).toBe(false);
-    expect(passport.summary.newThisYear).toBe(0);
+    expect(passport.countries.find((c) => c.code === "IT")?.isNew).toBe(true);
+    expect(passport.summary.newThisYear).toBe(1);
   });
 });

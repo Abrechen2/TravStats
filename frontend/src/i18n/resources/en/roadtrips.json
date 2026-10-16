@@ -940,6 +940,7 @@
     "colStation": "Station",
     "colBefore": "Before",
     "colAfter": "New",
+    "previewCaption": "Preview: old and new dates per station",
     "noticesTitle": "Please check",
     "notice": {
       "beforePrevious": "“{{name}}” then begins before “{{previous}}” ends.",

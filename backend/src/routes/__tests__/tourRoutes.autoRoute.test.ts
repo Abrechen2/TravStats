@@ -11,6 +11,7 @@ import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { resolveRouteProvider } from "../../services/tour/routing/resolveProvider";
 import type { RouteProvider, RouteRequest } from "../../services/tour/routing/types";
+import { resetProviderBudget, takeProviderCall } from "../../services/tour/routing/providerBudget";
 
 const mockResolveProvider = resolveRouteProvider as jest.Mock<Promise<RouteProvider | null>>;
 
@@ -89,6 +90,22 @@ describe("Automatic routing of new legs on save", () => {
       expect(leg.source).toBe("routed");
       expect(leg.distanceKm).toBe(500);
       expect(leg.waypoints).toHaveLength(3);
+    }
+  });
+
+  it("does not route a save past the user's spent daily routing budget", async () => {
+    const id = await newRoadtrip();
+    try {
+      while (takeProviderCall(userId) === "ok");
+      const res = await request(app)
+        .put(`/api/v1/roadtrips/${id}/stations`)
+        .set("Cookie", cookie)
+        .send({ stations: [station(HAMBURG), station(AALBORG)] });
+      expect(res.status).toBe(200);
+      expect(bentRoad).not.toHaveBeenCalled();
+      expect(res.body.legs[0].source).toBe("straight");
+    } finally {
+      resetProviderBudget();
     }
   });
 

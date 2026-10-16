@@ -200,9 +200,13 @@ describe("controls", () => {
 
   it("holds the button heights the design system names", () => {
     const { rerender } = render(<Button variant="primary">Speichern</Button>);
-    expect(screen.getByRole("button").style.height).toBe("var(--ts-size-button-primary)");
+    expect(screen.getByRole("button").style.height).toBe(
+      "var(--ts-button-height, var(--ts-size-button-primary))"
+    );
     rerender(<Button variant="secondary">Abbrechen</Button>);
-    expect(screen.getByRole("button").style.height).toBe("var(--ts-size-button-secondary)");
+    expect(screen.getByRole("button").style.height).toBe(
+      "var(--ts-button-height, var(--ts-size-button-secondary))"
+    );
   });
 });
 

@@ -77,6 +77,7 @@ jest.mock("../utils/database", () => ({
 // Import service after mocks are registered
 import { listBackups, getBackup, deleteBackup, cleanupOldBackups } from "../services/backupService";
 import * as fs from "fs";
+import { AppError } from "../middleware/errorHandler";
 
 const mockExistsSync = fs.existsSync as jest.Mock;
 const mockRmSync = fs.rmSync as jest.Mock;
@@ -307,6 +308,56 @@ describe("backupService", () => {
       const cutoff = filter.lt.getTime();
       expect(Math.abs(cutoff - (Date.now() - 4 * 86400000))).toBeLessThan(1000);
       expect(mockDeleteCloudBackup).toHaveBeenCalledWith(old);
+    });
+
+    // Uploads before 2026-10-12 recorded no target, so remote deletion refuses
+    // them with REMOTE_TARGET_UNKNOWN. That refusal used to keep the LOCAL
+    // archive too, so with remote retention on, retention never deleted any
+    // older archive again.
+    describe("with remote retention on", () => {
+      const old = { ...MOCK_BACKUP, id: "old-1", syncedToCloud: true };
+
+      beforeEach(() => {
+        mockAdminSettingsFindFirst.mockResolvedValue({ backupCloudRetention: true });
+        mockBackupFindMany
+          .mockResolvedValueOnce([old])
+          .mockResolvedValueOnce([{ id: "latest", backupPath: "/latest" }]);
+        mockBackupFindUnique.mockResolvedValue(old);
+        mockExistsSync.mockReturnValue(true);
+      });
+
+      it("deletes the local archive when the remote target is unknown, leaving the remote copy", async () => {
+        mockDeleteCloudBackup.mockRejectedValueOnce(
+          new AppError("Remote backup target is unknown or changed", 409, "REMOTE_TARGET_UNKNOWN")
+        );
+
+        expect(await cleanupOldBackups()).toBe(1);
+
+        expect(mockRmSync).toHaveBeenCalledWith("/data/backups/backup-1", expect.anything());
+        expect(mockBackupDelete).toHaveBeenCalledWith({ where: { id: "old-1" } });
+      });
+
+      it("keeps the local archive when a known remote target fails to delete", async () => {
+        mockDeleteCloudBackup.mockRejectedValueOnce(
+          new AppError("WebDAV share did not answer as expected: offline", 502)
+        );
+
+        expect(await cleanupOldBackups()).toBe(0);
+
+        expect(mockRmSync).not.toHaveBeenCalled();
+        expect(mockBackupDelete).not.toHaveBeenCalled();
+      });
+    });
+
+    it("still refuses an explicit remote delete whose target is unknown", async () => {
+      mockBackupFindUnique.mockResolvedValue({ ...MOCK_BACKUP, syncedToCloud: true });
+      mockDeleteCloudBackup.mockRejectedValueOnce(
+        new AppError("Remote backup target is unknown or changed", 409, "REMOTE_TARGET_UNKNOWN")
+      );
+
+      await expect(deleteBackup("backup-1", true)).rejects.toMatchObject({ statusCode: 409 });
+
+      expect(mockBackupDelete).not.toHaveBeenCalled();
     });
 
     it("returns 0 when no old backups exist", async () => {

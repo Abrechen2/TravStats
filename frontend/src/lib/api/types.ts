@@ -267,10 +267,19 @@ export interface PendingUpdateFlightRef {
   arrIata: string | null;
 }
 
+/** `pendingUpdates/statisticsImpact` on the server: km and minutes, after − before. */
 export interface StatisticsImpact {
-  distanceChange?: number;
-  durationChange?: number;
+  distance?: { before: number; after: number; change: number };
+  flightTime?: { before: number; after: number; change: number };
   [key: string]: unknown;
+}
+
+/** Set by the historical enrichment job; absent on a live provider's proposal. */
+export interface PendingUpdateMetadata {
+  isHistoricalEnrichment?: boolean;
+  enrichmentMode?: "full" | "slim";
+  confidence?: number;
+  sourceFlightsCount?: number;
 }
 
 /** Flight update data for pending updates (key-value pairs of flight fields) */
@@ -293,6 +302,7 @@ export interface PendingUpdate {
   rejectedAt?: string;
   editedAt?: string;
   statisticsImpact?: StatisticsImpact;
+  metadata?: PendingUpdateMetadata | null;
   flight?: PendingUpdateFlightRef;
 }
 

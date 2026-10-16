@@ -16,8 +16,6 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
-import { useRailVisible } from "../../hooks/useRailVisible";
-import { useRentalVisible } from "../../hooks/useRentalVisible";
 import { useToursVisible } from "../../hooks/useToursVisible";
 import {
   OVERLAY_SIZE_RANGE,
@@ -25,7 +23,14 @@ import {
   type OverlayAppearance,
 } from "../../lib/overlayAppearance";
 import { useOverlayAppearanceStore } from "../../store/overlayAppearanceStore";
-import { CollapsibleSection, Slider, Toggle, type AppearanceDomain } from "./controlPanelKit";
+import {
+  CollapsibleSection,
+  Slider,
+  Toggle,
+  type AppearanceDomain,
+  MUTED_TEXT,
+} from "./controlPanelKit";
+import { useDomainVisible } from "../../hooks/useDomainVisible";
 
 type NumericKey = Exclude<keyof OverlayAppearance, "rentalShowLine">;
 
@@ -70,7 +75,7 @@ function RentalLineToggle(): JSX.Element {
         icon="↔️"
         label={t("map:globe.panel.rentalShowLine")}
       />
-      <div className="px-2 text-[10px] leading-snug" style={{ color: "rgba(241,245,249,0.45)" }}>
+      <div className="px-2 text-[10px] leading-snug" style={{ color: MUTED_TEXT }}>
         {t("map:globe.panel.rentalShowLineHint")}
       </div>
       {/* The width of a line that is not drawn is not a control — hidden with it. */}
@@ -91,8 +96,8 @@ function RentalLineToggle(): JSX.Element {
  */
 function useShownOverlayDomains(domains: readonly AppearanceDomain[]): Set<AppearanceDomain> {
   const toursVisible = useToursVisible();
-  const railVisible = useRailVisible();
-  const rentalVisible = useRentalVisible();
+  const railVisible = useDomainVisible("rail");
+  const rentalVisible = useDomainVisible("rental");
   const { isEnabled } = useEnabledDomains();
   const allowed: Partial<Record<AppearanceDomain, boolean>> = {
     tour: toursVisible,

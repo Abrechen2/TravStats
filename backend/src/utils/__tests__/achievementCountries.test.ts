@@ -133,7 +133,7 @@ describe("achievementCountries — the passport's evidence, the gates' visibilit
     await prisma.user.deleteMany({ where: { id: userId } });
   });
 
-  it("does not infer a visit from train endpoints alone", async () => {
+  it("does not infer a visit from a one-way train ride (an open chain)", async () => {
     await ride("DE", "CH", "2025-03-01");
     expect([...(await achievementCountries(userId, new Set()))].sort()).toEqual([]);
   });

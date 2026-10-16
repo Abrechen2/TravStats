@@ -5,8 +5,23 @@ import { pendingUpdatesApi } from "../../../lib/api/pendingUpdates";
 import type { PendingUpdate, FlightUpdateData } from "../../../lib/api/types";
 import { useDisplayFormat } from "../../../lib/displayFormat";
 import Button from "../../ui/Button";
+import ChangeDiffView from "../../ChangeDiffView";
 import type { InboxAction } from "./FlagQuickEditor";
+import { apiSourceLabel, expiresInLabel } from "./flightUpdateMeta";
 import { W } from "./model";
+
+/** `actualDeparture`/`actualArrival` are instants too, though their names do not end in "Time". */
+const TIME_FIELD = /Time$|^actual(Departure|Arrival)$/;
+
+/**
+ * A `datetime-local` value, read as UTC, as a full ISO instant. The input omits
+ * ":00" seconds, and `${value}Z` without seconds was refused by the server, so
+ * a time typed to the minute made the whole edit fail.
+ */
+function utcInputToIso(value: string): string | null {
+  const at = new Date(`${value}Z`);
+  return Number.isNaN(at.getTime()) ? null : at.toISOString();
+}
 
 /** All proposed fields stay visible. Saving the draft and applying it are separate API acts. */
 export default function FlightUpdateCard({
@@ -29,26 +44,50 @@ export default function FlightUpdateCard({
   const proposed = update.editedData ?? update.proposedData;
   const expired = Date.parse(update.expiresAt) <= Date.now();
   const value = (v: unknown) => (v === null || v === undefined || v === "" ? "—" : String(v));
+  const expiresIn = expiresInLabel(update.expiresAt, Date.now(), t);
+  const enrichment = update.metadata?.isHistoricalEnrichment ? update.metadata : null;
+  const distanceChange = update.statisticsImpact?.distance?.change;
   return (
     <form
       className="space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
         if (busy || expired) return;
-        void act(async () => {
-          if (Object.keys(draft).length > 0)
-            await pendingUpdatesApi.update(update.id, { ...proposed, ...draft });
-          await pendingUpdatesApi.apply(update.id);
-        });
+        void act(
+          async () => {
+            if (Object.keys(draft).length > 0)
+              await pendingUpdatesApi.update(update.id, { ...proposed, ...draft });
+            await pendingUpdatesApi.apply(update.id);
+          },
+          false,
+          t("pendingUpdates:messages.applied")
+        );
       }}
     >
       <p className="t-caption">
-        {t(`${W}.source`)}:{" "}
-        {t(`pendingUpdates:apiSource.${update.apiSource}`, { defaultValue: update.apiSource })} ·{" "}
+        {t(`${W}.source`)}: {apiSourceLabel(update.apiSource, t)} ·{" "}
         {format.dateTime(update.fetchedAt)}
+        {expiresIn && ` · ${t("pendingUpdates:expiresIn")} ${expiresIn}`}
       </p>
+      {/* A historical enrichment is a guess from reference flights, not a
+          provider's report: it says so, with its basis, before anything else. */}
+      {enrichment && (
+        <p className="t-caption" role="note">
+          <span className="font-semibold">
+            {t(
+              `pendingUpdates:enrichment.${enrichment.enrichmentMode === "full" ? "fullBadge" : "slimBadge"}`
+            )}
+          </span>{" "}
+          ·{" "}
+          {t("pendingUpdates:enrichment.disclaimer", {
+            count: enrichment.sourceFlightsCount ?? 0,
+            confidence: enrichment.confidence ?? 0,
+          })}
+        </p>
+      )}
       {update.flight && (
         <p className="text-sm">
+          {update.flight.airline ? `${update.flight.airline} · ` : ""}
           {format.dateTime(update.flight.departureTime, { timeZone: "UTC" })} UTC ·{" "}
           <Link className="underline" to={`/flights/${update.flightId}`}>
             {t(`${W}.openRecord`)}
@@ -58,7 +97,7 @@ export default function FlightUpdateCard({
       <fieldset disabled={busy || expired} className="min-w-0 space-y-3">
         <legend className="t-label-mono mb-2">{t(`${W}.compare`)}</legend>
         {changes.map((change) => {
-          const isTime = /Time$/.test(change.field);
+          const isTime = TIME_FIELD.test(change.field);
           const current = Object.prototype.hasOwnProperty.call(draft, change.field)
             ? draft[change.field]
             : proposed[change.field];
@@ -125,7 +164,7 @@ export default function FlightUpdateCard({
                               : originalType === "number"
                                 ? Number(e.target.value)
                                 : isTime
-                                  ? `${e.target.value}Z`
+                                  ? utcInputToIso(e.target.value)
                                   : e.target.value,
                         }))
                       }
@@ -137,6 +176,19 @@ export default function FlightUpdateCard({
           );
         })}
       </fieldset>
+      {distanceChange !== undefined && distanceChange !== 0 && (
+        <p className="t-caption">
+          {t("pendingUpdates:statisticsImpact")}: {t("pendingUpdates:distance")}{" "}
+          {distanceChange > 0 ? "+" : ""}
+          {distanceChange} km
+        </p>
+      )}
+      <details className="rounded-lg border border-(--ts-border) p-3 text-sm">
+        <summary className="cursor-pointer">{t("pendingUpdates:actions.viewDetails")}</summary>
+        <div className="mt-3">
+          <ChangeDiffView original={update.originalData} proposed={proposed} changes={changes} />
+        </div>
+      </details>
       <p className="t-caption">{t(`${W}.flightEffect`, { count: changes.length })}</p>
       {expired && <p role="status">{t(`${W}.expired`)}</p>}
       <div className="flex flex-wrap gap-2">
@@ -146,7 +198,13 @@ export default function FlightUpdateCard({
         <Button
           type="button"
           disabled={busy}
-          onClick={() => void act(() => pendingUpdatesApi.reject(update.id))}
+          onClick={() =>
+            void act(
+              () => pendingUpdatesApi.reject(update.id),
+              false,
+              t("pendingUpdates:messages.rejected")
+            )
+          }
         >
           {t(`${W}.keepFlight`)}
         </Button>

@@ -18,8 +18,14 @@ import { DEFAULT_CRUISE_COLOR_CONFIG } from "../../lib/cruiseColor";
 
 const gates = vi.hoisted(() => ({ tours: true, rail: true, rental: true, roadtrip: true }));
 vi.mock("../../hooks/useToursVisible", () => ({ useToursVisible: () => gates.tours }));
-vi.mock("../../hooks/useRailVisible", () => ({ useRailVisible: () => gates.rail }));
-vi.mock("../../hooks/useRentalVisible", () => ({ useRentalVisible: () => gates.rental }));
+vi.mock("../../hooks/useDomainVisible", () => ({
+  useDomainVisible: (key: string): boolean =>
+    (
+      (({ rail: () => gates.rail, rental: () => gates.rental }) as Record<string, () => boolean>)[
+        key
+      ] ?? (() => false)
+    )(),
+}));
 vi.mock("../../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({
     enabled: [],

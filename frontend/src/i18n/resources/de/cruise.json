@@ -268,7 +268,7 @@
     "errors": {
       "endBeforeStart": "Das Ankunftsdatum liegt vor dem Abfahrtsdatum.",
       "deck": "Das Deck ist eine ganze Zahl von 1 bis 30.",
-      "price": "Der Preis darf nicht negativ sein."
+      "price": "Bitte gib einen gültigen Preis ab 0 ein (z. B. 39,90)."
     },
     "colorPicked": "Gewählte Farbe: {{color}}"
   },

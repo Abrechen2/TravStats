@@ -77,3 +77,45 @@ it("uses the configured provider for unfamiliar layouts and keeps only evidenced
   expect(result.parser).toBe("llm");
   expect(result.crossings).toHaveLength(1);
 });
+it("does not read a forwarded mail's From:/To: headers as ports", () => {
+  // The header lines matched the bare "from"/"to" port labels: the sender
+  // became the departure port, or two "From:" lines cancelled the real one.
+  const forwarded = [
+    "---------- Forwarded message ---------",
+    "From: Jadrolinija <booking@jadrolinija.hr>",
+    "Date: Mon, 5 Oct 2026 at 10:00",
+    "Subject: Your ticket",
+    "To: Dennis <dennis@example.com>",
+    "",
+    "From: Split",
+    "To: Supetar",
+    "Departure: 2026-10-20 09:30",
+  ].join("\n");
+  expect(labelledTicket(forwarded)).toMatchObject({
+    departurePort: { value: "Split" },
+    arrivalPort: { value: "Supetar" },
+  });
+  const headerOnly = "From: booking@jadrolinija.hr\nTo: dennis@example.com\nDeparture: 2026-10-20";
+  const ports = labelledTicket(headerOnly);
+  expect(ports.departurePort).toBeUndefined();
+  expect(ports.arrivalPort).toBeUndefined();
+});
+it("logs why the model failed instead of swallowing it", async () => {
+  const logger = (await import("../../../utils/logger")).default;
+  const warn = jest.spyOn(logger, "warn").mockImplementation(() => logger);
+  (llmRefusalFor as jest.Mock).mockResolvedValue(null);
+  (llmGenerateChain as jest.Mock).mockRejectedValue(new Error("model timed out"));
+  const result = await previewFerryText("Ferry ticket\nOperator: Jadrolinija", "user");
+  expect(result.reason).toBe("unavailable");
+  expect(warn).toHaveBeenCalledWith(
+    expect.objectContaining({ operation: "ferry.ticketPreview", error: "model timed out" }),
+    expect.any(String)
+  );
+  warn.mockRestore();
+});
+it("keeps a ticket's own From:/To: ports next to a Date: line", () => {
+  expect(labelledTicket("From: Split\nTo: Supetar\nDate: 20.10.2026 09:30")).toMatchObject({
+    departurePort: { value: "Split" },
+    arrivalPort: { value: "Supetar" },
+  });
+});

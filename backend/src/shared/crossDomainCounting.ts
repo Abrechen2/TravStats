@@ -91,3 +91,51 @@ export function crossDomainDayKey(year: number, month1: number, day: number): st
 export function dayKeyInYear(dayKey: string, year: number | null): boolean {
   return year === null || dayKey.startsWith(`${year}-`);
 }
+
+/**
+ * One domain's share in a VISITED country (forgejo#299), as the passport
+ * publishes it per row: which domain's records prove the visit, in which
+ * years, and whether one of them carried no date.
+ */
+export interface VisitedCountrySource {
+  /** ISO 3166-1 alpha-2. */
+  code: string;
+  domain: DomainKey;
+  years: number[];
+  undated: boolean;
+}
+
+/**
+ * The countries ONE domain contributes to "Länder besucht" — the passport's
+ * visited rule, never "any record touched it". Before this the overview tile
+ * of that name unioned every country a domain's records touched, so a
+ * connection in Doha and an open-jaw end counted as visits there while the
+ * passport, under the same words, did not count them.
+ *
+ * A year scope takes the sources dated in that year; an undated source proves
+ * the country for the lifetime figure only — no year is invented for it.
+ */
+export function visitedCountryContribution(
+  sources: readonly VisitedCountrySource[],
+  domain: DomainKey,
+  year: number | null
+): string[] {
+  const out = new Set<string>();
+  for (const source of sources) {
+    if (source.domain !== domain) continue;
+    if (year === null || source.years.includes(year)) out.add(source.code);
+  }
+  return [...out].sort();
+}
+
+/** The passport rows' `visitSources`, flattened into one list keyed by country. */
+export function visitedSourcesOfRows(
+  rows: ReadonlyArray<{
+    code: string;
+    visitSources?: ReadonlyArray<Omit<VisitedCountrySource, "code">>;
+  }>
+): VisitedCountrySource[] {
+  return rows.flatMap((row) =>
+    (row.visitSources ?? []).map((source) => ({ ...source, code: row.code }))
+  );
+}

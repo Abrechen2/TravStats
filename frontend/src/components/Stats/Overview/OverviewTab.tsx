@@ -9,14 +9,13 @@ import type { DomainKey } from "../../../shared/domains";
 import type { DomainStatsMap } from "../../../lib/stats/domain-stats";
 import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import { usePlacesAccess } from "../../../hooks/usePlacesVisible";
-import { useBusOffered } from "../../../hooks/useBusVisible";
-import { useRailOffered } from "../../../hooks/useRailVisible";
 import { visibleStatsTabs } from "../../../pages/statsTabAccess";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { StatsPeriod } from "../useStatsPeriod";
 import type { SectionVisibility } from "../../../hooks/useSectionVisibility";
 import { comparisonWindow, type ComparisonKind } from "../../../lib/stats/comparisonWindow";
 import { aggregate, collectYears, foldedDomains } from "./aggregate";
+import { useVisitedCountryIndex } from "./useVisitedCountryIndex";
 import CrossDomainKpis from "./CrossDomainKpis";
 import CrossDomainActivityChart from "./CrossDomainActivityChart";
 import CrossDomainHeatmap from "./CrossDomainHeatmap";
@@ -58,16 +57,12 @@ export default function OverviewTab({
   // beta flag off for an account that had the domain on from beta days.
   const { enabled: enabledDomains } = useEnabledDomains();
   const placesAccess = usePlacesAccess();
-  const railOffered = useRailOffered();
-  // Bus behind its own switch (forgejo#265). Rental has a tab but no place in
-  // the cross-domain folds (rental spec §11 D3), so it is dropped here.
-  const busOffered = useBusOffered();
+  // The beta switches are already applied to `enabledDomains`. Rental has a
+  // tab but no place in the cross-domain folds (rental spec §11 D3), so it is
+  // dropped here.
   const enabled = useMemo(
-    () => [
-      ...visibleStatsTabs(enabledDomains, placesAccess, railOffered, false, busOffered),
-      ...enabledDomains.filter((key) => key === "ferry"),
-    ],
-    [enabledDomains, placesAccess, railOffered, busOffered]
+    () => visibleStatsTabs(enabledDomains, placesAccess).filter((key) => key !== "rental"),
+    [enabledDomains, placesAccess]
   );
   const { selectedYear, compareYear, compareEnabled } = period;
   const show = visibility.isVisible;
@@ -99,13 +94,19 @@ export default function OverviewTab({
   // big number at odds with the evidence panel behind it, which answers for
   // the whole year. The DELTA pair is windowed on both sides, because that is
   // the only comparison worth publishing.
-  const agg = aggregate(stats, visible, selectedYear, null);
+  // "Länder besucht" counts by the passport's visited rule (forgejo#299).
+  const visitedIndex = useVisitedCountryIndex();
+  const agg = aggregate(stats, visible, selectedYear, null, visitedIndex);
   // The evidence scope names the population the KPI numbers describe, which
   // is what the fold READ — not the chip state (see `foldedDomains`).
   const folded = useMemo(() => foldedDomains(stats, visible), [stats, visible]);
   const comparing = compareEnabled && selectedYear !== null && compareYear !== null;
-  const currentAgg = comparing ? aggregate(stats, visible, selectedYear, comparison) : null;
-  const prevAgg = comparing ? aggregate(stats, visible, compareYear, comparison) : null;
+  const currentAgg = comparing
+    ? aggregate(stats, visible, selectedYear, comparison, visitedIndex)
+    : null;
+  const prevAgg = comparing
+    ? aggregate(stats, visible, compareYear, comparison, visitedIndex)
+    : null;
   // Falls back to the year it is in the profile zone (Q1), not the reader's.
   const heatmapYear =
     selectedYear ?? years[years.length - 1] ?? Number(todayIn(todayZoneNow()).slice(0, 4));

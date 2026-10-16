@@ -1,3 +1,4 @@
+import { parseDecimalInput } from "../../lib/decimalInput";
 import Modal from "../Modal";
 import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -113,15 +114,17 @@ export default function BookingEditModal({
   // A booking names no place, so a deadline with a time must name its zone.
   const deadlinesInvalid = !deadlineDraftValid(deadlines, true);
   const travellersInvalid = travellers.trim() !== "" && parseTravellers(travellers) === null;
+  // Either notation: `Number("1.500,00")` was NaN and the save sent "no price".
+  const parsedPrice = parseDecimalInput(price);
+  const priceInvalid = parsedPrice !== null && !(Number.isFinite(parsedPrice) && parsedPrice >= 0);
 
   const handleSave = async (): Promise<void> => {
-    if (travellersInvalid || deadlinesInvalid) return;
+    if (travellersInvalid || deadlinesInvalid || priceInvalid) return;
     setSaving(true);
-    const parsedPrice = price.trim() === "" ? null : Number(price);
     const fields = {
       pnr: pnr.trim() === "" ? null : pnr.trim(),
       operator: operator.trim() === "" ? null : operator.trim(),
-      price: parsedPrice != null && Number.isFinite(parsedPrice) ? parsedPrice : null,
+      price: parsedPrice,
       currency,
       travellers: parseTravellers(travellers),
       bookedOn: bookedOn || null,
@@ -202,7 +205,7 @@ export default function BookingEditModal({
             type="button"
             className="btn-primary text-sm"
             onClick={() => void handleSave()}
-            disabled={saving || travellersInvalid || deadlinesInvalid}
+            disabled={saving || travellersInvalid || deadlinesInvalid || priceInvalid}
           >
             {t("trips:bookingEdit.save")}
           </button>
@@ -250,12 +253,17 @@ export default function BookingEditModal({
           "price",
           <input
             className="input"
-            type="number"
-            min="0"
-            step="0.01"
+            type="text"
+            inputMode="decimal"
             value={price}
+            aria-invalid={priceInvalid}
             onChange={(e) => setPrice(e.target.value)}
-          />
+          />,
+          priceInvalid ? (
+            <span role="alert" className="mt-1 block text-xs" style={{ color: "var(--danger)" }}>
+              {t("trips:bookingEdit.priceInvalid")}
+            </span>
+          ) : undefined
         )}
         {label(
           "currency",

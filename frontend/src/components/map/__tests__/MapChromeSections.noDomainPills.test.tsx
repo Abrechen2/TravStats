@@ -17,7 +17,10 @@ vi.mock("../../../hooks/useEnabledDomains", () => ({
     isEnabled: () => true,
   }),
 }));
-vi.mock("../../../hooks/useRailVisible", () => ({ useRailVisible: () => true }));
+vi.mock("../../../hooks/useDomainVisible", () => ({
+  useDomainVisible: (key: string): boolean =>
+    ((({ rail: () => true }) as Record<string, () => boolean>)[key] ?? (() => false))(),
+}));
 
 import { MapChromeSections } from "../MapChromeSections";
 

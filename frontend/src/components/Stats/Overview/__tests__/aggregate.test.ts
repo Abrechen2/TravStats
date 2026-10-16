@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { DomainStatsMap } from "../../../../lib/stats/domain-stats";
+import type { VisitedCountrySource } from "../../../../shared/crossDomainCounting";
 import {
   aggregate,
   collectYears,
@@ -76,48 +77,57 @@ describe("aggregate", () => {
     expect(result.perDomainEvents).toEqual({ flight: 10 });
   });
 
-  it("countries are unioned across domains (DE overlaps, JP+US+IT+ES unique)", () => {
-    const lifetime = aggregate(baseMap, { flight: true, cruise: true }, null);
-    expect(lifetime.countriesCount).toBe(5);
-  });
+  /**
+   * "Länder besucht" counts by the passport's visited rule (forgejo#299), from
+   * the per-domain `visitSources` the passport publishes — never from the
+   * countries a domain's records merely TOUCHED. The adapters above list
+   * DE/US/JP and IT/ES/DE as touched; the index says which were visited.
+   */
+  describe("countries: the passport's visited index, scoped by chip and year", () => {
+    const visited: VisitedCountrySource[] = [
+      { code: "DE", domain: "flight", years: [2023, 2024], undated: false },
+      { code: "JP", domain: "flight", years: [2023], undated: false },
+      { code: "IT", domain: "cruise", years: [2024], undated: false },
+      { code: "DE", domain: "cruise", years: [2024], undated: false },
+      { code: "BE", domain: "poi", years: [], undated: true },
+    ];
 
-  // Until 2.5.0 the country count ignored the selected year entirely — it
-  // returned the lifetime set for every year, which made the tile's
-  // year-over-year delta structurally always zero.
-  describe("year-scoped countries", () => {
-    it("counts only the selected year's countries, not the lifetime set", () => {
-      // 2024: flights DE+US, cruises IT+DE -> DE, US, IT = 3 (lifetime is 5)
-      const result = aggregate(baseMap, { flight: true, cruise: true }, 2024);
-      expect(result.countriesCount).toBe(3);
+    it("counts visited countries only — a touched country without a visit does not count", () => {
+      // US (flights) and ES (cruise) are in the adapters' touched sets but
+      // not visited: a connection and a port nobody went ashore at in the
+      // fixture. The tile read 5 before forgejo#299; it reads 3.
+      const lifetime = aggregate(baseMap, { flight: true, cruise: true }, null, null, visited);
+      expect(lifetime.countriesCount).toBe(3); // DE, JP, IT
     });
 
-    it("produces a different count per year, so the delta can be real", () => {
-      const y2023 = aggregate(baseMap, { flight: true, cruise: true }, 2023);
-      const y2025 = aggregate(baseMap, { flight: true, cruise: true }, 2025);
+    it("unions a country visited in two domains once", () => {
+      const y2024 = aggregate(baseMap, { flight: true, cruise: true }, 2024, null, visited);
+      expect(y2024.countriesCount).toBe(2); // DE (both), IT
+    });
+
+    it("follows the chips: a hidden domain's visits do not count", () => {
+      const flightOnly = aggregate(baseMap, { flight: true, cruise: false }, 2024, null, visited);
+      expect(flightOnly.countriesCount).toBe(1); // DE
+    });
+
+    it("scopes to the year, so the delta can be real", () => {
+      const y2023 = aggregate(baseMap, { flight: true, cruise: true }, 2023, null, visited);
       expect(y2023.countriesCount).toBe(2); // DE, JP
-      expect(y2025.countriesCount).toBe(1); // ES
-      expect(y2023.countriesCount).not.toBe(y2025.countriesCount);
+      expect(aggregate(baseMap, { flight: true, cruise: true }, 1999, null, visited)).toMatchObject(
+        { countriesCount: 0 }
+      );
     });
 
-    it("still unions across domains within the year", () => {
-      const flightOnly = aggregate(baseMap, { flight: true, cruise: false }, 2024);
-      expect(flightOnly.countriesCount).toBe(2); // DE, US
+    it("counts an undated visit for the lifetime only, and only from a folded domain", () => {
+      // POI is not in this stats map, so its visit is not on the strip.
+      expect(
+        aggregate({ ...baseMap }, { flight: true, cruise: true, poi: true }, null, null, visited)
+          .countriesCount
+      ).toBe(3);
     });
 
-    it("returns 0 for a year the domain has no countries for", () => {
-      const result = aggregate(baseMap, { flight: true, cruise: true }, 1999);
-      expect(result.countriesCount).toBe(0);
-    });
-
-    it("falls back to the lifetime set when a domain predates the year index", () => {
-      // A domain adapter that has not been taught countriesByYear yet must
-      // not silently contribute zero — that would UNDER-report the count
-      // rather than over-report it, which is the harder bug to notice.
-      const legacy: DomainStatsMap = {
-        flight: { ...flightStats, countriesByYear: undefined },
-      };
-      const result = aggregate(legacy, { flight: true }, 2024);
-      expect(result.countriesCount).toBe(3); // DE, US, JP — the lifetime set
+    it("abstains (null) while the index is not there, instead of falling back to touched countries", () => {
+      expect(aggregate(baseMap, { flight: true, cruise: true }, null).countriesCount).toBeNull();
     });
   });
 

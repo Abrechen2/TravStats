@@ -4,9 +4,6 @@ import { differenceInCalendarDays } from "date-fns";
 import type { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
-import { useRailVisible } from "../../hooks/useRailVisible";
-import { useBusVisible } from "../../hooks/useBusVisible";
-import { useRentalVisible } from "../../hooks/useRentalVisible";
 import type { Trip } from "../../types";
 import { tripCostTotals } from "../../lib/tripCost";
 import { formatDate } from "../../lib/displayFormat";
@@ -21,6 +18,7 @@ import { useTripRoadtrips } from "../Roadtrips/useTripRoadtrips";
 import DocumentsSection from "../documents/DocumentsSection";
 import TripSharingPanel from "../sharing/TripSharingPanel";
 import ShareLinkButton from "../shareLinks/ShareLinkButton";
+import { useDomainVisible } from "../../hooks/useDomainVisible";
 
 type T = ReturnType<typeof useTranslation>["t"];
 
@@ -176,9 +174,9 @@ export default function TripOverview({
   const flights = trip.flights ?? [];
   const cruises = cruiseEnabled ? (trip.cruises ?? []) : [];
   const stays = lodgingEnabled ? (trip.lodgingStays ?? []) : [];
-  const railJourneys = useRailVisible() ? (trip.railJourneys ?? []) : [];
-  const busRides = useBusVisible() ? (trip.busJourneys ?? []) : [];
-  const rentals = useRentalVisible() ? (trip.rentalBookings ?? []) : [];
+  const railJourneys = useDomainVisible("rail") ? (trip.railJourneys ?? []) : [];
+  const busRides = useDomainVisible("bus") ? (trip.busJourneys ?? []) : [];
+  const rentals = useDomainVisible("rental") ? (trip.rentalBookings ?? []) : [];
 
   const days =
     trip.startDate && trip.endDate

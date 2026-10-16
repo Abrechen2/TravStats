@@ -53,6 +53,31 @@ describe("BookingEditModal", () => {
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
   });
 
+  // `Number("1.500,00")` is NaN, which the save turned into "no price": a
+  // German total silently cleared the booking's price.
+  it.each([
+    ["1.500,00", 1500],
+    ["39,90", 39.9],
+  ])("sends a price typed as %s as %s", async (raw, expected) => {
+    render(<BookingEditModal booking={booking} onClose={() => {}} onSaved={() => {}} />);
+    const priceInput = screen.getByLabelText(/trips:bookingEdit\.price/i);
+    expect(priceInput).toHaveAttribute("inputmode", "decimal");
+    fireEvent.change(priceInput, { target: { value: raw } });
+    fireEvent.click(screen.getByRole("button", { name: /trips:bookingEdit\.save/i }));
+    await waitFor(() =>
+      expect(updateBooking).toHaveBeenCalledWith("b1", expect.objectContaining({ price: expected }))
+    );
+  });
+
+  it("refuses a price that is not a number instead of clearing it", () => {
+    render(<BookingEditModal booking={booking} onClose={() => {}} onSaved={() => {}} />);
+    fireEvent.change(screen.getByLabelText(/trips:bookingEdit\.price/i), {
+      target: { value: "abc" },
+    });
+    expect(screen.getByText("trips:bookingEdit.priceInvalid")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /trips:bookingEdit\.save/i })).toBeDisabled();
+  });
+
   it("sends a day-only cancellation as the day, and holds a time without a zone (forgejo#285)", async () => {
     render(<BookingEditModal booking={booking} onClose={() => {}} onSaved={() => {}} />);
     const save = screen.getByRole("button", { name: /save|Speichern|trips:bookingEdit\.save/i });

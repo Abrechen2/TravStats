@@ -75,6 +75,8 @@ export interface PlaceImportCommitResult {
   stopsSkipped?: number;
   /** Rows confirmed as one of the user's stays — nothing written for them. */
   matchedStays: number;
+  /** Kept documents filed on the visit the import wrote; absent on older servers. */
+  documentsFiled?: number;
   failed: PlaceImportFailure[];
 }
 

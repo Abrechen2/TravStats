@@ -10,25 +10,34 @@ import ReviewCard from "./ReviewCard";
 import TripProposalCard from "./TripProposalCard";
 import FlightUpdateCard from "./FlightUpdateCard";
 import PhotoProposalCard from "./PhotoProposalCard";
+import VisitSuggestionCard from "../visitReview/VisitSuggestionCard";
+import type { VisitReviewState } from "../visitReview/useVisitReview";
+import { photoJourneyLabel } from "../photoJourneyLabel";
+import { isCardPhotoJourney } from "../../../types/photoJourney";
 import type { InboxAction } from "./FlagQuickEditor";
+import { useToastStore } from "../../../store/toastStore";
 
 export default function InboxCard({
   item,
   disabled,
   reload,
   stayChoices,
+  visitReview,
 }: {
   item: InboxItem;
   disabled: boolean;
   reload: () => Promise<void>;
   stayChoices: StayChoices;
+  /** Shared by every visit card and the batch bar, so a selection spans cards. */
+  visitReview: VisitReviewState;
 }) {
   const { t } = useTranslation(["dataQuality", "common"]);
   const lock = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedCheckFailed, setSavedCheckFailed] = useState(false);
-  const act: InboxAction = async (operation, recheck = false) => {
+  const addToast = useToastStore((state) => state.addToast);
+  const act: InboxAction = async (operation, recheck = false, done) => {
     if (lock.current || disabled) return false;
     lock.current = true;
     setBusy(true);
@@ -43,6 +52,7 @@ export default function InboxCard({
           setSavedCheckFailed(true);
         }
       }
+      if (done) addToast("success", done);
       await reload();
       return true;
     } catch (failure) {
@@ -79,9 +89,24 @@ export default function InboxCard({
       {item.source === "updates" && (
         <FlightUpdateCard update={item.data} busy={working} act={act} />
       )}
-      {item.source === "photos" && (
-        <PhotoProposalCard journey={item.data} busy={working} act={act} />
-      )}
+      {item.source === "photos" &&
+        (isCardPhotoJourney(item.data) ? (
+          <PhotoProposalCard journey={item.data} busy={working} act={act} />
+        ) : (
+          <VisitSuggestionCard
+            embedded
+            journey={item.data}
+            label={photoJourneyLabel(item.data)}
+            selected={visitReview.selected.has(item.data.id)}
+            busy={disabled || visitReview.busy.has(item.data.id)}
+            correction={visitReview.corrections[item.data.id] ?? {}}
+            failure={visitReview.failures.find((failure) => failure.id === item.data.id)}
+            onToggle={() => visitReview.toggle(item.data.id)}
+            onCorrect={(next) => visitReview.correct(item.data.id, next)}
+            onAccept={() => void visitReview.answer([item.data.id], "accept")}
+            onDismiss={() => void visitReview.answer([item.data.id], "dismiss")}
+          />
+        ))}
       {item.source === "dawarich" && (
         <fieldset disabled={disabled} className="min-w-0">
           <StayReviewCard row={item.data} choices={stayChoices} onDone={() => void reload()} />

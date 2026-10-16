@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { JSX } from "react";
 import Modal from "../Modal";
 import { useTranslation } from "../../hooks/useTranslation";
-import { rentalApi } from "../../lib/api/rental";
+import { rentalApi, type RentalDeadlineField } from "../../lib/api/rental";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { logger } from "../../lib/logger";
 import type { RentalImportCandidate, StationResolution } from "../../types/rental";
@@ -19,7 +19,8 @@ import {
 interface Props {
   candidate: RentalImportCandidate;
   onCancel: () => void;
-  onSaved: () => void | Promise<void>;
+  /** `filledDeadlines`: the deadlines this document filled on a stored booking. */
+  onSaved: (result: { filledDeadlines: RentalDeadlineField[] }) => void | Promise<void>;
 }
 
 const INPUT_CLASS =
@@ -92,8 +93,9 @@ export function RentalImportPreviewModal({ candidate, onCancel, onSaved }: Props
     try {
       const mailSentAt = candidate.mailSentAt;
       let outcome: string | null = null;
+      let filledDeadlines: RentalDeadlineField[] | undefined;
       if (candidate.kind === "confirmation" && input) {
-        ({ outcome } = await rentalApi.importDocument({
+        ({ outcome, filledDeadlines } = await rentalApi.importDocument({
           kind: "confirmation",
           input: {
             ...input,
@@ -123,7 +125,7 @@ export function RentalImportPreviewModal({ candidate, onCancel, onSaved }: Props
         setStale(true);
         return;
       }
-      await onSaved();
+      await onSaved({ filledDeadlines: filledDeadlines ?? [] });
     } catch (err: unknown) {
       logger.error("RentalImportPreviewModal: import failed", err);
       if (apiErrorMachineCode(err) === "RENTAL_INVOICE_KM_CONFLICT") {

@@ -13,6 +13,7 @@ export function sharingErrorKey(err: unknown, fallbackKey: string): string {
     SHARE_CONSENT_NOT_FOUND: "sharing:errors.consentNotFound",
     SHARE_CONSENT_NOT_PENDING: "sharing:errors.notPending",
     SHARE_CONSENT_REQUIRED: "sharing:errors.consentRequired",
+    SHARE_GROUP_CONSENT_REQUIRED: "sharing:errors.groupConsentRequired",
     COMPANION_NOT_FOUND: "sharing:errors.companionNotFound",
     SHARE_COMPANION_ALREADY_LINKED: "sharing:errors.alreadyLinked",
     SHARE_COMPANION_NOT_LINKED: "sharing:errors.notLinked",

@@ -138,6 +138,36 @@ describe("which stops of a trip become a question", () => {
     expect(findVisitStops([stop()], { ...NOTHING, flights: [cancelled] }, zoneAt)).toHaveLength(1);
   });
 
+  it("reads a legacy trip anchor by the shared day rule, not its UTC date", () => {
+    // Saved by a UTC+2 browser before the time model: local midnight of 1 May
+    // is stored as 30 April 22:00 UTC. The trip ends ON 1 May.
+    const legacy = {
+      id: "legacy",
+      name: "Legacy",
+      startDate: new Date("2026-04-27T22:00:00Z"),
+      endDate: new Date("2026-04-30T22:00:00Z"),
+    };
+    const stops = findVisitStops([stop()], { ...NOTHING, trips: [legacy] }, zoneAt);
+    expect(stops.map((s) => s.tripId)).toEqual(["legacy"]);
+  });
+
+  it("reads a visit's day on its own clock, not from the legacy column's UTC date", () => {
+    // 05:00 Seoul on 1 May, written as a real instant into `visitedAt` too:
+    // its UTC date is 30 April, its day at the place is 1 May.
+    const instant = new Date("2026-04-30T20:00:00Z");
+    const visited = place({
+      visits: [
+        {
+          visitedAt: instant,
+          visitedAtUtc: instant,
+          visitedZone: SEOUL,
+          visitedPrecision: "minute",
+        },
+      ],
+    });
+    expect(findVisitStops([stop()], { ...NOTHING, places: [visited] }, zoneAt)).toHaveLength(0);
+  });
+
   it("orders the questions biggest first", () => {
     const small = stop({ photoCount: 3 });
     const big = stop({

@@ -111,8 +111,11 @@ export default function ShareLinkPreview({ view }: { view: ShareView }): JSX.Ele
     rows.push([t(`${NS}.view.year`, { year: w.year }), ""]);
     if (w.owner !== undefined) rows.push([label("wrapped", "owner"), w.owner ?? none]);
     if (w.totals) {
-      rows.push([t(`${NS}.view.flights`), String(w.totals.flights)]);
-      rows.push([t(`${NS}.view.km`), String(Math.round(w.totals.distanceKm))]);
+      // Null = not shown to this owner / not measured: no row, never "0" or "null".
+      if (w.totals.flights !== null) rows.push([t(`${NS}.view.flights`), String(w.totals.flights)]);
+      if (w.totals.distanceKm !== null) {
+        rows.push([t(`${NS}.view.km`), String(Math.round(w.totals.distanceKm))]);
+      }
     }
     if (w.topAirline !== undefined) {
       rows.push([label("wrapped", "topAirline"), w.topAirline?.name ?? none]);

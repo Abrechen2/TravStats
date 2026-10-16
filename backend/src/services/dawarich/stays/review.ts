@@ -8,8 +8,11 @@ import { recheckAchievements } from "../../../utils/achievements";
 import type { StayReview } from "../../../schemas/dawarichStays";
 import { venueCategory, VENUE_TYPES, type VenueType } from "../marketVisits/venueTypes";
 import { meters } from "./detect";
+import { completePlaceAddress } from "../../places/addressBackfill";
+import logger from "../../../utils/logger";
 
 async function acceptStayOnce(userId: string, id: string, input: StayReview) {
+  let createdPlaceId: string | null = null;
   const outcome = await prisma.$transaction(
     async (tx) => {
       const row = await tx.dawarichStay.findFirst({ where: { id, userId } });
@@ -81,7 +84,7 @@ async function acceptStayOnce(userId: string, id: string, input: StayReview) {
         end.visitedAtUtc.getTime() > Date.now() + 60_000
       )
         throw new AppError("Invalid stay interval", 400, "DAWARICH_INVALID_INTERVAL");
-      if (!place)
+      if (!place) {
         place = await tx.place.create({
           data: {
             userId,
@@ -94,6 +97,8 @@ async function acceptStayOnce(userId: string, id: string, input: StayReview) {
             visited: true,
           },
         });
+        createdPlaceId = place.id;
+      }
       const dayStart = new Date(start.visitedAt!.toISOString().slice(0, 10) + "T00:00:00Z");
       const dayEnd = new Date(dayStart.getTime() + 86_400_000);
       // A minute-precise visit is reused only inside this interval. A day-only
@@ -166,21 +171,57 @@ async function acceptStayOnce(userId: string, id: string, input: StayReview) {
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
   );
+  // A place made here had no country, so an accepted stay never reached the
+  // passport or the country filter. Its address comes from the pin the way the
+  // place form's does — after the commit, because the geocoder is a network call.
+  if (createdPlaceId) await completeAcceptedPlace(createdPlaceId);
   await recheckAchievements(userId, "Dawarich stay accepted");
   return outcome;
 }
 
-export async function rejectStay(userId: string, id: string) {
-  const result = await prisma.dawarichStay.updateMany({
-    where: { id, userId, status: "pending" },
-    data: { status: "rejected", resolvedAt: new Date() },
-  });
-  if (!result.count) {
-    const row = await prisma.dawarichStay.findFirst({ where: { id, userId } });
-    if (!row) throw new AppError("Finding not found", 404);
-    if (row.status !== "rejected")
-      throw new AppError("Finding already resolved", 409, "DAWARICH_ALREADY_RESOLVED");
+async function completeAcceptedPlace(placeId: string): Promise<void> {
+  try {
+    await completePlaceAddress(placeId);
+  } catch (err) {
+    // The stay is accepted either way; the place backfill retries the address.
+    logger.warn(
+      { operation: "dawarich_stay_place_address_failed", placeId, err },
+      "Address of an accepted Dawarich place could not be completed"
+    );
   }
+}
+
+export async function rejectStay(userId: string, id: string) {
+  await prisma.$transaction(async (tx) => {
+    const result = await tx.dawarichStay.updateMany({
+      where: { id, userId, status: "pending" },
+      data: { status: "rejected", resolvedAt: new Date() },
+    });
+    if (!result.count) {
+      const row = await tx.dawarichStay.findFirst({ where: { id, userId } });
+      if (!row) throw new AppError("Finding not found", 404);
+      if (row.status !== "rejected")
+        throw new AppError("Finding already resolved", 409, "DAWARICH_ALREADY_RESOLVED");
+      return;
+    }
+    // A venue suggestion replaced the plain stays it grew out of. Rejecting the
+    // venue used to leave them `superseded` for good — the stays vanished from
+    // the inbox and no later scan offered them again.
+    const row = await tx.dawarichStay.findFirst({
+      where: { id, userId },
+      select: { evidence: true },
+    });
+    const replaced = (row?.evidence as { supersededFindingIds?: unknown } | null)
+      ?.supersededFindingIds;
+    const ids = Array.isArray(replaced)
+      ? replaced.filter((v): v is string => typeof v === "string")
+      : [];
+    if (ids.length)
+      await tx.dawarichStay.updateMany({
+        where: { userId, id: { in: ids }, status: "superseded" },
+        data: { status: "pending", resolvedAt: null },
+      });
+  });
 }
 
 /** Retry a serialization collision; a simultaneous acceptance then reads the same visit. */

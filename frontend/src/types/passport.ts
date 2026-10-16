@@ -1,3 +1,4 @@
+import type { DomainKey } from "../shared/domains";
 /**
  * The passport, exactly as the server derives it.
  *
@@ -84,7 +85,7 @@ export function countryTierChoicesFor(
  * inventing a word for it.
  */
 export type PassportEvidenceKind =
-  "flight" | "lodging" | "port" | "place" | "rail" | "bus" | "roadtrip" | "track";
+  "flight" | "lodging" | "port" | "place" | "rail" | "bus" | "ferry" | "roadtrip" | "track";
 
 /**
  * How long the traveller was on the ground in a country — spec §3.4b, mirrored
@@ -110,10 +111,22 @@ export type PassportEvidenceKind =
 export type CountryGroundTime =
   { state: "measured"; minutes: number } | { state: "unknown" } | { state: "notApplicable" };
 
+/**
+ * Why a ground-presence country's visit cannot be decided (forgejo#299) —
+ * mirrors `PassportUnclearReason` in backend `services/stats/passport.ts`.
+ */
+export type PassportUnclearReason = "openChain" | "noDestination" | "undated";
+
 export interface PassportCountry {
   groundPresence?: boolean;
   visited?: boolean;
   visitUncertain?: boolean;
+  visitUncertainReasons?: PassportUnclearReason[];
+  /**
+   * Which domains prove the visit, in which years (forgejo#299) — the index
+   * the Stats overview's "Länder besucht" tile folds by chip and year.
+   */
+  visitSources?: Array<{ domain: DomainKey; years: number[]; undated: boolean }>;
   /** ISO-3166 alpha-2 — the glyph shown, deliberately not a flag. */
   code: string;
   continent: Continent | null;
@@ -212,6 +225,8 @@ export interface Passport {
     countries: number;
     groundCountries?: number;
     visitedCountries?: number;
+    /** Ground-presence countries whose visit the records cannot decide. */
+    unclearCountries?: number;
     /** Every row in `countries`, whatever its tier. */
     countriesTotal: number;
     /** What the rule before evidence tiers would have said — for the one-time notice (§5). */
@@ -228,7 +243,10 @@ export interface Passport {
     newThisYear: number;
     /** Countries per strongest evidence KIND. Sums to `countriesTotal`. */
     /** `bus` is absent from a server older than forgejo#265. */
-    byEvidence: Record<Exclude<PassportEvidenceKind, "bus">, number> & { bus?: number };
+    byEvidence: Record<Exclude<PassportEvidenceKind, "bus" | "ferry">, number> & {
+      bus?: number;
+      ferry?: number;
+    };
     /** Countries per evidence STRENGTH. Also sums to `countriesTotal`. */
     byTier: Record<CountryTier, number>;
   };
@@ -301,6 +319,14 @@ export type CountryTimelineEntry =
       rideLabel: string;
       stationName: string;
     }
+  /** A completed ferry crossing with a port in this country (owner ruling 2026-10-16 #3). */
+  | {
+      kind: "ferry";
+      date: string | null;
+      rideId: string;
+      rideLabel: string;
+      stationName: string;
+    }
   /** A completed bus ride with a terminal in this country (forgejo#265); opens the ride. */
   | {
       kind: "bus";
@@ -331,6 +357,7 @@ export interface CountryDetail {
   groundPresence?: boolean;
   visited?: boolean;
   visitUncertain?: boolean;
+  visitUncertainReasons?: PassportUnclearReason[];
   code: string;
   continent: Continent | null;
   evidence: PassportEvidenceKind;
@@ -349,6 +376,7 @@ export interface CountryDetail {
   railRides: number;
   /** Bus rides with a terminal here; absent from a server older than forgejo#265. */
   busRides?: number;
+  ferryCrossings?: number;
   /** Distinct days a location history placed the traveller here. Zero on an
    *  account with none, which is most of them. */
   trackDays: number;

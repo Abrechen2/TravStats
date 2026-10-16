@@ -40,3 +40,13 @@ it("requires a nine-digit MMSI and labels a missing source timestamp honestly", 
   expect(await screen.findByText("ferry:live.ageUnknown")).toBeVisible();
   expect(mocks.position).toHaveBeenCalledWith("ferry", "211123456");
 });
+it("reads only the crossing's vessel once one is bound", async () => {
+  // The server refuses another MMSI for a bound crossing; the field says so
+  // instead of letting a typed number fail as "service unavailable".
+  mocks.availability.mockResolvedValue({ configured: true });
+  render(<FerryLivePosition id="ferry" boundMmsi="211123456" />);
+  const input = await screen.findByLabelText("ferry:live.mmsi");
+  expect(input).toHaveValue("211123456");
+  expect(input).toHaveAttribute("readonly");
+  expect(screen.getByText("ferry:live.bound")).toBeVisible();
+});

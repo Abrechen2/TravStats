@@ -22,7 +22,8 @@ import { resolveFlightTipColor } from "../lib/flightColor";
 import { useLodgingColorStore } from "../store/lodgingColorStore";
 import { usePlaceColorStore } from "../store/placeColorStore";
 import { useMapCameraStore } from "../store/mapCameraStore";
-import { FLAT_BASEMAPS, resolveFlatStyle, type FlatStyleId } from "./map/basemapStyles";
+import { FLAT_BASEMAPS, type FlatStyleId } from "./map/basemapStyles";
+import { useResilientStyle } from "./map/basemapFallback";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
 import type { Lodging } from "../types/lodging";
@@ -225,15 +226,14 @@ export function DeckGLMap({
   );
   const rememberCamera = useMapCameraStore((s) => s.remember);
 
-  // Hand cursor over any pickable deck object — airports, ports, lodging pins
-  // (#247). Driven by picking, so it needs no per-layer wiring.
+  // Hand cursor over any pickable deck object (#247); picking-driven, no per-layer wiring.
   const { isHovering, onHover: onDeckHover } = useDeckHoverCursor();
 
   const [mapLoaded, setMapLoaded] = useState(false);
-  // Flat-map appearance customisation (mirrors the globe's "Anpassung"
-  // panel) + style-level overlays, persisted so the look survives reloads.
-  // `markerColor === null` keeps the theme airport-dot colour.
+  // Flat-map appearance (mirrors the globe's "Anpassung" panel) + style-level overlays,
+  // persisted so the look survives reloads. `markerColor === null` keeps the theme dot colour.
   const [styleId, setStyleId] = useState<FlatStyleId>(() => loadMapAppearance().styleId ?? "dark");
+  const flatStyle = useResilientStyle(styleId);
   // Flight-domain appearance. The route COLOUR lives in the flight-colour
   // store above (mode + colours); only shape / width / marker settings are local.
   //
@@ -824,7 +824,7 @@ export function DeckGLMap({
         ref={mapRef}
         reuseMaps
         initialViewState={initialViewState}
-        mapStyle={resolveFlatStyle(styleId)}
+        mapStyle={flatStyle}
         style={{ position: "absolute", inset: "0" }}
         onLoad={() => setMapLoaded(true)}
         onMove={handleMapMove}

@@ -4,7 +4,6 @@ import type { ComparisonLink, Prisma } from "../../prisma";
 import { circleSchema, type Circle, type Scope } from "./contract";
 import { exchange, refused } from "./security";
 import { ownedLink, saveGrant, revokeGrant } from "./links";
-import { buildSnapshot, readFriend, sourceSnapshot } from "./snapshots";
 
 export const audienceOf = (c: Pick<Circle, "id" | "version">) => `${c.id}:${c.version}`;
 const view = (c: { id: string; name: string; version: number; members: unknown }) =>
@@ -180,79 +179,6 @@ export async function listCircles(userId: string) {
     }
   }
   return [...owned, ...invited];
-}
-export async function readAtHub(
-  userId: string,
-  circleId: string,
-  year: number | null,
-  viewerLink?: ComparisonLink
-) {
-  const c = view(await ownedCircle(userId, circleId));
-  if (viewerLink) {
-    const member = c.members.find((m) => m.channel === viewerLink.channel);
-    if (!member?.accepted || viewerLink.userId !== userId || viewerLink.revoked) throw refused();
-  }
-  const rows: Array<{
-    channel: string;
-    label: string;
-    snapshot: Awaited<ReturnType<typeof readFriend>> | null;
-  }> = [];
-  let own = null;
-  try {
-    if (viewerLink) own = await sourceSnapshot(viewerLink, audienceOf(c), year);
-    else {
-      const domains = (await import("../domainVisibility")).loadVisibleDomains;
-      own = await buildSnapshot(
-        userId,
-        {
-          statistics: true,
-          details: false,
-          costs: true,
-          personal: false,
-          documents: false,
-          photos: false,
-          domains: await domains(userId),
-          futureTrips: true,
-          tripIds: [],
-          precision: "exact",
-          expiresAt: null,
-          year,
-          acceptedAt: new Date().toISOString(),
-        },
-        year
-      );
-    }
-  } catch {
-    /* No owner grant is not permission to borrow a personal one. */
-  }
-  if (own) own = { ...own, details: false, trips: [] };
-  rows.push({ channel: "host", label: "host", snapshot: own });
-  for (const member of c.members) {
-    let snapshot = null;
-    try {
-      if (member.accepted) {
-        const source = await prisma.comparisonLink.findFirst({
-          where: { userId, channel: member.channel, revoked: false },
-        });
-        if (source) snapshot = await readFriend(userId, source.id, audienceOf(c), year);
-      }
-    } catch {
-      /* Withheld or unreachable, never zero. */
-    }
-    // Shared group boards carry statistics only. Trip drill-down needs the original personal link.
-    if (snapshot) snapshot = { ...snapshot, details: false, trips: [] };
-    rows.push({ channel: member.channel, label: member.label, snapshot });
-  }
-  if ((await ownedCircle(userId, circleId)).version !== c.version) throw refused();
-  if (viewerLink) {
-    const latest = view(await ownedCircle(userId, circleId));
-    if (!latest.members.find((m) => m.channel === viewerLink.channel)?.accepted) throw refused();
-  }
-  if (viewerLink) {
-    const fresh = await prisma.comparisonLink.findUnique({ where: { id: viewerLink.id } });
-    if (!fresh || fresh.revoked || !fresh.confirmed || !fresh.remoteConfirmed) throw refused();
-  }
-  return { circle: c, rows };
 }
 export async function leaveCircle(
   userId: string,

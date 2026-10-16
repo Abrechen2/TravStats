@@ -2,6 +2,7 @@ import { z } from "zod";
 import { llmRefusalFor } from "../llm/llmGate";
 import { describeLlmTarget, llmGenerateChain } from "../llm/llmProvider";
 import { llmParseTimeoutMs } from "../http/llmTimeout";
+import logger from "../../utils/logger";
 
 /** A preview only: copied evidence accompanies every proposed value. Never geocode a ticket silently. */
 export const TICKET_FIELDS = [
@@ -105,11 +106,46 @@ function verified(
     return /^[A-Z]{3}$/.test(value) && fold(evidence).includes(fold(value)) ? value : null;
   return value.trim().length <= 200 && fold(evidence).includes(fold(value)) ? value.trim() : null;
 }
+const MAIL_HEADER =
+  /^(?:from|to|cc|bcc|reply-to|sent|date|subject|von|an|gesendet|datum|betreff)\s*:/i;
+const MAIL_SENDER = /^(?:from|von)\s*:/i;
+// Header names a ticket does not print: with an address they tell a mail
+// header block apart from a ticket's own "From: Split / To: Supetar / Date:".
+const MAIL_ONLY = /^(?:cc|bcc|reply-to|sent|subject|gesendet|betreff)\s*:/i;
+const ADDRESS_LINE = /^(?:from|to|cc|von|an)\s*:.*@/i;
+
+/**
+ * Blank out e-mail header lines: a forwarded mail's From/To/Date/Subject
+ * block, and any From:/To: line naming an address. "from" and "to" are also
+ * port labels, so the sender used to be proposed as the departure port, or a
+ * second "From:" cancelled the ticket's real one.
+ */
+function withoutMailHeaders(text: string): string {
+  const lines = text.split(/\r?\n/).map((line) => line.trim());
+  const header = lines.map((line) => ADDRESS_LINE.test(line));
+  for (let start = 0; start < lines.length;) {
+    let end = start;
+    while (end < lines.length && MAIL_HEADER.test(lines[end])) end += 1;
+    const block = lines.slice(start, end);
+    if (
+      block.some((line) => MAIL_SENDER.test(line)) &&
+      block.some((line) => MAIL_ONLY.test(line) || line.includes("@"))
+    )
+      for (let i = start; i < end; i += 1) header[i] = true;
+    start = end === start ? start + 1 : end;
+  }
+  return text
+    .split(/\r?\n/)
+    .map((line, i) => (header[i] ? "" : line))
+    .join("\n");
+}
+
 export function labelledTicket(text: string): TicketProposal {
   const result: TicketProposal = {};
+  const body = withoutMailHeaders(text);
   for (const field of TICKET_FIELDS) {
     const matches = [
-      ...text.matchAll(new RegExp(`^(?:${labels[field]})\\s*[:：]\\s*(.+)$`, "gim")),
+      ...body.matchAll(new RegExp(`^(?:${labels[field]})\\s*[:：]\\s*(.+)$`, "gim")),
     ];
     // Repeated labels may be outbound + return. Do not silently select one leg.
     if (matches.length !== 1) continue;
@@ -184,7 +220,14 @@ export async function previewFerryText(text: string, userId: string) {
       reason: crossings.length ? null : "nothingFound",
       provider: describeLlmTarget(target),
     };
-  } catch {
+  } catch (error) {
+    logger.warn(
+      {
+        operation: "ferry.ticketPreview",
+        error: error instanceof Error ? error.message : String(error),
+      },
+      "Ferry ticket model reading failed; answering with the labelled facts only"
+    );
     return {
       crossings: Object.keys(deterministic).length ? [deterministic] : [],
       parser: "labels",

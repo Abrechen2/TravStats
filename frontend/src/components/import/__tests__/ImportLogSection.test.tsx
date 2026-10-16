@@ -390,10 +390,21 @@ describe("ImportLogSection", () => {
       counts: { lodgings: 0, stays: 0, flights: 0, cruises: 0, places: 7 },
     };
 
+    // A Takeout import can write trip stops instead of places; undo takes them too.
+    const stopBatch: ImportBatchSummary = {
+      id: "batch-s",
+      domain: "poi",
+      source: "csv",
+      fileName: "takeout.csv",
+      createdAt: "2026-08-04T00:00:00.000Z",
+      counts: { lodgings: 0, stays: 0, flights: 0, cruises: 0, places: 2, stops: 3 },
+    };
+
     it.each([
       ["flight", flightBatch, 160],
       ["cruise", cruiseBatch, 4],
       ["poi", poiBatch, 7],
+      ["poi with trip stops", stopBatch, 5],
     ])("warns a %s import that everything goes, with the count", async (_name, batch, count) => {
       vi.mocked(listImportBatches).mockResolvedValue([batch]);
       renderList();

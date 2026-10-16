@@ -295,5 +295,9 @@
     "rentalPickup": "Rental car · pick-up",
     "rentalReturn": "Rental car · return",
     "rentalLink": "Rental car · one-way"
+  },
+  "styleFallback": {
+    "notice": "The map provider cannot be reached right now. You are seeing a simplified fallback map.",
+    "unavailable": "The map could not be loaded. Reload the page later."
   }
 }

@@ -52,14 +52,12 @@ export interface BetaFeatureMeta {
 }
 
 /**
- * OWNER DECISION 2026-09-18: everything comes out of the registry EXCEPT the
- * phone app. `tripAiSummary`, `tourRoutes` and `dawarich` are released; the
- * one entry left is `devicePairing`, and it stays for the reason its own text
- * gives — the Companion is a TestFlight build, so offering a Devices section
- * to everybody would mint claim codes for an app they cannot install.
- *
- * That makes the 2.7 goal ("nothing left in the registry") a question about
- * the app, and nothing else.
+ * The entries below are the list — nothing else restates it, because a list in
+ * prose beside a list in code is a list that goes wrong (this comment once
+ * said "the one entry left is devicePairing" while six more had been added).
+ * Each entry carries `why` it is hidden and `returnsWhen` it may come back;
+ * the 2.7 goal is that the map is empty, and an entry leaves only on the
+ * owner's word, never because its `returnsWhen` reads as met.
  */
 export const BETA_FEATURES = Object.freeze({
   comparison: Object.freeze({
@@ -115,17 +113,9 @@ export const BETA_FEATURES = Object.freeze({
   }),
 
   /**
-   * The rail domain — train journeys logged like flights (owner decision
-   * 2026-09-25, spec docs/superpowers/specs/2026-09-25-rail-domain.md).
-   *
-   * Gated in `hooks/useRailVisible.ts`, the rule's one home: the module toggle
-   * and the setup picker ask the flag alone (that is where the domain is
-   * switched on); nav, logbook tabs, colour settings and the route ask the
-   * flag AND the user's own domain choice.
-   */
-  /**
-   * Car rentals (spec 2026-10-01-rental-domain-design). Two conditions, as
-   * rail: this flag AND the user's own domain choice (`useRentalVisible`).
+   * Car rentals (spec 2026-10-01-rental-domain-design). Like every domain
+   * switch here, gated through `config/domainBetaGates.ts`: this flag AND the
+   * user's own domain choice.
    */
   rentalDomain: Object.freeze({
     why: "Car rentals are a new domain (spec 2026-10-01-rental-domain-design), built in packages; the Companion app does not handle rentals yet and no release candidate has carried them.",
@@ -134,6 +124,11 @@ export const BETA_FEATURES = Object.freeze({
     reason: "beta",
   }),
 
+  /**
+   * The rail domain — train journeys logged like flights (owner decision
+   * 2026-09-25, spec docs/superpowers/specs/2026-09-25-rail-domain.md), gated
+   * through `config/domainBetaGates.ts` like the other domain switches.
+   */
   railDomain: Object.freeze({
     why: "The rail domain is complete as phase 2 of its spec describes it — logbook, station catalogue, train lookup with Transitous lines, detail page with documents and connections, trip bounds and timeline, dashboard tab and map layer, statistics, Excel and JSON export, demo seed; since it merged main the spreadsheet also reads rides back, and a roadtrip stored by rail can be taken over as rides. The owner ruled on 2026-09-25 that it stays in beta after phase 2: the Companion app does not handle it yet, and it has not been through a release candidate.",
     returnsWhen:
@@ -150,6 +145,21 @@ export const BETA_FEATURES = Object.freeze({
     why: "Long-distance coach rides are a new domain (spec 2026-10-07-bus-domain-design), built in packages; the Companion app does not handle them yet and no release candidate has carried them.",
     returnsWhen:
       "The owner explicitly takes bus out of beta. Packages being done is not that event.",
+    reason: "beta",
+  }),
+
+  /**
+   * TravPlan, the planning mode for a trip that has not happened yet (`/plan*`).
+   *
+   * Gated in `hooks/useTravPlanVisible.ts` (nav entry, trip summary) and by
+   * `BetaFeatureRouteGuard` on the three routes in `App.tsx`. The instance's
+   * own `travel_plan_config.enabled` is a second, server-side condition the
+   * hook also asks — this key decides whether the mode is shown at all.
+   */
+  travPlan: Object.freeze({
+    why: "An alpha experiment (owner, 2026-10-16). The planning mode arrived on 2026-10-14 open to every logged-in user with no gate, drawn with its own theme and its own navigation outside the design system. It is unfinished: its screens were rebuilt on the primitives on 2026-10-16, and nobody has walked the planning flow in a browser since.",
+    returnsWhen:
+      "The owner has walked the planning flow after the UI rework in a browser review and accepts it for release.",
     reason: "beta",
   }),
 

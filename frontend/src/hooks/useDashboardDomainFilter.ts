@@ -2,9 +2,6 @@ import { useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useEnabledDomains } from "./useEnabledDomains";
 import { useToursVisible } from "./useToursVisible";
-import { useRailVisible } from "./useRailVisible";
-import { useRentalVisible } from "./useRentalVisible";
-import { useBusVisible } from "./useBusVisible";
 import { useDashboardCountsStore } from "../store/dashboardCountsStore";
 import { useDashboardDomainFilterStore } from "../store/dashboardDomainFilterStore";
 import { useDashboardRoute } from "./useDashboardRoute";
@@ -52,14 +49,14 @@ export interface DashboardDomainFilterResult {
  * is purely informational — "still labelled beta on this instance", not a
  * second gate.
  */
-const BETA_ROWS = new Set<FilterDomainKey>(["tour", "roadtrip", "rail", "bus", "rental"]);
+const BETA_ROWS = new Set<FilterDomainKey>(["tour", "roadtrip", "rail", "bus", "ferry", "rental"]);
 
 /**
  * Rows with no single-domain dashboard view (yet): selected alone, they stay
  * on "Alle" rather than navigating to a tab that does not exist.
  */
-const NO_OWN_VIEW = new Set<FilterDomainKey>(["bus", "rental"]);
-type ViewKey = Exclude<FilterDomainKey, "bus" | "rental">;
+const NO_OWN_VIEW = new Set<FilterDomainKey>(["bus", "ferry", "rental"]);
+type ViewKey = Exclude<FilterDomainKey, "bus" | "ferry" | "rental">;
 const hasOwnView = (key: FilterDomainKey): key is ViewKey => !NO_OWN_VIEW.has(key);
 
 /**
@@ -76,9 +73,6 @@ const hasOwnView = (key: FilterDomainKey): key is ViewKey => !NO_OWN_VIEW.has(ke
 export function useDashboardDomainFilter(tourCount: number | null): DashboardDomainFilterResult {
   const { isEnabled } = useEnabledDomains();
   const toursVisible = useToursVisible();
-  const railVisible = useRailVisible();
-  const rentalVisible = useRentalVisible();
-  const busVisible = useBusVisible();
   const counts = useDashboardCountsStore((s) => s.counts);
   const [search] = useSearchParams();
   const { tab, setTab } = useDashboardRoute();
@@ -134,12 +128,11 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
       poi: isEnabled("poi"),
       tour: toursVisible,
       roadtrip: isEnabled("roadtrip"),
-      // Both halves of rail's own gate live in `useRailVisible`: the instance
-      // beta switch AND the user's domain.
-      rail: railVisible,
-      // Bus: the `busDomain` beta switch AND the user's domain (`useBusVisible`).
-      bus: busVisible,
-      rental: rentalVisible,
+      // A gated domain's beta switch is already applied by `isEnabled`.
+      rail: isEnabled("rail"),
+      bus: isEnabled("bus"),
+      ferry: isEnabled("ferry"),
+      rental: isEnabled("rental"),
     };
     const rowCount: Record<FilterDomainKey, number | null> = {
       flight: counts.flight,
@@ -151,6 +144,8 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
       rail: counts.rail,
       // Nor bus rides: unknown, not 0.
       bus: null,
+      // Nor ferry crossings.
+      ferry: null,
       // The dashboard counts carry no rentals; the row says "unknown", not 0.
       rental: null,
     };
@@ -160,16 +155,7 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
       count: rowCount[key],
       beta: BETA_ROWS.has(key),
     }));
-  }, [
-    isEnabled,
-    toursVisible,
-    railVisible,
-    busVisible,
-    rentalVisible,
-    counts,
-    tourCount,
-    effectiveHidden,
-  ]);
+  }, [isEnabled, toursVisible, counts, tourCount, effectiveHidden]);
 
   const visibleCount = rows.filter((r) => r.visible).length;
   const totalCount = rows.length;
@@ -184,7 +170,7 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
     // One domain: its own view. The stored set is deliberately NOT written —
     // it belongs to "Alle", and a reader who goes Back should find the
     // selection they left there, not one this navigation invented.
-    // Rental and bus have no dashboard view of their own (yet): alone, they stay on "Alle".
+    // Rental, bus and ferry have no dashboard view of their own (yet): alone, they stay on "Alle".
     if (visible.length === 1 && hasOwnView(visible[0])) {
       setTab(visible[0]);
       return;

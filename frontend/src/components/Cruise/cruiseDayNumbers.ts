@@ -10,7 +10,8 @@ import type { CruiseStopInput } from "../../types";
  *
  * The rule, the same as the Companion's route editor (`dayNumbers()` in
  * `app/src/lib/cruise-route/draft.ts`): a stop keeps the day it was loaded
- * with; a stop added in the editor takes the day after the one before it; and
+ * with, even the day of the stop before it; a stop added in the editor takes
+ * the day after the one before it; and
  * a stop whose day would no longer rise, because it was moved behind a later
  * day, is pushed to the next free day.
  *
@@ -21,7 +22,12 @@ export function withCruiseDayNumbers(stops: readonly CruiseStopInput[]): CruiseS
   let previous = 0;
   return stops.map((stop) => {
     const originalDay = stop.originalDay === undefined ? stop.dayNumber : stop.originalDay;
-    const dayNumber = Math.max(originalDay ?? previous + 1, previous + 1);
+    // A loaded stop may share the previous stop's day: two calls on one day
+    // are real (CLAUDE.md, cruise stops), and pushing the second one on
+    // moved it a day on any edit. Only an added stop, or one moved behind a
+    // later day, takes the next day.
+    const keeps = originalDay != null && originalDay >= Math.max(previous, 1);
+    const dayNumber = keeps ? originalDay : previous + 1;
     previous = dayNumber;
     return { ...stop, originalDay, dayNumber };
   });

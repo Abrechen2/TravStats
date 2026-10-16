@@ -36,6 +36,7 @@ import type { ExpenseAccountRow } from "./expenseAccount";
 import { TRIP_COST_SELECT, expenseMoney, toTripCostInput } from "../trip/tripCostLoad";
 import { loadVisibleDomainSet, rowsIfVisible, type VisibleDomains } from "../domainVisibility";
 import type { DomainKey } from "../../shared/domains";
+import { NOT_PLAN_SHELL } from "../travplan/planShell";
 
 /** A stay, plus what an evidence entry needs to name it and to link to it. */
 export interface TravelAccountStayRow extends AccountStay {
@@ -183,7 +184,7 @@ export async function loadTravelAccountData(
       },
     }),
     prisma.trip.findMany({
-      where: { userId },
+      where: { userId, AND: [NOT_PLAN_SHELL] },
       select: {
         id: true,
         name: true,

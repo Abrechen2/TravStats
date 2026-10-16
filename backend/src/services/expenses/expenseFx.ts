@@ -60,9 +60,15 @@ export interface ExpenseFxInputs {
   date: Date | null;
 }
 
+/**
+ * In Decimal, half-up: in binary floating point 1.005 × 100 is
+ * 100.49999999999999, so `Math.round(amount * rate * factor)` turned half a
+ * cent down.
+ */
 function priced(amount: number, rate: number, baseCurrency: string): Prisma.Decimal {
-  const factor = 10 ** minorUnits(baseCurrency);
-  return new Prisma.Decimal(Math.round(amount * rate * factor) / factor);
+  return new Prisma.Decimal(amount)
+    .times(new Prisma.Decimal(rate))
+    .toDecimalPlaces(minorUnits(baseCurrency), Prisma.Decimal.ROUND_HALF_UP);
 }
 
 function suppliedColumns(fx: SuppliedFx, inputs: ExpenseFxInputs): ExpenseFxColumns {

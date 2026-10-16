@@ -1,12 +1,9 @@
 import { JSX, KeyboardEvent } from "react";
 import { DOMAIN_KEYS, DOMAINS, type DomainKey } from "../../shared/domains";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
+import { switchableDomains } from "../../config/domainBetaGates";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
-import { useRailOffered } from "../../hooks/useRailVisible";
-import { useRentalOffered } from "../../hooks/useRentalVisible";
-import { useFerryOffered } from "../../hooks/useFerryVisible";
-import { useBusOffered } from "../../hooks/useBusVisible";
 
 export interface DomainPickerStepProps {
   value: DomainKey[];
@@ -33,30 +30,10 @@ export default function DomainPickerStep({ value, onChange }: DomainPickerStepPr
   // Every domain, since 2026-09-05. Places was withheld from a fresh install
   // while it was in beta (the flag is unknown before the first settings
   // request, and unknown read as OFF here on purpose); that gate is gone.
-  // Roadtrips are beta (2.7): not offered as a switch while the instance
-  // gate is closed — `useEnabledDomains` would hide the domain anyway.
-  // Rail is offered only where its own beta switch allows it — the flag ALONE
-  // (hooks/useRailVisible.ts), because this list is where the user turns the
-  // domain on. A rail domain the user already enabled stays listed, so it can
-  // always be switched off again.
+  // A domain behind a beta switch is offered by the switch alone — this list
+  // is where the user turns it on (`switchableDomains`, the settings rule).
   const { isFeatureVisible } = useBetaFeatures();
-  const railOffered = useRailOffered();
-  const enabledRail = value.includes("rail");
-  // Rental: the same rule on its own gate (hooks/useRentalVisible.ts).
-  const rentalOffered = useRentalOffered();
-  const enabledRental = value.includes("rental");
-  // Bus: the same rule on its own gate (hooks/useBusVisible.ts).
-  const busOffered = useBusOffered();
-  const ferryOffered = useFerryOffered();
-  const enabledBus = value.includes("bus");
-  const visibleKeys = DOMAIN_KEYS.filter((key) => {
-    if (key === "roadtrip") return isFeatureVisible("roadtrips");
-    if (key === "rail") return railOffered || enabledRail;
-    if (key === "rental") return rentalOffered || enabledRental;
-    if (key === "ferry") return ferryOffered || value.includes("ferry");
-    if (key === "bus") return busOffered || enabledBus;
-    return true;
-  });
+  const visibleKeys = switchableDomains(DOMAIN_KEYS, value, isFeatureVisible);
 
   return (
     <div className="space-y-4">

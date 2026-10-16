@@ -1,10 +1,15 @@
-/* Concrete action labels must wrap on phones and at enlarged text sizes. */
+/* Concrete action labels must wrap on phones and at enlarged text sizes.
+   Set through the Button primitive's hooks (ui/Button.tsx), not by beating its
+   inline styles with an important flag. */
+.inbox-workspace {
+  --ts-button-height: auto;
+  --ts-button-padding: 10px 16px;
+  --ts-button-white-space: normal;
+}
+
 .inbox-workspace .ts-button {
   max-width: 100%;
   min-height: var(--ts-size-button-secondary);
-  height: auto !important;
-  padding: 10px 16px !important;
-  white-space: normal !important;
   overflow-wrap: anywhere;
   line-height: 1.3;
 }

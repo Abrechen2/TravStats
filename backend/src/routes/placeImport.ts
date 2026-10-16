@@ -5,6 +5,7 @@ import { AppError } from "../middleware/errorHandler";
 import { placeImportCommitSchema, placeImportPreviewSchema } from "../schemas/placeImport";
 import { previewPlaceImport } from "../services/places/placeImportPreview";
 import { commitPlaceImport } from "../services/places/placeImportCommit";
+import { takeDocumentIds } from "../services/documents/documentService";
 import { triggerDataQualityChecks } from "../services/dataQualityTrigger";
 import { placeImportResolveSchema } from "../schemas/placeImportResolve";
 import { resolveTakeoutList } from "../services/places/takeout/resolveTakeout";
@@ -76,11 +77,15 @@ router.post("/commit", async (req: AuthRequest, res: Response, next: NextFunctio
     const parsed = placeImportCommitSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
+    // Checked before anything is written: an unknown, foreign or already
+    // filed document fails the import instead of leaving it half-filed.
+    const documentIds = await takeDocumentIds(userId, req.body);
     const result = await commitPlaceImport(
       userId,
       parsed.data.source,
       parsed.data.fileName ?? null,
-      parsed.data.rows
+      parsed.data.rows,
+      documentIds
     );
 
     // An import is where the owner's case arises: a row carrying a third

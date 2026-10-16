@@ -109,7 +109,6 @@ export default function DawarichStayScanCard({
             {t("trips:dawarichStays.markets.coverage", {
               tiles: state.marketResult.tiles,
               total: state.marketResult.totalTiles,
-              cached: state.marketResult.cachedTiles,
             })}
           </p>
           {!!state.marketResult.missingAreaCount && (
@@ -119,7 +118,7 @@ export default function DawarichStayScanCard({
               })}
             </p>
           )}
-          {!!state.marketResult.staleTiles && <p>{text("markets.stale")}</p>}
+          {state.marketResult.staleMapData && <p>{text("markets.stale")}</p>}
           <p>
             {t(`trips:dawarichStays.${coverageScope}.counts`, {
               created: state.marketResult.createdCount,

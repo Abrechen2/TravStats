@@ -1,5 +1,4 @@
 import { e2eRequest } from "./e2e/wire";
-import { RECORD_FIELDS, type RecordDomain } from "./recordFields";
 import { z } from "zod";
 import { AVAILABLE_DOMAINS } from "../../shared/domains";
 
@@ -43,11 +42,10 @@ export const grantInput = z.strictObject({
 });
 export const circleRequest = z.strictObject({
   action: z.literal("circle"),
-  operation: z.enum(["list", "info", "accept", "read", "leave"]),
+  operation: z.enum(["list", "info", "accept", "leave"]),
   channel: id,
   circleId: id.optional(),
   version: z.number().int().positive().optional(),
-  year: z.number().int().min(1900).max(2200).nullable().optional(),
 });
 export const circleMember = z.strictObject({ channel: id, label, origin, accepted: z.boolean() });
 export const circleSchema = z.strictObject({
@@ -71,21 +69,6 @@ export const packetBody = z.discriminatedUnion("action", [
     channel: id,
     confirmed: z.boolean(),
     revoked: z.boolean(),
-  }),
-  z.strictObject({
-    action: z.literal("read"),
-    channel: id,
-    audience: z.string().max(100),
-    year: z.number().int().min(1900).max(2200).nullable(),
-    tripId: id.optional(),
-    recordDomain: z
-      .enum(Object.keys(RECORD_FIELDS) as [RecordDomain, ...RecordDomain[]])
-      .optional(),
-    cursor: id.optional(),
-    attachment: z
-      .string()
-      .regex(/^(photos|documents)\/[A-Za-z0-9_-]{1,64}\.[a-z0-9]{1,8}$/)
-      .optional(),
   }),
 ]);
 export type PeerBody = z.infer<typeof packetBody>;
@@ -141,16 +124,3 @@ export const snapshotSchema = z.strictObject({
   trips: z.array(z.strictObject({ id, name: z.string().max(1000) })).max(500),
 });
 export type Snapshot = z.infer<typeof snapshotSchema>;
-
-export const circleBoardSchema = z.strictObject({
-  circle: circleSchema,
-  rows: z
-    .array(
-      z.strictObject({
-        channel: z.union([id, z.literal("host")]),
-        label,
-        snapshot: snapshotSchema.nullable(),
-      })
-    )
-    .max(20),
-});

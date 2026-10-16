@@ -239,6 +239,8 @@ registry.registerPath({
   method: "put",
   path: "/pending-updates/{id}",
   summary: "Edit a proposal before applying it",
+  description:
+    "`editedData` takes the proposal snapshot's fields, each nullable. It is laid over the proposal and any earlier edit: a field left out keeps the proposal's value, unknown fields are refused. Times may omit seconds.",
   tags: pendingTag,
   request: { params: z.object({ id: uuid }) },
   responses: { 200: { description: "Updated" }, 400: badInput, 404: notFound },

@@ -124,14 +124,22 @@ export function mergeRental(
   }
 
   const actualPickup = actualOf(
-    existing && { utc: existing.actualPickupTime, precision: existing.actualPickupPrecision },
+    existing && {
+      utc: existing.actualPickupTime,
+      precision: existing.actualPickupPrecision,
+      zone: existing.pickupTimezone,
+    },
     input.actualPickupLocal,
     input.actualPickupFold,
     pickup,
     "actualPickupLocal"
   );
   const actualReturn = actualOf(
-    existing && { utc: existing.actualReturnTime, precision: existing.actualReturnPrecision },
+    existing && {
+      utc: existing.actualReturnTime,
+      precision: existing.actualReturnPrecision,
+      zone: existing.returnTimezone,
+    },
     input.actualReturnLocal,
     input.actualReturnFold,
     ret,
@@ -140,8 +148,8 @@ export function mergeRental(
   // Only when this write MOVED an actual end (the odometer's rule): a stored
   // pair the write left as it was — absent, or re-sent unchanged as a form
   // does — never blocks an unrelated edit; legacy rows hold days stored as
-  // midnight minutes. A moved station keeps the actual instants, so it
-  // cannot change their order.
+  // midnight minutes. A station moved into another zone re-anchors a kept
+  // actual end, which counts as moved and is checked like a sent one.
   const moved = {
     pickup: actualMoved(
       existing && { utc: existing.actualPickupTime, precision: existing.actualPickupPrecision },
@@ -201,18 +209,27 @@ function timeOf(
   const storedTime = end === "pickup" ? existing.pickupTime : existing.returnTime;
   const storedZone = end === "pickup" ? existing.pickupTimezone : existing.returnTimezone;
   const storedPrecision = end === "pickup" ? existing.pickupPrecision : existing.returnPrecision;
-  if (storedZone === station.timezone) return { utc: storedTime, precision: storedPrecision };
-  // The station moved into another zone: the booking's wall clock stays.
-  const wall = toLocal(storedTime, storedZone).local.slice(0, 16);
+  return reanchored(storedTime, storedPrecision, storedZone, station.timezone);
+}
+
+/**
+ * A stored end whose station moved into another zone: the wall clock the user
+ * entered stays, the instant moves with the zone (a day-only end stays on its
+ * day). The same zone keeps the instant as it is.
+ */
+function reanchored(
+  utc: Date,
+  precision: string,
+  fromZone: string,
+  toZone: string
+): { utc: Date; precision: string } {
+  if (fromZone === toZone) return { utc, precision };
+  const wall = toLocal(utc, fromZone).local.slice(0, 16);
   return {
-    utc: toInstant(
-      storedPrecision === "day" ? `${wall.slice(0, 10)}T00:00` : wall,
-      station.timezone,
-      {
-        origin: "machine",
-      }
-    ).utc,
-    precision: storedPrecision,
+    utc: toInstant(precision === "day" ? `${wall.slice(0, 10)}T00:00` : wall, toZone, {
+      origin: "machine",
+    }).utc,
+    precision,
   };
 }
 
@@ -242,14 +259,18 @@ export function actualMoved(
  * chose and not silently the earlier one.
  */
 function actualOf(
-  stored: { utc: Date | null; precision: string | null } | null,
+  stored: { utc: Date | null; precision: string | null; zone: string } | null,
   sent: string | null | undefined,
   fold: Fold | null | undefined,
   station: ResolvedStation,
   field: TimeField
 ): ActualEnd | null {
   if (sent === undefined) {
-    return stored?.utc ? { utc: stored.utc, precision: stored.precision ?? "minute" } : null;
+    // Kept as an instant, a hand-over at 18:30 in Berlin read 12:30 once the
+    // station moved to New York — re-anchored like the booked ends.
+    return stored?.utc
+      ? reanchored(stored.utc, stored.precision ?? "minute", stored.zone, station.timezone)
+      : null;
   }
   if (sent === null) return null;
   return sentWallClock(sent, station.timezone, field, fold);

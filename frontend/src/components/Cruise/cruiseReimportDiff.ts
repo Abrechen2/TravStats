@@ -44,6 +44,55 @@ function timesDiffer(stored: CruiseStopInput, imported: CruiseStopInput): boolea
   );
 }
 
+const MS_PER_DAY = 86_400_000;
+
+/** The calendar day of a stop's date as a UTC day count, or null without one. */
+function dayIndex(date: string | null | undefined): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(date ?? "");
+  if (!m) return null;
+  const ms = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isNaN(ms) ? null : Math.round(ms / MS_PER_DAY);
+}
+
+/**
+ * An import numbers its days by list position (a booking that leaves the
+ * sea days out calls Oslo "day 2"), the stored itinerary by day of the
+ * cruise — keyed as they came, every port after a missing sea day read as
+ * one removed and one added call. A dated imported stop therefore takes
+ * the day the stored itinerary gives that date, or the day the date falls
+ * on counted from a dated stored stop; only an undated one keeps its own.
+ */
+export function alignImportedDays(
+  stored: readonly CruiseStopInput[],
+  imported: readonly CruiseStopInput[]
+): CruiseStopInput[] {
+  const anchor = stored.find((s) => dayIndex(s.date) !== null);
+  if (!anchor) return [...imported];
+  const anchorIndex = dayIndex(anchor.date) as number;
+  return imported.map((stop) => {
+    const index = dayIndex(stop.date);
+    if (index === null) return stop;
+    const day = anchor.dayNumber + (index - anchorIndex);
+    return day >= 1 && day !== stop.dayNumber ? { ...stop, dayNumber: day } : stop;
+  });
+}
+
+/** Accent- and case-blind, so "Colon" and "Colón" are one name. */
+const fold = (name: string | null | undefined): string =>
+  normalizePortName(name ?? "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+
+/** Does an imported name name this catalogue port (its name or its city)? */
+function namesPort(name: string, stop: CruiseStopInput): boolean {
+  const wanted = fold(name);
+  if (!wanted) return false;
+  return [stop.port?.name, stop.port?.city].some((candidate) => {
+    const known = fold(candidate);
+    return known !== "" && (known === wanted || known.includes(wanted) || wanted.includes(known));
+  });
+}
+
 function byDay(stops: readonly CruiseStopInput[]): Map<number, CruiseStopInput[]> {
   const days = new Map<number, CruiseStopInput[]>();
   for (const stop of stops) days.set(stop.dayNumber, [...(days.get(stop.dayNumber) ?? []), stop]);
@@ -55,7 +104,7 @@ export function diffItinerary(
   imported: readonly CruiseStopInput[]
 ): ReimportChange[] {
   const storedDays = byDay(stored);
-  const importedDays = byDay(imported);
+  const importedDays = byDay(alignImportedDays(stored, imported));
   const days = [...new Set([...storedDays.keys(), ...importedDays.keys()])].sort((a, b) => a - b);
   const changes: ReimportChange[] = [];
 
@@ -83,10 +132,18 @@ export function diffItinerary(
     // never offered as a change back to the unresolved name, which would
     // drop the call from the map and the sea miles (review I2). The other
     // way round — an imported catalogue port for a stored name — is an
-    // upgrade and stays a proposed change.
+    // upgrade and stays a proposed change. The pairing needs the name to
+    // name that port, or the day to hold one call on each side: paired with
+    // ANY resolved port, another port's times landed on it and the port
+    // change itself was never shown.
+    const soleCall =
+      (storedDays.get(day) ?? []).length === 1 && (importedDays.get(day) ?? []).length === 1;
     for (let i = right.length - 1; i >= 0; i -= 1) {
-      if (right[i].isAtSea || right[i].portId != null || !right[i].unresolvedPortName) continue;
-      const match = left.findIndex((s) => !s.isAtSea && s.portId != null);
+      const name = right[i].unresolvedPortName;
+      if (right[i].isAtSea || right[i].portId != null || !name) continue;
+      const resolved = (s: CruiseStopInput) => !s.isAtSea && s.portId != null;
+      const named = left.findIndex((s) => resolved(s) && namesPort(name, s));
+      const match = named >= 0 || !soleCall ? named : left.findIndex(resolved);
       if (match < 0) continue;
       const [s] = left.splice(match, 1);
       const [m] = right.splice(i, 1);

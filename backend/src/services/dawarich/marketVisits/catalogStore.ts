@@ -4,6 +4,24 @@ import { validateAreas } from "./geometry";
 import type { CatalogStore } from "./catalog";
 import type { MarketCatalog } from "./osm";
 const STATE = "public-market-catalog";
+/** Tiles kept instance-wide. */
+export const MAX_CATALOG_TILES = 2048;
+
+/**
+ * Evict the oldest tiles until one more fits. A full cache used to refuse
+ * every write, so once 2048 tiles existed no new area was ever cached again and
+ * each scan of it spent the shared daily Overpass budget anew.
+ */
+async function makeRoom(): Promise<void> {
+  const excess = (await prisma.marketCatalogTile.count()) - MAX_CATALOG_TILES + 1;
+  if (excess <= 0) return;
+  const oldest = await prisma.marketCatalogTile.findMany({
+    select: { key: true },
+    orderBy: [{ fetchedAt: "asc" }, { key: "asc" }],
+    take: excess,
+  });
+  await prisma.marketCatalogTile.deleteMany({ where: { key: { in: oldest.map((t) => t.key) } } });
+}
 /** Public cache only; the budget/lease is shared by all users and server processes. */
 export const marketCatalogStore: CatalogStore = {
   async read(key) {
@@ -28,7 +46,7 @@ export const marketCatalogStore: CatalogStore = {
       where: { key },
       select: { key: true },
     });
-    if (!exists && (await prisma.marketCatalogTile.count()) >= 2048) return;
+    if (!exists) await makeRoom();
     const data = { payload: payload as unknown as Prisma.InputJsonValue, fetchedAt: at };
     await prisma.marketCatalogTile.upsert({
       where: { key },

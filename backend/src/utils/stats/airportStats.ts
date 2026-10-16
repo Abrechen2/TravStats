@@ -218,7 +218,10 @@ export function farthestFromHomeOf(
   for (const f of flights) {
     const arrCode = f.arrIata || f.arrIcao;
     if (!arrCode) continue;
-    const flightDay = departureClockOf(f)?.date ?? new Date().toISOString().slice(0, 10);
+    // No departure, no "where did they live then": measuring an undated
+    // flight from today's home after a move crowned a distance never flown.
+    const flightDay = departureClockOf(f)?.date;
+    if (!flightDay) continue;
     const homeCode = primaryAirportAt(homePeriods, flightDay);
     const residence = residenceAt(homePeriods, flightDay);
     if (!homeCode || !residence) continue;

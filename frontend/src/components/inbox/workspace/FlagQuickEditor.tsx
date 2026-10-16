@@ -1,19 +1,21 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { flightsApi } from "../../../lib/api/flights";
 import { tripsApi } from "../../../lib/api/trips";
 import type { DataQualityFlag } from "../../../types/dataQuality";
-import { recordFlagSubjectPath } from "../../DataQuality/recordFlagLinks";
-import { timeFlagEditorPath } from "../../DataQuality/timeFlagLinks";
-import { flaggedRecordPath } from "../../DataQuality/flagLinks";
 import Button from "../../ui/Button";
 import { W } from "./model";
 
 import RecordEditButton from "./RecordEditButton";
+/**
+ * Runs one answer: the operation, an optional re-check, a reload — and, when
+ * given, a confirmation of what was done (the old per-tab toasts said so; a
+ * card that just vanishes leaves the reader guessing whether it saved).
+ */
 export type InboxAction = (
   operation: () => Promise<unknown>,
-  recheck?: boolean
+  recheck?: boolean,
+  done?: string
 ) => Promise<boolean>;
 
 function TripDates({
@@ -123,14 +125,6 @@ export default function FlagQuickEditor({
   act: InboxAction;
 }) {
   const { t } = useTranslation(["dataQuality", "common"]);
-  const path =
-    recordFlagSubjectPath(flag) ??
-    timeFlagEditorPath(flag) ??
-    (flag.entityType === "lodging" || flag.entityType === "place"
-      ? flaggedRecordPath({ entityType: flag.entityType, entityId: flag.entityId, label: "" })
-      : flag.entityType === "home"
-        ? "/settings?section=homeAirport"
-        : null);
   return (
     <div className="space-y-3">
       {(flag.kind === "trip_end_missing" || flag.kind === "trip_entries_outside") && (
@@ -172,11 +166,6 @@ export default function FlagQuickEditor({
           onSaved={() => void act(async () => {}, true)}
         />
       ))}
-      {path && (
-        <Link className="inline-block text-sm underline" to={path}>
-          {t(`${W}.openRecord`)}
-        </Link>
-      )}
     </div>
   );
 }

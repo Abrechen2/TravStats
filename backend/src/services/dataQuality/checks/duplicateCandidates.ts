@@ -8,6 +8,7 @@ import type {
 } from "../recordGather";
 import { normaliseKey } from "../recordGather";
 import type { DataQualityFinding } from "../types";
+import { isSetAside } from "./setAside";
 
 /**
  * The same journey or stay entered twice — a mail import beside a hand-typed
@@ -64,7 +65,6 @@ interface Candidate {
 type MatchField = DataQualityFinding & { kind: "duplicate_candidate" };
 type Field = MatchField["details"]["matchedOn"][number];
 
-const CANCELLED = "cancelled";
 const minuteOf = (at: Date): number => Math.floor(at.getTime() / 60_000);
 
 /** "LH 0400" and "lh400" are one number; anything else is kept, only folded. */
@@ -197,7 +197,7 @@ const candidateOf = (row: {
 }): Candidate => ({ ...row, parentId: null });
 
 function flightDuplicates(flights: readonly FlightRecord[]): DataQualityFinding[] {
-  const live = flights.filter((f) => f.status !== CANCELLED);
+  const live = flights.filter((f) => !isSetAside(f.status));
   const groups = new Groups();
   const numberOf = (f: FlightRecord) => normaliseFlightNumber(f.flightNumber);
   const route = (f: FlightRecord): string | null => {
@@ -226,7 +226,7 @@ function groundDuplicates(
   domain: "rail_journey" | "bus_journey",
   rows: readonly GroundRecord[]
 ): DataQualityFinding[] {
-  const live = rows.filter((r) => r.status !== CANCELLED && r.depKey && r.arrKey);
+  const live = rows.filter((r) => !isSetAside(r.status) && r.depKey && r.arrKey);
   const groups = new Groups();
   if (domain === "rail_journey") {
     bucket(
@@ -248,7 +248,7 @@ function groundDuplicates(
 }
 
 function cruiseDuplicates(cruises: readonly CruiseRecord[]): DataQualityFinding[] {
-  const live = cruises.filter((c) => c.status !== CANCELLED);
+  const live = cruises.filter((c) => !isSetAside(c.status));
   const groups = new Groups();
   bucket(
     groups,
@@ -261,7 +261,7 @@ function cruiseDuplicates(cruises: readonly CruiseRecord[]): DataQualityFinding[
 }
 
 function stayDuplicates(stays: readonly StayRecord[]): DataQualityFinding[] {
-  const live = stays.filter((s) => s.status !== CANCELLED);
+  const live = stays.filter((s) => !isSetAside(s.status));
   const groups = new Groups();
   bucket(
     groups,

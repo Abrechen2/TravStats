@@ -9,6 +9,7 @@ import { StayStatusPill } from "./StayStatusPill";
 import { StayNightPriceLine } from "./StayNightPriceLine";
 import Toggletip from "../ui/Toggletip";
 import { deadlineFacts } from "../../lib/deadlines";
+import { dateLocaleForLanguage } from "../../lib/units";
 
 interface LodgingStayCardProps {
   stay: LodgingStay;
@@ -56,7 +57,7 @@ export function LodgingStayCard({
   const { t, i18n } = useTranslation(["lodging", "common"]);
   const baseCurrency = useSettingsStore((st) => st.baseCurrency);
   const nights = stayNights(stay);
-  const deadlineLocale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const deadlineLocale = dateLocaleForLanguage(i18n.language);
   const period = formatStayPeriod(stay, i18n.language, t);
   const { original, fxReadout, marker } = formatStayPriceDisplay(
     {

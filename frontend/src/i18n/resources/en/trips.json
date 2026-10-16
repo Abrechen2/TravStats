@@ -288,6 +288,7 @@
     "bookedOnHint": "The price is converted at this day's rate.",
     "travellers": "Number of travellers",
     "travellersInvalid": "Please enter a whole number from 1 to 50.",
+    "priceInvalid": "Enter a valid price of 0 or more (e.g. 39.90).",
     "forPersons_one": "for {{count}} person",
     "forPersons_other": "for {{count}} people",
     "created": "Booking added",
@@ -674,7 +675,7 @@
     "markets": {
       "enable": "Suggest market visits automatically",
       "privacy": "Area recognition queries approximate regions (roughly 5 km grid cells) from OpenStreetMap/Overpass. Your location sequences, times and point IDs are not sent. Visits are only recorded after your confirmation.",
-      "coverage": "Regions checked: {{tiles}} of {{total}} · {{cached}} from stored map data",
+      "coverage": "Regions checked: {{tiles}} of {{total}}",
       "missing": "{{count}} map entries have no usable market boundary. This does not mean you did not visit.",
       "stale": "Some map data is older. Please check these suggestions carefully.",
       "counts": "New market suggestions: {{created}} · Already recorded: {{known}}",
@@ -727,7 +728,7 @@
       "paused": "Scan paused",
       "running": "Scanning",
       "succeeded": "Scan completed",
-      "partial": "Only part of the data was returned",
+      "partial": "Scan partly completed – please note the data gaps",
       "failed": "Scan failed",
       "interrupted": "Scan interrupted; please start again"
     },

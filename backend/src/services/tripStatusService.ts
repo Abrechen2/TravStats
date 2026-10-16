@@ -1,6 +1,6 @@
 import { profileZoneOf } from "../shared/time/profileZone";
 import { RAIL_CLOCK_SELECT, rideStatusSpan } from "../shared/railClock";
-import { prisma } from "../db";
+import { prisma, type DbTransaction } from "../db";
 import { deriveTripStatus, tripDateBounds, tripStatusBounds } from "../shared/statusDerivation";
 import { flightEnds, segmentTripDays, typedTripDays } from "./timeModel/tripColumns";
 
@@ -100,8 +100,16 @@ export async function fillTripDatesFromSegments(tripId: string): Promise<void> {
   });
 }
 
-export async function recomputeTripStatus(tripId: string): Promise<void> {
-  const trip = await prisma.trip.findUnique({
+/**
+ * `client` lets a caller inside a transaction (sharing propagation, ride
+ * create with receipts) read the rows it has just written instead of the
+ * committed state.
+ */
+export async function recomputeTripStatus(
+  tripId: string,
+  client: Pick<DbTransaction, "trip"> = prisma
+): Promise<void> {
+  const trip = await client.trip.findUnique({
     where: { id: tripId },
     select: {
       userId: true,
@@ -146,5 +154,5 @@ export async function recomputeTripStatus(tripId: string): Promise<void> {
   const derived = deriveTripStatus(bounds);
   if (derived == null || derived === trip.status) return;
 
-  await prisma.trip.update({ where: { id: tripId }, data: { status: derived } });
+  await client.trip.update({ where: { id: tripId }, data: { status: derived } });
 }

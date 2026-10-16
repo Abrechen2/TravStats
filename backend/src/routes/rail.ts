@@ -35,11 +35,11 @@ import {
 } from "../services/rail/railGeometry";
 import { resolveStationInput, withStationShortCodes } from "../services/rail/railStations";
 import { bindConnection } from "../services/rail/railConnection";
-import { recomputeTripStatus } from "../services/tripStatusService";
+import { restatusTrips } from "../services/trip/restatusTrips";
 import { railYear } from "../shared/railCounting";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
-import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
+import { fileReceipts, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
 import logger from "../utils/logger";
@@ -134,17 +134,6 @@ function primaryOrder(query: RailQueryInput): Prisma.RailJourneyOrderByWithRelat
   return column === "distanceKm"
     ? { distanceKm: { sort: query.order, nulls: "last" } }
     : { [column]: query.order };
-}
-
-/**
- * A ride extends its trip's span, so every write re-derives the status of the
- * trip it was in and the trip it is in now (owner decision 6 of the rail spec)
- * — after the commit, because the derivation reads the stored rows.
- */
-async function restatusTrips(...tripIds: Array<string | null | undefined>): Promise<void> {
-  for (const id of new Set(tripIds.filter((t): t is string => Boolean(t)))) {
-    await recomputeTripStatus(id);
-  }
 }
 
 /** A misspelt `…Fold` is refused, not dropped — see `strayFoldKey`. */
@@ -470,26 +459,20 @@ async function createRailRide(userId: string, body: unknown, claim: ClaimClientR
     }
     await propagateWrite(tx, userId, "rail", created.id);
     await claim(tx, created.id);
+    // Filed inside the create: filed after the commit, a failure left the ride
+    // without its receipt and the spent client-ref claim kept the outbox
+    // replay from ever filing it.
+    await fileReceipts(tx, userId, documentIds, { type: "railJourney", id: created.id });
+    await restatusTrips([created.tripId], tx);
     return tx.railJourney.findUniqueOrThrow({
       where: { id: created.id },
       include: RAIL_INCLUDE,
     });
   });
 
-  await linkDocuments(userId, documentIds, { type: "railJourney", id: journey.id });
-  await restatusTrips(journey.tripId);
-  // Read again once originals were filed, so the answer names its source.
-  const filed =
-    documentIds.length > 0
-      ? await prisma.railJourney.findUniqueOrThrow({
-          where: { id: journey.id },
-          include: RAIL_INCLUDE,
-        })
-      : journey;
-
   logger.info({ operation: "rail_journey_create", railJourneyId: journey.id, userId });
   return {
-    data: withRailSource(withStationShortCodes(withRailTimes(filed))),
+    data: withRailSource(withStationShortCodes(withRailTimes(journey))),
     meta: { geometry: reportOf(geo) },
   };
 }
@@ -658,7 +641,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       });
     });
 
-    await restatusTrips(existing.tripId, journey.tripId);
+    await restatusTrips([existing.tripId, journey.tripId]);
     res.json({
       success: true,
       data: withRailSource(withStationShortCodes(withRailTimes(journey))),
@@ -682,7 +665,7 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
       await tx.railJourney.delete({ where: { id: existing.id } });
       await propagateDelete(tx, userId, gone);
     });
-    await restatusTrips(existing.tripId);
+    await restatusTrips([existing.tripId]);
     res.status(204).send();
   } catch (err) {
     next(err);

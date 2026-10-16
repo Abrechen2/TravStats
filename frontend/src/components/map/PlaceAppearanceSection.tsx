@@ -18,7 +18,7 @@ import {
 } from "../../lib/placeColor";
 import type { PlaceLabelSource } from "../../lib/placeLabel";
 import type { Rgb } from "../../lib/cruiseColor";
-import { CollapsibleSection, ColorRow, SegControl, Slider } from "./controlPanelKit";
+import { CollapsibleSection, ColorRow, SegControl, Slider, MUTED_TEXT } from "./controlPanelKit";
 
 /** Offered in the order a user reaches for them: the default first, then the
  *  two overrides. */
@@ -109,10 +109,7 @@ export function PlaceAppearanceSection({
             onChange={onColorModeChange}
             options={modeOptions}
           />
-          <div
-            className="mt-1 text-[10px] leading-snug"
-            style={{ color: "rgba(241,245,249,0.45)" }}
-          >
+          <div className="mt-1 text-[10px] leading-snug" style={{ color: MUTED_TEXT }}>
             {t(`map:globe.panel.placeColorMode.${mode}.hint`)}
           </div>
 
@@ -141,10 +138,7 @@ export function PlaceAppearanceSection({
               label: t(`map:globe.panel.placeLabelSource.${s}.label`),
             }))}
           />
-          <div
-            className="mt-1 text-[10px] leading-snug"
-            style={{ color: "rgba(241,245,249,0.45)" }}
-          >
+          <div className="mt-1 text-[10px] leading-snug" style={{ color: MUTED_TEXT }}>
             {t(`map:globe.panel.placeLabelSource.${labelSource}.hint`)}
           </div>
         </div>

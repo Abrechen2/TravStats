@@ -242,9 +242,9 @@ const wrappedView = z.strictObject({
   year: z.number().int(),
   totals: z
     .strictObject({
-      flights: z.number().int(),
-      distanceKm: z.number(),
-      earthFactor: z.number(),
+      flights: z.number().int().nullable(),
+      distanceKm: z.number().nullable(),
+      earthFactor: z.number().nullable(),
       newCountries: z.number().int(),
       cruises: z.number().int().nullable(),
       railRides: z.number().int().nullable(),

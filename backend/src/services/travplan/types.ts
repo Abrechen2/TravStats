@@ -1,4 +1,11 @@
-/** Travel planning contract v1. No planned record is travel evidence. */
+/**
+ * Travel planning contract v1. No planned record is travel evidence.
+ *
+ * Mirrored byte for byte at `frontend/src/types/travplan.ts` (and back):
+ * change both together. The frontend used to import this file across the
+ * tree boundary, which the Docker build had to copy into the frontend stage;
+ * `travplanTypesMirror.test.ts` holds the two copies equal instead.
+ */
 export type PlanKind =
   | "activity"
   | "flight"

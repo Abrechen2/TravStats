@@ -63,3 +63,24 @@ it("stores public catalog data durably and validates cached geometry", async () 
   });
   expect(await marketCatalogStore.read(key)).toBeNull();
 });
+it("makes room by evicting the oldest tile instead of refusing every new one", async () => {
+  await prisma.marketCatalogTile.deleteMany({ where: { key: { startsWith: "evict:" } } });
+  const fill = 2048 - (await prisma.marketCatalogTile.count());
+  const payload = { areas: [], missingAreas: [], invalidCount: 0, sourceTimestamp: null };
+  await prisma.marketCatalogTile.createMany({
+    data: Array.from({ length: fill }, (_, i) => ({
+      key: `evict:${String(i).padStart(4, "0")}`,
+      payload,
+      fetchedAt: new Date(Date.UTC(2020, 0, 1) - (fill - i) * 1000),
+    })),
+  });
+  try {
+    await marketCatalogStore.write("evict:new", payload, at);
+    expect(await marketCatalogStore.read("evict:new")).toEqual({ payload, fetchedAt: at });
+    expect(await prisma.marketCatalogTile.count()).toBe(2048);
+    // The oldest fill row (fetched furthest back) made room.
+    expect(await prisma.marketCatalogTile.findUnique({ where: { key: "evict:0000" } })).toBeNull();
+  } finally {
+    await prisma.marketCatalogTile.deleteMany({ where: { key: { startsWith: "evict:" } } });
+  }
+});

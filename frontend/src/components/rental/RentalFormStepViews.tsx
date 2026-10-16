@@ -35,6 +35,7 @@ import {
 } from "./rentalDraftEdits";
 import { rentalFieldId } from "./rentalFormSteps";
 import type { RentalTimeEnd } from "./rentalFormTimes";
+import { dateLocaleForLanguage } from "../../lib/units";
 
 /** What every step reads and writes — the ONE draft the dialog holds. */
 export interface RentalStepProps {
@@ -385,7 +386,7 @@ export function RentalPickupStep(props: RentalStepProps): JSX.Element {
 export function RentalReturnStep(props: RentalStepProps): JSX.Element {
   const { draft, update, errorOf } = props;
   const { t, i18n } = useTranslation(["rental"]);
-  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
+  const locale = dateLocaleForLanguage(i18n.language);
   const recentCurrencies = useRecentCurrencies();
   const set = useSetter(update);
   // Which figure will count once saved — the rule the list and stats read.
