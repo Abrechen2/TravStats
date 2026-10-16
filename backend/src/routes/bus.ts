@@ -38,7 +38,7 @@ import { restatusTrips } from "../services/trip/restatusTrips";
 import { busYear } from "../shared/busCounting";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
-import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
+import { fileReceipts, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
 import logger from "../utils/logger";
@@ -316,11 +316,13 @@ async function createBusRide(userId: string, body: unknown, claim: ClaimClientRe
     }
     await propagateWrite(tx, userId, "bus", created.id);
     await claim(tx, created.id);
+    // Filed inside the create, so a failure rolls the ride and its claim back
+    // and the outbox replay files the receipt (it used to run after commit).
+    await fileReceipts(tx, userId, documentIds, { type: "busJourney", id: created.id });
+    await restatusTrips([created.tripId], tx);
     return tx.busJourney.findUniqueOrThrow({ where: { id: created.id }, include: BUS_INCLUDE });
   });
 
-  await linkDocuments(userId, documentIds, { type: "busJourney", id: ride.id });
-  await restatusTrips([ride.tripId]);
   logger.info({ operation: "bus_journey_create", busJourneyId: ride.id, userId });
   return { ride: withBusTimes(ride), report: busGeometryReport(edit, "straight") };
 }

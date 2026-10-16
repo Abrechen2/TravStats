@@ -39,7 +39,7 @@ import { restatusTrips } from "../services/trip/restatusTrips";
 import { railYear } from "../shared/railCounting";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
-import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
+import { fileReceipts, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import { createOnce, takeClientRef, type ClaimClientRef } from "../services/sync/clientRef";
 import logger from "../utils/logger";
@@ -459,26 +459,20 @@ async function createRailRide(userId: string, body: unknown, claim: ClaimClientR
     }
     await propagateWrite(tx, userId, "rail", created.id);
     await claim(tx, created.id);
+    // Filed inside the create: filed after the commit, a failure left the ride
+    // without its receipt and the spent client-ref claim kept the outbox
+    // replay from ever filing it.
+    await fileReceipts(tx, userId, documentIds, { type: "railJourney", id: created.id });
+    await restatusTrips([created.tripId], tx);
     return tx.railJourney.findUniqueOrThrow({
       where: { id: created.id },
       include: RAIL_INCLUDE,
     });
   });
 
-  await linkDocuments(userId, documentIds, { type: "railJourney", id: journey.id });
-  await restatusTrips([journey.tripId]);
-  // Read again once originals were filed, so the answer names its source.
-  const filed =
-    documentIds.length > 0
-      ? await prisma.railJourney.findUniqueOrThrow({
-          where: { id: journey.id },
-          include: RAIL_INCLUDE,
-        })
-      : journey;
-
   logger.info({ operation: "rail_journey_create", railJourneyId: journey.id, userId });
   return {
-    data: withRailSource(withStationShortCodes(withRailTimes(filed))),
+    data: withRailSource(withStationShortCodes(withRailTimes(journey))),
     meta: { geometry: reportOf(geo) },
   };
 }
