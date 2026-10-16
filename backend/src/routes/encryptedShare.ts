@@ -13,19 +13,11 @@ import {
 import { Router, type Response, type NextFunction } from "express";
 import { z } from "zod";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
-import { createPublicKey } from "crypto";
-import { authenticate, requireAdmin, type AuthRequest } from "../middleware/auth";
+import { authenticate, type AuthRequest } from "../middleware/auth";
 import { rejectDemo } from "../middleware/demoGuard";
 import { getInstanceSettings } from "../services/instanceSettingsService";
 import { prisma } from "../db";
-import {
-  grantInput,
-  claimInput,
-  id,
-  label,
-  origin,
-  scopeSchema,
-} from "../services/federation/contract";
+import { grantInput, claimInput, id, label, scopeSchema } from "../services/federation/contract";
 import {
   invite,
   claim,
@@ -35,7 +27,7 @@ import {
   listLinks,
 } from "../services/federation/links";
 import { buildSnapshot } from "../services/federation/snapshots";
-import { exchange, loadIdentity, refused, hash } from "../services/federation/security";
+import { refused } from "../services/federation/security";
 
 /**
  * The full-record, device-encrypted transfer (protocol v2, docs/FEDERATION_E2E.md), moved here
@@ -154,69 +146,6 @@ router.get(
     });
   })
 );
-router.get(
-  "/peers",
-  requireAdmin,
-  handle(async (_req, res) => {
-    let local = null;
-    try {
-      const i = await loadIdentity();
-      local = { origin: i.origin, publicKey: i.publicKey, fingerprint: i.fingerprint };
-    } catch {
-      /* Explicitly unconfigured. */
-    }
-    res.json({ success: true, data: { local, peers: await prisma.comparisonPeer.findMany() } });
-  })
-);
-router.post(
-  "/peers",
-  requireAdmin,
-  handle(async (req, res) => {
-    const b = z
-      .strictObject({
-        origin,
-        publicKey: z.string().min(40).max(500),
-        fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
-        enabled: z.boolean(),
-      })
-      .parse(req.body);
-    if (b.origin === "local" || b.origin === (await loadIdentity()).origin) throw refused();
-    const key = createPublicKey(b.publicKey);
-    if (key.asymmetricKeyType !== "ed25519") throw refused();
-    const pem = key.export({ type: "spki", format: "pem" }).toString();
-    if (hash(pem) !== b.fingerprint) throw refused();
-    const previous = await prisma.comparisonPeer.findUnique({ where: { origin: b.origin } });
-    if (previous && previous.publicKey !== pem) {
-      await prisma.comparisonLink.updateMany({
-        where: { origin: b.origin },
-        data: { revoked: true },
-      });
-    }
-    res.json({
-      success: true,
-      data: await prisma.comparisonPeer.upsert({
-        where: { origin: b.origin },
-        create: { origin: b.origin, publicKey: pem, enabled: b.enabled },
-        update: { publicKey: pem, enabled: b.enabled, verifiedAt: null },
-      }),
-    });
-  })
-);
-router.post(
-  "/peers/verify",
-  requireAdmin,
-  handle(async (req, res) => {
-    const b = z.strictObject({ origin }).parse(req.body);
-    const reply = await exchange(b.origin, { action: "ping" });
-    if (!reply || typeof reply !== "object" || !("ready" in reply) || reply.ready !== true)
-      throw refused();
-    await prisma.comparisonPeer.update({
-      where: { origin: b.origin },
-      data: { verifiedAt: new Date() },
-    });
-    res.json({ success: true, data: { verified: true } });
-  })
-);
 
 router.get(
   "/circles",
@@ -264,18 +193,6 @@ router.post(
   handle(async (req, res) => {
     const b = z.strictObject({ circleId: id, channel: id }).parse(req.body);
     res.json({ success: true, data: await removeMember(req.userId!, b.circleId, b.channel) });
-  })
-);
-router.post(
-  "/peers/suspend",
-  requireAdmin,
-  handle(async (req, res) => {
-    const b = z.strictObject({ origin }).parse(req.body);
-    await prisma.comparisonPeer.update({
-      where: { origin: b.origin },
-      data: { enabled: false, verifiedAt: null },
-    });
-    res.json({ success: true, data: { suspended: true } });
   })
 );
 router.post(

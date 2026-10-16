@@ -5,6 +5,7 @@
     "admin/apiKeys.ts",
     "admin/backupSettings.ts",
     "admin/dawarich.ts",
+    "admin/federation.ts",
     "admin/immich.ts",
     "admin/index.ts",
     "admin/instanceSettings.ts",

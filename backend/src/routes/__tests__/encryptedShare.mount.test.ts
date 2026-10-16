@@ -22,4 +22,10 @@ describe("the encrypted share lives apart from the comparison page", () => {
     expect(UNDOCUMENTED_MOUNTS.get("encrypted-share")).toMatch(/beta/i);
     expect(UNDOCUMENTED_MOUNTS.has("comparison")).toBe(false);
   });
+
+  it("keeps peer administration out of the user-facing API", () => {
+    const served = listMountedEndpoints().map((e) => `${e.method} ${e.path}`);
+    expect(served.filter((p) => p.includes("/encrypted-share/peers"))).toEqual([]);
+    expect(served).toContain("post /admin/federation/peers");
+  });
 });

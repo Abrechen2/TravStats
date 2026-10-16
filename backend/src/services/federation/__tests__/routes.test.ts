@@ -50,11 +50,6 @@ it("fails closed while the instance beta switch is disabled", async () => {
     (await request(app).get("/api/v1/encrypted-share/links").set("x-test-user", userId)).status
   ).toBe(403);
 });
-it("does not allow an ordinary account to admit peers", async () => {
-  expect(
-    (await request(app).get("/api/v1/encrypted-share/peers").set("x-test-user", userId)).status
-  ).toBe(403);
-});
 it("returns only this user's links and refuses oversized or unknown grant fields", async () => {
   const res = await request(app).get("/api/v1/encrypted-share/links").set("x-test-user", userId);
   expect(res.status).toBe(200);
