@@ -126,6 +126,39 @@ describe("generateYearReportPdf", () => {
     });
   });
 
+  // A flight with no coordinates was measured from (0, 0): FRA alone became
+  // a 5,600 km flight. Unmeasured is "-", in the total and in the row.
+  describe("a flight without coordinates", () => {
+    beforeEach(() => {
+      mockText.mockClear();
+      mockAutoTable.mockClear();
+    });
+
+    it("adds no kilometres and shows a dash", async () => {
+      const unplaced = { ...mockFlight, arrLat: null, arrLon: null } as unknown as Flight;
+      await generateYearReportPdf({ year: 2026, flights: [unplaced], userName: "D", units: "km" });
+      const drawn = mockText.mock.calls.map((call) => call[0]);
+      const label = drawn.indexOf("Total Distance");
+      expect(drawn[label + 1]).toBe("-");
+      const body = mockAutoTable.mock.calls[0][1].body as string[][];
+      expect(body[0][4]).toBe("-");
+    });
+
+    it("totals only the flights that were measured", async () => {
+      const unplaced = { ...mockFlight, arrLat: null, arrLon: null } as unknown as Flight;
+      await generateYearReportPdf({
+        year: 2026,
+        flights: [mockFlight, unplaced],
+        userName: "D",
+        units: "km",
+      });
+      const drawn = mockText.mock.calls.map((call) => call[0]);
+      const total = drawn[drawn.indexOf("Total Distance") + 1] as string;
+      const body = mockAutoTable.mock.calls[0][1].body as string[][];
+      expect(total).toBe(`${body[0][4]} km`);
+    });
+  });
+
   describe("characters the PDF font has", () => {
     // jsPDF's built-in Helvetica is WinAnsi: an arrow, a subscript two, a
     // dingbat or a narrow no-break space is drawn as garbage in the real file.
