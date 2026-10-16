@@ -21,7 +21,13 @@ export interface Link {
   confirmed: boolean;
   remoteConfirmed: boolean;
   code: string;
-  grants: Array<{ audience: string; active: boolean; revision: number; scope: Scope }>;
+  grants: Array<{
+    audience: string;
+    active: boolean;
+    revision: number;
+    /** As stored: "all existing trips" comes back with the trip ids the server resolved. */
+    scope: Scope & { allExisting?: boolean; acceptedAt?: string };
+  }>;
 }
 export interface Snapshot {
   version: 1;
