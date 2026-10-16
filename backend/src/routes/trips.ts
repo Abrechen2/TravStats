@@ -56,7 +56,11 @@ import { enrichFlightsForClients } from "../services/flightAirportFacts";
 import { withTripTimes } from "../services/trips/timesDto";
 import { withTripDetailTimes } from "../services/trips/tripDetailTimes";
 import { detachTrip } from "../services/sharing/detach";
-import { propagateWrites, shareSnapshots } from "../services/sharing/propagate";
+import {
+  propagateWrites,
+  shareSnapshots,
+  SHARE_TX_TIMEOUT_MS,
+} from "../services/sharing/propagate";
 
 // Re-exported for the Immich trip routers, which import it from here.
 export { resolveTrip };
@@ -618,22 +622,25 @@ router.post(
         throw new AppError("One or more flights not found", 404);
       }
 
-      await prisma.$transaction(async (tx) => {
-        const before = await shareSnapshots(tx, "flight", flightIds);
-        if (action === "add") {
-          await tx.flight.updateMany({
-            where: { id: { in: flightIds }, userId },
-            data: { tripId: trip.id },
-          });
-        } else {
-          await tx.flight.updateMany({
-            where: { id: { in: flightIds }, userId, tripId: trip.id },
-            data: { tripId: null },
-          });
-        }
-        // Into a shared trip: copied to the others; out of one: they are told.
-        await propagateWrites(tx, userId, "flight", flightIds, before);
-      });
+      await prisma.$transaction(
+        async (tx) => {
+          const before = await shareSnapshots(tx, "flight", flightIds);
+          if (action === "add") {
+            await tx.flight.updateMany({
+              where: { id: { in: flightIds }, userId },
+              data: { tripId: trip.id },
+            });
+          } else {
+            await tx.flight.updateMany({
+              where: { id: { in: flightIds }, userId, tripId: trip.id },
+              data: { tripId: null },
+            });
+          }
+          // Into a shared trip: copied to the others; out of one: they are told.
+          await propagateWrites(tx, userId, "flight", flightIds, before);
+        },
+        { timeout: SHARE_TX_TIMEOUT_MS }
+      );
       await recomputeTripStatus(trip.id);
 
       res.json({

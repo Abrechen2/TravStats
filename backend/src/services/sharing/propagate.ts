@@ -58,9 +58,14 @@ export interface ShareSnapshot extends SharedRow {
   groupId: string | null;
 }
 
+/** A write and its propagation share one transaction; the copies of a big trip need more than Prisma's 5 s default. */
+export const SHARE_TX_TIMEOUT_MS = 30_000;
+
 async function inTransaction<T>(c: ShareClient, fn: (tx: DbTransaction) => Promise<T>) {
   const run = (tx: DbTransaction) => asPropagation(() => fn(tx));
-  return "$transaction" in c ? (c as Db).$transaction(run, { timeout: 30_000 }) : run(c);
+  return "$transaction" in c
+    ? (c as Db).$transaction(run, { timeout: SHARE_TX_TIMEOUT_MS })
+    : run(c);
 }
 
 /** trip id → its share group; with `ownerId`, only trips that are that user's own. */

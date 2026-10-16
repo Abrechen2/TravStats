@@ -5,7 +5,7 @@
  * Also calculates statistics impact of updates.
  */
 
-import { propagateWrite, shareSnapshot } from "./sharing/propagate";
+import { propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "./sharing/propagate";
 import { PrismaClient, PendingFlightUpdate, Flight, Prisma } from "../prisma";
 import { prisma } from "../db";
 import logger from "../utils/logger";
@@ -407,22 +407,25 @@ export async function applyPendingUpdate(id: string, userId: string): Promise<Fl
     }
 
     // An accepted suggestion is the member's own change: on a shared trip it
-    // reaches the other copies (design 2026-10-09) — in one transaction, so
+    // reaches the other copies (design 2026-10-09) â€” in one transaction, so
     // neither the flight nor the suggestion's status moves if the copies cannot.
-    const updatedFlight = await prisma.$transaction(async (tx) => {
-      const before = await shareSnapshot(tx, "flight", flight.id);
-      const written = await tx.flight.update({ where: { id: flight.id }, data: updateData });
-      await propagateWrite(tx, userId, "flight", flight.id, before);
-      await tx.pendingFlightUpdate.update({
-        where: { id },
-        data: {
-          status: "applied",
-          appliedAt: new Date(),
-          updatedAt: new Date(),
-        },
-      });
-      return written;
-    });
+    const updatedFlight = await prisma.$transaction(
+      async (tx) => {
+        const before = await shareSnapshot(tx, "flight", flight.id);
+        const written = await tx.flight.update({ where: { id: flight.id }, data: updateData });
+        await propagateWrite(tx, userId, "flight", flight.id, before);
+        await tx.pendingFlightUpdate.update({
+          where: { id },
+          data: {
+            status: "applied",
+            appliedAt: new Date(),
+            updatedAt: new Date(),
+          },
+        });
+        return written;
+      },
+      { timeout: SHARE_TX_TIMEOUT_MS }
+    );
 
     // Update user statistics
     await updateUserStatistics(userId, "applied");

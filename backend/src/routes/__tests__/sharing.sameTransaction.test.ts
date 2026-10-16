@@ -56,6 +56,33 @@ describe("trip sharing — propagation shares the write's transaction", () => {
     expect((await prisma.flight.findUniqueOrThrow({ where: { id: loose.id } })).tripId).toBeNull();
   });
 
+  it("assigning several flights to the shared trip copies each to the member", async () => {
+    const { full, memberTrip } = await sharedPair(anna, ben);
+    const base = {
+      userId: anna.id,
+      depIata: "FRA",
+      depLat: 50.0379,
+      depLon: 8.5622,
+      arrIata: "LIS",
+      arrLat: 38.7742,
+      arrLon: -9.1342,
+    };
+    const loose = await Promise.all(
+      ["LH1170", "LH1171", "LH1172", "LH1173"].map((flightNumber) =>
+        prisma.flight.create({ data: { ...base, flightNumber } })
+      )
+    );
+    const before = await prisma.flight.count({ where: { userId: ben.id, tripId: memberTrip.id } });
+    const res = await request(app)
+      .post(`/api/v1/trips/${full.trip.id}/flights`)
+      .set("Cookie", anna.cookie)
+      .send({ flightIds: loose.map((f) => f.id), action: "add" });
+    expect(res.status).toBe(200);
+    expect(await prisma.flight.count({ where: { userId: ben.id, tripId: memberTrip.id } })).toBe(
+      before + loose.length
+    );
+  });
+
   it("a stay edit rolls back when the copy cannot follow", async () => {
     const { full } = await sharedPair(anna, ben);
     jest.spyOn(ADAPTERS.lodgingStay, "apply").mockRejectedValueOnce(new Error("apply failed"));
