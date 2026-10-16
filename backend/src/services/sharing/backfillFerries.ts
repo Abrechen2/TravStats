@@ -39,7 +39,12 @@ const countOf = (entry: CopiedEntry): keyof Counts =>
   entry.movedFrom ? "moved" : entry.joined ? "joined" : "copied";
 
 export async function backfillSharedFerries(opts: { apply: boolean }): Promise<BackfillResult> {
-  const groups = await prisma.tripShareGroup.findMany({ select: { id: true } });
+  // Oldest first, id as tie-breaker: a failure report's "n of m groups done"
+  // then means the same groups on a re-run.
+  const groups = await prisma.tripShareGroup.findMany({
+    select: { id: true },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+  });
   const total: BackfillResult = { groups: groups.length, keyed: 0, joined: 0, moved: 0, copied: 0 };
   for (const [done, group] of groups.entries()) {
     const counted: Counts = { keyed: 0, joined: 0, moved: 0, copied: 0 };

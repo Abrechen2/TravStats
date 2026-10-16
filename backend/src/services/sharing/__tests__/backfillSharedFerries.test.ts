@@ -99,9 +99,14 @@ describe("sharing rollout — ferry backfill and consent report", () => {
   });
 
   it("names the group and the groups done when one fails", async () => {
-    // The first group the backfill visits is the one the mocked transaction fails.
+    // The backfill visits groups oldest first, so the mocked failure lands on a
+    // known group: one created before every other, inserted last.
+    const early = { createdAt: { lt: new Date("2001-01-01T00:00:00Z") } };
+    await prisma.tripShareGroup.deleteMany({ where: early });
+    const first = await prisma.tripShareGroup.create({
+      data: { createdById: anna.id, createdAt: new Date("2000-01-01T00:00:00Z") },
+    });
     const groups = await prisma.tripShareGroup.findMany({ select: { id: true } });
-    const first = groups[0];
     const spy = jest.spyOn(prisma, "$transaction").mockRejectedValueOnce(new Error("boom"));
     try {
       await expect(backfillSharedFerries({ apply: true })).rejects.toThrow(
@@ -109,6 +114,7 @@ describe("sharing rollout — ferry backfill and consent report", () => {
       );
     } finally {
       spy.mockRestore();
+      await prisma.tripShareGroup.deleteMany({ where: early });
     }
   });
 
