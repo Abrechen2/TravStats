@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import { haversineKm } from "../../shared/geo/haversine";
 import { VISIT_STOP_EXPLAINED_M } from "./visitStops";
+import { visitDay } from "../places/visitTrip";
 
 /**
  * The nearest logged visit to each `visit` finding — part of the reasoning a
@@ -36,9 +37,17 @@ export interface NearestVisitInput {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** A visit's local day: `visitedAt` holds the place's wall clock as fake UTC. */
-const dayOf = (visitedAt: Date | null): string | null =>
-  visitedAt ? visitedAt.toISOString().slice(0, 10) : null;
+/**
+ * The instants that can hold a visit on these local days. A day at the place
+ * starts up to 14 h before and ends up to 12 h after the same UTC date, so one
+ * day of margin on each side; the exact day is decided by `visitDay` below.
+ */
+function dayWindow(first: string, last: string): { gte: Date; lt: Date } {
+  return {
+    gte: new Date(Date.parse(`${first}T00:00:00.000Z`) - DAY_MS),
+    lt: new Date(Date.parse(`${last}T00:00:00.000Z`) + 2 * DAY_MS),
+  };
+}
 
 export async function nearestVisits(
   userId: string,
@@ -49,28 +58,32 @@ export async function nearestVisits(
   if (visitRows.length === 0) return result;
 
   const tripIds = [...new Set(visitRows.flatMap((row) => (row.tripId ? [row.tripId] : [])))];
-  const days = visitRows.flatMap((row) => [row.startDay, row.endDay]).filter(Boolean) as string[];
-  const dayRange =
-    days.length > 0
-      ? {
-          gte: new Date(`${days.reduce((a, b) => (a < b ? a : b))}T00:00:00.000Z`),
-          lt: new Date(
-            Date.parse(`${days.reduce((a, b) => (a > b ? a : b))}T00:00:00.000Z`) + DAY_MS
-          ),
-        }
-      : null;
+  // One window per finding, not one from the oldest finding to the newest: a
+  // January and a December finding loaded every visit of the year between.
+  const windows = [
+    ...new Map(
+      visitRows.flatMap((row) =>
+        row.startDay && row.endDay
+          ? [[`${row.startDay}|${row.endDay}`, dayWindow(row.startDay, row.endDay)] as const]
+          : []
+      )
+    ).values(),
+  ];
 
   const visits = await prisma.placeVisit.findMany({
     where: {
       userId,
       OR: [
         ...(tripIds.length > 0 ? [{ tripId: { in: tripIds } }] : []),
-        ...(dayRange ? [{ visitedAt: dayRange }] : []),
+        ...windows.flatMap((w) => [{ visitedAtUtc: w }, { visitedAtUtc: null, visitedAt: w }]),
       ],
     },
     select: {
       tripId: true,
       visitedAt: true,
+      visitedAtUtc: true,
+      visitedZone: true,
+      visitedPrecision: true,
       place: { select: { id: true, name: true, lat: true, lon: true } },
     },
   });
@@ -78,7 +91,7 @@ export async function nearestVisits(
   for (const row of visitRows) {
     let best: NearestVisit | null = null;
     for (const visit of visits) {
-      const day = dayOf(visit.visitedAt);
+      const day = visitDay(visit);
       const sameDay =
         day !== null && row.startDay !== null && row.endDay !== null
           ? day >= row.startDay && day <= row.endDay

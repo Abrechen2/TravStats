@@ -24,6 +24,7 @@ registry.registerPath({
   path: "/photo-journeys",
   summary: "Journeys proposed from photo timestamps",
   description:
+    "At most 500 rows of the requested status, newest first. " +
     "Each row is ONE reading of a burst of photos nothing recorded explains, the strongest that fits: " +
     "`place` (photos within 2 km of an own place, no visit that day; `placeId`, `distanceKm`), " +
     "`trip` (an own, flown airport other than home within 300 km; `airportIata`, `distanceKm`, `spreadKm`), " +
