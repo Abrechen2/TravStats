@@ -144,6 +144,14 @@ COPY backend/data/land-mask.bin ./data/land-mask.bin
 # ENOENT on first call and every cruise leg falls back to the coarse
 # 1° A*, which cuts across narrow Baltic and Adriatic straits.
 COPY backend/data/marnet/marnet.geojson ./data/marnet/marnet.geojson
+# River anchor polylines (data/rivers/river_<name>.json), read by
+# services/cruiseDistance/riverCalculator.ts via __dirname from
+# dist/services/cruiseDistance to /app/backend/data/rivers. The calculator
+# treats a missing directory as "no rivers" with a single warn, so without
+# this line every river leg is measured as the chord and drawn as one — which
+# is how prod stored a whole Nile cruise as `haversine` (2026-10-16). Guarded
+# by services/cruiseDistance/__tests__/inlandLeg.test.ts.
+COPY backend/data/rivers ./data/rivers
 # Vendored Natural Earth 1:10m country outlines (public domain), read by
 # services/geo/countryBoundaries.ts via __dirname from dist/services/geo/ to
 # /app/backend/data/countries. 10.2 MB, 245 polygonal features, 239 ISO codes.

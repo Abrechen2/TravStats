@@ -39,7 +39,7 @@ export interface DawarichStay {
     TimeValue | null
   >;
   id: string;
-  status: "pending" | "accepted" | "rejected";
+  status: "pending" | "accepted" | "rejected" | "covered";
   name: string | null;
   startAt: string;
   endAt: string;
@@ -69,6 +69,15 @@ export interface DawarichStay {
       overlappingMarketIds: string[];
     };
     matchingVisitId?: string | null;
+    /** Set when the finding was resolved because a recorded visit or hotel stay already holds it. */
+    coveredBy?: {
+      kind: "visit" | "lodging";
+      id: string;
+      placeId?: string;
+      lodgingId?: string;
+      name: string;
+      distanceM: number;
+    };
     zone: string;
     pointIds: number[];
     maxGapMinutes: number;

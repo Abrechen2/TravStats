@@ -164,13 +164,22 @@ registry.registerPath({
   summary: "The original's bytes",
   description:
     "Sets `Cache-Control: private`, overriding the API-wide `no-store`. Mail files and Wallet " +
-    "passes are served as attachments rather than rendered.",
+    "passes are served as attachments rather than rendered. `view=text` on a mail file " +
+    "answers a plain-text reading of it instead — sender, recipients, date, subject, the body " +
+    "(an HTML body reduced to its text) and the list of attachments, labelled in German " +
+    "unless `Accept-Language` prefers English. Other formats ignore `view`.",
   tags,
-  request: { params: idParams },
+  request: {
+    params: idParams,
+    query: z.object({ view: z.enum(["text"]).optional() }),
+  },
   responses: {
     200: {
-      description: "The stored bytes",
-      content: { "application/octet-stream": { schema: z.string() } },
+      description: "The stored bytes, or with `view=text` a mail's plain-text reading",
+      content: {
+        "application/octet-stream": { schema: z.string() },
+        "text/plain": { schema: z.string() },
+      },
     },
     404: notFound,
   },

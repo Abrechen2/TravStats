@@ -9,6 +9,8 @@
   "uploadFailed": "The file could not be uploaded.",
   "deleteFailed": "The document could not be removed.",
   "openLabel": "Open {{name}}",
+  "download": "Original",
+  "downloadLabel": "Download {{name}} as the original mail",
   "remove": "Remove",
   "removeLabel": "Remove {{name}}",
   "deleteTitle": "Remove document?",

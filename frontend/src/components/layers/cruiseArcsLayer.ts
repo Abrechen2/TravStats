@@ -135,7 +135,13 @@ export function buildCruiseArcs(
     for (let i = 0; i < ports.length - 1; i++) {
       const a = ports[i];
       const b = ports[i + 1];
-      const routeGeometry = waypointsByPair.get(pairKey(a.id, b.id)) ?? {
+      // A night in port (Luxor followed by Luxor) is no leg: the server sends
+      // no feature for it, and the chord fallback below would otherwise
+      // mount a zero-length path — a dot under the port marker, and an arrow
+      // with no heading. Only a line the user drew or recorded for it counts.
+      const ownLine = waypointsByPair.get(pairKey(a.id, b.id));
+      if (!ownLine && a.id === b.id) continue;
+      const routeGeometry = ownLine ?? {
         coordinates: [
           [a.lon, a.lat],
           [b.lon, b.lat],

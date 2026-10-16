@@ -1,4 +1,4 @@
-import { classifyVisit } from "../../shared/placeCounting";
+import { visitPromotesPlace } from "../../shared/placeCounting";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
 import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
@@ -137,7 +137,8 @@ export async function commitPlaceImport(
       // it, because an undated VISIT ROW is still a visit. An import row
       // without a date is not a visit row at all.
       const happened =
-        usableVisitedAt !== null && classifyVisit({ visitedAt: usableVisitedAt }) === "visited";
+        usableVisitedAt !== null &&
+        visitPromotesPlace({ visitedAt: usableVisitedAt, visitedAtUtc: null });
       // A trip the row names but the caller does not own is refused, not
       // dropped: a visit silently losing its trip is a quiet downgrade.
       const tripId = row.tripId ? await visitTripId(userId, row.tripId) : null;

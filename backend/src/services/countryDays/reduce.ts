@@ -6,9 +6,10 @@
  * *"Store country-days, not tracks"*, and the July concept's §3, which makes
  * location history opt-in, encrypted at rest and **never sent to the
  * frontend**. This module is where that promise is actually kept: it is the
- * only place in the server that ever holds a Dawarich coordinate, it holds each
- * one for the length of one loop iteration, and nothing it returns can be
- * inverted back into a position.
+ * only place in the server that reads a Dawarich coordinate, the sweep holds
+ * one month of them in memory only until this reduction has run (the speed rule
+ * below needs each point's neighbours), and nothing it returns can be inverted
+ * back into a position.
  *
  * Deliberately source-agnostic. It takes `TimedPosition`, not `DawarichPoint`,
  * so a GPX track (`TripRouteTrack`, which already stores `source = "gpx"`) can
@@ -30,6 +31,30 @@
  *   from `services/countryDays/knownAirports.ts`, built from the account's own
  *   flown flights. This file only counts how many points it answered yes for;
  *   what that count MEANS is `services/stats/trackEvidence.ts`'s decision.
+ *
+ * ## Points taken in the air never reach a row (forgejo#299)
+ *
+ * *"Ein Überflug oder fehlerhafter Standort darf weder Bodenkontakt noch
+ * Besuch belegen"* — and until 2026-10-16 every fix a phone took at cruising
+ * altitude became a country-day: Syria from one point on EK052, Romania from
+ * 1,686 on LH718, Cape Verde from 111 on LH506. Two independent rules now drop
+ * such a point before it is bucketed, and a dropped point creates no day and
+ * extends none:
+ *
+ * 1. **Inside a flown flight's air time** (`inFlight`, built from the account's
+ *    flights by `./flightAirTime.ts`) in any country but that flight's two
+ *    airports' countries.
+ * 2. **Moving at airliner speed** — faster than `AIRBORNE_SPEED_KMH` to the
+ *    point before it AND to the point after it — whether or not a flight was
+ *    ever entered. A point on the grounds of a known airport is exempt: the
+ *    aircraft there is landing, taxiing or at the gate, and a short layover
+ *    between two long hops must not vanish with the hops.
+ *
+ * Rule 2 is also the outlier rule #299 asks for: a single fix that jumps
+ * hundreds of kilometres away and back is fast on both sides and goes with the
+ * flight points. Neither rule turns a dropped point into a weaker kind of
+ * evidence — #299's table puts an overflight in neither "am Boden gewesen" nor
+ * "besucht", so there is nothing to keep it as.
  *
  * ## Why the airport question is asked HERE and nowhere later
  *
@@ -104,6 +129,69 @@ interface DayBucket {
 export type KnownAirportTest = (lat: number, lon: number) => boolean;
 
 /**
+ * "Was a position at this instant, resolved to this country, taken in the air
+ * on a flight this account flew?" — `./flightAirTime.ts`. Injected like the
+ * other two questions; omitted, nothing is in flight.
+ */
+export type InFlightTest = (timestampMs: number, countryCode: string) => boolean;
+
+/**
+ * Faster than any ground transport a traveller rides, slower than any airliner
+ * in cruise (800–900 km/h) or in the climb most fixes are taken in. Not 250:
+ * high-speed rail runs at 300–350 km/h (ICE, TGV, the Chinese lines), and a
+ * train through a country is ground contact under #299 — this rule exists to
+ * remove the cabin, not the carriage.
+ */
+const AIRBORNE_SPEED_KMH = 400;
+
+/**
+ * The shortest span a speed is measured over. Phones repeat a fix or jitter by
+ * a few hundred metres within a second; measured over a minute those vanish,
+ * while a minute of cruise is still ~14 km.
+ */
+const MIN_SPEED_SPAN_MS = 60_000;
+
+const MS_PER_HOUR = 3_600_000;
+
+function speedKmh(a: TimedPosition, b: TimedPosition): number {
+  const hours = Math.abs(b.timestampMs - a.timestampMs) / MS_PER_HOUR;
+  if (hours === 0) return 0;
+  return (
+    haversineKm({ lat: a.latitude, lon: a.longitude }, { lat: b.latitude, lon: b.longitude }) /
+    hours
+  );
+}
+
+/**
+ * Which of these time-ordered points were taken at airliner speed: fast to the
+ * nearest point at least `MIN_SPEED_SPAN_MS` before AND to the nearest one at
+ * least that long after. A point without such a neighbour on one side is never
+ * judged airborne — the first fix of a window cannot be told from a departure.
+ */
+export function airborneBySpeed(sorted: readonly TimedPosition[]): boolean[] {
+  const airborne = new Array<boolean>(sorted.length).fill(false);
+  // `before`: the latest index at least a span earlier; `after`: the earliest
+  // index at least a span later. Both only move forward, so this is one pass.
+  let before = -1;
+  let after = 0;
+  for (let i = 0; i < sorted.length; i += 1) {
+    const at = sorted[i].timestampMs;
+    while (before + 1 < i && at - sorted[before + 1].timestampMs >= MIN_SPEED_SPAN_MS) {
+      before += 1;
+    }
+    if (after <= i) after = i + 1;
+    while (after < sorted.length && sorted[after].timestampMs - at < MIN_SPEED_SPAN_MS) {
+      after += 1;
+    }
+    if (before < 0 || after >= sorted.length) continue;
+    airborne[i] =
+      speedKmh(sorted[before], sorted[i]) > AIRBORNE_SPEED_KMH &&
+      speedKmh(sorted[i], sorted[after]) > AIRBORNE_SPEED_KMH;
+  }
+  return airborne;
+}
+
+/**
  * Accumulates across several windows, because a truncated month is re-pulled as
  * smaller windows and their days must merge rather than compete.
  */
@@ -121,6 +209,9 @@ export function utcDay(timestampMs: number): string {
 /**
  * Fold one batch of positions into the accumulator.
  *
+ * Pass a window WHOLE rather than in slices: the speed rule compares each point
+ * with its neighbours in time, and a point at the edge of a slice has none.
+ *
  * A point whose timestamp is not finite is dropped rather than bucketed into
  * the epoch — the client already guarantees finite values, and a defensive
  * `new Date(NaN).toISOString()` would throw rather than lie, which is worse
@@ -130,19 +221,33 @@ export function accumulateCountryDays(
   accumulator: CountryDayAccumulator,
   points: readonly TimedPosition[],
   countryAt: (lat: number, lon: number) => string | null,
-  atKnownAirport: KnownAirportTest = () => false
+  atKnownAirport: KnownAirportTest = () => false,
+  inFlight: InFlightTest = () => false
 ): void {
-  for (const point of points) {
-    if (!Number.isFinite(point.timestampMs)) continue;
+  // The speed rule needs neighbours in time order, and Dawarich answers
+  // newest-first. A sorted copy: the caller's array is not ours to reorder.
+  const ordered = points
+    .filter((point) => Number.isFinite(point.timestampMs))
+    .sort((a, b) => a.timestampMs - b.timestampMs);
+  const fast = airborneBySpeed(ordered);
+
+  for (let i = 0; i < ordered.length; i += 1) {
+    const point = ordered[i];
+    // Asked here, of the position itself, because there is nowhere later: the
+    // coordinate is gone by the end of this iteration.
+    const atAirport = atKnownAirport(point.latitude, point.longitude);
+    // Airliner speed away from an airport: the cabin, not the ground.
+    if (fast[i] && !atAirport) continue;
 
     const countryCode = countryAt(point.latitude, point.longitude);
     // The sea, Antarctica, an unattributed area, or a coordinate that is not
     // one. An abstention, never a nearest-neighbour guess.
     if (!countryCode) continue;
 
-    // Asked here, of the position itself, because there is nowhere later: the
-    // coordinate is gone by the end of this iteration.
-    const airside = atKnownAirport(point.latitude, point.longitude) ? 1 : 0;
+    // Inside a flown flight's air time, over a country it does not land in.
+    if (inFlight(point.timestampMs, countryCode)) continue;
+
+    const airside = atAirport ? 1 : 0;
     const date = utcDay(point.timestampMs);
     const key = `${date} ${countryCode}`;
     const bucket = accumulator.get(key);
@@ -201,9 +306,10 @@ export function drainCountryDays(accumulator: CountryDayAccumulator): CountryDay
 export function reduceToCountryDays(
   points: readonly TimedPosition[],
   countryAt: (lat: number, lon: number) => string | null,
-  atKnownAirport?: KnownAirportTest
+  atKnownAirport?: KnownAirportTest,
+  inFlight?: InFlightTest
 ): CountryDayObservation[] {
   const accumulator = createCountryDayAccumulator();
-  accumulateCountryDays(accumulator, points, countryAt, atKnownAirport);
+  accumulateCountryDays(accumulator, points, countryAt, atKnownAirport, inFlight);
   return drainCountryDays(accumulator);
 }

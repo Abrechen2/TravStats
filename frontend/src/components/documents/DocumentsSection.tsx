@@ -8,6 +8,7 @@ import { Icon } from "../ui/Icon";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
+  documentDownloadUrl,
   documentFileUrl,
   documentsApi,
   isDemoForbidden,
@@ -282,6 +283,17 @@ export default function DocumentsSection({
       >
         {doc.displayName}
       </a>
+      {doc.format === "eml" && (
+        <a
+          href={documentDownloadUrl(doc)}
+          download
+          aria-label={t("documents:downloadLabel", { name: doc.displayName })}
+          className="t-caption shrink-0"
+          style={{ color: "var(--ts-muted)" }}
+        >
+          {t("documents:download")}
+        </a>
+      )}
       <span className="t-caption shrink-0">
         {[
           doc.kind ? t(`documents:kind.${doc.kind}`) : t(`documents:format.${doc.format}`),

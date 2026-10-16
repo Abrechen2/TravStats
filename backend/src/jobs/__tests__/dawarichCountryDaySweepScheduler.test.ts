@@ -54,6 +54,9 @@ jest.mock("../../services/geo/countryFromCoordinates", () => ({
 jest.mock("../../services/countryDays/knownAirports", () => ({
   buildKnownAirportTest: async () => () => false,
 }));
+jest.mock("../../services/countryDays/flightAirTime", () => ({
+  buildFlightAirTimeTest: async () => () => false,
+}));
 
 jest.mock("../../services/dawarich/dawarichResolver", () => ({
   buildUserDawarichConnection: (baseUrl: string | null, apiKey: string | null) =>

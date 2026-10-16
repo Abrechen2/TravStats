@@ -735,7 +735,12 @@
     "status": {
       "pending": "To review",
       "accepted": "Accepted",
-      "rejected": "Dismissed"
+      "rejected": "Dismissed",
+      "covered": "Already recorded"
+    },
+    "coveredBy": {
+      "visit": "Already recorded as a visit: {{name}}",
+      "lodging": "Already recorded as a stay: {{name}}"
     },
     "uncertainty": {
       "staleMapData": "Some venue boundaries are older.",

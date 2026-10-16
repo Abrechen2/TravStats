@@ -19,7 +19,7 @@ import logger from "../../utils/logger";
 import { haversineCalculator } from "./haversineCalculator";
 import { riverCalculator } from "./riverCalculator";
 import { seaRouteCalculator } from "./seaRouteCalculator";
-import type { ComputedLeg, DistanceCalculator, PortPoint } from "./types";
+import type { ComputedLeg, DistanceCalculator, LegContext, PortPoint } from "./types";
 
 const calculators: DistanceCalculator[] = [
   // Order matters: highest-priority calculator first. Each is tried
@@ -30,9 +30,13 @@ const calculators: DistanceCalculator[] = [
   haversineCalculator,
 ];
 
-export async function computeLegDistance(from: PortPoint, to: PortPoint): Promise<ComputedLeg> {
+export async function computeLegDistance(
+  from: PortPoint,
+  to: PortPoint,
+  context: LegContext = {}
+): Promise<ComputedLeg> {
   for (const calc of calculators) {
-    if (!calc.accepts(from, to)) continue;
+    if (!calc.accepts(from, to, context)) continue;
     try {
       const result = await calc.compute(from, to);
       if (result !== null) return result;
@@ -57,4 +61,4 @@ export async function computeLegDistance(from: PortPoint, to: PortPoint): Promis
   throw new Error("No DistanceCalculator accepted the port pair");
 }
 
-export type { ComputedLeg, DistanceMethod, Confidence, PortPoint } from "./types";
+export type { ComputedLeg, DistanceMethod, Confidence, LegContext, PortPoint } from "./types";

@@ -18,6 +18,7 @@ import {
   countPlaceCountries,
   countVisitedPlaces,
   visitCountsForYear,
+  visitPromotesPlace,
   visitYear,
 } from "../placeCounting";
 
@@ -120,5 +121,43 @@ describe("placeCounting — the visit's own instant and zone (ADR 0002 phase 4)"
       visitedAtUtc: new Date("2027-05-02T09:00:00.000Z"),
     };
     expect(classifyVisit(visit, now)).toBe("visited");
+  });
+});
+
+describe("visitPromotesPlace — the write-side rule, east of UTC", () => {
+  // 10:30 in Seoul on 9 October 2026 is 01:30Z. A visit logged then, with the
+  // Seoul wall clock in the legacy column, read as eight hours AHEAD.
+  const now = new Date("2026-10-09T02:30:00.000Z");
+
+  it("promotes a visit an hour old whose legacy wall clock still lies ahead", () => {
+    const visit = {
+      visitedAt: new Date("2026-10-09T10:30:00.000Z"),
+      visitedAtUtc: new Date("2026-10-09T01:30:00.000Z"),
+    };
+    expect(visitPromotesPlace(visit, now)).toBe(true);
+  });
+
+  it("promotes a day-only visit for TODAY at the place before 09:00 there", () => {
+    // A suggestion accepted for 9 October at 08:00 KST: the legacy column is
+    // `2026-10-09T00:00Z`, the instant the day's start in Seoul.
+    const at0800Kst = new Date("2026-10-08T23:00:00.000Z");
+    const visit = {
+      visitedAt: new Date("2026-10-09T00:00:00.000Z"),
+      visitedAtUtc: new Date("2026-10-08T15:00:00.000Z"),
+    };
+    expect(visitPromotesPlace(visit, at0800Kst)).toBe(true);
+  });
+
+  it("keeps a visit whose instant lies ahead a plan", () => {
+    const visit = {
+      visitedAt: new Date("2026-10-09T12:30:00.000Z"),
+      visitedAtUtc: new Date("2026-10-09T03:30:00.000Z"),
+    };
+    expect(visitPromotesPlace(visit, now)).toBe(false);
+  });
+
+  it("falls back to the legacy column only when the writer has no instant", () => {
+    expect(visitPromotesPlace({ visitedAt: PAST, visitedAtUtc: null }, NOW)).toBe(true);
+    expect(visitPromotesPlace({ visitedAt: FUTURE, visitedAtUtc: null }, NOW)).toBe(false);
   });
 });
