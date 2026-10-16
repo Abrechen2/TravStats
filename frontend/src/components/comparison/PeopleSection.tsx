@@ -105,7 +105,7 @@ export default function PeopleSection({
   return (
     <section
       className="flex flex-col"
-      style={{ gap: "var(--ts-space-lg)", marginTop: "var(--ts-space-2xl)" }}
+      style={{ gap: "var(--ts-space-lg)", marginTop: "var(--ts-space-xxl)" }}
     >
       {people.requests.length > 0 && (
         <div>

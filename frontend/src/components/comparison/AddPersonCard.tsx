@@ -60,7 +60,7 @@ export default function AddPersonCard({ onChanged }: { onChanged: () => void }):
   };
 
   return (
-    <Card style={{ marginTop: "var(--ts-space-2xl)" }}>
+    <Card style={{ marginTop: "var(--ts-space-xxl)" }}>
       <div className="flex flex-col" style={{ gap: "var(--ts-space-lg)" }}>
         <SectionLabel>{tr("add.title")}</SectionLabel>
         <Field label={tr("add.username")} htmlFor="comparison-username">

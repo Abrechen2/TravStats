@@ -71,7 +71,7 @@ export default function BoardsSection({
   };
 
   return (
-    <section style={{ marginTop: "var(--ts-space-2xl)" }}>
+    <section style={{ marginTop: "var(--ts-space-xxl)" }}>
       <SectionLabel>{tr("boards.title")}</SectionLabel>
       {boards.length === 0 && (
         <p className="t-caption">{tr(visible.length === 0 ? "boards.noPeople" : "boards.empty")}</p>
