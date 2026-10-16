@@ -184,7 +184,11 @@
           },
           "comparison": {
             "name": "Friend comparisons",
-            "what": "Compare travel data between linked people after explicit consent."
+            "what": "Compare your travel totals with friends who agreed, as a leaderboard — no individual records."
+          },
+          "encryptedShare": {
+            "name": "Encrypted sharing",
+            "what": "Send full travel records, encrypted on your device, to verified friends — not yet independently reviewed."
           }
         }
       },

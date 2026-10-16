@@ -184,7 +184,11 @@
           },
           "comparison": {
             "name": "Freundesvergleiche",
-            "what": "Reisedaten nach ausdrücklicher Freigabe zwischen verknüpften Personen vergleichen."
+            "what": "Die Summen deiner Reisen mit Freunden vergleichen, die zugestimmt haben – als Rangliste, ohne einzelne Einträge."
+          },
+          "encryptedShare": {
+            "name": "Verschlüsselt teilen",
+            "what": "Vollständige Reisedaten auf dem Gerät verschlüsselt an geprüfte Freunde übertragen – noch ohne unabhängige Sicherheitsprüfung."
           }
         }
       },
