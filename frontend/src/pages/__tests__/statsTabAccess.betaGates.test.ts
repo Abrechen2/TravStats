@@ -55,4 +55,14 @@ describe("statistics tab access — the beta-gated domains", () => {
     const enabled = renderHook(() => useEnabledDomains()).result.current.enabled;
     expect(resolveStatsTab("rail", enabled, "denied")).toBe("all");
   });
+
+  // Ferry had no statistics tab at all, beta switch open or not.
+  it("draws a ferry tab and opens its deep link once the ferry switch is open", () => {
+    useSettingsStore.setState({ enabledDomains: ["flight", "ferry"], betaFeaturesEnabled: true });
+    const { result, unmount } = renderHook(() => useEnabledDomains());
+    const { enabled } = result.current;
+    unmount();
+    expect(visibleStatsTabs(enabled, "denied")).toEqual(["flight", "ferry"]);
+    expect(resolveStatsTab("ferry", enabled, "denied")).toBe("ferry");
+  });
 });

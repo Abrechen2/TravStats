@@ -54,9 +54,7 @@ export function visibleStatsTabs(
   enabledDomains: readonly DomainKey[],
   placesAccess: PlacesAccess
 ): DomainKey[] {
-  return enabledDomains.filter(
-    (key) => (key !== "poi" || placesAccess !== "denied") && key !== "ferry"
-  );
+  return enabledDomains.filter((key) => key !== "poi" || placesAccess !== "denied");
 }
 
 export function resolveStatsTab(
@@ -64,7 +62,7 @@ export function resolveStatsTab(
   enabledDomains: readonly DomainKey[],
   placesAccess: PlacesAccess
 ): StatsTab {
-  if (requested === "all" || requested === "ferry") return "all";
+  if (requested === "all") return "all";
   if (requested === "poi") return placesAccess === "denied" ? "all" : "poi";
   // Falling back to the overview rather than showing nothing: the reader asked
   // for statistics, and a page they can use beats an empty panel.

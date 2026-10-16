@@ -162,5 +162,18 @@
     "observed": "Source timestamp: {{time}}",
     "ageUnknown": "The source provides no complete observation timestamp. The age of this position is unknown.",
     "map": "View on OpenStreetMap"
+  },
+  "stats": {
+    "crossings": "Crossings",
+    "crossingsDesc": "Completed crossings only.",
+    "km": "Distance",
+    "kmMeasured": "{{km}} km from the ticket or drawn",
+    "kmStraight": "{{km}} km straight line",
+    "hours": "Hours on board",
+    "hoursDesc": "Only crossings with both departure and arrival times.",
+    "countries": "Countries",
+    "operators": "Operators",
+    "empty": "No completed ferry crossing yet.",
+    "loadError": "The ferry statistics could not be loaded."
   }
 }

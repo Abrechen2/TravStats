@@ -58,12 +58,9 @@ export default function OverviewTab({
   const placesAccess = usePlacesAccess();
   // The beta switches are already applied to `enabledDomains`. Rental has a
   // tab but no place in the cross-domain folds (rental spec §11 D3), so it is
-  // dropped here; ferry has folds but, as yet, no tab of its own.
+  // dropped here.
   const enabled = useMemo(
-    () => [
-      ...visibleStatsTabs(enabledDomains, placesAccess).filter((key) => key !== "rental"),
-      ...enabledDomains.filter((key) => key === "ferry"),
-    ],
+    () => visibleStatsTabs(enabledDomains, placesAccess).filter((key) => key !== "rental"),
     [enabledDomains, placesAccess]
   );
   const { selectedYear, compareYear, compareEnabled } = period;

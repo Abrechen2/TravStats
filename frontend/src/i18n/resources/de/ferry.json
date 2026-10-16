@@ -162,5 +162,18 @@
     "observed": "Zeitangabe der Quelle: {{time}}",
     "ageUnknown": "Die Quelle liefert keinen vollständigen Beobachtungszeitpunkt. Das Alter der Position ist unbekannt.",
     "map": "Auf OpenStreetMap ansehen"
+  },
+  "stats": {
+    "crossings": "Überfahrten",
+    "crossingsDesc": "Nur abgeschlossene Überfahrten.",
+    "km": "Strecke",
+    "kmMeasured": "{{km}} km vom Ticket oder eingezeichnet",
+    "kmStraight": "{{km}} km Luftlinie",
+    "hours": "Stunden an Bord",
+    "hoursDesc": "Nur Überfahrten mit Abfahrts- und Ankunftszeit.",
+    "countries": "Länder",
+    "operators": "Reedereien",
+    "empty": "Noch keine abgeschlossene Fährüberfahrt.",
+    "loadError": "Die Fährstatistik konnte nicht geladen werden."
   }
 }

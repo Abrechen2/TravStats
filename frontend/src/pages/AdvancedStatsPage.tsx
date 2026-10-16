@@ -54,6 +54,7 @@ import PoiStatsSection from "../components/Stats/PoiStatsSection";
 import RailStatsSection from "../components/Stats/rail/RailStatsSection";
 import RentalStatsSection from "../components/Stats/rental/RentalStatsSection";
 import BusStatsSection from "../components/Stats/bus/BusStatsSection";
+import FerryStatsSection from "../components/Stats/ferry/FerryStatsSection";
 import { mergeYears, useBetaDomainYears } from "../lib/stats/useBetaDomainYears";
 import RoadtripStatsSection from "../components/Stats/RoadtripStatsSection";
 import OverviewTab from "../components/Stats/Overview/OverviewTab";
@@ -594,6 +595,7 @@ export default function AdvancedStatsPage(): JSX.Element {
             <RentalStatsSection scope={scope} visibility={sections} />
           )}
           {effectiveFilter === "bus" && <BusStatsSection scope={scope} visibility={sections} />}
+          {effectiveFilter === "ferry" && <FerryStatsSection scope={scope} visibility={sections} />}
 
           {/* Generate Certificate + Year Report Buttons — flight-only now. */}
           {effectiveFilter === "flight" && flights.length > 0 && (
