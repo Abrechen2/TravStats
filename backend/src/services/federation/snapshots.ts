@@ -8,6 +8,7 @@ import { loadPassport } from "../stats/passportLoader";
 import { loadDaysAway } from "../stats/daysAwayLoader";
 import { scopeSchema, snapshotSchema, type Scope, type Snapshot } from "./contract";
 import { refused } from "./security";
+import { NOT_PLAN_SHELL } from "../travplan/planShell";
 
 export function storedScope(raw: unknown): Scope & { acceptedAt: string; allExisting?: boolean } {
   if (
@@ -102,6 +103,7 @@ export async function buildSnapshot(
       ? await prisma.trip.findMany({
           where: {
             userId,
+            AND: [NOT_PLAN_SHELL],
             ...(selection ? { id: { in: scope.tripIds } } : {}),
             ...(!scope.futureTrips ? { createdAt: { lte: new Date(scope.acceptedAt) } } : {}),
           },
