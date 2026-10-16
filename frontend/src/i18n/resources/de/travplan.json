@@ -163,7 +163,6 @@
   },
   "conscious": "Bewusst offen lassen",
   "dismiss": "Brauche ich nicht",
-  "allChecks": "Alle Hinweise ansehen",
   "freeDay": "Tag bewusst frei lassen",
   "openDay": "Tag wieder für Ideen öffnen",
   "fixed": "Gebucht · fester Anker",
@@ -198,7 +197,6 @@
   "apply": "Vorschlag übernehmen",
   "reject": "So lassen",
   "stale": "Dieser Vorschlag passt nicht mehr zum aktuellen Plan. Bitte neu erstellen.",
-  "noAI": "Manuelle Planung und Reisecheck funktionieren auch ohne KI.",
   "packIntro": "Packhilfe passend zu deinem Ziel und deinen Plänen. Deine eigenen Mengen bleiben erhalten.",
   "forecast": "Wettervorhersage abrufen",
   "weatherUnknown": "Für diesen Zeitraum liegen noch keine Wetterdaten vor. Eine fehlende Vorhersage bedeutet kein gutes Wetter.",
@@ -225,7 +223,6 @@
   "newItem": "Neuer Programmpunkt",
   "newIdea": "Eine Idee festhalten",
   "newPacking": "Etwas auf die Packliste",
-  "newTask": "Eine Aufgabe festhalten",
   "newCost": "Kostenpunkt hinzufügen",
   "packingIdeas": {
     "rain": "Regenjacke oder Regenschutz",

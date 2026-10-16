@@ -29,3 +29,17 @@ describe("the English bundle carries no German domain noun", () => {
     expect(offenders).toEqual([]);
   });
 });
+
+/**
+ * English writes the domain as one word everywhere ("Roadtrips" tab, "Add a
+ * roadtrip"); the passport's evidence kind alone said "Road trip", so one
+ * screen named the same thing two ways.
+ */
+describe("the English bundle spells roadtrip as one word", () => {
+  const files = fs.readdirSync(EN_DIR).filter((f) => f.endsWith(".json"));
+  it.each(files)("%s", (file) => {
+    const bundle: unknown = JSON.parse(fs.readFileSync(path.join(EN_DIR, file), "utf8"));
+    const offenders = strings(bundle, "").filter(([, value]) => /\broad trips?\b/i.test(value));
+    expect(offenders).toEqual([]);
+  });
+});

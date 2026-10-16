@@ -307,7 +307,6 @@
       "flightNumber": "Flight number",
       "saveNumber": "Save and check flight number",
       "numberEffect": "Adds this flight’s number, then checks the question again.",
-      "editFlight": "Edit flight here",
       "openRecord": "Open and edit record",
       "source": "Source",
       "compare": "Stored and proposed",

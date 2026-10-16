@@ -163,7 +163,6 @@
   },
   "conscious": "Keep intentionally open",
   "dismiss": "Not needed",
-  "allChecks": "View all hints",
   "freeDay": "Keep this day intentionally free",
   "openDay": "Open this day to ideas again",
   "fixed": "Booked · fixed anchor",
@@ -198,7 +197,6 @@
   "apply": "Apply proposal",
   "reject": "Keep as is",
   "stale": "This proposal no longer matches the current plan. Please generate it again.",
-  "noAI": "Manual planning and trip checks also work without AI.",
   "packIntro": "Packing help for your destination and plans. Your own quantities are preserved.",
   "forecast": "Get weather forecast",
   "weatherUnknown": "No forecast is available for this period yet. Missing data does not mean good weather.",
@@ -225,7 +223,6 @@
   "newItem": "New itinerary item",
   "newIdea": "Keep an idea",
   "newPacking": "Add a packing item",
-  "newTask": "Keep a task",
   "newCost": "Add a cost item",
   "packingIdeas": {
     "rain": "Rain jacket or rain protection",
