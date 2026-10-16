@@ -728,7 +728,7 @@
       "paused": "Scan paused",
       "running": "Scanning",
       "succeeded": "Scan completed",
-      "partial": "Only part of the data was returned",
+      "partial": "Scan partly completed – please note the data gaps",
       "failed": "Scan failed",
       "interrupted": "Scan interrupted; please start again"
     },
