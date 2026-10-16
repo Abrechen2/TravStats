@@ -78,6 +78,7 @@ export async function projectRow(
 ): Promise<Row | null> {
   if (row.userId && row.userId !== userId) return null;
   if (spec.category && !scope[spec.category]) return null;
+  if (Object.entries(spec.only ?? {}).some(([k, v]) => row[k] !== v)) return null;
   const fields = FIELD_INVENTORY[spec.model];
   const allowed = [
     ...words(fields.details),

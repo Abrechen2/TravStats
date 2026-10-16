@@ -105,17 +105,22 @@ it("collects the complete graph and keeps ownership, personal categories and cre
   await prisma.note.create({
     data: {
       userId: a,
-      body: "private note deliberately shared",
+      body: "shareable note deliberately shared",
       occurredAt: new Date("2026-01-01Z"),
       occurredZone: "UTC",
+      visibility: "shareable",
     },
+  });
+  // forgejo#146: a private note never leaves its owner, even under a personal grant.
+  await prisma.note.create({
+    data: { userId: a, body: "OWNER-ONLY NOTE", occurredAt: new Date(), occurredZone: "UTC" },
   });
   await prisma.note.create({
     data: { userId: b, body: "STRANGER", occurredAt: new Date(), occurredZone: "UTC" },
   });
   const all = await collectComparison(a, await prepareScope(a, scope));
-  expect(JSON.stringify(all.sections)).toContain("private note deliberately shared");
-  expect(JSON.stringify(all)).not.toMatch(/STRANGER|passwordHash|test-only/);
+  expect(JSON.stringify(all.sections)).toContain("shareable note deliberately shared");
+  expect(JSON.stringify(all)).not.toMatch(/STRANGER|OWNER-ONLY NOTE|passwordHash|test-only/);
   expect(all.sections).toHaveProperty("ferryJourneys");
   expect(all.sections).toHaveProperty("tourRoutes");
   const restricted = await collectComparison(
@@ -129,7 +134,7 @@ it("collects the complete graph and keeps ownership, personal categories and cre
     })
   );
   expect(restricted.sections.notes).toBeUndefined();
-  expect(JSON.stringify(restricted)).not.toContain("private note deliberately shared");
+  expect(JSON.stringify(restricted)).not.toContain("shareable note deliberately shared");
 });
 it("stores ciphertext only, commits atomically, authenticates the device and stops reads after revocation", async () => {
   const a = await user(),
