@@ -101,7 +101,7 @@
     "personal": "description notes",
     "photos": "",
     "documents": "",
-    "excluded": "sourceId shareKey"
+    "excluded": "sourceId shareKey importBatchId"
   },
   "TripRoute": {
     "details": "id tripId name mode orderIdx color startOdometerKm endOdometerKm kind activity vehicle vehicleName anchorStopId kindAssignedAutomatically tourDate tourStartMinute createdAt updatedAt",

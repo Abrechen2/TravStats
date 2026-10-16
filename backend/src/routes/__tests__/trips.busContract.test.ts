@@ -91,9 +91,11 @@ describe("a trip's bus rides, wherever the trip is read", () => {
     const trip = await loadOwnedTrip(userId, busTripId);
     const fields = new Set(["totals", "route", "countries"]) as ReadonlySet<ShareLinkField<"trip">>;
     const view = await buildTripView(userId, trip!, fields, null, []);
-    // The cancelled ride still sits on the trip; the view counts what the trip holds.
-    expect(view.totals?.busRides).toBe(2);
-    expect(view.route?.filter((leg) => leg.mode === "bus")).toHaveLength(2);
+    // The cancelled ride still sits on the trip, but it was never travelled: the
+    // public view leaves it out like a cancelled flight, and like the trip list
+    // leaves out its country (FR) in the first test above.
+    expect(view.totals?.busRides).toBe(1);
+    expect(view.route?.filter((leg) => leg.mode === "bus")).toHaveLength(1);
     expect(view.route?.[0]).toEqual({ mode: "bus", from: "Porto", to: "Vigo" });
     expect(view.countries).toEqual(["ES", "PT"]);
   });

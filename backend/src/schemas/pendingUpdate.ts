@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 /**
  * A UTC-or-offset timestamp, seconds optional, normalised to full ISO.

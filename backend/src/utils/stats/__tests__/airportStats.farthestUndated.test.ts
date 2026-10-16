@@ -34,6 +34,7 @@ const flight = (over: Partial<FlightData>): FlightData => ({
   departureTime: new Date("2015-06-01T08:00:00Z"),
   arrivalTime: null,
   status: "flown",
+  createdAt: new Date("2015-01-01T00:00:00Z"),
   ...over,
 });
 
