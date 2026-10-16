@@ -1,4 +1,5 @@
 import {
+  SERVED_VERSIONS,
   aggregateReplySchema,
   leaderboardScopeSchema,
   leaderboardSnapshotSchema,
@@ -79,5 +80,10 @@ describe("leaderboard wire schemas", () => {
       status: "yearNotShared",
       year: 2024,
     });
+  });
+  it("serves exactly the snapshot version its own schema reads", () => {
+    // Two sources for one fact: a version advertised in the ping that the snapshot schema
+    // rejects would make every pull from a newer peer fail as malformed.
+    expect([...SERVED_VERSIONS]).toEqual([leaderboardSnapshotSchema.shape.version.value]);
   });
 });

@@ -32,6 +32,8 @@ const app = express();
 app.use(express.json());
 app.use("/api/v1/comparison-peer", peer);
 let ownerId: string;
+// The route logs every refused packet by design; tests that care read the spy.
+let warn: jest.SpyInstance;
 
 function packet(from: "remote" | "other", body: unknown) {
   const unsigned = {
@@ -101,9 +103,11 @@ beforeAll(async () => {
   ).id;
 });
 beforeEach(() => {
+  warn = jest.spyOn(logger, "warn").mockImplementation(() => undefined);
   jest.mocked(getInstanceSettings).mockResolvedValue({ betaFeaturesEnabled: true } as never);
   jest.mocked(loadVisibleDomains).mockResolvedValue(["ferry"]);
 });
+afterEach(() => warn.mockRestore());
 afterAll(async () => {
   await prisma.comparisonPeer.deleteMany({ where: { origin: { in: [REMOTE, OTHER] } } });
   await prisma.user.delete({ where: { id: ownerId } });
@@ -205,14 +209,12 @@ it("exposes nothing while the consent is not accepted, even with a scope already
 it("answers notShared for an accepted consent whose stored scope does not parse", async () => {
   const channel = await claimed("jo");
   await share(channel, { groups: ["nonsense"], domains: [], year: "x" });
-  const warn = jest.spyOn(logger, "warn");
   const reply = await send("remote", { action: "aggregate", channel, year: null, accept: [1] });
   expect(reply).toEqual({ status: 200, data: { status: "notShared" } });
   expect(warn).toHaveBeenCalledWith(
     expect.objectContaining({ operation: "comparison_scope_invalid" }),
     expect.any(String)
   );
-  warn.mockRestore();
 });
 
 it("answers notShared for a deactivated owner", async () => {
@@ -226,27 +228,34 @@ it("answers notShared for a deactivated owner", async () => {
 
 it("refuses a channel from another origin and logs unknown-channel", async () => {
   const channel = await claimed("finn");
-  const warn = jest.spyOn(logger, "warn");
   const reply = await send("other", { action: "aggregate", channel, year: null, accept: [1] });
   expect(reply.status).toBe(403);
   expect(warn).toHaveBeenCalledWith(
     expect.objectContaining({ kind: "unknown-channel" }),
     "Comparison peer packet refused"
   );
-  warn.mockRestore();
 });
 
 it("refuses a suspended peer before reading anything", async () => {
   const channel = await claimed("kai");
   await share(channel, ferryScope(null));
   await prisma.comparisonPeer.update({ where: { origin: REMOTE }, data: { enabled: false } });
+  // aggregate reads through prisma.leaderboardRemote; lb-state reads only inside its
+  // transaction, where the client is `tx` — so the transaction itself must never open.
   const findRemote = jest.spyOn(prisma.leaderboardRemote, "findUnique");
+  const transaction = jest.spyOn(prisma, "$transaction");
   const aggregate = await send("remote", { action: "aggregate", channel, year: null, accept: [1] });
   const state = await send("remote", { action: "lb-state", channel, status: "withdrawn" });
+  const [reads, transactions] = [findRemote.mock.calls.length, transaction.mock.calls.length];
+  findRemote.mockRestore();
+  transaction.mockRestore();
   await prisma.comparisonPeer.update({ where: { origin: REMOTE }, data: { enabled: true } });
   expect([aggregate.status, state.status]).toEqual([403, 403]);
-  expect(findRemote).not.toHaveBeenCalled();
-  findRemote.mockRestore();
+  expect([reads, transactions]).toEqual([0, 0]);
+  expect(warn).toHaveBeenCalledWith(
+    expect.objectContaining({ kind: "unknown-peer" }),
+    "Comparison peer packet refused"
+  );
   expect(await prisma.leaderboardRemote.count({ where: { channel } })).toBe(1);
 });
 
