@@ -44,6 +44,17 @@
  * happens the day is stored with `partialWindow: true` and pinned on the sweep
  * state, rather than stored as if it were whole.
  *
+ * ## A changed reduction re-reads the whole history
+ *
+ * `COUNTRY_DAY_REDUCER_VERSION` names the rules that turned points into the
+ * stored rows. Rows made under an older version are not corrected by the
+ * nightly forward pass, which only reads the newest month — so an account whose
+ * state carries an older version is walked again from scratch, exactly as
+ * `force` would, and each month it reaches is REPLACED (`replaceCountryDays`).
+ * Version 1 (2026-10-16, forgejo#299): points taken in the air no longer make a
+ * country-day. Deleting the rows instead would not have fixed anything — the
+ * next sweep would have written them again.
+ *
  * ## Nothing here throws for a Dawarich problem
  *
  * A server that is down, slow, on another version, or holding a key that has
@@ -68,7 +79,9 @@ import {
   createCountryDayAccumulator,
   drainCountryDays,
   utcDay,
+  type InFlightTest,
   type KnownAirportTest,
+  type TimedPosition,
 } from "../countryDays/reduce";
 import { replaceCountryDays } from "../countryDays/store";
 import type { DawarichClient } from "./dawarichClient";
@@ -101,6 +114,16 @@ const MAX_MONTHS_WITH_DATA_PER_RUN = 12;
  */
 const MAX_WINDOWS_PER_RUN = 60;
 
+/**
+ * The version of the rules in `services/countryDays/reduce.ts` that the stored
+ * rows were made with. Raise it whenever a change there would turn the same
+ * points into different rows; every account is then re-walked once. See the
+ * header.
+ *
+ * 1 — forgejo#299: in-flight and airliner-speed points are dropped.
+ */
+export const COUNTRY_DAY_REDUCER_VERSION = 1;
+
 export interface CountryDaySweepDeps {
   /** Already built for THIS user — see `buildUserDawarichConnection`. */
   client: DawarichClient;
@@ -116,6 +139,12 @@ export interface CountryDaySweepDeps {
    * safe direction, and the one an account with no flights genuinely deserves.
    */
   atKnownAirport?: KnownAirportTest;
+  /**
+   * "Was this point taken in the air on a flight this account flew?" —
+   * `services/countryDays/flightAirTime.ts`, built once per account by the
+   * caller. Optional: omitted, only the speed rule removes flight points.
+   */
+  inFlight?: InFlightTest;
   now: Date;
   /** Re-walk the whole history from scratch, ignoring the stored cursors. */
   force?: boolean;
@@ -174,6 +203,13 @@ function daysCovered(startAt: Date, endAtExclusive: Date): string[] {
 interface WindowRun {
   windows: number;
   partialDays: Set<string>;
+  /**
+   * The month's accepted points, reduced once at the end: the speed rule reads
+   * each point's neighbours, and a window split for truncation would otherwise
+   * cut a flight into pieces with an edge point in each. Never returned, never
+   * logged, gone when `sweepMonth` returns.
+   */
+  points: TimedPosition[];
 }
 
 /**
@@ -186,7 +222,6 @@ interface WindowRun {
  */
 async function pullWindow(
   deps: CountryDaySweepDeps,
-  accumulator: ReturnType<typeof createCountryDayAccumulator>,
   run: WindowRun,
   startAt: Date,
   endAtExclusive: Date
@@ -198,7 +233,7 @@ async function pullWindow(
   });
 
   if (!truncated) {
-    accumulateCountryDays(accumulator, points, deps.countryAt, deps.atKnownAirport);
+    run.points.push(...points);
     return;
   }
 
@@ -206,7 +241,7 @@ async function pullWindow(
   if (spanMs <= DAY_MS) {
     // The floor. Keep the newest slice Dawarich handed back — those points are
     // real observations — and record that this day's silence proves nothing.
-    accumulateCountryDays(accumulator, points, deps.countryAt, deps.atKnownAirport);
+    run.points.push(...points);
     for (const day of daysCovered(startAt, endAtExclusive)) run.partialDays.add(day);
     return;
   }
@@ -221,8 +256,8 @@ async function pullWindow(
     )
   );
 
-  await pullWindow(deps, accumulator, run, startAt, mid);
-  await pullWindow(deps, accumulator, run, mid, endAtExclusive);
+  await pullWindow(deps, run, startAt, mid);
+  await pullWindow(deps, run, mid, endAtExclusive);
 }
 
 interface MonthResult {
@@ -239,11 +274,19 @@ async function sweepMonth(
   monthStart: Date
 ): Promise<MonthResult> {
   const monthEndExclusive = addUtcMonths(monthStart, 1);
+  const run: WindowRun = { windows: 0, partialDays: new Set(), points: [] };
+
+  await pullWindow(deps, run, monthStart, monthEndExclusive);
+
   const accumulator = createCountryDayAccumulator();
-  const run: WindowRun = { windows: 0, partialDays: new Set() };
-
-  await pullWindow(deps, accumulator, run, monthStart, monthEndExclusive);
-
+  accumulateCountryDays(
+    accumulator,
+    run.points,
+    deps.countryAt,
+    deps.atKnownAirport,
+    deps.inFlight
+  );
+  run.points.length = 0;
   const observations = drainCountryDays(accumulator);
   const { written } = await replaceCountryDays(
     userId,
@@ -284,7 +327,7 @@ async function persistCursors(
   cursors: SweepCursors,
   extra: { lastRunAt?: Date; lastErrorKind?: string | null; lastTruncatedAt?: Date }
 ): Promise<void> {
-  const data = { ...cursors, ...extra };
+  const data = { ...cursors, ...extra, reducerVersion: COUNTRY_DAY_REDUCER_VERSION };
   await prisma.dawarichSweepState.upsert({
     where: { userId },
     update: data,
@@ -306,7 +349,9 @@ export async function sweepUserCountryDays(
 ): Promise<UserSweepOutcome> {
   const stored = await prisma.dawarichSweepState.findUnique({ where: { userId } });
 
-  const cursors: SweepCursors = deps.force
+  // Rows made under older rules are re-walked like a forced run (header).
+  const restart = deps.force || (stored?.reducerVersion ?? 0) < COUNTRY_DAY_REDUCER_VERSION;
+  const cursors: SweepCursors = restart
     ? { backfilledFromMonth: null, backfillComplete: false, sweptThroughAt: null }
     : {
         backfilledFromMonth: stored?.backfilledFromMonth ?? null,
