@@ -25,6 +25,8 @@ describe("Fr24ImportTile — a failed preview", () => {
     postImportPreview.mockRejectedValueOnce(cause);
     render(<Fr24ImportTile />);
     const file = new File([CSV], "fr24.csv", { type: "text/csv" });
+    // jsdom's File has no text(); the tile reads the file through it.
+    Object.defineProperty(file, "text", { value: () => Promise.resolve(CSV) });
     fireEvent.change(screen.getByLabelText("settings:import.tile.fr24.uploadLabel"), {
       target: { files: [file] },
     });
