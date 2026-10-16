@@ -9,6 +9,7 @@ import type { Flight, FlightInput } from "../../../../types";
 import type { Lodging } from "../../../../types/lodging";
 import type { Place, PlaceVisit } from "../../../../types/place";
 import RecordEditButton from "../RecordEditButton";
+import { logger } from "../../../../lib/logger";
 
 vi.mock("../../../../hooks/useTranslation", () => ({
   useTranslation: () => germanUseTranslation(),
@@ -17,6 +18,9 @@ vi.mock("../../../../lib/api/flights", () => ({
   flightsApi: { getById: vi.fn(), update: vi.fn() },
 }));
 vi.mock("../../../../lib/api/lodging", () => ({ getLodging: vi.fn() }));
+vi.mock("../../../../lib/logger", () => ({
+  logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+}));
 vi.mock("../../../../lib/api/places", () => ({ getPlace: vi.fn() }));
 vi.mock("../../../FlightEditModal", () => ({
   default: ({
@@ -85,6 +89,19 @@ describe("inbox record editors", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Der Eintrag konnte nicht geladen werden"
     );
+  });
+
+  it("logs why a record could not be loaded, not only that it could not", async () => {
+    const cause = new Error("503 from the server");
+    vi.mocked(flightsApi.getById).mockRejectedValue(cause);
+    render(
+      <RecordEditButton entityType="flight" entityId="f1" disabled={false} onSaved={vi.fn()} />
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Hier bearbeiten" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Der Eintrag konnte nicht geladen werden"
+    );
+    expect(logger.error).toHaveBeenCalledWith(expect.any(String), cause);
   });
 
   it("opens precisely the existing visit on its parent place", async () => {
