@@ -3,7 +3,6 @@
   "hexLiterals": [
     "components/AchievementPopup.tsx",
     "components/Admin/BackupManagement.tsx",
-    "components/Admin/InvitationManagement.tsx",
     "components/Admin/InviteSuccessModal.tsx",
     "components/Admin/LoggingManager.tsx",
     "components/Admin/SystemInfo.tsx",
