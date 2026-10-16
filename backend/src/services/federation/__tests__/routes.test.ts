@@ -74,11 +74,11 @@ it("has no plaintext comparison fallback and applies the same cookie gate to enc
         .set("x-test-user", userId)
         .send({ year: null })
     ).status
-  ).toBe(403);
+  ).toBe(410);
   expect(
     (await request(app).post("/api/v1/comparison/circles/read").set("x-test-user", userId).send({}))
       .status
-  ).toBe(403);
+  ).toBe(410);
   expect(
     (
       await request(app)
@@ -129,5 +129,64 @@ it("lists only the owner's publication metadata without ciphertext or sender key
   } finally {
     await prisma.comparisonPublication.delete({ where: { id: own.id } });
     await prisma.user.delete({ where: { id: other.id } });
+  }
+});
+
+it("previews exactly the fields a grant publishes, from the same inventory", async () => {
+  // The consent preview once read its own field list while publication read
+  // fieldInventory.json, so the friend received fields the owner never saw.
+  await prisma.userSettings.upsert({
+    where: { userId },
+    create: { userId, enabledDomains: ["flight"], data: {} },
+    update: { enabledDomains: ["flight"] },
+  });
+  await prisma.flight.create({
+    data: {
+      userId,
+      flightNumber: "LH400",
+      operatingAirline: "Lufthansa CityLine",
+      depLat: 50.03,
+      depLon: 8.57,
+      arrLat: 40.64,
+      arrLon: -73.78,
+      departureTime: new Date("2025-03-01T10:00:00Z"),
+      price: 900,
+      taxes: 120,
+      seatNumber: "12A",
+    },
+  });
+  for (const extra of [
+    { costs: false, personal: false },
+    { costs: true, personal: true },
+  ]) {
+    const scope = {
+      statistics: false,
+      details: true,
+      photos: false,
+      documents: false,
+      domains: ["flight"],
+      tripIds: [],
+      futureTrips: true,
+      year: null,
+      precision: "exact",
+      expiresAt: null,
+      ...extra,
+    };
+    const preview = await request(app)
+      .post("/api/v1/comparison/preview/records")
+      .set("x-test-user", userId)
+      .send({ scope, domain: "flight" });
+    const published = await request(app)
+      .post("/api/v1/comparison/sealed/source")
+      .set("x-test-user", userId)
+      .send(scope);
+    expect(preview.status).toBe(200);
+    expect(published.status).toBe(200);
+    const sent = published.body.data.sections.flights as Array<Record<string, unknown>>;
+    expect(sent).toHaveLength(1);
+    const shown = preview.body.data.rows[0].fields.map((f: { name: string }) => f.name);
+    expect([...shown].sort()).toEqual(Object.keys(sent[0]).sort());
+    expect(shown.includes("taxes")).toBe(extra.costs);
+    expect(shown.includes("operatingAirline")).toBe(extra.personal);
   }
 });

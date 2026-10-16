@@ -1,10 +1,15 @@
 import { sourceData, type SourceData } from "../../lib/comparison/transport";
 import { downloadBlob } from "./DevicePanel";
-import type { RecordPage } from "./RecordBrowser";
 import { useState } from "react";
 import { Button } from "../ui";
 import { useTranslation } from "../../hooks/useTranslation";
-import { comparisonPost, type Link, type Scope, type Snapshot } from "../../lib/api/comparison";
+import {
+  comparisonPost,
+  type Link,
+  type RecordPage,
+  type Scope,
+  type Snapshot,
+} from "../../lib/api/comparison";
 
 export function initialScope(domains: string[]): Scope {
   return {

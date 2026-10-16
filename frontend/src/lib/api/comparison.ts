@@ -56,15 +56,13 @@ export interface Snapshot {
   details: boolean;
   trips: Array<{ id: string; name: string }>;
 }
-export interface Detail {
-  tripId: string;
-  attachments: Array<{ key: string; name: string; kind: "photos" | "documents" }>;
-  sections: Array<{
-    name: string;
-    rows: Array<{
-      key: string;
-      fields: Array<{ name: string; value: string | number | boolean | null }>;
-    }>;
+/** One domain of a consent preview, cut from the same projection a grant publishes. */
+export interface RecordPage {
+  domain: string;
+  nextCursor: null;
+  rows: Array<{
+    key: string;
+    fields: Array<{ name: string; value: string | number | boolean | null }>;
   }>;
 }
 export interface Board {

@@ -44,8 +44,6 @@ router.post("/", async (req, res) => {
       else {
         if (!body.circleId) throw refused();
         if (body.operation === "info") data = await circleInfo(link, body.circleId);
-        else if (body.operation === "read")
-          throw refused(); // No plaintext group fallback in protocol v2.
         else {
           if (!body.version) throw refused();
           data = await acceptAtHub(link, body.circleId, body.version, body.operation === "accept");

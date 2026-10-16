@@ -7,8 +7,7 @@ import { buildWhere, computeSummary } from "../stats/summary";
 import { loadPassport } from "../stats/passportLoader";
 import { loadDaysAway } from "../stats/daysAwayLoader";
 import { scopeSchema, snapshotSchema, type Scope, type Snapshot } from "./contract";
-import { exchange, refused } from "./security";
-import { ownedLink } from "./links";
+import { refused } from "./security";
 
 export function storedScope(raw: unknown): Scope & { acceptedAt: string; allExisting?: boolean } {
   if (
@@ -144,29 +143,4 @@ export async function buildSnapshot(
     details: scope.details,
     trips,
   });
-}
-export async function sourceSnapshot(link: ComparisonLink, audience: string, year: number | null) {
-  const grant = await currentGrant(link, audience);
-  const snapshot = await buildSnapshot(link.userId, storedScope(grant.scope), year);
-  await assertUnchanged(link, grant);
-  await audit(link, grant, "statistics");
-  return snapshot;
-}
-export async function readFriend(
-  userId: string,
-  id: string,
-  audience: string,
-  year: number | null
-) {
-  const link = await ownedLink(userId, id);
-  if (!link.confirmed || !link.remoteConfirmed) throw refused();
-  if (link.origin !== "local")
-    return snapshotSchema.parse(
-      await exchange(link.origin, { action: "read", channel: link.channel, audience, year })
-    );
-  const source = await prisma.comparisonLink.findFirst({
-    where: { channel: link.channel, id: { not: link.id }, origin: "local" },
-  });
-  if (!source) throw refused();
-  return sourceSnapshot(source, audience, year);
 }
