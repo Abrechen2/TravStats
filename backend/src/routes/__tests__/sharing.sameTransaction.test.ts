@@ -27,7 +27,9 @@ describe("trip sharing — propagation shares the write's transaction", () => {
     anna = await makeAccount("anna-tx");
     ben = await makeAccount("ben-tx");
   });
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
   afterAll(async () => {
     await wipeShareTestAccounts();
     await prisma.$disconnect();
@@ -86,7 +88,7 @@ describe("trip sharing — propagation shares the write's transaction", () => {
   it("a stay edit rolls back when the copy cannot follow", async () => {
     const { full } = await sharedPair(anna, ben);
     jest.spyOn(ADAPTERS.lodgingStay, "apply").mockRejectedValueOnce(new Error("apply failed"));
-    await expect(updateStayRecord(anna.id, full.stay, { board: "half_board" })).rejects.toThrow(
+    await expect(updateStayRecord(anna.id, full.stay, { board: "half" })).rejects.toThrow(
       "apply failed"
     );
     expect(

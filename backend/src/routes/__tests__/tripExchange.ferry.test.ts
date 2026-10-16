@@ -20,10 +20,7 @@ describe("trip export / import — ferry crossings", () => {
   let ben: TestAccount;
   let tripId: string;
 
-  const binary = (
-    res: NodeJS.ReadableStream,
-    done: (err: Error | null, body: Buffer) => void
-  ): void => {
+  const binary = (res: request.Response, done: (err: Error | null, body: Buffer) => void): void => {
     const chunks: Buffer[] = [];
     res.on("data", (c: Buffer) => chunks.push(Buffer.from(c)));
     res.on("end", () => done(null, Buffer.concat(chunks)));

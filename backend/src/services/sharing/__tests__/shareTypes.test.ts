@@ -40,7 +40,7 @@ describe("share type registry", () => {
   });
 
   it("has no stale unwired table", () => {
-    const registered = new Set(SHARE_ENTITIES.map((e) => SHARE_TYPES[e].table));
+    const registered = new Set<string>(SHARE_ENTITIES.map((e) => SHARE_TYPES[e].table));
     expect(UNWIRED_SHARE_KEY_TABLES.filter((t) => registered.has(t))).toEqual([]);
   });
 
