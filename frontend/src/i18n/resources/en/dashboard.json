@@ -200,7 +200,8 @@
       "roadtrip": "Roadtrips",
       "rail": "Rail",
       "rental": "Rental cars",
-      "bus": "Bus"
+      "bus": "Bus",
+      "ferry": "Ferries"
     },
     "disabledHint": "Area disabled — Settings → Areas"
   },
