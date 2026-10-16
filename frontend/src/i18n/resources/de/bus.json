@@ -345,7 +345,8 @@
       "done": "{{routed}} über die Straße berechnet, {{straight}} blieben bei der Luftlinie.",
       "reasons": "Gründe: {{reasons}}.",
       "stopped": "Gestoppt: {{reason}}",
-      "remaining": "{{count}} Fahrten sind noch offen; starte die Berechnung erneut.",
+      "remaining_one": "1 Fahrt ist noch offen; starte die Berechnung erneut.",
+      "remaining_other": "{{count}} Fahrten sind noch offen; starte die Berechnung erneut.",
       "failed": "Die Berechnung konnte nicht abgeschlossen werden. Bitte versuche es noch einmal.",
       "lost": "Der Stand der Berechnung ist nicht mehr abrufbar. Lade die Liste neu, um zu sehen, was schon fertig ist."
     },

@@ -855,7 +855,8 @@
   },
   "punctuality": {
     "title": "Punctuality",
-    "subtitle": "From {{count}} flights with a recorded delay.",
+    "subtitle_one": "From 1 flight with a recorded delay.",
+    "subtitle_other": "From {{count}} flights with a recorded delay.",
     "avgDelay": "Avg delay",
     "minutes_one": "{{count}} min",
     "minutes_other": "{{count}} min",

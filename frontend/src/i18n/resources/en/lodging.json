@@ -409,7 +409,8 @@
         "unexpected_error": "unexpected error",
         "missing_stay_reference": "not a stay of your account"
       },
-      "updatedSuffix": " {{count}} stored stays updated.",
+      "updatedSuffix_one": " 1 stored stay updated.",
+      "updatedSuffix_other": " {{count}} stored stays updated.",
       "deadlinesFilledSuffix_one": " Missing deadlines were added to {{count}} stay.",
       "deadlinesFilledSuffix_other": " Missing deadlines were added to {{count}} stays."
     },
