@@ -119,7 +119,8 @@
   "menu": {
     "button": "Teilen",
     "companions": "Mit Mitreisenden (eigene Kopie)",
-    "link": "Öffentlicher Link"
+    "link": "Öffentlicher Link",
+    "loading": "Wird geladen …"
   },
   "trip": {
     "leaveConfirm": "Geteilte Reise verlassen? Deine Kopie bleibt als eigene Reise erhalten; die anderen werden benachrichtigt.",

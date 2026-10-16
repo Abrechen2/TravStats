@@ -119,7 +119,8 @@
   "menu": {
     "button": "Share",
     "companions": "With travel companions (own copy)",
-    "link": "Public link"
+    "link": "Public link",
+    "loading": "Loading …"
   },
   "trip": {
     "leaveConfirm": "Leave the shared trip? Your copy stays as your own trip; the others are notified.",

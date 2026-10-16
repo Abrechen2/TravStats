@@ -190,11 +190,20 @@ export default function TripShareMenu({ tripId }: { tripId: string }): JSX.Eleme
   };
 
   const people = loaded?.tripId === tripId ? loaded.people : null;
+  // Between the pick and the people arriving nothing else is on screen: the
+  // trigger says so, and is not a second way in while the first is loading.
+  const loading = dialog === "companions" && !people;
 
   return (
     <div ref={rootRef} onBlur={onBlur}>
-      <Button aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        {t("sharing:menu.button")}
+      <Button
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-busy={loading}
+        disabled={loading}
+        onClick={() => setOpen((o) => !o)}
+      >
+        {loading ? t("sharing:menu.loading") : t("sharing:menu.button")}
       </Button>
       {open &&
         createPortal(

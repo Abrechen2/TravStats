@@ -55,6 +55,22 @@ describe("TripShareMenu", () => {
     expect(await screen.findByText("sharing:shareDialog.nobody")).toBeTruthy();
   });
 
+  it("shows that the people are loading between the pick and the dialog", async () => {
+    let resolve: (v: Awaited<ReturnType<typeof api.tripSharing>>) => void = () => undefined;
+    api.tripSharing.mockReturnValue(new Promise((r) => (resolve = r)));
+    render(<TripShareMenu tripId="t1" />);
+    await userEvent.click(screen.getByRole("button", { name: "sharing:menu.button" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "sharing:menu.companions" }));
+    const busy = screen.getByRole("button", { name: "sharing:menu.loading" });
+    expect(busy.getAttribute("aria-busy")).toBe("true");
+    expect((busy as HTMLButtonElement).disabled).toBe(true);
+    await act(async () => {
+      resolve({ groupId: null, bookingTotals: [], people: [], linkableUsers: [] });
+    });
+    expect(await screen.findByText("sharing:shareDialog.nobody")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "sharing:menu.loading" })).toBeNull();
+  });
+
   it("is absent for the shared demo account", () => {
     demo.value = true;
     render(<TripShareMenu tripId="t1" />);
