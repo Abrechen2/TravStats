@@ -109,3 +109,85 @@ export class RouteStore<T> {
     return own;
   }
 }
+
+/** Route files unwritten for this long are recomputed on next use. External
+ * routers (OSRM, GraphHopper, ORS, the rail router) publish no data version,
+ * so age is the only bound on how stale their OSM data in a cached route gets. */
+export const ROUTE_FILE_MAX_AGE_MS = 180 * 86_400_000;
+/** Per domain directory. A long road trip is a few hundred kB of geometry. */
+export const ROUTE_DIRECTORY_MAX_BYTES = 512 * 1024 * 1024;
+export const ROUTE_DOMAINS = ["rail", "sea", "road"] as const;
+const ROUTE_FILE = /^[a-f0-9]{64}\.json$/;
+const ROUTE_TEMPORARY = /^[a-f0-9]{64}-[0-9a-f-]{1,64}\.tmp$/;
+/** A write takes milliseconds; an older temporary file is a crashed write. */
+const TEMPORARY_GRACE_MS = 60 * 60_000;
+
+/**
+ * Delete route files past the age cap, then the oldest-written until the
+ * directory fits its size cap. Nothing ever deleted a route file before, so
+ * the store grew without bound and kept routes of deleted trips forever.
+ * Only files this store writes are touched.
+ */
+export async function pruneRouteStore(
+  directory: string,
+  options: { now?: number; maxAgeMs: number; maxBytes: number }
+): Promise<{ removed: number; bytes: number }> {
+  const now = options.now ?? Date.now();
+  let names: string[];
+  try {
+    names = await fs.readdir(directory);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return { removed: 0, bytes: 0 };
+    throw error;
+  }
+  const files: { file: string; size: number; mtime: number }[] = [];
+  let removed = 0;
+  const remove = async (file: string) => {
+    await fs.unlink(file).catch((error: NodeJS.ErrnoException) => {
+      if (error.code !== "ENOENT") throw error;
+    });
+    removed++;
+  };
+  for (const name of names) {
+    const isRoute = ROUTE_FILE.test(name);
+    if (!isRoute && !ROUTE_TEMPORARY.test(name)) continue;
+    const file = path.join(directory, name);
+    const stat = await fs.stat(file).catch(() => null);
+    if (!stat?.isFile()) continue;
+    const age = now - stat.mtimeMs;
+    if (!isRoute) {
+      if (age > TEMPORARY_GRACE_MS) await remove(file);
+    } else if (age > options.maxAgeMs) await remove(file);
+    else files.push({ file, size: stat.size, mtime: stat.mtimeMs });
+  }
+  let bytes = files.reduce((sum, f) => sum + f.size, 0);
+  // Oldest written first; the name breaks ties so the order is total.
+  files.sort((a, b) => a.mtime - b.mtime || a.file.localeCompare(b.file));
+  for (const f of files) {
+    if (bytes <= options.maxBytes) break;
+    await remove(f.file);
+    bytes -= f.size;
+  }
+  return { removed, bytes };
+}
+
+/** Nightly: every domain's route directory, each failure logged on its own. */
+export async function pruneRouteStores(): Promise<void> {
+  for (const domain of ROUTE_DOMAINS) {
+    const directory = routeDirectory(domain);
+    if (!directory) continue;
+    try {
+      const result = await pruneRouteStore(directory, {
+        maxAgeMs: ROUTE_FILE_MAX_AGE_MS,
+        maxBytes: ROUTE_DIRECTORY_MAX_BYTES,
+      });
+      if (result.removed)
+        logger.info({ operation: "route_store_pruned", domain, ...result }, "Route files pruned");
+    } catch (error) {
+      logger.warn(
+        { operation: "route_store_prune_failed", domain, err: error },
+        "Route files could not be pruned"
+      );
+    }
+  }
+}

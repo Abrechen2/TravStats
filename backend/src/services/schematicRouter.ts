@@ -1,4 +1,4 @@
-import { createSchematicRouteStore } from "./routing/schematicRouteStore";
+import { createSchematicRouteStore, schematicRouteVersion } from "./routing/schematicRouteStore";
 import { routeKey } from "./routing/routeStore";
 /**
  * Schematic cruise-route pipeline — coarse waypoints + spline approach.
@@ -858,8 +858,8 @@ export interface SchematicRoute {
   readonly method: "short_hop" | "maritime_graph" | "coarse_a_star" | "direct";
 }
 
-/** Hot set backed by durable successful routes. Bump the policy version below
- * when the maritime graph, masks or routing algorithm change. */
+/** Hot set backed by durable successful routes. The key carries the policy
+ * and a hash of the maritime graph and masks (schematicRouteVersion). */
 let durableRoutes = createSchematicRouteStore();
 const ROUTE_CACHE_MAX = 5000;
 const routeCache = new Map<string, SchematicRoute>();
@@ -868,7 +868,7 @@ let routeCacheMisses = 0;
 
 function routeCacheKey(dep: SchematicRoutePort, arr: SchematicRoutePort): string | null {
   if (dep.id === undefined || arr.id === undefined) return null;
-  return routeKey(["schematic-v1", dep, arr, getPortApproach(dep), getPortApproach(arr)]);
+  return routeKey([schematicRouteVersion(), dep, arr, getPortApproach(dep), getPortApproach(arr)]);
 }
 
 export function getSchematicRouteCacheStats(): {

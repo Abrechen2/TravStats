@@ -1,7 +1,7 @@
 /**
  * Log Retention Scheduler
  *
- * Runs `enforceLogRetention` daily and once at start, so the retention the
+ * Runs `enforceLogRetention` (and the route-file prune) daily and once at start, so the retention the
  * admin page promises is actually kept — it used to run only when someone
  * pressed "clean up" (audit 2026-09-26: 69 files back five months under a
  * seven-day setting on the beta).
@@ -16,6 +16,7 @@ import cron from "node-cron";
 import type { ScheduledTask } from "node-cron";
 
 import { enforceLogRetention } from "../services/logRetention";
+import { pruneRouteStores } from "../services/routing/routeStore";
 import logger from "../utils/logger";
 import { schedulerZone } from "../shared/time/schedulerZone";
 
@@ -30,6 +31,9 @@ export async function runLogRetention(): Promise<void> {
     // Retried by the next run; it must not take the process down.
     logger.warn({ operation: "log_retention_failed", error });
   }
+  // Durable route geometry had no sweep of its own and grew forever; it is
+  // storage hygiene on the same night. Logs each domain's failure itself.
+  await pruneRouteStores();
 }
 
 export function startLogRetentionScheduler(): void {
