@@ -123,6 +123,9 @@ export type ApiErrorCode =
   /** The archive was taken while a migration had failed on its database
    *  (Prisma's P3009 state); its schema is no version's (forgejo#157). */
   | "RESTORE_ARCHIVE_FAILED_MIGRATION"
+  /** A backup's remote copy has no recorded target, or the target changed
+   *  since the upload: the object to delete cannot be named safely. */
+  | "REMOTE_TARGET_UNKNOWN"
   /** A rail write body failed validation; `field` names the first field. */
   | "RAIL_INVALID_INPUT"
   /** A rail arrival instant before its departure — usually a night train

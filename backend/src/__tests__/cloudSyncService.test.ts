@@ -514,7 +514,12 @@ describe("remote backup deletion identity", () => {
   it("refuses legacy or changed targets and retains an actionable error", async () => {
     const { deleteCloudBackup } = await loadModule(true);
     mockClient.deleteFile.mockClear();
-    await expect(deleteCloudBackup({ id: "b" })).rejects.toMatchObject({ statusCode: 409 });
+    // The code is what lets retention tell "cannot name the object" from a
+    // share that failed, and delete the local archive only for the former.
+    await expect(deleteCloudBackup({ id: "b" })).rejects.toMatchObject({
+      statusCode: 409,
+      code: "REMOTE_TARGET_UNKNOWN",
+    });
     await expect(
       deleteCloudBackup({
         id: "b",
