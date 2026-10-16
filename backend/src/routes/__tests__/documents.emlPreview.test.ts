@@ -46,7 +46,9 @@ const HTML_ONLY_MAIL = lines(
   "MIME-Version: 1.0",
   "Content-Type: text/html; charset=utf-8",
   "",
-  "<html><body><p>Check-in <b>12.04.</b></p><script>alert('x')</script>",
+  '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">',
+  "<html><head><title>Mailer template 7</title><style>p{color:red}</style></head>",
+  "<body><p>Check-in <b>12.04.</b></p><script>alert('x')</script>",
   '<img src="https://tracker.example/pixel.gif"><p>Zimmer 204</p></body></html>',
   ""
 );
@@ -109,6 +111,7 @@ describe("GET /documents/:id/file?view=text", () => {
     expect(res.headers["content-type"]).toMatch(/^text\/plain; charset=utf-8/);
     expect(res.headers["content-disposition"]).toBeUndefined();
     expect(res.text).toContain("Von: Lufthansa <noreply@booking-lufthansa.com>");
+    expect(res.text).toContain("Datum: Tue, 21 Sep 2021 10:14:00 +0200");
     expect(res.text).toContain("Betreff: Ihre Buchungsbestätigung M4UXDO");
     expect(res.text).toContain("LH2460 München 08:35 → Helsinki 12:00");
     expect(res.text).toContain("- termin.ics");
@@ -128,6 +131,9 @@ describe("GET /documents/:id/file?view=text", () => {
     expect(res.text).not.toContain("<");
     expect(res.text).not.toContain("alert");
     expect(res.text).not.toContain("tracker.example");
+    expect(res.text).not.toContain("DOCTYPE");
+    expect(res.text).not.toContain("Mailer template");
+    expect(res.text).not.toContain("color:red");
   });
 
   it("still hands over the original mail as a download without the view", async () => {

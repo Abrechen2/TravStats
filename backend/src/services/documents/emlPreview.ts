@@ -53,7 +53,10 @@ const NO_BREAK_SPACE = String.fromCharCode(0xa0);
 
 /** The text of an HTML body, one block per line — what a reader sees, nothing that runs. */
 export function htmlToText(html: string): string {
-  const root = parseHtml(html, { blockTextElements: { script: false, style: false } });
+  const root = parseHtml(html.replace(/<!DOCTYPE[^>]*>/gi, ""), {
+    blockTextElements: { script: false, style: false },
+  });
+  root.querySelectorAll("head, title").forEach((node) => node.remove());
   root.querySelectorAll("br").forEach((br) => br.replaceWith("\n"));
   root
     .querySelectorAll("p, div, tr, li, h1, h2, h3, h4, h5, h6, table")
@@ -86,10 +89,17 @@ export async function renderEmlAsText(bytes: Buffer, language: PreviewLanguage):
   if (from) head.push(`${label.from}: ${from}`);
   const to = (mail.to ?? []).map((a) => addressText(a)).filter(Boolean);
   if (to.length > 0) head.push(`${label.to}: ${to.join(", ")}`);
-  if (mail.date) head.push(`${label.date}: ${mail.date}`);
-  if (mail.subject) head.push(`${label.subject}: ${mail.subject}`);
+  // The Date line as the sender wrote it, with its own offset — not converted
+  // to UTC, which would show a 16:36 booking mail as sent at 14:36.
+  const date = mail.headers.find((h) => h.key === "date")?.value.trim() || mail.date;
+  if (date) head.push(`${label.date}: ${date}`);
+  if (mail.subject) head.push(`${label.subject}: ${mail.subject.trim()}`);
 
-  const body = mail.text?.trim() || (mail.html ? htmlToText(mail.html) : "") || label.noBody;
+  // The HTML part first when there is one: a mailer's plain-text part is often
+  // generated from it and carries every image as a `<https://…gif>` line,
+  // measured on a Lufthansa confirmation as a third of its text.
+  const fromHtml = mail.html ? htmlToText(mail.html) : "";
+  const body = fromHtml || mail.text?.trim() || label.noBody;
 
   const attached = mail.attachments
     .filter((a) => a.disposition !== "inline" || a.filename)
