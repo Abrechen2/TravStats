@@ -12,7 +12,8 @@
     "applied": "Applied",
     "rejected": "Rejected",
     "expired": "Expired",
-    "edited": "Edited"
+    "edited": "Edited",
+    "superseded": "Applied through shared trip"
   },
   "expiresIn": "Expires in",
   "expired": "Expired",

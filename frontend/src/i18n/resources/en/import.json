@@ -220,6 +220,7 @@
       "cruise": "Cruise",
       "rail": "Rail",
       "bus": "Bus",
+      "ferry": "Ferry",
       "rental": "Rental car",
       "visit": "Place",
       "stop": "Stop"

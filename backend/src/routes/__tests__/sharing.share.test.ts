@@ -56,6 +56,13 @@ describe("sharing — share a trip", () => {
       },
     });
 
+  it("refuses to share into a deactivated account and copies nothing", async () => {
+    await prisma.user.update({ where: { id: ben.id }, data: { isActive: false } });
+    const res = await share(anna, full.trip.id, companionId).expect(404);
+    expect(res.body.error?.code ?? res.body.code).toBe("SHARE_USER_NOT_FOUND");
+    expect(await prisma.trip.count({ where: { userId: ben.id } })).toBe(0);
+  });
+
   it("copies the trip and every entry type into the companion's account", async () => {
     const res = await share(anna, full.trip.id, companionId).expect(200);
     expect(res.body.success).toBe(true);
@@ -66,6 +73,7 @@ describe("sharing — share a trip", () => {
       cruises: 1,
       railJourneys: 1,
       busJourneys: 0,
+      ferryJourneys: 0,
       rentals: 1,
       stops: 2,
     });
@@ -152,7 +160,7 @@ describe("sharing — share a trip", () => {
     expect(own.userId).toBe(anna.id);
   });
 
-  it("tells the recipient, and the trip view lists the member", async () => {
+  it("tells the recipient, and the trip view lists the member among its people", async () => {
     await share(anna, full.trip.id, companionId).expect(200);
     const notices = await request(app)
       .get("/api/v1/sharing/notices")
@@ -187,15 +195,31 @@ describe("sharing — share a trip", () => {
       .get(`/api/v1/sharing/trips/${full.trip.id}`)
       .set("Cookie", anna.cookie)
       .expect(200);
-    expect(view.body.data.members.map((m: { id: string }) => m.id)).toEqual([ben.id]);
-    expect(view.body.data.candidates).toEqual([
-      expect.objectContaining({ companionId, consenting: true, shared: true }),
+    expect(view.body.data.people).toEqual([
+      expect.objectContaining({
+        account: expect.objectContaining({ id: ben.id }),
+        member: true,
+        consent: "accepted",
+      }),
     ]);
     const bensView = await request(app)
       .get(`/api/v1/sharing/trips/${copy.id}`)
       .set("Cookie", ben.cookie)
       .expect(200);
-    expect(bensView.body.data.members.map((m: { id: string }) => m.id)).toEqual([anna.id]);
+    expect(
+      bensView.body.data.people.map((p: { account: { id: string } | null }) => p.account?.id)
+    ).toEqual([anna.id]);
+  });
+
+  it("answers the trip view in its one shape: people, linkable accounts, booking totals", async () => {
+    await share(anna, full.trip.id, companionId).expect(200);
+    const res = await request(app)
+      .get(`/api/v1/sharing/trips/${full.trip.id}`)
+      .set("Cookie", anna.cookie)
+      .expect(200);
+    expect(Object.keys(res.body.data).sort()).toEqual(
+      ["bookingTotals", "groupId", "linkableUsers", "people"].sort()
+    );
   });
 
   it("is idempotent: sharing again adds nothing twice, only what is new", async () => {

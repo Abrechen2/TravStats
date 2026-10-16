@@ -168,10 +168,12 @@ export async function migrateLegacyReceipts(): Promise<{ migrated: number; skipp
     const legacyUrl = { in: receiptUrlForms(upload.filename) };
     const next = { receiptUrl: receiptUrlFor(documentId) };
     await prisma.$transaction([
+      // share-exempt: receipt links — private
       prisma.flight.updateMany({
         where: { userId: upload.userId, receiptUrl: legacyUrl },
         data: next,
       }),
+      // share-exempt: receipt links — private
       prisma.lodgingStay.updateMany({
         where: { userId: upload.userId, receiptUrl: legacyUrl },
         data: next,

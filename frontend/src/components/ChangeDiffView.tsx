@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useTranslation } from "../hooks/useTranslation";
 import { formatDateTime } from "../lib/displayFormat";
 
-interface ChangeEntry {
+export interface ChangeEntry {
   field: string;
   type: "added" | "removed" | "changed";
   oldValue: string | number | boolean | null | undefined;
@@ -19,9 +19,21 @@ interface ChangeDiffViewProps {
   original: Record<string, unknown>;
   proposed: Record<string, unknown>;
   changes: ChangeEntry[];
+  /**
+   * Values the caller already formatted — a share notice's, read on the
+   * place's clock (ADR 0002). Shown as given: the built-in formatter re-parses
+   * any string with a "T" as a date in the browser's zone.
+   */
+  formatValue?: (value: unknown) => string;
+  /** The field's label; the raw field name when absent. */
+  fieldLabel?: (field: string) => string;
 }
 
-export default function ChangeDiffView({ changes }: ChangeDiffViewProps): JSX.Element {
+export default function ChangeDiffView({
+  changes,
+  formatValue: formatGiven,
+  fieldLabel,
+}: ChangeDiffViewProps): JSX.Element {
   const { t } = useTranslation(["pendingUpdates"]);
   const [expandedFields, setExpandedFields] = useState<Set<string>>(new Set());
 
@@ -48,7 +60,7 @@ export default function ChangeDiffView({ changes }: ChangeDiffViewProps): JSX.El
     }
   };
 
-  const formatValue = (value: unknown): string => {
+  const formatRaw = (value: unknown): string => {
     if (value === null || value === undefined) return "-";
     if (typeof value === "object") return JSON.stringify(value);
     if (typeof value === "string" && value.includes("T")) {
@@ -56,6 +68,9 @@ export default function ChangeDiffView({ changes }: ChangeDiffViewProps): JSX.El
     }
     return String(value);
   };
+
+  const show = formatGiven ?? formatRaw;
+  const label = fieldLabel ?? ((field: string) => field);
 
   return (
     <div className="space-y-3">
@@ -73,7 +88,7 @@ export default function ChangeDiffView({ changes }: ChangeDiffViewProps): JSX.El
               >
                 <div className="flex items-center gap-2">
                   {getChangeIcon(change.type)}
-                  <span className="font-medium text-(--text-primary)">{change.field}</span>
+                  <span className="font-medium text-(--text-primary)">{label(change.field)}</span>
                 </div>
                 <svg
                   className={`w-4 h-4 text-(--text-muted) transition-transform ${
@@ -97,15 +112,13 @@ export default function ChangeDiffView({ changes }: ChangeDiffViewProps): JSX.El
                     <div className="text-xs text-(--text-muted) mb-1">
                       {t("pendingUpdates:changes.original")}
                     </div>
-                    <div className="text-sm text-red-600 line-through">
-                      {formatValue(change.oldValue)}
-                    </div>
+                    <div className="text-sm text-red-600 line-through">{show(change.oldValue)}</div>
                   </div>
                   <div>
                     <div className="text-xs text-(--text-muted) mb-1">
                       {t("pendingUpdates:changes.new")}
                     </div>
-                    <div className="text-sm text-green-600">{formatValue(change.newValue)}</div>
+                    <div className="text-sm text-green-600">{show(change.newValue)}</div>
                   </div>
                 </div>
               )}

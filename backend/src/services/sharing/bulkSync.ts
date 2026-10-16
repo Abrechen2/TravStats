@@ -1,6 +1,6 @@
 import { prisma } from "../../db";
-import type { DbTransaction } from "../../db";
 import { SHARE_ENTITIES, type ShareEntity } from "./adapters";
+import { sharedIdsOf } from "./keyOps";
 import { propagateDeletes, propagateWrites, shareSnapshots, type ShareSnapshot } from "./propagate";
 
 /**
@@ -12,36 +12,16 @@ import { propagateDeletes, propagateWrites, shareSnapshots, type ShareSnapshot }
  */
 export type SharedState = Map<ShareEntity, Map<string, ShareSnapshot>>;
 
-/** Ids of the user's rows that are keyed or sit on one of their shared trips. */
-async function sharedIds(c: DbTransaction, userId: string, entity: ShareEntity) {
-  const where = {
-    OR: [{ shareKey: { not: null } }, { trip: { shareGroupId: { not: null } } }],
-  };
-  const select = { id: true } as const;
-  const own = { userId, ...where };
-  const rows =
-    entity === "flight"
-      ? await c.flight.findMany({ where: own, select })
-      : entity === "lodgingStay"
-        ? await c.lodgingStay.findMany({ where: own, select })
-        : entity === "cruise"
-          ? await c.cruise.findMany({ where: own, select })
-          : entity === "rail"
-            ? await c.railJourney.findMany({ where: own, select })
-            : entity === "bus"
-              ? await c.busJourney.findMany({ where: own, select })
-              : entity === "rental"
-                ? await c.rentalBooking.findMany({ where: own, select })
-                : await c.tripStop.findMany({ where: { trip: { userId }, ...where }, select });
-  return rows.map((r) => r.id);
-}
-
 export async function sharedStateOf(userId: string): Promise<SharedState> {
   const state: SharedState = new Map();
   for (const entity of SHARE_ENTITIES) {
     state.set(
       entity,
-      await shareSnapshots(prisma, entity, await sharedIds(prisma, userId, entity))
+      await shareSnapshots(
+        prisma,
+        entity,
+        await prisma.$transaction((tx) => sharedIdsOf(tx, userId, entity))
+      )
     );
   }
   return state;
@@ -51,7 +31,7 @@ export async function sharedStateOf(userId: string): Promise<SharedState> {
 export async function propagateBulk(userId: string, before: SharedState): Promise<void> {
   for (const entity of SHARE_ENTITIES) {
     const snapshots = before.get(entity) ?? new Map<string, ShareSnapshot>();
-    const now = new Set(await sharedIds(prisma, userId, entity));
+    const now = new Set(await prisma.$transaction((tx) => sharedIdsOf(tx, userId, entity)));
     const stillThere = await shareSnapshots(prisma, entity, [...snapshots.keys()]);
     const gone = [...snapshots.values()].filter((s) => !stillThere.has(s.id));
     await propagateDeletes(prisma, userId, gone);

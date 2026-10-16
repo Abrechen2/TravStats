@@ -9,6 +9,7 @@ export * from "./lodgingStay";
 export * from "./cruise";
 export * from "./rail";
 export * from "./bus";
+export * from "./ferry";
 export * from "./rental";
 export * from "./stop";
 export * from "./trip";

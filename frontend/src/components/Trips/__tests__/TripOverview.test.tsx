@@ -7,9 +7,10 @@ import type { Trip } from "../../../types";
 // its own suite, and `__tests__/documentsMountPoints.test.tsx` checks that
 // this surface mounts it — here it would only be a request reaching the
 // network, which the setup refuses (forgejo#110).
-// Shared trips (2026-10-09): the panel loads on its own and has its own
-// suite (components/sharing/__tests__); here it would only race the assertions.
-vi.mock("../../sharing/TripSharingPanel", () => ({ default: () => null }));
+// "Reisende" (spec 2026-10-16, D9): the section loads its sharing state on its
+// own and has its own suite (components/sharing/__tests__); here it would only
+// race the assertions.
+vi.mock("../../sharing/TripPeopleSection", () => ({ default: () => null }));
 
 vi.mock("../../documents/DocumentsSection", () => ({ default: () => null }));
 

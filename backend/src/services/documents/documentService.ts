@@ -640,6 +640,7 @@ export async function deleteDocument(userId: string, id: string): Promise<void> 
   // would show a receipt that answers 404.
   const receiptUrl = `/api/v1/documents/${document.id}/file`;
   await prisma.$transaction([
+    // share-exempt: clears a receipt URL — private
     prisma.flight.updateMany({ where: { userId, receiptUrl }, data: { receiptUrl: null } }),
     prisma.lodgingStay.updateMany({ where: { userId, receiptUrl }, data: { receiptUrl: null } }),
     prisma.document.delete({ where: { id: document.id } }),

@@ -1,4 +1,5 @@
 import type { DbTransaction } from "../../db";
+import { clearTripKeys } from "./keyOps";
 
 /**
  * Taking one member's trip out of its share group. The trip and every entry
@@ -14,18 +15,7 @@ export async function detachTrip(
 ): Promise<void> {
   const groupId = trip.shareGroupId;
   if (!groupId) return;
-  const own = { tripId: trip.id, userId, shareKey: { not: null } };
-  const clear = { shareKey: null };
-  await tx.flight.updateMany({ where: own, data: clear });
-  await tx.lodgingStay.updateMany({ where: own, data: clear });
-  await tx.cruise.updateMany({ where: own, data: clear });
-  await tx.railJourney.updateMany({ where: own, data: clear });
-  await tx.busJourney.updateMany({ where: own, data: clear });
-  await tx.rentalBooking.updateMany({ where: own, data: clear });
-  await tx.tripStop.updateMany({
-    where: { tripId: trip.id, shareKey: { not: null } },
-    data: clear,
-  });
+  await clearTripKeys(tx, userId, trip.id);
   await tx.trip.update({ where: { id: trip.id }, data: { shareGroupId: null } });
 
   const others = await tx.trip.findMany({

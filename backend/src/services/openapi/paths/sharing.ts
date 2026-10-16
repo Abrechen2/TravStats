@@ -12,6 +12,8 @@ import {
   consentRequestSchema,
   shareTripSchema,
 } from "../../../routes/sharing";
+import { CONSENT_STATUSES, SHARE_ENTITY_TYPES, SHARE_NOTICE_KINDS } from "../../../schemas/sharing";
+import type { ShareEntity } from "../../sharing/shareTypes";
 
 const tags = ["Sharing"];
 const err = (description: string) => ({ description, content: errorContent });
@@ -44,13 +46,14 @@ const counts = z.object({
   cruises: z.number().int(),
   railJourneys: z.number().int(),
   busJourneys: z.number().int(),
+  ferryJourneys: z.number().int(),
   rentals: z.number().int(),
   stops: z.number().int(),
 });
 const notice = z.object({
   id: z.string(),
-  kind: z.enum(["shared", "created", "updated", "deleted", "left"]),
-  entityType: z.string().nullable(),
+  kind: z.enum(SHARE_NOTICE_KINDS),
+  entityType: z.enum(SHARE_ENTITY_TYPES as ["trip", ...ShareEntity[]]).nullable(),
   entityKey: z
     .string()
     .nullable()
@@ -178,10 +181,9 @@ registry.registerPath({
   request: { params: tripParam },
   responses: {
     200: ok(
-      "Members besides the caller, and the caller's linked companions",
+      "The trip's people with their sharing state",
       z.object({
         groupId: z.string().nullable(),
-        members: z.array(person),
         bookingTotals: z
           .array(
             z.object({
@@ -190,15 +192,35 @@ registry.registerPath({
             })
           )
           .describe("The other members' booking totals for their trip of the group, read-only"),
-        candidates: z.array(
-          z.object({
-            companionId: z.string(),
-            name: z.string(),
-            user: person,
-            consenting: z.boolean(),
-            shared: z.boolean(),
-          })
-        ),
+        people: z
+          .array(
+            z.object({
+              key: z.string(),
+              companionId: z.string().nullable(),
+              name: z.string(),
+              account: person.nullable(),
+              consent: z.enum(["none", ...CONSENT_STATUSES]),
+              member: z.boolean(),
+              receivesChanges: z
+                .boolean()
+                .nullable()
+                .describe("Members only: whether changes travel between the caller and them"),
+              shareBlockedBy: z
+                .enum([
+                  "notLinked",
+                  "consentMissing",
+                  "consentPending",
+                  "groupConsentMissing",
+                  "alreadyMember",
+                  "accountInactive",
+                ])
+                .nullable(),
+            })
+          )
+          .describe("Every companion of the trip, then every group member who is none of them"),
+        linkableUsers: z
+          .array(person)
+          .describe("Accounts that accepted the caller's consent request"),
       })
     ),
     404: err("`TRIP_NOT_FOUND`"),
@@ -210,7 +232,7 @@ registry.registerPath({
   path: "/sharing/trips/{tripId}/share",
   summary: "Share a trip with a linked companion",
   description:
-    "One transaction: copies the trip and every flight, stay, cruise, rail ride, bus ride, rental and " +
+    "One transaction: copies the trip and every flight, stay, cruise, rail ride, bus ride, ferry crossing, rental and " +
     "timeline stop into the companion's account — facts only — and joins both copies in a " +
     "share group. Idempotent: entries the other account already holds are not copied again.",
   tags,
@@ -265,11 +287,14 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/sharing/notices/{id}/undo",
-  summary: "Undo another member's change on the caller's own copy",
+  summary: "Undo another member's change, or a move-in, on the caller's own copy",
   description:
     "Restores the values the change replaced, on the caller's copy only, when the copy still " +
     "holds exactly what the change wrote. The undo is a change by the caller and propagates " +
-    "to the other members with a notice of its own.",
+    "to the other members with a notice of its own. A `created` notice whose `after.movedFrom` " +
+    "names a trip (the caller's own entry was joined and moved in from it) is undone by moving " +
+    "the entry back there and unlinking it, without a notice to the other members and without " +
+    "sharing it into a group the previous trip belongs to.",
   tags,
   request: { params: idParam },
   responses: {

@@ -7,9 +7,9 @@ import { useToastStore } from "../../store/toastStore";
 import type { ShareConsent, ShareNotice } from "../../types/sharing";
 import { shareFieldLabel } from "../sharing/noticeValues";
 import { sharingErrorKey, staleUndoFields } from "../sharing/sharingCopy";
-import Button from "../ui/Button";
-import EmptyState from "../ui/EmptyState";
-import ShareNoticeRow from "./ShareNoticeRow";
+import { GlobeLoader } from "../GlobeLoader";
+import { Button, Card, EmptyState } from "../ui";
+import ShareNoticeCard from "./ShareNoticeCard";
 
 const NS = "sharing:inbox";
 
@@ -130,7 +130,11 @@ export default function SharingTab({
     );
   }
   if (requests === null || notices === null) {
-    return <p className="t-caption">{t("common:loading.default")}</p>;
+    return (
+      <div className="flex justify-center py-12">
+        <GlobeLoader size={120} label={t("common:loading.default")} />
+      </div>
+    );
   }
   if (requests.length === 0 && notices.length === 0) {
     return (
@@ -149,12 +153,7 @@ export default function SharingTab({
         <section aria-label={t(`${NS}.requests.title`)} className="space-y-3">
           <h2 className="t-label-mono">{t(`${NS}.requests.title`)}</h2>
           {requests.map((consent) => (
-            <div
-              key={consent.id}
-              data-testid="share-request"
-              className="rounded-lg p-4"
-              style={{ border: "1px solid var(--ts-border)", background: "var(--ts-tile)" }}
-            >
+            <Card key={consent.id} data-testid="share-request">
               <p className="mb-3 text-sm">
                 {t(`${NS}.requests.body`, {
                   name: consent.person.displayName,
@@ -176,7 +175,7 @@ export default function SharingTab({
                   {t(`${NS}.requests.decline`)}
                 </Button>
               </div>
-            </div>
+            </Card>
           ))}
         </section>
       )}
@@ -184,7 +183,7 @@ export default function SharingTab({
         <section aria-label={t(`${NS}.notices.title`)} className="space-y-3">
           <h2 className="t-label-mono">{t(`${NS}.notices.title`)}</h2>
           {notices.map((notice) => (
-            <ShareNoticeRow
+            <ShareNoticeCard
               key={notice.id}
               notice={notice}
               busy={busy === notice.id}

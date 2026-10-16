@@ -62,14 +62,21 @@ export async function acceptedWith(
   return new Set(rows.map((r) => (r.requesterId === actorId ? r.targetId : r.requesterId)));
 }
 
-/** The other members' trips in `groupId` that may receive `actorId`'s changes. */
+/**
+ * The other members' trips in `groupId` that may receive `actorId`'s changes.
+ * A deactivated account receives nothing — no copy, no update, no notice —
+ * while it is switched off; copy, update and removal notice all read this list.
+ * What it misses is NOT replayed when the account is reactivated: the copies
+ * stay as they were until the next change to the entry, or until the entry is
+ * shared again (the rollout backfill does that for crossings).
+ */
 export async function receivingMembers(
   c: Pick<DbTransaction, "trip" | "shareConsent">,
   groupId: string,
   actorId: string
 ): Promise<MemberTrip[]> {
   const trips = await c.trip.findMany({
-    where: { shareGroupId: groupId, NOT: { userId: actorId } },
+    where: { shareGroupId: groupId, NOT: { userId: actorId }, user: { isActive: true } },
     select: { id: true, userId: true },
     orderBy: { createdAt: "asc" },
   });
@@ -79,4 +86,26 @@ export async function receivingMembers(
     trips.map((t) => t.userId)
   );
   return trips.filter((t) => consenting.has(t.userId));
+}
+
+/**
+ * Ids of the group's members (besides the sharer and the recipient) who have
+ * NOT agreed to sharing with `recipientId` — the onward-share rule (owner,
+ * 2026-10-16). Empty means the recipient may join. `shareTrip` refuses on a
+ * non-empty answer and the trip page shows the same verdict, so both read it
+ * from here.
+ */
+export async function missingGroupConsent(
+  c: Pick<DbTransaction, "trip" | "shareConsent">,
+  groupId: string,
+  sharerId: string,
+  recipientId: string
+): Promise<string[]> {
+  const memberTrips = await c.trip.findMany({
+    where: { shareGroupId: groupId, userId: { notIn: [sharerId, recipientId] } },
+    select: { userId: true },
+  });
+  const others = [...new Set(memberTrips.map((t) => t.userId))];
+  const consenting = await acceptedWith(c, recipientId, others);
+  return others.filter((id) => !consenting.has(id));
 }

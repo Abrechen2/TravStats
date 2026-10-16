@@ -3,23 +3,23 @@ import type { DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { Prisma } from "../../prisma";
 import { consentRequired, hasAcceptedConsent } from "./consent";
-import {
-  assignShareKeys,
-  copyCruises,
-  copyFlights,
-  copyLodgingStays,
-  copyBusJourneys,
-  copyRailJourneys,
-  copyRentals,
-  copyStops,
-  type CopyContext,
-  type CopyCounts,
-} from "./copyEntries";
+import { copyMissing, joinedMeta, type CopiedEntry } from "./copyInto";
 import { groupBookingTotals, type MemberBookingTotal } from "./bookingTotals";
 import { detachTrip } from "./detach";
-import { acceptedWith } from "./members";
+import { assignShareKeys } from "./keyOps";
+import {
+  SHARE_ENTITIES,
+  SHARE_TYPES,
+  emptyCounts,
+  type CopyCounts,
+  type ShareEntity,
+} from "./shareTypes";
+import { missingGroupConsent, type MemberTrip } from "./members";
+import { noticeMeta, recordEntryNotice } from "./propagate";
 import { tripFacts } from "./facts";
-import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
+import { restatusTrips } from "../trip/restatusTrips";
+import type { SharePerson } from "./people";
+import { tripPeople, type TripPerson } from "./tripPeople";
 
 /**
  * Sharing one trip with a linked, consenting companion (design 2026-10-09,
@@ -81,18 +81,44 @@ async function requireGroupConsent(
   sharerId: string,
   recipientId: string
 ): Promise<void> {
-  const memberTrips = await tx.trip.findMany({
-    where: { shareGroupId: groupId, userId: { notIn: [sharerId, recipientId] } },
-    select: { userId: true },
-  });
-  const others = [...new Set(memberTrips.map((t) => t.userId))];
-  const consenting = await acceptedWith(tx, recipientId, others);
-  if (others.some((id) => !consenting.has(id))) {
+  if ((await missingGroupConsent(tx, groupId, sharerId, recipientId)).length > 0) {
     throw new AppError(
       "Not every member of this trip has agreed to sharing with this account",
       403,
       "SHARE_GROUP_CONSENT_REQUIRED"
     );
+  }
+}
+
+/**
+ * The share's one `shared` notice counts what was created. An own entry moved
+ * in from another of the recipient's trips gets a notice of its own: it says
+ * where it came from, and undoing it puts the entry back there.
+ */
+async function noticeMovedIn(
+  tx: DbTransaction,
+  entity: ShareEntity,
+  groupId: string,
+  actorId: string,
+  recipient: MemberTrip,
+  copied: readonly CopiedEntry[]
+): Promise<void> {
+  for (const entry of copied) {
+    if (!entry.movedFrom) continue;
+    await recordEntryNotice(tx, {
+      recipient,
+      groupId,
+      actorId,
+      kind: "created",
+      entity,
+      shareKey: entry.source.shareKey as string,
+      // `via: "share"`: the share moved it, not a later addition of the actor's.
+      after: {
+        ...noticeMeta(entry.source, recipient, entry.id),
+        ...joinedMeta(entry),
+        via: "share",
+      },
+    });
   }
 }
 
@@ -114,6 +140,13 @@ export async function shareTrip(
           "SHARE_COMPANION_NOT_LINKED"
         );
       }
+      // Same answer as `requestConsent` gives for a deactivated account.
+      const recipient = await tx.user.findFirst({
+        where: { id: recipientId, isActive: true },
+        select: { id: true },
+      });
+      if (!recipient)
+        throw new AppError("No such user on this server", 404, "SHARE_USER_NOT_FOUND");
       // Asked again on every share, not only when linking: a consent can be
       // withdrawn after the link was made.
       if (!(await hasAcceptedConsent(tx, userId, recipientId))) throw consentRequired();
@@ -130,24 +163,26 @@ export async function shareTrip(
       await assignShareKeys(tx, userId, trip.id);
 
       const target = await recipientTrip(tx, trip, groupId, recipientId);
-      const ctx: CopyContext = {
-        tx,
-        ownerId: userId,
-        ownerTripId: trip.id,
-        recipientId,
-        recipientTripId: target.id,
-        idMap: new Map(),
-      };
-      // Stops last: they re-point at the copies the others made.
-      const created: CopyCounts = {
-        flights: await copyFlights(ctx),
-        lodgingStays: await copyLodgingStays(ctx),
-        cruises: await copyCruises(ctx),
-        railJourneys: await copyRailJourneys(ctx),
-        busJourneys: await copyBusJourneys(ctx),
-        rentals: await copyRentals(ctx),
-        stops: await copyStops(ctx),
-      };
+      // Registry order: stops last, they resolve the entries they wrap by key.
+      const created = emptyCounts();
+      for (const entity of SHARE_ENTITIES) {
+        const copied = await copyMissing(
+          tx,
+          entity,
+          { userId, tripId: trip.id },
+          { userId: recipientId, tripId: target.id }
+        );
+        created[SHARE_TYPES[entity].countKey] = copied.filter((e) => !e.joined).length;
+        await noticeMovedIn(
+          tx,
+          entity,
+          groupId,
+          userId,
+          { userId: recipientId, id: target.id },
+          copied
+        );
+      }
+      await restatusTrips([target.id], tx);
 
       const anything = target.created || Object.values(created).some((n) => n > 0);
       if (anything) {
@@ -184,21 +219,12 @@ export async function leaveGroup(userId: string, tripId: string): Promise<{ left
   });
 }
 
-export interface ShareCandidate {
-  companionId: string;
-  name: string;
-  user: SharePerson;
-  /** The linked account has accepted sharing from the caller. */
-  consenting: boolean;
-  /** The linked account already holds a copy of this trip. */
-  shared: boolean;
-}
-
 export interface TripSharingView {
   groupId: string | null;
-  /** The other members — never the caller, never their trip ids. */
-  members: SharePerson[];
-  candidates: ShareCandidate[];
+  /** Companions and group members of the trip, each with their sharing state. */
+  people: TripPerson[];
+  /** Accounts that accepted the caller's consent request. */
+  linkableUsers: SharePerson[];
   /** The other members' booking totals for their trip of the group, read-only (decision 2). */
   bookingTotals: MemberBookingTotal[];
 }
@@ -206,43 +232,9 @@ export interface TripSharingView {
 /** Who holds this trip besides the caller, and whom the caller could share it with. */
 export async function tripSharingView(userId: string, tripId: string): Promise<TripSharingView> {
   const trip = await ownTrip(prisma, userId, tripId);
-  const [memberTrips, companions, consents] = await Promise.all([
-    trip.shareGroupId
-      ? prisma.trip.findMany({
-          where: { shareGroupId: trip.shareGroupId, NOT: { userId } },
-          select: { user: { select: PERSON_SELECT } },
-          orderBy: { createdAt: "asc" },
-        })
-      : Promise.resolve([]),
-    prisma.companion.findMany({
-      where: { userId, linkedUserId: { not: null } },
-      include: { linkedUser: { select: PERSON_SELECT } },
-      orderBy: { displayName: "asc" },
-    }),
-    prisma.shareConsent.findMany({
-      where: { requesterId: userId, status: "accepted" },
-      select: { targetId: true },
-    }),
+  const [people, bookingTotals] = await Promise.all([
+    tripPeople(userId, trip),
+    trip.shareGroupId ? groupBookingTotals(trip.shareGroupId, userId) : Promise.resolve([]),
   ]);
-  const members = memberTrips.map((t) => toPerson(t.user));
-  const memberIds = new Set(members.map((m) => m.id));
-  const consenting = new Set(consents.map((c) => c.targetId));
-  return {
-    groupId: trip.shareGroupId,
-    members,
-    bookingTotals: trip.shareGroupId ? await groupBookingTotals(trip.shareGroupId, userId) : [],
-    candidates: companions.flatMap((c) =>
-      c.linkedUser
-        ? [
-            {
-              companionId: c.id,
-              name: c.displayName,
-              user: toPerson(c.linkedUser),
-              consenting: consenting.has(c.linkedUser.id),
-              shared: memberIds.has(c.linkedUser.id),
-            },
-          ]
-        : []
-    ),
-  };
+  return { groupId: trip.shareGroupId, ...people, bookingTotals };
 }

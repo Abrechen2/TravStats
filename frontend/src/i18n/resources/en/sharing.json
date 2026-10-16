@@ -20,10 +20,22 @@
       "updated": "{{name}} changed {{type}} “{{entry}}”. Your copy has been updated.",
       "deleted": "{{name}} deleted {{type}} “{{entry}}”. Your copy stays — it is your call.",
       "movedOut": "{{name}} took {{type}} “{{entry}}” out of the shared trip. Your copy stays — it is your call.",
+      "joined": "{{name}} added {{type}} “{{entry}}” to the shared trip. Your own entry is now linked to it.",
+      "joinedMoved": "{{name}} added {{type}} “{{entry}}” to the shared trip. Your own entry from “{{from}}” is now linked to this trip and was moved here.",
+      "joinedMovedOnShare": "{{name}} shared the trip with you. Your own entry “{{entry}}” from “{{from}}” is now linked to it and was moved here.",
       "unknownEntry": "an entry",
       "undo": "Undo",
+      "undoMove": "Move back to “{{from}}”",
       "deleteCopy": "Delete mine too",
-      "undone": "Undone on your copy."
+      "undone": "Undone on your copy.",
+      "kinds": {
+        "shared": "Shared",
+        "created": "Added",
+        "updated": "Changed",
+        "deleted": "Deleted",
+        "left": "Left"
+      },
+      "details": "Details"
     },
     "empty": {
       "title": "Nothing new",
@@ -80,31 +92,44 @@
       "noLinkable": "Nobody has agreed to your request yet."
     },
     "errors": {
-      "loadFailed": "Sharing could not be loaded.",
+      "loadFailed": "The sharing settings could not be loaded.",
       "requestFailed": "The request could not be sent.",
       "withdrawFailed": "The consent could not be withdrawn.",
       "linkFailed": "The link could not be saved."
     }
   },
+  "people": {
+    "badges": {
+      "linked": "Account linked",
+      "member": "Shares this trip",
+      "consentPending": "Consent pending"
+    },
+    "noChangesHint": "Your changes don't reach each other until you have both agreed.",
+    "actions": {
+      "link": "Link to account…",
+      "share": "Share trip…"
+    },
+    "blocked": {
+      "consentMissing": "{{name}} has not agreed to sharing yet.",
+      "consentDeclined": "{{name}} declined your request to share.",
+      "consentWithdrawn": "The agreement to share with {{name}} was withdrawn.",
+      "groupConsentMissing": "Not everyone on this shared trip has agreed to sharing with {{name}}."
+    },
+    "leave": "Leave shared trip"
+  },
+  "menu": {
+    "button": "Share",
+    "companions": "With travel companions (own copy)",
+    "link": "Public link",
+    "loading": "Loading …"
+  },
   "trip": {
-    "title": "Shared",
-    "notShared": "This trip is not shared with anyone.",
-    "members": "Shared with",
-    "candidates": "Share with",
-    "shareTick": "Share with {{name}}",
-    "sharedTick": "Shared with {{name}}",
-    "noConsent": "{{name}} has not agreed to sharing (yet).",
-    "noCandidates": "Link companions to their account to share trips.",
-    "settingsLink": "Go to settings",
-    "leave": "Leave group",
-    "leaveConfirm": "Leave the group? Your copy stays as your own trip; the others are notified.",
-    "left": "You left the group. Your trip stays.",
-    "shared": "Shared with {{name}}.",
-    "privateHint": "Only facts are copied — flights, stays, cruises, rail journeys, bus rides, rentals and stops. Seat, room, price, ratings and notes stay private.",
+    "leaveConfirm": "Leave the shared trip? Your copy stays as your own trip; the others are notified.",
+    "left": "You left the shared trip. Your trip stays.",
     "errors": {
-      "loadFailed": "This trip's sharing could not be loaded.",
+      "loadFailed": "Who shares this trip could not be loaded.",
       "shareFailed": "The trip could not be shared.",
-      "leaveFailed": "The group could not be left."
+      "leaveFailed": "The shared trip could not be left."
     },
     "bookingTotals": "Booking total",
     "bookingTotalsHint": "View only — the person named booked and paid; your own share of the price stays private."
@@ -128,6 +153,48 @@
     "undoUnavailable": "This notice cannot be undone (any more).",
     "copyNotFound": "Your copy of this entry no longer exists."
   },
+  "shareDialog": {
+    "title": "Share trip with {{name}}",
+    "titlePick": "Share trip",
+    "person": "With whom",
+    "copied": "{{name}} gets their own copy of this trip: flights, stays, cruises, train, bus and ferry rides, rentals and stops with their times, places and status. When one of you changes something later, it reaches everyone and can be undone in the inbox.",
+    "private": "Staying private: seat, cabin and room, your price, booking references, ratings, notes, photos, journal and documents.",
+    "final": "This cannot be taken back: {{name}} keeps the copy even if one of you leaves the shared trip.",
+    "confirm": "Share trip",
+    "done": "Trip shared with {{name}}.",
+    "nobody": "Right now you can't share this trip with anyone. Link travellers to their account — that works once they have accepted your request.",
+    "add": {
+      "title": "These accounts have agreed to share with you but are not travellers on this trip yet. Add a person and link them — then you can share the trip with them.",
+      "action": "Add as traveller and link",
+      "actionLabel": "Add {{name}} as a traveller and link their account",
+      "addFailed": "{{name}} could not be added as a traveller. Nothing was changed.",
+      "linkFailed": "{{name}} is now a traveller, but linking their account did not work. Please try again.",
+      "reloadFailed": "{{name}} is added and linked, but the list could not be reloaded. Close the dialog and open it again.",
+      "nameTaken": "The name “{{name}}” already belongs to a traveller linked to another account. Rename that traveller on the trip — then you can add {{name}}."
+    },
+    "blockedTitle": "Not possible right now",
+    "blocked": {
+      "notLinked": "{{name}} is not linked to an account.",
+      "consentMissing": "{{name}} has not agreed to share with you yet. You have not sent a request yet — you can do that under Settings → Trips → Share trips.",
+      "consentDeclined": "{{name}} declined your request to share. You can send a new request under Settings → Trips → Share trips.",
+      "consentWithdrawn": "The agreement to share between you and {{name}} was withdrawn. You can send a new request under Settings → Trips → Share trips.",
+      "consentPending": "Your request to {{name}} is still open.",
+      "groupConsentMissing": "{{name}} first has to connect with everyone who already shares this trip.",
+      "alreadyMember": "{{name}} is already part of this shared trip.",
+      "accountInactive": "{{name}}'s account is deactivated."
+    }
+  },
+  "linkDialog": {
+    "title": "Link {{name}} to an account",
+    "account": "Account",
+    "choose": "Choose an account",
+    "link": "Link",
+    "linked": "{{name}} is now linked to @{{username}}.",
+    "requestIntro": "Nobody has accepted your request yet. Send {{name}} a request by username; once they accept, you can link here.",
+    "username": "Username",
+    "request": "Send request",
+    "requested": "Request sent to @{{username}}."
+  },
   "entityTypes": {
     "trip": "the trip",
     "flight": "the flight",
@@ -135,6 +202,7 @@
     "cruise": "the cruise",
     "rail": "the train ride",
     "bus": "the bus ride",
+    "ferry": "the ferry crossing",
     "rental": "the rental car",
     "stop": "the stop"
   },
@@ -226,6 +294,7 @@
     "trainCategory": "Train category",
     "trainNumber": "Train number",
     "lineName": "Line",
+    "vesselName": "Vessel",
     "rideKind": "Kind of ride",
     "depAddress": "Departure address",
     "arrAddress": "Arrival address",

@@ -3,8 +3,11 @@ import { randomUUID } from "crypto";
 import type { Db, DbTransaction } from "../../db";
 import type { Prisma } from "../../prisma";
 import { ADAPTERS, type EntityAdapter, type ShareEntity, type SharedRow } from "./adapters";
+import { copyInto, joinedMeta } from "./copyInto";
 import { changedKeys, jsonSubset, sameFact } from "./factValues";
-import { recomputeTripStatus } from "../tripStatusService";
+import { restatusTrips } from "../trip/restatusTrips";
+import { DERIVE } from "./deriveCopy";
+import { supersedeSatisfied } from "./pendingSupersede";
 import { receivingMembers, type MemberTrip } from "./members";
 import { asPropagation, isPropagating } from "./propagationGuard";
 
@@ -56,9 +59,14 @@ export interface ShareSnapshot extends SharedRow {
   groupId: string | null;
 }
 
+/** A write and its propagation share one transaction; the copies of a big trip need more than Prisma's 5 s default. */
+export const SHARE_TX_TIMEOUT_MS = 30_000;
+
 async function inTransaction<T>(c: ShareClient, fn: (tx: DbTransaction) => Promise<T>) {
   const run = (tx: DbTransaction) => asPropagation(() => fn(tx));
-  return "$transaction" in c ? (c as Db).$transaction(run, { timeout: 30_000 }) : run(c);
+  return "$transaction" in c
+    ? (c as Db).$transaction(run, { timeout: SHARE_TX_TIMEOUT_MS })
+    : run(c);
 }
 
 /** trip id → its share group; with `ownerId`, only trips that are that user's own. */
@@ -111,7 +119,7 @@ export async function shareSnapshot(
   return (await shareSnapshots(c, entity, [id])).get(id) ?? null;
 }
 
-interface NoticeInput {
+export interface NoticeInput {
   recipient: MemberTrip;
   groupId: string;
   actorId: string;
@@ -122,8 +130,8 @@ interface NoticeInput {
   after: Prisma.InputJsonObject;
 }
 
-async function notice(c: DbTransaction, n: NoticeInput): Promise<void> {
-  await c.shareNotice.create({
+export async function recordEntryNotice(c: DbTransaction, n: NoticeInput): Promise<string> {
+  const row = await c.shareNotice.create({
     data: {
       userId: n.recipient.userId,
       groupId: n.groupId,
@@ -134,11 +142,13 @@ async function notice(c: DbTransaction, n: NoticeInput): Promise<void> {
       ...(n.before ? { before: n.before } : {}),
       after: n.after,
     },
+    select: { id: true },
   });
+  return row.id;
 }
 
 /** What every notice carries besides the values: what the entry is and where the copy lives. */
-const meta = (row: SharedRow, recipient: MemberTrip, copyId: string) => ({
+export const noticeMeta = (row: SharedRow, recipient: MemberTrip, copyId: string) => ({
   label: row.label,
   tripId: recipient.id,
   entryId: copyId,
@@ -160,16 +170,21 @@ async function createCopies(
   await adapter.setKey(c, row.id, key);
   const source = { ...row, shareKey: key };
   for (const member of await receivingMembers(c, groupId, actorId)) {
-    const copyId = await adapter.createCopy(c, source, member.userId, member.id);
-    await recomputeTripStatus(member.id, c);
-    await notice(c, {
+    const copy = await copyInto(c, adapter.entity, source, {
+      userId: member.userId,
+      tripId: member.id,
+    });
+    // Their own entry sits in another shared trip: left there, nothing to tell.
+    if (!copy) continue;
+    await restatusTrips([member.id], c);
+    await recordEntryNotice(c, {
       recipient: member,
       groupId,
       actorId,
       kind: "created",
       entity: adapter.entity,
       shareKey: key,
-      after: meta(source, member, copyId),
+      after: { ...noticeMeta(source, member, copy.id), ...joinedMeta(copy) },
     });
   }
 }
@@ -187,14 +202,14 @@ async function noticeRemoval(
   for (const member of await receivingMembers(c, groupId, actorId)) {
     const copy = copyOf(copies, member);
     if (!copy) continue;
-    await notice(c, {
+    await recordEntryNotice(c, {
       recipient: member,
       groupId,
       actorId,
       kind: "deleted",
       entity: adapter.entity,
       shareKey: key,
-      after: { ...meta(row, member, copy.id), reason },
+      after: { ...noticeMeta(row, member, copy.id), reason },
     });
   }
 }
@@ -216,6 +231,7 @@ async function updateCopies(
     const keys = changed.filter((k) => !sameFact(copy.facts[k], row.facts[k]));
     if (keys.length === 0) continue;
     await adapter.apply(c, copy, row.facts, keys, before.facts);
+    await DERIVE[adapter.entity](c, copy.id, member.userId);
     // What the copy holds NOW, not what the sharer sent: a house written field
     // by field, a cruise that kept a member's own call, a status re-derived
     // from the dates all differ from the sharer's values, and an undo compares
@@ -223,8 +239,8 @@ async function updateCopies(
     const [applied] = await adapter.load(c, [copy.id]);
     // The trip's status caches its entries' dates; the route that made the
     // change re-derives only the writer's own trip.
-    await recomputeTripStatus(member.id, c);
-    await notice(c, {
+    await restatusTrips([member.id], c);
+    const noticeId = await recordEntryNotice(c, {
       recipient: member,
       groupId,
       actorId,
@@ -232,8 +248,13 @@ async function updateCopies(
       entity: adapter.entity,
       shareKey: row.shareKey as string,
       before: { facts: jsonSubset(copy.facts, keys), zones: copy.zones },
-      after: { ...meta(row, member, copy.id), facts: jsonSubset((applied ?? row).facts, keys) },
+      after: {
+        ...noticeMeta(row, member, copy.id),
+        facts: jsonSubset((applied ?? row).facts, keys),
+      },
     });
+    // Flights are the one type with provider suggestions (PendingFlightUpdate).
+    if (adapter.entity === "flight") await supersedeSatisfied(c, copy.id, { noticeId, actorId });
   }
 }
 

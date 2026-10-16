@@ -1,9 +1,14 @@
 import { prisma, type DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { Prisma } from "../../prisma";
-import { ADAPTERS, SHARE_ENTITIES, type ShareEntity, type SharedRow } from "./adapters";
+import { z } from "zod";
+import { shareEntityTypeSchema } from "../../schemas/sharing";
+import { restatusTrips } from "../trip/restatusTrips";
+import { ADAPTERS, type ShareEntity, type SharedRow } from "./adapters";
 import { revivedRecord, sameFact } from "./factValues";
-import { propagateDelete, propagateWrite, shareSnapshot } from "./propagate";
+import { keyedDelegate } from "./keyOps";
+import { reopenSuperseded } from "./pendingSupersede";
+import { propagateDelete, propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "./propagate";
 
 /**
  * Acting on a notice (design 2026-10-09, decision 3): undo a change another
@@ -24,10 +29,11 @@ async function ownNotice(userId: string, noticeId: string) {
 }
 
 function entityOf(type: string | null): ShareEntity {
-  if (!type || !(SHARE_ENTITIES as readonly string[]).includes(type)) {
+  const parsed = shareEntityTypeSchema.safeParse(type);
+  if (!parsed.success || parsed.data === "trip") {
     throw new AppError("This notice names no entry", 409, "SHARE_UNDO_UNAVAILABLE");
   }
-  return type as ShareEntity;
+  return parsed.data;
 }
 
 /** The caller's own copy behind a share key, or a 409 that says it is gone. */
@@ -70,12 +76,14 @@ export interface UndoResult {
  */
 export async function undoNotice(userId: string, noticeId: string): Promise<UndoResult> {
   const notice = await ownNotice(userId, noticeId);
-  if (notice.kind !== "updated") {
+  const movedFrom = notice.kind === "created" ? movedFromOf(notice.after) : null;
+  if (notice.kind !== "updated" && !movedFrom) {
     throw new AppError("Only a change can be undone", 409, "SHARE_UNDO_UNAVAILABLE");
   }
   if (notice.undoneAt) {
     throw new AppError("This change was already undone", 409, "SHARE_UNDO_UNAVAILABLE");
   }
+  if (movedFrom) return undoMoveIn(userId, notice, movedFrom);
   const entity = entityOf(notice.entityType);
   const after = revivedRecord(factsOf(notice.after));
   const before = revivedRecord(factsOf(notice.before));
@@ -84,27 +92,89 @@ export async function undoNotice(userId: string, noticeId: string): Promise<Undo
     throw new AppError("This notice carries no values", 409, "SHARE_UNDO_UNAVAILABLE");
   }
 
-  return prisma.$transaction(async (tx) => {
-    const own = await ownCopy(tx, entity, notice, userId);
-    const changedSince = keys.filter((k) => !sameFact(own.facts[k], after[k]));
-    if (changedSince.length > 0) {
-      throw new AppError(
-        `Changed since this notice: ${changedSince.join(", ")}`,
-        409,
-        "SHARE_UNDO_STALE",
-        undefined,
-        { fields: changedSince.join(",") }
-      );
-    }
-    const snapshot = await shareSnapshot(tx, entity, own.id);
-    await ADAPTERS[entity].apply(tx, own, before, keys);
-    await tx.shareNotice.update({
-      where: { id: notice.id },
-      data: { undoneAt: new Date(), readAt: notice.readAt ?? new Date() },
-    });
-    await propagateWrite(tx, userId, entity, own.id, snapshot);
-    return { undone: true as const, entryId: own.id };
-  });
+  return prisma.$transaction(
+    async (tx) => {
+      const own = await ownCopy(tx, entity, notice, userId);
+      const changedSince = keys.filter((k) => !sameFact(own.facts[k], after[k]));
+      if (changedSince.length > 0) {
+        throw new AppError(
+          `Changed since this notice: ${changedSince.join(", ")}`,
+          409,
+          "SHARE_UNDO_STALE",
+          undefined,
+          { fields: changedSince.join(",") }
+        );
+      }
+      const snapshot = await shareSnapshot(tx, entity, own.id);
+      await ADAPTERS[entity].apply(tx, own, before, keys);
+      // Flights are the one type with provider suggestions (PendingFlightUpdate).
+      if (entity === "flight") await reopenSuperseded(tx, own.id, notice.id);
+      await tx.shareNotice.update({
+        where: { id: notice.id },
+        data: { undoneAt: new Date(), readAt: notice.readAt ?? new Date() },
+      });
+      await propagateWrite(tx, userId, entity, own.id, snapshot);
+      return { undone: true as const, entryId: own.id };
+    },
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
+}
+
+/** `after.movedFrom` of a `created` notice whose join moved the caller's own entry in. */
+const movedFromSchema = z.object({
+  movedFrom: z.object({ tripId: z.string(), tripName: z.string() }),
+});
+
+function movedFromOf(after: Prisma.JsonValue | null): { tripId: string } | null {
+  const parsed = movedFromSchema.safeParse(after);
+  return parsed.success ? parsed.data.movedFrom : null;
+}
+
+/**
+ * Undo a join that moved the caller's own entry in from another of their trips
+ * (owner decision 2026-10-16): it goes back to that trip, unkeyed.
+ *
+ * Silent towards the other members: the entry was only ever the caller's own,
+ * so they are not told it left (a moved-out notice would offer the sharer to
+ * delete their ORIGINAL). And it is not shared into a group the previous trip
+ * may belong to — sharing it there is the owner's explicit step.
+ */
+async function undoMoveIn(
+  userId: string,
+  notice: Awaited<ReturnType<typeof ownNotice>>,
+  movedFrom: { tripId: string }
+): Promise<UndoResult> {
+  const entity = entityOf(notice.entityType);
+  return prisma.$transaction(
+    async (tx) => {
+      const own = await ownCopy(tx, entity, notice, userId);
+      const back = await tx.trip.findFirst({
+        where: { id: movedFrom.tripId, userId },
+        select: { id: true },
+      });
+      if (!back) {
+        throw new AppError(
+          "The trip this entry came from no longer exists",
+          409,
+          "SHARE_UNDO_UNAVAILABLE"
+        );
+      }
+      // Deliberately NOT propagated (controller ruling 2026-10-16): no
+      // moved-out notice, no "delete yours too" offer on the sharer's
+      // original, and no auto-share into a group the previous trip belongs to.
+      await keyedDelegate(tx, entity).update({
+        where: { id: own.id },
+        data: { tripId: back.id, shareKey: null },
+      });
+      await tx.shareNotice.update({
+        where: { id: notice.id },
+        data: { undoneAt: new Date(), readAt: notice.readAt ?? new Date() },
+      });
+      await restatusTrips([own.tripId, back.id], tx);
+      return { undone: true as const, entryId: own.id };
+    },
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
 }
 
 /**
@@ -118,15 +188,18 @@ export async function deleteOwnCopy(userId: string, noticeId: string): Promise<{
     throw new AppError("Only after a delete", 409, "SHARE_UNDO_UNAVAILABLE");
   }
   const entity = entityOf(notice.entityType);
-  return prisma.$transaction(async (tx) => {
-    const own = await ownCopy(tx, entity, notice, userId);
-    const snapshot = await shareSnapshot(tx, entity, own.id);
-    await ADAPTERS[entity].remove(tx, own.id);
-    await tx.shareNotice.update({
-      where: { id: notice.id },
-      data: { readAt: notice.readAt ?? new Date() },
-    });
-    await propagateDelete(tx, userId, snapshot);
-    return { deleted: true as const };
-  });
+  return prisma.$transaction(
+    async (tx) => {
+      const own = await ownCopy(tx, entity, notice, userId);
+      const snapshot = await shareSnapshot(tx, entity, own.id);
+      await ADAPTERS[entity].remove(tx, own.id);
+      await tx.shareNotice.update({
+        where: { id: notice.id },
+        data: { readAt: notice.readAt ?? new Date() },
+      });
+      await propagateDelete(tx, userId, snapshot);
+      return { deleted: true as const };
+    },
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
 }

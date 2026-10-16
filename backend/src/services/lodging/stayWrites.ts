@@ -14,7 +14,7 @@
  * forgetting it is the AUD-038 hole.
  */
 
-import { propagateWrite, shareSnapshot } from "../sharing/propagate";
+import { propagateWrite, shareSnapshot, SHARE_TX_TIMEOUT_MS } from "../sharing/propagate";
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { Prisma } from "../../prisma";
@@ -28,8 +28,7 @@ import { assertReferencesOwned } from "../../utils/ownedReferences";
 import { resolveEffectiveStayDates } from "./stayPatchMerge";
 import { legacyDay, stayTimeColumns, zoneOfLodging } from "../timeModel/stayColumns";
 import type { LocalTimeOrigin } from "../../shared/time/instant";
-import { dayAnchorNow } from "../../shared/time/clock";
-import { profileZoneOf } from "../../shared/time/profileZone";
+import { dayAnchorNowFor } from "../../shared/time/profileZone";
 import { getBaseCurrency } from "../fx/snapshot";
 import { resolveDeadlineColumns } from "../deadlines/bookingDeadlines";
 import {
@@ -55,15 +54,6 @@ export interface StayProvenance {
   viaToken?: boolean;
 }
 
-/**
- * "Now" for a stay's status: the user's profile-zone wall clock against the
- * UTC-midnight day anchors, so a stay completes when check-out day begins
- * where the USER is, not in Greenwich (ADR 0002 D4).
- */
-async function stayStatusNow(userId: string): Promise<Date> {
-  return dayAnchorNow((await profileZoneOf(userId)).zone);
-}
-
 export async function createStayRecord(
   userId: string,
   lodgingId: string,
@@ -80,10 +70,16 @@ export async function createStayRecord(
     data,
     provenance
   );
-  const created = await prisma.lodgingStay.create({ data: { ...columns, lodgingId, userId } });
-  // On a shared trip: copied to the other members (design 2026-10-09).
-  await propagateWrite(prisma, userId, "lodgingStay", created.id);
-  return created;
+  // One transaction: on a shared trip the copies are created with the stay or
+  // not at all (design 2026-10-09, D8 of 2026-10-16).
+  return prisma.$transaction(
+    async (tx) => {
+      const created = await tx.lodgingStay.create({ data: { ...columns, lodgingId, userId } });
+      await propagateWrite(tx, userId, "lodgingStay", created.id);
+      return created;
+    },
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
 }
 
 /** A new stay's columns, without its lodging and owner. */
@@ -164,7 +160,7 @@ export async function buildStayCreateData(
       checkIn: input.checkIn ? new Date(input.checkIn) : null,
       checkOut: input.checkOut ? new Date(input.checkOut) : null,
       current: input.status,
-      now: await stayStatusNow(userId),
+      now: await dayAnchorNowFor(userId),
     }),
     // Likewise derived, not accepted: the overall score follows the three
     // components wherever a stay is written — form, CSV, e-mail/PDF — so
@@ -356,41 +352,49 @@ export async function updateStayRecord(
     { userId, placeZone: () => lodgingZone, viaToken }
   );
 
-  const before = await shareSnapshot(prisma, "lodgingStay", stay.id);
-  const updated = await prisma.lodgingStay.update({
-    where: { id: stay.id },
-    data: {
-      ...input,
-      ...timeClears,
-      ...timeColumns,
-      ...deadlineColumns,
-      // totalPrice is authoritative and derived above from the merged view,
-      // so it overrides whatever `...input` carried (which may be a stale
-      // re-send or absent while only the per-night price changed).
-      totalPrice: effectiveTotalPrice,
-      ...fxFields,
-      // Derived from the EFFECTIVE (merged) dates, not from `input`, so a
-      // PATCH that moves only one date still re-derives against the range
-      // that will actually be stored. `current` is likewise the effective
-      // status — a body omitting `status` must not lose an existing
-      // cancellation, which is the one value derivation passes through.
-      status: deriveLodgingStatus({
-        checkIn: effectiveCheckIn,
-        checkOut: effectiveCheckOut,
-        current: input.status ?? stay.status,
-        now: await stayStatusNow(userId),
-      }),
-      // Derived from the EFFECTIVE (merged) ratings for the same reason: a
-      // PATCH sending one component must score the row that will actually
-      // be stored, not the partial body.
-      ratingOverall: deriveStayOverallRating({
-        room: effectiveRating(input.ratingRoom, stay.ratingRoom),
-        breakfast: effectiveRating(input.ratingBreakfast, stay.ratingBreakfast),
-        service: effectiveRating(input.ratingService, stay.ratingService),
-        current: effectiveRating(input.ratingOverall, stay.ratingOverall),
-      }),
+  // Awaited above the transaction: it holds no network or settings read.
+  const statusNow = await dayAnchorNowFor(userId);
+  // One transaction: a shared stay's copies follow the edit or it does not happen.
+  return prisma.$transaction(
+    async (tx) => {
+      const before = await shareSnapshot(tx, "lodgingStay", stay.id);
+      const updated = await tx.lodgingStay.update({
+        where: { id: stay.id },
+        data: {
+          ...input,
+          ...timeClears,
+          ...timeColumns,
+          ...deadlineColumns,
+          // totalPrice is authoritative and derived above from the merged view,
+          // so it overrides whatever `...input` carried (which may be a stale
+          // re-send or absent while only the per-night price changed).
+          totalPrice: effectiveTotalPrice,
+          ...fxFields,
+          // Derived from the EFFECTIVE (merged) dates, not from `input`, so a
+          // PATCH that moves only one date still re-derives against the range
+          // that will actually be stored. `current` is likewise the effective
+          // status — a body omitting `status` must not lose an existing
+          // cancellation, which is the one value derivation passes through.
+          status: deriveLodgingStatus({
+            checkIn: effectiveCheckIn,
+            checkOut: effectiveCheckOut,
+            current: input.status ?? stay.status,
+            now: statusNow,
+          }),
+          // Derived from the EFFECTIVE (merged) ratings for the same reason: a
+          // PATCH sending one component must score the row that will actually
+          // be stored, not the partial body.
+          ratingOverall: deriveStayOverallRating({
+            room: effectiveRating(input.ratingRoom, stay.ratingRoom),
+            breakfast: effectiveRating(input.ratingBreakfast, stay.ratingBreakfast),
+            service: effectiveRating(input.ratingService, stay.ratingService),
+            current: effectiveRating(input.ratingOverall, stay.ratingOverall),
+          }),
+        },
+      });
+      await propagateWrite(tx, userId, "lodgingStay", stay.id, before);
+      return updated;
     },
-  });
-  await propagateWrite(prisma, userId, "lodgingStay", stay.id, before);
-  return updated;
+    { timeout: SHARE_TX_TIMEOUT_MS }
+  );
 }

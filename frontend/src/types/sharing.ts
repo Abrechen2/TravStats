@@ -40,14 +40,6 @@ export interface LinkableCompanionList {
   linkableUsers: SharePerson[];
 }
 
-export interface ShareCandidate {
-  companionId: string;
-  name: string;
-  user: SharePerson;
-  consenting: boolean;
-  shared: boolean;
-}
-
 /** Another member's booking total for their trip of the group, read-only (decision 2). */
 export interface MemberBookingTotal {
   member: SharePerson;
@@ -55,10 +47,39 @@ export interface MemberBookingTotal {
   totals: { currency: string; amount: number }[];
 }
 
+/**
+ * The ONE reason sharing a trip with a person is not possible yet. The
+ * server decides it (`accountInactive` is added by the controller's person
+ * list), so the page never draws an action the server would refuse.
+ */
+export type ShareBlock =
+  | "notLinked"
+  | "consentMissing"
+  | "consentPending"
+  | "groupConsentMissing"
+  | "alreadyMember"
+  | "accountInactive";
+
+/** One person of a trip: a companion, or a group member who is none. */
+export interface TripPerson {
+  /** "c:<companionId>" for a companion, "u:<userId>" for a member who is none. */
+  key: string;
+  companionId: string | null;
+  name: string;
+  account: SharePerson | null;
+  /** The caller's request to `account`; "none" when there is no row. */
+  consent: "none" | ConsentStatus;
+  member: boolean;
+  /** Members only: an accepted consent in either direction lets changes through. */
+  receivesChanges: boolean | null;
+  shareBlockedBy: ShareBlock | null;
+}
+
 export interface TripSharing {
   groupId: string | null;
-  members: SharePerson[];
-  candidates: ShareCandidate[];
+  people: TripPerson[];
+  /** Accounts that accepted the caller's consent request. */
+  linkableUsers: SharePerson[];
   bookingTotals: MemberBookingTotal[];
 }
 
@@ -68,6 +89,7 @@ export interface ShareCounts {
   cruises: number;
   railJourneys: number;
   busJourneys: number;
+  ferryJourneys: number;
   rentals: number;
   stops: number;
 }
@@ -82,7 +104,7 @@ export type ShareNoticeKind = "shared" | "created" | "updated" | "deleted" | "le
 
 /** The entry types a notice may name (S2); `trip` for shared/left. */
 export type ShareEntityType =
-  "trip" | "flight" | "lodgingStay" | "cruise" | "rail" | "bus" | "rental" | "stop";
+  "trip" | "flight" | "lodgingStay" | "cruise" | "rail" | "bus" | "ferry" | "rental" | "stop";
 
 /**
  * One side of a changed fact, already in the API's time shapes (ADR 0002 D3):
@@ -116,6 +138,12 @@ export interface ShareNoticeAfter {
   entryId?: string;
   /** `deleted`: removed, or moved out of the shared trip. */
   reason?: "deleted" | "movedOut";
+  /** `created`: the reader's own entry was linked instead of a copy being made. */
+  joined?: boolean;
+  /** `created`, joined: the reader's own entry was moved here from this trip of theirs. */
+  movedFrom?: { tripId: string; tripName: string };
+  /** `created`, moved: "share" when sharing the trip moved it, absent for a later addition. */
+  via?: "share";
 }
 
 export interface ShareNotice {

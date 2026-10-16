@@ -52,6 +52,7 @@ router.get(
       }
       const result = await lookupVessel(mmsi, userId);
       if (result.status === "ok" && own.vesselMmsi === null) {
+        // share-exempt: binds the vessel MMSI for the live position — private
         await prisma.ferryJourney.updateMany({
           where: { id: own.id, userId, vesselMmsi: null },
           data: { vesselMmsi: mmsi },

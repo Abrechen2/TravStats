@@ -65,6 +65,7 @@ router.post("/:id/roadtrip", async (req: AuthRequest, res: Response, next: NextF
     const { routeId } = parsed.data;
 
     if (routeId === null) {
+      // share-exempt: roadtrip link — private (no roadtrip is shared)
       const row = await prisma.rentalBooking.update({
         where: { id: rental.id },
         data: { routeId: null },
@@ -84,6 +85,7 @@ router.post("/:id/roadtrip", async (req: AuthRequest, res: Response, next: NextF
     // An empty vehicle name takes the booked group; a name the user wrote stays.
     const name = rental.vehicleClass ?? rental.vehicleExample;
     const [row] = await prisma.$transaction([
+      // share-exempt: roadtrip link — private (no roadtrip is shared)
       prisma.rentalBooking.update({
         where: { id: rental.id },
         data: { routeId },

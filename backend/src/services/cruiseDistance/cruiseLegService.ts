@@ -91,6 +91,7 @@ export async function recomputeLegsForCruise(
     cruise?.arrivalPort ? toPortPoint(cruise.arrivalPort) : null
   );
 
+  // share-exempt: legs recomputed inside the cruise writes, which propagate after it
   await client.cruiseLeg.deleteMany({ where: { cruiseId } });
 
   if (sequence.length < 2) return 0;
@@ -166,6 +167,7 @@ export async function recomputeLegsForCruise(
   }
 
   if (rows.length > 0) {
+    // share-exempt: legs recomputed inside the cruise writes, which propagate after it
     await client.cruiseLeg.createMany({ data: rows });
   }
 

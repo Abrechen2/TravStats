@@ -29,6 +29,8 @@
     "seed:airports:csv": "node dist/seedAirportsFromCSV.js",
     "backfill:closed-airports": "node dist/scripts/backfillClosedAirports.js",
     "backfill:route-distance": "node dist/scripts/backfillRouteDistance.js",
+    "sharing:report-consent": "node dist/scripts/reportShareGroupConsent.js",
+    "sharing:backfill-ferries": "node dist/scripts/backfillSharedFerries.js",
     "seed:demo": "node dist/seedDemoAccount.js",
     "seed:dev-admin": "tsx src/seedDevAdmin.ts",
     "seed:roadtrip-demo": "tsx src/seedRoadtripDemoCli.ts",

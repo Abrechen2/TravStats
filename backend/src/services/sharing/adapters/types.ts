@@ -2,20 +2,9 @@ import type { DbTransaction } from "../../../db";
 import { Prisma } from "../../../prisma";
 import type { FactRecord } from "../factValues";
 
-/**
- * The seven shareable entry types (design 2026-10-09). The names are the
- * `ShareNotice.entityType` vocabulary the inbox reads.
- */
-export const SHARE_ENTITIES = [
-  "flight",
-  "lodgingStay",
-  "cruise",
-  "rail",
-  "bus",
-  "rental",
-  "stop",
-] as const;
-export type ShareEntity = (typeof SHARE_ENTITIES)[number];
+import type { ShareEntity } from "../shareTypes";
+
+export { SHARE_ENTITIES, type ShareEntity } from "../shareTypes";
 
 /**
  * One entry as propagation sees it: who owns it, where it is filed, its key,
@@ -79,6 +68,18 @@ export interface EntityAdapter {
     previous?: FactRecord
   ): Promise<void>;
   remove(c: DbTransaction, id: string): Promise<void>;
+  /**
+   * The recipient's own unkeyed rows that ARE this entry — a flight the
+   * companion logged themselves — in the adapter's order, possibly none.
+   * `copyInto` joins the first one it may take instead of copying, so no
+   * statistic counts the journey twice. All of them, not the first: one filed
+   * in another share group must not block a valid one. Absent: never joins.
+   */
+  ownMatches?(
+    c: DbTransaction,
+    source: SharedRow,
+    recipientId: string
+  ): Promise<{ id: string; tripId: string | null }[]>;
 }
 
 /**

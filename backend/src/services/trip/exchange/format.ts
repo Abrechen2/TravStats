@@ -24,17 +24,22 @@ import { isValidZone } from "../../../shared/time/zonedParts";
 
 export const TRIP_FILE_FORMAT = "travstats-trip";
 /**
- * What this build WRITES. Version 1 had no bus rides; a file that carries any
- * is stamped 2 (`tripFileVersionFor`), so an importer that predates the `bus`
- * key refuses it by name ("format version 2 is not supported", 422) instead
- * of by a schema error — and a trip without bus rides is still a version-1
- * file every older importer reads.
+ * What this build WRITES. Version 1 had no bus rides, version 2 no ferry
+ * crossings; a file is stamped with the lowest version that can carry it
+ * (`tripFileVersionFor`), so an importer that predates a key refuses the file
+ * by name ("format version 3 is not supported", 422) instead of importing the
+ * trip without those journeys — and a trip without them stays readable by
+ * every older importer.
  */
-export const TRIP_FILE_VERSION = 2;
-/** What this build READS: version 1 (no `bus` key) and 2. */
-export const TRIP_FILE_SUPPORTED_VERSIONS = [1, 2] as const;
+export const TRIP_FILE_VERSION = 3;
+/** What this build READS: 1 (no `bus`, no `ferry`), 2 (no `ferry`) and 3. */
+export const TRIP_FILE_SUPPORTED_VERSIONS = [1, 2, 3] as const;
 
-export function tripFileVersionFor(file: { bus?: readonly unknown[] }): 1 | 2 {
+export function tripFileVersionFor(file: {
+  bus?: readonly unknown[];
+  ferry?: readonly unknown[];
+}): 1 | 2 | 3 {
+  if ((file.ferry?.length ?? 0) > 0) return 3;
   return (file.bus?.length ?? 0) > 0 ? 2 : 1;
 }
 export const TRIP_FILE_EXTENSION = ".travstats";
@@ -91,7 +96,7 @@ export const manifestHeadSchema = z.object({
 
 export const manifestSchema = manifestHeadSchema
   .extend({
-    formatVersion: z.union([z.literal(1), z.literal(2)]),
+    formatVersion: z.union([z.literal(1), z.literal(2), z.literal(3)]),
     appVersion: str(200),
     exportedAt: z.iso.datetime({ offset: true }),
     options: exportOptionsSchema,
@@ -395,6 +400,46 @@ const busSchema = z
   })
   .strict();
 
+/** Cabin, seat, own price and both references travel only in a private file; the vehicle never. */
+const ferryPrivate = z
+  .object({
+    fareClass: optStr(200),
+    seat: optStr(200),
+    cabinType: optStr(200),
+    bookingReference: optStr(200),
+    ticketReference: optStr(200),
+    price: money,
+    currency,
+    notes: optStr(10_000),
+    companions: names,
+  })
+  .strict();
+
+/**
+ * A crossing on bus's rule. The vehicle on board, the vessel's AIS binding
+ * (`vesselMmsi`) and the roadtrip leg it is linked to are not in the schema at
+ * all — the same fields `FERRY_FACT_FIELDS` keeps out of a shared copy.
+ */
+const ferrySchema = z
+  .object({
+    key,
+    bookingKey: key.nullable(),
+    externalRef: optStr(200),
+    operator: optStr(200),
+    vesselName: optStr(200),
+    dep: busEnd,
+    arr: busEnd,
+    departureTime: z.iso.datetime({ offset: true }),
+    arrivalTime: instant,
+    depPrecision: optStr(200),
+    arrPrecision: optStr(200),
+    distanceKm: z.number().min(0).max(50_000).nullable(),
+    distanceSource: optStr(200),
+    status: str(200),
+    private: ferryPrivate.optional(),
+  })
+  .strict();
+
 const rentalEnd = z
   .object({
     stationName: str(200).min(1),
@@ -528,6 +573,7 @@ export const ENTITY_KINDS = [
   "cruise",
   "rail",
   "bus",
+  "ferry",
   "rental",
   "visit",
 ] as const;
@@ -565,6 +611,8 @@ export const tripFileSchema = z
     rail: z.array(railSchema).max(300),
     /** Absent in a version-1 file (written before bus rides were in the contract). */
     bus: z.array(busSchema).max(300).default([]),
+    /** Absent before version 3. */
+    ferry: z.array(ferrySchema).max(300).default([]),
     rentals: z.array(rentalSchema).max(50),
     places: z.array(placeSchema).max(1000),
     visits: z.array(visitSchema).max(2000),
@@ -589,6 +637,7 @@ export const tripFileSchema = z
       cruise: keysOf(file.cruises),
       rail: keysOf(file.rail),
       bus: keysOf(file.bus),
+      ferry: keysOf(file.ferry),
       rental: keysOf(file.rentals),
       visit: keysOf(file.visits),
     };
@@ -603,6 +652,7 @@ export const tripFileSchema = z
       [file.cruises, "cruises"],
       [file.rail, "rail"],
       [file.bus, "bus"],
+      [file.ferry, "ferry"],
     ] as const) {
       list.forEach((e, i) => dangling([name, i, "bookingKey"], e.bookingKey, bookings));
     }
@@ -625,6 +675,7 @@ export type TripFileStay = TripFile["stays"][number];
 export type TripFileCruise = TripFile["cruises"][number];
 export type TripFileRail = TripFile["rail"][number];
 export type TripFileBus = TripFile["bus"][number];
+export type TripFileFerry = TripFile["ferry"][number];
 export type TripFileRental = TripFile["rentals"][number];
 export type TripFilePlace = TripFile["places"][number];
 export type TripFileVisit = TripFile["visits"][number];

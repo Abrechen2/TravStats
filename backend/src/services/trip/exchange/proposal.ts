@@ -25,6 +25,7 @@ import {
   dayAt,
   existingPlace,
   existingBus,
+  existingFerry,
   existingRail,
   existingRental,
   existingStop,
@@ -63,6 +64,7 @@ export function fileSpan(file: TripFile): { first: string; last: string } | null
     ]),
     ...file.rail.map((r) => dayAt(r.departureTime, r.dep.timezone)),
     ...file.bus.map((r) => dayAt(r.departureTime, r.dep.timezone)),
+    ...file.ferry.map((r) => dayAt(r.departureTime, r.dep.timezone)),
     ...file.rentals.flatMap((r) => [
       dayAt(r.pickupTime, r.pickup.timezone),
       dayAt(r.returnTime, r.return.timezone),
@@ -238,6 +240,23 @@ async function proposeEntries(
       ...decide(existing, tripId, r.bookingKey !== null),
       label:
         `${[r.operator, r.lineName].filter(Boolean).join(" ")} ${r.dep.name}–${r.arr.name}`.trim(),
+      day,
+    });
+  }
+  for (const r of file.ferry) {
+    const day = dayAt(r.departureTime, r.dep.timezone)!;
+    const existing = await existingFerry(userId, {
+      externalRef: r.externalRef,
+      operator: r.operator,
+      depName: r.dep.name,
+      arrName: r.arr.name,
+      day,
+    });
+    entries.push({
+      key: r.key,
+      kind: "ferry",
+      ...decide(existing, tripId, r.bookingKey !== null),
+      label: `${r.operator ?? ""} ${r.dep.name}–${r.arr.name}`.trim(),
       day,
     });
   }

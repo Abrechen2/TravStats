@@ -12,12 +12,10 @@ import { formatCurrency } from "../../lib/units";
 import { statusPillStyle } from "../table/statusPillStyle";
 import { Icon, type IconName } from "../ui/Icon";
 import DetailSection from "../ui/DetailSection";
-import PeopleList from "../ui/PeopleList";
 import TripSummaryPanel from "./TripSummaryPanel";
 import { useTripRoadtrips } from "../Roadtrips/useTripRoadtrips";
 import DocumentsSection from "../documents/DocumentsSection";
-import TripSharingPanel from "../sharing/TripSharingPanel";
-import ShareLinkButton from "../shareLinks/ShareLinkButton";
+import TripPeopleSection from "../sharing/TripPeopleSection";
 import { useDomainVisible } from "../../hooks/useDomainVisible";
 
 type T = ReturnType<typeof useTranslation>["t"];
@@ -443,20 +441,14 @@ export default function TripOverview({
 
         {hasSide && (
           <div className="flex min-w-0 flex-col gap-6">
-            {trip.companions.length > 0 && (
-              <DetailSection title={t("trips:detail.companions")}>
-                <PeopleList names={trip.companions} />
-              </DetailSection>
-            )}
-            {/* Shared trips (design 2026-10-09). Not for the shared demo
-                account, which is every visitor at once. */}
-            {!isSharedDemo && <TripSharingPanel tripId={trip.id} onChanged={onChanged} />}
-            {/* A public, expiring link — the share card (forgejo#281). */}
-            {!isSharedDemo && (
-              <div>
-                <ShareLinkButton kind="trip" targetId={trip.id} />
-              </div>
-            )}
+            {/* "Reisende": the trip's people and its sharing in one place
+                (spec 2026-10-16, D9). It hides itself when there is nobody,
+                and stays a plain name list for the shared demo account. */}
+            <TripPeopleSection
+              tripId={trip.id}
+              companionNames={trip.companions}
+              onChanged={onChanged}
+            />
             <TripSummaryPanel trip={trip} t={t} language={language} onChanged={onChanged} />
             {trip.tags.length > 0 && (
               <DetailSection title={t("trips:detail.tags")}>

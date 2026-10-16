@@ -209,6 +209,7 @@ export async function applyConfirmation(
   if (Object.keys(update).length === 0) {
     // Nothing to write but, perhaps, a newer mark — a repeat import rewrites nothing.
     const markMoved = lastMailSentAt?.getTime() !== existing.lastMailSentAt?.getTime();
+    // share-exempt: last-mail mark only; real updates go through rentalRowWrite.ts
     const row = markMoved
       ? await prisma.rentalBooking.update({
           where: { id: existing.id },

@@ -20,9 +20,12 @@ const mockToursVisible = vi.hoisted(() => vi.fn(() => true));
 // read the sharing API on mount; answered empty so no request escapes.
 vi.mock("@/lib/api/sharing", () => ({
   sharingApi: {
-    tripSharing: vi
-      .fn()
-      .mockResolvedValue({ groupId: null, members: [], candidates: [], bookingTotals: [] }),
+    tripSharing: vi.fn().mockResolvedValue({
+      groupId: null,
+      people: [],
+      linkableUsers: [],
+      bookingTotals: [],
+    }),
     listConsents: vi.fn().mockResolvedValue({ incoming: [], outgoing: [] }),
     listCompanions: vi.fn().mockResolvedValue({ companions: [], linkableUsers: [] }),
     listNotices: vi.fn().mockResolvedValue([]),

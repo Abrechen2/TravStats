@@ -2,49 +2,55 @@ import { describe, expect, it } from "@jest/globals";
 import { readdirSync, readFileSync, statSync } from "fs";
 import { join, relative } from "path";
 
+import { SHARE_ENTITIES, SHARE_TYPES } from "../shareTypes";
+
 /**
- * Every write path of the shareable types propagates — or says why not.
+ * Every WRITE to a shareable table propagates — or says why not, at the call
+ * (spec 2026-10-16, D5). The file-level guard this replaces passed a file with
+ * eight writes and one propagate call; it proved "this file mentions
+ * propagation", not "this write propagates".
  *
- * Propagation is called explicitly (design 2026-10-09, "Propagation"), so a
- * new write path that forgets it would silently stop a shared trip's copies
- * from following. This scan finds every source file that writes a flight,
- * stay, house, cruise (or its calls and legs), rail or bus ride, rental or trip
- * stop, and requires each to either call propagation or stand in EXEMPT
- * below with the reason. Both directions fail: an unlisted writer, and a
- * listed file that no longer writes or now propagates (a stale reason is a
- * wrong reason).
+ * A write is covered when
+ *   (a) a propagation call follows it inside the same top-level declaration
+ *       (from one column-0 declaration to the next), or
+ *   (b) `// share-exempt: <reason>` stands on one of the two lines above it, or
+ *   (c) its file is in FILE_EXEMPT — files whose every write shares one reason.
+ * A `share-exempt` comment with no write in the two lines below it is stale and
+ * fails, as is a FILE_EXEMPT entry that no longer writes or now propagates.
+ *
+ * This is a source scanner and it will age (memory: "Quelltext-scannende
+ * Waechter altern"): `sharing.lowRatioPaths.test.ts` proves the paths it once
+ * found weakest by running them.
  */
-
 const SRC = join(__dirname, "../../..");
-const WRITE =
-  /\.(flight|lodgingStay|lodging|cruise|cruiseStop|cruiseLeg|railJourney|busJourney|rentalBooking|tripStop)\s*\.(create|createMany|createManyAndReturn|update|updateMany|upsert|delete|deleteMany)\(/;
+const TABLES = [
+  ...SHARE_ENTITIES.map((e) => SHARE_TYPES[e].delegate),
+  "lodging",
+  "cruiseStop",
+  "cruiseLeg",
+];
+const WRITE = new RegExp(
+  `\\.(${TABLES.join("|")})\\s*\\.(create|createMany|createManyAndReturn|update|updateMany|upsert|delete|deleteMany)\\(`,
+  "g"
+);
 const PROPAGATES = /\b(propagateWrites?|propagateDeletes?|detachTrip|propagateBulk)\(/;
+const MARK = /\/\/ share-exempt: \S/;
+const DECLARATION = /^(export |async |function |const |let |router\.|class )/;
 
-const EXEMPT: Record<string, string> = {
-  // Propagation itself: its writes are the copies, guarded against recursion.
+// keyOps.ts and copyInto.ts write through generic delegates (`delegate.update`,
+// `keyedDelegate(...)`), which WRITE does not match — listing them here would
+// be a stale entry (preflight P7).
+const FILE_EXEMPT: Record<string, string> = {
   "services/sharing/adapters/flat.ts": "propagation writes (the copies)",
   "services/sharing/adapters/bus.ts": "propagation writes (the copies)",
+  "services/sharing/adapters/ferry.ts": "propagation writes (the copies)",
   "services/sharing/adapters/lodgingStay.ts": "propagation writes (the copies)",
   "services/sharing/adapters/cruise.ts": "propagation writes (the copies)",
   "services/sharing/adapters/stop.ts": "propagation writes (the copies)",
-  "services/sharing/copyEntries.ts": "S1 share copy; keys and copies, no member change",
-  "services/places/placeMerge.ts":
-    "re-points the owner's own stations from a duplicate place to the kept one; the copies point at their own places, whose facts do not change",
-  // Private columns only.
-  "routes/uploads.ts": "clears a receipt URL — private",
-  "services/documents/documentService.ts": "clears a receipt URL — private",
-  "services/documents/receipts.ts": "receipt links — private",
-  "services/xlsxImport/companionLinks.ts": "companions — private",
-  "services/rail/railConnection.ts": "booking link — private",
-  "routes/rental/links.ts": "roadtrip link — private (no roadtrip is shared)",
-  "services/rental/rentalImport.ts":
-    "last-mail mark only; its real updates go through rentalRowWrite.ts, which propagates",
-  // Every account's rows alike: each copy is maintained on its own.
+  "services/sharing/deriveCopy.ts": "a copy's derived status, written by propagation",
   "index.ts": "boot-time aircraft-name normalisation, applied to every account",
   "services/statusSweep.ts": "status sweep, runs over every account's rows",
   "services/flightAutoUpdate.ts": "provider tracking job, per account",
-  "services/flights/flightReimport.ts":
-    "fills only onlineCheckInOpensAt/Zone — booking terms, not a shared fact (sharing/facts/flight.ts)",
   "services/flightLandedStatus.ts": "provider tracking job, per account",
   "services/finalArrivalLookup.ts": "provider lookup job, per account",
   "services/bulkFlightRefresh.ts": "provider refresh, per account",
@@ -58,26 +64,16 @@ const EXEMPT: Record<string, string> = {
   "services/timeMigration/tripStops.ts": "ADR 0002 migration, every account alike",
   "services/timeMigration/dayColumns.ts": "ADR 0002 migration, every account alike",
   "services/timeMigration/reResolve.ts": "ADR 0002 migration, every account alike",
-  "services/cruiseDistance/cruiseLegService.ts":
-    "legs recomputed inside the cruise writes, which propagate after it",
-  // Never on a shared trip.
-  "services/tripDetectionService.ts": "files unfiled flights into a trip it just created",
-  "services/lodging/createLodging.ts": "a new house has no stay yet",
-  // Roadtrip stations and tour points: not shared (S1 copies no roadtrip).
-  "routes/trips/tourRoutes.ts": "route membership of stops — not a fact",
-  "services/roadtrip/companionStations.ts": "roadtrip stations — not shared",
-  "services/roadtrip/replaceStations.ts": "roadtrip stations — not shared",
-  "services/tour/replaceTourPoints.ts": "tour points — not shared",
-  "services/tour/legRecompute.ts":
-    "stop update helper; routes/trips/tripStops.ts propagates around it",
-  // The spreadsheet import: propagated once per run (sharing/bulkSync.ts).
   "services/xlsxImport/flights.ts": "xlsx run, propagated by importSheets.ts",
   "services/xlsxImport/rail.ts": "xlsx run, propagated by importSheets.ts",
   "services/xlsxImport/bus.ts": "xlsx run, propagated by importSheets.ts",
+  "services/xlsxImport/ferry.ts": "xlsx run, propagated by importSheets.ts",
   "services/xlsxImport/cruises.ts": "xlsx run, propagated by importSheets.ts",
   "services/xlsxImport/lodging.ts": "xlsx run, propagated by importSheets.ts",
   "services/xlsxImport/prune.ts": "xlsx run, propagated by importSheets.ts",
   "services/xlsxImport/routeLists.ts": "xlsx run, propagated by importSheets.ts",
+  "services/xlsxImport/companionLinks.ts": "companions — private",
+  "services/tour/replaceTourPoints.ts": "tour points — not shared",
 };
 
 function sources(dir: string): string[] {
@@ -91,29 +87,65 @@ function sources(dir: string): string[] {
   });
 }
 
-describe("sharing — every write path of a shareable type propagates", () => {
+interface Write {
+  rel: string;
+  line: number;
+}
+
+function uncovered(rel: string, text: string): Write[] {
+  const lines = text.split("\n");
+  const starts = lines.flatMap((l, i) => (DECLARATION.test(l) ? [i] : []));
+  const blockEnd = (line: number) => starts.find((s) => s > line) ?? lines.length;
+  const out: Write[] = [];
+  for (const match of text.matchAll(WRITE)) {
+    const line = text.slice(0, match.index).split("\n").length - 1;
+    const marked = [line - 1, line - 2].some((i) => i >= 0 && MARK.test(lines[i]));
+    const after = lines.slice(line, blockEnd(line)).join("\n");
+    if (!marked && !PROPAGATES.test(after.slice(after.indexOf(match[0]) + match[0].length))) {
+      out.push({ rel, line: line + 1 });
+    }
+  }
+  return out;
+}
+
+function staleMarks(rel: string, text: string): Write[] {
+  const lines = text.split("\n");
+  return lines.flatMap((l, i) => {
+    if (!MARK.test(l)) return [];
+    const below = lines.slice(i + 1, i + 3).join("\n");
+    return new RegExp(WRITE.source).test(below) ? [] : [{ rel, line: i + 1 }];
+  });
+}
+
+describe("sharing — every write to a shareable table propagates, per call", () => {
   const files = sources(SRC).map((path) => ({
     rel: relative(SRC, path).split("\\").join("/"),
     text: readFileSync(path, "utf8"),
   }));
-  const writers = files.filter((f) => WRITE.test(f.text));
+  const writes = (text: string) => new RegExp(WRITE.source).test(text);
 
   it("finds the writers at all", () => {
-    expect(writers.length).toBeGreaterThan(30);
+    expect(files.filter((f) => writes(f.text)).length).toBeGreaterThan(30);
   });
 
-  it("each writer propagates or is exempt with a reason", () => {
-    const missing = writers
-      .filter((f) => !PROPAGATES.test(f.text) && !(f.rel in EXEMPT))
-      .map((f) => f.rel);
+  it("each write propagates or carries its reason", () => {
+    const missing = files
+      .filter((f) => !(f.rel in FILE_EXEMPT))
+      .flatMap((f) => uncovered(f.rel, f.text))
+      .map((w) => `${w.rel}:${w.line}`);
     expect(missing).toEqual([]);
   });
 
-  it("no exemption is stale", () => {
+  it("no share-exempt comment is stale", () => {
+    const stale = files.flatMap((f) => staleMarks(f.rel, f.text)).map((w) => `${w.rel}:${w.line}`);
+    expect(stale).toEqual([]);
+  });
+
+  it("no file exemption is stale", () => {
     const byRel = new Map(files.map((f) => [f.rel, f.text]));
-    const stale = Object.keys(EXEMPT).filter((rel) => {
+    const stale = Object.keys(FILE_EXEMPT).filter((rel) => {
       const text = byRel.get(rel);
-      return !text || !WRITE.test(text) || PROPAGATES.test(text);
+      return !text || !writes(text) || PROPAGATES.test(text);
     });
     expect(stale).toEqual([]);
   });

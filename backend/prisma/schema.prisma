@@ -1382,7 +1382,7 @@ model PendingFlightUpdate {
   id               String    @id @default(uuid())
   flightId         String    @map("flight_id")
   userId           String    @map("user_id")
-  status           String    @default("pending") // "pending" | "applied" | "rejected" | "expired" | "edited"
+  status           String    @default("pending") // "pending" | "applied" | "rejected" | "expired" | "edited" | "superseded" (a shared trip's propagated change brought every proposed field — services/sharing/pendingSupersede.ts)
   originalData     Json      @map("original_data")
   proposedData     Json      @map("proposed_data")
   editedData       Json?     @map("edited_data")
@@ -4443,7 +4443,7 @@ model ShareConsent {
   id          String    @id @default(uuid())
   requesterId String    @map("requester_id")
   targetId    String    @map("target_id")
-  /// pending | accepted | declined | withdrawn
+  /// pending | accepted | declined | withdrawn — CHECK share_consents_status_check, schemas/sharing.ts
   status      String    @default("pending")
   createdAt   DateTime  @default(now()) @map("created_at")
   decidedAt   DateTime? @map("decided_at")
@@ -4482,9 +4482,9 @@ model ShareNotice {
   userId     String    @map("user_id")
   groupId    String?   @map("group_id")
   actorId    String?   @map("actor_id")
-  /// shared | created | updated | deleted | left
+  /// shared | created | updated | deleted | left — CHECK share_notices_kind_check, schemas/sharing.ts
   kind       String
-  /// trip | flight | lodgingStay | cruise | rail | rental | stop
+  /// trip | flight | lodgingStay | cruise | rail | bus | ferry | rental | stop — services/sharing/shareTypes.ts; CHECK share_notices_entity_type_check
   entityType String?   @map("entity_type")
   /// The entry's shareKey; for `trip` the RECIPIENT's own trip id.
   entityKey  String?   @map("entity_key")

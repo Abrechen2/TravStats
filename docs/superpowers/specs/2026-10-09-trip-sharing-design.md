@@ -257,3 +257,12 @@ change reads the stamp first and refuses version 2 BY NAME (`TRIP_FILE_VERSION_U
 422, "format version 2 is not supported") — never as a schema error, and never by importing the
 trip minus its rides. This build reads 1 and 2; a version-1 file has no `bus` key and imports
 as before.
+
+## Rework (2026-10-16)
+
+The per-type lists of this design (seven entry types, one `copyX` each, detach,
+bulk sync) are now one registry, `services/sharing/shareTypes.ts`, and ferry
+crossings are the eighth shareable type. Copy path, derivation, the per-call
+write-path guard, the vocabulary CHECKs, the superseded pending update and the
+trip page's single "Reisende" section are described in
+`2026-10-16-trip-sharing-rework-design.md`. Decisions 1–7 above stand unchanged.

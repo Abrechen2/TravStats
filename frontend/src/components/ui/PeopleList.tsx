@@ -1,4 +1,4 @@
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 
 const initials = (name: string): string =>
   name
@@ -8,16 +8,35 @@ const initials = (name: string): string =>
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
 
+/** One person: a name, and on the trip page what is true about them and what can be done. */
+export interface PersonRow {
+  key: string;
+  name: string;
+  /** A line under the name — "@username". */
+  meta?: ReactNode;
+  /** Pills: facts about the person, never actions. */
+  badges?: ReactNode;
+  /** At most one action, at the end of the row. */
+  action?: ReactNode;
+}
+
+type PeopleListProps = { names: readonly string[] } | { rows: readonly PersonRow[] };
+
 /**
  * Companions on a detail page: one row per person with an initials mark, as
  * round 4 draws the "Mitreisende" section. A comma list ran the names into
- * one wrapped line the eye had to split again.
+ * one wrapped line the eye had to split again. The trip page passes rows with
+ * the sharing state (spec 2026-10-16, D9); every other page passes names.
  */
-export default function PeopleList({ names }: { names: readonly string[] }): JSX.Element {
+export default function PeopleList(props: PeopleListProps): JSX.Element {
+  const rows: readonly PersonRow[] =
+    "rows" in props
+      ? props.rows
+      : props.names.map((name, index) => ({ key: `${index}:${name}`, name }));
   return (
     <ul className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
-      {names.map((name) => (
-        <li key={name} className="flex items-center" style={{ gap: "var(--ts-space-md)" }}>
+      {rows.map((row) => (
+        <li key={row.key} className="flex items-center" style={{ gap: "var(--ts-space-md)" }}>
           <span
             aria-hidden="true"
             className="flex shrink-0 items-center justify-center"
@@ -32,9 +51,18 @@ export default function PeopleList({ names }: { names: readonly string[] }): JSX
               color: "var(--ts-text-bright)",
             }}
           >
-            {initials(name)}
+            {initials(row.name)}
           </span>
-          <span style={{ fontSize: 14, color: "var(--ts-text-bright)" }}>{name}</span>
+          <span className="flex min-w-0 flex-1 flex-col" style={{ gap: 2 }}>
+            <span style={{ fontSize: 14, color: "var(--ts-text-bright)" }}>{row.name}</span>
+            {row.meta && <span className="t-caption">{row.meta}</span>}
+            {row.badges && (
+              <span className="flex flex-wrap" style={{ gap: 6 }}>
+                {row.badges}
+              </span>
+            )}
+          </span>
+          {row.action && <span className="shrink-0">{row.action}</span>}
         </li>
       ))}
     </ul>

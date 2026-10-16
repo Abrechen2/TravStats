@@ -1,5 +1,5 @@
 import type { Flight, Prisma, RailJourney, RentalBooking } from "../../../prisma";
-import { SHARED_SOURCE } from "../copyEntries";
+import { SHARED_SOURCE } from "../shareTypes";
 import {
   FLIGHT_FACT_FIELDS,
   RAIL_FACT_FIELDS,
@@ -12,6 +12,7 @@ import {
   type RailFactField,
   type RentalFactField,
 } from "../facts";
+import { ownFlightCandidates, sameFlight, type FlightIdentity } from "../ownFlightMatch";
 import { joinLabel, plainData, type EntityAdapter, type SharedRow } from "./types";
 
 /**
@@ -80,6 +81,13 @@ export const flightAdapter: EntityAdapter = {
   },
   async remove(c, id) {
     await c.flight.delete({ where: { id } });
+  },
+  async ownMatches(c, source, recipientId) {
+    const identity = source.facts as unknown as FlightIdentity;
+    const candidates = await ownFlightCandidates(c, recipientId, [identity]);
+    return candidates
+      .filter((f) => sameFlight(identity, f))
+      .map((f) => ({ id: f.id, tripId: f.tripId }));
   },
 };
 

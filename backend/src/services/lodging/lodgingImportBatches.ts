@@ -133,9 +133,11 @@ export async function revertLodgingImportBatch(
       // every revert, cost a query, and read as a guarantee it was not making.
       // A house WITH photographs is detached instead of deleted, which is
       // exactly why nothing needs cleaning up.
+      // share-exempt: deletes houses this batch created that nothing hangs from — a shared stay's house is never empty
       const lodgings = emptyIds.length
         ? await tx.lodging.deleteMany({ where: { id: { in: emptyIds } } })
         : { count: 0 };
+      // share-exempt: clears the batch link of an occupied house — import bookkeeping, not a fact
       const detached = occupiedIds.length
         ? await tx.lodging.updateMany({
             where: { id: { in: occupiedIds } },

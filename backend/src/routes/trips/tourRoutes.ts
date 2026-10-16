@@ -17,6 +17,7 @@ import { autoRouteNewLegs } from "../../services/tour/routing/autoRouteLegs";
 import { describeRoutingAvailability } from "../../services/tour/routing/resolveProvider";
 import { resolveTrip } from "../trips";
 import { DETACH_STATION_PHOTOS, planStationPhotoMove } from "../../services/trips/photoStation";
+import { propagateWrites, shareSnapshots } from "../../services/sharing/propagate";
 import logger from "../../utils/logger";
 
 /**
@@ -378,11 +379,22 @@ router.delete(
         // deletes the timeline the tour was only drawn over. The night
         // columns are a roadtrip station's state and leave with the station,
         // as they do when `PUT /roadtrips/:id/stations` drops one.
+        // A released station is an ordinary timeline stop again: on a shared
+        // trip it is copied (a station never was) and its cleared stay link
+        // reaches the copies it already has.
+        const released = (
+          await tx.tripStop.findMany({
+            where: { routeId, tripId: { not: null } },
+            select: { id: true },
+          })
+        ).map((s) => s.id);
+        const before = await shareSnapshots(tx, "stop", released);
         await tx.tripStop.updateMany({
           where: { routeId, tripId: { not: null } },
           data: { routeId: null, routeOrderIdx: null, lodgingStayId: null, overnight: false },
         });
         await tx.tripRoute.delete({ where: { id: routeId } });
+        await propagateWrites(tx, userId, "stop", released, before);
       });
 
       logger.info({ operation: "tour.route.delete", routeId });
@@ -559,6 +571,7 @@ router.put(
 
       const createdLegs = await prisma.$transaction(
         async (tx) => {
+          const members = await tx.tripStop.findMany({ where: { routeId }, select: { id: true } });
           // Release first: `@@unique([routeId, routeOrderIdx])` would
           // collide with the old numbering otherwise.
           await tx.tripStop.updateMany({
@@ -575,6 +588,7 @@ router.put(
           // instead of silently losing a leg's endpoint.
           for (let idx = 0; idx < stopIds.length; idx++) {
             const id = stopIds[idx];
+            // share-exempt: joining a tour changes no fact; a copied stop keeps its copies
             const hit = await tx.tripStop.updateMany({
               where: { id, ...ownedStop, OR: [{ routeId: null }, { routeId }] },
               data: { routeId, routeOrderIdx: idx },
@@ -587,6 +601,11 @@ router.put(
               );
             }
           }
+          // A station the tour drops is an ordinary timeline stop again: on a
+          // shared trip it is copied now (a station never was).
+          const kept = new Set(stopIds);
+          const released = members.map((m) => m.id).filter((id) => !kept.has(id));
+          await propagateWrites(tx, userId, "stop", released);
           const route = await tx.tripRoute.findUniqueOrThrow({
             where: { id: routeId },
             select: { mode: true },

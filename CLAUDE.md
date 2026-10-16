@@ -424,6 +424,14 @@ enforced, and merely practised** below.
   in `backend/src/shared/domains.ts` and its frontend mirror at
   `frontend/src/shared/domains.ts`. Shared code paths iterate
   `AVAILABLE_DOMAINS`, never `enabledDomains.includes('flight')`.
+- **Shareable entry types are one registry** (since 2026-10-16) —
+  `backend/src/services/sharing/shareTypes.ts`. A domain added to
+  `shared/domains.ts` is classified in `DOMAIN_SHARING` (shared, or why not);
+  a table with a `share_key` column needs a `SHARE_TYPES` entry and an adapter, or
+  `shareTypes.test.ts` fails (a missing `DERIVE` entry is a type error). Bus was missing from ten
+  hand-kept lists until forgejo#288 and ferry carried a `share_key` nothing read.
+  Every write to a shareable table propagates or carries
+  `// share-exempt: <reason>` within the two lines above it.
 - **Cruise stops (3-state invariant)** — each stop is exactly one of:
   (1) **matched port** — `portId` set, `isAtSea = false`,
   `unresolvedPortName = null`; (2) **sea day** — `isAtSea = true`,
@@ -623,6 +631,8 @@ checked by nothing until now — is broken by 21 files, the largest at 2161.
 | Nothing outside `shared/time/` reads the host's zone — host-local `Date` getters/setters, `new Date(y, m, …)`, `toLocale*String`/`Intl.DateTimeFormat` without `timeZone`, date-fns `format` / date-fns-tz, and the clock in status files (ADR 0002, D6) | `scripts/eslint/timeRules.mjs` — `time/no-host-local-date`, `time/no-zoneless-format`, `time/no-zone-library`, `time/no-ambient-now` — as errors in both eslint configs. Both trees reached zero offenders in phase 4 and their `eslint-suppressions.json` files are gone, so a new offender fails outright; a tree that ever needs to freeze offenders again uses ESLint bulk suppressions in its own `eslint-suppressions.json` (a fixed one leaves a stale entry that fails until `--prune-suppressions`). Rules and ratchet tested in `frontend/src/__tests__/lint/timeRules.test.ts` |
 | A test's verdict does not depend on the host's zone | `frontend-tests-tz` / `backend-tests-tz` in `.github/workflows/ci.yml` re-run (the Forgejo workflow, written by Paperclip, does not carry them — owner, 2026-09-27) the suites under `TZ=Pacific/Kiritimati` and `TZ=America/St_Johns`; `scripts/check-tz-ratchet.mjs` vs `scripts/tz-failures-baseline.json` fails on a new failure and on a listed test that now passes |
 | Server and web answer every time question the same way | `shared/time/vectors.json`, run by `backend/src/shared/time/__tests__/vectors*.test.ts` and `frontend/src/shared/time/__tests__/vectors.test.ts`, each also under the two odd zones |
+| Every table with a `share_key` column is a registered shareable type, every domain is classified, every type has an adapter and is named in the DE+EN inbox, every fact field has a DE+EN label | `backend/src/services/sharing/__tests__/shareTypes.test.ts` |
+| Every write to a shareable table propagates or names its reason at the call | `backend/src/services/sharing/__tests__/propagate.writePaths.test.ts` |
 
 Six of these are **ratchets** carrying a list of today's offenders — file
 size, OpenAPI coverage, OpenAPI response schemas, response-shape leaks, the

@@ -1,7 +1,6 @@
 import type { DbTransaction } from "../../../db";
 import type { Lodging, LodgingStay, Prisma } from "../../../prisma";
-import { deriveLodgingStatus } from "../../../shared/statusDerivation";
-import { SHARED_SOURCE } from "../copyEntries";
+import { SHARED_SOURCE } from "../shareTypes";
 import { sameFact } from "../factValues";
 import {
   LODGING_FACT_FIELDS,
@@ -94,17 +93,6 @@ async function houseFor(
   return { id: created.id, reused: false };
 }
 
-/** The copy's status re-derived from its dates after the write (the column is a cache). */
-function derivedStatus(data: Prisma.LodgingStayUncheckedUpdateInput, current: SharedRow): string {
-  const value = (key: "checkIn" | "checkOut" | "status") =>
-    key in data ? (data as Record<string, unknown>)[key] : current.facts[key];
-  return deriveLodgingStatus({
-    checkIn: value("checkIn") as Date | null,
-    checkOut: value("checkOut") as Date | null,
-    current: value("status") as string,
-  });
-}
-
 /**
  * The house columns that differ between `before` and `after`. The member's
  * house may be their OWN lodging, reused because it is the same building and
@@ -148,12 +136,6 @@ export const lodgingStayAdapter: EntityAdapter = {
     const copy = await c.lodgingStay.create({
       data: {
         ...lodgingStayFacts(facts),
-        // A cache of the dates (`shared/statusDerivation.ts`), derived afresh.
-        status: deriveLodgingStatus({
-          checkIn: facts.checkIn,
-          checkOut: facts.checkOut,
-          current: facts.status,
-        }),
         lodgingId: house.id,
         userId: recipientId,
         tripId: recipientTripId,
@@ -170,9 +152,6 @@ export const lodgingStayAdapter: EntityAdapter = {
       keys,
       LODGING_STAY_FACT_FIELDS
     ) as Prisma.LodgingStayUncheckedUpdateInput;
-    if (["checkIn", "checkOut", "status"].some((k) => keys.includes(k))) {
-      data.status = derivedStatus(data, copy);
-    }
     if (keys.includes("lodging")) {
       const house = values.lodging as HouseFacts;
       const stay = await c.lodgingStay.findUniqueOrThrow({

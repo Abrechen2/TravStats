@@ -1,6 +1,12 @@
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { Prisma } from "../../prisma";
+import {
+  shareEntityTypeSchema,
+  shareNoticeKindSchema,
+  type ShareEntityType,
+  type ShareNoticeKind,
+} from "../../schemas/sharing";
 import { noticeChanges, type NoticeChange } from "./noticeChanges";
 import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
 
@@ -11,8 +17,8 @@ import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
 
 export interface ShareNoticeView {
   id: string;
-  kind: string;
-  entityType: string | null;
+  kind: ShareNoticeKind;
+  entityType: ShareEntityType | null;
   entityKey: string | null;
   after: Prisma.JsonValue | null;
   createdAt: string;
@@ -36,8 +42,10 @@ export async function listNotices(userId: string): Promise<ShareNoticeView[]> {
   });
   return rows.map((row) => ({
     id: row.id,
-    kind: row.kind,
-    entityType: row.entityType,
+    // A value the database refuses cannot be read either; a parse failure is a
+    // 500 with the value in the log, never a silently dropped notice.
+    kind: shareNoticeKindSchema.parse(row.kind),
+    entityType: row.entityType === null ? null : shareEntityTypeSchema.parse(row.entityType),
     // An entry notice's key is a share key — never sent (wireGuard.ts). A
     // `trip` notice's key is the recipient's own trip id.
     entityKey: row.entityType === "trip" ? row.entityKey : null,

@@ -28,8 +28,7 @@ import {
   stopColumnsFromRequest,
   type StopRequestContext,
 } from "../timeModel/cruiseColumns";
-import { dayAnchorNow } from "../../shared/time/clock";
-import { profileZoneOf } from "../../shared/time/profileZone";
+import { dayAnchorNowFor } from "../../shared/time/profileZone";
 import { propagateWrite } from "../sharing/propagate";
 import { resolveCruiseKind } from "../../shared/cruiseKind";
 
@@ -77,7 +76,7 @@ export async function createCruiseRecord(
         endDate: endDateUtc,
         current: status,
         // Day anchors against the user's profile-zone clock (ADR 0002 D4).
-        now: dayAnchorNow((await profileZoneOf(userId)).zone),
+        now: await dayAnchorNowFor(userId),
       });
 
   // ADR 0002 phase 2 dual-write, resolved BEFORE the transaction so a refused

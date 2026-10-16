@@ -13,7 +13,7 @@ export interface TripExportOptions {
 }
 
 export type TripFileEntryKind =
-  "flight" | "stay" | "cruise" | "rail" | "bus" | "rental" | "visit" | "stop";
+  "flight" | "stay" | "cruise" | "rail" | "bus" | "ferry" | "rental" | "visit" | "stop";
 
 export interface TripFileEntryProposal {
   key: string;

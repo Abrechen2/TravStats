@@ -7,6 +7,7 @@ import { STATION_DTO_SELECT } from "./roadtripSummary";
 import { readRouteAndLegs, ROUTE_SELECT } from "../../routes/trips/tourRoutes";
 import { stationTimeColumns } from "../timeModel/tripColumns";
 import { lockRoute } from "./lockRoute";
+import { propagateWrites, shareSnapshots } from "../sharing/propagate";
 
 export type Station = StationsInput["stations"][number];
 
@@ -170,6 +171,13 @@ export async function replaceStations(
         );
       }
 
+      // A timeline stop stays one while it is a station: its edits here are
+      // the facts the timeline editor propagates, and released below it is an
+      // ordinary stop of its trip again. The roadtrip's own stations sit on
+      // no trip and are never shared.
+      const timelineIds = [...onTimeline];
+      const before = await shareSnapshots(tx, "stop", timelineIds);
+
       // Free every position first: `@@unique([routeId, routeOrderIdx])`
       // would otherwise collide mid-reorder.
       await tx.tripStop.updateMany({ where: { routeId }, data: { routeOrderIdx: null } });
@@ -236,6 +244,7 @@ export async function replaceStations(
         },
       });
       await tx.tripStop.deleteMany({ where: { routeId, routeOrderIdx: null } });
+      await propagateWrites(tx, userId, "stop", timelineIds, before);
 
       const createdLegs = await recomputeLegs(tx, routeId, mode, ordered);
 

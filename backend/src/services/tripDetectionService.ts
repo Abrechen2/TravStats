@@ -635,6 +635,7 @@ async function commitProposals(
         // a single-flight "trip" is noise, and the bookkeeping done above
         // (trip + optional booking) gets rolled back via finalize cleanup
         // (orphan delete) and the booking cascade in the schema.
+        // share-exempt: files unfiled flights into a trip it just created — never shared
         const result = await tx.flight.updateMany({
           where: { id: { in: p.flightIds }, userId, tripId: null },
           data: { tripId: trip.id, bookingId },

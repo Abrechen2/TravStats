@@ -189,6 +189,7 @@ async function writePlan(userId: string, flightId: string, plan: Plan): Promise<
         });
       }
     }
+    // share-exempt: bulkEditFlights propagates the moved flights once for the whole edit; tags and companions are private
     await tx.flight.update({
       where: { id: flightId, userId },
       data: { ...plan.data, lastModifiedBy: "user" },

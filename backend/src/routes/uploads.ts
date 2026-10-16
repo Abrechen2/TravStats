@@ -210,12 +210,14 @@ router.delete(
 
       // Clear the receipt reference on whichever domain record owned it.
       if (owner.flightId) {
+        // share-exempt: clears a receipt URL — private
         await prisma.flight.update({
           where: { id: owner.flightId },
           data: { receiptUrl: null },
         });
       }
       if (owner.lodgingStayId) {
+        // share-exempt: clears a receipt URL — private
         await prisma.lodgingStay.update({
           where: { id: owner.lodgingStayId },
           data: { receiptUrl: null },

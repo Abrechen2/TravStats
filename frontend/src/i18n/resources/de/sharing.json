@@ -20,10 +20,22 @@
       "updated": "{{name}} hat {{type}} „{{entry}}“ geändert. Deine Kopie ist angepasst.",
       "deleted": "{{name}} hat {{type}} „{{entry}}“ gelöscht. Deine Kopie bleibt — entscheide selbst.",
       "movedOut": "{{name}} hat {{type}} „{{entry}}“ aus der geteilten Reise genommen. Deine Kopie bleibt — entscheide selbst.",
+      "joined": "{{name}} hat {{type}} „{{entry}}“ zur geteilten Reise hinzugefügt. Dein eigener Eintrag ist jetzt damit verbunden.",
+      "joinedMoved": "{{name}} hat {{type}} „{{entry}}“ zur geteilten Reise hinzugefügt. Dein eigener Eintrag aus „{{from}}“ ist jetzt mit dieser Reise verbunden und dorthin verschoben.",
+      "joinedMovedOnShare": "{{name}} hat die Reise mit dir geteilt. Dein eigener Eintrag „{{entry}}“ aus „{{from}}“ ist jetzt damit verbunden und hierher verschoben.",
       "unknownEntry": "einen Eintrag",
       "undo": "Rückgängig",
+      "undoMove": "Zurück nach „{{from}}“",
       "deleteCopy": "Bei mir auch löschen",
-      "undone": "Bei dir rückgängig gemacht."
+      "undone": "Bei dir rückgängig gemacht.",
+      "kinds": {
+        "shared": "Geteilt",
+        "created": "Hinzugefügt",
+        "updated": "Geändert",
+        "deleted": "Gelöscht",
+        "left": "Verlassen"
+      },
+      "details": "Details"
     },
     "empty": {
       "title": "Nichts Neues",
@@ -80,31 +92,44 @@
       "noLinkable": "Noch hat niemand deiner Anfrage zugestimmt."
     },
     "errors": {
-      "loadFailed": "Die Freigaben konnten nicht geladen werden.",
+      "loadFailed": "Die Einstellungen zum Teilen konnten nicht geladen werden.",
       "requestFailed": "Die Anfrage konnte nicht gesendet werden.",
       "withdrawFailed": "Die Zustimmung konnte nicht zurückgezogen werden.",
       "linkFailed": "Die Verknüpfung konnte nicht gespeichert werden."
     }
   },
+  "people": {
+    "badges": {
+      "linked": "Konto verknüpft",
+      "member": "Teilt diese Reise",
+      "consentPending": "Zustimmung offen"
+    },
+    "noChangesHint": "Eure Änderungen kommen gegenseitig nicht an, bis ihr beide zugestimmt habt.",
+    "actions": {
+      "link": "Mit Konto verknüpfen…",
+      "share": "Reise teilen…"
+    },
+    "blocked": {
+      "consentMissing": "{{name}} hat dem Teilen noch nicht zugestimmt.",
+      "consentDeclined": "{{name}} hat deine Anfrage zum Teilen abgelehnt.",
+      "consentWithdrawn": "Die Zustimmung zum Teilen mit {{name}} wurde zurückgezogen.",
+      "groupConsentMissing": "Nicht alle, die diese Reise teilen, haben dem Teilen mit {{name}} zugestimmt."
+    },
+    "leave": "Geteilte Reise verlassen"
+  },
+  "menu": {
+    "button": "Teilen",
+    "companions": "Mit Mitreisenden (eigene Kopie)",
+    "link": "Öffentlicher Link",
+    "loading": "Wird geladen …"
+  },
   "trip": {
-    "title": "Geteilt",
-    "notShared": "Diese Reise ist mit niemandem geteilt.",
-    "members": "Geteilt mit",
-    "candidates": "Teilen mit",
-    "shareTick": "Mit {{name}} teilen",
-    "sharedTick": "Mit {{name}} geteilt",
-    "noConsent": "{{name}} hat dem Teilen (noch) nicht zugestimmt.",
-    "noCandidates": "Verknüpfe Mitreisende mit ihrem Konto, um Reisen zu teilen.",
-    "settingsLink": "Zu den Einstellungen",
-    "leave": "Gruppe verlassen",
-    "leaveConfirm": "Gruppe verlassen? Deine Kopie bleibt als eigene Reise erhalten; die anderen werden benachrichtigt.",
-    "left": "Du hast die Gruppe verlassen. Deine Reise bleibt erhalten.",
-    "shared": "Mit {{name}} geteilt.",
-    "privateHint": "Kopiert werden nur Fakten — Flüge, Unterkünfte, Kreuzfahrten, Bahnfahrten, Busfahrten, Mietwagen und Stopps. Sitzplatz, Zimmer, Preis, Bewertungen und Notizen bleiben privat.",
+    "leaveConfirm": "Geteilte Reise verlassen? Deine Kopie bleibt als eigene Reise erhalten; die anderen werden benachrichtigt.",
+    "left": "Du hast die geteilte Reise verlassen. Deine Reise bleibt erhalten.",
     "errors": {
-      "loadFailed": "Die Freigabe dieser Reise konnte nicht geladen werden.",
+      "loadFailed": "Wer diese Reise teilt, konnte nicht geladen werden.",
       "shareFailed": "Die Reise konnte nicht geteilt werden.",
-      "leaveFailed": "Die Gruppe konnte nicht verlassen werden."
+      "leaveFailed": "Die geteilte Reise konnte nicht verlassen werden."
     },
     "bookingTotals": "Buchungssumme",
     "bookingTotalsHint": "Nur zur Ansicht — gebucht und bezahlt hat die genannte Person; dein eigener Preisanteil bleibt privat."
@@ -128,6 +153,48 @@
     "undoUnavailable": "Diese Mitteilung lässt sich nicht (mehr) rückgängig machen.",
     "copyNotFound": "Deine Kopie dieses Eintrags gibt es nicht mehr."
   },
+  "shareDialog": {
+    "title": "Reise mit {{name}} teilen",
+    "titlePick": "Reise teilen",
+    "person": "Mit wem",
+    "copied": "{{name}} bekommt eine eigene Kopie dieser Reise: Flüge, Unterkünfte, Kreuzfahrten, Bahn-, Bus- und Fährfahrten, Mietwagen und Stopps mit Zeiten, Orten und Status. Ändert einer von euch später etwas daran, kommt es bei allen an und lässt sich im Posteingang rückgängig machen.",
+    "private": "Privat bleiben: Sitzplatz, Kabine und Zimmer, dein Preis, Buchungsnummern, Bewertungen, Notizen, Fotos, Tagebuch und Dokumente.",
+    "final": "Das lässt sich nicht zurücknehmen: {{name}} behält die Kopie, auch wenn einer von euch die geteilte Reise verlässt.",
+    "confirm": "Reise teilen",
+    "done": "Reise mit {{name}} geteilt.",
+    "nobody": "Gerade kannst du diese Reise mit niemandem teilen. Verknüpfe Reisende mit ihrem Konto — das geht, sobald die Person deiner Anfrage zugestimmt hat.",
+    "add": {
+      "title": "Diese Konten haben dem Teilen mit dir zugestimmt, stehen aber noch nicht bei den Reisenden dieser Reise. Trag eine Person ein und verknüpfe sie — danach kannst du die Reise mit ihr teilen.",
+      "action": "Als Reisende:n eintragen und verknüpfen",
+      "actionLabel": "{{name}} als Reisende:n eintragen und mit dem Konto verknüpfen",
+      "addFailed": "{{name}} konnte nicht bei den Reisenden eingetragen werden. Es wurde nichts geändert.",
+      "linkFailed": "{{name}} steht jetzt bei den Reisenden, die Verknüpfung mit dem Konto hat aber nicht geklappt. Versuch es noch einmal.",
+      "reloadFailed": "{{name}} ist eingetragen und verknüpft, die Liste konnte aber nicht neu geladen werden. Schließ den Dialog und öffne ihn erneut.",
+      "nameTaken": "Der Name „{{name}}“ gehört schon zu einer reisenden Person, die mit einem anderen Konto verknüpft ist. Benenne sie bei den Reisenden der Reise um — dann kannst du {{name}} eintragen."
+    },
+    "blockedTitle": "Gerade nicht möglich",
+    "blocked": {
+      "notLinked": "{{name}} ist mit keinem Konto verknüpft.",
+      "consentMissing": "{{name}} hat dem Teilen mit dir noch nicht zugestimmt. Du hast noch keine Anfrage gesendet — das geht unter Einstellungen → Reisen → Reisen teilen.",
+      "consentDeclined": "{{name}} hat deine Anfrage zum Teilen abgelehnt. Eine neue Anfrage kannst du unter Einstellungen → Reisen → Reisen teilen senden.",
+      "consentWithdrawn": "Die Zustimmung zum Teilen zwischen dir und {{name}} wurde zurückgezogen. Eine neue Anfrage kannst du unter Einstellungen → Reisen → Reisen teilen senden.",
+      "consentPending": "Deine Anfrage an {{name}} ist noch offen.",
+      "groupConsentMissing": "{{name}} muss sich erst mit allen verbinden, die diese Reise schon teilen.",
+      "alreadyMember": "{{name}} ist schon Teil dieser geteilten Reise.",
+      "accountInactive": "Das Konto von {{name}} ist deaktiviert."
+    }
+  },
+  "linkDialog": {
+    "title": "{{name}} mit Konto verknüpfen",
+    "account": "Konto",
+    "choose": "Konto wählen",
+    "link": "Verknüpfen",
+    "linked": "{{name}} ist jetzt mit @{{username}} verknüpft.",
+    "requestIntro": "Noch hat niemand deiner Anfrage zugestimmt. Schick {{name}} eine Anfrage über den Benutzernamen; sobald die Person zustimmt, kannst du hier verknüpfen.",
+    "username": "Benutzername",
+    "request": "Anfrage senden",
+    "requested": "Anfrage an @{{username}} gesendet."
+  },
   "entityTypes": {
     "trip": "die Reise",
     "flight": "den Flug",
@@ -135,6 +202,7 @@
     "cruise": "die Kreuzfahrt",
     "rail": "die Bahnfahrt",
     "bus": "die Busfahrt",
+    "ferry": "die Fährfahrt",
     "rental": "den Mietwagen",
     "stop": "den Stopp"
   },
@@ -226,6 +294,7 @@
     "trainCategory": "Zuggattung",
     "trainNumber": "Zugnummer",
     "lineName": "Linie",
+    "vesselName": "Schiff",
     "rideKind": "Art der Fahrt",
     "depAddress": "Abfahrtsadresse",
     "arrAddress": "Zieladresse",

@@ -22,6 +22,11 @@ vi.mock("../../../lib/api/sharing", () => ({
   },
 }));
 
+// The real globe paints a canvas jsdom cannot; keep its status semantics.
+vi.mock("../../GlobeLoader", () => ({
+  GlobeLoader: ({ label }: { label?: string }) => <div role="status" aria-label={label} />,
+}));
+
 const addToast = vi.fn();
 const toastState = { addToast: (...args: unknown[]) => addToast(...args) };
 vi.mock("../../../store/toastStore", () => ({
@@ -59,6 +64,15 @@ function renderTab(onCount = vi.fn()) {
   );
   return onCount;
 }
+
+describe("SharingTab — loading", () => {
+  it("shows the globe loader, named, until the first answer", () => {
+    api.listConsents.mockReturnValue(new Promise(() => {}));
+    api.listNotices.mockReturnValue(new Promise(() => {}));
+    renderTab();
+    expect(screen.getByRole("status", { name: "common:loading.default" })).toBeTruthy();
+  });
+});
 
 describe("SharingTab", () => {
   beforeEach(() => {

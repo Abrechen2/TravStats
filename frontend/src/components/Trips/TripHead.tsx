@@ -9,6 +9,7 @@ import { FlagImg } from "../../lib/countryFlag";
 import { countryName } from "../../shared/geo/countryCode";
 import { statusPillStyle } from "../table/statusPillStyle";
 import Button from "../ui/Button";
+import TripShareMenu from "../sharing/TripShareMenu";
 import { TripExportModal } from "./TripExportModal";
 
 /** Trip status → the shared status palette (planned reads as scheduled). */
@@ -24,6 +25,8 @@ interface TripHeadProps {
   t: ReturnType<typeof useTranslation>["t"];
   onEdit: () => void;
   onDelete: () => void;
+  /** The trip changed from the head (sharing added a traveller): reload it. */
+  onChanged: () => void;
 }
 
 /**
@@ -42,6 +45,7 @@ export default function TripHead({
   t,
   onEdit,
   onDelete,
+  onChanged,
 }: TripHeadProps): JSX.Element {
   // The export dialog lives here, beside its button, so the trip page itself
   // does not have to carry one more piece of state.
@@ -146,6 +150,7 @@ export default function TripHead({
             )}
           </div>
           <div className="flex shrink-0 flex-wrap" style={{ gap: "var(--ts-space-sm)" }}>
+            <TripShareMenu tripId={trip.id} onChanged={onChanged} />
             <Button onClick={() => setExporting(true)}>{t("trips:export.button")}</Button>
             <Button onClick={onEdit}>{t("common:buttons.edit")}</Button>
             <Button variant="danger" onClick={onDelete}>
