@@ -35,7 +35,7 @@ type Counts = Omit<BackfillResult, "groups">;
 export async function backfillSharedFerries(opts: { apply: boolean }): Promise<BackfillResult> {
   const groups = await prisma.tripShareGroup.findMany({ select: { id: true } });
   const total: BackfillResult = { groups: groups.length, keyed: 0, joined: 0, copied: 0 };
-  for (const group of groups) {
+  for (const [done, group] of groups.entries()) {
     const counted: Counts = { keyed: 0, joined: 0, copied: 0 };
     try {
       await prisma.$transaction(
@@ -77,7 +77,16 @@ export async function backfillSharedFerries(opts: { apply: boolean }): Promise<B
         { timeout: SHARE_TX_TIMEOUT_MS }
       );
     } catch (err) {
-      if (!(err instanceof DryRun)) throw err;
+      if (!(err instanceof DryRun)) {
+        // A long run over many groups: say where it stopped, so the operator
+        // can see which group failed and how many were finished before it.
+        throw new Error(
+          `Ferry backfill failed in group ${group.id} (${done} of ${groups.length} groups done): ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+          { cause: err }
+        );
+      }
     }
     total.keyed += counted.keyed;
     total.joined += counted.joined;

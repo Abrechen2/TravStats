@@ -86,6 +86,32 @@ describe("sharing rollout — ferry backfill and consent report", () => {
     );
   });
 
+  it("gives a group member without consent no copy", async () => {
+    const carl = await makeAccount("carl-nocopy");
+    const group = (await prisma.trip.findUniqueOrThrow({ where: { id: tripId } })).shareGroupId!;
+    await prisma.trip.create({ data: { userId: carl.id, name: "Fjorde", shareGroupId: group } });
+    await backfillSharedFerries({ apply: true });
+    expect(await prisma.ferryJourney.count({ where: { userId: carl.id } })).toBe(0);
+    expect(
+      await prisma.shareNotice.count({ where: { userId: carl.id, entityType: "ferry" } })
+    ).toBe(0);
+    expect(await prisma.ferryJourney.count({ where: { userId: ben.id } })).toBe(1);
+  });
+
+  it("names the group and the groups done when one fails", async () => {
+    // The first group the backfill visits is the one the mocked transaction fails.
+    const groups = await prisma.tripShareGroup.findMany({ select: { id: true } });
+    const first = groups[0];
+    const spy = jest.spyOn(prisma, "$transaction").mockRejectedValueOnce(new Error("boom"));
+    try {
+      await expect(backfillSharedFerries({ apply: true })).rejects.toThrow(
+        `group ${first.id} (0 of ${groups.length} groups done): boom`
+      );
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
   it("reports a member pair without consent", async () => {
     const carl = await makeAccount("carl-backfill");
     const group = (await prisma.trip.findUniqueOrThrow({ where: { id: tripId } })).shareGroupId!;
