@@ -12,6 +12,7 @@ import {
   type CruiseLegFactField,
   type CruiseStopFactField,
 } from "../facts";
+import { planStopMatch } from "./cruiseStopMatch";
 import { joinLabel, plainData, type EntityAdapter, type SharedRow } from "./types";
 
 /**
@@ -45,11 +46,7 @@ function cruiseRow(row: CruiseWithParts): SharedRow {
   };
 }
 
-/**
- * Port calls are matched by position: the n-th call of the source onto the
- * n-th call of the copy, so a member's own excursion note stays on its day.
- * Extra calls are added, surplus calls removed.
- */
+/** Port calls are matched by day and place (`cruiseStopMatch.ts`), never by position. */
 async function applyStops(
   c: Parameters<EntityAdapter["apply"]>[0],
   cruiseId: string,
@@ -58,15 +55,26 @@ async function applyStops(
   const current = await c.cruiseStop.findMany({
     where: { cruiseId },
     orderBy: [{ dayNumber: "asc" }, { id: "asc" }],
-    select: { id: true },
+    select: {
+      id: true,
+      dayNumber: true,
+      isAtSea: true,
+      portId: true,
+      unresolvedPortName: true,
+      excursionNote: true,
+      allAboardTime: true,
+    },
   });
-  for (let i = 0; i < stops.length; i += 1) {
-    const facts = cruiseStopFacts(stops[i]);
-    if (current[i]) await c.cruiseStop.update({ where: { id: current[i].id }, data: facts });
-    else await c.cruiseStop.create({ data: { ...facts, cruiseId } });
+  const plan = planStopMatch(stops, current);
+  for (const { copyId, source } of plan.updates) {
+    await c.cruiseStop.update({ where: { id: copyId }, data: cruiseStopFacts(source) });
   }
-  const surplus = current.slice(stops.length).map((s) => s.id);
-  if (surplus.length > 0) await c.cruiseStop.deleteMany({ where: { id: { in: surplus } } });
+  for (const source of plan.creates) {
+    await c.cruiseStop.create({ data: { ...cruiseStopFacts(source), cruiseId } });
+  }
+  if (plan.deletes.length > 0) {
+    await c.cruiseStop.deleteMany({ where: { id: { in: plan.deletes } } });
+  }
 }
 
 export const cruiseAdapter: EntityAdapter = {
