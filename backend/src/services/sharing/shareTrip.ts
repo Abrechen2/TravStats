@@ -8,10 +8,11 @@ import { groupBookingTotals, type MemberBookingTotal } from "./bookingTotals";
 import { detachTrip } from "./detach";
 import { assignShareKeys } from "./keyOps";
 import { SHARE_ENTITIES, SHARE_TYPES, emptyCounts, type CopyCounts } from "./shareTypes";
-import { acceptedWith } from "./members";
+import { missingGroupConsent } from "./members";
 import { tripFacts } from "./facts";
 import { restatusTrips } from "../trip/restatusTrips";
 import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
+import { tripPeople, type TripPerson } from "./tripPeople";
 
 /**
  * Sharing one trip with a linked, consenting companion (design 2026-10-09,
@@ -73,13 +74,7 @@ async function requireGroupConsent(
   sharerId: string,
   recipientId: string
 ): Promise<void> {
-  const memberTrips = await tx.trip.findMany({
-    where: { shareGroupId: groupId, userId: { notIn: [sharerId, recipientId] } },
-    select: { userId: true },
-  });
-  const others = [...new Set(memberTrips.map((t) => t.userId))];
-  const consenting = await acceptedWith(tx, recipientId, others);
-  if (others.some((id) => !consenting.has(id))) {
+  if ((await missingGroupConsent(tx, groupId, sharerId, recipientId)).length > 0) {
     throw new AppError(
       "Not every member of this trip has agreed to sharing with this account",
       403,
@@ -185,6 +180,10 @@ export interface TripSharingView {
   /** The other members — never the caller, never their trip ids. */
   members: SharePerson[];
   candidates: ShareCandidate[];
+  /** Companions and group members of the trip, each with their sharing state. */
+  people: TripPerson[];
+  /** Accounts that accepted the caller's consent request. */
+  linkableUsers: SharePerson[];
   /** The other members' booking totals for their trip of the group, read-only (decision 2). */
   bookingTotals: MemberBookingTotal[];
 }
@@ -216,6 +215,7 @@ export async function tripSharingView(userId: string, tripId: string): Promise<T
   return {
     groupId: trip.shareGroupId,
     members,
+    ...(await tripPeople(userId, trip)),
     bookingTotals: trip.shareGroupId ? await groupBookingTotals(trip.shareGroupId, userId) : [],
     candidates: companions.flatMap((c) =>
       c.linkedUser

@@ -80,3 +80,25 @@ export async function receivingMembers(
   );
   return trips.filter((t) => consenting.has(t.userId));
 }
+
+/**
+ * Ids of the group's members (besides the sharer and the recipient) who have
+ * NOT agreed to sharing with `recipientId` — the onward-share rule (owner,
+ * 2026-10-16). Empty means the recipient may join. `shareTrip` refuses on a
+ * non-empty answer and the trip page shows the same verdict, so both read it
+ * from here.
+ */
+export async function missingGroupConsent(
+  c: Pick<DbTransaction, "trip" | "shareConsent">,
+  groupId: string,
+  sharerId: string,
+  recipientId: string
+): Promise<string[]> {
+  const memberTrips = await c.trip.findMany({
+    where: { shareGroupId: groupId, userId: { notIn: [sharerId, recipientId] } },
+    select: { userId: true },
+  });
+  const others = [...new Set(memberTrips.map((t) => t.userId))];
+  const consenting = await acceptedWith(c, recipientId, others);
+  return others.filter((id) => !consenting.has(id));
+}

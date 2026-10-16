@@ -12,7 +12,7 @@ import {
   consentRequestSchema,
   shareTripSchema,
 } from "../../../routes/sharing";
-import { SHARE_ENTITY_TYPES } from "../../../schemas/sharing";
+import { CONSENT_STATUSES, SHARE_ENTITY_TYPES } from "../../../schemas/sharing";
 import type { ShareEntity } from "../../sharing/shareTypes";
 
 const tags = ["Sharing"];
@@ -181,7 +181,7 @@ registry.registerPath({
   request: { params: tripParam },
   responses: {
     200: ok(
-      "Members besides the caller, and the caller's linked companions",
+      "The trip's people with their sharing state; members/candidates are deprecated",
       z.object({
         groupId: z.string().nullable(),
         members: z.array(person),
@@ -202,6 +202,34 @@ registry.registerPath({
             shared: z.boolean(),
           })
         ),
+        people: z
+          .array(
+            z.object({
+              key: z.string(),
+              companionId: z.string().nullable(),
+              name: z.string(),
+              account: person.nullable(),
+              consent: z.enum(["none", ...CONSENT_STATUSES]),
+              member: z.boolean(),
+              receivesChanges: z
+                .boolean()
+                .nullable()
+                .describe("Members only: whether changes travel between the caller and them"),
+              shareBlockedBy: z
+                .enum([
+                  "notLinked",
+                  "consentMissing",
+                  "consentPending",
+                  "groupConsentMissing",
+                  "alreadyMember",
+                ])
+                .nullable(),
+            })
+          )
+          .describe("Every companion of the trip, then every group member who is none of them"),
+        linkableUsers: z
+          .array(person)
+          .describe("Accounts that accepted the caller's consent request"),
       })
     ),
     404: err("`TRIP_NOT_FOUND`"),
