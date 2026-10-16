@@ -93,9 +93,6 @@ export default function CountryRow({
         <td className="px-3 py-2.5" data-wide>
           <div className="flex flex-wrap items-center gap-1.5">
             <TierBadge tier={row.tier} />
-            {row.visitUncertain && (
-              <span className="text-xs">{t("passport:countries.visitUncertain")}</span>
-            )}
             {!row.counted && (
               <Toggletip
                 content={t("passport:countries.notCountedExplained")}

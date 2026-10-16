@@ -165,13 +165,6 @@ export default function CountryProvenance({ code }: { code: string }): JSX.Eleme
         {t("passport:provenance.intro")}
       </p>
 
-      {!loading && detail?.visited !== undefined && (
-        <p className="mb-2">
-          {t(detail.visited ? "passport:summary.countries" : "passport:summary.groundCountries")}
-          {detail.visitUncertain && ` · ${t("passport:countries.visitUncertain")}`}
-        </p>
-      )}
-
       {loading && <p style={{ color: "var(--text-muted)" }}>{t("common:loading.default")}</p>}
 
       {/* A failed drill-down must never read as "no records": the country is in

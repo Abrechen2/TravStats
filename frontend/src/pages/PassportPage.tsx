@@ -13,6 +13,7 @@ import { useAuthStore } from "../store/authStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { logger } from "../lib/logger";
 import type { Passport, PassportContinentGroup } from "../types/passport";
+import Toggletip from "../components/ui/Toggletip";
 
 /**
  * The passport.
@@ -219,19 +220,18 @@ export default function PassportPage(): JSX.Element {
                           className="text-2xl font-semibold"
                           style={{ fontVariantNumeric: "tabular-nums" }}
                         >
-                          {passport.summary.visitedCountries ?? passport.summary.countries}
+                          {passport.summary.countries}
+                          <Toggletip
+                            content={t("passport:summary.countriesTotalExplained")}
+                            triggerClassName="text-base"
+                            triggerStyle={{ color: "var(--text-muted)" }}
+                          >
+                            {" / "}
+                            {passport.summary.countriesTotal}
+                          </Toggletip>
                         </dd>
-                        <dt
-                          className="text-[11px] uppercase tracking-wider mt-2"
-                          style={{ color: "var(--text-muted)" }}
-                        >
-                          {t("passport:summary.groundCountries")}
-                        </dt>
-                        <dd
-                          className="text-xl font-semibold"
-                          style={{ fontVariantNumeric: "tabular-nums" }}
-                        >
-                          {passport.summary.groundCountries ?? passport.summary.countriesTotal}
+                        <dd className="text-[11px]" style={{ color: "var(--text-muted)" }}>
+                          {t("passport:summary.countriesTotal")}
                         </dd>
                       </div>
                       {[

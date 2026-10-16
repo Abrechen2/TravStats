@@ -94,7 +94,6 @@ export interface WrappedRail {
 /** What the passport already knows about a country, and all this needs of it. */
 export interface WrappedCountry {
   firstYear: number | null;
-  firstVisitedYear?: number | null;
   /**
    * Does the row reach the user's counting threshold? Taken from the passport
    * rather than re-decided here, so the story cannot count from a different
@@ -252,10 +251,7 @@ export function buildWrapped(
     // disagree about whether a connection is a country. Without it, a year
     // spent changing planes in Doha would open the wrapped with a new country
     // the passport does not count, and neither number would explain the other.
-    newCountries: countries.filter(
-      (c) =>
-        c.counted && (c.firstVisitedYear === undefined ? c.firstYear : c.firstVisitedYear) === year
-    ).length,
+    newCountries: countries.filter((c) => c.counted && c.firstYear === year).length,
     // A hidden domain abstains — null, never a zero the client must know to
     // hide (forgejo#265), the rule every chapter follows.
     cruises: cruises === null ? null : (cruisesPerYear.get(year) ?? 0),

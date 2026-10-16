@@ -89,8 +89,7 @@ describe("GET /api/v1/stats/passport", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.countries.map((c: { code: string }) => c.code).sort()).toEqual(["DE", "US"]);
-    expect(res.body.summary.groundCountries).toBe(2);
-    expect(res.body.summary.visitedCountries).toBe(0);
+    expect(res.body.summary.countries).toBe(2);
     expect(res.body.summary.airports).toBe(2);
     expect(res.body.summary.firstStampYear).toBe(2019);
   });

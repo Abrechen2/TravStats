@@ -150,13 +150,13 @@ describe("PassportPage — headline, total and threshold", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getAllByText("passport:summary.countries")[0]).toBeInTheDocument();
+      expect(screen.getByText("passport:summary.countries")).toBeInTheDocument();
     });
 
     // Two different numbers, both on screen, labelled as what they are.
     expect(screen.getByText("40")).toBeInTheDocument();
     expect(screen.getByText(/43/)).toBeInTheDocument();
-    expect(screen.getAllByText("passport:summary.groundCountries")[0]).toBeInTheDocument();
+    expect(screen.getByText("passport:summary.countriesTotal")).toBeInTheDocument();
 
     // The rule between them is named rather than implied.
     expect(screen.getByText("passport:evidence.headlineNote")).toBeInTheDocument();

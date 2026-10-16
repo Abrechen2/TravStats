@@ -27,6 +27,7 @@
 
 import {
   attestedGroundDays,
+  groundTier,
   measuredGroundMinutes,
   type EvidenceInput,
 } from "../../shared/countryEvidence";
@@ -103,10 +104,69 @@ const departedAt = (f: PassportFlight): number =>
   f.departureTime ? f.departureTime.getTime() : Number.MAX_SAFE_INTEGER;
 
 /**
- * Ground presence follows from flown endpoints. A visit needs a return-shaped
- * chain, never an overnight or an elapsed-time threshold (forgejo#299).
- * Consecutive domestic legs are one spell. An onward or incomplete chain
- * proves ground contact only; another curated source may prove a visit.
+ * What the flight list proves about each country, as evidence tiers.
+ *
+ * The case the old rule got wrong is the country somebody only changed planes
+ * in. It is visible in the data as a GROUND SEGMENT — landed on one flight,
+ * left on the next — so the flights are walked in chronological order and each
+ * such segment is read through `groundTier`:
+ *
+ *   - the local day changed → `slept`. Same evidence a hotel gives, from a
+ *     different source (spec §7.5).
+ *   - the local day did not → a connection OR a day trip, and which one is
+ *     decided by where the journey goes next. See below.
+ *
+ * `groundTier` answers `visited` for a same-day pair because it compares two
+ * days and nothing more; what a same-day gap MEANS is this function's question.
+ *
+ * ## A connection continues onward; a day trip returns
+ *
+ * Filing every same-day ground segment as `connection` was wrong in a way that
+ * silently deleted countries: fly MUC→FCO in the morning and FCO→MUC at night
+ * and Italy dropped out of the headline, despite a day spent in Rome. The two
+ * shapes were called "structurally identical". They are not — the structure that
+ * tells them apart is the DESTINATION of the onward flight:
+ *
+ *   - it lands in the country the traveller came FROM → they went there and came
+ *     back. That is a return, not a connection, in any ordinary sense of the
+ *     word, and the tier is `visited`.
+ *   - it lands anywhere else → the journey continued onward, which is what a
+ *     connection is, and the tier stays `connection`.
+ *
+ * Compared at COUNTRY level, not airport level: MUC→FCO→FRA is a day in Rome
+ * between two German airports just as much as MUC→FCO→MUC is.
+ *
+ * A run of several ground segments in one country is judged as ONE stay on the
+ * ground, because that is what it is: JFK→LHR→EDI→JFK never leaves Britain in
+ * between, and pairwise reading called both of its segments a connection and
+ * dropped the United Kingdom out of a headline that contained three flights to
+ * it.
+ *
+ * ## The ambiguous shape, and why it stays `connection`
+ *
+ * MUC→FCO→BCN on one day cannot be told apart from a morning in Rome. It is
+ * ALSO the exact shape of every hub connection there is — MUC→DOH→SIN, the case
+ * §1.1 was written about. Reading the triangle as `visited` would therefore not
+ * be "erring towards the stronger tier at the margin"; it would empty the
+ * `connection` tier completely and put all seven of the owner's sub-five-hour
+ * connections back in the headline, which is the defect this whole rework
+ * exists to remove. So the triangle keeps the weaker reading, and the country
+ * keeps its row in the list where a reader can see it.
+ *
+ * A geometric tie-breaker — "is B on the way from A to C" — was considered and
+ * rejected: it is a dial to turn until the total feels right, which is the thing
+ * §2 refuses on principle.
+ *
+ * Every end NOT consumed by a segment is `visited`: the airport somebody first
+ * flew out of, the one they never flew home from, both ends of a domestic hop.
+ * None of those is a connection, and reading them as one would have demoted the
+ * home country of anybody whose first recorded flight is an outbound one.
+ *
+ * The cost of filing both ends of a flight on its DEPARTURE day is named here
+ * rather than hidden: a red-eye that lands after midnight reads as an overnight
+ * even when the traveller connected in three hours. That errs towards the
+ * stronger tier, which keeps a country in the headline rather than dropping one
+ * out of it — the safe direction for a hint.
  */
 export function flightEvidence(
   flights: readonly PassportFlight[],
@@ -123,7 +183,7 @@ export function flightEvidence(
    * The ground segment between `chain[i]` and `chain[i + 1]`, or null where
    * there is none to read. An undated end cannot say whether a night passed, so
    * it is no segment either: both flights' ends then stay unconsumed and fall
-   * through to ground-only evidence below — a weaker claim than the data may support, which
+   * through to `visited` below — a weaker claim than the data may support, which
    * is the right way round to be wrong.
    */
   interface GroundSegment {
@@ -205,7 +265,12 @@ export function flightEvidence(
       inputs.push({
         country: segment.country,
         kind: "flight",
-        tier: returned ? "visited" : "connection",
+        tier:
+          groundTier(segment.arrivalDay, segment.departureDay) === "slept"
+            ? "slept"
+            : returned
+              ? "visited"
+              : "connection",
         at: dayCarrier(segment.arrivalDay),
         // The two ends of the spell and nothing between them — the days the
         // records attest. Read on the airports' own clocks, never on the UTC
@@ -234,7 +299,7 @@ export function flightEvidence(
       inputs.push({
         country: countryOf(f.depIata),
         kind: "flight",
-        tier: "connection",
+        tier: "visited",
         at: dayCarrier(day),
         days,
       });
@@ -243,7 +308,7 @@ export function flightEvidence(
       inputs.push({
         country: countryOf(f.arrIata),
         kind: "flight",
-        tier: "connection",
+        tier: "visited",
         at: dayCarrier(day),
         days,
       });

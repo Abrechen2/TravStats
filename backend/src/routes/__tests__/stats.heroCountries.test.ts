@@ -122,7 +122,7 @@ describe("GET /api/v1/stats/hero — countries come from the shared rule", () =>
     }
   });
 
-  it("keeps visit counts independent of obsolete threshold settings", async () => {
+  it("moves with the threshold, which an airport count cannot", async () => {
     if (!catalogReady) return;
 
     const at = async (tier: string) => {
@@ -131,10 +131,10 @@ describe("GET /api/v1/stats/hero — countries come from the shared rule", () =>
     };
 
     // Every rung counts: Germany, Qatar, Singapore.
-    expect(await at("connection")).toBe(0);
+    expect(await at("connection")).toBe(3);
     // The default. Qatar was a connection under one calendar day and drops out
     // — this is the "too high" half of the owner's report.
-    expect(await at("transited")).toBe(0);
+    expect(await at("transited")).toBe(2);
     // Nobody slept anywhere in this fixture, so the honest answer is none.
     expect(await at("slept")).toBe(0);
   });
