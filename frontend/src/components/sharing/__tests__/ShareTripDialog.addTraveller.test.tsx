@@ -19,7 +19,12 @@ import en from "../../../i18n/resources/en/sharing.json";
  * silent half state.
  */
 vi.mock("../../../lib/api/sharing", () => ({
-  sharingApi: { shareTrip: vi.fn(), tripSharing: vi.fn(), linkCompanion: vi.fn() },
+  sharingApi: {
+    shareTrip: vi.fn(),
+    tripSharing: vi.fn(),
+    linkCompanion: vi.fn(),
+    listCompanions: vi.fn(),
+  },
 }));
 vi.mock("../../../lib/api/trips", () => ({
   tripsApi: { getById: vi.fn(), update: vi.fn() },
@@ -83,6 +88,7 @@ describe("ShareTripDialog — adding a consenting account as a traveller", () =>
     vi.clearAllMocks();
     trips.getById.mockResolvedValue({ id: "t1", companions: ["Ilse"] } as Trip);
     trips.update.mockResolvedValue({ id: "t1", companions: ["Ilse", "Carl"] } as Trip);
+    api.listCompanions.mockResolvedValue({ companions: [], linkableUsers: [carlAccount] });
   });
 
   it("offers the account instead of a dead end", () => {
@@ -135,6 +141,31 @@ describe("ShareTripDialog — adding a consenting account as a traveller", () =>
     await waitFor(() => expect(changed).toHaveBeenCalled());
     expect(screen.getAllByText("sharing:shareDialog.blocked.notLinked")).toHaveLength(2);
     expect(api.shareTrip).not.toHaveBeenCalled();
+  });
+
+  it("says the name is taken by another linked account instead of a retry that loops", async () => {
+    api.listCompanions.mockResolvedValue({
+      companions: [
+        {
+          id: "c-carl-old",
+          name: "carl ",
+          linkedUser: { id: "u-other", username: "carl2", displayName: "Carl" },
+        },
+      ],
+      linkableUsers: [carlAccount],
+    });
+    renderDialog();
+    await addCarl();
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "sharing:shareDialog.add.nameTaken"
+    );
+    expect(trips.update).not.toHaveBeenCalled();
+    expect(api.linkCompanion).not.toHaveBeenCalled();
+    for (const bundle of [de, en]) {
+      const add = (bundle.shareDialog as Record<string, unknown>).add as Record<string, string>;
+      expect(add.nameTaken).toBeTruthy();
+      expect(add.nameTaken).not.toMatch(/noch einmal|try again/i);
+    }
   });
 
   it("has German and English copy for the path", () => {

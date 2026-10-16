@@ -169,7 +169,8 @@
       "actionLabel": "{{name}} als Reisende:n eintragen und mit dem Konto verknüpfen",
       "addFailed": "{{name}} konnte nicht bei den Reisenden eingetragen werden. Es wurde nichts geändert.",
       "linkFailed": "{{name}} steht jetzt bei den Reisenden, die Verknüpfung mit dem Konto hat aber nicht geklappt. Versuch es noch einmal.",
-      "reloadFailed": "{{name}} ist eingetragen und verknüpft, die Liste konnte aber nicht neu geladen werden. Schließ den Dialog und öffne ihn erneut."
+      "reloadFailed": "{{name}} ist eingetragen und verknüpft, die Liste konnte aber nicht neu geladen werden. Schließ den Dialog und öffne ihn erneut.",
+      "nameTaken": "Der Name „{{name}}“ gehört schon zu einer reisenden Person, die mit einem anderen Konto verknüpft ist. Benenne sie bei den Reisenden der Reise um — dann kannst du {{name}} eintragen."
     },
     "blockedTitle": "Gerade nicht möglich",
     "blocked": {

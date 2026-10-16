@@ -88,9 +88,10 @@ function ShareTripForm({
     } catch (err) {
       logger.error("Failed to add a traveller:", err);
       const stage = err instanceof AddTravellerError ? err.stage : "add";
-      setError(t(`${NS}.add.${stage}Failed`, { name: user.displayName }));
+      const copyKey = stage === "nameTaken" ? "nameTaken" : `${stage}Failed`;
+      setError(t(`${NS}.add.${copyKey}`, { name: user.displayName }));
       // Past the first step the trip has a new traveller: show it, never a half state.
-      if (stage !== "add") {
+      if (stage === "link" || stage === "reload") {
         if (err instanceof AddTravellerError && err.people) setPeople(err.people);
         onPeopleChanged?.();
       }

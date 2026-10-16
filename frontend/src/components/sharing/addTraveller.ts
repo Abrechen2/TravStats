@@ -10,8 +10,12 @@ import type { SharePerson, TripPerson, TripSharing } from "../../types/sharing";
 export const nameKey = (name: string): string =>
   name.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
 
-/** Which step failed: nothing changed, added but not linked, or done but not reloaded. */
-export type AddTravellerStage = "add" | "link" | "reload";
+/**
+ * Which step failed: the name already belongs to a companion linked to a
+ * different account (nothing changed — a retry would only fail the same way),
+ * nothing changed, added but not linked, or done but not reloaded.
+ */
+export type AddTravellerStage = "nameTaken" | "add" | "link" | "reload";
 
 export class AddTravellerError extends Error {
   constructor(
@@ -41,6 +45,18 @@ export async function addAndLinkTraveller(
   user: SharePerson
 ): Promise<{ view: TripSharing; key: string }> {
   const wanted = nameKey(user.displayName);
+  // A companion is identified by its name: one of that name linked to another
+  // account would be put on the trip and could never be linked to this one.
+  let taken: boolean;
+  try {
+    const { companions } = await sharingApi.listCompanions();
+    taken = companions.some(
+      (c) => nameKey(c.name) === wanted && c.linkedUser !== null && c.linkedUser.id !== user.id
+    );
+  } catch (err) {
+    throw new AddTravellerError("add", err);
+  }
+  if (taken) throw new AddTravellerError("nameTaken", null);
   try {
     const names = (await tripsApi.getById(tripId)).companions ?? [];
     if (!names.some((n) => nameKey(n) === wanted)) {

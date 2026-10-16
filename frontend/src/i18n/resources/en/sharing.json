@@ -169,7 +169,8 @@
       "actionLabel": "Add {{name}} as a traveller and link their account",
       "addFailed": "{{name}} could not be added as a traveller. Nothing was changed.",
       "linkFailed": "{{name}} is now a traveller, but linking their account did not work. Please try again.",
-      "reloadFailed": "{{name}} is added and linked, but the list could not be reloaded. Close the dialog and open it again."
+      "reloadFailed": "{{name}} is added and linked, but the list could not be reloaded. Close the dialog and open it again.",
+      "nameTaken": "The name “{{name}}” already belongs to a traveller linked to another account. Rename that traveller on the trip — then you can add {{name}}."
     },
     "blockedTitle": "Not possible right now",
     "blocked": {
