@@ -45,8 +45,10 @@ export async function loadTourFacts(
   at: Date = now(),
   options: { withElevation?: boolean } = {}
 ): Promise<TourFacts[]> {
-  const resolver = await getCountryResolver();
-  return (await loadInsightTours(userId, resolver, options)).map((t) => tourFacts(t, at));
+  // The resolver is loaded only for an account that has tours: building it
+  // for every badge re-check of a tour-less account was the cold-start cost
+  // behind slow first saves and the random CI timeouts.
+  return (await loadInsightTours(userId, getCountryResolver, options)).map((t) => tourFacts(t, at));
 }
 
 /** Rows a caller already loaded, so one badge check reads each source once (review I4). */
