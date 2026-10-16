@@ -116,6 +116,8 @@ export interface ShareNoticeAfter {
   entryId?: string;
   /** `deleted`: removed, or moved out of the shared trip. */
   reason?: "deleted" | "movedOut";
+  /** `created`: the reader's own entry was linked instead of a copy being made. */
+  joined?: boolean;
 }
 
 export interface ShareNotice {

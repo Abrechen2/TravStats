@@ -1,7 +1,7 @@
 import type { DbTransaction } from "../../../db";
 import type { Lodging, LodgingStay, Prisma } from "../../../prisma";
 import { deriveLodgingStatus } from "../../../shared/statusDerivation";
-import { SHARED_SOURCE } from "../copyEntries";
+import { SHARED_SOURCE } from "../shareTypes";
 import { sameFact } from "../factValues";
 import {
   LODGING_FACT_FIELDS,

@@ -36,7 +36,11 @@ export default function ShareNoticeRow({
   const locale = dateLocaleForLanguage(i18n.language);
   const after = notice.after ?? {};
   const kindKey =
-    notice.kind === "deleted" && after.reason === "movedOut" ? "movedOut" : notice.kind;
+    notice.kind === "deleted" && after.reason === "movedOut"
+      ? "movedOut"
+      : notice.kind === "created" && after.joined
+        ? "joined"
+        : notice.kind;
   const text = t(`${NS}.${kindKey}`, {
     name: notice.actor?.displayName ?? t(`${NS}.someone`),
     trip: after.tripName ?? t(`${NS}.unknownTrip`),

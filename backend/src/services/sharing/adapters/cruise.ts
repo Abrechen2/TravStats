@@ -1,5 +1,5 @@
 import type { Cruise, CruiseLeg, CruiseStop, Prisma } from "../../../prisma";
-import { SHARED_SOURCE } from "../copyEntries";
+import { SHARED_SOURCE } from "../shareTypes";
 import {
   CRUISE_FACT_FIELDS,
   CRUISE_LEG_FACT_FIELDS,

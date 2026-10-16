@@ -3,20 +3,11 @@ import type { DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { Prisma } from "../../prisma";
 import { consentRequired, hasAcceptedConsent } from "./consent";
-import {
-  copyCruises,
-  copyFlights,
-  copyLodgingStays,
-  copyBusJourneys,
-  copyRailJourneys,
-  copyRentals,
-  copyStops,
-  type CopyContext,
-  type CopyCounts,
-} from "./copyEntries";
+import { copyMissing } from "./copyInto";
 import { groupBookingTotals, type MemberBookingTotal } from "./bookingTotals";
 import { detachTrip } from "./detach";
 import { assignShareKeys } from "./keyOps";
+import { SHARE_ENTITIES, SHARE_TYPES, emptyCounts, type CopyCounts } from "./shareTypes";
 import { acceptedWith } from "./members";
 import { tripFacts } from "./facts";
 import { PERSON_SELECT, toPerson, type SharePerson } from "./people";
@@ -130,24 +121,17 @@ export async function shareTrip(
       await assignShareKeys(tx, userId, trip.id);
 
       const target = await recipientTrip(tx, trip, groupId, recipientId);
-      const ctx: CopyContext = {
-        tx,
-        ownerId: userId,
-        ownerTripId: trip.id,
-        recipientId,
-        recipientTripId: target.id,
-        idMap: new Map(),
-      };
-      // Stops last: they re-point at the copies the others made.
-      const created: CopyCounts = {
-        flights: await copyFlights(ctx),
-        lodgingStays: await copyLodgingStays(ctx),
-        cruises: await copyCruises(ctx),
-        railJourneys: await copyRailJourneys(ctx),
-        busJourneys: await copyBusJourneys(ctx),
-        rentals: await copyRentals(ctx),
-        stops: await copyStops(ctx),
-      };
+      // Registry order: stops last, they resolve the entries they wrap by key.
+      const created = emptyCounts();
+      for (const entity of SHARE_ENTITIES) {
+        const copied = await copyMissing(
+          tx,
+          entity,
+          { userId, tripId: trip.id },
+          { userId: recipientId, tripId: target.id }
+        );
+        created[SHARE_TYPES[entity].countKey] = copied.filter((e) => !e.joined).length;
+      }
 
       const anything = target.created || Object.values(created).some((n) => n > 0);
       if (anything) {

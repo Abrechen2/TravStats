@@ -20,6 +20,7 @@
       "updated": "{{name}} hat {{type}} „{{entry}}“ geändert. Deine Kopie ist angepasst.",
       "deleted": "{{name}} hat {{type}} „{{entry}}“ gelöscht. Deine Kopie bleibt — entscheide selbst.",
       "movedOut": "{{name}} hat {{type}} „{{entry}}“ aus der geteilten Reise genommen. Deine Kopie bleibt — entscheide selbst.",
+      "joined": "{{name}} hat {{type}} „{{entry}}“ zur geteilten Reise hinzugefügt. Dein eigener Eintrag ist jetzt damit verbunden.",
       "unknownEntry": "einen Eintrag",
       "undo": "Rückgängig",
       "deleteCopy": "Bei mir auch löschen",

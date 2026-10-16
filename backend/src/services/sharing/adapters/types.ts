@@ -68,6 +68,16 @@ export interface EntityAdapter {
     previous?: FactRecord
   ): Promise<void>;
   remove(c: DbTransaction, id: string): Promise<void>;
+  /**
+   * The recipient's own unkeyed row that IS this entry — a flight the
+   * companion logged themselves — or null. Joined instead of copied
+   * (`copyInto`), so no statistic counts the journey twice. Absent: never joins.
+   */
+  ownMatch?(
+    c: DbTransaction,
+    source: SharedRow,
+    recipientId: string
+  ): Promise<{ id: string; tripId: string | null } | null>;
 }
 
 /**

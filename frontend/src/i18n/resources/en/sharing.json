@@ -20,6 +20,7 @@
       "updated": "{{name}} changed {{type}} “{{entry}}”. Your copy has been updated.",
       "deleted": "{{name}} deleted {{type}} “{{entry}}”. Your copy stays — it is your call.",
       "movedOut": "{{name}} took {{type}} “{{entry}}” out of the shared trip. Your copy stays — it is your call.",
+      "joined": "{{name}} added {{type}} “{{entry}}” to the shared trip. Your own entry is now linked to it.",
       "unknownEntry": "an entry",
       "undo": "Undo",
       "deleteCopy": "Delete mine too",
