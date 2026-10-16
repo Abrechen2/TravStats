@@ -15,6 +15,7 @@ export interface MergeCounts {
   listEntriesShared: number;
   roadtripStations: number;
   photoJourneys: number;
+  dawarichStays: number;
 }
 
 /**
@@ -32,7 +33,8 @@ export interface MergeCounts {
  * - Master data comes from the side the user picked per group; nothing is
  *   decided for them here.
  * - `visited` is the OR of the two: a place one of them had been to stays
- *   visited — the flag is one-directional everywhere else as well.
+ *   visited — the flag is one-directional everywhere else as well. The same
+ *   holds for `countryVisitKind`: "visit" if either side counted.
  * - The primary source reference (`externalRef`) follows the POSITION — it
  *   names the object at those coordinates — and falls back to the other side's.
  *   The reference that is NOT kept as the primary is not dropped: it becomes an
@@ -126,6 +128,13 @@ export async function mergePlaces(
       where: { placeId: source.id, userId },
       data: { placeId: target.id },
     });
+    // A Dawarich finding (accepted or open) names its place; deleting the
+    // duplicate would otherwise clear that link, and the accepted stay would no
+    // longer say where it was.
+    const dawarichStays = await tx.dawarichStay.updateMany({
+      where: { placeId: source.id, userId },
+      data: { placeId: target.id },
+    });
 
     await tx.place.update({ where: { id: target.id }, data: merged });
     await tx.place.delete({ where: { id: source.id } });
@@ -136,6 +145,7 @@ export async function mergePlaces(
       listEntriesShared: shared.length,
       roadtripStations: stations.count,
       photoJourneys: journeys.count,
+      dawarichStays: dawarichStays.count,
     };
   });
 }
@@ -166,6 +176,13 @@ function mergedData(
     isoCountryCode: address.isoCountryCode,
     notes: mergedNotes(target.notes, source.notes, fields.notes),
     visited: target.visited || source.visited,
+    // One-directional like `visited`: a duplicate that counted as a country
+    // visit keeps counting once merged. Taking the target's value dropped it
+    // whenever the place that stays had been marked transit.
+    countryVisitKind:
+      target.countryVisitKind === "visit" || source.countryVisitKind === "visit"
+        ? "visit"
+        : target.countryVisitKind,
     curatedItemId: target.curatedItemId ?? source.curatedItemId,
     coverPhoto: coverFor(target, source),
     // A merged row is no longer "what that import created" — unless both were.

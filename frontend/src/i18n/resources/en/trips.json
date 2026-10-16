@@ -674,7 +674,7 @@
     "markets": {
       "enable": "Suggest market visits automatically",
       "privacy": "Area recognition queries approximate regions (roughly 5 km grid cells) from OpenStreetMap/Overpass. Your location sequences, times and point IDs are not sent. Visits are only recorded after your confirmation.",
-      "coverage": "Regions checked: {{tiles}} of {{total}} · {{cached}} from stored map data",
+      "coverage": "Regions checked: {{tiles}} of {{total}}",
       "missing": "{{count}} map entries have no usable market boundary. This does not mean you did not visit.",
       "stale": "Some map data is older. Please check these suggestions carefully.",
       "counts": "New market suggestions: {{created}} · Already recorded: {{known}}",

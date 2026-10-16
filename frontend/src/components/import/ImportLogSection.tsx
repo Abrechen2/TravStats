@@ -48,10 +48,16 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
  * back by reverting it.
  */
 function describeCounts(batch: ImportBatchSummary, t: Translate): string {
-  const { lodgings, stays, flights, cruises, places } = batch.counts;
+  const { lodgings, stays, flights, cruises, places, stops = 0 } = batch.counts;
   if (batch.domain === "flight") return t("settings:import.log.counts.flights", { count: flights });
   if (batch.domain === "cruise") return t("settings:import.log.counts.cruises", { count: cruises });
-  if (batch.domain === "poi") return t("settings:import.log.counts.places", { count: places });
+  if (batch.domain === "poi") {
+    const placesText = t("settings:import.log.counts.places", { count: places });
+    // A Takeout import can write trip stops instead of places.
+    return stops > 0
+      ? `${placesText} · ${t("settings:import.log.counts.stops", { count: stops })}`
+      : placesText;
+  }
   return t("lodging:import.batches.created", {
     hotels: t("lodging:units.hotels", { count: lodgings }),
     stays: t("lodging:units.stays", { count: stays }),
@@ -60,10 +66,10 @@ function describeCounts(batch: ImportBatchSummary, t: Translate): string {
 
 /** How many rows the revert of this batch would delete. */
 function revertCount(batch: ImportBatchSummary): number {
-  const { lodgings, stays, flights, cruises, places } = batch.counts;
+  const { lodgings, stays, flights, cruises, places, stops = 0 } = batch.counts;
   if (batch.domain === "flight") return flights;
   if (batch.domain === "cruise") return cruises;
-  if (batch.domain === "poi") return places;
+  if (batch.domain === "poi") return places + stops;
   return lodgings + stays;
 }
 

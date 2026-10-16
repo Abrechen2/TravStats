@@ -1,3 +1,4 @@
+import { TRIP_SPAN_SELECT } from "../places/visitTrip";
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import { reverseGeocode } from "../geo/nominatim";
@@ -136,7 +137,8 @@ export async function scanPhotoJourneys(
     }),
     prisma.trip.findMany({
       where: { userId },
-      select: { id: true, name: true, startDate: true, endDate: true },
+      // The day columns too: a stop's trip is read by the shared day rule.
+      select: TRIP_SPAN_SELECT,
     }),
     prisma.cruise.findMany({
       where: { userId },
@@ -154,7 +156,14 @@ export async function scanPhotoJourneys(
         localName: true,
         lat: true,
         lon: true,
-        visits: { select: { visitedAt: true } },
+        visits: {
+          select: {
+            visitedAt: true,
+            visitedAtUtc: true,
+            visitedZone: true,
+            visitedPrecision: true,
+          },
+        },
       },
     }),
   ]);

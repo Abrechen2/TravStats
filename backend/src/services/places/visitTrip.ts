@@ -51,6 +51,26 @@ export function visitLocalDay(v: VisitDayColumns): string | null {
   return localDay(v.visitedAtUtc, v.visitedZone);
 }
 
+/**
+ * A visit's calendar day for matching: its own clock where the time model
+ * recorded one (`visitLocalDay`), else the legacy `visitedAt` column, whose
+ * UTC date is the place's wall-clock day. A visit dated coarser than a day
+ * (month, year) has no day either way.
+ */
+export function visitDay(
+  v: Partial<VisitDayColumns> & { visitedAt: Date | string | null }
+): string | null {
+  const precision = v.visitedPrecision ?? null;
+  if (precision !== null && !DAY_PRECISE.has(precision)) return null;
+  const local = visitLocalDay({
+    visitedAtUtc: v.visitedAtUtc ?? null,
+    visitedZone: v.visitedZone ?? null,
+    visitedPrecision: precision,
+  });
+  if (local) return local;
+  return v.visitedAt ? new Date(v.visitedAt).toISOString().slice(0, 10) : null;
+}
+
 /** A trip's first and last day, by the read side's own rule (`readDay`). */
 export function tripSpan(t: TripSpanColumns): { first: string; last: string } | null {
   const first = readDay(t.startDay, t.startDate, t.startZone)?.date ?? null;

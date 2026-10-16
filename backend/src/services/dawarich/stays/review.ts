@@ -8,8 +8,11 @@ import { recheckAchievements } from "../../../utils/achievements";
 import type { StayReview } from "../../../schemas/dawarichStays";
 import { venueCategory, VENUE_TYPES, type VenueType } from "../marketVisits/venueTypes";
 import { meters } from "./detect";
+import { completePlaceAddress } from "../../places/addressBackfill";
+import logger from "../../../utils/logger";
 
 async function acceptStayOnce(userId: string, id: string, input: StayReview) {
+  let createdPlaceId: string | null = null;
   const outcome = await prisma.$transaction(
     async (tx) => {
       const row = await tx.dawarichStay.findFirst({ where: { id, userId } });
@@ -81,7 +84,7 @@ async function acceptStayOnce(userId: string, id: string, input: StayReview) {
         end.visitedAtUtc.getTime() > Date.now() + 60_000
       )
         throw new AppError("Invalid stay interval", 400, "DAWARICH_INVALID_INTERVAL");
-      if (!place)
+      if (!place) {
         place = await tx.place.create({
           data: {
             userId,
@@ -94,6 +97,8 @@ async function acceptStayOnce(userId: string, id: string, input: StayReview) {
             visited: true,
           },
         });
+        createdPlaceId = place.id;
+      }
       const dayStart = new Date(start.visitedAt!.toISOString().slice(0, 10) + "T00:00:00Z");
       const dayEnd = new Date(dayStart.getTime() + 86_400_000);
       // A minute-precise visit is reused only inside this interval. A day-only
@@ -166,8 +171,24 @@ async function acceptStayOnce(userId: string, id: string, input: StayReview) {
     },
     { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
   );
+  // A place made here had no country, so an accepted stay never reached the
+  // passport or the country filter. Its address comes from the pin the way the
+  // place form's does — after the commit, because the geocoder is a network call.
+  if (createdPlaceId) await completeAcceptedPlace(createdPlaceId);
   await recheckAchievements(userId, "Dawarich stay accepted");
   return outcome;
+}
+
+async function completeAcceptedPlace(placeId: string): Promise<void> {
+  try {
+    await completePlaceAddress(placeId);
+  } catch (err) {
+    // The stay is accepted either way; the place backfill retries the address.
+    logger.warn(
+      { operation: "dawarich_stay_place_address_failed", placeId, err },
+      "Address of an accepted Dawarich place could not be completed"
+    );
+  }
 }
 
 export async function rejectStay(userId: string, id: string) {

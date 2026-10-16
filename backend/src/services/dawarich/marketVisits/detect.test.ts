@@ -237,6 +237,22 @@ describe("existing records and partial feature usage", () => {
     expect(result.status).toBe("review");
     expect(result.tripId).toBeNull();
   });
+  it("reads a legacy trip anchor by the shared day rule, not its UTC date", () => {
+    // Local midnight of 14 October saved by a UTC+2 browser before the time model.
+    const result = previewMarketVisit(candidate(), market, {
+      places: [],
+      visits: [],
+      trips: [
+        {
+          id: "trip",
+          name: "Jeju",
+          startDate: "2026-10-13T22:00:00.000Z",
+          endDate: "2026-10-13T22:00:00.000Z",
+        },
+      ],
+    });
+    expect(result.tripId).toBe("trip");
+  });
   it("identifies a recorded market visit without creating anything", () => {
     const result = previewMarketVisit(candidate(), market, {
       places: [knownPlace],

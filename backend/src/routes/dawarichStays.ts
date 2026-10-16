@@ -10,6 +10,7 @@ import { ownConnection, reserveScan, scanStays } from "../services/dawarich/stay
 import { acceptStay, rejectStay } from "../services/dawarich/stays/review";
 import { stayReviewSchema } from "../schemas/dawarichStays";
 import { withStayTimes, withScanTimes } from "../services/dawarich/stays/times";
+import { publicMarketCoverage } from "../services/dawarich/stays/publicCoverage";
 import { startJob } from "../services/jobs/jobRegistry";
 
 import {
@@ -39,8 +40,11 @@ router.get("/settings", async (req: AuthRequest, res, next) => {
     try {
       await ownConnection(userId);
       connected = true;
-    } catch {
-      /* connection unavailable, no secret returned */
+    } catch (error) {
+      // Only "no own connection" means disconnected. A database error used to
+      // land here too and was shown as a missing connection.
+      if (!(error instanceof AppError && error.code === "DAWARICH_OWN_CONNECTION_REQUIRED"))
+        throw error;
     }
     const places = await placesEnabled(userId);
     const pausedReason = !state?.enabled
@@ -61,7 +65,7 @@ router.get("/settings", async (req: AuthRequest, res, next) => {
         connected,
         marketEnabled: state?.marketEnabled ?? false,
         venueEnabled: state?.venueEnabled ?? false,
-        marketResult: state?.marketResult ?? null,
+        marketResult: publicMarketCoverage(state?.marketResult),
         result:
           state?.result === "running" && pausedReason
             ? "paused"
@@ -145,22 +149,46 @@ router.get("/", async (req: AuthRequest, res, next) => {
     next(e);
   }
 });
+/**
+ * The review form's place and trip pickers. Bounded: an account with thousands
+ * of places loaded every one on each inbox open. `q` narrows by name so a place
+ * past the cap stays findable, and `truncated` says when the list was cut — a
+ * picker that silently shows a subset is a picker that loses the right answer.
+ */
+const CHOICE_PLACES_CAP = 2000;
+const CHOICE_TRIPS_CAP = 500;
+const choicesQuery = z.object({ q: z.string().trim().max(200).optional() }).strict();
 router.get("/choices", async (req: AuthRequest, res, next) => {
   try {
     const userId = user(req);
+    const { q } = choicesQuery.parse(req.query);
+    const name = q ? { contains: q, mode: "insensitive" as const } : undefined;
     const [places, trips] = await Promise.all([
       prisma.place.findMany({
-        where: { userId },
+        where: { userId, ...(name ? { name } : {}) },
         select: { id: true, name: true, lat: true, lon: true },
-        orderBy: { name: "asc" },
+        // name is not unique; the id keeps the cut at the cap stable.
+        orderBy: [{ name: "asc" }, { id: "asc" }],
+        take: CHOICE_PLACES_CAP + 1,
       }),
       prisma.trip.findMany({
-        where: { userId },
+        where: { userId, ...(name ? { name } : {}) },
         select: { id: true, name: true },
-        orderBy: { startDate: "desc" },
+        orderBy: [{ startDate: { sort: "desc", nulls: "last" } }, { id: "asc" }],
+        take: CHOICE_TRIPS_CAP + 1,
       }),
     ]);
-    res.json({ success: true, data: { places, trips } });
+    res.json({
+      success: true,
+      data: {
+        places: places.slice(0, CHOICE_PLACES_CAP),
+        trips: trips.slice(0, CHOICE_TRIPS_CAP),
+        truncated: {
+          places: places.length > CHOICE_PLACES_CAP,
+          trips: trips.length > CHOICE_TRIPS_CAP,
+        },
+      },
+    });
   } catch (e) {
     next(e);
   }

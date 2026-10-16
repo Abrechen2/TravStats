@@ -18,6 +18,11 @@ import { contains } from "../marketVisits/geometry";
 import type { CatalogStore } from "../marketVisits/catalog";
 import { Prisma } from "../../../prisma";
 import { placesEnabledWhere, requirePlacesEnabled } from "./availability";
+import { publicMarketCoverage } from "./publicCoverage";
+import { tripForStay } from "./tripMatch";
+import { loadSuppression, suppressionReason } from "./suppression";
+import { TRIP_SPAN_SELECT } from "../../places/visitTrip";
+import logger from "../../../utils/logger";
 
 const DAY = 86_400_000;
 export async function ownConnection(userId: string) {
@@ -51,6 +56,31 @@ export async function reserveScan(userId: string, now = new Date()): Promise<voi
   });
   if (!acquired.count)
     throw new AppError("Scan disabled or already running", 409, "DAWARICH_SCAN_UNAVAILABLE");
+}
+
+/**
+ * The pending plain-stop finding this candidate continues, or null. A stay
+ * still going on when a scan ran ends at that scan's last point; the next scan
+ * sees the same stop with a later end (or an earlier start) and must grow the
+ * finding rather than leave it frozen. Only when the candidate holds the whole
+ * old interval and is longer, and the row is the one known match.
+ */
+function grownPendingRow<
+  T extends {
+    id: string;
+    status: string;
+    sourceStartAt: Date;
+    sourceEndAt: Date;
+    evidence: unknown;
+  },
+>(known: readonly T[], c: { startAt: Date; endAt: Date }): T | null {
+  if (known.length !== 1) return null;
+  const row = known[0];
+  if (row.status !== "pending" || (row.evidence as { market?: unknown } | null)?.market)
+    return null;
+  const holds = c.startAt <= row.sourceStartAt && c.endAt >= row.sourceEndAt;
+  const longer = c.startAt < row.sourceStartAt || c.endAt > row.sourceEndAt;
+  return holds && longer ? row : null;
 }
 
 /** Only findings are written. Confirmation is the sole path to a PlaceVisit. */
@@ -97,10 +127,8 @@ export async function scanStays(
       where: { userId },
       select: { id: true, name: true, lat: true, lon: true, externalRef: true, wikidataId: true },
     });
-    const trips = await prisma.trip.findMany({
-      where: { userId },
-      select: { id: true, name: true, startDate: true, endDate: true },
-    });
+    const trips = await prisma.trip.findMany({ where: { userId }, select: TRIP_SPAN_SELECT });
+    const suppression = await loadSuppression(userId);
     let markets: Awaited<ReturnType<typeof collectMarketFindings>> | null = null;
     if (state.marketEnabled || state.venueEnabled) {
       const visits = await prisma.placeVisit.findMany({
@@ -127,6 +155,8 @@ export async function scanStays(
             ...t,
             startDate: t.startDate?.toISOString() ?? null,
             endDate: t.endDate?.toISOString() ?? null,
+            startDay: t.startDay?.toISOString() ?? null,
+            endDay: t.endDay?.toISOString() ?? null,
           })),
         },
         {
@@ -155,6 +185,9 @@ export async function scanStays(
       ...stationary.filter((c) => !markets || !isMarketFragment(c, markets, places)),
     ];
     let created = 0;
+    let extended = 0;
+    let suppressed = 0;
+    let skippedNoZone = 0;
     for (const c of candidates) {
       // A late upstream response belongs to this reservation, never its successor.
       const current = await prisma.dawarichStayScan.findFirst({
@@ -170,7 +203,15 @@ export async function scanStays(
           sourceStartAt: { lte: c.endAt },
           sourceEndAt: { gte: c.startAt },
         },
-        select: { id: true, status: true, sourceLat: true, sourceLon: true, evidence: true },
+        select: {
+          id: true,
+          status: true,
+          sourceLat: true,
+          sourceLon: true,
+          sourceStartAt: true,
+          sourceEndAt: true,
+          evidence: true,
+        },
       });
       const fragments =
         market && markets
@@ -193,25 +234,36 @@ export async function scanStays(
               return shared >= 3 || !!(area && contains(area, row.sourceLon, row.sourceLat));
             })
           : [];
-      if (
-        old.some((row) => {
-          if (!market)
-            return meters({ lat: row.sourceLat, lon: row.sourceLon }, c) <= RADIUS_METERS * 2;
-          const evidence = (row.evidence ?? {}) as {
-            market?: { identity?: string; areaIds?: string[]; venueType?: string };
-          };
-          return (
-            (evidence.market?.identity === market.market.identity &&
-              (evidence.market?.venueType ?? "market") === (market.market.venueType ?? "market")) ||
-            evidence.market?.areaIds?.some((id) => market.market.areaIds.includes(id)) ||
-            (row.status === "rejected" && fragments.some((f) => f.id === row.id))
-          );
-        })
-      )
-        continue; // includes rejection/acceptance memory; pending fragments are superseded below
+      const known = old.filter((row) => {
+        if (!market)
+          return meters({ lat: row.sourceLat, lon: row.sourceLon }, c) <= RADIUS_METERS * 2;
+        const evidence = (row.evidence ?? {}) as {
+          market?: { identity?: string; areaIds?: string[]; venueType?: string };
+        };
+        return (
+          (evidence.market?.identity === market.market.identity &&
+            (evidence.market?.venueType ?? "market") === (market.market.venueType ?? "market")) ||
+          evidence.market?.areaIds?.some((id) => market.market.areaIds.includes(id)) ||
+          (row.status === "rejected" && fragments.some((f) => f.id === row.id))
+        );
+      });
+      // Known: rejection/acceptance memory, or the same stop already pending.
+      // The one exception is a pending stop that has grown since — a stay still
+      // going on at the last scan froze at that scan's last point.
+      const growing = !market && known.length ? grownPendingRow(known, c) : null;
+      if (known.length && !growing) continue;
       const supersededFindingIds = fragments.filter((r) => r.status === "pending").map((r) => r.id);
       const zone = zoneOf(c);
-      if (!zone) throw new AppError("Location timezone unavailable", 422, "TZ_UNRESOLVED");
+      if (!zone) {
+        // One position without a zone used to fail the whole scan, every scan,
+        // until the window moved past it. It is that candidate's problem alone.
+        skippedNoZone++;
+        logger.warn(
+          { operation: "dawarich_stay_zone_unresolved", userId, lat: c.lat, lon: c.lon },
+          "Dawarich stay candidate skipped: no timezone at its position"
+        );
+        continue;
+      }
       const day = new Intl.DateTimeFormat("en-CA", {
         timeZone: zone,
         year: "numeric",
@@ -224,20 +276,17 @@ export async function scanStays(
         month: "2-digit",
         day: "2-digit",
       }).format(c.endAt);
-      const overlappingTrips = trips.filter(
-        (t) =>
-          t.startDate &&
-          t.endDate &&
-          t.startDate.toISOString().slice(0, 10) <= endDay &&
-          t.endDate.toISOString().slice(0, 10) >= day
-      );
-      const matchingTrips = overlappingTrips.filter(
-        (t) =>
-          t.startDate!.toISOString().slice(0, 10) <= day &&
-          t.endDate!.toISOString().slice(0, 10) >= endDay
-      );
-      const trip =
-        overlappingTrips.length === 1 && matchingTrips.length === 1 ? matchingTrips[0] : undefined;
+      if (!market && !growing) {
+        const why = suppressionReason(c, day, suppression);
+        if (why) {
+          suppressed++;
+          continue;
+        }
+      }
+      const tripMatch = tripForStay(trips, day, endDay);
+      const overlappingTrips = tripMatch.overlapping;
+      const matchingTrips = tripMatch.containing;
+      const trip = tripMatch.trip ?? undefined;
       const nearby = places
         .map((p) => ({ ...p, distance: meters(p, c) }))
         .filter((p) => p.distance <= 100)
@@ -283,6 +332,44 @@ export async function scanStays(
               ])
             )
             .digest("hex");
+      const row = {
+        sourceStartAt: c.startAt,
+        sourceEndAt: c.endAt,
+        sourceLat: c.lat,
+        sourceLon: c.lon,
+        startAt: c.startAt,
+        endAt: c.endAt,
+        lat: c.lat,
+        lon: c.lon,
+        zone,
+        pointCount: c.pointCount,
+        evidence: {
+          source: "dawarich",
+          ...(market
+            ? {
+                kind:
+                  market.market.venueType && market.market.venueType !== "market"
+                    ? "venue"
+                    : "market",
+                market: market.market,
+                supersededFindingIds,
+              }
+            : {}),
+          matchingVisitId: matchingVisit?.id ?? null,
+          zone,
+          pointIds: c.pointIds,
+          maxGapMinutes: c.maxGapMinutes,
+          uncertainties: [
+            ...c.uncertainties,
+            ...(overlappingTrips.length > 1 ? ["tripAmbiguous"] : []),
+            ...(overlappingTrips.length && !matchingTrips.length ? ["tripIncomplete"] : []),
+            ...(!market && nearby.length > 1 ? ["placeAmbiguous"] : []),
+          ],
+        },
+        placeId: place?.id,
+        name: market?.name ?? place?.name,
+        tripId: market ? market.tripId : (trip?.id ?? null),
+      };
       const inserted = await prisma.$transaction(async (tx) => {
         // Lock the scan row with the consent/reservation predicate. Revocation
         // or takeover cannot slip between this check and the finding insert.
@@ -290,7 +377,7 @@ export async function scanStays(
           where: { userId, ...reservation!, enabled: true, ...placesEnabledWhere },
           data: { result: "running" },
         });
-        if (!owned.count) return { count: 0 };
+        if (!owned.count) return { count: 0, extended: 0 };
         // Claim pending fragments before inserting the parent. A concurrent review
         // either resolves first (and prevents replacement) or receives a conflict.
         if (supersededFindingIds.length) {
@@ -301,53 +388,22 @@ export async function scanStays(
           if (superseded.count !== supersededFindingIds.length)
             throw new AppError("Finding changed during scan", 409, "DAWARICH_ALREADY_RESOLVED");
         }
-        return tx.dawarichStay.createMany({
+        if (growing) {
+          // Rewritten as a whole: a pending row holds nothing the user decided.
+          const grown = await tx.dawarichStay.updateMany({
+            where: { id: growing.id, userId, status: "pending" },
+            data: row,
+          });
+          return { count: 0, extended: grown.count };
+        }
+        const made = await tx.dawarichStay.createMany({
           skipDuplicates: true,
-          data: [
-            {
-              userId,
-              fingerprint,
-              sourceStartAt: c.startAt,
-              sourceEndAt: c.endAt,
-              sourceLat: c.lat,
-              sourceLon: c.lon,
-              startAt: c.startAt,
-              endAt: c.endAt,
-              lat: c.lat,
-              lon: c.lon,
-              zone,
-              pointCount: c.pointCount,
-              evidence: {
-                source: "dawarich",
-                ...(market
-                  ? {
-                      kind:
-                        market.market.venueType && market.market.venueType !== "market"
-                          ? "venue"
-                          : "market",
-                      market: market.market,
-                      supersededFindingIds,
-                    }
-                  : {}),
-                matchingVisitId: matchingVisit?.id ?? null,
-                zone,
-                pointIds: c.pointIds,
-                maxGapMinutes: c.maxGapMinutes,
-                uncertainties: [
-                  ...c.uncertainties,
-                  ...(overlappingTrips.length > 1 ? ["tripAmbiguous"] : []),
-                  ...(overlappingTrips.length && !matchingTrips.length ? ["tripIncomplete"] : []),
-                  ...(!market && nearby.length > 1 ? ["placeAmbiguous"] : []),
-                ],
-              },
-              placeId: place?.id,
-              name: market?.name ?? place?.name,
-              tripId: market ? market.tripId : (trip?.id ?? null),
-            },
-          ],
+          data: [{ userId, fingerprint, ...row }],
         });
+        return { count: made.count, extended: 0 };
       });
       created += inserted.count;
+      extended += inserted.extended;
       if (market && markets) markets.coverage.createdCount += inserted.count;
     }
     const newest = points.reduce((max, p) => Math.max(max, p.timestampMs), -Infinity);
@@ -362,7 +418,7 @@ export async function scanStays(
             ? "partial"
             : "succeeded",
         marketResult: markets
-          ? (markets.coverage as unknown as Prisma.InputJsonValue)
+          ? (publicMarketCoverage(markets.coverage) as unknown as Prisma.InputJsonValue)
           : Prisma.DbNull,
         error: null,
         windowStart: start,
@@ -372,13 +428,26 @@ export async function scanStays(
         createdCount: created,
       },
     });
+    if (suppressed || skippedNoZone)
+      logger.info(
+        { operation: "dawarich_stay_scan_filtered", userId, suppressed, skippedNoZone },
+        "Dawarich stay candidates left out of this scan"
+      );
     return {
       created,
+      extended,
+      suppressed,
+      skippedNoZone,
       points: points.length,
       truncated: result.truncated,
-      ...(markets ? { markets: markets.coverage } : {}),
+      ...(markets ? { markets: publicMarketCoverage(markets.coverage) } : {}),
     };
   } catch (error) {
+    if (!(error instanceof DawarichError) && !(error instanceof AppError))
+      logger.error(
+        { operation: "dawarich_stay_scan_error", userId, err: error },
+        "Dawarich stay scan failed unexpectedly"
+      );
     const code =
       error instanceof DawarichError
         ? error.kind
