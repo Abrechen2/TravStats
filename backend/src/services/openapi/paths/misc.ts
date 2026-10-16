@@ -151,7 +151,7 @@ registry.registerPath({
   path: "/upcoming",
   summary: "The next item across every enabled domain",
   description:
-    "One entry per domain the user has enabled — next flight, cruise, stay, train, bus, rental — " +
+    "One entry per domain the user has enabled — next flight, cruise, stay, train, bus, ferry, rental — " +
     "plus the next trip, sorted by start. Domains the user cannot see are absent " +
     "rather than empty: switched off by the user, OR hidden by the instance's beta " +
     "switch (rail while `betaFeaturesEnabled` is false) — a client need not apply " +
@@ -175,6 +175,7 @@ registry.registerPath({
                     "place",
                     "rail",
                     "bus",
+                    "ferry",
                     "rental",
                     "trip",
                   ]),
@@ -190,14 +191,14 @@ registry.registerPath({
                     .enum(["minute", "day"])
                     .optional()
                     .describe(
-                      "Rail and bus. `day` for a ride logged without a clock: `startsAt` is " +
+                      "Rail, bus and ferry. `day` for a ride logged without a clock: `startsAt` is " +
                         "the start of that day at the station, not a departure time, and " +
                         "the entry stays upcoming until the day is over."
                     ),
                   times: busTimesSchema
                     .optional()
                     .describe(
-                      "Rail and bus: departure and arrival on the station/terminal " +
+                      "Rail, bus and ferry: departure and arrival on the station/terminal " +
                         "clocks (a ride with changes ends at its last train's arrival). " +
                         "Not yet carried by the other domains, whose `startsAt` is " +
                         "still a bare instant."
